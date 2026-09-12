@@ -1,0 +1,7133 @@
+{
+  "config": {
+    "session_seconds": 600,
+    "charge_seconds_per_practice_second": 0.1,
+    "base_rate": 0.1,
+    "time_bonus": 0.2,
+    "additive_rate": 0.05,
+    "conditional_bonus_per_active_core": 0.1,
+    "infusor_bonus": 0.2,
+    "upgrade_first_cost": 10,
+    "upgrade_cost_growth": 1.6,
+    "rarity_power": {
+      "common": 1.2,
+      "uncommon": 1.25,
+      "rare": 1.3
+    },
+    "rarity_probability": {
+      "common": 0.99,
+      "uncommon": 0.009,
+      "rare": 0.001
+    },
+    "starter_prices": {
+      "additive": 40,
+      "conditional": 60,
+      "infusor": 40,
+      "forge": 80,
+      "expander": 80
+    },
+    "forge_initial_threshold": 60,
+    "forge_threshold_growth": 1.5,
+    "expansion_initial_threshold": 60,
+    "expansion_threshold_growth": 2.0
+  },
+  "assumptions": [
+    "Ten-minute sessions stop at their target; completion charge acts next session.",
+    "Fixed initial core positions; exact gameplay placement search on a deterministic connected expansion shape.",
+    "Rolls remain banked; no random module rewards or combinations are spent in route trajectories.",
+    "Production-first maximizes immediate nous gain/price, not long-term utility; rush routes follow documented priorities.",
+    "All purchases are common; expansion cells are placed before the next session, at no nous cost.",
+    "Upgrade prices use ceil(first_cost * growth ** current_level), with no recursive rounding.",
+    "Continuous empowerment interpolation is 1+s/(1+s); route results only use strengths zero and one.",
+    "Levels unlock with the store. Earlier unlocking is retained as a historical sensitivity comparison; level curves remain provisional."
+  ],
+  "routes": {
+    "baseline": [
+      {
+        "session": 1,
+        "income": 60.0,
+        "balance_before_management": 60.0,
+        "balance_after_management": 60.0,
+        "total_income": 60.0,
+        "start_nous_per_second": 0.1,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0
+        }
+      },
+      {
+        "session": 2,
+        "income": 72.0,
+        "balance_before_management": 132.0,
+        "balance_after_management": 12.0,
+        "total_income": 132.0,
+        "start_nous_per_second": 0.12,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "buy additive (40)",
+          "buy forge (80)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "additive": 0,
+          "forge": 0
+        }
+      },
+      {
+        "session": 3,
+        "income": 113.4,
+        "balance_before_management": 125.4,
+        "balance_after_management": 45.4,
+        "total_income": 245.4,
+        "start_nous_per_second": 0.27,
+        "rolls_banked": 1,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 90.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "buy expander (80)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "additive",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "additive": 0,
+          "forge": 0,
+          "expander": 0
+        }
+      },
+      {
+        "session": 4,
+        "income": 75.6,
+        "balance_before_management": 121.0,
+        "balance_after_management": 21.0,
+        "total_income": 321.0,
+        "start_nous_per_second": 0.18,
+        "rolls_banked": 1,
+        "forge_progress": 60.0,
+        "forge_next_threshold": 90.0,
+        "cells_earned": 1,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 120.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "buy conditional (60)",
+          "buy infusor (40)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "expander",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "additive": 0,
+          "forge": 0,
+          "expander": 0,
+          "conditional": 0,
+          "infusor": 0
+        }
+      },
+      {
+        "session": 5,
+        "income": 173.3805,
+        "balance_before_management": 194.3805,
+        "balance_after_management": 194.3805,
+        "total_income": 494.3805,
+        "start_nous_per_second": 0.479115,
+        "rolls_banked": 1,
+        "forge_progress": 60.0,
+        "forge_next_threshold": 90.0,
+        "cells_earned": 1,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 120.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "conditional",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "additive": 0,
+          "forge": 0,
+          "expander": 0,
+          "conditional": 0,
+          "infusor": 0
+        }
+      },
+      {
+        "session": 6,
+        "income": 173.3805,
+        "balance_before_management": 367.761,
+        "balance_after_management": 367.761,
+        "total_income": 667.761,
+        "start_nous_per_second": 0.479115,
+        "rolls_banked": 1,
+        "forge_progress": 60.0,
+        "forge_next_threshold": 90.0,
+        "cells_earned": 1,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 120.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "conditional",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "additive": 0,
+          "forge": 0,
+          "expander": 0,
+          "conditional": 0,
+          "infusor": 0
+        }
+      },
+      {
+        "session": 7,
+        "income": 173.3805,
+        "balance_before_management": 541.1415,
+        "balance_after_management": 541.1415,
+        "total_income": 841.1415,
+        "start_nous_per_second": 0.479115,
+        "rolls_banked": 1,
+        "forge_progress": 60.0,
+        "forge_next_threshold": 90.0,
+        "cells_earned": 1,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 120.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "conditional",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "additive": 0,
+          "forge": 0,
+          "expander": 0,
+          "conditional": 0,
+          "infusor": 0
+        }
+      },
+      {
+        "session": 8,
+        "income": 173.3805,
+        "balance_before_management": 714.522,
+        "balance_after_management": 714.522,
+        "total_income": 1014.522,
+        "start_nous_per_second": 0.479115,
+        "rolls_banked": 1,
+        "forge_progress": 60.0,
+        "forge_next_threshold": 90.0,
+        "cells_earned": 1,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 120.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "conditional",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "additive": 0,
+          "forge": 0,
+          "expander": 0,
+          "conditional": 0,
+          "infusor": 0
+        }
+      },
+      {
+        "session": 9,
+        "income": 173.3805,
+        "balance_before_management": 887.9025,
+        "balance_after_management": 887.9025,
+        "total_income": 1187.9025,
+        "start_nous_per_second": 0.479115,
+        "rolls_banked": 1,
+        "forge_progress": 60.0,
+        "forge_next_threshold": 90.0,
+        "cells_earned": 1,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 120.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "conditional",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "additive": 0,
+          "forge": 0,
+          "expander": 0,
+          "conditional": 0,
+          "infusor": 0
+        }
+      },
+      {
+        "session": 10,
+        "income": 173.3805,
+        "balance_before_management": 1061.283,
+        "balance_after_management": 1061.283,
+        "total_income": 1361.283,
+        "start_nous_per_second": 0.479115,
+        "rolls_banked": 1,
+        "forge_progress": 60.0,
+        "forge_next_threshold": 90.0,
+        "cells_earned": 1,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 120.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "conditional",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "additive": 0,
+          "forge": 0,
+          "expander": 0,
+          "conditional": 0,
+          "infusor": 0
+        }
+      },
+      {
+        "session": 11,
+        "income": 173.3805,
+        "balance_before_management": 1234.6635,
+        "balance_after_management": 1234.6635,
+        "total_income": 1534.6635,
+        "start_nous_per_second": 0.479115,
+        "rolls_banked": 1,
+        "forge_progress": 60.0,
+        "forge_next_threshold": 90.0,
+        "cells_earned": 1,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 120.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "conditional",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "additive": 0,
+          "forge": 0,
+          "expander": 0,
+          "conditional": 0,
+          "infusor": 0
+        }
+      },
+      {
+        "session": 12,
+        "income": 173.3805,
+        "balance_before_management": 1408.044,
+        "balance_after_management": 1408.044,
+        "total_income": 1708.044,
+        "start_nous_per_second": 0.479115,
+        "rolls_banked": 1,
+        "forge_progress": 60.0,
+        "forge_next_threshold": 90.0,
+        "cells_earned": 1,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 120.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "conditional",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "additive": 0,
+          "forge": 0,
+          "expander": 0,
+          "conditional": 0,
+          "infusor": 0
+        }
+      }
+    ],
+    "production_first": [
+      {
+        "session": 1,
+        "income": 60.0,
+        "balance_before_management": 60.0,
+        "balance_after_management": 60.0,
+        "total_income": 60.0,
+        "start_nous_per_second": 0.1,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0
+        }
+      },
+      {
+        "session": 2,
+        "income": 72.0,
+        "balance_before_management": 132.0,
+        "balance_after_management": 0.0,
+        "total_income": 132.0,
+        "start_nous_per_second": 0.12,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (10)",
+          "level enter (16)",
+          "buy additive (40)",
+          "level enter (26)",
+          "buy infusor (40)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 3,
+          "time": 0,
+          "additive": 0,
+          "infusor": 0
+        }
+      },
+      {
+        "session": 3,
+        "income": 203.472432,
+        "balance_before_management": 203.472432,
+        "balance_after_management": 8.472432,
+        "total_income": 335.472432,
+        "start_nous_per_second": 0.51907,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (41)",
+          "level time (10)",
+          "level infusor (10)",
+          "level additive (10)",
+          "level time (16)",
+          "level infusor (16)",
+          "level enter (66)",
+          "level time (26)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 3
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 5,
+          "time": 3,
+          "additive": 1,
+          "infusor": 2
+        }
+      },
+      {
+        "session": 4,
+        "income": 352.941093,
+        "balance_before_management": 361.413525,
+        "balance_after_management": 0.413525,
+        "total_income": 688.413525,
+        "start_nous_per_second": 0.933551,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level infusor (26)",
+          "level additive (16)",
+          "level enter (105)",
+          "level time (41)",
+          "level infusor (41)",
+          "level infusor (66)",
+          "level time (66)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 5
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 3
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 1
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 2
+          }
+        ],
+        "owned_levels": {
+          "enter": 6,
+          "time": 5,
+          "additive": 2,
+          "infusor": 5
+        }
+      },
+      {
+        "session": 5,
+        "income": 589.177492,
+        "balance_before_management": 589.591018,
+        "balance_after_management": 17.591018,
+        "total_income": 1277.591018,
+        "start_nous_per_second": 1.66403,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level additive (26)",
+          "level enter (168)",
+          "level infusor (105)",
+          "level time (105)",
+          "level infusor (168)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 6
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 5
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 2
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 5
+          }
+        ],
+        "owned_levels": {
+          "enter": 7,
+          "time": 6,
+          "additive": 3,
+          "infusor": 7
+        }
+      },
+      {
+        "session": 6,
+        "income": 934.399961,
+        "balance_before_management": 951.990978,
+        "balance_after_management": 33.990978,
+        "total_income": 2211.990978,
+        "start_nous_per_second": 2.787392,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (269)",
+          "level time (168)",
+          "level additive (41)",
+          "level infusor (269)",
+          "level additive (66)",
+          "level additive (105)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 7
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 6
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 3
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 7
+          }
+        ],
+        "owned_levels": {
+          "enter": 8,
+          "time": 7,
+          "additive": 6,
+          "infusor": 8
+        }
+      },
+      {
+        "session": 7,
+        "income": 1465.119466,
+        "balance_before_management": 1499.110444,
+        "balance_after_management": 202.110444,
+        "total_income": 3677.110444,
+        "start_nous_per_second": 4.492176,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level time (269)",
+          "level enter (430)",
+          "level infusor (430)",
+          "level additive (168)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 8
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 7
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 6
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 8
+          }
+        ],
+        "owned_levels": {
+          "enter": 9,
+          "time": 8,
+          "additive": 7,
+          "infusor": 9
+        }
+      },
+      {
+        "session": 8,
+        "income": 2250.305748,
+        "balance_before_management": 2452.416192,
+        "balance_after_management": 377.416192,
+        "total_income": 5927.416192,
+        "start_nous_per_second": 7.150543,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level time (430)",
+          "level enter (688)",
+          "level infusor (688)",
+          "level additive (269)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 9
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 8
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 7
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 9
+          }
+        ],
+        "owned_levels": {
+          "enter": 10,
+          "time": 9,
+          "additive": 8,
+          "infusor": 10
+        }
+      },
+      {
+        "session": 9,
+        "income": 3566.57911,
+        "balance_before_management": 3943.995302,
+        "balance_after_management": 625.995302,
+        "total_income": 9493.995302,
+        "start_nous_per_second": 11.753469,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level time (688)",
+          "level infusor (1100)",
+          "level enter (1100)",
+          "level additive (430)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 10
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 9
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 8
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 10
+          }
+        ],
+        "owned_levels": {
+          "enter": 11,
+          "time": 10,
+          "additive": 9,
+          "infusor": 11
+        }
+      },
+      {
+        "session": 10,
+        "income": 5831.765017,
+        "balance_before_management": 6457.760319,
+        "balance_after_management": 646.760319,
+        "total_income": 15325.760319,
+        "start_nous_per_second": 19.9235,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level time (1100)",
+          "level infusor (1760)",
+          "level enter (1760)",
+          "buy conditional (60)",
+          "level conditional (10)",
+          "level conditional (16)",
+          "level conditional (26)",
+          "level conditional (41)",
+          "level conditional (66)",
+          "level conditional (105)",
+          "level conditional (168)",
+          "level conditional (269)",
+          "level conditional (430)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 11
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 10
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 9
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 11
+          }
+        ],
+        "owned_levels": {
+          "enter": 12,
+          "time": 11,
+          "additive": 9,
+          "infusor": 12,
+          "conditional": 9
+        }
+      },
+      {
+        "session": 11,
+        "income": 13813.217104,
+        "balance_before_management": 14459.977424,
+        "balance_after_management": 777.977424,
+        "total_income": 29138.977424,
+        "start_nous_per_second": 56.329942,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level conditional (688)",
+          "level time (1760)",
+          "level infusor (2815)",
+          "level conditional (1100)",
+          "level enter (2815)",
+          "level infusor (4504)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 12
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 11
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 12
+          },
+          {
+            "type": "conditional",
+            "position": [
+              2,
+              0
+            ],
+            "level": 9
+          }
+        ],
+        "owned_levels": {
+          "enter": 13,
+          "time": 12,
+          "additive": 9,
+          "infusor": 14,
+          "conditional": 11
+        }
+      },
+      {
+        "session": 12,
+        "income": 35987.202292,
+        "balance_before_management": 36765.179715,
+        "balance_after_management": 1451.179715,
+        "total_income": 65126.179715,
+        "start_nous_per_second": 158.914155,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level time (2815)",
+          "level conditional (1760)",
+          "level enter (4504)",
+          "level infusor (7206)",
+          "level time (4504)",
+          "level conditional (2815)",
+          "level enter (7206)",
+          "level conditional (4504)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 13
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 12
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 14
+          },
+          {
+            "type": "conditional",
+            "position": [
+              2,
+              0
+            ],
+            "level": 11
+          }
+        ],
+        "owned_levels": {
+          "enter": 15,
+          "time": 14,
+          "additive": 9,
+          "infusor": 15,
+          "conditional": 14
+        }
+      }
+    ],
+    "forge_first": [
+      {
+        "session": 1,
+        "income": 60.0,
+        "balance_before_management": 60.0,
+        "balance_after_management": 60.0,
+        "total_income": 60.0,
+        "start_nous_per_second": 0.1,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0
+        }
+      },
+      {
+        "session": 2,
+        "income": 72.0,
+        "balance_before_management": 132.0,
+        "balance_after_management": 2.0,
+        "total_income": 132.0,
+        "start_nous_per_second": 0.12,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "buy forge (80)",
+          "buy additive (40)",
+          "upgrade forge L1 (10)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "forge": 1,
+          "additive": 0
+        }
+      },
+      {
+        "session": 3,
+        "income": 113.4,
+        "balance_before_management": 115.4,
+        "balance_after_management": 19.4,
+        "total_income": 245.4,
+        "start_nous_per_second": 0.27,
+        "rolls_banked": 1,
+        "forge_progress": 12.0,
+        "forge_next_threshold": 90.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "buy expander (80)",
+          "upgrade forge L2 (16)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              0,
+              0
+            ],
+            "level": 1
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "forge": 2,
+          "additive": 0,
+          "expander": 0
+        }
+      },
+      {
+        "session": 4,
+        "income": 75.6,
+        "balance_before_management": 95.0,
+        "balance_after_management": 29.0,
+        "total_income": 321.0,
+        "start_nous_per_second": 0.18,
+        "rolls_banked": 2,
+        "forge_progress": 8.4,
+        "forge_next_threshold": 135.0,
+        "cells_earned": 1,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 120.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "buy infusor (40)",
+          "upgrade forge L3 (26)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              0,
+              0
+            ],
+            "level": 2
+          },
+          {
+            "type": "expander",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "forge": 3,
+          "additive": 0,
+          "expander": 0,
+          "infusor": 0
+        }
+      },
+      {
+        "session": 5,
+        "income": 113.4,
+        "balance_before_management": 142.4,
+        "balance_after_management": 41.4,
+        "total_income": 434.4,
+        "start_nous_per_second": 0.27,
+        "rolls_banked": 2,
+        "forge_progress": 112.08,
+        "forge_next_threshold": 135.0,
+        "cells_earned": 1,
+        "expansion_progress": 60.0,
+        "expansion_next_threshold": 120.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "buy conditional (60)",
+          "upgrade forge L4 (41)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              0,
+              0
+            ],
+            "level": 3
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "expander",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "forge": 4,
+          "additive": 0,
+          "expander": 0,
+          "infusor": 0,
+          "conditional": 0
+        }
+      },
+      {
+        "session": 6,
+        "income": 113.4,
+        "balance_before_management": 154.8,
+        "balance_after_management": 88.8,
+        "total_income": 547.8,
+        "start_nous_per_second": 0.27,
+        "rolls_banked": 3,
+        "forge_progress": 101.496,
+        "forge_next_threshold": 202.5,
+        "cells_earned": 2,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 240.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "upgrade forge L5 (66)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              0,
+              0
+            ],
+            "level": 4
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "expander",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "forge": 5,
+          "additive": 0,
+          "expander": 0,
+          "infusor": 0,
+          "conditional": 0
+        }
+      },
+      {
+        "session": 7,
+        "income": 142.641,
+        "balance_before_management": 231.441,
+        "balance_after_management": 126.441,
+        "total_income": 690.441,
+        "start_nous_per_second": 0.36855,
+        "rolls_banked": 4,
+        "forge_progress": 48.2952,
+        "forge_next_threshold": 303.75,
+        "cells_earned": 2,
+        "expansion_progress": 60.0,
+        "expansion_next_threshold": 240.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "upgrade forge L6 (105)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              0,
+              0
+            ],
+            "level": 5
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "expander",
+            "position": [
+              1,
+              1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "forge": 6,
+          "additive": 0,
+          "expander": 0,
+          "infusor": 0,
+          "conditional": 0
+        }
+      },
+      {
+        "session": 8,
+        "income": 142.641,
+        "balance_before_management": 269.082,
+        "balance_after_management": 101.082,
+        "total_income": 833.082,
+        "start_nous_per_second": 0.36855,
+        "rolls_banked": 4,
+        "forge_progress": 227.45424,
+        "forge_next_threshold": 303.75,
+        "cells_earned": 2,
+        "expansion_progress": 120.0,
+        "expansion_next_threshold": 240.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "upgrade forge L7 (168)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              0,
+              0
+            ],
+            "level": 6
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "expander",
+            "position": [
+              1,
+              1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "forge": 7,
+          "additive": 0,
+          "expander": 0,
+          "infusor": 0,
+          "conditional": 0
+        }
+      },
+      {
+        "session": 9,
+        "income": 142.641,
+        "balance_before_management": 243.723,
+        "balance_after_management": 243.723,
+        "total_income": 975.723,
+        "start_nous_per_second": 0.36855,
+        "rolls_banked": 5,
+        "forge_progress": 138.695088,
+        "forge_next_threshold": 455.625,
+        "cells_earned": 2,
+        "expansion_progress": 180.0,
+        "expansion_next_threshold": 240.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              0,
+              0
+            ],
+            "level": 7
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "expander",
+            "position": [
+              1,
+              1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "forge": 7,
+          "additive": 0,
+          "expander": 0,
+          "infusor": 0,
+          "conditional": 0
+        }
+      },
+      {
+        "session": 10,
+        "income": 142.641,
+        "balance_before_management": 386.364,
+        "balance_after_management": 117.364,
+        "total_income": 1118.364,
+        "start_nous_per_second": 0.36855,
+        "rolls_banked": 5,
+        "forge_progress": 353.685936,
+        "forge_next_threshold": 455.625,
+        "cells_earned": 3,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 480.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "upgrade forge L8 (269)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              0,
+              0
+            ],
+            "level": 7
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "expander",
+            "position": [
+              1,
+              1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "forge": 8,
+          "additive": 0,
+          "expander": 0,
+          "infusor": 0,
+          "conditional": 0
+        }
+      },
+      {
+        "session": 11,
+        "income": 160.677,
+        "balance_before_management": 278.041,
+        "balance_after_management": 278.041,
+        "total_income": 1279.041,
+        "start_nous_per_second": 0.40131,
+        "rolls_banked": 6,
+        "forge_progress": 156.049954,
+        "forge_next_threshold": 683.4375,
+        "cells_earned": 3,
+        "expansion_progress": 60.0,
+        "expansion_next_threshold": 480.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              2,
+              0
+            ],
+            "level": 8
+          },
+          {
+            "type": "additive",
+            "position": [
+              1,
+              -2
+            ],
+            "level": 0
+          },
+          {
+            "type": "expander",
+            "position": [
+              1,
+              1
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "conditional",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "forge": 8,
+          "additive": 0,
+          "expander": 0,
+          "infusor": 0,
+          "conditional": 0
+        }
+      },
+      {
+        "session": 12,
+        "income": 160.677,
+        "balance_before_management": 438.718,
+        "balance_after_management": 8.718,
+        "total_income": 1439.718,
+        "start_nous_per_second": 0.40131,
+        "rolls_banked": 6,
+        "forge_progress": 414.038971,
+        "forge_next_threshold": 683.4375,
+        "cells_earned": 3,
+        "expansion_progress": 120.0,
+        "expansion_next_threshold": 480.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "upgrade forge L9 (430)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              2,
+              0
+            ],
+            "level": 8
+          },
+          {
+            "type": "additive",
+            "position": [
+              1,
+              -2
+            ],
+            "level": 0
+          },
+          {
+            "type": "expander",
+            "position": [
+              1,
+              1
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "conditional",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "forge": 9,
+          "additive": 0,
+          "expander": 0,
+          "infusor": 0,
+          "conditional": 0
+        }
+      }
+    ],
+    "expansion_first": [
+      {
+        "session": 1,
+        "income": 60.0,
+        "balance_before_management": 60.0,
+        "balance_after_management": 60.0,
+        "total_income": 60.0,
+        "start_nous_per_second": 0.1,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0
+        }
+      },
+      {
+        "session": 2,
+        "income": 72.0,
+        "balance_before_management": 132.0,
+        "balance_after_management": 2.0,
+        "total_income": 132.0,
+        "start_nous_per_second": 0.12,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "buy expander (80)",
+          "buy additive (40)",
+          "upgrade expander L1 (10)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "expander": 1,
+          "additive": 0
+        }
+      },
+      {
+        "session": 3,
+        "income": 113.4,
+        "balance_before_management": 115.4,
+        "balance_after_management": 19.4,
+        "total_income": 245.4,
+        "start_nous_per_second": 0.27,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 1,
+        "expansion_progress": 12.0,
+        "expansion_next_threshold": 120.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "buy forge (80)",
+          "upgrade expander L2 (16)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "expander",
+            "position": [
+              0,
+              0
+            ],
+            "level": 1
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "expander": 2,
+          "additive": 0,
+          "forge": 0
+        }
+      },
+      {
+        "session": 4,
+        "income": 113.4,
+        "balance_before_management": 132.8,
+        "balance_after_management": 6.8,
+        "total_income": 358.8,
+        "start_nous_per_second": 0.27,
+        "rolls_banked": 1,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 90.0,
+        "cells_earned": 1,
+        "expansion_progress": 98.4,
+        "expansion_next_threshold": 120.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "buy infusor (40)",
+          "buy conditional (60)",
+          "upgrade expander L3 (26)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "expander",
+            "position": [
+              0,
+              0
+            ],
+            "level": 2
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "expander": 3,
+          "additive": 0,
+          "forge": 0,
+          "infusor": 0,
+          "conditional": 0
+        }
+      },
+      {
+        "session": 5,
+        "income": 113.4,
+        "balance_before_management": 120.2,
+        "balance_after_management": 13.2,
+        "total_income": 472.2,
+        "start_nous_per_second": 0.27,
+        "rolls_banked": 1,
+        "forge_progress": 60.0,
+        "forge_next_threshold": 90.0,
+        "cells_earned": 2,
+        "expansion_progress": 82.08,
+        "expansion_next_threshold": 240.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "upgrade expander L4 (41)",
+          "upgrade expander L5 (66)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "expander",
+            "position": [
+              0,
+              0
+            ],
+            "level": 3
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "expander": 5,
+          "additive": 0,
+          "forge": 0,
+          "infusor": 0,
+          "conditional": 0
+        }
+      },
+      {
+        "session": 6,
+        "income": 142.641,
+        "balance_before_management": 155.841,
+        "balance_after_management": 50.841,
+        "total_income": 614.841,
+        "start_nous_per_second": 0.36855,
+        "rolls_banked": 2,
+        "forge_progress": 30.0,
+        "forge_next_threshold": 135.0,
+        "cells_earned": 2,
+        "expansion_progress": 231.3792,
+        "expansion_next_threshold": 240.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "upgrade expander L6 (105)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "expander",
+            "position": [
+              0,
+              0
+            ],
+            "level": 5
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              1,
+              1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "expander": 6,
+          "additive": 0,
+          "forge": 0,
+          "infusor": 0,
+          "conditional": 0
+        }
+      },
+      {
+        "session": 7,
+        "income": 142.641,
+        "balance_before_management": 193.482,
+        "balance_after_management": 25.482,
+        "total_income": 757.482,
+        "start_nous_per_second": 0.36855,
+        "rolls_banked": 2,
+        "forge_progress": 90.0,
+        "forge_next_threshold": 135.0,
+        "cells_earned": 3,
+        "expansion_progress": 170.53824,
+        "expansion_next_threshold": 480.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "upgrade expander L7 (168)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "expander",
+            "position": [
+              0,
+              0
+            ],
+            "level": 6
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              1,
+              1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "expander": 7,
+          "additive": 0,
+          "forge": 0,
+          "infusor": 0,
+          "conditional": 0
+        }
+      },
+      {
+        "session": 8,
+        "income": 160.677,
+        "balance_before_management": 186.159,
+        "balance_after_management": 186.159,
+        "total_income": 918.159,
+        "start_nous_per_second": 0.40131,
+        "rolls_banked": 3,
+        "forge_progress": 15.0,
+        "forge_next_threshold": 202.5,
+        "cells_earned": 3,
+        "expansion_progress": 385.529088,
+        "expansion_next_threshold": 480.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "expander",
+            "position": [
+              2,
+              0
+            ],
+            "level": 7
+          },
+          {
+            "type": "additive",
+            "position": [
+              1,
+              -2
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              1,
+              1
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "conditional",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "expander": 7,
+          "additive": 0,
+          "forge": 0,
+          "infusor": 0,
+          "conditional": 0
+        }
+      },
+      {
+        "session": 9,
+        "income": 160.677,
+        "balance_before_management": 346.836,
+        "balance_after_management": 77.836,
+        "total_income": 1078.836,
+        "start_nous_per_second": 0.40131,
+        "rolls_banked": 3,
+        "forge_progress": 75.0,
+        "forge_next_threshold": 202.5,
+        "cells_earned": 4,
+        "expansion_progress": 120.519936,
+        "expansion_next_threshold": 960.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "upgrade expander L8 (269)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "expander",
+            "position": [
+              2,
+              0
+            ],
+            "level": 7
+          },
+          {
+            "type": "additive",
+            "position": [
+              1,
+              -2
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              1,
+              1
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "conditional",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "expander": 8,
+          "additive": 0,
+          "forge": 0,
+          "infusor": 0,
+          "conditional": 0
+        }
+      },
+      {
+        "session": 10,
+        "income": 170.1864,
+        "balance_before_management": 248.0224,
+        "balance_after_management": 248.0224,
+        "total_income": 1249.0224,
+        "start_nous_per_second": 0.42588,
+        "rolls_banked": 3,
+        "forge_progress": 135.0,
+        "forge_next_threshold": 202.5,
+        "cells_earned": 4,
+        "expansion_progress": 378.508954,
+        "expansion_next_threshold": 960.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "expander",
+            "position": [
+              2,
+              0
+            ],
+            "level": 8
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              -2
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              1,
+              1
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "conditional",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "expander": 8,
+          "additive": 0,
+          "forge": 0,
+          "infusor": 0,
+          "conditional": 0
+        }
+      },
+      {
+        "session": 11,
+        "income": 170.1864,
+        "balance_before_management": 418.2088,
+        "balance_after_management": 418.2088,
+        "total_income": 1419.2088,
+        "start_nous_per_second": 0.42588,
+        "rolls_banked": 3,
+        "forge_progress": 195.0,
+        "forge_next_threshold": 202.5,
+        "cells_earned": 4,
+        "expansion_progress": 636.497971,
+        "expansion_next_threshold": 960.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "expander",
+            "position": [
+              2,
+              0
+            ],
+            "level": 8
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              -2
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              1,
+              1
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "conditional",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "expander": 8,
+          "additive": 0,
+          "forge": 0,
+          "infusor": 0,
+          "conditional": 0
+        }
+      },
+      {
+        "session": 12,
+        "income": 170.1864,
+        "balance_before_management": 588.3952,
+        "balance_after_management": 158.3952,
+        "total_income": 1589.3952,
+        "start_nous_per_second": 0.42588,
+        "rolls_banked": 4,
+        "forge_progress": 52.5,
+        "forge_next_threshold": 303.75,
+        "cells_earned": 4,
+        "expansion_progress": 894.486989,
+        "expansion_next_threshold": 960.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "upgrade expander L9 (430)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "expander",
+            "position": [
+              2,
+              0
+            ],
+            "level": 8
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              -2
+            ],
+            "level": 0
+          },
+          {
+            "type": "forge",
+            "position": [
+              1,
+              1
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              2,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "conditional",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0,
+          "expander": 9,
+          "additive": 0,
+          "forge": 0,
+          "infusor": 0,
+          "conditional": 0
+        }
+      }
+    ]
+  },
+  "early_upgrade_sensitivity": [
+    {
+      "session": 1,
+      "income": 60.0,
+      "balance_before_management": 60.0,
+      "balance_after_management": 8.0,
+      "total_income": 60.0,
+      "start_nous_per_second": 0.1,
+      "rolls_banked": 0,
+      "forge_progress": 0.0,
+      "forge_next_threshold": 60.0,
+      "cells_earned": 0,
+      "expansion_progress": 0.0,
+      "expansion_next_threshold": 60.0,
+      "charge_seconds_banked": 0,
+      "actions": [
+        "level enter (10)",
+        "level enter (16)",
+        "level enter (26)"
+      ],
+      "deployed": [
+        {
+          "type": "enter",
+          "position": [
+            1,
+            -1
+          ],
+          "level": 0
+        },
+        {
+          "type": "time",
+          "position": [
+            1,
+            0
+          ],
+          "level": 0
+        }
+      ],
+      "owned_levels": {
+        "enter": 3,
+        "time": 0
+      }
+    },
+    {
+      "session": 2,
+      "income": 124.416,
+      "balance_before_management": 132.416,
+      "balance_after_management": 1.416,
+      "total_income": 184.416,
+      "start_nous_per_second": 0.20736,
+      "rolls_banked": 0,
+      "forge_progress": 0.0,
+      "forge_next_threshold": 60.0,
+      "cells_earned": 0,
+      "expansion_progress": 0.0,
+      "expansion_next_threshold": 60.0,
+      "charge_seconds_banked": 60.0,
+      "actions": [
+        "buy additive (40)",
+        "buy infusor (40)",
+        "level enter (41)",
+        "level time (10)"
+      ],
+      "deployed": [
+        {
+          "type": "enter",
+          "position": [
+            1,
+            -1
+          ],
+          "level": 3
+        },
+        {
+          "type": "time",
+          "position": [
+            1,
+            0
+          ],
+          "level": 0
+        }
+      ],
+      "owned_levels": {
+        "enter": 4,
+        "time": 1,
+        "additive": 0,
+        "infusor": 0
+      }
+    },
+    {
+      "session": 3,
+      "income": 245.578222,
+      "balance_before_management": 246.994222,
+      "balance_after_management": 19.994222,
+      "total_income": 429.994222,
+      "start_nous_per_second": 0.62891,
+      "rolls_banked": 0,
+      "forge_progress": 0.0,
+      "forge_next_threshold": 60.0,
+      "cells_earned": 0,
+      "expansion_progress": 0.0,
+      "expansion_next_threshold": 60.0,
+      "charge_seconds_banked": 60.0,
+      "actions": [
+        "level infusor (10)",
+        "level additive (10)",
+        "level time (16)",
+        "level infusor (16)",
+        "level enter (66)",
+        "level time (26)",
+        "level infusor (26)",
+        "level additive (16)",
+        "level time (41)"
+      ],
+      "deployed": [
+        {
+          "type": "enter",
+          "position": [
+            1,
+            -1
+          ],
+          "level": 4
+        },
+        {
+          "type": "time",
+          "position": [
+            1,
+            0
+          ],
+          "level": 1
+        },
+        {
+          "type": "additive",
+          "position": [
+            2,
+            0
+          ],
+          "level": 0
+        },
+        {
+          "type": "infusor",
+          "position": [
+            0,
+            0
+          ],
+          "level": 0
+        }
+      ],
+      "owned_levels": {
+        "enter": 5,
+        "time": 4,
+        "additive": 2,
+        "infusor": 3
+      }
+    },
+    {
+      "session": 4,
+      "income": 408.261037,
+      "balance_before_management": 428.255259,
+      "balance_after_management": 19.255259,
+      "total_income": 838.255259,
+      "start_nous_per_second": 1.099631,
+      "rolls_banked": 0,
+      "forge_progress": 0.0,
+      "forge_next_threshold": 60.0,
+      "cells_earned": 0,
+      "expansion_progress": 0.0,
+      "expansion_next_threshold": 60.0,
+      "charge_seconds_banked": 60.0,
+      "actions": [
+        "level infusor (41)",
+        "level enter (105)",
+        "level infusor (66)",
+        "level time (66)",
+        "level additive (26)",
+        "level infusor (105)"
+      ],
+      "deployed": [
+        {
+          "type": "enter",
+          "position": [
+            1,
+            -1
+          ],
+          "level": 5
+        },
+        {
+          "type": "time",
+          "position": [
+            1,
+            0
+          ],
+          "level": 4
+        },
+        {
+          "type": "additive",
+          "position": [
+            2,
+            0
+          ],
+          "level": 2
+        },
+        {
+          "type": "infusor",
+          "position": [
+            0,
+            0
+          ],
+          "level": 3
+        }
+      ],
+      "owned_levels": {
+        "enter": 6,
+        "time": 5,
+        "additive": 3,
+        "infusor": 6
+      }
+    },
+    {
+      "session": 5,
+      "income": 660.113088,
+      "balance_before_management": 679.368347,
+      "balance_after_management": 29.368347,
+      "total_income": 1498.368347,
+      "start_nous_per_second": 1.902116,
+      "rolls_banked": 0,
+      "forge_progress": 0.0,
+      "forge_next_threshold": 60.0,
+      "cells_earned": 0,
+      "expansion_progress": 0.0,
+      "expansion_next_threshold": 60.0,
+      "charge_seconds_banked": 60.0,
+      "actions": [
+        "level enter (168)",
+        "level time (105)",
+        "level infusor (168)",
+        "level time (168)",
+        "level additive (41)"
+      ],
+      "deployed": [
+        {
+          "type": "enter",
+          "position": [
+            1,
+            -1
+          ],
+          "level": 6
+        },
+        {
+          "type": "time",
+          "position": [
+            1,
+            0
+          ],
+          "level": 5
+        },
+        {
+          "type": "additive",
+          "position": [
+            2,
+            0
+          ],
+          "level": 3
+        },
+        {
+          "type": "infusor",
+          "position": [
+            0,
+            0
+          ],
+          "level": 6
+        }
+      ],
+      "owned_levels": {
+        "enter": 7,
+        "time": 7,
+        "additive": 4,
+        "infusor": 7
+      }
+    },
+    {
+      "session": 6,
+      "income": 1055.257914,
+      "balance_before_management": 1084.626261,
+      "balance_after_management": 106.626261,
+      "total_income": 2553.626261,
+      "start_nous_per_second": 3.160365,
+      "rolls_banked": 0,
+      "forge_progress": 0.0,
+      "forge_next_threshold": 60.0,
+      "cells_earned": 0,
+      "expansion_progress": 0.0,
+      "expansion_next_threshold": 60.0,
+      "charge_seconds_banked": 60.0,
+      "actions": [
+        "level enter (269)",
+        "level infusor (269)",
+        "level time (269)",
+        "level additive (66)",
+        "level additive (105)"
+      ],
+      "deployed": [
+        {
+          "type": "enter",
+          "position": [
+            1,
+            -1
+          ],
+          "level": 7
+        },
+        {
+          "type": "time",
+          "position": [
+            1,
+            0
+          ],
+          "level": 7
+        },
+        {
+          "type": "additive",
+          "position": [
+            2,
+            0
+          ],
+          "level": 4
+        },
+        {
+          "type": "infusor",
+          "position": [
+            0,
+            0
+          ],
+          "level": 7
+        }
+      ],
+      "owned_levels": {
+        "enter": 8,
+        "time": 8,
+        "additive": 6,
+        "infusor": 8
+      }
+    },
+    {
+      "session": 7,
+      "income": 1635.235216,
+      "balance_before_management": 1741.861478,
+      "balance_after_management": 14.861478,
+      "total_income": 4188.861478,
+      "start_nous_per_second": 5.050431,
+      "rolls_banked": 0,
+      "forge_progress": 0.0,
+      "forge_next_threshold": 60.0,
+      "cells_earned": 0,
+      "expansion_progress": 0.0,
+      "expansion_next_threshold": 60.0,
+      "charge_seconds_banked": 60.0,
+      "actions": [
+        "level enter (430)",
+        "level infusor (430)",
+        "level time (430)",
+        "level additive (168)",
+        "level additive (269)"
+      ],
+      "deployed": [
+        {
+          "type": "enter",
+          "position": [
+            1,
+            -1
+          ],
+          "level": 8
+        },
+        {
+          "type": "time",
+          "position": [
+            1,
+            0
+          ],
+          "level": 8
+        },
+        {
+          "type": "additive",
+          "position": [
+            2,
+            0
+          ],
+          "level": 6
+        },
+        {
+          "type": "infusor",
+          "position": [
+            0,
+            0
+          ],
+          "level": 8
+        }
+      ],
+      "owned_levels": {
+        "enter": 9,
+        "time": 9,
+        "additive": 8,
+        "infusor": 9
+      }
+    },
+    {
+      "session": 8,
+      "income": 2612.52306,
+      "balance_before_management": 2627.384538,
+      "balance_after_management": 133.384538,
+      "total_income": 6801.384538,
+      "start_nous_per_second": 8.32757,
+      "rolls_banked": 0,
+      "forge_progress": 0.0,
+      "forge_next_threshold": 60.0,
+      "cells_earned": 0,
+      "expansion_progress": 0.0,
+      "expansion_next_threshold": 60.0,
+      "charge_seconds_banked": 60.0,
+      "actions": [
+        "level enter (688)",
+        "level infusor (688)",
+        "level time (688)",
+        "level additive (430)"
+      ],
+      "deployed": [
+        {
+          "type": "enter",
+          "position": [
+            1,
+            -1
+          ],
+          "level": 9
+        },
+        {
+          "type": "time",
+          "position": [
+            1,
+            0
+          ],
+          "level": 9
+        },
+        {
+          "type": "additive",
+          "position": [
+            2,
+            0
+          ],
+          "level": 8
+        },
+        {
+          "type": "infusor",
+          "position": [
+            0,
+            0
+          ],
+          "level": 9
+        }
+      ],
+      "owned_levels": {
+        "enter": 10,
+        "time": 10,
+        "additive": 9,
+        "infusor": 10
+      }
+    },
+    {
+      "session": 9,
+      "income": 4176.420992,
+      "balance_before_management": 4309.80553,
+      "balance_after_management": 321.80553,
+      "total_income": 10977.80553,
+      "start_nous_per_second": 13.801602,
+      "rolls_banked": 0,
+      "forge_progress": 0.0,
+      "forge_next_threshold": 60.0,
+      "cells_earned": 0,
+      "expansion_progress": 0.0,
+      "expansion_next_threshold": 60.0,
+      "charge_seconds_banked": 60.0,
+      "actions": [
+        "level infusor (1100)",
+        "level enter (1100)",
+        "level time (1100)",
+        "level additive (688)"
+      ],
+      "deployed": [
+        {
+          "type": "enter",
+          "position": [
+            1,
+            -1
+          ],
+          "level": 10
+        },
+        {
+          "type": "time",
+          "position": [
+            1,
+            0
+          ],
+          "level": 10
+        },
+        {
+          "type": "additive",
+          "position": [
+            2,
+            0
+          ],
+          "level": 9
+        },
+        {
+          "type": "infusor",
+          "position": [
+            0,
+            0
+          ],
+          "level": 10
+        }
+      ],
+      "owned_levels": {
+        "enter": 11,
+        "time": 11,
+        "additive": 10,
+        "infusor": 11
+      }
+    },
+    {
+      "session": 10,
+      "income": 6880.657679,
+      "balance_before_management": 7202.463209,
+      "balance_after_management": 822.463209,
+      "total_income": 17858.463209,
+      "start_nous_per_second": 23.559821,
+      "rolls_banked": 0,
+      "forge_progress": 0.0,
+      "forge_next_threshold": 60.0,
+      "cells_earned": 0,
+      "expansion_progress": 0.0,
+      "expansion_next_threshold": 60.0,
+      "charge_seconds_banked": 60.0,
+      "actions": [
+        "level infusor (1760)",
+        "level enter (1760)",
+        "level time (1760)",
+        "level additive (1100)"
+      ],
+      "deployed": [
+        {
+          "type": "enter",
+          "position": [
+            1,
+            -1
+          ],
+          "level": 11
+        },
+        {
+          "type": "time",
+          "position": [
+            1,
+            0
+          ],
+          "level": 11
+        },
+        {
+          "type": "additive",
+          "position": [
+            2,
+            0
+          ],
+          "level": 10
+        },
+        {
+          "type": "infusor",
+          "position": [
+            0,
+            0
+          ],
+          "level": 11
+        }
+      ],
+      "owned_levels": {
+        "enter": 12,
+        "time": 12,
+        "additive": 11,
+        "infusor": 12
+      }
+    },
+    {
+      "session": 11,
+      "income": 11666.851096,
+      "balance_before_management": 12489.314305,
+      "balance_after_management": 1065.314305,
+      "total_income": 29525.314305,
+      "start_nous_per_second": 41.330408,
+      "rolls_banked": 0,
+      "forge_progress": 0.0,
+      "forge_next_threshold": 60.0,
+      "cells_earned": 0,
+      "expansion_progress": 0.0,
+      "expansion_next_threshold": 60.0,
+      "charge_seconds_banked": 60.0,
+      "actions": [
+        "level infusor (2815)",
+        "level enter (2815)",
+        "buy conditional (60)",
+        "level conditional (10)",
+        "level conditional (16)",
+        "level conditional (26)",
+        "level conditional (41)",
+        "level conditional (66)",
+        "level conditional (105)",
+        "level conditional (168)",
+        "level conditional (269)",
+        "level conditional (430)",
+        "level conditional (688)",
+        "level conditional (1100)",
+        "level time (2815)"
+      ],
+      "deployed": [
+        {
+          "type": "enter",
+          "position": [
+            1,
+            -1
+          ],
+          "level": 12
+        },
+        {
+          "type": "time",
+          "position": [
+            1,
+            0
+          ],
+          "level": 12
+        },
+        {
+          "type": "additive",
+          "position": [
+            2,
+            0
+          ],
+          "level": 11
+        },
+        {
+          "type": "infusor",
+          "position": [
+            0,
+            0
+          ],
+          "level": 12
+        }
+      ],
+      "owned_levels": {
+        "enter": 13,
+        "time": 13,
+        "additive": 11,
+        "infusor": 13,
+        "conditional": 11
+      }
+    },
+    {
+      "session": 12,
+      "income": 32985.971564,
+      "balance_before_management": 34051.285869,
+      "balance_after_management": 1552.285869,
+      "total_income": 62511.285869,
+      "start_nous_per_second": 142.982566,
+      "rolls_banked": 0,
+      "forge_progress": 0.0,
+      "forge_next_threshold": 60.0,
+      "cells_earned": 0,
+      "expansion_progress": 0.0,
+      "expansion_next_threshold": 60.0,
+      "charge_seconds_banked": 60.0,
+      "actions": [
+        "level infusor (4504)",
+        "level conditional (1760)",
+        "level enter (4504)",
+        "level infusor (7206)",
+        "level time (4504)",
+        "level conditional (2815)",
+        "level enter (7206)"
+      ],
+      "deployed": [
+        {
+          "type": "enter",
+          "position": [
+            1,
+            -1
+          ],
+          "level": 13
+        },
+        {
+          "type": "time",
+          "position": [
+            1,
+            0
+          ],
+          "level": 13
+        },
+        {
+          "type": "infusor",
+          "position": [
+            0,
+            0
+          ],
+          "level": 13
+        },
+        {
+          "type": "conditional",
+          "position": [
+            2,
+            0
+          ],
+          "level": 11
+        }
+      ],
+      "owned_levels": {
+        "enter": 15,
+        "time": 14,
+        "additive": 11,
+        "infusor": 15,
+        "conditional": 13
+      }
+    }
+  ],
+  "cost_growth_sensitivity": {
+    "1.15": [
+      {
+        "session": 1,
+        "income": 60.0,
+        "balance_before_management": 60.0,
+        "balance_after_management": 60.0,
+        "total_income": 60.0,
+        "start_nous_per_second": 0.1,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0
+        }
+      },
+      {
+        "session": 2,
+        "income": 72.0,
+        "balance_before_management": 132.0,
+        "balance_after_management": 7.0,
+        "total_income": 132.0,
+        "start_nous_per_second": 0.12,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (10)",
+          "level enter (12)",
+          "level enter (14)",
+          "level enter (16)",
+          "level enter (18)",
+          "level enter (21)",
+          "level enter (24)",
+          "level time (10)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 7,
+          "time": 1
+        }
+      },
+      {
+        "session": 3,
+        "income": 279.918084,
+        "balance_before_management": 286.918084,
+        "balance_after_management": 0.918084,
+        "total_income": 411.918084,
+        "start_nous_per_second": 0.666472,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (27)",
+          "buy infusor (40)",
+          "level enter (31)",
+          "level enter (36)",
+          "level enter (41)",
+          "level infusor (10)",
+          "level enter (47)",
+          "level infusor (12)",
+          "level infusor (14)",
+          "level infusor (16)",
+          "level time (12)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 7
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 1
+          }
+        ],
+        "owned_levels": {
+          "enter": 12,
+          "time": 2,
+          "infusor": 4
+        }
+      },
+      {
+        "session": 4,
+        "income": 1149.640253,
+        "balance_before_management": 1150.558338,
+        "balance_after_management": 35.558338,
+        "total_income": 1561.558338,
+        "start_nous_per_second": 3.182846,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level infusor (18)",
+          "level infusor (21)",
+          "level time (14)",
+          "level infusor (24)",
+          "level time (16)",
+          "level infusor (27)",
+          "level time (18)",
+          "level infusor (31)",
+          "level time (21)",
+          "level infusor (36)",
+          "level time (24)",
+          "level infusor (41)",
+          "level time (27)",
+          "level infusor (47)",
+          "level time (31)",
+          "level infusor (54)",
+          "level time (36)",
+          "level infusor (62)",
+          "level infusor (71)",
+          "level time (41)",
+          "level infusor (82)",
+          "level time (47)",
+          "level enter (54)",
+          "level infusor (94)",
+          "level time (54)",
+          "level enter (62)",
+          "level time (62)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 12
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 2
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 4
+          }
+        ],
+        "owned_levels": {
+          "enter": 14,
+          "time": 14,
+          "infusor": 17
+        }
+      },
+      {
+        "session": 5,
+        "income": 74678.032274,
+        "balance_before_management": 74713.590612,
+        "balance_after_management": 530.590612,
+        "total_income": 76239.590612,
+        "start_nous_per_second": 304.59939,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level infusor (108)",
+          "level infusor (124)",
+          "level enter (71)",
+          "level time (71)",
+          "level infusor (143)",
+          "level enter (82)",
+          "level time (82)",
+          "level infusor (164)",
+          "level enter (94)",
+          "level time (94)",
+          "level infusor (189)",
+          "buy conditional (60)",
+          "level conditional (10)",
+          "level conditional (12)",
+          "level conditional (14)",
+          "level conditional (16)",
+          "level conditional (18)",
+          "level conditional (21)",
+          "level conditional (24)",
+          "level conditional (27)",
+          "level conditional (31)",
+          "level conditional (36)",
+          "level conditional (41)",
+          "level conditional (47)",
+          "level conditional (54)",
+          "level enter (108)",
+          "level infusor (217)",
+          "level time (108)",
+          "level conditional (62)",
+          "level conditional (71)",
+          "level infusor (249)",
+          "level enter (124)",
+          "level time (124)",
+          "level conditional (82)",
+          "level conditional (94)",
+          "level infusor (287)",
+          "level enter (143)",
+          "level time (143)",
+          "level conditional (108)",
+          "level infusor (330)",
+          "level enter (164)",
+          "level time (164)",
+          "level conditional (124)",
+          "level infusor (379)",
+          "level conditional (143)",
+          "level enter (189)",
+          "level time (189)",
+          "level conditional (164)",
+          "level infusor (436)",
+          "level enter (217)",
+          "level time (217)",
+          "level conditional (189)",
+          "level infusor (501)",
+          "level enter (249)",
+          "level time (249)",
+          "level conditional (217)",
+          "level infusor (576)",
+          "level conditional (249)",
+          "level enter (287)",
+          "level time (287)",
+          "level infusor (663)",
+          "level conditional (287)",
+          "level enter (330)",
+          "level time (330)",
+          "level infusor (762)",
+          "level conditional (330)",
+          "level enter (379)",
+          "level time (379)",
+          "level infusor (876)",
+          "level conditional (379)",
+          "level enter (436)",
+          "level time (436)",
+          "level infusor (1007)",
+          "level conditional (436)",
+          "level enter (501)",
+          "level time (501)",
+          "level conditional (501)",
+          "level infusor (1159)",
+          "level enter (576)",
+          "level time (576)",
+          "level conditional (576)",
+          "level infusor (1332)",
+          "level enter (663)",
+          "level time (663)",
+          "level conditional (663)",
+          "level infusor (1532)",
+          "level enter (762)",
+          "level time (762)",
+          "level conditional (762)",
+          "level infusor (1762)",
+          "level enter (876)",
+          "level time (876)",
+          "level conditional (876)",
+          "level infusor (2026)",
+          "level enter (1007)",
+          "level time (1007)",
+          "level conditional (1007)",
+          "level infusor (2330)",
+          "level enter (1159)",
+          "level time (1159)",
+          "level conditional (1159)",
+          "level infusor (2679)",
+          "level enter (1332)",
+          "level time (1332)",
+          "level conditional (1332)",
+          "level infusor (3081)",
+          "level enter (1532)",
+          "level time (1532)",
+          "level conditional (1532)",
+          "level infusor (3543)",
+          "level enter (1762)",
+          "level time (1762)",
+          "level conditional (1762)",
+          "level infusor (4074)",
+          "level enter (2026)",
+          "level time (2026)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 14
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 14
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 17
+          }
+        ],
+        "owned_levels": {
+          "enter": 39,
+          "time": 39,
+          "infusor": 44,
+          "conditional": 38
+        }
+      },
+      {
+        "session": 6,
+        "income": 971096335402780.2,
+        "balance_before_management": 971096335403310.9,
+        "balance_after_management": 971096335403310.9,
+        "total_income": 971096335479019.9,
+        "start_nous_per_second": 5810426994076.904,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 39
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 39
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 44
+          },
+          {
+            "type": "conditional",
+            "position": [
+              2,
+              0
+            ],
+            "level": 38
+          }
+        ],
+        "owned_levels": {
+          "enter": 39,
+          "time": 39,
+          "infusor": 44,
+          "conditional": 38
+        },
+        "stop_reason": "Exceeded the exploratory 1e12 cumulative-nous range; not a game cap."
+      }
+    ],
+    "1.3": [
+      {
+        "session": 1,
+        "income": 60.0,
+        "balance_before_management": 60.0,
+        "balance_after_management": 60.0,
+        "total_income": 60.0,
+        "start_nous_per_second": 0.1,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0
+        }
+      },
+      {
+        "session": 2,
+        "income": 72.0,
+        "balance_before_management": 132.0,
+        "balance_after_management": 1.0,
+        "total_income": 132.0,
+        "start_nous_per_second": 0.12,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (10)",
+          "level enter (13)",
+          "level enter (17)",
+          "level enter (22)",
+          "level enter (29)",
+          "buy infusor (40)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 5,
+          "time": 0,
+          "infusor": 0
+        }
+      },
+      {
+        "session": 3,
+        "income": 236.624302,
+        "balance_before_management": 237.624302,
+        "balance_after_management": 26.624302,
+        "total_income": 368.624302,
+        "start_nous_per_second": 0.61138,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (38)",
+          "level infusor (10)",
+          "level enter (49)",
+          "level time (10)",
+          "level infusor (13)",
+          "level time (13)",
+          "level infusor (17)",
+          "level time (17)",
+          "level infusor (22)",
+          "level time (22)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 5
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 7,
+          "time": 4,
+          "infusor": 4
+        }
+      },
+      {
+        "session": 4,
+        "income": 521.840604,
+        "balance_before_management": 548.464906,
+        "balance_after_management": 26.464906,
+        "total_income": 890.464906,
+        "start_nous_per_second": 1.458319,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (63)",
+          "level infusor (29)",
+          "level time (29)",
+          "level infusor (38)",
+          "level enter (82)",
+          "level infusor (49)",
+          "level time (38)",
+          "level infusor (63)",
+          "level time (49)",
+          "level infusor (82)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 7
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 4
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 4
+          }
+        ],
+        "owned_levels": {
+          "enter": 9,
+          "time": 7,
+          "infusor": 9
+        }
+      },
+      {
+        "session": 5,
+        "income": 1724.955671,
+        "balance_before_management": 1751.420577,
+        "balance_after_management": 40.420577,
+        "total_income": 2615.420577,
+        "start_nous_per_second": 5.572805,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level time (63)",
+          "level enter (107)",
+          "buy conditional (60)",
+          "level conditional (10)",
+          "level conditional (13)",
+          "level infusor (107)",
+          "level time (82)",
+          "level conditional (17)",
+          "level infusor (138)",
+          "level conditional (22)",
+          "level enter (138)",
+          "level time (107)",
+          "level conditional (29)",
+          "level infusor (180)",
+          "level time (138)",
+          "level conditional (38)",
+          "level enter (180)",
+          "level infusor (233)",
+          "level conditional (49)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 9
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 7
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 9
+          }
+        ],
+        "owned_levels": {
+          "enter": 12,
+          "time": 11,
+          "infusor": 13,
+          "conditional": 7
+        }
+      },
+      {
+        "session": 6,
+        "income": 15403.089243,
+        "balance_before_management": 15443.50982,
+        "balance_after_management": 74.50982,
+        "total_income": 18018.50982,
+        "start_nous_per_second": 62.809147,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level time (180)",
+          "level infusor (303)",
+          "level conditional (63)",
+          "level enter (233)",
+          "level conditional (82)",
+          "level infusor (394)",
+          "level time (233)",
+          "level conditional (107)",
+          "level enter (303)",
+          "level infusor (512)",
+          "level time (303)",
+          "level conditional (138)",
+          "level enter (394)",
+          "level conditional (180)",
+          "level infusor (666)",
+          "level time (394)",
+          "level conditional (233)",
+          "level infusor (866)",
+          "level enter (512)",
+          "level time (512)",
+          "level conditional (303)",
+          "level infusor (1125)",
+          "level enter (666)",
+          "level conditional (394)",
+          "level time (666)",
+          "level infusor (1462)",
+          "level conditional (512)",
+          "level enter (866)",
+          "level time (866)",
+          "level infusor (1901)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 12
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 11
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 13
+          },
+          {
+            "type": "conditional",
+            "position": [
+              2,
+              0
+            ],
+            "level": 7
+          }
+        ],
+        "owned_levels": {
+          "enter": 18,
+          "time": 18,
+          "infusor": 21,
+          "conditional": 16
+        }
+      },
+      {
+        "session": 7,
+        "income": 3379226.525204,
+        "balance_before_management": 3379301.035024,
+        "balance_after_management": 56045.035024,
+        "total_income": 3397245.035024,
+        "start_nous_per_second": 17801.336933,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level conditional (666)",
+          "level enter (1125)",
+          "level time (1125)",
+          "level conditional (866)",
+          "level infusor (2471)",
+          "level enter (1462)",
+          "level time (1462)",
+          "level conditional (1125)",
+          "level infusor (3212)",
+          "level conditional (1462)",
+          "level enter (1901)",
+          "level time (1901)",
+          "level infusor (4176)",
+          "level conditional (1901)",
+          "level enter (2471)",
+          "level time (2471)",
+          "level infusor (5429)",
+          "level conditional (2471)",
+          "level enter (3212)",
+          "level time (3212)",
+          "level infusor (7057)",
+          "level conditional (3212)",
+          "level enter (4176)",
+          "level time (4176)",
+          "level infusor (9174)",
+          "level conditional (4176)",
+          "level enter (5429)",
+          "level time (5429)",
+          "level infusor (11926)",
+          "level conditional (5429)",
+          "level enter (7057)",
+          "level time (7057)",
+          "level infusor (15503)",
+          "level conditional (7057)",
+          "level enter (9174)",
+          "level time (9174)",
+          "level infusor (20154)",
+          "level conditional (9174)",
+          "level enter (11926)",
+          "level time (11926)",
+          "level infusor (26200)",
+          "level conditional (11926)",
+          "level enter (15503)",
+          "level time (15503)",
+          "level infusor (34060)",
+          "level conditional (15503)",
+          "level enter (20154)",
+          "level time (20154)",
+          "level infusor (44278)",
+          "level conditional (20154)",
+          "level enter (26200)",
+          "level time (26200)",
+          "level infusor (57562)",
+          "level conditional (26200)",
+          "level enter (34060)",
+          "level time (34060)",
+          "level infusor (74830)",
+          "level conditional (34060)",
+          "level enter (44278)",
+          "level time (44278)",
+          "level infusor (97279)",
+          "level conditional (44278)",
+          "level enter (57562)",
+          "level time (57562)",
+          "level infusor (126463)",
+          "level conditional (57562)",
+          "level enter (74830)",
+          "level time (74830)",
+          "level infusor (164401)",
+          "level conditional (74830)",
+          "level enter (97279)",
+          "level time (97279)",
+          "level infusor (213722)",
+          "level conditional (97279)",
+          "level enter (126463)",
+          "level time (126463)",
+          "level infusor (277838)",
+          "level conditional (126463)",
+          "level enter (164401)",
+          "level time (164401)",
+          "level conditional (164401)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 18
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 18
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 21
+          },
+          {
+            "type": "conditional",
+            "position": [
+              2,
+              0
+            ],
+            "level": 16
+          }
+        ],
+        "owned_levels": {
+          "enter": 38,
+          "time": 38,
+          "infusor": 40,
+          "conditional": 38
+        }
+      },
+      {
+        "session": 8,
+        "income": 157324885654356.0,
+        "balance_before_management": 157324885710401.03,
+        "balance_after_management": 157324885710401.03,
+        "total_income": 157324889051601.03,
+        "start_nous_per_second": 940625312408.581,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 38
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 38
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 40
+          },
+          {
+            "type": "conditional",
+            "position": [
+              2,
+              0
+            ],
+            "level": 38
+          }
+        ],
+        "owned_levels": {
+          "enter": 38,
+          "time": 38,
+          "infusor": 40,
+          "conditional": 38
+        },
+        "stop_reason": "Exceeded the exploratory 1e12 cumulative-nous range; not a game cap."
+      }
+    ],
+    "1.6": [
+      {
+        "session": 1,
+        "income": 60.0,
+        "balance_before_management": 60.0,
+        "balance_after_management": 60.0,
+        "total_income": 60.0,
+        "start_nous_per_second": 0.1,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0
+        }
+      },
+      {
+        "session": 2,
+        "income": 72.0,
+        "balance_before_management": 132.0,
+        "balance_after_management": 0.0,
+        "total_income": 132.0,
+        "start_nous_per_second": 0.12,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (10)",
+          "level enter (16)",
+          "buy additive (40)",
+          "level enter (26)",
+          "buy infusor (40)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 3,
+          "time": 0,
+          "additive": 0,
+          "infusor": 0
+        }
+      },
+      {
+        "session": 3,
+        "income": 203.472432,
+        "balance_before_management": 203.472432,
+        "balance_after_management": 8.472432,
+        "total_income": 335.472432,
+        "start_nous_per_second": 0.51907,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (41)",
+          "level time (10)",
+          "level infusor (10)",
+          "level additive (10)",
+          "level time (16)",
+          "level infusor (16)",
+          "level enter (66)",
+          "level time (26)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 3
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 5,
+          "time": 3,
+          "additive": 1,
+          "infusor": 2
+        }
+      },
+      {
+        "session": 4,
+        "income": 352.941093,
+        "balance_before_management": 361.413525,
+        "balance_after_management": 0.413525,
+        "total_income": 688.413525,
+        "start_nous_per_second": 0.933551,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level infusor (26)",
+          "level additive (16)",
+          "level enter (105)",
+          "level time (41)",
+          "level infusor (41)",
+          "level infusor (66)",
+          "level time (66)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 5
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 3
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 1
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 2
+          }
+        ],
+        "owned_levels": {
+          "enter": 6,
+          "time": 5,
+          "additive": 2,
+          "infusor": 5
+        }
+      },
+      {
+        "session": 5,
+        "income": 589.177492,
+        "balance_before_management": 589.591018,
+        "balance_after_management": 17.591018,
+        "total_income": 1277.591018,
+        "start_nous_per_second": 1.66403,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level additive (26)",
+          "level enter (168)",
+          "level infusor (105)",
+          "level time (105)",
+          "level infusor (168)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 6
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 5
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 2
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 5
+          }
+        ],
+        "owned_levels": {
+          "enter": 7,
+          "time": 6,
+          "additive": 3,
+          "infusor": 7
+        }
+      },
+      {
+        "session": 6,
+        "income": 934.399961,
+        "balance_before_management": 951.990978,
+        "balance_after_management": 33.990978,
+        "total_income": 2211.990978,
+        "start_nous_per_second": 2.787392,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (269)",
+          "level time (168)",
+          "level additive (41)",
+          "level infusor (269)",
+          "level additive (66)",
+          "level additive (105)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 7
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 6
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 3
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 7
+          }
+        ],
+        "owned_levels": {
+          "enter": 8,
+          "time": 7,
+          "additive": 6,
+          "infusor": 8
+        }
+      },
+      {
+        "session": 7,
+        "income": 1465.119466,
+        "balance_before_management": 1499.110444,
+        "balance_after_management": 202.110444,
+        "total_income": 3677.110444,
+        "start_nous_per_second": 4.492176,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level time (269)",
+          "level enter (430)",
+          "level infusor (430)",
+          "level additive (168)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 8
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 7
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 6
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 8
+          }
+        ],
+        "owned_levels": {
+          "enter": 9,
+          "time": 8,
+          "additive": 7,
+          "infusor": 9
+        }
+      },
+      {
+        "session": 8,
+        "income": 2250.305748,
+        "balance_before_management": 2452.416192,
+        "balance_after_management": 377.416192,
+        "total_income": 5927.416192,
+        "start_nous_per_second": 7.150543,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level time (430)",
+          "level enter (688)",
+          "level infusor (688)",
+          "level additive (269)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 9
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 8
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 7
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 9
+          }
+        ],
+        "owned_levels": {
+          "enter": 10,
+          "time": 9,
+          "additive": 8,
+          "infusor": 10
+        }
+      },
+      {
+        "session": 9,
+        "income": 3566.57911,
+        "balance_before_management": 3943.995302,
+        "balance_after_management": 625.995302,
+        "total_income": 9493.995302,
+        "start_nous_per_second": 11.753469,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level time (688)",
+          "level infusor (1100)",
+          "level enter (1100)",
+          "level additive (430)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 10
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 9
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 8
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 10
+          }
+        ],
+        "owned_levels": {
+          "enter": 11,
+          "time": 10,
+          "additive": 9,
+          "infusor": 11
+        }
+      },
+      {
+        "session": 10,
+        "income": 5831.765017,
+        "balance_before_management": 6457.760319,
+        "balance_after_management": 646.760319,
+        "total_income": 15325.760319,
+        "start_nous_per_second": 19.9235,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level time (1100)",
+          "level infusor (1760)",
+          "level enter (1760)",
+          "buy conditional (60)",
+          "level conditional (10)",
+          "level conditional (16)",
+          "level conditional (26)",
+          "level conditional (41)",
+          "level conditional (66)",
+          "level conditional (105)",
+          "level conditional (168)",
+          "level conditional (269)",
+          "level conditional (430)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 11
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 10
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 9
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 11
+          }
+        ],
+        "owned_levels": {
+          "enter": 12,
+          "time": 11,
+          "additive": 9,
+          "infusor": 12,
+          "conditional": 9
+        }
+      },
+      {
+        "session": 11,
+        "income": 13813.217104,
+        "balance_before_management": 14459.977424,
+        "balance_after_management": 777.977424,
+        "total_income": 29138.977424,
+        "start_nous_per_second": 56.329942,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level conditional (688)",
+          "level time (1760)",
+          "level infusor (2815)",
+          "level conditional (1100)",
+          "level enter (2815)",
+          "level infusor (4504)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 12
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 11
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 12
+          },
+          {
+            "type": "conditional",
+            "position": [
+              2,
+              0
+            ],
+            "level": 9
+          }
+        ],
+        "owned_levels": {
+          "enter": 13,
+          "time": 12,
+          "additive": 9,
+          "infusor": 14,
+          "conditional": 11
+        }
+      },
+      {
+        "session": 12,
+        "income": 35987.202292,
+        "balance_before_management": 36765.179715,
+        "balance_after_management": 1451.179715,
+        "total_income": 65126.179715,
+        "start_nous_per_second": 158.914155,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level time (2815)",
+          "level conditional (1760)",
+          "level enter (4504)",
+          "level infusor (7206)",
+          "level time (4504)",
+          "level conditional (2815)",
+          "level enter (7206)",
+          "level conditional (4504)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 13
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 12
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 14
+          },
+          {
+            "type": "conditional",
+            "position": [
+              2,
+              0
+            ],
+            "level": 11
+          }
+        ],
+        "owned_levels": {
+          "enter": 15,
+          "time": 14,
+          "additive": 9,
+          "infusor": 15,
+          "conditional": 14
+        }
+      }
+    ]
+  },
+  "paired_power_cost_sensitivity": {
+    "cost 1.15, common power 1.05": [
+      {
+        "session": 1,
+        "income": 60.0,
+        "balance_before_management": 60.0,
+        "balance_after_management": 60.0,
+        "total_income": 60.0,
+        "start_nous_per_second": 0.1,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0
+        }
+      },
+      {
+        "session": 2,
+        "income": 72.0,
+        "balance_before_management": 132.0,
+        "balance_after_management": 0.0,
+        "total_income": 132.0,
+        "start_nous_per_second": 0.12,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "buy additive (40)",
+          "buy infusor (40)",
+          "level enter (10)",
+          "level enter (12)",
+          "level enter (14)",
+          "level enter (16)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 4,
+          "time": 0,
+          "additive": 0,
+          "infusor": 0
+        }
+      },
+      {
+        "session": 3,
+        "income": 154.737351,
+        "balance_before_management": 154.737351,
+        "balance_after_management": 1.737351,
+        "total_income": 286.737351,
+        "start_nous_per_second": 0.39315,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (18)",
+          "level enter (21)",
+          "level enter (24)",
+          "level enter (27)",
+          "level enter (31)",
+          "level additive (10)",
+          "level time (10)",
+          "level additive (12)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 4
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 9,
+          "time": 1,
+          "additive": 2,
+          "infusor": 0
+        }
+      },
+      {
+        "session": 4,
+        "income": 192.548856,
+        "balance_before_management": 194.286208,
+        "balance_after_management": 8.286208,
+        "total_income": 479.286208,
+        "start_nous_per_second": 0.490355,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (36)",
+          "level enter (41)",
+          "level infusor (10)",
+          "level time (12)",
+          "level enter (47)",
+          "level infusor (12)",
+          "level time (14)",
+          "level additive (14)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 9
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 1
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 2
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 12,
+          "time": 3,
+          "additive": 3,
+          "infusor": 2
+        }
+      },
+      {
+        "session": 5,
+        "income": 226.842782,
+        "balance_before_management": 235.12899,
+        "balance_after_management": 0.12899,
+        "total_income": 706.12899,
+        "start_nous_per_second": 0.582494,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (54)",
+          "level infusor (14)",
+          "level time (16)",
+          "level enter (62)",
+          "level infusor (16)",
+          "level time (18)",
+          "level infusor (18)",
+          "level time (21)",
+          "level additive (16)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 12
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 3
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 3
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 2
+          }
+        ],
+        "owned_levels": {
+          "enter": 14,
+          "time": 6,
+          "additive": 4,
+          "infusor": 5
+        }
+      },
+      {
+        "session": 6,
+        "income": 264.491656,
+        "balance_before_management": 264.620646,
+        "balance_after_management": 0.620646,
+        "total_income": 970.620646,
+        "start_nous_per_second": 0.687877,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (71)",
+          "level infusor (21)",
+          "level time (24)",
+          "level additive (18)",
+          "level infusor (24)",
+          "level time (27)",
+          "level infusor (27)",
+          "level time (31)",
+          "level additive (21)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 14
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 6
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 4
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 5
+          }
+        ],
+        "owned_levels": {
+          "enter": 15,
+          "time": 9,
+          "additive": 6,
+          "infusor": 8
+        }
+      },
+      {
+        "session": 7,
+        "income": 302.44356,
+        "balance_before_management": 303.064206,
+        "balance_after_management": 0.064206,
+        "total_income": 1273.064206,
+        "start_nous_per_second": 0.797101,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (82)",
+          "level enter (94)",
+          "level infusor (31)",
+          "level time (36)",
+          "level infusor (36)",
+          "level additive (24)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 15
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 9
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 6
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 8
+          }
+        ],
+        "owned_levels": {
+          "enter": 17,
+          "time": 10,
+          "additive": 7,
+          "infusor": 10
+        }
+      },
+      {
+        "session": 8,
+        "income": 344.367653,
+        "balance_before_management": 344.431859,
+        "balance_after_management": 2.431859,
+        "total_income": 1617.431859,
+        "start_nous_per_second": 0.916737,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (108)",
+          "level time (41)",
+          "level infusor (41)",
+          "level time (47)",
+          "level infusor (47)",
+          "level additive (27)",
+          "level additive (31)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 17
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 10
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 7
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 10
+          }
+        ],
+        "owned_levels": {
+          "enter": 18,
+          "time": 12,
+          "additive": 9,
+          "infusor": 12
+        }
+      },
+      {
+        "session": 9,
+        "income": 387.784574,
+        "balance_before_management": 390.216433,
+        "balance_after_management": 15.216433,
+        "total_income": 2005.216433,
+        "start_nous_per_second": 1.043135,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (124)",
+          "level time (54)",
+          "level infusor (54)",
+          "level enter (143)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 18
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 12
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 9
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 12
+          }
+        ],
+        "owned_levels": {
+          "enter": 20,
+          "time": 13,
+          "additive": 9,
+          "infusor": 13
+        }
+      },
+      {
+        "session": 10,
+        "income": 433.995655,
+        "balance_before_management": 449.212088,
+        "balance_after_management": 19.212088,
+        "total_income": 2439.212088,
+        "start_nous_per_second": 1.176133,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level time (62)",
+          "level infusor (62)",
+          "level time (71)",
+          "level infusor (71)",
+          "level enter (164)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 20
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 13
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 9
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 13
+          }
+        ],
+        "owned_levels": {
+          "enter": 21,
+          "time": 15,
+          "additive": 9,
+          "infusor": 15
+        }
+      },
+      {
+        "session": 11,
+        "income": 484.80753,
+        "balance_before_management": 504.019617,
+        "balance_after_management": 21.019617,
+        "total_income": 2924.019617,
+        "start_nous_per_second": 1.331498,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level infusor (82)",
+          "level time (82)",
+          "level enter (189)",
+          "level additive (36)",
+          "level infusor (94)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 21
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 15
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 9
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 15
+          }
+        ],
+        "owned_levels": {
+          "enter": 22,
+          "time": 16,
+          "additive": 10,
+          "infusor": 17
+        }
+      },
+      {
+        "session": 12,
+        "income": 538.933765,
+        "balance_before_management": 559.953383,
+        "balance_after_management": 32.953383,
+        "total_income": 3462.953383,
+        "start_nous_per_second": 1.498256,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level time (94)",
+          "level enter (217)",
+          "level infusor (108)",
+          "level time (108)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 22
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 16
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 10
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 17
+          }
+        ],
+        "owned_levels": {
+          "enter": 23,
+          "time": 18,
+          "additive": 10,
+          "infusor": 18
+        }
+      }
+    ],
+    "cost 1.3, common power 1.1": [
+      {
+        "session": 1,
+        "income": 60.0,
+        "balance_before_management": 60.0,
+        "balance_after_management": 60.0,
+        "total_income": 60.0,
+        "start_nous_per_second": 0.1,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 0,
+        "actions": [],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 0,
+          "time": 0
+        }
+      },
+      {
+        "session": 2,
+        "income": 72.0,
+        "balance_before_management": 132.0,
+        "balance_after_management": 2.0,
+        "total_income": 132.0,
+        "start_nous_per_second": 0.12,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "buy additive (40)",
+          "level enter (10)",
+          "level enter (13)",
+          "buy infusor (40)",
+          "level enter (17)",
+          "level additive (10)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 0
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 3,
+          "time": 0,
+          "additive": 1,
+          "infusor": 0
+        }
+      },
+      {
+        "session": 3,
+        "income": 169.635114,
+        "balance_before_management": 171.635114,
+        "balance_after_management": 0.635114,
+        "total_income": 301.635114,
+        "start_nous_per_second": 0.430977,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (22)",
+          "level enter (29)",
+          "level enter (38)",
+          "level time (10)",
+          "level infusor (10)",
+          "level time (13)",
+          "level enter (49)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 3
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 0
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 1
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 0
+          }
+        ],
+        "owned_levels": {
+          "enter": 7,
+          "time": 2,
+          "additive": 1,
+          "infusor": 1
+        }
+      },
+      {
+        "session": 4,
+        "income": 242.130563,
+        "balance_before_management": 242.765677,
+        "balance_after_management": 0.765677,
+        "total_income": 543.765677,
+        "start_nous_per_second": 0.622952,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level infusor (13)",
+          "level additive (13)",
+          "level time (17)",
+          "level infusor (17)",
+          "level enter (63)",
+          "level time (22)",
+          "level infusor (22)",
+          "level additive (17)",
+          "level time (29)",
+          "level infusor (29)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 7
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 2
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 1
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 1
+          }
+        ],
+        "owned_levels": {
+          "enter": 8,
+          "time": 5,
+          "additive": 3,
+          "infusor": 5
+        }
+      },
+      {
+        "session": 5,
+        "income": 320.584459,
+        "balance_before_management": 321.350135,
+        "balance_after_management": 5.350135,
+        "total_income": 864.350135,
+        "start_nous_per_second": 0.852228,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level enter (82)",
+          "level time (38)",
+          "level additive (22)",
+          "level infusor (38)",
+          "level enter (107)",
+          "level additive (29)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 8
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 5
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 3
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 5
+          }
+        ],
+        "owned_levels": {
+          "enter": 10,
+          "time": 6,
+          "additive": 5,
+          "infusor": 6
+        }
+      },
+      {
+        "session": 6,
+        "income": 411.38736,
+        "balance_before_management": 416.737495,
+        "balance_after_management": 16.737495,
+        "total_income": 1275.737495,
+        "start_nous_per_second": 1.105476,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level time (49)",
+          "level infusor (49)",
+          "level enter (138)",
+          "level time (63)",
+          "level infusor (63)",
+          "level additive (38)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 10
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 6
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 5
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 6
+          }
+        ],
+        "owned_levels": {
+          "enter": 11,
+          "time": 8,
+          "additive": 6,
+          "infusor": 8
+        }
+      },
+      {
+        "session": 7,
+        "income": 517.576177,
+        "balance_before_management": 534.313672,
+        "balance_after_management": 34.313672,
+        "total_income": 1793.313672,
+        "start_nous_per_second": 1.424978,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level time (82)",
+          "level infusor (82)",
+          "level enter (180)",
+          "level infusor (107)",
+          "level additive (49)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 11
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 8
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 6
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 8
+          }
+        ],
+        "owned_levels": {
+          "enter": 12,
+          "time": 9,
+          "additive": 7,
+          "infusor": 10
+        }
+      },
+      {
+        "session": 8,
+        "income": 640.502153,
+        "balance_before_management": 674.815825,
+        "balance_after_management": 58.815825,
+        "total_income": 2433.815825,
+        "start_nous_per_second": 1.807712,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level time (107)",
+          "level enter (233)",
+          "level infusor (138)",
+          "level time (138)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 12
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 9
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 7
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 10
+          }
+        ],
+        "owned_levels": {
+          "enter": 13,
+          "time": 11,
+          "additive": 7,
+          "infusor": 11
+        }
+      },
+      {
+        "session": 9,
+        "income": 791.778154,
+        "balance_before_management": 850.593978,
+        "balance_after_management": 42.593978,
+        "total_income": 3225.593978,
+        "start_nous_per_second": 2.279836,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level infusor (180)",
+          "level enter (303)",
+          "level time (180)",
+          "level additive (63)",
+          "level additive (82)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 13
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 11
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 7
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 11
+          }
+        ],
+        "owned_levels": {
+          "enter": 14,
+          "time": 12,
+          "additive": 9,
+          "infusor": 12
+        }
+      },
+      {
+        "session": 10,
+        "income": 974.271309,
+        "balance_before_management": 1016.865288,
+        "balance_after_management": 49.865288,
+        "total_income": 4199.865288,
+        "start_nous_per_second": 2.846084,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level infusor (233)",
+          "level time (233)",
+          "level enter (394)",
+          "level additive (107)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 14
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 12
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 9
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 12
+          }
+        ],
+        "owned_levels": {
+          "enter": 15,
+          "time": 13,
+          "additive": 10,
+          "infusor": 13
+        }
+      },
+      {
+        "session": 11,
+        "income": 1190.333594,
+        "balance_before_management": 1240.198882,
+        "balance_after_management": 122.198882,
+        "total_income": 5390.198882,
+        "start_nous_per_second": 3.536302,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level infusor (303)",
+          "level time (303)",
+          "level enter (512)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 15
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 13
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 10
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 13
+          }
+        ],
+        "owned_levels": {
+          "enter": 16,
+          "time": 14,
+          "additive": 10,
+          "infusor": 14
+        }
+      },
+      {
+        "session": 12,
+        "income": 1446.46358,
+        "balance_before_management": 1568.662462,
+        "balance_after_management": 130.662462,
+        "total_income": 6836.662462,
+        "start_nous_per_second": 4.380723,
+        "rolls_banked": 0,
+        "forge_progress": 0.0,
+        "forge_next_threshold": 60.0,
+        "cells_earned": 0,
+        "expansion_progress": 0.0,
+        "expansion_next_threshold": 60.0,
+        "charge_seconds_banked": 60.0,
+        "actions": [
+          "level infusor (394)",
+          "level time (394)",
+          "level infusor (512)",
+          "level additive (138)"
+        ],
+        "deployed": [
+          {
+            "type": "enter",
+            "position": [
+              1,
+              -1
+            ],
+            "level": 16
+          },
+          {
+            "type": "time",
+            "position": [
+              1,
+              0
+            ],
+            "level": 14
+          },
+          {
+            "type": "additive",
+            "position": [
+              2,
+              0
+            ],
+            "level": 10
+          },
+          {
+            "type": "infusor",
+            "position": [
+              0,
+              0
+            ],
+            "level": 14
+          }
+        ],
+        "owned_levels": {
+          "enter": 16,
+          "time": 15,
+          "additive": 11,
+          "infusor": 16
+        }
+      }
+    ]
+  },
+  "combination": [
+    {
+      "input_level": 0,
+      "two_common_power": 2.0,
+      "one_uncommon_power": 1.0,
+      "refund": 0,
+      "reinvested_level": 0,
+      "reinvested_uncommon_power": 1.0,
+      "refund_left": 0
+    },
+    {
+      "input_level": 1,
+      "two_common_power": 2.4,
+      "one_uncommon_power": 1.25,
+      "refund": 10,
+      "reinvested_level": 1,
+      "reinvested_uncommon_power": 1.25,
+      "refund_left": 10
+    },
+    {
+      "input_level": 4,
+      "two_common_power": 4.1472,
+      "one_uncommon_power": 2.44140625,
+      "refund": 93,
+      "reinvested_level": 5,
+      "reinvested_uncommon_power": 3.0517578125,
+      "refund_left": 27
+    },
+    {
+      "input_level": 8,
+      "two_common_power": 8.599633919999997,
+      "one_uncommon_power": 5.9604644775390625,
+      "refund": 701,
+      "reinvested_level": 9,
+      "reinvested_uncommon_power": 7.450580596923828,
+      "refund_left": 271
+    },
+    {
+      "input_level": 12,
+      "two_common_power": 17.832200896511992,
+      "one_uncommon_power": 14.551915228366852,
+      "refund": 4679,
+      "reinvested_level": 13,
+      "reinvested_uncommon_power": 18.189894035458565,
+      "refund_left": 1864
+    },
+    {
+      "input_level": 17,
+      "two_common_power": 44.37222213480871,
+      "one_uncommon_power": 44.40892098500626,
+      "refund": 49181,
+      "reinvested_level": 18,
+      "reinvested_uncommon_power": 55.51115123125783,
+      "refund_left": 19666
+    }
+  ],
+  "rarity": {
+    "at_least_one_noncommon_per_roll": 0.029700999999999977,
+    "at_least_one_rare_per_roll": 0.002997000999999999
+  },
+  "upgrade_prices": [
+    10,
+    16,
+    26,
+    41,
+    66,
+    105,
+    168,
+    269,
+    430,
+    688,
+    1100,
+    1760
+  ]
+}
