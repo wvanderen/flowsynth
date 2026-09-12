@@ -1,21 +1,17 @@
-import { createInitialState } from "./state";
-import type { GameState, ModuleInstance, ModuleType, Hex } from "./types";
+import { createInitialState, createModule } from "./state";
+import { investment } from "./economy";
+import type { GameState, Hex, ModuleInstance, ModuleType } from "./types";
 
 export function fresh(): GameState {
   return createInitialState();
 }
 
 export function give(state: GameState, type: ModuleType, pos: Hex | null, level = 0): ModuleInstance {
-  const module: ModuleInstance = {
-    id: `m${state.nextId++}`,
-    type,
-    rarity: "common",
-    level,
-    invested: 0,
-    pos,
-    bursts: [],
-  };
-  if (level > 0) module.invested = level * 10;
+  const module: ModuleInstance = { ...createModule(state, type, "common"), pos };
+  if (level > 0) {
+    module.level = level;
+    module.invested = investment(level);
+  }
   state.modules.push(module);
   return module;
 }

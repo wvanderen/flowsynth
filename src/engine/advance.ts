@@ -43,7 +43,7 @@ export function advance(state: import("./types").GameState, seconds: number, rng
       state.totalEarned += gained;
       result.nousEarned += gained;
       if (snapshot.forgeRate > 0) {
-        result.rollsBanked += addForgeProgress(state, snapshot.forgeRate * step, rng).rollsBanked;
+        result.rollsBanked += addForgeProgress(state, snapshot.forgeRate * step, rng);
       }
       if (snapshot.expansionRate > 0) {
         result.cellsEarned += addExpansionProgress(state, snapshot.expansionRate * step);

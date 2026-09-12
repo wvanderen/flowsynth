@@ -1,6 +1,6 @@
 import { BALANCE, ROLL_POOL } from "./constants";
 import { newModuleId } from "./state";
-import type { Candidate, GameState, Meter, ModuleType, RollOffer } from "./types";
+import type { Candidate, GameState, ModuleType, RollOffer } from "./types";
 
 export type Rng = () => number;
 
@@ -30,22 +30,16 @@ export function expansionThreshold(earned: number): number {
   return BALANCE.expansionInitialThreshold * BALANCE.expansionThresholdGrowth ** earned;
 }
 
-export interface MeterResult {
-  rollsBanked: number;
-  cellsEarned: number;
-}
-
-export function addForgeProgress(state: GameState, amount: number, rng: Rng = Math.random): MeterResult {
+export function addForgeProgress(state: GameState, amount: number, rng: Rng = Math.random): number {
   state.forge.progress += amount;
   let rolls = 0;
-  let cells = 0;
   while (state.forge.progress + 1e-9 >= forgeThreshold(state.forge.earned)) {
     state.forge.progress = Math.max(0, state.forge.progress - forgeThreshold(state.forge.earned));
     state.forge.earned++;
     state.bankedRolls.push(generateOffer(state, rng));
     rolls++;
   }
-  return { rollsBanked: rolls, cellsEarned: cells };
+  return rolls;
 }
 
 export function addExpansionProgress(state: GameState, amount: number): number {
@@ -58,8 +52,4 @@ export function addExpansionProgress(state: GameState, amount: number): number {
     cells++;
   }
   return cells;
-}
-
-export function meterThreshold(meter: Meter, system: "forge" | "expansion"): number {
-  return system === "forge" ? forgeThreshold(meter.earned) : expansionThreshold(meter.earned);
 }

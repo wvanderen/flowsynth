@@ -17,6 +17,10 @@ export function sameHex(a: Hex, b: Hex): boolean {
   return a.q === b.q && a.r === b.r;
 }
 
+export function hexKey(h: Hex): string {
+  return `${h.q},${h.r}`;
+}
+
 export function adjacent(a: Hex, b: Hex): boolean {
   return DIRECTIONS.some(([dq, dr]) => a.q + dq === b.q && a.r + dr === b.r);
 }
@@ -27,13 +31,12 @@ export function neighbors(a: Hex): Hex[] {
 
 export function isConnected(cells: Hex[]): boolean {
   if (cells.length === 0) return true;
-  const key = (h: Hex) => `${h.q},${h.r}`;
-  const seen = new Set([key(cells[0])]);
+  const seen = new Set([hexKey(cells[0])]);
   const frontier = [cells[0]];
   while (frontier.length) {
     const current = frontier.pop()!;
     for (const n of neighbors(current)) {
-      const k = key(n);
+      const k = hexKey(n);
       if (seen.has(k)) continue;
       const match = cells.find((c) => sameHex(c, n));
       if (match) {

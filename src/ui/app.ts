@@ -42,8 +42,24 @@ interface LoadedSave {
   savedAt: number;
 }
 
+type ParsedSave = LoadedSave | { error: string };
+
+function parseSave(text: string): ParsedSave {
+  const result = deserialize(text);
+  if (result.error || !result.state) {
+    return { error: result.error ?? "unknown error" };
+  }
+  let savedAt = Date.now();
+  try {
+    savedAt = (JSON.parse(text) as { savedAt?: number }).savedAt ?? savedAt;
+  } catch {
+    // keep fallback
+  }
+  return { state: result.state, savedAt };
+}
+
 export class App {
-  state: GameState;
+  state: GameState = createInitialState();
   ui: UiState = {
     selected: null,
     placing: null,
@@ -63,16 +79,10 @@ export class App {
     this.els = els;
     this.dev = dev;
     const loaded = this.load();
-    this.state = loaded?.state ?? createInitialState();
-    if (this.state.mode === "flow" && loaded) {
-      const plan = planTick(loaded.savedAt, Date.now());
-      if (plan.pending !== null) {
-        this.state.pendingGap = { seconds: plan.pending, detectedAt: Date.now() };
-        this.ui.modal = "reconcile";
-      } else {
-        advance(this.state, plan.apply);
-        this.lastWall = Date.now();
-      }
+    if (loaded) {
+      this.resumeFromSave(loaded);
+    } else {
+      this.state = createInitialState();
     }
     this.bindGlobalEvents();
     this.greet();
@@ -84,20 +94,31 @@ export class App {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
-      const result = deserialize(raw);
-      if (result.error || !result.state) {
-        this.say(`Could not load the local save: ${result.error ?? "unknown error"}. A fresh instrument was created.`);
+      const parsed = parseSave(raw);
+      if ("error" in parsed) {
+        this.say(`Could not load the local save: ${parsed.error}. A fresh instrument was created.`);
         return null;
       }
-      let savedAt = Date.now();
-      try {
-        savedAt = (JSON.parse(raw) as { savedAt?: number }).savedAt ?? savedAt;
-      } catch {
-        // keep fallback
-      }
-      return { state: result.state, savedAt };
+      return parsed;
     } catch {
       return null;
+    }
+  }
+
+  // Resumes an in-flow session from a save: ordinary background time applies
+  // silently; extended gaps (sleep, closure, import) freeze for confirmation
+  // instead of finalizing silently.
+  private resumeFromSave(loaded: LoadedSave): void {
+    this.state = loaded.state;
+    this.lastWall = null;
+    if (this.state.mode !== "flow") return;
+    const plan = planTick(loaded.savedAt, Date.now());
+    if (plan.pending !== null) {
+      this.state.pendingGap = { seconds: plan.pending, detectedAt: Date.now() };
+      this.ui.modal = "reconcile";
+    } else {
+      advance(this.state, plan.apply);
+      this.lastWall = Date.now();
     }
   }
 
@@ -115,21 +136,24 @@ export class App {
   }
 
   importText(text: string): boolean {
-    const result = deserialize(text);
-    if (result.error || !result.state) {
-      this.ui.importError = result.error ?? "Unknown import error.";
+    const parsed = parseSave(text);
+    if ("error" in parsed) {
+      this.ui.importError = parsed.error;
       this.render();
       return false;
     }
-    this.state = result.state;
     this.ui.selected = null;
     this.ui.placing = null;
     this.ui.managing = false;
     this.ui.reshape = null;
     this.ui.modal = null;
     this.ui.importError = null;
-    this.lastWall = this.state.mode === "flow" ? Date.now() : null;
-    this.say("Save imported. Everything is where you left it.");
+    this.resumeFromSave(parsed);
+    this.say(
+      this.state.pendingGap
+        ? "Save imported while a session was running. Confirm the away interval before it counts."
+        : "Save imported. Everything is where you left it.",
+    );
     this.save();
     this.render();
     return true;
@@ -418,6 +442,14 @@ export class App {
     this.render();
   }
 
+  private stagedCells(): Hex[] | null {
+    const stage = this.ui.reshape;
+    if (!stage) return null;
+    return this.state.cells
+      .filter((c) => !stage.removes.some((r) => sameHex(r, c)))
+      .concat(stage.adds);
+  }
+
   reshapeValidity(): { ok: boolean; message: string } {
     const stage = this.ui.reshape;
     if (!stage) return { ok: false, message: "" };
@@ -427,9 +459,8 @@ export class App {
     if (stage.adds.length !== stage.removes.length) {
       return { ok: false, message: `Unbalanced: −${stage.removes.length} removed, +${stage.adds.length} added.` };
     }
-    const next = this.state.cells
-      .filter((c) => !stage.removes.some((r) => sameHex(r, c)))
-      .concat(stage.adds);
+    const next = this.stagedCells();
+    if (!next) return { ok: false, message: "" };
     const keys = new Set(next.map((c) => `${c.q},${c.r}`));
     if (keys.size !== next.length) return { ok: false, message: "Duplicate cells staged." };
     const probe = structuredClone(this.state);
@@ -439,11 +470,8 @@ export class App {
   }
 
   applyReshape(): void {
-    const stage = this.ui.reshape;
-    if (!stage) return;
-    const next = this.state.cells
-      .filter((c) => !stage.removes.some((r) => sameHex(r, c)))
-      .concat(stage.adds);
+    const next = this.stagedCells();
+    if (!next) return;
     if (this.act(reshapeCells(this.state, next), "Board reshaped. Modules keep their positions.")) {
       this.ui.reshape = null;
     }

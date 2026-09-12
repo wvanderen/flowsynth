@@ -1,16 +1,17 @@
-import { chargedFactor, computeRates, isActive, isCore, levelCost, modulePower } from "../engine/economy";
+import { chargedFactor, computeRates, isActive, isCore, levelCost, modulePower, wholeNous } from "../engine/economy";
 import { deployedAt, deployedTime, chargeSecondsRemaining, chargeActive } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold, expansionThreshold } from "../engine/rolls";
 import { BALANCE } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
-import type { GameState, Hex, ModuleInstance } from "../engine/types";
+import type { GameState, Hex, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
 import { moduleIcon } from "./icons";
 import { DURATION_OPTIONS, META, RARITY_LABEL, fmt, fmtWhole } from "./meta";
 
 const HEX_RADIUS = 61;
 const SPACING = 65;
+const DRAG_THRESHOLD_PX = 6;
 
 function point({ q, r }: Hex): [number, number] {
   return [Math.sqrt(3) * SPACING * (q + r / 2), SPACING * 1.5 * r];
@@ -30,14 +31,8 @@ function byId(id: string): HTMLElement | null {
 // The rate shown in the header, formula bar, and hexes: live during flow,
 // idle build rate while arranging in upgrade mode. Module panels preview
 // charge separately via computeRates(state, true).
-function currentSnapshot(state: Parameters<typeof computeRates>[0]): ReturnType<typeof computeRates> {
+function currentSnapshot(state: GameState): RateSnapshot {
   return computeRates(state, state.mode === "upgrade" ? false : undefined);
-}
-
-function el(html: string): HTMLDivElement {
-  const wrapper = document.createElement("div");
-  wrapper.innerHTML = html.trim();
-  return wrapper.firstElementChild as HTMLDivElement;
 }
 
 function stat(label: string, value: string): string {
@@ -71,6 +66,20 @@ export function render(app: App): void {
 
 /* ── Top toolbar ───────────────────────────────────── */
 
+function durationOptionsHtml(app: App): string {
+  return DURATION_OPTIONS.map(
+    (o) => `<option value="${o.value === null ? "open" : o.value}" ${app.ui.chosenTarget === o.value ? "selected" : ""}>${o.label}</option>`,
+  ).join("");
+}
+
+function bindDurationSelect(app: App, select: HTMLElement | null): void {
+  select?.addEventListener("change", () => {
+    const v = (select as HTMLSelectElement).value;
+    app.ui.chosenTarget = v === "open" ? null : Number(v);
+    app.render();
+  });
+}
+
 function renderSessionToolbar(app: App): void {
   const { state } = app;
   const host = byId("session-toolbar");
@@ -85,19 +94,12 @@ function renderSessionToolbar(app: App): void {
       </div>
       <div class="config">
         <label class="config-label" for="duration">Session duration</label>
-        <select id="duration">${DURATION_OPTIONS.map(
-          (o) => `<option value="${o.value === null ? "open" : o.value}" ${app.ui.chosenTarget === o.value ? "selected" : ""}>${o.label}</option>`,
-        ).join("")}</select>
+        <select id="duration">${durationOptionsHtml(app)}</select>
       </div>
       <div class="session-actions">
         <button class="primary" id="start-flow">Enter flow ↗</button>
       </div>`;
-    const select = byId("duration");
-    select?.addEventListener("change", () => {
-      const v = (select as HTMLSelectElement).value;
-      app.ui.chosenTarget = v === "open" ? null : Number(v);
-      app.render();
-    });
+    bindDurationSelect(app, byId("duration"));
     byId("start-flow")?.addEventListener("click", () => app.startFlow());
     return;
   }
@@ -408,27 +410,40 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
     svg.querySelectorAll<SVGGElement>(".cell-node").forEach((node) => {
       const cell = node.getAttribute("data-cell")!.split(",").map(Number);
       const module = deployedAt(app.state, { q: cell[0]!, r: cell[1]! });
-      if (module) bindDrag(app, node, module.id);
+      if (module) bindPointerDrag(app, node, module.id);
     });
   }
 }
 
-function bindDrag(app: App, node: Element, id: string): void {
-  node.addEventListener("pointerdown", (baseEvent: Event) => {
+// Shared pointer-drag binding for grid modules and inventory items: shows a
+// ghost after a small threshold, then drops onto a cell (place) or the
+// inventory zone (return). Click-placement stays available without dragging.
+function bindPointerDrag(app: App, element: Element, id: string): void {
+  element.addEventListener("pointerdown", (baseEvent: Event) => {
     const event = baseEvent as PointerEvent;
     if (event.button !== 0 || (event.target as Element).closest("[data-hex-action]")) return;
     const startX = event.clientX;
     const startY = event.clientY;
     let moved = false;
     let ghost: HTMLDivElement | null = null;
+
+    const suppressNextClick = () => {
+      const suppress = (clickEvent: Event) => {
+        clickEvent.preventDefault();
+        clickEvent.stopImmediatePropagation();
+      };
+      document.addEventListener("click", suppress, { capture: true, once: true });
+      setTimeout(() => document.removeEventListener("click", suppress, true), 0);
+    };
     const move = (ev: PointerEvent) => {
-      if (!moved && Math.hypot(ev.clientX - startX, ev.clientY - startY) > 6) {
+      if (!moved && Math.hypot(ev.clientX - startX, ev.clientY - startY) > DRAG_THRESHOLD_PX) {
         moved = true;
+        const module = app.state.modules.find((m) => m.id === id);
         ghost = document.createElement("div");
         ghost.className = "drag-ghost";
-        ghost.textContent = META[app.state.modules.find((m) => m.id === id)!.type].name;
+        ghost.textContent = module ? META[module.type].name : "Module";
         document.body.append(ghost);
-        node.classList.add("dragging");
+        element.classList.add("dragging");
       }
       if (ghost) {
         ghost.style.left = `${ev.clientX + 12}px`;
@@ -440,13 +455,12 @@ function bindDrag(app: App, node: Element, id: string): void {
       document.removeEventListener("pointerup", up);
       document.removeEventListener("pointercancel", cancel);
       ghost?.remove();
-      node.classList.remove("dragging");
+      element.classList.remove("dragging");
       if (!apply || !moved) return;
-      document.addEventListener("click", suppressClick, { capture: true, once: true });
+      suppressNextClick();
       const target = document.elementFromPoint(ev.clientX, ev.clientY);
-      const zone = target?.closest("#inventory-zone");
       const cellNode = target?.closest("[data-cell]");
-      if (zone) {
+      if (target?.closest("#inventory-zone")) {
         app.returnToInventory(id);
       } else if (cellNode) {
         const cell = cellNode.getAttribute("data-cell")!.split(",").map(Number);
@@ -455,10 +469,6 @@ function bindDrag(app: App, node: Element, id: string): void {
     };
     const up = (ev: PointerEvent) => finish(ev, true);
     const cancel = () => finish(new PointerEvent("pointerup"), false);
-    const suppressClick = (clickEvent: Event) => {
-      clickEvent.preventDefault();
-      clickEvent.stopImmediatePropagation();
-    };
     document.addEventListener("pointermove", move);
     document.addEventListener("pointerup", up);
     document.addEventListener("pointercancel", cancel);
@@ -576,7 +586,7 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
   const growth = BALANCE.rarityPower[module.rarity];
   const cost = levelCost(module.level);
   const canUpgrade = upgrade && active && state.storeOpened;
-  const affordable = Math.floor(state.nous + 1e-9) >= cost;
+  const affordable = wholeNous(state) >= cost;
   const partner = state.modules.find((m) => m.id !== module.id && m.type === module.type && m.rarity === module.rarity);
   const time = deployedTime(state);
   const neighborStrength = deployed && time?.pos && module.pos && state.timeActive && active && adjacent(module.pos, time.pos)
@@ -596,7 +606,7 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       <span class="eyebrow">FOCUS CONTROLS</span>
       <label class="config-label" for="panel-duration">Session duration</label>
       <select id="panel-duration" ${upgrade ? "" : "disabled"}>
-        ${DURATION_OPTIONS.map((o) => `<option value="${o.value === null ? "open" : o.value}" ${app.ui.chosenTarget === o.value ? "selected" : ""}>${o.label}</option>`).join("")}
+        ${durationOptionsHtml(app)}
       </select>
       ${!upgrade && state.session ? stat("Elapsed", formatClock(state.session.elapsed)) : ""}
     </section>`;
@@ -667,12 +677,7 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
   byId("panel-flow")?.addEventListener("click", () => app.startFlow());
   byId("panel-end")?.addEventListener("click", () => app.endFlow());
   byId("panel-pause")?.addEventListener("click", () => (state.mode === "paused" ? app.resume() : app.pause()));
-  const duration = byId("panel-duration");
-  duration?.addEventListener("change", () => {
-    const v = (duration as HTMLSelectElement).value;
-    app.ui.chosenTarget = v === "open" ? null : Number(v);
-    app.render();
-  });
+  bindDurationSelect(app, byId("panel-duration"));
 }
 
 function effectTextFor(module: ModuleInstance, value: number, strength: number): string {
@@ -748,58 +753,10 @@ function renderManagePanel(app: App, host: HTMLElement): void {
   host.querySelectorAll<HTMLButtonElement>("[data-inv]").forEach((button) => {
     const id = button.getAttribute("data-inv")!;
     button.addEventListener("click", () => app.beginPlacing(id));
-    bindInventoryDrag(app, button, id);
+    bindPointerDrag(app, button, id);
   });
   const zone = byId("inventory-zone");
   zone?.addEventListener("dragover", (e) => e.preventDefault());
-}
-
-function bindInventoryDrag(app: App, button: HTMLButtonElement, id: string): void {
-  button.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0) return;
-    const startX = event.clientX;
-    const startY = event.clientY;
-    let moved = false;
-    let ghost: HTMLDivElement | null = null;
-    const move = (ev: PointerEvent) => {
-      if (!moved && Math.hypot(ev.clientX - startX, ev.clientY - startY) > 6) {
-        moved = true;
-        ghost = document.createElement("div");
-        ghost.className = "drag-ghost";
-        ghost.textContent = META[app.state.modules.find((m) => m.id === id)!.type].name;
-        document.body.append(ghost);
-        button.classList.add("dragging");
-      }
-      if (ghost) {
-        ghost.style.left = `${ev.clientX + 12}px`;
-        ghost.style.top = `${ev.clientY + 12}px`;
-      }
-    };
-    const finish = (ev: PointerEvent, apply: boolean) => {
-      document.removeEventListener("pointermove", move);
-      document.removeEventListener("pointerup", up);
-      document.removeEventListener("pointercancel", cancel);
-      ghost?.remove();
-      button.classList.remove("dragging");
-      if (!apply || !moved) return;
-      document.addEventListener("click", suppressClick, { capture: true, once: true });
-      const target = document.elementFromPoint(ev.clientX, ev.clientY);
-      const cellNode = target?.closest("[data-cell]");
-      if (cellNode) {
-        const cell = cellNode.getAttribute("data-cell")!.split(",").map(Number);
-        app.pickCellThenPlace(id, { q: cell[0]!, r: cell[1]! });
-      }
-    };
-    const up = (ev: PointerEvent) => finish(ev, true);
-    const cancel = () => finish(new PointerEvent("pointerup"), false);
-    const suppressClick = (clickEvent: Event) => {
-      clickEvent.preventDefault();
-      clickEvent.stopImmediatePropagation();
-    };
-    document.addEventListener("pointermove", move);
-    document.addEventListener("pointerup", up);
-    document.addEventListener("pointercancel", cancel);
-  });
 }
 
 /* ── Modals ────────────────────────────────────────── */
@@ -843,7 +800,7 @@ function renderStoreModal(app: App, content: HTMLElement): void {
         .map((type) => {
           const price = BALANCE.starterPrices[type];
           const owned = state.purchased[type];
-          const affordable = Math.floor(state.nous + 1e-9) >= price;
+          const affordable = wholeNous(state) >= price;
           return `<div class="shop-item">
             <div><h3>${META[type].name}</h3><small>${META[type].role}</small></div>
             <button class="primary" data-buy="${type}" ${owned || !affordable ? "disabled" : ""}>${owned ? "Acquired" : `${price} ν`}</button>
@@ -989,8 +946,10 @@ function renderDev(app: App): void {
     return;
   }
   if (!panel) {
-    panel = el(`<div class="dev-panel" id="dev-panel"><span>DEV</span></div>`);
-    document.body.append(panel!);
+    panel = document.createElement("div");
+    panel.className = "dev-panel";
+    panel.id = "dev-panel";
+    document.body.append(panel);
   }
   panel.innerHTML = `<span>DEV</span>
     <button data-dev="60">+1m</button>

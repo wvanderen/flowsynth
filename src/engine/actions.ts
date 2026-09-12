@@ -1,8 +1,9 @@
 import { BALANCE, NEXT_RARITY } from "./constants";
-import { advance, pushBurst } from "./advance";
+import { pushBurst } from "./advance";
 import { deployedAt, findModule, isActive, isCore, levelCost, wholeNous } from "./economy";
-import { adjacent, isConnected, sameHex } from "./hex";
-import type { Burst, GameState, Hex, ModuleInstance, StarterType } from "./types";
+import { adjacent, hexKey, isConnected, sameHex } from "./hex";
+import { createModule } from "./state";
+import type { GameState, Hex, ModuleInstance, StarterType } from "./types";
 
 export interface ActionResult {
   ok: boolean;
@@ -18,7 +19,6 @@ function fail(reason: string): ActionResult {
 
 export function startSession(state: GameState, target: number | null): ActionResult {
   if (state.mode !== "upgrade") return fail("A session is already running.");
-  if (target !== null && target < 60) return fail("Timed sessions need at least one minute.");
   state.sessionIndex++;
   state.mode = "flow";
   state.session = { target, elapsed: 0, burstAwarded: false };
@@ -56,15 +56,7 @@ export function buyStarter(state: GameState, type: StarterType): ActionResult {
   if (wholeNous(state) < price) return fail("Not enough whole nous.");
   state.nous -= price;
   state.purchased[type] = true;
-  state.modules.push({
-    id: `m${state.nextId++}`,
-    type,
-    rarity: "common",
-    level: 0,
-    invested: 0,
-    pos: null,
-    bursts: [],
-  });
+  state.modules.push(createModule(state, type, "common"));
   return ok;
 }
 
@@ -179,10 +171,10 @@ export function placeCell(state: GameState, pos: Hex): ActionResult {
 export function reshapeCells(state: GameState, next: Hex[]): ActionResult {
   if (state.mode !== "upgrade") return fail("Reshaping happens between sessions.");
   if (next.length !== state.cells.length) return fail("Reshaping preserves the cell count.");
-  const keys = new Set(next.map((c) => `${c.q},${c.r}`));
+  const keys = new Set(next.map(hexKey));
   if (keys.size !== next.length) return fail("Duplicate cells in the proposed shape.");
   for (const module of state.modules) {
-    if (module.pos !== null && !keys.has(`${module.pos.q},${module.pos.r}`)) {
+    if (module.pos !== null && !keys.has(hexKey(module.pos))) {
       return fail("Every deployed module needs a cell.");
     }
   }
@@ -199,21 +191,6 @@ export function chooseRoll(state: GameState, offerId: string, candidateId: strin
   const candidate = offer.candidates.find((c) => c.id === candidateId);
   if (!candidate) return fail("That candidate is not part of this roll.");
   state.bankedRolls.splice(index, 1);
-  state.modules.push({
-    id: `m${state.nextId++}`,
-    type: candidate.type,
-    rarity: candidate.rarity,
-    level: 0,
-    invested: 0,
-    pos: null,
-    bursts: [] as Burst[],
-  });
+  state.modules.push(createModule(state, candidate.type, candidate.rarity));
   return ok;
 }
-
-export function grantBurstForTesting(state: GameState, strength: number, seconds: number): void {
-  const time = state.modules.find((m) => m.type === "time" && m.pos !== null);
-  if (time) pushBurst(time, { strength, seconds });
-}
-
-export { advance };

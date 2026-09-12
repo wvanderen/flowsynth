@@ -26,10 +26,6 @@ export function fmtWhole(n: number): string {
   return Math.floor(n + 1e-9).toLocaleString();
 }
 
-export function fmtMultiplier(n: number): string {
-  return `×${fmt(n, 3)}`;
-}
-
 export const DURATION_OPTIONS: { label: string; value: number | null }[] = [
   { label: "10 minutes", value: 600 },
   { label: "15 minutes", value: 900 },

@@ -102,6 +102,13 @@ describe("session rules", () => {
     expect(s.session?.burstAwarded).toBe(true);
   });
 
+  it("accepts any timed duration; presets are a UI concern, not an engine rule", () => {
+    const s = fresh();
+    expect(startSession(s, 30).ok).toBe(true);
+    const result = advance(s, 30);
+    expect(result.nousEarned).toBeCloseTo(3, 6);
+  });
+
   it("the first session neither multiplies nor awards a burst", () => {
     const s = fresh();
     startSession(s, 600);
