@@ -15,7 +15,7 @@ import {
   upgradeModule,
   type ActionResult,
 } from "../engine/actions";
-import { chargeSecondsRemaining, deployedTime, wholeNous } from "../engine/economy";
+import { chargeSecondsRemaining, deployedTime, isCore, wholeNous } from "../engine/economy";
 import { adjacent, neighbors, sameHex } from "../engine/hex";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
 import { planTick } from "../engine/clock";
@@ -35,6 +35,7 @@ export interface UiState {
   importText: string;
   importError: string | null;
   chosenTarget: number | null;
+  showAcquired: boolean;
 }
 
 interface LoadedSave {
@@ -69,6 +70,7 @@ export class App {
     importText: "",
     importError: null,
     chosenTarget: 600,
+    showAcquired: false,
   };
   lastWall: number | null = null;
   lastSaveWall = 0;
@@ -389,11 +391,41 @@ export class App {
     if (!candidate) return;
     if (this.act(chooseRoll(this.state, offerId, candidateId), "")) {
       const added = this.state.modules[this.state.modules.length - 1]!;
+      this.ui.modal = null;
+      this.ui.managing = true;
+      this.ui.reshape = null;
       this.ui.selected = added.id;
       this.ui.placing = added.id;
-      this.ui.modal = this.state.bankedRolls.length > 0 ? "forge" : null;
-      this.say(`${META[candidate.type].name} added. Choose a cell for it, or keep it in inventory.`);
+      const more = this.state.bankedRolls.length > 0 ? ` ${this.state.bankedRolls.length} more choice${this.state.bankedRolls.length === 1 ? "" : "s"} wait in the Forge.` : "";
+      this.say(`${META[candidate.type].name} added. Click a cell to place it; right-click keeps it in inventory.${more}`);
       this.render();
+    }
+  }
+
+  cancelPlacing(): void {
+    const id = this.ui.placing;
+    this.ui.placing = null;
+    if (id && id !== "cell") {
+      const module = this.state.modules.find((m) => m.id === id);
+      if (module) {
+        this.say(module.pos === null ? `${META[module.type].name} kept in inventory.` : `Move cancelled; ${META[module.type].name} stays deployed.`);
+      }
+    } else {
+      this.say("Cell placement cancelled.");
+    }
+    this.render();
+  }
+
+  rightClickCell(pos: Hex): void {
+    if (this.state.mode !== "upgrade") return;
+    if (this.ui.reshape) return;
+    if (this.ui.placing) {
+      this.cancelPlacing();
+      return;
+    }
+    if (this.ui.managing) {
+      const occupant = this.state.modules.find((m) => m.pos !== null && sameHex(m.pos, pos));
+      if (occupant && !isCore(occupant)) this.returnToInventory(occupant.id);
     }
   }
 

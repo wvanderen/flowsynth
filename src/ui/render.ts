@@ -41,14 +41,18 @@ function stat(label: string, value: string): string {
   return `<div class="stat-row"><span>${label}</span><span class="mono">${value}</span></div>`;
 }
 
-function meterBar(progress: number, threshold: number, system: "forge" | "expansion", state: GameState): string {
+function statLive(id: string, label: string, value: string): string {
+  return `<div class="stat-row"><span>${label}</span><span class="mono" data-live="${id}">${value}</span></div>`;
+}
+
+function meterBar(system: "forge" | "expansion", state: GameState, progress: number, threshold: number): string {
   const text = system === "forge" ? "Next Forge roll" : "Next grid cell";
   const note =
     system === "forge"
       ? `All deployed Forges feed one shared meter · ${state.forge.earned} earned`
       : `All deployed expanders feed one shared meter · ${state.expansion.earned} earned`;
-  return `<div class="overview-meter" title="${note}">${stat(text, `${fmt(Math.max(0, progress), 1)} / ${fmt(threshold, 1)}`)}
-    <progress aria-label="${text}" value="${Math.min(1, Math.max(0, progress / threshold))}" max="1"></progress></div>`;
+  return `<div class="overview-meter" title="${note}">${statLive(system, text, `${fmt(Math.max(0, progress), 1)} / ${fmt(threshold, 1)}`)}
+    <progress data-live="${system}-bar" aria-label="${text}" value="${Math.min(1, Math.max(0, progress / threshold))}" max="1"></progress></div>`;
 }
 
 export function render(app: App): void {
@@ -94,11 +98,18 @@ function renderSessionToolbar(app: App): void {
     app.ui.placing = null;
     app.render();
   });
+
   if (upgrade) {
-    host.innerHTML = `<div><p class="session-clock mono">${app.ui.chosenTarget === null ? "∞" : formatClock(app.ui.chosenTarget)}</p><p class="clock-caption">${app.ui.chosenTarget === null ? "Open-ended" : "Planned practice"}</p></div>
-      ${shortcut}<div class="session-actions"><button class="primary" id="start-flow">Enter flow ↗</button></div>`;
-    bindShortcut();
-    byId("start-flow")?.addEventListener("click", () => app.startFlow());
+    // Structural key: only rebuild when the shape of the toolbar changes, so
+    // button nodes (and in-flight clicks) survive clock ticks.
+    const key = `upgrade:${app.ui.chosenTarget}`;
+    if (host.dataset.renderKey !== key) {
+      host.dataset.renderKey = key;
+      host.innerHTML = `<div><p class="session-clock mono">${app.ui.chosenTarget === null ? "∞" : formatClock(app.ui.chosenTarget)}</p><p class="clock-caption">${app.ui.chosenTarget === null ? "Open-ended" : "Planned practice"}</p></div>
+        ${shortcut}<div class="session-actions"><button class="primary" id="start-flow">Enter flow ↗</button></div>`;
+      bindShortcut();
+      byId("start-flow")?.addEventListener("click", () => app.startFlow());
+    }
     return;
   }
 
@@ -106,34 +117,52 @@ function renderSessionToolbar(app: App): void {
   const elapsed = session?.elapsed ?? 0;
   const target = session?.target ?? null;
   const paused = state.mode === "paused";
+  const reached = target !== null && elapsed >= target;
+  const banked = chargeSecondsRemaining(state);
+  const dispensing = chargeActive(state) && !paused;
+
+  const key = `flow:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}`;
+  if (host.dataset.renderKey !== key) {
+    host.dataset.renderKey = key;
+    host.innerHTML = `
+      <div>
+        <p class="session-clock mono" id="session-clock">${formatClock(elapsed)}</p>
+        <p class="clock-caption" id="session-caption"></p>
+        <div class="time-track"><span id="time-track-fill" style="width:0%"></span></div>
+      </div>
+      ${shortcut}<div class="charge-bank">
+        <span class="config-label">Charge bank</span>
+        <strong class="mono" id="charge-bank-value" style="font-size:17px"></strong>
+        <p class="clock-caption" id="charge-bank-caption"></p>
+      </div>
+      <div class="session-actions">
+        <button id="pause-flow">${paused ? "Resume" : "Pause"}</button>
+        <button class="primary" id="end-flow">End flow</button>
+      </div>`;
+    bindShortcut();
+    byId("pause-flow")?.addEventListener("click", () => (state.mode === "paused" ? app.resume() : app.pause()));
+    byId("end-flow")?.addEventListener("click", () => app.endFlow());
+  }
+
+  // Live values update in place; the buttons above are never replaced by ticks.
   const caption = paused
     ? "Paused · progress preserved"
     : target === null
       ? "Open-ended practice"
-      : elapsed >= target
+      : reached
         ? "Target reached · continue freely"
         : `of ${formatClock(target)} planned`;
-  const banked = chargeSecondsRemaining(state);
-  const dispensing = chargeActive(state) && !paused;
-
-  host.innerHTML = `
-    <div>
-      <p class="session-clock mono" id="session-clock">${formatClock(elapsed)}</p>
-      <p class="clock-caption">${caption}</p>
-      <div class="time-track"><span style="width:${target ? Math.min(100, (elapsed / target) * 100) : 0}%"></span></div>
-    </div>
-    ${shortcut}<div class="charge-bank">
-      <span class="config-label">Charge bank</span>
-      <strong class="mono" style="font-size:17px">${Math.ceil(banked)}s</strong>
-      <p class="clock-caption">${dispensing ? "→ dispensing now" : paused ? "frozen while paused" : "waiting / banked"}</p>
-    </div>
-    <div class="session-actions">
-      <button id="pause-flow">${paused ? "Resume" : "Pause"}</button>
-      <button class="primary" id="end-flow">End flow</button>
-    </div>`;
-  bindShortcut();
-  byId("pause-flow")?.addEventListener("click", () => (paused ? app.resume() : app.pause()));
-  byId("end-flow")?.addEventListener("click", () => app.endFlow());
+  const set = (id: string, text: string) => {
+    const node = byId(id);
+    if (node && node.textContent !== text) node.textContent = text;
+  };
+  set("session-clock", formatClock(elapsed));
+  set("session-caption", caption);
+  set("charge-bank-value", `${Math.ceil(banked)}s`);
+  set("charge-bank-caption", dispensing ? "→ dispensing now" : paused ? "frozen while paused" : "waiting / banked");
+  const track = byId("time-track-fill");
+  const width = target ? `${Math.min(100, (elapsed / target) * 100)}%` : "0%";
+  if (track && track.style.width !== width) track.style.width = width;
 }
 
 function renderAccounting(app: App): void {
@@ -149,15 +178,19 @@ function renderAccounting(app: App): void {
 }
 
 function renderTools(app: App): void {
-  const { state } = app;
+  const { state, ui } = app;
   const host = byId("board-tools");
   if (!host) return;
   const upgrade = state.mode === "upgrade";
   const storeReady = state.storeOpened;
+  const key = JSON.stringify([upgrade, storeReady, state.bankedRolls.length, state.cellTokens, ui.managing]);
+  if (host.dataset.renderKey === key) return;
+  host.dataset.renderKey = key;
+  const cellBadge = state.cellTokens > 0 ? ` · ${state.cellTokens}` : "";
   host.innerHTML = `
     <button class="small" id="tool-store" ${upgrade && storeReady ? "" : "disabled"} title="${storeReady ? "Starter copies" : "Opens after your first completed timed target"}">Store</button>
     <button class="small" id="tool-forge" ${upgrade ? "" : "disabled"}>Forge · ${state.bankedRolls.length}</button>
-    <button class="small" id="tool-manage" ${upgrade ? "" : "disabled"}>Grid &amp; inventory</button>
+    <button class="small" id="tool-manage" ${upgrade ? "" : "disabled"} title="${ui.managing ? "Back to the inspector" : "Move modules, place earned cells"}">Grid &amp; inventory${cellBadge}</button>
     <button class="small" id="tool-settings">Settings</button>`;
   byId("tool-settings")?.addEventListener("click", () => app.openModal("settings"));
   byId("tool-store")?.addEventListener("click", () => app.openModal("store"));
@@ -295,13 +328,12 @@ function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderCont
     }
   }
 
-  let ring = "";
-  if (module.type === "forge") {
-    const p = state.forge.progress / forgeThreshold(state.forge.earned);
-    ring = ringShape(p);
-  } else if (module.type === "expander") {
-    const p = state.expansion.progress / expansionThreshold(state.expansion.earned);
-    ring = ringShape(p);
+  // Water-fill: threshold progress rises inside the hex like liquid filling.
+  let fill = "";
+  if (module.type === "forge" || module.type === "expander") {
+    const progress = module.type === "forge" ? state.forge.progress : state.expansion.progress;
+    const threshold = module.type === "forge" ? forgeThreshold(state.forge.earned) : expansionThreshold(state.expansion.earned);
+    fill = waterFill(module.id, progress / threshold);
   }
 
   let sub = "";
@@ -325,8 +357,7 @@ function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderCont
   const levelTag = active ? ` ${module.level}` : "";
 
   return `<g class="module-node ${active ? "" : "locked"}" data-rarity="${module.rarity}">
-    <polygon data-key="hex" class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>${highlight}
-    <g data-key="meter" transform="translate(0,-13)">${ring}</g>
+    <polygon data-key="hex" class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>${fill}${highlight}
     <g data-key="icon" transform="translate(0,-13)" class="hex-icon" fill="none" stroke-width="1.6">${moduleIcon(module.type)}</g>
     <text data-key="name" y="17" text-anchor="middle" class="hex-name">${name}${levelTag}</text>
     ${active ? `<text data-key="value" y="34" text-anchor="middle" class="hex-sub">${sub}</text>` : ""}
@@ -334,11 +365,16 @@ function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderCont
     </g>`;
 }
 
-function ringShape(progress: number): string {
-  const r = 21;
-  const circumference = 2 * Math.PI * r;
+const FILL_INSET = 3;
+
+function waterFill(moduleId: string, progress: number): string {
   const clamped = Math.min(1, Math.max(0, progress));
-  return `<circle class="ring-track" r="${r}"/><circle class="ring-progress" r="${r}" stroke-dasharray="${clamped * circumference} ${circumference}"/>`;
+  const radius = HEX_RADIUS - FILL_INSET;
+  const height = 2 * radius * clamped;
+  const y = radius - height;
+  const clipId = `water-${moduleId}`;
+  return `<clipPath id="${clipId}"><polygon points="${hexPoints(radius)}"/></clipPath>
+    <rect data-key="fill" clip-path="url(#${clipId})" class="water-fill" x="${-radius}" y="${y}" width="${2 * radius}" height="${height}"/>`;
 }
 
 function isTargetCell(app: App, pos: Hex): boolean {
@@ -373,6 +409,10 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
       }
     });
     node.addEventListener("click", () => app.pickCell(position()));
+    node.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      app.rightClickCell(position());
+    });
     bindPointerDrag(app, node, () => deployedAt(app.state, position())?.id ?? null);
   });
 }
@@ -390,6 +430,15 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
     const startY = event.clientY;
     let moved = false;
     let ghost: HTMLDivElement | null = null;
+    let hoverTarget: Element | null = null;
+
+    const setHoverTarget = (ev: PointerEvent) => {
+      const under = document.elementFromPoint(ev.clientX, ev.clientY)?.closest("[data-cell]");
+      if (under === hoverTarget) return;
+      hoverTarget?.querySelector(".hex")?.classList.remove("drop-target");
+      hoverTarget = under ?? null;
+      hoverTarget?.querySelector(".hex")?.classList.add("drop-target");
+    };
 
     const suppressNextClick = () => {
       const suppress = (clickEvent: Event) => {
@@ -405,13 +454,14 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
         const module = app.state.modules.find((m) => m.id === id);
         ghost = document.createElement("div");
         ghost.className = "drag-ghost";
-        ghost.textContent = module ? META[module.type].name : "Module";
+        ghost.innerHTML = `<svg viewBox="-18 -18 36 36" aria-hidden="true">${module ? moduleIcon(module.type) : ""}</svg><span>${module ? META[module.type].short : "Module"}</span>`;
         document.body.append(ghost);
         element.classList.add("dragging");
       }
       if (ghost) {
-        ghost.style.left = `${ev.clientX + 12}px`;
-        ghost.style.top = `${ev.clientY + 12}px`;
+        ghost.style.left = `${ev.clientX + 14}px`;
+        ghost.style.top = `${ev.clientY + 14}px`;
+        setHoverTarget(ev);
       }
     };
     const finish = (ev: PointerEvent, apply: boolean) => {
@@ -420,6 +470,8 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
       document.removeEventListener("pointercancel", cancel);
       ghost?.remove();
       element.classList.remove("dragging");
+      hoverTarget?.querySelector(".hex")?.classList.remove("drop-target");
+      hoverTarget = null;
       if (!apply || !moved) return;
       suppressNextClick();
       const target = document.elementFromPoint(ev.clientX, ev.clientY);
@@ -444,16 +496,54 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
 function renderInspector(app: App): void {
   const host = byId("inspector");
   if (!host) return;
-  if (app.ui.managing && app.state.mode === "upgrade") {
-    renderManagePanel(app, host);
-    return;
+  const { state, ui } = app;
+  const module = state.modules.find((m) => m.id === ui.selected);
+  // Rebuild only when the panel's structure changes; per-tick values update
+  // in place below so buttons and scroll position survive flow ticks.
+  const key = JSON.stringify([
+    state.mode,
+    ui.managing,
+    ui.selected,
+    ui.placing,
+    ui.reshape,
+    state.storeOpened,
+    state.bankedRolls.length,
+    state.cellTokens,
+    module?.level ?? null,
+    module?.rarity ?? null,
+  ]);
+  if (host.dataset.renderKey !== key) {
+    host.dataset.renderKey = key;
+    host.scrollTop = 0;
+    if (ui.managing && state.mode === "upgrade") {
+      renderManagePanel(app, host);
+    } else if (!module) {
+      renderOverview(app, host);
+    } else {
+      renderModulePanel(app, host, module);
+    }
   }
-  const module = app.state.modules.find((m) => m.id === app.ui.selected);
-  if (!module) {
-    renderOverview(app, host);
-    return;
-  }
-  renderModulePanel(app, host, module);
+  updateInspectorLive(app, host);
+}
+
+// Values that move during flow without rebuilding the panel.
+function updateInspectorLive(app: App, host: HTMLElement): void {
+  const { state } = app;
+  const set = (id: string, text: string) => {
+    const node = host.querySelector(`[data-live="${id}"]`);
+    if (node && node.textContent !== text) node.textContent = text;
+  };
+  set("charge", `${Math.ceil(chargeSecondsRemaining(state))}s`);
+  set("queued", `${fmt(chargeSecondsRemaining(state), 1)}s`);
+  set("forge", `${fmt(Math.max(0, state.forge.progress), 1)} / ${fmt(forgeThreshold(state.forge.earned), 1)}`);
+  set("expansion", `${fmt(Math.max(0, state.expansion.progress), 1)} / ${fmt(expansionThreshold(state.expansion.earned), 1)}`);
+  set("rolls", String(state.bankedRolls.length));
+  set("cells", String(state.cellTokens));
+  set("elapsed", state.session ? formatClock(state.session.elapsed) : "—");
+  const forgeBar = host.querySelector('[data-live="forge-bar"]') as HTMLProgressElement | null;
+  if (forgeBar) forgeBar.value = Math.min(1, Math.max(0, state.forge.progress / forgeThreshold(state.forge.earned)));
+  const expansionBar = host.querySelector('[data-live="expansion-bar"]') as HTMLProgressElement | null;
+  if (expansionBar) expansionBar.value = Math.min(1, Math.max(0, state.expansion.progress / expansionThreshold(state.expansion.earned)));
 }
 
 function renderOverview(app: App, host: HTMLElement): void {
@@ -465,13 +555,13 @@ function renderOverview(app: App, host: HTMLElement): void {
     <div class="grid-overview">
       <div class="eyebrow">GRID OVERVIEW</div>
       <h2>Charge &amp; progress</h2>
-      ${stat(upgrade ? "Banked charge" : "Charge remaining", `${Math.ceil(chargeSecondsRemaining(state))}s`)}
+      ${statLive("charge", upgrade ? "Banked charge" : "Charge remaining", `${Math.ceil(chargeSecondsRemaining(state))}s`)}
       ${stat("Active modules", `${active.length} / ${deployedModules.length} deployed`)}
-      ${meterBar(state.forge.progress, forgeThreshold(state.forge.earned), "forge", state)}
-      ${meterBar(state.expansion.progress, expansionThreshold(state.expansion.earned), "expansion", state)}
+      ${meterBar("forge", state, state.forge.progress, forgeThreshold(state.forge.earned))}
+      ${meterBar("expansion", state, state.expansion.progress, expansionThreshold(state.expansion.earned))}
       <div class="divider"></div>
-      ${stat("Banked Forge choices", String(state.bankedRolls.length))}
-      ${stat("Cells ready to place", String(state.cellTokens))}
+      ${statLive("rolls", "Banked Forge choices", String(state.bankedRolls.length))}
+      ${statLive("cells", "Cells ready to place", String(state.cellTokens))}
       ${stat("Empty grid cells", String(state.cells.length - deployedModules.length))}
       ${stat("Modules in inventory", String(state.modules.length - deployedModules.length))}
       ${stat("Sessions completed", String(state.sessionsCompleted))}
@@ -572,7 +662,7 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       <select id="panel-duration" ${upgrade ? "" : "disabled"}>
         ${durationOptionsHtml(app)}
       </select>
-      ${!upgrade && state.session ? stat("Elapsed", formatClock(state.session.elapsed)) : ""}
+      ${!upgrade && state.session ? statLive("elapsed", "Elapsed", formatClock(state.session.elapsed)) : ""}
     </section>`;
   } else if (isCore(module)) {
     focus = `<section class="focus-controls"><span class="eyebrow">FOCUS CONTROLS</span><p class="small muted">This module reserves its cell. Its focus tool arrives in a later version.</p></section>`;
@@ -586,7 +676,7 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       ${stat("Burst strength", "1× to each eligible adjacent module")}
       ${stat("Burst duration", "6s × target minutes")}
       ${stat("Next target burst", state.session?.target === null || !state.session ? (app.ui.chosenTarget === null ? "0s (open-ended)" : `${Math.round(app.ui.chosenTarget * BALANCE.chargeSecondsPerPracticeSecond)}s`) : `${Math.round(state.session.target! * BALANCE.chargeSecondsPerPracticeSecond)}s`)}
-      ${stat("Queued output", `${fmt(queued, 1)}s`)}
+      ${statLive("queued", "Queued output", `${fmt(queued, 1)}s`)}
       ${state.timeActive ? "" : stat("Status", "activates after your first session")}`;
   } else if (module.type === "forge" || module.type === "expander") {
     const isForge = module.type === "forge";
@@ -594,7 +684,7 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
     const threshold = isForge ? forgeThreshold(state.forge.earned) : expansionThreshold(state.expansion.earned);
     const eligible = time?.pos && module.pos && adjacent(module.pos, time.pos) && state.timeActive;
     chargeStats = `
-      ${stat("Shared progress", `${fmt(Math.max(0, progress), 1)} / ${fmt(threshold, 1)}`)}
+      ${statLive(isForge ? "forge" : "expansion", "Shared progress", `${fmt(Math.max(0, progress), 1)} / ${fmt(threshold, 1)}`)}
       ${stat("Rewards earned", String(isForge ? state.forge.earned : state.expansion.earned))}
       ${stat("Charge source", eligible ? "adjacent to active Time" : "not adjacent to active Time")}
       ${stat("Progress rate", `${fmt(contribution?.value ?? 0, 2)} /s while charged`)}`;
@@ -735,7 +825,13 @@ function renderModal(app: App): void {
     delete content.dataset.renderKey;
     return;
   }
-  const renderKey = JSON.stringify([kind, app.ui.importError, app.state.pendingGap, kind === "forge" ? app.state.bankedRolls.at(-1)?.id : null]);
+  const extra =
+    kind === "forge"
+      ? app.state.bankedRolls.at(-1)?.id ?? null
+      : kind === "store"
+        ? [app.ui.showAcquired, wholeNous(app.state), JSON.stringify(app.state.purchased)]
+        : null;
+  const renderKey = JSON.stringify([kind, app.ui.importError, app.state.pendingGap, extra]);
   // Clock ticks must not replace a save textarea or steal dialog focus.
   if (!backdrop.hidden && content.dataset.renderKey === renderKey) return;
   backdrop.hidden = false;
@@ -770,29 +866,35 @@ function renderSettingsModal(app: App, content: HTMLElement): void {
 }
 
 function renderStoreModal(app: App, content: HTMLElement): void {
-  const { state } = app;
+  const { state, ui } = app;
+  const types = Object.keys(BALANCE.starterPrices) as (keyof typeof BALANCE.starterPrices)[];
+  const visible = types.filter((type) => ui.showAcquired || !state.purchased[type]);
+  const acquired = types.filter((type) => state.purchased[type]).length;
   content.innerHTML = `
     ${modalTop("STORE")}
     <h2 id="modal-title">Shape what comes next.</h2>
     <p class="lead">One guaranteed common copy of each starter module. ${fmtWhole(state.nous)} ν available.</p>
     <div class="shop-list">
-      ${(Object.keys(BALANCE.starterPrices) as (keyof typeof BALANCE.starterPrices)[])
-        .map((type) => {
-          const price = BALANCE.starterPrices[type];
-          const owned = state.purchased[type];
-          const affordable = wholeNous(state) >= price;
-          return `<div class="shop-item">
-            <div><h3>${META[type].name}</h3><small>${META[type].role}</small></div>
-            <button class="primary" data-buy="${type}" ${owned || !affordable ? "disabled" : ""}>${owned ? "Acquired" : `${price} ν`}</button>
-          </div>`;
-        })
-        .join("")}
+      ${visible.map((type) => {
+        const price = BALANCE.starterPrices[type];
+        const owned = state.purchased[type];
+        const affordable = wholeNous(state) >= price;
+        return `<div class="shop-item">
+          <div><h3>${META[type].name}</h3><small>${META[type].role}</small></div>
+          <button class="primary" data-buy="${type}" ${owned || !affordable ? "disabled" : ""}>${owned ? "Acquired" : `${price} ν`}</button>
+        </div>`;
+      }).join("") || `<p class="empty-copy">Everything is acquired. New copies come from the Forge.</p>`}
     </div>
+    <label class="store-toggle"><input type="checkbox" id="store-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${acquired}/${types.length})</label>
     <p class="modal-note">Each offer is one-time. Copies from Forge rolls do not remove these offers — they can become combination material.</p>`;
   content.querySelectorAll<HTMLButtonElement>("[data-buy]").forEach((button) => {
     button.addEventListener("click", () => {
       app.buy(button.getAttribute("data-buy") as keyof typeof BALANCE.starterPrices);
     });
+  });
+  byId("store-show-acquired")?.addEventListener("change", (event) => {
+    app.ui.showAcquired = (event.target as HTMLInputElement).checked;
+    app.render();
   });
   wireClose(app);
 }
@@ -811,28 +913,54 @@ function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
   }
 }
 
+function candidateHeadline(type: ModuleInstance["type"]): string {
+  switch (type) {
+    case "enter":
+      return `+${fmt(BALANCE.baseRate)} ν/s`;
+    case "additive":
+      return `+${fmt(BALANCE.additiveRate)} ν/s`;
+    case "time":
+      return `×${fmt(1 + BALANCE.timeBonus)}`;
+    case "conditional":
+      return `+${fmt(BALANCE.conditionalBonusPerActiveCore * 100)}%/core`;
+    case "infusor":
+      return `+${fmt(BALANCE.infusorBonus * 100)}%`;
+    case "forge":
+      return "1 roll meter";
+    case "expander":
+      return "1 cell meter";
+    default:
+      return "";
+  }
+}
+
 function renderForgeModal(app: App, content: HTMLElement): void {
   const { state } = app;
   const offer = state.bankedRolls[state.bankedRolls.length - 1];
+  const banked = state.bankedRolls.length;
   content.innerHTML = `
-    <div class="modal-top"><h2 id="modal-title" class="sr-only">Forge</h2><button id="close-modal" aria-label="Close Forge">✕</button></div>
+    <div class="modal-top"><span class="eyebrow">FORGE</span><span class="small muted">${banked} banked</span></div>
+    <h2 id="modal-title" class="sr-only">Forge choice</h2>
     ${offer ? `<div class="candidates">
       ${offer.candidates.map((candidate) => `
-        <div class="candidate">
-          <span class="rarity" style="color:var(--rarity-${candidate.rarity})">${RARITY_LABEL[candidate.rarity]} · level 0</span>
-          <svg class="candidate-icon" viewBox="-18 -18 36 36" aria-hidden="true">${moduleIcon(candidate.type)}</svg>
-          <h3>${META[candidate.type].name}</h3>
-          <p>${forgeEffect(candidate.type, state)}</p>
-          <p class="candidate-scaling">+${fmt((BALANCE.rarityPower[candidate.rarity] - 1) * 100)}% power per level</p>
-          <button class="primary" data-choice="${candidate.id}" data-offer="${offer.id}">Select</button>
-        </div>`).join("")}
+        <button class="candidate-tile" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${candidate.rarity}" title="Take the ${RARITY_LABEL[candidate.rarity]} ${META[candidate.type].name}">
+          <svg viewBox="-75 -75 150 150" aria-hidden="true">
+            <polygon class="hex" points="${hexPoints(HEX_RADIUS)}"/>
+            <g transform="translate(0,-16)" class="hex-icon" fill="none" stroke-width="2.2">${moduleIcon(candidate.type)}</g>
+            <text y="22" text-anchor="middle" class="hex-name">${META[candidate.type].short}</text>
+            <text y="42" text-anchor="middle" class="hex-sub">${candidateHeadline(candidate.type)}</text>
+            <text y="-46" text-anchor="middle" class="hex-level">Lv 0</text>
+          </svg>
+          <span class="rarity" style="color:var(--rarity-${candidate.rarity})">${RARITY_LABEL[candidate.rarity]}</span>
+          <span class="candidate-scaling">+${fmt((BALANCE.rarityPower[candidate.rarity] - 1) * 100)}% / level · upgrades from 10 ν</span>
+          <span class="candidate-effect">${forgeEffect(candidate.type, state)}</span>
+        </button>`).join("")}
     </div>` : `<p class="empty-copy">No Forge choices available.</p>`}`;
   content.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach((button) => {
     button.addEventListener("click", () => {
       app.chooseCandidate(button.getAttribute("data-offer")!, button.getAttribute("data-choice")!);
     });
   });
-  wireClose(app);
 }
 
 function renderExportModal(app: App, content: HTMLElement): void {

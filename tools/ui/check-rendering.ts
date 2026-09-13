@@ -31,19 +31,25 @@ export async function checkRendering(app: App): Promise<string[]> {
     await frame();
     const hex = document.querySelector(".hex.charged")!;
     const animation = hex.getAnimations()[0];
-    const ring = document.querySelector(".ring-progress")!;
-    const initialProgress = ring.getAttribute("stroke-dasharray");
+    const fill = document.querySelector(".water-fill")!;
+    const initialFill = fill.getAttribute("y");
     for (let i = 0; i < 5; i++) app.render();
     check(document.querySelector(".hex.charged") === hex, "Charge hex survives repeated renders");
     check(hex.getAnimations().includes(animation), "Charge pulse keeps its animation timeline");
     advance(app.state, 0.5);
     app.render();
-    check(document.querySelector(".ring-progress") === ring, "Progress ring survives a clock advance");
-    check(ring.getAttribute("stroke-dasharray") !== initialProgress, "Clock advance updates ring progress");
-    check(getComputedStyle(ring).transitionProperty.includes("stroke-dasharray"), "Ring accumulation has a CSS transition");
+    check(document.querySelector(".water-fill") === fill, "Water fill survives a clock advance");
+    check(fill.getAttribute("y") !== initialFill, "Clock advance raises the water fill");
+    check(getComputedStyle(fill).transitionProperty.includes("y"), "Water accumulation has a CSS transition");
     check(document.querySelector('head link[rel="stylesheet"]'), "Styles load before first paint");
 
-    app.state.mode = "upgrade";
+    // Buttons must survive clock ticks so a single click always lands.
+    const endButton = document.getElementById("end-flow")!;
+    for (let i = 0; i < 5; i++) app.render();
+    check(document.getElementById("end-flow") === endButton, "End flow button survives repeated renders");
+    endButton.click();
+    check(app.state.mode === "upgrade", "End flow ends the session on the first click");
+
     app.ui.managing = true;
     app.render();
     for (let i = 0; i < 5; i++) app.render();
@@ -66,25 +72,28 @@ export async function checkRendering(app: App): Promise<string[]> {
     drag(document.querySelector('[data-cell="2,0"]')!, document.querySelector("#inventory-zone")!);
     check(forge.pos === null, "Dragging into inventory returns the module");
     await frame();
+
+    // Right-click while placing keeps the module in inventory.
     app.state.bankedRolls = [
       { id: "check-first", candidates: [
         { id: "check-a", type: "enter", rarity: "common" },
         { id: "check-b", type: "time", rarity: "uncommon" },
         { id: "check-c", type: "expander", rarity: "rare" },
       ] },
-      { id: "check-second", candidates: [
-        { id: "check-d", type: "additive", rarity: "common" },
-        { id: "check-e", type: "conditional", rarity: "uncommon" },
-        { id: "check-f", type: "infusor", rarity: "rare" },
-      ] },
     ];
     app.openModal("forge");
-    check(document.querySelectorAll(".candidate").length === 3, "Forge displays three choices");
-    check(document.querySelector(".candidate")?.textContent?.includes("+0.05 ν/s"), "Forge displays concrete production");
-    check(!document.querySelector("#modal-content .lead, #modal-content .modal-note"), "Forge omits surrounding filler");
+    check(document.querySelectorAll(".candidate-tile").length === 3, "Forge offers three hex candidates");
+    check(document.querySelector(".candidate-tile")?.textContent?.includes("0.1 ν/s"), "Forge tiles show concrete production");
+    check(!document.querySelector("#modal-content .modal-note, #modal-content .lead"), "Forge omits surrounding filler");
+    check(!document.querySelector("#close-modal"), "Forge closes by clicking away, not an ✕ button");
     document.querySelector<HTMLButtonElement>("[data-choice]")!.click();
-    check(app.state.bankedRolls.length === 1, "Select consumes one offer");
-    check(document.querySelector("[data-choice]")?.getAttribute("data-choice") === "check-a", "Next banked offer replaces the previous options");
+    check(app.state.bankedRolls.length === 0, "Select consumes the offer");
+    check(app.ui.modal === null, "Choosing a module closes the Forge");
+    check(app.ui.managing === true && typeof app.ui.placing === "string", "Choosing enters grid management with the module ready to place");
+    const placed = app.state.modules[app.state.modules.length - 1]!;
+    check(placed.id === app.ui.placing, "The placed module is the chosen candidate");
+    document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    check(app.ui.placing === null && placed.pos === null, "Right-click keeps the module in inventory");
     return passed;
   } finally {
     app.state = state;
