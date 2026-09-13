@@ -7,7 +7,7 @@ import { generateOffer } from "./rolls";
 import { hex } from "./hex";
 
 describe("forge roll generation", () => {
-  it("samples three distinct specific types uniformly from the seven implemented types", () => {
+  it("samples three distinct specific types uniformly from the implemented types", () => {
     const s = fresh();
     const rng = stubRng([0.0, 0.99, 0.2, 0.5, 0.3, 0.5]);
     const offer = generateOffer(s, rng);
@@ -16,7 +16,7 @@ describe("forge roll generation", () => {
     for (const type of types) {
       expect(ROLL_POOL).toContain(type);
     }
-    expect(types).toEqual([ROLL_POOL[0], ROLL_POOL[2], ROLL_POOL[3]]);
+    expect(types).toEqual([ROLL_POOL[0], ROLL_POOL[2], ROLL_POOL[4]]);
   });
 
   it("rolls each candidate's rarity independently", () => {
@@ -26,11 +26,11 @@ describe("forge roll generation", () => {
   });
 
   it("excludes unfinished core types from the pool", () => {
-    expect(ROLL_POOL).not.toContain("habit");
     expect(ROLL_POOL).not.toContain("goals");
     expect(ROLL_POOL).not.toContain("tasks");
     expect(ROLL_POOL).toContain("notes");
-    expect(ROLL_POOL).toHaveLength(8);
+    expect(ROLL_POOL).toContain("habit");
+    expect(ROLL_POOL).toHaveLength(9);
   });
 
   it("persists outcomes when the roll is earned, not when it is revealed", () => {

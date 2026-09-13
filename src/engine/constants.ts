@@ -44,7 +44,7 @@ export const CORE_TYPES: readonly CoreType[] = ["enter", "time", "habit", "notes
 
 export const GAMEPLAY_TYPES: readonly StarterType[] = ["additive", "conditional", "infusor", "forge", "expander"];
 
-export const ROLL_POOL: readonly ModuleType[] = ["enter", "time", "notes", "additive", "conditional", "infusor", "forge", "expander"];
+export const ROLL_POOL: readonly ModuleType[] = ["enter", "time", "notes", "habit", "additive", "conditional", "infusor", "forge", "expander"];
 
 export const NEXT_RARITY: Record<Rarity, Rarity | null> = { common: "uncommon", uncommon: "rare", rare: null };
 

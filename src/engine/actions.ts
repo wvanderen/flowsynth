@@ -4,6 +4,7 @@ import { deployedAt, findModule, isActive, isCore, levelCost, wholeNous } from "
 import { adjacent, hexKey, isConnected, sameHex } from "./hex";
 import { createModule } from "./state";
 import { bankNotesBurst } from "./notes";
+import { logSessionPractice } from "./habits";
 import type { GameState, Hex, ModuleInstance, StarterType } from "./types";
 
 export interface ActionResult {
@@ -27,7 +28,7 @@ export function startSession(state: GameState, target: number | null): ActionRes
   return ok;
 }
 
-export function endSession(state: GameState): ActionResult {
+export function endSession(state: GameState, now: number = 0): ActionResult {
   if (state.mode === "upgrade") return fail("No session is running.");
   const sessionId = state.sessionIndex;
   const elapsed = state.session?.elapsed ?? 0;
@@ -37,6 +38,7 @@ export function endSession(state: GameState): ActionResult {
   state.sessionsCompleted++;
   if (state.sessionsCompleted >= 1) state.timeActive = true;
   bankNotesBurst(state, sessionId, elapsed);
+  logSessionPractice(state, elapsed, now);
   return ok;
 }
 

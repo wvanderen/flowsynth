@@ -5,6 +5,7 @@ import { forgeThreshold, expansionThreshold } from "../engine/rolls";
 import { BALANCE } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
 import { canWriteNotes, projectedNotesBurst, sessionNoteCount } from "../engine/notes";
+import { activeHabit, developmentRate } from "../engine/habits";
 import type { GameState, Hex, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
 import { moduleIcon } from "./icons";
@@ -363,6 +364,11 @@ function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderCont
     sub = `×${fmt(1 + (contribution?.value ?? 0), 2)}`;
   } else if (module.type === "infusor") {
     sub = `+${fmt(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(ctx.snapshot.chargeStrength.get(module.id) ?? 0), 0)}%`;
+  } else if (module.type === "habit") {
+    const habit = activeHabit(state);
+    sub = habit ? formatDuration(habit.seconds) : "no habit";
+  } else if (module.type === "notes") {
+    sub = state.notesActive ? `${state.notes.length} notes` : "Locked";
   } else {
     sub = `+${fmt(contribution?.value ?? 0)} ν/s`;
   }
@@ -524,6 +530,9 @@ function renderInspector(app: App): void {
     state.bankedRolls.length,
     state.cellTokens,
     state.notes.length,
+    state.habits.map((h) => `${h.archived ? "·" : ""}${h.name}`).join("|"),
+    state.activeHabitId,
+    app.ui.editingHabitId,
     module?.level ?? null,
     module?.rarity ?? null,
   ]);
@@ -554,6 +563,18 @@ function updateInspectorLive(app: App, host: HTMLElement): void {
   set("charge", `${Math.ceil(chargeSecondsRemaining(state))}s`);
   set("queued", `${fmt(chargeSecondsRemaining(state), 1)}s`);
   set("notes-projection", `${fmt(projectedNotesBurst(state), 1)}s of charge`);
+  set("habit-session", `${formatClock(state.session?.elapsed ?? 0)} of practice`);
+  for (const habit of state.habits) {
+    const node = host.querySelector(`[data-habit-seconds="${habit.id}"]`);
+    const display = formatDuration(habit.seconds);
+    if (node && node.textContent !== display) node.textContent = display;
+  }
+  const habitDev = host.querySelector('[data-live="habit-development"]');
+  const active = activeHabit(state);
+  if (habitDev && active) {
+    const display = formatDuration(active.seconds);
+    if (habitDev.textContent !== display) habitDev.textContent = display;
+  }
   set("forge", `${fmt(Math.max(0, state.forge.progress), 1)} / ${fmt(forgeThreshold(state.forge.earned), 1)}`);
   set("expansion", `${fmt(Math.max(0, state.expansion.progress), 1)} / ${fmt(expansionThreshold(state.expansion.earned), 1)}`);
   set("rolls", String(state.bankedRolls.length));
@@ -612,6 +633,8 @@ function effectDescription(module: ModuleInstance): string {
       return "Applies the running ×1.2 multiplier and awards the completion burst when a timed target is reached.";
     case "notes":
       return "Captures thoughts during flow. A session with at least one note banks a charge burst at session end, sized by its practice minutes.";
+    case "habit":
+      return "Names what you practice. The selected habit locks for the session and develops from live practice and manual logs; its level speeds development.";
     case "additive":
       return "Adds its production directly to the shared base rate.";
     case "conditional":
@@ -639,6 +662,8 @@ function nominalEffect(module: ModuleInstance, charged: boolean): { text: string
       return { text: `+${fmt(100 * BALANCE.timeBonus * power)}% multiplier`, value: BALANCE.timeBonus * power };
     case "notes":
       return { text: `${fmt(BALANCE.notesChargePerMinute * power)}s charge / qualifying minute`, value: BALANCE.notesChargePerMinute * power };
+    case "habit":
+      return { text: `×${fmt(power, 3)} habit development rate`, value: power };
     case "conditional":
       return { text: `+${fmt(100 * BALANCE.conditionalBonusPerActiveCore * power)}% per adjacent core`, value: BALANCE.conditionalBonusPerActiveCore * power };
     case "infusor":
@@ -687,6 +712,53 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       </select>
       ${!upgrade && state.session ? statLive("elapsed", "Elapsed", formatClock(state.session.elapsed)) : ""}
     </section>`;
+  } else if (module.type === "habit") {
+    const active = activeHabit(state);
+    const live = state.mode !== "upgrade";
+    const habits = state.habits.filter((h) => !h.archived);
+    if (live) {
+      focus = `<section class="focus-controls">
+        <span class="eyebrow">FOCUS CONTROLS</span>
+        <p class="habit-active-name">${active ? escapeHtml(active.name) : "Unstructured practice"}</p>
+        <p class="small muted" style="margin-top:4px">${active ? "Locked for this session — selected before entering flow." : "No habit selected; the session still counts as practice."}</p>
+        ${active ? statLive("habit-session", "This session", `${formatClock(state.session?.elapsed ?? 0)} of practice`) : ""}
+      </section>`;
+    } else {
+      focus = `<section class="focus-controls">
+        <span class="eyebrow">FOCUS CONTROLS</span>
+        <div class="habit-create">
+          <input type="text" id="habit-name-input" placeholder="New habit (piano, cooking…)" maxlength="40" />
+          <button class="primary small" id="habit-create">Add</button>
+        </div>
+        <div class="habit-list">
+          ${habits.map((habit) => {
+            const editing = app.ui.editingHabitId === habit.id;
+            return `<div class="habit-row ${state.activeHabitId === habit.id ? "selected" : ""}" data-habit="${habit.id}">
+              ${editing
+                ? `<input type="text" class="habit-rename-input" id="habit-rename-input" value="${escapeHtml(habit.name)}" maxlength="40" />
+                   <button class="primary small" id="habit-rename-save">Save</button>`
+                : `<button class="habit-pick" data-pick="${habit.id}" title="Make this the active habit">
+                     <span class="habit-dot" aria-hidden="true"></span>
+                     <span class="habit-name">${escapeHtml(habit.name)}</span>
+                     <small class="mono" data-habit-seconds="${habit.id}">${formatDuration(habit.seconds)}</small>
+                   </button>
+                   <button class="quiet small" data-rename="${habit.id}" title="Rename">✎</button>
+                   <button class="quiet small" data-archive="${habit.id}" title="Archive">⌄</button>`}
+            </div>`;
+          }).join("") || `<p class="empty-copy">No habits yet. Name what you practice.</p>`}
+        </div>
+        ${state.activeHabitId
+          ? `<div class="habit-log">
+              <label class="config-label" for="habit-log-minutes">Log practice for ${escapeHtml(active?.name ?? "")} manually</label>
+              <div class="habit-create">
+                <input type="number" id="habit-log-minutes" min="1" max="600" placeholder="minutes" />
+                <button class="small" id="habit-log-add">Log</button>
+              </div>
+              <p class="small muted">Manual logs grow development and later count toward goals — they never produce nous or charge.</p>
+            </div>`
+          : `<p class="small muted">Select a habit to log practice manually; selection is locked during flow.</p>`}
+      </section>`;
+    }
   } else if (module.type === "notes") {
     const recent = [...state.notes].slice(-8).reverse();
     const noteCount = sessionNoteCount(state);
@@ -730,6 +802,14 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       ${statLive("notes-projection", "Banks at session end", `${fmt(projectedNotesBurst(state), 1)}s of charge`)}
       ${stat("Notes captured", String(state.notes.length))}
       ${state.notesActive ? "" : stat("Status", "activates with the store")}`;
+  } else if (module.type === "habit") {
+    const habit = activeHabit(state);
+    chargeStats = `
+      ${stat("Active habit", habit ? escapeHtml(habit.name) : "unstructured")}
+      ${habit ? statLive("habit-development", "Development", formatDuration(habit.seconds)) : ""}
+      ${stat("Development rate", `×${fmt(developmentRate(state), 3)} per practice minute`)}
+      ${stat("Habits tracked", String(state.habits.filter((h) => !h.archived).length))}
+      ${stat("Practice entries logged", String(state.practiceLog.length))}`;
   } else {
     chargeStats = `
       ${stat("Banked charge", `${Math.ceil(chargeSecondsRemaining(state))}s (on Time)`)}
@@ -774,6 +854,57 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
   byId("panel-end")?.addEventListener("click", () => app.endFlow());
   byId("panel-pause")?.addEventListener("click", () => (state.mode === "paused" ? app.resume() : app.pause()));
   bindDurationSelect(app, byId("panel-duration"));
+  byId("habit-create")?.addEventListener("click", () => {
+    const input = byId("habit-name-input") as HTMLInputElement | null;
+    if (input) app.createHabitAction(input.value);
+  });
+  byId("habit-name-input")?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const input = event.target as HTMLInputElement;
+      app.createHabitAction(input.value);
+    }
+  });
+  host.querySelectorAll<HTMLElement>("[data-pick]").forEach((button) => {
+    button.addEventListener("click", () => app.selectHabitAction(button.getAttribute("data-pick")));
+  });
+  host.querySelectorAll<HTMLElement>("[data-rename]").forEach((button) => {
+    button.addEventListener("click", () => {
+      app.ui.editingHabitId = button.getAttribute("data-rename");
+      app.render();
+      const input = byId("habit-rename-input") as HTMLInputElement | null;
+      input?.focus();
+      input?.select();
+    });
+  });
+  host.querySelectorAll<HTMLElement>("[data-archive]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.getAttribute("data-archive");
+      if (id) app.archiveHabitAction(id);
+    });
+  });
+  const renameInput = byId("habit-rename-input");
+  renameInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const id = app.ui.editingHabitId;
+      if (id) app.renameHabitAction(id, (event.target as HTMLInputElement).value);
+    }
+    if (event.key === "Escape") {
+      event.stopPropagation();
+      app.ui.editingHabitId = null;
+      app.render();
+    }
+  });
+  byId("habit-rename-save")?.addEventListener("click", () => {
+    const id = app.ui.editingHabitId;
+    const input = byId("habit-rename-input") as HTMLInputElement | null;
+    if (id && input) app.renameHabitAction(id, input.value);
+  });
+  byId("habit-log-add")?.addEventListener("click", () => {
+    const input = byId("habit-log-minutes") as HTMLInputElement | null;
+    if (input && input.value) app.logPracticeAction(Number(input.value));
+  });
   const composer = byId("note-composer") as HTMLTextAreaElement | null;
   const saveNote = () => {
     if (!composer) return;
@@ -818,6 +949,9 @@ function nominalGainText(module: ModuleInstance): string {
   }
   if (module.type === "notes") {
     return `+${fmt(now.value * (growth - 1), 3)}s / minute`;
+  }
+  if (module.type === "habit") {
+    return `×${fmt(growth, 3)} → ×${fmt(now.value * growth, 3)} development`;
   }
   return `+${fmt(now.value * (growth - 1), 4)} effect`;
 }
@@ -970,6 +1104,7 @@ function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
     case "additive": return `+${fmt(BALANCE.additiveRate)} ν/s base production<br>+${fmt(BALANCE.additiveRate * charged)} ν/s at charge strength 1`;
     case "time": return `×${fmt(1 + BALANCE.timeBonus)} production during flow<br>Timed completion: strength 1 for ${fmt(BALANCE.chargeSecondsPerPracticeSecond * 60)}s per planned minute`;
     case "notes": return `Bank a strength-1 charge burst at session end<br>${fmt(BALANCE.notesChargePerMinute)}s per qualifying practice minute (any note qualifies the session)`;
+    case "habit": return `Locks one habit for the session; live and logged practice develop it<br>Development rate ×${fmt(1, 3)}, improved by level and rarity`;
     case "conditional": return `+${fmt(BALANCE.conditionalBonusPerActiveCore * 100)}% production per adjacent active core<br>+${fmt(BALANCE.conditionalBonusPerActiveCore * charged * 100)}% at charge strength 1`;
     case "infusor": return `+${fmt(BALANCE.infusorBonus * 100)}% to adjacent production contributions<br>+${fmt(BALANCE.infusorBonus * charged * 100)}% at charge strength 1`;
     case "forge": return `1 Forge progress per charge<br>Next roll: ${fmt(forgeThreshold(state.forge.earned))} progress`;
@@ -988,6 +1123,8 @@ function candidateHeadline(type: ModuleInstance["type"]): string {
       return `×${fmt(1 + BALANCE.timeBonus)}`;
     case "notes":
       return `${fmt(BALANCE.notesChargePerMinute)}s/min burst`;
+    case "habit":
+      return "×1 development";
     case "conditional":
       return `+${fmt(BALANCE.conditionalBonusPerActiveCore * 100)}%/core`;
     case "infusor":

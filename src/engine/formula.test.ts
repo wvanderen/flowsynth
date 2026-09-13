@@ -39,7 +39,9 @@ describe("shared production formula", () => {
     setActive(s);
     give(s, "conditional", hex(0, 0));
     give(s, "conditional", hex(2, -1));
-    expect(computeRates(s, false).rate).toBeCloseTo(0.1 * 1.2 * 1.4, 9);
+    // (0,0) sees enter, Time, and the now-active Habit core (3);
+    // (2,-1) sees enter and Time (2): total +0.5 multiplier bonus.
+    expect(computeRates(s, false).rate).toBeCloseTo(0.1 * 1.2 * 1.5, 9);
   });
 
   it("infusors add and only empower the bonus above ×1", () => {

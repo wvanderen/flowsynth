@@ -183,6 +183,23 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .note-entry .note-when { display: block; font-size: 9px; color: var(--muted); letter-spacing: 0.08em; margin-bottom: 3px; }
 .note-entry p { font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 
+/* Habit management: pick the session's practice identity in upgrade mode. */
+.habit-create { display: flex; gap: 8px; }
+.habit-create input { flex: 1; min-width: 0; background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font-size: 13px; }
+.habit-create input:focus { border-color: var(--charge); outline: none; }
+.habit-list { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.habit-row { display: flex; align-items: center; gap: 4px; border: 1px solid var(--line-soft); border-radius: 8px; padding: 4px 8px 4px 4px; }
+.habit-row.selected { border-color: var(--accent); background: #262c22; }
+.habit-pick { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; border: 0; background: transparent; text-align: left; padding: 6px 8px; border-radius: 6px; }
+.habit-pick:hover { background: #2b322a; }
+.habit-dot { width: 8px; height: 8px; border-radius: 100%; border: 1.5px solid var(--muted); flex-shrink: 0; }
+.habit-row.selected .habit-dot { background: var(--accent); border-color: var(--accent); }
+.habit-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.habit-row small { color: var(--muted); flex-shrink: 0; }
+.habit-rename-input { flex: 1; min-width: 0; background: var(--panel-soft); color: var(--ink); border: 1px solid var(--charge); border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+.habit-log { margin-top: 14px; }
+.habit-active-name { font-size: 17px; font-weight: 550; margin: 4px 0 0; }
+
 .level-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
 .level-heading strong { font: 30px var(--mono); font-weight: 400; }
 .level-effect { font: 13px var(--mono); color: var(--accent); }

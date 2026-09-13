@@ -62,6 +62,21 @@ export interface NoteEntry {
   text: string;
 }
 
+export interface Habit {
+  id: string;
+  name: string;
+  seconds: number;
+  archived: boolean;
+}
+
+export interface PracticeEntry {
+  id: string;
+  habitId: string;
+  seconds: number;
+  source: "live" | "manual";
+  at: number;
+}
+
 export type Mode = "upgrade" | "flow" | "paused";
 
 export interface GameState {
@@ -80,6 +95,9 @@ export interface GameState {
   timeActive: boolean;
   notesActive: boolean;
   notes: NoteEntry[];
+  habits: Habit[];
+  activeHabitId: string | null;
+  practiceLog: PracticeEntry[];
   storeOpened: boolean;
   session: SessionState | null;
   pendingGap: PendingGap | null;

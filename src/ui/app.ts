@@ -21,6 +21,14 @@ import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
 import { planTick } from "../engine/clock";
 import { createInitialState } from "../engine/state";
 import { writeNote } from "../engine/notes";
+import {
+  activeHabit,
+  addPracticeLog,
+  archiveHabit,
+  createHabit,
+  renameHabit,
+  selectHabit,
+} from "../engine/habits";
 import type { GameState, Hex, StarterType } from "../engine/types";
 import { render } from "./render";
 import { META } from "./meta";
@@ -37,6 +45,7 @@ export interface UiState {
   importError: string | null;
   chosenTarget: number | null;
   showAcquired: boolean;
+  editingHabitId: string | null;
 }
 
 interface LoadedSave {
@@ -72,6 +81,7 @@ export class App {
     importError: null,
     chosenTarget: 600,
     showAcquired: false,
+    editingHabitId: null,
   };
   lastWall: number | null = null;
   lastSaveWall = 0;
@@ -269,7 +279,7 @@ export class App {
 
   endFlow(): void {
     const firstSession = this.state.sessionIndex === 1;
-    if (this.act(endSession(this.state), "")) {
+    if (this.act(endSession(this.state, Date.now()), "")) {
       this.lastWall = null;
       // Read the bank after ending: session-end bursts (Notes) join Time's.
       const banked = chargeSecondsRemaining(this.state);
@@ -396,6 +406,57 @@ export class App {
       this.say(result.reason ?? "Cannot capture a note right now.");
     }
     this.render();
+  }
+
+  // ── Habits (#5) ─────────────────────────────────────────────────────────
+
+  habitAction(
+    run: () => { ok: boolean; reason?: string },
+    success: string,
+  ): void {
+    const result = run();
+    if (result.ok) {
+      this.say(success);
+      this.save();
+    } else {
+      this.say(result.reason ?? "That habit action is unavailable.");
+    }
+    this.render();
+  }
+
+  createHabitAction(name: string): void {
+    this.habitAction(() => createHabit(this.state, name), `${name.trim()} added to your habits.`);
+  }
+
+  renameHabitAction(id: string, name: string): void {
+    this.ui.editingHabitId = null;
+    this.habitAction(() => renameHabit(this.state, id, name), "Habit renamed.");
+  }
+
+  archiveHabitAction(id: string): void {
+    const habit = this.state.habits.find((h) => h.id === id);
+    this.habitAction(() => archiveHabit(this.state, id), `${habit?.name ?? "Habit"} archived. Its development is kept.`);
+  }
+
+  selectHabitAction(id: string | null): void {
+    const habit = this.state.habits.find((h) => h.id === id);
+    this.habitAction(
+      () => selectHabit(this.state, id),
+      habit ? `${habit.name} will be the active habit for your next session.` : "Next session is unstructured; no habit selected.",
+    );
+  }
+
+  logPracticeAction(minutes: number): void {
+    const habit = activeHabit(this.state);
+    if (!habit) {
+      this.say("Select a habit first; logs apply to the active habit.");
+      this.render();
+      return;
+    }
+    this.habitAction(
+      () => addPracticeLog(this.state, habit.id, minutes, Date.now()),
+      `Logged ${minutes} minutes of ${habit.name}. Development grows; no nous or charge is produced.`,
+    );
   }
 
   chooseCandidate(offerId: string, candidateId: string): void {
