@@ -555,8 +555,9 @@ function renderInspector(app: App): void {
     state.goals.map((g) => (g.completed ? "1" : "0") + g.condition.minutes + (g.condition.habitId ?? "") + g.schedule.kind).join("|"),
     state.goalsActive,
     state.tasks.length,
-    state.tasks.map((t) => (t.done ? "d" : "") + (t.paid ? "p" : "")).join("|"),
+    state.tasks.map((t) => `${t.done ? "d" : ""}${t.paid ? "p" : ""}${t.text}`).join("|"),
     state.tasksActive,
+    app.ui.editingTaskId,
     module?.level ?? null,
     module?.rarity ?? null,
   ]);
@@ -872,12 +873,19 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
           <button class="primary small" id="task-add">Add</button>
         </div>
         <div class="task-list">
-          ${open.map((task) => `
-            <div class="task-row" data-task="${task.id}">
+          ${open.map((task) => {
+            const editing = app.ui.editingTaskId === task.id;
+            return `<div class="task-row" data-task="${task.id}">
               <span class="task-size mono">${task.size}</span>
-              <span class="task-text">${escapeHtml(task.text)}</span>
-              <button class="small" data-task-done="${task.id}" title="Mark complete">Done</button>
-            </div>`).join("") || `<p class="empty-copy">No open tasks. Capture the bite-sized things as they come.</p>`}
+              ${editing
+                ? `<input type="text" class="task-rename-input" id="task-rename-input" value="${escapeHtml(task.text)}" maxlength="120" />
+                   <button class="primary small" id="task-rename-save">Save</button>`
+                : `<span class="task-text">${escapeHtml(task.text)}</span>
+                   <button class="quiet small icon-btn" data-task-rename="${task.id}" title="Edit task"><svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M-8 8 8-8M-1-7h8v8"/></svg></button>
+                   <button class="small" data-task-done="${task.id}" title="Mark complete">Done</button>`}
+              <button class="quiet small icon-btn" data-task-delete="${task.id}" title="Delete task"><svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M-6-6 6 6M6-6-6 6"/></svg></button>
+            </div>`;
+          }).join("") || `<p class="empty-copy">No open tasks. Capture the bite-sized things as they come.</p>`}
         </div>
         ${pending.length > 0 ? `
           <h3 class="store-section-title">Awaiting allowance</h3>
@@ -887,6 +895,7 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
                 <span class="task-size mono">${task.size}</span>
                 <span class="task-text">${escapeHtml(task.text)}</span>
                 <small class="mono" data-live="task-next-cost">${fmt(Math.max(0, taskCost(task.size) - (next && task.id === next.id ? state.allowance : 0)), 1)} pts to go</small>
+                <button class="quiet small icon-btn" data-task-delete="${task.id}" title="Delete task (forfeits its unfunded reward)"><svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M-6-6 6 6M6-6-6 6"/></svg></button>
               </div>`).join("")}
           </div>` : ""}
         ${paid.length > 0 ? `<p class="small muted" style="margin-top:10px">${paid.length} task${paid.length === 1 ? "" : "s"} paid out.</p>` : ""}
@@ -1093,6 +1102,39 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       const id = button.getAttribute("data-task-done");
       if (id) app.completeTaskAction(id);
     });
+  });
+  host.querySelectorAll<HTMLElement>("[data-task-delete]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.getAttribute("data-task-delete");
+      if (id) app.deleteTaskAction(id);
+    });
+  });
+  host.querySelectorAll<HTMLElement>("[data-task-rename]").forEach((button) => {
+    button.addEventListener("click", () => {
+      app.ui.editingTaskId = button.getAttribute("data-task-rename");
+      app.render();
+      const input = byId("task-rename-input") as HTMLInputElement | null;
+      input?.focus();
+      input?.select();
+    });
+  });
+  const taskRenameInput = byId("task-rename-input");
+  taskRenameInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const id = app.ui.editingTaskId;
+      if (id) app.renameTaskAction(id, (event.target as HTMLInputElement).value);
+    }
+    if (event.key === "Escape") {
+      event.stopPropagation();
+      app.ui.editingTaskId = null;
+      app.render();
+    }
+  });
+  byId("task-rename-save")?.addEventListener("click", () => {
+    const id = app.ui.editingTaskId;
+    const input = byId("task-rename-input") as HTMLInputElement | null;
+    if (id && input) app.renameTaskAction(id, input.value);
   });
   const composer = byId("note-composer") as HTMLTextAreaElement | null;
   const saveNote = () => {

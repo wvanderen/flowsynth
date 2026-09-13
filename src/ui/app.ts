@@ -31,7 +31,7 @@ import {
   selectHabit,
 } from "../engine/habits";
 import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
-import { completeTask, createTask, type TaskSize } from "../engine/tasks";
+import { completeTask, createTask, deleteTask, renameTask, type TaskSize } from "../engine/tasks";
 import type { CoreActivationType, GameState, Hex, StarterType } from "../engine/types";
 import { render } from "./render";
 import { META } from "./meta";
@@ -49,6 +49,7 @@ export interface UiState {
   chosenTarget: number | null;
   showAcquired: boolean;
   editingHabitId: string | null;
+  editingTaskId: string | null;
 }
 
 interface LoadedSave {
@@ -85,6 +86,7 @@ export class App {
     chosenTarget: 600,
     showAcquired: false,
     editingHabitId: null,
+    editingTaskId: null,
   };
   lastWall: number | null = null;
   lastSaveWall = 0;
@@ -534,6 +536,27 @@ export class App {
       this.save();
     } else {
       this.say(result.reason ?? "Could not complete the task.");
+    }
+    this.render();
+  }
+
+  renameTaskAction(id: string, text: string): void {
+    this.ui.editingTaskId = null;
+    const result = renameTask(this.state, id, text);
+    this.say(result.ok ? "Task updated." : result.reason ?? "Could not update the task.");
+    if (result.ok) this.save();
+    this.render();
+  }
+
+  deleteTaskAction(id: string): void {
+    const task = this.state.tasks.find((t) => t.id === id);
+    const result = deleteTask(this.state, id);
+    if (result.ok) {
+      const note = task?.done && !task?.paid ? " Its unfunded reward was forfeited." : "";
+      this.say(`Task removed.${note}`);
+      this.save();
+    } else {
+      this.say(result.reason ?? "Could not remove the task.");
     }
     this.render();
   }

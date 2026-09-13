@@ -7,6 +7,8 @@ import {
   allowanceRate,
   completeTask,
   createTask,
+  deleteTask,
+  renameTask,
   settlePendingRewards,
   taskCost,
   taskReward,
@@ -55,6 +57,34 @@ describe("task capture and completion", () => {
     expect(completeTask(s, "nope").ok).toBe(false);
     expect(completeTask(s, s.tasks[0]!.id).ok).toBe(true);
     expect(completeTask(s, s.tasks[0]!.id).ok).toBe(false);
+  });
+
+  it("edits open tasks any time; completed tasks are history", () => {
+    const s = activated();
+    startSession(s, 600);
+    createTask(s, "print sheat", "small");
+    expect(renameTask(s, s.tasks[0]!.id, " print sheet 3 ")).toEqual({ ok: true });
+    expect(s.tasks[0]!.text).toBe("print sheet 3");
+    expect(renameTask(s, s.tasks[0]!.id, "  ").ok).toBe(false);
+    completeTask(s, s.tasks[0]!.id);
+    expect(renameTask(s, s.tasks[0]!.id, "rewrite history").ok).toBe(false);
+  });
+
+  it("deletes tasks any time; deleting a pending task forfeits its reward", () => {
+    const s = activated();
+    s.allowance = 0;
+    createTask(s, "keep", "small");
+    createTask(s, "drop", "large");
+    completeTask(s, s.tasks[1]!.id); // pending, unfunded
+    const baseline = s.nous;
+    expect(deleteTask(s, s.tasks[1]!.id)).toEqual({ ok: true });
+    expect(s.tasks).toHaveLength(1);
+    s.allowance = 50;
+    settlePendingRewards(s);
+    expect(s.nous - baseline).toBeCloseTo(0, 6); // the deleted reward never pays
+    expect(deleteTask(s, "nope").ok).toBe(false);
+    startSession(s, 600);
+    expect(deleteTask(s, s.tasks[0]!.id)).toEqual({ ok: true }); // works during flow too
   });
 });
 

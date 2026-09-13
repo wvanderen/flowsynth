@@ -54,6 +54,27 @@ export function completeTask(state: GameState, id: string): { ok: boolean; reaso
   return { ok: true, paid: task.paid };
 }
 
+// Editing and deleting are available any time, like capture. Deleting a
+// pending task forfeits its unfunded reward; paid history is unaffected.
+export function renameTask(state: GameState, id: string, text: string): { ok: boolean; reason?: string } {
+  if (!tasksActive(state)) return { ok: false, reason: "The Tasks module is not active yet." };
+  const task = state.tasks.find((t) => t.id === id);
+  if (!task) return { ok: false, reason: "Task not found." };
+  if (task.done) return { ok: false, reason: "Completed tasks are history; capture a new one instead." };
+  const trimmed = text.trim().slice(0, 120);
+  if (!trimmed) return { ok: false, reason: "Describe the task first." };
+  task.text = trimmed;
+  return { ok: true };
+}
+
+export function deleteTask(state: GameState, id: string): { ok: boolean; reason?: string } {
+  if (!tasksActive(state)) return { ok: false, reason: "The Tasks module is not active yet." };
+  const index = state.tasks.findIndex((t) => t.id === id);
+  if (index === -1) return { ok: false, reason: "Task not found." };
+  state.tasks.splice(index, 1);
+  return { ok: true };
+}
+
 // Pays pending rewards in completion order: fully or not at all.
 export function settlePendingRewards(state: GameState): number {
   const pending = state.tasks.filter((t) => t.done && !t.paid).sort((a, b) => (a.completionOrder ?? 0) - (b.completionOrder ?? 0));
