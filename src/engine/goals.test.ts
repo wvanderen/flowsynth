@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
-import { endSession, startSession } from "./actions";
+import { buyCoreActivation, endSession, startSession } from "./actions";
 import { chargeSecondsRemaining } from "./economy";
 import { fresh } from "./fixtures";
 import { createHabit, selectHabit, addPracticeLog } from "./habits";
@@ -10,7 +10,6 @@ import {
   deleteGoal,
   goalCapacity,
   goalBurstSeconds,
-  goalsActive,
   rollGoalOccurrences,
 } from "./goals";
 import { deserialize, serialize } from "./save";
@@ -34,20 +33,20 @@ function withHabit(s: ReturnType<typeof fresh>, name = "Piano", now = 1_000_000)
 }
 
 describe("goal slots and creation", () => {
-  it("starts with two slots and gains one per module level", () => {
+  it("keeps slot capacity at the base two; expansion design is deferred", () => {
     const s = activated();
     expect(goalCapacity(s)).toBe(2);
-    s.modules.find((m) => m.type === "goals")!.level = 1;
-    expect(goalCapacity(s)).toBe(3);
+    s.modules.find((m) => m.type === "goals")!.level = 3;
+    expect(goalCapacity(s)).toBe(2);
   });
 
   it("rejects goals when full, with bad inputs, or while in flow", () => {
-    const { s } = { s: activated() };
+    const s = activated();
     withHabit(s);
     createGoal(s, { habitId: null, minutes: 20, schedule: "daily", now: 1 });
     createGoal(s, { habitId: null, minutes: 20, schedule: "daily", now: 1 });
     expect(createGoal(s, { habitId: null, minutes: 5, schedule: "daily", now: 1 }).ok).toBe(false);
-    s.modules.find((m) => m.type === "goals")!.level = 1;
+    deleteGoal(s, s.goals[0]!.id);
     expect(createGoal(s, { habitId: null, minutes: 5, schedule: "daily", now: 1 }).ok).toBe(true);
     expect(createGoal(s, { habitId: null, minutes: 0, schedule: "daily", now: 1 }).ok).toBe(false);
     expect(createGoal(s, { habitId: "nope", minutes: 5, schedule: "daily", now: 1 }).ok).toBe(false);
@@ -58,17 +57,24 @@ describe("goal slots and creation", () => {
     expect(deleteGoal(s, s.goals[0]!.id).ok).toBe(true);
   });
 
-  it("stays inactive before the store opens and activates with it", () => {
+  it("activation is a store purchase under the ADR-0007 economy, not automatic", () => {
     const s = fresh();
     startSession(s, 600);
     advance(s, 600);
     endSession(s);
-    expect(s.storeOpened).toBe(false);
-    expect(goalsActive(s)).toBe(false);
     startSession(s, 600);
     const result = advance(s, 600);
     expect(result.storeOpened).toBe(true);
+    endSession(s);
+    expect(s.goalsActive).toBe(false);
+
+    s.nous = 29;
+    expect(buyCoreActivation(s, "goals").ok).toBe(false);
+    s.nous = 30;
+    expect(buyCoreActivation(s, "goals").ok).toBe(true);
     expect(s.goalsActive).toBe(true);
+    expect(s.nous).toBeCloseTo(0, 6);
+    expect(buyCoreActivation(s, "goals").ok).toBe(false);
   });
 });
 
@@ -83,8 +89,21 @@ describe("goal progress and completion", () => {
     expect(s.goals[0]!.completed).toBe(true);
     expect(s.goals[0]!.completedCount).toBe(1);
     // Time's completion burst (60s) plus the goal burst (5s) both queue.
-    expect(chargeSecondsRemaining(s)).toBeCloseTo(60 + goalBurstSeconds(s.goals[0]!), 6);
-    expect(goalBurstSeconds(s.goals[0]!)).toBeCloseTo(5, 6); // 10 min × 0.5 s/min
+    expect(chargeSecondsRemaining(s)).toBeCloseTo(60 + goalBurstSeconds(s, s.goals[0]!), 6);
+    expect(goalBurstSeconds(s, s.goals[0]!)).toBeCloseTo(5, 6); // 10 min × 0.5 s/min
+  });
+
+  it("scales the completion burst with module level and rarity", () => {
+    const s = activated();
+    const goalsModule = s.modules.find((m) => m.type === "goals")!;
+    goalsModule.level = 2;
+    goalsModule.rarity = "rare";
+    const { habit } = withHabit(s);
+    createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 });
+    startSession(s, 600);
+    advance(s, 600);
+    endSession(s);
+    expect(chargeSecondsRemaining(s)).toBeCloseTo(60 + 5 * 1.3 ** 2, 6);
   });
 
   it("rewards an occurrence exactly once; extra practice does not re-complete", () => {
@@ -203,7 +222,7 @@ describe("recurrence", () => {
 });
 
 describe("persistence", () => {
-  it("round-trips goals and activates them for store-opened older saves", () => {
+  it("round-trips goals; pre-economy saves grandfather in as activated", () => {
     const s = activated();
     const { habit } = withHabit(s);
     createGoal(s, { habitId: habit.id, minutes: 20, schedule: "daily", now: 7_000 });
@@ -211,14 +230,21 @@ describe("persistence", () => {
     const loaded = deserialize(serialize(s))!;
     expect(loaded.state!.goals).toHaveLength(1);
     expect(loaded.state!.goals[0]!.progressSeconds).toBeCloseTo(240, 6);
-    expect(loaded.state!.goalsActive).toBe(true);
+    expect(loaded.state!.goalsActive).toBe(true); // stored true loads true
 
-    const v2 = serialize(s).replace('"version": 3', '"version": 2');
-    const parsed = JSON.parse(v2);
+    // v3-era store-opened save without the fields: grandfathered active.
+    const v3 = serialize(s).replace('"version": 4', '"version": 3');
+    const parsed = JSON.parse(v3);
     delete parsed.state.goalsActive;
     delete parsed.state.goals;
     const migrated = deserialize(JSON.stringify(parsed))!;
     expect(migrated.state!.goalsActive).toBe(true);
     expect(migrated.state!.goals).toEqual([]);
+
+    // v4 saves load activation exactly as stored (activation is a purchase).
+    const v4 = JSON.parse(serialize(s));
+    v4.state.goalsActive = false;
+    const freshLoad = deserialize(JSON.stringify(v4))!;
+    expect(freshLoad.state!.goalsActive).toBe(false);
   });
 });

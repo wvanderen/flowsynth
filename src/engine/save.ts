@@ -23,13 +23,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-// v1 (first playable) → v2 (Notes) → v3 (Goals): new state starts empty and
-// the modules activate retroactively for saves that already opened the store.
-// The activation healing is unconditional — any stale `false` written by a
-// mixed-version tab also resolves on load, because the store gate is the
-// single source of truth for these activations.
-function migrate(state: Record<string, unknown>): Record<string, unknown> {
-  if (state.storeOpened === true) {
+// v1 (first playable) → v2 (Notes) → v3 (Goals) → v4 (activation economy).
+// Before v4, Notes and Goals auto-activated when the store opened; those
+// saves are grandfathered in as already-activated. From v4 on, activation
+// is a store purchase (ADR-0007) and saved flags load exactly as stored.
+function migrate(state: Record<string, unknown>, fromVersion: number): Record<string, unknown> {
+  if (fromVersion < 4 && state.storeOpened === true) {
     state = { ...state, notesActive: true, goalsActive: true };
   }
   if (state.notes === undefined) state = { ...state, notes: [] };
@@ -54,7 +53,7 @@ export function deserialize(text: string): LoadResult {
   if (!isRecord(parsed.state)) {
     return { error: "The save data is incomplete." };
   }
-  const state = migrate(parsed.state);
+  const state = migrate(parsed.state, parsed.version);
   const fresh = createInitialState();
   const raw = state as Partial<GameState> & { mode?: unknown };
   if (typeof raw.mode !== "string" || !["upgrade", "flow", "paused"].includes(raw.mode)) {

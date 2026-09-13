@@ -6,7 +6,7 @@ import { createModule } from "./state";
 import { bankNotesBurst } from "./notes";
 import { logSessionPractice } from "./habits";
 import { rollGoalOccurrences } from "./goals";
-import type { GameState, Hex, ModuleInstance, StarterType } from "./types";
+import type { CoreActivationType, GameState, Hex, ModuleInstance, StarterType } from "./types";
 
 export interface ActionResult {
   ok: boolean;
@@ -65,6 +65,21 @@ export function buyStarter(state: GameState, type: StarterType): ActionResult {
   state.nous -= price;
   state.purchased[type] = true;
   state.modules.push(createModule(state, type, "common"));
+  return ok;
+}
+
+// ADR-0007 activation economy: core activations are the cheapest store
+// offers, chosen by the player. Activation is permanent and player-wide.
+export function buyCoreActivation(state: GameState, type: CoreActivationType): ActionResult {
+  if (state.mode !== "upgrade") return fail("The store is available between sessions.");
+  if (!state.storeOpened) return fail("The store has not opened yet.");
+  const active = type === "notes" ? state.notesActive : state.goalsActive;
+  if (active) return fail("This core module is already active.");
+  const price = BALANCE.coreActivationPrices[type];
+  if (wholeNous(state) < price) return fail("Not enough whole nous.");
+  state.nous -= price;
+  if (type === "notes") state.notesActive = true;
+  else state.goalsActive = true;
   return ok;
 }
 

@@ -6,8 +6,7 @@ import { BALANCE } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
 import { canWriteNotes, projectedNotesBurst, sessionNoteCount } from "../engine/notes";
 import { activeHabit, developmentRate } from "../engine/habits";
-import { goalCapacity, goalRequiredSeconds, goalSummary, goalsActive } from "../engine/goals";
-import type { Goal, GameState, Hex, ModuleInstance, RateSnapshot } from "../engine/types";
+import { goalCapacity, goalRequiredSeconds, goalSummary, goalsActive } from "../engine/goals";import type { CoreActivationType, Goal, GameState, Hex, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
 import { moduleIcon } from "./icons";
 import { updateSvg } from "./svg";
@@ -352,12 +351,16 @@ function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderCont
     }
   }
 
-  // Water-fill: threshold progress rises inside the hex like liquid filling.
+  // Water-fill: threshold progress rises inside the hexagon like liquid.
   let fill = "";
   if (module.type === "forge" || module.type === "expander") {
     const progress = module.type === "forge" ? state.forge.progress : state.expansion.progress;
     const threshold = module.type === "forge" ? forgeThreshold(state.forge.earned) : expansionThreshold(state.expansion.earned);
     fill = waterFill(module.id, progress / threshold);
+  } else if (module.type === "goals" && state.goalsActive && state.goals.length > 0) {
+    // Show the goal closest to completion; a fully complete set fills fully.
+    const fractions = state.goals.map((g) => Math.min(1, g.progressSeconds / goalRequiredSeconds(g)));
+    fill = waterFill(module.id, state.goals.every((g) => g.completed) ? 1 : Math.max(...fractions));
   }
 
   let sub = "";
@@ -659,7 +662,7 @@ function effectDescription(module: ModuleInstance): string {
     case "habit":
       return "Names what you practice. The selected habit locks for the session and develops from live practice and manual logs; its level speeds development.";
     case "goals":
-      return "Tracks practice conditions in limited slots. Completions queue a charge burst; each level adds a goal slot.";
+      return "Tracks practice conditions in limited slots. Completions queue a charge burst; the module's level strengthens those bursts.";
     case "additive":
       return "Adds its production directly to the shared base rate.";
     case "conditional":
@@ -690,7 +693,7 @@ function nominalEffect(module: ModuleInstance, charged: boolean): { text: string
     case "habit":
       return { text: `×${fmt(power, 3)} habit development rate`, value: power };
     case "goals":
-      return { text: `${BALANCE.goalBaseSlots + module.level} goal slots`, value: BALANCE.goalBaseSlots + module.level };
+      return { text: `${fmt(BALANCE.goalBurstSecondsPerPracticeMinute * power, 3)}s burst / required minute`, value: BALANCE.goalBurstSecondsPerPracticeMinute * power };
     case "conditional":
       return { text: `+${fmt(100 * BALANCE.conditionalBonusPerActiveCore * power)}% per adjacent core`, value: BALANCE.conditionalBonusPerActiveCore * power };
     case "infusor":
@@ -811,7 +814,7 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       </div>`;
     };
     if (!goalsActive(state)) {
-      focus = `<section class="focus-controls"><span class="eyebrow">FOCUS CONTROLS</span><p class="small muted">The Goals tool activates when the starter store opens.</p></section>`;
+      focus = `<section class="focus-controls"><span class="eyebrow">FOCUS CONTROLS</span><p class="small muted">Activation is a store purchase — the cheapest way to open up.</p></section>`;
     } else if (live) {
       focus = `<section class="focus-controls">
         <span class="eyebrow">FOCUS CONTROLS · LOCKED FOR THIS SESSION</span>
@@ -847,7 +850,7 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
         ? `<textarea class="note-composer" id="note-composer" placeholder="What are you noticing?" maxlength="2000" rows="3"></textarea>
            <div class="session-actions" style="margin:10px 0 0"><button class="primary" id="note-save">Capture note</button></div>
            ${noteCount > 0 ? statLive("notes-projection", "Banks at session end", `${fmt(projectedNotesBurst(state), 1)}s of charge`) : `<p class="small muted" style="margin-top:10px">One note during this session turns its practice minutes into a banked charge burst.</p>`}`
-        : `<p class="small muted">${state.notesActive ? "Note capture happens during flow; the burst is banked when the session ends." : "The Notes tool activates when the starter store opens."}</p>`}
+        : `<p class="small muted">${state.notesActive ? "Note capture happens during flow; the burst is banked when the session ends." : "Activation is a store purchase — the cheapest way to open up."}</p>`}
       ${recent.length > 0 ? `<div class="note-list">${recent.map((n) => `<div class="note-entry"><span class="note-when mono">S${n.sessionId} · ${formatClock(n.atElapsed)}</span><p>${escapeHtml(n.text)}</p></div>`).join("")}</div>` : ""}
     </section>`;
   } else if (isCore(module)) {
@@ -879,7 +882,7 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       ${stat("Session notes", String(sessionNoteCount(state)))}
       ${statLive("notes-projection", "Banks at session end", `${fmt(projectedNotesBurst(state), 1)}s of charge`)}
       ${stat("Notes captured", String(state.notes.length))}
-      ${state.notesActive ? "" : stat("Status", "activates with the store")}`;
+      ${state.notesActive ? "" : stat("Status", "activation available in the store")}`;
   } else if (module.type === "habit") {
     const habit = activeHabit(state);
     chargeStats = `
@@ -894,8 +897,8 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       ${stat("Goal slots", `${state.goals.length} / ${goalCapacity(state)}`)}
       ${stat("Completed this occurrence", `${completed} / ${state.goals.length}`)}
       ${stat("Total completions", String(state.goals.reduce((sum, g) => sum + g.completedCount, 0)))}
-      ${stat("Burst per completion", `${fmt(0.5, 2)}s of charge per required minute`)}
-      ${state.goalsActive ? "" : stat("Status", "activates with the store")}`;
+      ${stat("Burst per completion", `${fmt(BALANCE.goalBurstSecondsPerPracticeMinute * modulePower(module), 3)}s of charge per required minute`)}
+      ${state.goalsActive ? "" : stat("Status", "activation available in the store")}`;
   } else {
     chargeStats = `
       ${stat("Banked charge", `${Math.ceil(chargeSecondsRemaining(state))}s (on Time)`)}
@@ -1057,7 +1060,7 @@ function nominalGainText(module: ModuleInstance): string {
     return `×${fmt(growth, 3)} → ×${fmt(now.value * growth, 3)} development`;
   }
   if (module.type === "goals") {
-    return `+1 goal slot`;
+    return `+${fmt(now.value * (growth - 1), 3)}s per minute`;
   }
   return `+${fmt(now.value * (growth - 1), 4)} effect`;
 }
@@ -1133,7 +1136,7 @@ function renderModal(app: App): void {
     kind === "forge"
       ? app.state.bankedRolls.at(-1)?.id ?? null
       : kind === "store"
-        ? [app.ui.showAcquired, wholeNous(app.state), JSON.stringify(app.state.purchased)]
+        ? [app.ui.showAcquired, wholeNous(app.state), JSON.stringify(app.state.purchased), app.state.notesActive, app.state.goalsActive]
         : null;
   const renderKey = JSON.stringify([kind, app.ui.importError, app.state.pendingGap, extra]);
   // Clock ticks must not replace a save textarea or steal dialog focus.
@@ -1174,10 +1177,24 @@ function renderStoreModal(app: App, content: HTMLElement): void {
   const types = Object.keys(BALANCE.starterPrices) as (keyof typeof BALANCE.starterPrices)[];
   const visible = types.filter((type) => ui.showAcquired || !state.purchased[type]);
   const acquired = types.filter((type) => state.purchased[type]).length;
+  const activations = (Object.keys(BALANCE.coreActivationPrices) as CoreActivationType[]).filter(
+    (type) => !ui.showAcquired && (type === "notes" ? !state.notesActive : !state.goalsActive),
+  );
   content.innerHTML = `
     ${modalTop("STORE")}
     <h2 id="modal-title">Shape what comes next.</h2>
-    <p class="lead">One guaranteed common copy of each starter module. ${fmtWhole(state.nous)} ν available.</p>
+    <p class="lead">Core activations are the cheapest way to open the instrument up. ${fmtWhole(state.nous)} ν available.</p>
+    ${activations.length > 0 ? `
+      <div class="shop-list store-activations">
+        ${activations.map((type) => {
+          const price = BALANCE.coreActivationPrices[type];
+          const affordable = wholeNous(state) >= price;
+          return `<div class="shop-item activation">
+            <div><h3>Activate ${META[type].name}</h3><small>${META[type].role} · permanent</small></div>
+            <button class="primary" data-activate="${type}" ${affordable ? "" : "disabled"}>${price} ν</button>
+          </div>`;
+        }).join("")}
+      </div>` : ""}
     <div class="shop-list">
       ${visible.map((type) => {
         const price = BALANCE.starterPrices[type];
@@ -1190,10 +1207,15 @@ function renderStoreModal(app: App, content: HTMLElement): void {
       }).join("") || `<p class="empty-copy">Everything is acquired. New copies come from the Forge.</p>`}
     </div>
     <label class="store-toggle"><input type="checkbox" id="store-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${acquired}/${types.length})</label>
-    <p class="modal-note">Each offer is one-time. Copies from Forge rolls do not remove these offers — they can become combination material.</p>`;
+    <p class="modal-note">Activations and starter offers are one-time. Copies from Forge rolls do not remove these offers — they can become combination material.</p>`;
   content.querySelectorAll<HTMLButtonElement>("[data-buy]").forEach((button) => {
     button.addEventListener("click", () => {
       app.buy(button.getAttribute("data-buy") as keyof typeof BALANCE.starterPrices);
+    });
+  });
+  content.querySelectorAll<HTMLButtonElement>("[data-activate]").forEach((button) => {
+    button.addEventListener("click", () => {
+      app.buyActivation(button.getAttribute("data-activate") as CoreActivationType);
     });
   });
   byId("store-show-acquired")?.addEventListener("change", (event) => {
@@ -1211,7 +1233,7 @@ function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
     case "time": return `×${fmt(1 + BALANCE.timeBonus)} production during flow<br>Timed completion: strength 1 for ${fmt(BALANCE.chargeSecondsPerPracticeSecond * 60)}s per planned minute`;
     case "notes": return `Bank a strength-1 charge burst at session end<br>${fmt(BALANCE.notesChargePerMinute)}s per qualifying practice minute (any note qualifies the session)`;
     case "habit": return `Locks one habit for the session; live and logged practice develop it<br>Development rate ×${fmt(1, 3)}, improved by level and rarity`;
-    case "goals": return `Track practice conditions in limited slots<br>Each completion banks a charge burst; levels add slots`;
+    case "goals": return `Track practice conditions in limited slots<br>Each completion banks a charge burst; levels strengthen bursts`;
     case "conditional": return `+${fmt(BALANCE.conditionalBonusPerActiveCore * 100)}% production per adjacent active core<br>+${fmt(BALANCE.conditionalBonusPerActiveCore * charged * 100)}% at charge strength 1`;
     case "infusor": return `+${fmt(BALANCE.infusorBonus * 100)}% to adjacent production contributions<br>+${fmt(BALANCE.infusorBonus * charged * 100)}% at charge strength 1`;
     case "forge": return `1 Forge progress per charge<br>Next roll: ${fmt(forgeThreshold(state.forge.earned))} progress`;

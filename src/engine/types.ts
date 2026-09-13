@@ -44,6 +44,11 @@ export interface Meter {
 
 export type StarterType = GameplayType;
 
+// Core modules whose activation is a purchasable store offer under the
+// ADR-0007 activation economy. Enter/Exit starts active, Time activates
+// after the first session (ADR-0008 pacing), Habit is free onboarding.
+export type CoreActivationType = "notes" | "goals";
+
 export interface SessionState {
   target: number | null;
   elapsed: number;

@@ -1,6 +1,7 @@
 import { advance } from "../engine/advance";
 import type { AdvanceResult } from "../engine/types";
 import {
+  buyCoreActivation,
   buyStarter,
   chooseRoll,
   combine,
@@ -30,7 +31,7 @@ import {
   selectHabit,
 } from "../engine/habits";
 import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
-import type { GameState, Hex, StarterType } from "../engine/types";
+import type { CoreActivationType, GameState, Hex, StarterType } from "../engine/types";
 import { render } from "./render";
 import { META } from "./meta";
 
@@ -313,6 +314,13 @@ export class App {
     if (this.act(buyStarter(this.state, type), `${META[type].name} purchased. Choose a cell for it.`)) {
       this.ui.modal = null;
       this.beginPlacing(this.state.modules[this.state.modules.length - 1]!.id);
+    }
+  }
+
+  buyActivation(type: CoreActivationType): void {
+    if (this.act(buyCoreActivation(this.state, type), `${META[type].name} activated. Its focus tools are live.`)) {
+      this.ui.modal = "store";
+      this.render();
     }
   }
 

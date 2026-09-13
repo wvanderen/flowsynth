@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
-import { endSession, startSession } from "./actions";
+import { buyCoreActivation, endSession, startSession } from "./actions";
 import { chargeSecondsRemaining, isActive } from "./economy";
 import { fresh, grantBurst } from "./fixtures";
 import { canWriteNotes, projectedNotesBurst, sessionNoteCount, writeNote, notesPower } from "./notes";
@@ -14,16 +14,21 @@ function activated(): GameState {
 }
 
 describe("notes module", () => {
-  it("activates alongside the store at the first completed timed target", () => {
+  it("activation is a store purchase; it stays locked until bought", () => {
     const s = fresh();
     expect(isActive(s, s.modules.find((m) => m.type === "notes")!)).toBe(false);
     startSession(s, 600);
     advance(s, 600);
     endSession(s);
     startSession(s, 600);
-    const result = advance(s, 600);
-    expect(result.storeOpened).toBe(true);
+    advance(s, 600);
+    endSession(s);
+    expect(s.storeOpened).toBe(true);
+    expect(s.notesActive).toBe(false);
+    s.nous = 20;
+    expect(buyCoreActivation(s, "notes").ok).toBe(true);
     expect(s.notesActive).toBe(true);
+    expect(s.nous).toBeCloseTo(0, 6);
   });
 
   it("captures notes during flow and paused, never in upgrade mode", () => {

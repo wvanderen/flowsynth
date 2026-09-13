@@ -1,6 +1,6 @@
 import { pushBurst } from "./advance";
 import { BALANCE, EPS } from "./constants";
-import { deployedTime, isActive } from "./economy";
+import { deployedTime, isActive, modulePower } from "./economy";
 import type { Goal, GoalCondition, GoalSchedule, GameState, ModuleInstance } from "./types";
 
 export type { Goal, GoalCondition, GoalSchedule };
@@ -21,19 +21,24 @@ export function goalsActive(state: GameState): boolean {
   return state.goalsActive && goalModule(state) !== undefined;
 }
 
-// The module's primary effect: one goal slot per level beyond the base.
+// The module's primary effect: its level strengthens completion bursts.
+// Slot capacity is fixed at the base count for now; how slots expand is a
+// deferred design question (see issue #6).
 export function goalCapacity(state: GameState): number {
   const module = goalModule(state);
   if (!module || !isActive(state, module)) return 0;
-  return BALANCE.goalBaseSlots + module.level;
+  return BALANCE.goalBaseSlots;
 }
 
 export function goalRequiredSeconds(goal: Goal): number {
   return goal.condition.minutes * 60;
 }
 
-export function goalBurstSeconds(goal: Goal): number {
-  return goal.condition.minutes * BALANCE.goalBurstSecondsPerPracticeMinute;
+// Burst scales with the module's level and rarity (standard power curve).
+export function goalBurstSeconds(state: GameState, goal: Goal): number {
+  const module = goalModule(state);
+  const power = module ? modulePower(module) : 1;
+  return goal.condition.minutes * BALANCE.goalBurstSecondsPerPracticeMinute * power;
 }
 
 function localDateKey(now: number): string {
@@ -128,7 +133,7 @@ export function accrueGoalProgress(state: GameState, habitId: string | null, sec
     if (time && goal.progressSeconds >= goalRequiredSeconds(goal)) {
       goal.completed = true;
       goal.completedCount++;
-      pushBurst(time, { strength: 1, seconds: goalBurstSeconds(goal) });
+      pushBurst(time, { strength: 1, seconds: goalBurstSeconds(state, goal) });
       completions++;
     }
   }

@@ -53,7 +53,7 @@ describe("persistence", () => {
     setActive(s);
     s.storeOpened = true;
     s.nous = 42;
-    const v1 = serialize(s).replace('"version": 2', '"version": 1');
+    const v1 = serialize(s).replace('"version": 4', '"version": 1');
     const withoutNotesFields = JSON.parse(v1);
     delete withoutNotesFields.state.notesActive;
     delete withoutNotesFields.state.notes;
@@ -64,11 +64,12 @@ describe("persistence", () => {
     expect(result.state!.nous).toBeCloseTo(42, 6);
   });
 
-  it("heals notes and goals activation for any store-opened save, even explicit stale false", () => {
+  it("grandfathers pre-economy (v3) store-opened saves in as activated", () => {
     const s = fresh();
     setActive(s);
     s.storeOpened = true;
     const v3 = JSON.parse(serialize(s));
+    v3.version = 3;
     v3.state.notesActive = false;
     v3.state.goalsActive = false;
     const result = deserialize(JSON.stringify(v3));
