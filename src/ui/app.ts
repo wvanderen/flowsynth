@@ -24,7 +24,7 @@ import type { GameState, Hex, StarterType } from "../engine/types";
 import { render } from "./render";
 import { META } from "./meta";
 
-export type ModalKind = "store" | "forge" | "export" | "import" | "reset" | "reconcile" | null;
+export type ModalKind = "settings" | "store" | "forge" | "export" | "import" | "reset" | "reconcile" | null;
 
 export interface UiState {
   selected: string | null;
@@ -402,7 +402,7 @@ export class App {
     this.ui.selected = null;
     this.ui.placing = null;
     this.ui.reshape = null;
-    this.say("Grid & inventory: drag modules between cells, or select one for Move and Return.");
+    this.say("Grid & inventory: drag modules between cells or into inventory.");
     this.render();
   }
 
