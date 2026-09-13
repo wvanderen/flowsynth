@@ -64,6 +64,19 @@ describe("persistence", () => {
     expect(result.state!.nous).toBeCloseTo(42, 6);
   });
 
+  it("heals notes and goals activation for any store-opened save, even explicit stale false", () => {
+    const s = fresh();
+    setActive(s);
+    s.storeOpened = true;
+    const v3 = JSON.parse(serialize(s));
+    v3.state.notesActive = false;
+    v3.state.goalsActive = false;
+    const result = deserialize(JSON.stringify(v3));
+    expect(result.error).toBeUndefined();
+    expect(result.state!.notesActive).toBe(true);
+    expect(result.state!.goalsActive).toBe(true);
+  });
+
   it("rejects corrupt, foreign, and future-version saves", () => {
     expect(deserialize("{nope").error).toBeDefined();
     expect(deserialize('{"app":"other","version":1}').error).toBeDefined();

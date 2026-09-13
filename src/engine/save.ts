@@ -25,12 +25,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 // v1 (first playable) → v2 (Notes) → v3 (Goals): new state starts empty and
 // the modules activate retroactively for saves that already opened the store.
+// The activation healing is unconditional — any stale `false` written by a
+// mixed-version tab also resolves on load, because the store gate is the
+// single source of truth for these activations.
 function migrate(state: Record<string, unknown>): Record<string, unknown> {
-  if (state.notesActive === undefined && state.storeOpened === true) {
-    state = { ...state, notesActive: true };
-  }
-  if (state.goalsActive === undefined && state.storeOpened === true) {
-    state = { ...state, goalsActive: true };
+  if (state.storeOpened === true) {
+    state = { ...state, notesActive: true, goalsActive: true };
   }
   if (state.notes === undefined) state = { ...state, notes: [] };
   if (state.habits === undefined) state = { ...state, habits: [], activeHabitId: null, practiceLog: [] };
