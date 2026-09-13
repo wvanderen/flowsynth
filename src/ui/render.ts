@@ -4,6 +4,7 @@ import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold, expansionThreshold } from "../engine/rolls";
 import { BALANCE } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
+import { canWriteNotes, projectedNotesBurst, sessionNoteCount } from "../engine/notes";
 import type { GameState, Hex, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
 import { moduleIcon } from "./icons";
@@ -92,12 +93,25 @@ function renderSessionToolbar(app: App): void {
   const upgrade = state.mode === "upgrade";
 
   const shortcut = `<button class="module-shortcut" id="time-shortcut" aria-label="Open Time module" title="Time settings"><svg viewBox="-18 -18 36 36" aria-hidden="true">${moduleIcon("time")}</svg></button>`;
-  const bindShortcut = () => byId("time-shortcut")?.addEventListener("click", () => {
-    app.ui.selected = deployedTime(state)?.id ?? null;
-    app.ui.managing = false;
-    app.ui.placing = null;
-    app.render();
-  });
+  const bindShortcut = () => {
+    byId("time-shortcut")?.addEventListener("click", () => {
+      app.ui.selected = deployedTime(state)?.id ?? null;
+      app.ui.managing = false;
+      app.ui.placing = null;
+      app.render();
+    });
+    byId("notes-shortcut")?.addEventListener("click", () => {
+      const notes = app.state.modules.find((m) => m.type === "notes" && m.pos !== null);
+      app.ui.selected = notes?.id ?? null;
+      app.ui.managing = false;
+      app.ui.placing = null;
+      app.render();
+    });
+  };
+  const notesShortcut =
+    state.mode !== "upgrade" && state.notesActive
+      ? `<button class="module-shortcut" id="notes-shortcut" aria-label="Open Notes module" title="Capture a thought"><svg viewBox="-18 -18 36 36" aria-hidden="true">${moduleIcon("notes")}</svg></button>`
+      : "";
 
   if (upgrade) {
     // Structural key: only rebuild when the shape of the toolbar changes, so
@@ -121,7 +135,7 @@ function renderSessionToolbar(app: App): void {
   const banked = chargeSecondsRemaining(state);
   const dispensing = chargeActive(state) && !paused;
 
-  const key = `flow:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}`;
+  const key = `flow:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}:${state.notesActive}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.innerHTML = `
@@ -130,7 +144,7 @@ function renderSessionToolbar(app: App): void {
         <p class="clock-caption" id="session-caption"></p>
         <div class="time-track"><span id="time-track-fill" style="width:0%"></span></div>
       </div>
-      ${shortcut}<div class="charge-bank">
+      ${shortcut}${notesShortcut}<div class="charge-bank">
         <span class="config-label">Charge bank</span>
         <strong class="mono" id="charge-bank-value" style="font-size:17px"></strong>
         <p class="clock-caption" id="charge-bank-caption"></p>
@@ -509,12 +523,15 @@ function renderInspector(app: App): void {
     state.storeOpened,
     state.bankedRolls.length,
     state.cellTokens,
+    state.notes.length,
     module?.level ?? null,
     module?.rarity ?? null,
   ]);
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
-    host.scrollTop = 0;
+    // A newly captured note keeps the panel scrolled where the player is.
+    const keepScroll = module?.type === "notes" && state.mode !== "upgrade";
+    const scrollTop = host.scrollTop;
     if (ui.managing && state.mode === "upgrade") {
       renderManagePanel(app, host);
     } else if (!module) {
@@ -522,6 +539,7 @@ function renderInspector(app: App): void {
     } else {
       renderModulePanel(app, host, module);
     }
+    if (keepScroll) host.scrollTop = scrollTop;
   }
   updateInspectorLive(app, host);
 }
@@ -535,6 +553,7 @@ function updateInspectorLive(app: App, host: HTMLElement): void {
   };
   set("charge", `${Math.ceil(chargeSecondsRemaining(state))}s`);
   set("queued", `${fmt(chargeSecondsRemaining(state), 1)}s`);
+  set("notes-projection", `${fmt(projectedNotesBurst(state), 1)}s of charge`);
   set("forge", `${fmt(Math.max(0, state.forge.progress), 1)} / ${fmt(forgeThreshold(state.forge.earned), 1)}`);
   set("expansion", `${fmt(Math.max(0, state.expansion.progress), 1)} / ${fmt(expansionThreshold(state.expansion.earned), 1)}`);
   set("rolls", String(state.bankedRolls.length));
@@ -591,6 +610,8 @@ function effectDescription(module: ModuleInstance): string {
       return "Supplies the baseline nous production while flow is live. It never generates charge.";
     case "time":
       return "Applies the running ×1.2 multiplier and awards the completion burst when a timed target is reached.";
+    case "notes":
+      return "Captures thoughts during flow. A session with at least one note banks a charge burst at session end, sized by its practice minutes.";
     case "additive":
       return "Adds its production directly to the shared base rate.";
     case "conditional":
@@ -616,6 +637,8 @@ function nominalEffect(module: ModuleInstance, charged: boolean): { text: string
       return { text: `+${fmt(BALANCE.additiveRate * power * factor)} ν/s`, value: BALANCE.additiveRate * power * factor };
     case "time":
       return { text: `+${fmt(100 * BALANCE.timeBonus * power)}% multiplier`, value: BALANCE.timeBonus * power };
+    case "notes":
+      return { text: `${fmt(BALANCE.notesChargePerMinute * power)}s charge / qualifying minute`, value: BALANCE.notesChargePerMinute * power };
     case "conditional":
       return { text: `+${fmt(100 * BALANCE.conditionalBonusPerActiveCore * power)}% per adjacent core`, value: BALANCE.conditionalBonusPerActiveCore * power };
     case "infusor":
@@ -664,6 +687,19 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       </select>
       ${!upgrade && state.session ? statLive("elapsed", "Elapsed", formatClock(state.session.elapsed)) : ""}
     </section>`;
+  } else if (module.type === "notes") {
+    const recent = [...state.notes].slice(-8).reverse();
+    const noteCount = sessionNoteCount(state);
+    const capture = canWriteNotes(state);
+    focus = `<section class="focus-controls">
+      <span class="eyebrow">FOCUS CONTROLS</span>
+      ${capture
+        ? `<textarea class="note-composer" id="note-composer" placeholder="What are you noticing?" maxlength="2000" rows="3"></textarea>
+           <div class="session-actions" style="margin:10px 0 0"><button class="primary" id="note-save">Capture note</button></div>
+           ${noteCount > 0 ? statLive("notes-projection", "Banks at session end", `${fmt(projectedNotesBurst(state), 1)}s of charge`) : `<p class="small muted" style="margin-top:10px">One note during this session turns its practice minutes into a banked charge burst.</p>`}`
+        : `<p class="small muted">${state.notesActive ? "Note capture happens during flow; the burst is banked when the session ends." : "The Notes tool activates when the starter store opens."}</p>`}
+      ${recent.length > 0 ? `<div class="note-list">${recent.map((n) => `<div class="note-entry"><span class="note-when mono">S${n.sessionId} · ${formatClock(n.atElapsed)}</span><p>${escapeHtml(n.text)}</p></div>`).join("")}</div>` : ""}
+    </section>`;
   } else if (isCore(module)) {
     focus = `<section class="focus-controls"><span class="eyebrow">FOCUS CONTROLS</span><p class="small muted">This module reserves its cell. Its focus tool arrives in a later version.</p></section>`;
   }
@@ -688,6 +724,12 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       ${stat("Rewards earned", String(isForge ? state.forge.earned : state.expansion.earned))}
       ${stat("Charge source", eligible ? "adjacent to active Time" : "not adjacent to active Time")}
       ${stat("Progress rate", `${fmt(contribution?.value ?? 0, 2)} /s while charged`)}`;
+  } else if (module.type === "notes") {
+    chargeStats = `
+      ${stat("Session notes", String(sessionNoteCount(state)))}
+      ${statLive("notes-projection", "Banks at session end", `${fmt(projectedNotesBurst(state), 1)}s of charge`)}
+      ${stat("Notes captured", String(state.notes.length))}
+      ${state.notesActive ? "" : stat("Status", "activates with the store")}`;
   } else {
     chargeStats = `
       ${stat("Banked charge", `${Math.ceil(chargeSecondsRemaining(state))}s (on Time)`)}
@@ -732,6 +774,25 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
   byId("panel-end")?.addEventListener("click", () => app.endFlow());
   byId("panel-pause")?.addEventListener("click", () => (state.mode === "paused" ? app.resume() : app.pause()));
   bindDurationSelect(app, byId("panel-duration"));
+  const composer = byId("note-composer") as HTMLTextAreaElement | null;
+  const saveNote = () => {
+    if (!composer) return;
+    app.addNote(composer.value);
+    // A successful save rebuilds the panel with a fresh composer; refocus it.
+    const fresh = byId("note-composer") as HTMLTextAreaElement | null;
+    if (fresh) fresh.focus();
+  };
+  byId("note-save")?.addEventListener("click", saveNote);
+  composer?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      saveNote();
+    }
+  });
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function effectTextFor(module: ModuleInstance, value: number, strength: number): string {
@@ -752,10 +813,13 @@ function effectTextFor(module: ModuleInstance, value: number, strength: number):
 function nominalGainText(module: ModuleInstance): string {
   const now = nominalEffect(module, false);
   const growth = BALANCE.rarityPower[module.rarity];
-  if (module.type === "enter" || module.type === "additive" || module.type === "time" || module.type === "conditional" || module.type === "infusor") {
-    return `+${fmt(now.value * (growth - 1), 4)} effect`;
+  if (module.type === "forge" || module.type === "expander") {
+    return `${fmt(now.value * (growth - 1), 3)} progress/s`;
   }
-  return `${fmt(now.value * (growth - 1), 3)} progress/s`;
+  if (module.type === "notes") {
+    return `+${fmt(now.value * (growth - 1), 3)}s / minute`;
+  }
+  return `+${fmt(now.value * (growth - 1), 4)} effect`;
 }
 
 /* ── Grid & inventory panel ────────────────────────── */
@@ -905,6 +969,7 @@ function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
     case "enter": return `+${fmt(BALANCE.baseRate)} ν/s base production<br>+${fmt(BALANCE.baseRate * charged)} ν/s at charge strength 1`;
     case "additive": return `+${fmt(BALANCE.additiveRate)} ν/s base production<br>+${fmt(BALANCE.additiveRate * charged)} ν/s at charge strength 1`;
     case "time": return `×${fmt(1 + BALANCE.timeBonus)} production during flow<br>Timed completion: strength 1 for ${fmt(BALANCE.chargeSecondsPerPracticeSecond * 60)}s per planned minute`;
+    case "notes": return `Bank a strength-1 charge burst at session end<br>${fmt(BALANCE.notesChargePerMinute)}s per qualifying practice minute (any note qualifies the session)`;
     case "conditional": return `+${fmt(BALANCE.conditionalBonusPerActiveCore * 100)}% production per adjacent active core<br>+${fmt(BALANCE.conditionalBonusPerActiveCore * charged * 100)}% at charge strength 1`;
     case "infusor": return `+${fmt(BALANCE.infusorBonus * 100)}% to adjacent production contributions<br>+${fmt(BALANCE.infusorBonus * charged * 100)}% at charge strength 1`;
     case "forge": return `1 Forge progress per charge<br>Next roll: ${fmt(forgeThreshold(state.forge.earned))} progress`;
@@ -921,6 +986,8 @@ function candidateHeadline(type: ModuleInstance["type"]): string {
       return `+${fmt(BALANCE.additiveRate)} ν/s`;
     case "time":
       return `×${fmt(1 + BALANCE.timeBonus)}`;
+    case "notes":
+      return `${fmt(BALANCE.notesChargePerMinute)}s/min burst`;
     case "conditional":
       return `+${fmt(BALANCE.conditionalBonusPerActiveCore * 100)}%/core`;
     case "infusor":

@@ -69,6 +69,9 @@ export function advance(state: import("./types").GameState, seconds: number, rng
       }
       if (state.timeActive && !state.storeOpened) {
         state.storeOpened = true;
+        // The store opening is also the Notes module's activation gate (#4):
+        // its capture tool comes alive with the wider game.
+        state.notesActive = true;
         result.storeOpened = true;
       }
     }

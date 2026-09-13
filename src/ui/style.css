@@ -164,6 +164,25 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .focus-controls .eyebrow { display: block; margin-bottom: 12px; }
 .focus-controls .session-actions { margin: 0; }
 
+/* Notes capture during flow: quiet composer and an unobtrusive history. */
+.note-composer {
+  width: 100%;
+  background: var(--panel-soft);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  resize: vertical;
+  min-height: 66px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.note-composer:focus { border-color: var(--charge); outline: none; }
+.note-list { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+.note-entry { border: 1px solid var(--line-soft); border-radius: 8px; padding: 8px 11px; }
+.note-entry .note-when { display: block; font-size: 9px; color: var(--muted); letter-spacing: 0.08em; margin-bottom: 3px; }
+.note-entry p { font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+
 .level-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
 .level-heading strong { font: 30px var(--mono); font-weight: 400; }
 .level-effect { font: 13px var(--mono); color: var(--accent); }

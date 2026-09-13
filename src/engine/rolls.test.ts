@@ -27,9 +27,10 @@ describe("forge roll generation", () => {
 
   it("excludes unfinished core types from the pool", () => {
     expect(ROLL_POOL).not.toContain("habit");
-    expect(ROLL_POOL).not.toContain("notes");
     expect(ROLL_POOL).not.toContain("goals");
     expect(ROLL_POOL).not.toContain("tasks");
+    expect(ROLL_POOL).toContain("notes");
+    expect(ROLL_POOL).toHaveLength(8);
   });
 
   it("persists outcomes when the roll is earned, not when it is revealed", () => {

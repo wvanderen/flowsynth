@@ -20,6 +20,7 @@ import { adjacent, neighbors, sameHex } from "../engine/hex";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
 import { planTick } from "../engine/clock";
 import { createInitialState } from "../engine/state";
+import { writeNote } from "../engine/notes";
 import type { GameState, Hex, StarterType } from "../engine/types";
 import { render } from "./render";
 import { META } from "./meta";
@@ -267,10 +268,11 @@ export class App {
   }
 
   endFlow(): void {
-    const banked = chargeSecondsRemaining(this.state);
     const firstSession = this.state.sessionIndex === 1;
     if (this.act(endSession(this.state), "")) {
       this.lastWall = null;
+      // Read the bank after ending: session-end bursts (Notes) join Time's.
+      const banked = chargeSecondsRemaining(this.state);
       if (firstSession) {
         this.say("First session complete — Time is now active. Its multiplier and completion bursts power your build.");
       } else if (banked > 0) {
@@ -383,6 +385,17 @@ export class App {
 
   returnToInventory(id: string): void {
     this.act(returnModule(this.state, id), "Returned to inventory. Its state is kept.");
+  }
+
+  addNote(text: string): void {
+    const result = writeNote(this.state, text);
+    if (result.ok) {
+      this.say("Noted. This session's practice counts toward the Notes burst.");
+      this.save();
+    } else {
+      this.say(result.reason ?? "Cannot capture a note right now.");
+    }
+    this.render();
   }
 
   chooseCandidate(offerId: string, candidateId: string): void {

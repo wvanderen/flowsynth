@@ -55,6 +55,13 @@ export interface PendingGap {
   detectedAt: number;
 }
 
+export interface NoteEntry {
+  id: string;
+  sessionId: number;
+  atElapsed: number;
+  text: string;
+}
+
 export type Mode = "upgrade" | "flow" | "paused";
 
 export interface GameState {
@@ -71,6 +78,8 @@ export interface GameState {
   bankedRolls: RollOffer[];
   purchased: Record<StarterType, boolean>;
   timeActive: boolean;
+  notesActive: boolean;
+  notes: NoteEntry[];
   storeOpened: boolean;
   session: SessionState | null;
   pendingGap: PendingGap | null;

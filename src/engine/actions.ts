@@ -3,6 +3,7 @@ import { pushBurst } from "./advance";
 import { deployedAt, findModule, isActive, isCore, levelCost, wholeNous } from "./economy";
 import { adjacent, hexKey, isConnected, sameHex } from "./hex";
 import { createModule } from "./state";
+import { bankNotesBurst } from "./notes";
 import type { GameState, Hex, ModuleInstance, StarterType } from "./types";
 
 export interface ActionResult {
@@ -28,11 +29,14 @@ export function startSession(state: GameState, target: number | null): ActionRes
 
 export function endSession(state: GameState): ActionResult {
   if (state.mode === "upgrade") return fail("No session is running.");
+  const sessionId = state.sessionIndex;
+  const elapsed = state.session?.elapsed ?? 0;
   state.mode = "upgrade";
   state.session = null;
   state.pendingGap = null;
   state.sessionsCompleted++;
   if (state.sessionsCompleted >= 1) state.timeActive = true;
+  bankNotesBurst(state, sessionId, elapsed);
   return ok;
 }
 

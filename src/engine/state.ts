@@ -16,6 +16,8 @@ export function createInitialState(): GameState {
     bankedRolls: [],
     purchased: { additive: false, conditional: false, infusor: false, forge: false, expander: false },
     timeActive: false,
+    notesActive: false,
+    notes: [],
     storeOpened: false,
     session: null,
     pendingGap: null,

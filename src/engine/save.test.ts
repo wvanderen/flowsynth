@@ -48,11 +48,27 @@ describe("persistence", () => {
     expect(restored.cellTokens).toBe(straight.cellTokens);
   });
 
+  it("migrates version-1 saves into the Notes-era format", () => {
+    const s = fresh();
+    setActive(s);
+    s.storeOpened = true;
+    s.nous = 42;
+    const v1 = serialize(s).replace('"version": 2', '"version": 1');
+    const withoutNotesFields = JSON.parse(v1);
+    delete withoutNotesFields.state.notesActive;
+    delete withoutNotesFields.state.notes;
+    const result = deserialize(JSON.stringify(withoutNotesFields));
+    expect(result.error).toBeUndefined();
+    expect(result.state!.notesActive).toBe(true);
+    expect(result.state!.notes).toEqual([]);
+    expect(result.state!.nous).toBeCloseTo(42, 6);
+  });
+
   it("rejects corrupt, foreign, and future-version saves", () => {
     expect(deserialize("{nope").error).toBeDefined();
     expect(deserialize('{"app":"other","version":1}').error).toBeDefined();
     expect(deserialize('{"app":"flowsynth","version":99,"state":{}}').error).toBeDefined();
-    expect(deserialize('{"app":"flowsynth","version":1,"state":{"mode":"weird"}}').error).toBeDefined();
+    expect(deserialize('{"app":"flowsynth","version":2,"state":{"mode":"weird"}}').error).toBeDefined();
   });
 });
 
