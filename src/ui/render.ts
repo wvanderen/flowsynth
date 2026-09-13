@@ -108,20 +108,32 @@ function renderSessionToolbar(app: App): void {
       app.ui.placing = null;
       app.render();
     });
+    byId("habit-chip")?.addEventListener("click", () => {
+      const habit = app.state.modules.find((m) => m.type === "habit" && m.pos !== null);
+      app.ui.selected = habit?.id ?? null;
+      app.ui.managing = false;
+      app.ui.placing = null;
+      app.render();
+    });
   };
-  const notesShortcut =
-    state.mode !== "upgrade" && state.notesActive
-      ? `<button class="module-shortcut" id="notes-shortcut" aria-label="Open Notes module" title="Capture a thought"><svg viewBox="-18 -18 36 36" aria-hidden="true">${moduleIcon("notes")}</svg></button>`
-      : "";
+  const notesShortcut = state.notesActive
+    ? `<button class="module-shortcut" id="notes-shortcut" aria-label="Open Notes module" title="Notes"><svg viewBox="-18 -18 36 36" aria-hidden="true">${moduleIcon("notes")}</svg></button>`
+    : "";
+  const activeHabitChip = (habitName: string) =>
+    `<button class="habit-chip" id="habit-chip" title="Open the Habit module"><svg viewBox="-18 -18 36 36" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6">${moduleIcon("habit")}</svg><span>${escapeHtml(habitName)}</span></button>`;
+  const activeHabitName = () => {
+    const habit = activeHabit(state);
+    return habit ? habit.name : "";
+  };
 
   if (upgrade) {
     // Structural key: only rebuild when the shape of the toolbar changes, so
     // button nodes (and in-flight clicks) survive clock ticks.
-    const key = `upgrade:${app.ui.chosenTarget}`;
+    const key = `upgrade:${app.ui.chosenTarget}:${state.notesActive}:${state.activeHabitId ?? ""}`;
     if (host.dataset.renderKey !== key) {
       host.dataset.renderKey = key;
       host.innerHTML = `<div><p class="session-clock mono">${app.ui.chosenTarget === null ? "∞" : formatClock(app.ui.chosenTarget)}</p><p class="clock-caption">${app.ui.chosenTarget === null ? "Open-ended" : "Planned practice"}</p></div>
-        ${shortcut}<div class="session-actions"><button class="primary" id="start-flow">Enter flow ↗</button></div>`;
+        ${shortcut}${notesShortcut}${activeHabitName() ? activeHabitChip(activeHabitName()) : ""}<div class="session-actions"><button class="primary" id="start-flow">Enter flow ↗</button></div>`;
       bindShortcut();
       byId("start-flow")?.addEventListener("click", () => app.startFlow());
     }
@@ -133,10 +145,8 @@ function renderSessionToolbar(app: App): void {
   const target = session?.target ?? null;
   const paused = state.mode === "paused";
   const reached = target !== null && elapsed >= target;
-  const banked = chargeSecondsRemaining(state);
-  const dispensing = chargeActive(state) && !paused;
 
-  const key = `flow:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}:${state.notesActive}`;
+  const key = `flow:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}:${state.notesActive}:${state.activeHabitId ?? ""}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.innerHTML = `
@@ -145,11 +155,7 @@ function renderSessionToolbar(app: App): void {
         <p class="clock-caption" id="session-caption"></p>
         <div class="time-track"><span id="time-track-fill" style="width:0%"></span></div>
       </div>
-      ${shortcut}${notesShortcut}<div class="charge-bank">
-        <span class="config-label">Charge bank</span>
-        <strong class="mono" id="charge-bank-value" style="font-size:17px"></strong>
-        <p class="clock-caption" id="charge-bank-caption"></p>
-      </div>
+      ${shortcut}${notesShortcut}${activeHabitName() ? activeHabitChip(activeHabitName()) : ""}
       <div class="session-actions">
         <button id="pause-flow">${paused ? "Resume" : "Pause"}</button>
         <button class="primary" id="end-flow">End flow</button>
@@ -173,8 +179,6 @@ function renderSessionToolbar(app: App): void {
   };
   set("session-clock", formatClock(elapsed));
   set("session-caption", caption);
-  set("charge-bank-value", `${Math.ceil(banked)}s`);
-  set("charge-bank-caption", dispensing ? "→ dispensing now" : paused ? "frozen while paused" : "waiting / banked");
   const track = byId("time-track-fill");
   const width = target ? `${Math.min(100, (elapsed / target) * 100)}%` : "0%";
   if (track && track.style.width !== width) track.style.width = width;
@@ -742,8 +746,10 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
                      <span class="habit-name">${escapeHtml(habit.name)}</span>
                      <small class="mono" data-habit-seconds="${habit.id}">${formatDuration(habit.seconds)}</small>
                    </button>
-                   <button class="quiet small" data-rename="${habit.id}" title="Rename">✎</button>
-                   <button class="quiet small" data-archive="${habit.id}" title="Archive">⌄</button>`}
+                    <button class="quiet small" data-rename="${habit.id}" title="Rename">✎</button>
+                    <button class="quiet small icon-btn" data-archive="${habit.id}" title="Archive (keeps its development)">
+                      <svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M-7-6h14v3H-7Z"/><path d="M-5-3v8h10v-8"/><path d="M0 0v4"/><path d="m-2 2 2 2 2-2"/></svg>
+                    </button>`}
             </div>`;
           }).join("") || `<p class="empty-copy">No habits yet. Name what you practice.</p>`}
         </div>
