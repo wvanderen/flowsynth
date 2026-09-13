@@ -119,8 +119,12 @@ function renderSessionToolbar(app: App): void {
   const notesShortcut = state.notesActive
     ? `<button class="module-shortcut" id="notes-shortcut" aria-label="Open Notes module" title="Notes"><svg viewBox="-18 -18 36 36" aria-hidden="true">${moduleIcon("notes")}</svg></button>`
     : "";
-  const activeHabitChip = (habitName: string) =>
-    `<button class="habit-chip" id="habit-chip" title="Open the Habit module"><svg viewBox="-18 -18 36 36" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6">${moduleIcon("habit")}</svg><span>${escapeHtml(habitName)}</span></button>`;
+  // Habit access is always in the header: a named chip when a habit is
+  // selected, the plain module shortcut otherwise.
+  const habitShortcut = (habitName: string) =>
+    habitName
+      ? `<button class="habit-chip" id="habit-chip" title="Open the Habit module"><svg viewBox="-18 -18 36 36" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6">${moduleIcon("habit")}</svg><span>${escapeHtml(habitName)}</span></button>`
+      : `<button class="module-shortcut" id="habit-chip" aria-label="Open Habit module" title="Choose a habit"><svg viewBox="-18 -18 36 36" aria-hidden="true">${moduleIcon("habit")}</svg></button>`;
   const activeHabitName = () => {
     const habit = activeHabit(state);
     return habit ? habit.name : "";
@@ -133,7 +137,7 @@ function renderSessionToolbar(app: App): void {
     if (host.dataset.renderKey !== key) {
       host.dataset.renderKey = key;
       host.innerHTML = `<div><p class="session-clock mono">${app.ui.chosenTarget === null ? "∞" : formatClock(app.ui.chosenTarget)}</p><p class="clock-caption">${app.ui.chosenTarget === null ? "Open-ended" : "Planned practice"}</p></div>
-        ${shortcut}${notesShortcut}${activeHabitName() ? activeHabitChip(activeHabitName()) : ""}<div class="session-actions"><button class="primary" id="start-flow">Enter flow ↗</button></div>`;
+        ${shortcut}${notesShortcut}${habitShortcut(activeHabitName())}<div class="session-actions"><button class="primary" id="start-flow">Enter flow ↗</button></div>`;
       bindShortcut();
       byId("start-flow")?.addEventListener("click", () => app.startFlow());
     }
@@ -155,7 +159,7 @@ function renderSessionToolbar(app: App): void {
         <p class="clock-caption" id="session-caption"></p>
         <div class="time-track"><span id="time-track-fill" style="width:0%"></span></div>
       </div>
-      ${shortcut}${notesShortcut}${activeHabitName() ? activeHabitChip(activeHabitName()) : ""}
+      ${shortcut}${notesShortcut}${habitShortcut(activeHabitName())}
       <div class="session-actions">
         <button id="pause-flow">${paused ? "Resume" : "Pause"}</button>
         <button class="primary" id="end-flow">End flow</button>
