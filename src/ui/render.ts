@@ -1222,7 +1222,7 @@ function renderModal(app: App): void {
     kind === "forge"
       ? app.state.bankedRolls.at(-1)?.id ?? null
       : kind === "store"
-        ? [app.ui.showAcquired, wholeNous(app.state), JSON.stringify(app.state.purchased), app.state.notesActive, app.state.goalsActive]
+        ? [app.ui.showAcquired, wholeNous(app.state), JSON.stringify(app.state.purchased), app.state.notesActive, app.state.goalsActive, app.state.tasksActive]
         : null;
   const renderKey = JSON.stringify([kind, app.ui.importError, app.state.pendingGap, extra]);
   // Clock ticks must not replace a save textarea or steal dialog focus.
@@ -1262,7 +1262,8 @@ function renderStoreModal(app: App, content: HTMLElement): void {
   const { state, ui } = app;
   const starterTypes = Object.keys(BALANCE.starterPrices) as (keyof typeof BALANCE.starterPrices)[];
   const activationTypes = Object.keys(BALANCE.coreActivationPrices) as CoreActivationType[];
-  const activationActive = (type: CoreActivationType) => (type === "notes" ? state.notesActive : state.goalsActive);
+  const activationActive = (type: CoreActivationType) =>
+    type === "notes" ? state.notesActive : type === "goals" ? state.goalsActive : state.tasksActive;
 
   // Purchasable groups on top; already-owned items demote below the checkbox
   // and appear only when it is checked — cores and starters alike.
