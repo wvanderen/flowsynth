@@ -77,6 +77,25 @@ export interface PracticeEntry {
   at: number;
 }
 
+export interface GoalCondition {
+  kind: "habit-minutes";
+  habitId: string | null;
+  minutes: number;
+}
+
+export type GoalSchedule = { kind: "once" } | { kind: "daily" } | { kind: "weekly" };
+
+export interface Goal {
+  id: string;
+  condition: GoalCondition;
+  schedule: GoalSchedule;
+  occurrenceKey: string;
+  progressSeconds: number;
+  completed: boolean;
+  completedCount: number;
+  createdAt: number;
+}
+
 export type Mode = "upgrade" | "flow" | "paused";
 
 export interface GameState {
@@ -98,6 +117,8 @@ export interface GameState {
   habits: Habit[];
   activeHabitId: string | null;
   practiceLog: PracticeEntry[];
+  goalsActive: boolean;
+  goals: Goal[];
   storeOpened: boolean;
   session: SessionState | null;
   pendingGap: PendingGap | null;
@@ -131,4 +152,5 @@ export interface AdvanceResult {
   cellsEarned: number;
   burstAwarded: boolean;
   storeOpened: boolean;
+  goalsCompleted: number;
 }

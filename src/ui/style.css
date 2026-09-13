@@ -200,6 +200,24 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .habit-log { margin-top: 14px; }
 .habit-active-name { font-size: 17px; font-weight: 550; margin: 4px 0 0; }
 
+/* Goals: tracked practice conditions in limited slots. */
+.goal-create { display: flex; gap: 6px; flex-wrap: wrap; }
+.goal-create select, .goal-create input { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; font-size: 12.5px; }
+.goal-create input { width: 64px; }
+.goal-create select:focus, .goal-create input:focus { border-color: var(--charge); outline: none; }
+.goal-list { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.goal-row { border: 1px solid var(--line-soft); border-radius: 8px; padding: 9px 11px; }
+.goal-row.done { border-color: #46695255; }
+.goal-head { display: flex; align-items: center; gap: 8px; }
+.goal-name { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.goal-status { font: 10px var(--mono); color: var(--muted); flex-shrink: 0; }
+.goal-status.done { color: var(--rarity-uncommon); }
+.goal-row.done .goal-name { color: var(--muted); }
+.goal-track { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; margin: 8px 0 4px; }
+.goal-track > span { display: block; height: 100%; background: var(--charge); transition: width 400ms ease-out; }
+.goal-row.done .goal-track > span { background: var(--rarity-uncommon); }
+.goal-row small { color: var(--muted); font-size: 10px; }
+
 .level-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
 .level-heading strong { font: 30px var(--mono); font-weight: 400; }
 .level-effect { font: 13px var(--mono); color: var(--accent); }

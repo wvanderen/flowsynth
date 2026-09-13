@@ -21,6 +21,8 @@ export function createInitialState(): GameState {
     habits: [],
     activeHabitId: null,
     practiceLog: [],
+    goalsActive: false,
+    goals: [],
     storeOpened: false,
     session: null,
     pendingGap: null,

@@ -2,6 +2,7 @@ import { BALANCE, EPS } from "./constants";
 import { computeRates, deployedTime } from "./economy";
 import { addExpansionProgress, addForgeProgress, type Rng } from "./rolls";
 import { accrueLivePractice } from "./habits";
+import { accrueGoalProgress } from "./goals";
 import type { AdvanceResult, Burst, ModuleInstance } from "./types";
 
 export function pushBurst(module: ModuleInstance, burst: Burst): void {
@@ -20,6 +21,7 @@ export function advance(state: import("./types").GameState, seconds: number, rng
     cellsEarned: 0,
     burstAwarded: false,
     storeOpened: false,
+    goalsCompleted: 0,
   };
   if (state.mode !== "flow" || seconds <= 0) return result;
 
@@ -52,6 +54,7 @@ export function advance(state: import("./types").GameState, seconds: number, rng
       if (burst) burst.seconds = Math.max(0, burst.seconds - step);
       session.elapsed += step;
       accrueLivePractice(state, step);
+      result.goalsCompleted += accrueGoalProgress(state, state.activeHabitId, step);
       remaining -= step;
     }
 
@@ -74,6 +77,8 @@ export function advance(state: import("./types").GameState, seconds: number, rng
         // The store opening is also the Notes module's activation gate (#4):
         // its capture tool comes alive with the wider game.
         state.notesActive = true;
+        // Goals activate with it as well (#6).
+        state.goalsActive = true;
         result.storeOpened = true;
       }
     }

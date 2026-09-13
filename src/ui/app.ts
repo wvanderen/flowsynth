@@ -29,6 +29,7 @@ import {
   renameHabit,
   selectHabit,
 } from "../engine/habits";
+import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
 import type { GameState, Hex, StarterType } from "../engine/types";
 import { render } from "./render";
 import { META } from "./meta";
@@ -97,6 +98,7 @@ export class App {
     } else {
       this.state = createInitialState();
     }
+    rollGoalOccurrences(this.state, Date.now());
     this.bindGlobalEvents();
     this.greet();
     this.render();
@@ -233,6 +235,7 @@ export class App {
       return;
     }
     if (plan.apply > 0) {
+      rollGoalOccurrences(this.state, now);
       const result = advance(this.state, plan.apply);
       this.reportAdvance(result);
     }
@@ -247,6 +250,7 @@ export class App {
     if (result.burstAwarded) notes.push("Completion burst earned: charge flows to adjacent modules.");
     if (result.rollsBanked > 0) notes.push(`${result.rollsBanked} forge ${result.rollsBanked === 1 ? "roll" : "rolls"} banked.`);
     if (result.cellsEarned > 0) notes.push(`${result.cellsEarned} new ${result.cellsEarned === 1 ? "cell" : "cells"} earned.`);
+    if (result.goalsCompleted > 0) notes.push(`${result.goalsCompleted} goal${result.goalsCompleted === 1 ? "" : "s"} completed — charge queued.`);
     if (notes.length > 0) this.say(notes.join(" "));
   }
 
@@ -453,10 +457,39 @@ export class App {
       this.render();
       return;
     }
-    this.habitAction(
-      () => addPracticeLog(this.state, habit.id, minutes, Date.now()),
-      `Logged ${minutes} minutes of ${habit.name}. Development grows; no nous or charge is produced.`,
-    );
+    const result = addPracticeLog(this.state, habit.id, minutes, Date.now());
+    if (result.ok) {
+      const goalNote =
+        result.completions && result.completions > 0
+          ? ` A goal completed — its charge burst is banked for the next session.`
+          : "";
+      this.say(`Logged ${minutes} minutes of ${habit.name}. Development grows; no nous or charge is produced.${goalNote}`);
+      this.save();
+    } else {
+      this.say(result.reason ?? "Could not log practice.");
+    }
+    this.render();
+  }
+
+  // ── Goals (#6) ──────────────────────────────────────────────────────────
+
+  createGoalAction(habitId: string | null, minutes: number, schedule: "once" | "daily" | "weekly"): void {
+    const result = createGoal(this.state, { habitId, minutes, schedule, now: Date.now() });
+    if (result.ok) {
+      this.save();
+      const habit = habitId ? this.state.habits.find((h) => h.id === habitId)?.name : "any habit";
+      this.say(`Goal tracking: ${habit}, ${minutes} minutes ${schedule}.`);
+    } else {
+      this.say(result.reason ?? "Could not create the goal.");
+    }
+    this.render();
+  }
+
+  deleteGoalAction(id: string): void {
+    const result = deleteGoal(this.state, id);
+    this.say(result.ok ? "Goal removed; the slot is free." : result.reason ?? "Could not remove the goal.");
+    if (result.ok) this.save();
+    this.render();
   }
 
   chooseCandidate(offerId: string, candidateId: string): void {

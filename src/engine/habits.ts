@@ -1,5 +1,6 @@
 import { EPS } from "./constants";
 import { isActive, modulePower } from "./economy";
+import { accrueGoalProgress, rollGoalOccurrences } from "./goals";
 import type { GameState, ModuleInstance } from "./types";
 
 // Habits (issue #5). A habit names what you are practicing; one may be
@@ -83,13 +84,21 @@ export function selectHabit(state: GameState, id: string | null): { ok: boolean;
   return { ok: true };
 }
 
-// Manual practice log: advances development (and later goal conditions)
-// without producing nous or simulating charge activity.
-export function addPracticeLog(state: GameState, habitId: string, minutes: number, now: number = 0): { ok: boolean; reason?: string } {
+// Manual practice log: advances development and goal conditions without
+// producing nous or simulating charge activity. Goal completions from a
+// manual log bank their burst for the next session (ADR-0001).
+export function addPracticeLog(
+  state: GameState,
+  habitId: string,
+  minutes: number,
+  now: number = 0,
+): { ok: boolean; reason?: string; completions?: number } {
   if (state.mode !== "upgrade") return { ok: false, reason: "Practice is logged between sessions." };
   const habit = state.habits.find((h) => h.id === habitId && !h.archived);
   if (!habit) return { ok: false, reason: "Habit not found." };
   if (!(minutes > 0)) return { ok: false, reason: "Log a positive number of minutes." };
+  rollGoalOccurrences(state, now);
+  const completions = accrueGoalProgress(state, habitId, minutes * 60);
   const seconds = minutes * 60 * developmentRate(state);
   habit.seconds += seconds;
   state.practiceLog.push({
@@ -99,7 +108,7 @@ export function addPracticeLog(state: GameState, habitId: string, minutes: numbe
     source: "manual",
     at: now,
   });
-  return { ok: true };
+  return { ok: true, completions };
 }
 
 // Called from advance's step loop: live practice develops the active habit.

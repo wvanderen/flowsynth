@@ -62,7 +62,7 @@ describe("starter store", () => {
     const s = fresh();
     s.nous = 100;
     const enter = s.modules.find((m) => m.type === "enter")!;
-    const goals = s.modules.find((m) => m.type === "goals")!;
+    const tasks = s.modules.find((m) => m.type === "tasks")!;
     expect(upgradeModule(s, enter.id).ok).toBe(false);
 
     startSession(s, 600);
@@ -72,7 +72,7 @@ describe("starter store", () => {
     advance(s, 600);
     endSession(s);
 
-    expect(upgradeModule(s, goals.id).ok).toBe(false);
+    expect(upgradeModule(s, tasks.id).ok).toBe(false);
     expect(upgradeModule(s, enter.id).ok).toBe(true);
     expect(enter.level).toBe(1);
     expect(s.nous).toBeCloseTo(100 + 60 + 72 - 10, 6);

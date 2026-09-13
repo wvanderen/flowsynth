@@ -33,6 +33,7 @@ export function isActive(state: GameState, module: ModuleInstance): boolean {
   if (module.type === "time") return state.timeActive;
   if (module.type === "notes") return state.notesActive;
   if (module.type === "habit") return true;
+  if (module.type === "goals") return state.goalsActive;
   return false;
 }
 

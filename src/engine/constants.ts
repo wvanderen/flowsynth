@@ -14,6 +14,8 @@ export interface Balance {
   rarityProbability: Record<Rarity, number>;
   starterPrices: Record<StarterType, number>;
   notesChargePerMinute: number;
+  goalBaseSlots: number;
+  goalBurstSecondsPerPracticeMinute: number;
   forgeInitialThreshold: number;
   forgeThresholdGrowth: number;
   expansionInitialThreshold: number;
@@ -34,6 +36,8 @@ export const BALANCE: Balance = {
   rarityProbability: { common: 0.99, uncommon: 0.009, rare: 0.001 },
   starterPrices: { additive: 40, conditional: 60, infusor: 40, forge: 80, expander: 80 },
   notesChargePerMinute: 1,
+  goalBaseSlots: 2,
+  goalBurstSecondsPerPracticeMinute: 0.5,
   forgeInitialThreshold: 60,
   forgeThresholdGrowth: 1.5,
   expansionInitialThreshold: 60,
@@ -44,7 +48,7 @@ export const CORE_TYPES: readonly CoreType[] = ["enter", "time", "habit", "notes
 
 export const GAMEPLAY_TYPES: readonly StarterType[] = ["additive", "conditional", "infusor", "forge", "expander"];
 
-export const ROLL_POOL: readonly ModuleType[] = ["enter", "time", "notes", "habit", "additive", "conditional", "infusor", "forge", "expander"];
+export const ROLL_POOL: readonly ModuleType[] = ["enter", "time", "notes", "habit", "goals", "additive", "conditional", "infusor", "forge", "expander"];
 
 export const NEXT_RARITY: Record<Rarity, Rarity | null> = { common: "uncommon", uncommon: "rare", rare: null };
 
@@ -52,4 +56,4 @@ export const EPS = 1e-9;
 
 export const RECONCILIATION_THRESHOLD_SECONDS = 120;
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;

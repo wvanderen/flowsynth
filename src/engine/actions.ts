@@ -5,6 +5,7 @@ import { adjacent, hexKey, isConnected, sameHex } from "./hex";
 import { createModule } from "./state";
 import { bankNotesBurst } from "./notes";
 import { logSessionPractice } from "./habits";
+import { rollGoalOccurrences } from "./goals";
 import type { GameState, Hex, ModuleInstance, StarterType } from "./types";
 
 export interface ActionResult {
@@ -39,6 +40,7 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
   if (state.sessionsCompleted >= 1) state.timeActive = true;
   bankNotesBurst(state, sessionId, elapsed);
   logSessionPractice(state, elapsed, now);
+  rollGoalOccurrences(state, now);
   return ok;
 }
 

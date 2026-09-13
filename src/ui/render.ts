@@ -6,7 +6,8 @@ import { BALANCE } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
 import { canWriteNotes, projectedNotesBurst, sessionNoteCount } from "../engine/notes";
 import { activeHabit, developmentRate } from "../engine/habits";
-import type { GameState, Hex, ModuleInstance, RateSnapshot } from "../engine/types";
+import { goalCapacity, goalRequiredSeconds, goalSummary, goalsActive } from "../engine/goals";
+import type { Goal, GameState, Hex, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
 import { moduleIcon } from "./icons";
 import { updateSvg } from "./svg";
@@ -377,6 +378,8 @@ function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderCont
     sub = habit ? formatDuration(habit.seconds) : "no habit";
   } else if (module.type === "notes") {
     sub = state.notesActive ? `${state.notes.length} notes` : "Locked";
+  } else if (module.type === "goals") {
+    sub = state.goalsActive ? `${state.goals.length}/${goalCapacity(state)} goals` : "Locked";
   } else {
     sub = `+${fmt(contribution?.value ?? 0)} ν/s`;
   }
@@ -541,6 +544,9 @@ function renderInspector(app: App): void {
     state.habits.map((h) => `${h.archived ? "·" : ""}${h.name}`).join("|"),
     state.activeHabitId,
     app.ui.editingHabitId,
+    state.goals.length,
+    state.goals.map((g) => (g.completed ? "1" : "0") + g.condition.minutes + (g.condition.habitId ?? "") + g.schedule.kind).join("|"),
+    state.goalsActive,
     module?.level ?? null,
     module?.rarity ?? null,
   ]);
@@ -582,6 +588,15 @@ function updateInspectorLive(app: App, host: HTMLElement): void {
   if (habitDev && active) {
     const display = formatDuration(active.seconds);
     if (habitDev.textContent !== display) habitDev.textContent = display;
+  }
+  for (const goal of state.goals) {
+    const required = goalRequiredSeconds(goal);
+    const bar = host.querySelector(`[data-goal-progress="${goal.id}"]`) as HTMLElement | null;
+    const width = `${Math.min(100, (goal.progressSeconds / required) * 100)}%`;
+    if (bar && bar.style.width !== width) bar.style.width = width;
+    const minutes = host.querySelector(`[data-goal-minutes="${goal.id}"]`);
+    const display = `${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · earned ×${goal.completedCount}` : ""}`;
+    if (minutes && minutes.textContent !== display) minutes.textContent = display;
   }
   set("forge", `${fmt(Math.max(0, state.forge.progress), 1)} / ${fmt(forgeThreshold(state.forge.earned), 1)}`);
   set("expansion", `${fmt(Math.max(0, state.expansion.progress), 1)} / ${fmt(expansionThreshold(state.expansion.earned), 1)}`);
@@ -643,6 +658,8 @@ function effectDescription(module: ModuleInstance): string {
       return "Captures thoughts during flow. A session with at least one note banks a charge burst at session end, sized by its practice minutes.";
     case "habit":
       return "Names what you practice. The selected habit locks for the session and develops from live practice and manual logs; its level speeds development.";
+    case "goals":
+      return "Tracks practice conditions in limited slots. Completions queue a charge burst; each level adds a goal slot.";
     case "additive":
       return "Adds its production directly to the shared base rate.";
     case "conditional":
@@ -672,6 +689,8 @@ function nominalEffect(module: ModuleInstance, charged: boolean): { text: string
       return { text: `${fmt(BALANCE.notesChargePerMinute * power)}s charge / qualifying minute`, value: BALANCE.notesChargePerMinute * power };
     case "habit":
       return { text: `×${fmt(power, 3)} habit development rate`, value: power };
+    case "goals":
+      return { text: `${BALANCE.goalBaseSlots + module.level} goal slots`, value: BALANCE.goalBaseSlots + module.level };
     case "conditional":
       return { text: `+${fmt(100 * BALANCE.conditionalBonusPerActiveCore * power)}% per adjacent core`, value: BALANCE.conditionalBonusPerActiveCore * power };
     case "infusor":
@@ -769,6 +788,55 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
           : `<p class="small muted">Select a habit to log practice manually; selection is locked during flow.</p>`}
       </section>`;
     }
+  } else if (module.type === "goals") {
+    const capacity = goalCapacity(state);
+    const live = state.mode !== "upgrade";
+    const habitOptions = [`<option value="">Any habit</option>`]
+      .concat(state.habits.filter((h) => !h.archived).map((h) => `<option value="${h.id}">${escapeHtml(h.name)}</option>`))
+      .join("");
+    const goalRow = (goal: Goal) => {
+      const required = goalRequiredSeconds(goal);
+      const fraction = Math.min(1, goal.progressSeconds / required);
+      const status = goal.completed
+        ? `<span class="goal-status done">complete${goal.schedule.kind === "once" ? "" : ` · resets ${goal.schedule.kind === "daily" ? "tomorrow" : "Monday"}`}</span>`
+        : `<span class="goal-status">${formatClock(Math.max(0, required - goal.progressSeconds))} to go</span>`;
+      return `<div class="goal-row ${goal.completed ? "done" : ""}" data-goal="${goal.id}">
+        <div class="goal-head">
+          <span class="goal-name">${escapeHtml(goalSummary(state, goal))}</span>
+          ${status}
+          ${live ? "" : `<button class="quiet small icon-btn" data-goal-delete="${goal.id}" title="Remove goal"><svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M-6-6 6 6M6-6-6 6"/></svg></button>`}
+        </div>
+        <div class="goal-track"><span data-goal-progress="${goal.id}" style="width:${fraction * 100}%"></span></div>
+        <small class="mono" data-goal-minutes="${goal.id}">${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · earned ×${goal.completedCount}` : ""}</small>
+      </div>`;
+    };
+    if (!goalsActive(state)) {
+      focus = `<section class="focus-controls"><span class="eyebrow">FOCUS CONTROLS</span><p class="small muted">The Goals tool activates when the starter store opens.</p></section>`;
+    } else if (live) {
+      focus = `<section class="focus-controls">
+        <span class="eyebrow">FOCUS CONTROLS · LOCKED FOR THIS SESSION</span>
+        ${state.goals.map(goalRow).join("") || `<p class="empty-copy">No goals tracked. Create some between sessions.</p>`}
+      </section>`;
+    } else {
+      focus = `<section class="focus-controls">
+        <span class="eyebrow">FOCUS CONTROLS · ${state.goals.length}/${capacity} SLOTS</span>
+        ${state.goals.length < capacity ? `
+          <div class="goal-create">
+            <select id="goal-habit" aria-label="Habit">${habitOptions}</select>
+            <input type="number" id="goal-minutes" min="1" max="1440" placeholder="min" />
+            <select id="goal-schedule" aria-label="Schedule">
+              <option value="daily">daily</option>
+              <option value="weekly">weekly</option>
+              <option value="once">once</option>
+            </select>
+            <button class="primary small" id="goal-add">Add</button>
+          </div>` : `<p class="small muted">All slots in use — upgrade the module or remove a goal.</p>`}
+        <div class="goal-list">
+          ${state.goals.map(goalRow).join("") || `<p class="empty-copy">No goals yet. Goals track practice conditions and reward charge bursts.</p>`}
+        </div>
+        <p class="small muted" style="margin-top:10px">Progress counts only while a goal exists; earlier practice never counts retroactively. Manual logs count too.</p>
+      </section>`;
+    }
   } else if (module.type === "notes") {
     const recent = [...state.notes].slice(-8).reverse();
     const noteCount = sessionNoteCount(state);
@@ -820,6 +888,14 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       ${stat("Development rate", `×${fmt(developmentRate(state), 3)} per practice minute`)}
       ${stat("Habits tracked", String(state.habits.filter((h) => !h.archived).length))}
       ${stat("Practice entries logged", String(state.practiceLog.length))}`;
+  } else if (module.type === "goals") {
+    const completed = state.goals.filter((g) => g.completed).length;
+    chargeStats = `
+      ${stat("Goal slots", `${state.goals.length} / ${goalCapacity(state)}`)}
+      ${stat("Completed this occurrence", `${completed} / ${state.goals.length}`)}
+      ${stat("Total completions", String(state.goals.reduce((sum, g) => sum + g.completedCount, 0)))}
+      ${stat("Burst per completion", `${fmt(0.5, 2)}s of charge per required minute`)}
+      ${state.goalsActive ? "" : stat("Status", "activates with the store")}`;
   } else {
     chargeStats = `
       ${stat("Banked charge", `${Math.ceil(chargeSecondsRemaining(state))}s (on Time)`)}
@@ -915,6 +991,23 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
     const input = byId("habit-log-minutes") as HTMLInputElement | null;
     if (input && input.value) app.logPracticeAction(Number(input.value));
   });
+  byId("goal-add")?.addEventListener("click", () => {
+    const habitSelect = byId("goal-habit") as HTMLSelectElement | null;
+    const minutesInput = byId("goal-minutes") as HTMLInputElement | null;
+    const scheduleSelect = byId("goal-schedule") as HTMLSelectElement | null;
+    if (!habitSelect || !minutesInput || !scheduleSelect || !minutesInput.value) return;
+    app.createGoalAction(
+      habitSelect.value === "" ? null : habitSelect.value,
+      Number(minutesInput.value),
+      scheduleSelect.value as "once" | "daily" | "weekly",
+    );
+  });
+  host.querySelectorAll<HTMLElement>("[data-goal-delete]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.getAttribute("data-goal-delete");
+      if (id) app.deleteGoalAction(id);
+    });
+  });
   const composer = byId("note-composer") as HTMLTextAreaElement | null;
   const saveNote = () => {
     if (!composer) return;
@@ -962,6 +1055,9 @@ function nominalGainText(module: ModuleInstance): string {
   }
   if (module.type === "habit") {
     return `×${fmt(growth, 3)} → ×${fmt(now.value * growth, 3)} development`;
+  }
+  if (module.type === "goals") {
+    return `+1 goal slot`;
   }
   return `+${fmt(now.value * (growth - 1), 4)} effect`;
 }
@@ -1115,6 +1211,7 @@ function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
     case "time": return `×${fmt(1 + BALANCE.timeBonus)} production during flow<br>Timed completion: strength 1 for ${fmt(BALANCE.chargeSecondsPerPracticeSecond * 60)}s per planned minute`;
     case "notes": return `Bank a strength-1 charge burst at session end<br>${fmt(BALANCE.notesChargePerMinute)}s per qualifying practice minute (any note qualifies the session)`;
     case "habit": return `Locks one habit for the session; live and logged practice develop it<br>Development rate ×${fmt(1, 3)}, improved by level and rarity`;
+    case "goals": return `Track practice conditions in limited slots<br>Each completion banks a charge burst; levels add slots`;
     case "conditional": return `+${fmt(BALANCE.conditionalBonusPerActiveCore * 100)}% production per adjacent active core<br>+${fmt(BALANCE.conditionalBonusPerActiveCore * charged * 100)}% at charge strength 1`;
     case "infusor": return `+${fmt(BALANCE.infusorBonus * 100)}% to adjacent production contributions<br>+${fmt(BALANCE.infusorBonus * charged * 100)}% at charge strength 1`;
     case "forge": return `1 Forge progress per charge<br>Next roll: ${fmt(forgeThreshold(state.forge.earned))} progress`;
@@ -1135,6 +1232,8 @@ function candidateHeadline(type: ModuleInstance["type"]): string {
       return `${fmt(BALANCE.notesChargePerMinute)}s/min burst`;
     case "habit":
       return "×1 development";
+    case "goals":
+      return "2 slots";
     case "conditional":
       return `+${fmt(BALANCE.conditionalBonusPerActiveCore * 100)}%/core`;
     case "infusor":
