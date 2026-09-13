@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>FlowSynth</title>
+    <link rel="stylesheet" href="/src/ui/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <path d="M16 2 28 9v14l-12 7L4 23V9Z" />
+            <path d="m10 20 5-10v12l7-10" />
+          </svg>
+          FlowSynth
+        </div>
+        <div class="session-toolbar" id="session-toolbar"></div>
+        <div class="accounting" id="accounting"></div>
+      </header>
+      <main class="workspace">
+        <section class="board-panel">
+          <div class="board-heading">
+            <div class="board-tools" id="board-tools"></div>
+          </div>
+          <div class="board-space"><svg id="grid" role="group" aria-label="Module grid"></svg></div>
+          <div class="board-footer">
+            <div class="legend">
+              <span><i></i>Production</span>
+              <span><i class="ch"></i>Receiving charge</span>
+              <span><i class="am"></i>Dispensing</span>
+              <span id="cell-count"></span>
+            </div>
+            <div class="rate-formula" id="rate-formula"></div>
+          </div>
+        </section>
+        <aside class="inspector" id="inspector"></aside>
+      </main>
+      <p class="sr-only" id="status" role="status" aria-live="polite"></p>
+    </div>
+    <div class="modal-backdrop" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal" id="modal-content"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
