@@ -797,11 +797,9 @@ export class App {
   render(): void {
     render(this);
     document.body.classList.toggle("live", this.state.mode === "flow");
-    // Arranging is unmistakable: body-level class drives the banner, dimmed
-    // board, and raised tiles. It can only be on while the grid is unlocked.
-    const managing = this.managing;
-    document.body.classList.toggle("managing", managing);
-    const banner = document.getElementById("manage-banner");
-    if (banner) banner.hidden = !managing;
+    // Arranging is unmistakable: the body-level class drives the banner,
+    // dimmed cells, and raised tiles. It can only be on while the grid is
+    // unlocked.
+    document.body.classList.toggle("managing", this.managing);
   }
 }

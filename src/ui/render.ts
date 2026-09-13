@@ -215,7 +215,7 @@ function renderTools(app: App): void {
   host.innerHTML = `
     <button class="small" id="tool-store" ${upgrade && storeReady ? "" : "disabled"} title="${storeReady ? "Activations and starter copies" : "Opens after your first session"}">Store</button>
     <button class="small" id="tool-forge" ${forgeReady ? "" : "disabled"} title="${forgeReady ? `${state.bankedRolls.length} banked choice${state.bankedRolls.length === 1 ? "" : "s"}` : "No banked rolls — earn Forge progress from charge"}">Forge · ${state.bankedRolls.length}</button>
-    <button class="small ${ui.managing ? "active" : ""}" id="tool-manage" ${upgrade ? "" : "disabled"} aria-pressed="${ui.managing}" title="${ui.managing ? "Exit arranging (Esc)" : "Move modules, place earned cells"}>Grid &amp; inventory${cellBadge}</button>
+    <button class="small ${app.managing ? "active" : ""}" id="tool-manage" ${upgrade ? "" : "disabled"} aria-pressed="${app.managing}" title="${app.managing ? "Exit arranging (Esc)" : "Move modules, place earned cells"}>Grid &amp; inventory${cellBadge}</button>
     <button class="small" id="tool-settings">Settings</button>`;
   byId("tool-settings")?.addEventListener("click", () => app.openModal("settings"));
   byId("tool-store")?.addEventListener("click", () => app.openModal("store"));
@@ -469,6 +469,7 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
     let moved = false;
     let ghost: HTMLDivElement | null = null;
     let hoverTarget: Element | null = null;
+    const zone = document.getElementById("inventory-zone");
 
     const setHoverTarget = (ev: PointerEvent) => {
       const hit = document.elementFromPoint(ev.clientX, ev.clientY);
@@ -478,7 +479,7 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
         hoverTarget = under;
         hoverTarget?.querySelector(".hex")?.classList.add("drop-target");
       }
-      document.getElementById("inventory-zone")?.classList.toggle("drag-over", !!hit?.closest("#inventory-zone"));
+      zone?.classList.toggle("drag-over", !!hit?.closest("#inventory-zone"));
     };
 
     const suppressNextClick = () => {
@@ -518,7 +519,7 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
       element.classList.remove("dragging");
       hoverTarget?.querySelector(".hex")?.classList.remove("drop-target");
       hoverTarget = null;
-      document.getElementById("inventory-zone")?.classList.remove("drag-over");
+      zone?.classList.remove("drag-over");
       if (!apply || !moved) return;
       suppressNextClick();
       const target = document.elementFromPoint(ev.clientX, ev.clientY);

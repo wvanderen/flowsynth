@@ -275,15 +275,16 @@ body.live .grid-overview { opacity: 0.75; }
 .inventory-tile:hover { border-color: #697360; background: #262b26; transform: translateY(-2px); }
 .inventory-tile:focus-visible { outline-offset: 3px; }
 .inventory-tile svg { width: 100%; max-width: 112px; aspect-ratio: 1; display: block; }
-.inventory-tile .hex { fill: #232824; stroke: var(--rarity-common); stroke-width: 1.4; }
-.inventory-tile[data-rarity="uncommon"] .hex { stroke: var(--rarity-uncommon); }
-.inventory-tile[data-rarity="rare"] .hex { stroke: var(--rarity-rare); }
-.inventory-tile .hex-icon { stroke: var(--rarity-common); stroke-linecap: round; stroke-linejoin: round; }
-.inventory-tile[data-rarity="uncommon"] .hex-icon { stroke: var(--rarity-uncommon); }
-.inventory-tile[data-rarity="rare"] .hex-icon { stroke: var(--rarity-rare); }
-.inventory-tile .hex-name { fill: var(--ink); font: 600 15px sans-serif; }
-.inventory-tile .hex-sub { fill: var(--muted); font: 10px var(--mono); letter-spacing: 0.06em; }
-.inventory-tile .hex-level { fill: var(--muted); font: 9.5px var(--mono); letter-spacing: 0.08em; }
+.inventory-tile .hex, .drag-ghost .hex { fill: #232824; stroke: var(--rarity-common); }
+.inventory-tile .hex { stroke-width: 1.4; }
+.inventory-tile .hex-icon, .drag-ghost .hex-icon { stroke: var(--rarity-common); stroke-linecap: round; stroke-linejoin: round; }
+.inventory-tile[data-rarity="uncommon"] .hex, .drag-ghost[data-rarity="uncommon"] .hex { stroke: var(--rarity-uncommon); }
+.inventory-tile[data-rarity="rare"] .hex, .drag-ghost[data-rarity="rare"] .hex { stroke: var(--rarity-rare); }
+.inventory-tile[data-rarity="uncommon"] .hex-icon, .drag-ghost[data-rarity="uncommon"] .hex-icon { stroke: var(--rarity-uncommon); }
+.inventory-tile[data-rarity="rare"] .hex-icon, .drag-ghost[data-rarity="rare"] .hex-icon { stroke: var(--rarity-rare); }
+.inventory-tile .hex-name, .drag-ghost .hex-name { fill: var(--ink); font: 600 15px sans-serif; }
+.inventory-tile .hex-sub, .drag-ghost .hex-sub { fill: var(--muted); font: 10px var(--mono); }
+.inventory-tile .hex-level, .drag-ghost .hex-level { fill: var(--muted); font: 9.5px var(--mono); letter-spacing: 0.08em; }
 .inventory-tile.locked .hex { fill: #1e221f; }
 .inventory-tile.locked .hex-icon { stroke: var(--muted); }
 .inventory-tile.locked .hex-name { fill: var(--muted); }
@@ -346,7 +347,6 @@ body.managing .module-node {
   filter: drop-shadow(0 11px 9px #0009);
 }
 body.managing .cell-node:has(> .hex.empty) { opacity: 0.55; }
-body.managing .board-space::before { opacity: 0.3; }
 
 /* The live drag ghost: the module's own hex tile, carried under the cursor. */
 .drag-ghost {
@@ -359,38 +359,26 @@ body.managing .board-space::before { opacity: 0.3; }
   filter: drop-shadow(0 14px 12px #0009);
 }
 .drag-ghost svg { width: 100%; height: 100%; display: block; }
-.drag-ghost .hex { fill: #232824; stroke: var(--rarity-common); stroke-width: 1.6; }
-.drag-ghost[data-rarity="uncommon"] .hex { stroke: var(--rarity-uncommon); }
-.drag-ghost[data-rarity="rare"] .hex { stroke: var(--rarity-rare); }
-.drag-ghost .hex-icon { stroke: var(--rarity-common); stroke-linecap: round; stroke-linejoin: round; }
-.drag-ghost[data-rarity="uncommon"] .hex-icon { stroke: var(--rarity-uncommon); }
-.drag-ghost[data-rarity="rare"] .hex-icon { stroke: var(--rarity-rare); }
-.drag-ghost .hex-name { fill: var(--ink); font: 600 15px sans-serif; }
-.drag-ghost .hex-sub { fill: var(--muted); font: 10px var(--mono); }
-.drag-ghost .hex-level { fill: var(--muted); font: 9.5px var(--mono); letter-spacing: 0.08em; }
+.drag-ghost .hex { stroke-width: 1.6; }
 .dragging { opacity: 0.35; }
 
-/* Arranging banner: a persistent, unmistakable mode indicator with a visible
-   exit. Static markup — its buttons are never replaced by ticks. */
+/* Arranging banner: a persistent header row while the mode is on. Static
+   markup shown purely via body.managing — its buttons are never replaced by
+   ticks. It is a layout row above the board, so it can never cover cells. */
 .manage-banner {
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 4;
-  display: flex;
+  display: none;
   align-items: center;
+  justify-content: center;
   gap: 14px;
   flex-wrap: wrap;
-  justify-content: center;
-  max-width: calc(100% - 32px);
-  background: #232a22f2;
+  flex-shrink: 0;
+  margin: 10px 0 0;
+  background: #232a22;
   border: 1px solid var(--accent);
   border-radius: 10px;
   padding: 8px 10px 8px 16px;
-  box-shadow: 0 12px 34px #000a;
 }
-.manage-banner[hidden] { display: none; }
+body.managing .manage-banner { display: flex; }
 .manage-banner-label { font: 10px var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
 .manage-banner-hint { font-size: 11.5px; color: var(--muted); }
 .manage-banner-esc { font-size: 10.5px; color: var(--muted); white-space: nowrap; }
@@ -403,7 +391,6 @@ body.managing .board-space::before { opacity: 0.3; }
   color: var(--ink);
   background: var(--panel-soft);
 }
-.manage-banner .primary { flex-shrink: 0; }
 
 /* The tool button reflects the mode it toggles. */
 .board-tools button.active { border-color: var(--accent); color: var(--accent); background: #262c22; }

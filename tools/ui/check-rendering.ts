@@ -75,8 +75,18 @@ export async function checkRendering(app: App): Promise<string[]> {
 
     // Arranging mode is unmistakable: banner, body flag, raised tiles.
     check(document.body.classList.contains("managing"), "Arranging mode is marked on the body");
-    check(!document.getElementById("manage-banner")!.hidden, "The arranging banner is visible while managing");
+    const banner = document.getElementById("manage-banner")!;
+    check(getComputedStyle(banner).display !== "none", "The arranging banner is visible while managing");
     check(!!document.getElementById("manage-banner-done"), "The banner carries a Done exit");
+    // The banner is a header row, not an overlay: it must never cover a cell.
+    const bannerBox = banner.getBoundingClientRect();
+    const overlaps = (a: DOMRect, b: DOMRect) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    check(![...document.querySelectorAll("[data-cell]")].some((node) => overlaps(node.getBoundingClientRect(), bannerBox)), "The banner never covers board cells");
+    const deadCell = [...document.querySelectorAll<SVGElement>("[data-cell]")].find((node) => {
+      const box = node.getBoundingClientRect();
+      return !document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)?.closest("[data-cell]");
+    });
+    check(!deadCell, "Every cell stays clickable while arranging");
     check(getComputedStyle(document.querySelector(".module-node")!).transform !== "none", "Deployed modules raise off the board while arranging");
     const invTile = document.querySelector(`[data-inv="${forge.id}"]`);
     check(!!invTile?.querySelector("svg polygon.hex"), "Returned modules appear as inventory hex tiles");
@@ -97,7 +107,7 @@ export async function checkRendering(app: App): Promise<string[]> {
     // Done exits arranging everywhere it is visible.
     document.getElementById("manage-banner-done")!.click();
     check(app.ui.managing === false, "Banner Done exits arranging");
-    check(document.getElementById("manage-banner")!.hidden, "The arranging banner hides on exit");
+    check(getComputedStyle(document.getElementById("manage-banner")!).display === "none", "The arranging banner hides on exit");
     check(!document.body.classList.contains("managing"), "The body flag clears on exit");
 
     // Right-click while placing keeps the module in inventory.
