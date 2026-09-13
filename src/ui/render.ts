@@ -210,10 +210,11 @@ function renderTools(app: App): void {
   if (host.dataset.renderKey === key) return;
   host.dataset.renderKey = key;
   const cellBadge = state.cellTokens > 0 ? ` · ${state.cellTokens}` : "";
+  const forgeReady = upgrade && state.bankedRolls.length > 0;
   host.innerHTML = `
-    <button class="small" id="tool-store" ${upgrade && storeReady ? "" : "disabled"} title="${storeReady ? "Starter copies" : "Opens after your first completed timed target"}">Store</button>
-    <button class="small" id="tool-forge" ${upgrade ? "" : "disabled"}>Forge · ${state.bankedRolls.length}</button>
-    <button class="small" id="tool-manage" ${upgrade ? "" : "disabled"} title="${ui.managing ? "Back to the inspector" : "Move modules, place earned cells"}">Grid &amp; inventory${cellBadge}</button>
+    <button class="small" id="tool-store" ${upgrade && storeReady ? "" : "disabled"} title="${storeReady ? "Activations and starter copies" : "Opens after your first session"}">Store</button>
+    <button class="small" id="tool-forge" ${forgeReady ? "" : "disabled"} title="${forgeReady ? `${state.bankedRolls.length} banked choice${state.bankedRolls.length === 1 ? "" : "s"}` : "No banked rolls — earn Forge progress from charge"}">Forge · ${state.bankedRolls.length}</button>
+    <button class="small" id="tool-manage" ${upgrade ? "" : "disabled"} title="${ui.managing ? "Back to the inspector" : "Move modules, place earned cells"}>Grid &amp; inventory${cellBadge}</button>
     <button class="small" id="tool-settings">Settings</button>`;
   byId("tool-settings")?.addEventListener("click", () => app.openModal("settings"));
   byId("tool-store")?.addEventListener("click", () => app.openModal("store"));
@@ -378,7 +379,7 @@ function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderCont
     sub = `+${fmt(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(ctx.snapshot.chargeStrength.get(module.id) ?? 0), 0)}%`;
   } else if (module.type === "habit") {
     const habit = activeHabit(state);
-    sub = habit ? formatDuration(habit.seconds) : "no habit";
+    sub = habit ? habit.name : "no habit";
   } else if (module.type === "notes") {
     sub = state.notesActive ? `${state.notes.length} notes` : "Locked";
   } else if (module.type === "goals") {
@@ -1177,24 +1178,21 @@ function renderStoreModal(app: App, content: HTMLElement): void {
   const types = Object.keys(BALANCE.starterPrices) as (keyof typeof BALANCE.starterPrices)[];
   const visible = types.filter((type) => ui.showAcquired || !state.purchased[type]);
   const acquired = types.filter((type) => state.purchased[type]).length;
-  const activations = (Object.keys(BALANCE.coreActivationPrices) as CoreActivationType[]).filter(
-    (type) => !ui.showAcquired && (type === "notes" ? !state.notesActive : !state.goalsActive),
-  );
+  const activationRows = (Object.keys(BALANCE.coreActivationPrices) as CoreActivationType[]).map((type) => {
+    const price = BALANCE.coreActivationPrices[type];
+    const active = type === "notes" ? state.notesActive : state.goalsActive;
+    const affordable = wholeNous(state) >= price;
+    return `<div class="shop-item activation ${active ? "owned" : ""}">
+      <div><h3>Activate ${META[type].name}</h3><small>${META[type].role} · permanent</small></div>
+      ${active
+        ? `<span class="activation-owned mono">Active</span>`
+        : `<button class="primary" data-activate="${type}" ${affordable ? "" : "disabled"}>${price} ν</button>`}
+    </div>`;
+  });
   content.innerHTML = `
     ${modalTop("STORE")}
     <h2 id="modal-title">Shape what comes next.</h2>
     <p class="lead">Core activations are the cheapest way to open the instrument up. ${fmtWhole(state.nous)} ν available.</p>
-    ${activations.length > 0 ? `
-      <div class="shop-list store-activations">
-        ${activations.map((type) => {
-          const price = BALANCE.coreActivationPrices[type];
-          const affordable = wholeNous(state) >= price;
-          return `<div class="shop-item activation">
-            <div><h3>Activate ${META[type].name}</h3><small>${META[type].role} · permanent</small></div>
-            <button class="primary" data-activate="${type}" ${affordable ? "" : "disabled"}>${price} ν</button>
-          </div>`;
-        }).join("")}
-      </div>` : ""}
     <div class="shop-list">
       ${visible.map((type) => {
         const price = BALANCE.starterPrices[type];
@@ -1207,6 +1205,8 @@ function renderStoreModal(app: App, content: HTMLElement): void {
       }).join("") || `<p class="empty-copy">Everything is acquired. New copies come from the Forge.</p>`}
     </div>
     <label class="store-toggle"><input type="checkbox" id="store-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${acquired}/${types.length})</label>
+    <h3 class="store-section-title">Core activations</h3>
+    <div class="shop-list store-activations">${activationRows.join("")}</div>
     <p class="modal-note">Activations and starter offers are one-time. Copies from Forge rolls do not remove these offers — they can become combination material.</p>`;
   content.querySelectorAll<HTMLButtonElement>("[data-buy]").forEach((button) => {
     button.addEventListener("click", () => {

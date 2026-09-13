@@ -118,32 +118,26 @@ describe("session rules", () => {
     expect(result.storeOpened).toBe(false);
     endSession(s);
     expect(s.timeActive).toBe(true);
-    expect(s.storeOpened).toBe(false);
     expect(chargeSecondsRemaining(s)).toBe(0);
   });
 
-  it("the first completed timed target after Time activates opens the store", () => {
+  it("the store opens as soon as Time unlocks at the first session's end", () => {
     const s = fresh();
     startSession(s, 600);
     advance(s, 600);
+    expect(s.storeOpened).toBe(false);
     endSession(s);
-    startSession(s, 600);
-    const result = advance(s, 600);
-    expect(result.storeOpened).toBe(true);
+    expect(s.timeActive).toBe(true);
     expect(s.storeOpened).toBe(true);
   });
 
-  it("an early first session still activates Time; a later timed completion opens the store", () => {
+  it("an early first session still activates Time and opens the store", () => {
     const s = fresh();
     startSession(s, 600);
     advance(s, 30);
     endSession(s);
     expect(s.timeActive).toBe(true);
-    expect(s.storeOpened).toBe(false);
-    startSession(s, 600);
-    const result = advance(s, 600);
-    expect(result.storeOpened).toBe(true);
-    expect(result.burstAwarded).toBe(true);
+    expect(s.storeOpened).toBe(true);
   });
 });
 

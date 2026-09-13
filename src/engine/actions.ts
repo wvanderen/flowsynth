@@ -38,6 +38,9 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
   state.pendingGap = null;
   state.sessionsCompleted++;
   if (state.sessionsCompleted >= 1) state.timeActive = true;
+  // The store opens the moment Time unlocks (first session end) so the
+  // player's earliest nous can already buy activations and starters.
+  state.storeOpened = state.storeOpened || state.timeActive;
   bankNotesBurst(state, sessionId, elapsed);
   logSessionPractice(state, elapsed, now);
   rollGoalOccurrences(state, now);

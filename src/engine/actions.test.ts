@@ -36,9 +36,10 @@ describe("starter store", () => {
     expect(buyStarter(s, "additive").ok).toBe(false);
     startSession(s, 600);
     advance(s, 600);
-    endSession(s);
     expect(s.storeOpened).toBe(false);
     expect(buyStarter(s, "additive").ok).toBe(false);
+    endSession(s);
+    expect(s.storeOpened).toBe(true);
   });
 
   it("sells each starter copy once for whole nous", () => {

@@ -72,10 +72,6 @@ export function advance(state: import("./types").GameState, seconds: number, rng
         pushBurst(time, { strength: 1, seconds: session.target * BALANCE.chargeSecondsPerPracticeSecond });
         result.burstAwarded = true;
       }
-      if (state.timeActive && !state.storeOpened) {
-        state.storeOpened = true;
-        result.storeOpened = true;
-      }
     }
   }
   return result;

@@ -62,10 +62,7 @@ describe("goal slots and creation", () => {
     startSession(s, 600);
     advance(s, 600);
     endSession(s);
-    startSession(s, 600);
-    const result = advance(s, 600);
-    expect(result.storeOpened).toBe(true);
-    endSession(s);
+    expect(s.storeOpened).toBe(true);
     expect(s.goalsActive).toBe(false);
 
     s.nous = 29;

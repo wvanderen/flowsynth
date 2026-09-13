@@ -451,10 +451,18 @@ export class App {
   }
 
   selectHabitAction(id: string | null): void {
-    const habit = this.state.habits.find((h) => h.id === id);
+    // Clicking the already-active habit clears the selection, so unstructured
+    // practice is always one click away.
+    const togglingOff = id !== null && this.state.activeHabitId === id;
+    const target = togglingOff ? null : id;
+    const habit = this.state.habits.find((h) => h.id === target);
     this.habitAction(
-      () => selectHabit(this.state, id),
-      habit ? `${habit.name} will be the active habit for your next session.` : "Next session is unstructured; no habit selected.",
+      () => selectHabit(this.state, target),
+      togglingOff
+        ? "Next session is unstructured; no habit selected."
+        : habit
+          ? `${habit.name} will be the active habit for your next session.`
+          : "Next session is unstructured; no habit selected.",
     );
   }
 
