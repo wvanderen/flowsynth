@@ -53,6 +53,8 @@ export async function checkRendering(app: App): Promise<string[]> {
     // Settings is meta and lives in the top bar; board tools stay gameplay.
     check(!!document.getElementById("topbar-settings"), "Settings lives in the top bar");
     check(!document.getElementById("tool-settings"), "Board tools are gameplay-only");
+    check(!!document.getElementById("tool-manage")?.textContent?.includes("Grid & inventory"), "The Grid & inventory tool renders in the toolbar");
+    check(!!document.getElementById("tool-store")?.textContent?.includes("Store"), "The Store tool renders in the toolbar");
     document.getElementById("topbar-settings")!.click();
     check(app.ui.modal === "settings", "The top-bar button opens Settings");
     app.closeModal();
