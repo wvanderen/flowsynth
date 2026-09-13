@@ -36,7 +36,7 @@ export const BALANCE: Balance = {
   rarityPower: { common: 1.2, uncommon: 1.25, rare: 1.3 },
   rarityProbability: { common: 0.99, uncommon: 0.009, rare: 0.001 },
   starterPrices: { additive: 40, conditional: 60, infusor: 40, forge: 80, expander: 80 },
-  coreActivationPrices: { notes: 20, goals: 30 },
+  coreActivationPrices: { notes: 20, goals: 30, tasks: 25 },
   notesChargePerMinute: 1,
   goalBaseSlots: 2,
   goalBurstSecondsPerPracticeMinute: 0.5,
@@ -50,7 +50,7 @@ export const CORE_TYPES: readonly CoreType[] = ["enter", "time", "habit", "notes
 
 export const GAMEPLAY_TYPES: readonly StarterType[] = ["additive", "conditional", "infusor", "forge", "expander"];
 
-export const ROLL_POOL: readonly ModuleType[] = ["enter", "time", "notes", "habit", "goals", "additive", "conditional", "infusor", "forge", "expander"];
+export const ROLL_POOL: readonly ModuleType[] = ["enter", "time", "notes", "habit", "goals", "tasks", "additive", "conditional", "infusor", "forge", "expander"];
 
 export const NEXT_RARITY: Record<Rarity, Rarity | null> = { common: "uncommon", uncommon: "rare", rare: null };
 

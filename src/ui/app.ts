@@ -31,6 +31,7 @@ import {
   selectHabit,
 } from "../engine/habits";
 import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
+import { completeTask, createTask, type TaskSize } from "../engine/tasks";
 import type { CoreActivationType, GameState, Hex, StarterType } from "../engine/types";
 import { render } from "./render";
 import { META } from "./meta";
@@ -505,6 +506,35 @@ export class App {
     const result = deleteGoal(this.state, id);
     this.say(result.ok ? "Goal removed; the slot is free." : result.reason ?? "Could not remove the goal.");
     if (result.ok) this.save();
+    this.render();
+  }
+
+  // ── Tasks (#7) ──────────────────────────────────────────────────────────
+
+  addTaskAction(text: string, size: TaskSize): void {
+    const result = createTask(this.state, text, size);
+    if (result.ok) {
+      this.say(`Task captured: ${text.trim().slice(0, 60)}. Its reward funds from practice allowance.`);
+      this.save();
+    } else {
+      this.say(result.reason ?? "Could not capture the task.");
+    }
+    this.render();
+  }
+
+  completeTaskAction(id: string): void {
+    const task = this.state.tasks.find((t) => t.id === id);
+    const result = completeTask(this.state, id);
+    if (result.ok) {
+      this.say(
+        result.paid
+          ? `"${task?.text ?? "Task"}" complete — reward paid from allowance.`
+          : `"${task?.text ?? "Task"}" complete — reward pending until allowance funds it.`,
+      );
+      this.save();
+    } else {
+      this.say(result.reason ?? "Could not complete the task.");
+    }
     this.render();
   }
 

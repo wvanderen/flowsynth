@@ -45,9 +45,9 @@ export interface Meter {
 export type StarterType = GameplayType;
 
 // Core modules whose activation is a purchasable store offer under the
-// ADR-0007 activation economy. Enter/Exit starts active, Time activates
-// after the first session (ADR-0008 pacing), Habit is free onboarding.
-export type CoreActivationType = "notes" | "goals";
+// ADR-0007 activation economy (ADR-0011). Enter/Exit starts active, Time
+// activates after the first session, Habit is free onboarding.
+export type CoreActivationType = "notes" | "goals" | "tasks";
 
 export interface SessionState {
   target: number | null;
@@ -101,6 +101,17 @@ export interface Goal {
   createdAt: number;
 }
 
+export type TaskSize = "small" | "medium" | "large";
+
+export interface Task {
+  id: string;
+  text: string;
+  size: TaskSize;
+  done: boolean;
+  paid: boolean;
+  completionOrder: number | null;
+}
+
 export type Mode = "upgrade" | "flow" | "paused";
 
 export interface GameState {
@@ -124,6 +135,10 @@ export interface GameState {
   practiceLog: PracticeEntry[];
   goalsActive: boolean;
   goals: Goal[];
+  tasksActive: boolean;
+  tasks: Task[];
+  allowance: number;
+  taskCompletionCounter: number;
   storeOpened: boolean;
   session: SessionState | null;
   pendingGap: PendingGap | null;

@@ -3,6 +3,7 @@ import { computeRates, deployedTime } from "./economy";
 import { addExpansionProgress, addForgeProgress, type Rng } from "./rolls";
 import { accrueLivePractice } from "./habits";
 import { accrueGoalProgress } from "./goals";
+import { accrueTaskAllowance } from "./tasks";
 import type { AdvanceResult, Burst, ModuleInstance } from "./types";
 
 export function pushBurst(module: ModuleInstance, burst: Burst): void {
@@ -55,6 +56,7 @@ export function advance(state: import("./types").GameState, seconds: number, rng
       session.elapsed += step;
       accrueLivePractice(state, step);
       result.goalsCompleted += accrueGoalProgress(state, state.activeHabitId, step);
+      accrueTaskAllowance(state, step);
       remaining -= step;
     }
 

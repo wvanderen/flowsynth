@@ -498,3 +498,16 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .shop-item.activation.owned { opacity: 0.75; }
 .activation-owned { color: var(--rarity-uncommon); font-size: 12px; }
 .store-section-title { font: 10px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; }
+
+/* Tasks: bite-sized capture funded by live practice allowance. */
+.task-create { display: flex; gap: 6px; flex-wrap: wrap; }
+.task-create input[type="text"] { flex: 1; min-width: 120px; background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font-size: 13px; }
+.task-create select { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 7px 6px; font-size: 12px; }
+.task-create input:focus, .task-create select:focus { border-color: var(--charge); outline: none; }
+.task-list { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.task-row { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line-soft); border-radius: 8px; padding: 7px 10px; }
+.task-row.pending { border-style: dashed; opacity: 0.85; }
+.task-size { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; width: 44px; flex-shrink: 0; }
+.task-text { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-row.pending .task-text { color: var(--muted); text-decoration: line-through; }
+.task-row small { color: var(--muted); flex-shrink: 0; font-size: 10px; }

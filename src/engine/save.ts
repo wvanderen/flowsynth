@@ -34,6 +34,7 @@ function migrate(state: Record<string, unknown>, fromVersion: number): Record<st
   if (state.notes === undefined) state = { ...state, notes: [] };
   if (state.habits === undefined) state = { ...state, habits: [], activeHabitId: null, practiceLog: [] };
   if (state.goals === undefined) state = { ...state, goals: [] };
+  if (state.tasks === undefined) state = { ...state, tasks: [], allowance: 0, taskCompletionCounter: 0 };
   return state;
 }
 
@@ -60,7 +61,7 @@ export function deserialize(text: string): LoadResult {
     return { error: "The save data has an unknown session mode." };
   }
   const merged: GameState = { ...fresh, ...raw } as GameState;
-  if (!Array.isArray(merged.modules) || !Array.isArray(merged.cells) || !Array.isArray(merged.bankedRolls) || !Array.isArray(merged.notes) || !Array.isArray(merged.habits) || !Array.isArray(merged.practiceLog) || !Array.isArray(merged.goals)) {
+  if (!Array.isArray(merged.modules) || !Array.isArray(merged.cells) || !Array.isArray(merged.bankedRolls) || !Array.isArray(merged.notes) || !Array.isArray(merged.habits) || !Array.isArray(merged.practiceLog) || !Array.isArray(merged.goals) || !Array.isArray(merged.tasks)) {
     return { error: "The save data is incomplete." };
   }
   return { state: merged };

@@ -6,7 +6,8 @@ import { BALANCE } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
 import { canWriteNotes, projectedNotesBurst, sessionNoteCount } from "../engine/notes";
 import { activeHabit, developmentRate } from "../engine/habits";
-import { goalCapacity, goalRequiredSeconds, goalSummary, goalsActive } from "../engine/goals";import type { CoreActivationType, Goal, GameState, Hex, ModuleInstance, RateSnapshot } from "../engine/types";
+import { goalCapacity, goalRequiredSeconds, goalSummary, goalsActive } from "../engine/goals";
+import { allowanceRate, taskCost, tasksActive, type TaskSize } from "../engine/tasks";import type { CoreActivationType, Goal, GameState, Hex, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
 import { moduleIcon } from "./icons";
 import { updateSvg } from "./svg";
@@ -384,6 +385,8 @@ function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderCont
     sub = state.notesActive ? `${state.notes.length} notes` : "Locked";
   } else if (module.type === "goals") {
     sub = state.goalsActive ? `${state.goals.length}/${goalCapacity(state)} goals` : "Locked";
+  } else if (module.type === "tasks") {
+    sub = state.tasksActive ? `${state.tasks.filter((t) => !t.done).length} open` : "Locked";
   } else {
     sub = `+${fmt(contribution?.value ?? 0)} ν/s`;
   }
@@ -551,6 +554,9 @@ function renderInspector(app: App): void {
     state.goals.length,
     state.goals.map((g) => (g.completed ? "1" : "0") + g.condition.minutes + (g.condition.habitId ?? "") + g.schedule.kind).join("|"),
     state.goalsActive,
+    state.tasks.length,
+    state.tasks.map((t) => (t.done ? "d" : "") + (t.paid ? "p" : "")).join("|"),
+    state.tasksActive,
     module?.level ?? null,
     module?.rarity ?? null,
   ]);
@@ -602,6 +608,7 @@ function updateInspectorLive(app: App, host: HTMLElement): void {
     const display = `${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · earned ×${goal.completedCount}` : ""}`;
     if (minutes && minutes.textContent !== display) minutes.textContent = display;
   }
+  set("task-allowance", `${fmt(state.allowance, 1)} pts`);
   set("forge", `${fmt(Math.max(0, state.forge.progress), 1)} / ${fmt(forgeThreshold(state.forge.earned), 1)}`);
   set("expansion", `${fmt(Math.max(0, state.expansion.progress), 1)} / ${fmt(expansionThreshold(state.expansion.earned), 1)}`);
   set("rolls", String(state.bankedRolls.length));
@@ -664,6 +671,8 @@ function effectDescription(module: ModuleInstance): string {
       return "Names what you practice. The selected habit locks for the session and develops from live practice and manual logs; its level speeds development.";
     case "goals":
       return "Tracks practice conditions in limited slots. Completions queue a charge burst; the module's level strengthens those bursts.";
+    case "tasks":
+      return "Captures bite-sized steps any time. Live practice funds an allowance that pays task rewards fully, in completion order.";
     case "additive":
       return "Adds its production directly to the shared base rate.";
     case "conditional":
@@ -695,6 +704,8 @@ function nominalEffect(module: ModuleInstance, charged: boolean): { text: string
       return { text: `×${fmt(power, 3)} habit development rate`, value: power };
     case "goals":
       return { text: `${fmt(BALANCE.goalBurstSecondsPerPracticeMinute * power, 3)}s burst / required minute`, value: BALANCE.goalBurstSecondsPerPracticeMinute * power };
+    case "tasks":
+      return { text: `${fmt(power, 3)} allowance pts / live minute`, value: power };
     case "conditional":
       return { text: `+${fmt(100 * BALANCE.conditionalBonusPerActiveCore * power)}% per adjacent core`, value: BALANCE.conditionalBonusPerActiveCore * power };
     case "infusor":
@@ -841,6 +852,46 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
         <p class="small muted" style="margin-top:10px">Progress counts only while a goal exists; earlier practice never counts retroactively. Manual logs count too.</p>
       </section>`;
     }
+  } else if (module.type === "tasks") {
+    if (!tasksActive(state)) {
+      focus = `<section class="focus-controls"><span class="eyebrow">FOCUS CONTROLS</span><p class="small muted">Activation is a store purchase — the cheapest way to open up.</p></section>`;
+    } else {
+      const open = state.tasks.filter((t) => !t.done);
+      const pending = state.tasks.filter((t) => t.done && !t.paid);
+      const paid = state.tasks.filter((t) => t.paid);
+      const next = pending[0];
+      focus = `<section class="focus-controls">
+        <span class="eyebrow">FOCUS CONTROLS · CAPTURE ANY TIME</span>
+        <div class="task-create">
+          <input type="text" id="task-text-input" placeholder="A small concrete step…" maxlength="120" />
+          <select id="task-size" aria-label="Size">
+            <option value="small">small · 3 ν</option>
+            <option value="medium">medium · 8 ν</option>
+            <option value="large">large · 15 ν</option>
+          </select>
+          <button class="primary small" id="task-add">Add</button>
+        </div>
+        <div class="task-list">
+          ${open.map((task) => `
+            <div class="task-row" data-task="${task.id}">
+              <span class="task-size mono">${task.size}</span>
+              <span class="task-text">${escapeHtml(task.text)}</span>
+              <button class="small" data-task-done="${task.id}" title="Mark complete">Done</button>
+            </div>`).join("") || `<p class="empty-copy">No open tasks. Capture the bite-sized things as they come.</p>`}
+        </div>
+        ${pending.length > 0 ? `
+          <h3 class="store-section-title">Awaiting allowance</h3>
+          <div class="task-list">
+            ${pending.map((task) => `
+              <div class="task-row pending">
+                <span class="task-size mono">${task.size}</span>
+                <span class="task-text">${escapeHtml(task.text)}</span>
+                <small class="mono" data-live="task-next-cost">${fmt(Math.max(0, taskCost(task.size) - (next && task.id === next.id ? state.allowance : 0)), 1)} pts to go</small>
+              </div>`).join("")}
+          </div>` : ""}
+        ${paid.length > 0 ? `<p class="small muted" style="margin-top:10px">${paid.length} task${paid.length === 1 ? "" : "s"} paid out.</p>` : ""}
+      </section>`;
+    }
   } else if (module.type === "notes") {
     const recent = [...state.notes].slice(-8).reverse();
     const noteCount = sessionNoteCount(state);
@@ -900,6 +951,16 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       ${stat("Total completions", String(state.goals.reduce((sum, g) => sum + g.completedCount, 0)))}
       ${stat("Burst per completion", `${fmt(BALANCE.goalBurstSecondsPerPracticeMinute * modulePower(module), 3)}s of charge per required minute`)}
       ${state.goalsActive ? "" : stat("Status", "activation available in the store")}`;
+  } else if (module.type === "tasks") {
+    const open = state.tasks.filter((t) => !t.done).length;
+    const pending = state.tasks.filter((t) => t.done && !t.paid).length;
+    chargeStats = `
+      ${statLive("task-allowance", "Allowance", `${fmt(state.allowance, 1)} pts`)}
+      ${stat("Accrual", `${fmt(allowanceRate(state), 3)} pts / live minute`)}
+      ${stat("Open tasks", String(open))}
+      ${stat("Pending payouts", String(pending))}
+      ${stat("Paid out", String(state.tasks.filter((t) => t.paid).length))}
+      ${state.tasksActive ? "" : stat("Status", "activation available in the store")}`;
   } else {
     chargeStats = `
       ${stat("Banked charge", `${Math.ceil(chargeSecondsRemaining(state))}s (on Time)`)}
@@ -1012,6 +1073,27 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       if (id) app.deleteGoalAction(id);
     });
   });
+  byId("task-add")?.addEventListener("click", () => {
+    const textInput = byId("task-text-input") as HTMLInputElement | null;
+    const sizeSelect = byId("task-size") as HTMLSelectElement | null;
+    if (textInput && sizeSelect && textInput.value.trim()) {
+      app.addTaskAction(textInput.value, sizeSelect.value as TaskSize);
+    }
+  });
+  byId("task-text-input")?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const textInput = event.target as HTMLInputElement;
+      const sizeSelect = byId("task-size") as HTMLSelectElement | null;
+      if (textInput.value.trim() && sizeSelect) app.addTaskAction(textInput.value, sizeSelect.value as TaskSize);
+    }
+  });
+  host.querySelectorAll<HTMLElement>("[data-task-done]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.getAttribute("data-task-done");
+      if (id) app.completeTaskAction(id);
+    });
+  });
   const composer = byId("note-composer") as HTMLTextAreaElement | null;
   const saveNote = () => {
     if (!composer) return;
@@ -1062,6 +1144,9 @@ function nominalGainText(module: ModuleInstance): string {
   }
   if (module.type === "goals") {
     return `+${fmt(now.value * (growth - 1), 3)}s per minute`;
+  }
+  if (module.type === "tasks") {
+    return `+${fmt(now.value * (growth - 1), 3)} pts / minute`;
   }
   return `+${fmt(now.value * (growth - 1), 4)} effect`;
 }
@@ -1246,6 +1331,7 @@ function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
     case "notes": return `Bank a strength-1 charge burst at session end<br>${fmt(BALANCE.notesChargePerMinute)}s per qualifying practice minute (any note qualifies the session)`;
     case "habit": return `Locks one habit for the session; live and logged practice develop it<br>Development rate ×${fmt(1, 3)}, improved by level and rarity`;
     case "goals": return `Track practice conditions in limited slots<br>Each completion banks a charge burst; levels strengthen bursts`;
+    case "tasks": return `Capture bite-sized steps any time<br>Live practice funds rewards: small 3, medium 8, large 15`;
     case "conditional": return `+${fmt(BALANCE.conditionalBonusPerActiveCore * 100)}% production per adjacent active core<br>+${fmt(BALANCE.conditionalBonusPerActiveCore * charged * 100)}% at charge strength 1`;
     case "infusor": return `+${fmt(BALANCE.infusorBonus * 100)}% to adjacent production contributions<br>+${fmt(BALANCE.infusorBonus * charged * 100)}% at charge strength 1`;
     case "forge": return `1 Forge progress per charge<br>Next roll: ${fmt(forgeThreshold(state.forge.earned))} progress`;
@@ -1268,6 +1354,8 @@ function candidateHeadline(type: ModuleInstance["type"]): string {
       return "×1 development";
     case "goals":
       return "2 slots";
+    case "tasks":
+      return "3/8/15 ν rewards";
     case "conditional":
       return `+${fmt(BALANCE.conditionalBonusPerActiveCore * 100)}%/core`;
     case "infusor":

@@ -76,13 +76,15 @@ export function buyStarter(state: GameState, type: StarterType): ActionResult {
 export function buyCoreActivation(state: GameState, type: CoreActivationType): ActionResult {
   if (state.mode !== "upgrade") return fail("The store is available between sessions.");
   if (!state.storeOpened) return fail("The store has not opened yet.");
-  const active = type === "notes" ? state.notesActive : state.goalsActive;
+  const active =
+    type === "notes" ? state.notesActive : type === "goals" ? state.goalsActive : state.tasksActive;
   if (active) return fail("This core module is already active.");
   const price = BALANCE.coreActivationPrices[type];
   if (wholeNous(state) < price) return fail("Not enough whole nous.");
   state.nous -= price;
   if (type === "notes") state.notesActive = true;
-  else state.goalsActive = true;
+  else if (type === "goals") state.goalsActive = true;
+  else state.tasksActive = true;
   return ok;
 }
 
