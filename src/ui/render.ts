@@ -1175,38 +1175,50 @@ function renderSettingsModal(app: App, content: HTMLElement): void {
 
 function renderStoreModal(app: App, content: HTMLElement): void {
   const { state, ui } = app;
-  const types = Object.keys(BALANCE.starterPrices) as (keyof typeof BALANCE.starterPrices)[];
-  const visible = types.filter((type) => ui.showAcquired || !state.purchased[type]);
-  const acquired = types.filter((type) => state.purchased[type]).length;
-  const activationRows = (Object.keys(BALANCE.coreActivationPrices) as CoreActivationType[]).map((type) => {
-    const price = BALANCE.coreActivationPrices[type];
-    const active = type === "notes" ? state.notesActive : state.goalsActive;
-    const affordable = wholeNous(state) >= price;
-    return `<div class="shop-item activation ${active ? "owned" : ""}">
+  const starterTypes = Object.keys(BALANCE.starterPrices) as (keyof typeof BALANCE.starterPrices)[];
+  const activationTypes = Object.keys(BALANCE.coreActivationPrices) as CoreActivationType[];
+  const activationActive = (type: CoreActivationType) => (type === "notes" ? state.notesActive : state.goalsActive);
+
+  // Purchasable groups on top; already-owned items demote below the checkbox
+  // and appear only when it is checked — cores and starters alike.
+  const openActivations = activationTypes.filter((type) => !activationActive(type));
+  const openStarters = starterTypes.filter((type) => !state.purchased[type]);
+  const ownedStarters = starterTypes.filter((type) => state.purchased[type]);
+  const ownedActivations = activationTypes.filter(activationActive);
+  const acquiredCount = ownedStarters.length + ownedActivations.length;
+  const totalCount = starterTypes.length + activationTypes.length;
+
+  const activationRow = (type: CoreActivationType) => `
+    <div class="shop-item activation">
       <div><h3>Activate ${META[type].name}</h3><small>${META[type].role} · permanent</small></div>
-      ${active
-        ? `<span class="activation-owned mono">Active</span>`
-        : `<button class="primary" data-activate="${type}" ${affordable ? "" : "disabled"}>${price} ν</button>`}
+      <button class="primary" data-activate="${type}" ${wholeNous(state) >= BALANCE.coreActivationPrices[type] ? "" : "disabled"}>${BALANCE.coreActivationPrices[type]} ν</button>
     </div>`;
-  });
+
   content.innerHTML = `
     ${modalTop("STORE")}
     <h2 id="modal-title">Shape what comes next.</h2>
     <p class="lead">Core activations are the cheapest way to open the instrument up. ${fmtWhole(state.nous)} ν available.</p>
-    <div class="shop-list">
-      ${visible.map((type) => {
+    ${openActivations.length > 0 ? `
+      <h3 class="store-section-title">Core activations</h3>
+      <div class="shop-list store-activations">${openActivations.map(activationRow).join("")}</div>` : ""}
+    ${openStarters.length > 0 ? `
+      <h3 class="store-section-title">Starter modules</h3>
+      <div class="shop-list">${openStarters.map((type) => {
         const price = BALANCE.starterPrices[type];
-        const owned = state.purchased[type];
         const affordable = wholeNous(state) >= price;
         return `<div class="shop-item">
           <div><h3>${META[type].name}</h3><small>${META[type].role}</small></div>
-          <button class="primary" data-buy="${type}" ${owned || !affordable ? "disabled" : ""}>${owned ? "Acquired" : `${price} ν`}</button>
+          <button class="primary" data-buy="${type}" ${affordable ? "" : "disabled"}>${price} ν</button>
         </div>`;
-      }).join("") || `<p class="empty-copy">Everything is acquired. New copies come from the Forge.</p>`}
-    </div>
-    <label class="store-toggle"><input type="checkbox" id="store-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${acquired}/${types.length})</label>
-    <h3 class="store-section-title">Core activations</h3>
-    <div class="shop-list store-activations">${activationRows.join("")}</div>
+      }).join("")}</div>` : ""}
+    ${openActivations.length === 0 && openStarters.length === 0 ? `<p class="empty-copy">Everything is acquired. New copies come from the Forge.</p>` : ""}
+    <label class="store-toggle"><input type="checkbox" id="store-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${acquiredCount}/${totalCount})</label>
+    ${ui.showAcquired && acquiredCount > 0 ? `
+      <h3 class="store-section-title">Acquired</h3>
+      <div class="shop-list store-owned">
+        ${ownedActivations.map((type) => `<div class="shop-item activation owned"><div><h3>Activate ${META[type].name}</h3><small>${META[type].role} · permanent</small></div><span class="activation-owned mono">Active</span></div>`).join("")}
+        ${ownedStarters.map((type) => `<div class="shop-item owned"><div><h3>${META[type].name}</h3><small>${META[type].role}</small></div><span class="activation-owned mono">Acquired</span></div>`).join("")}
+      </div>` : ""}
     <p class="modal-note">Activations and starter offers are one-time. Copies from Forge rolls do not remove these offers — they can become combination material.</p>`;
   content.querySelectorAll<HTMLButtonElement>("[data-buy]").forEach((button) => {
     button.addEventListener("click", () => {

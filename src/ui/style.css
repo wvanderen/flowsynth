@@ -493,7 +493,8 @@ body.live .hex.charged { animation: charge-pulse 3s ease-in-out infinite; }
 select { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 5px; padding: 8px; max-width: 100%; }
 ::selection { background: var(--accent); color: var(--accent-ink); }
 
-.store-activations { margin-top: 0; }
+.store-activations { margin-top: 0; margin-bottom: 14px; }
+.shop-list.store-owned .shop-item { opacity: 0.7; }
 .shop-item.activation.owned { opacity: 0.75; }
 .activation-owned { color: var(--rarity-uncommon); font-size: 12px; }
 .store-section-title { font: 10px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; }
