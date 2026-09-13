@@ -194,7 +194,7 @@ function renderAccounting(app: App): void {
   const host = byId("accounting");
   if (!host) return;
   const rate = currentSnapshot(state).rate;
-  const mode = state.mode === "upgrade" ? "UPGRADE MODE" : state.mode === "paused" ? "FLOW PAUSED" : "FLOW LIVE";
+  const mode = app.managing ? "ARRANGING" : state.mode === "upgrade" ? "UPGRADE MODE" : state.mode === "paused" ? "FLOW PAUSED" : "FLOW LIVE";
   host.innerHTML = `
     <div><span class="eyebrow">Nous</span><strong id="nous-display">${fmtWhole(state.nous)}</strong></div>
     <div><span class="eyebrow">Production</span><strong>${fmt(rate)}<span class="unit"> ν/s</span></strong></div>
@@ -215,7 +215,7 @@ function renderTools(app: App): void {
   host.innerHTML = `
     <button class="small" id="tool-store" ${upgrade && storeReady ? "" : "disabled"} title="${storeReady ? "Activations and starter copies" : "Opens after your first session"}">Store</button>
     <button class="small" id="tool-forge" ${forgeReady ? "" : "disabled"} title="${forgeReady ? `${state.bankedRolls.length} banked choice${state.bankedRolls.length === 1 ? "" : "s"}` : "No banked rolls — earn Forge progress from charge"}">Forge · ${state.bankedRolls.length}</button>
-    <button class="small" id="tool-manage" ${upgrade ? "" : "disabled"} title="${ui.managing ? "Back to the inspector" : "Move modules, place earned cells"}>Grid &amp; inventory${cellBadge}</button>
+    <button class="small ${ui.managing ? "active" : ""}" id="tool-manage" ${upgrade ? "" : "disabled"} aria-pressed="${ui.managing}" title="${ui.managing ? "Exit arranging (Esc)" : "Move modules, place earned cells"}>Grid &amp; inventory${cellBadge}</button>
     <button class="small" id="tool-settings">Settings</button>`;
   byId("tool-settings")?.addEventListener("click", () => app.openModal("settings"));
   byId("tool-store")?.addEventListener("click", () => app.openModal("store"));
@@ -471,11 +471,14 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
     let hoverTarget: Element | null = null;
 
     const setHoverTarget = (ev: PointerEvent) => {
-      const under = document.elementFromPoint(ev.clientX, ev.clientY)?.closest("[data-cell]");
-      if (under === hoverTarget) return;
-      hoverTarget?.querySelector(".hex")?.classList.remove("drop-target");
-      hoverTarget = under ?? null;
-      hoverTarget?.querySelector(".hex")?.classList.add("drop-target");
+      const hit = document.elementFromPoint(ev.clientX, ev.clientY);
+      const under = hit?.closest("[data-cell]") ?? null;
+      if (under !== hoverTarget) {
+        hoverTarget?.querySelector(".hex")?.classList.remove("drop-target");
+        hoverTarget = under;
+        hoverTarget?.querySelector(".hex")?.classList.add("drop-target");
+      }
+      document.getElementById("inventory-zone")?.classList.toggle("drag-over", !!hit?.closest("#inventory-zone"));
     };
 
     const suppressNextClick = () => {
@@ -490,15 +493,20 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
       if (!moved && Math.hypot(ev.clientX - startX, ev.clientY - startY) > DRAG_THRESHOLD_PX) {
         moved = true;
         const module = app.state.modules.find((m) => m.id === id);
+        // The ghost is the module's own hex tile — what you carry is what you
+        // drop — centered under the cursor.
         ghost = document.createElement("div");
         ghost.className = "drag-ghost";
-        ghost.innerHTML = `<svg viewBox="-18 -18 36 36" aria-hidden="true">${module ? moduleIcon(module.type) : ""}</svg><span>${module ? META[module.type].short : "Module"}</span>`;
+        if (module) ghost.dataset.rarity = module.rarity;
+        ghost.innerHTML = module
+          ? hexTileSvg(module)
+          : `<svg viewBox="-75 -75 150 150" aria-hidden="true"><polygon class="hex" points="${hexPoints(HEX_RADIUS)}"/></svg>`;
         document.body.append(ghost);
         element.classList.add("dragging");
       }
       if (ghost) {
-        ghost.style.left = `${ev.clientX + 14}px`;
-        ghost.style.top = `${ev.clientY + 14}px`;
+        ghost.style.left = `${ev.clientX}px`;
+        ghost.style.top = `${ev.clientY}px`;
         setHoverTarget(ev);
       }
     };
@@ -510,6 +518,7 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
       element.classList.remove("dragging");
       hoverTarget?.querySelector(".hex")?.classList.remove("drop-target");
       hoverTarget = null;
+      document.getElementById("inventory-zone")?.classList.remove("drag-over");
       if (!apply || !moved) return;
       suppressNextClick();
       const target = document.elementFromPoint(ev.clientX, ev.clientY);
@@ -560,6 +569,9 @@ function renderInspector(app: App): void {
     app.ui.editingTaskId,
     module?.level ?? null,
     module?.rarity ?? null,
+    // Module moves (drag, place, return, combine) must refresh the manage
+    // panel's hex inventory even when the selection itself never changes.
+    state.modules.map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}:${m.pos ? `${m.pos.q},${m.pos.r}` : "-"}`).join("|"),
   ]);
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
@@ -1195,6 +1207,21 @@ function nominalGainText(module: ModuleInstance): string {
 
 /* ── Grid & inventory panel ────────────────────────── */
 
+// A canvas-style hex tile — icon, name, level, rarity accent — shared by the
+// inventory grid and the live drag ghost so a carried tile looks identical to
+// the one waiting in inventory (candidate-tile pattern from the Forge).
+function hexTileSvg(module: ModuleInstance, locked = false): string {
+  return `<svg viewBox="-75 -75 150 150" aria-hidden="true">
+    <polygon class="hex" points="${hexPoints(HEX_RADIUS)}"/>
+    <g transform="translate(0,-16)" class="hex-icon" fill="none" stroke-width="2.2">${moduleIcon(module.type)}</g>
+    <text y="24" text-anchor="middle" class="hex-name">${META[module.type].short}</text>
+    <text y="-46" text-anchor="middle" class="hex-level">Lv ${module.level}</text>
+    ${locked
+      ? `<g transform="translate(0,36)" stroke="var(--muted)" fill="none" stroke-width="1.4"><path d="M-3 0v-2.5a3 3 0 0 1 6 0V0"/><rect x="-5" y="0" width="10" height="8" rx="1.5" fill="none"/></g>`
+      : `<text y="44" text-anchor="middle" class="hex-sub">${RARITY_LABEL[module.rarity]}</text>`}
+  </svg>`;
+}
+
 function renderManagePanel(app: App, host: HTMLElement): void {
   const { state, ui } = app;
   const inventory = state.modules.filter((m) => m.pos === null);
@@ -1203,14 +1230,14 @@ function renderManagePanel(app: App, host: HTMLElement): void {
   host.innerHTML = `
     <div class="detail-head">
       <h1>Grid &amp; inventory</h1>
-      <button id="manage-done">Done</button>
+      <button class="primary small" id="manage-done">Done</button>
     </div>
     <p class="small muted">${
       reshaping
         ? "Reshaping: click empty cells to remove and frontier outlines to add; they must balance."
         : ui.placing
           ? "Choose a destination cell. Occupied gameplay modules swap."
-          : "Drag modules between cells or into inventory. Required cores stay deployed."
+          : "Tiles are raised and movable. Drag between cells or into the inventory; required cores stay deployed."
     }</p>
     <div class="manage-actions">
       ${reshaping
@@ -1228,9 +1255,14 @@ function renderManagePanel(app: App, host: HTMLElement): void {
     </div>
     <section class="inventory-drop" id="inventory-zone">
       <h3>Inventory</h3>
-      <p class="small muted">Drop a gameplay module here to store it, or click one to place it.</p>
-      <div class="inventory-list" id="inventory-list">
-        ${inventory.map((m) => `<button class="inventory-item" data-inv="${m.id}"><span>${META[m.type].name}${m.level > 0 ? ` ·${m.level}` : ""}</span><small>${RARITY_LABEL[m.rarity]}</small></button>`).join("") || `<p class="empty-copy">Inventory is empty.</p>`}
+      <p class="small muted">Drop a raised tile here to store its module, or click one to place it.</p>
+      <div class="inventory-hexes" id="inventory-list">
+        ${inventory.map((m) => {
+          const spareCore = isCore(m) && !isActive(state, m);
+          return `<button class="inventory-tile ${spareCore ? "locked" : ""}" data-inv="${m.id}" data-rarity="${m.rarity}" title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]}${spareCore ? " · spare core: places by replacing its deployed match" : ""}">
+            ${hexTileSvg(m, spareCore)}
+          </button>`;
+        }).join("") || `<p class="empty-copy">Inventory is empty. Drag a gameplay tile here to store it.</p>`}
       </div>
     </section>`;
 
@@ -1244,8 +1276,6 @@ function renderManagePanel(app: App, host: HTMLElement): void {
     button.addEventListener("click", () => app.beginPlacing(id));
     bindPointerDrag(app, button, id);
   });
-  const zone = byId("inventory-zone");
-  zone?.addEventListener("dragover", (e) => e.preventDefault());
 }
 
 /* ── Modals ────────────────────────────────────────── */

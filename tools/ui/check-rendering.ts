@@ -73,6 +73,33 @@ export async function checkRendering(app: App): Promise<string[]> {
     check(forge.pos === null, "Dragging into inventory returns the module");
     await frame();
 
+    // Arranging mode is unmistakable: banner, body flag, raised tiles.
+    check(document.body.classList.contains("managing"), "Arranging mode is marked on the body");
+    check(!document.getElementById("manage-banner")!.hidden, "The arranging banner is visible while managing");
+    check(!!document.getElementById("manage-banner-done"), "The banner carries a Done exit");
+    check(getComputedStyle(document.querySelector(".module-node")!).transform !== "none", "Deployed modules raise off the board while arranging");
+    const invTile = document.querySelector(`[data-inv="${forge.id}"]`);
+    check(!!invTile?.querySelector("svg polygon.hex"), "Returned modules appear as inventory hex tiles");
+    check(invTile?.getAttribute("data-rarity") === "common", "Inventory hex tiles carry the rarity accent");
+
+    // The live drag ghost is the module's own hex tile and it places back out.
+    const tileBox = invTile!.getBoundingClientRect();
+    invTile!.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, clientX: tileBox.x + tileBox.width / 2, clientY: tileBox.y + tileBox.height / 2 }));
+    document.dispatchEvent(new PointerEvent("pointermove", { clientX: tileBox.x + tileBox.width / 2 + 40, clientY: tileBox.y + tileBox.height / 2 + 40 }));
+    const ghostTile = document.querySelector(".drag-ghost");
+    check(!!ghostTile?.querySelector("polygon.hex"), "The drag ghost is the module's hex tile");
+    check(ghostTile?.getAttribute("data-rarity") === "common", "The drag ghost keeps the module's rarity accent");
+    const home = document.querySelector('[data-cell="0,0"]')!.getBoundingClientRect();
+    document.dispatchEvent(new PointerEvent("pointerup", { clientX: home.x + home.width / 2, clientY: home.y + home.height / 2 }));
+    check(forge.pos?.q === 0 && forge.pos.r === 0, "Inventory hex tiles drag back onto the board");
+    await frame();
+
+    // Done exits arranging everywhere it is visible.
+    document.getElementById("manage-banner-done")!.click();
+    check(app.ui.managing === false, "Banner Done exits arranging");
+    check(document.getElementById("manage-banner")!.hidden, "The arranging banner hides on exit");
+    check(!document.body.classList.contains("managing"), "The body flag clears on exit");
+
     // Right-click while placing keeps the module in inventory.
     app.state.bankedRolls = [
       { id: "check-first", candidates: [

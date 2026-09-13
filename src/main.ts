@@ -32,8 +32,9 @@ document.addEventListener("keydown", (event) => {
     return;
   }
   if (app.ui.placing) {
-    app.ui.placing = null;
-    app.render();
+    app.cancelPlacing();
+  } else if (app.managing) {
+    app.stopManaging();
   } else if (app.ui.selected) {
     app.ui.selected = null;
     app.render();

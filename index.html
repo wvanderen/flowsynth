@@ -25,7 +25,15 @@
           <div class="board-heading">
             <div class="board-tools" id="board-tools"></div>
           </div>
-          <div class="board-space"><svg id="grid" role="group" aria-label="Module grid"></svg></div>
+          <div class="board-space">
+            <svg id="grid" role="group" aria-label="Module grid"></svg>
+            <div class="manage-banner" id="manage-banner" hidden>
+              <span class="manage-banner-label">Arranging</span>
+              <span class="manage-banner-hint">Tiles are raised — drag them between cells or into the inventory</span>
+              <span class="manage-banner-esc" aria-hidden="true"><kbd>Esc</kbd> exits</span>
+              <button class="primary small" id="manage-banner-done">Done</button>
+            </div>
+          </div>
           <div class="board-footer">
             <div class="legend">
               <span><i></i>Production</span>

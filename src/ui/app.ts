@@ -93,6 +93,12 @@ export class App {
   dev: boolean;
   private els: Record<string, HTMLElement>;
 
+  // Management mode counts only while the grid is unlocked: entering flow or
+  // importing a save clears the flag, but stale values must never linger.
+  get managing(): boolean {
+    return this.ui.managing && this.state.mode === "upgrade";
+  }
+
   constructor(els: Record<string, HTMLElement>, dev: boolean) {
     this.els = els;
     this.dev = dev;
@@ -104,6 +110,7 @@ export class App {
     }
     rollGoalOccurrences(this.state, Date.now());
     this.bindGlobalEvents();
+    document.getElementById("manage-banner-done")?.addEventListener("click", () => this.stopManaging());
     this.greet();
     this.render();
     this.save();
@@ -610,7 +617,7 @@ export class App {
     this.ui.selected = null;
     this.ui.placing = null;
     this.ui.reshape = null;
-    this.say("Grid & inventory: drag modules between cells or into inventory.");
+    this.say("Arranging: drag the raised tiles between cells or into the inventory. Done or Esc finishes.");
     this.render();
   }
 
@@ -790,5 +797,11 @@ export class App {
   render(): void {
     render(this);
     document.body.classList.toggle("live", this.state.mode === "flow");
+    // Arranging is unmistakable: body-level class drives the banner, dimmed
+    // board, and raised tiles. It can only be on while the grid is unlocked.
+    const managing = this.managing;
+    document.body.classList.toggle("managing", managing);
+    const banner = document.getElementById("manage-banner");
+    if (banner) banner.hidden = !managing;
   }
 }
