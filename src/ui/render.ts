@@ -2,7 +2,7 @@ import { chargedFactor, computeRates, isActive, isCore, levelCost, modulePower, 
 import { deployedAt, deployedTime, chargeSecondsRemaining, chargeActive } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold, expansionThreshold } from "../engine/rolls";
-import { BALANCE } from "../engine/constants";
+import { BALANCE, NEXT_RARITY } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
 import { canWriteNotes, projectedNotesBurst, sessionNoteCount } from "../engine/notes";
 import { activeHabit, developmentRate } from "../engine/habits";
@@ -215,9 +215,7 @@ function renderTools(app: App): void {
   host.innerHTML = `
     <button class="small" id="tool-store" ${upgrade && storeReady ? "" : "disabled"} title="${storeReady ? "Activations and starter copies" : "Opens after your first session"}">Store</button>
     <button class="small" id="tool-forge" ${forgeReady ? "" : "disabled"} title="${forgeReady ? `${state.bankedRolls.length} banked choice${state.bankedRolls.length === 1 ? "" : "s"}` : "No banked rolls — earn Forge progress from charge"}">Forge · ${state.bankedRolls.length}</button>
-    <button class="small ${app.managing ? "active" : ""}" id="tool-manage" ${upgrade ? "" : "disabled"} aria-pressed="${app.managing}" title="${app.managing ? "Exit arranging (Esc)" : "Move modules, place earned cells"}>Grid &amp; inventory${cellBadge}</button>
-    <button class="small" id="tool-settings">Settings</button>`;
-  byId("tool-settings")?.addEventListener("click", () => app.openModal("settings"));
+    <button class="small ${app.managing ? "active" : ""}" id="tool-manage" ${upgrade ? "" : "disabled"} aria-pressed="${app.managing}" title="${app.managing ? "Exit arranging (Esc)" : "Move modules, place earned cells"}>Grid &amp; inventory${cellBadge}</button>`;
   byId("tool-store")?.addEventListener("click", () => app.openModal("store"));
   byId("tool-forge")?.addEventListener("click", () => app.openModal("forge"));
   byId("tool-manage")?.addEventListener("click", () => (app.ui.managing ? app.stopManaging() : app.startManaging()));
@@ -393,8 +391,14 @@ function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderCont
 
   const name = META[module.type].short;
   const levelTag = active ? ` ${module.level}` : "";
+  // While arranging, required cores wear a pin: they move between cells but
+  // never leave the board. The title gives the native hover explanation.
+  const pinned = app.managing && isCore(module);
+  const pin = pinned
+    ? `<title>Required core — it always stays on the board. Drag it between cells to move it.</title><g data-key="pin" class="core-pin" transform="translate(36,-33)"><circle cx="0" cy="-3.4" r="3.1"/><path d="M0-.4v7.4"/></g>`
+    : "";
 
-  return `<g class="module-node ${active ? "" : "locked"}" data-rarity="${module.rarity}">
+  return `<g class="module-node ${active ? "" : "locked"}" data-rarity="${module.rarity}">${pin}
     <polygon data-key="hex" class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>${fill}${highlight}
     <g data-key="icon" transform="translate(0,-13)" class="hex-icon" fill="none" stroke-width="1.6">${moduleIcon(module.type)}</g>
     <text data-key="name" y="17" text-anchor="middle" class="hex-name">${name}${levelTag}</text>
@@ -456,30 +460,49 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
 }
 
 // Shared pointer-drag binding for grid modules and inventory items: shows a
-// ghost after a small threshold, then drops onto a cell (place) or the
-// inventory zone (return). Click-placement stays available without dragging.
+// ghost after a small threshold, then drops onto a cell (place, swap, or
+// combine with a matching twin) or the inventory zone (return; cores refuse).
+// Click-placement stays available without dragging.
 function bindPointerDrag(app: App, element: Element, moduleId: string | (() => string | null)): void {
   element.addEventListener("pointerdown", (baseEvent: Event) => {
     const event = baseEvent as PointerEvent;
     if (event.button !== 0 || !app.ui.managing || app.state.mode !== "upgrade" || app.ui.reshape) return;
     const id = typeof moduleId === "function" ? moduleId() : moduleId;
     if (!id) return;
+    const dragModule = app.state.modules.find((m) => m.id === id) ?? null;
     const startX = event.clientX;
     const startY = event.clientY;
     let moved = false;
     let ghost: HTMLDivElement | null = null;
     let hoverTarget: Element | null = null;
     const zone = document.getElementById("inventory-zone");
+    const canCombineWith = (occupant: { id: string; type: string; rarity: string } | undefined): boolean =>
+      !!dragModule &&
+      !!occupant &&
+      occupant.id !== dragModule.id &&
+      occupant.type === dragModule.type &&
+      occupant.rarity === dragModule.rarity &&
+      NEXT_RARITY[dragModule.rarity] !== null;
 
     const setHoverTarget = (ev: PointerEvent) => {
       const hit = document.elementFromPoint(ev.clientX, ev.clientY);
-      const under = hit?.closest("[data-cell]") ?? null;
-      if (under !== hoverTarget) {
-        hoverTarget?.querySelector(".hex")?.classList.remove("drop-target");
-        hoverTarget = under;
-        hoverTarget?.querySelector(".hex")?.classList.add("drop-target");
+      const cellNode = hit?.closest("[data-cell]") ?? null;
+      if (cellNode !== hoverTarget) {
+        hoverTarget?.querySelector(".hex")?.classList.remove("drop-target", "combine-target");
+        hoverTarget = cellNode;
+        const [q, r] = (hoverTarget?.getAttribute("data-cell") ?? "").split(",").map(Number);
+        const occupant =
+          hoverTarget && Number.isFinite(q) && Number.isFinite(r)
+            ? app.state.modules.find((m) => m.pos !== null && m.pos.q === q && m.pos.r === r)
+            : undefined;
+        hoverTarget
+          ?.querySelector(".hex")
+          ?.classList.add(canCombineWith(occupant) ? "combine-target" : "drop-target");
       }
-      zone?.classList.toggle("drag-over", !!hit?.closest("#inventory-zone"));
+      // A dragged core can never be stored: the zone explains itself.
+      const overZone = !!hit?.closest("#inventory-zone");
+      zone?.classList.toggle("refuse", overZone && !!dragModule && isCore(dragModule));
+      zone?.classList.toggle("drag-over", overZone && !(dragModule && isCore(dragModule)));
     };
 
     const suppressNextClick = () => {
@@ -517,18 +540,34 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
       document.removeEventListener("pointercancel", cancel);
       ghost?.remove();
       element.classList.remove("dragging");
-      hoverTarget?.querySelector(".hex")?.classList.remove("drop-target");
+      hoverTarget?.querySelector(".hex")?.classList.remove("drop-target", "combine-target");
       hoverTarget = null;
       zone?.classList.remove("drag-over");
-      if (!apply || !moved) return;
+      if (!apply || !moved) {
+        zone?.classList.remove("refuse");
+        return;
+      }
       suppressNextClick();
       const target = document.elementFromPoint(ev.clientX, ev.clientY);
       const cellNode = target?.closest("[data-cell]");
       if (target?.closest("#inventory-zone")) {
-        app.returnToInventory(id);
+        if (dragModule && isCore(dragModule)) {
+          // Cores refuse storage: keep the explanation on the zone briefly.
+          app.say(`Required cores stay on the board — the ${META[dragModule.type].name} cannot be stored.`);
+          setTimeout(() => zone?.classList.remove("refuse"), 1000);
+        } else {
+          zone?.classList.remove("refuse");
+          app.returnToInventory(id);
+        }
       } else if (cellNode) {
+        zone?.classList.remove("refuse");
         const cell = cellNode.getAttribute("data-cell")!.split(",").map(Number);
-        app.pickCellThenPlace(id, { q: cell[0]!, r: cell[1]! });
+        const pos = { q: cell[0]!, r: cell[1]! };
+        const occupant = deployedAt(app.state, pos);
+        if (canCombineWith(occupant)) app.dropCombine(id, occupant!.id, pos);
+        else app.pickCellThenPlace(id, pos);
+      } else {
+        zone?.classList.remove("refuse");
       }
     };
     const up = (ev: PointerEvent) => finish(ev, true);
@@ -1238,7 +1277,7 @@ function renderManagePanel(app: App, host: HTMLElement): void {
         ? "Reshaping: click empty cells to remove and frontier outlines to add; they must balance."
         : ui.placing
           ? "Choose a destination cell. Occupied gameplay modules swap."
-          : "Tiles are raised and movable. Drag between cells or into the inventory; required cores stay deployed."
+          : "Tiles are raised and movable. Drag them between cells or into the inventory; drop one onto a matching twin to combine. Pinned cores stay on the board."
     }</p>
     <div class="manage-actions">
       ${reshaping

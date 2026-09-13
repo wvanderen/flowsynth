@@ -50,6 +50,13 @@ export async function checkRendering(app: App): Promise<string[]> {
     endButton.click();
     check(app.state.mode === "upgrade", "End flow ends the session on the first click");
 
+    // Settings is meta and lives in the top bar; board tools stay gameplay.
+    check(!!document.getElementById("topbar-settings"), "Settings lives in the top bar");
+    check(!document.getElementById("tool-settings"), "Board tools are gameplay-only");
+    document.getElementById("topbar-settings")!.click();
+    check(app.ui.modal === "settings", "The top-bar button opens Settings");
+    app.closeModal();
+
     app.ui.managing = true;
     app.render();
     for (let i = 0; i < 5; i++) app.render();
@@ -88,6 +95,8 @@ export async function checkRendering(app: App): Promise<string[]> {
     });
     check(!deadCell, "Every cell stays clickable while arranging");
     check(getComputedStyle(document.querySelector(".module-node")!).transform !== "none", "Deployed modules raise off the board while arranging");
+    check(!!document.querySelector(".module-node .core-pin"), "Core tiles wear a pin while arranging");
+    check(document.querySelector(".module-node title")?.textContent?.includes("Required core") === true, "The pin carries a stays-on-the-board tooltip");
     const invTile = document.querySelector(`[data-inv="${forge.id}"]`);
     check(!!invTile?.querySelector("svg polygon.hex"), "Returned modules appear as inventory hex tiles");
     check(invTile?.getAttribute("data-rarity") === "common", "Inventory hex tiles carry the rarity accent");
@@ -102,6 +111,16 @@ export async function checkRendering(app: App): Promise<string[]> {
     const home = document.querySelector('[data-cell="0,0"]')!.getBoundingClientRect();
     document.dispatchEvent(new PointerEvent("pointerup", { clientX: home.x + home.width / 2, clientY: home.y + home.height / 2 }));
     check(forge.pos?.q === 0 && forge.pos.r === 0, "Inventory hex tiles drag back onto the board");
+    await frame();
+
+    // Dropping a tile onto a matching twin combines them at the drop cell.
+    const twin = give(app.state, "forge", { q: 2, r: 0 });
+    app.render();
+    await frame();
+    drag(document.querySelector('[data-cell="0,0"]')!, document.querySelector('[data-cell="2,0"]')!);
+    check(app.state.modules.filter((m) => m.type === "forge").length === 1, "Dropping a tile onto its matching twin combines them");
+    check(!app.state.modules.includes(twin), "The twin is consumed");
+    check(forge.rarity === "uncommon" && forge.pos?.q === 2 && forge.pos.r === 0, "The combined module upgrades and lands on the drop cell");
     await frame();
 
     // Done exits arranging everywhere it is visible.

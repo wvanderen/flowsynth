@@ -111,6 +111,7 @@ export class App {
     rollGoalOccurrences(this.state, Date.now());
     this.bindGlobalEvents();
     document.getElementById("manage-banner-done")?.addEventListener("click", () => this.stopManaging());
+    document.getElementById("topbar-settings")?.addEventListener("click", () => this.openModal("settings"));
     this.greet();
     this.render();
     this.save();
@@ -342,7 +343,26 @@ export class App {
   }
 
   combinePair(id: string): void {
-    const result = combine(this.state, id);
+    this.reportCombine(combine(this.state, id));
+  }
+
+  // Drag-to-combine: dropping a module onto a same-type, same-rarity twin.
+  // The survivor lands on the drop cell so the merge reads physically.
+  dropCombine(id: string, partnerId: string, pos: Hex): void {
+    const a = this.state.modules.find((m) => m.id === id);
+    const b = this.state.modules.find((m) => m.id === partnerId);
+    if (!a || !b) return;
+    const result = combine(this.state, id, partnerId);
+    if (result.ok) {
+      // combine() keeps the higher-level input (ties keep `id`); land it here.
+      const keeperId = b.level > a.level ? b.id : a.id;
+      const keeper = this.state.modules.find((m) => m.id === keeperId);
+      if (keeper) keeper.pos = pos;
+    }
+    this.reportCombine(result);
+  }
+
+  private reportCombine(result: ActionResult): void {
     if (result.ok) {
       this.say(
         result.refund && result.refund > 0
@@ -609,6 +629,7 @@ export class App {
     if (this.ui.managing) {
       const occupant = this.state.modules.find((m) => m.pos !== null && sameHex(m.pos, pos));
       if (occupant && !isCore(occupant)) this.returnToInventory(occupant.id);
+      else if (occupant) this.say("Required cores stay on the board — drag one between cells to move it instead.");
     }
   }
 

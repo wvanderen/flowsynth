@@ -395,6 +395,29 @@ body.managing .manage-banner { display: flex; }
 /* The tool button reflects the mode it toggles. */
 .board-tools button.active { border-color: var(--accent); color: var(--accent); background: #262c22; }
 
+/* Settings is meta, not gameplay: it lives in the top bar. */
+.topbar-button { width: 40px; height: 40px; padding: 9px; flex-shrink: 0; }
+.topbar-button svg { width: 100%; height: 100%; }
+
+/* Core pin: required modules move between cells but never leave the board. */
+.core-pin { stroke: var(--amber); fill: none; stroke-width: 1.4; stroke-linecap: round; }
+.core-pin circle { fill: #3b3021; }
+.module-node .core-pin { cursor: help; }
+
+/* Drop targets: swap (accent) versus combine with a matching twin (amber). */
+.hex.combine-target { stroke: var(--amber); stroke-width: 2.5; fill: #3b3021; }
+
+/* The inventory refuses dragged cores and says so. */
+.inventory-drop.refuse { border-color: var(--danger); background: #d99a9a12; }
+.inventory-drop.refuse::after {
+  content: "Required cores stay on the board";
+  display: block;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--danger);
+  text-align: center;
+}
+
 /* ── Modals ────────────────────────────────────────── */
 
 .modal-backdrop {
