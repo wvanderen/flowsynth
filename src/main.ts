@@ -1,5 +1,13 @@
 import { App } from "./ui/app";
 
+const prototypeRequested = new URLSearchParams(location.search).get("prototype") === "console";
+if ((import.meta as ImportMeta & { env: { DEV: boolean } }).env.DEV && prototypeRequested) {
+  void import("./ui/console-prototype").then(({ mountConsolePrototype }) => mountConsolePrototype());
+} else {
+  mountApp();
+}
+
+function mountApp() {
 const els: Record<string, HTMLElement> = {};
 for (const id of [
   "session-toolbar",
@@ -40,3 +48,4 @@ document.addEventListener("keydown", (event) => {
     app.render();
   }
 });
+}
