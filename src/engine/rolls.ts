@@ -26,10 +26,6 @@ export function forgeThreshold(earned: number): number {
   return BALANCE.forgeInitialThreshold * BALANCE.forgeThresholdGrowth ** earned;
 }
 
-export function expansionThreshold(earned: number): number {
-  return BALANCE.expansionInitialThreshold * BALANCE.expansionThresholdGrowth ** earned;
-}
-
 export function addForgeProgress(state: GameState, amount: number, rng: Rng = Math.random): number {
   state.forge.progress += amount;
   let rolls = 0;
@@ -40,16 +36,4 @@ export function addForgeProgress(state: GameState, amount: number, rng: Rng = Ma
     rolls++;
   }
   return rolls;
-}
-
-export function addExpansionProgress(state: GameState, amount: number): number {
-  state.expansion.progress += amount;
-  let cells = 0;
-  while (state.expansion.progress + 1e-9 >= expansionThreshold(state.expansion.earned)) {
-    state.expansion.progress = Math.max(0, state.expansion.progress - expansionThreshold(state.expansion.earned));
-    state.expansion.earned++;
-    state.cellTokens++;
-    cells++;
-  }
-  return cells;
 }

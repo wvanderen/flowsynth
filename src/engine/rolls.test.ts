@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import { startSession } from "./actions";
-import { fresh, give, grantBurst, setActive, stubRng } from "./fixtures";
+import { fresh, give, stubRng } from "./fixtures";
 import { ROLL_POOL } from "./constants";
 import { generateOffer } from "./rolls";
 import { hex } from "./hex";
 
 describe("forge roll generation", () => {
-  it("samples three distinct specific types uniformly from the implemented types", () => {
+  it("samples three distinct types from the launch pool", () => {
     const s = fresh();
     const rng = stubRng([0.0, 0.99, 0.2, 0.5, 0.3, 0.5]);
     const offer = generateOffer(s, rng);
@@ -16,7 +16,7 @@ describe("forge roll generation", () => {
     for (const type of types) {
       expect(ROLL_POOL).toContain(type);
     }
-    expect(types).toEqual([ROLL_POOL[0], ROLL_POOL[3], ROLL_POOL[4]]);
+    expect(types).toEqual([ROLL_POOL[0], ROLL_POOL[2], ROLL_POOL[3]]);
   });
 
   it("rolls each candidate's rarity independently", () => {
@@ -25,28 +25,23 @@ describe("forge roll generation", () => {
     expect(offer.candidates.map((c) => c.rarity)).toEqual(["common", "uncommon", "rare"]);
   });
 
-  it("contains every implemented module type", () => {
-    expect(ROLL_POOL).toContain("enter");
-    expect(ROLL_POOL).toContain("time");
-    expect(ROLL_POOL).toContain("notes");
-    expect(ROLL_POOL).toContain("habit");
-    expect(ROLL_POOL).toContain("goals");
-    expect(ROLL_POOL).toContain("tasks");
+  it("contains every launch module type except the granted Carrier", () => {
     expect(ROLL_POOL).toContain("additive");
     expect(ROLL_POOL).toContain("conditional");
+    expect(ROLL_POOL).toContain("generator");
+    expect(ROLL_POOL).toContain("focusKeyed");
     expect(ROLL_POOL).toContain("infusor");
     expect(ROLL_POOL).toContain("forge");
-    expect(ROLL_POOL).toContain("expander");
-    expect(ROLL_POOL).toHaveLength(11);
+    expect(ROLL_POOL).not.toContain("carrier");
+    expect(ROLL_POOL).toHaveLength(6);
   });
 
   it("persists outcomes when the roll is earned, not when it is revealed", () => {
     const s = fresh();
-    setActive(s);
-    give(s, "forge", hex(0, 0));
-    grantBurst(s, 1, 60);
-    startSession(s, 600);
-    advance(s, 600, stubRng(new Array(12).fill(0.3)));
+    give(s, "forge", hex(1, 0));
+    give(s, "generator", hex(2, 0));
+    startSession(s, null);
+    advance(s, 100, stubRng(new Array(12).fill(0.3)));
     expect(s.bankedRolls).toHaveLength(1);
     const saved = JSON.parse(JSON.stringify(s.bankedRolls[0]));
     expect(saved.candidates).toHaveLength(3);

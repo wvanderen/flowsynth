@@ -1,12 +1,10 @@
 import { BALANCE, NEXT_RARITY } from "./constants";
-import { pushBurst } from "./advance";
-import { deployedAt, findModule, isActive, isCore, levelCost, wholeNous } from "./economy";
-import { adjacent, hexKey, isConnected, sameHex } from "./hex";
-import { createModule } from "./state";
-import { bankNotesBurst } from "./notes";
+import { deployedAt, findModule, levelCost, wholeNous } from "./economy";
+import { hexKey, isConnected, sameHex } from "./hex";
+import { createModule, isCarrier } from "./state";
 import { logSessionPractice } from "./habits";
 import { rollGoalOccurrences } from "./goals";
-import type { CoreActivationType, GameState, Hex, ModuleInstance, StarterType } from "./types";
+import type { GameState, Hex, ModuleInstance, ShelfType } from "./types";
 
 export interface ActionResult {
   ok: boolean;
@@ -24,24 +22,18 @@ export function startSession(state: GameState, target: number | null): ActionRes
   if (state.mode !== "upgrade") return fail("A session is already running.");
   state.sessionIndex++;
   state.mode = "flow";
-  state.session = { target, elapsed: 0, burstAwarded: false };
+  state.session = { target, elapsed: 0 };
   state.pendingGap = null;
   return ok;
 }
 
 export function endSession(state: GameState, now: number = 0): ActionResult {
   if (state.mode === "upgrade") return fail("No session is running.");
-  const sessionId = state.sessionIndex;
   const elapsed = state.session?.elapsed ?? 0;
   state.mode = "upgrade";
   state.session = null;
   state.pendingGap = null;
   state.sessionsCompleted++;
-  if (state.sessionsCompleted >= 1) state.timeActive = true;
-  // The store opens the moment Time unlocks (first session end) so the
-  // player's earliest nous can already buy activations and starters.
-  state.storeOpened = state.storeOpened || state.timeActive;
-  bankNotesBurst(state, sessionId, elapsed);
   logSessionPractice(state, elapsed, now);
   rollGoalOccurrences(state, now);
   return ok;
@@ -59,11 +51,13 @@ export function resumeSession(state: GameState): ActionResult {
   return ok;
 }
 
-export function buyStarter(state: GameState, type: StarterType): ActionResult {
-  if (state.mode !== "upgrade") return fail("The store is available between sessions.");
-  if (!state.storeOpened) return fail("The store has not opened yet.");
-  if (state.purchased[type]) return fail("This starter copy was already purchased.");
-  const price = BALANCE.starterPrices[type];
+// The starter shelf (ADR-0013): one-time offers for the launch categories.
+// All nous spending is upgrade-mode-only (§3); there is no separate store
+// gate — upgrade mode itself is the purchase window.
+export function buyShelfModule(state: GameState, type: ShelfType): ActionResult {
+  if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
+  if (state.purchased[type]) return fail("This shelf offer was already purchased.");
+  const price = BALANCE.shelfPrices[type];
   if (wholeNous(state) < price) return fail("Not enough whole nous.");
   state.nous -= price;
   state.purchased[type] = true;
@@ -71,29 +65,10 @@ export function buyStarter(state: GameState, type: StarterType): ActionResult {
   return ok;
 }
 
-// ADR-0007 activation economy: core activations are the cheapest store
-// offers, chosen by the player. Activation is permanent and player-wide.
-export function buyCoreActivation(state: GameState, type: CoreActivationType): ActionResult {
-  if (state.mode !== "upgrade") return fail("The store is available between sessions.");
-  if (!state.storeOpened) return fail("The store has not opened yet.");
-  const active =
-    type === "notes" ? state.notesActive : type === "goals" ? state.goalsActive : state.tasksActive;
-  if (active) return fail("This core module is already active.");
-  const price = BALANCE.coreActivationPrices[type];
-  if (wholeNous(state) < price) return fail("Not enough whole nous.");
-  state.nous -= price;
-  if (type === "notes") state.notesActive = true;
-  else if (type === "goals") state.goalsActive = true;
-  else state.tasksActive = true;
-  return ok;
-}
-
 export function upgradeModule(state: GameState, id: string): ActionResult {
   const module = findModule(state, id);
   if (!module) return fail("Module not found.");
   if (state.mode !== "upgrade") return fail("Upgrades happen between sessions.");
-  if (!state.storeOpened) return fail("Upgrades have not unlocked yet.");
-  if (!isActive(state, module)) return fail("Inactive core modules cannot be upgraded.");
   const cost = levelCost(module.level);
   if (wholeNous(state) < cost) return fail("Not enough whole nous.");
   state.nous -= cost;
@@ -112,6 +87,7 @@ export function combine(state: GameState, id: string, partnerId?: string): Actio
   if (state.mode !== "upgrade") return fail("Combining happens between sessions.");
   const selected = findModule(state, id);
   if (!selected) return fail("Module not found.");
+  if (isCarrier(selected)) return fail("The Carrier cannot be combined.");
   let partner: ModuleInstance | undefined;
   if (partnerId !== undefined) {
     partner = findModule(state, partnerId);
@@ -137,7 +113,6 @@ export function combine(state: GameState, id: string, partnerId?: string): Actio
   if (nextRarity === null) return fail("The highest rarity does not combine further.");
   keep.rarity = nextRarity;
   keep.level = Math.max(keep.level, melt.level);
-  for (const burst of melt.bursts) pushBurst(keep, burst);
   if (keep.pos === null && melt.pos !== null) {
     keep.pos = melt.pos;
     melt.pos = null;
@@ -150,27 +125,11 @@ export function placeModule(state: GameState, id: string, pos: Hex): ActionResul
   if (state.mode !== "upgrade") return fail("The grid is locked during flow.");
   const module = findModule(state, id);
   if (!module) return fail("Module not found.");
+  if (isCarrier(module)) return fail("The Carrier is pinned at the origin.");
   if (!state.cells.some((c) => sameHex(c, pos))) return fail("That cell is not part of the board.");
   const occupant = deployedAt(state, pos);
   if (module.pos !== null && sameHex(module.pos, pos)) return ok;
-
-  if (isCore(module)) {
-    if (module.pos !== null) {
-      if (occupant) occupant.pos = module.pos;
-      module.pos = pos;
-      return ok;
-    }
-    if (!occupant || occupant.type !== module.type) {
-      return fail("A spare core copy replaces its matching deployed core.");
-    }
-    occupant.pos = null;
-    module.pos = pos;
-    return ok;
-  }
-
-  if (occupant && isCore(occupant)) {
-    return fail("Core modules stay deployed.");
-  }
+  if (occupant && isCarrier(occupant)) return fail("The Carrier keeps its cell.");
   if (occupant) occupant.pos = module.pos;
   module.pos = pos;
   return ok;
@@ -180,19 +139,9 @@ export function returnModule(state: GameState, id: string): ActionResult {
   if (state.mode !== "upgrade") return fail("The grid is locked during flow.");
   const module = findModule(state, id);
   if (!module) return fail("Module not found.");
-  if (isCore(module)) return fail("Required core modules stay deployed.");
+  if (isCarrier(module)) return fail("The Carrier is pinned at the origin.");
   if (module.pos === null) return fail("This module is already in inventory.");
   module.pos = null;
-  return ok;
-}
-
-export function placeCell(state: GameState, pos: Hex): ActionResult {
-  if (state.mode !== "upgrade") return fail("Cells are placed between sessions.");
-  if (state.cellTokens <= 0) return fail("No earned cells to place.");
-  if (state.cells.some((c) => sameHex(c, pos))) return fail("That cell already exists.");
-  if (!state.cells.some((c) => adjacent(c, pos))) return fail("New cells attach to the existing board.");
-  state.cells.push(pos);
-  state.cellTokens--;
   return ok;
 }
 

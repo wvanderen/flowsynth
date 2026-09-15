@@ -1,56 +1,80 @@
-import type { CoreActivationType, CoreType, ModuleType, Rarity, StarterType } from "./types";
+import type { Category, ModuleType, Rarity, ShelfType } from "./types";
 
 export interface Balance {
-  baseRate: number;
-  timeBonus: number;
+  carrierRate: number;
   additiveRate: number;
-  conditionalBonusPerActiveCore: number;
+  conditionalRate: number;
   infusorBonus: number;
-  chargeSecondsPerPracticeSecond: number;
   upgradeFirstCost: number;
   upgradeCostGrowthNumerator: bigint;
   upgradeCostGrowthDenominator: bigint;
   rarityPower: Record<Rarity, number>;
   rarityProbability: Record<Rarity, number>;
-  starterPrices: Record<StarterType, number>;
-  coreActivationPrices: Record<CoreActivationType, number>;
-  notesChargePerMinute: number;
+  shelfPrices: Record<ShelfType, number>;
   goalBaseSlots: number;
-  goalBurstSecondsPerPracticeMinute: number;
   forgeInitialThreshold: number;
   forgeThresholdGrowth: number;
-  expansionInitialThreshold: number;
-  expansionThresholdGrowth: number;
 }
 
+// Provisional tuning throughout; the redesign spec's numbers are not final
+// until the tuning fronts land.
 export const BALANCE: Balance = {
-  baseRate: 0.1,
-  timeBonus: 0.2,
+  carrierRate: 0.1,
   additiveRate: 0.05,
-  conditionalBonusPerActiveCore: 0.1,
+  conditionalRate: 0.05,
   infusorBonus: 0.2,
-  chargeSecondsPerPracticeSecond: 0.1,
   upgradeFirstCost: 10,
   upgradeCostGrowthNumerator: 8n,
   upgradeCostGrowthDenominator: 5n,
   rarityPower: { common: 1.2, uncommon: 1.25, rare: 1.3 },
   rarityProbability: { common: 0.99, uncommon: 0.009, rare: 0.001 },
-  starterPrices: { additive: 40, conditional: 60, infusor: 40, forge: 80, expander: 80 },
-  coreActivationPrices: { notes: 20, goals: 30, tasks: 25 },
-  notesChargePerMinute: 1,
+  shelfPrices: { generator: 40, infusor: 40, forge: 80 },
   goalBaseSlots: 2,
-  goalBurstSecondsPerPracticeMinute: 0.5,
   forgeInitialThreshold: 60,
   forgeThresholdGrowth: 1.5,
-  expansionInitialThreshold: 60,
-  expansionThresholdGrowth: 2,
 };
 
-export const CORE_TYPES: readonly CoreType[] = ["enter", "time", "habit", "notes", "goals", "tasks"];
+export const CATEGORY_OF: Record<ModuleType, Category> = {
+  carrier: "synthesizer",
+  additive: "synthesizer",
+  conditional: "synthesizer",
+  generator: "generator",
+  focusKeyed: "generator",
+  infusor: "infusor",
+  forge: "forge",
+};
 
-export const GAMEPLAY_TYPES: readonly StarterType[] = ["additive", "conditional", "infusor", "forge", "expander"];
+// Chargeable is a supertype family above the category level (ADR-0012): its
+// members accumulate received charge toward a threshold. The Forge is the
+// sole launch instance. Continuous-charge categories use received charge as
+// continuous empowerment instead. Membership is decided per category —
+// never per type.
+export const CHARGEABLE_CATEGORIES: readonly Category[] = ["forge"];
 
-export const ROLL_POOL: readonly ModuleType[] = ["enter", "time", "notes", "habit", "goals", "tasks", "additive", "conditional", "infusor", "forge", "expander"];
+export const CONTINUOUS_CHARGE_CATEGORIES: readonly Category[] = ["synthesizer", "infusor"];
+
+// The union of the two families: the categories that receive charge at all.
+export const CHARGE_RECEIVING_CATEGORIES: readonly Category[] = [
+  ...CHARGEABLE_CATEGORIES,
+  ...CONTINUOUS_CHARGE_CATEGORIES,
+];
+
+export const MODULE_TYPES: readonly ModuleType[] = [
+  "carrier",
+  "additive",
+  "conditional",
+  "generator",
+  "focusKeyed",
+  "infusor",
+  "forge",
+];
+
+// The Carrier is granted, never rolled (§2.1); everything else can come from
+// the Forge.
+export const ROLL_POOL: readonly ModuleType[] = MODULE_TYPES.filter((type) => type !== "carrier");
+
+// The starter shelf (§3): one-time offers completing the category landscape.
+export const SHELF_TYPES: readonly ShelfType[] = ["forge", "generator", "infusor"];
 
 export const NEXT_RARITY: Record<Rarity, Rarity | null> = { common: "uncommon", uncommon: "rare", rare: null };
 
@@ -58,4 +82,4 @@ export const EPS = 1e-9;
 
 export const RECONCILIATION_THRESHOLD_SECONDS = 120;
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;

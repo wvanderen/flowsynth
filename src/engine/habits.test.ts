@@ -7,7 +7,6 @@ import {
   addPracticeLog,
   archiveHabit,
   createHabit,
-  developmentRate,
   renameHabit,
   selectHabit,
 } from "./habits";
@@ -49,7 +48,7 @@ describe("habit management", () => {
 });
 
 describe("habit development", () => {
-  it("accrues live flow time for the selected habit only", () => {
+  it("accrues live flow time for the selected habit only, one-for-one", () => {
     const s = fresh();
     const piano = createHabit(s, "Piano")!.habit!;
     selectHabit(s, piano.id);
@@ -92,18 +91,15 @@ describe("habit development", () => {
     expect(addPracticeLog(s, piano.id, -5).ok).toBe(false);
   });
 
-  it("the Habit module's level multiplies development rate for live and manual time", () => {
+  it("the habit app is a fixed instrument: development never scales with any module", () => {
     const s = fresh();
-    const module = s.modules.find((m) => m.type === "habit")!;
-    module.level = 1;
-    expect(developmentRate(s)).toBeCloseTo(1.2, 9);
     const piano = createHabit(s, "Piano")!.habit!;
     addPracticeLog(s, piano.id, 10);
-    expect(piano.seconds).toBeCloseTo(720, 6);
+    expect(piano.seconds).toBeCloseTo(600, 6);
     selectHabit(s, piano.id);
     startSession(s, 600);
     advance(s, 100);
-    expect(piano.seconds).toBeCloseTo(840, 6);
+    expect(piano.seconds).toBeCloseTo(700, 6);
   });
 
   it("logs one live practice entry per session with a timestamp", () => {

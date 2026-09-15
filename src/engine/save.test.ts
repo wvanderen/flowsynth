@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import { startSession } from "./actions";
-import { fresh, give, grantBurst, setActive, stubRng } from "./fixtures";
+import { fresh, give, stubRng } from "./fixtures";
+import { SAVE_VERSION } from "./constants";
 import { deserialize, serialize } from "./save";
 import { planTick } from "./clock";
 import { hex } from "./hex";
@@ -9,9 +10,8 @@ import { hex } from "./hex";
 describe("persistence", () => {
   it("round-trips the full game state", () => {
     const s = fresh();
-    setActive(s);
-    give(s, "additive", hex(0, 0));
-    give(s, "forge", hex(2, 0));
+    give(s, "additive", hex(1, 0));
+    give(s, "forge", hex(0, -1));
     s.nous = 123.456;
     s.forge.progress = 42.5;
     startSession(s, 600);
@@ -22,13 +22,17 @@ describe("persistence", () => {
     expect(serialize(loaded.state!, 1_000)).toBe(text);
   });
 
+  it("saves carry the current version", () => {
+    const parsed = JSON.parse(serialize(fresh()));
+    expect(parsed.version).toBe(SAVE_VERSION);
+    expect(parsed.version).toBe(5);
+  });
+
   it("resuming from a mid-flow save does not duplicate rewards", () => {
     const build = () => {
       const s = fresh();
-      setActive(s);
-      give(s, "forge", hex(0, 0));
-      give(s, "expander", hex(2, 0));
-      grantBurst(s, 1, 200);
+      give(s, "forge", hex(1, 0));
+      give(s, "generator", hex(2, 0));
       startSession(s, 600);
       return s;
     };
@@ -44,45 +48,32 @@ describe("persistence", () => {
 
     expect(restored.nous).toBeCloseTo(straight.nous, 6);
     expect(restored.forge.progress).toBeCloseTo(straight.forge.progress, 6);
-    expect(restored.expansion.progress).toBeCloseTo(straight.expansion.progress, 6);
-    expect(restored.cellTokens).toBe(straight.cellTokens);
   });
 
-  it("migrates version-1 saves into the Notes-era format", () => {
+  it("rejects v4 saves at the v5 boundary with a clear message (ADR-0017)", () => {
     const s = fresh();
-    setActive(s);
-    s.storeOpened = true;
-    s.nous = 42;
-    const v1 = serialize(s).replace('"version": 4', '"version": 1');
-    const withoutNotesFields = JSON.parse(v1);
-    delete withoutNotesFields.state.notesActive;
-    delete withoutNotesFields.state.notes;
-    const result = deserialize(JSON.stringify(withoutNotesFields));
-    expect(result.error).toBeUndefined();
-    expect(result.state!.notesActive).toBe(true);
-    expect(result.state!.notes).toEqual([]);
-    expect(result.state!.nous).toBeCloseTo(42, 6);
+    const v4 = serialize(s).replace(`"version": ${SAVE_VERSION}`, '"version": 4');
+    const result = deserialize(v4);
+    expect(result.error).toBeDefined();
+    expect(result.error).toMatch(/older version/i);
+    expect(result.state).toBeUndefined();
   });
 
-  it("grandfathers pre-economy (v3) store-opened saves in as activated", () => {
-    const s = fresh();
-    setActive(s);
-    s.storeOpened = true;
-    const v3 = JSON.parse(serialize(s));
-    v3.version = 3;
-    v3.state.notesActive = false;
-    v3.state.goalsActive = false;
-    const result = deserialize(JSON.stringify(v3));
-    expect(result.error).toBeUndefined();
-    expect(result.state!.notesActive).toBe(true);
-    expect(result.state!.goalsActive).toBe(true);
+  it("rejects every older version; there is no migrate chain", () => {
+    for (const version of [1, 2, 3, 4]) {
+      const text = serialize(fresh()).replace(`"version": ${SAVE_VERSION}`, `"version": ${version}`);
+      const result = deserialize(text);
+      expect(result.error, `v${version}`).toBeDefined();
+      expect(result.state, `v${version}`).toBeUndefined();
+    }
   });
 
   it("rejects corrupt, foreign, and future-version saves", () => {
     expect(deserialize("{nope").error).toBeDefined();
-    expect(deserialize('{"app":"other","version":1}').error).toBeDefined();
+    expect(deserialize('{"app":"other","version":5}').error).toBeDefined();
     expect(deserialize('{"app":"flowsynth","version":99,"state":{}}').error).toBeDefined();
-    expect(deserialize('{"app":"flowsynth","version":2,"state":{"mode":"weird"}}').error).toBeDefined();
+    expect(deserialize('{"app":"flowsynth","version":5,"state":{"mode":"weird"}}').error).toBeDefined();
+    expect(deserialize('{"app":"flowsynth","version":5}').error).toBeDefined();
   });
 });
 

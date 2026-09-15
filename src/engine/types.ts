@@ -1,19 +1,26 @@
 export type Rarity = "common" | "uncommon" | "rare";
 
-export type CoreType = "enter" | "time" | "habit" | "notes" | "goals" | "tasks";
+// ADR-0012 category landscape: board modules are module → category → type.
+export type Category = "synthesizer" | "generator" | "infusor" | "forge";
 
-export type GameplayType = "additive" | "conditional" | "infusor" | "forge" | "expander";
+// Synthesizers contribute harmonic terms to the nous composite. The Carrier
+// is the unique granted origin module (never rolled, never shelved); every
+// other synthesizer is strictly harmonics.
+export type SynthesizerType = "carrier" | "additive" | "conditional";
 
-export type ModuleType = CoreType | GameplayType;
+// Generators produce charge. The focus-keyed generator reads focus state
+// (its charge-window rule is the §2.3 launch exception).
+export type GeneratorType = "generator" | "focusKeyed";
+
+export type InfusorType = "infusor";
+
+export type ForgeType = "forge";
+
+export type ModuleType = SynthesizerType | GeneratorType | InfusorType | ForgeType;
 
 export interface Hex {
   q: number;
   r: number;
-}
-
-export interface Burst {
-  strength: number;
-  seconds: number;
 }
 
 export interface ModuleInstance {
@@ -23,7 +30,6 @@ export interface ModuleInstance {
   level: number;
   invested: number;
   pos: Hex | null;
-  bursts: Burst[];
 }
 
 export interface Candidate {
@@ -42,17 +48,14 @@ export interface Meter {
   earned: number;
 }
 
-export type StarterType = GameplayType;
-
-// Core modules whose activation is a purchasable store offer under the
-// ADR-0007 activation economy (ADR-0011). Enter/Exit starts active, Time
-// activates after the first session, Habit is free onboarding.
-export type CoreActivationType = "notes" | "goals" | "tasks";
+// The starter shelf (ADR-0013): one-time catalog offers that complete the
+// category landscape — every launch category guaranteed exactly once. The
+// focus-keyed generator is not shelved; its acquisition point is tuning.
+export type ShelfType = "generator" | "infusor" | "forge";
 
 export interface SessionState {
   target: number | null;
   elapsed: number;
-  burstAwarded: boolean;
 }
 
 export interface PendingGap {
@@ -101,17 +104,6 @@ export interface Goal {
   createdAt: number;
 }
 
-export type TaskSize = "small" | "medium" | "large";
-
-export interface Task {
-  id: string;
-  text: string;
-  size: TaskSize;
-  done: boolean;
-  paid: boolean;
-  completionOrder: number | null;
-}
-
 export type Mode = "upgrade" | "flow" | "paused";
 
 export interface GameState {
@@ -122,24 +114,14 @@ export interface GameState {
   totalEarned: number;
   modules: ModuleInstance[];
   cells: Hex[];
-  cellTokens: number;
   forge: Meter;
-  expansion: Meter;
   bankedRolls: RollOffer[];
-  purchased: Record<StarterType, boolean>;
-  timeActive: boolean;
-  notesActive: boolean;
+  purchased: Record<ShelfType, boolean>;
   notes: NoteEntry[];
   habits: Habit[];
   activeHabitId: string | null;
   practiceLog: PracticeEntry[];
-  goalsActive: boolean;
   goals: Goal[];
-  tasksActive: boolean;
-  tasks: Task[];
-  allowance: number;
-  taskCompletionCounter: number;
-  storeOpened: boolean;
   session: SessionState | null;
   pendingGap: PendingGap | null;
   nextId: number;
@@ -151,26 +133,19 @@ export interface Contribution {
   value: number;
   infusorBonus: number;
   chargeFactor: number;
-  adjacentActiveCores: number;
+  chargeStrength: number;
 }
 
 export interface RateSnapshot {
   base: number;
-  timeBonus: number;
-  conditionalBonus: number;
   rate: number;
   forgeRate: number;
-  expansionRate: number;
   contributions: Map<string, Contribution>;
   chargeStrength: Map<string, number>;
-  chargeSeconds: number;
 }
 
 export interface AdvanceResult {
   nousEarned: number;
   rollsBanked: number;
-  cellsEarned: number;
-  burstAwarded: boolean;
-  storeOpened: boolean;
   goalsCompleted: number;
 }

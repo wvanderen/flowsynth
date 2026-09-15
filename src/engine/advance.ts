@@ -1,80 +1,32 @@
-import { BALANCE, EPS } from "./constants";
-import { computeRates, deployedTime } from "./economy";
-import { addExpansionProgress, addForgeProgress, type Rng } from "./rolls";
+import { EPS } from "./constants";
+import { computeRates } from "./economy";
+import { addForgeProgress, type Rng } from "./rolls";
 import { accrueLivePractice } from "./habits";
 import { accrueGoalProgress } from "./goals";
-import { accrueTaskAllowance } from "./tasks";
-import type { AdvanceResult, Burst, ModuleInstance } from "./types";
+import type { AdvanceResult, GameState } from "./types";
 
-export function pushBurst(module: ModuleInstance, burst: Burst): void {
-  const last = module.bursts[module.bursts.length - 1];
-  if (last && last.strength === burst.strength) {
-    last.seconds += burst.seconds;
-  } else {
-    module.bursts.push(burst);
-  }
-}
-
-export function advance(state: import("./types").GameState, seconds: number, rng: Rng = Math.random): AdvanceResult {
+export function advance(state: GameState, seconds: number, rng: Rng = Math.random): AdvanceResult {
   const result: AdvanceResult = {
     nousEarned: 0,
     rollsBanked: 0,
-    cellsEarned: 0,
-    burstAwarded: false,
-    storeOpened: false,
     goalsCompleted: 0,
   };
-  if (state.mode !== "flow" || seconds <= 0) return result;
+  if (state.mode !== "flow" || seconds <= EPS) return result;
+  const session = state.session;
+  if (!session) return result;
 
-  let remaining = seconds;
-  let guard = 0;
-  while (remaining > EPS && guard++ < 100_000) {
-    const time = state.timeActive ? deployedTime(state) : undefined;
-    const burst = time && time.bursts.length > 0 ? time.bursts[0] : undefined;
-    const session = state.session;
-    if (!session) break;
-
-    const tBurst = burst ? burst.seconds : Number.POSITIVE_INFINITY;
-    const target = session.target;
-    const tTarget =
-      target !== null && !session.burstAwarded && session.elapsed < target ? target - session.elapsed : Number.POSITIVE_INFINITY;
-    const step = Math.min(remaining, tBurst, tTarget);
-
-    if (step > EPS) {
-      const snapshot = computeRates(state, burst !== undefined);
-      const gained = snapshot.rate * step;
-      state.nous += gained;
-      state.totalEarned += gained;
-      result.nousEarned += gained;
-      if (snapshot.forgeRate > 0) {
-        result.rollsBanked += addForgeProgress(state, snapshot.forgeRate * step, rng);
-      }
-      if (snapshot.expansionRate > 0) {
-        result.cellsEarned += addExpansionProgress(state, snapshot.expansionRate * step);
-      }
-      if (burst) burst.seconds = Math.max(0, burst.seconds - step);
-      session.elapsed += step;
-      accrueLivePractice(state, step);
-      result.goalsCompleted += accrueGoalProgress(state, state.activeHabitId, step);
-      accrueTaskAllowance(state, step);
-      remaining -= step;
-    }
-
-    if (burst && burst.seconds <= EPS && time) {
-      time.bursts.shift();
-    }
-
-    if (
-      session.target !== null &&
-      !session.burstAwarded &&
-      session.elapsed >= session.target - EPS
-    ) {
-      session.burstAwarded = true;
-      if (state.timeActive && time) {
-        pushBurst(time, { strength: 1, seconds: session.target * BALANCE.chargeSecondsPerPracticeSecond });
-        result.burstAwarded = true;
-      }
-    }
+  // The board is locked during flow, so the rate is constant across the
+  // step; production is exactly what the board's modules make (§2.1).
+  const snapshot = computeRates(state, true);
+  const gained = snapshot.rate * seconds;
+  state.nous += gained;
+  state.totalEarned += gained;
+  result.nousEarned += gained;
+  if (snapshot.forgeRate > 0) {
+    result.rollsBanked += addForgeProgress(state, snapshot.forgeRate * seconds, rng);
   }
+  session.elapsed += seconds;
+  accrueLivePractice(state, seconds);
+  result.goalsCompleted += accrueGoalProgress(state, state.activeHabitId, seconds);
   return result;
 }

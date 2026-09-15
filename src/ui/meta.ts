@@ -1,17 +1,13 @@
 import type { ModuleType, Rarity } from "../engine/types";
 
 export const META: Record<ModuleType, { name: string; short: string; role: string }> = {
-  enter: { name: "Enter / Exit", short: "Flow", role: "Core production" },
-  time: { name: "Time", short: "Time", role: "Session rhythm" },
-  habit: { name: "Habit", short: "Habit", role: "Practice identity" },
-  notes: { name: "Notes", short: "Notes", role: "Capture a thought" },
-  goals: { name: "Goals", short: "Goals", role: "Practice conditions" },
-  tasks: { name: "Tasks", short: "Tasks", role: "Small steps" },
-  additive: { name: "Additive Synth", short: "Additive", role: "Base production" },
-  conditional: { name: "Conditional Synth", short: "Multiplier", role: "Core adjacency" },
+  carrier: { name: "Carrier", short: "Carrier", role: "The granted origin" },
+  additive: { name: "Additive Synth", short: "Additive", role: "Harmonic term" },
+  conditional: { name: "Conditional Synth", short: "Conditional", role: "Harmonic term" },
+  generator: { name: "Generator", short: "Generator", role: "Produces charge" },
+  focusKeyed: { name: "Focus-Keyed Generator", short: "Focus-Gen", role: "Charge from focus" },
   infusor: { name: "Infusor", short: "Infusor", role: "Neighbor bonuses" },
-  forge: { name: "Forge", short: "Forge", role: "New possibilities" },
-  expander: { name: "Expander", short: "Expander", role: "Room to grow" },
+  forge: { name: "Forge", short: "Forge", role: "Rolls at threshold" },
 };
 
 export const RARITY_LABEL: Record<Rarity, string> = { common: "common", uncommon: "uncommon", rare: "rare" };

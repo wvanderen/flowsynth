@@ -399,24 +399,13 @@ body.managing .manage-banner { display: flex; }
 .topbar-button { width: 40px; height: 40px; padding: 9px; flex-shrink: 0; }
 .topbar-button svg { width: 100%; height: 100%; }
 
-/* Core pin: required modules move between cells but never leave the board. */
-.core-pin { stroke: var(--amber); fill: none; stroke-width: 1.4; stroke-linecap: round; }
-.core-pin circle { fill: #3b3021; }
-.module-node .core-pin { cursor: help; }
+/* Module pin: the Carrier is granted and pinned — it never moves. */
+.module-pin { stroke: var(--amber); fill: none; stroke-width: 1.4; stroke-linecap: round; }
+.module-pin circle { fill: #3b3021; }
+.module-node .module-pin { cursor: help; }
 
 /* Drop targets: swap (accent) versus combine with a matching twin (amber). */
 .hex.combine-target { stroke: var(--amber); stroke-width: 2.5; fill: #3b3021; }
-
-/* The inventory refuses dragged cores and says so. */
-.inventory-drop.refuse { border-color: var(--danger); background: #d99a9a12; }
-.inventory-drop.refuse::after {
-  content: "Required cores stay on the board";
-  display: block;
-  margin-top: 10px;
-  font-size: 11px;
-  color: var(--danger);
-  text-align: center;
-}
 
 /* ── Modals ────────────────────────────────────────── */
 
@@ -546,21 +535,11 @@ body.managing .manage-banner { display: flex; }
 /* Instrument canvas and persistent module states. */
 .topbar { flex-shrink: 0; }
 .inspector { min-height: 0; min-width: 0; scrollbar-color: var(--line) var(--panel-soft); }
-.module-shortcut { width: 40px; height: 40px; padding: 8px; flex-shrink: 0; }
-.module-shortcut svg { width: 100%; height: 100%; fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 
-/* Active-habit chip: shows the session's practice identity; opens the module. */
-.habit-chip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px 8px 10px;
-  flex-shrink: 0;
-  max-width: 190px;
-  border-radius: 8px;
-}
-.habit-chip svg { width: 18px; height: 18px; flex-shrink: 0; stroke: var(--charge); }
-.habit-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+/* Focus-app toolbar buttons: panel access until the console lands. */
+.app-buttons { display: flex; gap: 6px; flex-shrink: 0; }
+.app-button { padding: 8px 12px; font-size: 12px; }
+.app-button.active { border-color: var(--accent); color: var(--accent); }
 .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 4px; }
 .icon-btn svg { width: 100%; height: 100%; color: var(--muted); }
 .icon-btn:hover:not(:disabled) svg { color: var(--ink); }
@@ -581,17 +560,3 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .shop-item.activation.owned { opacity: 0.75; }
 .activation-owned { color: var(--rarity-uncommon); font-size: 12px; }
 .store-section-title { font: 10px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; }
-
-/* Tasks: bite-sized capture funded by live practice allowance. */
-.task-create { display: flex; gap: 6px; flex-wrap: wrap; }
-.task-create input[type="text"] { flex: 1; min-width: 120px; background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font-size: 13px; }
-.task-create select { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 7px 6px; font-size: 12px; }
-.task-create input:focus, .task-create select:focus { border-color: var(--charge); outline: none; }
-.task-list { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
-.task-row { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line-soft); border-radius: 8px; padding: 7px 10px; }
-.task-row.pending { border-style: dashed; opacity: 0.85; }
-.task-size { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; width: 44px; flex-shrink: 0; }
-.task-text { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.task-row.pending .task-text { color: var(--muted); text-decoration: line-through; }
-.task-row small { color: var(--muted); flex-shrink: 0; font-size: 10px; }
-.task-rename-input { flex: 1; min-width: 0; background: var(--panel-soft); color: var(--ink); border: 1px solid var(--charge); border-radius: 6px; padding: 6px 10px; font-size: 13px; }
