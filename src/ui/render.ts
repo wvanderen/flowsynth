@@ -61,8 +61,9 @@ function times(count: number, noun: string): string {
 
 export function render(app: App): void {
   const { state } = app;
-  renderSessionToolbar(app);
-  renderAccounting(app);
+  renderConsoleSession(app);
+  renderConsoleApps(app);
+  renderConsoleReadout(app);
   renderTools(app);
   renderGrid(app);
   renderFormula(app);
@@ -73,7 +74,7 @@ export function render(app: App): void {
   if (count) count.textContent = `${state.cells.length} cells`;
 }
 
-/* ── Top toolbar ───────────────────────────────────── */
+/* ── Console (ADR-0012) ────────────────────────────── */
 
 function durationOptionsHtml(app: App): string {
   return DURATION_OPTIONS.map(
@@ -89,42 +90,37 @@ function bindDurationSelect(app: App, select: HTMLElement | null): void {
   });
 }
 
-// Focus-app access lives in the toolbar until the console arrives (ADR-0012).
-const APP_BUTTONS: { key: AppPanel; label: string }[] = [
-  { key: "habit", label: "Habit" },
-  { key: "notes", label: "Notes" },
-  { key: "goals", label: "Goals" },
-];
-
-function renderSessionToolbar(app: App): void {
+// Session controls: the clock block plus the Enter/Exit main switch and the
+// pause control. The switch is the console's sole session gate — sessions
+// start and end through it — and it is the one colored console element
+// (vermillion; bright and animated while flow is live, dim when idle).
+function renderConsoleSession(app: App): void {
   const { state } = app;
-  const host = byId("session-toolbar");
+  const host = byId("console-session");
   if (!host) return;
 
-  const appButtons = () =>
-    `<div class="app-buttons">${APP_BUTTONS.map(
-      ({ key, label }) => `<button class="app-button ${app.ui.app === key ? "active" : ""}" id="app-${key}" aria-pressed="${app.ui.app === key}">${label}</button>`,
-    ).join("")}</div>`;
-  const bindAppButtons = () => {
-    for (const { key } of APP_BUTTONS) {
-      byId(`app-${key}`)?.addEventListener("click", () => app.openApp(key));
-    }
-  };
+  const switchSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.2 6.6a8 8 0 1 0 11.6 0"/></svg>`;
 
   if (state.mode === "upgrade") {
-    // Structural key: only rebuild when the shape of the toolbar changes, so
-    // button nodes (and in-flight clicks) survive clock ticks.
-    const key = `upgrade:${app.ui.chosenTarget}:${app.ui.app ?? ""}`;
+    // Structural key: only rebuild when the shape of the section changes, so
+    // control nodes (and in-flight clicks) survive clock ticks.
+    const key = `upgrade:${app.ui.chosenTarget}`;
     if (host.dataset.renderKey !== key) {
       host.dataset.renderKey = key;
-      host.innerHTML = `<div>
-          <select id="toolbar-duration" aria-label="Session duration">${durationOptionsHtml(app)}</select>
-          <p class="clock-caption">${app.ui.chosenTarget === null ? "Open-ended" : "Planned practice"}</p>
+      host.innerHTML = `
+        <div class="console-clock">
+          <div class="clock-plan">
+            <select id="console-duration" aria-label="Session duration">${durationOptionsHtml(app)}</select>
+            <p class="clock-caption">${app.ui.chosenTarget === null ? "Open-ended" : "Planned practice"}</p>
+          </div>
         </div>
-        ${appButtons()}<div class="session-actions"><button class="primary" id="start-flow">Enter flow ↗</button></div>`;
-      bindAppButtons();
-      bindDurationSelect(app, byId("toolbar-duration"));
-      byId("start-flow")?.addEventListener("click", () => app.startFlow());
+        <div class="session-actions">
+          <button class="main-switch idle" id="flow-switch" title="Enter flow — the board locks and runs itself">
+            ${switchSvg}<span>Enter flow</span>
+          </button>
+        </div>`;
+      bindDurationSelect(app, byId("console-duration"));
+      byId("flow-switch")?.addEventListener("click", () => app.startFlow());
     }
     return;
   }
@@ -135,26 +131,26 @@ function renderSessionToolbar(app: App): void {
   const paused = state.mode === "paused";
   const reached = target !== null && elapsed >= target;
 
-  const key = `flow:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}:${app.ui.app ?? ""}`;
+  const key = `flow:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.innerHTML = `
-      <div>
+      <div class="console-clock">
         <p class="session-clock mono" id="session-clock">${formatClock(elapsed)}</p>
         <p class="clock-caption" id="session-caption"></p>
         <div class="time-track"><span id="time-track-fill" style="width:0%"></span></div>
       </div>
-      ${appButtons()}
       <div class="session-actions">
         <button id="pause-flow">${paused ? "Resume" : "Pause"}</button>
-        <button class="primary" id="end-flow">End flow</button>
+        <button class="main-switch ${paused ? "held" : "live"}" id="flow-switch" title="Exit flow — end the session and bank its production">
+          ${switchSvg}<span>Exit flow</span>
+        </button>
       </div>`;
-    bindAppButtons();
     byId("pause-flow")?.addEventListener("click", () => (state.mode === "paused" ? app.resume() : app.pause()));
-    byId("end-flow")?.addEventListener("click", () => app.endFlow());
+    byId("flow-switch")?.addEventListener("click", () => app.endFlow());
   }
 
-  // Live values update in place; the buttons above are never replaced by ticks.
+  // Live values update in place; the controls above are never replaced by ticks.
   const caption = paused
     ? "Paused · progress preserved"
     : target === null
@@ -173,16 +169,73 @@ function renderSessionToolbar(app: App): void {
   if (track && track.style.width !== width) track.style.width = width;
 }
 
-function renderAccounting(app: App): void {
-  const { state } = app;
-  const host = byId("accounting");
+// Focus-app access: plain console buttons until the app-tiles ticket (#40)
+// gives each app a proper tile with a state LED and its own popover.
+function renderConsoleApps(app: App): void {
+  const host = byId("console-apps");
   if (!host) return;
-  const rate = currentSnapshot(state).rate;
-  const mode = app.managing ? "ARRANGING" : state.mode === "upgrade" ? "UPGRADE MODE" : state.mode === "paused" ? "FLOW PAUSED" : "FLOW LIVE";
-  host.innerHTML = `
-    <div><span class="eyebrow">Nous</span><strong id="nous-display">${fmtWhole(state.nous)}</strong></div>
-    <div><span class="eyebrow">Production</span><strong>${fmt(rate)}<span class="unit"> ν/s</span></strong></div>
-    <div><span class="eyebrow">Mode</span><strong style="font-size:11px;letter-spacing:.08em;padding-top:6px">${mode}</strong></div>`;
+  const key = app.ui.app ?? "";
+  if (host.dataset.renderKey === key) return;
+  host.dataset.renderKey = key;
+  host.innerHTML = `<div class="app-buttons">${APP_BUTTONS.map(
+    ({ key: appKey, label }) => `<button class="app-button ${app.ui.app === appKey ? "active" : ""}" id="app-${appKey}" aria-pressed="${app.ui.app === appKey}">${label}</button>`,
+  ).join("")}</div>`;
+  for (const { key: appKey } of APP_BUTTONS) {
+    byId(`app-${appKey}`)?.addEventListener("click", () => app.openApp(appKey));
+  }
+}
+
+const APP_BUTTONS: { key: AppPanel; label: string }[] = [
+  { key: "habit", label: "Habit" },
+  { key: "notes", label: "Notes" },
+  { key: "goals", label: "Goals" },
+];
+
+const TROPHY_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+  <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+  <path d="M4 22h16"/>
+  <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+  <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+  <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+</svg>`;
+
+// The console's readout end: the status strip (mode, live rate, and the
+// trophy glyph slot that opens achievements once they exist), the nous
+// balance, and the activation-ladder rung telegraph slot (issue #42 fills it).
+// Static slots are built once; tick-moving values update in place.
+function renderConsoleReadout(app: App): void {
+  const { state } = app;
+  const strip = byId("console-status");
+  if (strip) {
+    const mode = app.managing ? "ARRANGING" : state.mode === "upgrade" ? "UPGRADE" : state.mode === "paused" ? "PAUSED" : "LIVE";
+    if (strip.dataset.renderKey !== mode) {
+      strip.dataset.renderKey = mode;
+      strip.innerHTML = `
+        <div class="console-slot"><span class="eyebrow">Mode</span><strong class="mode-value mono">${mode}</strong></div>
+        <div class="console-slot"><span class="eyebrow">Production</span><strong class="mono" data-live="rate"></strong></div>
+        <div class="console-slot trophy-slot">
+          <button class="trophy-glyph" disabled title="Achievements arrive with the progression work" aria-label="Achievements (not yet available)">${TROPHY_SVG}</button>
+        </div>`;
+    }
+    const rateNode = strip.querySelector('[data-live="rate"]');
+    const rateText = `${fmt(currentSnapshot(state).rate)} ν/s`;
+    if (rateNode && rateNode.textContent !== rateText) rateNode.textContent = rateText;
+  }
+  const nous = byId("nous-balance");
+  if (nous) {
+    if (nous.childElementCount === 0) {
+      nous.innerHTML = `<span class="eyebrow">Nous</span><strong class="mono" data-live="nous"></strong>`;
+    }
+    const amount = nous.querySelector('[data-live="nous"]');
+    const text = fmtWhole(state.nous);
+    if (amount && amount.textContent !== text) amount.textContent = text;
+  }
+  const telegraph = byId("telegraph-slot");
+  if (telegraph && telegraph.childElementCount === 0) {
+    telegraph.innerHTML = `<span class="eyebrow">Next rung</span><strong class="mono">—</strong>`;
+    telegraph.title = "The activation ladder's next rung will show here";
+  }
 }
 
 function renderTools(app: App): void {
@@ -196,8 +249,12 @@ function renderTools(app: App): void {
   const forgeReady = upgrade && state.bankedRolls.length > 0;
   host.innerHTML = `
     <button class="small" id="tool-store" ${upgrade ? "" : "disabled"} title="${upgrade ? "The starter shelf: one-time offers for each category" : "Purchases happen between sessions"}">Store</button>
-    <button class="small" id="tool-forge" ${forgeReady ? "" : "disabled"} title="${forgeReady ? `${state.bankedRolls.length} banked choice${state.bankedRolls.length === 1 ? "" : "s"}` : "No banked rolls — earn Forge progress from charge"}">Forge · ${state.bankedRolls.length}</button>
-    <button class="small ${app.managing ? "active" : ""}" id="tool-manage" ${upgrade ? "" : "disabled"} aria-pressed="${app.managing}" title="${app.managing ? "Exit arranging (Esc)" : "Move modules"}">Grid &amp; inventory</button>`;
+    <button class="small" id="tool-forge" ${forgeReady ? "" : "disabled"} title="${forgeReady
+      ? `${state.bankedRolls.length} banked choice${state.bankedRolls.length === 1 ? "" : "s"}`
+      : upgrade
+        ? "No banked rolls — earn Forge progress from charge"
+        : "Forge choices belong to upgrade mode"}">Forge · ${state.bankedRolls.length}</button>
+    <button class="small ${app.managing ? "active" : ""}" id="tool-manage" ${upgrade ? "" : "disabled"} aria-pressed="${app.managing}" title="${app.managing ? "Exit arranging (Esc)" : upgrade ? "Move modules" : "The grid is locked during flow"}">Grid &amp; inventory</button>`;
   byId("tool-store")?.addEventListener("click", () => app.openModal("store"));
   byId("tool-forge")?.addEventListener("click", () => app.openModal("forge"));
   byId("tool-manage")?.addEventListener("click", () => (app.ui.managing ? app.stopManaging() : app.startManaging()));

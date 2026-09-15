@@ -15,6 +15,13 @@
   --rarity-common: #bbc5b1;
   --rarity-uncommon: #74cfa6;
   --rarity-rare: #b99bed;
+  /* The console's sole colored element: the Enter/Exit main switch
+     (vermillion per ADR-0016; hexes provisional until the token table). */
+  --switch: #cc603d;
+  --switch-dim: #96562f;
+  --switch-faint: #cc603d12;
+  --switch-faint-strong: #cc603d24;
+  --switch-glow: #cc603d7a;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
@@ -59,14 +66,19 @@ h1, h2, h3, p { margin: 0; }
 
 #app { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
 
-/* ── Top focus toolbar ─────────────────────────────── */
+/* ── The console (ADR-0012, ADR-0016) ──────────────── */
 
-.topbar {
+/* Structurally above the game UI: a fixed-height rail the game can never
+   move, reflow, or dim. Monochrome graphite — color is the board's language;
+   the Enter/Exit main switch is the sole colored exception. */
+.console {
   display: flex;
   align-items: center;
-  gap: 28px;
-  min-height: 96px;
-  padding: 12px 26px;
+  gap: 24px;
+  height: 88px;
+  flex-shrink: 0;
+  padding: 0 26px;
+  background: var(--panel-soft);
   border-bottom: 1px solid var(--line);
 }
 
@@ -80,27 +92,99 @@ h1, h2, h3, p { margin: 0; }
 }
 .brand svg { width: 28px; height: 28px; }
 
-.session-toolbar { flex: 1; display: flex; align-items: center; gap: 22px; min-width: 0; }
-.session-clock { font: 28px var(--mono); margin: 0; }
-.clock-caption { font-size: 10px; color: var(--muted); margin-top: 3px; }
+/* Session controls: clock block, pause, and the main switch. The clock block
+   keeps fixed dimensions across modes so entering or exiting flow shifts
+   nothing below. */
+.console-session { display: flex; align-items: center; gap: 20px; min-width: 0; }
+.console-clock {
+  width: 196px;
+  height: 56px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.clock-plan { display: flex; flex-direction: column; gap: 2px; }
+.clock-plan select { width: 148px; padding: 6px 8px; }
+.session-clock { font: 28px/1.1 var(--mono); margin: 0; }
+.clock-caption { font-size: 10px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .time-track {
   width: 135px;
   height: 3px;
   background: var(--line);
   border-radius: 2px;
   overflow: hidden;
-  margin-top: 6px;
+  margin-top: 5px;
 }
 .time-track > span { display: block; height: 100%; background: var(--accent); }
-.config-label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
-.config select { width: 135px; background: var(--panel); color: var(--ink); border-color: var(--line); border-radius: 5px; padding: 6px 8px; }
-.session-actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: nowrap; }
+
+/* The Enter/Exit main switch: vermillion, the console's sole colored element.
+   Bright and animated = flow live; dim = idle; paused holds bright but still. */
+.main-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 18px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  border-radius: 7px;
+  white-space: nowrap;
+}
+.main-switch svg { width: 15px; height: 15px; }
+.main-switch.idle {
+  color: var(--switch);
+  border-color: var(--switch-dim);
+  background: var(--switch-faint);
+}
+.main-switch.idle:hover { background: var(--switch-faint-strong); border-color: var(--switch); }
+.main-switch.live,
+.main-switch.held {
+  color: #fff7f2;
+  background: var(--switch);
+  border-color: var(--switch);
+  text-shadow: 0 1px 2px #0006;
+}
+.main-switch.live { animation: switch-live 2.2s ease-in-out infinite; }
+@keyframes switch-live { 50% { box-shadow: 0 0 14px 1px var(--switch-glow); } }
+
+.session-actions { display: flex; gap: 8px; flex-wrap: nowrap; }
 .session-actions button { white-space: nowrap; }
 
-.accounting { display: flex; align-items: center; gap: 22px; border-left: 1px solid var(--line); padding-left: 24px; flex-shrink: 0; }
-.accounting strong { font: 20px var(--mono); font-weight: 400; display: block; }
-.accounting .eyebrow { display: block; margin-bottom: 3px; }
-.accounting .unit { font-size: 12px; color: var(--muted); }
+/* Focus-app section: plain buttons until the app-tiles ticket renders the
+   real tiles with state LEDs and popovers. */
+.console-apps { display: flex; align-items: center; flex-shrink: 0; }
+.app-buttons { display: flex; gap: 6px; }
+.app-button { padding: 8px 12px; font-size: 12px; }
+/* The console is monochrome (ADR-0016): panel access reads as ink, never hue. */
+.app-button.active { border-color: var(--ink); color: var(--ink); background: var(--panel); }
+
+/* Readout end: status strip, nous balance, rung telegraph — one slot grammar. */
+.console-readout {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  border-left: 1px solid var(--line);
+  padding-left: 24px;
+  flex-shrink: 0;
+}
+.console-slot .eyebrow { display: block; margin-bottom: 3px; }
+.console-slot strong { font: 17px var(--mono); font-weight: 400; display: block; }
+.console-status { display: flex; align-items: center; gap: 20px; }
+.console-slot .mode-value { font-size: 12px; letter-spacing: 0.08em; padding-top: 4px; }
+.trophy-slot { display: flex; align-items: center; }
+.trophy-glyph {
+  width: 36px;
+  height: 36px;
+  padding: 7px;
+  border-radius: 7px;
+}
+.trophy-glyph svg { width: 100%; height: 100%; }
+.console-telegraph { color: var(--muted); }
+.console-telegraph strong { color: var(--muted); }
+
+.console-button { width: 40px; height: 40px; padding: 9px; flex-shrink: 0; }
+.console-button svg { width: 100%; height: 100%; }
 
 /* ── Workspace ─────────────────────────────────────── */
 
@@ -395,9 +479,7 @@ body.managing .manage-banner { display: flex; }
 /* The tool button reflects the mode it toggles. */
 .board-tools button.active { border-color: var(--accent); color: var(--accent); background: #262c22; }
 
-/* Settings is meta, not gameplay: it lives in the top bar. */
-.topbar-button { width: 40px; height: 40px; padding: 9px; flex-shrink: 0; }
-.topbar-button svg { width: 100%; height: 100%; }
+.config-label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 
 /* Module pin: the Carrier is granted and pinned — it never moves. */
 .module-pin { stroke: var(--amber); fill: none; stroke-width: 1.4; stroke-linecap: round; }
@@ -505,23 +587,24 @@ body.managing .manage-banner { display: flex; }
 /* ── Responsive ────────────────────────────────────── */
 
 @media (max-width: 1150px) {
-  .topbar { gap: 18px; }
+  .console { gap: 18px; }
 }
 
 @media (max-width: 980px) {
   .workspace { grid-template-columns: minmax(0, 1fr) 290px; }
-  .accounting { gap: 14px; }
+  .console-readout { gap: 14px; padding-left: 18px; }
 }
 
 @media (max-width: 760px) {
-  .topbar { flex-wrap: wrap; min-height: 0; padding: 14px 16px; gap: 14px; }
-  .session-toolbar { order: 3; flex-basis: 100%; flex-wrap: wrap; gap: 12px; }
-  .accounting { margin-left: auto; border: 0; padding: 0; }
+  .console { flex-wrap: wrap; height: auto; min-height: 0; padding: 14px 16px; gap: 14px; }
+  .console-session { order: 3; flex-basis: 100%; flex-wrap: wrap; gap: 12px; }
+  .console-readout { margin-left: auto; border: 0; padding: 0; }
+  .console-telegraph { display: none; }
   .board-panel { padding: 16px 14px 0; }
   .session-actions { margin-left: auto; }
   .workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(200px, 1fr) minmax(0, 0.8fr); }
   .inspector { border-left: 0; border-top: 1px solid var(--line); padding: 16px; }
-  .accounting > div:last-child { display: none; }
+  .mode-value, .trophy-slot { display: none; }
   .rate-equation { font-size: 12px; }
   .board-tools { gap: 4px; }
   .board-tools button { padding: 7px 8px; }
@@ -533,13 +616,8 @@ body.managing .manage-banner { display: flex; }
 }
 
 /* Instrument canvas and persistent module states. */
-.topbar { flex-shrink: 0; }
 .inspector { min-height: 0; min-width: 0; scrollbar-color: var(--line) var(--panel-soft); }
 
-/* Focus-app toolbar buttons: panel access until the console lands. */
-.app-buttons { display: flex; gap: 6px; flex-shrink: 0; }
-.app-button { padding: 8px 12px; font-size: 12px; }
-.app-button.active { border-color: var(--accent); color: var(--accent); }
 .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 4px; }
 .icon-btn svg { width: 100%; height: 100%; color: var(--muted); }
 .icon-btn:hover:not(:disabled) svg { color: var(--ink); }
