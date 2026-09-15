@@ -12,6 +12,7 @@ import type { App } from "./app";
 import { moduleIcon } from "./icons";
 import { updateSvg } from "./svg";
 import { DURATION_OPTIONS, META, RARITY_LABEL, fmt, fmtWhole } from "./meta";
+import { prototypeVariant, renderDissolvedOverview, renderStatusMonitor } from "./prototype-status-monitor";
 
 const HEX_RADIUS = 61;
 const SPACING = 65;
@@ -64,7 +65,8 @@ export function render(app: App): void {
   renderAccounting(app);
   renderTools(app);
   renderGrid(app);
-  renderFormula(app);
+  if (prototypeVariant()) renderStatusMonitor(app);
+  else renderFormula(app);
   renderInspector(app);
   renderModal(app);
   renderDev(app);
@@ -588,6 +590,7 @@ function renderInspector(app: App): void {
   // Rebuild only when the panel's structure changes; per-tick values update
   // in place below so buttons and scroll position survive flow ticks.
   const key = JSON.stringify([
+    prototypeVariant() ?? "",
     state.mode,
     ui.managing,
     ui.selected,
@@ -621,7 +624,8 @@ function renderInspector(app: App): void {
     if (ui.managing && state.mode === "upgrade") {
       renderManagePanel(app, host);
     } else if (!module) {
-      renderOverview(app, host);
+      if (prototypeVariant()) renderDissolvedOverview(host);
+      else renderOverview(app, host);
     } else {
       renderModulePanel(app, host, module);
     }

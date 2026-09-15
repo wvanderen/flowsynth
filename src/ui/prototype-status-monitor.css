@@ -1,0 +1,203 @@
+/* PROTOTYPE — status monitor (wayfinder #27). Throwaway; never merge to main. */
+
+.sm-variant {
+  --sm-panel: #191c28;
+  --sm-panel-soft: #14161f;
+  --sm-line: #2e3347;
+  --sm-line-soft: #232739;
+  --sm-ink: #dfe2ef;
+  --sm-muted: #8b90a8;
+  --sm-nous: #b9b4f2;
+  --sm-forge: #bc9239;
+  --sm-arete: #8d7ee0;
+  color: var(--sm-ink);
+  background: var(--sm-panel);
+  border: 1px solid var(--sm-line);
+  border-radius: 10px;
+  padding: 10px 14px 11px;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.sm-variant .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.sm-when {
+  font: 9px var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sm-muted);
+}
+.sm-what {
+  font: 9px var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sm-ink);
+  opacity: 0.85;
+}
+
+/* ── Formula with progressive disclosure ───────────── */
+
+.sm-formula { position: relative; display: inline-flex; align-items: center; gap: 8px; outline: none; }
+.sm-equation { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; min-height: 24px; }
+.sm-equation .op { color: var(--sm-muted); }
+.sm-equation strong { font-weight: 600; color: var(--sm-nous); }
+.sm-term { display: inline-flex; align-items: center; gap: 4px; color: var(--sm-ink); }
+.sm-term svg { width: 17px; height: 17px; stroke: var(--sm-muted); flex-shrink: 0; }
+.sm-hint { font-size: 10px; color: var(--sm-muted); border: 1px solid var(--sm-line); border-radius: 99px; width: 15px; height: 15px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sm-formula:hover .sm-hint, .sm-formula:focus .sm-hint { color: var(--sm-nous); border-color: var(--sm-nous); }
+
+.sm-breakdown {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  z-index: 40;
+  width: 330px;
+  background: var(--sm-panel-soft);
+  border: 1px solid var(--sm-line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 10px 26px #00000080;
+}
+.sm-formula:hover .sm-breakdown, .sm-formula:focus .sm-breakdown, .sm-formula:focus-within .sm-breakdown { display: block; }
+.sm-breakdown-row { display: grid; grid-template-columns: 86px 84px 1fr; gap: 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px solid var(--sm-line-soft); }
+.sm-breakdown-row:last-child { border-bottom: 0; }
+.sm-breakdown-row .mono { text-align: right; color: var(--sm-nous); font-size: 12px; }
+.sm-breakdown-row.total .mono, .sm-breakdown-row.total .sm-bk-name { color: var(--sm-ink); font-weight: 600; }
+.sm-bk-name { font-size: 12px; color: var(--sm-ink); }
+.sm-bk-note { font-size: 10.5px; color: var(--sm-muted); }
+
+/* ── Forge meter ───────────────────────────────────── */
+
+.sm-forge { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.sm-forge-bar { flex: 1; height: 5px; min-width: 60px; background: var(--sm-panel-soft); border: 1px solid var(--sm-line-soft); border-radius: 3px; overflow: hidden; }
+.sm-forge-bar i { display: block; height: 100%; background: var(--sm-forge); transition: width 400ms ease-out; }
+.sm-forge-val { font-size: 11px; color: var(--sm-muted); white-space: nowrap; }
+
+/* ── Arete accumulator ─────────────────────────────── */
+
+.am-accumulator { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.am-track { position: relative; height: 7px; background: var(--sm-panel-soft); border: 1px solid var(--sm-line-soft); border-radius: 4px; }
+.am-fill { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: linear-gradient(90deg, #4d4585, var(--sm-nous)); transition: width 400ms ease-out; }
+.am-grad { position: absolute; top: -3px; bottom: -3px; width: 1px; background: var(--sm-line); }
+.am-grad b {
+  position: absolute;
+  top: 9px;
+  left: 50%;
+  transform: translateX(-50%);
+  font: 8.5px var(--mono);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--sm-muted);
+}
+.am-horizon {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  right: -1px;
+  width: 2px;
+  background: var(--sm-arete);
+  box-shadow: 0 0 8px 1px #8d7ee06e;
+  border-radius: 1px;
+}
+.am-under { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin-top: 20px; }
+.am-beat { font-size: 10.5px; color: var(--sm-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.am-secondary { font-size: 10.5px; color: var(--sm-muted); white-space: nowrap; }
+.am-secondary .am-arete { color: var(--sm-arete); }
+
+/* Head-riding readout (variant C): annotation above the rail */
+.am-head {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  transform: translateX(-50%);
+  font: 10px var(--mono);
+  color: var(--sm-muted);
+  white-space: nowrap;
+}
+.am-head.flip { transform: translateX(-100%); }
+
+/* ── Variant A — Faceplate rail ────────────────────── */
+
+.sm-a { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(210px, 0.75fr) minmax(0, 1.5fr); gap: 0; padding: 0; }
+.sm-a .sm-cell { padding: 10px 16px 16px; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
+.sm-a .sm-cell + .sm-cell { border-left: 1px solid var(--sm-line-soft); }
+.sm-a header { display: flex; gap: 8px; align-items: baseline; }
+.sm-a .sm-what::before { content: "· "; color: var(--sm-muted); }
+.sm-a .am-track { height: 9px; }
+
+/* ── Variant B — Readout stack ─────────────────────── */
+
+.sm-b { display: flex; flex-direction: column; padding: 4px 14px; }
+.sm-b .sm-row { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 14px; align-items: center; padding: 9px 0; }
+.sm-b .sm-row + .sm-row { border-top: 1px solid var(--sm-line-soft); }
+.sm-b .sm-row-label {
+  font: 9px var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sm-muted);
+  text-align: right;
+}
+.sm-b .sm-row.era { align-items: start; padding-top: 11px; }
+.sm-b .sm-row.era .sm-row-label { color: var(--sm-arete); padding-top: 2px; }
+.sm-b .sm-row-body { display: flex; align-items: center; min-width: 0; }
+.sm-b .sm-row-body > * { flex: 1; }
+.sm-b .sm-forge { max-width: 420px; }
+
+/* ── Variant C — Horizon rail ──────────────────────── */
+
+.sm-c { display: flex; flex-direction: column; gap: 26px; padding-top: 24px; }
+.sm-c-top { display: flex; align-items: center; justify-content: space-between; gap: 22px; flex-wrap: wrap; }
+.sm-c-chips { display: flex; align-items: center; gap: 10px; }
+.sm-chip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--sm-line-soft);
+  border-radius: 99px;
+  padding: 4px 12px;
+  background: var(--sm-panel-soft);
+}
+.sm-chip-label { font: 9px var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--sm-muted); }
+.sm-chip.forge .sm-forge-bar { height: 4px; min-width: 90px; }
+.sm-chip .sm-forge-val { font-size: 10px; }
+.sm-c .am-track { height: 14px; border-radius: 7px; }
+.sm-c .am-grad { top: -4px; bottom: -4px; }
+.sm-c .am-grad b { top: 18px; font-size: 9px; }
+.sm-c .am-horizon { top: -6px; bottom: -6px; width: 3px; }
+.sm-c .am-under { margin-top: 26px; }
+
+/* ── Dissolved overview stub ───────────────────────── */
+
+.proto-dissolved { padding-top: 6px; }
+
+/* ── Floating prototype switcher (not part of any design) ── */
+
+#proto-switcher {
+  position: fixed;
+  bottom: 14px;
+  right: 14px;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  background: #f2f3f7;
+  color: #1c1e2a;
+  border-radius: 99px;
+  padding: 6px 10px;
+  box-shadow: 0 6px 22px #000000a8;
+  font-size: 12px;
+}
+#proto-switcher .proto-nav { display: flex; align-items: center; gap: 8px; }
+#proto-switcher button {
+  cursor: pointer;
+  border: 1px solid #c3c6d4;
+  background: #ffffff;
+  color: #1c1e2a;
+  border-radius: 99px;
+  padding: 2px 9px;
+  font: 11px var(--mono);
+}
+#proto-switcher button:hover { background: #e6e8f0; }
+#proto-switcher .proto-label { font-weight: 600; min-width: 150px; text-align: center; }
+#proto-switcher .proto-sim { display: flex; align-items: center; gap: 4px; }
+#proto-switcher .proto-sim-label { font: 9px var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: #6a6e85; margin-right: 2px; }
