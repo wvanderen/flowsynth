@@ -49,10 +49,20 @@ export function flowLive(state: GameState): boolean {
   return state.mode === "flow";
 }
 
+// The charge window is live while banked time remains (§2.3, ADR-0012): the
+// focus-keyed generator emits and the window drains only under this rule.
+export function chargeWindowActive(state: GameState): boolean {
+  return state.chargeWindow > 0;
+}
+
 // A generator's charge output: strength scales with its amplitude (level and
-// rarity). Only generators produce charge (§2.3 boundary rule).
-export function emittedStrength(module: ModuleInstance, flow: boolean): number {
+// rarity). Only generators produce charge (§2.3 boundary rule). The
+// focus-keyed generator spends the banked charge window: it emits at full
+// strength only while window time remains, spending a second of window per
+// second of live flow (the remaining-duration vocabulary).
+export function emittedStrength(state: GameState, module: ModuleInstance, flow: boolean): number {
   if (!flow || CATEGORY_OF[module.type] !== "generator" || module.pos === null) return 0;
+  if (module.type === "focusKeyed" && !chargeWindowActive(state)) return 0;
   return modulePower(module);
 }
 
@@ -64,7 +74,7 @@ export function receivedStrength(state: GameState, module: ModuleInstance, flow:
   let strength = 0;
   for (const generator of deployedGenerators(state)) {
     if (generator.pos !== null && adjacent(module.pos, generator.pos)) {
-      strength += emittedStrength(generator, flow);
+      strength += emittedStrength(state, generator, flow);
     }
   }
   return strength;
