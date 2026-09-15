@@ -32,6 +32,10 @@ export interface ModuleInstance {
   pos: Hex | null;
 }
 
+// A module known to sit on the board — the shape chord math and rate passes
+// work in once deployment has been filtered.
+export type DeployedModule = ModuleInstance & { pos: Hex };
+
 export interface Candidate {
   id: string;
   type: ModuleType;
@@ -127,17 +131,50 @@ export interface GameState {
   nextId: number;
 }
 
+// A raw chord pair: two adjacent synthesizers one pitch apart. Each pair
+// multiplies the composite by a small bonus — stacking is multiplicative and
+// uncapped (ADR-0014).
+export interface ChordPairTerm {
+  a: string;
+  b: string;
+  bonus: number;
+}
+
+// A recognized named chord: one bonus term replacing its member pairs'
+// bonuses, with one breakdown line per recognition.
+export interface NamedChordTerm {
+  name: string;
+  pitches: number[];
+  bonus: number;
+  moduleIds: string[];
+}
+
 export interface Contribution {
   moduleId: string;
   type: ModuleType;
+  pitch: number | null;
+  amplitude: number;
   value: number;
+  chordTerms: number;
   infusorBonus: number;
   chargeFactor: number;
   chargeStrength: number;
 }
 
+// The live rate breakdown (§4): carrier / harmonics / chords / empowerment /
+// achievements → rate. The carrier and harmonic legs are uncharged; charge
+// empowerment aggregates into its own leg so the lines always multiply out:
+// rate = composite × empowerment × achievementBoost.
 export interface RateSnapshot {
-  base: number;
+  carrier: number;
+  harmonics: number;
+  amplitude: number;
+  chordMultiplier: number;
+  pairs: ChordPairTerm[];
+  namedChords: NamedChordTerm[];
+  composite: number;
+  empowerment: number;
+  achievementBoost: number;
   rate: number;
   forgeRate: number;
   contributions: Map<string, Contribution>;
