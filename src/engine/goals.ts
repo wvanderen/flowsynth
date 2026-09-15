@@ -1,44 +1,23 @@
-import { pushBurst } from "./advance";
 import { BALANCE, EPS } from "./constants";
-import { deployedTime, isActive, modulePower } from "./economy";
-import type { Goal, GoalCondition, GoalSchedule, GameState, ModuleInstance } from "./types";
+import type { Goal, GoalCondition, GoalSchedule, GameState } from "./types";
 
 export type { Goal, GoalCondition, GoalSchedule };
 
-// Goals (issue #6). A goal tracks a practice condition ("Piano, 20 minutes a
-// day") in a limited slot. Progress accrues only while the goal is active —
-// earlier practice never counts retroactively. Completion queues a charge
-// burst exactly once per occurrence (ADR-0001): immediately during flow,
-// banked for the next session when completed between sessions. Daily and
-// weekly goals reset at the local calendar boundary; one-time goals keep
-// their slot until replaced in upgrade mode.
+// Goals (issue #6). A goal tracks a practice condition ("Piano, 20 minutes
+// a day") in a limited slot. Progress accrues only while the goal is active
+// — earlier practice never counts retroactively. Completions carry no
+// charge: goal templates are conditions only (ADR-0012). Daily and weekly
+// goals reset at the local calendar boundary; one-time goals keep their
+// slot until replaced in upgrade mode. Slot capacity is fixed until the
+// console long goals arrive.
 
-export function goalModule(state: GameState): ModuleInstance | undefined {
-  return state.modules.find((m) => m.type === "goals" && m.pos !== null);
-}
-
-export function goalsActive(state: GameState): boolean {
-  return state.goalsActive && goalModule(state) !== undefined;
-}
-
-// The module's primary effect: its level strengthens completion bursts.
-// Slot capacity is fixed at the base count for now; how slots expand is a
-// deferred design question (see issue #6).
 export function goalCapacity(state: GameState): number {
-  const module = goalModule(state);
-  if (!module || !isActive(state, module)) return 0;
+  void state;
   return BALANCE.goalBaseSlots;
 }
 
 export function goalRequiredSeconds(goal: Goal): number {
   return goal.condition.minutes * 60;
-}
-
-// Burst scales with the module's level and rarity (standard power curve).
-export function goalBurstSeconds(state: GameState, goal: Goal): number {
-  const module = goalModule(state);
-  const power = module ? modulePower(module) : 1;
-  return goal.condition.minutes * BALANCE.goalBurstSecondsPerPracticeMinute * power;
 }
 
 function localDateKey(now: number): string {
@@ -81,8 +60,7 @@ export interface GoalCreateInput {
 
 export function createGoal(state: GameState, input: GoalCreateInput): { ok: boolean; reason?: string; goal?: Goal } {
   if (state.mode !== "upgrade") return { ok: false, reason: "Goals are managed between sessions." };
-  if (!goalsActive(state)) return { ok: false, reason: "The Goals module is not active yet." };
-  if (state.goals.length >= goalCapacity(state)) return { ok: false, reason: "No free goal slots — upgrade the module or remove a goal." };
+  if (state.goals.length >= goalCapacity(state)) return { ok: false, reason: "No free goal slots — remove a goal first." };
   if (!(input.minutes > 0) || input.minutes > 24 * 60) return { ok: false, reason: "Choose between 1 and 1440 minutes." };
   if (input.habitId !== null && !state.habits.some((h) => h.id === input.habitId && !h.archived)) {
     return { ok: false, reason: "That habit does not exist." };
@@ -122,18 +100,16 @@ export function goalSummary(state: GameState, goal: Goal): string {
 // (habitId null) counts toward any-habit goals; specific-habit goals only
 // accrue from their habit. Returns the number of occurrences completed.
 export function accrueGoalProgress(state: GameState, habitId: string | null, seconds: number): number {
-  if (!goalsActive(state) || seconds <= EPS) return 0;
-  const time = deployedTime(state);
+  if (seconds <= EPS) return 0;
   let completions = 0;
   for (const goal of state.goals) {
     if (goal.completed) continue;
     if (goal.condition.kind !== "habit-minutes") continue;
     if (goal.condition.habitId !== null && goal.condition.habitId !== habitId) continue;
     goal.progressSeconds += seconds;
-    if (time && goal.progressSeconds >= goalRequiredSeconds(goal)) {
+    if (goal.progressSeconds >= goalRequiredSeconds(goal)) {
       goal.completed = true;
       goal.completedCount++;
-      pushBurst(time, { strength: 1, seconds: goalBurstSeconds(state, goal) });
       completions++;
     }
   }

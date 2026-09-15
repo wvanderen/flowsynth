@@ -23,21 +23,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-// v1 (first playable) → v2 (Notes) → v3 (Goals) → v4 (activation economy).
-// Before v4, Notes and Goals auto-activated when the store opened; those
-// saves are grandfathered in as already-activated. From v4 on, activation
-// is a store purchase (ADR-0007) and saved flags load exactly as stored.
-function migrate(state: Record<string, unknown>, fromVersion: number): Record<string, unknown> {
-  if (fromVersion < 4 && state.storeOpened === true) {
-    state = { ...state, notesActive: true, goalsActive: true };
-  }
-  if (state.notes === undefined) state = { ...state, notes: [] };
-  if (state.habits === undefined) state = { ...state, habits: [], activeHabitId: null, practiceLog: [] };
-  if (state.goals === undefined) state = { ...state, goals: [] };
-  if (state.tasks === undefined) state = { ...state, tasks: [], allowance: 0, taskCompletionCounter: 0 };
-  return state;
-}
-
+// ADR-0017: the v5 boundary is a clean cut. Saves older than SAVE_VERSION
+// are rejected with a clear message and the game starts fresh; there is no
+// migration chain, archive, or import path for them.
 export function deserialize(text: string): LoadResult {
   let parsed: unknown;
   try {
@@ -48,20 +36,32 @@ export function deserialize(text: string): LoadResult {
   if (!isRecord(parsed) || parsed.app !== "flowsynth" || typeof parsed.version !== "number") {
     return { error: "This file is not a FlowSynth save." };
   }
+  if (parsed.version < SAVE_VERSION) {
+    return {
+      error: `Incompatible older version (save v${parsed.version}, this build is v${SAVE_VERSION}) — starting fresh.`,
+    };
+  }
   if (parsed.version > SAVE_VERSION) {
-    return { error: `Save version ${String(parsed.version)} is newer than this build supports (${String(SAVE_VERSION)}).` };
+    return { error: `Save version ${parsed.version} is newer than this build supports (${SAVE_VERSION}).` };
   }
   if (!isRecord(parsed.state)) {
     return { error: "The save data is incomplete." };
   }
-  const state = migrate(parsed.state, parsed.version);
   const fresh = createInitialState();
-  const raw = state as Partial<GameState> & { mode?: unknown };
+  const raw = parsed.state as Partial<GameState> & { mode?: unknown };
   if (typeof raw.mode !== "string" || !["upgrade", "flow", "paused"].includes(raw.mode)) {
     return { error: "The save data has an unknown session mode." };
   }
   const merged: GameState = { ...fresh, ...raw } as GameState;
-  if (!Array.isArray(merged.modules) || !Array.isArray(merged.cells) || !Array.isArray(merged.bankedRolls) || !Array.isArray(merged.notes) || !Array.isArray(merged.habits) || !Array.isArray(merged.practiceLog) || !Array.isArray(merged.goals) || !Array.isArray(merged.tasks)) {
+  if (
+    !Array.isArray(merged.modules) ||
+    !Array.isArray(merged.cells) ||
+    !Array.isArray(merged.bankedRolls) ||
+    !Array.isArray(merged.notes) ||
+    !Array.isArray(merged.habits) ||
+    !Array.isArray(merged.practiceLog) ||
+    !Array.isArray(merged.goals)
+  ) {
     return { error: "The save data is incomplete." };
   }
   return { state: merged };

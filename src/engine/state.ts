@@ -1,5 +1,14 @@
-import { DIRECTIONS, hex } from "./hex";
-import type { GameState, ModuleInstance } from "./types";
+import { hex } from "./hex";
+import type { GameState, ModuleInstance, ModuleType, Rarity } from "./types";
+
+// ADR-0013 opening board: the Carrier pinned at the origin plus ~2 empty
+// cells. The opening grant (the Carrier's first upgrade price as starting
+// nous) arrives with the catalog work (issue #43).
+const STARTER_CELLS: { q: number; r: number }[] = [
+  { q: 0, r: 0 },
+  { q: 1, r: 0 },
+  { q: 0, r: -1 },
+];
 
 export function createInitialState(): GameState {
   const state: GameState = {
@@ -9,42 +18,22 @@ export function createInitialState(): GameState {
     nous: 0,
     totalEarned: 0,
     modules: [],
-    cells: [...DIRECTIONS.map(([q, r]) => hex(q, r)), hex(0, 0), hex(2, 0)],
-    cellTokens: 0,
+    cells: STARTER_CELLS.map(({ q, r }) => hex(q, r)),
     forge: { progress: 0, earned: 0 },
-    expansion: { progress: 0, earned: 0 },
     bankedRolls: [],
-    purchased: { additive: false, conditional: false, infusor: false, forge: false, expander: false },
-    timeActive: false,
-    notesActive: false,
+    purchased: { generator: false, infusor: false, forge: false },
     notes: [],
     habits: [],
     activeHabitId: null,
     practiceLog: [],
-    goalsActive: false,
     goals: [],
-    tasksActive: false,
-    tasks: [],
-    allowance: 0,
-    taskCompletionCounter: 0,
-    storeOpened: false,
     session: null,
     pendingGap: null,
     nextId: 1,
   };
-  const layout: { type: ModuleInstance["type"]; pos: ReturnType<typeof hex> }[] = [
-    { type: "enter", pos: hex(1, -1) },
-    { type: "time", pos: hex(1, 0) },
-    { type: "habit", pos: hex(0, -1) },
-    { type: "notes", pos: hex(-1, 0) },
-    { type: "goals", pos: hex(-1, 1) },
-    { type: "tasks", pos: hex(0, 1) },
-  ];
-  for (const { type, pos } of layout) {
-    const module = createModule(state, type, "common");
-    module.pos = pos;
-    state.modules.push(module);
-  }
+  const carrier = createModule(state, "carrier", "common");
+  carrier.pos = hex(0, 0);
+  state.modules.push(carrier);
   return state;
 }
 
@@ -52,11 +41,7 @@ export function newModuleId(state: GameState): string {
   return `m${state.nextId++}`;
 }
 
-export function createModule(
-  state: GameState,
-  type: ModuleInstance["type"],
-  rarity: ModuleInstance["rarity"],
-): ModuleInstance {
+export function createModule(state: GameState, type: ModuleType, rarity: Rarity): ModuleInstance {
   return {
     id: newModuleId(state),
     type,
@@ -64,6 +49,11 @@ export function createModule(
     level: 0,
     invested: 0,
     pos: null,
-    bursts: [],
   };
+}
+
+// The Carrier is the unique granted synthesizer: pinned, immovable,
+// unsellable (§2.1).
+export function isCarrier(module: ModuleInstance): boolean {
+  return module.type === "carrier";
 }

@@ -1,14 +1,15 @@
-import { chargedFactor, computeRates, isActive, isCore, levelCost, modulePower, wholeNous } from "../engine/economy";
-import { deployedAt, deployedTime, chargeSecondsRemaining, chargeActive } from "../engine/economy";
+import { chargedFactor, computeRates, deployed, deployedGenerators, levelCost, modulePower, wholeNous } from "../engine/economy";
+import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
-import { forgeThreshold, expansionThreshold } from "../engine/rolls";
-import { BALANCE, NEXT_RARITY } from "../engine/constants";
+import { forgeThreshold } from "../engine/rolls";
+import { BALANCE, CATEGORY_OF, NEXT_RARITY } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
-import { canWriteNotes, projectedNotesBurst, sessionNoteCount } from "../engine/notes";
-import { activeHabit, developmentRate } from "../engine/habits";
-import { goalCapacity, goalRequiredSeconds, goalSummary, goalsActive } from "../engine/goals";
-import { allowanceRate, taskCost, tasksActive, type TaskSize } from "../engine/tasks";import type { CoreActivationType, Goal, GameState, Hex, ModuleInstance, RateSnapshot } from "../engine/types";
-import type { App } from "./app";
+import { canWriteNotes } from "../engine/notes";
+import { activeHabit } from "../engine/habits";
+import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
+import { isCarrier } from "../engine/state";
+import type { GameState, Goal, Hex, ModuleInstance, RateSnapshot } from "../engine/types";
+import type { App, AppPanel } from "./app";
 import { moduleIcon } from "./icons";
 import { updateSvg } from "./svg";
 import { DURATION_OPTIONS, META, RARITY_LABEL, fmt, fmtWhole } from "./meta";
@@ -34,10 +35,10 @@ function byId(id: string): HTMLElement | null {
 }
 
 // The rate shown in the header, formula bar, and hexes: live during flow,
-// idle build rate while arranging in upgrade mode. Module panels preview
+// projected build rate while arranging in upgrade mode. Module panels preview
 // charge separately via computeRates(state, true).
 function currentSnapshot(state: GameState): RateSnapshot {
-  return computeRates(state, state.mode === "upgrade" ? false : undefined);
+  return computeRates(state, state.mode === "flow");
 }
 
 function stat(label: string, value: string): string {
@@ -46,16 +47,6 @@ function stat(label: string, value: string): string {
 
 function statLive(id: string, label: string, value: string): string {
   return `<div class="stat-row"><span>${label}</span><span class="mono" data-live="${id}">${value}</span></div>`;
-}
-
-function meterBar(system: "forge" | "expansion", state: GameState, progress: number, threshold: number): string {
-  const text = system === "forge" ? "Next Forge roll" : "Next grid cell";
-  const note =
-    system === "forge"
-      ? `All deployed Forges feed one shared meter · ${state.forge.earned} earned`
-      : `All deployed expanders feed one shared meter · ${state.expansion.earned} earned`;
-  return `<div class="overview-meter" title="${note}">${statLive(system, text, `${fmt(Math.max(0, progress), 1)} / ${fmt(threshold, 1)}`)}
-    <progress data-live="${system}-bar" aria-label="${text}" value="${Math.min(1, Math.max(0, progress / threshold))}" max="1"></progress></div>`;
 }
 
 export function render(app: App): void {
@@ -88,58 +79,41 @@ function bindDurationSelect(app: App, select: HTMLElement | null): void {
   });
 }
 
+// Focus-app access lives in the toolbar until the console arrives (ADR-0012).
+const APP_BUTTONS: { key: AppPanel; label: string }[] = [
+  { key: "habit", label: "Habit" },
+  { key: "notes", label: "Notes" },
+  { key: "goals", label: "Goals" },
+];
+
 function renderSessionToolbar(app: App): void {
   const { state } = app;
   const host = byId("session-toolbar");
   if (!host) return;
-  const upgrade = state.mode === "upgrade";
 
-  const shortcut = `<button class="module-shortcut" id="time-shortcut" aria-label="Open Time module" title="Time settings"><svg viewBox="-18 -18 36 36" aria-hidden="true">${moduleIcon("time")}</svg></button>`;
-  const bindShortcut = () => {
-    byId("time-shortcut")?.addEventListener("click", () => {
-      app.ui.selected = deployedTime(state)?.id ?? null;
-      app.ui.managing = false;
-      app.ui.placing = null;
-      app.render();
-    });
-    byId("notes-shortcut")?.addEventListener("click", () => {
-      const notes = app.state.modules.find((m) => m.type === "notes" && m.pos !== null);
-      app.ui.selected = notes?.id ?? null;
-      app.ui.managing = false;
-      app.ui.placing = null;
-      app.render();
-    });
-    byId("habit-chip")?.addEventListener("click", () => {
-      const habit = app.state.modules.find((m) => m.type === "habit" && m.pos !== null);
-      app.ui.selected = habit?.id ?? null;
-      app.ui.managing = false;
-      app.ui.placing = null;
-      app.render();
-    });
-  };
-  const notesShortcut = state.notesActive
-    ? `<button class="module-shortcut" id="notes-shortcut" aria-label="Open Notes module" title="Notes"><svg viewBox="-18 -18 36 36" aria-hidden="true">${moduleIcon("notes")}</svg></button>`
-    : "";
-  // Habit access is always in the header: a named chip when a habit is
-  // selected, the plain module shortcut otherwise.
-  const habitShortcut = (habitName: string) =>
-    habitName
-      ? `<button class="habit-chip" id="habit-chip" title="Open the Habit module"><svg viewBox="-18 -18 36 36" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6">${moduleIcon("habit")}</svg><span>${escapeHtml(habitName)}</span></button>`
-      : `<button class="module-shortcut" id="habit-chip" aria-label="Open Habit module" title="Choose a habit"><svg viewBox="-18 -18 36 36" aria-hidden="true">${moduleIcon("habit")}</svg></button>`;
-  const activeHabitName = () => {
-    const habit = activeHabit(state);
-    return habit ? habit.name : "";
+  const appButtons = () =>
+    `<div class="app-buttons">${APP_BUTTONS.map(
+      ({ key, label }) => `<button class="app-button ${app.ui.app === key ? "active" : ""}" id="app-${key}" aria-pressed="${app.ui.app === key}">${label}</button>`,
+    ).join("")}</div>`;
+  const bindAppButtons = () => {
+    for (const { key } of APP_BUTTONS) {
+      byId(`app-${key}`)?.addEventListener("click", () => app.openApp(key));
+    }
   };
 
-  if (upgrade) {
+  if (state.mode === "upgrade") {
     // Structural key: only rebuild when the shape of the toolbar changes, so
     // button nodes (and in-flight clicks) survive clock ticks.
-    const key = `upgrade:${app.ui.chosenTarget}:${state.notesActive}:${state.activeHabitId ?? ""}`;
+    const key = `upgrade:${app.ui.chosenTarget}:${app.ui.app ?? ""}`;
     if (host.dataset.renderKey !== key) {
       host.dataset.renderKey = key;
-      host.innerHTML = `<div><p class="session-clock mono">${app.ui.chosenTarget === null ? "∞" : formatClock(app.ui.chosenTarget)}</p><p class="clock-caption">${app.ui.chosenTarget === null ? "Open-ended" : "Planned practice"}</p></div>
-        ${shortcut}${notesShortcut}${habitShortcut(activeHabitName())}<div class="session-actions"><button class="primary" id="start-flow">Enter flow ↗</button></div>`;
-      bindShortcut();
+      host.innerHTML = `<div>
+          <select id="toolbar-duration" aria-label="Session duration">${durationOptionsHtml(app)}</select>
+          <p class="clock-caption">${app.ui.chosenTarget === null ? "Open-ended" : "Planned practice"}</p>
+        </div>
+        ${appButtons()}<div class="session-actions"><button class="primary" id="start-flow">Enter flow ↗</button></div>`;
+      bindAppButtons();
+      bindDurationSelect(app, byId("toolbar-duration"));
       byId("start-flow")?.addEventListener("click", () => app.startFlow());
     }
     return;
@@ -151,7 +125,7 @@ function renderSessionToolbar(app: App): void {
   const paused = state.mode === "paused";
   const reached = target !== null && elapsed >= target;
 
-  const key = `flow:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}:${state.notesActive}:${state.activeHabitId ?? ""}`;
+  const key = `flow:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}:${app.ui.app ?? ""}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.innerHTML = `
@@ -160,12 +134,12 @@ function renderSessionToolbar(app: App): void {
         <p class="clock-caption" id="session-caption"></p>
         <div class="time-track"><span id="time-track-fill" style="width:0%"></span></div>
       </div>
-      ${shortcut}${notesShortcut}${habitShortcut(activeHabitName())}
+      ${appButtons()}
       <div class="session-actions">
         <button id="pause-flow">${paused ? "Resume" : "Pause"}</button>
         <button class="primary" id="end-flow">End flow</button>
       </div>`;
-    bindShortcut();
+    bindAppButtons();
     byId("pause-flow")?.addEventListener("click", () => (state.mode === "paused" ? app.resume() : app.pause()));
     byId("end-flow")?.addEventListener("click", () => app.endFlow());
   }
@@ -206,16 +180,14 @@ function renderTools(app: App): void {
   const host = byId("board-tools");
   if (!host) return;
   const upgrade = state.mode === "upgrade";
-  const storeReady = state.storeOpened;
-  const key = JSON.stringify([upgrade, storeReady, state.bankedRolls.length, state.cellTokens, ui.managing]);
+  const key = JSON.stringify([upgrade, state.bankedRolls.length, ui.managing]);
   if (host.dataset.renderKey === key) return;
   host.dataset.renderKey = key;
-  const cellBadge = state.cellTokens > 0 ? ` · ${state.cellTokens}` : "";
   const forgeReady = upgrade && state.bankedRolls.length > 0;
   host.innerHTML = `
-    <button class="small" id="tool-store" ${upgrade && storeReady ? "" : "disabled"} title="${storeReady ? "Activations and starter copies" : "Opens after your first session"}">Store</button>
+    <button class="small" id="tool-store" ${upgrade ? "" : "disabled"} title="${upgrade ? "The starter shelf: one-time offers for each category" : "Purchases happen between sessions"}">Store</button>
     <button class="small" id="tool-forge" ${forgeReady ? "" : "disabled"} title="${forgeReady ? `${state.bankedRolls.length} banked choice${state.bankedRolls.length === 1 ? "" : "s"}` : "No banked rolls — earn Forge progress from charge"}">Forge · ${state.bankedRolls.length}</button>
-    <button class="small ${app.managing ? "active" : ""}" id="tool-manage" ${upgrade ? "" : "disabled"} aria-pressed="${app.managing}" title="${app.managing ? "Exit arranging (Esc)" : "Move modules, place earned cells"}">Grid &amp; inventory${cellBadge}</button>`;
+    <button class="small ${app.managing ? "active" : ""}" id="tool-manage" ${upgrade ? "" : "disabled"} aria-pressed="${app.managing}" title="${app.managing ? "Exit arranging (Esc)" : "Move modules"}">Grid &amp; inventory</button>`;
   byId("tool-store")?.addEventListener("click", () => app.openModal("store"));
   byId("tool-forge")?.addEventListener("click", () => app.openModal("forge"));
   byId("tool-manage")?.addEventListener("click", () => (app.ui.managing ? app.stopManaging() : app.startManaging()));
@@ -228,19 +200,19 @@ function renderFormula(app: App): void {
   const host = byId("rate-formula");
   if (!host) return;
   const snapshot = currentSnapshot(state);
-  const term = (type: string, value: number) =>
-    `<span class="formula-term" title="${META[type as keyof typeof META].name}" aria-label="${META[type as keyof typeof META].name}: ${fmt(value)}">
-      <svg viewBox="-18 -18 36 36" aria-hidden="true" fill="none" stroke-width="1.6">${moduleIcon(type as never)}</svg>${fmt(value)}</span>`;
-  const sum = (type: string) => {
+  const term = (type: ModuleInstance["type"], value: number) =>
+    `<span class="formula-term" title="${META[type].name}" aria-label="${META[type].name}: ${fmt(value)}">
+      <svg viewBox="-18 -18 36 36" aria-hidden="true" fill="none" stroke-width="1.6">${moduleIcon(type)}</svg>${fmt(value)}</span>`;
+  const sum = (type: ModuleInstance["type"]) => {
     let total = 0;
     for (const c of snapshot.contributions.values()) if (c.type === type) total += c.value;
     return total;
   };
   host.innerHTML = `
     <div class="rate-equation">
-      <span class="op">(</span>${term("enter", sum("enter"))}<span class="op">+</span>${term("additive", sum("additive"))}<span class="op">)</span>
-      <span class="op">×</span><span class="op">(1 +</span>${term("time", sum("time"))}<span class="op">)</span>
-      <span class="op">×</span><span class="op">(1 +</span>${term("conditional", sum("conditional"))}<span class="op">)</span>
+      ${term("carrier", sum("carrier"))}
+      <span class="op">+</span>${term("additive", sum("additive"))}
+      <span class="op">+</span>${term("conditional", sum("conditional"))}
       <span class="op">=</span><strong>${fmt(snapshot.rate)} ν/s</strong>
     </div>`;
 }
@@ -252,7 +224,7 @@ function renderGrid(app: App): void {
   const svg = document.getElementById("grid") as SVGSVGElement | null;
   if (!svg) return;
   const upgrade = state.mode === "upgrade";
-  const showFrontier = upgrade && (ui.placing === "cell" || ui.reshape !== null);
+  const showFrontier = upgrade && ui.reshape !== null;
   const frontier = showFrontier ? app.frontierCells() : [];
   const allCells = [...state.cells, ...frontier];
   const coords = allCells.map(point);
@@ -262,32 +234,43 @@ function renderGrid(app: App): void {
   const maxY = Math.max(...coords.map((p) => p[1])) + 82;
   svg.setAttribute("viewBox", `${minX} ${minY} ${maxX - minX} ${maxY - minY}`);
 
-  const time = deployedTime(state);
-  const dispensing = state.mode === "flow" && chargeActive(state);
+  const flow = state.mode === "flow";
+  const generators = deployedGenerators(state);
+  const emitting = flow && generators.length > 0;
   const snapshot = currentSnapshot(state);
   const selectedModule = state.modules.find((m) => m.id === ui.selected) ?? null;
 
   let html = "";
 
-  // Charge lines: live during flow, preview when the generator is selected in upgrade mode.
-  if (time && isActive(state, time)) {
-    const previewing = upgrade && selectedModule?.type === "time";
-    if (dispensing || previewing) {
-      for (const m of state.modules) {
-        if (m.pos === null || !isActive(state, m) || m.id === time.id) continue;
-        if (!adjacent(m.pos, time.pos!)) continue;
-        const [x1, y1] = point(time.pos!);
-        const [x2, y2] = point(m.pos);
-        html += `<line data-key="charge-${m.id}" class="${dispensing ? "charge-line" : "charge-preview-line"}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+  // Charge leads: live during flow, previewed around the selected module.
+  if (emitting) {
+    for (const module of deployed(state)) {
+      if (isSource(module) || module.pos === null) continue;
+      if ((snapshot.chargeStrength.get(module.id) ?? 0) <= 0) continue;
+      for (const generator of generators) {
+        if (generator.pos === null || !adjacent(generator.pos, module.pos)) continue;
+        const [x1, y1] = point(generator.pos);
+        const [x2, y2] = point(module.pos);
+        html += `<line data-key="charge-${generator.id}-${module.id}" class="charge-line" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
       }
     }
-  }
-
-  // Source lines when a receiver is selected.
-  if (upgrade && selectedModule && (selectedModule.type === "forge" || selectedModule.type === "expander") && selectedModule.pos && time && isActive(state, time) && time.pos && adjacent(selectedModule.pos, time.pos)) {
-    const [x1, y1] = point(time.pos);
-    const [x2, y2] = point(selectedModule.pos);
-    html += `<line data-key="charge-${selectedModule.id}" class="charge-preview-line" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+  } else if (upgrade && selectedModule) {
+    if (isSource(selectedModule) && selectedModule.pos) {
+      for (const module of deployed(state)) {
+        if (module.id === selectedModule.id || isSource(module) || module.pos === null) continue;
+        if (!adjacent(selectedModule.pos, module.pos)) continue;
+        const [x1, y1] = point(selectedModule.pos);
+        const [x2, y2] = point(module.pos);
+        html += `<line data-key="charge-${selectedModule.id}-${module.id}" class="charge-preview-line" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+      }
+    } else if (selectedModule.pos) {
+      for (const generator of generators) {
+        if (generator.pos === null || !adjacent(generator.pos, selectedModule.pos)) continue;
+        const [x1, y1] = point(generator.pos);
+        const [x2, y2] = point(selectedModule.pos);
+        html += `<line data-key="charge-${generator.id}-${selectedModule.id}" class="charge-preview-line" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+      }
+    }
   }
 
   for (const pos of state.cells) {
@@ -300,7 +283,7 @@ function renderGrid(app: App): void {
     html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${module ? META[module.type].name : "Empty cell"}">
       ${module ? "" : `<polygon class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>`}`;
     if (module) {
-      html += moduleNode(app, module, pos, { dispensing, snapshot, selectedModule });
+      html += moduleNode(app, module, pos, { dispensing: emitting, snapshot, selectedModule });
     } else {
       html += `<path class="empty-plus" d="M-7-6H7M0-13V1"/><text y="24" text-anchor="middle" class="hex-sub">EMPTY CELL</text>`;
     }
@@ -322,6 +305,8 @@ function renderGrid(app: App): void {
   bindGridEvents(app, svg);
 }
 
+// Generators are the sole charge source category (ADR-0012).
+const isSource = (m: ModuleInstance) => CATEGORY_OF[m.type] === "generator";
 interface RenderContext {
   dispensing: boolean;
   snapshot: ReturnType<typeof computeRates>;
@@ -329,81 +314,53 @@ interface RenderContext {
 }
 
 function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderContext): string {
-  const { state, ui } = app;
-  const active = isActive(state, module);
+  const { ui } = app;
   const selected = ui.selected === module.id;
   const charged = ctx.dispensing && (ctx.snapshot.chargeStrength.get(module.id) ?? 0) > 0;
-  const dispensingNow = ctx.dispensing && module.type === "time" && state.timeActive;
+  const emittingNow = ctx.dispensing && isSource(module);
   const contribution = ctx.snapshot.contributions.get(module.id);
 
   let classes = "hex";
   if (selected) classes += " selected";
   if (charged) classes += " charged";
-  if (dispensingNow) classes += " dispensing";
-  if (!active) classes += " locked";
+  if (emittingNow) classes += " dispensing";
 
-  // Highlight eligible receivers while the generator is selected in upgrade mode.
+  // Highlight eligible receivers while a generator is selected in upgrade mode.
   let highlight = "";
-  if (state.mode === "upgrade" && ctx.selectedModule?.type === "time" && active && module.type !== "time") {
-    const time = deployedTime(state);
-    if (time?.pos && module.pos && adjacent(module.pos, time.pos)) {
-      highlight = `<polygon data-key="preview" class="highlight-ring" points="${hexPoints(HEX_RADIUS - 4)}"/>`;
-    }
+  if (app.state.mode === "upgrade" && ctx.selectedModule && isSource(ctx.selectedModule) && module.id !== ctx.selectedModule.id && module.pos && ctx.selectedModule.pos && adjacent(module.pos, ctx.selectedModule.pos)) {
+    highlight = `<polygon data-key="preview" class="highlight-ring" points="${hexPoints(HEX_RADIUS - 4)}"/>`;
   }
 
   // Water-fill: threshold progress rises inside the hexagon like liquid.
   let fill = "";
-  if (module.type === "forge" || module.type === "expander") {
-    const progress = module.type === "forge" ? state.forge.progress : state.expansion.progress;
-    const threshold = module.type === "forge" ? forgeThreshold(state.forge.earned) : expansionThreshold(state.expansion.earned);
-    fill = waterFill(module.id, progress / threshold);
-  } else if (module.type === "goals" && state.goalsActive && state.goals.length > 0) {
-    // Show the goal closest to completion; a fully complete set fills fully.
-    const fractions = state.goals.map((g) => Math.min(1, g.progressSeconds / goalRequiredSeconds(g)));
-    fill = waterFill(module.id, state.goals.every((g) => g.completed) ? 1 : Math.max(...fractions));
+  if (module.type === "forge") {
+    fill = waterFill(module.id, app.state.forge.progress / forgeThreshold(app.state.forge.earned));
   }
 
   let sub = "";
-  if (!active) {
-    sub = "Locked";
-  } else if (module.type === "time") {
-    sub = dispensingNow ? `→ ${Math.ceil(ctx.snapshot.chargeSeconds)}s` : `×${fmt(1 + (contribution?.value ?? 0), 2)}`;
-  } else if (module.type === "forge") {
-    sub = `${fmt(Math.max(0, state.forge.progress), 0)}/${fmt(forgeThreshold(state.forge.earned), 0)}`;
-  } else if (module.type === "expander") {
-    sub = `${fmt(Math.max(0, state.expansion.progress), 0)}/${fmt(expansionThreshold(state.expansion.earned), 0)}`;
-  } else if (module.type === "conditional") {
-    sub = `×${fmt(1 + (contribution?.value ?? 0), 2)}`;
+  if (module.type === "forge") {
+    sub = `${fmt(Math.max(0, app.state.forge.progress), 0)}/${fmt(forgeThreshold(app.state.forge.earned), 0)}`;
+  } else if (isSource(module)) {
+    sub = `⌁${fmt(modulePower(module), 2)}`;
   } else if (module.type === "infusor") {
     sub = `+${fmt(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(ctx.snapshot.chargeStrength.get(module.id) ?? 0), 0)}%`;
-  } else if (module.type === "habit") {
-    const habit = activeHabit(state);
-    sub = habit ? habit.name : "no habit";
-  } else if (module.type === "notes") {
-    sub = state.notesActive ? `${state.notes.length} notes` : "Locked";
-  } else if (module.type === "goals") {
-    sub = state.goalsActive ? `${state.goals.length}/${goalCapacity(state)} goals` : "Locked";
-  } else if (module.type === "tasks") {
-    sub = state.tasksActive ? `${state.tasks.filter((t) => !t.done).length} open` : "Locked";
   } else {
     sub = `+${fmt(contribution?.value ?? 0)} ν/s`;
   }
 
   const name = META[module.type].short;
-  const levelTag = active ? ` ${module.level}` : "";
-  // While arranging, required cores wear a pin: they move between cells but
-  // never leave the board. The title gives the native hover explanation.
-  const pinned = app.managing && isCore(module);
+  const levelTag = ` ${module.level}`;
+  // The Carrier wears a pin: it is immovable and unsellable (§2.1).
+  const pinned = isCarrier(module);
   const pin = pinned
-    ? `<title>Required core — it always stays on the board. Drag it between cells to move it.</title><g data-key="pin" class="core-pin" transform="translate(36,-33)"><circle cx="0" cy="-3.4" r="3.1"/><path d="M0-.4v7.4"/></g>`
+    ? `<title>The Carrier — granted at the origin. Pinned: it never moves and never leaves the board.</title><g data-key="pin" class="module-pin" transform="translate(36,-33)"><circle cx="0" cy="-3.4" r="3.1"/><path d="M0-.4v7.4"/></g>`
     : "";
 
-  return `<g class="module-node ${active ? "" : "locked"}" data-rarity="${module.rarity}">${pin}
+  return `<g class="module-node" data-rarity="${module.rarity}">${pin}
     <polygon data-key="hex" class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>${fill}${highlight}
     <g data-key="icon" transform="translate(0,-13)" class="hex-icon" fill="none" stroke-width="1.6">${moduleIcon(module.type)}</g>
     <text data-key="name" y="17" text-anchor="middle" class="hex-name">${name}${levelTag}</text>
-    ${active ? `<text data-key="value" y="34" text-anchor="middle" class="hex-sub">${sub}</text>` : ""}
-    ${active ? "" : `<g data-key="lock" transform="translate(0,31)" stroke="var(--muted)" fill="none" stroke-width="1.4"><path d="M-3 0v-2.5a3 3 0 0 1 6 0V0"/><rect x="-5" y="0" width="10" height="8" rx="1.5" fill="none"/></g>`}
+    <text data-key="value" y="34" text-anchor="middle" class="hex-sub">${sub}</text>
     </g>`;
 }
 
@@ -423,15 +380,11 @@ function isTargetCell(app: App, pos: Hex): boolean {
   const { ui, state } = app;
   if (state.mode !== "upgrade") return false;
   if (ui.reshape) return false;
-  if (ui.placing && ui.placing !== "cell") {
+  if (ui.placing) {
     const module = state.modules.find((m) => m.id === ui.placing);
     if (!module) return false;
     const occupant = deployedAt(state, pos);
-    if (isCore(module)) {
-      if (module.pos !== null) return true;
-      return occupant?.type === module.type;
-    }
-    return !occupant || !isCore(occupant);
+    return !occupant || !isCarrier(occupant);
   }
   return false;
 }
@@ -461,8 +414,8 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
 
 // Shared pointer-drag binding for grid modules and inventory items: shows a
 // ghost after a small threshold, then drops onto a cell (place, swap, or
-// combine with a matching twin) or the inventory zone (return; cores refuse).
-// Click-placement stays available without dragging.
+// combine with a matching twin) or the inventory zone (return). Click-
+// placement stays available without dragging.
 function bindPointerDrag(app: App, element: Element, moduleId: string | (() => string | null)): void {
   element.addEventListener("pointerdown", (baseEvent: Event) => {
     const event = baseEvent as PointerEvent;
@@ -470,6 +423,7 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
     const id = typeof moduleId === "function" ? moduleId() : moduleId;
     if (!id) return;
     const dragModule = app.state.modules.find((m) => m.id === id) ?? null;
+    if (dragModule && isCarrier(dragModule)) return;
     const startX = event.clientX;
     const startY = event.clientY;
     let moved = false;
@@ -499,10 +453,8 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
           ?.querySelector(".hex")
           ?.classList.add(canCombineWith(occupant) ? "combine-target" : "drop-target");
       }
-      // A dragged core can never be stored: the zone explains itself.
       const overZone = !!hit?.closest("#inventory-zone");
-      zone?.classList.toggle("refuse", overZone && !!dragModule && isCore(dragModule));
-      zone?.classList.toggle("drag-over", overZone && !(dragModule && isCore(dragModule)));
+      zone?.classList.toggle("drag-over", overZone);
     };
 
     const suppressNextClick = () => {
@@ -543,31 +495,18 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
       hoverTarget?.querySelector(".hex")?.classList.remove("drop-target", "combine-target");
       hoverTarget = null;
       zone?.classList.remove("drag-over");
-      if (!apply || !moved) {
-        zone?.classList.remove("refuse");
-        return;
-      }
+      if (!apply || !moved) return;
       suppressNextClick();
       const target = document.elementFromPoint(ev.clientX, ev.clientY);
       const cellNode = target?.closest("[data-cell]");
       if (target?.closest("#inventory-zone")) {
-        if (dragModule && isCore(dragModule)) {
-          // Cores refuse storage: keep the explanation on the zone briefly.
-          app.say(`Required cores stay on the board — the ${META[dragModule.type].name} cannot be stored.`);
-          setTimeout(() => zone?.classList.remove("refuse"), 1000);
-        } else {
-          zone?.classList.remove("refuse");
-          app.returnToInventory(id);
-        }
+        app.returnToInventory(id);
       } else if (cellNode) {
-        zone?.classList.remove("refuse");
         const cell = cellNode.getAttribute("data-cell")!.split(",").map(Number);
         const pos = { q: cell[0]!, r: cell[1]! };
         const occupant = deployedAt(app.state, pos);
         if (canCombineWith(occupant)) app.dropCombine(id, occupant!.id, pos);
         else app.pickCellThenPlace(id, pos);
-      } else {
-        zone?.classList.remove("refuse");
       }
     };
     const up = (ev: PointerEvent) => finish(ev, true);
@@ -591,22 +530,16 @@ function renderInspector(app: App): void {
     state.mode,
     ui.managing,
     ui.selected,
+    ui.app,
     ui.placing,
     ui.reshape,
-    state.storeOpened,
     state.bankedRolls.length,
-    state.cellTokens,
     state.notes.length,
     state.habits.map((h) => `${h.archived ? "·" : ""}${h.name}`).join("|"),
     state.activeHabitId,
     app.ui.editingHabitId,
     state.goals.length,
     state.goals.map((g) => (g.completed ? "1" : "0") + g.condition.minutes + (g.condition.habitId ?? "") + g.schedule.kind).join("|"),
-    state.goalsActive,
-    state.tasks.length,
-    state.tasks.map((t) => `${t.done ? "d" : ""}${t.paid ? "p" : ""}${t.text}`).join("|"),
-    state.tasksActive,
-    app.ui.editingTaskId,
     module?.level ?? null,
     module?.rarity ?? null,
     // Module moves (drag, place, return, combine) must refresh the manage
@@ -616,14 +549,16 @@ function renderInspector(app: App): void {
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     // A newly captured note keeps the panel scrolled where the player is.
-    const keepScroll = module?.type === "notes" && state.mode !== "upgrade";
+    const keepScroll = ui.app === "notes" && state.mode !== "upgrade";
     const scrollTop = host.scrollTop;
     if (ui.managing && state.mode === "upgrade") {
       renderManagePanel(app, host);
-    } else if (!module) {
-      renderOverview(app, host);
-    } else {
+    } else if (module) {
       renderModulePanel(app, host, module);
+    } else if (ui.app) {
+      renderAppPanel(app, host, ui.app);
+    } else {
+      renderOverview(app, host);
     }
     if (keepScroll) host.scrollTop = scrollTop;
   }
@@ -637,9 +572,6 @@ function updateInspectorLive(app: App, host: HTMLElement): void {
     const node = host.querySelector(`[data-live="${id}"]`);
     if (node && node.textContent !== text) node.textContent = text;
   };
-  set("charge", `${Math.ceil(chargeSecondsRemaining(state))}s`);
-  set("queued", `${fmt(chargeSecondsRemaining(state), 1)}s`);
-  set("notes-projection", `${fmt(projectedNotesBurst(state), 1)}s of charge`);
   set("habit-session", `${formatClock(state.session?.elapsed ?? 0)} of practice`);
   for (const habit of state.habits) {
     const node = host.querySelector(`[data-habit-seconds="${habit.id}"]`);
@@ -661,34 +593,29 @@ function updateInspectorLive(app: App, host: HTMLElement): void {
     const display = `${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · earned ×${goal.completedCount}` : ""}`;
     if (minutes && minutes.textContent !== display) minutes.textContent = display;
   }
-  set("task-allowance", `${fmt(state.allowance, 1)} pts`);
   set("forge", `${fmt(Math.max(0, state.forge.progress), 1)} / ${fmt(forgeThreshold(state.forge.earned), 1)}`);
-  set("expansion", `${fmt(Math.max(0, state.expansion.progress), 1)} / ${fmt(expansionThreshold(state.expansion.earned), 1)}`);
   set("rolls", String(state.bankedRolls.length));
-  set("cells", String(state.cellTokens));
   set("elapsed", state.session ? formatClock(state.session.elapsed) : "—");
   const forgeBar = host.querySelector('[data-live="forge-bar"]') as HTMLProgressElement | null;
   if (forgeBar) forgeBar.value = Math.min(1, Math.max(0, state.forge.progress / forgeThreshold(state.forge.earned)));
-  const expansionBar = host.querySelector('[data-live="expansion-bar"]') as HTMLProgressElement | null;
-  if (expansionBar) expansionBar.value = Math.min(1, Math.max(0, state.expansion.progress / expansionThreshold(state.expansion.earned)));
+}
+
+function forgeMeter(state: GameState): string {
+  return `<div class="overview-meter" title="All deployed Forges feed one shared meter · ${state.forge.earned} earned">${statLive("forge", "Next Forge roll", `${fmt(Math.max(0, state.forge.progress), 1)} / ${fmt(forgeThreshold(state.forge.earned), 1)}`)}
+    <progress data-live="forge-bar" aria-label="Next Forge roll" value="${Math.min(1, Math.max(0, state.forge.progress / forgeThreshold(state.forge.earned)))}" max="1"></progress></div>`;
 }
 
 function renderOverview(app: App, host: HTMLElement): void {
   const { state } = app;
-  const deployedModules = state.modules.filter((m) => m.pos !== null);
-  const active = deployedModules.filter((m) => isActive(state, m));
-  const upgrade = state.mode === "upgrade";
+  const deployedModules = deployed(state);
   host.innerHTML = `
     <div class="grid-overview">
       <div class="eyebrow">GRID OVERVIEW</div>
       <h2>Charge &amp; progress</h2>
-      ${statLive("charge", upgrade ? "Banked charge" : "Charge remaining", `${Math.ceil(chargeSecondsRemaining(state))}s`)}
-      ${stat("Active modules", `${active.length} / ${deployedModules.length} deployed`)}
-      ${meterBar("forge", state, state.forge.progress, forgeThreshold(state.forge.earned))}
-      ${meterBar("expansion", state, state.expansion.progress, expansionThreshold(state.expansion.earned))}
+      ${forgeMeter(state)}
       <div class="divider"></div>
       ${statLive("rolls", "Banked Forge choices", String(state.bankedRolls.length))}
-      ${statLive("cells", "Cells ready to place", String(state.cellTokens))}
+      ${stat("Deployed modules", String(deployedModules.length))}
       ${stat("Empty grid cells", String(state.cells.length - deployedModules.length))}
       ${stat("Modules in inventory", String(state.modules.length - deployedModules.length))}
       ${stat("Sessions completed", String(state.sessionsCompleted))}
@@ -697,47 +624,36 @@ function renderOverview(app: App, host: HTMLElement): void {
         state.mode === "flow"
           ? "Rewards bank automatically. Nothing here needs your attention during practice."
           : state.mode === "paused"
-            ? "Time and charge are frozen while paused."
+            ? "Production is frozen while paused."
             : "Select a module to inspect or tune it. Store, Forge, and Grid & inventory manage the build."
       }</p>
       <section class="overview-formula">
         <h3>Nous / second</h3>
-        <p>(Flow + additive) × (1 + Time bonus) × (1 + adjacency bonus).</p>
-        <p>Each contribution = base effect × rarity growth<sup>level</sup> × (1 + Σ adjacent infusor bonuses) × charge factor.</p>
-        <p>Charge factor = 1 + strength / (1 + strength); only strength 1 exists today (+50%).</p>
-        <p>Base effects: Flow 0.1 ν/s · additive 0.05 ν/s · Time +0.2 · adjacency +0.1 per adjacent active core · infusor +20%.</p>
-        <p>Forge and expansion progress = received strength × progress efficiency; infusors and charge empowerment do not apply to them.</p>
-        <p>Rarity growth per level: common ×1.2 · uncommon ×1.25 · rare ×1.3.</p>
+        <p>Carrier + harmonic terms, each scaled by level, rarity, adjacent infusors, and charge empowerment.</p>
+        <p>Generators produce charge during flow: adjacent synthesizers and infusors are empowered continuously; the Forge banks the charge toward its next roll.</p>
+        <p>Charge factor = 1 + strength / (1 + strength). Rarity growth per level: common ×1.2 · uncommon ×1.25 · rare ×1.3.</p>
       </section>
     </div>`;
 }
 
 function effectDescription(module: ModuleInstance): string {
   switch (module.type) {
-    case "enter":
-      return "Supplies the baseline nous production while flow is live. It never generates charge.";
-    case "time":
-      return "Applies the running ×1.2 multiplier and awards the completion burst when a timed target is reached.";
-    case "notes":
-      return "Captures thoughts during flow. A session with at least one note banks a charge burst at session end, sized by its practice minutes.";
-    case "habit":
-      return "Names what you practice. The selected habit locks for the session and develops from live practice and manual logs; its level speeds development.";
-    case "goals":
-      return "Tracks practice conditions in limited slots. Completions queue a charge burst; the module's level strengthens those bursts.";
-    case "tasks":
-      return "Captures bite-sized steps any time. Live practice funds an allowance that pays task rewards fully, in completion order.";
+    case "carrier":
+      return "The granted origin synthesizer. Pinned at the origin: it never moves, never combines, never leaves the board, and plays the formula's carrier term.";
     case "additive":
-      return "Adds its production directly to the shared base rate.";
+      return "A plain harmonic term: adds production to the shared composite.";
     case "conditional":
-      return "Adds a multiplier bonus for every adjacent active core module.";
+      return "A harmonic term whose chord behavior deepens as the formula grows. For now it adds its term like Additive.";
+    case "generator":
+      return "Produces charge during flow. Adjacent synthesizers and infusors are empowered continuously; the Forge banks charge toward its next roll.";
+    case "focusKeyed":
+      return "A generator keyed to your focus: its charge window rule arrives with the charge rework. Until then it produces like a basic generator.";
     case "infusor":
-      return "Boosts production contributions of eligible adjacent modules. Never affects charge generation or meter progress.";
+      return "Boosts production contributions of adjacent modules. Receives charge as continuous empowerment.";
     case "forge":
-      return "Feeds the shared Forge meter while receiving charge. Threshold crossings bank a roll.";
-    case "expander":
-      return "Feeds the shared expansion meter while receiving charge. Threshold crossings earn grid cells.";
+      return "The chargeable launch module: banks received charge toward a threshold and mints a roll at each crossing.";
     default:
-      return "A reserved focus module. It holds its cell and activates in a later version.";
+      return "A reserved module.";
   }
 }
 
@@ -745,26 +661,18 @@ function nominalEffect(module: ModuleInstance, charged: boolean): { text: string
   const power = modulePower(module);
   const factor = charged ? chargedFactor(1) : 1;
   switch (module.type) {
-    case "enter":
-      return { text: `+${fmt(BALANCE.baseRate * power * factor)} ν/s`, value: BALANCE.baseRate * power * factor };
+    case "carrier":
+      return { text: `+${fmt(BALANCE.carrierRate * power * factor)} ν/s`, value: BALANCE.carrierRate * power * factor };
     case "additive":
       return { text: `+${fmt(BALANCE.additiveRate * power * factor)} ν/s`, value: BALANCE.additiveRate * power * factor };
-    case "time":
-      return { text: `+${fmt(100 * BALANCE.timeBonus * power)}% multiplier`, value: BALANCE.timeBonus * power };
-    case "notes":
-      return { text: `${fmt(BALANCE.notesChargePerMinute * power)}s charge / qualifying minute`, value: BALANCE.notesChargePerMinute * power };
-    case "habit":
-      return { text: `×${fmt(power, 3)} habit development rate`, value: power };
-    case "goals":
-      return { text: `${fmt(BALANCE.goalBurstSecondsPerPracticeMinute * power, 3)}s burst / required minute`, value: BALANCE.goalBurstSecondsPerPracticeMinute * power };
-    case "tasks":
-      return { text: `${fmt(power, 3)} allowance pts / live minute`, value: power };
     case "conditional":
-      return { text: `+${fmt(100 * BALANCE.conditionalBonusPerActiveCore * power)}% per adjacent core`, value: BALANCE.conditionalBonusPerActiveCore * power };
+      return { text: `+${fmt(BALANCE.conditionalRate * power * factor)} ν/s`, value: BALANCE.conditionalRate * power * factor };
+    case "generator":
+    case "focusKeyed":
+      return { text: `${fmt(power, 3)} charge strength while flowing`, value: power };
     case "infusor":
       return { text: `+${fmt(100 * BALANCE.infusorBonus * power * factor)}% to adjacent`, value: BALANCE.infusorBonus * power * factor };
     case "forge":
-    case "expander":
       return { text: `${fmt(power)} progress/s at strength 1`, value: power };
     default:
       return { text: "—", value: 0 };
@@ -774,81 +682,130 @@ function nominalEffect(module: ModuleInstance, charged: boolean): { text: string
 function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance): void {
   const { state } = app;
   const upgrade = state.mode === "upgrade";
-  const active = isActive(state, module);
   const meta = META[module.type];
-  const preview = upgrade && active ? computeRates(state, true) : computeRates(state);
+  const preview = computeRates(state, true);
   const contribution = module.pos !== null ? preview.contributions.get(module.id) : null;
-  const deployed = module.pos !== null;
-  const effect = deployed && contribution && contribution.value !== 0 ? { text: effectTextFor(module, contribution.value, preview.chargeStrength.get(module.id) ?? 0), value: contribution.value } : nominalEffect(module, upgrade);
+  const deployedHere = module.pos !== null;
+  const chargeStrength = preview.chargeStrength.get(module.id) ?? 0;
+  const effect =
+    deployedHere && contribution && contribution.value !== 0
+      ? { text: effectTextFor(module, contribution.value, chargeStrength), value: contribution.value }
+      : nominalEffect(module, upgrade);
   const growth = BALANCE.rarityPower[module.rarity];
   const cost = levelCost(module.level);
-  const canUpgrade = upgrade && active && state.storeOpened;
   const affordable = wholeNous(state) >= cost;
   const partner = state.modules.find((m) => m.id !== module.id && m.type === module.type && m.rarity === module.rarity);
-  const time = deployedTime(state);
-  const neighborStrength = deployed && time?.pos && module.pos && state.timeActive && active && adjacent(module.pos, time.pos)
-    ? (state.mode === "flow" && chargeActive(state) ? 1 : state.mode === "upgrade" ? 1 : 0)
-    : 0;
+  const carrier = isCarrier(module);
 
-  let focus = "";
-  if (module.type === "enter") {
-    focus = `<section class="focus-controls">
-      <span class="eyebrow">FOCUS CONTROLS</span>
-      <div class="session-actions">
-        ${upgrade ? `<button class="primary" id="panel-flow">Enter flow ↗</button>` : `<button id="panel-pause">${state.mode === "paused" ? "Resume" : "Pause"}</button><button class="primary" id="panel-end">End flow</button>`}
-      </div>
+  const focus = `<section class="focus-controls">
+    <span class="eyebrow">${upgrade ? "NEXT SESSION PREVIEW" : "LIVE GRID"}</span>
+    ${statLive("elapsed", "Session", state.session ? formatClock(state.session.elapsed) : "—")}
+  </section>`;
+
+  let chargeStats = "";
+  if (module.type === "forge") {
+    chargeStats = `
+      ${statLive("forge", "Shared progress", `${fmt(Math.max(0, state.forge.progress), 1)} / ${fmt(forgeThreshold(state.forge.earned), 1)}`)}
+      ${stat("Rolls earned", String(state.forge.earned))}
+      ${stat("Charge source", deployedHere && chargeStrength > 0 ? "adjacent generator" : "no adjacent generator")}
+      ${stat("Progress rate", `${fmt(contribution?.value ?? 0, 2)} /s while charged`)}`;
+  } else if (isSource(module)) {
+    chargeStats = `
+      ${stat("Output strength", `${fmt(modulePower(module), 3)} per second of flow`)}
+      ${stat("Receivers", deployedHere ? String(deployed(state).filter((m) => m.id !== module.id && m.pos !== null && module.pos !== null && adjacent(m.pos, module.pos)).length) : "—")}`;
+  } else if (module.type === "infusor") {
+    chargeStats = `
+      ${stat("Bonus to adjacent", `+${fmt(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(chargeStrength), 1)}%`)}
+      ${stat("Charge", chargeStrength > 0 ? `strength ${fmt(chargeStrength, 2)}` : "none")}`;
+  } else {
+    chargeStats = `
+      ${stat("Charge", chargeStrength > 0 ? `strength ${fmt(chargeStrength, 2)} (×${fmt(chargedFactor(chargeStrength), 3)})` : "none")}`;
+  }
+
+  host.innerHTML = `
+    <div class="module-heading">
+      <button class="quiet small" id="back-overview">← Grid overview</button>
+      <h1>${meta.name}</h1>
+      <span class="rarity-chip ${module.rarity}">${RARITY_LABEL[module.rarity]}${carrier ? " · pinned" : ""}</span>
+    </div>
+    ${focus}
+    <section>
+      <div class="eyebrow">MODULE POWER</div>
+      <div class="level-heading">Level <strong>${module.level}</strong><span class="level-effect">${effect.text}</span></div>
+      <p class="small muted" style="margin:6px 0 0">${effectDescription(module)}</p>
+      <button class="primary upgrade-cta" id="upgrade-module" ${upgrade && affordable ? "" : "disabled"}>
+        <span>Upgrade
+          <small class="upgrade-gain">+${fmt((growth - 1) * 100, 1)}% → ${nominalGainText(module)}</small>
+        </span>
+        <strong>${cost} ν</strong>
+      </button>
+      ${!upgrade ? `<p class="small muted">Upgrades happen between sessions.</p>` : ""}
+      ${carrier ? `<p class="small muted">The Carrier is pinned: it upgrades in place and cannot be moved, combined, or shelved.</p>` : ""}
+      ${upgrade && !carrier && partner && module.rarity !== "rare"
+        ? `<button id="combine-pair">Combine with its ${RARITY_LABEL[module.rarity]} pair</button>`
+        : ""}
+    </section>
+    <section>
+      <div class="eyebrow">${upgrade ? "NEXT SESSION PREVIEW" : "LIVE GRID"}</div>
+      ${stat("Position", module.pos ? `${module.pos.q}, ${module.pos.r}` : "inventory")}
+      ${chargeStats}
     </section>`;
-  } else if (module.type === "time") {
-    focus = `<section class="focus-controls">
-      <span class="eyebrow">FOCUS CONTROLS</span>
-      <label class="config-label" for="panel-duration">Session duration</label>
-      <select id="panel-duration" ${upgrade ? "" : "disabled"}>
-        ${durationOptionsHtml(app)}
-      </select>
-      ${!upgrade && state.session ? statLive("elapsed", "Elapsed", formatClock(state.session.elapsed)) : ""}
-    </section>`;
-  } else if (module.type === "habit") {
+
+  byId("back-overview")?.addEventListener("click", () => app.select(null));
+  byId("upgrade-module")?.addEventListener("click", () => app.upgrade(module.id));
+  byId("combine-pair")?.addEventListener("click", () => app.combinePair(module.id));
+}
+
+/* ── Focus-app panels ──────────────────────────────── */
+
+function renderAppPanel(app: App, host: HTMLElement, panel: AppPanel): void {
+  const { state } = app;
+  const upgrade = state.mode === "upgrade";
+  let inner = "";
+
+  if (panel === "habit") {
     const active = activeHabit(state);
-    const live = state.mode !== "upgrade";
+    const live = !upgrade;
     const habits = state.habits.filter((h) => !h.archived);
+    const rows = habits.map((habit) => {
+      const editing = app.ui.editingHabitId === habit.id;
+      return `<div class="habit-row ${state.activeHabitId === habit.id ? "selected" : ""}" data-habit="${habit.id}">
+        ${editing
+          ? `<input type="text" class="habit-rename-input" id="habit-rename-input" value="${escapeHtml(habit.name)}" maxlength="40" />
+             <button class="primary small" id="habit-rename-save">Save</button>`
+          : `<button class="habit-pick" data-pick="${habit.id}" title="Make this the active habit">
+               <span class="habit-dot" aria-hidden="true"></span>
+               <span class="habit-name">${escapeHtml(habit.name)}</span>
+               <small class="mono" data-habit-seconds="${habit.id}">${formatDuration(habit.seconds)}</small>
+             </button>
+              <button class="quiet small" data-rename="${habit.id}" title="Rename">✎</button>
+              <button class="quiet small icon-btn" data-archive="${habit.id}" title="Archive (keeps its development)">
+                <svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M-7-6h14v3H-7Z"/><path d="M-5-3v8h10v-8"/><path d="M0 0v4"/><path d="m-2 2 2 2 2-2"/></svg>
+              </button>`}
+      </div>`;
+    }).join("");
     if (live) {
-      focus = `<section class="focus-controls">
+      inner = `<section class="focus-controls">
         <span class="eyebrow">FOCUS CONTROLS</span>
         <p class="habit-active-name">${active ? escapeHtml(active.name) : "Unstructured practice"}</p>
         <p class="small muted" style="margin-top:4px">${active ? "Locked for this session — selected before entering flow." : "No habit selected; the session still counts as practice."}</p>
         ${active ? statLive("habit-session", "This session", `${formatClock(state.session?.elapsed ?? 0)} of practice`) : ""}
       </section>`;
     } else {
-      focus = `<section class="focus-controls">
+      inner = `<section class="focus-controls">
         <span class="eyebrow">FOCUS CONTROLS</span>
         <div class="habit-create">
           <input type="text" id="habit-name-input" placeholder="New habit (piano, cooking…)" maxlength="40" />
           <button class="primary small" id="habit-create">Add</button>
         </div>
         <div class="habit-list">
-          ${habits.map((habit) => {
-            const editing = app.ui.editingHabitId === habit.id;
-            return `<div class="habit-row ${state.activeHabitId === habit.id ? "selected" : ""}" data-habit="${habit.id}">
-              ${editing
-                ? `<input type="text" class="habit-rename-input" id="habit-rename-input" value="${escapeHtml(habit.name)}" maxlength="40" />
-                   <button class="primary small" id="habit-rename-save">Save</button>`
-                : `<button class="habit-pick" data-pick="${habit.id}" title="Make this the active habit">
-                     <span class="habit-dot" aria-hidden="true"></span>
-                     <span class="habit-name">${escapeHtml(habit.name)}</span>
-                     <small class="mono" data-habit-seconds="${habit.id}">${formatDuration(habit.seconds)}</small>
-                   </button>
-                    <button class="quiet small" data-rename="${habit.id}" title="Rename">✎</button>
-                    <button class="quiet small icon-btn" data-archive="${habit.id}" title="Archive (keeps its development)">
-                      <svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M-7-6h14v3H-7Z"/><path d="M-5-3v8h10v-8"/><path d="M0 0v4"/><path d="m-2 2 2 2 2-2"/></svg>
-                    </button>`}
-            </div>`;
-          }).join("") || `<p class="empty-copy">No habits yet. Name what you practice.</p>`}
+          ${rows || `<p class="empty-copy">No habits yet. Name what you practice.</p>`}
         </div>
         ${state.activeHabitId
           ? `<div class="habit-log">
               <label class="config-label" for="habit-log-minutes">Log practice for ${escapeHtml(active?.name ?? "")} manually</label>
               <div class="habit-create">
-                <input type="number" id="habit-log-minutes" min="1" max="600" placeholder="minutes" />
+                <input type="number" id="habit-log-minutes" min="1" placeholder="minutes" />
                 <button class="small" id="habit-log-add">Log</button>
               </div>
               <p class="small muted">Manual logs grow development and later count toward goals — they never produce nous or charge.</p>
@@ -856,9 +813,19 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
           : `<p class="small muted">Select a habit to log practice manually; selection is locked during flow.</p>`}
       </section>`;
     }
-  } else if (module.type === "goals") {
+  } else if (panel === "notes") {
+    const recent = [...state.notes].slice(-8).reverse();
+    const capture = canWriteNotes(state);
+    inner = `<section class="focus-controls">
+      <span class="eyebrow">FOCUS CONTROLS</span>
+      ${capture
+        ? `<textarea class="note-composer" id="note-composer" placeholder="What are you noticing?" maxlength="2000" rows="3"></textarea>
+           <div class="session-actions" style="margin:10px 0 0"><button class="primary" id="note-save">Capture note</button></div>`
+        : `<p class="small muted">Note capture happens during flow.</p>`}
+      ${recent.length > 0 ? `<div class="note-list">${recent.map((n) => `<div class="note-entry"><span class="note-when mono">S${n.sessionId} · ${formatClock(n.atElapsed)}</span><p>${escapeHtml(n.text)}</p></div>`).join("")}</div>` : ""}
+    </section>`;
+  } else {
     const capacity = goalCapacity(state);
-    const live = state.mode !== "upgrade";
     const habitOptions = [`<option value="">Any habit</option>`]
       .concat(state.habits.filter((h) => !h.archived).map((h) => `<option value="${h.id}">${escapeHtml(h.name)}</option>`))
       .join("");
@@ -872,200 +839,41 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
         <div class="goal-head">
           <span class="goal-name">${escapeHtml(goalSummary(state, goal))}</span>
           ${status}
-          ${live ? "" : `<button class="quiet small icon-btn" data-goal-delete="${goal.id}" title="Remove goal"><svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M-6-6 6 6M6-6-6 6"/></svg></button>`}
+          ${upgrade ? `<button class="quiet small icon-btn" data-goal-delete="${goal.id}" title="Remove goal"><svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M-6-6 6 6M6-6-6 6"/></svg></button>` : ""}
         </div>
         <div class="goal-track"><span data-goal-progress="${goal.id}" style="width:${fraction * 100}%"></span></div>
         <small class="mono" data-goal-minutes="${goal.id}">${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · earned ×${goal.completedCount}` : ""}</small>
       </div>`;
     };
-    if (!goalsActive(state)) {
-      focus = `<section class="focus-controls"><span class="eyebrow">FOCUS CONTROLS</span><p class="small muted">Activation is a store purchase — the cheapest way to open up.</p></section>`;
-    } else if (live) {
-      focus = `<section class="focus-controls">
-        <span class="eyebrow">FOCUS CONTROLS · LOCKED FOR THIS SESSION</span>
-        ${state.goals.map(goalRow).join("") || `<p class="empty-copy">No goals tracked. Create some between sessions.</p>`}
-      </section>`;
-    } else {
-      focus = `<section class="focus-controls">
-        <span class="eyebrow">FOCUS CONTROLS · ${state.goals.length}/${capacity} SLOTS</span>
-        ${state.goals.length < capacity ? `
-          <div class="goal-create">
-            <select id="goal-habit" aria-label="Habit">${habitOptions}</select>
-            <input type="number" id="goal-minutes" min="1" max="1440" placeholder="min" />
-            <select id="goal-schedule" aria-label="Schedule">
-              <option value="daily">daily</option>
-              <option value="weekly">weekly</option>
-              <option value="once">once</option>
-            </select>
-            <button class="primary small" id="goal-add">Add</button>
-          </div>` : `<p class="small muted">All slots in use — upgrade the module or remove a goal.</p>`}
-        <div class="goal-list">
-          ${state.goals.map(goalRow).join("") || `<p class="empty-copy">No goals yet. Goals track practice conditions and reward charge bursts.</p>`}
-        </div>
-        <p class="small muted" style="margin-top:10px">Progress counts only while a goal exists; earlier practice never counts retroactively. Manual logs count too.</p>
-      </section>`;
-    }
-  } else if (module.type === "tasks") {
-    if (!tasksActive(state)) {
-      focus = `<section class="focus-controls"><span class="eyebrow">FOCUS CONTROLS</span><p class="small muted">Activation is a store purchase — the cheapest way to open up.</p></section>`;
-    } else {
-      const open = state.tasks.filter((t) => !t.done);
-      const pending = state.tasks.filter((t) => t.done && !t.paid);
-      const paid = state.tasks.filter((t) => t.paid);
-      const next = pending[0];
-      focus = `<section class="focus-controls">
-        <span class="eyebrow">FOCUS CONTROLS · CAPTURE ANY TIME</span>
-        <div class="task-create">
-          <input type="text" id="task-text-input" placeholder="A small concrete step…" maxlength="120" />
-          <select id="task-size" aria-label="Size">
-            <option value="small">small · 3 ν</option>
-            <option value="medium">medium · 8 ν</option>
-            <option value="large">large · 15 ν</option>
+    inner = `<section class="focus-controls">
+      <span class="eyebrow">FOCUS CONTROLS · ${state.goals.length}/${capacity} SLOTS${upgrade ? "" : " · LOCKED FOR THIS SESSION"}</span>
+      ${upgrade && state.goals.length < capacity ? `
+        <div class="goal-create">
+          <select id="goal-habit" aria-label="Habit">${habitOptions}</select>
+          <input type="number" id="goal-minutes" min="1" max="1440" placeholder="min" />
+          <select id="goal-schedule" aria-label="Schedule">
+            <option value="daily">daily</option>
+            <option value="weekly">weekly</option>
+            <option value="once">once</option>
           </select>
-          <button class="primary small" id="task-add">Add</button>
-        </div>
-        <div class="task-list">
-          ${open.map((task) => {
-            const editing = app.ui.editingTaskId === task.id;
-            return `<div class="task-row" data-task="${task.id}">
-              <span class="task-size mono">${task.size}</span>
-              ${editing
-                ? `<input type="text" class="task-rename-input" id="task-rename-input" value="${escapeHtml(task.text)}" maxlength="120" />
-                   <button class="primary small" id="task-rename-save">Save</button>`
-                : `<span class="task-text">${escapeHtml(task.text)}</span>
-                   <button class="quiet small icon-btn" data-task-rename="${task.id}" title="Edit task"><svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M-8 8 8-8M-1-7h8v8"/></svg></button>
-                   <button class="small" data-task-done="${task.id}" title="Mark complete">Done</button>`}
-              <button class="quiet small icon-btn" data-task-delete="${task.id}" title="Delete task"><svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M-6-6 6 6M6-6-6 6"/></svg></button>
-            </div>`;
-          }).join("") || `<p class="empty-copy">No open tasks. Capture the bite-sized things as they come.</p>`}
-        </div>
-        ${pending.length > 0 ? `
-          <h3 class="store-section-title">Awaiting allowance</h3>
-          <div class="task-list">
-            ${pending.map((task) => `
-              <div class="task-row pending">
-                <span class="task-size mono">${task.size}</span>
-                <span class="task-text">${escapeHtml(task.text)}</span>
-                <small class="mono" data-live="task-next-cost">${fmt(Math.max(0, taskCost(task.size) - (next && task.id === next.id ? state.allowance : 0)), 1)} pts to go</small>
-                <button class="quiet small icon-btn" data-task-delete="${task.id}" title="Delete task (forfeits its unfunded reward)"><svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M-6-6 6 6M6-6-6 6"/></svg></button>
-              </div>`).join("")}
-          </div>` : ""}
-        ${paid.length > 0 ? `<p class="small muted" style="margin-top:10px">${paid.length} task${paid.length === 1 ? "" : "s"} paid out.</p>` : ""}
-      </section>`;
-    }
-  } else if (module.type === "notes") {
-    const recent = [...state.notes].slice(-8).reverse();
-    const noteCount = sessionNoteCount(state);
-    const capture = canWriteNotes(state);
-    focus = `<section class="focus-controls">
-      <span class="eyebrow">FOCUS CONTROLS</span>
-      ${capture
-        ? `<textarea class="note-composer" id="note-composer" placeholder="What are you noticing?" maxlength="2000" rows="3"></textarea>
-           <div class="session-actions" style="margin:10px 0 0"><button class="primary" id="note-save">Capture note</button></div>
-           ${noteCount > 0 ? statLive("notes-projection", "Banks at session end", `${fmt(projectedNotesBurst(state), 1)}s of charge`) : `<p class="small muted" style="margin-top:10px">One note during this session turns its practice minutes into a banked charge burst.</p>`}`
-        : `<p class="small muted">${state.notesActive ? "Note capture happens during flow; the burst is banked when the session ends." : "Activation is a store purchase — the cheapest way to open up."}</p>`}
-      ${recent.length > 0 ? `<div class="note-list">${recent.map((n) => `<div class="note-entry"><span class="note-when mono">S${n.sessionId} · ${formatClock(n.atElapsed)}</span><p>${escapeHtml(n.text)}</p></div>`).join("")}</div>` : ""}
+          <button class="primary small" id="goal-add">Add</button>
+        </div>` : ""}
+      <div class="goal-list">
+        ${state.goals.map(goalRow).join("") || `<p class="empty-copy">No goals yet. Goals track practice conditions.</p>`}
+      </div>
+      <p class="small muted" style="margin-top:10px">Progress counts only while a goal exists; earlier practice never counts retroactively. Manual logs count too.</p>
     </section>`;
-  } else if (isCore(module)) {
-    focus = `<section class="focus-controls"><span class="eyebrow">FOCUS CONTROLS</span><p class="small muted">This module reserves its cell. Its focus tool arrives in a later version.</p></section>`;
-  }
-
-  let chargeStats = "";
-  if (module.type === "time") {
-    const queued = chargeSecondsRemaining(state);
-    chargeStats = `
-      ${stat("Trigger", "Timed target complete")}
-      ${stat("Burst strength", "1× to each eligible adjacent module")}
-      ${stat("Burst duration", "6s × target minutes")}
-      ${stat("Next target burst", state.session?.target === null || !state.session ? (app.ui.chosenTarget === null ? "0s (open-ended)" : `${Math.round(app.ui.chosenTarget * BALANCE.chargeSecondsPerPracticeSecond)}s`) : `${Math.round(state.session.target! * BALANCE.chargeSecondsPerPracticeSecond)}s`)}
-      ${statLive("queued", "Queued output", `${fmt(queued, 1)}s`)}
-      ${state.timeActive ? "" : stat("Status", "activates after your first session")}`;
-  } else if (module.type === "forge" || module.type === "expander") {
-    const isForge = module.type === "forge";
-    const progress = isForge ? state.forge.progress : state.expansion.progress;
-    const threshold = isForge ? forgeThreshold(state.forge.earned) : expansionThreshold(state.expansion.earned);
-    const eligible = time?.pos && module.pos && adjacent(module.pos, time.pos) && state.timeActive;
-    chargeStats = `
-      ${statLive(isForge ? "forge" : "expansion", "Shared progress", `${fmt(Math.max(0, progress), 1)} / ${fmt(threshold, 1)}`)}
-      ${stat("Rewards earned", String(isForge ? state.forge.earned : state.expansion.earned))}
-      ${stat("Charge source", eligible ? "adjacent to active Time" : "not adjacent to active Time")}
-      ${stat("Progress rate", `${fmt(contribution?.value ?? 0, 2)} /s while charged`)}`;
-  } else if (module.type === "notes") {
-    chargeStats = `
-      ${stat("Session notes", String(sessionNoteCount(state)))}
-      ${statLive("notes-projection", "Banks at session end", `${fmt(projectedNotesBurst(state), 1)}s of charge`)}
-      ${stat("Notes captured", String(state.notes.length))}
-      ${state.notesActive ? "" : stat("Status", "activation available in the store")}`;
-  } else if (module.type === "habit") {
-    const habit = activeHabit(state);
-    chargeStats = `
-      ${stat("Active habit", habit ? escapeHtml(habit.name) : "unstructured")}
-      ${habit ? statLive("habit-development", "Development", formatDuration(habit.seconds)) : ""}
-      ${stat("Development rate", `×${fmt(developmentRate(state), 3)} per practice minute`)}
-      ${stat("Habits tracked", String(state.habits.filter((h) => !h.archived).length))}
-      ${stat("Practice entries logged", String(state.practiceLog.length))}`;
-  } else if (module.type === "goals") {
-    const completed = state.goals.filter((g) => g.completed).length;
-    chargeStats = `
-      ${stat("Goal slots", `${state.goals.length} / ${goalCapacity(state)}`)}
-      ${stat("Completed this occurrence", `${completed} / ${state.goals.length}`)}
-      ${stat("Total completions", String(state.goals.reduce((sum, g) => sum + g.completedCount, 0)))}
-      ${stat("Burst per completion", `${fmt(BALANCE.goalBurstSecondsPerPracticeMinute * modulePower(module), 3)}s of charge per required minute`)}
-      ${state.goalsActive ? "" : stat("Status", "activation available in the store")}`;
-  } else if (module.type === "tasks") {
-    const open = state.tasks.filter((t) => !t.done).length;
-    const pending = state.tasks.filter((t) => t.done && !t.paid).length;
-    chargeStats = `
-      ${statLive("task-allowance", "Allowance", `${fmt(state.allowance, 1)} pts`)}
-      ${stat("Accrual", `${fmt(allowanceRate(state), 3)} pts / live minute`)}
-      ${stat("Open tasks", String(open))}
-      ${stat("Pending payouts", String(pending))}
-      ${stat("Paid out", String(state.tasks.filter((t) => t.paid).length))}
-      ${state.tasksActive ? "" : stat("Status", "activation available in the store")}`;
-  } else {
-    chargeStats = `
-      ${stat("Banked charge", `${Math.ceil(chargeSecondsRemaining(state))}s (on Time)`)}
-      ${stat("Neighbor strength", neighborStrength > 0 ? `${neighborStrength}×` : "—")}`;
   }
 
   host.innerHTML = `
     <div class="module-heading">
       <button class="quiet small" id="back-overview">← Grid overview</button>
-      <h1>${meta.name}</h1>
-      <span class="rarity-chip ${module.rarity}">${RARITY_LABEL[module.rarity]}${isCore(module) ? " · core" : ""}</span>
+      <h1>${panel === "habit" ? "Habit" : panel === "notes" ? "Notes" : "Goals"}</h1>
+      <span class="rarity-chip common">app</span>
     </div>
-    ${focus}
-    <section>
-      <div class="eyebrow">MODULE POWER</div>
-      <div class="level-heading">Level <strong>${module.level}</strong><span class="level-effect">${active ? effect.text : "Inactive"}</span></div>
-      <p class="small muted" style="margin:6px 0 0">${effectDescription(module)}</p>
-      <button class="primary upgrade-cta" id="upgrade-module" ${canUpgrade && affordable ? "" : "disabled"}>
-        <span>Upgrade
-          <small class="upgrade-gain">+${fmt((growth - 1) * 100, 1)}% → ${nominalGainText(module)}</small>
-        </span>
-        <strong>${cost} ν</strong>
-      </button>
-      ${!state.storeOpened ? `<p class="small muted">Upgrades unlock with the store after your first completed timed target.</p>` : ""}
-      ${!active ? `<p class="small muted">Inactive core modules cannot take power upgrades.</p>` : ""}
-      ${!upgrade && state.storeOpened ? `<p class="small muted">Upgrades happen between sessions.</p>` : ""}
-      ${upgrade && active && partner && module.rarity !== "rare"
-        ? `<button id="combine-pair">Combine with its ${RARITY_LABEL[module.rarity]} pair</button>`
-        : ""}
-    </section>
-    <section>
-      <div class="eyebrow">${upgrade ? "NEXT SESSION PREVIEW" : "LIVE GRID"}</div>
-      ${stat("Position", module.pos ? `${module.pos.q}, ${module.pos.r}` : "inventory")}
-      ${module.type === "conditional" && module.pos ? stat("Adjacent active cores", String(contribution?.adjacentActiveCores ?? 0)) : ""}
-      ${chargeStats}
-    </section>`;
+    ${inner}`;
 
-  byId("back-overview")?.addEventListener("click", () => app.select(null));
-  byId("upgrade-module")?.addEventListener("click", () => app.upgrade(module.id));
-  byId("combine-pair")?.addEventListener("click", () => app.combinePair(module.id));
-  byId("panel-flow")?.addEventListener("click", () => app.startFlow());
-  byId("panel-end")?.addEventListener("click", () => app.endFlow());
-  byId("panel-pause")?.addEventListener("click", () => (state.mode === "paused" ? app.resume() : app.pause()));
-  bindDurationSelect(app, byId("panel-duration"));
+  byId("back-overview")?.addEventListener("click", () => app.closeApp());
   byId("habit-create")?.addEventListener("click", () => {
     const input = byId("habit-name-input") as HTMLInputElement | null;
     if (input) app.createHabitAction(input.value);
@@ -1134,60 +942,6 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       if (id) app.deleteGoalAction(id);
     });
   });
-  byId("task-add")?.addEventListener("click", () => {
-    const textInput = byId("task-text-input") as HTMLInputElement | null;
-    const sizeSelect = byId("task-size") as HTMLSelectElement | null;
-    if (textInput && sizeSelect && textInput.value.trim()) {
-      app.addTaskAction(textInput.value, sizeSelect.value as TaskSize);
-    }
-  });
-  byId("task-text-input")?.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      const textInput = event.target as HTMLInputElement;
-      const sizeSelect = byId("task-size") as HTMLSelectElement | null;
-      if (textInput.value.trim() && sizeSelect) app.addTaskAction(textInput.value, sizeSelect.value as TaskSize);
-    }
-  });
-  host.querySelectorAll<HTMLElement>("[data-task-done]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const id = button.getAttribute("data-task-done");
-      if (id) app.completeTaskAction(id);
-    });
-  });
-  host.querySelectorAll<HTMLElement>("[data-task-delete]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const id = button.getAttribute("data-task-delete");
-      if (id) app.deleteTaskAction(id);
-    });
-  });
-  host.querySelectorAll<HTMLElement>("[data-task-rename]").forEach((button) => {
-    button.addEventListener("click", () => {
-      app.ui.editingTaskId = button.getAttribute("data-task-rename");
-      app.render();
-      const input = byId("task-rename-input") as HTMLInputElement | null;
-      input?.focus();
-      input?.select();
-    });
-  });
-  const taskRenameInput = byId("task-rename-input");
-  taskRenameInput?.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      const id = app.ui.editingTaskId;
-      if (id) app.renameTaskAction(id, (event.target as HTMLInputElement).value);
-    }
-    if (event.key === "Escape") {
-      event.stopPropagation();
-      app.ui.editingTaskId = null;
-      app.render();
-    }
-  });
-  byId("task-rename-save")?.addEventListener("click", () => {
-    const id = app.ui.editingTaskId;
-    const input = byId("task-rename-input") as HTMLInputElement | null;
-    if (id && input) app.renameTaskAction(id, input.value);
-  });
   const composer = byId("note-composer") as HTMLTextAreaElement | null;
   const saveNote = () => {
     if (!composer) return;
@@ -1209,14 +963,15 @@ function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function effectTextFor(module: ModuleInstance, value: number, strength: number): string {
+function effectTextFor(module: ModuleInstance, value: number, strength = 0): string {
   switch (module.type) {
-    case "enter":
+    case "carrier":
     case "additive":
-      return `+${fmt(value)} ν/s`;
-    case "time":
     case "conditional":
-      return `+${fmt(value * 100)}% (×${fmt(1 + value, 3)})`;
+      return `+${fmt(value)} ν/s`;
+    case "generator":
+    case "focusKeyed":
+      return `${fmt(modulePower(module), 2)} strength`;
     case "infusor":
       return `+${fmt(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(strength), 1)}% to adjacent`;
     default:
@@ -1227,20 +982,11 @@ function effectTextFor(module: ModuleInstance, value: number, strength: number):
 function nominalGainText(module: ModuleInstance): string {
   const now = nominalEffect(module, false);
   const growth = BALANCE.rarityPower[module.rarity];
-  if (module.type === "forge" || module.type === "expander") {
+  if (isSource(module)) {
+    return `+${fmt(now.value * (growth - 1), 3)} strength`;
+  }
+  if (module.type === "forge") {
     return `${fmt(now.value * (growth - 1), 3)} progress/s`;
-  }
-  if (module.type === "notes") {
-    return `+${fmt(now.value * (growth - 1), 3)}s / minute`;
-  }
-  if (module.type === "habit") {
-    return `×${fmt(growth, 3)} → ×${fmt(now.value * growth, 3)} development`;
-  }
-  if (module.type === "goals") {
-    return `+${fmt(now.value * (growth - 1), 3)}s per minute`;
-  }
-  if (module.type === "tasks") {
-    return `+${fmt(now.value * (growth - 1), 3)} pts / minute`;
   }
   return `+${fmt(now.value * (growth - 1), 4)} effect`;
 }
@@ -1250,15 +996,13 @@ function nominalGainText(module: ModuleInstance): string {
 // A canvas-style hex tile — icon, name, level, rarity accent — shared by the
 // inventory grid and the live drag ghost so a carried tile looks identical to
 // the one waiting in inventory (candidate-tile pattern from the Forge).
-function hexTileSvg(module: ModuleInstance, locked = false): string {
+function hexTileSvg(module: ModuleInstance): string {
   return `<svg viewBox="-75 -75 150 150" aria-hidden="true">
     <polygon class="hex" points="${hexPoints(HEX_RADIUS)}"/>
     <g transform="translate(0,-16)" class="hex-icon" fill="none" stroke-width="2.2">${moduleIcon(module.type)}</g>
     <text y="24" text-anchor="middle" class="hex-name">${META[module.type].short}</text>
     <text y="-46" text-anchor="middle" class="hex-level">Lv ${module.level}</text>
-    ${locked
-      ? `<g transform="translate(0,36)" stroke="var(--muted)" fill="none" stroke-width="1.4"><path d="M-3 0v-2.5a3 3 0 0 1 6 0V0"/><rect x="-5" y="0" width="10" height="8" rx="1.5" fill="none"/></g>`
-      : `<text y="44" text-anchor="middle" class="hex-sub">${RARITY_LABEL[module.rarity]}</text>`}
+    <text y="44" text-anchor="middle" class="hex-sub">${RARITY_LABEL[module.rarity]}</text>
   </svg>`;
 }
 
@@ -1276,8 +1020,8 @@ function renderManagePanel(app: App, host: HTMLElement): void {
       reshaping
         ? "Reshaping: click empty cells to remove and frontier outlines to add; they must balance."
         : ui.placing
-          ? "Choose a destination cell. Occupied gameplay modules swap."
-          : "Tiles are raised and movable. Drag them between cells or into the inventory; drop one onto a matching twin to combine. Pinned cores stay on the board."
+          ? "Choose a destination cell. Occupied modules swap."
+          : "Tiles are raised and movable. Drag them between cells or into the inventory; drop one onto a matching twin to combine. The Carrier stays pinned."
     }</p>
     <div class="manage-actions">
       ${reshaping
@@ -1290,24 +1034,21 @@ function renderManagePanel(app: App, host: HTMLElement): void {
               <button class="small" id="reshape-cancel">Cancel</button>
             </div>
           </div>`
-        : `<button id="add-cell" ${state.cellTokens > 0 ? "" : "disabled"}>Add cell · ${state.cellTokens} earned</button>
-           <button id="reshape-start">Reshape board</button>`}
+        : `<button id="reshape-start">Reshape board</button>`}
     </div>
     <section class="inventory-drop" id="inventory-zone">
       <h3>Inventory</h3>
       <p class="small muted">Drop a raised tile here to store its module, or click one to place it.</p>
       <div class="inventory-hexes" id="inventory-list">
         ${inventory.map((m) => {
-          const spareCore = isCore(m) && !isActive(state, m);
-          return `<button class="inventory-tile ${spareCore ? "locked" : ""}" data-inv="${m.id}" data-rarity="${m.rarity}" title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]}${spareCore ? " · spare core: places by replacing its deployed match" : ""}">
-            ${hexTileSvg(m, spareCore)}
+          return `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]}">
+            ${hexTileSvg(m)}
           </button>`;
-        }).join("") || `<p class="empty-copy">Inventory is empty. Drag a gameplay tile here to store it.</p>`}
+        }).join("") || `<p class="empty-copy">Inventory is empty. Drag a tile here to store it.</p>`}
       </div>
     </section>`;
 
   byId("manage-done")?.addEventListener("click", () => app.stopManaging());
-  byId("add-cell")?.addEventListener("click", () => app.beginCellPlacement());
   byId("reshape-start")?.addEventListener("click", () => app.startReshape());
   byId("reshape-apply")?.addEventListener("click", () => app.applyReshape());
   byId("reshape-cancel")?.addEventListener("click", () => app.cancelReshape());
@@ -1334,7 +1075,7 @@ function renderModal(app: App): void {
     kind === "forge"
       ? app.state.bankedRolls.at(-1)?.id ?? null
       : kind === "store"
-        ? [app.ui.showAcquired, wholeNous(app.state), JSON.stringify(app.state.purchased), app.state.notesActive, app.state.goalsActive, app.state.tasksActive]
+        ? [app.ui.showAcquired, wholeNous(app.state), JSON.stringify(app.state.purchased)]
         : null;
   const renderKey = JSON.stringify([kind, app.ui.importError, app.state.pendingGap, extra]);
   // Clock ticks must not replace a save textarea or steal dialog focus.
@@ -1372,60 +1113,37 @@ function renderSettingsModal(app: App, content: HTMLElement): void {
 
 function renderStoreModal(app: App, content: HTMLElement): void {
   const { state, ui } = app;
-  const starterTypes = Object.keys(BALANCE.starterPrices) as (keyof typeof BALANCE.starterPrices)[];
-  const activationTypes = Object.keys(BALANCE.coreActivationPrices) as CoreActivationType[];
-  const activationActive = (type: CoreActivationType) =>
-    type === "notes" ? state.notesActive : type === "goals" ? state.goalsActive : state.tasksActive;
+  const shelfTypes = Object.keys(BALANCE.shelfPrices) as (keyof typeof BALANCE.shelfPrices)[];
 
-  // Purchasable groups on top; already-owned items demote below the checkbox
-  // and appear only when it is checked — cores and starters alike.
-  const openActivations = activationTypes.filter((type) => !activationActive(type));
-  const openStarters = starterTypes.filter((type) => !state.purchased[type]);
-  const ownedStarters = starterTypes.filter((type) => state.purchased[type]);
-  const ownedActivations = activationTypes.filter(activationActive);
-  const acquiredCount = ownedStarters.length + ownedActivations.length;
-  const totalCount = starterTypes.length + activationTypes.length;
-
-  const activationRow = (type: CoreActivationType) => `
-    <div class="shop-item activation">
-      <div><h3>Activate ${META[type].name}</h3><small>${META[type].role} · permanent</small></div>
-      <button class="primary" data-activate="${type}" ${wholeNous(state) >= BALANCE.coreActivationPrices[type] ? "" : "disabled"}>${BALANCE.coreActivationPrices[type]} ν</button>
-    </div>`;
+  // One-time shelf offers on top; acquired items demote below the checkbox.
+  const openShelf = shelfTypes.filter((type) => !state.purchased[type]);
+  const ownedShelf = shelfTypes.filter((type) => state.purchased[type]);
 
   content.innerHTML = `
     ${modalTop("STORE")}
     <h2 id="modal-title">Shape what comes next.</h2>
-    <p class="lead">Core activations are the cheapest way to open the instrument up. ${fmtWhole(state.nous)} ν available.</p>
-    ${openActivations.length > 0 ? `
-      <h3 class="store-section-title">Core activations</h3>
-      <div class="shop-list store-activations">${openActivations.map(activationRow).join("")}</div>` : ""}
-    ${openStarters.length > 0 ? `
-      <h3 class="store-section-title">Starter modules</h3>
-      <div class="shop-list">${openStarters.map((type) => {
-        const price = BALANCE.starterPrices[type];
+    <p class="lead">The starter shelf: one offer per category, once each. ${fmtWhole(state.nous)} ν available.</p>
+    ${openShelf.length > 0 ? `
+      <h3 class="store-section-title">Starter shelf</h3>
+      <div class="shop-list">${openShelf.map((type) => {
+        const price = BALANCE.shelfPrices[type];
         const affordable = wholeNous(state) >= price;
         return `<div class="shop-item">
           <div><h3>${META[type].name}</h3><small>${META[type].role}</small></div>
           <button class="primary" data-buy="${type}" ${affordable ? "" : "disabled"}>${price} ν</button>
         </div>`;
       }).join("")}</div>` : ""}
-    ${openActivations.length === 0 && openStarters.length === 0 ? `<p class="empty-copy">Everything is acquired. New copies come from the Forge.</p>` : ""}
-    <label class="store-toggle"><input type="checkbox" id="store-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${acquiredCount}/${totalCount})</label>
-    ${ui.showAcquired && acquiredCount > 0 ? `
+    ${openShelf.length === 0 ? `<p class="empty-copy">The shelf is empty. New modules come from the Forge.</p>` : ""}
+    <label class="store-toggle"><input type="checkbox" id="store-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${ownedShelf.length}/${shelfTypes.length})</label>
+    ${ui.showAcquired && ownedShelf.length > 0 ? `
       <h3 class="store-section-title">Acquired</h3>
       <div class="shop-list store-owned">
-        ${ownedActivations.map((type) => `<div class="shop-item activation owned"><div><h3>Activate ${META[type].name}</h3><small>${META[type].role} · permanent</small></div><span class="activation-owned mono">Active</span></div>`).join("")}
-        ${ownedStarters.map((type) => `<div class="shop-item owned"><div><h3>${META[type].name}</h3><small>${META[type].role}</small></div><span class="activation-owned mono">Acquired</span></div>`).join("")}
+        ${ownedShelf.map((type) => `<div class="shop-item owned"><div><h3>${META[type].name}</h3><small>${META[type].role}</small></div><span class="activation-owned mono">Acquired</span></div>`).join("")}
       </div>` : ""}
-    <p class="modal-note">Activations and starter offers are one-time. Copies from Forge rolls do not remove these offers — they can become combination material.</p>`;
+    <p class="modal-note">Shelf offers are one-time. Copies from Forge rolls do not remove these offers — they can become combination material.</p>`;
   content.querySelectorAll<HTMLButtonElement>("[data-buy]").forEach((button) => {
     button.addEventListener("click", () => {
-      app.buy(button.getAttribute("data-buy") as keyof typeof BALANCE.starterPrices);
-    });
-  });
-  content.querySelectorAll<HTMLButtonElement>("[data-activate]").forEach((button) => {
-    button.addEventListener("click", () => {
-      app.buyActivation(button.getAttribute("data-activate") as CoreActivationType);
+      app.buyShelf(button.getAttribute("data-buy") as keyof typeof BALANCE.shelfPrices);
     });
   });
   byId("store-show-acquired")?.addEventListener("change", (event) => {
@@ -1438,45 +1156,33 @@ function renderStoreModal(app: App, content: HTMLElement): void {
 function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
   const charged = chargedFactor(1);
   switch (type) {
-    case "enter": return `+${fmt(BALANCE.baseRate)} ν/s base production<br>+${fmt(BALANCE.baseRate * charged)} ν/s at charge strength 1`;
-    case "additive": return `+${fmt(BALANCE.additiveRate)} ν/s base production<br>+${fmt(BALANCE.additiveRate * charged)} ν/s at charge strength 1`;
-    case "time": return `×${fmt(1 + BALANCE.timeBonus)} production during flow<br>Timed completion: strength 1 for ${fmt(BALANCE.chargeSecondsPerPracticeSecond * 60)}s per planned minute`;
-    case "notes": return `Bank a strength-1 charge burst at session end<br>${fmt(BALANCE.notesChargePerMinute)}s per qualifying practice minute (any note qualifies the session)`;
-    case "habit": return `Locks one habit for the session; live and logged practice develop it<br>Development rate ×${fmt(1, 3)}, improved by level and rarity`;
-    case "goals": return `Track practice conditions in limited slots<br>Each completion banks a charge burst; levels strengthen bursts`;
-    case "tasks": return `Capture bite-sized steps any time<br>Live practice funds rewards: small 3, medium 8, large 15`;
-    case "conditional": return `+${fmt(BALANCE.conditionalBonusPerActiveCore * 100)}% production per adjacent active core<br>+${fmt(BALANCE.conditionalBonusPerActiveCore * charged * 100)}% at charge strength 1`;
+    case "carrier": return `The granted origin module — never rolled<br>+${fmt(BALANCE.carrierRate * charged)} ν/s at charge strength 1`;
+    case "additive": return `+${fmt(BALANCE.additiveRate)} ν/s harmonic term<br>+${fmt(BALANCE.additiveRate * charged)} ν/s at charge strength 1`;
+    case "conditional": return `+${fmt(BALANCE.conditionalRate)} ν/s harmonic term<br>+${fmt(BALANCE.conditionalRate * charged)} ν/s at charge strength 1`;
+    case "generator": return `${fmt(1, 0)} charge strength per second of flow<br>empowers adjacent modules continuously`;
+    case "focusKeyed": return `A generator keyed to your focus<br>charge-window rule arrives with the charge rework`;
     case "infusor": return `+${fmt(BALANCE.infusorBonus * 100)}% to adjacent production contributions<br>+${fmt(BALANCE.infusorBonus * charged * 100)}% at charge strength 1`;
-    case "forge": return `1 Forge progress per charge<br>Next roll: ${fmt(forgeThreshold(state.forge.earned))} progress`;
-    case "expander": return `1 expansion progress per charge<br>Next cell: ${fmt(expansionThreshold(state.expansion.earned))} progress`;
+    case "forge": return `1 Forge progress per received charge strength<br>Next roll: ${fmt(forgeThreshold(state.forge.earned))} progress`;
     default: return "Not yet active";
   }
 }
 
 function candidateHeadline(type: ModuleInstance["type"]): string {
   switch (type) {
-    case "enter":
-      return `+${fmt(BALANCE.baseRate)} ν/s`;
+    case "carrier":
+      return `+${fmt(BALANCE.carrierRate)} ν/s`;
     case "additive":
       return `+${fmt(BALANCE.additiveRate)} ν/s`;
-    case "time":
-      return `×${fmt(1 + BALANCE.timeBonus)}`;
-    case "notes":
-      return `${fmt(BALANCE.notesChargePerMinute)}s/min burst`;
-    case "habit":
-      return "×1 development";
-    case "goals":
-      return "2 slots";
-    case "tasks":
-      return "3/8/15 ν rewards";
     case "conditional":
-      return `+${fmt(BALANCE.conditionalBonusPerActiveCore * 100)}%/core`;
+      return `+${fmt(BALANCE.conditionalRate)} ν/s`;
+    case "generator":
+      return "1× charge while flowing";
+    case "focusKeyed":
+      return "focus-keyed charge";
     case "infusor":
       return `+${fmt(BALANCE.infusorBonus * 100)}%`;
     case "forge":
-      return "1 roll meter";
-    case "expander":
-      return "1 cell meter";
+      return "rolls at threshold";
     default:
       return "";
   }
@@ -1578,7 +1284,7 @@ function renderResetModal(app: App, content: HTMLElement): void {
   content.innerHTML = `
     ${modalTop("RESET")}
     <h2 id="modal-title">Start over?</h2>
-    <p class="lead">This erases the current instrument: modules, nous, charge, progress, and banked rolls. Export first if you want a backup.</p>
+    <p class="lead">This erases the current instrument: modules, nous, progress, and banked rolls. Export first if you want a backup.</p>
     <div class="modal-actions">
       <button id="reset-cancel">Keep playing</button>
       <button id="reset-confirm" class="primary" style="background:var(--danger);border-color:var(--danger)">Erase everything</button>
@@ -1623,13 +1329,11 @@ function renderDev(app: App): void {
     <button data-dev="60">+1m</button>
     <button data-dev="600">+10m</button>
     <button data-dev="target">→ target</button>
-    <button data-dev="charge">+60s charge</button>
     <button data-dev="nous">+100ν</button>`;
   panel.querySelectorAll<HTMLButtonElement>("[data-dev]").forEach((button) => {
     button.addEventListener("click", () => {
       const key = button.getAttribute("data-dev")!;
       if (key === "target") app.devToTarget();
-      else if (key === "charge") app.devCharge();
       else if (key === "nous") app.devNous();
       else app.devAdvance(Number(key));
     });

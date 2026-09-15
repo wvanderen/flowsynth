@@ -1,44 +1,16 @@
 import { EPS } from "./constants";
-import { isActive, modulePower } from "./economy";
 import { accrueGoalProgress, rollGoalOccurrences } from "./goals";
-import type { GameState, ModuleInstance } from "./types";
+import type { GameState, Habit, PracticeEntry } from "./types";
+
+export type { Habit, PracticeEntry };
 
 // Habits (issue #5). A habit names what you are practicing; one may be
 // selected as the session's active habit, locked for the session (ADR-0001).
 // Development accrues from live flow time and manual practice logs — manual
-// logs never produce nous or charge (ADR-0001). The Habit module's primary
-// effect is its development-rate multiplier; customization unlocks that
-// spend development are deferred.
-
-export interface Habit {
-  id: string;
-  name: string;
-  seconds: number;
-  archived: boolean;
-}
-
-export interface PracticeEntry {
-  id: string;
-  habitId: string;
-  seconds: number;
-  source: "live" | "manual";
-  at: number;
-}
-
-export function habitModule(state: GameState): ModuleInstance | undefined {
-  return state.modules.find((m) => m.type === "habit" && m.pos !== null);
-}
-
-export function habitsActive(state: GameState): boolean {
-  return isActive(state, habitModule(state)!);
-}
-
-export function developmentRate(state: GameState): number {
-  const module = habitModule(state);
-  if (!module || !isActive(state, module)) return 1;
-  return modulePower(module);
-}
-
+// logs never produce nous or charge (ADR-0012's boundary rule). The Habit
+// app is a fixed-function console instrument (ADR-0012): no module, no
+// power curve; development always advances one-for-one until the console
+// long goals arrive.
 export function activeHabit(state: GameState): Habit | undefined {
   return state.habits.find((h) => h.id === state.activeHabitId && !h.archived);
 }
@@ -85,8 +57,7 @@ export function selectHabit(state: GameState, id: string | null): { ok: boolean;
 }
 
 // Manual practice log: advances development and goal conditions without
-// producing nous or simulating charge activity. Goal completions from a
-// manual log bank their burst for the next session (ADR-0001).
+// producing nous or charge (§2.3).
 export function addPracticeLog(
   state: GameState,
   habitId: string,
@@ -99,24 +70,23 @@ export function addPracticeLog(
   if (!(minutes > 0)) return { ok: false, reason: "Log a positive number of minutes." };
   rollGoalOccurrences(state, now);
   const completions = accrueGoalProgress(state, habitId, minutes * 60);
-  const seconds = minutes * 60 * developmentRate(state);
-  habit.seconds += seconds;
+  habit.seconds += minutes * 60;
   state.practiceLog.push({
     id: `p${state.nextId++}`,
     habitId,
-    seconds,
+    seconds: minutes * 60,
     source: "manual",
     at: now,
   });
   return { ok: true, completions };
 }
 
-// Called from advance's step loop: live practice develops the active habit.
+// Called from advance: live practice develops the active habit.
 export function accrueLivePractice(state: GameState, seconds: number): void {
   if (seconds <= EPS) return;
   const habit = activeHabit(state);
   if (!habit) return;
-  habit.seconds += seconds * developmentRate(state);
+  habit.seconds += seconds;
 }
 
 // Called from endSession: one practice-log entry per session for goal
@@ -127,7 +97,7 @@ export function logSessionPractice(state: GameState, seconds: number, now: numbe
   state.practiceLog.push({
     id: `p${state.nextId++}`,
     habitId: habit.id,
-    seconds: seconds * developmentRate(state),
+    seconds,
     source: "live",
     at: now,
   });

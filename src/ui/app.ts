@@ -1,13 +1,11 @@
 import { advance } from "../engine/advance";
 import type { AdvanceResult } from "../engine/types";
 import {
-  buyCoreActivation,
-  buyStarter,
+  buyShelfModule,
   chooseRoll,
   combine,
   endSession,
   pauseSession,
-  placeCell,
   placeModule,
   reshapeCells,
   resumeSession,
@@ -16,7 +14,7 @@ import {
   upgradeModule,
   type ActionResult,
 } from "../engine/actions";
-import { chargeSecondsRemaining, deployedTime, isCore, wholeNous } from "../engine/economy";
+import { wholeNous } from "../engine/economy";
 import { adjacent, neighbors, sameHex } from "../engine/hex";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
 import { planTick } from "../engine/clock";
@@ -31,16 +29,20 @@ import {
   selectHabit,
 } from "../engine/habits";
 import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
-import { completeTask, createTask, deleteTask, renameTask, type TaskSize } from "../engine/tasks";
-import type { CoreActivationType, GameState, Hex, StarterType } from "../engine/types";
+import type { GameState, Hex, ShelfType } from "../engine/types";
 import { render } from "./render";
 import { META } from "./meta";
 
 export type ModalKind = "settings" | "store" | "forge" | "export" | "import" | "reset" | "reconcile" | null;
 
+// Focus apps are console instruments (ADR-0012); until the console lands
+// they keep panel access through these selection keys.
+export type AppPanel = "habit" | "notes" | "goals";
+
 export interface UiState {
   selected: string | null;
-  placing: string | null | "cell";
+  app: AppPanel | null;
+  placing: string | null;
   managing: boolean;
   reshape: { adds: Hex[]; removes: Hex[] } | null;
   modal: ModalKind;
@@ -49,7 +51,6 @@ export interface UiState {
   chosenTarget: number | null;
   showAcquired: boolean;
   editingHabitId: string | null;
-  editingTaskId: string | null;
 }
 
 interface LoadedSave {
@@ -77,6 +78,7 @@ export class App {
   state: GameState = createInitialState();
   ui: UiState = {
     selected: null,
+    app: null,
     placing: null,
     managing: false,
     reshape: null,
@@ -86,11 +88,13 @@ export class App {
     chosenTarget: 600,
     showAcquired: false,
     editingHabitId: null,
-    editingTaskId: null,
   };
   lastWall: number | null = null;
   lastSaveWall = 0;
   dev: boolean;
+  // Set when the stored save was rejected (e.g. the ADR-0017 v5 clean cut):
+  // the message must survive the constructor's greeting.
+  private loadNotice: string | null = null;
   private els: Record<string, HTMLElement>;
 
   // Management mode counts only while the grid is unlocked: entering flow or
@@ -123,7 +127,7 @@ export class App {
       if (!raw) return null;
       const parsed = parseSave(raw);
       if ("error" in parsed) {
-        this.say(`Could not load the local save: ${parsed.error}. A fresh instrument was created.`);
+        this.loadNotice = `Could not load the local save: ${parsed.error}`;
         return null;
       }
       return parsed;
@@ -170,6 +174,7 @@ export class App {
       return false;
     }
     this.ui.selected = null;
+    this.ui.app = null;
     this.ui.placing = null;
     this.ui.managing = false;
     this.ui.reshape = null;
@@ -189,6 +194,7 @@ export class App {
   hardReset(): void {
     this.state = createInitialState();
     this.ui.selected = null;
+    this.ui.app = null;
     this.ui.placing = null;
     this.ui.managing = false;
     this.ui.reshape = null;
@@ -196,7 +202,7 @@ export class App {
     this.ui.importError = null;
     this.ui.chosenTarget = 600;
     this.lastWall = null;
-    this.say("A fresh instrument. Enter flow to begin your first practice.");
+    this.say("A fresh instrument. The Carrier is yours — enter flow when ready.");
     this.save();
     this.render();
   }
@@ -207,8 +213,13 @@ export class App {
   }
 
   greet(): void {
+    if (this.loadNotice) {
+      this.say(`${this.loadNotice} A fresh instrument was created.`);
+      this.loadNotice = null;
+      return;
+    }
     if (this.state.sessionsCompleted === 0 && this.state.mode === "upgrade") {
-      this.say("Welcome. Enter flow, practice for the ten-minute target, and let real work power the instrument.");
+      this.say("Welcome. The Carrier is granted at the origin — upgrade it, then enter flow and let real practice power the instrument.");
     } else if (this.state.mode === "flow") {
       this.say("Flow is live. The instrument runs itself; your attention stays with your practice.");
     } else {
@@ -258,11 +269,8 @@ export class App {
 
   private reportAdvance(result: AdvanceResult): void {
     const notes: string[] = [];
-    if (result.storeOpened) notes.push("Timed target complete — the starter store and upgrades are open.");
-    if (result.burstAwarded) notes.push("Completion burst earned: charge flows to adjacent modules.");
     if (result.rollsBanked > 0) notes.push(`${result.rollsBanked} forge ${result.rollsBanked === 1 ? "roll" : "rolls"} banked.`);
-    if (result.cellsEarned > 0) notes.push(`${result.cellsEarned} new ${result.cellsEarned === 1 ? "cell" : "cells"} earned.`);
-    if (result.goalsCompleted > 0) notes.push(`${result.goalsCompleted} goal${result.goalsCompleted === 1 ? "" : "s"} completed — charge queued.`);
+    if (result.goalsCompleted > 0) notes.push(`${result.goalsCompleted} goal${result.goalsCompleted === 1 ? "" : "s"} completed.`);
     if (notes.length > 0) this.say(notes.join(" "));
   }
 
@@ -282,7 +290,7 @@ export class App {
     const started = this.act(
       startSession(this.state, target),
       target === null
-        ? "Open-ended flow is live. Banked charge still works; no completion bonus."
+        ? "Open-ended flow is live. The board produces exactly what it produces."
         : `Flow is live for ${Math.round(target / 60)} minutes. Your layout is locked; the instrument takes care of itself.`,
     );
     if (started) {
@@ -290,27 +298,19 @@ export class App {
       this.ui.managing = false;
       this.ui.placing = null;
       this.ui.selected = null;
+      this.ui.app = null;
     }
   }
 
   endFlow(): void {
-    const firstSession = this.state.sessionIndex === 1;
     if (this.act(endSession(this.state, Date.now()), "")) {
       this.lastWall = null;
-      // Read the bank after ending: session-end bursts (Notes) join Time's.
-      const banked = chargeSecondsRemaining(this.state);
-      if (firstSession) {
-        this.say("First session complete — Time is now active. Its multiplier and completion bursts power your build.");
-      } else if (banked > 0) {
-        this.say(`Session ended. Earned nous is kept; ${Math.round(banked)}s of charge are banked for next time.`);
-      } else {
-        this.say("Session ended. Earned nous is kept. Arrange, upgrade, and begin again when ready.");
-      }
+      this.say("Session ended. The board's production is banked. Arrange, upgrade, and begin again when ready.");
     }
   }
 
   pause(): void {
-    if (this.act(pauseSession(this.state), "Practice and charge are paused. Your layout stays locked.")) {
+    if (this.act(pauseSession(this.state), "Practice is paused. Your layout stays locked.")) {
       this.lastWall = null;
     }
   }
@@ -321,17 +321,10 @@ export class App {
     }
   }
 
-  buy(type: StarterType): void {
-    if (this.act(buyStarter(this.state, type), `${META[type].name} purchased. Choose a cell for it.`)) {
+  buyShelf(type: ShelfType): void {
+    if (this.act(buyShelfModule(this.state, type), `${META[type].name} purchased. Choose a cell for it.`)) {
       this.ui.modal = null;
       this.beginPlacing(this.state.modules[this.state.modules.length - 1]!.id);
-    }
-  }
-
-  buyActivation(type: CoreActivationType): void {
-    if (this.act(buyCoreActivation(this.state, type), `${META[type].name} activated. Its focus tools are live.`)) {
-      this.ui.modal = "store";
-      this.render();
     }
   }
 
@@ -366,8 +359,8 @@ export class App {
     if (result.ok) {
       this.say(
         result.refund && result.refund > 0
-          ? `Combined into a stronger copy; ${result.refund} ν of the lower copy's upgrades refunded. Global progress is unchanged.`
-          : "Combined into a stronger copy. Global progress is unchanged.",
+          ? `Combined into a stronger copy; ${result.refund} ν of the lower copy's upgrades refunded.`
+          : "Combined into a stronger copy.",
       );
       this.save();
     } else {
@@ -378,21 +371,29 @@ export class App {
 
   select(id: string | null): void {
     this.ui.selected = this.ui.selected === id ? null : id;
+    this.ui.app = null;
     this.ui.placing = null;
+    this.render();
+  }
+
+  openApp(app: AppPanel): void {
+    this.ui.app = this.ui.app === app ? null : app;
+    this.ui.selected = null;
+    this.ui.placing = null;
+    this.render();
+  }
+
+  closeApp(): void {
+    this.ui.app = null;
+    this.ui.editingHabitId = null;
     this.render();
   }
 
   beginPlacing(id: string): void {
     this.ui.selected = id;
+    this.ui.app = null;
     this.ui.placing = id;
-    this.say("Choose a cell. Occupied gameplay modules swap; a spare core replaces its matching core.");
-    this.render();
-  }
-
-  beginCellPlacement(): void {
-    this.ui.placing = "cell";
-    this.ui.reshape = null;
-    this.say("Choose an outlined position for the new cell.");
+    this.say("Choose a cell. Occupied modules swap positions.");
     this.render();
   }
 
@@ -405,12 +406,6 @@ export class App {
     }
     if (ui.reshape) {
       this.stageReshape(pos);
-      return;
-    }
-    if (ui.placing === "cell") {
-      const result = placeCell(state, pos);
-      this.act(result, "A new cell is ready. Place a module to put it to work.");
-      if (state.cellTokens === 0) ui.placing = null;
       return;
     }
     if (ui.placing) {
@@ -442,7 +437,7 @@ export class App {
   addNote(text: string): void {
     const result = writeNote(this.state, text);
     if (result.ok) {
-      this.say("Noted. This session's practice counts toward the Notes burst.");
+      this.say("Noted.");
       this.save();
     } else {
       this.say(result.reason ?? "Cannot capture a note right now.");
@@ -507,7 +502,7 @@ export class App {
     if (result.ok) {
       const goalNote =
         result.completions && result.completions > 0
-          ? ` A goal completed — its charge burst is banked for the next session.`
+          ? ` A goal completed.`
           : "";
       this.say(`Logged ${minutes} minutes of ${habit.name}. Development grows; no nous or charge is produced.${goalNote}`);
       this.save();
@@ -538,56 +533,6 @@ export class App {
     this.render();
   }
 
-  // ── Tasks (#7) ──────────────────────────────────────────────────────────
-
-  addTaskAction(text: string, size: TaskSize): void {
-    const result = createTask(this.state, text, size);
-    if (result.ok) {
-      this.say(`Task captured: ${text.trim().slice(0, 60)}. Its reward funds from practice allowance.`);
-      this.save();
-    } else {
-      this.say(result.reason ?? "Could not capture the task.");
-    }
-    this.render();
-  }
-
-  completeTaskAction(id: string): void {
-    const task = this.state.tasks.find((t) => t.id === id);
-    const result = completeTask(this.state, id);
-    if (result.ok) {
-      this.say(
-        result.paid
-          ? `"${task?.text ?? "Task"}" complete — reward paid from allowance.`
-          : `"${task?.text ?? "Task"}" complete — reward pending until allowance funds it.`,
-      );
-      this.save();
-    } else {
-      this.say(result.reason ?? "Could not complete the task.");
-    }
-    this.render();
-  }
-
-  renameTaskAction(id: string, text: string): void {
-    this.ui.editingTaskId = null;
-    const result = renameTask(this.state, id, text);
-    this.say(result.ok ? "Task updated." : result.reason ?? "Could not update the task.");
-    if (result.ok) this.save();
-    this.render();
-  }
-
-  deleteTaskAction(id: string): void {
-    const task = this.state.tasks.find((t) => t.id === id);
-    const result = deleteTask(this.state, id);
-    if (result.ok) {
-      const note = task?.done && !task?.paid ? " Its unfunded reward was forfeited." : "";
-      this.say(`Task removed.${note}`);
-      this.save();
-    } else {
-      this.say(result.reason ?? "Could not remove the task.");
-    }
-    this.render();
-  }
-
   chooseCandidate(offerId: string, candidateId: string): void {
     const offer = this.state.bankedRolls.find((o) => o.id === offerId);
     const candidate = offer?.candidates.find((c) => c.id === candidateId);
@@ -608,13 +553,11 @@ export class App {
   cancelPlacing(): void {
     const id = this.ui.placing;
     this.ui.placing = null;
-    if (id && id !== "cell") {
+    if (id) {
       const module = this.state.modules.find((m) => m.id === id);
       if (module) {
         this.say(module.pos === null ? `${META[module.type].name} kept in inventory.` : `Move cancelled; ${META[module.type].name} stays deployed.`);
       }
-    } else {
-      this.say("Cell placement cancelled.");
     }
     this.render();
   }
@@ -628,14 +571,14 @@ export class App {
     }
     if (this.ui.managing) {
       const occupant = this.state.modules.find((m) => m.pos !== null && sameHex(m.pos, pos));
-      if (occupant && !isCore(occupant)) this.returnToInventory(occupant.id);
-      else if (occupant) this.say("Required cores stay on the board — drag one between cells to move it instead.");
+      if (occupant) this.returnToInventory(occupant.id);
     }
   }
 
   startManaging(): void {
     this.ui.managing = true;
     this.ui.selected = null;
+    this.ui.app = null;
     this.ui.placing = null;
     this.ui.reshape = null;
     this.say("Arranging: drag the raised tiles between cells or into the inventory. Done or Esc finishes.");
@@ -742,11 +685,6 @@ export class App {
   }
 
   openModal(kind: ModalKind): void {
-    if (kind === "store" && !this.state.storeOpened) {
-      this.say("The store opens after your first completed timed target.");
-      this.render();
-      return;
-    }
     this.ui.modal = kind;
     if (kind === "import") this.ui.importText = "";
     this.render();
@@ -781,17 +719,6 @@ export class App {
     this.devAdvance(Math.max(0, session.target - session.elapsed));
   }
 
-  devCharge(): void {
-    const time = deployedTime(this.state);
-    if (time && this.state.timeActive) {
-      time.bursts.push({ strength: 1, seconds: 60 });
-      this.say("Dev: granted 60s of strength-1 charge.");
-      this.render();
-    } else {
-      this.say("No active Time module.");
-    }
-  }
-
   devNous(): void {
     this.state.nous += 100;
     this.state.totalEarned += 100;
@@ -799,8 +726,8 @@ export class App {
     this.render();
   }
 
-  stats(): { charge: number; nous: number } {
-    return { charge: chargeSecondsRemaining(this.state), nous: wholeNous(this.state) };
+  stats(): { nous: number } {
+    return { nous: wholeNous(this.state) };
   }
 
   frontierCells(): Hex[] {
