@@ -1,55 +1,152 @@
 # FlowSynth
 
-FlowSynth is an incremental game in which real-life practices drive a configurable grid of modules.
+FlowSynth is an incremental game in which real-life practices drive a configurable hex board of modules — the board is the optimization game, and a console above it hosts the focus tools.
 
 ## Language
 
+### The board
+
+**Board**:
+The hex grid of modules where all nous production and charge production happen; sessions run it automatically. The board may read focus state as inputs to module effects, but no console resource ever crosses onto it.
+
+**Cell**:
+One hexagonal place on the board. Cells are bought with nous on a geometric scaler over total cells bought, then placed and reshaped in upgrade mode on a connected board.
+
 **Module**:
-A unit occupying one cell on the hex grid, with gameplay effects and, in many cases, a connection to a real-life practice or supporting interaction.
+A unit occupying one cell on the board, with gameplay effects derived from its category and, in many cases, a connection to a real-life practice or supporting interaction.
+
+**Module category**:
+The function level of a board module — synthesizer, generator, infusor, or forge at launch. Category carries the module's hue.
 
 **Module type**:
-A specific module design, such as Additive Synthesizer or Conditional Synthesizer, rather than a broad functional category such as synthesizer. Forge choices contain distinct module types; different types may share the same function.
+A specific module design within a category, such as Additive Synthesizer or the basic generator, carrying its own glyph and nameplate. Forge choices contain distinct module types; different types may share the same category.
 
-**Flow session**:
-A period of real-life practice during which the grid runs automatically and the interface supports focus activities such as taking notes.
+**Chargeable module**:
+A supertype family above the category level whose members accumulate received charge toward thresholds that produce effects; the threshold fill is the family's shared rendering trait. The Forge is the launch instance. Continuous-charge categories (synthesizer, infusor) use received charge as continuous empowerment instead.
 
-**Upgrade mode**:
-The period between flow sessions when the player configures and upgrades the grid while its charge state is paused and no production occurs.
+**Carrier**:
+The unique granted origin module that plays the formula's carrier role; pinned to the origin cell, immovable and unsellable, wearing white. All other synthesizers are strictly harmonics.
+_Avoid_: starter synth
+
+**Pitch**:
+A synthesizer's harmonic number, equal to its hex distance from the Carrier plus one.
+
+**Chord pair**:
+Two adjacent synthesizers at consecutive pitches; each pair multiplies the composite by a small bonus, stacking multiplicatively and uncapped. Identical pitches add amplitude without forming a chord; skipped pitches are legal but chordless.
+
+**Named chord**:
+A just-intonation chord recognized over a connected cluster of adjacent synthesizers — at launch: octave 1:2, fifth 2:3, major triad 4:5:6, and blues triad 5:6:7. A named chord's term replaces its member pairs' bonuses; overlapping named chords stack multiplicatively.
+
+### Resources and production
+
+**Nous**:
+The provisional name for the game's main progression resource, spent on permanent upgrades. It is produced only by the board formula.
+
+**Nous production rate**:
+The single final nous-per-second output: `composite × empowerment × achievementBoost`. Modules contribute terms to this shared rate rather than producing independent timed payouts.
+
+**Composite**:
+The board's summed and chord-multiplied amplitude: the Carrier plus all harmonic terms, times every chord term.
+
+**Harmonic term**:
+A synthesizer's contribution to the composite — its amplitude at its pitch, plus a per-chord-pair bonus for Conditional types.
+
+**Synthesizer**:
+A board module contributing a harmonic term to the composite, whose effect is empowered while it receives charge. Synthesizers never produce charge.
+_Avoid_: Synth (in domain documentation)
+
+**Charge**:
+A habit-independent resource produced by generators that empowers or charges other modules; its state is preserved between flow sessions.
+
+**Generator**:
+A board module that produces charge. Remaining output belongs to the generator and follows it when moved. The launch generators are the basic generator and the focus-keyed generator.
+
+**Charge window**:
+The charge budget banked at session end by the focus-keyed generator, sized as a fraction of that session's live practice time and spent as output during the next session's first minutes. Manual practice logs never create one.
+
+**Output strength**:
+The rate at which a generator delivers charge to each eligible adjacent module, without dividing output among neighbors. Strengths from simultaneously active generators add at each receiver.
+
+**Remaining duration**:
+The amount of live flow time for which a generator's output remains available; simultaneously active generators each use their own duration.
+
+**Charged empowerment**:
+An increase to a module's specified effect while receiving charge, increasing with received strength with diminishing returns. Its numerical curve remains to be balanced.
+
+**Infusor**:
+A board module that improves a specified effect of eligible adjacent modules, with its bonus strengthened while receiving charge.
+_Avoid_: Infuser
+
+### Quality and acquisition
+
+**Module upgrade**:
+A purchased increase to a module's core power, paid for with nous in upgrade mode.
+
+**Rarity**:
+A module quality shown as an engraved ring count and plate tint; it improves how purchased levels scale and strengthens secondary effects, rather than granting free levels.
+
+**Combination**:
+The consumption of two modules of the same type and rarity to produce one of the next rarity, retaining the higher input level and refunding the lower-level input's nous upgrade expenditure. The player chooses one input's secondary effects to retain with the new rarity's improvements.
+
+**Forge**:
+The launch chargeable module; it accumulates received charge toward thresholds that mint forge rolls.
+
+**Forge progress**:
+A player-wide meter to which deployed Forges contribute according to received charge and progress efficiency. Crossing its globally scaling threshold banks a roll and carries excess progress forward, independently of any individual Forge's identity.
+
+**Forge roll**:
+A charge-earned choice of one module from three generated candidates; unchosen candidates disappear without consolation resources.
+
+**Catalog**:
+The permanent upgrade-mode purchase surface: starter-shelf offers while available, cells, and module upgrades.
+
+**Starter shelf**:
+The catalog's one-time guaranteed offers — a Forge, one basic generator, and one infusor — hidden once acquired. It completes the launch category landscape; everything else comes from rolls.
+
+### The console and focus apps
+
+**Console**:
+The surface structurally above the board, carrying the Enter/Exit main switch, clock, pause, one tile per focus app with its state LED, the status strip, the nous balance, and the rung telegraph. The board never moves or dims while the console is in use.
+
+**Focus app**:
+A fixed-function instrument hosted by the console — Habit, Time, Notes, and Goals at launch. Apps never grant, produce, or spend nous or charge; board modules may read their state as effect inputs.
+
+**App activation**:
+The permanent, player-wide unlock that enables a focus app, bought from the activation ladder and separate from anything the board sells.
+
+**Activation ladder**:
+The shared, scaling price sequence for app activations with free order — each rung costs more than the last regardless of which app it opens, and rung one sits below the shelf floor.
+
+**Console long goal**:
+A hand-paced, one-at-a-time purchase beat for a console upgrade such as goal capacity; priced past the current build-out, gated behind its app's activation, and rendered as a dashed strip in the owning app's panel.
 
 **Habit**:
-A repeatable real-life practice, such as piano or cooking, that develops through live or manually logged practice time and can be selected for a flow session. Its development unlocks habit-specific customization options, separate from nous-funded Habit module upgrades.
+A repeatable real-life practice, such as piano or cooking, that develops through live or manually logged practice time and can be selected for a flow session. Its development unlocks habit-specific customization options and is separate from nous.
 
-**Habit module**:
-A module through which the player selects one active habit for a session. Its upgrades and rarity are separate from the selected habit's development.
+**Habit app**:
+The always-free focus app through which the player selects the active habit for a session, or practices unstructured.
 
-**Required module**:
-A core module type with exactly one deployed copy that must remain on the board, freely movable during upgrade mode; inactive core modules reserve their cells without providing effects. Enter/Exit Flow, Time, Habit, Goals, Notes, and Tasks are required types, and duplicate copies may be held in inventory.
+**Time app**:
+The focus app providing planned targets and timing tools; it auto-activates after the first session and has no economy coupling.
 
-**Core activation**:
-The permanent player-wide unlock that enables a core module type, separate from obtaining copies of it. Inactive copies provide no effects and neither receive nor produce charge; any previously held charge remains frozen until activation.
+**Planned target**:
+A practice duration or milestone set within the Time app that a session can aim at and hit; hits are recorded in the session summary.
 
-**Goal module**:
-The unique required module in which the player tracks goals, with capacity increased through goal-slot upgrades rather than additional Goal modules.
+**Notes app**:
+The focus app for recording notes during a flow session. Notes carry no charge or economy effect.
+
+**Goals app**:
+The focus app for tracking goals; completion is the tracking itself, surfaced in the session summary. Its capacity grows through console long goals.
 
 **Goal**:
 A practice condition to fulfill, such as practicing piano for twenty minutes or practicing four specified habits in a day, accruing progress only while active. Goals may qualify practice by habit or other criteria, and a session may advance several goals.
 _Avoid_: Task
 
 **Goal slot**:
-Capacity for one tracked goal within the Goal module; available slots limit the number of goals the player can track.
+Capacity for one tracked goal within the Goals app; available slots limit the number of goals the player can track.
 
-**Task**:
-A concrete action whose size is estimated and whose completion is reported by the player, initially intended to be bite-sized. Tasks can be created or completed at any time.
-_Avoid_: Goal
-
-**Task module**:
-The unique required module for capturing tasks and recognizing their completion, with unrestricted task capture and size-based rewards limited by practice time.
-
-**Task reward allowance**:
-A player-wide allowance earned through live flow-session time and consumed by task rewards according to estimated task size, carrying across habits and sessions without a cap or expiry. All task sizes share it; manual practice logs do not earn it, and no task-specific working status is required.
-
-**Pending task reward**:
-A reward for an already completed task that waits for full funding from task reward allowance in completion order. Task completion is recorded immediately regardless of available allowance.
+**Goal template**:
+A configurable definition of valid practice conditions within the Goals app; players select habits and targets within the template.
 
 **Recurring goal**:
 A goal that retains its slot and resets on its configured schedule, awarding completion once per occurrence.
@@ -60,79 +157,59 @@ A goal that rewards completion once and remains completed in its slot until repl
 **Manual practice log**:
 A player-reported record of practice outside a running session that can satisfy goal conditions without retroactively producing nous or simulating charge activity.
 
-**Enter/Exit Flow module**:
-The module used to start and end flow sessions, supplying baseline nous production while flow is live without requiring charge.
+### Sessions
 
-**Charge**:
-A habit-independent resource produced by module activations that empowers or charges other modules; its state is preserved between flow sessions.
+**Flow session**:
+A period of real-life practice during which the board runs automatically and the console supports focus activities such as taking notes.
 
-**Generator**:
-A module that produces charge, including modules that also serve a focus function. Remaining output belongs to the generator and follows it when moved.
-
-**Charged core bonus**:
-An improvement to a core module's contribution to nous production while it receives charge. It does not improve charge generation; generator and synthesizer functions are distinct capabilities of a module.
-
-**Charged empowerment**:
-An increase to a module's specified effect while receiving charge, increasing with received strength with diminishing returns. Its numerical curve remains to be balanced.
-
-**Output strength**:
-The rate at which a generator delivers charge to each eligible adjacent module, without dividing output among neighbors. Strengths from simultaneously active generators add at each receiver.
-
-**Remaining duration**:
-The amount of live flow time for which a generator's output remains available; simultaneously active generators each use their own duration.
-
-**Synthesizer**:
-A module contributing to the shared nous production formula, whose effect is empowered while it receives charge.
-_Avoid_: Synth (in domain documentation)
-
-**Nous production rate**:
-The single final nous-per-second output calculated from the combined Enter/Exit and additive synthesizer base contributions, then modified by production multipliers. Modules contribute terms to this shared rate rather than producing independent timed payouts.
-
-**Chargeable module**:
-A module that accumulates received charge toward thresholds that produce effects or rewards.
-
-**Stored charge**:
-Charge held by a receiving module, belonging to that module independently of its position on the grid.
-
-**Time module**:
-A module for session timing that contributes the same baseline running multiplier in timed and open-ended sessions and awards a duration-proportional charge burst once a planned target is reached. The multiplier is independent of planned duration and continues after the target until the session ends.
-
-**Notes module**:
-A required module for recording notes whose use qualifies session practice time for a charge burst banked at session end for the next session. Its bound is charge per minute of qualifying practice, increased by customization, rather than a per-session ceiling or a reward for entry count or first-note timing.
-
-**Goal template**:
-A configurable definition of valid practice conditions and their equipped benefit and completion-charge rules. Players select habits and targets within the template.
-
-**Completion bonus**:
-A reward for completing the planned session, withheld when the session ends early without removing production or habit progress already earned.
+**Unstructured practice**:
+Starting a flow session with no habit selected; available at every session start, accruing no habit development, and leaving nous production unaffected.
 
 **Open-ended session**:
-A flow session without a planned duration, earning progressive rewards without a completion bonus.
+A flow session without a planned duration.
 
 **Paused session**:
-A flow session whose elapsed time and grid activity are frozen while its starting configuration remains locked; resuming continues the same session.
+A flow session whose elapsed time and board activity are frozen while its starting configuration remains locked; resuming continues the same session.
 
-**Nous**:
-The provisional name for the game's main progression resource, spent on permanent module upgrades.
+**Upgrade mode**:
+The period between flow sessions when the player configures and upgrades the board and console while charge state is paused and no production occurs. It is the only window for all nous spending.
 
-**Module upgrade**:
-A purchased increase to a module's core power, paid for with nous.
+**Session summary**:
+The modal every flow session ends with in upgrade mode: the session's earned nous headline, practice minutes, the achieved rate with its breakdown, and any unlocks. It is the future home of session reflections.
 
-**Rarity**:
-A module quality that improves how purchased levels scale and strengthens secondary effects, rather than granting free levels.
+**Practice-minute countdown**:
+The affordability estimate on upgrade-mode purchase surfaces, projecting the current board's next-session rate ("in ~3:40 of practice"); hidden when already affordable or when no rate exists. Never shown in-session or in the summary.
 
-**Combination**:
-The consumption of two modules of the same type and rarity to produce one of the next rarity, retaining the higher input level and refunding the lower-level input's nous upgrade expenditure. The player chooses one input's secondary effects to retain with the new rarity's improvements.
+### Progression
 
-**Infusor**:
-A module that improves a specified effect of eligible adjacent modules, with its bonus strengthened while receiving charge.
-_Avoid_: Infuser
+**Arete**:
+The resource minted when the Arete accumulator fills. What mints it in quantity and what it spends on are prestige design, not yet decided.
 
-**Forge roll**:
-A charge-earned choice of one module from three generated candidates; unchosen candidates disappear without consolation resources.
+**Arete accumulator**:
+The status monitor's log-scale fill on lifetime total nous earned toward the horizon line; its decade graduations are visible but inert.
 
-**Forge progress**:
-A player-wide meter to which deployed Forges contribute according to received charge and progress efficiency. Crossing its globally scaling threshold banks a roll and carries excess progress forward, independently of any individual Forge's identity.
+**Horizon line**:
+The Arete accumulator's cap — the first prestige threshold — with a reserved, inert prestige button beneath it at launch.
 
-**Expansion progress**:
-A player-wide meter to which deployed expanders contribute charge toward the next cell unlock. The next cost scales with total expansion earned, rather than resetting for each expander.
+**Status monitor**:
+The full-width rail beneath the board carrying exactly three elements: the live formula chip, the Forge progress meter, and the Arete accumulator.
+
+**Achievement**:
+A named feat that accelerates but never gates progress; each adds into the global achievementBoost term of the nous rate. Detection is live, storage is the v5 save's `id → unlockedAt` map. "Feat" is flavor individual names may carry, never a second term.
+
+### Deferred vocabulary
+
+The Tasks console app ships post-launch; its terms below stand as designed (ADR-0005) and join the activation ladder when built.
+
+**Task**:
+A concrete action whose size is estimated and whose completion is reported by the player, initially intended to be bite-sized. Tasks can be created or completed at any time.
+_Avoid_: Goal
+
+**Task app**:
+The planned future focus app for capturing tasks and recognizing their completion, with unrestricted task capture and size-based rewards limited by practice time.
+
+**Task reward allowance**:
+A player-wide allowance earned through live flow-session time and consumed by task rewards according to estimated task size, carrying across habits and sessions without a cap or expiry. All task sizes share it; manual practice logs do not earn it, and no task-specific working status is required.
+
+**Pending task reward**:
+A reward for an already completed task that waits for full funding from task reward allowance in completion order. Task completion is recorded immediately regardless of available allowance.
