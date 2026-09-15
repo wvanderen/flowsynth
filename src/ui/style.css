@@ -385,6 +385,9 @@ body.live .grid-overview { opacity: 0.75; }
 .hex { fill: #232923; stroke: #54604c; stroke-width: 1; transition: stroke 0.2s, fill 0.2s; }
 .hex.future { fill: transparent; stroke: #4a544a; stroke-dasharray: 5 4; }
 .hex.target { stroke: var(--accent); stroke-width: 2; fill: #2a3125; }
+/* A frontier hex while a cell purchase is armed: solid, inviting, priced. */
+.hex.buy-here { fill: #26302a; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.hex.buy-here:hover { fill: #2c382f; }
 .hex.selected { stroke: var(--accent); stroke-width: 2.5; }
 .hex.charged { stroke: var(--charge); fill: #1f2b27; }
 .hex.dispensing { stroke: var(--amber); fill: #3b3021; stroke-width: 2; }

@@ -118,6 +118,9 @@ export interface GameState {
   totalEarned: number;
   modules: ModuleInstance[];
   cells: Hex[];
+  // Total cells ever bought (§3): the geometric cell-price scaler counts
+  // purchases, never the current board size reshaping may rearrange.
+  cellsBought: number;
   forge: Meter;
   // The charge window (§2.3): remaining output seconds banked at session
   // end by the focus-keyed generator rule, spent as that generator's output

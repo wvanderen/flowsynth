@@ -1,6 +1,6 @@
 import { BALANCE, NEXT_RARITY } from "./constants";
-import { deployedAt, findModule, levelCost, wholeNous } from "./economy";
-import { hexKey, isConnected, sameHex } from "./hex";
+import { cellCost, deployedAt, findModule, levelCost, wholeNous } from "./economy";
+import { adjacent, hexKey, isConnected, sameHex } from "./hex";
 import { createModule, isCarrier } from "./state";
 import { logSessionPractice } from "./habits";
 import { rollGoalOccurrences } from "./goals";
@@ -67,6 +67,21 @@ export function buyShelfModule(state: GameState, type: ShelfType): ActionResult 
   state.nous -= price;
   state.purchased[type] = true;
   state.modules.push(createModule(state, type, "common"));
+  return ok;
+}
+
+// Cells (ADR-0013): direct nous purchases, bought and placed in upgrade
+// mode. A new cell must extend the connected frontier, so the board grows
+// without ever disconnecting; reshaping stays the count-preserving rule.
+export function buyCell(state: GameState, pos: Hex): ActionResult {
+  if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
+  if (state.cells.some((c) => sameHex(c, pos))) return fail("That cell is already part of the board.");
+  if (!state.cells.some((c) => adjacent(c, pos))) return fail("New cells must touch the board.");
+  const price = cellCost(state.cellsBought);
+  if (wholeNous(state) < price) return fail("Not enough whole nous.");
+  state.nous -= price;
+  state.cells.push(pos);
+  state.cellsBought++;
   return ok;
 }
 
