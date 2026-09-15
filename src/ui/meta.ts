@@ -3,7 +3,7 @@ import type { ModuleType, Rarity } from "../engine/types";
 export const META: Record<ModuleType, { name: string; short: string; role: string }> = {
   carrier: { name: "Carrier", short: "Carrier", role: "The granted origin" },
   additive: { name: "Additive Synth", short: "Additive", role: "Harmonic term" },
-  conditional: { name: "Conditional Synth", short: "Conditional", role: "Harmonic term" },
+  conditional: { name: "Conditional Synth", short: "Conditional", role: "Amplitude + chord bonus" },
   generator: { name: "Generator", short: "Generator", role: "Produces charge" },
   focusKeyed: { name: "Focus-Keyed Generator", short: "Focus-Gen", role: "Charge from focus" },
   infusor: { name: "Infusor", short: "Infusor", role: "Neighbor bonuses" },

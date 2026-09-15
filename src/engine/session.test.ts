@@ -90,8 +90,9 @@ describe("session rules", () => {
     endSession(s);
 
     // Same session shape with an added harmonic: production grows only
-    // because the board grew.
-    give(s, "additive", hex(1, 0));
+    // because the board grew. (2,0) is pitch 3 — chordless, so the arithmetic
+    // stays pure amplitude; the octave lesson lives in chords.test.ts.
+    give(s, "additive", hex(2, 0));
     startSession(s, 600);
     expect(earned(s, 600)).toBeCloseTo((0.1 + 0.05) * 600, 6);
   });

@@ -4,7 +4,10 @@ export interface Balance {
   carrierRate: number;
   additiveRate: number;
   conditionalRate: number;
+  conditionalPairBonus: number;
+  pairBonus: number;
   infusorBonus: number;
+  achievementBoost: number;
   upgradeFirstCost: number;
   upgradeCostGrowthNumerator: bigint;
   upgradeCostGrowthDenominator: bigint;
@@ -22,7 +25,11 @@ export const BALANCE: Balance = {
   carrierRate: 0.1,
   additiveRate: 0.05,
   conditionalRate: 0.05,
+  conditionalPairBonus: 0.1,
+  pairBonus: 0.1,
   infusorBonus: 0.2,
+  // ADR-0015's global achievement term: unity until achievements land.
+  achievementBoost: 1,
   upgradeFirstCost: 10,
   upgradeCostGrowthNumerator: 8n,
   upgradeCostGrowthDenominator: 5n,
@@ -33,6 +40,24 @@ export const BALANCE: Balance = {
   forgeInitialThreshold: 60,
   forgeThresholdGrowth: 1.5,
 };
+
+// The launch chord vocabulary (§4, issue #29): consecutive-pitch runs,
+// recognized over free-floating connected clusters. A named chord's term
+// replaces its member pairs' bonuses; overlapping named chords (a 4·5·6·7
+// run) stack multiplicatively. The consecutive-run law makes the textbook
+// minor triad 10:12:15 geometrically impossible; 5:6:7 is the minor-ish run.
+export interface NamedChordDef {
+  name: string;
+  pitches: number[];
+  bonus: number;
+}
+
+export const NAMED_CHORDS: readonly NamedChordDef[] = [
+  { name: "Octave", pitches: [1, 2], bonus: 0.15 },
+  { name: "Fifth", pitches: [2, 3], bonus: 0.3 },
+  { name: "Major triad", pitches: [4, 5, 6], bonus: 0.5 },
+  { name: "Blues triad", pitches: [5, 6, 7], bonus: 0.75 },
+];
 
 export const CATEGORY_OF: Record<ModuleType, Category> = {
   carrier: "synthesizer",

@@ -6,7 +6,9 @@ import { fresh, give } from "./fixtures";
 import { hex } from "./hex";
 
 // Fresh board: the Carrier at (0,0), empty cells (1,0) and (0,-1). The
-// carrier term alone is the whole formula at game start (§4).
+// carrier term alone is the whole formula at game start (§4). Ring-2 cells
+// like (2,0) sit two hexes out — pitch 3, chordless — keeping the amplitude
+// tests free of chord terms; chords get their own suite (chords.test.ts).
 const CARRIER = 0.1;
 
 describe("board production model", () => {
@@ -18,22 +20,23 @@ describe("board production model", () => {
 
   it("harmonic terms add to the composite", () => {
     const s = fresh();
-    give(s, "additive", hex(1, 0));
-    give(s, "conditional", hex(0, -1));
+    give(s, "additive", hex(2, 0));
+    give(s, "conditional", hex(2, -1));
+    // Both pitch 3; adjacent at the same pitch, so amplitude only — no chord.
     expect(computeRates(s, true).rate).toBeCloseTo(CARRIER + 0.05 + 0.05, 9);
   });
 
   it("amplitude scales with level and rarity", () => {
     const s = fresh();
-    const additive = give(s, "additive", hex(1, 0), 2);
+    const additive = give(s, "additive", hex(2, 0), 2);
     additive.rarity = "uncommon";
     expect(computeRates(s, true).rate).toBeCloseTo(CARRIER + 0.05 * 1.25 ** 2, 9);
   });
 
   it("infusors add local bonuses to neighbors", () => {
     const s = fresh();
-    give(s, "additive", hex(1, 0));
-    give(s, "infusor", hex(2, 0));
+    give(s, "additive", hex(2, 0));
+    give(s, "infusor", hex(2, -1));
     // The infusor touches the additive but not the carrier.
     expect(computeRates(s, true).rate).toBeCloseTo(CARRIER + 0.05 * (1 + 0.2), 9);
   });

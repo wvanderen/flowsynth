@@ -2,7 +2,7 @@ import { chargedFactor, computeRates, deployed, deployedGenerators, levelCost, m
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
-import { BALANCE, CATEGORY_OF, NEXT_RARITY } from "../engine/constants";
+import { BALANCE, CATEGORY_OF, EPS, NEXT_RARITY } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
 import { canWriteNotes } from "../engine/notes";
 import { activeHabit } from "../engine/habits";
@@ -47,6 +47,10 @@ function stat(label: string, value: string): string {
 
 function statLive(id: string, label: string, value: string): string {
   return `<div class="stat-row"><span>${label}</span><span class="mono" data-live="${id}">${value}</span></div>`;
+}
+
+function times(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
 
 export function render(app: App): void {
@@ -208,11 +212,19 @@ function renderFormula(app: App): void {
     for (const c of snapshot.contributions.values()) if (c.type === type) total += c.value;
     return total;
   };
+  const chordLines = [
+    ...snapshot.namedChords.map((c) => `${c.name} ×${fmt(1 + c.bonus, 2)}`),
+    ...(snapshot.pairs.length > 0 ? [`${times(snapshot.pairs.length, "chord pair")} ×${fmt(1 + BALANCE.pairBonus, 2)} each`] : []),
+  ];
+  const chordLabel =
+    chordLines.length > 0 ? chordLines.join(" · ") : "no chords yet — adjacent synthesizers one pitch apart chord";
+  const chargeActive = snapshot.empowerment > 1 + EPS;
   host.innerHTML = `
-    <div class="rate-equation">
+    <div class="rate-equation" title="Chords: ${chordLabel}${chargeActive ? ` · charge empowerment ×${fmt(snapshot.empowerment, 2)}` : ""}">
       ${term("carrier", sum("carrier"))}
       <span class="op">+</span>${term("additive", sum("additive"))}
       <span class="op">+</span>${term("conditional", sum("conditional"))}
+      <span class="op">×</span><span class="formula-term" title="${chordLabel}" aria-label="Chord terms: ×${fmt(snapshot.chordMultiplier, 2)}">χ ${fmt(snapshot.chordMultiplier, 2)}</span>
       <span class="op">=</span><strong>${fmt(snapshot.rate)} ν/s</strong>
     </div>`;
 }
@@ -345,7 +357,9 @@ function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderCont
   } else if (module.type === "infusor") {
     sub = `+${fmt(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(ctx.snapshot.chargeStrength.get(module.id) ?? 0), 0)}%`;
   } else {
-    sub = `+${fmt(contribution?.value ?? 0)} ν/s`;
+    // Synthesizers wear their pitch: hex distance from the Carrier + 1.
+    const pitch = contribution?.pitch ?? null;
+    sub = `${pitch !== null ? `P${pitch} ` : ""}+${fmt(contribution?.value ?? 0)} ν/s`;
   }
 
   const name = META[module.type].short;
@@ -629,9 +643,9 @@ function renderOverview(app: App, host: HTMLElement): void {
       }</p>
       <section class="overview-formula">
         <h3>Nous / second</h3>
-        <p>Carrier + harmonic terms, each scaled by level, rarity, adjacent infusors, and charge empowerment.</p>
-        <p>Generators produce charge during flow: adjacent synthesizers and infusors are empowered continuously; the Forge banks the charge toward its next roll.</p>
-        <p>Charge factor = 1 + strength / (1 + strength). Rarity growth per level: common ×1.2 · uncommon ×1.25 · rare ×1.3.</p>
+        <p>rate = (carrier + Σ harmonics) × Π chord terms × charge empowerment. Pitch is hex distance from the Carrier + 1; adjacent synthesizers one pitch apart multiply the composite by a chord-pair bonus — stacking is multiplicative and uncapped.</p>
+        <p>Named chords — octave 1:2, fifth 2:3, major triad 4:5:6, blues triad 5:6:7 — replace their member pairs' bonuses with one bigger term, and overlaps stack. Conditionals add a bonus per chord pair they sing.</p>
+        <p>Generators produce charge during flow: adjacent synthesizers and infusors are empowered continuously; the Forge banks the charge toward its next roll. Charge factor = 1 + strength / (1 + strength). Rarity growth per level: common ×1.2 · uncommon ×1.25 · rare ×1.3.</p>
       </section>
     </div>`;
 }
@@ -641,9 +655,9 @@ function effectDescription(module: ModuleInstance): string {
     case "carrier":
       return "The granted origin synthesizer. Pinned at the origin: it never moves, never combines, never leaves the board, and plays the formula's carrier term.";
     case "additive":
-      return "A plain harmonic term: adds production to the shared composite.";
+      return "A plain harmonic term: amplitude at its pitch. Adjacent synthesizers one pitch apart form chord pairs whose bonuses multiply the whole composite.";
     case "conditional":
-      return "A harmonic term whose chord behavior deepens as the formula grows. For now it adds its term like Additive.";
+      return "Amplitude at its pitch, plus a bonus for every chord pair it participates in — a named chord counts once, however many of its pairs the module shares in.";
     case "generator":
       return "Produces charge during flow. Adjacent synthesizers and infusors are empowered continuously; the Forge banks charge toward its next roll.";
     case "focusKeyed":
@@ -666,7 +680,7 @@ function nominalEffect(module: ModuleInstance, charged: boolean): { text: string
     case "additive":
       return { text: `+${fmt(BALANCE.additiveRate * power * factor)} ν/s`, value: BALANCE.additiveRate * power * factor };
     case "conditional":
-      return { text: `+${fmt(BALANCE.conditionalRate * power * factor)} ν/s`, value: BALANCE.conditionalRate * power * factor };
+      return { text: `+${fmt(BALANCE.conditionalRate * power * factor)} ν/s · +${fmt(100 * BALANCE.conditionalPairBonus, 0)}% per chord pair`, value: BALANCE.conditionalRate * power * factor };
     case "generator":
     case "focusKeyed":
       return { text: `${fmt(power, 3)} charge strength while flowing`, value: power };
@@ -718,7 +732,18 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       ${stat("Bonus to adjacent", `+${fmt(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(chargeStrength), 1)}%`)}
       ${stat("Charge", chargeStrength > 0 ? `strength ${fmt(chargeStrength, 2)}` : "none")}`;
   } else {
+    const named = preview.namedChords.filter((c) => c.moduleIds.includes(module.id)).map((c) => c.name);
+    const pairCount = preview.pairs.filter((p) => p.a === module.id || p.b === module.id).length;
+    const chordSummary =
+      named.length > 0
+        ? `${named.join(" + ")}${pairCount > 0 ? ` + ${times(pairCount, "pair")}` : ""}`
+        : pairCount > 0
+          ? times(pairCount, "chord pair")
+          : "chordless";
+    const pitch = contribution?.pitch ?? null;
     chargeStats = `
+      ${stat("Pitch", pitch !== null ? `P${pitch} — ${pitch - 1} hex${pitch === 2 ? "" : "es"} from the Carrier` : "—")}
+      ${stat("Chords", chordSummary)}
       ${stat("Charge", chargeStrength > 0 ? `strength ${fmt(chargeStrength, 2)} (×${fmt(chargedFactor(chargeStrength), 3)})` : "none")}`;
   }
 

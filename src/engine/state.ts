@@ -52,6 +52,9 @@ export function createModule(state: GameState, type: ModuleType, rarity: Rarity)
   };
 }
 
+// The Carrier pins the grid's origin cell: it anchors every pitch (§4).
+export const ORIGIN = hex(0, 0);
+
 // The Carrier is the unique granted synthesizer: pinned, immovable,
 // unsellable (§2.1).
 export function isCarrier(module: ModuleInstance): boolean {

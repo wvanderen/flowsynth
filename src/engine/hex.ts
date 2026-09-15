@@ -21,6 +21,12 @@ export function hexKey(h: Hex): string {
   return `${h.q},${h.r}`;
 }
 
+export function hexDistance(a: Hex, b: Hex): number {
+  const dq = a.q - b.q;
+  const dr = a.r - b.r;
+  return (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2;
+}
+
 export function adjacent(a: Hex, b: Hex): boolean {
   return DIRECTIONS.some(([dq, dr]) => a.q + dq === b.q && a.r + dr === b.r);
 }
