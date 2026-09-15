@@ -1,0 +1,23 @@
+# Move focus apps off the board into a console
+
+The board-and-core model put six focus functions on the hex board as pinned, unique required modules. The redesign map's centerpiece decision (issue #10, branch C, 2026-09-14) moves every focus function off the board: the board becomes purely the optimization game, and focus lives in the **console** — the top bar promoted into a surface structurally above the game UI. The boundary rule between console and board was settled by issue #28 (2026-09-15).
+
+## Decision
+
+- **The console** carries the session controls (the Enter/Exit main switch, clock, pause), one tile per focus app — greyed until activated, with a state LED — the status strip, the nous balance, and the activation-ladder rung telegraph. App panels open as popovers anchored beneath their tiles; the board never moves, reflows, or dims while the console is in use (issue #20; a centered faceplate modal is the noted future-mobile alternative, not this effort's shape).
+- **Focus apps — Habit, Time, Notes, Goals — are unlock-only, fixed-function instruments.** No power-curve levels. A small curated set of permanent nous upgrades (goal capacity and friends) is sold where apps unlock, hand-paced as **console long goals**: one at a time at named beats, priced past the current build-out, never grindable back-to-back, and gated behind the app's activation. Tasks joins the console when it is designed.
+- **App activation** is ADR-0011's economy repointed at the console: permanent, player-wide unlocks bought on a shared scaling ladder with free order (ADR-0013). Habit is free and always on; Time auto-activates after the first session; Notes and Goals are the launch rungs in either order.
+- **The boundary rule (issue #28): board modules may read focus app state as inputs to module effects** — practice time, a note written, a planned target hit, a goal completed, the active habit — but resources never cross the seam. Console apps never grant, produce, or spend nous or charge; all charge is generator output, all nous is board production.
+- **Launch ships one focus-keyed generator** so the seam is real from the start: ending any session banks a **charge window** of `fraction × that session's live practice time`, spent as the generator's output during the next session's first minutes. Keyed on live practice time only — manual practice logs never simulate charge activity. Categorically a generator: LED green family, generator glyph (ADR-0016).
+- **Session rewards are retired**: no completion bonus, no progressive rewards. Session earnings are exactly what the board produced during practice; the session summary modal and the achievement channel carry the celebration job the bonus used to do.
+- **Category landscape (issue #22): board modules are module → category → module type.** Launch categories are exactly synthesizer, generator, infusor, forge. **Chargeable is a supertype family above the category level**; the Forge is its sole launch instance, and the threshold fill is the family's shared rendering trait. Continuous-charge categories (synthesizer, infusor) use received charge as continuous empowerment instead.
+
+## Consequences
+
+- **ADR-0003** is superseded in its required-uniqueness, pinning, and accompanying-cell provisions; its board-reshaping and cell-banking rules survive (cell supply itself is re-founded by ADR-0013).
+- **ADR-0007** is superseded in its core preallocation, board-resident locked cores, and starter store; its guaranteed-initial-access rationale survives as the starter shelf (ADR-0013).
+- **ADR-0011**'s activation economy survives repointed at focus apps; its store prices and grandfathering provision are superseded (ADR-0013, ADR-0017).
+- **ADR-0001**'s session-reward provisions (completion bonus, progressive rewards, and the Notes/Time production identities) are superseded; its focus protection and charge-pause provisions stand, and its protection now extends to all purchasing (ADR-0013).
+- **ADR-0002**'s charge-preservation rules stand; its "dedicated generators deferred" clause is overtaken — launch ships the basic generator and the focus-keyed generator — and its expansion exceptions retire with the expansion meter (ADR-0013).
+- **ADR-0005** stands untouched; the Tasks app it describes remains deferred breadth and joins the activation ladder when built.
+- **Retired terms**: required module, core module, Enter/Exit Flow module, core activation (→ app activation), charged core bonus. Enter/Exit survives as the console's main switch, not a module. The glossary rewrite lands with the redesign spec (issue #19).
