@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PROTOTYPE — Chord geometry: distance-field board vs isomorphic lattice</title>
+<style>
+  :root {
+    --bg: #12142a;
+    --panel: #1a1d38;
+    --ink: #e8e9f5;
+    --dim: #9a9cb8;
+    --line: #2e3157;
+    --synth: #6360d4;
+    --carrier: #f4f4f8;
+    --octave: #8f8ce8;
+    --fifth: #1f95b5;
+    --major: #bc9239;
+    --blues: #cc603d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.55 ui-sans-serif, system-ui, sans-serif;
+    padding: 24px;
+  }
+  .proto-tag {
+    display: inline-block;
+    background: var(--blues);
+    color: #fff;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-bottom: 8px;
+  }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .lede { color: var(--dim); max-width: 860px; margin-bottom: 20px; }
+  .cols { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+    flex: 1 1 480px;
+    min-width: 440px;
+  }
+  .panel h2 { font-size: 16px; margin-bottom: 2px; }
+  .panel .sub { color: var(--dim); font-size: 13px; margin-bottom: 12px; }
+  .toggles { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .toggles button {
+    font: 12px/1 ui-sans-serif, system-ui, sans-serif;
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--dim);
+    cursor: pointer;
+  }
+  .toggles button.on { color: #fff; border-color: currentColor; }
+  svg { display: block; width: 100%; height: auto; }
+  .readout {
+    font: 12px/1.4 ui-monospace, monospace;
+    color: var(--dim);
+    min-height: 2.8em;
+    margin-top: 8px;
+    padding: 6px 8px;
+    background: #101228;
+    border-radius: 5px;
+  }
+  .fact {
+    margin-top: 12px;
+    font-size: 13px;
+    border-left: 3px solid var(--major);
+    padding: 6px 10px;
+    background: #101228;
+    border-radius: 0 5px 5px 0;
+  }
+  .legend { margin-top: 10px; font-size: 13px; display: grid; gap: 4px; }
+  .legend .row { display: flex; gap: 8px; align-items: baseline; }
+  .legend .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; transform: translateY(1px); }
+  .legend .ratio { font-family: ui-monospace, monospace; color: var(--dim); }
+  table { border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { background: #20233f; font-size: 13px; }
+  td:first-child { color: var(--dim); white-space: nowrap; }
+  .openq { max-width: 900px; margin-top: 24px; color: var(--dim); font-size: 13.5px; }
+  .openq strong { color: var(--ink); }
+  .cell-label { font: 600 12px ui-monospace, monospace; fill: var(--ink); pointer-events: none; }
+  .cell-faint { font: 500 10px ui-monospace, monospace; fill: #55587f; pointer-events: none; }
+  .chord-label { font: 700 12px ui-sans-serif, system-ui, sans-serif; pointer-events: none; }
+</style>
+</head>
+<body>
+<div class="proto-tag">Prototype — throwaway, answers one question</div>
+<h1>Chord geometry on the FlowSynth board</h1>
+<p class="lede">
+  Two ways a "named chord" could live on the hex grid, drawn with the same chords.
+  Panel A is the <strong>distance-field board</strong> (pitch = hex distance from the carrier + 1 — the decided,
+  prototyped law). Panel B is a <strong>Harmonic-Table-style isomorphic lattice</strong> (pitch fixed per cell,
+  shape = chord, movable). Hover cells in Panel A to inspect pitch and neighbors.
+</p>
+
+<div class="cols">
+  <div class="panel">
+    <h2>A — Distance-field board</h2>
+    <div class="sub">pitch = distance from the carrier + 1 · radius-6 board shown · toggle the chords</div>
+    <div class="toggles" id="togglesA"></div>
+    <svg id="svgA" viewBox="0 0 560 640"></svg>
+    <div class="readout" id="readoutA">hover a cell…</div>
+    <div class="legend" id="legendA"></div>
+    <div class="fact">
+      <strong>Geometric law:</strong> neighboring cells always sit one ring apart, so adjacent synths'
+      pitches always differ by exactly 1 — <em>every chord is a consecutive run</em> n : (n+1) : (n+2).
+      The familiar minor triad <strong>10:12:15 is geometrically impossible</strong> here (10→12 skips a
+      ring); the minor-ish consecutive run is <strong>5:6:7</strong>. Deep chords need deep boards: the
+      major triad lives at rings 3·4·5 — and only there.
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>B — Isomorphic lattice (comparison)</h2>
+    <div class="sub">pitch fixed per cell (octave-folded note names, schematic) · shape = chord, movable</div>
+    <svg id="svgB" viewBox="0 0 560 400"></svg>
+    <div class="legend">
+      <div class="row"><span class="swatch" style="background: var(--major)"></span><span><span class="ratio">C–E–G</span> — the major-triad wedge: root + up-right (major third) + down-right (fifth)</span></div>
+      <div class="row"><span class="swatch" style="background: var(--fifth)"></span><span><span class="ratio">G–B–D</span> — the <em>same shape</em>, slid across the lattice: a new key, same chord class</span></div>
+    </div>
+    <div class="fact">
+      <strong>What movable shapes cost:</strong> pitch becomes a property of <em>where</em> you buy, not
+      <em>how deep</em> — the cell economy can no longer gate harmonic depth, and every chord class is
+      available from the first ring. "The carrier as tonic" would need a new story too: on this lattice
+      it anchors one key out of many, rather than tuning the whole field.
+    </div>
+  </div>
+</div>
+
+<table>
+  <tr><th></th><th>A — Distance-field</th><th>B — Isomorphic</th></tr>
+  <tr><td>Pitch</td><td>earned: hex distance from the carrier</td><td>fixed: a property of the cell's position</td></tr>
+  <tr><td>Chord shape</td><td>bent paths across consecutive rings</td><td>compact movable glyphs</td></tr>
+  <tr><td>Chord key</td><td>fixed per class — the major triad is <em>always</em> 4:5:6</td><td>movable — same shape plays in any key</td></tr>
+  <tr><td>Tonic</td><td>tuning fork: sets every cell's pitch; chords float free of it</td><td>one root among many; "carrier as tonic" needs redefining</td></tr>
+  <tr><td>Board depth</td><td>gates harmonic depth — cells ↔ chords coupled</td><td>gates nothing — all chords reachable immediately</td></tr>
+  <tr><td>Settled decisions</td><td>opening economy, prototype, formula untouched</td><td>reworks the opening economy, the formula's depth coupling, and the board prototype</td></tr>
+</table>
+
+<div class="openq">
+  <strong>Open questions this sketch feeds (see the ticket):</strong>
+  must a chord connect back to the tonic (Panel A's floating blues triad asks exactly this)?
+  which consecutive runs get names at launch (octave, fifth, major triad, blues triad — note 10:12:15 is out)?
+  and do a named chord's member pairs still pay the anonymous pair bonus, or does the chord term replace them?
+</div>
+
+<script>
+(() => {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = id => document.getElementById(id);
+  const el = (tag, attrs, parent) => {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  };
+
+  // ---------- Panel A: distance-field board ----------
+  const SIZE = 22;
+  const RADIUS = 6;
+  const NEI = [[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]];
+  const hexDist = (q, r) => (Math.abs(q) + Math.abs(r) + Math.abs(q + r)) / 2;
+  const px = (q, r) => [280 + SIZE * Math.sqrt(3) * (q + r / 2), 320 + SIZE * 1.5 * r];
+  const hexPts = (cx, cy) => {
+    const pts = [];
+    for (let k = 0; k < 6; k++) {
+      const a = Math.PI / 180 * (60 * k + 30);
+      pts.push((cx + SIZE * Math.cos(a)).toFixed(1) + "," + (cy + SIZE * Math.sin(a)).toFixed(1));
+    }
+    return pts.join(" ");
+  };
+
+  // chords: cells are [q, r]; pitch = dist+1; labelPos pins the name tag
+  const CHORDS = {
+    octave: { color: "var(--octave)", name: "Octave 1:2", cells: [[0,0],[0,-1]], labelPos: [196, 236] },   // rings 0·1
+    fifth:  { color: "var(--fifth)",  name: "Fifth 2:3",  cells: [[1,0],[2,0]], labelPos: [420, 268] },    // rings 1·2
+    major:  { color: "var(--major)",  name: "Major triad 4:5:6", cells: [[3,0],[4,0],[4,1]], labelPos: [452, 412] },  // rings 3·4·5 bent
+    blues:  { color: "var(--blues)",  name: "Blues triad 5:6:7", cells: [[-4,0],[-5,0],[-5,-1]], labelPos: [128, 372] } // rings 4·5·6, floating
+  };
+
+  const layerBase = el("g", {}, svg("svgA"));
+  const layerChords = {}; // per chord, created lazily
+  const layerTop = el("g", {}, svg("svgA"));
+
+  const key = (q, r) => q + "," + r;
+  const cellMap = new Map();
+
+  for (let q = -RADIUS; q <= RADIUS; q++) {
+    for (let r = Math.max(-RADIUS, -q - RADIUS); r <= Math.min(RADIUS, -q + RADIUS); r++) {
+      const d = hexDist(q, r);
+      const [x, y] = px(q, r);
+      const light = 20 - d * 0.75;
+      const poly = el("polygon", {
+        points: hexPts(x, y),
+        fill: `hsl(243 32% ${light.toFixed(1)}%)`,
+        stroke: "#3a3e6b",
+        "stroke-width": 1
+      }, layerBase);
+      cellMap.set(key(q, r), { q, r, d, x, y, poly });
+
+      if (d === 0) {
+        el("text", { x, y: y + 4, "text-anchor": "middle", class: "cell-label", fill: "#12142a" }, layerTop)
+          .textContent = "1";
+        el("polygon", { points: hexPts(x, y), fill: "none", stroke: "var(--carrier)", "stroke-width": 2 }, layerTop);
+      }
+      // pitch ruler along the up-right spoke (k,-k)
+      if (q > 0 && q === -r && d >= 1) {
+        el("text", { x, y: y + 4, "text-anchor": "middle", class: "cell-label", fill: "#7d80a8" }, layerTop)
+          .textContent = String(d + 1);
+      }
+    }
+  }
+  // ruler caption
+  {
+    const [x, y] = px(4, -4);
+    el("text", { x, y: y - 30, "text-anchor": "middle", class: "cell-faint", fill: "#8b8eb4" }, layerTop)
+      .textContent = "pitch ruler →";
+    const [cx2, cy2] = px(0, 0);
+    el("text", { x: cx2 - 27, y: cy2 + 46, "text-anchor": "middle", class: "cell-faint", fill: "#b9bcd8" }, layerTop)
+      .textContent = "carrier · pitch 1";
+    el("text", { x: cx2 - 27, y: cy2 + 60, "text-anchor": "middle", class: "cell-faint", fill: "#8b8eb4" }, layerTop)
+      .textContent = "the tuning fork";
+  }
+
+  function drawChord(id) {
+    const c = CHORDS[id];
+    if (layerChords[id]) { layerChords[id].remove(); delete layerChords[id]; return; }
+    const g = el("g", {}, layerTop);
+    // connect member centers
+    for (let i = 0; i < c.cells.length - 1; i++) {
+      const [x1, y1] = px(...c.cells[i]);
+      const [x2, y2] = px(...c.cells[i + 1]);
+      el("line", { x1, y1, x2, y2, stroke: c.color, "stroke-width": 3 }, g);
+    }
+    // outline members
+    c.cells.forEach(([q, r]) => {
+      const [x, y] = px(q, r);
+      el("polygon", { points: hexPts(x, y), fill: "none", stroke: c.color, "stroke-width": 3 }, g);
+      const d = hexDist(q, r);
+      el("text", { x, y: y + 4, "text-anchor": "middle", class: "cell-label", fill: c.color.includes("var") ? getChordHex(c.color) : c.color }, g)
+        .textContent = String(d + 1);
+    });
+    // label
+    const [lx, ly] = c.labelPos || px(...c.cells[c.cells.length - 1]);
+    el("text", { x: lx, y: ly, "text-anchor": "middle", class: "chord-label", fill: getChordHex(c.color) }, g)
+      .textContent = c.name;
+    layerChords[id] = g;
+  }
+  const cssVar = v => v.replace("var(--", "").replace(")", "");
+  function getChordHex(v) {
+    const styles = getComputedStyle(document.documentElement);
+    return styles.getPropertyValue(cssVar(v)).trim() || "#fff";
+  }
+
+  // floating-chord annotation
+  {
+    const [x, y] = px(-5, 0);
+    const g = el("g", {}, layerTop);
+    el("path", {
+      d: `M ${x + 14} ${y + 30} Q ${x + 34} ${y + 58} ${x + 26} ${y + 84}`,
+      fill: "none", stroke: "#8b8eb4", "stroke-width": 1.5, "stroke-dasharray": "4 4"
+    }, g);
+    el("text", { x: x + 62, y: y + 104, "text-anchor": "middle", class: "cell-faint", fill: "#a3a6c9" }, g)
+      .textContent = "no synth path back to the tonic —";
+    el("text", { x: x + 62, y: y + 118, "text-anchor": "middle", class: "cell-faint", fill: "#a3a6c9" }, g)
+      .textContent = "is it still a chord?";
+  }
+
+  // hover inspect
+  const readout = document.getElementById("readoutA");
+  cellMap.forEach(c => {
+    c.poly.addEventListener("mouseenter", () => {
+      const p = c.d + 1;
+      const ns = NEI.map(([dq, dr]) => {
+        const n = cellMap.get(key(c.q + dq, c.r + dr));
+        return n ? p + 1 : null;
+      }).filter(Boolean);
+      cellMap.forEach(o => o.poly.setAttribute("stroke", "#3a3e6b"));
+      NEI.forEach(([dq, dr]) => {
+        const n = cellMap.get(key(c.q + dq, c.r + dr));
+        if (n) n.poly.setAttribute("stroke", "#e8e9f5");
+      });
+      readout.textContent = `ring ${c.d} · pitch ${p} · neighbors sing ${ns.join(", ")} — always ±1, so chord steps are always n:(n+1)`;
+    });
+  });
+
+  // toggles
+  const tog = document.getElementById("togglesA");
+  Object.entries(CHORDS).forEach(([id, c]) => {
+    const b = document.createElement("button");
+    b.textContent = c.name;
+    b.style.color = getChordHex(c.color);
+    b.className = "on";
+    b.onclick = () => { drawChord(id); b.classList.toggle("on"); };
+    tog.appendChild(b);
+    drawChord(id); // start all-on
+    b.classList.add("on");
+  });
+  // legend
+  const leg = document.getElementById("legendA");
+  Object.values(CHORDS).forEach(c => {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `<span class="swatch" style="background:${getChordHex(c.color)}"></span>` +
+      `<span><span class="ratio">${c.name}</span> — rings ${c.cells.map(([q,r]) => hexDist(q,r)).join("·")}</span>`;
+    leg.appendChild(row);
+  });
+
+  // ---------- Panel B: isomorphic lattice ----------
+  const SIZE_B = 26;
+  const NAMES = ["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+  const note = (i, j) => NAMES[((4 * i + 7 * j) % 12 + 12) % 12];
+  const pxB = (i, j) => [190 + SIZE_B * Math.sqrt(3) * (i + j / 2), 60 + SIZE_B * 1.5 * j];
+  const svgB = svg("svgB");
+  const WEDGES = [
+    { color: getChordHex2("var(--major)"), cells: [[0,0],[1,0],[0,1]], label: "C major" },
+    { color: getChordHex2("var(--fifth)"), cells: [[3,1],[4,1],[3,2]], label: "G major" }
+  ];
+  function getChordHex2(v) {
+    const styles = getComputedStyle(document.documentElement);
+    return styles.getPropertyValue(cssVar(v)).trim() || "#fff";
+  }
+  for (let i = -1; i <= 5; i++) {
+    for (let j = 0; j <= 5; j++) {
+      const [x, y] = pxB(i, j);
+      const isWedge = WEDGES.some(w => w.cells.some(([wi, wj]) => wi === i && wj === j));
+      el("polygon", {
+        points: hexPtsB(x, y),
+        fill: isWedge ? "#232649" : `hsl(243 30% ${(15.5 - ((i + j) % 2) * 1.2).toFixed(1)}%)`,
+        stroke: "#262a4e",
+        "stroke-width": 1
+      }, svgB);
+      el("text", { x, y: y + 4, "text-anchor": "middle", class: isWedge ? "cell-label" : "cell-faint", fill: isWedge ? "" : "#4c4f75" }, svgB)
+        .textContent = note(i, j);
+    }
+  }
+  function hexPtsB(cx, cy) {
+    const pts = [];
+    for (let k = 0; k < 6; k++) {
+      const a = Math.PI / 180 * (60 * k + 30);
+      pts.push((cx + SIZE_B * Math.cos(a)).toFixed(1) + "," + (cy + SIZE_B * Math.sin(a)).toFixed(1));
+    }
+    return pts.join(" ");
+  }
+  WEDGES.forEach(w => {
+    const g = el("g", {}, svgB);
+    const [[x1, y1]] = w.cells.map(([i, j]) => pxB(i, j));
+    w.cells.slice(1).forEach(([i, j]) => {
+      const [x2, y2] = pxB(i, j);
+      el("line", { x1, y1, x2, y2, stroke: w.color, "stroke-width": 3 }, g);
+    });
+    w.cells.forEach(([i, j]) => {
+      const [x, y] = pxB(i, j);
+      el("polygon", { points: hexPtsB(x, y), fill: "none", stroke: w.color, "stroke-width": 3 }, g);
+    });
+    el("text", { x: x1, y: y1 - SIZE_B * 1.5, "text-anchor": "middle", class: "chord-label", fill: w.color }, g)
+      .textContent = w.label;
+  });
+  // slide arrow between wedges
+  {
+    const [ax, ay] = pxB(1.5, 1.05);
+    const [bx, by] = pxB(2.5, 1.35);
+    el("line", { x1: ax, y1: ay, x2: bx, y2: by, stroke: "#8b8eb4", "stroke-width": 2 }, svgB);
+    el("path", { d: `M ${bx} ${by} l -9 -2 l 3 8 z`, fill: "#8b8eb4" }, svgB);
+    el("text", { x: (ax + bx) / 2, y: (ay + by) / 2 + 18, "text-anchor": "middle", class: "cell-faint", fill: "#8b8eb4" }, svgB)
+      .textContent = "slide the shape";
+  }
+})();
+</script>
+</body>
+</html>
