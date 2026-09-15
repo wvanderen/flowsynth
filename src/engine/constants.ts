@@ -17,6 +17,9 @@ export interface Balance {
   goalBaseSlots: number;
   forgeInitialThreshold: number;
   forgeThresholdGrowth: number;
+  // The focus-keyed generator's bank ratio (§2.3): each session end banks a
+  // charge window of fraction × live practice seconds. Provisional tuning.
+  chargeWindowFraction: number;
 }
 
 // Provisional tuning throughout; the redesign spec's numbers are not final
@@ -39,6 +42,7 @@ export const BALANCE: Balance = {
   goalBaseSlots: 2,
   forgeInitialThreshold: 60,
   forgeThresholdGrowth: 1.5,
+  chargeWindowFraction: 0.1,
 };
 
 // The launch chord vocabulary (§4, issue #29): consecutive-pitch runs,

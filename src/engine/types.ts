@@ -119,6 +119,10 @@ export interface GameState {
   modules: ModuleInstance[];
   cells: Hex[];
   forge: Meter;
+  // The charge window (§2.3): remaining output seconds banked at session
+  // end by the focus-keyed generator rule, spent as that generator's output
+  // during the next session's first minutes.
+  chargeWindow: number;
   bankedRolls: RollOffer[];
   purchased: Record<ShelfType, boolean>;
   notes: NoteEntry[];

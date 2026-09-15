@@ -49,6 +49,12 @@ function statLive(id: string, label: string, value: string): string {
   return `<div class="stat-row"><span>${label}</span><span class="mono" data-live="${id}">${value}</span></div>`;
 }
 
+// The focus-keyed generator's remaining window (§2.3), in the same
+// remaining-duration vocabulary the generator spends it in.
+function chargeWindowText(state: GameState): string {
+  return formatDuration(Math.max(0, state.chargeWindow));
+}
+
 function times(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
@@ -610,6 +616,7 @@ function updateInspectorLive(app: App, host: HTMLElement): void {
   set("forge", `${fmt(Math.max(0, state.forge.progress), 1)} / ${fmt(forgeThreshold(state.forge.earned), 1)}`);
   set("rolls", String(state.bankedRolls.length));
   set("elapsed", state.session ? formatClock(state.session.elapsed) : "—");
+  set("window", chargeWindowText(state));
   const forgeBar = host.querySelector('[data-live="forge-bar"]') as HTMLProgressElement | null;
   if (forgeBar) forgeBar.value = Math.min(1, Math.max(0, state.forge.progress / forgeThreshold(state.forge.earned)));
 }
@@ -645,7 +652,7 @@ function renderOverview(app: App, host: HTMLElement): void {
         <h3>Nous / second</h3>
         <p>rate = (carrier + Σ harmonics) × Π chord terms × charge empowerment. Pitch is hex distance from the Carrier + 1; adjacent synthesizers one pitch apart multiply the composite by a chord-pair bonus — stacking is multiplicative and uncapped.</p>
         <p>Named chords — octave 1:2, fifth 2:3, major triad 4:5:6, blues triad 5:6:7 — replace their member pairs' bonuses with one bigger term, and overlaps stack. Conditionals add a bonus per chord pair they sing.</p>
-        <p>Generators produce charge during flow: adjacent synthesizers and infusors are empowered continuously; the Forge banks the charge toward its next roll. Charge factor = 1 + strength / (1 + strength). Rarity growth per level: common ×1.2 · uncommon ×1.25 · rare ×1.3.</p>
+        <p>Generators produce charge during flow: adjacent synthesizers and infusors are empowered continuously; the Forge banks the charge toward its next roll. The focus-keyed generator emits only while its charge window lasts — every session end banks fraction × live practice time as window minutes. Charge factor = 1 + strength / (1 + strength). Rarity growth per level: common ×1.2 · uncommon ×1.25 · rare ×1.3.</p>
       </section>
     </div>`;
 }
@@ -661,7 +668,7 @@ function effectDescription(module: ModuleInstance): string {
     case "generator":
       return "Produces charge during flow. Adjacent synthesizers and infusors are empowered continuously; the Forge banks charge toward its next roll.";
     case "focusKeyed":
-      return "A generator keyed to your focus: its charge window rule arrives with the charge rework. Until then it produces like a basic generator.";
+      return "A generator keyed to your focus: every session end banks a charge window — a slice of that session's live practice time — and the generator spends it as output during the next session's first minutes.";
     case "infusor":
       return "Boosts production contributions of adjacent modules. Receives charge as continuous empowerment.";
     case "forge":
@@ -682,8 +689,9 @@ function nominalEffect(module: ModuleInstance, charged: boolean): { text: string
     case "conditional":
       return { text: `+${fmt(BALANCE.conditionalRate * power * factor)} ν/s · +${fmt(100 * BALANCE.conditionalPairBonus, 0)}% per chord pair`, value: BALANCE.conditionalRate * power * factor };
     case "generator":
-    case "focusKeyed":
       return { text: `${fmt(power, 3)} charge strength while flowing`, value: power };
+    case "focusKeyed":
+      return { text: `${fmt(power, 3)} charge strength while its charge window lasts`, value: power };
     case "infusor":
       return { text: `+${fmt(100 * BALANCE.infusorBonus * power * factor)}% to adjacent`, value: BALANCE.infusorBonus * power * factor };
     case "forge":
@@ -726,6 +734,7 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
   } else if (isSource(module)) {
     chargeStats = `
       ${stat("Output strength", `${fmt(modulePower(module), 3)} per second of flow`)}
+      ${module.type === "focusKeyed" ? statLive("window", "Charge window", chargeWindowText(state)) : ""}
       ${stat("Receivers", deployedHere ? String(deployed(state).filter((m) => m.id !== module.id && m.pos !== null && module.pos !== null && adjacent(m.pos, module.pos)).length) : "—")}`;
   } else if (module.type === "infusor") {
     chargeStats = `
@@ -1185,7 +1194,7 @@ function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
     case "additive": return `+${fmt(BALANCE.additiveRate)} ν/s harmonic term<br>+${fmt(BALANCE.additiveRate * charged)} ν/s at charge strength 1`;
     case "conditional": return `+${fmt(BALANCE.conditionalRate)} ν/s harmonic term<br>+${fmt(BALANCE.conditionalRate * charged)} ν/s at charge strength 1`;
     case "generator": return `${fmt(1, 0)} charge strength per second of flow<br>empowers adjacent modules continuously`;
-    case "focusKeyed": return `A generator keyed to your focus<br>charge-window rule arrives with the charge rework`;
+    case "focusKeyed": return `A generator keyed to your focus<br>every session end banks a charge window of practice time — spent as its output next session`;
     case "infusor": return `+${fmt(BALANCE.infusorBonus * 100)}% to adjacent production contributions<br>+${fmt(BALANCE.infusorBonus * charged * 100)}% at charge strength 1`;
     case "forge": return `1 Forge progress per received charge strength<br>Next roll: ${fmt(forgeThreshold(state.forge.earned))} progress`;
     default: return "Not yet active";
@@ -1203,7 +1212,7 @@ function candidateHeadline(type: ModuleInstance["type"]): string {
     case "generator":
       return "1× charge while flowing";
     case "focusKeyed":
-      return "focus-keyed charge";
+      return "charge from focus time";
     case "infusor":
       return `+${fmt(BALANCE.infusorBonus * 100)}%`;
     case "forge":

@@ -34,6 +34,11 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
   state.session = null;
   state.pendingGap = null;
   state.sessionsCompleted++;
+  // The focus-keyed generator's rule (§2.3, ADR-0012): ending any session
+  // banks a charge window of fraction × live practice time. Banked windows
+  // extend the remaining duration — the spec's only stacking rule. Manual
+  // practice logs never pass through here and never bank one.
+  state.chargeWindow += BALANCE.chargeWindowFraction * elapsed;
   logSessionPractice(state, elapsed, now);
   rollGoalOccurrences(state, now);
   return ok;

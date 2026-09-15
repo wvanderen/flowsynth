@@ -1,5 +1,5 @@
 import { EPS } from "./constants";
-import { computeRates } from "./economy";
+import { chargeWindowActive, computeRates, deployed } from "./economy";
 import { addForgeProgress, type Rng } from "./rolls";
 import { accrueLivePractice } from "./habits";
 import { accrueGoalProgress } from "./goals";
@@ -26,6 +26,13 @@ export function advance(state: GameState, seconds: number, rng: Rng = Math.rando
     result.rollsBanked += addForgeProgress(state, snapshot.forgeRate * seconds, rng);
   }
   session.elapsed += seconds;
+  // The charge window is a time budget, not a rate: a deployed focus-keyed
+  // generator spends one window second per flow second, elapsing even with
+  // no eligible neighbors (the remaining-duration vocabulary). Undeployed,
+  // it produces no output and the window holds.
+  if (chargeWindowActive(state) && deployed(state).some((m) => m.type === "focusKeyed")) {
+    state.chargeWindow = Math.max(0, state.chargeWindow - seconds);
+  }
   accrueLivePractice(state, seconds);
   result.goalsCompleted += accrueGoalProgress(state, state.activeHabitId, seconds);
   return result;
