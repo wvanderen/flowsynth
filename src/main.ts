@@ -2,8 +2,11 @@ import { App } from "./ui/app";
 
 const els: Record<string, HTMLElement> = {};
 for (const id of [
-  "session-toolbar",
-  "accounting",
+  "console-session",
+  "console-apps",
+  "console-status",
+  "nous-balance",
+  "telegraph-slot",
   "board-tools",
   "grid",
   "rate-formula",

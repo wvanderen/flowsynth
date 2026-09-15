@@ -35,8 +35,9 @@ import { META } from "./meta";
 
 export type ModalKind = "settings" | "store" | "forge" | "export" | "import" | "reset" | "reconcile" | null;
 
-// Focus apps are console instruments (ADR-0012); until the console lands
-// they keep panel access through these selection keys.
+// Focus apps are console instruments (ADR-0012). Until the app-tiles ticket
+// gives them proper tiles and popovers, their panels open through the
+// console's app section into the inspector.
 export type AppPanel = "habit" | "notes" | "goals";
 
 export interface UiState {
@@ -115,7 +116,7 @@ export class App {
     rollGoalOccurrences(this.state, Date.now());
     this.bindGlobalEvents();
     document.getElementById("manage-banner-done")?.addEventListener("click", () => this.stopManaging());
-    document.getElementById("topbar-settings")?.addEventListener("click", () => this.openModal("settings"));
+    document.getElementById("console-settings")?.addEventListener("click", () => this.openModal("settings"));
     this.greet();
     this.render();
     this.save();

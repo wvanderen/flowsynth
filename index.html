@@ -9,7 +9,11 @@
   </head>
   <body>
     <div id="app">
-      <header class="topbar">
+      <!-- The console (ADR-0012): structurally above the game UI. On the
+           desktop layout its height is fixed, so nothing below it ever moves,
+           reflows, or dims while the console is used. (Mobile is the noted
+           future alternative, not this effort's shape.) -->
+      <header class="console">
         <div class="brand">
           <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
             <path d="M16 2 28 9v14l-12 7L4 23V9Z" />
@@ -17,9 +21,14 @@
           </svg>
           FlowSynth
         </div>
-        <div class="session-toolbar" id="session-toolbar"></div>
-        <div class="accounting" id="accounting"></div>
-        <button class="topbar-button" id="topbar-settings" aria-label="Settings" title="Settings — save data, import / export, reset">
+        <div class="console-session" id="console-session"></div>
+        <div class="console-apps" id="console-apps"></div>
+        <div class="console-readout">
+          <div class="console-status" id="console-status"></div>
+          <div class="console-slot" id="nous-balance"></div>
+          <div class="console-slot console-telegraph" id="telegraph-slot"></div>
+        </div>
+        <button class="console-button" id="console-settings" aria-label="Settings" title="Settings — save data, import / export, reset">
           <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
