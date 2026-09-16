@@ -63,6 +63,9 @@ export interface SessionState {
   // Nous produced by the board during this session (§5.7): the loud
   // summary's headline and rate read from it at session end.
   earned: number;
+  // Achievements unlocked while this session was live (ADR-0015): they
+  // queue here and read out as the summary's "unlocked this session" row.
+  unlocked: string[];
 }
 
 // The loud summary (§5.7): captured once at session end — however the
@@ -81,6 +84,9 @@ export interface SessionSummary {
   empowerment: number;
   // Session one only: Time auto-activated with this session's end.
   timeUnlocked: boolean;
+  // Feats unlocked during the session, including at its end boundary —
+  // the summary's "unlocked this session" row.
+  achievements: string[];
   seen: boolean;
 }
 
@@ -140,6 +146,12 @@ export interface GameState {
   mode: Mode;
   sessionIndex: number;
   sessionsCompleted: number;
+  // Achievement counters (ADR-0015 §6.3): the unstructured-session counter
+  // is new with the framework; the other two are the triggers that have no
+  // pure read off existing state.
+  unstructuredSessions: number;
+  plannedSessionsCompleted: number;
+  combinations: number;
   nous: number;
   totalEarned: number;
   // The Arete accumulator (ADR-0015): Arete minted at the horizon, inert
@@ -174,6 +186,9 @@ export interface GameState {
   activeHabitId: string | null;
   practiceLog: PracticeEntry[];
   goals: Goal[];
+  // The achievement ledger (ADR-0015): achievement id → unlockedAt (epoch
+  // ms). Definitions live in code, never in the save.
+  achievements: Record<string, number>;
   session: SessionState | null;
   // The last session's loud summary (§5.7): set at every session end,
   // dismissed once by the player, replaced by the next session's end.

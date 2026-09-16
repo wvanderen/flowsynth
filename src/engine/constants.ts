@@ -7,7 +7,10 @@ export interface Balance {
   conditionalPairBonus: number;
   pairBonus: number;
   infusorBonus: number;
-  achievementBoost: number;
+  // ADR-0015's global achievement term: each unlocked feat adds this much
+  // into the boost, additively (boost = 1 + feats × per-feat). Nous-rate
+  // only. Provisional tuning (~+2% each).
+  achievementBoostPerFeat: number;
   upgradeFirstCost: number;
   upgradeCostGrowthNumerator: bigint;
   upgradeCostGrowthDenominator: bigint;
@@ -49,8 +52,7 @@ export const BALANCE: Balance = {
   conditionalPairBonus: 0.1,
   pairBonus: 0.1,
   infusorBonus: 0.2,
-  // ADR-0015's global achievement term: unity until achievements land.
-  achievementBoost: 1,
+  achievementBoostPerFeat: 0.02,
   upgradeFirstCost: 10,
   upgradeCostGrowthNumerator: 8n,
   upgradeCostGrowthDenominator: 5n,

@@ -1,4 +1,5 @@
 import { EPS } from "./constants";
+import { syncAchievements } from "./achievements";
 import { accrueGoalProgress, rollGoalOccurrences } from "./goals";
 import type { GameState, Habit, PracticeEntry } from "./types";
 
@@ -63,7 +64,7 @@ export function addPracticeLog(
   habitId: string,
   minutes: number,
   now: number = 0,
-): { ok: boolean; reason?: string; completions?: number } {
+): { ok: boolean; reason?: string; completions?: number; unlocked?: string[] } {
   if (state.mode !== "upgrade") return { ok: false, reason: "Practice is logged between sessions." };
   const habit = state.habits.find((h) => h.id === habitId && !h.archived);
   if (!habit) return { ok: false, reason: "Habit not found." };
@@ -78,7 +79,8 @@ export function addPracticeLog(
     source: "manual",
     at: now,
   });
-  return { ok: true, completions };
+  // The manual-log boundary check (ADR-0015): Off the clock, Time in the seat.
+  return { ok: true, completions, unlocked: syncAchievements(state, { now }).map((def) => def.id) };
 }
 
 // Called from advance: live practice develops the active habit.

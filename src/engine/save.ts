@@ -70,6 +70,18 @@ export function deserialize(text: string): LoadResult {
   if (merged.session && typeof merged.session.earned !== "number") {
     merged.session.earned = 0;
   }
+  // ADR-0015 fields join the v5 shape: the achievement ledger, the
+  // session's unlock queue, and the summary's readout of it. No users
+  // exist pre-release, so defaults are enough — no migration chain.
+  if (!isRecord(merged.achievements)) {
+    merged.achievements = {};
+  }
+  if (merged.session && !Array.isArray(merged.session.unlocked)) {
+    merged.session.unlocked = [];
+  }
+  if (merged.summary && !Array.isArray(merged.summary.achievements)) {
+    merged.summary.achievements = [];
+  }
   return { state: merged };
 }
 

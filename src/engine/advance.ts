@@ -1,6 +1,7 @@
 import { EPS } from "./constants";
 import { syncArete } from "./accumulator";
-import { chargeWindowActive, computeRates, deployed } from "./economy";
+import { syncAchievements } from "./achievements";
+import { chargeDelivered, chargeWindowActive, computeRates, deployed } from "./economy";
 import { addForgeProgress, type Rng } from "./rolls";
 import { accrueLivePractice } from "./habits";
 import { accrueGoalProgress } from "./goals";
@@ -42,5 +43,9 @@ export function advance(state: GameState, seconds: number, rng: Rng = Math.rando
   }
   accrueLivePractice(state, seconds);
   result.goalsCompleted += accrueGoalProgress(state, state.activeHabitId, seconds);
+  // The session-tick check (ADR-0015): charge exists only live in flow, so
+  // the tick that holds the snapshot reports whether any module received
+  // it (Spark). Unlocks queue into the session's summary row.
+  syncAchievements(state, { chargeDelivered: chargeDelivered(snapshot) });
   return result;
 }

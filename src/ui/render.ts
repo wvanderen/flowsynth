@@ -1,4 +1,4 @@
-import { chargedFactor, cellCost, computeRates, deployed, emittedStrength, levelCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
+import { chargedFactor, cellCost, chargeDelivered, computeRates, deployed, emittedStrength, levelCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
@@ -8,6 +8,7 @@ import { appActive, appLockNote, FOCUS_APPS, LADDER_APPS, ladderComplete, nextRu
 import { canWriteNotes } from "../engine/notes";
 import { activeHabit } from "../engine/habits";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
+import { ACHIEVEMENTS, achievementName } from "../engine/achievements";
 import { isCarrier } from "../engine/state";
 import type { GameState, Goal, Hex, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
@@ -289,23 +290,74 @@ const TROPHY_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stro
   <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
 </svg>`;
 
+// The achievements popover (ADR-0015): the always-visible full list — all
+// seventeen feats with progress bars, none hidden. Spark's progress rides
+// the charge preview; it reads zero between sessions, as charge does.
+function renderAchievementsPopover(app: App, strip: HTMLElement): void {
+  const slot = strip.querySelector(".trophy-slot");
+  if (!slot) return;
+  let host = slot.querySelector<HTMLDivElement>("#achievements-popover");
+  if (!app.ui.achievementsOpen) {
+    host?.remove();
+    return;
+  }
+  if (!host) {
+    host = document.createElement("div");
+    host.className = "achievements-popover";
+    host.id = "achievements-popover";
+    host.setAttribute("role", "dialog");
+    host.setAttribute("aria-label", "Achievements");
+    slot.append(host);
+  }
+  const ctx = { chargeDelivered: app.state.mode === "flow" && chargeDelivered(computeRates(app.state, true)) };
+  const count = Object.keys(app.state.achievements).length;
+  const rows = ACHIEVEMENTS.map((def) => {
+    const unlockedAt = app.state.achievements[def.id];
+    const { current, goal } = def.progress(app.state, ctx);
+    const fraction = Math.min(1, goal > 0 ? current / goal : 1);
+    const readout = unlockedAt !== undefined
+      ? "done"
+      : `${formatNumber(current)} / ${formatNumber(goal)}`;
+    return `<div class="ach-row${unlockedAt !== undefined ? " unlocked" : ""}">
+      <div class="ach-head">
+        <span class="ach-name">${def.name}</span>
+        <span class="ach-readout mono">${readout}</span>
+      </div>
+      <p class="ach-desc">${def.description}</p>
+      <div class="ach-track" aria-hidden="true"><i style="width:${(fraction * 100).toFixed(1)}%"></i></div>
+    </div>`;
+  }).join("");
+  const html = `
+    <div class="popover-head">
+      <span class="eyebrow">ACHIEVEMENTS · ${count}/${ACHIEVEMENTS.length}</span>
+      <span class="small muted">each feat speeds the rate a little</span>
+    </div>
+    <div class="ach-list">${rows}</div>`;
+  if (host.dataset.renderKey !== html) {
+    host.dataset.renderKey = html;
+    host.innerHTML = html;
+  }
+}
+
 // The console's readout end: the status strip (mode, live rate, and the
-// trophy glyph slot that opens achievements once they exist), the nous
-// balance, and the activation-ladder rung telegraph slot (issue #42 fills it).
+// trophy glyph opening the achievements popover), the nous balance, and the
+// activation-ladder rung telegraph slot (issue #42 fills it).
 // Static slots are built once; tick-moving values update in place.
 function renderConsoleReadout(app: App): void {
   const { state } = app;
   const strip = byId("console-status");
   if (strip) {
     const mode = app.managing ? "ARRANGING" : state.mode === "upgrade" ? "UPGRADE" : state.mode === "paused" ? "PAUSED" : "LIVE";
-    if (strip.dataset.renderKey !== mode) {
-      strip.dataset.renderKey = mode;
+    const key = `${mode}:${app.ui.achievementsOpen ? "ach" : "plain"}`;
+    if (strip.dataset.renderKey !== key) {
+      strip.dataset.renderKey = key;
       strip.innerHTML = `
         <div class="console-slot"><span class="eyebrow">Mode</span><strong class="mode-value mono">${mode}</strong></div>
         <div class="console-slot production-slot"><span class="eyebrow">Production</span><strong class="mono" data-live="rate"></strong></div>
         <div class="console-slot trophy-slot">
-          <button class="trophy-glyph" disabled title="Achievements arrive with the progression work" aria-label="Achievements (not yet available)">${TROPHY_SVG}</button>
+          <button class="trophy-glyph" id="trophy-button" aria-expanded="${app.ui.achievementsOpen}" title="Achievements — every feat, and how close the next one is" aria-label="Achievements">${TROPHY_SVG}</button>
         </div>`;
+      byId("trophy-button")?.addEventListener("click", () => app.toggleAchievements());
     }
     const rateNode = strip.querySelector('[data-live="rate"]');
     // One readout, two units (§5.4, §5.6): the ν/s projection matches the
@@ -314,6 +366,7 @@ function renderConsoleReadout(app: App): void {
     const rate = currentSnapshot(state).rate;
     const rateText = `${formatNumber(rate)} ν/s · ${formatNumber(rate * 60)} ν/min`;
     if (rateNode && rateNode.textContent !== rateText) rateNode.textContent = rateText;
+    renderAchievementsPopover(app, strip);
   }
   const nous = byId("nous-balance");
   if (nous) {
@@ -1712,6 +1765,16 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
         ...(summary.chordMultiplier > 1 ? [`chords ×${formatNumber(summary.chordMultiplier)}`] : []),
         ...(summary.empowerment > 1 ? [`empowerment ×${formatNumber(summary.empowerment)}`] : []),
       ].join(" · ");
+  // The "unlocked this session" row (ADR-0015): in-session unlocks queue
+  // here instead of toasting, whatever the exit path.
+  const unlocked = (summary.achievements ?? []).map(achievementName);
+  const unlockRow = unlocked.length > 0
+    ? `<div class="summary-row unlock">
+        <span class="summary-label">Unlocked this session</span>
+        <strong>${unlocked.join(" · ")}</strong>
+        <small class="summary-note">Trophies live on the console's status strip.</small>
+      </div>`
+    : "";
   content.innerHTML = `
     ${modalTop(`SESSION ${summary.sessionNumber} · SUMMARY`)}
     <h2 id="modal-title" class="summary-headline">This session earned <strong class="mono">${formatNumber(summary.earned)}</strong> nous</h2>
@@ -1725,6 +1788,7 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
         <strong class="mono">${formatNumber(summary.ratePerMinute)} ν <small>per practice minute</small></strong>
         <small class="summary-note">${breakdown}</small>
       </div>
+      ${unlockRow}
       ${summary.timeUnlocked
         ? `<div class="summary-row unlock">
         <span class="summary-label">New feature unlocked</span>

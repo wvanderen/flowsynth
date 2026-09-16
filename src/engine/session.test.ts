@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import { endSession, pauseSession, resumeSession, startSession } from "./actions";
+import { computeRates } from "./economy";
 import { fresh, give } from "./fixtures";
 import { hex } from "./hex";
 
@@ -91,9 +92,10 @@ describe("session rules", () => {
 
     // Same session shape with an added harmonic: production grows only
     // because the board grew. (2,0) is pitch 3 — chordless, so the arithmetic
-    // stays pure amplitude; the octave lesson lives in chords.test.ts.
+    // stays pure amplitude; the octave lesson lives in chords.test.ts. The
+    // achievement boost is a global multiplier outside that comparison.
     give(s, "additive", hex(2, 0));
     startSession(s, 600);
-    expect(earned(s, 600)).toBeCloseTo((0.1 + 0.05) * 600, 6);
+    expect(earned(s, 600)).toBeCloseTo((0.1 + 0.05) * 600 * computeRates(s, true).achievementBoost, 6);
   });
 });

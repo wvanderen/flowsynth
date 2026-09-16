@@ -5,12 +5,16 @@ import { adjacent, hexKey, isConnected, sameHex } from "./hex";
 import { createModule, isCarrier } from "./state";
 import { logSessionPractice } from "./habits";
 import { rollGoalOccurrences } from "./goals";
+import { syncAchievements } from "./achievements";
 import type { GameState, Hex, ModuleInstance, ShelfType } from "./types";
 
 export interface ActionResult {
   ok: boolean;
   reason?: string;
   refund?: number;
+  // Feats unlocked by this action (ADR-0015): in-session unlocks queue into
+  // the session's summary row instead, so callers don't toast these twice.
+  unlocked?: string[];
 }
 
 const ok: ActionResult = { ok: true };
@@ -19,23 +23,38 @@ function fail(reason: string): ActionResult {
   return { ok: false, reason };
 }
 
+// The action-boundary check (ADR-0015): run after any state-mutating action
+// that can flip a feat. Returns the ids for the result's unlocked field.
+function checkAchievements(state: GameState): string[] {
+  return syncAchievements(state).map((def) => def.id);
+}
+
 export function startSession(state: GameState, target: number | null): ActionResult {
   if (state.mode !== "upgrade") return fail("A session is already running.");
   state.sessionIndex++;
   state.mode = "flow";
-  state.session = { target, elapsed: 0, earned: 0 };
+  // An unstructured session starts with no active habit selected.
+  if (state.activeHabitId === null) state.unstructuredSessions++;
+  state.session = { target, elapsed: 0, earned: 0, unlocked: [] };
   state.pendingGap = null;
+  // In-session unlocks (Untethered, past session one) queue into the
+  // session's summary row — the result carries nothing to toast.
+  syncAchievements(state);
   return ok;
 }
 
 export function endSession(state: GameState, now: number = 0): ActionResult {
   if (state.mode === "upgrade") return fail("No session is running.");
-  const elapsed = state.session?.elapsed ?? 0;
-  const earned = state.session?.earned ?? 0;
+  const session = state.session;
+  const elapsed = session?.elapsed ?? 0;
+  const earned = session?.earned ?? 0;
+  const queued = [...(session?.unlocked ?? [])];
+  const reachedTarget = session !== null && session.target !== null && session.elapsed >= session.target;
   state.mode = "upgrade";
   state.session = null;
   state.pendingGap = null;
   state.sessionsCompleted++;
+  if (reachedTarget) state.plannedSessionsCompleted++;
   // The focus-keyed generator's rule (§2.3, ADR-0012): ending any session
   // banks a charge window of fraction × live practice time. Banked windows
   // extend the remaining duration — the spec's only stacking rule. Manual
@@ -43,6 +62,9 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
   state.chargeWindow += BALANCE.chargeWindowFraction * elapsed;
   logSessionPractice(state, elapsed, now);
   rollGoalOccurrences(state, now);
+  // The session-end boundary check (ADR-0015): First light, On the clock,
+  // Keeping time, and friends fire here and join the summary row.
+  const ended = syncAchievements(state, { now });
   // The loud summary (§5.7): every exit path lands here, so the modal's
   // rows are captured from the session itself — earned, practice time, rate
   // achieved with the breakdown legs — whatever the length or exit. Time
@@ -60,6 +82,7 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
     chordMultiplier: snapshot.chordMultiplier,
     empowerment: snapshot.empowerment,
     timeUnlocked: state.sessionsCompleted === 1,
+    achievements: [...queued, ...ended.map((def) => def.id)],
     seen: false,
   };
   return ok;
@@ -82,7 +105,7 @@ export function resumeSession(state: GameState): ActionResult {
 // detect the gesture ("Eyes on the horizon").
 export function acknowledgeHorizon(state: GameState): ActionResult {
   state.horizonAcknowledged = true;
-  return ok;
+  return { ok: true, unlocked: checkAchievements(state) };
 }
 
 // The one-time welcome card (§5.1): following its CTA to the Carrier's
@@ -130,7 +153,7 @@ export function buyCell(state: GameState, pos: Hex): ActionResult {
   state.nous -= price;
   state.cells.push(pos);
   state.cellsBought++;
-  return ok;
+  return { ok: true, unlocked: checkAchievements(state) };
 }
 
 // The activation ladder (ADR-0013): the purchase that flips a focus app on.
@@ -213,7 +236,8 @@ export function combine(state: GameState, id: string, partnerId?: string): Actio
     melt.pos = null;
   }
   state.modules = state.modules.filter((m) => m.id !== melt.id);
-  return { ok: true, refund };
+  state.combinations++;
+  return { ok: true, refund, unlocked: checkAchievements(state) };
 }
 
 export function placeModule(state: GameState, id: string, pos: Hex): ActionResult {
@@ -227,7 +251,8 @@ export function placeModule(state: GameState, id: string, pos: Hex): ActionResul
   if (occupant && isCarrier(occupant)) return fail("The Carrier keeps its cell.");
   if (occupant) occupant.pos = module.pos;
   module.pos = pos;
-  return ok;
+  // Layout changes move the chord multiplier (Power chord).
+  return { ok: true, unlocked: checkAchievements(state) };
 }
 
 export function returnModule(state: GameState, id: string): ActionResult {
@@ -252,7 +277,7 @@ export function reshapeCells(state: GameState, next: Hex[]): ActionResult {
   }
   if (!isConnected(next)) return fail("The board must stay connected.");
   state.cells = next;
-  return ok;
+  return { ok: true, unlocked: checkAchievements(state) };
 }
 
 export function chooseRoll(state: GameState, offerId: string, candidateId: string): ActionResult {
@@ -264,5 +289,6 @@ export function chooseRoll(state: GameState, offerId: string, candidateId: strin
   if (!candidate) return fail("That candidate is not part of this roll.");
   state.bankedRolls.splice(index, 1);
   state.modules.push(createModule(state, candidate.type, candidate.rarity));
-  return ok;
+  // A taken candidate can be the first rare (Fine china) or Forge roll.
+  return { ok: true, unlocked: checkAchievements(state) };
 }

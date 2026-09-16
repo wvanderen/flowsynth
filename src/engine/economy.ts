@@ -1,5 +1,6 @@
 import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS } from "./constants";
 import { analyzeChords, pitchOf } from "./chords";
+import { achievementBoostOf } from "./achievements";
 import { adjacent } from "./hex";
 import type { Contribution, DeployedModule, GameState, ModuleInstance, ModuleType, RateSnapshot, SynthesizerType } from "./types";
 
@@ -75,6 +76,16 @@ export function deployedAt(state: GameState, pos: { q: number; r: number }): Mod
 
 export function wholeNous(state: GameState): number {
   return Math.floor(state.nous + EPS);
+}
+
+// Whether any module is actually receiving charge in this snapshot — the
+// Spark trigger and the popover's read of it. Charge exists only live in
+// flow, so a flow-gated snapshot answers for itself.
+export function chargeDelivered(snapshot: RateSnapshot): boolean {
+  for (const strength of snapshot.chargeStrength.values()) {
+    if (strength > 0) return true;
+  }
+  return false;
 }
 
 // Charge exists only while flow is live: board production is session-bound.
@@ -220,10 +231,13 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
     });
   }
 
-  const achievementBoost = BALANCE.achievementBoost;
+  const achievementBoost = achievementBoostOf(state);
   const amplitude = carrier + harmonics;
   const composite = amplitude * analysis.multiplier;
-  const rate = chargedSum * analysis.multiplier;
+  // The boost multiplies the rate on top of charge empowerment; the
+  // empowerment leg divides it back out so the breakdown multiplies out
+  // exactly: rate = composite × empowerment × achievementBoost.
+  const rate = chargedSum * analysis.multiplier * achievementBoost;
   const empowerment = composite > EPS ? rate / (composite * achievementBoost) : 1;
 
   return {

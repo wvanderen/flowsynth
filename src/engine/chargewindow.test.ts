@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import { endSession, pauseSession, resumeSession, startSession } from "./actions";
 import { createHabit, addPracticeLog } from "./habits";
+import { computeRates } from "./economy";
 import { fresh, give, stubRng } from "./fixtures";
 import { serialize, deserialize } from "./save";
 import { hex } from "./hex";
@@ -95,8 +96,11 @@ describe("the charge window", () => {
 
     startSession(s, null);
     const before = s.nous;
+    // Board production only (0.1 ν/s) — the window buys charge, never nous —
+    // scaled by the boost leg in force during the step (ADR-0015).
+    const boost = computeRates(s, true).achievementBoost;
     advance(s, 60);
-    expect(s.nous - before).toBeCloseTo(0.1 * 60, 6);
+    expect(s.nous - before).toBeCloseTo(0.1 * 60 * boost, 6);
   });
 
   it("window time elapses during flow even without eligible neighbors", () => {
