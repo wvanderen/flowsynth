@@ -415,7 +415,6 @@ body.live .grid-overview { opacity: 0.75; }
 /* The Forge's charge-vs-threshold readout sits in the charge register. */
 .face-readout.charge { fill: var(--charge); }
 .face-note { font: 8.5px var(--mono); letter-spacing: 0.12em; fill: var(--muted); }
-.face-category { font: 6.5px var(--mono); letter-spacing: 0.16em; fill: var(--muted); }
 .face-signature { stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 
 body.live .hex.charged { animation: charge-pulse 3s ease-in-out infinite; }

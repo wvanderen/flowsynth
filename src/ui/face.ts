@@ -7,7 +7,6 @@
 // hue-law exception. Shared by the board, the inventory tiles, the drag
 // ghost, and the Forge candidate tiles, so a module reads identically
 // everywhere it appears.
-import { CATEGORY_OF } from "../engine/constants";
 import type { ModuleType, Rarity } from "../engine/types";
 import { moduleIcon } from "./icons";
 import { META } from "./meta";
@@ -73,6 +72,5 @@ export function moduleFace(spec: FaceSpec): string {
     <text data-key="name" y="-27" text-anchor="middle" class="face-name">${META[spec.type].short.toUpperCase()}</text>
     <text data-key="readout" y="9" text-anchor="middle" class="face-readout${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>
     ${spec.note ? `<text data-key="note" y="23" text-anchor="middle" class="face-note">${spec.note}</text>` : ""}
-    <text data-key="category" x="-21" y="41" text-anchor="middle" class="face-category">${CATEGORY_OF[spec.type].toUpperCase()}</text>
     <g data-key="signature" class="face-signature" transform="translate(25 29) scale(0.62)" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>`;
 }

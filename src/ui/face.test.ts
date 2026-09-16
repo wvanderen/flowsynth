@@ -43,12 +43,14 @@ describe("module face", () => {
       hexClass: "selected",
       pinned: true,
     });
-    for (const key of ["hex", "rings", "rail", "level", "name", "readout", "note", "category", "signature", "pin"]) {
+    for (const key of ["hex", "rings", "rail", "level", "name", "readout", "note", "signature", "pin"]) {
       expect(face).toContain(`data-key="${key}"`);
     }
     expect(face).toContain('class="hex selected"');
     expect(face).toContain("face-readout charge");
     expect(face).toContain(">FORGE</text>");
+    // The nameplate names the type; no duplicate category label.
+    expect(face).not.toContain('data-key="category"');
   });
 
   it("keeps every hue var resolvable in the theme token table", () => {
