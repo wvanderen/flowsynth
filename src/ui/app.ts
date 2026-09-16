@@ -21,7 +21,7 @@ import {
   type ActionResult,
 } from "../engine/actions";
 import { syncArete } from "../engine/accumulator";
-import { cellCost, computeRates, wholeNous } from "../engine/economy";
+import { wholeNous } from "../engine/economy";
 import { adjacent, neighbors, sameHex } from "../engine/hex";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
 import { planTick } from "../engine/clock";
@@ -39,10 +39,8 @@ import {
   selectHabit,
 } from "../engine/habits";
 import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
-import type { GameState, Hex, ShelfType } from "../engine/types";
-import { render } from "./render";
+import type { GameState, Hex, ShelfType } from "../engine/types";import { render } from "./render";
 import { APP_LABELS, META } from "./meta";
-import { formatInt, practiceCountdown } from "./format";
 
 // The session modal surfaces (§5.5, §5.7): the enter prompt precedes every
 // session; the loud summary follows every one.
@@ -225,7 +223,7 @@ export class App {
     this.say(
       this.state.pendingGap
         ? "Save imported while a session was running. Confirm the away interval before it counts."
-        : "Save imported. Everything is where you left it.",
+        : "Save imported.",
     );
     this.save();
     this.render();
@@ -239,7 +237,7 @@ export class App {
     this.ui.importError = null;
     this.ui.chosenTarget = 600;
     this.lastWall = null;
-    this.say("A fresh instrument. The Carrier is yours — enter flow when ready.");
+    this.say("A fresh instrument. The Carrier is yours.");
     this.save();
     this.render();
   }
@@ -256,11 +254,11 @@ export class App {
       return;
     }
     if (this.state.sessionsCompleted === 0 && this.state.mode === "upgrade") {
-      this.say("Welcome. The Carrier is granted at the origin — upgrade it, then enter flow and let real practice power the instrument.");
+      this.say("Welcome. Upgrade the Carrier, then enter flow.");
     } else if (this.state.mode === "flow") {
-      this.say("Flow is live. The instrument runs itself; your attention stays with your practice.");
+      this.say("Flow is live.");
     } else {
-      this.say("The instrument is ready. Arrange, upgrade, and enter flow again.");
+      this.say("Ready. Arrange, upgrade, enter flow.");
     }
   }
 
@@ -320,7 +318,7 @@ export class App {
       this.forgeFlashUntil = Date.now() + 900;
     }
     if (result.goalsCompleted > 0) notes.push(`${result.goalsCompleted} goal${result.goalsCompleted === 1 ? "" : "s"} completed.`);
-    if (result.areteMinted > 0) notes.push("The accumulator filled — Arete minted at the horizon.");
+    if (result.areteMinted > 0) notes.push("Arete minted.");
     if (notes.length > 0) this.say(notes.join(" "));
   }
 
@@ -345,16 +343,21 @@ export class App {
       .map(achievementName);
     this.say(
       names.length > 0
-        ? `${otherwise}${otherwise ? " " : ""}Achievement unlocked — ${names.join(", ")}. The achievements page has the full list.`
+        ? `${otherwise}${otherwise ? " " : ""}Achievement unlocked — ${names.join(", ")}.`
         : otherwise,
     );
   }
 
-  // The enter prompt (§5.5) precedes every session: "What are you
-  // practicing?" — with practice-unstructured as a visible affordance. The
-  // switch only opens the prompt; the prompt's choice starts the session.
+  // The Enter switch: with a habit selected the session starts directly —
+  // the Habit app already made the choice, so the prompt never asks twice.
+  // The prompt only opens when no habit is selected (or on a fresh save).
   startFlow(): void {
     if (this.state.mode !== "upgrade") return;
+    const habit = activeHabit(this.state);
+    if (habit) {
+      this.beginFlow(habit.id);
+      return;
+    }
     this.clearTransientUi();
     this.ui.modal = "enter";
     this.render();
@@ -375,11 +378,7 @@ export class App {
     this.ui.modal = null;
     this.lastWall = Date.now();
     this.clearTransientUi();
-    this.say(
-      target === null
-        ? "Open-ended flow is live. Try a few minutes, then exit to see what the board made."
-        : `Flow is live for ${Math.round(target / 60)} minutes. Your layout is locked; the instrument takes care of itself.`,
-    );
+    this.say(target === null ? "Flow is live." : `Flow is live for ${Math.round(target / 60)} minutes — the board is locked.`);
     this.save();
     this.render();
   }
@@ -405,7 +404,7 @@ export class App {
       return;
     }
     this.lastWall = null;
-    this.say("Session ended. The board's production is banked.");
+    this.say("Session banked.");
     // The loud summary (§5.7) opens however the session ended.
     this.ui.modal = "summary";
     this.save();
@@ -413,7 +412,7 @@ export class App {
   }
 
   pause(): void {
-    if (this.act(pauseSession(this.state), "Practice is paused. Your layout stays locked.")) {
+    if (this.act(pauseSession(this.state), "Paused.")) {
       this.lastWall = null;
     }
   }
@@ -427,7 +426,7 @@ export class App {
   // The reserved prestige button (ADR-0015): inert at launch — pressing
   // only acknowledges the horizon, and the flag stays detectable.
   acknowledgeHorizon(): void {
-    this.act(acknowledgeHorizon(this.state), "The horizon is acknowledged. Prestige itself waits beyond it.");
+    this.act(acknowledgeHorizon(this.state), "Horizon acknowledged.");
   }
 
   // The one-time welcome card (§5.1): acknowledging it — via its CTA or the
@@ -452,32 +451,33 @@ export class App {
 
   dismissWelcome(): void {
     acknowledgeWelcome(this.state);
-    this.say("Welcome dismissed. The Carrier's upgrade waits in its panel whenever you want it.");
+    this.say("Welcome dismissed.");
     this.save();
     this.render();
   }
 
   buyShelf(type: ShelfType): void {
-    if (this.act(buyShelfModule(this.state, type), `${META[SHELF_MODULE[type]].name} purchased. Choose a cell for it.`)) {
-      this.ui.modal = null;
-      this.beginPlacing(this.state.modules[this.state.modules.length - 1]!.id);
-    }
+    // The purchase stays in the catalog: the module lands in inventory and
+    // placement happens from Grid & inventory, on the player's beat.
+    this.act(buyShelfModule(this.state, type), `${META[SHELF_MODULE[type]].name} purchased — it's in your inventory.`);
   }
 
   // The activation ladder (ADR-0013): buying a rung flips the app on; the
   // other ladder rows step to the next price.
   buyActivationAction(appKey: FocusApp): void {
-    this.act(buyActivation(this.state, appKey), `${APP_LABELS[appKey]} app activated. It stays yours.`);
+    this.act(buyActivation(this.state, appKey), `${APP_LABELS[appKey]} activated.`);
   }
 
   // The first console long goal (ADR-0012): goal capacity, one beat at a
   // time from the Goals panel's dashed strip.
   buyGoalCapacityAction(): void {
-    this.act(buyGoalCapacity(this.state), `Goal capacity grows by ${BALANCE.goalSlotsPerLongGoal} slots. The next beat prices itself past this one.`);
+    this.act(buyGoalCapacity(this.state), `Goal capacity +${BALANCE.goalSlotsPerLongGoal} slots.`);
   }
 
-  // Arm the cell purchase from the catalog: the buy itself lands only when a
-  // frontier hex is clicked, so the price is always attached to a placement.
+  // Cell purchase (ADR-0013): armed from the toolbar's cell icon (or the
+  // catalog row), resolved by clicking a frontier hex. The buy only lands
+  // when a frontier cell is clicked; the icon toggles, Esc and right-click
+  // cancel.
   armCellPurchase(): void {
     if (this.state.mode !== "upgrade") {
       this.say("Purchases happen between sessions.");
@@ -486,8 +486,6 @@ export class App {
     this.clearTransientUi();
     this.ui.modal = null;
     this.ui.buyingCell = true;
-    const price = cellCost(this.state.cellsBought);
-    this.say(`Choose a hex touching your board — the new cell costs ${formatInt(price)} ν. Esc or Cancel on the banner backs out.`);
     this.render();
   }
 
@@ -585,14 +583,14 @@ export class App {
       // The arm persists across buys: sweep several cells, then back out
       // yourself via the banner's Cancel (or Esc). act() re-renders each
       // time, so the banner hint and hex prices step to the next scaler rung.
-      this.act(buyCell(state, pos), "Cell bought. The board grew — buy another, or Cancel when done.");
+      this.act(buyCell(state, pos), "Cell bought.");
       return;
     }
     if (ui.placing) {
       const module = state.modules.find((m) => m.id === ui.placing);
       if (!module) return;
       const result = placeModule(state, module.id, pos);
-      if (this.act(result, `${META[module.type].name} placed. Production and adjacency have updated.`)) {
+      if (this.act(result, `${META[module.type].name} placed.`)) {
         ui.placing = null;
       }
       return;
@@ -611,7 +609,7 @@ export class App {
   }
 
   returnToInventory(id: string): void {
-    this.act(returnModule(this.state, id), "Returned to inventory. Its state is kept.");
+    this.act(returnModule(this.state, id), "Returned to inventory.");
   }
 
   addNote(text: string): void {
@@ -652,7 +650,7 @@ export class App {
 
   archiveHabitAction(id: string): void {
     const habit = this.state.habits.find((h) => h.id === id);
-    this.habitAction(() => archiveHabit(this.state, id), `${habit?.name ?? "Habit"} archived. Its development is kept.`);
+    this.habitAction(() => archiveHabit(this.state, id), `${habit?.name ?? "Habit"} archived.`);
   }
 
   selectHabitAction(id: string | null): void {
@@ -663,11 +661,7 @@ export class App {
     const habit = this.state.habits.find((h) => h.id === target);
     this.habitAction(
       () => selectHabit(this.state, target),
-      togglingOff
-        ? "Next session is unstructured; no habit selected."
-        : habit
-          ? `${habit.name} will be the active habit for your next session.`
-          : "Next session is unstructured; no habit selected.",
+      togglingOff ? "No habit selected." : habit ? `${habit.name} selected.` : "No habit selected.",
     );
   }
 
@@ -684,10 +678,7 @@ export class App {
         result.completions && result.completions > 0
           ? ` A goal completed.`
           : "";
-      this.announceUnlocks(
-        result.unlocked,
-        `Logged ${minutes} minutes of ${habit.name}. Development grows; no nous or charge is produced.${goalNote}`,
-      );
+      this.announceUnlocks(result.unlocked, `Logged ${minutes} min of ${habit.name}.${goalNote}`);
       this.save();
     } else {
       this.say(result.reason ?? "Could not log practice.");
@@ -701,8 +692,7 @@ export class App {
     const result = createGoal(this.state, { habitId, minutes, schedule, now: Date.now() });
     if (result.ok) {
       this.save();
-      const habit = habitId ? this.state.habits.find((h) => h.id === habitId)?.name : "any habit";
-      this.say(`Goal tracking: ${habit}, ${minutes} minutes ${schedule}.`);
+      this.say("Goal added.");
     } else {
       this.say(result.reason ?? "Could not create the goal.");
     }
@@ -711,7 +701,7 @@ export class App {
 
   deleteGoalAction(id: string): void {
     const result = deleteGoal(this.state, id);
-    this.say(result.ok ? "Goal removed; the slot is free." : result.reason ?? "Could not remove the goal.");
+    this.say(result.ok ? "Goal removed." : result.reason ?? "Could not remove the goal.");
     if (result.ok) this.save();
     this.render();
   }
@@ -735,7 +725,7 @@ export class App {
     const more = this.state.bankedRolls.length > 0 ? ` ${this.state.bankedRolls.length} more choice${this.state.bankedRolls.length === 1 ? "" : "s"} wait in the Forge.` : "";
     this.announceUnlocks(
       result.unlocked,
-      `${META[candidate.type].name} added. Click a cell to place it; right-click keeps it in inventory.${more}`,
+      `${META[candidate.type].name} added — pick a cell.${more}`,
     );
     this.save();
     this.render();
@@ -746,7 +736,7 @@ export class App {
     if (id) {
       const module = this.state.modules.find((m) => m.id === id);
       if (module) {
-        this.say(module.pos === null ? `${META[module.type].name} kept in inventory.` : `Move cancelled; ${META[module.type].name} stays deployed.`);
+        this.say(module.pos === null ? `${META[module.type].name} kept in inventory.` : "Move cancelled.");
       }
     }
     this.render();
@@ -772,7 +762,7 @@ export class App {
   startManaging(): void {
     this.clearTransientUi();
     this.ui.managing = true;
-    this.say("Arranging: drag the raised tiles between cells or into the inventory. Done or Esc finishes.");
+    this.say("Arranging — drag tiles. Esc or Done finishes.");
     this.render();
   }
 
@@ -787,7 +777,7 @@ export class App {
     this.ui.reshape = { adds: [], removes: [] };
     this.ui.placing = null;
     this.ui.buyingCell = false;
-    this.say("Reshape: click empty cells to remove them and frontier outlines to add. Removals and additions must balance.");
+    this.say("Reshape — removals and additions must balance.");
     this.render();
   }
 
@@ -858,7 +848,7 @@ export class App {
     if (gap) {
       const result = advance(this.state, gap.seconds);
       this.reportAdvance(result);
-      this.say(`Confirmed ${Math.round(gap.seconds / 60)} minutes of practice. Flow continues.`);
+      this.say(`Confirmed ${Math.round(gap.seconds / 60)} min. Flow continues.`);
     }
     this.state.pendingGap = null;
     this.ui.modal = null;
@@ -871,7 +861,7 @@ export class App {
     this.state.pendingGap = null;
     this.ui.modal = null;
     this.lastWall = Date.now();
-    this.say("Interval discarded. That away time did not power the instrument.");
+    this.say("Interval discarded.");
     this.save();
     this.render();
   }
@@ -881,7 +871,7 @@ export class App {
   dismissSummary(): void {
     dismissSessionSummary(this.state);
     this.ui.modal = null;
-    this.say("Session banked. The board is yours.");
+    this.say("Session banked.");
     this.save();
     this.render();
   }
@@ -958,16 +948,5 @@ export class App {
     // dimmed cells, and raised tiles. It can only be on while the grid is
     // unlocked.
     document.body.classList.toggle("managing", this.managing);
-    // Same visibility contract for the armed cell purchase (ADR-0013).
-    document.body.classList.toggle("buying", this.ui.buyingCell && this.state.mode === "upgrade");
-    if (this.ui.buyingCell && this.state.mode === "upgrade") {
-      const hint = document.getElementById("buy-banner-hint");
-      const price = cellCost(this.state.cellsBought);
-      // The armed purchase is an upgrade-mode surface: the price counts down
-      // in practice minutes when it is out of reach (§7).
-      const countdown = practiceCountdown(price, wholeNous(this.state), computeRates(this.state, true).rate);
-      const text = `Choose a hex touching your board — the new cell costs ${formatInt(price)} ν${countdown ? ` · ${countdown}` : ""}`;
-      if (hint && hint.textContent !== text) hint.textContent = text;
-    }
   }
 }

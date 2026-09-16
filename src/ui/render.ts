@@ -92,9 +92,9 @@ function renderWelcome(app: App): void {
       <span class="eyebrow">WELCOME</span>
       <button class="welcome-dismiss" id="welcome-dismiss" aria-label="Dismiss the welcome card">✕</button>
     </div>
-    <p class="welcome-copy">Your <strong>Carrier</strong> is granted and pinned at the origin — the instrument's fundamental. Its first upgrade is already affordable.</p>
+    <p class="welcome-copy">Your <strong>Carrier</strong> is granted — its first upgrade is already affordable.</p>
     <button class="primary" id="welcome-cta">Upgrade the Carrier</button>
-    <p class="small muted" style="margin:10px 0 0">Or skip straight to flow — skipping loses nothing.</p>`;
+    `;
   byId("welcome-cta")?.addEventListener("click", () => app.ackWelcomeToCarrier());
   byId("welcome-dismiss")?.addEventListener("click", () => app.dismissWelcome());
 }
@@ -134,7 +134,7 @@ function renderConsoleSession(app: App): void {
       host.innerHTML = `
         <div class="console-clock">
           <p class="clock-plan-value mono">${planText(timeOn ? app.ui.chosenTarget : null)}</p>
-          <p class="clock-caption">${timeOn ? "Next session — plan it in the Time app" : "Open-ended until Time unlocks"}</p>
+          ${timeOn ? "" : `<p class="clock-caption">unlocks after your first session</p>`}
         </div>
         <div class="session-actions">
           <button class="main-switch idle" id="flow-switch" title="Enter flow — the board locks and runs itself">
@@ -157,9 +157,9 @@ function renderConsoleSession(app: App): void {
     host.dataset.renderKey = key;
     host.innerHTML = `
       <div class="console-clock">
-        <p class="session-clock mono" id="session-clock">${formatClock(elapsed)}</p>
+        <p class="session-clock mono" id="session-clock"></p>
         <p class="clock-caption" id="session-caption"></p>
-        <div class="time-track"><span id="time-track-fill" style="width:0%"></span></div>
+        <div class="time-track${target === null && !paused ? " pulse" : ""}"><span id="time-track-fill" style="width:0%"></span></div>
       </div>
       <div class="session-actions">
         <button id="pause-flow">${paused ? "Resume" : "Pause"}</button>
@@ -172,14 +172,14 @@ function renderConsoleSession(app: App): void {
   }
 
   // Live values update in place; the controls above are never replaced by ticks.
+  // Planned sessions count down what remains; open-ended ones count up, with
+  // the track pulsing calmly instead of filling.
   const set = (id: string, text: string) => {
     const node = byId(id);
     if (node && node.textContent !== text) node.textContent = text;
   };
-  set("session-clock", formatClock(elapsed));
+  set("session-clock", formatClock(target !== null ? Math.max(0, target - elapsed) : elapsed));
   set("session-caption", sessionCaption(elapsed, target, paused));
-  // Production lives in one place — the console readout's Production slot,
-  // which carries the per-second rate and the session's running total.
   const track = byId("time-track-fill");
   const width = sessionTrackWidth(elapsed, target);
   if (track && track.style.width !== width) track.style.width = width;
@@ -190,12 +190,12 @@ function renderConsoleSession(app: App): void {
 function sessionCaption(elapsed: number, target: number | null, paused: boolean): string {
   const reached = target !== null && elapsed >= target;
   return paused
-    ? "Paused · progress preserved"
+    ? "paused"
     : target === null
-      ? "Open-ended practice"
+      ? ""
       : reached
-        ? "Target reached · continue freely"
-        : `of ${formatClock(target)} planned`;
+        ? "target reached"
+        : `of ${formatClock(target)}`;
 }
 
 function sessionTrackWidth(elapsed: number, target: number | null): string {
@@ -245,15 +245,29 @@ function renderConsoleApps(app: App): void {
     const open = ui.app === appKey;
     const label = APP_LABELS[appKey];
     const anchor = appKey === FOCUS_APPS[0] ? " first" : appKey === last ? " last" : "";
-    const title = note ? `${label} — locked: ${note}` : `${label} app`;
+    // The tile wears the app's live state instead of its name: the Habit
+    // tile shows the selected habit (or that none is), the Time tile the
+    // current plan once active; Notes, Goals, and locked apps are
+    // icon-only, their tooltips carrying the unlock gate.
+    let stateText: string | null = null;
+    if (appKey === "habit") {
+      stateText = activeHabit(state)?.name ?? "no habit";
+    } else if (appKey === "time" && active) {
+      stateText = planShort(ui.chosenTarget);
+    }
+    const title =
+      stateText !== null && active
+        ? `${label} app`
+        : note
+          ? `${label} — locked: ${note}`
+          : `${label} app`;
     return `<div class="app-slot${anchor}">
       <button class="app-tile${active ? "" : " locked"}${open ? " open" : ""}" id="app-tile-${appKey}" aria-pressed="${open}"${active ? "" : ' aria-disabled="true"'} title="${title}">
         <span class="app-tile-glyph">
           <svg viewBox="-12 -12 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${appIcon(appKey)}</svg>
           <span class="app-led${active ? "" : " off"}" aria-hidden="true"></span>
         </span>
-        <span class="app-tile-name">${label}</span>
-        ${note ? `<span class="app-locknote">${note}</span>` : ""}
+        ${stateText ? `<span class="app-tile-state">${escapeHtml(stateText)}</span>` : ""}
       </button>
       ${open ? `<div class="app-popover" id="app-popover">${popoverHtml(app, appKey)}</div>` : ""}
     </div>`;
@@ -265,6 +279,11 @@ function renderConsoleApps(app: App): void {
   }
   bindAppPanel(app, host);
   updateAppPanelLive(app, host);
+}
+
+// The Time tile's compact plan: the clock, or "open" for open-ended.
+function planShort(chosenTarget: number | null): string {
+  return chosenTarget === null ? "open" : formatClock(chosenTarget);
 }
 
 function popoverHtml(app: App, panel: FocusApp): string {
@@ -390,26 +409,54 @@ function renderConsoleReadout(app: App): void {
   }
 }
 
+const CELL_TOOL_SVG = `<svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M0-6v12M-6 0h12"/></svg>`;
+
 function renderTools(app: App): void {
   const { state, ui } = app;
   const host = byId("board-tools");
   if (!host) return;
   const upgrade = state.mode === "upgrade";
-  const key = JSON.stringify([upgrade, state.bankedRolls.length, ui.managing]);
-  if (host.dataset.renderKey === key) return;
-  host.dataset.renderKey = key;
-  const forgeReady = upgrade && state.bankedRolls.length > 0;
-  host.innerHTML = `
-    <button class="small" id="tool-store" ${upgrade ? "" : "disabled"} title="${upgrade ? "The catalog: starter-shelf offers and board cells" : "Purchases happen between sessions"}">Catalog</button>
-    <button class="small" id="tool-forge" ${forgeReady ? "" : "disabled"} title="${forgeReady
-      ? `${state.bankedRolls.length} banked choice${state.bankedRolls.length === 1 ? "" : "s"}`
-      : upgrade
-        ? "No banked rolls — earn Forge progress from charge"
-        : "Forge choices belong to upgrade mode"}">Forge · ${state.bankedRolls.length}</button>
-    <button class="small ${app.managing ? "active" : ""}" id="tool-manage" ${upgrade ? "" : "disabled"} aria-pressed="${app.managing}" title="${app.managing ? "Exit arranging (Esc)" : upgrade ? "Move modules" : "The grid is locked during flow"}">Grid &amp; inventory</button>`;
-  byId("tool-store")?.addEventListener("click", () => app.openModal("store"));
-  byId("tool-forge")?.addEventListener("click", () => app.openModal("forge"));
-  byId("tool-manage")?.addEventListener("click", () => (app.ui.managing ? app.stopManaging() : app.startManaging()));
+  const key = JSON.stringify([upgrade, state.bankedRolls.length, ui.managing, ui.buyingCell]);
+  if (host.dataset.renderKey !== key) {
+    host.dataset.renderKey = key;
+    const forgeReady = upgrade && state.bankedRolls.length > 0;
+    host.innerHTML = `
+      <button class="small" id="tool-store" ${upgrade ? "" : "disabled"} title="${upgrade ? "The catalog: starter-shelf offers and board cells" : "Purchases happen between sessions"}">Catalog</button>
+      <button class="small tool-forge" id="tool-forge" ${forgeReady ? "" : "disabled"} title="">
+        <span>Forge${state.bankedRolls.length > 0 ? ` · ${state.bankedRolls.length}` : ""}</span>
+        <i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i>
+      </button>
+      <button class="small ${app.managing ? "active" : ""}" id="tool-manage" ${upgrade ? "" : "disabled"} aria-pressed="${app.managing}" title="${app.managing ? "Exit arranging (Esc)" : upgrade ? "Move modules" : "The grid is locked during flow"}">Grid &amp; inventory</button>
+      <button class="small tool-cell${ui.buyingCell ? " active" : ""}" id="tool-cell" ${upgrade ? "" : "disabled"} aria-pressed="${ui.buyingCell}" title="">${CELL_TOOL_SVG}</button>`;
+    byId("tool-store")?.addEventListener("click", () => app.openModal("store"));
+    byId("tool-forge")?.addEventListener("click", () => app.openModal("forge"));
+    byId("tool-manage")?.addEventListener("click", () => (app.ui.managing ? app.stopManaging() : app.startManaging()));
+    byId("tool-cell")?.addEventListener("click", () => (app.ui.buyingCell ? app.cancelCellPurchase() : app.armCellPurchase()));
+  }
+  // Live under the structural rebuild: the Forge pip tracks the shared
+  // meter, and the cell icon wears the current price and affordability.
+  const cap = forgeThreshold(state.forge.earned);
+  const pip = host.querySelector<HTMLElement>('[data-live="forge-pip"]');
+  const pipWidth = `${(Math.min(1, Math.max(0, state.forge.progress / cap)) * 100).toFixed(1)}%`;
+  if (pip && pip.style.width !== pipWidth) pip.style.width = pipWidth;
+  const forgeButton = byId("tool-forge");
+  if (forgeButton) {
+    forgeButton.title =
+      state.bankedRolls.length > 0
+        ? `Forge progress ${formatNumber(Math.max(0, state.forge.progress))} / ${formatNumber(cap)} · ${state.bankedRolls.length} banked choice${state.bankedRolls.length === 1 ? "" : "s"}`
+        : `Forge progress ${formatNumber(Math.max(0, state.forge.progress))} / ${formatNumber(cap)} — charge feeds it`;
+  }
+  const cellButton = byId("tool-cell") as HTMLButtonElement | null;
+  if (cellButton && upgrade) {
+    const price = cellCost(state.cellsBought);
+    if (ui.buyingCell) {
+      cellButton.title = "Pick a frontier hex · Esc cancels";
+    } else {
+      const countdown = practiceCountdown(price, wholeNous(state), computeRates(state, true).rate);
+      cellButton.title = `New cell — ${formatInt(price)} ν${countdown ? ` · ${countdown}` : ""}`;
+      cellButton.disabled = wholeNous(state) < price;
+    }
+  }
 }
 
 /* ── Hex grid ──────────────────────────────────────── */
@@ -811,7 +858,7 @@ function renderDissolvedOverview(host: HTMLElement): void {
   host.innerHTML = `
     <div class="inspector-empty">
       <div class="eyebrow">INSPECTOR</div>
-      <p class="small muted" style="margin-top:10px">Select a module to inspect or tune it. Score and progression live on the status monitor beneath the grid.</p>
+      <p class="small muted" style="margin-top:10px">Select a module to inspect or tune it.</p>
     </div>`;
 }
 
@@ -929,7 +976,7 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       </button>
       ${upgrade ? `<p class="countdown mono" data-live="countdown">${upgradeCountdown(app, cost) ?? ""}</p>` : ""}
       ${!upgrade ? `<p class="small muted">Upgrades happen between sessions.</p>` : ""}
-      ${carrier ? `<p class="small muted">The Carrier is pinned: it upgrades in place and cannot be moved, combined, or shelved.</p>` : ""}
+      ${carrier ? `<p class="small muted">Pinned — it never moves, combines, or leaves.</p>` : ""}
       ${upgrade && !carrier && partner && module.rarity !== "rare"
         ? `<button id="combine-pair">Combine with its ${RARITY_LABEL[module.rarity]} pair</button>`
         : ""}
@@ -976,7 +1023,6 @@ function appPanelBody(app: App, panel: FocusApp): string {
       return `<section class="focus-controls">
         <span class="eyebrow">FOCUS CONTROLS</span>
         <p class="habit-active-name">${active ? escapeHtml(active.name) : "Unstructured practice"}</p>
-        <p class="small muted" style="margin-top:4px">${active ? "Locked for this session — selected before entering flow." : "No habit selected; the session still counts as practice."}</p>
         ${active ? `<div class="stat-row"><span>This session</span><span class="mono" data-live="habit-session">${formatClock(state.session?.elapsed ?? 0)} of practice</span></div>` : ""}
       </section>`;
     }
@@ -991,14 +1037,14 @@ function appPanelBody(app: App, panel: FocusApp): string {
       </div>
       ${state.activeHabitId
         ? `<div class="habit-log">
-            <label class="config-label" for="habit-log-minutes">Log practice for ${escapeHtml(active?.name ?? "")} manually</label>
+            <label class="config-label" for="habit-log-minutes">Log practice</label>
             <div class="habit-create">
               <input type="number" id="habit-log-minutes" min="1" placeholder="minutes" />
               <button class="small" id="habit-log-add">Log</button>
             </div>
-            <p class="small muted">Manual logs grow development and later count toward goals — they never produce nous or charge.</p>
+            <p class="small muted">Manual logs never produce nous or charge.</p>
           </div>`
-        : `<p class="small muted">Select a habit to log practice manually; selection is locked during flow.</p>`}
+        : `<p class="small muted">Selection is locked during flow.</p>`}
     </section>`;
   }
 
@@ -1010,7 +1056,7 @@ function appPanelBody(app: App, panel: FocusApp): string {
           <select id="console-duration" aria-label="Session duration">${durationOptionsHtml(app)}</select>
           <p class="clock-caption">${app.ui.chosenTarget === null ? "Open-ended" : "Planned practice"}</p>
         </div>
-        <p class="small muted" style="margin-top:10px">The next session aims at the planned target; open-ended sessions run until you exit flow.</p>
+        
       </section>`;
     }
     const elapsed = state.session?.elapsed ?? 0;
@@ -1021,20 +1067,17 @@ function appPanelBody(app: App, panel: FocusApp): string {
       <p class="session-clock mono" data-live="time-clock">${formatClock(elapsed)}</p>
       <p class="clock-caption" data-live="time-caption">${sessionCaption(elapsed, target, paused)}</p>
       <div class="time-track wide"><span data-live="time-track" style="width:${sessionTrackWidth(elapsed, target)}"></span></div>
-      <p class="small muted" style="margin-top:10px">Timing rides with your practice; the session itself starts and ends at the console switch.</p>
     </section>`;
   }
 
   if (panel === "notes") {
     const recent = [...state.notes].slice(-8).reverse();
-    const live = state.session !== null;
     const when = (n: (typeof state.notes)[number]): string =>
       n.atElapsed === NOTE_BETWEEN_SESSIONS ? "between sessions" : `S${n.sessionId} · ${formatClock(n.atElapsed)}`;
     return `<section class="focus-controls">
       <span class="eyebrow">FOCUS CONTROLS</span>
       <textarea class="note-composer" id="note-composer" placeholder="What are you noticing?" maxlength="2000" rows="3"></textarea>
       <div class="session-actions" style="margin:10px 0 0"><button class="primary" id="note-save">Capture note</button></div>
-      <p class="small muted" style="margin:8px 0 0">${live ? "Notes carry no charge and no economy — they are notes." : "Captured between sessions; write during flow to timestamp against the session clock."}</p>
       ${recent.length > 0 ? `<div class="note-list">${recent.map((n) => `<div class="note-entry"><span class="note-when mono">${when(n)}</span><p>${escapeHtml(n.text)}</p></div>`).join("")}</div>` : ""}
     </section>`;
   }
@@ -1095,7 +1138,6 @@ function appPanelBody(app: App, panel: FocusApp): string {
     <div class="goal-list">
       ${state.goals.map(goalRow).join("") || `<p class="empty-copy">No goals yet. Goals track practice conditions.</p>`}
     </div>
-    <p class="small muted" style="margin-top:10px">Progress counts only while a goal exists; earlier practice never counts retroactively. Manual logs count too.</p>
   </section>`;
 }
 
@@ -1308,10 +1350,10 @@ function renderManagePanel(app: App, host: HTMLElement): void {
     </div>
     <p class="small muted">${
       reshaping
-        ? "Reshaping: click empty cells to remove and frontier outlines to add; they must balance."
+        ? "Reshaping — removals and additions must balance."
         : ui.placing
           ? "Choose a destination cell. Occupied modules swap."
-          : "Tiles are raised and movable. Drag them between cells or into the inventory; drop one onto a matching twin to combine. The Carrier stays pinned."
+          : "Drag tiles between cells or into the inventory; drop onto a twin to combine."
     }</p>
     <p class="manage-counts mono">${deployedCount} deployed · ${state.cells.length - deployedCount} empty · ${inventory.length} in inventory</p>
     <div class="manage-actions">
@@ -1329,13 +1371,13 @@ function renderManagePanel(app: App, host: HTMLElement): void {
     </div>
     <section class="inventory-drop" id="inventory-zone">
       <h3>Inventory</h3>
-      <p class="small muted">Drop a raised tile here to store its module, or click one to place it.</p>
+      <p class="small muted">Drop a tile here to store it; click to place.</p>
       <div class="inventory-hexes" id="inventory-list">
         ${inventory.map((m) => {
           return `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]}">
             ${hexTileSvg(m)}
           </button>`;
-        }).join("") || `<p class="empty-copy">Inventory is empty. Drag a tile here to store it.</p>`}
+        }).join("") || `<p class="empty-copy">Inventory is empty.</p>`}
       </div>
     </section>`;
 
@@ -1442,7 +1484,7 @@ function renderStoreModal(app: App, content: HTMLElement): void {
   content.innerHTML = `
     ${modalTop("CATALOG")}
     <h2 id="modal-title">Shape what comes next.</h2>
-    <p class="lead">The permanent purchase surface: starter-shelf offers while available, board cells, and every module's next level — all spendable between sessions. ${formatInt(state.nous)} ν available.</p>
+    <p class="lead">${formatInt(state.nous)} ν available.</p>
     ${ladderRows.length > 0 ? `
       <h3 class="store-section-title">Activations</h3>
       <div class="shop-list store-activations">${ladderRows.map((appKey) => {
@@ -1454,7 +1496,7 @@ function renderStoreModal(app: App, content: HTMLElement): void {
           </span>
         </div>`;
       }).join("")}</div>
-      <p class="small muted" style="margin:6px 0 0">Any order — every activation costs more than the last, whichever app it opens.</p>` : ""}
+      <p class="small muted" style="margin:6px 0 0">Any order — each rung costs more than the last.</p>` : ""}
     ${openShelf.length > 0 ? `
       <h3 class="store-section-title">Starter shelf</h3>
       <div class="shop-list">${openShelf.map((type) => {
@@ -1471,18 +1513,18 @@ function renderStoreModal(app: App, content: HTMLElement): void {
           </span>
         </div>`;
       }).join("")}</div>` : ""}
-    ${openShelf.length === 0 ? `<p class="empty-copy">The shelf is empty. New modules come from the Forge.</p>` : ""}
+    ${openShelf.length === 0 ? `<p class="empty-copy">The shelf is empty.</p>` : ""}
     <h3 class="store-section-title">Cells</h3>
     <div class="shop-list">
       <div class="shop-item">
         <div><h3>Board cell</h3><small>Empty hexes to place modules on — you choose where it touches the board.</small></div>
         <span class="shop-buy">
-          <button class="primary" id="buy-cell" ${cellAffordable ? "" : "disabled"} title="${cellAffordable ? "Arm the purchase — pick a frontier hex on the board; the price shows there" : "Not enough nous"}">Buy cell</button>
+          <button class="primary" id="buy-cell" ${cellAffordable ? "" : "disabled"} title="${cellAffordable ? "Arm the purchase — pick a frontier hex on the board" : "Not enough nous"}">${formatInt(cellPrice)} ν</button>
           ${cellCountdown ? `<small class="shop-countdown mono">${cellCountdown}</small>` : ""}
         </span>
       </div>
     </div>
-    <p class="small muted" style="margin:6px 0 0">Each cell bought raises the next price — the board shows it before you commit.</p>
+    <p class="small muted" style="margin:6px 0 0">Each purchase raises the next price.</p>
     <h3 class="store-section-title">Module upgrades</h3>
     <div class="shop-list">${state.modules.map((module) => {
       const cost = levelCost(module.level);
@@ -1497,14 +1539,13 @@ function renderStoreModal(app: App, content: HTMLElement): void {
         </span>
       </div>`;
     }).join("")}</div>
-    <p class="small muted" style="margin:6px 0 0">Upgrading here is the same purchase as the module's own panel — the carrier term moves on the status monitor.</p>
     <label class="store-toggle"><input type="checkbox" id="store-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${ownedShelf.length}/${shelfTypes.length})</label>
     ${ui.showAcquired && ownedShelf.length > 0 ? `
       <h3 class="store-section-title">Acquired</h3>
       <div class="shop-list store-owned">
-        ${ownedShelf.map((type) => `<div class="shop-item owned"><div><h3>${META[SHELF_MODULE[type]].name}</h3><small>${META[SHELF_MODULE[type]].role}</small></div><span class="activation-owned mono">Acquired</span></div>`).join("")}
+        ${ownedShelf.map((type) => `<div class="shop-item owned"><div><h3>${META[SHELF_MODULE[type]].name}</h3><small>${META[SHELF_MODULE[type]].role}</small></div><span class="activation-owned mono">in inventory</span></div>`).join("")}
       </div>` : ""}
-    <p class="modal-note">Shelf offers are one-time and hide once acquired. Copies from Forge rolls do not remove these offers — they can become combination material.</p>`;
+    <p class="modal-note">Shelf offers hide once acquired; roll copies stay, as combination material.</p>`;
   content.querySelectorAll<HTMLButtonElement>("[data-buy]").forEach((button) => {
     button.addEventListener("click", () => {
       app.buyShelf(button.getAttribute("data-buy") as keyof typeof BALANCE.shelfPrices);
@@ -1588,7 +1629,7 @@ function renderExportModal(app: App, content: HTMLElement): void {
   content.innerHTML = `
     ${modalTop("EXPORT SAVE")}
     <h2 id="modal-title">Take your progress with you.</h2>
-    <p class="lead">Copy this save text, or download it as a file. Import it on any machine running FlowSynth.</p>
+    <p class="lead">Copy, or download as a file.</p>
     <textarea class="save-textarea" id="export-text" readonly>${text}</textarea>
     <div class="modal-actions">
       <button id="export-copy">Copy to clipboard</button>
@@ -1624,7 +1665,7 @@ function renderImportModal(app: App, content: HTMLElement): void {
   content.innerHTML = `
     ${modalTop("IMPORT SAVE")}
     <h2 id="modal-title">Bring progress back.</h2>
-    <p class="lead">Paste a FlowSynth save here, or choose a save file. This replaces the current instrument.</p>
+    <p class="lead">Replaces the current instrument.</p>
     <textarea class="save-textarea" id="import-text" placeholder='{"app":"flowsynth", ...}'></textarea>
     <div class="modal-actions">
       <input type="file" id="import-file" accept="application/json,.json" style="display:none" />
@@ -1650,7 +1691,7 @@ function renderResetModal(app: App, content: HTMLElement): void {
   content.innerHTML = `
     ${modalTop("RESET")}
     <h2 id="modal-title">Start over?</h2>
-    <p class="lead">This erases the current instrument: modules, nous, progress, and banked rolls. Export first if you want a backup.</p>
+    <p class="lead">Erases everything. Export first for a backup.</p>
     <div class="modal-actions">
       <button id="reset-cancel">Keep playing</button>
       <button id="reset-confirm" class="primary" style="background:var(--danger);border-color:var(--danger)">Erase everything</button>
@@ -1666,7 +1707,7 @@ function renderReconcileModal(app: App, content: HTMLElement): void {
   content.innerHTML = `
     ${modalTop("PRACTICE CHECK")}
     <h2 id="modal-title">Were you practicing?</h2>
-    <p class="lead">FlowSynth lost contact with the browser for a while. Confirm the interval to keep its rewards, or discard it.</p>
+    <p class="lead">Confirm the interval to keep its rewards, or discard it.</p>
     <p class="reconcile-gap">${formatDuration(gap?.seconds ?? 0)}</p>
     <p class="small muted">${minutes > 0 ? `About ${minutes} minute${minutes === 1 ? "" : "s"} of wall-clock time.` : ""} Nothing was finalized yet; rewards apply only after you confirm.</p>
     <div class="modal-actions">
@@ -1679,29 +1720,21 @@ function renderReconcileModal(app: App, content: HTMLElement): void {
 
 /* ── Session modals (§5.5, §5.7) ───────────────────── */
 
-// The enter prompt, ahead of every session: "What are you practicing?" —
-// the habit ask with practice-unstructured as a visible, equal affordance,
-// and a create field wired into the Habit app: naming a new practice adds
-// the habit — the first, on a fresh instrument — and starts the session
-// with it selected. No purchase surface lives here, and the copy carries
-// the tuning hint: open-ended sessions suggest ~5 minutes, then exiting.
+// The enter prompt, ahead of a session with no habit selected: the habit
+// ask, the create field, and unstructured practice — nothing else. With a
+// habit already selected the console switch starts directly and this prompt
+// never opens.
 function renderEnterModal(app: App, content: HTMLElement): void {
-  const { state, ui } = app;
+  const { state } = app;
   const habits = state.habits.filter((h) => !h.archived);
   const active = activeHabit(state);
-  const planned = appActive(state, "time") && ui.chosenTarget !== null;
-  const planLine = planned
-    ? `Planned · ${formatClock(ui.chosenTarget!)} — the session still ends when you end it.`
-    : "Open-ended — try ~5 minutes, then exit flow to see what the board made.";
   content.innerHTML = `
     ${modalTop("ENTER FLOW")}
     <h2 id="modal-title">What are you practicing?</h2>
-    <p class="lead">Name the practice this session serves, or go in unstructured — the board produces either way.</p>
     <div class="enter-choices">
       ${habits
         .map(
           (habit) => `<button class="enter-choice${active?.id === habit.id ? " current" : ""}" data-enter-habit="${habit.id}">
-        <span class="habit-dot" aria-hidden="true"></span>
         <span class="enter-choice-name">${escapeHtml(habit.name)}</span>
         <small class="mono">${formatDuration(habit.seconds)}</small>
       </button>`,
@@ -1712,12 +1745,10 @@ function renderEnterModal(app: App, content: HTMLElement): void {
         <button class="small" id="enter-habit-add">Add &amp; practice</button>
       </div>
       <button class="enter-choice unstructured" id="enter-unstructured">
-        <span class="habit-dot off" aria-hidden="true"></span>
         <span class="enter-choice-name">Practice unstructured</span>
-        <small>no habit — development holds still, nous is unaffected</small>
+        <small>nous is unaffected</small>
       </button>
     </div>
-    <p class="small muted" style="margin:12px 0 0">${planLine}</p>
     <div class="modal-actions"><button id="enter-cancel">Back</button></div>`;
   content.querySelectorAll<HTMLElement>("[data-enter-habit]").forEach((button) => {
     button.addEventListener("click", () => app.beginFlow(button.getAttribute("data-enter-habit")));
@@ -1767,7 +1798,6 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
     ? `<div class="summary-row unlock">
         <span class="summary-label">Unlocked this session</span>
         <strong>${unlocked.join(" · ")}</strong>
-        <small class="summary-note">Trophies live on the console's status strip.</small>
       </div>`
     : "";
   content.innerHTML = `
@@ -1788,11 +1818,10 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
         ? `<div class="summary-row unlock">
         <span class="summary-label">New feature unlocked</span>
         <strong>Time your flow sessions</strong>
-        <small class="summary-note">The Time app is live on the console rail — plan sessions from it or the catalog.</small>
+        <small class="summary-note">The Time app is live.</small>
       </div>`
         : ""}
     </div>
-    <p class="small muted summary-reflections"><em>Session reflections will live here.</em></p>
     <div class="modal-actions"><button id="summary-continue" class="primary">Continue</button></div>`;
   byId("summary-continue")?.addEventListener("click", () => app.dismissSummary());
   wireClose(app);

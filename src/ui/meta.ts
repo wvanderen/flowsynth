@@ -33,10 +33,10 @@ export const APP_LABELS: Record<FocusApp, string> = { habit: "Habit", time: "Tim
 // The one-line pitch each ladder row carries in the catalog (spec §2.2's
 // launch function column).
 export const APP_ROLES: Record<FocusApp, string> = {
-  habit: "Select the active habit, or practice unstructured.",
+  habit: "Select the active habit.",
   time: "Planned targets and timing tools.",
-  notes: "The notes app — capture what you notice, in flow or between sessions.",
-  goals: "The goals app — track practice conditions. Templates are conditions only.",
+  notes: "Capture what you notice.",
+  goals: "Track practice conditions.",
 };
 
 export const DURATION_OPTIONS: { label: string; value: number | null }[] = [
