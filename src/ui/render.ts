@@ -13,7 +13,7 @@ import type { App, AppPanel } from "./app";
 import { moduleIcon } from "./icons";
 import { updateSvg } from "./svg";
 import { DURATION_OPTIONS, META, RARITY_LABEL } from "./meta";
-import { formatInt, formatNumber, practiceCountdown } from "./format";
+import { formatBalance, formatInt, formatNumber, practiceCountdown } from "./format";
 
 const HEX_RADIUS = 61;
 const SPACING = 65;
@@ -229,9 +229,7 @@ function renderConsoleReadout(app: App): void {
       nous.innerHTML = `<span class="eyebrow">Nous</span><strong class="mono" data-live="nous"></strong>`;
     }
     const amount = nous.querySelector('[data-live="nous"]');
-    // The counter reads whole nous — what is actually spendable — so the
-    // ticking decimals never flicker in and out of the readout.
-    const text = formatInt(state.nous);
+    const text = formatBalance(state.nous);
     if (amount && amount.textContent !== text) amount.textContent = text;
   }
   const telegraph = byId("telegraph-slot");
@@ -1257,7 +1255,7 @@ function renderStoreModal(app: App, content: HTMLElement): void {
   content.innerHTML = `
     ${modalTop("CATALOG")}
     <h2 id="modal-title">Shape what comes next.</h2>
-    <p class="lead">The starter shelf: one offer per category, once each — plus board cells, always. ${formatInt(state.nous)} ν available.</p>
+    <p class="lead">The starter shelf: one offer per category, once each — plus board cells, always. ${formatBalance(state.nous)} ν available.</p>
     ${openShelf.length > 0 ? `
       <h3 class="store-section-title">Starter shelf</h3>
       <div class="shop-list">${openShelf.map((type) => {

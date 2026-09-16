@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCountdown, formatInt, formatNumber, practiceCountdown } from "./format";
+import { formatBalance, formatCountdown, formatInt, formatNumber, practiceCountdown } from "./format";
 
 describe("formatNumber — the shared live-value formatter (§7)", () => {
   it("shows exact comma-grouped integers below one million", () => {
@@ -86,6 +86,27 @@ describe("formatInt — integer quantities are always exact", () => {
   it("floors fractional input", () => {
     expect(formatInt(99.9)).toBe("99");
     expect(formatInt(10.000000001)).toBe("10");
+  });
+});
+
+describe("formatBalance — the nous counter's constant-digit readout", () => {
+  it("always shows exactly two decimals, padded rather than trimmed", () => {
+    expect(formatBalance(0)).toBe("0.00");
+    expect(formatBalance(0.1)).toBe("0.10");
+    expect(formatBalance(42)).toBe("42.00");
+    expect(formatBalance(0.35)).toBe("0.35");
+    expect(formatBalance(1234.5)).toBe("1,234.50");
+  });
+
+  it("floors to the spendable amount", () => {
+    expect(formatBalance(79.999)).toBe("79.99");
+    expect(formatBalance(0.999)).toBe("0.99");
+  });
+
+  it("hands the ladder boundary back to the shared formatter", () => {
+    expect(formatBalance(999_999.999)).toBe("999,999.99");
+    expect(formatBalance(1_000_000)).toBe("1M");
+    expect(formatBalance(1_234_567.89)).toBe("1.235M");
   });
 });
 

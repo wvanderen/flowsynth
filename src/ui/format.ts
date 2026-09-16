@@ -28,6 +28,19 @@ export function formatInt(n: number): string {
   return Math.floor(n + 1e-9).toLocaleString("en-US");
 }
 
+// The nous counter's readout: exactly two decimals, padded rather than
+// trimmed (floored to the spendable amount), so a ticking balance keeps a
+// constant digit count and never shifts the layout around it. The ladder
+// takes over at the exact-range boundary as everywhere else.
+export function formatBalance(n: number): string {
+  if (!Number.isFinite(n)) return "—";
+  if (Math.abs(n) >= EXACT_LIMIT) return formatNumber(n);
+  return (Math.floor(n * 100) / 100).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 function exact(abs: number): string {
   return (Math.round(abs * 100) / 100).toLocaleString("en-US", { maximumFractionDigits: 2 });
 }
