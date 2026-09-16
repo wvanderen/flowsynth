@@ -607,15 +607,17 @@ body.live .inspector-empty { opacity: 0.75; }
    contribution readout, and a smaller geometric signature. Hue = category;
    the Carrier wears white; rarity is rings + plate tint — never hue. */
 
-/* Chassis states: structure in line colors; light and motion carry charge. */
-.hex { fill: var(--hex-face); stroke: var(--line-strong); stroke-width: 1; transition: stroke 0.2s, fill 0.2s; }
+/* Chassis states: structure in line colors; light and motion carry charge.
+   A charged receiver's fill comes from the charge token at an inline
+   fill-opacity that scales with its received strength (the face's glow). */
+.hex { fill: var(--hex-face); stroke: var(--line-strong); stroke-width: 1; transition: stroke 0.2s, fill 0.2s, fill-opacity 0.2s; }
 .hex.future { fill: transparent; stroke: var(--line); stroke-dasharray: 5 4; }
 .hex.target { stroke: var(--accent); stroke-width: 2; fill: var(--accent-faint); }
 /* A frontier hex while a cell purchase is armed: solid, inviting, priced. */
 .hex.buy-here { fill: var(--accent-faint); stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 5 4; }
 .hex.buy-here:hover { fill: var(--accent-soft); }
 .hex.selected { stroke: var(--accent); stroke-width: 2.5; }
-.hex.charged { stroke: var(--charge); fill: var(--charge-faint); }
+.hex.charged { stroke: var(--charge); fill: var(--charge); }
 .hex.dispensing { stroke: var(--forge-glow); fill: var(--forge-faint); stroke-width: 2; }
 .hex.locked { fill: var(--panel-deep); }
 .hex.remove-stage { stroke: var(--danger); stroke-width: 2; stroke-dasharray: 5 4; fill: var(--danger-faint); }
@@ -637,8 +639,8 @@ body.live .inspector-empty { opacity: 0.75; }
 .face-rings { fill: none; stroke: var(--muted); stroke-opacity: 0.3; stroke-width: 1; pointer-events: none; }
 
 /* The narrow category rail: the face's one category-hue element, paired with
-   the signature glyph. A receiving module brightens its rail toward the
-   luminous charge register. */
+   the signature glyph. A charged receiver's rail swaps to the charge token;
+   the face's inline stroke-opacity brightens it with received strength. */
 .face-rail { fill: none; stroke-width: 5; stroke-linecap: round; pointer-events: none; }
 .module-node:has(.hex.charged) .face-rail { stroke: var(--charge); }
 
@@ -655,12 +657,17 @@ body.live .inspector-empty { opacity: 0.75; }
 .face-note { font: 8.5px var(--mono); letter-spacing: 0.12em; fill: var(--muted); }
 .face-signature { stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 
-body.live .hex.charged { animation: charge-pulse 3s ease-in-out infinite; }
-@keyframes charge-pulse { 50% { fill: var(--charge-deep); } }
-
-.charge-line { stroke: var(--charge); stroke-width: 2; stroke-dasharray: 4 5; opacity: 0.8; animation: charge-flow 1.6s linear infinite; }
+/* Charge leads (§8, #41): uniform green patch leads, center-to-center,
+   directional generator → receiver. Leads in live flow flow; everything
+   else — upgrade or paused (charge pauses, ADR-0001), or a generator whose
+   charge window is spent — sits dim and static as wiring previews
+   (ADR-0002). Motion lives on the leads; the charged receiver's light is
+   the strength-scaled glow the face carries inline. */
+.charge-line { stroke: var(--charge); stroke-width: 2; stroke-dasharray: 4 5; opacity: 0.85; marker-end: url(#fs-lead-tip); animation: charge-flow 1.6s linear infinite; }
 @keyframes charge-flow { to { stroke-dashoffset: -18; } }
-.charge-preview-line { stroke: var(--charge); stroke-width: 1.5; stroke-dasharray: 3 6; opacity: 0.45; }
+.charge-preview-line { stroke: var(--charge); stroke-width: 1.5; stroke-dasharray: 3 6; opacity: 0.32; marker-end: url(#fs-lead-tip-dim); }
+.lead-tip { fill: var(--charge); }
+.lead-tip-dim { fill: var(--charge); opacity: 0.5; }
 .highlight-ring { fill: none; stroke: var(--charge); stroke-width: 1.5; opacity: 0.8; pointer-events: none; }
 
 /* Threshold fill: the chargeable's progress rises inside the chassis like
