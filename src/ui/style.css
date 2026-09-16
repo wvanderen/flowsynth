@@ -90,7 +90,6 @@ h1, h2, h3, p { margin: 0; }
    shift the layout. */
 .session-clock { font: 28px/1.1 var(--mono); margin: 0; }
 .clock-caption { font-size: 10px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.clock-state { font-size: 20px; letter-spacing: 0.04em; }
 .time-track {
   width: 135px;
   height: 3px;

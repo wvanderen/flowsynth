@@ -79,14 +79,15 @@ describe("the console readout", () => {
     expect(document.querySelector("#flow-switch .switch-state")).not.toBeNull();
   });
 
-  it("the upgrade-mode clock reads 'planned' or 'open' in the clock slot", () => {
+  it("the upgrade-mode clock wears the target in flow styles, 'planned' as caption", () => {
     app.state.sessionsCompleted = 1;
     app.ui.chosenTarget = 600;
     app.render();
-    expect(document.getElementById("console-session")!.textContent).toContain("planned");
+    expect(document.querySelector("#console-session .session-clock")!.textContent).toBe("10:00");
+    expect(document.querySelector("#console-session .clock-caption")!.textContent).toBe("planned");
     app.ui.chosenTarget = null;
     app.render();
-    expect(document.getElementById("console-session")!.textContent).toContain("open");
+    expect(document.querySelector("#console-session .session-clock")!.textContent).toBe("open");
   });
 
   it("the session total only exists while a session runs", () => {

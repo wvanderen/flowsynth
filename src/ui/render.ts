@@ -121,16 +121,16 @@ function renderConsoleSession(app: App): void {
   if (state.mode === "upgrade") {
     // Structural key: only rebuild when the shape of the section changes, so
     // control nodes (and in-flight clicks) survive clock ticks. The clock
-    // wears the next session's shape — "planned" or "open" — in the same
-    // slot the running clock uses; the target itself lives on the Time tile.
-    const timeOn = appActive(state, "time");
-    const planned = timeOn && app.ui.chosenTarget !== null;
+    // wears the next session's target in flow's clock styles, with
+    // "planned" (or "open") in the caption slot.
+    const planned = appActive(state, "time") && app.ui.chosenTarget !== null;
     const key = `upgrade:${planned}`;
     if (host.dataset.renderKey !== key) {
       host.dataset.renderKey = key;
       host.innerHTML = `
         <div class="console-clock">
-          <p class="session-clock mono clock-state">${planned ? "planned" : "open"}</p>
+          <p class="session-clock mono">${planned ? formatClock(app.ui.chosenTarget!) : "open"}</p>
+          <p class="clock-caption">${planned ? "planned" : ""}</p>
           <div class="time-track"><span id="time-track-fill" style="width:0%"></span></div>
         </div>
         <div class="session-actions">
