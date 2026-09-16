@@ -1,5 +1,6 @@
 import { BALANCE, NEXT_RARITY } from "./constants";
-import { cellCost, deployedAt, findModule, levelCost, wholeNous } from "./economy";
+import { cellCost, deployedAt, findModule, levelCost, longGoalCost, wholeNous } from "./economy";
+import { nextRungCost, appActive, LADDER_APPS, type FocusApp } from "./apps";
 import { adjacent, hexKey, isConnected, sameHex } from "./hex";
 import { createModule, isCarrier } from "./state";
 import { logSessionPractice } from "./habits";
@@ -90,6 +91,33 @@ export function buyCell(state: GameState, pos: Hex): ActionResult {
   state.nous -= price;
   state.cells.push(pos);
   state.cellsBought++;
+  return ok;
+}
+
+// The activation ladder (ADR-0013): the purchase that flips a focus app on.
+// The rung price is shared — buying Notes first makes Goals cost rung two —
+// so order is free while the ladder always rises.
+export function buyActivation(state: GameState, app: FocusApp): ActionResult {
+  if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
+  if (!LADDER_APPS.includes(app)) return fail("That app is not sold on the activation ladder.");
+  if (appActive(state, app)) return fail("That app is already active.");
+  const price = nextRungCost(state);
+  if (wholeNous(state) < price) return fail("Not enough whole nous.");
+  state.nous -= price;
+  state.activatedApps.push(app);
+  return ok;
+}
+
+// The first console long goal (ADR-0012, issue #42): goal capacity. One at
+// a time, gated behind the Goals app's activation, each purchase pricing
+// the next past the current build-out.
+export function buyGoalCapacity(state: GameState): ActionResult {
+  if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
+  if (!appActive(state, "goals")) return fail("Goals must be active before its upgrades appear.");
+  const price = longGoalCost(state.goalCapacityBought);
+  if (wholeNous(state) < price) return fail("Not enough whole nous.");
+  state.nous -= price;
+  state.goalCapacityBought++;
   return ok;
 }
 

@@ -1,10 +1,10 @@
-import { chargedFactor, cellCost, computeRates, deployed, emittedStrength, levelCost, modulePower, wholeNous } from "../engine/economy";
+import { chargedFactor, cellCost, computeRates, deployed, emittedStrength, levelCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
 import { BALANCE, CATEGORY_OF, NEXT_RARITY } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
-import { appActive, appLockNote, FOCUS_APPS, type FocusApp } from "../engine/apps";
+import { appActive, appLockNote, FOCUS_APPS, LADDER_APPS, ladderComplete, nextRung, nextRungCost, type FocusApp } from "../engine/apps";
 import { canWriteNotes } from "../engine/notes";
 import { activeHabit } from "../engine/habits";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
@@ -15,7 +15,7 @@ import { appIcon } from "./icons";
 import { HEX_RADIUS, hexPoints, moduleFace } from "./face";
 import { chargeGlow, chargeLeads } from "./leads";
 import { updateSvg } from "./svg";
-import { DURATION_OPTIONS, META, RARITY_LABEL } from "./meta";
+import { DURATION_OPTIONS, APP_LABELS, APP_ROLES, META, RARITY_LABEL } from "./meta";
 import { formatInt, formatNumber, practiceCountdown } from "./format";
 import { renderStatusMonitor } from "./monitor";
 
@@ -179,7 +179,7 @@ function liveText(scope: ParentNode, live: string, text: string): void {
 // state LED when active — with its panel opening as a popover anchored
 // directly beneath the tile. Locked tiles open nothing; the board never
 // moves, reflows, or dims while the console is used.
-const APP_LABELS: Record<FocusApp, string> = { habit: "Habit", time: "Time", goals: "Goals", notes: "Notes" };
+// (Display names live in meta.ts's APP_LABELS.)
 
 function renderConsoleApps(app: App): void {
   const host = byId("console-apps");
@@ -189,6 +189,8 @@ function renderConsoleApps(app: App): void {
     ui.app,
     state.mode,
     state.sessionsCompleted === 0,
+    state.activatedApps.join("|"),
+    state.goalCapacityBought,
     state.habits.map((h) => `${h.archived ? "·" : ""}${h.name}`).join("|"),
     state.activeHabitId,
     ui.editingHabitId,
@@ -284,9 +286,17 @@ function renderConsoleReadout(app: App): void {
     if (amount && amount.textContent !== text) amount.textContent = text;
   }
   const telegraph = byId("telegraph-slot");
-  if (telegraph && telegraph.childElementCount === 0) {
-    telegraph.innerHTML = `<span class="eyebrow">Next rung</span><strong class="mono">—</strong>`;
-    telegraph.title = "The activation ladder's next rung will show here";
+  if (telegraph) {
+    if (telegraph.childElementCount === 0) {
+      telegraph.innerHTML = `<span class="eyebrow">Next rung</span><strong class="mono" data-live="rung">—</strong>`;
+    }
+    // The ladder telegraph (§2.2): the next rung's price — any app, in any
+    // order — standing in for the whole ladder until a new app joins it.
+    const text = ladderComplete(state) ? "—" : `${formatInt(nextRungCost(state))} · any app`;
+    liveText(telegraph, "rung", text);
+    telegraph.title = ladderComplete(state)
+      ? "The activation ladder is complete — new apps join it when designed"
+      : "The activation ladder's next rung: activating any locked app costs this";
   }
 }
 
@@ -946,6 +956,25 @@ function appPanelBody(app: App, panel: FocusApp): string {
   const habitOptions = [`<option value="">Any habit</option>`]
     .concat(state.habits.filter((h) => !h.archived).map((h) => `<option value="${h.id}">${escapeHtml(h.name)}</option>`))
     .join("");
+  // The first console long goal (ADR-0012, issue #42): goal capacity as a
+  // dashed strip in the owning app's panel — one at a time, each purchase
+  // pricing the next past the build-out. Read-only in flow.
+  const longGoalPrice = longGoalCost(state.goalCapacityBought);
+  const longGoalAffordable = wholeNous(state) >= longGoalPrice;
+  const longGoalCountdown = upgrade ? practiceCountdown(longGoalPrice, wholeNous(state), computeRates(state, true).rate) : null;
+  const longGoalStrip = `
+    <div class="long-goal-strip">
+      <div class="long-goal-info">
+        <span class="eyebrow">CONSOLE LONG GOAL · ${state.goalCapacityBought + 1}</span>
+        <p class="long-goal-name">Goal capacity <span class="mono">+${BALANCE.goalSlotsPerLongGoal} slots</span></p>
+        <small class="mono" style="color:var(--muted)">${capacity} → ${capacity + BALANCE.goalSlotsPerLongGoal} slots</small>
+      </div>
+      <span class="shop-buy">
+        <button class="primary small" id="long-goal-buy" ${upgrade && longGoalAffordable ? "" : "disabled"}
+          title="${upgrade ? (longGoalAffordable ? "Buy the next beat of goal capacity" : "Not enough nous yet") : "Purchases happen between sessions"}">${formatInt(longGoalPrice)} ν</button>
+        ${upgrade ? `<small class="shop-countdown mono" data-live="long-goal-countdown">${longGoalCountdown ?? ""}</small>` : `<small class="shop-countdown">between sessions</small>`}
+      </span>
+    </div>`;
   const goalRow = (goal: Goal) => {
     const required = goalRequiredSeconds(goal);
     const fraction = Math.min(1, goal.progressSeconds / required);
@@ -964,6 +993,7 @@ function appPanelBody(app: App, panel: FocusApp): string {
   };
   return `<section class="focus-controls">
     <span class="eyebrow">FOCUS CONTROLS · ${state.goals.length}/${capacity} SLOTS${upgrade ? "" : " · LOCKED FOR THIS SESSION"}</span>
+    ${longGoalStrip}
     ${upgrade && state.goals.length < capacity ? `
       <div class="goal-create">
         <select id="goal-habit" aria-label="Habit">${habitOptions}</select>
@@ -1053,6 +1083,7 @@ function bindAppPanel(app: App, scope: HTMLElement): void {
       scheduleSelect.value as "once" | "daily" | "weekly",
     );
   });
+  scope.querySelector("#long-goal-buy")?.addEventListener("click", () => app.buyGoalCapacityAction());
   scope.querySelectorAll<HTMLElement>("[data-goal-delete]").forEach((button) => {
     button.addEventListener("click", () => {
       const id = button.getAttribute("data-goal-delete");
@@ -1102,6 +1133,16 @@ function updateAppPanelLive(app: App, scope: ParentNode): void {
     const minutes = scope.querySelector(`[data-goal-minutes="${goal.id}"]`);
     const display = `${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · ×${goal.completedCount} completed` : ""}`;
     if (minutes && minutes.textContent !== display) minutes.textContent = display;
+  }
+  // The long-goal strip's affordability moves with the balance between
+  // rebuilds: the buy button and its practice-minute countdown keep
+  // themselves current, like the module upgrade CTA (§7).
+  const longGoalBuy = scope.querySelector("#long-goal-buy") as HTMLButtonElement | null;
+  if (longGoalBuy) {
+    const price = longGoalCost(state.goalCapacityBought);
+    longGoalBuy.disabled = !(state.mode === "upgrade" && wholeNous(state) >= price);
+    const countdown = practiceCountdown(price, wholeNous(state), computeRates(state, true).rate) ?? "";
+    liveText(scope, "long-goal-countdown", countdown);
   }
 }
 
@@ -1240,7 +1281,7 @@ function renderModal(app: App): void {
     kind === "forge"
       ? app.state.bankedRolls.at(-1)?.id ?? null
       : kind === "store"
-        ? [app.ui.showAcquired, wholeNous(app.state), JSON.stringify(app.state.purchased), app.state.cellsBought]
+        ? [app.ui.showAcquired, wholeNous(app.state), JSON.stringify(app.state.purchased), app.state.cellsBought, app.state.activatedApps.join("|")]
         : null;
   const renderKey = JSON.stringify([kind, app.ui.importError, app.state.pendingGap, extra]);
   // Clock ticks must not replace a save textarea or steal dialog focus.
@@ -1284,6 +1325,14 @@ function renderStoreModal(app: App, content: HTMLElement): void {
   const openShelf = shelfTypes.filter((type) => !state.purchased[type]);
   const ownedShelf = shelfTypes.filter((type) => state.purchased[type]);
 
+  // The activation ladder (ADR-0013): every locked app is a row at the same
+  // shared price — the next rung — so the order stays free while every
+  // purchase raises the rung for the apps still waiting.
+  const ladderRows = LADDER_APPS.filter((appKey) => !appActive(state, appKey));
+  const rungPrice = nextRungCost(state);
+  const rungAffordable = wholeNous(state) >= rungPrice;
+  const rungCountdown = upgradeCountdown(app, rungPrice);
+
   // Cells (ADR-0013): the permanent catalog row. The price is not quoted
   // here — it lives where the purchase commits, on the board's frontier.
   const cellPrice = cellCost(state.cellsBought);
@@ -1294,6 +1343,18 @@ function renderStoreModal(app: App, content: HTMLElement): void {
     ${modalTop("CATALOG")}
     <h2 id="modal-title">Shape what comes next.</h2>
     <p class="lead">The starter shelf: one offer per category, once each — plus board cells, always. ${formatInt(state.nous)} ν available.</p>
+    ${ladderRows.length > 0 ? `
+      <h3 class="store-section-title">Activations</h3>
+      <div class="shop-list store-activations">${ladderRows.map((appKey) => {
+        return `<div class="shop-item activation">
+          <div><h3>${APP_LABELS[appKey]}</h3><small>${APP_ROLES[appKey]}</small></div>
+          <span class="shop-buy">
+            <button class="primary" data-activate="${appKey}" ${rungAffordable ? "" : "disabled"} title="Rung ${nextRung(state)} of the activation ladder — any app, in any order">${formatInt(rungPrice)} ν</button>
+            ${rungCountdown ? `<small class="shop-countdown mono">${rungCountdown}</small>` : ""}
+          </span>
+        </div>`;
+      }).join("")}</div>
+      <p class="small muted" style="margin:6px 0 0">Any order — every activation costs more than the last, whichever app it opens.</p>` : ""}
     ${openShelf.length > 0 ? `
       <h3 class="store-section-title">Starter shelf</h3>
       <div class="shop-list">${openShelf.map((type) => {
@@ -1315,7 +1376,7 @@ function renderStoreModal(app: App, content: HTMLElement): void {
         <div><h3>Board cell</h3><small>Empty hexes to place modules on — you choose where it touches the board.</small></div>
         <span class="shop-buy">
           <button class="primary" id="buy-cell" ${cellAffordable ? "" : "disabled"} title="${cellAffordable ? "Arm the purchase — pick a frontier hex on the board; the price shows there" : "Not enough nous"}">Buy cell</button>
-          ${cellCountdown}
+          ${cellCountdown ? `<small class="shop-countdown mono">${cellCountdown}</small>` : ""}
         </span>
       </div>
     </div>
@@ -1330,6 +1391,11 @@ function renderStoreModal(app: App, content: HTMLElement): void {
   content.querySelectorAll<HTMLButtonElement>("[data-buy]").forEach((button) => {
     button.addEventListener("click", () => {
       app.buyShelf(button.getAttribute("data-buy") as keyof typeof BALANCE.shelfPrices);
+    });
+  });
+  content.querySelectorAll<HTMLButtonElement>("[data-activate]").forEach((button) => {
+    button.addEventListener("click", () => {
+      app.buyActivationAction(button.getAttribute("data-activate") as FocusApp);
     });
   });
   byId("buy-cell")?.addEventListener("click", () => app.armCellPurchase());

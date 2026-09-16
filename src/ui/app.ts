@@ -2,7 +2,9 @@ import { advance } from "../engine/advance";
 import type { AdvanceResult } from "../engine/types";
 import {
   acknowledgeHorizon,
+  buyActivation,
   buyCell,
+  buyGoalCapacity,
   buyShelfModule,
   chooseRoll,
   combine,
@@ -24,6 +26,7 @@ import { planTick } from "../engine/clock";
 import { createInitialState } from "../engine/state";
 import { appActive, type FocusApp } from "../engine/apps";
 import { writeNote } from "../engine/notes";
+import { BALANCE } from "../engine/constants";
 import {
   activeHabit,
   addPracticeLog,
@@ -35,7 +38,7 @@ import {
 import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
 import type { GameState, Hex, ShelfType } from "../engine/types";
 import { render } from "./render";
-import { META } from "./meta";
+import { APP_LABELS, META } from "./meta";
 import { formatInt, practiceCountdown } from "./format";
 
 export type ModalKind = "settings" | "store" | "forge" | "export" | "import" | "reset" | "reconcile" | null;
@@ -357,6 +360,18 @@ export class App {
       this.ui.modal = null;
       this.beginPlacing(this.state.modules[this.state.modules.length - 1]!.id);
     }
+  }
+
+  // The activation ladder (ADR-0013): buying a rung flips the app on; the
+  // telegraph and the other ladder rows step to the next price.
+  buyActivationAction(appKey: FocusApp): void {
+    this.act(buyActivation(this.state, appKey), `${APP_LABELS[appKey]} app activated. It stays yours.`);
+  }
+
+  // The first console long goal (ADR-0012): goal capacity, one beat at a
+  // time from the Goals panel's dashed strip.
+  buyGoalCapacityAction(): void {
+    this.act(buyGoalCapacity(this.state), `Goal capacity grows by ${BALANCE.goalSlotsPerLongGoal} slots. The next beat prices itself past this one.`);
   }
 
   // Arm the cell purchase from the catalog: the buy itself lands only when a

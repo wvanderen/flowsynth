@@ -110,6 +110,10 @@ export interface Goal {
 
 export type Mode = "upgrade" | "flow" | "paused";
 
+// The console's fixed-function instruments (ADR-0012). Defined here because
+// the save state records which of them the activation ladder has unlocked.
+export type FocusApp = "habit" | "time" | "notes" | "goals";
+
 export interface GameState {
   mode: Mode;
   sessionIndex: number;
@@ -133,6 +137,13 @@ export interface GameState {
   chargeWindow: number;
   bankedRolls: RollOffer[];
   purchased: Record<ShelfType, boolean>;
+  // The activation ladder (ADR-0013): the apps unlocked by rung purchases,
+  // in purchase order — free order, globally rising rungs. Habit is always
+  // on and Time auto-activates; neither is ever stored here.
+  activatedApps: FocusApp[];
+  // Console long goals (ADR-0012): goal capacity is the first named beat —
+  // each purchase grows the Goals app's slot capacity.
+  goalCapacityBought: number;
   notes: NoteEntry[];
   habits: Habit[];
   activeHabitId: string | null;

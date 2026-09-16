@@ -1,6 +1,5 @@
 import { BALANCE, EPS } from "./constants";
 import type { Goal, GoalCondition, GoalSchedule, GameState } from "./types";
-
 export type { Goal, GoalCondition, GoalSchedule };
 
 // Goals (issue #6). A goal tracks a practice condition ("Piano, 20 minutes
@@ -8,12 +7,11 @@ export type { Goal, GoalCondition, GoalSchedule };
 // — earlier practice never counts retroactively. Completions carry no
 // charge: goal templates are conditions only (ADR-0012). Daily and weekly
 // goals reset at the local calendar boundary; one-time goals keep their
-// slot until replaced in upgrade mode. Slot capacity is fixed until the
-// console long goals arrive.
+// slot until replaced in upgrade mode. Slot capacity grows only through the
+// console long goal (issue #42): goal capacity, bought in the Goals panel.
 
 export function goalCapacity(state: GameState): number {
-  void state;
-  return BALANCE.goalBaseSlots;
+  return BALANCE.goalBaseSlots + state.goalCapacityBought * BALANCE.goalSlotsPerLongGoal;
 }
 
 export function goalRequiredSeconds(goal: Goal): number {
