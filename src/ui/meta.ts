@@ -4,10 +4,18 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
   carrier: { name: "Carrier", short: "Carrier", role: "The granted origin" },
   additive: { name: "Additive Synth", short: "Additive", role: "Harmonic term" },
   conditional: { name: "Conditional Synth", short: "Conditional", role: "Amplitude + chord bonus" },
-  generator: { name: "Generator", short: "Generator", role: "Produces charge" },
   focusKeyed: { name: "Focus-Keyed Generator", short: "Focus-Gen", role: "Charge from focus" },
   infusor: { name: "Infusor", short: "Infusor", role: "Neighbor bonuses" },
   forge: { name: "Forge", short: "Forge", role: "Rolls at threshold" },
+};
+
+// Shelf rows speak through the module they grant (ADR-0018: the generator
+// offer is the focus-keyed generator; the additive synth is shelved).
+export const SHELF_MODULE: Record<ShelfType, ModuleType> = {
+  additive: "additive",
+  generator: "focusKeyed",
+  infusor: "infusor",
+  forge: "forge",
 };
 
 // The shelf's one permanent hint (§5.8): the guaranteed generator row names
@@ -27,7 +35,7 @@ export const APP_LABELS: Record<FocusApp, string> = { habit: "Habit", time: "Tim
 export const APP_ROLES: Record<FocusApp, string> = {
   habit: "Select the active habit, or practice unstructured.",
   time: "Planned targets and timing tools.",
-  notes: "The notes app — capture what you notice during flow. Notes are notes.",
+  notes: "The notes app — capture what you notice, in flow or between sessions.",
   goals: "The goals app — track practice conditions. Templates are conditions only.",
 };
 

@@ -11,7 +11,7 @@ import {
   startSession,
   upgradeModule,
 } from "./actions";
-import { cellCost, wholeNous } from "./economy";
+import { cellCost, computeRates, wholeNous } from "./economy";
 import { fresh, give, stubRng } from "./fixtures";
 import { generateOffer } from "./rolls";
 import { hex, isConnected, sameHex } from "./hex";
@@ -34,24 +34,37 @@ describe("starter shelf", () => {
     s.nous = 39.9;
     expect(buyShelfModule(s, "infusor").ok).toBe(false);
 
-    for (const type of ["infusor", "forge"] as ShelfType[]) {
+    for (const type of ["additive", "infusor", "forge"] as ShelfType[]) {
       s.nous = BALANCE.shelfPrices[type];
       expect(buyShelfModule(s, type).ok).toBe(true);
     }
-    expect(s.modules.filter((m) => m.type === "generator")).toHaveLength(1);
+    // The shelf's "generator" offer is the focus-keyed generator (ADR-0018).
+    expect(s.modules.filter((m) => m.type === "focusKeyed")).toHaveLength(1);
   });
 
-  it("every launch category is reachable exactly once through shelf plus rolls", () => {
+  it("the shelf's additive synth chords with the Carrier out of the box", () => {
     const s = fresh();
-    for (const type of ["generator", "infusor", "forge"] as ShelfType[]) {
+    s.nous = BALANCE.shelfPrices.additive;
+    expect(buyShelfModule(s, "additive").ok).toBe(true);
+    const additive = s.modules[s.modules.length - 1]!;
+    expect(additive.type).toBe("additive");
+    expect(placeModule(s, additive.id, hex(1, 0)).ok).toBe(true);
+    const snapshot = computeRates(s, true);
+    expect(snapshot.namedChords.map((c) => c.name)).toEqual(["Octave"]);
+  });
+
+  it("every launch category is reachable through shelf plus rolls", () => {
+    const s = fresh();
+    for (const type of ["additive", "generator", "infusor", "forge"] as ShelfType[]) {
       s.nous = BALANCE.shelfPrices[type];
       expect(buyShelfModule(s, type).ok).toBe(true);
     }
-    const categories = new Set(s.modules.map((m) => m.type));
-    expect(categories.has("generator")).toBe(true);
-    expect(categories.has("infusor")).toBe(true);
-    expect(categories.has("forge")).toBe(true);
-    expect(categories.has("carrier")).toBe(true);
+    const types = new Set(s.modules.map((m) => m.type));
+    expect(types.has("additive")).toBe(true);
+    expect(types.has("focusKeyed")).toBe(true);
+    expect(types.has("infusor")).toBe(true);
+    expect(types.has("forge")).toBe(true);
+    expect(types.has("carrier")).toBe(true);
   });
 
   it("upgrades need only upgrade mode and whole nous", () => {
@@ -79,9 +92,9 @@ describe("placement and board rules", () => {
   it("gameplay modules swap positions and store to inventory", () => {
     const s = fresh();
     const additive = give(s, "additive", hex(1, 0));
-    const forge = give(s, "forge", hex(0, -1));
-    expect(placeModule(s, additive.id, hex(0, -1)).ok).toBe(true);
-    expect(additive.pos).toEqual(hex(0, -1));
+    const forge = give(s, "forge", hex(0, 1));
+    expect(placeModule(s, additive.id, hex(0, 1)).ok).toBe(true);
+    expect(additive.pos).toEqual(hex(0, 1));
     expect(forge.pos).toEqual(hex(1, 0));
     expect(returnModule(s, forge.id).ok).toBe(true);
     expect(forge.pos).toBeNull();
@@ -201,8 +214,9 @@ describe("conservation", () => {
     const s = fresh();
     const rng = stubRng(new Array(64).fill(0.5));
     give(s, "additive", hex(1, 0));
-    give(s, "forge", hex(0, -1));
-    give(s, "generator", hex(2, 0));
+    give(s, "forge", hex(0, 1));
+    give(s, "focusKeyed", hex(2, 0));
+    s.chargeWindow = 1200;
     // The opening grant (issue #43) sits in the balance before anything is
     // earned; conservation reads earned = (final − starting) + spent.
     const startingNous = s.nous;
@@ -212,7 +226,7 @@ describe("conservation", () => {
 
     const earnedTotal = s.totalEarned;
     let spent = 0;
-    for (const type of ["generator", "infusor", "forge"] as ShelfType[]) {
+    for (const type of ["additive", "generator", "infusor", "forge"] as ShelfType[]) {
       if (wholeNous(s) >= BALANCE.shelfPrices[type]) {
         const before = s.nous;
         buyShelfModule(s, type);

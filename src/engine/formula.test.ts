@@ -5,10 +5,11 @@ import { chargedFactor, computeRates, investment, levelCost, modulePower } from 
 import { fresh, give } from "./fixtures";
 import { hex } from "./hex";
 
-// Fresh board: the Carrier at (0,0), empty cells (1,0) and (0,-1). The
-// carrier term alone is the whole formula at game start (§4). Ring-2 cells
-// like (2,0) sit two hexes out — pitch 3, chordless — keeping the amplitude
-// tests free of chord terms; chords get their own suite (chords.test.ts).
+// Fresh board: the Carrier at (0,0), empty cells (1,0) and (0,1) — a
+// triangle (ADR-0018). The carrier term alone is the whole formula at game
+// start (§4). Ring-2 cells like (2,0) sit two hexes out — pitch 3,
+// chordless — keeping the amplitude tests free of chord terms; chords get
+// their own suite (chords.test.ts).
 const CARRIER = 0.1;
 
 describe("board production model", () => {
@@ -41,9 +42,10 @@ describe("board production model", () => {
     expect(computeRates(s, true).rate).toBeCloseTo(CARRIER + 0.05 * (1 + 0.2), 9);
   });
 
-  it("charge empowers adjacent synthesizers and infusors continuously during flow", () => {
+  it("charge empowers adjacent synthesizers and infusors while the window lasts", () => {
     const s = fresh();
-    give(s, "generator", hex(0, -1));
+    give(s, "focusKeyed", hex(0, 1));
+    s.chargeWindow = 60;
     const live = computeRates(s, true);
     expect(live.rate).toBeCloseTo(CARRIER * chargedFactor(1), 9);
     // Charge exists only while flow is live: no session, no empowerment.
@@ -64,7 +66,8 @@ describe("board production model", () => {
   it("a generator feeds the adjacent Forge toward its threshold", () => {
     const s = fresh();
     give(s, "forge", hex(1, 0));
-    give(s, "generator", hex(2, 0));
+    give(s, "focusKeyed", hex(2, 0));
+    s.chargeWindow = 600;
     expect(computeRates(s, true).forgeRate).toBeCloseTo(1, 9);
     startSession(s, null);
     advance(s, 100);
@@ -74,8 +77,9 @@ describe("board production model", () => {
 
   it("generators never charge themselves or each other", () => {
     const s = fresh();
-    const generator = give(s, "generator", hex(1, 0));
-    const second = give(s, "generator", hex(2, 0));
+    const generator = give(s, "focusKeyed", hex(1, 0));
+    const second = give(s, "focusKeyed", hex(2, 0));
+    s.chargeWindow = 60;
     const snapshot = computeRates(s, true);
     expect(snapshot.chargeStrength.get(generator.id)).toBe(0);
     expect(snapshot.chargeStrength.get(second.id)).toBe(0);
@@ -86,8 +90,9 @@ describe("board production model", () => {
 
   it("stacked generators empower with diminishing returns", () => {
     const s = fresh();
-    give(s, "generator", hex(1, 0));
-    give(s, "generator", hex(0, -1));
+    give(s, "focusKeyed", hex(1, 0));
+    give(s, "focusKeyed", hex(0, 1));
+    s.chargeWindow = 60;
     expect(computeRates(s, true).rate).toBeCloseTo(CARRIER * chargedFactor(2), 9);
   });
 
@@ -102,8 +107,9 @@ describe("board production model", () => {
   it("produces nothing outside flow: paused and upgrade boards earn zero", () => {
     const s = fresh();
     give(s, "additive", hex(1, 0));
-    give(s, "forge", hex(0, -1));
-    give(s, "generator", hex(2, 0));
+    give(s, "forge", hex(0, 1));
+    give(s, "focusKeyed", hex(2, 0));
+    s.chargeWindow = 600;
     startSession(s, 600);
     advance(s, 100);
     s.mode = "paused";

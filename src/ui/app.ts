@@ -29,7 +29,7 @@ import { createInitialState, isCarrier } from "../engine/state";
 import { appActive, type FocusApp } from "../engine/apps";
 import { writeNote } from "../engine/notes";
 import { achievementName } from "../engine/achievements";
-import { BALANCE } from "../engine/constants";
+import { BALANCE, SHELF_MODULE } from "../engine/constants";
 import {
   activeHabit,
   addPracticeLog,
@@ -458,14 +458,14 @@ export class App {
   }
 
   buyShelf(type: ShelfType): void {
-    if (this.act(buyShelfModule(this.state, type), `${META[type].name} purchased. Choose a cell for it.`)) {
+    if (this.act(buyShelfModule(this.state, type), `${META[SHELF_MODULE[type]].name} purchased. Choose a cell for it.`)) {
       this.ui.modal = null;
       this.beginPlacing(this.state.modules[this.state.modules.length - 1]!.id);
     }
   }
 
   // The activation ladder (ADR-0013): buying a rung flips the app on; the
-  // telegraph and the other ladder rows step to the next price.
+  // other ladder rows step to the next price.
   buyActivationAction(appKey: FocusApp): void {
     this.act(buyActivation(this.state, appKey), `${APP_LABELS[appKey]} app activated. It stays yours.`);
   }

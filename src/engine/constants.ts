@@ -58,7 +58,7 @@ export const BALANCE: Balance = {
   upgradeCostGrowthDenominator: 5n,
   rarityPower: { common: 1.2, uncommon: 1.25, rare: 1.3 },
   rarityProbability: { common: 0.99, uncommon: 0.009, rare: 0.001 },
-  shelfPrices: { generator: 40, infusor: 40, forge: 80 },
+  shelfPrices: { generator: 40, additive: 40, infusor: 40, forge: 80 },
   cellFirstCost: 30,
   cellCostGrowthNumerator: 5n,
   cellCostGrowthDenominator: 2n,
@@ -97,7 +97,6 @@ export const CATEGORY_OF: Record<ModuleType, Category> = {
   carrier: "synthesizer",
   additive: "synthesizer",
   conditional: "synthesizer",
-  generator: "generator",
   focusKeyed: "generator",
   infusor: "infusor",
   forge: "forge",
@@ -122,7 +121,6 @@ export const MODULE_TYPES: readonly ModuleType[] = [
   "carrier",
   "additive",
   "conditional",
-  "generator",
   "focusKeyed",
   "infusor",
   "forge",
@@ -132,8 +130,19 @@ export const MODULE_TYPES: readonly ModuleType[] = [
 // the Forge.
 export const ROLL_POOL: readonly ModuleType[] = MODULE_TYPES.filter((type) => type !== "carrier");
 
-// The starter shelf (§3): one-time offers completing the category landscape.
-export const SHELF_TYPES: readonly ShelfType[] = ["forge", "generator", "infusor"];
+// The starter shelf (§3, ADR-0018): one-time offers completing the category
+// landscape — plus the additive synth, so chord play exists before the first
+// roll. The shelf's "generator" offer is the focus-keyed generator.
+export const SHELF_TYPES: readonly ShelfType[] = ["generator", "additive", "infusor", "forge"];
+
+// What module a shelf offer grants: the "generator" key predates the basic
+// generator's retirement (ADR-0018) and stays the save's shelf key.
+export const SHELF_MODULE: Record<ShelfType, ModuleType> = {
+  additive: "additive",
+  generator: "focusKeyed",
+  infusor: "infusor",
+  forge: "forge",
+};
 
 export const NEXT_RARITY: Record<Rarity, Rarity | null> = { common: "uncommon", uncommon: "rare", rare: null };
 

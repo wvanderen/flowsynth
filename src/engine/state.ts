@@ -2,12 +2,14 @@ import { levelCost } from "./economy";
 import { hex } from "./hex";
 import type { GameState, ModuleInstance, ModuleType, Rarity } from "./types";
 
-// ADR-0013 opening board: the Carrier pinned at the origin plus ~2 empty
-// cells.
+// ADR-0013 opening board, amended by ADR-0018: the Carrier pinned at the
+// origin plus two empty cells that are adjacent to each other as well — a
+// triangle, so the shelf's generator can charge an adjacent Forge and a
+// shelved additive can chord with the Carrier without buying a cell first.
 const STARTER_CELLS: { q: number; r: number }[] = [
   { q: 0, r: 0 },
   { q: 1, r: 0 },
-  { q: 0, r: -1 },
+  { q: 0, r: 1 },
 ];
 
 // The opening grant (ADR-0013): exactly the Carrier's first upgrade price —
@@ -36,7 +38,7 @@ export function createInitialState(): GameState {
     forge: { progress: 0, earned: 0 },
     chargeWindow: 0,
     bankedRolls: [],
-    purchased: { generator: false, infusor: false, forge: false },
+    purchased: { additive: false, generator: false, infusor: false, forge: false },
     activatedApps: [],
     goalCapacityBought: 0,
     notes: [],

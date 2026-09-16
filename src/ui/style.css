@@ -91,7 +91,6 @@ h1, h2, h3, p { margin: 0; }
 .clock-plan-value { font: 15px/1.3 var(--mono); letter-spacing: 0.03em; margin: 0; }
 .session-clock { font: 28px/1.1 var(--mono); margin: 0; }
 .clock-caption { font-size: 10px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.session-rate { font-size: 11px; color: var(--muted); margin: 3px 0 0; white-space: nowrap; }
 .time-track {
   width: 135px;
   height: 3px;
@@ -192,7 +191,9 @@ h1, h2, h3, p { margin: 0; }
 .time-plan select { width: 170px; padding: 6px 8px; }
 .time-track.wide { width: 100%; margin-top: 8px; }
 
-/* Readout end: status strip, nous balance, rung telegraph — one slot grammar. */
+/* Readout end: status strip and nous balance — one slot grammar. Production
+   reads here and only here: the per-second rate (matching the formula chip)
+   plus the live session's running total. */
 .console-readout {
   margin-left: auto;
   display: flex;
@@ -235,8 +236,6 @@ h1, h2, h3, p { margin: 0; }
 .ach-track { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
 .ach-track i { display: block; height: 100%; background: var(--muted); opacity: 0.55; border-radius: 2px; }
 .ach-row.unlocked .ach-track i { background: var(--accent); opacity: 1; }
-.console-telegraph { color: var(--muted); }
-.console-telegraph strong { color: var(--muted); text-transform: uppercase; }
 
 .console-button { width: 40px; height: 40px; padding: 9px; flex-shrink: 0; }
 .console-button svg { width: 100%; height: 100%; }
@@ -680,14 +679,20 @@ body.live .inspector-empty { opacity: 0.75; }
    directional generator → receiver. Leads in live flow flow; everything
    else — upgrade or paused (charge pauses, ADR-0001), or a generator whose
    charge window is spent — sits dim and static as wiring previews
-   (ADR-0002). Motion lives on the leads; the charged receiver's light is
-   the strength-scaled glow the face carries inline. */
+   (ADR-0002). Motion lives on the leads plus a soft pulse on the lit
+   receiver, so a charged module reads as alive at a glance. */
 .charge-line { stroke: var(--charge); stroke-width: 2; stroke-dasharray: 4 5; opacity: 0.85; marker-end: url(#fs-lead-tip); animation: charge-flow 1.6s linear infinite; }
 @keyframes charge-flow { to { stroke-dashoffset: -18; } }
 .charge-preview-line { stroke: var(--charge); stroke-width: 1.5; stroke-dasharray: 3 6; opacity: 0.32; marker-end: url(#fs-lead-tip-dim); }
 .lead-tip { fill: var(--charge); }
 .lead-tip-dim { fill: var(--charge); opacity: 0.5; }
 .highlight-ring { fill: none; stroke: var(--charge); stroke-width: 1.5; opacity: 0.8; pointer-events: none; }
+
+/* The lit receiver breathes: charge state is feedback, not decoration, so
+   the pulse rides the same 0..1 glow the face already carries inline. */
+.module-node:has(.hex.charged) .hex,
+.module-node:has(.hex.dispensing) .hex { animation: charge-breathe 2.4s ease-in-out infinite; }
+@keyframes charge-breathe { 50% { filter: drop-shadow(0 0 7px color-mix(in srgb, var(--charge) 60%, transparent)); } }
 
 /* Threshold fill: the chargeable's progress rises inside the chassis like
    liquid; the face flashes when it crosses. */
@@ -908,18 +913,6 @@ body.buying #buy-banner { display: flex; }
 
 /* ── Responsive ────────────────────────────────────── */
 
-@media (max-width: 1500px) {
-  /* Tight consoles shed the production slot first — it duplicates the
-     status monitor's live rate; the console's height stays fixed. */
-  .production-slot { display: none; }
-}
-
-@media (max-width: 1360px) {
-  /* Then the rung telegraph: its price also sits on the ladder's purchase
-     rows in the catalog. */
-  .console-telegraph { display: none; }
-}
-
 @media (max-width: 1180px) {
   /* Below here the console wraps instead of clipping: its height stays
      width-determined, so console use never shifts the board. */
@@ -946,6 +939,10 @@ body.buying #buy-banner { display: flex; }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
+  /* The charge lead's flow is state communication, not ornament: it is the
+     only motion that survives the reduce-motion switch (small, slow, and
+     directional), so a charged board still reads as charged. */
+  .charge-line { animation: charge-flow 1.6s linear infinite !important; }
 }
 
 /* Instrument canvas and persistent module states. */

@@ -2,21 +2,26 @@ import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import { endSession, startSession } from "./actions";
 import { fresh } from "./fixtures";
-import { canWriteNotes, sessionNoteCount, writeNote } from "./notes";
+import { NOTE_BETWEEN_SESSIONS, sessionNoteCount, writeNote } from "./notes";
 import { deserialize, serialize } from "./save";
 
 describe("notes app", () => {
-  it("captures notes during flow and paused, never in upgrade mode", () => {
+  it("captures notes in flow, paused, and between sessions (ADR-0018)", () => {
     const s = fresh();
-    expect(writeNote(s, "hello").ok).toBe(false);
+    expect(writeNote(s, "hello").ok).toBe(true);
+    // A note written outside any session carries the between-sessions mark
+    // instead of a session clock.
+    expect(s.notes[0]!.atElapsed).toBe(NOTE_BETWEEN_SESSIONS);
+    expect(writeNote(s, "   ").ok).toBe(false);
     startSession(s, 600);
     expect(writeNote(s, "first thought").ok).toBe(true);
     expect(sessionNoteCount(s)).toBe(1);
-    expect(writeNote(s, "   ").ok).toBe(false);
+    expect(s.notes[1]!.atElapsed).toBe(0);
     s.mode = "paused";
     expect(writeNote(s, "paused thought").ok).toBe(true);
     endSession(s);
-    expect(canWriteNotes(s)).toBe(false);
+    expect(writeNote(s, "after the session").ok).toBe(true);
+    expect(s.notes).toHaveLength(4);
   });
 
   it("notes are notes: capture produces no nous and no charge", () => {

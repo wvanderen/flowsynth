@@ -7,10 +7,12 @@ import { fresh, give, stubRng } from "./fixtures";
 import { serialize, deserialize } from "./save";
 import { hex } from "./hex";
 
-// The focus-keyed generator's charge window (§2.3, ADR-0012): ending any
-// session banks a window of fraction × live practice time — the tuning
-// fraction is 0.1, so a 600 s session banks 60 s — spent as this generator's
-// output during the next session's first minutes.
+// The generator's charge window (§2.3, ADR-0012; ADR-0018 made the
+// focus-keyed generator the launch generator): ending any session banks a
+// window of fraction × live practice time — the tuning fraction is 0.1, so
+// a 600 s session banks 60 s — spent as the generator's output during the
+// next session's first minutes. Charge is an across-session reserve, never
+// a live drip.
 
 describe("the charge window", () => {
   it("every session end banks fraction × live practice time", () => {
@@ -167,15 +169,34 @@ describe("the charge window", () => {
     expect(s.chargeWindow).toBeCloseTo(0, 6);
   });
 
-  it("a basic generator ignores the window; a drained focus-keyed generator stays silent", () => {
+  it("a step that outlives the window splits at the boundary, never over-crediting", () => {
+    const s = fresh();
+    startSession(s, 600);
+    advance(s, 600);
+    endSession(s);
+    give(s, "forge", hex(1, 0));
+    give(s, "focusKeyed", hex(2, 0));
+    startSession(s, null);
+    // One 100 s step across the 60 s window — as a throttled tab's catch-up
+    // tick would take: the drained generator credits only 60 s of it, and
+    // the step's remaining 40 s run uncharged.
+    advance(s, 100, stubRng(new Array(12).fill(0.5)));
+    expect(s.chargeWindow).toBeCloseTo(0, 6);
+    // 60 s at strength 1 crosses the 60 threshold exactly: one roll, none left.
+    expect(s.forge.earned).toBe(1);
+    expect(s.forge.progress).toBeCloseTo(0, 6);
+    expect(s.session!.elapsed).toBeCloseTo(100, 6);
+  });
+
+  it("every generator spends the window: an empty window means silence (ADR-0018)", () => {
     const s = fresh();
     give(s, "forge", hex(1, 0));
     give(s, "focusKeyed", hex(2, 0));
-    give(s, "generator", hex(1, -1));
     startSession(s, null);
     advance(s, 10);
-    // Only the basic generator's strength 1 flows; the window is empty.
-    expect(s.forge.progress).toBeCloseTo(10, 6);
+    // No window is banked yet — session one only accrues it — so nothing
+    // flows at all. Charge is a reserve, never a live drip.
+    expect(s.forge.progress).toBe(0);
     expect(s.chargeWindow).toBe(0);
   });
 

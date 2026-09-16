@@ -174,10 +174,24 @@ function updateMonitorLive(app: App, past: boolean): void {
   const beat = beatReadout(state.totalEarned, snapshot.rate);
   const head = host.querySelector<HTMLElement>('[data-live="m-head"]');
   if (head) {
-    const left = `${Math.min(96, Math.max(3, pos * 100)).toFixed(2)}%`;
-    if (head.style.left !== left) head.style.left = left;
-    head.classList.toggle("flip", pos > HEAD_FLIP_AT);
     if (head.textContent !== beat) head.textContent = beat;
+    head.classList.toggle("flip", pos > HEAD_FLIP_AT);
+    // The pill rides the fill head but must stay on the rail: clamp the
+    // anchor so the readout never hangs off either edge, whatever its text
+    // width and whatever fill fraction the log scale reports.
+    const rail = host.querySelector<HTMLElement>(".monitor-rail");
+    if (rail) {
+      const railWidth = rail.clientWidth;
+      const margin = 4;
+      let anchorPx = pos * railWidth;
+      if (pos > HEAD_FLIP_AT) {
+        anchorPx = Math.min(anchorPx, railWidth - head.offsetWidth - margin);
+      } else {
+        anchorPx = Math.max(anchorPx, head.offsetWidth / 2 + margin);
+      }
+      const left = `${((anchorPx / railWidth) * 100).toFixed(2)}%`;
+      if (head.style.left !== left) head.style.left = left;
+    }
   }
   set("m-beat", past ? "Arete minted — the horizon is behind you" : "");
   set("m-secondary", `${state.sessionsCompleted} sessions · Arete ${state.arete}`);

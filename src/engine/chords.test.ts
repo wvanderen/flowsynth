@@ -234,7 +234,8 @@ describe("live rate breakdown", () => {
 
   it("charge aggregates into the empowerment leg, per module", () => {
     const s = fresh();
-    give(s, "generator", hex(0, -1));
+    give(s, "focusKeyed", hex(0, 1));
+    s.chargeWindow = 60;
     const snapshot = computeRates(s, true);
     // Only the carrier is charged: the uncharged legs stay clean and the
     // empowerment leg carries the exact multiplier.
@@ -247,7 +248,8 @@ describe("live rate breakdown", () => {
     const s = fresh();
     give(s, "conditional", hex(1, 0));
     give(s, "additive", hex(2, 0));
-    give(s, "generator", hex(0, 1));
+    give(s, "focusKeyed", hex(0, 1));
+    s.chargeWindow = 60;
     // (0,1) touches both the Carrier and the conditional at (1,0): each
     // charges to strength 1 while the additive at (2,0) stays uncharged. The
     // conditional's per-pair bonus rides in its harmonic leg; empowerment is

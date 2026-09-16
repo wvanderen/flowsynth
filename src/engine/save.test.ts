@@ -4,6 +4,7 @@ import { startSession } from "./actions";
 import { fresh, give, stubRng } from "./fixtures";
 import { SAVE_VERSION } from "./constants";
 import { deserialize, serialize } from "./save";
+import { generateOffer } from "./rolls";
 import { planTick } from "./clock";
 import { hex } from "./hex";
 
@@ -11,7 +12,7 @@ describe("persistence", () => {
   it("round-trips the full game state", () => {
     const s = fresh();
     give(s, "additive", hex(1, 0));
-    give(s, "forge", hex(0, -1));
+    give(s, "forge", hex(0, 1));
     s.nous = 123.456;
     s.forge.progress = 42.5;
     startSession(s, 600);
@@ -46,11 +47,45 @@ describe("persistence", () => {
     expect(loaded.state!.goalCapacityBought).toBe(0);
   });
 
+  it("remaps the retired generator type to the focus-keyed generator (ADR-0018)", () => {
+    const s = fresh();
+    give(s, "focusKeyed", hex(1, 0));
+    const legacy = serialize(s, 1_000).replaceAll('"type": "focusKeyed"', '"type": "generator"');
+    const loaded = deserialize(legacy);
+    expect(loaded.error).toBeUndefined();
+    const types = loaded.state!.modules.map((m) => m.type as string);
+    expect(types).not.toContain("generator");
+    expect(types.filter((t) => t === "focusKeyed")).toHaveLength(1);
+  });
+
+  it("remaps retired generator roll candidates waiting in the bank", () => {
+    const s = fresh();
+    s.forge.earned = 1;
+    s.bankedRolls.push(generateOffer(s, stubRng(new Array(6).fill(0.5))));
+    const legacy = serialize(s, 1_000).replaceAll('"type": "focusKeyed"', '"type": "generator"');
+    const loaded = deserialize(legacy);
+    expect(loaded.error).toBeUndefined();
+    for (const offer of loaded.state!.bankedRolls) {
+      for (const candidate of offer.candidates) {
+        expect(candidate.type as string).not.toBe("generator");
+      }
+    }
+  });
+
+  it("shelf keys added after a save default to unpurchased", () => {
+    const file = JSON.parse(serialize(fresh()));
+    delete file.state.purchased.additive;
+    const loaded = deserialize(JSON.stringify(file));
+    expect(loaded.error).toBeUndefined();
+    expect(loaded.state!.purchased.additive).toBe(false);
+  });
+
   it("resuming from a mid-flow save does not duplicate rewards", () => {
     const build = () => {
       const s = fresh();
       give(s, "forge", hex(1, 0));
-      give(s, "generator", hex(2, 0));
+      give(s, "focusKeyed", hex(2, 0));
+      s.chargeWindow = 600;
       startSession(s, 600);
       return s;
     };

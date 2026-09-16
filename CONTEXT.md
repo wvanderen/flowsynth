@@ -59,7 +59,7 @@ _Avoid_: Synth (in domain documentation)
 A habit-independent resource produced by generators that empowers or charges other modules; its state is preserved between flow sessions.
 
 **Generator**:
-A board module that produces charge. Remaining output belongs to the generator and follows it when moved. The launch generators are the basic generator and the focus-keyed generator.
+A board module that produces charge. Remaining output belongs to the generator and follows it when moved. The launch generator is the focus-keyed generator (ADR-0018 retired the plain generator pre-release); other generators with different requirements come later.
 
 **Charge window**:
 The charge budget banked at session end by the focus-keyed generator, sized as a fraction of that session's live practice time and spent as output during the next session's first minutes. Manual practice logs never create one.
@@ -101,7 +101,7 @@ A charge-earned choice of one module from three generated candidates; unchosen c
 The permanent upgrade-mode purchase surface: starter-shelf offers while available, cells, and module upgrades.
 
 **Starter shelf**:
-The catalog's one-time guaranteed offers — a Forge, one basic generator, and one infusor — hidden once acquired. It completes the launch category landscape; everything else comes from rolls.
+The catalog's one-time guaranteed offers — an Additive Synth, the generator, one infusor, and a Forge — hidden once acquired. It completes the category landscape and seeds chord play (ADR-0018); everything else comes from rolls.
 
 ### The console and focus apps
 
@@ -133,7 +133,7 @@ The focus app providing planned targets and timing tools; it auto-activates afte
 A practice duration or milestone set within the Time app that a session can aim at and hit; hits are recorded in the session summary.
 
 **Notes app**:
-The focus app for recording notes during a flow session. Notes carry no charge or economy effect.
+The focus app for recording notes — during a flow session or between sessions. Notes carry no charge or economy effect.
 
 **Goals app**:
 The focus app for tracking goals; completion is the tracking itself, surfaced in the session summary. Its capacity grows through console long goals.

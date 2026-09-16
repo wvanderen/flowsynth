@@ -19,6 +19,29 @@ export function advance(state: GameState, seconds: number, rng: Rng = Math.rando
   if (!session) return result;
 
   // The board is locked during flow, so the rate is constant across the
+  // step — except at the charge-window boundary: a step that outlives the
+  // window splits there, so the drained generator stops crediting the
+  // remainder (the rate really does change mid-step, once).
+  if (
+    chargeWindowActive(state) &&
+    state.chargeWindow + EPS < seconds &&
+    deployed(state).some((m) => m.type === "focusKeyed")
+  ) {
+    // Capture the split point first: the first leg drains the window, so
+    // reading it in the second call's argument would re-advance the whole
+    // step uncharged.
+    const split = state.chargeWindow;
+    const first = advance(state, split, rng);
+    const second = advance(state, seconds - split, rng);
+    return {
+      nousEarned: first.nousEarned + second.nousEarned,
+      rollsBanked: first.rollsBanked + second.rollsBanked,
+      goalsCompleted: first.goalsCompleted + second.goalsCompleted,
+      areteMinted: first.areteMinted + second.areteMinted,
+    };
+  }
+
+  // The board is locked during flow, so the rate is constant across the
   // step; production is exactly what the board's modules make (§2.1).
   const snapshot = computeRates(state, true);
   const gained = snapshot.rate * seconds;

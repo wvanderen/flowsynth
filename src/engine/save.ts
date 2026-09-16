@@ -82,6 +82,25 @@ export function deserialize(text: string): LoadResult {
   if (merged.summary && !Array.isArray(merged.summary.achievements)) {
     merged.summary.achievements = [];
   }
+  // ADR-0018 retired the plain generator type pre-release: the focus-keyed
+  // generator is the launch generator. Early v5 saves may still carry
+  // "generator" modules or unspent roll candidates — remap them rather than
+  // crashing on a type that no longer exists.
+  for (const module of merged.modules) {
+    if ((module as { type: string }).type === "generator") {
+      module.type = "focusKeyed";
+    }
+  }
+  for (const offer of merged.bankedRolls) {
+    for (const candidate of offer.candidates) {
+      if ((candidate as { type: string }).type === "generator") {
+        candidate.type = "focusKeyed";
+      }
+    }
+  }
+  // Shelf keys added after a save was written (the additive synth) default
+  // to unpurchased rather than reading as undefined.
+  merged.purchased = { ...fresh.purchased, ...merged.purchased };
   return { state: merged };
 }
 

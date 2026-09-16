@@ -21,7 +21,8 @@ describe("the forge meter", () => {
   it("charge from generators banks rolls through the shared meter", () => {
     const s = fresh();
     give(s, "forge", hex(1, 0));
-    give(s, "generator", hex(2, 0));
+    give(s, "focusKeyed", hex(2, 0));
+    s.chargeWindow = 600;
     startSession(s, null);
     advance(s, 100);
     expect(s.forge.earned).toBe(1);
@@ -33,8 +34,9 @@ describe("the forge meter", () => {
   it("duplicate forges share one increasing threshold", () => {
     const s = fresh();
     give(s, "forge", hex(1, 0));
-    give(s, "forge", hex(0, -1));
-    give(s, "generator", hex(2, 0));
+    give(s, "forge", hex(0, 1));
+    give(s, "focusKeyed", hex(2, 0));
+    s.chargeWindow = 600;
     startSession(s, null);
     advance(s, 600);
     // 600 progress through thresholds 60 + 90 + 135 + 202.5 → 4 rolls, 112.5 left.
@@ -62,7 +64,8 @@ describe("the forge meter", () => {
   it("forge progress scales with the forge's own power", () => {
     const s = fresh();
     const forge = give(s, "forge", hex(1, 0), 1);
-    give(s, "generator", hex(2, 0));
+    give(s, "focusKeyed", hex(2, 0));
+    s.chargeWindow = 600;
     startSession(s, null);
     advance(s, 100);
     expect(forge.level).toBe(1);

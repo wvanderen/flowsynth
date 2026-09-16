@@ -2,10 +2,10 @@ import { chargedFactor, cellCost, chargeDelivered, computeRates, deployed, emitt
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
-import { BALANCE, CATEGORY_OF, NEXT_RARITY } from "../engine/constants";
+import { BALANCE, CATEGORY_OF, NEXT_RARITY, SHELF_MODULE } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
-import { appActive, appLockNote, FOCUS_APPS, LADDER_APPS, ladderComplete, nextRung, nextRungCost, type FocusApp } from "../engine/apps";
-import { canWriteNotes } from "../engine/notes";
+import { appActive, appLockNote, FOCUS_APPS, LADDER_APPS, nextRung, nextRungCost, type FocusApp } from "../engine/apps";
+import { NOTE_BETWEEN_SESSIONS } from "../engine/notes";
 import { activeHabit } from "../engine/habits";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
@@ -159,7 +159,6 @@ function renderConsoleSession(app: App): void {
       <div class="console-clock">
         <p class="session-clock mono" id="session-clock">${formatClock(elapsed)}</p>
         <p class="clock-caption" id="session-caption"></p>
-        <p class="session-rate mono" id="session-rate"></p>
         <div class="time-track"><span id="time-track-fill" style="width:0%"></span></div>
       </div>
       <div class="session-actions">
@@ -179,12 +178,8 @@ function renderConsoleSession(app: App): void {
   };
   set("session-clock", formatClock(elapsed));
   set("session-caption", sessionCaption(elapsed, target, paused));
-  // The pure-flow HUD (§5.6): the ticking counter lives in the nous balance;
-  // this line is the per-practice-minute pace plus what the session made.
-  set(
-    "session-rate",
-    `${formatNumber(currentSnapshot(state).rate * 60)} ν/min · ${formatNumber(state.session?.earned ?? 0)} ν this session`,
-  );
+  // Production lives in one place — the console readout's Production slot,
+  // which carries the per-second rate and the session's running total.
   const track = byId("time-track-fill");
   const width = sessionTrackWidth(elapsed, target);
   if (track && track.style.width !== width) track.style.width = width;
@@ -352,9 +347,8 @@ function renderAchievementsModal(app: App, content: HTMLElement): void {
   wireClose(app);
 }
 
-// The console's readout end: the status strip (mode, live rate, and the
-// trophy glyph opening the achievements popover), the nous balance, and the
-// activation-ladder rung telegraph slot (issue #42 fills it).
+// The console's readout end: the status strip (mode, production, and the
+// trophy glyph opening the achievements page), and the nous balance.
 // Static slots are built once; tick-moving values update in place.
 function renderConsoleReadout(app: App): void {
   const { state } = app;
@@ -373,11 +367,14 @@ function renderConsoleReadout(app: App): void {
       byId("trophy-button")?.addEventListener("click", () => app.openModal("achievements"));
     }
     const rateNode = strip.querySelector('[data-live="rate"]');
-    // One readout, two units (§5.4, §5.6): the ν/s projection matches the
-    // formula chip, and the per-practice-minute figure is the flow HUD's
-    // pace — pre-session it projects, in-session it ticks with the board.
+    // One production readout (§7: rates per-second everywhere): the ν/s
+    // figure matches the formula chip — projected in upgrade mode, ticking
+    // with the board in flow — and the flow session appends what it made.
     const rate = currentSnapshot(state).rate;
-    const rateText = `${formatNumber(rate)} ν/s · ${formatNumber(rate * 60)} ν/min`;
+    const session = state.session;
+    const rateText = session
+      ? `${formatNumber(rate)} ν/s · ${formatNumber(session.earned)} ν this session`
+      : `${formatNumber(rate)} ν/s`;
     if (rateNode && rateNode.textContent !== rateText) rateNode.textContent = rateText;
   }
   const nous = byId("nous-balance");
@@ -390,19 +387,6 @@ function renderConsoleReadout(app: App): void {
     // ticking decimals never flicker in and out of the readout.
     const text = formatInt(state.nous);
     if (amount && amount.textContent !== text) amount.textContent = text;
-  }
-  const telegraph = byId("telegraph-slot");
-  if (telegraph) {
-    if (telegraph.childElementCount === 0) {
-      telegraph.innerHTML = `<span class="eyebrow">Next rung</span><strong class="mono" data-live="rung">—</strong>`;
-    }
-    // The ladder telegraph (§2.2): the next rung's price — any app, in any
-    // order — standing in for the whole ladder until a new app joins it.
-    const text = ladderComplete(state) ? "—" : `${formatInt(nextRungCost(state))} · any app`;
-    liveText(telegraph, "rung", text);
-    telegraph.title = ladderComplete(state)
-      ? "The activation ladder is complete — new apps join it when designed"
-      : "The activation ladder's next rung: activating any locked app costs this";
   }
 }
 
@@ -839,10 +823,8 @@ function effectDescription(module: ModuleInstance): string {
       return "A plain harmonic term: amplitude at its pitch. Adjacent synthesizers one pitch apart form chord pairs whose bonuses multiply the whole composite.";
     case "conditional":
       return "Amplitude at its pitch, plus a bonus for every chord pair it participates in — a named chord counts once, however many of its pairs the module shares in.";
-    case "generator":
-      return "Produces charge during flow. Adjacent synthesizers and infusors are empowered continuously; the Forge banks charge toward its next roll.";
     case "focusKeyed":
-      return "A generator keyed to your focus: every session end banks a charge window — a slice of that session's live practice time — and the generator spends it as output during the next session's first minutes.";
+      return "The generator (ADR-0018: the launch generator is focus-keyed). It never drips live: every session end banks a charge window — a tenth of that session's live practice time — and the generator spends it as output during the next session's first minutes. Charge is a reserve you carry between sessions.";
     case "infusor":
       return "Boosts production contributions of adjacent modules. Receives charge as continuous empowerment.";
     case "forge":
@@ -862,8 +844,6 @@ function nominalEffect(module: ModuleInstance, charged: boolean): { text: string
       return { text: `+${formatNumber(BALANCE.additiveRate * power * factor)} ν/s`, value: BALANCE.additiveRate * power * factor };
     case "conditional":
       return { text: `+${formatNumber(BALANCE.conditionalRate * power * factor)} ν/s · +${formatNumber(100 * BALANCE.conditionalPairBonus)}% per chord pair`, value: BALANCE.conditionalRate * power * factor };
-    case "generator":
-      return { text: `${formatNumber(power)} charge strength while flowing`, value: power };
     case "focusKeyed":
       return { text: `${formatNumber(power)} charge strength while its charge window lasts`, value: power };
     case "infusor":
@@ -908,7 +888,7 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
   } else if (isSource(module)) {
     chargeStats = `
       ${stat("Output strength", `${formatNumber(modulePower(module))} per second of flow`)}
-      ${module.type === "focusKeyed" ? statLive("window", "Charge window", chargeWindowText(state)) : ""}
+      ${statLive("window", "Charge window", chargeWindowText(state))}
       ${stat("Receivers", deployedHere ? String(deployed(state).filter((m) => m.id !== module.id && m.pos !== null && module.pos !== null && adjacent(m.pos, module.pos)).length) : "—")}`;
   } else if (module.type === "infusor") {
     chargeStats = `
@@ -1047,14 +1027,15 @@ function appPanelBody(app: App, panel: FocusApp): string {
 
   if (panel === "notes") {
     const recent = [...state.notes].slice(-8).reverse();
-    const capture = canWriteNotes(state);
+    const live = state.session !== null;
+    const when = (n: (typeof state.notes)[number]): string =>
+      n.atElapsed === NOTE_BETWEEN_SESSIONS ? "between sessions" : `S${n.sessionId} · ${formatClock(n.atElapsed)}`;
     return `<section class="focus-controls">
       <span class="eyebrow">FOCUS CONTROLS</span>
-      ${capture
-        ? `<textarea class="note-composer" id="note-composer" placeholder="What are you noticing?" maxlength="2000" rows="3"></textarea>
-           <div class="session-actions" style="margin:10px 0 0"><button class="primary" id="note-save">Capture note</button></div>`
-        : `<p class="small muted">Note capture happens during flow.</p>`}
-      ${recent.length > 0 ? `<div class="note-list">${recent.map((n) => `<div class="note-entry"><span class="note-when mono">S${n.sessionId} · ${formatClock(n.atElapsed)}</span><p>${escapeHtml(n.text)}</p></div>`).join("")}</div>` : ""}
+      <textarea class="note-composer" id="note-composer" placeholder="What are you noticing?" maxlength="2000" rows="3"></textarea>
+      <div class="session-actions" style="margin:10px 0 0"><button class="primary" id="note-save">Capture note</button></div>
+      <p class="small muted" style="margin:8px 0 0">${live ? "Notes carry no charge and no economy — they are notes." : "Captured between sessions; write during flow to timestamp against the session clock."}</p>
+      ${recent.length > 0 ? `<div class="note-list">${recent.map((n) => `<div class="note-entry"><span class="note-when mono">${when(n)}</span><p>${escapeHtml(n.text)}</p></div>`).join("")}</div>` : ""}
     </section>`;
   }
 
@@ -1262,7 +1243,6 @@ function effectTextFor(module: ModuleInstance, value: number, strength = 0): str
     case "additive":
     case "conditional":
       return `+${formatNumber(value)} ν/s`;
-    case "generator":
     case "focusKeyed":
       return `${formatNumber(modulePower(module))} strength`;
     case "infusor":
@@ -1306,7 +1286,6 @@ function nominalReadout(module: ModuleInstance): string {
       return `+${formatNumber(BALANCE.additiveRate * power)}`;
     case "conditional":
       return `+${formatNumber(BALANCE.conditionalRate * power)}`;
-    case "generator":
     case "focusKeyed":
       return `⌁${formatNumber(power)}`;
     case "infusor":
@@ -1483,8 +1462,9 @@ function renderStoreModal(app: App, content: HTMLElement): void {
         const affordable = wholeNous(state) >= price;
         const countdown = upgradeCountdown(app, price);
         const hint = SHELF_HINTS[type];
+        const moduleMeta = META[SHELF_MODULE[type]];
         return `<div class="shop-item">
-          <div><h3>${META[type].name}</h3><small>${META[type].role}</small>${hint ? `<em class="shop-hint">${hint}</em>` : ""}</div>
+          <div><h3>${moduleMeta.name}</h3><small>${moduleMeta.role}</small>${hint ? `<em class="shop-hint">${hint}</em>` : ""}</div>
           <span class="shop-buy">
             <button class="primary" data-buy="${type}" ${affordable ? "" : "disabled"}>${formatInt(price)} ν</button>
             ${countdown ? `<small class="shop-countdown mono">${countdown}</small>` : ""}
@@ -1522,7 +1502,7 @@ function renderStoreModal(app: App, content: HTMLElement): void {
     ${ui.showAcquired && ownedShelf.length > 0 ? `
       <h3 class="store-section-title">Acquired</h3>
       <div class="shop-list store-owned">
-        ${ownedShelf.map((type) => `<div class="shop-item owned"><div><h3>${META[type].name}</h3><small>${META[type].role}</small></div><span class="activation-owned mono">Acquired</span></div>`).join("")}
+        ${ownedShelf.map((type) => `<div class="shop-item owned"><div><h3>${META[SHELF_MODULE[type]].name}</h3><small>${META[SHELF_MODULE[type]].role}</small></div><span class="activation-owned mono">Acquired</span></div>`).join("")}
       </div>` : ""}
     <p class="modal-note">Shelf offers are one-time and hide once acquired. Copies from Forge rolls do not remove these offers — they can become combination material.</p>`;
   content.querySelectorAll<HTMLButtonElement>("[data-buy]").forEach((button) => {
@@ -1554,8 +1534,7 @@ function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
     case "carrier": return `The granted origin module — never rolled<br>+${formatNumber(BALANCE.carrierRate * charged)} ν/s at charge strength 1`;
     case "additive": return `+${formatNumber(BALANCE.additiveRate)} ν/s harmonic term<br>+${formatNumber(BALANCE.additiveRate * charged)} ν/s at charge strength 1`;
     case "conditional": return `+${formatNumber(BALANCE.conditionalRate)} ν/s harmonic term<br>+${formatNumber(BALANCE.conditionalRate * charged)} ν/s at charge strength 1`;
-    case "generator": return `${formatNumber(1)} charge strength per second of flow<br>empowers adjacent modules continuously`;
-    case "focusKeyed": return `A generator keyed to your focus<br>every session end banks a charge window of practice time — spent as its output next session`;
+    case "focusKeyed": return `The generator — keyed to your focus<br>each session end banks a charge window (a tenth of its live practice time), spent as its output next session`;
     case "infusor": return `+${formatNumber(BALANCE.infusorBonus * 100)}% to adjacent production contributions<br>+${formatNumber(BALANCE.infusorBonus * charged * 100)}% at charge strength 1`;
     case "forge": return `1 Forge progress per received charge strength<br>Next roll: ${formatNumber(forgeThreshold(state.forge.earned))} progress`;
     default: return "Not yet active";
@@ -1570,7 +1549,6 @@ function candidateReadout(type: ModuleInstance["type"]): string {
       return `+${formatNumber(BALANCE.additiveRate)}`;
     case "conditional":
       return `+${formatNumber(BALANCE.conditionalRate)}`;
-    case "generator":
     case "focusKeyed":
       return "⌁1";
     case "infusor":

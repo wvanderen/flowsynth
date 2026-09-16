@@ -27,7 +27,6 @@ export const HUE_TOKEN_OF: Record<ModuleType, string> = {
   carrier: "hue-carrier",
   additive: "hue-synthesizer",
   conditional: "hue-synthesizer",
-  generator: "hue-generator",
   focusKeyed: "hue-generator",
   infusor: "hue-infusor",
   forge: "hue-forge",
@@ -78,7 +77,7 @@ export function moduleFace(spec: FaceSpec): string {
   const hue = `var(--${HUE_TOKEN_OF[spec.type]})`;
   const rings = Array.from({ length: RING_COUNT[spec.rarity] }, (_, i) => `<polygon points="${hexPoints(RING_RADII[i]!)}"/>`).join("");
   const pin = spec.pinned
-    ? `<title>The Carrier — granted at the origin. Pinned: it never moves and never leaves the board.</title><g data-key="pin" class="module-pin" transform="translate(36,-33)"><circle cx="0" cy="-3.4" r="3.1"/><path d="M0-.4v7.4"/></g>`
+    ? `<title>The Carrier — granted at the origin. Pinned: it never moves and never leaves the board.</title><g data-key="pin" class="module-pin" transform="translate(35,-26)"><circle cx="0" cy="-3.4" r="3.1"/><path d="M0-.4v7.4"/></g>`
     : "";
   // The charge light (§8, #41): the chassis fill takes the charge hue at an
   // inline fill-opacity, and the rail takes an inline stroke-opacity — both

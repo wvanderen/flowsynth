@@ -110,8 +110,10 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     category: "console",
     name: "Marginalia",
     description: "Write a note during a flow session.",
-    evaluate: (s) => s.notes.length >= 1,
-    progress: (s) => fraction(s.notes.length, 1),
+    // Between-session notes (ADR-0018) don't count — the feat is the
+    // in-flow capture, so only notes with a session clock qualify.
+    evaluate: (s) => s.notes.some((n) => n.atElapsed >= 0),
+    progress: (s) => fraction(s.notes.filter((n) => n.atElapsed >= 0).length, 1),
   },
   {
     id: "on-the-clock",

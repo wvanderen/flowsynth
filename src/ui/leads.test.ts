@@ -13,7 +13,8 @@ function flowing(): GameState {
 describe("charge leads — the patch wire diagram (§8, #41)", () => {
   it("runs one directional lead per adjacent generator → receiver pair", () => {
     const s = flowing();
-    const generator = give(s, "generator", hex(1, 0));
+    const generator = give(s, "focusKeyed", hex(1, 0));
+    s.chargeWindow = 60;
     const carrier = s.modules[0]!; // pinned at the origin, adjacent to (1,0)
     const forge = give(s, "forge", hex(2, 0));
     const leads = chargeLeads(s, true);
@@ -25,7 +26,7 @@ describe("charge leads — the patch wire diagram (§8, #41)", () => {
 
   it("never charges generators themselves or each other", () => {
     const s = flowing();
-    const gen = give(s, "generator", hex(1, 0));
+    const gen = give(s, "focusKeyed", hex(1, 0));
     const keyed = give(s, "focusKeyed", hex(2, 0));
     s.chargeWindow = 60;
     const pairs = chargeLeads(s, true).map((l) => [l.generator.id, l.receiver.id]);
@@ -35,7 +36,7 @@ describe("charge leads — the patch wire diagram (§8, #41)", () => {
 
   it("skips receivers beyond adjacency", () => {
     const s = flowing();
-    give(s, "generator", hex(1, 0));
+    give(s, "focusKeyed", hex(1, 0));
     give(s, "additive", hex(0, -1)); // two hexes from the generator
     const leads = chargeLeads(s, true);
     expect(leads.map((l) => l.receiver.type)).toEqual(["carrier"]);
