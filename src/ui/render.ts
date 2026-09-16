@@ -12,7 +12,8 @@ import type { GameState, Goal, Hex, ModuleInstance, RateSnapshot } from "../engi
 import type { App, AppPanel } from "./app";
 import { moduleIcon } from "./icons";
 import { updateSvg } from "./svg";
-import { DURATION_OPTIONS, META, RARITY_LABEL, fmt, fmtWhole } from "./meta";
+import { DURATION_OPTIONS, META, RARITY_LABEL } from "./meta";
+import { formatInt, formatNumber, practiceCountdown } from "./format";
 
 const HEX_RADIUS = 61;
 const SPACING = 65;
@@ -219,7 +220,7 @@ function renderConsoleReadout(app: App): void {
         </div>`;
     }
     const rateNode = strip.querySelector('[data-live="rate"]');
-    const rateText = `${fmt(currentSnapshot(state).rate)} ν/s`;
+    const rateText = `${formatNumber(currentSnapshot(state).rate)} ν/s`;
     if (rateNode && rateNode.textContent !== rateText) rateNode.textContent = rateText;
   }
   const nous = byId("nous-balance");
@@ -228,7 +229,7 @@ function renderConsoleReadout(app: App): void {
       nous.innerHTML = `<span class="eyebrow">Nous</span><strong class="mono" data-live="nous"></strong>`;
     }
     const amount = nous.querySelector('[data-live="nous"]');
-    const text = fmtWhole(state.nous);
+    const text = formatNumber(state.nous);
     if (amount && amount.textContent !== text) amount.textContent = text;
   }
   const telegraph = byId("telegraph-slot");
@@ -268,27 +269,27 @@ function renderFormula(app: App): void {
   if (!host) return;
   const snapshot = currentSnapshot(state);
   const term = (type: ModuleInstance["type"], value: number) =>
-    `<span class="formula-term" title="${META[type].name}" aria-label="${META[type].name}: ${fmt(value)}">
-      <svg viewBox="-18 -18 36 36" aria-hidden="true" fill="none" stroke-width="1.6">${moduleIcon(type)}</svg>${fmt(value)}</span>`;
+    `<span class="formula-term" title="${META[type].name}" aria-label="${META[type].name}: ${formatNumber(value)}">
+      <svg viewBox="-18 -18 36 36" aria-hidden="true" fill="none" stroke-width="1.6">${moduleIcon(type)}</svg>${formatNumber(value)}</span>`;
   const sum = (type: ModuleInstance["type"]) => {
     let total = 0;
     for (const c of snapshot.contributions.values()) if (c.type === type) total += c.value;
     return total;
   };
   const chordLines = [
-    ...snapshot.namedChords.map((c) => `${c.name} ×${fmt(1 + c.bonus, 2)}`),
-    ...(snapshot.pairs.length > 0 ? [`${times(snapshot.pairs.length, "chord pair")} ×${fmt(1 + BALANCE.pairBonus, 2)} each`] : []),
+    ...snapshot.namedChords.map((c) => `${c.name} ×${formatNumber(1 + c.bonus)}`),
+    ...(snapshot.pairs.length > 0 ? [`${times(snapshot.pairs.length, "chord pair")} ×${formatNumber(1 + BALANCE.pairBonus)} each`] : []),
   ];
   const chordLabel =
     chordLines.length > 0 ? chordLines.join(" · ") : "no chords yet — adjacent synthesizers one pitch apart chord";
   const chargeActive = snapshot.empowerment > 1 + EPS;
   host.innerHTML = `
-    <div class="rate-equation" title="Chords: ${chordLabel}${chargeActive ? ` · charge empowerment ×${fmt(snapshot.empowerment, 2)}` : ""}">
+    <div class="rate-equation" title="Chords: ${chordLabel}${chargeActive ? ` · charge empowerment ×${formatNumber(snapshot.empowerment)}` : ""}">
       ${term("carrier", sum("carrier"))}
       <span class="op">+</span>${term("additive", sum("additive"))}
       <span class="op">+</span>${term("conditional", sum("conditional"))}
-      <span class="op">×</span><span class="formula-term" title="${chordLabel}" aria-label="Chord terms: ×${fmt(snapshot.chordMultiplier, 2)}">χ ${fmt(snapshot.chordMultiplier, 2)}</span>
-      <span class="op">=</span><strong>${fmt(snapshot.rate)} ν/s</strong>
+      <span class="op">×</span><span class="formula-term" title="${chordLabel}" aria-label="Chord terms: ×${formatNumber(snapshot.chordMultiplier)}">χ ${formatNumber(snapshot.chordMultiplier)}</span>
+      <span class="op">=</span><strong>${formatNumber(snapshot.rate)} ν/s</strong>
     </div>`;
 }
 
@@ -373,11 +374,11 @@ function renderGrid(app: App): void {
       if (ui.buyingCell) {
         // The purchase arm: every frontier hex carries its price; the buy
         // lands only where clicked (ADR-0013).
-        html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Buy cell here for ${price} nous">
+        html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Buy cell here for ${formatInt(price)} nous">
           <polygon class="hex ${affordable ? "buy-here" : "future"}" points="${hexPoints(HEX_RADIUS)}"/>
           <text y="-24" text-anchor="middle" class="hex-sub">NEW CELL</text>
           ${affordable ? `<text y="8" text-anchor="middle" fill="var(--accent)" font-size="22">+</text>` : ""}
-          <text y="${affordable ? 34 : 8}" text-anchor="middle" class="hex-sub">${fmtWhole(price)} ν</text>
+          <text y="${affordable ? 34 : 8}" text-anchor="middle" class="hex-sub">${formatInt(price)} ν</text>
         </g>`;
       } else {
         const isAdd = ui.reshape?.adds.some((c) => sameHex(c, pos)) ?? false;
@@ -427,15 +428,15 @@ function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderCont
 
   let sub = "";
   if (module.type === "forge") {
-    sub = `${fmt(Math.max(0, app.state.forge.progress), 0)}/${fmt(forgeThreshold(app.state.forge.earned), 0)}`;
+    sub = `${formatNumber(Math.max(0, app.state.forge.progress))}/${formatNumber(forgeThreshold(app.state.forge.earned))}`;
   } else if (isSource(module)) {
-    sub = `⌁${fmt(modulePower(module), 2)}`;
+    sub = `⌁${formatNumber(modulePower(module))}`;
   } else if (module.type === "infusor") {
-    sub = `+${fmt(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(ctx.snapshot.chargeStrength.get(module.id) ?? 0), 0)}%`;
+    sub = `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(ctx.snapshot.chargeStrength.get(module.id) ?? 0))}%`;
   } else {
     // Synthesizers wear their pitch: hex distance from the Carrier + 1.
     const pitch = contribution?.pitch ?? null;
-    sub = `${pitch !== null ? `P${pitch} ` : ""}+${fmt(contribution?.value ?? 0)} ν/s`;
+    sub = `${pitch !== null ? `P${pitch} ` : ""}+${formatNumber(contribution?.value ?? 0)} ν/s`;
   }
 
   const name = META[module.type].short;
@@ -683,16 +684,37 @@ function updateInspectorLive(app: App, host: HTMLElement): void {
     const display = `${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · earned ×${goal.completedCount}` : ""}`;
     if (minutes && minutes.textContent !== display) minutes.textContent = display;
   }
-  set("forge", `${fmt(Math.max(0, state.forge.progress), 1)} / ${fmt(forgeThreshold(state.forge.earned), 1)}`);
+  set("forge", `${formatNumber(Math.max(0, state.forge.progress))} / ${formatNumber(forgeThreshold(state.forge.earned))}`);
   set("rolls", String(state.bankedRolls.length));
   set("elapsed", state.session ? formatClock(state.session.elapsed) : "—");
   set("window", chargeWindowText(state));
+  // The upgrade CTA and its practice-minute countdown keep themselves current
+  // between rebuilds: the projected rate moves with the board, the balance
+  // with purchases, so affordability can flip while the panel stands.
+  const selected = state.modules.find((m) => m.id === app.ui.selected);
+  if (selected) {
+    const cost = levelCost(selected.level);
+    const countdownNode = host.querySelector('[data-live="countdown"]');
+    if (countdownNode) {
+      const text = upgradeCountdown(app, cost) ?? "";
+      if (countdownNode.textContent !== text) countdownNode.textContent = text;
+    }
+    const cta = byId("upgrade-module") as HTMLButtonElement | null;
+    if (cta) cta.disabled = !(state.mode === "upgrade" && wholeNous(state) >= cost);
+  }
   const forgeBar = host.querySelector('[data-live="forge-bar"]') as HTMLProgressElement | null;
   if (forgeBar) forgeBar.value = Math.min(1, Math.max(0, state.forge.progress / forgeThreshold(state.forge.earned)));
 }
 
+// The upgrade-mode countdown for a price on this board: phrased against the
+// projected next-session rate; null (hidden) when affordable or rateless.
+function upgradeCountdown(app: App, cost: number): string | null {
+  if (app.state.mode !== "upgrade") return null;
+  return practiceCountdown(cost, wholeNous(app.state), currentSnapshot(app.state).rate);
+}
+
 function forgeMeter(state: GameState): string {
-  return `<div class="overview-meter" title="All deployed Forges feed one shared meter · ${state.forge.earned} earned">${statLive("forge", "Next Forge roll", `${fmt(Math.max(0, state.forge.progress), 1)} / ${fmt(forgeThreshold(state.forge.earned), 1)}`)}
+  return `<div class="overview-meter" title="All deployed Forges feed one shared meter · ${state.forge.earned} earned">${statLive("forge", "Next Forge roll", `${formatNumber(Math.max(0, state.forge.progress))} / ${formatNumber(forgeThreshold(state.forge.earned))}`)}
     <progress data-live="forge-bar" aria-label="Next Forge roll" value="${Math.min(1, Math.max(0, state.forge.progress / forgeThreshold(state.forge.earned)))}" max="1"></progress></div>`;
 }
 
@@ -710,7 +732,7 @@ function renderOverview(app: App, host: HTMLElement): void {
       ${stat("Empty grid cells", String(state.cells.length - deployedModules.length))}
       ${stat("Modules in inventory", String(state.modules.length - deployedModules.length))}
       ${stat("Sessions completed", String(state.sessionsCompleted))}
-      ${stat("Total nous earned", fmt(state.totalEarned, 1))}
+      ${stat("Total nous earned", formatNumber(state.totalEarned))}
       <p class="small muted" style="margin-top:16px">${
         state.mode === "flow"
           ? "Rewards bank automatically. Nothing here needs your attention during practice."
@@ -753,19 +775,19 @@ function nominalEffect(module: ModuleInstance, charged: boolean): { text: string
   const factor = charged ? chargedFactor(1) : 1;
   switch (module.type) {
     case "carrier":
-      return { text: `+${fmt(BALANCE.carrierRate * power * factor)} ν/s`, value: BALANCE.carrierRate * power * factor };
+      return { text: `+${formatNumber(BALANCE.carrierRate * power * factor)} ν/s`, value: BALANCE.carrierRate * power * factor };
     case "additive":
-      return { text: `+${fmt(BALANCE.additiveRate * power * factor)} ν/s`, value: BALANCE.additiveRate * power * factor };
+      return { text: `+${formatNumber(BALANCE.additiveRate * power * factor)} ν/s`, value: BALANCE.additiveRate * power * factor };
     case "conditional":
-      return { text: `+${fmt(BALANCE.conditionalRate * power * factor)} ν/s · +${fmt(100 * BALANCE.conditionalPairBonus, 0)}% per chord pair`, value: BALANCE.conditionalRate * power * factor };
+      return { text: `+${formatNumber(BALANCE.conditionalRate * power * factor)} ν/s · +${formatNumber(100 * BALANCE.conditionalPairBonus)}% per chord pair`, value: BALANCE.conditionalRate * power * factor };
     case "generator":
-      return { text: `${fmt(power, 3)} charge strength while flowing`, value: power };
+      return { text: `${formatNumber(power)} charge strength while flowing`, value: power };
     case "focusKeyed":
-      return { text: `${fmt(power, 3)} charge strength while its charge window lasts`, value: power };
+      return { text: `${formatNumber(power)} charge strength while its charge window lasts`, value: power };
     case "infusor":
-      return { text: `+${fmt(100 * BALANCE.infusorBonus * power * factor)}% to adjacent`, value: BALANCE.infusorBonus * power * factor };
+      return { text: `+${formatNumber(100 * BALANCE.infusorBonus * power * factor)}% to adjacent`, value: BALANCE.infusorBonus * power * factor };
     case "forge":
-      return { text: `${fmt(power)} progress/s at strength 1`, value: power };
+      return { text: `${formatNumber(power)} progress/s at strength 1`, value: power };
     default:
       return { text: "—", value: 0 };
   }
@@ -797,19 +819,19 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
   let chargeStats = "";
   if (module.type === "forge") {
     chargeStats = `
-      ${statLive("forge", "Shared progress", `${fmt(Math.max(0, state.forge.progress), 1)} / ${fmt(forgeThreshold(state.forge.earned), 1)}`)}
+      ${statLive("forge", "Shared progress", `${formatNumber(Math.max(0, state.forge.progress))} / ${formatNumber(forgeThreshold(state.forge.earned))}`)}
       ${stat("Rolls earned", String(state.forge.earned))}
       ${stat("Charge source", deployedHere && chargeStrength > 0 ? "adjacent generator" : "no adjacent generator")}
-      ${stat("Progress rate", `${fmt(contribution?.value ?? 0, 2)} /s while charged`)}`;
+      ${stat("Progress rate", `${formatNumber(contribution?.value ?? 0)} /s while charged`)}`;
   } else if (isSource(module)) {
     chargeStats = `
-      ${stat("Output strength", `${fmt(modulePower(module), 3)} per second of flow`)}
+      ${stat("Output strength", `${formatNumber(modulePower(module))} per second of flow`)}
       ${module.type === "focusKeyed" ? statLive("window", "Charge window", chargeWindowText(state)) : ""}
       ${stat("Receivers", deployedHere ? String(deployed(state).filter((m) => m.id !== module.id && m.pos !== null && module.pos !== null && adjacent(m.pos, module.pos)).length) : "—")}`;
   } else if (module.type === "infusor") {
     chargeStats = `
-      ${stat("Bonus to adjacent", `+${fmt(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(chargeStrength), 1)}%`)}
-      ${stat("Charge", chargeStrength > 0 ? `strength ${fmt(chargeStrength, 2)}` : "none")}`;
+      ${stat("Bonus to adjacent", `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(chargeStrength))}%`)}
+      ${stat("Charge", chargeStrength > 0 ? `strength ${formatNumber(chargeStrength)}` : "none")}`;
   } else {
     const named = preview.namedChords.filter((c) => c.moduleIds.includes(module.id)).map((c) => c.name);
     const pairCount = preview.pairs.filter((p) => p.a === module.id || p.b === module.id).length;
@@ -823,7 +845,7 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
     chargeStats = `
       ${stat("Pitch", pitch !== null ? `P${pitch} — ${pitch - 1} hex${pitch === 2 ? "" : "es"} from the Carrier` : "—")}
       ${stat("Chords", chordSummary)}
-      ${stat("Charge", chargeStrength > 0 ? `strength ${fmt(chargeStrength, 2)} (×${fmt(chargedFactor(chargeStrength), 3)})` : "none")}`;
+      ${stat("Charge", chargeStrength > 0 ? `strength ${formatNumber(chargeStrength)} (×${formatNumber(chargedFactor(chargeStrength))})` : "none")}`;
   }
 
   host.innerHTML = `
@@ -839,10 +861,11 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       <p class="small muted" style="margin:6px 0 0">${effectDescription(module)}</p>
       <button class="primary upgrade-cta" id="upgrade-module" ${upgrade && affordable ? "" : "disabled"}>
         <span>Upgrade
-          <small class="upgrade-gain">+${fmt((growth - 1) * 100, 1)}% → ${nominalGainText(module)}</small>
+          <small class="upgrade-gain">+${formatNumber((growth - 1) * 100)}% → ${nominalGainText(module)}</small>
         </span>
-        <strong>${cost} ν</strong>
+        <strong>${formatInt(cost)} ν</strong>
       </button>
+      ${upgrade ? `<p class="countdown mono" data-live="countdown">${upgradeCountdown(app, cost) ?? ""}</p>` : ""}
       ${!upgrade ? `<p class="small muted">Upgrades happen between sessions.</p>` : ""}
       ${carrier ? `<p class="small muted">The Carrier is pinned: it upgrades in place and cannot be moved, combined, or shelved.</p>` : ""}
       ${upgrade && !carrier && partner && module.rarity !== "rare"
@@ -1072,14 +1095,14 @@ function effectTextFor(module: ModuleInstance, value: number, strength = 0): str
     case "carrier":
     case "additive":
     case "conditional":
-      return `+${fmt(value)} ν/s`;
+      return `+${formatNumber(value)} ν/s`;
     case "generator":
     case "focusKeyed":
-      return `${fmt(modulePower(module), 2)} strength`;
+      return `${formatNumber(modulePower(module))} strength`;
     case "infusor":
-      return `+${fmt(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(strength), 1)}% to adjacent`;
+      return `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(strength))}% to adjacent`;
     default:
-      return `${fmt(value, 2)} progress/s`;
+      return `${formatNumber(value)} progress/s`;
   }
 }
 
@@ -1087,12 +1110,12 @@ function nominalGainText(module: ModuleInstance): string {
   const now = nominalEffect(module, false);
   const growth = BALANCE.rarityPower[module.rarity];
   if (isSource(module)) {
-    return `+${fmt(now.value * (growth - 1), 3)} strength`;
+    return `+${formatNumber(now.value * (growth - 1))} strength`;
   }
   if (module.type === "forge") {
-    return `${fmt(now.value * (growth - 1), 3)} progress/s`;
+    return `${formatNumber(now.value * (growth - 1))} progress/s`;
   }
-  return `+${fmt(now.value * (growth - 1), 4)} effect`;
+  return `+${formatNumber(now.value * (growth - 1))} effect`;
 }
 
 /* ── Grid & inventory panel ────────────────────────── */
@@ -1231,15 +1254,19 @@ function renderStoreModal(app: App, content: HTMLElement): void {
   content.innerHTML = `
     ${modalTop("CATALOG")}
     <h2 id="modal-title">Shape what comes next.</h2>
-    <p class="lead">The starter shelf: one offer per category, once each — plus board cells, always. ${fmtWhole(state.nous)} ν available.</p>
+    <p class="lead">The starter shelf: one offer per category, once each — plus board cells, always. ${formatNumber(state.nous)} ν available.</p>
     ${openShelf.length > 0 ? `
       <h3 class="store-section-title">Starter shelf</h3>
       <div class="shop-list">${openShelf.map((type) => {
         const price = BALANCE.shelfPrices[type];
         const affordable = wholeNous(state) >= price;
+        const countdown = upgradeCountdown(app, price);
         return `<div class="shop-item">
           <div><h3>${META[type].name}</h3><small>${META[type].role}</small></div>
-          <button class="primary" data-buy="${type}" ${affordable ? "" : "disabled"}>${price} ν</button>
+          <span class="shop-buy">
+            <button class="primary" data-buy="${type}" ${affordable ? "" : "disabled"}>${formatInt(price)} ν</button>
+            ${countdown ? `<small class="shop-countdown mono">${countdown}</small>` : ""}
+          </span>
         </div>`;
       }).join("")}</div>` : ""}
     ${openShelf.length === 0 ? `<p class="empty-copy">The shelf is empty. New modules come from the Forge.</p>` : ""}
@@ -1247,7 +1274,10 @@ function renderStoreModal(app: App, content: HTMLElement): void {
     <div class="shop-list">
       <div class="shop-item">
         <div><h3>Board cell</h3><small>Empty hexes to place modules on — you choose where it touches the board.</small></div>
-        <button class="primary" id="buy-cell" ${cellAffordable ? "" : "disabled"} title="${cellAffordable ? "Arm the purchase — pick a frontier hex on the board; the price shows there" : "Not enough nous"}">Buy cell</button>
+        <span class="shop-buy">
+          <button class="primary" id="buy-cell" ${cellAffordable ? "" : "disabled"} title="${cellAffordable ? "Arm the purchase — pick a frontier hex on the board; the price shows there" : "Not enough nous"}">Buy cell</button>
+          ${upgradeCountdown(app, cellPrice) ? `<small class="shop-countdown mono">${upgradeCountdown(app, cellPrice)}</small>` : ""}
+        </span>
       </div>
     </div>
     <p class="small muted" style="margin-top:6px">Each cell bought raises the next price — the board shows it before you commit.</p>
@@ -1274,13 +1304,13 @@ function renderStoreModal(app: App, content: HTMLElement): void {
 function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
   const charged = chargedFactor(1);
   switch (type) {
-    case "carrier": return `The granted origin module — never rolled<br>+${fmt(BALANCE.carrierRate * charged)} ν/s at charge strength 1`;
-    case "additive": return `+${fmt(BALANCE.additiveRate)} ν/s harmonic term<br>+${fmt(BALANCE.additiveRate * charged)} ν/s at charge strength 1`;
-    case "conditional": return `+${fmt(BALANCE.conditionalRate)} ν/s harmonic term<br>+${fmt(BALANCE.conditionalRate * charged)} ν/s at charge strength 1`;
-    case "generator": return `${fmt(1, 0)} charge strength per second of flow<br>empowers adjacent modules continuously`;
+    case "carrier": return `The granted origin module — never rolled<br>+${formatNumber(BALANCE.carrierRate * charged)} ν/s at charge strength 1`;
+    case "additive": return `+${formatNumber(BALANCE.additiveRate)} ν/s harmonic term<br>+${formatNumber(BALANCE.additiveRate * charged)} ν/s at charge strength 1`;
+    case "conditional": return `+${formatNumber(BALANCE.conditionalRate)} ν/s harmonic term<br>+${formatNumber(BALANCE.conditionalRate * charged)} ν/s at charge strength 1`;
+    case "generator": return `${formatNumber(1)} charge strength per second of flow<br>empowers adjacent modules continuously`;
     case "focusKeyed": return `A generator keyed to your focus<br>every session end banks a charge window of practice time — spent as its output next session`;
-    case "infusor": return `+${fmt(BALANCE.infusorBonus * 100)}% to adjacent production contributions<br>+${fmt(BALANCE.infusorBonus * charged * 100)}% at charge strength 1`;
-    case "forge": return `1 Forge progress per received charge strength<br>Next roll: ${fmt(forgeThreshold(state.forge.earned))} progress`;
+    case "infusor": return `+${formatNumber(BALANCE.infusorBonus * 100)}% to adjacent production contributions<br>+${formatNumber(BALANCE.infusorBonus * charged * 100)}% at charge strength 1`;
+    case "forge": return `1 Forge progress per received charge strength<br>Next roll: ${formatNumber(forgeThreshold(state.forge.earned))} progress`;
     default: return "Not yet active";
   }
 }
@@ -1288,17 +1318,17 @@ function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
 function candidateHeadline(type: ModuleInstance["type"]): string {
   switch (type) {
     case "carrier":
-      return `+${fmt(BALANCE.carrierRate)} ν/s`;
+      return `+${formatNumber(BALANCE.carrierRate)} ν/s`;
     case "additive":
-      return `+${fmt(BALANCE.additiveRate)} ν/s`;
+      return `+${formatNumber(BALANCE.additiveRate)} ν/s`;
     case "conditional":
-      return `+${fmt(BALANCE.conditionalRate)} ν/s`;
+      return `+${formatNumber(BALANCE.conditionalRate)} ν/s`;
     case "generator":
       return "1× charge while flowing";
     case "focusKeyed":
       return "charge from focus time";
     case "infusor":
-      return `+${fmt(BALANCE.infusorBonus * 100)}%`;
+      return `+${formatNumber(BALANCE.infusorBonus * 100)}%`;
     case "forge":
       return "rolls at threshold";
     default:
@@ -1324,7 +1354,7 @@ function renderForgeModal(app: App, content: HTMLElement): void {
             <text y="-46" text-anchor="middle" class="hex-level">Lv 0</text>
           </svg>
           <span class="rarity" style="color:var(--finish-${candidate.rarity})">${RARITY_LABEL[candidate.rarity]}</span>
-          <span class="candidate-scaling">+${fmt((BALANCE.rarityPower[candidate.rarity] - 1) * 100)}% / level · upgrades from 10 ν</span>
+          <span class="candidate-scaling">+${formatNumber((BALANCE.rarityPower[candidate.rarity] - 1) * 100)}% / level · upgrades from 10 ν</span>
           <span class="candidate-effect">${forgeEffect(candidate.type, state)}</span>
         </button>`).join("")}
     </div>` : `<p class="empty-copy">No Forge choices available.</p>`}`;

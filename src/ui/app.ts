@@ -15,7 +15,7 @@ import {
   upgradeModule,
   type ActionResult,
 } from "../engine/actions";
-import { cellCost, wholeNous } from "../engine/economy";
+import { cellCost, computeRates, wholeNous } from "../engine/economy";
 import { adjacent, neighbors, sameHex } from "../engine/hex";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
 import { planTick } from "../engine/clock";
@@ -32,7 +32,8 @@ import {
 import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
 import type { GameState, Hex, ShelfType } from "../engine/types";
 import { render } from "./render";
-import { fmtWhole, META } from "./meta";
+import { META } from "./meta";
+import { formatInt, practiceCountdown } from "./format";
 
 export type ModalKind = "settings" | "store" | "forge" | "export" | "import" | "reset" | "reconcile" | null;
 
@@ -246,7 +247,7 @@ export class App {
       }
     });
     window.addEventListener("beforeunload", () => this.save());
-    window.setInterval(() => this.tick(), 500);
+    window.setInterval(() => this.tick(), 100);
   }
 
   tick(): void {
@@ -346,7 +347,7 @@ export class App {
     this.ui.modal = null;
     this.ui.buyingCell = true;
     const price = cellCost(this.state.cellsBought);
-    this.say(`Choose a hex touching your board — the new cell costs ${price} ν. Esc or Cancel on the banner backs out.`);
+    this.say(`Choose a hex touching your board — the new cell costs ${formatInt(price)} ν. Esc or Cancel on the banner backs out.`);
     this.render();
   }
 
@@ -790,7 +791,11 @@ export class App {
     document.body.classList.toggle("buying", this.ui.buyingCell && this.state.mode === "upgrade");
     if (this.ui.buyingCell && this.state.mode === "upgrade") {
       const hint = document.getElementById("buy-banner-hint");
-      const text = `Choose a hex touching your board — the new cell costs ${fmtWhole(cellCost(this.state.cellsBought))} ν`;
+      const price = cellCost(this.state.cellsBought);
+      // The armed purchase is an upgrade-mode surface: the price counts down
+      // in practice minutes when it is out of reach (§7).
+      const countdown = practiceCountdown(price, wholeNous(this.state), computeRates(this.state, true).rate);
+      const text = `Choose a hex touching your board — the new cell costs ${formatInt(price)} ν${countdown ? ` · ${countdown}` : ""}`;
       if (hint && hint.textContent !== text) hint.textContent = text;
     }
   }
