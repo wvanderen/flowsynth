@@ -91,6 +91,7 @@ h1, h2, h3, p { margin: 0; }
 .clock-plan-value { font: 15px/1.3 var(--mono); letter-spacing: 0.03em; margin: 0; }
 .session-clock { font: 28px/1.1 var(--mono); margin: 0; }
 .clock-caption { font-size: 10px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.session-rate { font-size: 11px; color: var(--muted); margin: 3px 0 0; white-space: nowrap; }
 .time-track {
   width: 135px;
   height: 3px;
@@ -821,6 +822,49 @@ body.buying #buy-banner { display: flex; }
 .import-error { color: var(--danger); font-size: 12px; margin-top: 8px; }
 
 .reconcile-gap { font: 30px var(--mono); margin: 14px 0 6px; }
+
+/* Session modals (§5.5, §5.7): the enter prompt's habit choices and the
+   loud summary's rows. Both are plain modal surfaces — no purchase or
+   countdown furniture on either. */
+.enter-choices { display: grid; gap: 8px; }
+.enter-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+.enter-choice:hover { border-color: var(--line-strong); background: var(--hover-bg); }
+.enter-choice.current { border-color: var(--accent); background: var(--accent-faint); }
+.enter-choice .enter-choice-name { flex: 1; font-size: 13.5px; font-weight: 550; }
+.enter-choice small { color: var(--muted); }
+.enter-choice.unstructured { border-style: dashed; }
+.habit-dot.off { border-style: dashed; }
+.summary-headline strong { font-weight: 600; color: var(--accent); }
+.summary-rows { display: grid; gap: 8px; margin-top: 16px; }
+.summary-row {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 14px;
+  align-items: baseline;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px 14px;
+}
+.summary-row > strong { font-size: 15px; font-weight: 600; }
+.summary-row > strong small { font-size: 11.5px; font-weight: 400; color: var(--muted); }
+.summary-label { font: 10px var(--mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+.summary-note { grid-column: 2; font-size: 11.5px; color: var(--muted); }
+.summary-row.unlock { border-color: var(--charge-line); background: var(--charge-faint); }
+.summary-row.unlock > strong { color: var(--charge); }
+.summary-reflections { margin-top: 14px; }
 
 /* ── Dev panel ─────────────────────────────────────── */
 

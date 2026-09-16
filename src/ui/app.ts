@@ -9,6 +9,7 @@ import {
   buyShelfModule,
   chooseRoll,
   combine,
+  dismissSummary as dismissSessionSummary,
   endSession,
   pauseSession,
   placeModule,
@@ -42,7 +43,19 @@ import { render } from "./render";
 import { APP_LABELS, META } from "./meta";
 import { formatInt, practiceCountdown } from "./format";
 
-export type ModalKind = "settings" | "store" | "forge" | "export" | "import" | "reset" | "reconcile" | null;
+// The session modal surfaces (§5.5, §5.7): the enter prompt precedes every
+// session; the loud summary follows every one.
+export type ModalKind =
+  | "settings"
+  | "store"
+  | "forge"
+  | "export"
+  | "import"
+  | "reset"
+  | "reconcile"
+  | "enter"
+  | "summary"
+  | null;
 
 export interface UiState {
   selected: string | null;
@@ -156,6 +169,11 @@ export class App {
   private resumeFromSave(loaded: LoadedSave): void {
     this.state = loaded.state;
     this.lastWall = null;
+    // An unseen loud summary (§5.7) survives a reload: the modal re-opens
+    // until the player dismisses it.
+    if (this.state.mode === "upgrade" && this.state.summary && !this.state.summary.seen) {
+      this.ui.modal = "summary";
+    }
     if (this.state.mode !== "flow") return;
     const plan = planTick(loaded.savedAt, Date.now());
     if (plan.pending !== null) {
@@ -315,27 +333,53 @@ export class App {
     return result.ok;
   }
 
+  // The enter prompt (§5.5) precedes every session: "What are you
+  // practicing?" — with practice-unstructured as a visible affordance. The
+  // switch only opens the prompt; the prompt's choice starts the session.
   startFlow(): void {
+    if (this.state.mode !== "upgrade") return;
+    this.clearTransientUi();
+    this.ui.modal = "enter";
+    this.render();
+  }
+
+  beginFlow(habitId: string | null): void {
+    selectHabit(this.state, habitId);
     // Planned targets belong to the Time app (§2.3): until it auto-activates,
     // every session is mechanically open-ended.
     const target = appActive(this.state, "time") ? this.ui.chosenTarget : null;
-    const started = this.act(
-      startSession(this.state, target),
+    const started = startSession(this.state, target);
+    if (!started.ok) {
+      this.ui.modal = null;
+      this.say(started.reason ?? "Cannot enter flow right now.");
+      this.render();
+      return;
+    }
+    this.ui.modal = null;
+    this.lastWall = Date.now();
+    this.clearTransientUi();
+    this.say(
       target === null
-        ? "Open-ended flow is live. The board produces exactly what it produces."
+        ? "Open-ended flow is live. Try a few minutes, then exit to see what the board made."
         : `Flow is live for ${Math.round(target / 60)} minutes. Your layout is locked; the instrument takes care of itself.`,
     );
-    if (started) {
-      this.lastWall = Date.now();
-      this.clearTransientUi();
-    }
+    this.save();
+    this.render();
   }
 
   endFlow(): void {
-    if (this.act(endSession(this.state, Date.now()), "")) {
-      this.lastWall = null;
-      this.say("Session ended. The board's production is banked. Arrange, upgrade, and begin again when ready.");
+    const result = endSession(this.state, Date.now());
+    if (!result.ok) {
+      this.say(result.reason ?? "No session is running.");
+      this.render();
+      return;
     }
+    this.lastWall = null;
+    this.say("Session ended. The board's production is banked.");
+    // The loud summary (§5.7) opens however the session ended.
+    this.ui.modal = "summary";
+    this.save();
+    this.render();
   }
 
   pause(): void {
@@ -791,6 +835,16 @@ export class App {
     this.render();
   }
 
+  // The loud summary's dismissal (§5.7): the post-session choice that
+  // follows is deliberately unguided — no pointing, just the surfaces.
+  dismissSummary(): void {
+    dismissSessionSummary(this.state);
+    this.ui.modal = null;
+    this.say("Session banked. The board is yours.");
+    this.save();
+    this.render();
+  }
+
   openModal(kind: ModalKind): void {
     this.ui.modal = kind;
     if (kind === "import") this.ui.importText = "";
@@ -799,6 +853,12 @@ export class App {
 
   closeModal(): void {
     if (this.ui.modal === "reconcile") return;
+    // Backdrop click or Esc on the loud summary counts as its dismissal, so
+    // an unseen summary never silently stays unseen.
+    if (this.ui.modal === "summary") {
+      this.dismissSummary();
+      return;
+    }
     this.ui.modal = null;
     this.ui.importError = null;
     this.render();

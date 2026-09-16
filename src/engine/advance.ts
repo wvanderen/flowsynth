@@ -30,6 +30,9 @@ export function advance(state: GameState, seconds: number, rng: Rng = Math.rando
     result.rollsBanked += addForgeProgress(state, snapshot.forgeRate * seconds, rng);
   }
   session.elapsed += seconds;
+  // The summary's headline and rate (§5.7) accrue with the session itself,
+  // so pauses and discarded gaps never count into either.
+  session.earned += gained;
   // The charge window is a time budget, not a rate: a deployed focus-keyed
   // generator spends one window second per flow second, elapsing even with
   // no eligible neighbors (the remaining-duration vocabulary). Undeployed,
