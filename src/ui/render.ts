@@ -1323,7 +1323,7 @@ function renderForgeModal(app: App, content: HTMLElement): void {
             <text y="42" text-anchor="middle" class="hex-sub">${candidateHeadline(candidate.type)}</text>
             <text y="-46" text-anchor="middle" class="hex-level">Lv 0</text>
           </svg>
-          <span class="rarity" style="color:var(--rarity-${candidate.rarity})">${RARITY_LABEL[candidate.rarity]}</span>
+          <span class="rarity" style="color:var(--finish-${candidate.rarity})">${RARITY_LABEL[candidate.rarity]}</span>
           <span class="candidate-scaling">+${fmt((BALANCE.rarityPower[candidate.rarity] - 1) * 100)}% / level · upgrades from 10 ν</span>
           <span class="candidate-effect">${forgeEffect(candidate.type, state)}</span>
         </button>`).join("")}
