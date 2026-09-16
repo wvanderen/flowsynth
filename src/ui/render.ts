@@ -2,7 +2,7 @@ import { chargedFactor, cellCost, computeRates, deployed, deployedGenerators, le
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
-import { BALANCE, CATEGORY_OF, EPS, NEXT_RARITY } from "../engine/constants";
+import { BALANCE, CATEGORY_OF, NEXT_RARITY } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
 import { appActive, appLockNote, FOCUS_APPS, type FocusApp } from "../engine/apps";
 import { canWriteNotes } from "../engine/notes";
@@ -15,6 +15,7 @@ import type { App } from "./app";
 import { updateSvg } from "./svg";
 import { DURATION_OPTIONS, META, RARITY_LABEL } from "./meta";
 import { formatInt, formatNumber, practiceCountdown } from "./format";
+import { renderStatusMonitor } from "./monitor";
 
 const HEX_RADIUS = 61;
 const SPACING = 65;
@@ -62,18 +63,15 @@ function times(count: number, noun: string): string {
 }
 
 export function render(app: App): void {
-  const { state } = app;
   renderConsoleSession(app);
   renderConsoleApps(app);
   renderConsoleReadout(app);
   renderTools(app);
   renderGrid(app);
-  renderFormula(app);
+  renderStatusMonitor(app);
   renderInspector(app);
   renderModal(app);
   renderDev(app);
-  const count = byId("cell-count");
-  if (count) count.textContent = `${state.cells.length} cells`;
 }
 
 /* ── Console (ADR-0012) ────────────────────────────── */
@@ -318,38 +316,6 @@ function renderTools(app: App): void {
   byId("tool-store")?.addEventListener("click", () => app.openModal("store"));
   byId("tool-forge")?.addEventListener("click", () => app.openModal("forge"));
   byId("tool-manage")?.addEventListener("click", () => (app.ui.managing ? app.stopManaging() : app.startManaging()));
-}
-
-/* ── Formula bar ───────────────────────────────────── */
-
-function renderFormula(app: App): void {
-  const { state } = app;
-  const host = byId("rate-formula");
-  if (!host) return;
-  const snapshot = currentSnapshot(state);
-  const term = (type: ModuleInstance["type"], value: number) =>
-    `<span class="formula-term" title="${META[type].name}" aria-label="${META[type].name}: ${formatNumber(value)}">
-      <svg viewBox="-18 -18 36 36" aria-hidden="true" fill="none" stroke-width="1.6">${moduleIcon(type)}</svg>${formatNumber(value)}</span>`;
-  const sum = (type: ModuleInstance["type"]) => {
-    let total = 0;
-    for (const c of snapshot.contributions.values()) if (c.type === type) total += c.value;
-    return total;
-  };
-  const chordLines = [
-    ...snapshot.namedChords.map((c) => `${c.name} ×${formatNumber(1 + c.bonus)}`),
-    ...(snapshot.pairs.length > 0 ? [`${times(snapshot.pairs.length, "chord pair")} ×${formatNumber(1 + BALANCE.pairBonus)} each`] : []),
-  ];
-  const chordLabel =
-    chordLines.length > 0 ? chordLines.join(" · ") : "no chords yet — adjacent synthesizers one pitch apart chord";
-  const chargeActive = snapshot.empowerment > 1 + EPS;
-  host.innerHTML = `
-    <div class="rate-equation" title="Chords: ${chordLabel}${chargeActive ? ` · charge empowerment ×${formatNumber(snapshot.empowerment)}` : ""}">
-      ${term("carrier", sum("carrier"))}
-      <span class="op">+</span>${term("additive", sum("additive"))}
-      <span class="op">+</span>${term("conditional", sum("conditional"))}
-      <span class="op">×</span><span class="formula-term" title="${chordLabel}" aria-label="Chord terms: ×${formatNumber(snapshot.chordMultiplier)}">χ ${formatNumber(snapshot.chordMultiplier)}</span>
-      <span class="op">=</span><strong>${formatNumber(snapshot.rate)} ν/s</strong>
-    </div>`;
 }
 
 /* ── Hex grid ──────────────────────────────────────── */
@@ -697,7 +663,7 @@ function renderInspector(app: App): void {
     } else if (module) {
       renderModulePanel(app, host, module);
     } else {
-      renderOverview(app, host);
+      renderDissolvedOverview(host);
     }
   }
   updateInspectorLive(app, host);
@@ -707,7 +673,6 @@ function renderInspector(app: App): void {
 function updateInspectorLive(app: App, host: HTMLElement): void {
   const { state } = app;
   liveText(host, "forge", `${formatNumber(Math.max(0, state.forge.progress))} / ${formatNumber(forgeThreshold(state.forge.earned))}`);
-  liveText(host, "rolls", String(state.bankedRolls.length));
   liveText(host, "elapsed", state.session ? formatClock(state.session.elapsed) : "—");
   liveText(host, "window", chargeWindowText(state));
   // The upgrade CTA and its practice-minute countdown keep themselves current
@@ -724,8 +689,6 @@ function updateInspectorLive(app: App, host: HTMLElement): void {
     const cta = byId("upgrade-module") as HTMLButtonElement | null;
     if (cta) cta.disabled = !(state.mode === "upgrade" && wholeNous(state) >= cost);
   }
-  const forgeBar = host.querySelector('[data-live="forge-bar"]') as HTMLProgressElement | null;
-  if (forgeBar) forgeBar.value = Math.min(1, Math.max(0, state.forge.progress / forgeThreshold(state.forge.earned)));
 }
 
 // The upgrade-mode countdown for a price on this board: phrased against the
@@ -735,39 +698,16 @@ function upgradeCountdown(app: App, cost: number): string | null {
   return practiceCountdown(cost, wholeNous(app.state), computeRates(app.state, true).rate);
 }
 
-function forgeMeter(state: GameState): string {
-  return `<div class="overview-meter" title="All deployed Forges feed one shared meter · ${state.forge.earned} earned">${statLive("forge", "Next Forge roll", `${formatNumber(Math.max(0, state.forge.progress))} / ${formatNumber(forgeThreshold(state.forge.earned))}`)}
-    <progress data-live="forge-bar" aria-label="Next Forge roll" value="${Math.min(1, Math.max(0, state.forge.progress / forgeThreshold(state.forge.earned)))}" max="1"></progress></div>`;
-}
-
-function renderOverview(app: App, host: HTMLElement): void {
-  const { state } = app;
-  const deployedModules = deployed(state);
+// The grid overview dissolved into the status monitor (issue #38): the
+// expansion meter and cell tokens retired, banked rolls moved to the Forge
+// surface, charge info to board and module surfaces, counts to the views
+// that describe them, and the static formula explainer to the monitor's
+// formula chip. When nothing is selected the inspector only points.
+function renderDissolvedOverview(host: HTMLElement): void {
   host.innerHTML = `
-    <div class="grid-overview">
-      <div class="eyebrow">GRID OVERVIEW</div>
-      <h2>Charge &amp; progress</h2>
-      ${forgeMeter(state)}
-      <div class="divider"></div>
-      ${statLive("rolls", "Banked Forge choices", String(state.bankedRolls.length))}
-      ${stat("Deployed modules", String(deployedModules.length))}
-      ${stat("Empty grid cells", String(state.cells.length - deployedModules.length))}
-      ${stat("Modules in inventory", String(state.modules.length - deployedModules.length))}
-      ${stat("Sessions completed", String(state.sessionsCompleted))}
-      ${stat("Total nous earned", formatNumber(state.totalEarned))}
-      <p class="small muted" style="margin-top:16px">${
-        state.mode === "flow"
-          ? "Rewards bank automatically. Nothing here needs your attention during practice."
-          : state.mode === "paused"
-            ? "Production is frozen while paused."
-            : "Select a module to inspect or tune it. Store, Forge, and Grid & inventory manage the build."
-      }</p>
-      <section class="overview-formula">
-        <h3>Nous / second</h3>
-        <p>rate = (carrier + Σ harmonics) × Π chord terms × charge empowerment. Pitch is hex distance from the Carrier + 1; adjacent synthesizers one pitch apart multiply the composite by a chord-pair bonus — stacking is multiplicative and uncapped.</p>
-        <p>Named chords — octave 1:2, fifth 2:3, major triad 4:5:6, blues triad 5:6:7 — replace their member pairs' bonuses with one bigger term, and overlaps stack. Conditionals add a bonus per chord pair they sing.</p>
-        <p>Generators produce charge during flow: adjacent synthesizers and infusors are empowered continuously; the Forge banks the charge toward its next roll. The focus-keyed generator emits only while its charge window lasts — every session end banks fraction × live practice time as window minutes. Charge factor = 1 + strength / (1 + strength). Rarity growth per level: common ×1.2 · uncommon ×1.25 · rare ×1.3.</p>
-      </section>
+    <div class="inspector-empty">
+      <div class="eyebrow">INSPECTOR</div>
+      <p class="small muted" style="margin-top:10px">Select a module to inspect or tune it. Score and progression live on the status monitor beneath the grid.</p>
     </div>`;
 }
 
@@ -872,7 +812,7 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
 
   host.innerHTML = `
     <div class="module-heading">
-      <button class="quiet small" id="back-overview">← Grid overview</button>
+      <button class="quiet small" id="back-overview">← Back</button>
       <h1>${meta.name}</h1>
       <span class="rarity-chip ${module.rarity}">${RARITY_LABEL[module.rarity]}${carrier ? " · pinned" : ""}</span>
     </div>
@@ -1211,6 +1151,7 @@ function hexTileSvg(module: ModuleInstance): string {
 function renderManagePanel(app: App, host: HTMLElement): void {
   const { state, ui } = app;
   const inventory = state.modules.filter((m) => m.pos === null);
+  const deployedCount = state.modules.length - inventory.length;
   const reshaping = ui.reshape !== null;
   const validity = reshaping ? app.reshapeValidity() : null;
   host.innerHTML = `
@@ -1225,6 +1166,7 @@ function renderManagePanel(app: App, host: HTMLElement): void {
           ? "Choose a destination cell. Occupied modules swap."
           : "Tiles are raised and movable. Drag them between cells or into the inventory; drop one onto a matching twin to combine. The Carrier stays pinned."
     }</p>
+    <p class="manage-counts mono">${deployedCount} deployed · ${state.cells.length - deployedCount} empty · ${inventory.length} in inventory</p>
     <div class="manage-actions">
       ${reshaping
         ? `<div class="reshape-panel">

@@ -116,6 +116,11 @@ export interface GameState {
   sessionsCompleted: number;
   nous: number;
   totalEarned: number;
+  // The Arete accumulator (ADR-0015): Arete minted at the horizon, inert
+  // until prestige's design lands; and whether the reserved prestige button
+  // has been pressed — the acknowledgment the achievements ticket detects.
+  arete: number;
+  horizonAcknowledged: boolean;
   modules: ModuleInstance[];
   cells: Hex[];
   // Total cells ever bought (§3): the geometric cell-price scaler counts
@@ -192,4 +197,5 @@ export interface AdvanceResult {
   nousEarned: number;
   rollsBanked: number;
   goalsCompleted: number;
+  areteMinted: number;
 }

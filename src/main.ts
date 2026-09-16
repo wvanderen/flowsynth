@@ -9,7 +9,7 @@ for (const id of [
   "telegraph-slot",
   "board-tools",
   "grid",
-  "rate-formula",
+  "status-monitor",
   "inspector",
   "status",
   "modal",

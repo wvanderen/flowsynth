@@ -1,6 +1,7 @@
 import { advance } from "../engine/advance";
 import type { AdvanceResult } from "../engine/types";
 import {
+  acknowledgeHorizon,
   buyCell,
   buyShelfModule,
   chooseRoll,
@@ -15,6 +16,7 @@ import {
   upgradeModule,
   type ActionResult,
 } from "../engine/actions";
+import { syncArete } from "../engine/accumulator";
 import { cellCost, computeRates, wholeNous } from "../engine/economy";
 import { adjacent, neighbors, sameHex } from "../engine/hex";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
@@ -288,6 +290,7 @@ export class App {
     const notes: string[] = [];
     if (result.rollsBanked > 0) notes.push(`${result.rollsBanked} forge ${result.rollsBanked === 1 ? "roll" : "rolls"} banked.`);
     if (result.goalsCompleted > 0) notes.push(`${result.goalsCompleted} goal${result.goalsCompleted === 1 ? "" : "s"} completed.`);
+    if (result.areteMinted > 0) notes.push("The accumulator filled — Arete minted at the horizon.");
     if (notes.length > 0) this.say(notes.join(" "));
   }
 
@@ -335,6 +338,12 @@ export class App {
     if (this.act(resumeSession(this.state), "Flow resumed.")) {
       this.lastWall = Date.now();
     }
+  }
+
+  // The reserved prestige button (ADR-0015): inert at launch — pressing
+  // only acknowledges the horizon, and the flag stays detectable.
+  acknowledgeHorizon(): void {
+    this.act(acknowledgeHorizon(this.state), "The horizon is acknowledged. Prestige itself waits beyond it.");
   }
 
   buyShelf(type: ShelfType): void {
@@ -771,7 +780,8 @@ export class App {
   devNous(): void {
     this.state.nous += 100;
     this.state.totalEarned += 100;
-    this.say("Dev: +100 ν.");
+    const minted = syncArete(this.state);
+    this.say(minted > 0 ? "Dev: +100 ν. The accumulator filled — Arete minted." : "Dev: +100 ν.");
     this.render();
   }
 
