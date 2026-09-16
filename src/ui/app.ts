@@ -28,6 +28,7 @@ import { planTick } from "../engine/clock";
 import { createInitialState, isCarrier } from "../engine/state";
 import { appActive, type FocusApp } from "../engine/apps";
 import { writeNote } from "../engine/notes";
+import { achievementName } from "../engine/achievements";
 import { BALANCE } from "../engine/constants";
 import {
   activeHabit,
@@ -49,6 +50,7 @@ export type ModalKind =
   | "settings"
   | "store"
   | "forge"
+  | "achievements"
   | "export"
   | "import"
   | "reset"
@@ -326,11 +328,26 @@ export class App {
     if (!result.ok) {
       this.say(result.reason ?? "That action is not available.");
     } else {
-      this.say(success);
+      this.announceUnlocks(result.unlocked, success);
     }
     if (result.ok) this.save();
     this.render();
     return result.ok;
+  }
+
+  // The upgrade-mode toast (ADR-0015): newly unlocked feats add onto the
+  // action's own message, and point at the trophy list's home. In-session
+  // unlocks never reach here — they queue into the session's summary row
+  // instead, so the filter below is a belt-and-braces.
+  announceUnlocks(ids: string[] | undefined, otherwise: string): void {
+    const names = (ids ?? [])
+      .filter((id) => !this.state.session?.unlocked.includes(id))
+      .map(achievementName);
+    this.say(
+      names.length > 0
+        ? `${otherwise}${otherwise ? " " : ""}Achievement unlocked — ${names.join(", ")}. The achievements page has the full list.`
+        : otherwise,
+    );
   }
 
   // The enter prompt (§5.5) precedes every session: "What are you
@@ -509,7 +526,8 @@ export class App {
 
   private reportCombine(result: ActionResult): void {
     if (result.ok) {
-      this.say(
+      this.announceUnlocks(
+        result.unlocked,
         result.refund && result.refund > 0
           ? `Combined into a stronger copy; ${result.refund} ν of the lower copy's upgrades refunded.`
           : "Combined into a stronger copy.",
@@ -666,7 +684,10 @@ export class App {
         result.completions && result.completions > 0
           ? ` A goal completed.`
           : "";
-      this.say(`Logged ${minutes} minutes of ${habit.name}. Development grows; no nous or charge is produced.${goalNote}`);
+      this.announceUnlocks(
+        result.unlocked,
+        `Logged ${minutes} minutes of ${habit.name}. Development grows; no nous or charge is produced.${goalNote}`,
+      );
       this.save();
     } else {
       this.say(result.reason ?? "Could not log practice.");
@@ -699,19 +720,26 @@ export class App {
     const offer = this.state.bankedRolls.find((o) => o.id === offerId);
     const candidate = offer?.candidates.find((c) => c.id === candidateId);
     if (!candidate) return;
-    if (this.act(chooseRoll(this.state, offerId, candidateId), "")) {
-      const added = this.state.modules[this.state.modules.length - 1]!;
-      this.ui.modal = null;
-      this.ui.managing = true;
-      this.ui.reshape = null;
-      this.ui.selected = added.id;
-      this.ui.placing = added.id;
-      const more = this.state.bankedRolls.length > 0 ? ` ${this.state.bankedRolls.length} more choice${this.state.bankedRolls.length === 1 ? "" : "s"} wait in the Forge.` : "";
-      this.say(`${META[candidate.type].name} added. Click a cell to place it; right-click keeps it in inventory.${more}`);
+    const result = chooseRoll(this.state, offerId, candidateId);
+    if (!result.ok) {
+      this.say(result.reason ?? "That roll cannot be taken.");
       this.render();
+      return;
     }
+    const added = this.state.modules[this.state.modules.length - 1]!;
+    this.ui.modal = null;
+    this.ui.managing = true;
+    this.ui.reshape = null;
+    this.ui.selected = added.id;
+    this.ui.placing = added.id;
+    const more = this.state.bankedRolls.length > 0 ? ` ${this.state.bankedRolls.length} more choice${this.state.bankedRolls.length === 1 ? "" : "s"} wait in the Forge.` : "";
+    this.announceUnlocks(
+      result.unlocked,
+      `${META[candidate.type].name} added. Click a cell to place it; right-click keeps it in inventory.${more}`,
+    );
+    this.save();
+    this.render();
   }
-
   cancelPlacing(): void {
     const id = this.ui.placing;
     this.ui.placing = null;

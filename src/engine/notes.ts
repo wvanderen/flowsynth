@@ -1,3 +1,4 @@
+import { syncAchievements } from "./achievements";
 import type { GameState } from "./types";
 
 // Notes (issue #4), now a pure fixed-function instrument (ADR-0012): notes
@@ -21,6 +22,9 @@ export function writeNote(state: GameState, text: string): { ok: boolean; reason
     atElapsed: state.session.elapsed,
     text: trimmed.slice(0, 2000),
   });
+  // The in-flow boundary check (ADR-0015): Marginalia and the note ladder
+  // unlock here; the live session queues them into its summary row.
+  syncAchievements(state);
   return { ok: true };
 }
 

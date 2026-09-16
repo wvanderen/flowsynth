@@ -7,6 +7,7 @@
 // and the reserved prestige button beneath. The grid overview panel and the
 // static formula explainer this rail replaces are dissolved (issue #38).
 import { ARETE_GRADUATIONS, ARETE_HORIZON, accumulatorFill, nextAccumulatorMark } from "../engine/accumulator";
+import { achievementBoostOf } from "../engine/achievements";
 import { BALANCE } from "../engine/constants";
 import { computeRates } from "../engine/economy";
 import { forgeThreshold } from "../engine/rolls";
@@ -46,7 +47,7 @@ function termIcon(type: "carrier" | "additive"): string {
   return `<svg viewBox="-18 -18 36 36" aria-hidden="true" fill="none" stroke-width="1.6">${moduleIcon(type)}</svg>`;
 }
 
-function formulaChipHtml(): string {
+function formulaChipHtml(boosted: boolean): string {
   return `
     <div class="monitor-chip monitor-formula" tabindex="0" aria-label="Live nous formula — focus for the breakdown">
       <span class="monitor-equation mono">
@@ -55,6 +56,7 @@ function formulaChipHtml(): string {
         <span class="op">)</span>
         <span class="op">×</span><span class="monitor-term" title="Chord terms — hover for the breakdown"><span class="term-glyph">χ</span><span data-live="m-chi"></span></span>
         <span class="op">×</span><span class="monitor-term" title="Charge empowerment — continuous while modules receive charge"><span class="term-glyph">emp</span><span data-live="m-emp"></span></span>
+        ${boosted ? `<span class="op">×</span><span class="monitor-term" title="Achievements — each feat adds into the boost"><span class="term-glyph">ach</span><span data-live="m-ach"></span></span>` : ""}
         <span class="op">=</span><strong data-live="m-rate"></strong>
       </span>
       <span class="monitor-hint" aria-hidden="true">ⓘ</span>
@@ -106,14 +108,16 @@ export function renderStatusMonitor(app: App): void {
   if (!host) return;
   const { state } = app;
   const past = state.totalEarned >= ARETE_HORIZON;
-  // Structural key: only the era flip and the prestige acknowledgment
-  // rebuild the rail; every tick-moving value updates in place below so
-  // hover popovers and buttons survive clock ticks.
-  const key = `${past ? "past" : "under"}:${state.horizonAcknowledged ? "acked" : "open"}`;
+  // Structural key: the era flip, the prestige acknowledgment, and the
+  // achievement term joining the chip equation (first feat) rebuild the
+  // rail; every tick-moving value updates in place below so hover popovers
+  // and buttons survive clock ticks.
+  const achieving = achievementBoostOf(state) > 1;
+  const key = `${past ? "past" : "under"}:${state.horizonAcknowledged ? "acked" : "open"}:${achieving ? "ach" : "plain"}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.innerHTML = `
-      <div class="monitor-top">${formulaChipHtml()}${forgeChipHtml()}</div>
+      <div class="monitor-top">${formulaChipHtml(achieving)}${forgeChipHtml()}</div>
       ${accumulatorHtml(state, past)}`;
     byId("prestige-button")?.addEventListener("click", () => app.acknowledgeHorizon());
   }
@@ -139,13 +143,15 @@ function updateMonitorLive(app: App, past: boolean): void {
   set("m-harmonics", formatNumber(snapshot.harmonics));
   set("m-chi", formatNumber(snapshot.chordMultiplier));
   set("m-emp", formatNumber(snapshot.empowerment));
+  set("m-ach", `+${Math.round((snapshot.achievementBoost - 1) * 100)}%`);
   set("m-rate", `${formatNumber(snapshot.rate)} ν/s`);
   set("b-carrier", `+${formatNumber(snapshot.carrier)} ν/s`);
   set("b-harmonics", `+${formatNumber(snapshot.harmonics)} ν/s`);
   set("b-chords", `×${formatNumber(snapshot.chordMultiplier)}`);
   set("b-chord-note", chordSummary(snapshot));
   set("b-emp", `×${formatNumber(snapshot.empowerment)}`);
-  set("b-ach", `×${formatNumber(snapshot.achievementBoost)}`);
+  // The single legible achievements line (§6.3): "Achievements +26%".
+  set("b-ach", `+${Math.round((snapshot.achievementBoost - 1) * 100)}%`);
   set("b-rate", `${formatNumber(snapshot.rate)} ν/s`);
 
   // The Forge chip: the shared meter's progress toward the next roll.
