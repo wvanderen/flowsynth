@@ -1,4 +1,4 @@
-import { chargedFactor, computeRates, deployed, deployedGenerators, levelCost, modulePower, wholeNous } from "../engine/economy";
+import { chargedFactor, cellCost, computeRates, deployed, deployedGenerators, levelCost, modulePower, wholeNous } from "../engine/economy";
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
@@ -248,7 +248,7 @@ function renderTools(app: App): void {
   host.dataset.renderKey = key;
   const forgeReady = upgrade && state.bankedRolls.length > 0;
   host.innerHTML = `
-    <button class="small" id="tool-store" ${upgrade ? "" : "disabled"} title="${upgrade ? "The starter shelf: one-time offers for each category" : "Purchases happen between sessions"}">Store</button>
+    <button class="small" id="tool-store" ${upgrade ? "" : "disabled"} title="${upgrade ? "The catalog: starter-shelf offers and board cells" : "Purchases happen between sessions"}">Catalog</button>
     <button class="small" id="tool-forge" ${forgeReady ? "" : "disabled"} title="${forgeReady
       ? `${state.bankedRolls.length} banked choice${state.bankedRolls.length === 1 ? "" : "s"}`
       : upgrade
@@ -299,7 +299,7 @@ function renderGrid(app: App): void {
   const svg = document.getElementById("grid") as SVGSVGElement | null;
   if (!svg) return;
   const upgrade = state.mode === "upgrade";
-  const showFrontier = upgrade && ui.reshape !== null;
+  const showFrontier = upgrade && (ui.reshape !== null || ui.buyingCell);
   const frontier = showFrontier ? app.frontierCells() : [];
   const allCells = [...state.cells, ...frontier];
   const coords = allCells.map(point);
@@ -366,13 +366,26 @@ function renderGrid(app: App): void {
   }
 
   if (showFrontier) {
+    const price = cellCost(state.cellsBought);
+    const affordable = wholeNous(state) >= price;
     for (const pos of frontier) {
       const [x, y] = point(pos);
-      const isAdd = ui.reshape?.adds.some((c) => sameHex(c, pos)) ?? false;
-      html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Expand here">
-        <polygon class="hex ${isAdd ? "target" : "future"}" points="${hexPoints(HEX_RADIUS)}"/>
-        ${isAdd ? `<text y="5" text-anchor="middle" fill="var(--accent)" font-size="20">+</text>` : ""}
-      </g>`;
+      if (ui.buyingCell) {
+        // The purchase arm: every frontier hex carries its price; the buy
+        // lands only where clicked (ADR-0013).
+        html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Buy cell here for ${price} nous">
+          <polygon class="hex ${affordable ? "buy-here" : "future"}" points="${hexPoints(HEX_RADIUS)}"/>
+          <text y="-24" text-anchor="middle" class="hex-sub">NEW CELL</text>
+          ${affordable ? `<text y="8" text-anchor="middle" fill="var(--accent)" font-size="22">+</text>` : ""}
+          <text y="${affordable ? 34 : 8}" text-anchor="middle" class="hex-sub">${fmtWhole(price)} ν</text>
+        </g>`;
+      } else {
+        const isAdd = ui.reshape?.adds.some((c) => sameHex(c, pos)) ?? false;
+        html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Expand here">
+          <polygon class="hex ${isAdd ? "target" : "future"}" points="${hexPoints(HEX_RADIUS)}"/>
+          ${isAdd ? `<text y="5" text-anchor="middle" fill="var(--accent)" font-size="20">+</text>` : ""}
+        </g>`;
+      }
     }
   }
 
@@ -496,7 +509,7 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
 function bindPointerDrag(app: App, element: Element, moduleId: string | (() => string | null)): void {
   element.addEventListener("pointerdown", (baseEvent: Event) => {
     const event = baseEvent as PointerEvent;
-    if (event.button !== 0 || !app.ui.managing || app.state.mode !== "upgrade" || app.ui.reshape) return;
+    if (event.button !== 0 || !app.ui.managing || app.state.mode !== "upgrade" || app.ui.reshape || app.ui.buyingCell) return;
     const id = typeof moduleId === "function" ? moduleId() : moduleId;
     if (!id) return;
     const dragModule = app.state.modules.find((m) => m.id === id) ?? null;
@@ -1166,7 +1179,7 @@ function renderModal(app: App): void {
     kind === "forge"
       ? app.state.bankedRolls.at(-1)?.id ?? null
       : kind === "store"
-        ? [app.ui.showAcquired, wholeNous(app.state), JSON.stringify(app.state.purchased)]
+        ? [app.ui.showAcquired, wholeNous(app.state), JSON.stringify(app.state.purchased), app.state.cellsBought]
         : null;
   const renderKey = JSON.stringify([kind, app.ui.importError, app.state.pendingGap, extra]);
   // Clock ticks must not replace a save textarea or steal dialog focus.
@@ -1210,10 +1223,15 @@ function renderStoreModal(app: App, content: HTMLElement): void {
   const openShelf = shelfTypes.filter((type) => !state.purchased[type]);
   const ownedShelf = shelfTypes.filter((type) => state.purchased[type]);
 
+  // Cells (ADR-0013): the permanent catalog row. The price is not quoted
+  // here — it lives where the purchase commits, on the board's frontier.
+  const cellPrice = cellCost(state.cellsBought);
+  const cellAffordable = wholeNous(state) >= cellPrice;
+
   content.innerHTML = `
-    ${modalTop("STORE")}
+    ${modalTop("CATALOG")}
     <h2 id="modal-title">Shape what comes next.</h2>
-    <p class="lead">The starter shelf: one offer per category, once each. ${fmtWhole(state.nous)} ν available.</p>
+    <p class="lead">The starter shelf: one offer per category, once each — plus board cells, always. ${fmtWhole(state.nous)} ν available.</p>
     ${openShelf.length > 0 ? `
       <h3 class="store-section-title">Starter shelf</h3>
       <div class="shop-list">${openShelf.map((type) => {
@@ -1225,6 +1243,14 @@ function renderStoreModal(app: App, content: HTMLElement): void {
         </div>`;
       }).join("")}</div>` : ""}
     ${openShelf.length === 0 ? `<p class="empty-copy">The shelf is empty. New modules come from the Forge.</p>` : ""}
+    <h3 class="store-section-title">Cells</h3>
+    <div class="shop-list">
+      <div class="shop-item">
+        <div><h3>Board cell</h3><small>Empty hexes to place modules on — you choose where it touches the board.</small></div>
+        <button class="primary" id="buy-cell" ${cellAffordable ? "" : "disabled"} title="${cellAffordable ? "Arm the purchase — pick a frontier hex on the board; the price shows there" : "Not enough nous"}">Buy cell</button>
+      </div>
+    </div>
+    <p class="small muted" style="margin-top:6px">Each cell bought raises the next price — the board shows it before you commit.</p>
     <label class="store-toggle"><input type="checkbox" id="store-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${ownedShelf.length}/${shelfTypes.length})</label>
     ${ui.showAcquired && ownedShelf.length > 0 ? `
       <h3 class="store-section-title">Acquired</h3>
@@ -1237,6 +1263,7 @@ function renderStoreModal(app: App, content: HTMLElement): void {
       app.buyShelf(button.getAttribute("data-buy") as keyof typeof BALANCE.shelfPrices);
     });
   });
+  byId("buy-cell")?.addEventListener("click", () => app.armCellPurchase());
   byId("store-show-acquired")?.addEventListener("change", (event) => {
     app.ui.showAcquired = (event.target as HTMLInputElement).checked;
     app.render();

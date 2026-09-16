@@ -36,6 +36,8 @@ document.addEventListener("keydown", (event) => {
   }
   if (app.ui.placing) {
     app.cancelPlacing();
+  } else if (app.ui.buyingCell) {
+    app.cancelCellPurchase();
   } else if (app.managing) {
     app.stopManaging();
   } else if (app.ui.selected) {

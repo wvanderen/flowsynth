@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import {
+  buyCell,
   buyShelfModule,
   chooseRoll,
   endSession,
@@ -10,10 +11,10 @@ import {
   startSession,
   upgradeModule,
 } from "./actions";
-import { wholeNous } from "./economy";
+import { cellCost, wholeNous } from "./economy";
 import { fresh, give, stubRng } from "./fixtures";
 import { generateOffer } from "./rolls";
-import { hex, isConnected } from "./hex";
+import { hex, isConnected, sameHex } from "./hex";
 import { BALANCE } from "./constants";
 import type { ShelfType } from "./types";
 
@@ -115,6 +116,83 @@ describe("placement and board rules", () => {
 
     expect(reshapeCells(s, [hex(0, 0)]).ok).toBe(false);
     expect(reshapeCells(s, [hex(0, 0), hex(1, 0), hex(3, 0)]).ok).toBe(false);
+  });
+});
+
+describe("cells as direct nous purchases", () => {
+  it("prices cells on a steep geometric scaler over total cells bought", () => {
+    expect(cellCost(0)).toBe(BALANCE.cellFirstCost);
+    expect(cellCost(1)).toBeGreaterThan(cellCost(0));
+    expect(cellCost(2)).toBeGreaterThan(cellCost(1));
+    // Geometric: each price is the previous scaled by the growth ratio.
+    const ratio = cellCost(4) / cellCost(3);
+    expect(ratio).toBeCloseTo(
+      Number(BALANCE.cellCostGrowthNumerator) / Number(BALANCE.cellCostGrowthDenominator),
+      0,
+    );
+  });
+
+  it("sells frontier cells for whole nous in upgrade mode only", () => {
+    const s = fresh();
+    startSession(s, 600);
+    s.nous = 1000;
+    expect(buyCell(s, hex(2, 0)).ok).toBe(false); // flow is read-only
+    endSession(s);
+
+    const price0 = cellCost(s.cellsBought);
+    s.nous = price0 - 0.1;
+    expect(buyCell(s, hex(2, 0)).ok).toBe(false); // needs whole nous
+    s.nous = price0 + 0.9;
+    expect(buyCell(s, hex(2, 0)).ok).toBe(true);
+    expect(s.nous).toBeCloseTo(0.9, 6);
+    expect(s.cellsBought).toBe(1);
+    expect(s.cells.some((c) => sameHex(c, hex(2, 0)))).toBe(true);
+  });
+
+  it("grows the board only through the connected frontier", () => {
+    const s = fresh();
+    s.nous = 1e6;
+    expect(buyCell(s, hex(5, 0)).ok).toBe(false); // not adjacent to the board
+    expect(buyCell(s, hex(1, 0)).ok).toBe(false); // already a cell
+    expect(buyCell(s, hex(2, 0)).ok).toBe(true);
+    expect(buyCell(s, hex(4, 0)).ok).toBe(false); // two rings out, not adjacent
+    expect(buyCell(s, hex(3, 0)).ok).toBe(true); // adjacent to the new cell
+    expect(buyCell(s, hex(4, 0)).ok).toBe(true);
+    expect(isConnected(s.cells)).toBe(true);
+    expect(s.cellsBought).toBe(3);
+  });
+
+  it("counts every purchase ever made, not the current cell count", () => {
+    const s = fresh();
+    s.nous = 1e6;
+    let spent = 0;
+    for (let i = 0; i < 3; i++) {
+      const price = cellCost(s.cellsBought);
+      const before = s.nous;
+      expect(buyCell(s, hex(2 + i, 0)).ok).toBe(true);
+      expect(before - s.nous).toBe(price);
+      spent += price;
+    }
+    expect(s.cells).toHaveLength(6);
+    expect(s.cellsBought).toBe(3);
+    expect(spent).toBe(cellCost(0) + cellCost(1) + cellCost(2));
+    // Reshaping never changes the count, so the scaler never rewinds.
+    const next = [hex(0, 0), hex(1, 0), hex(0, -1), hex(2, 0), hex(3, 0), hex(-1, 0)];
+    expect(reshapeCells(s, next).ok).toBe(true);
+    expect(cellCost(s.cellsBought)).toBe(cellCost(3));
+  });
+
+  it("the board grows past the opening footprint and modules place on bought cells", () => {
+    const s = fresh();
+    s.nous = 1e6;
+    expect(buyCell(s, hex(2, 0)).ok).toBe(true);
+    const additive = give(s, "additive", null);
+    expect(placeModule(s, additive.id, hex(2, 0)).ok).toBe(true);
+    expect(additive.pos).toEqual(hex(2, 0));
+    // The first acquired module is placeable without buying a cell first.
+    const s2 = fresh();
+    const conditional = give(s2, "conditional", null);
+    expect(placeModule(s2, conditional.id, hex(1, 0)).ok).toBe(true);
   });
 });
 

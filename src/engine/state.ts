@@ -19,6 +19,7 @@ export function createInitialState(): GameState {
     totalEarned: 0,
     modules: [],
     cells: STARTER_CELLS.map(({ q, r }) => hex(q, r)),
+    cellsBought: 0,
     forge: { progress: 0, earned: 0 },
     chargeWindow: 0,
     bankedRolls: [],

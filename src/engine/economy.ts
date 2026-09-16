@@ -14,6 +14,15 @@ export function levelCost(level: number): number {
   return Number((numerator + denominator - 1n) / denominator);
 }
 
+// The cell price (ADR-0013): a steep geometric scaler over total cells
+// bought — always charged in whole nous, ceiling-exact like level costs.
+export function cellCost(cellsBought: number): number {
+  if (cellsBought < 0) throw new Error("cellsBought must be non-negative");
+  const numerator = BigInt(BALANCE.cellFirstCost) * BALANCE.cellCostGrowthNumerator ** BigInt(cellsBought);
+  const denominator = BALANCE.cellCostGrowthDenominator ** BigInt(cellsBought);
+  return Number((numerator + denominator - 1n) / denominator);
+}
+
 export function investment(level: number): number {
   let total = 0;
   for (let i = 0; i < level; i++) total += levelCost(i);

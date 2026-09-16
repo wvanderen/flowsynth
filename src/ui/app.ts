@@ -1,6 +1,7 @@
 import { advance } from "../engine/advance";
 import type { AdvanceResult } from "../engine/types";
 import {
+  buyCell,
   buyShelfModule,
   chooseRoll,
   combine,
@@ -14,7 +15,7 @@ import {
   upgradeModule,
   type ActionResult,
 } from "../engine/actions";
-import { wholeNous } from "../engine/economy";
+import { cellCost, wholeNous } from "../engine/economy";
 import { adjacent, neighbors, sameHex } from "../engine/hex";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
 import { planTick } from "../engine/clock";
@@ -31,7 +32,7 @@ import {
 import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
 import type { GameState, Hex, ShelfType } from "../engine/types";
 import { render } from "./render";
-import { META } from "./meta";
+import { fmtWhole, META } from "./meta";
 
 export type ModalKind = "settings" | "store" | "forge" | "export" | "import" | "reset" | "reconcile" | null;
 
@@ -46,6 +47,9 @@ export interface UiState {
   placing: string | null;
   managing: boolean;
   reshape: { adds: Hex[]; removes: Hex[] } | null;
+  // Cell purchase (ADR-0013): armed from the catalog, resolved by clicking a
+  // frontier hex. The buy only lands when a frontier cell is clicked.
+  buyingCell: boolean;
   modal: ModalKind;
   importText: string;
   importError: string | null;
@@ -83,6 +87,7 @@ export class App {
     placing: null,
     managing: false,
     reshape: null,
+    buyingCell: false,
     modal: null,
     importText: "",
     importError: null,
@@ -116,6 +121,7 @@ export class App {
     rollGoalOccurrences(this.state, Date.now());
     this.bindGlobalEvents();
     document.getElementById("manage-banner-done")?.addEventListener("click", () => this.stopManaging());
+    document.getElementById("buy-banner-cancel")?.addEventListener("click", () => this.cancelCellPurchase());
     document.getElementById("console-settings")?.addEventListener("click", () => this.openModal("settings"));
     this.greet();
     this.render();
@@ -167,6 +173,17 @@ export class App {
     return serialize(this.state);
   }
 
+  // The transient interaction modes are mutually exclusive: every exit path
+  // (import, reset, session start, arming another mode) clears them together.
+  private clearTransientUi(): void {
+    this.ui.selected = null;
+    this.ui.app = null;
+    this.ui.placing = null;
+    this.ui.managing = false;
+    this.ui.reshape = null;
+    this.ui.buyingCell = false;
+  }
+
   importText(text: string): boolean {
     const parsed = parseSave(text);
     if ("error" in parsed) {
@@ -174,11 +191,7 @@ export class App {
       this.render();
       return false;
     }
-    this.ui.selected = null;
-    this.ui.app = null;
-    this.ui.placing = null;
-    this.ui.managing = false;
-    this.ui.reshape = null;
+    this.clearTransientUi();
     this.ui.modal = null;
     this.ui.importError = null;
     this.resumeFromSave(parsed);
@@ -194,11 +207,7 @@ export class App {
 
   hardReset(): void {
     this.state = createInitialState();
-    this.ui.selected = null;
-    this.ui.app = null;
-    this.ui.placing = null;
-    this.ui.managing = false;
-    this.ui.reshape = null;
+    this.clearTransientUi();
     this.ui.modal = null;
     this.ui.importError = null;
     this.ui.chosenTarget = 600;
@@ -296,10 +305,7 @@ export class App {
     );
     if (started) {
       this.lastWall = Date.now();
-      this.ui.managing = false;
-      this.ui.placing = null;
-      this.ui.selected = null;
-      this.ui.app = null;
+      this.clearTransientUi();
     }
   }
 
@@ -327,6 +333,27 @@ export class App {
       this.ui.modal = null;
       this.beginPlacing(this.state.modules[this.state.modules.length - 1]!.id);
     }
+  }
+
+  // Arm the cell purchase from the catalog: the buy itself lands only when a
+  // frontier hex is clicked, so the price is always attached to a placement.
+  armCellPurchase(): void {
+    if (this.state.mode !== "upgrade") {
+      this.say("Purchases happen between sessions.");
+      return;
+    }
+    this.clearTransientUi();
+    this.ui.modal = null;
+    this.ui.buyingCell = true;
+    const price = cellCost(this.state.cellsBought);
+    this.say(`Choose a hex touching your board — the new cell costs ${price} ν. Esc or Cancel on the banner backs out.`);
+    this.render();
+  }
+
+  cancelCellPurchase(): void {
+    this.ui.buyingCell = false;
+    this.say("Cell purchase cancelled.");
+    this.render();
   }
 
   upgrade(id: string): void {
@@ -409,6 +436,13 @@ export class App {
       this.stageReshape(pos);
       return;
     }
+    if (ui.buyingCell) {
+      // The arm persists across buys: sweep several cells, then back out
+      // yourself via the banner's Cancel (or Esc). act() re-renders each
+      // time, so the banner hint and hex prices step to the next scaler rung.
+      this.act(buyCell(state, pos), "Cell bought. The board grew — buy another, or Cancel when done.");
+      return;
+    }
     if (ui.placing) {
       const module = state.modules.find((m) => m.id === ui.placing);
       if (!module) return;
@@ -424,7 +458,7 @@ export class App {
 
   pickCellThenPlace(id: string, pos: Hex): void {
     const { state } = this;
-    if (state.mode !== "upgrade" || this.ui.reshape) return;
+    if (state.mode !== "upgrade" || this.ui.reshape || this.ui.buyingCell) return;
     const module = state.modules.find((m) => m.id === id);
     if (!module) return;
     this.ui.placing = null;
@@ -566,6 +600,10 @@ export class App {
   rightClickCell(pos: Hex): void {
     if (this.state.mode !== "upgrade") return;
     if (this.ui.reshape) return;
+    if (this.ui.buyingCell) {
+      this.cancelCellPurchase();
+      return;
+    }
     if (this.ui.placing) {
       this.cancelPlacing();
       return;
@@ -577,11 +615,8 @@ export class App {
   }
 
   startManaging(): void {
+    this.clearTransientUi();
     this.ui.managing = true;
-    this.ui.selected = null;
-    this.ui.app = null;
-    this.ui.placing = null;
-    this.ui.reshape = null;
     this.say("Arranging: drag the raised tiles between cells or into the inventory. Done or Esc finishes.");
     this.render();
   }
@@ -596,6 +631,7 @@ export class App {
   startReshape(): void {
     this.ui.reshape = { adds: [], removes: [] };
     this.ui.placing = null;
+    this.ui.buyingCell = false;
     this.say("Reshape: click empty cells to remove them and frontier outlines to add. Removals and additions must balance.");
     this.render();
   }
@@ -750,5 +786,12 @@ export class App {
     // dimmed cells, and raised tiles. It can only be on while the grid is
     // unlocked.
     document.body.classList.toggle("managing", this.managing);
+    // Same visibility contract for the armed cell purchase (ADR-0013).
+    document.body.classList.toggle("buying", this.ui.buyingCell && this.state.mode === "upgrade");
+    if (this.ui.buyingCell && this.state.mode === "upgrade") {
+      const hint = document.getElementById("buy-banner-hint");
+      const text = `Choose a hex touching your board — the new cell costs ${fmtWhole(cellCost(this.state.cellsBought))} ν`;
+      if (hint && hint.textContent !== text) hint.textContent = text;
+    }
   }
 }

@@ -14,6 +14,11 @@ export interface Balance {
   rarityPower: Record<Rarity, number>;
   rarityProbability: Record<Rarity, number>;
   shelfPrices: Record<ShelfType, number>;
+  // Cells (ADR-0013): direct nous purchases on a steep geometric scaler over
+  // total cells bought. Provisional tuning.
+  cellFirstCost: number;
+  cellCostGrowthNumerator: bigint;
+  cellCostGrowthDenominator: bigint;
   goalBaseSlots: number;
   forgeInitialThreshold: number;
   forgeThresholdGrowth: number;
@@ -39,6 +44,9 @@ export const BALANCE: Balance = {
   rarityPower: { common: 1.2, uncommon: 1.25, rare: 1.3 },
   rarityProbability: { common: 0.99, uncommon: 0.009, rare: 0.001 },
   shelfPrices: { generator: 40, infusor: 40, forge: 80 },
+  cellFirstCost: 30,
+  cellCostGrowthNumerator: 5n,
+  cellCostGrowthDenominator: 2n,
   goalBaseSlots: 2,
   forgeInitialThreshold: 60,
   forgeThresholdGrowth: 1.5,

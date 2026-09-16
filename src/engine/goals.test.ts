@@ -21,7 +21,7 @@ function withHabit(s: ReturnType<typeof fresh>, name = "Piano") {
 }
 
 describe("goal slots and creation", () => {
-  it("keeps slot capacity at the base two; expansion is a future console long goal", () => {
+  it("keeps slot capacity at the base two; more capacity is a future console long goal", () => {
     const s = fresh();
     expect(goalCapacity(s)).toBe(2);
   });

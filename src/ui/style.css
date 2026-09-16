@@ -385,6 +385,9 @@ body.live .grid-overview { opacity: 0.75; }
 .hex { fill: #232923; stroke: #54604c; stroke-width: 1; transition: stroke 0.2s, fill 0.2s; }
 .hex.future { fill: transparent; stroke: #4a544a; stroke-dasharray: 5 4; }
 .hex.target { stroke: var(--accent); stroke-width: 2; fill: #2a3125; }
+/* A frontier hex while a cell purchase is armed: solid, inviting, priced. */
+.hex.buy-here { fill: #26302a; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.hex.buy-here:hover { fill: #2c382f; }
 .hex.selected { stroke: var(--accent); stroke-width: 2.5; }
 .hex.charged { stroke: var(--charge); fill: #1f2b27; }
 .hex.dispensing { stroke: var(--amber); fill: #3b3021; stroke-width: 2; }
@@ -463,6 +466,8 @@ body.managing .cell-node:has(> .hex.empty) { opacity: 0.55; }
   padding: 8px 10px 8px 16px;
 }
 body.managing .manage-banner { display: flex; }
+/* Cell purchase (ADR-0013): same static-banner pattern, driven by body.buying. */
+body.buying #buy-banner { display: flex; }
 .manage-banner-label { font: 10px var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
 .manage-banner-hint { font-size: 11.5px; color: var(--muted); }
 .manage-banner-esc { font-size: 10.5px; color: var(--muted); white-space: nowrap; }
@@ -553,6 +558,7 @@ body.managing .manage-banner { display: flex; }
 
 .shop-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .shop-item { border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.shop-item button { white-space: nowrap; }
 .shop-item h3 { font-size: 13.5px; font-weight: 550; }
 .shop-item small { color: var(--muted); }
 .shop-item .price { font-family: var(--mono); white-space: nowrap; }
