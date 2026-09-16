@@ -13,11 +13,12 @@ import {
   upgradeModule,
 } from "./actions";
 import { advance } from "./advance";
+import { appActive } from "./apps";
 import { BALANCE } from "./constants";
 import { rungCost } from "./economy";
 import { fresh } from "./fixtures";
 import { hex } from "./hex";
-import { appActive } from "./apps";
+import { createHabit, selectHabit } from "./habits";
 import { isCarrier } from "./state";
 import { deserialize, serialize } from "./save";
 import type { ShelfType } from "./types";
@@ -32,6 +33,24 @@ describe("the enter prompt's open-ended shape (§5.5)", () => {
     expect(appActive(s, "time")).toBe(false);
     expect(startSession(s, null).ok).toBe(true);
     expect(s.session?.target).toBeNull();
+  });
+
+  it("a habit named at the prompt lands first in the Habit app and takes the session", () => {
+    const s = fresh();
+    // The prompt's create field: createHabit, then beginFlow's select.
+    const created = createHabit(s, "Piano");
+    expect(created.ok).toBe(true);
+    expect(s.habits).toHaveLength(1);
+    expect(selectHabit(s, created.habit!.id).ok).toBe(true);
+    startSession(s, null);
+    expect(s.activeHabitId).toBe(created.habit!.id);
+    advance(s, 600);
+    expect(s.habits[0]!.seconds).toBeCloseTo(600, 6);
+    endSession(s, 1_000);
+    // The session logs to the chosen habit: its first practice-log entry.
+    expect(s.practiceLog).toHaveLength(1);
+    expect(s.practiceLog[0]!.habitId).toBe(created.habit!.id);
+    expect(s.practiceLog[0]!.source).toBe("live");
   });
 });
 

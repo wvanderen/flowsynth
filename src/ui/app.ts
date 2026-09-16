@@ -367,6 +367,19 @@ export class App {
     this.render();
   }
 
+  // The prompt's create field (§5.5): naming a new practice adds the habit
+  // to the Habit app — the first, on a fresh instrument — and starts the
+  // session with it selected, so its development accrues from this session.
+  beginFlowNewHabit(name: string): void {
+    const result = createHabit(this.state, name);
+    if (!result.ok || !result.habit) {
+      this.say(result.reason ?? "Could not add the habit.");
+      this.render();
+      return;
+    }
+    this.beginFlow(result.habit.id);
+  }
+
   endFlow(): void {
     const result = endSession(this.state, Date.now());
     if (!result.ok) {

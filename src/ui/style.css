@@ -846,6 +846,10 @@ body.buying #buy-banner { display: flex; }
 .enter-choice small { color: var(--muted); }
 .enter-choice.unstructured { border-style: dashed; }
 .habit-dot.off { border-style: dashed; }
+.enter-create { display: flex; gap: 8px; margin: 2px 0; }
+.enter-create input { flex: 1; min-width: 0; background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font-size: 13px; }
+.enter-create input:focus { border-color: var(--charge); outline: none; }
+.enter-create button { white-space: nowrap; }
 .summary-headline strong { font-weight: 600; color: var(--accent); }
 .summary-rows { display: grid; gap: 8px; margin-top: 16px; }
 .summary-row {

@@ -1632,9 +1632,11 @@ function renderReconcileModal(app: App, content: HTMLElement): void {
 /* ── Session modals (§5.5, §5.7) ───────────────────── */
 
 // The enter prompt, ahead of every session: "What are you practicing?" —
-// the habit ask with practice-unstructured as a visible, equal affordance.
-// No purchase surface lives here, and the copy carries the tuning hint:
-// open-ended sessions suggest ~5 minutes, then exiting.
+// the habit ask with practice-unstructured as a visible, equal affordance,
+// and a create field wired into the Habit app: naming a new practice adds
+// the habit — the first, on a fresh instrument — and starts the session
+// with it selected. No purchase surface lives here, and the copy carries
+// the tuning hint: open-ended sessions suggest ~5 minutes, then exiting.
 function renderEnterModal(app: App, content: HTMLElement): void {
   const { state, ui } = app;
   const habits = state.habits.filter((h) => !h.archived);
@@ -1657,7 +1659,10 @@ function renderEnterModal(app: App, content: HTMLElement): void {
       </button>`,
         )
         .join("")}
-      ${habits.length === 0 ? `<p class="empty-copy">No habits yet — name what you practice in the Habit app, anytime.</p>` : ""}
+      <div class="enter-create">
+        <input type="text" id="enter-habit-name" placeholder="New habit (piano, cooking…)" maxlength="40" aria-label="Name a new habit and start the session with it" />
+        <button class="small" id="enter-habit-add">Add &amp; practice</button>
+      </div>
       <button class="enter-choice unstructured" id="enter-unstructured">
         <span class="habit-dot off" aria-hidden="true"></span>
         <span class="enter-choice-name">Practice unstructured</span>
@@ -1668,6 +1673,18 @@ function renderEnterModal(app: App, content: HTMLElement): void {
     <div class="modal-actions"><button id="enter-cancel">Back</button></div>`;
   content.querySelectorAll<HTMLElement>("[data-enter-habit]").forEach((button) => {
     button.addEventListener("click", () => app.beginFlow(button.getAttribute("data-enter-habit")));
+  });
+  const nameInput = byId("enter-habit-name") as HTMLInputElement | null;
+  const addNew = () => {
+    if (!nameInput) return;
+    app.beginFlowNewHabit(nameInput.value);
+  };
+  byId("enter-habit-add")?.addEventListener("click", addNew);
+  nameInput?.addEventListener("keydown", (event) => {
+    if ((event as KeyboardEvent).key === "Enter") {
+      event.preventDefault();
+      addNew();
+    }
   });
   byId("enter-unstructured")?.addEventListener("click", () => app.beginFlow(null));
   byId("enter-cancel")?.addEventListener("click", () => app.closeModal());
