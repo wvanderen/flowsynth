@@ -10,27 +10,20 @@ import { activeHabit } from "../engine/habits";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
 import { isCarrier } from "../engine/state";
 import type { GameState, Goal, Hex, ModuleInstance, RateSnapshot } from "../engine/types";
-import { moduleIcon, appIcon } from "./icons";
 import type { App } from "./app";
+import { appIcon } from "./icons";
+import { HEX_RADIUS, hexPoints, moduleFace } from "./face";
 import { updateSvg } from "./svg";
 import { DURATION_OPTIONS, META, RARITY_LABEL } from "./meta";
 import { formatInt, formatNumber, practiceCountdown } from "./format";
 import { renderStatusMonitor } from "./monitor";
 
-const HEX_RADIUS = 61;
 const SPACING = 65;
 const DRAG_THRESHOLD_PX = 6;
 const boundCells = new WeakSet<SVGElement>();
 
 function point({ q, r }: Hex): [number, number] {
   return [Math.sqrt(3) * SPACING * (q + r / 2), SPACING * 1.5 * r];
-}
-
-function hexPoints(radius: number): string {
-  return Array.from({ length: 6 }, (_, i) => {
-    const a = ((60 * i - 30) * Math.PI) / 180;
-    return `${radius * Math.cos(a)},${radius * Math.sin(a)}`;
-  }).join(" ");
 }
 
 function byId(id: string): HTMLElement | null {
@@ -434,10 +427,10 @@ function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderCont
   const emittingNow = ctx.dispensing && isSource(module);
   const contribution = ctx.snapshot.contributions.get(module.id);
 
-  let classes = "hex";
-  if (selected) classes += " selected";
-  if (charged) classes += " charged";
-  if (emittingNow) classes += " dispensing";
+  let hexClass = "";
+  if (selected) hexClass += " selected";
+  if (charged) hexClass += " charged";
+  if (emittingNow) hexClass += " dispensing";
 
   // Highlight eligible receivers while a generator is selected in upgrade mode.
   let highlight = "";
@@ -445,38 +438,44 @@ function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderCont
     highlight = `<polygon data-key="preview" class="highlight-ring" points="${hexPoints(HEX_RADIUS - 4)}"/>`;
   }
 
-  // Water-fill: threshold progress rises inside the hexagon like liquid.
-  let fill = "";
+  // The chargeable face-hierarchy exception: the Forge's prominent readout is
+  // charge-vs-threshold, rendered as a threshold fill with a flash at crossing.
+  let under = "";
+  let readout: string;
+  let readoutClass: string | undefined;
+  let note: string | undefined;
   if (module.type === "forge") {
-    fill = waterFill(module.id, app.state.forge.progress / forgeThreshold(app.state.forge.earned));
-  }
-
-  let sub = "";
-  if (module.type === "forge") {
-    sub = `${formatNumber(Math.max(0, app.state.forge.progress))}/${formatNumber(forgeThreshold(app.state.forge.earned))}`;
+    under = waterFill(module.id, app.state.forge.progress / forgeThreshold(app.state.forge.earned));
+    // The face's glanceable readout rounds; the inspector keeps exact values.
+    readout = `${formatNumber(Math.floor(Math.max(0, app.state.forge.progress)))}/${formatNumber(Math.round(forgeThreshold(app.state.forge.earned)))}`;
+    readoutClass = "charge";
   } else if (isSource(module)) {
-    sub = `⌁${formatNumber(modulePower(module))}`;
+    readout = `⌁${formatNumber(modulePower(module))}`;
   } else if (module.type === "infusor") {
-    sub = `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(ctx.snapshot.chargeStrength.get(module.id) ?? 0))}%`;
+    readout = `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(ctx.snapshot.chargeStrength.get(module.id) ?? 0))}%`;
   } else {
-    // Synthesizers wear their pitch: hex distance from the Carrier + 1.
+    // Synthesizers wear their contribution, pitch beneath it: hex distance
+    // from the Carrier + 1.
+    readout = `+${formatNumber(contribution?.value ?? 0)}`;
     const pitch = contribution?.pitch ?? null;
-    sub = `${pitch !== null ? `P${pitch} ` : ""}+${formatNumber(contribution?.value ?? 0)} ν/s`;
+    note = pitch !== null ? `P${pitch}` : undefined;
   }
 
-  const name = META[module.type].short;
-  const levelTag = ` ${module.level}`;
-  // The Carrier wears a pin: it is immovable and unsellable (§2.1).
-  const pinned = isCarrier(module);
-  const pin = pinned
-    ? `<title>The Carrier — granted at the origin. Pinned: it never moves and never leaves the board.</title><g data-key="pin" class="module-pin" transform="translate(36,-33)"><circle cx="0" cy="-3.4" r="3.1"/><path d="M0-.4v7.4"/></g>`
-    : "";
+  // The threshold-crossing flash fires for a moment after a roll is minted.
+  const crossed = module.type === "forge" && app.forgeFlashUntil > Date.now();
 
-  return `<g class="module-node" data-rarity="${module.rarity}">${pin}
-    <polygon data-key="hex" class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>${fill}${highlight}
-    <g data-key="icon" transform="translate(0,-13)" class="hex-icon" fill="none" stroke-width="1.6">${moduleIcon(module.type)}</g>
-    <text data-key="name" y="17" text-anchor="middle" class="hex-name">${name}${levelTag}</text>
-    <text data-key="value" y="34" text-anchor="middle" class="hex-sub">${sub}</text>
+  return `<g class="module-node${crossed ? " forge-crossed" : ""}" data-type="${module.type}" data-rarity="${module.rarity}">
+    ${moduleFace({
+      type: module.type,
+      rarity: module.rarity,
+      readout,
+      ...(readoutClass ? { readoutClass } : {}),
+      ...(note ? { note } : {}),
+      level: module.level,
+      hexClass: hexClass.trim(),
+      under,
+      pinned: isCarrier(module),
+    })}${highlight}
     </g>`;
 }
 
@@ -1135,17 +1134,34 @@ function nominalGainText(module: ModuleInstance): string {
 
 /* ── Grid & inventory panel ────────────────────────── */
 
-// A canvas-style hex tile — icon, name, level, rarity accent — shared by the
-// inventory grid and the live drag ghost so a carried tile looks identical to
-// the one waiting in inventory (candidate-tile pattern from the Forge).
+// A canvas-style face tile — the same readout panel the board renders, with
+// nominal values for the module's level — shared by the inventory grid and
+// the live drag ghost so a carried tile looks identical to the one waiting in
+// inventory (candidate-tile pattern from the Forge).
 function hexTileSvg(module: ModuleInstance): string {
-  return `<svg viewBox="-75 -75 150 150" aria-hidden="true">
-    <polygon class="hex" points="${hexPoints(HEX_RADIUS)}"/>
-    <g transform="translate(0,-16)" class="hex-icon" fill="none" stroke-width="2.2">${moduleIcon(module.type)}</g>
-    <text y="24" text-anchor="middle" class="hex-name">${META[module.type].short}</text>
-    <text y="-46" text-anchor="middle" class="hex-level">Lv ${module.level}</text>
-    <text y="44" text-anchor="middle" class="hex-sub">${RARITY_LABEL[module.rarity]}</text>
+  return `<svg viewBox="-70 -70 140 140" aria-hidden="true">
+    ${moduleFace({ type: module.type, rarity: module.rarity, readout: nominalReadout(module), level: module.level })}
   </svg>`;
+}
+
+// The face's prominent readout from nominal (uncharged) values.
+function nominalReadout(module: ModuleInstance): string {
+  const power = modulePower(module);
+  switch (module.type) {
+    case "carrier":
+      return `+${formatNumber(BALANCE.carrierRate * power)}`;
+    case "additive":
+      return `+${formatNumber(BALANCE.additiveRate * power)}`;
+    case "conditional":
+      return `+${formatNumber(BALANCE.conditionalRate * power)}`;
+    case "generator":
+    case "focusKeyed":
+      return `⌁${formatNumber(power)}`;
+    case "infusor":
+      return `+${formatNumber(100 * BALANCE.infusorBonus * power)}%`;
+    case "forge":
+      return `${formatNumber(power)}/s`;
+  }
 }
 
 function renderManagePanel(app: App, host: HTMLElement): void {
@@ -1333,24 +1349,21 @@ function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
   }
 }
 
-function candidateHeadline(type: ModuleInstance["type"]): string {
+function candidateReadout(type: ModuleInstance["type"]): string {
   switch (type) {
     case "carrier":
-      return `+${formatNumber(BALANCE.carrierRate)} ν/s`;
+      return `+${formatNumber(BALANCE.carrierRate)}`;
     case "additive":
-      return `+${formatNumber(BALANCE.additiveRate)} ν/s`;
+      return `+${formatNumber(BALANCE.additiveRate)}`;
     case "conditional":
-      return `+${formatNumber(BALANCE.conditionalRate)} ν/s`;
+      return `+${formatNumber(BALANCE.conditionalRate)}`;
     case "generator":
-      return "1× charge while flowing";
     case "focusKeyed":
-      return "charge from focus time";
+      return "⌁1";
     case "infusor":
       return `+${formatNumber(BALANCE.infusorBonus * 100)}%`;
     case "forge":
-      return "rolls at threshold";
-    default:
-      return "";
+      return "1/s";
   }
 }
 
@@ -1363,15 +1376,11 @@ function renderForgeModal(app: App, content: HTMLElement): void {
     <h2 id="modal-title" class="sr-only">Forge choice</h2>
     ${offer ? `<div class="candidates">
       ${offer.candidates.map((candidate) => `
-        <button class="candidate-tile" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${candidate.rarity}" title="Take the ${RARITY_LABEL[candidate.rarity]} ${META[candidate.type].name}">
-          <svg viewBox="-75 -75 150 150" aria-hidden="true">
-            <polygon class="hex" points="${hexPoints(HEX_RADIUS)}"/>
-            <g transform="translate(0,-16)" class="hex-icon" fill="none" stroke-width="2.2">${moduleIcon(candidate.type)}</g>
-            <text y="22" text-anchor="middle" class="hex-name">${META[candidate.type].short}</text>
-            <text y="42" text-anchor="middle" class="hex-sub">${candidateHeadline(candidate.type)}</text>
-            <text y="-46" text-anchor="middle" class="hex-level">Lv 0</text>
+        <button class="candidate-tile" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${candidate.rarity}" data-type="${candidate.type}" title="Take the ${RARITY_LABEL[candidate.rarity]} ${META[candidate.type].name}">
+          <svg viewBox="-70 -70 140 140" aria-hidden="true">
+            ${moduleFace({ type: candidate.type, rarity: candidate.rarity, readout: candidateReadout(candidate.type), level: 0 })}
           </svg>
-          <span class="rarity" style="color:var(--finish-${candidate.rarity})">${RARITY_LABEL[candidate.rarity]}</span>
+          <span class="rarity">${RARITY_LABEL[candidate.rarity]}</span>
           <span class="candidate-scaling">+${formatNumber((BALANCE.rarityPower[candidate.rarity] - 1) * 100)}% / level · upgrades from 10 ν</span>
           <span class="candidate-effect">${forgeEffect(candidate.type, state)}</span>
         </button>`).join("")}
