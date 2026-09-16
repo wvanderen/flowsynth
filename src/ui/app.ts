@@ -437,11 +437,10 @@ export class App {
       return;
     }
     if (ui.buyingCell) {
-      // Disarm before rendering on success: act() re-renders, and the armed
-      // view must never outlive the flag (a stale arm eats clicks silently).
-      const result = buyCell(state, pos);
-      if (result.ok) ui.buyingCell = false;
-      this.act(result, "Cell bought. The board grew — reshape or place modules freely.");
+      // The arm persists across buys: sweep several cells, then back out
+      // yourself via the banner's Cancel (or Esc). act() re-renders each
+      // time, so the banner hint and hex prices step to the next scaler rung.
+      this.act(buyCell(state, pos), "Cell bought. The board grew — buy another, or Cancel when done.");
       return;
     }
     if (ui.placing) {
