@@ -65,6 +65,11 @@ export function deserialize(text: string): LoadResult {
   ) {
     return { error: "The save data is incomplete." };
   }
+  // A v5 save from before the session summary existed carries a session
+  // without the earned tally; default it rather than NaN the summary.
+  if (merged.session && typeof merged.session.earned !== "number") {
+    merged.session.earned = 0;
+  }
   return { state: merged };
 }
 

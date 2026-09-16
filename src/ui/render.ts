@@ -158,6 +158,7 @@ function renderConsoleSession(app: App): void {
       <div class="console-clock">
         <p class="session-clock mono" id="session-clock">${formatClock(elapsed)}</p>
         <p class="clock-caption" id="session-caption"></p>
+        <p class="session-rate mono" id="session-rate"></p>
         <div class="time-track"><span id="time-track-fill" style="width:0%"></span></div>
       </div>
       <div class="session-actions">
@@ -177,6 +178,12 @@ function renderConsoleSession(app: App): void {
   };
   set("session-clock", formatClock(elapsed));
   set("session-caption", sessionCaption(elapsed, target, paused));
+  // The pure-flow HUD (§5.6): the ticking counter lives in the nous balance;
+  // this line is the per-practice-minute pace plus what the session made.
+  set(
+    "session-rate",
+    `${formatNumber(currentSnapshot(state).rate * 60)} ν/min · ${formatNumber(state.session?.earned ?? 0)} ν this session`,
+  );
   const track = byId("time-track-fill");
   const width = sessionTrackWidth(elapsed, target);
   if (track && track.style.width !== width) track.style.width = width;
@@ -301,7 +308,11 @@ function renderConsoleReadout(app: App): void {
         </div>`;
     }
     const rateNode = strip.querySelector('[data-live="rate"]');
-    const rateText = `${formatNumber(currentSnapshot(state).rate)} ν/s`;
+    // One readout, two units (§5.4, §5.6): the ν/s projection matches the
+    // formula chip, and the per-practice-minute figure is the flow HUD's
+    // pace — pre-session it projects, in-session it ticks with the board.
+    const rate = currentSnapshot(state).rate;
+    const rateText = `${formatNumber(rate)} ν/s · ${formatNumber(rate * 60)} ν/min`;
     if (rateNode && rateNode.textContent !== rateText) rateNode.textContent = rateText;
   }
   const nous = byId("nous-balance");
@@ -1333,6 +1344,8 @@ function renderModal(app: App): void {
   else if (kind === "import") renderImportModal(app, content);
   else if (kind === "reset") renderResetModal(app, content);
   else if (kind === "reconcile") renderReconcileModal(app, content);
+  else if (kind === "enter") renderEnterModal(app, content);
+  else if (kind === "summary") renderSummaryModal(app, content);
   const firstButton = content.querySelector("button:not([disabled])");
   (firstButton as HTMLElement | null)?.focus();
 }
@@ -1614,6 +1627,116 @@ function renderReconcileModal(app: App, content: HTMLElement): void {
     </div>`;
   byId("gap-confirm")?.addEventListener("click", () => app.confirmGap());
   byId("gap-discard")?.addEventListener("click", () => app.discardGap());
+}
+
+/* ── Session modals (§5.5, §5.7) ───────────────────── */
+
+// The enter prompt, ahead of every session: "What are you practicing?" —
+// the habit ask with practice-unstructured as a visible, equal affordance,
+// and a create field wired into the Habit app: naming a new practice adds
+// the habit — the first, on a fresh instrument — and starts the session
+// with it selected. No purchase surface lives here, and the copy carries
+// the tuning hint: open-ended sessions suggest ~5 minutes, then exiting.
+function renderEnterModal(app: App, content: HTMLElement): void {
+  const { state, ui } = app;
+  const habits = state.habits.filter((h) => !h.archived);
+  const active = activeHabit(state);
+  const planned = appActive(state, "time") && ui.chosenTarget !== null;
+  const planLine = planned
+    ? `Planned · ${formatClock(ui.chosenTarget!)} — the session still ends when you end it.`
+    : "Open-ended — try ~5 minutes, then exit flow to see what the board made.";
+  content.innerHTML = `
+    ${modalTop("ENTER FLOW")}
+    <h2 id="modal-title">What are you practicing?</h2>
+    <p class="lead">Name the practice this session serves, or go in unstructured — the board produces either way.</p>
+    <div class="enter-choices">
+      ${habits
+        .map(
+          (habit) => `<button class="enter-choice${active?.id === habit.id ? " current" : ""}" data-enter-habit="${habit.id}">
+        <span class="habit-dot" aria-hidden="true"></span>
+        <span class="enter-choice-name">${escapeHtml(habit.name)}</span>
+        <small class="mono">${formatDuration(habit.seconds)}</small>
+      </button>`,
+        )
+        .join("")}
+      <div class="enter-create">
+        <input type="text" id="enter-habit-name" placeholder="New habit (piano, cooking…)" maxlength="40" aria-label="Name a new habit and start the session with it" />
+        <button class="small" id="enter-habit-add">Add &amp; practice</button>
+      </div>
+      <button class="enter-choice unstructured" id="enter-unstructured">
+        <span class="habit-dot off" aria-hidden="true"></span>
+        <span class="enter-choice-name">Practice unstructured</span>
+        <small>no habit — development holds still, nous is unaffected</small>
+      </button>
+    </div>
+    <p class="small muted" style="margin:12px 0 0">${planLine}</p>
+    <div class="modal-actions"><button id="enter-cancel">Back</button></div>`;
+  content.querySelectorAll<HTMLElement>("[data-enter-habit]").forEach((button) => {
+    button.addEventListener("click", () => app.beginFlow(button.getAttribute("data-enter-habit")));
+  });
+  const nameInput = byId("enter-habit-name") as HTMLInputElement | null;
+  const addNew = () => {
+    if (!nameInput) return;
+    app.beginFlowNewHabit(nameInput.value);
+  };
+  byId("enter-habit-add")?.addEventListener("click", addNew);
+  nameInput?.addEventListener("keydown", (event) => {
+    if ((event as KeyboardEvent).key === "Enter") {
+      event.preventDefault();
+      addNew();
+    }
+  });
+  byId("enter-unstructured")?.addEventListener("click", () => app.beginFlow(null));
+  byId("enter-cancel")?.addEventListener("click", () => app.closeModal());
+  wireClose(app);
+}
+
+// The loud summary (§5.7): shown once per session end, however the session
+// ended. Exactly four row shapes — the headline, practice time, rate
+// achieved with the carrier-only breakdown, and (first session only) the
+// Time unlock — and never a countdown. The modal is the future home of
+// session reflections; the reserved line keeps that home.
+function renderSummaryModal(app: App, content: HTMLElement): void {
+  const summary = app.state.summary;
+  if (!summary) {
+    content.innerHTML = `${modalTop("SESSION SUMMARY")}<h2 id="modal-title">No session to summarize.</h2>`;
+    wireClose(app);
+    return;
+  }
+  const carrierOnly = summary.harmonics === 0 && summary.chordMultiplier === 1 && summary.empowerment === 1;
+  const breakdown = carrierOnly
+    ? `the carrier term alone — ${formatNumber(summary.carrier)} ν/s is the whole formula`
+    : [
+        `carrier +${formatNumber(summary.carrier)} ν/s`,
+        ...(summary.harmonics > 0 ? [`harmonics +${formatNumber(summary.harmonics)} ν/s`] : []),
+        ...(summary.chordMultiplier > 1 ? [`chords ×${formatNumber(summary.chordMultiplier)}`] : []),
+        ...(summary.empowerment > 1 ? [`empowerment ×${formatNumber(summary.empowerment)}`] : []),
+      ].join(" · ");
+  content.innerHTML = `
+    ${modalTop(`SESSION ${summary.sessionNumber} · SUMMARY`)}
+    <h2 id="modal-title" class="summary-headline">This session earned <strong class="mono">${formatNumber(summary.earned)}</strong> nous</h2>
+    <div class="summary-rows">
+      <div class="summary-row">
+        <span class="summary-label">Practice time</span>
+        <strong class="mono">${formatDuration(summary.seconds)}</strong>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">Rate achieved</span>
+        <strong class="mono">${formatNumber(summary.ratePerMinute)} ν <small>per practice minute</small></strong>
+        <small class="summary-note">${breakdown}</small>
+      </div>
+      ${summary.timeUnlocked
+        ? `<div class="summary-row unlock">
+        <span class="summary-label">New feature unlocked</span>
+        <strong>Time your flow sessions</strong>
+        <small class="summary-note">The Time app is live on the console rail — plan sessions from it or the catalog.</small>
+      </div>`
+        : ""}
+    </div>
+    <p class="small muted summary-reflections"><em>Session reflections will live here.</em></p>
+    <div class="modal-actions"><button id="summary-continue" class="primary">Continue</button></div>`;
+  byId("summary-continue")?.addEventListener("click", () => app.dismissSummary());
+  wireClose(app);
 }
 
 /* ── Dev panel ─────────────────────────────────────── */

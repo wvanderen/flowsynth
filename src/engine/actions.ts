@@ -1,5 +1,5 @@
-import { BALANCE, NEXT_RARITY } from "./constants";
-import { cellCost, deployedAt, findModule, levelCost, longGoalCost, wholeNous } from "./economy";
+import { BALANCE, EPS, NEXT_RARITY } from "./constants";
+import { cellCost, computeRates, deployedAt, findModule, levelCost, longGoalCost, wholeNous } from "./economy";
 import { nextRungCost, appActive, LADDER_APPS, type FocusApp } from "./apps";
 import { adjacent, hexKey, isConnected, sameHex } from "./hex";
 import { createModule, isCarrier } from "./state";
@@ -23,7 +23,7 @@ export function startSession(state: GameState, target: number | null): ActionRes
   if (state.mode !== "upgrade") return fail("A session is already running.");
   state.sessionIndex++;
   state.mode = "flow";
-  state.session = { target, elapsed: 0 };
+  state.session = { target, elapsed: 0, earned: 0 };
   state.pendingGap = null;
   return ok;
 }
@@ -31,6 +31,7 @@ export function startSession(state: GameState, target: number | null): ActionRes
 export function endSession(state: GameState, now: number = 0): ActionResult {
   if (state.mode === "upgrade") return fail("No session is running.");
   const elapsed = state.session?.elapsed ?? 0;
+  const earned = state.session?.earned ?? 0;
   state.mode = "upgrade";
   state.session = null;
   state.pendingGap = null;
@@ -42,6 +43,25 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
   state.chargeWindow += BALANCE.chargeWindowFraction * elapsed;
   logSessionPractice(state, elapsed, now);
   rollGoalOccurrences(state, now);
+  // The loud summary (§5.7): every exit path lands here, so the modal's
+  // rows are captured from the session itself — earned, practice time, rate
+  // achieved with the breakdown legs — whatever the length or exit. Time
+  // auto-activated with the first completion; only its session says so.
+  const snapshot = computeRates(state, true);
+  state.summary = {
+    sessionNumber: state.sessionsCompleted,
+    earned,
+    seconds: elapsed,
+    // Achieved, not projected (§5.7): a session that ended before any
+    // practice accrued has no rate to report.
+    ratePerMinute: elapsed > EPS ? (earned / elapsed) * 60 : 0,
+    carrier: snapshot.carrier,
+    harmonics: snapshot.harmonics,
+    chordMultiplier: snapshot.chordMultiplier,
+    empowerment: snapshot.empowerment,
+    timeUnlocked: state.sessionsCompleted === 1,
+    seen: false,
+  };
   return ok;
 }
 
@@ -68,9 +88,19 @@ export function acknowledgeHorizon(state: GameState): ActionResult {
 // The one-time welcome card (§5.1): following its CTA to the Carrier's
 // upgrade button — or dismissing it — is the one acknowledgment; the save
 // keeps the flag so the card never returns. Skipping straight to a session
-// loses nothing: the card forces nothing.
+// loses nothing: the card forces nothing. It is an upgrade-mode surface —
+// it stands down for live sessions, so nothing unlocks mid-session-one.
 export function acknowledgeWelcome(state: GameState): ActionResult {
+  if (state.mode !== "upgrade") return fail("The welcome card waits for upgrade mode.");
   state.welcomeAcked = true;
+  return ok;
+}
+
+// The loud summary's dismissal (§5.7): one-time per session, persisted so a
+// reload with an unseen summary re-opens the modal.
+export function dismissSummary(state: GameState): ActionResult {
+  if (!state.summary) return fail("No session summary to dismiss.");
+  state.summary.seen = true;
   return ok;
 }
 

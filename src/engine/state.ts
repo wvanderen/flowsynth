@@ -42,6 +42,7 @@ export function createInitialState(): GameState {
     practiceLog: [],
     goals: [],
     session: null,
+    summary: null,
     pendingGap: null,
     nextId: 1,
   };

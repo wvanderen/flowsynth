@@ -60,6 +60,28 @@ export type ShelfType = "generator" | "infusor" | "forge";
 export interface SessionState {
   target: number | null;
   elapsed: number;
+  // Nous produced by the board during this session (§5.7): the loud
+  // summary's headline and rate read from it at session end.
+  earned: number;
+}
+
+// The loud summary (§5.7): captured once at session end — however the
+// session ended — and shown on returning to upgrade mode. No countdown rows;
+// the modal is the future home of session reflections. `seen` marks the
+// player's dismissal so an unseen summary survives a reload.
+export interface SessionSummary {
+  sessionNumber: number;
+  earned: number;
+  seconds: number;
+  ratePerMinute: number;
+  // The rate breakdown at session end (carrier-only during session one).
+  carrier: number;
+  harmonics: number;
+  chordMultiplier: number;
+  empowerment: number;
+  // Session one only: Time auto-activated with this session's end.
+  timeUnlocked: boolean;
+  seen: boolean;
 }
 
 export interface PendingGap {
@@ -153,6 +175,9 @@ export interface GameState {
   practiceLog: PracticeEntry[];
   goals: Goal[];
   session: SessionState | null;
+  // The last session's loud summary (§5.7): set at every session end,
+  // dismissed once by the player, replaced by the next session's end.
+  summary: SessionSummary | null;
   pendingGap: PendingGap | null;
   nextId: number;
 }
