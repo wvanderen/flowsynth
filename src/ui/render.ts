@@ -13,7 +13,7 @@ import type { GameState, Goal, Hex, ModuleInstance, RateSnapshot } from "../engi
 import { moduleIcon, appIcon } from "./icons";
 import type { App } from "./app";
 import { updateSvg } from "./svg";
-import { DURATION_OPTIONS, APP_LABELS, META, RARITY_LABEL } from "./meta";
+import { DURATION_OPTIONS, APP_LABELS, APP_ROLES, META, RARITY_LABEL } from "./meta";
 import { formatInt, formatNumber, practiceCountdown } from "./format";
 import { renderStatusMonitor } from "./monitor";
 
@@ -1325,10 +1325,8 @@ function renderStoreModal(app: App, content: HTMLElement): void {
     ${ladderRows.length > 0 ? `
       <h3 class="store-section-title">Activations</h3>
       <div class="shop-list store-activations">${ladderRows.map((appKey) => {
-        const label = APP_LABELS[appKey];
-        const role = appKey === "notes" ? "The notes app — capture what you notice during flow. Notes are notes." : "The goals app — track practice conditions. Templates are conditions only.";
         return `<div class="shop-item activation">
-          <div><h3>${label}</h3><small>${role}</small></div>
+          <div><h3>${APP_LABELS[appKey]}</h3><small>${APP_ROLES[appKey]}</small></div>
           <span class="shop-buy">
             <button class="primary" data-activate="${appKey}" ${rungAffordable ? "" : "disabled"} title="Rung ${nextRung(state)} of the activation ladder — any app, in any order">${formatInt(rungPrice)} ν</button>
             ${rungCountdown ? `<small class="shop-countdown mono">${rungCountdown}</small>` : ""}
