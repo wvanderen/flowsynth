@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { CATEGORY_OF, MODULE_TYPES } from "../engine/constants";
 import type { ModuleType, Rarity } from "../engine/types";
-import { HUE_TOKEN_OF, RING_COUNT, moduleFace } from "./face";
+import { CHARGED_FILL_MIN, CHARGED_FILL_SPAN, HUE_TOKEN_OF, RAIL_CHARGED_FLOOR, RAIL_CHARGED_SPAN, RING_COUNT, moduleFace } from "./face";
+import { chargeGlow } from "./leads";
 import { defaultTheme } from "./theme";
 
 const RARITIES: Rarity[] = ["common", "uncommon", "rare"];
@@ -57,5 +58,23 @@ describe("module face", () => {
     for (const type of MODULE_TYPES as ModuleType[]) {
       expect(defaultTheme.tokens, type).toHaveProperty(HUE_TOKEN_OF[type]);
     }
+  });
+
+  it("scales the charged chassis fill and rail with the received-charge glow", () => {
+    const face = (chargeGlow?: number) =>
+      moduleFace({ type: "additive", rarity: "common", readout: "+1", ...(chargeGlow ? { hexClass: "charged", chargeGlow } : {}) });
+    // The glow rides the chassis fill-opacity and the rail stroke-opacity;
+    // the colors themselves never leave the stylesheet/token table.
+    const inline = (markup: string, prop: string) => Number(markup.match(new RegExp(`${prop}:([\\d.]+)`))![1]);
+    const weak = face(chargeGlow(1));
+    const strong = face(chargeGlow(4));
+    expect(inline(weak, "fill-opacity")).toBeCloseTo(CHARGED_FILL_MIN + CHARGED_FILL_SPAN * 0.5, 3);
+    expect(inline(weak, "stroke-opacity")).toBeCloseTo(RAIL_CHARGED_FLOOR + RAIL_CHARGED_SPAN * 0.5, 3);
+    expect(inline(strong, "fill-opacity")).toBeGreaterThan(inline(weak, "fill-opacity"));
+    expect(inline(strong, "stroke-opacity")).toBeGreaterThan(inline(weak, "stroke-opacity"));
+    expect(inline(strong, "fill-opacity")).toBeLessThan(CHARGED_FILL_MIN + CHARGED_FILL_SPAN + 0.001);
+    // Uncharged faces carry no inline overrides.
+    expect(face()).not.toContain("fill-opacity");
+    expect(face()).not.toContain("stroke-opacity");
   });
 });

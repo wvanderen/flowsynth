@@ -1,4 +1,4 @@
-import { chargedFactor, cellCost, computeRates, deployed, deployedGenerators, levelCost, modulePower, wholeNous } from "../engine/economy";
+import { chargedFactor, cellCost, computeRates, deployed, emittedStrength, levelCost, modulePower, wholeNous } from "../engine/economy";
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
@@ -13,6 +13,7 @@ import type { GameState, Goal, Hex, ModuleInstance, RateSnapshot } from "../engi
 import type { App } from "./app";
 import { appIcon } from "./icons";
 import { HEX_RADIUS, hexPoints, moduleFace } from "./face";
+import { chargeGlow, chargeLeads } from "./leads";
 import { updateSvg } from "./svg";
 import { DURATION_OPTIONS, META, RARITY_LABEL } from "./meta";
 import { formatInt, formatNumber, practiceCountdown } from "./format";
@@ -329,42 +330,21 @@ function renderGrid(app: App): void {
   svg.setAttribute("viewBox", `${minX} ${minY} ${maxX - minX} ${maxY - minY}`);
 
   const flow = state.mode === "flow";
-  const generators = deployedGenerators(state);
-  const emitting = flow && generators.length > 0;
   const snapshot = currentSnapshot(state);
   const selectedModule = state.modules.find((m) => m.id === ui.selected) ?? null;
 
-  let html = "";
-
-  // Charge leads: live during flow, previewed around the selected module.
-  if (emitting) {
-    for (const module of deployed(state)) {
-      if (isSource(module) || module.pos === null) continue;
-      if ((snapshot.chargeStrength.get(module.id) ?? 0) <= 0) continue;
-      for (const generator of generators) {
-        if (generator.pos === null || !adjacent(generator.pos, module.pos)) continue;
-        const [x1, y1] = point(generator.pos);
-        const [x2, y2] = point(module.pos);
-        html += `<line data-key="charge-${generator.id}-${module.id}" class="charge-line" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
-      }
-    }
-  } else if (upgrade && selectedModule) {
-    if (isSource(selectedModule) && selectedModule.pos) {
-      for (const module of deployed(state)) {
-        if (module.id === selectedModule.id || isSource(module) || module.pos === null) continue;
-        if (!adjacent(selectedModule.pos, module.pos)) continue;
-        const [x1, y1] = point(selectedModule.pos);
-        const [x2, y2] = point(module.pos);
-        html += `<line data-key="charge-${selectedModule.id}-${module.id}" class="charge-preview-line" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
-      }
-    } else if (selectedModule.pos) {
-      for (const generator of generators) {
-        if (generator.pos === null || !adjacent(generator.pos, selectedModule.pos)) continue;
-        const [x1, y1] = point(generator.pos);
-        const [x2, y2] = point(selectedModule.pos);
-        html += `<line data-key="charge-${generator.id}-${selectedModule.id}" class="charge-preview-line" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
-      }
-    }
+  // Charge leads (§8, #41): uniform green patch leads, center-to-center,
+  // directional generator → receiver. Leads in live flow animate; everything
+  // else — paused, upgrade mode (charge pauses between sessions, ADR-0001),
+  // or a generator whose charge window is spent — sits dim and static as
+  // wiring previews (ADR-0002).
+  let html = CHARGE_LEAD_DEFS;
+  for (const { generator, receiver, emitting } of chargeLeads(state, flow)) {
+    if (generator.pos === null || receiver.pos === null) continue;
+    const [x1, y1] = point(generator.pos);
+    const [x2, y2] = point(receiver.pos);
+    const cls = emitting ? "charge-line" : "charge-preview-line";
+    html += `<line data-key="charge-${generator.id}-${receiver.id}" class="${cls}" ${leadSegment(x1, y1, x2, y2)}/>`;
   }
 
   for (const pos of state.cells) {
@@ -377,7 +357,7 @@ function renderGrid(app: App): void {
     html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${module ? META[module.type].name : "Empty cell"}">
       ${module ? "" : `<polygon class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>`}`;
     if (module) {
-      html += moduleNode(app, module, pos, { dispensing: emitting, snapshot, selectedModule });
+      html += moduleNode(app, module, pos, { snapshot, selectedModule });
     } else {
       html += `<path class="empty-plus" d="M-7-6H7M0-13V1"/><text y="24" text-anchor="middle" class="hex-sub">EMPTY CELL</text>`;
     }
@@ -414,17 +394,41 @@ function renderGrid(app: App): void {
 
 // Generators are the sole charge source category (ADR-0012).
 const isSource = (m: ModuleInstance) => CATEGORY_OF[m.type] === "generator";
+
+// Directional tips for the patch leads, in the charge register: full for
+// live flow, dimmed for everything that only previews the wiring.
+const leadMarker = (id: string, cls: string): string =>
+  `<marker id="${id}" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto"><path class="${cls}" d="M0 0 10 5 0 10Z"/></marker>`;
+const CHARGE_LEAD_DEFS = `<defs data-key="charge-defs">${leadMarker("fs-lead-tip", "lead-tip")}${leadMarker("fs-lead-tip-dim", "lead-tip-dim")}</defs>`;
+
+// A lead runs center-to-center beneath the faces, trimmed to the chassis:
+// the pad is the face's apothem plus a hair, so the lead spans the seam
+// between neighboring hexes and the directional tip lands on the receiver's
+// edge rather than vanishing under it.
+const LEAD_PAD = Math.round((HEX_RADIUS * Math.sqrt(3)) / 2) + 1;
+
+function leadSegment(x1: number, y1: number, x2: number, y2: number): string {
+  const len = Math.hypot(x2 - x1, y2 - y1);
+  const ux = (x2 - x1) / len;
+  const uy = (y2 - y1) / len;
+  return `x1="${(x1 + ux * LEAD_PAD).toFixed(2)}" y1="${(y1 + uy * LEAD_PAD).toFixed(2)}" x2="${(x2 - ux * LEAD_PAD).toFixed(2)}" y2="${(y2 - uy * LEAD_PAD).toFixed(2)}"`;
+}
+
 interface RenderContext {
-  dispensing: boolean;
   snapshot: ReturnType<typeof computeRates>;
   selectedModule: ModuleInstance | null;
 }
 
 function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderContext): string {
-  const { ui } = app;
+  const { ui, state } = app;
   const selected = ui.selected === module.id;
-  const charged = ctx.dispensing && (ctx.snapshot.chargeStrength.get(module.id) ?? 0) > 0;
-  const emittingNow = ctx.dispensing && isSource(module);
+  // Charge is session-bound: the snapshot is flow-gated, so any strength it
+  // reports is live. Receivers brighten with their received strength, and a
+  // generator lights only while it actually emits (a spent charge window
+  // emits nothing).
+  const strength = ctx.snapshot.chargeStrength.get(module.id) ?? 0;
+  const charged = strength > 0;
+  const emittingNow = state.mode === "flow" && isSource(module) && emittedStrength(state, module, true) > 0;
   const contribution = ctx.snapshot.contributions.get(module.id);
 
   let hexClass = "";
@@ -475,6 +479,7 @@ function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderCont
       hexClass: hexClass.trim(),
       under,
       pinned: isCarrier(module),
+      ...(charged ? { chargeGlow: chargeGlow(strength) } : {}),
     })}${highlight}
     </g>`;
 }

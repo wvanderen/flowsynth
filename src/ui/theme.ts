@@ -78,7 +78,6 @@ const semantics = {
   "accent-soft": "color-mix(in srgb, var(--accent) 16%, var(--panel-soft))",
   "charge-faint": "color-mix(in srgb, var(--charge) 13%, var(--panel-soft))",
   "charge-tint": "color-mix(in srgb, var(--charge) 7%, transparent)",
-  "charge-deep": "color-mix(in srgb, var(--charge) 26%, var(--panel-soft))",
   "charge-line": "color-mix(in srgb, var(--charge) 38%, transparent)",
   "forge-faint": "color-mix(in srgb, var(--forge-glow) 15%, var(--panel-soft))",
   "danger-faint": "color-mix(in srgb, var(--danger) 13%, var(--panel-soft))",
