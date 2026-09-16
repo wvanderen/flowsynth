@@ -1,4 +1,4 @@
-import type { ModuleType, Rarity } from "../engine/types";
+import type { FocusApp, ModuleType, Rarity } from "../engine/types";
 
 export const META: Record<ModuleType, { name: string; short: string; role: string }> = {
   carrier: { name: "Carrier", short: "Carrier", role: "The granted origin" },
@@ -11,6 +11,9 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
 };
 
 export const RARITY_LABEL: Record<Rarity, string> = { common: "common", uncommon: "uncommon", rare: "rare" };
+
+// Focus-app display names, shared by the console tiles and purchase surfaces.
+export const APP_LABELS: Record<FocusApp, string> = { habit: "Habit", time: "Time", goals: "Goals", notes: "Notes" };
 
 export const DURATION_OPTIONS: { label: string; value: number | null }[] = [
   { label: "10 minutes", value: 600 },

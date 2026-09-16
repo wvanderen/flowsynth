@@ -19,6 +19,19 @@ export interface Balance {
   cellFirstCost: number;
   cellCostGrowthNumerator: bigint;
   cellCostGrowthDenominator: bigint;
+  // The activation ladder (ADR-0013): rung one below the shelf floor, each
+  // later rung costs more — counted globally regardless of which app it
+  // opens. Provisional tuning.
+  ladderFirstCost: number;
+  ladderGrowthNumerator: bigint;
+  ladderGrowthDenominator: bigint;
+  // Console long goals (ADR-0012): hand-paced, one at a time, priced past
+  // the current build-out so they never grind back-to-back. Provisional
+  // tuning; goal capacity is the first named beat.
+  longGoalFirstCost: number;
+  longGoalGrowthNumerator: bigint;
+  longGoalGrowthDenominator: bigint;
+  goalSlotsPerLongGoal: number;
   goalBaseSlots: number;
   forgeInitialThreshold: number;
   forgeThresholdGrowth: number;
@@ -47,6 +60,13 @@ export const BALANCE: Balance = {
   cellFirstCost: 30,
   cellCostGrowthNumerator: 5n,
   cellCostGrowthDenominator: 2n,
+  ladderFirstCost: 25,
+  ladderGrowthNumerator: 5n,
+  ladderGrowthDenominator: 2n,
+  longGoalFirstCost: 500,
+  longGoalGrowthNumerator: 5n,
+  longGoalGrowthDenominator: 1n,
+  goalSlotsPerLongGoal: 2,
   goalBaseSlots: 2,
   forgeInitialThreshold: 60,
   forgeThresholdGrowth: 1.5,

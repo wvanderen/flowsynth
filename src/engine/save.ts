@@ -60,7 +60,8 @@ export function deserialize(text: string): LoadResult {
     !Array.isArray(merged.notes) ||
     !Array.isArray(merged.habits) ||
     !Array.isArray(merged.practiceLog) ||
-    !Array.isArray(merged.goals)
+    !Array.isArray(merged.goals) ||
+    !Array.isArray(merged.activatedApps)
   ) {
     return { error: "The save data is incomplete." };
   }

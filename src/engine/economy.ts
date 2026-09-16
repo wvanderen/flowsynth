@@ -23,6 +23,27 @@ export function cellCost(cellsBought: number): number {
   return Number((numerator + denominator - 1n) / denominator);
 }
 
+// The activation ladder (ADR-0013): a shared geometric scaler over rungs
+// bought — rung one below the shelf floor, every later rung costs more no
+// matter which app it opens. Same ceiling-exact whole-nous pattern.
+export function rungCost(rung: number): number {
+  if (rung < 1) throw new Error("rung must be positive");
+  const index = BigInt(rung - 1);
+  const numerator = BigInt(BALANCE.ladderFirstCost) * BALANCE.ladderGrowthNumerator ** index;
+  const denominator = BALANCE.ladderGrowthDenominator ** index;
+  return Number((numerator + denominator - 1n) / denominator);
+}
+
+// Console long goals (ADR-0012): each purchase of a named beat prices the
+// next one past the current build-out, so the beat stays hand-paced and
+// never grinds back-to-back. Ceiling-exact whole nous, like every price.
+export function longGoalCost(bought: number): number {
+  if (bought < 0) throw new Error("bought must be non-negative");
+  const numerator = BigInt(BALANCE.longGoalFirstCost) * BALANCE.longGoalGrowthNumerator ** BigInt(bought);
+  const denominator = BALANCE.longGoalGrowthDenominator ** BigInt(bought);
+  return Number((numerator + denominator - 1n) / denominator);
+}
+
 export function investment(level: number): number {
   let total = 0;
   for (let i = 0; i < level; i++) total += levelCost(i);

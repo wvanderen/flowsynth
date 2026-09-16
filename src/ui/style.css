@@ -517,6 +517,12 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .goal-track > span { display: block; height: 100%; background: var(--charge); transition: width 400ms ease-out; }
 .goal-row.done .goal-track > span { background: var(--charge); }
 .goal-row small { color: var(--muted); font-size: 10px; }
+/* The console long goal (ADR-0012): a dashed strip in the owning app's
+   panel — the hand-paced purchase beat reads as waiting work, not a row. */
+.long-goal-strip { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px dashed var(--line-strong); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
+.long-goal-strip .long-goal-name { margin: 4px 0 2px; font-size: 13px; font-weight: 550; }
+.long-goal-strip .long-goal-name .mono { font-size: 11px; color: var(--charge); }
+.long-goal-strip .shop-buy { align-items: flex-end; }
 
 .level-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
 .level-heading strong { font: 30px var(--mono); font-weight: 400; }
@@ -805,15 +811,15 @@ body.buying #buy-banner { display: flex; }
 /* ── Responsive ────────────────────────────────────── */
 
 @media (max-width: 1500px) {
-  /* Tight consoles shed the inert rung telegraph first (the activation
-     ladder's live telegraph arrives with issue #42, which owns these
-     breakpoints); the console's height stays fixed either way. */
-  .console-telegraph { display: none; }
+  /* Tight consoles shed the production slot first — it duplicates the
+     status monitor's live rate; the console's height stays fixed. */
+  .production-slot { display: none; }
 }
 
 @media (max-width: 1360px) {
-  /* The production slot duplicates the formula bar's live rate. */
-  .production-slot { display: none; }
+  /* Then the rung telegraph: its price also sits on the ladder's purchase
+     rows in the catalog. */
+  .console-telegraph { display: none; }
 }
 
 @media (max-width: 1180px) {
