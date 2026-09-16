@@ -36,6 +36,16 @@ describe("persistence", () => {
     expect(loaded.state!.cellsBought).toBe(0);
   });
 
+  it("v5 saves from before the activation ladder default the ladder state", () => {
+    const file = JSON.parse(serialize(fresh()));
+    delete file.state.activatedApps;
+    delete file.state.goalCapacityBought;
+    const loaded = deserialize(JSON.stringify(file));
+    expect(loaded.error).toBeUndefined();
+    expect(loaded.state!.activatedApps).toEqual([]);
+    expect(loaded.state!.goalCapacityBought).toBe(0);
+  });
+
   it("resuming from a mid-flow save does not duplicate rewards", () => {
     const build = () => {
       const s = fresh();

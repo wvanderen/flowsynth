@@ -26,6 +26,8 @@ export function createInitialState(): GameState {
     chargeWindow: 0,
     bankedRolls: [],
     purchased: { generator: false, infusor: false, forge: false },
+    activatedApps: [],
+    goalCapacityBought: 0,
     notes: [],
     habits: [],
     activeHabitId: null,

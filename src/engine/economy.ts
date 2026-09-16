@@ -14,13 +14,37 @@ export function levelCost(level: number): number {
   return Number((numerator + denominator - 1n) / denominator);
 }
 
+// The shared pricing shape (ADR-0013): a geometric scaler charged in whole
+// nous, ceiling-exact like level costs — the cell scaler, the activation
+// ladder, and the console long goals all ride this one curve.
+function geometricCeilCost(firstCost: number, numerator: bigint, denominator: bigint, steps: number): number {
+  const n = BigInt(steps);
+  const num = BigInt(firstCost) * numerator ** n;
+  const den = denominator ** n;
+  return Number((num + den - 1n) / den);
+}
+
 // The cell price (ADR-0013): a steep geometric scaler over total cells
 // bought — always charged in whole nous, ceiling-exact like level costs.
 export function cellCost(cellsBought: number): number {
   if (cellsBought < 0) throw new Error("cellsBought must be non-negative");
-  const numerator = BigInt(BALANCE.cellFirstCost) * BALANCE.cellCostGrowthNumerator ** BigInt(cellsBought);
-  const denominator = BALANCE.cellCostGrowthDenominator ** BigInt(cellsBought);
-  return Number((numerator + denominator - 1n) / denominator);
+  return geometricCeilCost(BALANCE.cellFirstCost, BALANCE.cellCostGrowthNumerator, BALANCE.cellCostGrowthDenominator, cellsBought);
+}
+
+// The activation ladder (ADR-0013): a shared geometric scaler over rungs
+// bought — rung one below the shelf floor, every later rung costs more no
+// matter which app it opens. Same ceiling-exact whole-nous pattern.
+export function rungCost(rung: number): number {
+  if (rung < 1) throw new Error("rung must be positive");
+  return geometricCeilCost(BALANCE.ladderFirstCost, BALANCE.ladderGrowthNumerator, BALANCE.ladderGrowthDenominator, rung - 1);
+}
+
+// Console long goals (ADR-0012): each purchase of a named beat prices the
+// next one past the current build-out, so the beat stays hand-paced and
+// never grinds back-to-back. Ceiling-exact whole nous, like every price.
+export function longGoalCost(bought: number): number {
+  if (bought < 0) throw new Error("bought must be non-negative");
+  return geometricCeilCost(BALANCE.longGoalFirstCost, BALANCE.longGoalGrowthNumerator, BALANCE.longGoalGrowthDenominator, bought);
 }
 
 export function investment(level: number): number {

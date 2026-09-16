@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
-import { endSession, startSession } from "./actions";
+import { buyActivation, buyGoalCapacity, endSession, startSession } from "./actions";
 import { fresh } from "./fixtures";
 import { addPracticeLog, createHabit, selectHabit } from "./habits";
 import {
@@ -10,6 +10,7 @@ import {
   goalCapacity,
   rollGoalOccurrences,
 } from "./goals";
+import { longGoalCost, rungCost } from "./economy";
 import { deserialize, serialize } from "./save";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -21,9 +22,46 @@ function withHabit(s: ReturnType<typeof fresh>, name = "Piano") {
 }
 
 describe("goal slots and creation", () => {
-  it("keeps slot capacity at the base two; more capacity is a future console long goal", () => {
+  it("starts at the base two slots; capacity grows only through the console long goal", () => {
     const s = fresh();
     expect(goalCapacity(s)).toBe(2);
+    s.goalCapacityBought = 2;
+    expect(goalCapacity(s)).toBe(6);
+  });
+
+  it("sells goal capacity as the first console long goal, gated behind Goals activation", () => {
+    const s = fresh();
+    s.nous = longGoalCost(0) + rungCost(1);
+    // Locked apps sell no upgrades (ADR-0012).
+    expect(buyGoalCapacity(s).ok).toBe(false);
+    expect(buyActivation(s, "goals").ok).toBe(true);
+    expect(buyGoalCapacity(s).ok).toBe(true);
+    expect(s.goalCapacityBought).toBe(1);
+    expect(goalCapacity(s)).toBe(4);
+    expect(s.nous).toBe(0);
+  });
+
+  it("prices each long goal past the last, one at a time", () => {
+    const s = fresh();
+    expect(longGoalCost(1)).toBeGreaterThan(longGoalCost(0));
+    s.nous = rungCost(1) + longGoalCost(0) + longGoalCost(1);
+    buyActivation(s, "goals");
+    expect(buyGoalCapacity(s).ok).toBe(true);
+    expect(buyGoalCapacity(s).ok).toBe(true);
+    expect(s.goalCapacityBought).toBe(2);
+    expect(s.nous).toBe(0);
+  });
+
+  it("refuses the long goal during flow or without nous", () => {
+    const s = fresh();
+    s.nous = rungCost(1) + longGoalCost(0);
+    buyActivation(s, "goals");
+    startSession(s, null);
+    expect(buyGoalCapacity(s).ok).toBe(false);
+    endSession(s);
+    s.nous = 0;
+    expect(buyGoalCapacity(s).ok).toBe(false);
+    expect(s.goalCapacityBought).toBe(0);
   });
 
   it("rejects goals when full, with bad inputs, or while in flow", () => {
