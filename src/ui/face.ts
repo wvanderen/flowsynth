@@ -70,7 +70,7 @@ export function moduleFace(spec: FaceSpec): string {
     <path data-key="rail" class="face-rail" d="M-39 -19V19" stroke="${hue}"/>
     ${spec.level !== undefined ? `<text data-key="level" y="-40" text-anchor="middle" class="face-level">LV ${spec.level}</text>` : ""}
     <text data-key="name" y="-27" text-anchor="middle" class="face-name">${META[spec.type].short.toUpperCase()}</text>
-    <text data-key="readout" y="9" text-anchor="middle" class="face-readout${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>
-    ${spec.note ? `<text data-key="note" y="23" text-anchor="middle" class="face-note">${spec.note}</text>` : ""}
-    <g data-key="signature" class="face-signature" transform="translate(25 29) scale(0.62)" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>`;
+    <text data-key="readout" x="7" y="5" text-anchor="middle" class="face-readout${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>
+    ${spec.note ? `<text data-key="note" x="7" y="19" text-anchor="middle" class="face-note">${spec.note}</text>` : ""}
+    <g data-key="signature" class="face-signature" transform="translate(0 36.5) scale(0.62)" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>`;
 }
