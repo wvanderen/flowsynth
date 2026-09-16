@@ -82,9 +82,10 @@ describe("habit development", () => {
   it("manual logs advance development without nous or charge", () => {
     const s = fresh();
     const piano = createHabit(s, "Piano")!.habit!;
+    const startingNous = s.nous; // the opening grant (issue #43) sits in the balance
     addPracticeLog(s, piano.id, 15, 2_000);
     expect(piano.seconds).toBeCloseTo(900, 6);
-    expect(s.nous).toBe(0);
+    expect(s.nous).toBe(startingNous);
     expect(s.practiceLog).toHaveLength(1);
     expect(s.practiceLog[0]!.source).toBe("manual");
     expect(s.practiceLog[0]!.at).toBe(2_000);

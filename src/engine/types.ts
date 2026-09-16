@@ -125,6 +125,9 @@ export interface GameState {
   // has been pressed — the acknowledgment the achievements ticket detects.
   arete: number;
   horizonAcknowledged: boolean;
+  // The one-time welcome card (§5.1): false until the player follows its CTA
+  // to the Carrier's upgrade button or dismisses it — then it never returns.
+  welcomeAcked: boolean;
   modules: ModuleInstance[];
   cells: Hex[];
   // Total cells ever bought (§3): the geometric cell-price scaler counts

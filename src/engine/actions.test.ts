@@ -203,6 +203,9 @@ describe("conservation", () => {
     give(s, "additive", hex(1, 0));
     give(s, "forge", hex(0, -1));
     give(s, "generator", hex(2, 0));
+    // The opening grant (issue #43) sits in the balance before anything is
+    // earned; conservation reads earned = (final − starting) + spent.
+    const startingNous = s.nous;
     startSession(s, 600);
     advance(s, 600, rng);
     endSession(s);
@@ -224,7 +227,7 @@ describe("conservation", () => {
       spent += before - s.nous;
     }
     expect(s.nous).toBeGreaterThanOrEqual(0);
-    expect(earnedTotal).toBeCloseTo(s.nous + spent, 6);
+    expect(earnedTotal).toBeCloseTo(s.nous - startingNous + spent, 6);
   });
 });
 

@@ -15,7 +15,7 @@ import { appIcon } from "./icons";
 import { HEX_RADIUS, hexPoints, moduleFace } from "./face";
 import { chargeGlow, chargeLeads } from "./leads";
 import { updateSvg } from "./svg";
-import { DURATION_OPTIONS, APP_LABELS, APP_ROLES, META, RARITY_LABEL } from "./meta";
+import { DURATION_OPTIONS, APP_LABELS, APP_ROLES, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatInt, formatNumber, practiceCountdown } from "./format";
 import { renderStatusMonitor } from "./monitor";
 
@@ -64,8 +64,38 @@ export function render(app: App): void {
   renderGrid(app);
   renderStatusMonitor(app);
   renderInspector(app);
+  renderWelcome(app);
   renderModal(app);
   renderDev(app);
+}
+
+/* ── Welcome card (§5.1) ───────────────────────────── */
+
+// The one-time opening card: the Carrier is granted and its first upgrade is
+// already affordable. Unforced — it locks nothing, and acknowledging or
+// dismissing it once (persisted in the save) keeps it away forever. It is an
+// upgrade-mode surface: it stands down for live sessions.
+function renderWelcome(app: App): void {
+  const host = byId("welcome-card");
+  if (!host) return;
+  if (app.state.welcomeAcked || app.state.mode !== "upgrade") {
+    host.hidden = true;
+    delete host.dataset.renderKey;
+    return;
+  }
+  host.hidden = false;
+  if (host.dataset.renderKey === "open") return;
+  host.dataset.renderKey = "open";
+  host.innerHTML = `
+    <div class="welcome-top">
+      <span class="eyebrow">WELCOME</span>
+      <button class="welcome-dismiss" id="welcome-dismiss" aria-label="Dismiss the welcome card">✕</button>
+    </div>
+    <p class="welcome-copy">Your <strong>Carrier</strong> is granted and pinned at the origin — the instrument's fundamental. Its first upgrade is already affordable.</p>
+    <button class="primary" id="welcome-cta">Upgrade the Carrier</button>
+    <p class="small muted" style="margin:10px 0 0">Or skip straight to flow — skipping loses nothing.</p>`;
+  byId("welcome-cta")?.addEventListener("click", () => app.ackWelcomeToCarrier());
+  byId("welcome-dismiss")?.addEventListener("click", () => app.dismissWelcome());
 }
 
 /* ── Console (ADR-0012) ────────────────────────────── */
@@ -1281,9 +1311,17 @@ function renderModal(app: App): void {
     kind === "forge"
       ? app.state.bankedRolls.at(-1)?.id ?? null
       : kind === "store"
-        ? [app.ui.showAcquired, wholeNous(app.state), JSON.stringify(app.state.purchased), app.state.cellsBought, app.state.activatedApps.join("|")]
+        ? [
+            app.ui.showAcquired,
+            wholeNous(app.state),
+            JSON.stringify(app.state.purchased),
+            app.state.cellsBought,
+            app.state.activatedApps.join("|"),
+            // Module-upgrade rows reprice with levels, moves, and the roster.
+            app.state.modules.map((m) => `${m.id}:${m.level}:${m.rarity}:${m.pos ? "d" : "i"}`).join("|"),
+          ]
         : null;
-  const renderKey = JSON.stringify([kind, app.ui.importError, app.state.pendingGap, extra]);
+  const renderKey = JSON.stringify([kind, app.ui.importError, app.state.pendingGap, app.state.mode, extra]);
   // Clock ticks must not replace a save textarea or steal dialog focus.
   if (!backdrop.hidden && content.dataset.renderKey === renderKey) return;
   backdrop.hidden = false;
@@ -1342,7 +1380,7 @@ function renderStoreModal(app: App, content: HTMLElement): void {
   content.innerHTML = `
     ${modalTop("CATALOG")}
     <h2 id="modal-title">Shape what comes next.</h2>
-    <p class="lead">The starter shelf: one offer per category, once each — plus board cells, always. ${formatInt(state.nous)} ν available.</p>
+    <p class="lead">The permanent purchase surface: starter-shelf offers while available, board cells, and every module's next level — all spendable between sessions. ${formatInt(state.nous)} ν available.</p>
     ${ladderRows.length > 0 ? `
       <h3 class="store-section-title">Activations</h3>
       <div class="shop-list store-activations">${ladderRows.map((appKey) => {
@@ -1361,8 +1399,9 @@ function renderStoreModal(app: App, content: HTMLElement): void {
         const price = BALANCE.shelfPrices[type];
         const affordable = wholeNous(state) >= price;
         const countdown = upgradeCountdown(app, price);
+        const hint = SHELF_HINTS[type];
         return `<div class="shop-item">
-          <div><h3>${META[type].name}</h3><small>${META[type].role}</small></div>
+          <div><h3>${META[type].name}</h3><small>${META[type].role}</small>${hint ? `<em class="shop-hint">${hint}</em>` : ""}</div>
           <span class="shop-buy">
             <button class="primary" data-buy="${type}" ${affordable ? "" : "disabled"}>${formatInt(price)} ν</button>
             ${countdown ? `<small class="shop-countdown mono">${countdown}</small>` : ""}
@@ -1380,17 +1419,37 @@ function renderStoreModal(app: App, content: HTMLElement): void {
         </span>
       </div>
     </div>
-    <p class="small muted" style="margin-top:6px">Each cell bought raises the next price — the board shows it before you commit.</p>
+    <p class="small muted" style="margin:6px 0 0">Each cell bought raises the next price — the board shows it before you commit.</p>
+    <h3 class="store-section-title">Module upgrades</h3>
+    <div class="shop-list">${state.modules.map((module) => {
+      const cost = levelCost(module.level);
+      const affordable = wholeNous(state) >= cost;
+      const countdown = upgradeCountdown(app, cost);
+      const carrier = isCarrier(module);
+      return `<div class="shop-item upgrade-row">
+        <div><h3>${META[module.type].name} <span class="shop-level mono">Lv ${module.level}</span></h3><small>${carrier ? "pinned at the origin" : module.pos ? "on the board" : "in inventory"} · +${formatNumber((BALANCE.rarityPower[module.rarity] - 1) * 100)}% per level</small></div>
+        <span class="shop-buy">
+          <button class="primary" data-upgrade="${module.id}" ${affordable ? "" : "disabled"}>${formatInt(cost)} ν</button>
+          ${countdown ? `<small class="shop-countdown mono">${countdown}</small>` : ""}
+        </span>
+      </div>`;
+    }).join("")}</div>
+    <p class="small muted" style="margin:6px 0 0">Upgrading here is the same purchase as the module's own panel — the carrier term moves on the status monitor.</p>
     <label class="store-toggle"><input type="checkbox" id="store-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${ownedShelf.length}/${shelfTypes.length})</label>
     ${ui.showAcquired && ownedShelf.length > 0 ? `
       <h3 class="store-section-title">Acquired</h3>
       <div class="shop-list store-owned">
         ${ownedShelf.map((type) => `<div class="shop-item owned"><div><h3>${META[type].name}</h3><small>${META[type].role}</small></div><span class="activation-owned mono">Acquired</span></div>`).join("")}
       </div>` : ""}
-    <p class="modal-note">Shelf offers are one-time. Copies from Forge rolls do not remove these offers — they can become combination material.</p>`;
+    <p class="modal-note">Shelf offers are one-time and hide once acquired. Copies from Forge rolls do not remove these offers — they can become combination material.</p>`;
   content.querySelectorAll<HTMLButtonElement>("[data-buy]").forEach((button) => {
     button.addEventListener("click", () => {
       app.buyShelf(button.getAttribute("data-buy") as keyof typeof BALANCE.shelfPrices);
+    });
+  });
+  content.querySelectorAll<HTMLButtonElement>("[data-upgrade]").forEach((button) => {
+    button.addEventListener("click", () => {
+      app.upgrade(button.getAttribute("data-upgrade")!);
     });
   });
   content.querySelectorAll<HTMLButtonElement>("[data-activate]").forEach((button) => {

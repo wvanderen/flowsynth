@@ -2,6 +2,7 @@ import { advance } from "../engine/advance";
 import type { AdvanceResult } from "../engine/types";
 import {
   acknowledgeHorizon,
+  acknowledgeWelcome,
   buyActivation,
   buyCell,
   buyGoalCapacity,
@@ -23,7 +24,7 @@ import { cellCost, computeRates, wholeNous } from "../engine/economy";
 import { adjacent, neighbors, sameHex } from "../engine/hex";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
 import { planTick } from "../engine/clock";
-import { createInitialState } from "../engine/state";
+import { createInitialState, isCarrier } from "../engine/state";
 import { appActive, type FocusApp } from "../engine/apps";
 import { writeNote } from "../engine/notes";
 import { BALANCE } from "../engine/constants";
@@ -353,6 +354,33 @@ export class App {
   // only acknowledges the horizon, and the flag stays detectable.
   acknowledgeHorizon(): void {
     this.act(acknowledgeHorizon(this.state), "The horizon is acknowledged. Prestige itself waits beyond it.");
+  }
+
+  // The one-time welcome card (§5.1): acknowledging it — via its CTA or the
+  // dismiss — is one-time; the save keeps the flag. The CTA is the Carrier's
+  // upgrade button for beat one: it spends the grant on the spot, so the
+  // carrier term bumps and the balance returns to zero in one click. If the
+  // upgrade cannot go through (an older save's balance, say), the Carrier is
+  // still selected so the player lands on its upgrade panel.
+  ackWelcomeToCarrier(): void {
+    acknowledgeWelcome(this.state);
+    const carrier = this.state.modules.find(isCarrier);
+    this.save(); // the ack is one-time whether or not the upgrade lands
+    if (!carrier) {
+      this.render();
+      return;
+    }
+    this.ui.selected = carrier.id;
+    this.ui.app = null;
+    this.ui.placing = null;
+    this.upgrade(carrier.id);
+  }
+
+  dismissWelcome(): void {
+    acknowledgeWelcome(this.state);
+    this.say("Welcome dismissed. The Carrier's upgrade waits in its panel whenever you want it.");
+    this.save();
+    this.render();
   }
 
   buyShelf(type: ShelfType): void {

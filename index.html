@@ -58,7 +58,13 @@
             <span class="manage-banner-hint" id="buy-banner-hint"></span>
             <button class="small" id="buy-banner-cancel">Cancel</button>
           </div>
-          <div class="board-space"><svg id="grid" role="group" aria-label="Module grid"></svg></div>
+          <div class="board-space">
+            <svg id="grid" role="group" aria-label="Module grid"></svg>
+            <!-- The one-time welcome card (§5.1): unforced guidance over the
+                 opening board — it never locks anything and never returns
+                 once acknowledged or dismissed. -->
+            <div class="welcome-card" id="welcome-card" hidden></div>
+          </div>
           <!-- The status monitor (ADR-0015): the board footer's whole
                section — the full-width horizon rail, formula chip and Forge
                chip on its top edge, the Arete accumulator spanning beneath. -->
