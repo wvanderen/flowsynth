@@ -1223,8 +1223,8 @@ function renderStoreModal(app: App, content: HTMLElement): void {
   const openShelf = shelfTypes.filter((type) => !state.purchased[type]);
   const ownedShelf = shelfTypes.filter((type) => state.purchased[type]);
 
-  // Cells (ADR-0013): the permanent catalog row. The next price climbs the
-  // geometric scaler over total cells bought; the buy arms frontier choice.
+  // Cells (ADR-0013): the permanent catalog row. The price is not quoted
+  // here — it lives where the purchase commits, on the board's frontier.
   const cellPrice = cellCost(state.cellsBought);
   const cellAffordable = wholeNous(state) >= cellPrice;
 
@@ -1247,10 +1247,10 @@ function renderStoreModal(app: App, content: HTMLElement): void {
     <div class="shop-list">
       <div class="shop-item">
         <div><h3>Board cell</h3><small>Empty hexes to place modules on — you choose where it touches the board.</small></div>
-        <button class="primary" id="buy-cell" ${cellAffordable ? "" : "disabled"}>${fmtWhole(cellPrice)} ν</button>
+        <button class="primary" id="buy-cell" ${cellAffordable ? "" : "disabled"} title="${cellAffordable ? "Arm the purchase — pick a frontier hex on the board; the price shows there" : "Not enough nous"}">Buy cell</button>
       </div>
     </div>
-    ${state.cellsBought > 0 ? `<p class="small muted" style="margin-top:6px">${state.cellsBought} cell${state.cellsBought === 1 ? "" : "s"} bought · next one ${fmtWhole(cellCost(state.cellsBought + 1))} ν.</p>` : `<p class="small muted" style="margin-top:6px">Each cell bought raises the next price.</p>`}
+    <p class="small muted" style="margin-top:6px">Each cell bought raises the next price — the board shows it before you commit.</p>
     <label class="store-toggle"><input type="checkbox" id="store-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${ownedShelf.length}/${shelfTypes.length})</label>
     ${ui.showAcquired && ownedShelf.length > 0 ? `
       <h3 class="store-section-title">Acquired</h3>

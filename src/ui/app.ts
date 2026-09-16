@@ -32,7 +32,7 @@ import {
 import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
 import type { GameState, Hex, ShelfType } from "../engine/types";
 import { render } from "./render";
-import { META } from "./meta";
+import { fmtWhole, META } from "./meta";
 
 export type ModalKind = "settings" | "store" | "forge" | "export" | "import" | "reset" | "reconcile" | null;
 
@@ -121,6 +121,7 @@ export class App {
     rollGoalOccurrences(this.state, Date.now());
     this.bindGlobalEvents();
     document.getElementById("manage-banner-done")?.addEventListener("click", () => this.stopManaging());
+    document.getElementById("buy-banner-cancel")?.addEventListener("click", () => this.cancelCellPurchase());
     document.getElementById("console-settings")?.addEventListener("click", () => this.openModal("settings"));
     this.greet();
     this.render();
@@ -345,7 +346,7 @@ export class App {
     this.ui.modal = null;
     this.ui.buyingCell = true;
     const price = cellCost(this.state.cellsBought);
-    this.say(`Choose a hex touching your board — the new cell costs ${price} ν. Right-click or Esc to cancel.`);
+    this.say(`Choose a hex touching your board — the new cell costs ${price} ν. Esc or Cancel on the banner backs out.`);
     this.render();
   }
 
@@ -436,9 +437,11 @@ export class App {
       return;
     }
     if (ui.buyingCell) {
-      if (this.act(buyCell(state, pos), "Cell bought. The board grew — reshape or place modules freely.")) {
-        ui.buyingCell = false;
-      }
+      // Disarm before rendering on success: act() re-renders, and the armed
+      // view must never outlive the flag (a stale arm eats clicks silently).
+      const result = buyCell(state, pos);
+      if (result.ok) ui.buyingCell = false;
+      this.act(result, "Cell bought. The board grew — reshape or place modules freely.");
       return;
     }
     if (ui.placing) {
@@ -784,5 +787,12 @@ export class App {
     // dimmed cells, and raised tiles. It can only be on while the grid is
     // unlocked.
     document.body.classList.toggle("managing", this.managing);
+    // Same visibility contract for the armed cell purchase (ADR-0013).
+    document.body.classList.toggle("buying", this.ui.buyingCell && this.state.mode === "upgrade");
+    if (this.ui.buyingCell && this.state.mode === "upgrade") {
+      const hint = document.getElementById("buy-banner-hint");
+      const text = `Choose a hex touching your board — the new cell costs ${fmtWhole(cellCost(this.state.cellsBought))} ν`;
+      if (hint && hint.textContent !== text) hint.textContent = text;
+    }
   }
 }
