@@ -65,6 +65,15 @@ export function acknowledgeHorizon(state: GameState): ActionResult {
   return ok;
 }
 
+// The one-time welcome card (§5.1): following its CTA to the Carrier's
+// upgrade button — or dismissing it — is the one acknowledgment; the save
+// keeps the flag so the card never returns. Skipping straight to a session
+// loses nothing: the card forces nothing.
+export function acknowledgeWelcome(state: GameState): ActionResult {
+  state.welcomeAcked = true;
+  return ok;
+}
+
 // The starter shelf (ADR-0013): one-time offers for the launch categories.
 // All nous spending is upgrade-mode-only (§3); there is no separate store
 // gate — upgrade mode itself is the purchase window.

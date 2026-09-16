@@ -143,10 +143,11 @@ describe("goal progress and completion", () => {
     const s = fresh();
     const habit = withHabit(s);
     createGoal(s, { habitId: habit.id, minutes: 15, schedule: "daily", now: 1 });
+    const startingNous = s.nous; // the opening grant (issue #43) sits in the balance
     const result = addPracticeLog(s, habit.id, 15, 2_000);
     expect(result.completions).toBe(1);
     expect(s.goals[0]!.completed).toBe(true);
-    expect(s.nous).toBe(0);
+    expect(s.nous).toBe(startingNous);
   });
 });
 

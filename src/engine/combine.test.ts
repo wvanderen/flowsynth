@@ -20,6 +20,7 @@ describe("combination", () => {
     const s = fresh();
     const a = leveled(s, "additive", 2, hex(1, 0));
     const b = leveled(s, "additive", 1, hex(0, -1));
+    s.nous = 0;
     const result = combine(s, b.id);
     expect(result.ok).toBe(true);
     expect(result.refund).toBe(10);

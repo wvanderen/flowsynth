@@ -1,4 +1,4 @@
-import type { FocusApp, ModuleType, Rarity } from "../engine/types";
+import type { FocusApp, ModuleType, Rarity, ShelfType } from "../engine/types";
 
 export const META: Record<ModuleType, { name: string; short: string; role: string }> = {
   carrier: { name: "Carrier", short: "Carrier", role: "The granted origin" },
@@ -8,6 +8,13 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
   focusKeyed: { name: "Focus-Keyed Generator", short: "Focus-Gen", role: "Charge from focus" },
   infusor: { name: "Infusor", short: "Infusor", role: "Neighbor bonuses" },
   forge: { name: "Forge", short: "Forge", role: "Rolls at threshold" },
+};
+
+// The shelf's one permanent hint (§5.8): the guaranteed generator row names
+// what charge is for, since nothing else on the board explains it. Every
+// other row speaks for itself.
+export const SHELF_HINTS: Partial<Record<ShelfType, string>> = {
+  generator: "produces charge — feeds the Forge.",
 };
 
 export const RARITY_LABEL: Record<Rarity, string> = { common: "common", uncommon: "uncommon", rare: "rare" };

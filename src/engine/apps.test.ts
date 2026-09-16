@@ -89,6 +89,8 @@ describe("activation ladder (ADR-0013, issue #42)", () => {
     const broke = fresh();
     expect(buyActivation(broke, "notes").ok).toBe(false);
     expect(broke.activatedApps).toHaveLength(0);
-    expect(broke.nous).toBe(0);
+    // The opening grant (issue #43) sits in the balance yet never reaches rung one.
+    expect(broke.nous).toBeGreaterThan(0);
+    expect(broke.nous).toBeLessThan(rungCost(1));
   });
 });
