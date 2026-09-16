@@ -107,12 +107,6 @@ function durationOptionsHtml(app: App): string {
   ).join("");
 }
 
-// The planned target is the Time app's instrument (§2.3), so the select lives
-// in its popover; the console clock block displays the next session's shape.
-function planText(chosenTarget: number | null): string {
-  return chosenTarget === null ? "Open-ended" : `Planned · ${formatClock(chosenTarget)}`;
-}
-
 // Session controls: the clock block plus the Enter/Exit main switch and the
 // pause control. The switch is the console's sole session gate — sessions
 // start and end through it — and it is the one colored console element
@@ -126,19 +120,22 @@ function renderConsoleSession(app: App): void {
 
   if (state.mode === "upgrade") {
     // Structural key: only rebuild when the shape of the section changes, so
-    // control nodes (and in-flight clicks) survive clock ticks.
+    // control nodes (and in-flight clicks) survive clock ticks. The clock
+    // wears the next session's shape — "planned" or "open" — in the same
+    // slot the running clock uses; the target itself lives on the Time tile.
     const timeOn = appActive(state, "time");
-    const key = `upgrade:${app.ui.chosenTarget}:${timeOn}`;
+    const planned = timeOn && app.ui.chosenTarget !== null;
+    const key = `upgrade:${planned}`;
     if (host.dataset.renderKey !== key) {
       host.dataset.renderKey = key;
       host.innerHTML = `
         <div class="console-clock">
-          <p class="clock-plan-value mono">${planText(timeOn ? app.ui.chosenTarget : null)}</p>
-          ${timeOn ? "" : `<p class="clock-caption">unlocks after your first session</p>`}
+          <p class="session-clock mono clock-state">${planned ? "planned" : "open"}</p>
+          <div class="time-track"><span id="time-track-fill" style="width:0%"></span></div>
         </div>
         <div class="session-actions">
           <button class="main-switch idle" id="flow-switch" title="Enter flow — the board locks and runs itself">
-            ${switchSvg}<span>Enter flow</span>
+            ${switchSvg}<span>Enter flow</span><i class="switch-state" aria-hidden="true"></i>
           </button>
         </div>`;
       byId("flow-switch")?.addEventListener("click", () => app.startFlow());
@@ -164,7 +161,7 @@ function renderConsoleSession(app: App): void {
       <div class="session-actions">
         <button id="pause-flow">${paused ? "Resume" : "Pause"}</button>
         <button class="main-switch ${paused ? "held" : "live"}" id="flow-switch" title="Exit flow — end the session and bank its production">
-          ${switchSvg}<span>Exit flow</span>
+          ${switchSvg}<span>Exit flow</span><i class="switch-state" aria-hidden="true"></i>
         </button>
       </div>`;
     byId("pause-flow")?.addEventListener("click", () => (state.mode === "paused" ? app.resume() : app.pause()));
@@ -265,11 +262,10 @@ function renderConsoleApps(app: App): void {
       <button class="app-tile${active ? "" : " locked"}${open ? " open" : ""}" id="app-tile-${appKey}" aria-pressed="${open}"${active ? "" : ' aria-disabled="true"'} title="${title}">
         <span class="app-tile-glyph">
           <svg viewBox="-12 -12 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${appIcon(appKey)}</svg>
-          <span class="app-led${active ? "" : " off"}" aria-hidden="true"></span>
         </span>
         ${stateText ? `<span class="app-tile-state">${escapeHtml(stateText)}</span>` : ""}
       </button>
-      ${open ? `<div class="app-popover" id="app-popover">${popoverHtml(app, appKey)}</div>` : ""}
+      ${open ? `<div class="app-popover" id="app-popover">${appPanelBody(app, appKey)}</div>` : ""}
     </div>`;
   }).join("");
   host.innerHTML = `<div class="app-tiles">${tiles}</div>`;
@@ -284,15 +280,6 @@ function renderConsoleApps(app: App): void {
 // The Time tile's compact plan: the clock, or "open" for open-ended.
 function planShort(chosenTarget: number | null): string {
   return chosenTarget === null ? "open" : formatClock(chosenTarget);
-}
-
-function popoverHtml(app: App, panel: FocusApp): string {
-  const label = APP_LABELS[panel];
-  return `<div class="popover-head">
-      <span class="eyebrow">${label.toUpperCase()} APP</span>
-      <button class="popover-close" id="app-close" aria-label="Close the ${label} panel">✕</button>
-    </div>
-    ${appPanelBody(app, panel)}`;
 }
 
 const TROPHY_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -366,45 +353,45 @@ function renderAchievementsModal(app: App, content: HTMLElement): void {
   wireClose(app);
 }
 
-// The console's readout end: the status strip (mode, production, and the
-// trophy glyph opening the achievements page), and the nous balance.
-// Static slots are built once; tick-moving values update in place.
+// The console's readout end: production (rate with the session total
+// beneath) and the nous balance — bare values; the main switch carries the
+// mode. Static slots are built once; tick-moving values update in place.
 function renderConsoleReadout(app: App): void {
   const { state } = app;
   const strip = byId("console-status");
   if (strip) {
-    const mode = app.managing ? "ARRANGING" : state.mode === "upgrade" ? "UPGRADE" : state.mode === "paused" ? "PAUSED" : "LIVE";
-    const key = `${mode}`;
-    if (strip.dataset.renderKey !== key) {
-      strip.dataset.renderKey = key;
+    if (strip.childElementCount === 0) {
       strip.innerHTML = `
-        <div class="console-slot"><span class="eyebrow">Mode</span><strong class="mode-value mono">${mode}</strong></div>
-        <div class="console-slot production-slot"><span class="eyebrow">Production</span><strong class="mono" data-live="rate"></strong></div>
+        <div class="console-slot production-slot">
+          <strong class="mono" data-live="rate"></strong>
+          <small class="mono session-total" data-live="session"></small>
+        </div>
         <div class="console-slot trophy-slot">
           <button class="trophy-glyph" id="trophy-button" title="Achievements — every feat, and how close the next one is" aria-label="Achievements">${TROPHY_SVG}</button>
         </div>`;
       byId("trophy-button")?.addEventListener("click", () => app.openModal("achievements"));
     }
-    const rateNode = strip.querySelector('[data-live="rate"]');
     // One production readout (§7: rates per-second everywhere): the ν/s
     // figure matches the formula chip — projected in upgrade mode, ticking
     // with the board in flow — and the flow session appends what it made.
     const rate = currentSnapshot(state).rate;
     const session = state.session;
-    const rateText = session
-      ? `${formatNumber(rate)} ν/s · ${formatNumber(session.earned)} ν this session`
-      : `${formatNumber(rate)} ν/s`;
+    const rateNode = strip.querySelector('[data-live="rate"]');
+    const rateText = `${formatNumber(rate)} ν/s`;
     if (rateNode && rateNode.textContent !== rateText) rateNode.textContent = rateText;
+    const sessionNode = strip.querySelector('[data-live="session"]');
+    const sessionText = session ? `${formatNumber(session.earned)} ν this session` : "";
+    if (sessionNode && sessionNode.textContent !== sessionText) sessionNode.textContent = sessionText;
   }
   const nous = byId("nous-balance");
   if (nous) {
     if (nous.childElementCount === 0) {
-      nous.innerHTML = `<span class="eyebrow">Nous</span><strong class="mono" data-live="nous"></strong>`;
+      nous.innerHTML = `<strong class="mono" data-live="nous"></strong>`;
     }
     const amount = nous.querySelector('[data-live="nous"]');
     // The counter reads whole nous — what is actually spendable — so the
     // ticking decimals never flicker in and out of the readout.
-    const text = formatInt(state.nous);
+    const text = `${formatInt(state.nous)} ν`;
     if (amount && amount.textContent !== text) amount.textContent = text;
   }
 }
@@ -1021,13 +1008,11 @@ function appPanelBody(app: App, panel: FocusApp): string {
     }).join("");
     if (live) {
       return `<section class="focus-controls">
-        <span class="eyebrow">FOCUS CONTROLS</span>
         <p class="habit-active-name">${active ? escapeHtml(active.name) : "Unstructured practice"}</p>
         ${active ? `<div class="stat-row"><span>This session</span><span class="mono" data-live="habit-session">${formatClock(state.session?.elapsed ?? 0)} of practice</span></div>` : ""}
       </section>`;
     }
     return `<section class="focus-controls">
-      <span class="eyebrow">FOCUS CONTROLS</span>
       <div class="habit-create">
         <input type="text" id="habit-name-input" placeholder="New habit (piano, cooking…)" maxlength="40" />
         <button class="primary small" id="habit-create">Add</button>
@@ -1051,7 +1036,6 @@ function appPanelBody(app: App, panel: FocusApp): string {
   if (panel === "time") {
     if (upgrade) {
       return `<section class="focus-controls">
-        <span class="eyebrow">PLANNED TARGET</span>
         <div class="time-plan">
           <select id="console-duration" aria-label="Session duration">${durationOptionsHtml(app)}</select>
           <p class="clock-caption">${app.ui.chosenTarget === null ? "Open-ended" : "Planned practice"}</p>
@@ -1063,7 +1047,6 @@ function appPanelBody(app: App, panel: FocusApp): string {
     const target = state.session?.target ?? null;
     const paused = state.mode === "paused";
     return `<section class="focus-controls">
-      <span class="eyebrow">THIS SESSION</span>
       <p class="session-clock mono" data-live="time-clock">${formatClock(elapsed)}</p>
       <p class="clock-caption" data-live="time-caption">${sessionCaption(elapsed, target, paused)}</p>
       <div class="time-track wide"><span data-live="time-track" style="width:${sessionTrackWidth(elapsed, target)}"></span></div>
@@ -1075,7 +1058,6 @@ function appPanelBody(app: App, panel: FocusApp): string {
     const when = (n: (typeof state.notes)[number]): string =>
       n.atElapsed === NOTE_BETWEEN_SESSIONS ? "between sessions" : `S${n.sessionId} · ${formatClock(n.atElapsed)}`;
     return `<section class="focus-controls">
-      <span class="eyebrow">FOCUS CONTROLS</span>
       <textarea class="note-composer" id="note-composer" placeholder="What are you noticing?" maxlength="2000" rows="3"></textarea>
       <div class="session-actions" style="margin:10px 0 0"><button class="primary" id="note-save">Capture note</button></div>
       ${recent.length > 0 ? `<div class="note-list">${recent.map((n) => `<div class="note-entry"><span class="note-when mono">${when(n)}</span><p>${escapeHtml(n.text)}</p></div>`).join("")}</div>` : ""}
@@ -1122,7 +1104,7 @@ function appPanelBody(app: App, panel: FocusApp): string {
     </div>`;
   };
   return `<section class="focus-controls">
-    <span class="eyebrow">FOCUS CONTROLS · ${state.goals.length}/${capacity} SLOTS${upgrade ? "" : " · LOCKED FOR THIS SESSION"}</span>
+    <p class="goal-slots mono">${state.goals.length}/${capacity} slots${upgrade ? "" : " · locked for this session"}</p>
     ${longGoalStrip}
     ${upgrade && state.goals.length < capacity ? `
       <div class="goal-create">
@@ -1142,7 +1124,6 @@ function appPanelBody(app: App, panel: FocusApp): string {
 }
 
 function bindAppPanel(app: App, scope: HTMLElement): void {
-  scope.querySelector("#app-close")?.addEventListener("click", () => app.closeApp());
   const duration = scope.querySelector("#console-duration");
   duration?.addEventListener("change", () => {
     const v = (duration as HTMLSelectElement).value;
@@ -1525,20 +1506,6 @@ function renderStoreModal(app: App, content: HTMLElement): void {
       </div>
     </div>
     <p class="small muted" style="margin:6px 0 0">Each purchase raises the next price.</p>
-    <h3 class="store-section-title">Module upgrades</h3>
-    <div class="shop-list">${state.modules.map((module) => {
-      const cost = levelCost(module.level);
-      const affordable = wholeNous(state) >= cost;
-      const countdown = upgradeCountdown(app, cost);
-      const carrier = isCarrier(module);
-      return `<div class="shop-item upgrade-row">
-        <div><h3>${META[module.type].name} <span class="shop-level mono">Lv ${module.level}</span></h3><small>${carrier ? "pinned at the origin" : module.pos ? "on the board" : "in inventory"} · +${formatNumber((BALANCE.rarityPower[module.rarity] - 1) * 100)}% per level</small></div>
-        <span class="shop-buy">
-          <button class="primary" data-upgrade="${module.id}" ${affordable ? "" : "disabled"}>${formatInt(cost)} ν</button>
-          ${countdown ? `<small class="shop-countdown mono">${countdown}</small>` : ""}
-        </span>
-      </div>`;
-    }).join("")}</div>
     <label class="store-toggle"><input type="checkbox" id="store-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${ownedShelf.length}/${shelfTypes.length})</label>
     ${ui.showAcquired && ownedShelf.length > 0 ? `
       <h3 class="store-section-title">Acquired</h3>
@@ -1549,11 +1516,6 @@ function renderStoreModal(app: App, content: HTMLElement): void {
   content.querySelectorAll<HTMLButtonElement>("[data-buy]").forEach((button) => {
     button.addEventListener("click", () => {
       app.buyShelf(button.getAttribute("data-buy") as keyof typeof BALANCE.shelfPrices);
-    });
-  });
-  content.querySelectorAll<HTMLButtonElement>("[data-upgrade]").forEach((button) => {
-    button.addEventListener("click", () => {
-      app.upgrade(button.getAttribute("data-upgrade")!);
     });
   });
   content.querySelectorAll<HTMLButtonElement>("[data-activate]").forEach((button) => {

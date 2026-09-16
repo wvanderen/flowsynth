@@ -88,9 +88,9 @@ h1, h2, h3, p { margin: 0; }
 /* The next session's shape, displayed read-only; planning lives in the Time
    app's popover. Same reserved block as the running clock so modes never
    shift the layout. */
-.clock-plan-value { font: 15px/1.3 var(--mono); letter-spacing: 0.03em; margin: 0; }
 .session-clock { font: 28px/1.1 var(--mono); margin: 0; }
 .clock-caption { font-size: 10px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.clock-state { font-size: 20px; letter-spacing: 0.04em; }
 .time-track {
   width: 135px;
   height: 3px;
@@ -118,6 +118,10 @@ h1, h2, h3, p { margin: 0; }
   white-space: nowrap;
 }
 .main-switch svg { width: 15px; height: 15px; }
+/* The switch's own state light: the mode indicator lives here now. */
+.switch-state { width: 8px; height: 8px; border-radius: 50%; border: 1px solid currentColor; opacity: 0.65; }
+.main-switch.live .switch-state { background: var(--switch-ink); border-color: var(--switch-ink); opacity: 1; box-shadow: 0 0 8px var(--switch-glow); }
+.main-switch.held .switch-state { background: var(--switch-ink); border-color: var(--switch-ink); opacity: 1; }
 .main-switch.idle {
   color: var(--switch);
   border-color: var(--switch-dim);
@@ -157,8 +161,6 @@ h1, h2, h3, p { margin: 0; }
 .app-tile:hover:not(.locked), .app-tile.open { border-color: var(--line); background: var(--panel); }
 .app-tile-glyph { display: flex; align-items: center; gap: 6px; color: var(--ink); }
 .app-tile-glyph svg { width: 19px; height: 19px; display: block; }
-.app-led { width: 5px; height: 5px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 6px var(--ink); }
-.app-led.off { background: var(--muted); box-shadow: none; opacity: 0.4; }
 /* The tile's state line: the selected habit, the planned clock, or a
    locknote — the app name lives in the tooltip. */
 .app-tile-state {
@@ -197,33 +199,36 @@ h1, h2, h3, p { margin: 0; }
 .app-slot.last .app-popover { left: auto; right: 0; transform: none; animation-name: popover-in-left; }
 @keyframes popover-in { from { opacity: 0; transform: translateX(-50%) translateY(-5px); } }
 @keyframes popover-in-left { from { opacity: 0; transform: translateY(-5px); } }
-.popover-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
-.popover-close { border: 0; color: var(--muted); padding: 3px 6px; font-size: 12px; }
-.popover-close:hover { color: var(--ink); background: transparent; }
 
 .time-plan { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
 .time-plan select { width: 170px; padding: 6px 8px; }
 .time-track.wide { width: 100%; margin-top: 8px; }
 
-/* Readout end: status strip and nous balance — one slot grammar. Production
-   reads here and only here: the per-second rate (matching the formula chip)
-   plus the live session's running total. */
+/* Readout end: bare values only — production (rate with the session total
+   beneath) and the nous balance. The main switch carries the mode. */
 .console-readout {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   border-left: 1px solid var(--line);
   padding-left: 16px;
   flex-shrink: 0;
 }
-.console-slot .eyebrow { display: block; margin-bottom: 3px; }
-.console-slot strong { font: 17px var(--mono); font-weight: 400; display: block; }
-/* Numeric readouts sit in a reserved right-aligned column: a ticking
-   counter changes digits, never the layout around it. */
-.console-slot strong[data-live] { min-width: 8ch; text-align: right; }
-.console-status { display: flex; align-items: center; gap: 14px; }
-.console-slot .mode-value { font-size: 12px; letter-spacing: 0.08em; padding-top: 4px; }
+/* The session total sits under the rate in a reserved-width column, so a
+   growing tally never nudges its neighbors. */
+.production-slot { display: flex; flex-direction: column; gap: 1px; }
+.production-slot strong { font: 17px var(--mono); font-weight: 400; }
+.session-total { font-size: 10.5px; color: var(--muted); min-width: 20ch; white-space: nowrap; }
+.nous-slot strong, #nous-balance strong {
+  font: 17px var(--mono);
+  font-weight: 400;
+  display: block;
+  /* Reserved right-aligned column: digits change, the layout doesn't. */
+  min-width: 6ch;
+  text-align: right;
+}
+.console-status { display: flex; align-items: center; gap: 16px; }
 .trophy-slot { display: flex; align-items: center; }
 .trophy-glyph {
   width: 36px;
@@ -321,8 +326,6 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   background: var(--panel-soft);
   min-width: 0;
 }
-.monitor-chip-label { font: 9px var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
-
 /* The formula chip: the live equation, with the full breakdown disclosed
    on hover or focus. */
 .monitor-formula { position: relative; outline-offset: 4px; }
@@ -386,18 +389,6 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .monitor-breakdown-row.total .bk-name { color: var(--ink); font-weight: 600; }
 .bk-name { font-size: 12px; color: var(--ink); }
 .bk-note { font-size: 10.5px; color: var(--muted); }
-
-/* The Forge chip: the shared meter toward the next roll. */
-.monitor-forge-track {
-  width: 90px;
-  height: 4px;
-  background: var(--panel-deep);
-  border: 1px solid var(--line-soft);
-  border-radius: 2px;
-  overflow: hidden;
-}
-.monitor-forge-track i { display: block; height: 100%; background: var(--forge-glow); transition: width 400ms ease-out; }
-.monitor-forge-val { font-size: 10px; color: var(--muted); white-space: nowrap; }
 
 /* The accumulator rail: log-scale fill on lifetime ν, inert decade
    graduations, the horizon cap, and the beat readout riding the fill head. */
@@ -993,7 +984,7 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 /* The shelf's one permanent hint (§5.8): the generator row says what charge
    is for; nothing else in the catalog explains itself twice. */
 .shop-hint { display: block; margin-top: 3px; font-size: 11.5px; font-style: normal; color: var(--charge); }
-.shop-level { font-size: 10.5px; color: var(--muted); margin-left: 6px; }
+.goal-slots { font: 10px var(--mono); letter-spacing: 0.06em; color: var(--muted); margin: 0 0 10px; }
 
 /* The one-time welcome card (§5.1): unforced guidance floating over the
    opening board — clicks pass around it, and it never returns once

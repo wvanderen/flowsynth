@@ -68,6 +68,62 @@ describe("the console tiles", () => {
   });
 });
 
+describe("the console readout", () => {
+  it("wears bare values: no labels, nous in units, session total under the rate", () => {
+    app.render();
+    expect(document.getElementById("console-status")!.textContent).not.toContain("Mode");
+    expect(document.getElementById("console-status")!.textContent).not.toContain("Production");
+    expect(document.getElementById("nous-balance")!.textContent).toMatch(/^\d+ ν$/);
+    expect(document.querySelector(".production-slot .session-total")).not.toBeNull();
+    expect(document.querySelector(".app-led")).toBeNull();
+    expect(document.querySelector("#flow-switch .switch-state")).not.toBeNull();
+  });
+
+  it("the upgrade-mode clock reads 'planned' or 'open' in the clock slot", () => {
+    app.state.sessionsCompleted = 1;
+    app.ui.chosenTarget = 600;
+    app.render();
+    expect(document.getElementById("console-session")!.textContent).toContain("planned");
+    app.ui.chosenTarget = null;
+    app.render();
+    expect(document.getElementById("console-session")!.textContent).toContain("open");
+  });
+
+  it("the session total only exists while a session runs", () => {
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    startSession(s, 600);
+    advance(s, 30);
+    app.render();
+    expect(document.querySelector('[data-live="session"]')!.textContent).toContain("ν this session");
+    endSession(s);
+    app.render();
+    expect(document.querySelector('[data-live="session"]')!.textContent).toBe("");
+  });
+});
+
+describe("the status monitor", () => {
+  it("carries the formula chip and accumulator only — no forge chip", () => {
+    app.render();
+    expect(document.querySelector(".monitor-forge")).toBeNull();
+    expect(document.querySelector(".monitor-formula")).not.toBeNull();
+    expect(document.querySelector(".monitor-rail")).not.toBeNull();
+  });
+});
+
+describe("the app popovers", () => {
+  it("open bare: no head, no close button, no focus-controls eyebrow", () => {
+    app.openApp("habit");
+    const popover = document.getElementById("app-popover")!;
+    expect(popover.querySelector(".popover-head")).toBeNull();
+    expect(popover.querySelector("#app-close")).toBeNull();
+    expect(popover.textContent).not.toContain("Focus Controls");
+    // Close so the instance's document-level click-away listener never
+    // reaches into a later test's DOM.
+    app.closeApp();
+  });
+});
+
 describe("the board toolbar", () => {
   it("the Forge tool carries the shared meter pip and progress tooltip", () => {
     app.state.forge.progress = 30;

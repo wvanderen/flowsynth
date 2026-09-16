@@ -1,16 +1,14 @@
 // The status monitor (ADR-0015, §6.2): the full-width horizon rail beneath
-// the board, carrying exactly three elements — the live formula chip and the
-// Forge progress meter docked as chips on its top edge, the Arete
-// accumulator spanning beneath. The accumulator is the monitor: a log-scale
-// fill on lifetime total nous earned toward the horizon line, with inert
-// decade graduations, a practice-relative beat readout riding the fill head,
-// and the reserved prestige button beneath. The grid overview panel and the
-// static formula explainer this rail replaces are dissolved (issue #38).
+// the board — the live formula chip docked on its top edge, the Arete
+// accumulator spanning beneath (the Forge meter lives on the toolbar's
+// Forge tool). The accumulator is the monitor: a log-scale fill on lifetime
+// total nous earned toward the horizon line, with inert decade
+// graduations, a practice-relative beat readout riding the fill head, and
+// the reserved prestige button beneath.
 import { ARETE_GRADUATIONS, ARETE_HORIZON, accumulatorFill, nextAccumulatorMark } from "../engine/accumulator";
 import { achievementBoostOf } from "../engine/achievements";
 import { BALANCE } from "../engine/constants";
 import { computeRates } from "../engine/economy";
-import { forgeThreshold } from "../engine/rolls";
 import type { GameState, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
 import { moduleIcon } from "./icons";
@@ -71,15 +69,6 @@ function formulaChipHtml(boosted: boolean): string {
     </div>`;
 }
 
-function forgeChipHtml(): string {
-  return `
-    <div class="monitor-chip monitor-forge" title="All deployed Forges feed one shared meter — banked rolls wait on the Forge surface">
-      <span class="monitor-chip-label">Forge</span>
-      <span class="monitor-forge-track"><i data-live="m-forge-fill"></i></span>
-      <span class="monitor-forge-val mono"><span data-live="m-forge-progress"></span> / <span data-live="m-forge-cap"></span></span>
-    </div>`;
-}
-
 // The Arete accumulator: the rail with its fill, inert decade graduations,
 // the horizon cap, the riding beat head, and the reserved prestige button.
 function accumulatorHtml(state: GameState, past: boolean): string {
@@ -117,7 +106,7 @@ export function renderStatusMonitor(app: App): void {
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.innerHTML = `
-      <div class="monitor-top">${formulaChipHtml(achieving)}${forgeChipHtml()}</div>
+      <div class="monitor-top">${formulaChipHtml(achieving)}</div>
       ${accumulatorHtml(state, past)}`;
     byId("prestige-button")?.addEventListener("click", () => app.acknowledgeHorizon());
   }
@@ -153,14 +142,6 @@ function updateMonitorLive(app: App, past: boolean): void {
   // The single legible achievements line (§6.3): "Achievements +26%".
   set("b-ach", `+${Math.round((snapshot.achievementBoost - 1) * 100)}%`);
   set("b-rate", `${formatNumber(snapshot.rate)} ν/s`);
-
-  // The Forge chip: the shared meter's progress toward the next roll.
-  const cap = forgeThreshold(state.forge.earned);
-  const forgeFill = host.querySelector<HTMLElement>('[data-live="m-forge-fill"]');
-  const forgeWidth = `${(Math.min(1, Math.max(0, state.forge.progress / cap)) * 100).toFixed(1)}%`;
-  if (forgeFill && forgeFill.style.width !== forgeWidth) forgeFill.style.width = forgeWidth;
-  set("m-forge-progress", formatNumber(Math.max(0, state.forge.progress)));
-  set("m-forge-cap", formatNumber(cap));
 
   // The accumulator: log-scale fill, riding beat head, secondaries.
   const pos = accumulatorFill(state.totalEarned);
