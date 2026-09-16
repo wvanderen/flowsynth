@@ -12,16 +12,6 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
 
 export const RARITY_LABEL: Record<Rarity, string> = { common: "common", uncommon: "uncommon", rare: "rare" };
 
-export function fmt(n: number, digits = 3): string {
-  if (!Number.isFinite(n)) return "—";
-  if (Math.abs(n) >= 1e9) return n.toExponential(2);
-  return n.toLocaleString(undefined, { maximumFractionDigits: digits });
-}
-
-export function fmtWhole(n: number): string {
-  return Math.floor(n + 1e-9).toLocaleString();
-}
-
 export const DURATION_OPTIONS: { label: string; value: number | null }[] = [
   { label: "10 minutes", value: 600 },
   { label: "15 minutes", value: 900 },
