@@ -1355,7 +1355,7 @@ function renderStoreModal(app: App, content: HTMLElement): void {
         <div><h3>Board cell</h3><small>Empty hexes to place modules on — you choose where it touches the board.</small></div>
         <span class="shop-buy">
           <button class="primary" id="buy-cell" ${cellAffordable ? "" : "disabled"} title="${cellAffordable ? "Arm the purchase — pick a frontier hex on the board; the price shows there" : "Not enough nous"}">Buy cell</button>
-          ${cellCountdown}
+          ${cellCountdown ? `<small class="shop-countdown mono">${cellCountdown}</small>` : ""}
         </span>
       </div>
     </div>
