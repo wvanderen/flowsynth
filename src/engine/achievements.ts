@@ -15,13 +15,19 @@ export interface AchievementProgress {
   goal: number;
 }
 
+// ADR-0015's five launch buckets: "practice capstones, console encouragers,
+// board-and-economy encouragers, formula-and-horizon feats, and counter
+// ladder seeds". The achievements page groups by them.
+export type AchievementCategory = "practice" | "console" | "board" | "formula" | "ladder";
+
 export interface AchievementDef {
   id: string;
   name: string;
   description: string;
+  category: AchievementCategory;
   // Pure predicate over saved state — the unlock condition.
   evaluate: (state: GameState, ctx: AchievementContext) => boolean;
-  // Pure read for the popover's progress bars; no secrets at launch.
+  // Pure read for the achievements page's progress bars; no secrets at launch.
   progress: (state: GameState, ctx: AchievementContext) => AchievementProgress;
 }
 
@@ -69,6 +75,7 @@ function chordMultiplierOf(state: GameState): number {
 export const ACHIEVEMENTS: readonly AchievementDef[] = [
   {
     id: "first-light",
+    category: "practice",
     name: "First light",
     description: "Complete your first flow session.",
     evaluate: (s) => s.sessionsCompleted >= 1,
@@ -76,6 +83,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   },
   {
     id: "off-the-clock",
+    category: "console",
     name: "Off the clock",
     description: "Log practice manually for the first time.",
     evaluate: (s) => manualLogCount(s) >= 1,
@@ -83,6 +91,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   },
   {
     id: "kept-promise",
+    category: "console",
     name: "Kept promise",
     description: "Complete a goal in the Goals app.",
     evaluate: (s) => goalCompletions(s) >= 1,
@@ -90,6 +99,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   },
   {
     id: "untethered",
+    category: "console",
     name: "Untethered",
     description: "Start an unstructured session.",
     evaluate: (s) => s.unstructuredSessions >= 1,
@@ -97,6 +107,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   },
   {
     id: "marginalia",
+    category: "console",
     name: "Marginalia",
     description: "Write a note during a flow session.",
     evaluate: (s) => s.notes.length >= 1,
@@ -104,6 +115,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   },
   {
     id: "on-the-clock",
+    category: "console",
     name: "On the clock",
     description: "Complete a planned session to its target.",
     evaluate: (s) => s.plannedSessionsCompleted >= 1,
@@ -111,6 +123,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   },
   {
     id: "room-to-grow",
+    category: "board",
     name: "Room to grow",
     description: "Buy your first cell.",
     evaluate: (s) => s.cellsBought >= 1,
@@ -118,6 +131,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   },
   {
     id: "spark",
+    category: "board",
     name: "Spark",
     description: "Deliver charge to a module during flow.",
     evaluate: (_s, ctx) => ctx.chargeDelivered,
@@ -125,6 +139,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   },
   {
     id: "roll-credit",
+    category: "board",
     name: "Roll credit",
     description: "Take your first Forge roll.",
     evaluate: (s) => rollsTaken(s) >= 1,
@@ -132,6 +147,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   },
   {
     id: "two-of-a-kind",
+    category: "board",
     name: "Two of a kind",
     description: "Combine a pair of modules for the first time.",
     evaluate: (s) => s.combinations >= 1,
@@ -139,6 +155,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   },
   {
     id: "power-chord",
+    category: "formula",
     name: "Power chord",
     description: "Stack chord multipliers to ×2 of the composite.",
     evaluate: (s) => chordMultiplierOf(s) >= 2,
@@ -146,6 +163,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   },
   {
     id: "fine-china",
+    category: "board",
     name: "Fine china",
     description: "Own a rare module.",
     evaluate: (s) => ownsRare(s),
@@ -153,6 +171,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   },
   {
     id: "eyes-on-the-horizon",
+    category: "formula",
     name: "Eyes on the horizon",
     description: "Press the reserved prestige button.",
     evaluate: (s) => s.horizonAcknowledged,
@@ -160,6 +179,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   },
   {
     id: "time-in-the-seat",
+    category: "practice",
     name: "Time in the seat",
     description: "Log 100 lifetime practice minutes, live or manual.",
     evaluate: (s) => totalPracticeSeconds(s) >= 100 * 60,
@@ -167,6 +187,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   },
   {
     id: "keeping-time",
+    category: "ladder",
     name: "Keeping time",
     description: "Complete 10 flow sessions.",
     evaluate: (s) => s.sessionsCompleted >= 10,
@@ -174,6 +195,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   },
   {
     id: "marathoner",
+    category: "practice",
     name: "Marathoner",
     description: "Practice 10 lifetime hours across flow sessions.",
     evaluate: (s) => livePracticeSeconds(s) >= 10 * 3600,
@@ -181,6 +203,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   },
   {
     id: "commonplace-book",
+    category: "ladder",
     name: "Commonplace book",
     description: "Record 25 notes.",
     evaluate: (s) => s.notes.length >= 25,

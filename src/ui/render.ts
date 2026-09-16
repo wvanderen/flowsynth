@@ -8,7 +8,7 @@ import { appActive, appLockNote, FOCUS_APPS, LADDER_APPS, ladderComplete, nextRu
 import { canWriteNotes } from "../engine/notes";
 import { activeHabit } from "../engine/habits";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
-import { ACHIEVEMENTS, achievementName } from "../engine/achievements";
+import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
 import { isCarrier } from "../engine/state";
 import type { GameState, Goal, Hex, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
@@ -290,53 +290,66 @@ const TROPHY_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stro
   <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
 </svg>`;
 
-// The achievements popover (ADR-0015): the always-visible full list — all
-// seventeen feats with progress bars, none hidden. Spark's progress rides
-// the charge preview; it reads zero between sessions, as charge does.
-function renderAchievementsPopover(app: App, strip: HTMLElement): void {
-  const slot = strip.querySelector(".trophy-slot");
-  if (!slot) return;
-  let host = slot.querySelector<HTMLDivElement>("#achievements-popover");
-  if (!app.ui.achievementsOpen) {
-    host?.remove();
-    return;
-  }
-  if (!host) {
-    host = document.createElement("div");
-    host.className = "achievements-popover";
-    host.id = "achievements-popover";
-    host.setAttribute("role", "dialog");
-    host.setAttribute("aria-label", "Achievements");
-    slot.append(host);
-  }
-  const ctx = { chargeDelivered: app.state.mode === "flow" && chargeDelivered(computeRates(app.state, true)) };
-  const count = Object.keys(app.state.achievements).length;
-  const rows = ACHIEVEMENTS.map((def) => {
-    const unlockedAt = app.state.achievements[def.id];
+// The achievements page (ADR-0015): the always-visible full list — all
+// seventeen feats with progress bars, none hidden, grouped by the launch
+// buckets the ADR names. Spark's progress rides the charge preview; it
+// reads zero between sessions, as charge does.
+const ACHIEVEMENT_CATEGORY_LABEL: Record<AchievementCategory, string> = {
+  practice: "Practice capstones",
+  console: "Console encouragers",
+  board: "Board & economy",
+  formula: "Formula & horizon",
+  ladder: "Counter ladder",
+};
+
+const ACHIEVEMENT_CATEGORY_ORDER: readonly AchievementCategory[] = ["practice", "console", "board", "formula", "ladder"];
+
+function achievementContextOf(app: App): AchievementContext {
+  return { chargeDelivered: app.state.mode === "flow" && chargeDelivered(computeRates(app.state, true)) };
+}
+
+// The open page's refresh signature: each feat's progress quantized to a
+// percent, so a rebuild only happens when a bar visibly moves.
+function achProgressKey(app: App): string {
+  const ctx = achievementContextOf(app);
+  return ACHIEVEMENTS.map((def) => {
     const { current, goal } = def.progress(app.state, ctx);
-    const fraction = Math.min(1, goal > 0 ? current / goal : 1);
-    const readout = unlockedAt !== undefined
-      ? "done"
-      : `${formatNumber(current)} / ${formatNumber(goal)}`;
-    return `<div class="ach-row${unlockedAt !== undefined ? " unlocked" : ""}">
-      <div class="ach-head">
-        <span class="ach-name">${def.name}</span>
-        <span class="ach-readout mono">${readout}</span>
-      </div>
-      <p class="ach-desc">${def.description}</p>
-      <div class="ach-track" aria-hidden="true"><i style="width:${(fraction * 100).toFixed(1)}%"></i></div>
-    </div>`;
-  }).join("");
-  const html = `
-    <div class="popover-head">
-      <span class="eyebrow">ACHIEVEMENTS · ${count}/${ACHIEVEMENTS.length}</span>
-      <span class="small muted">each feat speeds the rate a little</span>
+    return String(Math.round((Math.min(1, goal > 0 ? current / goal : 1)) * 100));
+  }).join(",");
+}
+
+function achRowHtml(app: App, def: AchievementDef, ctx: AchievementContext): string {
+  const unlockedAt = app.state.achievements[def.id];
+  const { current, goal } = def.progress(app.state, ctx);
+  const fraction = Math.min(1, goal > 0 ? current / goal : 1);
+  const readout = unlockedAt !== undefined ? "done" : `${formatNumber(current)} / ${formatNumber(goal)}`;
+  return `<div class="ach-row${unlockedAt !== undefined ? " unlocked" : ""}">
+    <div class="ach-head">
+      <span class="ach-name">${def.name}</span>
+      <span class="ach-readout mono">${readout}</span>
     </div>
-    <div class="ach-list">${rows}</div>`;
-  if (host.dataset.renderKey !== html) {
-    host.dataset.renderKey = html;
-    host.innerHTML = html;
-  }
+    <p class="ach-desc">${def.description}</p>
+    <div class="ach-track" aria-hidden="true"><i style="width:${(fraction * 100).toFixed(1)}%"></i></div>
+  </div>`;
+}
+
+function renderAchievementsModal(app: App, content: HTMLElement): void {
+  const ctx = achievementContextOf(app);
+  const count = Object.keys(app.state.achievements).length;
+  const sections = ACHIEVEMENT_CATEGORY_ORDER.map((category) => {
+    const feats = ACHIEVEMENTS.filter((def) => def.category === category);
+    if (feats.length === 0) return "";
+    return `<section class="ach-section">
+      <h3 class="store-section-title">${ACHIEVEMENT_CATEGORY_LABEL[category]}</h3>
+      <div class="ach-grid">${feats.map((def) => achRowHtml(app, def, ctx)).join("")}</div>
+    </section>`;
+  }).join("");
+  content.innerHTML = `
+    ${modalTop("ACHIEVEMENTS")}
+    <h2 id="modal-title">${count} of ${ACHIEVEMENTS.length} feats.</h2>
+    <p class="lead">Every feat speeds the rate a little — they accelerate, never gate. Each one adds into the Achievements line of the live rate breakdown.</p>
+    ${sections}`;
+  wireClose(app);
 }
 
 // The console's readout end: the status strip (mode, live rate, and the
@@ -348,16 +361,16 @@ function renderConsoleReadout(app: App): void {
   const strip = byId("console-status");
   if (strip) {
     const mode = app.managing ? "ARRANGING" : state.mode === "upgrade" ? "UPGRADE" : state.mode === "paused" ? "PAUSED" : "LIVE";
-    const key = `${mode}:${app.ui.achievementsOpen ? "ach" : "plain"}`;
+    const key = `${mode}`;
     if (strip.dataset.renderKey !== key) {
       strip.dataset.renderKey = key;
       strip.innerHTML = `
         <div class="console-slot"><span class="eyebrow">Mode</span><strong class="mode-value mono">${mode}</strong></div>
         <div class="console-slot production-slot"><span class="eyebrow">Production</span><strong class="mono" data-live="rate"></strong></div>
         <div class="console-slot trophy-slot">
-          <button class="trophy-glyph" id="trophy-button" aria-expanded="${app.ui.achievementsOpen}" title="Achievements — every feat, and how close the next one is" aria-label="Achievements">${TROPHY_SVG}</button>
+          <button class="trophy-glyph" id="trophy-button" title="Achievements — every feat, and how close the next one is" aria-label="Achievements">${TROPHY_SVG}</button>
         </div>`;
-      byId("trophy-button")?.addEventListener("click", () => app.toggleAchievements());
+      byId("trophy-button")?.addEventListener("click", () => app.openModal("achievements"));
     }
     const rateNode = strip.querySelector('[data-live="rate"]');
     // One readout, two units (§5.4, §5.6): the ν/s projection matches the
@@ -366,7 +379,6 @@ function renderConsoleReadout(app: App): void {
     const rate = currentSnapshot(state).rate;
     const rateText = `${formatNumber(rate)} ν/s · ${formatNumber(rate * 60)} ν/min`;
     if (rateNode && rateNode.textContent !== rateText) rateNode.textContent = rateText;
-    renderAchievementsPopover(app, strip);
   }
   const nous = byId("nous-balance");
   if (nous) {
@@ -1384,7 +1396,11 @@ function renderModal(app: App): void {
             // Module-upgrade rows reprice with levels, moves, and the roster.
             app.state.modules.map((m) => `${m.id}:${m.level}:${m.rarity}:${m.pos ? "d" : "i"}`).join("|"),
           ]
-        : null;
+        : kind === "achievements"
+          // Quantized progress: an open page refreshes when a bar visibly
+          // moves, not on every clock tick.
+          ? achProgressKey(app)
+          : null;
   const renderKey = JSON.stringify([kind, app.ui.importError, app.state.pendingGap, app.state.mode, extra]);
   // Clock ticks must not replace a save textarea or steal dialog focus.
   if (!backdrop.hidden && content.dataset.renderKey === renderKey) return;
@@ -1393,6 +1409,7 @@ function renderModal(app: App): void {
   if (kind === "settings") renderSettingsModal(app, content);
   else if (kind === "store") renderStoreModal(app, content);
   else if (kind === "forge") renderForgeModal(app, content);
+  else if (kind === "achievements") renderAchievementsModal(app, content);
   else if (kind === "export") renderExportModal(app, content);
   else if (kind === "import") renderImportModal(app, content);
   else if (kind === "reset") renderResetModal(app, content);

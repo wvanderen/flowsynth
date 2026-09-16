@@ -50,6 +50,7 @@ export type ModalKind =
   | "settings"
   | "store"
   | "forge"
+  | "achievements"
   | "export"
   | "import"
   | "reset"
@@ -74,8 +75,6 @@ export interface UiState {
   chosenTarget: number | null;
   showAcquired: boolean;
   editingHabitId: string | null;
-  // The trophy popover (ADR-0015): the always-visible full feat list.
-  achievementsOpen: boolean;
 }
 
 interface LoadedSave {
@@ -114,7 +113,6 @@ export class App {
     chosenTarget: 600,
     showAcquired: false,
     editingHabitId: null,
-    achievementsOpen: false,
   };
   lastWall: number | null = null;
   lastSaveWall = 0;
@@ -278,17 +276,12 @@ export class App {
     window.setInterval(() => this.tick(), 100);
     // A popover is light furniture: clicking anywhere outside the console's
     // app section dismisses it. The board never dims beneath it (ADR-0012).
-    // The trophy popover follows the same law, anchored to the status strip.
     // composedPath stays valid even when a tile click re-rendered the DOM.
     document.addEventListener("click", (event) => {
-      if (this.ui.app !== null) {
-        const inside = event.composedPath().some((node) => node instanceof Element && node.id === "console-apps");
-        if (!inside) this.closeApp();
-      }
-      if (this.ui.achievementsOpen) {
-        const inside = event.composedPath().some((node) => node instanceof Element && (node.id === "console-status" || node.id === "achievements-popover"));
-        if (!inside) this.ui.achievementsOpen = false;
-      }
+      if (this.ui.app === null) return;
+      const inside = event.composedPath().some((node) => node instanceof Element && node.id === "console-apps");
+      if (inside) return;
+      this.closeApp();
     });
   }
 
@@ -352,7 +345,7 @@ export class App {
       .map(achievementName);
     this.say(
       names.length > 0
-        ? `${otherwise}${otherwise ? " " : ""}Achievement unlocked — ${names.join(", ")}. The full list lives under the trophy glyph.`
+        ? `${otherwise}${otherwise ? " " : ""}Achievement unlocked — ${names.join(", ")}. The achievements page has the full list.`
         : otherwise,
     );
   }
@@ -550,13 +543,6 @@ export class App {
     this.ui.selected = this.ui.selected === id ? null : id;
     this.ui.app = null;
     this.ui.placing = null;
-    this.render();
-  }
-
-  // The trophy popover (ADR-0015): the always-visible full feat list with
-  // progress bars — no secrets at launch.
-  toggleAchievements(): void {
-    this.ui.achievementsOpen = !this.ui.achievementsOpen;
     this.render();
   }
 
