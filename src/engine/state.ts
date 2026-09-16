@@ -17,6 +17,8 @@ export function createInitialState(): GameState {
     sessionsCompleted: 0,
     nous: 0,
     totalEarned: 0,
+    arete: 0,
+    horizonAcknowledged: false,
     modules: [],
     cells: STARTER_CELLS.map(({ q, r }) => hex(q, r)),
     cellsBought: 0,

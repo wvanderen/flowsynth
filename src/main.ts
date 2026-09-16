@@ -9,7 +9,7 @@ for (const id of [
   "telegraph-slot",
   "board-tools",
   "grid",
-  "rate-formula",
+  "status-monitor",
   "inspector",
   "status",
   "modal",
@@ -40,6 +40,8 @@ document.addEventListener("keydown", (event) => {
     app.cancelCellPurchase();
   } else if (app.managing) {
     app.stopManaging();
+  } else if (app.ui.app) {
+    app.closeApp();
   } else if (app.ui.selected) {
     app.ui.selected = null;
     app.render();

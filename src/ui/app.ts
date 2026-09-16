@@ -1,6 +1,7 @@
 import { advance } from "../engine/advance";
 import type { AdvanceResult } from "../engine/types";
 import {
+  acknowledgeHorizon,
   buyCell,
   buyShelfModule,
   chooseRoll,
@@ -15,11 +16,13 @@ import {
   upgradeModule,
   type ActionResult,
 } from "../engine/actions";
+import { syncArete } from "../engine/accumulator";
 import { cellCost, computeRates, wholeNous } from "../engine/economy";
 import { adjacent, neighbors, sameHex } from "../engine/hex";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
 import { planTick } from "../engine/clock";
 import { createInitialState } from "../engine/state";
+import { appActive, type FocusApp } from "../engine/apps";
 import { writeNote } from "../engine/notes";
 import {
   activeHabit,
@@ -37,14 +40,10 @@ import { formatInt, practiceCountdown } from "./format";
 
 export type ModalKind = "settings" | "store" | "forge" | "export" | "import" | "reset" | "reconcile" | null;
 
-// Focus apps are console instruments (ADR-0012). Until the app-tiles ticket
-// gives them proper tiles and popovers, their panels open through the
-// console's app section into the inspector.
-export type AppPanel = "habit" | "notes" | "goals";
-
 export interface UiState {
   selected: string | null;
-  app: AppPanel | null;
+  // The focus app whose console popover is open, if any (ADR-0012).
+  app: FocusApp | null;
   placing: string | null;
   managing: boolean;
   reshape: { adds: Hex[]; removes: Hex[] } | null;
@@ -251,6 +250,15 @@ export class App {
     });
     window.addEventListener("beforeunload", () => this.save());
     window.setInterval(() => this.tick(), 100);
+    // A popover is light furniture: clicking anywhere outside the console's
+    // app section dismisses it. The board never dims beneath it (ADR-0012).
+    // composedPath stays valid even when a tile click re-rendered the DOM.
+    document.addEventListener("click", (event) => {
+      if (this.ui.app === null) return;
+      const inside = event.composedPath().some((node) => node instanceof Element && node.id === "console-apps");
+      if (inside) return;
+      this.closeApp();
+    });
   }
 
   tick(): void {
@@ -288,6 +296,7 @@ export class App {
       this.forgeFlashUntil = Date.now() + 900;
     }
     if (result.goalsCompleted > 0) notes.push(`${result.goalsCompleted} goal${result.goalsCompleted === 1 ? "" : "s"} completed.`);
+    if (result.areteMinted > 0) notes.push("The accumulator filled — Arete minted at the horizon.");
     if (notes.length > 0) this.say(notes.join(" "));
   }
 
@@ -303,7 +312,9 @@ export class App {
   }
 
   startFlow(): void {
-    const target = this.ui.chosenTarget;
+    // Planned targets belong to the Time app (§2.3): until it auto-activates,
+    // every session is mechanically open-ended.
+    const target = appActive(this.state, "time") ? this.ui.chosenTarget : null;
     const started = this.act(
       startSession(this.state, target),
       target === null
@@ -333,6 +344,12 @@ export class App {
     if (this.act(resumeSession(this.state), "Flow resumed.")) {
       this.lastWall = Date.now();
     }
+  }
+
+  // The reserved prestige button (ADR-0015): inert at launch — pressing
+  // only acknowledges the horizon, and the flag stays detectable.
+  acknowledgeHorizon(): void {
+    this.act(acknowledgeHorizon(this.state), "The horizon is acknowledged. Prestige itself waits beyond it.");
   }
 
   buyShelf(type: ShelfType): void {
@@ -411,7 +428,10 @@ export class App {
     this.render();
   }
 
-  openApp(app: AppPanel): void {
+  openApp(app: FocusApp): void {
+    // Locked tiles open nothing (ADR-0012): the tile is inert, greyed, and
+    // carries its locknote; no panel, no message.
+    if (!appActive(this.state, app)) return;
     this.ui.app = this.ui.app === app ? null : app;
     this.ui.selected = null;
     this.ui.placing = null;
@@ -766,7 +786,8 @@ export class App {
   devNous(): void {
     this.state.nous += 100;
     this.state.totalEarned += 100;
-    this.say("Dev: +100 ν.");
+    const minted = syncArete(this.state);
+    this.say(minted > 0 ? "Dev: +100 ν. The accumulator filled — Arete minted." : "Dev: +100 ν.");
     this.render();
   }
 

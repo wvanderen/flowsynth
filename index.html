@@ -39,6 +39,13 @@
         <section class="board-panel">
           <div class="board-heading">
             <div class="board-tools" id="board-tools"></div>
+            <div class="legend">
+              <span><i class="rail"></i>Rail · category</span>
+              <span><i class="ring"></i>Rings · rarity</span>
+              <span><i class="ch"></i>Light · charge</span>
+              <span><i class="am"></i>Forge output</span>
+              <span id="cell-count"></span>
+            </div>
           </div>
           <div class="manage-banner" id="manage-banner">
             <span class="manage-banner-label">Arranging</span>
@@ -52,16 +59,10 @@
             <button class="small" id="buy-banner-cancel">Cancel</button>
           </div>
           <div class="board-space"><svg id="grid" role="group" aria-label="Module grid"></svg></div>
-          <div class="board-footer">
-            <div class="legend">
-              <span><i class="rail"></i>Rail · category</span>
-              <span><i class="ring"></i>Rings · rarity</span>
-              <span><i class="ch"></i>Light · charge</span>
-              <span><i class="am"></i>Forge output</span>
-              <span id="cell-count"></span>
-            </div>
-            <div class="rate-formula" id="rate-formula"></div>
-          </div>
+          <!-- The status monitor (ADR-0015): the board footer's whole
+               section — the full-width horizon rail, formula chip and Forge
+               chip on its top edge, the Arete accumulator spanning beneath. -->
+          <div class="board-footer status-monitor" id="status-monitor"></div>
         </section>
         <aside class="inspector" id="inspector"></aside>
       </main>

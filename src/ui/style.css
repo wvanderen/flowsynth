@@ -55,10 +55,10 @@ h1, h2, h3, p { margin: 0; }
 .console {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 16px;
   height: 88px;
   flex-shrink: 0;
-  padding: 0 26px;
+  padding: 0 20px;
   background: var(--panel-soft);
   border-bottom: 1px solid var(--line);
 }
@@ -76,17 +76,19 @@ h1, h2, h3, p { margin: 0; }
 /* Session controls: clock block, pause, and the main switch. The clock block
    keeps fixed dimensions across modes so entering or exiting flow shifts
    nothing below. */
-.console-session { display: flex; align-items: center; gap: 20px; min-width: 0; }
+.console-session { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
 .console-clock {
-  width: 196px;
+  width: 172px;
   height: 56px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   flex-shrink: 0;
 }
-.clock-plan { display: flex; flex-direction: column; gap: 2px; }
-.clock-plan select { width: 148px; padding: 6px 8px; }
+/* The next session's shape, displayed read-only; planning lives in the Time
+   app's popover. Same reserved block as the running clock so modes never
+   shift the layout. */
+.clock-plan-value { font: 15px/1.3 var(--mono); letter-spacing: 0.03em; margin: 0; }
 .session-clock { font: 28px/1.1 var(--mono); margin: 0; }
 .clock-caption { font-size: 10px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .time-track {
@@ -104,8 +106,8 @@ h1, h2, h3, p { margin: 0; }
 .main-switch {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  padding: 11px 18px;
+  gap: 8px;
+  padding: 11px 14px;
   font-weight: 650;
   letter-spacing: 0.02em;
   border-radius: 7px;
@@ -131,30 +133,80 @@ h1, h2, h3, p { margin: 0; }
 .session-actions { display: flex; gap: 8px; flex-wrap: nowrap; }
 .session-actions button { white-space: nowrap; }
 
-/* Focus-app section: plain buttons until the app-tiles ticket renders the
-   real tiles with state LEDs and popovers. */
+/* Focus-app tiles (ADR-0012): greyed until activated, state LED when active,
+   one-line locknote on locked tiles. Monochrome — panel access reads as ink,
+   never hue. Locked tiles open nothing. */
 .console-apps { display: flex; align-items: center; flex-shrink: 0; }
-.app-buttons { display: flex; gap: 6px; }
-.app-button { padding: 8px 12px; font-size: 12px; }
-/* The console is monochrome (ADR-0016): panel access reads as ink, never hue. */
-.app-button.active { border-color: var(--ink); color: var(--ink); background: var(--panel); }
+.app-tiles { display: flex; gap: 3px; }
+.app-slot { position: relative; display: flex; }
+.app-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 8px 5px;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+}
+.app-tile:hover:not(.locked), .app-tile.open { border-color: var(--line); background: var(--panel); }
+.app-tile-glyph { display: flex; align-items: center; gap: 6px; color: var(--ink); }
+.app-tile-glyph svg { width: 19px; height: 19px; display: block; }
+.app-led { width: 5px; height: 5px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 6px var(--ink); }
+.app-led.off { background: var(--muted); box-shadow: none; opacity: 0.4; }
+.app-tile-name { font: 9.5px var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.app-tile:hover:not(.locked) .app-tile-name, .app-tile.open .app-tile-name { color: var(--ink); }
+.app-locknote { font: 8px var(--mono); letter-spacing: 0.02em; color: var(--muted); opacity: 0.85; white-space: nowrap; }
+.app-tile.locked { cursor: default; }
+.app-tile.locked .app-tile-glyph { color: var(--muted); opacity: 0.6; }
+
+/* App panels open as popovers anchored directly beneath their tile — short
+   mouse travel, and nothing below the console ever moves, reflows, or dims. */
+.app-popover {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 372px;
+  max-height: calc(100dvh - 170px);
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px 16px;
+  box-shadow: 0 18px 50px var(--shadow);
+  z-index: 30;
+  animation: popover-in 0.14s ease-out;
+}
+.app-slot.first .app-popover { left: 0; transform: none; animation-name: popover-in-left; }
+.app-slot.last .app-popover { left: auto; right: 0; transform: none; animation-name: popover-in-left; }
+@keyframes popover-in { from { opacity: 0; transform: translateX(-50%) translateY(-5px); } }
+@keyframes popover-in-left { from { opacity: 0; transform: translateY(-5px); } }
+.popover-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.popover-close { border: 0; color: var(--muted); padding: 3px 6px; font-size: 12px; }
+.popover-close:hover { color: var(--ink); background: transparent; }
+
+.time-plan { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
+.time-plan select { width: 170px; padding: 6px 8px; }
+.time-track.wide { width: 100%; margin-top: 8px; }
 
 /* Readout end: status strip, nous balance, rung telegraph — one slot grammar. */
 .console-readout {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 14px;
   border-left: 1px solid var(--line);
-  padding-left: 24px;
+  padding-left: 16px;
   flex-shrink: 0;
 }
 .console-slot .eyebrow { display: block; margin-bottom: 3px; }
 .console-slot strong { font: 17px var(--mono); font-weight: 400; display: block; }
 /* Numeric readouts sit in a reserved right-aligned column: a ticking
    counter changes digits, never the layout around it. */
-.console-slot strong[data-live] { min-width: 10ch; text-align: right; }
-.console-status { display: flex; align-items: center; gap: 20px; }
+.console-slot strong[data-live] { min-width: 8ch; text-align: right; }
+.console-status { display: flex; align-items: center; gap: 14px; }
 .console-slot .mode-value { font-size: 12px; letter-spacing: 0.08em; padding-top: 4px; }
 .trophy-slot { display: flex; align-items: center; }
 .trophy-glyph {
@@ -193,23 +245,209 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 
 #grid { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; display: block; }
 
-.board-footer { flex-shrink: 0; border-top: 1px solid var(--line); padding: 10px 0 14px; position: relative; }
+.board-footer { flex-shrink: 0; border-top: 1px solid var(--line); padding: 14px 0 16px; position: relative; }
 /* The board legend: the Rack's three color channels (hue = category,
-   rings = rarity, light = charge). The rail swatch sweeps every category
-   hue; the ring swatch is the engraved rarity mark. */
-.legend { display: flex; gap: 14px; font-size: 9px; color: var(--muted); margin-bottom: 6px; }
+   rings = rarity, light = charge). It sits at the heading row's end — the
+   board footer itself is the status monitor's, capped at three elements.
+   The rail swatch sweeps every category hue; the ring swatch is the
+   engraved rarity mark. */
+.legend { display: flex; align-items: center; gap: 14px; font-size: 9px; color: var(--muted); }
+.board-heading .legend { margin-left: auto; padding-bottom: 4px; }
 .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
 .legend i.rail { background: linear-gradient(90deg, var(--hue-generator), var(--hue-synthesizer), var(--hue-infusor), var(--hue-forge)); }
 .legend i.ring { background: transparent; border: 1px solid var(--muted); border-radius: 50%; box-sizing: border-box; }
 .legend i.ch { background: var(--charge); }
 .legend i.am { background: var(--forge-glow); }
 
-.rate-formula { overflow-x: auto; }
-.rate-equation { display: flex; align-items: center; gap: 5px; white-space: nowrap; font: 14px var(--mono); min-height: 26px; }
-.rate-equation .op { color: var(--muted); }
-.rate-equation strong { font-weight: 600; color: var(--accent); }
-.formula-term { display: inline-flex; align-items: center; gap: 4px; }
-.formula-term svg { width: 18px; height: 18px; flex-shrink: 0; stroke: var(--muted); }
+/* ── Status monitor (ADR-0015): the horizon rail ───── */
+
+/* The monitor is the accumulator: the full-width section beneath the grid,
+   hard cap of three elements — formula chip and Forge chip on its top edge,
+   the Arete accumulator spanning beneath. It is the board footer itself, so
+   it carries no card chrome; the section's top border and padding are the
+   rail's frame. Arete wears the reserved violet; all other color comes from
+   the category hues and registers. */
+.status-monitor { min-width: 0; }
+
+.monitor-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  /* Headroom for the beat readout riding above the rail. */
+  margin-bottom: 32px;
+}
+
+.monitor-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: 99px;
+  padding: 5px 13px;
+  background: var(--panel-soft);
+  min-width: 0;
+}
+.monitor-chip-label { font: 9px var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+
+/* The formula chip: the live equation, with the full breakdown disclosed
+   on hover or focus. */
+.monitor-formula { position: relative; outline-offset: 4px; }
+.monitor-equation {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  font: 13px var(--mono);
+  min-height: 22px;
+  overflow-x: auto;
+}
+.monitor-equation .op { color: var(--muted); }
+.monitor-equation strong { font-weight: 600; color: var(--nous); }
+.monitor-term { display: inline-flex; align-items: center; gap: 4px; }
+.monitor-term svg { width: 16px; height: 16px; flex-shrink: 0; stroke: var(--muted); }
+.monitor-term .term-glyph { color: var(--muted); }
+.monitor-hint {
+  font-size: 10px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  width: 15px;
+  height: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.monitor-formula:hover .monitor-hint,
+.monitor-formula:focus .monitor-hint { color: var(--nous); border-color: var(--nous); }
+
+.monitor-breakdown {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  z-index: 40;
+  width: 350px;
+  background: var(--panel-deep);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 10px 26px var(--shadow);
+}
+.monitor-formula:hover .monitor-breakdown,
+.monitor-formula:focus .monitor-breakdown,
+.monitor-formula:focus-within .monitor-breakdown { display: block; }
+.monitor-breakdown-row {
+  display: grid;
+  grid-template-columns: 92px 84px 1fr;
+  gap: 8px;
+  align-items: baseline;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 12px;
+}
+.monitor-breakdown-row:last-child { border-bottom: 0; }
+.monitor-breakdown-row .mono { text-align: right; color: var(--nous); font-size: 12px; }
+.monitor-breakdown-row.total .mono,
+.monitor-breakdown-row.total .bk-name { color: var(--ink); font-weight: 600; }
+.bk-name { font-size: 12px; color: var(--ink); }
+.bk-note { font-size: 10.5px; color: var(--muted); }
+
+/* The Forge chip: the shared meter toward the next roll. */
+.monitor-forge-track {
+  width: 90px;
+  height: 4px;
+  background: var(--panel-deep);
+  border: 1px solid var(--line-soft);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.monitor-forge-track i { display: block; height: 100%; background: var(--forge-glow); transition: width 400ms ease-out; }
+.monitor-forge-val { font-size: 10px; color: var(--muted); white-space: nowrap; }
+
+/* The accumulator rail: log-scale fill on lifetime ν, inert decade
+   graduations, the horizon cap, and the beat readout riding the fill head. */
+.monitor-rail {
+  position: relative;
+  height: 14px;
+  background: var(--panel-deep);
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+}
+.monitor-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 6px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--hue-synthesizer) 45%, var(--panel)), var(--nous));
+  transition: width 400ms ease-out;
+}
+.monitor-grad { position: absolute; top: -4px; bottom: -4px; width: 1px; background: var(--line-strong); }
+.monitor-grad b {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  font: 9px var(--mono);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.monitor-horizon {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  right: -1px;
+  width: 3px;
+  background: var(--reserved-violet);
+  box-shadow: 0 0 8px 1px color-mix(in srgb, var(--reserved-violet) 45%, transparent);
+  border-radius: 1px;
+}
+.monitor-head {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  transform: translateX(-50%);
+  font: 10px var(--mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.monitor-head.flip { transform: translateX(-100%); }
+
+.monitor-under {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 28px;
+}
+.monitor-prestige {
+  flex-shrink: 0;
+  font: 10px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--reserved-violet);
+  border: 1px solid color-mix(in srgb, var(--reserved-violet) 45%, var(--line));
+  border-radius: 99px;
+  padding: 3px 12px;
+  background: transparent;
+}
+.monitor-prestige:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--reserved-violet) 12%, transparent);
+  border-color: var(--reserved-violet);
+}
+.monitor-prestige:disabled { opacity: 0.55; cursor: default; }
+.monitor-beat {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 10.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.monitor-beat.minted { color: var(--reserved-violet); }
+.monitor-secondary { flex-shrink: 0; font-size: 10.5px; color: var(--muted); white-space: nowrap; }
 
 
 /* ── Inspector ─────────────────────────────────────── */
@@ -217,6 +455,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .inspector { border-left: 1px solid var(--line); padding: 26px 24px; overflow-y: auto; }
 .inspector > section, .inspector > div > section { margin-bottom: 22px; }
 .divider { border-top: 1px solid var(--line-soft); margin: 18px 0; }
+.manage-counts { font-size: 11px; color: var(--muted); margin-top: 8px; }
 
 .module-heading h1 { font-size: 26px; font-weight: 550; line-height: 1.15; margin: 10px 0 2px; }
 /* Rarity reads as text here; on faces it is engraved rings + plate tint
@@ -312,16 +551,9 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .stat-row:last-child { border-bottom: 0; }
 .stat-row .mono { color: var(--ink); }
 
-.grid-overview h2 { font-size: 18px; color: var(--muted); font-weight: 500; margin: 10px 0 14px; }
-.overview-meter { margin: 14px 0; }
-.overview-meter progress { display: block; width: 100%; height: 3px; border: 0; appearance: none; background: var(--line); }
-.overview-meter progress::-webkit-progress-bar { background: var(--line); }
-.overview-meter progress::-webkit-progress-value { background: var(--meter-fill); }
-.overview-meter progress::-moz-progress-bar { background: var(--meter-fill); }
-.overview-formula { border-top: 1px solid var(--line); margin-top: 20px; padding-top: 16px; font-size: 12px; line-height: 1.7; color: var(--muted); }
-.overview-formula h3 { color: var(--ink); font-weight: 550; }
-.overview-formula p { margin-top: 8px; }
-body.live .grid-overview { opacity: 0.75; }
+/* The dissolved grid overview leaves only a pointer (issue #38). */
+.inspector-empty { padding-top: 6px; }
+body.live .inspector-empty { opacity: 0.75; }
 
 /* Grid & inventory management */
 .detail-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
@@ -597,26 +829,39 @@ body.buying #buy-banner { display: flex; }
 
 /* ── Responsive ────────────────────────────────────── */
 
-@media (max-width: 1150px) {
-  .console { gap: 18px; }
+@media (max-width: 1500px) {
+  /* Tight consoles shed the inert rung telegraph first (the activation
+     ladder's live telegraph arrives with issue #42, which owns these
+     breakpoints); the console's height stays fixed either way. */
+  .console-telegraph { display: none; }
+}
+
+@media (max-width: 1360px) {
+  /* The production slot duplicates the formula bar's live rate. */
+  .production-slot { display: none; }
+}
+
+@media (max-width: 1180px) {
+  /* The trophy slot is reserved until the achievements work (#45). Below
+     here the console wraps instead of clipping: its height stays
+     width-determined, so console use never shifts the board. */
+  .trophy-slot { display: none; }
+  .console { flex-wrap: wrap; height: auto; min-height: 0; padding: 12px 16px; gap: 10px 16px; }
+  .console-session { order: 3; flex-basis: 100%; justify-content: space-between; }
+  .console-readout { margin-left: auto; border: 0; padding: 0; }
 }
 
 @media (max-width: 980px) {
   .workspace { grid-template-columns: minmax(0, 1fr) 290px; }
-  .console-readout { gap: 14px; padding-left: 18px; }
 }
 
 @media (max-width: 760px) {
-  .console { flex-wrap: wrap; height: auto; min-height: 0; padding: 14px 16px; gap: 14px; }
-  .console-session { order: 3; flex-basis: 100%; flex-wrap: wrap; gap: 12px; }
-  .console-readout { margin-left: auto; border: 0; padding: 0; }
-  .console-telegraph { display: none; }
   .board-panel { padding: 16px 14px 0; }
   .session-actions { margin-left: auto; }
   .workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(200px, 1fr) minmax(0, 0.8fr); }
   .inspector { border-left: 0; border-top: 1px solid var(--line); padding: 16px; }
-  .mode-value, .trophy-slot { display: none; }
-  .rate-equation { font-size: 12px; }
+  .monitor-equation { font-size: 12px; }
+  .monitor-breakdown { width: min(350px, calc(100vw - 60px)); }
   .board-tools { gap: 4px; }
   .board-tools button { padding: 7px 8px; }
   .candidates, .shop-list { grid-template-columns: 1fr; }
