@@ -707,10 +707,10 @@ function updateInspectorLive(app: App, host: HTMLElement): void {
 }
 
 // The upgrade-mode countdown for a price on this board: phrased against the
-// projected next-session rate; null (hidden) when affordable or rateless.
+// board's projected next-session rate (the charged preview, whatever the
+// current mode); null (hidden) when affordable or rateless.
 function upgradeCountdown(app: App, cost: number): string | null {
-  if (app.state.mode !== "upgrade") return null;
-  return practiceCountdown(cost, wholeNous(app.state), currentSnapshot(app.state).rate);
+  return practiceCountdown(cost, wholeNous(app.state), computeRates(app.state, true).rate);
 }
 
 function forgeMeter(state: GameState): string {
@@ -1250,6 +1250,7 @@ function renderStoreModal(app: App, content: HTMLElement): void {
   // here — it lives where the purchase commits, on the board's frontier.
   const cellPrice = cellCost(state.cellsBought);
   const cellAffordable = wholeNous(state) >= cellPrice;
+  const cellCountdown = upgradeCountdown(app, cellPrice);
 
   content.innerHTML = `
     ${modalTop("CATALOG")}
@@ -1276,7 +1277,7 @@ function renderStoreModal(app: App, content: HTMLElement): void {
         <div><h3>Board cell</h3><small>Empty hexes to place modules on — you choose where it touches the board.</small></div>
         <span class="shop-buy">
           <button class="primary" id="buy-cell" ${cellAffordable ? "" : "disabled"} title="${cellAffordable ? "Arm the purchase — pick a frontier hex on the board; the price shows there" : "Not enough nous"}">Buy cell</button>
-          ${upgradeCountdown(app, cellPrice) ? `<small class="shop-countdown mono">${upgradeCountdown(app, cellPrice)}</small>` : ""}
+          ${cellCountdown}
         </span>
       </div>
     </div>

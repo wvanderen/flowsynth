@@ -3,6 +3,8 @@
 // digits above, scientific notation from 1e33, integer quantities always
 // exact, and practice-minute countdowns phrased as `in ~3:40 of practice`.
 
+// The full short-scale ladder from the redesign spec (§7); the exact range
+// begins at 1e6, so the leading "k" rung stands for completeness only.
 const LADDER = ["k", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc"] as const;
 
 // Tier boundaries: the ladder takes over at 1e6, science at 1e33.
@@ -31,12 +33,13 @@ function exact(abs: number): string {
 }
 
 function laddered(abs: number): string {
-  const tier = Math.min(LADDER.length - 1, Math.floor(Math.log10(abs) / 3));
+  const tier = Math.floor(Math.log10(abs) / 3);
   const scale = 10 ** (tier * 3);
   const mantissa = parseFloat((abs / scale).toPrecision(SIGNIFICANT_DIGITS));
-  // Rounding can carry across a rung boundary (999,999,999 → "1000M"):
-  // re-enter one tier up rather than printing four integer digits.
-  if (mantissa >= 1000) return laddered(mantissa * scale);
+  // Rounding can carry across a rung boundary (999,999,999 → "1000M",
+  // 999.9No → 1e33): re-dispatch from the top so a carried value lands on
+  // the next rung — or in scientific notation past the ladder's ceiling.
+  if (mantissa >= 1000) return formatNumber(mantissa * scale);
   return `${mantissa}${LADDER[tier - 1]}`;
 }
 

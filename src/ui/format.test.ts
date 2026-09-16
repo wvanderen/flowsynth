@@ -59,6 +59,13 @@ describe("formatNumber — the shared live-value formatter (§7)", () => {
     expect(formatNumber(4.2e40)).toBe("4.2e40");
   });
 
+  it("hands a rounding carry at the top rung to scientific notation", () => {
+    // 999.9No rounds to 1000No; the carry must re-enter past the ladder
+    // ceiling instead of recursing on the same rung.
+    expect(formatNumber(9.9996e32)).toBe("1e33");
+    expect(formatNumber(9.999e32)).toBe("999.9No");
+  });
+
   it("keeps signs and replaces non-finite values with an em dash", () => {
     expect(formatNumber(-1234)).toBe("-1,234");
     expect(formatNumber(-2e6)).toBe("-2M");
