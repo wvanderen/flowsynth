@@ -30,6 +30,19 @@ describe("theme token table", () => {
     expect(tokens["hue-carrier"]).toBeDefined();
   });
 
+  it("derives the rarity plate tints from the finish tokens", () => {
+    for (const rarity of ["common", "uncommon", "rare"]) {
+      expect(tokens[`plate-${rarity}`], rarity).toMatch(/^color-mix\(in srgb, var\(--finish-/);
+    }
+  });
+
+  it("retires rarity-as-hue: finish tokens never color a stroke", () => {
+    // Rarity is engraved rings + plate tint (ADR-0016) — the stylesheet must
+    // not paint chassis outlines, icons, or labels in finish hues.
+    expect(stylesheet.match(/stroke:\s*var\(--finish-/g)).toBeNull();
+    expect(stylesheet.match(/\.hex-icon/g)).toBeNull();
+  });
+
   it("only produces valid color values", () => {
     const primitive = /^(#[0-9a-fA-F]{3,8}|rgba\(.+\))$/;
     const derived = /^color-mix\(in srgb, var\(--[a-z0-9-]+\) \d+%, (var\(--[a-z0-9-]+\)|transparent)\)$/;

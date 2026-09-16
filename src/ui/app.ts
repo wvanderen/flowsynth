@@ -99,6 +99,9 @@ export class App {
   lastWall: number | null = null;
   lastSaveWall = 0;
   dev: boolean;
+  // The Forge's threshold-crossing flash: a roll was minted, so its face
+  // flashes until this wall-clock moment.
+  forgeFlashUntil = 0;
   // Set when the stored save was rejected (e.g. the ADR-0017 v5 clean cut):
   // the message must survive the constructor's greeting.
   private loadNotice: string | null = null;
@@ -280,7 +283,10 @@ export class App {
 
   private reportAdvance(result: AdvanceResult): void {
     const notes: string[] = [];
-    if (result.rollsBanked > 0) notes.push(`${result.rollsBanked} forge ${result.rollsBanked === 1 ? "roll" : "rolls"} banked.`);
+    if (result.rollsBanked > 0) {
+      notes.push(`${result.rollsBanked} forge ${result.rollsBanked === 1 ? "roll" : "rolls"} banked.`);
+      this.forgeFlashUntil = Date.now() + 900;
+    }
     if (result.goalsCompleted > 0) notes.push(`${result.goalsCompleted} goal${result.goalsCompleted === 1 ? "" : "s"} completed.`);
     if (notes.length > 0) this.say(notes.join(" "));
   }

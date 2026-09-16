@@ -62,8 +62,8 @@ const interactive = {
   danger: "#e08a8a",
 } as const;
 
-// Rarity = finish: subtle plate tints, never glowing, never taking a category
-// hue (ADR-0016). Ring-count engraving arrives with the module-face work.
+// Rarity = finish: engraved ring count (rendered by the module face) plus a
+// subtle plate tint, never glowing, never taking a category hue (ADR-0016).
 const finishes = {
   "finish-common": "#b4bdd8",
   "finish-uncommon": "#7fd0a8",
@@ -87,8 +87,11 @@ const semantics = {
   "switch-faint": "color-mix(in srgb, var(--switch) 7%, transparent)",
   "switch-faint-strong": "color-mix(in srgb, var(--switch) 14%, transparent)",
   "switch-glow": "color-mix(in srgb, var(--switch) 48%, transparent)",
-  "finish-uncommon-line": "color-mix(in srgb, var(--finish-uncommon) 42%, var(--line))",
-  "finish-rare-line": "color-mix(in srgb, var(--finish-rare) 42%, var(--line))",
+  // Rarity plate tints (ADR-0016): the chassis carries its rarity as a faint
+  // wash of its finish over the panel face — never a hue, never a glow.
+  "plate-common": "color-mix(in srgb, var(--finish-common) 4%, var(--hex-face))",
+  "plate-uncommon": "color-mix(in srgb, var(--finish-uncommon) 9%, var(--hex-face))",
+  "plate-rare": "color-mix(in srgb, var(--finish-rare) 14%, var(--hex-face))",
 } as const;
 
 export const defaultTheme: Theme = {

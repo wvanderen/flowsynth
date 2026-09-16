@@ -194,8 +194,13 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 #grid { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; display: block; }
 
 .board-footer { flex-shrink: 0; border-top: 1px solid var(--line); padding: 10px 0 14px; position: relative; }
+/* The board legend: the Rack's three color channels (hue = category,
+   rings = rarity, light = charge). The rail swatch sweeps every category
+   hue; the ring swatch is the engraved rarity mark. */
 .legend { display: flex; gap: 14px; font-size: 9px; color: var(--muted); margin-bottom: 6px; }
-.legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: var(--accent); margin-right: 4px; vertical-align: -1px; }
+.legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.legend i.rail { background: linear-gradient(90deg, var(--hue-generator), var(--hue-synthesizer), var(--hue-infusor), var(--hue-forge)); }
+.legend i.ring { background: transparent; border: 1px solid var(--muted); border-radius: 50%; box-sizing: border-box; }
 .legend i.ch { background: var(--charge); }
 .legend i.am { background: var(--forge-glow); }
 
@@ -214,6 +219,8 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .divider { border-top: 1px solid var(--line-soft); margin: 18px 0; }
 
 .module-heading h1 { font-size: 26px; font-weight: 550; line-height: 1.15; margin: 10px 0 2px; }
+/* Rarity reads as text here; on faces it is engraved rings + plate tint
+   (ADR-0016) — the chip stays neutral, never rarity-as-hue. */
 .rarity-chip {
   display: inline-block;
   font: 10px var(--mono);
@@ -221,12 +228,10 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   text-transform: uppercase;
   padding: 2px 8px;
   border-radius: 99px;
-  border: 1px solid currentColor;
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
   margin-bottom: 10px;
 }
-.rarity-chip.common { color: var(--finish-common); }
-.rarity-chip.uncommon { color: var(--finish-uncommon); }
-.rarity-chip.rare { color: var(--finish-rare); }
 
 .focus-controls { padding-bottom: 18px; border-bottom: 1px solid var(--line-soft); }
 .focus-controls .eyebrow { display: block; margin-bottom: 12px; }
@@ -327,7 +332,8 @@ body.live .grid-overview { opacity: 0.75; }
 .inventory-drop > p { margin-top: 8px; }
 .empty-copy { color: var(--muted); font-size: 12px; font-style: italic; }
 
-/* Inventory as a hex grid: the same tiles the board uses, ready to swap in. */
+/* Inventory as a hex grid: the same readout-panel faces the board uses,
+   ready to swap in. */
 .inventory-hexes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 12px; }
 .inventory-tile {
   display: flex;
@@ -343,19 +349,10 @@ body.live .grid-overview { opacity: 0.75; }
 .inventory-tile:hover { border-color: var(--line-strong); background: var(--hover-bg); transform: translateY(-2px); }
 .inventory-tile:focus-visible { outline-offset: 3px; }
 .inventory-tile svg { width: 100%; max-width: 112px; aspect-ratio: 1; display: block; }
-.inventory-tile .hex, .drag-ghost .hex { fill: var(--hex-face); stroke: var(--finish-common); }
-.inventory-tile .hex { stroke-width: 1.4; }
-.inventory-tile .hex-icon, .drag-ghost .hex-icon { stroke: var(--finish-common); stroke-linecap: round; stroke-linejoin: round; }
-.inventory-tile[data-rarity="uncommon"] .hex, .drag-ghost[data-rarity="uncommon"] .hex { stroke: var(--finish-uncommon); }
-.inventory-tile[data-rarity="rare"] .hex, .drag-ghost[data-rarity="rare"] .hex { stroke: var(--finish-rare); }
-.inventory-tile[data-rarity="uncommon"] .hex-icon, .drag-ghost[data-rarity="uncommon"] .hex-icon { stroke: var(--finish-uncommon); }
-.inventory-tile[data-rarity="rare"] .hex-icon, .drag-ghost[data-rarity="rare"] .hex-icon { stroke: var(--finish-rare); }
-.inventory-tile .hex-name, .drag-ghost .hex-name { fill: var(--ink); font: 600 15px sans-serif; }
-.inventory-tile .hex-sub, .drag-ghost .hex-sub { fill: var(--muted); font: 10px var(--mono); }
-.inventory-tile .hex-level, .drag-ghost .hex-level { fill: var(--muted); font: 9.5px var(--mono); letter-spacing: 0.08em; }
+.inventory-tile .hex, .drag-ghost .hex { stroke-width: 1.4; }
+.inventory-tile .face-readout, .drag-ghost .face-readout { font-size: 14px; }
 .inventory-tile.locked .hex { fill: var(--panel-deep); }
-.inventory-tile.locked .hex-icon { stroke: var(--muted); }
-.inventory-tile.locked .hex-name { fill: var(--muted); }
+.inventory-tile.locked text { fill: var(--muted); }
 
 .reshape-panel { border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-top: 14px; }
 .reshape-panel h3 { font-size: 13px; margin-bottom: 6px; }
@@ -366,6 +363,13 @@ body.live .grid-overview { opacity: 0.75; }
 
 /* ── Hex grid ──────────────────────────────────────── */
 
+/* ── Module faces: readout panels (ADR-0016, #39) ──── */
+/* A face is a shared chassis, engraved rarity rings, a narrow category rail
+   in the category hue, a condensed technical-caps nameplate, a prominent
+   contribution readout, and a smaller geometric signature. Hue = category;
+   the Carrier wears white; rarity is rings + plate tint — never hue. */
+
+/* Chassis states: structure in line colors; light and motion carry charge. */
 .hex { fill: var(--hex-face); stroke: var(--line-strong); stroke-width: 1; transition: stroke 0.2s, fill 0.2s; }
 .hex.future { fill: transparent; stroke: var(--line); stroke-dasharray: 5 4; }
 .hex.target { stroke: var(--accent); stroke-width: 2; fill: var(--accent-faint); }
@@ -380,18 +384,39 @@ body.live .grid-overview { opacity: 0.75; }
 
 .module-node { cursor: pointer; }
 .cell-node { touch-action: none; }
-.module-node text { fill: var(--ink); pointer-events: none; }
-.module-node .hex-name { font: 600 10px sans-serif; }
-.module-node .hex-sub { font: 9px var(--mono); fill: var(--muted); }
-.module-node .hex-icon { stroke: var(--finish-common); fill: none; stroke-width: 1.6; }
-.module-node[data-rarity="uncommon"] .hex-icon { stroke: var(--finish-uncommon); }
-.module-node[data-rarity="rare"] .hex-icon { stroke: var(--finish-rare); }
-.module-node[data-rarity="uncommon"] .hex:not(.selected):not(.charged):not(.dispensing):not(.locked) { stroke: var(--finish-uncommon-line); }
-.module-node[data-rarity="rare"] .hex:not(.selected):not(.charged):not(.dispensing):not(.locked) { stroke: var(--finish-rare-line); }
+.module-node text, .inventory-tile text, .drag-ghost text, .candidate-tile text { fill: var(--ink); pointer-events: none; }
 .module-node.locked text { fill: var(--muted); }
-.module-node.locked .hex-icon { stroke: var(--muted); }
-.module-node:has(.hex.dispensing) .hex-icon { stroke: var(--forge-glow); }
-.module-node:has(.hex.charged) .hex-icon { stroke: var(--charge); }
+
+/* Rarity = finish: a faint plate tint over the chassis. The light channels
+   (selection, charge, dispensing) win over the tint wherever they apply. */
+.module-node .hex, .inventory-tile .hex, .drag-ghost .hex, .candidate-tile .hex { fill: var(--plate-common); }
+.module-node[data-rarity="uncommon"] .hex:not(.selected):not(.charged):not(.dispensing):not(.locked),
+.inventory-tile[data-rarity="uncommon"] .hex, .drag-ghost[data-rarity="uncommon"] .hex, .candidate-tile[data-rarity="uncommon"] .hex { fill: var(--plate-uncommon); }
+.module-node[data-rarity="rare"] .hex:not(.selected):not(.charged):not(.dispensing):not(.locked),
+.inventory-tile[data-rarity="rare"] .hex, .drag-ghost[data-rarity="rare"] .hex, .candidate-tile[data-rarity="rare"] .hex { fill: var(--plate-rare); }
+
+/* Engraved rarity rings: hairline circles under the panel's engraving. */
+.face-rings { fill: none; stroke: var(--muted); stroke-opacity: 0.3; stroke-width: 1; pointer-events: none; }
+
+/* The narrow category rail: the face's one category-hue element, paired with
+   the signature glyph. A receiving module brightens its rail toward the
+   luminous charge register. */
+.face-rail { fill: none; stroke-width: 5; stroke-linecap: round; pointer-events: none; }
+.module-node:has(.hex.charged) .face-rail { stroke: var(--charge); }
+
+.face-name { font: 700 8.5px var(--mono); letter-spacing: 0.13em; }
+.face-level { font: 8px var(--mono); letter-spacing: 0.1em; fill: var(--muted); }
+.face-readout { font: 500 17px var(--mono); font-variant-numeric: tabular-nums; }
+.module-node[data-type="forge"] .face-readout,
+.inventory-tile[data-type="forge"] .face-readout,
+.drag-ghost[data-type="forge"] .face-readout,
+.candidate-tile[data-type="forge"] .face-readout { font-size: 12px; }
+.inventory-tile .face-readout, .drag-ghost .face-readout, .candidate-tile .face-readout { font-size: 14px; }
+/* The Forge's charge-vs-threshold readout sits in the charge register. */
+.face-readout.charge { fill: var(--charge); }
+.face-note { font: 8.5px var(--mono); letter-spacing: 0.12em; fill: var(--muted); }
+.face-category { font: 6.5px var(--mono); letter-spacing: 0.16em; fill: var(--muted); }
+.face-signature { stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 
 body.live .hex.charged { animation: charge-pulse 3s ease-in-out infinite; }
 @keyframes charge-pulse { 50% { fill: var(--charge-deep); } }
@@ -401,9 +426,13 @@ body.live .hex.charged { animation: charge-pulse 3s ease-in-out infinite; }
 .charge-preview-line { stroke: var(--charge); stroke-width: 1.5; stroke-dasharray: 3 6; opacity: 0.45; }
 .highlight-ring { fill: none; stroke: var(--charge); stroke-width: 1.5; opacity: 0.8; pointer-events: none; }
 
-/* Water fill: threshold progress rises inside the hexagon like liquid. */
+/* Threshold fill: the chargeable's progress rises inside the chassis like
+   liquid; the face flashes when it crosses. */
 .water-fill { fill: var(--charge); opacity: 0.22; transition: y 400ms ease-out, height 400ms ease-out; }
-.module-node:has(.water-fill) .hex-sub { fill: var(--charge); }
+.module-node.forge-crossed .water-fill { animation: forge-cross-fill 0.9s ease-out; }
+.module-node.forge-crossed .face-readout { animation: forge-cross-ink 0.9s ease-out; }
+@keyframes forge-cross-fill { 0% { opacity: 0.85; } 100% { opacity: 0.22; } }
+@keyframes forge-cross-ink { 0%, 55% { fill: var(--ink); } }
 
 .lock-mark { fill: var(--muted); font: 9px var(--mono); }
 
@@ -419,7 +448,7 @@ body.managing .module-node {
 }
 body.managing .cell-node:has(> .hex.empty) { opacity: 0.55; }
 
-/* The live drag ghost: the module's own hex tile, carried under the cursor. */
+/* The live drag ghost: the module's own face tile, carried under the cursor. */
 .drag-ghost {
   position: fixed;
   z-index: 100;
@@ -430,7 +459,6 @@ body.managing .cell-node:has(> .hex.empty) { opacity: 0.55; }
   filter: drop-shadow(0 14px 12px var(--shadow));
 }
 .drag-ghost svg { width: 100%; height: 100%; display: block; }
-.drag-ghost .hex { stroke-width: 1.6; }
 .dragging { opacity: 0.35; }
 
 /* Arranging banner: a persistent header row while the mode is on. Static
@@ -470,9 +498,9 @@ body.buying #buy-banner { display: flex; }
 
 .config-label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 
-/* Module pin: the Carrier is granted and pinned — it never moves. */
-.module-pin { stroke: var(--forge-glow); fill: none; stroke-width: 1.4; stroke-linecap: round; }
-.module-pin circle { fill: var(--forge-faint); }
+/* Module pin: the Carrier is granted and pinned — it never moves. The pin
+   is a neutral instrument marking, never a hue. */
+.module-pin { stroke: var(--muted); fill: var(--panel-deep); stroke-width: 1.4; stroke-linecap: round; }
 .module-node .module-pin { cursor: help; }
 
 /* Drop targets: swap (accent) versus combine with a matching twin (amber). */
@@ -509,7 +537,7 @@ body.buying #buy-banner { display: flex; }
 .modal:has(.candidates) { width: min(820px, 100%); }
 .candidates { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; padding: 12px 8px 8px; }
 
-/* Forge candidates are canvas-style hex modules; clicking the hex takes it. */
+/* Forge candidates are readout-panel faces; clicking the hex takes it. */
 .candidate-tile {
   display: flex;
   flex-direction: column;
@@ -526,17 +554,8 @@ body.buying #buy-banner { display: flex; }
 .candidate-tile:hover:not(:disabled) { border-color: var(--line-strong); background: var(--hover-bg); transform: translateY(-2px); }
 .candidate-tile:focus-visible { outline-offset: 4px; }
 .candidate-tile svg { width: 150px; height: 150px; }
-.candidate-tile .hex { fill: var(--hex-face); stroke: var(--finish-common); stroke-width: 1.4; transition: stroke 0.15s; }
-.candidate-tile[data-rarity="uncommon"] .hex { stroke: var(--finish-uncommon); }
-.candidate-tile[data-rarity="rare"] .hex { stroke: var(--finish-rare); }
 .candidate-tile:hover:not(:disabled) .hex { fill: var(--accent-faint); }
-.candidate-tile .hex-icon { stroke: var(--finish-common); stroke-linecap: round; stroke-linejoin: round; }
-.candidate-tile[data-rarity="uncommon"] .hex-icon { stroke: var(--finish-uncommon); }
-.candidate-tile[data-rarity="rare"] .hex-icon { stroke: var(--finish-rare); }
-.candidate-tile .hex-name { fill: var(--ink); font: 600 12px sans-serif; }
-.candidate-tile .hex-sub { fill: var(--muted); font: 10px var(--mono); }
-.candidate-tile .hex-level { fill: var(--muted); font: 9px var(--mono); letter-spacing: 0.08em; }
-.candidate-tile .rarity { font: 10px var(--mono); text-transform: uppercase; letter-spacing: 0.1em; }
+.candidate-tile .rarity { font: 10px var(--mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
 .candidate-tile .candidate-scaling { font: 10.5px var(--mono); color: var(--muted); text-align: center; }
 .candidate-tile .candidate-effect { font-size: 11.5px; color: var(--muted); text-align: center; line-height: 1.7; }
 
@@ -617,8 +636,6 @@ body.buying #buy-banner { display: flex; }
 .hex.empty { fill: var(--panel-deep); stroke: var(--line-strong); stroke-dasharray: 3 5; }
 .cell-node > .hex-sub { fill: var(--muted); font: 9px var(--mono); }
 .empty-plus { fill: none; stroke: var(--muted); stroke-width: 1; }
-.hex-icon { stroke-linecap: round; stroke-linejoin: round; }
-.module-node .hex.selected { stroke: var(--accent); stroke-width: 2.5; }
 .cell-node:hover .hex { stroke-width: 2; }
 .cell-node:focus-visible { outline: none; }
 .cell-node:focus-visible .hex { stroke: var(--ink); stroke-width: 3; }
