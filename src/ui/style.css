@@ -151,6 +151,9 @@ h1, h2, h3, p { margin: 0; }
 }
 .console-slot .eyebrow { display: block; margin-bottom: 3px; }
 .console-slot strong { font: 17px var(--mono); font-weight: 400; display: block; }
+/* Numeric readouts sit in a reserved right-aligned column: a ticking
+   counter changes digits, never the layout around it. */
+.console-slot strong[data-live] { min-width: 10ch; text-align: right; }
 .console-status { display: flex; align-items: center; gap: 20px; }
 .console-slot .mode-value { font-size: 12px; letter-spacing: 0.08em; padding-top: 4px; }
 .trophy-slot { display: flex; align-items: center; }
