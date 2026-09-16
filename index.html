@@ -52,15 +52,10 @@
             <button class="small" id="buy-banner-cancel">Cancel</button>
           </div>
           <div class="board-space"><svg id="grid" role="group" aria-label="Module grid"></svg></div>
-          <div class="board-footer">
-            <div class="legend">
-              <span><i></i>Production</span>
-              <span><i class="ch"></i>Receiving charge</span>
-              <span><i class="am"></i>Dispensing</span>
-              <span id="cell-count"></span>
-            </div>
-            <div class="rate-formula" id="rate-formula"></div>
-          </div>
+          <!-- The status monitor (ADR-0015): the board footer's whole
+               section — the full-width horizon rail, formula chip and Forge
+               chip on its top edge, the Arete accumulator spanning beneath. -->
+          <div class="board-footer status-monitor" id="status-monitor"></div>
         </section>
         <aside class="inspector" id="inspector"></aside>
       </main>

@@ -1,4 +1,5 @@
 import { EPS } from "./constants";
+import { syncArete } from "./accumulator";
 import { chargeWindowActive, computeRates, deployed } from "./economy";
 import { addForgeProgress, type Rng } from "./rolls";
 import { accrueLivePractice } from "./habits";
@@ -10,6 +11,7 @@ export function advance(state: GameState, seconds: number, rng: Rng = Math.rando
     nousEarned: 0,
     rollsBanked: 0,
     goalsCompleted: 0,
+    areteMinted: 0,
   };
   if (state.mode !== "flow" || seconds <= EPS) return result;
   const session = state.session;
@@ -22,6 +24,8 @@ export function advance(state: GameState, seconds: number, rng: Rng = Math.rando
   state.nous += gained;
   state.totalEarned += gained;
   result.nousEarned += gained;
+  // Filling the accumulator mints Arete (ADR-0015).
+  result.areteMinted += syncArete(state);
   if (snapshot.forgeRate > 0) {
     result.rollsBanked += addForgeProgress(state, snapshot.forgeRate * seconds, rng);
   }

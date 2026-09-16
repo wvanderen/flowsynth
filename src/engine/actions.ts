@@ -56,6 +56,14 @@ export function resumeSession(state: GameState): ActionResult {
   return ok;
 }
 
+// The reserved prestige button (ADR-0015): inert at launch — pressing only
+// acknowledges the horizon. The flag persists so the achievements ticket can
+// detect the gesture ("Eyes on the horizon").
+export function acknowledgeHorizon(state: GameState): ActionResult {
+  state.horizonAcknowledged = true;
+  return ok;
+}
+
 // The starter shelf (ADR-0013): one-time offers for the launch categories.
 // All nous spending is upgrade-mode-only (§3); there is no separate store
 // gate — upgrade mode itself is the purchase window.
