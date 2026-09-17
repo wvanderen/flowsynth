@@ -74,6 +74,10 @@ export interface UiState {
   chosenTarget: number | null;
   showAcquired: boolean;
   editingHabitId: string | null;
+  // The chord view (issue #62): display-only highlight of the board's chord
+  // terms — chord voices stay lit, everything else dims, pair links and
+  // named-chord hulls draw in the chord register. Never affects gameplay.
+  showChords: boolean;
 }
 
 interface LoadedSave {
@@ -112,6 +116,7 @@ export class App {
     chosenTarget: 600,
     showAcquired: false,
     editingHabitId: null,
+    showChords: false,
   };
   lastWall: number | null = null;
   lastSaveWall = 0;
@@ -282,6 +287,22 @@ export class App {
       if (inside) return;
       this.closeApp();
     });
+    // The chord view's keyboard beat (issue #62): C toggles the highlight.
+    // Display only, so it works in every mode — but never while typing.
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "c" && event.key !== "C") return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.isContentEditable || target.matches("input, textarea, select"))) return;
+      this.toggleChords();
+    });
+  }
+
+  // The chord view is a reading aid, not a session artifact: it neither
+  // clears with the transient interaction modes nor reaches the save.
+  toggleChords(): void {
+    this.ui.showChords = !this.ui.showChords;
+    this.render();
   }
 
   tick(): void {

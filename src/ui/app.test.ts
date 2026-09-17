@@ -6,6 +6,8 @@ import { createHabit, selectHabit } from "../engine/habits";
 import { BALANCE } from "../engine/constants";
 import { startSession, endSession } from "../engine/actions";
 import { advance } from "../engine/advance";
+import { give } from "../engine/fixtures";
+import { hex } from "../engine/hex";
 import type { GameState } from "../engine/types";
 
 // UI smoke tests: the console chrome, the enter-prompt gating, and the
@@ -148,6 +150,58 @@ describe("the board toolbar", () => {
     armed.click();
     expect(app.ui.buyingCell).toBe(false);
     expect(document.getElementById("buy-banner")).toBeNull();
+  });
+});
+
+describe("the chord view", () => {
+  it("toggles from the toolbar and the C key, in either mode", () => {
+    const button = () => document.getElementById("tool-chords") as HTMLButtonElement;
+    expect(app.ui.showChords).toBe(false);
+    button().click();
+    expect(app.ui.showChords).toBe(true);
+    expect(button().classList.contains("active")).toBe(true);
+    expect(button().getAttribute("aria-pressed")).toBe("true");
+    // The keyboard beat toggles.
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "c" }));
+    expect(app.ui.showChords).toBe(false);
+    // Typing a c never toggles it.
+    const input = document.createElement("input");
+    document.body.append(input);
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+    expect(app.ui.showChords).toBe(false);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "c" }));
+    expect(app.ui.showChords).toBe(true);
+    // A reading aid, not a purchase surface: it stays live during flow.
+    startSession(app.state, 600);
+    app.render();
+    expect(button().disabled).toBe(false);
+    button().click();
+    expect(app.ui.showChords).toBe(false);
+    endSession(app.state);
+  });
+
+  it("lights chord voices, dims the rest, links the pair, labels the named chord", () => {
+    // The octave: the Carrier (pitch 1) plus an additive one hex out.
+    give(app.state, "additive", hex(1, 0));
+    // A raw pair island at pitches 6–7: below the triad vocabulary's reach.
+    app.state.cells.push(hex(5, 0), hex(6, 0));
+    give(app.state, "additive", hex(5, 0));
+    give(app.state, "additive", hex(6, 0));
+    app.ui.showChords = true;
+    app.render();
+    const grid = document.getElementById("grid")!;
+    expect(grid.classList.contains("chord-view")).toBe(true);
+    expect(grid.querySelectorAll(".cell-node.chord-lit")).toHaveLength(4);
+    expect(grid.querySelectorAll(".cell-node.chord-dim")).toHaveLength(1);
+    expect(grid.querySelectorAll(".chord-link")).toHaveLength(1);
+    expect(grid.querySelectorAll(".chord-hull")).toHaveLength(1);
+    expect(grid.querySelector(".chord-label")!.textContent).toBe("Octave ×1.15");
+    // Off again: the board returns undimmed, no overlay nodes linger.
+    app.ui.showChords = false;
+    app.render();
+    expect(grid.classList.contains("chord-view")).toBe(false);
+    expect(grid.querySelectorAll(".chord-link, .chord-hull, .chord-label")).toHaveLength(0);
+    expect(grid.querySelectorAll(".cell-node.chord-dim")).toHaveLength(0);
   });
 });
 
