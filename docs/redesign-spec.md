@@ -2,7 +2,7 @@
 
 The decoupled board, the opening, the horizon, and the Rack — assembled for implementation.
 
-**Status**: produced by the FlowSynth redesign map ([issue #9](https://github.com/wvanderen/flowsynth/issues/9)); every decision below is final for this effort and traceable to its deciding ticket. Exact numbers are **provisional tuning** unless a source says otherwise. Companion records: ADR-0012…0017 (supersessions) and the rewritten `CONTEXT.md` (glossary). Where this spec and an ADR disagree, the ADR wins; where both are silent, consult the linked ticket.
+**Status**: produced by the FlowSynth redesign map ([issue #9](https://github.com/wvanderen/flowsynth/issues/9)); every decision below is final for this effort and traceable to its deciding ticket. Exact numbers are **provisional tuning** unless a source says otherwise. Companion records: ADR-0012…0018 (supersessions) and the rewritten `CONTEXT.md` (glossary). Where this spec and an ADR disagree, the ADR wins; where both are silent, consult the linked ticket.
 
 ---
 
@@ -28,7 +28,7 @@ The hex board is **purely the optimization game**. Modules occupy cells; every n
 | Category | Role | Launch types |
 |---|---|---|
 | **Synthesizer** | contributes harmonic terms to nous composite | the Carrier (unique), Additive, Conditional |
-| **Generator** | produces charge | basic generator, focus-keyed generator |
+| **Generator** | produces charge | focus-keyed generator — the plain generator is retired pre-release (→ ADR-0018) |
 | **Infusor** | amplifies neighboring effects | basic infusor |
 | **Forge** | chargeable; threshold-minted rolls | the Forge |
 
@@ -41,12 +41,12 @@ The hex board is **purely the optimization game**. Modules occupy cells; every n
 The top bar is promoted to the **console**, structurally above the game UI:
 
 - Session controls: **Enter/Exit main switch** (vermillion; bright/animated = live, dim = idle), clock, pause.
-- One tile per focus app — greyed until activated, state LED when active; locked tiles open nothing and carry one-line locknotes naming the gate ("after your first session", "activate with nous").
-- The status strip (trophy glyph → achievements popover), the nous balance, and the rung telegraph (`NEXT RUNG 45 · ANY APP`).
+- One tile per focus app — greyed until activated, then wearing live state in the tile itself (selected habit, planned clock); icon-only tiles carry unlock gates in their tooltips. State LEDs and locknotes are retired (→ ADR-0018).
+- The status strip (trophy glyph → achievements popover) and the nous balance. The rung telegraph is retired — the catalog's ladder rows already price every rung (→ ADR-0018).
 
 **Focus apps — Habit, Time, Notes, Goals — are unlock-only, fixed-function instruments.** No power-curve levels. Their permanent upgrades (goal capacity et al.) are **console long goals**: hand-paced, one at a time at named beats, priced past the current build-out, never grindable back-to-back, gated behind the app's activation, rendered as a dashed strip in the owning app's panel. Tasks joins the console when designed.
 
-**Console UX** ([Focus-view UX, #20](https://github.com/wvanderen/flowsynth/issues/20); prototype branch `prototype/console-ux`, commit `272310f`, open `/?prototype=console&variant=A`): app panels open as **popovers anchored directly beneath their tile** — short mouse travel, and the board never moves, reflows, or dims in console use. Purchases are read-only in flow; locknotes name the upgrade-mode gate and the practice-minute countdown. A centered faceplate modal over a dimmed board is the noted future-mobile alternative — not this effort's shape.
+**Console UX** ([Focus-view UX, #20](https://github.com/wvanderen/flowsynth/issues/20); prototype branch `prototype/console-ux`, commit `272310f`, open `/?prototype=console&variant=A`): app panels open as **popovers anchored directly beneath their tile** — short mouse travel, and the board never moves, reflows, or dims in console use. Purchases are read-only in flow; tooltips carry the upgrade-mode gate and the practice-minute countdown (→ ADR-0018 retired locknotes). A centered faceplate modal over a dimmed board is the noted future-mobile alternative — not this effort's shape.
 
 ### 2.3 The boundary rule (the focus↔grid seam)
 
@@ -72,10 +72,10 @@ The top bar is promoted to the **console**, structurally above the game UI:
 
 - **Start state**: upgrade mode on a tiny all-discretionary board — the Carrier at the origin plus ~2 empty cells.
 - **Grant** = exactly the Carrier's first upgrade price (below the shelf floor). Beat one: buy it, watch the carrier term move, balance returns to zero.
-- **The starter shelf**: one-time catalog offers — Forge, basic generator, infusor — hidden once acquired. Completes the landscape: every launch category guaranteed exactly once; everything else comes from rolls. The shelf's basic generator is the guaranteed charge ignition; synthesizers never generate.
+- **The starter shelf**: one-time catalog offers — Forge, the generator, an Additive Synth, infusor — hidden once acquired (→ ADR-0018 shelved the synth and keyed the generator). Completes the landscape: synthesizers are guaranteed twice at launch (the Carrier plus one harmonic), so chord play exists before the first roll; everything else comes from rolls. Ignition is a second-session reserve payoff — session one produces no charge anywhere; synthesizers never generate.
 - **Cells**: direct nous purchases on a steep geometric scaler over total cells bought; bought and placed in upgrade mode; connected-board and reshaping rules unchanged. The first acquired module must be placeable without buying a cell first.
 - **The expander is retired**; charge feeds the Forge only.
-- **The catalog** is the permanent upgrade-mode purchase surface (named here per the delegation in #24's handoff; post-shelf contents remain map fog): starter shelf while available, cells, module upgrades.
+- **The catalog** is the permanent upgrade-mode purchase surface (named here per the delegation in #24's handoff; post-shelf contents remain map fog): app activations, the starter shelf while available, and cells — module upgrades live on module panels (→ ADR-0018).
 - **The activation ladder**: shared, scaling, free order. Rung 1 below the shelf floor; each later rung costs more, counted globally regardless of app. Habit free; Time auto-activates after the first session; Notes and Goals are the launch rungs in either order. App upgrades appear only after activation.
 - **Purchase windows**: **all nous spending is upgrade-mode-only.** Live sessions are read-only. Practice-minute countdowns render on purchase surfaces in upgrade mode only — never in-session, never in the summary.
 
@@ -103,9 +103,9 @@ composite = (carrier + Σ harmonic terms) × Π chord terms
 
 1. **First launch — upgrade mode.** Opens directly on the tiny board: the Carrier pinned at the origin with a subtle pin locknote, ~2 empty cells. A one-time welcome card: the Carrier is granted, its first upgrade already affordable; a single CTA on the Carrier's upgrade button. Unforced — skipping straight to a session loses nothing.
 2. **Beat one — first upgrade.** The carrier term visibly bumps in the status monitor; balance returns to zero.
-3. **The surfaces around minute 0.** The catalog lists the starter shelf (Forge, generator, infusor), each priced below reach with practice-minute countdowns; items vanish as acquired. The console rail shows greyed tiles with state LEDs and locknotes; locked tiles open nothing.
+3. **The surfaces around minute 0.** The catalog lists the starter shelf (Forge, generator, Additive Synth, infusor), each priced below reach with practice-minute countdowns; items vanish as acquired. The console rail shows greyed tiles with unlock gates in their tooltips; locked tiles open nothing (→ ADR-0018).
 4. **Status monitor, pre-session.** Projected rate per practice-minute, the carrier term alone, earned-so-far 0 — the whole formula is one term. Teaching by solitude.
-5. **Enter prompt.** "What are you practicing?" — the habit ask, with **practice unstructured** as a visible affordance at every session start (no habit development accrues, nous unaffected). Copy suggests ~5 minutes (tuning) then exiting; the session is mechanically **open-ended** — planned targets arrive with Time.
+5. **Enter prompt.** "What are you practicing?" — the habit ask; it opens whenever no habit is selected, so session one always meets it, and once a habit is selected the Enter switch starts directly (→ ADR-0018). Unstructured practice stays a visible affordance of the prompt (no habit development accrues, nous unaffected); the ~5-minute suggestion copy was cut in the copy pass (→ ADR-0018). The session is mechanically **open-ended** — planned targets arrive with Time.
 6. **Session one — pure flow.** HUD: ticking nous counter and per-practice-minute rate. No countdowns in-session, no apps, zero purchases possible. The beats are identical whatever the session's length or early exit.
 7. **End — the loud summary.** A modal on returning to upgrade mode, however the session ended. Rows: headline "this session earned X nous" · practice minutes · rate achieved with the carrier-only breakdown · "New feature unlocked — time your flow sessions" (Time auto-activated). No countdown rows. The modal is the future home of session reflections (out of scope).
 8. **Post-session — the first real decision.** Time is live on the rail. Side-by-side and deliberately unguided: open Notes or Goals at rung 1 (below the shelf floor), or save toward the catalog's generator — its row carries the one permanent hint: "produces charge — feeds the Forge."
@@ -124,7 +124,7 @@ composite = (carrier + Σ harmonic terms) × Π chord terms
 
 ### 6.2 The status monitor (horizon rail)
 
-The monitor **is** the accumulator: full-width rail under the grid, **hard cap of three elements** — the live formula chip and the Forge progress meter docked as chips on its top edge (now / this stretch), the accumulator beneath (the era). The **grid overview panel dissolves**: expansion meter and cell tokens retire; banked rolls move to the Forge surface; charge to board/module surfaces; counts to the views they describe. The static formula explainer dies → progressive disclosure on the formula chip (hover/focus: carrier, harmonics, chord, empowerment → rate). Mode-guidance text is the console's business.
+The monitor **is** the accumulator: full-width rail under the grid, **hard cap of two elements** — the live formula chip docked on its top edge, the accumulator beneath (the era); the Forge progress meter rides the toolbar's Forge pip (→ ADR-0018). The **grid overview panel dissolves**: expansion meter and cell tokens retire; banked rolls move to the Forge surface; charge to board/module surfaces; counts to the views they describe. The static formula explainer dies → progressive disclosure on the formula chip (hover/focus: carrier, harmonics, chord, empowerment → rate). Mode-guidance text is the console's business.
 
 ### 6.3 Achievements
 
@@ -200,22 +200,28 @@ The monitor **is** the accumulator: full-width rail under the grid, **hard cap o
 | Static formula explainer panel | dedicated panel | progressive disclosure on the formula chip |
 | Grid overview panel | stats aggregate | dissolved; stats dispositioned per §6.2 |
 | v1–v4 saves + migrate chain | grandfathered migration | v5 clean cut (§9) |
+| State LEDs + tile locknotes | tile fixtures naming state and gates | tiles wear live state; gates live in tooltips (→ ADR-0018) |
+| Rung telegraph | console readout (`NEXT RUNG 45 · ANY APP`) | catalog ladder rows price every rung (→ ADR-0018) |
+| Mode slot | console readout of session mode | the main switch is the mode indicator (→ ADR-0018) |
+| Monitor Forge meter | status-monitor chip | toolbar Forge pip with exact progress in its tooltip (→ ADR-0018) |
+| Catalog module upgrades | purchase surface | module panels own upgrades (→ ADR-0018) |
+| Session-start flavor copy (~5-minute suggestion, modal leads, toast tails) | reassurance text | surfaces carry data, not commentary (→ ADR-0018) |
 
-**ADR disposition**: ADR-0001 focus protection + charge pause stand (extended to all purchasing); session-reward provisions superseded → ADR-0012/0013. ADR-0002 charge preservation stands; core-generation clause overtaken; expansion exceptions retired → ADR-0012/0013. ADR-0003 superseded in board-core provisions → ADR-0012; reshape/banking survive. ADR-0004 superseded → ADR-0014 (two legs kept). ADR-0005 stands; Tasks deferred. ADR-0006 upgrade/combination stand; expansion half superseded → ADR-0013. ADR-0007 superseded → ADR-0012/0013; guaranteed-access rationale survives as the shelf. ADR-0008 visual provision superseded → ADR-0016; scope/economy provisions superseded → ADR-0012/0013/0015; desktop-first/offline/local persistence stand. ADR-0009 stands. ADR-0010 stands; migration chain deleted → ADR-0017. ADR-0011 repointed at apps → ADR-0012; prices superseded → ADR-0013; grandfathering superseded → ADR-0017.
+**ADR disposition**: ADR-0001 focus protection + charge pause stand (extended to all purchasing); session-reward provisions superseded → ADR-0012/0013. ADR-0002 charge preservation stands; core-generation clause overtaken; expansion exceptions retired → ADR-0012/0013. ADR-0003 superseded in board-core provisions → ADR-0012; reshape/banking survive. ADR-0004 superseded → ADR-0014 (two legs kept). ADR-0005 stands; Tasks deferred. ADR-0006 upgrade/combination stand; expansion half superseded → ADR-0013. ADR-0007 superseded → ADR-0012/0013; guaranteed-access rationale survives as the shelf. ADR-0008 visual provision superseded → ADR-0016; scope/economy provisions superseded → ADR-0012/0013/0015; desktop-first/offline/local persistence stand. ADR-0009 stands. ADR-0010 stands; migration chain deleted → ADR-0017. ADR-0011 repointed at apps → ADR-0012; prices superseded → ADR-0013; grandfathering superseded → ADR-0017. ADR-0015's three-element monitor composition is amended → ADR-0018.
 
 ## 11. Glossary
 
-The rewrite of `CONTEXT.md` ships in this change set: new terms (Carrier, Pitch, Chord pair, Named chord, Composite, Charge window, Console, Focus app, App activation, Activation ladder, Console long goal, Catalog, Starter shelf, Cell, Module category, Chargeable, Status monitor, Arete, Arete accumulator, Horizon line, Achievement, Session summary, Unstructured practice, Practice-minute countdown, Planned target), rewritten terms (Nous production rate, Synthesizer, Charge, Generator, Goal template, open-ended session, the four app entries), and the retirements in §10.
+The rewrite of `CONTEXT.md` ships in this change set: new terms (Carrier, Pitch, Chord pair, Named chord, Composite, Charge window, Console, Focus app, App activation, Activation ladder, Console long goal, Catalog, Starter shelf, Cell, Module category, Chargeable, Status monitor, Arete, Arete accumulator, Horizon line, Achievement, Session summary, Unstructured practice, Practice-minute countdown, Planned target), rewritten terms (Nous production rate, Synthesizer, Charge, Generator, Goal template, open-ended session, the four app entries), and the retirements in §10. ADR-0018's pass additionally rewrites Module type, Catalog, Console, and Status monitor.
 
 ## 12. Deferred and out of scope
 
-**Map fog (in scope for future efforts, not this one)** — new chargeable categories beyond the Forge; new synthesizer types (octave/sub carriers, chain-relay pitch, chosen waveforms); bridge modules (gapped-ratio canon); resonance groups; new generator types beyond the launch two; focus-keyed board modules beyond the launch generator; the transmit-style infusor; the catalog's post-shelf contents.
+**Map fog (in scope for future efforts, not this one)** — new chargeable categories beyond the Forge; new synthesizer types (octave/sub carriers, chain-relay pitch, chosen waveforms); bridge modules (gapped-ratio canon); resonance groups; new generator types beyond the launch generator; focus-keyed board modules beyond the launch generator; the transmit-style infusor; the catalog's post-shelf contents.
 
 **Out of scope** — prestige design (kept possible only); deferred breadth (Tasks console app, console upgrades beyond the paced set, habit development, secondary effects and rarity inheritance, achievement breadth beyond the seeds); theme variants; platform growth (phone, sync, accounts); session reflections.
 
 ## 13. Handoff notes for implementation sessions
 
-- **Read order**: this spec → ADR-0012…0017 → the linked tickets for any section's rationale → `research/implementation-survey.md` §7 for the coupled-code map.
+- **Read order**: this spec → ADR-0012…0018 → the linked tickets for any section's rationale → `research/implementation-survey.md` §7 for the coupled-code map.
 - **Suggested sequencing** (one vertical at a time, engine-first): (1) engine model rewrite — categories, Carrier, formula + chords, charge/Forge-only, v5 state (ADR-0014, 0012, 0017); (2) opening + ladder + catalog + onboarding script (ADR-0013, §5); (3) progression — accumulator, monitor, achievements (§6); (4) UI/theme — console, readout panels, token table, display scheme (§7, §8). Each step lands with its test suite reworked; the 104 existing engine tests are the baseline to consciously retire or port.
 - **Tuning fronts** (numbers, not spec): grant/shelf/rung/cell prices and scalers; empowerment curve constants; chord pair + named-chord bonuses; achievement boost per feat; the ~100k horizon and log floor; the focus-keyed generator's fraction and window; hue hexes; glyph art; the ~10 Hz tick.
 - **Prototype assets** (throwaway, branches): `prototype/new-opening` (`fabb7e5`), `prototype/console-ux` (`272310f`), `prototype/retheme-module-faces` (`a27f64c`), `prototype/status-monitor` (`ef5618b`), `prototype/chord-geometry` — reference for intent, not code to keep.

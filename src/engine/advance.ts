@@ -7,6 +7,15 @@ import { accrueLivePractice } from "./habits";
 import { accrueGoalProgress } from "./goals";
 import type { AdvanceResult, GameState } from "./types";
 
+function sumResults(a: AdvanceResult, b: AdvanceResult): AdvanceResult {
+  return {
+    nousEarned: a.nousEarned + b.nousEarned,
+    rollsBanked: a.rollsBanked + b.rollsBanked,
+    goalsCompleted: a.goalsCompleted + b.goalsCompleted,
+    areteMinted: a.areteMinted + b.areteMinted,
+  };
+}
+
 export function advance(state: GameState, seconds: number, rng: Rng = Math.random): AdvanceResult {
   const result: AdvanceResult = {
     nousEarned: 0,
@@ -33,12 +42,7 @@ export function advance(state: GameState, seconds: number, rng: Rng = Math.rando
     const split = state.chargeWindow;
     const first = advance(state, split, rng);
     const second = advance(state, seconds - split, rng);
-    return {
-      nousEarned: first.nousEarned + second.nousEarned,
-      rollsBanked: first.rollsBanked + second.rollsBanked,
-      goalsCompleted: first.goalsCompleted + second.goalsCompleted,
-      areteMinted: first.areteMinted + second.areteMinted,
-    };
+    return sumResults(first, second);
   }
 
   // The board is locked during flow, so the rate is constant across the

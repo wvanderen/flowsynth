@@ -11,9 +11,23 @@ The first played sessions of the polish pass (issue #46, 2026-09-16) exposed thr
 - **Console readouts consolidate.** The activation-ladder rung telegraph is cut (the catalog's ladder rows already price every rung); production reads in one place — the console's Production slot shows the per-second rate (rates are per-second everywhere, §7) plus the live session's running total; the duplicate counter under the session clock is removed.
 - **v5 saves from before this change** are remapped, not rejected: stored "generator" modules and unspent roll candidates load as focus-keyed, and shelf keys added later default to unpurchased. The version stays 5 — no players exist pre-release, and a structural rejection would erase the maintainer's review save for no gain.
 
+## Refinements from the played review
+
+Playing the review of the earlier slices — still issue #46, 2026-09-16 — settled a second round of decisions. Each began as a deviation from the redesign spec, arrived at through refinement rather than redesign; they are recorded here and locked in.
+
+- **The Forge meter moves from the monitor to the toolbar.** The status monitor carries exactly two elements — the live formula chip and the Arete accumulator; Forge progress rides a fill pip on the toolbar's Forge button, with exact progress in its tooltip. This amends ADR-0015's three-element composition: the meter lives on the surface where rolls are spent, and the cap stays a guard against the monitor regrowing, not a quota to fill.
+- **Tiles and popovers speak through their controls, not fixtures.** State LEDs and locknotes are retired: app tiles wear live state directly (the habit tile shows the selected habit or "no habit"; the Time tile wears the planned clock — counting down what remains on a planned session, counting up open-ended; in upgrade mode the clock slot shows the target time with "planned" as its caption), Notes and Goals are icon-only with unlock gates in their tooltips, popovers open bare (no title row, no close button, no eyebrow), readouts show bare values in reserved-width columns, and the main switch itself is the mode indicator (off / glowing live / held paused) — the Mode slot is gone. Amends §2.2 and §5.3's tile language.
+- **Module upgrades leave the catalog.** The catalog sells app activations, the starter shelf, and cells; upgrades live in module panels only, beside the modules they belong to. Amends §3's catalog contents.
+- **The Enter switch starts directly when a habit is selected.** The habit ask opens only when no habit is selected, so nobody selects twice; unstructured practice stays a visible affordance of the prompt, and session one — with no habit yet — still meets §5.5's ask. Amends §5.5's "visible affordance at every session start".
+- **Shelf purchases land in inventory, not the board.** Buying from the shelf no longer auto-places; placement stays a player act in upgrade mode (the old auto-placement read as a dead close).
+- **The flavor text is cut app-wide** — the summary reflections line, panel reassurances, modal leads, toast tails, and the §5.5 "~5 minutes" suggestion. Surfaces carry data, not commentary.
+
 ## Consequences
 
+- **Amends ADR-0015**: the monitor's "exactly three elements" is now two — the formula chip and the accumulator; the Forge progress meter is the toolbar's pip.
 - **Amends ADR-0013**: the shelf's contents ("Forge, one basic generator, and one infusor") and the category-once guarantee; the opening's "~2 empty cells" becomes a named triangle. ADR-0013's grant, cell-purchase, and ladder provisions stand.
 - **Amends the §2.3 launch exception's framing**: what was one focus-keyed exception is now the launch generator rule (still live-practice-only; manual logs never bank).
 - The redesign spec's §5 line "octave 1:2 … teachable in session one" is now actually true instead of aspirational.
 - The Forge cannot charge during session one even when bought and placed — the summary teaches the reserve idea instead ("your generator banked a charge window"), and the charge window readout on the generator's face and the board's dim wiring previews make the banked state visible.
+- `CONTEXT.md` is reconciled: Module type (the basic-generator example), Catalog (activations, shelf, cells — upgrades off the catalog), Console (telegraph and state LED gone; the switch is the mode indicator), and Status monitor (two elements plus the Forge pip).
+- The redesign spec's drifted lines are annotated → ADR-0018 (§2.1's generator table, §2.2's tiles and telegraph, §3's shelf and catalog, §5's beats 3 and 5, §6.2's monitor, §11's glossary roll-up, §12's "launch two" — now a launch pair of one), and §10's ledger gains this pass's retirements.

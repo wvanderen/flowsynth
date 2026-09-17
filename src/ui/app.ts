@@ -39,7 +39,8 @@ import {
   selectHabit,
 } from "../engine/habits";
 import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
-import type { GameState, Hex, ShelfType } from "../engine/types";import { render } from "./render";
+import type { GameState, Hex, ShelfType } from "../engine/types";
+import { render } from "./render";
 import { APP_LABELS, META } from "./meta";
 
 // The session modal surfaces (§5.5, §5.7): the enter prompt precedes every

@@ -10,6 +10,12 @@ import type { GameState } from "./types";
 // Elapsed marker for notes captured outside any session.
 export const NOTE_BETWEEN_SESSIONS = -1;
 
+// The one place that decodes the marker: a note is in-flow when it carries
+// a session clock. Marginalia and the note ladder count only these.
+export function isInFlowNote(note: { atElapsed: number }): boolean {
+  return note.atElapsed !== NOTE_BETWEEN_SESSIONS;
+}
+
 export function writeNote(state: GameState, text: string): { ok: boolean; reason?: string } {
   const trimmed = text.trim();
   if (!trimmed) return { ok: false, reason: "Write something first." };

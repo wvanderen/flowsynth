@@ -9,15 +9,6 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
   forge: { name: "Forge", short: "Forge", role: "Rolls at threshold" },
 };
 
-// Shelf rows speak through the module they grant (ADR-0018: the generator
-// offer is the focus-keyed generator; the additive synth is shelved).
-export const SHELF_MODULE: Record<ShelfType, ModuleType> = {
-  additive: "additive",
-  generator: "focusKeyed",
-  infusor: "infusor",
-  forge: "forge",
-};
-
 // The shelf's one permanent hint (§5.8): the guaranteed generator row names
 // what charge is for, since nothing else on the board explains it. Every
 // other row speaks for itself.

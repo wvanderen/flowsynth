@@ -5,7 +5,7 @@ import { forgeThreshold } from "../engine/rolls";
 import { BALANCE, CATEGORY_OF, NEXT_RARITY, SHELF_MODULE } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
 import { appActive, appLockNote, FOCUS_APPS, LADDER_APPS, nextRung, nextRungCost, type FocusApp } from "../engine/apps";
-import { NOTE_BETWEEN_SESSIONS } from "../engine/notes";
+import { isInFlowNote } from "../engine/notes";
 import { activeHabit } from "../engine/habits";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
@@ -1040,7 +1040,6 @@ function appPanelBody(app: App, panel: FocusApp): string {
           <select id="console-duration" aria-label="Session duration">${durationOptionsHtml(app)}</select>
           <p class="clock-caption">${app.ui.chosenTarget === null ? "Open-ended" : "Planned practice"}</p>
         </div>
-        
       </section>`;
     }
     const elapsed = state.session?.elapsed ?? 0;
@@ -1056,7 +1055,7 @@ function appPanelBody(app: App, panel: FocusApp): string {
   if (panel === "notes") {
     const recent = [...state.notes].slice(-8).reverse();
     const when = (n: (typeof state.notes)[number]): string =>
-      n.atElapsed === NOTE_BETWEEN_SESSIONS ? "between sessions" : `S${n.sessionId} · ${formatClock(n.atElapsed)}`;
+      !isInFlowNote(n) ? "between sessions" : `S${n.sessionId} · ${formatClock(n.atElapsed)}`;
     return `<section class="focus-controls">
       <textarea class="note-composer" id="note-composer" placeholder="What are you noticing?" maxlength="2000" rows="3"></textarea>
       <div class="session-actions" style="margin:10px 0 0"><button class="primary" id="note-save">Capture note</button></div>
