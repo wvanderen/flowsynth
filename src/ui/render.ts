@@ -15,6 +15,7 @@ import type { App } from "./app";
 import { appIcon } from "./icons";
 import { HEX_RADIUS, hexPoints, moduleFace } from "./face";
 import { chargeGlow, chargeLeads } from "./leads";
+import { chordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { DURATION_OPTIONS, APP_LABELS, APP_ROLES, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatInt, formatNumber, practiceCountdown } from "./format";
@@ -403,7 +404,7 @@ function renderTools(app: App): void {
   const host = byId("board-tools");
   if (!host) return;
   const upgrade = state.mode === "upgrade";
-  const key = JSON.stringify([upgrade, state.bankedRolls.length, ui.managing, ui.buyingCell]);
+  const key = JSON.stringify([upgrade, state.bankedRolls.length, ui.managing, ui.buyingCell, ui.showChords]);
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     const forgeReady = upgrade && state.bankedRolls.length > 0;
@@ -414,11 +415,13 @@ function renderTools(app: App): void {
         <i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i>
       </button>
       <button class="small ${app.managing ? "active" : ""}" id="tool-manage" ${upgrade ? "" : "disabled"} aria-pressed="${app.managing}" title="${app.managing ? "Exit arranging (Esc)" : upgrade ? "Move modules" : "The grid is locked during flow"}">Grid &amp; inventory</button>
-      <button class="small tool-cell${ui.buyingCell ? " active" : ""}" id="tool-cell" ${upgrade ? "" : "disabled"} aria-pressed="${ui.buyingCell}" title="">${CELL_TOOL_SVG}</button>`;
+      <button class="small tool-cell${ui.buyingCell ? " active" : ""}" id="tool-cell" ${upgrade ? "" : "disabled"} aria-pressed="${ui.buyingCell}" title="">${CELL_TOOL_SVG}</button>
+      <button class="small${ui.showChords ? " active" : ""}" id="tool-chords" aria-pressed="${ui.showChords}" title="Show chords — light the chord voices, link the pairs, outline and label named chords · C">Chords</button>`;
     byId("tool-store")?.addEventListener("click", () => app.openModal("store"));
     byId("tool-forge")?.addEventListener("click", () => app.openModal("forge"));
     byId("tool-manage")?.addEventListener("click", () => (app.ui.managing ? app.stopManaging() : app.startManaging()));
     byId("tool-cell")?.addEventListener("click", () => (app.ui.buyingCell ? app.cancelCellPurchase() : app.armCellPurchase()));
+    byId("tool-chords")?.addEventListener("click", () => app.toggleChords());
   }
   // Live under the structural rebuild: the Forge pip tracks the shared
   // meter, and the cell icon wears the current price and affordability.
@@ -462,10 +465,31 @@ function renderGrid(app: App): void {
   const minY = Math.min(...coords.map((p) => p[1])) - 82;
   const maxY = Math.max(...coords.map((p) => p[1])) + 82;
   svg.setAttribute("viewBox", `${minX} ${minY} ${maxX - minX} ${maxY - minY}`);
+  svg.classList.toggle("chord-view", ui.showChords);
 
   const flow = state.mode === "flow";
   const snapshot = currentSnapshot(state);
   const selectedModule = state.modules.find((m) => m.id === ui.selected) ?? null;
+
+  // The chord view (issue #62): a display-only read of the board's chord
+  // terms — the same pairs and named chords the formula chip names, drawn
+  // where they live. Chord voices stay lit; everything else dims; pair links
+  // and named-chord hulls wear the chord register. Purely cosmetic: no
+  // gating, no gameplay effect, available in every mode.
+  const deployedById = new Map(state.modules.filter((m) => m.pos !== null).map((m) => [m.id, m]));
+  const overlay = ui.showChords
+    ? chordOverlay({
+        pairs: snapshot.pairs,
+        namedChords: snapshot.namedChords,
+        posOf: (id) => deployedById.get(id)?.pos ?? null,
+        point,
+        radius: HEX_RADIUS,
+        pad: 5,
+        labelFor: (chord) => `${chord.name} ×${formatNumber(1 + chord.bonus)}`,
+      })
+    : null;
+  const nodeClass = (moduleId: string | null): string =>
+    ui.showChords ? `cell-node ${moduleId !== null && overlay!.participants.has(moduleId) ? "chord-lit" : "chord-dim"}` : "cell-node";
 
   // Charge leads (§8, #41): uniform green patch leads, center-to-center,
   // directional generator → receiver. Leads in live flow animate; everything
@@ -481,6 +505,14 @@ function renderGrid(app: App): void {
     html += `<line data-key="charge-${generator.id}-${receiver.id}" class="${cls}" ${leadSegment(x1, y1, x2, y2)}/>`;
   }
 
+  // Chord pair links: seam bridges beneath the faces, in the chord register
+  // — the wiring language, re-register for the board's optimization game.
+  if (overlay) {
+    html += `<g data-key="chord-links">${overlay.links
+      .map((link) => `<line data-key="pair-${link.key}" class="chord-link" x1="${link.x1}" y1="${link.y1}" x2="${link.x2}" y2="${link.y2}"/>`)
+      .join("")}</g>`;
+  }
+
   for (const pos of state.cells) {
     const [x, y] = point(pos);
     const module = deployedAt(state, pos);
@@ -488,7 +520,7 @@ function renderGrid(app: App): void {
     let classes = "hex empty";
     if (isRemoval) classes += " remove-stage";
     if (!module && isTargetCell(app, pos)) classes += " target";
-    html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${module ? META[module.type].name : "Empty cell"}">
+    html += `<g class="${nodeClass(module?.id ?? null)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${module ? META[module.type].name : "Empty cell"}">
       ${module ? "" : `<polygon class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>`}`;
     if (module) {
       html += moduleNode(app, module, pos, { snapshot, selectedModule });
@@ -506,7 +538,7 @@ function renderGrid(app: App): void {
       if (ui.buyingCell) {
         // The purchase arm: every frontier hex carries its price; the buy
         // lands only where clicked (ADR-0013).
-        html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Buy cell here for ${formatInt(price)} nous">
+        html += `<g class="${nodeClass(null)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Buy cell here for ${formatInt(price)} nous">
           <polygon class="hex ${affordable ? "buy-here" : "future"}" points="${hexPoints(HEX_RADIUS)}"/>
           <text y="-24" text-anchor="middle" class="hex-sub">NEW CELL</text>
           ${affordable ? `<text y="8" text-anchor="middle" fill="var(--accent)" font-size="22">+</text>` : ""}
@@ -514,12 +546,23 @@ function renderGrid(app: App): void {
         </g>`;
       } else {
         const isAdd = ui.reshape?.adds.some((c) => sameHex(c, pos)) ?? false;
-        html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Expand here">
+        html += `<g class="${nodeClass(null)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Expand here">
           <polygon class="hex ${isAdd ? "target" : "future"}" points="${hexPoints(HEX_RADIUS)}"/>
           ${isAdd ? `<text y="5" text-anchor="middle" fill="var(--accent)" font-size="20">+</text>` : ""}
         </g>`;
       }
     }
+  }
+
+  // Named-chord marks: a hull wrapping each chord's voices plus its
+  // formula-chip label, drawn over the faces so a chord names itself.
+  if (overlay) {
+    html += `<g data-key="chord-marks">${overlay.marks
+      .map(
+        (mark) =>
+          `<g data-key="${mark.key}"><polygon class="chord-hull" points="${mark.points}"/><text class="chord-label mono" x="${mark.labelX}" y="${mark.labelY}">${escapeHtml(mark.label)}</text></g>`,
+      )
+      .join("")}</g>`;
   }
 
   updateSvg(svg, html);

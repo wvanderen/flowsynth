@@ -692,6 +692,34 @@ body.live .inspector-empty { opacity: 0.75; }
 .lead-tip-dim { fill: var(--charge); opacity: 0.5; }
 .highlight-ring { fill: none; stroke: var(--charge); stroke-width: 1.5; opacity: 0.8; pointer-events: none; }
 
+/* Chord view (issue #62): the board's chord register — the synthesizer
+   category's luminous glow, per the register law (ADR-0016). Chord voices
+   stay lit while everything chordless dims; a pair link bridges the seam
+   between its two faces; a named chord wraps its voices in a hull and wears
+   its formula-chip label. Display only. */
+.cell-node { transition: opacity 0.25s; }
+#grid.chord-view .cell-node:not(.chord-lit) { opacity: 0.22; }
+#grid.chord-view .charge-line,
+#grid.chord-view .charge-preview-line { opacity: 0.1; }
+.chord-link { stroke: var(--nous); stroke-width: 3; stroke-linecap: round; opacity: 0.9; pointer-events: none; }
+.chord-hull {
+  fill: color-mix(in srgb, var(--nous) 7%, transparent);
+  stroke: var(--nous);
+  stroke-width: 1.5;
+  stroke-dasharray: 7 5;
+  pointer-events: none;
+}
+.chord-label {
+  font: 10.5px var(--mono);
+  letter-spacing: 0.1em;
+  fill: var(--nous);
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--panel-deep);
+  stroke-width: 4;
+  pointer-events: none;
+}
+
 /* The lit receiver breathes: charge state is feedback, not decoration, so
    the pulse rides the same 0..1 glow the face already carries inline. */
 .module-node:has(.hex.charged) .hex,

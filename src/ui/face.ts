@@ -13,11 +13,15 @@ import { META } from "./meta";
 
 export const HEX_RADIUS = 61;
 
+// The face's pointy-top corner offsets, shared with every renderer that must
+// wrap or touch a hex's corners (the chord view's hulls, for one).
+export function hexCorner(radius: number, i: number): [number, number] {
+  const a = ((60 * i - 30) * Math.PI) / 180;
+  return [radius * Math.cos(a), radius * Math.sin(a)];
+}
+
 export function hexPoints(radius: number): string {
-  return Array.from({ length: 6 }, (_, i) => {
-    const a = ((60 * i - 30) * Math.PI) / 180;
-    return `${radius * Math.cos(a)},${radius * Math.sin(a)}`;
-  }).join(" ");
+  return Array.from({ length: 6 }, (_, i) => hexCorner(radius, i).map((v) => v.toFixed(4)).join(",")).join(" ");
 }
 
 // Hue = category: the rail and signature wear the category hue; per-type
