@@ -29,5 +29,6 @@ Modules once differed only by logo. The visual effort — references (issue #14)
 ## Consequences
 
 - **Supersedes ADR-0008's visual-identity provision** — the "light futuristic instrument identity" intent survives ("light" = lightweight, not light-mode), sharpened into this direction — and the current stylesheet's rarity-as-hue coding. Retires the retheme prototype's provisional vermillion infusor fixture (vermillion migrates to the Enter/Exit switch).
+- **The monochrome rule's colored set grows by one expression (issue #63, 2026-09-16)**: while a session runs, the console header's bottom-edge session progress strip wears the switch's vermillion. It is the switch's expression at the header's edge — bright with live flow, holding when paused, absent when idle — not a second colored element; upgrade mode stays strictly monochrome.
 - Exact glyph art, plate tints, typefaces, and all hexes remain prototype tuning; category assignments and the visual mapping law are the taxonomy decision's record (issue #22).
 - Out of scope for this effort: swappable themes, a colorblind-tuned variant, a light theme, and per-source lead tinting (deferred until legibility demands it). The token table and hue-glyph pairing make them cheap later.

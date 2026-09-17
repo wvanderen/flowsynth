@@ -51,7 +51,9 @@ h1, h2, h3, p { margin: 0; }
 
 /* Structurally above the game UI: a fixed-height rail the game can never
    move, reflow, or dim. Monochrome graphite — color is the board's language;
-   the Enter/Exit main switch is the sole colored exception. */
+   the Enter/Exit main switch is the colored exception, and its vermillion
+   register extends to the session progress strip on the header's bottom
+   edge (issue #63) while a session runs. */
 .console {
   display: flex;
   align-items: center;
@@ -61,6 +63,7 @@ h1, h2, h3, p { margin: 0; }
   padding: 0 20px;
   background: var(--panel-soft);
   border-bottom: 1px solid var(--line);
+  position: relative;
 }
 
 .brand {
@@ -90,22 +93,36 @@ h1, h2, h3, p { margin: 0; }
    shift the layout. */
 .session-clock { font: 28px/1.1 var(--mono); margin: 0; }
 .clock-caption { font-size: 10px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The session progress strip (issue #63): the header itself is the progress
+   surface — a thin highlight pinned along its bottom border, above the
+   resting border line. Planned sessions fill it left-to-right; an open-ended
+   session has nothing to fill toward, so it pulses calmly across the full
+   width — alive, not progress; paused holds it bright but still. Empty when
+   no session runs. */
+.session-strip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  pointer-events: none;
+}
+.session-strip > span { display: block; height: 100%; width: 0; background: var(--switch); box-shadow: 0 0 8px var(--switch-glow); }
+.session-strip.pulse > span { animation: strip-pulse 3.2s ease-in-out infinite; }
+@keyframes strip-pulse { 50% { opacity: 0.35; } }
+/* The Time app popover keeps a local track for the running session. */
 .time-track {
-  width: 135px;
+  width: 100%;
   height: 3px;
   background: var(--line);
   border-radius: 2px;
   overflow: hidden;
-  margin-top: 5px;
+  margin-top: 8px;
 }
 .time-track > span { display: block; height: 100%; background: var(--accent); }
-/* An open-ended session has nothing to fill toward: the track pulses
-   calmly instead — alive, not progress. */
-.time-track.pulse > span { width: 100%; animation: track-pulse 3.2s ease-in-out infinite; }
-@keyframes track-pulse { 50% { opacity: 0.35; } }
 
-/* The Enter/Exit main switch: vermillion, the console's sole colored element.
-   Bright and animated = flow live; dim = idle; paused holds bright but still. */
+/* The Enter/Exit main switch: vermillion. Bright and animated = flow live;
+   dim = idle; paused holds bright but still. */
 .main-switch {
   display: inline-flex;
   align-items: center;
@@ -201,7 +218,6 @@ h1, h2, h3, p { margin: 0; }
 
 .time-plan { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
 .time-plan select { width: 170px; padding: 6px 8px; }
-.time-track.wide { width: 100%; margin-top: 8px; }
 
 /* Readout end: bare values only — production (rate with the session total
    beneath) and the nous balance. The main switch carries the mode. */
