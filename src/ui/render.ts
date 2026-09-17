@@ -110,8 +110,9 @@ function durationOptionsHtml(app: App): string {
 
 // Session controls: the clock block plus the Enter/Exit main switch and the
 // pause control. The switch is the console's sole session gate — sessions
-// start and end through it — and it is the one colored console element
-// (vermillion; bright and animated while flow is live, dim when idle).
+// start and end through it — and the switch's vermillion is the one colored
+// console element: the switch itself and, while a session runs, the progress
+// strip along the header's bottom edge (issue #63).
 function renderConsoleSession(app: App): void {
   const { state } = app;
   const host = byId("console-session");
@@ -123,7 +124,8 @@ function renderConsoleSession(app: App): void {
     // Structural key: only rebuild when the shape of the section changes, so
     // control nodes (and in-flight clicks) survive clock ticks. The clock
     // wears the next session's target in flow's clock styles, with
-    // "planned" (or "open") in the caption slot.
+    // "planned" (or "open") in the caption slot. No session runs, so the
+    // header's progress strip stays empty.
     const planned = appActive(state, "time") && app.ui.chosenTarget !== null;
     const key = `upgrade:${planned}`;
     if (host.dataset.renderKey !== key) {
@@ -132,7 +134,6 @@ function renderConsoleSession(app: App): void {
         <div class="console-clock">
           <p class="session-clock mono">${planned ? formatClock(app.ui.chosenTarget!) : "open"}</p>
           <p class="clock-caption">${planned ? "planned" : ""}</p>
-          <div class="time-track"><span id="time-track-fill" style="width:0%"></span></div>
         </div>
         <div class="session-actions">
           <button class="main-switch idle" id="flow-switch" title="Enter flow — the board locks and runs itself">
@@ -141,6 +142,7 @@ function renderConsoleSession(app: App): void {
         </div>`;
       byId("flow-switch")?.addEventListener("click", () => app.startFlow());
     }
+    renderSessionStrip(false);
     return;
   }
 
@@ -157,7 +159,6 @@ function renderConsoleSession(app: App): void {
       <div class="console-clock">
         <p class="session-clock mono" id="session-clock"></p>
         <p class="clock-caption" id="session-caption"></p>
-        <div class="time-track${target === null && !paused ? " pulse" : ""}"><span id="time-track-fill" style="width:0%"></span></div>
       </div>
       <div class="session-actions">
         <button id="pause-flow">${paused ? "Resume" : "Pause"}</button>
@@ -171,20 +172,32 @@ function renderConsoleSession(app: App): void {
 
   // Live values update in place; the controls above are never replaced by ticks.
   // Planned sessions count down what remains; open-ended ones count up, with
-  // the track pulsing calmly instead of filling.
+  // the header's progress strip pulsing calmly instead of filling.
   const set = (id: string, text: string) => {
     const node = byId(id);
     if (node && node.textContent !== text) node.textContent = text;
   };
   set("session-clock", formatClock(target !== null ? Math.max(0, target - elapsed) : elapsed));
   set("session-caption", sessionCaption(elapsed, target, paused));
-  const track = byId("time-track-fill");
-  const width = sessionTrackWidth(elapsed, target);
-  if (track && track.style.width !== width) track.style.width = width;
+  renderSessionStrip(true, elapsed, target, paused);
 }
 
-// The running-session readout shared by the console clock block and the Time
-// app's popover: caption phrasing and track-fill width (§2.2).
+// The header's bottom edge is the progress surface (issue #63): a thin strip
+// pinned along it, wearing the switch's vermillion so flow reads from across
+// the room. Planned sessions fill it left-to-right; open-ended ones pulse
+// calmly at full width; paused holds it still; idle leaves it empty.
+// Tick-safe — class and width update in place.
+function renderSessionStrip(running: boolean, elapsed = 0, target: number | null = null, paused = false): void {
+  const strip = byId("session-strip");
+  const fill = byId("session-strip-fill");
+  if (!strip || !fill) return;
+  strip.classList.toggle("pulse", running && target === null && !paused);
+  const width = !running ? "0%" : target === null ? "100%" : plannedFill(elapsed, target);
+  if (fill.style.width !== width) fill.style.width = width;
+}
+
+// The running-session caption shared by the console clock block and the Time
+// app's popover (§2.2).
 function sessionCaption(elapsed: number, target: number | null, paused: boolean): string {
   const reached = target !== null && elapsed >= target;
   return paused
@@ -196,8 +209,15 @@ function sessionCaption(elapsed: number, target: number | null, paused: boolean)
         : `of ${formatClock(target)}`;
 }
 
+// Share of a planned session already practiced, as a fill percentage.
+function plannedFill(elapsed: number, target: number): string {
+  return `${Math.min(100, (elapsed / target) * 100)}%`;
+}
+
+// Fill width for the Time app popover's local track; open-ended leaves it
+// empty — the console header's strip is what pulses for those.
 function sessionTrackWidth(elapsed: number, target: number | null): string {
-  return target ? `${Math.min(100, (elapsed / target) * 100)}%` : "0%";
+  return target === null ? "0%" : plannedFill(elapsed, target);
 }
 
 // In-place text swap for a data-live node within a scope; tick-safe.
@@ -1091,7 +1111,7 @@ function appPanelBody(app: App, panel: FocusApp): string {
     return `<section class="focus-controls">
       <p class="session-clock mono" data-live="time-clock">${formatClock(elapsed)}</p>
       <p class="clock-caption" data-live="time-caption">${sessionCaption(elapsed, target, paused)}</p>
-      <div class="time-track wide"><span data-live="time-track" style="width:${sessionTrackWidth(elapsed, target)}"></span></div>
+      <div class="time-track"><span data-live="time-track" style="width:${sessionTrackWidth(elapsed, target)}"></span></div>
     </section>`;
   }
 

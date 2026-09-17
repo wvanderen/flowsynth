@@ -252,21 +252,45 @@ describe("the session clock", () => {
     advance(state, 240);
   }
 
-  it("counts down what remains on a planned session, filling the track", () => {
+  it("counts down what remains on a planned session, filling the header strip", () => {
     runPlanned(app.state);
     app.render();
     expect(document.getElementById("session-clock")!.textContent).toBe("06:00");
-    expect(document.getElementById("time-track-fill")!.getAttribute("style")).toContain("40");
+    expect(document.getElementById("session-strip-fill")!.style.width).toBe("40%");
   });
 
-  it("counts up open-ended, pulsing the track instead of filling it", () => {
+  it("counts up open-ended, pulsing the header strip instead of filling it", () => {
     const s = app.state;
     s.sessionsCompleted = 1;
     startSession(s, null);
     advance(s, 90);
     app.render();
     expect(document.getElementById("session-clock")!.textContent).toBe("01:30");
-    expect(document.querySelector("#console-session .time-track")!.classList.contains("pulse")).toBe(true);
+    expect(document.getElementById("session-strip")!.classList.contains("pulse")).toBe(true);
+    expect(document.getElementById("session-strip-fill")!.style.width).toBe("100%");
+  });
+
+  it("holds the header strip while paused: width kept, no pulse — planned or open-ended", () => {
+    runPlanned(app.state);
+    app.pause();
+    app.render();
+    const strip = document.getElementById("session-strip")!;
+    const fill = document.getElementById("session-strip-fill")!;
+    expect(strip.classList.contains("pulse")).toBe(false);
+    expect(fill.style.width).toBe("40%");
+    app.resume();
+    const s = app.state;
+    s.session!.target = null;
+    app.pause();
+    app.render();
+    expect(strip.classList.contains("pulse")).toBe(false);
+    expect(fill.style.width).toBe("100%");
+  });
+
+  it("leaves the header strip empty in upgrade mode", () => {
+    app.render();
+    expect(document.getElementById("session-strip")!.classList.contains("pulse")).toBe(false);
+    expect(document.getElementById("session-strip-fill")!.style.width).toBe("0%");
   });
 
   it("the loud summary keeps only data rows and the continue action", () => {

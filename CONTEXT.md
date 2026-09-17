@@ -106,7 +106,7 @@ The catalog's one-time guaranteed offers — an Additive Synth, the generator, o
 ### The console and focus apps
 
 **Console**:
-The surface structurally above the board, carrying the Enter/Exit main switch, the clock, pause, one tile per focus app, the status strip, and the nous balance. The main switch is the mode indicator — off, glowing live, held paused. The board never moves or dims while the console is in use.
+The surface structurally above the board, carrying the Enter/Exit main switch, the clock, pause, one tile per focus app, the status strip, and the nous balance. The main switch is the mode indicator — off, glowing live, held paused. While a session runs, a thin progress strip along the console's bottom edge shows its progress in the switch's vermillion — filling on planned sessions, pulsing on open-ended ones, held while paused. The board never moves or dims while the console is in use.
 
 **Focus app**:
 A fixed-function instrument hosted by the console — Habit, Time, Notes, and Goals at launch. Apps never grant, produce, or spend nous or charge; board modules may read their state as effect inputs.
