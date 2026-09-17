@@ -4,7 +4,6 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
   carrier: { name: "Carrier", short: "Carrier", role: "The granted origin" },
   additive: { name: "Additive Synth", short: "Additive", role: "Harmonic term" },
   conditional: { name: "Conditional Synth", short: "Conditional", role: "Amplitude + chord bonus" },
-  generator: { name: "Generator", short: "Generator", role: "Produces charge" },
   focusKeyed: { name: "Focus-Keyed Generator", short: "Focus-Gen", role: "Charge from focus" },
   infusor: { name: "Infusor", short: "Infusor", role: "Neighbor bonuses" },
   forge: { name: "Forge", short: "Forge", role: "Rolls at threshold" },
@@ -25,10 +24,10 @@ export const APP_LABELS: Record<FocusApp, string> = { habit: "Habit", time: "Tim
 // The one-line pitch each ladder row carries in the catalog (spec §2.2's
 // launch function column).
 export const APP_ROLES: Record<FocusApp, string> = {
-  habit: "Select the active habit, or practice unstructured.",
+  habit: "Select the active habit.",
   time: "Planned targets and timing tools.",
-  notes: "The notes app — capture what you notice during flow. Notes are notes.",
-  goals: "The goals app — track practice conditions. Templates are conditions only.",
+  notes: "Capture what you notice.",
+  goals: "Track practice conditions.",
 };
 
 export const DURATION_OPTIONS: { label: string; value: number | null }[] = [

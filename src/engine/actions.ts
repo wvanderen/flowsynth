@@ -1,4 +1,4 @@
-import { BALANCE, EPS, NEXT_RARITY } from "./constants";
+import { BALANCE, EPS, NEXT_RARITY, SHELF_MODULE } from "./constants";
 import { cellCost, computeRates, deployedAt, findModule, levelCost, longGoalCost, wholeNous } from "./economy";
 import { nextRungCost, appActive, LADDER_APPS, type FocusApp } from "./apps";
 import { adjacent, hexKey, isConnected, sameHex } from "./hex";
@@ -127,9 +127,10 @@ export function dismissSummary(state: GameState): ActionResult {
   return ok;
 }
 
-// The starter shelf (ADR-0013): one-time offers for the launch categories.
-// All nous spending is upgrade-mode-only (§3); there is no separate store
-// gate — upgrade mode itself is the purchase window.
+// The starter shelf (ADR-0013, ADR-0018): one-time offers for the launch
+// categories plus the additive synth that makes chord play possible before
+// the first roll. All nous spending is upgrade-mode-only (§3); there is no
+// separate store gate — upgrade mode itself is the purchase window.
 export function buyShelfModule(state: GameState, type: ShelfType): ActionResult {
   if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
   if (state.purchased[type]) return fail("This shelf offer was already purchased.");
@@ -137,7 +138,7 @@ export function buyShelfModule(state: GameState, type: ShelfType): ActionResult 
   if (wholeNous(state) < price) return fail("Not enough whole nous.");
   state.nous -= price;
   state.purchased[type] = true;
-  state.modules.push(createModule(state, type, "common"));
+  state.modules.push(createModule(state, SHELF_MODULE[type], "common"));
   return ok;
 }
 

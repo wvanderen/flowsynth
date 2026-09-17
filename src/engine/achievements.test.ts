@@ -124,6 +124,17 @@ describe("the 17-feat launch set", () => {
     expect(s.session!.unlocked).toEqual([]);
   });
 
+  it("Marginalia: an in-flow note, never a between-session one (ADR-0018)", () => {
+    const s = fresh();
+    completeSession(s);
+    writeNote(s, "captured outside any session");
+    // The between-session note changes nothing: Marginalia waits.
+    expect(s.achievements["marginalia"]).toBeUndefined();
+    startSession(s, null);
+    writeNote(s, "captured in flow");
+    expect(s.session!.unlocked).toEqual(["marginalia"]);
+  });
+
   it("On the clock: a planned session completed to its target", () => {
     const s = fresh();
     completeSession(s);
@@ -149,8 +160,9 @@ describe("the 17-feat launch set", () => {
   it("Spark: first charge delivered during flow", () => {
     const s = fresh();
     completeSession(s);
-    give(s, "generator", hex(1, 0));
-    give(s, "infusor", hex(0, -1));
+    give(s, "focusKeyed", hex(1, 0));
+    give(s, "infusor", hex(0, 1));
+    s.chargeWindow = 60;
     startSession(s, null);
     advance(s, 1);
     expect(s.session!.unlocked).toContain("spark");
@@ -202,7 +214,7 @@ describe("the 17-feat launch set", () => {
     completeSession(s);
     s.cells.push(hex(2, 0));
     give(s, "additive", hex(1, 0)); // P2 — octave with the carrier: ×1.15
-    give(s, "generator", hex(2, 0)); // P3 — would add a fifth if it voiced
+    give(s, "focusKeyed", hex(2, 0)); // not a synth — would add a fifth if it voiced
     const def = ACHIEVEMENTS.find((a) => a.id === "power-chord")!;
     expect(def.progress(s, { chargeDelivered: false }).current).toBeCloseTo(1.15, 9);
   });

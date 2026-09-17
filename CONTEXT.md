@@ -19,7 +19,7 @@ A unit occupying one cell on the board, with gameplay effects derived from its c
 The function level of a board module — synthesizer, generator, infusor, or forge at launch. Category carries the module's hue.
 
 **Module type**:
-A specific module design within a category, such as Additive Synthesizer or the basic generator, carrying its own glyph and nameplate. Forge choices contain distinct module types; different types may share the same category.
+A specific module design within a category, such as the Additive Synthesizer or the focus-keyed generator, carrying its own glyph and nameplate. Forge choices contain distinct module types; different types may share the same category.
 
 **Chargeable module**:
 A supertype family above the category level whose members accumulate received charge toward thresholds that produce effects; the threshold fill is the family's shared rendering trait. The Forge is the launch instance. Continuous-charge categories (synthesizer, infusor) use received charge as continuous empowerment instead.
@@ -59,7 +59,7 @@ _Avoid_: Synth (in domain documentation)
 A habit-independent resource produced by generators that empowers or charges other modules; its state is preserved between flow sessions.
 
 **Generator**:
-A board module that produces charge. Remaining output belongs to the generator and follows it when moved. The launch generators are the basic generator and the focus-keyed generator.
+A board module that produces charge. Remaining output belongs to the generator and follows it when moved. The launch generator is the focus-keyed generator (ADR-0018 retired the plain generator pre-release); other generators with different requirements come later.
 
 **Charge window**:
 The charge budget banked at session end by the focus-keyed generator, sized as a fraction of that session's live practice time and spent as output during the next session's first minutes. Manual practice logs never create one.
@@ -98,15 +98,15 @@ A player-wide meter to which deployed Forges contribute according to received ch
 A charge-earned choice of one module from three generated candidates; unchosen candidates disappear without consolation resources.
 
 **Catalog**:
-The permanent upgrade-mode purchase surface: starter-shelf offers while available, cells, and module upgrades.
+The permanent upgrade-mode purchase surface: app activations, starter-shelf offers while available, and cells. Module upgrades live on module panels, not the catalog (ADR-0018).
 
 **Starter shelf**:
-The catalog's one-time guaranteed offers — a Forge, one basic generator, and one infusor — hidden once acquired. It completes the launch category landscape; everything else comes from rolls.
+The catalog's one-time guaranteed offers — an Additive Synth, the generator, one infusor, and a Forge — hidden once acquired. It completes the category landscape and seeds chord play (ADR-0018); everything else comes from rolls.
 
 ### The console and focus apps
 
 **Console**:
-The surface structurally above the board, carrying the Enter/Exit main switch, clock, pause, one tile per focus app with its state LED, the status strip, the nous balance, and the rung telegraph. The board never moves or dims while the console is in use.
+The surface structurally above the board, carrying the Enter/Exit main switch, the clock, pause, one tile per focus app, the status strip, and the nous balance. The main switch is the mode indicator — off, glowing live, held paused. The board never moves or dims while the console is in use.
 
 **Focus app**:
 A fixed-function instrument hosted by the console — Habit, Time, Notes, and Goals at launch. Apps never grant, produce, or spend nous or charge; board modules may read their state as effect inputs.
@@ -133,7 +133,7 @@ The focus app providing planned targets and timing tools; it auto-activates afte
 A practice duration or milestone set within the Time app that a session can aim at and hit; hits are recorded in the session summary.
 
 **Notes app**:
-The focus app for recording notes during a flow session. Notes carry no charge or economy effect.
+The focus app for recording notes — during a flow session or between sessions. Notes carry no charge or economy effect.
 
 **Goals app**:
 The focus app for tracking goals; completion is the tracking itself, surfaced in the session summary. Its capacity grows through console long goals.
@@ -192,7 +192,7 @@ The status monitor's log-scale fill on lifetime total nous earned toward the hor
 The Arete accumulator's cap — the first prestige threshold — with a reserved, inert prestige button beneath it at launch.
 
 **Status monitor**:
-The full-width rail beneath the board carrying exactly three elements: the live formula chip, the Forge progress meter, and the Arete accumulator.
+The full-width rail beneath the board carrying the live formula chip and the Arete accumulator; Forge progress rides the toolbar's Forge pip (ADR-0018).
 
 **Achievement**:
 A named feat that accelerates but never gates progress; each adds into the global achievementBoost term of the nous rate. Detection is live, storage is the v5 save's `id → unlockedAt` map. "Feat" is flavor individual names may carry, never a second term.

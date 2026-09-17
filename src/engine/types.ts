@@ -8,9 +8,11 @@ export type Category = "synthesizer" | "generator" | "infusor" | "forge";
 // other synthesizer is strictly harmonics.
 export type SynthesizerType = "carrier" | "additive" | "conditional";
 
-// Generators produce charge. The focus-keyed generator reads focus state
-// (its charge-window rule is the §2.3 launch exception).
-export type GeneratorType = "generator" | "focusKeyed";
+// Generators produce charge. The launch generator is the focus-keyed one
+// (ADR-0018): it reads focus state, and its charge-window rule is the §2.3
+// launch exception. The plain "generator" type was retired pre-release —
+// every generator banks its window and releases it next session.
+export type GeneratorType = "focusKeyed";
 
 export type InfusorType = "infusor";
 
@@ -52,10 +54,11 @@ export interface Meter {
   earned: number;
 }
 
-// The starter shelf (ADR-0013): one-time catalog offers that complete the
-// category landscape — every launch category guaranteed exactly once. The
-// focus-keyed generator is not shelved; its acquisition point is tuning.
-export type ShelfType = "generator" | "infusor" | "forge";
+// The starter shelf (ADR-0013, amended by ADR-0018): one-time catalog offers
+// completing the category landscape — the additive synth joins so the octave
+// chord is teachable in session one, and the generator offer is the
+// focus-keyed generator. "generator" stays the shelf key the save stores.
+export type ShelfType = "additive" | "generator" | "infusor" | "forge";
 
 export interface SessionState {
   target: number | null;

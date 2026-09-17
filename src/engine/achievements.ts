@@ -8,6 +8,7 @@
 // upgrade-mode unlocks return to the caller for toasting.
 import { BALANCE, CATEGORY_OF } from "./constants";
 import { analyzeChords } from "./chords";
+import { isInFlowNote } from "./notes";
 import type { DeployedModule, GameState } from "./types";
 
 export interface AchievementProgress {
@@ -110,8 +111,10 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     category: "console",
     name: "Marginalia",
     description: "Write a note during a flow session.",
-    evaluate: (s) => s.notes.length >= 1,
-    progress: (s) => fraction(s.notes.length, 1),
+    // Between-session notes (ADR-0018) don't count — the feat is the
+    // in-flow capture.
+    evaluate: (s) => s.notes.some(isInFlowNote),
+    progress: (s) => fraction(s.notes.filter(isInFlowNote).length, 1),
   },
   {
     id: "on-the-clock",

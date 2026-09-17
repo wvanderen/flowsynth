@@ -7,6 +7,15 @@ import { accrueLivePractice } from "./habits";
 import { accrueGoalProgress } from "./goals";
 import type { AdvanceResult, GameState } from "./types";
 
+function sumResults(a: AdvanceResult, b: AdvanceResult): AdvanceResult {
+  return {
+    nousEarned: a.nousEarned + b.nousEarned,
+    rollsBanked: a.rollsBanked + b.rollsBanked,
+    goalsCompleted: a.goalsCompleted + b.goalsCompleted,
+    areteMinted: a.areteMinted + b.areteMinted,
+  };
+}
+
 export function advance(state: GameState, seconds: number, rng: Rng = Math.random): AdvanceResult {
   const result: AdvanceResult = {
     nousEarned: 0,
@@ -17,6 +26,24 @@ export function advance(state: GameState, seconds: number, rng: Rng = Math.rando
   if (state.mode !== "flow" || seconds <= EPS) return result;
   const session = state.session;
   if (!session) return result;
+
+  // The board is locked during flow, so the rate is constant across the
+  // step — except at the charge-window boundary: a step that outlives the
+  // window splits there, so the drained generator stops crediting the
+  // remainder (the rate really does change mid-step, once).
+  if (
+    chargeWindowActive(state) &&
+    state.chargeWindow + EPS < seconds &&
+    deployed(state).some((m) => m.type === "focusKeyed")
+  ) {
+    // Capture the split point first: the first leg drains the window, so
+    // reading it in the second call's argument would re-advance the whole
+    // step uncharged.
+    const split = state.chargeWindow;
+    const first = advance(state, split, rng);
+    const second = advance(state, seconds - split, rng);
+    return sumResults(first, second);
+  }
 
   // The board is locked during flow, so the rate is constant across the
   // step; production is exactly what the board's modules make (§2.1).

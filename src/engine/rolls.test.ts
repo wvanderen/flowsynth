@@ -16,7 +16,7 @@ describe("forge roll generation", () => {
     for (const type of types) {
       expect(ROLL_POOL).toContain(type);
     }
-    expect(types).toEqual([ROLL_POOL[0], ROLL_POOL[2], ROLL_POOL[3]]);
+    expect(types).toEqual([ROLL_POOL[0], ROLL_POOL[1], ROLL_POOL[2]]);
   });
 
   it("rolls each candidate's rarity independently", () => {
@@ -28,18 +28,18 @@ describe("forge roll generation", () => {
   it("contains every launch module type except the granted Carrier", () => {
     expect(ROLL_POOL).toContain("additive");
     expect(ROLL_POOL).toContain("conditional");
-    expect(ROLL_POOL).toContain("generator");
     expect(ROLL_POOL).toContain("focusKeyed");
     expect(ROLL_POOL).toContain("infusor");
     expect(ROLL_POOL).toContain("forge");
     expect(ROLL_POOL).not.toContain("carrier");
-    expect(ROLL_POOL).toHaveLength(6);
+    expect(ROLL_POOL).toHaveLength(5);
   });
 
   it("persists outcomes when the roll is earned, not when it is revealed", () => {
     const s = fresh();
     give(s, "forge", hex(1, 0));
-    give(s, "generator", hex(2, 0));
+    give(s, "focusKeyed", hex(2, 0));
+    s.chargeWindow = 600;
     startSession(s, null);
     advance(s, 100, stubRng(new Array(12).fill(0.3)));
     expect(s.bankedRolls).toHaveLength(1);

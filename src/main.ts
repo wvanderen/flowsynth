@@ -6,7 +6,6 @@ for (const id of [
   "console-apps",
   "console-status",
   "nous-balance",
-  "telegraph-slot",
   "board-tools",
   "grid",
   "status-monitor",

@@ -7,13 +7,14 @@ import {
   buyShelfModule,
   endSession,
   pauseSession,
+  placeModule,
   startSession,
   upgradeModule,
 } from "./actions";
 import { SHELF_TYPES, BALANCE, SAVE_VERSION } from "./constants";
 import { cellCost, computeRates, levelCost, longGoalCost, rungCost } from "./economy";
 import { fresh } from "./fixtures";
-import { hex } from "./hex";
+import { adjacent, hex } from "./hex";
 import { isCarrier } from "./state";
 import { serialize, deserialize } from "./save";
 import type { ShelfType } from "./types";
@@ -134,6 +135,34 @@ describe("scaler interactions at the opening", () => {
     // …the ladder counts rungs bought, unmoved by cells…
     expect(rungCost(s.activatedApps.length + 1)).toBe(rungCost(2));
     // …and the shelf hides exactly what was acquired.
-    expect(SHELF_TYPES.filter((type) => !s.purchased[type])).toEqual(["forge", "infusor"]);
+    expect(SHELF_TYPES.filter((type) => !s.purchased[type])).toEqual(["additive", "infusor", "forge"]);
+  });
+});
+
+describe("the opening board (ADR-0018)", () => {
+  it("opens on a triangle: every cell touches the Carrier and each other", () => {
+    const s = fresh();
+    expect(s.cells).toHaveLength(3);
+    for (const a of s.cells) {
+      for (const b of s.cells) {
+        if (a === b) continue;
+        expect(adjacent(a, b), `${a.q},${a.r} ↔ ${b.q},${b.r}`).toBe(true);
+      }
+    }
+  });
+
+  it("the shelf's generator charges an adjacent Forge without buying a cell", () => {
+    const s = fresh();
+    s.nous = 1e6;
+    expect(buyShelfModule(s, "generator").ok).toBe(true);
+    expect(buyShelfModule(s, "forge").ok).toBe(true);
+    const generator = s.modules.find((m) => m.type === "focusKeyed")!;
+    const forge = s.modules.find((m) => m.type === "forge")!;
+    expect(placeModule(s, generator.id, hex(1, 0)).ok).toBe(true);
+    expect(placeModule(s, forge.id, hex(0, 1)).ok).toBe(true);
+    s.chargeWindow = 60;
+    const snapshot = computeRates(s, true);
+    expect(snapshot.chargeStrength.get(forge.id)).toBe(1);
+    expect(snapshot.forgeRate).toBe(1);
   });
 });

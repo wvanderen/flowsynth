@@ -23,6 +23,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+// ADR-0018 retired the plain generator type pre-release: the focus-keyed
+// generator is the launch generator. Early v5 saves may still carry
+// "generator" types — modules, or unspent roll candidates — so remap them
+// rather than crashing on a type that no longer exists. Untyped on purpose:
+// the data comes straight from the parsed file.
+function remapRetiredGenerator(rows: { type: string }[]): void {
+  for (const row of rows) {
+    if (row.type === "generator") {
+      row.type = "focusKeyed";
+    }
+  }
+}
+
 // ADR-0017: the v5 boundary is a clean cut. Saves older than SAVE_VERSION
 // are rejected with a clear message and the game starts fresh; there is no
 // migration chain, archive, or import path for them.
@@ -82,6 +95,15 @@ export function deserialize(text: string): LoadResult {
   if (merged.summary && !Array.isArray(merged.summary.achievements)) {
     merged.summary.achievements = [];
   }
+  // ADR-0018 retired the plain generator type pre-release (see
+  // remapRetiredGenerator above); shelf keys added after a save was written
+  // (the additive synth) default to unpurchased rather than reading as
+  // undefined.
+  remapRetiredGenerator(merged.modules);
+  for (const offer of merged.bankedRolls) {
+    remapRetiredGenerator(offer.candidates);
+  }
+  merged.purchased = { ...fresh.purchased, ...merged.purchased };
   return { state: merged };
 }
 
