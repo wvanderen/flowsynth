@@ -1,12 +1,12 @@
 // The module face (ADR-0016, issue #39): every module renders as a Readout
 // panel in the Rack identity — a shared chassis, a narrow category rail in
-// the category hue, a condensed technical-caps nameplate, a prominent
-// contribution readout, and a smaller geometric signature. Rarity is
-// engraved ring count plus a subtle plate tint (styled from data-rarity in
-// the stylesheet) — never hue, never glow. The Carrier wears white, the sole
-// hue-law exception. Shared by the board, the inventory tiles, the drag
-// ghost, and the Forge candidate tiles, so a module reads identically
-// everywhere it appears.
+// the category hue, a condensed technical-caps nameplate, the module's
+// signature glyph as the centered centerpiece, and the contribution readout
+// beneath it. Rarity is engraved ring count plus a subtle plate tint (styled
+// from data-rarity in the stylesheet) — never hue, never glow. The Carrier
+// wears white, the sole hue-law exception. Shared by the board, the
+// inventory tiles, the drag ghost, and the Forge candidate tiles, so a
+// module reads identically everywhere it appears.
 import type { ModuleType, Rarity } from "../engine/types";
 import { moduleIcon } from "./icons";
 import { META } from "./meta";
@@ -51,11 +51,21 @@ export const CHARGED_FILL_SPAN = 0.34;
 export const RAIL_CHARGED_FLOOR = 0.6;
 export const RAIL_CHARGED_SPAN = 0.4;
 
+// The face's vertical rhythm (ADR-0016): the engraved level and nameplate sit
+// above, the signature glyph holds the center at its scale, and the readout
+// and note sit beneath, all horizontally centered. The doc's glyph-authoring
+// notes in docs/modules.md point at FACE_GLYPH_SCALE.
+export const FACE_GLYPH_SCALE = 0.8;
+const FACE_LEVEL_Y = -31;
+const FACE_NAME_Y = -18;
+const FACE_READOUT_Y = 30;
+const FACE_NOTE_Y = 43;
+
 export interface FaceSpec {
   type: ModuleType;
   rarity: Rarity;
-  // The prominent readout: the module's contribution — for the chargeable
-  // Forge, charge-vs-threshold.
+  // The prominent readout beneath the signature: the module's contribution —
+  // for the chargeable Forge, charge-vs-threshold.
   readout: string;
   // Extra class on the readout (e.g. the charge register on the Forge).
   readoutClass?: string;
@@ -94,9 +104,9 @@ export function moduleFace(spec: FaceSpec): string {
     <polygon data-key="hex" class="hex${spec.hexClass ? ` ${spec.hexClass}` : ""}" points="${hexPoints(HEX_RADIUS)}"${hexStyle}/>${spec.under ?? ""}
     <g data-key="rings" class="face-rings">${rings}</g>
     <path data-key="rail" class="face-rail" d="M-39 -19V19" stroke="${hue}"${railStyle}/>
-    ${spec.level !== undefined ? `<text data-key="level" y="-40" text-anchor="middle" class="face-level">LV ${spec.level}</text>` : ""}
-    <text data-key="name" y="-27" text-anchor="middle" class="face-name">${META[spec.type].short.toUpperCase()}</text>
-    <text data-key="readout" x="7" y="5" text-anchor="middle" class="face-readout${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>
-    ${spec.note ? `<text data-key="note" x="7" y="19" text-anchor="middle" class="face-note">${spec.note}</text>` : ""}
-    <g data-key="signature" class="face-signature" transform="translate(0 36.5) scale(0.62)" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>`;
+    ${spec.level !== undefined ? `<text data-key="level" y="${FACE_LEVEL_Y}" text-anchor="middle" class="face-level">LV ${spec.level}</text>` : ""}
+    <text data-key="name" y="${FACE_NAME_Y}" text-anchor="middle" class="face-name">${META[spec.type].short.toUpperCase()}</text>
+    <g data-key="signature" class="face-signature" transform="scale(${FACE_GLYPH_SCALE})" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>
+    <text data-key="readout" x="0" y="${FACE_READOUT_Y}" text-anchor="middle" class="face-readout${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>
+    ${spec.note ? `<text data-key="note" x="0" y="${FACE_NOTE_Y}" text-anchor="middle" class="face-note">${spec.note}</text>` : ""}`;
 }
