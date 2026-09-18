@@ -6,17 +6,17 @@ new types and game-design concepts — the engine keys and records live in code
 design thinking lives. The roster table reflects the code as of the last
 update; when a type lands, update the table in the same change.
 
-Last updated: 2026-09-17
+Last updated: 2026-09-18
 
 ## Roster
 
 | Key | Name | Nameplate | Category | Hue | Glyph | Symbol | Origin | Face readout |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `carrier` | Carrier | CARRIER | synthesizer | `hue-carrier` (white — sole hue-law exception) | circle with rays | ◉ | Granted at the origin, pinned, never rolled or shelved | `+value` |
-| `additive` | Additive Synth | ADDITIVE | synthesizer | `hue-synthesizer` | plus cross | + | Starter shelf (40) and roll pool | `+value`, note `P«pitch»` |
-| `conditional` | Conditional Synth | CONDITIONAL | synthesizer | `hue-synthesizer` | saltire cross | × | Roll pool only | `+value`, note `P«pitch»` |
-| `focusKeyed` | Focus-Keyed Generator | FOCUS-GEN | generator | `hue-generator` | keyed spark | ⌁ | Starter shelf ("generator", 40) and roll pool | `⌁power` |
-| `infusor` | Infusor | INFUSOR | infusor | `hue-infusor` | dotted spark | ✳ | Starter shelf (40) and roll pool | `+«%»` |
+| `additive` | Additive Synthesizer | ADDITIVE | synthesizer | `hue-synthesizer` | plus cross | + | Starter shelf (40) and roll pool | `+value`, note `P«pitch»` |
+| `conditional` | Conditional Synthesizer | CONDITIONAL | synthesizer | `hue-synthesizer` | saltire cross | × | Roll pool only | `+value`, note `P«pitch»` |
+| `focusKeyed` | Focus-Keyed Generator | FOCUS-GEN | generator | `hue-generator` | shield with check | ⌁ | Starter shelf ("generator", 40) and roll pool | `⌁power` |
+| `infusor` | Infusor | INFUSOR | infusor | `hue-infusor` | circle with rays | ✳ | Starter shelf (40) and roll pool | `+«%»` |
 | `forge` | Forge | FORGE | forge | `hue-forge` | hex prism | ⬡ | Starter shelf (80) and roll pool | `«charge»/«threshold»` (charge register) |
 
 All rollable types roll at 99% common / 0.9% uncommon / 0.1% rare
@@ -47,11 +47,11 @@ The granted origin (ADR-0013): common, pinned at (0,0), immovable,
 unsellable. Base term `carrierRate` = 0.1/s — the whole formula in session
 one. Sets every cell's pitch globally by distance.
 
-### Additive Synth (`additive`)
+### Additive Synthesizer (`additive`)
 The plain harmonic term: `additiveRate` = 0.05/s × amplitude. On the shelf so
 the octave chord (Carrier + adjacent Additive) is teachable in session one.
 
-### Conditional Synth (`conditional`)
+### Conditional Synthesizer (`conditional`)
 Amplitude term plus `conditionalPairBonus` = 0.1 per chord pair it
 participates in. Roll-only — the shelf stays four offers.
 
@@ -71,14 +71,22 @@ threshold crossing banks a roll offer of three candidates.
 
 Signature glyphs are stroke-only SVG fragments (no fill) authored in a
 ±15 coordinate space centered on (0,0), in `src/ui/icons.ts` (`PATHS`).
-On the face they render centered at scale 0.8, stroke width 2 (pre-scale),
-in the category hue. The monitor (`src/ui/monitor.ts`) reuses the same
-fragment at stroke width 1.6. Keep geometry inside ±15 and remember the
-whole module face shares the hex — the ±12 box the glyph occupies at 0.8
-scale must not fight the nameplate above or the readout below.
+On the face they render centered at `FACE_GLYPH_SCALE` (0.8, in
+`src/ui/face.ts` alongside the face's nameplate/readout/note offsets),
+stroke width 2 (pre-scale), in the category hue. The monitor
+(`src/ui/monitor.ts`) reuses the same fragment at stroke width 1.6. Keep
+geometry inside ±15 and remember the whole module face shares the hex —
+the ±12 box the glyph occupies at 0.8 scale must not fight the nameplate
+above or the readout below.
 
 The `moduleSymbol` characters (◉ + × ⌁ ✳ ⬡) are text fallbacks, not the
 face artwork.
+
+Known flag: the infusor's glyph is a near-twin of the Carrier's — both
+are a circle with eight rays, differing only in radii — while the two
+wear cyan and white. ADR-0016 pairs every hue with a glyph, so
+differentiate the infusor glyph before ship; log sketch iterations in
+[Concepts](#concepts).
 
 Design intent: hand-drawn glyphs, one per type, readable at board scale and
 at inventory-tile scale. Log sketch iterations and rationale in

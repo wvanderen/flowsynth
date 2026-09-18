@@ -51,6 +51,16 @@ export const CHARGED_FILL_SPAN = 0.34;
 export const RAIL_CHARGED_FLOOR = 0.6;
 export const RAIL_CHARGED_SPAN = 0.4;
 
+// The face's vertical rhythm (ADR-0016): the engraved level and nameplate sit
+// above, the signature glyph holds the center at its scale, and the readout
+// and note sit beneath, all horizontally centered. The doc's glyph-authoring
+// notes in docs/modules.md point at FACE_GLYPH_SCALE.
+export const FACE_GLYPH_SCALE = 0.8;
+const FACE_LEVEL_Y = -31;
+const FACE_NAME_Y = -18;
+const FACE_READOUT_Y = 30;
+const FACE_NOTE_Y = 43;
+
 export interface FaceSpec {
   type: ModuleType;
   rarity: Rarity;
@@ -94,9 +104,9 @@ export function moduleFace(spec: FaceSpec): string {
     <polygon data-key="hex" class="hex${spec.hexClass ? ` ${spec.hexClass}` : ""}" points="${hexPoints(HEX_RADIUS)}"${hexStyle}/>${spec.under ?? ""}
     <g data-key="rings" class="face-rings">${rings}</g>
     <path data-key="rail" class="face-rail" d="M-39 -19V19" stroke="${hue}"${railStyle}/>
-    ${spec.level !== undefined ? `<text data-key="level" y="-31" text-anchor="middle" class="face-level">LV ${spec.level}</text>` : ""}
-    <text data-key="name" y="-18" text-anchor="middle" class="face-name">${META[spec.type].short.toUpperCase()}</text>
-    <g data-key="signature" class="face-signature" transform="translate(0 0) scale(0.8)" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>
-    <text data-key="readout" x="0" y="30" text-anchor="middle" class="face-readout${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>
-    ${spec.note ? `<text data-key="note" x="0" y="43" text-anchor="middle" class="face-note">${spec.note}</text>` : ""}`;
+    ${spec.level !== undefined ? `<text data-key="level" y="${FACE_LEVEL_Y}" text-anchor="middle" class="face-level">LV ${spec.level}</text>` : ""}
+    <text data-key="name" y="${FACE_NAME_Y}" text-anchor="middle" class="face-name">${META[spec.type].short.toUpperCase()}</text>
+    <g data-key="signature" class="face-signature" transform="scale(${FACE_GLYPH_SCALE})" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>
+    <text data-key="readout" x="0" y="${FACE_READOUT_Y}" text-anchor="middle" class="face-readout${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>
+    ${spec.note ? `<text data-key="note" x="0" y="${FACE_NOTE_Y}" text-anchor="middle" class="face-note">${spec.note}</text>` : ""}`;
 }
