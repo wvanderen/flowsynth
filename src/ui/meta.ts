@@ -30,13 +30,10 @@ export const APP_ROLES: Record<FocusApp, string> = {
   goals: "Track practice conditions.",
 };
 
-export const DURATION_OPTIONS: { label: string; value: number | null }[] = [
-  { label: "10 minutes", value: 600 },
-  { label: "15 minutes", value: 900 },
-  { label: "20 minutes", value: 1200 },
-  { label: "25 minutes", value: 1500 },
-  { label: "30 minutes", value: 1800 },
-  { label: "45 minutes", value: 2700 },
-  { label: "1 hour", value: 3600 },
-  { label: "Open-ended", value: null },
-];
+// The planned target's free-entry range (§6): whole minutes, 1–90.
+export const PLAN_MIN_MINUTES = 1;
+export const PLAN_MAX_MINUTES = 90;
+
+// The planned-target preset chips (§6): quick picks, the set gained 90.
+// Open-ended is its own mode — never a duration choice. Values are minutes.
+export const PLAN_PRESET_MINUTES: readonly number[] = [10, 15, 20, 25, 30, 45, 60, 90];

@@ -18,7 +18,7 @@ import { HEX_RADIUS, hexPoints, moduleFace } from "./face";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
-import { DURATION_OPTIONS, APP_LABELS, APP_ROLES, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
+import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, APP_ROLES, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatInt, formatNumber, formatPracticeMinutes, practiceCountdown, secondsToMinutes } from "./format";
 import { renderStatusMonitor } from "./monitor";
 
@@ -102,12 +102,6 @@ function renderWelcome(app: App): void {
 }
 
 /* ── Console (ADR-0012) ────────────────────────────── */
-
-function durationOptionsHtml(app: App): string {
-  return DURATION_OPTIONS.map(
-    (o) => `<option value="${o.value === null ? "open" : o.value}" ${app.ui.chosenTarget === o.value ? "selected" : ""}>${o.label}</option>`,
-  ).join("");
-}
 
 // Session controls: the clock block plus the Enter/Exit main switch and the
 // pause control. The switch is the console's sole session gate — sessions
@@ -1110,10 +1104,27 @@ function appPanelBody(app: App, panel: FocusApp): string {
 
   if (panel === "time") {
     if (upgrade) {
+      // The planned-target affordances (§6): preset chips as quick picks,
+      // free 1–90 minute entry in one-minute steps — and open-ended as its
+      // own mode, never a duration choice.
+      const open = app.ui.chosenTarget === null;
+      const chosen = app.ui.chosenTarget;
+      const minutes = chosen === null ? null : Math.round(chosen / 60);
       return `<section class="focus-controls">
         <div class="time-plan">
-          <select id="console-duration" aria-label="Session duration">${durationOptionsHtml(app)}</select>
-          <p class="clock-caption">${app.ui.chosenTarget === null ? "Open-ended" : "Planned practice"}</p>
+          <div class="plan-chips" role="group" aria-label="Planned session length in minutes">
+            ${PLAN_PRESET_MINUTES.map(
+              (option) =>
+                `<button class="plan-chip${minutes === option ? " active" : ""}" data-plan="${option}" aria-pressed="${minutes === option}">${option}</button>`,
+            ).join("")}
+          </div>
+          <div class="plan-free">
+            <input type="number" id="plan-minutes" min="${PLAN_MIN_MINUTES}" max="${PLAN_MAX_MINUTES}" step="1" placeholder="1–90"
+              value="${minutes ?? ""}" ${open ? "disabled" : ""} aria-label="Custom session length, 1 to 90 minutes" />
+            <span class="plan-unit">min</span>
+          </div>
+          <button id="plan-open" class="plan-open${open ? " active" : ""}" aria-pressed="${open}">Open-ended</button>
+          <p class="clock-caption">${open ? "Open-ended" : "Planned practice"}</p>
         </div>
       </section>`;
     }
@@ -1198,10 +1209,25 @@ function appPanelBody(app: App, panel: FocusApp): string {
 }
 
 function bindAppPanel(app: App, scope: HTMLElement): void {
-  const duration = scope.querySelector("#console-duration");
-  duration?.addEventListener("change", () => {
-    const v = (duration as HTMLSelectElement).value;
-    app.ui.chosenTarget = v === "open" ? null : Number(v);
+  // The plan affordances (§6): chips pick a preset, the free entry takes
+  // any whole minute from 1 to 90 (clamped, one-minute steps), and
+  // open-ended is its own mode toggle.
+  scope.querySelectorAll<HTMLButtonElement>("[data-plan]").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      app.ui.chosenTarget = Number(chip.getAttribute("data-plan")) * 60;
+      app.render();
+    });
+  });
+  const planInput = scope.querySelector("#plan-minutes") as HTMLInputElement | null;
+  planInput?.addEventListener("change", () => {
+    const minutes = Math.round(Number(planInput.value));
+    if (Number.isFinite(minutes) && planInput.value !== "") {
+      app.ui.chosenTarget = Math.min(PLAN_MAX_MINUTES, Math.max(PLAN_MIN_MINUTES, minutes)) * 60;
+      app.render();
+    }
+  });
+  scope.querySelector("#plan-open")?.addEventListener("click", () => {
+    app.ui.chosenTarget = null;
     app.render();
   });
   scope.querySelector("#habit-create")?.addEventListener("click", () => {
@@ -1515,7 +1541,15 @@ function wireClose(app: App): void {
 function renderSettingsModal(app: App, content: HTMLElement): void {
   content.innerHTML = `${modalTop("PREFERENCES")}<h2 id="modal-title">Settings</h2>
     <p class="lead">Progress saves automatically on this device.</p>
+    <div class="pref-row">
+      <input type="checkbox" id="pref-mute" ${app.state.muted ? "checked" : ""} />
+      <label for="pref-mute">Mute all sound</label>
+      <small class="muted">silences every sound, the target chime included</small>
+    </div>
     <div class="modal-actions"><button id="settings-export">Export save</button><button id="settings-import">Import save</button><button id="settings-reset">Reset progress</button></div>`;
+  byId("pref-mute")?.addEventListener("change", (event) => {
+    app.setMuted((event.target as HTMLInputElement).checked);
+  });
   for (const kind of ["export", "import", "reset"] as const) {
     byId(`settings-${kind}`)?.addEventListener("click", () => app.openModal(kind));
   }

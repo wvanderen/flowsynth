@@ -144,6 +144,20 @@ describe("persistence", () => {
     expect(loaded.state!.session!.accounting.events).toEqual([]);
   });
 
+  it("saves from before the signals and preferences default leniently (§4–5)", () => {
+    const s = fresh();
+    startSession(s, 600);
+    const file = JSON.parse(serialize(s, 1_000));
+    delete file.state.muted;
+    delete file.state.notificationAsked;
+    delete file.state.session.targetSignaled;
+    const loaded = deserialize(JSON.stringify(file));
+    expect(loaded.error).toBeUndefined();
+    expect(loaded.state!.muted).toBe(false);
+    expect(loaded.state!.notificationAsked).toBe(false);
+    expect(loaded.state!.session!.targetSignaled).toBe(false);
+  });
+
   it("the retired reconcile dialog's frozen gap is dropped at load (ADR-0019)", () => {
     const s = fresh();
     startSession(s, 600);

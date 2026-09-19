@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { App } from "./app";
 import { createHabit, selectHabit } from "../engine/habits";
@@ -10,11 +10,12 @@ import { applyGap, poolOutstanding } from "../engine/trust";
 import { give } from "../engine/fixtures";
 import { hex } from "../engine/hex";
 import type { GameState } from "../engine/types";
+import type { SignalChannels } from "./signals";
 
 // UI smoke tests: the console chrome, the enter-prompt gating, and the
 // catalog's shelf behavior, booted on the real index.html skeleton.
 
-function boot(): App {
+function boot(channels?: SignalChannels): App {
   const html = readFileSync("index.html", "utf8");
   const body = html.slice(html.indexOf("<body>") + 6, html.lastIndexOf("</body>"));
   document.body.innerHTML = body;
@@ -35,7 +36,7 @@ function boot(): App {
     const element = document.getElementById(id);
     if (element) els[id] = element;
   }
-  return new App(els, false);
+  return new App(els, false, channels);
 }
 
 let app: App;
@@ -516,5 +517,330 @@ describe("the close-out choreography (§8)", () => {
     expect(revived.state.session).not.toBeNull();
     expect(poolOutstanding(revived.state)).toBe(true);
     expect(revived.ui.modal).toBe("honesty");
+  });
+});
+
+describe("the tab title (§4)", () => {
+  it("is plain FlowSynth with no session", () => {
+    app.render();
+    expect(document.title).toBe("FlowSynth");
+  });
+
+  it("carries the remaining clock on planned, done past the target, paused overriding done", () => {
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    startSession(s, 600);
+    advance(s, 60);
+    app.render();
+    expect(document.title).toBe("09:00 · FlowSynth");
+    app.pause();
+    expect(document.title).toBe("paused · FlowSynth");
+    app.resume();
+    advance(s, 600);
+    app.render();
+    expect(document.title).toBe("done · FlowSynth");
+    endSession(s);
+    app.render();
+    expect(document.title).toBe("FlowSynth");
+  });
+
+  it("counts up on open-ended", () => {
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    startSession(s, null);
+    advance(s, 2530);
+    app.render();
+    expect(document.title).toBe("42:10 · FlowSynth");
+  });
+});
+
+// The signal channels (§4–5), recorded instead of played: the App seam
+// takes a SignalChannels stub, mirroring how the engine injects Rng.
+function makeRecorder() {
+  const fired = {
+    unlocks: 0,
+    chimes: 0,
+    notifications: 0,
+    permissionRequests: 0,
+    permission: "default" as "default" | "granted" | "denied",
+  };
+  const channels: SignalChannels = {
+    unlockAudio: () => {
+      fired.unlocks++;
+      return null;
+    },
+    playChime: () => {
+      fired.chimes++;
+    },
+    notificationPermission: () => fired.permission,
+    requestNotificationPermission: () => {
+      fired.permissionRequests++;
+      fired.permission = "granted";
+    },
+    showTargetNotification: () => {
+      fired.notifications++;
+    },
+  };
+  return { fired, channels };
+}
+
+function stubChannels() {
+  const recorder = makeRecorder();
+  return { ...recorder, app: boot(recorder.channels) };
+}
+
+// happy-dom exposes visibilityState as a prototype getter; an own
+// property override flips it per test (restored after each).
+function setVisibility(state: "visible" | "hidden"): void {
+  Object.defineProperty(document, "visibilityState", { configurable: true, value: state });
+}
+
+describe("the target-hit signals (§4)", () => {
+  afterEach(() => setVisibility("visible"));
+
+  it("the first wake-up past the target fires chime and notification together; the session stays live", () => {
+    const { fired, app } = stubChannels();
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, 600);
+    advance(app.state, 600);
+    app.tick();
+    expect(fired.chimes).toBe(1);
+    expect(fired.notifications).toBe(1);
+    expect(app.state.session!.targetSignaled).toBe(true);
+    expect(app.state.mode).toBe("flow");
+    expect(document.title).toBe("done · FlowSynth");
+  });
+
+  it("open-ended sessions never chime and never notify", () => {
+    const { fired, app } = stubChannels();
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, null);
+    advance(app.state, 7200);
+    app.tick();
+    expect(fired.chimes).toBe(0);
+    expect(fired.notifications).toBe(0);
+    expect(app.state.session!.targetSignaled).toBe(false);
+  });
+
+  it("hidden re-fires ride the wall clock, capped at three total", () => {
+    const { fired, app } = stubChannels();
+    setVisibility("hidden");
+    startSession(app.state, 600);
+    advance(app.state, 600);
+    app.tick();
+    expect(fired.chimes).toBe(1);
+    // Same-minute wake-ups re-fire nothing, however often they come.
+    app.tick();
+    app.tick();
+    expect(fired.chimes).toBe(1);
+    // A wall-clock minute later: one re-fire per minute, to the cap.
+    app.signals.lastChimeAt -= 61_000;
+    app.tick();
+    expect(fired.chimes).toBe(2);
+    app.signals.lastChimeAt -= 61_000;
+    app.tick();
+    expect(fired.chimes).toBe(3);
+    app.signals.lastChimeAt -= 61_000;
+    app.tick();
+    expect(fired.chimes).toBe(3);
+    // One notification only, however long the absence runs.
+    expect(fired.notifications).toBe(1);
+  });
+
+  it("a visible return acknowledges; hiding again never re-fires", () => {
+    const { fired, app } = stubChannels();
+    setVisibility("hidden");
+    startSession(app.state, 600);
+    advance(app.state, 600);
+    app.tick();
+    expect(fired.chimes).toBe(1);
+    setVisibility("visible");
+    app.tick();
+    setVisibility("hidden");
+    app.signals.lastChimeAt -= 61_000;
+    app.tick();
+    expect(fired.chimes).toBe(1);
+  });
+
+  it("pausing silences immediately; nothing fires while paused or after resume", () => {
+    const { fired, app } = stubChannels();
+    startSession(app.state, 600);
+    advance(app.state, 600);
+    app.tick();
+    expect(fired.chimes).toBe(1);
+    app.pause();
+    setVisibility("hidden");
+    app.signals.lastChimeAt -= 61_000;
+    app.tick();
+    app.tick();
+    expect(fired.chimes).toBe(1);
+    setVisibility("visible");
+    app.resume();
+    setVisibility("hidden");
+    app.signals.lastChimeAt -= 61_000;
+    app.tick();
+    expect(fired.chimes).toBe(1);
+  });
+
+  it("the global mute gates every chime, including hidden re-fires; the silent notification is unaffected", () => {
+    const { fired, app } = stubChannels();
+    app.setMuted(true);
+    setVisibility("hidden");
+    startSession(app.state, 600);
+    advance(app.state, 600);
+    app.tick();
+    expect(fired.chimes).toBe(0);
+    expect(fired.notifications).toBe(1);
+    expect(app.state.session!.targetSignaled).toBe(true);
+    app.setMuted(false);
+    app.signals.lastChimeAt -= 61_000;
+    app.tick();
+    expect(fired.chimes).toBe(1);
+  });
+
+  it("a reload mid-overrun never re-delivers the signals", () => {
+    const { fired, channels, app } = stubChannels();
+    setVisibility("hidden");
+    startSession(app.state, 600);
+    advance(app.state, 600);
+    app.tick();
+    app.save();
+    const revived = boot(channels);
+    setVisibility("visible");
+    revived.tick();
+    expect(fired.chimes).toBe(1);
+    expect(fired.notifications).toBe(1);
+    expect(document.title).toBe("done · FlowSynth");
+  });
+});
+
+describe("the notification permission ask (§4)", () => {
+  afterEach(() => setVisibility("visible"));
+
+  function selectJammin(s: ReturnType<typeof stubChannels>["app"]["state"]): void {
+    const created = createHabit(s, "Jammin");
+    selectHabit(s, created.habit!.id);
+  }
+
+  it("rides the first planned start exactly once, never again", () => {
+    const { fired, app } = stubChannels();
+    app.state.sessionsCompleted = 1;
+    selectJammin(app.state);
+    app.startFlow();
+    expect(fired.permissionRequests).toBe(1);
+    expect(app.state.notificationAsked).toBe(true);
+    endSession(app.state);
+    app.startFlow();
+    expect(fired.permissionRequests).toBe(1);
+  });
+
+  it("open-ended starts never ask", () => {
+    const { fired, app } = stubChannels();
+    app.state.sessionsCompleted = 1;
+    selectJammin(app.state);
+    app.ui.chosenTarget = null;
+    app.startFlow();
+    expect(fired.permissionRequests).toBe(0);
+    expect(app.state.notificationAsked).toBe(false);
+    app.pause();
+    endSession(app.state);
+    // A later planned start still carries the one ask.
+    app.ui.chosenTarget = 600;
+    app.startFlow();
+    expect(fired.permissionRequests).toBe(1);
+    expect(app.state.notificationAsked).toBe(true);
+  });
+
+  it("a pre-decided permission spends the ask-slot without prompting, and the start still unlocks audio", () => {
+    const { fired, app } = stubChannels();
+    fired.permission = "denied";
+    app.state.sessionsCompleted = 1;
+    selectJammin(app.state);
+    app.startFlow();
+    expect(fired.permissionRequests).toBe(0);
+    expect(app.state.notificationAsked).toBe(true);
+    expect(fired.unlocks).toBe(1);
+  });
+
+  it("the audio unlock rides every start gesture, planned or open-ended", () => {
+    const { fired, app } = stubChannels();
+    app.state.sessionsCompleted = 1;
+    selectJammin(app.state);
+    app.startFlow();
+    expect(fired.unlocks).toBe(1);
+    app.pause();
+    endSession(app.state);
+    app.ui.chosenTarget = null;
+    app.startFlow();
+    expect(fired.unlocks).toBe(2);
+  });
+});
+
+describe("the planned-target affordances (§6)", () => {
+  function openTimePlan(): void {
+    app.state.sessionsCompleted = 1;
+    app.openApp("time");
+  }
+
+  afterEach(() => app.closeApp());
+
+  it("the preset chips stay as quick picks, the set gained 90", () => {
+    openTimePlan();
+    const chips = [...document.querySelectorAll<HTMLButtonElement>(".plan-chip")];
+    expect(chips.map((c) => c.textContent)).toEqual(["10", "15", "20", "25", "30", "45", "60", "90"]);
+    expect(chips[0]!.classList.contains("active")).toBe(true);
+  });
+
+  it("picking a chip plans that many minutes", () => {
+    openTimePlan();
+    document.querySelector<HTMLButtonElement>('[data-plan="25"]')!.click();
+    expect(app.ui.chosenTarget).toBe(1500);
+    const input = document.getElementById("plan-minutes") as HTMLInputElement;
+    expect(input.value).toBe("25");
+    expect(input.disabled).toBe(false);
+  });
+
+  it("free entry takes any whole minute from 1 to 90 and clamps past the range", () => {
+    openTimePlan();
+    const commit = (value: string): HTMLInputElement => {
+      const input = document.getElementById("plan-minutes") as HTMLInputElement;
+      input.value = value;
+      input.dispatchEvent(new Event("change"));
+      return document.getElementById("plan-minutes") as HTMLInputElement;
+    };
+    commit("37");
+    expect(app.ui.chosenTarget).toBe(37 * 60);
+    commit("200");
+    expect(app.ui.chosenTarget).toBe(90 * 60);
+    commit("0");
+    expect(app.ui.chosenTarget).toBe(60);
+    const minutes = commit("3.6");
+    expect(app.ui.chosenTarget).toBe(4 * 60);
+    expect(minutes.value).toBe("4");
+  });
+
+  it("open-ended is its own mode, not a duration choice", () => {
+    openTimePlan();
+    document.getElementById("plan-open")!.click();
+    expect(app.ui.chosenTarget).toBeNull();
+    expect(document.getElementById("plan-open")!.getAttribute("aria-pressed")).toBe("true");
+    const input = document.getElementById("plan-minutes") as HTMLInputElement;
+    expect(input.disabled).toBe(true);
+    expect([...document.querySelectorAll(".plan-chip.active")]).toHaveLength(0);
+    expect(document.querySelector("#console-apps .clock-caption")!.textContent).toBe("Open-ended");
+  });
+});
+
+describe("the settings preferences (§5)", () => {
+  it("carries one global mute toggle that gates and persists", () => {
+    app.openModal("settings");
+    const toggle = document.getElementById("pref-mute") as HTMLInputElement;
+    expect(toggle).not.toBeNull();
+    expect(toggle.checked).toBe(false);
+    toggle.checked = true;
+    toggle.dispatchEvent(new Event("change"));
+    expect(app.state.muted).toBe(true);
+    const saved = JSON.parse(localStorage.getItem("flowsynth.save.v1")!);
+    expect(saved.state.muted).toBe(true);
   });
 });

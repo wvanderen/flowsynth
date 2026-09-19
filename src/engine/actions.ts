@@ -36,7 +36,14 @@ export function startSession(state: GameState, target: number | null): ActionRes
   state.mode = "flow";
   // An unstructured session starts with no active habit selected.
   if (state.activeHabitId === null) state.unstructuredSessions++;
-  state.session = { target, elapsed: 0, earned: 0, unlocked: [], accounting: freshAccounting() };
+  state.session = {
+    target,
+    elapsed: 0,
+    earned: 0,
+    unlocked: [],
+    accounting: freshAccounting(),
+    targetSignaled: false,
+  };
   // In-session unlocks (Untethered, past session one) queue into the
   // session's summary row — the result carries nothing to toast.
   syncAchievements(state);

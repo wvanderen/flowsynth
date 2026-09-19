@@ -93,6 +93,28 @@ export const NAMED_CHORDS: readonly NamedChordDef[] = [
   { name: "Blues triad", pitches: [5, 6, 7], bonus: 0.75 },
 ];
 
+// The target chime (focus-tool spec §4–5): one synthesized just-intonation
+// two-note motif — the chord vocabulary's Fifth (2:3) — with each note
+// carrying a quiet 3× partial from the same ratio ladder. Fixed quiet gain,
+// no volume setting. All numbers are tuning, not spec.
+export const CHIME = {
+  // The just-intonation interval between the motif's two notes (the Fifth).
+  fifthRatio: 3 / 2,
+  // The root note's frequency (C5).
+  rootHz: 523.25,
+  // Fixed quiet gain; the partial sits beneath it.
+  gain: 0.12,
+  partialGain: 0.04,
+  // Per-note envelope: attack, decay length, and the gap before note two.
+  attackSeconds: 0.02,
+  noteSeconds: 1.1,
+  onsetGapSeconds: 0.28,
+  // Hidden re-fires (§4): at most once per wall-clock minute, capped at
+  // three chimes total per overrun.
+  refireSeconds: 60,
+  maxChimes: 3,
+};
+
 export const CATEGORY_OF: Record<ModuleType, Category> = {
   carrier: "synthesizer",
   additive: "synthesizer",
