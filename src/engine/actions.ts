@@ -116,8 +116,9 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
   });
   // The loud summary (§5.7): every exit path lands here, so the modal's
   // rows are captured from the session itself — earned, practice time, rate
-  // achieved with the breakdown legs — whatever the length or exit. Time
-  // auto-activated with the first completion; only its session says so.
+  // achieved with the breakdown legs — whatever the length or exit. The
+  // unlock row stays in design but never fires at launch (ADR-0019): the
+  // launch apps are free from minute 0, so there is nothing to unlock.
   const snapshot = computeRates(state, true);
   state.summary = {
     sessionNumber: state.sessionsCompleted,
@@ -133,7 +134,9 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
     harmonics: snapshot.harmonics,
     chordMultiplier: snapshot.chordMultiplier,
     empowerment: snapshot.empowerment,
-    timeUnlocked: state.sessionsCompleted === 1,
+    // The unlock row renders inert at launch (ADR-0019, issue #83); it
+    // fires again when the ladder's first tenant joins, post-launch.
+    timeUnlocked: false,
     // The practice row's denominator (§8): "X / Y min" on planned sessions.
     plannedTarget: target,
     // The honesty events beneath the final numbers (§8), where a dropped
@@ -245,9 +248,11 @@ export function buyCell(state: GameState, pos: Hex): ActionResult {
   return { ok: true, unlocked: checkAchievements(state) };
 }
 
-// The activation ladder (ADR-0013): the purchase that flips a focus app on.
-// The rung price is shared — buying Notes first makes Goals cost rung two —
-// so order is free while the ladder always rises.
+// The activation ladder's purchase (ADR-0013): the rung price is shared —
+// buying one tenant first prices the next rung — so order stays free while
+// the ladder always rises. The ladder rests empty at launch (ADR-0019):
+// every launch app is free, so this refuses everything until a tenant
+// (Tasks, post-launch) joins LADDER_APPS.
 export function buyActivation(state: GameState, app: FocusApp): ActionResult {
   if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
   if (!LADDER_APPS.includes(app)) return fail("That app is not sold on the activation ladder.");

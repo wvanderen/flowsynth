@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
-import { buyActivation, buyGoalCapacity, endSession, startSession } from "./actions";
+import { buyGoalCapacity, endSession, startSession } from "./actions";
 import { fresh } from "./fixtures";
 import { addPracticeLog, createHabit, selectHabit } from "./habits";
 import {
@@ -10,7 +10,7 @@ import {
   goalCapacity,
   rollGoalOccurrences,
 } from "./goals";
-import { longGoalCost, rungCost } from "./economy";
+import { longGoalCost } from "./economy";
 import { deserialize, serialize } from "./save";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -29,12 +29,9 @@ describe("goal slots and creation", () => {
     expect(goalCapacity(s)).toBe(6);
   });
 
-  it("sells goal capacity as the first console long goal, gated behind Goals activation", () => {
+  it("sells goal capacity as the first console long goal — Goals is free, so only nous gates it", () => {
     const s = fresh();
-    s.nous = longGoalCost(0) + rungCost(1);
-    // Locked apps sell no upgrades (ADR-0012).
-    expect(buyGoalCapacity(s).ok).toBe(false);
-    expect(buyActivation(s, "goals").ok).toBe(true);
+    s.nous = longGoalCost(0);
     expect(buyGoalCapacity(s).ok).toBe(true);
     expect(s.goalCapacityBought).toBe(1);
     expect(goalCapacity(s)).toBe(4);
@@ -44,8 +41,7 @@ describe("goal slots and creation", () => {
   it("prices each long goal past the last, one at a time", () => {
     const s = fresh();
     expect(longGoalCost(1)).toBeGreaterThan(longGoalCost(0));
-    s.nous = rungCost(1) + longGoalCost(0) + longGoalCost(1);
-    buyActivation(s, "goals");
+    s.nous = longGoalCost(0) + longGoalCost(1);
     expect(buyGoalCapacity(s).ok).toBe(true);
     expect(buyGoalCapacity(s).ok).toBe(true);
     expect(s.goalCapacityBought).toBe(2);
@@ -54,8 +50,7 @@ describe("goal slots and creation", () => {
 
   it("refuses the long goal during flow or without nous", () => {
     const s = fresh();
-    s.nous = rungCost(1) + longGoalCost(0);
-    buyActivation(s, "goals");
+    s.nous = longGoalCost(0);
     startSession(s, null);
     expect(buyGoalCapacity(s).ok).toBe(false);
     endSession(s);

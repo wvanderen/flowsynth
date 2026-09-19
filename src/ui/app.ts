@@ -3,7 +3,6 @@ import type { AdvanceResult } from "../engine/types";
 import {
   acknowledgeHorizon,
   acknowledgeWelcome,
-  buyActivation,
   buyCell,
   buyGoalCapacity,
   buyShelfModule,
@@ -43,7 +42,7 @@ import {
 import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
 import type { GameState, Hex, ShelfType } from "../engine/types";
 import { render } from "./render";
-import { APP_LABELS, HISTORY_PAGE_ROWS, META } from "./meta";
+import { HISTORY_PAGE_ROWS, META } from "./meta";
 import { browserChannels, type SignalChannels } from "./signals";
 
 // The session modal surfaces (§5.5, §5.7): the enter prompt precedes every
@@ -75,6 +74,10 @@ export interface UiState {
   modal: ModalKind;
   importText: string;
   importError: string | null;
+  // The plan the next session starts with (§6): null is open-ended — the
+  // resting mode, nothing pushed. The launch apps are free (ADR-0019), so
+  // even session one can be planned from here; the affordances stay
+  // visible but unpushed.
   chosenTarget: number | null;
   showAcquired: boolean;
   editingHabitId: string | null;
@@ -143,7 +146,7 @@ export class App {
     modal: null,
     importText: "",
     importError: null,
-    chosenTarget: 600,
+    chosenTarget: null,
     showAcquired: false,
     editingHabitId: null,
     showChords: false,
@@ -344,7 +347,7 @@ export class App {
     this.clearTransientUi();
     this.ui.modal = null;
     this.ui.importError = null;
-    this.ui.chosenTarget = 600;
+    this.ui.chosenTarget = null;
     this.lastWall = null;
     this.exitPending = false;
     this.say("A fresh instrument. The Carrier is yours.");
@@ -546,10 +549,11 @@ export class App {
 
   beginFlow(habitId: string | null): void {
     selectHabit(this.state, habitId);
-    // Planned targets belong to the Time app (§2.3): until it auto-activates,
-    // every session is mechanically open-ended.
-    const target = appActive(this.state, "time") ? this.ui.chosenTarget : null;
-    const started = startSession(this.state, target, Date.now());
+    // Time is free from the very first session (ADR-0019), so session one
+    // can be planned; the enter prompt's duration affordances stay visible
+    // but unpushed — the resting plan is open-ended, and only this choice
+    // ever arms the chime, the permission ask, and the title flip (§4).
+    const started = startSession(this.state, this.ui.chosenTarget, Date.now());
     if (!started.ok) {
       this.ui.modal = null;
       this.say(started.reason ?? "Cannot enter flow right now.");
@@ -564,8 +568,12 @@ export class App {
     // context is created or resumed here, so the chime can sound later.
     this.audio = this.channels.unlockAudio(this.audio);
     this.signals = freshChimeState();
-    this.askNotificationPermissionOnce(target);
-    this.say(target === null ? "Flow is live." : `Flow is live for ${Math.round(target / 60)} minutes — the board is locked.`);
+    this.askNotificationPermissionOnce(this.ui.chosenTarget);
+    this.say(
+      this.ui.chosenTarget === null
+        ? "Flow is live."
+        : `Flow is live for ${Math.round(this.ui.chosenTarget / 60)} minutes — the board is locked.`,
+    );
     this.save();
     this.render();
   }
@@ -675,12 +683,6 @@ export class App {
     this.act(buyShelfModule(this.state, type), `${META[SHELF_MODULE[type]].name} purchased — it's in your inventory.`);
   }
 
-  // The activation ladder (ADR-0013): buying a rung flips the app on; the
-  // other ladder rows step to the next price.
-  buyActivationAction(appKey: FocusApp): void {
-    this.act(buyActivation(this.state, appKey), `${APP_LABELS[appKey]} activated.`);
-  }
-
   // The first console long goal (ADR-0012): goal capacity, one beat at a
   // time from the Goals panel's dashed strip.
   buyGoalCapacityAction(): void {
@@ -759,7 +761,9 @@ export class App {
 
   openApp(app: FocusApp): void {
     // Locked tiles open nothing (ADR-0012): the tile is inert, greyed, and
-    // carries its locknote; no panel, no message.
+    // carries its locknote; no panel, no message. The launch four never
+    // lock (ADR-0019), so every launch tile opens from session one — the
+    // guard stays for a future ladder tenant.
     if (!appActive(this.state, app)) return;
     this.ui.app = this.ui.app === app ? null : app;
     this.ui.selected = null;

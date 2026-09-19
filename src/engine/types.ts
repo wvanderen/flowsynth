@@ -149,7 +149,9 @@ export interface SessionSummary {
   harmonics: number;
   chordMultiplier: number;
   empowerment: number;
-  // Session one only: Time auto-activated with this session's end.
+  // The summary's unlock row (ADR-0015): in design, inert at launch — the
+  // launch apps are free from minute 0 (ADR-0019) and it fires again only
+  // when the ladder's first tenant joins.
   timeUnlocked: boolean;
   // The session's planned target seconds, null on open-ended (§8): the
   // practice-time row's "X / Y min" denominator.
@@ -297,9 +299,11 @@ export interface GameState {
   chargeWindow: number;
   bankedRolls: RollOffer[];
   purchased: Record<ShelfType, boolean>;
-  // The activation ladder (ADR-0013): the apps unlocked by rung purchases,
-  // in purchase order — free order, globally rising rungs. Habit is always
-  // on and Time auto-activates; neither is ever stored here.
+  // The activation ladder's permanent record (ADR-0013): apps unlocked by
+  // rung purchases, in purchase order — free order, globally rising rungs.
+  // The ladder rests empty at launch (ADR-0019): all four launch apps are
+  // free from the first session, so nothing is stored here until a tenant
+  // joins.
   activatedApps: FocusApp[];
   // Console long goals (ADR-0012): goal capacity is the first named beat —
   // each purchase grows the Goals app's slot capacity.

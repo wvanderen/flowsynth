@@ -51,14 +51,17 @@ beforeEach(() => {
 });
 
 describe("the console tiles", () => {
-  it("Habit wears the selected habit (or no habit); Notes and Goals are icon-only with lock tooltips", () => {
+  it("all four tiles are live from a fresh boot: Habit wears its habit, Time its plan, Notes and Goals icon-only", () => {
     app.render();
     const stateText = (id: string) => document.getElementById(id)?.querySelector(".app-tile-state")?.textContent ?? null;
     expect(stateText("app-tile-habit")).toBe("no habit");
-    expect(stateText("app-tile-time")).toBe(null); // locked: tooltip carries the gate
-    expect(document.getElementById("app-tile-time")!.classList.contains("locked")).toBe(true);
-    expect(document.getElementById("app-tile-time")!.title).toContain("after your first session");
-    expect(document.getElementById("app-tile-notes")!.title).toContain("activate with nous");
+    // Time is free from minute 0 (ADR-0019): the tile wears the resting
+    // plan, and no tile is greyed or carries a lock tooltip.
+    expect(stateText("app-tile-time")).toBe("open");
+    for (const key of ["habit", "time", "notes", "goals"]) {
+      expect(document.getElementById(`app-tile-${key}`)!.classList.contains("locked")).toBe(false);
+      expect(document.getElementById(`app-tile-${key}`)!.title).not.toContain("locked");
+    }
     expect(stateText("app-tile-notes")).toBe(null);
     expect(stateText("app-tile-goals")).toBe(null);
 
@@ -68,11 +71,12 @@ describe("the console tiles", () => {
     expect(stateText("app-tile-habit")).toBe("Jammin");
   });
 
-  it("the Time tile wears the current plan once Time is active", () => {
-    app.state.sessionsCompleted = 1;
-    app.ui.chosenTarget = 600;
-    app.render();
-    expect(document.getElementById("app-tile-time")!.querySelector(".app-tile-state")!.textContent).toBe("10:00");
+  it("every tile opens its panel from session one", () => {
+    for (const key of ["time", "notes", "goals"] as const) {
+      app.openApp(key);
+      expect(document.getElementById("app-popover")).not.toBeNull();
+      app.closeApp();
+    }
   });
 });
 
@@ -230,6 +234,34 @@ describe("the enter prompt", () => {
     expect(app.state.mode).toBe("flow");
     expect(app.state.activeHabitId).toBe(created.habit!.id);
   });
+
+  it("carries the duration affordances from the first start, visible but unpushed", () => {
+    app.startFlow();
+    const modal = document.getElementById("modal-content")!;
+    // The chips and free entry are present; the resting plan is open-ended
+    // and session one's steer suggests a short try (ADR-0019).
+    expect([...modal.querySelectorAll(".plan-chip")]).toHaveLength(8);
+    expect(modal.querySelectorAll(".plan-chip.active")).toHaveLength(0);
+    expect((modal.querySelector("#plan-minutes") as HTMLInputElement).value).toBe("");
+    expect(modal.querySelector("#plan-open")!.getAttribute("aria-pressed")).toBe("true");
+    expect(modal.querySelector(".enter-steer")!.textContent).toContain("five minutes");
+  });
+
+  it("a picked chip plans session one; the steer leaves after the first session", () => {
+    app.startFlow();
+    document.querySelector<HTMLButtonElement>('#modal-content [data-plan="25"]')!.click();
+    expect(app.ui.chosenTarget).toBe(1500);
+    app.closeModal();
+    const created = createHabit(app.state, "Jammin");
+    selectHabit(app.state, created.habit!.id);
+    app.startFlow();
+    expect(app.state.session!.target).toBe(1500);
+    endSession(app.state);
+    // Clear the selection so the prompt opens again.
+    selectHabit(app.state, null);
+    app.startFlow();
+    expect(document.querySelector(".enter-steer")).toBeNull();
+  });
 });
 
 describe("the catalog", () => {
@@ -247,6 +279,15 @@ describe("the catalog", () => {
     app.openModal("store");
     const cellButton = document.getElementById("buy-cell")!;
     expect(cellButton.textContent).toContain(`${BALANCE.cellFirstCost} ν`);
+  });
+
+  it("omits the activation section while the ladder rests empty — no telegraph, no pricing", () => {
+    app.openModal("store");
+    const modal = document.getElementById("modal-content")!;
+    expect(modal.querySelector(".store-activations")).toBeNull();
+    expect(modal.textContent).not.toContain("Activations");
+    expect(modal.querySelectorAll("[data-activate]")).toHaveLength(0);
+    expect(modal.textContent).not.toContain("activate");
   });
 });
 
@@ -726,10 +767,10 @@ describe("the notification permission ask (§4)", () => {
     selectHabit(s, created.habit!.id);
   }
 
-  it("rides the first planned start exactly once, never again", () => {
+  it("rides the first planned start exactly once, never again — session one included", () => {
     const { fired, app } = stubChannels();
-    app.state.sessionsCompleted = 1;
     selectJammin(app.state);
+    app.ui.chosenTarget = 600;
     app.startFlow();
     expect(fired.permissionRequests).toBe(1);
     expect(app.state.notificationAsked).toBe(true);
@@ -740,7 +781,6 @@ describe("the notification permission ask (§4)", () => {
 
   it("open-ended starts never ask", () => {
     const { fired, app } = stubChannels();
-    app.state.sessionsCompleted = 1;
     selectJammin(app.state);
     app.ui.chosenTarget = null;
     app.startFlow();
@@ -758,8 +798,8 @@ describe("the notification permission ask (§4)", () => {
   it("a pre-decided permission spends the ask-slot without prompting, and the start still unlocks audio", () => {
     const { fired, app } = stubChannels();
     fired.permission = "denied";
-    app.state.sessionsCompleted = 1;
     selectJammin(app.state);
+    app.ui.chosenTarget = 600;
     app.startFlow();
     expect(fired.permissionRequests).toBe(0);
     expect(app.state.notificationAsked).toBe(true);
@@ -768,8 +808,8 @@ describe("the notification permission ask (§4)", () => {
 
   it("the audio unlock rides every start gesture, planned or open-ended", () => {
     const { fired, app } = stubChannels();
-    app.state.sessionsCompleted = 1;
     selectJammin(app.state);
+    app.ui.chosenTarget = 600;
     app.startFlow();
     expect(fired.unlocks).toBe(1);
     app.pause();
@@ -782,17 +822,18 @@ describe("the notification permission ask (§4)", () => {
 
 describe("the planned-target affordances (§6)", () => {
   function openTimePlan(): void {
-    app.state.sessionsCompleted = 1;
     app.openApp("time");
   }
 
   afterEach(() => app.closeApp());
 
-  it("the preset chips stay as quick picks, the set gained 90", () => {
+  it("the preset chips stay as quick picks, the set gained 90, nothing preselected", () => {
     openTimePlan();
     const chips = [...document.querySelectorAll<HTMLButtonElement>(".plan-chip")];
     expect(chips.map((c) => c.textContent)).toEqual(["10", "15", "20", "25", "30", "45", "60", "90"]);
-    expect(chips[0]!.classList.contains("active")).toBe(true);
+    // Visible but unpushed (ADR-0019): the resting plan is open-ended.
+    expect([...document.querySelectorAll(".plan-chip.active")]).toHaveLength(0);
+    expect(document.getElementById("plan-open")!.getAttribute("aria-pressed")).toBe("true");
   });
 
   it("picking a chip plans that many minutes", () => {
@@ -1047,7 +1088,6 @@ describe("the Habit app's development summary (§9)", () => {
 describe("the Notes stream's habit chips (§9)", () => {
   it("tagged notes wear their habit; unstructured and between-sessions notes wear none", () => {
     const s = app.state;
-    s.activatedApps.push("notes");
     const habit = createHabit(s, "Piano").habit!;
     selectHabit(s, habit.id);
     startSession(s, null, DAY);
@@ -1068,7 +1108,6 @@ describe("the Notes stream's habit chips (§9)", () => {
 
   it("the stream shows everything it keeps — no recent-window cap", () => {
     const s = app.state;
-    s.activatedApps.push("notes");
     for (let i = 0; i < 10; i++) writeNote(s, `note ${i}`, DAY + i * 1000);
     app.openApp("notes");
     const entries = [...document.querySelectorAll(".note-entry")];

@@ -12,6 +12,7 @@ import {
   upgradeModule,
 } from "./actions";
 import { SHELF_TYPES, BALANCE, SAVE_VERSION } from "./constants";
+import { nextRungCost } from "./apps";
 import { cellCost, computeRates, levelCost, longGoalCost, rungCost } from "./economy";
 import { fresh } from "./fixtures";
 import { adjacent, hex } from "./hex";
@@ -88,10 +89,12 @@ describe("purchase windows — all nous spending is upgrade-mode-only (§3)", ()
     expect(s.goalCapacityBought).toBe(0);
     expect(carrier.level).toBe(0);
     endSession(s);
-    // Back in upgrade mode the same purchases go through.
+    // Back in upgrade mode the same purchases go through — except the
+    // ladder, which sells nothing at launch (ADR-0019): the apps were
+    // already free.
     expect(buyShelfModule(s, "forge").ok).toBe(true);
     expect(buyCell(s, hex(2, 0)).ok).toBe(true);
-    expect(buyActivation(s, "notes").ok).toBe(true);
+    expect(buyActivation(s, "notes").ok).toBe(false);
     expect(upgradeModule(s, carrier.id).ok).toBe(true);
   });
 
@@ -114,8 +117,9 @@ describe("scaler interactions at the opening", () => {
       expect(grant).toBeLessThan(BALANCE.shelfPrices[type]);
       expect(buyShelfModule(s, type).ok).toBe(false);
     }
-    expect(rungCost(1)).toBeGreaterThan(grant);
+    // The ladder sells nothing, whatever the balance (ADR-0019).
     expect(buyActivation(s, "notes").ok).toBe(false);
+    expect(buyActivation(s, "goals").ok).toBe(false);
     expect(cellCost(0)).toBeGreaterThan(grant);
     expect(buyCell(s, hex(2, 0)).ok).toBe(false);
     expect(longGoalCost(0)).toBeGreaterThan(grant);
@@ -129,11 +133,10 @@ describe("scaler interactions at the opening", () => {
     buyCell(s, hex(2, 0));
     buyCell(s, hex(3, 0));
     buyShelfModule(s, "generator");
-    buyActivation(s, "notes");
-    // Cells ride the cell scaler, not the ladder or shelf…
+    // Cells ride the cell scaler…
     expect(cellCost(s.cellsBought)).toBe(cellCost(2));
-    // …the ladder counts rungs bought, unmoved by cells…
-    expect(rungCost(s.activatedApps.length + 1)).toBe(rungCost(2));
+    // …the ladder's rung never moves while it rests empty…
+    expect(nextRungCost(s)).toBe(rungCost(1));
     // …and the shelf hides exactly what was acquired.
     expect(SHELF_TYPES.filter((type) => !s.purchased[type])).toEqual(["additive", "infusor", "forge"]);
   });

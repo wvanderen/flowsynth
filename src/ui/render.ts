@@ -4,7 +4,7 @@ import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
 import { BALANCE, CATEGORY_OF, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
-import { appActive, appLockNote, FOCUS_APPS, LADDER_APPS, nextRung, nextRungCost, type FocusApp } from "../engine/apps";
+import { appActive, appLockNote, FOCUS_APPS, type FocusApp } from "../engine/apps";
 import { isInFlowNote } from "../engine/notes";
 import { activeHabit } from "../engine/habits";
 import {
@@ -26,7 +26,7 @@ import { HEX_RADIUS, hexPoints, moduleFace } from "./face";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
-import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, APP_ROLES, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
+import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatDate, formatInt, formatNumber, formatPracticeMinutes, practiceCountdown, secondsToMinutes } from "./format";
 import { renderStatusMonitor } from "./monitor";
 
@@ -129,7 +129,7 @@ function renderConsoleSession(app: App): void {
     // wears the next session's target in flow's clock styles, with
     // "planned" (or "open") in the caption slot. No session runs, so the
     // header's progress strip stays empty.
-    const planned = appActive(state, "time") && app.ui.chosenTarget !== null;
+    const planned = app.ui.chosenTarget !== null;
     const key = `upgrade:${planned}`;
     if (host.dataset.renderKey !== key) {
       host.dataset.renderKey = key;
@@ -240,10 +240,12 @@ function liveText(scope: ParentNode, live: string, text: string): void {
   if (node && node.textContent !== text) node.textContent = text;
 }
 
-// Focus-app access (ADR-0012): one tile per app — greyed until activated,
-// state LED when active — with its panel opening as a popover anchored
-// directly beneath the tile. Locked tiles open nothing; the board never
-// moves, reflows, or dims while the console is used.
+// Focus-app access (ADR-0012): one tile per app — the launch four live
+// from minute 0 (ADR-0019), each wearing its live state, with its panel
+// opening as a popover anchored directly beneath the tile. The locked-tile
+// plumbing stays for a future ladder tenant; locked tiles would open
+// nothing, and the board never moves, reflows, or dims while the console
+// is used.
 // (Display names live in meta.ts's APP_LABELS.)
 
 function renderConsoleApps(app: App): void {
@@ -286,12 +288,12 @@ function renderConsoleApps(app: App): void {
     const anchor = appKey === FOCUS_APPS[0] ? " first" : appKey === last ? " last" : "";
     // The tile wears the app's live state instead of its name: the Habit
     // tile shows the selected habit (or that none is), the Time tile the
-    // current plan once active; Notes, Goals, and locked apps are
-    // icon-only, their tooltips carrying the unlock gate.
+    // current plan; Notes and Goals are icon-only. Nothing is locked at
+    // launch (ADR-0019) — no tile is spotlighted, none greyed.
     let stateText: string | null = null;
     if (appKey === "habit") {
       stateText = activeHabit(state)?.name ?? "no habit";
-    } else if (appKey === "time" && active) {
+    } else if (appKey === "time") {
       stateText = planShort(ui.chosenTarget);
     }
     const title =
@@ -1262,28 +1264,8 @@ function appPanelBody(app: App, panel: FocusApp): string {
       return app.ui.drillSession !== null ? historyDrillHtml(app) : historyListHtml(app);
     }
     if (upgrade) {
-      // The planned-target affordances (§6): preset chips as quick picks,
-      // free 1–90 minute entry in one-minute steps — and open-ended as its
-      // own mode, never a duration choice.
-      const open = app.ui.chosenTarget === null;
-      const chosen = app.ui.chosenTarget;
-      const minutes = chosen === null ? null : Math.round(chosen / 60);
       return `<section class="focus-controls">
-        <div class="time-plan">
-          <div class="plan-chips" role="group" aria-label="Planned session length in minutes">
-            ${PLAN_PRESET_MINUTES.map(
-              (option) =>
-                `<button class="plan-chip${minutes === option ? " active" : ""}" data-plan="${option}" aria-pressed="${minutes === option}">${option}</button>`,
-            ).join("")}
-          </div>
-          <div class="plan-free">
-            <input type="number" id="plan-minutes" min="${PLAN_MIN_MINUTES}" max="${PLAN_MAX_MINUTES}" step="1" placeholder="1–90"
-              value="${minutes ?? ""}" ${open ? "disabled" : ""} aria-label="Custom session length, 1 to 90 minutes" />
-            <span class="plan-unit">min</span>
-          </div>
-          <button id="plan-open" class="plan-open${open ? " active" : ""}" aria-pressed="${open}">Open-ended</button>
-          <p class="clock-caption">${open ? "Open-ended" : "Planned practice"}</p>
-        </div>
+        ${planControlsHtml(app)}
         <button class="quiet small time-history" id="time-history">History</button>
       </section>`;
     }
@@ -1368,10 +1350,38 @@ function appPanelBody(app: App, panel: FocusApp): string {
   </section>`;
 }
 
-function bindAppPanel(app: App, scope: HTMLElement): void {
-  // The plan affordances (§6): chips pick a preset, the free entry takes
-  // any whole minute from 1 to 90 (clamped, one-minute steps), and
-  // open-ended is its own mode toggle.
+// The planned-target affordances (§6), shared by the Time app's panel and
+// the enter prompt: preset chips as quick picks, free 1–90 minute entry in
+// one-minute steps — and open-ended as its own mode, never a duration
+// choice. They ride the very first start (ADR-0019), visible but unpushed:
+// the resting plan is open-ended, and only a picked plan ever arms the
+// target signals (§4).
+function planControlsHtml(app: App): string {
+  const open = app.ui.chosenTarget === null;
+  const chosen = app.ui.chosenTarget;
+  const minutes = chosen === null ? null : Math.round(chosen / 60);
+  return `<div class="time-plan">
+    <div class="plan-chips" role="group" aria-label="Planned session length in minutes">
+      ${PLAN_PRESET_MINUTES.map(
+        (option) =>
+          `<button class="plan-chip${minutes === option ? " active" : ""}" data-plan="${option}" aria-pressed="${minutes === option}">${option}</button>`,
+      ).join("")}
+    </div>
+    <div class="plan-free">
+      <input type="number" id="plan-minutes" min="${PLAN_MIN_MINUTES}" max="${PLAN_MAX_MINUTES}" step="1" placeholder="1–90"
+        value="${minutes ?? ""}" ${open ? "disabled" : ""} aria-label="Custom session length, 1 to 90 minutes" />
+      <span class="plan-unit">min</span>
+    </div>
+    <button id="plan-open" class="plan-open${open ? " active" : ""}" aria-pressed="${open}">Open-ended</button>
+    <p class="clock-caption">${open ? "Open-ended" : "Planned practice"}</p>
+  </div>`;
+}
+
+// The plan affordances' binding within any scope (the Time popover or the
+// enter modal): chips pick a preset, the free entry takes any whole minute
+// from 1 to 90 (clamped, one-minute steps), and open-ended is its own mode
+// toggle.
+function bindPlanControls(app: App, scope: HTMLElement): void {
   scope.querySelectorAll<HTMLButtonElement>("[data-plan]").forEach((chip) => {
     chip.addEventListener("click", () => {
       app.ui.chosenTarget = Number(chip.getAttribute("data-plan")) * 60;
@@ -1390,6 +1400,10 @@ function bindAppPanel(app: App, scope: HTMLElement): void {
     app.ui.chosenTarget = null;
     app.render();
   });
+}
+
+function bindAppPanel(app: App, scope: HTMLElement): void {
+  bindPlanControls(app, scope);
   scope.querySelector("#habit-create")?.addEventListener("click", () => {
     const input = scope.querySelector("#habit-name-input") as HTMLInputElement | null;
     if (input) app.createHabitAction(input.value);
@@ -1746,13 +1760,11 @@ function renderStoreModal(app: App, content: HTMLElement): void {
   const openShelf = shelfTypes.filter((type) => !state.purchased[type]);
   const ownedShelf = shelfTypes.filter((type) => state.purchased[type]);
 
-  // The activation ladder (ADR-0013): every locked app is a row at the same
-  // shared price — the next rung — so the order stays free while every
-  // purchase raises the rung for the apps still waiting.
-  const ladderRows = LADDER_APPS.filter((appKey) => !appActive(state, appKey));
-  const rungPrice = nextRungCost(state);
-  const rungAffordable = wholeNous(state) >= rungPrice;
-  const rungCountdown = upgradeCountdown(app, rungPrice);
+  // The activation ladder (ADR-0013) rests empty at launch, so the catalog
+  // omits its activation section entirely (ADR-0019): no telegraph row, no
+  // pricing — after session one the hinted generator pull is the only spend
+  // path. The section returns with the ladder's first tenant, priced by
+  // that tenant's effort; the rung markup is not preserved here.
 
   // Cells (ADR-0013): the permanent catalog row. The price is not quoted
   // here — it lives where the purchase commits, on the board's frontier.
@@ -1764,18 +1776,6 @@ function renderStoreModal(app: App, content: HTMLElement): void {
     ${modalTop("CATALOG")}
     <h2 id="modal-title">Shape what comes next.</h2>
     <p class="lead">${formatInt(state.nous)} ν available.</p>
-    ${ladderRows.length > 0 ? `
-      <h3 class="store-section-title">Activations</h3>
-      <div class="shop-list store-activations">${ladderRows.map((appKey) => {
-        return `<div class="shop-item activation">
-          <div><h3>${APP_LABELS[appKey]}</h3><small>${APP_ROLES[appKey]}</small></div>
-          <span class="shop-buy">
-            <button class="primary" data-activate="${appKey}" ${rungAffordable ? "" : "disabled"} title="Rung ${nextRung(state)} of the activation ladder — any app, in any order">${formatInt(rungPrice)} ν</button>
-            ${rungCountdown ? `<small class="shop-countdown mono">${rungCountdown}</small>` : ""}
-          </span>
-        </div>`;
-      }).join("")}</div>
-      <p class="small muted" style="margin:6px 0 0">Any order — each rung costs more than the last.</p>` : ""}
     ${openShelf.length > 0 ? `
       <h3 class="store-section-title">Starter shelf</h3>
       <div class="shop-list">${openShelf.map((type) => {
@@ -1814,11 +1814,6 @@ function renderStoreModal(app: App, content: HTMLElement): void {
   content.querySelectorAll<HTMLButtonElement>("[data-buy]").forEach((button) => {
     button.addEventListener("click", () => {
       app.buyShelf(button.getAttribute("data-buy") as keyof typeof BALANCE.shelfPrices);
-    });
-  });
-  content.querySelectorAll<HTMLButtonElement>("[data-activate]").forEach((button) => {
-    button.addEventListener("click", () => {
-      app.buyActivationAction(button.getAttribute("data-activate") as FocusApp);
     });
   });
   byId("buy-cell")?.addEventListener("click", () => app.armCellPurchase());
@@ -2027,7 +2022,9 @@ function renderHonestyModal(app: App, content: HTMLElement): void {
 // The enter prompt, ahead of a session with no habit selected: the habit
 // ask, the create field, and unstructured practice — nothing else. With a
 // habit already selected the console switch starts directly and this prompt
-// never opens.
+// never opens. It carries the duration affordances from the very first
+// start (ADR-0019) — visible but unpushed, the resting plan open-ended —
+// and session one's steered suggestion: a short try, then exit.
 function renderEnterModal(app: App, content: HTMLElement): void {
   const { state } = app;
   const habits = state.habits.filter((h) => !h.archived);
@@ -2053,7 +2050,10 @@ function renderEnterModal(app: App, content: HTMLElement): void {
         <small>nous is unaffected</small>
       </button>
     </div>
+    ${state.sessionsCompleted === 0 ? `<p class="enter-steer small muted">A first try can be short — five minutes or so, then exit and see what the session banked.</p>` : ""}
+    ${planControlsHtml(app)}
     <div class="modal-actions"><button id="enter-cancel">Back</button></div>`;
+  bindPlanControls(app, content);
   content.querySelectorAll<HTMLElement>("[data-enter-habit]").forEach((button) => {
     button.addEventListener("click", () => app.beginFlow(button.getAttribute("data-enter-habit")));
   });
