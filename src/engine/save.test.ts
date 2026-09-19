@@ -5,7 +5,6 @@ import { fresh, give, stubRng } from "./fixtures";
 import { SAVE_VERSION } from "./constants";
 import { deserialize, serialize } from "./save";
 import { generateOffer } from "./rolls";
-import { planTick } from "./clock";
 import { hex } from "./hex";
 
 describe("persistence", () => {
@@ -128,24 +127,30 @@ describe("persistence", () => {
     expect(deserialize('{"app":"flowsynth","version":5,"state":{"mode":"weird"}}').error).toBeDefined();
     expect(deserialize('{"app":"flowsynth","version":5}').error).toBeDefined();
   });
-});
 
-describe("interruption reconciliation", () => {
-  it("applies ordinary background gaps without confirmation", () => {
-    const plan = planTick(1_000_000, 1_000_000 + 60_000);
-    expect(plan.apply).toBeCloseTo(60, 6);
-    expect(plan.pending).toBeNull();
+  it("v5 saves from before trust accounting default the session ledger (ADR-0019)", () => {
+    const s = fresh();
+    startSession(s, 600);
+    advance(s, 30);
+    const file = JSON.parse(serialize(s, 1_000));
+    delete file.state.session.accounting;
+    const loaded = deserialize(JSON.stringify(file));
+    expect(loaded.error).toBeUndefined();
+    expect(loaded.state!.session!.accounting.creditedSeconds).toBe(0);
+    expect(loaded.state!.session!.accounting.poolSeconds).toBe(0);
+    expect(loaded.state!.session!.accounting.bucketNous).toBe(0);
+    expect(loaded.state!.session!.accounting.pendingAwaySeconds).toBe(0);
+    expect(loaded.state!.session!.accounting.events).toEqual([]);
   });
 
-  it("freezes extended gaps for confirmation", () => {
-    const plan = planTick(1_000_000, 1_000_000 + 600_000);
-    expect(plan.apply).toBe(0);
-    expect(plan.pending).toBeCloseTo(600, 6);
-  });
-
-  it("never produces negative gaps", () => {
-    const plan = planTick(2_000_000, 1_000_000);
-    expect(plan.apply).toBe(0);
-    expect(plan.pending).toBeNull();
+  it("the retired reconcile dialog's frozen gap is dropped at load (ADR-0019)", () => {
+    const s = fresh();
+    startSession(s, 600);
+    advance(s, 30);
+    const file = JSON.parse(serialize(s, 1_000));
+    file.state.pendingGap = { seconds: 600, detectedAt: 1_000 };
+    const loaded = deserialize(JSON.stringify(file));
+    expect(loaded.error).toBeUndefined();
+    expect((loaded.state as unknown as Record<string, unknown>).pendingGap).toBeUndefined();
   });
 });

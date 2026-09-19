@@ -49,7 +49,6 @@ export function createInitialState(): GameState {
     achievements: {},
     session: null,
     summary: null,
-    pendingGap: null,
     nextId: 1,
   };
   const carrier = createModule(state, "carrier", "common");
