@@ -15,7 +15,6 @@ import {
 import { advance } from "./advance";
 import { appActive } from "./apps";
 import { BALANCE } from "./constants";
-import { rungCost } from "./economy";
 import { fresh } from "./fixtures";
 import { hex } from "./hex";
 import { createHabit, selectHabit } from "./habits";
@@ -27,10 +26,16 @@ import type { ShelfType } from "./types";
 // identical whatever the session's length or early exit, so every exit path
 // lands in the same loud summary.
 
-describe("the enter prompt's open-ended shape (§5.5)", () => {
-  it("session one is mechanically open-ended — Time is not active yet", () => {
+describe("the enter prompt's open-ended shape (§5.5, §7)", () => {
+  it("session one can be planned — Time is free from minute 0", () => {
     const s = fresh();
-    expect(appActive(s, "time")).toBe(false);
+    expect(appActive(s, "time")).toBe(true);
+    expect(startSession(s, 600).ok).toBe(true);
+    expect(s.session?.target).toBe(600);
+  });
+
+  it("open-ended remains its own mode, and the script still steers it for session one", () => {
+    const s = fresh();
     expect(startSession(s, null).ok).toBe(true);
     expect(s.session?.target).toBeNull();
   });
@@ -66,7 +71,7 @@ describe("the loud summary (§5.7) — every exit path, identical beats", () => 
     expect(s.summary!.seconds).toBeCloseTo(300, 6);
     expect(s.summary!.ratePerMinute).toBeCloseTo(6, 6);
     expect(s.summary!.seen).toBe(false);
-    expect(s.summary!.timeUnlocked).toBe(true);
+    expect(s.summary!.timeUnlocked).toBe(false);
   });
 
   it("a manual exit after the target also summarizes (target reached or not)", () => {
@@ -76,7 +81,7 @@ describe("the loud summary (§5.7) — every exit path, identical beats", () => 
     advance(s, 60);
     expect(endSession(s).ok).toBe(true);
     expect(s.summary!.earned).toBeCloseTo(66, 6);
-    expect(s.summary!.timeUnlocked).toBe(true);
+    expect(s.summary!.timeUnlocked).toBe(false);
   });
 
   it("exiting from a pause summarizes too", () => {
@@ -133,11 +138,12 @@ describe("the loud summary (§5.7) — every exit path, identical beats", () => 
     expect(s.summary!.ratePerMinute).toBe(0);
   });
 
-  it("session two's summary drops the unlock row", () => {
+  it("session two's summary drops the unlock row too — the row never fires at launch", () => {
     const s = fresh();
     startSession(s, null);
     advance(s, 60);
     endSession(s);
+    expect(s.summary!.timeUnlocked).toBe(false);
     startSession(s, null);
     advance(s, 60);
     endSession(s);
@@ -155,7 +161,7 @@ describe("the loud summary (§5.7) — every exit path, identical beats", () => 
     const restored = deserialize(serialize(s, 1_000)).state!;
     expect(restored.summary!.seen).toBe(true);
     expect(restored.summary!.earned).toBeCloseTo(6, 6);
-    expect(restored.summary!.timeUnlocked).toBe(true);
+    expect(restored.summary!.timeUnlocked).toBe(false);
   });
 
   it("an unseen summary survives a reload to re-open the modal; a seen one stays closed", () => {
@@ -171,21 +177,20 @@ describe("the loud summary (§5.7) — every exit path, identical beats", () => 
   });
 });
 
-describe("Time auto-activates with the first completion (§5.7–5.8)", () => {
-  it("the unlock lands at endSession, never during the session", () => {
+describe("the four apps are live from the first session (ADR-0019)", () => {
+  it("Time never waits on a milestone: active before session one, never via endSession", () => {
     const s = fresh();
+    expect(appActive(s, "time")).toBe(true);
     startSession(s, null);
     advance(s, 600);
-    expect(appActive(s, "time")).toBe(false);
+    expect(appActive(s, "time")).toBe(true);
     endSession(s);
     expect(appActive(s, "time")).toBe(true);
     expect(s.activatedApps).toHaveLength(0);
   });
 
-  it("after session one the planned target is a real choice", () => {
+  it("the planned target is a real choice from the very first session", () => {
     const s = fresh();
-    startSession(s, null);
-    endSession(s);
     expect(startSession(s, 300).ok).toBe(true);
     expect(s.session?.target).toBe(300);
   });
@@ -210,16 +215,23 @@ describe("nothing unlocks or purchases mid-session-one (§5.6)", () => {
     expect(s.goalCapacityBought).toBe(0);
     expect(s.welcomeAcked).toBe(false);
     endSession(s);
-    // The same surfaces reopen between sessions.
+    // The same surfaces reopen between sessions — but the ladder still
+    // sells nothing: the apps were already free.
     expect(acknowledgeWelcome(s).ok).toBe(true);
-    expect(buyActivation(s, "notes").ok).toBe(true);
+    expect(buyActivation(s, "notes").ok).toBe(false);
   });
 });
 
-describe("post-session: the rung-1-vs-generator choice (§5.8)", () => {
-  it("rung one prices below the shelf floor, unguided and side by side", () => {
-    const shelfFloor = Math.min(...Object.values(BALANCE.shelfPrices));
-    expect(rungCost(1)).toBeLessThan(shelfFloor);
-    expect(rungCost(2)).toBeGreaterThan(rungCost(1));
+describe("post-session: the generator pull is the only spend path (§7)", () => {
+  it("the rung-1-vs-generator fork is gone; the shelf stays, hint intact", () => {
+    const s = fresh();
+    startSession(s, null);
+    advance(s, 60);
+    endSession(s);
+    s.nous = 1e6;
+    expect(buyActivation(s, "notes").ok).toBe(false);
+    expect(buyActivation(s, "goals").ok).toBe(false);
+    // The shelf remains the one place early nous goes.
+    expect(buyShelfModule(s, "generator").ok).toBe(true);
   });
 });

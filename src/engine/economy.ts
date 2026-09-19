@@ -33,8 +33,9 @@ export function cellCost(cellsBought: number): number {
 }
 
 // The activation ladder (ADR-0013): a shared geometric scaler over rungs
-// bought — rung one below the shelf floor, every later rung costs more no
-// matter which app it opens. Same ceiling-exact whole-nous pattern.
+// bought — each later rung costs more no matter which app it opens. The
+// ladder rests empty at launch (ADR-0019): the scaler's shape stands, and
+// its pricing is decided with the ladder's first tenant.
 export function rungCost(rung: number): number {
   if (rung < 1) throw new Error("rung must be positive");
   return geometricCeilCost(BALANCE.ladderFirstCost, BALANCE.ladderGrowthNumerator, BALANCE.ladderGrowthDenominator, rung - 1);

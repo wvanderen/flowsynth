@@ -21,8 +21,9 @@ export const RARITY_LABEL: Record<Rarity, string> = { common: "common", uncommon
 // Focus-app display names, shared by the console tiles and purchase surfaces.
 export const APP_LABELS: Record<FocusApp, string> = { habit: "Habit", time: "Time", notes: "Notes", goals: "Goals" };
 
-// The one-line pitch each ladder row carries in the catalog (spec §2.2's
-// launch function column).
+// The one-line pitch a ladder row carries in the catalog (spec §2.2's
+// launch function column). The ladder rests empty at launch (ADR-0019), so
+// no row renders; the pitches stay for the ladder's first tenant.
 export const APP_ROLES: Record<FocusApp, string> = {
   habit: "Select the active habit.",
   time: "Planned targets and timing tools.",
