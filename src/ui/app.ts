@@ -24,7 +24,7 @@ import { syncArete } from "../engine/accumulator";
 import { wholeNous } from "../engine/economy";
 import { adjacent, neighbors, sameHex } from "../engine/hex";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
-import { planTick } from "../engine/clock";
+import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
 import { createInitialState, isCarrier } from "../engine/state";
 import { appActive, type FocusApp } from "../engine/apps";
 import { writeNote } from "../engine/notes";
@@ -44,7 +44,8 @@ import { render } from "./render";
 import { APP_LABELS, META } from "./meta";
 
 // The session modal surfaces (§5.5, §5.7): the enter prompt precedes every
-// session; the loud summary follows every one.
+// session; the loud summary follows every one; the honesty report interrupts
+// whenever provisional time waits (§1–2).
 export type ModalKind =
   | "settings"
   | "store"
@@ -53,7 +54,7 @@ export type ModalKind =
   | "export"
   | "import"
   | "reset"
-  | "reconcile"
+  | "honesty"
   | "enter"
   | "summary"
   | null;
@@ -101,6 +102,14 @@ function parseSave(text: string): ParsedSave {
   return { state: result.state, savedAt };
 }
 
+// The dual clock (focus-tool spec §1, §10): drift between the wall clock
+// and the monotonic one. performance.now() does not advance while the
+// machine sleeps; Date.now() does — so a positive step in this drift across
+// a boundary sizes a slept gap, even while the tab stayed "visible".
+function dualDriftMs(): number {
+  return Date.now() - (performance.timeOrigin + performance.now());
+}
+
 export class App {
   state: GameState = createInitialState();
   ui: UiState = {
@@ -119,6 +128,19 @@ export class App {
     showChords: false,
   };
   lastWall: number | null = null;
+  // The dual-clock drift baseline at lastWall (§10): its positive steps
+  // size slept gaps; a negative step credits its boundary zero.
+  lastDrift = 0;
+  // The presence state that held since the last boundary (§1): presence is
+  // visibility — focus loss alone is not away.
+  presence = true;
+  // Set when exit was requested while the honesty report still waits: the
+  // answer is mandatory and final before the session ends (§2).
+  exitPending = false;
+  // Set at load when document.wasDiscarded marks a Memory-Saver discard
+  // (§10): the reconcile path treats it exactly like any other away gap,
+  // and greet() passes the observation on.
+  private resumedFromDiscard = false;
   lastSaveWall = 0;
   dev: boolean;
   // The Forge's threshold-crossing flash: a roll was minted, so its face
@@ -169,26 +191,72 @@ export class App {
     }
   }
 
-  // Resumes an in-flow session from a save: ordinary background time applies
-  // silently; extended gaps (sleep, closure, import) freeze for confirmation
-  // instead of finalizing silently.
+  // Resumes an in-flow session from a save. One reconcile path (§1): the
+  // gap since the last hidden-transition save classifies as away through
+  // the trust rules — sleep, tab discard, mid-session reload, and
+  // save-import all flow through it; the confirm-or-discard dialog is gone
+  // (ADR-0019).
   private resumeFromSave(loaded: LoadedSave): void {
     this.state = loaded.state;
     this.lastWall = null;
+    this.presence = document.visibilityState === "visible";
+    this.exitPending = false;
     // An unseen loud summary (§5.7) survives a reload: the modal re-opens
     // until the player dismisses it.
     if (this.state.mode === "upgrade" && this.state.summary && !this.state.summary.seen) {
       this.ui.modal = "summary";
     }
     if (this.state.mode !== "flow") return;
-    const plan = planTick(loaded.savedAt, Date.now());
-    if (plan.pending !== null) {
-      this.state.pendingGap = { seconds: plan.pending, detectedAt: Date.now() };
-      this.ui.modal = "reconcile";
-    } else {
-      advance(this.state, plan.apply);
-      this.lastWall = Date.now();
+    // A discarded tab (Memory Saver, §10) lands here exactly like a plain
+    // reload: the gap since the last hidden-transition save is away, and
+    // document.wasDiscarded only records that it happened.
+    this.resumedFromDiscard = (document as Document & { wasDiscarded?: boolean }).wasDiscarded === true;
+    const gapSeconds = Math.max(0, (Date.now() - loaded.savedAt) / 1000);
+    applyGap(this.state, gapSeconds, "away", 0);
+    this.reportAdvance(flushPendingAway(this.state));
+    this.syncBoundaryClock(Date.now());
+    // The report fires at this return when the pool is outstanding, and
+    // re-presents, recalculated, at each next return until settled (§1).
+    if (poolOutstanding(this.state)) this.ui.modal = "honesty";
+  }
+
+  // The boundary clock's baseline: wall moment and dual-clock drift move
+  // together, never one without the other.
+  private syncBoundaryClock(now: number): void {
+    this.lastWall = now;
+    this.lastDrift = dualDriftMs();
+  }
+
+  // One boundary (§1): the wall-clock gap since the last boundary is
+  // classified by the presence that held during it and the whole simulation
+  // advances by it — never by tick count, which throttling falsifies.
+  private applyBoundary(now: number): void {
+    if (this.state.mode !== "flow") {
+      this.lastWall = null;
+      return;
     }
+    if (this.lastWall === null) {
+      this.syncBoundaryClock(now);
+      return;
+    }
+    const gapSeconds = (now - this.lastWall) / 1000;
+    const driftStepSeconds = (dualDriftMs() - this.lastDrift) / 1000;
+    this.syncBoundaryClock(now);
+    if (gapSeconds <= 0 && driftStepSeconds <= 0) return;
+    rollGoalOccurrences(this.state, now);
+    const result = applyGap(this.state, gapSeconds, this.presence ? "visible" : "away", driftStepSeconds);
+    this.reportAdvance(result);
+    if (now - this.lastSaveWall > 5000) this.save(now);
+  }
+
+  // A return (§1): the buffered absence — the hidden stretch, reconciled
+  // whole — classifies once, then live presence resumes banking behind it.
+  private processReturn(now: number): void {
+    this.applyBoundary(now);
+    if (document.visibilityState === "visible") {
+      this.reportAdvance(flushPendingAway(this.state));
+    }
+    this.tick();
   }
 
   save(now: number = Date.now()): void {
@@ -227,8 +295,8 @@ export class App {
     this.ui.importError = null;
     this.resumeFromSave(parsed);
     this.say(
-      this.state.pendingGap
-        ? "Save imported while a session was running. Confirm the away interval before it counts."
+      poolOutstanding(this.state)
+        ? "Save imported while a session was running — the honesty report is waiting."
         : "Save imported.",
     );
     this.save();
@@ -243,6 +311,7 @@ export class App {
     this.ui.importError = null;
     this.ui.chosenTarget = 600;
     this.lastWall = null;
+    this.exitPending = false;
     this.say("A fresh instrument. The Carrier is yours.");
     this.save();
     this.render();
@@ -259,6 +328,11 @@ export class App {
       this.loadNotice = null;
       return;
     }
+    if (this.resumedFromDiscard && this.state.mode === "flow") {
+      this.say("The tab was discarded while away — the gap counted as away time.");
+      this.resumedFromDiscard = false;
+      return;
+    }
     if (this.state.sessionsCompleted === 0 && this.state.mode === "upgrade") {
       this.say("Welcome. Upgrade the Carrier, then enter flow.");
     } else if (this.state.mode === "flow") {
@@ -271,11 +345,27 @@ export class App {
   private bindGlobalEvents(): void {
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "hidden") {
+        // The gap that just ended was present: classify it, then persist —
+        // the transition to hidden is the last reliably observable save
+        // point (§10), carrying the session, the bucket, and the absence
+        // buffer.
+        this.applyBoundary(Date.now());
+        this.presence = false;
         this.save();
       } else {
-        this.tick();
+        this.presence = true;
+        this.processReturn(Date.now());
       }
     });
+    // A bfcache restore is a return: the frozen stretch classifies as away.
+    window.addEventListener("pageshow", (event) => {
+      if (!(event as PageTransitionEvent).persisted) return;
+      this.presence = document.visibilityState === "visible";
+      this.processReturn(Date.now());
+    });
+    // Focus loss alone is not away, but focus is a boundary: a stalled or
+    // throttled clock catches up here with presence unchanged.
+    window.addEventListener("focus", () => this.processReturn(Date.now()));
     window.addEventListener("beforeunload", () => this.save());
     window.setInterval(() => this.tick(), 100);
     // A popover is light furniture: clicking anywhere outside the console's
@@ -306,30 +396,16 @@ export class App {
   }
 
   tick(): void {
-    if (this.state.mode !== "flow" || this.state.pendingGap) {
-      if (this.state.mode !== "flow") this.lastWall = null;
+    this.applyBoundary(Date.now());
+    if (this.state.mode !== "flow") {
+      this.lastWall = null;
       return;
     }
-    const now = Date.now();
-    if (this.lastWall === null) {
-      this.lastWall = now;
-      return;
+    // A return with the pool outstanding presents the mandatory honesty
+    // report; presence keeps banking behind it until it settles (§1).
+    if (poolOutstanding(this.state) && this.ui.modal !== "honesty") {
+      this.ui.modal = "honesty";
     }
-    const plan = planTick(this.lastWall, now);
-    if (plan.pending !== null) {
-      this.state.pendingGap = { seconds: plan.pending, detectedAt: now };
-      this.lastWall = now;
-      this.ui.modal = "reconcile";
-      this.render();
-      return;
-    }
-    if (plan.apply > 0) {
-      rollGoalOccurrences(this.state, now);
-      const result = advance(this.state, plan.apply);
-      this.reportAdvance(result);
-    }
-    this.lastWall = now;
-    if (now - this.lastSaveWall > 5000) this.save(now);
     this.render();
   }
 
@@ -398,7 +474,8 @@ export class App {
       return;
     }
     this.ui.modal = null;
-    this.lastWall = Date.now();
+    this.exitPending = false;
+    this.syncBoundaryClock(Date.now());
     this.clearTransientUi();
     this.say(target === null ? "Flow is live." : `Flow is live for ${Math.round(target / 60)} minutes — the board is locked.`);
     this.save();
@@ -419,6 +496,15 @@ export class App {
   }
 
   endFlow(): void {
+    // The exit runs report-first (§8): with the pool outstanding, the
+    // honesty report's answer is mandatory and final — the bucket must
+    // bank or drop before the summary shows.
+    if (this.state.mode !== "upgrade" && poolOutstanding(this.state)) {
+      this.exitPending = true;
+      this.ui.modal = "honesty";
+      this.render();
+      return;
+    }
     const result = endSession(this.state, Date.now());
     if (!result.ok) {
       this.say(result.reason ?? "No session is running.");
@@ -441,7 +527,7 @@ export class App {
 
   resume(): void {
     if (this.act(resumeSession(this.state), "Flow resumed.")) {
-      this.lastWall = Date.now();
+      this.syncBoundaryClock(Date.now());
     }
   }
 
@@ -865,25 +951,31 @@ export class App {
     this.render();
   }
 
-  confirmGap(): void {
-    const gap = this.state.pendingGap;
-    if (gap) {
-      const result = advance(this.state, gap.seconds);
-      this.reportAdvance(result);
-      this.say(`Confirmed ${Math.round(gap.seconds / 60)} min. Flow continues.`);
+  // The honesty report's answer (§2): banks or drops the bucket in one
+  // move and credits the pool accordingly. Non-dismissible mid-session —
+  // leaving it unanswered means leaving, and the next return re-presents
+  // the pool recalculated. When exit is pending, the session ends straight
+  // after the settle, so the report precedes the summary.
+  resolveHonesty(outcome: HonestyOutcome): void {
+    const resolution = resolveHonestyReport(this.state, outcome);
+    if (!resolution.ok) {
+      this.say(resolution.reason ?? "The report cannot settle right now.");
+      this.render();
+      return;
     }
-    this.state.pendingGap = null;
     this.ui.modal = null;
-    this.lastWall = Date.now();
-    this.save();
-    this.render();
-  }
-
-  discardGap(): void {
-    this.state.pendingGap = null;
-    this.ui.modal = null;
-    this.lastWall = Date.now();
-    this.say("Interval discarded.");
+    const wasExiting = this.exitPending;
+    this.exitPending = false;
+    const goalNote = resolution.completions && resolution.completions > 0 ? " A goal completed." : "";
+    this.say(
+      (outcome === "missed"
+        ? "Report settled — the held nous dropped."
+        : "Report settled — the held nous banked.") + goalNote,
+    );
+    if (wasExiting) {
+      this.endFlow();
+      return;
+    }
     this.save();
     this.render();
   }
@@ -905,7 +997,9 @@ export class App {
   }
 
   closeModal(): void {
-    if (this.ui.modal === "reconcile") return;
+    // The honesty report is non-dismissible (ADR-0019): it settles, or the
+    // player leaves and the next return re-presents it, recalculated.
+    if (this.ui.modal === "honesty") return;
     // Backdrop click or Esc on the loud summary counts as its dismissal, so
     // an unseen summary never silently stays unseen.
     if (this.ui.modal === "summary") {

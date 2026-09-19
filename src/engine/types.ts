@@ -60,15 +60,57 @@ export interface Meter {
 // focus-keyed generator. "generator" stays the shelf key the save stores.
 export type ShelfType = "additive" | "generator" | "infusor" | "forge";
 
+// The per-reconciliation honesty outcome (focus-tool spec §2): how a
+// provisional absence's past-target slice settled.
+export type HonestyOutcome = "missed" | "planned" | "full";
+
+// One settled reconciliation's factual line (spec §9): the away minutes and
+// their outcome. Rendered neutrally in history — accounting, not judgment.
+export interface HonestyEvent {
+  awaySeconds: number;
+  outcome: HonestyOutcome;
+}
+
+// Trust accounting for the running session (focus-tool spec §1–3). Presence
+// is always trusted; away time is trusted up to a planned target, and
+// provisional past it (all provisional on open-ended, beyond the floor).
+// The bucket holds provisional nous until the honesty report banks or drops
+// it in one move; the pool holds the provisional minutes behind it. C —
+// creditedSeconds — is the seam every focus-side consumer keys off: live
+// present and trusted time accrue it at their boundary, provisional time
+// only when the report credits it. Additive v5 fields; older saves default
+// the whole object at load.
+export interface SessionAccounting {
+  // Credited practice time: present + trusted + provisionally credited.
+  creditedSeconds: number;
+  // The provisional pool: away minutes awaiting the honesty report.
+  poolSeconds: number;
+  // The provisional bucket: nous produced by provisional time, visibly
+  // flagged on the console until the report settles it.
+  bucketNous: number;
+  // Away time accumulated by the current contiguous absence — a hidden
+  // stretch's throttled wake-ups buffer here, and the whole absence is
+  // classified in one pass when presence returns (the reconciliation floor
+  // and the target split both read the whole absence, never a chunk).
+  pendingAwaySeconds: number;
+  // Settled reconciliations, in order. Target hits, the honesty summary,
+  // and miss rows derive from these — never stored.
+  events: HonestyEvent[];
+}
+
 export interface SessionState {
   target: number | null;
   elapsed: number;
   // Nous produced by the board during this session (§5.7): the loud
-  // summary's headline and rate read from it at session end.
+  // summary's headline and rate read from it at session end. Only banked
+  // nous counts — a dropped bucket is absent from the number.
   earned: number;
   // Achievements unlocked while this session was live (ADR-0015): they
   // queue here and read out as the summary's "unlocked this session" row.
   unlocked: string[];
+  // The trust ledger (spec §1–3): credited time, the provisional bucket
+  // and pool, and settled honesty events.
+  accounting: SessionAccounting;
 }
 
 // The loud summary (§5.7): captured once at session end — however the
@@ -91,11 +133,6 @@ export interface SessionSummary {
   // the summary's "unlocked this session" row.
   achievements: string[];
   seen: boolean;
-}
-
-export interface PendingGap {
-  seconds: number;
-  detectedAt: number;
 }
 
 export interface NoteEntry {
@@ -196,7 +233,6 @@ export interface GameState {
   // The last session's loud summary (§5.7): set at every session end,
   // dismissed once by the player, replaced by the next session's end.
   summary: SessionSummary | null;
-  pendingGap: PendingGap | null;
   nextId: number;
 }
 

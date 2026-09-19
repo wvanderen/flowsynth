@@ -1,5 +1,6 @@
 import { createInitialState } from "./state";
 import { SAVE_VERSION } from "./constants";
+import { freshAccounting } from "./trust";
 import type { GameState } from "./types";
 
 export interface SaveFile {
@@ -95,6 +96,25 @@ export function deserialize(text: string): LoadResult {
   if (merged.summary && !Array.isArray(merged.summary.achievements)) {
     merged.summary.achievements = [];
   }
+  // The focus-tool spec's trust accounting (ADR-0019) joins as additive v5
+  // fields: sessions from before it carry no ledger, so default the whole
+  // object and its lists leniently — older saves load unchanged.
+  if (merged.session) {
+    if (!isRecord(merged.session.accounting)) {
+      merged.session.accounting = freshAccounting();
+    } else {
+      if (!Array.isArray(merged.session.accounting.events)) {
+        merged.session.accounting.events = [];
+      }
+      if (typeof merged.session.accounting.pendingAwaySeconds !== "number") {
+        merged.session.accounting.pendingAwaySeconds = 0;
+      }
+    }
+  }
+  // The retired 120 s reconcile dialog's frozen gap (ADR-0010 → ADR-0019):
+  // a pre-trust save may still carry one; drop it rather than resuming a
+  // state shape this build no longer reads.
+  delete (merged as unknown as Record<string, unknown>).pendingGap;
   // ADR-0018 retired the plain generator type pre-release (see
   // remapRetiredGenerator above); shelf keys added after a save was written
   // (the additive synth) default to unpurchased rather than reading as

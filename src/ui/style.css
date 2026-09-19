@@ -901,7 +901,28 @@ body.managing .manage-banner { display: flex; }
 .modal-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 .import-error { color: var(--danger); font-size: 12px; margin-top: 8px; }
 
-.reconcile-gap { font: 30px var(--mono); margin: 14px 0 6px; }
+/* The honesty report (§2): consequence-carrying choices, no dismiss. */
+.honesty-choices { display: grid; gap: 8px; margin-top: 14px; }
+.honesty-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-soft);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.honesty-choice:hover { border-color: var(--accent); }
+.honesty-label { font-weight: 650; }
+.honesty-consequence { color: var(--muted); font-size: 12px; }
+
+/* The provisional bucket's console flag (§2): the switch's vermillion. */
+.clock-provisional { margin: 2px 0 0; font: 11.5px var(--mono); color: var(--accent); min-height: 14px; }
 
 /* Session modals (§5.5, §5.7): the enter prompt's habit choices and the
    loud summary's rows. Both are plain modal surfaces — no purchase or

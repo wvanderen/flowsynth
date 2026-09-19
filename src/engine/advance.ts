@@ -7,7 +7,14 @@ import { accrueLivePractice } from "./habits";
 import { accrueGoalProgress } from "./goals";
 import type { AdvanceResult, GameState } from "./types";
 
-function sumResults(a: AdvanceResult, b: AdvanceResult): AdvanceResult {
+// Where a span's produced nous lands and whether it credits practice
+// (focus-tool spec §1–3). "live" is present or trusted time: banks, credits,
+// accrues. "provisional" is away time the honesty report still owns: its
+// nous lands in the provisional bucket and its minutes in the pool — it
+// produces, but credits nothing until the report settles it.
+export type AdvanceSink = "live" | "provisional";
+
+export function sumResults(a: AdvanceResult, b: AdvanceResult): AdvanceResult {
   return {
     nousEarned: a.nousEarned + b.nousEarned,
     rollsBanked: a.rollsBanked + b.rollsBanked,
@@ -16,7 +23,12 @@ function sumResults(a: AdvanceResult, b: AdvanceResult): AdvanceResult {
   };
 }
 
-export function advance(state: GameState, seconds: number, rng: Rng = Math.random): AdvanceResult {
+export function advance(
+  state: GameState,
+  seconds: number,
+  rng: Rng = Math.random,
+  sink: AdvanceSink = "live",
+): AdvanceResult {
   const result: AdvanceResult = {
     nousEarned: 0,
     rollsBanked: 0,
@@ -40,17 +52,28 @@ export function advance(state: GameState, seconds: number, rng: Rng = Math.rando
     // reading it in the second call's argument would re-advance the whole
     // step uncharged.
     const split = state.chargeWindow;
-    const first = advance(state, split, rng);
-    const second = advance(state, seconds - split, rng);
+    const first = advance(state, split, rng, sink);
+    const second = advance(state, seconds - split, rng, sink);
     return sumResults(first, second);
   }
 
   // The board is locked during flow, so the rate is constant across the
   // step; production is exactly what the board's modules make (§2.1).
+  // Board-side meters (forge progress, received charge) run in both sinks —
+  // the trust table redirects only nous and practice minutes (§1); the
+  // bucket holds nous only.
   const snapshot = computeRates(state, true);
   const gained = snapshot.rate * seconds;
-  state.nous += gained;
-  state.totalEarned += gained;
+  if (sink === "provisional") {
+    // Provisional nous never touches the balance: it waits in the bucket
+    // for the honesty report to bank or drop it in one move (§2), and the
+    // span's minutes join the pool behind it.
+    session.accounting.bucketNous += gained;
+    session.accounting.poolSeconds += seconds;
+  } else {
+    state.nous += gained;
+    state.totalEarned += gained;
+  }
   result.nousEarned += gained;
   // Filling the accumulator mints Arete (ADR-0015).
   result.areteMinted += syncArete(state);
@@ -59,8 +82,9 @@ export function advance(state: GameState, seconds: number, rng: Rng = Math.rando
   }
   session.elapsed += seconds;
   // The summary's headline and rate (§5.7) accrue with the session itself,
-  // so pauses and discarded gaps never count into either.
-  session.earned += gained;
+  // so pauses never count into either; provisional production stays out
+  // until its bucket banks.
+  if (sink === "live") session.earned += gained;
   // The charge window is a time budget, not a rate: a deployed focus-keyed
   // generator spends one window second per flow second, elapsing even with
   // no eligible neighbors (the remaining-duration vocabulary). Undeployed,
@@ -68,8 +92,14 @@ export function advance(state: GameState, seconds: number, rng: Rng = Math.rando
   if (chargeWindowActive(state) && deployed(state).some((m) => m.type === "focusKeyed")) {
     state.chargeWindow = Math.max(0, state.chargeWindow - seconds);
   }
-  accrueLivePractice(state, seconds);
-  result.goalsCompleted += accrueGoalProgress(state, state.activeHabitId, seconds);
+  if (sink === "live") {
+    // Practice credits only from present and trusted time — nothing ever
+    // accrues from away before its reconciliation (§3), so the provisional
+    // minutes above leave habit, goals, and C untouched.
+    session.accounting.creditedSeconds += seconds;
+    accrueLivePractice(state, seconds);
+    result.goalsCompleted += accrueGoalProgress(state, state.activeHabitId, seconds);
+  }
   // The session-tick check (ADR-0015): charge exists only live in flow, so
   // the tick that holds the snapshot reports whether any module received
   // it (Spark). Unlocks queue into the session's summary row.

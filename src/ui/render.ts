@@ -7,6 +7,7 @@ import { formatClock, formatDuration } from "../engine/clock";
 import { appActive, appLockNote, FOCUS_APPS, LADDER_APPS, nextRung, nextRungCost, type FocusApp } from "../engine/apps";
 import { isInFlowNote } from "../engine/notes";
 import { activeHabit } from "../engine/habits";
+import { poolOutstanding } from "../engine/trust";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
 import { isCarrier } from "../engine/state";
@@ -159,6 +160,7 @@ function renderConsoleSession(app: App): void {
       <div class="console-clock">
         <p class="session-clock mono" id="session-clock"></p>
         <p class="clock-caption" id="session-caption"></p>
+        <p class="clock-provisional" id="session-provisional" role="status"></p>
       </div>
       <div class="session-actions">
         <button id="pause-flow">${paused ? "Resume" : "Pause"}</button>
@@ -179,6 +181,16 @@ function renderConsoleSession(app: App): void {
   };
   set("session-clock", formatClock(target !== null ? Math.max(0, target - elapsed) : elapsed));
   set("session-caption", sessionCaption(elapsed, target, paused));
+  // The provisional bucket is visibly flagged while it holds (§2): the pool
+  // minutes and the nous waiting on the honesty report, in the switch's
+  // vermillion so it reads from across the room.
+  const accounting = session?.accounting;
+  set(
+    "session-provisional",
+    accounting && poolOutstanding(state)
+      ? `${formatDuration(accounting.poolSeconds)} provisional · ${formatNumber(accounting.bucketNous)} ν held`
+      : "",
+  );
   renderSessionStrip(true, elapsed, target, paused);
 }
 
@@ -1450,7 +1462,9 @@ function renderModal(app: App): void {
   const extra =
     kind === "forge"
       ? app.state.bankedRolls.at(-1)?.id ?? null
-      : kind === "store"
+      : kind === "honesty"
+        ? [app.exitPending, app.state.session?.accounting.poolSeconds ?? 0, app.state.session?.accounting.bucketNous ?? 0]
+        : kind === "store"
         ? [
             app.ui.showAcquired,
             wholeNous(app.state),
@@ -1465,7 +1479,7 @@ function renderModal(app: App): void {
           // moves, not on every clock tick.
           ? achProgressKey(app)
           : null;
-  const renderKey = JSON.stringify([kind, app.ui.importError, app.state.pendingGap, app.state.mode, extra]);
+  const renderKey = JSON.stringify([kind, app.ui.importError, app.state.session?.accounting.poolSeconds ?? 0, app.state.mode, extra]);
   // Clock ticks must not replace a save textarea or steal dialog focus.
   if (!backdrop.hidden && content.dataset.renderKey === renderKey) return;
   backdrop.hidden = false;
@@ -1477,7 +1491,7 @@ function renderModal(app: App): void {
   else if (kind === "export") renderExportModal(app, content);
   else if (kind === "import") renderImportModal(app, content);
   else if (kind === "reset") renderResetModal(app, content);
-  else if (kind === "reconcile") renderReconcileModal(app, content);
+  else if (kind === "honesty") renderHonestyModal(app, content);
   else if (kind === "enter") renderEnterModal(app, content);
   else if (kind === "summary") renderSummaryModal(app, content);
   const firstButton = content.querySelector("button:not([disabled])");
@@ -1725,21 +1739,65 @@ function renderResetModal(app: App, content: HTMLElement): void {
   wireClose(app);
 }
 
-function renderReconcileModal(app: App, content: HTMLElement): void {
-  const gap = app.state.pendingGap;
-  const minutes = Math.floor((gap?.seconds ?? 0) / 60);
+// The honesty report (focus-tool spec §2): the mandatory adjudication when
+// a session returns with provisional time outstanding. One surface, both
+// uses — mid-session and at exit (framing copy differs) — never merged into
+// the dismissible summary. The away minutes and the bucket are stated up
+// top; each option carries its consequences inline as its label; the answer
+// banks or drops the bucket in one move. Non-dismissible (ADR-0019): it
+// settles, or the player leaves and the next return re-presents it,
+// recalculated.
+function renderHonestyModal(app: App, content: HTMLElement): void {
+  const session = app.state.session;
+  const pool = session?.accounting.poolSeconds ?? 0;
+  const bucket = session?.accounting.bucketNous ?? 0;
+  const target = session?.target ?? null;
+  const planned = target !== null;
+  const hold = `${formatNumber(bucket)} ν held in the bucket`;
+  const head = planned
+    ? `${formatDuration(pool)} away past your plan — ${hold}.`
+    : `${formatDuration(pool)} away — ${hold}.`;
+  const options: { outcome: "missed" | "planned" | "full"; label: string; consequence: string }[] = [
+    {
+      outcome: "missed",
+      label: "Didn't practice",
+      consequence: `the ${formatNumber(bucket)} ν drop; those minutes don't count`,
+    },
+    ...(planned
+      ? [
+          {
+            outcome: "planned" as const,
+            label: "Did what I planned",
+            consequence: `credit rises to your ${formatClock(target)} plan; the ν banks`,
+          },
+        ]
+      : []),
+    {
+      outcome: "full",
+      label: "Practiced the whole time away",
+      consequence: `all ${formatDuration(pool)} count; the ν banks`,
+    },
+  ];
   content.innerHTML = `
-    ${modalTop("PRACTICE CHECK")}
-    <h2 id="modal-title">Were you practicing?</h2>
-    <p class="lead">Confirm the interval to keep its rewards, or discard it.</p>
-    <p class="reconcile-gap">${formatDuration(gap?.seconds ?? 0)}</p>
-    <p class="small muted">${minutes > 0 ? `About ${minutes} minute${minutes === 1 ? "" : "s"} of wall-clock time.` : ""} Nothing was finalized yet; rewards apply only after you confirm.</p>
-    <div class="modal-actions">
-      <button id="gap-discard">Discard interval</button>
-      <button id="gap-confirm" class="primary">Count this practice</button>
+    <div class="modal-top"><span class="eyebrow">${app.exitPending ? "BEFORE YOU WRAP UP" : "HONESTY REPORT"}</span></div>
+    <h2 id="modal-title">While you were away</h2>
+    <p class="lead">${head}</p>
+    <p class="small muted">Nothing is final until you answer${planned ? " — only the time past your plan is waiting" : ""}. What already banked stays banked.</p>
+    <div class="honesty-choices">
+      ${options
+        .map(
+          (option) => `<button class="honesty-choice" data-honesty="${option.outcome}">
+        <span class="honesty-label">${option.label}</span>
+        <small class="honesty-consequence">${option.consequence}</small>
+      </button>`,
+        )
+        .join("")}
     </div>`;
-  byId("gap-confirm")?.addEventListener("click", () => app.confirmGap());
-  byId("gap-discard")?.addEventListener("click", () => app.discardGap());
+  content.querySelectorAll<HTMLButtonElement>("[data-honesty]").forEach((button) => {
+    button.addEventListener("click", () => {
+      app.resolveHonesty(button.getAttribute("data-honesty") as "missed" | "planned" | "full");
+    });
+  });
 }
 
 /* ── Session modals (§5.5, §5.7) ───────────────────── */
