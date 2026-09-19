@@ -969,7 +969,24 @@ body.managing .manage-banner { display: flex; }
 .summary-note { grid-column: 2; font-size: 11.5px; color: var(--muted); }
 .summary-row.unlock { border-color: var(--charge-line); background: var(--charge-faint); }
 .summary-row.unlock > strong { color: var(--charge); }
-.summary-reflections { margin-top: 14px; }
+/* The summary's honesty events and reflection slot (§8): neutral factual
+   lines beneath the final numbers; the reflection rides above dismissal. */
+.summary-events { display: grid; gap: 2px; margin: 10px 2px 0; }
+.summary-event { margin: 0; font-size: 11.5px; color: var(--muted); }
+.summary-reflection { display: grid; gap: 8px; margin-top: 14px; }
+.summary-reflection input[type="text"] {
+  width: 100%;
+  background: var(--panel-soft);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+}
+.summary-reflection input[type="text"]:focus { border-color: var(--charge); outline: none; }
+.reflection-slider { display: flex; align-items: center; gap: 10px; }
+.reflection-slider input[type="range"] { flex: 1; accent-color: var(--accent); }
+.reflection-end { font-size: 11px; color: var(--muted); }
 
 /* ── Dev panel ─────────────────────────────────────── */
 

@@ -4,8 +4,10 @@ import {
   buyCell,
   buyShelfModule,
   chooseRoll,
+  dismissSummary,
   endSession,
   placeModule,
+  recordSummaryReflection,
   reshapeCells,
   returnModule,
   startSession,
@@ -15,7 +17,8 @@ import { cellCost, computeRates, wholeNous } from "./economy";
 import { fresh, give, stubRng } from "./fixtures";
 import { generateOffer } from "./rolls";
 import { hex, isConnected, sameHex } from "./hex";
-import { BALANCE } from "./constants";
+import { BALANCE, REFLECTION_SLIDER_NEUTRAL } from "./constants";
+import { applyGap, flushPendingAway, resolveHonestyReport } from "./trust";
 import type { ShelfType } from "./types";
 
 describe("starter shelf", () => {
@@ -261,5 +264,90 @@ describe("chooseRoll", () => {
     expect(added.rarity).toBe(candidate.rarity);
     expect(added.pos).toBeNull();
     expect(chooseRoll(s, offer.id, candidate.id).ok).toBe(false);
+  });
+});
+
+describe("the summary's final numbers and reflection (§8)", () => {
+  it("captures the plan and the settled honesty events; the reflection starts absent", () => {
+    const s = fresh();
+    startSession(s, 600);
+    advance(s, 600);
+    // 300 s provisional past the plan, settled as a miss: the summary must
+    // carry the event so the dropped bucket's drop stays visible.
+    applyGap(s, 300, "away", 0);
+    flushPendingAway(s);
+    resolveHonestyReport(s, "missed");
+    endSession(s, 5_000);
+    expect(s.summary!.plannedTarget).toBe(600);
+    expect(s.summary!.honestyEvents).toEqual([{ awaySeconds: 300, outcome: "missed" }]);
+    expect(s.summary!.reflection).toBeNull();
+  });
+
+  it("an open-ended session's summary carries a null plan and its own events", () => {
+    const s = fresh();
+    startSession(s, null);
+    advance(s, 600);
+    applyGap(s, 300, "away", 0);
+    flushPendingAway(s);
+    resolveHonestyReport(s, "full");
+    endSession(s, 5_000);
+    expect(s.summary!.plannedTarget).toBeNull();
+    expect(s.summary!.honestyEvents).toEqual([{ awaySeconds: 300, outcome: "full" }]);
+  });
+
+  it("a summary with no honesty events carries an empty list, not undefined", () => {
+    const s = fresh();
+    startSession(s, null);
+    advance(s, 60);
+    endSession(s, 5_000);
+    expect(s.summary!.honestyEvents).toEqual([]);
+    expect(s.summary!.plannedTarget).toBeNull();
+  });
+
+  it("the reflection records as either field is touched; the untouched field keeps its neutral default", () => {
+    const s = fresh();
+    startSession(s, 600);
+    advance(s, 60);
+    endSession(s, 5_000);
+    // Slider first: the text stays at its neutral empty default.
+    expect(recordSummaryReflection(s, { slider: 5 }).ok).toBe(true);
+    expect(s.summary!.reflection).toEqual({ text: "", slider: 5 });
+    // Then text: the slider keeps its recorded position.
+    recordSummaryReflection(s, { text: "loose but honest" });
+    expect(s.summary!.reflection).toEqual({ text: "loose but honest", slider: 5 });
+    // The neutral middle is the default for a first slider touch.
+    const t = fresh();
+    startSession(t, 600);
+    advance(t, 60);
+    endSession(t, 5_000);
+    recordSummaryReflection(t, { text: "tight" });
+    expect(t.summary!.reflection).toEqual({ text: "tight", slider: REFLECTION_SLIDER_NEUTRAL });
+  });
+
+  it("recording needs a summary; neither field touched leaves the reflection absent", () => {
+    const s = fresh();
+    expect(recordSummaryReflection(s, { text: "ghost" }).ok).toBe(false);
+    startSession(s, 600);
+    advance(s, 60);
+    endSession(s, 5_000);
+    expect(s.summary!.reflection).toBeNull();
+  });
+
+  it("every dismissal logs the same: the recorded reflection stays, absent stays absent", () => {
+    const s = fresh();
+    startSession(s, 600);
+    advance(s, 60);
+    endSession(s, 5_000);
+    expect(dismissSummary(s).ok).toBe(true);
+    expect(s.summary!.seen).toBe(true);
+    expect(s.summary!.reflection).toBeNull();
+    const t = fresh();
+    startSession(t, 600);
+    advance(t, 60);
+    endSession(t, 5_000);
+    recordSummaryReflection(t, { slider: 2 });
+    dismissSummary(t);
+    expect(t.summary!.seen).toBe(true);
+    expect(t.summary!.reflection).toEqual({ text: "", slider: 2 });
   });
 });

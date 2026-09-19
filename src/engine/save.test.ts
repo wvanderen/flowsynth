@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
-import { startSession } from "./actions";
+import { endSession, recordSummaryReflection, startSession } from "./actions";
 import { fresh, give, stubRng } from "./fixtures";
 import { SAVE_VERSION } from "./constants";
 import { deserialize, serialize } from "./save";
+import { applyGap, flushPendingAway, resolveHonestyReport } from "./trust";
 import { generateOffer } from "./rolls";
 import { hex } from "./hex";
 
@@ -152,5 +153,52 @@ describe("persistence", () => {
     const loaded = deserialize(JSON.stringify(file));
     expect(loaded.error).toBeUndefined();
     expect((loaded.state as unknown as Record<string, unknown>).pendingGap).toBeUndefined();
+  });
+
+  it("summaries from before the close-out numbers default leniently (§8)", () => {
+    const s = fresh();
+    startSession(s, 600);
+    advance(s, 60);
+    endSession(s, 5_000);
+    const file = JSON.parse(serialize(s, 1_000));
+    delete file.state.summary.plannedTarget;
+    delete file.state.summary.honestyEvents;
+    delete file.state.summary.reflection;
+    const loaded = deserialize(JSON.stringify(file));
+    expect(loaded.error).toBeUndefined();
+    expect(loaded.state!.summary!.plannedTarget).toBeNull();
+    expect(loaded.state!.summary!.honestyEvents).toEqual([]);
+    expect(loaded.state!.summary!.reflection).toBeNull();
+  });
+
+  it("a malformed reflection field loads absent rather than half-shaped", () => {
+    const s = fresh();
+    startSession(s, 600);
+    advance(s, 60);
+    endSession(s, 5_000);
+    recordSummaryReflection(s, { slider: 4 });
+    const file = JSON.parse(serialize(s, 1_000));
+    file.state.summary.reflection = { text: 7 };
+    const loaded = deserialize(JSON.stringify(file));
+    expect(loaded.error).toBeUndefined();
+    expect(loaded.state!.summary!.reflection).toBeNull();
+  });
+
+  it("an unseen summary, its events, and its reflection survive a reload together (§8)", () => {
+    const s = fresh();
+    startSession(s, 600);
+    advance(s, 600);
+    applyGap(s, 300, "away", 0);
+    flushPendingAway(s);
+    resolveHonestyReport(s, "missed");
+    endSession(s, 5_000);
+    recordSummaryReflection(s, { text: "drifted" });
+    expect(s.summary!.seen).toBe(false);
+    const loaded = deserialize(serialize(s, 1_000));
+    expect(loaded.error).toBeUndefined();
+    const summary = loaded.state!.summary!;
+    expect(summary.seen).toBe(false);
+    expect(summary.honestyEvents).toEqual([{ awaySeconds: 300, outcome: "missed" }]);
+    expect(summary.reflection).toEqual({ text: "drifted", slider: 3 });
   });
 });

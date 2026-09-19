@@ -113,10 +113,19 @@ export interface SessionState {
   accounting: SessionAccounting;
 }
 
+// The summary's reflection (spec §8): free text plus the five-position
+// rough–great slider. Recorded when either field is touched — the untouched
+// field keeps its neutral default (empty text, middle slider) — and absent
+// when neither was. Pure insight at launch: nothing in the economy reads it.
+export interface SessionReflection {
+  text: string;
+  slider: number;
+}
+
 // The loud summary (§5.7): captured once at session end — however the
 // session ended — and shown on returning to upgrade mode. No countdown rows;
-// the modal is the future home of session reflections. `seen` marks the
-// player's dismissal so an unseen summary survives a reload.
+// the modal carries the reflection slot. `seen` marks the player's dismissal
+// so an unseen summary survives a reload.
 export interface SessionSummary {
   sessionNumber: number;
   earned: number;
@@ -129,9 +138,18 @@ export interface SessionSummary {
   empowerment: number;
   // Session one only: Time auto-activated with this session's end.
   timeUnlocked: boolean;
+  // The session's planned target seconds, null on open-ended (§8): the
+  // practice-time row's "X / Y min" denominator.
+  plannedTarget: number | null;
+  // Settled honesty events (§8): the neutral factual lines beneath the
+  // final numbers — where a dropped bucket's drop is visible.
+  honestyEvents: HonestyEvent[];
   // Feats unlocked during the session, including at its end boundary —
   // the summary's "unlocked this session" row.
   achievements: string[];
+  // The reflection (§8): records as its fields are touched, survives a
+  // reload with the summary, absent (null) when untouched.
+  reflection: SessionReflection | null;
   seen: boolean;
 }
 

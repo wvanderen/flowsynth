@@ -2,7 +2,7 @@ import { chargedFactor, cellCost, chargeDelivered, computeRates, deployed, emitt
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
-import { BALANCE, CATEGORY_OF, NEXT_RARITY, SHELF_MODULE } from "../engine/constants";
+import { BALANCE, CATEGORY_OF, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
 import { appActive, appLockNote, FOCUS_APPS, LADDER_APPS, nextRung, nextRungCost, type FocusApp } from "../engine/apps";
 import { isInFlowNote } from "../engine/notes";
@@ -11,7 +11,7 @@ import { poolOutstanding } from "../engine/trust";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
 import { isCarrier } from "../engine/state";
-import type { GameState, Goal, Hex, ModuleInstance, RateSnapshot } from "../engine/types";
+import type { GameState, Goal, Hex, HonestyEvent, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
 import { appIcon } from "./icons";
 import { HEX_RADIUS, hexPoints, moduleFace } from "./face";
@@ -19,7 +19,7 @@ import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { DURATION_OPTIONS, APP_LABELS, APP_ROLES, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
-import { formatInt, formatNumber, practiceCountdown } from "./format";
+import { formatInt, formatNumber, formatPracticeMinutes, practiceCountdown } from "./format";
 import { renderStatusMonitor } from "./monitor";
 
 const SPACING = 65;
@@ -1464,21 +1464,27 @@ function renderModal(app: App): void {
       ? app.state.bankedRolls.at(-1)?.id ?? null
       : kind === "honesty"
         ? [app.exitPending, app.state.session?.accounting.poolSeconds ?? 0, app.state.session?.accounting.bucketNous ?? 0]
-        : kind === "store"
-        ? [
-            app.ui.showAcquired,
-            wholeNous(app.state),
-            JSON.stringify(app.state.purchased),
-            app.state.cellsBought,
-            app.state.activatedApps.join("|"),
-            // Module-upgrade rows reprice with levels, moves, and the roster.
-            app.state.modules.map((m) => `${m.id}:${m.level}:${m.rarity}:${m.pos ? "d" : "i"}`).join("|"),
-          ]
-        : kind === "achievements"
-          // Quantized progress: an open page refreshes when a bar visibly
-          // moves, not on every clock tick.
-          ? achProgressKey(app)
-          : null;
+        // The summary's identity: a fresh session's summary must never
+        // reuse the previous one's already-rendered content.
+        : kind === "summary"
+          ? [app.state.summary?.sessionNumber ?? null, app.state.summary?.earned ?? null]
+          // The summary's identity: a fresh session's summary must never
+          // reuse the previous one's already-rendered content.
+          : kind === "store"
+            ? [
+                app.ui.showAcquired,
+                wholeNous(app.state),
+                JSON.stringify(app.state.purchased),
+                app.state.cellsBought,
+                app.state.activatedApps.join("|"),
+                // Module-upgrade rows reprice with levels, moves, and the roster.
+                app.state.modules.map((m) => `${m.id}:${m.level}:${m.rarity}:${m.pos ? "d" : "i"}`).join("|"),
+              ]
+            : kind === "achievements"
+              // Quantized progress: an open page refreshes when a bar visibly
+              // moves, not on every clock tick.
+              ? achProgressKey(app)
+              : null;
   const renderKey = JSON.stringify([kind, app.ui.importError, app.state.session?.accounting.poolSeconds ?? 0, app.state.mode, extra]);
   // Clock ticks must not replace a save textarea or steal dialog focus.
   if (!backdrop.hidden && content.dataset.renderKey === renderKey) return;
@@ -1852,11 +1858,27 @@ function renderEnterModal(app: App, content: HTMLElement): void {
   wireClose(app);
 }
 
-// The loud summary (§5.7): shown once per session end, however the session
-// ended. Exactly four row shapes — the headline, practice time, rate
-// achieved with the carrier-only breakdown, and (first session only) the
-// Time unlock — and never a countdown. The modal is the future home of
-// session reflections; the reserved line keeps that home.
+// The honesty event's neutral factual line (§8–9), the history list's
+// format: accounting, not judgment — "22 min away · didn't practice".
+function honestyEventLine(event: HonestyEvent): string {
+  const label =
+    event.outcome === "missed"
+      ? "didn't practice"
+      : event.outcome === "planned"
+        ? "did what I planned"
+        : "practiced the whole time away";
+  return `${Math.max(0, Math.round(event.awaySeconds / 60))} min away · ${label}`;
+}
+
+// The loud summary (§5.7, §8): shown once per session end, however the
+// session ended — final numbers only. The headline is banked nous; practice
+// time shows credited minutes in the history list's format; the honesty
+// events sit beneath as neutral factual lines, where a dropped bucket's
+// drop is visible — and there is no raw wall-duration row. The reflection's
+// reserved slot rides above dismissal: free text plus a five-position
+// rough–great slider, end labels only, middle neutral and the default. It
+// records as either field is touched and stays absent otherwise, so every
+// dismissal path — Continue, ✕, backdrop, Esc — logs the same.
 function renderSummaryModal(app: App, content: HTMLElement): void {
   const summary = app.state.summary;
   if (!summary) {
@@ -1882,13 +1904,17 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
         <strong>${unlocked.join(" · ")}</strong>
       </div>`
     : "";
+  const events = (summary.honestyEvents ?? [])
+    .map((event) => `<p class="summary-event">${honestyEventLine(event)}</p>`)
+    .join("");
+  const reflection = summary.reflection;
   content.innerHTML = `
     ${modalTop(`SESSION ${summary.sessionNumber} · SUMMARY`)}
     <h2 id="modal-title" class="summary-headline">This session earned <strong class="mono">${formatNumber(summary.earned)}</strong> nous</h2>
     <div class="summary-rows">
       <div class="summary-row">
         <span class="summary-label">Practice time</span>
-        <strong class="mono">${formatDuration(summary.seconds)}</strong>
+        <strong class="mono">${formatPracticeMinutes(summary.seconds, summary.plannedTarget ?? null)}</strong>
       </div>
       <div class="summary-row">
         <span class="summary-label">Rate achieved</span>
@@ -1904,7 +1930,23 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
       </div>`
         : ""}
     </div>
+    ${events ? `<div class="summary-events">${events}</div>` : ""}
+    <div class="summary-reflection">
+      <span class="summary-label">How did it go?</span>
+      <input type="text" id="summary-reflection-text" maxlength="280" placeholder="A line for the log (optional)" aria-label="Reflect on the session in words" value="${escapeHtml(reflection?.text ?? "")}" />
+      <div class="reflection-slider">
+        <span class="reflection-end">rough</span>
+        <input type="range" id="summary-reflection-slider" min="1" max="${REFLECTION_SLIDER_POSITIONS}" step="1" value="${reflection?.slider ?? REFLECTION_SLIDER_NEUTRAL}" aria-label="How the session went, rough to great" />
+        <span class="reflection-end">great</span>
+      </div>
+    </div>
     <div class="modal-actions"><button id="summary-continue" class="primary">Continue</button></div>`;
+  byId("summary-reflection-text")?.addEventListener("input", (event) => {
+    app.recordReflectionText((event.target as HTMLInputElement).value);
+  });
+  byId("summary-reflection-slider")?.addEventListener("input", (event) => {
+    app.recordReflectionSlider(Number((event.target as HTMLInputElement).value));
+  });
   byId("summary-continue")?.addEventListener("click", () => app.dismissSummary());
   wireClose(app);
 }

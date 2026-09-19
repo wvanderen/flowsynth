@@ -66,6 +66,17 @@ export function formatCountdown(seconds: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
+// The credited practice minutes (§3, §8): the history list's format —
+// planned sessions as "X / Y min", open-ended as "X min". Minutes, rounded;
+// the summary and the history surfaces share it so neither contradicts the
+// practice log.
+export function formatPracticeMinutes(creditedSeconds: number, plannedTargetSeconds: number | null): string {
+  const minutes = Math.max(0, Math.round(creditedSeconds / 60));
+  return plannedTargetSeconds === null
+    ? `${minutes} min`
+    : `${minutes} / ${Math.max(0, Math.round(plannedTargetSeconds / 60))} min`;
+}
+
 // The upgrade-mode purchase countdown (§7): how much practice until the
 // price is reachable at the board's projected rate. Hidden when the purchase
 // is already affordable or no rate exists.

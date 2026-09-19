@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCountdown, formatInt, formatNumber, practiceCountdown } from "./format";
+import { formatCountdown, formatInt, formatNumber, formatPracticeMinutes, practiceCountdown } from "./format";
 
 describe("formatNumber — the shared live-value formatter (§7)", () => {
   it("shows exact comma-grouped integers below one million", () => {
@@ -103,6 +103,24 @@ describe("formatCountdown — practice-minute spans", () => {
     expect(formatCountdown(3720)).toBe("1h 2m");
     expect(formatCountdown(4800)).toBe("1h 20m");
     expect(formatCountdown(9000)).toBe("2h 30m");
+  });
+});
+
+describe("formatPracticeMinutes — the history list's credited-minute format (§8)", () => {
+  it("planned sessions show credited over planned minutes", () => {
+    expect(formatPracticeMinutes(600, 600)).toBe("10 / 10 min");
+    expect(formatPracticeMinutes(540, 600)).toBe("9 / 10 min");
+    expect(formatPracticeMinutes(900, 600)).toBe("15 / 10 min");
+  });
+
+  it("open-ended sessions show credited minutes only", () => {
+    expect(formatPracticeMinutes(300, null)).toBe("5 min");
+    expect(formatPracticeMinutes(0, null)).toBe("0 min");
+  });
+
+  it("rounds to the nearest minute and never goes negative", () => {
+    expect(formatPracticeMinutes(90, 600)).toBe("2 / 10 min");
+    expect(formatPracticeMinutes(-5, null)).toBe("0 min");
   });
 });
 
