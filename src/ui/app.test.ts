@@ -310,7 +310,7 @@ describe("the session clock", () => {
 
 describe("the honesty report", () => {
   // Overrun away time past a 600 s plan: 300 s provisional.
-  function poolOutstanding(s: GameState, target: number | null): void {
+  function stageProvisionalPool(s: GameState, target: number | null): void {
     s.sessionsCompleted = 1;
     startSession(s, target);
     advance(s, target ?? 0);
@@ -320,7 +320,7 @@ describe("the honesty report", () => {
   }
 
   it("a return with the pool outstanding opens the mandatory report mid-session", () => {
-    poolOutstanding(app.state, 600);
+    stageProvisionalPool(app.state, 600);
     app.tick();
     expect(app.ui.modal).toBe("honesty");
     const modal = document.getElementById("modal-content")!;
@@ -338,7 +338,7 @@ describe("the honesty report", () => {
   });
 
   it("open-ended sessions offer two outcomes", () => {
-    poolOutstanding(app.state, null);
+    stageProvisionalPool(app.state, null);
     app.tick();
     const modal = document.getElementById("modal-content")!;
     const outcomes = [...modal.querySelectorAll("[data-honesty]")].map((b) => b.getAttribute("data-honesty"));
@@ -346,7 +346,7 @@ describe("the honesty report", () => {
   });
 
   it("the bucket banks or drops in one move, then flow continues", () => {
-    poolOutstanding(app.state, null);
+    stageProvisionalPool(app.state, null);
     app.tick();
     const balance = app.state.nous;
     const creditedBefore = app.state.session!.accounting.creditedSeconds;
@@ -358,7 +358,7 @@ describe("the honesty report", () => {
   });
 
   it("at exit the answer is mandatory and final: report first, summary after", () => {
-    poolOutstanding(app.state, 600);
+    stageProvisionalPool(app.state, 600);
     app.endFlow();
     expect(app.ui.modal).toBe("honesty");
     expect(app.state.mode).toBe("flow");
@@ -374,7 +374,7 @@ describe("the honesty report", () => {
   });
 
   it("the provisional bucket is visibly flagged on the console while it holds", () => {
-    poolOutstanding(app.state, 600);
+    stageProvisionalPool(app.state, 600);
     app.tick();
     const flag = document.getElementById("session-provisional")!;
     expect(flag.textContent).toContain("provisional");

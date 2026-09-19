@@ -14,7 +14,7 @@ import type { AdvanceResult, GameState } from "./types";
 // produces, but credits nothing until the report settles it.
 export type AdvanceSink = "live" | "provisional";
 
-function sumResults(a: AdvanceResult, b: AdvanceResult): AdvanceResult {
+export function sumResults(a: AdvanceResult, b: AdvanceResult): AdvanceResult {
   return {
     nousEarned: a.nousEarned + b.nousEarned,
     rollsBanked: a.rollsBanked + b.rollsBanked,
@@ -59,6 +59,9 @@ export function advance(
 
   // The board is locked during flow, so the rate is constant across the
   // step; production is exactly what the board's modules make (§2.1).
+  // Board-side meters (forge progress, received charge) run in both sinks —
+  // the trust table redirects only nous and practice minutes (§1); the
+  // bucket holds nous only.
   const snapshot = computeRates(state, true);
   const gained = snapshot.rate * seconds;
   if (sink === "provisional") {

@@ -137,6 +137,10 @@ export class App {
   // Set when exit was requested while the honesty report still waits: the
   // answer is mandatory and final before the session ends (§2).
   exitPending = false;
+  // Set at load when document.wasDiscarded marks a Memory-Saver discard
+  // (§10): the reconcile path treats it exactly like any other away gap,
+  // and greet() passes the observation on.
+  private resumedFromDiscard = false;
   lastSaveWall = 0;
   dev: boolean;
   // The Forge's threshold-crossing flash: a roll was minted, so its face
@@ -203,6 +207,10 @@ export class App {
       this.ui.modal = "summary";
     }
     if (this.state.mode !== "flow") return;
+    // A discarded tab (Memory Saver, §10) lands here exactly like a plain
+    // reload: the gap since the last hidden-transition save is away, and
+    // document.wasDiscarded only records that it happened.
+    this.resumedFromDiscard = (document as Document & { wasDiscarded?: boolean }).wasDiscarded === true;
     const gapSeconds = Math.max(0, (Date.now() - loaded.savedAt) / 1000);
     applyGap(this.state, gapSeconds, "away", 0);
     this.reportAdvance(flushPendingAway(this.state));
@@ -318,6 +326,11 @@ export class App {
     if (this.loadNotice) {
       this.say(`${this.loadNotice} A fresh instrument was created.`);
       this.loadNotice = null;
+      return;
+    }
+    if (this.resumedFromDiscard && this.state.mode === "flow") {
+      this.say("The tab was discarded while away — the gap counted as away time.");
+      this.resumedFromDiscard = false;
       return;
     }
     if (this.state.sessionsCompleted === 0 && this.state.mode === "upgrade") {
@@ -953,10 +966,11 @@ export class App {
     this.ui.modal = null;
     const wasExiting = this.exitPending;
     this.exitPending = false;
+    const goalNote = resolution.completions && resolution.completions > 0 ? " A goal completed." : "";
     this.say(
-      outcome === "missed"
+      (outcome === "missed"
         ? "Report settled — the held nous dropped."
-        : "Report settled — the held nous banked.",
+        : "Report settled — the held nous banked.") + goalNote,
     );
     if (wasExiting) {
       this.endFlow();

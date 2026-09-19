@@ -1,6 +1,6 @@
 import { EPS, RECONCILIATION_FLOOR_SECONDS } from "./constants";
 import { syncArete } from "./accumulator";
-import { advance } from "./advance";
+import { advance, sumResults } from "./advance";
 import { accrueLivePractice } from "./habits";
 import { accrueGoalProgress } from "./goals";
 import type { Rng } from "./rolls";
@@ -36,15 +36,6 @@ export function freshAccounting(): SessionAccounting {
 export type Presence = "visible" | "away";
 
 const ZERO: AdvanceResult = { nousEarned: 0, rollsBanked: 0, goalsCompleted: 0, areteMinted: 0 };
-
-function sumResults(a: AdvanceResult, b: AdvanceResult): AdvanceResult {
-  return {
-    nousEarned: a.nousEarned + b.nousEarned,
-    rollsBanked: a.rollsBanked + b.rollsBanked,
-    goalsCompleted: a.goalsCompleted + b.goalsCompleted,
-    areteMinted: a.areteMinted + b.areteMinted,
-  };
-}
 
 export function poolOutstanding(state: GameState): boolean {
   return (state.session?.accounting.poolSeconds ?? 0) > EPS;

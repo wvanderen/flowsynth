@@ -185,6 +185,29 @@ describe("presence: slept gaps size by dual-clock drift", () => {
     away(s, 3000);
     expect(s.session!.accounting.poolSeconds).toBeCloseTo(3000, 6);
   });
+
+  it("slept past the plan on a planned session: the sleep slice past the target goes provisional", () => {
+    const s = fresh();
+    startSession(s, 600);
+    advance(s, 600);
+    applyGap(s, 1800, "visible", 1800);
+    // All 1800 s of sleep land past the target: nothing credits, all of it
+    // waits in the bucket and pool.
+    expect(s.session!.accounting.creditedSeconds).toBeCloseTo(600, 6);
+    expect(s.session!.accounting.poolSeconds).toBeCloseTo(1800, 6);
+    expect(s.session!.accounting.bucketNous).toBeCloseTo(180, 6);
+  });
+
+  it("a slept gap straddling the plan: sleep clamps at the target, the awake tail banks live", () => {
+    const s = fresh();
+    startSession(s, 600);
+    applyGap(s, 1800, "visible", 1000);
+    // Sleep: 600 s trusted up to the plan, 400 s provisional; then 800 s
+    // awake presence banks live past the target.
+    expect(s.session!.accounting.creditedSeconds).toBeCloseTo(1400, 6);
+    expect(s.session!.accounting.poolSeconds).toBeCloseTo(400, 6);
+    expect(s.session!.elapsed).toBeCloseTo(1800, 6);
+  });
 });
 
 describe("one reconcile path: discard, reload, and import", () => {
@@ -222,6 +245,27 @@ describe("one reconcile path: discard, reload, and import", () => {
     expect(imported.session!.accounting.creditedSeconds).toBeCloseTo(600, 6);
     expect(imported.session!.accounting.poolSeconds).toBeCloseTo(1500, 6);
     expect(imported.session!.accounting.bucketNous).toBeCloseTo(150, 6);
+  });
+
+  it("an imported save's sub-floor gap auto-credits silently, never joining the pool", () => {
+    const original = fresh();
+    startSession(original, null);
+    advance(original, 60);
+    const imported = deserialize(serialize(original, 2_000_000))!.state!;
+    away(imported, RECONCILIATION_FLOOR_SECONDS - 1);
+    expect(imported.session!.accounting.poolSeconds).toBe(0);
+    expect(imported.session!.accounting.creditedSeconds).toBeCloseTo(60 + RECONCILIATION_FLOOR_SECONDS - 1, 6);
+  });
+
+  it("a discarded tab's gap on a planned session still under the plan is trusted in full", () => {
+    const s = fresh();
+    startSession(s, 600);
+    advance(s, 120);
+    const loaded = deserialize(serialize(s, 5_000))!.state!;
+    away(loaded, 300);
+    expect(loaded.session!.accounting.creditedSeconds).toBeCloseTo(420, 6);
+    expect(loaded.session!.accounting.poolSeconds).toBe(0);
+    expect(poolOutstanding(loaded)).toBe(false);
   });
 });
 
