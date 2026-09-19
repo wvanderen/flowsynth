@@ -87,12 +87,15 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
   // The session-end boundary check (ADR-0015): First light, On the clock,
   // Keeping time, and friends fire here and join the summary row.
   const ended = syncAchievements(state, { now });
+  const achievements = [...queued, ...ended.map((def) => def.id)];
+  // The settled honesty events, copied — the session object is gone after
+  // this, so both the record and the summary carry their own.
+  const events = (session?.accounting.events ?? []).map((event) => ({ ...event }));
   // The session record (§9): one append-only entry at close, whatever the
   // length or mode. The habit id stores raw — it resolves at render — and
   // the goals-advanced ledger snapshots from the session, so deleting or
   // replacing a goal never rewrites history. The reflection joins after
   // close, as the summary records it (see recordSummaryReflection).
-  const achievements = [...queued, ...ended.map((def) => def.id)];
   state.sessionRecords.push({
     sessionNumber: state.sessionsCompleted,
     // A session resumed from a pre-§9 save carries no start stamp; its end
@@ -104,7 +107,7 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
     plannedTarget: target,
     creditedSeconds: credited,
     earned,
-    honestyEvents: (session?.accounting.events ?? []).map((event) => ({ ...event })),
+    honestyEvents: events,
     reflection: null,
     goalsAdvanced: Object.entries(session?.goalSeconds ?? {}).map(([goalId, seconds]) => ({ goalId, seconds })),
     achievements,
@@ -131,9 +134,9 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
     timeUnlocked: state.sessionsCompleted === 1,
     // The practice row's denominator (§8): "X / Y min" on planned sessions.
     plannedTarget: target,
-    // The honesty events beneath the final numbers (§8), copied — the
-    // session object is gone after this, so the summary carries its own.
-    honestyEvents: (session?.accounting.events ?? []).map((event) => ({ ...event })),
+    // The honesty events beneath the final numbers (§8), where a dropped
+    // bucket's drop is visible.
+    honestyEvents: events,
     achievements,
     // The reflection (§8) records from the summary itself, so it starts
     // absent here.

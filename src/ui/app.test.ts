@@ -10,6 +10,7 @@ import { BALANCE } from "../engine/constants";
 import { startSession, endSession } from "../engine/actions";
 import { advance } from "../engine/advance";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport } from "../engine/trust";
+import { recordMissed, recordTargetHit } from "../engine/records";
 import { give } from "../engine/fixtures";
 import { hex } from "../engine/hex";
 import type { GameState } from "../engine/types";
@@ -943,6 +944,28 @@ describe("the Time app's history (§9)", () => {
     expect(document.getElementById("app-popover")!.textContent).toContain("a since-removed goal");
     document.getElementById("history-back")!.click();
     expect(document.getElementById("app-popover")!.querySelector(".history-row")).not.toBeNull();
+  });
+
+  it("one chip per row: a presence-earned hit that later missed shows the muted miss marker alone", () => {
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    startSession(s, 600, DAY);
+    advance(s, 600); // the target hit, earned by presence
+    applyGap(s, 300, "away", 0);
+    flushPendingAway(s);
+    resolveHonestyReport(s, "missed");
+    endSession(s, DAY + 900_000);
+    const record = s.sessionRecords[0]!;
+    expect(recordTargetHit(record)).toBe(true);
+    expect(recordMissed(record)).toBe(true);
+    app.openApp("time");
+    document.getElementById("time-history")!.click();
+    const row = document.querySelector(".history-row")!;
+    expect(row.querySelectorAll(".history-chip")).toHaveLength(1);
+    expect(row.querySelector(".history-chip.miss")).not.toBeNull();
+    // The minutes figure still shows the hit factually.
+    expect(row.textContent).toContain("10 / 10 min");
+    app.closeApp();
   });
 
   it("the drill-down renders each honesty event as a neutral factual line", () => {

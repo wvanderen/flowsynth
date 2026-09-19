@@ -28,9 +28,10 @@ export function habitRecordName(state: GameState, habitId: string): string {
 }
 
 // The per-habit aggregates (§9), read off the practice log — live sessions
-// and manual logs together. Sessions practiced counts live entries only
-// (each session writes at most one); last practiced is the newest entry of
-// either kind, or null when the habit has never been practiced.
+// and manual logs together. Lifetime and last-practiced count both kinds;
+// "sessions practiced" counts live entries only, since a manual log is by
+// definition practice outside a running session — practice, but not a
+// session.
 export function habitPracticeSummary(state: GameState, habitId: string): { sessions: number; lastPracticed: number | null } {
   let sessions = 0;
   let lastPracticed: number | null = null;

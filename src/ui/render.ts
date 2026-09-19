@@ -19,7 +19,7 @@ import { poolOutstanding } from "../engine/trust";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
 import { isCarrier } from "../engine/state";
-import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, RateSnapshot } from "../engine/types";
+import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NoteEntry, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
 import { appIcon } from "./icons";
 import { HEX_RADIUS, hexPoints, moduleFace } from "./face";
@@ -1094,6 +1094,22 @@ function habitRowHtml(app: App, habit: Habit, selectable: boolean): string {
   return `<div class="habit-row${selected}" data-habit="${habit.id}">${controls}</div>${expanded ? habitSummaryHtml(app, habit) : ""}`;
 }
 
+// The note stamp both note surfaces share (§9): the date where known, then
+// the in-session mark — or the between-sessions marker when the note was
+// written outside any session.
+function noteStampHtml(note: NoteEntry): string {
+  return `${note.at > 0 ? `${formatDate(note.at)} · ` : ""}${
+    isInFlowNote(note) ? `S${note.sessionId} · ${formatClock(note.atElapsed)}` : "between sessions"
+  }`;
+}
+
+// The habit-keyed chip (§9): a tagged note wears its habit, resolved at
+// render — renames and archiving never rewrite the stream. Untagged notes
+// (unstructured, between sessions) wear none.
+function habitChipHtml(state: GameState, note: NoteEntry): string {
+  return note.habitId !== null ? `<span class="habit-chip">${escapeHtml(habitRecordName(state, note.habitId))}</span>` : "";
+}
+
 // The development summary (§9): lifetime practice (the development total),
 // sessions practiced and last practiced — aggregates off the practice log,
 // live sessions and manual logs together — and the habit's tagged notes
@@ -1102,12 +1118,9 @@ function habitSummaryHtml(app: App, habit: Habit): string {
   const { state } = app;
   const { sessions, lastPracticed } = habitPracticeSummary(state, habit.id);
   const notes = habitTaggedNotes(state, habit.id);
-  const noteRows = notes.map((note) => {
-    const when = `${note.at > 0 ? `${formatDate(note.at)} · ` : ""}${
-      isInFlowNote(note) ? `S${note.sessionId} · ${formatClock(note.atElapsed)}` : "between sessions"
-    }`;
-    return `<div class="note-entry"><span class="note-when mono">${when}</span><p>${escapeHtml(note.text)}</p></div>`;
-  }).join("");
+  const noteRows = notes
+    .map((note) => `<div class="note-entry"><span class="note-when mono">${noteStampHtml(note)}</span><p>${escapeHtml(note.text)}</p></div>`)
+    .join("");
   return `<div class="habit-summary" data-summary-for="${habit.id}">
     ${stat("Lifetime practice", formatDuration(habit.seconds))}
     ${stat("Sessions practiced", String(sessions))}
@@ -1119,7 +1132,8 @@ function habitSummaryHtml(app: App, habit: Habit): string {
 // The Time app's history list (§9): flat, newest first, ~20 rows with a
 // show-more tail — date · habit (or "unstructured") · credited minutes · a
 // hit chip or the muted miss marker. No day grouping, charts, or calendars;
-// a row drills into the full record.
+// a row drills into the full record. One chip per row, the miss marker
+// winning when both derive: the "X / Y min" figure already shows the hit.
 function historyListHtml(app: App): string {
   const records = sessionRecordsNewestFirst(app.state);
   const shown = records.slice(0, app.ui.historyLimit);
@@ -1129,9 +1143,8 @@ function historyListHtml(app: App): string {
       return `<button class="history-row" data-drill="${record.sessionNumber}" title="Session ${record.sessionNumber}">
         <span class="history-when mono">${formatDate(record.startedAt)}</span>
         <span class="history-habit">${habit}</span>
-        <span class="history-min mono">${formatPracticeMinutes(record.creditedSeconds, record.plannedTarget)}</span>
-        ${recordTargetHit(record) ? `<span class="history-chip hit">hit</span>` : ""}
-        ${recordMissed(record) ? `<span class="history-chip miss">miss</span>` : ""}
+      <span class="history-min mono">${formatPracticeMinutes(record.creditedSeconds, record.plannedTarget)}</span>
+      ${recordMissed(record) ? `<span class="history-chip miss">miss</span>` : recordTargetHit(record) ? `<span class="history-chip hit">hit</span>` : ""}
       </button>`;
     })
     .join("");
@@ -1287,17 +1300,10 @@ function appPanelBody(app: App, panel: FocusApp): string {
 
   if (panel === "notes") {
     const recent = [...state.notes].slice(-8).reverse();
-    const when = (n: (typeof state.notes)[number]): string =>
-      !isInFlowNote(n) ? "between sessions" : `S${n.sessionId} · ${formatClock(n.atElapsed)}`;
-    // The habit-keyed chip (§9): tagged notes wear their habit, resolved at
-    // render — renames and archiving never rewrite the stream. Untagged
-    // notes (unstructured, between sessions) wear none.
-    const chip = (n: (typeof state.notes)[number]): string =>
-      n.habitId !== null ? `<span class="habit-chip">${escapeHtml(habitRecordName(state, n.habitId))}</span>` : "";
     return `<section class="focus-controls">
       <textarea class="note-composer" id="note-composer" placeholder="What are you noticing?" maxlength="2000" rows="3"></textarea>
       <div class="session-actions" style="margin:10px 0 0"><button class="primary" id="note-save">Capture note</button></div>
-      ${recent.length > 0 ? `<div class="note-list">${recent.map((n) => `<div class="note-entry"><span class="note-when mono">${when(n)}</span>${chip(n)}<p>${escapeHtml(n.text)}</p></div>`).join("")}</div>` : ""}
+      ${recent.length > 0 ? `<div class="note-list">${recent.map((n) => `<div class="note-entry"><span class="note-when mono">${noteStampHtml(n)}</span>${habitChipHtml(state, n)}<p>${escapeHtml(n.text)}</p></div>`).join("")}</div>` : ""}
     </section>`;
   }
 
