@@ -62,7 +62,7 @@ A habit-independent resource produced by generators that empowers or charges oth
 A board module that produces charge. Remaining output belongs to the generator and follows it when moved. The launch generator is the focus-keyed generator (ADR-0018 retired the plain generator pre-release); other generators with different requirements come later.
 
 **Charge window**:
-The charge budget banked at session end by the focus-keyed generator, sized as a fraction of that session's live practice time and spent as output during the next session's first minutes. Manual practice logs never create one.
+The charge budget banked at session end by the focus-keyed generator, sized as a fraction of that session's credited practice time and spent as output during the next session's first minutes. Manual practice logs never create one.
 
 **Output strength**:
 The rate at which a generator delivers charge to each eligible adjacent module, without dividing output among neighbors. Strengths from simultaneously active generators add at each receiver.
@@ -98,7 +98,7 @@ A player-wide meter to which deployed Forges contribute according to received ch
 A charge-earned choice of one module from three generated candidates; unchosen candidates disappear without consolation resources.
 
 **Catalog**:
-The permanent upgrade-mode purchase surface: app activations, starter-shelf offers while available, and cells. Module upgrades live on module panels, not the catalog (ADR-0018).
+The permanent upgrade-mode purchase surface: app activations, starter-shelf offers while available, and cells. Its activation section appears only once the ladder has a tenant. Module upgrades live on module panels, not the catalog (ADR-0018).
 
 **Starter shelf**:
 The catalog's one-time guaranteed offers — an Additive Synth, the generator, one infusor, and a Forge — hidden once acquired. It completes the category landscape and seeds chord play (ADR-0018); everything else comes from rolls.
@@ -112,28 +112,40 @@ The surface structurally above the board, carrying the Enter/Exit main switch, t
 A fixed-function instrument hosted by the console — Habit, Time, Notes, and Goals at launch. Apps never grant, produce, or spend nous or charge; board modules may read their state as effect inputs.
 
 **App activation**:
-The permanent, player-wide unlock that enables a focus app, bought from the activation ladder and separate from anything the board sells.
+The permanent, player-wide unlock that enables a focus app, bought from the activation ladder and separate from anything the board sells. The four launch apps are active from the very first session; activation opens future apps such as Tasks.
 
 **Activation ladder**:
-The shared, scaling price sequence for app activations with free order — each rung costs more than the last regardless of which app it opens, and rung one sits below the shelf floor.
+The shared, scaling price sequence for app activations with free order — each rung costs more than the last regardless of which app it opens. It rests empty at launch, hidden until its first tenant (such as Tasks) is designed; its pricing is decided with that tenant.
 
 **Console long goal**:
 A hand-paced, one-at-a-time purchase beat for a console upgrade such as goal capacity; priced past the current build-out, gated behind its app's activation, and rendered as a dashed strip in the owning app's panel.
 
 **Habit**:
-A repeatable real-life practice, such as piano or cooking, that develops through live or manually logged practice time and can be selected for a flow session. Its development unlocks habit-specific customization options and is separate from nous.
+A repeatable real-life practice, such as piano or cooking, that develops through credited practice time and manually logged practice time and can be selected for a flow session. Its development unlocks habit-specific customization options and is separate from nous.
 
 **Habit app**:
 The always-free focus app through which the player selects the active habit for a session, or practices unstructured.
 
+**Habit development summary**:
+The Habit app's per-habit view: lifetime practice time, sessions practiced, last practiced, and the habit's tagged notes. Its aggregates read the practice log — live sessions and manual logs together.
+
+**Practice run**:
+A stretch of consecutive days on which any credited practice was logged for a habit, live or manual; surfaced as its current and longest runs. Joins post-launch. _Avoid_: streak
+
+**Practice calendar**:
+The per-habit day-grid of logged practice minutes in the Habit app's development summary. Joins post-launch. _Avoid_: heatmap
+
 **Time app**:
-The focus app providing planned targets and timing tools; it auto-activates after the first session and has no economy coupling.
+The focus app providing planned targets and timing tools, and the home of session history; active from the very first session, with no economy coupling.
 
 **Planned target**:
-A practice duration or milestone set within the Time app that a session can aim at and hit; hits are recorded in the session summary.
+A practice duration or milestone set within the Time app — a preset quick pick or free entry from 1 to 90 minutes in 1-minute steps — that a session can aim at and hit; hits are recorded in the session summary.
 
 **Notes app**:
-The focus app for recording notes — during a flow session or between sessions. Notes carry no charge or economy effect.
+The focus app for recording notes — during a flow session or between sessions. Notes carry no charge or economy effect; tagged notes wear their habit as a chip.
+
+**Habit-keyed note**:
+A note tagged with the session's selected habit at capture, surfaced in that habit's development summary and chipped in the Notes stream. Unstructured and upgrade-mode notes go untagged.
 
 **Goals app**:
 The focus app for tracking goals; completion is the tracking itself, surfaced in the session summary. Its capacity grows through console long goals.
@@ -171,14 +183,53 @@ A flow session without a planned duration.
 **Paused session**:
 A flow session whose elapsed time and board activity are frozen while its starting configuration remains locked; resuming continues the same session.
 
+**Present time**:
+The portion of a flow session during which the player is present. Always trusted: banks and credits live, before and after a planned target.
+
+**Away time**:
+The portion of a flow session during which the player is away, including whole-system sleep. Toward the target on planned sessions; provisional past it; all provisional on open-ended. Brief absences credit silently as present.
+
+**Provisional bucket**:
+The visibly flagged nous counter for provisional time; the minutes behind it form the provisional pool. Banked or dropped in one move when the honesty report resolves. Nothing already banked is ever taken back.
+
+**Provisional pool**:
+The minutes owed honesty behind the provisional bucket: away time past a planned target, and all away time on open-ended sessions beyond the reconciliation floor. The honesty report settles it together with the bucket.
+
+**Honesty report**:
+The mandatory adjudication presented when a session returns with provisional time outstanding, repeated until resolved. One answer banks or drops the bucket and sets how much of the provisional time credits: didn't practice, did what I planned, or practiced the whole time away — the middle option only where a plan exists.
+
+**Credited practice time**:
+A session's post-reconciliation practice total: live present and trusted time, plus provisional time as the honesty report credits it. Habit accrual, goal progress, the charge window, and session achievements all key off it.
+
+**Honesty outcome**:
+The per-reconciliation record — missed, planned, or full — from which a session's honesty summary and its miss row derive.
+
+**Overrun**:
+The continued run of a planned session past its target: presence keeps banking live, away time turns provisional, and the tab title flips to done.
+
+**Target-hit signals**:
+The chime, browser notification, and tab-title flip fired together the first moment a session's wall clock reaches its planned target. Open-ended and paused sessions fire none.
+
 **Upgrade mode**:
 The period between flow sessions when the player configures and upgrades the board and console while charge state is paused and no production occurs. It is the only window for all nous spending.
 
 **Session summary**:
-The modal every flow session ends with in upgrade mode: the session's earned nous headline, practice minutes, the achieved rate with its breakdown, and any unlocks. It is the future home of session reflections.
+The modal every flow session ends with in upgrade mode, after the honesty report when one is owed: the session's banked nous headline, credited practice minutes, the achieved rate with its breakdown, its honesty event lines as neutral factual lines, and any unlocks. The reflection rides in it above dismissal.
+
+**Reflection**:
+The optional insight capture in the session summary: free text plus a five-position valence slider (rough ↔ great), neutral middle default. Recorded when either part is touched, absent otherwise; pure insight at launch — nothing reads it.
 
 **Practice-minute countdown**:
 The affordability estimate on upgrade-mode purchase surfaces, projecting the current board's next-session rate ("in ~3:40 of practice"); hidden when already affordable or when no rate exists. Never shown in-session or in the summary.
+
+**Session record**:
+The permanent per-session entry: when it ran, which habit, planned vs credited time, what banked, its honesty events, reflection, and goals advanced.
+
+**Session history**:
+The complete append-only run of session records, browsed in the Time app's list and drill-down.
+
+**Miss marker**:
+The muted list-row flag on session records carrying a missed honesty event. Muted grey, never red — accounting, not judgment.
 
 ### Progression
 

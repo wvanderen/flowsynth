@@ -2,7 +2,7 @@
 
 The decoupled board, the opening, the horizon, and the Rack — assembled for implementation.
 
-**Status**: produced by the FlowSynth redesign map ([issue #9](https://github.com/wvanderen/flowsynth/issues/9)); every decision below is final for this effort and traceable to its deciding ticket. Exact numbers are **provisional tuning** unless a source says otherwise. Companion records: ADR-0012…0018 (supersessions) and the rewritten `CONTEXT.md` (glossary). Where this spec and an ADR disagree, the ADR wins; where both are silent, consult the linked ticket.
+**Status**: produced by the FlowSynth redesign map ([issue #9](https://github.com/wvanderen/flowsynth/issues/9)); every decision below is final for this effort and traceable to its deciding ticket. Exact numbers are **provisional tuning** unless a source says otherwise. Companion records: ADR-0012…0018 (supersessions) and the rewritten `CONTEXT.md` (glossary). The focus-tool elevation ([issue #68](https://github.com/wvanderen/flowsynth/issues/68)) supersedes this spec's session-accounting and opening-activation lines; its decisions live in [the focus-tool spec](focus-tool-spec.md) and ADR-0019. Where this spec and an ADR disagree, the ADR wins; where both are silent, consult the linked ticket.
 
 ---
 
@@ -64,6 +64,8 @@ The top bar is promoted to the **console**, structurally above the game UI:
 | Notes | rung purchase | notes are notes | Marginalia, Commonplace book |
 | Goals | rung purchase | track goals; templates are conditions only | Kept promise |
 
+*(Superseded: all four apps are active from the first session and the ladder rests empty until Tasks → [focus-tool spec](focus-tool-spec.md) §7, ADR-0019.)*
+
 **Retired with the old coupling**: the completion bonus, progressive rewards, Notes' charge burst, Time's multiplier and bursts, goal templates' equipped benefits and completion-charge rules. Session earnings are exactly what the board produced; the session summary and achievements carry celebration.
 
 ## 3. The opening economy
@@ -76,7 +78,7 @@ The top bar is promoted to the **console**, structurally above the game UI:
 - **Cells**: direct nous purchases on a steep geometric scaler over total cells bought; bought and placed in upgrade mode; connected-board and reshaping rules unchanged. The first acquired module must be placeable without buying a cell first.
 - **The expander is retired**; charge feeds the Forge only.
 - **The catalog** is the permanent upgrade-mode purchase surface (named here per the delegation in #24's handoff; post-shelf contents remain map fog): app activations, the starter shelf while available, and cells — module upgrades live on module panels (→ ADR-0018).
-- **The activation ladder**: shared, scaling, free order. Rung 1 below the shelf floor; each later rung costs more, counted globally regardless of app. Habit free; Time auto-activates after the first session; Notes and Goals are the launch rungs in either order. App upgrades appear only after activation.
+- **The activation ladder**: shared, scaling, free order. Rung 1 below the shelf floor; each later rung costs more, counted globally regardless of app. Habit free; Time auto-activates after the first session; Notes and Goals are the launch rungs in either order. App upgrades appear only after activation. *(Superseded: the launch rungs are struck — the ladder rests empty at launch, hidden until Tasks, and its pricing defers to that first tenant → [focus-tool spec](focus-tool-spec.md) §7, ADR-0019.)*
 - **Purchase windows**: **all nous spending is upgrade-mode-only.** Live sessions are read-only. Practice-minute countdowns render on purchase surfaces in upgrade mode only — never in-session, never in the summary.
 
 ## 4. The nous formula
@@ -99,7 +101,7 @@ composite = (carrier + Σ harmonic terms) × Π chord terms
 
 ## 5. Onboarding: the first session, moment by moment
 
-*Scripted by [Onboarding beat sheet, #24](https://github.com/wvanderen/flowsynth/issues/24); amends #11's skeleton. The accepted coarse skeleton: grant → first upgrade → short first session → loud summary → Time activates → rung-1-vs-generator choice → generator/charge/Forge/first roll + first cell → first console long goal capstone.*
+*Scripted by [Onboarding beat sheet, #24](https://github.com/wvanderen/flowsynth/issues/24); amends #11's skeleton. The accepted coarse skeleton: grant → first upgrade → short first session → loud summary → Time activates → rung-1-vs-generator choice → generator/charge/Forge/first roll + first cell → first console long goal capstone. Amended by the focus-tool elevation: all apps live from minute 0, session one is open-ended-steered with duration affordances visible, tiles open but unprompted, and beat 8's fork is struck → [focus-tool spec](focus-tool-spec.md) §7, ADR-0019.*
 
 1. **First launch — upgrade mode.** Opens directly on the tiny board: the Carrier pinned at the origin with a subtle pin locknote, ~2 empty cells. A one-time welcome card: the Carrier is granted, its first upgrade already affordable; a single CTA on the Carrier's upgrade button. Unforced — skipping straight to a session loses nothing.
 2. **Beat one — first upgrade.** The carrier term visibly bumps in the status monitor; balance returns to zero.
@@ -182,7 +184,7 @@ The monitor **is** the accumulator: full-width rail under the grid, **hard cap o
 
 *Decided by [Save migration, #21](https://github.com/wvanderen/flowsynth/issues/21); recorded in ADR-0017.*
 
-- `SAVE_VERSION` = 5; `deserialize` rejects v4-and-older with a clear message and starts fresh; the v1–v3 `migrate` chain is deleted; no archive or import path; life-record loss accepted. Every player plays the new opening from zero. ADR-0010's other persistence provisions stand (versioned localStorage, export/import, autosave cadence, 120 s reconcile-or-discard).
+- `SAVE_VERSION` = 5; `deserialize` rejects v4-and-older with a clear message and starts fresh; the v1–v3 `migrate` chain is deleted; no archive or import path; life-record loss accepted. Every player plays the new opening from zero. ADR-0010's other persistence provisions stand (versioned localStorage, export/import, autosave cadence); the 120 s reconcile-or-discard is superseded by trust-model session accounting → [focus-tool spec](focus-tool-spec.md) §1–2, ADR-0019.
 
 ## 10. Retirement ledger
 
@@ -217,7 +219,7 @@ The rewrite of `CONTEXT.md` ships in this change set: new terms (Carrier, Pitch,
 
 **Map fog (in scope for future efforts, not this one)** — new chargeable categories beyond the Forge; new synthesizer types (octave/sub carriers, chain-relay pitch, chosen waveforms); bridge modules (gapped-ratio canon); resonance groups; new generator types beyond the launch generator; focus-keyed board modules beyond the launch generator; the transmit-style infusor; the catalog's post-shelf contents.
 
-**Out of scope** — prestige design (kept possible only); deferred breadth (Tasks console app, console upgrades beyond the paced set, habit development, secondary effects and rarity inheritance, achievement breadth beyond the seeds); theme variants; platform growth (phone, sync, accounts); session reflections.
+**Out of scope** — prestige design (kept possible only); deferred breadth (Tasks console app, console upgrades beyond the paced set, habit development, secondary effects and rarity inheritance, achievement breadth beyond the seeds); theme variants; platform growth (phone, sync, accounts); session reflections *(since spec'd by the focus-tool elevation → [focus-tool spec](focus-tool-spec.md) §8)*.
 
 ## 13. Handoff notes for implementation sessions
 
