@@ -1,7 +1,7 @@
 import { createInitialState } from "./state";
 import { SAVE_VERSION } from "./constants";
 import { freshAccounting } from "./trust";
-import type { GameState } from "./types";
+import type { GameState, SessionReflection } from "./types";
 
 export interface SaveFile {
   app: "flowsynth";
@@ -95,6 +95,22 @@ export function deserialize(text: string): LoadResult {
   }
   if (merged.summary && !Array.isArray(merged.summary.achievements)) {
     merged.summary.achievements = [];
+  }
+  // The close-out summary's final numbers and reflection (§8) join the v5
+  // shape additively, defaulted leniently like the achievements row above:
+  // a summary written before them shows plain minutes, no event lines, and
+  // no reflection — never a half-shaped object.
+  if (merged.summary) {
+    if (!Array.isArray(merged.summary.honestyEvents)) {
+      merged.summary.honestyEvents = [];
+    }
+    if (typeof merged.summary.plannedTarget !== "number") {
+      merged.summary.plannedTarget = null;
+    }
+    const reflection = merged.summary.reflection as SessionReflection | null | undefined;
+    if (!reflection || typeof reflection.text !== "string" || typeof reflection.slider !== "number") {
+      merged.summary.reflection = null;
+    }
   }
   // The focus-tool spec's trust accounting (ADR-0019) joins as additive v5
   // fields: sessions from before it carry no ledger, so default the whole

@@ -6,6 +6,7 @@ import { createHabit, selectHabit } from "../engine/habits";
 import { BALANCE } from "../engine/constants";
 import { startSession, endSession } from "../engine/actions";
 import { advance } from "../engine/advance";
+import { applyGap, poolOutstanding } from "../engine/trust";
 import { give } from "../engine/fixtures";
 import { hex } from "../engine/hex";
 import type { GameState } from "../engine/types";
@@ -293,7 +294,7 @@ describe("the session clock", () => {
     expect(document.getElementById("session-strip-fill")!.style.width).toBe("0%");
   });
 
-  it("the loud summary keeps only data rows and the continue action", () => {
+  it("the summary carries the reflection slot above its continue action", () => {
     const s = app.state;
     s.sessionsCompleted = 1;
     startSession(s, 600);
@@ -302,9 +303,22 @@ describe("the session clock", () => {
     app.ui.modal = "summary";
     app.render();
     const modal = document.getElementById("modal-content")!;
-    expect(modal.querySelector(".summary-reflections")).toBeNull();
-    expect(modal.textContent).not.toContain("Trophies live");
-    expect(document.getElementById("summary-continue")).not.toBeNull();
+    const slider = document.getElementById("summary-reflection-slider") as HTMLInputElement;
+    const text = document.getElementById("summary-reflection-text") as HTMLInputElement;
+    const continueButton = document.getElementById("summary-continue")!;
+    expect(slider).not.toBeNull();
+    expect(text).not.toBeNull();
+    // Five positions, end labels only, the middle neutral and the default.
+    expect(slider.min).toBe("1");
+    expect(slider.max).toBe("5");
+    expect(slider.step).toBe("1");
+    expect(slider.value).toBe("3");
+    expect(text.value).toBe("");
+    expect(modal.textContent).toContain("How did it go?");
+    expect(modal.textContent).toContain("rough");
+    expect(modal.textContent).toContain("great");
+    // The reserved slot rides above dismissal.
+    expect(slider.compareDocumentPosition(continueButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 
@@ -382,5 +396,125 @@ describe("the honesty report", () => {
     app.resolveHonesty("full");
     app.render();
     expect(document.getElementById("session-provisional")!.textContent).toBe("");
+  });
+});
+
+describe("the close-out choreography (§8)", () => {
+  function endPlannedSession(seconds: number): void {
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    startSession(s, 600);
+    advance(s, seconds);
+    app.endFlow();
+    app.render();
+  }
+
+  it("a present-typed exit goes straight to the summary", () => {
+    endPlannedSession(600);
+    expect(app.state.mode).toBe("upgrade");
+    expect(app.ui.modal).toBe("summary");
+    expect(app.state.summary).not.toBeNull();
+  });
+
+  it("practice time shows credited minutes in the history list's format", () => {
+    endPlannedSession(600);
+    const modal = document.getElementById("modal-content")!;
+    expect(modal.textContent).toContain("10 / 10 min");
+    // The next session is open-ended and short: plain minutes, no plan.
+    app.dismissSummary();
+    const s = app.state;
+    startSession(s, null);
+    advance(s, 300);
+    app.endFlow();
+    app.render();
+    const open = document.getElementById("modal-content")!;
+    expect(open.textContent).toContain("5 min");
+    expect(open.textContent).not.toContain("/ 10 min");
+  });
+
+  it("honesty events render as neutral factual lines; no raw wall-duration row", () => {
+    // 600 s present under a 600 s plan, then 300 s provisional away settled
+    // as a miss: wall time is 15 min, credited is 10, and only the latter
+    // may appear as a duration row.
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    startSession(s, 600);
+    advance(s, 600);
+    advance(s, 1, Math.random, "provisional");
+    s.session!.accounting.poolSeconds = 300;
+    s.session!.accounting.bucketNous = 30;
+    app.endFlow();
+    document.querySelector<HTMLButtonElement>('[data-honesty="missed"]')!.click();
+    app.render();
+    const modal = document.getElementById("modal-content")!;
+    expect(modal.textContent).toContain("5 min away · didn't practice");
+    expect(modal.textContent).toContain("10 / 10 min");
+    expect(modal.textContent).not.toContain("15 min");
+  });
+
+  it("touching either field records the reflection; the untouched field keeps its neutral default", () => {
+    endPlannedSession(60);
+    const text = document.getElementById("summary-reflection-text") as HTMLInputElement;
+    text.value = "held the plan";
+    text.dispatchEvent(new Event("input"));
+    expect(app.state.summary!.reflection).toEqual({ text: "held the plan", slider: 3 });
+    const slider = document.getElementById("summary-reflection-slider") as HTMLInputElement;
+    slider.value = "5";
+    slider.dispatchEvent(new Event("input"));
+    expect(app.state.summary!.reflection).toEqual({ text: "held the plan", slider: 5 });
+  });
+
+  it("an untouched reflection stays absent when dismissed via Continue", () => {
+    endPlannedSession(60);
+    document.getElementById("summary-continue")!.click();
+    expect(app.ui.modal).toBeNull();
+    expect(app.state.summary!.seen).toBe(true);
+    expect(app.state.summary!.reflection).toBeNull();
+  });
+
+  it("the close, backdrop, and Esc path logs the same reflection-or-absent", () => {
+    endPlannedSession(60);
+    const text = document.getElementById("summary-reflection-text") as HTMLInputElement;
+    text.value = "rough start";
+    text.dispatchEvent(new Event("input"));
+    app.closeModal();
+    expect(app.state.summary!.seen).toBe(true);
+    expect(app.state.summary!.reflection).toEqual({ text: "rough start", slider: 3 });
+    const s = app.state;
+    startSession(s, null);
+    advance(s, 60);
+    app.endFlow();
+    app.render();
+    app.closeModal();
+    expect(app.state.summary!.seen).toBe(true);
+    expect(app.state.summary!.reflection).toBeNull();
+  });
+
+  it("an unseen summary and its half-entered reflection survive a reload", () => {
+    endPlannedSession(60);
+    const text = document.getElementById("summary-reflection-text") as HTMLInputElement;
+    text.value = "half-done thought";
+    text.dispatchEvent(new Event("input"));
+    app.save();
+    const revived = boot();
+    expect(revived.ui.modal).toBe("summary");
+    expect(revived.state.summary!.seen).toBe(false);
+    expect(revived.state.summary!.reflection).toEqual({ text: "half-done thought", slider: 3 });
+    const reloaded = document.getElementById("summary-reflection-text") as HTMLInputElement;
+    expect(reloaded.value).toBe("half-done thought");
+  });
+
+  it("relaunching with a running session resumes it; the owed report fires, nothing auto-closes", () => {
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    startSession(s, null);
+    advance(s, 60);
+    applyGap(s, 600, "away", 0);
+    app.save();
+    const revived = boot();
+    expect(revived.state.mode).toBe("flow");
+    expect(revived.state.session).not.toBeNull();
+    expect(poolOutstanding(revived.state)).toBe(true);
+    expect(revived.ui.modal).toBe("honesty");
   });
 });

@@ -13,6 +13,7 @@ import {
   endSession,
   pauseSession,
   placeModule,
+  recordSummaryReflection,
   reshapeCells,
   resumeSession,
   returnModule,
@@ -980,8 +981,25 @@ export class App {
     this.render();
   }
 
-  // The loud summary's dismissal (§5.7): the post-session choice that
+  // The summary's reflection fields (§8): each touch records immediately —
+  // the engine keeps the untouched field at its neutral default — and no
+  // re-render follows, so the caret and the slider drag never lose their
+  // place. Persistence rides the ordinary save points (hidden transition,
+  // beforeunload, dismissal), so an unseen summary's half-entered
+  // reflection survives a reload alongside the summary itself.
+  recordReflectionText(text: string): void {
+    recordSummaryReflection(this.state, { text });
+  }
+
+  recordReflectionSlider(slider: number): void {
+    recordSummaryReflection(this.state, { slider });
+  }
+
+  // The loud summary's dismissal (§5.7, §8): the post-session choice that
   // follows is deliberately unguided — no pointing, just the surfaces.
+  // All four paths — Continue, ✕, backdrop, Esc — land here and log the
+  // same thing: the reflection recorded as its fields were touched, or
+  // absent. No distinct skip state exists.
   dismissSummary(): void {
     dismissSessionSummary(this.state);
     this.ui.modal = null;

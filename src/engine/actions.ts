@@ -1,4 +1,4 @@
-import { BALANCE, EPS, NEXT_RARITY, SHELF_MODULE } from "./constants";
+import { BALANCE, EPS, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "./constants";
 import { cellCost, computeRates, deployedAt, findModule, levelCost, longGoalCost, wholeNous } from "./economy";
 import { nextRungCost, appActive, LADDER_APPS, type FocusApp } from "./apps";
 import { adjacent, hexKey, isConnected, sameHex } from "./hex";
@@ -7,7 +7,7 @@ import { logSessionPractice } from "./habits";
 import { rollGoalOccurrences } from "./goals";
 import { syncAchievements } from "./achievements";
 import { freshAccounting } from "./trust";
-import type { GameState, Hex, ModuleInstance, ShelfType } from "./types";
+import type { GameState, Hex, ModuleInstance, SessionReflection, ShelfType } from "./types";
 
 export interface ActionResult {
   ok: boolean;
@@ -96,7 +96,15 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
     chordMultiplier: snapshot.chordMultiplier,
     empowerment: snapshot.empowerment,
     timeUnlocked: state.sessionsCompleted === 1,
+    // The practice row's denominator (§8): "X / Y min" on planned sessions.
+    plannedTarget: session?.target ?? null,
+    // The honesty events beneath the final numbers (§8), copied — the
+    // session object is gone after this, so the summary carries its own.
+    honestyEvents: (session?.accounting.events ?? []).map((event) => ({ ...event })),
     achievements: [...queued, ...ended.map((def) => def.id)],
+    // The reflection (§8) records from the summary itself, so it starts
+    // absent here.
+    reflection: null,
     seen: false,
   };
   return ok;
@@ -133,8 +141,31 @@ export function acknowledgeWelcome(state: GameState): ActionResult {
   return ok;
 }
 
+// The summary's reflection (§8): recorded the moment either field is
+// touched — the untouched field keeps its neutral default (empty text,
+// middle slider) — and absent while neither is. Recording is the logging,
+// so every dismissal path (Continue, close, backdrop, Esc) then logs the
+// same thing: reflection-or-absent, no distinct skip state. The engine hold
+// also persists the half-touched reflection across a reload alongside the
+// unseen summary it rides.
+export function recordSummaryReflection(
+  state: GameState,
+  part: Partial<SessionReflection>,
+): ActionResult {
+  if (!state.summary) return fail("No session summary to reflect on.");
+  const current = state.summary.reflection ?? { text: "", slider: REFLECTION_SLIDER_NEUTRAL };
+  state.summary.reflection = {
+    text: part.text ?? current.text,
+    // The decided range is clamped here, not only in the DOM control.
+    slider: Math.min(REFLECTION_SLIDER_POSITIONS, Math.max(1, Math.round(part.slider ?? current.slider))),
+  };
+  return ok;
+}
+
 // The loud summary's dismissal (§5.7): one-time per session, persisted so a
-// reload with an unseen summary re-opens the modal.
+// reload with an unseen summary re-opens the modal. The reflection is not
+// dismissal's business — it recorded as its fields were touched — so all
+// four dismissal paths pass through here identically.
 export function dismissSummary(state: GameState): ActionResult {
   if (!state.summary) return fail("No session summary to dismiss.");
   state.summary.seen = true;

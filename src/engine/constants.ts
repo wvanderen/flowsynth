@@ -154,4 +154,10 @@ export const EPS = 1e-9;
 // retired 120 s confirm-or-discard threshold (ADR-0019).
 export const RECONCILIATION_FLOOR_SECONDS = 180;
 
+// The summary reflection's slider (focus-tool spec §8): five positions,
+// rough ↔ great, the middle neutral and the default. Decided shape, not
+// tuning; the render reads both so the range and its default stay paired.
+export const REFLECTION_SLIDER_POSITIONS = 5;
+export const REFLECTION_SLIDER_NEUTRAL = 3;
+
 export const SAVE_VERSION = 5;
