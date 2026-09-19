@@ -118,8 +118,9 @@ describe("formatPracticeMinutes — the history list's credited-minute format (�
     expect(formatPracticeMinutes(0, null)).toBe("0 min");
   });
 
-  it("rounds to the nearest minute and never goes negative", () => {
-    expect(formatPracticeMinutes(90, 600)).toBe("2 / 10 min");
+  it("rounds down — partial credit never reads as a full minute", () => {
+    expect(formatPracticeMinutes(590, 600)).toBe("9 / 10 min");
+    expect(formatPracticeMinutes(90, 600)).toBe("1 / 10 min");
     expect(formatPracticeMinutes(-5, null)).toBe("0 min");
   });
 });

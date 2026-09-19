@@ -1,4 +1,4 @@
-import { BALANCE, EPS, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL, SHELF_MODULE } from "./constants";
+import { BALANCE, EPS, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "./constants";
 import { cellCost, computeRates, deployedAt, findModule, levelCost, longGoalCost, wholeNous } from "./economy";
 import { nextRungCost, appActive, LADDER_APPS, type FocusApp } from "./apps";
 import { adjacent, hexKey, isConnected, sameHex } from "./hex";
@@ -7,7 +7,7 @@ import { logSessionPractice } from "./habits";
 import { rollGoalOccurrences } from "./goals";
 import { syncAchievements } from "./achievements";
 import { freshAccounting } from "./trust";
-import type { GameState, Hex, ModuleInstance, ShelfType } from "./types";
+import type { GameState, Hex, ModuleInstance, SessionReflection, ShelfType } from "./types";
 
 export interface ActionResult {
   ok: boolean;
@@ -150,13 +150,14 @@ export function acknowledgeWelcome(state: GameState): ActionResult {
 // unseen summary it rides.
 export function recordSummaryReflection(
   state: GameState,
-  part: { text?: string; slider?: number },
+  part: Partial<SessionReflection>,
 ): ActionResult {
   if (!state.summary) return fail("No session summary to reflect on.");
   const current = state.summary.reflection ?? { text: "", slider: REFLECTION_SLIDER_NEUTRAL };
   state.summary.reflection = {
     text: part.text ?? current.text,
-    slider: part.slider ?? current.slider,
+    // The decided range is clamped here, not only in the DOM control.
+    slider: Math.min(REFLECTION_SLIDER_POSITIONS, Math.max(1, Math.round(part.slider ?? current.slider))),
   };
   return ok;
 }

@@ -66,15 +66,20 @@ export function formatCountdown(seconds: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
+// The credited-minute figure both §8 surfaces share (the summary's practice
+// row and the factual event lines, later the history list): whole minutes,
+// floored — never rounded up, so partial credit never reads as a full minute.
+export function secondsToMinutes(seconds: number): number {
+  return Math.max(0, Math.floor(seconds / 60));
+}
+
 // The credited practice minutes (§3, §8): the history list's format —
-// planned sessions as "X / Y min", open-ended as "X min". Minutes, rounded;
-// the summary and the history surfaces share it so neither contradicts the
-// practice log.
+// planned sessions as "X / Y min", open-ended as "X min". The summary and
+// the history surfaces share it so neither contradicts the practice log.
 export function formatPracticeMinutes(creditedSeconds: number, plannedTargetSeconds: number | null): string {
-  const minutes = Math.max(0, Math.round(creditedSeconds / 60));
   return plannedTargetSeconds === null
-    ? `${minutes} min`
-    : `${minutes} / ${Math.max(0, Math.round(plannedTargetSeconds / 60))} min`;
+    ? `${secondsToMinutes(creditedSeconds)} min`
+    : `${secondsToMinutes(creditedSeconds)} / ${secondsToMinutes(plannedTargetSeconds)} min`;
 }
 
 // The upgrade-mode purchase countdown (§7): how much practice until the
