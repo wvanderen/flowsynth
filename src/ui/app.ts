@@ -43,7 +43,7 @@ import {
 import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
 import type { GameState, Hex, ShelfType } from "../engine/types";
 import { render } from "./render";
-import { APP_LABELS, META } from "./meta";
+import { APP_LABELS, HISTORY_PAGE_ROWS, META } from "./meta";
 import { browserChannels, type SignalChannels } from "./signals";
 
 // The session modal surfaces (§5.5, §5.7): the enter prompt precedes every
@@ -82,6 +82,13 @@ export interface UiState {
   // terms — chord voices stay lit, everything else dims, pair links and
   // named-chord hulls draw in the chord register. Never affects gameplay.
   showChords: boolean;
+  // Session history (§9): the Time app's list view, its page size, and the
+  // record drilled into. Light furniture — cleared with the popover.
+  historyOpen: boolean;
+  historyLimit: number;
+  drillSession: number | null;
+  // The Habit app's expanded development summary (§9): one habit at a time.
+  summaryHabitId: string | null;
 }
 
 interface LoadedSave {
@@ -140,6 +147,10 @@ export class App {
     showAcquired: false,
     editingHabitId: null,
     showChords: false,
+    historyOpen: false,
+    historyLimit: HISTORY_PAGE_ROWS,
+    drillSession: null,
+    summaryHabitId: null,
   };
   lastWall: number | null = null;
   // The dual-clock drift baseline at lastWall (§10): its positive steps
@@ -538,7 +549,7 @@ export class App {
     // Planned targets belong to the Time app (§2.3): until it auto-activates,
     // every session is mechanically open-ended.
     const target = appActive(this.state, "time") ? this.ui.chosenTarget : null;
-    const started = startSession(this.state, target);
+    const started = startSession(this.state, target, Date.now());
     if (!started.ok) {
       this.ui.modal = null;
       this.say(started.reason ?? "Cannot enter flow right now.");
@@ -753,12 +764,65 @@ export class App {
     this.ui.app = this.ui.app === app ? null : app;
     this.ui.selected = null;
     this.ui.placing = null;
+    this.resetHistorySurfaces();
     this.render();
   }
 
   closeApp(): void {
     this.ui.app = null;
     this.ui.editingHabitId = null;
+    this.resetHistorySurfaces();
+    this.render();
+  }
+
+  // ── Session history (§9) ────────────────────────────────────────────────
+
+  private resetHistoryUi(): void {
+    this.ui.historyOpen = false;
+    this.ui.historyLimit = HISTORY_PAGE_ROWS;
+    this.ui.drillSession = null;
+  }
+
+  // Both history surfaces clear together when the popover swaps apps or
+  // closes: the Time list view and the Habit development summary.
+  private resetHistorySurfaces(): void {
+    this.resetHistoryUi();
+    this.ui.summaryHabitId = null;
+  }
+
+  // The Time app's history affordance: the panel body swaps to the
+  // newest-first record list. One-way in — only the back control leaves it.
+  openHistory(): void {
+    this.resetHistoryUi();
+    this.ui.historyOpen = true;
+    this.render();
+  }
+
+  // Back past the list itself: the Time panel body returns.
+  closeHistory(): void {
+    this.resetHistoryUi();
+    this.render();
+  }
+
+  // The list's show-more tail: one more page of rows.
+  moreHistory(): void {
+    this.ui.historyLimit += HISTORY_PAGE_ROWS;
+    this.render();
+  }
+
+  openDrill(sessionNumber: number): void {
+    this.ui.drillSession = sessionNumber;
+    this.render();
+  }
+
+  closeDrill(): void {
+    this.ui.drillSession = null;
+    this.render();
+  }
+
+  // The Habit app's per-habit development summary: one expanded at a time.
+  toggleHabitSummary(id: string): void {
+    this.ui.summaryHabitId = this.ui.summaryHabitId === id ? null : id;
     this.render();
   }
 
@@ -815,7 +879,7 @@ export class App {
   }
 
   addNote(text: string): void {
-    const result = writeNote(this.state, text);
+    const result = writeNote(this.state, text, Date.now());
     if (result.ok) {
       this.say("Noted.");
       this.save();

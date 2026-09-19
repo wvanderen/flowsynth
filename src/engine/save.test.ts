@@ -5,6 +5,7 @@ import { fresh, give, stubRng } from "./fixtures";
 import { SAVE_VERSION } from "./constants";
 import { deserialize, serialize } from "./save";
 import { applyGap, flushPendingAway, resolveHonestyReport } from "./trust";
+import { writeNote } from "./notes";
 import { generateOffer } from "./rolls";
 import { hex } from "./hex";
 
@@ -214,5 +215,45 @@ describe("persistence", () => {
     expect(summary.seen).toBe(false);
     expect(summary.honestyEvents).toEqual([{ awaySeconds: 300, outcome: "missed" }]);
     expect(summary.reflection).toEqual({ text: "drifted", slider: 3 });
+  });
+
+  it("v5 saves from before the session records default the history to empty (§9)", () => {
+    const s = fresh();
+    startSession(s, 600);
+    advance(s, 60);
+    endSession(s, 5_000);
+    const file = JSON.parse(serialize(s, 1_000));
+    delete file.state.sessionRecords;
+    const loaded = deserialize(JSON.stringify(file));
+    expect(loaded.error).toBeUndefined();
+    expect(loaded.state!.sessionRecords).toEqual([]);
+  });
+
+  it("a running session from before the record seams defaults its start stamp and goal ledger (§9)", () => {
+    const s = fresh();
+    startSession(s, 600, 1_000);
+    advance(s, 60);
+    const file = JSON.parse(serialize(s, 1_000));
+    delete file.state.session.startedAt;
+    delete file.state.session.goalSeconds;
+    const loaded = deserialize(JSON.stringify(file));
+    expect(loaded.error).toBeUndefined();
+    expect(loaded.state!.session!.startedAt).toBe(0);
+    expect(loaded.state!.session!.goalSeconds).toEqual({});
+  });
+
+  it("notes from before the habit tag load untagged and undated (§9)", () => {
+    const s = fresh();
+    startSession(s, 600);
+    writeNote(s, "pre-tag note", 1_000);
+    advance(s, 60);
+    endSession(s, 2_000);
+    const file = JSON.parse(serialize(s, 1_000));
+    delete file.state.notes[0].habitId;
+    delete file.state.notes[0].at;
+    const loaded = deserialize(JSON.stringify(file));
+    expect(loaded.error).toBeUndefined();
+    expect(loaded.state!.notes[0]!.habitId).toBeNull();
+    expect(loaded.state!.notes[0]!.at).toBe(0);
   });
 });

@@ -4,6 +4,7 @@ import { nextRungCost, appActive, LADDER_APPS, type FocusApp } from "./apps";
 import { adjacent, hexKey, isConnected, sameHex } from "./hex";
 import { createModule, isCarrier } from "./state";
 import { logSessionPractice } from "./habits";
+import { plannedTargetHit } from "./records";
 import { rollGoalOccurrences } from "./goals";
 import { syncAchievements } from "./achievements";
 import { freshAccounting } from "./trust";
@@ -30,7 +31,7 @@ function checkAchievements(state: GameState): string[] {
   return syncAchievements(state).map((def) => def.id);
 }
 
-export function startSession(state: GameState, target: number | null): ActionResult {
+export function startSession(state: GameState, target: number | null, now: number = 0): ActionResult {
   if (state.mode !== "upgrade") return fail("A session is already running.");
   state.sessionIndex++;
   state.mode = "flow";
@@ -43,6 +44,9 @@ export function startSession(state: GameState, target: number | null): ActionRes
     unlocked: [],
     accounting: freshAccounting(),
     targetSignaled: false,
+    // The record's start stamp (§9), taken from the start gesture.
+    startedAt: now,
+    goalSeconds: {},
   };
   // In-session unlocks (Untethered, past session one) queue into the
   // session's summary row — the result carries nothing to toast.
@@ -62,12 +66,14 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
   }
   // Credited practice time (§3) is the seam: the practice-log entry, the
   // charge window, and the summary's practice minutes all key off C —
-  // never raw elapsed. The target hit derives from C too, so a reported
-  // miss never suppresses a presence-earned hit.
+  // never raw elapsed. The target hit derives from C too — the one shared
+  // rule (records.plannedTargetHit) — so a reported miss never suppresses a
+  // presence-earned hit.
   const credited = session?.accounting.creditedSeconds ?? 0;
   const earned = session?.earned ?? 0;
   const queued = [...(session?.unlocked ?? [])];
-  const targetHit = session !== null && session.target !== null && credited >= session.target;
+  const target = session?.target ?? null;
+  const targetHit = plannedTargetHit(credited, target);
   state.mode = "upgrade";
   state.session = null;
   state.sessionsCompleted++;
@@ -83,6 +89,31 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
   // The session-end boundary check (ADR-0015): First light, On the clock,
   // Keeping time, and friends fire here and join the summary row.
   const ended = syncAchievements(state, { now });
+  const achievements = [...queued, ...ended.map((def) => def.id)];
+  // The settled honesty events, copied — the session object is gone after
+  // this, so both the record and the summary carry their own.
+  const events = (session?.accounting.events ?? []).map((event) => ({ ...event }));
+  // The session record (§9): one append-only entry at close, whatever the
+  // length or mode. The habit id stores raw — it resolves at render — and
+  // the goals-advanced ledger snapshots from the session, so deleting or
+  // replacing a goal never rewrites history. The reflection joins after
+  // close, as the summary records it (see recordSummaryReflection).
+  state.sessionRecords.push({
+    sessionNumber: state.sessionsCompleted,
+    // A session resumed from a pre-§9 save carries no start stamp; its end
+    // time stands in rather than dating the record to 1970.
+    startedAt: session && session.startedAt > 0 ? session.startedAt : now,
+    endedAt: now,
+    habitId: state.activeHabitId,
+    mode: target !== null ? "planned" : "open-ended",
+    plannedTarget: target,
+    creditedSeconds: credited,
+    earned,
+    honestyEvents: events,
+    reflection: null,
+    goalsAdvanced: Object.entries(session?.goalSeconds ?? {}).map(([goalId, seconds]) => ({ goalId, seconds })),
+    achievements,
+  });
   // The loud summary (§5.7): every exit path lands here, so the modal's
   // rows are captured from the session itself — earned, practice time, rate
   // achieved with the breakdown legs — whatever the length or exit. Time
@@ -104,11 +135,11 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
     empowerment: snapshot.empowerment,
     timeUnlocked: state.sessionsCompleted === 1,
     // The practice row's denominator (§8): "X / Y min" on planned sessions.
-    plannedTarget: session?.target ?? null,
-    // The honesty events beneath the final numbers (§8), copied — the
-    // session object is gone after this, so the summary carries its own.
-    honestyEvents: (session?.accounting.events ?? []).map((event) => ({ ...event })),
-    achievements: [...queued, ...ended.map((def) => def.id)],
+    plannedTarget: target,
+    // The honesty events beneath the final numbers (§8), where a dropped
+    // bucket's drop is visible.
+    honestyEvents: events,
+    achievements,
     // The reflection (§8) records from the summary itself, so it starts
     // absent here.
     reflection: null,
@@ -166,6 +197,11 @@ export function recordSummaryReflection(
     // The decided range is clamped here, not only in the DOM control.
     slider: Math.min(REFLECTION_SLIDER_POSITIONS, Math.max(1, Math.round(part.slider ?? current.slider))),
   };
+  // The record's reflection slot (§9) fills from the same touch: the
+  // reflection records after close (it rides the summary), and this is the
+  // same session completing its own record — not a rewrite of history.
+  const record = state.sessionRecords.find((r) => r.sessionNumber === state.summary!.sessionNumber);
+  if (record) record.reflection = { ...state.summary.reflection };
   return ok;
 }
 

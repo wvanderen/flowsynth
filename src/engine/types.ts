@@ -115,6 +115,15 @@ export interface SessionState {
   // the signals (spec §4). Persisted so a discard/reload never re-delivers
   // them; the chime's re-fire cadence stays ephemeral UI state.
   targetSignaled: boolean;
+  // The session record's start stamp (§9): wall-clock epoch ms from the
+  // start gesture. Zero only on lenient defaults — a pre-§9 session resumed
+  // from an older save falls back to its end time at close.
+  startedAt: number;
+  // This session's goal-advancement ledger (§9): goalId → credited seconds
+  // accrued while the session ran. Snapshot into the record at close, so
+  // deleting or replacing a goal never rewrites history; the ledger dies
+  // with the session object.
+  goalSeconds: Record<string, number>;
 }
 
 // The summary's reflection (spec §8): free text plus the five-position
@@ -157,11 +166,56 @@ export interface SessionSummary {
   seen: boolean;
 }
 
+// The session record's mode (§9): derived from the plan at close. Planned
+// sessions carry a target; open-ended ones carry none.
+export type SessionMode = "planned" | "open-ended";
+
+// The goals-advanced snapshot (§9): one row per goal the session credited
+// time toward, captured at close so deleting or replacing a goal never
+// rewrites history — the id resolves at render.
+export interface GoalAdvanceSnapshot {
+  goalId: string;
+  seconds: number;
+}
+
+// The session record (§9): the permanent per-session entry, written once at
+// close, append-only and never pruned. Every flow session gets one —
+// planned, open-ended, unstructured, seconds-long. The habit id resolves at
+// render; credited seconds are post-reconciliation; earned is what actually
+// banked after any bucket drop, so history never contradicts the balance.
+// Derived, never stored: the target hit, the honesty summary, and miss-row
+// status (see records.ts). Present/away/paused breakdowns are not stored.
+export interface SessionRecord {
+  sessionNumber: number;
+  startedAt: number;
+  endedAt: number;
+  // null = unstructured.
+  habitId: string | null;
+  mode: SessionMode;
+  // null on open-ended.
+  plannedTarget: number | null;
+  creditedSeconds: number;
+  earned: number;
+  honestyEvents: HonestyEvent[];
+  // Absent (null) = never touched; renders neutral.
+  reflection: SessionReflection | null;
+  goalsAdvanced: GoalAdvanceSnapshot[];
+  achievements: string[];
+}
+
 export interface NoteEntry {
   id: string;
   sessionId: number;
   atElapsed: number;
   text: string;
+  // The habit-keyed tag (§9): the session's selected habit at capture —
+  // null for unstructured and between-sessions notes. Tagged once, never
+  // retagged; the id resolves at render so renames and archiving never
+  // rewrite the stream.
+  habitId: string | null;
+  // The wall-clock capture stamp (epoch ms); zero on lenient defaults,
+  // which render undated.
+  at: number;
 }
 
 export interface Habit {
@@ -254,6 +308,9 @@ export interface GameState {
   habits: Habit[];
   activeHabitId: string | null;
   practiceLog: PracticeEntry[];
+  // The session history (§9): the complete append-only run of session
+  // records, browsed in the Time app. Kept in full — no pruning, no caps.
+  sessionRecords: SessionRecord[];
   goals: Goal[];
   // The achievement ledger (ADR-0015): achievement id → unlockedAt (epoch
   // ms). Definitions live in code, never in the save.

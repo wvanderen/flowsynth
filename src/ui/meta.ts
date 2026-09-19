@@ -37,3 +37,7 @@ export const PLAN_MAX_MINUTES = 90;
 // The planned-target preset chips (§6): quick picks, the set gained 90.
 // Open-ended is its own mode — never a duration choice. Values are minutes.
 export const PLAN_PRESET_MINUTES: readonly number[] = [10, 15, 20, 25, 30, 45, 60, 90];
+
+// The history list's page size (§9): ~20 rows with a show-more tail, no
+// grouping, no caps on what is kept — only on what is drawn at once.
+export const HISTORY_PAGE_ROWS = 20;

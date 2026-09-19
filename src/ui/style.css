@@ -578,6 +578,54 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .habit-log { margin-top: 14px; }
 .habit-active-name { font-size: 17px; font-weight: 550; margin: 4px 0 0; }
 
+/* The development summary (§9): per-habit aggregates and tagged notes,
+   expanded beneath their row. Archiving hides a habit from selection only:
+   the archived section keeps every summary and note reachable. */
+.summary-toggle[aria-pressed="true"] { color: var(--ink); }
+.habit-summary { border: 1px solid var(--line-soft); border-top: 0; border-radius: 0 0 8px 8px; margin: -2px 0 6px; padding: 9px 11px; display: grid; gap: 2px; }
+.habit-summary .note-list { margin-top: 8px; }
+.habit-archived { margin-top: 12px; display: grid; gap: 6px; }
+.habit-archived > .eyebrow { margin-bottom: 2px; }
+.habit-archived .habit-pick.archived { cursor: default; color: var(--muted); }
+.habit-archived .habit-pick.archived:hover { background: transparent; }
+
+/* The habit-keyed chip (§9): a tagged note wears its habit in the stream. */
+.habit-chip {
+  display: inline-block;
+  font: 9px var(--mono);
+  letter-spacing: 0.06em;
+  padding: 1px 7px;
+  border-radius: 99px;
+  border: 1px solid var(--accent-faint);
+  background: var(--accent-faint);
+  color: var(--accent);
+  margin: 0 0 3px 6px;
+  vertical-align: top;
+}
+
+/* Session history (§9): the Time app's list and drill-down. Flat,
+   newest first, paged with a show-more tail. Misses render as a muted
+   grey marker — accounting, not judgment; never red, no streaks. */
+.history-panel { display: flex; flex-direction: column; gap: 6px; }
+.history-panel .empty-copy { margin-top: 6px; }
+.history-row {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  border: 1px solid var(--line-soft); border-radius: 8px;
+  background: transparent; text-align: left; padding: 7px 10px; cursor: pointer;
+}
+.history-row:hover { background: var(--hover-bg); }
+.history-when { font-size: 10px; color: var(--muted); flex-shrink: 0; width: 44px; }
+.history-habit { flex: 1; min-width: 0; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-min { font-size: 10.5px; color: var(--muted); flex-shrink: 0; }
+.history-chip { font: 9px var(--mono); letter-spacing: 0.05em; padding: 1px 7px; border-radius: 99px; border: 1px solid var(--line-soft); flex-shrink: 0; }
+.history-chip.hit { color: var(--charge); }
+.history-chip.miss { color: var(--muted); }
+.show-more { align-self: center; }
+.history-title { font-size: 14px; font-weight: 550; margin: 2px 0 0; }
+.history-section { font: 10px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-top: 8px; }
+.history-line { font-size: 12.5px; line-height: 1.5; overflow-wrap: anywhere; }
+.history-line.muted { color: var(--muted); }
+
 /* Goals: tracked practice conditions in limited slots. */
 .goal-create { display: flex; gap: 6px; flex-wrap: wrap; }
 .goal-create select, .goal-create input { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; font-size: 12.5px; }
