@@ -47,7 +47,7 @@ Persist session + bucket + `lastSeen` at every transition to hidden (the last re
 - **The screen**: the away minutes and the bucket (minutes + nous in it) stated up top; the options carry their consequences inline as their labels. No arithmetic preview beyond the labels — the outcome is visible on the next screen.
 - **Options** — the answer covers that absence's past-target slice only; under-plan slices are never mentioned:
   - **Didn't practice** → the pool credits 0; the bucket drops; outcome `missed`.
-  - **Did what I planned** → credited rises to `max(C, T)`; the pool credits only up to the plan; the bucket banks; outcome `planned`.
+  - **Did what I planned** → credited rises to `max(C, T)` (T = the planned target); the pool credits only up to the plan; the bucket banks; outcome `planned`.
   - **Practiced the whole time away** → the pool credits fully; the bucket banks; outcome `full`.
 - Planned sessions offer all three; **open-ended sessions offer two** — didn't practice / practiced the whole time away (no plan, no middle option). No freeform trim at launch.
 - Mid-session the report can be left unanswered (pool rolls forward, §1); at exit the choice is mandatory and final — the bucket must bank or drop before the summary shows.

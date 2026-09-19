@@ -204,6 +204,9 @@ A session's post-reconciliation practice total: live present and trusted time, p
 **Honesty outcome**:
 The per-reconciliation record — missed, planned, or full — from which a session's honesty summary and its miss row derive.
 
+**Honesty event**:
+One reconciliation's factual line in the session record: the away minutes and their honesty outcome ("22 min away · didn't practice").
+
 **Overrun**:
 The continued run of a planned session past its target: presence keeps banking live, away time turns provisional, and the tab title flips to done.
 
