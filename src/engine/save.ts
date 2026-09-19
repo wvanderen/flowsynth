@@ -146,7 +146,7 @@ export function deserialize(text: string): LoadResult {
   // Note tags and stamps (§9) join additively: pre-§9 notes load untagged
   // and undated, exactly what they were.
   for (const note of merged.notes) {
-    if (note.habitId !== null && typeof note.habitId !== "string") {
+    if (typeof note.habitId !== "string") {
       note.habitId = null;
     }
     if (typeof note.at !== "number") {

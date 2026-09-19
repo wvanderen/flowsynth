@@ -4,6 +4,7 @@ import { nextRungCost, appActive, LADDER_APPS, type FocusApp } from "./apps";
 import { adjacent, hexKey, isConnected, sameHex } from "./hex";
 import { createModule, isCarrier } from "./state";
 import { logSessionPractice } from "./habits";
+import { plannedTargetHit } from "./records";
 import { rollGoalOccurrences } from "./goals";
 import { syncAchievements } from "./achievements";
 import { freshAccounting } from "./trust";
@@ -65,13 +66,14 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
   }
   // Credited practice time (§3) is the seam: the practice-log entry, the
   // charge window, and the summary's practice minutes all key off C —
-  // never raw elapsed. The target hit derives from C too, so a reported
-  // miss never suppresses a presence-earned hit.
+  // never raw elapsed. The target hit derives from C too — the one shared
+  // rule (records.plannedTargetHit) — so a reported miss never suppresses a
+  // presence-earned hit.
   const credited = session?.accounting.creditedSeconds ?? 0;
   const earned = session?.earned ?? 0;
   const queued = [...(session?.unlocked ?? [])];
   const target = session?.target ?? null;
-  const targetHit = session !== null && target !== null && credited >= target;
+  const targetHit = plannedTargetHit(credited, target);
   state.mode = "upgrade";
   state.session = null;
   state.sessionsCompleted++;

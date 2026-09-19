@@ -913,6 +913,21 @@ describe("the Time app's history (§9)", () => {
     expect(document.getElementById("history-more")).toBeNull();
   });
 
+  it("back from the list returns to the Time panel", () => {
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    startSession(s, null, DAY);
+    endSession(s, DAY + 500);
+    app.openApp("time");
+    document.getElementById("time-history")!.click();
+    expect(document.getElementById("app-popover")!.querySelector(".history-row")).not.toBeNull();
+    document.getElementById("history-back")!.click();
+    // The panel body is the planner again, not the record list.
+    expect(document.getElementById("app-popover")!.querySelector(".history-row")).toBeNull();
+    expect(document.getElementById("app-popover")!.querySelector(".plan-chips")).not.toBeNull();
+    expect(document.getElementById("time-history")).not.toBeNull();
+  });
+
   it("a row drills into the full record; notes and the rate breakdown stay out", () => {
     const s = app.state;
     const habit = createHabit(s, "Piano").habit!;
@@ -1048,6 +1063,18 @@ describe("the Notes stream's habit chips (§9)", () => {
     expect(entries[0]!.querySelector(".habit-chip")).toBeNull();
     expect(entries[1]!.querySelector(".habit-chip")).toBeNull();
     expect(entries[2]!.querySelector(".habit-chip")!.textContent).toBe("Piano");
+    app.closeApp();
+  });
+
+  it("the stream shows everything it keeps — no recent-window cap", () => {
+    const s = app.state;
+    s.activatedApps.push("notes");
+    for (let i = 0; i < 10; i++) writeNote(s, `note ${i}`, DAY + i * 1000);
+    app.openApp("notes");
+    const entries = [...document.querySelectorAll(".note-entry")];
+    expect(entries).toHaveLength(10);
+    // Newest first: the last capture leads.
+    expect(entries[0]!.querySelector("p")!.textContent).toBe("note 9");
     app.closeApp();
   });
 });

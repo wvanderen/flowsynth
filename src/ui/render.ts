@@ -1299,11 +1299,13 @@ function appPanelBody(app: App, panel: FocusApp): string {
   }
 
   if (panel === "notes") {
-    const recent = [...state.notes].slice(-8).reverse();
+    // The full stream (§9): everything kept, newest first — no cap on what
+    // is shown, matching the engine's no-pruning rule.
+    const stream = [...state.notes].reverse();
     return `<section class="focus-controls">
       <textarea class="note-composer" id="note-composer" placeholder="What are you noticing?" maxlength="2000" rows="3"></textarea>
       <div class="session-actions" style="margin:10px 0 0"><button class="primary" id="note-save">Capture note</button></div>
-      ${recent.length > 0 ? `<div class="note-list">${recent.map((n) => `<div class="note-entry"><span class="note-when mono">${noteStampHtml(n)}</span>${habitChipHtml(state, n)}<p>${escapeHtml(n.text)}</p></div>`).join("")}</div>` : ""}
+      ${stream.length > 0 ? `<div class="note-list">${stream.map((n) => `<div class="note-entry"><span class="note-when mono">${noteStampHtml(n)}</span>${habitChipHtml(state, n)}<p>${escapeHtml(n.text)}</p></div>`).join("")}</div>` : ""}
     </section>`;
   }
 
@@ -1426,11 +1428,12 @@ function bindAppPanel(app: App, scope: HTMLElement): void {
     });
   });
   // The history surfaces (§9): the affordance swaps the Time panel body to
-  // the list; rows drill in; the tail pages; back unwinds one level.
-  scope.querySelector("#time-history")?.addEventListener("click", () => app.toggleHistory());
+  // the list; rows drill in; the tail pages; back unwinds one level — out of
+  // the drill-down to the list, out of the list to the Time panel itself.
+  scope.querySelector("#time-history")?.addEventListener("click", () => app.openHistory());
   scope.querySelector("#history-back")?.addEventListener("click", () => {
     if (app.ui.drillSession !== null) app.closeDrill();
-    else app.toggleHistory();
+    else app.closeHistory();
   });
   scope.querySelector("#history-more")?.addEventListener("click", () => app.moreHistory());
   scope.querySelectorAll<HTMLElement>("[data-drill]").forEach((row) => {

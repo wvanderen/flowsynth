@@ -14,6 +14,7 @@ import {
 } from "./records";
 import { deserialize, serialize } from "./save";
 import { applyGap, flushPendingAway, resolveHonestyReport } from "./trust";
+import type { GameState } from "./types";
 import { fresh } from "./fixtures";
 
 // Session records (focus-tool spec §9): one append-only entry per session
@@ -23,7 +24,7 @@ import { fresh } from "./fixtures";
 const START = new Date(2026, 8, 18, 9, 0).getTime();
 const END = START + 30 * 60_000;
 
-function practice(state = fresh(), seconds: number): void {
+function practice(state: GameState, seconds: number): void {
   advance(state, seconds);
 }
 

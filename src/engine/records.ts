@@ -7,11 +7,17 @@ import type { GameState, NoteEntry, SessionRecord } from "./types";
 // events they summarize. Habit ids resolve at render — renames and
 // archiving never rewrite history.
 
-// The derived target hit (§9): a planned session whose credited practice
-// time reached its plan. Presence-earned hits count even when a later
-// honesty event read missed.
+// The target-hit rule in one place (§9): a planned session whose credited
+// practice time reached its plan. Presence-earned hits count even when a
+// later honesty event read missed. endSession reads the same rule off the
+// seam values at close, so the summary counter and the record's derived
+// chip can never disagree.
+export function plannedTargetHit(creditedSeconds: number, plannedTarget: number | null): boolean {
+  return plannedTarget !== null && creditedSeconds >= plannedTarget;
+}
+
 export function recordTargetHit(record: SessionRecord): boolean {
-  return record.plannedTarget !== null && record.creditedSeconds >= record.plannedTarget;
+  return plannedTargetHit(record.creditedSeconds, record.plannedTarget);
 }
 
 // The derived miss marker (§9): the record carries a reconciliation that

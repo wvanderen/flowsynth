@@ -764,16 +764,14 @@ export class App {
     this.ui.app = this.ui.app === app ? null : app;
     this.ui.selected = null;
     this.ui.placing = null;
-    this.resetHistoryUi();
-    this.ui.summaryHabitId = null;
+    this.resetHistorySurfaces();
     this.render();
   }
 
   closeApp(): void {
     this.ui.app = null;
     this.ui.editingHabitId = null;
-    this.resetHistoryUi();
-    this.ui.summaryHabitId = null;
+    this.resetHistorySurfaces();
     this.render();
   }
 
@@ -785,11 +783,24 @@ export class App {
     this.ui.drillSession = null;
   }
 
-  // The Time app's history affordance: the panel body swaps to the
-  // newest-first record list.
-  toggleHistory(): void {
+  // Both history surfaces clear together when the popover swaps apps or
+  // closes: the Time list view and the Habit development summary.
+  private resetHistorySurfaces(): void {
     this.resetHistoryUi();
-    this.ui.historyOpen = !this.ui.historyOpen;
+    this.ui.summaryHabitId = null;
+  }
+
+  // The Time app's history affordance: the panel body swaps to the
+  // newest-first record list. One-way in — only the back control leaves it.
+  openHistory(): void {
+    this.resetHistoryUi();
+    this.ui.historyOpen = true;
+    this.render();
+  }
+
+  // Back past the list itself: the Time panel body returns.
+  closeHistory(): void {
+    this.resetHistoryUi();
     this.render();
   }
 
