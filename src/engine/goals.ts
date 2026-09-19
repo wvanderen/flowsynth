@@ -97,6 +97,10 @@ export function goalSummary(state: GameState, goal: Goal): string {
 // Accrues qualifying practice and completes goals. Unstructured practice
 // (habitId null) counts toward any-habit goals; specific-habit goals only
 // accrue from their habit. Returns the number of occurrences completed.
+// While a session is live, every credited second is also ledged onto the
+// session's own advancement map (§9), snapshotting into the record at close
+// — manual logs never pass through here with a session live, so they never
+// join the snapshot.
 export function accrueGoalProgress(state: GameState, habitId: string | null, seconds: number): number {
   if (seconds <= EPS) return 0;
   let completions = 0;
@@ -105,6 +109,8 @@ export function accrueGoalProgress(state: GameState, habitId: string | null, sec
     if (goal.condition.kind !== "habit-minutes") continue;
     if (goal.condition.habitId !== null && goal.condition.habitId !== habitId) continue;
     goal.progressSeconds += seconds;
+    const session = state.session;
+    if (session) session.goalSeconds[goal.id] = (session.goalSeconds[goal.id] ?? 0) + seconds;
     if (goal.progressSeconds >= goalRequiredSeconds(goal)) {
       goal.completed = true;
       goal.completedCount++;

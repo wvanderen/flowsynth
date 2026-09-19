@@ -82,6 +82,18 @@ export function formatPracticeMinutes(creditedSeconds: number, plannedTargetSeco
     : `${secondsToMinutes(creditedSeconds)} / ${secondsToMinutes(plannedTargetSeconds)} min`;
 }
 
+// The date stamp the history surfaces share (§9): "Sep 19" for list rows,
+// with the year in the drill-down. Zero stamps (lenient defaults) render
+// as an em dash rather than 1970.
+export function formatDate(ms: number, withYear = false): string {
+  if (!(ms > 0)) return "—";
+  return new Date(ms).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(withYear ? { year: "numeric" } : {}),
+  });
+}
+
 // The upgrade-mode purchase countdown (§7): how much practice until the
 // price is reachable at the board's projected rate. Hidden when the purchase
 // is already affordable or no rate exists.

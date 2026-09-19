@@ -74,6 +74,7 @@ export function deserialize(text: string): LoadResult {
     !Array.isArray(merged.notes) ||
     !Array.isArray(merged.habits) ||
     !Array.isArray(merged.practiceLog) ||
+    !Array.isArray(merged.sessionRecords) ||
     !Array.isArray(merged.goals) ||
     !Array.isArray(merged.activatedApps)
   ) {
@@ -131,6 +132,25 @@ export function deserialize(text: string): LoadResult {
     // flag holds.
     if (typeof merged.session.targetSignaled !== "boolean") {
       merged.session.targetSignaled = false;
+    }
+    // The session record's seams (§9) join additively: a pre-§9 session
+    // carries no start stamp and no goal ledger, and zero/empty are honest
+    // defaults — the record falls back to its end time at close.
+    if (typeof merged.session.startedAt !== "number") {
+      merged.session.startedAt = 0;
+    }
+    if (!isRecord(merged.session.goalSeconds)) {
+      merged.session.goalSeconds = {};
+    }
+  }
+  // Note tags and stamps (§9) join additively: pre-§9 notes load untagged
+  // and undated, exactly what they were.
+  for (const note of merged.notes) {
+    if (note.habitId !== null && typeof note.habitId !== "string") {
+      note.habitId = null;
+    }
+    if (typeof note.at !== "number") {
+      note.at = 0;
     }
   }
   // The global mute and the notification-ask flag (§4–5) join additively:

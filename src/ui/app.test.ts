@@ -2,11 +2,14 @@
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { App } from "./app";
-import { createHabit, selectHabit } from "../engine/habits";
+import { addPracticeLog, archiveHabit, createHabit, selectHabit } from "../engine/habits";
+import { createGoal, deleteGoal, goalSummary } from "../engine/goals";
+import { recordSummaryReflection } from "../engine/actions";
+import { writeNote } from "../engine/notes";
 import { BALANCE } from "../engine/constants";
 import { startSession, endSession } from "../engine/actions";
 import { advance } from "../engine/advance";
-import { applyGap, poolOutstanding } from "../engine/trust";
+import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport } from "../engine/trust";
 import { give } from "../engine/fixtures";
 import { hex } from "../engine/hex";
 import type { GameState } from "../engine/types";
@@ -842,5 +845,186 @@ describe("the settings preferences (§5)", () => {
     expect(app.state.muted).toBe(true);
     const saved = JSON.parse(localStorage.getItem("flowsynth.save.v1")!);
     expect(saved.state.muted).toBe(true);
+  });
+});
+
+// Midday stamps so no timezone can roll the date under test.
+const DAY = new Date(2026, 8, 18, 12).getTime();
+
+describe("the Time app's history (§9)", () => {
+  function runHitSession(): void {
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    startSession(s, 600, DAY);
+    advance(s, 600);
+    endSession(s, DAY + 600_000);
+  }
+
+  function runMissSession(): void {
+    const s = app.state;
+    startSession(s, 600, DAY + 1_000_000);
+    advance(s, 600);
+    applyGap(s, 300, "away", 0);
+    flushPendingAway(s);
+    resolveHonestyReport(s, "missed");
+    endSession(s, DAY + 1_900_000);
+  }
+
+  afterEach(() => app.closeApp());
+
+  it("the affordance opens the list: newest first, date · habit · credited minutes · chips", () => {
+    const s = app.state;
+    const habit = createHabit(s, "Piano").habit!;
+    selectHabit(s, habit.id);
+    runHitSession();
+    selectHabit(s, null);
+    runMissSession();
+    s.sessionRecords[0]!.startedAt = DAY; // the hit ran the day under test
+    app.openApp("time");
+    document.getElementById("time-history")!.click();
+    const panel = document.getElementById("app-popover")!;
+    const rows = [...panel.querySelectorAll(".history-row")];
+    expect(rows).toHaveLength(2);
+    // Newest first: the miss session leads.
+    expect(rows[0]!.textContent).toContain("unstructured");
+    expect(rows[0]!.textContent).toContain("10 / 10 min");
+    expect(rows[0]!.querySelector(".history-chip.miss")).not.toBeNull();
+    expect(rows[1]!.textContent).toContain("Piano");
+    expect(rows[1]!.textContent).toContain("10 / 10 min");
+    expect(rows[1]!.querySelector(".history-chip.hit")).not.toBeNull();
+    expect(rows[1]!.textContent).toMatch(/Sep 18/);
+    // Open-ended minutes carry no denominator anywhere.
+    expect(rows[0]!.textContent).not.toMatch(/min \/ /);
+  });
+
+  it("the list pages ~20 rows with a show-more tail", () => {
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    for (let i = 0; i < 21; i++) {
+      startSession(s, null, DAY + i * 1000);
+      endSession(s, DAY + i * 1000 + 500);
+    }
+    app.openApp("time");
+    document.getElementById("time-history")!.click();
+    expect(document.getElementById("app-popover")!.querySelectorAll(".history-row")).toHaveLength(20);
+    document.getElementById("history-more")!.click();
+    expect(document.getElementById("app-popover")!.querySelectorAll(".history-row")).toHaveLength(21);
+    expect(document.getElementById("history-more")).toBeNull();
+  });
+
+  it("a row drills into the full record; notes and the rate breakdown stay out", () => {
+    const s = app.state;
+    const habit = createHabit(s, "Piano").habit!;
+    selectHabit(s, habit.id);
+    const goal = createGoal(s, { habitId: habit.id, minutes: 5, schedule: "once", now: DAY }).goal!;
+    startSession(s, null, DAY);
+    writeNote(s, "a private note", DAY + 1000);
+    advance(s, 120);
+    endSession(s, DAY + 600_000);
+    recordSummaryReflection(s, { text: "held focus", slider: 5 });
+    app.openApp("time");
+    document.getElementById("time-history")!.click();
+    document.querySelector<HTMLButtonElement>(`[data-drill="1"]`)!.click();
+    const panel = document.getElementById("app-popover")!;
+    expect(panel.textContent).toContain("Session 1 · Piano");
+    expect(panel.textContent).toContain("Open-ended");
+    expect(panel.textContent).toContain("2 min");
+    expect(panel.textContent).toContain(`2 min · ${goalSummary(s, goal)}`);
+    expect(panel.textContent).toContain("First light");
+    expect(panel.textContent).toContain("held focus");
+    expect(panel.textContent).toContain("felt great");
+    // The drill-down is about practice: no note replay, no economy rate.
+    expect(panel.textContent).not.toContain("a private note");
+    expect(panel.textContent).not.toContain("per practice minute");
+    expect(panel.textContent).not.toContain("carrier +");
+    // Back returns to the list; the deleted goal still renders its snapshot.
+    deleteGoal(s, goal.id);
+    app.openDrill(1);
+    expect(document.getElementById("app-popover")!.textContent).toContain("a since-removed goal");
+    document.getElementById("history-back")!.click();
+    expect(document.getElementById("app-popover")!.querySelector(".history-row")).not.toBeNull();
+  });
+
+  it("the drill-down renders each honesty event as a neutral factual line", () => {
+    runMissSession();
+    app.openApp("time");
+    document.getElementById("time-history")!.click();
+    document.querySelector<HTMLButtonElement>('[data-drill="1"]')!.click();
+    const panel = document.getElementById("app-popover")!;
+    expect(panel.textContent).toContain("5 min away · didn't practice");
+    expect(panel.textContent).toContain("Planned · 10:00");
+    expect(panel.textContent).toContain("10 / 10 min");
+  });
+});
+
+describe("the Habit app's development summary (§9)", () => {
+  afterEach(() => app.closeApp());
+
+  it("aggregates read the practice log; tagged notes list newest first", () => {
+    const s = app.state;
+    const habit = createHabit(s, "Piano").habit!;
+    selectHabit(s, habit.id);
+    startSession(s, null, DAY);
+    writeNote(s, "first", DAY + 1000);
+    writeNote(s, "second", DAY + 2000);
+    advance(s, 60);
+    endSession(s, DAY + 120_000);
+    addPracticeLog(s, habit.id, 10, DAY + 500_000);
+    app.openApp("habit");
+    document.querySelector<HTMLButtonElement>(`[data-summary="${habit.id}"]`)!.click();
+    const summary = document.querySelector(`[data-summary-for="${habit.id}"]`)!;
+    expect(summary.textContent).toContain("1 min"); // lifetime = credited 60s
+    expect(summary.textContent).toContain("Sessions practiced");
+    expect(summary.textContent).toContain("1");
+    expect(summary.textContent).toContain("Last practiced");
+    expect(summary.textContent).toContain("Sep 18, 2026");
+    const notes = [...summary.querySelectorAll(".note-entry p")].map((n) => n.textContent);
+    expect(notes).toEqual(["second", "first"]);
+    // The stamp carries the date and the in-session clock.
+    expect(summary.querySelector(".note-when")!.textContent).toContain("Sep 18");
+    expect(summary.querySelector(".note-when")!.textContent).toContain("S1 ·");
+  });
+
+  it("archiving hides the habit from selection but keeps its summary reachable", () => {
+    const s = app.state;
+    const habit = createHabit(s, "Piano").habit!;
+    selectHabit(s, habit.id);
+    startSession(s, null, DAY);
+    writeNote(s, "a thought", DAY + 1000);
+    advance(s, 60);
+    endSession(s, DAY + 120_000);
+    archiveHabit(s, habit.id);
+    app.openApp("habit");
+    const popover = document.getElementById("app-popover")!;
+    expect(popover.querySelector(`[data-pick="${habit.id}"]`)).toBeNull();
+    expect(popover.textContent).toContain("ARCHIVED");
+    document.querySelector<HTMLButtonElement>(`.habit-archived [data-summary="${habit.id}"]`)!.click();
+    const summary = document.querySelector(`[data-summary-for="${habit.id}"]`)!;
+    expect(summary.textContent).toContain("a thought");
+    // Renames resolve forward through the archived summary's habit tile.
+    expect(popover.querySelector(".habit-archived .habit-name")!.textContent).toBe("Piano");
+  });
+});
+
+describe("the Notes stream's habit chips (§9)", () => {
+  it("tagged notes wear their habit; unstructured and between-sessions notes wear none", () => {
+    const s = app.state;
+    s.activatedApps.push("notes");
+    const habit = createHabit(s, "Piano").habit!;
+    selectHabit(s, habit.id);
+    startSession(s, null, DAY);
+    writeNote(s, "keyed to piano", DAY + 1000);
+    s.activeHabitId = null;
+    writeNote(s, "unstructured thought", DAY + 2000);
+    endSession(s, DAY + 120_000);
+    writeNote(s, "between sessions", DAY + 300_000);
+    app.openApp("notes");
+    const entries = [...document.querySelectorAll(".note-entry")];
+    expect(entries).toHaveLength(3);
+    // Newest first: the between-sessions note leads, the tagged one trails.
+    expect(entries[0]!.querySelector(".habit-chip")).toBeNull();
+    expect(entries[1]!.querySelector(".habit-chip")).toBeNull();
+    expect(entries[2]!.querySelector(".habit-chip")!.textContent).toBe("Piano");
+    app.closeApp();
   });
 });

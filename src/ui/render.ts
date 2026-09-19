@@ -7,19 +7,27 @@ import { formatClock, formatDuration } from "../engine/clock";
 import { appActive, appLockNote, FOCUS_APPS, LADDER_APPS, nextRung, nextRungCost, type FocusApp } from "../engine/apps";
 import { isInFlowNote } from "../engine/notes";
 import { activeHabit } from "../engine/habits";
+import {
+  habitRecordName,
+  habitPracticeSummary,
+  habitTaggedNotes,
+  recordMissed,
+  recordTargetHit,
+  sessionRecordsNewestFirst,
+} from "../engine/records";
 import { poolOutstanding } from "../engine/trust";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
 import { isCarrier } from "../engine/state";
-import type { GameState, Goal, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, RateSnapshot } from "../engine/types";
+import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
 import { appIcon } from "./icons";
 import { HEX_RADIUS, hexPoints, moduleFace } from "./face";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
-import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, APP_ROLES, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
-import { formatInt, formatNumber, formatPracticeMinutes, practiceCountdown, secondsToMinutes } from "./format";
+import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, APP_ROLES, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
+import { formatDate, formatInt, formatNumber, formatPracticeMinutes, practiceCountdown, secondsToMinutes } from "./format";
 import { renderStatusMonitor } from "./monitor";
 
 const SPACING = 65;
@@ -254,6 +262,13 @@ function renderConsoleApps(app: App): void {
     state.notes.length,
     state.goals.map((g) => (g.completed ? "1" : "0") + g.condition.minutes + (g.condition.habitId ?? "") + g.schedule.kind).join("|"),
     ui.chosenTarget,
+    // The history surfaces (§9): the list view, its page, the drilled
+    // record, and the expanded habit summary each rebuild the popover.
+    ui.historyOpen,
+    ui.drillSession,
+    ui.historyLimit,
+    ui.summaryHabitId,
+    state.sessionRecords.length,
   ]);
   if (host.dataset.renderKey === key) {
     updateAppPanelLive(app, host);
@@ -1050,6 +1065,143 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
 
 /* ── Focus-app panels (popover bodies, ADR-0012) ───── */
 
+// One habit row (§9): the pick/rename/archive controls plus the development
+// summary toggle. An archived habit loses the selection controls but keeps
+// its summary — archiving hides a habit from selection only.
+function habitRowHtml(app: App, habit: Habit, selectable: boolean): string {
+  const { state, ui } = app;
+  const editing = selectable && app.ui.editingHabitId === habit.id;
+  const expanded = ui.summaryHabitId === habit.id;
+  const chevron = `<button class="quiet small icon-btn summary-toggle" data-summary="${habit.id}" aria-pressed="${expanded}" title="Development summary">${expanded ? "▾" : "▸"}</button>`;
+  const controls = editing
+    ? `<input type="text" class="habit-rename-input" id="habit-rename-input" value="${escapeHtml(habit.name)}" maxlength="40" />
+       <button class="primary small" id="habit-rename-save">Save</button>${chevron}`
+    : selectable
+      ? `<button class="habit-pick" data-pick="${habit.id}" title="Make this the active habit">
+           <span class="habit-dot" aria-hidden="true"></span>
+           <span class="habit-name">${escapeHtml(habit.name)}</span>
+           <small class="mono" data-habit-seconds="${habit.id}">${formatDuration(habit.seconds)}</small>
+         </button>
+         <button class="quiet small" data-rename="${habit.id}" title="Rename">✎</button>
+         <button class="quiet small icon-btn" data-archive="${habit.id}" title="Archive (keeps its development)">
+           <svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M-7-6h14v3H-7Z"/><path d="M-5-3v8h10v-8"/><path d="M0 0v4"/><path d="m-2 2 2 2 2-2"/></svg>
+         </button>${chevron}`
+      : `<span class="habit-pick archived">
+           <span class="habit-name">${escapeHtml(habit.name)}</span>
+           <small class="mono" data-habit-seconds="${habit.id}">${formatDuration(habit.seconds)}</small>
+         </span>${chevron}`;
+  const selected = selectable && state.activeHabitId === habit.id ? " selected" : "";
+  return `<div class="habit-row${selected}" data-habit="${habit.id}">${controls}</div>${expanded ? habitSummaryHtml(app, habit) : ""}`;
+}
+
+// The development summary (§9): lifetime practice (the development total),
+// sessions practiced and last practiced — aggregates off the practice log,
+// live sessions and manual logs together — and the habit's tagged notes
+// beneath, newest first, each with its date and in-session stamp.
+function habitSummaryHtml(app: App, habit: Habit): string {
+  const { state } = app;
+  const { sessions, lastPracticed } = habitPracticeSummary(state, habit.id);
+  const notes = habitTaggedNotes(state, habit.id);
+  const noteRows = notes.map((note) => {
+    const when = `${note.at > 0 ? `${formatDate(note.at)} · ` : ""}${
+      isInFlowNote(note) ? `S${note.sessionId} · ${formatClock(note.atElapsed)}` : "between sessions"
+    }`;
+    return `<div class="note-entry"><span class="note-when mono">${when}</span><p>${escapeHtml(note.text)}</p></div>`;
+  }).join("");
+  return `<div class="habit-summary" data-summary-for="${habit.id}">
+    ${stat("Lifetime practice", formatDuration(habit.seconds))}
+    ${stat("Sessions practiced", String(sessions))}
+    ${stat("Last practiced", lastPracticed !== null && lastPracticed > 0 ? formatDate(lastPracticed, true) : "—")}
+    ${noteRows ? `<div class="note-list">${noteRows}</div>` : `<p class="small muted">No tagged notes yet.</p>`}
+  </div>`;
+}
+
+// The Time app's history list (§9): flat, newest first, ~20 rows with a
+// show-more tail — date · habit (or "unstructured") · credited minutes · a
+// hit chip or the muted miss marker. No day grouping, charts, or calendars;
+// a row drills into the full record.
+function historyListHtml(app: App): string {
+  const records = sessionRecordsNewestFirst(app.state);
+  const shown = records.slice(0, app.ui.historyLimit);
+  const rows = shown
+    .map((record) => {
+      const habit = record.habitId === null ? "unstructured" : escapeHtml(habitRecordName(app.state, record.habitId));
+      return `<button class="history-row" data-drill="${record.sessionNumber}" title="Session ${record.sessionNumber}">
+        <span class="history-when mono">${formatDate(record.startedAt)}</span>
+        <span class="history-habit">${habit}</span>
+        <span class="history-min mono">${formatPracticeMinutes(record.creditedSeconds, record.plannedTarget)}</span>
+        ${recordTargetHit(record) ? `<span class="history-chip hit">hit</span>` : ""}
+        ${recordMissed(record) ? `<span class="history-chip miss">miss</span>` : ""}
+      </button>`;
+    })
+    .join("");
+  return `<section class="focus-controls history-panel">
+    <button class="quiet small" id="history-back">← Time</button>
+    ${rows || `<p class="empty-copy">No sessions yet.</p>`}
+    ${
+      records.length > shown.length
+        ? `<button class="quiet small show-more" id="history-more">Show ${Math.min(HISTORY_PAGE_ROWS, records.length - shown.length)} more</button>`
+        : ""
+    }
+  </section>`;
+}
+
+// The drill-down (§9): the full record — when, mode and target, credited
+// vs planned, earned nous, each honesty event as a factual line, the
+// reflection if present, goals advanced, achievements unlocked. Notes and
+// the rate breakdown stay out: this is about practice, not economy replay.
+function historyDrillHtml(app: App): string {
+  const { state } = app;
+  const record = state.sessionRecords.find((r) => r.sessionNumber === app.ui.drillSession);
+  if (!record) {
+    return `<section class="focus-controls history-panel">
+      <button class="quiet small" id="history-back">← History</button>
+      <p class="empty-copy">That session record is gone.</p>
+    </section>`;
+  }
+  const habit = record.habitId === null ? "Unstructured practice" : escapeHtml(habitRecordName(state, record.habitId));
+  const plan = record.mode === "planned" ? `Planned · ${formatClock(record.plannedTarget!)}` : "Open-ended";
+  const events = record.honestyEvents.map((event) => `<p class="history-line">${honestyEventLine(event)}</p>`).join("");
+  const reflection = record.reflection;
+  const reflectionLine =
+    reflection === null
+      ? `<p class="history-line muted">No reflection.</p>`
+      : `<p class="history-line">"${escapeHtml(reflection.text)}"${reflectionValence(reflection.slider)}</p>`;
+  const goals =
+    record.goalsAdvanced
+      .map(({ goalId, seconds }) => {
+        const goal = state.goals.find((g) => g.id === goalId);
+        return `<p class="history-line">${secondsToMinutes(seconds)} min · ${goal ? escapeHtml(goalSummary(state, goal)) : "a since-removed goal"}</p>`;
+      })
+      .join("") || `<p class="history-line muted">No goals advanced.</p>`;
+  const achievements =
+    record.achievements.map((id) => `<p class="history-line">${escapeHtml(achievementName(id))}</p>`).join("") ||
+    `<p class="history-line muted">Nothing unlocked.</p>`;
+  return `<section class="focus-controls history-panel">
+    <button class="quiet small" id="history-back">← History</button>
+    <h3 class="history-title">Session ${record.sessionNumber} · ${habit}</h3>
+    <div class="stat-row"><span>When</span><span class="mono">${formatDate(record.startedAt, true)} – ${formatDate(record.endedAt, true)}</span></div>
+    <div class="stat-row"><span>Plan</span><span class="mono">${plan}</span></div>
+    <div class="stat-row"><span>Practice time</span><span class="mono">${formatPracticeMinutes(record.creditedSeconds, record.plannedTarget)}</span></div>
+    <div class="stat-row"><span>Earned</span><span class="mono">${formatNumber(record.earned)} ν</span></div>
+    <div class="history-section">Honesty</div>
+    ${events || `<p class="history-line muted">Nothing to reconcile.</p>`}
+    <div class="history-section">Reflection</div>
+    ${reflectionLine}
+    <div class="history-section">Goals advanced</div>
+    ${goals}
+    <div class="history-section">Unlocked</div>
+    ${achievements}
+  </section>`;
+}
+
+// The reflection's valence tail: the untouched neutral field reads as
+// nothing at all.
+function reflectionValence(slider: number): string {
+  if (slider === REFLECTION_SLIDER_NEUTRAL) return "";
+  return ` · felt ${slider < REFLECTION_SLIDER_NEUTRAL ? "rough" : "great"}`;
+}
+
 function appPanelBody(app: App, panel: FocusApp): string {
   const { state } = app;
   const upgrade = state.mode === "upgrade";
@@ -1058,29 +1210,14 @@ function appPanelBody(app: App, panel: FocusApp): string {
     const active = activeHabit(state);
     const live = !upgrade;
     const habits = state.habits.filter((h) => !h.archived);
-    const rows = habits.map((habit) => {
-      const editing = app.ui.editingHabitId === habit.id;
-      return `<div class="habit-row ${state.activeHabitId === habit.id ? "selected" : ""}" data-habit="${habit.id}">
-        ${editing
-          ? `<input type="text" class="habit-rename-input" id="habit-rename-input" value="${escapeHtml(habit.name)}" maxlength="40" />
-             <button class="primary small" id="habit-rename-save">Save</button>`
-          : `<button class="habit-pick" data-pick="${habit.id}" title="Make this the active habit">
-               <span class="habit-dot" aria-hidden="true"></span>
-               <span class="habit-name">${escapeHtml(habit.name)}</span>
-               <small class="mono" data-habit-seconds="${habit.id}">${formatDuration(habit.seconds)}</small>
-             </button>
-              <button class="quiet small" data-rename="${habit.id}" title="Rename">✎</button>
-              <button class="quiet small icon-btn" data-archive="${habit.id}" title="Archive (keeps its development)">
-                <svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M-7-6h14v3H-7Z"/><path d="M-5-3v8h10v-8"/><path d="M0 0v4"/><path d="m-2 2 2 2 2-2"/></svg>
-              </button>`}
-      </div>`;
-    }).join("");
+    const rows = habits.map((habit) => habitRowHtml(app, habit, true)).join("");
     if (live) {
       return `<section class="focus-controls">
         <p class="habit-active-name">${active ? escapeHtml(active.name) : "Unstructured practice"}</p>
         ${active ? `<div class="stat-row"><span>This session</span><span class="mono" data-live="habit-session">${formatClock(state.session?.elapsed ?? 0)} of practice</span></div>` : ""}
       </section>`;
     }
+    const archived = state.habits.filter((h) => h.archived);
     return `<section class="focus-controls">
       <div class="habit-create">
         <input type="text" id="habit-name-input" placeholder="New habit (piano, cooking…)" maxlength="40" />
@@ -1089,6 +1226,11 @@ function appPanelBody(app: App, panel: FocusApp): string {
       <div class="habit-list">
         ${rows || `<p class="empty-copy">No habits yet. Name what you practice.</p>`}
       </div>
+      ${
+        archived.length > 0
+          ? `<div class="habit-archived"><span class="eyebrow">ARCHIVED</span>${archived.map((habit) => habitRowHtml(app, habit, false)).join("")}</div>`
+          : ""
+      }
       ${state.activeHabitId
         ? `<div class="habit-log">
             <label class="config-label" for="habit-log-minutes">Log practice</label>
@@ -1103,6 +1245,9 @@ function appPanelBody(app: App, panel: FocusApp): string {
   }
 
   if (panel === "time") {
+    if (app.ui.historyOpen) {
+      return app.ui.drillSession !== null ? historyDrillHtml(app) : historyListHtml(app);
+    }
     if (upgrade) {
       // The planned-target affordances (§6): preset chips as quick picks,
       // free 1–90 minute entry in one-minute steps — and open-ended as its
@@ -1126,6 +1271,7 @@ function appPanelBody(app: App, panel: FocusApp): string {
           <button id="plan-open" class="plan-open${open ? " active" : ""}" aria-pressed="${open}">Open-ended</button>
           <p class="clock-caption">${open ? "Open-ended" : "Planned practice"}</p>
         </div>
+        <button class="quiet small time-history" id="time-history">History</button>
       </section>`;
     }
     const elapsed = state.session?.elapsed ?? 0;
@@ -1135,6 +1281,7 @@ function appPanelBody(app: App, panel: FocusApp): string {
       <p class="session-clock mono" data-live="time-clock">${formatClock(elapsed)}</p>
       <p class="clock-caption" data-live="time-caption">${sessionCaption(elapsed, target, paused)}</p>
       <div class="time-track"><span data-live="time-track" style="width:${sessionTrackWidth(elapsed, target)}"></span></div>
+      <button class="quiet small time-history" id="time-history">History</button>
     </section>`;
   }
 
@@ -1142,10 +1289,15 @@ function appPanelBody(app: App, panel: FocusApp): string {
     const recent = [...state.notes].slice(-8).reverse();
     const when = (n: (typeof state.notes)[number]): string =>
       !isInFlowNote(n) ? "between sessions" : `S${n.sessionId} · ${formatClock(n.atElapsed)}`;
+    // The habit-keyed chip (§9): tagged notes wear their habit, resolved at
+    // render — renames and archiving never rewrite the stream. Untagged
+    // notes (unstructured, between sessions) wear none.
+    const chip = (n: (typeof state.notes)[number]): string =>
+      n.habitId !== null ? `<span class="habit-chip">${escapeHtml(habitRecordName(state, n.habitId))}</span>` : "";
     return `<section class="focus-controls">
       <textarea class="note-composer" id="note-composer" placeholder="What are you noticing?" maxlength="2000" rows="3"></textarea>
       <div class="session-actions" style="margin:10px 0 0"><button class="primary" id="note-save">Capture note</button></div>
-      ${recent.length > 0 ? `<div class="note-list">${recent.map((n) => `<div class="note-entry"><span class="note-when mono">${when(n)}</span><p>${escapeHtml(n.text)}</p></div>`).join("")}</div>` : ""}
+      ${recent.length > 0 ? `<div class="note-list">${recent.map((n) => `<div class="note-entry"><span class="note-when mono">${when(n)}</span>${chip(n)}<p>${escapeHtml(n.text)}</p></div>`).join("")}</div>` : ""}
     </section>`;
   }
 
@@ -1258,6 +1410,27 @@ function bindAppPanel(app: App, scope: HTMLElement): void {
     button.addEventListener("click", () => {
       const id = button.getAttribute("data-archive");
       if (id) app.archiveHabitAction(id);
+    });
+  });
+  // The development summary toggle (§9): one habit expanded at a time.
+  scope.querySelectorAll<HTMLElement>("[data-summary]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.getAttribute("data-summary");
+      if (id) app.toggleHabitSummary(id);
+    });
+  });
+  // The history surfaces (§9): the affordance swaps the Time panel body to
+  // the list; rows drill in; the tail pages; back unwinds one level.
+  scope.querySelector("#time-history")?.addEventListener("click", () => app.toggleHistory());
+  scope.querySelector("#history-back")?.addEventListener("click", () => {
+    if (app.ui.drillSession !== null) app.closeDrill();
+    else app.toggleHistory();
+  });
+  scope.querySelector("#history-more")?.addEventListener("click", () => app.moreHistory());
+  scope.querySelectorAll<HTMLElement>("[data-drill]").forEach((row) => {
+    row.addEventListener("click", () => {
+      const number = Number(row.getAttribute("data-drill"));
+      if (Number.isFinite(number)) app.openDrill(number);
     });
   });
   const renameInput = scope.querySelector("#habit-rename-input");

@@ -47,6 +47,7 @@ export function createInitialState(): GameState {
     habits: [],
     activeHabitId: null,
     practiceLog: [],
+    sessionRecords: [],
     goals: [],
     achievements: {},
     session: null,
