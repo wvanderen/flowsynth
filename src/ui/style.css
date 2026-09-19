@@ -216,8 +216,36 @@ h1, h2, h3, p { margin: 0; }
 @keyframes popover-in { from { opacity: 0; transform: translateX(-50%) translateY(-5px); } }
 @keyframes popover-in-left { from { opacity: 0; transform: translateY(-5px); } }
 
-.time-plan { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
-.time-plan select { width: 170px; padding: 6px 8px; }
+.time-plan { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+/* The planned-target affordances (§6): preset chips, free 1–90 entry,
+   and open-ended as its own mode — never a duration choice. */
+.plan-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.plan-chip {
+  padding: 5px 9px;
+  border-radius: 999px;
+  font: 12px var(--mono);
+  color: var(--muted);
+  background: var(--panel-soft);
+}
+.plan-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-faint); }
+.plan-free { display: flex; align-items: center; gap: 7px; }
+.plan-free input {
+  width: 74px;
+  padding: 6px 8px;
+  background: var(--panel-soft);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.plan-free input:focus { border-color: var(--charge); outline: none; }
+.plan-unit { font: 11.5px var(--mono); color: var(--muted); }
+.plan-open { align-self: flex-start; padding: 5px 11px; border-radius: 999px; font-size: 12px; color: var(--muted); }
+.plan-open.active { border-color: var(--accent); color: var(--accent); background: var(--accent-faint); }
+/* The settings modal's one preference row (§5): the global mute. */
+.pref-row { display: flex; align-items: center; gap: 9px; margin: 4px 0 2px; }
+.pref-row input { width: 15px; height: 15px; accent-color: var(--accent); }
+.pref-row label { cursor: pointer; }
+.pref-row small { margin-left: auto; }
 
 /* Readout end: bare values only — production (rate with the session total
    beneath) and the nous balance. The main switch carries the mode. */

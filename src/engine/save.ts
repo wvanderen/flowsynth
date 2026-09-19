@@ -126,6 +126,20 @@ export function deserialize(text: string): LoadResult {
         merged.session.accounting.pendingAwaySeconds = 0;
       }
     }
+    // The overrun entry flag (§4) joins the v5 shape additively: a session
+    // from before the signals existed re-fires them once at most, then the
+    // flag holds.
+    if (typeof merged.session.targetSignaled !== "boolean") {
+      merged.session.targetSignaled = false;
+    }
+  }
+  // The global mute and the notification-ask flag (§4–5) join additively:
+  // older saves load unmuted, never having been asked.
+  if (typeof merged.muted !== "boolean") {
+    merged.muted = false;
+  }
+  if (typeof merged.notificationAsked !== "boolean") {
+    merged.notificationAsked = false;
   }
   // The retired 120 s reconcile dialog's frozen gap (ADR-0010 → ADR-0019):
   // a pre-trust save may still carry one; drop it rather than resuming a

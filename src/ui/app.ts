@@ -25,12 +25,13 @@ import { syncArete } from "../engine/accumulator";
 import { wholeNous } from "../engine/economy";
 import { adjacent, neighbors, sameHex } from "../engine/hex";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
+import { formatClock } from "../engine/clock";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
 import { createInitialState, isCarrier } from "../engine/state";
 import { appActive, type FocusApp } from "../engine/apps";
 import { writeNote } from "../engine/notes";
 import { achievementName } from "../engine/achievements";
-import { BALANCE, SHELF_MODULE } from "../engine/constants";
+import { BALANCE, SHELF_MODULE, CHIME } from "../engine/constants";
 import {
   activeHabit,
   addPracticeLog,
@@ -43,6 +44,7 @@ import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
 import type { GameState, Hex, ShelfType } from "../engine/types";
 import { render } from "./render";
 import { APP_LABELS, META } from "./meta";
+import { browserChannels, type SignalChannels } from "./signals";
 
 // The session modal surfaces (§5.5, §5.7): the enter prompt precedes every
 // session; the loud summary follows every one; the honesty report interrupts
@@ -86,6 +88,17 @@ interface LoadedSave {
   state: GameState;
   savedAt: number;
 }
+
+// The chime's re-fire ledger for the running overrun (§4): how many chimes
+// have sounded, when the last one did, and whether a visible return or a
+// pause has acknowledged and silenced the rest. Ephemeral — never saved.
+interface ChimeState {
+  chimes: number;
+  lastChimeAt: number;
+  acknowledged: boolean;
+}
+
+const freshChimeState = (): ChimeState => ({ chimes: 0, lastChimeAt: 0, acknowledged: false });
 
 type ParsedSave = LoadedSave | { error: string };
 
@@ -144,6 +157,15 @@ export class App {
   private resumedFromDiscard = false;
   lastSaveWall = 0;
   dev: boolean;
+  // The session's AudioContext (§4): created or resumed inside the start
+  // gesture, kept for the target chime. Null where Web Audio is
+  // unavailable — the title and notification then carry the signal alone.
+  audio: AudioContext | null = null;
+  // The chime's ephemeral re-fire state (§4). Never saved — a reload
+  // mid-overrun stays silent, the persisted targetSignaled flag sees to
+  // that.
+  signals: ChimeState = freshChimeState();
+  private channels: SignalChannels;
   // The Forge's threshold-crossing flash: a roll was minted, so its face
   // flashes until this wall-clock moment.
   forgeFlashUntil = 0;
@@ -158,9 +180,10 @@ export class App {
     return this.ui.managing && this.state.mode === "upgrade";
   }
 
-  constructor(els: Record<string, HTMLElement>, dev: boolean) {
+  constructor(els: Record<string, HTMLElement>, dev: boolean, channels: SignalChannels = browserChannels) {
     this.els = els;
     this.dev = dev;
+    this.channels = channels;
     const loaded = this.load();
     if (loaded) {
       this.resumeFromSave(loaded);
@@ -371,11 +394,18 @@ export class App {
     window.setInterval(() => this.tick(), 100);
     // A popover is light furniture: clicking anywhere outside the console's
     // app section dismisses it. The board never dims beneath it (ADR-0012).
-    // composedPath stays valid even when a tile click re-rendered the DOM.
-    document.addEventListener("click", (event) => {
-      if (this.ui.app === null) return;
-      const inside = event.composedPath().some((node) => node instanceof Element && node.id === "console-apps");
-      if (inside) return;
+    // The dismissal intent is captured on the section itself — the one node
+    // no re-render replaces — because a click that re-renders its own
+    // target (a chip pick, a tile toggle) detaches that target before this
+    // document-level listener reads anything.
+    let clickInsideApps = false;
+    this.els["console-apps"]?.addEventListener("click", () => {
+      clickInsideApps = true;
+    }, { capture: true });
+    document.addEventListener("click", () => {
+      const inside = clickInsideApps;
+      clickInsideApps = false;
+      if (this.ui.app === null || inside) return;
       this.closeApp();
     });
     // The chord view's keyboard beat (issue #62): C toggles the highlight.
@@ -407,7 +437,48 @@ export class App {
     if (poolOutstanding(this.state) && this.ui.modal !== "honesty") {
       this.ui.modal = "honesty";
     }
+    this.fireTargetSignals();
     this.render();
+  }
+
+  // The target-hit signals (§4): one event — the first boundary or timer
+  // wake-up whose wall clock sees elapsed ≥ target — enters overrun and
+  // fires chime, silent notification, and the title flip together. While
+  // the tab stays hidden the chime re-fires at most once per wall-clock
+  // minute, capped at three total; a visible return or a pause silences
+  // it. Open-ended and paused sessions fire nothing, ever.
+  private fireTargetSignals(): void {
+    const session = this.state.session;
+    if (this.state.mode !== "flow" || !session || session.target === null) return;
+    if (session.elapsed < session.target) return;
+    const now = Date.now();
+    if (!session.targetSignaled) {
+      session.targetSignaled = true;
+      this.signals = { chimes: 1, lastChimeAt: now, acknowledged: document.visibilityState === "visible" };
+      this.playChime();
+      this.channels.showTargetNotification(() => window.focus());
+      return;
+    }
+    // Re-fires ride the wall clock, never the throttled wake-up cadence,
+    // and only while the tab stays hidden — a visible return acknowledges
+    // the overrun for good.
+    if (document.visibilityState === "visible") {
+      this.signals.acknowledged = true;
+      return;
+    }
+    if (this.signals.acknowledged) return;
+    if (this.signals.chimes === 0 || this.signals.chimes >= CHIME.maxChimes) return;
+    if (now - this.signals.lastChimeAt < CHIME.refireSeconds * 1000) return;
+    this.signals.chimes++;
+    this.signals.lastChimeAt = now;
+    this.playChime();
+  }
+
+  // The global mute (§5) gates every app sound, including the chime's
+  // hidden re-fires. No volume slider, no per-sound mix.
+  private playChime(): void {
+    if (this.state.muted) return;
+    this.channels.playChime(this.audio);
   }
 
   private reportAdvance(result: AdvanceResult): void {
@@ -478,9 +549,28 @@ export class App {
     this.exitPending = false;
     this.syncBoundaryClock(Date.now());
     this.clearTransientUi();
+    // The start gesture is the audio unlock (§4, §10): the session's
+    // context is created or resumed here, so the chime can sound later.
+    this.audio = this.channels.unlockAudio(this.audio);
+    this.signals = freshChimeState();
+    this.askNotificationPermissionOnce(target);
     this.say(target === null ? "Flow is live." : `Flow is live for ${Math.round(target / 60)} minutes — the board is locked.`);
     this.save();
     this.render();
+  }
+
+  // The one notification permission ask ever (§4): it rides the first
+  // planned-session start, from this gesture on a visible page. The ask-slot
+  // is spent by that start whatever the browser's current permission state —
+  // a pre-decided state needs no prompt — and open-ended starts never ask.
+  // Denial or dismissal degrades silently and nothing re-prompts later.
+  private askNotificationPermissionOnce(target: number | null): void {
+    if (target === null || this.state.notificationAsked) return;
+    if (document.visibilityState !== "visible") return;
+    this.state.notificationAsked = true;
+    if (this.channels.notificationPermission() === "default") {
+      this.channels.requestNotificationPermission();
+    }
   }
 
   // The prompt's create field (§5.5): naming a new practice adds the habit
@@ -523,6 +613,9 @@ export class App {
   pause(): void {
     if (this.act(pauseSession(this.state), "Paused.")) {
       this.lastWall = null;
+      // Pausing silences the overrun chime immediately (§4); it never
+      // un-silences, since a visible resume acknowledges anyway.
+      this.signals.acknowledged = true;
     }
   }
 
@@ -1075,8 +1168,39 @@ export class App {
     return out;
   }
 
+  // The global mute toggle (§5): one switch in PREFERENCES gating every
+  // app sound, including the chime's hidden re-fires.
+  setMuted(muted: boolean): void {
+    this.state.muted = muted;
+    this.save();
+    this.render();
+  }
+
+  // The tab title (§4): the live clock while a session runs — remaining on
+  // planned, elapsed on open-ended — a static "done" past the target,
+  // "paused" overriding during overrun, plain FlowSynth with no session.
+  // Ticks keep it exact whenever visible; while hidden it lands at
+  // wake-ups.
+  private syncTitle(): void {
+    let title = "FlowSynth";
+    const session = this.state.session;
+    if (this.state.mode === "paused") {
+      title = "paused · FlowSynth";
+    } else if (this.state.mode === "flow" && session) {
+      if (session.target === null) {
+        title = `${formatClock(session.elapsed)} · FlowSynth`;
+      } else if (session.elapsed >= session.target) {
+        title = "done · FlowSynth";
+      } else {
+        title = `${formatClock(Math.max(0, session.target - session.elapsed))} · FlowSynth`;
+      }
+    }
+    if (document.title !== title) document.title = title;
+  }
+
   render(): void {
     render(this);
+    this.syncTitle();
     document.body.classList.toggle("live", this.state.mode === "flow");
     // Arranging is unmistakable: the body-level class drives the banner,
     // dimmed cells, and raised tiles. It can only be on while the grid is

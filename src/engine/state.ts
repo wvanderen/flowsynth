@@ -32,6 +32,8 @@ export function createInitialState(): GameState {
     arete: 0,
     horizonAcknowledged: false,
     welcomeAcked: false,
+    muted: false,
+    notificationAsked: false,
     modules: [],
     cells: STARTER_CELLS.map(({ q, r }) => hex(q, r)),
     cellsBought: 0,

@@ -111,6 +111,10 @@ export interface SessionState {
   // The trust ledger (spec §1–3): credited time, the provisional bucket
   // and pool, and settled honesty events.
   accounting: SessionAccounting;
+  // Set at the first wake-up past the target — the overrun entry that fires
+  // the signals (spec §4). Persisted so a discard/reload never re-delivers
+  // them; the chime's re-fire cadence stays ephemeral UI state.
+  targetSignaled: boolean;
 }
 
 // The summary's reflection (spec §8): free text plus the five-position
@@ -220,6 +224,13 @@ export interface GameState {
   // The one-time welcome card (§5.1): false until the player follows its CTA
   // to the Carrier's upgrade button or dismisses it — then it never returns.
   welcomeAcked: boolean;
+  // One global mute (§5): gates every app sound, including the target
+  // chime's hidden re-fires. No volume slider, no per-sound mix.
+  muted: boolean;
+  // The notification permission ask (§4): rides the first planned-session
+  // start, once ever. Denial or dismissal degrades silently and never
+  // re-prompts — the flag, not the browser's permission state, is the gate.
+  notificationAsked: boolean;
   modules: ModuleInstance[];
   cells: Hex[];
   // Total cells ever bought (§3): the geometric cell-price scaler counts
