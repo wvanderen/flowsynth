@@ -1,17 +1,6 @@
-import { RECONCILIATION_THRESHOLD_SECONDS } from "./constants";
-
-export interface TickPlan {
-  apply: number;
-  pending: number | null;
-}
-
-export function planTick(lastWallMs: number, nowMs: number): TickPlan {
-  const gapSeconds = Math.max(0, (nowMs - lastWallMs) / 1000);
-  if (gapSeconds <= RECONCILIATION_THRESHOLD_SECONDS) {
-    return { apply: gapSeconds, pending: null };
-  }
-  return { apply: 0, pending: gapSeconds };
-}
+// Clock formatting only: gap accounting lives in trust.ts, which classifies
+// whole wall-clock gaps at boundaries — the retired tick planner's job
+// (ADR-0010's confirm-or-discard dialog) is gone (ADR-0019).
 
 export function formatClock(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds));

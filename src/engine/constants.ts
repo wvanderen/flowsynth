@@ -148,6 +148,10 @@ export const NEXT_RARITY: Record<Rarity, Rarity | null> = { common: "uncommon", 
 
 export const EPS = 1e-9;
 
-export const RECONCILIATION_THRESHOLD_SECONDS = 120;
+// The reconciliation floor (focus-tool spec §1): absences below it
+// auto-credit silently on both modes — nous banks, time credits, no report,
+// never joins the pool. Provisional tuning (~3 minutes). Supersedes the
+// retired 120 s confirm-or-discard threshold (ADR-0019).
+export const RECONCILIATION_FLOOR_SECONDS = 180;
 
 export const SAVE_VERSION = 5;

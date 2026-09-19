@@ -307,3 +307,80 @@ describe("the session clock", () => {
     expect(document.getElementById("summary-continue")).not.toBeNull();
   });
 });
+
+describe("the honesty report", () => {
+  // Overrun away time past a 600 s plan: 300 s provisional.
+  function poolOutstanding(s: GameState, target: number | null): void {
+    s.sessionsCompleted = 1;
+    startSession(s, target);
+    advance(s, target ?? 0);
+    advance(s, 1, Math.random, "provisional");
+    s.session!.accounting.poolSeconds = 300;
+    s.session!.accounting.bucketNous = 30;
+  }
+
+  it("a return with the pool outstanding opens the mandatory report mid-session", () => {
+    poolOutstanding(app.state, 600);
+    app.tick();
+    expect(app.ui.modal).toBe("honesty");
+    const modal = document.getElementById("modal-content")!;
+    expect(modal.textContent).toContain("5 min");
+    expect(modal.textContent).toContain("30 ν");
+    // Planned sessions offer all three outcomes, consequences inline.
+    const outcomes = [...modal.querySelectorAll("[data-honesty]")].map((b) => b.getAttribute("data-honesty"));
+    expect(outcomes).toEqual(["missed", "planned", "full"]);
+    expect(modal.textContent).toContain("the 30 ν drop");
+    expect(modal.textContent).toContain("the ν banks");
+    // Non-dismissible: no close button, Esc and backdrop never close it.
+    expect(document.getElementById("close-modal")).toBeNull();
+    app.closeModal();
+    expect(app.ui.modal).toBe("honesty");
+  });
+
+  it("open-ended sessions offer two outcomes", () => {
+    poolOutstanding(app.state, null);
+    app.tick();
+    const modal = document.getElementById("modal-content")!;
+    const outcomes = [...modal.querySelectorAll("[data-honesty]")].map((b) => b.getAttribute("data-honesty"));
+    expect(outcomes).toEqual(["missed", "full"]);
+  });
+
+  it("the bucket banks or drops in one move, then flow continues", () => {
+    poolOutstanding(app.state, null);
+    app.tick();
+    const balance = app.state.nous;
+    const creditedBefore = app.state.session!.accounting.creditedSeconds;
+    document.querySelector<HTMLButtonElement>('[data-honesty="full"]')!.click();
+    expect(app.ui.modal).toBeNull();
+    expect(app.state.nous - balance).toBeCloseTo(30, 6);
+    expect(app.state.session!.accounting.creditedSeconds).toBeCloseTo(creditedBefore + 300, 6);
+    expect(app.state.mode).toBe("flow");
+  });
+
+  it("at exit the answer is mandatory and final: report first, summary after", () => {
+    poolOutstanding(app.state, 600);
+    app.endFlow();
+    expect(app.ui.modal).toBe("honesty");
+    expect(app.state.mode).toBe("flow");
+    const balance = app.state.nous;
+    const banked = app.state.session!.earned;
+    document.querySelector<HTMLButtonElement>('[data-honesty="missed"]')!.click();
+    // The dropped bucket never joins the banked headline.
+    expect(app.state.nous - balance).toBeCloseTo(0, 6);
+    expect(app.state.mode).toBe("upgrade");
+    expect(app.ui.modal).toBe("summary");
+    expect(app.state.summary!.earned).toBeCloseTo(banked, 6);
+    expect(app.state.summary!.seconds).toBeCloseTo(600, 6);
+  });
+
+  it("the provisional bucket is visibly flagged on the console while it holds", () => {
+    poolOutstanding(app.state, 600);
+    app.tick();
+    const flag = document.getElementById("session-provisional")!;
+    expect(flag.textContent).toContain("provisional");
+    expect(flag.textContent).toContain("30 ν");
+    app.resolveHonesty("full");
+    app.render();
+    expect(document.getElementById("session-provisional")!.textContent).toBe("");
+  });
+});

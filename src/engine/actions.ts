@@ -6,6 +6,7 @@ import { createModule, isCarrier } from "./state";
 import { logSessionPractice } from "./habits";
 import { rollGoalOccurrences } from "./goals";
 import { syncAchievements } from "./achievements";
+import { freshAccounting } from "./trust";
 import type { GameState, Hex, ModuleInstance, ShelfType } from "./types";
 
 export interface ActionResult {
@@ -35,8 +36,7 @@ export function startSession(state: GameState, target: number | null): ActionRes
   state.mode = "flow";
   // An unstructured session starts with no active habit selected.
   if (state.activeHabitId === null) state.unstructuredSessions++;
-  state.session = { target, elapsed: 0, earned: 0, unlocked: [] };
-  state.pendingGap = null;
+  state.session = { target, elapsed: 0, earned: 0, unlocked: [], accounting: freshAccounting() };
   // In-session unlocks (Untethered, past session one) queue into the
   // session's summary row — the result carries nothing to toast.
   syncAchievements(state);
@@ -46,21 +46,32 @@ export function startSession(state: GameState, target: number | null): ActionRes
 export function endSession(state: GameState, now: number = 0): ActionResult {
   if (state.mode === "upgrade") return fail("No session is running.");
   const session = state.session;
-  const elapsed = session?.elapsed ?? 0;
+  // The exit gate (spec §1–2): the honesty report's answer is mandatory and
+  // final — the bucket must bank or drop before the session ends. A still
+  // unclassified absence buffer counts too: it would have flushed at the
+  // visible boundary that preceded any real exit.
+  if (session && (session.accounting.poolSeconds > EPS || session.accounting.pendingAwaySeconds > EPS)) {
+    return fail("Provisional time is waiting on the honesty report.");
+  }
+  // Credited practice time (§3) is the seam: the practice-log entry, the
+  // charge window, and the summary's practice minutes all key off C —
+  // never raw elapsed. The target hit derives from C too, so a reported
+  // miss never suppresses a presence-earned hit.
+  const credited = session?.accounting.creditedSeconds ?? 0;
   const earned = session?.earned ?? 0;
   const queued = [...(session?.unlocked ?? [])];
-  const reachedTarget = session !== null && session.target !== null && session.elapsed >= session.target;
+  const targetHit = session !== null && session.target !== null && credited >= session.target;
   state.mode = "upgrade";
   state.session = null;
-  state.pendingGap = null;
   state.sessionsCompleted++;
-  if (reachedTarget) state.plannedSessionsCompleted++;
-  // The focus-keyed generator's rule (§2.3, ADR-0012): ending any session
-  // banks a charge window of fraction × live practice time. Banked windows
-  // extend the remaining duration — the spec's only stacking rule. Manual
-  // practice logs never pass through here and never bank one.
-  state.chargeWindow += BALANCE.chargeWindowFraction * elapsed;
-  logSessionPractice(state, elapsed, now);
+  if (targetHit) state.plannedSessionsCompleted++;
+  // The focus-keyed generator's rule (§2.3, ADR-0012; basis amended by
+  // ADR-0019): ending any session banks a charge window of fraction ×
+  // credited practice time. Banked windows extend the remaining duration —
+  // the spec's only stacking rule. Manual practice logs never pass through
+  // here and never bank one.
+  state.chargeWindow += BALANCE.chargeWindowFraction * credited;
+  logSessionPractice(state, credited, now);
   rollGoalOccurrences(state, now);
   // The session-end boundary check (ADR-0015): First light, On the clock,
   // Keeping time, and friends fire here and join the summary row.
@@ -72,11 +83,14 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
   const snapshot = computeRates(state, true);
   state.summary = {
     sessionNumber: state.sessionsCompleted,
+    // The headline is banked nous — a dropped bucket is absent from it,
+    // visible in the event lines instead (§8).
     earned,
-    seconds: elapsed,
+    // Practice minutes show credited time (§3, §8).
+    seconds: credited,
     // Achieved, not projected (§5.7): a session that ended before any
     // practice accrued has no rate to report.
-    ratePerMinute: elapsed > EPS ? (earned / elapsed) * 60 : 0,
+    ratePerMinute: credited > EPS ? (earned / credited) * 60 : 0,
     carrier: snapshot.carrier,
     harmonics: snapshot.harmonics,
     chordMultiplier: snapshot.chordMultiplier,
