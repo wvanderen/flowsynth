@@ -1,0 +1,446 @@
+<!doctype html>
+<!-- PROTOTYPE — throwaway, never ship. Map ticket #92 (part of map #90).
+     Three variants of the enter-flow modal's selection-and-confirm shape,
+     switchable via ?variant= (A|B|C) and the floating bottom bar. The
+     duration chips re-render on every pick here — that is the renderKey fix
+     the follow-on implementation ticket will land for real. Question the
+     variants answer: layout, selection model (habit vs unstructured vs new
+     habit), CTA wording and placement. Run: `npm run dev`, then open
+     /prototype-enter-modal.html. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prototype — enter-flow modal (#92)</title>
+  <style>
+    /* ADR-0016 token table (src/ui/theme.ts), inlined for this throwaway page. */
+    :root {
+      --bg: #0d1122;
+      --panel: #141a30;
+      --panel-soft: #111627;
+      --panel-deep: #0a0e1b;
+      --line: #2a3150;
+      --line-soft: #222841;
+      --line-strong: #414a75;
+      --ink: #e5e9f5;
+      --muted: #99a1c2;
+      --scrim: rgba(5, 8, 19, 0.82);
+      --shadow: rgba(2, 4, 12, 0.6);
+      --charge: #9affa8;
+      --nous: #cbcaff;
+      --accent: #cbcaff;
+      --accent-bright: #e8e6ff;
+      --accent-ink: #10142b;
+      --hover-bg: color-mix(in srgb, var(--ink) 6%, var(--panel));
+      --accent-faint: color-mix(in srgb, var(--accent) 9%, var(--panel-soft));
+      --accent-soft: color-mix(in srgb, var(--accent) 16%, var(--panel-soft));
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+    button, input { font: inherit; }
+    button {
+      cursor: pointer;
+      color: inherit;
+      border: 1px solid var(--line);
+      background: transparent;
+      border-radius: 5px;
+      padding: 9px 13px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    button:hover:not(:disabled) { background: var(--hover-bg); border-color: var(--line-strong); }
+    button:focus-visible, input:focus-visible { outline: 2px solid var(--charge); outline-offset: 3px; }
+    button:disabled { opacity: 0.35; cursor: default; }
+    .primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 650; }
+    .primary:hover:not(:disabled) { background: var(--accent-bright); }
+    .small { padding: 5px 10px; font-size: 12px; }
+    .mono { font-family: var(--mono); }
+
+    /* ── Mock console backdrop (cheap stand-in for the real chassis) ── */
+    .mock-header {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding: 14px 20px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+    .mock-logo { font: 11px var(--mono); letter-spacing: 0.2em; color: var(--muted); }
+    .mock-clock {
+      width: 172px; height: 56px; flex-shrink: 0;
+      display: flex; flex-direction: column; justify-content: center;
+      border: 1px solid var(--line); border-radius: 8px; padding: 0 12px;
+      background: var(--panel-soft);
+    }
+    .mock-clock p { margin: 0; }
+    .session-clock { font: 28px/1.1 var(--mono); }
+    .clock-caption { font-size: 10px; color: var(--muted); margin-top: 3px; }
+    .mock-nous { font: 12px var(--mono); color: var(--nous); }
+    .mock-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; padding: 20px; }
+    .mock-tile { height: 120px; border: 1px solid var(--line-soft); border-radius: 12px; background: var(--panel-soft); opacity: 0.6; }
+
+    /* ── Modal shell (copied from src/ui/style.css) ── */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: var(--scrim);
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px; z-index: 50;
+    }
+    .modal {
+      width: min(680px, 100%);
+      max-height: min(82vh, 720px);
+      overflow-y: auto;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 26px;
+      box-shadow: 0 24px 80px var(--shadow);
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .eyebrow { font: 10.5px var(--mono); letter-spacing: 0.16em; color: var(--muted); text-transform: uppercase; }
+    .modal h2 { font-size: 21px; font-weight: 500; letter-spacing: -0.02em; margin: 0; }
+    .modal .lead { color: var(--muted); margin: 8px 0 18px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+    .muted { color: var(--muted); }
+    .small-copy { font-size: 12.5px; }
+
+    /* Plan affordances (copied + adapted from src/ui/style.css). */
+    .time-plan { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .plan-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+    .plan-chip { min-width: 40px; text-align: center; font-family: var(--mono); font-size: 12.5px; padding: 5px 9px; }
+    .plan-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-faint); }
+    .plan-free { display: flex; align-items: center; gap: 7px; }
+    .plan-free input {
+      width: 72px; background: var(--panel-soft); color: var(--ink);
+      border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px;
+      font-family: var(--mono); font-size: 13px;
+    }
+    .plan-free input:focus { border-color: var(--charge); outline: none; }
+    .plan-unit { font-size: 12px; color: var(--muted); }
+    .plan-open { align-self: flex-start; padding: 5px 11px; border-radius: 999px; font-size: 12px; color: var(--muted); }
+    .plan-open.active { border-color: var(--accent); color: var(--accent); background: var(--accent-faint); }
+    .clock-caption { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+    .enter-steer { margin: 10px 0 0; font-size: 12.5px; }
+
+    /* ── Variant A: one selectable list + footer CTA ── */
+    .enter-choices { display: grid; gap: 8px; }
+    .enter-choice {
+      display: flex; align-items: center; gap: 12px; width: 100%;
+      padding: 11px 14px;
+      border: 1px solid var(--line); border-radius: 10px;
+      background: transparent; color: inherit; text-align: left;
+    }
+    .enter-choice:hover { border-color: var(--line-strong); background: var(--hover-bg); }
+    .enter-choice.selected { border-color: var(--accent); background: var(--accent-faint); }
+    .enter-choice .dot {
+      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+      border: 1.5px solid var(--line-strong);
+    }
+    .enter-choice.selected .dot { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 4px, transparent 5px); }
+    .enter-choice .enter-choice-name { flex: 1; font-size: 13.5px; font-weight: 550; }
+    .enter-choice small { color: var(--muted); }
+    .enter-choice.unstructured { border-style: dashed; }
+    .enter-create { display: flex; gap: 8px; margin: 2px 0; align-items: center; }
+    .enter-create.selected { border: 1px solid var(--accent); border-radius: 10px; padding: 8px; background: var(--accent-faint); }
+    .enter-create input {
+      flex: 1; min-width: 0; background: var(--panel-soft); color: var(--ink);
+      border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font-size: 13px;
+    }
+    .enter-create input:focus { border-color: var(--charge); outline: none; }
+    .modal-actions .cta-summary { margin-right: auto; align-self: center; font-size: 12px; color: var(--muted); }
+
+    /* ── Variant B: mode tabs first, sticky footer ── */
+    .mode-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; margin: 14px 0 12px; }
+    .mode-tab { border: none; border-radius: 0; padding: 9px 6px; font-size: 12.5px; color: var(--muted); background: transparent; }
+    .mode-tab + .mode-tab { border-left: 1px solid var(--line); }
+    .mode-tab.active { background: var(--accent-faint); color: var(--accent); font-weight: 600; }
+    .mode-pane { display: grid; gap: 8px; min-height: 120px; align-content: start; }
+    .mode-explain { font-size: 12.5px; color: var(--muted); padding: 4px 2px; }
+    .footer-band {
+      margin: 16px -26px -26px; padding: 14px 26px;
+      border-top: 1px solid var(--line);
+      background: var(--panel-soft);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .footer-band .cta-summary { flex: 1; font-size: 12.5px; color: var(--muted); }
+
+    /* ── Variant C: cards + commit bar ── */
+    .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+    .enter-card {
+      position: relative;
+      display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+      padding: 16px 14px;
+      border: 1px solid var(--line); border-radius: 12px;
+      background: transparent; color: inherit; text-align: left;
+    }
+    .enter-card:hover { border-color: var(--line-strong); background: var(--hover-bg); }
+    .enter-card.selected { border-color: var(--accent); background: var(--accent-faint); }
+    .enter-card .check {
+      position: absolute; top: 10px; right: 12px;
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 1.5px solid var(--line-strong);
+      font: 11px/16px var(--mono); text-align: center; color: var(--accent-ink);
+    }
+    .enter-card.selected .check { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+    .enter-card .name { font-size: 14.5px; font-weight: 600; padding-right: 22px; }
+    .enter-card small { color: var(--muted); }
+    .enter-card.unstructured { border-style: dashed; }
+    .commit-bar {
+      margin: 16px -26px -26px; padding: 14px 26px;
+      border-top: 1px solid var(--line);
+      background: var(--panel-soft);
+      display: flex; align-items: center; gap: 14px;
+    }
+    .commit-bar .commit-summary { flex: 1; font-size: 13.5px; }
+    .commit-bar .commit-summary strong { font-weight: 650; }
+    .commit-bar .commit-summary .commit-sub { display: block; font-size: 11.5px; color: var(--muted); }
+    .commit-bar button { padding: 10px 22px; font-size: 14px; }
+
+    /* ── Prototype switcher (never part of the design) ── */
+    .proto-switcher {
+      position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+      z-index: 100;
+      display: flex; align-items: center; gap: 10px;
+      background: #f4ede4; color: #241d12;
+      border: 1px solid #b5a58c; border-radius: 999px;
+      padding: 6px 12px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+      font-size: 12.5px;
+    }
+    .proto-switcher button { border-color: #b5a58c; color: #241d12; padding: 2px 9px; border-radius: 999px; background: transparent; }
+    .proto-switcher button:hover { background: rgba(0,0,0,0.08); }
+    .proto-switcher .proto-state { font: 11px var(--mono); color: #6b5c42; max-width: 340px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  </style>
+</head>
+<body>
+  <div class="mock-header">
+    <span class="mock-logo">FLOWSYNTH</span>
+    <div class="mock-clock"><p class="session-clock">00:00</p><p class="clock-caption">open-ended</p></div>
+    <span class="mock-nous">0 ν</span>
+  </div>
+  <div class="mock-tiles">
+    <div class="mock-tile"></div><div class="mock-tile"></div><div class="mock-tile"></div>
+  </div>
+
+  <div class="modal-backdrop">
+    <div class="modal" id="modal" role="dialog" aria-labelledby="modal-title"></div>
+  </div>
+
+  <div class="proto-switcher">
+    <button id="prev-variant" aria-label="Previous variant">‹</button>
+    <span id="variant-label"></span>
+    <button id="next-variant" aria-label="Next variant">›</button>
+    <span class="proto-state" id="proto-state"></span>
+  </div>
+
+<script>
+const PRESETS = [10, 15, 20, 25, 30, 45, 60, 90];
+const HABITS = [
+  { id: "piano", name: "Piano", total: "5h 12m" },
+  { id: "cooking", name: "Cooking", total: "1h 03m" },
+];
+const FIRST_SESSION = true;
+const NAMES = { A: "List + footer Start", B: "Kind-first tabs", C: "Cards + commit bar" };
+
+const state = {
+  choice: null,        // habitId | "unstructured" | "new" | null
+  newHabitName: "",
+  minutes: null,       // null = open-ended (the resting plan)
+  mode: "habit",       // variant B only: "habit" | "new" | "unstructured"
+};
+
+const choiceName = () =>
+  state.choice === "unstructured" ? "unstructured"
+  : state.choice === "new" ? (state.newHabitName.trim() || "new habit")
+  : HABITS.find((h) => h.id === state.choice)?.name ?? null;
+
+const durationLabel = () => (state.minutes === null ? "open-ended" : `${state.minutes} min`);
+const planControls = () => `
+  <div class="time-plan">
+    <div class="plan-chips" role="group" aria-label="Planned session length in minutes">
+      ${PRESETS.map((m) => `<button class="plan-chip${state.minutes === m ? " active" : ""}" data-plan="${m}" aria-pressed="${state.minutes === m}">${m}</button>`).join("")}
+    </div>
+    <div class="plan-free">
+      <input type="number" id="plan-minutes" min="1" max="90" step="1" placeholder="1–90" value="${state.minutes ?? ""}" ${state.minutes === null ? "disabled" : ""} aria-label="Custom session length, 1 to 90 minutes" />
+      <span class="plan-unit">min</span>
+    </div>
+    <button id="plan-open" class="plan-open${state.minutes === null ? " active" : ""}" aria-pressed="${state.minutes === null}">Open-ended</button>
+    <p class="clock-caption">${state.minutes === null ? "Open-ended" : "Planned practice"}</p>
+  </div>`;
+const steer = () => FIRST_SESSION ? `<p class="enter-steer small-copy muted">A first try can be short — five minutes or so, then exit and see what the session banked.</p>` : "";
+const modalTop = () => `<div class="modal-top"><span class="eyebrow">ENTER FLOW</span><button class="small" aria-label="Close dialog">✕</button></div>`;
+
+function bindPlanControls(scope) {
+  scope.querySelectorAll("[data-plan]").forEach((chip) =>
+    chip.addEventListener("click", () => { state.minutes = Number(chip.dataset.plan); render(); }));
+  scope.querySelector("#plan-minutes")?.addEventListener("change", (e) => {
+    const m = Math.round(Number(e.target.value));
+    if (Number.isFinite(m) && e.target.value !== "") { state.minutes = Math.min(90, Math.max(1, m)); render(); }
+  });
+  scope.querySelector("#plan-open")?.addEventListener("click", () => { state.minutes = null; render(); });
+}
+
+/* ── Variant A: one selectable list, everything defers to a footer Start ── */
+function renderA() {
+  const named = choiceName();
+  const cta = !state.choice
+    ? `<button class="primary" disabled>Select a practice to start</button>`
+    : `<button class="primary">Start — ${named} · ${durationLabel()}</button>`;
+  return `${modalTop()}
+    <h2 id="modal-title">What are you practicing?</h2>
+    <p class="lead">Pick what this session is. Nothing starts until you press Start.</p>
+    <div class="enter-choices">
+      ${HABITS.map((h) => `<button class="enter-choice${state.choice === h.id ? " selected" : ""}" data-choice="${h.id}" aria-pressed="${state.choice === h.id}">
+        <span class="dot"></span>
+        <span class="enter-choice-name">${h.name}</span>
+        <small class="mono">${h.total}</small>
+      </button>`).join("")}
+      <div class="enter-create${state.choice === "new" ? " selected" : ""}" id="new-row">
+        <input type="text" id="enter-habit-name" placeholder="New habit (piano, cooking…)" maxlength="40" aria-label="Name a new habit" value="${state.newHabitName}" />
+        <span class="small-copy muted">new habit</span>
+      </div>
+      <button class="enter-choice unstructured${state.choice === "unstructured" ? " selected" : ""}" data-choice="unstructured" aria-pressed="${state.choice === "unstructured"}">
+        <span class="dot"></span>
+        <span class="enter-choice-name">Practice unstructured</span>
+        <small>nous is unaffected</small>
+      </button>
+    </div>
+    ${steer()}
+    ${planControls()}
+    <div class="modal-actions">
+      <button id="enter-cancel">Back</button>
+      <span class="cta-summary">${state.choice ? `${named} · ${durationLabel()}` : "nothing selected"}</span>
+      ${cta}
+    </div>`;
+}
+function bindA(scope) {
+  scope.querySelectorAll("[data-choice]").forEach((b) =>
+    b.addEventListener("click", () => { state.choice = b.dataset.choice; render(); }));
+  const row = scope.querySelector("#new-row");
+  const input = scope.querySelector("#enter-habit-name");
+  row.addEventListener("click", () => { if (state.choice !== "new") { state.choice = "new"; render(); input.focus(); } });
+  input.addEventListener("input", () => { state.newHabitName = input.value; if (state.choice !== "new") { state.choice = "new"; } render(); input.focus(); input.setSelectionRange(input.value.length, input.value.length); });
+  scope.querySelector("#enter-cancel")?.addEventListener("click", () => alert("prototype: back"));
+}
+
+/* ── Variant B: decide the kind first, then the specifics, footer band ── */
+function renderB() {
+  const tab = (id, label) => `<button class="mode-tab${state.mode === id ? " active" : ""}" data-mode="${id}" aria-pressed="${state.mode === id}">${label}</button>`;
+  let pane = "";
+  if (state.mode === "habit") {
+    pane = HABITS.map((h) => `<button class="enter-choice${state.choice === h.id ? " selected" : ""}" data-choice="${h.id}" aria-pressed="${state.choice === h.id}">
+      <span class="dot"></span><span class="enter-choice-name">${h.name}</span><small class="mono">${h.total}</small>
+    </button>`).join("") + `<p class="mode-explain">Pick the habit this session counts toward.</p>`;
+  } else if (state.mode === "new") {
+    pane = `<div class="enter-create selected" id="new-row">
+      <input type="text" id="enter-habit-name" placeholder="Name it (piano, cooking…)" maxlength="40" aria-label="Name a new habit" value="${state.newHabitName}" />
+    </div>
+    <p class="mode-explain">A brand-new habit starts its clock with this session.</p>`;
+  } else {
+    pane = `<p class="mode-explain">No habit attached — the session runs, and nous is unaffected.</p>`;
+  }
+  const named = choiceName();
+  const ready = state.mode === "habit" ? HABITS.some((h) => h.id === state.choice)
+    : state.mode === "new" ? state.newHabitName.trim() !== ""
+    : true;
+  const ctaLabel = !ready
+    ? (state.mode === "habit" ? "Select a habit" : "Name your new habit")
+    : `Begin — ${state.mode === "unstructured" ? "unstructured" : named} · ${durationLabel()}`;
+  return `${modalTop()}
+    <h2 id="modal-title">What are you practicing?</h2>
+    <div class="mode-tabs" role="tablist">${tab("habit", "A habit")}${tab("new", "New habit")}${tab("unstructured", "Unstructured")}</div>
+    <div class="mode-pane">${pane}</div>
+    ${steer()}
+    ${planControls()}
+    <div class="footer-band">
+      <button id="enter-cancel" class="small">Back</button>
+      <span class="cta-summary">${ready ? `${state.mode === "unstructured" ? "unstructured" : named} · ${durationLabel()}` : "not ready"}</span>
+      <button class="primary" ${ready ? "" : "disabled"}>${ctaLabel}</button>
+    </div>`;
+}
+function bindB(scope) {
+  scope.querySelectorAll("[data-mode]").forEach((b) =>
+    b.addEventListener("click", () => { state.mode = b.dataset.mode; render(); }));
+  scope.querySelectorAll("[data-choice]").forEach((b) =>
+    b.addEventListener("click", () => { state.choice = b.dataset.choice; render(); }));
+  const input = scope.querySelector("#enter-habit-name");
+  input?.addEventListener("input", () => { state.newHabitName = input.value; render(); input.focus(); input.setSelectionRange(input.value.length, input.value.length); });
+  scope.querySelector("#enter-cancel")?.addEventListener("click", () => alert("prototype: back"));
+}
+
+/* ── Variant C: cards in a grid, sticky commit bar at the bottom ── */
+function renderC() {
+  const named = choiceName();
+  const card = (id, name, sub, cls = "") => `<button class="enter-card ${cls}${state.choice === id ? " selected" : ""}" data-choice="${id}" aria-pressed="${state.choice === id}">
+    <span class="check">✓</span>
+    <span class="name">${name}</span>
+    <small>${sub}</small>
+  </button>`;
+  const cta = !state.choice
+    ? `<button disabled>Pick a card to start</button>`
+    : `<button class="primary">Start session</button>`;
+  return `${modalTop()}
+    <h2 id="modal-title">What are you practicing?</h2>
+    <p class="lead">Tap a card, set a length if you want one, and start.</p>
+    <div class="card-grid">
+      ${HABITS.map((h) => card(h.id, h.name, `${h.total} so far`)).join("")}
+      ${card("new", "New habit", state.newHabitName.trim() ? `“${state.newHabitName.trim()}”` : "name it after you pick")}
+      ${card("unstructured", "Unstructured", "no habit · nous is unaffected", "unstructured")}
+    </div>
+    <input type="text" id="enter-habit-name" placeholder="New habit name (piano, cooking…)" maxlength="40" aria-label="Name a new habit" value="${state.newHabitName}"
+      style="margin-top:10px; width:100%; background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font-size: 13px; ${state.choice === "new" ? "border-color: var(--accent);" : ""}" />
+    ${steer()}
+    ${planControls()}
+    <div class="commit-bar">
+      <span class="commit-summary">${state.choice ? `<strong>${named}</strong> · ${durationLabel()}<span class="commit-sub">${state.minutes === null ? "unplanned — ends when you exit" : `you're aiming at ${state.minutes} minutes`}</span>` : `<span class="muted">nothing selected yet</span>`}</span>
+      ${cta}
+    </div>`;
+}
+function bindC(scope) {
+  scope.querySelectorAll("[data-choice]").forEach((b) =>
+    b.addEventListener("click", () => { state.choice = b.dataset.choice; render(); }));
+  const input = scope.querySelector("#enter-habit-name");
+  input.addEventListener("input", () => { state.newHabitName = input.value; if (state.choice !== "new") { state.choice = "new"; } render(); input.focus(); input.setSelectionRange(input.value.length, input.value.length); });
+}
+
+/* ── Switcher plumbing ── */
+const modal = document.getElementById("modal");
+const VARIANTS = { A: [renderA, bindA], B: [renderB, bindB], C: [renderC, bindC] };
+const keys = Object.keys(VARIANTS);
+let variant = keys.includes(new URLSearchParams(location.search).get("variant")) ? new URLSearchParams(location.search).get("variant") : "A";
+
+function render() {
+  const [draw, bind] = VARIANTS[variant];
+  modal.innerHTML = draw();
+  bind(modal);
+  bindPlanControls(modal);
+  document.getElementById("variant-label").textContent = `${variant} (${NAMES[variant]})`;
+  document.getElementById("proto-state").textContent =
+    `choice=${state.choice ?? "none"}${state.choice === "new" ? `:“${state.newHabitName}”` : ""} · ${state.minutes === null ? "open-ended" : state.minutes + " min"} · first-session=${FIRST_SESSION}`;
+  history.replaceState(null, "", `?variant=${variant}`);
+}
+
+document.getElementById("prev-variant").addEventListener("click", () => {
+  variant = keys[(keys.indexOf(variant) + keys.length - 1) % keys.length]; render();
+});
+document.getElementById("next-variant").addEventListener("click", () => {
+  variant = keys[(keys.indexOf(variant) + 1) % keys.length]; render();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.target.matches("input, textarea") || e.target.isContentEditable) return;
+  if (e.key === "ArrowLeft") document.getElementById("prev-variant").click();
+  if (e.key === "ArrowRight") document.getElementById("next-variant").click();
+});
+
+render();
+</script>
+</body>
+</html>
