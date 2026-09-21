@@ -87,23 +87,24 @@ export interface FaceSpec {
   pinned?: boolean;
 }
 
-// The Carrier's panel-mount hardware (ADR-0016, issue #94): the pin badge is
-// a white instrument marking seated in an engraved housing plate at the
-// face's top-right, and three bolt circles mount the chassis at alternating
-// corners, skipping the badge's corner. Exact vertex math is prototype
-// tuning; the stylesheet paints the registers.
-const PIN_BADGE_AT: [number, number] = [35, -26];
-const PIN_BOLT_CORNERS = [1, 3, 5];
+// The Carrier's panel-mount hardware (ADR-0016, issue #94): the pinned badge
+// is a white lock marking seated in an engraved housing plate at the face's
+// top center, right above the engraved level, and three bolt circles mount
+// the chassis at alternating corners, skipping the lock's corner. Exact
+// vertex math is prototype tuning; the stylesheet paints the registers.
+const PIN_BADGE_AT: [number, number] = [0, -48];
+const PIN_BOLT_CORNERS = [0, 2, 4];
 const PIN_BOLT_SEAT = 57.5;
 const PIN_BOLT_RADIUS = 2.4;
 
 export function moduleFace(spec: FaceSpec): string {
   const hue = `var(--${HUE_TOKEN_OF[spec.type]})`;
   const rings = Array.from({ length: RING_COUNT[spec.rarity] }, (_, i) => `<polygon points="${hexPoints(RING_RADII[i]!)}"/>`).join("");
-  // The pin badge paints after the chassis (a marking under the plate would
-  // never read), wearing the carrier's white — the neutral register.
+  // The pinned badge paints after the chassis (a marking under the plate
+  // would never read), wearing the carrier's white — the neutral register.
+  // The marking is a padlock: shackle arc over a rounded body.
   const pin = spec.pinned
-    ? `<g data-key="pin" class="module-pin" transform="translate(${PIN_BADGE_AT[0]},${PIN_BADGE_AT[1]})"><title>The Carrier — granted at the origin. Pinned: it never moves and never leaves the board.</title><circle class="pin-plate" r="9.5"/><circle cx="0" cy="-4.4" r="4.1"/><path d="M0-.5v8.4"/></g>
+    ? `<g data-key="pin" class="module-pin" transform="translate(${PIN_BADGE_AT[0]},${PIN_BADGE_AT[1]})"><title>The Carrier — granted at the origin. Pinned: it never moves and never leaves the board.</title><circle class="pin-plate" r="9.5"/><path d="M-2.7-.5v-2.4a2.7 2.7 0 0 1 5.4 0v2.4"/><rect x="-4.4" y="-0.5" width="8.8" height="6.8" rx="1.5"/></g>
     <g data-key="bolts" class="module-bolts">${PIN_BOLT_CORNERS.map((corner) => {
       const [x, y] = hexCorner(PIN_BOLT_SEAT, corner);
       return `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${PIN_BOLT_RADIUS}"/>`;

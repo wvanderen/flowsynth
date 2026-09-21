@@ -54,8 +54,8 @@ describe("module face", () => {
     expect(face).not.toContain('data-key="category"');
   });
 
-  it("seats the pinned badge in a housing plate above the chassis, with three mounting bolts", () => {
-    const face = moduleFace({ type: "carrier", rarity: "common", readout: "+1", pinned: true });
+  it("seats the lock badge top-center above the level, housed, with three mounting bolts", () => {
+    const face = moduleFace({ type: "carrier", rarity: "common", readout: "+1", level: 2, pinned: true });
     // The badge paints after the chassis polygon — a marking under the plate
     // would never read. The housing plate is part of the badge group.
     const hex = face.indexOf('data-key="hex"');
@@ -63,9 +63,19 @@ describe("module face", () => {
     const plate = face.indexOf('class="pin-plate"');
     expect(pin).toBeGreaterThan(hex);
     expect(plate).toBeGreaterThan(pin);
-    // Panel-mount hardware: three bolt circles at alternating corners.
+    // Top center, right above the engraved level.
+    expect(face).toContain('data-key="pin" class="module-pin" transform="translate(0,-48)"');
+    // The marking is a padlock: shackle arc over a rounded body.
+    expect(face).toContain('d="M-2.7-.5v-2.4a2.7 2.7 0 0 1 5.4 0v2.4"');
+    expect(face).toContain('<rect x="-4.4" y="-0.5" width="8.8" height="6.8" rx="1.5"/>');
+    // Panel-mount hardware: three bolt circles at alternating corners, the
+    // lock's (top) corner skipped — upper-right, bottom, upper-left.
     const bolts = face.split('<g data-key="bolts" class="module-bolts">')[1]!.split("</g>")[0]!;
     expect(bolts.match(/<circle/g)).toHaveLength(3);
+    expect(bolts).toContain('cx="49.80" cy="-28.75"');
+    expect(bolts).toContain('cx="0.00" cy="57.50"');
+    expect(bolts).toContain('cx="-49.80" cy="-28.75"');
+    expect(bolts).not.toContain('cy="-57.50"');
   });
 
   it("carries no pin hardware without pinned — the treatment is carrier-only", () => {
