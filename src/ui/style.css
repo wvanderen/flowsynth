@@ -77,22 +77,25 @@ h1, h2, h3, p { margin: 0; }
 .brand svg { width: 28px; height: 28px; }
 
 /* Session controls: clock block, pause, and the main switch. The clock block
-   keeps fixed dimensions across modes so entering or exiting flow shifts
-   nothing below. */
+   reserves its dimensions across modes so entering or exiting flow shifts
+   nothing below — the reserve is a minimum, so longer content grows the
+   block instead of clipping. */
 .console-session { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
 .console-clock {
-  width: 172px;
-  height: 56px;
+  min-width: 172px;
+  min-height: 56px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   flex-shrink: 0;
 }
 /* The next session's shape, displayed read-only; planning lives in the Time
-   app's popover. Same reserved block as the running clock so modes never
-   shift the layout. */
+   app's popover. Clock and caption fit the 172px reserve in every mode; the
+   provisional line — only present in flow — may exceed it, and the block
+   grows rather than clipping (mono digits re-widen it only when a digit
+   count turns over). */
 .session-clock { font: 28px/1.1 var(--mono); margin: 0; }
-.clock-caption { font-size: 10px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.clock-caption { font-size: 10px; color: var(--muted); margin-top: 3px; white-space: nowrap; }
 /* The session progress strip (issue #63): the header itself is the progress
    surface — a thin highlight pinned along its bottom border, above the
    resting border line. Planned sessions fill it left-to-right; an open-ended
@@ -178,7 +181,10 @@ h1, h2, h3, p { margin: 0; }
 .app-tile-glyph { display: flex; align-items: center; gap: 6px; color: var(--ink); }
 .app-tile-glyph svg { width: 19px; height: 19px; display: block; }
 /* The tile's state line: the selected habit, the planned clock, or a
-   locknote — the app name lives in the tooltip. */
+   locknote — the app name lives in the tooltip. The cap stays for the
+   free-text states (habit names, locknotes), which are one-line by design;
+   the Time tile's outputs are bounded — the mode word and at most a
+   90-minute clock — and fit it with margin. */
 .app-tile-state {
   font: 9.5px var(--mono);
   letter-spacing: 0.06em;
