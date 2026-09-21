@@ -73,6 +73,24 @@ export interface UiIntents {
   stopManaging(): void;
   cancelCellPurchase(): void;
 
+  // ── grid (board and arranging) ─────────────────────────────────────────
+  pickCell(pos: { q: number; r: number }): void;
+  rightClickCell(pos: { q: number; r: number }): void;
+  pickCellThenPlace(id: string, pos: { q: number; r: number }): void;
+  returnToInventory(id: string): void;
+  dropCombine(id: string, partnerId: string, pos: { q: number; r: number }): void;
+  beginPlacing(id: string): void;
+  startReshape(): void;
+  applyReshape(): void;
+  cancelReshape(): void;
+  /** The staged reshape's probe verdict — a query intent (like exportText). */
+  reshapeValidity(): { ok: boolean; message: string };
+
+  // ── dev panel (?dev=1) ─────────────────────────────────────────────────
+  devAdvance(seconds: number): void;
+  devToTarget(): void;
+  devNous(): void;
+
   // ── voice ──────────────────────────────────────────────────────────────
   say(message: string): void;
   /** Region-local view state changed; run a render pass. */
@@ -85,6 +103,11 @@ export interface RenderContext {
   readonly intents: UiIntents;
   // True while the honesty report frames itself as the pre-exit gate.
   readonly exitPending: boolean;
+  // The Forge's threshold-crossing flash deadline (an animation fact the
+  // grid reads; set by App when a roll is minted).
+  readonly forgeFlashUntil: number;
+  // The dev panel's flag (?dev=1).
+  readonly dev: boolean;
   // Lazily-memoized shared derivations, computed at most once per render
   // pass no matter how many regions read them.
   readonly memo: {
@@ -104,6 +127,8 @@ export function contextFor(app: App): RenderContext {
     ui: app.ui,
     intents: app,
     exitPending: app.exitPending,
+    forgeFlashUntil: app.forgeFlashUntil,
+    dev: app.dev,
     memo: {
       projected: () => (projected ??= computeRates(state, true)),
       snapshot: () => (snapshot ??= computeRates(state)),

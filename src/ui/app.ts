@@ -21,7 +21,7 @@ import {
   type ActionResult,
 } from "../engine/actions";
 import { syncArete } from "../engine/accumulator";
-import { adjacent, hexKey, neighbors, sameHex } from "../engine/hex";
+import { adjacent, hexKey, sameHex } from "../engine/hex";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
 import { formatClock } from "../engine/clock";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
@@ -1192,18 +1192,6 @@ export class App {
     const minted = syncArete(this.state);
     this.say(minted > 0 ? "Dev: +100 ν. The accumulator filled — Arete minted." : "Dev: +100 ν.");
     this.render();
-  }
-
-  frontierCells(): Hex[] {
-    const { state } = this;
-    const out: Hex[] = [];
-    const seen = (h: Hex) => state.cells.some((c) => sameHex(c, h)) || out.some((c) => sameHex(c, h));
-    for (const cell of state.cells) {
-      for (const n of neighbors(cell)) {
-        if (!seen(n)) out.push(n);
-      }
-    }
-    return out;
   }
 
   // The global mute toggle (§5): one switch in PREFERENCES gating every

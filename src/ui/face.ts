@@ -10,6 +10,7 @@
 import type { ModuleType, Rarity } from "../engine/types";
 import { moduleIcon } from "./icons";
 import { META } from "./meta";
+import { faceReadout } from "./lexicon";
 
 export const HEX_RADIUS = 61;
 
@@ -18,6 +19,16 @@ export const HEX_RADIUS = 61;
 export function hexCorner(radius: number, i: number): [number, number] {
   const a = ((60 * i - 30) * Math.PI) / 180;
   return [radius * Math.cos(a), radius * Math.sin(a)];
+}
+
+// A canvas-style face tile — the same readout panel the board renders, with
+// nominal values for the module's level — shared by the inventory grid and
+// the live drag ghost so a carried tile looks identical to the one waiting in
+// inventory (candidate-tile pattern from the Forge).
+export function hexTileSvg(module: { type: ModuleType; rarity: Rarity; level: number }): string {
+  return `<svg viewBox="-70 -70 140 140" aria-hidden="true">
+    ${moduleFace({ type: module.type, rarity: module.rarity, readout: faceReadout(module), level: module.level })}
+  </svg>`;
 }
 
 export function hexPoints(radius: number): string {
