@@ -57,7 +57,7 @@ describe("the console tiles", () => {
     expect(stateText("app-tile-habit")).toBe("no habit");
     // Time is free from minute 0 (ADR-0019): the tile wears the resting
     // plan, and no tile is greyed or carries a lock tooltip.
-    expect(stateText("app-tile-time")).toBe("open");
+    expect(stateText("app-tile-time")).toBe("open-ended");
     for (const key of ["habit", "time", "notes", "goals"]) {
       expect(document.getElementById(`app-tile-${key}`)!.classList.contains("locked")).toBe(false);
       expect(document.getElementById(`app-tile-${key}`)!.title).not.toContain("locked");
@@ -99,7 +99,10 @@ describe("the console readout", () => {
     expect(document.querySelector("#console-session .clock-caption")!.textContent).toBe("planned");
     app.ui.chosenTarget = null;
     app.render();
-    expect(document.querySelector("#console-session .session-clock")!.textContent).toBe("open");
+    // The clock slot only ever holds clock text: an unplanned open-ended
+    // shape wears a placeholder, the caption names the mode.
+    expect(document.querySelector("#console-session .session-clock")!.textContent).toBe("--:--");
+    expect(document.querySelector("#console-session .clock-caption")!.textContent).toBe("open-ended");
   });
 
   it("the session total only exists while a session runs", () => {

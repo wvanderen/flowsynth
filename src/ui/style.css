@@ -77,12 +77,13 @@ h1, h2, h3, p { margin: 0; }
 .brand svg { width: 28px; height: 28px; }
 
 /* Session controls: clock block, pause, and the main switch. The clock block
-   keeps fixed dimensions across modes so entering or exiting flow shifts
-   nothing below. */
+   reserves its dimensions across modes so entering or exiting flow shifts
+   nothing below — the reserve is a minimum, so longer content grows the
+   block instead of clipping. */
 .console-session { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
 .console-clock {
-  width: 172px;
-  height: 56px;
+  min-width: 172px;
+  min-height: 56px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -92,7 +93,7 @@ h1, h2, h3, p { margin: 0; }
    app's popover. Same reserved block as the running clock so modes never
    shift the layout. */
 .session-clock { font: 28px/1.1 var(--mono); margin: 0; }
-.clock-caption { font-size: 10px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.clock-caption { font-size: 10px; color: var(--muted); margin-top: 3px; white-space: nowrap; }
 /* The session progress strip (issue #63): the header itself is the progress
    surface — a thin highlight pinned along its bottom border, above the
    resting border line. Planned sessions fill it left-to-right; an open-ended

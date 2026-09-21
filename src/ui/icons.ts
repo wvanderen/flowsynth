@@ -13,7 +13,10 @@ const PATHS: Record<ModuleType, string> = {
 // Focus-app glyphs (ADR-0016: geometric synthesis glyphs, every hue paired
 // with a glyph — the console stays monochrome, so these ride ink/muted).
 const APP_PATHS: Record<FocusApp, string> = {
-  habit: '<path d="M0-8A8 8 0 1 1-6.9 3.9M-6.9 3.9l-3.2-.8M-6.9 3.9l.9 3.2"/>',
+  // Habit: a cycle that carries a mark — a ~300° ring, a chevron arrowhead
+  // sized to survive 19px, and a center dot (the practice inside the cycle).
+  // The old 270° arc's hairline nubs read as a spinner at tile size.
+  habit: '<path d="M0-8A8 8 0 1 1-8 0"/><path d="M-11 3.4-8 0-5 3.4"/><circle r="1.4" fill="currentColor" stroke="none"/>',
   time: '<circle r="8"/><path d="M0-4.5V0l3.4 2.2"/>',
   goals: '<path d="M-6-8V8M-6-7H6L3-3l3 4H-6"/>',
   notes: '<path d="M-7-8H7M-7-2H7M-7 4h3M6.5 3.5 8 5l-4 4-2 .5.5-2Z"/>',
