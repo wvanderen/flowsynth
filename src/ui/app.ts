@@ -128,6 +128,14 @@ interface ChimeState {
 
 const freshChimeState = (): ChimeState => ({ chimes: 0, lastChimeAt: 0, acknowledged: false });
 
+// The combine say-line: the refund, when the lower copy carried upgrades,
+// rides on the plain success sentence.
+function combineMessage(result: ActionResult): string {
+  return result.refund && result.refund > 0
+    ? `Combined into a stronger copy; ${result.refund} ν of the lower copy's upgrades refunded.`
+    : "Combined into a stronger copy.";
+}
+
 type ParsedSave = LoadedSave | { error: string };
 
 function parseSave(text: string): ParsedSave {
@@ -525,13 +533,24 @@ export class App {
     if (notes.length > 0) this.say(notes.join(" "));
   }
 
-  private act(result: ActionResult, success: string): boolean {
-    if (!result.ok) {
-      this.say(result.reason ?? "That action is not available.");
+  // The action tail: every engine action funnels through here — run the
+  // call, speak success or failure, save on success, render, return ok.
+  // Guards and UI mutations stay in the owning action method (or its thunk);
+  // the engine's ActionResult remains facts-only, so this module owns the
+  // say-line's copy.
+  private perform<T extends ActionResult>(
+    run: () => T,
+    message: string | ((result: T) => string),
+    fallback = "That action is not available.",
+  ): boolean {
+    const result = run();
+    if (result.ok) {
+      const text = typeof message === "function" ? message(result) : message;
+      this.announceUnlocks(result.unlocked, text);
+      this.save();
     } else {
-      this.announceUnlocks(result.unlocked, success);
+      this.say(result.reason ?? fallback);
     }
-    if (result.ok) this.save();
     this.render();
     return result.ok;
   }
@@ -540,7 +559,7 @@ export class App {
   // action's own message, and point at the trophy list's home. In-session
   // unlocks never reach here — they queue into the session's summary row
   // instead, so the filter below is a belt-and-braces.
-  announceUnlocks(ids: string[] | undefined, otherwise: string): void {
+  private announceUnlocks(ids: string[] | undefined, otherwise: string): void {
     const names = (ids ?? [])
       .filter((id) => !this.state.session?.unlocked.includes(id))
       .map(achievementName);
@@ -651,7 +670,7 @@ export class App {
   }
 
   pause(): void {
-    if (this.act(pauseSession(this.state), "Paused.")) {
+    if (this.perform(() => pauseSession(this.state), "Paused.")) {
       this.lastWall = null;
       // Pausing silences the overrun chime immediately (§4); it never
       // un-silences, since a visible resume acknowledges anyway.
@@ -660,7 +679,7 @@ export class App {
   }
 
   resume(): void {
-    if (this.act(resumeSession(this.state), "Flow resumed.")) {
+    if (this.perform(() => resumeSession(this.state), "Flow resumed.")) {
       this.syncBoundaryClock(Date.now());
     }
   }
@@ -668,7 +687,7 @@ export class App {
   // The reserved prestige button (ADR-0015): inert at launch — pressing
   // only acknowledges the horizon, and the flag stays detectable.
   acknowledgeHorizon(): void {
-    this.act(acknowledgeHorizon(this.state), "Horizon acknowledged.");
+    this.perform(() => acknowledgeHorizon(this.state), "Horizon acknowledged.");
   }
 
   // The one-time welcome card (§5.1): acknowledging it — via its CTA or the
@@ -701,13 +720,13 @@ export class App {
   buyShelf(type: ShelfType): void {
     // The purchase stays in the catalog: the module lands in inventory and
     // placement happens from Grid & inventory, on the player's beat.
-    this.act(buyShelfModule(this.state, type), `${META[SHELF_MODULE[type]].name} purchased — it's in your inventory.`);
+    this.perform(() => buyShelfModule(this.state, type), `${META[SHELF_MODULE[type]].name} purchased — it's in your inventory.`);
   }
 
   // The first console long goal (ADR-0012): goal capacity, one beat at a
   // time from the Goals panel's dashed strip.
   buyGoalCapacityAction(): void {
-    this.act(buyGoalCapacity(this.state), `Goal capacity +${BALANCE.goalSlotsPerLongGoal} slots.`);
+    this.perform(() => buyGoalCapacity(this.state), `Goal capacity +${BALANCE.goalSlotsPerLongGoal} slots.`);
   }
 
   // Cell purchase (ADR-0013): armed from the toolbar's cell icon (or the
@@ -735,11 +754,11 @@ export class App {
     const module = this.state.modules.find((m) => m.id === id);
     if (!module) return;
     const nextLevel = module.level + 1;
-    this.act(upgradeModule(this.state, id), `${META[module.type].name} upgraded to level ${nextLevel}.`);
+    this.perform(() => upgradeModule(this.state, id), `${META[module.type].name} upgraded to level ${nextLevel}.`);
   }
 
   combinePair(id: string): void {
-    this.reportCombine(combine(this.state, id));
+    this.perform(() => combine(this.state, id), combineMessage, "Cannot combine.");
   }
 
   // Drag-to-combine: dropping a module onto a same-type, same-rarity twin.
@@ -748,29 +767,21 @@ export class App {
     const a = this.state.modules.find((m) => m.id === id);
     const b = this.state.modules.find((m) => m.id === partnerId);
     if (!a || !b) return;
-    const result = combine(this.state, id, partnerId);
-    if (result.ok) {
-      // combine() keeps the higher-level input (ties keep `id`); land it here.
-      const keeperId = b.level > a.level ? b.id : a.id;
-      const keeper = this.state.modules.find((m) => m.id === keeperId);
-      if (keeper) keeper.pos = pos;
-    }
-    this.reportCombine(result);
-  }
-
-  private reportCombine(result: ActionResult): void {
-    if (result.ok) {
-      this.announceUnlocks(
-        result.unlocked,
-        result.refund && result.refund > 0
-          ? `Combined into a stronger copy; ${result.refund} ν of the lower copy's upgrades refunded.`
-          : "Combined into a stronger copy.",
-      );
-      this.save();
-    } else {
-      this.say(result.reason ?? "Cannot combine.");
-    }
-    this.render();
+    this.perform(
+      () => {
+        const result = combine(this.state, id, partnerId);
+        if (result.ok) {
+          // combine() keeps the higher-level input (ties keep `id`); land it
+          // here.
+          const keeperId = b.level > a.level ? b.id : a.id;
+          const keeper = this.state.modules.find((m) => m.id === keeperId);
+          if (keeper) keeper.pos = pos;
+        }
+        return result;
+      },
+      combineMessage,
+      "Cannot combine.",
+    );
   }
 
   select(id: string | null): void {
@@ -872,16 +883,16 @@ export class App {
     }
     if (ui.buyingCell) {
       // The arm persists across buys: sweep several cells, then back out
-      // yourself via the banner's Cancel (or Esc). act() re-renders each
+      // yourself via the banner's Cancel (or Esc). perform() re-renders each
       // time, so the banner hint and hex prices step to the next scaler rung.
-      this.act(buyCell(state, pos), "Cell bought.");
+      this.perform(() => buyCell(state, pos), "Cell bought.");
       return;
     }
     if (ui.placing) {
       const module = state.modules.find((m) => m.id === ui.placing);
       if (!module) return;
       const result = placeModule(state, module.id, pos);
-      if (this.act(result, `${META[module.type].name} placed.`)) {
+      if (this.perform(() => result, `${META[module.type].name} placed.`)) {
         ui.placing = null;
       }
       return;
@@ -896,52 +907,31 @@ export class App {
     const module = state.modules.find((m) => m.id === id);
     if (!module) return;
     this.ui.placing = null;
-    this.act(placeModule(state, id, pos), `${META[module.type].name} placed.`);
+    this.perform(() => placeModule(state, id, pos), `${META[module.type].name} placed.`);
   }
 
   returnToInventory(id: string): void {
-    this.act(returnModule(this.state, id), "Returned to inventory.");
+    this.perform(() => returnModule(this.state, id), "Returned to inventory.");
   }
 
   addNote(text: string): void {
-    const result = writeNote(this.state, text, Date.now());
-    if (result.ok) {
-      this.say("Noted.");
-      this.save();
-    } else {
-      this.say(result.reason ?? "Cannot capture a note right now.");
-    }
-    this.render();
+    this.perform(() => writeNote(this.state, text, Date.now()), "Noted.", "Cannot capture a note right now.");
   }
 
   // ── Habits (#5) ─────────────────────────────────────────────────────────
 
-  habitAction(
-    run: () => { ok: boolean; reason?: string },
-    success: string,
-  ): void {
-    const result = run();
-    if (result.ok) {
-      this.say(success);
-      this.save();
-    } else {
-      this.say(result.reason ?? "That habit action is unavailable.");
-    }
-    this.render();
-  }
-
   createHabitAction(name: string): void {
-    this.habitAction(() => createHabit(this.state, name), `${name.trim()} added to your habits.`);
+    this.perform(() => createHabit(this.state, name), `${name.trim()} added to your habits.`, "That habit action is unavailable.");
   }
 
   renameHabitAction(id: string, name: string): void {
     this.ui.editingHabitId = null;
-    this.habitAction(() => renameHabit(this.state, id, name), "Habit renamed.");
+    this.perform(() => renameHabit(this.state, id, name), "Habit renamed.", "That habit action is unavailable.");
   }
 
   archiveHabitAction(id: string): void {
     const habit = this.state.habits.find((h) => h.id === id);
-    this.habitAction(() => archiveHabit(this.state, id), `${habit?.name ?? "Habit"} archived.`);
+    this.perform(() => archiveHabit(this.state, id), `${habit?.name ?? "Habit"} archived.`, "That habit action is unavailable.");
   }
 
   selectHabitAction(id: string | null): void {
@@ -950,9 +940,10 @@ export class App {
     const togglingOff = id !== null && this.state.activeHabitId === id;
     const target = togglingOff ? null : id;
     const habit = this.state.habits.find((h) => h.id === target);
-    this.habitAction(
+    this.perform(
       () => selectHabit(this.state, target),
       togglingOff ? "No habit selected." : habit ? `${habit.name} selected.` : "No habit selected.",
+      "That habit action is unavailable.",
     );
   }
 
@@ -963,63 +954,53 @@ export class App {
       this.render();
       return;
     }
-    const result = addPracticeLog(this.state, habit.id, minutes, Date.now());
-    if (result.ok) {
-      const goalNote =
-        result.completions && result.completions > 0
-          ? ` A goal completed.`
-          : "";
-      this.announceUnlocks(result.unlocked, `Logged ${minutes} min of ${habit.name}.${goalNote}`);
-      this.save();
-    } else {
-      this.say(result.reason ?? "Could not log practice.");
-    }
-    this.render();
+    this.perform(
+      () => addPracticeLog(this.state, habit.id, minutes, Date.now()),
+      (result) => {
+        const goalNote =
+          result.completions && result.completions > 0
+            ? ` A goal completed.`
+            : "";
+        return `Logged ${minutes} min of ${habit.name}.${goalNote}`;
+      },
+      "Could not log practice.",
+    );
   }
 
   // ── Goals (#6) ──────────────────────────────────────────────────────────
 
   createGoalAction(habitId: string | null, minutes: number, schedule: "once" | "daily" | "weekly"): void {
-    const result = createGoal(this.state, { habitId, minutes, schedule, now: Date.now() });
-    if (result.ok) {
-      this.save();
-      this.say("Goal added.");
-    } else {
-      this.say(result.reason ?? "Could not create the goal.");
-    }
-    this.render();
+    this.perform(() => createGoal(this.state, { habitId, minutes, schedule, now: Date.now() }), "Goal added.", "Could not create the goal.");
   }
 
   deleteGoalAction(id: string): void {
-    const result = deleteGoal(this.state, id);
-    this.say(result.ok ? "Goal removed." : result.reason ?? "Could not remove the goal.");
-    if (result.ok) this.save();
-    this.render();
+    this.perform(() => deleteGoal(this.state, id), "Goal removed.", "Could not remove the goal.");
   }
 
   chooseCandidate(offerId: string, candidateId: string): void {
     const offer = this.state.bankedRolls.find((o) => o.id === offerId);
     const candidate = offer?.candidates.find((c) => c.id === candidateId);
     if (!candidate) return;
-    const result = chooseRoll(this.state, offerId, candidateId);
-    if (!result.ok) {
-      this.say(result.reason ?? "That roll cannot be taken.");
-      this.render();
-      return;
-    }
-    const added = this.state.modules[this.state.modules.length - 1]!;
-    this.ui.modal = null;
-    this.ui.managing = true;
-    this.ui.reshape = null;
-    this.ui.selected = added.id;
-    this.ui.placing = added.id;
-    const more = this.state.bankedRolls.length > 0 ? ` ${this.state.bankedRolls.length} more choice${this.state.bankedRolls.length === 1 ? "" : "s"} wait in the Forge.` : "";
-    this.announceUnlocks(
-      result.unlocked,
-      `${META[candidate.type].name} added — pick a cell.${more}`,
+    this.perform(
+      () => {
+        const result = chooseRoll(this.state, offerId, candidateId);
+        if (result.ok) {
+          const added = this.state.modules[this.state.modules.length - 1]!;
+          this.ui.modal = null;
+          this.ui.managing = true;
+          this.ui.reshape = null;
+          this.ui.selected = added.id;
+          this.ui.placing = added.id;
+        }
+        return result;
+      },
+      () => {
+        const rolls = this.state.bankedRolls.length;
+        const more = rolls > 0 ? ` ${rolls} more choice${rolls === 1 ? "" : "s"} wait in the Forge.` : "";
+        return `${META[candidate.type].name} added — pick a cell.${more}`;
+      },
+      "That roll cannot be taken.",
     );
-    this.save();
-    this.render();
   }
   cancelPlacing(): void {
     const id = this.ui.placing;
@@ -1124,7 +1105,7 @@ export class App {
   applyReshape(): void {
     const next = this.stagedCells();
     if (!next) return;
-    if (this.act(reshapeCells(this.state, next), "Board reshaped. Modules keep their positions.")) {
+    if (this.perform(() => reshapeCells(this.state, next), "Board reshaped. Modules keep their positions.")) {
       this.ui.reshape = null;
     }
   }
