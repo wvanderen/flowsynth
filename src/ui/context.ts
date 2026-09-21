@@ -61,6 +61,18 @@ export interface UiIntents {
   upgrade(id: string): void;
   combinePair(id: string): void;
 
+  // ── console ────────────────────────────────────────────────────────────
+  startFlow(): void;
+  endFlow(): void;
+  pause(): void;
+  resume(): void;
+  ackWelcomeToCarrier(): void;
+  dismissWelcome(): void;
+  toggleChords(): void;
+  startManaging(): void;
+  stopManaging(): void;
+  cancelCellPurchase(): void;
+
   // ── voice ──────────────────────────────────────────────────────────────
   say(message: string): void;
   /** Region-local view state changed; run a render pass. */
@@ -78,12 +90,15 @@ export interface RenderContext {
   readonly memo: {
     /** The board's projected charged rate — the countdown basis (§7). */
     projected(): RateSnapshot;
+    /** The board's current snapshot at its own flow default. */
+    snapshot(): RateSnapshot;
   };
 }
 
 export function contextFor(app: App): RenderContext {
   const { state } = app;
   let projected: RateSnapshot | null = null;
+  let snapshot: RateSnapshot | null = null;
   return {
     state,
     ui: app.ui,
@@ -91,6 +106,7 @@ export function contextFor(app: App): RenderContext {
     exitPending: app.exitPending,
     memo: {
       projected: () => (projected ??= computeRates(state, true)),
+      snapshot: () => (snapshot ??= computeRates(state)),
     },
   };
 }
