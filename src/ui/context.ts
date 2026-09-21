@@ -56,6 +56,11 @@ export interface UiIntents {
   deleteGoalAction(id: string): void;
   buyGoalCapacityAction(): void;
 
+  // ── inspector (module panel) ───────────────────────────────────────────
+  select(id: string | null): void;
+  upgrade(id: string): void;
+  combinePair(id: string): void;
+
   // ── voice ──────────────────────────────────────────────────────────────
   say(message: string): void;
   /** Region-local view state changed; run a render pass. */
