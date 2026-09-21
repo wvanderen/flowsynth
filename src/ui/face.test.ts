@@ -54,6 +54,26 @@ describe("module face", () => {
     expect(face).not.toContain('data-key="category"');
   });
 
+  it("seats the pinned badge in a housing plate above the chassis, with three mounting bolts", () => {
+    const face = moduleFace({ type: "carrier", rarity: "common", readout: "+1", pinned: true });
+    // The badge paints after the chassis polygon — a marking under the plate
+    // would never read. The housing plate is part of the badge group.
+    const hex = face.indexOf('data-key="hex"');
+    const pin = face.indexOf('data-key="pin"');
+    const plate = face.indexOf('class="pin-plate"');
+    expect(pin).toBeGreaterThan(hex);
+    expect(plate).toBeGreaterThan(pin);
+    // Panel-mount hardware: three bolt circles at alternating corners.
+    const bolts = face.split('<g data-key="bolts" class="module-bolts">')[1]!.split("</g>")[0]!;
+    expect(bolts.match(/<circle/g)).toHaveLength(3);
+  });
+
+  it("carries no pin hardware without pinned — the treatment is carrier-only", () => {
+    const face = moduleFace({ type: "additive", rarity: "common", readout: "+1" });
+    expect(face).not.toContain('data-key="pin"');
+    expect(face).not.toContain('data-key="bolts"');
+  });
+
   it("keeps every hue var resolvable in the theme token table", () => {
     for (const type of MODULE_TYPES as ModuleType[]) {
       expect(defaultTheme.tokens, type).toHaveProperty(HUE_TOKEN_OF[type]);

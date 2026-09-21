@@ -13,6 +13,7 @@ import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport } fro
 import { recordMissed, recordTargetHit } from "../engine/records";
 import { give } from "../engine/fixtures";
 import { hex } from "../engine/hex";
+import { PINNED_SENTENCE } from "./render";
 import type { GameState } from "../engine/types";
 import type { SignalChannels } from "./signals";
 
@@ -163,6 +164,25 @@ describe("the board toolbar", () => {
     armed.click();
     expect(app.ui.buyingCell).toBe(false);
     expect(document.getElementById("buy-banner")).toBeNull();
+  });
+});
+
+describe("the pinned carrier", () => {
+  it("a drag attempt refuses visibly: face shake, canonical toast, no ghost, no move", () => {
+    app.startManaging();
+    const cell = document.querySelector('[data-cell="0,0"]')!;
+    cell.dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
+    expect(document.getElementById("status")!.textContent).toBe(PINNED_SENTENCE);
+    expect(document.querySelector(".drag-ghost")).toBeNull();
+    expect(cell.querySelector(".module-node")!.classList.contains("pin-refused")).toBe(true);
+    // Releasing must neither drop nor select: the gesture was a drag, not a click.
+    document.dispatchEvent(new MouseEvent("pointerup", { clientX: 130, clientY: 100 }));
+    cell.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const carrier = app.state.modules.find((m) => m.type === "carrier")!;
+    expect(carrier.pos).toEqual(hex(0, 0));
+    expect(app.ui.selected).toBeNull();
+    expect(document.querySelector(".drag-ghost")).toBeNull();
   });
 });
 
