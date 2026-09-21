@@ -44,6 +44,18 @@ export interface UiIntents {
   // ── status monitor ─────────────────────────────────────────────────────
   acknowledgeHorizon(): void;
 
+  // ── focus-app panels ───────────────────────────────────────────────────
+  openApp(app: import("../engine/apps").FocusApp): void;
+  createHabitAction(name: string): void;
+  renameHabitAction(id: string, name: string): void;
+  archiveHabitAction(id: string): void;
+  selectHabitAction(id: string | null): void;
+  logPracticeAction(minutes: number): void;
+  addNote(text: string): void;
+  createGoalAction(habitId: string | null, minutes: number, schedule: "once" | "daily" | "weekly"): void;
+  deleteGoalAction(id: string): void;
+  buyGoalCapacityAction(): void;
+
   // ── voice ──────────────────────────────────────────────────────────────
   say(message: string): void;
   /** Region-local view state changed; run a render pass. */

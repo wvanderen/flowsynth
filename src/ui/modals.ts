@@ -16,6 +16,7 @@ import { moduleFace } from "./face";
 import { faceReadout, forgeWording } from "./lexicon";
 import { honestyEventLine, outcomeLabel } from "./honesty";
 import { byId, escapeHtml } from "./dom";
+import { keyedRegion } from "./region";
 import { bindPlanControls, planControlsHtml } from "./plan";
 import { projectedCountdown, type RenderContext } from "./context";
 import type { ModalKind } from "./app";
@@ -112,12 +113,12 @@ export function renderModals(ctx: RenderContext): void {
   const def = MODAL_DEFS[kind];
   const renderKey = JSON.stringify([kind, ctx.ui.importError, ctx.state.session?.accounting.poolSeconds ?? 0, ctx.state.mode, def.identity(ctx)]);
   // Clock ticks must not replace a save textarea or steal dialog focus.
-  if (!backdrop.hidden && content.dataset.renderKey === renderKey) return;
-  backdrop.hidden = false;
-  content.dataset.renderKey = renderKey;
-  def.render(ctx, content);
-  const firstButton = content.querySelector("button:not([disabled])");
-  (firstButton as HTMLElement | null)?.focus();
+  keyedRegion(content, renderKey, () => {
+    backdrop.hidden = false;
+    def.render(ctx, content);
+    const firstButton = content.querySelector("button:not([disabled])");
+    (firstButton as HTMLElement | null)?.focus();
+  });
 }
 
 function modalTop(label: string): string {

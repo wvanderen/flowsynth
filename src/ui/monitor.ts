@@ -10,6 +10,7 @@ import { achievementBoostOf } from "../engine/achievements";
 import { BALANCE } from "../engine/constants";
 import type { RateSnapshot } from "../engine/types";
 import { byId } from "./dom";
+import { keyedRegion } from "./region";
 import { moduleIcon } from "./icons";
 import { formatCountdown, formatNumber } from "./format";
 import type { RenderContext } from "./context";
@@ -104,13 +105,12 @@ export function renderStatusMonitor(ctx: RenderContext): void {
   // and buttons survive clock ticks.
   const achieving = achievementBoostOf(state) > 1;
   const key = `${past ? "past" : "under"}:${state.horizonAcknowledged ? "acked" : "open"}:${achieving ? "ach" : "plain"}`;
-  if (host.dataset.renderKey !== key) {
-    host.dataset.renderKey = key;
+  keyedRegion(host, key, () => {
     host.innerHTML = `
       <div class="monitor-top">${formulaChipHtml(achieving)}</div>
       ${accumulatorHtml(ctx, past)}`;
     byId("prestige-button")?.addEventListener("click", () => ctx.intents.acknowledgeHorizon());
-  }
+  });
   updateMonitorLive(ctx, past);
 }
 
