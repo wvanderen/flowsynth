@@ -88,10 +88,10 @@ export interface FaceSpec {
 }
 
 // The Carrier's panel-mount hardware (ADR-0016, issue #94): the pinned badge
-// is a white lock marking seated in an engraved housing plate at the face's
-// top center, right above the engraved level, and three bolt circles mount
-// the chassis at alternating corners, skipping the lock's corner. Exact
-// vertex math is prototype tuning; the stylesheet paints the registers.
+// is a bare white lock marking — no housing plate — at the face's top center,
+// right above the engraved level, and three bolt circles mount the chassis at
+// alternating corners, skipping the lock's corner. Exact vertex math is
+// prototype tuning; the stylesheet paints the registers.
 const PIN_BADGE_AT: [number, number] = [0, -48];
 const PIN_BOLT_CORNERS = [0, 2, 4];
 const PIN_BOLT_SEAT = 57.5;

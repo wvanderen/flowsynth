@@ -906,9 +906,9 @@ body.managing .manage-banner { display: flex; }
 .config-label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 
 /* Module pin (issue #94): the Carrier is granted and pinned — it never moves.
-   The badge is a white lock marking (the carrier's neutral register) seated
-   in an engraved housing plate above the engraved level, and three bolt
-   circles mount the chassis — hardware, never a hue. */
+   The badge is a bare white lock marking (the carrier's neutral register)
+   above the engraved level, and three bolt circles mount the chassis —
+   hardware, never a hue. */
 .module-pin { stroke: var(--hue-carrier); fill: none; stroke-width: 1.8; stroke-linecap: round; }
 .module-bolts circle { fill: var(--panel-deep); stroke: var(--line); stroke-width: 1.2; }
 .module-node .module-pin { cursor: help; }
