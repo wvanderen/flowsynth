@@ -910,7 +910,7 @@ body.managing .manage-banner { display: flex; }
    in an engraved housing plate above the engraved level, and three bolt
    circles mount the chassis — hardware, never a hue. */
 .module-pin { stroke: var(--hue-carrier); fill: none; stroke-width: 1.8; stroke-linecap: round; }
-.module-pin .pin-plate, .module-bolts circle { fill: var(--panel-deep); stroke: var(--line); stroke-width: 1.2; }
+.module-bolts circle { fill: var(--panel-deep); stroke: var(--line); stroke-width: 1.2; }
 .module-node .module-pin { cursor: help; }
 
 /* A drag attempt on the pinned Carrier refuses visibly: the face shakes
