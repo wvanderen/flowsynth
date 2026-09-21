@@ -1052,14 +1052,16 @@ body.managing .manage-banner { display: flex; }
 .mode-tab.active { background: var(--accent-faint); color: var(--accent); font-weight: 600; }
 .mode-pane { display: grid; gap: 8px; min-height: 120px; align-content: start; }
 .mode-explain { font-size: 12.5px; color: var(--muted); padding: 4px 2px; }
-/* The prompt's sticky footer band: Back, the live summary, and the Begin
-   CTA — full-bleed against the modal's padding, top-bordered, panel-soft.
-   Sticky bottom keeps Back and Begin in reach no matter how long the kind
-   pane grows; at full scroll it rests in its natural full-bleed slot. */
+/* The enter modal splits into a scrolling body and a fixed footer band:
+   the body scrolls inside the modal's padding while Back, the live summary,
+   and the Begin CTA stay put beneath it — content never slides under the
+   band, and the band sits flush with the modal's bottom edge. */
+.modal:has(.footer-band) { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0; }
+.modal:has(.footer-band) #modal-content { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.enter-body { overflow-y: auto; }
 .footer-band {
-  position: sticky;
-  bottom: 0;
-  margin: 16px -26px -26px;
+  flex-shrink: 0;
+  margin: 16px -26px 0;
   padding: 14px 26px;
   border-top: 1px solid var(--line);
   background: var(--panel-soft);

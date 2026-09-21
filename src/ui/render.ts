@@ -2124,13 +2124,15 @@ function renderEnterModal(app: App, content: HTMLElement): void {
   }
   content.innerHTML = `
     ${modalTop("ENTER FLOW")}
-    <h2 id="modal-title">What are you practicing?</h2>
-    <div class="mode-tabs" role="group" aria-label="What kind of session is this?">
-      ${kindTab("habit", "A habit")}${kindTab("new", "New habit")}${kindTab("unstructured", "Unstructured")}
+    <div class="enter-body">
+      <h2 id="modal-title">What are you practicing?</h2>
+      <div class="mode-tabs" role="group" aria-label="What kind of session is this?">
+        ${kindTab("habit", "A habit")}${kindTab("new", "New habit")}${kindTab("unstructured", "Unstructured")}
+      </div>
+      <div class="mode-pane">${pane}</div>
+      ${state.sessionsCompleted === 0 ? `<p class="enter-steer small muted">A first try can be short — five minutes or so, then exit and see what the session banked.</p>` : ""}
+      ${planControlsHtml(app)}
     </div>
-    <div class="mode-pane">${pane}</div>
-    ${state.sessionsCompleted === 0 ? `<p class="enter-steer small muted">A first try can be short — five minutes or so, then exit and see what the session banked.</p>` : ""}
-    ${planControlsHtml(app)}
     <div class="footer-band">
       <button id="enter-cancel" class="small">Back</button>
       <span class="cta-summary">${foot.summary}</span>
