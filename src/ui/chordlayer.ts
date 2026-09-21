@@ -4,7 +4,7 @@
 // decides which modules participate in drawable chord terms, where pair links
 // span, and the hull that wraps each named chord's voices.
 import type { ChordPairTerm, Hex, NamedChordTerm } from "../engine/types";
-import { hexCorner } from "./face";
+import { hexApothem, hexCorner } from "./face";
 
 export type Point = readonly [number, number];
 
@@ -128,7 +128,7 @@ export function chordOverlay(opts: {
   // Pair links bridge the seam between neighboring faces, trimmed to the
   // chassis edge-to-edge (flat-to-flat apothem plus a hair), so they read in
   // the same wiring register the charge leads render in.
-  const trim = (radius * Math.sqrt(3)) / 2 + 1;
+  const trim = hexApothem(radius) + 1;
   const links: ChordLink[] = [];
   const participants = new Set<string>();
   for (const pair of pairs) {

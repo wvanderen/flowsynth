@@ -39,7 +39,3 @@ export function writeNote(state: GameState, text: string, now: number = 0): { ok
   syncAchievements(state);
   return { ok: true };
 }
-
-export function sessionNoteCount(state: GameState): number {
-  return state.notes.filter((n) => n.sessionId === state.sessionIndex).length;
-}

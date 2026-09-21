@@ -21,8 +21,7 @@ import {
   type ActionResult,
 } from "../engine/actions";
 import { syncArete } from "../engine/accumulator";
-import { wholeNous } from "../engine/economy";
-import { adjacent, neighbors, sameHex } from "../engine/hex";
+import { adjacent, hexKey, neighbors, sameHex } from "../engine/hex";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
 import { formatClock } from "../engine/clock";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
@@ -1114,7 +1113,7 @@ export class App {
     }
     const next = this.stagedCells();
     if (!next) return { ok: false, message: "" };
-    const keys = new Set(next.map((c) => `${c.q},${c.r}`));
+    const keys = new Set(next.map(hexKey));
     if (keys.size !== next.length) return { ok: false, message: "Duplicate cells staged." };
     const probe = structuredClone(this.state);
     const result = reshapeCells(probe, next);
@@ -1240,10 +1239,6 @@ export class App {
     const minted = syncArete(this.state);
     this.say(minted > 0 ? "Dev: +100 ν. The accumulator filled — Arete minted." : "Dev: +100 ν.");
     this.render();
-  }
-
-  stats(): { nous: number } {
-    return { nous: wholeNous(this.state) };
   }
 
   frontierCells(): Hex[] {

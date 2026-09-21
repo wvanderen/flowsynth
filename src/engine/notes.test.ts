@@ -3,7 +3,7 @@ import { advance } from "./advance";
 import { endSession, startSession } from "./actions";
 import { fresh } from "./fixtures";
 import { createHabit, selectHabit } from "./habits";
-import { NOTE_BETWEEN_SESSIONS, sessionNoteCount, writeNote } from "./notes";
+import { NOTE_BETWEEN_SESSIONS, writeNote } from "./notes";
 import { deserialize, serialize } from "./save";
 
 describe("notes app", () => {
@@ -16,7 +16,7 @@ describe("notes app", () => {
     expect(writeNote(s, "   ").ok).toBe(false);
     startSession(s, 600);
     expect(writeNote(s, "first thought").ok).toBe(true);
-    expect(sessionNoteCount(s)).toBe(1);
+    expect(s.notes.filter((n) => n.sessionId === s.sessionIndex).length).toBe(1);
     expect(s.notes[1]!.atElapsed).toBe(0);
     s.mode = "paused";
     expect(writeNote(s, "paused thought").ok).toBe(true);
