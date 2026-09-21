@@ -41,6 +41,7 @@ import {
 import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
 import type { GameState, Hex, ShelfType } from "../engine/types";
 import { render } from "./render";
+import { resetEnterDraft } from "./modals";
 import { HISTORY_PAGE_ROWS, META } from "./meta";
 import { browserChannels, type SignalChannels } from "./signals";
 
@@ -64,18 +65,6 @@ export type ModalKind =
 // segmented control decides what kind of session this is before any
 // specifics — pick from the habits you have, name a brand-new one, or run
 // with no habit attached.
-export type EnterKind = "habit" | "new" | "unstructured";
-
-// The prompt's selection state, one clump: the kind tab that holds, the
-// habit the habit tab has picked, and the new-habit name as typed.
-export interface EnterSelection {
-  kind: EnterKind;
-  habitId: string | null;
-  newName: string;
-}
-
-export const freshEnterSelection = (): EnterSelection => ({ kind: "habit", habitId: null, newName: "" });
-
 export interface UiState {
   selected: string | null;
   // The focus app whose console popover is open, if any (ADR-0012).
@@ -87,17 +76,13 @@ export interface UiState {
   // frontier hex. The buy only lands when a frontier cell is clicked.
   buyingCell: boolean;
   modal: ModalKind;
-  importText: string;
   importError: string | null;
   // The plan the next session starts with (§6): null is open-ended — the
   // resting mode, nothing pushed. The launch apps are free (ADR-0019), so
   // even session one can be planned from here; the affordances stay
-  // visible but unpushed.
+  // visible but unpushed. Cross-surface: the console's clock previews it
+  // between sessions, so it lives here rather than in the enter modal.
   chosenTarget: number | null;
-  // The enter prompt's kind-first selection (issue #95). Light furniture —
-  // reset every time the prompt opens.
-  enter: EnterSelection;
-  showAcquired: boolean;
   editingHabitId: string | null;
   // The chord view (issue #62): display-only highlight of the board's chord
   // terms — chord voices stay lit, everything else dims, pair links and
@@ -170,11 +155,8 @@ export class App {
     reshape: null,
     buyingCell: false,
     modal: null,
-    importText: "",
     importError: null,
     chosenTarget: null,
-    enter: freshEnterSelection(),
-    showAcquired: false,
     editingHabitId: null,
     showChords: false,
     historyOpen: false,
@@ -433,6 +415,15 @@ export class App {
     window.addEventListener("focus", () => this.processReturn(Date.now()));
     window.addEventListener("beforeunload", () => this.save());
     window.setInterval(() => this.tick(), 100);
+    // Escape runs one state machine (see escape()); the modal backdrop is
+    // the shell's other dismissal gesture. Both absorbed from main.ts so
+    // nothing outside App writes UI state.
+    document.getElementById("modal")?.addEventListener("click", (event) => {
+      if (event.target === event.currentTarget) this.closeModal();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") this.escape();
+    });
     // A popover is light furniture: clicking anywhere outside the console's
     // app section dismisses it. The board never dims beneath it (ADR-0012).
     // The dismissal intent is captured on the section itself — the one node
@@ -582,7 +573,7 @@ export class App {
     }
     this.clearTransientUi();
     // The kind-first selection starts fresh every time the prompt opens.
-    this.ui.enter = freshEnterSelection();
+    resetEnterDraft();
     this.ui.modal = "enter";
     this.render();
   }
@@ -1173,7 +1164,6 @@ export class App {
 
   openModal(kind: ModalKind): void {
     this.ui.modal = kind;
-    if (kind === "import") this.ui.importText = "";
     this.render();
   }
 
@@ -1190,6 +1180,41 @@ export class App {
     this.ui.modal = null;
     this.ui.importError = null;
     this.render();
+  }
+
+  // The plan the next session starts with (§6): the one write gate for the
+  // chosen target — the enter modal's and the Time popover's affordances
+  // both fire it. Null is open-ended.
+  planTarget(target: number | null): void {
+    this.ui.chosenTarget = target;
+    this.render();
+  }
+
+  // Region-local view state changed (the enter draft, the catalog toggle):
+  // the one legitimate ask for a fresh render pass without a state write.
+  refreshView(): void {
+    this.render();
+  }
+
+  // One Escape state machine (absorbed from main.ts): modal → placing →
+  // armed cell buy → arranging → app popover → selection.
+  escape(): void {
+    if (this.ui.modal) {
+      this.closeModal();
+      return;
+    }
+    if (this.ui.placing) {
+      this.cancelPlacing();
+    } else if (this.ui.buyingCell) {
+      this.cancelCellPurchase();
+    } else if (this.managing) {
+      this.stopManaging();
+    } else if (this.ui.app) {
+      this.closeApp();
+    } else if (this.ui.selected) {
+      this.ui.selected = null;
+      this.render();
+    }
   }
 
   // Dev helpers (?dev=1): time-warp and fixtures for hands-on verification only.
