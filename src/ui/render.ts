@@ -111,6 +111,12 @@ function renderWelcome(app: App): void {
 
 /* ── Console (ADR-0012) ────────────────────────────── */
 
+// The unplanned shape's two words (§6): the clock slot only ever holds clock
+// text, so an unplanned plan wears a dash placeholder there, while captions
+// and the Time tile's compact plan name the mode itself.
+const CLOCK_PLACEHOLDER = "--:--";
+const OPEN_ENDED_WORD = "open-ended";
+
 // Session controls: the clock block plus the Enter/Exit main switch and the
 // pause control. The switch is the console's sole session gate — sessions
 // start and end through it — and the switch's vermillion is the one colored
@@ -137,8 +143,8 @@ function renderConsoleSession(app: App): void {
       host.dataset.renderKey = key;
       host.innerHTML = `
         <div class="console-clock">
-          <p class="session-clock mono">${planned ? formatClock(app.ui.chosenTarget!) : "--:--"}</p>
-          <p class="clock-caption">${planned ? "planned" : "open-ended"}</p>
+          <p class="session-clock mono">${planned ? formatClock(app.ui.chosenTarget!) : CLOCK_PLACEHOLDER}</p>
+          <p class="clock-caption">${planned ? "planned" : OPEN_ENDED_WORD}</p>
         </div>
         <div class="session-actions">
           <button class="main-switch idle" id="flow-switch" title="Enter flow — the board locks and runs itself">
@@ -213,13 +219,14 @@ function renderSessionStrip(running: boolean, elapsed = 0, target: number | null
 }
 
 // The running-session caption shared by the console clock block and the Time
-// app's popover (§2.2).
+// app's popover (§2.2). Every running state names itself — paused,
+// open-ended, target reached, or what remains of the plan.
 function sessionCaption(elapsed: number, target: number | null, paused: boolean): string {
   const reached = target !== null && elapsed >= target;
   return paused
     ? "paused"
     : target === null
-      ? ""
+      ? OPEN_ENDED_WORD
       : reached
         ? "target reached"
         : `of ${formatClock(target)}`;
@@ -325,7 +332,7 @@ function renderConsoleApps(app: App): void {
 
 // The Time tile's compact plan: the clock, or the mode word for open-ended.
 function planShort(chosenTarget: number | null): string {
-  return chosenTarget === null ? "open-ended" : formatClock(chosenTarget);
+  return chosenTarget === null ? OPEN_ENDED_WORD : formatClock(chosenTarget);
 }
 
 const TROPHY_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">

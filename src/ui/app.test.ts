@@ -316,6 +316,8 @@ describe("the session clock", () => {
     advance(s, 90);
     app.render();
     expect(document.getElementById("session-clock")!.textContent).toBe("01:30");
+    // Every running state names itself: open-ended's caption says so.
+    expect(document.getElementById("session-caption")!.textContent).toBe("open-ended");
     expect(document.getElementById("session-strip")!.classList.contains("pulse")).toBe(true);
     expect(document.getElementById("session-strip-fill")!.style.width).toBe("100%");
   });
