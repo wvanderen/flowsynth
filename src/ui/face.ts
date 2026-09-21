@@ -87,11 +87,28 @@ export interface FaceSpec {
   pinned?: boolean;
 }
 
+// The Carrier's panel-mount hardware (ADR-0016, issue #94): the pinned badge
+// is a bare white lock marking — no housing plate — at the face's top center,
+// right above the engraved level, and three bolt circles mount the chassis at
+// alternating corners, skipping the lock's corner. Exact vertex math is
+// prototype tuning; the stylesheet paints the registers.
+const PIN_BADGE_AT: [number, number] = [0, -48];
+const PIN_BOLT_CORNERS = [0, 2, 4];
+const PIN_BOLT_SEAT = 57.5;
+const PIN_BOLT_RADIUS = 2.4;
+
 export function moduleFace(spec: FaceSpec): string {
   const hue = `var(--${HUE_TOKEN_OF[spec.type]})`;
   const rings = Array.from({ length: RING_COUNT[spec.rarity] }, (_, i) => `<polygon points="${hexPoints(RING_RADII[i]!)}"/>`).join("");
+  // The pinned badge paints after the chassis (a marking under the plate
+  // would never read), wearing the carrier's white — the neutral register.
+  // The marking is a bare padlock: shackle arc over a rounded body.
   const pin = spec.pinned
-    ? `<title>The Carrier — granted at the origin. Pinned: it never moves and never leaves the board.</title><g data-key="pin" class="module-pin" transform="translate(35,-26)"><circle cx="0" cy="-3.4" r="3.1"/><path d="M0-.4v7.4"/></g>`
+    ? `<g data-key="pin" class="module-pin" transform="translate(${PIN_BADGE_AT[0]},${PIN_BADGE_AT[1]})"><title>The Carrier — granted at the origin. Pinned: it never moves and never leaves the board.</title><path d="M-2.7-.5v-2.4a2.7 2.7 0 0 1 5.4 0v2.4"/><rect x="-4.4" y="-0.5" width="8.8" height="6.8" rx="1.5"/></g>
+    <g data-key="bolts" class="module-bolts">${PIN_BOLT_CORNERS.map((corner) => {
+      const [x, y] = hexCorner(PIN_BOLT_SEAT, corner);
+      return `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${PIN_BOLT_RADIUS}"/>`;
+    }).join("")}</g>`
     : "";
   // The charge light (§8, #41): the chassis fill takes the charge hue at an
   // inline fill-opacity, and the rail takes an inline stroke-opacity — both
@@ -100,10 +117,10 @@ export function moduleFace(spec: FaceSpec): string {
   const glow = spec.chargeGlow ?? 0;
   const hexStyle = glow > 0 ? ` style="fill-opacity:${(CHARGED_FILL_MIN + CHARGED_FILL_SPAN * glow).toFixed(3)}"` : "";
   const railStyle = glow > 0 ? ` style="stroke-opacity:${(RAIL_CHARGED_FLOOR + RAIL_CHARGED_SPAN * glow).toFixed(3)}"` : "";
-  return `${pin}
-    <polygon data-key="hex" class="hex${spec.hexClass ? ` ${spec.hexClass}` : ""}" points="${hexPoints(HEX_RADIUS)}"${hexStyle}/>${spec.under ?? ""}
+  return `<polygon data-key="hex" class="hex${spec.hexClass ? ` ${spec.hexClass}` : ""}" points="${hexPoints(HEX_RADIUS)}"${hexStyle}/>${spec.under ?? ""}
     <g data-key="rings" class="face-rings">${rings}</g>
     <path data-key="rail" class="face-rail" d="M-39 -19V19" stroke="${hue}"${railStyle}/>
+    ${pin}
     ${spec.level !== undefined ? `<text data-key="level" y="${FACE_LEVEL_Y}" text-anchor="middle" class="face-level">LV ${spec.level}</text>` : ""}
     <text data-key="name" y="${FACE_NAME_Y}" text-anchor="middle" class="face-name">${META[spec.type].short.toUpperCase()}</text>
     <g data-key="signature" class="face-signature" transform="scale(${FACE_GLYPH_SCALE})" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>

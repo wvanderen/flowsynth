@@ -761,10 +761,28 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
   });
 }
 
+// The canonical pinned sentence (#94): the inspector's note and the drag
+// refusal's toast say exactly the same thing, once worded.
+export const PINNED_SENTENCE = "Pinned — it never moves, combines, or leaves.";
+
+// The pinned face's visible refusal: a short shake on the module node (which
+// only grid cells carry — the Carrier can never reach inventory). The
+// translate property keeps the arranging lift intact, and the class restarts
+// cleanly on repeat attempts.
+function refusePinnedDrag(element: Element): void {
+  const node = element.querySelector(".module-node");
+  if (!node) return;
+  node.classList.remove("pin-refused");
+  node.getBoundingClientRect(); // flush style so re-adding restarts the shake
+  node.classList.add("pin-refused");
+  node.addEventListener("animationend", () => node.classList.remove("pin-refused"), { once: true });
+}
+
 // Shared pointer-drag binding for grid modules and inventory items: shows a
 // ghost after a small threshold, then drops onto a cell (place, swap, or
 // combine with a matching twin) or the inventory zone (return). Click-
-// placement stays available without dragging.
+// placement stays available without dragging. The pinned Carrier refuses the
+// drag at the threshold — a face shake plus the canonical sentence.
 function bindPointerDrag(app: App, element: Element, moduleId: string | (() => string | null)): void {
   element.addEventListener("pointerdown", (baseEvent: Event) => {
     const event = baseEvent as PointerEvent;
@@ -772,7 +790,6 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
     const id = typeof moduleId === "function" ? moduleId() : moduleId;
     if (!id) return;
     const dragModule = app.state.modules.find((m) => m.id === id) ?? null;
-    if (dragModule && isCarrier(dragModule)) return;
     const startX = event.clientX;
     const startY = event.clientY;
     let moved = false;
@@ -814,8 +831,16 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
       document.addEventListener("click", suppress, { capture: true, once: true });
       setTimeout(() => document.removeEventListener("click", suppress, true), 0);
     };
+    let refused = false;
     const move = (ev: PointerEvent) => {
-      if (!moved && Math.hypot(ev.clientX - startX, ev.clientY - startY) > DRAG_THRESHOLD_PX) {
+      if (!moved && !refused && Math.hypot(ev.clientX - startX, ev.clientY - startY) > DRAG_THRESHOLD_PX) {
+        if (dragModule && isCarrier(dragModule)) {
+          refused = true;
+          app.say(PINNED_SENTENCE);
+          refusePinnedDrag(element);
+          suppressNextClick();
+          return;
+        }
         moved = true;
         const module = app.state.modules.find((m) => m.id === id);
         // The ghost is the module's own hex tile — what you carry is what you
@@ -1058,7 +1083,7 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       </button>
       ${upgrade ? `<p class="countdown mono" data-live="countdown">${upgradeCountdown(app, cost) ?? ""}</p>` : ""}
       ${!upgrade ? `<p class="small muted">Upgrades happen between sessions.</p>` : ""}
-      ${carrier ? `<p class="small muted">Pinned — it never moves, combines, or leaves.</p>` : ""}
+      ${carrier ? `<p class="small muted">${PINNED_SENTENCE}</p>` : ""}
       ${upgrade && !carrier && partner && module.rarity !== "rare"
         ? `<button id="combine-pair">Combine with its ${RARITY_LABEL[module.rarity]} pair</button>`
         : ""}

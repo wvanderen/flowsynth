@@ -905,10 +905,23 @@ body.managing .manage-banner { display: flex; }
 
 .config-label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 
-/* Module pin: the Carrier is granted and pinned — it never moves. The pin
-   is a neutral instrument marking, never a hue. */
-.module-pin { stroke: var(--muted); fill: var(--panel-deep); stroke-width: 1.4; stroke-linecap: round; }
+/* Module pin (issue #94): the Carrier is granted and pinned — it never moves.
+   The badge is a bare white lock marking (the carrier's neutral register)
+   above the engraved level, and three bolt circles mount the chassis —
+   hardware, never a hue. */
+.module-pin { stroke: var(--hue-carrier); fill: none; stroke-width: 1.8; stroke-linecap: round; }
+.module-bolts circle { fill: var(--panel-deep); stroke: var(--line); stroke-width: 1.2; }
 .module-node .module-pin { cursor: help; }
+
+/* A drag attempt on the pinned Carrier refuses visibly: the face shakes
+   (translate composes with the arranging lift) while the status names why. */
+.module-node.pin-refused { animation: pin-refuse 0.42s ease-out; }
+@keyframes pin-refuse {
+  20% { translate: -3.5px 0; }
+  45% { translate: 3px 0; }
+  70% { translate: -2px 0; }
+  90% { translate: 1.5px 0; }
+}
 
 /* Drop targets: swap (accent) versus combine with a matching twin (amber). */
 .hex.combine-target { stroke: var(--forge-glow); stroke-width: 2.5; fill: var(--forge-faint); }

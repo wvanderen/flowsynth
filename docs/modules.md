@@ -6,7 +6,7 @@ new types and game-design concepts — the engine keys and records live in code
 design thinking lives. The roster table reflects the code as of the last
 update; when a type lands, update the table in the same change.
 
-Last updated: 2026-09-18
+Last updated: 2026-09-21
 
 ## Roster
 
@@ -46,6 +46,10 @@ empowerment × achievementBoost`.
 The granted origin (ADR-0013): common, pinned at (0,0), immovable,
 unsellable. Base term `carrierRate` = 0.1/s — the whole formula in session
 one. Sets every cell's pitch globally by distance.
+
+The face marks the pin with panel hardware (ADR-0016): a bare white lock
+top-center above the engraved level and three chassis bolts at alternating
+corners; a drag attempt refuses with a shake and the pinned sentence.
 
 ### Additive Synthesizer (`additive`)
 The plain harmonic term: `additiveRate` = 0.05/s × amplitude. On the shelf so
