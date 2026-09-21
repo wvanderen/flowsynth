@@ -2067,36 +2067,60 @@ function renderHonestyModal(app: App, content: HTMLElement): void {
 // §6–7) — preset chips + free 1–90 entry, open-ended resting, session-one's
 // steer riding above — and the renderKey fix: the modal's key rides the plan
 // and the selection state, so picks re-render immediately.
-function enterFootprint(app: App): { armed: boolean; summary: string; cta: string } {
+// The one resolution of the selection — the only place that switches on the
+// kind. The kind's requirement (a habit picked, a name typed, or nothing for
+// unstructured) decides whether the session may start, and resolves its
+// target: the picked habit's id, or the trimmed new-habit name.
+function enterTarget(app: App): { armed: boolean; habitId: string | null; newName: string } {
   const { ui, state } = app;
-  const duration = ui.chosenTarget === null ? "open-ended" : `${Math.round(ui.chosenTarget / 60)} min`;
-  const name = ui.enter.newName.trim();
-  const habit = ui.enter.habitId === null ? undefined : state.habits.find((h) => h.id === ui.enter.habitId && !h.archived);
   if (ui.enter.kind === "habit") {
-    if (!habit) return { armed: false, summary: "no habit picked yet", cta: "Select a habit" };
-    return { armed: true, summary: `${habit.name} · ${duration}`, cta: `Begin — ${habit.name} · ${duration}` };
+    const habit = ui.enter.habitId === null ? undefined : state.habits.find((h) => h.id === ui.enter.habitId && !h.archived);
+    return { armed: habit !== undefined, habitId: habit?.id ?? null, newName: "" };
   }
   if (ui.enter.kind === "new") {
-    if (!name) return { armed: false, summary: "name it to arm the start", cta: "Name your new habit" };
-    return { armed: true, summary: `${name} · ${duration}`, cta: `Begin — ${name} · ${duration}` };
+    const newName = ui.enter.newName.trim();
+    return { armed: newName !== "", habitId: null, newName };
   }
-  return { armed: true, summary: `unstructured · ${duration}`, cta: `Begin — unstructured · ${duration}` };
+  return { armed: true, habitId: null, newName: "" };
+}
+
+interface EnterFootprint {
+  armed: boolean;
+  summary: string;
+  cta: string;
+}
+
+// The footer band's current content, read off the shared resolution.
+function enterFootprint(app: App): EnterFootprint {
+  const duration = app.ui.chosenTarget === null ? "open-ended" : `${Math.round(app.ui.chosenTarget / 60)} min`;
+  const target = enterTarget(app);
+  if (!target.armed) {
+    return app.ui.enter.kind === "new"
+      ? { armed: false, summary: "name it to arm the start", cta: "Name your new habit" }
+      : { armed: false, summary: "no habit picked yet", cta: "Select a habit" };
+  }
+  const what = target.newName
+    ? target.newName
+    : target.habitId === null
+      ? "unstructured"
+      : (app.state.habits.find((h) => h.id === target.habitId)?.name ?? "unstructured");
+  return { armed: true, summary: `${what} · ${duration}`, cta: `Begin — ${what} · ${duration}` };
 }
 
 // The footprint's summary and CTA carry user-typed names; anything these
 // strings feed as markup must escape them (the in-place footer refresh sets
 // textContent, which must stay raw).
-const escapeFoot = (foot: { armed: boolean; summary: string; cta: string }) => ({
-  ...foot,
-  summary: escapeHtml(foot.summary),
-  cta: escapeHtml(foot.cta),
+const escapeFootprint = (footprint: EnterFootprint): EnterFootprint => ({
+  ...footprint,
+  summary: escapeHtml(footprint.summary),
+  cta: escapeHtml(footprint.cta),
 });
 
 function renderEnterModal(app: App, content: HTMLElement): void {
   const { state, ui } = app;
   const enter = ui.enter;
   const habits = state.habits.filter((h) => !h.archived);
-  const foot = escapeFoot(enterFootprint(app));
+  const footprint = escapeFootprint(enterFootprint(app));
   const kindTab = (kind: EnterKind, label: string) =>
     `<button class="mode-tab${enter.kind === kind ? " active" : ""}" data-enter-kind="${kind}" aria-pressed="${enter.kind === kind}">${label}</button>`;
   let pane = "";
@@ -2107,6 +2131,7 @@ function renderEnterModal(app: App, content: HTMLElement): void {
       ${habits
         .map(
           (habit) => `<button class="enter-choice${enter.habitId === habit.id ? " selected" : ""}" data-enter-habit="${habit.id}" aria-pressed="${enter.habitId === habit.id}">
+        <span class="dot"></span>
         <span class="enter-choice-name">${escapeHtml(habit.name)}</span>
         <small class="mono">${formatDuration(habit.seconds)}</small>
       </button>`,
@@ -2135,14 +2160,18 @@ function renderEnterModal(app: App, content: HTMLElement): void {
     </div>
     <div class="footer-band">
       <button id="enter-cancel" class="small">Back</button>
-      <span class="cta-summary">${foot.summary}</span>
-      <button id="enter-begin" class="primary" ${foot.armed ? "" : "disabled"}>${foot.cta}</button>
+      <span class="cta-summary">${footprint.summary}</span>
+      <button id="enter-begin" class="primary" ${footprint.armed ? "" : "disabled"}>${footprint.cta}</button>
     </div>`;
   bindPlanControls(app, content);
+  // The same shared resolution arms the action: a typed name rides the
+  // new-habit path; otherwise the target is the picked habit's id, with null
+  // meaning unstructured rides beginFlow directly.
   const begin = () => {
-    if (enter.kind === "habit" && enter.habitId !== null) app.beginFlow(enter.habitId);
-    else if (enter.kind === "new") app.beginFlowNewHabit(enter.newName);
-    else if (enter.kind === "unstructured") app.beginFlow(null);
+    const target = enterTarget(app);
+    if (!target.armed) return;
+    if (target.newName) app.beginFlowNewHabit(target.newName);
+    else app.beginFlow(target.habitId);
   };
   content.querySelectorAll<HTMLButtonElement>("[data-enter-kind]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -2161,7 +2190,7 @@ function renderEnterModal(app: App, content: HTMLElement): void {
   // the console sits in upgrade mode): the name rides ui state and the
   // footer refreshes in place, so the caret keeps its place while the CTA
   // arms. The next interaction that does render rebuilds with the name kept.
-  const refreshFoot = () => {
+  const refreshFootprint = () => {
     const next = enterFootprint(app);
     const summary = content.querySelector(".cta-summary");
     const beginButton = byId("enter-begin");
@@ -2173,12 +2202,12 @@ function renderEnterModal(app: App, content: HTMLElement): void {
   };
   nameInput?.addEventListener("input", () => {
     enter.newName = nameInput.value;
-    refreshFoot();
+    refreshFootprint();
   });
   nameInput?.addEventListener("keydown", (event) => {
     if ((event as KeyboardEvent).key === "Enter") {
       event.preventDefault();
-      if (enterFootprint(app).armed) begin();
+      if (enterTarget(app).armed) begin();
     }
   });
   byId("enter-begin")?.addEventListener("click", begin);
