@@ -20,7 +20,7 @@ import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals"
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
 import { isCarrier } from "../engine/state";
 import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NoteEntry, RateSnapshot } from "../engine/types";
-import type { App } from "./app";
+import type { App, EnterKind } from "./app";
 import { appIcon } from "./icons";
 import { HEX_RADIUS, hexPoints, moduleFace } from "./face";
 import { chargeGlow, chargeLeads } from "./leads";
@@ -1740,7 +1740,12 @@ function renderModal(app: App): void {
               // Quantized progress: an open page refreshes when a bar visibly
               // moves, not on every clock tick.
               ? achProgressKey(app)
-              : null;
+              // The enter prompt's own selection state (issue #95): the plan
+              // and the kind-first picks re-render the modal the moment they
+              // change — chips highlight on pick, never a stale footer.
+              : kind === "enter"
+                ? [app.ui.chosenTarget, app.ui.enter]
+                : null;
   const renderKey = JSON.stringify([kind, app.ui.importError, app.state.session?.accounting.poolSeconds ?? 0, app.state.mode, extra]);
   // Clock ticks must not replace a save textarea or steal dialog focus.
   if (!backdrop.hidden && content.dataset.renderKey === renderKey) return;
@@ -2053,57 +2058,128 @@ function renderHonestyModal(app: App, content: HTMLElement): void {
 
 /* ── Session modals (§5.5, §5.7) ───────────────────── */
 
-// The enter prompt, ahead of a session with no habit selected: the habit
-// ask, the create field, and unstructured practice — nothing else. With a
-// habit already selected the console switch starts directly and this prompt
-// never opens. It carries the duration affordances from the very first
-// start (ADR-0019) — visible but unpushed, the resting plan open-ended —
-// and session one's steered suggestion: a short try, then exit.
+// The enter prompt's decided shape (issue #92, built by #95): selection is
+// kind-first — a segmented `A habit | New habit | Unstructured` control, a
+// pane serving the picked kind, and a sticky footer band (Back / live
+// summary / `Begin — {kind} · {duration}`) whose CTA arms per the kind's
+// requirement: a habit picked, a name typed, or always for unstructured. It
+// carries the duration affordances from the very first start (ADR-0019,
+// §6–7) — preset chips + free 1–90 entry, open-ended resting, session-one's
+// steer riding above — and the renderKey fix: the modal's key rides the plan
+// and the selection state, so picks re-render immediately.
+function enterFootprint(app: App): { armed: boolean; summary: string; cta: string } {
+  const { ui, state } = app;
+  const duration = ui.chosenTarget === null ? "open-ended" : `${Math.round(ui.chosenTarget / 60)} min`;
+  const name = ui.enter.newName.trim();
+  const habit = ui.enter.habitId === null ? undefined : state.habits.find((h) => h.id === ui.enter.habitId && !h.archived);
+  if (ui.enter.kind === "habit") {
+    if (!habit) return { armed: false, summary: "no habit picked yet", cta: "Select a habit" };
+    return { armed: true, summary: `${habit.name} · ${duration}`, cta: `Begin — ${habit.name} · ${duration}` };
+  }
+  if (ui.enter.kind === "new") {
+    if (!name) return { armed: false, summary: "name it to arm the start", cta: "Name your new habit" };
+    return { armed: true, summary: `${name} · ${duration}`, cta: `Begin — ${name} · ${duration}` };
+  }
+  return { armed: true, summary: `unstructured · ${duration}`, cta: `Begin — unstructured · ${duration}` };
+}
+
+// The footprint's summary and CTA carry user-typed names; anything these
+// strings feed as markup must escape them (the in-place footer refresh sets
+// textContent, which must stay raw).
+const escapeFoot = (foot: { armed: boolean; summary: string; cta: string }) => ({
+  ...foot,
+  summary: escapeHtml(foot.summary),
+  cta: escapeHtml(foot.cta),
+});
+
 function renderEnterModal(app: App, content: HTMLElement): void {
-  const { state } = app;
+  const { state, ui } = app;
+  const enter = ui.enter;
   const habits = state.habits.filter((h) => !h.archived);
-  const active = activeHabit(state);
-  content.innerHTML = `
-    ${modalTop("ENTER FLOW")}
-    <h2 id="modal-title">What are you practicing?</h2>
-    <div class="enter-choices">
+  const foot = escapeFoot(enterFootprint(app));
+  const kindTab = (kind: EnterKind, label: string) =>
+    `<button class="mode-tab${enter.kind === kind ? " active" : ""}" data-enter-kind="${kind}" aria-pressed="${enter.kind === kind}">${label}</button>`;
+  let pane = "";
+  if (enter.kind === "habit") {
+    pane = habits.length === 0
+      ? `<p class="mode-explain">No habits yet — the New habit tab names your first.</p>`
+      : `<div class="enter-choices">
       ${habits
         .map(
-          (habit) => `<button class="enter-choice${active?.id === habit.id ? " current" : ""}" data-enter-habit="${habit.id}">
+          (habit) => `<button class="enter-choice${enter.habitId === habit.id ? " selected" : ""}" data-enter-habit="${habit.id}" aria-pressed="${enter.habitId === habit.id}">
         <span class="enter-choice-name">${escapeHtml(habit.name)}</span>
         <small class="mono">${formatDuration(habit.seconds)}</small>
       </button>`,
         )
         .join("")}
-      <div class="enter-create">
-        <input type="text" id="enter-habit-name" placeholder="New habit (piano, cooking…)" maxlength="40" aria-label="Name a new habit and start the session with it" />
-        <button class="small" id="enter-habit-add">Add &amp; practice</button>
-      </div>
-      <button class="enter-choice unstructured" id="enter-unstructured">
-        <span class="enter-choice-name">Practice unstructured</span>
-        <small>nous is unaffected</small>
-      </button>
     </div>
+    <p class="mode-explain">Pick the habit this session counts toward.</p>`;
+  } else if (enter.kind === "new") {
+    pane = `<div class="enter-create">
+      <input type="text" id="enter-habit-name" placeholder="Name it (piano, cooking…)" maxlength="40" aria-label="Name a new habit and start the session with it" value="${escapeHtml(enter.newName)}" />
+    </div>
+    <p class="mode-explain">A brand-new habit starts its clock with this session.</p>`;
+  } else {
+    pane = `<p class="mode-explain">No habit attached — the session runs, and nous is unaffected.</p>`;
+  }
+  content.innerHTML = `
+    ${modalTop("ENTER FLOW")}
+    <h2 id="modal-title">What are you practicing?</h2>
+    <div class="mode-tabs" role="group" aria-label="What kind of session is this?">
+      ${kindTab("habit", "A habit")}${kindTab("new", "New habit")}${kindTab("unstructured", "Unstructured")}
+    </div>
+    <div class="mode-pane">${pane}</div>
     ${state.sessionsCompleted === 0 ? `<p class="enter-steer small muted">A first try can be short — five minutes or so, then exit and see what the session banked.</p>` : ""}
     ${planControlsHtml(app)}
-    <div class="modal-actions"><button id="enter-cancel">Back</button></div>`;
+    <div class="footer-band">
+      <button id="enter-cancel" class="small">Back</button>
+      <span class="cta-summary">${foot.summary}</span>
+      <button id="enter-begin" class="primary" ${foot.armed ? "" : "disabled"}>${foot.cta}</button>
+    </div>`;
   bindPlanControls(app, content);
+  const begin = () => {
+    if (enter.kind === "habit" && enter.habitId !== null) app.beginFlow(enter.habitId);
+    else if (enter.kind === "new") app.beginFlowNewHabit(enter.newName);
+    else if (enter.kind === "unstructured") app.beginFlow(null);
+  };
+  content.querySelectorAll<HTMLButtonElement>("[data-enter-kind]").forEach((button) => {
+    button.addEventListener("click", () => {
+      enter.kind = button.getAttribute("data-enter-kind") as EnterKind;
+      app.render();
+    });
+  });
   content.querySelectorAll<HTMLElement>("[data-enter-habit]").forEach((button) => {
-    button.addEventListener("click", () => app.beginFlow(button.getAttribute("data-enter-habit")));
+    button.addEventListener("click", () => {
+      enter.habitId = button.getAttribute("data-enter-habit");
+      app.render();
+    });
   });
   const nameInput = byId("enter-habit-name") as HTMLInputElement | null;
-  const addNew = () => {
-    if (!nameInput) return;
-    app.beginFlowNewHabit(nameInput.value);
+  // Typing never rebuilds the modal (nothing renders in the background while
+  // the console sits in upgrade mode): the name rides ui state and the
+  // footer refreshes in place, so the caret keeps its place while the CTA
+  // arms. The next interaction that does render rebuilds with the name kept.
+  const refreshFoot = () => {
+    const next = enterFootprint(app);
+    const summary = content.querySelector(".cta-summary");
+    const beginButton = byId("enter-begin");
+    if (summary) summary.textContent = next.summary;
+    if (beginButton) {
+      beginButton.textContent = next.cta;
+      (beginButton as HTMLButtonElement).disabled = !next.armed;
+    }
   };
-  byId("enter-habit-add")?.addEventListener("click", addNew);
+  nameInput?.addEventListener("input", () => {
+    enter.newName = nameInput.value;
+    refreshFoot();
+  });
   nameInput?.addEventListener("keydown", (event) => {
     if ((event as KeyboardEvent).key === "Enter") {
       event.preventDefault();
-      addNew();
+      if (enterFootprint(app).armed) begin();
     }
   });
-  byId("enter-unstructured")?.addEventListener("click", () => app.beginFlow(null));
+  byId("enter-begin")?.addEventListener("click", begin);
   byId("enter-cancel")?.addEventListener("click", () => app.closeModal());
   wireClose(app);
 }

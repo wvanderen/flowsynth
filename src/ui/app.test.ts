@@ -245,8 +245,13 @@ describe("the enter prompt", () => {
     const modal = document.getElementById("modal-content")!;
     expect(modal.querySelector("h2")!.textContent).toBe("What are you practicing?");
     expect(modal.querySelector(".lead")).toBeNull();
-    expect(modal.textContent).toContain("Practice unstructured");
-    expect(modal.textContent).toContain("nous is unaffected");
+    // The decided shape (issue #92): a kind-first segmented control, with
+    // unstructured as its own resting pane, not a row in a shared list.
+    const tabs = [...modal.querySelectorAll(".mode-tab")].map((t) => t.textContent);
+    expect(tabs).toEqual(["A habit", "New habit", "Unstructured"]);
+    expect(modal.querySelector(".mode-tab.active")!.textContent).toBe("A habit");
+    // The fresh-save habit pane is empty: it points at the way out.
+    expect(modal.querySelector(".mode-pane")!.textContent).toContain("No habits yet");
     expect(modal.textContent).not.toContain("development holds still");
 
     app.closeModal();
@@ -268,6 +273,125 @@ describe("the enter prompt", () => {
     expect((modal.querySelector("#plan-minutes") as HTMLInputElement).value).toBe("");
     expect(modal.querySelector("#plan-open")!.getAttribute("aria-pressed")).toBe("true");
     expect(modal.querySelector(".enter-steer")!.textContent).toContain("five minutes");
+  });
+
+  it("a picked chip re-renders the modal at once: the chip highlights and the footer tracks it", () => {
+    const created = createHabit(app.state, "Jammin");
+    app.startFlow();
+    document.querySelector<HTMLButtonElement>('#modal-content [data-plan="25"]')!.click();
+    expect(app.ui.chosenTarget).toBe(1500);
+    let modal = document.getElementById("modal-content")!;
+    // The renderKey fix (issue #92): the pick itself re-renders, so the
+    // chip highlights without any further interaction.
+    expect([...modal.querySelectorAll(".plan-chip.active")].map((c) => c.textContent)).toEqual(["25"]);
+    expect((modal.querySelector("#plan-minutes") as HTMLInputElement).value).toBe("25");
+    // The armed footer reads the live duration, summary included.
+    document.querySelector<HTMLButtonElement>(`#modal-content [data-enter-habit="${created.habit!.id}"]`)!.click();
+    modal = document.getElementById("modal-content")!;
+    expect(document.getElementById("enter-begin")!.textContent).toBe("Begin — Jammin · 25 min");
+    expect(modal.querySelector(".cta-summary")!.textContent).toBe("Jammin · 25 min");
+    // Open-ended stays its own mode: it re-arms as the resting plan.
+    document.getElementById("plan-open")!.click();
+    modal = document.getElementById("modal-content")!;
+    expect(modal.querySelectorAll(".plan-chip.active")).toHaveLength(0);
+    expect(document.getElementById("enter-begin")!.textContent).toBe("Begin — Jammin · open-ended");
+  });
+
+  it("the footer's Begin CTA arms per the kind: a habit picked, then the session counts toward it", () => {
+    const created = createHabit(app.state, "Jammin");
+    app.startFlow();
+    const begin = () => document.getElementById("modal-content")!.querySelector("#enter-begin") as HTMLButtonElement;
+    // Nothing picked yet: the CTA names its own missing requirement.
+    expect(begin().disabled).toBe(true);
+    expect(begin().textContent).toBe("Select a habit");
+    document.querySelector<HTMLButtonElement>(`#modal-content [data-enter-habit="${created.habit!.id}"]`)!.click();
+    const modal = document.getElementById("modal-content")!;
+    expect(modal.querySelector(`[data-enter-habit="${created.habit!.id}"]`)!.classList.contains("selected")).toBe(true);
+    expect(begin().disabled).toBe(false);
+    expect(begin().textContent).toBe("Begin — Jammin · open-ended");
+    expect(modal.querySelector(".cta-summary")!.textContent).toBe("Jammin · open-ended");
+    begin().click();
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.activeHabitId).toBe(created.habit!.id);
+    expect(app.ui.modal).toBeNull();
+  });
+
+  it("the New habit kind arms on a typed name and starts with the habit created", () => {
+    app.startFlow();
+    document.querySelector<HTMLButtonElement>('#modal-content [data-enter-kind="new"]')!.click();
+    const begin = () => document.getElementById("modal-content")!.querySelector("#enter-begin") as HTMLButtonElement;
+    const input = document.getElementById("enter-habit-name") as HTMLInputElement;
+    expect(begin().disabled).toBe(true);
+    expect(begin().textContent).toBe("Name your new habit");
+    // Typing arms the CTA in place — the input never leaves the DOM, so the
+    // caret keeps its place.
+    input.value = "Sketching";
+    input.dispatchEvent(new Event("input"));
+    expect(input.isConnected).toBe(true);
+    expect(begin().disabled).toBe(false);
+    expect(begin().textContent).toBe("Begin — Sketching · open-ended");
+    // A planned pick rides into the label too.
+    document.querySelector<HTMLButtonElement>('#modal-content [data-plan="10"]')!.click();
+    expect(document.getElementById("enter-begin")!.textContent).toBe("Begin — Sketching · 10 min");
+    document.getElementById("enter-begin")!.click();
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.habits.map((h) => h.name)).toContain("Sketching");
+    expect(app.state.activeHabitId).toBe(app.state.habits.find((h) => h.name === "Sketching")!.id);
+    expect(app.state.session!.target).toBe(600);
+  });
+
+  it("Enter in the name field starts when the CTA is armed, never before", () => {
+    app.startFlow();
+    document.querySelector<HTMLButtonElement>('#modal-content [data-enter-kind="new"]')!.click();
+    const input = document.getElementById("enter-habit-name") as HTMLInputElement;
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(app.state.mode).toBe("upgrade");
+    input.value = "Sketching";
+    input.dispatchEvent(new Event("input"));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(app.state.mode).toBe("flow");
+  });
+
+  it("habit names render as text in the footer, never markup", () => {
+    const created = createHabit(app.state, "<b>Logo</b>");
+    app.startFlow();
+    document.querySelector<HTMLButtonElement>(`#modal-content [data-enter-habit="${created.habit!.id}"]`)!.click();
+    const begin = document.getElementById("enter-begin")!;
+    expect(begin.textContent).toBe("Begin — <b>Logo</b> · open-ended");
+    expect(begin.querySelector("b")).toBeNull();
+  });
+
+  it("the Unstructured kind is always armed and starts with no habit", () => {
+    createHabit(app.state, "Jammin");
+    app.startFlow();
+    document.querySelector<HTMLButtonElement>('#modal-content [data-enter-kind="unstructured"]')!.click();
+    const modal = document.getElementById("modal-content")!;
+    expect(modal.querySelector('.mode-tab[data-enter-kind="unstructured"]')!.getAttribute("aria-pressed")).toBe("true");
+    expect(modal.textContent).toContain("No habit attached — the session runs, and nous is unaffected.");
+    const begin = document.getElementById("enter-begin") as HTMLButtonElement;
+    expect(begin.disabled).toBe(false);
+    expect(begin.textContent).toBe("Begin — unstructured · open-ended");
+    begin.click();
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.activeHabitId).toBeNull();
+  });
+
+  it("Back closes the prompt, and reopening starts the selection fresh", () => {
+    const created = createHabit(app.state, "Jammin");
+    app.startFlow();
+    document.querySelector<HTMLButtonElement>(`#modal-content [data-enter-habit="${created.habit!.id}"]`)!.click();
+    document.querySelector<HTMLButtonElement>('#modal-content [data-plan="25"]')!.click();
+    document.getElementById("enter-cancel")!.click();
+    expect(app.ui.modal).toBeNull();
+    app.startFlow();
+    const modal = document.getElementById("modal-content")!;
+    // The kind-first selection resets: nothing picked, nothing armed. The
+    // chosen plan is the next session's plan (§6), so it persists — not
+    // modal furniture.
+    expect(modal.querySelectorAll(".enter-choice.selected")).toHaveLength(0);
+    expect([...modal.querySelectorAll(".plan-chip.active")].map((c) => c.textContent)).toEqual(["25"]);
+    expect((document.getElementById("enter-begin") as HTMLButtonElement).disabled).toBe(true);
+    expect(document.getElementById("enter-begin")!.textContent).toBe("Select a habit");
   });
 
   it("a picked chip plans session one; the steer leaves after the first session", () => {

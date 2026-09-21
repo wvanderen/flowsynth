@@ -61,6 +61,22 @@ export type ModalKind =
   | "summary"
   | null;
 
+// The enter prompt's kind-first selection (issue #92's decided shape): the
+// segmented control decides what kind of session this is before any
+// specifics — pick from the habits you have, name a brand-new one, or run
+// with no habit attached.
+export type EnterKind = "habit" | "new" | "unstructured";
+
+// The prompt's selection state, one clump: the kind tab that holds, the
+// habit the habit tab has picked, and the new-habit name as typed.
+export interface EnterSelection {
+  kind: EnterKind;
+  habitId: string | null;
+  newName: string;
+}
+
+export const freshEnterSelection = (): EnterSelection => ({ kind: "habit", habitId: null, newName: "" });
+
 export interface UiState {
   selected: string | null;
   // The focus app whose console popover is open, if any (ADR-0012).
@@ -79,6 +95,9 @@ export interface UiState {
   // even session one can be planned from here; the affordances stay
   // visible but unpushed.
   chosenTarget: number | null;
+  // The enter prompt's kind-first selection (issue #95). Light furniture —
+  // reset every time the prompt opens.
+  enter: EnterSelection;
   showAcquired: boolean;
   editingHabitId: string | null;
   // The chord view (issue #62): display-only highlight of the board's chord
@@ -147,6 +166,7 @@ export class App {
     importText: "",
     importError: null,
     chosenTarget: null,
+    enter: freshEnterSelection(),
     showAcquired: false,
     editingHabitId: null,
     showChords: false,
@@ -543,6 +563,8 @@ export class App {
       return;
     }
     this.clearTransientUi();
+    // The kind-first selection starts fresh every time the prompt opens.
+    this.ui.enter = freshEnterSelection();
     this.ui.modal = "enter";
     this.render();
   }
