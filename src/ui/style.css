@@ -940,13 +940,14 @@ body.managing .manage-banner { display: flex; }
 }
 .modal-backdrop[hidden] { display: none; }
 .modal {
+  --modal-pad: 26px;
   width: min(680px, 100%);
   max-height: min(82vh, 720px);
   overflow-y: auto;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 26px;
+  padding: var(--modal-pad);
   box-shadow: 0 24px 80px var(--shadow);
 }
 .modal-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -1019,8 +1020,8 @@ body.managing .manage-banner { display: flex; }
 /* The provisional bucket's console flag (§2): the switch's vermillion. */
 .clock-provisional { margin: 2px 0 0; font: 11.5px var(--mono); color: var(--accent); min-height: 14px; }
 
-/* Session modals (§5.5, §5.7): the enter prompt's habit choices and the
-   loud summary's rows. Both are plain modal surfaces — no purchase or
+/* Session modals (§5.5, §5.7): the enter prompt's kind-first selection and
+   the loud summary's rows. Both are plain modal surfaces — no purchase or
    countdown furniture on either. */
 .enter-choices { display: grid; gap: 8px; }
 .enter-choice {
@@ -1037,15 +1038,49 @@ body.managing .manage-banner { display: flex; }
   transition: border-color 0.15s, background 0.15s;
 }
 .enter-choice:hover { border-color: var(--line-strong); background: var(--hover-bg); }
-.enter-choice.current { border-color: var(--accent); background: var(--accent-faint); }
+.enter-choice.selected { border-color: var(--accent); background: var(--accent-faint); }
+.enter-choice .dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1.5px solid var(--line-strong);
+}
+.enter-choice.selected .dot { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 4px, transparent 5px); }
 .enter-choice .enter-choice-name { flex: 1; font-size: 13.5px; font-weight: 550; }
 .enter-choice small { color: var(--muted); }
-.enter-choice.unstructured { border-style: dashed; }
-.habit-dot.off { border-style: dashed; }
 .enter-create { display: flex; gap: 8px; margin: 2px 0; }
 .enter-create input { flex: 1; min-width: 0; background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font-size: 13px; }
 .enter-create input:focus { border-color: var(--charge); outline: none; }
-.enter-create button { white-space: nowrap; }
+/* The enter prompt's kind-first segmented control (issue #95, prototype B):
+   the kind decides the pane, and the pane's pick arms the footer's Begin. */
+.mode-tabs { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 9px; overflow: hidden; margin: 14px 0 12px; }
+.mode-tab { border: none; border-radius: 0; padding: 9px 6px; font-size: 12.5px; color: var(--muted); background: transparent; }
+.mode-tab + .mode-tab { border-left: 1px solid var(--line); }
+.mode-tab:hover { background: var(--hover-bg); }
+.mode-tab.active { background: var(--accent-faint); color: var(--accent); font-weight: 600; }
+.mode-pane { display: grid; gap: 8px; min-height: 120px; align-content: start; }
+.mode-explain { font-size: 12.5px; color: var(--muted); padding: 4px 2px; }
+/* The enter modal splits into a scrolling body and a fixed footer band:
+   the body scrolls inside the modal's padding while Back, the live summary,
+   and the Begin CTA stay put beneath it — content never slides under the
+   band, and the band sits flush with the modal's bottom edge. */
+.modal:has(.footer-band) { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0; }
+.modal:has(.footer-band) #modal-content { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.enter-body { overflow-y: auto; }
+.footer-band {
+  flex-shrink: 0;
+  /* The band bleeds over the modal's own padding, borrowed through the
+     variable so the two stay one number. */
+  margin: 16px calc(-1 * var(--modal-pad)) 0;
+  padding: 14px var(--modal-pad);
+  border-top: 1px solid var(--line);
+  background: var(--panel-soft);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.footer-band .cta-summary { flex: 1; font-size: 12.5px; color: var(--muted); }
 /* Session one's steered suggestion (ADR-0019), riding above the prompt's
    duration affordances — visible but unpushed, open-ended resting. */
 .enter-steer { margin: 6px 0 0; }
