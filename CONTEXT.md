@@ -21,6 +21,9 @@ The function level of a board module — synthesizer, generator, infusor, or for
 **Module type**:
 A specific module design within a category, such as the Additive Synthesizer or the focus-keyed generator, carrying its own glyph and nameplate. Forge choices contain distinct module types; different types may share the same category.
 
+**Module lexicon**:
+The single voice for what each module type does — the effect wording shared by the inspector, the face-tile readouts, and forge-roll candidates. Wording lives in one UI module; every derived number is delegated to the economy, so a balance retune never touches a sentence.
+
 **Chargeable module**:
 A supertype family above the category level whose members accumulate received charge toward thresholds that produce effects; the threshold fill is the family's shared rendering trait. The Forge is the launch instance. Continuous-charge categories (synthesizer, infusor) use received charge as continuous empowerment instead.
 

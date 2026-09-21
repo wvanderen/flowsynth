@@ -55,7 +55,7 @@ export function investment(level: number): number {
   return total;
 }
 
-export function modulePower(module: ModuleInstance): number {
+export function modulePower(module: Pick<ModuleInstance, "rarity" | "level">): number {
   return BALANCE.rarityPower[module.rarity] ** module.level;
 }
 
@@ -147,6 +147,30 @@ const SYNTH_BASE_RATE: Record<SynthesizerType, number> = {
   additive: BALANCE.additiveRate,
   conditional: BALANCE.conditionalRate,
 };
+
+// What one module of this type contributes at its power, in the type's own
+// units (ADR-0004's readable roles): synthesizers their harmonic ν/s, the
+// generator its output strength, an infusor its bonus fraction, the Forge
+// its progress-per-received-strength. Charge empowers receivers
+// (synthesizers, infusors) through the same chargedFactor the live snapshot
+// uses; sources and the Forge ride modulePower alone. The UI's module
+// lexicon derives every number it shows from this one place.
+export function nominalContribution(module: Pick<ModuleInstance, "type" | "rarity" | "level">, strength = 0): number {
+  const power = modulePower(module);
+  switch (module.type) {
+    case "carrier":
+    case "additive":
+    case "conditional":
+      return SYNTH_BASE_RATE[module.type] * power * chargedFactor(strength);
+    case "infusor":
+      return BALANCE.infusorBonus * power * chargedFactor(strength);
+    case "focusKeyed":
+    case "forge":
+      return power;
+    default:
+      return 0;
+  }
+}
 
 // The additive-synthesis rate (ADR-0014):
 //   rate      = composite × empowerment × achievementBoost

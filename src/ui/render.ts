@@ -23,6 +23,7 @@ import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleI
 import type { App, EnterKind } from "./app";
 import { appIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, moduleFace } from "./face";
+import { effectLine, faceReadout, forgeWording, typeProse, upgradeGain } from "./lexicon";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
@@ -969,46 +970,6 @@ function renderDissolvedOverview(host: HTMLElement): void {
     </div>`;
 }
 
-function effectDescription(module: ModuleInstance): string {
-  switch (module.type) {
-    case "carrier":
-      return "The granted origin synthesizer. Pinned at the origin: it never moves, never combines, never leaves the board, and plays the formula's carrier term.";
-    case "additive":
-      return "A plain harmonic term: amplitude at its pitch. Adjacent synthesizers one pitch apart form chord pairs whose bonuses multiply the whole composite.";
-    case "conditional":
-      return "Amplitude at its pitch, plus a bonus for every chord pair it participates in — a named chord counts once, however many of its pairs the module shares in.";
-    case "focusKeyed":
-      return "The generator (ADR-0018: the launch generator is focus-keyed). It never drips live: every session end banks a charge window — a tenth of that session's live practice time — and the generator spends it as output during the next session's first minutes. Charge is a reserve you carry between sessions.";
-    case "infusor":
-      return "Boosts production contributions of adjacent modules. Receives charge as continuous empowerment.";
-    case "forge":
-      return "The chargeable launch module: banks received charge toward a threshold and mints a roll at each crossing.";
-    default:
-      return "A reserved module.";
-  }
-}
-
-function nominalEffect(module: ModuleInstance, charged: boolean): { text: string; value: number } {
-  const power = modulePower(module);
-  const factor = charged ? chargedFactor(1) : 1;
-  switch (module.type) {
-    case "carrier":
-      return { text: `+${formatNumber(BALANCE.carrierRate * power * factor)} ν/s`, value: BALANCE.carrierRate * power * factor };
-    case "additive":
-      return { text: `+${formatNumber(BALANCE.additiveRate * power * factor)} ν/s`, value: BALANCE.additiveRate * power * factor };
-    case "conditional":
-      return { text: `+${formatNumber(BALANCE.conditionalRate * power * factor)} ν/s · +${formatNumber(100 * BALANCE.conditionalPairBonus)}% per chord pair`, value: BALANCE.conditionalRate * power * factor };
-    case "focusKeyed":
-      return { text: `${formatNumber(power)} charge strength while its charge window lasts`, value: power };
-    case "infusor":
-      return { text: `+${formatNumber(100 * BALANCE.infusorBonus * power * factor)}% to adjacent`, value: BALANCE.infusorBonus * power * factor };
-    case "forge":
-      return { text: `${formatNumber(power)} progress/s at strength 1`, value: power };
-    default:
-      return { text: "—", value: 0 };
-  }
-}
-
 function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance): void {
   const { state } = app;
   const upgrade = state.mode === "upgrade";
@@ -1017,10 +978,10 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
   const contribution = module.pos !== null ? preview.contributions.get(module.id) : null;
   const deployedHere = module.pos !== null;
   const chargeStrength = preview.chargeStrength.get(module.id) ?? 0;
-  const effect =
+  const effectText =
     deployedHere && contribution && contribution.value !== 0
-      ? { text: effectTextFor(module, contribution.value, chargeStrength), value: contribution.value }
-      : nominalEffect(module, upgrade);
+      ? effectLine(module, { value: contribution.value, strength: chargeStrength })
+      : effectLine(module, null, upgrade);
   const growth = BALANCE.rarityPower[module.rarity];
   const cost = levelCost(module.level);
   const affordable = wholeNous(state) >= cost;
@@ -1073,11 +1034,11 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
     ${focus}
     <section>
       <div class="eyebrow">MODULE POWER</div>
-      <div class="level-heading">Level <strong>${module.level}</strong><span class="level-effect">${effect.text}</span></div>
-      <p class="small muted" style="margin:6px 0 0">${effectDescription(module)}</p>
+      <div class="level-heading">Level <strong>${module.level}</strong><span class="level-effect">${effectText}</span></div>
+      <p class="small muted" style="margin:6px 0 0">${typeProse(module.type)}</p>
       <button class="primary upgrade-cta" id="upgrade-module" ${upgrade && affordable ? "" : "disabled"}>
         <span>Upgrade
-          <small class="upgrade-gain">+${formatNumber((growth - 1) * 100)}% → ${nominalGainText(module)}</small>
+          <small class="upgrade-gain">+${formatNumber((growth - 1) * 100)}% → ${upgradeGain(module)}</small>
         </span>
         <strong>${formatInt(cost)} ν</strong>
       </button>
@@ -1590,33 +1551,6 @@ function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function effectTextFor(module: ModuleInstance, value: number, strength = 0): string {
-  switch (module.type) {
-    case "carrier":
-    case "additive":
-    case "conditional":
-      return `+${formatNumber(value)} ν/s`;
-    case "focusKeyed":
-      return `${formatNumber(modulePower(module))} strength`;
-    case "infusor":
-      return `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(strength))}% to adjacent`;
-    default:
-      return `${formatNumber(value)} progress/s`;
-  }
-}
-
-function nominalGainText(module: ModuleInstance): string {
-  const now = nominalEffect(module, false);
-  const growth = BALANCE.rarityPower[module.rarity];
-  if (isSource(module)) {
-    return `+${formatNumber(now.value * (growth - 1))} strength`;
-  }
-  if (module.type === "forge") {
-    return `${formatNumber(now.value * (growth - 1))} progress/s`;
-  }
-  return `+${formatNumber(now.value * (growth - 1))} effect`;
-}
-
 /* ── Grid & inventory panel ────────────────────────── */
 
 // A canvas-style face tile — the same readout panel the board renders, with
@@ -1625,28 +1559,10 @@ function nominalGainText(module: ModuleInstance): string {
 // inventory (candidate-tile pattern from the Forge).
 function hexTileSvg(module: ModuleInstance): string {
   return `<svg viewBox="-70 -70 140 140" aria-hidden="true">
-    ${moduleFace({ type: module.type, rarity: module.rarity, readout: nominalReadout(module), level: module.level })}
+    ${moduleFace({ type: module.type, rarity: module.rarity, readout: faceReadout(module), level: module.level })}
   </svg>`;
 }
 
-// The face's prominent readout from nominal (uncharged) values.
-function nominalReadout(module: ModuleInstance): string {
-  const power = modulePower(module);
-  switch (module.type) {
-    case "carrier":
-      return `+${formatNumber(BALANCE.carrierRate * power)}`;
-    case "additive":
-      return `+${formatNumber(BALANCE.additiveRate * power)}`;
-    case "conditional":
-      return `+${formatNumber(BALANCE.conditionalRate * power)}`;
-    case "focusKeyed":
-      return `⌁${formatNumber(power)}`;
-    case "infusor":
-      return `+${formatNumber(100 * BALANCE.infusorBonus * power)}%`;
-    case "forge":
-      return `${formatNumber(power)}/s`;
-  }
-}
 
 function renderManagePanel(app: App, host: HTMLElement): void {
   const { state, ui } = app;
@@ -1863,36 +1779,6 @@ function renderStoreModal(app: App, content: HTMLElement): void {
   wireClose(app);
 }
 
-function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
-  const charged = chargedFactor(1);
-  switch (type) {
-    case "carrier": return `The granted origin module — never rolled<br>+${formatNumber(BALANCE.carrierRate * charged)} ν/s at charge strength 1`;
-    case "additive": return `+${formatNumber(BALANCE.additiveRate)} ν/s harmonic term<br>+${formatNumber(BALANCE.additiveRate * charged)} ν/s at charge strength 1`;
-    case "conditional": return `+${formatNumber(BALANCE.conditionalRate)} ν/s harmonic term<br>+${formatNumber(BALANCE.conditionalRate * charged)} ν/s at charge strength 1`;
-    case "focusKeyed": return `The generator — keyed to your focus<br>each session end banks a charge window (a tenth of its live practice time), spent as its output next session`;
-    case "infusor": return `+${formatNumber(BALANCE.infusorBonus * 100)}% to adjacent production contributions<br>+${formatNumber(BALANCE.infusorBonus * charged * 100)}% at charge strength 1`;
-    case "forge": return `1 Forge progress per received charge strength<br>Next roll: ${formatNumber(forgeThreshold(state.forge.earned))} progress`;
-    default: return "Not yet active";
-  }
-}
-
-function candidateReadout(type: ModuleInstance["type"]): string {
-  switch (type) {
-    case "carrier":
-      return `+${formatNumber(BALANCE.carrierRate)}`;
-    case "additive":
-      return `+${formatNumber(BALANCE.additiveRate)}`;
-    case "conditional":
-      return `+${formatNumber(BALANCE.conditionalRate)}`;
-    case "focusKeyed":
-      return "⌁1";
-    case "infusor":
-      return `+${formatNumber(BALANCE.infusorBonus * 100)}%`;
-    case "forge":
-      return "1/s";
-  }
-}
-
 function renderForgeModal(app: App, content: HTMLElement): void {
   const { state } = app;
   const offer = state.bankedRolls[state.bankedRolls.length - 1];
@@ -1904,11 +1790,11 @@ function renderForgeModal(app: App, content: HTMLElement): void {
       ${offer.candidates.map((candidate) => `
         <button class="candidate-tile" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${candidate.rarity}" data-type="${candidate.type}" title="Take the ${RARITY_LABEL[candidate.rarity]} ${META[candidate.type].name}">
           <svg viewBox="-70 -70 140 140" aria-hidden="true">
-            ${moduleFace({ type: candidate.type, rarity: candidate.rarity, readout: candidateReadout(candidate.type), level: 0 })}
+            ${moduleFace({ type: candidate.type, rarity: candidate.rarity, readout: faceReadout({ type: candidate.type, rarity: candidate.rarity, level: 0 }), level: 0 })}
           </svg>
           <span class="rarity">${RARITY_LABEL[candidate.rarity]}</span>
           <span class="candidate-scaling">+${formatNumber((BALANCE.rarityPower[candidate.rarity] - 1) * 100)}% / level · upgrades from 10 ν</span>
-          <span class="candidate-effect">${forgeEffect(candidate.type, state)}</span>
+          <span class="candidate-effect">${forgeWording(candidate.type, forgeThreshold(state.forge.earned))}</span>
         </button>`).join("")}
     </div>` : `<p class="empty-copy">No Forge choices available.</p>`}`;
   content.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach((button) => {

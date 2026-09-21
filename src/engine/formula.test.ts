@@ -127,7 +127,7 @@ describe("upgrade costs and rarity power", () => {
 
   it("level zero power is one for every rarity", () => {
     for (const rarity of ["common", "uncommon", "rare"] as const) {
-      expect(modulePower({ id: "x", type: "forge", rarity, level: 0, invested: 0, pos: null })).toBe(1);
+      expect(modulePower({ rarity, level: 0 })).toBe(1);
     }
   });
 
