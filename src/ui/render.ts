@@ -1,8 +1,8 @@
-import { chargedFactor, cellCost, chargeDelivered, computeRates, deployed, emittedStrength, levelCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
+import { chargedFactor, cellCost, computeRates, deployed, emittedStrength, levelCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
-import { BALANCE, CATEGORY_OF, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
+import { BALANCE, CATEGORY_OF, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
 import { appActive, appLockNote, FOCUS_APPS, type FocusApp } from "../engine/apps";
 import { isInFlowNote } from "../engine/notes";
@@ -17,19 +17,25 @@ import {
 } from "../engine/records";
 import { poolOutstanding } from "../engine/trust";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
-import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
+import { achievementName } from "../engine/achievements";
 import { isCarrier } from "../engine/state";
-import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NoteEntry, RateSnapshot } from "../engine/types";
-import type { App, EnterKind } from "./app";
+import type { GameState, Goal, Habit, Hex, ModuleInstance, NoteEntry, RateSnapshot } from "../engine/types";
+import type { App } from "./app";
 import { appIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, moduleFace } from "./face";
-import { effectLine, faceReadout, forgeWording, typeProse, upgradeGain } from "./lexicon";
+import { effectLine, faceReadout, typeProse, upgradeGain } from "./lexicon";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
-import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
+import { APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL } from "./meta";
 import { formatDate, formatInt, formatNumber, formatPracticeMinutes, practiceCountdown, secondsToMinutes } from "./format";
 import { renderStatusMonitor } from "./monitor";
+import { byId, escapeHtml } from "./dom";
+import { bindPlanControls, planControlsHtml } from "./plan";
+import { contextFor } from "./context";
+import { honestyEventLine, PINNED_SENTENCE, renderModals } from "./modals";
+
+export { PINNED_SENTENCE } from "./modals";
 
 const SPACING = 65;
 const DRAG_THRESHOLD_PX = 6;
@@ -39,9 +45,6 @@ function point({ q, r }: Hex): [number, number] {
   return [Math.sqrt(3) * SPACING * (q + r / 2), SPACING * 1.5 * r];
 }
 
-function byId(id: string): HTMLElement | null {
-  return document.getElementById(id);
-}
 
 // The rate shown in the header, formula bar, and hexes: live during flow,
 // projected build rate while arranging in upgrade mode. Module panels preview
@@ -69,15 +72,19 @@ function times(count: number, noun: string): string {
 }
 
 export function render(app: App): void {
+  // One context per render pass: the modals and monitor regions (and, as
+  // each remaining region extracts, the rest) read state and fire intents
+  // through it, with the shared derivations memoized per pass.
+  const ctx = contextFor(app);
   renderConsoleSession(app);
   renderConsoleApps(app);
   renderConsoleReadout(app);
   renderTools(app);
   renderGrid(app);
-  renderStatusMonitor(app);
+  renderStatusMonitor(ctx);
   renderInspector(app);
   renderWelcome(app);
-  renderModal(app);
+  renderModals(ctx);
   renderDev(app);
 }
 
@@ -344,68 +351,6 @@ const TROPHY_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stro
   <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
   <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
 </svg>`;
-
-// The achievements page (ADR-0015): the always-visible full list — all
-// seventeen feats with progress bars, none hidden, grouped by the launch
-// buckets the ADR names. Spark's progress rides the charge preview; it
-// reads zero between sessions, as charge does.
-const ACHIEVEMENT_CATEGORY_LABEL: Record<AchievementCategory, string> = {
-  practice: "Practice capstones",
-  console: "Console encouragers",
-  board: "Board & economy",
-  formula: "Formula & horizon",
-  ladder: "Counter ladder",
-};
-
-const ACHIEVEMENT_CATEGORY_ORDER: readonly AchievementCategory[] = ["practice", "console", "board", "formula", "ladder"];
-
-function achievementContextOf(app: App): AchievementContext {
-  return { chargeDelivered: app.state.mode === "flow" && chargeDelivered(computeRates(app.state, true)) };
-}
-
-// The open page's refresh signature: each feat's progress quantized to a
-// percent, so a rebuild only happens when a bar visibly moves.
-function achProgressKey(app: App): string {
-  const ctx = achievementContextOf(app);
-  return ACHIEVEMENTS.map((def) => {
-    const { current, goal } = def.progress(app.state, ctx);
-    return String(Math.round((Math.min(1, goal > 0 ? current / goal : 1)) * 100));
-  }).join(",");
-}
-
-function achRowHtml(app: App, def: AchievementDef, ctx: AchievementContext): string {
-  const unlockedAt = app.state.achievements[def.id];
-  const { current, goal } = def.progress(app.state, ctx);
-  const fraction = Math.min(1, goal > 0 ? current / goal : 1);
-  const readout = unlockedAt !== undefined ? "done" : `${formatNumber(current)} / ${formatNumber(goal)}`;
-  return `<div class="ach-row${unlockedAt !== undefined ? " unlocked" : ""}">
-    <div class="ach-head">
-      <span class="ach-name">${def.name}</span>
-      <span class="ach-readout mono">${readout}</span>
-    </div>
-    <p class="ach-desc">${def.description}</p>
-    <div class="ach-track" aria-hidden="true"><i style="width:${(fraction * 100).toFixed(1)}%"></i></div>
-  </div>`;
-}
-
-function renderAchievementsModal(app: App, content: HTMLElement): void {
-  const ctx = achievementContextOf(app);
-  const count = Object.keys(app.state.achievements).length;
-  const sections = ACHIEVEMENT_CATEGORY_ORDER.map((category) => {
-    const feats = ACHIEVEMENTS.filter((def) => def.category === category);
-    if (feats.length === 0) return "";
-    return `<section class="ach-section">
-      <h3 class="store-section-title">${ACHIEVEMENT_CATEGORY_LABEL[category]}</h3>
-      <div class="ach-grid">${feats.map((def) => achRowHtml(app, def, ctx)).join("")}</div>
-    </section>`;
-  }).join("");
-  content.innerHTML = `
-    ${modalTop("ACHIEVEMENTS")}
-    <h2 id="modal-title">${count} of ${ACHIEVEMENTS.length} feats.</h2>
-    <p class="lead">Every feat speeds the rate a little — they accelerate, never gate. Each one adds into the Achievements line of the live rate breakdown.</p>
-    ${sections}`;
-  wireClose(app);
-}
 
 // The console's readout end: production (rate with the session total
 // beneath) and the nous balance — bare values; the main switch carries the
@@ -764,7 +709,6 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
 
 // The canonical pinned sentence (#94): the inspector's note and the drag
 // refusal's toast say exactly the same thing, once worded.
-export const PINNED_SENTENCE = "Pinned — it never moves, combines, or leaves.";
 
 // The pinned face's visible refusal: a short shake on the module node (which
 // only grid cells carry — the Carrier can never reach inventory). The
@@ -1259,8 +1203,11 @@ function appPanelBody(app: App, panel: FocusApp): string {
       return app.ui.drillSession !== null ? historyDrillHtml(app) : historyListHtml(app);
     }
     if (upgrade) {
+      // Strangler bridge: the panels region still renders from App; the
+      // plan affordances take the context, so build one here until this
+      // region extracts (its own pass will thread the render pass's ctx).
       return `<section class="focus-controls">
-        ${planControlsHtml(app)}
+        ${planControlsHtml(contextFor(app))}
         <button class="quiet small time-history" id="time-history">History</button>
       </section>`;
     }
@@ -1345,60 +1292,10 @@ function appPanelBody(app: App, panel: FocusApp): string {
   </section>`;
 }
 
-// The planned-target affordances (§6), shared by the Time app's panel and
-// the enter prompt: preset chips as quick picks, free 1–90 minute entry in
-// one-minute steps — and open-ended as its own mode, never a duration
-// choice. They ride the very first start (ADR-0019), visible but unpushed:
-// the resting plan is open-ended, and only a picked plan ever arms the
-// target signals (§4).
-function planControlsHtml(app: App): string {
-  const open = app.ui.chosenTarget === null;
-  const chosen = app.ui.chosenTarget;
-  const minutes = chosen === null ? null : Math.round(chosen / 60);
-  return `<div class="time-plan">
-    <div class="plan-chips" role="group" aria-label="Planned session length in minutes">
-      ${PLAN_PRESET_MINUTES.map(
-        (option) =>
-          `<button class="plan-chip${minutes === option ? " active" : ""}" data-plan="${option}" aria-pressed="${minutes === option}">${option}</button>`,
-      ).join("")}
-    </div>
-    <div class="plan-free">
-      <input type="number" id="plan-minutes" min="${PLAN_MIN_MINUTES}" max="${PLAN_MAX_MINUTES}" step="1" placeholder="1–90"
-        value="${minutes ?? ""}" ${open ? "disabled" : ""} aria-label="Custom session length, 1 to 90 minutes" />
-      <span class="plan-unit">min</span>
-    </div>
-    <button id="plan-open" class="plan-open${open ? " active" : ""}" aria-pressed="${open}">Open-ended</button>
-    <p class="clock-caption">${open ? "Open-ended" : "Planned practice"}</p>
-  </div>`;
-}
-
-// The plan affordances' binding within any scope (the Time popover or the
-// enter modal): chips pick a preset, the free entry takes any whole minute
-// from 1 to 90 (clamped, one-minute steps), and open-ended is its own mode
-// toggle.
-function bindPlanControls(app: App, scope: HTMLElement): void {
-  scope.querySelectorAll<HTMLButtonElement>("[data-plan]").forEach((chip) => {
-    chip.addEventListener("click", () => {
-      app.ui.chosenTarget = Number(chip.getAttribute("data-plan")) * 60;
-      app.render();
-    });
-  });
-  const planInput = scope.querySelector("#plan-minutes") as HTMLInputElement | null;
-  planInput?.addEventListener("change", () => {
-    const minutes = Math.round(Number(planInput.value));
-    if (Number.isFinite(minutes) && planInput.value !== "") {
-      app.ui.chosenTarget = Math.min(PLAN_MAX_MINUTES, Math.max(PLAN_MIN_MINUTES, minutes)) * 60;
-      app.render();
-    }
-  });
-  scope.querySelector("#plan-open")?.addEventListener("click", () => {
-    app.ui.chosenTarget = null;
-    app.render();
-  });
-}
-
 function bindAppPanel(app: App, scope: HTMLElement): void {
-  bindPlanControls(app, scope);
+  // Strangler bridge (see appPanelBody): the context here is fresh to this
+  // binding; the plan controls write through intents either way.
+  bindPlanControls(contextFor(app), scope);
   scope.querySelector("#habit-create")?.addEventListener("click", () => {
     const input = scope.querySelector("#habit-name-input") as HTMLInputElement | null;
     if (input) app.createHabitAction(input.value);
@@ -1547,9 +1444,6 @@ function updateAppPanelLive(app: App, scope: ParentNode): void {
   }
 }
 
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
 
 /* ── Grid & inventory panel ────────────────────────── */
 
@@ -1617,589 +1511,6 @@ function renderManagePanel(app: App, host: HTMLElement): void {
     button.addEventListener("click", () => app.beginPlacing(id));
     bindPointerDrag(app, button, id);
   });
-}
-
-/* ── Modals ────────────────────────────────────────── */
-
-function renderModal(app: App): void {
-  const backdrop = byId("modal");
-  const content = byId("modal-content");
-  if (!backdrop || !content) return;
-  const kind = app.ui.modal;
-  if (!kind) {
-    backdrop.hidden = true;
-    delete content.dataset.renderKey;
-    return;
-  }
-  const extra =
-    kind === "forge"
-      ? app.state.bankedRolls.at(-1)?.id ?? null
-      : kind === "honesty"
-        ? [app.exitPending, app.state.session?.accounting.poolSeconds ?? 0, app.state.session?.accounting.bucketNous ?? 0]
-        // The summary's identity: a fresh session's summary must never
-        // reuse the previous one's already-rendered content.
-        : kind === "summary"
-          // The summary's identity: a fresh session's summary must never
-          // reuse the previous one's already-rendered content.
-          ? [app.state.summary?.sessionNumber ?? null, app.state.summary?.earned ?? null]
-          : kind === "store"
-            ? [
-                app.ui.showAcquired,
-                wholeNous(app.state),
-                JSON.stringify(app.state.purchased),
-                app.state.cellsBought,
-                app.state.activatedApps.join("|"),
-                // Module-upgrade rows reprice with levels, moves, and the roster.
-                app.state.modules.map((m) => `${m.id}:${m.level}:${m.rarity}:${m.pos ? "d" : "i"}`).join("|"),
-              ]
-            : kind === "achievements"
-              // Quantized progress: an open page refreshes when a bar visibly
-              // moves, not on every clock tick.
-              ? achProgressKey(app)
-              // The enter prompt's own selection state (issue #95): the plan
-              // and the kind-first picks re-render the modal the moment they
-              // change — chips highlight on pick, never a stale footer.
-              : kind === "enter"
-                ? [app.ui.chosenTarget, app.ui.enter]
-                : null;
-  const renderKey = JSON.stringify([kind, app.ui.importError, app.state.session?.accounting.poolSeconds ?? 0, app.state.mode, extra]);
-  // Clock ticks must not replace a save textarea or steal dialog focus.
-  if (!backdrop.hidden && content.dataset.renderKey === renderKey) return;
-  backdrop.hidden = false;
-  content.dataset.renderKey = renderKey;
-  if (kind === "settings") renderSettingsModal(app, content);
-  else if (kind === "store") renderStoreModal(app, content);
-  else if (kind === "forge") renderForgeModal(app, content);
-  else if (kind === "achievements") renderAchievementsModal(app, content);
-  else if (kind === "export") renderExportModal(app, content);
-  else if (kind === "import") renderImportModal(app, content);
-  else if (kind === "reset") renderResetModal(app, content);
-  else if (kind === "honesty") renderHonestyModal(app, content);
-  else if (kind === "enter") renderEnterModal(app, content);
-  else if (kind === "summary") renderSummaryModal(app, content);
-  const firstButton = content.querySelector("button:not([disabled])");
-  (firstButton as HTMLElement | null)?.focus();
-}
-
-function modalTop(label: string): string {
-  return `<div class="modal-top"><span class="eyebrow">${label}</span><button id="close-modal" aria-label="Close dialog">✕</button></div>`;
-}
-
-function wireClose(app: App): void {
-  byId("close-modal")?.addEventListener("click", () => app.closeModal());
-}
-
-function renderSettingsModal(app: App, content: HTMLElement): void {
-  content.innerHTML = `${modalTop("PREFERENCES")}<h2 id="modal-title">Settings</h2>
-    <p class="lead">Progress saves automatically on this device.</p>
-    <div class="pref-row">
-      <input type="checkbox" id="pref-mute" ${app.state.muted ? "checked" : ""} />
-      <label for="pref-mute">Mute all sound</label>
-      <small class="muted">silences every sound, the target chime included</small>
-    </div>
-    <div class="modal-actions"><button id="settings-export">Export save</button><button id="settings-import">Import save</button><button id="settings-reset">Reset progress</button></div>`;
-  byId("pref-mute")?.addEventListener("change", (event) => {
-    app.setMuted((event.target as HTMLInputElement).checked);
-  });
-  for (const kind of ["export", "import", "reset"] as const) {
-    byId(`settings-${kind}`)?.addEventListener("click", () => app.openModal(kind));
-  }
-  wireClose(app);
-}
-
-function renderStoreModal(app: App, content: HTMLElement): void {
-  const { state, ui } = app;
-  const shelfTypes = Object.keys(BALANCE.shelfPrices) as (keyof typeof BALANCE.shelfPrices)[];
-
-  // One-time shelf offers on top; acquired items demote below the checkbox.
-  const openShelf = shelfTypes.filter((type) => !state.purchased[type]);
-  const ownedShelf = shelfTypes.filter((type) => state.purchased[type]);
-
-  // The activation ladder (ADR-0013) rests empty at launch, so the catalog
-  // omits its activation section entirely (ADR-0019): no telegraph row, no
-  // pricing — after session one the hinted generator pull is the only spend
-  // path. The section returns with the ladder's first tenant, priced by
-  // that tenant's effort; the rung markup is not preserved here.
-
-  // Cells (ADR-0013): the permanent catalog row. The price is not quoted
-  // here — it lives where the purchase commits, on the board's frontier.
-  const cellPrice = cellCost(state.cellsBought);
-  const cellAffordable = wholeNous(state) >= cellPrice;
-  const cellCountdown = upgradeCountdown(app, cellPrice);
-
-  content.innerHTML = `
-    ${modalTop("CATALOG")}
-    <h2 id="modal-title">Shape what comes next.</h2>
-    <p class="lead">${formatInt(state.nous)} ν available.</p>
-    ${openShelf.length > 0 ? `
-      <h3 class="store-section-title">Starter shelf</h3>
-      <div class="shop-list">${openShelf.map((type) => {
-        const price = BALANCE.shelfPrices[type];
-        const affordable = wholeNous(state) >= price;
-        const countdown = upgradeCountdown(app, price);
-        const hint = SHELF_HINTS[type];
-        const moduleMeta = META[SHELF_MODULE[type]];
-        return `<div class="shop-item">
-          <div><h3>${moduleMeta.name}</h3><small>${moduleMeta.role}</small>${hint ? `<em class="shop-hint">${hint}</em>` : ""}</div>
-          <span class="shop-buy">
-            <button class="primary" data-buy="${type}" ${affordable ? "" : "disabled"}>${formatInt(price)} ν</button>
-            ${countdown ? `<small class="shop-countdown mono">${countdown}</small>` : ""}
-          </span>
-        </div>`;
-      }).join("")}</div>` : ""}
-    ${openShelf.length === 0 ? `<p class="empty-copy">The shelf is empty.</p>` : ""}
-    <h3 class="store-section-title">Cells</h3>
-    <div class="shop-list">
-      <div class="shop-item">
-        <div><h3>Board cell</h3><small>Empty hexes to place modules on — you choose where it touches the board.</small></div>
-        <span class="shop-buy">
-          <button class="primary" id="buy-cell" ${cellAffordable ? "" : "disabled"} title="${cellAffordable ? "Arm the purchase — pick a frontier hex on the board" : "Not enough nous"}">${formatInt(cellPrice)} ν</button>
-          ${cellCountdown ? `<small class="shop-countdown mono">${cellCountdown}</small>` : ""}
-        </span>
-      </div>
-    </div>
-    <p class="small muted" style="margin:6px 0 0">Each purchase raises the next price.</p>
-    <label class="store-toggle"><input type="checkbox" id="store-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${ownedShelf.length}/${shelfTypes.length})</label>
-    ${ui.showAcquired && ownedShelf.length > 0 ? `
-      <h3 class="store-section-title">Acquired</h3>
-      <div class="shop-list store-owned">
-        ${ownedShelf.map((type) => `<div class="shop-item owned"><div><h3>${META[SHELF_MODULE[type]].name}</h3><small>${META[SHELF_MODULE[type]].role}</small></div><span class="activation-owned mono">in inventory</span></div>`).join("")}
-      </div>` : ""}
-    <p class="modal-note">Shelf offers hide once acquired; roll copies stay, as combination material.</p>`;
-  content.querySelectorAll<HTMLButtonElement>("[data-buy]").forEach((button) => {
-    button.addEventListener("click", () => {
-      app.buyShelf(button.getAttribute("data-buy") as keyof typeof BALANCE.shelfPrices);
-    });
-  });
-  byId("buy-cell")?.addEventListener("click", () => app.armCellPurchase());
-  byId("store-show-acquired")?.addEventListener("change", (event) => {
-    app.ui.showAcquired = (event.target as HTMLInputElement).checked;
-    app.render();
-  });
-  wireClose(app);
-}
-
-function renderForgeModal(app: App, content: HTMLElement): void {
-  const { state } = app;
-  const offer = state.bankedRolls[state.bankedRolls.length - 1];
-  const banked = state.bankedRolls.length;
-  content.innerHTML = `
-    <div class="modal-top"><span class="eyebrow">FORGE</span><span class="small muted">${banked} banked</span></div>
-    <h2 id="modal-title" class="sr-only">Forge choice</h2>
-    ${offer ? `<div class="candidates">
-      ${offer.candidates.map((candidate) => `
-        <button class="candidate-tile" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${candidate.rarity}" data-type="${candidate.type}" title="Take the ${RARITY_LABEL[candidate.rarity]} ${META[candidate.type].name}">
-          <svg viewBox="-70 -70 140 140" aria-hidden="true">
-            ${moduleFace({ type: candidate.type, rarity: candidate.rarity, readout: faceReadout({ type: candidate.type, rarity: candidate.rarity, level: 0 }), level: 0 })}
-          </svg>
-          <span class="rarity">${RARITY_LABEL[candidate.rarity]}</span>
-          <span class="candidate-scaling">+${formatNumber((BALANCE.rarityPower[candidate.rarity] - 1) * 100)}% / level · upgrades from 10 ν</span>
-          <span class="candidate-effect">${forgeWording(candidate.type, forgeThreshold(state.forge.earned))}</span>
-        </button>`).join("")}
-    </div>` : `<p class="empty-copy">No Forge choices available.</p>`}`;
-  content.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach((button) => {
-    button.addEventListener("click", () => {
-      app.chooseCandidate(button.getAttribute("data-offer")!, button.getAttribute("data-choice")!);
-    });
-  });
-}
-
-function renderExportModal(app: App, content: HTMLElement): void {
-  const text = app.exportText();
-  content.innerHTML = `
-    ${modalTop("EXPORT SAVE")}
-    <h2 id="modal-title">Take your progress with you.</h2>
-    <p class="lead">Copy, or download as a file.</p>
-    <textarea class="save-textarea" id="export-text" readonly>${text}</textarea>
-    <div class="modal-actions">
-      <button id="export-copy">Copy to clipboard</button>
-      <button id="export-download" class="primary">Download .json</button>
-    </div>`;
-  byId("export-copy")?.addEventListener("click", async () => {
-    const textarea = byId("export-text") as HTMLTextAreaElement | null;
-    if (!textarea) return;
-    textarea.select();
-    try {
-      await navigator.clipboard.writeText(textarea.value);
-      app.say("Save copied to the clipboard.");
-    } catch {
-      document.execCommand("copy");
-      app.say("Save selected — copy it with ⌘C / Ctrl+C.");
-    }
-  });
-  byId("export-download")?.addEventListener("click", () => {
-    const blob = new Blob([text], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "flowsynth-save.json";
-    document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
-  });
-  wireClose(app);
-}
-
-function renderImportModal(app: App, content: HTMLElement): void {
-  content.innerHTML = `
-    ${modalTop("IMPORT SAVE")}
-    <h2 id="modal-title">Bring progress back.</h2>
-    <p class="lead">Replaces the current instrument.</p>
-    <textarea class="save-textarea" id="import-text" placeholder='{"app":"flowsynth", ...}'></textarea>
-    <div class="modal-actions">
-      <input type="file" id="import-file" accept="application/json,.json" style="display:none" />
-      <button id="import-browse">Choose file…</button>
-      <button id="import-apply" class="primary">Import</button>
-    </div>
-    ${app.ui.importError ? `<p class="import-error">${app.ui.importError}</p>` : ""}`;
-  const textarea = byId("import-text") as HTMLTextAreaElement | null;
-  const file = byId("import-file") as HTMLInputElement | null;
-  byId("import-browse")?.addEventListener("click", () => file?.click());
-  file?.addEventListener("change", async () => {
-    const fileItem = file.files?.[0];
-    if (!fileItem || !textarea) return;
-    textarea.value = await fileItem.text();
-  });
-  byId("import-apply")?.addEventListener("click", () => {
-    if (textarea) app.importText(textarea.value);
-  });
-  wireClose(app);
-}
-
-function renderResetModal(app: App, content: HTMLElement): void {
-  content.innerHTML = `
-    ${modalTop("RESET")}
-    <h2 id="modal-title">Start over?</h2>
-    <p class="lead">Erases everything. Export first for a backup.</p>
-    <div class="modal-actions">
-      <button id="reset-cancel">Keep playing</button>
-      <button id="reset-confirm" class="primary" style="background:var(--danger);border-color:var(--danger)">Erase everything</button>
-    </div>`;
-  byId("reset-cancel")?.addEventListener("click", () => app.closeModal());
-  byId("reset-confirm")?.addEventListener("click", () => app.hardReset());
-  wireClose(app);
-}
-
-// The honesty report (focus-tool spec §2): the mandatory adjudication when
-// a session returns with provisional time outstanding. One surface, both
-// uses — mid-session and at exit (framing copy differs) — never merged into
-// the dismissible summary. The away minutes and the bucket are stated up
-// top; each option carries its consequences inline as its label; the answer
-// banks or drops the bucket in one move. Non-dismissible (ADR-0019): it
-// settles, or the player leaves and the next return re-presents it,
-// recalculated.
-function renderHonestyModal(app: App, content: HTMLElement): void {
-  const session = app.state.session;
-  const pool = session?.accounting.poolSeconds ?? 0;
-  const bucket = session?.accounting.bucketNous ?? 0;
-  const target = session?.target ?? null;
-  const planned = target !== null;
-  const hold = `${formatNumber(bucket)} ν held in the bucket`;
-  const head = planned
-    ? `${formatDuration(pool)} away past your plan — ${hold}.`
-    : `${formatDuration(pool)} away — ${hold}.`;
-  const options: { outcome: "missed" | "planned" | "full"; label: string; consequence: string }[] = [
-    {
-      outcome: "missed",
-      label: outcomeLabel("missed"),
-      consequence: `the ${formatNumber(bucket)} ν drop; those minutes don't count`,
-    },
-    ...(planned
-      ? [
-          {
-            outcome: "planned" as const,
-            label: outcomeLabel("planned"),
-            consequence: `credit rises to your ${formatClock(target)} plan; the ν banks`,
-          },
-        ]
-      : []),
-    {
-      outcome: "full",
-      label: outcomeLabel("full"),
-      consequence: `all ${formatDuration(pool)} count; the ν banks`,
-    },
-  ];
-  content.innerHTML = `
-    <div class="modal-top"><span class="eyebrow">${app.exitPending ? "BEFORE YOU WRAP UP" : "HONESTY REPORT"}</span></div>
-    <h2 id="modal-title">While you were away</h2>
-    <p class="lead">${head}</p>
-    <p class="small muted">Nothing is final until you answer${planned ? " — only the time past your plan is waiting" : ""}. What already banked stays banked.</p>
-    <div class="honesty-choices">
-      ${options
-        .map(
-          (option) => `<button class="honesty-choice" data-honesty="${option.outcome}">
-        <span class="honesty-label">${option.label}</span>
-        <small class="honesty-consequence">${option.consequence}</small>
-      </button>`,
-        )
-        .join("")}
-    </div>`;
-  content.querySelectorAll<HTMLButtonElement>("[data-honesty]").forEach((button) => {
-    button.addEventListener("click", () => {
-      app.resolveHonesty(button.getAttribute("data-honesty") as "missed" | "planned" | "full");
-    });
-  });
-}
-
-/* ── Session modals (§5.5, §5.7) ───────────────────── */
-
-// The enter prompt's decided shape (issue #92, built by #95): selection is
-// kind-first — a segmented `A habit | New habit | Unstructured` control, a
-// pane serving the picked kind, and a sticky footer band (Back / live
-// summary / `Begin — {kind} · {duration}`) whose CTA arms per the kind's
-// requirement: a habit picked, a name typed, or always for unstructured. It
-// carries the duration affordances from the very first start (ADR-0019,
-// §6–7) — preset chips + free 1–90 entry, open-ended resting, session-one's
-// steer riding above — and the renderKey fix: the modal's key rides the plan
-// and the selection state, so picks re-render immediately.
-// The one resolution of the selection — the only place that switches on the
-// kind. The kind's requirement (a habit picked, a name typed, or nothing for
-// unstructured) decides whether the session may start, and resolves its
-// target: the picked habit's id, or the trimmed new-habit name.
-function enterTarget(app: App): { armed: boolean; habitId: string | null; newName: string } {
-  const { ui, state } = app;
-  if (ui.enter.kind === "habit") {
-    const habit = ui.enter.habitId === null ? undefined : state.habits.find((h) => h.id === ui.enter.habitId && !h.archived);
-    return { armed: habit !== undefined, habitId: habit?.id ?? null, newName: "" };
-  }
-  if (ui.enter.kind === "new") {
-    const newName = ui.enter.newName.trim();
-    return { armed: newName !== "", habitId: null, newName };
-  }
-  return { armed: true, habitId: null, newName: "" };
-}
-
-interface EnterFootprint {
-  armed: boolean;
-  summary: string;
-  cta: string;
-}
-
-// The footer band's current content, read off the shared resolution.
-function enterFootprint(app: App): EnterFootprint {
-  const duration = app.ui.chosenTarget === null ? "open-ended" : `${Math.round(app.ui.chosenTarget / 60)} min`;
-  const target = enterTarget(app);
-  if (!target.armed) {
-    return app.ui.enter.kind === "new"
-      ? { armed: false, summary: "name it to arm the start", cta: "Name your new habit" }
-      : { armed: false, summary: "no habit picked yet", cta: "Select a habit" };
-  }
-  const what = target.newName
-    ? target.newName
-    : target.habitId === null
-      ? "unstructured"
-      : (app.state.habits.find((h) => h.id === target.habitId)?.name ?? "unstructured");
-  return { armed: true, summary: `${what} · ${duration}`, cta: `Begin — ${what} · ${duration}` };
-}
-
-// The footprint's summary and CTA carry user-typed names; anything these
-// strings feed as markup must escape them (the in-place footer refresh sets
-// textContent, which must stay raw).
-const escapeFootprint = (footprint: EnterFootprint): EnterFootprint => ({
-  ...footprint,
-  summary: escapeHtml(footprint.summary),
-  cta: escapeHtml(footprint.cta),
-});
-
-function renderEnterModal(app: App, content: HTMLElement): void {
-  const { state, ui } = app;
-  const enter = ui.enter;
-  const habits = state.habits.filter((h) => !h.archived);
-  const footprint = escapeFootprint(enterFootprint(app));
-  const kindTab = (kind: EnterKind, label: string) =>
-    `<button class="mode-tab${enter.kind === kind ? " active" : ""}" data-enter-kind="${kind}" aria-pressed="${enter.kind === kind}">${label}</button>`;
-  let pane = "";
-  if (enter.kind === "habit") {
-    pane = habits.length === 0
-      ? `<p class="mode-explain">No habits yet — the New habit tab names your first.</p>`
-      : `<div class="enter-choices">
-      ${habits
-        .map(
-          (habit) => `<button class="enter-choice${enter.habitId === habit.id ? " selected" : ""}" data-enter-habit="${habit.id}" aria-pressed="${enter.habitId === habit.id}">
-        <span class="dot"></span>
-        <span class="enter-choice-name">${escapeHtml(habit.name)}</span>
-        <small class="mono">${formatDuration(habit.seconds)}</small>
-      </button>`,
-        )
-        .join("")}
-    </div>
-    <p class="mode-explain">Pick the habit this session counts toward.</p>`;
-  } else if (enter.kind === "new") {
-    pane = `<div class="enter-create">
-      <input type="text" id="enter-habit-name" placeholder="Name it (piano, cooking…)" maxlength="40" aria-label="Name a new habit and start the session with it" value="${escapeHtml(enter.newName)}" />
-    </div>
-    <p class="mode-explain">A brand-new habit starts its clock with this session.</p>`;
-  } else {
-    pane = `<p class="mode-explain">No habit attached — the session runs, and nous is unaffected.</p>`;
-  }
-  content.innerHTML = `
-    ${modalTop("ENTER FLOW")}
-    <div class="enter-body">
-      <h2 id="modal-title">What are you practicing?</h2>
-      <div class="mode-tabs" role="group" aria-label="What kind of session is this?">
-        ${kindTab("habit", "A habit")}${kindTab("new", "New habit")}${kindTab("unstructured", "Unstructured")}
-      </div>
-      <div class="mode-pane">${pane}</div>
-      ${state.sessionsCompleted === 0 ? `<p class="enter-steer small muted">A first try can be short — five minutes or so, then exit and see what the session banked.</p>` : ""}
-      ${planControlsHtml(app)}
-    </div>
-    <div class="footer-band">
-      <button id="enter-cancel" class="small">Back</button>
-      <span class="cta-summary">${footprint.summary}</span>
-      <button id="enter-begin" class="primary" ${footprint.armed ? "" : "disabled"}>${footprint.cta}</button>
-    </div>`;
-  bindPlanControls(app, content);
-  // The same shared resolution arms the action: a typed name rides the
-  // new-habit path; otherwise the target is the picked habit's id, with null
-  // meaning unstructured rides beginFlow directly.
-  const begin = () => {
-    const target = enterTarget(app);
-    if (!target.armed) return;
-    if (target.newName) app.beginFlowNewHabit(target.newName);
-    else app.beginFlow(target.habitId);
-  };
-  content.querySelectorAll<HTMLButtonElement>("[data-enter-kind]").forEach((button) => {
-    button.addEventListener("click", () => {
-      enter.kind = button.getAttribute("data-enter-kind") as EnterKind;
-      app.render();
-    });
-  });
-  content.querySelectorAll<HTMLElement>("[data-enter-habit]").forEach((button) => {
-    button.addEventListener("click", () => {
-      enter.habitId = button.getAttribute("data-enter-habit");
-      app.render();
-    });
-  });
-  const nameInput = byId("enter-habit-name") as HTMLInputElement | null;
-  // Typing never rebuilds the modal (nothing renders in the background while
-  // the console sits in upgrade mode): the name rides ui state and the
-  // footer refreshes in place, so the caret keeps its place while the CTA
-  // arms. The next interaction that does render rebuilds with the name kept.
-  const refreshFootprint = () => {
-    const next = enterFootprint(app);
-    const summary = content.querySelector(".cta-summary");
-    const beginButton = byId("enter-begin");
-    if (summary) summary.textContent = next.summary;
-    if (beginButton) {
-      beginButton.textContent = next.cta;
-      (beginButton as HTMLButtonElement).disabled = !next.armed;
-    }
-  };
-  nameInput?.addEventListener("input", () => {
-    enter.newName = nameInput.value;
-    refreshFootprint();
-  });
-  nameInput?.addEventListener("keydown", (event) => {
-    if ((event as KeyboardEvent).key === "Enter") {
-      event.preventDefault();
-      if (enterTarget(app).armed) begin();
-    }
-  });
-  byId("enter-begin")?.addEventListener("click", begin);
-  byId("enter-cancel")?.addEventListener("click", () => app.closeModal());
-  wireClose(app);
-}
-
-// One voice for both honesty surfaces (§2, §8–9): the report's option
-// labels and the summary's factual event lines phrase each outcome the same
-// way, so the report's promise and the summary's record can never drift.
-const OUTCOME_PHRASES: Record<HonestyOutcome, string> = {
-  missed: "didn't practice",
-  planned: "did what I planned",
-  full: "practiced the whole time away",
-};
-
-const outcomeLabel = (outcome: HonestyOutcome): string => {
-  const phrase = OUTCOME_PHRASES[outcome];
-  return phrase.charAt(0).toUpperCase() + phrase.slice(1);
-};
-
-// The honesty event's neutral factual line (§8–9), the history list's
-// format: accounting, not judgment — "22 min away · didn't practice".
-function honestyEventLine(event: HonestyEvent): string {
-  return `${secondsToMinutes(event.awaySeconds)} min away · ${OUTCOME_PHRASES[event.outcome]}`;
-}
-
-// The loud summary (§5.7, §8): shown once per session end, however the
-// session ended — final numbers only. The headline is banked nous; practice
-// time shows credited minutes in the history list's format; the honesty
-// events sit beneath as neutral factual lines, where a dropped bucket's
-// drop is visible — and there is no raw wall-duration row. The reflection's
-// reserved slot rides above dismissal: free text plus a five-position
-// rough–great slider, end labels only, middle neutral and the default. It
-// records as either field is touched and stays absent otherwise, so every
-// dismissal path — Continue, ✕, backdrop, Esc — logs the same.
-function renderSummaryModal(app: App, content: HTMLElement): void {
-  const summary = app.state.summary;
-  if (!summary) {
-    content.innerHTML = `${modalTop("SESSION SUMMARY")}<h2 id="modal-title">No session to summarize.</h2>`;
-    wireClose(app);
-    return;
-  }
-  const carrierOnly = summary.harmonics === 0 && summary.chordMultiplier === 1 && summary.empowerment === 1;
-  const breakdown = carrierOnly
-    ? `the carrier term alone — ${formatNumber(summary.carrier)} ν/s is the whole formula`
-    : [
-        `carrier +${formatNumber(summary.carrier)} ν/s`,
-        ...(summary.harmonics > 0 ? [`harmonics +${formatNumber(summary.harmonics)} ν/s`] : []),
-        ...(summary.chordMultiplier > 1 ? [`chords ×${formatNumber(summary.chordMultiplier)}`] : []),
-        ...(summary.empowerment > 1 ? [`empowerment ×${formatNumber(summary.empowerment)}`] : []),
-      ].join(" · ");
-  // The "unlocked this session" row (ADR-0015): in-session unlocks queue
-  // here instead of toasting, whatever the exit path.
-  const unlocked = (summary.achievements ?? []).map(achievementName);
-  const unlockRow = unlocked.length > 0
-    ? `<div class="summary-row unlock">
-        <span class="summary-label">Unlocked this session</span>
-        <strong>${unlocked.join(" · ")}</strong>
-      </div>`
-    : "";
-  const events = (summary.honestyEvents ?? [])
-    .map((event) => `<p class="summary-event">${honestyEventLine(event)}</p>`)
-    .join("");
-  const reflection = summary.reflection;
-  content.innerHTML = `
-    ${modalTop(`SESSION ${summary.sessionNumber} · SUMMARY`)}
-    <h2 id="modal-title" class="summary-headline">This session earned <strong class="mono">${formatNumber(summary.earned)}</strong> nous</h2>
-    <div class="summary-rows">
-      <div class="summary-row">
-        <span class="summary-label">Practice time</span>
-        <strong class="mono">${formatPracticeMinutes(summary.seconds, summary.plannedTarget ?? null)}</strong>
-      </div>
-      <div class="summary-row">
-        <span class="summary-label">Rate achieved</span>
-        <strong class="mono">${formatNumber(summary.ratePerMinute)} ν <small>per practice minute</small></strong>
-        <small class="summary-note">${breakdown}</small>
-      </div>
-      ${unlockRow}
-      ${summary.timeUnlocked
-        ? `<div class="summary-row unlock">
-        <span class="summary-label">New feature unlocked</span>
-        <strong>Time your flow sessions</strong>
-        <small class="summary-note">The Time app is live.</small>
-      </div>`
-        : ""}
-    </div>
-    ${events ? `<div class="summary-events">${events}</div>` : ""}
-    <div class="summary-reflection">
-      <span class="summary-label">How did it go?</span>
-      <input type="text" id="summary-reflection-text" aria-label="Reflect on the session in words" value="${escapeHtml(reflection?.text ?? "")}" />
-      <div class="reflection-slider">
-        <span class="reflection-end">rough</span>
-        <input type="range" id="summary-reflection-slider" min="1" max="${REFLECTION_SLIDER_POSITIONS}" step="1" value="${reflection?.slider ?? REFLECTION_SLIDER_NEUTRAL}" aria-label="How the session went, rough to great" />
-        <span class="reflection-end">great</span>
-      </div>
-    </div>
-    <div class="modal-actions"><button id="summary-continue" class="primary">Continue</button></div>`;
-  byId("summary-reflection-text")?.addEventListener("input", (event) => {
-    app.recordReflectionText((event.target as HTMLInputElement).value);
-  });
-  byId("summary-reflection-slider")?.addEventListener("input", (event) => {
-    app.recordReflectionSlider(Number((event.target as HTMLInputElement).value));
-  });
-  byId("summary-continue")?.addEventListener("click", () => app.dismissSummary());
-  wireClose(app);
 }
 
 /* ── Dev panel ─────────────────────────────────────── */
