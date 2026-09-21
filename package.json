@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "deploy:vercel": "vercel build --prod && vercel deploy --prebuilt --prod"
   },
   "devDependencies": {
     "happy-dom": "^20.14.5",
