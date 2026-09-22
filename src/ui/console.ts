@@ -14,8 +14,8 @@ import { formatInt, formatNumber } from "./format";
 import { APP_LABELS } from "./meta";
 import { appIcon } from "./icons";
 import { byId, escapeHtml } from "./dom";
-import { keyedRegion } from "./region";
-import { OPEN_ENDED_WORD, plannedFill, sessionCaption } from "./clockface";
+import { keyedRegion, liveWidth } from "./region";
+import { OPEN_ENDED_WORD, plannedFill, sessionCaption, sessionClock } from "./clockface";
 import { projectedCountdown, type RenderContext } from "./context";
 import { appPanelBody, bindAppPanel, panelKeyFacts, updateAppPanelLive } from "./panels";
 
@@ -93,13 +93,10 @@ export function renderConsoleSession(ctx: RenderContext): void {
     return;
   }
 
-  const session = state.session;
-  const elapsed = session?.elapsed ?? 0;
-  const target = session?.target ?? null;
-  const paused = state.mode === "paused";
-  const reached = target !== null && elapsed >= target;
+  const clock = sessionClock(state);
+  const reached = clock.target !== null && clock.elapsed >= clock.target;
 
-  keyedRegion(host, `flow:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}`, () => {
+  keyedRegion(host, `flow:${state.mode}:${clock.target === null ? "open" : reached ? "reached" : "timed"}`, () => {
     host.innerHTML = `
       <div class="console-clock">
         <p class="session-clock mono" id="session-clock"></p>
@@ -107,8 +104,8 @@ export function renderConsoleSession(ctx: RenderContext): void {
         <p class="clock-provisional" id="session-provisional" role="status"></p>
       </div>
       <div class="session-actions">
-        <button id="pause-flow">${paused ? "Resume" : "Pause"}</button>
-        <button class="main-switch ${paused ? "held" : "live"}" id="flow-switch" title="Exit flow — end the session and bank its production">
+        <button id="pause-flow">${clock.paused ? "Resume" : "Pause"}</button>
+        <button class="main-switch ${clock.paused ? "held" : "live"}" id="flow-switch" title="Exit flow — end the session and bank its production">
           ${switchSvg}<span>Exit flow</span><i class="switch-state" aria-hidden="true"></i>
         </button>
       </div>`;
@@ -123,19 +120,19 @@ export function renderConsoleSession(ctx: RenderContext): void {
     const node = byId(id);
     if (node && node.textContent !== text) node.textContent = text;
   };
-  set("session-clock", formatClock(target !== null ? Math.max(0, target - elapsed) : elapsed));
-  set("session-caption", sessionCaption(elapsed, target, paused));
+  set("session-clock", formatClock(clock.target !== null ? Math.max(0, clock.target - clock.elapsed) : clock.elapsed));
+  set("session-caption", sessionCaption(clock.elapsed, clock.target, clock.paused));
   // The provisional bucket is visibly flagged while it holds (§2): the pool
   // minutes and the nous waiting on the honesty report, in the switch's
   // vermillion so it reads from across the room.
-  const accounting = session?.accounting;
+  const accounting = state.session?.accounting;
   set(
     "session-provisional",
     accounting && poolOutstanding(state)
       ? `${formatDuration(accounting.poolSeconds)} provisional · ${formatNumber(accounting.bucketNous)} ν held`
       : "",
   );
-  renderSessionStrip(true, elapsed, target, paused);
+  renderSessionStrip(true, clock.elapsed, clock.target, clock.paused);
 }
 
 // The header's bottom edge is the progress surface (issue #63): a thin strip
@@ -145,11 +142,10 @@ export function renderConsoleSession(ctx: RenderContext): void {
 // Tick-safe — class and width update in place.
 function renderSessionStrip(running: boolean, elapsed = 0, target: number | null = null, paused = false): void {
   const strip = byId("session-strip");
-  const fill = byId("session-strip-fill");
-  if (!strip || !fill) return;
+  if (!strip) return;
   strip.classList.toggle("pulse", running && target === null && !paused);
   const width = !running ? "0%" : target === null ? "100%" : plannedFill(elapsed, target);
-  if (fill.style.width !== width) fill.style.width = width;
+  liveWidth(document, "#session-strip-fill", width);
 }
 
 /* ── Focus-app tiles and popover shell (ADR-0012) ──── */
@@ -296,8 +292,10 @@ export function renderTools(ctx: RenderContext): void {
   const host = byId("board-tools");
   if (!host) return;
   const upgrade = state.mode === "upgrade";
-  const managing = ui.managing;
-  const key = JSON.stringify([upgrade, state.bankedRolls.length, managing, ui.buyingCell, ui.showChords]);
+  // The pressed state is the composed manage flag — arranging while in
+  // upgrade mode — which the raw ui flag alone doesn't imply.
+  const managing = ui.managing && upgrade;
+  const key = JSON.stringify([upgrade, state.bankedRolls.length, ui.managing, ui.buyingCell, ui.showChords]);
   keyedRegion(host, key, () => {
     const forgeReady = upgrade && state.bankedRolls.length > 0;
     host.innerHTML = `
@@ -311,16 +309,15 @@ export function renderTools(ctx: RenderContext): void {
       <button class="small${ui.showChords ? " active" : ""}" id="tool-chords" aria-pressed="${ui.showChords}" title="Show chords — light the chord voices, link the pairs, outline and label named chords · C">Chords</button>`;
     byId("tool-store")?.addEventListener("click", () => ctx.intents.openModal("store"));
     byId("tool-forge")?.addEventListener("click", () => ctx.intents.openModal("forge"));
-    byId("tool-manage")?.addEventListener("click", () => (managing ? ctx.intents.stopManaging() : ctx.intents.startManaging()));
+    byId("tool-manage")?.addEventListener("click", () => (ui.managing ? ctx.intents.stopManaging() : ctx.intents.startManaging()));
     byId("tool-cell")?.addEventListener("click", () => (ui.buyingCell ? ctx.intents.cancelCellPurchase() : ctx.intents.armCellPurchase()));
     byId("tool-chords")?.addEventListener("click", () => ctx.intents.toggleChords());
   });
   // Live under the structural rebuild: the Forge pip tracks the shared
   // meter, and the cell icon wears the current price and affordability.
   const cap = forgeThreshold(state.forge.earned);
-  const pip = host.querySelector<HTMLElement>('[data-live="forge-pip"]');
   const pipWidth = `${(Math.min(1, Math.max(0, state.forge.progress / cap)) * 100).toFixed(1)}%`;
-  if (pip && pip.style.width !== pipWidth) pip.style.width = pipWidth;
+  liveWidth(host, '[data-live="forge-pip"]', pipWidth);
   const forgeButton = byId("tool-forge");
   if (forgeButton) {
     forgeButton.title =

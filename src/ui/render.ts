@@ -3,7 +3,7 @@ import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
 import { NEXT_RARITY } from "../engine/constants";
 import { isCarrier } from "../engine/state";
-import type { GameState, Hex, ModuleInstance, RateSnapshot } from "../engine/types";
+import type { Hex, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
 import { HEX_RADIUS, hexApothem, hexPoints, moduleFace } from "./face";
 import { faceReadout, PINNED_SENTENCE } from "./lexicon";
@@ -28,14 +28,6 @@ function point({ q, r }: Hex): [number, number] {
 }
 
 
-// The rate shown in the header, formula bar, and hexes: live during flow,
-// projected build rate while arranging in upgrade mode. Module panels preview
-// charge separately via computeRates(state, true).
-function currentSnapshot(state: GameState): RateSnapshot {
-  return computeRates(state, state.mode === "flow");
-}
-
-
 export function render(app: App): void {
   // One context per render pass: the modals and monitor regions (and, as
   // each remaining region extracts, the rest) read state and fire intents
@@ -45,7 +37,8 @@ export function render(app: App): void {
   renderConsoleApps(ctx);
   renderConsoleReadout(ctx);
   renderTools(ctx);
-  renderGrid(app);
+  // The grid reads the same memoized per-pass snapshot as the console.
+  renderGrid(app, ctx.memo.snapshot());
   renderStatusMonitor(ctx);
   renderInspector(ctx, (host) => renderManagePanel(app, host));
   renderWelcome(ctx);
@@ -55,7 +48,7 @@ export function render(app: App): void {
 
 /* ── Hex grid ──────────────────────────────────────── */
 
-function renderGrid(app: App): void {
+function renderGrid(app: App, snapshot: RateSnapshot): void {
   const { state, ui } = app;
   const svg = document.getElementById("grid") as SVGSVGElement | null;
   if (!svg) return;
@@ -72,7 +65,6 @@ function renderGrid(app: App): void {
   svg.classList.toggle("chord-view", ui.showChords);
 
   const flow = state.mode === "flow";
-  const snapshot = currentSnapshot(state);
   const selectedModule = state.modules.find((m) => m.id === ui.selected) ?? null;
 
   // The chord view (issue #62): a display-only read of the board's chord
