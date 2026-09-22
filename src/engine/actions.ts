@@ -222,7 +222,7 @@ export function dismissSummary(state: GameState): ActionResult {
 // The starter shelf (ADR-0013, ADR-0018): one-time offers for the launch
 // categories plus the additive synth that makes chord play possible before
 // the first roll. All nous spending is upgrade-mode-only (§3); there is no
-// separate store gate — upgrade mode itself is the purchase window.
+// separate catalog gate — upgrade mode itself is the purchase window.
 export function buyShelfModule(state: GameState, type: ShelfType): ActionResult {
   if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
   if (state.purchased[type]) return fail("This shelf offer was already purchased.");

@@ -425,24 +425,24 @@ describe("the enter prompt", () => {
 describe("the catalog", () => {
   it("a shelf purchase stays in the catalog and lands in inventory", () => {
     app.state.nous = BALANCE.shelfPrices.generator;
-    app.openModal("store");
+    app.openModal("catalog");
     document.querySelector<HTMLButtonElement>('[data-buy="generator"]')!.click();
-    expect(app.ui.modal).toBe("store");
+    expect(app.ui.modal).toBe("catalog");
     const generator = app.state.modules.find((m) => m.type === "focusKeyed")!;
     expect(generator.pos).toBeNull();
     expect(app.state.purchased.generator).toBe(true);
   });
 
   it("the cell row quotes the actual price", () => {
-    app.openModal("store");
+    app.openModal("catalog");
     const cellButton = document.getElementById("buy-cell")!;
     expect(cellButton.textContent).toContain(`${BALANCE.cellFirstCost} ν`);
   });
 
   it("omits the activation section while the ladder rests empty — no telegraph, no pricing", () => {
-    app.openModal("store");
+    app.openModal("catalog");
     const modal = document.getElementById("modal-content")!;
-    expect(modal.querySelector(".store-activations")).toBeNull();
+    expect(modal.querySelector(".catalog-activations")).toBeNull();
     expect(modal.textContent).not.toContain("Activations");
     expect(modal.querySelectorAll("[data-activate]")).toHaveLength(0);
     expect(modal.textContent).not.toContain("activate");
