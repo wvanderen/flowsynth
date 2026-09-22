@@ -8,11 +8,11 @@
 import { ARETE_GRADUATIONS, ARETE_HORIZON, accumulatorFill, nextAccumulatorMark } from "../engine/accumulator";
 import { achievementBoostOf } from "../engine/achievements";
 import { BALANCE } from "../engine/constants";
-import { computeRates } from "../engine/economy";
-import type { GameState, RateSnapshot } from "../engine/types";
-import type { App } from "./app";
+import type { RateSnapshot } from "../engine/types";
+import { byId } from "./dom";
 import { moduleIcon } from "./icons";
 import { formatCountdown, formatNumber } from "./format";
+import type { RenderContext } from "./context";
 
 // Past this fill fraction the beat readout flips to right-anchoring so it
 // never clips at the rail's right edge (prototype tuning).
@@ -71,7 +71,8 @@ function formulaChipHtml(boosted: boolean): string {
 
 // The Arete accumulator: the rail with its fill, inert decade graduations,
 // the horizon cap, the riding beat head, and the reserved prestige button.
-function accumulatorHtml(state: GameState, past: boolean): string {
+function accumulatorHtml(ctx: RenderContext, past: boolean): string {
+  const { state } = ctx;
   const graduations = ARETE_GRADUATIONS.map(
     (mark) => `<i class="monitor-grad" style="left:${(accumulatorFill(mark) * 100).toFixed(2)}%"><b>${markLabel(mark)}</b></i>`,
   ).join("");
@@ -92,10 +93,10 @@ function accumulatorHtml(state: GameState, past: boolean): string {
     </div>`;
 }
 
-export function renderStatusMonitor(app: App): void {
+export function renderStatusMonitor(ctx: RenderContext): void {
   const host = document.getElementById("status-monitor");
   if (!host) return;
-  const { state } = app;
+  const { state } = ctx;
   const past = state.totalEarned >= ARETE_HORIZON;
   // Structural key: the era flip, the prestige acknowledgment, and the
   // achievement term joining the chip equation (first feat) rebuild the
@@ -107,21 +108,19 @@ export function renderStatusMonitor(app: App): void {
     host.dataset.renderKey = key;
     host.innerHTML = `
       <div class="monitor-top">${formulaChipHtml(achieving)}</div>
-      ${accumulatorHtml(state, past)}`;
-    byId("prestige-button")?.addEventListener("click", () => app.acknowledgeHorizon());
+      ${accumulatorHtml(ctx, past)}`;
+    byId("prestige-button")?.addEventListener("click", () => ctx.intents.acknowledgeHorizon());
   }
-  updateMonitorLive(app, past);
+  updateMonitorLive(ctx, past);
 }
 
-function byId(id: string): HTMLElement | null {
-  return document.getElementById(id);
-}
-
-function updateMonitorLive(app: App, past: boolean): void {
+function updateMonitorLive(ctx: RenderContext, past: boolean): void {
   const host = byId("status-monitor");
   if (!host) return;
-  const { state } = app;
-  const snapshot = computeRates(state, true);
+  const { state } = ctx;
+  // The memoized projection: one board pass per render pass, shared with
+  // every other region that reads the countdown basis.
+  const snapshot = ctx.memo.projected();
   const set = (id: string, text: string) => {
     const node = host.querySelector(`[data-live="${id}"]`);
     if (node && node.textContent !== text) node.textContent = text;
