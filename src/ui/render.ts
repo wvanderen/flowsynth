@@ -23,7 +23,7 @@ import type { GameState, Goal, Habit, Hex, ModuleInstance, NoteEntry, RateSnapsh
 import type { App } from "./app";
 import { appIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, moduleFace } from "./face";
-import { effectLine, faceReadout, typeProse, upgradeGain } from "./lexicon";
+import { effectLine, faceReadout, PINNED_SENTENCE, typeProse, upgradeGain } from "./lexicon";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
@@ -33,9 +33,8 @@ import { renderStatusMonitor } from "./monitor";
 import { byId, escapeHtml } from "./dom";
 import { bindPlanControls, planControlsHtml } from "./plan";
 import { contextFor } from "./context";
-import { honestyEventLine, PINNED_SENTENCE, renderModals } from "./modals";
-
-export { PINNED_SENTENCE } from "./modals";
+import { honestyEventLine } from "./honesty";
+import { renderModals } from "./modals";
 
 const SPACING = 65;
 const DRAG_THRESHOLD_PX = 6;

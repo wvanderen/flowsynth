@@ -13,7 +13,7 @@ import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport } fro
 import { recordMissed, recordTargetHit } from "../engine/records";
 import { give } from "../engine/fixtures";
 import { hex } from "../engine/hex";
-import { PINNED_SENTENCE } from "./render";
+import { PINNED_SENTENCE } from "./lexicon";
 import type { GameState } from "../engine/types";
 import type { SignalChannels } from "./signals";
 
@@ -426,6 +426,16 @@ describe("the catalog", () => {
     app.openModal("store");
     const cellButton = document.getElementById("buy-cell")!;
     expect(cellButton.textContent).toContain(`${BALANCE.cellFirstCost} ν`);
+  });
+
+  it("the show-acquired toggle is region-local scratch: it starts fresh each open", () => {
+    app.openModal("store");
+    const toggle = () => document.getElementById("store-show-acquired") as HTMLInputElement;
+    toggle().click();
+    expect(toggle().checked).toBe(true);
+    app.closeModal();
+    app.openModal("store");
+    expect(toggle().checked).toBe(false);
   });
 
   it("omits the activation section while the ladder rests empty — no telegraph, no pricing", () => {
