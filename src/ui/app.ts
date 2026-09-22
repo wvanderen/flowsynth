@@ -136,6 +136,8 @@ function combineMessage(result: ActionResult): string {
     : "Combined into a stronger copy.";
 }
 
+const HABIT_ACTION_UNAVAILABLE = "That habit action is unavailable.";
+
 type ParsedSave = LoadedSave | { error: string };
 
 function parseSave(text: string): ParsedSave {
@@ -921,17 +923,17 @@ export class App {
   // ── Habits (#5) ─────────────────────────────────────────────────────────
 
   createHabitAction(name: string): void {
-    this.perform(() => createHabit(this.state, name), `${name.trim()} added to your habits.`, "That habit action is unavailable.");
+    this.perform(() => createHabit(this.state, name), `${name.trim()} added to your habits.`, HABIT_ACTION_UNAVAILABLE);
   }
 
   renameHabitAction(id: string, name: string): void {
     this.ui.editingHabitId = null;
-    this.perform(() => renameHabit(this.state, id, name), "Habit renamed.", "That habit action is unavailable.");
+    this.perform(() => renameHabit(this.state, id, name), "Habit renamed.", HABIT_ACTION_UNAVAILABLE);
   }
 
   archiveHabitAction(id: string): void {
     const habit = this.state.habits.find((h) => h.id === id);
-    this.perform(() => archiveHabit(this.state, id), `${habit?.name ?? "Habit"} archived.`, "That habit action is unavailable.");
+    this.perform(() => archiveHabit(this.state, id), `${habit?.name ?? "Habit"} archived.`, HABIT_ACTION_UNAVAILABLE);
   }
 
   selectHabitAction(id: string | null): void {
@@ -943,7 +945,7 @@ export class App {
     this.perform(
       () => selectHabit(this.state, target),
       togglingOff ? "No habit selected." : habit ? `${habit.name} selected.` : "No habit selected.",
-      "That habit action is unavailable.",
+      HABIT_ACTION_UNAVAILABLE,
     );
   }
 
