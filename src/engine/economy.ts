@@ -148,7 +148,7 @@ const SYNTH_BASE_RATE: Record<SynthesizerType, number> = {
   conditional: BALANCE.conditionalRate,
 };
 
-// The additive-synthesis rate (ADR-0014):
+// The additive-synthesis rate (ADR-0014; leg naming per ADR-0020):
 //   rate      = (carrier + harmonics + infusors) × chord terms × empowerment × achievementBoost
 // Amplitude inputs are unchanged: level and rarity set amplitude, infusors
 // add local bonuses, charge empowers per-module with the diminishing-returns

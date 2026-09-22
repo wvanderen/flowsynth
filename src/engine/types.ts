@@ -357,7 +357,7 @@ export interface Contribution {
   chargeStrength: number;
 }
 
-// The live rate breakdown (§4): carrier / harmonics / infusors / chords /
+// The live rate breakdown (§4; leg naming per ADR-0020): carrier / harmonics / infusors / chords /
 // empowerment / achievements → rate. The carrier and harmonic legs are the
 // synths' base terms — infusor uplift is split into its own additive leg so
 // the breakdown names it — and all three stay uncharged so charge

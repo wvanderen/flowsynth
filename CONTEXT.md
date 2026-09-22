@@ -46,10 +46,10 @@ The provisional name for the game's main progression resource, spent on permanen
 The single final nous-per-second output: `composite × empowerment × achievementBoost`. Modules contribute terms to this shared rate rather than producing independent timed payouts.
 
 **Composite**:
-The board's summed and chord-multiplied amplitude: the Carrier plus all harmonic terms, times every chord term.
+The board's summed and chord-multiplied amplitude: the Carrier plus every harmonic and infusor term, times every chord term.
 
 **Harmonic term**:
-A synthesizer's contribution to the composite — its amplitude at its pitch, plus a per-chord-pair bonus for Conditional types.
+A synthesizer's base contribution to the composite — its amplitude at its pitch, plus a per-chord-pair bonus for Conditional types. Infusor uplift rides in the infusor term.
 
 **Synthesizer**:
 A board module contributing a harmonic term to the composite, whose effect is empowered while it receives charge. Synthesizers never produce charge.
@@ -76,6 +76,9 @@ An increase to a module's specified effect while receiving charge, increasing wi
 **Infusor**:
 A board module that improves a specified effect of eligible adjacent modules, with its bonus strengthened while receiving charge.
 _Avoid_: Infuser
+
+**Infusor term**:
+An infusor's contribution to the composite: the local uplift it grants adjacent synthesizers' amplitudes, named as its own additive leg in the live rate breakdown.
 
 ### Quality and acquisition
 
