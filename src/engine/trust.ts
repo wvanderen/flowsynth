@@ -1,4 +1,4 @@
-import { EPS, RECONCILIATION_FLOOR_SECONDS } from "./constants";
+import { DRIFT_NOISE_SECONDS, EPS, RECONCILIATION_FLOOR_SECONDS } from "./constants";
 import { syncArete } from "./accumulator";
 import { advance, sumResults } from "./advance";
 import { accrueLivePractice } from "./habits";
@@ -44,9 +44,11 @@ export function poolOutstanding(state: GameState): boolean {
 // One boundary's gap, classified and applied. `seconds` is the wall-clock
 // delta since the last boundary; `driftStepSeconds` is the step in
 // Date.now() − (performance.timeOrigin + performance.now()) across the same
-// span — a positive step sizes a slept gap, which is away even while the
-// tab was "visible"; a negative step (clock rolled back) credits zero.
-// Paused time is neither present nor away: it produces and credits nothing.
+// span — a positive step past the noise floor sizes a slept gap, which is
+// away even while the tab was "visible"; a negative step past the floor
+// (clock rolled back) credits zero; steps inside the floor on either side
+// are measurement jitter the boundary ignores. Paused time is neither
+// present nor away: it produces and credits nothing.
 export function applyGap(
   state: GameState,
   seconds: number,
@@ -55,9 +57,13 @@ export function applyGap(
   rng: Rng = Math.random,
 ): AdvanceResult {
   if (state.mode !== "flow" || seconds <= EPS) return ZERO;
-  // Clock rolled back: the span cannot be sized honestly, so it credits 0.
-  if (driftStepSeconds < 0) return ZERO;
-  const slept = Math.min(driftStepSeconds, seconds);
+  // Past the noise floor on either side is real drift; inside it is the two
+  // clocks' quantization jitter, which the boundary ignores. Treating each
+  // jitter step as drift discarded whole wall gaps (negative) or sized
+  // phantom sleeps from ±2 ms (positive) — a stopwatch against the session
+  // clock read a steady fraction of real time.
+  if (driftStepSeconds < -DRIFT_NOISE_SECONDS) return ZERO;
+  const slept = driftStepSeconds > DRIFT_NOISE_SECONDS ? Math.min(driftStepSeconds, seconds) : 0;
   const awake = seconds - slept;
   if (presence === "away") {
     // Same contiguous absence: buffer, never classify a throttled slice.
