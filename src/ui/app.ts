@@ -175,9 +175,9 @@ export class App {
     summaryHabitId: null,
   };
   lastWall: number | null = null;
-  // The dual-clock drift baseline at lastWall (§10): its positive steps
-  // size slept gaps; a negative step past the quantization noise floor
-  // credits its boundary zero — sub-floor steps are jitter, not drift.
+  // The dual-clock drift baseline at lastWall (§10): a positive step past
+  // the noise floor sizes slept gaps; a negative one past it credits the
+  // boundary zero — sub-floor steps are jitter, not drift.
   lastDrift = 0;
   // The presence state that held since the last boundary (§1): presence is
   // visibility — focus loss alone is not away.

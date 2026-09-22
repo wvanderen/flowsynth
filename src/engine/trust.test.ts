@@ -172,15 +172,26 @@ describe("presence: slept gaps size by dual-clock drift", () => {
     const s = fresh();
     startSession(s, 600);
     const balance = s.nous;
-    // Date.now() reads whole milliseconds while performance.now() reads
-    // finer: even with both clocks running true, the measured drift jitters
-    // by a millisecond or two across every boundary — the stopwatch report
-    // of a session clock running at a steady fraction of real time.
+    // Whole-millisecond quantization jitters the measured drift a
+    // millisecond or two per boundary (§1): sub-floor in either direction,
+    // so each gap credits whole and sizes no sleep.
     for (let i = 0; i < 10; i++) applyGap(s, 0.1, "visible", i % 2 === 0 ? -0.002 : 0.002);
     expect(s.session!.elapsed).toBeCloseTo(1, 6);
     expect(s.nous - balance).toBeCloseTo(0.1, 6);
     expect(s.session!.accounting.creditedSeconds).toBeCloseTo(1, 6);
     expect(s.session!.accounting.poolSeconds).toBe(0);
+  });
+
+  it("a sub-noise positive step sizes no sleep, even where the slice would go provisional", () => {
+    const s = fresh();
+    startSession(s, 600);
+    advance(s, 600);
+    applyGap(s, 1800, "visible", 0.04);
+    // +40 ms of jitter lands past the plan, where a real slept slice goes
+    // provisional: sizing it would leak the boundary's gap into the pool.
+    expect(s.session!.accounting.poolSeconds).toBe(0);
+    expect(s.session!.accounting.creditedSeconds).toBeCloseTo(2400, 6);
+    expect(s.session!.elapsed).toBeCloseTo(2400, 6);
   });
 
   it("a negative drift step (clock rolled back) credits zero", () => {
