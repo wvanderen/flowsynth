@@ -37,8 +37,10 @@ All rollable types roll at 99% common / 0.9% uncommon / 0.1% rare
 - **forge** — chargeable (ADR-0012): accumulates received charge toward a
   rolling threshold (initial 60, ×1.5 growth); crossing mints a roll offer.
 
-Composite (ADR-0014): `rate = (carrier + Σ harmonics) × Π chord terms ×
-empowerment × achievementBoost`.
+Composite (ADR-0014; leg naming per ADR-0020): `rate = (carrier + harmonics +
+infusors) × Π chord terms × empowerment × achievementBoost`. The carrier and
+harmonic legs are the synths' base terms; infusor uplift is named in its own
+additive leg, so the breakdown multiplies out exactly.
 
 ## Per-module notes
 

@@ -147,6 +147,7 @@ export interface SessionSummary {
   // The rate breakdown at session end (carrier-only during session one).
   carrier: number;
   harmonics: number;
+  infusors: number;
   chordMultiplier: number;
   empowerment: number;
   // The summary's unlock row (ADR-0015): in design, inert at launch — the
@@ -356,13 +357,17 @@ export interface Contribution {
   chargeStrength: number;
 }
 
-// The live rate breakdown (§4): carrier / harmonics / chords / empowerment /
-// achievements → rate. The carrier and harmonic legs are uncharged; charge
-// empowerment aggregates into its own leg so the lines always multiply out:
-// rate = composite × empowerment × achievementBoost.
+// The live rate breakdown (§4; leg naming per ADR-0020): carrier / harmonics / infusors / chords /
+// empowerment / achievements → rate. The carrier and harmonic legs are the
+// synths' base terms — infusor uplift is split into its own additive leg so
+// the breakdown names it — and all three stay uncharged so charge
+// empowerment aggregates into its own leg and the lines always multiply out:
+// rate = (carrier + harmonics + infusors) × chordMultiplier × empowerment ×
+// achievementBoost.
 export interface RateSnapshot {
   carrier: number;
   harmonics: number;
+  infusors: number;
   amplitude: number;
   chordMultiplier: number;
   pairs: ChordPairTerm[];

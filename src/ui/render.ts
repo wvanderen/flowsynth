@@ -2251,12 +2251,13 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
     wireClose(app);
     return;
   }
-  const carrierOnly = summary.harmonics === 0 && summary.chordMultiplier === 1 && summary.empowerment === 1;
+  const carrierOnly = summary.harmonics === 0 && summary.infusors === 0 && summary.chordMultiplier === 1 && summary.empowerment === 1;
   const breakdown = carrierOnly
     ? `the carrier term alone — ${formatNumber(summary.carrier)} ν/s is the whole formula`
     : [
         `carrier +${formatNumber(summary.carrier)} ν/s`,
         ...(summary.harmonics > 0 ? [`harmonics +${formatNumber(summary.harmonics)} ν/s`] : []),
+        ...(summary.infusors > 0 ? [`infusors +${formatNumber(summary.infusors)} ν/s`] : []),
         ...(summary.chordMultiplier > 1 ? [`chords ×${formatNumber(summary.chordMultiplier)}`] : []),
         ...(summary.empowerment > 1 ? [`empowerment ×${formatNumber(summary.empowerment)}`] : []),
       ].join(" · ");
