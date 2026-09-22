@@ -95,10 +95,10 @@ export interface ChordAnalysis {
 
 // The chord pass over the deployed synthesizers: adjacent synthesizers one
 // pitch apart form raw pair terms (identical pitches only stack amplitude —
-// no chord); each named chord replaces the pair terms at its pitch positions
-// in the cluster, paying one bonus instead — the chord's extra voices ride
-// amplitude only. Bonus-only: no dissonance penalties, and the board's
-// finite cell budget is the only cap.
+// no chord); each named chord replaces the pair terms of its member pairs —
+// the voices it actually sings through — while pairs outside any named chord
+// keep the anonymous bonus (#29). Bonus-only: no dissonance penalties, and
+// the board's finite cell budget is the only cap.
 export function analyzeChords(synths: DeployedModule[]): ChordAnalysis {
   const pairs: ChordPairTerm[] = [];
   const namedChords: NamedChordTerm[] = [];
@@ -113,7 +113,11 @@ export function analyzeChords(synths: DeployedModule[]): ChordAnalysis {
         const pa = pitchOf(a.pos);
         const pb = pitchOf(b.pos);
         if (Math.abs(pa - pb) !== 1) continue;
-        if (named.some((chord) => chord.pitches.includes(pa) && chord.pitches.includes(pb))) continue;
+        // A named chord replaces its member pairs' bonuses only: a pair both
+        // of whose modules sing in it. Pairs outside any named chord —
+        // including doubled voices at a chord's pitches — keep the anonymous
+        // bonus (#29).
+        if (named.some((chord) => chord.moduleIds.includes(a.id) && chord.moduleIds.includes(b.id))) continue;
         pairs.push({ a: a.id, b: b.id, bonus: BALANCE.pairBonus });
       }
     }
