@@ -4,7 +4,7 @@
 // RenderContext; every write is an intent. The arrange-mode manage view
 // also renders into this rail, but its drag wiring belongs to the grid —
 // the dispatcher passes it in until the grid region extracts.
-import { chargedFactor, deployed, isSource, levelCost, modulePower, nominalContribution, wholeNous } from "../engine/economy";
+import { chargedFactor, deployed, isSource, levelCost, modulePower, wholeNous } from "../engine/economy";
 import { BALANCE } from "../engine/constants";
 import { forgeThreshold } from "../engine/rolls";
 import { isCarrier } from "../engine/state";
@@ -13,20 +13,25 @@ import type { GameState, ModuleInstance } from "../engine/types";
 import { formatClock, formatDuration } from "../engine/clock";
 import { formatInt, formatNumber } from "./format";
 import { META, RARITY_LABEL } from "./meta";
-import { effectLine, typeProse, upgradeGain } from "./lexicon";
+import {
+  chordWording,
+  chargeSourceWording,
+  chargeStrengthWording,
+  effectLine,
+  infusorBonus,
+  pitchWording,
+  typeProse,
+  upgradeGain,
+  PINNED_SENTENCE,
+} from "./lexicon";
 import { byId, stat, statLive } from "./dom";
 import { keyedRegion, liveText } from "./region";
 import { projectedCountdown, type RenderContext } from "./context";
-import { PINNED_SENTENCE } from "./lexicon";
 
 // The focus-keyed generator's remaining window (§2.3), in the same
 // remaining-duration vocabulary the generator spends it in.
 function chargeWindowText(state: GameState): string {
   return formatDuration(Math.max(0, state.chargeWindow));
-}
-
-function times(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
 
 export function renderInspector(ctx: RenderContext, renderManageView: (host: HTMLElement) => void): void {
@@ -74,12 +79,8 @@ function updateInspectorLive(ctx: RenderContext, host: HTMLElement): void {
   const selected = state.modules.find((m) => m.id === ui.selected);
   if (selected) {
     const cost = levelCost(selected.level);
-    const countdownNode = host.querySelector('[data-live="countdown"]');
-    if (countdownNode) {
-      const text = projectedCountdown(ctx, cost) ?? "";
-      if (countdownNode.textContent !== text) countdownNode.textContent = text;
-    }
-    const cta = byId("upgrade-module") as HTMLButtonElement | null;
+    liveText(host, "countdown", projectedCountdown(ctx, cost) ?? "");
+    const cta = host.querySelector<HTMLButtonElement>("#upgrade-module");
     if (cta) cta.disabled = !(state.mode === "upgrade" && wholeNous(state) >= cost);
   }
 }
@@ -125,7 +126,7 @@ function renderModulePanel(ctx: RenderContext, host: HTMLElement, module: Module
     chargeStats = `
       ${statLive("forge", "Shared progress", `${formatNumber(Math.max(0, state.forge.progress))} / ${formatNumber(forgeThreshold(state.forge.earned))}`)}
       ${stat("Rolls earned", String(state.forge.earned))}
-      ${stat("Charge source", deployedHere && chargeStrength > 0 ? "adjacent generator" : "no adjacent generator")}
+      ${stat("Charge source", chargeSourceWording(deployedHere && chargeStrength > 0))}
       ${stat("Progress rate", `${formatNumber(contribution?.value ?? 0)} /s while charged`)}`;
   } else if (isSource(module)) {
     chargeStats = `
@@ -134,22 +135,16 @@ function renderModulePanel(ctx: RenderContext, host: HTMLElement, module: Module
       ${stat("Receivers", deployedHere ? String(deployed(state).filter((m) => m.id !== module.id && m.pos !== null && module.pos !== null && adjacent(m.pos, module.pos)).length) : "—")}`;
   } else if (module.type === "infusor") {
     chargeStats = `
-      ${stat("Bonus to adjacent", `+${formatNumber(100 * nominalContribution(module, chargeStrength))}%`)}
-      ${stat("Charge", chargeStrength > 0 ? `strength ${formatNumber(chargeStrength)}` : "none")}`;
+      ${stat("Bonus to adjacent", infusorBonus(module, chargeStrength))}
+      ${stat("Charge", chargeStrengthWording(chargeStrength))}`;
   } else {
     const named = preview.namedChords.filter((c) => c.moduleIds.includes(module.id)).map((c) => c.name);
     const pairCount = preview.pairs.filter((p) => p.a === module.id || p.b === module.id).length;
-    const chordSummary =
-      named.length > 0
-        ? `${named.join(" + ")}${pairCount > 0 ? ` + ${times(pairCount, "pair")}` : ""}`
-        : pairCount > 0
-          ? times(pairCount, "chord pair")
-          : "chordless";
     const pitch = contribution?.pitch ?? null;
     chargeStats = `
-      ${stat("Pitch", pitch !== null ? `P${pitch} — ${pitch - 1} hex${pitch === 2 ? "" : "es"} from the Carrier` : "—")}
-      ${stat("Chords", chordSummary)}
-      ${stat("Charge", chargeStrength > 0 ? `strength ${formatNumber(chargeStrength)} (×${formatNumber(chargedFactor(chargeStrength))})` : "none")}`;
+      ${stat("Pitch", pitchWording(pitch))}
+      ${stat("Chords", chordWording(named, pairCount))}
+      ${stat("Charge", chargeStrengthWording(chargeStrength, chargedFactor(chargeStrength)))}`;
   }
 
   host.innerHTML = `

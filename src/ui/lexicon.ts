@@ -17,6 +17,12 @@ export interface LiveContribution {
   strength: number;
 }
 
+// The infusor's adjacent-bonus percentage: the one wording shared by the
+// face readout, the effect line, and the inspector's bonus stat.
+export function infusorBonus(module: ModuleSpec, strength: number): string {
+  return `+${formatNumber(100 * nominalContribution(module, strength))}%`;
+}
+
 // The face's prominent readout from nominal (uncharged) values.
 export function faceReadout(module: ModuleSpec): string {
   const value = nominalContribution(module);
@@ -28,7 +34,7 @@ export function faceReadout(module: ModuleSpec): string {
     case "focusKeyed":
       return `⌁${formatNumber(value)}`;
     case "infusor":
-      return `+${formatNumber(100 * value)}%`;
+      return infusorBonus(module, 0);
     case "forge":
       return `${formatNumber(value)}/s`;
   }
@@ -47,7 +53,7 @@ export function effectLine(module: ModuleSpec, live: LiveContribution | null, ch
       case "focusKeyed":
         return `${formatNumber(nominalContribution(module))} strength`;
       case "infusor":
-        return `+${formatNumber(100 * nominalContribution(module, live.strength))}% to adjacent`;
+        return `${infusorBonus(module, live.strength)} to adjacent`;
       default:
         return `${formatNumber(live.value)} progress/s`;
     }
@@ -128,4 +134,37 @@ export function forgeWording(type: ModuleType, nextRollProgress: number): string
     default:
       return "Not yet active";
   }
+}
+
+// The charge stat's wording, shared by the infusor and synthesizer rows:
+// "none", the strength, or the strength with its synthesis factor.
+export function chargeStrengthWording(strength: number, factor: number | null = null): string {
+  if (strength <= 0) return "none";
+  return factor !== null
+    ? `strength ${formatNumber(strength)} (×${formatNumber(factor)})`
+    : `strength ${formatNumber(strength)}`;
+}
+
+// A synthesizer's pitch stat: the harmonic number and its hex distance
+// from the Carrier.
+export function pitchWording(pitch: number | null): string {
+  return pitch !== null ? `P${pitch} — ${pitch - 1} hex${pitch === 2 ? "" : "es"} from the Carrier` : "—";
+}
+
+// A synthesizer's chord stat: named chords first, then plain pairs,
+// or "chordless".
+export function chordWording(named: string[], pairCount: number): string {
+  if (named.length > 0) {
+    return `${named.join(" + ")}${pairCount > 0 ? ` + ${times(pairCount, "pair")}` : ""}`;
+  }
+  return pairCount > 0 ? times(pairCount, "chord pair") : "chordless";
+}
+
+function times(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+// The forge's charge-source stat: whether a generator sits adjacent.
+export function chargeSourceWording(charged: boolean): string {
+  return charged ? "adjacent generator" : "no adjacent generator";
 }
