@@ -57,7 +57,8 @@ function connectedVoices(voices: DeployedModule[]): boolean {
 // voice-set (one module per pattern pitch, deterministic by module id) wins.
 // Overlapping patterns — a 4·5·6·7 run is both triads — match separately and
 // stack multiplicatively downstream. Extra voices at a chord's pitches stay
-// amplitude, not a second bonus: identical pitches add amplitude, no chord.
+// out of it: identical pitches add amplitude, no chord, and a double's
+// non-member pair keeps the anonymous bonus (#29).
 function recognizeChords(component: DeployedModule[]): NamedChordTerm[] {
   const matches: NamedChordTerm[] = [];
   for (const def of NAMED_CHORDS) {
@@ -113,10 +114,7 @@ export function analyzeChords(synths: DeployedModule[]): ChordAnalysis {
         const pa = pitchOf(a.pos);
         const pb = pitchOf(b.pos);
         if (Math.abs(pa - pb) !== 1) continue;
-        // A named chord replaces its member pairs' bonuses only: a pair both
-        // of whose modules sing in it. Pairs outside any named chord —
-        // including doubled voices at a chord's pitches — keep the anonymous
-        // bonus (#29).
+        // Member pairs only (#29): a double at a chord's pitch isn't one.
         if (named.some((chord) => chord.moduleIds.includes(a.id) && chord.moduleIds.includes(b.id))) continue;
         pairs.push({ a: a.id, b: b.id, bonus: BALANCE.pairBonus });
       }

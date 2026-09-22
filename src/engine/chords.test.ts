@@ -140,10 +140,9 @@ describe("named chords", () => {
     const s = fresh();
     give(s, "additive", hex(1, 0));
     give(s, "additive", hex(0, -1));
-    // Two pitch-2 voices both adjacent to the Carrier (#29): the octave sings
-    // through one of them; the other's pair is outside the named chord and
-    // keeps the anonymous pair bonus (issue #29 — pairs outside any named
-    // chord keep the anonymous bonus).
+    // Two pitch-2 voices both adjacent to the Carrier: the octave sings
+    // through one of them; the double's pair is outside the chord and keeps
+    // the anonymous pair bonus.
     const snapshot = computeRates(s, true);
     expect(snapshot.namedChords).toHaveLength(1);
     expect(snapshot.pairs).toHaveLength(1);
@@ -161,7 +160,8 @@ describe("named chords", () => {
     give(s, "additive", hex(2, 0)); // pitch 3 — fifth voice with (1,0)
     const snapshot = computeRates(s, true);
     expect(snapshot.namedChords.map((c) => c.name)).toEqual(["Octave", "Fifth"]);
-    // (Carrier, pitch-2 double) survives: neither module is a chord voice.
+    // (Carrier, pitch-2 double) survives: the double sings in no chord — the
+    // Carrier does, as the octave's pitch-1 voice.
     expect(snapshot.pairs).toHaveLength(1);
     expect(snapshot.chordMultiplier).toBeCloseTo(1.15 * 1.3 * (1 + BALANCE.pairBonus), 9);
     expect(snapshot.contributions.get("m3")?.chordTerms).toBe(1);
