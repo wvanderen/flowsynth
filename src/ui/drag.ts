@@ -73,9 +73,7 @@ export function bindPointerDrag(
         hoverTarget = cellNode;
         const [q, r] = (hoverTarget?.getAttribute("data-cell") ?? "").split(",").map(Number);
         const occupant =
-          hoverTarget && Number.isFinite(q) && Number.isFinite(r)
-            ? state.modules.find((m) => m.pos !== null && m.pos.q === q && m.pos.r === r)
-            : undefined;
+          hoverTarget && Number.isFinite(q) && Number.isFinite(r) ? deployedAt(state, { q, r }) : undefined;
         hoverTarget
           ?.querySelector(".hex")
           ?.classList.add(canCombineWith(occupant) ? "combine-target" : "drop-target");

@@ -3,10 +3,9 @@
 // arrange-mode manage view (the inspector's callback seam ends here, in the
 // region that owns the drag wiring). Structural identity comes from svg.ts's
 // keyed diff; every write is an intent.
-import { chargedFactor, cellCost, deployedAt, emittedStrength, modulePower, wholeNous } from "../engine/economy";
+import { cellCost, deployedAt, emittedStrength, isSource, modulePower, nominalContribution, wholeNous } from "../engine/economy";
 import { adjacent, neighbors, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
-import { BALANCE, CATEGORY_OF } from "../engine/constants";
 import { isCarrier } from "../engine/state";
 import type { Hex, ModuleInstance, RateSnapshot } from "../engine/types";
 import { formatInt, formatNumber } from "./format";
@@ -25,9 +24,6 @@ const boundCells = new WeakSet<SVGElement>();
 function point({ q, r }: Hex): [number, number] {
   return [Math.sqrt(3) * SPACING * (q + r / 2), SPACING * 1.5 * r];
 }
-
-// Generators are the sole charge source category (ADR-0012).
-const isSource = (m: ModuleInstance) => CATEGORY_OF[m.type] === "generator";
 
 // The board's frontier: empty hexes adjacent to the owned board — the only
 // places a new cell may join (topology over the owned cells, pure).
@@ -114,7 +110,7 @@ export function renderGrid(ctx: RenderContext): void {
     html += `<g class="${nodeClass(module?.id ?? null)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${module ? META[module.type].name : "Empty cell"}">
       ${module ? "" : `<polygon class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>`}`;
     if (module) {
-      html += moduleNode(ctx, module, pos, { snapshot, selectedModule });
+      html += moduleNode(ctx, module, { snapshot, selectedModule });
     } else {
       html += `<path class="empty-plus" d="M-7-6H7M0-13V1"/><text y="24" text-anchor="middle" class="hex-sub">EMPTY CELL</text>`;
     }
@@ -184,7 +180,7 @@ interface GridNodeCtx {
   selectedModule: ModuleInstance | null;
 }
 
-function moduleNode(ctx: RenderContext, module: ModuleInstance, _pos: Hex, grid: GridNodeCtx): string {
+function moduleNode(ctx: RenderContext, module: ModuleInstance, grid: GridNodeCtx): string {
   const { ui, state } = ctx;
   const selected = ui.selected === module.id;
   // Charge is session-bound: the snapshot is flow-gated, so any strength it
@@ -221,7 +217,7 @@ function moduleNode(ctx: RenderContext, module: ModuleInstance, _pos: Hex, grid:
   } else if (isSource(module)) {
     readout = `⌁${formatNumber(modulePower(module))}`;
   } else if (module.type === "infusor") {
-    readout = `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(grid.snapshot.chargeStrength.get(module.id) ?? 0))}%`;
+    readout = `+${formatNumber(100 * nominalContribution(module, grid.snapshot.chargeStrength.get(module.id) ?? 0))}%`;
   } else {
     // Synthesizers wear their contribution, pitch beneath it: hex distance
     // from the Carrier + 1.
