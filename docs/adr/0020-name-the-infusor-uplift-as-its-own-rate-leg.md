@@ -9,7 +9,7 @@ rate      = (carrier + harmonics + infusors) × Π chord terms × empowerment ×
 composite = (carrier + harmonics + infusors) × Π chord terms
 ```
 
-- **Carrier and harmonic legs hold the synths' base terms** — `base rate × power × chord terms`, level and rarity only. The uplift each synth receives from adjacent infusors rides in the **infusors leg**, also uncharged. The three legs sum back to each synth's full amplitude, so every line multiplies out exactly and the rate is unchanged bit for bit.
+- **Carrier and harmonic legs hold the synths' base terms** — `base rate × power × chord terms`, level and rarity only. The uplift each synth receives from adjacent infusors rides in the **infusors leg**, also uncharged. The three legs sum back to each synth's full amplitude, so every line multiplies out exactly. The split regroups the same factors rather than rebalancing anything: rates are unchanged to floating-point rounding — regrouping can move the last bits, but no balance relationship moves.
 - **Charge still empowers whole contributions**: the empowerment leg divides the charged sum back out, and the diminishing-returns curve is untouched (ADR-0014's charge provisions stand).
 - **The leg is named only when uplift reaches a synth**: the monitor chip and breakdown grow an Infusors row when `infusors > 0` — an infusor empowering a generator shows nothing — and the session summary lists `infusors +… ν/s` when present.
 

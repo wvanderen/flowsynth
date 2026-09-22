@@ -149,7 +149,7 @@ const SYNTH_BASE_RATE: Record<SynthesizerType, number> = {
 };
 
 // The additive-synthesis rate (ADR-0014; leg naming per ADR-0020):
-//   rate      = (carrier + harmonics + infusors) × chord terms × empowerment × achievementBoost
+//   rate      = (carrier + harmonics + infusors) × Π chord terms × empowerment × achievementBoost
 // Amplitude inputs are unchanged: level and rarity set amplitude, infusors
 // add local bonuses, charge empowers per-module with the diminishing-returns
 // curve, and a Conditional's per-pair bonus rides in its own harmonic term.
@@ -169,7 +169,6 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
     module: DeployedModule;
     kind: SynthesizerType;
     power: number;
-    amplitude: number;
     chargeFactor: number;
     strength: number;
     localBonus: number;
@@ -184,7 +183,7 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
     const chargeFactor = chargedFactor(strength);
     const amplitude = modulePower(module) * (1 + localBonus);
     if (isSynthesizer(module.type) && module.pos !== null) {
-      synths.push({ module: { ...module, pos: module.pos }, kind: module.type, power: modulePower(module), amplitude, chargeFactor, strength, localBonus });
+      synths.push({ module: { ...module, pos: module.pos }, kind: module.type, power: modulePower(module), chargeFactor, strength, localBonus });
       continue;
     }
     let value = 0;
@@ -216,7 +215,7 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
   let harmonics = 0;
   let infusors = 0;
   let chargedSum = 0;
-  for (const { module, kind, power, amplitude, chargeFactor, strength, localBonus } of synths) {
+  for (const { module, kind, power, chargeFactor, strength, localBonus } of synths) {
     const pitch = pitchOf(module.pos);
     const chordTerms = analysis.participation.get(module.id) ?? 0;
     const chordAmp = kind === "conditional" ? 1 + BALANCE.conditionalPairBonus * chordTerms : 1;
@@ -231,7 +230,7 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
       moduleId: module.id,
       type: kind,
       pitch,
-      amplitude,
+      amplitude: power * (1 + localBonus),
       value: charged,
       chordTerms,
       infusorBonus: localBonus,

@@ -45,13 +45,39 @@ function termIcon(type: "carrier" | "additive" | "infusor"): string {
   return `<svg viewBox="-18 -18 36 36" aria-hidden="true" fill="none" stroke-width="1.6">${moduleIcon(type)}</svg>`;
 }
 
+// The chip's amplitude legs (ADR-0020): one record per leg renders both the
+// equation term and the breakdown row, so a future leg lands in one place.
+// Conditional legs join only once their term is nonzero — the infusor leg
+// appears with the first uplift that reaches a synth.
+const AMP_LEGS = [
+  { key: "carrier", icon: "carrier", name: "Carrier", note: "the origin synth's fundamental", always: true },
+  { key: "harmonics", icon: "additive", name: "Harmonics", note: "every other synth on the board", always: true },
+  { key: "inf", icon: "infusor", name: "Infusors", note: "adjacent uplift on the synths", always: false },
+] as const;
+
+function ampEquationHtml(infused: boolean): string {
+  return AMP_LEGS.filter((leg) => leg.always || infused)
+    .map(
+      (leg, i) =>
+        `${i > 0 ? '<span class="op">+</span>' : ""}<span class="monitor-term" title="${leg.name} — ${leg.note}">${termIcon(leg.icon)}<span data-live="m-${leg.key}"></span></span>`,
+    )
+    .join("");
+}
+
+function ampBreakdownHtml(infused: boolean): string {
+  return AMP_LEGS.filter((leg) => leg.always || infused)
+    .map(
+      (leg) =>
+        `<div class="monitor-breakdown-row"><span class="bk-name">${leg.name}</span><span class="mono" data-live="b-${leg.key}"></span><span class="bk-note">${leg.note}</span></div>`,
+    )
+    .join("");
+}
+
 function formulaChipHtml(boosted: boolean, infused: boolean): string {
   return `
     <div class="monitor-chip monitor-formula" tabindex="0" aria-label="Live nous formula — focus for the breakdown">
       <span class="monitor-equation mono">
-        <span class="op">(</span><span class="monitor-term" title="Carrier — the origin synth's fundamental">${termIcon("carrier")}<span data-live="m-carrier"></span></span>
-        <span class="op">+</span><span class="monitor-term" title="Harmonics — every other synth on the board">${termIcon("additive")}<span data-live="m-harmonics"></span></span>
-        ${infused ? `<span class="op">+</span><span class="monitor-term" title="Infusors — adjacent uplift on the synths' amplitudes">${termIcon("infusor")}<span data-live="m-inf"></span></span>` : ""}
+        <span class="op">(</span>${ampEquationHtml(infused)}
         <span class="op">)</span>
         <span class="op">×</span><span class="monitor-term" title="Chord terms — hover for the breakdown"><span class="term-glyph">χ</span><span data-live="m-chi"></span></span>
         <span class="op">×</span><span class="monitor-term" title="Charge empowerment — continuous while modules receive charge"><span class="term-glyph">emp</span><span data-live="m-emp"></span></span>
@@ -60,9 +86,7 @@ function formulaChipHtml(boosted: boolean, infused: boolean): string {
       </span>
       <span class="monitor-hint" aria-hidden="true">ⓘ</span>
       <div class="monitor-breakdown" role="tooltip">
-        <div class="monitor-breakdown-row"><span class="bk-name">Carrier</span><span class="mono" data-live="b-carrier"></span><span class="bk-note">the origin synth's fundamental</span></div>
-        <div class="monitor-breakdown-row"><span class="bk-name">Harmonics</span><span class="mono" data-live="b-harmonics"></span><span class="bk-note">every other synth on the board</span></div>
-        ${infused ? `<div class="monitor-breakdown-row"><span class="bk-name">Infusors</span><span class="mono" data-live="b-inf"></span><span class="bk-note">adjacent uplift on the synths</span></div>` : ""}
+        ${ampBreakdownHtml(infused)}
         <div class="monitor-breakdown-row"><span class="bk-name">Chords</span><span class="mono" data-live="b-chords"></span><span class="bk-note" data-live="b-chord-note"></span></div>
         <div class="monitor-breakdown-row"><span class="bk-name">Empowerment</span><span class="mono" data-live="b-emp"></span><span class="bk-note">charge uplift on charged modules</span></div>
         <div class="monitor-breakdown-row"><span class="bk-name">Achievements</span><span class="mono" data-live="b-ach"></span><span class="bk-note">each feat adds into the boost</span></div>
