@@ -55,6 +55,10 @@ export function investment(level: number): number {
   return total;
 }
 
+// The facts a magnitude question needs — a deployed module, an inventory
+// tile, and a forge-roll candidate all carry them.
+export type ModuleSpec = Pick<ModuleInstance, "type" | "rarity" | "level">;
+
 export function modulePower(module: Pick<ModuleInstance, "rarity" | "level">): number {
   return BALANCE.rarityPower[module.rarity] ** module.level;
 }
@@ -63,8 +67,13 @@ export function deployed(state: GameState): ModuleInstance[] {
   return state.modules.filter((m) => m.pos !== null);
 }
 
+// The sole charge-source category (ADR-0012): only generators emit charge.
+export function isSource(module: Pick<ModuleInstance, "type">): boolean {
+  return CATEGORY_OF[module.type] === "generator";
+}
+
 export function deployedGenerators(state: GameState): ModuleInstance[] {
-  return deployed(state).filter((m) => CATEGORY_OF[m.type] === "generator");
+  return deployed(state).filter(isSource);
 }
 
 export function findModule(state: GameState, id: string): ModuleInstance | undefined {
@@ -107,7 +116,7 @@ export function chargeWindowActive(state: GameState): boolean {
 // spending a second of window per second of live flow (the
 // remaining-duration vocabulary).
 export function emittedStrength(state: GameState, module: ModuleInstance, flow: boolean): number {
-  if (!flow || CATEGORY_OF[module.type] !== "generator" || module.pos === null) return 0;
+  if (!flow || !isSource(module) || module.pos === null) return 0;
   if (!chargeWindowActive(state)) return 0;
   return modulePower(module);
 }
@@ -154,8 +163,8 @@ const SYNTH_BASE_RATE: Record<SynthesizerType, number> = {
 // its progress-per-received-strength. Charge empowers receivers
 // (synthesizers, infusors) through the same chargedFactor the live snapshot
 // uses; sources and the Forge ride modulePower alone. The UI's module
-// lexicon derives every number it shows from this one place.
-export function nominalContribution(module: Pick<ModuleInstance, "type" | "rarity" | "level">, strength = 0): number {
+// lexicon takes every per-type magnitude it shows from this one place.
+export function nominalContribution(module: ModuleSpec, strength = 0): number {
   const power = modulePower(module);
   switch (module.type) {
     case "carrier":

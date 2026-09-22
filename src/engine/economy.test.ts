@@ -5,12 +5,6 @@ import type { ModuleType, Rarity } from "./types";
 
 const spec = (type: ModuleType, rarity: Rarity = "common", level = 0) => ({ type, rarity, level });
 
-const SYNTH_BASE: Record<"carrier" | "additive" | "conditional", number> = {
-  carrier: BALANCE.carrierRate,
-  additive: BALANCE.additiveRate,
-  conditional: BALANCE.conditionalRate,
-};
-
 describe("nominalContribution — the one per-type magnitude table", () => {
   it("level-0 uncharged synthesizers pin to their base rates", () => {
     expect(nominalContribution(spec("carrier"))).toBe(BALANCE.carrierRate);
@@ -19,7 +13,8 @@ describe("nominalContribution — the one per-type magnitude table", () => {
   });
 
   it("synthesizers contribute base × power × chargedFactor at any strength, rarity, or level", () => {
-    for (const [type, base] of Object.entries(SYNTH_BASE) as [ModuleType, number][]) {
+    for (const type of ["carrier", "additive", "conditional"] as const) {
+      const base = nominalContribution(spec(type));
       for (const rarity of ["common", "uncommon", "rare"] as const) {
         for (const level of [0, 1, 5]) {
           for (const strength of [0, 1, 4]) {

@@ -1,8 +1,7 @@
-import { chargedFactor, cellCost, chargeDelivered, computeRates, deployed, emittedStrength, levelCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
-import { deployedAt } from "../engine/economy";
+import { chargedFactor, cellCost, chargeDelivered, computeRates, deployed, deployedAt, emittedStrength, isSource, levelCost, longGoalCost, modulePower, nominalContribution, wholeNous } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
-import { BALANCE, CATEGORY_OF, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
+import { BALANCE, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
 import { appActive, appLockNote, FOCUS_APPS, type FocusApp } from "../engine/apps";
 import { isInFlowNote } from "../engine/notes";
@@ -622,9 +621,6 @@ function renderGrid(app: App): void {
   bindGridEvents(app, svg);
 }
 
-// Generators are the sole charge source category (ADR-0012).
-const isSource = (m: ModuleInstance) => CATEGORY_OF[m.type] === "generator";
-
 // Directional tips for the patch leads, in the charge register: full for
 // live flow, dimmed for everything that only previews the wiring.
 const leadMarker = (id: string, cls: string): string =>
@@ -686,7 +682,7 @@ function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderCont
   } else if (isSource(module)) {
     readout = `⌁${formatNumber(modulePower(module))}`;
   } else if (module.type === "infusor") {
-    readout = `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(ctx.snapshot.chargeStrength.get(module.id) ?? 0))}%`;
+    readout = `+${formatNumber(100 * nominalContribution(module, ctx.snapshot.chargeStrength.get(module.id) ?? 0))}%`;
   } else {
     // Synthesizers wear their contribution, pitch beneath it: hex distance
     // from the Carrier + 1.
@@ -1007,7 +1003,7 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       ${stat("Receivers", deployedHere ? String(deployed(state).filter((m) => m.id !== module.id && m.pos !== null && module.pos !== null && adjacent(m.pos, module.pos)).length) : "—")}`;
   } else if (module.type === "infusor") {
     chargeStats = `
-      ${stat("Bonus to adjacent", `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(chargeStrength))}%`)}
+      ${stat("Bonus to adjacent", `+${formatNumber(100 * nominalContribution(module, chargeStrength))}%`)}
       ${stat("Charge", chargeStrength > 0 ? `strength ${formatNumber(chargeStrength)}` : "none")}`;
   } else {
     const named = preview.namedChords.filter((c) => c.moduleIds.includes(module.id)).map((c) => c.name);
