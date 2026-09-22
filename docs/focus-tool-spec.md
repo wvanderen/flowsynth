@@ -17,7 +17,7 @@ Trusted session accounting, end-of-target signals, freeform targets, the free-ap
 - Presence is `visibilityState === "visible"`; everything else is away. Focus loss alone is not away.
 - At every boundary — `visibilitychange`, `focus`, `pageshow`/`resume`, every timer wake-up — the wall-clock delta since the last boundary is classified by the presence state that held during it, and the whole simulation (board + session clock) advances by that delta. The board catches up at full rate after a hidden stretch. This extends the existing `lastWall`/save-on-hidden architecture.
 - **Never accrue by tick count** — throttled tabs tick ~1/s hidden and ~1/min in Chrome after five minutes (§10).
-- Sleep gaps are sized by dual-clock drift: a positive step in `Date.now() − (performance.timeOrigin + performance.now())` is a slept gap = away, even if the tab was "visible" when the machine slept; negative drift (clock rolled back) credits 0.
+- Sleep gaps are sized by dual-clock drift: a positive step in `Date.now() − (performance.timeOrigin + performance.now())` is a slept gap = away, even if the tab was "visible" when the machine slept; negative drift past the quantization noise floor (clock rolled back) credits 0. Millisecond jitter between the two clocks' readings is measurement noise, not drift — its boundary credits its wall gap whole.
 - Paused time is neither present nor away: it produces and credits nothing.
 - **Reconciliation floor**: absences below 3 minutes (tuning) auto-credit silently on both modes — nous banks, time credits, no report, never joins the pool.
 

@@ -170,6 +170,14 @@ export const NEXT_RARITY: Record<Rarity, Rarity | null> = { common: "uncommon", 
 
 export const EPS = 1e-9;
 
+// The dual-clock drift noise floor (focus-tool spec §1): Date.now() reads
+// whole milliseconds while performance.now() reads finer, so the measured
+// drift jitters by a millisecond or two across every boundary even when
+// both clocks run true. Real sleeps and rollbacks move the drift by
+// seconds; a step inside this floor is quantization noise, not drift —
+// its boundary credits its wall gap whole.
+export const DRIFT_NOISE_SECONDS = 0.05;
+
 // The reconciliation floor (focus-tool spec §1): absences below it
 // auto-credit silently on both modes — nous banks, time credits, no report,
 // never joins the pool. Provisional tuning (~3 minutes). Supersedes the
