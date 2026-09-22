@@ -22,7 +22,7 @@ import { isCarrier } from "../engine/state";
 import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NoteEntry, RateSnapshot } from "../engine/types";
 import type { App, EnterKind } from "./app";
 import { appIcon } from "./icons";
-import { HEX_RADIUS, hexPoints, moduleFace } from "./face";
+import { HEX_RADIUS, hexApothem, hexPoints, moduleFace } from "./face";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
@@ -634,7 +634,7 @@ const CHARGE_LEAD_DEFS = `<defs data-key="charge-defs">${leadMarker("fs-lead-tip
 // the pad is the face's apothem plus a hair, so the lead spans the seam
 // between neighboring hexes and the directional tip lands on the receiver's
 // edge rather than vanishing under it.
-const LEAD_PAD = Math.round((HEX_RADIUS * Math.sqrt(3)) / 2) + 1;
+const LEAD_PAD = Math.round(hexApothem(HEX_RADIUS)) + 1;
 
 function leadSegment(x1: number, y1: number, x2: number, y2: number): string {
   const len = Math.hypot(x2 - x1, y2 - y1);

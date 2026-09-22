@@ -24,6 +24,13 @@ export function hexPoints(radius: number): string {
   return Array.from({ length: 6 }, (_, i) => hexCorner(radius, i).map((v) => v.toFixed(4)).join(",")).join(" ");
 }
 
+// The flat-to-flat apothem — half the distance between two neighboring
+// centers' facing edges. Renderers that must bridge or trim to a chassis
+// (charge leads, chord links) derive their pads from this one place.
+export function hexApothem(radius: number): number {
+  return (radius * Math.sqrt(3)) / 2;
+}
+
 // Hue = category: the rail and signature wear the category hue; per-type
 // identity rides the glyph and nameplate. The Carrier maps to its white —
 // the sole exception to the category→hue law.

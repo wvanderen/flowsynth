@@ -4,7 +4,7 @@
 // every color in the token table. This module only decides geometry and the
 // brightness curve.
 import { CHARGE_RECEIVING_CATEGORIES, CATEGORY_OF } from "../engine/constants";
-import { deployed, deployedGenerators, emittedStrength } from "../engine/economy";
+import { chargedFactor, deployed, deployedGenerators, emittedStrength } from "../engine/economy";
 import { adjacent } from "../engine/hex";
 import type { GameState, ModuleInstance } from "../engine/types";
 
@@ -35,11 +35,12 @@ export function chargeLeads(state: GameState, live: boolean): ChargeLead[] {
   return leads;
 }
 
-// Receiver brightening: received strength maps onto a 0..1 glow with the
-// saturating shape of the empowerment curve. Strengths from multiple
+// Receiver brightening: received strength maps onto a 0..1 glow — the
+// empowerment curve's gain above 1 (chargedFactor − 1), so the light and
+// the rate bonus share one saturating shape. Strengths from multiple
 // generators add before mapping, so every extra generator brightens the
 // receiver further, with diminishing returns.
 export function chargeGlow(strength: number): number {
   if (strength <= 0) return 0;
-  return strength / (1 + strength);
+  return chargedFactor(strength) - 1;
 }

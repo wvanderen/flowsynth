@@ -30,15 +30,3 @@ export function moduleIcon(type: ModuleType): string {
 export function appIcon(app: FocusApp): string {
   return APP_PATHS[app];
 }
-
-export function moduleSymbol(type: ModuleType): string {
-  const symbols: Record<ModuleType, string> = {
-    carrier: "◉",
-    additive: "+",
-    conditional: "×",
-    focusKeyed: "⌁",
-    infusor: "✳",
-    forge: "⬡",
-  };
-  return symbols[type];
-}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buyActivation, endSession, startSession } from "./actions";
-import { appActive, appLockNote, FOCUS_APPS, LADDER_APPS, ladderComplete, nextRung, nextRungCost } from "./apps";
+import { appActive, appLockNote, FOCUS_APPS, LADDER_APPS, nextRung, nextRungCost } from "./apps";
 import { rungCost } from "./economy";
 import { fresh } from "./fixtures";
 
@@ -26,7 +26,6 @@ describe("the free opening (ADR-0019, issue #83)", () => {
   it("exposes the launch app inventory in tile order, with the ladder resting empty", () => {
     expect(FOCUS_APPS).toEqual(["habit", "time", "notes", "goals"]);
     expect(LADDER_APPS).toEqual([]);
-    expect(ladderComplete(fresh())).toBe(true);
   });
 });
 
@@ -47,6 +46,5 @@ describe("the activation ladder rests empty at launch (ADR-0019)", () => {
     expect(nextRung(s)).toBe(1);
     expect(nextRungCost(s)).toBe(rungCost(1));
     // Nothing ever moves the rung at launch: the ladder sells nothing.
-    expect(ladderComplete(s)).toBe(true);
   });
 });

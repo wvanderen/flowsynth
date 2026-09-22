@@ -42,13 +42,6 @@ export function nextRungCost(state: GameState): number {
   return rungCost(nextRung(state));
 }
 
-// Every ladder app has been activated; with the ladder resting empty this
-// holds vacuously until a tenant joins (Tasks is the designed first member,
-// ADR-0012).
-export function ladderComplete(state: GameState): boolean {
-  return LADDER_APPS.every((app) => state.activatedApps.includes(app));
-}
-
 // The one-line gate each locked tile names ("activate with nous"). The
 // launch four never lock (ADR-0019) — greyed tiles and locknotes are
 // struck — so nothing carries a note today; a future ladder tenant brings
