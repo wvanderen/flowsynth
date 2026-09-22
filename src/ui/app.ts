@@ -42,7 +42,8 @@ import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
 import type { GameState, Hex, ShelfType } from "../engine/types";
 import { render } from "./render";
 import { resetEnterDraft, resetCatalogToggle } from "./modals";
-import { HISTORY_PAGE_ROWS, META } from "./meta";
+import { clearEditingHabit, panelOpenDrill, resetPanelSurfaces } from "./panels";
+import { META } from "./meta";
 import { browserChannels, type SignalChannels } from "./signals";
 
 // The session modal surfaces (§5.5, §5.7): the enter prompt precedes every
@@ -83,18 +84,10 @@ export interface UiState {
   // visible but unpushed. Cross-surface: the console's clock previews it
   // between sessions, so it lives here rather than in the enter modal.
   chosenTarget: number | null;
-  editingHabitId: string | null;
   // The chord view (issue #62): display-only highlight of the board's chord
   // terms — chord voices stay lit, everything else dims, pair links and
   // named-chord hulls draw in the chord register. Never affects gameplay.
   showChords: boolean;
-  // Session history (§9): the Time app's list view, its page size, and the
-  // record drilled into. Light furniture — cleared with the popover.
-  historyOpen: boolean;
-  historyLimit: number;
-  drillSession: number | null;
-  // The Habit app's expanded development summary (§9): one habit at a time.
-  summaryHabitId: string | null;
 }
 
 interface LoadedSave {
@@ -157,12 +150,7 @@ export class App {
     modal: null,
     importError: null,
     chosenTarget: null,
-    editingHabitId: null,
     showChords: false,
-    historyOpen: false,
-    historyLimit: HISTORY_PAGE_ROWS,
-    drillSession: null,
-    summaryHabitId: null,
   };
   lastWall: number | null = null;
   // The dual-clock drift baseline at lastWall (§10): its positive steps
@@ -791,65 +779,21 @@ export class App {
     this.ui.app = this.ui.app === app ? null : app;
     this.ui.selected = null;
     this.ui.placing = null;
-    this.resetHistorySurfaces();
+    resetPanelSurfaces();
     this.render();
   }
 
   closeApp(): void {
     this.ui.app = null;
-    this.ui.editingHabitId = null;
-    this.resetHistorySurfaces();
+    clearEditingHabit();
+    resetPanelSurfaces();
     this.render();
   }
 
-  // ── Session history (§9) ────────────────────────────────────────────────
-
-  private resetHistoryUi(): void {
-    this.ui.historyOpen = false;
-    this.ui.historyLimit = HISTORY_PAGE_ROWS;
-    this.ui.drillSession = null;
-  }
-
-  // Both history surfaces clear together when the popover swaps apps or
-  // closes: the Time list view and the Habit development summary.
-  private resetHistorySurfaces(): void {
-    this.resetHistoryUi();
-    this.ui.summaryHabitId = null;
-  }
-
-  // The Time app's history affordance: the panel body swaps to the
-  // newest-first record list. One-way in — only the back control leaves it.
-  openHistory(): void {
-    this.resetHistoryUi();
-    this.ui.historyOpen = true;
-    this.render();
-  }
-
-  // Back past the list itself: the Time panel body returns.
-  closeHistory(): void {
-    this.resetHistoryUi();
-    this.render();
-  }
-
-  // The list's show-more tail: one more page of rows.
-  moreHistory(): void {
-    this.ui.historyLimit += HISTORY_PAGE_ROWS;
-    this.render();
-  }
-
+  // The drill-down entry the suite drives directly: the write belongs to
+  // the panels region, the render pass to App.
   openDrill(sessionNumber: number): void {
-    this.ui.drillSession = sessionNumber;
-    this.render();
-  }
-
-  closeDrill(): void {
-    this.ui.drillSession = null;
-    this.render();
-  }
-
-  // The Habit app's per-habit development summary: one expanded at a time.
-  toggleHabitSummary(id: string): void {
-    this.ui.summaryHabitId = this.ui.summaryHabitId === id ? null : id;
+    panelOpenDrill(sessionNumber);
     this.render();
   }
 
@@ -916,7 +860,7 @@ export class App {
   }
 
   renameHabitAction(id: string, name: string): void {
-    this.ui.editingHabitId = null;
+    clearEditingHabit();
     this.perform(() => renameHabit(this.state, id, name), "Habit renamed.", "That habit action is unavailable.");
   }
 

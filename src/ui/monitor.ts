@@ -10,6 +10,7 @@ import { achievementBoostOf } from "../engine/achievements";
 import { BALANCE } from "../engine/constants";
 import type { RateSnapshot } from "../engine/types";
 import { byId } from "./dom";
+import { keyedRegion, liveWidth } from "./region";
 import { moduleIcon } from "./icons";
 import { formatCountdown, formatNumber } from "./format";
 import type { RenderContext } from "./context";
@@ -104,13 +105,12 @@ export function renderStatusMonitor(ctx: RenderContext): void {
   // and buttons survive clock ticks.
   const achieving = achievementBoostOf(state) > 1;
   const key = `${past ? "past" : "under"}:${state.horizonAcknowledged ? "acked" : "open"}:${achieving ? "ach" : "plain"}`;
-  if (host.dataset.renderKey !== key) {
-    host.dataset.renderKey = key;
+  keyedRegion(host, key, () => {
     host.innerHTML = `
       <div class="monitor-top">${formulaChipHtml(achieving)}</div>
       ${accumulatorHtml(ctx, past)}`;
     byId("prestige-button")?.addEventListener("click", () => ctx.intents.acknowledgeHorizon());
-  }
+  });
   updateMonitorLive(ctx, past);
 }
 
@@ -144,9 +144,7 @@ function updateMonitorLive(ctx: RenderContext, past: boolean): void {
 
   // The accumulator: log-scale fill, riding beat head, secondaries.
   const pos = accumulatorFill(state.totalEarned);
-  const fill = host.querySelector<HTMLElement>('[data-live="m-fill"]');
-  const fillWidth = `${(pos * 100).toFixed(2)}%`;
-  if (fill && fill.style.width !== fillWidth) fill.style.width = fillWidth;
+  liveWidth(host, '[data-live="m-fill"]', `${(pos * 100).toFixed(2)}%`);
   host.querySelector(".monitor-rail")?.setAttribute(
     "aria-label",
     `Arete accumulator: ${formatNumber(state.totalEarned)} of ${markLabel(ARETE_HORIZON)} lifetime ν, log scale`,
