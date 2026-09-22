@@ -225,7 +225,10 @@ describe("live rate breakdown", () => {
     give(s, "additive", hex(2, 0));
     give(s, "infusor", hex(3, 0));
     const snapshot = computeRates(s, true);
-    expect(snapshot.amplitude).toBeCloseTo(snapshot.carrier + snapshot.harmonics, 9);
+    // The infusor at (3,0) touches only the (2,0) additive: its uplift is
+    // its own leg (+0.01), and the amplitude splits exactly across legs.
+    expect(snapshot.infusors).toBeCloseTo(0.01, 9);
+    expect(snapshot.amplitude).toBeCloseTo(snapshot.carrier + snapshot.harmonics + snapshot.infusors, 9);
     expect(snapshot.composite).toBeCloseTo(snapshot.amplitude * snapshot.chordMultiplier, 9);
     expect(snapshot.empowerment).toBe(1);
     expect(snapshot.achievementBoost).toBe(1);

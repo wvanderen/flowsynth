@@ -149,13 +149,14 @@ const SYNTH_BASE_RATE: Record<SynthesizerType, number> = {
 };
 
 // The additive-synthesis rate (ADR-0014):
-//   rate      = composite × empowerment × achievementBoost
-//   composite = (carrier + Σ harmonic terms) × Π chord terms
+//   rate      = (carrier + harmonics + infusors) × chord terms × empowerment × achievementBoost
 // Amplitude inputs are unchanged: level and rarity set amplitude, infusors
 // add local bonuses, charge empowers per-module with the diminishing-returns
 // curve, and a Conditional's per-pair bonus rides in its own harmonic term.
-// The carrier and harmonic legs stay uncharged so charge aggregates into the
-// snapshot's empowerment leg and the breakdown multiplies out exactly.
+// The carrier and harmonic legs are the synths' base terms — infusor uplift
+// is split into its own additive leg so the breakdown names it — and all
+// three stay uncharged so charge aggregates into the snapshot's empowerment
+// leg and the breakdown multiplies out exactly.
 // Generators, the Forge meter, and cells are out of the formula, and there
 // is no session stage: the board is the whole production (§4).
 export function computeRates(state: GameState, flow: boolean = flowLive(state)): RateSnapshot {
@@ -167,6 +168,7 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
   interface SynthInfo {
     module: DeployedModule;
     kind: SynthesizerType;
+    power: number;
     amplitude: number;
     chargeFactor: number;
     strength: number;
@@ -182,7 +184,7 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
     const chargeFactor = chargedFactor(strength);
     const amplitude = modulePower(module) * (1 + localBonus);
     if (isSynthesizer(module.type) && module.pos !== null) {
-      synths.push({ module: { ...module, pos: module.pos }, kind: module.type, amplitude, chargeFactor, strength, localBonus });
+      synths.push({ module: { ...module, pos: module.pos }, kind: module.type, power: modulePower(module), amplitude, chargeFactor, strength, localBonus });
       continue;
     }
     let value = 0;
@@ -208,17 +210,22 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
 
   // Pass three: harmonic terms. A Conditional is amplitude plus a bonus per
   // chord pair it participates in; an Additive is the plain harmonic term.
+  // Each leg splits into the synth's base term and the infusors' uplift so
+  // the breakdown can name both; the split sums back to the full amplitude.
   let carrier = 0;
   let harmonics = 0;
+  let infusors = 0;
   let chargedSum = 0;
-  for (const { module, kind, amplitude, chargeFactor, strength, localBonus } of synths) {
+  for (const { module, kind, power, amplitude, chargeFactor, strength, localBonus } of synths) {
     const pitch = pitchOf(module.pos);
     const chordTerms = analysis.participation.get(module.id) ?? 0;
     const chordAmp = kind === "conditional" ? 1 + BALANCE.conditionalPairBonus * chordTerms : 1;
-    const uncharged = SYNTH_BASE_RATE[kind] * amplitude * chordAmp;
+    const base = SYNTH_BASE_RATE[kind] * power * chordAmp;
+    const uncharged = base * (1 + localBonus);
     const charged = uncharged * chargeFactor;
-    if (kind === "carrier") carrier += uncharged;
-    else harmonics += uncharged;
+    if (kind === "carrier") carrier += base;
+    else harmonics += base;
+    infusors += base * localBonus;
     chargedSum += charged;
     contributions.set(module.id, {
       moduleId: module.id,
@@ -234,7 +241,7 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
   }
 
   const achievementBoost = achievementBoostOf(state);
-  const amplitude = carrier + harmonics;
+  const amplitude = carrier + harmonics + infusors;
   const composite = amplitude * analysis.multiplier;
   // The boost multiplies the rate on top of charge empowerment; the
   // empowerment leg divides it back out so the breakdown multiplies out
@@ -245,6 +252,7 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
   return {
     carrier,
     harmonics,
+    infusors,
     amplitude,
     chordMultiplier: analysis.multiplier,
     pairs: analysis.pairs,

@@ -41,16 +41,17 @@ function chordSummary(snapshot: RateSnapshot): string {
   return lines.length > 0 ? lines.join(" · ") : "no chords yet — adjacent synthesizers one pitch apart chord";
 }
 
-function termIcon(type: "carrier" | "additive"): string {
+function termIcon(type: "carrier" | "additive" | "infusor"): string {
   return `<svg viewBox="-18 -18 36 36" aria-hidden="true" fill="none" stroke-width="1.6">${moduleIcon(type)}</svg>`;
 }
 
-function formulaChipHtml(boosted: boolean): string {
+function formulaChipHtml(boosted: boolean, infused: boolean): string {
   return `
     <div class="monitor-chip monitor-formula" tabindex="0" aria-label="Live nous formula — focus for the breakdown">
       <span class="monitor-equation mono">
         <span class="op">(</span><span class="monitor-term" title="Carrier — the origin synth's fundamental">${termIcon("carrier")}<span data-live="m-carrier"></span></span>
         <span class="op">+</span><span class="monitor-term" title="Harmonics — every other synth on the board">${termIcon("additive")}<span data-live="m-harmonics"></span></span>
+        ${infused ? `<span class="op">+</span><span class="monitor-term" title="Infusors — adjacent uplift on the synths' amplitudes">${termIcon("infusor")}<span data-live="m-inf"></span></span>` : ""}
         <span class="op">)</span>
         <span class="op">×</span><span class="monitor-term" title="Chord terms — hover for the breakdown"><span class="term-glyph">χ</span><span data-live="m-chi"></span></span>
         <span class="op">×</span><span class="monitor-term" title="Charge empowerment — continuous while modules receive charge"><span class="term-glyph">emp</span><span data-live="m-emp"></span></span>
@@ -61,6 +62,7 @@ function formulaChipHtml(boosted: boolean): string {
       <div class="monitor-breakdown" role="tooltip">
         <div class="monitor-breakdown-row"><span class="bk-name">Carrier</span><span class="mono" data-live="b-carrier"></span><span class="bk-note">the origin synth's fundamental</span></div>
         <div class="monitor-breakdown-row"><span class="bk-name">Harmonics</span><span class="mono" data-live="b-harmonics"></span><span class="bk-note">every other synth on the board</span></div>
+        ${infused ? `<div class="monitor-breakdown-row"><span class="bk-name">Infusors</span><span class="mono" data-live="b-inf"></span><span class="bk-note">adjacent uplift on the synths</span></div>` : ""}
         <div class="monitor-breakdown-row"><span class="bk-name">Chords</span><span class="mono" data-live="b-chords"></span><span class="bk-note" data-live="b-chord-note"></span></div>
         <div class="monitor-breakdown-row"><span class="bk-name">Empowerment</span><span class="mono" data-live="b-emp"></span><span class="bk-note">charge uplift on charged modules</span></div>
         <div class="monitor-breakdown-row"><span class="bk-name">Achievements</span><span class="mono" data-live="b-ach"></span><span class="bk-note">each feat adds into the boost</span></div>
@@ -97,45 +99,50 @@ export function renderStatusMonitor(app: App): void {
   if (!host) return;
   const { state } = app;
   const past = state.totalEarned >= ARETE_HORIZON;
-  // Structural key: the era flip, the prestige acknowledgment, and the
-  // achievement term joining the chip equation (first feat) rebuild the
-  // rail; every tick-moving value updates in place below so hover popovers
-  // and buttons survive clock ticks.
+  const snapshot = computeRates(state, true);
+  // Structural key: the era flip, the prestige acknowledgment, the
+  // achievement term joining the chip equation (first feat), and the
+  // infusor term joining it (first adjacent uplift) rebuild the rail; every
+  // tick-moving value updates in place below so hover popovers and buttons
+  // survive clock ticks.
   const achieving = achievementBoostOf(state) > 1;
-  const key = `${past ? "past" : "under"}:${state.horizonAcknowledged ? "acked" : "open"}:${achieving ? "ach" : "plain"}`;
+  const infused = snapshot.infusors > 0;
+  const key = `${past ? "past" : "under"}:${state.horizonAcknowledged ? "acked" : "open"}:${achieving ? "ach" : "plain"}:${infused ? "inf" : "plain"}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.innerHTML = `
-      <div class="monitor-top">${formulaChipHtml(achieving)}</div>
+      <div class="monitor-top">${formulaChipHtml(achieving, infused)}</div>
       ${accumulatorHtml(state, past)}`;
     byId("prestige-button")?.addEventListener("click", () => app.acknowledgeHorizon());
   }
-  updateMonitorLive(app, past);
+  updateMonitorLive(app, past, snapshot);
 }
 
 function byId(id: string): HTMLElement | null {
   return document.getElementById(id);
 }
 
-function updateMonitorLive(app: App, past: boolean): void {
+function updateMonitorLive(app: App, past: boolean, snapshot: RateSnapshot): void {
   const host = byId("status-monitor");
   if (!host) return;
   const { state } = app;
-  const snapshot = computeRates(state, true);
   const set = (id: string, text: string) => {
     const node = host.querySelector(`[data-live="${id}"]`);
     if (node && node.textContent !== text) node.textContent = text;
   };
 
-  // The formula chip: (carrier + harmonics) × chords × empowerment → rate.
+  // The formula chip: (carrier + harmonics [+ infusors]) × chords ×
+  // empowerment × achievements → rate.
   set("m-carrier", formatNumber(snapshot.carrier));
   set("m-harmonics", formatNumber(snapshot.harmonics));
+  set("m-inf", formatNumber(snapshot.infusors));
   set("m-chi", formatNumber(snapshot.chordMultiplier));
   set("m-emp", formatNumber(snapshot.empowerment));
   set("m-ach", `+${Math.round((snapshot.achievementBoost - 1) * 100)}%`);
   set("m-rate", `${formatNumber(snapshot.rate)} ν/s`);
   set("b-carrier", `+${formatNumber(snapshot.carrier)} ν/s`);
   set("b-harmonics", `+${formatNumber(snapshot.harmonics)} ν/s`);
+  set("b-inf", `+${formatNumber(snapshot.infusors)} ν/s`);
   set("b-chords", `×${formatNumber(snapshot.chordMultiplier)}`);
   set("b-chord-note", chordSummary(snapshot));
   set("b-emp", `×${formatNumber(snapshot.empowerment)}`);

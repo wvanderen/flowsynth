@@ -34,12 +34,18 @@ describe("board production model", () => {
     expect(computeRates(s, true).rate).toBeCloseTo(CARRIER + 0.05 * 1.25 ** 2, 9);
   });
 
-  it("infusors add local bonuses to neighbors", () => {
+  it("infusors add local bonuses to neighbors as their own leg", () => {
     const s = fresh();
     give(s, "additive", hex(2, 0));
     give(s, "infusor", hex(2, -1));
-    // The infusor touches the additive but not the carrier.
-    expect(computeRates(s, true).rate).toBeCloseTo(CARRIER + 0.05 * (1 + 0.2), 9);
+    // The infusor touches the additive but not the carrier: the harmonic
+    // leg stays base (0.05) and the uplift rides in the infusor leg.
+    const snapshot = computeRates(s, true);
+    expect(snapshot.rate).toBeCloseTo(CARRIER + 0.05 * (1 + 0.2), 9);
+    expect(snapshot.carrier).toBeCloseTo(CARRIER, 9);
+    expect(snapshot.harmonics).toBeCloseTo(0.05, 9);
+    expect(snapshot.infusors).toBeCloseTo(0.01, 9);
+    expect(snapshot.amplitude).toBeCloseTo(snapshot.carrier + snapshot.harmonics + snapshot.infusors, 9);
   });
 
   it("charge empowers adjacent synthesizers and infusors while the window lasts", () => {

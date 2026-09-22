@@ -14,6 +14,7 @@ import { recordMissed, recordTargetHit } from "../engine/records";
 import { give } from "../engine/fixtures";
 import { hex } from "../engine/hex";
 import { PINNED_SENTENCE } from "./render";
+import { formatNumber } from "./format";
 import type { GameState } from "../engine/types";
 import type { SignalChannels } from "./signals";
 
@@ -125,6 +126,16 @@ describe("the status monitor", () => {
     expect(document.querySelector(".monitor-forge")).toBeNull();
     expect(document.querySelector(".monitor-formula")).not.toBeNull();
     expect(document.querySelector(".monitor-rail")).not.toBeNull();
+  });
+
+  it("names the infusor term only when uplift reaches a synth", () => {
+    app.render();
+    expect(document.querySelector('[data-live="m-inf"]')).toBeNull();
+    give(app.state, "infusor", hex(0, 1));
+    app.render();
+    expect(document.querySelector('[data-live="m-inf"]')).not.toBeNull();
+    expect(document.querySelector('[data-live="m-inf"]')!.textContent).toBe(formatNumber(0.02));
+    expect(document.querySelector('[data-live="b-inf"]')!.textContent).toBe(`+${formatNumber(0.02)} ν/s`);
   });
 });
 

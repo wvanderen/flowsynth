@@ -38,7 +38,11 @@ All rollable types roll at 99% common / 0.9% uncommon / 0.1% rare
   rolling threshold (initial 60, ×1.5 growth); crossing mints a roll offer.
 
 Composite (ADR-0014): `rate = (carrier + Σ harmonics) × Π chord terms ×
-empowerment × achievementBoost`.
+empowerment × achievementBoost`. The live breakdown splits infusor uplift
+into its own additive leg — the carrier and harmonic legs read as base
+terms — so the chip multiplies out exactly:
+`(carrier + harmonics + infusors) × Π chord terms × empowerment ×
+achievementBoost`.
 
 ## Per-module notes
 
