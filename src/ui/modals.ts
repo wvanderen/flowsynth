@@ -107,14 +107,19 @@ export function renderModals(ctx: RenderContext): void {
   const kind = ctx.ui.modal;
   if (!kind) {
     backdrop.hidden = true;
+    // Hiding the host clears the stored key with it — the protocol rule
+    // (region.ts): the key alone decides rebuilds, so a re-shown modal
+    // can never keep a stale key and skip its rebuild.
     delete content.dataset.renderKey;
     return;
   }
   const def = MODAL_DEFS[kind];
   const renderKey = JSON.stringify([kind, ctx.ui.importError, ctx.state.session?.accounting.poolSeconds ?? 0, ctx.state.mode, def.identity(ctx)]);
-  // Clock ticks must not replace a save textarea or steal dialog focus.
+  // Visibility rides `kind` directly — shown exactly when a modal is open —
+  // and clock ticks must not replace a save textarea or steal dialog focus,
+  // so only the content rebuild is keyed.
+  backdrop.hidden = false;
   keyedRegion(content, renderKey, () => {
-    backdrop.hidden = false;
     def.render(ctx, content);
     const firstButton = content.querySelector("button:not([disabled])");
     (firstButton as HTMLElement | null)?.focus();

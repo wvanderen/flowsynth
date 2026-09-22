@@ -23,48 +23,61 @@ import type { GameState, Goal, Habit, NoteEntry } from "../engine/types";
 import { formatClock, formatDuration } from "../engine/clock";
 import { formatDate, formatInt, formatNumber, formatPracticeMinutes, secondsToMinutes } from "./format";
 import { HISTORY_PAGE_ROWS } from "./meta";
-import { stat } from "./dom";
-import { escapeHtml } from "./dom";
-import { liveText } from "./region";
-import { sessionCaption, sessionTrackWidth } from "./clockface";
+import { escapeHtml, stat, statLive } from "./dom";
+import { liveText, liveWidth } from "./region";
+import { sessionCaption, sessionClock, sessionTrackWidth } from "./clockface";
 import { bindPlanControls, planControlsHtml } from "./plan";
 import { projectedCountdown, type RenderContext } from "./context";
 import { honestyEventLine } from "./honesty";
 
 /* ── Region-local view state ────────────────────────── */
 
-// The habit whose rename input is open.
-let editingHabitId: string | null = null;
-// The Habit app's expanded development summary (§9): one habit at a time.
-let summaryHabitId: string | null = null;
-// The Time app's history surfaces (§9): the list view, its page size, and
-// the record drilled into. Cleared with the popover.
-let historyOpen = false;
-let historyLimit = HISTORY_PAGE_ROWS;
-let drillSession: number | null = null;
+// The panels' view state in one scratch object: the habit whose rename
+// input is open, the expanded development summary (§9, one habit at a
+// time), and the Time app's history surfaces (§9) — the list view, its
+// page size, and the record drilled into. The structural key reads the
+// whole object (panelKeyFacts), so a new field joins the key the moment
+// it joins the object — none can hide from it.
+interface PanelScratch {
+  editingHabitId: string | null;
+  summaryHabitId: string | null;
+  historyOpen: boolean;
+  historyLimit: number;
+  drillSession: number | null;
+}
+
+const freshScratch = (): PanelScratch => ({
+  editingHabitId: null,
+  summaryHabitId: null,
+  historyOpen: false,
+  historyLimit: HISTORY_PAGE_ROWS,
+  drillSession: null,
+});
+
+let scratch = freshScratch();
 
 /** The rename scratch clears when the popover closes or a rename commits. */
 export function clearEditingHabit(): void {
-  editingHabitId = null;
+  scratch.editingHabitId = null;
 }
 
 /** Both history surfaces and the development summary clear with the popover. */
 export function resetPanelSurfaces(): void {
-  historyOpen = false;
-  historyLimit = HISTORY_PAGE_ROWS;
-  drillSession = null;
-  summaryHabitId = null;
+  scratch.summaryHabitId = null;
+  scratch.historyOpen = false;
+  scratch.historyLimit = HISTORY_PAGE_ROWS;
+  scratch.drillSession = null;
 }
 
 /** Facts about this region's scratch that gate the popover's structural rebuild. */
 export function panelKeyFacts(): unknown[] {
-  return [editingHabitId, historyOpen, drillSession, historyLimit, summaryHabitId];
+  return Object.values(scratch);
 }
 
 /** Opens a session's drill-down directly (App re-renders around it). */
 export function panelOpenDrill(sessionNumber: number): void {
-  drillSession = sessionNumber;
-  historyOpen = true;
+  scratch.drillSession = sessionNumber;
+  scratch.historyOpen = true;
 }
 
 /* ── Panel bodies ───────────────────────────────────── */
@@ -74,8 +87,8 @@ export function panelOpenDrill(sessionNumber: number): void {
 // its summary — archiving hides a habit from selection only.
 function habitRowHtml(ctx: RenderContext, habit: Habit, selectable: boolean): string {
   const { state } = ctx;
-  const editing = selectable && editingHabitId === habit.id;
-  const expanded = summaryHabitId === habit.id;
+  const editing = selectable && scratch.editingHabitId === habit.id;
+  const expanded = scratch.summaryHabitId === habit.id;
   const chevron = `<button class="quiet small icon-btn summary-toggle" data-summary="${habit.id}" aria-pressed="${expanded}" title="Development summary">${expanded ? "▾" : "▸"}</button>`;
   const controls = editing
     ? `<input type="text" class="habit-rename-input" id="habit-rename-input" value="${escapeHtml(habit.name)}" maxlength="40" />
@@ -141,7 +154,7 @@ function habitSummaryHtml(ctx: RenderContext, habit: Habit): string {
 function historyListHtml(ctx: RenderContext): string {
   const { state } = ctx;
   const records = sessionRecordsNewestFirst(state);
-  const shown = records.slice(0, historyLimit);
+  const shown = records.slice(0, scratch.historyLimit);
   const rows = shown
     .map((record) => {
       const habit = record.habitId === null ? "unstructured" : escapeHtml(habitRecordName(state, record.habitId));
@@ -170,7 +183,7 @@ function historyListHtml(ctx: RenderContext): string {
 // the rate breakdown stay out: this is about practice, not economy replay.
 function historyDrillHtml(ctx: RenderContext): string {
   const { state } = ctx;
-  const record = state.sessionRecords.find((r) => r.sessionNumber === drillSession);
+  const record = state.sessionRecords.find((r) => r.sessionNumber === scratch.drillSession);
   if (!record) {
     return `<section class="focus-controls history-panel">
       <button class="quiet small" id="history-back">← History</button>
@@ -220,6 +233,16 @@ function reflectionValence(slider: number): string {
   return ` · felt ${slider < REFLECTION_SLIDER_NEUTRAL ? "rough" : "great"}`;
 }
 
+// Display lines the build and the live pass must phrase identically —
+// one wording, both passes read it.
+function sessionPracticeLine(elapsed: number): string {
+  return `${formatClock(elapsed)} of practice`;
+}
+
+function goalMinutesLine(goal: Goal, required: number): string {
+  return `${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · ×${goal.completedCount} completed` : ""}`;
+}
+
 export function appPanelBody(ctx: RenderContext, panel: FocusApp): string {
   const { state } = ctx;
   const upgrade = state.mode === "upgrade";
@@ -232,7 +255,7 @@ export function appPanelBody(ctx: RenderContext, panel: FocusApp): string {
     if (live) {
       return `<section class="focus-controls">
         <p class="habit-active-name">${active ? escapeHtml(active.name) : "Unstructured practice"}</p>
-        ${active ? `<div class="stat-row"><span>This session</span><span class="mono" data-live="habit-session">${formatClock(state.session?.elapsed ?? 0)} of practice</span></div>` : ""}
+        ${active ? statLive("habit-session", "This session", sessionPracticeLine(state.session?.elapsed ?? 0)) : ""}
       </section>`;
     }
     const archived = state.habits.filter((h) => h.archived);
@@ -263,8 +286,8 @@ export function appPanelBody(ctx: RenderContext, panel: FocusApp): string {
   }
 
   if (panel === "time") {
-    if (historyOpen) {
-      return drillSession !== null ? historyDrillHtml(ctx) : historyListHtml(ctx);
+    if (scratch.historyOpen) {
+      return scratch.drillSession !== null ? historyDrillHtml(ctx) : historyListHtml(ctx);
     }
     if (upgrade) {
       return `<section class="focus-controls">
@@ -272,13 +295,11 @@ export function appPanelBody(ctx: RenderContext, panel: FocusApp): string {
         <button class="quiet small time-history" id="time-history">History</button>
       </section>`;
     }
-    const elapsed = state.session?.elapsed ?? 0;
-    const target = state.session?.target ?? null;
-    const paused = state.mode === "paused";
+    const clock = sessionClock(state);
     return `<section class="focus-controls">
-      <p class="session-clock mono" data-live="time-clock">${formatClock(elapsed)}</p>
-      <p class="clock-caption" data-live="time-caption">${sessionCaption(elapsed, target, paused)}</p>
-      <div class="time-track"><span data-live="time-track" style="width:${sessionTrackWidth(elapsed, target)}"></span></div>
+      <p class="session-clock mono" data-live="time-clock">${formatClock(clock.elapsed)}</p>
+      <p class="clock-caption" data-live="time-caption">${sessionCaption(clock.elapsed, clock.target, clock.paused)}</p>
+      <div class="time-track"><span data-live="time-track" style="width:${sessionTrackWidth(clock.elapsed, clock.target)}"></span></div>
       <button class="quiet small time-history" id="time-history">History</button>
     </section>`;
   }
@@ -330,7 +351,7 @@ export function appPanelBody(ctx: RenderContext, panel: FocusApp): string {
         ${upgrade ? `<button class="quiet small icon-btn" data-goal-delete="${goal.id}" title="Remove goal"><svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M-6-6 6 6M6-6-6 6"/></svg></button>` : ""}
       </div>
       <div class="goal-track"><span data-goal-progress="${goal.id}" style="width:${fraction * 100}%"></span></div>
-      <small class="mono" data-goal-minutes="${goal.id}">${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · ×${goal.completedCount} completed` : ""}</small>
+      <small class="mono" data-goal-minutes="${goal.id}">${goalMinutesLine(goal, required)}</small>
     </div>`;
   };
   return `<section class="focus-controls">
@@ -375,7 +396,7 @@ export function bindAppPanel(ctx: RenderContext, scope: HTMLElement): void {
   });
   scope.querySelectorAll<HTMLElement>("[data-rename]").forEach((button) => {
     button.addEventListener("click", () => {
-      editingHabitId = button.getAttribute("data-rename");
+      scratch.editingHabitId = button.getAttribute("data-rename");
       intents.refreshView();
       const input = scope.querySelector("#habit-rename-input") as HTMLInputElement | null;
       input?.focus();
@@ -393,7 +414,7 @@ export function bindAppPanel(ctx: RenderContext, scope: HTMLElement): void {
     button.addEventListener("click", () => {
       const id = button.getAttribute("data-summary");
       if (id) {
-        summaryHabitId = summaryHabitId === id ? null : id;
+        scratch.summaryHabitId = scratch.summaryHabitId === id ? null : id;
         intents.refreshView();
       }
     });
@@ -402,30 +423,30 @@ export function bindAppPanel(ctx: RenderContext, scope: HTMLElement): void {
   // the list; rows drill in; the tail pages; back unwinds one level — out of
   // the drill-down to the list, out of the list to the Time panel itself.
   scope.querySelector("#time-history")?.addEventListener("click", () => {
-    historyOpen = true;
-    historyLimit = HISTORY_PAGE_ROWS;
-    drillSession = null;
+    scratch.historyOpen = true;
+    scratch.historyLimit = HISTORY_PAGE_ROWS;
+    scratch.drillSession = null;
     intents.refreshView();
   });
   scope.querySelector("#history-back")?.addEventListener("click", () => {
-    if (drillSession !== null) {
-      drillSession = null;
+    if (scratch.drillSession !== null) {
+      scratch.drillSession = null;
     } else {
-      historyOpen = false;
-      historyLimit = HISTORY_PAGE_ROWS;
-      drillSession = null;
+      scratch.historyOpen = false;
+      scratch.historyLimit = HISTORY_PAGE_ROWS;
+      scratch.drillSession = null;
     }
     intents.refreshView();
   });
   scope.querySelector("#history-more")?.addEventListener("click", () => {
-    historyLimit += HISTORY_PAGE_ROWS;
+    scratch.historyLimit += HISTORY_PAGE_ROWS;
     intents.refreshView();
   });
   scope.querySelectorAll<HTMLElement>("[data-drill]").forEach((row) => {
     row.addEventListener("click", () => {
       const number = Number(row.getAttribute("data-drill"));
       if (Number.isFinite(number)) {
-        drillSession = number;
+        scratch.drillSession = number;
         intents.refreshView();
       }
     });
@@ -434,17 +455,17 @@ export function bindAppPanel(ctx: RenderContext, scope: HTMLElement): void {
   renameInput?.addEventListener("keydown", (event) => {
     if ((event as KeyboardEvent).key === "Enter") {
       event.preventDefault();
-      const id = editingHabitId;
+      const id = scratch.editingHabitId;
       if (id) intents.renameHabitAction(id, (event.target as HTMLInputElement).value);
     }
     if ((event as KeyboardEvent).key === "Escape") {
       event.stopPropagation();
-      editingHabitId = null;
+      scratch.editingHabitId = null;
       intents.refreshView();
     }
   });
   scope.querySelector("#habit-rename-save")?.addEventListener("click", () => {
-    const id = editingHabitId;
+    const id = scratch.editingHabitId;
     const input = scope.querySelector("#habit-rename-input") as HTMLInputElement | null;
     if (id && input) intents.renameHabitAction(id, input.value);
   });
@@ -491,15 +512,11 @@ export function bindAppPanel(ctx: RenderContext, scope: HTMLElement): void {
 // practice tallies, and goal progress.
 export function updateAppPanelLive(ctx: RenderContext, scope: ParentNode): void {
   const { state } = ctx;
-  const elapsed = state.session?.elapsed ?? 0;
-  const target = state.session?.target ?? null;
-  const paused = state.mode === "paused";
-  liveText(scope, "habit-session", `${formatClock(elapsed)} of practice`);
-  liveText(scope, "time-clock", formatClock(elapsed));
-  liveText(scope, "time-caption", sessionCaption(elapsed, target, paused));
-  const track = scope.querySelector('[data-live="time-track"]') as HTMLElement | null;
-  const width = sessionTrackWidth(elapsed, target);
-  if (track && track.style.width !== width) track.style.width = width;
+  const clock = sessionClock(state);
+  liveText(scope, "habit-session", sessionPracticeLine(clock.elapsed));
+  liveText(scope, "time-clock", formatClock(clock.elapsed));
+  liveText(scope, "time-caption", sessionCaption(clock.elapsed, clock.target, clock.paused));
+  liveWidth(scope, '[data-live="time-track"]', sessionTrackWidth(clock.elapsed, clock.target));
   for (const habit of state.habits) {
     const node = scope.querySelector(`[data-habit-seconds="${habit.id}"]`);
     const display = formatDuration(habit.seconds);
@@ -507,21 +524,22 @@ export function updateAppPanelLive(ctx: RenderContext, scope: ParentNode): void 
   }
   for (const goal of state.goals) {
     const required = goalRequiredSeconds(goal);
-    const bar = scope.querySelector(`[data-goal-progress="${goal.id}"]`) as HTMLElement | null;
-    const barWidth = `${Math.min(100, (goal.progressSeconds / required) * 100)}%`;
-    if (bar && bar.style.width !== barWidth) bar.style.width = barWidth;
+    liveWidth(scope, `[data-goal-progress="${goal.id}"]`, `${Math.min(100, (goal.progressSeconds / required) * 100)}%`);
     const minutes = scope.querySelector(`[data-goal-minutes="${goal.id}"]`);
-    const display = `${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · ×${goal.completedCount} completed` : ""}`;
+    const display = goalMinutesLine(goal, required);
     if (minutes && minutes.textContent !== display) minutes.textContent = display;
   }
   // The long-goal strip's affordability moves with the balance between
   // rebuilds: the buy button and its practice-minute countdown keep
-  // themselves current, like the module upgrade CTA (§7).
+  // themselves current, like the module upgrade CTA (§7). The countdown
+  // span only exists in upgrade mode — the projection stays out of flow
+  // ticks, exactly where the strip itself puts it.
   const longGoalBuy = scope.querySelector("#long-goal-buy") as HTMLButtonElement | null;
   if (longGoalBuy) {
     const price = longGoalCost(state.goalCapacityBought);
     longGoalBuy.disabled = !(state.mode === "upgrade" && wholeNous(state) >= price);
-    const countdown = projectedCountdown(ctx, price) ?? "";
-    liveText(scope, "long-goal-countdown", countdown);
+    if (state.mode === "upgrade") {
+      liveText(scope, "long-goal-countdown", projectedCountdown(ctx, price) ?? "");
+    }
   }
 }

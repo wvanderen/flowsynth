@@ -2,8 +2,26 @@
 // Time app's popover (§2.2): the caption every running state names itself
 // with, and the planned-session fill both tracks read.
 import { formatClock } from "../engine/clock";
+import type { GameState } from "../engine/types";
 
 export const OPEN_ENDED_WORD = "open-ended";
+
+// The clock facts both clock blocks read off state — elapsed, the plan's
+// target, the pause flag — derived once here rather than re-derived per
+// consumer.
+export interface SessionClock {
+  elapsed: number;
+  target: number | null;
+  paused: boolean;
+}
+
+export function sessionClock(state: GameState): SessionClock {
+  return {
+    elapsed: state.session?.elapsed ?? 0,
+    target: state.session?.target ?? null,
+    paused: state.mode === "paused",
+  };
+}
 
 // The running-session caption: every running state names itself — paused,
 // open-ended, target reached, or what remains of the plan.
