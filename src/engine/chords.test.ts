@@ -136,20 +136,35 @@ describe("named chords", () => {
     expect(snapshot.rate).toBeCloseTo((0.1 + 0.2) * 1.5 * 1.75, 9);
   });
 
-  it("a named chord replaces its member pairs even with doubled voices", () => {
+  it("replaces only its member pairs: a doubled voice keeps the anonymous pair", () => {
     const s = fresh();
     give(s, "additive", hex(1, 0));
     give(s, "additive", hex(0, -1));
-    // Two pitch-2 voices both adjacent to the Carrier: one octave, no raw
-    // pair survives; the extra voice adds amplitude, not a second bonus.
+    // Two pitch-2 voices both adjacent to the Carrier: the octave sings
+    // through one of them; the double's pair is outside the chord and keeps
+    // the anonymous pair bonus.
     const snapshot = computeRates(s, true);
     expect(snapshot.namedChords).toHaveLength(1);
-    expect(snapshot.pairs).toHaveLength(0);
+    expect(snapshot.pairs).toHaveLength(1);
+    expect(snapshot.chordMultiplier).toBeCloseTo(1.15 * (1 + BALANCE.pairBonus), 9);
     expect(snapshot.amplitude).toBeCloseTo(0.2, 9);
-    expect(snapshot.rate).toBeCloseTo(0.2 * 1.15, 9);
-    // One voice per pitch sings the chord; the double rides amplitude only.
+    // One voice sings the chord; the double chords anonymously.
     expect(snapshot.contributions.get("m2")?.chordTerms).toBe(1);
-    expect(snapshot.contributions.get("m3")?.chordTerms).toBe(0);
+    expect(snapshot.contributions.get("m3")?.chordTerms).toBe(1);
+  });
+
+  it("keeps non-member pairs in mixed clusters with doubled voices", () => {
+    const s = fresh();
+    give(s, "additive", hex(1, 0)); // pitch 2 — octave voice
+    give(s, "additive", hex(0, -1)); // pitch 2 — adjacent to the Carrier only
+    give(s, "additive", hex(2, 0)); // pitch 3 — fifth voice with (1,0)
+    const snapshot = computeRates(s, true);
+    expect(snapshot.namedChords.map((c) => c.name)).toEqual(["Octave", "Fifth"]);
+    // (Carrier, pitch-2 double) survives: the double sings in no chord — the
+    // Carrier does, as the octave's pitch-1 voice.
+    expect(snapshot.pairs).toHaveLength(1);
+    expect(snapshot.chordMultiplier).toBeCloseTo(1.15 * 1.3 * (1 + BALANCE.pairBonus), 9);
+    expect(snapshot.contributions.get("m3")?.chordTerms).toBe(1);
   });
 
   it("the textbook 10:12:15 minor triad is geometrically impossible", () => {
@@ -171,11 +186,12 @@ describe("named chords", () => {
     give(s, "additive", hex(6, 0));
     give(s, "additive", hex(4, 1));
     // (4,1) doubles pitch 6 (adjacent to both 5·6 voices): the cluster still
-    // rings one blues triad, paying one bonus.
+    // rings one blues triad; the double's consecutive pair at 5·6 is outside
+    // the chord's voices and keeps the anonymous pair bonus.
     const snapshot = computeRates(s, true);
     expect(snapshot.namedChords.map((c) => c.name)).toEqual(["Blues triad"]);
-    expect(snapshot.pairs).toHaveLength(0);
-    expect(snapshot.chordMultiplier).toBeCloseTo(1.75, 9);
+    expect(snapshot.pairs).toHaveLength(1);
+    expect(snapshot.chordMultiplier).toBeCloseTo(1.75 * (1 + BALANCE.pairBonus), 9);
   });
 });
 

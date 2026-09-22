@@ -57,7 +57,8 @@ function connectedVoices(voices: DeployedModule[]): boolean {
 // voice-set (one module per pattern pitch, deterministic by module id) wins.
 // Overlapping patterns — a 4·5·6·7 run is both triads — match separately and
 // stack multiplicatively downstream. Extra voices at a chord's pitches stay
-// amplitude, not a second bonus: identical pitches add amplitude, no chord.
+// out of it: identical pitches add amplitude, no chord, and a double's
+// non-member pair keeps the anonymous bonus (#29).
 function recognizeChords(component: DeployedModule[]): NamedChordTerm[] {
   const matches: NamedChordTerm[] = [];
   for (const def of NAMED_CHORDS) {
@@ -95,10 +96,10 @@ export interface ChordAnalysis {
 
 // The chord pass over the deployed synthesizers: adjacent synthesizers one
 // pitch apart form raw pair terms (identical pitches only stack amplitude —
-// no chord); each named chord replaces the pair terms at its pitch positions
-// in the cluster, paying one bonus instead — the chord's extra voices ride
-// amplitude only. Bonus-only: no dissonance penalties, and the board's
-// finite cell budget is the only cap.
+// no chord); each named chord replaces the pair terms of its member pairs —
+// the voices it actually sings through — while pairs outside any named chord
+// keep the anonymous bonus (#29). Bonus-only: no dissonance penalties, and
+// the board's finite cell budget is the only cap.
 export function analyzeChords(synths: DeployedModule[]): ChordAnalysis {
   const pairs: ChordPairTerm[] = [];
   const namedChords: NamedChordTerm[] = [];
@@ -113,7 +114,8 @@ export function analyzeChords(synths: DeployedModule[]): ChordAnalysis {
         const pa = pitchOf(a.pos);
         const pb = pitchOf(b.pos);
         if (Math.abs(pa - pb) !== 1) continue;
-        if (named.some((chord) => chord.pitches.includes(pa) && chord.pitches.includes(pb))) continue;
+        // Member pairs only (#29): a double at a chord's pitch isn't one.
+        if (named.some((chord) => chord.moduleIds.includes(a.id) && chord.moduleIds.includes(b.id))) continue;
         pairs.push({ a: a.id, b: b.id, bonus: BALANCE.pairBonus });
       }
     }
