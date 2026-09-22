@@ -49,7 +49,7 @@ import { browserChannels, type SignalChannels } from "./signals";
 // whenever provisional time waits (§1–2).
 export type ModalKind =
   | "settings"
-  | "store"
+  | "catalog"
   | "forge"
   | "achievements"
   | "export"

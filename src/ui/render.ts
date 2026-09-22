@@ -394,7 +394,7 @@ function renderAchievementsModal(app: App, content: HTMLElement): void {
     const feats = ACHIEVEMENTS.filter((def) => def.category === category);
     if (feats.length === 0) return "";
     return `<section class="ach-section">
-      <h3 class="store-section-title">${ACHIEVEMENT_CATEGORY_LABEL[category]}</h3>
+      <h3 class="catalog-section-title">${ACHIEVEMENT_CATEGORY_LABEL[category]}</h3>
       <div class="ach-grid">${feats.map((def) => achRowHtml(app, def, ctx)).join("")}</div>
     </section>`;
   }).join("");
@@ -461,7 +461,7 @@ function renderTools(app: App): void {
     host.dataset.renderKey = key;
     const forgeReady = upgrade && state.bankedRolls.length > 0;
     host.innerHTML = `
-      <button class="small" id="tool-store" ${upgrade ? "" : "disabled"} title="${upgrade ? "The catalog: starter-shelf offers and board cells" : "Purchases happen between sessions"}">Catalog</button>
+      <button class="small" id="tool-catalog" ${upgrade ? "" : "disabled"} title="${upgrade ? "The catalog: starter-shelf offers and board cells" : "Purchases happen between sessions"}">Catalog</button>
       <button class="small tool-forge" id="tool-forge" ${forgeReady ? "" : "disabled"} title="">
         <span>Forge${state.bankedRolls.length > 0 ? ` · ${state.bankedRolls.length}` : ""}</span>
         <i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i>
@@ -469,7 +469,7 @@ function renderTools(app: App): void {
       <button class="small ${app.managing ? "active" : ""}" id="tool-manage" ${upgrade ? "" : "disabled"} aria-pressed="${app.managing}" title="${app.managing ? "Exit arranging (Esc)" : upgrade ? "Move modules" : "The grid is locked during flow"}">Grid &amp; inventory</button>
       <button class="small tool-cell${ui.buyingCell ? " active" : ""}" id="tool-cell" ${upgrade ? "" : "disabled"} aria-pressed="${ui.buyingCell}" title="">${CELL_TOOL_SVG}</button>
       <button class="small${ui.showChords ? " active" : ""}" id="tool-chords" aria-pressed="${ui.showChords}" title="Show chords — light the chord voices, link the pairs, outline and label named chords · C">Chords</button>`;
-    byId("tool-store")?.addEventListener("click", () => app.openModal("store"));
+    byId("tool-catalog")?.addEventListener("click", () => app.openModal("catalog"));
     byId("tool-forge")?.addEventListener("click", () => app.openModal("forge"));
     byId("tool-manage")?.addEventListener("click", () => (app.ui.managing ? app.stopManaging() : app.startManaging()));
     byId("tool-cell")?.addEventListener("click", () => (app.ui.buyingCell ? app.cancelCellPurchase() : app.armCellPurchase()));
@@ -1726,7 +1726,7 @@ function renderModal(app: App): void {
           // The summary's identity: a fresh session's summary must never
           // reuse the previous one's already-rendered content.
           ? [app.state.summary?.sessionNumber ?? null, app.state.summary?.earned ?? null]
-          : kind === "store"
+          : kind === "catalog"
             ? [
                 app.ui.showAcquired,
                 wholeNous(app.state),
@@ -1752,7 +1752,7 @@ function renderModal(app: App): void {
   backdrop.hidden = false;
   content.dataset.renderKey = renderKey;
   if (kind === "settings") renderSettingsModal(app, content);
-  else if (kind === "store") renderStoreModal(app, content);
+  else if (kind === "catalog") renderCatalogModal(app, content);
   else if (kind === "forge") renderForgeModal(app, content);
   else if (kind === "achievements") renderAchievementsModal(app, content);
   else if (kind === "export") renderExportModal(app, content);
@@ -1791,7 +1791,7 @@ function renderSettingsModal(app: App, content: HTMLElement): void {
   wireClose(app);
 }
 
-function renderStoreModal(app: App, content: HTMLElement): void {
+function renderCatalogModal(app: App, content: HTMLElement): void {
   const { state, ui } = app;
   const shelfTypes = Object.keys(BALANCE.shelfPrices) as (keyof typeof BALANCE.shelfPrices)[];
 
@@ -1816,7 +1816,7 @@ function renderStoreModal(app: App, content: HTMLElement): void {
     <h2 id="modal-title">Shape what comes next.</h2>
     <p class="lead">${formatInt(state.nous)} ν available.</p>
     ${openShelf.length > 0 ? `
-      <h3 class="store-section-title">Starter shelf</h3>
+      <h3 class="catalog-section-title">Starter shelf</h3>
       <div class="shop-list">${openShelf.map((type) => {
         const price = BALANCE.shelfPrices[type];
         const affordable = wholeNous(state) >= price;
@@ -1832,7 +1832,7 @@ function renderStoreModal(app: App, content: HTMLElement): void {
         </div>`;
       }).join("")}</div>` : ""}
     ${openShelf.length === 0 ? `<p class="empty-copy">The shelf is empty.</p>` : ""}
-    <h3 class="store-section-title">Cells</h3>
+    <h3 class="catalog-section-title">Cells</h3>
     <div class="shop-list">
       <div class="shop-item">
         <div><h3>Board cell</h3><small>Empty hexes to place modules on — you choose where it touches the board.</small></div>
@@ -1843,10 +1843,10 @@ function renderStoreModal(app: App, content: HTMLElement): void {
       </div>
     </div>
     <p class="small muted" style="margin:6px 0 0">Each purchase raises the next price.</p>
-    <label class="store-toggle"><input type="checkbox" id="store-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${ownedShelf.length}/${shelfTypes.length})</label>
+    <label class="catalog-toggle"><input type="checkbox" id="catalog-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${ownedShelf.length}/${shelfTypes.length})</label>
     ${ui.showAcquired && ownedShelf.length > 0 ? `
-      <h3 class="store-section-title">Acquired</h3>
-      <div class="shop-list store-owned">
+      <h3 class="catalog-section-title">Acquired</h3>
+      <div class="shop-list catalog-owned">
         ${ownedShelf.map((type) => `<div class="shop-item owned"><div><h3>${META[SHELF_MODULE[type]].name}</h3><small>${META[SHELF_MODULE[type]].role}</small></div><span class="activation-owned mono">in inventory</span></div>`).join("")}
       </div>` : ""}
     <p class="modal-note">Shelf offers hide once acquired; roll copies stay, as combination material.</p>`;
@@ -1856,7 +1856,7 @@ function renderStoreModal(app: App, content: HTMLElement): void {
     });
   });
   byId("buy-cell")?.addEventListener("click", () => app.armCellPurchase());
-  byId("store-show-acquired")?.addEventListener("change", (event) => {
+  byId("catalog-show-acquired")?.addEventListener("change", (event) => {
     app.ui.showAcquired = (event.target as HTMLInputElement).checked;
     app.render();
   });
