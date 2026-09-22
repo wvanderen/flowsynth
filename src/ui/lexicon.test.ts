@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { effectLine, faceReadout, forgeWording, typeProse, upgradeGain, type ModuleSpec } from "./lexicon";
+import {
+  chordWording,
+  chargeSourceWording,
+  chargeStrengthWording,
+  effectLine,
+  faceReadout,
+  forgeWording,
+  pitchWording,
+  typeProse,
+  upgradeGain,
+  type ModuleSpec,
+} from "./lexicon";
 
 const spec = (type: ModuleSpec["type"], rarity: ModuleSpec["rarity"] = "common", level = 0): ModuleSpec => ({ type, rarity, level });
 
@@ -79,5 +90,52 @@ describe("forgeWording — the forge-roll candidate card", () => {
 
   it("keeps the generator's prose card charge-free", () => {
     expect(forgeWording("focusKeyed", 300)).toContain("banks a charge window");
+  });
+});
+
+describe("chargeStrengthWording — the charge stat", () => {
+  it("says none at strength 0, regardless of a factor", () => {
+    expect(chargeStrengthWording(0)).toBe("none");
+    expect(chargeStrengthWording(0, 1)).toBe("none");
+  });
+
+  it("words the bare strength for the infusor row", () => {
+    expect(chargeStrengthWording(1.5)).toBe("strength 1.5");
+  });
+
+  it("appends the synthesis factor for the synthesizer row", () => {
+    expect(chargeStrengthWording(2, 1.44)).toBe("strength 2 (×1.44)");
+  });
+});
+
+describe("pitchWording — the synthesizer pitch stat", () => {
+  it("names the harmonic number and its hex distance from the Carrier", () => {
+    expect(pitchWording(1)).toBe("P1 — 0 hexes from the Carrier");
+    expect(pitchWording(2)).toBe("P2 — 1 hex from the Carrier");
+    expect(pitchWording(4)).toBe("P4 — 3 hexes from the Carrier");
+  });
+
+  it("stays silent off the board", () => {
+    expect(pitchWording(null)).toBe("—");
+  });
+});
+
+describe("chordWording — the synthesizer chord stat", () => {
+  it("joins named chords and appends plain pairs", () => {
+    expect(chordWording(["Major third"], 1)).toBe("Major third + 1 pair");
+    expect(chordWording(["Major third", "Perfect fifth"], 2)).toBe("Major third + Perfect fifth + 2 pairs");
+  });
+
+  it("falls back to plain pairs, then chordless", () => {
+    expect(chordWording([], 2)).toBe("2 chord pairs");
+    expect(chordWording([], 1)).toBe("1 chord pair");
+    expect(chordWording([], 0)).toBe("chordless");
+  });
+});
+
+describe("chargeSourceWording — the forge charge-source stat", () => {
+  it("reports adjacency with a generator", () => {
+    expect(chargeSourceWording(true)).toBe("adjacent generator");
+    expect(chargeSourceWording(false)).toBe("no adjacent generator");
   });
 });
