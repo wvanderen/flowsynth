@@ -41,7 +41,7 @@ import {
 import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
 import type { GameState, Hex, ShelfType } from "../engine/types";
 import { render } from "./render";
-import { resetEnterDraft } from "./modals";
+import { resetEnterDraft, resetCatalogToggle } from "./modals";
 import { HISTORY_PAGE_ROWS, META } from "./meta";
 import { browserChannels, type SignalChannels } from "./signals";
 
@@ -1163,6 +1163,9 @@ export class App {
   }
 
   openModal(kind: ModalKind): void {
+    // Region-local scratch resets where its surface opens (the enter
+    // prompt's draft resets in startFlow; the catalog's toggle here).
+    if (kind === "store") resetCatalogToggle();
     this.ui.modal = kind;
     this.render();
   }

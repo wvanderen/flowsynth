@@ -83,6 +83,10 @@ export function upgradeGain(module: ModuleSpec): string {
   return `+${formatNumber(now * (growth - 1))} effect`;
 }
 
+// The pinned module's refusal sentence (ADR-0016): the status line a drag
+// attempt on a pinned module raises, and the carrier panel's standing note.
+export const PINNED_SENTENCE = "Pinned — it never moves, combines, or leaves.";
+
 // The static per-type description the inspector's module panel carries.
 export function typeProse(type: ModuleType): string {
   switch (type) {

@@ -9,17 +9,16 @@ import { achievementName, ACHIEVEMENTS, type AchievementCategory, type Achieveme
 import { cellCost, chargeDelivered, wholeNous } from "../engine/economy";
 import { BALANCE, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { forgeThreshold } from "../engine/rolls";
-import type { HonestyEvent, HonestyOutcome } from "../engine/types";
 import { formatClock, formatDuration } from "../engine/clock";
-import { formatInt, formatNumber, formatPracticeMinutes, secondsToMinutes } from "./format";
+import { formatInt, formatNumber, formatPracticeMinutes } from "./format";
 import { META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { moduleFace } from "./face";
 import { faceReadout, forgeWording } from "./lexicon";
+import { honestyEventLine, outcomeLabel } from "./honesty";
 import { byId, escapeHtml } from "./dom";
 import { bindPlanControls, planControlsHtml } from "./plan";
 import { projectedCountdown, type RenderContext } from "./context";
-
-export const PINNED_SENTENCE = "Pinned — it never moves, combines, or leaves.";
+import type { ModalKind } from "./app";
 
 // The enter prompt's kind-first selection (issue #95): the kind tab that
 // holds, the habit the habit tab has picked, and the new-habit name as
@@ -41,10 +40,64 @@ export function resetEnterDraft(): void {
   enterSelection = freshEnterSelection();
 }
 
-// The catalog's show-acquired toggle — region-local view state.
+// The catalog's show-acquired toggle — region-local view state, reset every
+// time the catalog opens.
 let storeShowAcquired = false;
 
+/** Called by App.openModal: the toggle starts fresh each open. */
+export function resetCatalogToggle(): void {
+  storeShowAcquired = false;
+}
+
 /* ── Shell ──────────────────────────────────────────── */
+
+// One definition per dialog: the identity that joins the render key (what
+// structural change must force a rebuild) and the renderer itself.
+const MODAL_DEFS: Record<NonNullable<ModalKind>, {
+  identity(ctx: RenderContext): unknown;
+  render(ctx: RenderContext, content: HTMLElement): void;
+}> = {
+  settings: { identity: () => null, render: renderSettingsModal },
+  store: {
+    identity: (ctx) => [
+      storeShowAcquired,
+      wholeNous(ctx.state),
+      JSON.stringify(ctx.state.purchased),
+      ctx.state.cellsBought,
+      ctx.state.activatedApps.join("|"),
+      // Module-upgrade rows reprice with levels, moves, and the roster.
+      ctx.state.modules.map((m) => `${m.id}:${m.level}:${m.rarity}:${m.pos ? "d" : "i"}`).join("|"),
+    ],
+    render: renderStoreModal,
+  },
+  forge: { identity: (ctx) => ctx.state.bankedRolls.at(-1)?.id ?? null, render: renderForgeModal },
+  achievements: {
+    // Quantized progress: an open page refreshes when a bar visibly moves,
+    // not on every clock tick.
+    identity: (ctx) => achProgressKey(ctx),
+    render: renderAchievementsModal,
+  },
+  export: { identity: () => null, render: renderExportModal },
+  import: { identity: () => null, render: renderImportModal },
+  reset: { identity: () => null, render: renderResetModal },
+  honesty: {
+    identity: (ctx) => [ctx.exitPending, ctx.state.session?.accounting.poolSeconds ?? 0, ctx.state.session?.accounting.bucketNous ?? 0],
+    render: renderHonestyModal,
+  },
+  enter: {
+    // The enter prompt's own selection state (issue #95): the plan and the
+    // kind-first picks re-render the modal the moment they change — chips
+    // highlight on pick, never a stale footer.
+    identity: (ctx) => [ctx.ui.chosenTarget, enterSelection],
+    render: renderEnterModal,
+  },
+  summary: {
+    // The summary's identity: a fresh session's summary must never reuse the
+    // previous one's already-rendered content.
+    identity: (ctx) => [ctx.state.summary?.sessionNumber ?? null, ctx.state.summary?.earned ?? null],
+    render: renderSummaryModal,
+  },
+};
 
 export function renderModals(ctx: RenderContext): void {
   const backdrop = byId("modal");
@@ -56,50 +109,13 @@ export function renderModals(ctx: RenderContext): void {
     delete content.dataset.renderKey;
     return;
   }
-  const extra =
-    kind === "forge"
-      ? ctx.state.bankedRolls.at(-1)?.id ?? null
-      : kind === "honesty"
-        ? [ctx.exitPending, ctx.state.session?.accounting.poolSeconds ?? 0, ctx.state.session?.accounting.bucketNous ?? 0]
-        // The summary's identity: a fresh session's summary must never
-        // reuse the previous one's already-rendered content.
-        : kind === "summary"
-          ? [ctx.state.summary?.sessionNumber ?? null, ctx.state.summary?.earned ?? null]
-          : kind === "store"
-            ? [
-                storeShowAcquired,
-                wholeNous(ctx.state),
-                JSON.stringify(ctx.state.purchased),
-                ctx.state.cellsBought,
-                ctx.state.activatedApps.join("|"),
-                // Module-upgrade rows reprice with levels, moves, and the roster.
-                ctx.state.modules.map((m) => `${m.id}:${m.level}:${m.rarity}:${m.pos ? "d" : "i"}`).join("|"),
-              ]
-            : kind === "achievements"
-              // Quantized progress: an open page refreshes when a bar visibly
-              // moves, not on every clock tick.
-              ? achProgressKey(ctx)
-              // The enter prompt's own selection state (issue #95): the plan
-              // and the kind-first picks re-render the modal the moment they
-              // change — chips highlight on pick, never a stale footer.
-              : kind === "enter"
-                ? [ctx.ui.chosenTarget, enterSelection]
-                : null;
-  const renderKey = JSON.stringify([kind, ctx.ui.importError, ctx.state.session?.accounting.poolSeconds ?? 0, ctx.state.mode, extra]);
+  const def = MODAL_DEFS[kind];
+  const renderKey = JSON.stringify([kind, ctx.ui.importError, ctx.state.session?.accounting.poolSeconds ?? 0, ctx.state.mode, def.identity(ctx)]);
   // Clock ticks must not replace a save textarea or steal dialog focus.
   if (!backdrop.hidden && content.dataset.renderKey === renderKey) return;
   backdrop.hidden = false;
   content.dataset.renderKey = renderKey;
-  if (kind === "settings") renderSettingsModal(ctx, content);
-  else if (kind === "store") renderStoreModal(ctx, content);
-  else if (kind === "forge") renderForgeModal(ctx, content);
-  else if (kind === "achievements") renderAchievementsModal(ctx, content);
-  else if (kind === "export") renderExportModal(ctx, content);
-  else if (kind === "import") renderImportModal(ctx, content);
-  else if (kind === "reset") renderResetModal(ctx, content);
-  else if (kind === "honesty") renderHonestyModal(ctx, content);
-  else if (kind === "enter") renderEnterModal(ctx, content);
-  else if (kind === "summary") renderSummaryModal(ctx, content);
+  def.render(ctx, content);
   const firstButton = content.querySelector("button:not([disabled])");
   (firstButton as HTMLElement | null)?.focus();
 }
@@ -598,27 +614,6 @@ function renderEnterModal(ctx: RenderContext, content: HTMLElement): void {
 }
 
 /* ── Session summary (§5.7, §8) ─────────────────────── */
-
-// One voice for both honesty surfaces (§2, §8–9): the report's option
-// labels and the summary's factual event lines phrase each outcome the same
-// way, so the report's promise and the summary's record can never drift.
-// (Shared with the Time app's history drill — the panels region imports it.)
-const OUTCOME_PHRASES: Record<HonestyOutcome, string> = {
-  missed: "didn't practice",
-  planned: "did what I planned",
-  full: "practiced the whole time away",
-};
-
-const outcomeLabel = (outcome: HonestyOutcome): string => {
-  const phrase = OUTCOME_PHRASES[outcome];
-  return phrase.charAt(0).toUpperCase() + phrase.slice(1);
-};
-
-// The honesty event's neutral factual line (§8–9), the history list's
-// format: accounting, not judgment — "22 min away · didn't practice".
-export function honestyEventLine(event: HonestyEvent): string {
-  return `${secondsToMinutes(event.awaySeconds)} min away · ${OUTCOME_PHRASES[event.outcome]}`;
-}
 
 // The loud summary (§5.7, §8): shown once per session end, however the
 // session ended — final numbers only. The headline is banked nous; practice

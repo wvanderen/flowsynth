@@ -1,8 +1,8 @@
-import { chargedFactor, cellCost, computeRates, deployed, emittedStrength, levelCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
+import { chargedFactor, cellCost, computeRates, deployed, emittedStrength, isSource, levelCost, longGoalCost, modulePower, nominalContribution, wholeNous } from "../engine/economy";
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
-import { BALANCE, CATEGORY_OF, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL } from "../engine/constants";
+import { BALANCE, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
 import { appActive, appLockNote, FOCUS_APPS, type FocusApp } from "../engine/apps";
 import { isInFlowNote } from "../engine/notes";
@@ -23,7 +23,7 @@ import type { GameState, Goal, Habit, Hex, ModuleInstance, NoteEntry, RateSnapsh
 import type { App } from "./app";
 import { appIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, moduleFace } from "./face";
-import { effectLine, faceReadout, typeProse, upgradeGain } from "./lexicon";
+import { effectLine, faceReadout, PINNED_SENTENCE, typeProse, upgradeGain } from "./lexicon";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
@@ -33,9 +33,8 @@ import { renderStatusMonitor } from "./monitor";
 import { byId, escapeHtml } from "./dom";
 import { bindPlanControls, planControlsHtml } from "./plan";
 import { contextFor } from "./context";
-import { honestyEventLine, PINNED_SENTENCE, renderModals } from "./modals";
-
-export { PINNED_SENTENCE } from "./modals";
+import { honestyEventLine } from "./honesty";
+import { renderModals } from "./modals";
 
 const SPACING = 65;
 const DRAG_THRESHOLD_PX = 6;
