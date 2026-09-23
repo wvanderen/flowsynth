@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>FlowSynth — module bloom prototype (#127)</title>
+    <!--
+      THROWAWAY PROTOTYPE for "In-place module bloom: exact controls, hierarchy,
+      and canvas fit". Three structurally different blooms on the settled
+      octave-stack board, switchable via ?variant= and the bottom pill
+      (arrow keys work). Shared, already-decided behavior in all variants:
+      upgrade-mode dragging is always live, occupied drops swap immediately,
+      inventory stays on the board surface. Resize the window narrow (~900px)
+      to judge half-width density. Numbers are placeholders. No persistence.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0d1122;
+        --panel: #141a30;
+        --soft: #111627;
+        --line: #2a3150;
+        --line2: #465078;
+        --ink: #e5e9f5;
+        --muted: #8992ad;
+        --synth: #7774ef;
+        --generator: #35aa72;
+        --infusor: #35aeca;
+        --forge: #d1a341;
+        --charge: #9affa8;
+        --danger: #ff7272;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+      body { background: var(--bg); color: var(--ink); font: 14px/1.35 system-ui, sans-serif; }
+      button { color: inherit; font: inherit; background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 8px 11px; cursor: pointer; }
+      button:hover { border-color: var(--line2); background: #1a213b; }
+      button:focus-visible { outline: 2px solid var(--charge); outline-offset: 2px; }
+      .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+      .muted { color: var(--muted); }
+      .eyebrow { color: var(--muted); font: 10px var(--mono); letter-spacing: .15em; text-transform: uppercase; }
+      #app { height: 100dvh; display: flex; flex-direction: column; }
+      .console { height: 64px; flex: 0 0 auto; display: flex; align-items: center; gap: 16px; padding: 0 18px; background: var(--soft); border-bottom: 1px solid var(--line); }
+      .brand { font-size: 17px; display: flex; gap: 9px; align-items: center; }
+      .brand svg { width: 24px; }
+      .session { display: flex; gap: 10px; align-items: center; }
+      .session-readout strong { display: block; font: 20px var(--mono); }
+      .session-readout small { color: var(--muted); }
+      .enter { color: #ffe4da; border-color: #6f3e31; background: #351f22; }
+      .balances { margin-left: auto; display: flex; gap: 20px; text-align: right; }
+      .balances b { display: block; font: 16px var(--mono); }
+      .board-panel { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+      .board-head { min-height: 52px; display: flex; align-items: center; gap: 14px; padding: 8px 14px; border-bottom: 1px solid var(--line); }
+      .board-head h1 { margin: 0; font-size: 15px; font-weight: 650; }
+      .board-head p { margin: 0; color: var(--muted); font-size: 12px; }
+      .board-head .tip { margin-left: auto; text-align: right; white-space: nowrap; }
+      .board-wrap { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; background-image: radial-gradient(circle at 50% 45%, #161d36 0, var(--bg) 58%); }
+      #board { width: 100%; height: 100%; display: block; touch-action: none; }
+      .cell { fill: #11172a; stroke: var(--line); stroke-width: 1.5; transition: fill .12s, opacity .12s; }
+      .cell.target { fill: #172b31; stroke: var(--charge); stroke-width: 2.5; }
+      .cell.swap { fill: #332b19; stroke: var(--forge); stroke-width: 2.5; }
+      .cell.dim, .module.dim { opacity: .35; }
+      .pitch-label { fill: #68718d; font: 11px var(--mono); text-anchor: middle; pointer-events: none; }
+      .oct-label { fill: #4b5370; font: 8px var(--mono); text-anchor: middle; pointer-events: none; }
+      .module { cursor: grab; }
+      .module:active { cursor: grabbing; }
+      .module.dragging { opacity: .22; }
+      .module .plate { fill: #171d34; stroke: var(--cat); stroke-width: 3; transition: transform .14s, filter .14s; transform-box: fill-box; transform-origin: center; }
+      .module.selected .plate { stroke-width: 5; filter: brightness(1.2); transform: scale(1.07); }
+      .module .glyph { stroke: var(--cat); stroke-width: 2.4; fill: none; pointer-events: none; }
+      .module .level, .module .name { fill: var(--ink); text-anchor: middle; pointer-events: none; font-family: var(--mono); }
+      .module .level { font-size: 10px; }
+      .module .name { font-size: 8px; letter-spacing: .05em; }
+      .module .note { fill: var(--muted); text-anchor: middle; pointer-events: none; font: 9px var(--mono); }
+      .ghost { position: fixed; z-index: 90; width: 78px; height: 86px; display: grid; place-items: center; border: 2px solid var(--cat); border-radius: 18px; background: #171d34ee; box-shadow: 0 16px 36px #000a; pointer-events: none; font: 10px var(--mono); transform: translate(-50%, -50%) rotate(2deg); }
+      #bloom-host { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
+      #bloom-host > * { pointer-events: auto; }
+      .inventory { position: absolute; z-index: 14; left: 16px; right: 16px; bottom: 12px; display: flex; align-items: center; gap: 8px; min-height: 66px; padding: 8px 10px; background: #111627ed; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 30px #0008; }
+      .inventory-label { width: 84px; flex: 0 0 auto; }
+      .inventory-label strong { display: block; }
+      .inventory-label small { color: var(--muted); }
+      .inventory-items { display: flex; gap: 7px; overflow-x: auto; flex: 1; padding: 2px; }
+      .inv-item { --cat: var(--synth); min-width: 106px; display: flex; align-items: center; gap: 8px; padding: 7px 9px; background: var(--panel); border-left: 3px solid var(--cat); }
+      .inv-item span { text-align: left; }
+      .inv-item b, .inv-item small { display: block; }
+      .inv-item small { color: var(--muted); font-size: 10px; }
+      .inventory.drop { border-color: var(--danger); box-shadow: 0 0 0 2px #ff727233, 0 12px 30px #0008; }
+      .mode-banner { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 12; padding: 6px 11px; border-radius: 999px; background: #141a30dd; border: 1px solid var(--line); color: var(--muted); font-size: 11px; pointer-events: none; white-space: nowrap; }
+      .toast { position: absolute; z-index: 50; top: 14px; right: 16px; max-width: 300px; padding: 10px 12px; border: 1px solid var(--line2); background: var(--panel); border-radius: 8px; box-shadow: 0 14px 30px #0009; opacity: 0; transform: translateY(-8px); transition: .15s; pointer-events: none; }
+      .toast.show { opacity: 1; transform: none; }
+      .state-drawer { position: fixed; z-index: 101; right: 12px; bottom: 12px; }
+      .state-drawer summary { cursor: pointer; color: var(--muted); font: 10px var(--mono); text-align: right; }
+      .state-drawer pre { width: 330px; max-height: 40vh; overflow: auto; padding: 10px; background: #090c18f4; border: 1px solid var(--line); color: #bfc7dd; font: 10px/1.45 var(--mono); }
+      .switcher { position: fixed; z-index: 100; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 6px; background: #e7e9f2; color: #131522; border-radius: 999px; box-shadow: 0 8px 26px #000b; }
+      .switcher button { width: 34px; height: 30px; padding: 0; color: #131522; border-color: #aeb4c4; border-radius: 999px; }
+      .switcher button:hover { background: #cdd1dd; }
+      .switcher span { min-width: 210px; text-align: center; font: 11px var(--mono); }
+
+      /* A · Card bloom */
+      .bloom-card { position: absolute; z-index: 20; width: 252px; padding: 11px; background: #141a30f2; border: 1px solid var(--line2); border-radius: 12px; box-shadow: 0 18px 42px #050817cc; }
+      .bloom-card::before { content: ""; position: absolute; width: 12px; height: 12px; background: var(--panel); border-left: 1px solid var(--line2); border-top: 1px solid var(--line2); transform: rotate(45deg); left: calc(var(--ax, 50%) - 6px); }
+      .bloom-card.below::before { top: -7px; }
+      .bloom-card.above::before { bottom: -7px; transform: rotate(225deg); }
+      .panel-top { display: flex; align-items: center; gap: 8px; }
+      .panel-top strong { flex: 1; }
+      .close { border: 0; color: var(--muted); padding: 3px 7px; }
+      .module-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 10px 0; }
+      .stat { padding: 6px 7px; border: 1px solid var(--line); background: var(--soft); border-radius: 6px; }
+      .stat span { display: block; color: var(--muted); font-size: 10px; }
+      .panel-actions { display: flex; gap: 6px; }
+      .panel-actions button { flex: 1; }
+      .primary { background: #262d66; border-color: var(--synth); }
+      .danger { color: #ffaaaa; }
+      .drag-hint { color: var(--muted); font-size: 11px; margin: 8px 0 0; }
+      .narrow .bloom-card { width: 212px; padding: 9px; }
+      .narrow .module-stats { grid-template-columns: 1fr 1fr; gap: 4px; }
+      .narrow .stat { padding: 4px 6px; }
+      .narrow .drag-hint { display: none; }
+
+      /* B · Petal ring */
+      .petal { position: absolute; z-index: 20; display: grid; place-items: center; width: 52px; height: 52px; padding: 2px; border-radius: 50%; background: #141a30f2; border: 1px solid var(--line2); font: 10.5px var(--mono); text-align: center; line-height: 1.15; box-shadow: 0 10px 24px #050817aa; }
+      .petal:hover { border-color: var(--ink); background: #1a213b; }
+      .petal.primary { width: 64px; height: 64px; background: #262d66; border-color: var(--synth); }
+      .petal.primary small { display: block; color: #b9b6ff; font-size: 9px; }
+      .petal.danger { color: #ffaaaa; }
+      .petal.ghosty { border-style: dashed; color: var(--muted); pointer-events: none; background: #141a3088; box-shadow: none; }
+      .chip { position: absolute; z-index: 20; padding: 3px 8px; border-radius: 999px; background: #141a30f2; border: 1px solid var(--line); font: 10px var(--mono); color: var(--ink); pointer-events: none; }
+
+      /* C · Expanded face */
+      .bloom-expand { position: absolute; z-index: 20; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 7px; padding: 26px 44px; background: #171d34; border: 3px solid var(--cat); cursor: grab; clip-path: polygon(50% 0%, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%); filter: drop-shadow(0 18px 38px #050817cc); }
+      .bloom-expand:active { cursor: grabbing; }
+      .bloom-expand .head { display: flex; align-items: center; gap: 8px; }
+      .bloom-expand .head strong { font-size: 15px; }
+      .bloom-expand .head .close { padding: 2px 6px; }
+      .bloom-expand .contrib { font: 12px var(--mono); color: var(--charge); }
+      .bloom-expand .note-line { font: 10px var(--mono); color: var(--muted); }
+      .bloom-expand .panel-actions { width: 100%; }
+      .bloom-expand .drag-hint { margin: 0; font-size: 10px; }
+      .narrow .bloom-expand { padding: 20px 34px; gap: 5px; }
+      .narrow .bloom-expand .drag-hint { display: none; }
+
+      @media (max-width: 860px) {
+        .console { gap: 9px; padding: 0 10px; }
+        .tip { display: none; }
+        .state-drawer { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header class="console">
+        <div class="brand">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 2 28 9v14l-12 7L4 23V9Z"/><path d="m10 20 5-10v12l7-10"/></svg>
+          <span>FlowSynth</span>
+        </div>
+        <div class="session">
+          <div class="session-readout"><strong>25:00</strong><small>planned</small></div>
+          <button class="enter">Enter flow</button>
+        </div>
+        <div class="balances"><div><span class="eyebrow">Production</span><b>8.42 ν/s</b></div><div><span class="eyebrow">Nous</span><b>1,248 ν</b></div></div>
+      </header>
+      <main class="board-panel">
+        <div class="board-head">
+          <h1>Harmonic board</h1>
+          <p id="variant-purpose"></p>
+          <p class="tip">Click a face to bloom · hold &amp; drag to move (always live) · drop on an occupied cell to swap<br />Drop on inventory to retrieve · <span id="width-readout"></span></p>
+        </div>
+        <div class="board-wrap" id="board-wrap">
+          <div class="mode-banner" id="mode-banner">Upgrade mode · drag any module · occupied drops swap immediately</div>
+          <svg id="board" aria-label="Playable module bloom prototype"></svg>
+          <div id="bloom-host"></div>
+          <div class="inventory" id="inventory"><div class="inventory-label"><strong>Inventory</strong><small id="inventory-count"></small></div><div class="inventory-items" id="inventory-items"></div></div>
+          <div class="toast" id="toast"></div>
+        </div>
+      </main>
+    </div>
+    <div class="switcher"><button id="prev" aria-label="Previous variant">←</button><span id="variant-label"></span><button id="next" aria-label="Next variant">→</button></div>
+    <details class="state-drawer"><summary>prototype state</summary><pre id="state"></pre></details>
+    <script>
+      const VARIANTS = [
+        { key: "A", name: "Card bloom", purpose: "Anchored card with arrow; flips above/below and clamps at edges." },
+        { key: "B", name: "Petal ring", purpose: "Controls bloom as petals around the hex; folds inward at edges." },
+        { key: "C", name: "Expanded face", purpose: "The hex itself expands; controls live inside the enlarged face." },
+      ];
+      const NAMES = ["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+      const mod12 = (x) => ((x % 12) + 12) % 12;
+      const I = 10, J = 5, SIZE = 42;
+      const CELLS = [];
+      for (let i = 0; i < I; i++) for (let j = 0; j < J; j++)
+        CELLS.push({ i, j, key: i + "," + j, x: SIZE * Math.sqrt(3) * (i + j / 2), y: SIZE * 1.5 * j, st: 7 * i + 12 * j });
+      for (const c of CELLS) { c.name = NAMES[mod12(c.st)]; c.oct = 4 + Math.floor(c.st / 12); }
+      const byKey = new Map(CELLS.map(c => [c.key, c]));
+      const MODULES = [
+        { id: "s1", kind: "synth", name: "Additive", short: "ADD", level: 3, pos: "4,2" },
+        { id: "s2", kind: "synth", name: "Additive", short: "ADD", level: 1, pos: "3,1" },
+        { id: "s3", kind: "synth", name: "Conditional", short: "COND", level: 2, pos: "5,3" },
+        { id: "s4", kind: "synth", name: "Granular", short: "GRAN", level: 2, pos: "0,0" },
+        { id: "s5", kind: "synth", name: "FM", short: "FM", level: 4, pos: "9,0" },
+        { id: "n1", kind: "infusor", name: "Infusor", short: "INFUSE", level: 1, pos: "6,1" },
+        { id: "g1", kind: "generator", name: "Focus keyed", short: "FOCUS", level: 2, pos: "1,4" },
+        { id: "f1", kind: "forge", name: "Forge", short: "FORGE", level: 1, pos: "7,4" },
+        { id: "s6", kind: "synth", name: "Additive", short: "ADD", level: 1, pos: null },
+        { id: "n2", kind: "infusor", name: "Infusor", short: "INFUSE", level: 2, pos: null },
+        { id: "g2", kind: "generator", name: "Breath keyed", short: "BREATH", level: 1, pos: null },
+      ];
+      const colors = { synth: "var(--synth)", generator: "var(--generator)", infusor: "var(--infusor)", forge: "var(--forge)" };
+      const state = { selected: null, placing: null, dragging: null, over: null, modules: MODULES };
+      const $ = (id) => document.getElementById(id);
+      const occupant = (k) => state.modules.find(m => m.pos === k);
+      const selected = () => state.modules.find(m => m.id === state.selected) || null;
+      const narrow = () => innerWidth <= 900;
+      const contrib = (m) => "+" + (m.level * 1.6).toFixed(1) + " ν/s";
+      const UPGRADE_COST = 180;
+      const currentVariant = () => {
+        const wanted = new URLSearchParams(location.search).get("variant") || "A";
+        return VARIANTS.find(v => v.key === wanted) || VARIANTS[0];
+      };
+      function setVariant(delta) {
+        const i = VARIANTS.findIndex(v => v.key === currentVariant().key);
+        const v = VARIANTS[(i + delta + VARIANTS.length) % VARIANTS.length];
+        const url = new URL(location.href); url.searchParams.set("variant", v.key); history.replaceState({}, "", url); render();
+      }
+      function hexPts(cx, cy, r) {
+        return Array.from({ length: 6 }, (_, i) => {
+          const a = (Math.PI / 180) * (60 * i - 30);
+          return (cx + r * Math.cos(a)).toFixed(1) + "," + (cy + r * Math.sin(a)).toFixed(1);
+        }).join(" ");
+      }
+      function viewBox() {
+        let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+        for (const c of CELLS) { x0 = Math.min(x0, c.x); x1 = Math.max(x1, c.x); y0 = Math.min(y0, c.y); y1 = Math.max(y1, c.y); }
+        const px = SIZE * 1.7, py = SIZE * 2.2;
+        return (x0 - px) + " " + (y0 - py) + " " + (x1 - x0 + 2 * px) + " " + (y1 - y0 + 2 * py);
+      }
+      function moduleGlyph(m) {
+        if (m.kind === "generator") return '<circle cx="0" cy="0" r="10"/><path d="M-5 0h10M0-5v10"/>';
+        if (m.kind === "forge") return '<path d="M-11 7 0-11 11 7ZM-6 7h12"/>';
+        if (m.kind === "infusor") return '<path d="M-12 0h7M5 0h7M-5 0a5 5 0 0 1 10 0 5 5 0 0 1-10 0Z"/>';
+        return '<path d="M-14 2c4-16 8 16 14 0s10 16 14 0"/>';
+      }
+      function svgPoint(cell) {
+        const svg = $("board").getBoundingClientRect();
+        const poly = $("board").querySelector(`[data-cell-poly="${cell.key}"]`).getBoundingClientRect();
+        return { cx: poly.left + poly.width / 2 - svg.left, cy: poly.top + poly.height / 2 - svg.top, w: poly.width, h: poly.height };
+      }
+      function render() {
+        const v = currentVariant();
+        $("variant-label").textContent = v.key + " · " + v.name;
+        $("variant-purpose").textContent = v.purpose;
+        $("width-readout").textContent = innerWidth + "px" + (narrow() ? " — narrow: half-width density" : "");
+        document.body.classList.toggle("narrow", narrow());
+        const svg = $("board");
+        svg.setAttribute("viewBox", viewBox());
+        const dimAll = (state.dragging || state.placing) && !state.over;
+        let html = "";
+        for (const c of CELLS) {
+          let cls = "cell";
+          if (state.over === c.key) cls += occupant(c.key) && occupant(c.key).id !== state.dragging ? " swap" : " target";
+          else if (dimAll) cls += " dim";
+          html += `<g data-cell="${c.key}"><polygon data-cell-poly="${c.key}" class="${cls}" points="${hexPts(c.x, c.y, SIZE)}"/><text class="pitch-label" x="${c.x}" y="${c.y - 2}">${c.name}</text><text class="oct-label" x="${c.x + SIZE * 0.6}" y="${c.y + SIZE * 0.62}">${c.oct}</text></g>`;
+        }
+        for (const m of state.modules.filter(m => m.pos)) {
+          const c = byKey.get(m.pos);
+          const dim = state.dragging && state.dragging !== m.id || state.placing && state.placing !== m.id && v.key === "C";
+          html += `<g class="module${state.selected === m.id ? " selected" : ""}${state.dragging === m.id ? " dragging" : ""}${dim ? " dim" : ""}" data-module="${m.id}" style="--cat:${colors[m.kind]}" transform="translate(${c.x} ${c.y})">
+            <polygon class="plate" points="${hexPts(0, 0, SIZE * 0.82)}"/><text class="level" y="${-SIZE * 0.52}">L${m.level}</text><g class="glyph" transform="translate(0,-4)">${moduleGlyph(m)}</g><text class="name" y="${SIZE * 0.42}">${m.short}</text><text class="note" y="${SIZE * 0.62}">${c.name}${c.oct}</text></g>`;
+        }
+        svg.innerHTML = html;
+        bindBoard();
+        const inv = state.modules.filter(m => !m.pos);
+        $("inventory-items").innerHTML = inv.map(m => `<button class="inv-item" data-inventory="${m.id}" style="--cat:${colors[m.kind]}"><b>${m.short.slice(0, 4)}</b><span><b>${m.name}</b><small>L${m.level} · click to place</small></span></button>`).join("");
+        $("inventory-count").textContent = inv.length + " modules";
+        $("inventory").classList.toggle("drop", state.over === "inventory");
+        buildBloom(v);
+        $("mode-banner").textContent = state.placing
+          ? "Choose a cell for " + state.modules.find(m => m.id === state.placing).name + " · occupied swaps · Esc cancels"
+          : state.dragging ? "Drop on a cell to move or swap · drop on inventory to retrieve"
+          : "Upgrade mode · drag any module · occupied drops swap immediately";
+        $("state").textContent = JSON.stringify({
+          variant: v.key, narrow: narrow(), selected: state.selected, placing: state.placing, dragging: state.dragging, over: state.over,
+          modules: state.modules.map(({ short, level, pos }) => ({ short, level, pos: pos || "inventory" })),
+        }, null, 2);
+      }
+      function buildBloom(v) {
+        const host = $("bloom-host");
+        host.innerHTML = "";
+        const m = selected();
+        if (!m || !m.pos) return;
+        const c = byKey.get(m.pos);
+        const p = svgPoint(c);
+        if (v.key === "A") buildCard(host, m, c, p);
+        else if (v.key === "B") buildPetals(host, m, p);
+        else buildExpand(host, m, c, p);
+      }
+      function stopAll(el) { el.querySelectorAll("button").forEach(b => { b.onpointerdown = e => e.stopPropagation(); }); }
+      function buildCard(host, m, c, p) {
+        const wrap = $("board-wrap").getBoundingClientRect();
+        const card = document.createElement("div");
+        card.className = "bloom-card";
+        card.innerHTML = `<div class="panel-top"><span class="eyebrow">${m.kind}</span><strong>${m.name} · ${c.name}${c.oct}</strong><button class="close" data-action="close" aria-label="Dismiss">×</button></div>
+          <div class="module-stats">
+            <div class="stat"><span>Level</span><b class="mono">${m.level}</b></div>
+            <div class="stat"><span>Contribution</span><b class="mono">${contrib(m)}</b></div>
+            <div class="stat"><span>Cell</span><b class="mono">${c.name}${c.oct}</b></div>
+            <div class="stat"><span>Rarity</span><b>Common</b></div>
+          </div>
+          <div class="panel-actions"><button class="primary" data-action="upgrade">Upgrade · ${UPGRADE_COST} ν</button><button data-action="move">Move</button><button class="danger" data-action="return">Return</button></div>
+          <p class="drag-hint">Hold the face to drag — always live, no Move needed. Occupied drops swap.</p>`;
+        host.appendChild(card);
+        const cw = card.offsetWidth, ch = card.offsetHeight;
+        const belowSpace = wrap.height - (p.cy + p.h / 2);
+        const aboveSpace = p.cy - p.h / 2;
+        const need = ch + 24;
+        const flip = belowSpace < need && aboveSpace > belowSpace ? "above" : "below";
+        card.classList.add(flip);
+        let left = p.cx - cw / 2, top = flip === "below" ? p.cy + p.h / 2 + 12 : p.cy - p.h / 2 - ch - 12;
+        left = Math.max(8, Math.min(wrap.width - cw - 8, left));
+        top = Math.max(6, Math.min(wrap.height - ch - 80, top));
+        card.style.left = left + "px"; card.style.top = top + "px";
+        const arrowX = Math.max(16, Math.min(cw - 16, p.cx - left));
+        card.style.setProperty("--ax", arrowX + "px");
+        bindActions(card); stopAll(card);
+      }
+      function buildPetals(host, m, p) {
+        const wrap = $("board-wrap").getBoundingClientRect();
+        const dockH = $("inventory").offsetHeight + 20;
+        const r = p.w * 1.02;
+        const items = [
+          { angle: -90, cls: "primary", label: `Upgrade<small>${UPGRADE_COST} ν</small>`, action: "upgrade" },
+          { angle: -30, cls: "", label: "Move", action: "move" },
+          { angle: 30, cls: "danger", label: "Return", action: "return" },
+          { angle: 90, cls: "", label: "×", action: "close" },
+          { angle: 150, cls: "ghosty", label: `L${m.level}`, chip: true },
+          { angle: -150, cls: "ghosty", label: contrib(m), chip: true },
+        ];
+        const pad = 34;
+        for (const it of items) {
+          const rad = it.angle * Math.PI / 180;
+          let x = p.cx + r * Math.cos(rad), y = p.cy + r * Math.sin(rad);
+          if (x < pad || x > wrap.width - pad) x = p.cx - (x - p.cx);
+          if (y < pad + 14 || y > wrap.height - dockH - pad) y = p.cy - (y - p.cy);
+          x = Math.max(pad, Math.min(wrap.width - pad, x));
+          y = Math.max(pad - 10, Math.min(wrap.height - dockH - pad, y));
+          const el = document.createElement(it.chip ? "div" : "button");
+          if (it.chip) el.className = "chip " + it.cls;
+          else { el.className = "petal " + it.cls; el.dataset.action = it.action; el.innerHTML = it.label; }
+          el.style.left = x + "px"; el.style.top = y + "px";
+          el.style.transform = "translate(-50%,-50%)";
+          host.appendChild(el);
+          if (!it.chip) el.onclick = e => { e.stopPropagation(); act(it.action); };
+        }
+      }
+      function buildExpand(host, m, c, p) {
+        const wrap = $("board-wrap").getBoundingClientRect();
+        const box = document.createElement("div");
+        box.className = "bloom-expand";
+        box.dataset.module = m.id;
+        box.style.setProperty("--cat", colors[m.kind]);
+        box.innerHTML = `<div class="head"><span class="eyebrow">${m.kind}</span><strong>${m.name}</strong><button class="close" data-action="close" aria-label="Dismiss">×</button></div>
+          <div class="contrib">${contrib(m)} · L${m.level}</div>
+          <div class="note-line">plays ${c.name}${c.oct} · this board's only ${c.name}${c.oct}</div>
+          <div class="panel-actions"><button class="primary" data-action="upgrade">Upgrade · ${UPGRADE_COST} ν</button><button data-action="move">Move</button><button class="danger" data-action="return">Return</button></div>
+          <p class="drag-hint">hold the face &amp; drag — always live</p>`;
+        host.appendChild(box);
+        const w = p.w * 2.5, h = p.h * 2.35;
+        const dockH = $("inventory").offsetHeight + 20;
+        let left = Math.max(8, Math.min(wrap.width - w - 8, p.cx - w / 2));
+        let top = Math.max(40, Math.min(wrap.height - dockH - h - 8, p.cy - h / 2));
+        box.style.left = left + "px"; box.style.top = top + "px";
+        box.style.width = w + "px"; box.style.height = h + "px";
+        box.addEventListener("pointerdown", e => { if (e.target.closest("button")) return; startDrag(e, m.id); });
+        bindActions(box); stopAll(box);
+      }
+      function bindBoard() {
+        document.querySelectorAll("[data-module]").forEach(el => {
+          const id = el.dataset.module;
+          el.addEventListener("click", e => { e.stopPropagation(); if (state.dragging) return; state.selected = state.selected === id ? null : id; state.placing = null; render(); });
+          el.addEventListener("pointerdown", e => { if (e.button !== 0) return; e.stopPropagation(); startDrag(e, id); });
+        });
+        document.querySelectorAll("[data-cell]").forEach(el => el.addEventListener("click", () => {
+          if (!state.placing) { if (state.selected) { state.selected = null; render(); } return; }
+          place(state.placing, el.dataset.cell);
+        }));
+      }
+      function bindActions(scope) {
+        scope.querySelectorAll("[data-action]").forEach(el => el.onclick = e => { e.stopPropagation(); act(el.dataset.action); });
+      }
+      function act(a) {
+        const m = selected(); if (!m) return;
+        if (a === "close") { state.selected = null; state.placing = null; }
+        if (a === "move") { state.placing = m.id; say("Choose a destination cell — occupied cells swap."); }
+        if (a === "return") retrieve(m.id);
+        if (a === "upgrade") { m.level++; say(m.name + " upgraded to level " + m.level + "."); }
+        render();
+      }
+      function bindInventory() {
+        document.querySelectorAll("[data-inventory]").forEach(el => el.onclick = e => {
+          e.stopPropagation(); state.placing = el.dataset.inventory; state.selected = el.dataset.inventory; render();
+        });
+      }
+      function place(id, dest) {
+        const m = state.modules.find(m => m.id === id), other = occupant(dest);
+        if (!m) return;
+        const old = m.pos;
+        if (other && other.id !== id) { other.pos = old; m.pos = dest; say(m.name + " swapped with " + other.name + "."); }
+        else { m.pos = dest; say(m.name + " placed on " + byKey.get(dest).name + byKey.get(dest).oct + "."); }
+        state.selected = id; state.placing = null; state.over = null; render();
+      }
+      function retrieve(id) {
+        const m = state.modules.find(m => m.id === id); if (!m) return;
+        m.pos = null; state.selected = null; state.placing = null;
+        say(m.name + " returned to inventory."); render();
+      }
+      function startDrag(e, id) {
+        const start = { x: e.clientX, y: e.clientY };
+        let active = false, ghost = null;
+        const move = ev => {
+          if (!active && Math.hypot(ev.clientX - start.x, ev.clientY - start.y) > 6) {
+            active = true; state.dragging = id; state.selected = id; state.placing = null;
+            const m = state.modules.find(m => m.id === id);
+            ghost = document.createElement("div"); ghost.className = "ghost";
+            ghost.style.setProperty("--cat", colors[m.kind]); ghost.textContent = m.short;
+            document.body.appendChild(ghost);
+            render();
+          }
+          if (!active) return;
+          ghost.style.left = ev.clientX + "px"; ghost.style.top = ev.clientY + "px";
+          const below = document.elementFromPoint(ev.clientX, ev.clientY);
+          const cell = below?.closest?.("[data-cell]");
+          const inv = below?.closest?.("#inventory");
+          const over = cell?.dataset.cell || (inv ? "inventory" : null);
+          if (over !== state.over) { state.over = over; renderTargetOnly(); }
+        };
+        const up = () => {
+          window.removeEventListener("pointermove", move);
+          window.removeEventListener("pointerup", up);
+          ghost?.remove();
+          if (!active) return;
+          const target = state.over;
+          state.dragging = null; state.over = null;
+          if (target === "inventory") retrieve(id);
+          else if (target) place(id, target);
+          else { say("Move cancelled — drop on a cell or inventory."); render(); }
+        };
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", up, { once: true });
+      }
+      function renderTargetOnly() {
+        const dragging = state.dragging;
+        document.querySelectorAll("[data-cell-poly]").forEach(poly => {
+          const k = poly.dataset.cellPoly;
+          poly.classList.remove("target", "swap");
+          if (state.over === k) poly.classList.add(occupant(k) && occupant(k).id !== dragging ? "swap" : "target");
+        });
+        $("inventory").classList.toggle("drop", state.over === "inventory");
+      }
+      let toastTimer;
+      function say(text) {
+        const t = $("toast"); t.textContent = text; t.classList.add("show");
+        clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+      }
+      $("board").onclick = e => { if (e.target === $("board") && state.selected) { state.selected = null; render(); } };
+      $("prev").onclick = () => setVariant(-1);
+      $("next").onclick = () => setVariant(1);
+      addEventListener("keydown", e => {
+        const tag = e.target.tagName;
+        if (["INPUT", "TEXTAREA"].includes(tag) || e.target.isContentEditable) return;
+        if (e.key === "ArrowLeft") setVariant(-1);
+        if (e.key === "ArrowRight") setVariant(1);
+        if (e.key === "Escape") { state.selected = null; state.placing = null; render(); }
+      });
+      let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(render, 80); });
+      render(); bindInventory();
+    </script>
+  </body>
+</html>
