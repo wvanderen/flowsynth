@@ -6,6 +6,7 @@
   "description": "FlowSynth first playable: a modular focus instrument driven by real practice.",
   "scripts": {
     "dev": "vite",
+    "prototype:board-interaction": "vite --open /tools/direct-board-interaction-prototype.html",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",

@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>FlowSynth — direct board interaction prototype</title>
+    <style>
+      /* THROWAWAY PROTOTYPE for issue "Direct board interaction: selection,
+         module controls, movement, and inventory". Three variants share one
+         staged board and switch with ?variant=A|B|C. */
+      :root {
+        color-scheme: dark;
+        --bg: #0d1122;
+        --panel: #141a30;
+        --soft: #111627;
+        --line: #2a3150;
+        --line2: #465078;
+        --ink: #e5e9f5;
+        --muted: #8992ad;
+        --synth: #7774ef;
+        --generator: #35aa72;
+        --infusor: #35aeca;
+        --forge: #d1a341;
+        --charge: #9affa8;
+        --danger: #ff7272;
+        --switch: #cc603d;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+      body { background: var(--bg); color: var(--ink); font: 14px/1.35 system-ui, sans-serif; }
+      button { color: inherit; font: inherit; background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 8px 11px; cursor: pointer; }
+      button:hover { border-color: var(--line2); background: #1a213b; }
+      button:focus-visible { outline: 2px solid var(--charge); outline-offset: 2px; }
+      .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+      .muted { color: var(--muted); }
+      .eyebrow { color: var(--muted); font: 10px var(--mono); letter-spacing: .15em; text-transform: uppercase; }
+      #app { height: 100dvh; display: flex; flex-direction: column; }
+      .console { height: 72px; flex: 0 0 auto; display: flex; align-items: center; gap: 16px; padding: 0 18px; background: var(--soft); border-bottom: 1px solid var(--line); }
+      .brand { font-size: 18px; display: flex; gap: 9px; align-items: center; }
+      .brand svg { width: 26px; }
+      .session { display: flex; gap: 10px; align-items: center; }
+      .session-readout strong { display: block; font: 22px var(--mono); }
+      .session-readout small { color: var(--muted); }
+      .enter { color: #ffe4da; border-color: #6f3e31; background: #351f22; }
+      .app-tabs { display: flex; gap: 4px; }
+      .app-tabs button { padding: 7px 9px; color: var(--muted); }
+      .balances { margin-left: auto; display: flex; gap: 22px; text-align: right; }
+      .balances b { display: block; font: 17px var(--mono); }
+      .workspace { position: relative; flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); }
+      .workspace.rail { grid-template-columns: minmax(0, 1fr) 286px; }
+      .board-panel { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+      .board-head { min-height: 54px; display: flex; align-items: center; gap: 12px; padding: 9px 14px; border-bottom: 1px solid var(--line); }
+      .board-head h1 { margin: 0; font-size: 15px; font-weight: 650; }
+      .board-head p { margin: 0; color: var(--muted); font-size: 12px; }
+      .board-head .tip { margin-left: auto; text-align: right; }
+      .board-wrap { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; background-image: radial-gradient(circle at 50% 45%, #161d36 0, var(--bg) 58%); }
+      #board { width: 100%; height: 100%; display: block; touch-action: none; }
+      .cell { fill: #11172a; stroke: var(--line); stroke-width: 1.5; transition: fill .12s, stroke .12s, opacity .12s; }
+      .cell.pitch { fill: #12182c; }
+      .cell.target { fill: #172b31; stroke: var(--charge); stroke-width: 2.5; }
+      .cell.swap { fill: #332b19; stroke: var(--forge); stroke-width: 2.5; }
+      .cell.invalid { fill: #351d27; stroke: var(--danger); stroke-width: 2.5; }
+      .cell.dim { opacity: .42; }
+      .pitch-label { fill: #68718d; font: 10px var(--mono); text-anchor: middle; pointer-events: none; }
+      .module { cursor: grab; filter: drop-shadow(0 5px 8px #050817aa); }
+      .module:active { cursor: grabbing; }
+      .module .plate { fill: #171d34; stroke: var(--cat); stroke-width: 3; transition: transform .14s, filter .14s, opacity .14s; transform-box: fill-box; transform-origin: center; }
+      .module.selected .plate { stroke-width: 5; filter: brightness(1.18); transform: scale(1.06); }
+      .module.dragging { opacity: .25; }
+      .module .glyph { stroke: var(--cat); stroke-width: 2.4; fill: none; pointer-events: none; }
+      .module .level, .module .name { fill: var(--ink); text-anchor: middle; pointer-events: none; font-family: var(--mono); }
+      .module .level { font-size: 10px; }
+      .module .name { font-size: 8px; letter-spacing: .05em; }
+      .module .note { fill: var(--muted); text-anchor: middle; pointer-events: none; font: 9px var(--mono); }
+      .ghost { position: fixed; z-index: 90; width: 78px; height: 86px; display: grid; place-items: center; border: 2px solid var(--cat); border-radius: 18px; background: #171d34ee; box-shadow: 0 16px 36px #000a; pointer-events: none; font: 10px var(--mono); transform: translate(-50%, -50%) rotate(2deg); }
+      .selection-bloom { position: absolute; z-index: 20; width: 250px; padding: 11px; background: #141a30f2; border: 1px solid var(--line2); border-radius: 12px; box-shadow: 0 18px 42px #050817cc; transform: translate(-50%, 8px); }
+      .selection-bloom::before { content: ""; position: absolute; top: -7px; left: calc(50% - 7px); width: 12px; height: 12px; background: var(--panel); border-left: 1px solid var(--line2); border-top: 1px solid var(--line2); transform: rotate(45deg); }
+      .panel-top { display: flex; align-items: center; gap: 8px; }
+      .panel-top strong { flex: 1; }
+      .close { border: 0; color: var(--muted); padding: 3px 7px; }
+      .module-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 10px 0; }
+      .stat { padding: 7px; border: 1px solid var(--line); background: var(--soft); border-radius: 6px; }
+      .stat span { display: block; color: var(--muted); font-size: 10px; }
+      .panel-actions { display: flex; gap: 6px; }
+      .panel-actions button { flex: 1; }
+      .primary { background: #262d66; border-color: var(--synth); }
+      .danger { color: #ffaaaa; }
+      .drag-hint { color: var(--muted); font-size: 11px; margin-top: 8px; }
+      .inspector { display: none; border-left: 1px solid var(--line); background: var(--panel); padding: 15px; min-width: 0; overflow-y: auto; }
+      .workspace.rail .inspector { display: block; }
+      .inspector h2 { margin: 4px 0 3px; font-size: 18px; }
+      .inspector-empty { height: 100%; display: grid; place-content: center; text-align: center; color: var(--muted); }
+      .inspector .module-stats { grid-template-columns: 1fr; }
+      .inspector .panel-actions { flex-direction: column; }
+      .inventory { position: absolute; z-index: 14; left: 16px; right: 16px; bottom: 58px; display: flex; align-items: center; gap: 8px; min-height: 72px; padding: 8px 10px; background: #111627ed; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 30px #0008; transition: transform .16s; }
+      .inventory-label { width: 86px; flex: 0 0 auto; }
+      .inventory-label strong { display: block; }
+      .inventory-label small { color: var(--muted); }
+      .inventory-items { display: flex; gap: 7px; overflow-x: auto; flex: 1; padding: 2px; }
+      .inv-item { --cat: var(--synth); min-width: 108px; display: flex; align-items: center; gap: 8px; padding: 7px 9px; background: var(--panel); border-left: 3px solid var(--cat); }
+      .inv-item span { text-align: left; }
+      .inv-item b, .inv-item small { display: block; }
+      .inv-item small { color: var(--muted); font-size: 10px; }
+      .inventory.drop { border-color: var(--danger); box-shadow: 0 0 0 2px #ff727233, 0 12px 30px #0008; }
+      .workbench { display: none; position: absolute; z-index: 18; left: max(16px, calc(50% - 330px)); bottom: 58px; width: min(660px, calc(100% - 32px)); padding: 12px; background: #141a30f4; border: 1px solid var(--line2); border-radius: 12px; box-shadow: 0 18px 50px #000b; }
+      .workspace.bench .inventory { display: none; }
+      .workspace.bench .workbench { display: block; }
+      .bench-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; }
+      .bench-selected { min-width: 0; }
+      .bench-selected strong, .bench-selected small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .bench-selected small { color: var(--muted); }
+      .bench-actions { display: flex; gap: 6px; }
+      .bench-inventory { display: flex; justify-content: flex-end; gap: 6px; min-width: 0; overflow-x: auto; }
+      .bench-inventory .inv-item { min-width: 56px; width: 56px; padding: 7px; justify-content: center; }
+      .bench-inventory .inv-item span { display: none; }
+      .mode-banner { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 12; padding: 7px 11px; border-radius: 999px; background: #141a30dd; border: 1px solid var(--line); color: var(--muted); font-size: 11px; pointer-events: none; }
+      .toast { position: absolute; z-index: 50; top: 18px; right: 18px; max-width: 310px; padding: 10px 12px; border: 1px solid var(--line2); background: var(--panel); border-radius: 8px; box-shadow: 0 14px 30px #0009; opacity: 0; transform: translateY(-8px); transition: .15s; pointer-events: none; }
+      .toast.show { opacity: 1; transform: none; }
+      .state-drawer { position: fixed; z-index: 101; right: 12px; bottom: 12px; }
+      .state-drawer summary { cursor: pointer; color: var(--muted); font: 10px var(--mono); text-align: right; }
+      .state-drawer pre { width: 330px; max-height: 40vh; overflow: auto; padding: 10px; background: #090c18f4; border: 1px solid var(--line); color: #bfc7dd; font: 10px/1.45 var(--mono); }
+      .switcher { position: fixed; z-index: 100; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 6px; background: #e7e9f2; color: #131522; border-radius: 999px; box-shadow: 0 8px 26px #000b; }
+      .switcher button { width: 34px; height: 30px; padding: 0; color: #131522; border-color: #aeb4c4; border-radius: 999px; }
+      .switcher button:hover { background: #cdd1dd; }
+      .switcher span { min-width: 188px; text-align: center; font: 11px var(--mono); }
+      @media (max-width: 820px) {
+        .console { gap: 9px; padding: 0 10px; }
+        .app-tabs { display: none; }
+        .workspace.rail { grid-template-columns: minmax(0, 1fr) 230px; }
+        .tip { display: none; }
+        .inventory { left: 8px; right: 8px; }
+        .state-drawer { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header class="console">
+        <div class="brand">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 2 28 9v14l-12 7L4 23V9Z"/><path d="m10 20 5-10v12l7-10"/></svg>
+          <span>FlowSynth</span>
+        </div>
+        <div class="session">
+          <div class="session-readout"><strong>25:00</strong><small>planned</small></div>
+          <button class="enter">Enter flow</button>
+        </div>
+        <div class="app-tabs"><button>Habit</button><button>Time</button><button>Notes</button><button>Goals</button></div>
+        <div class="balances"><div><span class="eyebrow">Production</span><b>8.42 ν/s</b></div><div><span class="eyebrow">Nous</span><b>1,248 ν</b></div></div>
+      </header>
+      <main class="workspace" id="workspace">
+        <section class="board-panel">
+          <div class="board-head"><div><h1>Harmonic board</h1><p id="variant-purpose"></p></div><p class="tip">Select a module · drag to move · drag to inventory to retrieve<br />Choose an inventory module, then choose a cell</p></div>
+          <div class="board-wrap" id="board-wrap">
+            <div class="mode-banner" id="mode-banner">Upgrade mode · board unlocked</div>
+            <svg id="board" aria-label="Playable board interaction prototype"></svg>
+            <div id="selection-host"></div>
+            <div class="inventory" id="inventory"><div class="inventory-label"><strong>Inventory</strong><small id="inventory-count"></small></div><div class="inventory-items" id="inventory-items"></div></div>
+            <div class="workbench" id="workbench"></div>
+            <div class="toast" id="toast"></div>
+          </div>
+        </section>
+        <aside class="inspector" id="inspector"></aside>
+      </main>
+    </div>
+    <div class="switcher"><button id="prev" aria-label="Previous variant">←</button><span id="variant-label"></span><button id="next" aria-label="Next variant">→</button></div>
+    <details class="state-drawer"><summary>prototype state</summary><pre id="state"></pre></details>
+    <script>
+      const variants = [
+        { key: "A", name: "In-place bloom", purpose: "Controls stay at the selected cell; inventory is a narrow board dock." },
+        { key: "B", name: "Attached rail", purpose: "Selection opens a stable inspector; the module face itself stays compact." },
+        { key: "C", name: "Bottom workbench", purpose: "Selection and inventory meet in one transient workbench below the board." },
+      ];
+      const dirs = [[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]];
+      const cells = [
+        {q:-2,r:0,note:"D"},{q:-1,r:-1,note:"A"},{q:-1,r:0,note:"E"},{q:-1,r:1,note:"B"},
+        {q:0,r:-2,note:"E"},{q:0,r:-1,note:"B"},{q:0,r:0,note:"F♯"},{q:0,r:1,note:"C♯"},{q:0,r:2,note:"G♯"},
+        {q:1,r:-2,note:"B"},{q:1,r:-1,note:"F♯"},{q:1,r:0,note:"C♯"},{q:1,r:1,note:"G♯"},
+        {q:2,r:-2,note:"F♯"},{q:2,r:-1,note:"C♯"},{q:2,r:0,note:"G♯"},
+      ];
+      const modules = [
+        {id:"m1",kind:"synth",name:"Additive",short:"ADD",level:3,pos:"-1,-1"},
+        {id:"m2",kind:"synth",name:"Conditional",short:"COND",level:2,pos:"0,-1"},
+        {id:"m3",kind:"synth",name:"Additive",short:"ADD",level:1,pos:"0,0"},
+        {id:"m4",kind:"generator",name:"Focus keyed",short:"FOCUS",level:2,pos:"-1,1"},
+        {id:"m5",kind:"forge",name:"Forge",short:"FORGE",level:1,pos:"1,0"},
+        {id:"i1",kind:"infusor",name:"Infusor",short:"INFUSE",level:1,pos:null},
+        {id:"i2",kind:"synth",name:"Additive",short:"ADD",level:1,pos:null},
+      ];
+      const colors = {synth:"var(--synth)",generator:"var(--generator)",infusor:"var(--infusor)",forge:"var(--forge)"};
+      const state = { selected:null, placing:null, dragging:null, over:null, modules };
+      const $ = (id) => document.getElementById(id);
+      const key = (c) => `${c.q},${c.r}`;
+      const occupant = (k) => state.modules.find(m => m.pos === k);
+      const selected = () => state.modules.find(m => m.id === state.selected) || null;
+      const currentVariant = () => {
+        const wanted = new URLSearchParams(location.search).get("variant") || "A";
+        return variants.find(v => v.key === wanted) || variants[0];
+      };
+      function setVariant(delta) {
+        const i = variants.findIndex(v => v.key === currentVariant().key);
+        const v = variants[(i + delta + variants.length) % variants.length];
+        const url = new URL(location.href); url.searchParams.set("variant", v.key); history.replaceState({}, "", url); render();
+      }
+      function hexPoints(cx,cy,r=44){ return Array.from({length:6},(_,i)=>{const a=(Math.PI/180)*(60*i-30);return `${cx+r*Math.cos(a)},${cy+r*Math.sin(a)}`}).join(" "); }
+      function point(c,w,h){ const s=Math.min(68,Math.max(52,w/11)); return {x:w/2+Math.sqrt(3)*s*(c.q+c.r/2),y:h/2-24+s*1.5*c.r}; }
+      function moduleGlyph(m) {
+        if (m.kind === "generator") return '<circle cx="0" cy="0" r="11"/><path d="M-6 0h12M0-6v12"/>';
+        if (m.kind === "forge") return '<path d="M-12 8 0-12 12 8ZM-7 8h14"/>';
+        if (m.kind === "infusor") return '<path d="M-13 0h8M5 0h8M-5 0a5 5 0 0 1 10 0 5 5 0 0 1-10 0Z"/>';
+        return '<path d="M-16 2c5-18 9 18 16 0s11 18 16 0"/>';
+      }
+      function moduleSvg(m,p) {
+        return `<g class="module${state.selected===m.id?' selected':''}${state.dragging===m.id?' dragging':''}" data-module="${m.id}" style="--cat:${colors[m.kind]}" transform="translate(${p.x} ${p.y})">
+          <polygon class="plate" points="${hexPoints(0,0,39)}"/><text class="level" y="-24">L${m.level}</text><g class="glyph" transform="translate(0,-2)">${moduleGlyph(m)}</g><text class="name" y="22">${m.short}</text><text class="note" y="33">${cells.find(c=>key(c)===m.pos)?.note||''}</text></g>`;
+      }
+      function panelHtml(m, compact=false) {
+        if (!m) return `<div class="inspector-empty"><div><span class="eyebrow">No selection</span><p>Select a module to inspect and control it.</p></div></div>`;
+        return `<div class="panel-top"><span class="eyebrow">${m.kind}</span><strong>${m.name}</strong><button class="close" data-action="close" aria-label="Close">×</button></div>
+          ${compact?'':`<div class="module-stats"><div class="stat"><span>Level</span><b class="mono">${m.level}</b></div><div class="stat"><span>Cell note</span><b class="mono">${cells.find(c=>key(c)===m.pos)?.note||'inventory'}</b></div><div class="stat"><span>Contribution</span><b class="mono">+${(m.level*1.6).toFixed(1)} ν/s</b></div><div class="stat"><span>Rarity</span><b>Common</b></div></div>`}
+          <div class="panel-actions"><button class="primary" data-action="upgrade">Upgrade · 180 ν</button><button data-action="move">Move</button><button class="danger" data-action="return">Return</button></div>
+          ${compact?'':`<p class="drag-hint">Drag the module directly, or choose Move then a destination. Occupied cells swap.</p>`}`;
+      }
+      function invHtml(m, short=false) { return `<button class="inv-item" draggable="false" data-inventory="${m.id}" style="--cat:${colors[m.kind]}" title="Place ${m.name}"><b>${m.short.slice(0,3)}</b><span><b>${m.name}</b><small>Level ${m.level} · choose to place</small></span></button>`; }
+      function render() {
+        const v=currentVariant(); const ws=$("workspace"); ws.className=`workspace ${v.key==='B'?'rail':v.key==='C'?'bench':''}`;
+        $("variant-label").textContent=`${v.key} · ${v.name}`; $("variant-purpose").textContent=v.purpose;
+        const wrap=$("board-wrap"), svg=$("board"); const rect=wrap.getBoundingClientRect(); const w=Math.max(520,rect.width), h=Math.max(390,rect.height); svg.setAttribute("viewBox",`0 0 ${w} ${h}`);
+        let html="";
+        for(const c of cells){ const p=point(c,w,h); const k=key(c); let cls="cell pitch"; if(state.over===k){ const occ=occupant(k); cls+=occ&&occ.id!==state.dragging?" swap":" target"; } if((state.placing||state.dragging)&&!state.over) cls+=" dim"; html+=`<g data-cell="${k}"><polygon class="${cls}" points="${hexPoints(p.x,p.y)}"/><text class="pitch-label" x="${p.x}" y="${p.y-27}">${c.note}</text></g>`; }
+        for(const m of state.modules.filter(m=>m.pos)){ const c=cells.find(c=>key(c)===m.pos); if(c) html+=moduleSvg(m,point(c,w,h)); }
+        svg.innerHTML=html; bindBoard();
+        const inv=state.modules.filter(m=>!m.pos); $("inventory-items").innerHTML=inv.map(m=>invHtml(m)).join(""); $("inventory-count").textContent=`${inv.length} modules`;
+        $("inventory").classList.toggle("drop",state.over==="inventory"); bindInventory();
+        const m=selected(); const host=$("selection-host"); host.innerHTML="";
+        if(v.key==='A'&&m&&m.pos){ const c=cells.find(c=>key(c)===m.pos),p=point(c,w,h); const node=document.createElement("div"); node.className="selection-bloom"; node.style.left=`${p.x}px`; node.style.top=`${Math.min(h-250,p.y+45)}px`; node.innerHTML=panelHtml(m,true); host.appendChild(node); bindActions(node); }
+        $("inspector").innerHTML=v.key==='B'?panelHtml(m):""; bindActions($("inspector"));
+        $("workbench").innerHTML=v.key==='C'?`<div class="bench-row"><div class="bench-selected">${m?`<span class="eyebrow">Selected ${m.kind}</span><strong>${m.name}</strong><small>${cells.find(c=>key(c)===m.pos)?.note||'Inventory'} · Level ${m.level}</small>`:`<span class="eyebrow">Workbench</span><strong>No module selected</strong><small>Choose a face or inventory module</small>`}</div><div class="bench-actions">${m?'<button data-action="move">Move</button><button class="danger" data-action="return">Return</button>':''}</div><div class="bench-inventory">${inv.map(x=>invHtml(x,true)).join('')}</div></div>`:""; bindActions($("workbench")); bindInventory($("workbench"));
+        $("mode-banner").textContent=state.placing?`Choose a cell for ${state.modules.find(m=>m.id===state.placing).name} · Esc cancels`:state.dragging?"Drop on a cell to move or swap · drop in inventory to retrieve":"Upgrade mode · board unlocked";
+        $("state").textContent=JSON.stringify({variant:v.key,selected:state.selected,placing:state.placing,modules:state.modules.map(({id,name,pos})=>({id,name,pos:pos||'inventory'}))},null,2);
+      }
+      function bindBoard(){
+        document.querySelectorAll("[data-module]").forEach(el=>{
+          el.addEventListener("click",e=>{e.stopPropagation(); if(state.dragging)return; const id=el.dataset.module; state.selected=state.selected===id?null:id; state.placing=null; render();});
+          el.addEventListener("pointerdown",e=>startDrag(e,el.dataset.module));
+        });
+        document.querySelectorAll("[data-cell]").forEach(el=>el.addEventListener("click",()=>{ if(!state.placing)return; place(state.placing,el.dataset.cell); }));
+        $("board").onclick=e=>{ if(e.target===$("board")){state.selected=null;state.placing=null;render();} };
+      }
+      function bindInventory(scope=document){ scope.querySelectorAll("[data-inventory]").forEach(el=>el.onclick=e=>{e.stopPropagation();state.placing=el.dataset.inventory;state.selected=el.dataset.inventory;render();}); }
+      function bindActions(scope){ if(!scope)return; scope.querySelectorAll("[data-action]").forEach(el=>el.onclick=e=>{e.stopPropagation();const m=selected();if(!m)return; const a=el.dataset.action;if(a==='close'){state.selected=null;state.placing=null;}if(a==='move')state.placing=m.id;if(a==='return')retrieve(m.id);if(a==='upgrade'){m.level++;say(`${m.name} upgraded to level ${m.level}.`)}render();}); }
+      function place(id,dest){ const m=state.modules.find(m=>m.id===id), other=occupant(dest); if(!m)return; const old=m.pos; if(other&&other.id!==id){other.pos=old;m.pos=dest;say(`${m.name} swapped with ${other.name}.`);}else{m.pos=dest;say(`${m.name} placed on ${cells.find(c=>key(c)===dest)?.note}.`);} state.selected=id;state.placing=null;state.over=null;render(); }
+      function retrieve(id){const m=state.modules.find(m=>m.id===id);if(!m)return;m.pos=null;state.selected=null;state.placing=null;say(`${m.name} returned to inventory.`);render();}
+      function startDrag(e,id){
+        if(e.button!==0)return; const start={x:e.clientX,y:e.clientY}; let active=false,ghost=null; const move=ev=>{if(!active&&Math.hypot(ev.clientX-start.x,ev.clientY-start.y)>6){active=true;state.dragging=id;state.selected=id;ghost=document.createElement('div');ghost.className='ghost';const m=state.modules.find(m=>m.id===id);ghost.style.setProperty('--cat',colors[m.kind]);ghost.textContent=m.short;document.body.appendChild(ghost);}if(!active)return;ghost.style.left=ev.clientX+'px';ghost.style.top=ev.clientY+'px';const below=document.elementFromPoint(ev.clientX,ev.clientY);const cell=below?.closest?.('[data-cell]');const inv=below?.closest?.('#inventory');state.over=cell?.dataset.cell||(inv?'inventory':null);renderTargetOnly();};
+        const up=ev=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);ghost?.remove();if(!active)return;const target=state.over;state.dragging=null;state.over=null;if(target==='inventory')retrieve(id);else if(target)place(id,target);else{say('Move cancelled — drop on a cell or inventory.');render();}};
+        window.addEventListener('pointermove',move);window.addEventListener('pointerup',up,{once:true});
+      }
+      function renderTargetOnly(){ const dragging=state.dragging; document.querySelectorAll('[data-cell]').forEach(g=>{const k=g.dataset.cell,p=g.querySelector('.cell');p.classList.remove('target','swap','invalid');if(state.over===k)p.classList.add(occupant(k)&&occupant(k).id!==dragging?'swap':'target');});$('inventory').classList.toggle('drop',state.over==='inventory'); }
+      let toastTimer; function say(text){const t=$('toast');t.textContent=text;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),1800);}
+      $('prev').onclick=()=>setVariant(-1);$('next').onclick=()=>setVariant(1);
+      addEventListener('keydown',e=>{const tag=e.target.tagName;if(['INPUT','TEXTAREA'].includes(tag)||e.target.isContentEditable)return;if(e.key==='ArrowLeft')setVariant(-1);if(e.key==='ArrowRight')setVariant(1);if(e.key==='Escape'){state.selected=null;state.placing=null;render();}});
+      addEventListener('resize',render); render();
+    </script>
+  </body>
+</html>
