@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PROTOTYPE — Isomorphic layout: which interval mapping for the hex board? (#126)</title>
+<!--
+  Prototype plan: four playable interval mappings for the carrierless hex lattice (decided in #117),
+  switchable via ?variant= and the bottom pill (arrow keys work). One question — which interval
+  mapping becomes the board's law? A hex board has three neighbour directions but only two
+  independent intervals (the third is their difference); each variant spends that budget differently.
+  A: 12-TET octave-folded (incumbent) · B: 5-limit Tonnetz · C: 7-limit harmonic (3·7) ·
+  D: octave-stack, Wicki–Hayden kin. Numbers are placeholders. Throwaway: no persistence, no tests.
+  Sounds only after you enable it.
+-->
+<style>
+  :root {
+    --bg: #12142a;
+    --panel: #1a1d38;
+    --ink: #e8e9f5;
+    --dim: #9a9cb8;
+    --line: #2e3157;
+    --synth: #6360d4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.55 ui-sans-serif, system-ui, sans-serif;
+    padding: 20px 24px 90px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .proto-tag {
+    display: inline-block;
+    background: #cc603d;
+    color: #fff;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-bottom: 8px;
+  }
+  h1 { font-size: 21px; margin-bottom: 4px; }
+  .lede { color: var(--dim); max-width: 920px; margin-bottom: 12px; }
+  .decide {
+    max-width: 920px;
+    font-size: 13.5px;
+    border-left: 3px solid #bc9239;
+    padding: 7px 12px;
+    background: #101228;
+    border-radius: 0 6px 6px 0;
+    margin-bottom: 14px;
+  }
+  .decide strong { color: #d9b45f; }
+  .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .toolbar button {
+    font: 13px/1 ui-sans-serif, system-ui, sans-serif;
+    padding: 7px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: #20233f;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .toolbar button:hover { border-color: #565a8f; }
+  .toolbar .hint { color: var(--dim); font-size: 12.5px; }
+  .cols { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .boardpanel { flex: 0 1 auto; }
+  .side { flex: 1 1 330px; min-width: 320px; max-width: 560px; }
+  .panel h2 { font-size: 16px; margin-bottom: 2px; }
+  .panel .sub { color: var(--dim); font-size: 13px; margin-bottom: 10px; }
+  .side h3 {
+    font-size: 11.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #7d80a8;
+    margin: 12px 0 6px;
+  }
+  .side h3:first-child { margin-top: 0; }
+  .side ul { list-style: none; display: grid; gap: 5px; font-size: 13.5px; }
+  .side ul li::before { content: "→ "; color: #565a8f; }
+  .fact {
+    font-size: 13.5px;
+    border-left: 3px solid #1f95b5;
+    padding: 7px 10px;
+    background: #101228;
+    border-radius: 0 5px 5px 0;
+  }
+  .fact strong { color: var(--ink); }
+  .fact .cost { color: #d98a6d; }
+  svg { display: block; width: 100%; height: auto; touch-action: none; }
+  .readout {
+    font: 12.5px/1.5 ui-monospace, monospace;
+    color: var(--dim);
+    margin-top: 12px;
+    padding: 8px 10px;
+    background: #101228;
+    border-radius: 5px;
+    min-height: 3.2em;
+  }
+  .readout .rate { color: var(--ink); }
+  .readout .sel { color: #b9bcd8; }
+  .readout .hover { color: #7d80a8; }
+  .cell-label { font: 600 12px ui-monospace, monospace; fill: var(--ink); pointer-events: none; }
+  .cell-faint { font: 500 9px ui-monospace, monospace; fill: #565a90; pointer-events: none; }
+  .chord-label { font: 700 12px ui-sans-serif, system-ui, sans-serif; pointer-events: none; }
+  .switcher {
+    position: fixed;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #0c0d20;
+    border: 1px solid #4a4e80;
+    border-radius: 999px;
+    padding: 8px 14px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.55);
+    z-index: 10;
+  }
+  .switcher button {
+    font: 16px/1 ui-sans-serif, system-ui, sans-serif;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid #4a4e80;
+    background: #20233f;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .switcher button:hover { border-color: #7d80a8; }
+  .switcher .label { font-size: 13.5px; min-width: 330px; text-align: center; }
+  .switcher .label b { color: #d9b45f; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="proto-tag">Prototype — throwaway, answers one question (#126)</div>
+<h1>Isomorphic layout: which interval mapping for the hex board?</h1>
+<p class="lede">
+  Four playable pitch laws for the carrierless lattice decided in #117. Same interactions everywhere:
+  click to place, drag to move, double-click to remove, sound optional. A hex board has three
+  neighbour directions but only <strong>two independent intervals</strong> — the third is always their
+  difference — so every mapping spends a fixed budget: watch what becomes a tight shape, and what
+  leaves the board. Numbers are placeholders.
+</p>
+<div class="decide">
+  <strong>Decide while playing:</strong> what “key” means on the chosen lattice (a global tuning?
+  nothing?), whether the octave is playable, and what the cell economy can still gate once pitch
+  stops being bought with depth — the production ticket hangs on this.
+</div>
+<div class="toolbar">
+  <button id="soundBtn">sound: off</button>
+  <button id="demoBtn">demo chord</button>
+  <button id="clearBtn">clear board</button>
+  <span class="hint">click empty cell = place · click synth = inspect · drag = move · double-click = remove</span>
+</div>
+<div id="stage"></div>
+
+<div class="switcher">
+  <button id="prevBtn" title="previous layout">‹</button>
+  <span class="label" id="varLabel"></span>
+  <button id="nextBtn" title="next layout">›</button>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+// ---------- tiny svg + dom helpers ----------
+const SVGNS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs, parent) => {
+  const n = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+};
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+
+// ---------- audio: one shared drone manager ----------
+const AudioMgr = {
+  ctx: null, master: null, voices: new Map(), on: false,
+  ensure() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0.6;
+      this.master.connect(this.ctx.destination);
+    }
+    if (this.ctx.state === "suspended") this.ctx.resume();
+  },
+  setVoices(list) {
+    if (!this.on) return;
+    this.ensure();
+    const t = this.ctx.currentTime, seen = new Set();
+    for (const v of list.slice(0, 12)) {
+      seen.add(v.id);
+      let vc = this.voices.get(v.id);
+      if (!vc) {
+        const g = this.ctx.createGain(); g.gain.value = 0; g.connect(this.master);
+        const o1 = this.ctx.createOscillator(); o1.type = "sine"; o1.frequency.value = v.freq; o1.connect(g); o1.start();
+        const g2 = this.ctx.createGain(); g2.gain.value = 0.1;
+        const o2 = this.ctx.createOscillator(); o2.type = "sine"; o2.frequency.value = v.freq * 3; o2.connect(g2); g2.connect(g); o2.start();
+        vc = { g, o1, o2 };
+        this.voices.set(v.id, vc);
+      }
+      vc.o1.frequency.setTargetAtTime(v.freq, t, 0.04);
+      vc.o2.frequency.setTargetAtTime(v.freq * 3, t, 0.04);
+      vc.g.gain.setTargetAtTime(0.05, t, 0.06);
+    }
+    for (const [id, vc] of this.voices) {
+      if (!seen.has(id)) {
+        vc.g.gain.setTargetAtTime(0, t, 0.05);
+        const dead = vc;
+        setTimeout(() => { try { dead.o1.stop(); dead.o2.stop(); } catch (e) {} }, 400);
+        this.voices.delete(id);
+      }
+    }
+  },
+  silence() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    for (const [, vc] of this.voices) {
+      vc.g.gain.setTargetAtTime(0, t, 0.03);
+      try { vc.o1.stop(t + 0.3); vc.o2.stop(t + 0.3); } catch (e) {}
+    }
+    this.voices.clear();
+  },
+  blip(freq) {
+    if (!this.on) return;
+    this.ensure();
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.09, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+    o.connect(g); g.connect(this.master);
+    o.start(t); o.stop(t + 1);
+  },
+};
+
+// ---------- shared hex math ----------
+const DIRECTIONS = [[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]];
+const pairKey = (a, b) => (a < b ? a + "|" + b : b + "|" + a);
+const hexPts = (cx, cy, s) => {
+  const pts = [];
+  for (let k = 0; k < 6; k++) {
+    const a = Math.PI / 180 * (60 * k + 30);
+    pts.push((cx + s * Math.cos(a)).toFixed(1) + "," + (cy + s * Math.sin(a)).toFixed(1));
+  }
+  return pts.join(" ");
+};
+
+// ---------- drag machinery ----------
+function makeDrag(svg, getCellAt, h) {
+  let drag = null;
+  const down = (e) => {
+    const cell = getCellAt(e);
+    if (!cell) return;
+    drag = { from: cell, moved: false, sx: e.clientX, sy: e.clientY };
+    e.preventDefault();
+  };
+  const move = (e) => {
+    if (!drag) return;
+    if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) {
+      if (!h.canPick(drag.from)) return;
+      drag.moved = true;
+      h.onDragStart && h.onDragStart(drag.from);
+    }
+    if (drag.moved) h.onDragHover && h.onDragHover(drag.from, getCellAt(e));
+  };
+  const up = (e) => {
+    if (!drag) return;
+    const d = drag;
+    drag = null;
+    if (d.moved) h.onDrop && h.onDrop(d.from, getCellAt(e));
+    else h.onClick && h.onClick(d.from);
+  };
+  const dbl = (e) => {
+    const cell = getCellAt(e);
+    if (cell) h.onDblClick && h.onDblClick(cell);
+  };
+  svg.addEventListener("pointerdown", down);
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", up);
+  svg.addEventListener("dblclick", dbl);
+  return () => {
+    svg.removeEventListener("pointerdown", down);
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+    svg.removeEventListener("dblclick", dbl);
+  };
+}
+function svgPoint(svg, e) {
+  const m = svg.getScreenCTM();
+  if (!m) return null;
+  return new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+}
+
+// ---------- side-panel scaffolding ----------
+function buildLayout(boardHead, boardSub, sideHTML) {
+  const cols = document.createElement("div");
+  cols.className = "cols";
+  cols.innerHTML =
+    '<div class="panel boardpanel"><h2>' + esc(boardHead) + '</h2><div class="sub">' + boardSub + "</div></div>" +
+    '<div class="panel side">' + sideHTML + '<div class="readout"></div></div>';
+  $("#stage").appendChild(cols);
+  return cols;
+}
+function readoutHTML(rate, sel, hover) {
+  return (
+    '<div class="rate">' + (rate || "board empty — click cells to place synths") + "</div>" +
+    (sel ? '<div class="sel">' + esc(sel) + "</div>" : "") +
+    (hover ? '<div class="hover">' + esc(hover) + "</div>" : "")
+  );
+}
+
+// ---------- pitch helpers ----------
+const NAMES = ["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+const C_ROOT = 261.63; // C4
+const mod12 = (x) => ((x % 12) + 12) % 12;
+const fold2 = (r) => { while (r >= 2) r /= 2; while (r < 1) r *= 2; return r; };
+const centsOf = (r) => 1200 * Math.log2(r);
+const tetFreq = (st) => C_ROOT * Math.pow(2, st / 12);
+function jiInfo(ratio) {
+  const fold = fold2(ratio);
+  const c = centsOf(fold);
+  const st = Math.round(c / 100);
+  const dev = Math.round(c - 100 * st);
+  return { fold, name: NAMES[mod12(st)], dev };
+}
+// pitch-class weight, identical scheme across variants so Σ stays comparable
+const pcAmp = (st) => Math.pow(2, -mod12(st) / 12);
+
+// ---------- generic lattice variant ----------
+function hexGrid(I, J, SIZE) {
+  const cells = [];
+  for (let i = 0; i < I; i++)
+    for (let j = 0; j < J; j++)
+      cells.push({ i, j, key: i + "," + j, x: SIZE * Math.sqrt(3) * (i + j / 2), y: SIZE * 1.5 * j });
+  return cells;
+}
+function fitViewBox(cells, SIZE) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const c of cells) {
+    x0 = Math.min(x0, c.x); x1 = Math.max(x1, c.x);
+    y0 = Math.min(y0, c.y); y1 = Math.max(y1, c.y);
+  }
+  const px = SIZE * 1.8, py = SIZE * 2.6;
+  return (x0 - px) + " " + (y0 - py) + " " + (x1 - x0 + 2 * px) + " " + (y1 - y0 + 2 * py);
+}
+function matchShapes(cells, occ, byKey, shapes) {
+  const chords = [];
+  for (const c of cells) {
+    if (!occ.has(c.key)) continue;
+    for (const s of shapes) {
+      const cs = s.offs.map(([di, dj]) => byKey.get((c.i + di) + "," + (c.j + dj)));
+      if (cs.every(cell => cell && occ.has(cell.key))) chords.push({ def: s, cells: cs });
+    }
+  }
+  const inPair = new Set();
+  for (const ch of chords) {
+    const cs = ch.cells;
+    for (let a = 0; a < cs.length; a++)
+      for (let b = a + 1; b < cs.length; b++)
+        inPair.add(pairKey(cs[a].key, cs[b].key));
+  }
+  const list = cells.filter(c => occ.has(c.key));
+  let free = 0;
+  for (const c of list) {
+    for (const [di, dj] of DIRECTIONS) {
+      const o = byKey.get((c.i + di) + "," + (c.j + dj));
+      if (!o || !occ.has(o.key) || o.key <= c.key) continue;
+      if (inPair.has(pairKey(c.key, o.key))) continue;
+      free++;
+    }
+  }
+  return { chords, free, list };
+}
+
+function makeLayoutVariant(cfg) {
+  let selected = null;
+  let stashed = null;
+  let dragTarget = null;
+  let hoverCell = null;
+  let dispose = [];
+  let svg, gCells, gChords, gOcc, readoutEl;
+  const CELLS = hexGrid(cfg.I, cfg.J, cfg.SIZE);
+  const byKey = new Map(CELLS.map(c => [c.key, c]));
+  cfg.decorate(CELLS);
+
+  function refresh() {
+    gCells.innerHTML = ""; gChords.innerHTML = ""; gOcc.innerHTML = "";
+    const occ = cfg.occ;
+    for (const c of CELLS) {
+      const isTarget = dragTarget && dragTarget.key === c.key;
+      const on = occ.has(c.key);
+      const poly = el("polygon", {
+        points: hexPts(c.x, c.y, cfg.SIZE),
+        fill: on ? "#232649" : "hsl(243 30% " + (15.5 - ((c.i + c.j) % 2) * 1.4).toFixed(1) + "%)",
+        stroke: isTarget ? "#e8e9f5" : "#262a4e",
+        "stroke-width": isTarget ? 2.5 : 1,
+      }, gCells);
+      el("text", {
+        x: c.x, y: c.y + 3.5, "text-anchor": "middle",
+        class: on ? "cell-label" : "cell-faint",
+      }, gCells).textContent = c.name;
+      if (c.sub) el("text", {
+        x: c.x + cfg.SIZE * 0.62, y: c.y + cfg.SIZE * 0.58, "text-anchor": "middle",
+        class: on ? "cell-label" : "cell-faint",
+        opacity: on ? 0.85 : 1,
+      }, gCells).textContent = c.sub;
+      poly.addEventListener("mouseenter", () => { hoverCell = c; refresh(); });
+      poly.addEventListener("mouseleave", () => { if (hoverCell === c) { hoverCell = null; refresh(); } });
+    }
+
+    const res = matchShapes(CELLS, occ, byKey, cfg.shapes);
+    const labelStack = new Map(); // chords sharing a top cell stack their labels
+    for (const ch of res.chords) {
+      const cs = ch.cells;
+      const tri = cs.length === 3;
+      for (let i = 0; i < cs.length; i++) {
+        const a = cs[i], b = cs[(i + 1) % cs.length];
+        if (!tri && i === cs.length - 1) break;
+        el("line", { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: ch.def.color, "stroke-width": 3, opacity: 0.9 }, gChords);
+      }
+      cs.forEach(c => el("polygon", { points: hexPts(c.x, c.y, cfg.SIZE * 0.92), fill: "none", stroke: ch.def.color, "stroke-width": 2.5 }, gChords));
+      const top = cs.reduce((m, c) => (c.y < m.y ? c : m), cs[0]);
+      const k = labelStack.get(top.key) || 0;
+      labelStack.set(top.key, k + 1);
+      el("text", { x: top.x, y: top.y - cfg.SIZE * 1.05 - k * 13, "text-anchor": "middle", class: "chord-label", fill: ch.def.color }, gChords)
+        .textContent = ch.def.name + " " + ch.def.ratio + "  ×" + (1 + ch.def.bonus).toFixed(2);
+    }
+
+    for (const c of res.list) {
+      el("polygon", {
+        points: hexPts(c.x, c.y, cfg.SIZE * 0.7),
+        fill: "#6360d4",
+        stroke: selected === c.key ? "#ffffff" : "#8f8ce8",
+        "stroke-width": selected === c.key ? 2 : 1,
+      }, gOcc);
+    }
+
+    AudioMgr.setVoices(res.list.map(c => ({ id: c.key, freq: c.freq })));
+
+    let rateLine = null;
+    if (res.list.length) {
+      const sum = res.list.reduce((a, c) => a + cfg.amp(c), 0);
+      let m = 1; const parts = [];
+      for (const ch of res.chords) { const f = 1 + ch.def.bonus; m *= f; parts.push(ch.def.name + " ×" + f.toFixed(2)); }
+      if (res.free) { const f = 1 + 0.1 * res.free; m *= f; parts.push(res.free + " pair" + (res.free > 1 ? "s" : "") + " ×" + f.toFixed(2)); }
+      rateLine = "rate: Σ " + sum.toFixed(2) + (parts.length ? " · " + parts.join(" · ") : "") + " = " + (sum * m).toFixed(2) + "/s";
+    }
+    let selLine = null;
+    if (selected && occ.has(selected)) {
+      const sc = byKey.get(selected);
+      selLine = "synth · " + cfg.describe(sc) + " · drag to move (pitch = the target cell) · double-click to remove";
+    }
+    let hoverLine = null;
+    if (hoverCell && !occ.has(hoverCell.key)) hoverLine = "here: " + cfg.here(hoverCell);
+    readoutEl.innerHTML = readoutHTML(rateLine, selLine, hoverLine);
+  }
+
+  function mount(boardPanel, side) {
+    svg = el("svg", { viewBox: fitViewBox(CELLS, cfg.SIZE) });
+    boardPanel.appendChild(svg);
+    gCells = el("g", {}, svg);
+    gChords = el("g", {}, svg);
+    gOcc = el("g", {}, svg);
+    readoutEl = side.querySelector(".readout");
+    const getCellAt = (e) => {
+      const p = svgPoint(svg, e);
+      if (!p) return null;
+      let best = null, bd = 1e9;
+      for (const c of CELLS) {
+        const d = Math.hypot(c.x - p.x, c.y - p.y);
+        if (d < bd) { bd = d; best = c; }
+      }
+      return bd <= cfg.SIZE * 1.05 ? best : null;
+    };
+    dispose.push(makeDrag(svg, getCellAt, {
+      canPick: (cell) => cfg.occ.has(cell.key),
+      onClick: (cell) => {
+        if (cfg.occ.has(cell.key)) { selected = cell.key; }
+        else { cfg.occ.add(cell.key); AudioMgr.blip(cell.freq); selected = null; }
+        refresh();
+      },
+      onDblClick: (cell) => { if (cfg.occ.has(cell.key)) { cfg.occ.delete(cell.key); if (selected === cell.key) selected = null; refresh(); } },
+      onDragStart: (cell) => { stashed = cell.key; cfg.occ.delete(cell.key); refresh(); },
+      onDragHover: (from, cell) => {
+        const t = cell && !cfg.occ.has(cell.key) ? cell : null;
+        if ((t && t.key) !== (dragTarget && dragTarget.key)) { dragTarget = t; refresh(); }
+      },
+      onDrop: (from, cell) => {
+        if (cell && !cfg.occ.has(cell.key)) cfg.occ.add(cell.key);
+        else cfg.occ.add(stashed);
+        stashed = null; dragTarget = null;
+        refresh();
+      },
+    }));
+    refresh();
+  }
+  function unmount() {
+    dispose.forEach(fn => fn());
+    dispose = [];
+    selected = null; stashed = null; dragTarget = null;
+  }
+  return {
+    mount, unmount, refresh,
+    placeKeys: (keys) => { keys.forEach(k => cfg.occ.add(k)); refresh(); },
+  };
+}
+
+// =====================================================================
+// A · 12-TET octave-folded — the incumbent from the geometry decision
+// =====================================================================
+const layoutA = {
+  id: "a",
+  I: 10, J: 6, SIZE: 26,
+  occ: new Set(),
+  shapes: [
+    { name: "Major triad", ratio: "·0·4·7·", bonus: 0.50, color: "#bc9239", offs: [[0,0],[1,0],[0,1]] },
+    { name: "Minor triad", ratio: "·0·3·7·", bonus: 0.60, color: "#57a85a", offs: [[0,0],[-1,1],[0,1]] },
+    { name: "Fifth",       ratio: "·0·7·",   bonus: 0.30, color: "#1f95b5", offs: [[0,0],[0,1]] },
+  ],
+  decorate(CELLS) {
+    for (const c of CELLS) {
+      c.st = mod12(4 * c.i + 7 * c.j);
+      c.name = NAMES[c.st];
+      c.freq = tetFreq(c.st);
+      c.sub = "";
+    }
+  },
+  amp: (c) => pcAmp(c.st),
+  describe: (c) => c.name + " — 12-TET, folded: every E on this board is the same E",
+  here: (c) => c.name + " — fixed to this cell; stacking the wedge repeats pitch classes, not registers",
+  demo: ["4,2", "5,2", "4,3"],
+};
+
+// =====================================================================
+// B · 5-limit Tonnetz — exact ratios as positions
+// =====================================================================
+const layoutB = {
+  id: "b",
+  I: 12, J: 8, SIZE: 22,
+  occ: new Set(),
+  shapes: [
+    { name: "Major",  ratio: "4:5:6",   bonus: 0.50, color: "#bc9239", offs: [[0,0],[1,0],[0,1]] },
+    { name: "Minor",  ratio: "10:12:15",bonus: 0.60, color: "#57a85a", offs: [[0,0],[-1,1],[0,1]] },
+    { name: "Fifth",  ratio: "2:3",     bonus: 0.30, color: "#1f95b5", offs: [[0,0],[0,1]] },
+  ],
+  decorate(CELLS) {
+    for (const c of CELLS) {
+      const info = jiInfo(Math.pow(5, c.i) * Math.pow(3, c.j));
+      c.name = info.name;
+      c.dev = info.dev;
+      c.sub = (info.dev >= 0 ? "+" : "−") + Math.abs(info.dev);
+      c.freq = C_ROOT * info.fold;
+      c.st = mod12(Math.round(centsOf(info.fold) / 100));
+    }
+  },
+  amp: (c) => 1 / fold2(Math.pow(5, c.i) * Math.pow(3, c.j)),
+  describe: (c) => c.name + " " + (c.dev >= 0 ? "+" : "−") + Math.abs(c.dev) + "¢ — exact " +
+    (c.i === 0 && c.j === 0 ? "1:1 root" : (fold2(Math.pow(5, c.i) * Math.pow(3, c.j)).toFixed(3).replace(/\.?0+$/, "") + ":1")) +
+    " over the root; every wedge is a transposition",
+  here: (c) => c.name + " " + (c.dev >= 0 ? "+" : "−") + Math.abs(c.dev) + "¢ — exact; the cent sign is where you've drifted from the keyboard's names",
+  demo: ["0,0", "1,0", "0,1"],
+};
+
+// =====================================================================
+// C · 7-limit harmonic (3·7 board) — fifths + flat sevenths, no thirds
+// =====================================================================
+const layoutC = {
+  id: "c",
+  I: 11, J: 7, SIZE: 23,
+  occ: new Set(),
+  shapes: [
+    { name: "Dominant shell", ratio: "4:6:7",    bonus: 0.65, color: "#cc603d", offs: [[0,0],[1,0],[0,1]] },
+    { name: "Septimal minor", ratio: "6:7:9",    bonus: 0.70, color: "#d0749c", offs: [[0,0],[-1,1],[0,1]] },
+    { name: "Fifth",          ratio: "2:3",      bonus: 0.30, color: "#1f95b5", offs: [[0,0],[0,1]] },
+  ],
+  decorate(CELLS) {
+    for (const c of CELLS) {
+      const info = jiInfo(Math.pow(7, c.i) * Math.pow(3, c.j));
+      c.name = info.name;
+      c.dev = info.dev;
+      c.sub = (info.dev >= 0 ? "+" : "−") + Math.abs(info.dev);
+      c.freq = C_ROOT * info.fold;
+      c.st = mod12(Math.round(centsOf(info.fold) / 100));
+    }
+  },
+  amp: (c) => 1 / fold2(Math.pow(7, c.i) * Math.pow(3, c.j)),
+  describe: (c) => c.name + " " + (c.dev >= 0 ? "+" : "−") + Math.abs(c.dev) + "¢ — exact 3·7 ratio over the root; no 5s exist on this board",
+  here: (c) => c.name + " " + (c.dev >= 0 ? "+" : "−") + Math.abs(c.dev) + "¢ — the 7s sit ~31¢ flat of the keyboard; the whole board sounds blue",
+  demo: ["0,0", "1,0", "0,1"],
+};
+
+// =====================================================================
+// D · Octave-stack (Wicki–Hayden kin) — absolute pitch, octaves as shapes
+// =====================================================================
+const layoutD = {
+  id: "d",
+  I: 10, J: 5, SIZE: 26,
+  occ: new Set(),
+  shapes: [
+    { name: "Octave",      ratio: "·0·12·",   bonus: 0.15, color: "#8f8ce8", offs: [[0,0],[0,1]] },
+    { name: "Power chord", ratio: "·0·7·12·", bonus: 0.35, color: "#cc603d", offs: [[0,0],[1,0],[0,1]] },
+    { name: "Fourth shell",ratio: "·0·5·12·", bonus: 0.30, color: "#a86ad4", offs: [[0,0],[-1,1],[0,1]] },
+    { name: "Fifth",       ratio: "·0·7·",    bonus: 0.30, color: "#1f95b5", offs: [[0,0],[1,0]] },
+  ],
+  decorate(CELLS) {
+    for (const c of CELLS) {
+      c.st = 7 * c.i + 12 * c.j;
+      c.name = NAMES[mod12(c.st)];
+      c.oct = 4 + Math.floor(c.st / 12);
+      c.sub = String(c.oct);
+      c.freq = tetFreq(c.st);
+    }
+  },
+  amp: (c) => pcAmp(c.st),
+  describe: (c) => c.name + c.oct + " — absolute pitch; this is the board's only " + c.name + c.oct,
+  here: (c) => c.name + c.oct + " — appears exactly once on the board; one screen holds registers, not repetitions",
+  demo: ["0,0", "1,0", "0,1"],
+};
+
+// =====================================================================
+// variant registry + switcher
+// =====================================================================
+const VARIANTS = [
+  {
+    cfg: layoutA,
+    label: "<b>A</b> — 12-TET, octave folded (incumbent)",
+    head: "A — 12-TET octave-folded",
+    sub: "the incumbent from the geometry decision — note names per cell · M3 / P5 / m3 neighbours · octaves folded away",
+    side: `
+      <h3>Try</h3>
+      <ul>
+        <li>Place the major wedge: root + one cell right + one cell down-right.</li>
+        <li>Slide the same wedge anywhere: same chord class, new key — nothing anchors the board.</li>
+        <li>Try to build an octave. You can't: octaves are folded away; stacking the wedge repeats pitch classes, not registers.</li>
+      </ul>
+      <h3>Feel for</h3>
+      <div class="fact">
+        <strong>Key</strong> = nothing global — the board is fully relative, every position legal.
+        <strong>Octave</strong> = not playable, 1:2 has no shape. <strong>Economy</strong> = pitch is
+        fixed per cell, so cells can't gate harmonic content — <span class="cost">what's left to
+        buy?</span> The open production question starts here.
+      </div>`,
+  },
+  {
+    cfg: layoutB,
+    label: "<b>B</b> — 5-limit Tonnetz (exact ratios)",
+    head: "B — 5-limit Tonnetz",
+    sub: "exact ratios as positions — 5:4 one way, 3:2 the other · major 4:5:6 and textbook minor 10:12:15 are both tight triangles",
+    side: `
+      <h3>Try</h3>
+      <ul>
+        <li>Place the major wedge 4:5:6 (right + down-right); the mirrored wedge below-left is the textbook minor 10:12:15.</li>
+        <li>Walk four cells along the fifth axis and find a second “E” — 22¢ sharper than the first. The comma is a <em>place</em> on this board.</li>
+        <li>Turn sound on and hold a wedge: every interval is exact — the board teaches just intonation by position.</li>
+      </ul>
+      <h3>Feel for</h3>
+      <div class="fact">
+        <strong>Key</strong> = a global root plus region: one absolute tuning, and the cent offsets
+        show how far you've drifted from the keyboard's names. <strong>Octave</strong> = still folded.
+        <strong>Economy</strong> = cells still can't gate pitch — but they could gate
+        <span class="cost">exactness itself</span>: how far you may drift, or whether you may temper.
+      </div>`,
+  },
+  {
+    cfg: layoutC,
+    label: "<b>C</b> — 7-limit harmonic (fifths + flat 7ths)",
+    head: "C — 7-limit harmonic (3·7 board)",
+    sub: "fifths + harmonic sevenths — the dominant shell 4:6:7 and septimal minor 6:7:9 are tight; the thirds are off-board",
+    side: `
+      <h3>Try</h3>
+      <ul>
+        <li>Place the dominant wedge 4:6:7 (right = flat seventh, down-right = fifth) — the blues barre.</li>
+        <li>Place its mirror 6:7:9 — septimal minor: root, flat third, fifth.</li>
+        <li>Look for a major triad. You won't find one: the 5s are off the board — this layout spent its directions on 3s and 7s.</li>
+      </ul>
+      <h3>Feel for</h3>
+      <div class="fact">
+        <strong>Key</strong> = the same global-root story as the Tonnetz, but every 7 sits ~31¢ flat
+        of the keyboard — the board sounds blue everywhere. <strong>Octave</strong> = folded.
+        <strong>The finding:</strong> the blues triad 5:6:7 needs 3, 5 <em>and</em> 7 — a hex board is
+        rank-2, so <span class="cost">no mapping makes it a tight wedge</span>; any 7-limit hex board
+        drops one of {fifths, thirds}. This one drops the thirds.
+      </div>`,
+  },
+  {
+    cfg: layoutD,
+    label: "<b>D</b> — Octave-stack (Wicki–Hayden kin)",
+    head: "D — Octave-stack",
+    sub: "octave-row family — octaves stack along a direction · absolute pitch, each note exactly once · 12-TET rendered",
+    side: `
+      <h3>Try</h3>
+      <ul>
+        <li>Place two cells in a vertical column — an octave, a shape this family has and the folded boards don't.</li>
+        <li>Place the power wedge (right + down-right): root, fifth, octave.</li>
+        <li>Try to find a tight major triad. There isn't one — it becomes a scattered two-hop shape. Note the faint digits: every column is one note name.</li>
+      </ul>
+      <h3>Feel for</h3>
+      <div class="fact">
+        <strong>Key</strong> = the columns: letter names stack vertically, the horizontal axis walks
+        the circle of fifths. <strong>Octave</strong> = playable: registers are places, and stacking a
+        wedge across rows adds richness per octave. <strong>Economy</strong> = height is gatable —
+        <span class="cost">the next octave row can cost something</span>, the one clean lever the
+        folded boards lack. Screen: this board holds registers, so one screen holds fewer octaves
+        of music than a folded board holds pitch classes.
+      </div>`,
+  },
+];
+
+const occBy = Object.fromEntries(VARIANTS.map(v => [v.cfg.id, v.cfg.occ]));
+let inst = null;
+let curId = "a";
+const stage = $("#stage");
+
+function mountVariant(id) {
+  const v = VARIANTS.find(x => x.cfg.id === id) || VARIANTS[0];
+  if (inst) inst.unmount();
+  stage.innerHTML = "";
+  curId = v.cfg.id;
+  const cols = buildLayout(v.head, v.sub, v.side);
+  inst = makeLayoutVariant(v.cfg);
+  inst.mount(cols.querySelector(".boardpanel"), cols.querySelector(".side"));
+  $("#varLabel").innerHTML = v.label;
+  history.replaceState(null, "", location.pathname + "?variant=" + v.cfg.id);
+}
+
+$("#prevBtn").addEventListener("click", () => step(-1));
+$("#nextBtn").addEventListener("click", () => step(1));
+function step(d) {
+  const i = VARIANTS.findIndex(x => x.cfg.id === curId);
+  mountVariant(VARIANTS[(i + d + VARIANTS.length) % VARIANTS.length].cfg.id);
+}
+window.addEventListener("keydown", (e) => {
+  const t = e.target;
+  if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+  if (e.key === "ArrowLeft") step(-1);
+  if (e.key === "ArrowRight") step(1);
+});
+
+$("#soundBtn").addEventListener("click", () => {
+  AudioMgr.on = !AudioMgr.on;
+  $("#soundBtn").textContent = "sound: " + (AudioMgr.on ? "on" : "off");
+  if (!AudioMgr.on) AudioMgr.silence();
+  else if (inst) inst.refresh();
+});
+$("#demoBtn").addEventListener("click", () => {
+  const v = VARIANTS.find(x => x.cfg.id === curId);
+  inst.placeKeys(v.cfg.demo);
+});
+$("#clearBtn").addEventListener("click", () => {
+  occBy[curId].clear();
+  if (inst) inst.refresh();
+});
+
+const initial = new URLSearchParams(location.search).get("variant");
+mountVariant(initial || "a");
+
+// debug hooks for automated poking; harmless to leave in a throwaway prototype
+window.__layoutproto = {
+  setVariant: mountVariant,
+  place: (i, j) => { occBy[curId].add(i + "," + j); inst.refresh(); },
+  clear: () => { occBy[curId].clear(); inst.refresh(); },
+  state: () => ({ variant: curId, occupied: [...occBy[curId]] }),
+  get variant() { return curId; },
+};
+})();
+</script>
+</body>
+</html>
