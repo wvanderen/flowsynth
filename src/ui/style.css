@@ -1217,3 +1217,215 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .welcome-dismiss:hover { color: var(--ink); }
 .welcome-copy { font-size: 13px; line-height: 1.55; margin: 0 0 12px; }
 .welcome-copy strong { color: var(--ink); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PROTOTYPE (issue #119) — console-hierarchy variants. THROWAWAY: switch
+   via ?variant=a|b|c, half-width preview via ?half, floating bar at the
+   bottom. #app becomes a size container so the half preview exercises the
+   same widths the real viewport would.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+body[data-variant] #app { container: app / inline-size; }
+
+/* The half-width preview frames the app at a first-class half-desktop
+   width; the container queries below do the real responding. */
+body.half-preview #app {
+  max-width: 800px;
+  margin: 0 auto;
+  border-inline: 1px solid var(--line-strong);
+  box-shadow: 0 0 60px rgb(0 0 0 / 0.5);
+}
+
+/* The static legend leaves every variant: its encodings belong to the
+   surfaces that use them, and the heading row becomes pure action. */
+body[data-variant] .legend { display: none; }
+
+/* B and C retire the console's readout end entirely. */
+body[data-variant="b"] .console-readout,
+body[data-variant="c"] .console-readout { display: none; }
+
+/* ── The production ledger (shared anatomy) ────────────────────────────
+   Stock, rate, and session as three labeled cells of one instrument. */
+.prod-ledger {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel-soft);
+  overflow: hidden;
+}
+.prod-cell { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 6px 14px 7px; min-width: 84px; }
+.prod-cell + .prod-cell { border-left: 1px solid var(--line); }
+.prod-label { font: 9px var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+.prod-cell strong { font: 15.5px var(--mono); font-weight: 400; white-space: nowrap; }
+
+/* The feats chip (B's monitor row, C's board ledger row). */
+.feats-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.feats-chip svg { width: 14px; height: 14px; }
+.feats-chip:hover { color: var(--ink); }
+
+/* ── A · Ledger console ────────────────────────────────────────────────
+   The ledger replaces the scattered readout slots; feats move to the
+   board's standardized action row. */
+body[data-variant="a"] #nous-balance { display: none; }
+body[data-variant="a"] .console-readout { gap: 12px; }
+body[data-variant="a"] .board-tools { align-items: center; }
+body[data-variant="a"] .board-tools button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border-radius: 7px;
+}
+body[data-variant="a"] .board-tools button svg { width: 14px; height: 14px; }
+body[data-variant="a"] .board-tools button span { font-size: 12px; }
+.tool-sep { width: 1px; align-self: stretch; margin: 4px 4px; background: var(--line); }
+
+/* The pip rides the button's bottom edge in A's anatomy, so every action
+   keeps the same silhouette. The base forge button is a column flex — A
+   flattens it back to the row the other actions wear. */
+body[data-variant="a"] .tool-forge { position: relative; flex-direction: row; align-items: center; padding-bottom: 7px; }
+body[data-variant="a"] .tool-forge .forge-pip { position: absolute; left: 10px; right: 10px; bottom: 4px; }
+
+/* ── Icon-only action buttons (B's row, C's dock) ────────────────────── */
+.tool-icon {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+}
+.tool-icon svg { width: 16px; height: 16px; }
+.tool-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 999px;
+  font-size: 9.5px;
+  line-height: 1;
+  padding: 2.5px 5px;
+  font-style: normal;
+}
+.tool-icon .forge-pip { position: absolute; left: 7px; right: 7px; bottom: 3px; }
+body[data-variant="b"] .board-tools,
+body[data-variant="c"] .board-tools { gap: 6px; }
+
+/* ── B · Production footer ─────────────────────────────────────────────
+   The console slims to pure control; production joins the formula and the
+   feats chip on the monitor's top row. */
+body[data-variant="b"] .console { height: 64px; }
+body[data-variant="b"] .monitor-top { gap: 12px; }
+body[data-variant="b"] .monitor-top .prod-ledger { flex-shrink: 0; }
+
+/* ── C · Board ledger + dock ───────────────────────────────────────────
+   The production strip docks directly above the board; the action row
+   becomes a vertical icon dock on the board's left edge; the console clock
+   is itself the plan affordance. */
+.board-ledger { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 10px; }
+.board-ledger[hidden] { display: none; }
+body[data-variant="c"] .board-panel { position: relative; padding-left: 66px; }
+body[data-variant="c"] .board-tools {
+  position: absolute;
+  left: 16px;
+  top: 74px;
+  bottom: 118px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding-bottom: 0;
+}
+body[data-variant="c"] .board-tools .tool-icon { width: 38px; height: 38px; }
+body[data-variant="c"] .console-clock.clock-opens-time {
+  padding: 4px 8px;
+  min-width: 172px;
+  min-height: 56px;
+  text-align: left;
+  border-color: transparent;
+  background: transparent;
+}
+body[data-variant="c"] .console-clock.clock-opens-time:hover { border-color: var(--line); background: var(--panel); }
+
+/* ── Responsive parity: container mirrors of the viewport breakpoints ──
+   The half preview (and any real narrow window, where these fire at the
+   same widths) gets exactly the base layout's responsive behavior. */
+@container app (max-width: 1180px) {
+  body[data-variant] .console { flex-wrap: wrap; height: auto; min-height: 0; padding: 12px 16px; gap: 10px 16px; }
+  body[data-variant="b"] .console { height: auto; }
+  body[data-variant] .console-session { order: 3; flex-basis: 100%; justify-content: space-between; }
+  body[data-variant] .console-readout { margin-left: auto; border: 0; padding: 0; }
+}
+@container app (max-width: 980px) {
+  body[data-variant] .workspace { grid-template-columns: minmax(0, 1fr) 290px; }
+}
+@container app (max-width: 760px) {
+  body[data-variant] .board-panel { padding: 16px 14px 0; }
+  body[data-variant="c"] .board-panel { padding-left: 60px; }
+  body[data-variant] .session-actions { margin-left: auto; }
+  body[data-variant] .workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(200px, 1fr) minmax(0, 0.8fr); }
+  body[data-variant] .inspector { border-left: 0; border-top: 1px solid var(--line); padding: 16px; }
+  body[data-variant] .monitor-equation { font-size: 12px; }
+  body[data-variant] .monitor-breakdown { width: min(350px, calc(100cqw - 60px)); }
+  body[data-variant] .board-tools { gap: 4px; }
+  body[data-variant] .board-tools button { padding: 7px 8px; }
+  body[data-variant] .board-tools button.tool-icon { padding: 0; }
+  body[data-variant] .prod-cell { padding: 5px 10px 6px; min-width: 0; }
+  body[data-variant="b"] .monitor-top { flex-wrap: wrap; }
+}
+@container app (max-width: 900px) {
+  body[data-variant="b"] .monitor-top { flex-wrap: wrap; }
+  body[data-variant="a"] .tool-sep { display: none; }
+}
+@container app (max-width: 560px) {
+  body[data-variant="a"] .board-tools button span { display: none; }
+  body[data-variant="a"] .board-tools button { padding: 7px 9px; }
+}
+
+/* ── The floating switcher bar (never part of the design) ────────────── */
+.prototype-bar {
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--panel-veil);
+  border: 1px solid var(--forge-glow);
+  border-radius: 999px;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.5);
+  font-size: 12px;
+}
+.prototype-bar .prototype-label {
+  color: var(--forge-glow);
+  min-width: 168px;
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.prototype-arrow {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.prototype-extra { padding: 4px 10px; border-radius: 999px; font-size: 11px; }
+.prototype-extra.on { border-color: var(--charge); color: var(--charge); }
+.prototype-sep { width: 1px; height: 16px; background: var(--line-strong); }

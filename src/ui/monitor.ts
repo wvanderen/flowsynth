@@ -13,6 +13,7 @@ import type { GameState, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
 import { moduleIcon } from "./icons";
 import { formatCountdown, formatNumber } from "./format";
+import { prototypeVariant, ledgerHtml, updateLedgerLive, featsChipHtml } from "./variant";
 
 // Past this fill fraction the beat readout flips to right-anchoring so it
 // never clips at the rail's right edge (prototype tuning).
@@ -122,6 +123,11 @@ export function renderStatusMonitor(app: App): void {
   const host = document.getElementById("status-monitor");
   if (!host) return;
   const { state } = app;
+  // PROTOTYPE (issue #119, variant B): production moves down here, next to
+  // the formula that produces it — stock, rate, and session as the ledger,
+  // the feats chip riding the row where the ach term lives. The console
+  // slims to pure control.
+  const ledged = prototypeVariant() === "b";
   const past = state.totalEarned >= ARETE_HORIZON;
   const snapshot = computeRates(state, true);
   // Structural key: the era flip, the prestige acknowledgment, the
@@ -131,13 +137,22 @@ export function renderStatusMonitor(app: App): void {
   // survive clock ticks.
   const achieving = achievementBoostOf(state) > 1;
   const infused = snapshot.infusors > 0;
-  const key = `${past ? "past" : "under"}:${state.horizonAcknowledged ? "acked" : "open"}:${achieving ? "ach" : "plain"}:${infused ? "inf" : "plain"}`;
+  const feats = ledged ? Object.keys(state.achievements).length : 0;
+  const key = `${ledged ? "b" : "base"}:${past ? "past" : "under"}:${state.horizonAcknowledged ? "acked" : "open"}:${achieving ? "ach" : "plain"}:${infused ? "inf" : "plain"}:${feats}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.innerHTML = `
-      <div class="monitor-top">${formulaChipHtml(achieving, infused)}</div>
+      <div class="monitor-top">
+        ${ledged ? ledgerHtml() : ""}
+        ${formulaChipHtml(achieving, infused)}
+        ${ledged ? featsChipHtml(feats) : ""}
+      </div>
       ${accumulatorHtml(state, past)}`;
     byId("prestige-button")?.addEventListener("click", () => app.acknowledgeHorizon());
+    if (ledged) byId("feats-chip")?.addEventListener("click", () => app.openModal("achievements"));
+  }
+  if (ledged) {
+    updateLedgerLive(host, state, computeRates(state, state.mode === "flow").rate);
   }
   updateMonitorLive(app, past, snapshot);
 }
