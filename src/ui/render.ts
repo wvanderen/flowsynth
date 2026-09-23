@@ -29,7 +29,7 @@ import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatDate, formatInt, formatNumber, formatPracticeMinutes, practiceCountdown, secondsToMinutes } from "./format";
 import { renderStatusMonitor } from "./monitor";
-import { prototypeVariant, ledgerHtml, updateLedgerLive, featsChipHtml, FEATS_SVG, TOOL_ICONS } from "./variant";
+import { prototypeVariant, ledgerHtml, updateLedgerLive, featsChipHtml, unlockedCount, FEATS_SVG, TOOL_ICONS } from "./variant";
 
 const SPACING = 65;
 const DRAG_THRESHOLD_PX = 6;
@@ -253,6 +253,12 @@ function plannedFill(elapsed: number, target: number): string {
   return `${Math.min(100, (elapsed / target) * 100)}%`;
 }
 
+// Fill width for the Time app popover's local track; open-ended leaves it
+// empty — the console header's strip is what pulses for those.
+function sessionTrackWidth(elapsed: number, target: number | null): string {
+  return target === null ? "0%" : plannedFill(elapsed, target);
+}
+
 // In-place text swap for a data-live node within a scope; tick-safe.
 function liveText(scope: ParentNode, live: string, text: string): void {
   const node = scope.querySelector(`[data-live="${live}"]`);
@@ -430,8 +436,7 @@ function renderConsoleReadout(app: App): void {
   if (variant === "b" || variant === "c") return;
   const strip = byId("console-status");
   if (strip) {
-    if (strip.dataset.protoKey !== (variant ?? "base")) {
-      strip.dataset.protoKey = variant ?? "base";
+    if (strip.childElementCount === 0) {
       if (variant === "a") {
         strip.innerHTML = ledgerHtml();
       } else {
@@ -477,21 +482,18 @@ function renderConsoleReadout(app: App): void {
 
 // PROTOTYPE (issue #119): variant C's board-ledger strip — the production
 // ledger and the feats chip docked directly above the board, outside the
-// console. The console keeps only control; the board owns its numbers.
+// console. The console keeps only control; the board owns its numbers. The
+// host is created here so the production document never carries it.
 function renderBoardLedger(app: App): void {
-  const host = byId("board-ledger");
-  if (!host) return;
-  const variant = prototypeVariant();
-  if (variant !== "c") {
-    if (!host.hidden) {
-      host.hidden = true;
-      host.innerHTML = "";
-      delete host.dataset.protoKey;
-    }
-    return;
+  if (prototypeVariant() !== "c") return;
+  let host = document.getElementById("board-ledger");
+  if (!host) {
+    host = document.createElement("div");
+    host.className = "board-ledger";
+    host.id = "board-ledger";
+    document.querySelector(".board-heading")?.before(host);
   }
-  host.hidden = false;
-  const count = Object.keys(app.state.achievements).length;
+  const count = unlockedCount(app.state);
   const key = `c:${count}`;
   if (host.dataset.protoKey !== key) {
     host.dataset.protoKey = key;
@@ -509,8 +511,8 @@ function renderTools(app: App): void {
   const host = byId("board-tools");
   if (!host) return;
   const upgrade = state.mode === "upgrade";
-  const feats = Object.keys(state.achievements).length;
-  const key = JSON.stringify([variant, upgrade, state.bankedRolls.length, ui.managing, ui.buyingCell, ui.showChords, variant ? feats : 0]);
+  const feats = variant ? unlockedCount(state) : 0;
+  const key = JSON.stringify([variant, upgrade, state.bankedRolls.length, ui.managing, ui.buyingCell, ui.showChords, feats]);
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     const forgeReady = upgrade && state.bankedRolls.length > 0;
@@ -530,18 +532,19 @@ function renderTools(app: App): void {
         <span class="tool-sep" aria-hidden="true"></span>
         <button class="small" id="tool-feats" title="Achievements — every feat, and how close the next one is">${FEATS_SVG}<span>Feats</span></button>`;
     } else if (variant === "b" || variant === "c") {
-      const icon = (id: string, svg: string, label: string, extra: string, disabled: string, pressed: string, active = "") =>
+      type IconArgs = { id: string; svg: string; label: string; extra?: string; disabled?: string; pressed?: string; active?: string };
+      const icon = ({ id, svg, label, extra = "", disabled = "", pressed = "", active = "" }: IconArgs) =>
         `<button class="small tool-icon${active}" id="${id}" aria-label="${label}" title="${label}" ${disabled} ${pressed}>${svg}${extra}</button>`;
       const forgeTitle = forgeReady
         ? "Forge — banked choices wait"
         : "Forge — charge feeds it toward the next choice";
       host.innerHTML =
-        icon("tool-catalog", TOOL_ICONS.catalog, upgrade ? "Catalog — starter-shelf offers and board cells" : "Catalog — purchases happen between sessions", "", upgrade ? "" : "disabled", "") +
-        icon("tool-forge", TOOL_ICONS.forge, forgeTitle, forgeCount > 0 ? `<b class="tool-badge mono">${forgeCount}</b>` : "", forgeReady ? "" : "disabled", "") +
-        icon("tool-manage", TOOL_ICONS.arrange, app.managing ? "Exit arranging (Esc)" : upgrade ? "Arrange — move modules" : "Arrange — the grid is locked during flow", "", upgrade ? "" : "disabled", `aria-pressed="${app.managing}"`, app.managing ? " active" : "") +
-        icon("tool-cell", CELL_TOOL_SVG, "New cell", "", upgrade ? "" : "disabled", `aria-pressed="${ui.buyingCell}"`, ui.buyingCell ? " active" : "") +
-        icon("tool-chords", TOOL_ICONS.chords, "Show chords — light the chord voices, link the pairs, outline and label named chords · C", "", "", `aria-pressed="${ui.showChords}"`, ui.showChords ? " active" : "") +
-        (variant === "b" ? icon("tool-feats", FEATS_SVG, "Achievements — every feat, and how close the next one is", feats > 0 ? `<b class="tool-badge mono">${feats}</b>` : "", "", "") : "");
+        icon({ id: "tool-catalog", svg: TOOL_ICONS.catalog, label: upgrade ? "Catalog — starter-shelf offers and board cells" : "Catalog — purchases happen between sessions", disabled: upgrade ? "" : "disabled" }) +
+        icon({ id: "tool-forge", svg: TOOL_ICONS.forge, label: forgeTitle, extra: forgeCount > 0 ? `<b class="tool-badge mono">${forgeCount}</b>` : "", disabled: forgeReady ? "" : "disabled" }) +
+        icon({ id: "tool-manage", svg: TOOL_ICONS.arrange, label: app.managing ? "Exit arranging (Esc)" : upgrade ? "Arrange — move modules" : "Arrange — the grid is locked during flow", disabled: upgrade ? "" : "disabled", pressed: `aria-pressed="${app.managing}"`, active: app.managing ? " active" : "" }) +
+        icon({ id: "tool-cell", svg: CELL_TOOL_SVG, label: "New cell", disabled: upgrade ? "" : "disabled", pressed: `aria-pressed="${ui.buyingCell}"`, active: ui.buyingCell ? " active" : "" }) +
+        icon({ id: "tool-chords", svg: TOOL_ICONS.chords, label: "Show chords — light the chord voices, link the pairs, outline and label named chords · C", pressed: `aria-pressed="${ui.showChords}"`, active: ui.showChords ? " active" : "" }) +
+        (variant === "b" ? icon({ id: "tool-feats", svg: FEATS_SVG, label: "Achievements — every feat, and how close the next one is", extra: feats > 0 ? `<b class="tool-badge mono">${feats}</b>` : "" }) : "");
       host.classList.add("tool-icon-row");
     } else {
       host.innerHTML = `
@@ -1400,8 +1403,19 @@ function appPanelBody(app: App, panel: FocusApp): string {
         <button class="quiet small time-history" id="time-history">History</button>
       </section>`;
     }
+    if (variant) {
+      return `<section class="focus-controls">
+        <p class="small muted">The console clock keeps session time — the Time app holds the history.</p>
+        <button class="quiet small time-history" id="time-history">History</button>
+      </section>`;
+    }
+    const elapsed = state.session?.elapsed ?? 0;
+    const target = state.session?.target ?? null;
+    const paused = state.mode === "paused";
     return `<section class="focus-controls">
-      <p class="small muted">The console clock keeps session time — the Time app holds the history.</p>
+      <p class="session-clock mono" data-live="time-clock">${formatClock(elapsed)}</p>
+      <p class="clock-caption" data-live="time-caption">${sessionCaption(elapsed, target, paused)}</p>
+      <div class="time-track"><span data-live="time-track" style="width:${sessionTrackWidth(elapsed, target)}"></span></div>
       <button class="quiet small time-history" id="time-history">History</button>
     </section>`;
   }
@@ -1649,6 +1663,9 @@ function updateAppPanelLive(app: App, scope: ParentNode): void {
   liveText(scope, "habit-session", `${formatClock(elapsed)} of practice`);
   liveText(scope, "time-clock", formatClock(elapsed));
   liveText(scope, "time-caption", sessionCaption(elapsed, target, paused));
+  const track = scope.querySelector('[data-live="time-track"]') as HTMLElement | null;
+  const width = sessionTrackWidth(elapsed, target);
+  if (track && track.style.width !== width) track.style.width = width;
   for (const habit of state.habits) {
     const node = scope.querySelector(`[data-habit-seconds="${habit.id}"]`);
     const display = formatDuration(habit.seconds);

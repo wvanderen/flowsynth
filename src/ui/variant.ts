@@ -13,16 +13,20 @@ export function prototypeVariant(): PrototypeVariant | null {
   return v === "a" || v === "b" || v === "c" ? v : null;
 }
 
-// The production ledger: stock, rate, and session as three labeled cells of
+// The production ledger: nous, rate, and session as three labeled cells of
 // one bordered instrument — the "reads as one system" answer every variant
 // shares, placed differently (console in A, monitor footer in B, board
 // strip in C).
 export function ledgerHtml(): string {
   return `<div class="prod-ledger" role="group" aria-label="Production">
-    <div class="prod-cell"><span class="prod-label">Stock</span><strong class="mono" data-live="nous"></strong></div>
+    <div class="prod-cell"><span class="prod-label">Nous</span><strong class="mono" data-live="nous"></strong></div>
     <div class="prod-cell"><span class="prod-label">Rate</span><strong class="mono" data-live="rate"></strong></div>
     <div class="prod-cell"><span class="prod-label">Session</span><strong class="mono" data-live="session"></strong></div>
   </div>`;
+}
+
+export function unlockedCount(state: GameState): number {
+  return Object.keys(state.achievements).length;
 }
 
 export function updateLedgerLive(scope: ParentNode, state: GameState, rate: number): void {
@@ -51,7 +55,7 @@ export function featsChipHtml(count: number): string {
 // The standardized action row's icon set. Every action wears the same
 // anatomy — icon + label in A, icon alone in B and C — so no action reads
 // as a different kind of thing from its neighbors.
-export const TOOL_ICONS: Record<string, string> = {
+export const TOOL_ICONS = {
   catalog: `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/></svg>`,
   forge: `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1.8 3.2-3.2 4.6-3.2 8.4a3.2 3.2 0 0 0 6.4 0c0-1.4-.6-2.3-1.1-2.9 1.9.5 3.4 2 3.4 4.3a5.5 5.5 0 0 1-11 0C6.5 7.6 10.8 6.4 12 3Z"/></svg>`,
   arrange: `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 9-3 3 3 3"/><path d="m9 5 3-3 3 3"/><path d="m15 19-3 3-3-3"/><path d="m19 9 3 3-3 3"/><path d="M2 12h20"/><path d="M12 2v20"/></svg>`,

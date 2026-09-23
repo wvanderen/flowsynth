@@ -6,6 +6,7 @@ import { ACHIEVEMENTS } from "../engine/achievements";
 import { fresh, give } from "../engine/fixtures";
 import { hex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
+import { STORAGE_KEY } from "../engine/save";
 import type { GameState } from "../engine/types";
 import type { App } from "./app";
 
@@ -36,9 +37,6 @@ function cycle(dir: -1 | 1): void {
 }
 
 export function initPrototypeSwitcher(app: App): void {
-  if (new URLSearchParams(location.search).has("half")) {
-    document.body.classList.add("half-preview");
-  }
   const bar = document.createElement("div");
   bar.className = "prototype-bar";
   bar.innerHTML = `
@@ -92,6 +90,11 @@ export function installDemoBoard(app: App): void {
   app.state = demoState();
   app.ui.chosenTarget = 25 * 60;
   app.save = () => {};
+  // Belt and braces: even a writer that captured a bound save reference
+  // before this point can't reach the real save — the boundary itself is
+  // closed for the session's key.
+  const setItem = localStorage.setItem.bind(localStorage);
+  localStorage.setItem = (key: string, value: string) => (key === STORAGE_KEY ? undefined : setItem(key, value));
   app.render();
 }
 

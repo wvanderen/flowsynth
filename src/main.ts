@@ -32,7 +32,9 @@ for (const id of [
 
 const dev = params.has("dev");
 const app = new App(els, dev);
-initPrototypeSwitcher(app);
+// The switcher bar (and its arrow-key cycling, demo board) only exists when
+// the prototype is opted into; absent variant/half params nothing installs.
+if (variant !== null || params.has("half")) initPrototypeSwitcher(app);
 if (dev) {
   (window as unknown as Record<string, unknown>).__flowsynth = app;
 }
