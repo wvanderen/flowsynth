@@ -29,6 +29,7 @@ import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatDate, formatInt, formatNumber, formatPracticeMinutes, practiceCountdown, secondsToMinutes } from "./format";
 import { renderStatusMonitor } from "./monitor";
+import { prototypeVariant, ledgerHtml, updateLedgerLive, featsChipHtml, unlockedCount, FEATS_SVG, TOOL_ICONS } from "./variant";
 
 const SPACING = 65;
 const DRAG_THRESHOLD_PX = 6;
@@ -71,6 +72,7 @@ export function render(app: App): void {
   renderConsoleSession(app);
   renderConsoleApps(app);
   renderConsoleReadout(app);
+  renderBoardLedger(app);
   renderTools(app);
   renderGrid(app);
   renderStatusMonitor(app);
@@ -138,19 +140,33 @@ function renderConsoleSession(app: App): void {
     // caption slot. No session runs, so the header's progress strip stays
     // empty.
     const planned = app.ui.chosenTarget !== null;
-    const key = `upgrade:${planned}`;
+    const variant = prototypeVariant();
+    const key = `upgrade:${planned}:${variant ?? "base"}`;
     if (host.dataset.renderKey !== key) {
       host.dataset.renderKey = key;
-      host.innerHTML = `
-        <div class="console-clock">
+      // PROTOTYPE (issue #119, variant C): the clock block is itself the
+      // plan affordance — clicking it opens the Time app, so planning has
+      // one home and the console clock points at it.
+      const clockBlock = `
           <p class="session-clock mono">${planned ? formatClock(app.ui.chosenTarget!) : CLOCK_PLACEHOLDER}</p>
-          <p class="clock-caption">${planned ? "planned" : OPEN_ENDED_WORD}</p>
+          <p class="clock-caption">${planned ? "planned" : OPEN_ENDED_WORD}</p>`;
+      host.innerHTML =
+        variant === "c"
+          ? `<button class="console-clock clock-opens-time" id="clock-plan" title="Plan — opens the Time app">${clockBlock}</button>
+        <div class="session-actions">
+          <button class="main-switch idle" id="flow-switch" title="Enter flow — the board locks and runs itself">
+            ${switchSvg}<span>Enter flow</span><i class="switch-state" aria-hidden="true"></i>
+          </button>
+        </div>`
+          : `<div class="console-clock">
+          ${clockBlock}
         </div>
         <div class="session-actions">
           <button class="main-switch idle" id="flow-switch" title="Enter flow — the board locks and runs itself">
             ${switchSvg}<span>Enter flow</span><i class="switch-state" aria-hidden="true"></i>
           </button>
         </div>`;
+      if (variant === "c") byId("clock-plan")?.addEventListener("click", () => app.openApp("time"));
       byId("flow-switch")?.addEventListener("click", () => app.startFlow());
     }
     renderSessionStrip(false);
@@ -409,20 +425,35 @@ function renderAchievementsModal(app: App, content: HTMLElement): void {
 // The console's readout end: production (rate with the session total
 // beneath) and the nous balance — bare values; the main switch carries the
 // mode. Static slots are built once; tick-moving values update in place.
+// PROTOTYPE (issue #119): variant A replaces the scattered slots with the
+// production ledger — stock, rate, and session as one instrument — and
+// retires the trophy from the console (feats join the board action row).
+// Variants B and C retire the readout end entirely; production reads from
+// the monitor footer (B) or the board ledger strip (C).
 function renderConsoleReadout(app: App): void {
   const { state } = app;
+  const variant = prototypeVariant();
+  if (variant === "b" || variant === "c") return;
   const strip = byId("console-status");
   if (strip) {
     if (strip.childElementCount === 0) {
-      strip.innerHTML = `
-        <div class="console-slot production-slot">
-          <strong class="mono" data-live="rate"></strong>
-          <small class="mono session-total" data-live="session"></small>
-        </div>
-        <div class="console-slot trophy-slot">
-          <button class="trophy-glyph" id="trophy-button" title="Achievements — every feat, and how close the next one is" aria-label="Achievements">${TROPHY_SVG}</button>
-        </div>`;
-      byId("trophy-button")?.addEventListener("click", () => app.openModal("achievements"));
+      if (variant === "a") {
+        strip.innerHTML = ledgerHtml();
+      } else {
+        strip.innerHTML = `
+          <div class="console-slot production-slot">
+            <strong class="mono" data-live="rate"></strong>
+            <small class="mono session-total" data-live="session"></small>
+          </div>
+          <div class="console-slot trophy-slot">
+            <button class="trophy-glyph" id="trophy-button" title="Achievements — every feat, and how close the next one is" aria-label="Achievements">${TROPHY_SVG}</button>
+          </div>`;
+        byId("trophy-button")?.addEventListener("click", () => app.openModal("achievements"));
+      }
+    }
+    if (variant === "a") {
+      updateLedgerLive(strip, state, currentSnapshot(state).rate);
+      return;
     }
     // One production readout (§7: rates per-second everywhere): the ν/s
     // figure matches the formula chip — projected in upgrade mode, ticking
@@ -437,7 +468,7 @@ function renderConsoleReadout(app: App): void {
     if (sessionNode && sessionNode.textContent !== sessionText) sessionNode.textContent = sessionText;
   }
   const nous = byId("nous-balance");
-  if (nous) {
+  if (nous && variant !== "a") {
     if (nous.childElementCount === 0) {
       nous.innerHTML = `<strong class="mono" data-live="nous"></strong>`;
     }
@@ -449,31 +480,89 @@ function renderConsoleReadout(app: App): void {
   }
 }
 
+// PROTOTYPE (issue #119): variant C's board-ledger strip — the production
+// ledger and the feats chip docked directly above the board, outside the
+// console. The console keeps only control; the board owns its numbers. The
+// host is created here so the production document never carries it.
+function renderBoardLedger(app: App): void {
+  if (prototypeVariant() !== "c") return;
+  let host = document.getElementById("board-ledger");
+  if (!host) {
+    host = document.createElement("div");
+    host.className = "board-ledger";
+    host.id = "board-ledger";
+    document.querySelector(".board-heading")?.before(host);
+  }
+  const count = unlockedCount(app.state);
+  const key = `c:${count}`;
+  if (host.dataset.protoKey !== key) {
+    host.dataset.protoKey = key;
+    host.innerHTML = `${ledgerHtml()}${featsChipHtml(count)}`;
+    byId("feats-chip")?.addEventListener("click", () => app.openModal("achievements"));
+  }
+  updateLedgerLive(host, app.state, currentSnapshot(app.state).rate);
+}
+
 const CELL_TOOL_SVG = `<svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M0-6v12M-6 0h12"/></svg>`;
 
 function renderTools(app: App): void {
+  const variant = prototypeVariant();
   const { state, ui } = app;
   const host = byId("board-tools");
   if (!host) return;
   const upgrade = state.mode === "upgrade";
-  const key = JSON.stringify([upgrade, state.bankedRolls.length, ui.managing, ui.buyingCell, ui.showChords]);
+  const feats = variant ? unlockedCount(state) : 0;
+  const key = JSON.stringify([variant, upgrade, state.bankedRolls.length, ui.managing, ui.buyingCell, ui.showChords, feats]);
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     const forgeReady = upgrade && state.bankedRolls.length > 0;
-    host.innerHTML = `
-      <button class="small" id="tool-catalog" ${upgrade ? "" : "disabled"} title="${upgrade ? "The catalog: starter-shelf offers and board cells" : "Purchases happen between sessions"}">Catalog</button>
-      <button class="small tool-forge" id="tool-forge" ${forgeReady ? "" : "disabled"} title="">
-        <span>Forge${state.bankedRolls.length > 0 ? ` · ${state.bankedRolls.length}` : ""}</span>
-        <i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i>
-      </button>
-      <button class="small ${app.managing ? "active" : ""}" id="tool-manage" ${upgrade ? "" : "disabled"} aria-pressed="${app.managing}" title="${app.managing ? "Exit arranging (Esc)" : upgrade ? "Move modules" : "The grid is locked during flow"}">Grid &amp; inventory</button>
-      <button class="small tool-cell${ui.buyingCell ? " active" : ""}" id="tool-cell" ${upgrade ? "" : "disabled"} aria-pressed="${ui.buyingCell}" title="">${CELL_TOOL_SVG}</button>
-      <button class="small${ui.showChords ? " active" : ""}" id="tool-chords" aria-pressed="${ui.showChords}" title="Show chords — light the chord voices, link the pairs, outline and label named chords · C">Chords</button>`;
+    const forgeCount = state.bankedRolls.length;
+    // PROTOTYPE (issue #119): the legend leaves the heading row to the
+    // standardized action row — every action the same anatomy, so nothing
+    // reads as a different kind of thing. A wears icon + label; B and C
+    // wear icons alone. Feats joins the row (A, B) where the legend sat;
+    // C's dock stays five actions and feats reads from the board ledger.
+    if (variant === "a") {
+      host.innerHTML = `
+        <button class="small" id="tool-catalog" ${upgrade ? "" : "disabled"} title="${upgrade ? "The catalog: starter-shelf offers and board cells" : "Purchases happen between sessions"}">${TOOL_ICONS.catalog}<span>Catalog</span></button>
+        <button class="small tool-forge" id="tool-forge" ${forgeReady ? "" : "disabled"} title="">${TOOL_ICONS.forge}<span>Forge${forgeCount > 0 ? ` · ${forgeCount}` : ""}</span><i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i></button>
+        <button class="small ${app.managing ? "active" : ""}" id="tool-manage" ${upgrade ? "" : "disabled"} aria-pressed="${app.managing}" title="${app.managing ? "Exit arranging (Esc)" : upgrade ? "Move modules" : "The grid is locked during flow"}">${TOOL_ICONS.arrange}<span>Arrange</span></button>
+        <button class="small tool-cell${ui.buyingCell ? " active" : ""}" id="tool-cell" ${upgrade ? "" : "disabled"} aria-pressed="${ui.buyingCell}" title="">${CELL_TOOL_SVG}<span>Cell</span></button>
+        <button class="small${ui.showChords ? " active" : ""}" id="tool-chords" aria-pressed="${ui.showChords}" title="Show chords — light the chord voices, link the pairs, outline and label named chords · C">${TOOL_ICONS.chords}<span>Chords</span></button>
+        <span class="tool-sep" aria-hidden="true"></span>
+        <button class="small" id="tool-feats" title="Achievements — every feat, and how close the next one is">${FEATS_SVG}<span>Feats</span></button>`;
+    } else if (variant === "b" || variant === "c") {
+      type IconArgs = { id: string; svg: string; label: string; extra?: string; disabled?: string; pressed?: string; active?: string };
+      const icon = ({ id, svg, label, extra = "", disabled = "", pressed = "", active = "" }: IconArgs) =>
+        `<button class="small tool-icon${active}" id="${id}" aria-label="${label}" title="${label}" ${disabled} ${pressed}>${svg}${extra}</button>`;
+      const forgeTitle = forgeReady
+        ? "Forge — banked choices wait"
+        : "Forge — charge feeds it toward the next choice";
+      host.innerHTML =
+        icon({ id: "tool-catalog", svg: TOOL_ICONS.catalog, label: upgrade ? "Catalog — starter-shelf offers and board cells" : "Catalog — purchases happen between sessions", disabled: upgrade ? "" : "disabled" }) +
+        icon({ id: "tool-forge", svg: TOOL_ICONS.forge, label: forgeTitle, extra: forgeCount > 0 ? `<b class="tool-badge mono">${forgeCount}</b>` : "", disabled: forgeReady ? "" : "disabled" }) +
+        icon({ id: "tool-manage", svg: TOOL_ICONS.arrange, label: app.managing ? "Exit arranging (Esc)" : upgrade ? "Arrange — move modules" : "Arrange — the grid is locked during flow", disabled: upgrade ? "" : "disabled", pressed: `aria-pressed="${app.managing}"`, active: app.managing ? " active" : "" }) +
+        icon({ id: "tool-cell", svg: CELL_TOOL_SVG, label: "New cell", disabled: upgrade ? "" : "disabled", pressed: `aria-pressed="${ui.buyingCell}"`, active: ui.buyingCell ? " active" : "" }) +
+        icon({ id: "tool-chords", svg: TOOL_ICONS.chords, label: "Show chords — light the chord voices, link the pairs, outline and label named chords · C", pressed: `aria-pressed="${ui.showChords}"`, active: ui.showChords ? " active" : "" }) +
+        (variant === "b" ? icon({ id: "tool-feats", svg: FEATS_SVG, label: "Achievements — every feat, and how close the next one is", extra: feats > 0 ? `<b class="tool-badge mono">${feats}</b>` : "" }) : "");
+      host.classList.add("tool-icon-row");
+    } else {
+      host.innerHTML = `
+        <button class="small" id="tool-catalog" ${upgrade ? "" : "disabled"} title="${upgrade ? "The catalog: starter-shelf offers and board cells" : "Purchases happen between sessions"}">Catalog</button>
+        <button class="small tool-forge" id="tool-forge" ${forgeReady ? "" : "disabled"} title="">
+          <span>Forge${state.bankedRolls.length > 0 ? ` · ${state.bankedRolls.length}` : ""}</span>
+          <i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i>
+        </button>
+        <button class="small ${app.managing ? "active" : ""}" id="tool-manage" ${upgrade ? "" : "disabled"} aria-pressed="${app.managing}" title="${app.managing ? "Exit arranging (Esc)" : upgrade ? "Move modules" : "The grid is locked during flow"}">Grid &amp; inventory</button>
+        <button class="small tool-cell${ui.buyingCell ? " active" : ""}" id="tool-cell" ${upgrade ? "" : "disabled"} aria-pressed="${ui.buyingCell}" title="">${CELL_TOOL_SVG}</button>
+        <button class="small${ui.showChords ? " active" : ""}" id="tool-chords" aria-pressed="${ui.showChords}" title="Show chords — light the chord voices, link the pairs, outline and label named chords · C">Chords</button>`;
+    }
     byId("tool-catalog")?.addEventListener("click", () => app.openModal("catalog"));
     byId("tool-forge")?.addEventListener("click", () => app.openModal("forge"));
     byId("tool-manage")?.addEventListener("click", () => (app.ui.managing ? app.stopManaging() : app.startManaging()));
     byId("tool-cell")?.addEventListener("click", () => (app.ui.buyingCell ? app.cancelCellPurchase() : app.armCellPurchase()));
     byId("tool-chords")?.addEventListener("click", () => app.toggleChords());
+    byId("tool-feats")?.addEventListener("click", () => app.openModal("achievements"));
   }
   // Live under the structural rebuild: the Forge pip tracks the shared
   // meter, and the cell icon wears the current price and affordability.
@@ -1297,9 +1386,26 @@ function appPanelBody(app: App, panel: FocusApp): string {
     if (app.ui.historyOpen) {
       return app.ui.drillSession !== null ? historyDrillHtml(app) : historyListHtml(app);
     }
+    // PROTOTYPE (issue #119): de-duplicating planned time. Every variant
+    // gives the console clock the live session — the popover no longer
+    // repeats it. Variants differ on where PLANNING lives: A plans at the
+    // enter prompt; B and C plan here, in the Time app.
+    const variant = prototypeVariant();
     if (upgrade) {
+      if (variant === "a") {
+        return `<section class="focus-controls">
+          <p class="small muted">Planning happens at Enter flow — the armed plan shows in the console's clock block.</p>
+          <button class="quiet small time-history" id="time-history">History</button>
+        </section>`;
+      }
       return `<section class="focus-controls">
         ${planControlsHtml(app)}
+        <button class="quiet small time-history" id="time-history">History</button>
+      </section>`;
+    }
+    if (variant) {
+      return `<section class="focus-controls">
+        <p class="small muted">The console clock keeps session time — the Time app holds the history.</p>
         <button class="quiet small time-history" id="time-history">History</button>
       </section>`;
     }
@@ -2156,7 +2262,14 @@ function renderEnterModal(app: App, content: HTMLElement): void {
       </div>
       <div class="mode-pane">${pane}</div>
       ${state.sessionsCompleted === 0 ? `<p class="enter-steer small muted">A first try can be short — five minutes or so, then exit and see what the session banked.</p>` : ""}
-      ${planControlsHtml(app)}
+      ${
+        // PROTOTYPE (issue #119): A plans at the enter prompt; B and C plan
+        // in the Time app beforehand, so the prompt carries a pointer, not
+        // a second copy of the controls.
+        prototypeVariant() === "b" || prototypeVariant() === "c"
+          ? `<p class="enter-plan-hint small muted">Planning lives in the Time app — set it there, or enter open-ended.</p>`
+          : planControlsHtml(app)
+      }
     </div>
     <div class="footer-band">
       <button id="enter-cancel" class="small">Back</button>
