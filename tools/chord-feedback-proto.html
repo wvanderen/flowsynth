@@ -1,0 +1,863 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>PROTOTYPE — Chord feedback on the board (#120)</title>
+    <!--
+      Prototype plan: three structurally different chord-feedback languages on the settled
+      octave-stack board (#126) with the decided expanded-face bloom (#127) and always-live
+      dragging (#118), switchable via ?variant= and the bottom pill (arrow keys work).
+      Each must answer the same four states — possible, formed, selected, sounding — plus
+      overlap and clutter. A: colored outlines always on (annotation lives on the board).
+      B: faces carry it (seams + badges + captions, no outlines). C: quiet board, motion
+      and events (breathing groups, outlines only on selection and drag). Numbers are
+      placeholders. Throwaway: no persistence, no tests. Sounds only after you enable it.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0d1122;
+        --panel: #141a30;
+        --soft: #111627;
+        --line: #2a3150;
+        --line2: #465078;
+        --ink: #e5e9f5;
+        --muted: #8992ad;
+        --synth: #7774ef;
+        --generator: #35aa72;
+        --infusor: #35aeca;
+        --forge: #d1a341;
+        --charge: #9affa8;
+        --danger: #ff7272;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+      body { background: var(--bg); color: var(--ink); font: 14px/1.35 system-ui, sans-serif; }
+      button { color: inherit; font: inherit; background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 8px 11px; cursor: pointer; }
+      button:hover { border-color: var(--line2); background: #1a213b; }
+      button:focus-visible { outline: 2px solid var(--charge); outline-offset: 2px; }
+      .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+      .muted { color: var(--muted); }
+      .eyebrow { color: var(--muted); font: 10px var(--mono); letter-spacing: .15em; text-transform: uppercase; }
+      .proto-tag {
+        position: fixed; z-index: 120; top: 10px; left: 12px;
+        background: #cc603d; color: #fff; font: 10px var(--mono);
+        letter-spacing: .12em; text-transform: uppercase;
+        padding: 2px 8px; border-radius: 3px; pointer-events: none;
+      }
+      #app { height: 100dvh; display: flex; flex-direction: column; }
+      .console { height: 64px; flex: 0 0 auto; display: flex; align-items: center; gap: 16px; padding: 0 18px; background: var(--soft); border-bottom: 1px solid var(--line); }
+      .brand { font-size: 17px; display: flex; gap: 9px; align-items: center; }
+      .brand svg { width: 24px; }
+      .session { display: flex; gap: 10px; align-items: center; }
+      .session-readout strong { display: block; font: 20px var(--mono); }
+      .session-readout small { color: var(--muted); }
+      .enter { color: #ffe4da; border-color: #6f3e31; background: #351f22; }
+      .enter.live { color: #ffd9cf; border-color: #a05a41; background: #4a2a24; box-shadow: 0 0 14px #cc603d55; }
+      .balances { margin-left: auto; display: flex; gap: 20px; text-align: right; }
+      .balances b { display: block; font: 16px var(--mono); }
+      .board-panel { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+      .board-head { min-height: 52px; display: flex; align-items: center; gap: 14px; padding: 8px 14px; border-bottom: 1px solid var(--line); }
+      .board-head h1 { margin: 0; font-size: 15px; font-weight: 650; }
+      .board-head p { margin: 0; color: var(--muted); font-size: 12px; }
+      .board-head .tip { margin-left: auto; text-align: right; white-space: nowrap; }
+      .board-wrap { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; background-image: radial-gradient(circle at 50% 45%, #161d36 0, var(--bg) 58%); }
+      #board { width: 100%; height: 100%; display: block; touch-action: none; }
+      .cell { fill: #11172a; stroke: var(--line); stroke-width: 1.5; transition: fill .12s, opacity .12s; }
+      .cell.target { fill: #172b31; stroke: var(--charge); stroke-width: 2.5; }
+      .cell.swap { fill: #332b19; stroke: var(--forge); stroke-width: 2.5; }
+      .pitch-label { fill: #68718d; font: 11px var(--mono); text-anchor: middle; pointer-events: none; transition: fill .1s; }
+      .pitch-label.hint { fill: var(--hint, #fff); font-weight: 700; }
+      .oct-label { fill: #4b5370; font: 8px var(--mono); text-anchor: middle; pointer-events: none; }
+      .module { cursor: grab; }
+      .module:active { cursor: grabbing; }
+      .module.dragging { opacity: .22; }
+      .module .plate { fill: #171d34; stroke: var(--cat); stroke-width: 3; transition: filter .14s; }
+      .module.selected .plate { stroke-width: 5; filter: brightness(1.2); }
+      .module.chorded .plate { filter: brightness(1.1) saturate(1.25); }
+      .module .glyph { stroke: var(--cat); stroke-width: 2.4; fill: none; pointer-events: none; }
+      .module .level, .module .name { fill: var(--ink); text-anchor: middle; pointer-events: none; font-family: var(--mono); }
+      .module .level { font-size: 10px; }
+      .module .name { font-size: 8px; letter-spacing: .05em; }
+      .module .note { fill: var(--muted); text-anchor: middle; pointer-events: none; font: 9px var(--mono); }
+      .partner-ring { fill: none; stroke-width: 2.5; stroke-dasharray: 5 4; pointer-events: none; }
+      .ghost { position: fixed; z-index: 90; width: 78px; height: 86px; display: grid; place-items: center; border: 2px solid var(--cat); border-radius: 18px; background: #171d34ee; box-shadow: 0 16px 36px #000a; pointer-events: none; font: 10px var(--mono); transform: translate(-50%, -50%) rotate(2deg); }
+      #bloom-host { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
+      #bloom-host > * { pointer-events: auto; }
+      #bloom-host .caption { pointer-events: none !important; }
+      .inventory { position: absolute; z-index: 14; left: 16px; right: 16px; bottom: 12px; display: flex; align-items: center; gap: 8px; min-height: 66px; padding: 8px 10px; background: #111627ed; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 30px #0008; }
+      .inventory-label { width: 84px; flex: 0 0 auto; }
+      .inventory-label strong { display: block; }
+      .inventory-label small { color: var(--muted); }
+      .inventory-items { display: flex; gap: 7px; overflow-x: auto; flex: 1; padding: 2px; }
+      .inv-item { --cat: var(--synth); min-width: 106px; display: flex; align-items: center; gap: 8px; padding: 7px 9px; background: var(--panel); border-left: 3px solid var(--cat); }
+      .inv-item span { text-align: left; }
+      .inv-item b, .inv-item small { display: block; }
+      .inv-item small { color: var(--muted); font-size: 10px; }
+      .inventory.drop { border-color: var(--danger); box-shadow: 0 0 0 2px #ff727233, 0 12px 30px #0008; }
+      .mode-banner { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 12; padding: 6px 11px; border-radius: 999px; background: #141a30dd; border: 1px solid var(--line); color: var(--muted); font-size: 11px; pointer-events: none; white-space: nowrap; }
+      .mode-banner .would { color: var(--charge); }
+      .toast { position: absolute; z-index: 50; top: 14px; right: 16px; max-width: 300px; padding: 10px 12px; border: 1px solid var(--line2); background: var(--panel); border-radius: 8px; box-shadow: 0 14px 30px #0009; opacity: 0; transform: translateY(-8px); transition: .15s; pointer-events: none; }
+      .toast.show { opacity: 1; transform: none; }
+      .state-drawer { position: fixed; z-index: 101; right: 12px; bottom: 12px; }
+      .state-drawer summary { cursor: pointer; color: var(--muted); font: 10px var(--mono); text-align: right; }
+      .state-drawer pre { width: 330px; max-height: 40vh; overflow: auto; padding: 10px; background: #090c18f4; border: 1px solid var(--line); color: #bfc7dd; font: 10px/1.45 var(--mono); }
+      .switcher { position: fixed; z-index: 100; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 6px; background: #e7e9f2; color: #131522; border-radius: 999px; box-shadow: 0 8px 26px #000b; }
+      .switcher button { width: 34px; height: 30px; padding: 0; color: #131522; border-color: #aeb4c4; border-radius: 999px; }
+      .switcher button:hover { background: #cdd1dd; }
+      .switcher span { min-width: 250px; text-align: center; font: 11px var(--mono); }
+
+      /* Chord layers (all variants) */
+      .chord-hull { fill: color-mix(in srgb, var(--cc) 7%, transparent); stroke: var(--cc); pointer-events: none; }
+      .chord-hull.preview { stroke-dasharray: 7 5; }
+      .chord-chip { font: 700 10.5px var(--mono); fill: var(--ink); paint-order: stroke; stroke: #0d1122; stroke-width: 3px; pointer-events: none; }
+      .chord-chip tspan.mult { fill: var(--cc); }
+      .seam { stroke: var(--cc); stroke-linecap: round; pointer-events: none; }
+      .badge { pointer-events: none; }
+      .ripple { fill: none; stroke: var(--cc); pointer-events: none; transform-box: fill-box; transform-origin: center; animation: ripple-out .7s ease-out forwards; }
+      @keyframes ripple-out { from { transform: scale(.35); opacity: .75; } to { transform: scale(2.1); opacity: 0; } }
+      .caption { position: absolute; z-index: 30; max-width: 260px; padding: 7px 10px; background: #141a30f2; border: 1px solid var(--line2); border-radius: 8px; box-shadow: 0 10px 26px #0009; font: 11px/1.45 var(--mono); pointer-events: none; }
+      .caption .cname { font-weight: 700; }
+      .expanded-face-ring { pointer-events: none; }
+
+      /* C · expanded face — the decided bloom (#127), shared by every variant */
+      .bloom-expand { position: absolute; z-index: 20; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; padding: 24px 38px; background: #171d34; border: 3px solid var(--cat); border-radius: 4px; cursor: grab; clip-path: polygon(50% 0%, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%); transform-origin: 50% 92%; animation: bloom-lift .18s ease-out; }
+      .bloom-expand:active { cursor: grabbing; }
+      .bloom-expand .lv { font: 13px var(--mono); color: var(--ink); }
+      .bloom-expand .glyph { stroke: var(--cat); stroke-width: 2; fill: none; }
+      .bloom-expand .nm { font: 12px var(--mono); letter-spacing: .05em; }
+      .bloom-expand .cell-note { font: 11px var(--mono); color: var(--muted); }
+      .bloom-expand .chord-note { font: 11px var(--mono); margin-top: 2px; text-align: center; }
+      .bloom-expand .contrib { font: 11px var(--mono); color: var(--charge); margin-top: 4px; }
+      .bloom-expand .primary { display: grid; place-items: center; margin-top: 5px; padding: 6px 16px; font-size: 12px; }
+      .bloom-expand .primary small { display: block; font-size: 10px; color: #b9b6ff; }
+      @keyframes bloom-lift {
+        from { transform: translateY(16px) scale(.68); filter: drop-shadow(0 4px 8px #05081766) brightness(.88); }
+        to   { transform: translateY(-8px) scale(1); filter: drop-shadow(0 24px 46px #050817e6); }
+      }
+      .narrow .bloom-expand { padding: 18px 30px; gap: 4px; }
+
+      @media (max-width: 860px) {
+        .console { gap: 9px; padding: 0 10px; }
+        .tip { display: none; }
+        .state-drawer { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="proto-tag">Prototype · #120 · throwaway</div>
+    <div id="app">
+      <header class="console">
+        <div class="brand">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 2 28 9v14l-12 7L4 23V9Z"/><path d="m10 20 5-10v12l7-10"/></svg>
+          <span>FlowSynth</span>
+        </div>
+        <div class="session">
+          <div class="session-readout"><strong id="clock">25:00</strong><small id="clock-label">planned</small></div>
+          <button class="enter" id="flow-btn">Enter flow</button>
+        </div>
+        <div class="balances"><div><span class="eyebrow">Production</span><b id="rate-readout">0.00 ν/s</b></div><div><span class="eyebrow">Nous</span><b id="nous-readout">0 ν</b></div></div>
+      </header>
+      <main class="board-panel">
+        <div class="board-head">
+          <h1>Harmonic board</h1>
+          <p id="variant-purpose"></p>
+          <p class="tip">Click a face to select · hold &amp; drag to move (always live) · drop on an occupied cell to swap<br />Drop on inventory to retrieve · double-click a board face to return it · sound is opt-in · <span id="width-readout"></span></p>
+        </div>
+        <div class="board-wrap" id="board-wrap">
+          <div class="mode-banner" id="mode-banner"></div>
+          <svg id="board" aria-label="Chord feedback prototype board"></svg>
+          <div id="bloom-host"></div>
+          <div class="inventory" id="inventory"><div class="inventory-label"><strong>Inventory</strong><small id="inventory-count"></small></div><div class="inventory-items" id="inventory-items"></div></div>
+          <div class="toast" id="toast"></div>
+        </div>
+      </main>
+    </div>
+    <div class="switcher"><button id="prev" aria-label="Previous variant">←</button><span id="variant-label"></span><button id="next" aria-label="Next variant">→</button></div>
+    <details class="state-drawer"><summary>prototype state</summary><pre id="state"></pre></details>
+    <script>
+      const VARIANTS = [
+        { key: "A", name: "Outlines always on", purpose: "Every formed chord wears a colored outline + name chip, always. Drag previews dashed ghosts. Selected chord emphasized, rest fade." },
+        { key: "B", name: "Faces carry it", purpose: "No outlines: chord tints, seam bridges and corner badges live on the faces; captions name chords on hover; the bloom lists membership." },
+        { key: "C", name: "Quiet board, motion", purpose: "Almost no chrome: chord members breathe together; outlines flash only on selection and while dragging; ripples mark formation." },
+      ];
+
+      // ---------- board: the settled octave-stack lattice (#126 variant D) ----------
+      const NAMES = ["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+      const mod12 = (x) => ((x % 12) + 12) % 12;
+      const I = 10, J = 5, SIZE = 42;
+      const CELLS = [];
+      for (let i = 0; i < I; i++) for (let j = 0; j < J; j++)
+        CELLS.push({ i, j, key: i + "," + j, x: SIZE * Math.sqrt(3) * (i + j / 2), y: SIZE * 1.5 * j, st: 7 * i + 12 * j });
+      for (const c of CELLS) { c.name = NAMES[mod12(c.st)]; c.oct = 4 + Math.floor(c.st / 12); c.freq = 261.63 * Math.pow(2, c.st / 12); }
+      const byKey = new Map(CELLS.map(c => [c.key, c]));
+      const CHORD_DEFS = [
+        { name: "Octave",       short: "8", mult: 1.15, color: "#8f8ce8", dur: 3.4, offs: [[0,0],[0,1]] },
+        { name: "Fifth",        short: "5", mult: 1.20, color: "#1f95b5", dur: 2.7, offs: [[0,0],[1,0]] },
+        { name: "Fourth shell", short: "4", mult: 1.30, color: "#a86ad4", dur: 3.0, offs: [[0,0],[-1,1],[0,1]] },
+        { name: "Power chord",  short: "P", mult: 1.35, color: "#cc603d", dur: 2.4, offs: [[0,0],[1,0],[0,1]] },
+      ];
+      const chordHash = (s) => { let h = 0; for (let k = 0; k < s.length; k++) h = (h * 31 + s.charCodeAt(k)) % 997; return h; };
+
+      // ---------- seed board: power-chord overlap up front, non-synths that must never chord ----------
+      const seed = () => [
+        { id: "s1", kind: "synth", name: "Additive", short: "ADD", level: 3, pos: "3,1" },
+        { id: "s2", kind: "synth", name: "Additive", short: "ADD", level: 1, pos: "3,2" },
+        { id: "s3", kind: "synth", name: "Additive", short: "ADD", level: 2, pos: "4,1" },
+        { id: "s4", kind: "synth", name: "Granular", short: "GRAN", level: 2, pos: "6,3" },
+        { id: "s5", kind: "synth", name: "Granular", short: "GRAN", level: 1, pos: "5,4" },
+        { id: "s6", kind: "synth", name: "FM", short: "FM", level: 2, pos: "6,4" },
+        { id: "s7", kind: "synth", name: "Additive", short: "ADD", level: 1, pos: "0,0" },
+        { id: "n1", kind: "infusor", name: "Infusor", short: "INFUSE", level: 1, pos: "2,2" },
+        { id: "g1", kind: "generator", name: "Focus keyed", short: "FOCUS", level: 2, pos: "1,4" },
+        { id: "f1", kind: "forge", name: "Forge", short: "FORGE", level: 1, pos: "8,0" },
+        { id: "s8", kind: "synth", name: "Additive", short: "ADD", level: 1, pos: null },
+        { id: "n2", kind: "infusor", name: "Infusor", short: "INFUSE", level: 2, pos: null },
+      ];
+      const state = { variant: "A", mode: "upgrade", selected: null, placing: null, dragging: null, over: null, modules: seed(), banked: 0, elapsed: 0, knownChords: new Set() };
+
+      const $ = (id) => document.getElementById(id);
+      const colors = { synth: "var(--synth)", generator: "var(--generator)", infusor: "var(--infusor)", forge: "var(--forge)" };
+      const occupant = (k) => state.modules.find(m => m.pos === k);
+      const selectedMod = () => state.modules.find(m => m.id === state.selected) || null;
+      const synthKeys = () => new Set(state.modules.filter(m => m.kind === "synth" && m.pos).map(m => m.pos));
+      const ampOf = (m) => 1 + 0.3 * (m.level - 1);
+      const contrib = (m) => "+" + (ampOf(m) * 1.6).toFixed(1) + " ν/s";
+      const narrow = () => innerWidth <= 900;
+
+      // ---------- chord analysis over synthesizer cells ----------
+      function analyze(keys) {
+        const found = [];
+        for (const key of keys) {
+          const a = byKey.get(key);
+          for (const def of CHORD_DEFS) {
+            const cells = def.offs.map(([di, dj]) => byKey.get((a.i + di) + "," + (a.j + dj)));
+            if (cells.every(cell => cell && keys.has(cell.key)))
+              found.push({ def, cells, key: def.name + "@" + key, anchor: key });
+          }
+        }
+        return found;
+      }
+      const chordIds = (list) => new Set(list.map(c => c.key));
+      function chordsOf(list, posKey) { return list.filter(c => c.cells.some(cell => cell.key === posKey)); }
+      function rateOf(list) {
+        let sum = 0;
+        for (const m of state.modules) if (m.kind === "synth" && m.pos) sum += ampOf(m);
+        let mult = 1;
+        for (const c of list) mult *= c.def.mult;
+        return { sum, mult, total: sum * mult * 1.6 };
+      }
+
+      // ---------- audio: shared drone manager (#126) + chord strum ----------
+      const AudioMgr = {
+        ctx: null, master: null, voices: new Map(), on: false,
+        ensure() {
+          if (!this.ctx) {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AC();
+            this.master = this.ctx.createGain();
+            this.master.gain.value = 0.5;
+            this.master.connect(this.ctx.destination);
+          }
+          if (this.ctx.state === "suspended") this.ctx.resume();
+        },
+        setVoices(list) {
+          if (!this.on) return;
+          this.ensure();
+          const t = this.ctx.currentTime, seen = new Set();
+          for (const v of list.slice(0, 12)) {
+            seen.add(v.id);
+            let vc = this.voices.get(v.id);
+            if (!vc) {
+              const g = this.ctx.createGain(); g.gain.value = 0; g.connect(this.master);
+              const o1 = this.ctx.createOscillator(); o1.type = "sine"; o1.frequency.value = v.freq; o1.connect(g); o1.start();
+              const g2 = this.ctx.createGain(); g2.gain.value = 0.08;
+              const o2 = this.ctx.createOscillator(); o2.type = "sine"; o2.frequency.value = v.freq * 3; o2.connect(g2); g2.connect(g); o2.start();
+              vc = { g, o1, o2 };
+              this.voices.set(v.id, vc);
+            }
+            vc.o1.frequency.setTargetAtTime(v.freq, t, 0.04);
+            vc.o2.frequency.setTargetAtTime(v.freq * 3, t, 0.04);
+            vc.g.gain.setTargetAtTime(0.05, t, 0.06);
+          }
+          for (const [id, vc] of this.voices) {
+            if (!seen.has(id)) {
+              vc.g.gain.setTargetAtTime(0, t, 0.05);
+              const dead = vc;
+              setTimeout(() => { try { dead.o1.stop(); dead.o2.stop(); } catch (e) {} }, 400);
+              this.voices.delete(id);
+            }
+          }
+        },
+        silence() {
+          if (!this.ctx) return;
+          const t = this.ctx.currentTime;
+          for (const [, vc] of this.voices) {
+            vc.g.gain.setTargetAtTime(0, t, 0.03);
+            try { vc.o1.stop(t + 0.3); vc.o2.stop(t + 0.3); } catch (e) {}
+          }
+          this.voices.clear();
+        },
+        strum(freqs) {
+          if (!this.on) return;
+          this.ensure();
+          freqs.forEach((f, k) => {
+            const t = this.ctx.currentTime + k * 0.06;
+            const o = this.ctx.createOscillator(); o.type = "triangle"; o.frequency.value = f;
+            const g = this.ctx.createGain();
+            g.gain.setValueAtTime(0, t);
+            g.gain.linearRampToValueAtTime(0.11, t + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+            o.connect(g); g.connect(this.master);
+            o.start(t); o.stop(t + 1.2);
+          });
+        },
+      };
+
+      // ---------- svg helpers ----------
+      const SVGNS = "http://www.w3.org/2000/svg";
+      const el = (tag, attrs, parent) => {
+        const n = document.createElementNS(SVGNS, tag);
+        for (const k in attrs) n.setAttribute(k, attrs[k]);
+        if (parent) parent.appendChild(n);
+        return n;
+      };
+      function hexPts(cx, cy, r) {
+        return Array.from({ length: 6 }, (_, i) => {
+          const a = (Math.PI / 180) * (60 * i - 30);
+          return (cx + r * Math.cos(a)).toFixed(1) + "," + (cy + r * Math.sin(a)).toFixed(1);
+        }).join(" ");
+      }
+      function hullPath(points, pad) {
+        // convex hull of hex centers, expanded by pad — fine for ≤4 points
+        const pts = [...points].sort((p, q) => Math.atan2(p.y, p.x) - Math.atan2(q.y, q.x));
+        const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length, cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+        const poly = pts.map(p => {
+          const dx = p.x - cx, dy = p.y - cy, d = Math.hypot(dx, dy) || 1;
+          return { x: p.x + (dx / d) * pad, y: p.y + (dy / d) * pad };
+        });
+        return poly.map(p => p.x.toFixed(1) + "," + p.y.toFixed(1)).join(" ");
+      }
+      function svgPoint(cell) {
+        const svg = $("board").getBoundingClientRect();
+        const poly = $("board").querySelector(`[data-cell-poly="${cell.key}"]`).getBoundingClientRect();
+        return { cx: poly.left + poly.width / 2 - svg.left, cy: poly.top + poly.height / 2 - svg.top, w: poly.width, h: poly.height };
+      }
+      function viewBox() {
+        let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+        for (const c of CELLS) { x0 = Math.min(x0, c.x); x1 = Math.max(x1, c.x); y0 = Math.min(y0, c.y); y1 = Math.max(y1, c.y); }
+        const px = SIZE * 1.7, py = SIZE * 2.2;
+        return (x0 - px) + " " + (y0 - py) + " " + (x1 - x0 + 2 * px) + " " + (y1 - y0 + 2 * py);
+      }
+      function moduleGlyph(m) {
+        if (m.kind === "generator") return '<circle cx="0" cy="0" r="10"/><path d="M-5 0h10M0-5v10"/>';
+        if (m.kind === "forge") return '<path d="M-11 7 0-11 11 7ZM-6 7h12"/>';
+        if (m.kind === "infusor") return '<path d="M-12 0h7M5 0h7M-5 0a5 5 0 0 1 10 0 5 5 0 0 1-10 0Z"/>';
+        return '<path d="M-14 2c4-16 8 16 14 0s10 16 14 0"/>';
+      }
+
+      // ---------- what would form if the carried module landed on state.over ----------
+      function previewChords() {
+        const carried = state.dragging || state.placing;
+        if (!carried || !state.over || state.over === "inventory") return { list: [], formIds: new Set() };
+        const keys = synthKeys();
+        const dragged = state.modules.find(m => m.id === carried);
+        if (dragged && dragged.pos) keys.delete(dragged.pos);
+        if (occupant(state.over) && occupant(state.over).id !== carried) return { list: analyze(keys), formIds: new Set() };
+        keys.add(state.over);
+        const before = chordIds(analyze(synthKeys()));
+        const after = analyze(keys);
+        const formIds = new Set(after.filter(c => !before.has(c.key)).map(c => c.key));
+        return { list: after, formIds };
+      }
+
+      // ---------- render ----------
+      const selChordKeys = () => {
+        const m = selectedMod();
+        if (!m || !m.pos) return new Set();
+        return new Set(chordsOf(currentChords, m.pos).map(c => c.key));
+      };
+      let currentChords = [];
+      let rateNow = { total: 0 };
+      let gSeams, gHulls, gChips, gRipples, gCells, gModules;
+
+      function render() {
+        document.body.classList.toggle("narrow", narrow());
+        $("width-readout").textContent = innerWidth + "px" + (narrow() ? " — narrow: half-width density" : "");
+        currentChords = analyze(synthKeys());
+        rateNow = rateOf(currentChords);
+        $("rate-readout").textContent = rateNow.total.toFixed(2) + " ν/s";
+
+        const svg = $("board");
+        svg.setAttribute("viewBox", viewBox());
+        svg.innerHTML = "";
+        gCells = el("g", {}, svg);
+        gSeams = el("g", {}, svg);
+        gHulls = el("g", {}, svg);
+        gChips = el("g", {}, svg);
+        gModules = el("g", {}, svg);
+        gRipples = el("g", {}, svg);
+
+        const selSet = selChordKeys();
+        const { formIds, list: previewList } = previewChords();
+        const previewByKey = new Map(previewList.map(c => [c.key, c]));
+        const v = state.variant;
+        const flow = state.mode === "flow";
+        const dimNonSel = state.selected && (v === "A");
+        const hintCells = new Set();
+        for (const c of previewList) if (formIds.has(c.key)) for (const cell of c.cells) hintCells.add(cell.key);
+
+        // cells
+        for (const c of CELLS) {
+          let cls = "cell";
+          if (state.over === c.key) cls += occupant(c.key) && occupant(c.key).id !== (state.dragging || state.placing) ? " swap" : " target";
+          const label = el("text", { x: c.x, y: c.y - 2, class: "pitch-label" + (hintCells.has(c.key) ? " hint" : "") }, gCells);
+          if (hintCells.has(c.key)) {
+            const hc = [...formIds].map(k => previewByKey.get(k)).find(pc => pc.cells.some(cell => cell.key === c.key));
+            if (hc) label.style.setProperty("--hint", hc.def.color);
+          }
+          label.textContent = c.name;
+          el("text", { x: c.x + SIZE * 0.6, y: c.y + SIZE * 0.62, class: "oct-label" }, gCells).textContent = c.oct;
+          el("polygon", { "data-cell-poly": c.key, class: cls, points: hexPts(c.x, c.y, SIZE) }, gCells);
+        }
+
+        // chord feedback layer — the variant's language
+        if (v === "A") renderOutlines(currentChords, selSet, dimNonSel, flow, previewList, formIds);
+        if (v === "B") renderSeamsAndBadges(currentChords, selSet, flow);
+        if (v === "C") renderQuiet(currentChords, selSet, flow, previewList, formIds);
+
+        // modules
+        for (const m of state.modules.filter(m => m.pos)) {
+          const c = byKey.get(m.pos);
+          const mine = chordsOf(currentChords, m.pos);
+          const cls = "module" + (state.selected === m.id ? " selected" : "") + (state.dragging === m.id || state.placing === m.id ? " dragging" : "") + (mine.length ? " chorded" : "");
+          const g = el("g", { class: cls, "data-module": m.id, style: "--cat:" + colors[m.kind], transform: `translate(${c.x} ${c.y})` }, gModules);
+          const plate = el("polygon", { class: "plate", points: hexPts(0, 0, SIZE * 0.82) }, g);
+          if (v === "C" && mine.length) {
+            // breathing phase rides on the module; the ticker drives the plate's scale
+            const dom = mine.reduce((a, b) => (b.def.mult > a.def.mult ? b : a));
+            plate.dataset.breathe = dom.def.dur;
+            plate.dataset.phase = chordHash(dom.key) % 100 / 100;
+            plate.dataset.depth = flow ? 0.055 : 0.035;
+          }
+          el("text", { class: "level", y: -SIZE * 0.52 }, g).textContent = "L" + m.level;
+          el("g", { class: "glyph", transform: "translate(0,-4)" }, g).innerHTML = moduleGlyph(m);
+          el("text", { class: "name", y: SIZE * 0.42 }, g).textContent = m.short;
+          el("text", { class: "note", y: SIZE * 0.62 }, g).textContent = c.name + c.oct;
+          if (v === "B") {
+            mine.slice(0, 3).forEach((ch, k) => {
+              el("circle", { class: "badge", cx: SIZE * 0.5, cy: -SIZE * 0.5 - k * 9, r: 4, fill: ch.def.color, "data-badge": ch.def.dur, "data-bphase": chordHash(ch.key) % 100 / 100 }, g);
+            });
+            if (mine.length > 3) el("text", { class: "badge", x: SIZE * 0.5 + 8, y: -SIZE * 0.5 - 18, "font-size": 9, fill: "var(--muted)", style: "font: 9px var(--mono)" }, g).textContent = "+" + (mine.length - 3);
+            if (state.selected && mine.some(ch => selSet.has(ch.key)) && state.selected !== m.id)
+              el("polygon", { class: "partner-ring", points: hexPts(0, 0, SIZE * 0.94), stroke: mine.find(ch => selSet.has(ch.key)).def.color }, g);
+          }
+        }
+
+        // drone follows the board (synths only)
+        AudioMgr.setVoices(state.modules.filter(m => m.kind === "synth" && m.pos).map(m => ({ id: m.id, freq: byKey.get(m.pos).freq })));
+
+        buildBloom();
+        renderInventory();
+        const banner = $("mode-banner");
+        const wouldNames = [...formIds].map(k => previewByKey.get(k).def.name).join(" + ");
+        banner.innerHTML = state.placing
+          ? `Choose a cell for ${state.modules.find(m => m.id === state.placing).name} · occupied swaps${wouldNames ? ` · <span class="would">would form ${esc(wouldNames)}</span>` : ""} · Esc cancels`
+          : state.dragging
+            ? `Drop on a cell to move or swap · drop on inventory to retrieve${wouldNames ? ` · <span class="would">would form ${esc(wouldNames)}</span>` : ""}`
+            : flow
+              ? `Flow session · board locked · chords are sounding`
+              : `Upgrade mode · drag any module · occupied drops swap immediately`;
+        $("state").textContent = JSON.stringify({
+          variant: v, mode: state.mode, narrow: narrow(),
+          selected: state.selected, placing: state.placing, dragging: state.dragging, over: state.over,
+          chords: currentChords.map(c => ({ name: c.def.name, at: c.anchor, members: c.cells.map(x => x.key) })),
+          modules: state.modules.map(({ short, kind, level, pos }) => ({ short, kind, level, pos: pos || "inventory" })),
+        }, null, 2);
+      }
+      const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+
+      // ---------- A · outlines always on ----------
+      function renderOutlines(chords, selSet, dimNonSel, flow, previewList, formIds) {
+        const stack = new Map();
+        [...chords, ...previewList.filter(c => formIds.has(c.key))].forEach((ch, idx) => {
+          const isPreview = formIds.has(ch.key);
+          const pts = ch.cells.map(c => ({ x: c.x, y: c.y }));
+          const nest = stack.get(ch.cells.map(c => c.key).join()) || 0;
+          const pad = SIZE * (0.95 + nest * 0.16);
+          const top = ch.cells.reduce((m, c) => (c.y < m.y ? c : m), ch.cells[0]);
+          const k = stack.get("label" + top.key) || 0;
+          stack.set("label" + top.key, k + 1);
+          const dimmed = dimNonSel && !selSet.has(ch.key) && !isPreview;
+          el("polygon", {
+            class: "chord-hull" + (isPreview ? " preview" : ""),
+            points: hullPath(pts, pad),
+            style: `--cc:${ch.def.color};mix-blend-mode:screen`,
+            "stroke-width": selSet.has(ch.key) ? 4 : 2.5,
+            opacity: dimmed ? 0.22 : isPreview ? 0.75 : 0.9,
+            "data-hull": ch.key, "data-phase": chordHash(ch.key) % 100 / 100, "data-flow": flow && !isPreview ? 1 : 0,
+          }, gHulls);
+          const chip = el("text", { class: "chord-chip", x: top.x, y: top.y - SIZE * 1.18 - k * 14, "text-anchor": "middle", style: `--cc:${ch.def.color}`, opacity: dimmed ? 0.25 : 1 }, gChips);
+          let tspan = `<tspan class="mult">${esc(ch.def.name)} ×${ch.def.mult.toFixed(2)}</tspan>`;
+          if (flow && !isPreview) {
+            const members = ch.cells.map(c => occupant(c.key)).filter(Boolean);
+            const amp = members.reduce((s, m) => s + ampOf(m), 0);
+            tspan += `<tspan fill="var(--muted)"> · +${(amp * (ch.def.mult - 1) * 1.6).toFixed(1)} ν/s</tspan>`;
+          }
+          if (isPreview) tspan += `<tspan fill="var(--muted)"> · would form</tspan>`;
+          chip.innerHTML = tspan;
+        });
+      }
+
+      // ---------- B · seams + badges, captions on hover ----------
+      function renderSeamsAndBadges(chords, selSet, flow) {
+        const drawn = new Set();
+        for (const ch of chords) {
+          const dim = state.selected && !selSet.has(ch.key);
+          for (let a = 0; a < ch.cells.length; a++) for (let b = a + 1; b < ch.cells.length; b++) {
+            const p = ch.cells[a], q = ch.cells[b];
+            if (Math.hypot(p.x - q.x, p.y - q.y) > SIZE * 1.9) continue;
+            const sk = [p.key, q.key].sort().join("|");
+            if (drawn.has(sk)) continue;
+            drawn.add(sk);
+            const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy);
+            const trim = SIZE * 0.95;
+            el("line", {
+              class: "seam", x1: p.x + dx / d * trim, y1: p.y + dy / d * trim, x2: q.x - dx / d * trim, y2: q.y - dy / d * trim,
+              "stroke-width": selSet.has(ch.key) ? 7 : 5, opacity: dim ? 0.18 : 0.85,
+              style: `--cc:${ch.def.color}`, "data-seam": ch.def.dur, "data-phase": chordHash(ch.key) % 100 / 100, "data-flow": flow ? 1 : 0,
+            }, gSeams);
+          }
+        }
+      }
+
+      // ---------- C · quiet board: outlines only for selection and drag previews ----------
+      function renderQuiet(chords, selSet, flow, previewList, formIds) {
+        for (const ch of chords) {
+          if (!selSet.has(ch.key)) continue;
+          const pts = ch.cells.map(c => ({ x: c.x, y: c.y }));
+          el("polygon", {
+            class: "chord-hull", points: hullPath(pts, SIZE * 0.95),
+            style: `--cc:${ch.def.color}`, "stroke-width": 3, opacity: 0.85,
+          }, gHulls);
+          const top = ch.cells.reduce((m, c) => (c.y < m.y ? c : m), ch.cells[0]);
+          const chip = el("text", { class: "chord-chip", x: top.x, y: top.y - SIZE * 1.18, "text-anchor": "middle", style: `--cc:${ch.def.color}` }, gChips);
+          chip.innerHTML = `<tspan class="mult">${esc(ch.def.name)} ×${ch.def.mult.toFixed(2)}</tspan>`;
+        }
+        for (const ch of previewList) {
+          if (!formIds.has(ch.key)) continue;
+          const pts = ch.cells.map(c => ({ x: c.x, y: c.y }));
+          el("polygon", { class: "chord-hull preview", points: hullPath(pts, SIZE * 0.95), style: `--cc:${ch.def.color}`, "stroke-width": 2.5, opacity: 0.75 }, gHulls);
+        }
+      }
+
+      // ---------- expanded-face bloom (#127) + variant-specific selection callout ----------
+      function buildBloom() {
+        const host = $("bloom-host");
+        host.innerHTML = "";
+        const m = selectedMod();
+        if (!m || !m.pos) return;
+        const c = byKey.get(m.pos);
+        const p = svgPoint(c);
+        const wrap = $("board-wrap").getBoundingClientRect();
+        const mine = chordsOf(currentChords, m.pos);
+        const box = document.createElement("div");
+        box.className = "bloom-expand";
+        box.dataset.module = m.id;
+        box.style.setProperty("--cat", colors[m.kind]);
+        let chordNote = "";
+        if (state.variant === "B" && mine.length) {
+          chordNote = mine.map(ch => `<span class="cname" style="color:${ch.def.color}">${esc(ch.def.name)}</span> ×${ch.def.mult.toFixed(2)} with ${ch.cells.filter(x => x.key !== m.pos).map(x => x.name + x.oct).join("+")}`).join("<br>");
+        } else if (state.variant === "B") {
+          chordNote = `<span class="muted">no chord here — move next to a partner</span>`;
+        }
+        box.innerHTML = `<div class="lv">L${m.level}</div>
+          <svg class="glyph" width="46" height="40" viewBox="-18 -15 36 30"><g>${moduleGlyph(m)}</g></svg>
+          <div class="nm">${esc(m.short)}</div>
+          <div class="cell-note">${c.name}${c.oct}</div>
+          ${chordNote ? `<div class="chord-note">${chordNote}</div>` : ""}
+          <div class="contrib">${contrib(m)}</div>
+          ${state.mode === "upgrade" ? `<button class="primary" data-action="upgrade">Upgrade<small>180 ν</small></button>` : `<div class="muted" style="font:10px var(--mono)">sounding — locked until exit</div>`}`;
+        host.appendChild(box);
+        const w = Math.max(150, p.w * 2.6), h = Math.max(170, p.h * 2.45);
+        const dockH = $("inventory").offsetHeight + 20;
+        const left = Math.max(8, Math.min(wrap.width - w - 8, p.cx - w / 2));
+        const top = Math.max(40, Math.min(wrap.height - dockH - h - 8, p.cy - h / 2));
+        box.style.left = left + "px"; box.style.top = top + "px";
+        box.style.width = w + "px"; box.style.height = h + "px";
+        box.addEventListener("pointerdown", e => { if (e.target.closest("button")) return; startDrag(e, m.id); });
+        box.querySelectorAll("[data-action]").forEach(b => b.onclick = e => { e.stopPropagation(); act(b.dataset.action); });
+        box.querySelectorAll("button").forEach(b => b.addEventListener("pointerdown", e => e.stopPropagation()));
+      }
+
+      // ---------- hover caption (variant B's naming channel) ----------
+      let captionEl = null;
+      function showCaption(m) {
+        if (state.variant !== "B") return;
+        hideCaption();
+        const mine = m.pos ? chordsOf(currentChords, m.pos) : [];
+        if (!mine.length) return;
+        const c = byKey.get(m.pos);
+        const p = svgPoint(c);
+        captionEl = document.createElement("div");
+        captionEl.className = "caption";
+        captionEl.innerHTML = `<b>${c.name}${c.oct}</b> · ${mine.map(ch => `<span class="cname" style="color:${ch.def.color}">${esc(ch.def.name)}</span> ×${ch.def.mult.toFixed(2)}`).join(" · ")}`;
+        $("bloom-host").appendChild(captionEl);
+        captionEl.style.left = Math.min(innerWidth - 280, p.cx + p.w) + "px";
+        captionEl.style.top = Math.max(8, p.cy - 30) + "px";
+      }
+      function hideCaption() { captionEl?.remove(); captionEl = null; }
+
+      // ---------- inventory ----------
+      function renderInventory() {
+        const inv = state.modules.filter(m => !m.pos);
+        $("inventory-items").innerHTML = inv.map(m => `<button class="inv-item" data-inventory="${m.id}" style="--cat:${colors[m.kind]}"><b>${m.short.slice(0, 4)}</b><span><b>${esc(m.name)}</b><small>L${m.level} · click to place</small></span></button>`).join("");
+        $("inventory-count").textContent = inv.length + " modules";
+        $("inventory").classList.toggle("drop", state.over === "inventory");
+        document.querySelectorAll("[data-inventory]").forEach(b => b.onclick = e => {
+          e.stopPropagation();
+          if (state.mode === "flow") { say("Board is locked while a session runs — exit flow to rearrange."); return; }
+          state.placing = b.dataset.inventory; state.selected = b.dataset.inventory; render();
+        });
+      }
+
+      // ---------- actions ----------
+      function act(a) {
+        const m = selectedMod(); if (!m) return;
+        if (a === "upgrade") { m.level++; say(m.name + " upgraded to level " + m.level + "."); }
+        render();
+      }
+      function place(id, dest) {
+        const m = state.modules.find(m => m.id === id), other = occupant(dest);
+        if (!m) return;
+        const before = chordIds(currentChords);
+        const old = m.pos;
+        if (other && other.id !== id) { other.pos = old; m.pos = dest; say(m.name + " swapped with " + other.name + "."); }
+        else { m.pos = dest; say(m.name + " placed on " + byKey.get(dest).name + byKey.get(dest).oct + "."); }
+        state.selected = id; state.placing = null; state.over = null;
+        render();
+        resolveChordChanges(before);
+      }
+      function retrieve(id) {
+        const m = state.modules.find(m => m.id === id); if (!m) return;
+        const before = chordIds(currentChords);
+        m.pos = null; state.selected = null; state.placing = null;
+        render();
+        resolveChordChanges(before);
+        say(m.name + " returned to inventory.");
+      }
+      function resolveChordChanges(before) {
+        currentChords = analyze(synthKeys());
+        const after = chordIds(currentChords);
+        const born = [...after].filter(k => !before.has(k));
+        for (const k of born) {
+          const ch = currentChords.find(c => c.key === k);
+          ripple(ch);
+          AudioMgr.strum(ch.cells.map(c => c.freq));
+        }
+        if (born.length) say(born.map(k => currentChords.find(c => c.key === k).def.name).join(" + ") + " formed!");
+      }
+      function ripple(ch) {
+        const cx = ch.cells.reduce((s, c) => s + c.x, 0) / ch.cells.length;
+        const cy = ch.cells.reduce((s, c) => s + c.y, 0) / ch.cells.length;
+        const ring = el("circle", { class: "ripple", cx, cy, r: SIZE * 1.1, style: `--cc:${ch.def.color}`, "stroke-width": 3 }, gRipples);
+        setTimeout(() => ring.remove(), 750);
+      }
+
+      // ---------- drag (always live, #118) ----------
+      function startDrag(e, id) {
+        if (state.mode === "flow") { say("Board is locked while a session runs — exit flow to rearrange."); return; }
+        const start = { x: e.clientX, y: e.clientY };
+        let active = false, ghost = null;
+        const move = ev => {
+          if (!active && Math.hypot(ev.clientX - start.x, ev.clientY - start.y) > 6) {
+            active = true; state.dragging = id; state.selected = id; state.placing = null;
+            const m = state.modules.find(m => m.id === id);
+            ghost = document.createElement("div"); ghost.className = "ghost";
+            ghost.style.setProperty("--cat", colors[m.kind]); ghost.textContent = m.short;
+            document.body.appendChild(ghost);
+            render();
+          }
+          if (!active) return;
+          ghost.style.left = ev.clientX + "px"; ghost.style.top = ev.clientY + "px";
+          const below = document.elementFromPoint(ev.clientX, ev.clientY);
+          const cell = below?.closest?.("[data-cell-poly]");
+          const inv = below?.closest?.("#inventory");
+          const key = cell?.dataset.cellPoly;
+          const over = (key && byKey.has(key)) ? key : (inv ? "inventory" : null);
+          if (over !== state.over) { state.over = over; render(); }
+        };
+        const up = () => {
+          document.removeEventListener("pointermove", move);
+          document.removeEventListener("pointerup", up);
+          ghost?.remove();
+          if (!active) return;
+          const target = state.over;
+          state.dragging = null; state.over = null;
+          if (target === "inventory") retrieve(id);
+          else if (target) place(id, target);
+          else { say("Move cancelled — drop on a cell or inventory."); render(); }
+        };
+        document.addEventListener("pointermove", move);
+        document.addEventListener("pointerup", up, { once: true });
+      }
+
+      function bindBoard() {
+        document.querySelectorAll("[data-module]").forEach(elm => {
+          const id = elm.dataset.module;
+          const m = state.modules.find(x => x.id === id);
+          elm.addEventListener("click", e => {
+            e.stopPropagation(); if (state.dragging) return;
+            state.selected = state.selected === id ? null : id;
+            state.placing = null;
+            if (state.selected) showCaption(m); else hideCaption();
+            render();
+          });
+          elm.addEventListener("pointerdown", e => { if (e.button !== 0) return; e.stopPropagation(); startDrag(e, id); });
+          elm.addEventListener("mouseenter", () => { if (state.variant === "B" && !state.dragging) showCaption(m); });
+          elm.addEventListener("mouseleave", () => hideCaption());
+        });
+        document.querySelectorAll("[data-cell-poly]").forEach(poly => {
+          const key = poly.dataset.cellPoly;
+          poly.addEventListener("click", () => {
+            if (state.mode === "flow") { state.selected = null; hideCaption(); render(); return; }
+            if (!state.placing) { if (state.selected) { state.selected = null; hideCaption(); render(); } return; }
+            place(state.placing, key);
+          });
+          if (state.placing) {
+            poly.addEventListener("pointerenter", () => { if (state.over !== key) { state.over = key; render(); } });
+            poly.addEventListener("pointerleave", () => { if (state.over === key) { state.over = null; render(); } });
+          }
+        });
+      }
+      const mo = new MutationObserver(() => bindBoard());
+      mo.observe($("board"), { childList: true });
+
+      // ---------- breathing + session pulse ticker (time-based, survives re-renders) ----------
+      let raf;
+      function tick(t) {
+        const s = t / 1000;
+        document.querySelectorAll("[data-breathe]").forEach(p => {
+          const dur = +p.dataset.breathe, ph = +p.dataset.phase, depth = +p.dataset.depth;
+          const k = 1 + depth * (0.5 + 0.5 * Math.sin(s * Math.PI * 2 / dur + ph * Math.PI * 2));
+          p.style.transform = `scale(${k.toFixed(4)})`;
+          p.style.transformBox = "fill-box";
+          p.style.transformOrigin = "center";
+        });
+        document.querySelectorAll("[data-flow='1']").forEach(elm => {
+          const ph = +elm.dataset.phase || 0;
+          elm.style.opacity = (0.62 + 0.28 * (0.5 + 0.5 * Math.sin(s * Math.PI * 2 / 2.4 + ph * Math.PI * 2))).toFixed(3);
+        });
+        document.querySelectorAll("[data-badge]").forEach(b => {
+          const dur = +b.dataset.badge, ph = +b.dataset.bphase;
+          b.style.opacity = state.mode === "flow" ? (0.55 + 0.45 * (0.5 + 0.5 * Math.sin(s * Math.PI * 2 / dur + ph * Math.PI * 2))).toFixed(3) : 1;
+        });
+        document.querySelectorAll("[data-seam]").forEach(sm => {
+          if (sm.dataset.flow !== "1") return;
+          const dur = +sm.dataset.seam, ph = +sm.dataset.phase;
+          sm.style.opacity = (0.5 + 0.4 * (0.5 + 0.5 * Math.sin(s * Math.PI * 2 / dur + ph * Math.PI * 2))).toFixed(3);
+        });
+        raf = requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+
+      // ---------- flow session ----------
+      let timer;
+      function setMode(mode) {
+        state.mode = mode;
+        const flow = mode === "flow";
+        $("flow-btn").textContent = flow ? "Exit flow" : "Enter flow";
+        $("flow-btn").classList.toggle("live", flow);
+        $("clock-label").textContent = flow ? "remaining" : "planned";
+        if (flow) { state.elapsed = 0; state.selected = null; state.placing = null; hideCaption(); }
+        clearInterval(timer);
+        if (flow) timer = setInterval(() => {
+          state.elapsed += 0.25;
+          state.banked += rateNow.total * 0.25;
+          const left = Math.max(0, 25 * 60 - state.elapsed);
+          $("clock").textContent = Math.floor(left / 60) + ":" + String(Math.floor(left % 60)).padStart(2, "0");
+          $("nous-readout").textContent = Math.round(state.banked) + " ν";
+        }, 250);
+        else { $("clock").textContent = "25:00"; }
+        render();
+      }
+
+      // ---------- toast ----------
+      let toastTimer;
+      function say(text) {
+        const t = $("toast"); t.textContent = text; t.classList.add("show");
+        clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 1900);
+      }
+
+      // ---------- chrome ----------
+      $("board").onclick = e => { if (e.target === $("board") && state.selected) { state.selected = null; hideCaption(); render(); } };
+      $("flow-btn").onclick = () => setMode(state.mode === "flow" ? "upgrade" : "flow");
+      $("prev").onclick = () => setVariant(-1);
+      $("next").onclick = () => setVariant(1);
+      addEventListener("keydown", e => {
+        const tag = e.target.tagName;
+        if (["INPUT", "TEXTAREA"].includes(tag) || e.target.isContentEditable) return;
+        if (e.key === "ArrowLeft") setVariant(-1);
+        if (e.key === "ArrowRight") setVariant(1);
+        if (e.key === "Escape") { state.selected = null; state.placing = null; state.over = null; hideCaption(); render(); }
+        if (e.key.toLowerCase() === "s") toggleSound();
+        if (e.key.toLowerCase() === "f") setMode(state.mode === "flow" ? "upgrade" : "flow");
+      });
+      let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(render, 80); });
+
+      // sound toggle lives next to the switcher
+      const soundBtn = document.createElement("button");
+      soundBtn.id = "sound-btn";
+      soundBtn.style.cssText = "position:fixed;z-index:100;left:50%;bottom:56px;transform:translateX(-50%);font:11px var(--mono);background:#141a30f2;color:var(--ink);";
+      document.body.appendChild(soundBtn);
+      function toggleSound() {
+        AudioMgr.on = !AudioMgr.on;
+        soundBtn.textContent = "sound: " + (AudioMgr.on ? "on (S)" : "off (S)");
+        if (!AudioMgr.on) AudioMgr.silence();
+        else render();
+      }
+      soundBtn.onclick = toggleSound;
+      soundBtn.textContent = "sound: off (S)";
+
+      // demo / clear
+      const toolsRow = document.createElement("div");
+      toolsRow.style.cssText = "position:fixed;z-index:100;left:12px;top:34px;display:flex;gap:6px;";
+      toolsRow.innerHTML = `<button id="demo-btn" style="font:11px var(--mono);background:#141a30f2;">demo board</button><button id="clear-btn" style="font:11px var(--mono);background:#141a30f2;">clear board</button>`;
+      document.body.appendChild(toolsRow);
+      document.addEventListener("click", e => {
+        if (e.target.id === "demo-btn") { state.modules = seed(); state.selected = null; render(); say("Demo board seeded."); }
+        if (e.target.id === "clear-btn") { state.modules.forEach(m => m.pos = null); state.selected = null; render(); }
+      });
+
+      // ---------- variant switcher ----------
+      function setVariant(delta) {
+        const i = VARIANTS.findIndex(v => v.key === state.variant);
+        const v = VARIANTS[(i + delta + VARIANTS.length) % VARIANTS.length];
+        const url = new URL(location.href); url.searchParams.set("variant", v.key); history.replaceState({}, "", url);
+        applyVariant(v);
+      }
+      function applyVariant(v) {
+        state.variant = v.key;
+        $("variant-label").textContent = v.key + " · " + v.name;
+        $("variant-purpose").textContent = v.purpose;
+        hideCaption();
+        render();
+      }
+      const wanted = new URLSearchParams(location.search).get("variant") || "A";
+      applyVariant(VARIANTS.find(v => v.key === wanted) || VARIANTS[0]);
+      setMode("upgrade");
+
+      // debug hooks for automated poking; harmless in a throwaway prototype
+      window.__chordproto = {
+        setVariant: (k) => applyVariant(VARIANTS.find(v => v.key === k) || VARIANTS[0]),
+        setMode,
+        place: (id, pos) => { const m = state.modules.find(m => m.id === id); m.pos = pos; render(); },
+        chords: () => currentChords.map(c => ({ name: c.def.name, at: c.anchor })),
+        state: () => ({ variant: state.variant, mode: state.mode, dragging: state.dragging, over: state.over, selected: state.selected, chords: currentChords.map(c => c.def.name + "@" + c.anchor) }),
+      };
+    </script>
+  </body>
+</html>

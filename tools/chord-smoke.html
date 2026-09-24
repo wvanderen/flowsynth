@@ -1,0 +1,117 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>smoke</title>
+<script>
+addEventListener("DOMContentLoaded", () => {
+  const out = [];
+  window.__failed = false;
+  const check = (cond, name) => { out.push((cond ? "PASS " : "FAIL ") + name); if (!cond) window.__failed = true; };
+  const frame = () => new Promise(r => setTimeout(r, 60));
+  window.addEventListener("error", e => { out.push("ERROR " + e.message); window.__failed = true; });
+
+  const writeOut = () => {
+    document.title = window.__failed ? "SMOKE FAIL" : "SMOKE OK";
+    let pre = document.getElementById("smoke-out");
+    if (!pre) { pre = document.createElement("pre"); pre.id = "smoke-out"; document.body.appendChild(pre); }
+    pre.textContent = out.join("\n");
+  };
+
+  const run = async () => {
+    const frame_el = document.createElement("iframe");
+    frame_el.src = "/tools/chord-feedback-proto.html";
+    frame_el.width = 1280; frame_el.height = 800;
+    document.body.appendChild(frame_el);
+    await new Promise(r => frame_el.onload = r);
+    await frame();
+    const w = frame_el.contentWindow, d = frame_el.contentDocument;
+    const V = w.__chordproto;
+
+    const names = V.chords().map(c => c.name).sort().join(",");
+    check(names === "Fifth,Fifth,Fourth shell,Octave,Octave,Power chord", "seed board: six chords over three regions, got: " + names);
+
+    V.setVariant("B"); await frame();
+    check(d.querySelectorAll(".seam").length === 6, "B: six seam bridges");
+    check(d.querySelectorAll(".badge").length === 14, "B: fourteen chord badges");
+    check(d.querySelectorAll(".chord-hull").length === 0, "B: no hulls");
+    V.setVariant("C"); await frame();
+    check(d.querySelectorAll("[data-breathe]").length === 6, "C: six breathing plates");
+    check(d.querySelectorAll(".chord-hull").length === 0, "C: no hulls while unselected");
+    V.setVariant("A"); await frame();
+    check(d.querySelectorAll(".chord-hull:not(.preview)").length === 6, "A: six formed hulls");
+    check(d.querySelectorAll(".chord-chip").length === 6, "A: six chips (labels stack)");
+
+    const s2 = d.querySelector('[data-module="s2"]');
+    s2.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await frame();
+    const bloom = d.querySelector(".bloom-expand");
+    check(!!bloom, "A: selection opens the expanded face");
+    check(!bloom.textContent.includes("Octave"), "A: bloom carries no chord line (hull is the callout)");
+
+    V.setVariant("B"); await frame();
+    const s1 = d.querySelector('[data-module="s1"]');
+    s1.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await frame();
+    check(d.querySelector(".bloom-expand").textContent.includes("Octave"), "B: bloom lists chord membership");
+    check(d.querySelector(".bloom-expand").textContent.includes("with A7"), "B: names partners (A7 = cell 3,2)");
+    check(d.querySelectorAll(".partner-ring").length >= 1, "B: partners wear rings");
+    const s3 = d.querySelector('[data-module="s3"]');
+    s3.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+    await frame();
+    check(!!d.querySelector(".caption"), "B: hover caption appears");
+    s3.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
+    await frame();
+    check(!d.querySelector(".caption"), "B: caption hides on leave");
+
+    V.setVariant("A"); await frame();
+    const m7 = d.querySelector('[data-module="s7"]');
+    const box = m7.getBoundingClientRect();
+    m7.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0, clientX: box.x + 10, clientY: box.y + 10 }));
+    const poly = d.querySelector('[data-cell-poly="4,2"]').getBoundingClientRect();
+    d.dispatchEvent(new MouseEvent("pointermove", { clientX: poly.x + poly.width / 2, clientY: poly.y + poly.height / 2 }));
+    await frame();
+    check(d.querySelector(".mode-banner").textContent.includes("would form Fifth + Octave + Fourth shell"), "A: banner previews all three would-form chords");
+    d.querySelectorAll(".chord-hull.preview").forEach(h => out.push("PROBE preview hull: " + h.getAttribute("points").split(" ").slice(0,2).join(" ") + " cc=" + h.style.getPropertyValue("--cc")));
+    check(d.querySelectorAll(".chord-hull.preview").length === 3, "A: three dashed ghost hulls while dragging");
+    d.dispatchEvent(new MouseEvent("pointerup", { clientX: poly.x + poly.width / 2, clientY: poly.y + poly.height / 2 }));
+    await frame();
+    check(V.chords().some(c => c.name === "Octave" && c.at === "4,1") && V.chords().some(c => c.name === "Fifth" && c.at === "3,2"), "A: drop lands, Octave@4,1 + Fifth@3,2 exist");
+    check(d.querySelectorAll(".ripple").length >= 3, "A: formation ripples fired for all three new chords");
+
+    const m7b = d.querySelector('[data-module="s7"]');
+    const b2 = m7b.getBoundingClientRect();
+    m7b.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, clientX: b2.x + 10, clientY: b2.y + 10 }));
+    d.dispatchEvent(new MouseEvent("pointermove", { clientX: 5, clientY: 400 }));
+    await frame();
+    d.dispatchEvent(new MouseEvent("pointerup", { clientX: 5, clientY: 400 }));
+    await frame();
+    check(V.chords().some(c => c.name === "Octave" && c.at === "4,1"), "A: cancelled drag restores the module (Octave@4,1 persists)");
+
+    const inv = d.querySelector('[data-inventory="s8"]');
+    inv.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await frame();
+    check(d.querySelector(".mode-banner").textContent.includes("Choose a cell"), "placing banner shows");
+    d.querySelector('[data-cell-poly="3,3"]').dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await frame();
+    check(V.chords().some(c => c.name === "Octave" && c.at === "3,2"), "placing s8 at 3,3 forms Octave@3,2 with s2");
+
+    V.setMode("flow"); await frame();
+    check(d.querySelector(".mode-banner").textContent.includes("locked"), "flow banner: board locked");
+    check(!d.querySelector(".bloom-expand .primary"), "flow: no Upgrade button on the face");
+    const mforge = d.querySelector('[data-module="f1"]');
+    const fb = mforge.getBoundingClientRect();
+    mforge.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0, clientX: fb.x + 5, clientY: fb.y + 5 }));
+    d.dispatchEvent(new MouseEvent("pointermove", { clientX: fb.x + 60, clientY: fb.y + 60 }));
+    await frame();
+    check(d.querySelector(".toast").textContent.includes("locked"), "flow: drag attempt is refused with a toast");
+    d.dispatchEvent(new MouseEvent("pointerup", { clientX: fb.x + 60, clientY: fb.y + 60 }));
+
+    V.setMode("upgrade"); await frame();
+    d.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await frame();
+    check(!d.querySelector(".bloom-expand"), "Escape dismisses the bloom");
+  };
+
+  run().catch(e => { out.push("THREW " + (e && e.message)); window.__failed = true; writeOut(); });
+  setInterval(writeOut, 200);
+});
+</script>
