@@ -16,6 +16,7 @@ const VARIANTS: { key: string; label: string }[] = [
   { key: "b", label: "B · Production footer" },
   { key: "c", label: "C · Board ledger + dock" },
   { key: "d", label: "D · Header ledger + floating horizon" },
+  { key: "e", label: "E · Board ledger + tooltip formula + floating horizon" },
 ];
 
 function currentKey(): string {

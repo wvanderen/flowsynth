@@ -143,10 +143,10 @@ export function renderStatusMonitor(app: App): void {
   // the feats chip riding the row where the ach term lives. The console
   // slims to pure control.
   const ledgerOnMonitor = variant === "b";
-  // PROTOTYPE (issue #119, variant D): the monitor dissolves — the formula
-  // lives in the header ledger's tooltip, and the accumulator alone floats
-  // free over the board's bottom edge.
-  const floating = variant === "d";
+  // PROTOTYPE (issue #119, variants D and E): the monitor dissolves — the
+  // formula lives in a ledger tooltip (header in D, board dock in E), and
+  // the accumulator alone floats free over the board's bottom edge.
+  const floating = variant === "d" || variant === "e";
   const past = state.totalEarned >= ARETE_HORIZON;
   const snapshot = computeRates(state, true);
   // Structural key: the era flip, the prestige acknowledgment, the

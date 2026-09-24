@@ -1,11 +1,12 @@
 import { App } from "./ui/app";
 import { initPrototypeSwitcher } from "./ui/prototype";
+import { isPrototypeVariant } from "./ui/variant";
 
-// PROTOTYPE (issue #119): the console-hierarchy variants ride ?variant=a|b|c;
+// PROTOTYPE (issue #119): the console-hierarchy variants ride ?variant=<key>;
 // ?half restores the half-width preview. Absent params, the app is untouched.
 const params = new URLSearchParams(location.search);
 const variant = params.get("variant");
-if (variant === "a" || variant === "b" || variant === "c") {
+if (isPrototypeVariant(variant)) {
   document.body.dataset.variant = variant;
 }
 if (params.has("half")) {

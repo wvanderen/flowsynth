@@ -1243,9 +1243,9 @@ body.half-preview #app {
    surfaces that use them, and the heading row becomes pure action. */
 body[data-variant] .legend { display: none; }
 
-/* B and C retire the console's readout end entirely. */
+/* B, C, and E retire the console's readout end entirely. */
 body[data-variant="b"] .console-readout,
-body[data-variant="c"] .console-readout { display: none; }
+body:is([data-variant="c"], [data-variant="e"]) .console-readout { display: none; }
 
 /* ── The production ledger (shared anatomy) ────────────────────────────
    Stock, rate, and session as three labeled cells of one instrument. */
@@ -1339,8 +1339,8 @@ body[data-variant="b"] .monitor-top .prod-ledger { flex-shrink: 0; }
    becomes a vertical icon dock on the board's left edge; the console clock
    is itself the plan affordance. */
 .board-ledger { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 10px; }
-body[data-variant="c"] .board-panel { position: relative; padding-left: 66px; }
-body[data-variant="c"] .board-tools {
+body:is([data-variant="c"], [data-variant="e"]) .board-panel { position: relative; padding-left: 66px; }
+body:is([data-variant="c"], [data-variant="e"]) .board-tools {
   position: absolute;
   left: 16px;
   top: 74px;
@@ -1350,8 +1350,8 @@ body[data-variant="c"] .board-tools {
   gap: 8px;
   padding-bottom: 0;
 }
-body[data-variant="c"] .board-tools .tool-icon { width: 38px; height: 38px; }
-body[data-variant="c"] .console-clock.clock-opens-time {
+body:is([data-variant="c"], [data-variant="e"]) .board-tools .tool-icon { width: 38px; height: 38px; }
+body:is([data-variant="c"], [data-variant="e"]) .console-clock.clock-opens-time {
   padding: 4px 8px;
   min-width: 172px;
   min-height: 56px;
@@ -1359,28 +1359,28 @@ body[data-variant="c"] .console-clock.clock-opens-time {
   border-color: transparent;
   background: transparent;
 }
-body[data-variant="c"] .console-clock.clock-opens-time:hover { border-color: var(--line); background: var(--panel); }
+body:is([data-variant="c"], [data-variant="e"]) .console-clock.clock-opens-time:hover { border-color: var(--line); background: var(--panel); }
 
 /* ── D · Header ledger + floating horizon ──────────────────────────────
    All production info lives in the console: the ledger with the live
    formula disclosed on hover or focus, and the Arete accumulator detached
    from the monitor to float free over the board's bottom edge. */
-body[data-variant="d"] .prod-ledger-formula { position: relative; cursor: help; }
+body:is([data-variant="d"], [data-variant="e"]) .prod-ledger-formula { position: relative; cursor: help; overflow: visible; }
 .ledger-hint { position: absolute; top: 50%; right: 7px; transform: translateY(-50%); }
-body[data-variant="d"] .prod-ledger-formula:hover .ledger-hint,
-body[data-variant="d"] .prod-ledger-formula:focus .ledger-hint,
-body[data-variant="d"] .prod-ledger-formula:focus-within .ledger-hint { color: var(--nous); border-color: var(--nous); }
+body:is([data-variant="d"], [data-variant="e"]) .prod-ledger-formula:hover .ledger-hint,
+body:is([data-variant="d"], [data-variant="e"]) .prod-ledger-formula:focus .ledger-hint,
+body:is([data-variant="d"], [data-variant="e"]) .prod-ledger-formula:focus-within .ledger-hint { color: var(--nous); border-color: var(--nous); }
 /* The tooltip drops below the header, unlike the monitor chip's. */
-body[data-variant="d"] .prod-ledger-formula .monitor-breakdown { bottom: auto; top: calc(100% + 12px); }
-body[data-variant="d"] .prod-ledger-formula:hover .monitor-breakdown,
-body[data-variant="d"] .prod-ledger-formula:focus .monitor-breakdown,
-body[data-variant="d"] .prod-ledger-formula:focus-within .monitor-breakdown { display: block; }
+body:is([data-variant="d"], [data-variant="e"]) .prod-ledger-formula .monitor-breakdown { bottom: auto; top: calc(100% + 12px); }
+body:is([data-variant="d"], [data-variant="e"]) .prod-ledger-formula:hover .monitor-breakdown,
+body:is([data-variant="d"], [data-variant="e"]) .prod-ledger-formula:focus .monitor-breakdown,
+body:is([data-variant="d"], [data-variant="e"]) .prod-ledger-formula:focus-within .monitor-breakdown { display: block; }
 
 /* The floating accumulator: the rail, beat head, graduations, prestige,
    and secondaries in one pill pinned to the board's bottom edge — free of
    the monitor chrome and of any flow it used to occupy. */
-body[data-variant="d"] .board-panel { position: relative; }
-body[data-variant="d"] .board-footer.status-monitor {
+body:is([data-variant="d"], [data-variant="e"]) .board-panel { position: relative; }
+body:is([data-variant="d"], [data-variant="e"]) .board-footer.status-monitor {
   position: absolute;
   left: 50%;
   bottom: 16px;
@@ -1400,7 +1400,7 @@ body[data-variant="d"] .board-footer.status-monitor {
 }
 /* Tighter than the base rail: the pill is a compact instrument, but still
    clears the beat head above the rail and the graduation labels below it. */
-body[data-variant="d"] .monitor-under { margin-top: 24px; gap: 12px; }
+body:is([data-variant="d"], [data-variant="e"]) .monitor-under { margin-top: 24px; gap: 12px; }
 
 /* ── Responsive parity: container mirrors of the viewport breakpoints ──
    The half preview (and any real narrow window, where these fire at the
@@ -1416,7 +1416,7 @@ body[data-variant="d"] .monitor-under { margin-top: 24px; gap: 12px; }
 }
 @container app (max-width: 760px) {
   body:is([data-variant], .half-preview) .board-panel { padding: 16px 14px 0; }
-  body[data-variant="c"] .board-panel { padding-left: 60px; }
+  body:is([data-variant="c"], [data-variant="e"]) .board-panel { padding-left: 60px; }
   body:is([data-variant], .half-preview) .session-actions { margin-left: auto; }
   body:is([data-variant], .half-preview) .workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(200px, 1fr) minmax(0, 0.8fr); }
   body:is([data-variant], .half-preview) .inspector { border-left: 0; border-top: 1px solid var(--line); padding: 16px; }

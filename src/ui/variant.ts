@@ -6,11 +6,17 @@ import { ACHIEVEMENTS } from "../engine/achievements";
 import type { GameState } from "../engine/types";
 import { formatInt, formatNumber } from "./format";
 
-export type PrototypeVariant = "a" | "b" | "c" | "d";
+export type PrototypeVariant = "a" | "b" | "c" | "d" | "e";
+
+// Single source of truth for which keys the prototype accepts — main.ts
+// gates body[data-variant] through this, so a new variant lands here only.
+export function isPrototypeVariant(v: string | null): v is PrototypeVariant {
+  return v === "a" || v === "b" || v === "c" || v === "d" || v === "e";
+}
 
 export function prototypeVariant(): PrototypeVariant | null {
   const v = document.body.dataset.variant;
-  return v === "a" || v === "b" || v === "c" || v === "d" ? v : null;
+  return isPrototypeVariant(v) ? v : null;
 }
 
 // The ledger's three cells, shared by every placement (console in A and D,

@@ -151,7 +151,7 @@ function renderConsoleSession(app: App): void {
           <p class="session-clock mono">${planned ? formatClock(app.ui.chosenTarget!) : CLOCK_PLACEHOLDER}</p>
           <p class="clock-caption">${planned ? "planned" : OPEN_ENDED_WORD}</p>`;
       host.innerHTML =
-        variant === "c"
+        variant === "c" || variant === "e"
           ? `<button class="console-clock clock-opens-time" id="clock-plan" title="Plan — opens the Time app">${clockBlock}</button>
         <div class="session-actions">
           <button class="main-switch idle" id="flow-switch" title="Enter flow — the board locks and runs itself">
@@ -166,7 +166,7 @@ function renderConsoleSession(app: App): void {
             ${switchSvg}<span>Enter flow</span><i class="switch-state" aria-hidden="true"></i>
           </button>
         </div>`;
-      if (variant === "c") byId("clock-plan")?.addEventListener("click", () => app.openApp("time"));
+      if (variant === "c" || variant === "e") byId("clock-plan")?.addEventListener("click", () => app.openApp("time"));
       byId("flow-switch")?.addEventListener("click", () => app.startFlow());
     }
     renderSessionStrip(false);
@@ -434,7 +434,7 @@ function renderAchievementsModal(app: App, content: HTMLElement): void {
 function renderConsoleReadout(app: App): void {
   const { state } = app;
   const variant = prototypeVariant();
-  if (variant === "b" || variant === "c") return;
+  if (variant === "b" || variant === "c" || variant === "e") return;
   const strip = byId("console-status");
   if (strip) {
     // D's tooltip structure rebuilds when the ach term joins the equation
@@ -495,8 +495,11 @@ function renderConsoleReadout(app: App): void {
 // ledger and the feats chip docked directly above the board, outside the
 // console. The console keeps only control; the board owns its numbers. The
 // host is created here so the production document never carries it.
+// Variant E keeps the dock and hangs the live formula off the ledger as a
+// tooltip (D's disclosure, C's placement).
 function renderBoardLedger(app: App): void {
-  if (prototypeVariant() !== "c") return;
+  const variant = prototypeVariant();
+  if (variant !== "c" && variant !== "e") return;
   let host = document.getElementById("board-ledger");
   if (!host) {
     host = document.createElement("div");
@@ -504,14 +507,23 @@ function renderBoardLedger(app: App): void {
     host.id = "board-ledger";
     document.querySelector(".board-heading")?.before(host);
   }
+  // E's tooltip structure rebuilds when the ach term joins the equation
+  // (first feat) or the infusor leg joins it (first adjacent uplift).
+  const snapshot = currentSnapshot(app.state);
+  const achieving = achievementBoostOf(app.state) > 1;
+  const infused = snapshot.infusors > 0;
   const count = unlockedCount(app.state);
-  const key = `c:${count}`;
+  const key = `${variant}:${count}:${achieving ? "ach" : "plain"}:${infused ? "inf" : "plain"}`;
   if (host.dataset.protoKey !== key) {
     host.dataset.protoKey = key;
-    host.innerHTML = `${ledgerHtml()}${featsChipHtml(count)}`;
+    const ledger = variant === "e"
+      ? `<div class="prod-ledger prod-ledger-formula" tabindex="0" role="group" aria-label="Production — focus for the formula breakdown">${ledgerCellsHtml()}<span class="monitor-hint ledger-hint" aria-hidden="true">ⓘ</span>${formulaTooltipHtml(achieving, infused)}</div>`
+      : ledgerHtml();
+    host.innerHTML = `${ledger}${featsChipHtml(count)}`;
     byId("feats-chip")?.addEventListener("click", () => app.openModal("achievements"));
   }
-  updateLedgerLive(host, app.state, currentSnapshot(app.state).rate);
+  updateLedgerLive(host, app.state, snapshot.rate);
+  if (variant === "e") updateFormulaLive(host, snapshot);
 }
 
 const CELL_TOOL_SVG = `<svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M0-6v12M-6 0h12"/></svg>`;
@@ -542,7 +554,7 @@ function renderTools(app: App): void {
         <button class="small${ui.showChords ? " active" : ""}" id="tool-chords" aria-pressed="${ui.showChords}" title="Show chords — light the chord voices, link the pairs, outline and label named chords · C">${TOOL_ICONS.chords}<span>Chords</span></button>
         <span class="tool-sep" aria-hidden="true"></span>
         <button class="small" id="tool-feats" title="Achievements — every feat, and how close the next one is">${FEATS_SVG}<span>Feats</span></button>`;
-    } else if (variant === "b" || variant === "c") {
+    } else if (variant === "b" || variant === "c" || variant === "e") {
       type IconArgs = { id: string; svg: string; label: string; extra?: string; disabled?: string; pressed?: string; active?: string };
       const icon = ({ id, svg, label, extra = "", disabled = "", pressed = "", active = "" }: IconArgs) =>
         `<button class="small tool-icon${active}" id="${id}" aria-label="${label}" title="${label}" ${disabled} ${pressed}>${svg}${extra}</button>`;
