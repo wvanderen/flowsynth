@@ -11,8 +11,11 @@
       octave-stack board, switchable via ?variant= and the bottom pill
       (arrow keys work). Shared, already-decided behavior in all variants:
       upgrade-mode dragging is always live, occupied drops swap immediately,
-      inventory stays on the board surface. Resize the window narrow (~900px)
+      inventory stays on the board surface.       Resize the window narrow (~900px)
       to judge half-width density. Numbers are placeholders. No persistence.
+      Maintainer verdict: C — expanded face wins; content policy per issue
+      discussion (keep the face's own UI, add Upgrade + minimal info only,
+      no repeated readouts, no Move/Return — drag is always live).
     -->
     <style>
       :root {
@@ -128,18 +131,22 @@
       .petal.ghosty { border-style: dashed; color: var(--muted); pointer-events: none; background: #141a3088; box-shadow: none; }
       .chip { position: absolute; z-index: 20; padding: 3px 8px; border-radius: 999px; background: #141a30f2; border: 1px solid var(--line); font: 10px var(--mono); color: var(--ink); pointer-events: none; }
 
-      /* C · Expanded face */
-      .bloom-expand { position: absolute; z-index: 20; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 7px; padding: 26px 44px; background: #171d34; border: 3px solid var(--cat); cursor: grab; clip-path: polygon(50% 0%, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%); filter: drop-shadow(0 18px 38px #050817cc); }
+      /* C · Expanded face — the winner. The compact face's own UI, lifted
+         toward the camera; adds only Upgrade + minimal necessary info. */
+      .bloom-expand { position: absolute; z-index: 20; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; padding: 24px 38px; background: #171d34; border: 3px solid var(--cat); border-radius: 4px; cursor: grab; clip-path: polygon(50% 0%, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%); transform-origin: 50% 92%; animation: bloom-lift .18s ease-out; }
       .bloom-expand:active { cursor: grabbing; }
-      .bloom-expand .head { display: flex; align-items: center; gap: 8px; }
-      .bloom-expand .head strong { font-size: 15px; }
-      .bloom-expand .head .close { padding: 2px 6px; }
-      .bloom-expand .contrib { font: 12px var(--mono); color: var(--charge); }
-      .bloom-expand .note-line { font: 10px var(--mono); color: var(--muted); }
-      .bloom-expand .panel-actions { width: 100%; }
-      .bloom-expand .drag-hint { margin: 0; font-size: 10px; }
-      .narrow .bloom-expand { padding: 20px 34px; gap: 5px; }
-      .narrow .bloom-expand .drag-hint { display: none; }
+      .bloom-expand .lv { font: 13px var(--mono); color: var(--ink); }
+      .bloom-expand .glyph { stroke: var(--cat); stroke-width: 2; fill: none; }
+      .bloom-expand .nm { font: 12px var(--mono); letter-spacing: .05em; }
+      .bloom-expand .cell-note { font: 11px var(--mono); color: var(--muted); }
+      .bloom-expand .contrib { font: 11px var(--mono); color: var(--charge); margin-top: 4px; }
+      .bloom-expand .primary { display: grid; place-items: center; margin-top: 5px; padding: 6px 16px; font-size: 12px; }
+      .bloom-expand .primary small { display: block; font-size: 10px; color: #b9b6ff; }
+      @keyframes bloom-lift {
+        from { transform: translateY(16px) scale(.68); filter: drop-shadow(0 4px 8px #05081766) brightness(.88); }
+        to   { transform: translateY(-8px) scale(1); filter: drop-shadow(0 24px 46px #050817e6); }
+      }
+      .narrow .bloom-expand { padding: 18px 30px; gap: 4px; }
 
       @media (max-width: 860px) {
         .console { gap: 9px; padding: 0 10px; }
@@ -182,7 +189,7 @@
       const VARIANTS = [
         { key: "A", name: "Card bloom", purpose: "Anchored card with arrow; flips above/below and clamps at edges." },
         { key: "B", name: "Petal ring", purpose: "Controls bloom as petals around the hex; folds inward at edges." },
-        { key: "C", name: "Expanded face", purpose: "The hex itself expands; controls live inside the enlarged face." },
+        { key: "C", name: "Expanded face ★", purpose: "WINNER — the face lifts off the grid toward the camera; keeps its own UI, adds only Upgrade + minimal info." },
       ];
       const NAMES = ["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
       const mod12 = (x) => ((x % 12) + 12) % 12;
@@ -358,13 +365,14 @@
         box.className = "bloom-expand";
         box.dataset.module = m.id;
         box.style.setProperty("--cat", colors[m.kind]);
-        box.innerHTML = `<div class="head"><span class="eyebrow">${m.kind}</span><strong>${m.name}</strong><button class="close" data-action="close" aria-label="Dismiss">×</button></div>
-          <div class="contrib">${contrib(m)} · L${m.level}</div>
-          <div class="note-line">plays ${c.name}${c.oct} · this board's only ${c.name}${c.oct}</div>
-          <div class="panel-actions"><button class="primary" data-action="upgrade">Upgrade · ${UPGRADE_COST} ν</button><button data-action="move">Move</button><button class="danger" data-action="return">Return</button></div>
-          <p class="drag-hint">hold the face &amp; drag — always live</p>`;
+        box.innerHTML = `<div class="lv">L${m.level}</div>
+          <svg class="glyph" width="46" height="40" viewBox="-18 -15 36 30"><g>${moduleGlyph(m)}</g></svg>
+          <div class="nm">${m.short}</div>
+          <div class="cell-note">${c.name}${c.oct}</div>
+          <div class="contrib">${contrib(m)}</div>
+          <button class="primary" data-action="upgrade">Upgrade<small>${UPGRADE_COST} ν</small></button>`;
         host.appendChild(box);
-        const w = p.w * 2.5, h = p.h * 2.35;
+        const w = Math.max(150, p.w * 2.6), h = Math.max(170, p.h * 2.45);
         const dockH = $("inventory").offsetHeight + 20;
         let left = Math.max(8, Math.min(wrap.width - w - 8, p.cx - w / 2));
         let top = Math.max(40, Math.min(wrap.height - dockH - h - 8, p.cy - h / 2));
