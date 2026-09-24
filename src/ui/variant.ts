@@ -10,7 +10,7 @@ export type PrototypeVariant = "a" | "b" | "c" | "d" | "e";
 
 // Single source of truth for which keys the prototype accepts — main.ts
 // gates body[data-variant] through this, so a new variant lands here only.
-export function isPrototypeVariant(v: string | null): v is PrototypeVariant {
+export function isPrototypeVariant(v: string | null | undefined): v is PrototypeVariant {
   return v === "a" || v === "b" || v === "c" || v === "d" || v === "e";
 }
 
