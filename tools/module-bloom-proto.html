@@ -133,7 +133,7 @@
 
       /* C · Expanded face — the winner. The compact face's own UI, lifted
          toward the camera; adds only Upgrade + minimal necessary info. */
-      .bloom-expand { position: absolute; z-index: 20; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; padding: 24px 38px; background: #171d34; border: 3px solid var(--cat); border-radius: 4px; cursor: grab; clip-path: polygon(50% 0%, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%); transform-origin: 50% 92%; animation: bloom-lift .18s ease-out; }
+      .bloom-expand { position: absolute; z-index: 20; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; padding: 24px 38px; background: #171d34; border: 3px solid var(--cat); border-radius: 4px; cursor: grab; clip-path: polygon(50% 0%, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%); transform-origin: 50% 92%; animation: bloom-lift .18s ease-out forwards; }
       .bloom-expand:active { cursor: grabbing; }
       .bloom-expand .lv { font: 13px var(--mono); color: var(--ink); }
       .bloom-expand .glyph { stroke: var(--cat); stroke-width: 2; fill: none; }
@@ -143,7 +143,7 @@
       .bloom-expand .primary { display: grid; place-items: center; margin-top: 5px; padding: 6px 16px; font-size: 12px; }
       .bloom-expand .primary small { display: block; font-size: 10px; color: #b9b6ff; }
       @keyframes bloom-lift {
-        from { transform: translateY(16px) scale(.68); filter: drop-shadow(0 4px 8px #05081766) brightness(.88); }
+        from { transform: translateY(0) scale(.55); filter: drop-shadow(0 4px 8px #05081766) brightness(.88); }
         to   { transform: translateY(-8px) scale(1); filter: drop-shadow(0 24px 46px #050817e6); }
       }
       .narrow .bloom-expand { padding: 18px 30px; gap: 4px; }
@@ -215,8 +215,11 @@
       const colors = { synth: "var(--synth)", generator: "var(--generator)", infusor: "var(--infusor)", forge: "var(--forge)" };
       const state = { selected: null, placing: null, dragging: null, over: null, modules: MODULES };
       const $ = (id) => document.getElementById(id);
+      const byId = (id) => state.modules.find(m => m.id === id) || null;
       const occupant = (k) => state.modules.find(m => m.pos === k);
-      const selected = () => state.modules.find(m => m.id === state.selected) || null;
+      const selected = () => byId(state.selected);
+      const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+      const cellMark = (k, dragId) => occupant(k) && occupant(k).id !== dragId ? "swap" : "target";
       const narrow = () => innerWidth <= 900;
       const contrib = (m) => "+" + (m.level * 1.6).toFixed(1) + " ν/s";
       const UPGRADE_COST = 180;
@@ -264,7 +267,7 @@
         let html = "";
         for (const c of CELLS) {
           let cls = "cell";
-          if (state.over === c.key) cls += occupant(c.key) && occupant(c.key).id !== state.dragging ? " swap" : " target";
+          if (state.over === c.key) cls += " " + cellMark(c.key, state.dragging);
           else if (dimAll) cls += " dim";
           html += `<g data-cell="${c.key}"><polygon data-cell-poly="${c.key}" class="${cls}" points="${hexPts(c.x, c.y, SIZE)}"/><text class="pitch-label" x="${c.x}" y="${c.y - 2}">${c.name}</text><text class="oct-label" x="${c.x + SIZE * 0.6}" y="${c.y + SIZE * 0.62}">${c.oct}</text></g>`;
         }
@@ -282,7 +285,7 @@
         $("inventory").classList.toggle("drop", state.over === "inventory");
         buildBloom(v);
         $("mode-banner").textContent = state.placing
-          ? "Choose a cell for " + state.modules.find(m => m.id === state.placing).name + " · occupied swaps · Esc cancels"
+          ? "Choose a cell for " + byId(state.placing).name + " · occupied swaps · Esc cancels"
           : state.dragging ? "Drop on a cell to move or swap · drop on inventory to retrieve"
           : "Upgrade mode · drag any module · occupied drops swap immediately";
         $("state").textContent = JSON.stringify({
@@ -294,7 +297,7 @@
         const host = $("bloom-host");
         host.innerHTML = "";
         const m = selected();
-        if (!m || !m.pos) return;
+        if (!m || !m.pos || state.dragging) return;
         const c = byKey.get(m.pos);
         const p = svgPoint(c);
         if (v.key === "A") buildCard(host, m, c, p);
@@ -323,10 +326,10 @@
         const flip = belowSpace < need && aboveSpace > belowSpace ? "above" : "below";
         card.classList.add(flip);
         let left = p.cx - cw / 2, top = flip === "below" ? p.cy + p.h / 2 + 12 : p.cy - p.h / 2 - ch - 12;
-        left = Math.max(8, Math.min(wrap.width - cw - 8, left));
-        top = Math.max(6, Math.min(wrap.height - ch - 80, top));
+        left = clamp(left, 8, wrap.width - cw - 8);
+        top = clamp(top, 6, wrap.height - ch - 80);
         card.style.left = left + "px"; card.style.top = top + "px";
-        const arrowX = Math.max(16, Math.min(cw - 16, p.cx - left));
+        const arrowX = clamp(p.cx - left, 16, cw - 16);
         card.style.setProperty("--ax", arrowX + "px");
         bindActions(card); stopAll(card);
       }
@@ -348,8 +351,8 @@
           let x = p.cx + r * Math.cos(rad), y = p.cy + r * Math.sin(rad);
           if (x < pad || x > wrap.width - pad) x = p.cx - (x - p.cx);
           if (y < pad + 14 || y > wrap.height - dockH - pad) y = p.cy - (y - p.cy);
-          x = Math.max(pad, Math.min(wrap.width - pad, x));
-          y = Math.max(pad - 10, Math.min(wrap.height - dockH - pad, y));
+          x = clamp(x, pad, wrap.width - pad);
+          y = clamp(y, pad - 10, wrap.height - dockH - pad);
           const el = document.createElement(it.chip ? "div" : "button");
           if (it.chip) el.className = "chip " + it.cls;
           else { el.className = "petal " + it.cls; el.dataset.action = it.action; el.innerHTML = it.label; }
@@ -372,10 +375,11 @@
           <div class="contrib">${contrib(m)}</div>
           <button class="primary" data-action="upgrade">Upgrade<small>${UPGRADE_COST} ν</small></button>`;
         host.appendChild(box);
-        const w = Math.max(150, p.w * 2.6), h = Math.max(170, p.h * 2.45);
         const dockH = $("inventory").offsetHeight + 20;
-        let left = Math.max(8, Math.min(wrap.width - w - 8, p.cx - w / 2));
-        let top = Math.max(40, Math.min(wrap.height - dockH - h - 8, p.cy - h / 2));
+        const maxW = wrap.width - 16, maxH = wrap.height - dockH - 56;
+        const w = Math.min(maxW, Math.max(150, p.w * 2.6)), h = Math.min(maxH, Math.max(170, p.h * 2.45));
+        let left = clamp(p.cx - w / 2, 8, wrap.width - w - 8);
+        let top = clamp(p.cy - h / 2, 40, wrap.height - dockH - h - 8);
         box.style.left = left + "px"; box.style.top = top + "px";
         box.style.width = w + "px"; box.style.height = h + "px";
         box.addEventListener("pointerdown", e => { if (e.target.closest("button")) return; startDrag(e, m.id); });
@@ -409,7 +413,7 @@
         });
       }
       function place(id, dest) {
-        const m = state.modules.find(m => m.id === id), other = occupant(dest);
+        const m = byId(id), other = occupant(dest);
         if (!m) return;
         const old = m.pos;
         if (other && other.id !== id) { other.pos = old; m.pos = dest; say(m.name + " swapped with " + other.name + "."); }
@@ -417,7 +421,7 @@
         state.selected = id; state.placing = null; state.over = null; render();
       }
       function retrieve(id) {
-        const m = state.modules.find(m => m.id === id); if (!m) return;
+        const m = byId(id); if (!m) return;
         m.pos = null; state.selected = null; state.placing = null;
         say(m.name + " returned to inventory."); render();
       }
@@ -427,7 +431,7 @@
         const move = ev => {
           if (!active && Math.hypot(ev.clientX - start.x, ev.clientY - start.y) > 6) {
             active = true; state.dragging = id; state.selected = id; state.placing = null;
-            const m = state.modules.find(m => m.id === id);
+            const m = byId(id);
             ghost = document.createElement("div"); ghost.className = "ghost";
             ghost.style.setProperty("--cat", colors[m.kind]); ghost.textContent = m.short;
             document.body.appendChild(ghost);
@@ -436,9 +440,10 @@
           if (!active) return;
           ghost.style.left = ev.clientX + "px"; ghost.style.top = ev.clientY + "px";
           const below = document.elementFromPoint(ev.clientX, ev.clientY);
-          const cell = below?.closest?.("[data-cell]");
+          const mod = below?.closest?.("[data-module]");
+          const cell = below?.closest?.("[data-cell]")?.dataset.cell || (mod ? byId(mod.dataset.module)?.pos : null);
           const inv = below?.closest?.("#inventory");
-          const over = cell?.dataset.cell || (inv ? "inventory" : null);
+          const over = cell || (inv ? "inventory" : null);
           if (over !== state.over) { state.over = over; renderTargetOnly(); }
         };
         const up = () => {
@@ -460,7 +465,7 @@
         document.querySelectorAll("[data-cell-poly]").forEach(poly => {
           const k = poly.dataset.cellPoly;
           poly.classList.remove("target", "swap");
-          if (state.over === k) poly.classList.add(occupant(k) && occupant(k).id !== dragging ? "swap" : "target");
+          if (state.over === k) poly.classList.add(cellMark(k, dragging));
         });
         $("inventory").classList.toggle("drop", state.over === "inventory");
       }
@@ -469,7 +474,11 @@
         const t = $("toast"); t.textContent = text; t.classList.add("show");
         clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
       }
-      $("board").onclick = e => { if (e.target === $("board") && state.selected) { state.selected = null; render(); } };
+      document.addEventListener("click", e => {
+        if (!state.selected) return;
+        if (e.target.closest("[data-module], [data-cell], #bloom-host, #inventory, button, summary")) return;
+        state.selected = null; state.placing = null; render();
+      });
       $("prev").onclick = () => setVariant(-1);
       $("next").onclick = () => setVariant(1);
       addEventListener("keydown", e => {
