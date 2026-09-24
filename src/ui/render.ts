@@ -17,7 +17,7 @@ import {
 } from "../engine/records";
 import { poolOutstanding } from "../engine/trust";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
-import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
+import { ACHIEVEMENTS, achievementBoostOf, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
 import { isCarrier } from "../engine/state";
 import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NoteEntry, RateSnapshot } from "../engine/types";
 import type { App, EnterKind } from "./app";
@@ -28,8 +28,8 @@ import { chordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatDate, formatInt, formatNumber, formatPracticeMinutes, practiceCountdown, secondsToMinutes } from "./format";
-import { renderStatusMonitor } from "./monitor";
-import { prototypeVariant, ledgerHtml, updateLedgerLive, featsChipHtml, unlockedCount, FEATS_SVG, TOOL_ICONS } from "./variant";
+import { renderStatusMonitor, formulaTooltipHtml, updateFormulaLive } from "./monitor";
+import { prototypeVariant, ledgerHtml, ledgerCellsHtml, updateLedgerLive, featsChipHtml, unlockedCount, FEATS_SVG, TOOL_ICONS } from "./variant";
 
 const SPACING = 65;
 const DRAG_THRESHOLD_PX = 6;
@@ -429,16 +429,26 @@ function renderAchievementsModal(app: App, content: HTMLElement): void {
 // production ledger — stock, rate, and session as one instrument — and
 // retires the trophy from the console (feats join the board action row).
 // Variants B and C retire the readout end entirely; production reads from
-// the monitor footer (B) or the board ledger strip (C).
+// the monitor footer (B) or the board ledger strip (C). Variant D keeps
+// A's placement and hangs the live formula off the ledger as a tooltip.
 function renderConsoleReadout(app: App): void {
   const { state } = app;
   const variant = prototypeVariant();
   if (variant === "b" || variant === "c") return;
   const strip = byId("console-status");
   if (strip) {
-    if (strip.childElementCount === 0) {
+    // D's tooltip structure rebuilds when the ach term joins the equation
+    // (first feat) or the infusor leg joins it (first adjacent uplift).
+    const snapshot = currentSnapshot(state);
+    const achieving = achievementBoostOf(state) > 1;
+    const infused = snapshot.infusors > 0;
+    const structKey = `${variant ?? "base"}:${achieving ? "ach" : "plain"}:${infused ? "inf" : "plain"}`;
+    if (strip.dataset.protoKey !== structKey) {
+      strip.dataset.protoKey = structKey;
       if (variant === "a") {
         strip.innerHTML = ledgerHtml();
+      } else if (variant === "d") {
+        strip.innerHTML = `<div class="prod-ledger prod-ledger-formula" tabindex="0" role="group" aria-label="Production — focus for the formula breakdown">${ledgerCellsHtml()}<span class="monitor-hint ledger-hint" aria-hidden="true">ⓘ</span>${formulaTooltipHtml(achieving, infused)}</div>`;
       } else {
         strip.innerHTML = `
           <div class="console-slot production-slot">
@@ -451,8 +461,9 @@ function renderConsoleReadout(app: App): void {
         byId("trophy-button")?.addEventListener("click", () => app.openModal("achievements"));
       }
     }
-    if (variant === "a") {
-      updateLedgerLive(strip, state, currentSnapshot(state).rate);
+    if (variant === "a" || variant === "d") {
+      updateLedgerLive(strip, state, snapshot.rate);
+      if (variant === "d") updateFormulaLive(strip, snapshot);
       return;
     }
     // One production readout (§7: rates per-second everywhere): the ν/s
@@ -468,7 +479,7 @@ function renderConsoleReadout(app: App): void {
     if (sessionNode && sessionNode.textContent !== sessionText) sessionNode.textContent = sessionText;
   }
   const nous = byId("nous-balance");
-  if (nous && variant !== "a") {
+  if (nous && variant !== "a" && variant !== "d") {
     if (nous.childElementCount === 0) {
       nous.innerHTML = `<strong class="mono" data-live="nous"></strong>`;
     }
@@ -522,7 +533,7 @@ function renderTools(app: App): void {
     // reads as a different kind of thing. A wears icon + label; B and C
     // wear icons alone. Feats joins the row (A, B) where the legend sat;
     // C's dock stays five actions and feats reads from the board ledger.
-    if (variant === "a") {
+    if (variant === "a" || variant === "d") {
       host.innerHTML = `
         <button class="small" id="tool-catalog" ${upgrade ? "" : "disabled"} title="${upgrade ? "The catalog: starter-shelf offers and board cells" : "Purchases happen between sessions"}">${TOOL_ICONS.catalog}<span>Catalog</span></button>
         <button class="small tool-forge" id="tool-forge" ${forgeReady ? "" : "disabled"} title="">${TOOL_ICONS.forge}<span>Forge${forgeCount > 0 ? ` · ${forgeCount}` : ""}</span><i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i></button>
@@ -1388,11 +1399,11 @@ function appPanelBody(app: App, panel: FocusApp): string {
     }
     // PROTOTYPE (issue #119): de-duplicating planned time. Every variant
     // gives the console clock the live session — the popover no longer
-    // repeats it. Variants differ on where PLANNING lives: A plans at the
-    // enter prompt; B and C plan here, in the Time app.
+    // repeats it. Variants differ on where PLANNING lives: A and D plan at
+    // the enter prompt; B and C plan here, in the Time app.
     const variant = prototypeVariant();
     if (upgrade) {
-      if (variant === "a") {
+      if (variant === "a" || variant === "d") {
         return `<section class="focus-controls">
           <p class="small muted">Planning happens at Enter flow — the armed plan shows in the console's clock block.</p>
           <button class="quiet small time-history" id="time-history">History</button>

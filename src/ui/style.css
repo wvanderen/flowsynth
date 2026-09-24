@@ -1275,28 +1275,29 @@ body[data-variant="c"] .console-readout { display: none; }
 .feats-chip svg { width: 14px; height: 14px; }
 .feats-chip:hover { color: var(--ink); }
 
-/* ── A · Ledger console ────────────────────────────────────────────────
+/* ── A · Ledger console / D · Header ledger + floating horizon ─────────
    The ledger replaces the scattered readout slots; feats move to the
-   board's standardized action row. */
-body[data-variant="a"] #nous-balance { display: none; }
-body[data-variant="a"] .console-readout { gap: 12px; }
-body[data-variant="a"] .board-tools { align-items: center; }
-body[data-variant="a"] .board-tools button {
+   board's standardized action row. D shares this anatomy and adds the
+   formula tooltip and the floating accumulator (its own block below). */
+body:is([data-variant="a"], [data-variant="d"]) #nous-balance { display: none; }
+body:is([data-variant="a"], [data-variant="d"]) .console-readout { gap: 12px; }
+body:is([data-variant="a"], [data-variant="d"]) .board-tools { align-items: center; }
+body:is([data-variant="a"], [data-variant="d"]) .board-tools button {
   display: inline-flex;
   align-items: center;
   gap: 7px;
   padding: 7px 12px;
   border-radius: 7px;
 }
-body[data-variant="a"] .board-tools button svg { width: 14px; height: 14px; }
-body[data-variant="a"] .board-tools button span { font-size: 12px; }
+body:is([data-variant="a"], [data-variant="d"]) .board-tools button svg { width: 14px; height: 14px; }
+body:is([data-variant="a"], [data-variant="d"]) .board-tools button span { font-size: 12px; }
 .tool-sep { width: 1px; align-self: stretch; margin: 4px 4px; background: var(--line); }
 
 /* The pip rides the button's bottom edge in A's anatomy, so every action
    keeps the same silhouette. The base forge button is a column flex — A
    flattens it back to the row the other actions wear. */
-body[data-variant="a"] .tool-forge { position: relative; flex-direction: row; align-items: center; padding-bottom: 7px; }
-body[data-variant="a"] .tool-forge .forge-pip { position: absolute; left: 10px; right: 10px; bottom: 4px; }
+body:is([data-variant="a"], [data-variant="d"]) .tool-forge { position: relative; flex-direction: row; align-items: center; padding-bottom: 7px; }
+body:is([data-variant="a"], [data-variant="d"]) .tool-forge .forge-pip { position: absolute; left: 10px; right: 10px; bottom: 4px; }
 
 /* ── Icon-only action buttons (B's row, C's dock) ────────────────────── */
 .tool-icon {
@@ -1360,6 +1361,47 @@ body[data-variant="c"] .console-clock.clock-opens-time {
 }
 body[data-variant="c"] .console-clock.clock-opens-time:hover { border-color: var(--line); background: var(--panel); }
 
+/* ── D · Header ledger + floating horizon ──────────────────────────────
+   All production info lives in the console: the ledger with the live
+   formula disclosed on hover or focus, and the Arete accumulator detached
+   from the monitor to float free over the board's bottom edge. */
+body[data-variant="d"] .prod-ledger-formula { position: relative; cursor: help; }
+.ledger-hint { position: absolute; top: 50%; right: 7px; transform: translateY(-50%); }
+body[data-variant="d"] .prod-ledger-formula:hover .ledger-hint,
+body[data-variant="d"] .prod-ledger-formula:focus .ledger-hint,
+body[data-variant="d"] .prod-ledger-formula:focus-within .ledger-hint { color: var(--nous); border-color: var(--nous); }
+/* The tooltip drops below the header, unlike the monitor chip's. */
+body[data-variant="d"] .prod-ledger-formula .monitor-breakdown { bottom: auto; top: calc(100% + 12px); }
+body[data-variant="d"] .prod-ledger-formula:hover .monitor-breakdown,
+body[data-variant="d"] .prod-ledger-formula:focus .monitor-breakdown,
+body[data-variant="d"] .prod-ledger-formula:focus-within .monitor-breakdown { display: block; }
+
+/* The floating accumulator: the rail, beat head, graduations, prestige,
+   and secondaries in one pill pinned to the board's bottom edge — free of
+   the monitor chrome and of any flow it used to occupy. */
+body[data-variant="d"] .board-panel { position: relative; }
+body[data-variant="d"] .board-footer.status-monitor {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  width: min(620px, calc(100% - 56px));
+  border-top: 0;
+  padding: 0;
+  z-index: 30;
+}
+.monitor-float {
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 26px 20px 12px;
+  box-shadow: 0 14px 34px var(--shadow);
+}
+/* Tighter than the base rail: the pill is a compact instrument, but still
+   clears the beat head above the rail and the graduation labels below it. */
+body[data-variant="d"] .monitor-under { margin-top: 24px; gap: 12px; }
+
 /* ── Responsive parity: container mirrors of the viewport breakpoints ──
    The half preview (and any real narrow window, where these fire at the
    same widths) gets exactly the base layout's responsive behavior. */
@@ -1388,11 +1430,11 @@ body[data-variant="c"] .console-clock.clock-opens-time:hover { border-color: var
 }
 @container app (max-width: 900px) {
   body[data-variant="b"] .monitor-top { flex-wrap: wrap; }
-  body[data-variant="a"] .tool-sep { display: none; }
+  body:is([data-variant="a"], [data-variant="d"]) .tool-sep { display: none; }
 }
 @container app (max-width: 560px) {
-  body[data-variant="a"] .board-tools button span { display: none; }
-  body[data-variant="a"] .board-tools button { padding: 7px 9px; }
+  body:is([data-variant="a"], [data-variant="d"]) .board-tools button span { display: none; }
+  body:is([data-variant="a"], [data-variant="d"]) .board-tools button { padding: 7px 9px; }
 }
 
 /* ── The floating switcher bar (never part of the design) ────────────── */

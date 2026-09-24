@@ -74,9 +74,10 @@ function ampBreakdownHtml(infused: boolean): string {
     .join("");
 }
 
-function formulaChipHtml(boosted: boolean, infused: boolean): string {
+// The formula's live innards — equation plus breakdown — shared by the
+// monitor chip and variant D's header-ledger tooltip.
+function formulaLiveHtml(boosted: boolean, infused: boolean): string {
   return `
-    <div class="monitor-chip monitor-formula" tabindex="0" aria-label="Live nous formula — focus for the breakdown">
       <span class="monitor-equation mono">
         <span class="op">(</span>${ampEquationHtml(infused)}
         <span class="op">)</span>
@@ -85,15 +86,28 @@ function formulaChipHtml(boosted: boolean, infused: boolean): string {
         ${boosted ? `<span class="op">×</span><span class="monitor-term" title="Achievements — each feat adds into the boost"><span class="term-glyph">ach</span><span data-live="m-ach"></span></span>` : ""}
         <span class="op">=</span><strong data-live="m-rate"></strong>
       </span>
-      <span class="monitor-hint" aria-hidden="true">ⓘ</span>
       <div class="monitor-breakdown" role="tooltip">
         ${ampBreakdownHtml(infused)}
         <div class="monitor-breakdown-row"><span class="bk-name">Chords</span><span class="mono" data-live="b-chords"></span><span class="bk-note" data-live="b-chord-note"></span></div>
         <div class="monitor-breakdown-row"><span class="bk-name">Empowerment</span><span class="mono" data-live="b-emp"></span><span class="bk-note">charge uplift on charged modules</span></div>
         <div class="monitor-breakdown-row"><span class="bk-name">Achievements</span><span class="mono" data-live="b-ach"></span><span class="bk-note">each feat adds into the boost</span></div>
         <div class="monitor-breakdown-row total"><span class="bk-name">Rate</span><span class="mono" data-live="b-rate"></span><span class="bk-note">composite × empowerment × achievements</span></div>
-      </div>
+      </div>`;
+}
+
+function formulaChipHtml(boosted: boolean, infused: boolean): string {
+  return `
+    <div class="monitor-chip monitor-formula" tabindex="0" aria-label="Live nous formula — focus for the breakdown">
+      ${formulaLiveHtml(boosted, infused)}
+      <span class="monitor-hint" aria-hidden="true">ⓘ</span>
     </div>`;
+}
+
+// PROTOTYPE (issue #119, variant D): the same innards as the monitor chip,
+// disclosed from the header ledger instead. Rebuilt when the ach term joins
+// the equation (first feat) or the infusor leg joins it (first uplift).
+export function formulaTooltipHtml(boosted: boolean, infused: boolean): string {
+  return formulaLiveHtml(boosted, infused);
 }
 
 // The Arete accumulator: the rail with its fill, inert decade graduations,
@@ -123,11 +137,16 @@ export function renderStatusMonitor(app: App): void {
   const host = document.getElementById("status-monitor");
   if (!host) return;
   const { state } = app;
+  const variant = prototypeVariant();
   // PROTOTYPE (issue #119, variant B): production moves down here, next to
   // the formula that produces it — nous, rate, and session as the ledger,
   // the feats chip riding the row where the ach term lives. The console
   // slims to pure control.
-  const ledgerOnMonitor = prototypeVariant() === "b";
+  const ledgerOnMonitor = variant === "b";
+  // PROTOTYPE (issue #119, variant D): the monitor dissolves — the formula
+  // lives in the header ledger's tooltip, and the accumulator alone floats
+  // free over the board's bottom edge.
+  const floating = variant === "d";
   const past = state.totalEarned >= ARETE_HORIZON;
   const snapshot = computeRates(state, true);
   // Structural key: the era flip, the prestige acknowledgment, the
@@ -138,10 +157,12 @@ export function renderStatusMonitor(app: App): void {
   const achieving = achievementBoostOf(state) > 1;
   const infused = snapshot.infusors > 0;
   const feats = ledgerOnMonitor ? unlockedCount(state) : 0;
-  const key = `${ledgerOnMonitor ? "b" : "base"}:${past ? "past" : "under"}:${state.horizonAcknowledged ? "acked" : "open"}:${achieving ? "ach" : "plain"}:${infused ? "inf" : "plain"}:${feats}`;
+  const key = `${floating ? "d" : ledgerOnMonitor ? "b" : "base"}:${past ? "past" : "under"}:${state.horizonAcknowledged ? "acked" : "open"}:${achieving ? "ach" : "plain"}:${infused ? "inf" : "plain"}:${feats}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
-    host.innerHTML = `
+    host.innerHTML = floating
+      ? `<div class="monitor-float">${accumulatorHtml(state, past)}</div>`
+      : `
       <div class="monitor-top">
         ${ledgerOnMonitor ? ledgerHtml() : ""}
         ${formulaChipHtml(achieving, infused)}
@@ -161,17 +182,14 @@ function byId(id: string): HTMLElement | null {
   return document.getElementById(id);
 }
 
-function updateMonitorLive(app: App, past: boolean, snapshot: RateSnapshot): void {
-  const host = byId("status-monitor");
-  if (!host) return;
-  const { state } = app;
+// The formula chip and variant D's header tooltip: (carrier + harmonics
+// [+ infusors]) × chords × empowerment × achievements → rate. Scope is
+// whichever host carries the live nodes — the monitor or the console strip.
+export function updateFormulaLive(scope: ParentNode, snapshot: RateSnapshot): void {
   const set = (id: string, text: string) => {
-    const node = host.querySelector(`[data-live="${id}"]`);
+    const node = scope.querySelector(`[data-live="${id}"]`);
     if (node && node.textContent !== text) node.textContent = text;
   };
-
-  // The formula chip: (carrier + harmonics [+ infusors]) × chords ×
-  // empowerment × achievements → rate.
   set("m-carrier", formatNumber(snapshot.carrier));
   set("m-harmonics", formatNumber(snapshot.harmonics));
   set("m-inf", formatNumber(snapshot.infusors));
@@ -188,6 +206,18 @@ function updateMonitorLive(app: App, past: boolean, snapshot: RateSnapshot): voi
   // The single legible achievements line (§6.3): "Achievements +26%".
   set("b-ach", `+${Math.round((snapshot.achievementBoost - 1) * 100)}%`);
   set("b-rate", `${formatNumber(snapshot.rate)} ν/s`);
+}
+
+function updateMonitorLive(app: App, past: boolean, snapshot: RateSnapshot): void {
+  const host = byId("status-monitor");
+  if (!host) return;
+  const { state } = app;
+  const set = (id: string, text: string) => {
+    const node = host.querySelector(`[data-live="${id}"]`);
+    if (node && node.textContent !== text) node.textContent = text;
+  };
+
+  updateFormulaLive(host, snapshot);
 
   // The accumulator: log-scale fill, riding beat head, secondaries.
   const pos = accumulatorFill(state.totalEarned);

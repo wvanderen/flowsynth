@@ -6,11 +6,20 @@ import { ACHIEVEMENTS } from "../engine/achievements";
 import type { GameState } from "../engine/types";
 import { formatInt, formatNumber } from "./format";
 
-export type PrototypeVariant = "a" | "b" | "c";
+export type PrototypeVariant = "a" | "b" | "c" | "d";
 
 export function prototypeVariant(): PrototypeVariant | null {
   const v = document.body.dataset.variant;
-  return v === "a" || v === "b" || v === "c" ? v : null;
+  return v === "a" || v === "b" || v === "c" || v === "d" ? v : null;
+}
+
+// The ledger's three cells, shared by every placement (console in A and D,
+// monitor footer in B, board strip in C).
+export function ledgerCellsHtml(): string {
+  return `
+    <div class="prod-cell"><span class="prod-label">Nous</span><strong class="mono" data-live="nous"></strong></div>
+    <div class="prod-cell"><span class="prod-label">Rate</span><strong class="mono" data-live="rate"></strong></div>
+    <div class="prod-cell"><span class="prod-label">Session</span><strong class="mono" data-live="session"></strong></div>`;
 }
 
 // The production ledger: nous, rate, and session as three labeled cells of
@@ -18,11 +27,7 @@ export function prototypeVariant(): PrototypeVariant | null {
 // shares, placed differently (console in A, monitor footer in B, board
 // strip in C).
 export function ledgerHtml(): string {
-  return `<div class="prod-ledger" role="group" aria-label="Production">
-    <div class="prod-cell"><span class="prod-label">Nous</span><strong class="mono" data-live="nous"></strong></div>
-    <div class="prod-cell"><span class="prod-label">Rate</span><strong class="mono" data-live="rate"></strong></div>
-    <div class="prod-cell"><span class="prod-label">Session</span><strong class="mono" data-live="session"></strong></div>
-  </div>`;
+  return `<div class="prod-ledger" role="group" aria-label="Production">${ledgerCellsHtml()}</div>`;
 }
 
 export function unlockedCount(state: GameState): number {
