@@ -1363,18 +1363,47 @@ body:is([data-variant="c"], [data-variant="e"]) .console-clock.clock-opens-time:
 
 /* ── D · Header ledger + floating horizon ──────────────────────────────
    All production info lives in the console: the ledger with the live
-   formula disclosed on hover or focus, and the Arete accumulator detached
-   from the monitor to float free over the board's bottom edge. */
-body:is([data-variant="d"], [data-variant="e"]) .prod-ledger-formula { position: relative; cursor: help; overflow: visible; }
-.ledger-hint { position: absolute; top: 50%; right: 7px; transform: translateY(-50%); }
-body:is([data-variant="d"], [data-variant="e"]) .prod-ledger-formula:hover .ledger-hint,
-body:is([data-variant="d"], [data-variant="e"]) .prod-ledger-formula:focus .ledger-hint,
-body:is([data-variant="d"], [data-variant="e"]) .prod-ledger-formula:focus-within .ledger-hint { color: var(--nous); border-color: var(--nous); }
-/* The tooltip drops below the header, unlike the monitor chip's. */
-body:is([data-variant="d"], [data-variant="e"]) .prod-ledger-formula .monitor-breakdown { bottom: auto; top: calc(100% + 12px); }
-body:is([data-variant="d"], [data-variant="e"]) .prod-ledger-formula:hover .monitor-breakdown,
-body:is([data-variant="d"], [data-variant="e"]) .prod-ledger-formula:focus .monitor-breakdown,
-body:is([data-variant="d"], [data-variant="e"]) .prod-ledger-formula:focus-within .monitor-breakdown { display: block; }
+   formula disclosed from the Rate cell, and the Arete accumulator detached
+   from the monitor to float free over the board's bottom edge.
+   E · Board ledger + tooltip formula + floating horizon shares the same
+   disclosure anatomy, docked above the board. */
+body:is([data-variant="d"], [data-variant="e"]) .prod-ledger-formula { overflow: visible; }
+/* The disclosure trigger is the Rate cell alone — the formula lives
+   nowhere else on screen. */
+body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate { position: relative; cursor: help; }
+body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate:focus-visible { outline: 2px solid var(--nous); outline-offset: -2px; }
+.ledger-hint { position: absolute; top: 5px; right: 6px; }
+body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate:hover .ledger-hint,
+body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate:focus .ledger-hint,
+body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate.formula-open .ledger-hint { color: var(--nous); border-color: var(--nous); }
+/* The tooltip drops below the ledger row, unlike the monitor chip's. */
+body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate .monitor-breakdown { bottom: auto; top: calc(100% + 12px); left: 0; }
+body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate:hover .monitor-breakdown,
+body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate:focus .monitor-breakdown,
+body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate.formula-open .monitor-breakdown { display: block; }
+/* Tap pins the breakdown open; on narrow widths it presents as a modal
+   sheet over a scrim (touch has no hover). */
+.formula-scrim { display: none; }
+@container app (max-width: 760px) {
+  body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate:hover .monitor-breakdown { display: none; }
+  body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate.formula-open .monitor-breakdown {
+    display: block;
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    z-index: 100;
+    box-shadow: 0 18px 48px var(--shadow);
+  }
+  .formula-scrim.formula-open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: color-mix(in srgb, var(--shadow) 60%, transparent);
+  }
+}
 
 /* The floating accumulator: the rail, beat head, graduations, prestige,
    and secondaries in one pill pinned to the board's bottom edge — free of

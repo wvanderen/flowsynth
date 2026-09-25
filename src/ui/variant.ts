@@ -36,6 +36,19 @@ export function ledgerHtml(): string {
   return `<div class="prod-ledger" role="group" aria-label="Production">${ledgerCellsHtml()}</div>`;
 }
 
+// D and E: the ledger with the formula disclosure riding the Rate cell —
+// hover or focus reveals it on pointer devices; tap pins it open, and on
+// narrow widths it presents as a modal sheet. The formula is exposed ONLY
+// here; the scrim rides outside the ledger so it can cover the viewport.
+export function ledgerFormulaHtml(breakdown: string): string {
+  return `<div class="prod-ledger prod-ledger-formula" role="group" aria-label="Production">
+    <div class="prod-cell"><span class="prod-label">Nous</span><strong class="mono" data-live="nous"></strong></div>
+    <div class="prod-cell prod-cell-rate" tabindex="0" role="button" aria-expanded="false" aria-label="Rate — show the formula breakdown"><span class="prod-label">Rate</span><strong class="mono" data-live="rate"></strong><span class="monitor-hint ledger-hint" aria-hidden="true">ⓘ</span>${breakdown}</div>
+    <div class="prod-cell"><span class="prod-label">Session</span><strong class="mono" data-live="session"></strong></div>
+  </div>
+  <div class="formula-scrim" aria-hidden="true"></div>`;
+}
+
 export function unlockedCount(state: GameState): number {
   return Object.keys(state.achievements).length;
 }

@@ -29,7 +29,7 @@ import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatDate, formatInt, formatNumber, formatPracticeMinutes, practiceCountdown, secondsToMinutes } from "./format";
 import { renderStatusMonitor, formulaTooltipHtml, updateFormulaLive } from "./monitor";
-import { prototypeVariant, ledgerHtml, ledgerCellsHtml, updateLedgerLive, featsChipHtml, unlockedCount, FEATS_SVG, TOOL_ICONS } from "./variant";
+import { prototypeVariant, ledgerHtml, ledgerFormulaHtml, updateLedgerLive, featsChipHtml, unlockedCount, FEATS_SVG, TOOL_ICONS } from "./variant";
 
 const SPACING = 65;
 const DRAG_THRESHOLD_PX = 6;
@@ -448,7 +448,8 @@ function renderConsoleReadout(app: App): void {
       if (variant === "a") {
         strip.innerHTML = ledgerHtml();
       } else if (variant === "d") {
-        strip.innerHTML = `<div class="prod-ledger prod-ledger-formula" tabindex="0" role="group" aria-label="Production — focus for the formula breakdown">${ledgerCellsHtml()}<span class="monitor-hint ledger-hint" aria-hidden="true">ⓘ</span>${formulaTooltipHtml(achieving, infused)}</div>`;
+        strip.innerHTML = ledgerFormulaHtml(formulaTooltipHtml(achieving, infused));
+        wireFormulaDisclosure(strip);
       } else {
         strip.innerHTML = `
           <div class="console-slot production-slot">
@@ -517,13 +518,41 @@ function renderBoardLedger(app: App): void {
   if (host.dataset.protoKey !== key) {
     host.dataset.protoKey = key;
     const ledger = variant === "e"
-      ? `<div class="prod-ledger prod-ledger-formula" tabindex="0" role="group" aria-label="Production — focus for the formula breakdown">${ledgerCellsHtml()}<span class="monitor-hint ledger-hint" aria-hidden="true">ⓘ</span>${formulaTooltipHtml(achieving, infused)}</div>`
+      ? ledgerFormulaHtml(formulaTooltipHtml(achieving, infused))
       : ledgerHtml();
     host.innerHTML = `${ledger}${featsChipHtml(count)}`;
     byId("feats-chip")?.addEventListener("click", () => app.openModal("achievements"));
+    if (variant === "e") wireFormulaDisclosure(host);
   }
   updateLedgerLive(host, app.state, snapshot.rate);
   if (variant === "e") updateFormulaLive(host, snapshot);
+}
+
+// D and E: the formula disclosure rides the Rate cell. Hover reveals on
+// pointer devices via CSS alone; tap pins it open (the modal presentation
+// on narrow widths), and the scrim or Escape closes it.
+function wireFormulaDisclosure(scope: ParentNode): void {
+  const cell = scope.querySelector<HTMLElement>(".prod-cell-rate");
+  const scrim = scope.querySelector<HTMLElement>(".formula-scrim");
+  if (!cell) return;
+  const setOpen = (open: boolean) => {
+    cell.classList.toggle("formula-open", open);
+    cell.setAttribute("aria-expanded", open ? "true" : "false");
+    scrim?.classList.toggle("formula-open", open);
+  };
+  cell.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setOpen(!cell.classList.contains("formula-open"));
+  });
+  cell.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      setOpen(!cell.classList.contains("formula-open"));
+    } else if (event.key === "Escape") {
+      setOpen(false);
+    }
+  });
+  scrim?.addEventListener("click", () => setOpen(false));
 }
 
 const CELL_TOOL_SVG = `<svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M0-6v12M-6 0h12"/></svg>`;
