@@ -572,12 +572,18 @@
         return poly.map(p => p.x.toFixed(1) + "," + p.y.toFixed(1)).join(" ");
       }
       function svgPoint(cell) {
-        // zone-relative pixel center of a cell under the current view
+        // zone-relative pixel center of a cell under the current view. The
+        // svg letterboxes its viewBox (xMidYMid meet), so one uniform scale
+        // applies to both axes plus centering offsets — separate x/y scales
+        // drift Y by the letterbox.
         const v = viewSpec();
+        const s = Math.min(v.zw / v.w, v.zh / v.h);
+        const ox = (v.zw - v.w * s) / 2;
+        const oy = (v.zh - v.h * s) / 2;
         return {
-          cx: (cell.x - v.x) * v.zw / v.w,
-          cy: (cell.y - v.y) * v.zh / v.h,
-          w: SIZE * 2 * v.zw / v.w, h: SIZE * 2 * v.zh / v.h,
+          cx: (cell.x - v.x) * s + ox,
+          cy: (cell.y - v.y) * s + oy,
+          w: SIZE * 2 * s, h: SIZE * 2 * s,
         };
       }
       function moduleGlyph(m) {
