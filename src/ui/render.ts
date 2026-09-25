@@ -28,7 +28,7 @@ import { chordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatDate, formatInt, formatNumber, formatPracticeMinutes, practiceCountdown, secondsToMinutes } from "./format";
-import { renderStatusMonitor, formulaTooltipHtml, updateFormulaLive } from "./monitor";
+import { renderStatusMonitor, formulaPanelHtml, updateFormulaLive } from "./monitor";
 import { prototypeVariant, ledgerHtml, ledgerFormulaHtml, updateLedgerLive, featsChipHtml, unlockedCount, FEATS_SVG, TOOL_ICONS } from "./variant";
 
 const SPACING = 65;
@@ -448,7 +448,7 @@ function renderConsoleReadout(app: App): void {
       if (variant === "a") {
         strip.innerHTML = ledgerHtml();
       } else if (variant === "d") {
-        strip.innerHTML = ledgerFormulaHtml(formulaTooltipHtml(achieving, infused));
+        strip.innerHTML = ledgerFormulaHtml(formulaPanelHtml(achieving, infused));
         wireFormulaDisclosure(strip);
       } else {
         strip.innerHTML = `
@@ -518,7 +518,7 @@ function renderBoardLedger(app: App): void {
   if (host.dataset.protoKey !== key) {
     host.dataset.protoKey = key;
     const ledger = variant === "e"
-      ? ledgerFormulaHtml(formulaTooltipHtml(achieving, infused))
+      ? ledgerFormulaHtml(formulaPanelHtml(achieving, infused))
       : ledgerHtml();
     host.innerHTML = `${ledger}${featsChipHtml(count)}`;
     byId("feats-chip")?.addEventListener("click", () => app.openModal("achievements"));

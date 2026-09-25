@@ -1376,11 +1376,20 @@ body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate:focus-visible { 
 body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate:hover .ledger-hint,
 body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate:focus .ledger-hint,
 body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate.formula-open .ledger-hint { color: var(--nous); border-color: var(--nous); }
-/* The tooltip drops below the ledger row, unlike the monitor chip's. */
+/* The whole formula — equation and breakdown — is one panel dropping below
+   the ledger row; nothing is visible without hover or tap. */
 body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate .monitor-breakdown { bottom: auto; top: calc(100% + 12px); left: 0; }
 body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate:hover .monitor-breakdown,
 body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate:focus .monitor-breakdown,
 body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate.formula-open .monitor-breakdown { display: block; }
+/* The equation leads the panel, separated from the value rows beneath. */
+body:is([data-variant="d"], [data-variant="e"]) .formula-panel .monitor-equation {
+  display: flex;
+  margin: 0 0 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line-soft);
+  overflow: visible;
+}
 /* Tap pins the breakdown open; on narrow widths it presents as a modal
    sheet over a scrim (touch has no hover). */
 .formula-scrim { display: none; }

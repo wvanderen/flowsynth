@@ -74,9 +74,7 @@ function ampBreakdownHtml(infused: boolean): string {
     .join("");
 }
 
-// The formula's live innards — equation plus breakdown — shared by the
-// monitor chip and variant D's header-ledger tooltip.
-function formulaLiveHtml(boosted: boolean, infused: boolean): string {
+function formulaEquationHtml(boosted: boolean, infused: boolean): string {
   return `
       <span class="monitor-equation mono">
         <span class="op">(</span>${ampEquationHtml(infused)}
@@ -85,29 +83,42 @@ function formulaLiveHtml(boosted: boolean, infused: boolean): string {
         <span class="op">×</span><span class="monitor-term" title="Charge empowerment — continuous while modules receive charge"><span class="term-glyph">emp</span><span data-live="m-emp"></span></span>
         ${boosted ? `<span class="op">×</span><span class="monitor-term" title="Achievements — each feat adds into the boost"><span class="term-glyph">ach</span><span data-live="m-ach"></span></span>` : ""}
         <span class="op">=</span><strong data-live="m-rate"></strong>
-      </span>
-      <div class="monitor-breakdown" role="tooltip">
-        ${ampBreakdownHtml(infused)}
-        <div class="monitor-breakdown-row"><span class="bk-name">Chords</span><span class="mono" data-live="b-chords"></span><span class="bk-note" data-live="b-chord-note"></span></div>
-        <div class="monitor-breakdown-row"><span class="bk-name">Empowerment</span><span class="mono" data-live="b-emp"></span><span class="bk-note">charge uplift on charged modules</span></div>
-        <div class="monitor-breakdown-row"><span class="bk-name">Achievements</span><span class="mono" data-live="b-ach"></span><span class="bk-note">each feat adds into the boost</span></div>
-        <div class="monitor-breakdown-row total"><span class="bk-name">Rate</span><span class="mono" data-live="b-rate"></span><span class="bk-note">composite × empowerment × achievements</span></div>
-      </div>`;
+      </span>`;
 }
 
+function formulaBreakdownHtml(): string {
+  return `
+      <div class="monitor-breakdown-row"><span class="bk-name">Chords</span><span class="mono" data-live="b-chords"></span><span class="bk-note" data-live="b-chord-note"></span></div>
+      <div class="monitor-breakdown-row"><span class="bk-name">Empowerment</span><span class="mono" data-live="b-emp"></span><span class="bk-note">charge uplift on charged modules</span></div>
+      <div class="monitor-breakdown-row"><span class="bk-name">Achievements</span><span class="mono" data-live="b-ach"></span><span class="bk-note">each feat adds into the boost</span></div>
+      <div class="monitor-breakdown-row total"><span class="bk-name">Rate</span><span class="mono" data-live="b-rate"></span><span class="bk-note">composite × empowerment × achievements</span></div>`;
+}
+
+// The monitor chip shows the live equation with the breakdown disclosed on
+// hover or focus; the equation itself stays visible.
 function formulaChipHtml(boosted: boolean, infused: boolean): string {
   return `
     <div class="monitor-chip monitor-formula" tabindex="0" aria-label="Live nous formula — focus for the breakdown">
-      ${formulaLiveHtml(boosted, infused)}
+      ${formulaEquationHtml(boosted, infused)}
       <span class="monitor-hint" aria-hidden="true">ⓘ</span>
+      <div class="monitor-breakdown" role="tooltip">
+        ${ampBreakdownHtml(infused)}
+        ${formulaBreakdownHtml()}
+      </div>
     </div>`;
 }
 
-// PROTOTYPE (issue #119, variant D): the same innards as the monitor chip,
-// disclosed from the header ledger instead. Rebuilt when the ach term joins
-// the equation (first feat) or the infusor leg joins it (first uplift).
-export function formulaTooltipHtml(boosted: boolean, infused: boolean): string {
-  return formulaLiveHtml(boosted, infused);
+// PROTOTYPE (issue #119, variants D and E): the whole calculation formula —
+// equation AND breakdown — as one self-contained panel, revealed only from
+// the Rate cell. The equation rides inside the panel so the narrow-width
+// modal sheet carries it too; nothing is visible without hover or tap.
+export function formulaPanelHtml(boosted: boolean, infused: boolean): string {
+  return `
+    <div class="monitor-breakdown formula-panel" role="tooltip">
+      ${formulaEquationHtml(boosted, infused)}
+      ${ampBreakdownHtml(infused)}
+      ${formulaBreakdownHtml()}
+    </div>`;
 }
 
 // The Arete accumulator: the rail with its fill, inert decade graduations,
