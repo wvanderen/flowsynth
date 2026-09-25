@@ -1,0 +1,1233 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>PROTOTYPE — Responsive composition: half-width play and portrait-phone operation (#121)</title>
+    <!--
+      Prototype plan: one question — how do the accepted board (#117/#126), chord feedback (#120),
+      bloom (#127), and console hierarchy (#119 variant E) compose as the surface narrows to
+      half-width and portrait phone, without shrinking the desktop layout and while the board
+      stays the primary surface? Three structurally different narrow-width answers (the variants
+      below), each testable at three simulated widths (Full / Half 720 / Phone 390). Half-width is
+      identical in every variant — the fully-featured first-class layout is a given; the variants
+      disagree about what portrait phone does:
+        A · One instrument — the desktop anatomy survives intact at every width; everything
+            compacts in place, nothing re-docks, nothing hides.
+        B · Thumb dock — phone re-docks the console to the bottom edge: the ledger dissolves
+            into a one-line status strip, the icon dock becomes a bottom bar with inventory
+            folded in, the bloom presents as a bottom sheet.
+        C · Board-first HUD — phone keeps only a slim HUD over the full-bleed board; every
+            console surface (ops, inventory, ledger detail, bloom) opens as a sheet over a
+            scrim, plus a chrome-free Focus mode for board inspection.
+      State transitions to try at each width: session control (enter/pause/exit), board
+      inspection (zoom buttons, wheel, pan when zoomed), selected-module controls (bloom lift
+      vs sheet), inventory placement (drag and tap-to-place), overflow (ledger equation
+      collapse at 760px, stacked chord chips, dock labels). Numbers are placeholders. Throwaway:
+      no persistence, no tests. Sounds only after you enable it.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0d1122;
+        --panel: #141a30;
+        --soft: #111627;
+        --line: #2a3150;
+        --line2: #465078;
+        --ink: #e5e9f5;
+        --muted: #8992ad;
+        --synth: #7774ef;
+        --generator: #35aa72;
+        --infusor: #35aeca;
+        --forge: #d1a341;
+        --charge: #9affa8;
+        --danger: #ff7272;
+        --accent: #cc603d;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+      body { background: var(--bg); color: var(--ink); font: 14px/1.35 system-ui, sans-serif; }
+      button { color: inherit; font: inherit; background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 8px 11px; cursor: pointer; }
+      button:hover { border-color: var(--line2); background: #1a213b; }
+      button:focus-visible { outline: 2px solid var(--charge); outline-offset: 2px; }
+      .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+      .muted { color: var(--muted); }
+      .eyebrow { color: var(--muted); font: 10px var(--mono); letter-spacing: .15em; text-transform: uppercase; }
+      .proto-tag { position: fixed; z-index: 200; top: 10px; left: 12px; background: var(--accent); color: #fff; font: 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; padding: 2px 8px; border-radius: 3px; pointer-events: none; }
+
+      /* ── the simulator: a framed surface the app composes inside ── */
+      #sim { height: 100dvh; display: flex; flex-direction: column; align-items: center; }
+      .frame-label { flex: 0 0 auto; color: var(--muted); font: 11px var(--mono); padding: 10px 0 6px; }
+      .frame {
+        flex: 1 1 auto; min-height: 0; width: var(--fw, 100%); max-width: 100%;
+        background: var(--bg); border: 1px solid #3a4166; border-bottom: none;
+        border-radius: 14px 14px 0 0; overflow: hidden; position: relative;
+        box-shadow: 0 0 0 6px #1a1f38, 0 24px 60px #000a;
+      }
+      body[data-width="full"] .frame { border-radius: 0; border: none; box-shadow: none; }
+
+      /* ── the app shell: topbar (pure control) · deck (ledger) · board-zone ── */
+      #app { height: 100%; display: flex; flex-direction: column; }
+      .topbar { flex: 0 0 auto; display: flex; align-items: center; gap: 14px; padding: 9px 14px; background: var(--soft); border-bottom: 1px solid var(--line); }
+      .brand { font-size: 16px; display: flex; gap: 8px; align-items: center; white-space: nowrap; }
+      .brand svg { width: 22px; }
+      .session { display: flex; gap: 8px; align-items: center; }
+      .clock-box strong { display: block; font: 19px var(--mono); line-height: 1.1; }
+      .clock-box small { color: var(--muted); font-size: 10px; }
+      .enter { color: #ffe4da; border-color: #6f3e31; background: #351f22; white-space: nowrap; }
+      .enter.live { color: #ffd9cf; border-color: #a05a41; background: #4a2a24; box-shadow: 0 0 14px #cc603d55; }
+      .ghostbtn { padding: 7px 9px; }
+      .top-spring { flex: 1; }
+      /* B · phone: the ledger dissolves into the topbar as one status line */
+      .top-status { display: none; gap: 14px; align-items: baseline; font: 12.5px var(--mono); white-space: nowrap; }
+      .top-status b { font: 13px var(--mono); }
+
+      .deck { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 14px 0; }
+      .prod-ledger { display: flex; align-items: stretch; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: visible; }
+      .prod-cell { display: flex; flex-direction: column; justify-content: center; gap: 1px; padding: 5px 14px 6px; min-width: 84px; position: relative; }
+      .prod-cell + .prod-cell { border-left: 1px solid var(--line); }
+      .prod-cell strong { font: 15px var(--mono); font-weight: 400; white-space: nowrap; }
+      .prod-cell-rate { cursor: help; }
+      .prod-cell-rate:focus-visible { outline: 2px solid var(--nous, #9affa8); outline-offset: -2px; }
+      .ledger-hint { color: var(--muted); border: 1px solid var(--line); border-radius: 999px; font: 9px var(--mono); padding: 0 5px; position: absolute; top: 5px; right: 6px; }
+      .rate-equation { display: none; }
+      .ledger-formula { display: none; position: absolute; z-index: 40; top: calc(100% + 10px); left: -1px; width: 300px; padding: 10px 12px; background: var(--panel); border: 1px solid var(--line2); border-radius: 8px; box-shadow: 0 14px 34px #000a; font: 11px/1.6 var(--mono); }
+      .ledger-formula .eq { color: var(--ink); margin-bottom: 6px; }
+      .prod-cell-rate.formula-open .ledger-formula { display: block; }
+      .prod-cell-rate.formula-open .ledger-hint { color: var(--charge); border-color: var(--charge); }
+      .feats-chip { display: flex; gap: 6px; align-items: center; padding: 7px 10px; border-radius: 8px; white-space: nowrap; }
+      .feats-chip svg { width: 14px; height: 14px; }
+
+      .board-zone { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; background-image: radial-gradient(circle at 50% 45%, #161d36 0, var(--bg) 58%); }
+      #board { width: 100%; height: 100%; display: block; touch-action: none; }
+      .cell { fill: #11172a; stroke: var(--line); stroke-width: 1.5; transition: fill .12s; }
+      .cell.unowned { fill: #0d1220; stroke: #1c2138; }
+      .cell.target { fill: #172b31; stroke: var(--charge); stroke-width: 2.5; }
+      .cell.swap { fill: #332b19; stroke: var(--forge); stroke-width: 2.5; }
+      .cell.buyable { stroke: #3f6b58; }
+      .pitch-label { fill: #68718d; font: 11px var(--mono); text-anchor: middle; pointer-events: none; }
+      .oct-label { fill: #4b5370; font: 8px var(--mono); text-anchor: middle; pointer-events: none; }
+      .rowgate { fill: none; stroke: #33507a; stroke-width: 1; stroke-dasharray: 3 5; opacity: .7; }
+      .module { cursor: grab; }
+      .module:active { cursor: grabbing; }
+      .module.dragging { opacity: .22; }
+      .module .plate { fill: #171d34; stroke: var(--cat); stroke-width: 3; }
+      .module.selected .plate { stroke-width: 5; filter: brightness(1.2); }
+      .module .glyph { stroke: var(--cat); stroke-width: 2.4; fill: none; pointer-events: none; }
+      .module .level, .module .name { fill: var(--ink); text-anchor: middle; pointer-events: none; font-family: var(--mono); }
+      .module .level { font-size: 10px; }
+      .module .name { font-size: 8px; letter-spacing: .05em; }
+      .module .note { fill: var(--muted); text-anchor: middle; pointer-events: none; font: 9px var(--mono); }
+      .ghost { position: fixed; z-index: 90; width: 78px; height: 86px; display: grid; place-items: center; border: 2px solid var(--cat); border-radius: 18px; background: #171d34ee; box-shadow: 0 16px 36px #000a; pointer-events: none; font: 10px var(--mono); transform: translate(-50%, -50%) rotate(2deg); }
+      .chord-hull { fill: color-mix(in srgb, var(--cc) 7%, transparent); stroke: var(--cc); pointer-events: none; }
+      .chord-hull.preview { stroke-dasharray: 7 5; }
+      .chord-chip { font: 700 10.5px var(--mono); fill: var(--ink); paint-order: stroke; stroke: #0d1122; stroke-width: 3px; pointer-events: none; }
+      .chord-chip tspan.mult { fill: var(--cc); }
+      .ripple { fill: none; stroke: var(--cc); pointer-events: none; animation: ripple-out .7s ease-out forwards; }
+      @keyframes ripple-out { from { transform: scale(.35); opacity: .75; } to { transform: scale(2.1); opacity: 0; } }
+
+      .mode-banner { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 12; max-width: 92%; padding: 6px 11px; border-radius: 999px; background: #141a30dd; border: 1px solid var(--line); color: var(--muted); font-size: 11px; pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .mode-banner .would { color: var(--charge); }
+      .toast { position: absolute; z-index: 50; top: 12px; right: 14px; max-width: 300px; padding: 10px 12px; border: 1px solid var(--line2); background: var(--panel); border-radius: 8px; box-shadow: 0 14px 30px #0009; opacity: 0; transform: translateY(-8px); transition: .15s; pointer-events: none; }
+      .toast.show { opacity: 1; transform: none; }
+
+      /* zoom + focus cluster: floats over the board, above the inventory strip */
+      .zoom-cluster { position: absolute; z-index: 18; right: 12px; bottom: 84px; display: flex; flex-direction: column; gap: 6px; }
+      .zoom-cluster button { width: 36px; height: 34px; padding: 0; background: #141a30e6; font: 15px var(--mono); }
+
+      /* the Arete pill: floats free over the board's bottom edge (#119 E) */
+      .arete-pill { position: absolute; z-index: 14; left: 50%; transform: translateX(-50%); bottom: 90px; width: min(330px, 62%); padding: 6px 12px 8px; background: #141a30e0; border: 1px solid var(--line); border-radius: 999px; pointer-events: none; }
+      .arete-pill .row { display: flex; justify-content: space-between; font: 10.5px var(--mono); color: var(--muted); margin-bottom: 4px; }
+      .arete-pill .row b { color: var(--ink); font-weight: 400; }
+      .arete-rail { height: 4px; border-radius: 999px; background: #232948; overflow: hidden; }
+      .arete-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #7f5cc0, #b18ae0); }
+
+      /* inventory strip: lives on the board surface (#118) */
+      .inventory { position: absolute; z-index: 14; left: 12px; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 8px; min-height: 60px; padding: 7px 9px; background: #111627ed; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 30px #0008; }
+      .inventory-label { width: 78px; flex: 0 0 auto; }
+      .inventory-label strong { display: block; font-size: 12.5px; }
+      .inventory-label small { color: var(--muted); font-size: 10px; }
+      .inventory-items { display: flex; gap: 7px; overflow-x: auto; flex: 1; padding: 2px; }
+      .inv-item { --cat: var(--synth); min-width: 100px; display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--panel); border-left: 3px solid var(--cat); text-align: left; }
+      .inv-item b, .inv-item small { display: block; }
+      .inv-item small { color: var(--muted); font-size: 10px; }
+      .inventory.drop { border-color: var(--danger); box-shadow: 0 0 0 2px #ff727233, 0 12px 30px #0008; }
+      .inv-chip { position: absolute; z-index: 16; left: 12px; bottom: 12px; display: none; background: #141a30ee; }
+
+      /* left icon dock (#119 E) */
+      .dock { position: absolute; z-index: 16; left: 0; top: 14px; display: flex; flex-direction: column; gap: 4px; padding: 6px 5px; background: #111627e8; border: 1px solid var(--line); border-left: none; border-radius: 0 10px 10px 0; }
+      .dock button { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 52px; padding: 7px 4px; border: none; border-radius: 7px; color: var(--muted); }
+      .dock button svg { width: 19px; height: 19px; }
+      .dock button small { font-size: 8.5px; letter-spacing: .04em; }
+      .dock button:hover, .dock button.on { color: var(--ink); background: #1c2340; }
+      .dock button.armed { color: var(--charge); background: #14301f; }
+
+      /* B · phone bottom bar (the re-docked dock) */
+      .botbar { position: absolute; z-index: 16; left: 0; right: 0; bottom: 0; display: none; gap: 4px; padding: 7px 8px calc(7px + env(safe-area-inset-bottom, 0px)); background: #111627f2; border-top: 1px solid var(--line); }
+      .botbar button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px; border: none; border-radius: 8px; color: var(--muted); min-width: 0; }
+      .botbar button svg { width: 19px; height: 19px; }
+      .botbar button small { font-size: 8.5px; white-space: nowrap; }
+      .botbar button:hover, .botbar button.on { color: var(--ink); background: #1c2340; }
+      .botbar button.armed { color: var(--charge); background: #14301f; }
+
+      /* C · phone HUD menu button */
+      .hud-menu { position: absolute; z-index: 16; right: 12px; bottom: 12px; display: none; width: 46px; height: 46px; border-radius: 50%; background: #1c2340f0; font: 20px var(--mono); align-items: center; justify-content: center; padding: 0; }
+      .focus-exit { position: absolute; z-index: 30; top: 12px; right: 12px; display: none; background: #141a30ee; }
+
+      /* bloom: the expanded face (#127) */
+      #bloom-host { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
+      #bloom-host > * { pointer-events: auto; }
+      .bloom-expand { position: absolute; z-index: 20; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 4px; padding: 20px 32px; background: #171d34; border: 3px solid var(--cat); border-radius: 4px; cursor: grab; clip-path: polygon(50% 0%, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%); transform-origin: 50% 92%; animation: bloom-lift .18s ease-out; }
+      .bloom-expand:active { cursor: grabbing; }
+      .bloom-expand .lv { font: 13px var(--mono); }
+      .bloom-expand .glyph { stroke: var(--cat); stroke-width: 2; fill: none; }
+      .bloom-expand .nm { font: 12px var(--mono); letter-spacing: .05em; }
+      .bloom-expand .cell-note { font: 11px var(--mono); color: var(--muted); }
+      .bloom-expand .contrib { font: 11px var(--mono); color: var(--charge); margin-top: 3px; }
+      .bloom-expand .primary { display: grid; place-items: center; margin-top: 4px; padding: 6px 14px; font-size: 12px; border: 1px solid var(--line2); border-radius: 6px; background: #1c2340; }
+      .bloom-expand .primary small { display: block; font-size: 10px; color: #b9b6ff; }
+      @keyframes bloom-lift { from { transform: translateY(16px) scale(.68); filter: brightness(.88); } to { transform: translateY(-8px) scale(1); filter: drop-shadow(0 24px 46px #050817e6); } }
+      /* the sheet-presentation bloom: same content, docked (B/C phone) */
+      .bloom-sheet { position: absolute; z-index: 26; left: 10px; right: 10px; bottom: 10px; display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: #171d34; border: 2px solid var(--cat); border-radius: 12px; box-shadow: 0 -18px 40px #000a; animation: sheet-up .18s ease-out; }
+      .bloom-sheet .glyph { stroke: var(--cat); stroke-width: 2.4; fill: none; }
+      .bloom-sheet .col { display: flex; flex-direction: column; gap: 2px; font: 12px var(--mono); }
+      .bloom-sheet .col .nm { font-size: 13px; }
+      .bloom-sheet .col .cell-note { color: var(--muted); font-size: 11px; }
+      .bloom-sheet .contrib { color: var(--charge); font-size: 11px; }
+      .bloom-sheet .primary { margin-left: auto; padding: 8px 14px; background: #1c2340; }
+      .bloom-sheet .primary small { display: block; font-size: 10px; color: #b9b6ff; }
+      @keyframes sheet-up { from { transform: translateY(30px); opacity: .4; } to { transform: none; opacity: 1; } }
+
+      /* sheets (catalog · forge · inventory tray · menu · feats · formula) */
+      .scrim { position: absolute; inset: 0; z-index: 24; background: #050817aa; opacity: 0; pointer-events: none; transition: opacity .15s; }
+      .scrim.show { opacity: 1; pointer-events: auto; }
+      .sheet { position: absolute; z-index: 26; background: var(--panel); border: 1px solid var(--line2); border-radius: 12px; box-shadow: 0 18px 44px #000b; display: flex; flex-direction: column; min-height: 0; }
+      .sheet-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+      .sheet-head h2 { margin: 0; font-size: 14px; }
+      .sheet-head .x { margin-left: auto; padding: 3px 9px; }
+      .sheet-body { padding: 12px 14px; overflow: auto; min-height: 0; }
+      /* wide: right panel; half/phone: bottom sheet */
+      .sheet.docked { top: 10px; right: 10px; bottom: 10px; width: 320px; animation: none; }
+      .sheet.sheeted { left: 10px; right: 10px; bottom: 10px; top: auto; max-height: 72%; animation: sheet-up .18s ease-out; }
+      .shop-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; margin-bottom: 8px; background: var(--soft); border: 1px solid var(--line); border-radius: 8px; }
+      .shop-row b { display: block; font-size: 13px; }
+      .shop-row small { color: var(--muted); font-size: 10.5px; display: block; }
+      .shop-row button { margin-left: auto; white-space: nowrap; padding: 6px 10px; }
+      .opgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .opgrid button { display: flex; align-items: center; gap: 9px; padding: 12px 10px; text-align: left; }
+      .opgrid button svg { width: 18px; height: 18px; flex: 0 0 auto; }
+      .opgrid button div { display: flex; flex-direction: column; }
+      .opgrid button small { color: var(--muted); font-size: 10px; }
+      .feat-row { padding: 8px 10px; margin-bottom: 8px; background: var(--soft); border: 1px solid var(--line); border-radius: 8px; font-size: 12.5px; }
+      .feat-row small { display: block; color: var(--muted); font-size: 10.5px; }
+      .forge-progress { height: 8px; border-radius: 999px; background: #232948; overflow: hidden; margin: 8px 0 12px; }
+      .forge-progress i { display: block; height: 100%; background: var(--forge); }
+
+      /* ── width compaction shared by every variant (container-driven via data-size) ── */
+      #app[data-size="half"] .brand span, #app[data-size="phone"] .brand span { display: none; }
+      #app[data-size="half"] .prod-cell, #app[data-size="phone"] .prod-cell { padding: 4px 10px 5px; min-width: 0; }
+      #app[data-size="half"] .prod-cell strong, #app[data-size="phone"] .prod-cell strong { font-size: 13px; }
+      /* the #119 equation rule: ambient operand chain only above the 760px line */
+      #app[data-size="wide"] .prod-cell-rate .rate-equation { display: flex; align-items: center; gap: 4px; font: 11px var(--mono); color: var(--muted); white-space: nowrap; }
+      #app[data-size="wide"] .prod-cell-rate .rate-equation b { color: var(--ink); }
+      #app[data-size="wide"] .prod-cell-rate > strong { display: none; }
+      #app[data-size="half"] .dock button small, #app[data-size="phone"] .dock button small { display: none; }
+      #app[data-size="half"] .dock button, #app[data-size="phone"] .dock button { width: 40px; }
+      #app[data-size="phone"] .arete-pill { width: min(250px, 58%); padding: 4px 10px 6px; bottom: 78px; }
+      #app[data-size="phone"] .arete-pill .row { font-size: 9px; }
+      #app[data-size="phone"] .inventory { min-height: 50px; }
+      #app[data-size="phone"] .inv-item { min-width: 84px; }
+      #app[data-size="phone"] .mode-banner { font-size: 10px; }
+
+      /* ── B · thumb dock: phone re-docks everything to the bottom edge ── */
+      #app[data-variant="b"][data-size="phone"] .top-status { display: flex; }
+      #app[data-variant="b"][data-size="phone"] .deck { display: none; }
+      #app[data-variant="b"][data-size="phone"] .topbar { gap: 8px; padding: 7px 10px; }
+      #app[data-variant="b"][data-size="phone"] .dock { display: none; }
+      #app[data-variant="b"][data-size="phone"] .botbar { display: flex; }
+      #app[data-variant="b"][data-size="phone"] .inventory { display: none; }
+      #app[data-variant="b"][data-size="phone"] .arete-pill { bottom: 74px; }
+      #app[data-variant="b"][data-size="phone"] .zoom-cluster { bottom: 74px; }
+      #app[data-variant="b"][data-size="phone"] .bloom-expand { display: none; }
+      /* sheets and the bloom sheet clear the bottom bar */
+      #app[data-variant="b"][data-size="phone"] .sheet.sheeted,
+      #app[data-variant="b"][data-size="phone"] .bloom-sheet { bottom: 76px; }
+
+      /* ── C · board-first HUD: phone keeps only the HUD; surfaces become sheets ── */
+      #app[data-variant="c"][data-size="phone"] .deck { display: none; }
+      #app[data-variant="c"][data-size="phone"] .topbar { gap: 8px; padding: 7px 10px; background: #111627cc; }
+      #app[data-variant="c"][data-size="phone"] .dock { display: none; }
+      #app[data-variant="c"][data-size="phone"] .inventory { display: none; }
+      #app[data-variant="c"][data-size="phone"] .inv-chip { display: inline-flex; gap: 6px; align-items: center; padding: 8px 11px; border-radius: 999px; font: 11px var(--mono); }
+      #app[data-variant="c"][data-size="phone"] .hud-menu { display: grid; }
+      #app[data-variant="c"][data-size="phone"] .arete-pill { display: none; }
+      #app[data-variant="c"][data-size="phone"] .zoom-cluster { bottom: 70px; }
+      #app[data-variant="c"][data-size="phone"] .bloom-expand { display: none; }
+      #app[data-variant="c"][data-size="phone"] .sheet.sheeted,
+      #app[data-variant="c"][data-size="phone"] .bloom-sheet { bottom: 70px; }
+      /* the B phone status line's feats segment reads as a control */
+      .status-feats { border: none; padding: 0; font: 12.5px var(--mono); color: var(--muted); background: none; }
+      .status-feats b { color: var(--ink); }
+      /* focus mode: chrome-free inspection (C, any size — phone's zoom answer) */
+      #app.focus .topbar, #app.focus .deck, #app.focus .dock, #app.focus .botbar,
+      #app.focus .inventory, #app.focus .inv-chip, #app.focus .arete-pill,
+      #app.focus .mode-banner, #app.focus .hud-menu { display: none !important; }
+      #app.focus .focus-exit { display: inline-flex; gap: 6px; }
+
+      /* real narrow window: drop the simulator frame, the app fills the viewport */
+      @media (max-width: 700px) {
+        .frame-label { display: none; }
+        .frame { width: 100% !important; border: none; border-radius: 0; box-shadow: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="proto-tag">Prototype · #121 · throwaway</div>
+    <div id="sim">
+      <div class="frame-label" id="frame-label"></div>
+      <div class="frame" id="frame">
+        <div id="app" data-variant="a" data-size="wide">
+          <header class="topbar">
+            <div class="brand">
+              <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 2 28 9v14l-12 7L4 23V9Z"/><path d="m10 20 5-10v12l7-10"/></svg>
+              <span>FlowSynth</span>
+            </div>
+            <div class="top-status" id="top-status"></div>
+            <div class="top-spring"></div>
+            <div class="session">
+              <div class="clock-box"><strong id="clock">25:00</strong><small id="clock-label">planned</small></div>
+              <button class="ghostbtn" id="pause-btn" title="Pause the running session" style="display:none">⏸</button>
+              <button class="enter" id="flow-btn">Enter flow</button>
+              <button class="ghostbtn" id="focus-btn" title="Inspect the board with no chrome (C)" style="display:none">⤢</button>
+            </div>
+          </header>
+          <div class="deck" id="deck">
+            <div class="prod-ledger" role="group" aria-label="Production">
+              <div class="prod-cell"><span class="eyebrow">Nous</span><strong class="mono" id="nous-cell">0 ν</strong></div>
+              <div class="prod-cell prod-cell-rate" id="rate-cell" tabindex="0" role="button" aria-expanded="false" title="Rate — show the formula breakdown">
+                <span class="eyebrow">Rate</span>
+                <span class="rate-equation" id="rate-equation"></span>
+                <strong class="mono" id="rate-cell-total">0.0 ν/s</strong>
+                <span class="ledger-hint" aria-hidden="true">ⓘ</span>
+                <div class="ledger-formula" id="ledger-formula"></div>
+              </div>
+              <div class="prod-cell"><span class="eyebrow">Session</span><strong class="mono" id="session-cell">—</strong></div>
+            </div>
+            <button class="feats-chip" id="feats-chip" title="Achievements">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+              <span class="mono" id="feats-count">2/17 feats</span>
+            </button>
+          </div>
+          <main class="board-zone" id="board-zone">
+            <svg id="board" aria-label="Harmonic board"><g id="world"></g></svg>
+            <div class="mode-banner" id="mode-banner"></div>
+            <div class="zoom-cluster">
+              <button id="zoom-in" title="Zoom in">+</button>
+              <button id="zoom-out" title="Zoom out">−</button>
+              <button id="zoom-fit" title="Fit the board">⌂</button>
+            </div>
+            <div class="arete-pill" id="arete-pill">
+              <div class="row"><span>ARETE</span><b id="arete-text">8,600 / 10,000 ν lifetime</b></div>
+              <div class="arete-rail"><i class="arete-fill" id="arete-fill" style="width:93%"></i></div>
+            </div>
+            <div class="dock" id="dock"></div>
+            <div class="botbar" id="botbar"></div>
+            <button class="inv-chip" id="inv-chip">Inventory · 0</button>
+            <button class="hud-menu" id="hud-menu" title="Console">＋</button>
+            <button class="focus-exit ghostbtn" id="focus-exit">✕ Done</button>
+            <div id="bloom-host"></div>
+            <div class="inventory" id="inventory">
+              <div class="inventory-label"><strong>Inventory</strong><small id="inventory-count"></small></div>
+              <div class="inventory-items" id="inventory-items"></div>
+            </div>
+            <div class="scrim" id="scrim"></div>
+            <div id="sheet-host"></div>
+            <div class="toast" id="toast"></div>
+          </main>
+        </div>
+      </div>
+    </div>
+
+    <div class="switcher" style="position:fixed;z-index:120;left:50%;bottom:12px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:6px;background:#e7e9f2;color:#131522;border-radius:999px;box-shadow:0 8px 26px #000b;">
+      <button id="prev" aria-label="Previous variant" style="width:34px;height:30px;padding:0;border-radius:999px;color:#131522;">←</button>
+      <span id="variant-label" style="min-width:240px;text-align:center;font:11px var(--mono);"></span>
+      <button id="next" aria-label="Next variant" style="width:34px;height:30px;padding:0;border-radius:999px;color:#131522;">→</button>
+      <span style="width:1px;height:18px;background:#aeb4c4;"></span>
+      <button data-w="full" class="wbtn" style="padding:5px 10px;border-radius:999px;color:#131522;">Full</button>
+      <button data-w="half" class="wbtn" style="padding:5px 10px;border-radius:999px;color:#131522;">Half 720</button>
+      <button data-w="phone" class="wbtn" style="padding:5px 10px;border-radius:999px;color:#131522;">Phone 390</button>
+      <button id="sound-btn" style="padding:5px 10px;border-radius:999px;color:#131522;">sound: off</button>
+    </div>
+
+    <script>
+      // ── variants: three structurally different narrow-width compositions ──
+      const VARIANTS = [
+        { key: "a", name: "One instrument", blurb: "Desktop anatomy survives at every width — everything compacts in place, nothing re-docks or hides. Phone keeps ledger-deck, left dock, inventory strip; bloom stays a lifted face." },
+        { key: "b", name: "Thumb dock", blurb: "Phone re-docks to the bottom edge: ledger dissolves into a one-line top status strip, the icon dock becomes a bottom bar with inventory folded in, the bloom presents as a bottom sheet." },
+        { key: "c", name: "Board-first HUD", blurb: "Phone keeps only a slim HUD over the full-bleed board; ops, inventory, ledger detail and the bloom open as sheets over a scrim. ⤢ enters chrome-free Focus for inspection." },
+      ];
+
+      // ── the settled octave-stack lattice (#126 D) ──
+      const NAMES = ["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+      const mod12 = (x) => ((x % 12) + 12) % 12;
+      const I = 10, J = 5, SIZE = 42;
+      const CELLS = [];
+      for (let i = 0; i < I; i++) for (let j = 0; j < J; j++)
+        CELLS.push({ i, j, key: i + "," + j, x: SIZE * Math.sqrt(3) * (i + j / 2), y: SIZE * 1.5 * j, st: 7 * i + 12 * j });
+      for (const c of CELLS) { c.name = NAMES[mod12(c.st)]; c.oct = 4 + Math.floor(c.st / 12); c.freq = 261.63 * Math.pow(2, c.st / 12); }
+      const byKey = new Map(CELLS.map(c => [c.key, c]));
+      const CHORD_DEFS = [
+        { name: "Octave",      short: "8", mult: 1.15, color: "#8f8ce8", offs: [[0,0],[0,1]] },
+        { name: "Fifth",       short: "5", mult: 1.20, color: "#1f95b5", offs: [[0,0],[1,0]] },
+        { name: "Fourth shell",short: "4", mult: 1.30, color: "#a86ad4", offs: [[0,0],[-1,1],[0,1]] },
+        { name: "Power chord", short: "P", mult: 1.35, color: "#cc603d", offs: [[0,0],[1,0],[0,1]] },
+      ];
+      const chordHash = (s) => { let h = 0; for (let k = 0; k < s.length; k++) h = (h * 31 + s.charCodeAt(k)) % 997; return h; };
+
+      // seed: overlapping power chords + a fifth + an octave, non-synths that never chord,
+      // unowned frontier cells for the New-cell buy, two inventory items for placement.
+      const seed = () => [
+        { id: "s1", kind: "synth", name: "Additive", short: "ADD", level: 3, pos: "3,1" },
+        { id: "s2", kind: "synth", name: "Additive", short: "ADD", level: 1, pos: "3,2" },
+        { id: "s3", kind: "synth", name: "Additive", short: "ADD", level: 2, pos: "4,1" },
+        { id: "s4", kind: "synth", name: "Additive", short: "ADD", level: 1, pos: "5,1" },
+        { id: "s5", kind: "synth", name: "Additive", short: "ADD", level: 2, pos: "4,2" },
+        { id: "s6", kind: "synth", name: "Granular", short: "GRAN", level: 2, pos: "7,3" },
+        { id: "s7", kind: "synth", name: "Granular", short: "GRAN", level: 1, pos: "8,3" },
+        { id: "s8", kind: "synth", name: "FM", short: "FM", level: 2, pos: "0,0" },
+        { id: "s9", kind: "synth", name: "FM", short: "FM", level: 1, pos: "0,1" },
+        { id: "n1", kind: "infusor", name: "Infusor", short: "INFUSE", level: 1, pos: "2,2" },
+        { id: "g1", kind: "generator", name: "Focus keyed", short: "FOCUS", level: 2, pos: "1,4" },
+        { id: "f1", kind: "forge", name: "Forge", short: "FORGE", level: 1, pos: "8,0" },
+        { id: "s10", kind: "synth", name: "Additive", short: "ADD", level: 1, pos: null },
+        { id: "n2", kind: "infusor", name: "Infusor", short: "INFUSE", level: 2, pos: null },
+      ];
+      const ownedSeed = () => { const s = new Set(); for (const c of CELLS) if (c.j < 4 || c.i <= 5) s.add(c.key); return s; };
+      const state = {
+        variant: "a", mode: "upgrade", paused: false, selected: null, placing: null, dragging: null,
+        over: null, modules: seed(), owned: ownedSeed(), buyingCell: false, cellsBought: 0,
+        sheet: null, focus: false, banked: 0, elapsed: 0, zoom: 1, panX: 0, panY: 0,
+        width: "full", forgeProgress: 0.45, rolls: 1,
+      };
+
+      const $ = (id) => document.getElementById(id);
+      const app = $("app");
+      const colors = { synth: "var(--synth)", generator: "var(--generator)", infusor: "var(--infusor)", forge: "var(--forge)" };
+      const occupant = (k) => state.modules.find(m => m.pos === k);
+      const selectedMod = () => state.modules.find(m => m.id === state.selected) || null;
+      const synthKeys = () => new Set(state.modules.filter(m => m.kind === "synth" && m.pos).map(m => m.pos));
+      const ampOf = (m) => 1 + 0.3 * (m.level - 1);
+      const contrib = (m) => "+" + (ampOf(m) * 1.6).toFixed(1) + " ν/s";
+      const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+      const size = () => app.dataset.size;
+      const phone = () => size() === "phone";
+      const flow = () => state.mode === "flow";
+      const cellCost = () => 120 * Math.pow(2, state.cellsBought);
+      const frontier = () => {
+        const out = new Set();
+        for (const k of state.owned) {
+          const c = byKey.get(k);
+          for (const [di, dj] of [[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]]) {
+            const n = byKey.get((c.i + di) + "," + (c.j + dj));
+            if (n && !state.owned.has(n.key)) out.add(n.key);
+          }
+        }
+        return out;
+      };
+
+      // ── chord analysis (#120 A: outlines always on) ──
+      function analyze(keys) {
+        const found = [];
+        for (const key of keys) {
+          const a = byKey.get(key);
+          for (const def of CHORD_DEFS) {
+            const cells = def.offs.map(([di, dj]) => byKey.get((a.i + di) + "," + (a.j + dj)));
+            if (cells.every(cell => cell && keys.has(cell.key)))
+              found.push({ def, cells, key: def.name + "@" + key, anchor: key });
+          }
+        }
+        return found;
+      }
+      const chordIds = (list) => new Set(list.map(c => c.key));
+      function chordsOf(list, posKey) { return list.filter(c => c.cells.some(cell => cell.key === posKey)); }
+      function rateOf(list) {
+        let sum = 0;
+        for (const m of state.modules) if (m.kind === "synth" && m.pos) sum += ampOf(m);
+        let mult = 1;
+        for (const c of list) mult *= c.def.mult;
+        return { sum, mult, total: sum * mult * 1.6 };
+      }
+      function previewChords() {
+        const carried = state.dragging || state.placing;
+        if (!carried || !state.over || state.over === "inventory") return { list: [], formIds: new Set() };
+        if (!state.owned.has(state.over) || occupant(state.over)) return { list: currentChords, formIds: new Set() };
+        const keys = synthKeys();
+        const dragged = state.modules.find(m => m.id === carried);
+        if (dragged && dragged.pos) keys.delete(dragged.pos);
+        keys.add(state.over);
+        const before = chordIds(currentChords);
+        const after = analyze(keys);
+        const formIds = new Set(after.filter(c => !before.has(c.key)).map(c => c.key));
+        return { list: after, formIds };
+      }
+
+      // ── audio: shared drone + strum (opt-in garnish, #120) ──
+      const AudioMgr = {
+        ctx: null, master: null, voices: new Map(), on: false,
+        ensure() {
+          if (!this.ctx) {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AC();
+            this.master = this.ctx.createGain();
+            this.master.gain.value = 0.5;
+            this.master.connect(this.ctx.destination);
+          }
+          if (this.ctx.state === "suspended") this.ctx.resume();
+        },
+        setVoices(list) {
+          if (!this.on) return;
+          this.ensure();
+          const t = this.ctx.currentTime, seen = new Set();
+          for (const v of list.slice(0, 12)) {
+            seen.add(v.id);
+            let vc = this.voices.get(v.id);
+            if (!vc) {
+              const g = this.ctx.createGain(); g.gain.value = 0; g.connect(this.master);
+              const o1 = this.ctx.createOscillator(); o1.type = "sine"; o1.frequency.value = v.freq; o1.connect(g); o1.start();
+              vc = { g, o1 };
+              this.voices.set(v.id, vc);
+            }
+            vc.o1.frequency.setTargetAtTime(v.freq, t, 0.04);
+            vc.g.gain.setTargetAtTime(0.05, t, 0.06);
+          }
+          for (const [id, vc] of this.voices) {
+            if (!seen.has(id)) {
+              vc.g.gain.setTargetAtTime(0, t, 0.05);
+              const dead = vc;
+              setTimeout(() => { try { dead.o1.stop(); } catch (e) {} }, 400);
+              this.voices.delete(id);
+            }
+          }
+        },
+        silence() {
+          if (!this.ctx) return;
+          const t = this.ctx.currentTime;
+          for (const [, vc] of this.voices) { vc.g.gain.setTargetAtTime(0, t, 0.03); try { vc.o1.stop(t + 0.3); } catch (e) {} }
+          this.voices.clear();
+        },
+        strum(freqs) {
+          if (!this.on) return;
+          this.ensure();
+          freqs.forEach((f, k) => {
+            const t = this.ctx.currentTime + k * 0.06;
+            const o = this.ctx.createOscillator(); o.type = "triangle"; o.frequency.value = f;
+            const g = this.ctx.createGain();
+            g.gain.setValueAtTime(0, t);
+            g.gain.linearRampToValueAtTime(0.11, t + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+            o.connect(g); g.connect(this.master);
+            o.start(t); o.stop(t + 1.2);
+          });
+        },
+      };
+
+      // ── svg helpers ──
+      const SVGNS = "http://www.w3.org/2000/svg";
+      const el = (tag, attrs, parent) => {
+        const n = document.createElementNS(SVGNS, tag);
+        for (const k in attrs) n.setAttribute(k, attrs[k]);
+        if (parent) parent.appendChild(n);
+        return n;
+      };
+      function hexPts(cx, cy, r) {
+        return Array.from({ length: 6 }, (_, i) => {
+          const a = (Math.PI / 180) * (60 * i - 30);
+          return (cx + r * Math.cos(a)).toFixed(1) + "," + (cy + r * Math.sin(a)).toFixed(1);
+        }).join(" ");
+      }
+      function hullPath(points, pad) {
+        const pts = [...points].sort((p, q) => Math.atan2(p.y, p.x) - Math.atan2(q.y, q.x));
+        const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length, cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+        const poly = pts.map(p => {
+          const dx = p.x - cx, dy = p.y - cy, d = Math.hypot(dx, dy) || 1;
+          return { x: p.x + (dx / d) * pad, y: p.y + (dy / d) * pad };
+        });
+        return poly.map(p => p.x.toFixed(1) + "," + p.y.toFixed(1)).join(" ");
+      }
+      function svgPoint(cell) {
+        // zone-relative pixel center of a cell under the current view
+        const v = viewSpec();
+        return {
+          cx: (cell.x - v.x) * v.zw / v.w,
+          cy: (cell.y - v.y) * v.zh / v.h,
+          w: SIZE * 2 * v.zw / v.w, h: SIZE * 2 * v.zh / v.h,
+        };
+      }
+      function moduleGlyph(m) {
+        if (m.kind === "generator") return '<circle cx="0" cy="0" r="10"/><path d="M-5 0h10M0-5v10"/>';
+        if (m.kind === "forge") return '<path d="M-11 7 0-11 11 7ZM-6 7h12"/>';
+        if (m.kind === "infusor") return '<path d="M-12 0h7M5 0h7M-5 0a5 5 0 0 1 10 0 5 5 0 0 1-10 0Z"/>';
+        return '<path d="M-14 2c4-16 8 16 14 0s10 16 14 0"/>';
+      }
+      const ICONS = {
+        catalog: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/></svg>',
+        forge: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1.8 3.2-3.2 4.6-3.2 8.4a3.2 3.2 0 0 0 6.4 0c0-1.4-.6-2.3-1.1-2.9 1.9.5 3.4 2 3.4 4.3a5.5 5.5 0 0 1-11 0C6.5 7.6 10.8 6.4 12 3Z"/></svg>',
+        arrange: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 9-3 3 3 3"/><path d="m9 5 3-3 3 3"/><path d="m15 19-3 3-3-3"/><path d="m19 9 3 3-3 3"/><path d="M2 12h20"/><path d="M12 2v20"/></svg>',
+        cell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2l8.7 5v10L12 22l-8.7-5V7L12 2Z"/></svg>',
+        inv: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v9"/></svg>',
+      };
+
+      // ── zoom & pan: the viewBox is the only lens ──
+      // zoom shrinks the base viewBox around its center; pan is the world
+      // point held at the zone center. World coordinates never move, so
+      // hulls, chips, and ripples are zoom-agnostic by construction.
+      const BASE = (() => {
+        let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+        for (const c of CELLS) { x0 = Math.min(x0, c.x); x1 = Math.max(x1, c.x); y0 = Math.min(y0, c.y); y1 = Math.max(y1, c.y); }
+        const px = SIZE * 1.7, py = SIZE * 2.2;
+        return { x: x0 - px, y: y0 - py, w: (x1 - x0) + 2 * px, h: (y1 - y0) + 2 * py };
+      })();
+      function viewSpec() {
+        const zone = $("board-zone").getBoundingClientRect();
+        const vw = BASE.w / state.zoom, vh = BASE.h / state.zoom;
+        return { x: state.panX - vw / 2, y: state.panY - vh / 2, w: vw, h: vh, zw: zone.width, zh: zone.height };
+      }
+      function applyView() {
+        const v = viewSpec();
+        $("board").setAttribute("viewBox", `${v.x.toFixed(1)} ${v.y.toFixed(1)} ${v.w.toFixed(1)} ${v.h.toFixed(1)}`);
+      }
+      function zoomBy(f) {
+        state.zoom = Math.min(3, Math.max(0.8, state.zoom * f));
+        applyView();
+      }
+      function zoomFit() {
+        state.zoom = 1;
+        state.panX = BASE.x + BASE.w / 2;
+        state.panY = BASE.y + BASE.h / 2;
+        applyView();
+      }
+
+      let currentChords = [];
+      let rateNow = { total: 0 };
+
+      // ── render ──
+      function render() {
+        currentChords = analyze(synthKeys());
+        rateNow = rateOf(currentChords);
+
+        const svg = $("board");
+        applyView();
+        const world = $("world");
+        world.innerHTML = "";
+        const gCells = el("g", {}, world);
+        const gHulls = el("g", {}, world);
+        const gChips = el("g", {}, world);
+        const gModules = el("g", {}, world);
+
+        const { formIds, list: previewList } = previewChords();
+        const previewByKey = new Map(previewList.map(c => [c.key, c]));
+        const selSet = selChordKeys();
+        const fr = frontier();
+        const rowGates = new Set(CELLS.filter(c => !state.owned.has(c.key) && fr.has(c.key) && c.j >= Math.max(...[...state.owned].map(k => byKey.get(k).j)) + 1).map(c => c.j));
+
+        for (const c of CELLS) {
+          const owned = state.owned.has(c.key);
+          let cls = "cell" + (owned ? "" : " unowned");
+          if (state.over === c.key) {
+            if (state.buyingCell && !owned) cls += " buyable";
+            else if (owned && occupant(c.key) && occupant(c.key).id !== (state.dragging || state.placing)) cls += " swap";
+            else if (owned) cls += " target";
+          }
+          if (!owned && state.buyingCell && fr.has(c.key)) cls += " buyable";
+          if (owned) {
+            const label = el("text", { x: c.x, y: c.y - 2, class: "pitch-label" }, gCells);
+            label.textContent = c.name;
+            el("text", { x: c.x + SIZE * 0.6, y: c.y + SIZE * 0.62, class: "oct-label" }, gCells).textContent = c.oct;
+          }
+          el("polygon", { "data-cell-poly": c.key, class: cls, points: hexPts(c.x, c.y, SIZE) }, gCells);
+        }
+        // one dashed horizon per unowned row with a frontier cell: the row gate, visible
+        for (const j of rowGates) {
+          const y = SIZE * 1.5 * j - SIZE * 1.05;
+          el("line", { class: "rowgate", x1: 0, y1: y, x2: SIZE * Math.sqrt(3) * (I - 0.5), y2: y }, gCells);
+        }
+
+        // chord hulls + chips, stacked when chords nest (overflow behavior)
+        const stack = new Map();
+        [...currentChords, ...previewList.filter(c => formIds.has(c.key))].forEach((ch) => {
+          const isPreview = formIds.has(ch.key);
+          const pts = ch.cells.map(c => ({ x: c.x, y: c.y }));
+          const nest = stack.get(ch.cells.map(c => c.key).join()) || 0;
+          const pad = SIZE * (0.95 + nest * 0.16);
+          const top = ch.cells.reduce((m, c) => (c.y < m.y ? c : m), ch.cells[0]);
+          const k = stack.get("label" + top.key) || 0;
+          stack.set("label" + top.key, k + 1);
+          el("polygon", {
+            class: "chord-hull" + (isPreview ? " preview" : ""),
+            points: hullPath(pts, pad),
+            style: `--cc:${ch.def.color};mix-blend-mode:screen`,
+            "stroke-width": selSet.has(ch.key) ? 4 : 2.5,
+            opacity: isPreview ? 0.75 : 0.9,
+          }, gHulls);
+          const chip = el("text", { class: "chord-chip", x: top.x, y: top.y - SIZE * 1.18 - k * 14, "text-anchor": "middle", style: `--cc:${ch.def.color}` }, gChips);
+          let tspan = `<tspan class="mult">${esc(ch.def.name)} ×${ch.def.mult.toFixed(2)}</tspan>`;
+          if (flow() && !isPreview) {
+            const members = ch.cells.map(c => occupant(c.key)).filter(Boolean);
+            const amp = members.reduce((s, m) => s + ampOf(m), 0);
+            tspan += `<tspan fill="var(--muted)"> · +${(amp * (ch.def.mult - 1) * 1.6).toFixed(1)} ν/s</tspan>`;
+          }
+          if (isPreview) tspan += `<tspan fill="var(--muted)"> · would form</tspan>`;
+          chip.innerHTML = tspan;
+        });
+
+        for (const m of state.modules.filter(m => m.pos)) {
+          const c = byKey.get(m.pos);
+          const cls = "module" + (state.selected === m.id ? " selected" : "") + (state.dragging === m.id || state.placing === m.id ? " dragging" : "");
+          const g = el("g", { class: cls, "data-module": m.id, style: "--cat:" + colors[m.kind], transform: `translate(${c.x} ${c.y})` }, gModules);
+          el("polygon", { class: "plate", points: hexPts(0, 0, SIZE * 0.82) }, g);
+          el("text", { class: "level", y: -SIZE * 0.52 }, g).textContent = "L" + m.level;
+          el("g", { class: "glyph", transform: "translate(0,-4)" }, g).innerHTML = moduleGlyph(m);
+          el("text", { class: "name", y: SIZE * 0.42 }, g).textContent = m.short;
+          el("text", { class: "note", y: SIZE * 0.62 }, g).textContent = c.name + c.oct;
+        }
+
+        AudioMgr.setVoices(state.modules.filter(m => m.kind === "synth" && m.pos).map(m => ({ id: m.id, freq: byKey.get(m.pos).freq })));
+
+        buildBloom();
+        renderInventory();
+        renderDock();
+        renderLedger();
+        const wouldNames = [...formIds].map(k => previewByKey.get(k).def.name).join(" + ");
+        const banner = $("mode-banner");
+        banner.innerHTML = state.buyingCell
+          ? `New cell — click a dashed frontier cell · ${cellCost()} ν${rowGates.size ? " · first cell of a new octave row costs the row gate" : ""} · Esc cancels`
+          : state.placing
+            ? `Choose a cell for ${esc(state.modules.find(m => m.id === state.placing)?.name ?? "")} · occupied swaps${wouldNames ? ` · <span class="would">would form ${esc(wouldNames)}</span>` : ""} · Esc cancels`
+            : state.dragging
+              ? `Drop on a cell to move or swap · drop on inventory to retrieve${wouldNames ? ` · <span class="would">would form ${esc(wouldNames)}</span>` : ""}`
+              : flow()
+                ? `Flow session · board locked · chords are sounding`
+                : `Click a face to select · drag to move (always live) · drop on inventory to retrieve`;
+        $("pause-btn").style.display = flow() ? "" : "none";
+        $("pause-btn").textContent = state.paused ? "▶" : "⏸";
+        $("focus-btn").style.display = state.variant === "c" && phone() && !state.focus ? "" : "none";
+      }
+
+      const selChordKeys = () => {
+        const m = selectedMod();
+        if (!m || !m.pos) return new Set();
+        return new Set(chordsOf(currentChords, m.pos).map(c => c.key));
+      };
+
+      function renderLedger() {
+        const total = rateNow.total;
+        $("nous-cell").textContent = "2,400 ν";
+        $("rate-cell-total").textContent = total.toFixed(1) + " ν/s";
+        $("session-cell").textContent = flow() ? Math.round(state.banked) + " ν" : "—";
+        const parts = currentChords.map(c => `${c.def.short} ×${c.def.mult.toFixed(2)}`);
+        const chain = ["Σ voices " + rateNow.sum.toFixed(1), ...parts].join(" · ");
+        $("rate-equation").innerHTML = esc(chain) + " = <b>" + total.toFixed(1) + " ν/s</b>";
+        $("ledger-formula").innerHTML =
+          `<div class="eq">${esc(chain)} = ${total.toFixed(1)} ν/s</div>` +
+          `<div class="muted">voices: ${state.modules.filter(m => m.kind === "synth" && m.pos).length} synths · Σ amp ${rateNow.sum.toFixed(2)}</div>` +
+          `<div class="muted">chords: ${currentChords.length ? currentChords.map(c => esc(c.def.name) + " ×" + c.def.mult.toFixed(2)).join(", ") : "none"}</div>` +
+          `<div class="muted">cell scaler and empowerment folded into the voices' amp (placeholders)</div>`;
+        $("feats-count").textContent = "2/17 feats";
+        if (state.variant === "b" && phone()) {
+          $("top-status").innerHTML =
+            `<span><span class="muted">ν</span> <b>2,400</b></span>` +
+            `<span><b>${total.toFixed(1)}</b> <span class="muted">ν/s</span></span>` +
+            `<span><span class="muted">session</span> <b>${flow() ? Math.round(state.banked) : "—"}</b></span>` +
+            `<button class="status-feats" id="status-feats"><b>2</b>/17 feats</button>`;
+          const sf = $("status-feats");
+          if (sf) sf.onclick = (e) => { e.stopPropagation(); openSheet("feats", "sheeted"); };
+        }
+        const fill = Math.round(Math.log10(1 + 8.6) / Math.log10(11) * 100);
+        $("arete-fill").style.width = fill + "%";
+      }
+
+      function renderDock() {
+        const dockButtons = [
+          { id: "catalog", label: "Catalog", on: state.sheet === "catalog" },
+          { id: "forge", label: "Forge", on: state.sheet === "forge" },
+          { id: "arrange", label: "Arrange", on: false },
+          { id: "cell", label: "New cell", on: state.buyingCell },
+        ];
+        const html = dockButtons.map(b => `<button data-op="${b.id}" class="${b.on ? "on armed" : b.on ? "on" : ""}" title="${b.label}">${ICONS[b.id]}<small>${b.label}</small></button>`).join("");
+        $("dock").innerHTML = html;
+        const invCount = state.modules.filter(m => !m.pos).length;
+        $("botbar").innerHTML = dockButtons.map(b => `<button data-op="${b.id}" class="${b.on ? "on armed" : b.on ? "on" : ""}">${ICONS[b.id]}<small>${b.label}</small></button>`).join("") +
+          `<button data-op="inventory">${ICONS.inv}<small>Inventory · ${invCount}</small></button>`;
+        $("inv-chip").textContent = "Inventory · " + invCount;
+        document.querySelectorAll("[data-op]").forEach(b => b.onclick = (e) => { e.stopPropagation(); opAction(b.dataset.op); });
+      }
+
+      function opAction(op) {
+        if (flow()) { say("Board is locked while a session runs — exit flow to rearrange."); return; }
+        if (op === "arrange") { say("Dragging is always live — arrange by moving faces directly."); return; }
+        if (op === "cell") { state.buyingCell = !state.buyingCell; state.sheet = null; closeSheetUi(); render(); return; }
+        // catalog/forge/inventory present as sheet on half+phone, right panel on wide
+        const presenting = phone() || size() === "half" ? "sheeted" : "docked";
+        if (op === "inventory" && state.variant !== "c") {
+          // B folds inventory into the bar; A keeps the strip — chips/sheets only where hidden
+          if (state.variant === "b" && phone()) openSheet("inventory", presenting);
+          else say("Inventory lives on the board — drag items onto cells.");
+          return;
+        }
+        openSheet(op, presenting);
+      }
+
+      // ── bloom (#127): lifted face everywhere except B/C phone → sheet ──
+      function bloomStyle() {
+        if ((state.variant === "b" || state.variant === "c") && phone()) return "sheet";
+        return "lift";
+      }
+      function buildBloom() {
+        const host = $("bloom-host");
+        host.innerHTML = "";
+        const m = selectedMod();
+        if (!m || !m.pos || state.focus) return;
+        const c = byKey.get(m.pos);
+        const p = svgPoint(c);
+        const zone = $("board-zone").getBoundingClientRect();
+        const style = bloomStyle();
+        const inner = (col) => `<div class="${col ? "col" : ""}">
+            ${col ? `<div class="nm">${esc(m.short)} · L${m.level}</div><div class="cell-note">${c.name}${c.oct} · ${contrib(m)}</div>` : `
+            <div class="lv">L${m.level}</div>
+            <svg class="glyph" width="46" height="40" viewBox="-18 -15 36 30"><g>${moduleGlyph(m)}</g></svg>
+            <div class="nm">${esc(m.short)}</div>
+            <div class="cell-note">${c.name}${c.oct}</div>
+            <div class="contrib">${contrib(m)}</div>`}
+          </div>`;
+        const action = flow()
+          ? `<div class="muted" style="font:10px var(--mono)">sounding — locked until exit</div>`
+          : `<button class="primary" data-action="upgrade">Upgrade<small>180 ν</small></button>`;
+        let box = document.createElement("div");
+        if (style === "sheet") {
+          box.className = "bloom-sheet";
+          box.innerHTML = `<svg class="glyph" width="40" height="36" viewBox="-18 -15 36 30"><g>${moduleGlyph(m)}</g></svg>` + inner(true) + action;
+        } else {
+          box.className = "bloom-expand";
+          box.innerHTML = inner(false) + action;
+        }
+        box.dataset.module = m.id;
+        box.style.setProperty("--cat", colors[m.kind]);
+        host.appendChild(box);
+        if (style === "lift") {
+          const w = Math.max(150, p.w * 2.6), h = Math.max(170, p.h * 2.45);
+          const zoneH = zone.height;
+          const left = Math.max(8, Math.min(zone.width - w - 8, p.cx - w / 2));
+          const top = Math.max(40, Math.min(zoneH - h - 8, p.cy - h / 2));
+          box.style.left = left + "px"; box.style.top = top + "px";
+          box.style.width = w + "px"; box.style.height = h + "px";
+        }
+        box.querySelectorAll("[data-action]").forEach(b => b.onclick = (e) => {
+          e.stopPropagation();
+          if (b.dataset.action === "upgrade") { m.level++; say(m.name + " upgraded to level " + m.level + "."); render(); }
+        });
+        box.querySelectorAll("button").forEach(b => b.addEventListener("pointerdown", e => e.stopPropagation()));
+        // the lifted face itself is draggable — grabbing the bloom moves the module (#118)
+        box.addEventListener("pointerdown", e => { if (e.target.closest("button")) return; startDrag(e, m.id); });
+      }
+
+      // ── sheets ──
+      function openSheet(kind, presenting) {
+        // the rate formula and the feats list stay readable during a session;
+        // every board-mutating surface is upgrade-only
+        if (flow() && !["formula", "feats"].includes(kind)) {
+          say("Board is locked while a session runs — exit flow to rearrange.");
+          return;
+        }
+        closeSheetUi();
+        state.sheet = kind;
+        const host = $("sheet-host");
+        const sheet = document.createElement("div");
+        sheet.className = "sheet " + presenting;
+        sheet.dataset.sheet = kind;
+        const head = (title) => `<div class="sheet-head"><h2>${title}</h2><button class="x" data-close>✕</button></div>`;
+        if (kind === "catalog") {
+          sheet.innerHTML = head("Catalog") + `<div class="sheet-body">
+            <div class="shop-row"><div><b>Additive synth</b><small>The workhorse voice — joins chords by pitch</small></div><button data-buy="synth">340 ν</button></div>
+            <div class="shop-row"><div><b>Granular synth</b><small>Softer timbre, same harmonic role</small></div><button data-buy="synth">340 ν</button></div>
+            <div class="shop-row"><div><b>Infusor</b><small>Uplifts nearby synths — never chords</small></div><button data-buy="infusor">480 ν</button></div>
+            <div class="shop-row"><div><b>Focus-keyed generator</b><small>Charges while you practice</small></div><button data-buy="generator">520 ν</button></div>
+            <div class="muted" style="font-size:11px">Purchases land in inventory — placement happens on the board.</div>
+          </div>`;
+        } else if (kind === "forge") {
+          sheet.innerHTML = head("Forge") + `<div class="sheet-body">
+            <div class="eyebrow">Current roll</div>
+            <div class="forge-progress"><i style="width:${Math.round(state.forgeProgress * 100)}%"></i></div>
+            <button data-forge>Forge a roll (${state.rolls} banked)</button>
+            <div class="muted" style="font-size:11px;margin-top:10px">Rolls mint modules into inventory. Presentation only — the forge's own design is not this ticket.</div>
+          </div>`;
+        } else if (kind === "inventory") {
+          const inv = state.modules.filter(m => !m.pos);
+          sheet.innerHTML = head("Inventory") + `<div class="sheet-body">
+            ${inv.length ? inv.map(m => `<button class="inv-item" data-take="${m.id}" style="--cat:${colors[m.kind]};width:100%;margin-bottom:8px"><b>${esc(m.short.slice(0, 4))}</b><span><b>${esc(m.name)}</b><small>L${m.level} · tap, then tap a cell</small></span></button>`).join("") : `<div class="muted">Empty — buy from the catalog or forge a roll.</div>`}
+          </div>`;
+        } else if (kind === "menu") {
+          sheet.innerHTML = head("Console") + `<div class="sheet-body"><div class="opgrid">
+            <button data-op="catalog">${ICONS.catalog}<div>Catalog<small>buy modules</small></div></button>
+            <button data-op="forge">${ICONS.forge}<div>Forge<small>rolls → modules</small></div></button>
+            <button data-op="arrange">${ICONS.arrange}<div>Arrange<small>drag is always live</small></div></button>
+            <button data-op="cell">${ICONS.cell}<div>New cell<small>extend the board</small></div></button>
+            <button data-op="inventory">${ICONS.inv}<div>Inventory<small>place from the tray</small></div></button>
+          </div>
+          <div class="feat-row" style="margin-top:12px"><b>2/17 feats</b><small>Feats list — unchanged by this ticket.</small></div>
+          <div class="prod-ledger" style="margin-top:4px">
+            <div class="prod-cell"><span class="eyebrow">Nous</span><strong class="mono">2,400 ν</strong></div>
+            <div class="prod-cell"><span class="eyebrow">Rate</span><strong class="mono">${rateNow.total.toFixed(1)} ν/s</strong></div>
+            <div class="prod-cell"><span class="eyebrow">Session</span><strong class="mono">${flow() ? Math.round(state.banked) + " ν" : "—"}</strong></div>
+          </div></div>`;
+        } else if (kind === "feats") {
+          sheet.innerHTML = head("Feats — 2 of 17") + `<div class="sheet-body">
+            <div class="feat-row"><b>First chord</b><small>Formed your first chord · unlocked</small></div>
+            <div class="feat-row"><b>Session keeper</b><small>Bank 5 sessions · 6/5 — unlocked</small></div>
+            <div class="feat-row"><b>Octave upward</b><small>Own a cell in every octave row · 3/5</small></div>
+          </div>`;
+        } else if (kind === "formula") {
+          sheet.innerHTML = head("Rate formula") + `<div class="sheet-body">${$("ledger-formula").innerHTML}</div>`;
+        }
+        host.appendChild(sheet);
+        $("scrim").classList.add("show");
+        sheet.querySelector("[data-close]").onclick = () => closeSheet();
+        sheet.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => {
+          const kinds = { synth: ["Additive", "ADD"], infusor: ["Infusor", "INFUSE"], generator: ["Focus keyed", "FOCUS"] };
+          const [name, short] = kinds[b.dataset.buy];
+          const kindKey = b.dataset.buy === "synth" ? "synth" : b.dataset.buy;
+          state.modules.push({ id: "m" + Date.now(), kind: kindKey, name, short, level: 1, pos: null });
+          say(name + " purchased — it's in your inventory.");
+          render();
+        });
+        sheet.querySelectorAll("[data-forge]").forEach(b => b.onclick = () => {
+          state.rolls = Math.max(0, state.rolls - 1);
+          state.modules.push({ id: "m" + Date.now(), kind: "synth", name: "FM", short: "FM", level: 1, pos: null });
+          say("Roll forged — FM synth added to inventory.");
+          render();
+        });
+        sheet.querySelectorAll("[data-take]").forEach(b => b.onclick = () => {
+          state.placing = b.dataset.take;
+          state.selected = b.dataset.take;
+          closeSheet();
+          say("Now tap a cell — occupied cells swap.");
+          render();
+        });
+        sheet.querySelectorAll("[data-op]").forEach(b => b.onclick = (e) => { e.stopPropagation(); opAction(b.dataset.op); });
+      }
+      function closeSheetUi() { $("sheet-host").innerHTML = ""; $("scrim").classList.remove("show"); }
+      function closeSheet() { state.sheet = null; closeSheetUi(); }
+
+      // ── inventory strip (board surface, #118) ──
+      function renderInventory() {
+        const inv = state.modules.filter(m => !m.pos);
+        $("inventory-items").innerHTML = inv.map(m => `<button class="inv-item" data-inventory="${m.id}" style="--cat:${colors[m.kind]}"><b>${esc(m.short.slice(0, 4))}</b><span><b>${esc(m.name)}</b><small>L${m.level} · click to place</small></span></button>`).join("");
+        $("inventory-count").textContent = inv.length + " modules";
+        $("inventory").classList.toggle("drop", state.over === "inventory");
+        document.querySelectorAll("[data-inventory]").forEach(b => b.onclick = (e) => {
+          e.stopPropagation();
+          if (flow()) { say("Board is locked while a session runs — exit flow to rearrange."); return; }
+          state.placing = b.dataset.inventory; state.selected = b.dataset.inventory; render();
+        });
+      }
+
+      // ── actions ──
+      function place(id, dest) {
+        const m = state.modules.find(m => m.id === id), other = occupant(dest);
+        if (!m) return;
+        const before = chordIds(currentChords);
+        const old = m.pos;
+        if (other && other.id !== id) { other.pos = old; m.pos = dest; say(m.name + " swapped with " + other.name + "."); }
+        else { m.pos = dest; say(m.name + " placed on " + byKey.get(dest).name + byKey.get(dest).oct + "."); }
+        state.selected = id; state.placing = null; state.over = null;
+        render();
+        resolveChordChanges(before);
+      }
+      function retrieve(id) {
+        const m = state.modules.find(m => m.id === id); if (!m) return;
+        const before = chordIds(currentChords);
+        m.pos = null; state.selected = null; state.placing = null;
+        render();
+        resolveChordChanges(before);
+        say(m.name + " returned to inventory.");
+      }
+      function buyCell(key) {
+        const cost = cellCost();
+        const c = byKey.get(key);
+        const rowGate = ![...state.owned].some(k => byKey.get(k).j === c.j) ? 400 : 0;
+        state.owned.add(key);
+        state.cellsBought++;
+        state.buyingCell = false;
+        say(`Cell bought — ${cost} ν${rowGate ? " plus the row gate (" + rowGate + " ν)" : ""}.`);
+        render();
+      }
+      function resolveChordChanges(before) {
+        currentChords = analyze(synthKeys());
+        const after = chordIds(currentChords);
+        const born = [...after].filter(k => !before.has(k));
+        for (const k of born) {
+          const ch = currentChords.find(c => c.key === k);
+          ripple(ch);
+          AudioMgr.strum(ch.cells.map(c => c.freq));
+        }
+        if (born.length) say(born.map(k => currentChords.find(c => c.key === k).def.name).join(" + ") + " formed!");
+      }
+      function ripple(ch) {
+        const cx = ch.cells.reduce((s, c) => s + c.x, 0) / ch.cells.length;
+        const cy = ch.cells.reduce((s, c) => s + c.y, 0) / ch.cells.length;
+        const ring = el("circle", { class: "ripple", cx, cy, r: SIZE * 1.1, style: `--cc:${ch.def.color};transform-box:fill-box;transform-origin:center`, "stroke-width": 3 }, $("world"));
+        setTimeout(() => ring.remove(), 750);
+      }
+
+      // ── drag (always live, #118) ──
+      function startDrag(e, id) {
+        if (flow()) { say("Board is locked while a session runs — exit flow to rearrange."); return; }
+        const start = { x: e.clientX, y: e.clientY };
+        let active = false, ghost = null;
+        const move = ev => {
+          if (!active && Math.hypot(ev.clientX - start.x, ev.clientY - start.y) > 6) {
+            active = true; state.dragging = id; state.selected = id; state.placing = null;
+            const m = state.modules.find(m => m.id === id);
+            ghost = document.createElement("div"); ghost.className = "ghost";
+            ghost.style.setProperty("--cat", colors[m.kind]); ghost.textContent = m.short;
+            document.body.appendChild(ghost);
+            render();
+          }
+          if (!active) return;
+          ghost.style.left = ev.clientX + "px"; ghost.style.top = ev.clientY + "px";
+          const below = document.elementFromPoint(ev.clientX, ev.clientY);
+          const cell = below?.closest?.("[data-cell-poly]");
+          const inv = below?.closest?.("#inventory,[data-sheet='inventory']");
+          const key = cell?.dataset.cellPoly;
+          const over = (key && byKey.has(key)) ? key : (inv ? "inventory" : null);
+          if (over !== state.over) { state.over = over; render(); }
+        };
+        const up = () => {
+          document.removeEventListener("pointermove", move);
+          document.removeEventListener("pointerup", up);
+          ghost?.remove();
+          if (!active) return;
+          const target = state.over;
+          state.dragging = null; state.over = null;
+          if (target === "inventory") retrieve(id);
+          else if (target && state.owned.has(target)) place(id, target);
+          else { say("Move cancelled — drop on an owned cell or inventory."); render(); }
+        };
+        document.addEventListener("pointermove", move);
+        document.addEventListener("pointerup", up, { once: true });
+      }
+
+      // pan when zoomed: press an empty cell and drag
+      function startPan(e) {
+        if (state.zoom === 1) return;
+        const v = viewSpec();
+        const wx = v.w / v.zw, wy = v.h / v.zh; // world units per pixel
+        const start = { x: e.clientX, y: e.clientY, px: state.panX, py: state.panY };
+        const move = ev => {
+          state.panX = start.px - (ev.clientX - start.x) * wx;
+          state.panY = start.py - (ev.clientY - start.y) * wy;
+          applyView();
+        };
+        const up = () => {
+          document.removeEventListener("pointermove", move);
+          document.removeEventListener("pointerup", up);
+        };
+        document.addEventListener("pointermove", move);
+        document.addEventListener("pointerup", up, { once: true });
+      }
+
+      function bindBoard() {
+        // scope to the board svg: the bloom box carries data-module too, and it
+        // manages its own drag — its click must not toggle selection
+        document.querySelectorAll("#world [data-module]").forEach(elm => {
+          const id = elm.dataset.module;
+          elm.addEventListener("click", e => {
+            e.stopPropagation(); if (state.dragging) return;
+            state.selected = state.selected === id ? null : id;
+            state.placing = null;
+            render();
+          });
+          elm.addEventListener("pointerdown", e => { if (e.button !== 0) return; e.stopPropagation(); startDrag(e, id); });
+        });
+        document.querySelectorAll("[data-cell-poly]").forEach(poly => {
+          const key = poly.dataset.cellPoly;
+          poly.addEventListener("click", () => {
+            if (state.buyingCell) {
+              if (!state.owned.has(key)) buyCell(key);
+              return;
+            }
+            if (flow()) { state.selected = null; render(); return; }
+            if (!state.placing) { if (state.selected) { state.selected = null; render(); } return; }
+            if (!state.owned.has(key)) { say("That cell isn't yours yet — buy it from the dock."); return; }
+            place(state.placing, key);
+          });
+          poly.addEventListener("pointerdown", e => {
+            if (e.button !== 0) return;
+            const occupied = occupant(key);
+            if (!occupied && !state.placing && !state.buyingCell) startPan(e);
+          });
+        });
+      }
+      const mo = new MutationObserver(() => bindBoard());
+      mo.observe($("world"), { childList: true, subtree: true });
+      $("board").addEventListener("wheel", (e) => {
+        e.preventDefault();
+        zoomBy(e.deltaY < 0 ? 1.12 : 1 / 1.12);
+      }, { passive: false });
+
+      // ── flow session ──
+      let timer;
+      function setMode(mode) {
+        state.mode = mode;
+        const live = mode === "flow";
+        $("flow-btn").textContent = live ? "Exit flow" : "Enter flow";
+        $("flow-btn").classList.toggle("live", live);
+        $("clock-label").textContent = live ? (state.paused ? "paused" : "remaining") : "planned";
+        if (live) {
+          state.elapsed = 0; state.banked = 0; state.paused = false;
+          state.selected = null; state.placing = null; state.buyingCell = false;
+          state.focus = false; app.classList.remove("focus");
+          closeSheet();
+        }
+        clearInterval(timer);
+        if (live) timer = setInterval(() => {
+          if (state.paused) return;
+          state.elapsed += 0.25;
+          state.banked += rateNow.total * 0.25;
+          const left = Math.max(0, 25 * 60 - state.elapsed);
+          $("clock").textContent = Math.floor(left / 60) + ":" + String(Math.floor(left % 60)).padStart(2, "0");
+          renderLedger();
+        }, 250);
+        if (!live) $("clock").textContent = "25:00";
+        render();
+      }
+      $("pause-btn").onclick = () => {
+        if (!flow()) return;
+        state.paused = !state.paused;
+        say(state.paused ? "Paused." : "Flow resumed.");
+        $("clock-label").textContent = state.paused ? "paused" : "remaining";
+        render();
+      };
+      $("flow-btn").onclick = () => setMode(state.mode === "flow" ? "upgrade" : "flow");
+
+      // ── toast ──
+      let toastTimer;
+      function say(text) {
+        const t = $("toast"); t.textContent = text; t.classList.add("show");
+        clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2100);
+      }
+
+      // ── chrome wiring ──
+      $("rate-cell").onclick = () => {
+        if (phone() || size() === "half") openSheet("formula", "sheeted");
+        else {
+          const open = $("rate-cell").classList.toggle("formula-open");
+          $("rate-cell").setAttribute("aria-expanded", String(open));
+        }
+      };
+      $("feats-chip").onclick = () => openSheet("feats", phone() || size() === "half" ? "sheeted" : "docked");
+      $("inv-chip").onclick = () => openSheet("inventory", "sheeted");
+      $("hud-menu").onclick = () => openSheet("menu", "sheeted");
+      $("scrim").onclick = () => closeSheet();
+      $("zoom-in").onclick = () => zoomBy(1.25);
+      $("zoom-out").onclick = () => zoomBy(1 / 1.25);
+      $("zoom-fit").onclick = zoomFit;
+      $("focus-btn").onclick = () => { state.focus = true; app.classList.add("focus"); render(); };
+      $("focus-exit").onclick = () => { state.focus = false; app.classList.remove("focus"); render(); };
+      document.addEventListener("keydown", e => {
+        const tag = e.target.tagName;
+        if (["INPUT", "TEXTAREA"].includes(tag) || e.target.isContentEditable) return;
+        if (e.key === "Escape") {
+          if (state.focus) { state.focus = false; app.classList.remove("focus"); }
+          state.selected = null; state.placing = null; state.over = null; state.buyingCell = false;
+          closeSheet();
+          render();
+        }
+        if (e.key === "ArrowLeft") setVariant(-1);
+        if (e.key === "ArrowRight") setVariant(1);
+        if (e.key === "1") setWidth("full");
+        if (e.key === "2") setWidth("half");
+        if (e.key === "3") setWidth("phone");
+        if (e.key.toLowerCase() === "s") toggleSound();
+        if (e.key.toLowerCase() === "f") setMode(state.mode === "flow" ? "upgrade" : "flow");
+      });
+
+      // ── the simulator: width frames ──
+      const WIDTHS = {
+        full: () => ({ w: Math.min(window.innerWidth - 24, 1280), h: window.innerHeight - 90, label: "Full — fills the window" }),
+        half: () => ({ w: 720, h: Math.min(760, window.innerHeight - 90), label: "Half 720 — half-width desktop / tablet" }),
+        phone: () => ({ w: 390, h: Math.min(780, window.innerHeight - 90), label: "Phone 390 — portrait phone" }),
+      };
+      function setWidth(w) {
+        if (!WIDTHS[w]) w = "half";
+        state.width = w;
+        const spec = WIDTHS[w]();
+        const frame = $("frame");
+        frame.style.setProperty("--fw", spec.w + "px");
+        frame.style.height = spec.h + "px";
+        const v = VARIANTS.find(x => x.key === state.variant) || VARIANTS[0];
+        $("frame-label").textContent = spec.label + " — " + v.name + ": " + v.blurb;
+        document.body.dataset.width = w;
+        const url = new URL(location.href); url.searchParams.set("width", w); history.replaceState({}, "", url);
+        document.querySelectorAll(".wbtn").forEach(b => b.style.background = b.dataset.w === w ? "#131522" : "");
+        measure();
+        zoomFit();
+      }
+      function measure() {
+        const w = app.clientWidth;
+        const next = w > 900 ? "wide" : w >= 620 ? "half" : "phone";
+        if (app.dataset.size !== next) {
+          app.dataset.size = next;
+          render();
+        }
+      }
+      new ResizeObserver(() => measure()).observe(app);
+
+      // ── variant switcher ──
+      function setVariant(delta) {
+        const i = VARIANTS.findIndex(v => v.key === state.variant);
+        const v = VARIANTS[(i + delta + VARIANTS.length) % VARIANTS.length];
+        const url = new URL(location.href); url.searchParams.set("variant", v.key); history.replaceState({}, "", url);
+        applyVariant(v);
+      }
+      function applyVariant(v) {
+        state.variant = v.key;
+        app.dataset.variant = v.key;
+        $("variant-label").textContent = v.key.toUpperCase() + " · " + v.name;
+        $("frame-label").textContent = WIDTHS[state.width]().label + " — " + v.name + ": " + v.blurb;
+        closeSheet();
+        render();
+      }
+      $("prev").onclick = () => setVariant(-1);
+      $("next").onclick = () => setVariant(1);
+      document.querySelectorAll(".wbtn").forEach(b => b.onclick = () => setWidth(b.dataset.w));
+
+      // sound toggle
+      function toggleSound() {
+        AudioMgr.on = !AudioMgr.on;
+        $("sound-btn").textContent = "sound: " + (AudioMgr.on ? "on" : "off");
+        if (!AudioMgr.on) AudioMgr.silence();
+        else render();
+      }
+      $("sound-btn").onclick = toggleSound;
+
+      // ── boot ──
+      const params = new URLSearchParams(location.search);
+      setWidth(params.get("width") || (window.innerWidth <= 700 ? "full" : "half"));
+      applyVariant(VARIANTS.find(v => v.key === params.get("variant")) || VARIANTS[0]);
+      setMode("upgrade");
+
+      // debug hooks for automated poking; harmless in a throwaway prototype
+      window.__respproto = {
+        setVariant: (k) => applyVariant(VARIANTS.find(v => v.key === k) || VARIANTS[0]),
+        setWidth,
+        setMode,
+        place: (id, pos) => { const m = state.modules.find(m => m.id === id); m.pos = pos; render(); },
+        openSheet, closeSheet,
+        chords: () => currentChords.map(c => c.def.name + "@" + c.anchor),
+        state: () => ({ variant: state.variant, width: state.width, size: size(), mode: state.mode, focus: state.focus, zoom: state.zoom, sheet: state.sheet, selected: state.selected, placing: state.placing, dragging: state.dragging, over: state.over }),
+      };
+    </script>
+  </body>
+</html>
