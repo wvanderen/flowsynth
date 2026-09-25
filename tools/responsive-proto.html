@@ -844,10 +844,13 @@
         box.style.setProperty("--cat", colors[m.kind]);
         host.appendChild(box);
         if (style === "lift") {
-          // one fixed regular hexagon, anchored above the selected cell, clamped in
+          // toward the camera: always exactly centered over the module, its
+          // bottom tip touching the cell's top edge — below only if the top
+          // of the frame leaves no room
           const W = 224, H = 258;
-          const left = Math.max(8, Math.min(zone.width - W - 8, p.cx - W / 2));
-          const top = Math.max(6, Math.min(zone.height - H - 8, p.cy - H * 0.72));
+          const left = p.cx - W / 2;
+          let top = p.cy - p.h / 2 - H + 10;
+          if (top < 6) top = Math.min(zone.height - H - 6, p.cy + p.h / 2 - 10);
           box.style.left = left + "px"; box.style.top = top + "px";
         }
         box.querySelectorAll("[data-action]").forEach(b => b.onclick = (e) => {
@@ -964,7 +967,8 @@
         const old = m.pos;
         if (other && other.id !== id) { other.pos = old; m.pos = dest; say(m.name + " swapped with " + other.name + "."); }
         else { m.pos = dest; say(m.name + " placed on " + byKey.get(dest).name + byKey.get(dest).oct + "."); }
-        state.selected = id; state.placing = null; state.over = null;
+        // a drop leaves the bloom closed — selection is a click's answer, not a move's
+        state.selected = null; state.placing = null; state.over = null;
         render();
         resolveChordChanges(before);
       }
