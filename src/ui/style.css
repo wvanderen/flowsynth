@@ -1377,7 +1377,8 @@ body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate:hover .ledger-hi
 body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate:focus .ledger-hint,
 body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate.formula-open .ledger-hint { color: var(--nous); border-color: var(--nous); }
 /* The whole formula — equation and breakdown — is one panel dropping below
-   the ledger row; nothing is visible without hover or tap. */
+   the ledger row; nothing beyond the ambient equation is visible without
+   hover or tap. */
 body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate .monitor-breakdown { bottom: auto; top: calc(100% + 12px); left: 0; }
 body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate:hover .monitor-breakdown,
 body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate:focus .monitor-breakdown,
@@ -1390,10 +1391,21 @@ body:is([data-variant="d"], [data-variant="e"]) .formula-panel .monitor-equation
   border-bottom: 1px solid var(--line-soft);
   overflow: visible;
 }
+/* Ambient formula on wide layouts: the operand chain ending in the live
+   total rides in the Rate cell, collapsing the plain rate display into
+   the formula's own. */
+body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate .rate-equation { display: flex; align-items: center; }
+body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate .rate-equation .monitor-equation { display: flex; overflow: visible; }
+body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate > strong[data-live="rate"] { display: none; }
 /* Tap pins the breakdown open; on narrow widths it presents as a modal
    sheet over a scrim (touch has no hover). */
 .formula-scrim { display: none; }
 @container app (max-width: 760px) {
+  /* Mobile collapses the ambient formula to its total: the operand chain
+     hides, the plain rate stands alone, and the full formula returns via
+     the Rate tap modal. */
+  body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate .rate-equation { display: none; }
+  body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate > strong[data-live="rate"] { display: block; }
   body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate:hover .monitor-breakdown { display: none; }
   body:is([data-variant="d"], [data-variant="e"]) .prod-cell-rate.formula-open .monitor-breakdown {
     display: block;

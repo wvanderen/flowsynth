@@ -86,6 +86,11 @@ function formulaEquationHtml(boosted: boolean, infused: boolean): string {
       </span>`;
 }
 
+// The ambient equation the Rate cell carries on wide layouts: the operand
+// chain ending in the live total — the collapsed formula IS the rate
+// display. Exported for the variant ledger builders.
+export { formulaEquationHtml };
+
 function formulaBreakdownHtml(): string {
   return `
       <div class="monitor-breakdown-row"><span class="bk-name">Chords</span><span class="mono" data-live="b-chords"></span><span class="bk-note" data-live="b-chord-note"></span></div>
@@ -193,13 +198,15 @@ function byId(id: string): HTMLElement | null {
   return document.getElementById(id);
 }
 
-// The formula chip and variant D's header tooltip: (carrier + harmonics
-// [+ infusors]) × chords × empowerment × achievements → rate. Scope is
-// whichever host carries the live nodes — the monitor or the console strip.
+// The formula chip and variant D/E's ledger disclosure: (carrier +
+// harmonics [+ infusors]) × chords × empowerment × achievements → rate.
+// Scope is whichever host carries the live nodes; the ambient equation and
+// the disclosure panel may both be present, so every match updates.
 export function updateFormulaLive(scope: ParentNode, snapshot: RateSnapshot): void {
   const set = (id: string, text: string) => {
-    const node = scope.querySelector(`[data-live="${id}"]`);
-    if (node && node.textContent !== text) node.textContent = text;
+    for (const node of scope.querySelectorAll(`[data-live="${id}"]`)) {
+      if (node.textContent !== text) node.textContent = text;
+    }
   };
   set("m-carrier", formatNumber(snapshot.carrier));
   set("m-harmonics", formatNumber(snapshot.harmonics));
