@@ -6,26 +6,29 @@
     <meta name="color-scheme" content="dark" />
     <title>PROTOTYPE — Responsive composition: half-width play and portrait-phone operation (#121)</title>
     <!--
-      Prototype plan: one question — how do the accepted board (#117/#126), chord feedback (#120),
-      bloom (#127), and console hierarchy (#119 variant E) compose as the surface narrows to
-      half-width and portrait phone, without shrinking the desktop layout and while the board
-      stays the primary surface? Three structurally different narrow-width answers (the variants
-      below), each testable at three simulated widths (Full / Half 720 / Phone 390). Half-width is
-      identical in every variant — the fully-featured first-class layout is a given; the variants
-      disagree about what portrait phone does:
+      Prototype plan (rev 2, after first playtest feedback): one question — how do the accepted
+      board (#117/#126), chord feedback (#120), bloom (#127), and console hierarchy (#119 variant E)
+      compose as the surface narrows to half-width and portrait phone, without shrinking the desktop
+      layout and while the board stays the primary surface? Three structurally different narrow-width
+      answers (the variants below), each testable at three simulated widths (Full / Half 720 / Phone
+      390). Half-width is identical in every variant — the fully-featured first-class layout is a
+      given; the variants disagree about what portrait phone does:
         A · One instrument — the desktop anatomy survives intact at every width; everything
             compacts in place, nothing re-docks, nothing hides.
-        B · Thumb dock — phone re-docks the console to the bottom edge: the ledger dissolves
-            into a one-line status strip, the icon dock becomes a bottom bar with inventory
-            folded in, the bloom presents as a bottom sheet.
+        B · Thumb dock — phone re-docks: top nav keeps session controls only; production reads
+            live in a game-info strip where the tutorial helptext used to be; the icon dock becomes
+            a bottom bar (Catalog / Forge / New cell / Inventory / Feats); the bloom presents as a
+            bottom sheet.
         C · Board-first HUD — phone keeps only a slim HUD over the full-bleed board; every
-            console surface (ops, inventory, ledger detail, bloom) opens as a sheet over a
-            scrim, plus a chrome-free Focus mode for board inspection.
-      State transitions to try at each width: session control (enter/pause/exit), board
-      inspection (zoom buttons, wheel, pan when zoomed), selected-module controls (bloom lift
-      vs sheet), inventory placement (drag and tap-to-place), overflow (ledger equation
-      collapse at 760px, stacked chord chips, dock labels). Numbers are placeholders. Throwaway:
-      no persistence, no tests. Sounds only after you enable it.
+            console surface (ops, inventory, bloom) opens as a sheet over a scrim, plus a
+            chrome-free Focus mode for board inspection.
+      Rev-2 changes from the first playtest: idle tutorial helptext removed everywhere (a real
+      tutorial is future work; armed-mode hints remain); Arrange removed everywhere (dragging is
+      already live); feats moved off the cramped header onto the thumb bar/info strip; the bloom is
+      a fixed regular hexagon that no longer rides a drag, closes on outside click, and shows the
+      upgrade's benefit; zoom cluster rises above the open bloom sheet; the board pans by dragging
+      outside the grid at any zoom (and inside when zoomed), clamped so it can't be lost.
+      Throwaway: no persistence, no tests. Sounds only after you enable it.
     -->
     <style>
       :root {
@@ -80,9 +83,6 @@
       .enter.live { color: #ffd9cf; border-color: #a05a41; background: #4a2a24; box-shadow: 0 0 14px #cc603d55; }
       .ghostbtn { padding: 7px 9px; }
       .top-spring { flex: 1; }
-      /* B · phone: the ledger dissolves into the topbar as one status line */
-      .top-status { display: none; gap: 14px; align-items: baseline; font: 12.5px var(--mono); white-space: nowrap; }
-      .top-status b { font: 13px var(--mono); }
 
       .deck { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 14px 0; }
       .prod-ledger { display: flex; align-items: stretch; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: visible; }
@@ -129,7 +129,20 @@
       @keyframes ripple-out { from { transform: scale(.35); opacity: .75; } to { transform: scale(2.1); opacity: 0; } }
 
       .mode-banner { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 12; max-width: 92%; padding: 6px 11px; border-radius: 999px; background: #141a30dd; border: 1px solid var(--line); color: var(--muted); font-size: 11px; pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .mode-banner:empty { display: none; }
       .mode-banner .would { color: var(--charge); }
+      /* B/C phone: the game-info strip owns the banner slot; armed hints drop below it */
+      #app[data-variant="b"][data-size="phone"] .mode-banner,
+      #app[data-variant="c"][data-size="phone"] .mode-banner { top: 46px; }
+
+      /* the game-info strip: production reads under the top nav where the
+         tutorial helptext used to be (B/C phone; the deck owns it elsewhere) */
+      .info-strip { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 15; display: none; align-items: center; gap: 14px; max-width: 94%; padding: 7px 14px; background: #141a30dd; border: 1px solid var(--line); border-radius: 999px; font: 12px var(--mono); white-space: nowrap; }
+      .info-strip .muted { font-size: 10.5px; }
+      .info-feats { border: none; padding: 0; font: 12px var(--mono); color: var(--muted); background: none; }
+      .info-feats b { color: var(--ink); }
+      #app[data-variant="b"][data-size="phone"] .info-strip,
+      #app[data-variant="c"][data-size="phone"] .info-strip { display: flex; }
       .toast { position: absolute; z-index: 50; top: 12px; right: 14px; max-width: 300px; padding: 10px 12px; border: 1px solid var(--line2); background: var(--panel); border-radius: 8px; box-shadow: 0 14px 30px #0009; opacity: 0; transform: translateY(-8px); transition: .15s; pointer-events: none; }
       .toast.show { opacity: 1; transform: none; }
 
@@ -176,10 +189,13 @@
       .hud-menu { position: absolute; z-index: 16; right: 12px; bottom: 12px; display: none; width: 46px; height: 46px; border-radius: 50%; background: #1c2340f0; font: 20px var(--mono); align-items: center; justify-content: center; padding: 0; }
       .focus-exit { position: absolute; z-index: 30; top: 12px; right: 12px; display: none; background: #141a30ee; }
 
-      /* bloom: the expanded face (#127) */
+      /* bloom: the expanded face (#127) — one fixed, regular hexagon; the
+         face's own UI enlarged and centered, plus the Upgrade action */
       #bloom-host { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
       #bloom-host > * { pointer-events: auto; }
-      .bloom-expand { position: absolute; z-index: 20; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 4px; padding: 20px 32px; background: #171d34; border: 3px solid var(--cat); border-radius: 4px; cursor: grab; clip-path: polygon(50% 0%, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%); transform-origin: 50% 92%; animation: bloom-lift .18s ease-out; }
+      .bloom-expand { position: absolute; z-index: 20; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 4px; width: 224px; height: 258px; padding: 40px 34px 30px; text-align: center; background: var(--cat); border: none; cursor: grab; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); transform-origin: 50% 92%; animation: bloom-lift .18s ease-out; }
+      .bloom-expand::before { content: ""; position: absolute; inset: 3px; background: #171d34; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
+      .bloom-expand > * { position: relative; z-index: 1; }
       .bloom-expand:active { cursor: grabbing; }
       .bloom-expand .lv { font: 13px var(--mono); }
       .bloom-expand .glyph { stroke: var(--cat); stroke-width: 2; fill: none; }
@@ -242,7 +258,6 @@
       #app[data-size="phone"] .mode-banner { font-size: 10px; }
 
       /* ── B · thumb dock: phone re-docks everything to the bottom edge ── */
-      #app[data-variant="b"][data-size="phone"] .top-status { display: flex; }
       #app[data-variant="b"][data-size="phone"] .deck { display: none; }
       #app[data-variant="b"][data-size="phone"] .topbar { gap: 8px; padding: 7px 10px; }
       #app[data-variant="b"][data-size="phone"] .dock { display: none; }
@@ -267,9 +282,9 @@
       #app[data-variant="c"][data-size="phone"] .bloom-expand { display: none; }
       #app[data-variant="c"][data-size="phone"] .sheet.sheeted,
       #app[data-variant="c"][data-size="phone"] .bloom-sheet { bottom: 70px; }
-      /* the B phone status line's feats segment reads as a control */
-      .status-feats { border: none; padding: 0; font: 12.5px var(--mono); color: var(--muted); background: none; }
-      .status-feats b { color: var(--ink); }
+      /* the open bloom sheet must not bury the zoom cluster */
+      #app.bloom-open[data-variant="b"][data-size="phone"] .zoom-cluster { bottom: 190px; }
+      #app.bloom-open[data-variant="c"][data-size="phone"] .zoom-cluster { bottom: 184px; }
       /* focus mode: chrome-free inspection (C, any size — phone's zoom answer) */
       #app.focus .topbar, #app.focus .deck, #app.focus .dock, #app.focus .botbar,
       #app.focus .inventory, #app.focus .inv-chip, #app.focus .arete-pill,
@@ -294,7 +309,6 @@
               <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 2 28 9v14l-12 7L4 23V9Z"/><path d="m10 20 5-10v12l7-10"/></svg>
               <span>FlowSynth</span>
             </div>
-            <div class="top-status" id="top-status"></div>
             <div class="top-spring"></div>
             <div class="session">
               <div class="clock-box"><strong id="clock">25:00</strong><small id="clock-label">planned</small></div>
@@ -322,6 +336,7 @@
           </div>
           <main class="board-zone" id="board-zone">
             <svg id="board" aria-label="Harmonic board"><g id="world"></g></svg>
+            <div class="info-strip" id="info-strip"></div>
             <div class="mode-banner" id="mode-banner"></div>
             <div class="zoom-cluster">
               <button id="zoom-in" title="Zoom in">+</button>
@@ -574,9 +589,9 @@
       const ICONS = {
         catalog: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/></svg>',
         forge: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1.8 3.2-3.2 4.6-3.2 8.4a3.2 3.2 0 0 0 6.4 0c0-1.4-.6-2.3-1.1-2.9 1.9.5 3.4 2 3.4 4.3a5.5 5.5 0 0 1-11 0C6.5 7.6 10.8 6.4 12 3Z"/></svg>',
-        arrange: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 9-3 3 3 3"/><path d="m9 5 3-3 3 3"/><path d="m15 19-3 3-3-3"/><path d="m19 9 3 3-3 3"/><path d="M2 12h20"/><path d="M12 2v20"/></svg>',
         cell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2l8.7 5v10L12 22l-8.7-5V7L12 2Z"/></svg>',
         inv: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v9"/></svg>',
+        feats: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
       };
 
       // ── zoom & pan: the viewBox is the only lens ──
@@ -701,15 +716,15 @@
         renderLedger();
         const wouldNames = [...formIds].map(k => previewByKey.get(k).def.name).join(" + ");
         const banner = $("mode-banner");
+        // the idle tutorial helptext is gone for good (tutorial thinking lives
+        // elsewhere); banners speak only while a mode is armed
         banner.innerHTML = state.buyingCell
-          ? `New cell — click a dashed frontier cell · ${cellCost()} ν${rowGates.size ? " · first cell of a new octave row costs the row gate" : ""} · Esc cancels`
+          ? `New cell — ${cellCost()} ν · tap a dashed frontier cell · Esc cancels`
           : state.placing
-            ? `Choose a cell for ${esc(state.modules.find(m => m.id === state.placing)?.name ?? "")} · occupied swaps${wouldNames ? ` · <span class="would">would form ${esc(wouldNames)}</span>` : ""} · Esc cancels`
+            ? `Placing ${esc(state.modules.find(m => m.id === state.placing)?.name ?? "")}${wouldNames ? ` · <span class="would">would form ${esc(wouldNames)}</span>` : ""} · Esc cancels`
             : state.dragging
-              ? `Drop on a cell to move or swap · drop on inventory to retrieve${wouldNames ? ` · <span class="would">would form ${esc(wouldNames)}</span>` : ""}`
-              : flow()
-                ? `Flow session · board locked · chords are sounding`
-                : `Click a face to select · drag to move (always live) · drop on inventory to retrieve`;
+              ? (wouldNames ? `<span class="would">would form ${esc(wouldNames)}</span>` : "")
+              : "";
         $("pause-btn").style.display = flow() ? "" : "none";
         $("pause-btn").textContent = state.paused ? "▶" : "⏸";
         $("focus-btn").style.display = state.variant === "c" && phone() && !state.focus ? "" : "none";
@@ -735,38 +750,45 @@
           `<div class="muted">chords: ${currentChords.length ? currentChords.map(c => esc(c.def.name) + " ×" + c.def.mult.toFixed(2)).join(", ") : "none"}</div>` +
           `<div class="muted">cell scaler and empowerment folded into the voices' amp (placeholders)</div>`;
         $("feats-count").textContent = "2/17 feats";
-        if (state.variant === "b" && phone()) {
-          $("top-status").innerHTML =
-            `<span><span class="muted">ν</span> <b>2,400</b></span>` +
-            `<span><b>${total.toFixed(1)}</b> <span class="muted">ν/s</span></span>` +
-            `<span><span class="muted">session</span> <b>${flow() ? Math.round(state.banked) : "—"}</b></span>` +
-            `<button class="status-feats" id="status-feats"><b>2</b>/17 feats</button>`;
-          const sf = $("status-feats");
-          if (sf) sf.onclick = (e) => { e.stopPropagation(); openSheet("feats", "sheeted"); };
+        // B/C phone: production reads live where the tutorial helptext used to sit
+        if (state.variant === "b" || state.variant === "c") {
+          if (phone()) {
+            $("info-strip").innerHTML =
+              `<span><span class="muted">ν</span> 2,400</span>` +
+              `<span><b>${total.toFixed(1)}</b> <span class="muted">ν/s</span></span>` +
+              `<span><span class="muted">session</span> ${flow() ? Math.round(state.banked) : "—"}</span>` +
+              `<button class="info-feats" id="info-feats"><b>2</b>/17 feats</button>`;
+            const f = $("info-feats");
+            if (f) f.onclick = (e) => { e.stopPropagation(); openSheet("feats", "sheeted"); };
+          } else {
+            $("info-strip").innerHTML = "";
+          }
         }
         const fill = Math.round(Math.log10(1 + 8.6) / Math.log10(11) * 100);
         $("arete-fill").style.width = fill + "%";
       }
 
       function renderDock() {
+        // dragging is always live (#118), so Arrange has no job anywhere
         const dockButtons = [
           { id: "catalog", label: "Catalog", on: state.sheet === "catalog" },
           { id: "forge", label: "Forge", on: state.sheet === "forge" },
-          { id: "arrange", label: "Arrange", on: false },
           { id: "cell", label: "New cell", on: state.buyingCell },
         ];
         const html = dockButtons.map(b => `<button data-op="${b.id}" class="${b.on ? "on armed" : b.on ? "on" : ""}" title="${b.label}">${ICONS[b.id]}<small>${b.label}</small></button>`).join("");
         $("dock").innerHTML = html;
         const invCount = state.modules.filter(m => !m.pos).length;
+        // B phone thumb bar: feats lives here — it never fit on the header
         $("botbar").innerHTML = dockButtons.map(b => `<button data-op="${b.id}" class="${b.on ? "on armed" : b.on ? "on" : ""}">${ICONS[b.id]}<small>${b.label}</small></button>`).join("") +
-          `<button data-op="inventory">${ICONS.inv}<small>Inventory · ${invCount}</small></button>`;
+          `<button data-op="inventory">${ICONS.inv}<small>Inventory · ${invCount}</small></button>` +
+          `<button data-op="feats" class="${state.sheet === "feats" ? "on" : ""}">${ICONS.feats}<small>Feats · 2/17</small></button>`;
         $("inv-chip").textContent = "Inventory · " + invCount;
         document.querySelectorAll("[data-op]").forEach(b => b.onclick = (e) => { e.stopPropagation(); opAction(b.dataset.op); });
       }
 
       function opAction(op) {
+        if (op === "feats") { openSheet("feats", phone() || size() === "half" ? "sheeted" : "docked"); return; }
         if (flow()) { say("Board is locked while a session runs — exit flow to rearrange."); return; }
-        if (op === "arrange") { say("Dragging is always live — arrange by moving faces directly."); return; }
         if (op === "cell") { state.buyingCell = !state.buyingCell; state.sheet = null; closeSheetUi(); render(); return; }
         // catalog/forge/inventory present as sheet on half+phone, right panel on wide
         const presenting = phone() || size() === "half" ? "sheeted" : "docked";
@@ -788,23 +810,29 @@
         const host = $("bloom-host");
         host.innerHTML = "";
         const m = selectedMod();
-        if (!m || !m.pos || state.focus) return;
+        // a bloom never rides a drag or a placement — it answers selection only
+        if (!m || !m.pos || state.focus || state.dragging || state.placing) {
+          app.classList.remove("bloom-open");
+          return;
+        }
+        app.classList.toggle("bloom-open", bloomStyle() === "sheet");
         const c = byKey.get(m.pos);
         const p = svgPoint(c);
         const zone = $("board-zone").getBoundingClientRect();
         const style = bloomStyle();
+        const gain = "+" + ((ampOf(m.level + 1) - ampOf(m.level)) * 1.6).toFixed(1) + " ν/s";
         const inner = (col) => `<div class="${col ? "col" : ""}">
             ${col ? `<div class="nm">${esc(m.short)} · L${m.level}</div><div class="cell-note">${c.name}${c.oct} · ${contrib(m)}</div>` : `
             <div class="lv">L${m.level}</div>
-            <svg class="glyph" width="46" height="40" viewBox="-18 -15 36 30"><g>${moduleGlyph(m)}</g></svg>
+            <svg class="glyph" width="44" height="38" viewBox="-18 -15 36 30"><g>${moduleGlyph(m)}</g></svg>
             <div class="nm">${esc(m.short)}</div>
             <div class="cell-note">${c.name}${c.oct}</div>
             <div class="contrib">${contrib(m)}</div>`}
           </div>`;
         const action = flow()
           ? `<div class="muted" style="font:10px var(--mono)">sounding — locked until exit</div>`
-          : `<button class="primary" data-action="upgrade">Upgrade<small>180 ν</small></button>`;
-        let box = document.createElement("div");
+          : `<button class="primary" data-action="upgrade">Upgrade<small>${gain} · 180 ν</small></button>`;
+        const box = document.createElement("div");
         if (style === "sheet") {
           box.className = "bloom-sheet";
           box.innerHTML = `<svg class="glyph" width="40" height="36" viewBox="-18 -15 36 30"><g>${moduleGlyph(m)}</g></svg>` + inner(true) + action;
@@ -816,16 +844,19 @@
         box.style.setProperty("--cat", colors[m.kind]);
         host.appendChild(box);
         if (style === "lift") {
-          const w = Math.max(150, p.w * 2.6), h = Math.max(170, p.h * 2.45);
-          const zoneH = zone.height;
-          const left = Math.max(8, Math.min(zone.width - w - 8, p.cx - w / 2));
-          const top = Math.max(40, Math.min(zoneH - h - 8, p.cy - h / 2));
+          // one fixed regular hexagon, anchored above the selected cell, clamped in
+          const W = 224, H = 258;
+          const left = Math.max(8, Math.min(zone.width - W - 8, p.cx - W / 2));
+          const top = Math.max(6, Math.min(zone.height - H - 8, p.cy - H * 0.72));
           box.style.left = left + "px"; box.style.top = top + "px";
-          box.style.width = w + "px"; box.style.height = h + "px";
         }
         box.querySelectorAll("[data-action]").forEach(b => b.onclick = (e) => {
           e.stopPropagation();
-          if (b.dataset.action === "upgrade") { m.level++; say(m.name + " upgraded to level " + m.level + "."); render(); }
+          if (b.dataset.action === "upgrade") {
+            m.level++;
+            say(m.name + " upgraded to level " + m.level + " — " + gain + " more.");
+            render();
+          }
         });
         box.querySelectorAll("button").forEach(b => b.addEventListener("pointerdown", e => e.stopPropagation()));
         // the lifted face itself is draggable — grabbing the bloom moves the module (#118)
@@ -871,15 +902,8 @@
           sheet.innerHTML = head("Console") + `<div class="sheet-body"><div class="opgrid">
             <button data-op="catalog">${ICONS.catalog}<div>Catalog<small>buy modules</small></div></button>
             <button data-op="forge">${ICONS.forge}<div>Forge<small>rolls → modules</small></div></button>
-            <button data-op="arrange">${ICONS.arrange}<div>Arrange<small>drag is always live</small></div></button>
             <button data-op="cell">${ICONS.cell}<div>New cell<small>extend the board</small></div></button>
             <button data-op="inventory">${ICONS.inv}<div>Inventory<small>place from the tray</small></div></button>
-          </div>
-          <div class="feat-row" style="margin-top:12px"><b>2/17 feats</b><small>Feats list — unchanged by this ticket.</small></div>
-          <div class="prod-ledger" style="margin-top:4px">
-            <div class="prod-cell"><span class="eyebrow">Nous</span><strong class="mono">2,400 ν</strong></div>
-            <div class="prod-cell"><span class="eyebrow">Rate</span><strong class="mono">${rateNow.total.toFixed(1)} ν/s</strong></div>
-            <div class="prod-cell"><span class="eyebrow">Session</span><strong class="mono">${flow() ? Math.round(state.banked) + " ν" : "—"}</strong></div>
           </div></div>`;
         } else if (kind === "feats") {
           sheet.innerHTML = head("Feats — 2 of 17") + `<div class="sheet-body">
@@ -1018,15 +1042,20 @@
         document.addEventListener("pointerup", up, { once: true });
       }
 
-      // pan when zoomed: press an empty cell and drag
-      function startPan(e) {
-        if (state.zoom === 1) return;
+      // pan when zoomed: press an empty cell — or anywhere outside the grid —
+      // and drag. Outside-grid pan works at any zoom, so a full or larger-than-
+      // screen board can always be walked around.
+      function startPan(e, anyZoom = false) {
+        if (state.zoom === 1 && !anyZoom) return;
         const v = viewSpec();
         const wx = v.w / v.zw, wy = v.h / v.zh; // world units per pixel
         const start = { x: e.clientX, y: e.clientY, px: state.panX, py: state.panY };
         const move = ev => {
-          state.panX = start.px - (ev.clientX - start.x) * wx;
-          state.panY = start.py - (ev.clientY - start.y) * wy;
+          const nx = start.px - (ev.clientX - start.x) * wx;
+          const ny = start.py - (ev.clientY - start.y) * wy;
+          // clamp so the board itself can never leave the frame entirely
+          state.panX = Math.min(BASE.x + BASE.w, Math.max(BASE.x, nx));
+          state.panY = Math.min(BASE.y + BASE.h, Math.max(BASE.y, ny));
           applyView();
         };
         const up = () => {
@@ -1071,6 +1100,15 @@
       }
       const mo = new MutationObserver(() => bindBoard());
       mo.observe($("world"), { childList: true, subtree: true });
+      // outside the grid: drag pans (any zoom), a plain click dismisses the bloom
+      $("board").addEventListener("pointerdown", (e) => {
+        if (e.button !== 0) return;
+        if (e.target === $("board")) startPan(e, true);
+      });
+      $("board").addEventListener("click", (e) => {
+        if (e.target !== $("board")) return;
+        if (state.selected) { state.selected = null; render(); }
+      });
       $("board").addEventListener("wheel", (e) => {
         e.preventDefault();
         zoomBy(e.deltaY < 0 ? 1.12 : 1 / 1.12);
