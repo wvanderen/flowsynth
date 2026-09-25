@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PROTOTYPE — Opening learning arc: reaching the first chord through play (#123)</title>
+<title>PROTOTYPE — Opening learning arc: reaching the first chord through play (#123, rev 2)</title>
 <!--
-  Prototype plan: three playable opening sequences for "what gets a new player from the initial
-  board to a self-made basic chord within minutes", on the accepted board model — octave-stack
-  lattice (#126), direct interaction (#118), always-on chord feedback (#120), ledger-above-board
-  console (#119), unified synth leg with a row gate (#122). One question — which pedagogy opens
-  the game (and which opening grant does it imply; #122 deferred grant count/pitches here):
-  A: silent playground (the board teaches alone — 3 tray synths, empty triangle) ·
-  B: staged arc (dissolve-on-done goals — a pre-placed fifth + 2 tray synths) ·
-  C: live-in chord (perturb to learn — a pre-placed power triad + 1 tray synth).
-  Numbers are placeholders. No persistence, no tests. Desktop composition; phone follows #121.
-  Audio is opt-in garnish (#120). Catalog/Forge/Feats are out of the opening's first minutes.
+  Prototype plan, rev 2 — the maintainer's verdict on round 1 fixed the pedagogy: no goals, no
+  steps, no ambient hints; the player starts with a SINGLE synth and acquires more only through
+  play. One knob is left open ("maybe a pop-up hint about chords after the user acquires their
+  second synth"), so two variants share the whole arc and differ only in that card:
+  A: one earned pop-up hint after the second synth · B: total silence, the board language alone.
+  Acquisition is the accepted forge loop (#119 dock, #122 rules, placeholder pacing): practice
+  seconds fill the forge; crossing the threshold offers a new synth; placing it beside the first
+  chords by pitch content, previewed by the dashed would-form ghosts (#120) on the octave-stack
+  board (#126) under the direct-interaction language (#118). Numbers are placeholders. Throwaway:
+  no persistence, no tests. Desktop composition; phone follows #121.
 -->
 <style>
   :root {
@@ -27,6 +27,7 @@
     --synth-soft: #8f8ce8;
     --vermillion: #cc603d;
     --nous: #cbcaff;
+    --forge: #bc9239;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -53,7 +54,7 @@
   .decide {
     max-width: 940px;
     font-size: 13.5px;
-    border-left: 3px solid #bc9239;
+    border-left: 3px solid var(--forge);
     padding: 7px 12px;
     background: #101228;
     border-radius: 0 6px 6px 0;
@@ -117,7 +118,8 @@
   }
   .ledger .lab { color: #7d80a8; }
   .ledger b { color: var(--nous); font-weight: 600; }
-  .ledger b.live { color: #9affa8; }
+  .ledger b.forge-ready { color: var(--forge); animation: forgepulse 1.2s ease-in-out infinite; }
+  @keyframes forgepulse { 50% { opacity: 0.55; } }
   .ledger .grow { flex: 1; }
   .ledger button {
     font: 12.5px/1 ui-sans-serif, system-ui, sans-serif;
@@ -192,42 +194,34 @@
   }
   .bloom button:hover { background: #452d23; }
   .bloom button:disabled { opacity: 0.45; cursor: default; }
-  /* variant banners: the single opening line (A), the nudge (C) */
-  .banner {
-    max-width: 640px;
-    font-size: 14px;
-    border-left: 3px solid var(--synth-soft);
-    padding: 7px 12px;
-    background: #101228;
-    border-radius: 0 6px 6px 0;
-    margin-bottom: 10px;
-    transition: opacity 0.6s;
+  /* the one earned pop-up (A) and the forge offer */
+  .card {
+    position: absolute;
+    left: 50%;
+    top: 42%;
+    transform: translate(-50%, -50%);
+    width: min(380px, 86%);
+    background: #20244a;
+    border: 1.5px solid #b9b6f2;
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    z-index: 8;
   }
-  .banner.gone { opacity: 0; }
-  /* the goal ribbon (B): beats dissolve as real play completes them */
-  .ribbon {
-    border: 1px solid #bc9239;
-    background: #191728;
-    border-radius: 8px;
-    padding: 9px 13px;
-    margin-bottom: 10px;
-    font-size: 13.5px;
-    transition: opacity 0.8s;
+  .card .ctitle { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+  .card .cbody { font-size: 13.5px; color: var(--ink); line-height: 1.5; }
+  .card .cbody b { color: #b9b6f2; }
+  .card button {
+    margin-top: 11px;
+    font: 13px/1 ui-sans-serif, system-ui, sans-serif;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--synth-soft);
+    background: #2c2745;
+    color: #ffe9c4;
+    cursor: pointer;
   }
-  .ribbon .rhead {
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #d9b45f;
-    margin-bottom: 5px;
-  }
-  .ribbon ol { list-style: none; display: grid; gap: 3px; }
-  .ribbon li { color: var(--ink); transition: opacity 0.7s, transform 0.7s; }
-  .ribbon li::before { content: "○ "; color: #bc9239; }
-  .ribbon li.done { color: var(--dim); text-decoration: line-through; opacity: 0.55; }
-  .ribbon li.done::before { content: "✓ "; color: #57a85a; }
-  .ribbon.finished { opacity: 0; }
-  .ribbon .rbye { color: #d9b45f; font-style: italic; }
+  .card button:hover { background: #372f56; }
   .cell-label { font: 600 12px ui-monospace, monospace; fill: var(--ink); pointer-events: none; }
   .cell-faint { font: 500 9px ui-monospace, monospace; fill: #565a90; pointer-events: none; }
   .buycell { font: 700 10px ui-monospace, monospace; fill: #ffe9c4; pointer-events: none; }
@@ -281,28 +275,27 @@
 </style>
 </head>
 <body>
-<div class="proto-tag">Prototype — throwaway, answers one question (#123)</div>
-<h1>Opening learning arc: reaching the first chord through play</h1>
+<div class="proto-tag">Prototype — throwaway, answers one question (#123 · rev 2)</div>
+<h1>Opening learning arc: one synth, everything else earned</h1>
 <p class="lede">
-  The board model is settled: an octave-stack lattice where pitch lives in the cell and any two
-  adjacent synths almost fall into a chord. So the opening question is no longer <em>can</em> a new
-  player form a chord — it is whether they <strong>notice, attribute, and want more</strong>. Three
-  pedagogies, same accepted interaction language (click to place, drag to move with live swap,
-  double-click returns a synth to the tray, click a synth for its bloom), same placeholder economy
-  (0.1 ν/s per synth, geometric upgrade, 30 ν cells, one-time row gate upward).
+  Round 1's verdict set the pedagogy: <strong>no goals, no steps, no ambient hints — the player
+  starts with a single synth and acquires more only through play.</strong> What remains open is the
+  one "maybe": whether a <strong>single pop-up hint about chords</strong>, delivered after the
+  second synth is acquired, earns its place. Both variants play the identical arc — practice fills
+  the forge; the forge offers a synth; placing it beside your first chords the pair (dashed
+  preview while you drag, chip when it lands) — and differ only in that card.
 </p>
 <div class="decide">
-  <strong>Decide while playing:</strong> which pedagogy opens the game — a silent board (A), staged
-  wins (B), or a live-in chord to perturb (C)? Each implies an opening grant (#122 deferred the
-  count here):   A grants 3 free synths onto an empty triangle; B pre-places a fifth and grants 2
-  more; C pre-places the whole power chord and grants 2 plus a ready cell. Is the first session the arc's finale or
-  should practice start earlier? Does any of it need words at all? Success test: placed, chorded,
-  perceived, rearranged — inside minutes, with no Carrier lesson.
+  <strong>Decide while playing:</strong> does the earned hint land at the right moment with the
+  right words (A) — or is the dashed hull alone enough to carry "these two now chord, and the × is
+  what it pays" (B)? Is ~2 minutes of practice the right distance to the second synth? Does the
+  first chord feel <em>earned</em> when it can only arrive through play? Success test: placed,
+  chorded, perceived, rearranged — inside minutes, with no Carrier lesson.
 </div>
 <div class="toolbar">
   <button id="soundBtn">sound: off</button>
   <button id="restartBtn">restart arc</button>
-  <span class="hint">click tray tile then a cell = place · drag = move (occupied drops swap) · double-click = back to tray · click a synth = bloom · Esc cancels</span>
+  <span class="hint">drag = move (occupied drops swap) · drag off the board = back to tray · double-click = back to tray · click a synth = bloom · Esc cancels</span>
 </div>
 <div id="stage"></div>
 <div class="toast" id="toast"></div>
@@ -502,7 +495,6 @@ const TEMPLATES = [
   { name: "power",       offs: [0,7,12],   bonus: 0.35, color: "#cc603d" },
   { name: "4th shell",   offs: [0,5,12],   bonus: 0.30, color: "#a86ad4" },
 ];
-// the rest of the ladder (shells, thirds via spacers…) arrives after the opening — deliberately unseen
 
 // ---------- placeholder economy (#122 skeleton; numbers are tuning) ----------
 const SYNTH_BASE = 0.1;          // ν/s per synth at level 0
@@ -513,6 +505,9 @@ const CELL_COST0 = 30;
 const cellCost = (bought) => Math.ceil(CELL_COST0 * Math.pow(2.5, bought));
 const ROW_GATE = 20;             // one-time gate on the first purchase into a new octave row (#122)
 const GATED_ROW_FROM = 2;        // starter rows 0-1 begin open
+// the forge loop (placeholder pacing): practice seconds fill it; 60 ≈ 2 minutes to the 2nd synth
+const FORGE_MAX = 60;
+const FORGE_FILL = 0.5;
 
 function synthMult(contrib, chords) {
   let mult = 1;
@@ -524,7 +519,6 @@ function synthMult(contrib, chords) {
 function computeWorld(occ) {
   const keys = [...occ.keys()];
   const keySet = new Set(keys);
-  // clusters: union-find over directly adjacent synths
   const parent = new Map(keys.map(k => [k, k]));
   const find = (x) => { while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; };
   const union = (a, b) => { parent.set(find(a), find(b)); };
@@ -560,25 +554,26 @@ function computeWorld(occ) {
   return { chords };
 }
 
-// ---------- the opening sequence (one per variant) ----------
+// ---------- the arc (identical for both variants; only the hint card differs) ----------
 function makeVariant(cfg) {
   let selected = null, dragTarget = null, armedTray = false, buyingCell = false;
   let prevChordIds = new Set();
-  let svg, gCells, gChords, gModules, gGhosts, boardPanel, ledgerEl, trayEl, ribbonEl, bannerEl, bloomEl;
-  let tickTimer = null;
-  const flags = { placed: false, powered: false, upgraded: false, banked: false, nudged: false, ribbonGone: false };
+  let svg, gCells, gChords, gModules, gGhosts, boardPanel, ledgerEl, trayEl, bloomEl;
+  let cardEl = null, tickTimer = null;
 
   const s = {
     nous: cfg.grant,
-    occ: new Map(),          // key -> {lvl}
-    tray: cfg.tray,          // anonymous synths — pitch lives in the cell (#126)
+    occ: new Map([["0,0", { lvl: 0 }]]), // the single granted synth, pre-placed at C4
+    tray: 0,
     cells: new Set(cfg.cells),
     bought: 0,
     gatedRows: new Set([0, 1]),
-    session: null,           // {t0, earned}
+    forge: { progress: 0, ready: false },
+    acquired: 1,
+    hintShown: false,
+    session: null,
     totalBanked: 0,
   };
-  for (const [i, j] of cfg.placed) s.occ.set(i + "," + j, { lvl: 0 });
 
   const inSession = () => !!s.session;
   const rateParts = () => {
@@ -586,23 +581,10 @@ function makeVariant(cfg) {
     for (const [, m] of s.occ) sum += contribOf(m.lvl);
     return sum;
   };
-  const chordIds = (chords) => new Set(chords.map(ch => ch.tpl.name + "@" + ch.rootSt));
-
-  function checkGoals() {
-    if (!cfg.ribbon) return;
-    if (!flags.placed && cfg.placed.length < s.occ.size) flags.placed = true;
-    flags.powered = [...computeWorld(s.occ).chords].some(ch => ch.tpl.name === "power");
-    if (flags.placed && flags.powered && flags.upgraded && flags.banked && !flags.ribbonGone) {
-      flags.ribbonGone = true;
-      say("The arc is done — the board is yours from here.");
-      setTimeout(() => { if (ribbonEl) ribbonEl.classList.add("finished"); }, 900);
-      setTimeout(() => { if (ribbonEl) ribbonEl.remove(); }, 2400);
-    }
-  }
 
   function strumNew(chords) {
     if (!AudioMgr.on) return;
-    const ids = chordIds(chords);
+    const ids = new Set(chords.map(ch => ch.tpl.name + "@" + ch.rootSt));
     let delay = 0;
     for (const ch of chords) {
       if (prevChordIds.has(ch.tpl.name + "@" + ch.rootSt)) continue;
@@ -666,14 +648,20 @@ function makeVariant(cfg) {
   }
 
   function renderLedger(chords) {
-    const rate = rateParts() * (function () { let m = 1; for (const ch of chords) m *= 1 + ch.tpl.bonus; return m; })();
+    let mult = 1;
+    for (const ch of chords) mult *= 1 + ch.tpl.bonus;
+    const rate = rateParts() * mult;
     const sess = s.session
-      ? '<span class="lab">Session</span> <b class="live">' + s.session.earned.toFixed(2) + " ν · " + fmtClock((Date.now() - s.session.t0) / 1000) + "</b>"
+      ? '<span class="lab">Session</span> <b>' + s.session.earned.toFixed(2) + " ν · " + fmtClock((Date.now() - s.session.t0) / 1000) + "</b>"
       : '<span class="lab">Session</span> <b>' + (s.totalBanked > 0 ? s.totalBanked.toFixed(2) + " ν banked" : "—") + "</b>";
+    const forge = s.forge.ready
+      ? '<span class="lab">Forge</span> <b class="forge-ready">ready — a synth waits</b>'
+      : '<span class="lab">Forge</span> <b>' + Math.min(FORGE_MAX, Math.floor(s.forge.progress)) + "/" + FORGE_MAX + "</b>";
     ledgerEl.innerHTML =
       '<span class="lab">Nous</span> <b>' + Math.floor(s.nous) + " ν</b>" +
       '<span class="lab">Rate</span> <b>' + fmtRate(rate) + "</b>" +
       sess +
+      forge +
       '<span class="grow"></span>' +
       '<button id="cellBtn"' + (inSession() ? " disabled" : "") + ' title="Pick a frontier hex — one-time gate when reaching a new octave row">New cell · ' + cellCost(s.bought) + " ν</button>" +
       (inSession()
@@ -689,7 +677,7 @@ function makeVariant(cfg) {
       tiles.push('<button class="tile' + (armedTray && n === 0 ? " armed" : "") + '" data-n="' + n + '">synth</button>');
     trayEl.innerHTML = tiles.length
       ? "tray — pick one, then a cell: " + tiles.join(" ")
-      : '<span class="empty">tray empty — synths you double-click come back here</span>';
+      : '<span class="empty">tray empty — synths arrive from the forge, earned by practice</span>';
     trayEl.querySelectorAll(".tile").forEach(b =>
       b.addEventListener("click", () => {
         if (inSession()) { say("The board is set during a session — rearrange between sessions."); return; }
@@ -698,22 +686,6 @@ function makeVariant(cfg) {
         if (armedTray) say("Choose a cell. The cell names the note.");
         refresh();
       }));
-  }
-
-  function renderRibbon() {
-    if (!cfg.ribbon || flags.ribbonGone) return;
-    const items = [
-      { done: flags.placed, text: "Place a synth — pick one from the tray, then a cell" },
-      { done: flags.powered, text: "Complete the power chord — a voice on C5" },
-      { done: flags.upgraded, text: "Click a synth, then upgrade it" },
-      { done: flags.banked, text: "Play a short session — the chord earns while you practice" },
-    ];
-    const allDone = items.every(i => i.done);
-    ribbonEl.innerHTML =
-      '<div class="rhead">First steps — each dissolves when done</div><ol>' +
-      items.map(i => '<li class="' + (i.done ? "done" : "") + '">' + esc(i.text) + "</li>").join("") +
-      (allDone ? '<li class="rbye">…and the rest is play.</li>' : "") +
-      "</ol>";
   }
 
   function positionBloom() {
@@ -729,7 +701,7 @@ function makeVariant(cfg) {
 
   function renderBloom() {
     if (bloomEl) { bloomEl.remove(); bloomEl = null; }
-    if (!selected || !s.occ.has(selected)) return;
+    if (!selected || !s.occ.has(selected) || cardEl) return;
     const c = byKey.get(selected);
     const m = s.occ.get(selected);
     const cost = levelCost(m.lvl);
@@ -744,13 +716,47 @@ function makeVariant(cfg) {
       if (s.nous < cost) return;
       s.nous -= cost;
       m.lvl += 1;
-      flags.upgraded = true;
       say(c.name + c.oct + " upgraded — " + contribOf(m.lvl).toFixed(2) + " ν/s on its own.");
-      checkGoals();
       refresh();
     });
     boardPanel.appendChild(bloomEl);
     positionBloom();
+  }
+
+  function showHintCard() {
+    if (cardEl) cardEl.remove();
+    cardEl = document.createElement("div");
+    cardEl.className = "card";
+    cardEl.innerHTML =
+      '<div class="ctitle">A second synth</div>' +
+      '<div class="cbody">Set it <b>beside your first</b>. Drag it around the board — a <b>dashed hull</b> previews the chord it would form; drop it inside one. The chip\u2019s <b>×multiplier</b> is how much more the pair earns together.</div>' +
+      '<button>Got it</button>';
+    cardEl.querySelector("button").addEventListener("click", () => { cardEl.remove(); cardEl = null; refresh(); });
+    boardPanel.appendChild(cardEl);
+  }
+
+  function showForgeCard() {
+    if (cardEl) cardEl.remove();
+    cardEl = document.createElement("div");
+    cardEl.className = "card";
+    cardEl.innerHTML =
+      '<div class="ctitle">The forge is ready</div>' +
+      '<div class="cbody">Your practice fired it. Take the synth it made — it waits in the tray until you place it.</div>' +
+      '<button>Take the synth</button>';
+    cardEl.querySelector("button").addEventListener("click", () => {
+      cardEl.remove(); cardEl = null;
+      s.forge.ready = false;
+      s.forge.progress = 0;
+      s.tray += 1;
+      s.acquired += 1;
+      say("A new synth — in the tray. Place it wherever it earns its keep.");
+      if (cfg.hint && s.acquired === 2 && !s.hintShown) {
+        s.hintShown = true;
+        showHintCard();
+      }
+      refresh();
+    });
+    boardPanel.appendChild(cardEl);
   }
 
   function frontierKeys() {
@@ -783,6 +789,14 @@ function makeVariant(cfg) {
       const dt = 0.25;
       const chords = computeWorld(s.occ).chords;
       s.session.earned += synthMult(rateParts(), chords) * dt;
+      if (!s.forge.ready) {
+        s.forge.progress += FORGE_FILL * dt;
+        if (s.forge.progress >= FORGE_MAX) {
+          s.forge.progress = FORGE_MAX;
+          s.forge.ready = true;
+          say("The forge is ready — exit when you like and take your synth.");
+        }
+      }
       refresh();
     }, 250);
     refresh();
@@ -796,9 +810,8 @@ function makeVariant(cfg) {
     s.session = null;
     s.nous += earned;
     s.totalBanked += earned;
-    flags.banked = earned > 0;
     say("Session banked " + earned.toFixed(2) + " ν — practice, credited.");
-    checkGoals();
+    if (s.forge.ready) showForgeCard();
     refresh();
   }
 
@@ -863,34 +876,11 @@ function makeVariant(cfg) {
 
     renderLedger(world.chords);
     renderTray();
-    renderRibbon();
     renderBloom();
-  }
-
-  function guarded(what) {
-    if (inSession()) { say("The board is set during a session — rearrange between sessions."); return true; }
-    return false;
   }
 
   function mount(boardPanelEl, side) {
     boardPanel = boardPanelEl;
-    if (cfg.line) {
-      bannerEl = document.createElement("div");
-      bannerEl.className = "banner";
-      bannerEl.textContent = cfg.line;
-      boardPanel.appendChild(bannerEl);
-    }
-    if (cfg.ribbon) {
-      ribbonEl = document.createElement("div");
-      ribbonEl.className = "ribbon";
-      boardPanel.appendChild(ribbonEl);
-    }
-    if (cfg.nudge) {
-      bannerEl = document.createElement("div");
-      bannerEl.className = "banner";
-      bannerEl.textContent = "This chord is already yours. Drag a voice off the board — feel the chord break. Place it back.";
-      boardPanel.appendChild(bannerEl);
-    }
     ledgerEl = document.createElement("div");
     ledgerEl.className = "ledger";
     boardPanel.appendChild(ledgerEl);
@@ -925,14 +915,12 @@ function makeVariant(cfg) {
           s.occ.set(cell.key, { lvl: 0 });
           s.tray -= 1;
           armedTray = false;
-          flags.placed = true;
           AudioMgr.blip(audioFreq(byKey.get(cell.key).st));
           const name = byKey.get(cell.key).name + byKey.get(cell.key).oct;
           const chords = computeWorld(s.occ).chords.filter(ch => ch.members.includes(cell.key));
           say(chords.length
             ? name + " joins — " + chords.map(ch => NAMES[mod12(ch.rootSt)] + " " + ch.tpl.name).join(", ") + "."
             : name + " — alone for now.");
-          checkGoals();
         } else if (buyingCell && frontierKeys().includes(cell.key)) {
           const gate = s.gatedRows.has(cell.j) ? 0 : ROW_GATE;
           const price = cellCost(s.bought) + gate;
@@ -951,18 +939,14 @@ function makeVariant(cfg) {
       },
       onOutside: () => { selected = null; armedTray = false; buyingCell = false; refresh(); },
       onDblClick: (cell) => {
-        if (!s.occ.has(cell.key)) return;
-        if (guarded()) return;
+        if (!s.occ.has(cell.key) || inSession()) return;
         s.occ.delete(cell.key);
         s.tray += 1;
         if (selected === cell.key) selected = null;
         say(byKey.get(cell.key).name + byKey.get(cell.key).oct + " back to the tray.");
         refresh();
       },
-      onDragStart: (cell) => {
-        flags.nudged = true;
-        if (bannerEl && cfg.nudge && !bannerEl.classList.contains("gone")) bannerEl.classList.add("gone");
-      },
+      onDragStart: () => {},
       onDragHover: (from, cell) => {
         const t = cell && cell.key !== from.key ? cell : null;
         const next = t ? { key: t.key, fromKey: from.key } : null;
@@ -990,6 +974,7 @@ function makeVariant(cfg) {
 
     const onEsc = (e) => {
       if (e.key !== "Escape") return;
+      if (cardEl) return; // the earned cards dismiss by their own button
       if (armedTray || buyingCell) { armedTray = false; buyingCell = false; refresh(); }
       else if (selected) { selected = null; refresh(); }
     };
@@ -1007,6 +992,7 @@ function makeVariant(cfg) {
   }
   function unmount() {
     selected = null; dragTarget = null; prevChordIds = new Set();
+    if (cardEl) { cardEl.remove(); cardEl = null; }
   }
   return {
     mount, unmount, refresh,
@@ -1015,14 +1001,16 @@ function makeVariant(cfg) {
       nous: Math.floor(s.nous),
       placed: [...s.occ].map(([k, m]) => k + " L" + m.lvl),
       tray: s.tray,
+      acquired: s.acquired,
+      forge: { ...s.forge },
       cells: [...s.cells],
       inSession: inSession(),
       banked: +s.totalBanked.toFixed(2),
-      flags: { ...flags },
+      hintShown: s.hintShown,
     }),
     chords: () => computeWorld(s.occ).chords.map(ch => ch.tpl.name + "@" + NAMES[mod12(ch.rootSt)]),
     hooks: {
-      place: (i, j) => { if (s.tray > 0 && s.cells.has(i + "," + j) && !s.occ.has(i + "," + j)) { s.occ.set(i + "," + j, { lvl: 0 }); s.tray--; flags.placed = true; checkGoals(); refresh(); } },
+      place: (i, j) => { if (s.tray > 0 && s.cells.has(i + "," + j) && !s.occ.has(i + "," + j)) { s.occ.set(i + "," + j, { lvl: 0 }); s.tray--; refresh(); } },
       move: (a, b) => {
         const m = s.occ.get(a);
         if (!m) return;
@@ -1034,82 +1022,67 @@ function makeVariant(cfg) {
         } else { s.occ.delete(a); s.tray += 1; } // mirrors the off-board drop rule
         refresh();
       },
-      upgrade: (i, j) => { const m = s.occ.get(i + "," + j); if (m && s.nous >= levelCost(m.lvl)) { s.nous -= levelCost(m.lvl); m.lvl++; flags.upgraded = true; checkGoals(); refresh(); } },
+      upgrade: (i, j) => { const m = s.occ.get(i + "," + j); if (m && s.nous >= levelCost(m.lvl)) { s.nous -= levelCost(m.lvl); m.lvl++; refresh(); } },
       start: () => startSession(),
       stop: () => endSession(),
       give: (n) => { s.nous += n; refresh(); },
+      // jump the forge straight to ready (skips the ~2 min of practice)
+      fillForge: () => { if (!s.forge.ready) { s.forge.progress = FORGE_MAX; s.forge.ready = true; refresh(); } },
+      takeSynth: () => {
+        if (!s.forge.ready) return;
+        s.forge.ready = false; s.forge.progress = 0;
+        s.tray += 1; s.acquired += 1;
+        if (cfg.hint && s.acquired === 2 && !s.hintShown) { s.hintShown = true; showHintCard(); }
+        refresh();
+      },
+      hintCard: () => !!cardEl && cardEl.textContent.includes("second synth"),
     },
   };
 }
 
-// ---------- variant registry ----------
+// ---------- variant registry: one arc, one knob ----------
 const VARIANTS = [
   {
     id: "a",
-    label: "<b>A</b> — Silent playground (the board teaches alone)",
-    head: "A — Silent playground",
-    sub: "no goals, no hints, one opening line — hulls, chips, and drag ghosts are the whole curriculum",
-    line: "Three synths are yours. Place them where you like.",
-    grant: 12, tray: 3, placed: [], cells: STARTER_CELLS,
+    label: "<b>A</b> — One earned hint (after the second synth)",
+    head: "A — One earned hint",
+    sub: "the single pop-up fires once, only after the forge delivers the second synth — otherwise the board never says a word",
+    grant: 12, hint: true, cells: STARTER_CELLS,
     side: `
       <h3>Play the opening</h3>
       <ul>
-        <li>Place the three synths. Notice what the board does <em>without being told</em>: the second adjacent placement already lands a hull and a chip.</li>
-        <li>The empty triangle forces the power chord if all three land — is <strong>discovery-by-geometry</strong> a gift or a rail?</li>
-        <li>Start a session when <em>you</em> feel like it — nobody asks. Then exit and spend.</li>
-        <li>Buy a cell (30 ν) and rearrange — the swap drag is the only move lesson.</li>
+        <li>You open with <strong>one synth</strong> — a single drone, no company, no instructions.</li>
+        <li>Upgrade is affordable now (12 ν grant); a session pays ~0.1 ν/s and <strong>fills the forge</strong> — ~2 minutes of practice and it's ready.</li>
+        <li>Exit: the forge offers the synth it made. Take it — <strong>the one hint pops</strong>: place it beside your first, the dashed hull shows the chord, the × is the pay.</li>
+        <li>From here the board is mute forever: rearrange, reach for a 30 ν cell, cross the row gate upward.</li>
       </ul>
       <h3>Feel for</h3>
       <div class="fact">
-        No goal ever names a chord. Do the <strong>chips and ghosts carry attribution</strong> — does
-        the player know <em>they</em> made that? Time to first chord, and what stalled you. The
-        grant this implies: <strong>3 free synths, empty triangle, 12 ν</strong>.
-        <span class="cost">Risk: aimlessness.</span>
+        Does the hint land at the <strong>moment of maximum usefulness</strong> (you're holding a
+        synth you don't know where to put) — or does it interrupt a moment you were enjoying? Are
+        the words right? Is once enough? <span class="cost">Risk: even one card reads as
+        tutorial.</span> Compare B before deciding.
       </div>`,
   },
   {
     id: "b",
-    label: "<b>B</b> — Staged arc (small wins, then gone)",
-    head: "B — Staged arc",
-    sub: "a fifth is already humming; four goals dissolve as real play completes them — they never gate anything",
-    grant: 12, tray: 2, placed: [[0, 0], [1, 0]], cells: STARTER_CELLS,
-    ribbon: true,
+    label: "<b>B</b> — Total silence (the board language alone)",
+    head: "B — Total silence",
+    sub: "no card, ever — the drone, the forge meter, the dashed hull, and the chip are the entire curriculum",
+    grant: 12, hint: false, cells: STARTER_CELLS,
     side: `
       <h3>Play the opening</h3>
       <ul>
-        <li>The board opens mid-sound: <strong>C4 + G4, a fifth, already chipping</strong>. Perception precedes construction.</li>
-        <li>Follow the ribbon: place → complete the power chord on C5 (two chips land at once — octave <em>and</em> power) → upgrade → session.</li>
-        <li>Ignore the ribbon entirely and see if it minds — it shouldn't. It is a suggestion, never a gate.</li>
+        <li>Identical arc to A — minus the card. The forge delivers the second synth and <strong>nothing tells you anything</strong>.</li>
+        <li>The tray says a synth waits. Drag it around: the <strong>dashed hull</strong> appears when a chord would form — that's the whole lesson, discovered unaided.</li>
+        <li>Drop it on G4: the fifth lands with its chip and the drone fattens. Did you feel <em>why</em>?</li>
       </ul>
       <h3>Feel for</h3>
       <div class="fact">
-        Naming the chord <em>before</em> it exists: does the goal make completion
-        <strong>intentional</strong> — or does it <span class="cost">spoil the discovery</span> A
-        preserves? Do the beats match what you'd do anyway, or do they boss? After the ribbon
-        dissolves, what pulls you forward? Grant: <strong>a pre-placed fifth + 2 free synths, 12 ν</strong>.
-      </div>`,
-  },
-  {
-    id: "c",
-    label: "<b>C</b> — Live-in chord (perturb to learn)",
-    head: "C — Live-in chord",
-    sub: "the power chord is pre-placed and already earning; the first lesson is breaking it and feeling it return",
-    grant: 12, tray: 2, placed: [[0, 0], [1, 0], [0, 1]], cells: [...STARTER_CELLS, "-1,1"],
-    nudge: true,
-    side: `
-      <h3>Play the opening</h3>
-      <ul>
-        <li>The board opens <strong>already chorded</strong> — hull, chip, and rate all live before you touch anything.</li>
-        <li>Take the nudge: drag a voice <strong>off the board</strong>. The chip dies. Place it back from the tray — it returns. <strong>Attribution by perturbation.</strong></li>
-        <li>The tray's second synth wants F4 (−1,1), already open: one placement, a <em>second</em> chip (4th shell). Extending is one move.</li>
-        <li>Session, exit, spend — then the 30 ν cell upward crosses the <strong>row gate</strong> (+20 ν, once).</li>
-      </ul>
-      <h3>Feel for</h3>
-      <div class="fact">
-        Does opening mid-music land — <strong>"what am I adding to"</strong> — or confuse, "why is
-        this here"? Does breaking teach the rule faster than building? Is one nudge enough, or does
-        the board need a second? Grant: <strong>a pre-placed power chord + 2 free synths, the F4
-        cell pre-opened, 12 ν</strong>. <span class="cost">Risk: the chord feels unearned.</span>
+        Does the dashed hull alone carry <strong>attribution and pull</strong> — "these two now
+        chord, and the × is what it pays"? Or does the moment pass unnoticed,
+        <span class="cost">the chip landing on deaf eyes</span>? If B holds, the game's opening has
+        <strong>zero UI that isn't the game</strong>. If it doesn't, A's single card is the floor.
       </div>`,
   },
 ];
