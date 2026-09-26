@@ -8,6 +8,8 @@ update; when a type lands, update the table in the same change.
 
 Last updated: 2026-09-21
 
+> **Superseded provisions (2026-09-25).** The playtest-driven board redesign ([board redesign spec](board-redesign-spec.md), ADR-0021/0022) deletes the `carrier` type, replaces pitch-as-distance with the octave-stack lattice, and rebuilds chords as register-free pitch sets with a new `spacer` wire category. This catalog describes the code as it ships today and updates when the redesigned types land; until then, its carrier, pitch, chord, and composite provisions are superseded by the board redesign spec.
+
 ## Roster
 
 | Key | Name | Nameplate | Category | Hue | Glyph | Symbol | Origin | Face readout |

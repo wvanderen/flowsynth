@@ -111,6 +111,8 @@ Nous is never governed by C: it banks live (present + trusted away) or via the b
 
 *Decided by [The opening without rungs, #74](https://github.com/wvanderen/flowsynth/issues/74), with the maintainer. Amends the beat sheet (#24) and the opening economy (#11); recorded in ADR-0019.*
 
+> **Partially superseded (2026-09-25)** by the opening learning arc ([board redesign spec §8](board-redesign-spec.md), issue #123): the welcome card and its CTA are gone (`welcomeAcked` retired), the grant is one pre-placed synth plus first-upgrade funds, and the second synthesizer arrives through the forge loop — not the shelf pull. The free-apps, session-one, and ladder provisions below stand; the session-start accounting (§1–6) is untouched.
+
 - **Time is free at minute 0.** The after-first-session auto-activation milestone is struck: Habit, Time, Notes, and Goals are all active from the very first session, and session one can be planned. The loud summary keeps its unlock row in design, inert at launch — it fires when Tasks joins, post-launch.
 - **Session one stays open-ended-steered.** The enter prompt carries the duration affordances (preset chips + free 1–90 entry) from the very first start, visible but unpushed; the first-session copy still suggests a few minutes (~5, tuning) then exiting — reinstating a steered suggestion for session one only (ADR-0018's flavor cut otherwise stands). The chime, title flip, and the permission ask land whenever the player first plans — never at minute 0.
 - **Session-one tiles: openable but unprompted.** The focus tiles open in-session from session one, wearing live state; the script never spotlights them — the HUD stays the ticking nous counter and per-minute rate, with zero purchases.
