@@ -53,6 +53,25 @@ const PRESERVED_KEYS = [
   "horizonAcknowledged",
 ] as const satisfies readonly (keyof GameState)[];
 
+// The largest numeric suffix across the preserved life-record ids — one
+// lowercase prefix plus the shared counter's number (habits h, notes n,
+// goals g, the practice log p).
+function preservedMaxId(raw: Record<string, unknown>): number {
+  let max = 0;
+  for (const key of ["habits", "notes", "goals", "practiceLog"] as const) {
+    const list = raw[key];
+    if (!Array.isArray(list)) continue;
+    for (const item of list) {
+      const id = isRecord(item) ? item.id : undefined;
+      if (typeof id !== "string") continue;
+      const match = /^[a-z]+(\d+)$/.exec(id);
+      const n = match === null ? 0 : Number(match[1]);
+      if (Number.isInteger(n) && n > max) max = n;
+    }
+  }
+  return max;
+}
+
 function migrateV5(raw: Record<string, unknown>): GameState {
   const fresh = createInitialState();
   const merged = { ...fresh } as Record<string, unknown>;
@@ -62,6 +81,10 @@ function migrateV5(raw: Record<string, unknown>): GameState {
       merged[key] = value;
     }
   }
+  // The life record shares the one id counter with fresh minting: wind
+  // nextId past every preserved id so the migrated state can never mint a
+  // duplicate id over the record it just carried over.
+  merged.nextId = preservedMaxId(raw) + 1;
   // The mid-flow boundary (ADR-0023): a v5 save captured in flow or paused
   // discards the live session uncredited — the migration lands in upgrade
   // mode on the fresh board, whatever the save's mode said. `session`,
@@ -123,8 +146,9 @@ export function deserialize(text: string): LoadResult {
   }
   // The octave-row gate ledger joins the v6 shape (ADR-0022): lenient
   // default — a save written before it exists owes no gates it can't know
-  // about.
-  if (!Array.isArray(merged.gatedRows)) {
+  // about. The check reads the raw save, not the merge: a fresh state's
+  // granted opening rows must not masquerade as a ledger the save carried.
+  if (!Array.isArray(raw.gatedRows)) {
     merged.gatedRows = [];
   }
   // The retired 120 s reconcile dialog's frozen gap (ADR-0010 → ADR-0019):

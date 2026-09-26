@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import { endSession, startSession } from "./actions";
+import { createHabit } from "./habits";
 import { fresh, give, stubRng } from "./fixtures";
 import { BALANCE, SAVE_VERSION } from "./constants";
 import { deserialize, serialize } from "./save";
@@ -48,13 +49,14 @@ describe("persistence", () => {
   });
 
   it("v6 saves lenient-default the gate ledger", () => {
-    // Absent, the field rides the fresh defaults — the opening's granted
-    // rows; corrupt, it falls back to the empty ledger.
+    // Absent, a save written before the ledger existed owes no gates it
+    // can't know about — the fresh state's granted opening rows must not
+    // ride in; corrupt, it falls back to the empty ledger as well.
     const file = JSON.parse(serialize(fresh()));
     delete file.state.gatedRows;
     const absent = deserialize(JSON.stringify(file));
     expect(absent.error).toBeUndefined();
-    expect(absent.state!.gatedRows).toEqual([0, 1]);
+    expect(absent.state!.gatedRows).toEqual([]);
     file.state.gatedRows = null;
     const corrupt = deserialize(JSON.stringify(file));
     expect(corrupt.error).toBeUndefined();
@@ -181,6 +183,29 @@ describe("the v5 → v6 hybrid migration (ADR-0023)", () => {
     expect(m.totalEarned).toBe(12_345);
     expect(m.arete).toBe(2);
     expect(m.horizonAcknowledged).toBe(true);
+  });
+
+  it("winds the id counter past the preserved life record so minting can't collide", () => {
+    const s = fresh();
+    s.habits.push({ id: "h3", name: "Piano", seconds: 3600, archived: false });
+    s.practiceLog.push({ id: "p5", habitId: "h3", seconds: 600, source: "live", at: 1_000 });
+    s.notes.push({ id: "n7", sessionId: 1, atElapsed: 30, text: "kept", habitId: "h3", at: 1_000 });
+    s.goals.push({
+      id: "g2",
+      condition: { kind: "habit-minutes", habitId: "h3", minutes: 10 },
+      schedule: { kind: "daily" },
+      occurrenceKey: "2026-09-25",
+      progressSeconds: 0,
+      completed: false,
+      completedCount: 0,
+      createdAt: 1_000,
+    });
+    const m = deserialize(asV5(s)).state!;
+    expect(m.nextId).toBe(8);
+    const created = createHabit(m, "Cello");
+    expect(created.ok).toBe(true);
+    expect(created.habit!.id).toBe("h8");
+    expect(m.habits.map((h) => h.id)).toEqual(["h3", "h8"]);
   });
 
   it("resets the board side to the new opening — Carrier row included", () => {

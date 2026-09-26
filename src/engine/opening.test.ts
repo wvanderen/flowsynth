@@ -312,12 +312,13 @@ describe("the octave-row gate (ADR-0022)", () => {
     buyCell(s, hex(0, 2));
     const restored = deserialize(serialize(s, 1_000)).state!;
     expect(restored.gatedRows).toEqual([0, 1, 2]);
-    // Absent on a v6 save, the opening's granted rows ride the fresh
-    // defaults; a corrupt value lenient-defaults to the empty ledger.
+    // Absent on a v6 save, the ledger defaults empty — a save written
+    // before it exists owes no gates it can't know about; a corrupt value
+    // falls back to the empty ledger too.
     const file = JSON.parse(serialize(fresh()));
     delete file.state.gatedRows;
     const absent = deserialize(JSON.stringify(file)).state!;
-    expect(absent.gatedRows).toEqual([0, 1]);
+    expect(absent.gatedRows).toEqual([]);
     file.state.gatedRows = null;
     const corrupt = deserialize(JSON.stringify(file)).state!;
     expect(corrupt.gatedRows).toEqual([]);

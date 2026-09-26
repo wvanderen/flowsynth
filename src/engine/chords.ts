@@ -76,11 +76,14 @@ function matchRoots(cluster: DeployedModule[]): RootMatch[] {
       if (groups.some((group, i) => group.length < multiplicity[i]!)) continue;
       const instances = groups.reduce((total, group, i) => total * choose(group.length, multiplicity[i]!), 1);
       if (instances < 1) continue;
-      // One representative voice set for rendering: the lowest-id voice at
-      // each class (two for the Octave's doubled class).
-      const representative = groups.flatMap((group, i) => group.slice(0, multiplicity[i]!));
+      // Every voice that sings in at least one complete instance — all the
+      // cluster's voices at the chord's required classes (each class clears
+      // its multiplicity, or there is no match). The per-module panel read
+      // and the chord hulls share this list, so a doubled voice is never
+      // shown chordless while its instances multiply the rate.
+      const moduleIds = groups.flatMap((group) => group.map((m) => m.id));
       matches.push({
-        term: { name: def.name, bonus: def.bonus, instances, moduleIds: representative.map((m) => m.id) },
+        term: { name: def.name, bonus: def.bonus, instances, moduleIds },
         groups,
         multiplicity,
       });

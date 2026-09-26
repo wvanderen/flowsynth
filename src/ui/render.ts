@@ -1,4 +1,4 @@
-import { chargedFactor, cellCost, chargeDelivered, computeRates, deployed, emittedStrength, levelCost, longGoalCost, modulePower, rowGateCost, rowGateOwed, wholeNous } from "../engine/economy";
+import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, deployed, emittedStrength, levelCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
@@ -636,15 +636,12 @@ function renderGrid(app: App): void {
 
   if (showFrontier) {
     // The octave-row gate rides the quoted price (ADR-0022): a frontier hex
-    // in a row whose one-time gate is unpaid carries cell price + premium.
-    const gateFor = (pos: Hex): number => {
-      const row = octaveRowOf(pos);
-      return rowGateOwed(state, row) ? rowGateCost(row) : 0;
-    };
-    const price = cellCost(state.cellsBought);
+    // in a row whose one-time gate is unpaid carries cell price + premium —
+    // the same cellPurchasePrice seam the buy action charges.
+    const basePrice = cellCost(state.cellsBought);
     for (const pos of frontier) {
       const [x, y] = point(pos);
-      const total = price + gateFor(pos);
+      const total = cellPurchasePrice(state, pos);
       const affordable = wholeNous(state) >= total;
       if (ui.buyingCell) {
         // The purchase arm: every frontier hex carries its price; the buy
@@ -653,7 +650,7 @@ function renderGrid(app: App): void {
           <polygon class="hex ${affordable ? "buy-here" : "future"}" points="${hexPoints(HEX_RADIUS)}"/>
           <text y="-24" text-anchor="middle" class="hex-sub">NEW CELL</text>
           ${affordable ? `<text y="8" text-anchor="middle" fill="var(--accent)" font-size="22">+</text>` : ""}
-          <text y="${affordable ? 34 : 8}" text-anchor="middle" class="hex-sub">${formatInt(total)} ν${gateFor(pos) > 0 ? " · gated" : ""}</text>
+          <text y="${affordable ? 34 : 8}" text-anchor="middle" class="hex-sub">${formatInt(total)} ν${total > basePrice ? " · gated" : ""}</text>
         </g>`;
       } else {
         const isAdd = ui.reshape?.adds.some((c) => sameHex(c, pos)) ?? false;

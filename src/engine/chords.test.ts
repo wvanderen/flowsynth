@@ -102,6 +102,10 @@ describe("instances stack", () => {
     const snapshot = computeRates(s, true);
     expect(snapshot.namedChords.map((c) => `${c.name}×${c.instances}`)).toEqual(["Octave×3"]);
     expect(snapshot.chordMultiplier).toBeCloseTo(octave ** 3, 9);
+    // Every doubled voice sings the term — the panel read and the hulls
+    // share moduleIds, so no voice is shown chordless while its instances
+    // multiply the rate.
+    expect(snapshot.namedChords[0]!.moduleIds.sort()).toEqual(["m1", "m2", "m3"]);
   });
 
   it("overlapping instances stack: a C · G · D row rings two fifths and a flat seventh", () => {

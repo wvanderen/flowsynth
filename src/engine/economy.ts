@@ -2,7 +2,7 @@ import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS } from "./consta
 import { analyzeChords } from "./chords";
 import { achievementBoostOf } from "./achievements";
 import { adjacent } from "./hex";
-import { pitchOf } from "./lattice";
+import { octaveRowOf, pitchOf } from "./lattice";
 import type { Contribution, DeployedModule, GameState, ModuleInstance, ModuleType, RateSnapshot } from "./types";
 
 export function chargedFactor(strength: number): number {
@@ -52,6 +52,17 @@ export function rowGateOwed(state: GameState, row: number): boolean {
   return !state.gatedRows.includes(row);
 }
 
+// The one price for a new cell at `pos` (ADR-0013 + ADR-0022): the scaler
+// price plus the row's one-time gate premium when still owed. The single
+// seam — the buy action charges exactly this and the board's frontier hexes
+// quote exactly this, so the displayed price cannot drift from the charged
+// one.
+export function cellPurchasePrice(state: GameState, pos: { q: number; r: number }): number {
+  const row = octaveRowOf(pos);
+  const gate = rowGateOwed(state, row) ? rowGateCost(row) : 0;
+  return cellCost(state.cellsBought) + gate;
+}
+
 // The activation ladder (ADR-0013): a shared geometric scaler over rungs
 // bought — each later rung costs more no matter which app it opens. The
 // ladder rests empty at launch (ADR-0019): the scaler's shape stands, and
@@ -96,8 +107,8 @@ export function deployedAt(state: GameState, pos: { q: number; r: number }): Mod
 }
 
 // The deployed synthesizers and spacers — the two categories that conduct
-// chords (ADR-0021). One partition shared by the rate pass and the
-// achievements' chord read, so the filter can never drift between them.
+// chords (ADR-0021). One partition for the achievements' chord read, so it
+// filters exactly as the rate pass does.
 export function deployedConductors(state: GameState): { synths: DeployedModule[]; spacers: DeployedModule[] } {
   const synths: DeployedModule[] = [];
   const spacers: DeployedModule[] = [];
@@ -206,6 +217,7 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
     localBonus: number;
   }
   const synths: SynthInfo[] = [];
+  const spacers: DeployedModule[] = [];
   let forgeRate = 0;
 
   for (const deployedModule of deployed(state)) {
@@ -218,6 +230,9 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
       const pos = deployedModule.pos;
       synths.push({ module: { ...deployedModule, pos }, power: modulePower(deployedModule), chargeFactor, strength, localBonus });
       continue;
+    }
+    if (deployedModule.type === "spacer" && deployedModule.pos !== null) {
+      spacers.push({ ...deployedModule, pos: deployedModule.pos });
     }
     let value = 0;
     if (deployedModule.type === "forge") {
@@ -240,9 +255,10 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
   }
 
   // Pass two: pitch-set chords over the connected synthesizer-and-spacer
-  // clusters — the spacer conducts adjacency, never joins a pitch set.
-  const conductors = deployedConductors(state);
-  const analysis = analyzeChords(conductors.synths, conductors.spacers);
+  // clusters — the spacer conducts adjacency, never joins a pitch set. The
+  // partitions come straight from pass one's walk: one filter, never two
+  // that can drift.
+  const analysis = analyzeChords(synths.map(({ module }) => module), spacers);
 
   // Pass three: the unified synths leg. A Conditional is its base term plus
   // a bonus for every chord instance it belongs to; every other

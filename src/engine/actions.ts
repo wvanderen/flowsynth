@@ -1,5 +1,5 @@
 import { BALANCE, EPS, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE, SHELF_TYPES } from "./constants";
-import { cellCost, computeRates, deployedAt, findModule, levelCost, longGoalCost, rowGateCost, rowGateOwed, wholeNous } from "./economy";
+import { cellPurchasePrice, computeRates, deployedAt, findModule, levelCost, longGoalCost, rowGateOwed, wholeNous } from "./economy";
 import { nextRungCost, appActive, LADDER_APPS, type FocusApp } from "./apps";
 import { adjacent, hexKey, isConnected, sameHex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
@@ -242,8 +242,7 @@ export function buyCell(state: GameState, pos: Hex): ActionResult {
   if (!positionInRange(pos)) return fail("That cell lies outside the board's lattice.");
   const row = octaveRowOf(pos);
   const gateOwed = rowGateOwed(state, row);
-  const gate = gateOwed ? rowGateCost(row) : 0;
-  const price = cellCost(state.cellsBought) + gate;
+  const price = cellPurchasePrice(state, pos);
   if (wholeNous(state) < price) return fail("Not enough whole nous.");
   state.nous -= price;
   state.cells.push(pos);
