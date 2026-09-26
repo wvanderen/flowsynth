@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PROTOTYPE — Opening learning arc: reaching the first chord through play (#123, rev 2)</title>
+<!--
+  Prototype plan, rev 2 — the maintainer's verdict on round 1 fixed the pedagogy: no goals, no
+  steps, no ambient hints; the player starts with a SINGLE synth and acquires more only through
+  play. One knob is left open ("maybe a pop-up hint about chords after the user acquires their
+  second synth"), so two variants share the whole arc and differ only in that card:
+  A: one earned pop-up hint after the second synth · B: total silence, the board language alone.
+
+  VERDICT (issue #123, approved): the single-synth earned arc WINS with the one pop-up hint kept —
+  variant A's shape. The player opens with one pre-placed synth (C4) and a grant that makes the
+  first upgrade affordable; the forge fills with practice and offers the second synth; the single
+  dismissible hint card fires exactly once, after that acquisition. The totally-silent variant B
+  was built and tested on this branch and not chosen. The deleted idle tutorial helptext stays
+  deleted; there is no tutorial state machine, no goals, no steps. Acquisition runs through the
+  forge loop only (no shelf purchase for synths in the opening). Exact pacing numbers (forge fill,
+  threshold, grant) are tuning, not spec. This file is the primary source; the sequence folds
+  into the real game at consolidation (#125).
+
+  Acquisition is the accepted forge loop (#119 dock, #122 rules, placeholder pacing): practice
+  seconds fill the forge; crossing the threshold offers a new synth; placing it beside the first
+  chords by pitch content, previewed by the dashed would-form ghosts (#120) on the octave-stack
+  board (#126) under the direct-interaction language (#118). Numbers are placeholders. Throwaway:
+  no persistence, no tests. Desktop composition; phone follows #121.
+-->
+<style>
+  :root {
+    --bg: #12142a;
+    --panel: #1a1d38;
+    --ink: #e8e9f5;
+    --dim: #9a9cb8;
+    --line: #2e3157;
+    --synth: #6360d4;
+    --synth-soft: #8f8ce8;
+    --vermillion: #cc603d;
+    --nous: #cbcaff;
+    --forge: #bc9239;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.55 ui-sans-serif, system-ui, sans-serif;
+    padding: 20px 24px 90px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .proto-tag {
+    display: inline-block;
+    background: var(--vermillion);
+    color: #fff;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-bottom: 8px;
+  }
+  h1 { font-size: 21px; margin-bottom: 4px; }
+  .lede { color: var(--dim); max-width: 940px; margin-bottom: 12px; }
+  .decide {
+    max-width: 940px;
+    font-size: 13.5px;
+    border-left: 3px solid var(--forge);
+    padding: 7px 12px;
+    background: #101228;
+    border-radius: 0 6px 6px 0;
+    margin-bottom: 14px;
+  }
+  .decide strong { color: #d9b45f; }
+  .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .toolbar button {
+    font: 13px/1 ui-sans-serif, system-ui, sans-serif;
+    padding: 7px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: #20233f;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .toolbar button:hover { border-color: #565a8f; }
+  .toolbar .hint { color: var(--dim); font-size: 12.5px; }
+  .cols { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .boardpanel { flex: 0 1 auto; position: relative; }
+  .side { flex: 1 1 330px; min-width: 320px; max-width: 560px; }
+  .panel h2 { font-size: 16px; margin-bottom: 2px; }
+  .panel .sub { color: var(--dim); font-size: 13px; margin-bottom: 10px; }
+  .side h3 {
+    font-size: 11.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #7d80a8;
+    margin: 12px 0 6px;
+  }
+  .side h3:first-child { margin-top: 0; }
+  .side ul { list-style: none; display: grid; gap: 5px; font-size: 13.5px; }
+  .side ul li::before { content: "→ "; color: #565a8f; }
+  .fact {
+    font-size: 13.5px;
+    border-left: 3px solid #1f95b5;
+    padding: 7px 10px;
+    background: #101228;
+    border-radius: 0 5px 5px 0;
+  }
+  .fact strong { color: var(--ink); }
+  .fact .cost { color: #d98a6d; }
+  /* the ledger (#119): production reads docked above the board */
+  .ledger {
+    display: flex;
+    gap: 14px;
+    align-items: baseline;
+    flex-wrap: wrap;
+    font: 13px/1.4 ui-monospace, monospace;
+    background: #101228;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+  }
+  .ledger .lab { color: #7d80a8; }
+  .ledger b { color: var(--nous); font-weight: 600; }
+  .ledger b.forge-ready { color: var(--forge); animation: forgepulse 1.2s ease-in-out infinite; }
+  @keyframes forgepulse { 50% { opacity: 0.55; } }
+  .ledger .grow { flex: 1; }
+  .ledger button {
+    font: 12.5px/1 ui-sans-serif, system-ui, sans-serif;
+    padding: 6px 11px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: #20233f;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .ledger button.primary { border-color: var(--vermillion); color: #ffc9ae; }
+  .ledger button.primary:hover { background: #33251f; }
+  .ledger button:disabled { opacity: 0.45; cursor: default; }
+  svg { display: block; width: 100%; height: auto; touch-action: none; }
+  .tray {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 10px;
+    min-height: 40px;
+    font-size: 13px;
+    color: var(--dim);
+  }
+  .tray .tile {
+    font: 12.5px/1 ui-sans-serif, system-ui, sans-serif;
+    padding: 9px 13px;
+    border-radius: 7px;
+    border: 1.5px dashed var(--synth-soft);
+    background: #191c3a;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .tray .tile:hover { border-style: solid; border-color: #b9b6f2; }
+  .tray .tile.armed { border-style: solid; border-color: #ffe9c4; background: #2c2745; color: #ffe9c4; }
+  .tray .empty { font-style: italic; opacity: 0.7; }
+  /* the bloom (#127): the selected module's expanded face, floating above its cell */
+  .bloom {
+    position: absolute;
+    width: 150px;
+    transform: translate(-50%, -100%);
+    background: #20244a;
+    border: 1.5px solid #b9b6f2;
+    border-radius: 12px;
+    padding: 10px 12px 11px;
+    box-shadow: 0 8px 26px rgba(0,0,0,0.55);
+    z-index: 5;
+    text-align: center;
+  }
+  .bloom::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -7px;
+    width: 12px;
+    height: 12px;
+    background: #20244a;
+    border-right: 1.5px solid #b9b6f2;
+    border-bottom: 1.5px solid #b9b6f2;
+    transform: translateX(-50%) rotate(45deg);
+  }
+  .bloom .bname { font-weight: 700; font-size: 14px; }
+  .bloom .bnote { font: 12px/1.5 ui-monospace, monospace; color: var(--dim); margin: 2px 0 8px; }
+  .bloom button {
+    font: 12.5px/1 ui-sans-serif, system-ui, sans-serif;
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--vermillion);
+    background: #33251f;
+    color: #ffc9ae;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .bloom button:hover { background: #452d23; }
+  .bloom button:disabled { opacity: 0.45; cursor: default; }
+  /* the one earned pop-up (A) and the forge offer */
+  .card {
+    position: absolute;
+    left: 50%;
+    top: 42%;
+    transform: translate(-50%, -50%);
+    width: min(380px, 86%);
+    background: #20244a;
+    border: 1.5px solid #b9b6f2;
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    z-index: 8;
+  }
+  .card .ctitle { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+  .card .cbody { font-size: 13.5px; color: var(--ink); line-height: 1.5; }
+  .card .cbody b { color: #b9b6f2; }
+  .card button {
+    margin-top: 11px;
+    font: 13px/1 ui-sans-serif, system-ui, sans-serif;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--synth-soft);
+    background: #2c2745;
+    color: #ffe9c4;
+    cursor: pointer;
+  }
+  .card button:hover { background: #372f56; }
+  .cell-label { font: 600 12px ui-monospace, monospace; fill: var(--ink); pointer-events: none; }
+  .cell-faint { font: 500 9px ui-monospace, monospace; fill: #565a90; pointer-events: none; }
+  .buycell { font: 700 10px ui-monospace, monospace; fill: #ffe9c4; pointer-events: none; }
+  .chord-label { font: 700 12px ui-sans-serif, system-ui, sans-serif; pointer-events: none; }
+  .toast {
+    position: fixed;
+    bottom: 74px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0c0d20;
+    border: 1px solid #4a4e80;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13.5px;
+    z-index: 20;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    max-width: 620px;
+    text-align: center;
+  }
+  .toast.show { opacity: 1; }
+  .switcher {
+    position: fixed;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #0c0d20;
+    border: 1px solid #4a4e80;
+    border-radius: 999px;
+    padding: 8px 14px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.55);
+    z-index: 10;
+  }
+  .switcher button {
+    font: 16px/1 ui-sans-serif, system-ui, sans-serif;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid #4a4e80;
+    background: #20233f;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .switcher button:hover { border-color: #7d80a8; }
+  .switcher .label { font-size: 13.5px; min-width: 420px; text-align: center; }
+  .switcher .label b { color: #d9b45f; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="proto-tag">Prototype — throwaway, answers one question (#123 · rev 2)</div>
+<h1>Opening learning arc: one synth, everything else earned</h1>
+<p class="lede">
+  Round 1's verdict set the pedagogy: <strong>no goals, no steps, no ambient hints — the player
+  starts with a single synth and acquires more only through play.</strong> What remains open is the
+  one "maybe": whether a <strong>single pop-up hint about chords</strong>, delivered after the
+  second synth is acquired, earns its place. Both variants play the identical arc — practice fills
+  the forge; the forge offers a synth; placing it beside your first chords the pair (dashed
+  preview while you drag, chip when it lands) — and differ only in that card.
+</p>
+<div class="decide">
+  <strong>Decide while playing:</strong> does the earned hint land at the right moment with the
+  right words (A) — or is the dashed hull alone enough to carry "these two now chord, and the × is
+  what it pays" (B)? Is ~2 minutes of practice the right distance to the second synth? Does the
+  first chord feel <em>earned</em> when it can only arrive through play? Success test: placed,
+  chorded, perceived, rearranged — inside minutes, with no Carrier lesson.
+</div>
+<div class="toolbar">
+  <button id="soundBtn">sound: off</button>
+  <button id="restartBtn">restart arc</button>
+  <span class="hint">drag = move (occupied drops swap) · drag off the board = back to tray · double-click = back to tray · click a synth = bloom · Esc cancels</span>
+</div>
+<div id="stage"></div>
+<div class="toast" id="toast"></div>
+
+<div class="switcher">
+  <button id="prevBtn" title="previous variant">‹</button>
+  <span class="label" id="varLabel"></span>
+  <button id="nextBtn" title="next variant">›</button>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+// ---------- tiny svg + dom helpers ----------
+const SVGNS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs, parent) => {
+  const n = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+};
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+
+let toastTimer = null;
+function say(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 3200);
+}
+
+// ---------- audio: opt-in garnish (#120) — drone + formation strum ----------
+const AudioMgr = {
+  ctx: null, master: null, voices: new Map(), on: false,
+  ensure() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0.55;
+      this.master.connect(this.ctx.destination);
+    }
+    if (this.ctx.state === "suspended") this.ctx.resume();
+  },
+  setVoices(list) {
+    if (!this.on) return;
+    this.ensure();
+    const t = this.ctx.currentTime, seen = new Set();
+    for (const v of list.slice(0, 14)) {
+      seen.add(v.id);
+      let vc = this.voices.get(v.id);
+      if (!vc) {
+        const g = this.ctx.createGain(); g.gain.value = 0; g.connect(this.master);
+        const o1 = this.ctx.createOscillator(); o1.type = "sine"; o1.frequency.value = v.freq; o1.connect(g); o1.start();
+        const g2 = this.ctx.createGain(); g2.gain.value = 0.1;
+        const o2 = this.ctx.createOscillator(); o2.type = "sine"; o2.frequency.value = v.freq * 3; o2.connect(g2); g2.connect(g); o2.start();
+        vc = { g, o1, o2 };
+        this.voices.set(v.id, vc);
+      }
+      vc.o1.frequency.setTargetAtTime(v.freq, t, 0.04);
+      vc.o2.frequency.setTargetAtTime(v.freq * 3, t, 0.04);
+      vc.g.gain.setTargetAtTime(v.gain || 0.05, t, 0.06);
+    }
+    for (const [id, vc] of this.voices) {
+      if (!seen.has(id)) {
+        vc.g.gain.setTargetAtTime(0, t, 0.05);
+        const dead = vc;
+        setTimeout(() => { try { dead.o1.stop(); dead.o2.stop(); } catch (e) {} }, 400);
+        this.voices.delete(id);
+      }
+    }
+  },
+  blip(freq, when, gain) {
+    if (!this.on) return;
+    this.ensure();
+    const t = this.ctx.currentTime + (when || 0);
+    const o = this.ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(gain || 0.09, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+    o.connect(g); g.connect(this.master);
+    o.start(t); o.stop(t + 1);
+  },
+};
+
+// ---------- shared hex math ----------
+const DIRECTIONS = [[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]];
+const hexDist = (a, b) => {
+  const di = a.i - b.i, dj = a.j - b.j;
+  return (Math.abs(di) + Math.abs(dj) + Math.abs(di + dj)) / 2;
+};
+const hexPts = (cx, cy, s) => {
+  const pts = [];
+  for (let k = 0; k < 6; k++) {
+    const a = Math.PI / 180 * (60 * k + 30);
+    pts.push((cx + s * Math.cos(a)).toFixed(1) + "," + (cy + s * Math.sin(a)).toFixed(1));
+  }
+  return pts.join(" ");
+};
+
+// ---------- drag machinery (#118: click / drag with live swap / double-click) ----------
+function makeDrag(svg, getCellAt, h) {
+  let drag = null;
+  const down = (e) => {
+    const cell = getCellAt(e);
+    if (!cell) { h.onOutside && h.onOutside(); return; }
+    drag = { from: cell, moved: false, sx: e.clientX, sy: e.clientY };
+    e.preventDefault();
+  };
+  const move = (e) => {
+    if (!drag) return;
+    if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) {
+      if (!h.canPick(drag.from)) return;
+      drag.moved = true;
+      h.onDragStart && h.onDragStart(drag.from);
+    }
+    if (drag.moved) h.onDragHover && h.onDragHover(drag.from, getCellAt(e));
+  };
+  const up = (e) => {
+    if (!drag) return;
+    const d = drag;
+    drag = null;
+    if (d.moved) h.onDrop && h.onDrop(d.from, getCellAt(e));
+    else h.onClick && h.onClick(d.from);
+  };
+  const dbl = (e) => {
+    const cell = getCellAt(e);
+    if (cell) h.onDblClick && h.onDblClick(cell);
+  };
+  svg.addEventListener("pointerdown", down);
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", up);
+  svg.addEventListener("dblclick", dbl);
+  return () => {
+    svg.removeEventListener("pointerdown", down);
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+    svg.removeEventListener("dblclick", dbl);
+  };
+}
+function svgPoint(svg, e) {
+  const m = svg.getScreenCTM();
+  if (!m) return null;
+  return new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+}
+
+// ---------- pitch helpers ----------
+const NAMES = ["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+const C_ROOT = 261.63; // C4
+const mod12 = (x) => ((x % 12) + 12) % 12;
+const tetFreq = (st) => C_ROOT * Math.pow(2, st / 12);
+const audioFreq = (st) => {
+  let f = tetFreq(st);
+  while (f > 1046.5) f /= 2;
+  while (f < 130.8) f *= 2;
+  return f;
+};
+
+// ---------- the board: octave-stack, absolute pitch (#126) ----------
+const I_MIN = -2, I_MAX = 4, J_MAX = 3, SIZE = 26;
+function buildCells() {
+  const cells = [];
+  for (let i = I_MIN; i <= I_MAX; i++)
+    for (let j = 0; j <= J_MAX; j++) {
+      const st = 7 * i + 12 * j;
+      cells.push({
+        i, j, key: i + "," + j, st,
+        name: NAMES[mod12(st)],
+        oct: 4 + Math.floor(st / 12),
+        x: SIZE * Math.sqrt(3) * (i + j / 2),
+        y: SIZE * 1.5 * j,
+      });
+    }
+  return cells;
+}
+const CELLS = buildCells();
+const byKey = new Map(CELLS.map(c => [c.key, c]));
+function fitViewBox(cells) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const c of cells) {
+    x0 = Math.min(x0, c.x); x1 = Math.max(x1, c.x);
+    y0 = Math.min(y0, c.y); y1 = Math.max(y1, c.y);
+  }
+  const px = SIZE * 1.1, py = SIZE * 1.7;
+  return (x0 - px) + " " + (y0 - py) + " " + (x1 - x0 + 2 * px) + " " + (y1 - y0 + 2 * py);
+}
+const STARTER_CELLS = ["0,0", "1,0", "0,1"]; // the opening triangle — every cell adjacent to both others
+
+// ---------- the opening chord ladder (#122: pitch-set chords, multiplicative) ----------
+const TEMPLATES = [
+  { name: "octave",      offs: [0,12],     bonus: 0.15, color: "#8f8ce8" },
+  { name: "fifth",       offs: [0,7],      bonus: 0.30, color: "#1f95b5" },
+  { name: "power",       offs: [0,7,12],   bonus: 0.35, color: "#cc603d" },
+  { name: "4th shell",   offs: [0,5,12],   bonus: 0.30, color: "#a86ad4" },
+];
+
+// ---------- placeholder economy (#122 skeleton; numbers are tuning) ----------
+const SYNTH_BASE = 0.1;          // ν/s per synth at level 0
+const LEVEL_STEP = 1.5;          // contribution ×1.5 per level
+const levelCost = (lvl) => Math.ceil(10 * Math.pow(1.6, lvl)); // 10, 16, 26…
+const contribOf = (lvl) => SYNTH_BASE * Math.pow(LEVEL_STEP, lvl);
+const CELL_COST0 = 30;
+const cellCost = (bought) => Math.ceil(CELL_COST0 * Math.pow(2.5, bought));
+const ROW_GATE = 20;             // one-time gate on the first purchase into a new octave row (#122)
+const GATED_ROW_FROM = 2;        // starter rows 0-1 begin open
+// the forge loop (placeholder pacing): practice seconds fill it; 60 ≈ 2 minutes to the 2nd synth
+const FORGE_MAX = 60;
+const FORGE_FILL = 0.5;
+
+function synthMult(contrib, chords) {
+  let mult = 1;
+  for (const ch of chords) mult *= 1 + ch.tpl.bonus;
+  return contrib * mult;
+}
+
+// ---------- chord matching over adjacent clusters (pitch-set, #117/#122) ----------
+function computeWorld(occ) {
+  const keys = [...occ.keys()];
+  const keySet = new Set(keys);
+  const parent = new Map(keys.map(k => [k, k]));
+  const find = (x) => { while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; };
+  const union = (a, b) => { parent.set(find(a), find(b)); };
+  for (const k of keys) {
+    const c = byKey.get(k);
+    for (const [di, dj] of DIRECTIONS) {
+      const nk = (c.i + di) + "," + (c.j + dj);
+      if (keySet.has(nk)) union(k, nk);
+    }
+  }
+  const clusters = new Map();
+  for (const k of keys) {
+    const r = find(k);
+    if (!clusters.has(r)) clusters.set(r, []);
+    clusters.get(r).push(k);
+  }
+  const chords = [];
+  const dedupe = new Set();
+  for (const cluster of clusters.values()) {
+    const sts = new Set(cluster.map(k => byKey.get(k).st));
+    for (const tpl of TEMPLATES) {
+      for (const rootKey of cluster) {
+        const root = byKey.get(rootKey).st;
+        if (!tpl.offs.every(o => sts.has(root + o))) continue;
+        const dk = tpl.name + "@" + root;
+        if (dedupe.has(dk)) continue;
+        dedupe.add(dk);
+        const members = cluster.filter(k => tpl.offs.some(o => byKey.get(k).st === root + o));
+        chords.push({ tpl, rootSt: root, rootKey, members });
+      }
+    }
+  }
+  return { chords };
+}
+
+// ---------- the arc (identical for both variants; only the hint card differs) ----------
+function makeVariant(cfg) {
+  let selected = null, dragTarget = null, armedTray = false, buyingCell = false;
+  let prevChordIds = new Set();
+  let svg, gCells, gChords, gModules, gGhosts, boardPanel, ledgerEl, trayEl, bloomEl;
+  let cardEl = null, tickTimer = null;
+
+  const s = {
+    nous: cfg.grant,
+    occ: new Map([["0,0", { lvl: 0 }]]), // the single granted synth, pre-placed at C4
+    tray: 0,
+    cells: new Set(cfg.cells),
+    bought: 0,
+    gatedRows: new Set([0, 1]),
+    forge: { progress: 0, ready: false },
+    acquired: 1,
+    hintShown: false,
+    session: null,
+    totalBanked: 0,
+  };
+
+  const inSession = () => !!s.session;
+  const rateParts = () => {
+    let sum = 0;
+    for (const [, m] of s.occ) sum += contribOf(m.lvl);
+    return sum;
+  };
+
+  function strumNew(chords) {
+    if (!AudioMgr.on) return;
+    const ids = new Set(chords.map(ch => ch.tpl.name + "@" + ch.rootSt));
+    let delay = 0;
+    for (const ch of chords) {
+      if (prevChordIds.has(ch.tpl.name + "@" + ch.rootSt)) continue;
+      for (const m of ch.members) AudioMgr.blip(audioFreq(byKey.get(m).st), delay, 0.07);
+      delay += 0.09;
+    }
+    prevChordIds = ids;
+  }
+
+  function drawChord(ch, ghost) {
+    const attrs = ghost ? { "stroke-dasharray": "5 4", opacity: 0.65 } : {};
+    for (const k of ch.members) {
+      const c = byKey.get(k);
+      el("polygon", {
+        points: hexPts(c.x, c.y, SIZE * 0.92), fill: "none",
+        stroke: ch.tpl.color, "stroke-width": k === ch.rootKey && !ghost ? 3.5 : 2.5,
+        ...attrs,
+      }, ghost ? gGhosts : gChords);
+    }
+    const others = ch.members.filter(k => k !== ch.rootKey);
+    const lineTargets = ch.members.length <= 3 ? ch.members : [ch.rootKey, ...others];
+    for (let x = 0; x < lineTargets.length; x++)
+      for (let y = x + 1; y < lineTargets.length; y++) {
+        if (ch.members.length > 3 && x > 0) continue;
+        const a = byKey.get(lineTargets[x]), b = byKey.get(lineTargets[y]);
+        el("line", {
+          x1: a.x, y1: a.y, x2: b.x, y2: b.y,
+          stroke: ch.tpl.color, "stroke-width": 3, opacity: ghost ? 0.6 : 0.85,
+          ...(ghost ? { "stroke-dasharray": "5 4" } : {}),
+        }, ghost ? gGhosts : gChords);
+      }
+  }
+
+  function drawChips(chords, ghost, layer) {
+    const stack = new Map();
+    for (const ch of chords) {
+      const top = ch.members.reduce((m, k) => (byKey.get(k).y < byKey.get(m).y ? k : m), ch.members[0]);
+      const c = byKey.get(top);
+      const n = stack.get(top) || 0;
+      stack.set(top, n + 1);
+      el("text", {
+        x: c.x, y: c.y - SIZE * 1.12 - n * 14, "text-anchor": "middle",
+        class: "chord-label", fill: ch.tpl.color, opacity: ghost ? 0.7 : 1,
+      }, layer).textContent = NAMES[mod12(ch.rootSt)] + " " + ch.tpl.name + "  ×" + (1 + ch.tpl.bonus).toFixed(2);
+    }
+  }
+
+  function drawModule(c, isSel) {
+    el("polygon", {
+      points: hexPts(c.x, c.y, SIZE * 0.7),
+      fill: "#6360d4",
+      stroke: isSel ? "#ffffff" : "#8f8ce8",
+      "stroke-width": isSel ? 2 : 1,
+    }, gModules);
+  }
+
+  function fmtRate(x) { return x.toFixed(2) + " ν/s"; }
+  function fmtClock(sec) {
+    const m = Math.floor(sec / 60), r = Math.floor(sec % 60);
+    return m + ":" + String(r).padStart(2, "0");
+  }
+
+  function renderLedger(chords) {
+    let mult = 1;
+    for (const ch of chords) mult *= 1 + ch.tpl.bonus;
+    const rate = rateParts() * mult;
+    const sess = s.session
+      ? '<span class="lab">Session</span> <b>' + s.session.earned.toFixed(2) + " ν · " + fmtClock((Date.now() - s.session.t0) / 1000) + "</b>"
+      : '<span class="lab">Session</span> <b>' + (s.totalBanked > 0 ? s.totalBanked.toFixed(2) + " ν banked" : "—") + "</b>";
+    const forge = s.forge.ready
+      ? '<span class="lab">Forge</span> <b class="forge-ready">ready — a synth waits</b>'
+      : '<span class="lab">Forge</span> <b>' + Math.min(FORGE_MAX, Math.floor(s.forge.progress)) + "/" + FORGE_MAX + "</b>";
+    ledgerEl.innerHTML =
+      '<span class="lab">Nous</span> <b>' + Math.floor(s.nous) + " ν</b>" +
+      '<span class="lab">Rate</span> <b>' + fmtRate(rate) + "</b>" +
+      sess +
+      forge +
+      '<span class="grow"></span>' +
+      '<button id="cellBtn"' + (inSession() ? " disabled" : "") + ' title="Pick a frontier hex — one-time gate when reaching a new octave row">New cell · ' + cellCost(s.bought) + " ν</button>" +
+      (inSession()
+        ? '<button id="sessBtn" class="primary">Exit &amp; bank</button>'
+        : '<button id="sessBtn" class="primary">Enter session</button>');
+    ledgerEl.querySelector("#cellBtn").addEventListener("click", () => armCell());
+    ledgerEl.querySelector("#sessBtn").addEventListener("click", () => (inSession() ? endSession() : startSession()));
+  }
+
+  function renderTray() {
+    const tiles = [];
+    for (let n = 0; n < s.tray; n++)
+      tiles.push('<button class="tile' + (armedTray && n === 0 ? " armed" : "") + '" data-n="' + n + '">synth</button>');
+    trayEl.innerHTML = tiles.length
+      ? "tray — pick one, then a cell: " + tiles.join(" ")
+      : '<span class="empty">tray empty — synths arrive from the forge, earned by practice</span>';
+    trayEl.querySelectorAll(".tile").forEach(b =>
+      b.addEventListener("click", () => {
+        if (inSession()) { say("The board is set during a session — rearrange between sessions."); return; }
+        armedTray = !armedTray;
+        buyingCell = false;
+        if (armedTray) say("Choose a cell. The cell names the note.");
+        refresh();
+      }));
+  }
+
+  function positionBloom() {
+    if (!bloomEl || !selected) return;
+    const c = byKey.get(selected);
+    const m = svg.getScreenCTM();
+    if (!m) return;
+    const p = new DOMPoint(c.x, c.y - SIZE * 1.15).matrixTransform(m);
+    const r = boardPanel.getBoundingClientRect();
+    bloomEl.style.left = p.x - r.left + "px";
+    bloomEl.style.top = p.y - r.top + "px";
+  }
+
+  function renderBloom() {
+    if (bloomEl) { bloomEl.remove(); bloomEl = null; }
+    if (!selected || !s.occ.has(selected) || cardEl) return;
+    const c = byKey.get(selected);
+    const m = s.occ.get(selected);
+    const cost = levelCost(m.lvl);
+    const gain = contribOf(m.lvl + 1) - contribOf(m.lvl);
+    bloomEl = document.createElement("div");
+    bloomEl.className = "bloom";
+    bloomEl.innerHTML =
+      '<div class="bname">' + c.name + c.oct + " synth</div>" +
+      '<div class="bnote">' + contribOf(m.lvl).toFixed(2) + " ν/s · level " + m.lvl + "</div>" +
+      '<button' + (s.nous < cost ? " disabled" : "") + '>Upgrade · +' + gain.toFixed(2) + " ν/s · " + cost + " ν</button>";
+    bloomEl.querySelector("button").addEventListener("click", () => {
+      if (s.nous < cost) return;
+      s.nous -= cost;
+      m.lvl += 1;
+      say(c.name + c.oct + " upgraded — " + contribOf(m.lvl).toFixed(2) + " ν/s on its own.");
+      refresh();
+    });
+    boardPanel.appendChild(bloomEl);
+    positionBloom();
+  }
+
+  function showHintCard() {
+    if (cardEl) cardEl.remove();
+    cardEl = document.createElement("div");
+    cardEl.className = "card";
+    cardEl.innerHTML =
+      '<div class="ctitle">A second synth</div>' +
+      '<div class="cbody">Set it <b>beside your first</b>. Drag it around the board — a <b>dashed hull</b> previews the chord it would form; drop it inside one. The chip\u2019s <b>×multiplier</b> is how much more the pair earns together.</div>' +
+      '<button>Got it</button>';
+    cardEl.querySelector("button").addEventListener("click", () => { cardEl.remove(); cardEl = null; refresh(); });
+    boardPanel.appendChild(cardEl);
+  }
+
+  function showForgeCard() {
+    if (cardEl) cardEl.remove();
+    cardEl = document.createElement("div");
+    cardEl.className = "card";
+    cardEl.innerHTML =
+      '<div class="ctitle">The forge is ready</div>' +
+      '<div class="cbody">Your practice fired it. Take the synth it made — it waits in the tray until you place it.</div>' +
+      '<button>Take the synth</button>';
+    cardEl.querySelector("button").addEventListener("click", () => {
+      cardEl.remove(); cardEl = null;
+      s.forge.ready = false;
+      s.forge.progress = 0;
+      s.tray += 1;
+      s.acquired += 1;
+      say("A new synth — in the tray. Place it wherever it earns its keep.");
+      if (cfg.hint && s.acquired === 2 && !s.hintShown) {
+        s.hintShown = true;
+        showHintCard();
+      }
+      refresh();
+    });
+    boardPanel.appendChild(cardEl);
+  }
+
+  function frontierKeys() {
+    const out = [];
+    for (const c of CELLS) {
+      if (s.cells.has(c.key)) continue;
+      let touches = false;
+      for (const [di, dj] of DIRECTIONS) {
+        if (s.cells.has((c.i + di) + "," + (c.j + dj))) { touches = true; break; }
+      }
+      if (touches) out.push(c.key);
+    }
+    return out;
+  }
+
+  function armCell() {
+    if (inSession()) { say("The board is set during a session — rearrange between sessions."); return; }
+    buyingCell = !buyingCell;
+    armedTray = false;
+    if (buyingCell) say("Pick a frontier hex · Esc cancels.");
+    refresh();
+  }
+
+  function startSession() {
+    s.session = { t0: Date.now(), earned: 0 };
+    selected = null; armedTray = false; buyingCell = false;
+    say("Session running — the board holds its shape while you practice. Exit when you're done.");
+    tickTimer = setInterval(() => {
+      if (!s.session) return;
+      const dt = 0.25;
+      const chords = computeWorld(s.occ).chords;
+      s.session.earned += synthMult(rateParts(), chords) * dt;
+      if (!s.forge.ready) {
+        s.forge.progress += FORGE_FILL * dt;
+        if (s.forge.progress >= FORGE_MAX) {
+          s.forge.progress = FORGE_MAX;
+          s.forge.ready = true;
+          say("The forge is ready — exit when you like and take your synth.");
+        }
+      }
+      refresh();
+    }, 250);
+    refresh();
+  }
+
+  function endSession() {
+    if (!s.session) return;
+    clearInterval(tickTimer);
+    tickTimer = null;
+    const earned = s.session.earned;
+    s.session = null;
+    s.nous += earned;
+    s.totalBanked += earned;
+    say("Session banked " + earned.toFixed(2) + " ν — practice, credited.");
+    if (s.forge.ready) showForgeCard();
+    refresh();
+  }
+
+  function refresh() {
+    gCells.innerHTML = ""; gChords.innerHTML = ""; gModules.innerHTML = ""; gGhosts.innerHTML = "";
+    const frontier = new Set(buyingCell ? frontierKeys() : []);
+
+    for (const c of CELLS) {
+      const owned = s.cells.has(c.key);
+      const on = s.occ.has(c.key);
+      const isBuy = frontier.has(c.key);
+      const gated = !s.gatedRows.has(c.j);
+      const isTarget = armedTray && owned && !on;
+      const isDragT = dragTarget && dragTarget.key === c.key;
+      let fill = on ? "#232649" : "hsl(243 30% " + (15.5 - ((c.i + c.j) % 2) * 1.4).toFixed(1) + "%)";
+      if (isTarget) fill = "#2c2745";
+      if (isBuy) fill = "#2c2745";
+      el("polygon", {
+        points: hexPts(c.x, c.y, SIZE),
+        fill,
+        stroke: isDragT || isTarget || isBuy ? "#e8e9f5" : "#262a4e",
+        "stroke-width": isDragT || isTarget || isBuy ? 2.5 : 1,
+      }, gCells);
+      el("text", {
+        x: c.x, y: c.y + 3.5, "text-anchor": "middle",
+        class: owned ? "cell-label" : "cell-faint",
+      }, gCells).textContent = c.name;
+      el("text", {
+        x: c.x + SIZE * 0.62, y: c.y + SIZE * 0.58, "text-anchor": "middle",
+        class: owned ? "cell-label" : "cell-faint",
+      }, gCells).textContent = String(c.oct);
+      if (isBuy) {
+        const price = cellCost(s.bought) + (gated ? ROW_GATE : 0);
+        el("text", {
+          x: c.x, y: c.y - SIZE * 0.35, "text-anchor": "middle", class: "buycell",
+        }, gCells).textContent = "+" + price + "ν" + (gated ? " gate" : "");
+      }
+    }
+
+    const world = computeWorld(s.occ);
+    for (const ch of world.chords) drawChord(ch, false);
+    drawChips(world.chords, false, gChords);
+    for (const [k] of s.occ) drawModule(byKey.get(k), selected === k);
+
+    // ghosts (#120): the chords a drag would form, dashed
+    if (dragTarget) {
+      const hyp = new Map(s.occ);
+      const moved = hyp.get(dragTarget.fromKey);
+      hyp.delete(dragTarget.fromKey);
+      hyp.set(dragTarget.key, moved || { lvl: 0 });
+      const hw = computeWorld(hyp);
+      const ghostChords = hw.chords.filter(ch => ch.members.includes(dragTarget.key));
+      for (const ch of ghostChords) drawChord(ch, true);
+      drawChips(ghostChords, true, gGhosts);
+    }
+
+    // drone follows the board
+    const voices = [];
+    for (const [k] of s.occ) voices.push({ id: k, freq: audioFreq(byKey.get(k).st), gain: 0.05 });
+    AudioMgr.setVoices(voices);
+    strumNew(world.chords);
+
+    renderLedger(world.chords);
+    renderTray();
+    renderBloom();
+  }
+
+  function mount(boardPanelEl, side) {
+    boardPanel = boardPanelEl;
+    ledgerEl = document.createElement("div");
+    ledgerEl.className = "ledger";
+    boardPanel.appendChild(ledgerEl);
+    svg = el("svg", { viewBox: fitViewBox(CELLS) });
+    boardPanel.appendChild(svg);
+    gCells = el("g", {}, svg);
+    gChords = el("g", {}, svg);
+    gModules = el("g", {}, svg);
+    gGhosts = el("g", {}, svg);
+    trayEl = document.createElement("div");
+    trayEl.className = "tray";
+    boardPanel.appendChild(trayEl);
+
+    const getCellAt = (e) => {
+      const p = svgPoint(svg, e);
+      if (!p) return null;
+      let best = null, bd = 1e9;
+      for (const c of CELLS) {
+        const d = Math.hypot(c.x - p.x, c.y - p.y);
+        if (d < bd) { bd = d; best = c; }
+      }
+      return bd <= SIZE * 1.05 ? best : null;
+    };
+    const disposeDrag = makeDrag(svg, getCellAt, {
+      canPick: (cell) => s.occ.has(cell.key) && !inSession(),
+      onClick: (cell) => {
+        if (s.occ.has(cell.key)) {
+          selected = selected === cell.key ? null : cell.key;
+          armedTray = false; buyingCell = false;
+        } else if (armedTray && s.cells.has(cell.key)) {
+          // place from the tray — pitch lives in the cell (#126)
+          s.occ.set(cell.key, { lvl: 0 });
+          s.tray -= 1;
+          armedTray = false;
+          AudioMgr.blip(audioFreq(byKey.get(cell.key).st));
+          const name = byKey.get(cell.key).name + byKey.get(cell.key).oct;
+          const chords = computeWorld(s.occ).chords.filter(ch => ch.members.includes(cell.key));
+          say(chords.length
+            ? name + " joins — " + chords.map(ch => NAMES[mod12(ch.rootSt)] + " " + ch.tpl.name).join(", ") + "."
+            : name + " — alone for now.");
+        } else if (buyingCell && frontierKeys().includes(cell.key)) {
+          const gate = s.gatedRows.has(cell.j) ? 0 : ROW_GATE;
+          const price = cellCost(s.bought) + gate;
+          if (s.nous < price) { say("Not enough nous — " + price + " ν needed" + (gate ? " (" + cellCost(s.bought) + " + " + gate + " row gate)" : "") + "."); return; }
+          s.nous -= price;
+          s.cells.add(cell.key);
+          s.bought += 1;
+          if (gate) s.gatedRows.add(cell.j);
+          buyingCell = false;
+          say("New cell at " + byKey.get(cell.key).name + byKey.get(cell.key).oct + (gate ? " — row gate paid, this row is open now." : "."));
+        } else {
+          selected = null;
+          armedTray = false; buyingCell = false;
+        }
+        refresh();
+      },
+      onOutside: () => { selected = null; armedTray = false; buyingCell = false; refresh(); },
+      onDblClick: (cell) => {
+        if (!s.occ.has(cell.key) || inSession()) return;
+        s.occ.delete(cell.key);
+        s.tray += 1;
+        if (selected === cell.key) selected = null;
+        say(byKey.get(cell.key).name + byKey.get(cell.key).oct + " back to the tray.");
+        refresh();
+      },
+      onDragStart: () => {},
+      onDragHover: (from, cell) => {
+        const t = cell && cell.key !== from.key ? cell : null;
+        const next = t ? { key: t.key, fromKey: from.key } : null;
+        if ((next && next.key) !== (dragTarget && dragTarget.key)) { dragTarget = next; refresh(); }
+      },
+      onDrop: (from, cell) => {
+        const m = s.occ.get(from.key);
+        if (m && cell && cell.key !== from.key && s.cells.has(cell.key)) {
+          const target = s.occ.get(cell.key);
+          s.occ.delete(from.key);
+          if (target) s.occ.set(from.key, target); // live swap is the drop rule (#118)
+          s.occ.set(cell.key, m);
+          AudioMgr.blip(audioFreq(byKey.get(cell.key).st));
+        } else if (m) {
+          // dropped off the board: back to the tray (inventory lives on the surface, #118)
+          s.occ.delete(from.key);
+          s.tray += 1;
+          if (selected === from.key) selected = null;
+          say(byKey.get(from.key).name + byKey.get(from.key).oct + " back to the tray.");
+        }
+        dragTarget = null;
+        refresh();
+      },
+    });
+
+    const onEsc = (e) => {
+      if (e.key !== "Escape") return;
+      if (cardEl) return; // the earned cards dismiss by their own button
+      if (armedTray || buyingCell) { armedTray = false; buyingCell = false; refresh(); }
+      else if (selected) { selected = null; refresh(); }
+    };
+    document.addEventListener("keydown", onEsc);
+    const onResize = () => positionBloom();
+    window.addEventListener("resize", onResize);
+
+    refresh();
+    return () => {
+      disposeDrag();
+      document.removeEventListener("keydown", onEsc);
+      window.removeEventListener("resize", onResize);
+      if (tickTimer) clearInterval(tickTimer);
+    };
+  }
+  function unmount() {
+    selected = null; dragTarget = null; prevChordIds = new Set();
+    if (cardEl) { cardEl.remove(); cardEl = null; }
+  }
+  return {
+    mount, unmount, refresh,
+    state: () => ({
+      variant: cfg.id,
+      nous: Math.floor(s.nous),
+      placed: [...s.occ].map(([k, m]) => k + " L" + m.lvl),
+      tray: s.tray,
+      acquired: s.acquired,
+      forge: { ...s.forge },
+      cells: [...s.cells],
+      inSession: inSession(),
+      banked: +s.totalBanked.toFixed(2),
+      hintShown: s.hintShown,
+    }),
+    chords: () => computeWorld(s.occ).chords.map(ch => ch.tpl.name + "@" + NAMES[mod12(ch.rootSt)]),
+    hooks: {
+      place: (i, j) => { if (s.tray > 0 && s.cells.has(i + "," + j) && !s.occ.has(i + "," + j)) { s.occ.set(i + "," + j, { lvl: 0 }); s.tray--; refresh(); } },
+      move: (a, b) => {
+        const m = s.occ.get(a);
+        if (!m) return;
+        if (s.cells.has(b)) {
+          const t = s.occ.get(b);
+          s.occ.delete(a);
+          if (t) s.occ.set(a, t);
+          s.occ.set(b, m);
+        } else { s.occ.delete(a); s.tray += 1; } // mirrors the off-board drop rule
+        refresh();
+      },
+      upgrade: (i, j) => { const m = s.occ.get(i + "," + j); if (m && s.nous >= levelCost(m.lvl)) { s.nous -= levelCost(m.lvl); m.lvl++; refresh(); } },
+      start: () => startSession(),
+      stop: () => endSession(),
+      give: (n) => { s.nous += n; refresh(); },
+      // jump the forge straight to ready (skips the ~2 min of practice)
+      fillForge: () => { if (!s.forge.ready) { s.forge.progress = FORGE_MAX; s.forge.ready = true; refresh(); } },
+      takeSynth: () => {
+        if (!s.forge.ready) return;
+        s.forge.ready = false; s.forge.progress = 0;
+        s.tray += 1; s.acquired += 1;
+        if (cfg.hint && s.acquired === 2 && !s.hintShown) { s.hintShown = true; showHintCard(); }
+        refresh();
+      },
+      hintCard: () => !!cardEl && cardEl.textContent.includes("second synth"),
+    },
+  };
+}
+
+// ---------- variant registry: one arc, one knob ----------
+const VARIANTS = [
+  {
+    id: "a",
+    label: "<b>A</b> — One earned hint (after the second synth)",
+    head: "A — One earned hint",
+    sub: "the single pop-up fires once, only after the forge delivers the second synth — otherwise the board never says a word",
+    grant: 12, hint: true, cells: STARTER_CELLS,
+    side: `
+      <h3>Play the opening</h3>
+      <ul>
+        <li>You open with <strong>one synth</strong> — a single drone, no company, no instructions.</li>
+        <li>Upgrade is affordable now (12 ν grant); a session pays ~0.1 ν/s and <strong>fills the forge</strong> — ~2 minutes of practice and it's ready.</li>
+        <li>Exit: the forge offers the synth it made. Take it — <strong>the one hint pops</strong>: place it beside your first, the dashed hull shows the chord, the × is the pay.</li>
+        <li>From here the board is mute forever: rearrange, reach for a 30 ν cell, cross the row gate upward.</li>
+      </ul>
+      <h3>Feel for</h3>
+      <div class="fact">
+        Does the hint land at the <strong>moment of maximum usefulness</strong> (you're holding a
+        synth you don't know where to put) — or does it interrupt a moment you were enjoying? Are
+        the words right? Is once enough? <span class="cost">Risk: even one card reads as
+        tutorial.</span> Compare B before deciding.
+      </div>`,
+  },
+  {
+    id: "b",
+    label: "<b>B</b> — Total silence (the board language alone)",
+    head: "B — Total silence",
+    sub: "no card, ever — the drone, the forge meter, the dashed hull, and the chip are the entire curriculum",
+    grant: 12, hint: false, cells: STARTER_CELLS,
+    side: `
+      <h3>Play the opening</h3>
+      <ul>
+        <li>Identical arc to A — minus the card. The forge delivers the second synth and <strong>nothing tells you anything</strong>.</li>
+        <li>The tray says a synth waits. Drag it around: the <strong>dashed hull</strong> appears when a chord would form — that's the whole lesson, discovered unaided.</li>
+        <li>Drop it on G4: the fifth lands with its chip and the drone fattens. Did you feel <em>why</em>?</li>
+      </ul>
+      <h3>Feel for</h3>
+      <div class="fact">
+        Does the dashed hull alone carry <strong>attribution and pull</strong> — "these two now
+        chord, and the × is what it pays"? Or does the moment pass unnoticed,
+        <span class="cost">the chip landing on deaf eyes</span>? If B holds, the game's opening has
+        <strong>zero UI that isn't the game</strong>. If it doesn't, A's single card is the floor.
+      </div>`,
+  },
+];
+
+let inst = null;
+let dispose = null;
+let curId = "a";
+const stage = $("#stage");
+
+function mountVariant(id) {
+  const v = VARIANTS.find(x => x.id === id) || VARIANTS[0];
+  if (dispose) dispose();
+  if (inst) inst.unmount();
+  stage.innerHTML = "";
+  curId = v.id;
+  const cols = document.createElement("div");
+  cols.className = "cols";
+  cols.innerHTML =
+    '<div class="panel boardpanel"><h2>' + esc(v.head) + '</h2><div class="sub">' + esc(v.sub) + "</div></div>" +
+    '<div class="panel side">' + v.side + "</div>";
+  $("#stage").appendChild(cols);
+  inst = makeVariant(v);
+  dispose = inst.mount(cols.querySelector(".boardpanel"), cols.querySelector(".side"));
+  $("#varLabel").innerHTML = v.label;
+  history.replaceState(null, "", location.pathname + "?variant=" + v.id);
+}
+
+$("#prevBtn").addEventListener("click", () => step(-1));
+$("#nextBtn").addEventListener("click", () => step(1));
+function step(d) {
+  const i = VARIANTS.findIndex(x => x.id === curId);
+  mountVariant(VARIANTS[(i + d + VARIANTS.length) % VARIANTS.length].id);
+}
+window.addEventListener("keydown", (e) => {
+  const t = e.target;
+  if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+  if (e.key === "ArrowLeft") step(-1);
+  if (e.key === "ArrowRight") step(1);
+});
+
+$("#soundBtn").addEventListener("click", () => {
+  AudioMgr.on = !AudioMgr.on;
+  $("#soundBtn").textContent = "sound: " + (AudioMgr.on ? "on" : "off");
+  if (!AudioMgr.on) return;
+  if (inst) inst.refresh();
+});
+$("#restartBtn").addEventListener("click", () => mountVariant(curId));
+
+const initial = new URLSearchParams(location.search).get("variant");
+mountVariant(initial || "a");
+
+// debug hooks for automated poking; harmless to leave in a throwaway prototype
+window.__openingproto = {
+  setVariant: mountVariant,
+  inst: () => inst,
+  get variant() { return curId; },
+};
+})();
+</script>
+</body>
+</html>
