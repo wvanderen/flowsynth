@@ -43,7 +43,7 @@ import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
 import type { GameState, Hex, ModuleInstance, NamedChordTerm, ShelfType } from "../engine/types";
 import { render } from "./render";
 import { HISTORY_PAGE_ROWS, META } from "./meta";
-import { browserChannels, sessionDroneHz, type SignalChannels } from "./signals";
+import { browserChannels, type SignalChannels } from "./signals";
 
 // The session modal surfaces (§5.5, §5.7): the enter prompt precedes every
 // session; the loud summary follows every one; the honesty report interrupts
@@ -77,6 +77,10 @@ export interface EnterSelection {
 
 export const freshEnterSelection = (): EnterSelection => ({ kind: "habit", habitId: null, newName: "" });
 
+// The chord-hover ask (§6): a seam hovered names its one chord; a module
+// hovered names every chord it sings in. The reserved readout answers.
+export type ChordHover = { kind: "chord"; key: string } | { kind: "module"; moduleId: string };
+
 export interface UiState {
   selected: string | null;
   // The focus app whose console popover is open, if any (ADR-0012).
@@ -85,10 +89,10 @@ export interface UiState {
   // The live drop preview (§5–§6): the module a drag or armed placement is
   // pointing at, and the cell it hovers. Null whenever nothing hovers.
   dropHover: { moduleId: string; pos: Hex } | null;
-  // The chord the pointer rests on (§6): a seam's or an included voice's
-  // mark key, asked into the reserved readout. Light furniture — never
-  // saved, cleared with the transient modes.
-  chordHover: string | null;
+  // The chord the pointer rests on (§6): a hovered seam's chord or a
+  // hovered module's chords, asked into the reserved readout. Light
+  // furniture — never saved, cleared with the transient modes.
+  chordHover: ChordHover | null;
   // Cell purchase (ADR-0013): armed from the catalog, resolved by clicking a
   // frontier hex. The buy only lands when a frontier cell is clicked.
   buyingCell: boolean;
@@ -295,9 +299,6 @@ export class App {
       this.ui.modal = "summary";
     }
     if (this.state.mode !== "flow") return;
-    // The drone re-attaches if the browser still holds a running context;
-    // without a gesture it stays silent until the next session beat (§6).
-    this.syncDrone();
     // A discarded tab (Memory Saver, §10) lands here exactly like a plain
     // reload: the gap since the last hidden-transition save is away, and
     // document.wasDiscarded only records that it happened.
@@ -593,20 +594,6 @@ export class App {
     this.channels.playChime(this.audio);
   }
 
-  // The flow drone (§6): one quiet voice under the session, keyed to the
-  // board's first chord root — the sound of what the hulls name. Garnish
-  // behind the global mute: it follows the session's life, starting on
-  // flow and releasing on pause, end, or mute. It never unlocks audio
-  // itself — a context born off a gesture stays silent anyway — so the
-  // drone sounds only where the session's own unlock already ran.
-  private syncDrone(): void {
-    if (this.state.mode !== "flow" || this.state.muted) {
-      this.channels.stopDrone();
-      return;
-    }
-    this.channels.startDrone(this.audio, sessionDroneHz(computeRates(this.state).namedChords));
-  }
-
   // The formation strum (§6): a placement that forms a chord strums it —
   // the drop gesture is the audio unlock, and the global mute silences it.
   // The hull already said it; this is garnish, not information.
@@ -690,10 +677,8 @@ export class App {
     this.syncBoundaryClock(Date.now());
     this.clearTransientUi();
     // The start gesture is the audio unlock (§4, §10): the session's
-    // context is created or resumed here, so the chime can sound later —
-    // and the drone with it (§6).
+    // context is created or resumed here, so the chime can sound later.
     this.audio = this.channels.unlockAudio(this.audio);
-    this.syncDrone();
     this.signals = freshChimeState();
     this.askNotificationPermissionOnce(this.ui.chosenTarget);
     this.say(
@@ -752,7 +737,6 @@ export class App {
     this.say("Session banked.");
     // The loud summary (§5.7) opens however the session ended.
     this.ui.modal = "summary";
-    this.syncDrone();
     this.save();
     this.render();
   }
@@ -763,14 +747,12 @@ export class App {
       // Pausing silences the overrun chime immediately (§4); it never
       // un-silences, since a visible resume acknowledges anyway.
       this.signals.acknowledged = true;
-      this.syncDrone();
     }
   }
 
   resume(): void {
     if (this.act(resumeSession(this.state), "Flow resumed.")) {
       this.syncBoundaryClock(Date.now());
-      this.syncDrone();
     }
   }
 
@@ -932,8 +914,10 @@ export class App {
   pickCell(pos: Hex): void {
     const { state, ui } = this;
     if (state.mode !== "upgrade") {
-      const occupant = state.modules.find((m) => m.pos !== null && sameHex(m.pos, pos));
-      if (occupant) this.select(occupant.id);
+      // The board is locked through a session (§5): modules neither expand
+      // nor select mid-session — the click answers plainly instead of
+      // looking dead. Selection returns between sessions.
+      this.say("The board is locked during flow.");
       return;
     }
     if (ui.buyingCell) {
@@ -1284,10 +1268,9 @@ export class App {
   }
 
   // The global mute toggle (§5): one switch in PREFERENCES gating every
-  // app sound — the chime's re-fires, the drone, the formation strum.
+  // app sound — the chime's re-fires included.
   setMuted(muted: boolean): void {
     this.state.muted = muted;
-    this.syncDrone();
     this.save();
     this.render();
   }

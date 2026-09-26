@@ -21,7 +21,7 @@ import { poolOutstanding } from "../engine/trust";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
 import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NamedChordTerm, NoteEntry, RateSnapshot } from "../engine/types";
-import type { App, EnterKind } from "./app";
+import type { App, ChordHover, EnterKind } from "./app";
 import { appIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, moduleFace } from "./face";
 import { bloomLayout, bloomPops, bloomSpan, viewMeet, viewPoint, type ViewFrame } from "./bloom";
@@ -727,40 +727,59 @@ function chordMarkHtml(mark: ChordMark, keyPrefix: "formed" | "ghost"): string {
 // by mark key, with the render-time labels (flow chips carry live ν/s).
 const chordMarksCache = new WeakMap<App, ChordMark[]>();
 
-// The reserved readout (§6): one chip, one place — the selected module's
-// chord wins, else the chord the pointer rests on (a seam or an included
-// voice). Hidden when neither asks. HTML beside the board, so the expanded
-// face can never cover it and it never moves.
+// The reserved readout (§6): the chips, in one place — the selected
+// module's chords win, else what the pointer rests on (a seam names its
+// chord; a module names every chord it sings in). Hidden when neither
+// asks. HTML beside the board, so the expanded face can never cover it and
+// it never moves.
 function updateChordReadout(app: App): void {
   const host = byId("chord-readout");
   if (!host) return;
   const marks = chordMarksCache.get(app) ?? [];
   const selected = app.state.modules.find((m) => m.id === app.ui.selected && m.pos !== null) ?? null;
-  const mark =
-    (selected ? marks.find((m) => m.voices.includes(selected.id)) : null) ??
-    (app.ui.chordHover ? marks.find((m) => m.key === app.ui.chordHover) : null) ??
-    null;
-  if (!mark) {
+  // Every chord the module earns its bonus from — not just the first.
+  const chosen = selected
+    ? marks.filter((m) => m.voices.includes(selected.id))
+    : chordChipsForHover(app);
+  if (chosen.length === 0) {
     host.hidden = true;
     host.innerHTML = "";
     return;
   }
   host.hidden = false;
-  host.innerHTML = `<span class="chord-readout-chip mono" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.label)}</span>`;
+  host.innerHTML = chosen
+    .map(
+      (mark) =>
+        `<span class="chord-readout-chip mono" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.label)}</span>`,
+    )
+    .join("");
 }
 
-// The hover question (§6): which chord the pointer rests on, by mark key.
-// Null clears. Never a re-render — the readout updates in place.
-function setChordHover(app: App, key: string | null): void {
-  if (app.ui.chordHover === key) return;
-  app.ui.chordHover = key;
+// The chips a hover asks for: a seam names its one chord, a module names
+// every chord it sings in.
+function chordChipsForHover(app: App): ChordMark[] {
+  const hover = app.ui.chordHover;
+  if (!hover) return [];
+  const marks = chordMarksCache.get(app) ?? [];
+  return hover.kind === "chord"
+    ? marks.filter((m) => m.key === hover.key)
+    : marks.filter((m) => m.voices.includes(hover.moduleId));
+}
+
+// The hover question (§6): what the pointer rests on. Null clears. Never a
+// re-render — the readout updates in place.
+function setChordHover(app: App, hover: ChordHover | null): void {
+  const next = hover ?? null;
+  if (sameChordHover(app.ui.chordHover, next)) return;
+  app.ui.chordHover = next;
   updateChordReadout(app);
 }
 
-// The mark key a hovered module reveals: its first chord, if any.
-function chordKeyOfModule(app: App, moduleId: string | null): string | null {
-  if (moduleId === null) return null;
-  return chordMarksCache.get(app)?.find((mark) => mark.voices.includes(moduleId))?.key ?? null;
+function sameChordHover(a: ChordHover | null, b: ChordHover | null): boolean {
+  if (a === null || b === null) return a === b;
+  if (a.kind === "chord" && b.kind === "chord") return a.key === b.key;
+  if (a.kind === "module" && b.kind === "module") return a.moduleId === b.moduleId;
+  return false;
 }
 
 // Generators are the sole charge source category (ADR-0012).
@@ -1057,8 +1076,8 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
 
 // The grid never replaces its svg across renders, so the chord-hover
 // question binds once, delegating: over a chord's seam, that chord; over a
-// module cell, its first chord; anywhere else, none. Ghost marks never
-// answer — they promise chords that don't exist yet.
+// module cell, every chord the module sings in; anywhere else, none. Ghost
+// marks never answer — they promise chords that don't exist yet.
 const boundGrids = new WeakSet<SVGSVGElement>();
 
 function bindSeamHover(app: App, svg: SVGSVGElement): void {
@@ -1068,14 +1087,15 @@ function bindSeamHover(app: App, svg: SVGSVGElement): void {
     if (app.dragging) return;
     const target = event.target as Element;
     const mark = target.closest?.(".chord-mark:not(.ghost-mark)");
-    if (mark) {
-      setChordHover(app, mark.getAttribute("data-chord"));
+    const key = mark?.getAttribute("data-chord");
+    if (mark && key) {
+      setChordHover(app, { kind: "chord", key });
       return;
     }
     const cellNode = target.closest?.("[data-cell]");
     const [q, r] = (cellNode?.getAttribute("data-cell") ?? "").split(",").map(Number);
     const id = cellNode && Number.isFinite(q) ? deployedAt(app.state, { q: q!, r: r! })?.id ?? null : null;
-    setChordHover(app, chordKeyOfModule(app, id));
+    setChordHover(app, id ? { kind: "module", moduleId: id } : null);
   });
   svg.addEventListener("pointerleave", () => {
     if (app.dragging) return;

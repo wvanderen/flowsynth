@@ -621,25 +621,44 @@ describe("always-on chord feedback (§6, #137)", () => {
     expect(mark.querySelectorAll(".chord-seam")).toHaveLength(1);
   });
 
-  it("the readout is a reserved spot: one chip, one place, selection wins", () => {
+  it("the readout is a reserved spot: every chord the module sings in, selection wins", () => {
+    // The power-chord region again: C4 sings in two chords — the Octave
+    // (C4·C5) and the Fifth (C4·G4).
     give(app.state, "additive", hex(1, 0));
+    app.state.cells.push(hex(0, 1));
+    give(app.state, "additive", hex(0, 1));
     app.render();
-    // Hovering the G4 synth asks its chord into the readout.
+    const chips = () => [...readout().querySelectorAll(".chord-readout-chip")].map((chip) => chip.textContent);
+    // Hovering G4 — it sings the doubled Fifth (both instances share it).
     cell(1, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(readout().hidden).toBe(false);
-    expect(readout().textContent).toBe("Fifth ×1.3");
-    expect(readout().querySelector(".chord-readout-chip")!.getAttribute("style")).toContain("--chord-fifth");
-    // Leaving clears it.
+    expect(chips()).toEqual(["Fifth ×1.3 ×2"]);
+    // Hovering C4 asks both of its chords into the spot.
+    cell(0, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    expect(chips()).toEqual(["Octave ×1.15", "Fifth ×1.3 ×2"]);
+    // Leaving clears them.
     document.getElementById("grid")!.dispatchEvent(new MouseEvent("pointerleave"));
     expect(readout().hidden).toBe(true);
-    // Selecting the module pins the chip without any hover.
-    const g4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(1, 0)))!;
-    app.select(g4.id);
+    // Selecting C4 pins the same pair without any hover.
+    const c4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(0, 0)))!;
+    app.select(c4.id);
     expect(readout().hidden).toBe(false);
-    expect(readout().textContent).toBe("Fifth ×1.3");
+    expect(chips()).toEqual(["Octave ×1.15", "Fifth ×1.3 ×2"]);
     // Deselecting empties the readout again.
-    app.select(g4.id);
+    app.select(c4.id);
     expect(readout().hidden).toBe(true);
+  });
+
+  it("clicking a module during flow answers the lock — no selection, no bloom", () => {
+    give(app.state, "additive", hex(1, 0));
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, 600);
+    clickCell(1, 0);
+    expect(app.ui.selected).toBeNull();
+    const bloomEl = document.getElementById("module-bloom")!;
+    expect(bloomEl.hidden).toBe(true);
+    expect(document.getElementById("status")!.textContent).toContain("locked during flow");
+    endSession(app.state);
   });
 
   it("chips carry the live ν/s contribution during a session, at every width", () => {
@@ -728,24 +747,21 @@ describe("always-on chord feedback (§6, #137)", () => {
     expect(fired.strums).toBe(0);
   });
 
-  it("the drone follows the session's life, behind the mute", () => {
+  it("flow adds no sound of its own — no ambient, only the seams pulse", () => {
     const { fired, app } = stubChannels();
+    give(app.state, "additive", hex(1, 0));
     app.state.sessionsCompleted = 1;
+    app.ui.chosenTarget = 600;
     app.beginFlow(null);
-    expect(fired.droneStarts).toBe(1);
-    app.pause();
-    expect(fired.droneStops).toBe(1);
-    app.resume();
-    expect(fired.droneStarts).toBe(2);
-    // Muting mid-session releases the drone; unmuting re-arms it.
-    app.setMuted(true);
-    expect(fired.droneStops).toBe(2);
-    app.setMuted(false);
-    expect(fired.droneStarts).toBe(3);
+    expect(app.state.mode).toBe("flow");
+    expect(fired.chimes).toBe(0);
+    expect(fired.strums).toBe(0);
+    // The only live-flow sound left is the target chime.
+    advance(app.state, 600);
+    app.tick();
+    expect(fired.chimes).toBe(1);
     app.endFlow();
     app.dismissSummary();
-    expect(fired.droneStops).toBe(3);
-    expect(app.state.muted).toBe(false);
   });
 });
 
@@ -1311,8 +1327,6 @@ function makeRecorder() {
     unlocks: 0,
     chimes: 0,
     strums: 0,
-    droneStarts: 0,
-    droneStops: 0,
     notifications: 0,
     permissionRequests: 0,
     permission: "default" as "default" | "granted" | "denied",
@@ -1327,12 +1341,6 @@ function makeRecorder() {
     },
     playStrum: (_ctx, chords) => {
       fired.strums += chords.length;
-    },
-    startDrone: () => {
-      fired.droneStarts++;
-    },
-    stopDrone: () => {
-      fired.droneStops++;
     },
     notificationPermission: () => fired.permission,
     requestNotificationPermission: () => {
