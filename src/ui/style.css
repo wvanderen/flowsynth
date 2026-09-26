@@ -760,57 +760,72 @@ body.live .inspector-empty { opacity: 0.75; }
 .lead-tip-dim { fill: var(--charge); opacity: 0.5; }
 .highlight-ring { fill: none; stroke: var(--charge); stroke-width: 1.5; opacity: 0.8; pointer-events: none; }
 
-/* The chord annotation (§6, #137): always-on — every formed chord wraps
-   its voices in a hull and wears its name chip, no toggle and no chord
-   view. The synthesizer category's luminous register per the register law
-   (ADR-0016); selection is the only emphasis — the selected module's
-   chords keep the focus register, the rest fade. */
-.chord-hull {
-  fill: color-mix(in srgb, var(--nous) 7%, transparent);
-  stroke: var(--nous);
-  stroke-width: 1.5;
-  stroke-dasharray: 7 5;
-  pointer-events: none;
+/* The chord annotation (§6, #137) — the prototype's seam language (#120):
+   every formed chord draws colored trimmed lines between its voices, the
+   hue per chord on --cc, the pulse period on --seam-dur. The name chip is
+   not ambient: it rises when a seam or an included voice is hovered, or
+   when an included voice is selected. Selection is the only emphasis —
+   the selected module's chords keep the focus register, the rest fade. */
+.chord-mark { pointer-events: none; }
+.chord-seam {
+  stroke: var(--cc);
+  stroke-width: 4;
+  stroke-linecap: round;
+  opacity: 0.85;
+  pointer-events: stroke;
+  transition: opacity 0.2s, stroke-width 0.2s;
 }
-.chord-hull.chord-focus { stroke-width: 2.25; }
-.chord-hull.chord-fade,
-.chord-chip.chord-fade,
-.chord-label.chord-fade { opacity: 0.18; }
+.chord-mark.chord-focus .chord-seam { stroke-width: 6; }
+.chord-mark.chord-fade .chord-seam { opacity: 0.18; }
 .chord-chip {
   fill: var(--panel-deep);
-  stroke: var(--nous);
+  stroke: var(--cc);
   stroke-width: 0.75;
-  opacity: 0.92;
+  opacity: 0;
+  transition: opacity 0.15s;
   pointer-events: none;
 }
 .chord-label {
   font: 10.5px var(--mono);
   letter-spacing: 0.1em;
-  fill: var(--nous);
+  fill: var(--ink);
   text-anchor: middle;
+  opacity: 0;
+  transition: opacity 0.15s;
   pointer-events: none;
 }
+/* The chip's reveal: a seam's own hover is CSS (`:hover` climbs the mark);
+   an included module's hover lands `chord-hover`; a selection pins
+   `chord-reveal`. */
+.chord-mark:hover .chord-chip,
+.chord-mark:hover .chord-label,
+.chord-mark.chord-hover .chord-chip,
+.chord-mark.chord-hover .chord-label,
+.chord-mark.chord-reveal .chord-chip,
+.chord-mark.chord-reveal .chord-label { opacity: 1; }
+.chord-mark.chord-hover .chord-label,
+.chord-mark.chord-reveal .chord-label { fill: var(--cc); }
 
-/* Sounding (§6): in a live session the hulls pulse while the board stays
-   locked — the session breathes through its chords. Chips hold steady and
-   carry the live ν/s contribution instead. */
-body.live .chord-hull:not(.ghost-hull) { animation: chord-pulse 2.4s ease-in-out infinite; }
-@keyframes chord-pulse {
-  50% { stroke-width: 2.5; fill: color-mix(in srgb, var(--nous) 13%, transparent); }
+/* Sounding (§6): in a live session the seams pulse on their chord's own
+   period while the board stays locked — the session breathes through its
+   chords. */
+body.live .chord-seam { animation: seam-pulse var(--seam-dur, 2.7s) ease-in-out infinite; }
+@keyframes seam-pulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 0.45; }
 }
 
-/* The would-form ghosts (§6): dashed hulls with name chips, one per chord
-   the hovered drop or placement would form — fainter than the formed
-   register, promising rather than declaring. */
-.ghost-hull {
-  fill: none;
-  stroke: var(--nous);
-  stroke-width: 1.5;
-  stroke-dasharray: 3 4;
+/* The would-form ghosts (§6): dashed seams in the chord's hue, one per
+   chord the hovered drop or placement would form — promising rather than
+   declaring — and their chips always showing, since the promise is the
+   point. Inert to the pointer: drop targeting passes through. */
+.chord-mark.ghost-mark .chord-seam {
+  stroke-dasharray: 5 4;
   opacity: 0.75;
+  pointer-events: none;
 }
-.ghost-hull + .chord-chip { opacity: 0.7; }
-.ghost-hull + .chord-chip + .chord-label { opacity: 0.85; }
+.chord-mark.ghost-mark .chord-chip,
+.chord-mark.ghost-mark .chord-label { opacity: 0.85; }
 
 /* The lit receiver breathes: charge state is feedback, not decoration, so
    the pulse rides the same 0..1 glow the face already carries inline. */

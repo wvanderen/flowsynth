@@ -573,7 +573,9 @@ function renderGrid(app: App): void {
   const coords = allCells.map(point);
   const minX = Math.min(...coords.map((p) => p[0])) - 78;
   const maxX = Math.max(...coords.map((p) => p[0])) + 78;
-  const minY = Math.min(...coords.map((p) => p[1])) - 82;
+  // The top pad carries the chord chips, which float ~1.2 hex radii above
+  // the top row's faces (§6).
+  const minY = Math.min(...coords.map((p) => p[1])) - 100;
   const maxY = Math.max(...coords.map((p) => p[1])) + 82;
   svg.setAttribute("viewBox", `${minX} ${minY} ${maxX - minX} ${maxY - minY}`);
 
@@ -604,7 +606,6 @@ function renderGrid(app: App): void {
     posOf: (id) => deployedById.get(id)?.pos ?? null,
     point,
     radius: HEX_RADIUS,
-    pad: 5,
     labelFor,
     focusIds,
   });
@@ -678,13 +679,14 @@ function renderGrid(app: App): void {
     }
   }
 
-  // Named-chord marks: a hull wrapping each chord's voices plus its name
-  // chip, drawn over the faces so a chord names itself. With a selection
-  // standing, the selected module's chords keep the focus register and the
-  // rest fade (§6); the marks group wears `flow` in live sessions so the
-  // hulls pulse (§6) while the board stays locked.
+  // Named-chord marks: colored seams between each chord's voices plus its
+  // name chip — hidden until asked for (a seam or included voice hovered,
+  // an included voice selected). With a selection standing, the selected
+  // module's chords stay focused and the rest fade (§6); the marks group
+  // wears `flow` in live sessions so the seams pulse while the board stays
+  // locked.
   html += `<g data-key="chord-marks"${flow ? ' class="flow"' : ""}>${overlay.marks
-    .map((mark) => chordMarkHtml(mark, "formed"))
+    .map((mark) => chordMarkHtml(mark, "formed", focusIds.length > 0))
     .join("")}</g>`;
 
   // The would-form ghosts (§5–§6): dashed hulls over the chords the hovered
@@ -696,16 +698,36 @@ function renderGrid(app: App): void {
   bindGridEvents(app, svg);
 }
 
-// One chord mark's markup (§6): the chip rides its hull — a backing plate
-// under the label so the name reads over anything — and carries the
-// register's class: formed chords split focus/fade under a selection,
-// ghosts always promise at full strength. `keyPrefix` keeps the two
-// layers' DOM keys apart.
-function chordMarkHtml(mark: ChordMark, keyPrefix: "formed" | "ghost"): string {
+// One chord mark's markup (§6, prototype language #120): colored seams
+// between the chord's voices carrying the mark's hue on `--cc` and its
+// pulse period on `--seam-dur`, plus the name chip — hidden until asked
+// for: a seam hovered, an included voice hovered (`chord-hover`, wired in
+// bindGridEvents), or an included voice selected (`chord-reveal`). Ghost
+// marks preview would-form chords and always wear their chip — the promise
+// is the point. `keyPrefix` keeps the two layers' DOM keys apart.
+function chordMarkHtml(mark: ChordMark, keyPrefix: "formed" | "ghost", pinned = false): string {
   const ghost = keyPrefix === "ghost";
-  const register = ghost ? "chord-hull ghost-hull" : `chord-hull ${mark.focused ? "chord-focus" : "chord-fade"}`;
-  const emphasis = ghost ? "" : mark.focused ? " chord-focus" : " chord-fade";
-  return `<g data-key="${keyPrefix}-${escapeHtml(mark.key)}"><polygon class="${register}" points="${mark.points}"/><rect class="chord-chip${emphasis}" x="${(mark.labelX - mark.labelW / 2).toFixed(2)}" y="${(mark.labelY - 11.5).toFixed(2)}" width="${mark.labelW.toFixed(2)}" height="15" rx="4"/><text class="chord-label${emphasis} mono" x="${mark.labelX}" y="${mark.labelY}">${escapeHtml(mark.label)}</text></g>`;
+  const emphasis = ghost ? " ghost-mark" : mark.focused ? " chord-focus" : " chord-fade";
+  const reveal = pinned && mark.focused;
+  const style = `--cc:var(--${mark.colorVar});--seam-dur:${mark.duration}s`;
+  const seams = mark.seams
+    .map(
+      (s) =>
+        `<line class="chord-seam${ghost ? " ghost-seam" : ""}" x1="${s.x1}" y1="${s.y1}" x2="${s.x2}" y2="${s.y2}"/>`,
+    )
+    .join("");
+  const chip = `<rect class="chord-chip" x="${(mark.chipX - mark.labelW / 2).toFixed(2)}" y="${(mark.chipY - 11.5).toFixed(2)}" width="${mark.labelW.toFixed(2)}" height="15" rx="4"/><text class="chord-label mono" x="${mark.chipX}" y="${mark.chipY}">${escapeHtml(mark.label)}</text>`;
+  return `<g data-key="${keyPrefix}-${escapeHtml(mark.key)}" class="chord-mark${emphasis}${reveal ? " chord-reveal" : ""}"${ghost ? "" : ` data-voices="${escapeHtml(mark.voices.join(" "))}"`} style="${style}">${seams}${chip}</g>`;
+}
+
+// The hover reveal (§6): hovering a module raises its chords' chips — a
+// class toggle on the marks layer, never a re-render. Null clears.
+function setChordHover(moduleId: string | null): void {
+  const svg = document.getElementById("grid");
+  if (!svg) return;
+  svg.querySelectorAll(".chord-mark.chord-hover").forEach((node) => node.classList.remove("chord-hover"));
+  if (moduleId === null) return;
+  svg.querySelectorAll(`.chord-mark[data-voices~="${moduleId}"]`).forEach((node) => node.classList.add("chord-hover"));
 }
 
 // Generators are the sole charge source category (ADR-0012).
@@ -920,7 +942,6 @@ function ghostMarksHtml(app: App): string {
     posOf,
     point,
     radius: HEX_RADIUS,
-    pad: 5,
     labelFor: chordTermLabel,
   });
   return overlay.marks.map((mark) => chordMarkHtml(mark, "ghost")).join("");
@@ -944,6 +965,16 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
     node.addEventListener("contextmenu", (event) => {
       event.preventDefault();
       app.rightClickCell(position());
+    });
+    // The hover reveal (§6): resting on a module raises its chords' chips —
+    // display-only light, in either mode, cleared when the pointer leaves.
+    node.addEventListener("pointerenter", () => {
+      if (app.dragging) return;
+      setChordHover(deployedAt(app.state, position())?.id ?? null);
+    });
+    node.addEventListener("pointerleave", () => {
+      if (app.dragging) return;
+      setChordHover(null);
     });
     // The armed placement previews on hover (§5–§6): ghosts over the
     // would-form chords, the drop register over the hovered cell.
@@ -1068,6 +1099,7 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
       element.classList.remove("dragging");
       hoverTarget = null;
       setDropHover(app, null, null);
+      setChordHover(null);
       zone?.classList.remove("drag-over");
       if (!apply || !moved) return;
       suppressNextClick();

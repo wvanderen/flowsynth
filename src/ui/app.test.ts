@@ -250,7 +250,7 @@ describe("the board toolbar", () => {
 
 describe("the always-live board (§5)", () => {
   const cell = (q: number, r: number) => document.querySelector(`[data-cell="${q},${r}"]`)!;
-  const ghosts = () => document.getElementById("grid")!.querySelectorAll(".ghost-hull");
+  const ghosts = () => document.getElementById("grid")!.querySelectorAll(".ghost-mark");
   const bloom = () => document.getElementById("module-bloom")!;
 
   afterEach(() => {
@@ -599,32 +599,51 @@ describe("the expanded face (§5)", () => {
 });
 
 describe("always-on chord feedback (§6, #137)", () => {
-  it("hulls and chips draw in upgrade mode with no toggle anywhere", () => {
+  const cell = (q: number, r: number) => document.querySelector(`[data-cell="${q},${r}"]`)!;
+
+  it("seams draw always-on in upgrade mode; chips stay hidden until asked for", () => {
     // The opening C4 plus an additive at G4: a Fifth on the lattice.
     give(app.state, "additive", hex(1, 0));
     app.render();
     const grid = document.getElementById("grid")!;
-    expect(grid.querySelectorAll(".chord-hull")).toHaveLength(1);
-    expect(grid.querySelector(".chord-label")!.textContent).toBe("Fifth ×1.3");
-    // The chip wears its backing plate.
-    expect(grid.querySelector(".chord-chip")).not.toBeNull();
+    const mark = grid.querySelector('[data-key="chord-marks"] .chord-mark')!;
+    expect(mark.querySelectorAll(".chord-seam")).toHaveLength(1);
+    // The seam wears its chord hue and pulse period.
+    expect((mark as HTMLElement).style.getPropertyValue("--cc")).toBe("var(--chord-fifth)");
+    expect((mark as HTMLElement).style.getPropertyValue("--seam-dur")).toBe("2.7s");
+    // The chip exists but is not revealed: no pin, no hover.
+    expect(grid.querySelector('[data-key="chord-marks"] .chord-label')!.textContent).toBe("Fifth ×1.3");
+    expect(mark.classList.contains("chord-reveal")).toBe(false);
+    expect(mark.classList.contains("chord-hover")).toBe(false);
     // No chord toggle exists: no button, no C-key beat, no chord-view class.
     expect(document.getElementById("tool-chords")).toBeNull();
-    expect(grid.classList.contains("chord-view")).toBe(false);
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "c" }));
-    expect(grid.querySelectorAll(".chord-hull")).toHaveLength(1);
-    // No dimming: the board reads whole with the hulls on.
-    expect(grid.querySelectorAll(".cell-node.chord-dim, .cell-node.chord-lit")).toHaveLength(0);
+    expect(mark.querySelectorAll(".chord-seam")).toHaveLength(1);
   });
 
-  it("chips carry the live ν/s contribution during a session, in flow at every width", () => {
+  it("hovering an included module reveals its chord's chip; leaving hides it", () => {
+    give(app.state, "additive", hex(1, 0));
+    app.render();
+    const mark = document.querySelector('[data-key="chord-marks"] .chord-mark') as SVGGElement;
+    cell(1, 0).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
+    expect(mark.classList.contains("chord-hover")).toBe(true);
+    cell(1, 0).dispatchEvent(new MouseEvent("pointerleave", { bubbles: true }));
+    expect(mark.classList.contains("chord-hover")).toBe(false);
+    // Hovering the chordless far cell reveals nothing.
+    app.state.cells.push(hex(2, 0));
+    app.render();
+    cell(2, 0).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
+    expect(document.querySelectorAll(".chord-mark.chord-hover")).toHaveLength(0);
+  });
+
+  it("chips carry the live ν/s contribution during a session, at every width", () => {
     give(app.state, "additive", hex(1, 0));
     app.state.sessionsCompleted = 1;
     startSession(app.state, 600);
     app.render();
     const label = document.querySelector('[data-key="chord-marks"] .chord-label')!;
     expect(label.textContent).toMatch(/^Fifth ×1\.3 · \+\d[\d,.]* ν\/s$/);
-    // The marks group wears the flow register: the pulse rides it (CSS).
+    // The marks group wears the flow register: the seam pulse rides it (CSS).
     expect(document.querySelector('[data-key="chord-marks.flow"], [data-key="chord-marks"].flow')).not.toBeNull();
     endSession(app.state);
     // Back in upgrade the chip returns to the multiplier alone.
@@ -632,7 +651,7 @@ describe("always-on chord feedback (§6, #137)", () => {
     expect(document.querySelector('[data-key="chord-marks"] .chord-label')!.textContent).toBe("Fifth ×1.3");
   });
 
-  it("overlapping chords nest hulls and stack chips", () => {
+  it("overlapping chords draw their own seams and their chips clear each other", () => {
     // A power-chord region: C4 (the opening synth), G4 and C5 — the Fifth
     // and the Octave share voices, both draw, and their chips clear.
     give(app.state, "additive", hex(1, 0));
@@ -640,8 +659,12 @@ describe("always-on chord feedback (§6, #137)", () => {
     give(app.state, "additive", hex(0, 1));
     app.render();
     const grid = document.getElementById("grid")!;
+    const marks = [...grid.querySelectorAll('[data-key="chord-marks"] .chord-mark')];
+    expect(marks).toHaveLength(2);
+    // Two hues: the engine names the Octave first, the Fifth second.
+    const hues = marks.map((mark) => (mark as HTMLElement).style.getPropertyValue("--cc"));
+    expect(hues).toEqual(["var(--chord-octave)", "var(--chord-fifth)"]);
     const chips = [...grid.querySelectorAll('[data-key="chord-marks"] .chord-chip')] as SVGRectElement[];
-    expect(grid.querySelectorAll('[data-key="chord-marks"] .chord-hull')).toHaveLength(2);
     expect(chips).toHaveLength(2);
     const [a, b] = chips.map((chip) => ({ x: Number(chip.getAttribute("x")), y: Number(chip.getAttribute("y")), w: Number(chip.getAttribute("width")) }));
     const clearsVertically = Math.abs(a!.y - b!.y) >= 14;
@@ -649,7 +672,7 @@ describe("always-on chord feedback (§6, #137)", () => {
     expect(clearsVertically || clearsHorizontally).toBe(true);
   });
 
-  it("selection focuses the selected module's chords and fades the rest", () => {
+  it("selection focuses the selected module's chords, reveals their chip, and fades the rest", () => {
     // Two chords in separate clusters: the opening Fifth and an island
     // Octave down the board.
     give(app.state, "additive", hex(1, 0));
@@ -661,20 +684,26 @@ describe("always-on chord feedback (§6, #137)", () => {
     app.select(island.id);
     const marks = [...document.querySelectorAll('[data-key="chord-marks"] > g')];
     expect(marks).toHaveLength(2);
-    expect(marks.filter((mark) => mark.querySelector(".chord-hull.chord-focus"))).toHaveLength(1);
-    expect(marks.filter((mark) => mark.querySelector(".chord-hull.chord-fade"))).toHaveLength(1);
-    // Clearing the selection unfades everything.
+    const focused = marks.filter((mark) => mark.classList.contains("chord-focus"));
+    const faded = marks.filter((mark) => mark.classList.contains("chord-fade"));
+    expect(focused).toHaveLength(1);
+    expect(faded).toHaveLength(1);
+    // The selected module's chord pins its chip open.
+    expect(focused[0]!.classList.contains("chord-reveal")).toBe(true);
+    expect(faded[0]!.classList.contains("chord-reveal")).toBe(false);
+    // Clearing the selection unfades everything and unpins the chip.
     app.select(island.id);
-    expect(document.querySelectorAll(".chord-hull.chord-fade")).toHaveLength(0);
+    expect(document.querySelectorAll(".chord-mark.chord-fade")).toHaveLength(0);
+    expect(document.querySelectorAll(".chord-mark.chord-reveal")).toHaveLength(0);
   });
 
-  it("the bloom adds no chord line — the hull is the callout", () => {
+  it("the bloom adds no chord line — the seams are the callout", () => {
     give(app.state, "additive", hex(1, 0));
     app.render();
     clickCell(0, 0);
     const bloomEl = document.getElementById("module-bloom")!;
     expect(bloomEl.hidden).toBe(false);
-    expect(bloomEl.querySelector(".chord-hull, .chord-chip, .chord-label")).toBeNull();
+    expect(bloomEl.querySelector(".chord-seam, .chord-chip, .chord-label")).toBeNull();
   });
 
   it("a placement that forms a chord strums it, behind the mute", () => {
@@ -727,7 +756,7 @@ describe("the dev panel's synth grant (#137)", () => {
     expect(granted.type).toBe("additive");
     expect(granted.pos).toEqual(hex(1, 0)); // G4 — the opening C4's fifth
     app.render();
-    // It chords at once: the hull and its chip are on the board.
+    // It chords at once: the seam and its chip are on the board.
     expect(document.querySelector('[data-key="chord-marks"] .chord-label')!.textContent).toBe("Fifth ×1.3");
   });
 
@@ -748,7 +777,7 @@ describe("the dev panel's synth grant (#137)", () => {
     app.devSynth();
     const granted = app.state.modules[app.state.modules.length - 1]!;
     expect(granted.pos).toBeNull();
-    expect(document.querySelector('[data-key="chord-marks"] .chord-hull')).toBeNull();
+    expect(document.querySelector('[data-key="chord-marks"] .chord-seam')).toBeNull();
     endSession(app.state);
   });
 
