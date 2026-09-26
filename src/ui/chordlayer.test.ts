@@ -36,6 +36,7 @@ function overlayWith(namedChords: NamedChordTerm[]) {
     posOf: (id) => POS[id] ?? null,
     point,
     radius: HEX_RADIUS,
+    step: Math.sqrt(3) * 65,
     labelFor: (c) => `${c.name} ×${(1 + c.bonus).toFixed(2)}`,
   });
 }
@@ -66,29 +67,30 @@ describe("tracesFor — the prototype's seam language", () => {
       posOf: (id) => region[id] ?? null,
       point,
       radius: HEX_RADIUS,
+      step: Math.sqrt(3) * 65,
       labelFor: (c) => c.name,
     });
     const mark = overlay.marks[0]!;
     expect(mark.seams).toHaveLength(0);
     expect(mark.outline).not.toBeNull();
     const polygon = mark.outline!.split(" ").map((p) => p.split(",").map(Number) as [number, number]);
-    // A triangle with all three corners arc-rounded: six samples per corner.
-    expect(polygon).toHaveLength(18);
-    // The corners poke out past the outer module edges — but only just:
-    // every point sits near the poke cap from its nearest voice.
+    // The hull of three centers is a triangle.
+    expect(polygon).toHaveLength(3);
+    // The corners still poke past the outer module edges — only just.
     const centers = Object.values(region).map((h) => point(h));
     for (const [vx, vy] of polygon) {
       const nearest = Math.min(...centers.map(([cx, cy]) => Math.hypot(vx - cx, vy - cy)));
       expect(nearest).toBeGreaterThan(HEX_RADIUS);
-      expect(nearest).toBeLessThan(HEX_RADIUS + 3.2);
+      expect(nearest).toBeLessThan(HEX_RADIUS + 4);
     }
-    // The sides hug the formation: a hair outside the plates' facing
-    // apothem — touching the inner edges, never cutting a plate.
-    const pad = hexApothem(HEX_RADIUS) + 1.5;
+    // The edges stay straight through the gap between neighboring faces:
+    // just off the plates' facing edges, never cutting a plate.
+    const pad = hexApothem(HEX_RADIUS) + 2.5;
     for (const center of centers) {
       const d = edgeDistance(center, polygon);
-      expect(d).toBeGreaterThanOrEqual(hexApothem(HEX_RADIUS));
+      expect(d).toBeGreaterThanOrEqual(pad - 0.6);
       expect(d).toBeLessThanOrEqual(pad + 0.6);
+      expect(d).toBeGreaterThanOrEqual(hexApothem(HEX_RADIUS));
     }
   });
 
@@ -110,6 +112,7 @@ describe("tracesFor — the prototype's seam language", () => {
       posOf: (id) => POS[id] ?? null,
       point,
       radius: HEX_RADIUS,
+      step: Math.sqrt(3) * 65,
       labelFor: (c) => c.name,
     });
     expect(overlay.marks).toHaveLength(2);
@@ -160,6 +163,7 @@ describe("selection emphasis (§6)", () => {
       posOf: (id) => POS[id] ?? null,
       point,
       radius: HEX_RADIUS,
+      step: Math.sqrt(3) * 65,
       labelFor: (c) => c.name,
       focusIds: ["m1"],
     });
@@ -174,6 +178,7 @@ describe("selection emphasis (§6)", () => {
       posOf: (id) => POS[id] ?? null,
       point,
       radius: HEX_RADIUS,
+      step: Math.sqrt(3) * 65,
       labelFor: (c) => c.name,
     });
     expect(overlay.marks.every((m) => m.focused)).toBe(true);
