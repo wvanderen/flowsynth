@@ -596,10 +596,12 @@ export class App {
 
   // The formation strum (§6): a placement that forms a chord strums it —
   // the drop gesture is the audio unlock, and the global mute silences it.
-  // The hull already said it; this is garnish, not information.
+  // The seams already said it; this is garnish, not information.
   private strumFormedChords(before: readonly NamedChordTerm[]): void {
     if (this.state.muted) return;
-    const newcomers = newChordTerms(before, computeRates(this.state, true).namedChords);
+    // Same snapshot basis as the caller's `before`, so the diff can't lie
+    // if the two calls ever drift apart.
+    const newcomers = newChordTerms(before, computeRates(this.state).namedChords);
     if (newcomers.length === 0) return;
     this.audio = this.channels.unlockAudio(this.audio);
     this.channels.playStrum(this.audio, newcomers);
@@ -1224,9 +1226,9 @@ export class App {
 
   // Dev grant of an additive synthesizer (#137 hands-on): it lands on the
   // first free cell that chords with a deployed synth — a fifth beside the
-  // opening board, usually — so hulls and chips read at once. In flow the
-  // board stays locked per the standing constraints, so there it lands in
-  // the tray to drag into place between sessions.
+  // opening board, usually — so seams and the readout read at once. In
+  // flow the board stays locked per the standing constraints, so there it
+  // lands in the tray to drag into place between sessions.
   devSynth(): void {
     const module = createModule(this.state, "additive", "common");
     this.state.modules.push(module);

@@ -33,7 +33,7 @@ A named pitch set — octave, fifth, major triad, and kin — recognized by pitc
 _Avoid_: Named chord (the just-intonation-run sense), Chord pair
 
 **Seam**:
-The chord-colored line the board draws for a formed chord: center-to-center between a two-voice chord's adjacent voices; a chord of three or more draws its offset outline instead — a closed polygon behind the modules, edges riding the gaps between faces, corners just poking past. Always on, in every mode.
+The chord-colored line the board draws for a formed chord: center-to-center between a two-voice chord's adjacent voices; a chord the seams can't carry — three or more voices, or a spacer-bridged pair — draws its offset outline instead — a closed polygon behind the modules, edges riding the gaps between faces, corners just poking past. Always on, in every mode.
 _Avoid_: Chord link, Pair link, Hull
 
 **Chord readout**:

@@ -764,12 +764,13 @@ body.live .inspector-empty { opacity: 0.75; }
 .highlight-ring { fill: none; stroke: var(--charge); stroke-width: 1.5; opacity: 0.8; pointer-events: none; }
 
 /* The chord annotation (§6, #137) — the prototype's language (#120):
-   two-voice chords seam center-to-center; three or more draw the offset
+   two-voice chords seam center-to-center; chords the seams can't carry —
+   three or more voices, or a spacer-bridged pair — draw the offset
    outline polygon rendered UNDER the modules, so only the gaps between
    the faces and the poking corners show. The hue rides --cc, the pulse
    period --seam-dur. The name chip is not ambient and never floats: it
-   lives in the reserved readout by the board — one chord's chips at a
-   time (the selected module's, or the hovered seam/voice's). Selection is
+   lives in the reserved readout by the board — every chord the selected
+   module earns its bonus from, or the hovered seam/voice's. Selection is
    the only emphasis — the selected module's chords keep the focus
    register, the rest fade. */
 .chord-mark { pointer-events: none; }
@@ -818,14 +819,18 @@ body.live .inspector-empty { opacity: 0.75; }
 
 /* Sounding (§6): in a live session the seams pulse on their chord's own
    period while the board stays locked — the session breathes through its
-   chords. */
-body.live .chord-seam { animation: seam-pulse var(--seam-dur, 2.7s) ease-in-out infinite; }
+   chords. Selection stays the only emphasis: a faded chord keeps its
+   fade and never joins the pulse (the animation would otherwise
+   override the fade's opacity). */
+body.live .chord-mark:not(.chord-fade) .chord-seam {
+  animation: seam-pulse var(--seam-dur, 2.7s) ease-in-out infinite;
+}
 @keyframes seam-pulse {
   0%, 100% { opacity: 0.85; }
   50% { opacity: 0.45; }
 }
 
-/* The would-form ghosts (§6): dashed seams in the chord's hue, one per
+/* The would-form ghosts (§6): dashed marks in the chord's hue, one per
    chord the hovered drop or placement would form — promising rather than
    declaring — and their chips always showing at the anchor, since the
    promise is the point. Inert to the pointer: drop targeting passes

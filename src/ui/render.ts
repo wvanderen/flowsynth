@@ -635,10 +635,10 @@ function renderGrid(app: App): void {
   // modules — the prototype's triangle behind the faces, visible only in
   // the gaps between them and at the poking corners. With a selection
   // standing, the selected module's chords stay focused and the rest fade
-  // (§6); the marks group wears `flow` in live sessions so they pulse
-  // while the board stays locked. The readout refreshes with the same
-  // marks: a selection pins its chord's chip.
-  html += `<g data-key="chord-marks"${flow ? ' class="flow"' : ""}>${overlay.marks
+  // (§6); in live sessions the stylesheet pulses the focused marks while
+  // the board stays locked. The readout refreshes with the same marks: a
+  // selection pins its chord's chips.
+  html += `<g data-key="chord-marks">${overlay.marks
     .map((mark) => chordMarkHtml(mark, "formed"))
     .join("")}</g>`;
 
@@ -697,10 +697,11 @@ function renderGrid(app: App): void {
     }
   }
 
-  // The would-form ghosts (§5–§6): dashed hulls over the chords the hovered
-  // drop or placement would form, one per forming chord — these stay OVER
-  // the modules (the promise reads on top). Rebuilt from the live preview
-  // state so a re-render never strands a ghost.
+  // The would-form ghosts (§5–§6): dashed seams and outlines over the
+  // chords the hovered drop or placement would form, one per forming
+  // chord — these stay OVER the modules (the promise reads on top).
+  // Rebuilt from the live preview state so a re-render never strands a
+  // ghost.
   html += `<g data-key="ghost-chords">${ghostMarksHtml(app)}</g>`;
 
   updateSvg(svg, html);
@@ -709,12 +710,13 @@ function renderGrid(app: App): void {
 }
 
 // One chord mark's markup (§6, prototype language #120): a two-voice chord
-// draws colored seams between its voices; three or more draw the offset
-// outline polygon — the prototype's triangle, rendered behind the modules
-// so only the gaps and the poking corners show. The mark's hue rides `--cc`
-// and its pulse period `--seam-dur`. Ghost marks preview would-form chords
-// and wear their chip at the anchor, since the promise belongs where the
-// chord would land. `keyPrefix` keeps the two layers' DOM keys apart.
+// draws colored seams between its voices; a chord the seams can't carry
+// draws the offset outline polygon — the prototype's triangle, rendered
+// behind the modules so only the gaps and the poking corners show. The
+// mark's hue rides `--cc` and its pulse period `--seam-dur`. Ghost marks
+// preview would-form chords and wear their chip at the anchor, since the
+// promise belongs where the chord would land. `keyPrefix` keeps the two
+// layers' DOM keys apart.
 function chordMarkHtml(mark: ChordMark, keyPrefix: "formed" | "ghost"): string {
   const ghost = keyPrefix === "ghost";
   const emphasis = ghost ? " ghost-mark" : mark.focused ? " chord-focus" : " chord-fade";

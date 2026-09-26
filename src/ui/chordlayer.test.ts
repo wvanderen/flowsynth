@@ -108,6 +108,26 @@ describe("tracesFor — the prototype's seam language", () => {
     expect(pair.marks[0]!.outline).toBeNull();
   });
 
+  it("a spacer-bridged two-voice chord draws the outline — never nothing", () => {
+    // A wire-conducted pair sits beyond seam reach: no seam could span
+    // the wired cells between, so the outline carries the chord instead
+    // (the same way a bridged triad draws).
+    const overlay = overlayWith([chord("Flat seventh", ["m1", "far"])]);
+    expect(overlay.marks[0]!.seams).toHaveLength(0);
+    expect(overlay.marks[0]!.outline).not.toBeNull();
+    // The stadium around the pair: two clipped ends per long edge, joined
+    // into the short corner cuts. Every vertex pokes just past its
+    // module's chassis edge; the long edges ride the gaps (the cuts
+    // themselves hide behind the modules).
+    const polygon = overlay.marks[0]!.outline!.split(" ").map((p) => p.split(",").map(Number) as [number, number]);
+    expect(polygon).toHaveLength(4);
+    const centers = ["m1", "far"].map((id) => point(POS[id]!));
+    for (const [vx, vy] of polygon) {
+      const nearest = Math.min(...centers.map(([cx, cy]) => Math.hypot(vx - cx, vy - cy)));
+      expect(nearest).toBeCloseTo(HEX_RADIUS + 8, 0);
+    }
+  });
+
   it("shares a claimed pair across chords: the first chord's color wins", () => {
     const overlay = chordOverlay({
       namedChords: [chord("Fifth", ["m1", "m2"]), chord("Octave", ["m1", "m2"])],

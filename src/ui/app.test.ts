@@ -661,13 +661,16 @@ describe("always-on chord feedback (§6, #137)", () => {
     endSession(app.state);
   });
 
-  it("chips carry the live ν/s contribution during a session, at every width", () => {
+  it("chips carry the live ν/s contribution during a session", () => {
     give(app.state, "additive", hex(1, 0));
     app.state.sessionsCompleted = 1;
     startSession(app.state, 600);
     app.render();
-    // The seams pulse in flow; hovering asks the live chip into the slot.
-    expect(document.querySelector('[data-key="chord-marks.flow"], [data-key="chord-marks"].flow')).not.toBeNull();
+    // The session is live: the stylesheet pulses the focused seams; the
+    // mark group itself carries no mode class. Hovering asks the live
+    // chip into the slot.
+    expect(document.body.classList.contains("live")).toBe(true);
+    expect(document.querySelector('[data-key="chord-marks"].flow')).toBeNull();
     cell(1, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(readout().textContent).toMatch(/^Fifth ×1\.3 · \+\d[\d,.]* ν\/s$/);
     endSession(app.state);

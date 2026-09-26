@@ -3,8 +3,9 @@
 // markup and the stylesheet keeps every color in the token table.
 //
 // The language is the prototype's (#120): a two-voice chord seams
-// center-to-center between its voices; a chord of three or more draws an
-// offset outline around its voices — a closed convex hull riding the gaps
+// center-to-center between its voices; a chord the seams can't carry —
+// three or more voices, or a spacer-bridged pair — draws an offset
+// outline around its voices — a closed convex hull riding the gaps
 // between the faces, its corners poking out past the outer edges — drawn
 // behind the modules. Name chips live in a reserved spot by the board;
 // selection and hover are the caller's emphasis questions.
@@ -28,12 +29,13 @@ export interface ChordMark {
   readonly colorVar: string;
   // The flow pulse period (seconds), per chord — the prototype's rhythm.
   readonly duration: number;
-  // A two-voice chord's drawn segments: center-to-center per adjacent
-  // pair. Three or more voices draw the outline instead.
+  // A two-voice chord's drawn segments: center-to-center per qualifying
+  // pair. Chords the seams can't carry draw the outline instead.
   readonly seams: ChordSeam[];
-  // A chord of three or more voices: the offset hull around its centers
-  // as a polygon points string — the prototype's triangle behind the
-  // modules, corners sticking out. Null for two-voice chords.
+  // A chord the seams can't carry — three or more voices, or a pair
+  // beyond seam reach: the offset hull around its centers as a polygon
+  // points string — the prototype's triangle behind the modules, corners
+  // sticking out. Null when the seams carry the chord.
   readonly outline: string | null;
   // The chip anchor: above the chord's topmost voice. Ghost marks (the
   // would-form preview) render their chip here; formed chords render
@@ -83,8 +85,9 @@ const CHORD_PULSE: Record<string, number> = {
 const FALLBACK_HUE = "chord-octave";
 const FALLBACK_PULSE = 2.7;
 
-// A seam's reach: pairs of voices within ~1.1 adjacent-center steps draw —
-// straight and diagonal neighbors — longer pairs stay silent.
+// A seam's reach: 1.9 × the hex radius — a hair over one adjacent-center
+// step, so straight and diagonal neighbors draw and anything longer is a
+// bridged pair that draws the outline instead.
 const SEAM_REACH = 1.9;
 
 // How far a seam end stops short of its voice's center: just outside the
@@ -143,7 +146,7 @@ const OUTLINE_CLEARANCE = 2.5;
 // the module's own corner so the cut reads.
 const CORNER_POKE = 8;
 
-// The outline for a chord of three or more voices: the convex hull of the
+// The outline for a chord the seams can't carry: the convex hull of the
 // voice centers, offset so its edges run straight through the gap between
 // neighboring faces — just off the plates' facing edges — with each corner
 // bevel-cut a hair past the outer module edges: the prototype's triangle
@@ -182,10 +185,21 @@ function outlineFor(centers: readonly Point[], radius: number, step: number): st
   return points.join(" ");
 }
 
+// Whether a two-voice chord's voices sit beyond seam reach — a
+// spacer-conducted pair, usually. The seams can't draw it (a long line
+// would cross the faces in between), so the outline carries it, the same
+// way a bridged triad draws.
+export function bridgedPair(centers: readonly Point[], radius: number): boolean {
+  if (centers.length !== 2) return false;
+  const reach = radius * SEAM_REACH;
+  const [p, q] = [centers[0]!, centers[1]!];
+  return Math.hypot(q[0] - p[0], q[1] - p[1]) > reach;
+}
+
 // The chord's drawn seams: two voices seam center-to-center (each
 // qualifying adjacent pair; `claimed` carries pair keys across chords — a
-// shared pair draws once, the first chord's color winning). Three or more
-// voices draw no seams — the outline carries them.
+// shared pair draws once, the first chord's color winning). Pairs beyond
+// reach draw nothing — the chord is bridged and the outline carries it.
 function seamsFor(centers: readonly Point[], radius: number, claimed: Set<string>): ChordSeam[] {
   if (centers.length >= 3) return [];
   const reach = radius * SEAM_REACH;
@@ -238,7 +252,7 @@ export function chordOverlay(opts: {
     if (positions.some((pos) => pos === null)) return;
     const centers = positions.map((pos) => point(pos as Hex));
     const seams = seamsFor(centers, radius, claimed);
-    const outline = centers.length >= 3 ? outlineFor(centers, radius, step) : null;
+    const outline = centers.length >= 3 || bridgedPair(centers, radius) ? outlineFor(centers, radius, step) : null;
     const top = centers.reduce((a, b) => (b[1] < a[1] ? b : a));
     marks.push({
       key: `chord-${index}`,
