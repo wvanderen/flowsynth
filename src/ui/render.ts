@@ -584,9 +584,9 @@ function renderGrid(app: App): void {
   const flow = state.mode === "flow";
   const snapshot = currentSnapshot(state);
   const selectedModule = state.modules.find((m) => m.id === ui.selected) ?? null;
-  // The lift (§5): when the expanded face pops, it IS the module's hex
-  // lifted toward the camera — the origin face dims to a ghost while its
-  // bloom stands. (Riding the closed face, nothing lifts.)
+  // The lift-off (§5): when the expanded face pops, it IS the module's hex
+  // lifted toward the camera — the origin cell renders vacated while the
+  // bloom stands, since the bloom repeats every line the face carries.
   const bloomLifts = selectedModule !== null && bloomPops(viewMeet({ x: minX, y: minY, width: maxX - minX, height: maxY - minY }, { width: svg.clientWidth, height: svg.clientHeight }), HEX_RADIUS);
 
   // The chord view (issue #62, reworked for the carrierless board): a
@@ -625,22 +625,30 @@ function renderGrid(app: App): void {
   for (const pos of state.cells) {
     const [x, y] = point(pos);
     const module = deployedAt(state, pos);
+    // The lift-off (§5): with a popped bloom standing for the selected
+    // module, its own cell renders vacated — the bloom repeats every line
+    // the face carries, so the doubled face beneath adds nothing.
+    const lifted = bloomLifts && module !== undefined && module.id === ui.selected;
     const drop = dropRegister(app, pos);
-    let classes = "hex empty";
-    if (drop) classes += ` ${dropClass(drop)}`;
-    if (!module && isTargetCell(app)) classes += " target";
-    // The lattice reads on every cell (board-redesign spec §2): each cell
-    // is an absolute note — note name under the readout for modules, on the
-    // face for empty cells — so columns read as one note name and octave
-    // rows stack visibly.
-    html += `<g class="${nodeClass(module?.id ?? null)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${module ? `${META[module.type].name} at ${cellNoteOf(pos)}` : `Empty cell · ${cellNoteOf(pos)}`}">
-      ${module ? "" : `<polygon class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>`}`;
-    if (module) {
-      html += moduleNode(app, module, pos, { snapshot, selectedModule, drop, bloomLifts });
-    } else {
-      html += `<path class="empty-plus" d="M-7-6H7M0-13V1"/><text y="10" text-anchor="middle" class="hex-note">${cellNoteOf(pos)}</text><text y="24" text-anchor="middle" class="hex-sub">EMPTY CELL</text>`;
+    const label = module ? `${META[module.type].name} at ${cellNoteOf(pos)}` : `Empty cell · ${cellNoteOf(pos)}`;
+    if (module && !lifted) {
+      html += `<g class="${nodeClass(module.id)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">`;
+      html += moduleNode(app, module, pos, { snapshot, selectedModule, drop });
+      html += `</g>`;
+      continue;
     }
-    html += `</g>`;
+    // Vacated by the lift, or genuinely empty: the bare cell wears its
+    // note so the column still reads (board-redesign spec §2).
+    let classes = "hex empty";
+    if (lifted) classes += " lifted";
+    if (drop) classes += ` ${dropClass(drop)}`;
+    if (!module && !lifted && isTargetCell(app)) classes += " target";
+    html += `<g class="${nodeClass(module?.id ?? null)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">
+      <polygon class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>`;
+    if (!lifted) {
+      html += `<path class="empty-plus" d="M-7-6H7M0-13V1"/><text y="24" text-anchor="middle" class="hex-sub">EMPTY CELL</text>`;
+    }
+    html += `<text y="10" text-anchor="middle" class="hex-note">${cellNoteOf(pos)}</text></g>`;
   }
 
   if (frontier.length > 0) {
@@ -717,9 +725,6 @@ interface RenderContext {
   // The live drop register over this cell (§5): amber for occupied, green
   // for open. Null away from the hover.
   drop: DropRegister | null;
-  // Whether a popped expanded face is open: the selected module's own face
-  // dims while its bloom stands in for it (§5's lift toward the camera).
-  bloomLifts: boolean;
 }
 
 // A module face's readout (ADR-0016): the prominent value beneath the
@@ -780,9 +785,8 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
 
   // The threshold-crossing flash fires for a moment after a roll is minted.
   const crossed = module.type === "forge" && app.forgeFlashUntil > Date.now();
-  const lifted = selected && ctx.bloomLifts;
 
-  return `<g class="module-node${crossed ? " forge-crossed" : ""}${lifted ? " lifted" : ""}" data-type="${module.type}" data-rarity="${module.rarity}">
+  return `<g class="module-node${crossed ? " forge-crossed" : ""}" data-type="${module.type}" data-rarity="${module.rarity}">
     ${moduleFace({
       type: module.type,
       rarity: module.rarity,

@@ -420,13 +420,22 @@ describe("the expanded face (§5)", () => {
     const faceSvg = bloom().querySelector(".bloom-face")!;
     expect(faceSvg.querySelector(":scope > [data-key='hex']")).not.toBeNull();
     expect(faceSvg.querySelector(".face-name")!.getAttribute("y")).toBe("-27");
+    expect(faceSvg.querySelector(".face-readout")!.getAttribute("y")).toBe("14");
     expect(faceSvg.querySelector(".face-note")!.getAttribute("y")).toBe("46");
     expect(faceSvg.querySelector(".face-signature")!.getAttribute("transform")).toBe("translate(0 -6) scale(0.7)");
+    // The module lifted off its cell: the bloom repeats every line the face
+    // carries, so the origin renders vacated — no doubled module.
+    expect(document.querySelector('[data-cell="0,0"] .module-node')).toBeNull();
+    expect(document.querySelector('[data-cell="0,0"] .hex.lifted')).not.toBeNull();
     // …and the Upgrade button with its benefit and price.
     const button = bloom().querySelector<HTMLButtonElement>("#bloom-upgrade")!;
     expect(button.textContent).toContain("Upgrade");
     expect(button.textContent).toContain("+0.02 ν/s");
     expect(button.textContent).toContain("10 ν");
+    // The vacated cell still toggles its module — click it closed.
+    clickCell(0,0);
+    expect(app.ui.selected).toBeNull();
+    expect(document.querySelector('[data-cell="0,0"] .module-node')).not.toBeNull();
   });
 
   it("the upgrade button upgrades the module and keeps the bloom open", () => {
@@ -513,23 +522,25 @@ describe("the expanded face (§5)", () => {
     expect(app.state.modules[0]!.level).toBe(1);
   });
 
-  it("positions over the module: below when the cell sits high, above once the top leaves room", () => {
+  it("positions over the module: nested above, mirrored below when the top leaves no room", () => {
     const svg = document.getElementById("grid") as unknown as SVGSVGElement;
     // A tall, narrow wrap: the scaled board sits small enough for the bloom
     // to enlarge the module, with letterbox slack to separate the rows.
     Object.defineProperty(svg, "clientWidth", { configurable: true, value: 550 });
     Object.defineProperty(svg, "clientHeight", { configurable: true, value: 800 });
     app.state.cells.push(hex(0, 2));
-    // The opening C4 (0,0) is the board's topmost cell: its top edge leaves
-    // no room, so the face presents below — top tip at the cell's bottom.
+    // The opening C4 (0,0) is the board's topmost cell: nesting above would
+    // leave the frame, so the bloom presents below — mirrored onto the
+    // cell's lower edges.
     app.render();
     clickCell(0,0);
     const bloomEl = document.getElementById("module-bloom")!;
     expect(bloomEl.hidden).toBe(false);
     expect(bloomEl.classList.contains("below")).toBe(true);
-    expect(bloomEl.style.width).toBe("224px");
-    // C5 (0,1) sits a full octave row lower: the face presents above, bottom
-    // tip at the cell's top edge, and clears the wrap's left edge.
+    expect(bloomEl.style.width).toBe("256px");
+    // C5 (0,1) sits a full octave row lower: the bloom nests above — its
+    // bottom corners resting on the cell's upper edges — and clears the
+    // wrap's left edge.
     give(app.state, "additive", hex(0, 1));
     app.render();
     clickCell(0,1);

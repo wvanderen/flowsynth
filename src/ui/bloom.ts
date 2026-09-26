@@ -31,8 +31,8 @@ export interface BloomLayout {
   below: boolean;
 }
 
-export const BLOOM_WIDTH = 224;
-export const BLOOM_HEIGHT = 258;
+export const BLOOM_WIDTH = 256;
+export const BLOOM_HEIGHT = 296;
 
 // The meet scale the svg's viewBox maps onto the board wrap with; unit
 // scale when the wrap has no layout yet (hidden or unmeasured).
@@ -60,6 +60,12 @@ export function bloomPops(meet: number, cellRadius: number): boolean {
 // Screen position for one bloom over one cell. `cell` is the cell center in
 // svg units, `cellRadius` the hex radius in the same units, `view` the svg's
 // viewBox, and `box` the board wrap's css-pixel size.
+//
+// The bloom nests onto the module rather than kissing its tip: its center
+// sits one module-radius above the module's center, which brings the
+// bloom's two bottom corners to rest exactly on the module's upper edges —
+// both bottom corners touching, whatever the module's on-screen size.
+// Presenting below mirrors the nest onto the module's lower edges.
 export function bloomLayout(cell: readonly [number, number], cellRadius: number, view: ViewBox, box: Box): BloomLayout {
   const meet = viewMeet(view, box);
   const [cx, cy] = viewPoint(cell, view, box);
@@ -67,13 +73,10 @@ export function bloomLayout(cell: readonly [number, number], cellRadius: number,
   // regular hexagon's proportions.
   const width = box.width > 0 ? Math.min(BLOOM_WIDTH, box.width) : BLOOM_WIDTH;
   const height = Math.round((width / BLOOM_WIDTH) * BLOOM_HEIGHT);
-  // Bottom tip at the cell's top edge; below only when the top leaves no
-  // room, then the top tip touches the cell's bottom edge.
-  const cellTop = cy - cellRadius * meet;
-  const cellBottom = cy + cellRadius * meet;
-  let top = cellTop - height;
+  const moduleRadius = cellRadius * meet;
+  let top = cy - moduleRadius - height / 2;
   const below = top < 0 && box.height > 0;
-  if (below) top = cellBottom;
+  if (below) top = cy + moduleRadius - height / 2;
   if (box.height > 0) top = Math.min(top, Math.max(0, box.height - height));
   const left = Math.min(Math.max(cx - width / 2, 0), Math.max(0, box.width - width));
   return { left, top, width, height, below };

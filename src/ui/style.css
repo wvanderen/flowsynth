@@ -710,9 +710,9 @@ body.live .inspector-empty { opacity: 0.75; }
 .hex.locked { fill: var(--panel-deep); }
 
 .module-node { cursor: pointer; }
-/* The lift (§5): while a module's expanded face stands, the origin face
-   dims to a ghost — the bloom IS the module, lifted toward the camera. */
-.module-node.lifted { opacity: 0.3; }
+/* A cell vacated by the lift: its module stands in the bloom above, so the
+   cell reads as the empty hex it visually is. */
+.hex.lifted { opacity: 0.55; }
 .cell-node { touch-action: none; }
 .module-node text, .inventory-tile text, .drag-ghost text, .candidate-tile text { fill: var(--ink); pointer-events: none; }
 .module-node.locked text { fill: var(--muted); }
@@ -860,12 +860,12 @@ body.live .inspector-empty { opacity: 0.75; }
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 44px;
-  width: 132px;
+  bottom: 49px;
+  width: 150px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
 }
 .bloom-contribution { margin: 0; font-size: 12.5px; color: var(--nous); white-space: nowrap; }
 .bloom-upgrade {
