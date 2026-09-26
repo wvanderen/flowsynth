@@ -58,16 +58,17 @@ composite = (synths + infusor uplift) × Π chord terms
 - **Bloom rules, adopted everywhere**: a fixed-size regular hexagon (prototype 224×258: tuning), content centered; opens **only on click** — never for a drag or a drop, and a drop leaves it closed; **nests onto the selected module** (ADR-0024) — its center one module-radius above the module's center, both bottom corners resting on the module's upper edges, presenting below instead, mirrored onto the lower edges, only when the frame's top leaves no room (the toward-camera metaphor); pops only when it would actually enlarge the module — zoomed in past that, the affordances ride the closed face as a floating card (ADR-0024); closes on outside click or Esc; expansion caps to available width and clamps inside the board wrap; holding the face starts a live drag — the bloom collapses into the ghost. On portrait phone it presents as a bottom sheet (§7).
 - **Dismissal restores scanability**: selection elsewhere, outside click, or Esc returns the compact face. There is no leftover chrome.
 
-## 6. Chord feedback: always-on annotation
+## 6. Chord feedback: the prototype's seams and a reserved readout
 
-*Decided by [Chord feedback on the board, #120](https://github.com/wvanderen/flowsynth/issues/120) via the chord-feedback prototype ("A is clear winner"); supersedes issue #62's chord-view toggle.*
+*Decided by [Chord feedback on the board, #120](https://github.com/wvanderen/flowsynth/issues/120) via the chord-feedback prototype, as amended by [ADR-0025](adr/0025-annotate-chords-with-seams-and-a-reserved-readout.md) during the build (#137); supersedes issue #62's chord-view toggle.*
 
-- **Formed**: every formed chord wears a colored **outline hull** and a **name chip** (`Octave ×1.15`; live ν/s contribution during a session), always visible — chords read at a glance with no chord view and no dock toggle.
-- **Overlap**: hulls nest and chips stack, validated on seeded regions where a power chord contains its octave and fifth.
-- **Possible**: while dragging or placing, would-form chords preview as **dashed ghost hulls** with name chips (one per forming chord). What breaks is expressed by what disappears, never previewed.
-- **Selected**: the selected module's chords emphasize; other chords fade. The bloom adds no chord line — the hull is the callout.
-- **Sounding**: in a flow session hulls pulse and chips carry live contribution; the board stays locked per the standing constraints.
-- **Sound is opt-in garnish** — the drone plus a formation strum. Chord perception is visual-first; this effort carries no further sound-design work.
+- **Formed**: every formed chord draws its hue on the board — a two-voice chord seams center-to-center between its adjacent voices; three or more voices draw a single offset outline (the prototype's triangle) **behind the modules**, edges riding the gaps between faces, corners just poking past. No chord view and no dock toggle.
+- **Name chips live in the reserved readout** beside the board, not on it: one fixed spot, listing **every chord the module earns its bonus from**. The selected module's chords pin it; hovering a seam asks that chord; hovering a module asks all of its chords. Chips carry the ×multiplier always; during a session they carry the live ν/s contribution.
+- **Overlap**: outlines wrap their clusters; a module singing in several chords reads them all in the readout, stacked. Selection, not position, decides what emphasizes.
+- **Possible**: while dragging or placing, would-form chords preview as dashed seams or outlines **over** the modules, each with its name chip at the would-be chord (one per forming chord). What breaks is expressed by what disappears, never previewed.
+- **Selected**: the selected module's chords emphasize; other chords fade. The bloom adds no chord line — the outline behind the faces is the callout.
+- **Sounding**: in a flow session the seams and outlines pulse, each chord on its own period; the board stays locked per the standing constraints — clicking a module answers the lock.
+- **Sound is opt-in garnish** — the formation strum only; the flow ambient is retired (ADR-0025) until a soundscape is designed on purpose. Chord perception is visual-first.
 
 ## 7. Console hierarchy and responsive composition
 
@@ -99,7 +100,7 @@ composite = (synths + infusor uplift) × Π chord terms
 
 - **The player starts with exactly one synth**, pre-placed at C4 on the three-cell opening footprint (the old triangle's geometry retained; its Carrier rationale gone), plus a nous grant that makes the first upgrade affordable. The tray starts empty.
 - **Everything else is earned through play.** Practice fills the forge (placeholder pacing ≈ 2 minutes); crossing the threshold offers the synth it made — the opening's first roll yields a synthesizer candidate (rigging: tuning); taking it puts the synth in the tray for placement. Upgrades and new cells are paid from banked nous. **No synth purchases exist outside the forge loop in the opening**; the starter shelf sells the generator, one infusor, and the Forge.
-- **One earned pop-up, once, ever**: after the second synth is acquired, a single dismissible card — *place it beside your first; the dashed hull previews the chord it would form; the × is what the pair earns together*. The totally-silent alternative was built and played on the same branch and not chosen.
+- **One earned pop-up, once, ever**: after the second synth is acquired, a single dismissible card — *place it beside your first; the dashed outline previews the chord it would form; the × is what the pair earns together*. The totally-silent alternative was built and played on the same branch and not chosen.
 - **No goals, no steps, no ambient hints, no tutorial state machine.** The deleted idle helptext stays deleted.
 - **Interaction facts the arc rides on**: pitch lives in the cell, so a swap of identical synths can never break a chord — the chord-breaking gesture is *drag off the board into the tray* (right-click retrieves by the same gesture, §5); the dashed would-form ghost (§6) is what makes the first placement intentional.
 - Exact pacing numbers (forge fill, threshold, grant size) are tuning, not spec.
@@ -129,8 +130,11 @@ composite = (synths + infusor uplift) × Π chord terms
 | Opening triangle as Carrier rationale | generator→Forge and Carrier-adjacent chord reach | three-cell footprint retained, re-rationaled by §8 |
 | Status monitor | two-element rail under the board | dissolved; board ledger above (§7) + floating Arete pill |
 | Console production readouts | status strip, trophy, nous balance on the console | the board ledger strip |
-| Chords toggle | dock mode for chord display | always-on hulls and chips (§6) |
-| Separate chord view | display-only highlight mode (#62) | always-on annotation |
+| Chords toggle | dock mode for chord display | always-on seams and the reserved readout (§6, ADR-0025) |
+| Separate chord view | display-only highlight mode (#62) | always-on seam and outline annotation |
+| Chord hulls on the board | polygon hull wrapping each chord's voices | prototype seams (2 voices) and the offset outline behind the modules (3+, §6, ADR-0025) |
+| Ambient chord chips | ×multiplier floating at every formed chord | the reserved readout: chips on demand, one spot (§6, ADR-0025) |
+| Flow drone | quiet ambient tone under sessions | retired before landing; sound stays event-driven — strum and chime (ADR-0025) |
 | Move / Return commands | explicit move flow, bloom buttons | dragging always live; drop on inventory dock to return |
 | Drag-onto-twin combine | dropping on an identical twin offered a merge | occupied drops swap, always — pitch lives in the cell; combine stays a panel button |
 | Swap confirmation | confirm-or-preview on occupied drops | swap immediately; amber preview during drag |
@@ -150,7 +154,7 @@ composite = (synths + infusor uplift) × Π chord terms
 ## 12. Handoff notes for implementation sessions
 
 - **Read order**: this spec → ADR-0021…0023 → the linked tickets for any section's rationale → the rewritten `CONTEXT.md` for vocabulary → redesign spec §6.3/§7/§8 and the focus-tool spec for what still stands → `research/implementation-survey.md` §7 for the coupled-code map.
-- **Suggested sequencing** (one vertical at a time, engine-first): (1) lattice, pitch, chord analysis, spacer, formula legs, row-gate economy, and the v6 save with its hybrid migration (ADR-0021/0022/0023); (2) the opening learning arc and forge pacing (§8); (3) direct manipulation — expanded face, always-live dragging, inventory dock (§5); (4) chord feedback — hulls, chips, ghosts (§6); (5) console and responsive anatomy — ledger strip, icon dock, Rate-cell disclosure, Arete pill, thumb dock (§7). Each step lands with its test suite reworked; the existing engine tests are the baseline to consciously retire or port.
+- **Suggested sequencing** (one vertical at a time, engine-first): (1) lattice, pitch, chord analysis, spacer, formula legs, row-gate economy, and the v6 save with its hybrid migration (ADR-0021/0022/0023); (2) the opening learning arc and forge pacing (§8); (3) direct manipulation — expanded face, always-live dragging, inventory dock (§5); (4) chord feedback — seams, outline, reserved readout, ghosts (§6, ADR-0025); (5) console and responsive anatomy — ledger strip, icon dock, Rate-cell disclosure, Arete pill, thumb dock (§7). Each step lands with its test suite reworked; the existing engine tests are the baseline to consciously retire or port.
 - **Tuning fronts** (numbers, not spec): cell prices and the purchase scaler; gate premiums and row count; chord bonus tiers and the Conditional constant; forge fill pacing and threshold; the opening grant; spacer prices; bloom size and easing; the 760px disclosure breakpoint; achievement #11's thresholds.
 - **Open design work**: hue and glyph for the spacer category.
 - **Prototype assets** (throwaway, branches/PRs): `prototype/board-geometry`, `prototype/direct-board-interaction`, `prototype/isomorphic-layout-126`, `prototype/module-bloom-127`, `prototype/spacer-module-130`, `prototype/chord-feedback-120`, `prototype/console-hierarchy-119`, PR #132 (responsive, merged), PR #133 (opening arc, merged) — reference for intent, not code to keep.
