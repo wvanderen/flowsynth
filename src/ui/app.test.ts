@@ -414,13 +414,14 @@ describe("the expanded face (§5)", () => {
     // The ν/s unit rides the face's own readout — no repeated readout.
     expect(bloom().querySelector(".bloom-face .face-readout")!.textContent).toBe(`+${formatNumber(0.1)} ν/s`);
     expect(bloom().querySelector(".bloom-contribution")).toBeNull();
-    // The chassis stays welded to the plate — only the engraving shifts to
-    // make room for the button, or the plate shows past the hexagon's edges.
+    // The bloom re-proportions the engraving: the chassis hexagon stays a
+    // direct child of the svg, the name recenters over the full-width band
+    // (clear of the top vertex), and the note footnotes into the taper.
     const faceSvg = bloom().querySelector(".bloom-face")!;
     expect(faceSvg.querySelector(":scope > [data-key='hex']")).not.toBeNull();
-    const engraving = faceSvg.querySelector(":scope > [data-key='engraving']")!;
-    expect(engraving.getAttribute("transform")).toBe("translate(0 -20)");
-    expect(engraving.querySelector("[data-key='hex']")).toBeNull();
+    expect(faceSvg.querySelector(".face-name")!.getAttribute("y")).toBe("-27");
+    expect(faceSvg.querySelector(".face-note")!.getAttribute("y")).toBe("46");
+    expect(faceSvg.querySelector(".face-signature")!.getAttribute("transform")).toBe("translate(0 -6) scale(0.7)");
     // …and the Upgrade button with its benefit and price.
     const button = bloom().querySelector<HTMLButtonElement>("#bloom-upgrade")!;
     expect(button.textContent).toContain("Upgrade");

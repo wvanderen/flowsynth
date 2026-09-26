@@ -584,6 +584,10 @@ function renderGrid(app: App): void {
   const flow = state.mode === "flow";
   const snapshot = currentSnapshot(state);
   const selectedModule = state.modules.find((m) => m.id === ui.selected) ?? null;
+  // The lift (§5): when the expanded face pops, it IS the module's hex
+  // lifted toward the camera — the origin face dims to a ghost while its
+  // bloom stands. (Riding the closed face, nothing lifts.)
+  const bloomLifts = selectedModule !== null && bloomPops(viewMeet({ x: minX, y: minY, width: maxX - minX, height: maxY - minY }, { width: svg.clientWidth, height: svg.clientHeight }), HEX_RADIUS);
 
   // The chord view (issue #62, reworked for the carrierless board): a
   // display-only read of the board's pitch-set chord terms — the same named
@@ -632,7 +636,7 @@ function renderGrid(app: App): void {
     html += `<g class="${nodeClass(module?.id ?? null)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${module ? `${META[module.type].name} at ${cellNoteOf(pos)}` : `Empty cell · ${cellNoteOf(pos)}`}">
       ${module ? "" : `<polygon class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>`}`;
     if (module) {
-      html += moduleNode(app, module, pos, { snapshot, selectedModule, drop });
+      html += moduleNode(app, module, pos, { snapshot, selectedModule, drop, bloomLifts });
     } else {
       html += `<path class="empty-plus" d="M-7-6H7M0-13V1"/><text y="10" text-anchor="middle" class="hex-note">${cellNoteOf(pos)}</text><text y="24" text-anchor="middle" class="hex-sub">EMPTY CELL</text>`;
     }
@@ -713,6 +717,9 @@ interface RenderContext {
   // The live drop register over this cell (§5): amber for occupied, green
   // for open. Null away from the hover.
   drop: DropRegister | null;
+  // Whether a popped expanded face is open: the selected module's own face
+  // dims while its bloom stands in for it (§5's lift toward the camera).
+  bloomLifts: boolean;
 }
 
 // A module face's readout (ADR-0016): the prominent value beneath the
@@ -773,8 +780,9 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
 
   // The threshold-crossing flash fires for a moment after a roll is minted.
   const crossed = module.type === "forge" && app.forgeFlashUntil > Date.now();
+  const lifted = selected && ctx.bloomLifts;
 
-  return `<g class="module-node${crossed ? " forge-crossed" : ""}" data-type="${module.type}" data-rarity="${module.rarity}">
+  return `<g class="module-node${crossed ? " forge-crossed" : ""}${lifted ? " lifted" : ""}" data-type="${module.type}" data-rarity="${module.rarity}">
     ${moduleFace({
       type: module.type,
       rarity: module.rarity,
@@ -1130,11 +1138,10 @@ function renderBloom(app: App): void {
       host.innerHTML = readouts;
     } else {
       // The face fills the bloom hexagon exactly (viewBox = the hexagon's
-      // bounding box). The engraving alone shifts up to make room for the
-      // button — the chassis hexagon and its rings stay welded to the plate
-      // edge — and the enlarged readout carries the ν/s unit itself. No
-      // button, no need for the room: the face sits nearer its natural
-      // layout.
+      // bounding box), re-proportioned for the bloom: the engraving
+      // recenters over the full-width band, the cell note footnotes into
+      // the taper, and the button band sits between readout and taper. The
+      // enlarged readout carries the ν/s unit itself, so nothing repeats.
       const face = faceReadoutFor(state, module, module.pos, snapshot, true);
       host.innerHTML = `
         <div class="bloom-plate" data-type="${module.type}" data-rarity="${module.rarity}">
@@ -1145,7 +1152,7 @@ function renderBloom(app: App): void {
             ...(face.readoutClass ? { readoutClass: face.readoutClass } : {}),
             ...(face.note ? { note: face.note } : {}),
             level: module.level,
-            contentShift: benefit ? -20 : -12,
+            variant: "bloom",
           })}</svg>
           ${readouts}
         </div>`;
