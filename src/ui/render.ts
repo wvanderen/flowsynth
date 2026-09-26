@@ -20,20 +20,24 @@ import {
 import { poolOutstanding } from "../engine/trust";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
-import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NoteEntry, RateSnapshot } from "../engine/types";
-import type { App, EnterKind } from "./app";
+import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NamedChordTerm, NoteEntry, RateSnapshot } from "../engine/types";
+import type { App, ChordHover, EnterKind } from "./app";
 import { appIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, moduleFace } from "./face";
 import { bloomLayout, bloomPops, bloomSpan, viewMeet, viewPoint, type ViewFrame } from "./bloom";
 import { chargeGlow, chargeLeads } from "./leads";
-import { chordOverlay } from "./chordlayer";
+import { chordOverlay, chipWidth, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
-import { formatDate, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
+import { formatDate, formatInt, formatNumber, formatPracticeMinutes, chordLiveLabel, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
 import { renderStatusMonitor } from "./monitor";
 import { prototypeVariant, ledgerHtml, updateLedgerLive, featsChipHtml, unlockedCount, FEATS_SVG, TOOL_ICONS } from "./variant";
 
 const SPACING = 65;
+// The adjacent-center distance the chord overlay's edge trace needs: on
+// this pointy-top lattice every neighboring center sits exactly this far
+// from its mate, whatever the direction.
+const LATTICE_STEP = Math.sqrt(3) * SPACING;
 const DRAG_THRESHOLD_PX = 6;
 const boundCells = new WeakSet<SVGElement>();
 
@@ -482,7 +486,7 @@ function renderTools(app: App): void {
   if (!host) return;
   const upgrade = state.mode === "upgrade";
   const feats = variant ? unlockedCount(state) : 0;
-  const key = JSON.stringify([variant, upgrade, state.bankedRolls.length, ui.buyingCell, ui.showChords, feats]);
+  const key = JSON.stringify([variant, upgrade, state.bankedRolls.length, ui.buyingCell, feats]);
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     const forgeReady = upgrade && state.bankedRolls.length > 0;
@@ -499,7 +503,6 @@ function renderTools(app: App): void {
         <button class="small" id="tool-catalog" ${upgrade ? "" : "disabled"} title="${upgrade ? "The catalog: starter-shelf offers and board cells" : "Purchases happen between sessions"}">${TOOL_ICONS.catalog}<span>Catalog</span></button>
         <button class="small tool-forge" id="tool-forge" ${forgeReady ? "" : "disabled"} title="">${TOOL_ICONS.forge}<span>Forge${forgeCount > 0 ? ` · ${forgeCount}` : ""}</span><i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i></button>
         <button class="small tool-cell${ui.buyingCell ? " active" : ""}" id="tool-cell" ${upgrade ? "" : "disabled"} aria-pressed="${ui.buyingCell}" title="">${CELL_TOOL_SVG}<span>Cell</span></button>
-        <button class="small${ui.showChords ? " active" : ""}" id="tool-chords" aria-pressed="${ui.showChords}" title="Show chords — light the chord voices, link the pairs, outline and label named chords · C">${TOOL_ICONS.chords}<span>Chords</span></button>
         <span class="tool-sep" aria-hidden="true"></span>
         <button class="small" id="tool-feats" title="Achievements — every feat, and how close the next one is">${FEATS_SVG}<span>Feats</span></button>`;
     } else if (variant === "b" || variant === "c") {
@@ -513,7 +516,6 @@ function renderTools(app: App): void {
         icon({ id: "tool-catalog", svg: TOOL_ICONS.catalog, label: upgrade ? "Catalog — starter-shelf offers and board cells" : "Catalog — purchases happen between sessions", disabled: upgrade ? "" : "disabled" }) +
         icon({ id: "tool-forge", svg: TOOL_ICONS.forge, label: forgeTitle, extra: forgeCount > 0 ? `<b class="tool-badge mono">${forgeCount}</b>` : "", disabled: forgeReady ? "" : "disabled" }) +
         icon({ id: "tool-cell", svg: CELL_TOOL_SVG, label: "New cell", disabled: upgrade ? "" : "disabled", pressed: `aria-pressed="${ui.buyingCell}"`, active: ui.buyingCell ? " active" : "" }) +
-        icon({ id: "tool-chords", svg: TOOL_ICONS.chords, label: "Show chords — light the chord voices, link the pairs, outline and label named chords · C", pressed: `aria-pressed="${ui.showChords}"`, active: ui.showChords ? " active" : "" }) +
         (variant === "b" ? icon({ id: "tool-feats", svg: FEATS_SVG, label: "Achievements — every feat, and how close the next one is", extra: feats > 0 ? `<b class="tool-badge mono">${feats}</b>` : "" }) : "");
       host.classList.add("tool-icon-row");
     } else {
@@ -524,12 +526,11 @@ function renderTools(app: App): void {
           <i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i>
         </button>
         <button class="small tool-cell${ui.buyingCell ? " active" : ""}" id="tool-cell" ${upgrade ? "" : "disabled"} aria-pressed="${ui.buyingCell}" title="">${CELL_TOOL_SVG}</button>
-        <button class="small${ui.showChords ? " active" : ""}" id="tool-chords" aria-pressed="${ui.showChords}" title="Show chords — light the chord voices, link the pairs, outline and label named chords · C">Chords</button>`;
+      `;
     }
     byId("tool-catalog")?.addEventListener("click", () => app.openModal("catalog"));
     byId("tool-forge")?.addEventListener("click", () => app.openModal("forge"));
     byId("tool-cell")?.addEventListener("click", () => (app.ui.buyingCell ? app.cancelCellPurchase() : app.armCellPurchase()));
-    byId("tool-chords")?.addEventListener("click", () => app.toggleChords());
     byId("tool-feats")?.addEventListener("click", () => app.openModal("achievements"));
   }
   // Live under the structural rebuild: the Forge pip tracks the shared
@@ -576,10 +577,11 @@ function renderGrid(app: App): void {
   const coords = allCells.map(point);
   const minX = Math.min(...coords.map((p) => p[0])) - 78;
   const maxX = Math.max(...coords.map((p) => p[0])) + 78;
-  const minY = Math.min(...coords.map((p) => p[1])) - 82;
+  // The top pad carries the chord chips, which float ~1.2 hex radii above
+  // the top row's faces (§6).
+  const minY = Math.min(...coords.map((p) => p[1])) - 100;
   const maxY = Math.max(...coords.map((p) => p[1])) + 82;
   svg.setAttribute("viewBox", `${minX} ${minY} ${maxX - minX} ${maxY - minY}`);
-  svg.classList.toggle("chord-view", ui.showChords);
 
   const flow = state.mode === "flow";
   const snapshot = currentSnapshot(state);
@@ -595,24 +597,25 @@ function renderGrid(app: App): void {
   // bloom stands, since the bloom repeats every line the face carries.
   const bloomLifts = selectedModule !== null && bloomPops(viewMeet(frame), HEX_RADIUS);
 
-  // The chord view (issue #62, reworked for the carrierless board): a
-  // display-only read of the board's pitch-set chord terms — the same named
-  // chords the formula chip names, drawn where they live as hulls over the
-  // connected voices. Chord voices stay lit; everything else dims. Purely
-  // cosmetic: no gating, no gameplay effect, available in every mode.
+  // The chord annotation is always on (§6, #137): every formed chord wears
+  // its colored seams — no chord view, no toggle. The name chip lives in
+  // the reserved readout beside the board (the selected module's chord, or
+  // the hovered seam/voice's); during a session it carries the live ν/s
+  // contribution. Selection (§6) is the one emphasis: the selected
+  // module's chords stay focused and the rest fade.
   const deployedById = new Map(state.modules.filter((m) => m.pos !== null).map((m) => [m.id, m]));
-  const overlay = ui.showChords
-    ? chordOverlay({
-        namedChords: snapshot.namedChords,
-        posOf: (id) => deployedById.get(id)?.pos ?? null,
-        point,
-        radius: HEX_RADIUS,
-        pad: 5,
-        labelFor: chordTermLabel,
-      })
-    : null;
-  const nodeClass = (moduleId: string | null): string =>
-    ui.showChords ? `cell-node ${moduleId !== null && overlay!.participants.has(moduleId) ? "chord-lit" : "chord-dim"}` : "cell-node";
+  const focusIds = selectedModule?.pos ? [selectedModule.id] : [];
+  const labelFor = flow ? (chord: NamedChordTerm) => chordLiveLabel(chord, snapshot.rate) : chordTermLabel;
+  const overlay = chordOverlay({
+    namedChords: snapshot.namedChords,
+    posOf: (id) => deployedById.get(id)?.pos ?? null,
+    point,
+    radius: HEX_RADIUS,
+    step: LATTICE_STEP,
+    labelFor,
+    focusIds,
+  });
+  chordMarksCache.set(app, overlay.marks);
 
   // Charge leads (§8, #41): uniform green patch leads, center-to-center,
   // directional generator → receiver. Leads in live flow animate; everything
@@ -628,6 +631,17 @@ function renderGrid(app: App): void {
     html += `<line data-key="charge-${generator.id}-${receiver.id}" class="${cls}" ${leadSegment(x1, y1, x2, y2)}/>`;
   }
 
+  // Named-chord marks (§6): the outline polygons and seams draw UNDER the
+  // modules — the prototype's triangle behind the faces, visible only in
+  // the gaps between them and at the poking corners. With a selection
+  // standing, the selected module's chords stay focused and the rest fade
+  // (§6); in live sessions the stylesheet pulses the focused marks while
+  // the board stays locked. The readout refreshes with the same marks: a
+  // selection pins its chord's chips.
+  html += `<g data-key="chord-marks">${overlay.marks
+    .map((mark) => chordMarkHtml(mark, "formed"))
+    .join("")}</g>`;
+
   for (const pos of state.cells) {
     const [x, y] = point(pos);
     const module = deployedAt(state, pos);
@@ -638,7 +652,7 @@ function renderGrid(app: App): void {
     const drop = dropRegister(app, pos);
     const label = module ? `${META[module.type].name} at ${cellNoteOf(pos)}` : `Empty cell · ${cellNoteOf(pos)}`;
     if (module && !lifted) {
-      html += `<g class="${nodeClass(module.id)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">`;
+      html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">`;
       html += moduleNode(app, module, pos, { snapshot, selectedModule, drop });
       html += `</g>`;
       continue;
@@ -649,7 +663,7 @@ function renderGrid(app: App): void {
     if (lifted) classes += " lifted";
     if (drop) classes += ` ${dropClass(drop)}`;
     if (!module && !lifted && isTargetCell(app)) classes += " target";
-    html += `<g class="${nodeClass(module?.id ?? null)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">
+    html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">
       <polygon class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>`;
     if (!lifted) {
       html += `<path class="empty-plus" d="M-7-6H7M0-13V1"/><text y="24" text-anchor="middle" class="hex-sub">EMPTY CELL</text>`;
@@ -669,38 +683,115 @@ function renderGrid(app: App): void {
       if (ui.buyingCell) {
         // The purchase arm: every frontier hex carries its price; the buy
         // lands only where clicked (ADR-0013).
-        html += `<g class="${nodeClass(null)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Buy cell here for ${formatInt(total)} nous">
+        html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Buy cell here for ${formatInt(total)} nous">
           <polygon class="hex ${affordable ? "buy-here" : "future"}" points="${hexPoints(HEX_RADIUS)}"/>
           <text y="-24" text-anchor="middle" class="hex-sub">NEW CELL</text>
           ${affordable ? `<text y="8" text-anchor="middle" fill="var(--accent)" font-size="22">+</text>` : ""}
           <text y="${affordable ? 34 : 8}" text-anchor="middle" class="hex-sub">${formatInt(total)} ν${total > basePrice ? " · gated" : ""}</text>
         </g>`;
       } else {
-        html += `<g class="${nodeClass(null)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Expand here">
+        html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Expand here">
           <polygon class="hex future" points="${hexPoints(HEX_RADIUS)}"/>
         </g>`;
       }
     }
   }
 
-  // Named-chord marks: a hull wrapping each chord's voices plus its
-  // formula-chip label, drawn over the faces so a chord names itself.
-  if (overlay) {
-    html += `<g data-key="chord-marks">${overlay.marks
-      .map(
-        (mark) =>
-          `<g data-key="${mark.key}"><polygon class="chord-hull" points="${mark.points}"/><text class="chord-label mono" x="${mark.labelX}" y="${mark.labelY}">${escapeHtml(mark.label)}</text></g>`,
-      )
-      .join("")}</g>`;
-  }
-
-  // The would-form ghosts (§5–§6): dashed hulls over the chords the hovered
-  // drop or placement would form, one per forming chord. Rebuilt from the
-  // live preview state so a re-render never strands a ghost.
+  // The would-form ghosts (§5–§6): dashed seams and outlines over the
+  // chords the hovered drop or placement would form, one per forming
+  // chord — these stay OVER the modules (the promise reads on top).
+  // Rebuilt from the live preview state so a re-render never strands a
+  // ghost.
   html += `<g data-key="ghost-chords">${ghostMarksHtml(app)}</g>`;
 
   updateSvg(svg, html);
   bindGridEvents(app, svg);
+  updateChordReadout(app);
+}
+
+// One chord mark's markup (§6, prototype language #120): a two-voice chord
+// draws colored seams between its voices; a chord the seams can't carry
+// draws the offset outline polygon — the prototype's triangle, rendered
+// behind the modules so only the gaps and the poking corners show. The
+// mark's hue rides `--cc` and its pulse period `--seam-dur`. Ghost marks
+// preview would-form chords and wear their chip at the anchor, since the
+// promise belongs where the chord would land. `keyPrefix` keeps the two
+// layers' DOM keys apart.
+function chordMarkHtml(mark: ChordMark, keyPrefix: "formed" | "ghost"): string {
+  const ghost = keyPrefix === "ghost";
+  const emphasis = ghost ? " ghost-mark" : mark.focused ? " chord-focus" : " chord-fade";
+  const style = `--cc:var(--${mark.colorVar});--seam-dur:${mark.duration}s`;
+  const lines = mark.outline
+    ? `<polygon class="chord-seam chord-loop" points="${mark.outline}"/>`
+    : mark.seams
+        .map(
+          (s) =>
+            `<line class="chord-seam${ghost ? " ghost-seam" : ""}" x1="${s.x1}" y1="${s.y1}" x2="${s.x2}" y2="${s.y2}"/>`,
+        )
+        .join("");
+  const chip = ghost
+    ? `<rect class="chord-chip" x="${(mark.chipX - chipWidth(mark.label) / 2).toFixed(2)}" y="${(mark.chipY - 11.5).toFixed(2)}" width="${chipWidth(mark.label).toFixed(2)}" height="15" rx="4"/><text class="chord-label mono" x="${mark.chipX}" y="${mark.chipY}">${escapeHtml(mark.label)}</text>`
+    : "";
+  return `<g data-key="${keyPrefix}-${escapeHtml(mark.key)}" class="chord-mark${emphasis}"${ghost ? "" : ` data-chord="${escapeHtml(mark.key)}" data-voices="${escapeHtml(mark.voices.join(" "))}"`} style="${style}">${lines}${chip}</g>`;
+}
+
+// The mark index the hover questions read: the render's chord marks keyed
+// by mark key, with the render-time labels (flow chips carry live ν/s).
+const chordMarksCache = new WeakMap<App, ChordMark[]>();
+
+// The reserved readout (§6): the chips, in one place — the selected
+// module's chords win, else what the pointer rests on (a seam names its
+// chord; a module names every chord it sings in). Hidden when neither
+// asks. HTML beside the board, so the expanded face can never cover it and
+// it never moves.
+function updateChordReadout(app: App): void {
+  const host = byId("chord-readout");
+  if (!host) return;
+  const marks = chordMarksCache.get(app) ?? [];
+  const selected = app.state.modules.find((m) => m.id === app.ui.selected && m.pos !== null) ?? null;
+  // Every chord the module earns its bonus from — not just the first.
+  const chosen = selected
+    ? marks.filter((m) => m.voices.includes(selected.id))
+    : chordChipsForHover(app);
+  if (chosen.length === 0) {
+    host.hidden = true;
+    host.innerHTML = "";
+    return;
+  }
+  host.hidden = false;
+  host.innerHTML = chosen
+    .map(
+      (mark) =>
+        `<span class="chord-readout-chip mono" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.label)}</span>`,
+    )
+    .join("");
+}
+
+// The chips a hover asks for: a seam names its one chord, a module names
+// every chord it sings in.
+function chordChipsForHover(app: App): ChordMark[] {
+  const hover = app.ui.chordHover;
+  if (!hover) return [];
+  const marks = chordMarksCache.get(app) ?? [];
+  return hover.kind === "chord"
+    ? marks.filter((m) => m.key === hover.key)
+    : marks.filter((m) => m.voices.includes(hover.moduleId));
+}
+
+// The hover question (§6): what the pointer rests on. Null clears. Never a
+// re-render — the readout updates in place.
+function setChordHover(app: App, hover: ChordHover | null): void {
+  const next = hover ?? null;
+  if (sameChordHover(app.ui.chordHover, next)) return;
+  app.ui.chordHover = next;
+  updateChordReadout(app);
+}
+
+function sameChordHover(a: ChordHover | null, b: ChordHover | null): boolean {
+  if (a === null || b === null) return a === b;
+  if (a.kind === "chord" && b.kind === "chord") return a.key === b.key;
+  if (a.kind === "module" && b.kind === "module") return a.moduleId === b.moduleId;
+  return false;
 }
 
 // Generators are the sole charge source category (ADR-0012).
@@ -915,15 +1006,10 @@ function ghostMarksHtml(app: App): string {
     posOf,
     point,
     radius: HEX_RADIUS,
-    pad: 5,
+    step: LATTICE_STEP,
     labelFor: chordTermLabel,
   });
-  return overlay.marks
-    .map(
-      (mark, index) =>
-        `<g data-key="ghost-${index}"><polygon class="chord-hull ghost-hull" points="${mark.points}"/><text class="chord-label mono" x="${mark.labelX}" y="${mark.labelY}">${escapeHtml(mark.label)}</text></g>`,
-    )
-    .join("");
+  return overlay.marks.map((mark) => chordMarkHtml(mark, "ghost")).join("");
 }
 
 function bindGridEvents(app: App, svg: SVGSVGElement): void {
@@ -945,6 +1031,8 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
       event.preventDefault();
       app.rightClickCell(position());
     });
+    // The hover question rides the svg-level delegation (bindSeamHover):
+    // resting on a module or a seam asks that chord into the readout.
     // The armed placement previews on hover (§5–§6): ghosts over the
     // would-form chords, the drop register over the hovered cell.
     node.addEventListener("pointerenter", () => {
@@ -995,6 +1083,36 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
       document.addEventListener("pointercancel", cancel);
     });
     bindPointerDrag(app, node, () => deployedAt(app.state, position())?.id ?? null);
+  });
+  bindSeamHover(app, svg);
+}
+
+// The grid never replaces its svg across renders, so the chord-hover
+// question binds once, delegating: over a chord's seam, that chord; over a
+// module cell, every chord the module sings in; anywhere else, none. Ghost
+// marks never answer — they promise chords that don't exist yet.
+const boundGrids = new WeakSet<SVGSVGElement>();
+
+function bindSeamHover(app: App, svg: SVGSVGElement): void {
+  if (boundGrids.has(svg)) return;
+  boundGrids.add(svg);
+  svg.addEventListener("pointerover", (event) => {
+    if (app.dragging) return;
+    const target = event.target as Element;
+    const mark = target.closest?.(".chord-mark:not(.ghost-mark)");
+    const key = mark?.getAttribute("data-chord");
+    if (mark && key) {
+      setChordHover(app, { kind: "chord", key });
+      return;
+    }
+    const cellNode = target.closest?.("[data-cell]");
+    const [q, r] = (cellNode?.getAttribute("data-cell") ?? "").split(",").map(Number);
+    const id = cellNode && Number.isFinite(q) ? deployedAt(app.state, { q: q!, r: r! })?.id ?? null : null;
+    setChordHover(app, id ? { kind: "module", moduleId: id } : null);
+  });
+  svg.addEventListener("pointerleave", () => {
+    if (app.dragging) return;
+    setChordHover(app, null);
   });
 }
 
@@ -1068,6 +1186,7 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
       element.classList.remove("dragging");
       hoverTarget = null;
       setDropHover(app, null, null);
+      setChordHover(app, null);
       zone?.classList.remove("drag-over");
       if (!apply || !moved) return;
       suppressNextClick();
@@ -2653,12 +2772,14 @@ function renderDev(app: App): void {
     <button data-dev="60">+1m</button>
     <button data-dev="600">+10m</button>
     <button data-dev="target">→ target</button>
-    <button data-dev="nous">+100ν</button>`;
+    <button data-dev="nous">+100ν</button>
+    <button data-dev="synth">+synth</button>`;
   panel.querySelectorAll<HTMLButtonElement>("[data-dev]").forEach((button) => {
     button.addEventListener("click", () => {
       const key = button.getAttribute("data-dev")!;
       if (key === "target") app.devToTarget();
       else if (key === "nous") app.devNous();
+      else if (key === "synth") app.devSynth();
       else app.devAdvance(Number(key));
     });
   });

@@ -20,14 +20,17 @@ import {
 } from "../engine/actions";
 import { syncArete } from "../engine/accumulator";
 import { neighbors, sameHex } from "../engine/hex";
+import { newChordTerms } from "../engine/chords";
+import { computeRates } from "../engine/economy";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
 import { formatClock } from "../engine/clock";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
-import { createInitialState } from "../engine/state";
+import { createInitialState, createModule } from "../engine/state";
 import { appActive, type FocusApp } from "../engine/apps";
 import { writeNote } from "../engine/notes";
 import { achievementName } from "../engine/achievements";
-import { BALANCE, SHELF_MODULE, CHIME } from "../engine/constants";
+import { BALANCE, CATEGORY_OF, SHELF_MODULE, CHIME } from "../engine/constants";
+import { cellNoteOf } from "../engine/lattice";
 import {
   activeHabit,
   addPracticeLog,
@@ -37,7 +40,7 @@ import {
   selectHabit,
 } from "../engine/habits";
 import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
-import type { GameState, Hex, ShelfType } from "../engine/types";
+import type { GameState, Hex, ModuleInstance, NamedChordTerm, ShelfType } from "../engine/types";
 import { render } from "./render";
 import { HISTORY_PAGE_ROWS, META } from "./meta";
 import { browserChannels, type SignalChannels } from "./signals";
@@ -74,6 +77,10 @@ export interface EnterSelection {
 
 export const freshEnterSelection = (): EnterSelection => ({ kind: "habit", habitId: null, newName: "" });
 
+// The chord-hover ask (§6): a seam hovered names its one chord; a module
+// hovered names every chord it sings in. The reserved readout answers.
+export type ChordHover = { kind: "chord"; key: string } | { kind: "module"; moduleId: string };
+
 export interface UiState {
   selected: string | null;
   // The focus app whose console popover is open, if any (ADR-0012).
@@ -82,6 +89,10 @@ export interface UiState {
   // The live drop preview (§5–§6): the module a drag or armed placement is
   // pointing at, and the cell it hovers. Null whenever nothing hovers.
   dropHover: { moduleId: string; pos: Hex } | null;
+  // The chord the pointer rests on (§6): a hovered seam's chord or a
+  // hovered module's chords, asked into the reserved readout. Light
+  // furniture — never saved, cleared with the transient modes.
+  chordHover: ChordHover | null;
   // Cell purchase (ADR-0013): armed from the catalog, resolved by clicking a
   // frontier hex. The buy only lands when a frontier cell is clicked.
   buyingCell: boolean;
@@ -98,10 +109,6 @@ export interface UiState {
   enter: EnterSelection;
   showAcquired: boolean;
   editingHabitId: string | null;
-  // The chord view (issue #62): display-only highlight of the board's chord
-  // terms — chord voices stay lit, everything else dims, pair links and
-  // named-chord hulls draw in the chord register. Never affects gameplay.
-  showChords: boolean;
   // Session history (§9): the Time app's list view, its page size, and the
   // record drilled into. Light furniture — cleared with the popover.
   historyOpen: boolean;
@@ -158,6 +165,7 @@ export class App {
     app: null,
     placing: null,
     dropHover: null,
+    chordHover: null,
     buyingCell: false,
     modal: null,
     importText: "",
@@ -166,7 +174,6 @@ export class App {
     enter: freshEnterSelection(),
     showAcquired: false,
     editingHabitId: null,
-    showChords: false,
     historyOpen: false,
     historyLimit: HISTORY_PAGE_ROWS,
     drillSession: null,
@@ -372,6 +379,7 @@ export class App {
     this.ui.app = null;
     this.ui.placing = null;
     this.ui.dropHover = null;
+    this.ui.chordHover = null;
     this.ui.buyingCell = false;
   }
 
@@ -501,15 +509,6 @@ export class App {
         this.render();
       }
     });
-    // The chord view's keyboard beat (issue #62): C toggles the highlight.
-    // Display only, so it works in every mode — but never while typing.
-    document.addEventListener("keydown", (event) => {
-      if (event.key !== "c" && event.key !== "C") return;
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
-      const target = event.target;
-      if (target instanceof HTMLElement && (target.isContentEditable || target.matches("input, textarea, select"))) return;
-      this.toggleChords();
-    });
     // The Esc chain (§5): the modal eats it first; then the armed transient
     // modes unwind; then the expanded face — the selection is its open
     // state. Never while typing.
@@ -538,13 +537,6 @@ export class App {
         this.render();
       }
     });
-  }
-
-  // The chord view is a reading aid, not a session artifact: it neither
-  // clears with the transient interaction modes nor reaches the save.
-  toggleChords(): void {
-    this.ui.showChords = !this.ui.showChords;
-    this.render();
   }
 
   tick(): void {
@@ -600,6 +592,19 @@ export class App {
   private playChime(): void {
     if (this.state.muted) return;
     this.channels.playChime(this.audio);
+  }
+
+  // The formation strum (§6): a placement that forms a chord strums it —
+  // the drop gesture is the audio unlock, and the global mute silences it.
+  // The seams already said it; this is garnish, not information.
+  private strumFormedChords(before: readonly NamedChordTerm[]): void {
+    if (this.state.muted) return;
+    // Same snapshot basis as the caller's `before`, so the diff can't lie
+    // if the two calls ever drift apart.
+    const newcomers = newChordTerms(before, computeRates(this.state).namedChords);
+    if (newcomers.length === 0) return;
+    this.audio = this.channels.unlockAudio(this.audio);
+    this.channels.playStrum(this.audio, newcomers);
   }
 
   private reportAdvance(result: AdvanceResult): void {
@@ -911,8 +916,10 @@ export class App {
   pickCell(pos: Hex): void {
     const { state, ui } = this;
     if (state.mode !== "upgrade") {
-      const occupant = state.modules.find((m) => m.pos !== null && sameHex(m.pos, pos));
-      if (occupant) this.select(occupant.id);
+      // The board is locked through a session (§5): modules neither expand
+      // nor select mid-session — the click answers plainly instead of
+      // looking dead. Selection returns between sessions.
+      this.say("The board is locked during flow.");
       return;
     }
     if (ui.buyingCell) {
@@ -925,13 +932,7 @@ export class App {
     if (ui.placing) {
       const module = state.modules.find((m) => m.id === ui.placing);
       if (!module) return;
-      const result = placeModule(state, module.id, pos);
-      if (this.act(result, `${META[module.type].name} placed.`)) {
-        ui.placing = null;
-        // A placement never opens the expanded face (§5): the drop leaves
-        // it closed, whoever dropped it.
-        ui.selected = null;
-      }
+      this.placeAndStrum(module, pos);
       return;
     }
     const occupant = state.modules.find((m) => m.pos !== null && sameHex(m.pos, pos));
@@ -952,11 +953,19 @@ export class App {
     const module = state.modules.find((m) => m.id === id);
     if (!module) return;
     this.ui.placing = null;
-    if (this.act(placeModule(state, id, pos), `${META[module.type].name} placed.`)) {
-      // A placement never opens the expanded face (§5): the drop leaves it
-      // closed, whoever dropped it — an armed placement wears its module
-      // as the selection, so the drop clears it too.
+    this.placeAndStrum(module, pos);
+  }
+
+  // The one placement landing (§5–§6), shared by the click path and the
+  // drag/touch release: a drop never opens the expanded face — an armed
+  // placement wears its module as the selection, so the drop clears it —
+  // and a chord the drop newly forms strums (§6).
+  private placeAndStrum(module: ModuleInstance, pos: Hex): void {
+    const before = computeRates(this.state).namedChords;
+    if (this.act(placeModule(this.state, module.id, pos), `${META[module.type].name} placed.`)) {
+      this.ui.placing = null;
       this.ui.selected = null;
+      this.strumFormedChords(before);
     }
   }
 
@@ -1215,6 +1224,39 @@ export class App {
     this.render();
   }
 
+  // Dev grant of an additive synthesizer (#137 hands-on): it lands on the
+  // first free cell that chords with a deployed synth — a fifth beside the
+  // opening board, usually — so seams and the readout read at once. In
+  // flow the board stays locked per the standing constraints, so there it
+  // lands in the tray to drag into place between sessions.
+  devSynth(): void {
+    const module = createModule(this.state, "additive", "common");
+    this.state.modules.push(module);
+    if (this.state.mode !== "upgrade") {
+      module.pos = null;
+      this.say("Dev: additive synth in your inventory — the board is locked during flow.");
+      this.save();
+      this.render();
+      return;
+    }
+    const occupied = new Set(this.state.modules.filter((m) => m.pos !== null).map((m) => `${m.pos!.q},${m.pos!.r}`));
+    const chordsWith = this.state.modules.filter((m) => m.pos !== null && CATEGORY_OF[m.type] === "synthesizer");
+    const cell =
+      this.state.cells.find(
+        (cell) =>
+          !occupied.has(`${cell.q},${cell.r}`) &&
+          chordsWith.some((synth) => neighbors(synth.pos!).some((n) => sameHex(n, cell))),
+      ) ?? null;
+    module.pos = cell;
+    this.say(
+      cell
+        ? `Dev: additive synth placed at ${cellNoteOf(cell)}.`
+        : "Dev: additive synth in your inventory — no free cell chords with a synth.",
+    );
+    this.save();
+    this.render();
+  }
+
   frontierCells(): Hex[] {
     const { state } = this;
     const out: Hex[] = [];
@@ -1228,7 +1270,7 @@ export class App {
   }
 
   // The global mute toggle (§5): one switch in PREFERENCES gating every
-  // app sound, including the chime's hidden re-fires.
+  // app sound — the chime's re-fires included.
   setMuted(muted: boolean): void {
     this.state.muted = muted;
     this.save();

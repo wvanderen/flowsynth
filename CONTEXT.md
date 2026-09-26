@@ -32,6 +32,14 @@ _Avoid_: harmonic number, distance-from-origin
 A named pitch set — octave, fifth, major triad, and kin — recognized by pitch content over a connected cluster of synthesizers, register-free: any voicing, any octave. Overlapping chords stack multiplicatively; adjacency alone is chordless.
 _Avoid_: Named chord (the just-intonation-run sense), Chord pair
 
+**Seam**:
+The chord-colored line the board draws for a formed chord: center-to-center between a two-voice chord's adjacent voices; a chord the seams can't carry — three or more voices, or a spacer-bridged pair — draws its offset outline instead — a closed polygon behind the modules, edges riding the gaps between faces, corners just poking past. Always on, in every mode.
+_Avoid_: Chord link, Pair link, Hull
+
+**Chord readout**:
+The reserved spot beside the board — the heading's right end — that names the chords a module earns its bonus from: ×multiplier always, live ν/s contribution during a session. The selected module's chords pin it; hovering a seam or a module asks. One spot, never floating over the board.
+_Avoid_: Chord chip (the ambient-floating sense), Chord view
+
 **Spacer**:
 A silent wire module occupying one cell: it never sounds and never joins a pitch set, but conducts chord adjacency through chains of wired cells. Reaches the board only through forge rolls.
 

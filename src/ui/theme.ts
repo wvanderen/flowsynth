@@ -71,6 +71,17 @@ const finishes = {
   "finish-rare": "#b39cf2",
 } as const;
 
+// Chord annotation hues (§6): one hue per named chord — the seams' identity
+// in the prototype's chord-feedback language (#120). Annotation, not
+// category: these never ride a module face.
+const chords = {
+  "chord-octave": "#8f8ce8",
+  "chord-fifth": "#3fb5c9",
+  "chord-flat-seventh": "#a86ad4",
+  "chord-minor-triad": "#d4657f",
+  "chord-major-triad": "#e09a5a",
+} as const;
+
 // Semantic surfaces and states, derived from the primitives above so a theme
 // swap carries its whole interaction language.
 const semantics = {
@@ -102,6 +113,7 @@ export const defaultTheme: Theme = {
     ...resources,
     ...interactive,
     ...finishes,
+    ...chords,
     ...semantics,
   },
 };

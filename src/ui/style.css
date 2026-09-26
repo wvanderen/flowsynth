@@ -312,7 +312,10 @@ h1, h2, h3, p { margin: 0; }
 .workspace { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 330px; min-height: 0; }
 
 .board-panel { padding: 22px 26px 0; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-.board-heading { flex-shrink: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+/* The heading is the chord readout's positioning context: the readout
+   hangs from it as an overlay layer, so appearing or disappearing can
+   never reflow the row and shift the grid. */
+.board-heading { flex-shrink: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; position: relative; }
 .board-heading h2 { font-size: 19px; font-weight: 500; letter-spacing: -0.02em; margin: 6px 0 4px; }
 .board-heading p { font-size: 12px; color: var(--muted); max-width: 420px; }
 .board-tools { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 4px; }
@@ -760,44 +763,98 @@ body.live .inspector-empty { opacity: 0.75; }
 .lead-tip-dim { fill: var(--charge); opacity: 0.5; }
 .highlight-ring { fill: none; stroke: var(--charge); stroke-width: 1.5; opacity: 0.8; pointer-events: none; }
 
-/* Chord view (issue #62, reworked for the carrierless board): the board's
-   chord register — the synthesizer category's luminous glow, per the
-   register law (ADR-0016). Chord voices stay lit while everything
-   chordless dims; a named chord wraps its voices in a hull and wears its
-   formula-chip label. Display only. */
-.cell-node { transition: opacity 0.25s; }
-#grid.chord-view .cell-node:not(.chord-lit) { opacity: 0.22; }
-#grid.chord-view .charge-line,
-#grid.chord-view .charge-preview-line { opacity: 0.1; }
-.chord-hull {
-  fill: color-mix(in srgb, var(--nous) 7%, transparent);
-  stroke: var(--nous);
-  stroke-width: 1.5;
-  stroke-dasharray: 7 5;
+/* The chord annotation (§6, #137) — the prototype's language (#120):
+   two-voice chords seam center-to-center; chords the seams can't carry —
+   three or more voices, or a spacer-bridged pair — draw the offset
+   outline polygon rendered UNDER the modules, so only the gaps between
+   the faces and the poking corners show. The hue rides --cc, the pulse
+   period --seam-dur. The name chip is not ambient and never floats: it
+   lives in the reserved readout by the board — every chord the selected
+   module earns its bonus from, or the hovered seam/voice's. Selection is
+   the only emphasis — the selected module's chords keep the focus
+   register, the rest fade. */
+.chord-mark { pointer-events: none; }
+.chord-seam {
+  fill: none;
+  stroke: var(--cc);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.85;
+  pointer-events: stroke;
+  transition: opacity 0.2s, stroke-width 0.2s;
+}
+.chord-seam.chord-loop { stroke-width: 3.5; }
+.chord-mark.chord-focus .chord-seam { stroke-width: 6; }
+.chord-mark.chord-focus .chord-seam.chord-loop { stroke-width: 5; }
+.chord-mark.chord-fade .chord-seam { opacity: 0.18; }
+
+/* The reserved readout: the chips, stacked vertically, pinned to the
+   heading's right end as an overlay layer — outside every layout pass, so
+   hover and selection can never shift the grid, and above the board-space
+   (z-index over the bloom's 20) so the expanded face can never cover it.
+   Pointer-transparent: it reads, it never blocks. */
+.chord-readout {
+  position: absolute;
+  top: 100%;
+  right: 14px;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
   pointer-events: none;
 }
-.chord-label {
-  font: 10.5px var(--mono);
+.chord-readout[hidden] { display: none; }
+.chord-readout-chip {
+  display: inline-block;
+  padding: 3px 9px;
+  background: var(--panel-deep);
+  border: 1px solid var(--cc);
+  border-radius: 999px;
+  font-size: 10.5px;
   letter-spacing: 0.1em;
-  fill: var(--nous);
-  text-anchor: middle;
-  paint-order: stroke;
-  stroke: var(--panel-deep);
-  stroke-width: 4;
-  pointer-events: none;
+  color: var(--cc);
 }
 
-/* The would-form ghosts (§6): dashed hulls with name chips, one per chord
-   the hovered drop or placement would form — fainter than the formed
-   register, promising rather than declaring. */
-.ghost-hull {
-  fill: none;
-  stroke: var(--nous);
-  stroke-width: 1.5;
-  stroke-dasharray: 3 4;
-  opacity: 0.75;
+/* Sounding (§6): in a live session the seams pulse on their chord's own
+   period while the board stays locked — the session breathes through its
+   chords. Selection stays the only emphasis: a faded chord keeps its
+   fade and never joins the pulse (the animation would otherwise
+   override the fade's opacity). */
+body.live .chord-mark:not(.chord-fade) .chord-seam {
+  animation: seam-pulse var(--seam-dur, 2.7s) ease-in-out infinite;
 }
-.ghost-hull + .chord-label { opacity: 0.85; }
+@keyframes seam-pulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 0.45; }
+}
+
+/* The would-form ghosts (§6): dashed marks in the chord's hue, one per
+   chord the hovered drop or placement would form — promising rather than
+   declaring — and their chips always showing at the anchor, since the
+   promise is the point. Inert to the pointer: drop targeting passes
+   through. */
+.chord-mark.ghost-mark .chord-seam {
+  stroke-dasharray: 5 4;
+  opacity: 0.75;
+  pointer-events: none;
+}
+.chord-mark.ghost-mark .chord-chip {
+  fill: var(--panel-deep);
+  stroke: var(--cc);
+  stroke-width: 0.75;
+  opacity: 0.85;
+  pointer-events: none;
+}
+.chord-mark.ghost-mark .chord-label {
+  font: 10.5px var(--mono);
+  letter-spacing: 0.1em;
+  fill: var(--ink);
+  text-anchor: middle;
+  opacity: 0.85;
+  pointer-events: none;
+}
 
 /* The lit receiver breathes: charge state is feedback, not decoration, so
    the pulse rides the same 0..1 glow the face already carries inline. */

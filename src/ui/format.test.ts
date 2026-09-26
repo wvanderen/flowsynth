@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCountdown, formatInt, formatNumber, formatPracticeMinutes, practiceCountdown } from "./format";
+import { chordLiveLabel, chordTermContribution, formatCountdown, formatInt, formatNumber, formatPracticeMinutes, practiceCountdown } from "./format";
 
 describe("formatNumber — the shared live-value formatter (§7)", () => {
   it("shows exact comma-grouped integers below one million", () => {
@@ -140,5 +140,34 @@ describe("practiceCountdown — the upgrade-mode countdown decision", () => {
     expect(practiceCountdown(60, 20, 10)).toBe("in ~0:04 of practice");
     expect(practiceCountdown(240, 0, 1.1)).toBe("in ~3:38 of practice");
     expect(practiceCountdown(4900, 100, 1)).toBe("in ~1h 20m of practice");
+  });
+});
+
+describe("chordTermContribution — the term's marginal share of the live rate", () => {
+  it("is the rate minus the rate with the term divided back out", () => {
+    // A Fifth (×1.3) over a 10 ν/s base: 10 − 10/1.3 ≈ 2.308.
+    expect(chordTermContribution(10, { bonus: 0.3, instances: 1 })).toBeCloseTo(10 * (1 - 1 / 1.3), 9);
+  });
+
+  it("compounds stacked instances", () => {
+    // Octave ×1.15 ×3 compounds to 1.15³ over the term's rate share.
+    expect(chordTermContribution(10, { bonus: 0.15, instances: 3 })).toBeCloseTo(10 * (1 - 1 / 1.15 ** 3), 9);
+  });
+
+  it("is zero when the term carries no bonus", () => {
+    expect(chordTermContribution(10, { bonus: 0, instances: 1 })).toBe(0);
+  });
+});
+
+describe("chordLiveLabel — the chip's in-session label (§6)", () => {
+  it("keeps the multiplier and adds the live ν/s contribution", () => {
+    // A ×1.3 term over a 10 ν/s termless rate: 13 total, 3 of it the chord's.
+    expect(chordLiveLabel({ name: "Fifth", bonus: 0.3, instances: 1 }, 13)).toBe("Fifth ×1.3 · +3 ν/s");
+  });
+
+  it("stacked instances read one compounded contribution", () => {
+    const label = chordLiveLabel({ name: "Octave", bonus: 0.15, instances: 2 }, 10);
+    expect(label).toContain("Octave ×1.15 ×2 · +");
+    expect(label).toContain("ν/s");
   });
 });
