@@ -10,6 +10,17 @@
   play. One knob is left open ("maybe a pop-up hint about chords after the user acquires their
   second synth"), so two variants share the whole arc and differ only in that card:
   A: one earned pop-up hint after the second synth · B: total silence, the board language alone.
+
+  VERDICT (issue #123, approved): the single-synth earned arc WINS with the one pop-up hint kept —
+  variant A's shape. The player opens with one pre-placed synth (C4) and a grant that makes the
+  first upgrade affordable; the forge fills with practice and offers the second synth; the single
+  dismissible hint card fires exactly once, after that acquisition. The totally-silent variant B
+  was built and tested on this branch and not chosen. The deleted idle tutorial helptext stays
+  deleted; there is no tutorial state machine, no goals, no steps. Acquisition runs through the
+  forge loop only (no shelf purchase for synths in the opening). Exact pacing numbers (forge fill,
+  threshold, grant) are tuning, not spec. This file is the primary source; the sequence folds
+  into the real game at consolidation (#125).
+
   Acquisition is the accepted forge loop (#119 dock, #122 rules, placeholder pacing): practice
   seconds fill the forge; crossing the threshold offers a new synth; placing it beside the first
   chords by pitch content, previewed by the dashed would-form ghosts (#120) on the octave-stack
