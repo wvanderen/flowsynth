@@ -74,14 +74,16 @@ describe("tracesFor — the prototype's seam language", () => {
     expect(mark.seams).toHaveLength(0);
     expect(mark.outline).not.toBeNull();
     const polygon = mark.outline!.split(" ").map((p) => p.split(",").map(Number) as [number, number]);
-    // The hull of three centers is a triangle.
-    expect(polygon).toHaveLength(3);
-    // The corners still poke past the outer module edges — only just.
+    // Two clipped ends per hull edge: the triangle yields six points, the
+    // consecutive ends joining into the short corner bevels.
+    expect(polygon).toHaveLength(6);
     const centers = Object.values(region).map((h) => point(h));
+    // The corners poke only just past the outer module edges: every
+    // clipped corner point sits a fixed poke past the chassis radius.
     for (const [vx, vy] of polygon) {
       const nearest = Math.min(...centers.map(([cx, cy]) => Math.hypot(vx - cx, vy - cy)));
-      expect(nearest).toBeGreaterThan(HEX_RADIUS);
-      expect(nearest).toBeLessThan(HEX_RADIUS + 4);
+      expect(nearest).toBeCloseTo(HEX_RADIUS + 8, 0);
+      expect(nearest).toBeLessThan(HEX_RADIUS + 12);
     }
     // The edges stay straight through the gap between neighboring faces:
     // just off the plates' facing edges, never cutting a plate.

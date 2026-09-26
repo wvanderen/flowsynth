@@ -115,67 +115,71 @@ function convexHull(points: readonly Point[]): Point[] {
   upper.pop();
   return [...lower, ...upper];
 }
-
-// Offset a convex polygon outward by pad: shift every edge along its
-// outward normal and rebuild the vertices at the intersections. Radial
-// vertex scaling would starve long edges — a deep chord's row would clip.
-function offsetConvex(hull: readonly Point[], pad: number): Point[] {
-  const cx = hull.reduce((acc, p) => acc + p[0], 0) / hull.length;
-  const cy = hull.reduce((acc, p) => acc + p[1], 0) / hull.length;
-  const edges = hull.map((a, i) => {
-    const b = hull[(i + 1) % hull.length]!;
-    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-    const nx = (b[1] - a[1]) / len;
-    const ny = -(b[0] - a[0]) / len;
-    const mx = (a[0] + b[0]) / 2 - cx;
-    const my = (a[1] + b[1]) / 2 - cy;
-    // Outward faces away from the centroid, whichever way the hull winds.
-    const outward = nx * mx + ny * my < 0 ? -1 : 1;
-    const fnx = nx * outward;
-    const fny = ny * outward;
-    // The edge's offset line: every point p on it satisfies p·n = c.
-    return { nx: fnx, ny: fny, c: a[0] * fnx + a[1] * fny + pad };
-  });
-  return hull.map((_, i) => {
-    const p = edges[(i - 1 + edges.length) % edges.length]!;
-    const q = edges[i]!;
-    const det = p.nx * q.ny - p.ny * q.nx;
-    if (Math.abs(det) < 1e-9) return hull[i]!;
-    return [
-      (p.c * q.ny - p.ny * q.c) / det,
-      (p.nx * q.c - p.c * q.nx) / det,
-    ] as const;
-  });
-}
-
-// Shortest distance from a point to the polygon's edge lines; exact for
-// points inside a convex polygon, which is the only case the tests need.
+// Shortest distance from a point to the polygon's boundary segments —
+// clamped to the segments, so bevel cuts measure by their endpoints.
 export function edgeDistance(point: Point, polygon: readonly Point[]): number {
   let best = Infinity;
   for (let i = 0; i < polygon.length; i++) {
     const a = polygon[i]!;
     const b = polygon[(i + 1) % polygon.length]!;
-    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-    const dist = Math.abs(((b[0] - a[0]) * (point[1] - a[1]) - (b[1] - a[1]) * (point[0] - a[0])) / len);
-    best = Math.min(best, dist);
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const len2 = dx * dx + dy * dy;
+    let t = len2 > 0 ? ((point[0] - a[0]) * dx + (point[1] - a[1]) * dy) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    best = Math.min(best, Math.hypot(point[0] - (a[0] + dx * t), point[1] - (a[1] + dy * t)));
   }
   return best;
 }
 
 // How far the outline rides past the plates' facing edges (tuning): enough
-// that the stroke stays clear of the chassis, little enough that the
-// corners only just poke out past the module edges.
+// that the stroke stays clear of the chassis, little enough to stay inside
+// the gap between neighboring faces.
 const OUTLINE_CLEARANCE = 2.5;
+
+// How far past the module corner the outline's corners reach (tuning): a
+// plain offset of a 60° corner would spike to twice the pad — instead the
+// corner is bevel-cut at this radius from its voice's center, just past
+// the module's own corner so the cut reads.
+const CORNER_POKE = 8;
 
 // The outline for a chord of three or more voices: the convex hull of the
 // voice centers, offset so its edges run straight through the gap between
-// neighboring faces — just off the plates' facing edges — while its
-// corners poke slightly out past the outer module edges: the prototype's
-// triangle behind the modules.
+// neighboring faces — just off the plates' facing edges — with each corner
+// bevel-cut a hair past the outer module edges: the prototype's triangle
+// behind the modules. Returns the polygon as a points string.
 function outlineFor(centers: readonly Point[], radius: number, step: number): string {
   const pad = Math.min(hexApothem(radius) + OUTLINE_CLEARANCE, step / 2);
-  const grown = offsetConvex(convexHull(centers), pad);
-  return grown.map((p) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join(" ");
+  const hull = convexHull(centers);
+  if (hull.length < 2) return "";
+  const reach = Math.sqrt(Math.max(0, (radius + CORNER_POKE) ** 2 - pad * pad));
+  const cx = hull.reduce((acc, p) => acc + p[0], 0) / hull.length;
+  const cy = hull.reduce((acc, p) => acc + p[1], 0) / hull.length;
+  const points: string[] = [];
+  for (let i = 0; i < hull.length; i++) {
+    const a = hull[i]!;
+    const b = hull[(i + 1) % hull.length]!;
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (len < 1e-6) continue;
+    const ux = (b[0] - a[0]) / len;
+    const uy = (b[1] - a[1]) / len;
+    let nx = (b[1] - a[1]) / len;
+    let ny = -(b[0] - a[0]) / len;
+    const mx = (a[0] + b[0]) / 2 - cx;
+    const my = (a[1] + b[1]) / 2 - cy;
+    // Outward faces away from the centroid, whichever way the hull winds.
+    if (nx * mx + ny * my < 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+    // The offset edge, extended to the corner-bevel radius off each end —
+    // the spike sits BEHIND the perpendicular foot on each side, so the
+    // extension runs toward the corners, and consecutive edges' clipped
+    // ends join into the short corner bevels.
+    points.push(`${(a[0] + nx * pad - ux * reach).toFixed(2)},${(a[1] + ny * pad - uy * reach).toFixed(2)}`);
+    points.push(`${(b[0] + nx * pad + ux * reach).toFixed(2)},${(b[1] + ny * pad + uy * reach).toFixed(2)}`);
+  }
+  return points.join(" ");
 }
 
 // The chord's drawn seams: two voices seam center-to-center (each
