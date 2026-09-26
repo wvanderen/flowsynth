@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BALANCE, NAMED_CHORDS } from "./constants";
 import { computeRates } from "./economy";
-import { analyzeChords } from "./chords";
+import { analyzeChords, newChordTerms, wouldFormPreview } from "./chords";
 import { fresh, give } from "./fixtures";
 import { hex } from "./hex";
 import { pitchOf } from "./lattice";
@@ -315,5 +315,69 @@ describe("cluster shape", () => {
     // (-5,3) is A♭6 (class 8); (-4,3) is E♭7 (class 3): a fifth apart.
     expect(analysis.namedChords.map((c) => `${c.name}×${c.instances}`)).toEqual(["Fifth×1"]);
     expect(analysis.multiplier).toBeCloseTo(fifth, 9);
+  });
+});
+
+describe("the would-form preview (spec §5–§6)", () => {
+  const live = (s: ReturnType<typeof fresh>) => computeRates(s, true).namedChords;
+
+  it("previews the chord a tray placement would form", () => {
+    const s = fresh(); // C4 synth m1, cells C4 · G4 · C5
+    give(s, "additive", null); // m2 waits in the tray
+    const formed = newChordTerms(live(s), wouldFormPreview(s, "m2", hex(0, 1)).chords);
+    // Dropped on C5 it rings the Octave with the opening synth — the ghost
+    // the dashed hull previews before the drop (§6).
+    expect(formed.map((c) => c.name)).toEqual(["Octave"]);
+  });
+
+  it("an occupied target swaps: the occupant takes the mover's cell", () => {
+    const s = fresh();
+    give(s, "additive", hex(1, 0)); // m2 at G4 — a Fifth with C4
+    // m1 dropped onto m2's cell swaps them; the same voices ring the same
+    // chord, so no ghost — and the hypothetical still carries the Fifth.
+    const next = wouldFormPreview(s, "m1", hex(1, 0)).chords;
+    expect(newChordTerms(live(s), next)).toHaveLength(0);
+    expect(next.map((c) => `${c.name}×${c.instances}`)).toEqual(["Fifth×1"]);
+  });
+
+  it("what breaks is never previewed — only newcomers come back", () => {
+    const s = fresh();
+    give(s, "additive", hex(1, 0)); // m2: the Fifth's second voice
+    expect(live(s).map((c) => c.name)).toEqual(["Fifth"]);
+    const next = wouldFormPreview(s, "m2", hex(5, 0)).chords; // dragged far off the cluster
+    expect(newChordTerms(live(s), next)).toHaveLength(0);
+  });
+
+  it("an inventory placement onto an occupied cell evicts the occupant", () => {
+    const s = fresh();
+    give(s, "additive", hex(1, 0)); // m2 G4 — Fifth
+    give(s, "additive", hex(0, 1)); // m3 C5 — Octave with C4
+    // Tray synth m4 dropped onto m3's cell: m3 leaves the board, m4 sings
+    // in its place. The Octave at the same root persists — a voice change,
+    // not a forming — so nothing previews, and the hypothetical rings both.
+    give(s, "additive", null); // m4 in the tray
+    const next = wouldFormPreview(s, "m4", hex(0, 1)).chords;
+    expect(newChordTerms(live(s), next)).toHaveLength(0);
+    expect(next.map((c) => c.name).sort()).toEqual(["Fifth", "Octave"]);
+  });
+
+  it("a spacer drop previews the chord its wire would bridge", () => {
+    const s = fresh();
+    give(s, "additive", hex(-2, 2)); // m2 B♭4 — one wire cell out of reach
+    expect(live(s)).toHaveLength(0);
+    give(s, "spacer", null); // m3 wire in the tray
+    const formed = newChordTerms(live(s), wouldFormPreview(s, "m3", hex(-1, 1)).chords);
+    expect(formed.map((c) => c.name)).toEqual(["Flat seventh"]);
+  });
+
+  it("non-conductor moves preview nothing new", () => {
+    const s = fresh();
+    give(s, "infusor", hex(1, 0));
+    expect(newChordTerms(live(s), wouldFormPreview(s, "m2", hex(0, 1)).chords)).toHaveLength(0);
+  });
+
+  it("an unknown module previews nothing", () => {
+    const s = fresh();
+    expect(wouldFormPreview(s, "m99", hex(0, 1)).chords).toHaveLength(0);
   });
 });

@@ -525,7 +525,6 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 
 .inspector { border-left: 1px solid var(--line); padding: 26px 24px; overflow-y: auto; }
 .inspector > section, .inspector > div > section { margin-bottom: 22px; }
-.manage-counts { font-size: 11px; color: var(--muted); margin-top: 8px; }
 
 .module-heading h1 { font-size: 26px; font-weight: 550; line-height: 1.15; margin: 10px 0 2px; }
 /* Rarity reads as text here; on faces it is engraved rings + plate tint
@@ -658,19 +657,6 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .level-heading strong { font: 30px var(--mono); font-weight: 400; }
 .level-effect { font: 13px var(--mono); color: var(--accent); }
 
-.upgrade-cta {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 14px;
-  margin: 14px 0 8px;
-  text-align: left;
-}
-.upgrade-cta strong { white-space: nowrap; font-family: var(--mono); font-weight: 600; }
-.upgrade-gain { display: block; font: 11px/1.5 var(--mono); margin-top: 4px; opacity: 0.85; }
-
 .stat-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
 .stat-row:last-child { border-bottom: 0; }
 .stat-row .mono { color: var(--ink); }
@@ -679,18 +665,10 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .inspector-empty { padding-top: 6px; }
 body.live .inspector-empty { opacity: 0.75; }
 
-/* Grid & inventory management */
-.detail-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
-.detail-head h1 { font-size: 22px; font-weight: 550; }
-.manage-actions { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
-.inventory-drop { min-height: 190px; border: 1px dashed var(--line-strong); border-radius: 8px; padding: 14px; margin-top: 14px; transition: border-color 0.15s, background 0.15s; }
-.inventory-drop.drag-over { border-color: var(--charge); background: var(--charge-tint); }
-.inventory-drop > p { margin-top: 8px; }
 .empty-copy { color: var(--muted); font-size: 12px; font-style: italic; }
 
-/* Inventory as a hex grid: the same readout-panel faces the board uses,
-   ready to swap in. */
-.inventory-hexes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 12px; }
+/* The tray's inventory tiles share the board face: the same readout-panel
+   hex the board renders, ready to swap in. */
 .inventory-tile {
   display: flex;
   flex-direction: column;
@@ -705,17 +683,8 @@ body.live .inspector-empty { opacity: 0.75; }
 .inventory-tile:hover { border-color: var(--line-strong); background: var(--hover-bg); transform: translateY(-2px); }
 .inventory-tile:focus-visible { outline-offset: 3px; }
 .inventory-tile svg { width: 100%; max-width: 112px; aspect-ratio: 1; display: block; }
-.inventory-tile .hex, .drag-ghost .hex { stroke-width: 1.4; }
-.inventory-tile .face-readout, .drag-ghost .face-readout { font-size: 14px; }
-.inventory-tile.locked .hex { fill: var(--panel-deep); }
-.inventory-tile.locked text { fill: var(--muted); }
-
-.reshape-panel { border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-top: 14px; }
-.reshape-panel h3 { font-size: 13px; margin-bottom: 6px; }
-.reshape-valid { font: 11px var(--mono); margin: 8px 0; }
-.reshape-valid.ok { color: var(--accent); }
-.reshape-valid.bad { color: var(--danger); }
-.reshape-actions { display: flex; gap: 8px; }
+.inventory-tile .hex { stroke-width: 1.4; }
+.inventory-tile .face-readout { font-size: 14px; }
 
 /* ── Hex grid ──────────────────────────────────────── */
 
@@ -739,7 +708,6 @@ body.live .inspector-empty { opacity: 0.75; }
 .hex.charged { stroke: var(--charge); fill: var(--charge); }
 .hex.dispensing { stroke: var(--forge-glow); fill: var(--forge-faint); stroke-width: 2; }
 .hex.locked { fill: var(--panel-deep); }
-.hex.remove-stage { stroke: var(--danger); stroke-width: 2; stroke-dasharray: 5 4; fill: var(--danger-faint); }
 
 .module-node { cursor: pointer; }
 .cell-node { touch-action: none; }
@@ -816,6 +784,18 @@ body.live .inspector-empty { opacity: 0.75; }
   pointer-events: none;
 }
 
+/* The would-form ghosts (§6): dashed hulls with name chips, one per chord
+   the hovered drop or placement would form — fainter than the formed
+   register, promising rather than declaring. */
+.ghost-hull {
+  fill: none;
+  stroke: var(--nous);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 4;
+  opacity: 0.75;
+}
+.ghost-hull + .chord-label { opacity: 0.85; }
+
 /* The lit receiver breathes: charge state is feedback, not decoration, so
    the pulse rides the same 0..1 glow the face already carries inline. */
 .module-node:has(.hex.charged) .hex,
@@ -830,17 +810,89 @@ body.live .inspector-empty { opacity: 0.75; }
 @keyframes forge-cross-fill { 0% { opacity: 0.85; } 100% { opacity: 0.22; } }
 @keyframes forge-cross-ink { 0%, 55% { fill: var(--ink); } }
 
-.hex.drop-target { stroke: var(--accent); stroke-width: 2.5; fill: var(--accent-soft); }
+.hex.drop-open { stroke: var(--charge); stroke-width: 2.5; fill: var(--charge-tint); }
+/* The drop register (§5): amber over an occupied cell — a swap is coming,
+   never a confirmation — green over an open one. */
+.hex.drop-occupied { stroke: var(--forge-glow); stroke-width: 2.5; fill: var(--forge-faint); }
 
-/* Raised tiles: while arranging, deployed modules lift off the board so
-   rearranging reads physically. CSS-only — the svg diff-sync keeps node
-   identity, so the lift survives clock ticks without re-rendering. */
-.module-node { transition: transform 0.22s ease, filter 0.22s ease; }
-body.managing .module-node {
-  transform: translateY(-9px) scale(1.03);
-  filter: drop-shadow(0 11px 9px var(--shadow));
+/* ── The expanded face (§5) ────────────────────────── */
+/* The module's own hex lifted off the grid toward the camera: scale + rise
+   + drop shadow, the compact face enlarged, the production contribution and
+   the Upgrade button beneath it. No Move or Return buttons — dragging is
+   already live. The host is a positioned hexagonal plate; the plate inside
+   carries the clip so the shadow can follow the hexagon's shape. */
+.module-bloom {
+  position: absolute;
+  z-index: 20;
+  pointer-events: auto;
+  filter: drop-shadow(0 18px 16px var(--shadow));
+  animation: bloom-in 0.16s ease-out;
 }
-body.managing .cell-node:has(> .hex.empty) { opacity: 0.55; }
+.module-bloom[hidden] { display: none; }
+@keyframes bloom-in { from { opacity: 0; margin-top: 7px; } }
+.bloom-plate {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background:
+    radial-gradient(ellipse at 50% 30%, color-mix(in srgb, var(--hue-synthesizer) 7%, transparent), transparent 70%),
+    var(--panel);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 44px 40px 58px;
+}
+.bloom-plate .bloom-face { width: 128px; height: 128px; display: block; }
+.bloom-plate .hex { fill: var(--plate-common); stroke-width: 1.2; }
+.bloom-plate[data-rarity="uncommon"] .hex { fill: var(--plate-uncommon); }
+.bloom-plate[data-rarity="rare"] .hex { fill: var(--plate-rare); }
+.bloom-plate text { fill: var(--ink); }
+.bloom-readouts { display: flex; flex-direction: column; align-items: center; gap: 7px; width: 100%; }
+.bloom-contribution { margin: 0; font-size: 13px; color: var(--nous); white-space: nowrap; }
+.bloom-upgrade {
+  width: 100%;
+  max-width: 168px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 11px;
+  font-size: 12px;
+}
+.bloom-upgrade strong { white-space: nowrap; font-weight: 600; }
+.bloom-upgrade small { color: var(--charge); }
+
+/* ── The board-surface tray (§5) ───────────────────── */
+/* The inventory docked over the board's bottom edge: drag a module here to
+   retrieve it (the chord-breaking gesture), click an item then a cell to
+   place — occupied placement swaps. Hidden while the flow board is locked. */
+.inventory-tray {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 24px);
+  padding: 7px 13px 9px;
+  background: var(--panel-veil);
+  border: 1px dashed var(--line-strong);
+  border-radius: 12px;
+  transition: border-color 0.15s, background 0.15s;
+  backdrop-filter: blur(3px);
+}
+.inventory-tray.off { display: none; }
+.inventory-tray.drag-over { border-color: var(--charge); background: var(--charge-tint); }
+.tray-label { font: 10px var(--mono); letter-spacing: 0.16em; color: var(--muted); flex-shrink: 0; }
+.tray-items { display: flex; align-items: center; gap: 6px; min-height: 58px; }
+.tray-empty { font-size: 11px; color: var(--muted); font-style: italic; padding: 0 6px; }
+.tray-items .inventory-tile { width: 62px; padding: 3px 2px 5px; }
+.tray-items .inventory-tile svg { width: 100%; }
 
 /* The live drag ghost: the module's own face tile, carried under the cursor. */
 .drag-ghost {
@@ -854,36 +906,6 @@ body.managing .cell-node:has(> .hex.empty) { opacity: 0.55; }
 }
 .drag-ghost svg { width: 100%; height: 100%; display: block; }
 .dragging { opacity: 0.35; }
-
-/* Arranging banner: a persistent header row while the mode is on. Static
-   markup shown purely via body.managing — its buttons are never replaced by
-   ticks. It is a layout row above the board, so it can never cover cells. */
-.manage-banner {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  flex-shrink: 0;
-  margin: 10px 0 0;
-  background: var(--panel-soft);
-  border: 1px solid var(--accent);
-  border-radius: 10px;
-  padding: 8px 10px 8px 16px;
-}
-body.managing .manage-banner { display: flex; }
-.manage-banner-label { font: 10px var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
-.manage-banner-hint { font-size: 11.5px; color: var(--muted); }
-.manage-banner-esc { font-size: 10.5px; color: var(--muted); white-space: nowrap; }
-.manage-banner-esc kbd {
-  font: 10px var(--mono);
-  border: 1px solid var(--line);
-  border-bottom-width: 2px;
-  border-radius: 4px;
-  padding: 1px 5px;
-  color: var(--ink);
-  background: var(--panel-soft);
-}
 
 /* The tool button reflects the mode it toggles. */
 .board-tools button.active { border-color: var(--accent); color: var(--accent); background: var(--accent-faint); }
@@ -905,9 +927,6 @@ body.managing .manage-banner { display: flex; }
    empty cells wear theirs beneath the plus so columns read as one note
    name. */
 .hex-note { font-size: 11px; fill: var(--muted); letter-spacing: 0.04em; }
-
-/* Drop targets: swap (accent) versus combine with a matching twin (amber). */
-.hex.combine-target { stroke: var(--forge-glow); stroke-width: 2.5; fill: var(--forge-faint); }
 
 /* ── Modals ────────────────────────────────────────── */
 

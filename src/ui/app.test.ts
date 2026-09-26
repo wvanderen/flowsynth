@@ -7,6 +7,7 @@ import { createGoal, deleteGoal, goalSummary } from "../engine/goals";
 import { recordSummaryReflection } from "../engine/actions";
 import { writeNote } from "../engine/notes";
 import { BALANCE } from "../engine/constants";
+import { computeRates } from "../engine/economy";
 import { startSession, endSession } from "../engine/actions";
 import { advance } from "../engine/advance";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport } from "../engine/trust";
@@ -46,9 +47,23 @@ function boot(channels?: SignalChannels): App {
 
 let app: App;
 
+// Cell nodes are SVG g elements: happy-dom gives them no .click().
+function clickCell(q: number, r: number): void {
+  document.querySelector(`[data-cell="${q},${r}"]`)!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+}
+
 beforeEach(() => {
   localStorage.clear();
   app = boot();
+});
+
+// A synthetic drag installs a once-capture click suppressor (killing the
+// browser's post-drop click) that removes itself on a timer; drain that
+// timer so it never swallows the next test's clicks, and drop any
+// elementFromPoint mock the test left behind.
+afterEach(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
 });
 
 describe("the console tiles", () => {
@@ -223,22 +238,23 @@ describe("the board toolbar", () => {
     expect(app.ui.buyingCell).toBe(false);
     expect(document.getElementById("buy-banner")).toBeNull();
   });
+
+  it("carries no Arrange action anywhere — dragging is already live (§5)", () => {
+    app.render();
+    expect(document.getElementById("tool-manage")).toBeNull();
+    expect(document.getElementById("manage-banner")).toBeNull();
+    expect(document.getElementById("inventory-zone")).not.toBeNull();
+    expect((document.getElementById("inventory-zone") as HTMLElement).classList.contains("off")).toBe(false);
+  });
 });
 
-describe("arranging on the carrierless board", () => {
-  it("every module is draggable — nothing is pinned, no drag is refused", () => {
-    app.startManaging();
-    const cell = document.querySelector('[data-cell="0,0"]')!;
-    cell.dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
-    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
-    // The opening synthesizer lifts like any module: a ghost, no refusal
-    // toast, no shake (ADR-0021 — nothing is spatially privileged).
-    expect(document.querySelector(".drag-ghost")).not.toBeNull();
-    expect(cell.querySelector(".module-node")!.classList.contains("pin-refused")).toBe(false);
-    document.dispatchEvent(new MouseEvent("pointerup", { clientX: 130, clientY: 100 }));
-    cell.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.state.modules[0]!.pos).toEqual(hex(0, 0));
-    expect(document.querySelector(".drag-ghost")).toBeNull();
+describe("the always-live board (§5)", () => {
+  const cell = (q: number, r: number) => document.querySelector(`[data-cell="${q},${r}"]`)!;
+  const ghosts = () => document.getElementById("grid")!.querySelectorAll(".ghost-hull");
+  const bloom = () => document.getElementById("module-bloom")!;
+
+  afterEach(() => {
+    delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
   });
 
   it("the board renders the lattice: note names on cells, columns as one name", () => {
@@ -251,6 +267,260 @@ describe("arranging on the carrierless board", () => {
     expect(labels).toContain("C5");
     // The occupied cell's face carries its note beneath the readout.
     expect(grid.querySelector('[data-cell="0,0"] .face-note')!.textContent).toBe("C4");
+  });
+
+  it("every module is draggable with no arrange mode — nothing pinned, nothing refused", () => {
+    app.render();
+    cell(0, 0).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
+    // The opening synthesizer lifts like any module: a ghost, no refusal
+    // toast, no shake (ADR-0021 — nothing is spatially privileged).
+    expect(document.querySelector(".drag-ghost")).not.toBeNull();
+    document.dispatchEvent(new MouseEvent("pointerup", { clientX: 130, clientY: 100 }));
+    expect(app.state.modules[0]!.pos).toEqual(hex(0, 0));
+    expect(document.querySelector(".drag-ghost")).toBeNull();
+  });
+
+  it("holding the face starts a live drag; the bloom collapses into the ghost; a drop leaves it closed", () => {
+    app.render();
+    // Click opens the expanded face.
+    clickCell(0, 0);
+    expect(app.ui.selected).toBe("m1");
+    expect(bloom().hidden).toBe(false);
+    // Holding the face and moving: the ghost appears, the face collapses.
+    document.elementFromPoint = () => cell(0, 0);
+    cell(0, 0).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
+    expect(document.querySelector(".drag-ghost")).not.toBeNull();
+    expect(app.ui.selected).toBeNull();
+    expect(bloom().hidden).toBe(true);
+    // Dropping back on the origin cell moves nothing — and opens nothing.
+    document.dispatchEvent(new MouseEvent("pointerup", { clientX: 130, clientY: 110 }));
+    expect(app.state.modules[0]!.pos).toEqual(hex(0, 0));
+    expect(app.ui.selected).toBeNull();
+    expect(bloom().hidden).toBe(true);
+  });
+
+  it("the drop register previews amber over occupied cells, green over open ones", () => {
+    give(app.state, "additive", hex(1, 0)); // G4 — occupies the second cell
+    app.render();
+    document.elementFromPoint = () => cell(0, 1);
+    cell(0, 0).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
+    // Hover the open cell C5 (0,1): green.
+    expect(cell(0, 1).querySelector(".hex")!.classList.contains("drop-open")).toBe(true);
+    // Hover the occupied cell G4 (1,0): amber — the swap preview.
+    document.elementFromPoint = () => cell(1, 0);
+    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 220, clientY: 100 }));
+    expect(cell(1, 0).querySelector(".hex")!.classList.contains("drop-occupied")).toBe(true);
+    expect(cell(1, 0).querySelector(".hex")!.classList.contains("drop-open")).toBe(false);
+    document.dispatchEvent(new MouseEvent("pointerup", { clientX: 220, clientY: 100 }));
+  });
+
+  it("a drop onto an occupied cell swaps immediately — even identical twins — never confirming", () => {
+    // Two identical synths: pitch lives in the cell, so their swap is a
+    // plain swap (§5, §8) — occupied drops swap, always, without confirm.
+    const twin = give(app.state, "additive", hex(1, 0));
+    app.render();
+    document.elementFromPoint = () => cell(1, 0);
+    cell(0, 0).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
+    document.dispatchEvent(new MouseEvent("pointerup", { clientX: 220, clientY: 100 }));
+    expect(app.state.modules[0]!.pos).toEqual(hex(1, 0));
+    expect(twin.pos).toEqual(hex(0, 0));
+    expect(app.state.modules).toHaveLength(2);
+    expect(app.ui.placing).toBeNull();
+    expect(app.ui.modal).toBeNull();
+  });
+
+  it("dragging off the board into the tray retrieves the module", () => {
+    app.render();
+    const tray = document.getElementById("inventory-zone")!;
+    document.elementFromPoint = () => tray;
+    cell(0, 0).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
+    expect(tray.classList.contains("drag-over")).toBe(true);
+    document.dispatchEvent(new MouseEvent("pointerup", { clientX: 100, clientY: 500 }));
+    // Retrieved: the chord-breaking gesture leaves the synth in the tray.
+    expect(app.state.modules[0]!.pos).toBeNull();
+  });
+
+  it("the tray renders inventory; clicking an item arms placement, then a cell places (swapping occupied)", () => {
+    app.returnToInventory("m1");
+    app.render();
+    const tray = document.getElementById("inventory-zone")!;
+    expect(tray.querySelector('[data-inv="m1"]')).not.toBeNull();
+    tray.querySelector<HTMLButtonElement>('[data-inv="m1"]')!.click();
+    expect(app.ui.placing).toBe("m1");
+    clickCell(0, 1);
+    expect(app.state.modules[0]!.pos).toEqual(hex(0, 1));
+    expect(app.ui.placing).toBeNull();
+    // A placement never opens the expanded face (§5).
+    expect(app.ui.selected).toBeNull();
+  });
+
+  it("an armed placement previews the would-form ghosts on hover — one per forming chord", () => {
+    // m2 at G4 rings a Fifth with the opening synth; m3 waits in the tray.
+    give(app.state, "additive", hex(1, 0));
+    const traySynth = give(app.state, "additive", null);
+    app.render();
+    document.querySelector<HTMLButtonElement>(`[data-inv="${traySynth.id}"]`)!.click();
+    // Hovering C5 (0,1): the drop would ring an Octave with C4 — a ghost.
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
+    app.render();
+    expect(ghosts()).toHaveLength(1);
+    expect(document.getElementById("grid")!.querySelector(".ghost-hull + .chord-label")!.textContent).toBe("Octave ×1.15");
+    // Hovering the occupied G4: an identical-synth swap forms nothing new.
+    cell(1, 0).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
+    app.render();
+    expect(ghosts()).toHaveLength(0);
+  });
+
+  it("a held drag wears its ghost over the target cell, and the drop delivers what it previewed", () => {
+    // C4 · G4 · C5: the board rings Fifth ×2 and Octave at root C.
+    give(app.state, "additive", hex(1, 0));
+    give(app.state, "additive", hex(0, 1));
+    app.state.cells.push(hex(1, 1)); // G5
+    app.render();
+    // Holding C5 (m3) over G5: one dashed hull — the would-be Octave at the
+    // new root G, which the current board has never rung.
+    document.elementFromPoint = () => cell(1, 1);
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
+    expect(ghosts()).toHaveLength(1);
+    expect(document.getElementById("grid")!.querySelector(".ghost-hull + .chord-label")!.textContent).toBe("Octave ×1.15");
+    // The drop delivers exactly what the ghost promised; the hull lifts.
+    document.dispatchEvent(new MouseEvent("pointerup", { clientX: 130, clientY: 110 }));
+    expect(app.state.modules[2]!.pos).toEqual(hex(1, 1));
+    expect(ghosts()).toHaveLength(0);
+    expect(computeRates(app.state, true).namedChords.map((c) => `${c.name}|${c.root}`).sort()).toEqual(["Fifth|0", "Octave|7"]);
+  });
+});
+
+describe("the expanded face (§5)", () => {
+  const bloom = () => document.getElementById("module-bloom")!;
+
+  it("click opens it above the module; the face enlarges and adds what the face doesn't say", () => {
+    app.render();
+    document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.selected).toBe("m1");
+    expect(bloom().hidden).toBe(false);
+    // The plate carries the enlarged face — glyph, level, short name, note.
+    expect(bloom().querySelector(".bloom-face .face-name")!.textContent).toBe("ADDITIVE");
+    expect(bloom().querySelector(".bloom-face .face-level")!.textContent).toBe("LV 0");
+    expect(bloom().querySelector(".bloom-face .face-note")!.textContent).toBe("C4");
+    // …plus what the face doesn't say: the ν/s contribution and the Upgrade
+    // button with its benefit and price.
+    expect(bloom().querySelector(".bloom-contribution")!.textContent).toBe(`+${formatNumber(0.1)} ν/s`);
+    const button = bloom().querySelector<HTMLButtonElement>("#bloom-upgrade")!;
+    expect(button.textContent).toContain("Upgrade");
+    expect(button.textContent).toContain("+0.02 ν/s");
+    expect(button.textContent).toContain("10 ν");
+  });
+
+  it("the upgrade button upgrades the module and keeps the bloom open", () => {
+    app.state.nous = 30;
+    app.render();
+    clickCell(0,0);
+    bloom().querySelector<HTMLButtonElement>("#bloom-upgrade")!.click();
+    expect(app.state.modules[0]!.level).toBe(1);
+    expect(app.state.nous).toBe(20);
+    // Still selected: the bloom stands, repriced.
+    expect(app.ui.selected).toBe("m1");
+    expect(bloom().querySelector("#bloom-upgrade")!.textContent).toContain("16 ν");
+  });
+
+  it("cannot afford: the button disables", () => {
+    app.state.nous = 0;
+    app.render();
+    clickCell(0,0);
+    expect((bloom().querySelector("#bloom-upgrade") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("the silent wire wears no Upgrade button — a level buys it nothing", () => {
+    give(app.state, "spacer", hex(1, 0));
+    app.render();
+    clickCell(1,0);
+    expect(bloom().hidden).toBe(false);
+    expect(bloom().querySelector("#bloom-upgrade")).toBeNull();
+    expect(bloom().querySelector(".bloom-contribution")!.textContent).toContain("silent");
+  });
+
+  it("never opens for a drag or a drop; Esc, outside click, and selecting elsewhere close it", () => {
+    app.render();
+    // Open on click.
+    clickCell(0,0);
+    expect(bloom().hidden).toBe(false);
+    // Esc closes.
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    app.render();
+    expect(bloom().hidden).toBe(true);
+    expect(app.ui.selected).toBeNull();
+    // Selecting elsewhere moves it.
+    give(app.state, "additive", hex(1, 0));
+    app.render();
+    clickCell(1,0);
+    expect(app.ui.selected).not.toBe("m1");
+    expect(bloom().hidden).toBe(false);
+    // Outside click — an empty cell — closes it.
+    clickCell(0,1);
+    expect(app.ui.selected).toBeNull();
+    expect(bloom().hidden).toBe(true);
+  });
+
+  it("clicking the bloom's own upgrade button never closes it", () => {
+    app.state.nous = 30;
+    app.render();
+    clickCell(0,0);
+    expect(bloom().hidden).toBe(false);
+    // The upgrade runs, and the bloom stands: its own click never closes it.
+    bloom().querySelector<HTMLButtonElement>("#bloom-upgrade")!.click();
+    expect(app.state.modules[0]!.level).toBe(1);
+    expect(bloom().hidden).toBe(false);
+  });
+
+  it("positions over the module: below when the cell sits high, above once the top leaves room", () => {
+    const svg = document.getElementById("grid") as unknown as SVGSVGElement;
+    // A roomy wrap: the scaled board sits small inside it.
+    Object.defineProperty(svg, "clientWidth", { configurable: true, value: 2000 });
+    Object.defineProperty(svg, "clientHeight", { configurable: true, value: 2000 });
+    // The opening C4 (0,0) is the board's topmost cell: its top edge leaves
+    // no room, so the face presents below — top tip at the cell's bottom.
+    app.render();
+    clickCell(0,0);
+    const bloomEl = document.getElementById("module-bloom")!;
+    expect(bloomEl.hidden).toBe(false);
+    expect(bloomEl.classList.contains("below")).toBe(true);
+    expect(bloomEl.style.width).toBe("224px");
+    // C5 (0,1) sits a full octave row lower: the face presents above, bottom
+    // tip at the cell's top edge, and clears the wrap's left edge.
+    give(app.state, "additive", hex(0, 1));
+    app.render();
+    clickCell(0,1);
+    expect(bloomEl.classList.contains("below")).toBe(false);
+    const left = Number.parseFloat(bloomEl.style.left);
+    expect(left).toBeGreaterThanOrEqual(0);
+    expect(Number.parseFloat(bloomEl.style.top)).toBeGreaterThan(0);
+  });
+
+  it("stays closed in flow — the board is locked and upgrades live between sessions", () => {
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, 600);
+    app.render();
+    clickCell(0,0);
+    expect(bloom().hidden).toBe(true);
+    endSession(app.state);
+  });
+
+  it("module panels no longer offer upgrades — the expanded face is the upgrade surface", () => {
+    app.render();
+    clickCell(0,0);
+    app.render();
+    const panel = document.getElementById("inspector")!;
+    expect(panel.querySelector("#upgrade-module")).toBeNull();
+    expect(panel.textContent).not.toContain("Upgrade");
+    // The panel keeps its information role.
+    expect(panel.textContent).toContain("Additive Synth");
   });
 });
 

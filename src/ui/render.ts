@@ -1,8 +1,9 @@
 import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, deployed, emittedStrength, levelCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
 import { deployedAt } from "../engine/economy";
+import { newChordTerms, wouldFormPreview } from "../engine/chords";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
-import { BALANCE, CATEGORY_OF, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
+import { BALANCE, CATEGORY_OF, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
 import { cellNoteOf, noteNameOf, octaveRowOf, positionInRange } from "../engine/lattice";
 import { appActive, appLockNote, FOCUS_APPS, type FocusApp } from "../engine/apps";
@@ -23,6 +24,7 @@ import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleI
 import type { App, EnterKind } from "./app";
 import { appIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, moduleFace } from "./face";
+import { bloomLayout } from "./bloom";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
@@ -71,6 +73,8 @@ export function render(app: App): void {
   renderBoardLedger(app);
   renderTools(app);
   renderGrid(app);
+  renderInventoryTray(app);
+  renderBloom(app);
   renderStatusMonitor(app);
   renderInspector(app);
   renderModal(app);
@@ -478,7 +482,7 @@ function renderTools(app: App): void {
   if (!host) return;
   const upgrade = state.mode === "upgrade";
   const feats = variant ? unlockedCount(state) : 0;
-  const key = JSON.stringify([variant, upgrade, state.bankedRolls.length, ui.managing, ui.buyingCell, ui.showChords, feats]);
+  const key = JSON.stringify([variant, upgrade, state.bankedRolls.length, ui.buyingCell, ui.showChords, feats]);
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     const forgeReady = upgrade && state.bankedRolls.length > 0;
@@ -488,11 +492,12 @@ function renderTools(app: App): void {
     // reads as a different kind of thing. A wears icon + label; B and C
     // wear icons alone. Feats joins the row (A, B) where the legend sat;
     // C's dock stays five actions and feats reads from the board ledger.
+    // Arrange is gone everywhere (§5): dragging is already live in upgrade
+    // mode, so no move mode exists to enter.
     if (variant === "a") {
       host.innerHTML = `
         <button class="small" id="tool-catalog" ${upgrade ? "" : "disabled"} title="${upgrade ? "The catalog: starter-shelf offers and board cells" : "Purchases happen between sessions"}">${TOOL_ICONS.catalog}<span>Catalog</span></button>
         <button class="small tool-forge" id="tool-forge" ${forgeReady ? "" : "disabled"} title="">${TOOL_ICONS.forge}<span>Forge${forgeCount > 0 ? ` · ${forgeCount}` : ""}</span><i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i></button>
-        <button class="small ${app.managing ? "active" : ""}" id="tool-manage" ${upgrade ? "" : "disabled"} aria-pressed="${app.managing}" title="${app.managing ? "Exit arranging (Esc)" : upgrade ? "Move modules" : "The grid is locked during flow"}">${TOOL_ICONS.arrange}<span>Arrange</span></button>
         <button class="small tool-cell${ui.buyingCell ? " active" : ""}" id="tool-cell" ${upgrade ? "" : "disabled"} aria-pressed="${ui.buyingCell}" title="">${CELL_TOOL_SVG}<span>Cell</span></button>
         <button class="small${ui.showChords ? " active" : ""}" id="tool-chords" aria-pressed="${ui.showChords}" title="Show chords — light the chord voices, link the pairs, outline and label named chords · C">${TOOL_ICONS.chords}<span>Chords</span></button>
         <span class="tool-sep" aria-hidden="true"></span>
@@ -507,7 +512,6 @@ function renderTools(app: App): void {
       host.innerHTML =
         icon({ id: "tool-catalog", svg: TOOL_ICONS.catalog, label: upgrade ? "Catalog — starter-shelf offers and board cells" : "Catalog — purchases happen between sessions", disabled: upgrade ? "" : "disabled" }) +
         icon({ id: "tool-forge", svg: TOOL_ICONS.forge, label: forgeTitle, extra: forgeCount > 0 ? `<b class="tool-badge mono">${forgeCount}</b>` : "", disabled: forgeReady ? "" : "disabled" }) +
-        icon({ id: "tool-manage", svg: TOOL_ICONS.arrange, label: app.managing ? "Exit arranging (Esc)" : upgrade ? "Arrange — move modules" : "Arrange — the grid is locked during flow", disabled: upgrade ? "" : "disabled", pressed: `aria-pressed="${app.managing}"`, active: app.managing ? " active" : "" }) +
         icon({ id: "tool-cell", svg: CELL_TOOL_SVG, label: "New cell", disabled: upgrade ? "" : "disabled", pressed: `aria-pressed="${ui.buyingCell}"`, active: ui.buyingCell ? " active" : "" }) +
         icon({ id: "tool-chords", svg: TOOL_ICONS.chords, label: "Show chords — light the chord voices, link the pairs, outline and label named chords · C", pressed: `aria-pressed="${ui.showChords}"`, active: ui.showChords ? " active" : "" }) +
         (variant === "b" ? icon({ id: "tool-feats", svg: FEATS_SVG, label: "Achievements — every feat, and how close the next one is", extra: feats > 0 ? `<b class="tool-badge mono">${feats}</b>` : "" }) : "");
@@ -519,13 +523,11 @@ function renderTools(app: App): void {
           <span>Forge${state.bankedRolls.length > 0 ? ` · ${state.bankedRolls.length}` : ""}</span>
           <i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i>
         </button>
-        <button class="small ${app.managing ? "active" : ""}" id="tool-manage" ${upgrade ? "" : "disabled"} aria-pressed="${app.managing}" title="${app.managing ? "Exit arranging (Esc)" : upgrade ? "Move modules" : "The grid is locked during flow"}">Grid &amp; inventory</button>
         <button class="small tool-cell${ui.buyingCell ? " active" : ""}" id="tool-cell" ${upgrade ? "" : "disabled"} aria-pressed="${ui.buyingCell}" title="">${CELL_TOOL_SVG}</button>
         <button class="small${ui.showChords ? " active" : ""}" id="tool-chords" aria-pressed="${ui.showChords}" title="Show chords — light the chord voices, link the pairs, outline and label named chords · C">Chords</button>`;
     }
     byId("tool-catalog")?.addEventListener("click", () => app.openModal("catalog"));
     byId("tool-forge")?.addEventListener("click", () => app.openModal("forge"));
-    byId("tool-manage")?.addEventListener("click", () => (app.ui.managing ? app.stopManaging() : app.startManaging()));
     byId("tool-cell")?.addEventListener("click", () => (app.ui.buyingCell ? app.cancelCellPurchase() : app.armCellPurchase()));
     byId("tool-chords")?.addEventListener("click", () => app.toggleChords());
     byId("tool-feats")?.addEventListener("click", () => app.openModal("achievements"));
@@ -562,11 +564,14 @@ function renderGrid(app: App): void {
   const { state, ui } = app;
   const svg = document.getElementById("grid") as SVGSVGElement | null;
   if (!svg) return;
+  // The drop preview is session-bound light state: with no drag carried and
+  // no placement armed, no hover can be live — stale state never survives a
+  // render.
+  if (!app.dragging && !ui.placing) ui.dropHover = null;
   const upgrade = state.mode === "upgrade";
-  const showFrontier = upgrade && (ui.reshape !== null || ui.buyingCell);
   // The frontier stops at the finite octave-row band (ADR-0022): the
   // fifths axis runs free, the rows do not.
-  const frontier = showFrontier ? app.frontierCells().filter(positionInRange) : [];
+  const frontier = upgrade && ui.buyingCell ? app.frontierCells().filter(positionInRange) : [];
   const allCells = [...state.cells, ...frontier];
   const coords = allCells.map(point);
   const minX = Math.min(...coords.map((p) => p[0])) - 78;
@@ -616,9 +621,9 @@ function renderGrid(app: App): void {
   for (const pos of state.cells) {
     const [x, y] = point(pos);
     const module = deployedAt(state, pos);
-    const isRemoval = ui.reshape?.removes.some((c) => sameHex(c, pos)) ?? false;
+    const drop = dropRegister(app, pos);
     let classes = "hex empty";
-    if (isRemoval) classes += " remove-stage";
+    if (drop) classes += ` ${dropClass(drop)}`;
     if (!module && isTargetCell(app)) classes += " target";
     // The lattice reads on every cell (board-redesign spec §2): each cell
     // is an absolute note — note name under the readout for modules, on the
@@ -627,14 +632,14 @@ function renderGrid(app: App): void {
     html += `<g class="${nodeClass(module?.id ?? null)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${module ? `${META[module.type].name} at ${cellNoteOf(pos)}` : `Empty cell · ${cellNoteOf(pos)}`}">
       ${module ? "" : `<polygon class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>`}`;
     if (module) {
-      html += moduleNode(app, module, pos, { snapshot, selectedModule });
+      html += moduleNode(app, module, pos, { snapshot, selectedModule, drop });
     } else {
       html += `<path class="empty-plus" d="M-7-6H7M0-13V1"/><text y="10" text-anchor="middle" class="hex-note">${cellNoteOf(pos)}</text><text y="24" text-anchor="middle" class="hex-sub">EMPTY CELL</text>`;
     }
     html += `</g>`;
   }
 
-  if (showFrontier) {
+  if (frontier.length > 0) {
     // The octave-row gate rides the quoted price (ADR-0022): a frontier hex
     // in a row whose one-time gate is unpaid carries cell price + premium —
     // the same cellPurchasePrice seam the buy action charges.
@@ -653,10 +658,8 @@ function renderGrid(app: App): void {
           <text y="${affordable ? 34 : 8}" text-anchor="middle" class="hex-sub">${formatInt(total)} ν${total > basePrice ? " · gated" : ""}</text>
         </g>`;
       } else {
-        const isAdd = ui.reshape?.adds.some((c) => sameHex(c, pos)) ?? false;
         html += `<g class="${nodeClass(null)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Expand here">
-          <polygon class="hex ${isAdd ? "target" : "future"}" points="${hexPoints(HEX_RADIUS)}"/>
-          ${isAdd ? `<text y="5" text-anchor="middle" fill="var(--accent)" font-size="20">+</text>` : ""}
+          <polygon class="hex future" points="${hexPoints(HEX_RADIUS)}"/>
         </g>`;
       }
     }
@@ -672,6 +675,11 @@ function renderGrid(app: App): void {
       )
       .join("")}</g>`;
   }
+
+  // The would-form ghosts (§5–§6): dashed hulls over the chords the hovered
+  // drop or placement would form, one per forming chord. Rebuilt from the
+  // live preview state so a re-render never strands a ghost.
+  html += `<g data-key="ghost-chords">${ghostMarksHtml(app)}</g>`;
 
   updateSvg(svg, html);
   bindGridEvents(app, svg);
@@ -702,6 +710,37 @@ function leadSegment(x1: number, y1: number, x2: number, y2: number): string {
 interface RenderContext {
   snapshot: ReturnType<typeof computeRates>;
   selectedModule: ModuleInstance | null;
+  // The live drop register over this cell (§5): amber for occupied, green
+  // for open. Null away from the hover.
+  drop: DropRegister | null;
+}
+
+// A module face's readout (ADR-0016): the prominent value beneath the
+// signature — the same glanceable line whether compact, in the tray, or
+// enlarged on the expanded face. Shared by the board node and the bloom.
+function faceReadoutFor(state: GameState, module: ModuleInstance, pos: Hex | null, snapshot: ReturnType<typeof computeRates>): { readout: string; readoutClass?: string; note?: string } {
+  const contribution = snapshot.contributions.get(module.id);
+  if (module.type === "forge") {
+    // The face's glanceable readout rounds; the inspector keeps exact values.
+    return {
+      readout: `${formatNumber(Math.floor(Math.max(0, state.forge.progress)))}/${formatNumber(Math.round(forgeThreshold(state.forge.earned)))}`,
+      readoutClass: "charge",
+    };
+  }
+  if (isSource(module)) return { readout: `⌁${formatNumber(modulePower(module))}` };
+  if (module.type === "infusor") {
+    return { readout: `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(snapshot.chargeStrength.get(module.id) ?? 0))}%` };
+  }
+  if (module.type === "spacer") {
+    // The spacer is silent wire: it never sounds, never joins a pitch set —
+    // its face says so and names the cell it wires.
+    return pos ? { readout: "⌇", note: cellNoteOf(pos) } : { readout: "⌇" };
+  }
+  // Synthesizers wear their contribution with the cell's note beneath it:
+  // pitch lives in the cell (ADR-0021).
+  return pos
+    ? { readout: `+${formatNumber(contribution?.value ?? 0)}`, note: cellNoteOf(pos) }
+    : { readout: `+${formatNumber(contribution?.value ?? 0)}` };
 }
 
 function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderContext): string {
@@ -714,12 +753,12 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
   const strength = ctx.snapshot.chargeStrength.get(module.id) ?? 0;
   const charged = strength > 0;
   const emittingNow = state.mode === "flow" && isSource(module) && emittedStrength(state, module, true) > 0;
-  const contribution = ctx.snapshot.contributions.get(module.id);
 
   let hexClass = "";
   if (selected) hexClass += " selected";
   if (charged) hexClass += " charged";
   if (emittingNow) hexClass += " dispensing";
+  if (ctx.drop) hexClass += ` ${dropClass(ctx.drop)}`;
 
   // Highlight eligible receivers while a generator is selected in upgrade mode.
   let highlight = "";
@@ -727,32 +766,7 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
     highlight = `<polygon data-key="preview" class="highlight-ring" points="${hexPoints(HEX_RADIUS - 4)}"/>`;
   }
 
-  // The chargeable face-hierarchy exception: the Forge's prominent readout is
-  // charge-vs-threshold, rendered as a threshold fill with a flash at crossing.
-  let under = "";
-  let readout: string;
-  let readoutClass: string | undefined;
-  let note: string | undefined;
-  if (module.type === "forge") {
-    under = waterFill(module.id, app.state.forge.progress / forgeThreshold(app.state.forge.earned));
-    // The face's glanceable readout rounds; the inspector keeps exact values.
-    readout = `${formatNumber(Math.floor(Math.max(0, app.state.forge.progress)))}/${formatNumber(Math.round(forgeThreshold(app.state.forge.earned)))}`;
-    readoutClass = "charge";
-  } else if (isSource(module)) {
-    readout = `⌁${formatNumber(modulePower(module))}`;
-  } else if (module.type === "infusor") {
-    readout = `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(ctx.snapshot.chargeStrength.get(module.id) ?? 0))}%`;
-  } else if (module.type === "spacer") {
-    // The spacer is silent wire: it never sounds, never joins a pitch set —
-    // its face says so and names the cell it wires.
-    readout = "⌇";
-    note = cellNoteOf(pos);
-  } else {
-    // Synthesizers wear their contribution with the cell's note beneath it:
-    // pitch lives in the cell (ADR-0021).
-    readout = `+${formatNumber(contribution?.value ?? 0)}`;
-    note = cellNoteOf(pos);
-  }
+  const { readout, readoutClass, note } = faceReadoutFor(state, module, pos, ctx.snapshot);
 
   // The threshold-crossing flash fires for a moment after a roll is minted.
   const crossed = module.type === "forge" && app.forgeFlashUntil > Date.now();
@@ -766,7 +780,7 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
       ...(note ? { note } : {}),
       level: module.level,
       hexClass: hexClass.trim(),
-      under,
+      under: module.type === "forge" ? waterFill(module.id, state.forge.progress / forgeThreshold(state.forge.earned)) : "",
       ...(charged ? { chargeGlow: chargeGlow(strength) } : {}),
     })}${highlight}
     </g>`;
@@ -787,15 +801,96 @@ function waterFill(moduleId: string, progress: number): string {
 function isTargetCell(app: App): boolean {
   const { ui, state } = app;
   if (state.mode !== "upgrade") return false;
-  if (ui.reshape) return false;
   if (ui.placing) {
-    const module = state.modules.find((m) => m.id === ui.placing);
-    if (!module) return false;
     // No module is spatially privileged (ADR-0021): every cell is a legal
     // drop, occupied or not — a swap, never a refusal.
     return true;
   }
   return false;
+}
+
+/* ── Live drop preview (§5–§6) ───────────────────────────────────────────
+   While a drag crosses the board, or an armed placement hovers a cell, the
+   target wears its drop register — amber over an occupied cell (a swap is
+   coming), green over an open one — and the would-form ghosts draw as
+   dashed hulls, one per forming chord. The hover itself lives in UiState;
+   only the class/layer refresh happens here, never a re-render. */
+
+type DropRegister = "open" | "occupied";
+
+// The register's class: green for open, amber for occupied — every cell
+// that shows the register wears one of exactly these two.
+function dropClass(register: DropRegister): string {
+  return register === "open" ? "drop-open" : "drop-occupied";
+}
+
+// The register a drop onto `pos` would take: occupied (amber) whenever a
+// module sits there — a swap is coming, never a confirmation — green when
+// open. Null away from the hover, in flow, or onto the carried module's
+// own cell.
+function dropRegister(app: App, pos: Hex): DropRegister | null {
+  const hover = app.ui.dropHover;
+  if (!hover || app.state.mode !== "upgrade") return null;
+  if (!sameHex(hover.pos, pos)) return null;
+  const occupant = deployedAt(app.state, pos);
+  if (occupant && occupant.id !== hover.moduleId) return "occupied";
+  if (occupant) return null;
+  return "open";
+}
+
+// Hover state changes refresh the preview in place — classes on the target
+// hex plus the ghost layer — never a full render.
+function setDropHover(app: App, moduleId: string | null, pos: Hex | null): void {
+  app.ui.dropHover = moduleId && pos ? { moduleId, pos } : null;
+  refreshDropPreview(app);
+}
+
+function refreshDropPreview(app: App): void {
+  const svg = document.getElementById("grid");
+  if (!svg) return;
+  svg.querySelectorAll(".hex.drop-open, .hex.drop-occupied").forEach((node) => node.classList.remove("drop-open", "drop-occupied"));
+  const hover = app.ui.dropHover;
+  if (hover) {
+    const register = dropRegister(app, hover.pos);
+    if (register) {
+      svg.querySelector(`[data-cell="${hover.pos.q},${hover.pos.r}"] .hex`)?.classList.add(dropClass(register));
+    }
+  }
+  const layer = svg.querySelector('[data-key="ghost-chords"]');
+  if (layer) layer.innerHTML = ghostMarksHtml(app);
+}
+
+// The would-form ghost markup (§6): dashed hulls with name chips, one per
+// chord the drop would newly form, drawn over the voices' would-be
+// positions. What breaks is expressed by what disappears — breaking is
+// never previewed.
+function ghostMarksHtml(app: App): string {
+  const hover = app.ui.dropHover;
+  if (!hover || app.state.mode !== "upgrade") return "";
+  const module = app.state.modules.find((m) => m.id === hover.moduleId);
+  if (!module) return "";
+  const conducts = CATEGORY_OF[module.type] === "synthesizer" || module.type === "spacer";
+  if (!conducts) return "";
+  const current = computeRates(app.state, true).namedChords;
+  const preview = wouldFormPreview(app.state, hover.moduleId, hover.pos);
+  const newcomers = newChordTerms(current, preview.chords);
+  if (newcomers.length === 0) return "";
+  const deployedById = new Map(app.state.modules.filter((m) => m.pos !== null).map((m) => [m.id, m]));
+  const posOf = (id: string): Hex | null => (id === hover.moduleId ? hover.pos : preview.positions.get(id) ?? deployedById.get(id)?.pos ?? null);
+  const overlay = chordOverlay({
+    namedChords: newcomers,
+    posOf,
+    point,
+    radius: HEX_RADIUS,
+    pad: 5,
+    labelFor: chordTermLabel,
+  });
+  return overlay.marks
+    .map(
+      (mark, index) =>
+        `<g data-key="ghost-${index}"><polygon class="chord-hull ghost-hull" points="${mark.points}"/><text class="chord-label mono" x="${mark.labelX}" y="${mark.labelY}">${escapeHtml(mark.label)}</text></g>`,
+    )
+    .join("");
 }
 
 function bindGridEvents(app: App, svg: SVGSVGElement): void {
@@ -817,53 +912,51 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
       event.preventDefault();
       app.rightClickCell(position());
     });
+    // The armed placement previews on hover (§5–§6): ghosts over the
+    // would-form chords, the drop register over the hovered cell.
+    node.addEventListener("pointerenter", () => {
+      if (app.dragging || app.state.mode !== "upgrade") return;
+      setDropHover(app, app.ui.placing, position());
+    });
+    node.addEventListener("pointerleave", () => {
+      if (app.dragging || app.state.mode !== "upgrade") return;
+      if (app.ui.dropHover && sameHex(app.ui.dropHover.pos, position())) setDropHover(app, null, null);
+    });
     bindPointerDrag(app, node, () => deployedAt(app.state, position())?.id ?? null);
   });
 }
 
-// Shared pointer-drag binding for grid modules and inventory items: shows a
-// ghost after a small threshold, then drops onto a cell (place, swap, or
-// combine with a matching twin) or the inventory zone (return). Click-
-// placement stays available without dragging. No module refuses the drag —
-// nothing is pinned on the carrierless board (ADR-0021).
+// Shared pointer-drag binding for grid modules and tray items: holding the
+// face starts a live drag in upgrade mode — no arrange mode exists — the
+// bloom collapses into the ghost, and the drop lands as a placement (an
+// occupied target swaps immediately, never confirms) or a retrieval into
+// the tray. Click-placement stays available without dragging. No module
+// refuses the drag — nothing is pinned on the carrierless board (ADR-0021).
 function bindPointerDrag(app: App, element: Element, moduleId: string | (() => string | null)): void {
   element.addEventListener("pointerdown", (baseEvent: Event) => {
     const event = baseEvent as PointerEvent;
-    if (event.button !== 0 || !app.ui.managing || app.state.mode !== "upgrade" || app.ui.reshape || app.ui.buyingCell) return;
+    if (event.button !== 0 || app.state.mode !== "upgrade" || app.ui.buyingCell) return;
     const id = typeof moduleId === "function" ? moduleId() : moduleId;
     if (!id) return;
-    const dragModule = app.state.modules.find((m) => m.id === id) ?? null;
     const startX = event.clientX;
     const startY = event.clientY;
     let moved = false;
     let ghost: HTMLDivElement | null = null;
     let hoverTarget: Element | null = null;
     const zone = document.getElementById("inventory-zone");
-    const canCombineWith = (occupant: { id: string; type: string; rarity: string } | undefined): boolean =>
-      !!dragModule &&
-      !!occupant &&
-      occupant.id !== dragModule.id &&
-      occupant.type === dragModule.type &&
-      occupant.rarity === dragModule.rarity &&
-      NEXT_RARITY[dragModule.rarity] !== null;
 
     const setHoverTarget = (ev: PointerEvent) => {
       const hit = document.elementFromPoint(ev.clientX, ev.clientY);
       const cellNode = hit?.closest("[data-cell]") ?? null;
-      if (cellNode !== hoverTarget) {
-        hoverTarget?.querySelector(".hex")?.classList.remove("drop-target", "combine-target");
-        hoverTarget = cellNode;
-        const [q, r] = (hoverTarget?.getAttribute("data-cell") ?? "").split(",").map(Number);
-        const occupant =
-          hoverTarget && Number.isFinite(q) && Number.isFinite(r)
-            ? app.state.modules.find((m) => m.pos !== null && m.pos.q === q && m.pos.r === r)
-            : undefined;
-        hoverTarget
-          ?.querySelector(".hex")
-          ?.classList.add(canCombineWith(occupant) ? "combine-target" : "drop-target");
-      }
       const overZone = !!hit?.closest("#inventory-zone");
       zone?.classList.toggle("drag-over", overZone);
+      if (cellNode !== hoverTarget) {
+        hoverTarget = cellNode;
+        const [q, r] = (hoverTarget?.getAttribute("data-cell") ?? "").split(",").map(Number);
+        const pos = Number.isFinite(q) && Number.isFinite(r) ? { q: q!, r: r! } : null;
+        setDropHover(app, id, pos);
+      }
+      if (!cellNode) setDropHover(app, id, null);
     };
 
     const suppressNextClick = () => {
@@ -877,7 +970,14 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
     const move = (ev: PointerEvent) => {
       if (!moved && Math.hypot(ev.clientX - startX, ev.clientY - startY) > DRAG_THRESHOLD_PX) {
         moved = true;
+        app.dragging = id;
         const module = app.state.modules.find((m) => m.id === id);
+        // Holding the face starts the live drag (§5): the expanded face
+        // collapses into the ghost, and a drop leaves it closed.
+        if (app.ui.selected === id) {
+          app.ui.selected = null;
+          app.render();
+        }
         // The ghost is the module's own hex tile — what you carry is what you
         // drop — centered under the cursor.
         ghost = document.createElement("div");
@@ -899,10 +999,11 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
       document.removeEventListener("pointermove", move);
       document.removeEventListener("pointerup", up);
       document.removeEventListener("pointercancel", cancel);
+      app.dragging = null;
       ghost?.remove();
       element.classList.remove("dragging");
-      hoverTarget?.querySelector(".hex")?.classList.remove("drop-target", "combine-target");
       hoverTarget = null;
+      setDropHover(app, null, null);
       zone?.classList.remove("drag-over");
       if (!apply || !moved) return;
       suppressNextClick();
@@ -912,10 +1013,7 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
         app.returnToInventory(id);
       } else if (cellNode) {
         const cell = cellNode.getAttribute("data-cell")!.split(",").map(Number);
-        const pos = { q: cell[0]!, r: cell[1]! };
-        const occupant = deployedAt(app.state, pos);
-        if (canCombineWith(occupant)) app.dropCombine(id, occupant!.id, pos);
-        else app.pickCellThenPlace(id, pos);
+        app.pickCellThenPlace(id, { q: cell[0]!, r: cell[1]! });
       }
     };
     const up = (ev: PointerEvent) => finish(ev, true);
@@ -923,6 +1021,155 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
     document.addEventListener("pointermove", move);
     document.addEventListener("pointerup", up);
     document.addEventListener("pointercancel", cancel);
+  });
+}
+
+/* ── Expanded face + board tray (§5) ───────────────── */
+
+// The upgrade benefit (§5): what one level buys, in the module's own units —
+// the `Upgrade · +0.5 ν/s · 180 ν` shape. The silent wire buys nothing with
+// a level, so it wears no button at all.
+function upgradeBenefit(module: ModuleInstance): string | null {
+  const gain = modulePower(module) * (BALANCE.rarityPower[module.rarity] - 1);
+  switch (module.type) {
+    case "additive":
+    case "conditional":
+      return `+${formatNumber(BALANCE.synthRate * gain)} ν/s`;
+    case "infusor":
+      return `+${formatNumber(100 * BALANCE.infusorBonus * gain)}% uplift`;
+    case "focusKeyed":
+      return `+${formatNumber(gain)} strength`;
+    case "forge":
+      return `+${formatNumber(gain)} progress/s`;
+    case "spacer":
+      return null;
+  }
+}
+
+// The production contribution (§5): what the compact face doesn't say — the
+// effect with its units, the bloom's one added line beside the Upgrade
+// button.
+function bloomContribution(state: GameState, module: ModuleInstance): string {
+  const preview = computeRates(state, true);
+  const strength = preview.chargeStrength.get(module.id) ?? 0;
+  switch (module.type) {
+    case "additive":
+    case "conditional":
+      return `+${formatNumber(preview.contributions.get(module.id)?.value ?? 0)} ν/s`;
+    case "spacer":
+      return "silent — conducts chords, produces nothing";
+    case "focusKeyed":
+      return `${formatNumber(modulePower(module))} charge strength while its window lasts`;
+    case "infusor":
+      return `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(strength))}% to adjacent`;
+    case "forge":
+      return `${formatNumber(preview.contributions.get(module.id)?.value ?? 0)} progress/s while charged`;
+  }
+}
+
+// The expanded face: the module's own hex lifted off the grid toward the
+// camera — the compact face's UI enlarged, plus the production contribution
+// and the Upgrade button. Opens only on click, only in upgrade mode, only
+// for a deployed module; closes on outside click, Esc, or selecting
+// elsewhere; holding the face starts the live drag. The host persists (the
+// app creates it once); only the plate inside rebuilds.
+function renderBloom(app: App): void {
+  const host = byId("module-bloom");
+  if (!host) return;
+  const { state, ui } = app;
+  const module = state.modules.find((m) => m.id === ui.selected) ?? null;
+  const open = state.mode === "upgrade" && module !== null && module.pos !== null;
+  if (!open || !module || module.pos === null) {
+    if (!host.hidden) {
+      host.hidden = true;
+      host.innerHTML = "";
+      delete host.dataset.renderKey;
+    }
+    return;
+  }
+  const snapshot = computeRates(state, true);
+  const benefit = upgradeBenefit(module);
+  const cost = levelCost(module.level);
+  const affordable = wholeNous(state) >= cost;
+  // The Forge's face readout moves per tick; its bloom tracks it.
+  const forgeTick = module.type === "forge" ? Math.floor(state.forge.progress) : 0;
+  const key = JSON.stringify([module.id, module.level, module.rarity, benefit, affordable, forgeTick]);
+  if (host.dataset.renderKey !== key) {
+    host.dataset.renderKey = key;
+    const face = faceReadoutFor(state, module, module.pos, snapshot);
+    host.innerHTML = `
+      <div class="bloom-plate" data-type="${module.type}" data-rarity="${module.rarity}">
+        <svg class="bloom-face" viewBox="-70 -70 140 140" aria-hidden="true">${moduleFace({
+          type: module.type,
+          rarity: module.rarity,
+          readout: face.readout,
+          ...(face.readoutClass ? { readoutClass: face.readoutClass } : {}),
+          ...(face.note ? { note: face.note } : {}),
+          level: module.level,
+        })}</svg>
+        <div class="bloom-readouts">
+          <p class="bloom-contribution mono">${bloomContribution(state, module)}</p>
+          ${
+            benefit
+              ? `<button class="bloom-upgrade" id="bloom-upgrade" ${affordable ? "" : "disabled"} title="${affordable ? "Upgrade this module" : "Not enough whole nous"}">
+                  <span>Upgrade · <small class="mono">${benefit}</small></span>
+                  <strong class="mono">${formatInt(cost)} ν</strong>
+                </button>`
+              : ""
+          }
+        </div>
+      </div>`;
+    byId("bloom-upgrade")?.addEventListener("click", () => app.upgrade(module.id));
+    // Holding the face starts the live drag: the bloom collapses into the
+    // ghost, and a drop leaves it closed (§5).
+    const faceNode = host.querySelector(".bloom-face");
+    if (faceNode) bindPointerDrag(app, faceNode, module.id);
+  }
+  // Position over the module's cell on every render — the board may have
+  // grown or reflowed since the last one.
+  const svg = document.getElementById("grid");
+  const viewBox = (svg?.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
+  const layout = bloomLayout(
+    point(module.pos),
+    HEX_RADIUS,
+    { x: viewBox[0] ?? 0, y: viewBox[1] ?? 0, width: viewBox[2] ?? 0, height: viewBox[3] ?? 0 },
+    { width: svg?.clientWidth ?? 0, height: svg?.clientHeight ?? 0 },
+  );
+  host.hidden = false;
+  host.classList.toggle("below", layout.below);
+  host.style.left = `${Math.round(layout.left)}px`;
+  host.style.top = `${Math.round(layout.top)}px`;
+  host.style.width = `${layout.width}px`;
+  host.style.height = `${layout.height}px`;
+}
+
+// The board-surface tray (§5): the inventory docked over the board's bottom
+// edge. Retrieve by dragging off the board into it — the chord-breaking
+// gesture — place by clicking an item then a cell (occupied placement
+// swaps). Hidden while the flow board is locked.
+function renderInventoryTray(app: App): void {
+  const tray = byId("inventory-zone");
+  if (!tray) return;
+  const { state } = app;
+  const upgrade = state.mode === "upgrade";
+  tray.classList.toggle("off", !upgrade);
+  const inventory = state.modules.filter((m) => m.pos === null);
+  const key = JSON.stringify([upgrade, inventory.map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`)]);
+  if (tray.dataset.renderKey === key) return;
+  tray.dataset.renderKey = key;
+  tray.innerHTML = `<span class="tray-label">TRAY</span>
+    <div class="tray-items">${
+      inventory
+        .map(
+          (m) =>
+            `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}" title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]} — click, then a cell">${hexTileSvg(m)}</button>`,
+        )
+        .join("") || `<span class="tray-empty">drag a module here to store it</span>`
+    }</div>`;
+  tray.querySelectorAll<HTMLButtonElement>("[data-inv]").forEach((button) => {
+    const id = button.getAttribute("data-inv")!;
+    button.addEventListener("click", () => app.beginPlacing(id));
+    bindPointerDrag(app, button, id);
   });
 }
 
@@ -938,22 +1185,18 @@ function renderInspector(app: App): void {
   // Focus apps render in console popovers, never here.
   const key = JSON.stringify([
     state.mode,
-    ui.managing,
     ui.selected,
     ui.placing,
-    ui.reshape,
     state.bankedRolls.length,
     module?.level ?? null,
     module?.rarity ?? null,
-    // Module moves (drag, place, return, combine) must refresh the manage
-    // panel's hex inventory even when the selection itself never changes.
+    // Module moves (drag, place, return, combine) must refresh the panel's
+    // read even when the selection itself never changes.
     state.modules.map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}:${m.pos ? `${m.pos.q},${m.pos.r}` : "-"}`).join("|"),
   ]);
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
-    if (ui.managing && state.mode === "upgrade") {
-      renderManagePanel(app, host);
-    } else if (module) {
+    if (module) {
       renderModulePanel(app, host, module);
     } else {
       renderDissolvedOverview(host);
@@ -968,20 +1211,6 @@ function updateInspectorLive(app: App, host: HTMLElement): void {
   liveText(host, "forge", `${formatNumber(Math.max(0, state.forge.progress))} / ${formatNumber(forgeThreshold(state.forge.earned))}`);
   liveText(host, "elapsed", state.session ? formatClock(state.session.elapsed) : "—");
   liveText(host, "window", chargeWindowText(state));
-  // The upgrade CTA and its practice-minute countdown keep themselves current
-  // between rebuilds: the projected rate moves with the board, the balance
-  // with purchases, so affordability can flip while the panel stands.
-  const selected = state.modules.find((m) => m.id === app.ui.selected);
-  if (selected) {
-    const cost = levelCost(selected.level);
-    const countdownNode = host.querySelector('[data-live="countdown"]');
-    if (countdownNode) {
-      const text = upgradeCountdown(app, cost) ?? "";
-      if (countdownNode.textContent !== text) countdownNode.textContent = text;
-    }
-    const cta = byId("upgrade-module") as HTMLButtonElement | null;
-    if (cta) cta.disabled = !(state.mode === "upgrade" && wholeNous(state) >= cost);
-  }
 }
 
 // The upgrade-mode countdown for a price on this board: phrased against the
@@ -1056,9 +1285,6 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
     deployedHere && contribution && contribution.value !== 0
       ? { text: effectTextFor(module, contribution.value, chargeStrength), value: contribution.value }
       : nominalEffect(module, upgrade);
-  const growth = BALANCE.rarityPower[module.rarity];
-  const cost = levelCost(module.level);
-  const affordable = wholeNous(state) >= cost;
   const partner = state.modules.find((m) => m.id !== module.id && m.type === module.type && m.rarity === module.rarity);
 
   const focus = `<section class="focus-controls">
@@ -1101,6 +1327,8 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       ${stat("Charge", chargeStrength > 0 ? `strength ${formatNumber(chargeStrength)} (×${formatNumber(chargedFactor(chargeStrength))})` : "none")}`;
   }
 
+  // The module panel is an information surface (§5): upgrades live on the
+  // expanded face, so no upgrade CTA appears here — in either mode.
   host.innerHTML = `
     <div class="module-heading">
       <button class="quiet small" id="back-overview">← Back</button>
@@ -1112,13 +1340,6 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       <div class="eyebrow">MODULE POWER</div>
       <div class="level-heading">Level <strong>${module.level}</strong><span class="level-effect">${effect.text}</span></div>
       <p class="small muted" style="margin:6px 0 0">${effectDescription(module)}</p>
-      <button class="primary upgrade-cta" id="upgrade-module" ${upgrade && affordable ? "" : "disabled"}>
-        <span>Upgrade
-          <small class="upgrade-gain">+${formatNumber((growth - 1) * 100)}% → ${nominalGainText(module)}</small>
-        </span>
-        <strong>${formatInt(cost)} ν</strong>
-      </button>
-      ${upgrade ? `<p class="countdown mono" data-live="countdown">${upgradeCountdown(app, cost) ?? ""}</p>` : ""}
       ${!upgrade ? `<p class="small muted">Upgrades happen between sessions.</p>` : ""}
       ${upgrade && partner && module.rarity !== "rare"
         ? `<button id="combine-pair">Combine with its ${RARITY_LABEL[module.rarity]} pair</button>`
@@ -1131,7 +1352,6 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
     </section>`;
 
   byId("back-overview")?.addEventListener("click", () => app.select(null));
-  byId("upgrade-module")?.addEventListener("click", () => app.upgrade(module.id));
   byId("combine-pair")?.addEventListener("click", () => app.combinePair(module.id));
 }
 
@@ -1659,18 +1879,6 @@ function effectTextFor(module: ModuleInstance, value: number, strength = 0): str
   }
 }
 
-function nominalGainText(module: ModuleInstance): string {
-  const now = nominalEffect(module, false);
-  const growth = BALANCE.rarityPower[module.rarity];
-  if (isSource(module)) {
-    return `+${formatNumber(now.value * (growth - 1))} strength`;
-  }
-  if (module.type === "forge") {
-    return `${formatNumber(now.value * (growth - 1))} progress/s`;
-  }
-  return `+${formatNumber(now.value * (growth - 1))} effect`;
-}
-
 /* ── Grid & inventory panel ────────────────────────── */
 
 // A canvas-style face tile — the same readout panel the board renders, with
@@ -1700,61 +1908,6 @@ function nominalReadout(module: ModuleInstance): string {
     case "forge":
       return `${formatNumber(power)}/s`;
   }
-}
-
-function renderManagePanel(app: App, host: HTMLElement): void {
-  const { state, ui } = app;
-  const inventory = state.modules.filter((m) => m.pos === null);
-  const deployedCount = state.modules.length - inventory.length;
-  const reshaping = ui.reshape !== null;
-  const validity = reshaping ? app.reshapeValidity() : null;
-  host.innerHTML = `
-    <div class="detail-head">
-      <h1>Grid &amp; inventory</h1>
-      <button class="primary small" id="manage-done">Done</button>
-    </div>
-    <p class="small muted">${
-      reshaping
-        ? "Reshaping — removals and additions must balance."
-        : ui.placing
-          ? "Choose a destination cell. Occupied modules swap."
-          : "Drag tiles between cells or into the inventory; drop onto a twin to combine."
-    }</p>
-    <p class="manage-counts mono">${deployedCount} deployed · ${state.cells.length - deployedCount} empty · ${inventory.length} in inventory</p>
-    <div class="manage-actions">
-      ${reshaping
-        ? `<div class="reshape-panel">
-            <h3>Reshape board</h3>
-            <p class="small muted">Staged: −${ui.reshape!.removes.length} / +${ui.reshape!.adds.length}. Count must stay equal; shape must stay connected.</p>
-            <p class="reshape-valid ${validity!.ok ? "ok" : "bad"}">${validity!.message}</p>
-            <div class="reshape-actions">
-              <button class="primary small" id="reshape-apply" ${validity!.ok ? "" : "disabled"}>Apply</button>
-              <button class="small" id="reshape-cancel">Cancel</button>
-            </div>
-          </div>`
-        : `<button id="reshape-start">Reshape board</button>`}
-    </div>
-    <section class="inventory-drop" id="inventory-zone">
-      <h3>Inventory</h3>
-      <p class="small muted">Drop a tile here to store it; click to place.</p>
-      <div class="inventory-hexes" id="inventory-list">
-        ${inventory.map((m) => {
-          return `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]}">
-            ${hexTileSvg(m)}
-          </button>`;
-        }).join("") || `<p class="empty-copy">Inventory is empty.</p>`}
-      </div>
-    </section>`;
-
-  byId("manage-done")?.addEventListener("click", () => app.stopManaging());
-  byId("reshape-start")?.addEventListener("click", () => app.startReshape());
-  byId("reshape-apply")?.addEventListener("click", () => app.applyReshape());
-  byId("reshape-cancel")?.addEventListener("click", () => app.cancelReshape());
-  host.querySelectorAll<HTMLButtonElement>("[data-inv]").forEach((button) => {
-    const id = button.getAttribute("data-inv")!;
-    button.addEventListener("click", () => app.beginPlacing(id));
-    bindPointerDrag(app, button, id);
-  });
 }
 
 /* ── Modals ────────────────────────────────────────── */
