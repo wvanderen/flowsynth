@@ -779,14 +779,16 @@ body.live .inspector-empty { opacity: 0.75; }
 .chord-mark.chord-focus .chord-seam { stroke-width: 6; }
 .chord-mark.chord-fade .chord-seam { opacity: 0.18; }
 
-/* The reserved readout: the chips, in one spot at the heading's right
-   end — a fixed address the expanded face can never cover. */
+/* The reserved readout: the chips, stacked vertically in one spot at the
+   heading's right end — a fixed address the expanded face can never
+   cover. */
 .chord-readout {
   margin-left: 14px;
   padding-bottom: 4px;
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
 }
 .chord-readout[hidden] { display: none; }
 .chord-readout-chip {
