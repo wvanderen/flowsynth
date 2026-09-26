@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chordOverlay, convexHull, edgeDistance, hexVertices } from "./chordlayer";
+import { CHIP_STACK_PX, chordOverlay, chipWidth, convexHull, edgeDistance, hexVertices } from "./chordlayer";
 import { hex } from "../engine/hex";
 import { HEX_RADIUS } from "./face";
 import type { Hex, NamedChordTerm } from "../engine/types";
@@ -89,13 +89,6 @@ describe("chordOverlay", () => {
     expectClearance(overlay.marks[0]!, [hex(0, 0), hex(1, 0), hex(2, 0)], 5);
   });
 
-  it("lights exactly the voices of drawable terms", () => {
-    const overlay = overlayWith([chord("Fifth", ["m1", "m2"])]);
-    expect(overlay.participants.has("m1")).toBe(true);
-    expect(overlay.participants.has("m2")).toBe(true);
-    expect(overlay.participants.has("m3")).toBe(false);
-  });
-
   it("keys marks by index so same-named chords in separate clusters coexist", () => {
     const overlay = chordOverlay({
       namedChords: [chord("Fifth", ["m1", "m2"]), chord("Fifth", ["m3", "far"])],
@@ -109,9 +102,84 @@ describe("chordOverlay", () => {
     expect(overlay.marks.every((m) => m.label === "Fifth")).toBe(true);
   });
 
-  it("skips terms whose voices left the board — no light, no mark", () => {
+  it("skips terms whose voices left the board — no mark", () => {
     const overlay = overlayWith([chord("Octave", ["m1", "gone"])]);
     expect(overlay.marks).toHaveLength(0);
-    expect(overlay.participants.size).toBe(0);
+  });
+
+  it("sizes each chip's backing from its label", () => {
+    const overlay = overlayWith([chord("Fifth", ["m1", "m2"])]);
+    expect(overlay.marks[0]!.labelW).toBe(chipWidth("Fifth ×1.15"));
+  });
+
+  it("draws a power-chord region's nested hulls with cleared chips", () => {
+    // A seeded power-chord region on the lattice: C4, G4, C5 — the octave
+    // nests inside the fifth's hull and the two chips clear each other.
+    const region: Record<string, Hex> = { c4: hex(0, 0), g4: hex(1, 0), c5: hex(0, 1) };
+    const overlay = chordOverlay({
+      namedChords: [chord("Fifth", ["c4", "g4", "c5"]), chord("Octave", ["c4", "c5"])],
+      posOf: (id) => region[id] ?? null,
+      point,
+      radius: HEX_RADIUS,
+      pad: 5,
+      labelFor: (c) => c.name,
+    });
+    expect(overlay.marks).toHaveLength(2);
+    const [outer, inner] = overlay.marks;
+    // Two distinct hulls wrap the shared voices.
+    expect(outer!.points).not.toBe(inner!.points);
+    // The chips clear each other: a full stack step apart, or side by side.
+    const clearedVertically = Math.abs(outer!.labelY - inner!.labelY) >= CHIP_STACK_PX;
+    const clearedHorizontally = Math.abs(outer!.labelX - inner!.labelX) >= (outer!.labelW + inner!.labelW) / 2;
+    expect(clearedVertically || clearedHorizontally).toBe(true);
+  });
+
+  it("stacks same-row chips that would collide", () => {
+    const overlay = chordOverlay({
+      namedChords: [chord("Fifth", ["m1", "m2"]), chord("Fifth", ["m2", "m3"])],
+      posOf: (id) => POS[id] ?? null,
+      point,
+      radius: HEX_RADIUS,
+      pad: 5,
+      // A long label makes the neighboring chips' footprints overlap.
+      labelFor: () => "Flat seventh ×1.45 ×12",
+    });
+    expect(overlay.marks).toHaveLength(2);
+    const [a, b] = overlay.marks;
+    expect(Math.abs(a!.labelY - b!.labelY)).toBeGreaterThanOrEqual(CHIP_STACK_PX);
+  });
+});
+
+describe("selection emphasis (§6)", () => {
+  it("focuses the selected module's chords and fades the rest", () => {
+    const overlay = chordOverlay({
+      namedChords: [chord("Fifth", ["m1", "m2"]), chord("Octave", ["m3", "far"])],
+      posOf: (id) => POS[id] ?? null,
+      point,
+      radius: HEX_RADIUS,
+      pad: 5,
+      labelFor: (c) => c.name,
+      focusIds: ["m1"],
+    });
+    const byLabel = new Map(overlay.marks.map((m) => [m.label, m.focused]));
+    expect(byLabel.get("Fifth")).toBe(true);
+    expect(byLabel.get("Octave")).toBe(false);
+  });
+
+  it("focuses everything when nothing is selected", () => {
+    const overlay = chordOverlay({
+      namedChords: [chord("Fifth", ["m1", "m2"]), chord("Octave", ["m3", "far"])],
+      posOf: (id) => POS[id] ?? null,
+      point,
+      radius: HEX_RADIUS,
+      pad: 5,
+      labelFor: (c) => c.name,
+    });
+    expect(overlay.marks.every((m) => m.focused)).toBe(true);
+  });
+
+  it("a shared voice focuses every chord wearing it", () => {
+    const overlay = overlayWith([chord("Fifth", ["m1", "m2"]), chord("Fifth", ["m2", "m3"])]);
+    expect(overlay.marks.every((m) => m.focused)).toBe(true);
   });
 });

@@ -4,7 +4,9 @@
 // module decides which modules participate in drawable chord terms and the
 // hull that wraps each named chord's voices. With the carrierless board
 // (ADR-0021) chords are register-free pitch sets — there are no pair links
-// to draw, only named-chord hulls.
+// to draw, only named-chord hulls. The overlay is always on (§6): every
+// formed chord wears its hull and name chip, chips stack where chords
+// overlap, and selection is the caller's emphasis question.
 import type { Hex, NamedChordTerm } from "../engine/types";
 import { hexCorner } from "./face";
 
@@ -17,13 +19,30 @@ export interface ChordMark {
   readonly points: string;
   readonly labelX: number;
   readonly labelY: number;
+  // The chip's estimated pixel width — the backing rect's width and the
+  // stacking collision's footprint.
+  readonly labelW: number;
+  // Whether this chord carries one of the caller's focus ids (§6): the
+  // selected module's chords emphasize, the rest fade. Always true when no
+  // focus is asked for.
+  readonly focused: boolean;
 }
 
 export interface ChordOverlay {
   marks: ChordMark[];
-  // Every module id that lives in a drawable chord term — the view lights
-  // these and dims everything else.
-  participants: Set<string>;
+}
+
+// The chip's metrics: the mono face runs ~10.5px with 0.1em tracking, so a
+// character is ~7.4px wide; the backing adds side padding, and the vertical
+// stack step is chip height plus breathing room. Estimates for layout, not
+// measurement — the stylesheet owns the truth (tuning).
+export const CHIP_CHAR_PX = 7.4;
+export const CHIP_PAD_PX = 12;
+export const CHIP_STACK_PX = 20;
+
+// A chip's estimated pixel width from its label.
+export function chipWidth(label: string): number {
+  return label.length * CHIP_CHAR_PX + CHIP_PAD_PX;
 }
 
 // Hex corners in pixel space at a center, face.ts's angle convention.
@@ -102,9 +121,33 @@ export function edgeDistance(point: Point, polygon: readonly Point[]): number {
   return best;
 }
 
+// Stack overlapping chips (§6): where chords overlap or sit side by side,
+// their chips pile upward instead of colliding. Bottom-first, left-second
+// order — the lowest chip pins to its hull and the rest climb clear.
+function stackChips(marks: ChordMark[]): ChordMark[] {
+  const placed: ChordMark[] = [];
+  const ordered = [...marks].sort((a, b) => b.labelY - a.labelY || a.labelX - b.labelX);
+  for (const mark of ordered) {
+    let labelY = mark.labelY;
+    while (
+      placed.some(
+        (p) =>
+          Math.abs(p.labelY - labelY) < CHIP_STACK_PX &&
+          Math.abs(p.labelX - mark.labelX) < (p.labelW + mark.labelW) / 2,
+      )
+    ) {
+      labelY -= CHIP_STACK_PX;
+    }
+    placed.push({ ...mark, labelY });
+  }
+  return placed;
+}
+
 // The overlay over one board's chord terms: an offset hull plus formula-chip
 // label per named chord. A term with a voice off the board cannot be drawn
-// whole — it contributes nothing at all, not even light.
+// whole — it contributes nothing at all, not even light. `focusIds` carries
+// the selection's emphasis (§6): chords carrying one of those ids come back
+// focused, every other mark fades; unset, nothing fades.
 export function chordOverlay(opts: {
   namedChords: readonly NamedChordTerm[];
   posOf: (id: string) => Hex | null;
@@ -113,26 +156,30 @@ export function chordOverlay(opts: {
   // How far the hull clears the faces it wraps (pixels).
   pad: number;
   labelFor: (chord: NamedChordTerm) => string;
+  focusIds?: readonly string[];
 }): ChordOverlay {
   const { namedChords, posOf, point, radius, pad, labelFor } = opts;
+  const focus = new Set(opts.focusIds ?? []);
+  const emphasize = focus.size > 0;
   const round = (v: number) => Number(v.toFixed(2));
   const marks: ChordMark[] = [];
-  const participants = new Set<string>();
   namedChords.forEach((chord, index) => {
     const positions = chord.moduleIds.map(posOf);
     if (positions.some((pos) => pos === null)) return;
-    for (const id of chord.moduleIds) participants.add(id);
     const corners = positions.flatMap((pos) => hexVertices(point(pos as Hex), radius));
     const grown = offsetConvex(convexHull(corners), pad);
     const cx = grown.reduce((acc, p) => acc + p[0], 0) / grown.length;
+    const label = labelFor(chord);
     marks.push({
       key: `chord-${index}`,
-      label: labelFor(chord),
+      label,
       points: grown.map((p) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join(" "),
       labelX: round(cx),
       // The callout rides above the hull, clear of the faces it names.
       labelY: round(Math.min(...grown.map((p) => p[1])) - 9),
+      labelW: round(chipWidth(label)),
+      focused: !emphasize || chord.moduleIds.some((id) => focus.has(id)),
     });
   });
-  return { marks, participants };
+  return { marks: stackChips(marks) };
 }

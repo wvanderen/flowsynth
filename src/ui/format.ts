@@ -110,3 +110,21 @@ export function chordTermLabel(chord: { name: string; bonus: number; instances: 
   const term = `${chord.name} ×${formatNumber(1 + chord.bonus)}`;
   return chord.instances > 1 ? `${term} ×${chord.instances}` : term;
 }
+
+// One chord term's share of the live rate (§6): how much ν/s would vanish if
+// the term did — rate minus the rate with the term divided back out. The
+// standard attribution, so stacked instances contribute their compounded
+// factor and the legs still sum to the whole.
+export function chordTermContribution(rate: number, chord: { bonus: number; instances: number }): number {
+  const factor = (1 + chord.bonus) ** chord.instances;
+  if (!(factor > 1)) return 0;
+  return Math.max(0, rate * (1 - 1 / factor));
+}
+
+// The board chip's in-session label (§6): the multiplier always, the live
+// ν/s contribution beside it while a session runs —
+// "Fifth ×1.3 · +2.1 ν/s".
+export function chordLiveLabel(chord: { name: string; bonus: number; instances: number }, rate: number): string {
+  const contribution = chordTermContribution(rate, chord);
+  return `${chordTermLabel(chord)} · +${formatNumber(contribution)} ν/s`;
+}

@@ -20,16 +20,16 @@ import {
 import { poolOutstanding } from "../engine/trust";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
-import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NoteEntry, RateSnapshot } from "../engine/types";
+import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NamedChordTerm, NoteEntry, RateSnapshot } from "../engine/types";
 import type { App, EnterKind } from "./app";
 import { appIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, moduleFace } from "./face";
 import { bloomLayout, bloomPops, bloomSpan, viewMeet, viewPoint, type ViewFrame } from "./bloom";
 import { chargeGlow, chargeLeads } from "./leads";
-import { chordOverlay } from "./chordlayer";
+import { chordOverlay, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
-import { formatDate, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
+import { formatDate, formatInt, formatNumber, formatPracticeMinutes, chordLiveLabel, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
 import { renderStatusMonitor } from "./monitor";
 import { prototypeVariant, ledgerHtml, updateLedgerLive, featsChipHtml, unlockedCount, FEATS_SVG, TOOL_ICONS } from "./variant";
 
@@ -482,7 +482,7 @@ function renderTools(app: App): void {
   if (!host) return;
   const upgrade = state.mode === "upgrade";
   const feats = variant ? unlockedCount(state) : 0;
-  const key = JSON.stringify([variant, upgrade, state.bankedRolls.length, ui.buyingCell, ui.showChords, feats]);
+  const key = JSON.stringify([variant, upgrade, state.bankedRolls.length, ui.buyingCell, feats]);
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     const forgeReady = upgrade && state.bankedRolls.length > 0;
@@ -499,7 +499,6 @@ function renderTools(app: App): void {
         <button class="small" id="tool-catalog" ${upgrade ? "" : "disabled"} title="${upgrade ? "The catalog: starter-shelf offers and board cells" : "Purchases happen between sessions"}">${TOOL_ICONS.catalog}<span>Catalog</span></button>
         <button class="small tool-forge" id="tool-forge" ${forgeReady ? "" : "disabled"} title="">${TOOL_ICONS.forge}<span>Forge${forgeCount > 0 ? ` · ${forgeCount}` : ""}</span><i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i></button>
         <button class="small tool-cell${ui.buyingCell ? " active" : ""}" id="tool-cell" ${upgrade ? "" : "disabled"} aria-pressed="${ui.buyingCell}" title="">${CELL_TOOL_SVG}<span>Cell</span></button>
-        <button class="small${ui.showChords ? " active" : ""}" id="tool-chords" aria-pressed="${ui.showChords}" title="Show chords — light the chord voices, link the pairs, outline and label named chords · C">${TOOL_ICONS.chords}<span>Chords</span></button>
         <span class="tool-sep" aria-hidden="true"></span>
         <button class="small" id="tool-feats" title="Achievements — every feat, and how close the next one is">${FEATS_SVG}<span>Feats</span></button>`;
     } else if (variant === "b" || variant === "c") {
@@ -513,7 +512,6 @@ function renderTools(app: App): void {
         icon({ id: "tool-catalog", svg: TOOL_ICONS.catalog, label: upgrade ? "Catalog — starter-shelf offers and board cells" : "Catalog — purchases happen between sessions", disabled: upgrade ? "" : "disabled" }) +
         icon({ id: "tool-forge", svg: TOOL_ICONS.forge, label: forgeTitle, extra: forgeCount > 0 ? `<b class="tool-badge mono">${forgeCount}</b>` : "", disabled: forgeReady ? "" : "disabled" }) +
         icon({ id: "tool-cell", svg: CELL_TOOL_SVG, label: "New cell", disabled: upgrade ? "" : "disabled", pressed: `aria-pressed="${ui.buyingCell}"`, active: ui.buyingCell ? " active" : "" }) +
-        icon({ id: "tool-chords", svg: TOOL_ICONS.chords, label: "Show chords — light the chord voices, link the pairs, outline and label named chords · C", pressed: `aria-pressed="${ui.showChords}"`, active: ui.showChords ? " active" : "" }) +
         (variant === "b" ? icon({ id: "tool-feats", svg: FEATS_SVG, label: "Achievements — every feat, and how close the next one is", extra: feats > 0 ? `<b class="tool-badge mono">${feats}</b>` : "" }) : "");
       host.classList.add("tool-icon-row");
     } else {
@@ -524,12 +522,11 @@ function renderTools(app: App): void {
           <i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i>
         </button>
         <button class="small tool-cell${ui.buyingCell ? " active" : ""}" id="tool-cell" ${upgrade ? "" : "disabled"} aria-pressed="${ui.buyingCell}" title="">${CELL_TOOL_SVG}</button>
-        <button class="small${ui.showChords ? " active" : ""}" id="tool-chords" aria-pressed="${ui.showChords}" title="Show chords — light the chord voices, link the pairs, outline and label named chords · C">Chords</button>`;
+      `;
     }
     byId("tool-catalog")?.addEventListener("click", () => app.openModal("catalog"));
     byId("tool-forge")?.addEventListener("click", () => app.openModal("forge"));
     byId("tool-cell")?.addEventListener("click", () => (app.ui.buyingCell ? app.cancelCellPurchase() : app.armCellPurchase()));
-    byId("tool-chords")?.addEventListener("click", () => app.toggleChords());
     byId("tool-feats")?.addEventListener("click", () => app.openModal("achievements"));
   }
   // Live under the structural rebuild: the Forge pip tracks the shared
@@ -579,7 +576,6 @@ function renderGrid(app: App): void {
   const minY = Math.min(...coords.map((p) => p[1])) - 82;
   const maxY = Math.max(...coords.map((p) => p[1])) + 82;
   svg.setAttribute("viewBox", `${minX} ${minY} ${maxX - minX} ${maxY - minY}`);
-  svg.classList.toggle("chord-view", ui.showChords);
 
   const flow = state.mode === "flow";
   const snapshot = currentSnapshot(state);
@@ -595,24 +591,23 @@ function renderGrid(app: App): void {
   // bloom stands, since the bloom repeats every line the face carries.
   const bloomLifts = selectedModule !== null && bloomPops(viewMeet(frame), HEX_RADIUS);
 
-  // The chord view (issue #62, reworked for the carrierless board): a
-  // display-only read of the board's pitch-set chord terms — the same named
-  // chords the formula chip names, drawn where they live as hulls over the
-  // connected voices. Chord voices stay lit; everything else dims. Purely
-  // cosmetic: no gating, no gameplay effect, available in every mode.
+  // The chord annotation is always on (§6, #137): every formed chord wears
+  // its hull and name chip wherever the board shows — no chord view, no
+  // toggle. During a session the chips carry the live ν/s contribution;
+  // selection (§6) is the one emphasis: the selected module's chords stay
+  // focused and the rest fade.
   const deployedById = new Map(state.modules.filter((m) => m.pos !== null).map((m) => [m.id, m]));
-  const overlay = ui.showChords
-    ? chordOverlay({
-        namedChords: snapshot.namedChords,
-        posOf: (id) => deployedById.get(id)?.pos ?? null,
-        point,
-        radius: HEX_RADIUS,
-        pad: 5,
-        labelFor: chordTermLabel,
-      })
-    : null;
-  const nodeClass = (moduleId: string | null): string =>
-    ui.showChords ? `cell-node ${moduleId !== null && overlay!.participants.has(moduleId) ? "chord-lit" : "chord-dim"}` : "cell-node";
+  const focusIds = selectedModule?.pos ? [selectedModule.id] : [];
+  const labelFor = flow ? (chord: NamedChordTerm) => chordLiveLabel(chord, snapshot.rate) : chordTermLabel;
+  const overlay = chordOverlay({
+    namedChords: snapshot.namedChords,
+    posOf: (id) => deployedById.get(id)?.pos ?? null,
+    point,
+    radius: HEX_RADIUS,
+    pad: 5,
+    labelFor,
+    focusIds,
+  });
 
   // Charge leads (§8, #41): uniform green patch leads, center-to-center,
   // directional generator → receiver. Leads in live flow animate; everything
@@ -638,7 +633,7 @@ function renderGrid(app: App): void {
     const drop = dropRegister(app, pos);
     const label = module ? `${META[module.type].name} at ${cellNoteOf(pos)}` : `Empty cell · ${cellNoteOf(pos)}`;
     if (module && !lifted) {
-      html += `<g class="${nodeClass(module.id)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">`;
+      html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">`;
       html += moduleNode(app, module, pos, { snapshot, selectedModule, drop });
       html += `</g>`;
       continue;
@@ -649,7 +644,7 @@ function renderGrid(app: App): void {
     if (lifted) classes += " lifted";
     if (drop) classes += ` ${dropClass(drop)}`;
     if (!module && !lifted && isTargetCell(app)) classes += " target";
-    html += `<g class="${nodeClass(module?.id ?? null)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">
+    html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">
       <polygon class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>`;
     if (!lifted) {
       html += `<path class="empty-plus" d="M-7-6H7M0-13V1"/><text y="24" text-anchor="middle" class="hex-sub">EMPTY CELL</text>`;
@@ -669,30 +664,28 @@ function renderGrid(app: App): void {
       if (ui.buyingCell) {
         // The purchase arm: every frontier hex carries its price; the buy
         // lands only where clicked (ADR-0013).
-        html += `<g class="${nodeClass(null)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Buy cell here for ${formatInt(total)} nous">
+        html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Buy cell here for ${formatInt(total)} nous">
           <polygon class="hex ${affordable ? "buy-here" : "future"}" points="${hexPoints(HEX_RADIUS)}"/>
           <text y="-24" text-anchor="middle" class="hex-sub">NEW CELL</text>
           ${affordable ? `<text y="8" text-anchor="middle" fill="var(--accent)" font-size="22">+</text>` : ""}
           <text y="${affordable ? 34 : 8}" text-anchor="middle" class="hex-sub">${formatInt(total)} ν${total > basePrice ? " · gated" : ""}</text>
         </g>`;
       } else {
-        html += `<g class="${nodeClass(null)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Expand here">
+        html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Expand here">
           <polygon class="hex future" points="${hexPoints(HEX_RADIUS)}"/>
         </g>`;
       }
     }
   }
 
-  // Named-chord marks: a hull wrapping each chord's voices plus its
-  // formula-chip label, drawn over the faces so a chord names itself.
-  if (overlay) {
-    html += `<g data-key="chord-marks">${overlay.marks
-      .map(
-        (mark) =>
-          `<g data-key="${mark.key}"><polygon class="chord-hull" points="${mark.points}"/><text class="chord-label mono" x="${mark.labelX}" y="${mark.labelY}">${escapeHtml(mark.label)}</text></g>`,
-      )
-      .join("")}</g>`;
-  }
+  // Named-chord marks: a hull wrapping each chord's voices plus its name
+  // chip, drawn over the faces so a chord names itself. With a selection
+  // standing, the selected module's chords keep the focus register and the
+  // rest fade (§6); the marks group wears `flow` in live sessions so the
+  // hulls pulse (§6) while the board stays locked.
+  html += `<g data-key="chord-marks"${flow ? ' class="flow"' : ""}>${overlay.marks
+    .map((mark) => chordMarkHtml(mark, "formed"))
+    .join("")}</g>`;
 
   // The would-form ghosts (§5–§6): dashed hulls over the chords the hovered
   // drop or placement would form, one per forming chord. Rebuilt from the
@@ -701,6 +694,18 @@ function renderGrid(app: App): void {
 
   updateSvg(svg, html);
   bindGridEvents(app, svg);
+}
+
+// One chord mark's markup (§6): the chip rides its hull — a backing plate
+// under the label so the name reads over anything — and carries the
+// register's class: formed chords split focus/fade under a selection,
+// ghosts always promise at full strength. `keyPrefix` keeps the two
+// layers' DOM keys apart.
+function chordMarkHtml(mark: ChordMark, keyPrefix: "formed" | "ghost"): string {
+  const ghost = keyPrefix === "ghost";
+  const register = ghost ? "chord-hull ghost-hull" : `chord-hull ${mark.focused ? "chord-focus" : "chord-fade"}`;
+  const emphasis = ghost ? "" : mark.focused ? " chord-focus" : " chord-fade";
+  return `<g data-key="${keyPrefix}-${escapeHtml(mark.key)}"><polygon class="${register}" points="${mark.points}"/><rect class="chord-chip${emphasis}" x="${(mark.labelX - mark.labelW / 2).toFixed(2)}" y="${(mark.labelY - 11.5).toFixed(2)}" width="${mark.labelW.toFixed(2)}" height="15" rx="4"/><text class="chord-label${emphasis} mono" x="${mark.labelX}" y="${mark.labelY}">${escapeHtml(mark.label)}</text></g>`;
 }
 
 // Generators are the sole charge source category (ADR-0012).
@@ -918,12 +923,7 @@ function ghostMarksHtml(app: App): string {
     pad: 5,
     labelFor: chordTermLabel,
   });
-  return overlay.marks
-    .map(
-      (mark, index) =>
-        `<g data-key="ghost-${index}"><polygon class="chord-hull ghost-hull" points="${mark.points}"/><text class="chord-label mono" x="${mark.labelX}" y="${mark.labelY}">${escapeHtml(mark.label)}</text></g>`,
-    )
-    .join("");
+  return overlay.marks.map((mark) => chordMarkHtml(mark, "ghost")).join("");
 }
 
 function bindGridEvents(app: App, svg: SVGSVGElement): void {
