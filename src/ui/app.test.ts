@@ -142,7 +142,7 @@ describe("the status monitor", () => {
     expect(document.querySelector(".monitor-rail")).not.toBeNull();
   });
 
-  it("names the infusor term only when uplift reaches a synth", () => {
+  it("names the infusor term only when uplift reaches a synthesizer", () => {
     app.render();
     expect(document.querySelector('[data-live="m-inf"]')).toBeNull();
     give(app.state, "infusor", hex(0, 1));
@@ -193,7 +193,7 @@ describe("the status monitor", () => {
     expect(revived.state.sessionsCompleted).toBe(4);
     expect(revived.state.totalEarned).toBe(2_500);
     expect(revived.state.habits.map((h) => h.name)).toEqual(["Piano"]);
-    // The board reset to the new opening: one synth at C4, grant balance.
+    // The board reset to the new opening: one synthesizer at C4, grant balance.
     expect(revived.state.modules).toHaveLength(1);
     expect(revived.state.modules[0]!.pos).toEqual(hex(0, 0));
     expect(revived.state.nous).toBe(12);
@@ -341,7 +341,7 @@ describe("the always-live board (§5)", () => {
     document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
     expect(tray.classList.contains("drag-over")).toBe(true);
     document.dispatchEvent(new MouseEvent("pointerup", { clientX: 100, clientY: 500 }));
-    // Retrieved: the chord-breaking gesture leaves the synth in the tray.
+    // Retrieved: the chord-breaking gesture leaves the synthesizer in the tray.
     expect(app.state.modules[0]!.pos).toBeNull();
   });
 
@@ -360,19 +360,43 @@ describe("the always-live board (§5)", () => {
   });
 
   it("an armed placement previews the would-form ghosts on hover — one per forming chord", () => {
-    // m2 at G4 rings a Fifth with the opening synth; m3 waits in the tray.
+    // m2 at G4 rings a Fifth with the opening synthesizer; m3 waits in the tray.
     give(app.state, "additive", hex(1, 0));
     const traySynth = give(app.state, "additive", null);
     app.render();
     document.querySelector<HTMLButtonElement>(`[data-inv="${traySynth.id}"]`)!.click();
-    // Hovering C5 (0,1): the drop would ring an Octave with C4 — a ghost.
+    // Hovering C5 (0,1): the drop rings an Octave with C4 — and doubles the
+    // Fifth's root, a second instance forming (§6). Two ghosts, one per
+    // forming chord.
     cell(0, 1).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
     app.render();
-    expect(ghosts()).toHaveLength(1);
+    expect(ghosts()).toHaveLength(2);
     expect(document.getElementById("grid")!.querySelector(".ghost-hull + .chord-label")!.textContent).toBe("Octave ×1.15");
-    // Hovering the occupied G4: an identical-synth swap forms nothing new.
+    // Hovering the occupied G4: an identical-synthesizer swap forms nothing new.
     cell(1, 0).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
     app.render();
+    expect(ghosts()).toHaveLength(0);
+  });
+
+  it("placement rides the pointer: a press-and-slide previews live, and the release places", () => {
+    // Touch has no hover phase before its tap: pressing an open cell while
+    // a placement is armed previews the would-form chord as the finger
+    // slides, and the release places — a drop leaves the face closed (§5).
+    give(app.state, "additive", hex(1, 0));
+    const traySynth = give(app.state, "additive", null);
+    app.render();
+    document.querySelector<HTMLButtonElement>(`[data-inv="${traySynth.id}"]`)!.click();
+    expect(app.ui.placing).toBe(traySynth.id);
+    document.elementFromPoint = () => cell(0, 1);
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
+    // The Octave the C5 drop would ring — and the doubled Fifth — preview
+    // under the finger, one hull per forming chord.
+    expect(ghosts()).toHaveLength(2);
+    document.dispatchEvent(new MouseEvent("pointerup", { clientX: 130, clientY: 110 }));
+    expect(traySynth.pos).toEqual(hex(0, 1));
+    expect(app.ui.placing).toBeNull();
+    expect(app.ui.selected).toBeNull();
     expect(ghosts()).toHaveLength(0);
   });
 

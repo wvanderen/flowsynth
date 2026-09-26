@@ -204,11 +204,15 @@ export class App {
   // Set when the stored save was rejected (e.g. the ADR-0017 v5 clean cut):
   // the message must survive the constructor's greeting.
   private loadNotice: string | null = null;
-  // The expanded face's outside-click ledger (§5): a click that opened the
-  // bloom also bubbles to the document, so opening raises this one-shot
-  // guard and the document-level closer consumes it instead of closing
-  // what the same click just opened.
-  private bloomGuard = false;
+  // The expanded face's outside-click ledger (§5): one one-shot token
+  // count with two writers. The click that opens the bloom bubbles to the
+  // document after select() has dropped a token, and clicks inside the
+  // bloom — the Upgrade button included, whose re-render detaches it before
+  // the document listener reads anything — are captured on the bloom host,
+  // the one node no re-render replaces. The document-level closer consumes
+  // one token per click instead of closing what the click opened or stands
+  // in; a click with no token is outside, and dismisses.
+  private bloomClickTokens = 0;
   // The module a pointer drag is carrying, if any — pointerleave must not
   // clear a drag's hover preview just because the ghost crosses a cell
   // boundary. Ephemeral: lives exactly as long as one drag gesture.
@@ -305,7 +309,7 @@ export class App {
   // level listeners outlive the DOM they were bound in (a re-boot replaces
   // the body), and a stale instance must never act on — or re-render — a
   // newer instance's board.
-  private live(): boolean {
+  private ownsBoard(): boolean {
     return this.els["grid"]?.isConnected === true;
   }
 
@@ -477,21 +481,16 @@ export class App {
       if (this.ui.app === null || inside) return;
       this.closeApp();
     });
-    // The expanded face closes on outside click (§5): the one node no
-    // re-render replaces is the bloom host itself, so its capture-phase
-    // click is the "inside" mark. The guard consumes the very click that
-    // opened the bloom — it bubbles here after select() has already set
-    // the selection, and must not close what it opened.
-    let clickInsideBloom = false;
+    // The expanded face closes on outside click (§5): the bloom host's
+    // capture-phase click drops a token (see the ledger above), and the
+    // document-level closer consumes tokens before dismissing anything.
     document.getElementById("module-bloom")?.addEventListener("click", () => {
-      clickInsideBloom = true;
+      this.bloomClickTokens++;
     }, { capture: true });
     document.addEventListener("click", () => {
-      if (!this.live()) return;
-      const inside = clickInsideBloom;
-      clickInsideBloom = false;
-      if (inside || this.bloomGuard) {
-        this.bloomGuard = false;
+      if (!this.ownsBoard()) return;
+      if (this.bloomClickTokens > 0) {
+        this.bloomClickTokens--;
         return;
       }
       // A tray selection (an inventory module) wears no bloom: outside
@@ -515,7 +514,7 @@ export class App {
     // modes unwind; then the expanded face — the selection is its open
     // state. Never while typing.
     document.addEventListener("keydown", (event) => {
-      if (event.key !== "Escape" || !this.live()) return;
+      if (event.key !== "Escape" || !this.ownsBoard()) return;
       const target = event.target;
       if (target instanceof HTMLElement && (target.isContentEditable || target.matches("input, textarea, select"))) return;
       if (this.ui.modal) {
@@ -825,8 +824,8 @@ export class App {
     this.ui.app = null;
     this.ui.placing = null;
     // The click that opens the bloom bubbles to the document-level closer;
-    // guard it so the same click never closes what it opened (§5).
-    if (opening && this.ui.selected !== null) this.bloomGuard = true;
+    // it drops a token so the same click never closes what it opened (§5).
+    if (opening && this.ui.selected !== null) this.bloomClickTokens++;
     this.render();
   }
 
@@ -936,9 +935,12 @@ export class App {
       return;
     }
     const occupant = state.modules.find((m) => m.pos !== null && sameHex(m.pos, pos));
-    if (occupant) this.select(occupant.id);
-    else if (this.ui.selected !== null) {
-      // An empty cell is outside the bloom: clicking it dismisses (§5).
+    if (occupant && occupant.id !== ui.selected) {
+      this.select(occupant.id);
+    } else if (ui.selected !== null) {
+      // Outside the bloom (§5) — the vacated cell included: with the bloom
+      // standing for the selected module, its own cell renders empty, and
+      // clicking it is a dismissal, never a second toggle.
       this.ui.selected = null;
       this.render();
     }
@@ -950,7 +952,12 @@ export class App {
     const module = state.modules.find((m) => m.id === id);
     if (!module) return;
     this.ui.placing = null;
-    this.act(placeModule(state, id, pos), `${META[module.type].name} placed.`);
+    if (this.act(placeModule(state, id, pos), `${META[module.type].name} placed.`)) {
+      // A placement never opens the expanded face (§5): the drop leaves it
+      // closed, whoever dropped it — an armed placement wears its module
+      // as the selection, so the drop clears it too.
+      this.ui.selected = null;
+    }
   }
 
   returnToInventory(id: string): void {

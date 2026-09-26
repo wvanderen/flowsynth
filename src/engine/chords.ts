@@ -175,12 +175,27 @@ export function wouldFormPreview(state: GameState, id: string, target: Hex): Wou
 }
 
 // The newcomers between two chord-term lists — the would-form ghosts. A
-// chord identifies by pattern and root: the same name over the same root is
-// the same chord however the board arrived at it, so a Fifth that merely
-// sheds a doubled voice (Fifth ×2 → ×1) never masquerades as forming, while
-// a chord at a new root — or an altogether new pattern — previews.
+// chord identifies by pattern and root, and its instances count across
+// terms — doubled voices and disjoint clusters stack alike. An identity
+// would newly form when the drop's board sings more instances of it than
+// the live one does: a doubled Fifth (×1 → ×2) is a chord forming, so it
+// previews. An equal or smaller count is at best a re-voicing of the same
+// chord (a swapped identical synth) and at worst a break — neither
+// previews, because what breaks is expressed by what disappears, never
+// previewed.
 export function newChordTerms(current: readonly NamedChordTerm[], next: readonly NamedChordTerm[]): NamedChordTerm[] {
-  const key = (chord: NamedChordTerm): string => `${chord.name}|${chord.root}`;
-  const live = new Set(current.map(key));
-  return next.filter((chord) => !live.has(key(chord)));
+  const instanceTotals = (terms: readonly NamedChordTerm[]): Map<string, number> => {
+    const totals = new Map<string, number>();
+    for (const chord of terms) {
+      const key = `${chord.name}|${chord.root}`;
+      totals.set(key, (totals.get(key) ?? 0) + chord.instances);
+    }
+    return totals;
+  };
+  const live = instanceTotals(current);
+  const would = instanceTotals(next);
+  return next.filter((chord) => {
+    const key = `${chord.name}|${chord.root}`;
+    return (would.get(key) ?? 0) > (live.get(key) ?? 0);
+  });
 }

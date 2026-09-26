@@ -54,8 +54,8 @@ composite = (synths + infusor uplift) × Π chord terms
 
 - **Selecting a module opens its expanded face**: the module's own hex lifts off the grid toward the camera (scale + rise + drop shadow; easing/duration: tuning), keeping the compact face's existing UI enlarged — glyph, level, short name, cell note — and adding only what the face doesn't say: the production contribution (ν/s) and the **Upgrade button with its benefit** (`Upgrade · +0.5 ν/s · 180 ν` shape). No repeated readouts; no Move or Return buttons.
 - **Dragging is always live in upgrade mode.** No select-then-move, no Move command. Dropping onto an occupied cell **swaps immediately, without confirmation**; the target previews as occupied (amber) during drag, empty destinations as open (green).
-- **Inventory stays on the board surface**: retrieve by dragging onto the inventory dock, place by clicking an inventory item then a cell (occupied placement swaps too). No management view exists.
-- **Bloom rules, adopted everywhere**: a fixed-size regular hexagon (prototype 224×258: tuning), content centered; opens **only on click** — never for a drag or a drop, and a drop leaves it closed; sits exactly centered above the selected module, bottom tip at the cell's top edge, presenting below instead only when the frame's top leaves no room (the toward-camera metaphor); closes on outside click or Esc; expansion caps to available width and clamps inside the board wrap; holding the face starts a live drag — the bloom collapses into the ghost. On portrait phone it presents as a bottom sheet (§7).
+- **Inventory stays on the board surface**: retrieve by dragging onto the inventory dock, place by clicking an inventory item then a cell (occupied placement swaps too). Right-clicking a module retrieves it by the same gesture. No management view exists.
+- **Bloom rules, adopted everywhere**: a fixed-size regular hexagon (prototype 224×258: tuning), content centered; opens **only on click** — never for a drag or a drop, and a drop leaves it closed; **nests onto the selected module** (ADR-0024) — its center one module-radius above the module's center, both bottom corners resting on the module's upper edges, presenting below instead, mirrored onto the lower edges, only when the frame's top leaves no room (the toward-camera metaphor); pops only when it would actually enlarge the module — zoomed in past that, the affordances ride the closed face as a floating card (ADR-0024); closes on outside click or Esc; expansion caps to available width and clamps inside the board wrap; holding the face starts a live drag — the bloom collapses into the ghost. On portrait phone it presents as a bottom sheet (§7).
 - **Dismissal restores scanability**: selection elsewhere, outside click, or Esc returns the compact face. There is no leftover chrome.
 
 ## 6. Chord feedback: always-on annotation
@@ -101,7 +101,7 @@ composite = (synths + infusor uplift) × Π chord terms
 - **Everything else is earned through play.** Practice fills the forge (placeholder pacing ≈ 2 minutes); crossing the threshold offers the synth it made — the opening's first roll yields a synthesizer candidate (rigging: tuning); taking it puts the synth in the tray for placement. Upgrades and new cells are paid from banked nous. **No synth purchases exist outside the forge loop in the opening**; the starter shelf sells the generator, one infusor, and the Forge.
 - **One earned pop-up, once, ever**: after the second synth is acquired, a single dismissible card — *place it beside your first; the dashed hull previews the chord it would form; the × is what the pair earns together*. The totally-silent alternative was built and played on the same branch and not chosen.
 - **No goals, no steps, no ambient hints, no tutorial state machine.** The deleted idle helptext stays deleted.
-- **Interaction facts the arc rides on**: pitch lives in the cell, so a swap of identical synths can never break a chord — the chord-breaking gesture is *drag off the board into the tray*; the dashed would-form ghost (§6) is what makes the first placement intentional.
+- **Interaction facts the arc rides on**: pitch lives in the cell, so a swap of identical synths can never break a chord — the chord-breaking gesture is *drag off the board into the tray* (right-click retrieves by the same gesture, §5); the dashed would-form ghost (§6) is what makes the first placement intentional.
 - Exact pacing numbers (forge fill, threshold, grant size) are tuning, not spec.
 
 ## 9. Persistence: v5 → v6, hybrid migration
@@ -132,6 +132,7 @@ composite = (synths + infusor uplift) × Π chord terms
 | Chords toggle | dock mode for chord display | always-on hulls and chips (§6) |
 | Separate chord view | display-only highlight mode (#62) | always-on annotation |
 | Move / Return commands | explicit move flow, bloom buttons | dragging always live; drop on inventory dock to return |
+| Drag-onto-twin combine | dropping on an identical twin offered a merge | occupied drops swap, always — pitch lives in the cell; combine stays a panel button |
 | Swap confirmation | confirm-or-preview on occupied drops | swap immediately; amber preview during drag |
 | Arrange action | dock button | removed everywhere; dragging is the move |
 | Canvas legend | encoding legend | encodings live on the surfaces that use them |

@@ -340,6 +340,25 @@ describe("the would-form preview (spec §5–§6)", () => {
     expect(next.map((c) => `${c.name}×${c.instances}`)).toEqual(["Fifth×1"]);
   });
 
+  it("an added instance previews: a dropped voice doubling the Fifth forms a second one", () => {
+    const s = fresh();
+    give(s, "additive", hex(1, 0)); // m2 G4 — Fifth ×1 with the opening synth
+    give(s, "additive", null); // m3 waits in the tray
+    const formed = newChordTerms(live(s), wouldFormPreview(s, "m3", hex(0, 1)).chords);
+    // Dropped on C5 it doubles the Fifth's root — the second instance is a
+    // chord forming (§6), stacked with the Octave the drop also rings.
+    expect(formed.map((c) => `${c.name}×${c.instances}`).sort()).toEqual(["Fifth×2", "Octave×1"]);
+  });
+
+  it("a shed instance is a break, never a forming: Fifth ×2 → ×1 previews nothing", () => {
+    const s = fresh();
+    give(s, "additive", hex(1, 0)); // G4
+    give(s, "additive", hex(0, 1)); // C5 — the doubled root: Fifth ×2
+    expect(live(s).map((c) => `${c.name}×${c.instances}`).sort()).toEqual(["Fifth×2", "Octave×1"]);
+    const next = wouldFormPreview(s, "m3", hex(2, 2)).chords; // C5 dragged to an isolated D6
+    expect(newChordTerms(live(s), next)).toHaveLength(0);
+  });
+
   it("what breaks is never previewed — only newcomers come back", () => {
     const s = fresh();
     give(s, "additive", hex(1, 0)); // m2: the Fifth's second voice

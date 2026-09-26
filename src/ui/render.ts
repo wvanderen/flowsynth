@@ -24,7 +24,7 @@ import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleI
 import type { App, EnterKind } from "./app";
 import { appIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, moduleFace } from "./face";
-import { BLOOM_WIDTH, bloomLayout, bloomPops, viewMeet, viewPoint } from "./bloom";
+import { bloomLayout, bloomPops, bloomSpan, viewMeet, viewPoint, type ViewFrame } from "./bloom";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
@@ -584,10 +584,16 @@ function renderGrid(app: App): void {
   const flow = state.mode === "flow";
   const snapshot = currentSnapshot(state);
   const selectedModule = state.modules.find((m) => m.id === ui.selected) ?? null;
+  // One frame for every bloom placement question: the svg's viewBox plus
+  // the wrap's css-pixel size, read together (§5).
+  const frame: ViewFrame = {
+    view: { x: minX, y: minY, width: maxX - minX, height: maxY - minY },
+    box: { width: svg.clientWidth, height: svg.clientHeight },
+  };
   // The lift-off (§5): when the expanded face pops, it IS the module's hex
   // lifted toward the camera — the origin cell renders vacated while the
   // bloom stands, since the bloom repeats every line the face carries.
-  const bloomLifts = selectedModule !== null && bloomPops(viewMeet({ x: minX, y: minY, width: maxX - minX, height: maxY - minY }, { width: svg.clientWidth, height: svg.clientHeight }), HEX_RADIUS);
+  const bloomLifts = selectedModule !== null && bloomPops(viewMeet(frame), HEX_RADIUS);
 
   // The chord view (issue #62, reworked for the carrierless board): a
   // display-only read of the board's pitch-set chord terms — the same named
@@ -860,6 +866,18 @@ function setDropHover(app: App, moduleId: string | null, pos: Hex | null): void 
   refreshDropPreview(app);
 }
 
+// A gesture that commits on pointerup kills the browser's synthetic click,
+// so the release never re-fires what the drag already did (e.g. a placement
+// opening the face it must leave closed, §5).
+function suppressNextClick(): void {
+  const suppress = (clickEvent: Event) => {
+    clickEvent.preventDefault();
+    clickEvent.stopImmediatePropagation();
+  };
+  document.addEventListener("click", suppress, { capture: true, once: true });
+  setTimeout(() => document.removeEventListener("click", suppress, true), 0);
+}
+
 function refreshDropPreview(app: App): void {
   const svg = document.getElementById("grid");
   if (!svg) return;
@@ -937,6 +955,45 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
       if (app.dragging || app.state.mode !== "upgrade") return;
       if (app.ui.dropHover && sameHex(app.ui.dropHover.pos, position())) setDropHover(app, null, null);
     });
+    // Placement rides the pointer too (§5–§6): a touch press has no hover
+    // phase before its tap, so pressing an open cell while a placement is
+    // armed previews live as the finger slides, and the release places. A
+    // quick tap still places on the click — nothing here fires before the
+    // drag threshold.
+    node.addEventListener("pointerdown", (baseEvent: Event) => {
+      const event = baseEvent as PointerEvent;
+      if (event.button !== 0 || app.state.mode !== "upgrade" || app.ui.buyingCell) return;
+      if (!app.ui.placing || app.dragging) return;
+      if (deployedAt(app.state, position())) return;
+      const id = app.ui.placing;
+      const startX = event.clientX;
+      const startY = event.clientY;
+      let previewing = false;
+      const cellAt = (ev: PointerEvent): Hex | null => {
+        const hit = document.elementFromPoint(ev.clientX, ev.clientY)?.closest("[data-cell]") ?? null;
+        const [q, r] = (hit?.getAttribute("data-cell") ?? "").split(",").map(Number);
+        return Number.isFinite(q) && Number.isFinite(r) ? { q: q!, r: r! } : null;
+      };
+      const move = (ev: PointerEvent) => {
+        if (!previewing && Math.hypot(ev.clientX - startX, ev.clientY - startY) > DRAG_THRESHOLD_PX) previewing = true;
+        if (previewing) setDropHover(app, id, cellAt(ev));
+      };
+      const finish = (ev: PointerEvent, apply: boolean) => {
+        document.removeEventListener("pointermove", move);
+        document.removeEventListener("pointerup", up);
+        document.removeEventListener("pointercancel", cancel);
+        const pos = cellAt(ev);
+        setDropHover(app, null, null);
+        if (!apply || !previewing) return;
+        suppressNextClick();
+        if (pos) app.pickCellThenPlace(id, pos);
+      };
+      const up = (ev: PointerEvent) => finish(ev, true);
+      const cancel = (ev: PointerEvent) => finish(ev, false);
+      document.addEventListener("pointermove", move);
+      document.addEventListener("pointerup", up);
+      document.addEventListener("pointercancel", cancel);
+    });
     bindPointerDrag(app, node, () => deployedAt(app.state, position())?.id ?? null);
   });
 }
@@ -974,14 +1031,6 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
       if (!cellNode) setDropHover(app, id, null);
     };
 
-    const suppressNextClick = () => {
-      const suppress = (clickEvent: Event) => {
-        clickEvent.preventDefault();
-        clickEvent.stopImmediatePropagation();
-      };
-      document.addEventListener("click", suppress, { capture: true, once: true });
-      setTimeout(() => document.removeEventListener("click", suppress, true), 0);
-    };
     const move = (ev: PointerEvent) => {
       if (!moved && Math.hypot(ev.clientX - startX, ev.clientY - startY) > DRAG_THRESHOLD_PX) {
         moved = true;
@@ -1041,46 +1090,41 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
 
 /* ── Expanded face + board tray (§5) ───────────────── */
 
-// The upgrade benefit (§5): what one level buys, in the module's own units —
-// the `Upgrade · +0.5 ν/s · 180 ν` shape. The silent wire buys nothing with
-// a level, so it wears no button at all.
-function upgradeBenefit(module: ModuleInstance): string | null {
-  const gain = modulePower(module) * (BALANCE.rarityPower[module.rarity] - 1);
-  switch (module.type) {
-    case "additive":
-    case "conditional":
-      return `+${formatNumber(BALANCE.synthRate * gain)} ν/s`;
-    case "infusor":
-      return `+${formatNumber(100 * BALANCE.infusorBonus * gain)}% uplift`;
-    case "focusKeyed":
-      return `+${formatNumber(gain)} strength`;
-    case "forge":
-      return `+${formatNumber(gain)} progress/s`;
-    case "spacer":
-      return null;
-  }
+// The expanded face's two effect lines (§5), one entry per module type —
+// the single place a type's face phrasing lives. The Upgrade button's
+// benefit states what one level buys at that level's gain; the production
+// contribution states what the compact face doesn't say, at live values.
+// The silent wire buys nothing with a level, so its benefit is null and it
+// wears no button at all.
+interface BloomEffectInput {
+  gain: number;
+  power: number;
+  value: number;
+  strength: number;
 }
 
-// The production contribution (§5): what the compact face doesn't say — the
-// effect with its units, the bloom's one added line beside the Upgrade
-// button.
-function bloomContribution(state: GameState, module: ModuleInstance): string {
-  const preview = computeRates(state, true);
-  const strength = preview.chargeStrength.get(module.id) ?? 0;
-  switch (module.type) {
-    case "additive":
-    case "conditional":
-      return `+${formatNumber(preview.contributions.get(module.id)?.value ?? 0)} ν/s`;
-    case "spacer":
-      return "silent — conducts chords, produces nothing";
-    case "focusKeyed":
-      return `${formatNumber(modulePower(module))} charge strength while its window lasts`;
-    case "infusor":
-      return `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(strength))}% to adjacent`;
-    case "forge":
-      return `${formatNumber(preview.contributions.get(module.id)?.value ?? 0)} progress/s while charged`;
-  }
-}
+const synthBloomLines = ({ gain, value }: BloomEffectInput): { benefit: string | null; contribution: string } => ({
+  benefit: `+${formatNumber(BALANCE.synthRate * gain)} ν/s`,
+  contribution: `+${formatNumber(value)} ν/s`,
+});
+
+const BLOOM_EFFECTS: Record<ModuleInstance["type"], (input: BloomEffectInput) => { benefit: string | null; contribution: string }> = {
+  additive: synthBloomLines,
+  conditional: synthBloomLines,
+  spacer: () => ({ benefit: null, contribution: "silent — conducts chords, produces nothing" }),
+  focusKeyed: ({ gain, power }) => ({
+    benefit: `+${formatNumber(gain)} strength`,
+    contribution: `${formatNumber(power)} charge strength while its window lasts`,
+  }),
+  infusor: ({ gain, power, strength }) => ({
+    benefit: `+${formatNumber(100 * BALANCE.infusorBonus * gain)}% uplift`,
+    contribution: `+${formatNumber(100 * BALANCE.infusorBonus * power * chargedFactor(strength))}% to adjacent`,
+  }),
+  forge: ({ gain, value }) => ({
+    benefit: `+${formatNumber(gain)} progress/s`,
+    contribution: `${formatNumber(value)} progress/s while charged`,
+  }),
+};
 
 // The expanded face: the module's own hex lifted off the grid toward the
 // camera — the face itself IS the bloom, enlarged to fill it, its content
@@ -1111,24 +1155,34 @@ function renderBloom(app: App): void {
   }
   const svg = document.getElementById("grid");
   const viewBox = (svg?.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
-  const view = { x: viewBox[0] ?? 0, y: viewBox[1] ?? 0, width: viewBox[2] ?? 0, height: viewBox[3] ?? 0 };
-  const box = { width: svg?.clientWidth ?? 0, height: svg?.clientHeight ?? 0 };
-  const meet = viewMeet(view, box);
-  // Ride the closed face when the pop would shrink the module.
+  const frame: ViewFrame = {
+    view: { x: viewBox[0] ?? 0, y: viewBox[1] ?? 0, width: viewBox[2] ?? 0, height: viewBox[3] ?? 0 },
+    box: { width: svg?.clientWidth ?? 0, height: svg?.clientHeight ?? 0 },
+  };
+  const meet = viewMeet(frame);
+  // Ride the closed face when the pop would shrink the module. (No layout
+  // yet — hidden or unmeasured — degrades to unit scale by design; the
+  // plate repositions on the next render once the wrap measures.)
   const inline = !bloomPops(meet, HEX_RADIUS);
   const snapshot = computeRates(state, true);
-  const benefit = upgradeBenefit(module);
+  const lines = BLOOM_EFFECTS[module.type]({
+    gain: modulePower(module) * (BALANCE.rarityPower[module.rarity] - 1),
+    power: modulePower(module),
+    value: snapshot.contributions.get(module.id)?.value ?? 0,
+    strength: snapshot.chargeStrength.get(module.id) ?? 0,
+  });
+  const benefit = lines.benefit;
   const cost = levelCost(module.level);
   const affordable = wholeNous(state) >= cost;
   // The Forge's face readout moves per tick; its face tracks it.
   const forgeTick = module.type === "forge" ? Math.floor(state.forge.progress) : 0;
-  const key = JSON.stringify([module.id, module.level, module.rarity, benefit, affordable, forgeTick, inline]);
+  const key = JSON.stringify([module.id, module.level, module.rarity, benefit, lines.contribution, affordable, forgeTick, inline]);
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.classList.toggle("inline", inline);
     const readouts = `
       <div class="bloom-readouts">
-        ${inline ? `<p class="bloom-contribution mono">${bloomContribution(state, module)}</p>` : ""}
+        ${inline ? `<p class="bloom-contribution mono">${lines.contribution}</p>` : ""}
         ${
           benefit
             ? `<button class="bloom-upgrade" id="bloom-upgrade" ${affordable ? "" : "disabled"} title="${affordable ? "Upgrade this module" : "Not enough whole nous"}">
@@ -1169,21 +1223,21 @@ function renderBloom(app: App): void {
   }
   // Position over the module's cell on every render — the board may have
   // grown or reflowed since the last one.
-  const [cx, cy] = viewPoint(point(module.pos), view, box);
+  const [cx, cy] = viewPoint(point(module.pos), frame);
   if (inline) {
     // The card rides the closed face's lower band: centered, its body over
     // the taper below the face's note — hanging past the tip a little at
-    // threshold zooms, where the taper is too tight to hold it.
-    const width = box.width > 0 ? Math.min(BLOOM_WIDTH, box.width) : BLOOM_WIDTH;
+    // threshold zooms, where the taper is too tight to hold it. The same
+    // clamp as the popped plate (bloomSpan).
+    const { left, width } = bloomSpan(cx, frame);
     const halfHeight = meet * HEX_RADIUS;
-    const left = Math.min(Math.max(cx - width / 2, 0), Math.max(0, box.width - width));
     host.style.left = `${Math.round(left)}px`;
     host.style.top = `${Math.round(cy + halfHeight * 0.85 - 34)}px`;
     host.style.width = `${width}px`;
     host.style.height = "auto";
     host.classList.remove("below");
   } else {
-    const layout = bloomLayout(point(module.pos), HEX_RADIUS, view, box);
+    const layout = bloomLayout(point(module.pos), HEX_RADIUS, frame);
     host.hidden = false;
     host.classList.toggle("below", layout.below);
     host.style.left = `${Math.round(layout.left)}px`;
