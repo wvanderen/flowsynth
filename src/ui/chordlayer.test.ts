@@ -36,12 +36,13 @@ function overlayWith(namedChords: NamedChordTerm[]) {
     posOf: (id) => POS[id] ?? null,
     point,
     radius: HEX_RADIUS,
+    step: Math.sqrt(3) * 65,
     labelFor: (c) => `${c.name} ×${(1 + c.bonus).toFixed(2)}`,
   });
 }
 
-describe("seamsFor — the prototype's trimmed voice pairs", () => {
-  it("connects adjacent voices with a seam trimmed clear of both faces", () => {
+describe("tracesFor — the prototype's seam language", () => {
+  it("connects two adjacent voices with a seam trimmed clear of both faces", () => {
     const overlay = overlayWith([chord("Octave", ["m1", "m2"])]);
     expect(overlay.marks).toHaveLength(1);
     const seams = overlay.marks[0]!.seams;
@@ -57,16 +58,67 @@ describe("seamsFor — the prototype's trimmed voice pairs", () => {
     expect(seam.x2).toBeGreaterThan(seam.x1);
   });
 
-  it("connects straight and diagonal neighbors but not longer pairs", () => {
-    // m1→m2 straight, m1→far off-row — only the straight pair is close
-    // enough; a vertical pair (rows) also qualifies.
+  it("traces a three-voice chord along its voices' edges — the prototype's loop", () => {
+    // The power-chord region: three mutually adjacent hexes trace a closed
+    // loop — 18 hex edges less the 3 shared pairs' interior edges.
+    const region: Record<string, Hex> = { c4: hex(0, 0), g4: hex(1, 0), c5: hex(0, 1) };
+    const overlay = chordOverlay({
+      namedChords: [chord("Fifth", ["c4", "g4", "c5"])],
+      posOf: (id) => region[id] ?? null,
+      point,
+      radius: HEX_RADIUS,
+      step: Math.sqrt(3) * 65,
+      labelFor: (c) => c.name,
+    });
+    const loop = overlay.marks[0]!.seams;
+    expect(loop).toHaveLength(12);
+    // The trace rides the module edges: every segment endpoint sits at the
+    // trace inset from some voice's center — the lines hug the hexagons.
+    // (Adjacent chassis hexes never touch on this lattice, so the loop's
+    // arcs break at the corners; the stroke's round caps bridge them.)
+    const trace = HEX_RADIUS * 0.97;
+    const voiceCenters = Object.values(region).map((h) => point(h));
+    for (const edge of loop) {
+      for (const [ex, ey] of [
+        [edge.x1, edge.y1],
+        [edge.x2, edge.y2],
+      ]) {
+        expect(
+          voiceCenters.some(([cx, cy]) => Math.abs(Math.hypot(ex - cx, ey - cy) - trace) < 0.06),
+        ).toBe(true);
+      }
+    }
+    // Shared interior edges stay silent: no segment crosses between the
+    // voices — the line work runs around the cluster, not through it.
+    const midpoints = [
+      [region.c4!, region.g4!],
+      [region.c4!, region.c5!],
+      [region.g4!, region.c5!],
+    ].map(([a, b]) => {
+      const [ax, ay] = point(a);
+      const [bx, by] = point(b);
+      return [(ax + bx) / 2, (ay + by) / 2] as const;
+    });
+    for (const [mx, my] of midpoints) {
+      for (const edge of loop) {
+        // An interior crossing sits deep inside some hex; no traced edge's
+        // midpoint comes near one.
+        const ex = (edge.x1 + edge.x2) / 2;
+        const ey = (edge.y1 + edge.y2) / 2;
+        expect(Math.hypot(ex - mx, ey - my)).toBeGreaterThan(trace * 0.4);
+      }
+    }
+  });
+
+  it("a two-voice chord never grows a loop, and longer pairs stay silent", () => {
+    // m1→m2 seam; m1→far is off-cluster distance and draws nothing.
     const overlay = overlayWith([chord("Fifth", ["m1", "m2", "far"])]);
-    const seams = overlay.marks[0]!.seams;
-    expect(seams).toHaveLength(1);
-    // A three-in-a-row chord: every adjacent pair draws, the end pair (two
-    // steps) does not.
-    const row = overlayWith([chord("Fifth", ["m1", "m2", "m3"])]);
-    expect(row.marks[0]!.seams).toHaveLength(2);
+    // Three voices → the loop language, but `far` is alone: the loop covers
+    // all three voices' outlines — the bridged-voice case still annotates.
+    expect(overlay.marks[0]!.seams.length).toBeGreaterThan(0);
+    // A two-voice chord keeps the center-to-center seam.
+    const pair = overlayWith([chord("Octave", ["m1", "m2"])]);
+    expect(pair.marks[0]!.seams).toHaveLength(1);
   });
 
   it("shares a claimed pair across chords: the first chord's color wins", () => {
@@ -75,6 +127,7 @@ describe("seamsFor — the prototype's trimmed voice pairs", () => {
       posOf: (id) => POS[id] ?? null,
       point,
       radius: HEX_RADIUS,
+      step: Math.sqrt(3) * 65,
       labelFor: (c) => c.name,
     });
     expect(overlay.marks).toHaveLength(2);
@@ -125,6 +178,7 @@ describe("selection emphasis (§6)", () => {
       posOf: (id) => POS[id] ?? null,
       point,
       radius: HEX_RADIUS,
+      step: Math.sqrt(3) * 65,
       labelFor: (c) => c.name,
       focusIds: ["m1"],
     });
@@ -139,6 +193,7 @@ describe("selection emphasis (§6)", () => {
       posOf: (id) => POS[id] ?? null,
       point,
       radius: HEX_RADIUS,
+      step: Math.sqrt(3) * 65,
       labelFor: (c) => c.name,
     });
     expect(overlay.marks.every((m) => m.focused)).toBe(true);

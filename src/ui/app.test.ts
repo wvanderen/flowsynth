@@ -690,8 +690,9 @@ describe("always-on chord feedback (§6, #137)", () => {
     // Two hues: the engine names the Octave first, the Fifth second.
     const hues = marks.map((mark) => (mark as HTMLElement).style.getPropertyValue("--cc"));
     expect(hues).toEqual(["var(--chord-octave)", "var(--chord-fifth)"]);
-    // The Octave's vertical pair and the Fifth's two adjacent pairs.
-    expect(marks.map((mark) => mark.querySelectorAll(".chord-seam").length)).toEqual([1, 2]);
+    // The Octave's vertical pair seams center-to-center; the three-voice
+    // Fifth traces its voices' edges — the prototype's closed loop.
+    expect(marks.map((mark) => mark.querySelectorAll(".chord-seam").length)).toEqual([1, 12]);
   });
 
   it("selection focuses the selected module's chords and fades the rest", () => {

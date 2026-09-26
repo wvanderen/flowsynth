@@ -8,6 +8,7 @@
 // in a reserved spot by the board (never floating over it). Selection and
 // hover are the caller's emphasis questions.
 import type { Hex, NamedChordTerm } from "../engine/types";
+import { hexCorner } from "./face";
 
 export type Point = readonly [number, number];
 
@@ -26,6 +27,9 @@ export interface ChordMark {
   readonly colorVar: string;
   // The flow pulse period (seconds), per chord — the prototype's rhythm.
   readonly duration: number;
+  // The chord's drawn segments: a two-voice chord seams center-to-center
+  // between its adjacent voices; a chord of three or more traces the
+  // edges of its voices' hexagons — the prototype's outline loop (#120).
   readonly seams: ChordSeam[];
   // The chip anchor: above the chord's topmost voice. Ghost marks (the
   // would-form preview) render their chip here; formed chords render
@@ -86,10 +90,56 @@ function seamTrim(radius: number): number {
   return radius * (Math.sqrt(3) / 2) + 2;
 }
 
-// The chord's seams: every qualifying voice pair, center-to-center trimmed
-// to the chassis. `claimed` carries pair keys across chords — a shared pair
-// draws once, the first chord's color winning.
-function seamsFor(centers: readonly Point[], radius: number, claimed: Set<string>): ChordSeam[] {
+// Where the edge trace rides: just inside the chassis outline, clear of
+// both the chassis stroke and the outer rarity ring (tuning).
+const EDGE_TRACE_INSET = 0.97;
+
+// Center keys round to tenth-pixel grid cells — and normalize negative
+// zero, or a computed `(0, 0)` neighbor lands as "-0.0" and never matches.
+function centerKey(x: number, y: number): string {
+  return `${Math.round(x * 10) + 0}:${Math.round(y * 10) + 0}`;
+}
+
+// The chord's edges: for a chord of three or more voices, the boundary of
+// the voices' union traced along the hexagons' own edges — the prototype's
+// closed loop around the cluster (a trio of neighbors reads as a triangle).
+// An edge is on the boundary when the hex across it is not one of the
+// chord's voices; shared edges stay silent so interior faces don't get
+// crossed out. `step` is the lattice's adjacent-center distance in pixel
+// space (the trace rides at the hex radius, but neighbors sit a lattice
+// step across each edge).
+function edgeLoopFor(centers: readonly Point[], radius: number, step: number): ChordSeam[] {
+  const trace = radius * EDGE_TRACE_INSET;
+  const at = new Set(centers.map((c) => centerKey(c[0], c[1])));
+  const edges: ChordSeam[] = [];
+  for (const [cx, cy] of centers) {
+    for (let i = 0; i < 6; i++) {
+      // face.ts's pointy-top corners: corner i at (60i − 30)°, so the edge
+      // to corner i+1 faces outward along 60i°, neighbor a lattice step
+      // across it.
+      const a = hexCorner(trace, i);
+      const b = hexCorner(trace, (i + 1) % 6);
+      const outward = (60 * i * Math.PI) / 180;
+      const nx = cx + step * Math.cos(outward);
+      const ny = cy + step * Math.sin(outward);
+      if (at.has(centerKey(nx, ny))) continue;
+      edges.push({
+        x1: Number((cx + a[0]).toFixed(2)),
+        y1: Number((cy + a[1]).toFixed(2)),
+        x2: Number((cx + b[0]).toFixed(2)),
+        y2: Number((cy + b[1]).toFixed(2)),
+      });
+    }
+  }
+  return edges;
+}
+
+// The chord's drawn segments: two voices seam center-to-center (each
+// qualifying adjacent pair; `claimed` carries pair keys across chords — a
+// shared pair draws once, the first chord's color winning); three or more
+// voices trace their union's edges instead.
+function tracesFor(centers: readonly Point[], radius: number, step: number, claimed: Set<string>): ChordSeam[] {
+  if (centers.length >= 3) return edgeLoopFor(centers, radius, step);
   const reach = radius * SEAM_REACH;
   const trim = seamTrim(radius);
   const seams: ChordSeam[] = [];
@@ -115,20 +165,22 @@ function seamsFor(centers: readonly Point[], radius: number, claimed: Set<string
   return seams;
 }
 
-// The overlay over one board's chord terms: per named chord, its seams and
-// its chip anchor. A term with a voice off the board cannot be drawn
-// whole — it contributes nothing at all, not even light. `focusIds`
-// carries the selection's emphasis (§6): chords carrying one of those ids
-// come back focused, every other mark fades; unset, nothing fades.
+// The overlay over one board's chord terms: per named chord, its drawn
+// segments and its chip anchor. A term with a voice off the board cannot
+// be drawn whole — it contributes nothing at all, not even light.
+// `focusIds` carries the selection's emphasis (§6): chords carrying one of
+// those ids come back focused, every other mark fades; unset, nothing
+// fades. `step` is the lattice's adjacent-center distance.
 export function chordOverlay(opts: {
   namedChords: readonly NamedChordTerm[];
   posOf: (id: string) => Hex | null;
   point: (h: Hex) => Point;
   radius: number;
+  step: number;
   labelFor: (chord: NamedChordTerm) => string;
   focusIds?: readonly string[];
 }): ChordOverlay {
-  const { namedChords, posOf, point, radius, labelFor } = opts;
+  const { namedChords, posOf, point, radius, step, labelFor } = opts;
   const focus = new Set(opts.focusIds ?? []);
   const emphasize = focus.size > 0;
   const claimed = new Set<string>();
@@ -137,7 +189,7 @@ export function chordOverlay(opts: {
     const positions = chord.moduleIds.map(posOf);
     if (positions.some((pos) => pos === null)) return;
     const centers = positions.map((pos) => point(pos as Hex));
-    const seams = seamsFor(centers, radius, claimed);
+    const seams = tracesFor(centers, radius, step, claimed);
     const top = centers.reduce((a, b) => (b[1] < a[1] ? b : a));
     marks.push({
       key: `chord-${index}`,
