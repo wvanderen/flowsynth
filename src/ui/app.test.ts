@@ -415,23 +415,24 @@ describe("the expanded face (§5)", () => {
     expect(bloom().querySelector(".bloom-face .face-readout")!.textContent).toBe(`+${formatNumber(0.1)} ν/s`);
     expect(bloom().querySelector(".bloom-contribution")).toBeNull();
     // The bloom re-proportions the engraving: the chassis hexagon stays a
-    // direct child of the svg, the name recenters over the full-width band
-    // (clear of the top vertex), and the note footnotes into the taper.
+    // direct child of the svg, and the rhythm is even — title block over
+    // the signature, production line at button level, note in the taper.
     const faceSvg = bloom().querySelector(".bloom-face")!;
     expect(faceSvg.querySelector(":scope > [data-key='hex']")).not.toBeNull();
-    expect(faceSvg.querySelector(".face-name")!.getAttribute("y")).toBe("-27");
-    expect(faceSvg.querySelector(".face-readout")!.getAttribute("y")).toBe("14");
-    expect(faceSvg.querySelector(".face-note")!.getAttribute("y")).toBe("46");
-    expect(faceSvg.querySelector(".face-signature")!.getAttribute("transform")).toBe("translate(0 -6) scale(0.7)");
+    expect(faceSvg.querySelector(".face-name")!.getAttribute("y")).toBe("-26");
+    expect(faceSvg.querySelector(".face-readout")!.getAttribute("y")).toBe("11");
+    expect(faceSvg.querySelector(".face-note")!.getAttribute("y")).toBe("44");
+    expect(faceSvg.querySelector(".face-signature")!.getAttribute("transform")).toBe("translate(0 -7) scale(0.7)");
     // The module lifted off its cell: the bloom repeats every line the face
     // carries, so the origin renders vacated — no doubled module.
     expect(document.querySelector('[data-cell="0,0"] .module-node')).toBeNull();
     expect(document.querySelector('[data-cell="0,0"] .hex.lifted')).not.toBeNull();
-    // …and the Upgrade button with its benefit and price.
+    // …and the Upgrade button: title line with the price, benefit as its
+    // subtitle.
     const button = bloom().querySelector<HTMLButtonElement>("#bloom-upgrade")!;
-    expect(button.textContent).toContain("Upgrade");
-    expect(button.textContent).toContain("+0.02 ν/s");
-    expect(button.textContent).toContain("10 ν");
+    expect(button.querySelector(".bloom-upgrade-title")!.textContent).toContain("Upgrade");
+    expect(button.querySelector(".bloom-upgrade-title")!.textContent).toContain("10 ν");
+    expect(button.querySelector(".bloom-upgrade-benefit")!.textContent).toBe("+0.02 ν/s");
     // The vacated cell still toggles its module — click it closed.
     clickCell(0,0);
     expect(app.ui.selected).toBeNull();

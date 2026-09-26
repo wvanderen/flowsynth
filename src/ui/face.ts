@@ -99,12 +99,12 @@ export interface FaceSpec {
 
 // Engraving positions per variant (y in face units; the chassis spans
 // ±61). The compact face is the board's own; the bloom re-centers its
-// content over the hexagon's full-width band — level clear of the top
-// vertex, the signature holding the middle, the readout a clear step above
-// the Upgrade button's band, and the note footnoted into the taper.
+// content over the hexagon's full-width band with an even vertical rhythm
+// — title block, signature, production line, button band, and the cell
+// note footnoted into the taper — each step a similar breath apart.
 const FACE_LAYOUT = {
   compact: { level: FACE_LEVEL_Y, name: FACE_NAME_Y, glyph: 0, glyphScale: FACE_GLYPH_SCALE, readout: FACE_READOUT_Y, note: FACE_NOTE_Y },
-  bloom: { level: -39, name: -27, glyph: -6, glyphScale: 0.7, readout: 14, note: 46 },
+  bloom: { level: -39, name: -26, glyph: -7, glyphScale: 0.7, readout: 11, note: 44 },
 } as const;
 
 export function moduleFace(spec: FaceSpec): string {

@@ -853,14 +853,16 @@ body.live .inspector-empty { opacity: 0.75; }
 .bloom-plate text { fill: var(--ink); }
 .bloom-face .face-level { font-size: 9px; }
 .bloom-face .face-name { font-size: 10px; }
-.bloom-face .face-readout { font-size: 14px; }
+/* The production line sits at the button's own level in the hierarchy —
+   present, not dominant. */
+.bloom-face .face-readout { font-size: 7px; }
 .bloom-face .face-note { font-size: 6.2px; letter-spacing: 0.14em; }
 /* The upgrade affordances ride the band between readout and taper. */
 .bloom-readouts {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 49px;
+  bottom: 58px;
   width: 150px;
   display: flex;
   flex-direction: column;
@@ -868,18 +870,20 @@ body.live .inspector-empty { opacity: 0.75; }
   gap: 4px;
 }
 .bloom-contribution { margin: 0; font-size: 12.5px; color: var(--nous); white-space: nowrap; }
+/* Title line carries the action and its price; the benefit subtitles
+   beneath it. */
 .bloom-upgrade {
   width: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 7px;
+  gap: 1px;
   padding: 7px 10px;
-  font-size: 11.5px;
   background: var(--panel-soft);
 }
-.bloom-upgrade strong { white-space: nowrap; font-weight: 600; }
-.bloom-upgrade small { color: var(--charge); }
+.bloom-upgrade-title { font-size: 12px; line-height: 1.3; white-space: nowrap; }
+.bloom-upgrade-title strong { font-weight: 600; }
+.bloom-upgrade-benefit { font-size: 11px; line-height: 1.3; color: var(--charge); }
 
 /* Zoomed past the bloom's size, nothing pops: the affordances ride the
    closed face as a floating card anchored over the module's lower band.

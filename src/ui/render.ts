@@ -1132,8 +1132,8 @@ function renderBloom(app: App): void {
         ${
           benefit
             ? `<button class="bloom-upgrade" id="bloom-upgrade" ${affordable ? "" : "disabled"} title="${affordable ? "Upgrade this module" : "Not enough whole nous"}">
-                <span>Upgrade · <small class="mono">${benefit}</small></span>
-                <strong class="mono">${formatInt(cost)} ν</strong>
+                <span class="bloom-upgrade-title">Upgrade · <strong class="mono">${formatInt(cost)} ν</strong></span>
+                <small class="bloom-upgrade-benefit mono">${benefit}</small>
               </button>`
             : ""
         }
