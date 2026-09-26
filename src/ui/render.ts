@@ -2653,12 +2653,14 @@ function renderDev(app: App): void {
     <button data-dev="60">+1m</button>
     <button data-dev="600">+10m</button>
     <button data-dev="target">→ target</button>
-    <button data-dev="nous">+100ν</button>`;
+    <button data-dev="nous">+100ν</button>
+    <button data-dev="synth">+synth</button>`;
   panel.querySelectorAll<HTMLButtonElement>("[data-dev]").forEach((button) => {
     button.addEventListener("click", () => {
       const key = button.getAttribute("data-dev")!;
       if (key === "target") app.devToTarget();
       else if (key === "nous") app.devNous();
+      else if (key === "synth") app.devSynth();
       else app.devAdvance(Number(key));
     });
   });

@@ -25,11 +25,12 @@ import { computeRates } from "../engine/economy";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
 import { formatClock } from "../engine/clock";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
-import { createInitialState } from "../engine/state";
+import { createInitialState, createModule } from "../engine/state";
 import { appActive, type FocusApp } from "../engine/apps";
 import { writeNote } from "../engine/notes";
 import { achievementName } from "../engine/achievements";
-import { BALANCE, SHELF_MODULE, CHIME } from "../engine/constants";
+import { BALANCE, CATEGORY_OF, SHELF_MODULE, CHIME } from "../engine/constants";
+import { cellNoteOf } from "../engine/lattice";
 import {
   activeHabit,
   addPracticeLog,
@@ -1228,6 +1229,39 @@ export class App {
     this.state.totalEarned += 100;
     const minted = syncArete(this.state);
     this.say(minted > 0 ? "Dev: +100 ν. The accumulator filled — Arete minted." : "Dev: +100 ν.");
+    this.render();
+  }
+
+  // Dev grant of an additive synthesizer (#137 hands-on): it lands on the
+  // first free cell that chords with a deployed synth — a fifth beside the
+  // opening board, usually — so hulls and chips read at once. In flow the
+  // board stays locked per the standing constraints, so there it lands in
+  // the tray to drag into place between sessions.
+  devSynth(): void {
+    const module = createModule(this.state, "additive", "common");
+    this.state.modules.push(module);
+    if (this.state.mode !== "upgrade") {
+      module.pos = null;
+      this.say("Dev: additive synth in your inventory — the board is locked during flow.");
+      this.save();
+      this.render();
+      return;
+    }
+    const occupied = new Set(this.state.modules.filter((m) => m.pos !== null).map((m) => `${m.pos!.q},${m.pos!.r}`));
+    const chordsWith = this.state.modules.filter((m) => m.pos !== null && CATEGORY_OF[m.type] === "synthesizer");
+    const cell =
+      this.state.cells.find(
+        (cell) =>
+          !occupied.has(`${cell.q},${cell.r}`) &&
+          chordsWith.some((synth) => neighbors(synth.pos!).some((n) => sameHex(n, cell))),
+      ) ?? null;
+    module.pos = cell;
+    this.say(
+      cell
+        ? `Dev: additive synth placed at ${cellNoteOf(cell)}.`
+        : "Dev: additive synth in your inventory — no free cell chords with a synth.",
+    );
+    this.save();
     this.render();
   }
 

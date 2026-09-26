@@ -21,7 +21,7 @@ import type { SignalChannels } from "./signals";
 // UI smoke tests: the console chrome, the enter-prompt gating, and the
 // catalog's shelf behavior, booted on the real index.html skeleton.
 
-function boot(channels?: SignalChannels): App {
+function boot(channels?: SignalChannels, dev = false): App {
   const html = readFileSync("index.html", "utf8");
   const body = html.slice(html.indexOf("<body>") + 6, html.lastIndexOf("</body>"));
   document.body.innerHTML = body;
@@ -42,7 +42,7 @@ function boot(channels?: SignalChannels): App {
     const element = document.getElementById(id);
     if (element) els[id] = element;
   }
-  return new App(els, false, channels);
+  return new App(els, dev, channels);
 }
 
 let app: App;
@@ -716,6 +716,49 @@ describe("always-on chord feedback (§6, #137)", () => {
     app.dismissSummary();
     expect(fired.droneStops).toBe(3);
     expect(app.state.muted).toBe(false);
+  });
+});
+
+describe("the dev panel's synth grant (#137)", () => {
+  it("lands an additive on the first free cell that chords with a synth", () => {
+    app = boot(undefined, true);
+    app.devSynth();
+    const granted = app.state.modules[app.state.modules.length - 1]!;
+    expect(granted.type).toBe("additive");
+    expect(granted.pos).toEqual(hex(1, 0)); // G4 — the opening C4's fifth
+    app.render();
+    // It chords at once: the hull and its chip are on the board.
+    expect(document.querySelector('[data-key="chord-marks"] .chord-label')!.textContent).toBe("Fifth ×1.3");
+  });
+
+  it("falls back to the tray when no free cell chords with a synth", () => {
+    app = boot(undefined, true);
+    // Fill both chordable opening cells.
+    give(app.state, "additive", hex(1, 0));
+    give(app.state, "additive", hex(0, 1));
+    app.devSynth();
+    const granted = app.state.modules[app.state.modules.length - 1]!;
+    expect(granted.pos).toBeNull();
+  });
+
+  it("in flow the synth waits in the tray — the board stays locked", () => {
+    app = boot(undefined, true);
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, 600);
+    app.devSynth();
+    const granted = app.state.modules[app.state.modules.length - 1]!;
+    expect(granted.pos).toBeNull();
+    expect(document.querySelector('[data-key="chord-marks"] .chord-hull')).toBeNull();
+    endSession(app.state);
+  });
+
+  it("the dev panel wears the +synth button, dev boots only", () => {
+    app = boot(undefined, true);
+    app.render();
+    expect(document.querySelector('[data-dev="synth"]')).not.toBeNull();
+    app = boot();
+    app.render();
+    expect(document.getElementById("dev-panel")).toBeNull();
   });
 });
 
