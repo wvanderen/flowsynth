@@ -9,6 +9,7 @@
 // behind the modules. Name chips live in a reserved spot by the board;
 // selection and hover are the caller's emphasis questions.
 import type { Hex, NamedChordTerm } from "../engine/types";
+import { hexApothem } from "./face";
 
 export type Point = readonly [number, number];
 
@@ -115,38 +116,6 @@ function convexHull(points: readonly Point[]): Point[] {
   return [...lower, ...upper];
 }
 
-// Offset a convex polygon outward by pad: shift every edge along its
-// outward normal and rebuild the vertices at the intersections. Radial
-// vertex scaling would starve long edges — a deep chord's row would clip.
-function offsetConvex(hull: readonly Point[], pad: number): Point[] {
-  const cx = hull.reduce((acc, p) => acc + p[0], 0) / hull.length;
-  const cy = hull.reduce((acc, p) => acc + p[1], 0) / hull.length;
-  const edges = hull.map((a, i) => {
-    const b = hull[(i + 1) % hull.length]!;
-    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-    const nx = (b[1] - a[1]) / len;
-    const ny = -(b[0] - a[0]) / len;
-    const mx = (a[0] + b[0]) / 2 - cx;
-    const my = (a[1] + b[1]) / 2 - cy;
-    // Outward faces away from the centroid, whichever way the hull winds.
-    const outward = nx * mx + ny * my < 0 ? -1 : 1;
-    const fnx = nx * outward;
-    const fny = ny * outward;
-    // The edge's offset line: every point p on it satisfies p·n = c.
-    return { nx: fnx, ny: fny, c: a[0] * fnx + a[1] * fny + pad };
-  });
-  return hull.map((_, i) => {
-    const p = edges[(i - 1 + edges.length) % edges.length]!;
-    const q = edges[i]!;
-    const det = p.nx * q.ny - p.ny * q.nx;
-    if (Math.abs(det) < 1e-9) return hull[i]!;
-    return [
-      (p.c * q.ny - p.ny * q.c) / det,
-      (p.nx * q.c - p.c * q.nx) / det,
-    ] as const;
-  });
-}
-
 // Shortest distance from a point to the polygon's edge lines; exact for
 // points inside a convex polygon, which is the only case the tests need.
 export function edgeDistance(point: Point, polygon: readonly Point[]): number {
@@ -162,13 +131,71 @@ export function edgeDistance(point: Point, polygon: readonly Point[]): number {
 }
 
 // The outline for a chord of three or more voices: the convex hull of the
-// voice centers, offset so its edges ride the exact midpoint of the gap
-// between neighboring faces (`step / 2`) and its corners poke out past the
-// outer module edges — the prototype's triangle behind the modules.
-function outlineFor(centers: readonly Point[], step: number): string {
-  const pad = step / 2;
-  const grown = offsetConvex(convexHull(centers), pad);
-  return grown.map((p) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join(" ");
+// voice centers, offset so its sides approximately touch the inner edges
+// of the formation — a hair outside the plates' facing apothem. A flat
+// offset alone would fling the sharp (60°) corners out to twice the pad,
+// so each corner is rounded along the poke cap — `cap` past its voice
+// center, just outside the chassis corner. The prototype's triangle:
+// hugged close, corners poking out a little.
+function outlineFor(centers: readonly Point[], radius: number): string {
+  const pad = hexApothem(radius) + 1.5;
+  const cap = radius + 3;
+  const hull = convexHull(centers);
+  const cx = hull.reduce((acc, p) => acc + p[0], 0) / hull.length;
+  const cy = hull.reduce((acc, p) => acc + p[1], 0) / hull.length;
+  // Cap-intersection distance along each offset side.
+  const s = Math.sqrt(Math.max(0, cap * cap - pad * pad));
+  // Per edge: outward normal, and the side's two cap points —
+  // start (past this edge's first vertex) and end (past its second).
+  const sides = hull.map((p, i) => {
+    const q = hull[(i + 1) % hull.length]!;
+    const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    const ux = (q[0] - p[0]) / len;
+    const uy = (q[1] - p[1]) / len;
+    const nx = (q[1] - p[1]) / len;
+    const ny = -(q[0] - p[0]) / len;
+    const mx = (p[0] + q[0]) / 2 - cx;
+    const my = (p[1] + q[1]) / 2 - cy;
+    // Outward faces away from the centroid, whichever way the hull winds.
+    const outward = nx * mx + ny * my < 0 ? -1 : 1;
+    const fnx = nx * outward;
+    const fny = ny * outward;
+    return {
+      start: [p[0] + fnx * pad - ux * s, p[1] + fny * pad - uy * s] as Point,
+      end: [q[0] + fnx * pad + ux * s, q[1] + fny * pad + uy * s] as Point,
+      nx: fnx,
+      ny: fny,
+    };
+  });
+  // Each corner arcs around its voice center from the previous side's end
+  // to this side's start, through the outward bisector — sampled, since a
+  // straight chord here would slice back through the plates.
+  const wrap = (a: number): number => ((a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
+  const SAMPLES = 5;
+  const points: string[] = [];
+  for (let i = 0; i < hull.length; i++) {
+    const prev = sides[(i - 1 + hull.length) % hull.length]!;
+    const cur = sides[i]!;
+    const [vx, vy] = hull[i]!;
+    const from = prev.end;
+    const to = cur.start;
+    let bx = prev.nx + cur.nx;
+    let by = prev.ny + cur.ny;
+    const bl = Math.hypot(bx, by);
+    const aBis = Math.atan2(by, bx);
+    const aFrom = wrap(Math.atan2(from[1] - vy, from[0] - vx) - aBis);
+    const aTo = wrap(Math.atan2(to[1] - vy, to[0] - vx) - aBis);
+    if (bl < 1e-6) {
+      // A straight corner (degenerate two-point hull): no arc.
+      points.push(...[from, to].map((p) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`));
+      continue;
+    }
+    for (let k = 0; k <= SAMPLES; k++) {
+      const d = aBis + aFrom + ((aTo - aFrom) * k) / SAMPLES;
+      points.push(`${(vx + cap * Math.cos(d)).toFixed(2)},${(vy + cap * Math.sin(d)).toFixed(2)}`);
+    }
+  }
+  return points.join(" ");
 }
 
 // The chord's drawn seams: two voices seam center-to-center (each
@@ -207,17 +234,16 @@ function seamsFor(centers: readonly Point[], radius: number, claimed: Set<string
 // be drawn whole — it contributes nothing at all, not even light.
 // `focusIds` carries the selection's emphasis (§6): chords carrying one of
 // those ids come back focused, every other mark fades; unset, nothing
-// fades. `step` is the lattice's adjacent-center distance.
+// fades.
 export function chordOverlay(opts: {
   namedChords: readonly NamedChordTerm[];
   posOf: (id: string) => Hex | null;
   point: (h: Hex) => Point;
   radius: number;
-  step: number;
   labelFor: (chord: NamedChordTerm) => string;
   focusIds?: readonly string[];
 }): ChordOverlay {
-  const { namedChords, posOf, point, radius, step, labelFor } = opts;
+  const { namedChords, posOf, point, radius, labelFor } = opts;
   const focus = new Set(opts.focusIds ?? []);
   const emphasize = focus.size > 0;
   const claimed = new Set<string>();
@@ -227,7 +253,7 @@ export function chordOverlay(opts: {
     if (positions.some((pos) => pos === null)) return;
     const centers = positions.map((pos) => point(pos as Hex));
     const seams = seamsFor(centers, radius, claimed);
-    const outline = centers.length >= 3 ? outlineFor(centers, step) : null;
+    const outline = centers.length >= 3 ? outlineFor(centers, radius) : null;
     const top = centers.reduce((a, b) => (b[1] < a[1] ? b : a));
     marks.push({
       key: `chord-${index}`,

@@ -34,10 +34,6 @@ import { renderStatusMonitor } from "./monitor";
 import { prototypeVariant, ledgerHtml, updateLedgerLive, featsChipHtml, unlockedCount, FEATS_SVG, TOOL_ICONS } from "./variant";
 
 const SPACING = 65;
-// The adjacent-center distance the chord overlay's edge trace needs: on
-// this pointy-top lattice every neighboring center sits exactly this far
-// from its mate, whatever the direction.
-const LATTICE_STEP = Math.sqrt(3) * SPACING;
 const DRAG_THRESHOLD_PX = 6;
 const boundCells = new WeakSet<SVGElement>();
 
@@ -611,7 +607,6 @@ function renderGrid(app: App): void {
     posOf: (id) => deployedById.get(id)?.pos ?? null,
     point,
     radius: HEX_RADIUS,
-    step: LATTICE_STEP,
     labelFor,
     focusIds,
   });
@@ -1004,7 +999,6 @@ function ghostMarksHtml(app: App): string {
     posOf,
     point,
     radius: HEX_RADIUS,
-    step: LATTICE_STEP,
     labelFor: chordTermLabel,
   });
   return overlay.marks.map((mark) => chordMarkHtml(mark, "ghost")).join("");
