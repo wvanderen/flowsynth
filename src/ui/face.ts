@@ -89,6 +89,11 @@ export interface FaceSpec {
   // Markup drawn directly on the chassis, under the engraving (the Forge's
   // threshold fill).
   under?: string;
+  // Vertical shift for the engraving alone — rail, level, name, signature,
+  // readout, note — while the chassis hexagon and its rings stay put. The
+  // expanded face uses it to make room for the Upgrade button in the
+  // hexagon's lower band without stretching or offsetting the chassis.
+  contentShift?: number;
 }
 
 export function moduleFace(spec: FaceSpec): string {
@@ -101,12 +106,16 @@ export function moduleFace(spec: FaceSpec): string {
   const glow = spec.chargeGlow ?? 0;
   const hexStyle = glow > 0 ? ` style="fill-opacity:${(CHARGED_FILL_MIN + CHARGED_FILL_SPAN * glow).toFixed(3)}"` : "";
   const railStyle = glow > 0 ? ` style="stroke-opacity:${(RAIL_CHARGED_FLOOR + RAIL_CHARGED_SPAN * glow).toFixed(3)}"` : "";
-  return `<polygon data-key="hex" class="hex${spec.hexClass ? ` ${spec.hexClass}` : ""}" points="${hexPoints(HEX_RADIUS)}"${hexStyle}/>${spec.under ?? ""}
-    <g data-key="rings" class="face-rings">${rings}</g>
-    <path data-key="rail" class="face-rail" d="M-39 -19V19" stroke="${hue}"${railStyle}/>
+  const content = `<path data-key="rail" class="face-rail" d="M-39 -19V19" stroke="${hue}"${railStyle}/>
     ${spec.level !== undefined ? `<text data-key="level" y="${FACE_LEVEL_Y}" text-anchor="middle" class="face-level">LV ${spec.level}</text>` : ""}
     <text data-key="name" y="${FACE_NAME_Y}" text-anchor="middle" class="face-name">${META[spec.type].short.toUpperCase()}</text>
     <g data-key="signature" class="face-signature" transform="scale(${FACE_GLYPH_SCALE})" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>
     <text data-key="readout" x="0" y="${FACE_READOUT_Y}" text-anchor="middle" class="face-readout${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>
     ${spec.note ? `<text data-key="note" x="0" y="${FACE_NOTE_Y}" text-anchor="middle" class="face-note">${spec.note}</text>` : ""}`;
+  const engraving = spec.contentShift !== undefined
+    ? `<g data-key="engraving" transform="translate(0 ${spec.contentShift})">${content}</g>`
+    : content;
+  return `<polygon data-key="hex" class="hex${spec.hexClass ? ` ${spec.hexClass}` : ""}" points="${hexPoints(HEX_RADIUS)}"${hexStyle}/>${spec.under ?? ""}
+    <g data-key="rings" class="face-rings">${rings}</g>
+    ${engraving}`;
 }

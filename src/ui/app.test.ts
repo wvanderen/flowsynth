@@ -414,6 +414,13 @@ describe("the expanded face (§5)", () => {
     // The ν/s unit rides the face's own readout — no repeated readout.
     expect(bloom().querySelector(".bloom-face .face-readout")!.textContent).toBe(`+${formatNumber(0.1)} ν/s`);
     expect(bloom().querySelector(".bloom-contribution")).toBeNull();
+    // The chassis stays welded to the plate — only the engraving shifts to
+    // make room for the button, or the plate shows past the hexagon's edges.
+    const faceSvg = bloom().querySelector(".bloom-face")!;
+    expect(faceSvg.querySelector(":scope > [data-key='hex']")).not.toBeNull();
+    const engraving = faceSvg.querySelector(":scope > [data-key='engraving']")!;
+    expect(engraving.getAttribute("transform")).toBe("translate(0 -20)");
+    expect(engraving.querySelector("[data-key='hex']")).toBeNull();
     // …and the Upgrade button with its benefit and price.
     const button = bloom().querySelector<HTMLButtonElement>("#bloom-upgrade")!;
     expect(button.textContent).toContain("Upgrade");

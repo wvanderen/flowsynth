@@ -1130,21 +1130,23 @@ function renderBloom(app: App): void {
       host.innerHTML = readouts;
     } else {
       // The face fills the bloom hexagon exactly (viewBox = the hexagon's
-      // bounding box), its content shifted up to make room for the button;
-      // the enlarged readout carries the ν/s unit itself. No button, no
-      // need for the room — the face sits nearer its natural layout.
-      const shift = benefit ? -20 : -12;
+      // bounding box). The engraving alone shifts up to make room for the
+      // button — the chassis hexagon and its rings stay welded to the plate
+      // edge — and the enlarged readout carries the ν/s unit itself. No
+      // button, no need for the room: the face sits nearer its natural
+      // layout.
       const face = faceReadoutFor(state, module, module.pos, snapshot, true);
       host.innerHTML = `
         <div class="bloom-plate" data-type="${module.type}" data-rarity="${module.rarity}">
-          <svg class="bloom-face" viewBox="-52.8282 -61 105.6563 122" preserveAspectRatio="none" aria-hidden="true"><g transform="translate(0 ${shift})">${moduleFace({
+          <svg class="bloom-face" viewBox="-52.8282 -61 105.6563 122" preserveAspectRatio="none" aria-hidden="true">${moduleFace({
             type: module.type,
             rarity: module.rarity,
             readout: face.readout,
             ...(face.readoutClass ? { readoutClass: face.readoutClass } : {}),
             ...(face.note ? { note: face.note } : {}),
             level: module.level,
-          })}</g></svg>
+            contentShift: benefit ? -20 : -12,
+          })}</svg>
           ${readouts}
         </div>`;
       // Holding the face starts the live drag: the bloom collapses into the
