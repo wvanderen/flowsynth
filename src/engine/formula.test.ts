@@ -2,60 +2,67 @@ import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import { startSession } from "./actions";
 import { chargedFactor, computeRates, investment, levelCost, modulePower } from "./economy";
+import { BALANCE } from "./constants";
 import { fresh, give } from "./fixtures";
 import { hex } from "./hex";
 
-// Fresh board: the Carrier at (0,0), empty cells (1,0) and (0,1) — a
-// triangle (ADR-0018). The carrier term alone is the whole formula at game
-// start (§4). Ring-2 cells like (2,0) sit two hexes out — pitch 3,
-// chordless — keeping the amplitude tests free of chord terms; chords get
-// their own suite (chords.test.ts).
-const CARRIER = 0.1;
+// The unified production model (ADR-0022):
+//   rate      = (synths + infusor uplift) × Π chord terms × empowerment × achievementBoost
+//   composite = (synths + infusor uplift) × Π chord terms
+// Fresh board: one additive at C4 (0,0), empty cells G4 (1,0) and C5 (0,1) —
+// the retained three-cell footprint. Its single synth term is the whole
+// formula at game start. Chordless positions for amplitude tests sit off in
+// their own island (D5 at (2,0) matches nothing and touches nothing);
+// chords get their own suite (chords.test.ts).
+const SYNTH = BALANCE.synthRate;
 
 describe("board production model", () => {
-  it("a fresh board produces the carrier term alone", () => {
+  it("a fresh board produces one unified synth term", () => {
     const s = fresh();
-    expect(computeRates(s, true).rate).toBeCloseTo(CARRIER, 9);
-    expect(computeRates(s, false).rate).toBeCloseTo(CARRIER, 9);
+    expect(computeRates(s, true).rate).toBeCloseTo(SYNTH, 9);
+    expect(computeRates(s, false).rate).toBeCloseTo(SYNTH, 9);
+    expect(computeRates(s, true).synths).toBeCloseTo(SYNTH, 9);
   });
 
-  it("harmonic terms add to the composite", () => {
+  it("every synthesizer shares the one leg: a second synth adds the same base term", () => {
     const s = fresh();
-    give(s, "additive", hex(2, 0));
-    give(s, "conditional", hex(2, -1));
-    // Both pitch 3; adjacent at the same pitch, so amplitude only — no chord.
-    expect(computeRates(s, true).rate).toBeCloseTo(CARRIER + 0.05 + 0.05, 9);
+    give(s, "additive", hex(2, 0)); // D5 — its own island
+    give(s, "additive", hex(2, -1)); // D4 — the octave below it
+    const snapshot = computeRates(s, true);
+    // The D pair forms an Octave; there is no carrier/harmonics split —
+    // every synthesizer rides the same unified base rate.
+    expect(snapshot.synths).toBeCloseTo(3 * SYNTH, 9);
+    expect(snapshot.rate).toBeCloseTo(3 * SYNTH * 1.15, 9);
   });
 
   it("amplitude scales with level and rarity", () => {
     const s = fresh();
-    const additive = give(s, "additive", hex(2, 0), 2);
-    additive.rarity = "uncommon";
-    expect(computeRates(s, true).rate).toBeCloseTo(CARRIER + 0.05 * 1.25 ** 2, 9);
+    const island = give(s, "additive", hex(3, 0), 2); // A5 — chordless island
+    island.rarity = "uncommon";
+    expect(computeRates(s, true).rate).toBeCloseTo(SYNTH + SYNTH * 1.25 ** 2, 9);
   });
 
   it("infusors add local bonuses to neighbors as their own leg", () => {
     const s = fresh();
-    give(s, "additive", hex(2, 0));
-    give(s, "infusor", hex(2, -1));
-    // The infusor touches the additive but not the carrier: the harmonic
-    // leg stays base (0.05) and the uplift rides in the infusor leg.
+    give(s, "additive", hex(2, 0)); // D5 island
+    give(s, "infusor", hex(2, -1)); // adjacent to D5 only
+    // The infusor touches the island synth but not the opening synth: the
+    // synths leg stays base and the uplift rides in the infusor leg.
     const snapshot = computeRates(s, true);
-    expect(snapshot.rate).toBeCloseTo(CARRIER + 0.05 * (1 + 0.2), 9);
-    expect(snapshot.carrier).toBeCloseTo(CARRIER, 9);
-    expect(snapshot.harmonics).toBeCloseTo(0.05, 9);
-    expect(snapshot.infusors).toBeCloseTo(0.01, 9);
-    expect(snapshot.amplitude).toBeCloseTo(snapshot.carrier + snapshot.harmonics + snapshot.infusors, 9);
+    expect(snapshot.rate).toBeCloseTo(SYNTH + SYNTH * (1 + 0.2), 9);
+    expect(snapshot.synths).toBeCloseTo(2 * SYNTH, 9);
+    expect(snapshot.infusors).toBeCloseTo(SYNTH * 0.2, 9);
+    expect(snapshot.amplitude).toBeCloseTo(snapshot.synths + snapshot.infusors, 9);
   });
 
   it("charge empowers adjacent synthesizers and infusors while the window lasts", () => {
     const s = fresh();
-    give(s, "focusKeyed", hex(0, 1));
+    give(s, "focusKeyed", hex(0, 1)); // C5 — adjacent to the opening C4
     s.chargeWindow = 60;
     const live = computeRates(s, true);
-    expect(live.rate).toBeCloseTo(CARRIER * chargedFactor(1), 9);
+    expect(live.rate).toBeCloseTo(SYNTH * chargedFactor(1), 9);
     // Charge exists only while flow is live: no session, no empowerment.
-    expect(computeRates(s, false).rate).toBeCloseTo(CARRIER, 9);
+    expect(computeRates(s, false).rate).toBeCloseTo(SYNTH, 9);
   });
 
   it("generators produce charge only from board modules; none exists without one", () => {
@@ -89,9 +96,9 @@ describe("board production model", () => {
     const snapshot = computeRates(s, true);
     expect(snapshot.chargeStrength.get(generator.id)).toBe(0);
     expect(snapshot.chargeStrength.get(second.id)).toBe(0);
-    // The carrier at (0,0) is adjacent to the generator at (1,0) and is
-    // empowered; the generators themselves receive nothing.
-    expect(snapshot.rate).toBeCloseTo(CARRIER * chargedFactor(1), 9);
+    // The opening synth at (0,0) is adjacent to the generator at (1,0) and
+    // is empowered; the generators themselves receive nothing.
+    expect(snapshot.rate).toBeCloseTo(SYNTH * chargedFactor(1), 9);
   });
 
   it("stacked generators empower with diminishing returns", () => {
@@ -99,15 +106,16 @@ describe("board production model", () => {
     give(s, "focusKeyed", hex(1, 0));
     give(s, "focusKeyed", hex(0, 1));
     s.chargeWindow = 60;
-    expect(computeRates(s, true).rate).toBeCloseTo(CARRIER * chargedFactor(2), 9);
+    expect(computeRates(s, true).rate).toBeCloseTo(SYNTH * chargedFactor(2), 9);
   });
 
-  it("shelved modules produce nothing; the Carrier never leaves the board", () => {
+  it("shelved modules produce nothing; the spacer never produces anywhere", () => {
     const s = fresh();
     const additive = give(s, "additive", hex(1, 0));
     additive.pos = null;
-    expect(computeRates(s, true).rate).toBeCloseTo(CARRIER, 9);
-    expect(s.modules.some((m) => m.type === "carrier" && m.pos !== null)).toBe(true);
+    give(s, "spacer", hex(1, 0));
+    expect(computeRates(s, true).synths).toBeCloseTo(SYNTH, 9);
+    expect(computeRates(s, true).rate).toBeCloseTo(SYNTH, 9);
   });
 
   it("produces nothing outside flow: paused and upgrade boards earn zero", () => {

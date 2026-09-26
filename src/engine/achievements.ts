@@ -6,10 +6,11 @@
 // and nothing can unlock during session one. In-session unlocks queue into
 // the session's unlocked list (the summary's "unlocked this session" row);
 // upgrade-mode unlocks return to the caller for toasting.
-import { BALANCE, CATEGORY_OF } from "./constants";
+import { BALANCE } from "./constants";
 import { analyzeChords } from "./chords";
+import { deployedConductors } from "./economy";
 import { isInFlowNote } from "./notes";
-import type { DeployedModule, GameState } from "./types";
+import type { GameState } from "./types";
 
 export interface AchievementProgress {
   current: number;
@@ -62,14 +63,13 @@ const ownsRare = (state: GameState): boolean => state.modules.some((m) => m.rari
 // is the earned total minus what still waits in the Forge.
 const rollsTaken = (state: GameState): number => Math.max(0, state.forge.earned - state.bankedRolls.length);
 
-// The chord multiplier over the deployed synthesizers — the same filter the
-// rate pass applies (generators and infusors never chord) — computed
-// straight from the board so the registry stays free of the rate pass.
+// The chord multiplier over the deployed chord conductors — the same
+// partition the rate pass applies (generators, infusors, and forges never
+// chord; spacers conduct) — computed straight from the board so the
+// registry stays free of the rate pass.
 function chordMultiplierOf(state: GameState): number {
-  const synths = state.modules.filter(
-    (m): m is DeployedModule => m.pos !== null && CATEGORY_OF[m.type] === "synthesizer",
-  );
-  return analyzeChords(synths).multiplier;
+  const { synths, spacers } = deployedConductors(state);
+  return analyzeChords(synths, spacers).multiplier;
 }
 
 // The launch set (§6.3): seventeen feats in spec order. Names provisional.

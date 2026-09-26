@@ -1,285 +1,278 @@
 import { describe, expect, it } from "vitest";
 import { BALANCE, NAMED_CHORDS } from "./constants";
 import { computeRates } from "./economy";
-import { analyzeChords, pitchOf } from "./chords";
+import { analyzeChords } from "./chords";
 import { fresh, give } from "./fixtures";
-import { DIRECTIONS, hex, hexDistance } from "./hex";
+import { hex } from "./hex";
+import { pitchOf } from "./lattice";
 
-// The additive-synthesis formula (ADR-0014 / §4):
-//   rate      = composite × empowerment × achievementBoost
-//   composite = (carrier + Σ harmonic terms) × Π chord terms
-// Straight axial lines (k,0) sit at hex distance k, so a chain (1,0)…(n,0)
-// climbs pitches 2…n+1 — a readable way to build chords in tests.
+// The chord model (ADR-0021/0022): register-free pitch sets over connected
+// clusters of synthesizers — any voicing, any octave. The spacer conducts
+// adjacency through chains of wired cells; bridged chords match by pitch
+// content. Adjacency alone is chordless: the anonymous pair bonus is gone.
+//
+// Lattice recap (see lattice.test.ts): (0,0) is C4; (±1, 0) steps a fifth;
+// (0, ±1) steps an octave. The opening board is C4 (0,0), G4 (1,0), C5 (0,1)
+// with the opening synthesizer pre-placed at C4.
 
-describe("pitch", () => {
-  it("is hex distance from the Carrier plus one", () => {
-    expect(pitchOf(hex(0, 0))).toBe(1);
-    expect(pitchOf(hex(1, 0))).toBe(2);
-    expect(pitchOf(hex(0, -1))).toBe(2);
-    expect(pitchOf(hex(2, 0))).toBe(3);
-    expect(pitchOf(hex(2, -1))).toBe(3);
-    expect(pitchOf(hex(9, 0))).toBe(10);
-  });
+const fifth = 1 + 0.3;
+const octave = 1 + 0.15;
+const flatSeventh = 1 + 0.45;
 
-  it("is pure distance: adjacent cells differ by at most one ring", () => {
-    for (let q = -3; q <= 3; q++) {
-      for (let r = -3; r <= 3; r++) {
-        for (const [dq, dr] of DIRECTIONS) {
-          const gap = Math.abs(hexDistance(hex(q, r), hex(q + dq, r + dr)));
-          expect(gap <= 1).toBe(true);
-        }
-      }
+describe("the named vocabulary is pitch-class sets", () => {
+  it("spells the launch vocabulary with bonuses tracking the wire ladder", () => {
+    expect(NAMED_CHORDS.map((c) => `${c.name}:${c.intervals.join(",")}`)).toEqual([
+      "Octave:0,0",
+      "Fifth:0,7",
+      "Flat seventh:0,10",
+      "Minor triad:0,3,7",
+      "Major triad:0,4,7",
+    ]);
+    for (let i = 1; i < NAMED_CHORDS.length; i++) {
+      expect(NAMED_CHORDS[i]!.bonus).toBeGreaterThan(NAMED_CHORDS[i - 1]!.bonus);
     }
-  });
-
-  it("contributions expose the pitch of every deployed synthesizer", () => {
-    const s = fresh();
-    give(s, "additive", hex(2, 0));
-    const snapshot = computeRates(s, true);
-    expect(snapshot.contributions.get("m1")?.pitch).toBe(1);
-    expect(snapshot.contributions.get("m2")?.pitch).toBe(3);
   });
 });
 
-describe("chord pairs", () => {
-  it("adjacent synthesizers one pitch apart multiply the composite", () => {
+describe("register-free recognition", () => {
+  it("a lone synthesizer is chordless", () => {
     const s = fresh();
-    give(s, "additive", hex(7, 0));
-    give(s, "additive", hex(8, 0));
-    // Pitches 8 and 9: above the named vocabulary, so raw pairs only.
     const snapshot = computeRates(s, true);
-    expect(snapshot.namedChords).toHaveLength(0);
-    expect(snapshot.pairs).toHaveLength(1);
-    expect(snapshot.chordMultiplier).toBeCloseTo(1 + BALANCE.pairBonus, 9);
-    expect(snapshot.rate).toBeCloseTo((0.1 + 0.1) * (1 + BALANCE.pairBonus), 9);
-  });
-
-  it("pair bonuses stack multiplicatively and uncapped", () => {
-    const s = fresh();
-    for (const q of [7, 8, 9, 10]) give(s, "additive", hex(q, 0));
-    const snapshot = computeRates(s, true);
-    expect(snapshot.pairs).toHaveLength(3);
-    expect(snapshot.chordMultiplier).toBeCloseTo((1 + BALANCE.pairBonus) ** 3, 9);
-  });
-
-  it("identical pitches add amplitude without forming a chord", () => {
-    const s = fresh();
-    give(s, "additive", hex(2, 0));
-    give(s, "additive", hex(2, -1));
-    // Both pitch 3 and adjacent along a same-ring edge: amplitude, no chord.
-    const snapshot = computeRates(s, true);
-    expect(snapshot.pairs).toHaveLength(0);
     expect(snapshot.namedChords).toHaveLength(0);
     expect(snapshot.chordMultiplier).toBe(1);
-    expect(snapshot.rate).toBeCloseTo(0.1 + 0.1, 9);
+    expect(snapshot.rate).toBeCloseTo(BALANCE.synthRate, 9);
   });
 
-  it("shelved synthesizers join no chord and add no harmonic", () => {
+  it("adjacent fifths form a Fifth: the opening pair C4 · G4", () => {
     const s = fresh();
-    give(s, "additive", hex(1, 0), 0).pos = null;
+    give(s, "additive", hex(1, 0)); // G4
     const snapshot = computeRates(s, true);
-    expect(snapshot.harmonics).toBe(0);
+    expect(snapshot.namedChords.map((c) => `${c.name}×${c.instances}`)).toEqual(["Fifth×1"]);
+    expect(snapshot.chordMultiplier).toBeCloseTo(fifth, 9);
+    expect(snapshot.rate).toBeCloseTo(2 * BALANCE.synthRate * fifth, 9);
+  });
+
+  it("the octave stacks vertically: C4 · C5 form an Octave", () => {
+    const s = fresh();
+    give(s, "additive", hex(0, 1)); // C5
+    const snapshot = computeRates(s, true);
+    expect(snapshot.namedChords.map((c) => `${c.name}×${c.instances}`)).toEqual(["Octave×1"]);
+    expect(snapshot.rate).toBeCloseTo(2 * BALANCE.synthRate * octave, 9);
+  });
+
+  it("any voicing, any octave: a twelfth apart is still a Fifth", () => {
+    const s = fresh();
+    // G5 at (1,1) is two steps out; bridge with the G4 at (1,0).
+    give(s, "additive", hex(1, 0)); // G4
+    give(s, "additive", hex(1, 1)); // G5 — a twelfth above C4
+    const snapshot = computeRates(s, true);
+    const names = snapshot.namedChords.map((c) => `${c.name}×${c.instances}`).sort();
+    // Register-free: C4 pairs with each G — a fifth and a twelfth are the
+    // same pitch content — while the G pair stacks its own octave.
+    expect(names).toEqual(["Fifth×2", "Octave×1"]);
+    expect(snapshot.chordMultiplier).toBeCloseTo(fifth ** 2 * octave, 9);
+  });
+
+  it("adjacency alone is chordless: bridged non-matching voices pay nothing", () => {
+    const s = fresh();
+    give(s, "spacer", hex(1, -1)); // wire
+    give(s, "spacer", hex(2, -1)); // wire
+    give(s, "additive", hex(3, -1)); // A5 — a major sixth away: no named pair
+    const snapshot = computeRates(s, true);
     expect(snapshot.namedChords).toHaveLength(0);
-    expect(snapshot.rate).toBeCloseTo(0.1, 9);
+    expect(snapshot.chordMultiplier).toBe(1);
+    expect(snapshot.rate).toBeCloseTo(2 * BALANCE.synthRate, 9);
+  });
+
+  it("shelved synthesizers join no chord and add no term", () => {
+    const s = fresh();
+    give(s, "additive", hex(1, 0)).pos = null;
+    const snapshot = computeRates(s, true);
+    expect(snapshot.synths).toBeCloseTo(BALANCE.synthRate, 9);
+    expect(snapshot.namedChords).toHaveLength(0);
+    expect(snapshot.rate).toBeCloseTo(BALANCE.synthRate, 9);
   });
 });
 
-describe("named chords", () => {
-  it("the launch vocabulary is four consecutive-pitch runs", () => {
-    expect(NAMED_CHORDS.map((c) => c.name)).toEqual(["Octave", "Fifth", "Major triad", "Blues triad"]);
-    for (const chord of NAMED_CHORDS) {
-      const runs = chord.pitches.slice(1).map((p, i) => p - chord.pitches[i]!);
-      expect(runs.every((step) => step === 1)).toBe(true);
-    }
+describe("instances stack", () => {
+  it("doubled voices form Octave instances that stack — three Cs ring three octaves", () => {
+    const s = fresh();
+    give(s, "additive", hex(0, 1)); // C5
+    give(s, "additive", hex(0, 2)); // C6
+    const snapshot = computeRates(s, true);
+    expect(snapshot.namedChords.map((c) => `${c.name}×${c.instances}`)).toEqual(["Octave×3"]);
+    expect(snapshot.chordMultiplier).toBeCloseTo(octave ** 3, 9);
+    // Every doubled voice sings the term — the panel read and the hulls
+    // share moduleIds, so no voice is shown chordless while its instances
+    // multiply the rate.
+    expect(snapshot.namedChords[0]!.moduleIds.sort()).toEqual(["m1", "m2", "m3"]);
   });
 
-  it("the octave is the only chord touching the Carrier", () => {
-    expect(NAMED_CHORDS.filter((c) => c.pitches.includes(1))).toHaveLength(1);
+  it("overlapping instances stack: a C · G · D row rings two fifths and a flat seventh", () => {
     const s = fresh();
-    give(s, "additive", hex(1, 0));
+    give(s, "additive", hex(1, 0)); // G4
+    give(s, "additive", hex(2, 0)); // D5
     const snapshot = computeRates(s, true);
-    expect(snapshot.namedChords.map((c) => c.name)).toEqual(["Octave"]);
-    expect(snapshot.pairs).toHaveLength(0);
-    expect(snapshot.rate).toBeCloseTo((0.1 + 0.05) * 1.15, 9);
-  });
-
-  it("recognizes the fifth alongside the octave on a 1·2·3 chain", () => {
-    const s = fresh();
-    give(s, "additive", hex(1, 0));
-    give(s, "additive", hex(2, 0));
-    const snapshot = computeRates(s, true);
-    expect(snapshot.namedChords.map((c) => c.name)).toEqual(["Octave", "Fifth"]);
-    // Both named chords replace their member pairs; nothing survives raw.
-    expect(snapshot.pairs).toHaveLength(0);
-    expect(snapshot.chordMultiplier).toBeCloseTo(1.15 * 1.3, 9);
-    // The pitch-2 bridge sings in both chords.
+    // Register-free matching is generous (the accepted risk): as pitch
+    // classes C is D's flat seventh, whatever octave either sits in.
+    const names = snapshot.namedChords.map((c) => `${c.name}×${c.instances}`).sort();
+    expect(names).toEqual(["Fifth×1", "Fifth×1", "Flat seventh×1"]);
+    expect(snapshot.chordMultiplier).toBeCloseTo(fifth ** 2 * flatSeventh, 9);
+    // Every voice sings in two instances: C (fifth + flat seventh), G (both
+    // fifths), D (fifth + flat seventh).
+    expect(snapshot.contributions.get("m1")?.chordTerms).toBe(2);
     expect(snapshot.contributions.get("m2")?.chordTerms).toBe(2);
+    expect(snapshot.contributions.get("m3")?.chordTerms).toBe(2);
   });
 
-  it("recognizes the blues triad 5:6:7 as a free-standing island", () => {
+  it("a doubled voice doubles the chord it joins", () => {
     const s = fresh();
-    for (const q of [4, 5, 6]) give(s, "additive", hex(q, 0));
+    give(s, "additive", hex(1, 0)); // G4
+    give(s, "additive", hex(1, -1)); // G3 — the fifth doubled at the octave
     const snapshot = computeRates(s, true);
-    expect(snapshot.namedChords.map((c) => c.name)).toEqual(["Blues triad"]);
-    expect(snapshot.pairs).toHaveLength(0);
-    // No path back to the Carrier: the chord rings anyway.
-    expect(snapshot.rate).toBeCloseTo((0.1 + 0.15) * 1.75, 9);
+    const names = snapshot.namedChords.map((c) => `${c.name}×${c.instances}`).sort();
+    // Fifth×2: C pairs with each G. Octave×1: the G pair.
+    expect(names).toEqual(["Fifth×2", "Octave×1"]);
+    expect(snapshot.chordMultiplier).toBeCloseTo(fifth ** 2 * octave, 9);
   });
 
-  it("overlapping named chords stack multiplicatively on a 4·5·6·7 run", () => {
+  it("disjoint same-chord clusters stack multiplicatively", () => {
     const s = fresh();
-    for (const q of [3, 4, 5, 6]) give(s, "additive", hex(q, 0));
+    give(s, "additive", hex(1, 0)); // G4 — Fifth with the opening C4
+    give(s, "additive", hex(5, 0)); // B6 — a far island…
+    give(s, "additive", hex(6, 0)); // F♯7 — …ringing its own Fifth
     const snapshot = computeRates(s, true);
-    expect(snapshot.namedChords.map((c) => c.name)).toEqual(["Major triad", "Blues triad"]);
-    expect(snapshot.pairs).toHaveLength(0);
-    expect(snapshot.chordMultiplier).toBeCloseTo(1.5 * 1.75, 9);
-    expect(snapshot.rate).toBeCloseTo((0.1 + 0.2) * 1.5 * 1.75, 9);
+    expect(snapshot.namedChords.map((c) => c.name)).toEqual(["Fifth", "Fifth"]);
+    expect(snapshot.chordMultiplier).toBeCloseTo(fifth ** 2, 9);
+  });
+});
+
+describe("the spacer conducts", () => {
+  it("a wire bridges a ♭7: one spacer out, the flat-seventh chord forms", () => {
+    const s = fresh();
+    give(s, "spacer", hex(-1, 1)); // F4 — the wire cell
+    give(s, "additive", hex(-2, 2)); // B♭4 — one wire cell out
+    const snapshot = computeRates(s, true);
+    expect(snapshot.namedChords.map((c) => `${c.name}×${c.instances}`)).toEqual(["Flat seventh×1"]);
+    expect(snapshot.chordMultiplier).toBeCloseTo(flatSeventh, 9);
+    expect(snapshot.rate).toBeCloseTo(2 * BALANCE.synthRate * flatSeventh, 9);
   });
 
-  it("replaces only its member pairs: a doubled voice keeps the anonymous pair", () => {
+  it("chains of wired cells conduct — a minor triad across two wires", () => {
     const s = fresh();
-    give(s, "additive", hex(1, 0));
-    give(s, "additive", hex(0, -1));
-    // Two pitch-2 voices both adjacent to the Carrier: the octave sings
-    // through one of them; the double's pair is outside the chord and keeps
-    // the anonymous pair bonus.
+    give(s, "additive", hex(1, 0)); // G4 — the fifth voice, adjacent to C4
+    give(s, "spacer", hex(-1, 1)); // wire
+    give(s, "spacer", hex(-2, 1)); // wire
+    give(s, "additive", hex(-3, 2)); // E♭4 — m3, two wire cells out
     const snapshot = computeRates(s, true);
-    expect(snapshot.namedChords).toHaveLength(1);
-    expect(snapshot.pairs).toHaveLength(1);
-    expect(snapshot.chordMultiplier).toBeCloseTo(1.15 * (1 + BALANCE.pairBonus), 9);
-    expect(snapshot.amplitude).toBeCloseTo(0.2, 9);
-    // One voice sings the chord; the double chords anonymously.
-    expect(snapshot.contributions.get("m2")?.chordTerms).toBe(1);
-    expect(snapshot.contributions.get("m3")?.chordTerms).toBe(1);
+    const names = snapshot.namedChords.map((c) => `${c.name}×${c.instances}`).sort();
+    // The adjacent C · G pair rings its Fifth alongside the bridged triad.
+    expect(names).toEqual(["Fifth×1", "Minor triad×1"]);
+    expect(snapshot.chordMultiplier).toBeCloseTo(fifth * 1.6, 9);
   });
 
-  it("keeps non-member pairs in mixed clusters with doubled voices", () => {
+  it("a major triad costs three wires — the ladder's top rung", () => {
     const s = fresh();
-    give(s, "additive", hex(1, 0)); // pitch 2 — octave voice
-    give(s, "additive", hex(0, -1)); // pitch 2 — adjacent to the Carrier only
-    give(s, "additive", hex(2, 0)); // pitch 3 — fifth voice with (1,0)
+    give(s, "additive", hex(1, 0)); // G4
+    give(s, "spacer", hex(1, -1)); // wire
+    give(s, "spacer", hex(2, -1)); // wire
+    give(s, "spacer", hex(3, -1)); // wire
+    give(s, "additive", hex(4, -2)); // E4 — M3, three wire cells out
     const snapshot = computeRates(s, true);
-    expect(snapshot.namedChords.map((c) => c.name)).toEqual(["Octave", "Fifth"]);
-    // (Carrier, pitch-2 double) survives: the double sings in no chord — the
-    // Carrier does, as the octave's pitch-1 voice.
-    expect(snapshot.pairs).toHaveLength(1);
-    expect(snapshot.chordMultiplier).toBeCloseTo(1.15 * 1.3 * (1 + BALANCE.pairBonus), 9);
-    expect(snapshot.contributions.get("m3")?.chordTerms).toBe(1);
+    const names = snapshot.namedChords.map((c) => `${c.name}×${c.instances}`).sort();
+    expect(names).toEqual(["Fifth×1", "Major triad×1"]);
+    expect(snapshot.chordMultiplier).toBeCloseTo(fifth * 1.75, 9);
   });
 
-  it("the textbook 10:12:15 minor triad is geometrically impossible", () => {
-    // A connected run covering pitches 10 through 15: every adjacent pair is
-    // consecutive, so the gapped 10:12:15 voicing can never connect — and no
-    // named chord reaches pitch 8 and beyond.
+  it("the spacer never joins a pitch set and never produces", () => {
     const s = fresh();
-    for (const q of [9, 10, 11, 12, 13, 14]) give(s, "additive", hex(q, 0));
+    const spacer = give(s, "spacer", hex(1, 0)); // G4's cell, wired to C4
     const snapshot = computeRates(s, true);
-    expect(snapshot.namedChords).toHaveLength(0);
-    expect(snapshot.pairs).toHaveLength(5);
-    expect(snapshot.chordMultiplier).toBeCloseTo((1 + BALANCE.pairBonus) ** 5, 9);
+    expect(snapshot.namedChords).toHaveLength(0); // C alone: no Octave from wire
+    expect(snapshot.synths).toBeCloseTo(BALANCE.synthRate, 9);
+    expect(snapshot.contributions.get(spacer.id)?.value).toBe(0);
+    expect(snapshot.contributions.get(spacer.id)?.amplitude).toBe(0);
+    expect(snapshot.rate).toBeCloseTo(BALANCE.synthRate, 9);
   });
 
-  it("recognizes each pattern once per cluster, not once per position", () => {
+  it("shared wire merges clusters: bridged voices ring a chord they can't reach alone", () => {
     const s = fresh();
-    give(s, "additive", hex(4, 0));
-    give(s, "additive", hex(5, 0));
-    give(s, "additive", hex(6, 0));
-    give(s, "additive", hex(4, 1));
-    // (4,1) doubles pitch 6 (adjacent to both 5·6 voices): the cluster still
-    // rings one blues triad; the double's consecutive pair at 5·6 is outside
-    // the chord's voices and keeps the anonymous pair bonus.
-    const snapshot = computeRates(s, true);
-    expect(snapshot.namedChords.map((c) => c.name)).toEqual(["Blues triad"]);
-    expect(snapshot.pairs).toHaveLength(1);
-    expect(snapshot.chordMultiplier).toBeCloseTo(1.75 * (1 + BALANCE.pairBonus), 9);
+    const wire = give(s, "spacer", hex(1, 0));
+    give(s, "additive", hex(2, 0)); // D5
+    // With the wire: C4 and D5 connect — one cluster — and their pitch
+    // content rings a flat seventh (D's root, C a register-free ♭7 below).
+    const bridged = computeRates(s, true);
+    expect(bridged.namedChords.map((c) => `${c.name}×${c.instances}`)).toEqual(["Flat seventh×1"]);
+    // Without the wire they are two islands: adjacency gone, chord gone —
+    // the wire was the only conductor.
+    wire.pos = null;
+    const split = computeRates(s, true);
+    expect(split.namedChords).toHaveLength(0);
+    expect(split.chordMultiplier).toBe(1);
   });
 });
 
 describe("conditional synthesizers", () => {
-  it("pay amplitude plus a bonus per chord pair participated", () => {
+  it("pay their base term plus 10% per chord instance they belong to", () => {
     const s = fresh();
-    give(s, "conditional", hex(1, 0));
+    give(s, "conditional", hex(1, 0)); // G4 — one Fifth instance with C4
     const snapshot = computeRates(s, true);
-    // Octave voice: one participation.
     expect(snapshot.contributions.get("m2")?.chordTerms).toBe(1);
-    expect(snapshot.contributions.get("m2")?.value).toBeCloseTo(0.05 * (1 + BALANCE.conditionalPairBonus), 9);
-    expect(snapshot.rate).toBeCloseTo((0.1 + 0.05 * 1.1) * 1.15, 9);
+    expect(snapshot.contributions.get("m2")?.value).toBeCloseTo(BALANCE.synthRate * (1 + BALANCE.conditionalChordBonus), 9);
+    expect(snapshot.synths).toBeCloseTo(BALANCE.synthRate * 2 + BALANCE.synthRate * BALANCE.conditionalChordBonus, 9);
+    expect(snapshot.rate).toBeCloseTo((2 * BALANCE.synthRate + BALANCE.synthRate * 0.1) * fifth, 9);
   });
 
-  it("count a named chord once however many member pairs they share in", () => {
+  it("count every instance they sing in — the bridge rings twice", () => {
     const s = fresh();
-    give(s, "conditional", hex(1, 0));
-    give(s, "additive", hex(2, 0));
-    // The conditional bridges octave and fifth: two chord terms.
+    give(s, "conditional", hex(1, 0)); // G4
+    give(s, "additive", hex(2, 0)); // D5 — conditional bridges two Fifths
     const snapshot = computeRates(s, true);
     expect(snapshot.contributions.get("m2")?.chordTerms).toBe(2);
-    expect(snapshot.contributions.get("m2")?.value).toBeCloseTo(0.05 * (1 + 2 * BALANCE.conditionalPairBonus), 9);
-    expect(snapshot.rate).toBeCloseTo((0.1 + 0.05 * 1.2 + 0.05) * 1.15 * 1.3, 9);
+    expect(snapshot.contributions.get("m2")?.value).toBeCloseTo(BALANCE.synthRate * (1 + 2 * BALANCE.conditionalChordBonus), 9);
   });
 
   it("stay plain amplitude when chordless", () => {
     const s = fresh();
-    give(s, "conditional", hex(2, 0));
+    give(s, "conditional", hex(3, 0)); // A5 — its own island
     const snapshot = computeRates(s, true);
     expect(snapshot.contributions.get("m2")?.chordTerms).toBe(0);
-    expect(snapshot.rate).toBeCloseTo(0.15, 9);
+    expect(snapshot.rate).toBeCloseTo(2 * BALANCE.synthRate, 9);
   });
 
-  it("additives never take the per-pair bonus", () => {
+  it("additives never take the per-instance bonus", () => {
     const s = fresh();
     give(s, "additive", hex(1, 0));
     const snapshot = computeRates(s, true);
     expect(snapshot.contributions.get("m2")?.chordTerms).toBe(1);
-    expect(snapshot.contributions.get("m2")?.value).toBeCloseTo(0.05, 9);
+    expect(snapshot.contributions.get("m2")?.value).toBeCloseTo(BALANCE.synthRate, 9);
   });
 });
 
 describe("live rate breakdown", () => {
   it("multiplies out exactly: rate = composite × empowerment × achievements", () => {
     const s = fresh();
-    give(s, "additive", hex(1, 0));
-    give(s, "additive", hex(2, 0));
-    give(s, "infusor", hex(3, 0));
+    give(s, "additive", hex(1, 0)); // G4 — Fifth with C4
+    give(s, "infusor", hex(0, 1)); // C5 — adjacent to both C4 and G4
     const snapshot = computeRates(s, true);
-    // The infusor at (3,0) touches only the (2,0) additive: its uplift is
-    // its own leg (+0.01), and the amplitude splits exactly across legs.
-    expect(snapshot.infusors).toBeCloseTo(0.01, 9);
-    expect(snapshot.amplitude).toBeCloseTo(snapshot.carrier + snapshot.harmonics + snapshot.infusors, 9);
+    // The infusor touches both synths: uplift is its own leg, and the
+    // amplitude splits exactly across legs.
+    expect(snapshot.infusors).toBeCloseTo(2 * BALANCE.synthRate * BALANCE.infusorBonus, 9);
+    expect(snapshot.amplitude).toBeCloseTo(snapshot.synths + snapshot.infusors, 9);
     expect(snapshot.composite).toBeCloseTo(snapshot.amplitude * snapshot.chordMultiplier, 9);
-    expect(snapshot.empowerment).toBe(1);
+    expect(snapshot.empowerment).toBeCloseTo(1, 9);
     expect(snapshot.achievementBoost).toBe(1);
     expect(snapshot.rate).toBeCloseTo(snapshot.composite * snapshot.empowerment * snapshot.achievementBoost, 9);
   });
 
   it("charge aggregates into the empowerment leg, per module", () => {
     const s = fresh();
-    give(s, "focusKeyed", hex(0, 1));
+    give(s, "focusKeyed", hex(0, 1)); // C5 — adjacent to the opening C4
     s.chargeWindow = 60;
     const snapshot = computeRates(s, true);
-    // Only the carrier is charged: the uncharged legs stay clean and the
-    // empowerment leg carries the exact multiplier.
-    expect(snapshot.composite).toBeCloseTo(0.1, 9);
+    expect(snapshot.composite).toBeCloseTo(BALANCE.synthRate, 9);
     expect(snapshot.empowerment).toBeCloseTo(1.5, 9);
     expect(snapshot.rate).toBeCloseTo(snapshot.composite * snapshot.empowerment, 9);
-  });
-
-  it("keeps the empowerment leg honest across chords and conditionals", () => {
-    const s = fresh();
-    give(s, "conditional", hex(1, 0));
-    give(s, "additive", hex(2, 0));
-    give(s, "focusKeyed", hex(0, 1));
-    s.chargeWindow = 60;
-    // (0,1) touches both the Carrier and the conditional at (1,0): each
-    // charges to strength 1 while the additive at (2,0) stays uncharged. The
-    // conditional's per-pair bonus rides in its harmonic leg; empowerment is
-    // exactly the charge story (1.5 on two of three modules).
-    const snapshot = computeRates(s, true);
-    const unchargedSum = 0.1 + 0.05 * (1 + 2 * BALANCE.conditionalPairBonus) + 0.05;
-    const chargedSum = 0.1 * 1.5 + 0.05 * (1 + 2 * BALANCE.conditionalPairBonus) * 1.5 + 0.05;
-    expect(snapshot.composite).toBeCloseTo(unchargedSum * 1.15 * 1.3, 9);
-    expect(snapshot.rate).toBeCloseTo(chargedSum * 1.15 * 1.3, 9);
-    expect(snapshot.empowerment).toBeCloseTo(chargedSum / unchargedSum, 9);
-    expect(snapshot.rate).toBeCloseTo(snapshot.composite * snapshot.empowerment * snapshot.achievementBoost, 9);
   });
 
   it("keeps empowerment at unity when only chords boost the rate", () => {
@@ -287,42 +280,40 @@ describe("live rate breakdown", () => {
     give(s, "conditional", hex(1, 0));
     give(s, "additive", hex(2, 0));
     const snapshot = computeRates(s, true);
-    // Two chord terms on the conditional, but no charge anywhere: the
-    // empowerment leg must not absorb the chord bonus.
     expect(snapshot.empowerment).toBe(1);
     expect(snapshot.rate).toBeCloseTo(snapshot.composite, 9);
   });
 
-  it("derives a module's contribution for tooltips", () => {
+  it("derives a module's contribution and pitch for tooltips", () => {
     const s = fresh();
-    give(s, "additive", hex(1, 0), 2);
+    const g = give(s, "additive", hex(1, 0), 2); // G4, level 2
     const snapshot = computeRates(s, true);
-    const additive = snapshot.contributions.get("m2")!;
-    expect(additive.pitch).toBe(2);
-    expect(additive.amplitude).toBeCloseTo(1.2 ** 2, 9);
-    expect(additive.value).toBeCloseTo(BALANCE.additiveRate * additive.amplitude, 9);
-    expect(additive.chordTerms).toBe(1);
-    // Its share of the composite: term × chord multiplier.
-    expect(additive.value * snapshot.chordMultiplier).toBeCloseTo(0.05 * 1.44 * 1.15, 9);
+    const contribution = snapshot.contributions.get(g.id)!;
+    expect(contribution.pitch).toBe(67);
+    expect(contribution.amplitude).toBeCloseTo(1.2 ** 2, 9);
+    expect(contribution.value).toBeCloseTo(BALANCE.synthRate * contribution.amplitude, 9);
+    expect(contribution.chordTerms).toBe(1);
   });
 
-  it("the achievements leg exists at unity until ADR-0015 lands", () => {
+  it("exposes the pitch of every deployed synthesizer", () => {
     const s = fresh();
-    expect(computeRates(s, true).achievementBoost).toBe(1);
+    give(s, "additive", hex(2, 0)); // D5
+    const snapshot = computeRates(s, true);
+    expect(snapshot.contributions.get("m1")?.pitch).toBe(60);
+    expect(snapshot.contributions.get("m2")?.pitch).toBe(74);
+    expect(pitchOf(hex(2, 0))).toBe(74);
   });
 });
 
 describe("cluster shape", () => {
-  it("analyzes clusters without a path to the Carrier", () => {
+  it("analyzes free-floating islands without any path to the opening synth", () => {
     const s = fresh();
-    const island = [
-      give(s, "additive", hex(4, 0)),
-      give(s, "additive", hex(5, 0)),
-    ].map((m) => ({ ...m, pos: m.pos! }));
-    // Pitches 5·6: a raw pair position — no named chord covers it.
-    const analysis = analyzeChords(island);
-    expect(analysis.namedChords).toHaveLength(0);
-    expect(analysis.pairs).toHaveLength(1);
-    expect(analysis.multiplier).toBeCloseTo(1.1, 9);
+    const island = [give(s, "additive", hex(-5, 3)), give(s, "additive", hex(-4, 3))];
+    const analysis = analyzeChords(
+      island.map((m) => ({ ...m, pos: m.pos! })),
+    );
+    // (-5,3) is A♭6 (class 8); (-4,3) is E♭7 (class 3): a fifth apart.
+    expect(analysis.namedChords.map((c) => `${c.name}×${c.instances}`)).toEqual(["Fifth×1"]);
+    expect(analysis.multiplier).toBeCloseTo(fifth, 9);
   });
 });

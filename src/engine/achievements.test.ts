@@ -209,14 +209,14 @@ describe("the 17-feat launch set", () => {
     expect(s.achievements["power-chord"]).toBeDefined();
   });
 
-  it("Power chord reads synthesizers only: neighbors never chord", () => {
+  it("Power chord reads synthesizers and spacers only: other neighbors never chord", () => {
     const s = fresh();
     completeSession(s);
     s.cells.push(hex(2, 0));
-    give(s, "additive", hex(1, 0)); // P2 — octave with the carrier: ×1.15
-    give(s, "focusKeyed", hex(2, 0)); // not a synth — would add a fifth if it voiced
+    give(s, "additive", hex(1, 0)); // G4 — a Fifth with the opening C4: ×1.3
+    give(s, "focusKeyed", hex(2, 0)); // not a synth — would add another fifth if it voiced
     const def = ACHIEVEMENTS.find((a) => a.id === "power-chord")!;
-    expect(def.progress(s, { chargeDelivered: false }).current).toBeCloseTo(1.15, 9);
+    expect(def.progress(s, { chargeDelivered: false }).current).toBeCloseTo(1.3, 9);
   });
 
   it("Eyes on the horizon: pressing the reserved prestige button", () => {
@@ -300,7 +300,7 @@ describe("achievement persistence", () => {
     expect(loaded.state!.achievements["eyes-on-the-horizon"]).toBeDefined();
   });
 
-  it("v5 saves from before the framework default the achievement fields", () => {
+  it("saves missing the ledger fields lenient-default them at load", () => {
     const s = fresh();
     completeSession(s);
     const file = JSON.parse(serialize(s, NOW));
@@ -308,14 +308,12 @@ describe("achievement persistence", () => {
     delete file.state.unstructuredSessions;
     delete file.state.plannedSessionsCompleted;
     delete file.state.combinations;
-    delete file.state.summary.achievements;
     const loaded = deserialize(JSON.stringify(file));
     expect(loaded.error).toBeUndefined();
     expect(loaded.state!.achievements).toEqual({});
     expect(loaded.state!.unstructuredSessions).toBe(0);
     expect(loaded.state!.plannedSessionsCompleted).toBe(0);
     expect(loaded.state!.combinations).toBe(0);
-    expect(loaded.state!.summary!.achievements).toEqual([]);
   });
 
   it("a mid-flow save carries the session's unlock queue", () => {

@@ -1,8 +1,9 @@
-import { BALANCE, EPS, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "./constants";
-import { cellCost, computeRates, deployedAt, findModule, levelCost, longGoalCost, wholeNous } from "./economy";
+import { BALANCE, EPS, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE, SHELF_TYPES } from "./constants";
+import { cellPurchasePrice, computeRates, deployedAt, findModule, levelCost, longGoalCost, rowGateOwed, wholeNous } from "./economy";
 import { nextRungCost, appActive, LADDER_APPS, type FocusApp } from "./apps";
 import { adjacent, hexKey, isConnected, sameHex } from "./hex";
-import { createModule, isCarrier } from "./state";
+import { octaveRowOf, positionInRange } from "./lattice";
+import { createModule } from "./state";
 import { logSessionPractice } from "./habits";
 import { plannedTargetHit } from "./records";
 import { rollGoalOccurrences } from "./goals";
@@ -130,8 +131,7 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
     // Achieved, not projected (§5.7): a session that ended before any
     // practice accrued has no rate to report.
     ratePerMinute: credited > EPS ? (earned / credited) * 60 : 0,
-    carrier: snapshot.carrier,
-    harmonics: snapshot.harmonics,
+    synths: snapshot.synths,
     infusors: snapshot.infusors,
     chordMultiplier: snapshot.chordMultiplier,
     empowerment: snapshot.empowerment,
@@ -172,17 +172,6 @@ export function acknowledgeHorizon(state: GameState): ActionResult {
   return { ok: true, unlocked: checkAchievements(state) };
 }
 
-// The one-time welcome card (§5.1): following its CTA to the Carrier's
-// upgrade button — or dismissing it — is the one acknowledgment; the save
-// keeps the flag so the card never returns. Skipping straight to a session
-// loses nothing: the card forces nothing. It is an upgrade-mode surface —
-// it stands down for live sessions, so nothing unlocks mid-session-one.
-export function acknowledgeWelcome(state: GameState): ActionResult {
-  if (state.mode !== "upgrade") return fail("The welcome card waits for upgrade mode.");
-  state.welcomeAcked = true;
-  return ok;
-}
-
 // The summary's reflection (§8): recorded the moment either field is
 // touched — the untouched field keeps its neutral default (empty text,
 // middle slider) — and absent while neither is. Recording is the logging,
@@ -219,12 +208,14 @@ export function dismissSummary(state: GameState): ActionResult {
   return ok;
 }
 
-// The starter shelf (ADR-0013, ADR-0018): one-time offers for the launch
-// categories plus the additive synth that makes chord play possible before
-// the first roll. All nous spending is upgrade-mode-only (§3); there is no
-// separate catalog gate — upgrade mode itself is the purchase window.
+// The starter shelf (ADR-0013, amended by ADR-0022): one-time offers for
+// the non-synthesizer landscape — the generator, one infusor, and the Forge.
+// Synthesizers and spacers come only through the forge loop. All nous
+// spending is upgrade-mode-only (§3); there is no separate catalog gate —
+// upgrade mode itself is the purchase window.
 export function buyShelfModule(state: GameState, type: ShelfType): ActionResult {
   if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
+  if (!SHELF_TYPES.includes(type)) return fail("That offer is not on the shelf.");
   if (state.purchased[type]) return fail("This shelf offer was already purchased.");
   const price = BALANCE.shelfPrices[type];
   if (wholeNous(state) < price) return fail("Not enough whole nous.");
@@ -234,18 +225,29 @@ export function buyShelfModule(state: GameState, type: ShelfType): ActionResult 
   return ok;
 }
 
-// Cells (ADR-0013): direct nous purchases, bought and placed in upgrade
-// mode. A new cell must extend the connected frontier, so the board grows
-// without ever disconnecting; reshaping stays the count-preserving rule.
+// Cells (ADR-0013, amended by ADR-0022): direct nous purchases, bought and
+// placed in upgrade mode. A new cell must extend the connected frontier, so
+// the board grows without ever disconnecting; reshaping stays the
+// count-preserving rule. The first purchase into each new octave row pays a
+// one-time gate premium on top of the cell price — escalating with row
+// distance from the start register, never advancing the purchase scaler,
+// and never owed twice (the gatedRows ledger records every paid row,
+// including the opening's, which the grant paid). Movement between rows is
+// a different action entirely and never meets a gate. The fifths axis is
+// ungated; the row range is finite and symmetric around the start register.
 export function buyCell(state: GameState, pos: Hex): ActionResult {
   if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
   if (state.cells.some((c) => sameHex(c, pos))) return fail("That cell is already part of the board.");
   if (!state.cells.some((c) => adjacent(c, pos))) return fail("New cells must touch the board.");
-  const price = cellCost(state.cellsBought);
+  if (!positionInRange(pos)) return fail("That cell lies outside the board's lattice.");
+  const row = octaveRowOf(pos);
+  const gateOwed = rowGateOwed(state, row);
+  const price = cellPurchasePrice(state, pos);
   if (wholeNous(state) < price) return fail("Not enough whole nous.");
   state.nous -= price;
   state.cells.push(pos);
   state.cellsBought++;
+  if (gateOwed) state.gatedRows.push(row);
   return { ok: true, unlocked: checkAchievements(state) };
 }
 
@@ -300,7 +302,6 @@ export function combine(state: GameState, id: string, partnerId?: string): Actio
   if (state.mode !== "upgrade") return fail("Combining happens between sessions.");
   const selected = findModule(state, id);
   if (!selected) return fail("Module not found.");
-  if (isCarrier(selected)) return fail("The Carrier cannot be combined.");
   let partner: ModuleInstance | undefined;
   if (partnerId !== undefined) {
     partner = findModule(state, partnerId);
@@ -339,11 +340,12 @@ export function placeModule(state: GameState, id: string, pos: Hex): ActionResul
   if (state.mode !== "upgrade") return fail("The grid is locked during flow.");
   const module = findModule(state, id);
   if (!module) return fail("Module not found.");
-  if (isCarrier(module)) return fail("The Carrier is pinned at the origin.");
   if (!state.cells.some((c) => sameHex(c, pos))) return fail("That cell is not part of the board.");
   const occupant = deployedAt(state, pos);
   if (module.pos !== null && sameHex(module.pos, pos)) return ok;
-  if (occupant && isCarrier(occupant)) return fail("The Carrier keeps its cell.");
+  // No module is spatially privileged (ADR-0021): every placement swaps
+  // freely, and a swap of identical synthesizers can never break a chord —
+  // pitch lives in the cell.
   if (occupant) occupant.pos = module.pos;
   module.pos = pos;
   // Layout changes move the chord multiplier (Power chord).
@@ -354,12 +356,13 @@ export function returnModule(state: GameState, id: string): ActionResult {
   if (state.mode !== "upgrade") return fail("The grid is locked during flow.");
   const module = findModule(state, id);
   if (!module) return fail("Module not found.");
-  if (isCarrier(module)) return fail("The Carrier is pinned at the origin.");
   if (module.pos === null) return fail("This module is already in inventory.");
   module.pos = null;
   return ok;
 }
 
+// Reshaping moves owned cells anywhere within the finite row band — always
+// free, never gated (ADR-0022: gates tax acquisition only).
 export function reshapeCells(state: GameState, next: Hex[]): ActionResult {
   if (state.mode !== "upgrade") return fail("Reshaping happens between sessions.");
   if (next.length !== state.cells.length) return fail("Reshaping preserves the cell count.");
@@ -370,6 +373,7 @@ export function reshapeCells(state: GameState, next: Hex[]): ActionResult {
       return fail("Every deployed module needs a cell.");
     }
   }
+  if (next.some((cell) => !positionInRange(cell))) return fail("The board must stay inside the board's lattice.");
   if (!isConnected(next)) return fail("The board must stay connected.");
   state.cells = next;
   return { ok: true, unlocked: checkAchievements(state) };

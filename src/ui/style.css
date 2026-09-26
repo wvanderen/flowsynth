@@ -722,8 +722,9 @@ body.live .inspector-empty { opacity: 0.75; }
 /* ── Module faces: readout panels (ADR-0016, #39) ──── */
 /* A face is a shared chassis, engraved rarity rings, a narrow category rail
    in the category hue, a condensed technical-caps nameplate, a prominent
-   contribution readout, and a smaller geometric signature. Hue = category;
-   the Carrier wears white; rarity is rings + plate tint — never hue. */
+   contribution readout, and a smaller geometric signature. Hue = category —
+   the spacer wears its own muted wire hue; rarity is rings + plate tint,
+   never hue. */
 
 /* Chassis states: structure in line colors; light and motion carry charge.
    A charged receiver's fill comes from the charge token at an inline
@@ -788,16 +789,15 @@ body.live .inspector-empty { opacity: 0.75; }
 .lead-tip-dim { fill: var(--charge); opacity: 0.5; }
 .highlight-ring { fill: none; stroke: var(--charge); stroke-width: 1.5; opacity: 0.8; pointer-events: none; }
 
-/* Chord view (issue #62): the board's chord register — the synthesizer
-   category's luminous glow, per the register law (ADR-0016). Chord voices
-   stay lit while everything chordless dims; a pair link bridges the seam
-   between its two faces; a named chord wraps its voices in a hull and wears
-   its formula-chip label. Display only. */
+/* Chord view (issue #62, reworked for the carrierless board): the board's
+   chord register — the synthesizer category's luminous glow, per the
+   register law (ADR-0016). Chord voices stay lit while everything
+   chordless dims; a named chord wraps its voices in a hull and wears its
+   formula-chip label. Display only. */
 .cell-node { transition: opacity 0.25s; }
 #grid.chord-view .cell-node:not(.chord-lit) { opacity: 0.22; }
 #grid.chord-view .charge-line,
 #grid.chord-view .charge-preview-line { opacity: 0.1; }
-.chord-link { stroke: var(--nous); stroke-width: 3; stroke-linecap: round; opacity: 0.9; pointer-events: none; }
 .chord-hull {
   fill: color-mix(in srgb, var(--nous) 7%, transparent);
   stroke: var(--nous);
@@ -901,23 +901,10 @@ body.managing .manage-banner { display: flex; }
 
 .config-label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 
-/* Module pin (issue #94): the Carrier is granted and pinned — it never moves.
-   The badge is a bare white lock marking (the carrier's neutral register)
-   above the engraved level, and three bolt circles mount the chassis —
-   hardware, never a hue. */
-.module-pin { stroke: var(--hue-carrier); fill: none; stroke-width: 1.8; stroke-linecap: round; }
-.module-bolts circle { fill: var(--panel-deep); stroke: var(--line); stroke-width: 1.2; }
-.module-node .module-pin { cursor: help; }
-
-/* A drag attempt on the pinned Carrier refuses visibly: the face shakes
-   (translate composes with the arranging lift) while the status names why. */
-.module-node.pin-refused { animation: pin-refuse 0.42s ease-out; }
-@keyframes pin-refuse {
-  20% { translate: -3.5px 0; }
-  45% { translate: 3px 0; }
-  70% { translate: -2px 0; }
-  90% { translate: 1.5px 0; }
-}
+/* The lattice's note labels (ADR-0021): every cell is an absolute note —
+   empty cells wear theirs beneath the plus so columns read as one note
+   name. */
+.hex-note { font-size: 11px; fill: var(--muted); letter-spacing: 0.04em; }
 
 /* Drop targets: swap (accent) versus combine with a matching twin (amber). */
 .hex.combine-target { stroke: var(--forge-glow); stroke-width: 2.5; fill: var(--forge-faint); }
@@ -1195,28 +1182,6 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
    is for; nothing else in the catalog explains itself twice. */
 .shop-hint { display: block; margin-top: 3px; font-size: 11.5px; font-style: normal; color: var(--charge); }
 .goal-slots { font: 10px var(--mono); letter-spacing: 0.06em; color: var(--muted); margin: 0 0 10px; }
-
-/* The one-time welcome card (§5.1): unforced guidance floating over the
-   opening board — clicks pass around it, and it never returns once
-   acknowledged. */
-.welcome-card {
-  position: absolute;
-  top: 26px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 20;
-  width: min(340px, calc(100% - 48px));
-  background: var(--panel);
-  border: 1px solid var(--line-strong);
-  border-radius: 12px;
-  padding: 16px 18px;
-  box-shadow: 0 18px 50px rgb(0 0 0 / 0.45);
-}
-.welcome-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.welcome-dismiss { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 2px 6px; font-size: 13px; }
-.welcome-dismiss:hover { color: var(--ink); }
-.welcome-copy { font-size: 13px; line-height: 1.55; margin: 0 0 12px; }
-.welcome-copy strong { color: var(--ink); }
 
 /* ═══════════════════════════════════════════════════════════════════════
    PROTOTYPE (issue #119) — console-hierarchy variants. THROWAWAY: switch

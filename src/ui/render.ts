@@ -1,9 +1,10 @@
-import { chargedFactor, cellCost, chargeDelivered, computeRates, deployed, emittedStrength, levelCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
+import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, deployed, emittedStrength, levelCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
 import { BALANCE, CATEGORY_OF, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
+import { cellNoteOf, noteNameOf, octaveRowOf, positionInRange } from "../engine/lattice";
 import { appActive, appLockNote, FOCUS_APPS, type FocusApp } from "../engine/apps";
 import { isInFlowNote } from "../engine/notes";
 import { activeHabit } from "../engine/habits";
@@ -18,7 +19,6 @@ import {
 import { poolOutstanding } from "../engine/trust";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
-import { isCarrier } from "../engine/state";
 import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NoteEntry, RateSnapshot } from "../engine/types";
 import type { App, EnterKind } from "./app";
 import { appIcon } from "./icons";
@@ -27,7 +27,7 @@ import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
-import { formatDate, formatInt, formatNumber, formatPracticeMinutes, practiceCountdown, secondsToMinutes } from "./format";
+import { formatDate, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
 import { renderStatusMonitor } from "./monitor";
 import { prototypeVariant, ledgerHtml, updateLedgerLive, featsChipHtml, unlockedCount, FEATS_SVG, TOOL_ICONS } from "./variant";
 
@@ -64,10 +64,6 @@ function chargeWindowText(state: GameState): string {
   return formatDuration(Math.max(0, state.chargeWindow));
 }
 
-function times(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
-}
-
 export function render(app: App): void {
   renderConsoleSession(app);
   renderConsoleApps(app);
@@ -77,38 +73,8 @@ export function render(app: App): void {
   renderGrid(app);
   renderStatusMonitor(app);
   renderInspector(app);
-  renderWelcome(app);
   renderModal(app);
   renderDev(app);
-}
-
-/* ── Welcome card (§5.1) ───────────────────────────── */
-
-// The one-time opening card: the Carrier is granted and its first upgrade is
-// already affordable. Unforced — it locks nothing, and acknowledging or
-// dismissing it once (persisted in the save) keeps it away forever. It is an
-// upgrade-mode surface: it stands down for live sessions.
-function renderWelcome(app: App): void {
-  const host = byId("welcome-card");
-  if (!host) return;
-  if (app.state.welcomeAcked || app.state.mode !== "upgrade") {
-    host.hidden = true;
-    delete host.dataset.renderKey;
-    return;
-  }
-  host.hidden = false;
-  if (host.dataset.renderKey === "open") return;
-  host.dataset.renderKey = "open";
-  host.innerHTML = `
-    <div class="welcome-top">
-      <span class="eyebrow">WELCOME</span>
-      <button class="welcome-dismiss" id="welcome-dismiss" aria-label="Dismiss the welcome card">✕</button>
-    </div>
-    <p class="welcome-copy">Your <strong>Carrier</strong> is granted — its first upgrade is already affordable.</p>
-    <button class="primary" id="welcome-cta">Upgrade the Carrier</button>
-    `;
-  byId("welcome-cta")?.addEventListener("click", () => app.ackWelcomeToCarrier());
-  byId("welcome-dismiss")?.addEventListener("click", () => app.dismissWelcome());
 }
 
 /* ── Console (ADR-0012) ────────────────────────────── */
@@ -598,7 +564,9 @@ function renderGrid(app: App): void {
   if (!svg) return;
   const upgrade = state.mode === "upgrade";
   const showFrontier = upgrade && (ui.reshape !== null || ui.buyingCell);
-  const frontier = showFrontier ? app.frontierCells() : [];
+  // The frontier stops at the finite octave-row band (ADR-0022): the
+  // fifths axis runs free, the rows do not.
+  const frontier = showFrontier ? app.frontierCells().filter(positionInRange) : [];
   const allCells = [...state.cells, ...frontier];
   const coords = allCells.map(point);
   const minX = Math.min(...coords.map((p) => p[0])) - 78;
@@ -612,21 +580,20 @@ function renderGrid(app: App): void {
   const snapshot = currentSnapshot(state);
   const selectedModule = state.modules.find((m) => m.id === ui.selected) ?? null;
 
-  // The chord view (issue #62): a display-only read of the board's chord
-  // terms — the same pairs and named chords the formula chip names, drawn
-  // where they live. Chord voices stay lit; everything else dims; pair links
-  // and named-chord hulls wear the chord register. Purely cosmetic: no
-  // gating, no gameplay effect, available in every mode.
+  // The chord view (issue #62, reworked for the carrierless board): a
+  // display-only read of the board's pitch-set chord terms — the same named
+  // chords the formula chip names, drawn where they live as hulls over the
+  // connected voices. Chord voices stay lit; everything else dims. Purely
+  // cosmetic: no gating, no gameplay effect, available in every mode.
   const deployedById = new Map(state.modules.filter((m) => m.pos !== null).map((m) => [m.id, m]));
   const overlay = ui.showChords
     ? chordOverlay({
-        pairs: snapshot.pairs,
         namedChords: snapshot.namedChords,
         posOf: (id) => deployedById.get(id)?.pos ?? null,
         point,
         radius: HEX_RADIUS,
         pad: 5,
-        labelFor: (chord) => `${chord.name} ×${formatNumber(1 + chord.bonus)}`,
+        labelFor: chordTermLabel,
       })
     : null;
   const nodeClass = (moduleId: string | null): string =>
@@ -646,44 +613,44 @@ function renderGrid(app: App): void {
     html += `<line data-key="charge-${generator.id}-${receiver.id}" class="${cls}" ${leadSegment(x1, y1, x2, y2)}/>`;
   }
 
-  // Chord pair links: seam bridges beneath the faces, in the chord register
-  // — the wiring language, re-register for the board's optimization game.
-  if (overlay) {
-    html += `<g data-key="chord-links">${overlay.links
-      .map((link) => `<line data-key="pair-${link.key}" class="chord-link" x1="${link.x1}" y1="${link.y1}" x2="${link.x2}" y2="${link.y2}"/>`)
-      .join("")}</g>`;
-  }
-
   for (const pos of state.cells) {
     const [x, y] = point(pos);
     const module = deployedAt(state, pos);
     const isRemoval = ui.reshape?.removes.some((c) => sameHex(c, pos)) ?? false;
     let classes = "hex empty";
     if (isRemoval) classes += " remove-stage";
-    if (!module && isTargetCell(app, pos)) classes += " target";
-    html += `<g class="${nodeClass(module?.id ?? null)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${module ? META[module.type].name : "Empty cell"}">
+    if (!module && isTargetCell(app)) classes += " target";
+    // The lattice reads on every cell (board-redesign spec §2): each cell
+    // is an absolute note — note name under the readout for modules, on the
+    // face for empty cells — so columns read as one note name and octave
+    // rows stack visibly.
+    html += `<g class="${nodeClass(module?.id ?? null)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${module ? `${META[module.type].name} at ${cellNoteOf(pos)}` : `Empty cell · ${cellNoteOf(pos)}`}">
       ${module ? "" : `<polygon class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>`}`;
     if (module) {
       html += moduleNode(app, module, pos, { snapshot, selectedModule });
     } else {
-      html += `<path class="empty-plus" d="M-7-6H7M0-13V1"/><text y="24" text-anchor="middle" class="hex-sub">EMPTY CELL</text>`;
+      html += `<path class="empty-plus" d="M-7-6H7M0-13V1"/><text y="10" text-anchor="middle" class="hex-note">${cellNoteOf(pos)}</text><text y="24" text-anchor="middle" class="hex-sub">EMPTY CELL</text>`;
     }
     html += `</g>`;
   }
 
   if (showFrontier) {
-    const price = cellCost(state.cellsBought);
-    const affordable = wholeNous(state) >= price;
+    // The octave-row gate rides the quoted price (ADR-0022): a frontier hex
+    // in a row whose one-time gate is unpaid carries cell price + premium —
+    // the same cellPurchasePrice seam the buy action charges.
+    const basePrice = cellCost(state.cellsBought);
     for (const pos of frontier) {
       const [x, y] = point(pos);
+      const total = cellPurchasePrice(state, pos);
+      const affordable = wholeNous(state) >= total;
       if (ui.buyingCell) {
         // The purchase arm: every frontier hex carries its price; the buy
         // lands only where clicked (ADR-0013).
-        html += `<g class="${nodeClass(null)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Buy cell here for ${formatInt(price)} nous">
+        html += `<g class="${nodeClass(null)}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Buy cell here for ${formatInt(total)} nous">
           <polygon class="hex ${affordable ? "buy-here" : "future"}" points="${hexPoints(HEX_RADIUS)}"/>
           <text y="-24" text-anchor="middle" class="hex-sub">NEW CELL</text>
           ${affordable ? `<text y="8" text-anchor="middle" fill="var(--accent)" font-size="22">+</text>` : ""}
-          <text y="${affordable ? 34 : 8}" text-anchor="middle" class="hex-sub">${formatInt(price)} ν</text>
+          <text y="${affordable ? 34 : 8}" text-anchor="middle" class="hex-sub">${formatInt(total)} ν${total > basePrice ? " · gated" : ""}</text>
         </g>`;
       } else {
         const isAdd = ui.reshape?.adds.some((c) => sameHex(c, pos)) ?? false;
@@ -737,7 +704,7 @@ interface RenderContext {
   selectedModule: ModuleInstance | null;
 }
 
-function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderContext): string {
+function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderContext): string {
   const { ui, state } = app;
   const selected = ui.selected === module.id;
   // Charge is session-bound: the snapshot is flow-gated, so any strength it
@@ -775,12 +742,16 @@ function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderCont
     readout = `⌁${formatNumber(modulePower(module))}`;
   } else if (module.type === "infusor") {
     readout = `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(ctx.snapshot.chargeStrength.get(module.id) ?? 0))}%`;
+  } else if (module.type === "spacer") {
+    // The spacer is silent wire: it never sounds, never joins a pitch set —
+    // its face says so and names the cell it wires.
+    readout = "⌇";
+    note = cellNoteOf(pos);
   } else {
-    // Synthesizers wear their contribution, pitch beneath it: hex distance
-    // from the Carrier + 1.
+    // Synthesizers wear their contribution with the cell's note beneath it:
+    // pitch lives in the cell (ADR-0021).
     readout = `+${formatNumber(contribution?.value ?? 0)}`;
-    const pitch = contribution?.pitch ?? null;
-    note = pitch !== null ? `P${pitch}` : undefined;
+    note = cellNoteOf(pos);
   }
 
   // The threshold-crossing flash fires for a moment after a roll is minted.
@@ -796,7 +767,6 @@ function moduleNode(app: App, module: ModuleInstance, _pos: Hex, ctx: RenderCont
       level: module.level,
       hexClass: hexClass.trim(),
       under,
-      pinned: isCarrier(module),
       ...(charged ? { chargeGlow: chargeGlow(strength) } : {}),
     })}${highlight}
     </g>`;
@@ -814,15 +784,16 @@ function waterFill(moduleId: string, progress: number): string {
     <rect data-key="fill" clip-path="url(#${clipId})" class="water-fill" x="${-radius}" y="${y}" width="${2 * radius}" height="${height}"/>`;
 }
 
-function isTargetCell(app: App, pos: Hex): boolean {
+function isTargetCell(app: App): boolean {
   const { ui, state } = app;
   if (state.mode !== "upgrade") return false;
   if (ui.reshape) return false;
   if (ui.placing) {
     const module = state.modules.find((m) => m.id === ui.placing);
     if (!module) return false;
-    const occupant = deployedAt(state, pos);
-    return !occupant || !isCarrier(occupant);
+    // No module is spatially privileged (ADR-0021): every cell is a legal
+    // drop, occupied or not — a swap, never a refusal.
+    return true;
   }
   return false;
 }
@@ -850,28 +821,11 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
   });
 }
 
-// The canonical pinned sentence (#94): the inspector's note and the drag
-// refusal's toast say exactly the same thing, once worded.
-export const PINNED_SENTENCE = "Pinned — it never moves, combines, or leaves.";
-
-// The pinned face's visible refusal: a short shake on the module node (which
-// only grid cells carry — the Carrier can never reach inventory). The
-// translate property keeps the arranging lift intact, and the class restarts
-// cleanly on repeat attempts.
-function refusePinnedDrag(element: Element): void {
-  const node = element.querySelector(".module-node");
-  if (!node) return;
-  node.classList.remove("pin-refused");
-  node.getBoundingClientRect(); // flush style so re-adding restarts the shake
-  node.classList.add("pin-refused");
-  node.addEventListener("animationend", () => node.classList.remove("pin-refused"), { once: true });
-}
-
 // Shared pointer-drag binding for grid modules and inventory items: shows a
 // ghost after a small threshold, then drops onto a cell (place, swap, or
 // combine with a matching twin) or the inventory zone (return). Click-
-// placement stays available without dragging. The pinned Carrier refuses the
-// drag at the threshold — a face shake plus the canonical sentence.
+// placement stays available without dragging. No module refuses the drag —
+// nothing is pinned on the carrierless board (ADR-0021).
 function bindPointerDrag(app: App, element: Element, moduleId: string | (() => string | null)): void {
   element.addEventListener("pointerdown", (baseEvent: Event) => {
     const event = baseEvent as PointerEvent;
@@ -920,16 +874,8 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
       document.addEventListener("click", suppress, { capture: true, once: true });
       setTimeout(() => document.removeEventListener("click", suppress, true), 0);
     };
-    let refused = false;
     const move = (ev: PointerEvent) => {
-      if (!moved && !refused && Math.hypot(ev.clientX - startX, ev.clientY - startY) > DRAG_THRESHOLD_PX) {
-        if (dragModule && isCarrier(dragModule)) {
-          refused = true;
-          app.say(PINNED_SENTENCE);
-          refusePinnedDrag(element);
-          suppressNextClick();
-          return;
-        }
+      if (!moved && Math.hypot(ev.clientX - startX, ev.clientY - startY) > DRAG_THRESHOLD_PX) {
         moved = true;
         const module = app.state.modules.find((m) => m.id === id);
         // The ghost is the module's own hex tile — what you carry is what you
@@ -1060,12 +1006,12 @@ function renderDissolvedOverview(host: HTMLElement): void {
 
 function effectDescription(module: ModuleInstance): string {
   switch (module.type) {
-    case "carrier":
-      return "The granted origin synthesizer. Pinned at the origin: it never moves, never combines, never leaves the board, and plays the formula's carrier term.";
     case "additive":
-      return "A plain harmonic term: amplitude at its pitch. Adjacent synthesizers one pitch apart form chord pairs whose bonuses multiply the whole composite.";
+      return "One unified synth term: base rate at its cell's note, scaled by level and rarity. Chords are named pitch sets recognized over connected synthesizers — any voicing, any octave — and every instance multiplies the whole composite.";
     case "conditional":
-      return "Amplitude at its pitch, plus a bonus for every chord pair it participates in — a named chord counts once, however many of its pairs the module shares in.";
+      return "A synth term plus a bonus for every chord instance it belongs to — a doubled cluster counts each complete voice-set it sings in.";
+    case "spacer":
+      return "Silent wire: it never sounds, never joins a pitch set, and produces nothing — it conducts chord adjacency through chains of wired cells, so bridged chords match by pitch content across the connection.";
     case "focusKeyed":
       return "The generator (ADR-0018: the launch generator is focus-keyed). It never drips live: every session end banks a charge window — a tenth of that session's live practice time — and the generator spends it as output during the next session's first minutes. Charge is a reserve you carry between sessions.";
     case "infusor":
@@ -1081,12 +1027,12 @@ function nominalEffect(module: ModuleInstance, charged: boolean): { text: string
   const power = modulePower(module);
   const factor = charged ? chargedFactor(1) : 1;
   switch (module.type) {
-    case "carrier":
-      return { text: `+${formatNumber(BALANCE.carrierRate * power * factor)} ν/s`, value: BALANCE.carrierRate * power * factor };
     case "additive":
-      return { text: `+${formatNumber(BALANCE.additiveRate * power * factor)} ν/s`, value: BALANCE.additiveRate * power * factor };
+      return { text: `+${formatNumber(BALANCE.synthRate * power * factor)} ν/s`, value: BALANCE.synthRate * power * factor };
     case "conditional":
-      return { text: `+${formatNumber(BALANCE.conditionalRate * power * factor)} ν/s · +${formatNumber(100 * BALANCE.conditionalPairBonus)}% per chord pair`, value: BALANCE.conditionalRate * power * factor };
+      return { text: `+${formatNumber(BALANCE.synthRate * power * factor)} ν/s · +${formatNumber(100 * BALANCE.conditionalChordBonus)}% per chord instance`, value: BALANCE.synthRate * power * factor };
+    case "spacer":
+      return { text: "silent — conducts chords, produces nothing", value: 0 };
     case "focusKeyed":
       return { text: `${formatNumber(power)} charge strength while its charge window lasts`, value: power };
     case "infusor":
@@ -1114,7 +1060,6 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
   const cost = levelCost(module.level);
   const affordable = wholeNous(state) >= cost;
   const partner = state.modules.find((m) => m.id !== module.id && m.type === module.type && m.rarity === module.rarity);
-  const carrier = isCarrier(module);
 
   const focus = `<section class="focus-controls">
     <span class="eyebrow">${upgrade ? "NEXT SESSION PREVIEW" : "LIVE GRID"}</span>
@@ -1137,18 +1082,21 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
     chargeStats = `
       ${stat("Bonus to adjacent", `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(chargeStrength))}%`)}
       ${stat("Charge", chargeStrength > 0 ? `strength ${formatNumber(chargeStrength)}` : "none")}`;
+  } else if (module.type === "spacer") {
+    chargeStats = `
+      ${stat("Note", module.pos !== null ? cellNoteOf(module.pos) : "—")}
+      ${stat("Conducts", "chord adjacency through wired-cell chains")}
+      ${stat("Charge", "never — the wire is silent")}`;
   } else {
-    const named = preview.namedChords.filter((c) => c.moduleIds.includes(module.id)).map((c) => c.name);
-    const pairCount = preview.pairs.filter((p) => p.a === module.id || p.b === module.id).length;
+    const named = preview.namedChords.filter((c) => c.moduleIds.includes(module.id));
     const chordSummary =
       named.length > 0
-        ? `${named.join(" + ")}${pairCount > 0 ? ` + ${times(pairCount, "pair")}` : ""}`
-        : pairCount > 0
-          ? times(pairCount, "chord pair")
-          : "chordless";
+        ? named.map((c) => (c.instances > 1 ? `${c.name} ×${c.instances}` : c.name)).join(" + ")
+        : "chordless";
     const pitch = contribution?.pitch ?? null;
+    const row = module.pos !== null ? octaveRowOf(module.pos) : null;
     chargeStats = `
-      ${stat("Pitch", pitch !== null ? `P${pitch} — ${pitch - 1} hex${pitch === 2 ? "" : "es"} from the Carrier` : "—")}
+      ${stat("Note", pitch !== null && row !== null ? `${noteNameOf(pitch)} — octave row ${row >= 0 ? "+" : ""}${row}` : "—")}
       ${stat("Chords", chordSummary)}
       ${stat("Charge", chargeStrength > 0 ? `strength ${formatNumber(chargeStrength)} (×${formatNumber(chargedFactor(chargeStrength))})` : "none")}`;
   }
@@ -1157,7 +1105,7 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
     <div class="module-heading">
       <button class="quiet small" id="back-overview">← Back</button>
       <h1>${meta.name}</h1>
-      <span class="rarity-chip ${module.rarity}">${RARITY_LABEL[module.rarity]}${carrier ? " · pinned" : ""}</span>
+      <span class="rarity-chip ${module.rarity}">${RARITY_LABEL[module.rarity]}</span>
     </div>
     ${focus}
     <section>
@@ -1172,14 +1120,13 @@ function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance):
       </button>
       ${upgrade ? `<p class="countdown mono" data-live="countdown">${upgradeCountdown(app, cost) ?? ""}</p>` : ""}
       ${!upgrade ? `<p class="small muted">Upgrades happen between sessions.</p>` : ""}
-      ${carrier ? `<p class="small muted">${PINNED_SENTENCE}</p>` : ""}
-      ${upgrade && !carrier && partner && module.rarity !== "rare"
+      ${upgrade && partner && module.rarity !== "rare"
         ? `<button id="combine-pair">Combine with its ${RARITY_LABEL[module.rarity]} pair</button>`
         : ""}
     </section>
     <section>
       <div class="eyebrow">${upgrade ? "NEXT SESSION PREVIEW" : "LIVE GRID"}</div>
-      ${stat("Position", module.pos ? `${module.pos.q}, ${module.pos.r}` : "inventory")}
+      ${stat("Position", module.pos ? `${cellNoteOf(module.pos)} · ${module.pos.q}, ${module.pos.r}` : "inventory")}
       ${chargeStats}
     </section>`;
 
@@ -1698,10 +1645,11 @@ function escapeHtml(text: string): string {
 
 function effectTextFor(module: ModuleInstance, value: number, strength = 0): string {
   switch (module.type) {
-    case "carrier":
     case "additive":
     case "conditional":
       return `+${formatNumber(value)} ν/s`;
+    case "spacer":
+      return "silent — conducts chords";
     case "focusKeyed":
       return `${formatNumber(modulePower(module))} strength`;
     case "infusor":
@@ -1739,12 +1687,12 @@ function hexTileSvg(module: ModuleInstance): string {
 function nominalReadout(module: ModuleInstance): string {
   const power = modulePower(module);
   switch (module.type) {
-    case "carrier":
-      return `+${formatNumber(BALANCE.carrierRate * power)}`;
     case "additive":
-      return `+${formatNumber(BALANCE.additiveRate * power)}`;
+      return `+${formatNumber(BALANCE.synthRate * power)}`;
     case "conditional":
-      return `+${formatNumber(BALANCE.conditionalRate * power)}`;
+      return `+${formatNumber(BALANCE.synthRate * power)}`;
+    case "spacer":
+      return "⌇";
     case "focusKeyed":
       return `⌁${formatNumber(power)}`;
     case "infusor":
@@ -1972,9 +1920,9 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
 function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
   const charged = chargedFactor(1);
   switch (type) {
-    case "carrier": return `The granted origin module — never rolled<br>+${formatNumber(BALANCE.carrierRate * charged)} ν/s at charge strength 1`;
-    case "additive": return `+${formatNumber(BALANCE.additiveRate)} ν/s harmonic term<br>+${formatNumber(BALANCE.additiveRate * charged)} ν/s at charge strength 1`;
-    case "conditional": return `+${formatNumber(BALANCE.conditionalRate)} ν/s harmonic term<br>+${formatNumber(BALANCE.conditionalRate * charged)} ν/s at charge strength 1`;
+    case "additive": return `+${formatNumber(BALANCE.synthRate)} ν/s unified synth term<br>+${formatNumber(BALANCE.synthRate * charged)} ν/s at charge strength 1`;
+    case "conditional": return `+${formatNumber(BALANCE.synthRate)} ν/s synth term<br>+${formatNumber(100 * BALANCE.conditionalChordBonus)}% per chord instance it belongs to`;
+    case "spacer": return `Silent wire — never sounds, never joins a pitch set<br>conducts chord adjacency through chains of wired cells`;
     case "focusKeyed": return `The generator — keyed to your focus<br>each session end banks a charge window (a tenth of its live practice time), spent as its output next session`;
     case "infusor": return `+${formatNumber(BALANCE.infusorBonus * 100)}% to adjacent production contributions<br>+${formatNumber(BALANCE.infusorBonus * charged * 100)}% at charge strength 1`;
     case "forge": return `1 Forge progress per received charge strength<br>Next roll: ${formatNumber(forgeThreshold(state.forge.earned))} progress`;
@@ -1984,12 +1932,12 @@ function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
 
 function candidateReadout(type: ModuleInstance["type"]): string {
   switch (type) {
-    case "carrier":
-      return `+${formatNumber(BALANCE.carrierRate)}`;
     case "additive":
-      return `+${formatNumber(BALANCE.additiveRate)}`;
+      return `+${formatNumber(BALANCE.synthRate)}`;
     case "conditional":
-      return `+${formatNumber(BALANCE.conditionalRate)}`;
+      return `+${formatNumber(BALANCE.synthRate)}`;
+    case "spacer":
+      return "⌇";
     case "focusKeyed":
       return "⌁1";
     case "infusor":
@@ -2364,12 +2312,11 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
     wireClose(app);
     return;
   }
-  const carrierOnly = summary.harmonics === 0 && summary.infusors === 0 && summary.chordMultiplier === 1 && summary.empowerment === 1;
-  const breakdown = carrierOnly
-    ? `the carrier term alone — ${formatNumber(summary.carrier)} ν/s is the whole formula`
+  const synthOnly = summary.infusors === 0 && summary.chordMultiplier === 1 && summary.empowerment === 1;
+  const breakdown = synthOnly
+    ? `the synth term alone — ${formatNumber(summary.synths)} ν/s is the whole formula`
     : [
-        `carrier +${formatNumber(summary.carrier)} ν/s`,
-        ...(summary.harmonics > 0 ? [`harmonics +${formatNumber(summary.harmonics)} ν/s`] : []),
+        `synths +${formatNumber(summary.synths)} ν/s`,
         ...(summary.infusors > 0 ? [`infusors +${formatNumber(summary.infusors)} ν/s`] : []),
         ...(summary.chordMultiplier > 1 ? [`chords ×${formatNumber(summary.chordMultiplier)}`] : []),
         ...(summary.empowerment > 1 ? [`empowerment ×${formatNumber(summary.empowerment)}`] : []),

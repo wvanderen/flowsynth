@@ -100,9 +100,8 @@ export function installDemoBoard(app: App): void {
 
 function demoState(): GameState {
   const s = fresh();
-  s.welcomeAcked = true;
   s.notificationAsked = true;
-  s.purchased = { additive: true, generator: true, infusor: true, forge: true };
+  s.purchased = { generator: true, infusor: true, forge: true };
   s.nous = 2400;
   s.totalEarned = 8600;
   s.cells.push(hex(-1, 0), hex(-1, 1), hex(1, -1));

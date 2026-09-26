@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  acknowledgeWelcome,
   buyActivation,
   buyCell,
   buyGoalCapacity,
@@ -14,13 +13,11 @@ import {
 } from "./actions";
 import { advance } from "./advance";
 import { appActive } from "./apps";
-import { BALANCE } from "./constants";
+import { SHELF_TYPES } from "./constants";
 import { fresh } from "./fixtures";
 import { hex } from "./hex";
 import { createHabit, selectHabit } from "./habits";
-import { isCarrier } from "./state";
 import { deserialize, serialize } from "./save";
-import type { ShelfType } from "./types";
 
 // §5, issue #44: the first session, moment by moment. The beats are
 // identical whatever the session's length or early exit, so every exit path
@@ -118,13 +115,13 @@ describe("the loud summary (§5.7) — every exit path, identical beats", () => 
     expect(s.summary!.ratePerMinute).toBeCloseTo(6, 6);
   });
 
-  it("the rate breakdown is carrier-only during session one", () => {
+  it("the rate breakdown is one synth term during session one", () => {
     const s = fresh();
     startSession(s, null);
     advance(s, 60);
     endSession(s);
-    expect(s.summary!.carrier).toBeCloseTo(0.1, 9);
-    expect(s.summary!.harmonics).toBe(0);
+    expect(s.summary!.synths).toBeCloseTo(0.1, 9);
+    expect(s.summary!.infusors).toBe(0);
     expect(s.summary!.chordMultiplier).toBe(1);
     expect(s.summary!.empowerment).toBe(1);
   });
@@ -201,23 +198,20 @@ describe("nothing unlocks or purchases mid-session-one (§5.6)", () => {
     const s = fresh();
     s.nous = 1e6;
     startSession(s, null);
-    for (const type of Object.keys(BALANCE.shelfPrices) as ShelfType[]) {
+    for (const type of SHELF_TYPES) {
       expect(buyShelfModule(s, type).ok).toBe(false);
     }
     expect(buyCell(s, hex(2, 0)).ok).toBe(false);
     expect(buyActivation(s, "notes").ok).toBe(false);
     expect(buyGoalCapacity(s).ok).toBe(false);
-    expect(upgradeModule(s, s.modules.find(isCarrier)!.id).ok).toBe(false);
-    expect(acknowledgeWelcome(s).ok).toBe(false);
+    expect(upgradeModule(s, s.modules[0]!.id).ok).toBe(false);
     expect(s.purchased.generator).toBe(false);
     expect(s.cellsBought).toBe(0);
     expect(s.activatedApps).toHaveLength(0);
     expect(s.goalCapacityBought).toBe(0);
-    expect(s.welcomeAcked).toBe(false);
     endSession(s);
     // The same surfaces reopen between sessions — but the ladder still
     // sells nothing: the apps were already free.
-    expect(acknowledgeWelcome(s).ok).toBe(true);
     expect(buyActivation(s, "notes").ok).toBe(false);
   });
 });
