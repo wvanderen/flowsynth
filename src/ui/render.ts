@@ -19,7 +19,7 @@ import {
 } from "../engine/records";
 import { poolOutstanding } from "../engine/trust";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
-import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
+import { ACHIEVEMENTS, achievementBoostOf, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
 import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NamedChordTerm, NoteEntry, RateSnapshot } from "../engine/types";
 import type { App, ChordHover, EnterKind } from "./app";
 import { appIcon } from "./icons";
@@ -30,8 +30,8 @@ import { chordOverlay, chipWidth, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatDate, formatInt, formatNumber, formatPracticeMinutes, chordLiveLabel, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
-import { renderStatusMonitor } from "./monitor";
-import { prototypeVariant, ledgerHtml, updateLedgerLive, featsChipHtml, unlockedCount, FEATS_SVG, TOOL_ICONS } from "./variant";
+import { renderBoardLedger, renderAretePill, renderInfoStrip, ampBreakdownHtml, chordSummary, unlockedCount, FEATS_SVG } from "./ledger";
+import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
 
 const SPACING = 65;
 // The adjacent-center distance the chord overlay's edge trace needs: on
@@ -49,11 +49,26 @@ function byId(id: string): HTMLElement | null {
   return document.getElementById(id);
 }
 
-// The rate shown in the header, formula bar, and hexes: live during flow,
+// The rate shown in the ledger, hexes, and formula: live during flow,
 // projected build rate while arranging in upgrade mode. Module panels preview
 // charge separately via computeRates(state, true).
 function currentSnapshot(state: GameState): RateSnapshot {
   return computeRates(state, state.mode === "flow");
+}
+
+// The portrait-phone breakpoint (§7): below it the console re-docks to the
+// thumb bar, the ledger dissolves into the game-info strip, and the bloom
+// presents as a bottom sheet. Both this and the 760px formula gate read the
+// #app container's inline size — the same number the stylesheet's @container
+// rules respond to (ledger.ts holds the formula twin).
+export const PHONE_MAX_PX = 600;
+
+export function isPhoneWidth(): boolean {
+  // In a measured document #app is the container; a zero reading (a layout-
+  // less test DOM) falls through to the viewport.
+  const appWidth = document.getElementById("app")?.clientWidth ?? 0;
+  const width = appWidth > 0 ? appWidth : typeof window !== "undefined" ? window.innerWidth : 0;
+  return width > 0 && width < PHONE_MAX_PX;
 }
 
 function stat(label: string, value: string): string {
@@ -73,13 +88,14 @@ function chargeWindowText(state: GameState): string {
 export function render(app: App): void {
   renderConsoleSession(app);
   renderConsoleApps(app);
-  renderConsoleReadout(app);
   renderBoardLedger(app);
   renderTools(app);
   renderGrid(app);
   renderInventoryTray(app);
   renderBloom(app);
-  renderStatusMonitor(app);
+  renderZoomCluster(app);
+  renderAretePill(app);
+  renderInfoStrip(app);
   renderInspector(app);
   renderModal(app);
   renderDev(app);
@@ -97,7 +113,9 @@ const OPEN_ENDED_WORD = "open-ended";
 // pause control. The switch is the console's sole session gate — sessions
 // start and end through it — and the switch's vermillion is the one colored
 // console element: the switch itself and, while a session runs, the progress
-// strip along the header's bottom edge (issue #63).
+// strip along the header's bottom edge (issue #63). The console is pure
+// control (§7): the clock is itself the plan affordance — clicking it opens
+// the Time app — and no production readout lives here.
 function renderConsoleSession(app: App): void {
   const { state } = app;
   const host = byId("console-session");
@@ -114,33 +132,26 @@ function renderConsoleSession(app: App): void {
     // caption slot. No session runs, so the header's progress strip stays
     // empty.
     const planned = app.ui.chosenTarget !== null;
-    const variant = prototypeVariant();
-    const key = `upgrade:${planned}:${variant ?? "base"}`;
+    const key = `upgrade:${planned}`;
     if (host.dataset.renderKey !== key) {
       host.dataset.renderKey = key;
-      // PROTOTYPE (issue #119, variant C): the clock block is itself the
-      // plan affordance — clicking it opens the Time app, so planning has
-      // one home and the console clock points at it.
-      const clockBlock = `
-          <p class="session-clock mono">${planned ? formatClock(app.ui.chosenTarget!) : CLOCK_PLACEHOLDER}</p>
-          <p class="clock-caption">${planned ? "planned" : OPEN_ENDED_WORD}</p>`;
-      host.innerHTML =
-        variant === "c"
-          ? `<button class="console-clock clock-opens-time" id="clock-plan" title="Plan — opens the Time app">${clockBlock}</button>
-        <div class="session-actions">
-          <button class="main-switch idle" id="flow-switch" title="Enter flow — the board locks and runs itself">
-            ${switchSvg}<span>Enter flow</span><i class="switch-state" aria-hidden="true"></i>
+      host.innerHTML = `
+          <button class="console-clock clock-opens-time" id="clock-plan" title="Plan — opens the Time app">
+            <span class="session-clock mono">${planned ? formatClock(app.ui.chosenTarget!) : CLOCK_PLACEHOLDER}</span>
+            <span class="clock-caption">${planned ? "planned" : OPEN_ENDED_WORD}</span>
           </button>
-        </div>`
-          : `<div class="console-clock">
-          ${clockBlock}
-        </div>
         <div class="session-actions">
           <button class="main-switch idle" id="flow-switch" title="Enter flow — the board locks and runs itself">
             ${switchSvg}<span>Enter flow</span><i class="switch-state" aria-hidden="true"></i>
           </button>
         </div>`;
-      if (variant === "c") byId("clock-plan")?.addEventListener("click", () => app.openApp("time"));
+      byId("clock-plan")?.addEventListener("click", (event) => {
+        // The clock's own click must not bubble into the popover's
+        // click-away closer — the click that opens the Time app would
+        // otherwise close it in the same gesture.
+        event.stopPropagation();
+        app.openApp("time");
+      });
       byId("flow-switch")?.addEventListener("click", () => app.startFlow());
     }
     renderSessionStrip(false);
@@ -157,17 +168,23 @@ function renderConsoleSession(app: App): void {
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.innerHTML = `
-      <div class="console-clock">
-        <p class="session-clock mono" id="session-clock"></p>
-        <p class="clock-caption" id="session-caption"></p>
-        <p class="clock-provisional" id="session-provisional" role="status"></p>
-      </div>
+      <button class="console-clock clock-opens-time" id="clock-plan" title="Session time — opens the Time app">
+        <span class="session-clock mono" id="session-clock"></span>
+        <span class="clock-caption" id="session-caption"></span>
+        <span class="clock-provisional" id="session-provisional" role="status"></span>
+      </button>
       <div class="session-actions">
         <button id="pause-flow">${paused ? "Resume" : "Pause"}</button>
         <button class="main-switch ${paused ? "held" : "live"}" id="flow-switch" title="Exit flow — end the session and bank its production">
           ${switchSvg}<span>Exit flow</span><i class="switch-state" aria-hidden="true"></i>
         </button>
       </div>`;
+    byId("clock-plan")?.addEventListener("click", (event) => {
+      // Same guard as the upgrade clock: the opening click must not bubble
+      // into the popover's click-away closer.
+      event.stopPropagation();
+      app.openApp("time");
+    });
     byId("pause-flow")?.addEventListener("click", () => (state.mode === "paused" ? app.resume() : app.pause()));
     byId("flow-switch")?.addEventListener("click", () => app.endFlow());
   }
@@ -225,12 +242,6 @@ function sessionCaption(elapsed: number, target: number | null, paused: boolean)
 // Share of a planned session already practiced, as a fill percentage.
 function plannedFill(elapsed: number, target: number): string {
   return `${Math.min(100, (elapsed / target) * 100)}%`;
-}
-
-// Fill width for the Time app popover's local track; open-ended leaves it
-// empty — the console header's strip is what pulses for those.
-function sessionTrackWidth(elapsed: number, target: number | null): string {
-  return target === null ? "0%" : plannedFill(elapsed, target);
 }
 
 // In-place text swap for a data-live node within a scope; tick-safe.
@@ -325,15 +336,6 @@ function planShort(chosenTarget: number | null): string {
   return chosenTarget === null ? OPEN_ENDED_WORD : formatClock(chosenTarget);
 }
 
-const TROPHY_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
-  <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
-  <path d="M4 22h16"/>
-  <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
-  <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
-  <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
-</svg>`;
-
 // The achievements page (ADR-0015): the always-visible full list — all
 // seventeen feats with progress bars, none hidden, grouped by the launch
 // buckets the ADR names. Spark's progress rides the charge preview; it
@@ -396,165 +398,151 @@ function renderAchievementsModal(app: App, content: HTMLElement): void {
   wireClose(app);
 }
 
-// The console's readout end: production (rate with the session total
-// beneath) and the nous balance — bare values; the main switch carries the
-// mode. Static slots are built once; tick-moving values update in place.
-// PROTOTYPE (issue #119): variant A replaces the scattered slots with the
-// production ledger — stock, rate, and session as one instrument — and
-// retires the trophy from the console (feats join the board action row).
-// Variants B and C retire the readout end entirely; production reads from
-// the monitor footer (B) or the board ledger strip (C).
-function renderConsoleReadout(app: App): void {
-  const { state } = app;
-  const variant = prototypeVariant();
-  if (variant === "b" || variant === "c") return;
-  const strip = byId("console-status");
-  if (strip) {
-    if (strip.childElementCount === 0) {
-      if (variant === "a") {
-        strip.innerHTML = ledgerHtml();
-      } else {
-        strip.innerHTML = `
-          <div class="console-slot production-slot">
-            <strong class="mono" data-live="rate"></strong>
-            <small class="mono session-total" data-live="session"></small>
-          </div>
-          <div class="console-slot trophy-slot">
-            <button class="trophy-glyph" id="trophy-button" title="Achievements — every feat, and how close the next one is" aria-label="Achievements">${TROPHY_SVG}</button>
-          </div>`;
-        byId("trophy-button")?.addEventListener("click", () => app.openModal("achievements"));
-      }
-    }
-    if (variant === "a") {
-      updateLedgerLive(strip, state, currentSnapshot(state).rate);
-      return;
-    }
-    // One production readout (§7: rates per-second everywhere): the ν/s
-    // figure matches the formula chip — projected in upgrade mode, ticking
-    // with the board in flow — and the flow session appends what it made.
-    const rate = currentSnapshot(state).rate;
-    const session = state.session;
-    const rateNode = strip.querySelector('[data-live="rate"]');
-    const rateText = `${formatNumber(rate)} ν/s`;
-    if (rateNode && rateNode.textContent !== rateText) rateNode.textContent = rateText;
-    const sessionNode = strip.querySelector('[data-live="session"]');
-    const sessionText = session ? `${formatNumber(session.earned)} ν this session` : "";
-    if (sessionNode && sessionNode.textContent !== sessionText) sessionNode.textContent = sessionText;
-  }
-  const nous = byId("nous-balance");
-  if (nous && variant !== "a") {
-    if (nous.childElementCount === 0) {
-      nous.innerHTML = `<strong class="mono" data-live="nous"></strong>`;
-    }
-    const amount = nous.querySelector('[data-live="nous"]');
-    // The counter reads whole nous — what is actually spendable — so the
-    // ticking decimals never flicker in and out of the readout.
-    const text = `${formatInt(state.nous)} ν`;
-    if (amount && amount.textContent !== text) amount.textContent = text;
-  }
-}
-
-// PROTOTYPE (issue #119): variant C's board-ledger strip — the production
-// ledger and the feats chip docked directly above the board, outside the
-// console. The console keeps only control; the board owns its numbers. The
-// host is created here so the production document never carries it.
-function renderBoardLedger(app: App): void {
-  if (prototypeVariant() !== "c") return;
-  let host = document.getElementById("board-ledger");
-  if (!host) {
-    host = document.createElement("div");
-    host.className = "board-ledger";
-    host.id = "board-ledger";
-    document.querySelector(".board-heading")?.before(host);
-  }
-  const count = unlockedCount(app.state);
-  const key = `c:${count}`;
-  if (host.dataset.protoKey !== key) {
-    host.dataset.protoKey = key;
-    host.innerHTML = `${ledgerHtml()}${featsChipHtml(count)}`;
-    byId("feats-chip")?.addEventListener("click", () => app.openModal("achievements"));
-  }
-  updateLedgerLive(host, app.state, currentSnapshot(app.state).rate);
-}
+// ── The action row (§7): a left-edge icon dock ──────
 
 const CELL_TOOL_SVG = `<svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M0-6v12M-6 0h12"/></svg>`;
 
+const INVENTORY_TOOL_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/></svg>`;
+
+// The action definitions the dock and the thumb bar are both built from:
+// Catalog / Forge (count badge + charge pip) / New cell everywhere, with
+// Inventory and Feats folded into the phone's thumb bar (§7). Arrange has
+// no job anywhere — dragging is already live (§5) — and the canvas legend
+// is gone: its encodings belong to the surfaces that use them.
+interface ToolAction {
+  op: string;
+  svg: string;
+  label: string;
+  title: (app: App) => string;
+  disabled?: (app: App) => boolean;
+  active?: (app: App) => boolean;
+}
+
+function toolActions(): ToolAction[] {
+  return [
+    {
+      op: "catalog",
+      svg: TOOL_CATALOG_SVG,
+      label: "Catalog",
+      title: (app) => (app.state.mode === "upgrade" ? "Catalog — starter-shelf offers and board cells" : "Catalog — purchases happen between sessions"),
+      disabled: (app) => app.state.mode !== "upgrade",
+    },
+    {
+      op: "forge",
+      svg: TOOL_FORGE_SVG,
+      label: "Forge",
+      title: (app) =>
+        app.state.bankedRolls.length > 0
+          ? `Forge progress ${formatNumber(Math.max(0, app.state.forge.progress))} / ${formatNumber(forgeThreshold(app.state.forge.earned))} · ${app.state.bankedRolls.length} banked choice${app.state.bankedRolls.length === 1 ? "" : "s"}`
+          : `Forge progress ${formatNumber(Math.max(0, app.state.forge.progress))} / ${formatNumber(forgeThreshold(app.state.forge.earned))} — charge feeds it`,
+      disabled: (app) => app.state.mode !== "upgrade" || app.state.bankedRolls.length === 0,
+    },
+    {
+      op: "cell",
+      svg: CELL_TOOL_SVG,
+      label: "New cell",
+      title: (app) => (app.state.mode !== "upgrade" ? "New cell — purchases happen between sessions" : app.ui.buyingCell ? "Pick a frontier hex · Esc cancels" : "New cell"),
+      disabled: (app) => app.state.mode !== "upgrade",
+      active: (app) => app.ui.buyingCell,
+    },
+    {
+      op: "inventory",
+      svg: INVENTORY_TOOL_SVG,
+      label: "Inventory",
+      title: () => "Inventory — the board-surface tray, tapped open",
+    },
+    {
+      op: "feats",
+      svg: FEATS_SVG,
+      label: "Feats",
+      title: () => "Achievements — every feat, and how close the next one is",
+    },
+  ];
+}
+
+const TOOL_CATALOG_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/></svg>`;
+const TOOL_FORGE_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1.8 3.2-3.2 4.6-3.2 8.4a3.2 3.2 0 0 0 6.4 0c0-1.4-.6-2.3-1.1-2.9 1.9.5 3.4 2 3.4 4.3a5.5 5.5 0 0 1-11 0C6.5 7.6 10.8 6.4 12 3Z"/></svg>`;
+
+function runToolAction(app: App, op: string): void {
+  if (op === "catalog") app.openModal("catalog");
+  else if (op === "forge") app.openModal("forge");
+  else if (op === "feats") app.openModal("achievements");
+  else if (op === "inventory") app.openModal("inventory");
+  else if (op === "cell") {
+    if (app.ui.buyingCell) app.cancelCellPurchase();
+    else app.armCellPurchase();
+  }
+}
+
+// The left-edge icon dock (§7): Catalog / Forge (count badge + charge pip)
+// / New cell, floating over the board's left edge. Hidden on portrait
+// phone, where the same actions ride the bottom thumb bar.
 function renderTools(app: App): void {
-  const variant = prototypeVariant();
   const { state, ui } = app;
   const host = byId("board-tools");
-  if (!host) return;
-  const upgrade = state.mode === "upgrade";
-  const feats = variant ? unlockedCount(state) : 0;
-  const key = JSON.stringify([variant, upgrade, state.bankedRolls.length, ui.buyingCell, feats]);
-  if (host.dataset.renderKey !== key) {
-    host.dataset.renderKey = key;
-    const forgeReady = upgrade && state.bankedRolls.length > 0;
-    const forgeCount = state.bankedRolls.length;
-    // PROTOTYPE (issue #119): the legend leaves the heading row to the
-    // standardized action row — every action the same anatomy, so nothing
-    // reads as a different kind of thing. A wears icon + label; B and C
-    // wear icons alone. Feats joins the row (A, B) where the legend sat;
-    // C's dock stays five actions and feats reads from the board ledger.
-    // Arrange is gone everywhere (§5): dragging is already live in upgrade
-    // mode, so no move mode exists to enter.
-    if (variant === "a") {
-      host.innerHTML = `
-        <button class="small" id="tool-catalog" ${upgrade ? "" : "disabled"} title="${upgrade ? "The catalog: starter-shelf offers and board cells" : "Purchases happen between sessions"}">${TOOL_ICONS.catalog}<span>Catalog</span></button>
-        <button class="small tool-forge" id="tool-forge" ${forgeReady ? "" : "disabled"} title="">${TOOL_ICONS.forge}<span>Forge${forgeCount > 0 ? ` · ${forgeCount}` : ""}</span><i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i></button>
-        <button class="small tool-cell${ui.buyingCell ? " active" : ""}" id="tool-cell" ${upgrade ? "" : "disabled"} aria-pressed="${ui.buyingCell}" title="">${CELL_TOOL_SVG}<span>Cell</span></button>
-        <span class="tool-sep" aria-hidden="true"></span>
-        <button class="small" id="tool-feats" title="Achievements — every feat, and how close the next one is">${FEATS_SVG}<span>Feats</span></button>`;
-    } else if (variant === "b" || variant === "c") {
-      type IconArgs = { id: string; svg: string; label: string; extra?: string; disabled?: string; pressed?: string; active?: string };
-      const icon = ({ id, svg, label, extra = "", disabled = "", pressed = "", active = "" }: IconArgs) =>
-        `<button class="small tool-icon${active}" id="${id}" aria-label="${label}" title="${label}" ${disabled} ${pressed}>${svg}${extra}</button>`;
-      const forgeTitle = forgeReady
-        ? "Forge — banked choices wait"
-        : "Forge — charge feeds it toward the next choice";
-      host.innerHTML =
-        icon({ id: "tool-catalog", svg: TOOL_ICONS.catalog, label: upgrade ? "Catalog — starter-shelf offers and board cells" : "Catalog — purchases happen between sessions", disabled: upgrade ? "" : "disabled" }) +
-        icon({ id: "tool-forge", svg: TOOL_ICONS.forge, label: forgeTitle, extra: forgeCount > 0 ? `<b class="tool-badge mono">${forgeCount}</b>` : "", disabled: forgeReady ? "" : "disabled" }) +
-        icon({ id: "tool-cell", svg: CELL_TOOL_SVG, label: "New cell", disabled: upgrade ? "" : "disabled", pressed: `aria-pressed="${ui.buyingCell}"`, active: ui.buyingCell ? " active" : "" }) +
-        (variant === "b" ? icon({ id: "tool-feats", svg: FEATS_SVG, label: "Achievements — every feat, and how close the next one is", extra: feats > 0 ? `<b class="tool-badge mono">${feats}</b>` : "" }) : "");
-      host.classList.add("tool-icon-row");
-    } else {
-      host.innerHTML = `
-        <button class="small" id="tool-catalog" ${upgrade ? "" : "disabled"} title="${upgrade ? "The catalog: starter-shelf offers and board cells" : "Purchases happen between sessions"}">Catalog</button>
-        <button class="small tool-forge" id="tool-forge" ${forgeReady ? "" : "disabled"} title="">
-          <span>Forge${state.bankedRolls.length > 0 ? ` · ${state.bankedRolls.length}` : ""}</span>
-          <i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i>
-        </button>
-        <button class="small tool-cell${ui.buyingCell ? " active" : ""}" id="tool-cell" ${upgrade ? "" : "disabled"} aria-pressed="${ui.buyingCell}" title="">${CELL_TOOL_SVG}</button>
-      `;
+  const thumb = byId("thumb-bar");
+  const actions = toolActions();
+  const dockActions = actions.filter((action) => action.op !== "inventory" && action.op !== "feats");
+  const feats = unlockedCount(state);
+  const forgeCount = state.bankedRolls.length;
+  const trayCount = state.modules.filter((m) => m.pos === null).length;
+  const key = JSON.stringify(["dock", state.mode, forgeCount, ui.buyingCell, feats, trayCount]);
+
+  for (const [target, list] of [
+    [host, dockActions],
+    [thumb, actions],
+  ] as const) {
+    if (!target) continue;
+    if (target.dataset.renderKey !== key) {
+      target.dataset.renderKey = key;
+      target.innerHTML = list
+        .map((action) => {
+          const extra =
+            action.op === "forge"
+              ? `${forgeCount > 0 ? `<b class="tool-badge mono">${forgeCount}</b>` : ""}<i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i>`
+              : action.op === "feats"
+                ? feats > 0
+                  ? `<b class="tool-badge mono">${feats}</b>`
+                  : ""
+                : "";
+          const label = action.op === "feats" ? `Feats · ${feats}/${ACHIEVEMENTS.length}` : action.op === "inventory" ? `Inventory · ${trayCount}` : action.label;
+          return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" data-op="${action.op}" aria-label="${action.label}" title="${action.title(app)}"${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${label}</small></button>`;
+        })
+        .join("");
+      target.querySelectorAll<HTMLButtonElement>("[data-op]").forEach((button) => {
+        button.addEventListener("click", () => runToolAction(app, button.getAttribute("data-op")!));
+      });
     }
-    byId("tool-catalog")?.addEventListener("click", () => app.openModal("catalog"));
-    byId("tool-forge")?.addEventListener("click", () => app.openModal("forge"));
-    byId("tool-cell")?.addEventListener("click", () => (app.ui.buyingCell ? app.cancelCellPurchase() : app.armCellPurchase()));
-    byId("tool-feats")?.addEventListener("click", () => app.openModal("achievements"));
   }
+
   // Live under the structural rebuild: the Forge pip tracks the shared
   // meter, and the cell icon wears the current price and affordability.
   const cap = forgeThreshold(state.forge.earned);
-  const pip = host.querySelector<HTMLElement>('[data-live="forge-pip"]');
-  const pipWidth = `${(Math.min(1, Math.max(0, state.forge.progress / cap)) * 100).toFixed(1)}%`;
-  if (pip && pip.style.width !== pipWidth) pip.style.width = pipWidth;
-  const forgeButton = byId("tool-forge");
-  if (forgeButton) {
-    forgeButton.title =
-      state.bankedRolls.length > 0
-        ? `Forge progress ${formatNumber(Math.max(0, state.forge.progress))} / ${formatNumber(cap)} · ${state.bankedRolls.length} banked choice${state.bankedRolls.length === 1 ? "" : "s"}`
-        : `Forge progress ${formatNumber(Math.max(0, state.forge.progress))} / ${formatNumber(cap)} — charge feeds it`;
-  }
-  const cellButton = byId("tool-cell") as HTMLButtonElement | null;
-  if (cellButton && upgrade) {
-    const price = cellCost(state.cellsBought);
-    if (ui.buyingCell) {
-      cellButton.title = "Pick a frontier hex · Esc cancels";
-    } else {
-      const countdown = practiceCountdown(price, wholeNous(state), computeRates(state, true).rate);
-      cellButton.title = `New cell — ${formatInt(price)} ν${countdown ? ` · ${countdown}` : ""}`;
-      cellButton.disabled = wholeNous(state) < price;
+  for (const target of [host, thumb]) {
+    if (!target) continue;
+    const pip = target.querySelector<HTMLElement>('[data-live="forge-pip"]');
+    const pipWidth = `${(Math.min(1, Math.max(0, state.forge.progress / cap)) * 100).toFixed(1)}%`;
+    if (pip && pip.style.width !== pipWidth) pip.style.width = pipWidth;
+    const forgeButton = target.querySelector<HTMLButtonElement>('[data-op="forge"]');
+    if (forgeButton) {
+      const action = actions.find((a) => a.op === "forge")!;
+      forgeButton.title = action.title(app);
+      forgeButton.disabled = action.disabled?.(app) ?? false;
+    }
+    const cellButton = target.querySelector<HTMLButtonElement>('[data-op="cell"]');
+    if (cellButton && state.mode === "upgrade") {
+      const action = actions.find((a) => a.op === "cell")!;
+      cellButton.title = action.title(app);
+      cellButton.classList.toggle("active", ui.buyingCell);
+      cellButton.setAttribute("aria-pressed", String(ui.buyingCell));
+      if (ui.buyingCell) {
+        cellButton.disabled = false;
+      } else {
+        const price = cellCost(state.cellsBought);
+        const countdown = practiceCountdown(price, wholeNous(state), computeRates(state, true).rate);
+        cellButton.title = `New cell — ${formatInt(price)} ν${countdown ? ` · ${countdown}` : ""}`;
+        cellButton.disabled = wholeNous(state) < price;
+      }
     }
   }
 }
@@ -575,21 +563,23 @@ function renderGrid(app: App): void {
   const frontier = upgrade && ui.buyingCell ? app.frontierCells().filter(positionInRange) : [];
   const allCells = [...state.cells, ...frontier];
   const coords = allCells.map(point);
-  const minX = Math.min(...coords.map((p) => p[0])) - 78;
-  const maxX = Math.max(...coords.map((p) => p[0])) + 78;
-  // The top pad carries the chord chips, which float ~1.2 hex radii above
-  // the top row's faces (§6).
-  const minY = Math.min(...coords.map((p) => p[1])) - 100;
-  const maxY = Math.max(...coords.map((p) => p[1])) + 82;
-  svg.setAttribute("viewBox", `${minX} ${minY} ${maxX - minX} ${maxY - minY}`);
+  // The lens's base (§7): the board's own bounds with breathing room —
+  // the top pad carries the chord chips, which float ~1.2 hex radii above
+  // the top row's faces (§6). Zoom and pan play across it; the world
+  // itself never moves.
+  const bounds = boardBounds(coords, 78, 100, 82);
+  app.boardBounds = bounds;
+  const lens = lensFrame(ui.zoom, ui.pan, bounds);
+  svg.setAttribute("viewBox", lens.viewBox);
+  bindBoardNavigation(app, svg);
 
   const flow = state.mode === "flow";
   const snapshot = currentSnapshot(state);
   const selectedModule = state.modules.find((m) => m.id === ui.selected) ?? null;
-  // One frame for every bloom placement question: the svg's viewBox plus
-  // the wrap's css-pixel size, read together (§5).
+  // One frame for every bloom placement question: the lens's world view
+  // plus the wrap's css-pixel size, read together (§5).
   const frame: ViewFrame = {
-    view: { x: minX, y: minY, width: maxX - minX, height: maxY - minY },
+    view: lens.view,
     box: { width: svg.clientWidth, height: svg.clientHeight },
   };
   // The lift-off (§5): when the expanded face pops, it IS the module's hex
@@ -1253,6 +1243,10 @@ const BLOOM_EFFECTS: Record<ModuleInstance["type"], (input: BloomEffectInput) =>
 // outside click, Esc, or selecting elsewhere; holding the face starts the
 // live drag.
 //
+// On portrait phone (§7) the bloom presents as a bottom sheet docked over
+// the board's lower edge — same content, re-docked — and the zoom cluster
+// rises above it so inspection never gets buried.
+//
 // The pop only happens when it would actually enlarge the module: zoomed
 // far in (few cells filling the wrap), the on-screen module already
 // out-sizes the fixed bloom, and the affordances ride the closed face
@@ -1270,19 +1264,10 @@ function renderBloom(app: App): void {
       host.innerHTML = "";
       delete host.dataset.renderKey;
     }
+    document.body.classList.remove("bloom-sheet-open");
     return;
   }
-  const svg = document.getElementById("grid");
-  const viewBox = (svg?.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
-  const frame: ViewFrame = {
-    view: { x: viewBox[0] ?? 0, y: viewBox[1] ?? 0, width: viewBox[2] ?? 0, height: viewBox[3] ?? 0 },
-    box: { width: svg?.clientWidth ?? 0, height: svg?.clientHeight ?? 0 },
-  };
-  const meet = viewMeet(frame);
-  // Ride the closed face when the pop would shrink the module. (No layout
-  // yet — hidden or unmeasured — degrades to unit scale by design; the
-  // plate repositions on the next render once the wrap measures.)
-  const inline = !bloomPops(meet, HEX_RADIUS);
+  const phone = isPhoneWidth();
   const snapshot = computeRates(state, true);
   const lines = BLOOM_EFFECTS[module.type]({
     gain: modulePower(module) * (BALANCE.rarityPower[module.rarity] - 1),
@@ -1295,21 +1280,58 @@ function renderBloom(app: App): void {
   const affordable = wholeNous(state) >= cost;
   // The Forge's face readout moves per tick; its face tracks it.
   const forgeTick = module.type === "forge" ? Math.floor(state.forge.progress) : 0;
-  const key = JSON.stringify([module.id, module.level, module.rarity, benefit, lines.contribution, affordable, forgeTick, inline]);
+  const shape = phone ? "sheet" : "pop";
+  const key = JSON.stringify([shape, module.id, module.level, module.rarity, benefit, lines.contribution, affordable, forgeTick]);
+  // One frame read for both the pop question and the positioning below.
+  const svg = document.getElementById("grid");
+  const viewBox = (svg?.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
+  const frame: ViewFrame = {
+    view: { x: viewBox[0] ?? 0, y: viewBox[1] ?? 0, width: viewBox[2] ?? 0, height: viewBox[3] ?? 0 },
+    box: { width: svg?.clientWidth ?? 0, height: svg?.clientHeight ?? 0 },
+  };
+  const upgradeButton = benefit
+    ? `<button class="bloom-upgrade" id="bloom-upgrade" ${affordable ? "" : "disabled"} title="${affordable ? "Upgrade this module" : "Not enough whole nous"}">
+        <span class="bloom-upgrade-title">Upgrade · <strong class="mono">${formatInt(cost)} ν</strong></span>
+        <small class="bloom-upgrade-benefit mono">${benefit}</small>
+      </button>`
+    : "";
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
+    host.classList.toggle("sheet", phone);
+    document.body.classList.toggle("bloom-sheet-open", phone);
+    if (phone) {
+      // The bottom sheet (§7): the face tile beside the readout column,
+      // the upgrade action at its end — same content, re-docked.
+      const face = faceReadoutFor(state, module, module.pos, snapshot, true);
+      host.innerHTML = `<div class="bloom-sheet" data-type="${module.type}" data-rarity="${module.rarity}">
+        <svg class="bloom-sheet-tile" viewBox="-70 -70 140 140" aria-hidden="true">${moduleFace({
+          type: module.type,
+          rarity: module.rarity,
+          readout: face.readout,
+          ...(face.readoutClass ? { readoutClass: face.readoutClass } : {}),
+          ...(face.note ? { note: face.note } : {}),
+          level: module.level,
+        })}</svg>
+        <div class="bloom-sheet-col">
+          <span class="bloom-sheet-name">${META[module.type].name} · LV ${module.level}</span>
+          <small class="bloom-sheet-note mono">${cellNoteOf(module.pos)}</small>
+          <small class="bloom-sheet-contrib mono">${lines.contribution}</small>
+        </div>
+        ${upgradeButton}
+      </div>`;
+      byId("bloom-upgrade")?.addEventListener("click", () => app.upgrade(module.id));
+      host.hidden = false;
+      return;
+    }
+    // Ride the closed face when the pop would shrink the module. (No layout
+    // yet — hidden or unmeasured — degrades to unit scale by design; the
+    // plate repositions on the next render once the wrap measures.)
+    const inline = !bloomPops(viewMeet(frame), HEX_RADIUS);
     host.classList.toggle("inline", inline);
     const readouts = `
       <div class="bloom-readouts">
         ${inline ? `<p class="bloom-contribution mono">${lines.contribution}</p>` : ""}
-        ${
-          benefit
-            ? `<button class="bloom-upgrade" id="bloom-upgrade" ${affordable ? "" : "disabled"} title="${affordable ? "Upgrade this module" : "Not enough whole nous"}">
-                <span class="bloom-upgrade-title">Upgrade · <strong class="mono">${formatInt(cost)} ν</strong></span>
-                <small class="bloom-upgrade-benefit mono">${benefit}</small>
-              </button>`
-            : ""
-        }
+        ${upgradeButton}
       </div>`;
     if (inline) {
       host.innerHTML = readouts;
@@ -1340,16 +1362,20 @@ function renderBloom(app: App): void {
     }
     byId("bloom-upgrade")?.addEventListener("click", () => app.upgrade(module.id));
   }
+  if (phone) {
+    host.hidden = false;
+    return;
+  }
   // Position over the module's cell on every render — the board may have
   // grown or reflowed since the last one.
   const [cx, cy] = viewPoint(point(module.pos), frame);
-  if (inline) {
+  if (host.classList.contains("inline")) {
     // The card rides the closed face's lower band: centered, its body over
     // the taper below the face's note — hanging past the tip a little at
     // threshold zooms, where the taper is too tight to hold it. The same
     // clamp as the popped plate (bloomSpan).
     const { left, width } = bloomSpan(cx, frame);
-    const halfHeight = meet * HEX_RADIUS;
+    const halfHeight = viewMeet(frame) * HEX_RADIUS;
     host.style.left = `${Math.round(left)}px`;
     host.style.top = `${Math.round(cy + halfHeight * 0.85 - 34)}px`;
     host.style.width = `${width}px`;
@@ -1777,36 +1803,18 @@ function appPanelBody(app: App, panel: FocusApp): string {
     if (app.ui.historyOpen) {
       return app.ui.drillSession !== null ? historyDrillHtml(app) : historyListHtml(app);
     }
-    // PROTOTYPE (issue #119): de-duplicating planned time. Every variant
-    // gives the console clock the live session — the popover no longer
-    // repeats it. Variants differ on where PLANNING lives: A plans at the
-    // enter prompt; B and C plan here, in the Time app.
-    const variant = prototypeVariant();
+    // Planning lives only in the Time app (§7): in upgrade mode the panel
+    // owns the plan affordances the console clock points at; in flow the
+    // console clock keeps the live session and this panel holds the
+    // history — the popover never repeats the console's readout.
     if (upgrade) {
-      if (variant === "a") {
-        return `<section class="focus-controls">
-          <p class="small muted">Planning happens at Enter flow — the armed plan shows in the console's clock block.</p>
-          <button class="quiet small time-history" id="time-history">History</button>
-        </section>`;
-      }
       return `<section class="focus-controls">
         ${planControlsHtml(app)}
         <button class="quiet small time-history" id="time-history">History</button>
       </section>`;
     }
-    if (variant) {
-      return `<section class="focus-controls">
-        <p class="small muted">The console clock keeps session time — the Time app holds the history.</p>
-        <button class="quiet small time-history" id="time-history">History</button>
-      </section>`;
-    }
-    const elapsed = state.session?.elapsed ?? 0;
-    const target = state.session?.target ?? null;
-    const paused = state.mode === "paused";
     return `<section class="focus-controls">
-      <p class="session-clock mono" data-live="time-clock">${formatClock(elapsed)}</p>
-      <p class="clock-caption" data-live="time-caption">${sessionCaption(elapsed, target, paused)}</p>
-      <div class="time-track"><span data-live="time-track" style="width:${sessionTrackWidth(elapsed, target)}"></span></div>
+      <p class="small muted">The console clock keeps session time — the Time app holds the history.</p>
       <button class="quiet small time-history" id="time-history">History</button>
     </section>`;
   }
@@ -2044,19 +2052,12 @@ function bindAppPanel(app: App, scope: HTMLElement): void {
   });
 }
 
-// Values that move during flow without rebuilding the popover: clocks,
-// practice tallies, and goal progress.
+// Values that move during flow without rebuilding the popover: practice
+// tallies and goal progress. (The Time panel no longer repeats the
+// console's live session, so no clock lives here — §7.)
 function updateAppPanelLive(app: App, scope: ParentNode): void {
   const { state } = app;
-  const elapsed = state.session?.elapsed ?? 0;
-  const target = state.session?.target ?? null;
-  const paused = state.mode === "paused";
-  liveText(scope, "habit-session", `${formatClock(elapsed)} of practice`);
-  liveText(scope, "time-clock", formatClock(elapsed));
-  liveText(scope, "time-caption", sessionCaption(elapsed, target, paused));
-  const track = scope.querySelector('[data-live="time-track"]') as HTMLElement | null;
-  const width = sessionTrackWidth(elapsed, target);
-  if (track && track.style.width !== width) track.style.width = width;
+  liveText(scope, "habit-session", `${formatClock(state.session?.elapsed ?? 0)} of practice`);
   for (const habit of state.habits) {
     const node = scope.querySelector(`[data-habit-seconds="${habit.id}"]`);
     const display = formatDuration(habit.seconds);
@@ -2176,7 +2177,19 @@ function renderModal(app: App): void {
               // change — chips highlight on pick, never a stale footer.
               : kind === "enter"
                 ? [app.ui.chosenTarget, app.ui.enter]
-                : null;
+                // The formula sheet reprices only when a leg visibly moves:
+                // the rate quantized to whole ν/s keeps clock ticks from
+                // rebuilding (and refocusing) it every hundredth of a second.
+                : kind === "formula"
+                  ? [
+                      achievementBoostOf(app.state) > 1,
+                      computeRates(app.state, true).infusors > 0,
+                      Math.round(currentSnapshot(app.state).rate),
+                      app.state.session?.earned ?? null,
+                    ]
+                  : kind === "inventory"
+                    ? app.state.modules.filter((m) => m.pos === null).map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`)
+                    : null;
   const renderKey = JSON.stringify([kind, app.ui.importError, app.state.session?.accounting.poolSeconds ?? 0, app.state.mode, extra]);
   // Clock ticks must not replace a save textarea or steal dialog focus.
   if (!backdrop.hidden && content.dataset.renderKey === renderKey) return;
@@ -2192,8 +2205,65 @@ function renderModal(app: App): void {
   else if (kind === "honesty") renderHonestyModal(app, content);
   else if (kind === "enter") renderEnterModal(app, content);
   else if (kind === "summary") renderSummaryModal(app, content);
+  else if (kind === "formula") renderFormulaModal(app, content);
+  else if (kind === "inventory") renderInventorySheetModal(app, content);
   const firstButton = content.querySelector("button:not([disabled])");
   (firstButton as HTMLElement | null)?.focus();
+}
+
+// The formula sheet (§7): the full formula — equation plus value
+// breakdown — as a modal sheet over a scrim, opened by tapping the Rate
+// cell below the 760px breakpoint. The one place the formula is disclosed
+// on mobile; the Rate cell's hover popover owns the disclosure above it.
+function renderFormulaModal(app: App, content: HTMLElement): void {
+  const { state } = app;
+  // The same basis every rate figure wears — live during flow, projected
+  // while arranging — so the sheet can never disagree with the ledger it
+  // discloses.
+  const snapshot = computeRates(state, state.mode === "flow");
+  const achieving = achievementBoostOf(state) > 1;
+  const infused = snapshot.infusors > 0;
+  const chain = `<span class="op">(</span>${formatNumber(snapshot.synths)}${infused ? ` <span class="op">+</span> ${formatNumber(snapshot.infusors)}` : ""}<span class="op">)</span> <span class="op">×</span> χ ${formatNumber(snapshot.chordMultiplier)} <span class="op">×</span> emp ${formatNumber(snapshot.empowerment)}${achieving ? ` <span class="op">×</span> ach +${Math.round((snapshot.achievementBoost - 1) * 100)}%` : ""} <span class="op">=</span> <strong>${formatNumber(snapshot.rate)} ν/s</strong>`;
+  content.innerHTML = `
+    ${modalTop("FORMULA")}
+    <h2 id="modal-title">The live rate.</h2>
+    <p class="lead formula-equation mono">${chain}</p>
+    <div class="formula-breakdown">
+      ${ampBreakdownHtml(infused)}
+      <div class="rate-breakdown-row"><span class="bk-name">Chords</span><span class="mono">×${formatNumber(snapshot.chordMultiplier)}</span><span class="bk-note">${chordSummary(snapshot)}</span></div>
+      <div class="rate-breakdown-row"><span class="bk-name">Empowerment</span><span class="mono">×${formatNumber(snapshot.empowerment)}</span><span class="bk-note">charge uplift on charged modules</span></div>
+      <div class="rate-breakdown-row"><span class="bk-name">Achievements</span><span class="mono">+${Math.round((snapshot.achievementBoost - 1) * 100)}%</span><span class="bk-note">each feat adds into the boost</span></div>
+      <div class="rate-breakdown-row total"><span class="bk-name">Rate</span><span class="mono">${formatNumber(snapshot.rate)} ν/s</span><span class="bk-note">composite × empowerment × achievements</span></div>
+    </div>`;
+  wireClose(app);
+}
+
+// The inventory sheet (§7): the board-surface tray, re-docked for touch on
+// portrait phone where the thumb bar's Inventory segment taps it open.
+// Clicking an item arms the placement; the tray itself keeps the drag
+// gestures at every width.
+function renderInventorySheetModal(app: App, content: HTMLElement): void {
+  const inventory = app.state.modules.filter((m) => m.pos === null);
+  content.innerHTML = `
+    ${modalTop("INVENTORY")}
+    <h2 id="modal-title">Waiting for a cell.</h2>
+    <p class="lead">Tap a module, then a cell — dropping on an occupied cell swaps.</p>
+    <div class="inventory-sheet-grid">${
+      inventory
+        .map(
+          (m) =>
+            `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}" title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]} — tap, then a cell">${hexTileSvg(m)}</button>`,
+        )
+        .join("") || `<p class="empty-copy">Nothing in the tray. Drag a module off the board to store it here.</p>`
+    }</div>`;
+  content.querySelectorAll<HTMLButtonElement>("[data-inv]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.getAttribute("data-inv")!;
+      app.closeModal();
+      app.beginPlacing(id);
+    });
+  });
+  wireClose(app);
 }
 
 function modalTop(label: string): string {
@@ -2588,12 +2658,10 @@ function renderEnterModal(app: App, content: HTMLElement): void {
       <div class="mode-pane">${pane}</div>
       ${state.sessionsCompleted === 0 ? `<p class="enter-steer small muted">A first try can be short — five minutes or so, then exit and see what the session banked.</p>` : ""}
       ${
-        // PROTOTYPE (issue #119): A plans at the enter prompt; B and C plan
-        // in the Time app beforehand, so the prompt carries a pointer, not
-        // a second copy of the controls.
-        prototypeVariant() === "b" || prototypeVariant() === "c"
-          ? `<p class="enter-plan-hint small muted">Planning lives in the Time app — set it there, or enter open-ended.</p>`
-          : planControlsHtml(app)
+        // Planning lives only in the Time app (§7): the prompt carries a
+        // pointer, not a second copy of the controls — the console clock
+        // opens the Time app where the plan is set.
+        `<p class="enter-plan-hint small muted">Planning lives in the Time app — set it there (or tap the clock), or enter open-ended.</p>`
       }
     </div>
     <div class="footer-band">

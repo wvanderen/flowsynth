@@ -47,7 +47,9 @@ import { browserChannels, type SignalChannels } from "./signals";
 
 // The session modal surfaces (§5.5, §5.7): the enter prompt precedes every
 // session; the loud summary follows every one; the honesty report interrupts
-// whenever provisional time waits (§1–2).
+// whenever provisional time waits (§1–2). The formula sheet is the Rate
+// cell's tap-up disclosure below the 760px breakpoint (§7); the inventory
+// sheet re-docks the board-surface tray for touch on portrait phone.
 export type ModalKind =
   | "settings"
   | "catalog"
@@ -59,6 +61,8 @@ export type ModalKind =
   | "honesty"
   | "enter"
   | "summary"
+  | "formula"
+  | "inventory"
   | null;
 
 // The enter prompt's kind-first selection (issue #92's decided shape): the
@@ -116,6 +120,11 @@ export interface UiState {
   drillSession: number | null;
   // The Habit app's expanded development summary (§9): one habit at a time.
   summaryHabitId: string | null;
+  // Board navigation (§7): the zoom level and the world point the wrap
+  // holds at its center — null means fitted. Light furniture — never
+  // saved; fit resets zoom to 1 and the pan to null.
+  zoom: number;
+  pan: { x: number; y: number } | null;
 }
 
 interface LoadedSave {
@@ -178,6 +187,8 @@ export class App {
     historyLimit: HISTORY_PAGE_ROWS,
     drillSession: null,
     summaryHabitId: null,
+    zoom: 1,
+    pan: null,
   };
   lastWall: number | null = null;
   // The dual-clock drift baseline at lastWall (§10): a positive step past
@@ -224,6 +235,9 @@ export class App {
   // clear a drag's hover preview just because the ghost crosses a cell
   // boundary. Ephemeral: lives exactly as long as one drag gesture.
   dragging: string | null = null;
+  // The board's world bounds, recomputed every render from the owned and
+  // frontier cells (§7): the lens the zoom and pan clamp against.
+  boardBounds = { x: -100, y: -100, width: 200, height: 200 };
   private els: Record<string, HTMLElement>;
 
   constructor(els: Record<string, HTMLElement>, dev: boolean, channels: SignalChannels = browserChannels) {
@@ -239,7 +253,6 @@ export class App {
     rollGoalOccurrences(this.state, Date.now());
     this.ensureBoardOverlays();
     this.bindGlobalEvents();
-    document.getElementById("buy-banner-cancel")?.addEventListener("click", () => this.cancelCellPurchase());
     document.getElementById("console-settings")?.addEventListener("click", () => this.openModal("settings"));
     this.greet();
     this.render();
