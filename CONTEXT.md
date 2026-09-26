@@ -1,6 +1,6 @@
 # FlowSynth
 
-FlowSynth is an incremental game in which real-life practices drive a configurable hex board of modules — the board is the optimization game, and a console above it hosts the focus tools.
+FlowSynth is an incremental game in which real-life practices drive a configurable hex board of modules — the board is the optimization game, and a console carries the focus tools.
 
 ## Language
 
@@ -16,7 +16,7 @@ One hexagonal place on the board. Cells are bought with nous on a geometric scal
 A unit occupying one cell on the board, with gameplay effects derived from its category and, in many cases, a connection to a real-life practice or supporting interaction.
 
 **Module category**:
-The function level of a board module — synthesizer, generator, infusor, or forge at launch. Category carries the module's hue.
+The function level of a board module — synthesizer, spacer, generator, infusor, or forge at launch. Category carries the module's hue.
 
 **Module type**:
 A specific module design within a category, such as the Additive Synthesizer or the focus-keyed generator, carrying its own glyph and nameplate. Forge choices contain distinct module types; different types may share the same category.
@@ -24,18 +24,25 @@ A specific module design within a category, such as the Additive Synthesizer or 
 **Chargeable module**:
 A supertype family above the category level whose members accumulate received charge toward thresholds that produce effects; the threshold fill is the family's shared rendering trait. The Forge is the launch instance. Continuous-charge categories (synthesizer, infusor) use received charge as continuous empowerment instead.
 
-**Carrier**:
-The unique granted origin module that plays the formula's carrier role; pinned to the origin cell, immovable and unsellable, wearing white. All other synthesizers are strictly harmonics.
-_Avoid_: starter synth
-
 **Pitch**:
-A synthesizer's harmonic number, equal to its hex distance from the Carrier plus one.
+The absolute note a cell sounds — a property of the cell's position on the octave-stack lattice, derived from its coordinates and never persisted. Columns read as one note name; the horizontal axis walks the circle of fifths.
+_Avoid_: harmonic number, distance-from-origin
 
-**Chord pair**:
-Two adjacent synthesizers at consecutive pitches; each pair multiplies the composite by a small bonus, stacking multiplicatively and uncapped. Identical pitches add amplitude without forming a chord; skipped pitches are legal but chordless.
+**Chord**:
+A named pitch set — octave, fifth, major triad, and kin — recognized by pitch content over a connected cluster of synthesizers, register-free: any voicing, any octave. Overlapping chords stack multiplicatively; adjacency alone is chordless.
+_Avoid_: Named chord (the just-intonation-run sense), Chord pair
 
-**Named chord**:
-A just-intonation chord recognized over a connected cluster of adjacent synthesizers — at launch: octave 1:2, fifth 2:3, major triad 4:5:6, and blues triad 5:6:7. A named chord's term replaces its member pairs' bonuses; overlapping named chords stack multiplicatively.
+**Spacer**:
+A silent wire module occupying one cell: it never sounds and never joins a pitch set, but conducts chord adjacency through chains of wired cells. Reaches the board only through forge rolls.
+
+**Octave row**:
+One register of the board: the band of cells whose pitches sit in the same octave, stacked as a vertical shape.
+
+**Start register**:
+The octave row the opening board begins on; rows are finite, generous, and symmetric around it.
+
+**Row gate**:
+The one-time premium paid on the first purchase into each new octave row. It taxes acquisition only — moving owned cells between rows is free — and does not advance the cell purchase scaler.
 
 ### Resources and production
 
@@ -46,13 +53,13 @@ The provisional name for the game's main progression resource, spent on permanen
 The single final nous-per-second output: `composite × empowerment × achievementBoost`. Modules contribute terms to this shared rate rather than producing independent timed payouts.
 
 **Composite**:
-The board's summed and chord-multiplied amplitude: the Carrier plus every harmonic and infusor term, times every chord term.
+The board's summed and chord-multiplied amplitude: the synths leg plus the infusor uplift, times every chord term.
 
-**Harmonic term**:
-A synthesizer's base contribution to the composite — its amplitude at its pitch, plus a per-chord-pair bonus for Conditional types. Infusor uplift rides in the infusor term.
+**Synth term**:
+A synthesizer's base contribution to the composite — level and rarity power only, one unified leg shared by every synthesizer. The infusor uplift rides in its own leg beside it.
 
 **Synthesizer**:
-A board module contributing a harmonic term to the composite, whose effect is empowered while it receives charge. Synthesizers never produce charge.
+A board module contributing a synth term to the composite; no synthesizer is spatially privileged. It is empowered while receiving charge and never produces charge.
 _Avoid_: Synth (in domain documentation)
 
 **Charge**:
@@ -104,12 +111,15 @@ A charge-earned choice of one module from three generated candidates; unchosen c
 The permanent upgrade-mode purchase surface: app activations, starter-shelf offers while available, and cells. Its activation section appears only once the ladder has a tenant. Module upgrades live on module panels, not the catalog (ADR-0018).
 
 **Starter shelf**:
-The catalog's one-time guaranteed offers — an Additive Synth, the generator, one infusor, and a Forge — hidden once acquired. It completes the category landscape and seeds chord play (ADR-0018); everything else comes from rolls.
+The catalog's one-time guaranteed offers — the generator, one infusor, and a Forge — hidden once acquired. It completes the non-synthesizer landscape; synthesizers come only from the opening grant and forge rolls (ADR-0022).
 
 ### The console and focus apps
 
 **Console**:
-The surface structurally above the board, carrying the Enter/Exit main switch, the clock, pause, one tile per focus app, the status strip, and the nous balance. The main switch is the mode indicator — off, glowing live, held paused. While a session runs, a thin progress strip along the console's bottom edge shows its progress in the switch's vermillion — filling on planned sessions, pulsing on open-ended ones, held while paused. The board never moves or dims while the console is in use.
+The pure control surface carrying the Enter/Exit main switch, the clock, pause, and one tile per focus app. The main switch is the mode indicator — off, glowing live, held paused — and the clock is itself the plan affordance, opening the Time app. While a session runs, a thin progress strip along the console's bottom edge shows its progress in the switch's vermillion — filling on planned sessions, pulsing on open-ended ones, held while paused. The board never moves or dims while the console is in use.
+
+**Board ledger**:
+The strip docked above the board carrying Nous, Rate, and Session as one instrument, with the feats chip beside it — the board owns its production numbers. The Rate cell is the only door to the full formula.
 
 **Focus app**:
 A fixed-function instrument hosted by the console — Habit, Time, Notes, and Goals at launch. Apps never grant, produce, or spend nous or charge; board modules may read their state as effect inputs.
@@ -243,13 +253,10 @@ The muted list-row flag on session records carrying a missed honesty event. Mute
 The resource minted when the Arete accumulator fills. What mints it in quantity and what it spends on are prestige design, not yet decided.
 
 **Arete accumulator**:
-The status monitor's log-scale fill on lifetime total nous earned toward the horizon line; its decade graduations are visible but inert.
+The log-scale fill on lifetime total nous earned toward the horizon line, floating free as a translucent pill over the board's bottom edge; its decade graduations are visible but inert.
 
 **Horizon line**:
 The Arete accumulator's cap — the first prestige threshold — with a reserved, inert prestige button beneath it at launch.
-
-**Status monitor**:
-The full-width rail beneath the board carrying the live formula chip and the Arete accumulator; Forge progress rides the toolbar's Forge pip (ADR-0018).
 
 **Achievement**:
 A named feat that accelerates but never gates progress; each adds into the global achievementBoost term of the nous rate. Detection is live, storage is the v5 save's `id → unlockedAt` map. "Feat" is flavor individual names may carry, never a second term.

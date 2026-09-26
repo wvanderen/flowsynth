@@ -2,6 +2,8 @@
 
 The decoupled board, the opening, the horizon, and the Rack — assembled for implementation.
 
+> **Superseded (2026-09-25).** The playtest-driven board redesign ([board redesign spec](board-redesign-spec.md), map [issue #116](https://github.com/wvanderen/flowsynth/issues/116)) supersedes this spec's board-facing systems: geometry and pitch (§2.1, §4), the opening (§3, §5), progression surfaces (§6.1–6.2), console anatomy (§2.2), persistence (§9), and the glossary (§11). ADR-0021…0023 record the reversals. Still in force from this spec: §2.3's boundary rule (via the [focus-tool spec](focus-tool-spec.md)), §6.3's achievements, §7's number display, and §8's Rack identity minus its Carrier clauses. Read this document as the historical record of the first redesign; implement from the board redesign spec.
+
 **Status**: produced by the FlowSynth redesign map ([issue #9](https://github.com/wvanderen/flowsynth/issues/9)); every decision below is final for this effort and traceable to its deciding ticket. Exact numbers are **provisional tuning** unless a source says otherwise. Companion records: ADR-0012…0018 (supersessions) and the rewritten `CONTEXT.md` (glossary). The focus-tool elevation ([issue #68](https://github.com/wvanderen/flowsynth/issues/68)) supersedes this spec's session-accounting and opening-activation lines; its decisions live in [the focus-tool spec](focus-tool-spec.md) and ADR-0019. Where this spec and an ADR disagree, the ADR wins; where both are silent, consult the linked ticket.
 
 ---
