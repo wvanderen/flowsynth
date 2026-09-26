@@ -394,10 +394,12 @@ const CELL_TOOL_SVG = `<svg viewBox="-10 -10 20 20" aria-hidden="true" fill="non
 const INVENTORY_TOOL_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/></svg>`;
 
 // The action definitions the dock and the thumb bar are both built from:
-// Catalog / Forge (count badge + charge pip) / New cell everywhere, with
-// Inventory and Feats folded into the phone's thumb bar (§7). Arrange has
-// no job anywhere — dragging is already live (§5) — and the canvas legend
-// is gone: its encodings belong to the surfaces that use them.
+// Catalog / Forge (count badge + charge pip) / New cell / Inventory
+// everywhere, with Feats folded into the phone's thumb bar (§7). Arrange
+// has no job anywhere — dragging is already live (§5) — and the canvas
+// legend is gone: its encodings belong to the surfaces that use them.
+// Inventory presents twice: on phone the thumb bar taps open the sheet;
+// at every other width the dock icon toggles the tray column beside it.
 interface ToolAction {
   op: string;
   svg: string;
@@ -438,7 +440,8 @@ function toolActions(): ToolAction[] {
       op: "inventory",
       svg: INVENTORY_TOOL_SVG,
       label: "Inventory",
-      title: () => "Inventory — the board-surface tray, tapped open",
+      title: (app) => (isPhoneWidth() ? "Inventory — the board-surface tray, tapped open" : app.ui.trayOpen ? "Inventory — close the tray" : "Inventory — open the tray"),
+      active: (app) => !isPhoneWidth() && app.ui.trayOpen,
     },
     {
       op: "feats",
@@ -456,7 +459,15 @@ function runToolAction(app: App, op: string): void {
   if (op === "catalog") app.openModal("catalog");
   else if (op === "forge") app.openModal("forge");
   else if (op === "feats") app.openModal("achievements");
-  else if (op === "inventory") app.openModal("inventory");
+  else if (op === "inventory") {
+    // Phone folds the tray into a sheet; every other width toggles the
+    // tray column beside the dock.
+    if (isPhoneWidth()) app.openModal("inventory");
+    else {
+      app.ui.trayOpen = !app.ui.trayOpen;
+      app.render();
+    }
+  }
   else if (op === "cell") {
     if (app.ui.buyingCell) app.cancelCellPurchase();
     else app.armCellPurchase();
@@ -471,7 +482,7 @@ function renderTools(app: App): void {
   const host = byId("board-tools");
   const thumb = byId("thumb-bar");
   const actions = toolActions();
-  const dockActions = actions.filter((action) => action.op !== "inventory" && action.op !== "feats");
+  const dockActions = actions.filter((action) => action.op !== "feats");
   const feats = unlockedCount(state);
   const forgeCount = state.bankedRolls.length;
   const trayCount = state.modules.filter((m) => m.pos === null).length;
@@ -493,7 +504,11 @@ function renderTools(app: App): void {
                 ? feats > 0
                   ? `<b class="tool-badge mono">${feats}</b>`
                   : ""
-                : "";
+                : action.op === "inventory"
+                  ? trayCount > 0
+                    ? `<b class="tool-badge mono">${trayCount}</b>`
+                    : ""
+                  : "";
           const label = action.op === "feats" ? `Feats · ${feats}/${ACHIEVEMENTS.length}` : action.op === "inventory" ? `Inventory · ${trayCount}` : action.label;
           return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" data-op="${action.op}" aria-label="${action.label}" title="${action.title(app)}"${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${label}</small></button>`;
         })
@@ -1397,18 +1412,24 @@ function renderBloom(app: App): void {
   host.hidden = false;
 }
 
-// The board-surface tray (§5): the inventory docked over the board's bottom
-// edge. Retrieve by dragging off the board into it — the chord-breaking
-// gesture — place by clicking an item then a cell (occupied placement
-// swaps). Hidden while the flow board is locked.
+// The board-surface tray (§5): the inventory as a collapsible column docked
+// beside the action dock. The dock's Inventory icon toggles it; a drag or
+// an armed placement opens it for the moment regardless, so the
+// chord-breaking gesture always has a visible target. Retrieve by dropping
+// a module onto it, place by clicking an item then a cell (occupied
+// placement swaps). On portrait phone the tray hides — the thumb bar's
+// Inventory segment taps the same inventory open as a sheet.
 function renderInventoryTray(app: App): void {
   const tray = byId("inventory-zone");
   if (!tray) return;
-  const { state } = app;
+  const { state, ui } = app;
   const upgrade = state.mode === "upgrade";
-  tray.classList.toggle("off", !upgrade);
+  // Explicit open wins; a carried module or an armed placement opens the
+  // column for the gesture's duration whatever the toggle says.
+  const open = upgrade && (ui.trayOpen || app.dragging !== null || ui.placing !== null);
+  tray.classList.toggle("off", !open);
   const inventory = state.modules.filter((m) => m.pos === null);
-  const key = JSON.stringify([upgrade, inventory.map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`)]);
+  const key = JSON.stringify([upgrade, open, inventory.map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`)]);
   if (tray.dataset.renderKey === key) return;
   tray.dataset.renderKey = key;
   tray.innerHTML = `<span class="tray-label">TRAY</span>

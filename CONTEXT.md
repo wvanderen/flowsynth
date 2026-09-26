@@ -64,7 +64,7 @@ _Avoid_: pop-up, modal
 The popped bloom standing for its module: the origin cell renders vacated while the bloom stands, since the bloom repeats every line the face carries.
 
 **Tray**:
-The board-surface inventory dock over the board's bottom edge. Drag a module off the board into it to retrieve — the chord-breaking gesture, shared with right-click retrieve — and click an item then a cell to place; occupied placement swaps. There is no management view.
+The board-surface inventory as a collapsible column docked beside the action dock — the dock's Inventory icon toggles it, and a drag or an armed placement opens it for the gesture's duration. Drag a module off the board into it to retrieve — the chord-breaking gesture, shared with right-click retrieve — and click an item then a cell to place; occupied placement swaps. On portrait phone the tray hides and the thumb bar's Inventory segment taps the same inventory open as a sheet. There is no management view.
 _Avoid_: inventory panel, management view
 
 ### Resources and production

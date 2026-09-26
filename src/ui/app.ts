@@ -125,6 +125,10 @@ export interface UiState {
   // saved; fit resets zoom to 1 and the pan to null.
   zoom: number;
   pan: { x: number; y: number } | null;
+  // The tray column's explicit state (§5): toggled from the dock's
+  // Inventory icon; drags and placements open it temporarily whatever this
+  // says. Light furniture — never saved.
+  trayOpen: boolean;
 }
 
 interface LoadedSave {
@@ -189,6 +193,7 @@ export class App {
     summaryHabitId: null,
     zoom: 1,
     pan: null,
+    trayOpen: false,
   };
   lastWall: number | null = null;
   // The dual-clock drift baseline at lastWall (§10): a positive step past

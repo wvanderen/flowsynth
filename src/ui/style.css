@@ -677,9 +677,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  /* Above the tray's lane: the tray keeps the board's bottom edge, the
-     pill floats clear of it whatever the tray holds. */
-  bottom: 122px;
+  bottom: 12px;
   z-index: 14;
   width: min(340px, 62%);
   padding: 6px 13px 8px;
@@ -769,7 +767,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .zoom-cluster {
   position: absolute;
   right: 12px;
-  bottom: 122px;
+  bottom: 12px;
   z-index: 24;
   display: flex;
   flex-direction: column;
@@ -1108,28 +1106,36 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 /* The inventory docked over the board's bottom edge: drag a module here to
    retrieve it (the chord-breaking gesture), click an item then a cell to
    place — occupied placement swaps. Hidden while the flow board is locked. */
+/* ── The tray column (§5) ──────────────────────────── */
+/* The inventory as a collapsible column docked beside the action dock: the
+   dock's Inventory icon toggles it, and a drag or an armed placement opens
+   it for the gesture's duration — the chord-breaking drop always has a
+   visible target. Portrait phone hides it (the thumb bar taps the sheet). */
 .inventory-tray {
   position: absolute;
-  left: 50%;
-  bottom: 10px;
-  transform: translateX(-50%);
+  left: 58px;
+  top: 50%;
+  transform: translateY(-50%);
   z-index: 15;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  max-width: calc(100% - 24px);
-  padding: 7px 13px 9px;
+  gap: 8px;
+  width: 86px;
+  max-height: calc(100% - 40px);
+  padding: 9px 8px 11px;
   background: var(--panel-veil);
   border: 1px dashed var(--line-strong);
   border-radius: 12px;
   transition: border-color 0.15s, background 0.15s;
   backdrop-filter: blur(3px);
+  overflow-y: auto;
 }
 .inventory-tray.off { display: none; }
 .inventory-tray.drag-over { border-color: var(--charge); background: var(--charge-tint); }
 .tray-label { font: 10px var(--mono); letter-spacing: 0.16em; color: var(--muted); flex-shrink: 0; }
-.tray-items { display: flex; align-items: center; gap: 6px; min-height: 58px; }
-.tray-empty { font-size: 11px; color: var(--muted); font-style: italic; padding: 0 6px; }
+.tray-items { display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 40px; width: 100%; }
+.tray-empty { font-size: 10.5px; color: var(--muted); font-style: italic; text-align: center; padding: 4px 2px; }
 .tray-items .inventory-tile { width: 62px; padding: 3px 2px 5px; }
 .tray-items .inventory-tile svg { width: 100%; }
 
@@ -1421,16 +1427,14 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
   .info-strip { display: flex; }
   .board-tools { display: none; }
   .thumb-bar { display: flex; }
-  /* The tray stays the drag-retrieval target; it hides while empty and
-     docks directly above the thumb bar when it holds modules. The pill
-     floats clear above both. */
-  .inventory-tray { bottom: 56px; max-width: calc(100% - 76px); }
-  .inventory-tray:has(.tray-empty) { display: none; }
-  .arete-pill { bottom: 144px; width: min(260px, 60%); padding: 4px 11px 6px; }
+  /* The tray hides on phone — the thumb bar's Inventory taps the sheet —
+     so the pill owns the lane above the bar. */
+  .inventory-tray { display: none !important; }
+  .arete-pill { bottom: 64px; width: min(260px, 60%); padding: 4px 11px 6px; }
   .pill-row { font-size: 9px; margin-bottom: 4px; }
   .pill-rail { height: 7px; margin-top: 14px; }
   .pill-head { font-size: 8.5px; }
-  .zoom-cluster { right: 10px; bottom: 74px; }
+  .zoom-cluster { right: 10px; bottom: 64px; }
   body.bloom-sheet-open .zoom-cluster { bottom: 150px; }
   /* The open sheet owns the board's lower edge: the pill steps aside. */
   body.bloom-sheet-open .arete-pill { opacity: 0; }

@@ -308,17 +308,23 @@ describe("the app popovers", () => {
 });
 
 describe("the action row (§7)", () => {
-  it("is a left-edge icon dock: Catalog / Forge / New cell — no legend, no Arrange, no Chords toggle", () => {
+  it("is a left-edge icon dock: Catalog / Forge / New cell / Inventory — no legend, no Arrange, no Chords toggle", () => {
     app.render();
     const dock = document.getElementById("board-tools")!;
     const ops = [...dock.querySelectorAll("[data-op]")].map((b) => b.getAttribute("data-op"));
-    expect(ops).toEqual(["catalog", "forge", "cell"]);
+    expect(ops).toEqual(["catalog", "forge", "cell", "inventory"]);
     // The count badge rides the Forge icon; the charge pip rides beneath it.
     expect(dock.querySelector('[data-op="forge"] .forge-pip')).not.toBeNull();
     expect(document.querySelector(".legend")).toBeNull();
     expect(document.getElementById("tool-manage")).toBeNull();
     expect(document.getElementById("manage-banner")).toBeNull();
     expect(document.getElementById("inventory-zone")).not.toBeNull();
+    // The tray column starts closed and the dock icon toggles it.
+    const zone = document.getElementById("inventory-zone") as HTMLElement;
+    expect(zone.classList.contains("off")).toBe(true);
+    dock.querySelector<HTMLButtonElement>('[data-op="inventory"]')!.click();
+    expect(zone.classList.contains("off")).toBe(false);
+    expect(app.ui.trayOpen).toBe(true);
   });
 
   it("the Forge tool carries the shared meter pip and progress tooltip", () => {
@@ -346,6 +352,10 @@ describe("the action row (§7)", () => {
 });
 
 describe("the thumb bar (§7, portrait phone)", () => {
+  beforeEach(() => {
+    setAppWidth(390);
+  });
+
   it("folds the dock plus Inventory and Feats into the bottom bar", () => {
     give(app.state, "additive", null);
     app.render();
@@ -354,7 +364,7 @@ describe("the thumb bar (§7, portrait phone)", () => {
     expect(ops).toEqual(["catalog", "forge", "cell", "inventory", "feats"]);
     expect(bar.querySelector('[data-op="inventory"]')!.textContent).toContain("Inventory · 1");
     expect(bar.querySelector('[data-op="feats"]')!.textContent).toContain("Feats · 0");
-    // Inventory taps open the inventory sheet; feats opens the feats page.
+    // On phone Inventory taps the sheet; feats opens the feats page.
     bar.querySelector<HTMLButtonElement>('[data-op="inventory"]')!.click();
     expect(app.ui.modal).toBe("inventory");
     app.closeModal();
