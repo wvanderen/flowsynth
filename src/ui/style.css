@@ -312,7 +312,10 @@ h1, h2, h3, p { margin: 0; }
 .workspace { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 330px; min-height: 0; }
 
 .board-panel { padding: 22px 26px 0; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-.board-heading { flex-shrink: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+/* The heading is the chord readout's positioning context: the readout
+   hangs from it as an overlay layer, so appearing or disappearing can
+   never reflow the row and shift the grid. */
+.board-heading { flex-shrink: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; position: relative; }
 .board-heading h2 { font-size: 19px; font-weight: 500; letter-spacing: -0.02em; margin: 6px 0 4px; }
 .board-heading p { font-size: 12px; color: var(--muted); max-width: 420px; }
 .board-tools { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 4px; }
@@ -779,16 +782,21 @@ body.live .inspector-empty { opacity: 0.75; }
 .chord-mark.chord-focus .chord-seam { stroke-width: 6; }
 .chord-mark.chord-fade .chord-seam { opacity: 0.18; }
 
-/* The reserved readout: the chips, stacked vertically in one spot at the
-   heading's right end — a fixed address the expanded face can never
-   cover. */
+/* The reserved readout: the chips, stacked vertically, pinned to the
+   heading's right end as an overlay layer — outside every layout pass, so
+   hover and selection can never shift the grid, and above the board-space
+   (z-index over the bloom's 20) so the expanded face can never cover it.
+   Pointer-transparent: it reads, it never blocks. */
 .chord-readout {
-  margin-left: 14px;
-  padding-bottom: 4px;
+  position: absolute;
+  top: 100%;
+  right: 14px;
+  z-index: 25;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 4px;
+  pointer-events: none;
 }
 .chord-readout[hidden] { display: none; }
 .chord-readout-chip {
