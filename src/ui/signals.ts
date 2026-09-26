@@ -73,10 +73,13 @@ export function notificationPermission(): NotificationPermissionState {
 /* ── The chord garnish (§6): strum + drone ──────────── */
 
 // Just-intonation ratios for the launch chord vocabulary's interval classes
-// (mod 12): unison, minor and major third, fifth, flat seventh. A semitone
-// class outside the table falls back to the nearest tempered fifth — the
-// launch vocabulary never asks.
+// (mod 12): unison, minor and major third, fifth, flat seventh. The
+// fallbacks cover the cases the launch vocabulary never asks: an interval
+// class outside the table lands on the tempered fifth, a chord name
+// outside NAMED_CHORDS sings a bare fifth.
 const JUST_RATIOS: Record<number, number> = { 0: 1, 3: 6 / 5, 4: 5 / 4, 7: 3 / 2, 10: 9 / 5 };
+const TEMPERED_FIFTH_FALLBACK = 1.4983;
+const FALLBACK_INTERVALS = [0, 7];
 
 // The chord garnish's tuning (§6: garnish — no further sound-design work).
 export const STRUM = {
@@ -109,7 +112,7 @@ export function sessionDroneHz(chords: readonly NamedChordTerm[]): number {
 
 // The intervals a named chord sings, straight from the launch vocabulary.
 function intervalsOf(name: string): number[] {
-  return NAMED_CHORDS.find((def) => def.name === name)?.intervals ?? [0, 7];
+  return NAMED_CHORDS.find((def) => def.name === name)?.intervals ?? FALLBACK_INTERVALS;
 }
 
 // A formation strum (§6): the chord's just ratios plucked low to high, one
@@ -119,7 +122,7 @@ export function playStrum(ctx: AudioContext | null, chords: readonly NamedChordT
   let now = ctx.currentTime;
   for (const chord of chords) {
     for (const interval of intervalsOf(chord.name)) {
-      const hz = STRUM.rootHz * (JUST_RATIOS[interval % 12] ?? 1.4983);
+      const hz = STRUM.rootHz * (JUST_RATIOS[interval % 12] ?? TEMPERED_FIFTH_FALLBACK);
       const osc = ctx.createOscillator();
       osc.type = "sine";
       osc.frequency.value = hz;

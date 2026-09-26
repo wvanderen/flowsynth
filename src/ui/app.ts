@@ -39,7 +39,7 @@ import {
   selectHabit,
 } from "../engine/habits";
 import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
-import type { GameState, Hex, NamedChordTerm, ShelfType } from "../engine/types";
+import type { GameState, Hex, ModuleInstance, NamedChordTerm, ShelfType } from "../engine/types";
 import { render } from "./render";
 import { HISTORY_PAGE_ROWS, META } from "./meta";
 import { browserChannels, sessionDroneHz, type SignalChannels } from "./signals";
@@ -939,15 +939,7 @@ export class App {
     if (ui.placing) {
       const module = state.modules.find((m) => m.id === ui.placing);
       if (!module) return;
-      const before = computeRates(state, true).namedChords;
-      const result = placeModule(state, module.id, pos);
-      if (this.act(result, `${META[module.type].name} placed.`)) {
-        ui.placing = null;
-        // A placement never opens the expanded face (§5): the drop leaves
-        // it closed, whoever dropped it.
-        ui.selected = null;
-        this.strumFormedChords(before);
-      }
+      this.placeAndStrum(module, pos);
       return;
     }
     const occupant = state.modules.find((m) => m.pos !== null && sameHex(m.pos, pos));
@@ -968,11 +960,17 @@ export class App {
     const module = state.modules.find((m) => m.id === id);
     if (!module) return;
     this.ui.placing = null;
-    const before = computeRates(state, true).namedChords;
-    if (this.act(placeModule(state, id, pos), `${META[module.type].name} placed.`)) {
-      // A placement never opens the expanded face (§5): the drop leaves it
-      // closed, whoever dropped it — an armed placement wears its module
-      // as the selection, so the drop clears it too.
+    this.placeAndStrum(module, pos);
+  }
+
+  // The one placement landing (§5–§6), shared by the click path and the
+  // drag/touch release: a drop never opens the expanded face — an armed
+  // placement wears its module as the selection, so the drop clears it —
+  // and a chord the drop newly forms strums (§6).
+  private placeAndStrum(module: ModuleInstance, pos: Hex): void {
+    const before = computeRates(this.state).namedChords;
+    if (this.act(placeModule(this.state, module.id, pos), `${META[module.type].name} placed.`)) {
+      this.ui.placing = null;
       this.ui.selected = null;
       this.strumFormedChords(before);
     }
