@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { CHIP_STACK_PX, chordOverlay, chipWidth } from "./chordlayer";
+import { chordOverlay, chipWidth } from "./chordlayer";
 import { hex } from "../engine/hex";
 import { HEX_RADIUS, hexApothem } from "./face";
 import type { Hex, NamedChordTerm } from "../engine/types";
 
 // The chord overlay's geometry — the prototype's seam language (#120):
-// which voices connect, which hue and pulse period a chord wears, where its
-// chip sits. render.ts's point mapping is injected, so tests use the same
-// axial→pixel shape. Chips clear each other where chords overlap; selection
-// is the caller's emphasis question.
+// which voices connect, which hue and pulse period a chord wears, where
+// its ghost chip anchors. render.ts's point mapping is injected, so tests
+// use the same axial→pixel shape. The name chip lives in a reserved spot
+// by the board; selection is the caller's emphasis question.
 
 const point = ({ q, r }: { q: number; r: number }): [number, number] => [
   Math.sqrt(3) * 65 * (q + r / 2),
@@ -87,51 +87,17 @@ describe("seamsFor — the prototype's trimmed voice pairs", () => {
     expect(overlay.marks).toHaveLength(0);
   });
 
-  it("sizes each chip's backing from its label", () => {
-    const overlay = overlayWith([chord("Fifth", ["m1", "m2"])]);
-    expect(overlay.marks[0]!.labelW).toBe(chipWidth("Fifth ×1.15"));
+  it("sizes the ghost chip's backing from its label", () => {
+    expect(chipWidth("Fifth ×1.15")).toBe("Fifth ×1.15".length * 7.4 + 12);
   });
 
-  it("floats the chip above the chord's topmost voice", () => {
-    // c5 sits a row below (larger y): the chip rides over m1's row.
+  it("anchors the chip above the chord's topmost voice", () => {
+    // c5 sits a row below (larger y): the anchor rides over m1's row.
     const overlay = overlayWith([chord("Fifth", ["m1", "m2"])]);
     const mark = overlay.marks[0]!;
     const [topX, topY] = point(POS.m1!);
     expect(mark.chipX).toBe(topX);
     expect(mark.chipY).toBeCloseTo(topY - HEX_RADIUS * 1.18, 1);
-  });
-
-  it("draws nested chords with cleared chips on a power-chord region", () => {
-    // A seeded power-chord region on the lattice: C4, G4, C5 — the octave
-    // nests inside the fifth's region and the two chips clear each other.
-    const region: Record<string, Hex> = { c4: hex(0, 0), g4: hex(1, 0), c5: hex(0, 1) };
-    const overlay = chordOverlay({
-      namedChords: [chord("Fifth", ["c4", "g4", "c5"]), chord("Octave", ["c4", "c5"])],
-      posOf: (id) => region[id] ?? null,
-      point,
-      radius: HEX_RADIUS,
-      labelFor: (c) => c.name,
-    });
-    expect(overlay.marks).toHaveLength(2);
-    const [outer, inner] = overlay.marks;
-    // The chips clear each other: a full stack step apart, or side by side.
-    const clearedVertically = Math.abs(outer!.chipY - inner!.chipY) >= CHIP_STACK_PX;
-    const clearedHorizontally = Math.abs(outer!.chipX - inner!.chipX) >= (outer!.labelW + inner!.labelW) / 2;
-    expect(clearedVertically || clearedHorizontally).toBe(true);
-  });
-
-  it("stacks same-row chips that would collide", () => {
-    const overlay = chordOverlay({
-      namedChords: [chord("Fifth", ["m1", "m2"]), chord("Fifth", ["m2", "m3"])],
-      posOf: (id) => POS[id] ?? null,
-      point,
-      radius: HEX_RADIUS,
-      // A long label makes the neighboring chips' footprints overlap.
-      labelFor: () => "Flat seventh ×1.45 ×12",
-    });
-    expect(overlay.marks).toHaveLength(2);
-    const [a, b] = overlay.marks;
-    expect(Math.abs(a!.chipY - b!.chipY)).toBeGreaterThanOrEqual(CHIP_STACK_PX);
   });
 });
 

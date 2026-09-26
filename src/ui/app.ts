@@ -85,6 +85,10 @@ export interface UiState {
   // The live drop preview (§5–§6): the module a drag or armed placement is
   // pointing at, and the cell it hovers. Null whenever nothing hovers.
   dropHover: { moduleId: string; pos: Hex } | null;
+  // The chord the pointer rests on (§6): a seam's or an included voice's
+  // mark key, asked into the reserved readout. Light furniture — never
+  // saved, cleared with the transient modes.
+  chordHover: string | null;
   // Cell purchase (ADR-0013): armed from the catalog, resolved by clicking a
   // frontier hex. The buy only lands when a frontier cell is clicked.
   buyingCell: boolean;
@@ -157,6 +161,7 @@ export class App {
     app: null,
     placing: null,
     dropHover: null,
+    chordHover: null,
     buyingCell: false,
     modal: null,
     importText: "",
@@ -373,6 +378,7 @@ export class App {
     this.ui.app = null;
     this.ui.placing = null;
     this.ui.dropHover = null;
+    this.ui.chordHover = null;
     this.ui.buyingCell = false;
   }
 

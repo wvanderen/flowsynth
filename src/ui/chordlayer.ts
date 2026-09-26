@@ -4,10 +4,9 @@
 //
 // The language is the prototype's seams (#120, variant B): a chord names
 // itself with colored lines between its voices — trimmed short of each
-// face, chord-colored, pulse-timed per chord — and a name chip that only
-// appears when asked for (a seam or an included voice hovered, an included
-// voice selected). The overlay is always on (§6, #137): every formed chord
-// wears its seams; selection is the caller's emphasis question.
+// face, chord-colored, pulse-timed per chord — while its name chip lives
+// in a reserved spot by the board (never floating over it). Selection and
+// hover are the caller's emphasis questions.
 import type { Hex, NamedChordTerm } from "../engine/types";
 
 export type Point = readonly [number, number];
@@ -28,11 +27,11 @@ export interface ChordMark {
   // The flow pulse period (seconds), per chord — the prototype's rhythm.
   readonly duration: number;
   readonly seams: ChordSeam[];
+  // The chip anchor: above the chord's topmost voice. Ghost marks (the
+  // would-form preview) render their chip here; formed chords render
+  // theirs in the reserved spot instead.
   readonly chipX: number;
   readonly chipY: number;
-  // The chip's estimated pixel width — the backing rect's width and the
-  // stacking collision's footprint.
-  readonly labelW: number;
   // The chord's voice ids — the hover reveal's lookup on the mark node.
   readonly voices: readonly string[];
   // Whether this chord carries one of the caller's focus ids (§6): the
@@ -45,13 +44,12 @@ export interface ChordOverlay {
   marks: ChordMark[];
 }
 
-// The chip's metrics: the mono face runs ~10.5px with 0.1em tracking, so a
-// character is ~7.4px wide; the backing adds side padding, and the vertical
-// stack step is chip height plus breathing room. Estimates for layout, not
-// measurement — the stylesheet owns the truth (tuning).
+// The chip label's metrics: the mono face runs ~10.5px with 0.1em
+// tracking, so a character is ~7.4px wide; the backing adds side padding.
+// Estimates for layout, not measurement — the stylesheet owns the truth
+// (tuning).
 export const CHIP_CHAR_PX = 7.4;
 export const CHIP_PAD_PX = 12;
-export const CHIP_STACK_PX = 20;
 
 // A chip's estimated pixel width from its label.
 export function chipWidth(label: string): number {
@@ -117,33 +115,11 @@ function seamsFor(centers: readonly Point[], radius: number, claimed: Set<string
   return seams;
 }
 
-// Stack overlapping chips (§6): where chords overlap or sit side by side,
-// their chips pile upward instead of colliding. Bottom-first, left-second
-// order — the lowest chip pins to its chord and the rest climb clear.
-function stackChips(marks: ChordMark[]): ChordMark[] {
-  const placed: ChordMark[] = [];
-  const ordered = [...marks].sort((a, b) => b.chipY - a.chipY || a.chipX - b.chipX);
-  for (const mark of ordered) {
-    let chipY = mark.chipY;
-    while (
-      placed.some(
-        (p) =>
-          Math.abs(p.chipY - chipY) < CHIP_STACK_PX &&
-          Math.abs(p.chipX - mark.chipX) < (p.labelW + mark.labelW) / 2,
-      )
-    ) {
-      chipY -= CHIP_STACK_PX;
-    }
-    placed.push({ ...mark, chipY: Number(chipY.toFixed(2)) });
-  }
-  return placed;
-}
-
 // The overlay over one board's chord terms: per named chord, its seams and
-// its chip position. A term with a voice off the board cannot be drawn
-// whole — it contributes nothing at all, not even light. `focusIds` carries
-// the selection's emphasis (§6): chords carrying one of those ids come back
-// focused, every other mark fades; unset, nothing fades.
+// its chip anchor. A term with a voice off the board cannot be drawn
+// whole — it contributes nothing at all, not even light. `focusIds`
+// carries the selection's emphasis (§6): chords carrying one of those ids
+// come back focused, every other mark fades; unset, nothing fades.
 export function chordOverlay(opts: {
   namedChords: readonly NamedChordTerm[];
   posOf: (id: string) => Hex | null;
@@ -163,20 +139,18 @@ export function chordOverlay(opts: {
     const centers = positions.map((pos) => point(pos as Hex));
     const seams = seamsFor(centers, radius, claimed);
     const top = centers.reduce((a, b) => (b[1] < a[1] ? b : a));
-    const label = labelFor(chord);
     marks.push({
       key: `chord-${index}`,
-      label,
+      label: labelFor(chord),
       colorVar: CHORD_HUES[chord.name] ?? FALLBACK_HUE,
       duration: CHORD_PULSE[chord.name] ?? FALLBACK_PULSE,
       seams,
       chipX: Number(top[0].toFixed(2)),
-      // The callout floats above the chord's topmost voice, a half-hex clear.
+      // The chip anchor floats above the topmost voice, a half-hex clear.
       chipY: Number((top[1] - radius * 1.18).toFixed(2)),
-      labelW: Number(chipWidth(label).toFixed(2)),
       voices: chord.moduleIds,
       focused: !emphasize || chord.moduleIds.some((id) => focus.has(id)),
     });
   });
-  return { marks: stackChips(marks) };
+  return { marks };
 }

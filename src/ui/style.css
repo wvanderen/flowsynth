@@ -763,9 +763,10 @@ body.live .inspector-empty { opacity: 0.75; }
 /* The chord annotation (§6, #137) — the prototype's seam language (#120):
    every formed chord draws colored trimmed lines between its voices, the
    hue per chord on --cc, the pulse period on --seam-dur. The name chip is
-   not ambient: it rises when a seam or an included voice is hovered, or
-   when an included voice is selected. Selection is the only emphasis —
-   the selected module's chords keep the focus register, the rest fade. */
+   not ambient and never floats: it lives in the reserved readout by the
+   board — one chord at a time (the selected module's, or the hovered
+   seam/voice's). Selection is the only emphasis — the selected module's
+   chords keep the focus register, the rest fade. */
 .chord-mark { pointer-events: none; }
 .chord-seam {
   stroke: var(--cc);
@@ -777,34 +778,21 @@ body.live .inspector-empty { opacity: 0.75; }
 }
 .chord-mark.chord-focus .chord-seam { stroke-width: 6; }
 .chord-mark.chord-fade .chord-seam { opacity: 0.18; }
-.chord-chip {
-  fill: var(--panel-deep);
-  stroke: var(--cc);
-  stroke-width: 0.75;
-  opacity: 0;
-  transition: opacity 0.15s;
-  pointer-events: none;
-}
-.chord-label {
-  font: 10.5px var(--mono);
+
+/* The reserved readout: the one chip, in its one spot at the heading's
+   right end — a fixed address the expanded face can never cover. */
+.chord-readout { margin-left: 14px; padding-bottom: 4px; }
+.chord-readout[hidden] { display: none; }
+.chord-readout-chip {
+  display: inline-block;
+  padding: 3px 9px;
+  background: var(--panel-deep);
+  border: 1px solid var(--cc);
+  border-radius: 999px;
+  font-size: 10.5px;
   letter-spacing: 0.1em;
-  fill: var(--ink);
-  text-anchor: middle;
-  opacity: 0;
-  transition: opacity 0.15s;
-  pointer-events: none;
+  color: var(--cc);
 }
-/* The chip's reveal: a seam's own hover is CSS (`:hover` climbs the mark);
-   an included module's hover lands `chord-hover`; a selection pins
-   `chord-reveal`. */
-.chord-mark:hover .chord-chip,
-.chord-mark:hover .chord-label,
-.chord-mark.chord-hover .chord-chip,
-.chord-mark.chord-hover .chord-label,
-.chord-mark.chord-reveal .chord-chip,
-.chord-mark.chord-reveal .chord-label { opacity: 1; }
-.chord-mark.chord-hover .chord-label,
-.chord-mark.chord-reveal .chord-label { fill: var(--cc); }
 
 /* Sounding (§6): in a live session the seams pulse on their chord's own
    period while the board stays locked — the session breathes through its
@@ -817,15 +805,29 @@ body.live .chord-seam { animation: seam-pulse var(--seam-dur, 2.7s) ease-in-out 
 
 /* The would-form ghosts (§6): dashed seams in the chord's hue, one per
    chord the hovered drop or placement would form — promising rather than
-   declaring — and their chips always showing, since the promise is the
-   point. Inert to the pointer: drop targeting passes through. */
+   declaring — and their chips always showing at the anchor, since the
+   promise is the point. Inert to the pointer: drop targeting passes
+   through. */
 .chord-mark.ghost-mark .chord-seam {
   stroke-dasharray: 5 4;
   opacity: 0.75;
   pointer-events: none;
 }
-.chord-mark.ghost-mark .chord-chip,
-.chord-mark.ghost-mark .chord-label { opacity: 0.85; }
+.chord-mark.ghost-mark .chord-chip {
+  fill: var(--panel-deep);
+  stroke: var(--cc);
+  stroke-width: 0.75;
+  opacity: 0.85;
+  pointer-events: none;
+}
+.chord-mark.ghost-mark .chord-label {
+  font: 10.5px var(--mono);
+  letter-spacing: 0.1em;
+  fill: var(--ink);
+  text-anchor: middle;
+  opacity: 0.85;
+  pointer-events: none;
+}
 
 /* The lit receiver breathes: charge state is feedback, not decoration, so
    the pulse rides the same 0..1 glow the face already carries inline. */

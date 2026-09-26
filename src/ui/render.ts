@@ -26,7 +26,7 @@ import { appIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, moduleFace } from "./face";
 import { bloomLayout, bloomPops, bloomSpan, viewMeet, viewPoint, type ViewFrame } from "./bloom";
 import { chargeGlow, chargeLeads } from "./leads";
-import { chordOverlay, type ChordMark } from "./chordlayer";
+import { chordOverlay, chipWidth, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatDate, formatInt, formatNumber, formatPracticeMinutes, chordLiveLabel, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
@@ -594,10 +594,11 @@ function renderGrid(app: App): void {
   const bloomLifts = selectedModule !== null && bloomPops(viewMeet(frame), HEX_RADIUS);
 
   // The chord annotation is always on (§6, #137): every formed chord wears
-  // its hull and name chip wherever the board shows — no chord view, no
-  // toggle. During a session the chips carry the live ν/s contribution;
-  // selection (§6) is the one emphasis: the selected module's chords stay
-  // focused and the rest fade.
+  // its colored seams — no chord view, no toggle. The name chip lives in
+  // the reserved readout beside the board (the selected module's chord, or
+  // the hovered seam/voice's); during a session it carries the live ν/s
+  // contribution. Selection (§6) is the one emphasis: the selected
+  // module's chords stay focused and the rest fade.
   const deployedById = new Map(state.modules.filter((m) => m.pos !== null).map((m) => [m.id, m]));
   const focusIds = selectedModule?.pos ? [selectedModule.id] : [];
   const labelFor = flow ? (chord: NamedChordTerm) => chordLiveLabel(chord, snapshot.rate) : chordTermLabel;
@@ -609,6 +610,7 @@ function renderGrid(app: App): void {
     labelFor,
     focusIds,
   });
+  chordMarksCache.set(app, overlay.marks);
 
   // Charge leads (§8, #41): uniform green patch leads, center-to-center,
   // directional generator → receiver. Leads in live flow animate; everything
@@ -679,14 +681,13 @@ function renderGrid(app: App): void {
     }
   }
 
-  // Named-chord marks: colored seams between each chord's voices plus its
-  // name chip — hidden until asked for (a seam or included voice hovered,
-  // an included voice selected). With a selection standing, the selected
-  // module's chords stay focused and the rest fade (§6); the marks group
-  // wears `flow` in live sessions so the seams pulse while the board stays
-  // locked.
+  // Named-chord marks: colored seams between each chord's voices — always
+  // on. With a selection standing, the selected module's chords stay
+  // focused and the rest fade (§6); the marks group wears `flow` in live
+  // sessions so the seams pulse while the board stays locked. The readout
+  // refreshes with the same marks: a selection pins its chord's chip.
   html += `<g data-key="chord-marks"${flow ? ' class="flow"' : ""}>${overlay.marks
-    .map((mark) => chordMarkHtml(mark, "formed", focusIds.length > 0))
+    .map((mark) => chordMarkHtml(mark, "formed"))
     .join("")}</g>`;
 
   // The would-form ghosts (§5–§6): dashed hulls over the chords the hovered
@@ -696,19 +697,19 @@ function renderGrid(app: App): void {
 
   updateSvg(svg, html);
   bindGridEvents(app, svg);
+  updateChordReadout(app);
 }
 
 // One chord mark's markup (§6, prototype language #120): colored seams
 // between the chord's voices carrying the mark's hue on `--cc` and its
-// pulse period on `--seam-dur`, plus the name chip — hidden until asked
-// for: a seam hovered, an included voice hovered (`chord-hover`, wired in
-// bindGridEvents), or an included voice selected (`chord-reveal`). Ghost
-// marks preview would-form chords and always wear their chip — the promise
-// is the point. `keyPrefix` keeps the two layers' DOM keys apart.
-function chordMarkHtml(mark: ChordMark, keyPrefix: "formed" | "ghost", pinned = false): string {
+// pulse period on `--seam-dur`. Formed chords carry no chip — their name
+// lives in the reserved readout by the board. Ghost marks preview
+// would-form chords and wear their chip at the anchor, since the promise
+// belongs where the chord would land. `keyPrefix` keeps the two layers'
+// DOM keys apart.
+function chordMarkHtml(mark: ChordMark, keyPrefix: "formed" | "ghost"): string {
   const ghost = keyPrefix === "ghost";
   const emphasis = ghost ? " ghost-mark" : mark.focused ? " chord-focus" : " chord-fade";
-  const reveal = pinned && mark.focused;
   const style = `--cc:var(--${mark.colorVar});--seam-dur:${mark.duration}s`;
   const seams = mark.seams
     .map(
@@ -716,18 +717,50 @@ function chordMarkHtml(mark: ChordMark, keyPrefix: "formed" | "ghost", pinned = 
         `<line class="chord-seam${ghost ? " ghost-seam" : ""}" x1="${s.x1}" y1="${s.y1}" x2="${s.x2}" y2="${s.y2}"/>`,
     )
     .join("");
-  const chip = `<rect class="chord-chip" x="${(mark.chipX - mark.labelW / 2).toFixed(2)}" y="${(mark.chipY - 11.5).toFixed(2)}" width="${mark.labelW.toFixed(2)}" height="15" rx="4"/><text class="chord-label mono" x="${mark.chipX}" y="${mark.chipY}">${escapeHtml(mark.label)}</text>`;
-  return `<g data-key="${keyPrefix}-${escapeHtml(mark.key)}" class="chord-mark${emphasis}${reveal ? " chord-reveal" : ""}"${ghost ? "" : ` data-voices="${escapeHtml(mark.voices.join(" "))}"`} style="${style}">${seams}${chip}</g>`;
+  const chip = ghost
+    ? `<rect class="chord-chip" x="${(mark.chipX - chipWidth(mark.label) / 2).toFixed(2)}" y="${(mark.chipY - 11.5).toFixed(2)}" width="${chipWidth(mark.label).toFixed(2)}" height="15" rx="4"/><text class="chord-label mono" x="${mark.chipX}" y="${mark.chipY}">${escapeHtml(mark.label)}</text>`
+    : "";
+  return `<g data-key="${keyPrefix}-${escapeHtml(mark.key)}" class="chord-mark${emphasis}"${ghost ? "" : ` data-chord="${escapeHtml(mark.key)}" data-voices="${escapeHtml(mark.voices.join(" "))}"`} style="${style}">${seams}${chip}</g>`;
 }
 
-// The hover reveal (§6): hovering a module raises its chords' chips — a
-// class toggle on the marks layer, never a re-render. Null clears.
-function setChordHover(moduleId: string | null): void {
-  const svg = document.getElementById("grid");
-  if (!svg) return;
-  svg.querySelectorAll(".chord-mark.chord-hover").forEach((node) => node.classList.remove("chord-hover"));
-  if (moduleId === null) return;
-  svg.querySelectorAll(`.chord-mark[data-voices~="${moduleId}"]`).forEach((node) => node.classList.add("chord-hover"));
+// The mark index the hover questions read: the render's chord marks keyed
+// by mark key, with the render-time labels (flow chips carry live ν/s).
+const chordMarksCache = new WeakMap<App, ChordMark[]>();
+
+// The reserved readout (§6): one chip, one place — the selected module's
+// chord wins, else the chord the pointer rests on (a seam or an included
+// voice). Hidden when neither asks. HTML beside the board, so the expanded
+// face can never cover it and it never moves.
+function updateChordReadout(app: App): void {
+  const host = byId("chord-readout");
+  if (!host) return;
+  const marks = chordMarksCache.get(app) ?? [];
+  const selected = app.state.modules.find((m) => m.id === app.ui.selected && m.pos !== null) ?? null;
+  const mark =
+    (selected ? marks.find((m) => m.voices.includes(selected.id)) : null) ??
+    (app.ui.chordHover ? marks.find((m) => m.key === app.ui.chordHover) : null) ??
+    null;
+  if (!mark) {
+    host.hidden = true;
+    host.innerHTML = "";
+    return;
+  }
+  host.hidden = false;
+  host.innerHTML = `<span class="chord-readout-chip mono" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.label)}</span>`;
+}
+
+// The hover question (§6): which chord the pointer rests on, by mark key.
+// Null clears. Never a re-render — the readout updates in place.
+function setChordHover(app: App, key: string | null): void {
+  if (app.ui.chordHover === key) return;
+  app.ui.chordHover = key;
+  updateChordReadout(app);
+}
+
+// The mark key a hovered module reveals: its first chord, if any.
+function chordKeyOfModule(app: App, moduleId: string | null): string | null {
+  if (moduleId === null) return null;
+  return chordMarksCache.get(app)?.find((mark) => mark.voices.includes(moduleId))?.key ?? null;
 }
 
 // Generators are the sole charge source category (ADR-0012).
@@ -966,16 +999,8 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
       event.preventDefault();
       app.rightClickCell(position());
     });
-    // The hover reveal (§6): resting on a module raises its chords' chips —
-    // display-only light, in either mode, cleared when the pointer leaves.
-    node.addEventListener("pointerenter", () => {
-      if (app.dragging) return;
-      setChordHover(deployedAt(app.state, position())?.id ?? null);
-    });
-    node.addEventListener("pointerleave", () => {
-      if (app.dragging) return;
-      setChordHover(null);
-    });
+    // The hover question rides the svg-level delegation (bindSeamHover):
+    // resting on a module or a seam asks that chord into the readout.
     // The armed placement previews on hover (§5–§6): ghosts over the
     // would-form chords, the drop register over the hovered cell.
     node.addEventListener("pointerenter", () => {
@@ -1026,6 +1051,35 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
       document.addEventListener("pointercancel", cancel);
     });
     bindPointerDrag(app, node, () => deployedAt(app.state, position())?.id ?? null);
+  });
+  bindSeamHover(app, svg);
+}
+
+// The grid never replaces its svg across renders, so the chord-hover
+// question binds once, delegating: over a chord's seam, that chord; over a
+// module cell, its first chord; anywhere else, none. Ghost marks never
+// answer — they promise chords that don't exist yet.
+const boundGrids = new WeakSet<SVGSVGElement>();
+
+function bindSeamHover(app: App, svg: SVGSVGElement): void {
+  if (boundGrids.has(svg)) return;
+  boundGrids.add(svg);
+  svg.addEventListener("pointerover", (event) => {
+    if (app.dragging) return;
+    const target = event.target as Element;
+    const mark = target.closest?.(".chord-mark:not(.ghost-mark)");
+    if (mark) {
+      setChordHover(app, mark.getAttribute("data-chord"));
+      return;
+    }
+    const cellNode = target.closest?.("[data-cell]");
+    const [q, r] = (cellNode?.getAttribute("data-cell") ?? "").split(",").map(Number);
+    const id = cellNode && Number.isFinite(q) ? deployedAt(app.state, { q: q!, r: r! })?.id ?? null : null;
+    setChordHover(app, chordKeyOfModule(app, id));
+  });
+  svg.addEventListener("pointerleave", () => {
+    if (app.dragging) return;
+    setChordHover(app, null);
   });
 }
 
@@ -1099,7 +1153,7 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
       element.classList.remove("dragging");
       hoverTarget = null;
       setDropHover(app, null, null);
-      setChordHover(null);
+      setChordHover(app, null);
       zone?.classList.remove("drag-over");
       if (!apply || !moved) return;
       suppressNextClick();
