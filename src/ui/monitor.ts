@@ -11,7 +11,7 @@ import { computeRates } from "../engine/economy";
 import type { GameState, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
 import { moduleIcon } from "./icons";
-import { formatCountdown, formatNumber } from "./format";
+import { chordTermLabel, formatCountdown, formatNumber } from "./format";
 import { prototypeVariant, ledgerHtml, updateLedgerLive, featsChipHtml, unlockedCount } from "./variant";
 
 // Past this fill fraction the beat readout flips to right-anchoring so it
@@ -34,9 +34,7 @@ function beatReadout(totalEarned: number, rate: number): string {
 }
 
 function chordSummary(snapshot: RateSnapshot): string {
-  const lines = snapshot.namedChords.map((c) =>
-    c.instances > 1 ? `${c.name} ×${formatNumber(1 + c.bonus)} ×${c.instances}` : `${c.name} ×${formatNumber(1 + c.bonus)}`,
-  );
+  const lines = snapshot.namedChords.map(chordTermLabel);
   return lines.length > 0 ? lines.join(" · ") : "no chords yet — chords are named pitch sets over connected synths";
 }
 

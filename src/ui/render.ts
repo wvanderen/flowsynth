@@ -1,4 +1,4 @@
-import { chargedFactor, cellCost, chargeDelivered, computeRates, deployed, emittedStrength, levelCost, longGoalCost, modulePower, rowGateCost, wholeNous } from "../engine/economy";
+import { chargedFactor, cellCost, chargeDelivered, computeRates, deployed, emittedStrength, levelCost, longGoalCost, modulePower, rowGateCost, rowGateOwed, wholeNous } from "../engine/economy";
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
@@ -27,7 +27,7 @@ import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
-import { formatDate, formatInt, formatNumber, formatPracticeMinutes, practiceCountdown, secondsToMinutes } from "./format";
+import { formatDate, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
 import { renderStatusMonitor } from "./monitor";
 import { prototypeVariant, ledgerHtml, updateLedgerLive, featsChipHtml, unlockedCount, FEATS_SVG, TOOL_ICONS } from "./variant";
 
@@ -593,10 +593,7 @@ function renderGrid(app: App): void {
         point,
         radius: HEX_RADIUS,
         pad: 5,
-        labelFor: (chord) =>
-          chord.instances > 1
-            ? `${chord.name} ×${formatNumber(1 + chord.bonus)} ×${chord.instances}`
-            : `${chord.name} ×${formatNumber(1 + chord.bonus)}`,
+        labelFor: chordTermLabel,
       })
     : null;
   const nodeClass = (moduleId: string | null): string =>
@@ -639,11 +636,10 @@ function renderGrid(app: App): void {
 
   if (showFrontier) {
     // The octave-row gate rides the quoted price (ADR-0022): a frontier hex
-    // in a row the board doesn't reach yet carries cell price + the
-    // one-time gate premium.
+    // in a row whose one-time gate is unpaid carries cell price + premium.
     const gateFor = (pos: Hex): number => {
       const row = octaveRowOf(pos);
-      return state.cells.some((c) => octaveRowOf(c) === row) || state.gatedRows.includes(row) ? 0 : rowGateCost(row);
+      return rowGateOwed(state, row) ? rowGateCost(row) : 0;
     };
     const price = cellCost(state.cellsBought);
     for (const pos of frontier) {

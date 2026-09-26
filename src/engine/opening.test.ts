@@ -203,17 +203,24 @@ describe("the opening economy", () => {
 });
 
 describe("the octave-row gate (ADR-0022)", () => {
+  it("the opening's rows are gate-paid by the same grant that places the cells", () => {
+    const s = fresh();
+    expect(s.gatedRows).toEqual([0, 1]);
+    s.nous = 1e6;
+    // (1,1) is G5 — octave row 1, an opening row: cell price only.
+    expect(buyCell(s, hex(1, 1)).ok).toBe(true);
+    expect(s.nous).toBeCloseTo(1e6 - cellCost(0), 6);
+    expect(s.gatedRows).toEqual([0, 1]);
+  });
+
   it("the first purchase into each new octave row pays a one-time premium on top", () => {
     const s = fresh();
     s.nous = 1e6;
-    // (1,1) is G5 — octave row 1, which the opening board already reaches.
-    expect(buyCell(s, hex(1, 1)).ok).toBe(true);
-    expect(s.nous).toBeCloseTo(1e6 - cellCost(0), 6);
-    // (0,2) is C6 — row 2, a new row: cell price plus the row-2 gate.
-    const price = cellCost(1) + rowGateCost(2);
+    // (0,2) is C6 — row 2, a new register: cell price plus the row-2 gate.
+    const price = cellCost(0) + rowGateCost(2);
     expect(buyCell(s, hex(0, 2)).ok).toBe(true);
-    expect(s.nous).toBeCloseTo(1e6 - cellCost(0) - price, 6);
-    expect(s.gatedRows).toEqual([2]);
+    expect(s.nous).toBeCloseTo(1e6 - price, 6);
+    expect(s.gatedRows).toEqual([0, 1, 2]);
   });
 
   it("the gate is one-time per row: later purchases in a paid row pay cell price only", () => {
@@ -222,7 +229,7 @@ describe("the octave-row gate (ADR-0022)", () => {
     buyCell(s, hex(0, 2)); // row 2 — gate paid
     buyCell(s, hex(1, 2)); // row 2 again — no gate
     expect(s.nous).toBeCloseTo(1e6 - cellCost(0) - rowGateCost(2) - cellCost(1), 6);
-    expect(s.gatedRows).toEqual([2]);
+    expect(s.gatedRows).toEqual([0, 1, 2]);
   });
 
   it("gate spend never advances the cell purchase scaler", () => {
@@ -237,14 +244,18 @@ describe("the octave-row gate (ADR-0022)", () => {
     expect(gated.cellsBought).toBe(1);
   });
 
-  it("a row the board already reaches charges no gate — rows already owned are free to extend", () => {
+  it("the gate keys on the ledger, not the board's shape — reshaping cannot waive it", () => {
     const s = fresh();
     s.nous = 1e6;
-    // Row 1 is on the opening board (C5 at (0,1)); buying (1,1) — also
-    // row 1 — pays cell price only.
-    expect(buyCell(s, hex(1, 1)).ok).toBe(true);
-    expect(s.nous).toBeCloseTo(1e6 - cellCost(0), 6);
-    expect(s.gatedRows).toEqual([]);
+    // Move the whole opening up first (free, ungated): row 2 now sits on
+    // the board without ever being paid for…
+    expect(returnModule(s, s.modules[0]!.id).ok).toBe(true);
+    expect(reshapeCells(s, [hex(0, 2), hex(1, 2), hex(0, 3)]).ok).toBe(true);
+    // …but acquisition is what gates: the first purchase into row 3 pays
+    // its premium however the board is shaped.
+    expect(buyCell(s, hex(1, 3)).ok).toBe(true);
+    expect(s.nous).toBeCloseTo(1e6 - cellCost(0) - rowGateCost(3), 6);
+    expect(s.gatedRows).toEqual([0, 1, 3]);
   });
 
   it("moving owned cells between rows is free and ungated — even past every gate", () => {
@@ -261,7 +272,7 @@ describe("the octave-row gate (ADR-0022)", () => {
     expect(s.cells.length).toBe(next.length);
     expect(reshapeCells(s, next).ok).toBe(true);
     expect(s.nous).toBe(nousBefore);
-    expect(s.gatedRows).toEqual([2]); // unchanged — nothing new was gated
+    expect(s.gatedRows).toEqual([0, 1, 2]); // unchanged — nothing new was gated
   });
 
   it("rows are finite: purchases beyond the band are refused", () => {
@@ -287,23 +298,28 @@ describe("the octave-row gate (ADR-0022)", () => {
     for (const pos of [hex(-1, 1), hex(-2, 2), hex(-3, 2), hex(-4, 3)]) {
       expect(buyCell(s, pos).ok, `${pos.q},${pos.r}`).toBe(true);
     }
-    expect(s.gatedRows).toEqual([]);
+    expect(s.gatedRows).toEqual([0, 1]);
     expect(s.nous).toBeCloseTo(1e6 - cellCost(0) - cellCost(1) - cellCost(2) - cellCost(3), 6);
     // Climbing into a new register is what gates — never the column walk
     // itself: row 2's gate applies wherever its cell sits.
     expect(buyCell(s, hex(0, 2)).ok).toBe(true);
-    expect(s.gatedRows).toEqual([2]);
+    expect(s.gatedRows).toEqual([0, 1, 2]);
   });
 
-  it("gatedRows persists across a save round-trip and lenient-defaults to []", () => {
+  it("gatedRows persists across a save round-trip and lenient-defaults", () => {
     const s = fresh();
     s.nous = 1e6;
     buyCell(s, hex(0, 2));
     const restored = deserialize(serialize(s, 1_000)).state!;
-    expect(restored.gatedRows).toEqual([2]);
+    expect(restored.gatedRows).toEqual([0, 1, 2]);
+    // Absent on a v6 save, the opening's granted rows ride the fresh
+    // defaults; a corrupt value lenient-defaults to the empty ledger.
     const file = JSON.parse(serialize(fresh()));
     delete file.state.gatedRows;
-    const lenient = deserialize(JSON.stringify(file)).state!;
-    expect(lenient.gatedRows).toEqual([]);
+    const absent = deserialize(JSON.stringify(file)).state!;
+    expect(absent.gatedRows).toEqual([0, 1]);
+    file.state.gatedRows = null;
+    const corrupt = deserialize(JSON.stringify(file)).state!;
+    expect(corrupt.gatedRows).toEqual([]);
   });
 });

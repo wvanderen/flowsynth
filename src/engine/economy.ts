@@ -43,6 +43,15 @@ export function rowGateCost(row: number): number {
   return geometricCeilCost(BALANCE.rowGateFirstCost, BALANCE.rowGateGrowthNumerator, BALANCE.rowGateGrowthDenominator, distance - 1);
 }
 
+// Whether a purchase into `row` still owes its one-time gate: the ledger
+// holds every row whose premium is paid — the opening's rows by grant, the
+// rest by purchase. Movement never consults this (ADR-0022: gates tax
+// acquisition only), which is exactly why the ledger, not the board's
+// current shape, is the truth.
+export function rowGateOwed(state: GameState, row: number): boolean {
+  return !state.gatedRows.includes(row);
+}
+
 // The activation ladder (ADR-0013): a shared geometric scaler over rungs
 // bought — each later rung costs more no matter which app it opens. The
 // ladder rests empty at launch (ADR-0019): the scaler's shape stands, and
@@ -84,6 +93,21 @@ export function findModule(state: GameState, id: string): ModuleInstance | undef
 
 export function deployedAt(state: GameState, pos: { q: number; r: number }): ModuleInstance | undefined {
   return state.modules.find((m) => m.pos !== null && m.pos.q === pos.q && m.pos.r === pos.r);
+}
+
+// The deployed synthesizers and spacers — the two categories that conduct
+// chords (ADR-0021). One partition shared by the rate pass and the
+// achievements' chord read, so the filter can never drift between them.
+export function deployedConductors(state: GameState): { synths: DeployedModule[]; spacers: DeployedModule[] } {
+  const synths: DeployedModule[] = [];
+  const spacers: DeployedModule[] = [];
+  for (const module of deployed(state)) {
+    if (module.pos === null) continue;
+    const pos = module.pos;
+    if (isSynthesizer(module.type)) synths.push({ ...module, pos });
+    else if (module.type === "spacer") spacers.push({ ...module, pos });
+  }
+  return { synths, spacers };
 }
 
 export function wholeNous(state: GameState): number {
@@ -182,7 +206,6 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
     localBonus: number;
   }
   const synths: SynthInfo[] = [];
-  const spacers: DeployedModule[] = [];
   let forgeRate = 0;
 
   for (const deployedModule of deployed(state)) {
@@ -201,10 +224,6 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
       value = strength * modulePower(deployedModule);
       forgeRate += value;
     }
-    if (deployedModule.type === "spacer" && deployedModule.pos !== null) {
-      const pos = deployedModule.pos;
-      spacers.push({ ...deployedModule, pos });
-    }
     contributions.set(deployedModule.id, {
       moduleId: deployedModule.id,
       type: deployedModule.type,
@@ -222,10 +241,8 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
 
   // Pass two: pitch-set chords over the connected synthesizer-and-spacer
   // clusters — the spacer conducts adjacency, never joins a pitch set.
-  const analysis = analyzeChords(
-    synths.map(({ module }) => module),
-    spacers,
-  );
+  const conductors = deployedConductors(state);
+  const analysis = analyzeChords(conductors.synths, conductors.spacers);
 
   // Pass three: the unified synths leg. A Conditional is its base term plus
   // a bonus for every chord instance it belongs to; every other

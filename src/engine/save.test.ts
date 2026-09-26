@@ -48,11 +48,17 @@ describe("persistence", () => {
   });
 
   it("v6 saves lenient-default the gate ledger", () => {
+    // Absent, the field rides the fresh defaults — the opening's granted
+    // rows; corrupt, it falls back to the empty ledger.
     const file = JSON.parse(serialize(fresh()));
     delete file.state.gatedRows;
-    const loaded = deserialize(JSON.stringify(file));
-    expect(loaded.error).toBeUndefined();
-    expect(loaded.state!.gatedRows).toEqual([]);
+    const absent = deserialize(JSON.stringify(file));
+    expect(absent.error).toBeUndefined();
+    expect(absent.state!.gatedRows).toEqual([0, 1]);
+    file.state.gatedRows = null;
+    const corrupt = deserialize(JSON.stringify(file));
+    expect(corrupt.error).toBeUndefined();
+    expect(corrupt.state!.gatedRows).toEqual([]);
   });
 
   it("resuming from a mid-flow save does not duplicate rewards", () => {
@@ -202,7 +208,9 @@ describe("the v5 → v6 hybrid migration (ADR-0023)", () => {
     expect(m.modules[0]!.pos).toEqual(hex(0, 0));
     expect(m.cells.map((c) => `${c.q},${c.r}`).sort()).toEqual(["0,0", "0,1", "1,0"]);
     expect(m.cellsBought).toBe(0);
-    expect(m.gatedRows).toEqual([]);
+    // The opening's rows are gate-paid by grant; nothing the v5 board paid
+    // for survives into the new economy.
+    expect(m.gatedRows).toEqual([0, 1]);
     expect(m.forge).toEqual({ progress: 0, earned: 0 });
     expect(m.bankedRolls).toEqual([]);
     expect(m.chargeWindow).toBe(0);

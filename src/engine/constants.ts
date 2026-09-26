@@ -175,9 +175,9 @@ export const MODULE_TYPES: readonly ModuleType[] = [
   "forge",
 ];
 
-// The forge roll pool (ADR-0022): every module type except the shelf's —
-// the spacer ships through rolls only, and no module is granted or
-// privileged anymore.
+// The forge roll pool (ADR-0022): every module type rolls — no module is
+// granted or privileged anymore, and the spacer ships through rolls only,
+// never the shelf.
 export const ROLL_POOL: readonly ModuleType[] = MODULE_TYPES;
 
 // The starter shelf (ADR-0022): one-time offers completing the

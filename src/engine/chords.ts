@@ -52,7 +52,6 @@ interface RootMatch {
   groups: DeployedModule[][];
   // The multiplicity each class is sung with (1, or 2 for the Octave).
   multiplicity: number[];
-  instances: number;
 }
 
 // One (pattern, root) match over one cluster: the cluster holds at least
@@ -84,7 +83,6 @@ function matchRoots(cluster: DeployedModule[]): RootMatch[] {
         term: { name: def.name, bonus: def.bonus, instances, moduleIds: representative.map((m) => m.id) },
         groups,
         multiplicity,
-        instances,
       });
     }
   }

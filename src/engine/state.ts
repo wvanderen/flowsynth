@@ -12,6 +12,12 @@ const STARTER_CELLS: { q: number; r: number }[] = [
   { q: 0, r: 1 },
 ];
 
+// The octave rows the opening footprint spans (C4·G4 in row 0, C5 in row 1):
+// their one-time gates are paid by the same grant that places the cells, so
+// the start register is never "new" to the economy (ADR-0022 — gate distance
+// counts from it).
+const OPENING_GATED_ROWS: number[] = [0, 1];
+
 // The opening grant (ADR-0022): a nous grant that affords — but no longer
 // exactly equals — the pre-placed synthesizer's first upgrade. Everything
 // else is earned through play.
@@ -36,7 +42,7 @@ export function createInitialState(): GameState {
     modules: [],
     cells: STARTER_CELLS.map(({ q, r }) => hex(q, r)),
     cellsBought: 0,
-    gatedRows: [],
+    gatedRows: [...OPENING_GATED_ROWS],
     forge: { progress: 0, earned: 0 },
     chargeWindow: 0,
     bankedRolls: [],

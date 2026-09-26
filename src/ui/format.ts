@@ -102,3 +102,11 @@ export function practiceCountdown(cost: number, nous: number, rate: number): str
   if (!(rate > 0)) return null;
   return `in ~${formatCountdown((cost - nous) / rate)} of practice`;
 }
+
+// The chord-term label every chord surface shares — the board's hull chips
+// and the formula chip's breakdown: "Fifth ×1.3", with the instance count
+// appended when a term stacks more than one ("Octave ×1.15 ×3").
+export function chordTermLabel(chord: { name: string; bonus: number; instances: number }): string {
+  const term = `${chord.name} ×${formatNumber(1 + chord.bonus)}`;
+  return chord.instances > 1 ? `${term} ×${chord.instances}` : term;
+}

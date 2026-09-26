@@ -1,5 +1,5 @@
 import { BALANCE, EPS, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE, SHELF_TYPES } from "./constants";
-import { cellCost, computeRates, deployedAt, findModule, levelCost, longGoalCost, rowGateCost, wholeNous } from "./economy";
+import { cellCost, computeRates, deployedAt, findModule, levelCost, longGoalCost, rowGateCost, rowGateOwed, wholeNous } from "./economy";
 import { nextRungCost, appActive, LADDER_APPS, type FocusApp } from "./apps";
 import { adjacent, hexKey, isConnected, sameHex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
@@ -229,19 +229,19 @@ export function buyShelfModule(state: GameState, type: ShelfType): ActionResult 
 // placed in upgrade mode. A new cell must extend the connected frontier, so
 // the board grows without ever disconnecting; reshaping stays the
 // count-preserving rule. The first purchase into each new octave row pays a
-// one-time gate premium on top of the cell price — the gate escalates with
-// row distance from the start register, never advances the purchase
-// scaler, and is never owed for a row the board already reaches. The
-// fifths axis is ungated; the row range is finite and symmetric around the
-// start register.
+// one-time gate premium on top of the cell price — escalating with row
+// distance from the start register, never advancing the purchase scaler,
+// and never owed twice (the gatedRows ledger records every paid row,
+// including the opening's, which the grant paid). Movement between rows is
+// a different action entirely and never meets a gate. The fifths axis is
+// ungated; the row range is finite and symmetric around the start register.
 export function buyCell(state: GameState, pos: Hex): ActionResult {
   if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
   if (state.cells.some((c) => sameHex(c, pos))) return fail("That cell is already part of the board.");
   if (!state.cells.some((c) => adjacent(c, pos))) return fail("New cells must touch the board.");
-  if (!positionInRange(pos)) return fail("That cell lies outside the octave rows.");
+  if (!positionInRange(pos)) return fail("That cell lies outside the board's lattice.");
   const row = octaveRowOf(pos);
-  const rowOnBoard = state.cells.some((c) => octaveRowOf(c) === row);
-  const gateOwed = !rowOnBoard && !state.gatedRows.includes(row);
+  const gateOwed = rowGateOwed(state, row);
   const gate = gateOwed ? rowGateCost(row) : 0;
   const price = cellCost(state.cellsBought) + gate;
   if (wholeNous(state) < price) return fail("Not enough whole nous.");
@@ -374,7 +374,7 @@ export function reshapeCells(state: GameState, next: Hex[]): ActionResult {
       return fail("Every deployed module needs a cell.");
     }
   }
-  if (next.some((cell) => !positionInRange(cell))) return fail("The board must stay inside the octave rows.");
+  if (next.some((cell) => !positionInRange(cell))) return fail("The board must stay inside the board's lattice.");
   if (!isConnected(next)) return fail("The board must stay connected.");
   state.cells = next;
   return { ok: true, unlocked: checkAchievements(state) };
