@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chordOverlay, chipWidth } from "./chordlayer";
+import { chordOverlay, chipWidth, edgeDistance } from "./chordlayer";
 import { hex } from "../engine/hex";
 import { HEX_RADIUS, hexApothem } from "./face";
 import type { Hex, NamedChordTerm } from "../engine/types";
@@ -58,9 +58,9 @@ describe("tracesFor — the prototype's seam language", () => {
     expect(seam.x2).toBeGreaterThan(seam.x1);
   });
 
-  it("traces a three-voice chord along its voices' edges — the prototype's loop", () => {
-    // The power-chord region: three mutually adjacent hexes trace a closed
-    // loop — 18 hex edges less the 3 shared pairs' interior edges.
+  it("draws a three-voice chord's offset outline — the prototype's triangle", () => {
+    // The power-chord region: three mutually adjacent voices draw the
+    // convex outline behind the modules, no seams.
     const region: Record<string, Hex> = { c4: hex(0, 0), g4: hex(1, 0), c5: hex(0, 1) };
     const overlay = chordOverlay({
       namedChords: [chord("Fifth", ["c4", "g4", "c5"])],
@@ -70,55 +70,40 @@ describe("tracesFor — the prototype's seam language", () => {
       step: Math.sqrt(3) * 65,
       labelFor: (c) => c.name,
     });
-    const loop = overlay.marks[0]!.seams;
-    expect(loop).toHaveLength(12);
-    // The trace rides the module edges: every segment endpoint sits at the
-    // trace inset from some voice's center — the lines hug the hexagons.
-    // (Adjacent chassis hexes never touch on this lattice, so the loop's
-    // arcs break at the corners; the stroke's round caps bridge them.)
-    const trace = HEX_RADIUS * 0.97;
-    const voiceCenters = Object.values(region).map((h) => point(h));
-    for (const edge of loop) {
-      for (const [ex, ey] of [
-        [edge.x1, edge.y1],
-        [edge.x2, edge.y2],
-      ]) {
-        expect(
-          voiceCenters.some(([cx, cy]) => Math.abs(Math.hypot(ex - cx, ey - cy) - trace) < 0.06),
-        ).toBe(true);
-      }
+    const mark = overlay.marks[0]!;
+    expect(mark.seams).toHaveLength(0);
+    expect(mark.outline).not.toBeNull();
+    const polygon = mark.outline!.split(" ").map((p) => p.split(",").map(Number) as [number, number]);
+    // The hull of three centers is a triangle.
+    expect(polygon).toHaveLength(3);
+    // The corners poke out past the outer module edges.
+    const centers = Object.values(region).map((h) => point(h));
+    for (const [vx, vy] of polygon) {
+      const nearest = Math.min(...centers.map(([cx, cy]) => Math.hypot(vx - cx, vy - cy)));
+      expect(nearest).toBeGreaterThan(HEX_RADIUS);
     }
-    // Shared interior edges stay silent: no segment crosses between the
-    // voices — the line work runs around the cluster, not through it.
-    const midpoints = [
-      [region.c4!, region.g4!],
-      [region.c4!, region.c5!],
-      [region.g4!, region.c5!],
-    ].map(([a, b]) => {
-      const [ax, ay] = point(a);
-      const [bx, by] = point(b);
-      return [(ax + bx) / 2, (ay + by) / 2] as const;
-    });
-    for (const [mx, my] of midpoints) {
-      for (const edge of loop) {
-        // An interior crossing sits deep inside some hex; no traced edge's
-        // midpoint comes near one.
-        const ex = (edge.x1 + edge.x2) / 2;
-        const ey = (edge.y1 + edge.y2) / 2;
-        expect(Math.hypot(ex - mx, ey - my)).toBeGreaterThan(trace * 0.4);
-      }
+    // The edges ride the gap between neighboring faces: exactly half a
+    // lattice step from the center line — past the plate apothem, short of
+    // the next plate.
+    const step = Math.sqrt(3) * 65;
+    for (const center of centers) {
+      const d = edgeDistance(center, polygon);
+      expect(d).toBeGreaterThanOrEqual(step / 2 - 0.6);
+      expect(d).toBeLessThanOrEqual(step / 2 + 0.6);
+      expect(d).toBeGreaterThanOrEqual(hexApothem(HEX_RADIUS));
     }
   });
 
-  it("a two-voice chord never grows a loop, and longer pairs stay silent", () => {
-    // m1→m2 seam; m1→far is off-cluster distance and draws nothing.
+  it("a chord with a bridged voice still outlines the whole cluster", () => {
+    // Three voices, one far off-row: the outline wraps all three — the
+    // bridged-voice case the seams could never draw.
     const overlay = overlayWith([chord("Fifth", ["m1", "m2", "far"])]);
-    // Three voices → the loop language, but `far` is alone: the loop covers
-    // all three voices' outlines — the bridged-voice case still annotates.
-    expect(overlay.marks[0]!.seams.length).toBeGreaterThan(0);
-    // A two-voice chord keeps the center-to-center seam.
+    expect(overlay.marks[0]!.seams).toHaveLength(0);
+    expect(overlay.marks[0]!.outline).not.toBeNull();
+    // A two-voice chord keeps the center-to-center seam and grows no loop.
     const pair = overlayWith([chord("Octave", ["m1", "m2"])]);
     expect(pair.marks[0]!.seams).toHaveLength(1);
+    expect(pair.marks[0]!.outline).toBeNull();
   });
 
   it("shares a claimed pair across chords: the first chord's color wins", () => {

@@ -763,23 +763,29 @@ body.live .inspector-empty { opacity: 0.75; }
 .lead-tip-dim { fill: var(--charge); opacity: 0.5; }
 .highlight-ring { fill: none; stroke: var(--charge); stroke-width: 1.5; opacity: 0.8; pointer-events: none; }
 
-/* The chord annotation (§6, #137) — the prototype's seam language (#120):
-   every formed chord draws colored trimmed lines between its voices, the
-   hue per chord on --cc, the pulse period on --seam-dur. The name chip is
-   not ambient and never floats: it lives in the reserved readout by the
-   board — one chord at a time (the selected module's, or the hovered
-   seam/voice's). Selection is the only emphasis — the selected module's
-   chords keep the focus register, the rest fade. */
+/* The chord annotation (§6, #137) — the prototype's language (#120):
+   two-voice chords seam center-to-center; three or more draw the offset
+   outline polygon rendered UNDER the modules, so only the gaps between
+   the faces and the poking corners show. The hue rides --cc, the pulse
+   period --seam-dur. The name chip is not ambient and never floats: it
+   lives in the reserved readout by the board — one chord's chips at a
+   time (the selected module's, or the hovered seam/voice's). Selection is
+   the only emphasis — the selected module's chords keep the focus
+   register, the rest fade. */
 .chord-mark { pointer-events: none; }
 .chord-seam {
+  fill: none;
   stroke: var(--cc);
   stroke-width: 4;
   stroke-linecap: round;
+  stroke-linejoin: round;
   opacity: 0.85;
   pointer-events: stroke;
   transition: opacity 0.2s, stroke-width 0.2s;
 }
+.chord-seam.chord-loop { stroke-width: 3.5; }
 .chord-mark.chord-focus .chord-seam { stroke-width: 6; }
+.chord-mark.chord-focus .chord-seam.chord-loop { stroke-width: 5; }
 .chord-mark.chord-fade .chord-seam { opacity: 0.18; }
 
 /* The reserved readout: the chips, stacked vertically, pinned to the

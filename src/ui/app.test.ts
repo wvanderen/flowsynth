@@ -691,8 +691,13 @@ describe("always-on chord feedback (§6, #137)", () => {
     const hues = marks.map((mark) => (mark as HTMLElement).style.getPropertyValue("--cc"));
     expect(hues).toEqual(["var(--chord-octave)", "var(--chord-fifth)"]);
     // The Octave's vertical pair seams center-to-center; the three-voice
-    // Fifth traces its voices' edges — the prototype's closed loop.
-    expect(marks.map((mark) => mark.querySelectorAll(".chord-seam").length)).toEqual([1, 12]);
+    // Fifth draws the offset outline polygon behind the modules.
+    expect(marks.map((mark) => mark.querySelectorAll("line.chord-seam").length)).toEqual([1, 0]);
+    expect(marks[1]!.querySelector("polygon.chord-loop")).not.toBeNull();
+    // The outline renders behind the modules: the marks group precedes the
+    // cell nodes (which carry data-cell, no data-key) in paint order.
+    const children = [...grid.children].map((child) => child.getAttribute("data-key"));
+    expect(children.indexOf("chord-marks")).toBeLessThan(children.findIndex((key) => key === null));
   });
 
   it("selection focuses the selected module's chords and fades the rest", () => {

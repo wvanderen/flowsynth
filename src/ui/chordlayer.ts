@@ -2,13 +2,13 @@
 // leads.ts, the diagram stays pure and testable — render.ts draws the
 // markup and the stylesheet keeps every color in the token table.
 //
-// The language is the prototype's seams (#120, variant B): a chord names
-// itself with colored lines between its voices — trimmed short of each
-// face, chord-colored, pulse-timed per chord — while its name chip lives
-// in a reserved spot by the board (never floating over it). Selection and
-// hover are the caller's emphasis questions.
+// The language is the prototype's (#120): a two-voice chord seams
+// center-to-center between its voices; a chord of three or more draws an
+// offset outline around its voices — a closed convex hull riding the gaps
+// between the faces, its corners poking out past the outer edges — drawn
+// behind the modules. Name chips live in a reserved spot by the board;
+// selection and hover are the caller's emphasis questions.
 import type { Hex, NamedChordTerm } from "../engine/types";
-import { hexCorner } from "./face";
 
 export type Point = readonly [number, number];
 
@@ -27,10 +27,13 @@ export interface ChordMark {
   readonly colorVar: string;
   // The flow pulse period (seconds), per chord — the prototype's rhythm.
   readonly duration: number;
-  // The chord's drawn segments: a two-voice chord seams center-to-center
-  // between its adjacent voices; a chord of three or more traces the
-  // edges of its voices' hexagons — the prototype's outline loop (#120).
+  // A two-voice chord's drawn segments: center-to-center per adjacent
+  // pair. Three or more voices draw the outline instead.
   readonly seams: ChordSeam[];
+  // A chord of three or more voices: the offset hull around its centers
+  // as a polygon points string — the prototype's triangle behind the
+  // modules, corners sticking out. Null for two-voice chords.
+  readonly outline: string | null;
   // The chip anchor: above the chord's topmost voice. Ghost marks (the
   // would-form preview) render their chip here; formed chords render
   // theirs in the reserved spot instead.
@@ -90,56 +93,90 @@ function seamTrim(radius: number): number {
   return radius * (Math.sqrt(3) / 2) + 2;
 }
 
-// Where the edge trace rides: just inside the chassis outline, clear of
-// both the chassis stroke and the outer rarity ring (tuning).
-const EDGE_TRACE_INSET = 0.97;
-
-// Center keys round to tenth-pixel grid cells — and normalize negative
-// zero, or a computed `(0, 0)` neighbor lands as "-0.0" and never matches.
-function centerKey(x: number, y: number): string {
-  return `${Math.round(x * 10) + 0}:${Math.round(y * 10) + 0}`;
-}
-
-// The chord's edges: for a chord of three or more voices, the boundary of
-// the voices' union traced along the hexagons' own edges — the prototype's
-// closed loop around the cluster (a trio of neighbors reads as a triangle).
-// An edge is on the boundary when the hex across it is not one of the
-// chord's voices; shared edges stay silent so interior faces don't get
-// crossed out. `step` is the lattice's adjacent-center distance in pixel
-// space (the trace rides at the hex radius, but neighbors sit a lattice
-// step across each edge).
-function edgeLoopFor(centers: readonly Point[], radius: number, step: number): ChordSeam[] {
-  const trace = radius * EDGE_TRACE_INSET;
-  const at = new Set(centers.map((c) => centerKey(c[0], c[1])));
-  const edges: ChordSeam[] = [];
-  for (const [cx, cy] of centers) {
-    for (let i = 0; i < 6; i++) {
-      // face.ts's pointy-top corners: corner i at (60i − 30)°, so the edge
-      // to corner i+1 faces outward along 60i°, neighbor a lattice step
-      // across it.
-      const a = hexCorner(trace, i);
-      const b = hexCorner(trace, (i + 1) % 6);
-      const outward = (60 * i * Math.PI) / 180;
-      const nx = cx + step * Math.cos(outward);
-      const ny = cy + step * Math.sin(outward);
-      if (at.has(centerKey(nx, ny))) continue;
-      edges.push({
-        x1: Number((cx + a[0]).toFixed(2)),
-        y1: Number((cy + a[1]).toFixed(2)),
-        x2: Number((cx + b[0]).toFixed(2)),
-        y2: Number((cy + b[1]).toFixed(2)),
-      });
-    }
+// Andrew's monotone chain over pixel coordinates.
+function convexHull(points: readonly Point[]): Point[] {
+  if (points.length < 3) return [...points];
+  const sorted = [...points].sort((p, q) => p[0] - q[0] || p[1] - q[1]);
+  const cross = (o: Point, a: Point, b: Point): number =>
+    (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lower: Point[] = [];
+  for (const p of sorted) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2]!, lower[lower.length - 1]!, p) <= 0) lower.pop();
+    lower.push(p);
   }
-  return edges;
+  const upper: Point[] = [];
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const p = sorted[i]!;
+    while (upper.length >= 2 && cross(upper[upper.length - 2]!, upper[upper.length - 1]!, p) <= 0) upper.pop();
+    upper.push(p);
+  }
+  lower.pop();
+  upper.pop();
+  return [...lower, ...upper];
 }
 
-// The chord's drawn segments: two voices seam center-to-center (each
+// Offset a convex polygon outward by pad: shift every edge along its
+// outward normal and rebuild the vertices at the intersections. Radial
+// vertex scaling would starve long edges — a deep chord's row would clip.
+function offsetConvex(hull: readonly Point[], pad: number): Point[] {
+  const cx = hull.reduce((acc, p) => acc + p[0], 0) / hull.length;
+  const cy = hull.reduce((acc, p) => acc + p[1], 0) / hull.length;
+  const edges = hull.map((a, i) => {
+    const b = hull[(i + 1) % hull.length]!;
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const nx = (b[1] - a[1]) / len;
+    const ny = -(b[0] - a[0]) / len;
+    const mx = (a[0] + b[0]) / 2 - cx;
+    const my = (a[1] + b[1]) / 2 - cy;
+    // Outward faces away from the centroid, whichever way the hull winds.
+    const outward = nx * mx + ny * my < 0 ? -1 : 1;
+    const fnx = nx * outward;
+    const fny = ny * outward;
+    // The edge's offset line: every point p on it satisfies p·n = c.
+    return { nx: fnx, ny: fny, c: a[0] * fnx + a[1] * fny + pad };
+  });
+  return hull.map((_, i) => {
+    const p = edges[(i - 1 + edges.length) % edges.length]!;
+    const q = edges[i]!;
+    const det = p.nx * q.ny - p.ny * q.nx;
+    if (Math.abs(det) < 1e-9) return hull[i]!;
+    return [
+      (p.c * q.ny - p.ny * q.c) / det,
+      (p.nx * q.c - p.c * q.nx) / det,
+    ] as const;
+  });
+}
+
+// Shortest distance from a point to the polygon's edge lines; exact for
+// points inside a convex polygon, which is the only case the tests need.
+export function edgeDistance(point: Point, polygon: readonly Point[]): number {
+  let best = Infinity;
+  for (let i = 0; i < polygon.length; i++) {
+    const a = polygon[i]!;
+    const b = polygon[(i + 1) % polygon.length]!;
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const dist = Math.abs(((b[0] - a[0]) * (point[1] - a[1]) - (b[1] - a[1]) * (point[0] - a[0])) / len);
+    best = Math.min(best, dist);
+  }
+  return best;
+}
+
+// The outline for a chord of three or more voices: the convex hull of the
+// voice centers, offset so its edges ride the exact midpoint of the gap
+// between neighboring faces (`step / 2`) and its corners poke out past the
+// outer module edges — the prototype's triangle behind the modules.
+function outlineFor(centers: readonly Point[], step: number): string {
+  const pad = step / 2;
+  const grown = offsetConvex(convexHull(centers), pad);
+  return grown.map((p) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join(" ");
+}
+
+// The chord's drawn seams: two voices seam center-to-center (each
 // qualifying adjacent pair; `claimed` carries pair keys across chords — a
-// shared pair draws once, the first chord's color winning); three or more
-// voices trace their union's edges instead.
-function tracesFor(centers: readonly Point[], radius: number, step: number, claimed: Set<string>): ChordSeam[] {
-  if (centers.length >= 3) return edgeLoopFor(centers, radius, step);
+// shared pair draws once, the first chord's color winning). Three or more
+// voices draw no seams — the outline carries them.
+function seamsFor(centers: readonly Point[], radius: number, claimed: Set<string>): ChordSeam[] {
+  if (centers.length >= 3) return [];
   const reach = radius * SEAM_REACH;
   const trim = seamTrim(radius);
   const seams: ChordSeam[] = [];
@@ -189,7 +226,8 @@ export function chordOverlay(opts: {
     const positions = chord.moduleIds.map(posOf);
     if (positions.some((pos) => pos === null)) return;
     const centers = positions.map((pos) => point(pos as Hex));
-    const seams = tracesFor(centers, radius, step, claimed);
+    const seams = seamsFor(centers, radius, claimed);
+    const outline = centers.length >= 3 ? outlineFor(centers, step) : null;
     const top = centers.reduce((a, b) => (b[1] < a[1] ? b : a));
     marks.push({
       key: `chord-${index}`,
@@ -197,6 +235,7 @@ export function chordOverlay(opts: {
       colorVar: CHORD_HUES[chord.name] ?? FALLBACK_HUE,
       duration: CHORD_PULSE[chord.name] ?? FALLBACK_PULSE,
       seams,
+      outline,
       chipX: Number(top[0].toFixed(2)),
       // The chip anchor floats above the topmost voice, a half-hex clear.
       chipY: Number((top[1] - radius * 1.18).toFixed(2)),
