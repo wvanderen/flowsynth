@@ -62,14 +62,19 @@ const ownsRare = (state: GameState): boolean => state.modules.some((m) => m.rari
 // is the earned total minus what still waits in the Forge.
 const rollsTaken = (state: GameState): number => Math.max(0, state.forge.earned - state.bankedRolls.length);
 
-// The chord multiplier over the deployed synthesizers — the same filter the
-// rate pass applies (generators and infusors never chord) — computed
-// straight from the board so the registry stays free of the rate pass.
+// The chord multiplier over the deployed synthesizers and spacers — the
+// same filter the rate pass applies (generators, infusors, and forges never
+// chord; spacers conduct) — computed straight from the board so the
+// registry stays free of the rate pass.
 function chordMultiplierOf(state: GameState): number {
-  const synths = state.modules.filter(
-    (m): m is DeployedModule => m.pos !== null && CATEGORY_OF[m.type] === "synthesizer",
+  const conductors = state.modules.filter(
+    (m): m is DeployedModule =>
+      m.pos !== null && (CATEGORY_OF[m.type] === "synthesizer" || CATEGORY_OF[m.type] === "spacer"),
   );
-  return analyzeChords(synths).multiplier;
+  return analyzeChords(
+    conductors.filter((m) => CATEGORY_OF[m.type] === "synthesizer"),
+    conductors.filter((m) => CATEGORY_OF[m.type] === "spacer"),
+  ).multiplier;
 }
 
 // The launch set (§6.3): seventeen feats in spec order. Names provisional.

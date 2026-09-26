@@ -1,22 +1,22 @@
-import { levelCost } from "./economy";
+import { BALANCE } from "./constants";
 import { hex } from "./hex";
 import type { GameState, ModuleInstance, ModuleType, Rarity } from "./types";
 
-// ADR-0013 opening board, amended by ADR-0018: the Carrier pinned at the
-// origin plus two empty cells that are adjacent to each other as well — a
-// triangle, so the shelf's generator can charge an adjacent Forge and a
-// shelved additive can chord with the Carrier without buying a cell first.
+// The opening board (board-redesign spec §8, ADR-0022): the three-cell
+// opening footprint is retained — its geometry, not its Carrier rationale.
+// The player starts with exactly one plain synthesizer, pre-placed at C4
+// (the origin cell), and the tray starts empty.
 const STARTER_CELLS: { q: number; r: number }[] = [
   { q: 0, r: 0 },
   { q: 1, r: 0 },
   { q: 0, r: 1 },
 ];
 
-// The opening grant (ADR-0013): exactly the Carrier's first upgrade price —
-// priced below the shelf floor, so beat one is spendable within seconds of
-// reading and the balance returns to zero on the first purchase.
+// The opening grant (ADR-0022): a nous grant that affords — but no longer
+// exactly equals — the pre-placed synthesizer's first upgrade. Everything
+// else is earned through play.
 export function openingGrant(): number {
-  return levelCost(0);
+  return BALANCE.openingGrant;
 }
 
 export function createInitialState(): GameState {
@@ -31,16 +31,16 @@ export function createInitialState(): GameState {
     totalEarned: 0,
     arete: 0,
     horizonAcknowledged: false,
-    welcomeAcked: false,
     muted: false,
     notificationAsked: false,
     modules: [],
     cells: STARTER_CELLS.map(({ q, r }) => hex(q, r)),
     cellsBought: 0,
+    gatedRows: [],
     forge: { progress: 0, earned: 0 },
     chargeWindow: 0,
     bankedRolls: [],
-    purchased: { additive: false, generator: false, infusor: false, forge: false },
+    purchased: { generator: false, infusor: false, forge: false },
     activatedApps: [],
     goalCapacityBought: 0,
     notes: [],
@@ -54,9 +54,9 @@ export function createInitialState(): GameState {
     summary: null,
     nextId: 1,
   };
-  const carrier = createModule(state, "carrier", "common");
-  carrier.pos = hex(0, 0);
-  state.modules.push(carrier);
+  const opening = createModule(state, "additive", "common");
+  opening.pos = hex(0, 0);
+  state.modules.push(opening);
   return state;
 }
 
@@ -73,13 +73,4 @@ export function createModule(state: GameState, type: ModuleType, rarity: Rarity)
     invested: 0,
     pos: null,
   };
-}
-
-// The Carrier pins the grid's origin cell: it anchors every pitch (§4).
-export const ORIGIN = hex(0, 0);
-
-// The Carrier is the unique granted synthesizer: pinned, immovable,
-// unsellable (§2.1).
-export function isCarrier(module: ModuleInstance): boolean {
-  return module.type === "carrier";
 }

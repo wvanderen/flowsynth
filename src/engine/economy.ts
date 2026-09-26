@@ -1,8 +1,9 @@
 import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS } from "./constants";
-import { analyzeChords, pitchOf } from "./chords";
+import { analyzeChords } from "./chords";
 import { achievementBoostOf } from "./achievements";
 import { adjacent } from "./hex";
-import type { Contribution, DeployedModule, GameState, ModuleInstance, ModuleType, RateSnapshot, SynthesizerType } from "./types";
+import { pitchOf } from "./lattice";
+import type { Contribution, DeployedModule, GameState, ModuleInstance, ModuleType, RateSnapshot } from "./types";
 
 export function chargedFactor(strength: number): number {
   return 1 + strength / (1 + strength);
@@ -30,6 +31,16 @@ function geometricCeilCost(firstCost: number, numerator: bigint, denominator: bi
 export function cellCost(cellsBought: number): number {
   if (cellsBought < 0) throw new Error("cellsBought must be non-negative");
   return geometricCeilCost(BALANCE.cellFirstCost, BALANCE.cellCostGrowthNumerator, BALANCE.cellCostGrowthDenominator, cellsBought);
+}
+
+// The octave-row gate premium (ADR-0022): a one-time cost on the first
+// purchase into each new octave row, escalating with the row's distance
+// from the start register. Charged on top of the cell price; it never
+// advances the purchase scaler, and reshaping between rows never meets it.
+export function rowGateCost(row: number): number {
+  const distance = Math.abs(row);
+  if (distance < 1) return 0;
+  return geometricCeilCost(BALANCE.rowGateFirstCost, BALANCE.rowGateGrowthNumerator, BALANCE.rowGateGrowthDenominator, distance - 1);
 }
 
 // The activation ladder (ADR-0013): a shared geometric scaler over rungs
@@ -114,7 +125,8 @@ export function emittedStrength(state: GameState, module: ModuleInstance, flow: 
 
 // Received charge: the sum of adjacent deployed generators' output.
 // Generators never charge themselves or each other; only the chargeable and
-// continuous-charge categories receive.
+// continuous-charge categories receive. The spacer receives nothing — it is
+// silent wire.
 export function receivedStrength(state: GameState, module: ModuleInstance, flow: boolean): number {
   if (!CHARGE_RECEIVING_CATEGORIES.includes(CATEGORY_OF[module.type]) || module.pos === null) return 0;
   let strength = 0;
@@ -138,97 +150,104 @@ function infusorBonusAt(state: GameState, module: ModuleInstance, flow: boolean)
   return total;
 }
 
-function isSynthesizer(type: ModuleType): type is SynthesizerType {
+function isSynthesizer(type: ModuleType): boolean {
   return CATEGORY_OF[type] === "synthesizer";
 }
 
-const SYNTH_BASE_RATE: Record<SynthesizerType, number> = {
-  carrier: BALANCE.carrierRate,
-  additive: BALANCE.additiveRate,
-  conditional: BALANCE.conditionalRate,
-};
-
-// The additive-synthesis rate (ADR-0014; leg naming per ADR-0020):
-//   rate      = (carrier + harmonics + infusors) × Π chord terms × empowerment × achievementBoost
-// Amplitude inputs are unchanged: level and rarity set amplitude, infusors
-// add local bonuses, charge empowers per-module with the diminishing-returns
-// curve, and a Conditional's per-pair bonus rides in its own harmonic term.
-// The carrier and harmonic legs are the synths' base terms — infusor uplift
-// is split into its own additive leg so the breakdown names it — and all
-// three stay uncharged so charge aggregates into the snapshot's empowerment
-// leg and the breakdown multiplies out exactly.
-// Generators, the Forge meter, and cells are out of the formula, and there
-// is no session stage: the board is the whole production (§4).
+// The unified rate (ADR-0021/0022; leg naming per ADR-0020 as amended by
+// ADR-0022):
+//   rate      = (synths + infusor uplift) × Π chord terms × empowerment × achievementBoost
+//   composite = (synths + infusor uplift) × Π chord terms
+// Every synthesizer shares one base rate scaled by rarityPower^level — one
+// unified leg, no carrier/harmonics split — with the infusor uplift split
+// into its own additive leg so the breakdown names it. Both stay uncharged
+// so charge aggregates into the snapshot's empowerment leg and the
+// breakdown multiplies out exactly. A Conditional rides its own term with a
+// bonus per chord instance it belongs to; the spacer contributes nothing
+// and never sounds. Generators, the Forge meter, and cells are out of the
+// formula, and there is no session stage: the board is the whole production
+// (§4).
 export function computeRates(state: GameState, flow: boolean = flowLive(state)): RateSnapshot {
   const contributions = new Map<string, Contribution>();
   const chargeStrength = new Map<string, number>();
 
   // Pass one: per-module charge, local infusor bonuses, and amplitude; forge
-  // progress. Deployed synthesizers are collected for the chord pass.
+  // progress. Deployed synthesizers and spacers are collected for the chord
+  // pass.
   interface SynthInfo {
     module: DeployedModule;
-    kind: SynthesizerType;
     power: number;
     chargeFactor: number;
     strength: number;
     localBonus: number;
   }
   const synths: SynthInfo[] = [];
+  const spacers: DeployedModule[] = [];
   let forgeRate = 0;
 
-  for (const module of deployed(state)) {
-    const strength = receivedStrength(state, module, flow);
-    chargeStrength.set(module.id, strength);
-    const localBonus = infusorBonusAt(state, module, flow);
+  for (const deployedModule of deployed(state)) {
+    const strength = receivedStrength(state, deployedModule, flow);
+    chargeStrength.set(deployedModule.id, strength);
+    const localBonus = infusorBonusAt(state, deployedModule, flow);
     const chargeFactor = chargedFactor(strength);
-    const amplitude = modulePower(module) * (1 + localBonus);
-    if (isSynthesizer(module.type) && module.pos !== null) {
-      synths.push({ module: { ...module, pos: module.pos }, kind: module.type, power: modulePower(module), chargeFactor, strength, localBonus });
+    const amplitude = modulePower(deployedModule) * (1 + localBonus);
+    if (isSynthesizer(deployedModule.type) && deployedModule.pos !== null) {
+      const pos = deployedModule.pos;
+      synths.push({ module: { ...deployedModule, pos }, power: modulePower(deployedModule), chargeFactor, strength, localBonus });
       continue;
     }
     let value = 0;
-    if (module.type === "forge") {
-      value = strength * modulePower(module);
+    if (deployedModule.type === "forge") {
+      value = strength * modulePower(deployedModule);
       forgeRate += value;
     }
-    contributions.set(module.id, {
-      moduleId: module.id,
-      type: module.type,
+    if (deployedModule.type === "spacer" && deployedModule.pos !== null) {
+      const pos = deployedModule.pos;
+      spacers.push({ ...deployedModule, pos });
+    }
+    contributions.set(deployedModule.id, {
+      moduleId: deployedModule.id,
+      type: deployedModule.type,
       pitch: null,
-      amplitude,
+      // The spacer never sounds: no amplitude, no value — only the wire it
+      // conducts in the chord pass.
+      amplitude: deployedModule.type === "spacer" ? 0 : amplitude,
       value,
       chordTerms: 0,
-      infusorBonus: localBonus,
+      infusorBonus: deployedModule.type === "spacer" ? 0 : localBonus,
       chargeFactor,
       chargeStrength: strength,
     });
   }
 
-  // Pass two: chord pairs and named chords over the deployed synthesizers.
-  const analysis = analyzeChords(synths.map(({ module }) => module));
+  // Pass two: pitch-set chords over the connected synthesizer-and-spacer
+  // clusters — the spacer conducts adjacency, never joins a pitch set.
+  const analysis = analyzeChords(
+    synths.map(({ module }) => module),
+    spacers,
+  );
 
-  // Pass three: harmonic terms. A Conditional is amplitude plus a bonus per
-  // chord pair it participates in; an Additive is the plain harmonic term.
-  // Each leg splits into the synth's base term and the infusors' uplift so
-  // the breakdown can name both; the split sums back to the full amplitude.
-  let carrier = 0;
-  let harmonics = 0;
+  // Pass three: the unified synths leg. A Conditional is its base term plus
+  // a bonus for every chord instance it belongs to; every other
+  // synthesizer is the plain term. The leg splits into the synths' base and
+  // the infusors' uplift so the breakdown can name both; the split sums
+  // back to the full amplitude.
+  let synthsLeg = 0;
   let infusors = 0;
   let chargedSum = 0;
-  for (const { module, kind, power, chargeFactor, strength, localBonus } of synths) {
+  for (const { module, power, chargeFactor, strength, localBonus } of synths) {
     const pitch = pitchOf(module.pos);
     const chordTerms = analysis.participation.get(module.id) ?? 0;
-    const chordAmp = kind === "conditional" ? 1 + BALANCE.conditionalPairBonus * chordTerms : 1;
-    const base = SYNTH_BASE_RATE[kind] * power * chordAmp;
+    const chordAmp = module.type === "conditional" ? 1 + BALANCE.conditionalChordBonus * chordTerms : 1;
+    const base = BALANCE.synthRate * power * chordAmp;
     const uncharged = base * (1 + localBonus);
     const charged = uncharged * chargeFactor;
-    if (kind === "carrier") carrier += base;
-    else harmonics += base;
+    synthsLeg += base;
     infusors += base * localBonus;
     chargedSum += charged;
     contributions.set(module.id, {
       moduleId: module.id,
-      type: kind,
+      type: module.type,
       pitch,
       amplitude: power * (1 + localBonus),
       value: charged,
@@ -240,7 +259,7 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
   }
 
   const achievementBoost = achievementBoostOf(state);
-  const amplitude = carrier + harmonics + infusors;
+  const amplitude = synthsLeg + infusors;
   const composite = amplitude * analysis.multiplier;
   // The boost multiplies the rate on top of charge empowerment; the
   // empowerment leg divides it back out so the breakdown multiplies out
@@ -249,12 +268,10 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
   const empowerment = composite > EPS ? rate / (composite * achievementBoost) : 1;
 
   return {
-    carrier,
-    harmonics,
+    synths: synthsLeg,
     infusors,
     amplitude,
     chordMultiplier: analysis.multiplier,
-    pairs: analysis.pairs,
     namedChords: analysis.namedChords,
     composite,
     empowerment,

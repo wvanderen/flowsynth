@@ -1,21 +1,20 @@
-import { BALANCE, NAMED_CHORDS } from "./constants";
-import { adjacent, hexDistance } from "./hex";
-import { ORIGIN } from "./state";
-import type { ChordPairTerm, DeployedModule, NamedChordTerm } from "./types";
+import { NAMED_CHORDS } from "./constants";
+import { adjacent } from "./hex";
+import { pitchClassOf } from "./lattice";
+import type { DeployedModule, NamedChordTerm } from "./types";
 
-// Pitch is a synthesizer's harmonic number: hex distance from the Carrier
-// plus one (ADR-0014). The Carrier is pinned at the origin, so pitch is pure
-// distance — no relaying; the readout never lies. Cell purchases deepen
-// achievable pitch by growing the board outward.
-export function pitchOf(pos: { q: number; r: number }): number {
-  return hexDistance(pos, ORIGIN) + 1;
-}
+// The chord model (ADR-0021/0022): chords are register-free pitch sets —
+// a named pattern is recognized by pitch content over a connected cluster
+// of synthesizers, any voicing, any octave. Adjacency alone is chordless:
+// there is no anonymous pair bonus, matching what the board's hulls show.
+// The spacer conducts adjacency: a silent wire module joins clusters (and
+// nothing else) so chains of wired cells bridge synthesizers into one
+// connected group — bridged chords are pitch-set matches, not fixed shapes.
 
-// Free-floating connected clusters of adjacent synthesizers (direct adjacency
-// at launch). The carrier sets every cell's pitch globally, but chords need
-// no path back to it — deep chords are free-standing islands.
-export function synthComponents(synths: DeployedModule[]): DeployedModule[][] {
-  const remaining = [...synths];
+// Connected clusters over synthesizers and spacers together: the wire
+// conducts, the voices sing. Every other category stays out.
+export function chordClusters(conductors: DeployedModule[]): DeployedModule[][] {
+  const remaining = [...conductors];
   const components: DeployedModule[][] = [];
   while (remaining.length > 0) {
     const seed = remaining.pop()!;
@@ -37,101 +36,97 @@ export function synthComponents(synths: DeployedModule[]): DeployedModule[][] {
   return components;
 }
 
-function connectedVoices(voices: DeployedModule[]): boolean {
-  const seen = new Set([voices[0]!.id]);
-  const frontier = [voices[0]!];
-  while (frontier.length > 0) {
-    const current = frontier.pop()!;
-    for (const other of voices) {
-      if (seen.has(other.id)) continue;
-      if (adjacent(current.pos, other.pos)) {
-        seen.add(other.id);
-        frontier.push(other);
-      }
-    }
-  }
-  return seen.size === voices.length;
+// Choose m voices from a sorted group of k — the combination count. The
+// Octave is the m = 2 case over one pitch class; ordinary chords take one
+// voice per class (m = 1).
+function choose(k: number, m: number): number {
+  if (k < m) return 0;
+  let out = 1;
+  for (let i = 0; i < m; i++) out = (out * (k - i)) / (i + 1);
+  return Math.round(out);
 }
 
-// One recognition per named pattern per cluster: the first connected
-// voice-set (one module per pattern pitch, deterministic by module id) wins.
-// Overlapping patterns — a 4·5·6·7 run is both triads — match separately and
-// stack multiplicatively downstream. Extra voices at a chord's pitches stay
-// out of it: identical pitches add amplitude, no chord, and a double's
-// non-member pair keeps the anonymous bonus (#29).
-function recognizeChords(component: DeployedModule[]): NamedChordTerm[] {
-  const matches: NamedChordTerm[] = [];
+interface RootMatch {
+  term: NamedChordTerm;
+  // Per required class: the voices available at that class, sorted by id.
+  groups: DeployedModule[][];
+  // The multiplicity each class is sung with (1, or 2 for the Octave).
+  multiplicity: number[];
+  instances: number;
+}
+
+// One (pattern, root) match over one cluster: the cluster holds at least
+// the required voices at each interval class. Instances count complete
+// voice-sets — doubled voices stack (each pair of same-class voices is its
+// own Octave; a double in a triad doubles that triad) — and every instance
+// multiplies the composite by the same bonus.
+function matchRoots(cluster: DeployedModule[]): RootMatch[] {
+  const voices = cluster.filter((m) => m.type !== "spacer");
+  if (voices.length === 0) return [];
+  const matches: RootMatch[] = [];
+  const byClass: DeployedModule[][] = Array.from({ length: 12 }, () => []);
+  for (const voice of voices) {
+    byClass[pitchClassOf(voice.pos)]!.push(voice);
+  }
+  for (const group of byClass) group.sort((a, b) => a.id.localeCompare(b.id));
   for (const def of NAMED_CHORDS) {
-    const groups = def.pitches.map((pitch) =>
-      component.filter((m) => pitchOf(m.pos) === pitch).sort((a, b) => a.id.localeCompare(b.id)),
-    );
-    if (groups.some((group) => group.length === 0)) continue;
-    const combinations = groups.reduce((total, group) => total * group.length, 1);
-    for (let n = 0; n < combinations; n++) {
-      let rest = n;
-      const voices = groups.map((group) => {
-        const chosen = group[rest % group.length]!;
-        rest = Math.floor(rest / group.length);
-        return chosen;
+    const intervals = [...new Set(def.intervals)].sort((a, b) => a - b);
+    const multiplicity = intervals.map((interval) => def.intervals.filter((i) => i === interval).length);
+    for (let root = 0; root < 12; root++) {
+      const groups = intervals.map((interval) => byClass[(root + interval) % 12]!);
+      if (groups.some((group, i) => group.length < multiplicity[i]!)) continue;
+      const instances = groups.reduce((total, group, i) => total * choose(group.length, multiplicity[i]!), 1);
+      if (instances < 1) continue;
+      // One representative voice set for rendering: the lowest-id voice at
+      // each class (two for the Octave's doubled class).
+      const representative = groups.flatMap((group, i) => group.slice(0, multiplicity[i]!));
+      matches.push({
+        term: { name: def.name, bonus: def.bonus, instances, moduleIds: representative.map((m) => m.id) },
+        groups,
+        multiplicity,
+        instances,
       });
-      if (connectedVoices(voices)) {
-        matches.push({ name: def.name, pitches: [...def.pitches], bonus: def.bonus, moduleIds: voices.map((v) => v.id) });
-        break;
-      }
     }
   }
   return matches;
 }
 
 export interface ChordAnalysis {
-  pairs: ChordPairTerm[];
   namedChords: NamedChordTerm[];
   multiplier: number;
-  // Chord terms each module participates in: surviving pairs containing it
-  // plus named chords whose voices include it. The Conditional's bonus counts
-  // these; a named chord counts once however many of its member pairs the
-  // module shares in.
+  // Chord instances each module participates in: the Conditional's bonus
+  // counts one per instance it belongs to (ADR-0022) — a doubled cluster
+  // counts every complete voice-set the module sings in.
   participation: Map<string, number>;
 }
 
-// The chord pass over the deployed synthesizers: adjacent synthesizers one
-// pitch apart form raw pair terms (identical pitches only stack amplitude —
-// no chord); each named chord replaces the pair terms of its member pairs —
-// the voices it actually sings through — while pairs outside any named chord
-// keep the anonymous bonus (#29). Bonus-only: no dissonance penalties, and
-// the board's finite cell budget is the only cap.
-export function analyzeChords(synths: DeployedModule[]): ChordAnalysis {
-  const pairs: ChordPairTerm[] = [];
+// The chord pass over the deployed synthesizers and spacers: per connected
+// cluster, per pattern and root, the cluster's voices decide whether the
+// chord forms and how many instances it stacks. Overlapping instances
+// (shared voices) and disjoint same-chord clusters (separate terms) both
+// stack multiplicatively. Bonus-only: no dissonance penalties, and the
+// board's finite cell budget is the only cap.
+export function analyzeChords(synths: DeployedModule[], spacers: DeployedModule[] = []): ChordAnalysis {
   const namedChords: NamedChordTerm[] = [];
-  for (const component of synthComponents(synths)) {
-    const named = recognizeChords(component);
-    namedChords.push(...named);
-    for (let i = 0; i < component.length; i++) {
-      for (let j = i + 1; j < component.length; j++) {
-        const a = component[i]!;
-        const b = component[j]!;
-        if (!adjacent(a.pos, b.pos)) continue;
-        const pa = pitchOf(a.pos);
-        const pb = pitchOf(b.pos);
-        if (Math.abs(pa - pb) !== 1) continue;
-        // Member pairs only (#29): a double at a chord's pitch isn't one.
-        if (named.some((chord) => chord.moduleIds.includes(a.id) && chord.moduleIds.includes(b.id))) continue;
-        pairs.push({ a: a.id, b: b.id, bonus: BALANCE.pairBonus });
+  const participation = new Map<string, number>();
+  for (const cluster of chordClusters([...synths, ...spacers])) {
+    for (const match of matchRoots(cluster)) {
+      namedChords.push(match.term);
+      // The instances a specific voice belongs to: choose it at its class,
+      // then any complete combination of the other classes.
+      for (const voice of cluster) {
+        if (voice.type === "spacer") continue;
+        const own = match.groups.findIndex(
+          (group, i) => group.includes(voice) && match.multiplicity[i]! >= 1,
+        );
+        if (own === -1) continue;
+        const containing =
+          choose(match.groups[own]!.length - 1, match.multiplicity[own]! - 1) *
+          match.groups.reduce((total, group, i) => (i === own ? total : total * choose(group.length, match.multiplicity[i]!)), 1);
+        participation.set(voice.id, (participation.get(voice.id) ?? 0) + containing);
       }
     }
   }
-  const participation = new Map<string, number>();
-  for (const pair of pairs) {
-    participation.set(pair.a, (participation.get(pair.a) ?? 0) + 1);
-    participation.set(pair.b, (participation.get(pair.b) ?? 0) + 1);
-  }
-  for (const chord of namedChords) {
-    for (const id of chord.moduleIds) {
-      participation.set(id, (participation.get(id) ?? 0) + 1);
-    }
-  }
-  const multiplier =
-    pairs.reduce((acc, pair) => acc * (1 + pair.bonus), 1) *
-    namedChords.reduce((acc, chord) => acc * (1 + chord.bonus), 1);
-  return { pairs, namedChords, multiplier, participation };
+  const multiplier = namedChords.reduce((acc, chord) => acc * (1 + chord.bonus) ** chord.instances, 1);
+  return { namedChords, multiplier, participation };
 }

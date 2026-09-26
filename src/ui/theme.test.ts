@@ -24,10 +24,10 @@ describe("theme token table", () => {
     expect(tokens.switch).toBe("#cc603d");
   });
 
-  it("reserves the unbound hues and the Carrier's white", () => {
+  it("reserves the unbound hues and wires the spacer's grey", () => {
     expect(tokens["reserved-yellow"]).toBeDefined();
     expect(tokens["reserved-violet"]).toBeDefined();
-    expect(tokens["hue-carrier"]).toBeDefined();
+    expect(tokens["hue-spacer"]).toBeDefined();
   });
 
   it("derives the rarity plate tints from the finish tokens", () => {

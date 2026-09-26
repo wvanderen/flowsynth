@@ -1,12 +1,19 @@
 export type Rarity = "common" | "uncommon" | "rare";
 
-// ADR-0012 category landscape: board modules are module → category → type.
-export type Category = "synthesizer" | "generator" | "infusor" | "forge";
+// ADR-0012 category landscape, amended by ADR-0021: board modules are
+// module → category → type. The spacer joins as its own silent category.
+export type Category = "synthesizer" | "spacer" | "generator" | "infusor" | "forge";
 
-// Synthesizers contribute harmonic terms to the nous composite. The Carrier
-// is the unique granted origin module (never rolled, never shelved); every
-// other synthesizer is strictly harmonics.
-export type SynthesizerType = "carrier" | "additive" | "conditional";
+// Synthesizers contribute synth terms to the nous composite — one unified
+// leg shared by every synthesizer (ADR-0022). The Carrier is deleted:
+// no synthesizer is spatially privileged.
+export type SynthesizerType = "additive" | "conditional";
+
+// The spacer (ADR-0021): a silent wire occupying one cell. It never sounds,
+// never joins a pitch set, and never produces — it only conducts chord
+// adjacency through chains of wired cells. Reaches the board through forge
+// rolls only.
+export type SpacerType = "spacer";
 
 // Generators produce charge. The launch generator is the focus-keyed one
 // (ADR-0018): it reads focus state, and its charge-window rule is the §2.3
@@ -18,7 +25,7 @@ export type InfusorType = "infusor";
 
 export type ForgeType = "forge";
 
-export type ModuleType = SynthesizerType | GeneratorType | InfusorType | ForgeType;
+export type ModuleType = SynthesizerType | SpacerType | GeneratorType | InfusorType | ForgeType;
 
 export interface Hex {
   q: number;
@@ -54,11 +61,12 @@ export interface Meter {
   earned: number;
 }
 
-// The starter shelf (ADR-0013, amended by ADR-0018): one-time catalog offers
-// completing the category landscape — the additive synth joins so the octave
-// chord is teachable in session one, and the generator offer is the
-// focus-keyed generator. "generator" stays the shelf key the save stores.
-export type ShelfType = "additive" | "generator" | "infusor" | "forge";
+// The starter shelf (ADR-0013, amended by ADR-0022): one-time catalog
+// offers completing the non-synthesizer landscape — the generator, one
+// infusor, and the Forge. Synthesizers come only from the opening grant and
+// forge rolls; the shelf-sold additive synth is retired. "generator" stays
+// the shelf key the save stores.
+export type ShelfType = "generator" | "infusor" | "forge";
 
 // The per-reconciliation honesty outcome (focus-tool spec §2): how a
 // provisional absence's past-target slice settled.
@@ -144,9 +152,10 @@ export interface SessionSummary {
   earned: number;
   seconds: number;
   ratePerMinute: number;
-  // The rate breakdown at session end (carrier-only during session one).
-  carrier: number;
-  harmonics: number;
+  // The rate breakdown at session end (one synth term alone during session
+  // one): the unified synths leg plus the infusor uplift as its own named
+  // leg (ADR-0022).
+  synths: number;
   infusors: number;
   chordMultiplier: number;
   empowerment: number;
@@ -278,9 +287,6 @@ export interface GameState {
   // has been pressed — the acknowledgment the achievements ticket detects.
   arete: number;
   horizonAcknowledged: boolean;
-  // The one-time welcome card (§5.1): false until the player follows its CTA
-  // to the Carrier's upgrade button or dismisses it — then it never returns.
-  welcomeAcked: boolean;
   // One global mute (§5): gates every app sound, including the target
   // chime's hidden re-fires. No volume slider, no per-sound mix.
   muted: boolean;
@@ -291,8 +297,15 @@ export interface GameState {
   modules: ModuleInstance[];
   cells: Hex[];
   // Total cells ever bought (§3): the geometric cell-price scaler counts
-  // purchases, never the current board size reshaping may rearrange.
+  // purchases, never the current board size reshaping may rearrange. Row
+  // gates never advance it — gate nous is a premium on top, not a purchase
+  // the scaler counts (ADR-0022).
   cellsBought: number;
+  // Octave rows whose one-time gate premium is already paid (ADR-0022): row
+  // indices relative to the start register. An explicit array, not a
+  // max-distance scalar, so purchase order never matters; lenient-defaults
+  // to [] at load.
+  gatedRows: number[];
   forge: Meter;
   // The charge window (§2.3): remaining output seconds banked at session
   // end by the focus-keyed generator rule, spent as that generator's output
@@ -327,27 +340,25 @@ export interface GameState {
   nextId: number;
 }
 
-// A raw chord pair: two adjacent synthesizers one pitch apart. Each pair
-// multiplies the composite by a small bonus — stacking is multiplicative and
-// uncapped (ADR-0014).
-export interface ChordPairTerm {
-  a: string;
-  b: string;
-  bonus: number;
-}
-
-// A recognized named chord: one bonus term replacing its member pairs'
-// bonuses, with one breakdown line per recognition.
+// A recognized chord instance group (ADR-0021/0022): one entry per matched
+// (pattern, root) over a connected cluster — register-free pitch content,
+// any voicing, any octave. `instances` is how many complete voice-sets the
+// cluster sings the pattern through (doubled voices stack; disjoint
+// same-chord clusters are separate entries), and each instance multiplies
+// the composite by the same bonus. `moduleIds` carries one representative
+// voice set for rendering.
 export interface NamedChordTerm {
   name: string;
-  pitches: number[];
   bonus: number;
+  instances: number;
   moduleIds: string[];
 }
 
 export interface Contribution {
   moduleId: string;
   type: ModuleType;
+  // The cell's absolute pitch (MIDI) for synthesizers, null otherwise —
+  // derived from coordinates, never persisted.
   pitch: number | null;
   amplitude: number;
   value: number;
@@ -357,20 +368,19 @@ export interface Contribution {
   chargeStrength: number;
 }
 
-// The live rate breakdown (§4; leg naming per ADR-0020): carrier / harmonics / infusors / chords /
-// empowerment / achievements → rate. The carrier and harmonic legs are the
-// synths' base terms — infusor uplift is split into its own additive leg so
-// the breakdown names it — and all three stay uncharged so charge
-// empowerment aggregates into its own leg and the lines always multiply out:
-// rate = (carrier + harmonics + infusors) × chordMultiplier × empowerment ×
+// The live rate breakdown (§4; leg naming per ADR-0020 as amended by
+// ADR-0022): synths / infusors / chords / empowerment / achievements →
+// rate. The synths leg is every synthesizer's base term — one unified leg,
+// no carrier/harmonics split — with the infusor uplift split into its own
+// additive leg so the breakdown names it. Both stay uncharged so charge
+// empowerment aggregates into its own leg and the lines always multiply
+// out: rate = (synths + infusors) × chordMultiplier × empowerment ×
 // achievementBoost.
 export interface RateSnapshot {
-  carrier: number;
-  harmonics: number;
+  synths: number;
   infusors: number;
   amplitude: number;
   chordMultiplier: number;
-  pairs: ChordPairTerm[];
   namedChords: NamedChordTerm[];
   composite: number;
   empowerment: number;

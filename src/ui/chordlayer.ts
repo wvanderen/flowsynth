@@ -1,20 +1,14 @@
-// The chord overlay (issue #62): pure geometry for the on-demand chord view.
-// Like leads.ts, the diagram stays pure and testable — render.ts draws the
-// markup and the stylesheet keeps every color in the token table. This module
-// decides which modules participate in drawable chord terms, where pair links
-// span, and the hull that wraps each named chord's voices.
-import type { ChordPairTerm, Hex, NamedChordTerm } from "../engine/types";
-import { hexApothem, hexCorner } from "./face";
+// The chord overlay: pure geometry for the board's chord annotation. Like
+// leads.ts, the diagram stays pure and testable — render.ts draws the
+// markup and the stylesheet keeps every color in the token table. This
+// module decides which modules participate in drawable chord terms and the
+// hull that wraps each named chord's voices. With the carrierless board
+// (ADR-0021) chords are register-free pitch sets — there are no pair links
+// to draw, only named-chord hulls.
+import type { Hex, NamedChordTerm } from "../engine/types";
+import { hexCorner } from "./face";
 
 export type Point = readonly [number, number];
-
-export interface ChordLink {
-  readonly key: string;
-  readonly x1: number;
-  readonly y1: number;
-  readonly x2: number;
-  readonly y2: number;
-}
 
 export interface ChordMark {
   readonly key: string;
@@ -26,7 +20,6 @@ export interface ChordMark {
 }
 
 export interface ChordOverlay {
-  links: ChordLink[];
   marks: ChordMark[];
   // Every module id that lives in a drawable chord term — the view lights
   // these and dims everything else.
@@ -109,12 +102,10 @@ export function edgeDistance(point: Point, polygon: readonly Point[]): number {
   return best;
 }
 
-// The overlay over one board's chord terms: a trimmed seam link per pair and
-// an offset hull plus formula-chip label per named chord. A term with a voice
-// off the board cannot be drawn whole — it contributes nothing at all, not
-// even light.
+// The overlay over one board's chord terms: an offset hull plus formula-chip
+// label per named chord. A term with a voice off the board cannot be drawn
+// whole — it contributes nothing at all, not even light.
 export function chordOverlay(opts: {
-  pairs: readonly ChordPairTerm[];
   namedChords: readonly NamedChordTerm[];
   posOf: (id: string) => Hex | null;
   point: (h: Hex) => Point;
@@ -123,35 +114,10 @@ export function chordOverlay(opts: {
   pad: number;
   labelFor: (chord: NamedChordTerm) => string;
 }): ChordOverlay {
-  const { pairs, namedChords, posOf, point, radius, pad, labelFor } = opts;
+  const { namedChords, posOf, point, radius, pad, labelFor } = opts;
   const round = (v: number) => Number(v.toFixed(2));
-  // Pair links bridge the seam between neighboring faces, trimmed to the
-  // chassis edge-to-edge (flat-to-flat apothem plus a hair), so they read in
-  // the same wiring register the charge leads render in.
-  const trim = hexApothem(radius) + 1;
-  const links: ChordLink[] = [];
-  const participants = new Set<string>();
-  for (const pair of pairs) {
-    const a = posOf(pair.a);
-    const b = posOf(pair.b);
-    if (!a || !b) continue;
-    participants.add(pair.a);
-    participants.add(pair.b);
-    const [ax, ay] = point(a);
-    const [bx, by] = point(b);
-    const len = Math.hypot(bx - ax, by - ay);
-    if (!(len > 0)) continue;
-    const ux = (bx - ax) / len;
-    const uy = (by - ay) / len;
-    links.push({
-      key: `${pair.a}-${pair.b}`,
-      x1: round(ax + ux * trim),
-      y1: round(ay + uy * trim),
-      x2: round(bx - ux * trim),
-      y2: round(by - uy * trim),
-    });
-  }
   const marks: ChordMark[] = [];
+  const participants = new Set<string>();
   namedChords.forEach((chord, index) => {
     const positions = chord.moduleIds.map(posOf);
     if (positions.some((pos) => pos === null)) return;
@@ -168,5 +134,5 @@ export function chordOverlay(opts: {
       labelY: round(Math.min(...grown.map((p) => p[1])) - 9),
     });
   });
-  return { links, marks, participants };
+  return { marks, participants };
 }

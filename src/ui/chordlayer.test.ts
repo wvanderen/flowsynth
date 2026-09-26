@@ -2,22 +2,23 @@ import { describe, expect, it } from "vitest";
 import { chordOverlay, convexHull, edgeDistance, hexVertices } from "./chordlayer";
 import { hex } from "../engine/hex";
 import { HEX_RADIUS } from "./face";
-import type { ChordPairTerm, Hex, NamedChordTerm } from "../engine/types";
+import type { Hex, NamedChordTerm } from "../engine/types";
 
-// The chord overlay's geometry (issue #62): which modules light, where pair
-// links span, and the hulls that wrap named chords. render.ts's point mapping
-// is injected, so tests use the same axial→pixel shape.
+// The chord overlay's geometry: which modules light and the hulls that wrap
+// named chords. render.ts's point mapping is injected, so tests use the same
+// axial→pixel shape. With the carrierless board (ADR-0021) there are no pair
+// links — chords are register-free pitch sets drawn as hulls over their
+// voices.
 
 const point = ({ q, r }: { q: number; r: number }): [number, number] => [
   Math.sqrt(3) * 65 * (q + r / 2),
   65 * 1.5 * r,
 ];
 
-const pair = (a: string, b: string): ChordPairTerm => ({ a, b, bonus: 0.1 });
-const chord = (name: string, moduleIds: string[]): NamedChordTerm => ({
+const chord = (name: string, moduleIds: string[], instances = 1): NamedChordTerm => ({
   name,
-  pitches: moduleIds.map((_, i) => i + 1),
   bonus: 0.15,
+  instances,
   moduleIds,
 });
 
@@ -28,9 +29,8 @@ const POS: Record<string, Hex> = {
   far: hex(0, 5),
 };
 
-function overlayWith(pairs: ChordPairTerm[], namedChords: NamedChordTerm[]) {
+function overlayWith(namedChords: NamedChordTerm[]) {
   return chordOverlay({
-    pairs,
     namedChords,
     posOf: (id) => POS[id] ?? null,
     point,
@@ -69,27 +69,8 @@ describe("convexHull", () => {
 });
 
 describe("chordOverlay", () => {
-  it("trims pair links to the faces' edges, spanning the seam", () => {
-    const overlay = overlayWith([pair("m1", "m2")], []);
-    expect(overlay.links).toHaveLength(1);
-    const link = overlay.links[0]!;
-    const trim = (HEX_RADIUS * Math.sqrt(3)) / 2 + 1;
-    const span = Math.sqrt(3) * 65;
-    expect(link.y1).toBe(0);
-    expect(link.y2).toBe(0);
-    expect(link.x1).toBeCloseTo(trim, 1);
-    expect(link.x2).toBeCloseTo(span - trim, 1);
-    expect(link.x2 - link.x1).toBeLessThan(span);
-  });
-
-  it("lights exactly the drawable terms: no light for a partner off the board", () => {
-    const overlay = overlayWith([pair("m1", "gone")], []);
-    expect(overlay.links).toHaveLength(0);
-    expect(overlay.participants.has("m1")).toBe(false);
-  });
-
   it("wraps every voice hex inside the named chord's hull and labels it", () => {
-    const overlay = overlayWith([], [chord("Octave", ["m1", "m2"])]);
+    const overlay = overlayWith([chord("Octave", ["m1", "m2"])]);
     expect(overlay.marks).toHaveLength(1);
     const mark = overlay.marks[0]!;
     expect(mark.label).toBe("Octave ×1.15");
@@ -100,16 +81,22 @@ describe("chordOverlay", () => {
   });
 
   it("holds the clearance along a deep chord's row, not just at the corners", () => {
-    // A three-in-a-row Fifth is the elongated case that breaks radial
+    // A three-in-a-row chord is the elongated case that breaks radial
     // scaling: mid-row faces would clip a vertex-scaled hull.
-    const overlay = overlayWith([], [chord("Fifth", ["m1", "m2", "m3"])]);
+    const overlay = overlayWith([chord("Major triad", ["m1", "m2", "m3"])]);
     expect(overlay.marks).toHaveLength(1);
     expectClearance(overlay.marks[0]!, [hex(0, 0), hex(1, 0), hex(2, 0)], 5);
   });
 
+  it("lights exactly the voices of drawable terms", () => {
+    const overlay = overlayWith([chord("Fifth", ["m1", "m2"])]);
+    expect(overlay.participants.has("m1")).toBe(true);
+    expect(overlay.participants.has("m2")).toBe(true);
+    expect(overlay.participants.has("m3")).toBe(false);
+  });
+
   it("keys marks by index so same-named chords in separate clusters coexist", () => {
     const overlay = chordOverlay({
-      pairs: [],
       namedChords: [chord("Fifth", ["m1", "m2"]), chord("Fifth", ["m3", "far"])],
       posOf: (id) => POS[id] ?? null,
       point,
@@ -121,9 +108,8 @@ describe("chordOverlay", () => {
     expect(overlay.marks.every((m) => m.label === "Fifth")).toBe(true);
   });
 
-  it("skips terms whose voices left the board", () => {
-    const overlay = overlayWith([pair("m1", "gone")], [chord("Octave", ["m1", "gone"])]);
-    expect(overlay.links).toHaveLength(0);
+  it("skips terms whose voices left the board — no light, no mark", () => {
+    const overlay = overlayWith([chord("Octave", ["m1", "gone"])]);
     expect(overlay.marks).toHaveLength(0);
     expect(overlay.participants.size).toBe(0);
   });

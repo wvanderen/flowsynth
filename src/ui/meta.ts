@@ -1,9 +1,9 @@
 import type { FocusApp, ModuleType, Rarity, ShelfType } from "../engine/types";
 
 export const META: Record<ModuleType, { name: string; short: string; role: string }> = {
-  carrier: { name: "Carrier", short: "Carrier", role: "The granted origin" },
-  additive: { name: "Additive Synth", short: "Additive", role: "Harmonic term" },
-  conditional: { name: "Conditional Synth", short: "Conditional", role: "Amplitude + chord bonus" },
+  additive: { name: "Additive Synth", short: "Additive", role: "Synth term" },
+  conditional: { name: "Conditional Synth", short: "Conditional", role: "Synth term + chord bonus" },
+  spacer: { name: "Spacer", short: "Spacer", role: "Silent wire" },
   focusKeyed: { name: "Focus-Keyed Generator", short: "Focus-Gen", role: "Charge from focus" },
   infusor: { name: "Infusor", short: "Infusor", role: "Neighbor bonuses" },
   forge: { name: "Forge", short: "Forge", role: "Rolls at threshold" },

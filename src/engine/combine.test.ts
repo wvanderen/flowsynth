@@ -18,8 +18,8 @@ function leveled(state: GameState, type: ModuleType, level: number, pos: { q: nu
 describe("combination", () => {
   it("consumes both inputs and produces the next rarity keeping the higher level", () => {
     const s = fresh();
-    const a = leveled(s, "additive", 2, hex(1, 0));
-    const b = leveled(s, "additive", 1, hex(0, -1));
+    const a = leveled(s, "conditional", 2, hex(1, 0));
+    const b = leveled(s, "conditional", 1, hex(0, -1));
     s.nous = 0;
     const result = combine(s, b.id);
     expect(result.ok).toBe(true);
@@ -28,7 +28,7 @@ describe("combination", () => {
     expect(a.level).toBe(2);
     expect(a.invested).toBe(26);
     expect(s.nous).toBeCloseTo(10, 6);
-    expect(s.modules.filter((m) => m.type === "additive")).toHaveLength(1);
+    expect(s.modules.filter((m) => m.type === "conditional")).toHaveLength(1);
     expect(a.pos).toEqual(hex(1, 0));
   });
 
@@ -81,11 +81,15 @@ describe("combination", () => {
     expect(a.invested).toBe(52);
   });
 
-  it("the Carrier never combines", () => {
+  it("nothing is privileged: the opening synthesizer combines like any other", () => {
     const s = fresh();
-    const carrier = s.modules.find((m) => m.type === "carrier")!;
-    expect(combine(s, carrier.id).ok).toBe(false);
-    expect(findCombinePartner(s, carrier.id)).toBeUndefined();
+    const opening = s.modules[0]!;
+    const twin = give(s, "additive", null);
+    const result = combine(s, opening.id, twin.id);
+    expect(result.ok).toBe(true);
+    expect(s.modules.filter((m) => m.type === "additive")).toHaveLength(1);
+    // The survivor keeps the opening's cell — nothing is pinned (ADR-0021).
+    expect(s.modules[0]!.pos).toEqual(hex(0, 0));
   });
 
   it("leaves global meters untouched and works only in upgrade mode", () => {

@@ -30,15 +30,16 @@ const substrate = {
   "board-glow": "rgba(99, 96, 212, 0.14)",
 } as const;
 
-// The category hue table (ADR-0016). Hue = category; per-type identity rides
-// the glyph and nameplate. Yellow and violet stay unbound for future
-// categories; the Carrier wears white — the sole hue-law exception.
+// The category hue table (ADR-0016, amended by ADR-0021). Hue = category;
+// per-type identity rides the glyph and nameplate. The spacer wears a muted
+// wire grey — its own silent category. Yellow and violet stay unbound for
+// future categories.
 const hues = {
   "hue-generator": "#238858",
   "hue-synthesizer": "#6360d4",
+  "hue-spacer": "#8a93a8",
   "hue-infusor": "#1f95b5",
   "hue-forge": "#bc9239",
-  "hue-carrier": "#f5f7fd",
   "reserved-yellow": "#d9b84a",
   "reserved-violet": "#9d7bea",
 } as const;

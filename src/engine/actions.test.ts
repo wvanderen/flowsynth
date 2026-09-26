@@ -17,7 +17,7 @@ import { cellCost, computeRates, wholeNous } from "./economy";
 import { fresh, give, stubRng } from "./fixtures";
 import { generateOffer } from "./rolls";
 import { hex, isConnected, sameHex } from "./hex";
-import { BALANCE, REFLECTION_SLIDER_NEUTRAL } from "./constants";
+import { BALANCE, REFLECTION_SLIDER_NEUTRAL, SHELF_TYPES } from "./constants";
 import { applyGap, flushPendingAway, resolveHonestyReport } from "./trust";
 import type { ShelfType } from "./types";
 
@@ -37,7 +37,7 @@ describe("starter shelf", () => {
     s.nous = 39.9;
     expect(buyShelfModule(s, "infusor").ok).toBe(false);
 
-    for (const type of ["additive", "infusor", "forge"] as ShelfType[]) {
+    for (const type of ["infusor", "forge"] as ShelfType[]) {
       s.nous = BALANCE.shelfPrices[type];
       expect(buyShelfModule(s, type).ok).toBe(true);
     }
@@ -45,51 +45,83 @@ describe("starter shelf", () => {
     expect(s.modules.filter((m) => m.type === "focusKeyed")).toHaveLength(1);
   });
 
-  it("the shelf's additive synth chords with the Carrier out of the box", () => {
+  it("a rolled synthesizer chords with the opening synth out of the box", () => {
     const s = fresh();
-    s.nous = BALANCE.shelfPrices.additive;
-    expect(buyShelfModule(s, "additive").ok).toBe(true);
-    const additive = s.modules[s.modules.length - 1]!;
-    expect(additive.type).toBe("additive");
-    expect(placeModule(s, additive.id, hex(1, 0)).ok).toBe(true);
+    const rolled = give(s, "additive", null); // what a forge roll delivers
+    expect(placeModule(s, rolled.id, hex(1, 0)).ok).toBe(true); // G4
     const snapshot = computeRates(s, true);
-    expect(snapshot.namedChords.map((c) => c.name)).toEqual(["Octave"]);
+    expect(snapshot.namedChords.map((c) => c.name)).toEqual(["Fifth"]);
   });
 
-  it("every launch category is reachable through shelf plus rolls", () => {
+  it("a rolled spacer wires: silent on its own cell, conducting between voices", () => {
     const s = fresh();
-    for (const type of ["additive", "generator", "infusor", "forge"] as ShelfType[]) {
-      s.nous = BALANCE.shelfPrices[type];
-      expect(buyShelfModule(s, type).ok).toBe(true);
+    s.cells.push(hex(2, 0));
+    const spacer = give(s, "spacer", null);
+    const synth = give(s, "additive", null);
+    expect(placeModule(s, spacer.id, hex(1, 0)).ok).toBe(true); // the wire cell
+    expect(placeModule(s, synth.id, hex(2, 0)).ok).toBe(true); // D5
+    const snapshot = computeRates(s, true);
+    // C4 and D5 connect through the wire and ring the flat seventh.
+    expect(snapshot.namedChords.map((c) => c.name)).toEqual(["Flat seventh"]);
+    expect(snapshot.contributions.get(spacer.id)?.value).toBe(0);
+  });
+
+  it("every non-synthesizer category is reachable through the shelf; synths through rolls", () => {
+    const s = fresh();
+    s.nous = 1e6;
+    for (const type of SHELF_TYPES) {
+      expect(buyShelfModule(s, type).ok, type).toBe(true);
     }
     const types = new Set(s.modules.map((m) => m.type));
-    expect(types.has("additive")).toBe(true);
+    expect(types.has("additive")).toBe(true); // the opening synth
     expect(types.has("focusKeyed")).toBe(true);
     expect(types.has("infusor")).toBe(true);
     expect(types.has("forge")).toBe(true);
-    expect(types.has("carrier")).toBe(true);
+    expect(types.has("spacer")).toBe(false); // roll-pool only (ADR-0022)
   });
 
   it("upgrades need only upgrade mode and whole nous", () => {
     const s = fresh();
     s.nous = 100;
-    const carrier = s.modules.find((m) => m.type === "carrier")!;
-    expect(upgradeModule(s, carrier.id).ok).toBe(true);
-    expect(carrier.level).toBe(1);
+    const opening = s.modules[0]!;
+    expect(upgradeModule(s, opening.id).ok).toBe(true);
+    expect(opening.level).toBe(1);
     expect(s.nous).toBeCloseTo(90, 6);
-    expect(upgradeModule(s, carrier.id).ok).toBe(true);
+    expect(upgradeModule(s, opening.id).ok).toBe(true);
     expect(s.nous).toBeCloseTo(74, 6);
   });
 });
 
 describe("placement and board rules", () => {
-  it("the Carrier is pinned: immovable and unsellable", () => {
+  it("nothing is pinned: every module moves, swaps, and stores freely (ADR-0021)", () => {
     const s = fresh();
-    const carrier = s.modules.find((m) => m.type === "carrier")!;
-    expect(carrier.pos).toEqual(hex(0, 0));
-    expect(placeModule(s, carrier.id, hex(1, 0)).ok).toBe(false);
-    expect(returnModule(s, carrier.id).ok).toBe(false);
-    expect(carrier.pos).toEqual(hex(0, 0));
+    const opening = s.modules[0]!;
+    expect(opening.pos).toEqual(hex(0, 0));
+    const additive = give(s, "additive", hex(1, 0));
+    const forge = give(s, "forge", hex(0, 1));
+    // Swap onto the opening's own cell — a swap, never a refusal.
+    expect(placeModule(s, additive.id, hex(0, 0)).ok).toBe(true);
+    expect(additive.pos).toEqual(hex(0, 0));
+    expect(opening.pos).toEqual(hex(1, 0));
+    expect(placeModule(s, forge.id, hex(1, 0)).ok).toBe(true);
+    expect(forge.pos).toEqual(hex(1, 0));
+    expect(opening.pos).toEqual(hex(0, 1));
+    // And the opening synth itself returns to the tray like anything else.
+    expect(returnModule(s, opening.id).ok).toBe(true);
+    expect(opening.pos).toBeNull();
+  });
+
+  it("a swap of identical synthesizers never breaks a chord — pitch lives in the cell", () => {
+    const s = fresh();
+    const rolled = give(s, "additive", null);
+    placeModule(s, rolled.id, hex(1, 0)); // C4 · G4 fifth
+    const before = computeRates(s, true);
+    // Drag the opening synth off the board into the tray: the chord breaks
+    // by leaving, never by swapping.
+    expect(returnModule(s, s.modules[0]!.id).ok).toBe(true);
+    expect(computeRates(s, true).chordMultiplier).toBe(1);
+    placeModule(s, s.modules[0]!.id, hex(0, 0));
+    expect(computeRates(s, true).chordMultiplier).toBeCloseTo(before.chordMultiplier, 9);
   });
 
   it("gameplay modules swap positions and store to inventory", () => {
@@ -103,13 +135,6 @@ describe("placement and board rules", () => {
     expect(forge.pos).toBeNull();
   });
 
-  it("nothing can displace the Carrier and placed modules stay off its cell", () => {
-    const s = fresh();
-    const additive = give(s, "additive", null);
-    expect(placeModule(s, additive.id, hex(0, 0)).ok).toBe(false);
-    expect(placeModule(s, additive.id, hex(1, 0)).ok).toBe(true);
-  });
-
   it("locks the grid during flow", () => {
     const s = fresh();
     const additive = give(s, "additive", null);
@@ -119,19 +144,22 @@ describe("placement and board rules", () => {
     expect(reshapeCells(s, s.cells).ok).toBe(false);
   });
 
-  it("reshapes preserve count, connectivity, and deployed positions", () => {
+  it("reshapes preserve count, connectivity, deployed positions, and the row band", () => {
     const s = fresh();
     const next = [hex(0, 0), hex(1, 0), hex(1, -1)];
     expect(reshapeCells(s, next).ok).toBe(true);
     expect(s.cells).toHaveLength(3);
     expect(isConnected(next)).toBe(true);
 
-    // The Carrier pins its cell: any shape that drops (0,0) is invalid.
+    // Deployed modules keep their cells: any shape that drops (0,0) —
+    // where the opening synth sits — is invalid.
     const withoutOrigin = [hex(1, 0), hex(1, -1), hex(2, 0)];
     expect(reshapeCells(s, withoutOrigin).ok).toBe(false);
 
     expect(reshapeCells(s, [hex(0, 0)]).ok).toBe(false);
     expect(reshapeCells(s, [hex(0, 0), hex(1, 0), hex(3, 0)]).ok).toBe(false);
+    // The board lives inside the finite octave-row band.
+    expect(reshapeCells(s, [hex(0, 0), hex(1, 0), hex(0, 9)]).ok).toBe(false);
   });
 });
 
@@ -182,10 +210,12 @@ describe("cells as direct nous purchases", () => {
     const s = fresh();
     s.nous = 1e6;
     let spent = 0;
-    for (let i = 0; i < 3; i++) {
+    // (2,0), (3,0) stay in octave row 1 (already on the board); (1,1) is
+    // row 1 too — no gates muddy the scaler read.
+    for (const pos of [hex(2, 0), hex(3, 0), hex(1, 1)]) {
       const price = cellCost(s.cellsBought);
       const before = s.nous;
-      expect(buyCell(s, hex(2 + i, 0)).ok).toBe(true);
+      expect(buyCell(s, pos).ok, `${pos.q},${pos.r}`).toBe(true);
       expect(before - s.nous).toBe(price);
       spent += price;
     }
@@ -193,7 +223,7 @@ describe("cells as direct nous purchases", () => {
     expect(s.cellsBought).toBe(3);
     expect(spent).toBe(cellCost(0) + cellCost(1) + cellCost(2));
     // Reshaping never changes the count, so the scaler never rewinds.
-    const next = [hex(0, 0), hex(1, 0), hex(0, -1), hex(2, 0), hex(3, 0), hex(-1, 0)];
+    const next = [hex(0, 0), hex(1, 0), hex(0, -1), hex(2, 0), hex(3, 0), hex(-1, 1)];
     expect(reshapeCells(s, next).ok).toBe(true);
     expect(cellCost(s.cellsBought)).toBe(cellCost(3));
   });
@@ -219,6 +249,7 @@ describe("conservation", () => {
     give(s, "additive", hex(1, 0));
     give(s, "forge", hex(0, 1));
     give(s, "focusKeyed", hex(2, 0));
+    s.cells.push(hex(2, 0));
     s.chargeWindow = 1200;
     // The opening grant (issue #43) sits in the balance before anything is
     // earned; conservation reads earned = (final − starting) + spent.
@@ -229,17 +260,17 @@ describe("conservation", () => {
 
     const earnedTotal = s.totalEarned;
     let spent = 0;
-    for (const type of ["additive", "generator", "infusor", "forge"] as ShelfType[]) {
+    for (const type of SHELF_TYPES) {
       if (wholeNous(s) >= BALANCE.shelfPrices[type]) {
         const before = s.nous;
         buyShelfModule(s, type);
         spent += before - s.nous;
       }
     }
-    const carrier = s.modules.find((m) => m.type === "carrier")!;
+    const opening = s.modules[0]!;
     while (wholeNous(s) >= 10) {
       const before = s.nous;
-      const result = upgradeModule(s, carrier.id);
+      const result = upgradeModule(s, opening.id);
       if (!result.ok) break;
       spent += before - s.nous;
     }

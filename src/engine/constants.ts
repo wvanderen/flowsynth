@@ -1,11 +1,13 @@
 import type { Category, ModuleType, Rarity, ShelfType } from "./types";
 
 export interface Balance {
-  carrierRate: number;
-  additiveRate: number;
-  conditionalRate: number;
-  conditionalPairBonus: number;
-  pairBonus: number;
+  // One unified synthesizer base rate (ADR-0022): every synthesizer shares
+  // it, scaled by rarityPower^level. The carrier/harmonics split dies with
+  // the distinction it served. Provisional tuning.
+  synthRate: number;
+  // The Conditional's bonus (ADR-0022): +10% per named-chord instance it
+  // belongs to (constant: tuning).
+  conditionalChordBonus: number;
   infusorBonus: number;
   // ADR-0015's global achievement term: each unlocked feat adds this much
   // into the boost, additively (boost = 1 + feats × per-feat). Nous-rate
@@ -17,11 +19,30 @@ export interface Balance {
   rarityPower: Record<Rarity, number>;
   rarityProbability: Record<Rarity, number>;
   shelfPrices: Record<ShelfType, number>;
-  // Cells (ADR-0013): direct nous purchases on a steep geometric scaler over
+  // Cells (ADR-0013): direct nous purchases on a geometric scaler over
   // total cells bought. Provisional tuning.
   cellFirstCost: number;
   cellCostGrowthNumerator: bigint;
   cellCostGrowthDenominator: bigint;
+  // The octave-row gate (ADR-0022): a one-time premium on the first
+  // purchase into each new octave row, escalating with row distance from
+  // the start register. The fifths axis is ungated, gate spend never
+  // advances the cell scaler, and moving owned cells between rows is free.
+  // Provisional tuning.
+  rowGateFirstCost: number;
+  rowGateGrowthNumerator: bigint;
+  rowGateGrowthDenominator: bigint;
+  // How many octave rows sit above and below the start register: rows are
+  // finite, generous, and symmetric around it (count: tuning).
+  octaveRows: number;
+  // How many columns the board spans: the fifths axis walks a twelve-note
+  // circle, and the pitch kernel repeats every twelve columns — bounding
+  // them keeps each note appearing exactly once per octave row. The axis
+  // stays ungated; only the cell scaler prices it.
+  fifthsColumns: number;
+  // The opening grant (ADR-0022): affords — but no longer exactly equals —
+  // the first upgrade of the pre-placed synthesizer. Provisional tuning.
+  openingGrant: number;
   // The activation ladder (ADR-0013): rung one below the shelf floor, each
   // later rung costs more — counted globally regardless of which app it
   // opens. Provisional tuning.
@@ -46,11 +67,8 @@ export interface Balance {
 // Provisional tuning throughout; the redesign spec's numbers are not final
 // until the tuning fronts land.
 export const BALANCE: Balance = {
-  carrierRate: 0.1,
-  additiveRate: 0.05,
-  conditionalRate: 0.05,
-  conditionalPairBonus: 0.1,
-  pairBonus: 0.1,
+  synthRate: 0.1,
+  conditionalChordBonus: 0.1,
   infusorBonus: 0.2,
   achievementBoostPerFeat: 0.02,
   upgradeFirstCost: 10,
@@ -58,10 +76,16 @@ export const BALANCE: Balance = {
   upgradeCostGrowthDenominator: 5n,
   rarityPower: { common: 1.2, uncommon: 1.25, rare: 1.3 },
   rarityProbability: { common: 0.99, uncommon: 0.009, rare: 0.001 },
-  shelfPrices: { generator: 40, additive: 40, infusor: 40, forge: 80 },
+  shelfPrices: { generator: 40, infusor: 40, forge: 80 },
   cellFirstCost: 30,
   cellCostGrowthNumerator: 5n,
   cellCostGrowthDenominator: 2n,
+  rowGateFirstCost: 60,
+  rowGateGrowthNumerator: 2n,
+  rowGateGrowthDenominator: 1n,
+  octaveRows: 4,
+  fifthsColumns: 12,
+  openingGrant: 12,
   ladderFirstCost: 25,
   ladderGrowthNumerator: 5n,
   ladderGrowthDenominator: 2n,
@@ -75,22 +99,25 @@ export const BALANCE: Balance = {
   chargeWindowFraction: 0.1,
 };
 
-// The launch chord vocabulary (§4, issue #29): consecutive-pitch runs,
-// recognized over free-floating connected clusters. A named chord's term
-// replaces its member pairs' bonuses; overlapping named chords (a 4·5·6·7
-// run) stack multiplicatively. The consecutive-run law makes the textbook
-// minor triad 10:12:15 geometrically impossible; 5:6:7 is the minor-ish run.
+// The launch chord vocabulary (ADR-0021/0022): register-free pitch sets —
+// interval classes above the root, mod 12, with multiplicity (the Octave is
+// two voices of the same class). Recognition is by pitch content over a
+// connected cluster: any voicing, any octave. Bonus tiers track the spacer
+// ladder's construction cost — a ♭7 costs one wire cell, m3/M6 two, M3/m6
+// three — so harder chords cost more board and earn bigger multipliers
+// (tiers: tuning).
 export interface NamedChordDef {
   name: string;
-  pitches: number[];
+  intervals: number[];
   bonus: number;
 }
 
 export const NAMED_CHORDS: readonly NamedChordDef[] = [
-  { name: "Octave", pitches: [1, 2], bonus: 0.15 },
-  { name: "Fifth", pitches: [2, 3], bonus: 0.3 },
-  { name: "Major triad", pitches: [4, 5, 6], bonus: 0.5 },
-  { name: "Blues triad", pitches: [5, 6, 7], bonus: 0.75 },
+  { name: "Octave", intervals: [0, 0], bonus: 0.15 },
+  { name: "Fifth", intervals: [0, 7], bonus: 0.3 },
+  { name: "Flat seventh", intervals: [0, 10], bonus: 0.45 },
+  { name: "Minor triad", intervals: [0, 3, 7], bonus: 0.6 },
+  { name: "Major triad", intervals: [0, 4, 7], bonus: 0.75 },
 ];
 
 // The target chime (focus-tool spec §4–5): one synthesized just-intonation
@@ -116,9 +143,9 @@ export const CHIME = {
 };
 
 export const CATEGORY_OF: Record<ModuleType, Category> = {
-  carrier: "synthesizer",
   additive: "synthesizer",
   conditional: "synthesizer",
+  spacer: "spacer",
   focusKeyed: "generator",
   infusor: "infusor",
   forge: "forge",
@@ -128,7 +155,7 @@ export const CATEGORY_OF: Record<ModuleType, Category> = {
 // members accumulate received charge toward a threshold. The Forge is the
 // sole launch instance. Continuous-charge categories use received charge as
 // continuous empowerment instead. Membership is decided per category —
-// never per type.
+// never per type. The spacer receives nothing: it is silent wire.
 export const CHARGEABLE_CATEGORIES: readonly Category[] = ["forge"];
 
 export const CONTINUOUS_CHARGE_CATEGORIES: readonly Category[] = ["synthesizer", "infusor"];
@@ -140,27 +167,27 @@ export const CHARGE_RECEIVING_CATEGORIES: readonly Category[] = [
 ];
 
 export const MODULE_TYPES: readonly ModuleType[] = [
-  "carrier",
   "additive",
   "conditional",
+  "spacer",
   "focusKeyed",
   "infusor",
   "forge",
 ];
 
-// The Carrier is granted, never rolled (§2.1); everything else can come from
-// the Forge.
-export const ROLL_POOL: readonly ModuleType[] = MODULE_TYPES.filter((type) => type !== "carrier");
+// The forge roll pool (ADR-0022): every module type except the shelf's —
+// the spacer ships through rolls only, and no module is granted or
+// privileged anymore.
+export const ROLL_POOL: readonly ModuleType[] = MODULE_TYPES;
 
-// The starter shelf (§3, ADR-0018): one-time offers completing the category
-// landscape — plus the additive synth, so chord play exists before the first
-// roll. The shelf's "generator" offer is the focus-keyed generator.
-export const SHELF_TYPES: readonly ShelfType[] = ["generator", "additive", "infusor", "forge"];
+// The starter shelf (ADR-0022): one-time offers completing the
+// non-synthesizer landscape — the generator, one infusor, and the Forge.
+// Synthesizers come only from the opening grant and forge rolls.
+export const SHELF_TYPES: readonly ShelfType[] = ["generator", "infusor", "forge"];
 
 // What module a shelf offer grants: the "generator" key predates the basic
 // generator's retirement (ADR-0018) and stays the save's shelf key.
 export const SHELF_MODULE: Record<ShelfType, ModuleType> = {
-  additive: "additive",
   generator: "focusKeyed",
   infusor: "infusor",
   forge: "forge",
@@ -191,4 +218,8 @@ export const RECONCILIATION_FLOOR_SECONDS = 180;
 export const REFLECTION_SLIDER_POSITIONS = 5;
 export const REFLECTION_SLIDER_NEUTRAL = 3;
 
-export const SAVE_VERSION = 5;
+// ADR-0023: SAVE_VERSION 6 — the carrierless board. V5 saves convert once
+// inside deserialize (hybrid migration: the life record carries over, the
+// board resets to the new opening); anything older, and any future version,
+// hard-rejects with the start-fresh message (ADR-0017's gate stands).
+export const SAVE_VERSION = 6;

@@ -2,7 +2,6 @@ import { advance } from "../engine/advance";
 import type { AdvanceResult } from "../engine/types";
 import {
   acknowledgeHorizon,
-  acknowledgeWelcome,
   buyCell,
   buyGoalCapacity,
   buyShelfModule,
@@ -25,7 +24,7 @@ import { adjacent, hexKey, neighbors, sameHex } from "../engine/hex";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
 import { formatClock } from "../engine/clock";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
-import { createInitialState, isCarrier } from "../engine/state";
+import { createInitialState } from "../engine/state";
 import { appActive, type FocusApp } from "../engine/apps";
 import { writeNote } from "../engine/notes";
 import { achievementName } from "../engine/achievements";
@@ -370,7 +369,7 @@ export class App {
     this.ui.chosenTarget = null;
     this.lastWall = null;
     this.exitPending = false;
-    this.say("A fresh instrument. The Carrier is yours.");
+    this.say("A fresh instrument. One synth is yours.");
     this.save();
     this.render();
   }
@@ -392,7 +391,7 @@ export class App {
       return;
     }
     if (this.state.sessionsCompleted === 0 && this.state.mode === "upgrade") {
-      this.say("Welcome. Upgrade the Carrier, then enter flow.");
+      this.say("Welcome. Upgrade the synth, then enter flow.");
     } else if (this.state.mode === "flow") {
       this.say("Flow is live.");
     } else {
@@ -670,33 +669,6 @@ export class App {
   // only acknowledges the horizon, and the flag stays detectable.
   acknowledgeHorizon(): void {
     this.act(acknowledgeHorizon(this.state), "Horizon acknowledged.");
-  }
-
-  // The one-time welcome card (§5.1): acknowledging it — via its CTA or the
-  // dismiss — is one-time; the save keeps the flag. The CTA is the Carrier's
-  // upgrade button for beat one: it spends the grant on the spot, so the
-  // carrier term bumps and the balance returns to zero in one click. If the
-  // upgrade cannot go through (an older save's balance, say), the Carrier is
-  // still selected so the player lands on its upgrade panel.
-  ackWelcomeToCarrier(): void {
-    acknowledgeWelcome(this.state);
-    const carrier = this.state.modules.find(isCarrier);
-    this.save(); // the ack is one-time whether or not the upgrade lands
-    if (!carrier) {
-      this.render();
-      return;
-    }
-    this.ui.selected = carrier.id;
-    this.ui.app = null;
-    this.ui.placing = null;
-    this.upgrade(carrier.id);
-  }
-
-  dismissWelcome(): void {
-    acknowledgeWelcome(this.state);
-    this.say("Welcome dismissed.");
-    this.save();
-    this.render();
   }
 
   buyShelf(type: ShelfType): void {

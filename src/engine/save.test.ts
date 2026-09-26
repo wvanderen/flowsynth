@@ -1,13 +1,30 @@
 import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
-import { endSession, recordSummaryReflection, startSession } from "./actions";
+import { endSession, startSession } from "./actions";
 import { fresh, give, stubRng } from "./fixtures";
-import { SAVE_VERSION } from "./constants";
+import { BALANCE, SAVE_VERSION } from "./constants";
 import { deserialize, serialize } from "./save";
 import { applyGap, flushPendingAway, resolveHonestyReport } from "./trust";
 import { writeNote } from "./notes";
-import { generateOffer } from "./rolls";
 import { hex } from "./hex";
+import type { GameState } from "./types";
+
+// ADR-0023: SAVE_VERSION 6 — the carrierless board. V5 saves convert once
+// inside deserialize as a hybrid: the life record and lifetime meta carry
+// over, the board side resets to the new opening. Anything older, and any
+// future version, hard-rejects with the start-fresh message.
+
+// Fabricate a v5 save from a live v6 state: force the version and salt it
+// with the board-side shapes only a v5 build would write (a Carrier, the
+// retired additive shelf key, the welcome flag).
+function asV5(state: GameState, savedAt = 1_000): string {
+  const file = JSON.parse(serialize(state, savedAt));
+  file.version = 5;
+  file.state.welcomeAcked = true;
+  file.state.modules.unshift({ id: "m0", type: "carrier", rarity: "common", level: 4, invested: 93, pos: hex(0, 0) });
+  file.state.purchased.additive = true;
+  return JSON.stringify(file);
+}
 
 describe("persistence", () => {
   it("round-trips the full game state", () => {
@@ -27,58 +44,15 @@ describe("persistence", () => {
   it("saves carry the current version", () => {
     const parsed = JSON.parse(serialize(fresh()));
     expect(parsed.version).toBe(SAVE_VERSION);
-    expect(parsed.version).toBe(5);
+    expect(parsed.version).toBe(6);
   });
 
-  it("v5 saves from before cell purchases default cellsBought to zero", () => {
+  it("v6 saves lenient-default the gate ledger", () => {
     const file = JSON.parse(serialize(fresh()));
-    delete file.state.cellsBought;
+    delete file.state.gatedRows;
     const loaded = deserialize(JSON.stringify(file));
     expect(loaded.error).toBeUndefined();
-    expect(loaded.state!.cellsBought).toBe(0);
-  });
-
-  it("v5 saves from before the activation ladder default the ladder state", () => {
-    const file = JSON.parse(serialize(fresh()));
-    delete file.state.activatedApps;
-    delete file.state.goalCapacityBought;
-    const loaded = deserialize(JSON.stringify(file));
-    expect(loaded.error).toBeUndefined();
-    expect(loaded.state!.activatedApps).toEqual([]);
-    expect(loaded.state!.goalCapacityBought).toBe(0);
-  });
-
-  it("remaps the retired generator type to the focus-keyed generator (ADR-0018)", () => {
-    const s = fresh();
-    give(s, "focusKeyed", hex(1, 0));
-    const legacy = serialize(s, 1_000).replaceAll('"type": "focusKeyed"', '"type": "generator"');
-    const loaded = deserialize(legacy);
-    expect(loaded.error).toBeUndefined();
-    const types = loaded.state!.modules.map((m) => m.type as string);
-    expect(types).not.toContain("generator");
-    expect(types.filter((t) => t === "focusKeyed")).toHaveLength(1);
-  });
-
-  it("remaps retired generator roll candidates waiting in the bank", () => {
-    const s = fresh();
-    s.forge.earned = 1;
-    s.bankedRolls.push(generateOffer(s, stubRng(new Array(6).fill(0.5))));
-    const legacy = serialize(s, 1_000).replaceAll('"type": "focusKeyed"', '"type": "generator"');
-    const loaded = deserialize(legacy);
-    expect(loaded.error).toBeUndefined();
-    for (const offer of loaded.state!.bankedRolls) {
-      for (const candidate of offer.candidates) {
-        expect(candidate.type as string).not.toBe("generator");
-      }
-    }
-  });
-
-  it("shelf keys added after a save default to unpurchased", () => {
-    const file = JSON.parse(serialize(fresh()));
-    delete file.state.purchased.additive;
-    const loaded = deserialize(JSON.stringify(file));
-    expect(loaded.error).toBeUndefined();
-    expect(loaded.state!.purchased.additive).toBe(false);
+    expect(loaded.state!.gatedRows).toEqual([]);
   });
 
   it("resuming from a mid-flow save does not duplicate rewards", () => {
@@ -104,59 +78,22 @@ describe("persistence", () => {
     expect(restored.forge.progress).toBeCloseTo(straight.forge.progress, 6);
   });
 
-  it("rejects v4 saves at the v5 boundary with a clear message (ADR-0017)", () => {
-    const s = fresh();
-    const v4 = serialize(s).replace(`"version": ${SAVE_VERSION}`, '"version": 4');
-    const result = deserialize(v4);
-    expect(result.error).toBeDefined();
-    expect(result.error).toMatch(/older version/i);
-    expect(result.state).toBeUndefined();
-  });
-
-  it("rejects every older version; there is no migrate chain", () => {
-    for (const version of [1, 2, 3, 4]) {
-      const text = serialize(fresh()).replace(`"version": ${SAVE_VERSION}`, `"version": ${version}`);
-      const result = deserialize(text);
-      expect(result.error, `v${version}`).toBeDefined();
-      expect(result.state, `v${version}`).toBeUndefined();
-    }
-  });
-
-  it("rejects corrupt, foreign, and future-version saves", () => {
-    expect(deserialize("{nope").error).toBeDefined();
-    expect(deserialize('{"app":"other","version":5}').error).toBeDefined();
-    expect(deserialize('{"app":"flowsynth","version":99,"state":{}}').error).toBeDefined();
-    expect(deserialize('{"app":"flowsynth","version":5,"state":{"mode":"weird"}}').error).toBeDefined();
-    expect(deserialize('{"app":"flowsynth","version":5}').error).toBeDefined();
-  });
-
-  it("v5 saves from before trust accounting default the session ledger (ADR-0019)", () => {
+  it("an unseen summary, its events, and its reflection survive a reload together (§8)", () => {
     const s = fresh();
     startSession(s, 600);
-    advance(s, 30);
-    const file = JSON.parse(serialize(s, 1_000));
-    delete file.state.session.accounting;
-    const loaded = deserialize(JSON.stringify(file));
+    advance(s, 600);
+    applyGap(s, 300, "away", 0);
+    flushPendingAway(s);
+    resolveHonestyReport(s, "missed");
+    endSession(s, 5_000);
+    s.summary!.reflection = { text: "drifted", slider: 3 };
+    expect(s.summary!.seen).toBe(false);
+    const loaded = deserialize(serialize(s, 1_000));
     expect(loaded.error).toBeUndefined();
-    expect(loaded.state!.session!.accounting.creditedSeconds).toBe(0);
-    expect(loaded.state!.session!.accounting.poolSeconds).toBe(0);
-    expect(loaded.state!.session!.accounting.bucketNous).toBe(0);
-    expect(loaded.state!.session!.accounting.pendingAwaySeconds).toBe(0);
-    expect(loaded.state!.session!.accounting.events).toEqual([]);
-  });
-
-  it("saves from before the signals and preferences default leniently (§4–5)", () => {
-    const s = fresh();
-    startSession(s, 600);
-    const file = JSON.parse(serialize(s, 1_000));
-    delete file.state.muted;
-    delete file.state.notificationAsked;
-    delete file.state.session.targetSignaled;
-    const loaded = deserialize(JSON.stringify(file));
-    expect(loaded.error).toBeUndefined();
-    expect(loaded.state!.muted).toBe(false);
-    expect(loaded.state!.notificationAsked).toBe(false);
-    expect(loaded.state!.session!.targetSignaled).toBe(false);
+    const summary = loaded.state!.summary!;
+    expect(summary.seen).toBe(false);
+    expect(summary.honestyEvents).toEqual([{ awaySeconds: 300, outcome: "missed" }]);
+    expect(summary.reflection).toEqual({ text: "drifted", slider: 3 });
   });
 
   it("the retired reconcile dialog's frozen gap is dropped at load (ADR-0019)", () => {
@@ -169,91 +106,184 @@ describe("persistence", () => {
     expect(loaded.error).toBeUndefined();
     expect((loaded.state as unknown as Record<string, unknown>).pendingGap).toBeUndefined();
   });
+});
 
-  it("summaries from before the close-out numbers default leniently (§8)", () => {
+describe("the v5 → v6 hybrid migration (ADR-0023)", () => {
+  it("carries the life record and lifetime meta over untouched", () => {
     const s = fresh();
-    startSession(s, 600);
-    advance(s, 60);
-    endSession(s, 5_000);
-    const file = JSON.parse(serialize(s, 1_000));
-    delete file.state.summary.plannedTarget;
-    delete file.state.summary.honestyEvents;
-    delete file.state.summary.reflection;
-    const loaded = deserialize(JSON.stringify(file));
+    s.habits.push({ id: "h1", name: "Piano", seconds: 3600, archived: false });
+    s.activeHabitId = "h1";
+    s.practiceLog.push({ id: "p1", habitId: "h1", seconds: 600, source: "live", at: 1_000 });
+    s.notes.push({ id: "n1", sessionId: 1, atElapsed: 30, text: "kept", habitId: "h1", at: 1_000 });
+    s.goals.push({
+      id: "g1",
+      condition: { kind: "habit-minutes", habitId: "h1", minutes: 10 },
+      schedule: { kind: "daily" },
+      occurrenceKey: "2026-09-25",
+      progressSeconds: 120,
+      completed: false,
+      completedCount: 0,
+      createdAt: 1_000,
+    });
+    s.sessionRecords.push({
+      sessionNumber: 1,
+      startedAt: 1_000,
+      endedAt: 2_000,
+      habitId: "h1",
+      mode: "planned",
+      plannedTarget: 600,
+      creditedSeconds: 600,
+      earned: 60,
+      honestyEvents: [],
+      reflection: null,
+      goalsAdvanced: [],
+      achievements: [],
+    });
+    s.achievements = { "first-light": 1_234 };
+    s.sessionsCompleted = 3;
+    s.unstructuredSessions = 1;
+    s.plannedSessionsCompleted = 2;
+    s.sessionIndex = 3;
+    s.combinations = 5;
+    s.muted = true;
+    s.notificationAsked = true;
+    s.activatedApps = [];
+    s.goalCapacityBought = 1;
+    s.totalEarned = 12_345;
+    s.arete = 2;
+    s.horizonAcknowledged = true;
+
+    const loaded = deserialize(asV5(s));
     expect(loaded.error).toBeUndefined();
-    expect(loaded.state!.summary!.plannedTarget).toBeNull();
-    expect(loaded.state!.summary!.honestyEvents).toEqual([]);
-    expect(loaded.state!.summary!.reflection).toBeNull();
+    const m = loaded.state!;
+    expect(m.habits).toEqual(s.habits);
+    expect(m.activeHabitId).toBe("h1");
+    expect(m.practiceLog).toEqual(s.practiceLog);
+    expect(m.notes).toEqual(s.notes);
+    expect(m.goals).toEqual(s.goals);
+    expect(m.sessionRecords).toEqual(s.sessionRecords);
+    expect(m.achievements).toEqual({ "first-light": 1_234 });
+    expect(m.sessionsCompleted).toBe(3);
+    expect(m.unstructuredSessions).toBe(1);
+    expect(m.plannedSessionsCompleted).toBe(2);
+    expect(m.sessionIndex).toBe(3);
+    expect(m.combinations).toBe(5);
+    expect(m.muted).toBe(true);
+    expect(m.notificationAsked).toBe(true);
+    expect(m.activatedApps).toEqual([]);
+    expect(m.goalCapacityBought).toBe(1);
+    expect(m.totalEarned).toBe(12_345);
+    expect(m.arete).toBe(2);
+    expect(m.horizonAcknowledged).toBe(true);
   });
 
-  it("a malformed reflection field loads absent rather than half-shaped", () => {
+  it("resets the board side to the new opening — Carrier row included", () => {
     const s = fresh();
-    startSession(s, 600);
-    advance(s, 60);
-    endSession(s, 5_000);
-    recordSummaryReflection(s, { slider: 4 });
-    const file = JSON.parse(serialize(s, 1_000));
-    file.state.summary.reflection = { text: 7 };
-    const loaded = deserialize(JSON.stringify(file));
+    give(s, "conditional", hex(2, 0), 5);
+    s.cells.push(hex(4, 0), hex(5, 0), hex(-3, 2));
+    s.cellsBought = 7;
+    s.gatedRows = [2, -1];
+    s.forge = { progress: 500, earned: 9 };
+    s.bankedRolls.push({ id: "offer", candidates: [
+      { id: "c1", type: "conditional", rarity: "rare" },
+      { id: "c2", type: "forge", rarity: "common" },
+      { id: "c3", type: "infusor", rarity: "common" },
+    ] });
+    s.chargeWindow = 400;
+    s.nous = 5_000;
+
+    const loaded = deserialize(asV5(s));
     expect(loaded.error).toBeUndefined();
-    expect(loaded.state!.summary!.reflection).toBeNull();
+    const m = loaded.state!;
+    // The board resets: one pre-placed additive at C4, the opening
+    // footprint, nothing bought, nothing gated, nothing banked.
+    expect(m.modules).toHaveLength(1);
+    expect(m.modules[0]!.type).toBe("additive");
+    expect(m.modules[0]!.pos).toEqual(hex(0, 0));
+    expect(m.cells.map((c) => `${c.q},${c.r}`).sort()).toEqual(["0,0", "0,1", "1,0"]);
+    expect(m.cellsBought).toBe(0);
+    expect(m.gatedRows).toEqual([]);
+    expect(m.forge).toEqual({ progress: 0, earned: 0 });
+    expect(m.bankedRolls).toEqual([]);
+    expect(m.chargeWindow).toBe(0);
+    expect(m.purchased).toEqual({ generator: false, infusor: false, forge: false });
+    expect(m.mode).toBe("upgrade");
+    expect(m.nous).toBe(BALANCE.openingGrant);
+    // The retired welcome flag is deleted by the loader, not defaulted.
+    expect("welcomeAcked" in m).toBe(false);
+    expect((m as unknown as Record<string, unknown>).welcomeAcked).toBeUndefined();
   });
 
-  it("an unseen summary, its events, and its reflection survive a reload together (§8)", () => {
-    const s = fresh();
-    startSession(s, 600);
-    advance(s, 600);
-    applyGap(s, 300, "away", 0);
-    flushPendingAway(s);
-    resolveHonestyReport(s, "missed");
-    endSession(s, 5_000);
-    recordSummaryReflection(s, { text: "drifted" });
-    expect(s.summary!.seen).toBe(false);
-    const loaded = deserialize(serialize(s, 1_000));
-    expect(loaded.error).toBeUndefined();
-    const summary = loaded.state!.summary!;
-    expect(summary.seen).toBe(false);
-    expect(summary.honestyEvents).toEqual([{ awaySeconds: 300, outcome: "missed" }]);
-    expect(summary.reflection).toEqual({ text: "drifted", slider: 3 });
+  it("discards a mid-flow v5 session uncredited, landing in upgrade mode", () => {
+    for (const mode of ["flow", "paused"] as const) {
+      const s = fresh();
+      startSession(s, 600);
+      advance(s, 300);
+      s.mode = mode;
+      const loaded = deserialize(asV5(s));
+      expect(loaded.error).toBeUndefined();
+      expect(loaded.state!.mode).toBe("upgrade");
+      expect(loaded.state!.session).toBeNull();
+      // The discarded session credits nothing: no practice log entry, no
+      // charge window, and the balance is the grant alone.
+      expect(loaded.state!.practiceLog).toHaveLength(0);
+      expect(loaded.state!.chargeWindow).toBe(0);
+      expect(loaded.state!.nous).toBe(BALANCE.openingGrant);
+    }
   });
 
-  it("v5 saves from before the session records default the history to empty (§9)", () => {
+  it("preserved counters keep the session-one guard from re-firing", () => {
     const s = fresh();
-    startSession(s, 600);
-    advance(s, 60);
-    endSession(s, 5_000);
-    const file = JSON.parse(serialize(s, 1_000));
-    delete file.state.sessionRecords;
-    const loaded = deserialize(JSON.stringify(file));
-    expect(loaded.error).toBeUndefined();
-    expect(loaded.state!.sessionRecords).toEqual([]);
+    s.sessionsCompleted = 2;
+    s.achievements = {};
+    const loaded = deserialize(asV5(s));
+    const m = loaded.state!;
+    expect(m.achievements).toEqual({});
+    // Feats can unlock from the first post-migration session: the record's
+    // summary row fires at its end boundary.
+    startSession(m, 600);
+    advance(m, 60);
+    endSession(m, 5_000);
+    expect(m.achievements["first-light"]).toBeDefined();
   });
 
-  it("a running session from before the record seams defaults its start stamp and goal ledger (§9)", () => {
+  it("the migrated state saves forward as v6 and never converts twice", () => {
     const s = fresh();
-    startSession(s, 600, 1_000);
-    advance(s, 60);
-    const file = JSON.parse(serialize(s, 1_000));
-    delete file.state.session.startedAt;
-    delete file.state.session.goalSeconds;
-    const loaded = deserialize(JSON.stringify(file));
-    expect(loaded.error).toBeUndefined();
-    expect(loaded.state!.session!.startedAt).toBe(0);
-    expect(loaded.state!.session!.goalSeconds).toEqual({});
+    s.totalEarned = 999;
+    const migrated = deserialize(asV5(s)).state!;
+    const text = serialize(migrated, 2_000);
+    expect(JSON.parse(text).version).toBe(SAVE_VERSION);
+    const again = deserialize(text);
+    expect(again.error).toBeUndefined();
+    expect(again.state!.totalEarned).toBe(999);
+    expect(again.state!.modules).toHaveLength(1);
   });
 
-  it("notes from before the habit tag load untagged and undated (§9)", () => {
+  it("exported v5 saves follow the same rule: they convert exactly like stored ones", () => {
     const s = fresh();
-    startSession(s, 600);
-    writeNote(s, "pre-tag note", 1_000);
-    advance(s, 60);
-    endSession(s, 2_000);
-    const file = JSON.parse(serialize(s, 1_000));
-    delete file.state.notes[0].habitId;
-    delete file.state.notes[0].at;
-    const loaded = deserialize(JSON.stringify(file));
+    writeNote(s, "portable", 1_000);
+    const loaded = deserialize(asV5(s, 42));
     expect(loaded.error).toBeUndefined();
-    expect(loaded.state!.notes[0]!.habitId).toBeNull();
-    expect(loaded.state!.notes[0]!.at).toBe(0);
+    expect(loaded.state!.notes[0]!.text).toBe("portable");
+  });
+});
+
+describe("the version gate (ADR-0017, kept by ADR-0023)", () => {
+  it("rejects v4 and every older version; there is no migrate chain", () => {
+    for (const version of [1, 2, 3, 4]) {
+      const text = serialize(fresh()).replace(`"version": ${SAVE_VERSION}`, `"version": ${version}`);
+      const result = deserialize(text);
+      expect(result.error, `v${version}`).toMatch(/older version/i);
+      expect(result.state, `v${version}`).toBeUndefined();
+    }
+  });
+
+  it("rejects corrupt, foreign, and future-version saves", () => {
+    expect(deserialize("{nope").error).toBeDefined();
+    expect(deserialize('{"app":"other","version":6}').error).toBeDefined();
+    expect(deserialize('{"app":"flowsynth","version":99,"state":{}}').error).toBeDefined();
+    expect(deserialize('{"app":"flowsynth","version":6,"state":{"mode":"weird"}}').error).toBeDefined();
+    expect(deserialize('{"app":"flowsynth","version":6}').error).toBeDefined();
+    expect(deserialize('{"app":"flowsynth","version":7,"state":{}}').error).toMatch(/newer than this build/i);
   });
 });

@@ -39,7 +39,7 @@ describe("charge leads — the patch wire diagram (§8, #41)", () => {
     give(s, "focusKeyed", hex(1, 0));
     give(s, "additive", hex(0, -1)); // two hexes from the generator
     const leads = chargeLeads(s, true);
-    expect(leads.map((l) => l.receiver.type)).toEqual(["carrier"]);
+    expect(leads.map((l) => l.receiver.type)).toEqual(["additive"]);
   });
 
   it("emits nothing live from a spent charge window — the wiring dims, not vanishes", () => {

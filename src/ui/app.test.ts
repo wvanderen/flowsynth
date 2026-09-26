@@ -13,7 +13,6 @@ import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport } fro
 import { recordMissed, recordTargetHit } from "../engine/records";
 import { give } from "../engine/fixtures";
 import { hex } from "../engine/hex";
-import { PINNED_SENTENCE } from "./render";
 import { formatNumber } from "./format";
 import type { GameState } from "../engine/types";
 import type { SignalChannels } from "./signals";
@@ -137,6 +136,54 @@ describe("the status monitor", () => {
     expect(document.querySelector('[data-live="m-inf"]')!.textContent).toBe(formatNumber(0.02));
     expect(document.querySelector('[data-live="b-inf"]')!.textContent).toBe(`+${formatNumber(0.02)} ν/s`);
   });
+
+  it("carries the unified synths leg: (synths + infusors) × chords × emp", () => {
+    app.render();
+    expect(document.querySelector('[data-live="m-synths"]')!.textContent).toBe(formatNumber(0.1));
+    expect(document.querySelector('[data-live="m-carrier"]')).toBeNull();
+    expect(document.querySelector('[data-live="m-harmonics"]')).toBeNull();
+  });
+
+  it("the session summary's legs use the new names", () => {
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    startSession(s, 600);
+    advance(s, 60);
+    endSession(s);
+    app.ui.modal = "summary";
+    app.render();
+    const modal = document.getElementById("modal-content")!;
+    expect(modal.textContent).toContain("the synth term alone");
+    give(s, "additive", hex(1, 0)); // G4 — a Fifth for the next session
+    startSession(s, null);
+    advance(s, 60);
+    endSession(s);
+    app.render();
+    expect(modal.textContent).toContain(`synths +${formatNumber(0.2)} ν/s`);
+    expect(modal.textContent).toContain(`chords ×${formatNumber(1.3)}`);
+    expect(modal.textContent).not.toContain("carrier");
+    expect(modal.textContent).not.toContain("harmonics");
+  });
+
+  it("an old v5 save in localStorage boots migrated: life record kept, board reset", () => {
+    const legacy = app.state;
+    createHabit(legacy, "Piano");
+    legacy.sessionsCompleted = 4;
+    legacy.totalEarned = 2_500;
+    const file = JSON.parse(JSON.stringify({ app: "flowsynth", version: 5, savedAt: 1_000, state: legacy }));
+    file.state.welcomeAcked = true;
+    file.state.modules.push({ id: "m9", type: "carrier", rarity: "common", level: 3, invested: 66, pos: hex(1, 0) });
+    localStorage.setItem("flowsynth.save.v1", JSON.stringify(file));
+    const revived = boot();
+    expect(revived.state.sessionsCompleted).toBe(4);
+    expect(revived.state.totalEarned).toBe(2_500);
+    expect(revived.state.habits.map((h) => h.name)).toEqual(["Piano"]);
+    // The board reset to the new opening: one synth at C4, grant balance.
+    expect(revived.state.modules).toHaveLength(1);
+    expect(revived.state.modules[0]!.pos).toEqual(hex(0, 0));
+    expect(revived.state.nous).toBe(12);
+    expect("welcomeAcked" in revived.state).toBe(false);
+  });
 });
 
 describe("the app popovers", () => {
@@ -178,22 +225,32 @@ describe("the board toolbar", () => {
   });
 });
 
-describe("the pinned carrier", () => {
-  it("a drag attempt refuses visibly: face shake, canonical toast, no ghost, no move", () => {
+describe("arranging on the carrierless board", () => {
+  it("every module is draggable — nothing is pinned, no drag is refused", () => {
     app.startManaging();
     const cell = document.querySelector('[data-cell="0,0"]')!;
     cell.dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
     document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
-    expect(document.getElementById("status")!.textContent).toBe(PINNED_SENTENCE);
-    expect(document.querySelector(".drag-ghost")).toBeNull();
-    expect(cell.querySelector(".module-node")!.classList.contains("pin-refused")).toBe(true);
-    // Releasing must neither drop nor select: the gesture was a drag, not a click.
+    // The opening synthesizer lifts like any module: a ghost, no refusal
+    // toast, no shake (ADR-0021 — nothing is spatially privileged).
+    expect(document.querySelector(".drag-ghost")).not.toBeNull();
+    expect(cell.querySelector(".module-node")!.classList.contains("pin-refused")).toBe(false);
     document.dispatchEvent(new MouseEvent("pointerup", { clientX: 130, clientY: 100 }));
     cell.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    const carrier = app.state.modules.find((m) => m.type === "carrier")!;
-    expect(carrier.pos).toEqual(hex(0, 0));
-    expect(app.ui.selected).toBeNull();
+    expect(app.state.modules[0]!.pos).toEqual(hex(0, 0));
     expect(document.querySelector(".drag-ghost")).toBeNull();
+  });
+
+  it("the board renders the lattice: note names on cells, columns as one name", () => {
+    app.render();
+    const grid = document.getElementById("grid")!;
+    // Every empty cell wears its absolute note — the two free opening cells
+    // read G4 and C5.
+    const labels = [...grid.querySelectorAll(".hex-note")].map((n) => n.textContent);
+    expect(labels).toContain("G4");
+    expect(labels).toContain("C5");
+    // The occupied cell's face carries its note beneath the readout.
+    expect(grid.querySelector('[data-cell="0,0"] .face-note')!.textContent).toBe("C4");
   });
 });
 
@@ -224,22 +281,21 @@ describe("the chord view", () => {
     endSession(app.state);
   });
 
-  it("lights chord voices, dims the rest, links the pair, labels the named chord", () => {
-    // The octave: the Carrier (pitch 1) plus an additive one hex out.
+  it("lights chord voices, dims the rest, labels the named chord", () => {
+    // The opening C4 plus an additive at G4: a Fifth on the lattice.
     give(app.state, "additive", hex(1, 0));
-    // A raw pair island at pitches 6–7: below the triad vocabulary's reach.
-    app.state.cells.push(hex(5, 0), hex(6, 0));
-    give(app.state, "additive", hex(5, 0));
-    give(app.state, "additive", hex(6, 0));
+    // A far island with no pitch-set match: D5 at (2,0) is off-cluster.
+    app.state.cells.push(hex(3, 0));
+    give(app.state, "additive", hex(3, 0));
     app.ui.showChords = true;
     app.render();
     const grid = document.getElementById("grid")!;
     expect(grid.classList.contains("chord-view")).toBe(true);
-    expect(grid.querySelectorAll(".cell-node.chord-lit")).toHaveLength(4);
-    expect(grid.querySelectorAll(".cell-node.chord-dim")).toHaveLength(1);
-    expect(grid.querySelectorAll(".chord-link")).toHaveLength(1);
+    expect(grid.querySelectorAll(".cell-node.chord-lit")).toHaveLength(2);
+    // Dimmed: the chordless island and the untouched empty cell.
+    expect(grid.querySelectorAll(".cell-node.chord-dim")).toHaveLength(2);
     expect(grid.querySelectorAll(".chord-hull")).toHaveLength(1);
-    expect(grid.querySelector(".chord-label")!.textContent).toBe("Octave ×1.15");
+    expect(grid.querySelector(".chord-label")!.textContent).toBe("Fifth ×1.3");
     // Off again: the board returns undimmed, no overlay nodes linger.
     app.ui.showChords = false;
     app.render();
@@ -1153,7 +1209,7 @@ describe("the Time app's history (§9)", () => {
     // The drill-down is about practice: no note replay, no economy rate.
     expect(panel.textContent).not.toContain("a private note");
     expect(panel.textContent).not.toContain("per practice minute");
-    expect(panel.textContent).not.toContain("carrier +");
+    expect(panel.textContent).not.toContain("synths +");
     // Back returns to the list; the deleted goal still renders its snapshot.
     deleteGoal(s, goal.id);
     app.openDrill(1);

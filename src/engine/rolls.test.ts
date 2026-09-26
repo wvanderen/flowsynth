@@ -16,7 +16,9 @@ describe("forge roll generation", () => {
     for (const type of types) {
       expect(ROLL_POOL).toContain(type);
     }
-    expect(types).toEqual([ROLL_POOL[0], ROLL_POOL[1], ROLL_POOL[2]]);
+    // Draws without replacement: additive, then spacer (index 1 of the
+    // remaining five), then focus-keyed generator (index 1 of four).
+    expect(types).toEqual(["additive", "spacer", "focusKeyed"]);
   });
 
   it("rolls each candidate's rarity independently", () => {
@@ -25,14 +27,14 @@ describe("forge roll generation", () => {
     expect(offer.candidates.map((c) => c.rarity)).toEqual(["common", "uncommon", "rare"]);
   });
 
-  it("contains every launch module type except the granted Carrier", () => {
+  it("the pool is every launch module type — the spacer ships through rolls only", () => {
     expect(ROLL_POOL).toContain("additive");
     expect(ROLL_POOL).toContain("conditional");
+    expect(ROLL_POOL).toContain("spacer");
     expect(ROLL_POOL).toContain("focusKeyed");
     expect(ROLL_POOL).toContain("infusor");
     expect(ROLL_POOL).toContain("forge");
-    expect(ROLL_POOL).not.toContain("carrier");
-    expect(ROLL_POOL).toHaveLength(5);
+    expect(ROLL_POOL).toHaveLength(6);
   });
 
   it("persists outcomes when the roll is earned, not when it is revealed", () => {

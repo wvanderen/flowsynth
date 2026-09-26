@@ -7,7 +7,6 @@
 // the reserved prestige button beneath.
 import { ARETE_GRADUATIONS, ARETE_HORIZON, accumulatorFill, nextAccumulatorMark } from "../engine/accumulator";
 import { achievementBoostOf } from "../engine/achievements";
-import { BALANCE } from "../engine/constants";
 import { computeRates } from "../engine/economy";
 import type { GameState, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
@@ -35,24 +34,22 @@ function beatReadout(totalEarned: number, rate: number): string {
 }
 
 function chordSummary(snapshot: RateSnapshot): string {
-  const lines = [
-    ...snapshot.namedChords.map((c) => `${c.name} ×${formatNumber(1 + c.bonus)}`),
-    ...(snapshot.pairs.length > 0 ? [`${snapshot.pairs.length} chord pair${snapshot.pairs.length === 1 ? "" : "s"} ×${formatNumber(1 + BALANCE.pairBonus)} each`] : []),
-  ];
-  return lines.length > 0 ? lines.join(" · ") : "no chords yet — adjacent synthesizers one pitch apart chord";
+  const lines = snapshot.namedChords.map((c) =>
+    c.instances > 1 ? `${c.name} ×${formatNumber(1 + c.bonus)} ×${c.instances}` : `${c.name} ×${formatNumber(1 + c.bonus)}`,
+  );
+  return lines.length > 0 ? lines.join(" · ") : "no chords yet — chords are named pitch sets over connected synths";
 }
 
-function termIcon(type: "carrier" | "additive" | "infusor"): string {
+function termIcon(type: "additive" | "infusor"): string {
   return `<svg viewBox="-18 -18 36 36" aria-hidden="true" fill="none" stroke-width="1.6">${moduleIcon(type)}</svg>`;
 }
 
-// The chip's amplitude legs (ADR-0020): one record per leg renders both the
-// equation term and the breakdown row, so a future leg lands in one place.
-// Conditional legs join only once their term is nonzero — the infusor leg
-// appears with the first uplift that reaches a synth.
+// The chip's amplitude legs (ADR-0020 as amended by ADR-0022): one record
+// per leg renders both the equation term and the breakdown row, so a future
+// leg lands in one place. The synths leg is every synthesizer's unified
+// base term; the infusor leg joins only once uplift reaches a synth.
 const AMP_LEGS = [
-  { key: "carrier", icon: "carrier", name: "Carrier", note: "the origin synth's fundamental", always: true },
-  { key: "harmonics", icon: "additive", name: "Harmonics", note: "every other synth on the board", always: true },
+  { key: "synths", icon: "additive", name: "Synths", note: "every synthesizer's base term", always: true },
   { key: "inf", icon: "infusor", name: "Infusors", note: "adjacent uplift on the synths", always: false },
 ] as const;
 
@@ -170,17 +167,15 @@ function updateMonitorLive(app: App, past: boolean, snapshot: RateSnapshot): voi
     if (node && node.textContent !== text) node.textContent = text;
   };
 
-  // The formula chip: (carrier + harmonics [+ infusors]) × chords ×
-  // empowerment × achievements → rate.
-  set("m-carrier", formatNumber(snapshot.carrier));
-  set("m-harmonics", formatNumber(snapshot.harmonics));
+  // The formula chip: (synths [+ infusors]) × chords × empowerment ×
+  // achievements → rate.
+  set("m-synths", formatNumber(snapshot.synths));
   set("m-inf", formatNumber(snapshot.infusors));
   set("m-chi", formatNumber(snapshot.chordMultiplier));
   set("m-emp", formatNumber(snapshot.empowerment));
   set("m-ach", `+${Math.round((snapshot.achievementBoost - 1) * 100)}%`);
   set("m-rate", `${formatNumber(snapshot.rate)} ν/s`);
-  set("b-carrier", `+${formatNumber(snapshot.carrier)} ν/s`);
-  set("b-harmonics", `+${formatNumber(snapshot.harmonics)} ν/s`);
+  set("b-synths", `+${formatNumber(snapshot.synths)} ν/s`);
   set("b-inf", `+${formatNumber(snapshot.infusors)} ν/s`);
   set("b-chords", `×${formatNumber(snapshot.chordMultiplier)}`);
   set("b-chord-note", chordSummary(snapshot));

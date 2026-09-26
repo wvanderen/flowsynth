@@ -3,10 +3,9 @@
 // the category hue, a condensed technical-caps nameplate, the module's
 // signature glyph as the centered centerpiece, and the contribution readout
 // beneath it. Rarity is engraved ring count plus a subtle plate tint (styled
-// from data-rarity in the stylesheet) — never hue, never glow. The Carrier
-// wears white, the sole hue-law exception. Shared by the board, the
-// inventory tiles, the drag ghost, and the Forge candidate tiles, so a
-// module reads identically everywhere it appears.
+// from data-rarity in the stylesheet) — never hue, never glow. Shared by the
+// board, the inventory tiles, the drag ghost, and the Forge candidate
+// tiles, so a module reads identically everywhere it appears.
 import type { ModuleType, Rarity } from "../engine/types";
 import { moduleIcon } from "./icons";
 import { META } from "./meta";
@@ -32,12 +31,12 @@ export function hexApothem(radius: number): number {
 }
 
 // Hue = category: the rail and signature wear the category hue; per-type
-// identity rides the glyph and nameplate. The Carrier maps to its white —
-// the sole exception to the category→hue law.
+// identity rides the glyph and nameplate. The spacer wears its own muted
+// wire hue — its own module category (ADR-0021), never a synthesizer.
 export const HUE_TOKEN_OF: Record<ModuleType, string> = {
-  carrier: "hue-carrier",
   additive: "hue-synthesizer",
   conditional: "hue-synthesizer",
+  spacer: "hue-spacer",
   focusKeyed: "hue-generator",
   infusor: "hue-infusor",
   forge: "hue-forge",
@@ -76,7 +75,7 @@ export interface FaceSpec {
   readout: string;
   // Extra class on the readout (e.g. the charge register on the Forge).
   readoutClass?: string;
-  // Small line under the readout (a synthesizer's pitch).
+  // Small line under the readout (a synthesizer's note name).
   note?: string;
   // Engraved level, top center.
   level?: number;
@@ -90,33 +89,11 @@ export interface FaceSpec {
   // Markup drawn directly on the chassis, under the engraving (the Forge's
   // threshold fill).
   under?: string;
-  // The Carrier's pin: granted at the origin, immovable and unsellable.
-  pinned?: boolean;
 }
-
-// The Carrier's panel-mount hardware (ADR-0016, issue #94): the pinned badge
-// is a bare white lock marking — no housing plate — at the face's top center,
-// right above the engraved level, and three bolt circles mount the chassis at
-// alternating corners, skipping the lock's corner. Exact vertex math is
-// prototype tuning; the stylesheet paints the registers.
-const PIN_BADGE_AT: [number, number] = [0, -48];
-const PIN_BOLT_CORNERS = [0, 2, 4];
-const PIN_BOLT_SEAT = 57.5;
-const PIN_BOLT_RADIUS = 2.4;
 
 export function moduleFace(spec: FaceSpec): string {
   const hue = `var(--${HUE_TOKEN_OF[spec.type]})`;
   const rings = Array.from({ length: RING_COUNT[spec.rarity] }, (_, i) => `<polygon points="${hexPoints(RING_RADII[i]!)}"/>`).join("");
-  // The pinned badge paints after the chassis (a marking under the plate
-  // would never read), wearing the carrier's white — the neutral register.
-  // The marking is a bare padlock: shackle arc over a rounded body.
-  const pin = spec.pinned
-    ? `<g data-key="pin" class="module-pin" transform="translate(${PIN_BADGE_AT[0]},${PIN_BADGE_AT[1]})"><title>The Carrier — granted at the origin. Pinned: it never moves and never leaves the board.</title><path d="M-2.7-.5v-2.4a2.7 2.7 0 0 1 5.4 0v2.4"/><rect x="-4.4" y="-0.5" width="8.8" height="6.8" rx="1.5"/></g>
-    <g data-key="bolts" class="module-bolts">${PIN_BOLT_CORNERS.map((corner) => {
-      const [x, y] = hexCorner(PIN_BOLT_SEAT, corner);
-      return `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${PIN_BOLT_RADIUS}"/>`;
-    }).join("")}</g>`
-    : "";
   // The charge light (§8, #41): the chassis fill takes the charge hue at an
   // inline fill-opacity, and the rail takes an inline stroke-opacity — both
   // scaling continuously with the glow the module's received strength maps
@@ -127,7 +104,6 @@ export function moduleFace(spec: FaceSpec): string {
   return `<polygon data-key="hex" class="hex${spec.hexClass ? ` ${spec.hexClass}` : ""}" points="${hexPoints(HEX_RADIUS)}"${hexStyle}/>${spec.under ?? ""}
     <g data-key="rings" class="face-rings">${rings}</g>
     <path data-key="rail" class="face-rail" d="M-39 -19V19" stroke="${hue}"${railStyle}/>
-    ${pin}
     ${spec.level !== undefined ? `<text data-key="level" y="${FACE_LEVEL_Y}" text-anchor="middle" class="face-level">LV ${spec.level}</text>` : ""}
     <text data-key="name" y="${FACE_NAME_Y}" text-anchor="middle" class="face-name">${META[spec.type].short.toUpperCase()}</text>
     <g data-key="signature" class="face-signature" transform="scale(${FACE_GLYPH_SCALE})" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>
