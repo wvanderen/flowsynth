@@ -141,6 +141,7 @@ composite = (synths + infusor uplift) × Π chord terms
 | Arrange action | dock button | removed everywhere; dragging is the move |
 | Canvas legend | encoding legend | encodings live on the surfaces that use them |
 | Module panels as a separate upgrade surface | panel-based upgrades (ADR-0018) | the expanded face carries the Upgrade button |
+| Inspector sidebar | module panel + dissolved overview beside the board | retired entirely (ADR-0026); the expanded face is the module's only surface — Upgrade and Combine ride the bloom, chords answer in the reserved readout |
 | Idle tutorial helptext | ambient instruction line | deleted; opening arc + armed hints only |
 | `welcomeAcked` | save flag for the Carrier's upgrade CTA | retired; deleted by the v6 loader |
 | Formula legs `carrier` + `harmonics` | split breakdown legs | one `synths` leg (ADR-0022) |

@@ -33,7 +33,6 @@ function boot(channels?: SignalChannels, dev = false): App {
     "board-tools",
     "thumb-bar",
     "grid",
-    "inspector",
     "status",
     "modal",
     "modal-content",
@@ -714,15 +713,32 @@ describe("the expanded face (§5)", () => {
     endSession(app.state);
   });
 
-  it("module panels no longer offer upgrades — the expanded face is the upgrade surface", () => {
+  it("the inspector is retired — the expanded face is the module's only surface", () => {
     app.render();
+    expect(document.getElementById("inspector")).toBeNull();
+    // Selecting a module opens the bloom with the Upgrade action; no panel
+    // exists to duplicate it.
     clickCell(0,0);
+    expect(bloom().hidden).toBe(false);
+    expect(bloom().querySelector("#bloom-upgrade")).not.toBeNull();
+  });
+
+  it("Combine rides the expanded face when an identical pair exists", () => {
+    give(app.state, "additive", hex(1, 0)); // G4 — same type, same rarity
     app.render();
-    const panel = document.getElementById("inspector")!;
-    expect(panel.querySelector("#upgrade-module")).toBeNull();
-    expect(panel.textContent).not.toContain("Upgrade");
-    // The panel keeps its information role.
-    expect(panel.textContent).toContain("Additive Synth");
+    clickCell(0, 0);
+    const combine = bloom().querySelector<HTMLButtonElement>("#bloom-combine")!;
+    expect(combine).not.toBeNull();
+    expect(combine.textContent).toContain("common pair");
+    // Combining merges the pair: the selected copy carries the merged
+    // rarity, its twin is consumed.
+    combine.click();
+    expect(app.state.modules).toHaveLength(1);
+    expect(app.state.modules[0]!.id).toBe("m1");
+    expect(app.state.modules[0]!.rarity).toBe("uncommon");
+    // The bloom stands on the merged copy; no second common pair, no button.
+    expect(bloom().hidden).toBe(false);
+    expect(bloom().querySelector("#bloom-combine")).toBeNull();
   });
 });
 

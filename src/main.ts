@@ -7,7 +7,6 @@ for (const id of [
   "board-tools",
   "thumb-bar",
   "grid",
-  "inspector",
   "status",
   "modal",
   "modal-content",

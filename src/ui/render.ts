@@ -1,11 +1,11 @@
-import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, deployed, emittedStrength, levelCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
-import { deployedAt } from "../engine/economy";
+import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, emittedStrength, levelCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
+import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
 import { BALANCE, CATEGORY_OF, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
-import { cellNoteOf, noteNameOf, octaveRowOf, positionInRange } from "../engine/lattice";
+import { cellNoteOf, positionInRange } from "../engine/lattice";
 import { appActive, appLockNote, FOCUS_APPS, type FocusApp } from "../engine/apps";
 import { isInFlowNote } from "../engine/notes";
 import { activeHabit } from "../engine/habits";
@@ -75,16 +75,6 @@ function stat(label: string, value: string): string {
   return `<div class="stat-row"><span>${label}</span><span class="mono">${value}</span></div>`;
 }
 
-function statLive(id: string, label: string, value: string): string {
-  return `<div class="stat-row"><span>${label}</span><span class="mono" data-live="${id}">${value}</span></div>`;
-}
-
-// The focus-keyed generator's remaining window (§2.3), in the same
-// remaining-duration vocabulary the generator spends it in.
-function chargeWindowText(state: GameState): string {
-  return formatDuration(Math.max(0, state.chargeWindow));
-}
-
 export function render(app: App): void {
   renderConsoleSession(app);
   renderConsoleApps(app);
@@ -96,7 +86,6 @@ export function render(app: App): void {
   renderZoomCluster(app);
   renderAretePill(app);
   renderInfoStrip(app);
-  renderInspector(app);
   renderModal(app);
   renderDev(app);
 }
@@ -1278,10 +1267,21 @@ function renderBloom(app: App): void {
   const benefit = lines.benefit;
   const cost = levelCost(module.level);
   const affordable = wholeNous(state) >= cost;
+  // Combine rides the expanded face — the module's action surface: two
+  // copies of one type and rarity merge into a single stronger copy (the
+  // panel this button once lived on is retired).
+  const partner = state.modules.find((m) => m.id !== module.id && m.type === module.type && m.rarity === module.rarity);
+  const combinable = state.mode === "upgrade" && partner !== undefined && module.rarity !== "rare";
+  const combineButton = combinable
+    ? `<button class="bloom-combine" id="bloom-combine" title="Combine with its ${RARITY_LABEL[module.rarity]} twin — one stronger copy, the lower copy's upgrades refunded">
+        <span class="bloom-combine-title">Combine</span>
+        <small class="bloom-combine-note">${RARITY_LABEL[module.rarity]} pair</small>
+      </button>`
+    : "";
   // The Forge's face readout moves per tick; its face tracks it.
   const forgeTick = module.type === "forge" ? Math.floor(state.forge.progress) : 0;
   const shape = phone ? "sheet" : "pop";
-  const key = JSON.stringify([shape, module.id, module.level, module.rarity, benefit, lines.contribution, affordable, forgeTick]);
+  const key = JSON.stringify([shape, module.id, module.level, module.rarity, benefit, lines.contribution, affordable, forgeTick, combinable]);
   // One frame read for both the pop question and the positioning below.
   const svg = document.getElementById("grid");
   const viewBox = (svg?.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
@@ -1318,8 +1318,10 @@ function renderBloom(app: App): void {
           <small class="bloom-sheet-contrib mono">${lines.contribution}</small>
         </div>
         ${upgradeButton}
+        ${combineButton}
       </div>`;
       byId("bloom-upgrade")?.addEventListener("click", () => app.upgrade(module.id));
+      byId("bloom-combine")?.addEventListener("click", () => app.combinePair(module.id));
       host.hidden = false;
       return;
     }
@@ -1332,6 +1334,7 @@ function renderBloom(app: App): void {
       <div class="bloom-readouts">
         ${inline ? `<p class="bloom-contribution mono">${lines.contribution}</p>` : ""}
         ${upgradeButton}
+        ${combineButton}
       </div>`;
     if (inline) {
       host.innerHTML = readouts;
@@ -1361,6 +1364,7 @@ function renderBloom(app: App): void {
       if (faceNode) bindPointerDrag(app, faceNode, module.id);
     }
     byId("bloom-upgrade")?.addEventListener("click", () => app.upgrade(module.id));
+    byId("bloom-combine")?.addEventListener("click", () => app.combinePair(module.id));
   }
   if (phone) {
     host.hidden = false;
@@ -1421,188 +1425,6 @@ function renderInventoryTray(app: App): void {
     button.addEventListener("click", () => app.beginPlacing(id));
     bindPointerDrag(app, button, id);
   });
-}
-
-/* ── Inspector ─────────────────────────────────────── */
-
-function renderInspector(app: App): void {
-  const host = byId("inspector");
-  if (!host) return;
-  const { state, ui } = app;
-  const module = state.modules.find((m) => m.id === ui.selected);
-  // Rebuild only when the panel's structure changes; per-tick values update
-  // in place below so buttons and scroll position survive flow ticks.
-  // Focus apps render in console popovers, never here.
-  const key = JSON.stringify([
-    state.mode,
-    ui.selected,
-    ui.placing,
-    state.bankedRolls.length,
-    module?.level ?? null,
-    module?.rarity ?? null,
-    // Module moves (drag, place, return, combine) must refresh the panel's
-    // read even when the selection itself never changes.
-    state.modules.map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}:${m.pos ? `${m.pos.q},${m.pos.r}` : "-"}`).join("|"),
-  ]);
-  if (host.dataset.renderKey !== key) {
-    host.dataset.renderKey = key;
-    if (module) {
-      renderModulePanel(app, host, module);
-    } else {
-      renderDissolvedOverview(host);
-    }
-  }
-  updateInspectorLive(app, host);
-}
-
-// Values that move during flow without rebuilding the panel.
-function updateInspectorLive(app: App, host: HTMLElement): void {
-  const { state } = app;
-  liveText(host, "forge", `${formatNumber(Math.max(0, state.forge.progress))} / ${formatNumber(forgeThreshold(state.forge.earned))}`);
-  liveText(host, "elapsed", state.session ? formatClock(state.session.elapsed) : "—");
-  liveText(host, "window", chargeWindowText(state));
-}
-
-// The upgrade-mode countdown for a price on this board: phrased against the
-// board's projected next-session rate (the charged preview, whatever the
-// current mode); null (hidden) when affordable or rateless.
-function upgradeCountdown(app: App, cost: number): string | null {
-  return practiceCountdown(cost, wholeNous(app.state), computeRates(app.state, true).rate);
-}
-
-// The grid overview dissolved into the status monitor (issue #38): the
-// expansion meter and cell tokens retired, banked rolls moved to the Forge
-// surface, charge info to board and module surfaces, counts to the views
-// that describe them, and the static formula explainer to the monitor's
-// formula chip. When nothing is selected the inspector only points.
-function renderDissolvedOverview(host: HTMLElement): void {
-  host.innerHTML = `
-    <div class="inspector-empty">
-      <div class="eyebrow">INSPECTOR</div>
-      <p class="small muted" style="margin-top:10px">Select a module to inspect or tune it.</p>
-    </div>`;
-}
-
-function effectDescription(module: ModuleInstance): string {
-  switch (module.type) {
-    case "additive":
-      return "One unified synth term: base rate at its cell's note, scaled by level and rarity. Chords are named pitch sets recognized over connected synthesizers — any voicing, any octave — and every instance multiplies the whole composite.";
-    case "conditional":
-      return "A synth term plus a bonus for every chord instance it belongs to — a doubled cluster counts each complete voice-set it sings in.";
-    case "spacer":
-      return "Silent wire: it never sounds, never joins a pitch set, and produces nothing — it conducts chord adjacency through chains of wired cells, so bridged chords match by pitch content across the connection.";
-    case "focusKeyed":
-      return "The generator (ADR-0018: the launch generator is focus-keyed). It never drips live: every session end banks a charge window — a tenth of that session's live practice time — and the generator spends it as output during the next session's first minutes. Charge is a reserve you carry between sessions.";
-    case "infusor":
-      return "Boosts production contributions of adjacent modules. Receives charge as continuous empowerment.";
-    case "forge":
-      return "The chargeable launch module: banks received charge toward a threshold and mints a roll at each crossing.";
-    default:
-      return "A reserved module.";
-  }
-}
-
-function nominalEffect(module: ModuleInstance, charged: boolean): { text: string; value: number } {
-  const power = modulePower(module);
-  const factor = charged ? chargedFactor(1) : 1;
-  switch (module.type) {
-    case "additive":
-      return { text: `+${formatNumber(BALANCE.synthRate * power * factor)} ν/s`, value: BALANCE.synthRate * power * factor };
-    case "conditional":
-      return { text: `+${formatNumber(BALANCE.synthRate * power * factor)} ν/s · +${formatNumber(100 * BALANCE.conditionalChordBonus)}% per chord instance`, value: BALANCE.synthRate * power * factor };
-    case "spacer":
-      return { text: "silent — conducts chords, produces nothing", value: 0 };
-    case "focusKeyed":
-      return { text: `${formatNumber(power)} charge strength while its charge window lasts`, value: power };
-    case "infusor":
-      return { text: `+${formatNumber(100 * BALANCE.infusorBonus * power * factor)}% to adjacent`, value: BALANCE.infusorBonus * power * factor };
-    case "forge":
-      return { text: `${formatNumber(power)} progress/s at strength 1`, value: power };
-    default:
-      return { text: "—", value: 0 };
-  }
-}
-
-function renderModulePanel(app: App, host: HTMLElement, module: ModuleInstance): void {
-  const { state } = app;
-  const upgrade = state.mode === "upgrade";
-  const meta = META[module.type];
-  const preview = computeRates(state, true);
-  const contribution = module.pos !== null ? preview.contributions.get(module.id) : null;
-  const deployedHere = module.pos !== null;
-  const chargeStrength = preview.chargeStrength.get(module.id) ?? 0;
-  const effect =
-    deployedHere && contribution && contribution.value !== 0
-      ? { text: effectTextFor(module, contribution.value, chargeStrength), value: contribution.value }
-      : nominalEffect(module, upgrade);
-  const partner = state.modules.find((m) => m.id !== module.id && m.type === module.type && m.rarity === module.rarity);
-
-  const focus = `<section class="focus-controls">
-    <span class="eyebrow">${upgrade ? "NEXT SESSION PREVIEW" : "LIVE GRID"}</span>
-    ${statLive("elapsed", "Session", state.session ? formatClock(state.session.elapsed) : "—")}
-  </section>`;
-
-  let chargeStats = "";
-  if (module.type === "forge") {
-    chargeStats = `
-      ${statLive("forge", "Shared progress", `${formatNumber(Math.max(0, state.forge.progress))} / ${formatNumber(forgeThreshold(state.forge.earned))}`)}
-      ${stat("Rolls earned", String(state.forge.earned))}
-      ${stat("Charge source", deployedHere && chargeStrength > 0 ? "adjacent generator" : "no adjacent generator")}
-      ${stat("Progress rate", `${formatNumber(contribution?.value ?? 0)} /s while charged`)}`;
-  } else if (isSource(module)) {
-    chargeStats = `
-      ${stat("Output strength", `${formatNumber(modulePower(module))} per second of flow`)}
-      ${statLive("window", "Charge window", chargeWindowText(state))}
-      ${stat("Receivers", deployedHere ? String(deployed(state).filter((m) => m.id !== module.id && m.pos !== null && module.pos !== null && adjacent(m.pos, module.pos)).length) : "—")}`;
-  } else if (module.type === "infusor") {
-    chargeStats = `
-      ${stat("Bonus to adjacent", `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(chargeStrength))}%`)}
-      ${stat("Charge", chargeStrength > 0 ? `strength ${formatNumber(chargeStrength)}` : "none")}`;
-  } else if (module.type === "spacer") {
-    chargeStats = `
-      ${stat("Note", module.pos !== null ? cellNoteOf(module.pos) : "—")}
-      ${stat("Conducts", "chord adjacency through wired-cell chains")}
-      ${stat("Charge", "never — the wire is silent")}`;
-  } else {
-    const named = preview.namedChords.filter((c) => c.moduleIds.includes(module.id));
-    const chordSummary =
-      named.length > 0
-        ? named.map((c) => (c.instances > 1 ? `${c.name} ×${c.instances}` : c.name)).join(" + ")
-        : "chordless";
-    const pitch = contribution?.pitch ?? null;
-    const row = module.pos !== null ? octaveRowOf(module.pos) : null;
-    chargeStats = `
-      ${stat("Note", pitch !== null && row !== null ? `${noteNameOf(pitch)} — octave row ${row >= 0 ? "+" : ""}${row}` : "—")}
-      ${stat("Chords", chordSummary)}
-      ${stat("Charge", chargeStrength > 0 ? `strength ${formatNumber(chargeStrength)} (×${formatNumber(chargedFactor(chargeStrength))})` : "none")}`;
-  }
-
-  // The module panel is an information surface (§5): upgrades live on the
-  // expanded face, so no upgrade CTA appears here — in either mode.
-  host.innerHTML = `
-    <div class="module-heading">
-      <button class="quiet small" id="back-overview">← Back</button>
-      <h1>${meta.name}</h1>
-      <span class="rarity-chip ${module.rarity}">${RARITY_LABEL[module.rarity]}</span>
-    </div>
-    ${focus}
-    <section>
-      <div class="eyebrow">MODULE POWER</div>
-      <div class="level-heading">Level <strong>${module.level}</strong><span class="level-effect">${effect.text}</span></div>
-      <p class="small muted" style="margin:6px 0 0">${effectDescription(module)}</p>
-      ${!upgrade ? `<p class="small muted">Upgrades happen between sessions.</p>` : ""}
-      ${upgrade && partner && module.rarity !== "rare"
-        ? `<button id="combine-pair">Combine with its ${RARITY_LABEL[module.rarity]} pair</button>`
-        : ""}
-    </section>
-    <section>
-      <div class="eyebrow">${upgrade ? "NEXT SESSION PREVIEW" : "LIVE GRID"}</div>
-      ${stat("Position", module.pos ? `${cellNoteOf(module.pos)} · ${module.pos.q}, ${module.pos.r}` : "inventory")}
-      ${chargeStats}
-    </section>`;
-
-  byId("back-overview")?.addEventListener("click", () => app.select(null));
-  byId("combine-pair")?.addEventListener("click", () => app.combinePair(module.id));
 }
 
 /* ── Focus-app panels (popover bodies, ADR-0012) ───── */
@@ -2088,22 +1910,6 @@ function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function effectTextFor(module: ModuleInstance, value: number, strength = 0): string {
-  switch (module.type) {
-    case "additive":
-    case "conditional":
-      return `+${formatNumber(value)} ν/s`;
-    case "spacer":
-      return "silent — conducts chords";
-    case "focusKeyed":
-      return `${formatNumber(modulePower(module))} strength`;
-    case "infusor":
-      return `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(strength))}% to adjacent`;
-    default:
-      return `${formatNumber(value)} progress/s`;
-  }
-}
-
 /* ── Grid & inventory panel ────────────────────────── */
 
 // A canvas-style face tile — the same readout panel the board renders, with
@@ -2290,6 +2096,13 @@ function renderSettingsModal(app: App, content: HTMLElement): void {
     byId(`settings-${kind}`)?.addEventListener("click", () => app.openModal(kind));
   }
   wireClose(app);
+}
+
+// The upgrade-mode countdown for a price on this board: phrased against the
+// board's projected next-session rate (the charged preview, whatever the
+// current mode); null (hidden) when affordable or rateless.
+function upgradeCountdown(app: App, cost: number): string | null {
+  return practiceCountdown(cost, wholeNous(app.state), computeRates(app.state, true).rate);
 }
 
 function renderCatalogModal(app: App, content: HTMLElement): void {

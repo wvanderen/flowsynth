@@ -53,8 +53,8 @@ The octave row the opening board begins on; rows are finite, generous, and symme
 The one-time premium paid on the first purchase into each new octave row. It taxes acquisition only — moving owned cells between rows is free — and does not advance the cell purchase scaler.
 
 **Expanded face**:
-The module's own face opened by a click in upgrade mode — the compact face's UI enlarged, adding only what the face doesn't say: the production contribution and the Upgrade button with its benefit. Opens only on click, never for a drag or a drop, and a drop leaves it closed; closes on outside click, Esc, or selecting elsewhere. Module panels are information surfaces, never an upgrade surface.
-_Avoid_: Move button, Return button, module panel (as an upgrade surface)
+The module's own face opened by a click in upgrade mode — the compact face's UI enlarged, adding only what the face doesn't say: the production contribution, the Upgrade button with its benefit, and the Combine button when an identical pair exists. It is the module's only surface (ADR-0026): the inspector sidebar and module panels are retired, and no second panel duplicates what the board already says.
+_Avoid_: Move button, Return button, module panel, inspector sidebar
 
 **Bloom**:
 The expanded face's plate — a fixed regular hexagon nested onto the selected module (ADR-0024), presenting below, mirrored, only when the frame's top leaves no room. It pops only when it would actually enlarge the module; past that, the upgrade affordances ride the closed face as a floating card. On portrait phone it presents as a bottom sheet over the board's lower edge.
