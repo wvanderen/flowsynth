@@ -346,12 +346,15 @@ export interface GameState {
 // cluster sings the pattern through (doubled voices stack; disjoint
 // same-chord clusters are separate entries), and each instance multiplies
 // the composite by the same bonus. `moduleIds` carries one representative
-// voice set for rendering.
+// voice set for rendering; `root` is the match's root pitch class — the
+// (name, root) pair is a chord's identity across board changes (the
+// would-form preview diffs on it).
 export interface NamedChordTerm {
   name: string;
   bonus: number;
   instances: number;
   moduleIds: string[];
+  root: number;
 }
 
 export interface Contribution {

@@ -20,6 +20,7 @@ const chord = (name: string, moduleIds: string[], instances = 1): NamedChordTerm
   bonus: 0.15,
   instances,
   moduleIds,
+  root: 0,
 });
 
 const POS: Record<string, Hex> = {

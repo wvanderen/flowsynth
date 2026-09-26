@@ -89,7 +89,23 @@ export interface FaceSpec {
   // Markup drawn directly on the chassis, under the engraving (the Forge's
   // threshold fill).
   under?: string;
+  // The expanded face's layout (§5): the same vocabulary — chassis, rings,
+  // rail, level, name, signature, readout, note — re-proportioned for the
+  // bloom hexagon. The engraving recenters over the full-width band and the
+  // cell note drops to the lower taper as a footnote, making room for the
+  // Upgrade button between readout and taper.
+  variant?: "bloom";
 }
+
+// Engraving positions per variant (y in face units; the chassis spans
+// ±61). The compact face is the board's own; the bloom re-centers its
+// content over the hexagon's full-width band with an even vertical rhythm
+// — title block, signature, production line, button band, and the cell
+// note footnoted into the taper — each step a similar breath apart.
+const FACE_LAYOUT = {
+  compact: { level: FACE_LEVEL_Y, name: FACE_NAME_Y, glyph: 0, glyphScale: FACE_GLYPH_SCALE, readout: FACE_READOUT_Y, note: FACE_NOTE_Y },
+  bloom: { level: -39, name: -26, glyph: -7, glyphScale: 0.7, readout: 11, note: 44 },
+} as const;
 
 export function moduleFace(spec: FaceSpec): string {
   const hue = `var(--${HUE_TOKEN_OF[spec.type]})`;
@@ -101,12 +117,13 @@ export function moduleFace(spec: FaceSpec): string {
   const glow = spec.chargeGlow ?? 0;
   const hexStyle = glow > 0 ? ` style="fill-opacity:${(CHARGED_FILL_MIN + CHARGED_FILL_SPAN * glow).toFixed(3)}"` : "";
   const railStyle = glow > 0 ? ` style="stroke-opacity:${(RAIL_CHARGED_FLOOR + RAIL_CHARGED_SPAN * glow).toFixed(3)}"` : "";
+  const layout = FACE_LAYOUT[spec.variant ?? "compact"];
   return `<polygon data-key="hex" class="hex${spec.hexClass ? ` ${spec.hexClass}` : ""}" points="${hexPoints(HEX_RADIUS)}"${hexStyle}/>${spec.under ?? ""}
     <g data-key="rings" class="face-rings">${rings}</g>
     <path data-key="rail" class="face-rail" d="M-39 -19V19" stroke="${hue}"${railStyle}/>
-    ${spec.level !== undefined ? `<text data-key="level" y="${FACE_LEVEL_Y}" text-anchor="middle" class="face-level">LV ${spec.level}</text>` : ""}
-    <text data-key="name" y="${FACE_NAME_Y}" text-anchor="middle" class="face-name">${META[spec.type].short.toUpperCase()}</text>
-    <g data-key="signature" class="face-signature" transform="scale(${FACE_GLYPH_SCALE})" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>
-    <text data-key="readout" x="0" y="${FACE_READOUT_Y}" text-anchor="middle" class="face-readout${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>
-    ${spec.note ? `<text data-key="note" x="0" y="${FACE_NOTE_Y}" text-anchor="middle" class="face-note">${spec.note}</text>` : ""}`;
+    ${spec.level !== undefined ? `<text data-key="level" y="${layout.level}" text-anchor="middle" class="face-level">LV ${spec.level}</text>` : ""}
+    <text data-key="name" y="${layout.name}" text-anchor="middle" class="face-name">${META[spec.type].short.toUpperCase()}</text>
+    <g data-key="signature" class="face-signature" transform="translate(0 ${layout.glyph}) scale(${layout.glyphScale})" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>
+    <text data-key="readout" x="0" y="${layout.readout}" text-anchor="middle" class="face-readout${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>
+    ${spec.note ? `<text data-key="note" x="0" y="${layout.note}" text-anchor="middle" class="face-note">${spec.note}</text>` : ""}`;
 }

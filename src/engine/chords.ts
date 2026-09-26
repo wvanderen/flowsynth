@@ -1,7 +1,7 @@
-import { NAMED_CHORDS } from "./constants";
+import { CATEGORY_OF, NAMED_CHORDS } from "./constants";
 import { adjacent } from "./hex";
 import { pitchClassOf } from "./lattice";
-import type { DeployedModule, NamedChordTerm } from "./types";
+import type { DeployedModule, GameState, Hex, ModuleInstance, NamedChordTerm } from "./types";
 
 // The chord model (ADR-0021/0022): chords are register-free pitch sets —
 // a named pattern is recognized by pitch content over a connected cluster
@@ -83,7 +83,7 @@ function matchRoots(cluster: DeployedModule[]): RootMatch[] {
       // shown chordless while its instances multiply the rate.
       const moduleIds = groups.flatMap((group) => group.map((m) => m.id));
       matches.push({
-        term: { name: def.name, bonus: def.bonus, instances, moduleIds },
+        term: { name: def.name, bonus: def.bonus, instances, moduleIds, root },
         groups,
         multiplicity,
       });
@@ -130,4 +130,72 @@ export function analyzeChords(synths: DeployedModule[], spacers: DeployedModule[
   }
   const multiplier = namedChords.reduce((acc, chord) => acc * (1 + chord.bonus) ** chord.instances, 1);
   return { namedChords, multiplier, participation };
+}
+
+// The would-form pass (board-redesign spec §5–§6): what the board would
+// carry after the drop. `chords` is the hypothetical board's named-chord
+// terms; `positions` maps every module the drop moves to its would-be cell
+// — the drop lands, and an occupied target swaps. The drop may come from
+// the board (the occupant takes the mover's cell) or from the tray (the
+// occupant leaves the board). A drop of identical synthesizers onto each
+// other changes nothing here — pitch lives in the cell (§8), so a swap can
+// never break a chord. Callers diff against the live terms (newChordTerms)
+// and draw only the newcomers; what breaks is expressed by what disappears,
+// never previewed.
+export interface WouldFormPreview {
+  chords: NamedChordTerm[];
+  positions: ReadonlyMap<string, Hex>;
+}
+
+export function wouldFormPreview(state: GameState, id: string, target: Hex): WouldFormPreview {
+  const dragged = state.modules.find((m) => m.id === id);
+  if (!dragged) return { chords: [], positions: new Map() };
+  const positions = new Map<string, Hex>([[id, target]]);
+  const hypothetical: ModuleInstance[] = [];
+  for (const module of state.modules) {
+    if (module.id === id) {
+      hypothetical.push({ ...module, pos: target });
+      continue;
+    }
+    if (module.pos === null) continue;
+    if (module.pos.q === target.q && module.pos.r === target.r) {
+      // The occupant swaps out — to the mover's cell when the drop came
+      // from the board, off the board when it came from the tray.
+      hypothetical.push(
+        dragged.pos ? { ...module, pos: dragged.pos } : { ...module, pos: null },
+      );
+      if (dragged.pos) positions.set(module.id, dragged.pos);
+      continue;
+    }
+    hypothetical.push(module);
+  }
+  const synths = hypothetical.filter((m): m is DeployedModule => m.pos !== null && CATEGORY_OF[m.type] === "synthesizer");
+  const spacers = hypothetical.filter((m): m is DeployedModule => m.pos !== null && m.type === "spacer");
+  return { chords: analyzeChords(synths, spacers).namedChords, positions };
+}
+
+// The newcomers between two chord-term lists — the would-form ghosts. A
+// chord identifies by pattern and root, and its instances count across
+// terms — doubled voices and disjoint clusters stack alike. An identity
+// would newly form when the drop's board sings more instances of it than
+// the live one does: a doubled Fifth (×1 → ×2) is a chord forming, so it
+// previews. An equal or smaller count is at best a re-voicing of the same
+// chord (a swapped identical synth) and at worst a break — neither
+// previews, because what breaks is expressed by what disappears, never
+// previewed.
+export function newChordTerms(current: readonly NamedChordTerm[], next: readonly NamedChordTerm[]): NamedChordTerm[] {
+  const instanceTotals = (terms: readonly NamedChordTerm[]): Map<string, number> => {
+    const totals = new Map<string, number>();
+    for (const chord of terms) {
+      const key = `${chord.name}|${chord.root}`;
+      totals.set(key, (totals.get(key) ?? 0) + chord.instances);
+    }
+    return totals;
+  };
+  const live = instanceTotals(current);
+  const would = instanceTotals(next);
+  return next.filter((chord) => {
+    const key = `${chord.name}|${chord.root}`;
+    return (would.get(key) ?? 0) > (live.get(key) ?? 0);
+  });
 }

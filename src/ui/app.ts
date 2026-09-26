@@ -12,7 +12,6 @@ import {
   pauseSession,
   placeModule,
   recordSummaryReflection,
-  reshapeCells,
   resumeSession,
   returnModule,
   startSession,
@@ -20,7 +19,7 @@ import {
   type ActionResult,
 } from "../engine/actions";
 import { syncArete } from "../engine/accumulator";
-import { adjacent, hexKey, neighbors, sameHex } from "../engine/hex";
+import { neighbors, sameHex } from "../engine/hex";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
 import { formatClock } from "../engine/clock";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
@@ -80,8 +79,9 @@ export interface UiState {
   // The focus app whose console popover is open, if any (ADR-0012).
   app: FocusApp | null;
   placing: string | null;
-  managing: boolean;
-  reshape: { adds: Hex[]; removes: Hex[] } | null;
+  // The live drop preview (§5–§6): the module a drag or armed placement is
+  // pointing at, and the cell it hovers. Null whenever nothing hovers.
+  dropHover: { moduleId: string; pos: Hex } | null;
   // Cell purchase (ADR-0013): armed from the catalog, resolved by clicking a
   // frontier hex. The buy only lands when a frontier cell is clicked.
   buyingCell: boolean;
@@ -157,8 +157,7 @@ export class App {
     selected: null,
     app: null,
     placing: null,
-    managing: false,
-    reshape: null,
+    dropHover: null,
     buyingCell: false,
     modal: null,
     importText: "",
@@ -205,13 +204,20 @@ export class App {
   // Set when the stored save was rejected (e.g. the ADR-0017 v5 clean cut):
   // the message must survive the constructor's greeting.
   private loadNotice: string | null = null;
+  // The expanded face's outside-click ledger (§5): one one-shot token
+  // count with two writers. The click that opens the bloom bubbles to the
+  // document after select() has dropped a token, and clicks inside the
+  // bloom — the Upgrade button included, whose re-render detaches it before
+  // the document listener reads anything — are captured on the bloom host,
+  // the one node no re-render replaces. The document-level closer consumes
+  // one token per click instead of closing what the click opened or stands
+  // in; a click with no token is outside, and dismisses.
+  private bloomClickTokens = 0;
+  // The module a pointer drag is carrying, if any — pointerleave must not
+  // clear a drag's hover preview just because the ghost crosses a cell
+  // boundary. Ephemeral: lives exactly as long as one drag gesture.
+  dragging: string | null = null;
   private els: Record<string, HTMLElement>;
-
-  // Management mode counts only while the grid is unlocked: entering flow or
-  // importing a save clears the flag, but stale values must never linger.
-  get managing(): boolean {
-    return this.ui.managing && this.state.mode === "upgrade";
-  }
 
   constructor(els: Record<string, HTMLElement>, dev: boolean, channels: SignalChannels = browserChannels) {
     this.els = els;
@@ -224,8 +230,8 @@ export class App {
       this.state = createInitialState();
     }
     rollGoalOccurrences(this.state, Date.now());
+    this.ensureBoardOverlays();
     this.bindGlobalEvents();
-    document.getElementById("manage-banner-done")?.addEventListener("click", () => this.stopManaging());
     document.getElementById("buy-banner-cancel")?.addEventListener("click", () => this.cancelCellPurchase());
     document.getElementById("console-settings")?.addEventListener("click", () => this.openModal("settings"));
     this.greet();
@@ -245,6 +251,28 @@ export class App {
       return parsed;
     } catch {
       return null;
+    }
+  }
+
+  // The board-surface overlays (§5): the expanded-face bloom and the
+  // inventory tray live over the board's own space, so their hosts are
+  // created once here — the bloom's outside-click ledger binds against a
+  // node that never moves, and no render ever has to bootstrap one.
+  private ensureBoardOverlays(): void {
+    const space = document.querySelector(".board-space");
+    if (!space) return;
+    if (!document.getElementById("module-bloom")) {
+      const bloom = document.createElement("div");
+      bloom.id = "module-bloom";
+      bloom.className = "module-bloom";
+      bloom.hidden = true;
+      space.append(bloom);
+    }
+    if (!document.getElementById("inventory-zone")) {
+      const tray = document.createElement("div");
+      tray.id = "inventory-zone";
+      tray.className = "inventory-tray";
+      space.append(tray);
     }
   }
 
@@ -275,6 +303,14 @@ export class App {
     // The report fires at this return when the pool is outstanding, and
     // re-presents, recalculated, at each next return until settled (§1).
     if (poolOutstanding(this.state)) this.ui.modal = "honesty";
+  }
+
+  // Whether this instance's board is still the document's board: document-
+  // level listeners outlive the DOM they were bound in (a re-boot replaces
+  // the body), and a stale instance must never act on — or re-render — a
+  // newer instance's board.
+  private ownsBoard(): boolean {
+    return this.els["grid"]?.isConnected === true;
   }
 
   // The boundary clock's baseline: wall moment and dual-clock drift move
@@ -335,8 +371,7 @@ export class App {
     this.ui.selected = null;
     this.ui.app = null;
     this.ui.placing = null;
-    this.ui.managing = false;
-    this.ui.reshape = null;
+    this.ui.dropHover = null;
     this.ui.buyingCell = false;
   }
 
@@ -395,7 +430,7 @@ export class App {
     } else if (this.state.mode === "flow") {
       this.say("Flow is live.");
     } else {
-      this.say("Ready. Arrange, upgrade, enter flow.");
+      this.say("Ready. Drag, upgrade, enter flow.");
     }
   }
 
@@ -424,7 +459,12 @@ export class App {
     // throttled clock catches up here with presence unchanged.
     window.addEventListener("focus", () => this.processReturn(Date.now()));
     window.addEventListener("beforeunload", () => this.save());
-    window.setInterval(() => this.tick(), 100);
+    // The tick timer can outlive its document (a discarded environment, a
+    // torn-down test): a dead document is simply not ours to tick.
+    window.setInterval(() => {
+      if (typeof document === "undefined") return;
+      this.tick();
+    }, 100);
     // A popover is light furniture: clicking anywhere outside the console's
     // app section dismisses it. The board never dims beneath it (ADR-0012).
     // The dismissal intent is captured on the section itself — the one node
@@ -441,6 +481,26 @@ export class App {
       if (this.ui.app === null || inside) return;
       this.closeApp();
     });
+    // The expanded face closes on outside click (§5): the bloom host's
+    // capture-phase click drops a token (see the ledger above), and the
+    // document-level closer consumes tokens before dismissing anything.
+    document.getElementById("module-bloom")?.addEventListener("click", () => {
+      this.bloomClickTokens++;
+    }, { capture: true });
+    document.addEventListener("click", () => {
+      if (!this.ownsBoard()) return;
+      if (this.bloomClickTokens > 0) {
+        this.bloomClickTokens--;
+        return;
+      }
+      // A tray selection (an inventory module) wears no bloom: outside
+      // clicks must not fight the armed placement.
+      const selected = this.state.modules.find((m) => m.id === this.ui.selected);
+      if (this.ui.selected !== null && selected?.pos !== null) {
+        this.ui.selected = null;
+        this.render();
+      }
+    });
     // The chord view's keyboard beat (issue #62): C toggles the highlight.
     // Display only, so it works in every mode — but never while typing.
     document.addEventListener("keydown", (event) => {
@@ -449,6 +509,34 @@ export class App {
       const target = event.target;
       if (target instanceof HTMLElement && (target.isContentEditable || target.matches("input, textarea, select"))) return;
       this.toggleChords();
+    });
+    // The Esc chain (§5): the modal eats it first; then the armed transient
+    // modes unwind; then the expanded face — the selection is its open
+    // state. Never while typing.
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || !this.ownsBoard()) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.isContentEditable || target.matches("input, textarea, select"))) return;
+      if (this.ui.modal) {
+        this.closeModal();
+        return;
+      }
+      if (this.ui.placing) {
+        this.cancelPlacing();
+        return;
+      }
+      if (this.ui.buyingCell) {
+        this.cancelCellPurchase();
+        return;
+      }
+      if (this.ui.app) {
+        this.closeApp();
+        return;
+      }
+      if (this.ui.selected) {
+        this.ui.selected = null;
+        this.render();
+      }
     });
   }
 
@@ -715,22 +803,6 @@ export class App {
     this.reportCombine(combine(this.state, id));
   }
 
-  // Drag-to-combine: dropping a module onto a same-type, same-rarity twin.
-  // The survivor lands on the drop cell so the merge reads physically.
-  dropCombine(id: string, partnerId: string, pos: Hex): void {
-    const a = this.state.modules.find((m) => m.id === id);
-    const b = this.state.modules.find((m) => m.id === partnerId);
-    if (!a || !b) return;
-    const result = combine(this.state, id, partnerId);
-    if (result.ok) {
-      // combine() keeps the higher-level input (ties keep `id`); land it here.
-      const keeperId = b.level > a.level ? b.id : a.id;
-      const keeper = this.state.modules.find((m) => m.id === keeperId);
-      if (keeper) keeper.pos = pos;
-    }
-    this.reportCombine(result);
-  }
-
   private reportCombine(result: ActionResult): void {
     if (result.ok) {
       this.announceUnlocks(
@@ -747,9 +819,13 @@ export class App {
   }
 
   select(id: string | null): void {
+    const opening = id !== null && this.ui.selected !== id;
     this.ui.selected = this.ui.selected === id ? null : id;
     this.ui.app = null;
     this.ui.placing = null;
+    // The click that opens the bloom bubbles to the document-level closer;
+    // it drops a token so the same click never closes what it opened (§5).
+    if (opening && this.ui.selected !== null) this.bloomClickTokens++;
     this.render();
   }
 
@@ -839,10 +915,6 @@ export class App {
       if (occupant) this.select(occupant.id);
       return;
     }
-    if (ui.reshape) {
-      this.stageReshape(pos);
-      return;
-    }
     if (ui.buyingCell) {
       // The arm persists across buys: sweep several cells, then back out
       // yourself via the banner's Cancel (or Esc). act() re-renders each
@@ -856,20 +928,36 @@ export class App {
       const result = placeModule(state, module.id, pos);
       if (this.act(result, `${META[module.type].name} placed.`)) {
         ui.placing = null;
+        // A placement never opens the expanded face (§5): the drop leaves
+        // it closed, whoever dropped it.
+        ui.selected = null;
       }
       return;
     }
     const occupant = state.modules.find((m) => m.pos !== null && sameHex(m.pos, pos));
-    if (occupant) this.select(occupant.id);
+    if (occupant && occupant.id !== ui.selected) {
+      this.select(occupant.id);
+    } else if (ui.selected !== null) {
+      // Outside the bloom (§5) — the vacated cell included: with the bloom
+      // standing for the selected module, its own cell renders empty, and
+      // clicking it is a dismissal, never a second toggle.
+      this.ui.selected = null;
+      this.render();
+    }
   }
 
   pickCellThenPlace(id: string, pos: Hex): void {
     const { state } = this;
-    if (state.mode !== "upgrade" || this.ui.reshape || this.ui.buyingCell) return;
+    if (state.mode !== "upgrade" || this.ui.buyingCell) return;
     const module = state.modules.find((m) => m.id === id);
     if (!module) return;
     this.ui.placing = null;
-    this.act(placeModule(state, id, pos), `${META[module.type].name} placed.`);
+    if (this.act(placeModule(state, id, pos), `${META[module.type].name} placed.`)) {
+      // A placement never opens the expanded face (§5): the drop leaves it
+      // closed, whoever dropped it — an armed placement wears its module
+      // as the selection, so the drop clears it too.
+      this.ui.selected = null;
+    }
   }
 
   returnToInventory(id: string): void {
@@ -982,8 +1070,6 @@ export class App {
     }
     const added = this.state.modules[this.state.modules.length - 1]!;
     this.ui.modal = null;
-    this.ui.managing = true;
-    this.ui.reshape = null;
     this.ui.selected = added.id;
     this.ui.placing = added.id;
     const more = this.state.bankedRolls.length > 0 ? ` ${this.state.bankedRolls.length} more choice${this.state.bankedRolls.length === 1 ? "" : "s"} wait in the Forge.` : "";
@@ -1008,7 +1094,6 @@ export class App {
 
   rightClickCell(pos: Hex): void {
     if (this.state.mode !== "upgrade") return;
-    if (this.ui.reshape) return;
     if (this.ui.buyingCell) {
       this.cancelCellPurchase();
       return;
@@ -1017,94 +1102,10 @@ export class App {
       this.cancelPlacing();
       return;
     }
-    if (this.ui.managing) {
-      const occupant = this.state.modules.find((m) => m.pos !== null && sameHex(m.pos, pos));
-      if (occupant) this.returnToInventory(occupant.id);
-    }
-  }
-
-  startManaging(): void {
-    this.clearTransientUi();
-    this.ui.managing = true;
-    this.say("Arranging — drag tiles. Esc or Done finishes.");
-    this.render();
-  }
-
-  stopManaging(): void {
-    this.ui.managing = false;
-    this.ui.placing = null;
-    this.ui.reshape = null;
-    this.render();
-  }
-
-  startReshape(): void {
-    this.ui.reshape = { adds: [], removes: [] };
-    this.ui.placing = null;
-    this.ui.buyingCell = false;
-    this.say("Reshape — removals and additions must balance.");
-    this.render();
-  }
-
-  stageReshape(pos: Hex): void {
-    const stage = this.ui.reshape;
-    if (!stage) return;
-    const inAdds = stage.adds.findIndex((c) => sameHex(c, pos));
-    const inRemoves = stage.removes.findIndex((c) => sameHex(c, pos));
-    if (inAdds !== -1) {
-      stage.adds.splice(inAdds, 1);
-    } else if (inRemoves !== -1) {
-      stage.removes.splice(inRemoves, 1);
-    } else if (this.state.cells.some((c) => sameHex(c, pos))) {
-      const occupied = this.state.modules.some((m) => m.pos !== null && sameHex(m.pos, pos));
-      if (occupied) {
-        this.say("Only empty cells can be removed.");
-        return;
-      }
-      stage.removes.push(pos);
-    } else if (this.state.cells.some((c) => adjacent(c, pos)) || stage.adds.some((c) => adjacent(c, pos))) {
-      stage.adds.push(pos);
-    }
-    this.render();
-  }
-
-  private stagedCells(): Hex[] | null {
-    const stage = this.ui.reshape;
-    if (!stage) return null;
-    return this.state.cells
-      .filter((c) => !stage.removes.some((r) => sameHex(r, c)))
-      .concat(stage.adds);
-  }
-
-  reshapeValidity(): { ok: boolean; message: string } {
-    const stage = this.ui.reshape;
-    if (!stage) return { ok: false, message: "" };
-    if (stage.adds.length === 0 && stage.removes.length === 0) {
-      return { ok: false, message: "Click cells to stage removals and additions." };
-    }
-    if (stage.adds.length !== stage.removes.length) {
-      return { ok: false, message: `Unbalanced: −${stage.removes.length} removed, +${stage.adds.length} added.` };
-    }
-    const next = this.stagedCells();
-    if (!next) return { ok: false, message: "" };
-    const keys = new Set(next.map(hexKey));
-    if (keys.size !== next.length) return { ok: false, message: "Duplicate cells staged." };
-    const probe = structuredClone(this.state);
-    const result = reshapeCells(probe, next);
-    if (!result.ok) return { ok: false, message: result.reason ?? "Invalid shape." };
-    return { ok: true, message: "Shape is valid and connected." };
-  }
-
-  applyReshape(): void {
-    const next = this.stagedCells();
-    if (!next) return;
-    if (this.act(reshapeCells(this.state, next), "Board reshaped. Modules keep their positions.")) {
-      this.ui.reshape = null;
-    }
-  }
-
-  cancelReshape(): void {
-    this.ui.reshape = null;
-    this.render();
+    // Right-click retrieves: the same chord-breaking gesture as dragging
+    // into the tray, for the hand that prefers a context menu.
+    const occupant = this.state.modules.find((m) => m.pos !== null && sameHex(m.pos, pos));
+    if (occupant) this.returnToInventory(occupant.id);
   }
 
   // The honesty report's answer (§2): banks or drops the bucket in one
@@ -1260,9 +1261,5 @@ export class App {
     render(this);
     this.syncTitle();
     document.body.classList.toggle("live", this.state.mode === "flow");
-    // Arranging is unmistakable: the body-level class drives the banner,
-    // dimmed cells, and raised tiles. It can only be on while the grid is
-    // unlocked.
-    document.body.classList.toggle("managing", this.managing);
   }
 }
