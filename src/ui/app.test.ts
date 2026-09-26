@@ -400,18 +400,21 @@ describe("the always-live board (§5)", () => {
 describe("the expanded face (§5)", () => {
   const bloom = () => document.getElementById("module-bloom")!;
 
-  it("click opens it above the module; the face enlarges and adds what the face doesn't say", () => {
+  it("click opens it above the module; the face itself is the bloom", () => {
     app.render();
-    document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    clickCell(0,0);
     expect(app.ui.selected).toBe("m1");
     expect(bloom().hidden).toBe(false);
-    // The plate carries the enlarged face — glyph, level, short name, note.
+    // The plate carries the enlarged face — glyph, level, short name, note —
+    // and no second module inside it: one face, filling the bloom.
+    expect(bloom().querySelectorAll(".bloom-face")).toHaveLength(1);
     expect(bloom().querySelector(".bloom-face .face-name")!.textContent).toBe("ADDITIVE");
     expect(bloom().querySelector(".bloom-face .face-level")!.textContent).toBe("LV 0");
     expect(bloom().querySelector(".bloom-face .face-note")!.textContent).toBe("C4");
-    // …plus what the face doesn't say: the ν/s contribution and the Upgrade
-    // button with its benefit and price.
-    expect(bloom().querySelector(".bloom-contribution")!.textContent).toBe(`+${formatNumber(0.1)} ν/s`);
+    // The ν/s unit rides the face's own readout — no repeated readout.
+    expect(bloom().querySelector(".bloom-face .face-readout")!.textContent).toBe(`+${formatNumber(0.1)} ν/s`);
+    expect(bloom().querySelector(".bloom-contribution")).toBeNull();
+    // …and the Upgrade button with its benefit and price.
     const button = bloom().querySelector<HTMLButtonElement>("#bloom-upgrade")!;
     expect(button.textContent).toContain("Upgrade");
     expect(button.textContent).toContain("+0.02 ν/s");
@@ -443,7 +446,9 @@ describe("the expanded face (§5)", () => {
     clickCell(1,0);
     expect(bloom().hidden).toBe(false);
     expect(bloom().querySelector("#bloom-upgrade")).toBeNull();
-    expect(bloom().querySelector(".bloom-contribution")!.textContent).toContain("silent");
+    // The face itself is the bloom, sitting near its natural layout with no
+    // button to make room for.
+    expect(bloom().querySelector(".bloom-face .face-readout")!.textContent).toBe("⌇");
   });
 
   it("never opens for a drag or a drop; Esc, outside click, and selecting elsewhere close it", () => {
@@ -479,11 +484,34 @@ describe("the expanded face (§5)", () => {
     expect(bloom().hidden).toBe(false);
   });
 
-  it("positions over the module: below when the cell sits high, above once the top leaves room", () => {
+  it("zoomed past the bloom's size, the affordances ride the closed face and nothing pops", () => {
+    // A roomy wrap on the tiny opening board: the on-screen module dwarfs
+    // the fixed bloom, so an expanded face would only shrink it.
     const svg = document.getElementById("grid") as unknown as SVGSVGElement;
-    // A roomy wrap: the scaled board sits small inside it.
     Object.defineProperty(svg, "clientWidth", { configurable: true, value: 2000 });
     Object.defineProperty(svg, "clientHeight", { configurable: true, value: 2000 });
+    app.render();
+    clickCell(0,0);
+    const bloomEl = document.getElementById("module-bloom")!;
+    expect(bloomEl.hidden).toBe(false);
+    expect(bloomEl.classList.contains("inline")).toBe(true);
+    // No plate, no second face: just the upgrade card over the module.
+    expect(bloomEl.querySelector(".bloom-plate")).toBeNull();
+    expect(bloomEl.querySelector(".bloom-face")).toBeNull();
+    expect(bloomEl.querySelector(".bloom-contribution")!.textContent).toBe(`+${formatNumber(0.1)} ν/s`);
+    expect(bloomEl.querySelector("#bloom-upgrade")).not.toBeNull();
+    // The upgrade still works from the closed face.
+    bloomEl.querySelector<HTMLButtonElement>("#bloom-upgrade")!.click();
+    expect(app.state.modules[0]!.level).toBe(1);
+  });
+
+  it("positions over the module: below when the cell sits high, above once the top leaves room", () => {
+    const svg = document.getElementById("grid") as unknown as SVGSVGElement;
+    // A tall, narrow wrap: the scaled board sits small enough for the bloom
+    // to enlarge the module, with letterbox slack to separate the rows.
+    Object.defineProperty(svg, "clientWidth", { configurable: true, value: 550 });
+    Object.defineProperty(svg, "clientHeight", { configurable: true, value: 800 });
+    app.state.cells.push(hex(0, 2));
     // The opening C4 (0,0) is the board's topmost cell: its top edge leaves
     // no room, so the face presents below — top tip at the cell's bottom.
     app.render();

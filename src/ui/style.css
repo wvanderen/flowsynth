@@ -816,15 +816,15 @@ body.live .inspector-empty { opacity: 0.75; }
 .hex.drop-occupied { stroke: var(--forge-glow); stroke-width: 2.5; fill: var(--forge-faint); }
 
 /* ── The expanded face (§5) ────────────────────────── */
-/* The module's own hex lifted off the grid toward the camera: scale + rise
-   + drop shadow, the compact face enlarged, the production contribution and
-   the Upgrade button beneath it. No Move or Return buttons — dragging is
-   already live. The host is a positioned hexagonal plate; the plate inside
-   carries the clip so the shadow can follow the hexagon's shape. */
+/* The module's own hex lifted off the grid toward the camera: the face
+   itself IS the bloom — enlarged to fill the hexagonal plate, its content
+   shifted up to make room for the Upgrade button in the lower band. The
+   host is a positioned plate; pointer-events live on the plate and button
+   only, so the hexagon's corner gaps never block the board beneath. */
 .module-bloom {
   position: absolute;
   z-index: 20;
-  pointer-events: auto;
+  pointer-events: none;
   filter: drop-shadow(0 18px 16px var(--shadow));
   animation: bloom-in 0.16s ease-out;
 }
@@ -833,37 +833,62 @@ body.live .inspector-empty { opacity: 0.75; }
 .bloom-plate {
   position: absolute;
   inset: 0;
+  pointer-events: auto;
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   background:
     radial-gradient(ellipse at 50% 30%, color-mix(in srgb, var(--hue-synthesizer) 7%, transparent), transparent 70%),
     var(--panel);
   border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  padding: 44px 40px 58px;
 }
-.bloom-plate .bloom-face { width: 128px; height: 128px; display: block; }
+/* The face fills the plate exactly: the svg's viewBox is the hexagon's own
+   bounding box, so the module's hex IS the bloom. */
+.bloom-plate .bloom-face { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .bloom-plate .hex { fill: var(--plate-common); stroke-width: 1.2; }
 .bloom-plate[data-rarity="uncommon"] .hex { fill: var(--plate-uncommon); }
 .bloom-plate[data-rarity="rare"] .hex { fill: var(--plate-rare); }
 .bloom-plate text { fill: var(--ink); }
-.bloom-readouts { display: flex; flex-direction: column; align-items: center; gap: 7px; width: 100%; }
-.bloom-contribution { margin: 0; font-size: 13px; color: var(--nous); white-space: nowrap; }
+/* The upgrade affordances ride the lower band, inside the hexagon's taper. */
+.bloom-readouts {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 46px;
+  width: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.bloom-contribution { margin: 0; font-size: 12.5px; color: var(--nous); white-space: nowrap; }
 .bloom-upgrade {
   width: 100%;
-  max-width: 168px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 8px 11px;
-  font-size: 12px;
+  gap: 7px;
+  padding: 7px 10px;
+  font-size: 11.5px;
+  background: var(--panel-soft);
 }
 .bloom-upgrade strong { white-space: nowrap; font-weight: 600; }
 .bloom-upgrade small { color: var(--charge); }
+
+/* Zoomed past the bloom's size, nothing pops: the affordances ride the
+   closed face as a floating card anchored over the module's lower band.
+   Only the button is interactive — the face beneath keeps its drags. */
+.module-bloom.inline { filter: none; }
+.module-bloom.inline .bloom-readouts {
+  bottom: auto;
+  transform: none;
+  margin-left: 32px;
+  width: 160px;
+  padding: 8px 10px;
+  background: var(--panel-veil);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  backdrop-filter: blur(2px);
+}
+.module-bloom.inline .bloom-upgrade { pointer-events: auto; }
 
 /* ── The board-surface tray (§5) ───────────────────── */
 /* The inventory docked over the board's bottom edge: drag a module here to

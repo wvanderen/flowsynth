@@ -24,7 +24,7 @@ import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleI
 import type { App, EnterKind } from "./app";
 import { appIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, moduleFace } from "./face";
-import { bloomLayout } from "./bloom";
+import { BLOOM_WIDTH, bloomLayout, bloomPops, viewMeet, viewPoint } from "./bloom";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
@@ -717,8 +717,10 @@ interface RenderContext {
 
 // A module face's readout (ADR-0016): the prominent value beneath the
 // signature — the same glanceable line whether compact, in the tray, or
-// enlarged on the expanded face. Shared by the board node and the bloom.
-function faceReadoutFor(state: GameState, module: ModuleInstance, pos: Hex | null, snapshot: ReturnType<typeof computeRates>): { readout: string; readoutClass?: string; note?: string } {
+// enlarged on the expanded face. Shared by the board node and the bloom;
+// the bloom takes the contribution with its unit, since the enlarged face
+// is where the ν/s figure is added (no second readout beside it).
+function faceReadoutFor(state: GameState, module: ModuleInstance, pos: Hex | null, snapshot: ReturnType<typeof computeRates>, withUnits = false): { readout: string; readoutClass?: string; note?: string } {
   const contribution = snapshot.contributions.get(module.id);
   if (module.type === "forge") {
     // The face's glanceable readout rounds; the inspector keeps exact values.
@@ -738,9 +740,10 @@ function faceReadoutFor(state: GameState, module: ModuleInstance, pos: Hex | nul
   }
   // Synthesizers wear their contribution with the cell's note beneath it:
   // pitch lives in the cell (ADR-0021).
+  const unit = withUnits ? " ν/s" : "";
   return pos
-    ? { readout: `+${formatNumber(contribution?.value ?? 0)}`, note: cellNoteOf(pos) }
-    : { readout: `+${formatNumber(contribution?.value ?? 0)}` };
+    ? { readout: `+${formatNumber(contribution?.value ?? 0)}${unit}`, note: cellNoteOf(pos) }
+    : { readout: `+${formatNumber(contribution?.value ?? 0)}${unit}` };
 }
 
 function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderContext): string {
@@ -1068,11 +1071,18 @@ function bloomContribution(state: GameState, module: ModuleInstance): string {
 }
 
 // The expanded face: the module's own hex lifted off the grid toward the
-// camera — the compact face's UI enlarged, plus the production contribution
-// and the Upgrade button. Opens only on click, only in upgrade mode, only
-// for a deployed module; closes on outside click, Esc, or selecting
-// elsewhere; holding the face starts the live drag. The host persists (the
-// app creates it once); only the plate inside rebuilds.
+// camera — the face itself IS the bloom, enlarged to fill it, its content
+// shifted up to make room for the Upgrade button in the lower band. The
+// ν/s unit rides the face's own readout, so nothing repeats. Opens only on
+// click, only in upgrade mode, only for a deployed module; closes on
+// outside click, Esc, or selecting elsewhere; holding the face starts the
+// live drag.
+//
+// The pop only happens when it would actually enlarge the module: zoomed
+// far in (few cells filling the wrap), the on-screen module already
+// out-sizes the fixed bloom, and the affordances ride the closed face
+// instead — a floating upgrade card anchored over the module's lower band.
+// The host persists (the app creates it once); only the content rebuilds.
 function renderBloom(app: App): void {
   const host = byId("module-bloom");
   if (!host) return;
@@ -1087,60 +1097,88 @@ function renderBloom(app: App): void {
     }
     return;
   }
+  const svg = document.getElementById("grid");
+  const viewBox = (svg?.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
+  const view = { x: viewBox[0] ?? 0, y: viewBox[1] ?? 0, width: viewBox[2] ?? 0, height: viewBox[3] ?? 0 };
+  const box = { width: svg?.clientWidth ?? 0, height: svg?.clientHeight ?? 0 };
+  const meet = viewMeet(view, box);
+  // Ride the closed face when the pop would shrink the module.
+  const inline = !bloomPops(meet, HEX_RADIUS);
   const snapshot = computeRates(state, true);
   const benefit = upgradeBenefit(module);
   const cost = levelCost(module.level);
   const affordable = wholeNous(state) >= cost;
-  // The Forge's face readout moves per tick; its bloom tracks it.
+  // The Forge's face readout moves per tick; its face tracks it.
   const forgeTick = module.type === "forge" ? Math.floor(state.forge.progress) : 0;
-  const key = JSON.stringify([module.id, module.level, module.rarity, benefit, affordable, forgeTick]);
+  const key = JSON.stringify([module.id, module.level, module.rarity, benefit, affordable, forgeTick, inline]);
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
-    const face = faceReadoutFor(state, module, module.pos, snapshot);
-    host.innerHTML = `
-      <div class="bloom-plate" data-type="${module.type}" data-rarity="${module.rarity}">
-        <svg class="bloom-face" viewBox="-70 -70 140 140" aria-hidden="true">${moduleFace({
-          type: module.type,
-          rarity: module.rarity,
-          readout: face.readout,
-          ...(face.readoutClass ? { readoutClass: face.readoutClass } : {}),
-          ...(face.note ? { note: face.note } : {}),
-          level: module.level,
-        })}</svg>
-        <div class="bloom-readouts">
-          <p class="bloom-contribution mono">${bloomContribution(state, module)}</p>
-          ${
-            benefit
-              ? `<button class="bloom-upgrade" id="bloom-upgrade" ${affordable ? "" : "disabled"} title="${affordable ? "Upgrade this module" : "Not enough whole nous"}">
-                  <span>Upgrade · <small class="mono">${benefit}</small></span>
-                  <strong class="mono">${formatInt(cost)} ν</strong>
-                </button>`
-              : ""
-          }
-        </div>
+    host.classList.toggle("inline", inline);
+    const readouts = `
+      <div class="bloom-readouts">
+        ${inline ? `<p class="bloom-contribution mono">${bloomContribution(state, module)}</p>` : ""}
+        ${
+          benefit
+            ? `<button class="bloom-upgrade" id="bloom-upgrade" ${affordable ? "" : "disabled"} title="${affordable ? "Upgrade this module" : "Not enough whole nous"}">
+                <span>Upgrade · <small class="mono">${benefit}</small></span>
+                <strong class="mono">${formatInt(cost)} ν</strong>
+              </button>`
+            : ""
+        }
       </div>`;
+    if (inline) {
+      host.innerHTML = readouts;
+    } else {
+      // The face fills the bloom hexagon exactly (viewBox = the hexagon's
+      // bounding box), its content shifted up to make room for the button;
+      // the enlarged readout carries the ν/s unit itself. No button, no
+      // need for the room — the face sits nearer its natural layout.
+      const shift = benefit ? -20 : -12;
+      const face = faceReadoutFor(state, module, module.pos, snapshot, true);
+      host.innerHTML = `
+        <div class="bloom-plate" data-type="${module.type}" data-rarity="${module.rarity}">
+          <svg class="bloom-face" viewBox="-52.8282 -61 105.6563 122" preserveAspectRatio="none" aria-hidden="true"><g transform="translate(0 ${shift})">${moduleFace({
+            type: module.type,
+            rarity: module.rarity,
+            readout: face.readout,
+            ...(face.readoutClass ? { readoutClass: face.readoutClass } : {}),
+            ...(face.note ? { note: face.note } : {}),
+            level: module.level,
+          })}</g></svg>
+          ${readouts}
+        </div>`;
+      // Holding the face starts the live drag: the bloom collapses into the
+      // ghost, and a drop leaves it closed (§5).
+      const faceNode = host.querySelector(".bloom-face");
+      if (faceNode) bindPointerDrag(app, faceNode, module.id);
+    }
     byId("bloom-upgrade")?.addEventListener("click", () => app.upgrade(module.id));
-    // Holding the face starts the live drag: the bloom collapses into the
-    // ghost, and a drop leaves it closed (§5).
-    const faceNode = host.querySelector(".bloom-face");
-    if (faceNode) bindPointerDrag(app, faceNode, module.id);
   }
   // Position over the module's cell on every render — the board may have
   // grown or reflowed since the last one.
-  const svg = document.getElementById("grid");
-  const viewBox = (svg?.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
-  const layout = bloomLayout(
-    point(module.pos),
-    HEX_RADIUS,
-    { x: viewBox[0] ?? 0, y: viewBox[1] ?? 0, width: viewBox[2] ?? 0, height: viewBox[3] ?? 0 },
-    { width: svg?.clientWidth ?? 0, height: svg?.clientHeight ?? 0 },
-  );
+  const [cx, cy] = viewPoint(point(module.pos), view, box);
+  if (inline) {
+    // The card rides the closed face's lower band: centered, its body over
+    // the taper below the face's note — hanging past the tip a little at
+    // threshold zooms, where the taper is too tight to hold it.
+    const width = box.width > 0 ? Math.min(BLOOM_WIDTH, box.width) : BLOOM_WIDTH;
+    const halfHeight = meet * HEX_RADIUS;
+    const left = Math.min(Math.max(cx - width / 2, 0), Math.max(0, box.width - width));
+    host.style.left = `${Math.round(left)}px`;
+    host.style.top = `${Math.round(cy + halfHeight * 0.85 - 34)}px`;
+    host.style.width = `${width}px`;
+    host.style.height = "auto";
+    host.classList.remove("below");
+  } else {
+    const layout = bloomLayout(point(module.pos), HEX_RADIUS, view, box);
+    host.hidden = false;
+    host.classList.toggle("below", layout.below);
+    host.style.left = `${Math.round(layout.left)}px`;
+    host.style.top = `${Math.round(layout.top)}px`;
+    host.style.width = `${layout.width}px`;
+    host.style.height = `${layout.height}px`;
+  }
   host.hidden = false;
-  host.classList.toggle("below", layout.below);
-  host.style.left = `${Math.round(layout.left)}px`;
-  host.style.top = `${Math.round(layout.top)}px`;
-  host.style.width = `${layout.width}px`;
-  host.style.height = `${layout.height}px`;
 }
 
 // The board-surface tray (§5): the inventory docked over the board's bottom

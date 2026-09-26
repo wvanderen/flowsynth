@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { BLOOM_HEIGHT, BLOOM_WIDTH, bloomLayout } from "./bloom";
+import { BLOOM_HEIGHT, BLOOM_WIDTH, bloomLayout, bloomPops, viewMeet, viewPoint } from "./bloom";
 
 // The expanded face's geometry (§5): a fixed regular hexagon that sits
 // centered above the selected module — bottom tip at the cell's top edge —
@@ -67,5 +67,34 @@ describe("bloomLayout", () => {
     expect(layout.height).toBe(BLOOM_HEIGHT);
     expect(layout.below).toBe(false);
     expect(layout.top).toBe(400 - 61 - BLOOM_HEIGHT);
+  });
+});
+
+describe("the pop-or-ride threshold", () => {
+  it("the bloom only pops when it would enlarge the on-screen module", () => {
+    // A pointy-top regular hexagon is √3·radius wide: at meet 1 the module
+    // is ~106px — smaller than the bloom, so the expansion enlarges.
+    expect(bloomPops(1, 61)).toBe(true);
+    // Zoomed far in (few cells, huge modules): the module already out-sizes
+    // the fixed bloom — the affordances ride the closed face instead.
+    expect(bloomPops(3, 61)).toBe(false);
+    expect(bloomPops(2.2, 61)).toBe(false);
+    // Just under the threshold still enlarges.
+    expect(bloomPops(2.1, 61)).toBe(true);
+  });
+
+  it("viewMeet mirrors the svg's meet scaling", () => {
+    expect(viewMeet({ x: 0, y: 0, width: 2000, height: 1600 }, { width: 1000, height: 800 })).toBe(0.5);
+    expect(viewMeet({ x: 0, y: 0, width: 100, height: 50 }, { width: 100, height: 100 })).toBe(1);
+    // No layout yet: unit scale.
+    expect(viewMeet({ x: 0, y: 0, width: 100, height: 100 }, { width: 0, height: 0 })).toBe(1);
+  });
+
+  it("viewPoint maps svg units to wrap-local pixels", () => {
+    expect(viewPoint([100, 50], { x: 0, y: 0, width: 200, height: 100 }, { width: 200, height: 100 })).toEqual([100, 50]);
+    // The wrap letterboxes: centered content shifts by the margins.
+    const [x, y] = viewPoint([0, 0], { x: -100, y: -50, width: 1000, height: 800 }, { width: 1000, height: 800 });
+    expect(x).toBe(100);
+    expect(y).toBe(50);
   });
 });
