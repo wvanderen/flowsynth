@@ -669,7 +669,6 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 }
 .info-read { display: inline-flex; align-items: baseline; gap: 4px; font: 12px var(--mono); }
 .info-read small { font-size: 10px; color: var(--muted); }
-.game-info-strip .feats-chip { padding: 2px 6px; }
 /* The strip's rate read is the phone's door to the formula (§7): tapping it
    opens the formula sheet — the ledger's Rate cell doesn't exist here, and
    the operand chain never goes ambient at this width. It reads as a plain
@@ -1403,9 +1402,14 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
    only, nothing re-docks, nothing hides; portrait phone re-docks to the
    thumb bar. The 760px line is the formula breakpoint (ledger.ts's
    Rate-cell gate reads the same number); the 600px line is the phone
-   composition (render.ts's bloom gate likewise). */
+   composition (render.ts's bloom gate likewise). The rules use the
+   exclusive range form — (width < Npx) — so the boundary width itself
+   stays on the desktop side, exactly as the TS gates' strict `<` reads it.
+   An inclusive max-width would strand the boundary: CSS composing as
+   phone while the gate still answers desktop (or hiding the equation
+   with no sheet door). */
 
-@container app (max-width: 900px) {
+@container app (width < 900px) {
   /* Below here the slim console wraps instead of clipping: its height stays
      width-determined, so console use never shifts the board. */
   .console { flex-wrap: wrap; height: auto; min-height: 0; padding: 10px 14px; gap: 8px 14px; }
@@ -1413,7 +1417,7 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
   .console-apps { margin-left: auto; }
 }
 
-@container app (max-width: 760px) {
+@container app (width < 760px) {
   .board-panel { padding: 12px 14px 0; }
   .board-ledger { flex-wrap: wrap; }
   .session-actions { margin-left: auto; }
@@ -1428,7 +1432,7 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
   .app-popover { width: min(372px, calc(100cqw - 32px)); }
 }
 
-@container app (max-width: 600px) {
+@container app (width < 600px) {
   /* Portrait phone (§7): the composition re-docks. Top nav = session
      controls only (brand glyph, clock, switch, settings) — the focus-app
      tiles hide until an app popover is open (the clock's Time popover
@@ -1492,6 +1496,20 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
    as a .sheet class on the backdrop rather than a container rule. */
 .modal-backdrop.sheet { padding: 10px; align-items: flex-end; }
 .modal-backdrop.sheet .modal { width: 100%; max-height: 78vh; border-radius: 14px 14px 0 0; animation: sheet-up 0.18s ease-out; }
+
+/* The cluster rises above the modal sheets too (§7, ADR-0029: the zoom
+   cluster alone reacts to open sheets): the modal layer is body-level and
+   fixed, so its sheets — the formula sheet's gate below 760px and, on
+   phone, every modal — would bury a board-anchored cluster entirely. The
+   body class (renderModal's) lifts it out of the board panel and clears
+   the sheets' 78vh extent. Last among the cluster's sheet rules, so a
+   modal sheet over an open bloom sheet still reads as the topmost. */
+body.modal-sheet-open .zoom-cluster {
+  position: fixed;
+  right: 10px;
+  bottom: calc(78vh + 14px);
+  z-index: 60;
+}
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

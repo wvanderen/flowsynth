@@ -281,6 +281,35 @@ describe("the formula disclosure (§7)", () => {
     // The hover disclosure rides the cell: the breakdown lives in the DOM.
     expect(document.getElementById("rate-cell")!.querySelector(".rate-breakdown")).not.toBeNull();
   });
+
+  it("the boundary width itself stays on the desktop side of the 760px line", () => {
+    // Exactly 760: the equation stands and the tap is inert — the same
+    // strict `<` the stylesheet's exclusive range (width < 760px) reads.
+    // An inclusive max-width here would hide the equation with no door.
+    setAppWidth(760);
+    app.render();
+    document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.modal).toBeNull();
+    // One pixel less: the door opens.
+    setAppWidth(759);
+    app.render();
+    document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.modal).toBe("formula");
+    app.closeModal();
+  });
+
+  it("the zoom cluster rises above an open modal sheet (§7, ADR-0029)", () => {
+    // The cluster's reaction rides a body class: up with the sheet, down
+    // when it closes — inspection never buries it.
+    setAppWidth(720);
+    app.render();
+    expect(document.body.classList.contains("modal-sheet-open")).toBe(false);
+    document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.modal).toBe("formula");
+    expect(document.body.classList.contains("modal-sheet-open")).toBe(true);
+    app.closeModal();
+    expect(document.body.classList.contains("modal-sheet-open")).toBe(false);
+  });
 });
 
 describe("the Arete pill (§7)", () => {
@@ -2133,6 +2162,21 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     clickCell(0, 0);
     expect(bloomEl.hidden).toBe(true);
     expect(document.body.classList.contains("bloom-sheet-open")).toBe(false);
+  });
+
+  it("on phone every modal presents as a sheet, so any open modal raises the zoom cluster", () => {
+    // The modal layer reads the viewport (it lives outside #app), so the
+    // cluster's rise reads it too: at a phone viewport any open modal is a
+    // bottom sheet (§7), and the cluster must never be buried beneath one.
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+    app.render();
+    expect(document.body.classList.contains("modal-sheet-open")).toBe(false);
+    app.openModal("settings");
+    expect(app.ui.modal).toBe("settings");
+    expect(document.body.classList.contains("modal-sheet-open")).toBe(true);
+    app.closeModal();
+    expect(document.body.classList.contains("modal-sheet-open")).toBe(false);
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
   });
 
   it("the game-info strip carries ν, rate, and session on the board surface — no feats chip; feats rides the thumb bar once", () => {

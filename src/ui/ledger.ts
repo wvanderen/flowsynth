@@ -4,7 +4,6 @@
 // The status monitor dissolved into these; the console carries no readouts.
 import { ARETE_GRADUATIONS, ARETE_HORIZON, accumulatorFill, nextAccumulatorMark } from "../engine/accumulator";
 import { ACHIEVEMENTS, achievementBoostOf } from "../engine/achievements";
-import { computeRates } from "../engine/economy";
 import type { GameState, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
 import { FORMULA_BREAKPOINT_PX, containerWidth } from "./container";
@@ -148,11 +147,10 @@ export function featsChipHtml(count: number): string {
 // Above it the collapsed operand chain is ambient and hover discloses.
 // The gate reads the container's own inline size — the number the
 // stylesheet's @container rules respond to (container.ts holds it).
-export function renderBoardLedger(app: App): void {
+export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
   const host = document.getElementById("board-ledger");
   if (!host) return;
   const { state } = app;
-  const snapshot = computeRates(state, app.state.mode === "flow");
   const achieving = achievementBoostOf(state) > 1;
   const infused = snapshot.infusors > 0;
   const feats = unlockedCount(state);
@@ -200,7 +198,7 @@ export function updateLedgerLive(scope: ParentNode, state: GameState, rate: numb
 // sheet, the door the ledger's Rate cell provides at every other width.
 // The chain itself never goes ambient here — a 390px board has no room.
 // Displayed only below the 600px breakpoint; values update every render.
-export function renderGameInfoStrip(app: App): void {
+export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
   const host = document.getElementById("game-info-strip");
   if (!host) return;
   const { state } = app;
@@ -213,7 +211,7 @@ export function renderGameInfoStrip(app: App): void {
   }
   const set = (live: string, text: string) => liveSet(host, live, text);
   set("i-nous", formatInt(state.nous));
-  set("i-rate", formatFixed(computeRates(state, state.mode === "flow").rate));
+  set("i-rate", formatFixed(snapshot.rate));
   set("i-session", state.session ? formatFixed(state.session.earned) : "—");
 }
 
@@ -234,12 +232,11 @@ function beatReadout(totalEarned: number, rate: number): string {
   return `next mark ${label} · ≈${formatCountdown((mark - totalEarned) / rate)} of practice at this rate`;
 }
 
-export function renderAretePill(app: App): void {
+export function renderAretePill(app: App, snapshot: RateSnapshot): void {
   const host = document.getElementById("arete-pill");
   if (!host) return;
   const { state } = app;
   const past = state.totalEarned >= ARETE_HORIZON;
-  const snapshot = computeRates(state, state.mode === "flow");
   // Structural key: the era flip, the prestige acknowledgment, and the
   // graduation roster rebuild the pill; every tick-moving value updates in
   // place so the reserved button survives clock ticks.

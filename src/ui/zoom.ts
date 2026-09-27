@@ -4,6 +4,7 @@
 // larger-than-screen board always stays reachable. World coordinates never
 // move — seams, chips, and bloom frames are zoom-agnostic by construction.
 import type { App } from "./app";
+import { suppressNextClick } from "./click";
 
 // The zoom range (prototype tuning, #121): fitted is 1; a hair below 1 lets
 // a wide board letterbox more tightly, 3× is comfortably inside a face.
@@ -41,16 +42,6 @@ export function resolvePan(pan: { x: number; y: number } | null, bounds: BoardBo
     x: Math.min(bounds.x + bounds.width, Math.max(bounds.x, at.x)),
     y: Math.min(bounds.y + bounds.height, Math.max(bounds.y, at.y)),
   };
-}
-
-// The viewBox the lens reports: the base shrunk by zoom around the pan
-// center, honoring the wrap's aspect via the svg's preserveAspectRatio.
-function lensViewBox(zoom: number, pan: { x: number; y: number } | null, bounds: BoardBounds): string {
-  const z = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom));
-  const width = bounds.width / z;
-  const height = bounds.height / z;
-  const center = resolvePan(pan, bounds);
-  return `${(center.x - width / 2).toFixed(2)} ${(center.y - height / 2).toFixed(2)} ${width.toFixed(2)} ${height.toFixed(2)}`;
 }
 
 // A render-cycle reading of the lens: the viewBox string for the svg and
@@ -171,7 +162,7 @@ export function bindBoardNavigation(app: App, svg: SVGSVGElement): void {
       );
       // Pan repaints the lens without a full render: the viewBox is the
       // only thing that moves.
-      svg.setAttribute("viewBox", lensViewBox(app.ui.zoom, app.ui.pan, app.boardBounds));
+      svg.setAttribute("viewBox", lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds).viewBox);
     };
     const finish = () => {
       document.removeEventListener("pointermove", move);
@@ -204,14 +195,4 @@ export function bindBoardNavigation(app: App, svg: SVGSVGElement): void {
     if (app.ui.placing || app.ui.buyingCell) return;
     startPan(event);
   });
-}
-
-// One-shot click suppressor shared with the drag path's semantics.
-function suppressNextClick(): void {
-  const suppress = (clickEvent: Event) => {
-    clickEvent.preventDefault();
-    clickEvent.stopImmediatePropagation();
-  };
-  document.addEventListener("click", suppress, { capture: true, once: true });
-  setTimeout(() => document.removeEventListener("click", suppress, true), 0);
 }

@@ -22,6 +22,7 @@ import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals"
 import { ACHIEVEMENTS, achievementBoostOf, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
 import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NamedChordTerm, NoteEntry, RateSnapshot } from "../engine/types";
 import type { App, ChordHover, EnterKind } from "./app";
+import { suppressNextClick } from "./click";
 import { appIcon, moduleIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, HUE_TOKEN_OF, moduleFace } from "./face";
 import { bloomLayout, bloomPops, bloomSpan, viewMeet, viewPoint, type ViewFrame } from "./bloom";
@@ -32,7 +33,7 @@ import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HI
 import { formatDate, formatInt, formatNumber, formatPracticeMinutes, chordLiveLabel, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
 import { renderBoardLedger, renderAretePill, renderGameInfoStrip, ampBreakdownHtml, breakdownRowsHtml, unlockedCount, FEATS_SVG } from "./ledger";
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
-import { containerWidth, FORMULA_BREAKPOINT_PX, isPhoneWidth } from "./container";
+import { containerWidth, FORMULA_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX } from "./container";
 import { liveSet } from "./live";
 
 const SPACING = 65;
@@ -63,17 +64,23 @@ function stat(label: string, value: string): string {
 }
 
 export function render(app: App): void {
+  // One rate computation per pass, both bases (§7): the display basis —
+  // live during flow, projected build rate while arranging — and the
+  // charge-projected basis the panels, bloom, and countdowns preview.
+  // Every surface below reads the pass's snapshot; none recomputes.
+  const live = currentSnapshot(app.state);
+  const projected = computeRates(app.state, true);
   renderConsoleSession(app);
-  renderConsoleApps(app);
-  renderBoardLedger(app);
-  renderTools(app);
-  renderGrid(app);
+  renderConsoleApps(app, projected);
+  renderBoardLedger(app, live);
+  renderTools(app, projected);
+  renderGrid(app, live, projected);
   renderInventoryTray(app);
-  renderBloom(app);
+  renderBloom(app, projected);
   renderZoomCluster(app);
-  renderAretePill(app);
-  renderGameInfoStrip(app);
-  renderModal(app);
+  renderAretePill(app, live);
+  renderGameInfoStrip(app, live);
+  renderModal(app, live, projected);
   renderDev(app);
 }
 
@@ -228,7 +235,7 @@ function plannedFill(elapsed: number, target: number): string {
 // is used.
 // (Display names live in meta.ts's APP_LABELS.)
 
-function renderConsoleApps(app: App): void {
+function renderConsoleApps(app: App, projected: RateSnapshot): void {
   const host = byId("console-apps");
   if (!host) return;
   const { state, ui } = app;
@@ -257,7 +264,7 @@ function renderConsoleApps(app: App): void {
     state.sessionRecords.length,
   ]);
   if (host.dataset.renderKey === key) {
-    updateAppPanelLive(app, host);
+    updateAppPanelLive(app, host, projected);
     return;
   }
   host.dataset.renderKey = key;
@@ -302,7 +309,7 @@ function renderConsoleApps(app: App): void {
     byId(`app-tile-${appKey}`)?.addEventListener("click", () => app.openApp(appKey));
   }
   bindAppPanel(app, host);
-  updateAppPanelLive(app, host);
+  updateAppPanelLive(app, host, projected);
 }
 
 // The Time tile's compact plan: the clock, or the mode word for open-ended.
@@ -324,14 +331,14 @@ const ACHIEVEMENT_CATEGORY_LABEL: Record<AchievementCategory, string> = {
 
 const ACHIEVEMENT_CATEGORY_ORDER: readonly AchievementCategory[] = ["practice", "console", "board", "formula", "ladder"];
 
-function achievementContextOf(app: App): AchievementContext {
-  return { chargeDelivered: app.state.mode === "flow" && chargeDelivered(computeRates(app.state, true)) };
+function achievementContextOf(app: App, projected: RateSnapshot): AchievementContext {
+  return { chargeDelivered: app.state.mode === "flow" && chargeDelivered(projected) };
 }
 
 // The open page's refresh signature: each feat's progress quantized to a
 // percent, so a rebuild only happens when a bar visibly moves.
-function achProgressKey(app: App): string {
-  const ctx = achievementContextOf(app);
+function achProgressKey(app: App, projected: RateSnapshot): string {
+  const ctx = achievementContextOf(app, projected);
   return ACHIEVEMENTS.map((def) => {
     const { current, goal } = def.progress(app.state, ctx);
     return String(Math.round((Math.min(1, goal > 0 ? current / goal : 1)) * 100));
@@ -353,8 +360,8 @@ function achRowHtml(app: App, def: AchievementDef, ctx: AchievementContext): str
   </div>`;
 }
 
-function renderAchievementsModal(app: App, content: HTMLElement): void {
-  const ctx = achievementContextOf(app);
+function renderAchievementsModal(app: App, content: HTMLElement, projected: RateSnapshot): void {
+  const ctx = achievementContextOf(app, projected);
   const count = Object.keys(app.state.achievements).length;
   const sections = ACHIEVEMENT_CATEGORY_ORDER.map((category) => {
     const feats = ACHIEVEMENTS.filter((def) => def.category === category);
@@ -479,7 +486,7 @@ const TOOL_FORGE_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" 
 // The left-edge icon dock (§7): Catalog / Forge (count badge + charge pip)
 // / New cell, floating over the board's left edge. Hidden on portrait
 // phone, where the same actions ride the bottom thumb bar.
-function renderTools(app: App): void {
+function renderTools(app: App, projected: RateSnapshot): void {
   const { state, ui } = app;
   const host = byId("board-tools");
   const thumb = byId("thumb-bar");
@@ -536,7 +543,7 @@ function renderTools(app: App): void {
         cellButton.disabled = false;
       } else {
         const price = cellCost(state.cellsBought);
-        const countdown = practiceCountdown(price, wholeNous(state), computeRates(state, true).rate);
+        const countdown = practiceCountdown(price, wholeNous(state), projected.rate);
         cellButton.title = `New cell — ${formatInt(price)} ν${countdown ? ` · ${countdown}` : ""}`;
         cellButton.disabled = wholeNous(state) < price;
       }
@@ -546,7 +553,7 @@ function renderTools(app: App): void {
 
 /* ── Hex grid ──────────────────────────────────────── */
 
-function renderGrid(app: App): void {
+function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void {
   const { state, ui } = app;
   const svg = document.getElementById("grid") as SVGSVGElement | null;
   if (!svg) return;
@@ -571,7 +578,7 @@ function renderGrid(app: App): void {
   bindBoardNavigation(app, svg);
 
   const flow = state.mode === "flow";
-  const snapshot = currentSnapshot(state);
+  const snapshot = live;
   const selectedModule = state.modules.find((m) => m.id === ui.selected) ?? null;
   // One frame for every bloom placement question: the lens's world view
   // plus the wrap's css-pixel size, read together (§5).
@@ -689,7 +696,7 @@ function renderGrid(app: App): void {
   // chord — these stay OVER the modules (the promise reads on top).
   // Rebuilt from the live preview state so a re-render never strands a
   // ghost.
-  html += `<g data-key="ghost-chords">${ghostMarksHtml(app)}</g>`;
+  html += `<g data-key="ghost-chords">${ghostMarksHtml(app, projected)}</g>`;
 
   updateSvg(svg, html);
   bindGridEvents(app, svg);
@@ -946,15 +953,8 @@ function setDropHover(app: App, moduleId: string | null, pos: Hex | null): void 
 
 // A gesture that commits on pointerup kills the browser's synthetic click,
 // so the release never re-fires what the drag already did (e.g. a placement
-// opening the face it must leave closed, §5).
-function suppressNextClick(): void {
-  const suppress = (clickEvent: Event) => {
-    clickEvent.preventDefault();
-    clickEvent.stopImmediatePropagation();
-  };
-  document.addEventListener("click", suppress, { capture: true, once: true });
-  setTimeout(() => document.removeEventListener("click", suppress, true), 0);
-}
+// opening the face it must leave closed, §5) — click.ts holds the one
+// suppressor both drag paths share.
 
 function refreshDropPreview(app: App): void {
   const svg = document.getElementById("grid");
@@ -974,15 +974,16 @@ function refreshDropPreview(app: App): void {
 // The would-form ghost markup (§6): dashed hulls with name chips, one per
 // chord the drop would newly form, drawn over the voices' would-be
 // positions. What breaks is expressed by what disappears — breaking is
-// never previewed.
-function ghostMarksHtml(app: App): string {
+// never previewed. The render pass hands its projected snapshot over; the
+// drag-hover path (no pass in flight) computes its own.
+function ghostMarksHtml(app: App, projected?: RateSnapshot): string {
   const hover = app.ui.dropHover;
   if (!hover || app.state.mode !== "upgrade") return "";
   const module = app.state.modules.find((m) => m.id === hover.moduleId);
   if (!module) return "";
   const conducts = CATEGORY_OF[module.type] === "synthesizer" || module.type === "spacer";
   if (!conducts) return "";
-  const current = computeRates(app.state, true).namedChords;
+  const current = (projected ?? computeRates(app.state, true)).namedChords;
   const preview = wouldFormPreview(app.state, hover.moduleId, hover.pos);
   const newcomers = newChordTerms(current, preview.chords);
   if (newcomers.length === 0) return "";
@@ -1249,7 +1250,7 @@ const BLOOM_EFFECTS: Record<ModuleInstance["type"], (input: BloomEffectInput) =>
 // out-sizes the fixed bloom, and the affordances ride the closed face
 // instead — a floating upgrade card anchored over the module's lower band.
 // The host persists (the app creates it once); only the content rebuilds.
-function renderBloom(app: App): void {
+function renderBloom(app: App, projected: RateSnapshot): void {
   const host = byId("module-bloom");
   if (!host) return;
   const { state, ui } = app;
@@ -1265,7 +1266,7 @@ function renderBloom(app: App): void {
     return;
   }
   const phone = isPhoneWidth();
-  const snapshot = computeRates(state, true);
+  const snapshot = projected;
   const lines = BLOOM_EFFECTS[module.type]({
     gain: modulePower(module) * (BALANCE.rarityPower[module.rarity] - 1),
     power: modulePower(module),
@@ -1891,7 +1892,7 @@ function bindAppPanel(app: App, scope: HTMLElement): void {
 // Values that move during flow without rebuilding the popover: practice
 // tallies and goal progress. (The Time panel no longer repeats the
 // console's live session, so no clock lives here — §7.)
-function updateAppPanelLive(app: App, scope: ParentNode): void {
+function updateAppPanelLive(app: App, scope: ParentNode, projected: RateSnapshot): void {
   const { state } = app;
   liveSet(scope, "habit-session", `${formatClock(state.session?.elapsed ?? 0)} of practice`);
   for (const habit of state.habits) {
@@ -1915,7 +1916,7 @@ function updateAppPanelLive(app: App, scope: ParentNode): void {
   if (longGoalBuy) {
     const price = longGoalCost(state.goalCapacityBought);
     longGoalBuy.disabled = !(state.mode === "upgrade" && wholeNous(state) >= price);
-    const countdown = practiceCountdown(price, wholeNous(state), computeRates(state, true).rate) ?? "";
+    const countdown = practiceCountdown(price, wholeNous(state), projected.rate) ?? "";
     liveSet(scope, "long-goal-countdown", countdown);
   }
 }
@@ -1942,7 +1943,7 @@ function inventoryTileSvg(module: ModuleInstance): string {
 
 /* ── Modals ────────────────────────────────────────── */
 
-function renderModal(app: App): void {
+function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): void {
   const backdrop = byId("modal");
   const content = byId("modal-content");
   if (!backdrop || !content) return;
@@ -1950,21 +1951,25 @@ function renderModal(app: App): void {
   if (!kind) {
     backdrop.hidden = true;
     backdrop.classList.remove("sheet");
+    document.body.classList.remove("modal-sheet-open");
     delete content.dataset.renderKey;
     return;
   }
   // The formula sheet's own gate (§7): below the 760px container breakpoint
   // it presents as a sheet over the scrim. The modal layer is body-level —
   // outside the #app container — so the gate's decision arrives as a class
-  // the stylesheet can act on, not a container rule.
+  // the stylesheet can act on, not a container rule. On portrait phone the
+  // viewport media query sheets every modal, so the cluster's rise reads
+  // the wider of the two (§7, ADR-0029: the cluster alone reacts to open
+  // sheets, and inspection never buries it).
+  const sheet = (kind === "formula" && containerWidth() < FORMULA_BREAKPOINT_PX) || window.innerWidth < PHONE_MAX_PX;
   backdrop.classList.toggle("sheet", kind === "formula" && containerWidth() < FORMULA_BREAKPOINT_PX);
+  document.body.classList.toggle("modal-sheet-open", sheet);
   const extra =
     kind === "forge"
       ? app.state.bankedRolls.at(-1)?.id ?? null
       : kind === "honesty"
         ? [app.exitPending, app.state.session?.accounting.poolSeconds ?? 0, app.state.session?.accounting.bucketNous ?? 0]
-        // The summary's identity: a fresh session's summary must never
-        // reuse the previous one's already-rendered content.
         : kind === "summary"
           // The summary's identity: a fresh session's summary must never
           // reuse the previous one's already-rendered content.
@@ -1982,7 +1987,7 @@ function renderModal(app: App): void {
             : kind === "achievements"
               // Quantized progress: an open page refreshes when a bar visibly
               // moves, not on every clock tick.
-              ? achProgressKey(app)
+              ? achProgressKey(app, projected)
               // The enter prompt's own selection state (issue #95): the plan
               // and the kind-first picks re-render the modal the moment they
               // change — chips highlight on pick, never a stale footer.
@@ -1994,8 +1999,8 @@ function renderModal(app: App): void {
                 : kind === "formula"
                   ? [
                       achievementBoostOf(app.state) > 1,
-                      computeRates(app.state, true).infusors > 0,
-                      Math.round(currentSnapshot(app.state).rate),
+                      projected.infusors > 0,
+                      Math.round(live.rate),
                       app.state.session?.earned ?? null,
                     ]
                   : kind === "inventory"
@@ -2009,14 +2014,14 @@ function renderModal(app: App): void {
   if (kind === "settings") renderSettingsModal(app, content);
   else if (kind === "catalog") renderCatalogModal(app, content);
   else if (kind === "forge") renderForgeModal(app, content);
-  else if (kind === "achievements") renderAchievementsModal(app, content);
+  else if (kind === "achievements") renderAchievementsModal(app, content, projected);
   else if (kind === "export") renderExportModal(app, content);
   else if (kind === "import") renderImportModal(app, content);
   else if (kind === "reset") renderResetModal(app, content);
   else if (kind === "honesty") renderHonestyModal(app, content);
   else if (kind === "enter") renderEnterModal(app, content);
   else if (kind === "summary") renderSummaryModal(app, content);
-  else if (kind === "formula") renderFormulaModal(app, content);
+  else if (kind === "formula") renderFormulaModal(app, content, live);
   else if (kind === "inventory") renderInventorySheetModal(app, content);
   const firstButton = content.querySelector("button:not([disabled])");
   (firstButton as HTMLElement | null)?.focus();
@@ -2026,12 +2031,12 @@ function renderModal(app: App): void {
 // breakdown — as a modal sheet over a scrim, opened by tapping the Rate
 // cell below the 760px breakpoint. The one place the formula is disclosed
 // on mobile; the Rate cell's hover popover owns the disclosure above it.
-function renderFormulaModal(app: App, content: HTMLElement): void {
+function renderFormulaModal(app: App, content: HTMLElement, live: RateSnapshot): void {
   const { state } = app;
   // The same basis every rate figure wears — live during flow, projected
   // while arranging — so the sheet can never disagree with the ledger it
   // discloses.
-  const snapshot = computeRates(state, state.mode === "flow");
+  const snapshot = live;
   const achieving = achievementBoostOf(state) > 1;
   const infused = snapshot.infusors > 0;
   const chain = `<span class="op">(</span>${formatNumber(snapshot.synths)}${infused ? ` <span class="op">+</span> ${formatNumber(snapshot.infusors)}` : ""}<span class="op">)</span> <span class="op">×</span> χ ${formatNumber(snapshot.chordMultiplier)} <span class="op">×</span> emp ${formatNumber(snapshot.empowerment)}${achieving ? ` <span class="op">×</span> ach +${Math.round((snapshot.achievementBoost - 1) * 100)}%` : ""} <span class="op">=</span> <strong>${formatNumber(snapshot.rate)} ν/s</strong>`;
