@@ -150,18 +150,24 @@ const freshChimeState = (): ChimeState => ({ chimes: 0, lastChimeAt: 0, acknowle
 
 type ParsedSave = LoadedSave | { error: string };
 
+// The save file's wall-clock stamp, or null when the file carries none a
+// guard can trust — a broken stamp must never block a legitimate write
+// (#128).
+function savedAtOf(raw: string): number | null {
+  try {
+    const savedAt = (JSON.parse(raw) as { savedAt?: unknown }).savedAt;
+    return typeof savedAt === "number" && Number.isFinite(savedAt) ? savedAt : null;
+  } catch {
+    return null;
+  }
+}
+
 function parseSave(text: string): ParsedSave {
   const result = deserialize(text);
   if (result.error || !result.state) {
     return { error: result.error ?? "unknown error" };
   }
-  let savedAt = Date.now();
-  try {
-    savedAt = (JSON.parse(text) as { savedAt?: number }).savedAt ?? savedAt;
-  } catch {
-    // keep fallback
-  }
-  return { state: result.state, savedAt };
+  return { state: result.state, savedAt: savedAtOf(text) ?? Date.now() };
 }
 
 // The dual clock (focus-tool spec §1, §10): drift between the wall clock
@@ -212,6 +218,11 @@ export class App {
   // and greet() passes the observation on.
   private resumedFromDiscard = false;
   lastSaveWall = 0;
+  // The newest stored save this tab has incorporated — by loading at boot,
+  // writing, or adopting (#128). A slot entry newer than this was written
+  // by another tab: this tab's memory predates it, so writing would
+  // silently discard that tab's progress and save() refuses instead.
+  private knownSavedAt = 0;
   dev: boolean;
   // The session's AudioContext (§4): created or resumed inside the start
   // gesture, kept for the target chime. Null where Web Audio is
@@ -272,6 +283,10 @@ export class App {
       const parsed = parseSave(raw);
       if ("error" in parsed) {
         this.loadNotice = `Could not load the local save: ${parsed.error}`;
+        // A rejected file (an unknown version, say) is ours to overwrite:
+        // record its stamp so the fresh save this boot is about to write is
+        // never blocked by the very file that was refused (#128).
+        this.knownSavedAt = savedAtOf(raw) ?? this.knownSavedAt;
         return null;
       }
       return parsed;
@@ -309,6 +324,7 @@ export class App {
   // (ADR-0019).
   private resumeFromSave(loaded: LoadedSave): void {
     this.state = loaded.state;
+    this.knownSavedAt = loaded.savedAt;
     this.lastWall = null;
     this.presence = document.visibilityState === "visible";
     this.exitPending = false;
@@ -378,9 +394,62 @@ export class App {
     this.tick();
   }
 
-  save(now: number = Date.now()): void {
+  // The stored save's stamp, read fresh at every check: the slot is shared,
+  // so any read may observe another tab's write (#128). Null when absent or
+  // unreadable — a broken stamp never counts as newer, never blocks.
+  private storedSavedAt(): number | null {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw === null ? null : savedAtOf(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  // Whether the slot holds a save this tab never loaded, wrote, or adopted —
+  // another tab's write, which this tab's memory predates (#128).
+  private externalNewerSave(): boolean {
+    const stored = this.storedSavedAt();
+    return stored !== null && stored > this.knownSavedAt;
+  }
+
+  // Converges onto a newer stored save through the one resume/reconcile
+  // path (§1): the adopted save is treated exactly like a reload — a live
+  // session resumes with its absence reconciled as away. False when the
+  // stored save is unreadable, in which case writes must not be blocked.
+  private adoptNewerSave(): boolean {
+    const loaded = this.load();
+    if (!loaded) return false;
+    this.clearTransientUi();
+    this.resumeFromSave(loaded);
+    this.say("Caught up to the newer save from another tab.");
+    this.render();
+    return true;
+  }
+
+  // The two return doors (a visibility return, a bfcache restore) share one
+  // catch-up (#128): a tab coming back adopts a newer external save before
+  // its own reconcile runs, so the stale in-memory copy can never clobber
+  // what the slot gained while the tab was away.
+  private catchUpOnReturn(): void {
+    if (this.externalNewerSave()) this.adoptNewerSave();
+  }
+
+  // The one writer (§10). A shared slot means the write can race another
+  // tab's (#128): when the slot holds a save newer than anything this tab
+  // has incorporated, the write would silently discard that tab's progress,
+  // so it is refused — the tab stays on its own copy until a storage event
+  // (outside flow) or a return adopts the newer save. A tab whose own write
+  // is the newest thing in the slot — the single-tab case — saves through
+  // unchanged. Explicit import and reset force their write: a deliberate
+  // choice outranks the stamp. The stamp is claimed only after the slot
+  // accepted the write: a failed write (private browsing, full storage)
+  // must never read as incorporated.
+  save(now: number = Date.now(), force = false): void {
+    if (!force && this.externalNewerSave()) return;
     try {
       localStorage.setItem(STORAGE_KEY, serialize(this.state, now));
+      this.knownSavedAt = now;
     } catch {
       // Private browsing or full storage: the session continues without durable saves.
     }
@@ -418,7 +487,7 @@ export class App {
         ? "Save imported while a session was running — the honesty report is waiting."
         : "Save imported.",
     );
-    this.save();
+    this.save(Date.now(), true);
     this.render();
     return true;
   }
@@ -432,7 +501,7 @@ export class App {
     this.lastWall = null;
     this.exitPending = false;
     this.say("A fresh instrument. One synth is yours.");
-    this.save();
+    this.save(Date.now(), true);
     this.render();
   }
 
@@ -473,14 +542,26 @@ export class App {
         this.save();
       } else {
         this.presence = true;
+        this.catchUpOnReturn();
         this.processReturn(Date.now());
       }
     });
-    // A bfcache restore is a return: the frozen stretch classifies as away.
+    // A bfcache restore is a return: the frozen stretch classifies as away,
+    // and a save another tab wrote while this page sat frozen is adopted
+    // through the same reconcile path (#128).
     window.addEventListener("pageshow", (event) => {
       if (!(event as PageTransitionEvent).persisted) return;
       this.presence = document.visibilityState === "visible";
+      this.catchUpOnReturn();
       this.processReturn(Date.now());
+    });
+    // Another tab's save, announced here in every tab but the writer
+    // (#128): outside a live session the tab adopts at once — a cheap,
+    // invisible catch-up. Mid-flow the write guard refuses stale writes
+    // and the next visible return adopts through the reconcile path.
+    window.addEventListener("storage", (event) => {
+      if (event.key !== STORAGE_KEY || !this.ownsBoard()) return;
+      if (this.state.mode !== "flow") this.adoptNewerSave();
     });
     // Focus loss alone is not away, but focus is a boundary: a stalled or
     // throttled clock catches up here with presence unchanged.

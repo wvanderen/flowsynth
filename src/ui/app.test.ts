@@ -6,7 +6,8 @@ import { addPracticeLog, archiveHabit, createHabit, selectHabit } from "../engin
 import { createGoal, deleteGoal, goalSummary } from "../engine/goals";
 import { recordSummaryReflection } from "../engine/actions";
 import { writeNote } from "../engine/notes";
-import { BALANCE } from "../engine/constants";
+import { BALANCE, SAVE_VERSION } from "../engine/constants";
+import { STORAGE_KEY, serialize } from "../engine/save";
 import { computeRates } from "../engine/economy";
 import { startSession, endSession } from "../engine/actions";
 import { advance } from "../engine/advance";
@@ -2317,5 +2318,167 @@ describe("the opening arc's one pop-up (§8, issue #138)", () => {
     give(app.state, "forge", null);
     app.render();
     expect(arcCard().hidden).toBe(true);
+  });
+});
+
+// Cross-tab save conflicts (#128): one localStorage slot, many tabs. A tab
+// whose memory predates the stored save must never write over it, and a tab
+// that notices another tab's write converges onto it.
+describe("cross-tab save conflicts (#128)", () => {
+  afterEach(() => setVisibility("visible"));
+
+  // Forges the file another tab would have written: same lineage, one mark
+  // of progress, stamped later than anything this tab could have written.
+  function forgeNewerSave(nous: number): void {
+    localStorage.setItem(STORAGE_KEY, serialize({ ...app.state, nous }, Date.now() + 60_000));
+  }
+
+  const storedNous = () => JSON.parse(localStorage.getItem(STORAGE_KEY)!).state.nous as number;
+
+  it("a save from a tab whose snapshot is older than the stored save never replaces it", () => {
+    forgeNewerSave(777);
+    app.state.nous = 999;
+    app.save();
+    expect(storedNous()).toBe(777);
+  });
+
+  it("a tab holding the newest state saves normally", () => {
+    localStorage.setItem(STORAGE_KEY, serialize({ ...app.state, nous: 1 }, Date.now() - 60_000));
+    app.state.nous = 999;
+    app.save();
+    expect(storedNous()).toBe(999);
+  });
+
+  it("an equal stored savedAt never blocks a legitimate write", () => {
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+    localStorage.setItem(STORAGE_KEY, serialize({ ...app.state, nous: 5 }, stored.savedAt));
+    app.state.nous = 999;
+    app.save();
+    expect(storedNous()).toBe(999);
+  });
+
+  it("an unparseable stored save never blocks a write", () => {
+    localStorage.setItem(STORAGE_KEY, "{not json");
+    app.state.nous = 999;
+    app.save();
+    expect(storedNous()).toBe(999);
+  });
+
+  it("a stored save without a readable savedAt never blocks a write", () => {
+    const file = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+    delete file.savedAt;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(file));
+    app.state.nous = 999;
+    app.save();
+    expect(storedNous()).toBe(999);
+  });
+
+  it("a refused save leaves the tab's memory alone — convergence waits for the return", () => {
+    forgeNewerSave(777);
+    app.state.nous = 999;
+    app.save();
+    expect(storedNous()).toBe(777);
+    expect(app.state.nous).toBe(999);
+  });
+
+  it("the hidden-transition save refuses to clobber a newer save", () => {
+    forgeNewerSave(777);
+    setVisibility("hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(storedNous()).toBe(777);
+  });
+
+  it("a bfcache restore adopts a newer save written while the page sat frozen", () => {
+    forgeNewerSave(777);
+    setVisibility("visible");
+    // happy-dom ignores the PageTransitionEvent init dict; the persisted
+    // flag goes on as an own property.
+    const event = new Event("pageshow");
+    Object.defineProperty(event, "persisted", { value: true });
+    window.dispatchEvent(event);
+    expect(app.state.nous).toBe(777);
+  });
+
+  it("a storage event adopts the newer save when no session is live", () => {
+    forgeNewerSave(777);
+    window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY }));
+    expect(app.state.nous).toBe(777);
+  });
+
+  it("a storage event on another key changes nothing", () => {
+    const before = localStorage.getItem(STORAGE_KEY);
+    window.dispatchEvent(new StorageEvent("storage", { key: "some.other.key" }));
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(before);
+    expect(app.state.nous).not.toBe(777);
+  });
+
+  it("a live flow session is never replaced mid-flow by a storage event", () => {
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, 600);
+    forgeNewerSave(777);
+    window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY }));
+    expect(app.state.nous).not.toBe(777);
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.session).not.toBeNull();
+  });
+
+  it("a tab returning from the background adopts a newer save instead of clobbering it", () => {
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, 600);
+    app.tick();
+    // The tab hides: its own save is the newest thing in the slot and lands.
+    setVisibility("hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(app.state.mode).toBe("flow");
+    // Another tab banks progress and saves a newer file while we are away.
+    forgeNewerSave(777);
+    // The stale tab returns: it adopts, and the newer save survives. The
+    // live session keeps producing behind the adoption, so the adopted
+    // mark reads as a floor, not an equality.
+    setVisibility("visible");
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(app.state.nous).toBeGreaterThanOrEqual(777);
+    // The stored save keeps the other tab's progress — a stale clobber
+    // would read near zero, an allowed post-adoption save at least 777.
+    expect(storedNous()).toBeGreaterThanOrEqual(777);
+  });
+
+  it("the boundary throttle's save refuses to clobber a newer save", () => {
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, 600);
+    app.tick();
+    forgeNewerSave(777);
+    app.lastSaveWall = 0;
+    app.tick();
+    expect(storedNous()).toBe(777);
+  });
+
+  it("the unload save refuses to clobber a newer save", () => {
+    forgeNewerSave(777);
+    window.dispatchEvent(new Event("beforeunload"));
+    expect(storedNous()).toBe(777);
+  });
+
+  it("an explicit import writes even when the stored save is newer", () => {
+    forgeNewerSave(777);
+    const ok = app.importText(serialize({ ...app.state, nous: 555 }, Date.now() - 60_000));
+    expect(ok).toBe(true);
+    expect(storedNous()).toBe(555);
+  });
+
+  it("a hard reset writes even when the stored save is newer", () => {
+    forgeNewerSave(777);
+    app.hardReset();
+    expect(storedNous()).toBe(app.state.nous);
+  });
+
+  it("a rejected-version stored save never blocks the fresh save", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ app: "flowsynth", version: 1, savedAt: Date.now() + 60_000, state: {} }),
+    );
+    const fresh = boot();
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).version).toBe(SAVE_VERSION);
+    expect(fresh.state.mode).toBe("upgrade");
   });
 });
