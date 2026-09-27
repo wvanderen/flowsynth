@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buyActivation, endSession, startSession } from "./actions";
-import { appActive, appLockNote, FOCUS_APPS, LADDER_APPS, nextRung, nextRungCost } from "./apps";
+import { appActive, appLockNote, FOCUS_APPS, LADDER_APPS, nextRung, nextRungCost, TILE_APPS } from "./apps";
 import { rungCost } from "./economy";
 import { fresh } from "./fixtures";
 
@@ -25,6 +25,8 @@ describe("the free opening (ADR-0019, issue #83)", () => {
 
   it("exposes the launch app inventory in tile order, with the ladder resting empty", () => {
     expect(FOCUS_APPS).toEqual(["habit", "time", "notes", "goals"]);
+    // Time wears no tile (issue #148): the console clock is its affordance.
+    expect(TILE_APPS).toEqual(["habit", "notes", "goals"]);
     expect(LADDER_APPS).toEqual([]);
   });
 });

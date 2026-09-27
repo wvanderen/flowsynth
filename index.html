@@ -10,13 +10,16 @@
   <body>
     <div id="app">
       <!-- The console (ADR-0012): structurally above the game UI, pure
-           control (board-redesign spec §7): the main switch, the clock (itself
-           the plan affordance — clicking it opens the Time app), pause, the
-           focus-app tiles. Its height is fixed, so nothing below it ever
-           moves, reflows, or dims while the console is used. Production
-           reads live on the board ledger strip, never here. -->
+           control (board-redesign spec §7), organized around the session
+           gate (issue #148): brand, then the clock — itself the plan
+           affordance, its disclosure opening the Time app — with the
+           dominant Enter/Exit main switch centered in the flexible middle,
+           the icon-only focus-app tiles, and Settings at the far right.
+           Its height is fixed, so nothing below it ever moves, reflows, or
+           dims while the console is used. Production reads live on the
+           board ledger strip, never in the header. -->
       <header class="console">
-        <div class="brand">
+        <div class="brand" role="img" title="FlowSynth" aria-label="FlowSynth">
           <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
             <path d="M16 2 28 9v14l-12 7L4 23V9Z" />
             <path d="m10 20 5-10v12l7-10" />

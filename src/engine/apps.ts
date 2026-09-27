@@ -7,15 +7,18 @@ export type { FocusApp };
 // Activation is permanent and player-wide; the board may read app state as
 // effect inputs, but apps never touch nous or charge (§2.3's boundary rule).
 
-// Tile order on the console: the free app leads the rack (spec §2.3's
-// launch inventory).
+// Every focus app, launch order. Free from the very first session (ADR-0019,
+// issue #83). When the ladder's first tenant joins (Tasks, ADR-0012), it
+// joins this set but stays out of TILE_APPS — it then gates on the permanent
+// `activatedApps` record below, bought from the ladder at pricing that
+// tenant's effort decides.
 export const FOCUS_APPS: readonly FocusApp[] = ["habit", "time", "notes", "goals"];
 
-// Free from the very first session (ADR-0019, issue #83). Today this is
-// every FocusApp there is. When the ladder's first tenant joins (Tasks,
-// ADR-0012), it takes a tile in FOCUS_APPS but stays out of this set —
-// it then gates on the permanent `activatedApps` record below, bought
-// from the ladder at pricing that tenant's effort decides.
+// Tile order on the console (issue #148): Habit, Notes, Goals — consistently
+// sized icon-only controls. Time wears no tile: the console clock is itself
+// the app's affordance, its disclosure opening the Time popover.
+export const TILE_APPS: readonly FocusApp[] = ["habit", "notes", "goals"];
+
 const FREE_APPS: readonly FocusApp[] = FOCUS_APPS;
 
 // The activation ladder rests empty at launch (ADR-0019): with Notes and
