@@ -158,6 +158,12 @@ export const CATEGORY_OF: Record<ModuleType, Category> = {
   forge: "forge",
 };
 
+// The one synthesizer test, shared by the rate pass, the roll rig, and the
+// arc's acquisition count — one predicate, never three that can drift.
+export function isSynthesizerType(type: ModuleType): boolean {
+  return CATEGORY_OF[type] === "synthesizer";
+}
+
 // Chargeable is a supertype family above the category level (ADR-0012): its
 // members accumulate received charge toward a threshold. The Forge is the
 // sole launch instance. Continuous-charge categories use received charge as

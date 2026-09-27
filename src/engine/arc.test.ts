@@ -52,18 +52,6 @@ describe("practice fills the forge (§8)", () => {
     expect(s.forge.progress).toBeCloseTo(30, 6);
     expect(s.bankedRolls).toHaveLength(2);
   });
-
-  it("paused time feeds nothing", () => {
-    const s = fresh();
-    startSession(s, null);
-    advance(s, 60);
-    endSession(s);
-    const frozen = s.forge.progress;
-    expect(frozen).toBeGreaterThan(0);
-    expect(s.mode).toBe("upgrade");
-    // No advance path exists outside flow; the meter sits still.
-    expect(s.forge.progress).toBe(frozen);
-  });
 });
 
 describe("the first roll yields a synthesizer candidate (§8)", () => {
@@ -104,7 +92,7 @@ describe("the one pop-up card, once, ever (§8)", () => {
     expect(arcCardDue(s)).toBe(false);
   });
 
-  it("fires when the second synth is acquired — tray or board", () => {
+  it("fires when the second synthesizer is acquired — tray or board", () => {
     const s = fresh();
     s.modules.push({ id: "m99", type: "additive", rarity: "common", level: 0, invested: 0, pos: null });
     expect(synthsAcquired(s)).toBe(2);

@@ -209,7 +209,7 @@ export function dismissSummary(state: GameState): ActionResult {
   return ok;
 }
 
-// The opening arc's one pop-up (§8): the second synth's card. One
+// The opening arc's one pop-up (§8): the second synthesizer's card. One
 // dismissal, ever — the flag persists, so the card never fires again
 // whatever the board grows into. Idempotent, like every dismissal.
 export function dismissArcCard(state: GameState): ActionResult {

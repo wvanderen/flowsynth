@@ -1,4 +1,4 @@
-import { BALANCE, CATEGORY_OF, ROLL_POOL } from "./constants";
+import { BALANCE, isSynthesizerType, ROLL_POOL } from "./constants";
 import { newModuleId } from "./state";
 import type { Candidate, GameState, ModuleType, RollOffer } from "./types";
 
@@ -28,8 +28,9 @@ export function generateOffer(state: GameState, rng: Rng): RollOffer {
     candidates.push({ id: newModuleId(state), type, rarity: rollRarity(rng) });
   }
   // The rig can only ever land on the last slot: the guard means neither
-  // earlier candidate sings, so the replacement can't duplicate a type.
-  if (firstRollRigged(state) && !candidates.some((c) => CATEGORY_OF[c.type] === "synthesizer")) {
+  // earlier candidate sings, so the replacement can't duplicate a type. It
+  // changes what the slot is, not how good — the slot keeps its rolled rarity.
+  if (firstRollRigged(state) && !candidates.some((c) => isSynthesizerType(c.type))) {
     candidates[candidates.length - 1]!.type = "additive";
   }
   return { id: newModuleId(state), candidates: [candidates[0]!, candidates[1]!, candidates[2]!] };

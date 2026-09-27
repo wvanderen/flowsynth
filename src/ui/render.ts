@@ -1444,12 +1444,13 @@ function renderInventoryTray(app: App): void {
   });
 }
 
-// The opening arc's one pop-up (§8, issue #138): after the second synth is
-// acquired, a single dismissible card — place it beside your first; the
-// dashed ghost previews the chord it would form; the × is what the pair
-// earns together. Upgrade-mode furniture over the board's top edge, clear
-// of the dock, the pill, and the zoom cluster; the ✕ dismisses once, ever
-// (arcCardSeen persists). No goals, no steps, no tutorial state — one card.
+// The opening arc's one pop-up (§8, issue #138): after the second
+// synthesizer is acquired, a single dismissible card — place it beside
+// your first; the dashed ghost previews the chord it would form; the × is
+// what the pair earns together. Upgrade-mode furniture over the board's
+// top edge, clear of the dock, the pill, and the zoom cluster; the ✕
+// dismisses once, ever (arcCardSeen persists). No goals, no steps, no
+// tutorial state — one card.
 function renderArcCard(app: App): void {
   const card = byId("arc-card");
   if (!card) return;

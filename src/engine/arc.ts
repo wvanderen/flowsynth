@@ -1,4 +1,4 @@
-import { CATEGORY_OF } from "./constants";
+import { isSynthesizerType } from "./constants";
 import type { GameState } from "./types";
 
 // The opening learning arc (board-redesign spec §8, issue #138): a
@@ -9,7 +9,7 @@ import type { GameState } from "./types";
 // Every synthesizer the player has acquired, tray or board. The opening
 // grants one; the arc's card keys off the second.
 export function synthsAcquired(state: GameState): number {
-  return state.modules.filter((m) => CATEGORY_OF[m.type] === "synthesizer").length;
+  return state.modules.filter((m) => isSynthesizerType(m.type)).length;
 }
 
 // Whether the one pop-up is due: after the second acquisition, until its

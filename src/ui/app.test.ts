@@ -2270,7 +2270,7 @@ describe("the opening arc's one pop-up (§8, issue #138)", () => {
     expect(arcCard().hidden).toBe(true);
   });
 
-  it("fires after the second synth is acquired, leans on the ghost and the ×, and dismisses once, ever", () => {
+  it("fires after the second synthesizer is acquired, leans on the ghost and the ×, and dismisses once, ever", () => {
     give(app.state, "additive", null); // the tray holds the new arrival
     app.render();
     expect(arcCard().hidden).toBe(false);
