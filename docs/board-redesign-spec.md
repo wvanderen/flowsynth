@@ -85,7 +85,7 @@ composite = (synths + infusor uplift) × Π chord terms
 
 **Portrait phone — thumb dock:**
 
-- The top nav holds **session controls only** (clock, pause, enter/exit, settings — the clock stays the plan affordance). The focus-app tiles return only while an app popover is open, so the clock's Time popover keeps its anchor (ADR-0028).
+- The top nav holds **session controls** (clock, pause, enter/exit, settings — the clock stays the plan affordance) plus one **compact app launcher** (issue #149): a single icon-only control whose menu opens Habit, Notes, and Goals — the tiles stay docked out below the line (ADR-0028 as amended by ADR-0033).
 - Production reads (ν, rate, session) live in a **game-info strip** directly below the nav, on the board surface where the tutorial helptext used to sit. Feats appears once on phone — it rides the thumb bar; the strip carries no feats chip. The strip's **rate read is the phone's only formula door**: tapping it opens the formula sheet over a scrim — the operand chain never goes ambient at this width (ADR-0030).
 - The console is a **bottom thumb bar**: Catalog / Forge / New cell / Inventory / Feats.
 - The bloom presents as a **bottom sheet**; the zoom cluster rises above any open sheet so inspection never gets buried. The Arete pill is never dismissed — an open sheet covers the board's lower edge, and nothing fades the pill (ADR-0029).

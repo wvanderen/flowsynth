@@ -18,6 +18,16 @@ export function goalRequiredSeconds(goal: Goal): number {
   return goal.condition.minutes * 60;
 }
 
+// The tracker's rolled-up state (issue #149): no tracked goals, work in
+// progress (at least one incomplete current occurrence), or every current
+// occurrence complete. A recurring reset rolls completed goals back to open.
+export type GoalTrackerState = "none" | "open" | "complete";
+
+export function goalTrackerState(state: GameState): GoalTrackerState {
+  if (state.goals.length === 0) return "none";
+  return state.goals.some((g) => !g.completed) ? "open" : "complete";
+}
+
 function localDateKey(now: number): string {
   const d = new Date(now);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -37,7 +47,8 @@ export function occurrenceKeyFor(schedule: GoalSchedule, now: number): string {
 }
 
 // Rolls recurring goals to the current occurrence at the local calendar
-// boundary. Cheap; call with the real clock from ticks and session events.
+// boundary. Cheap and idempotent; call with the real clock from ticks and
+// session events.
 export function rollGoalOccurrences(state: GameState, now: number): void {
   for (const goal of state.goals) {
     const key = occurrenceKeyFor(goal.schedule, now);

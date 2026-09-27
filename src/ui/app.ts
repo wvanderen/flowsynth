@@ -90,6 +90,10 @@ export interface UiState {
   selected: string | null;
   // The focus app whose console popover is open, if any (ADR-0012).
   app: FocusApp | null;
+  // The phone launcher's menu (issue #149): the one compact entry point
+  // keeping Habit, Notes, and Goals reachable below the 600px line. Light
+  // furniture — never saved; cleared with the transient modes.
+  launcherOpen: boolean;
   placing: string | null;
   // The live drop preview (§5–§6): the module a drag or armed placement is
   // pointing at, and the cell it hovers. Null whenever nothing hovers.
@@ -183,6 +187,7 @@ export class App {
   ui: UiState = {
     selected: null,
     app: null,
+    launcherOpen: false,
     placing: null,
     dropHover: null,
     chordHover: null,
@@ -460,6 +465,7 @@ export class App {
   private clearTransientUi(): void {
     this.ui.selected = null;
     this.ui.app = null;
+    this.ui.launcherOpen = false;
     this.ui.placing = null;
     this.ui.dropHover = null;
     this.ui.chordHover = null;
@@ -589,10 +595,15 @@ export class App {
       if ((event.target as Element | null)?.closest(".clock-anchor")) clickInsideApps = true;
     }, { capture: true });
     document.addEventListener("click", () => {
+      // A stale instance's closer must never close — or re-render — a newer
+      // instance's board (§1's ownership rule, as the bloom closer below
+      // already reads it).
+      if (!this.ownsBoard()) return;
       const inside = clickInsideApps;
       clickInsideApps = false;
-      if (this.ui.app === null || inside) return;
-      this.closeApp();
+      if (inside) return;
+      if (this.ui.app !== null) this.closeApp();
+      else if (this.ui.launcherOpen) this.closeLauncher();
     });
     // The expanded face closes on outside click (§5): the bloom host's
     // capture-phase click drops a token (see the ledger above), and the
@@ -637,6 +648,10 @@ export class App {
         this.closeApp();
         return;
       }
+      if (this.ui.launcherOpen) {
+        this.closeLauncher();
+        return;
+      }
       if (this.ui.selected) {
         this.ui.selected = null;
         this.render();
@@ -645,6 +660,11 @@ export class App {
   }
 
   tick(): void {
+    // Recurring goals roll on every tick, not only across flow boundaries:
+    // a tab resting in upgrade mode must read the new day's state too —
+    // the launcher's Goals entry with it (issue #149). Idempotent with the
+    // boundary roll below.
+    rollGoalOccurrences(this.state, Date.now());
     this.applyBoundary(Date.now());
     if (this.state.mode !== "flow") {
       this.lastWall = null;
@@ -946,17 +966,51 @@ export class App {
     // guard stays for a future ladder tenant.
     if (!appActive(this.state, app)) return;
     this.ui.app = this.ui.app === app ? null : app;
+    // One popover at a time (issue #149): opening an app — from a tile, a
+    // launcher entry, or the clock — always dismisses the launcher's menu.
+    this.ui.launcherOpen = false;
     this.ui.selected = null;
     this.ui.placing = null;
     this.resetHistorySurfaces();
     this.render();
   }
 
+  // The phone launcher (issue #149): one compact control that keeps Habit,
+  // Notes, and Goals reachable below the 600px line. Pressing it always
+  // means "my menu": any open app popover gives way, and a second press
+  // closes. An entry press swaps the menu for that app's panel, anchored
+  // beneath the launcher itself.
+  launcherActivate(): void {
+    // The panel rides closeApp's full teardown — not just the app nulling —
+    // so a habit edit or drilled history can't survive the swap into the
+    // menu and leak into the panel a later press reopens.
+    this.dismissAppPanel();
+    this.ui.launcherOpen = !this.ui.launcherOpen;
+    this.render();
+    // Keyboard callers land inside the menu they asked for; touch callers
+    // are unaffected — the first entry is the next tap's neighbor anyway.
+    if (this.ui.launcherOpen) document.getElementById("app-launcher-habit")?.focus();
+  }
+
+  closeLauncher(): void {
+    if (!this.ui.launcherOpen) return;
+    this.ui.launcherOpen = false;
+    this.render();
+  }
+
   closeApp(): void {
+    this.dismissAppPanel();
+    this.render();
+  }
+
+  // The app popover's teardown without the render: the panel itself plus
+  // the panel-internal surfaces a habit edit or history drill leaves
+  // behind. Every path that takes the popover away (closeApp, Escape, the
+  // click-away closer, the launcher's menu swap) reads this one shape.
+  private dismissAppPanel(): void {
     this.ui.app = null;
     this.ui.editingHabitId = null;
     this.resetHistorySurfaces();
-    this.render();
   }
 
   // ── Session history (§9) ────────────────────────────────────────────────

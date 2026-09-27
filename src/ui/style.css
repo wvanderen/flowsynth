@@ -205,6 +205,73 @@ h1, h2, h3, p { margin: 0; }
 .app-tile.locked { cursor: default; }
 .app-tile.locked .app-tile-glyph { color: var(--muted); opacity: 0.6; }
 
+/* The phone launcher (issue #149): one compact control that keeps Habit,
+   Notes, and Goals reachable below the 600px line — the tiles stay docked
+   out there, the clock keeps the Time entry, and the header holds its one
+   row. Desktop docks the whole slot out; the tiles stand instead. */
+.app-launcher-slot { position: relative; display: none; }
+.app-launcher {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+}
+.app-launcher svg { width: 19px; height: 19px; display: block; }
+.app-launcher:hover, .app-launcher[aria-expanded="true"] { border-color: var(--line); background: var(--panel); }
+/* The open menu: a compact column of app entries right-anchored under the
+   launcher — the header's one row is never joined by a second. */
+.app-launcher-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 208px;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 18px 50px var(--shadow);
+  z-index: 30;
+  animation: popover-in-left 0.14s ease-out;
+}
+/* The panels opened from the launcher right-anchor too: the base popover
+   rule centers on its anchor, which at the row's far end overflows a phone
+   viewport's right edge — every sub-panel, every time. */
+.app-launcher-slot .app-popover { left: auto; right: 0; transform: none; animation-name: popover-in-left; }
+.app-launcher-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  text-align: left;
+}
+.app-launcher-item svg { width: 19px; height: 19px; flex-shrink: 0; }
+.app-launcher-word { font-size: 13px; font-weight: 600; }
+.app-launcher-item:hover:not(:disabled) { border-color: var(--line); background: var(--panel-soft); }
+/* The Goals entry's tracker read (issue #149): the habit-dot vocabulary —
+   hollow while work is open, filled when every current occurrence is
+   complete, dashed when nothing is tracked — a state, never an aggregate
+   percentage; the header stays pure control. */
+.launcher-goal-state { margin-left: auto; display: flex; align-items: center; gap: 7px; }
+.launcher-pip { width: 8px; height: 8px; border-radius: 100%; border: 1.5px solid var(--muted); flex-shrink: 0; }
+.launcher-goal-state.none .launcher-pip { border-style: dashed; opacity: 0.75; }
+.launcher-goal-state.complete .launcher-pip { background: var(--accent); border-color: var(--accent); }
+/* The Habit entry's inline readout: the practice a session would start,
+   wearing the same muted word style as the Goals state — truncated, since
+   a habit name is the player's own. */
+.launcher-habit-state { margin-left: auto; display: flex; align-items: center; min-width: 0; }
+.launcher-habit-state .launcher-state-word { max-width: 128px; overflow: hidden; text-overflow: ellipsis; }
+.launcher-state-word { font: 10px var(--mono); letter-spacing: 0.02em; color: var(--muted); white-space: nowrap; }
+
 /* App panels open as popovers anchored directly beneath their tile — short
    mouse travel, and nothing below the console ever moves, reflows, or dims. */
 .app-popover {
@@ -1492,20 +1559,29 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 
 @container app (width < 600px) {
   /* Portrait phone (§7): the composition re-docks. Top nav = session
-     controls only (brand glyph, clock, switch, settings) — the icon-only
-     tiles hide, and the clock's Time popover anchors to the clock itself;
-     production reads move to the board-surface game-info strip; the icon
-     dock becomes the bottom thumb bar with Inventory and Feats folded in;
-     the bloom presents as a bottom sheet. */
+     controls plus the app launcher (issue #149) — brand glyph, clock,
+     switch, launcher, settings — with the icon-only tiles docked out: the
+     launcher's menu opens Habit, Notes, and Goals from one compact control,
+     its panel popover anchoring beneath the launcher, and the clock's Time
+     popover anchors to the clock itself. Production reads move to the
+     board-surface game-info strip; the icon dock becomes the bottom thumb
+     bar with Inventory and Feats folded in; the bloom presents as a bottom
+     sheet. */
   .console { height: 56px; padding: 0 10px; gap: 8px; }
   .brand svg { width: 24px; height: 24px; }
   .console-session { flex: 0 0 auto; gap: 8px; }
-  .console-clock { min-height: 0; padding: 2px 6px; }
+  /* The clock hugs its content here: the 150px desktop reserve plus the
+     launcher would crowd a 320px device, and the row must never wrap. */
+  .console-clock { min-width: 0; min-height: 0; padding: 2px 6px; }
   .clock-provisional { display: none; }
   .main-switch { padding: 9px 11px; }
   .main-switch span { display: none; }
-  .console-apps { display: none; }
-  #console-settings { margin-left: auto; }
+  .app-tiles { display: none; }
+  .app-launcher-slot { display: flex; }
+  /* The launcher rides with Settings at the row's right end: the session
+     cluster ends at the switch, and the auto margin moves to the launcher. */
+  .console-apps { margin-left: auto; }
+  #console-settings { margin-left: 0; }
   .board-ledger { display: none; }
   .game-info-strip { display: flex; }
   .board-tools { display: none; }

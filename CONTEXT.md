@@ -139,7 +139,7 @@ The catalog's one-time guaranteed offers — the generator, one infusor, and a F
 ### The console and focus apps
 
 **Console**:
-The pure control surface organized around the Enter/Exit main switch — the dominant, centered session gate, with the clock beside it and Settings at the far right. The main switch is the mode indicator — off, glowing live, held paused — and the clock is itself the plan affordance: a small disclosure chevron on it opens the Time app, which wears no tile (Habit, Notes, and Goals carry the console's consistently sized icon-only tiles). While a session runs, a thin progress strip along the console's bottom edge shows its progress in the switch's vermillion — filling on planned sessions, pulsing on open-ended ones, held while paused. The board never moves or dims while the console is in use.
+The pure control surface organized around the Enter/Exit main switch — the dominant, centered session gate, with the clock beside it and Settings at the far right. The main switch is the mode indicator — off, glowing live, held paused — and the clock is itself the plan affordance: a small disclosure chevron on it opens the Time app, which wears no tile (Habit, Notes, and Goals carry the console's consistently sized icon-only tiles; on portrait phone a compact launcher stands in their place and opens the same three apps from one control, its entries wearing the selected habit and the tracker's goals state — ADR-0033). While a session runs, a thin progress strip along the console's bottom edge shows its progress in the switch's vermillion — filling on planned sessions, pulsing on open-ended ones, held while paused. The board never moves or dims while the console is in use.
 
 **Board ledger**:
 The strip docked above the board carrying Nous, Rate, and Session as one instrument, with the feats chip beside it — the board owns its production numbers. The Rate cell is the only door to the full formula: its collapsed operand chain ending in the live total is the rate display above the 760px breakpoint, and below it the bare total stands alone and a tap opens the formula as a modal sheet over a scrim. (On portrait phone the door moves to the game-info strip's rate read.)
@@ -169,7 +169,7 @@ A hand-paced, one-at-a-time purchase beat for a console upgrade such as goal cap
 A repeatable real-life practice, such as piano or cooking, that develops through credited practice time and manually logged practice time and can be selected for a flow session. Its development unlocks habit-specific customization options and is separate from nous.
 
 **Habit app**:
-The always-free focus app through which the player selects the active habit for a session, or practices unstructured.
+The always-free focus app through which the player selects the active habit for a session, or practices unstructured. On phone, the launcher's entry names the selected practice inline and reads "none selected" when the next session would be unstructured (ADR-0033) — the UI's word for the unstructured choice.
 
 **Habit development summary**:
 The Habit app's per-habit view: lifetime practice time, sessions practiced, last practiced, and the habit's tagged notes. Its aggregates read the practice log — live sessions and manual logs together.

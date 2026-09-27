@@ -8,6 +8,7 @@ import {
   createGoal,
   deleteGoal,
   goalCapacity,
+  goalTrackerState,
   rollGoalOccurrences,
 } from "./goals";
 import { longGoalCost } from "./economy";
@@ -182,6 +183,32 @@ describe("recurrence", () => {
     rollGoalOccurrences(s, 999_999_999);
     expect(s.goals[0]!.completed).toBe(true);
     expect(s.goals).toHaveLength(1);
+  });
+});
+
+describe("the tracker's rolled-up state (#149)", () => {
+  it("distinguishes no tracked goals, work in progress, and every occurrence complete", () => {
+    const s = fresh();
+    expect(goalTrackerState(s)).toBe("none");
+    const habit = withHabit(s);
+    createGoal(s, { habitId: habit.id, minutes: 10, schedule: "daily", now: 1 });
+    expect(goalTrackerState(s)).toBe("open");
+    accrueGoalProgress(s, habit.id, 600);
+    expect(goalTrackerState(s)).toBe("complete");
+    // One incomplete current occurrence is enough for in progress, whatever
+    // the others say.
+    createGoal(s, { habitId: null, minutes: 20, schedule: "once", now: 2 });
+    expect(goalTrackerState(s)).toBe("open");
+  });
+
+  it("a recurring reset returns the tracker to in progress", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    createGoal(s, { habitId: habit.id, minutes: 10, schedule: "daily", now: 1 });
+    accrueGoalProgress(s, habit.id, 600);
+    expect(goalTrackerState(s)).toBe("complete");
+    rollGoalOccurrences(s, DAY + 3600_000); // next local day: fresh occurrence
+    expect(goalTrackerState(s)).toBe("open");
   });
 });
 
