@@ -1092,9 +1092,15 @@ describe("the enter prompt", () => {
     const caption = () => document.querySelector("#console-session .clock-caption")!.textContent;
     document.querySelector<HTMLButtonElement>('#app-popover [data-plan="25"]')!.click();
     expect(clock()).toBe("25:00");
-    // A second, value-to-value change must still reach the clock node.
+    // A second, value-to-value change must still reach the clock node — by
+    // chip and by free entry alike.
     document.querySelector<HTMLButtonElement>('#app-popover [data-plan="45"]')!.click();
     expect(clock()).toBe("45:00");
+    expect(caption()).toBe("planned");
+    const input = document.getElementById("plan-minutes") as HTMLInputElement;
+    input.value = "40";
+    input.dispatchEvent(new Event("change"));
+    expect(clock()).toBe("40:00");
     expect(caption()).toBe("planned");
     document.querySelector<HTMLButtonElement>("#app-popover #plan-open")!.click();
     expect(clock()).toBe("--:--");
