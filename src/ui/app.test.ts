@@ -1086,6 +1086,24 @@ describe("the enter prompt", () => {
     expect(app.state.session!.target).toBe(1500);
   });
 
+  it("every accepted plan change moves the console clock, not just the first (issue #114)", () => {
+    app.openApp("time");
+    const clock = () => document.querySelector("#console-session .session-clock")!.textContent;
+    const caption = () => document.querySelector("#console-session .clock-caption")!.textContent;
+    document.querySelector<HTMLButtonElement>('#app-popover [data-plan="25"]')!.click();
+    expect(clock()).toBe("25:00");
+    // A second, value-to-value change must still reach the clock node.
+    document.querySelector<HTMLButtonElement>('#app-popover [data-plan="45"]')!.click();
+    expect(clock()).toBe("45:00");
+    expect(caption()).toBe("planned");
+    document.querySelector<HTMLButtonElement>("#app-popover #plan-open")!.click();
+    expect(clock()).toBe("--:--");
+    expect(caption()).toBe("open-ended");
+    document.querySelector<HTMLButtonElement>('#app-popover [data-plan="60"]')!.click();
+    expect(clock()).toBe("1:00:00");
+    expect(caption()).toBe("planned");
+  });
+
   it("the footer's Begin CTA arms per the kind: a habit picked, then the session counts toward it", () => {
     const created = createHabit(app.state, "Jammin");
     app.startFlow();

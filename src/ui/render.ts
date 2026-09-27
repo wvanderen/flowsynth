@@ -120,21 +120,23 @@ function renderConsoleSession(app: App): void {
   const switchSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.2 6.6a8 8 0 1 0 11.6 0"/></svg>`;
 
   if (state.mode === "upgrade") {
-    // Structural key: only rebuild when the shape of the section changes, so
+    // Structural key: only rebuild when the plan's shape or value changes, so
     // control nodes (and in-flight clicks) survive clock ticks. The clock
     // wears the next session's target in flow's clock styles; an unplanned
     // open-ended shape wears a placeholder so the slot only ever holds
     // clock text, with "planned" (or "open-ended") naming the mode in the
-    // caption slot. No session runs, so the header's progress strip stays
-    // empty.
-    const planned = app.ui.chosenTarget !== null;
-    const key = `upgrade:${planned}`;
+    // caption slot. The key carries the target value itself (issue #114) so
+    // every accepted plan change rebuilds the clock — safe because in
+    // upgrade mode nothing ticks. No session runs, so the header's progress
+    // strip stays empty.
+    const chosen = app.ui.chosenTarget;
+    const key = `upgrade:${chosen === null ? "open" : chosen}`;
     if (host.dataset.renderKey !== key) {
       host.dataset.renderKey = key;
       host.innerHTML = `
           <button class="console-clock clock-opens-time" id="clock-plan" title="Plan — opens the Time app">
-            <span class="session-clock mono">${planned ? formatClock(app.ui.chosenTarget!) : CLOCK_PLACEHOLDER}</span>
-            <span class="clock-caption">${planned ? "planned" : OPEN_ENDED_WORD}</span>
+            <span class="session-clock mono">${chosen !== null ? formatClock(chosen) : CLOCK_PLACEHOLDER}</span>
+            <span class="clock-caption">${chosen !== null ? "planned" : OPEN_ENDED_WORD}</span>
           </button>
         <div class="session-actions">
           <button class="main-switch idle" id="flow-switch" title="Enter flow — the board locks and runs itself">
