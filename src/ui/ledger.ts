@@ -136,8 +136,8 @@ export const FEATS_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none
   <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
 </svg>`;
 
-export function featsChipHtml(count: number, id = "feats-chip"): string {
-  return `<button class="feats-chip" id="${id}" title="Achievements — every feat, and how close the next one is">${FEATS_SVG}<span class="mono">${count}/${ACHIEVEMENTS.length} feats</span></button>`;
+export function featsChipHtml(count: number): string {
+  return `<button class="feats-chip" id="feats-chip" title="Achievements — every feat, and how close the next one is">${FEATS_SVG}<span class="mono">${count}/${ACHIEVEMENTS.length} feats</span></button>`;
 }
 
 // ── The board ledger strip (§7) ─────────────────────────────────────────
@@ -195,21 +195,18 @@ export function updateLedgerLive(scope: ParentNode, state: GameState, rate: numb
 
 // ── The phone game-info strip (§7) ──────────────────────────────────────
 // Production reads on the board surface, where the tutorial helptext used
-// to sit: ν, rate, session, feats. Displayed only below the 600px
+// to sit: ν, rate, session. Feats appears once on phone — riding the thumb
+// bar — so the strip carries no feats chip. Displayed only below the 600px
 // breakpoint; the values update at every render whatever the width.
 export function renderGameInfoStrip(app: App): void {
   const host = document.getElementById("game-info-strip");
   if (!host) return;
   const { state } = app;
-  const feats = unlockedCount(state);
-  const key = `${feats}`;
-  if (host.dataset.renderKey !== key) {
-    host.dataset.renderKey = key;
+  if (!host.dataset.renderKey) {
+    host.dataset.renderKey = "strip";
     host.innerHTML = `<span class="info-read"><small>ν</small> <strong class="mono" data-live="i-nous"></strong></span>
       <span class="info-read"><strong class="mono" data-live="i-rate"></strong> <small>ν/s</small></span>
-      <span class="info-read"><small>session</small> <strong class="mono" data-live="i-session"></strong></span>
-      ${featsChipHtml(feats, "game-info-feats-chip")}`;
-    document.getElementById("game-info-feats-chip")?.addEventListener("click", () => app.openModal("achievements"));
+      <span class="info-read"><small>session</small> <strong class="mono" data-live="i-session"></strong></span>`;
   }
   const set = (live: string, text: string) => liveSet(host, live, text);
   set("i-nous", formatInt(state.nous));

@@ -2135,16 +2135,26 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     expect(document.body.classList.contains("bloom-sheet-open")).toBe(false);
   });
 
-  it("the game-info strip carries ν, rate, session, and feats on the board surface", () => {
+  it("the game-info strip carries ν, rate, and session on the board surface — no feats chip; feats rides the thumb bar once", () => {
     app.render();
     const strip = document.getElementById("game-info-strip")!;
     expect(strip.querySelector('[data-live="i-nous"]')).not.toBeNull();
     expect(strip.querySelector('[data-live="i-rate"]')!.textContent).toBe(formatNumber(0.1));
     expect(strip.querySelector('[data-live="i-session"]')!.textContent).toBe("—");
-    expect(document.getElementById("game-info-feats-chip")).not.toBeNull();
-    document.getElementById("game-info-feats-chip")!.click();
-    expect(app.ui.modal).toBe("achievements");
-    app.closeModal();
+    // Feats appears once on phone: the thumb bar's segment, not a second
+    // chip in the strip.
+    expect(strip.querySelector(".feats-chip")).toBeNull();
+    expect(document.querySelector('#thumb-bar [data-op="feats"]')).not.toBeNull();
+  });
+
+  it("the Arete pill floats over the board's bottom edge with its full anatomy", () => {
+    app.render();
+    const pill = document.getElementById("arete-pill")!;
+    expect(pill.querySelector(".pill-row")).not.toBeNull();
+    expect(pill.querySelector('[data-live="p-total"]')!.textContent).toContain("lifetime");
+    expect(pill.querySelector(".pill-prestige")).not.toBeNull();
+    expect(pill.querySelector(".pill-rail")).not.toBeNull();
+    expect(document.getElementById("zoom-cluster")).not.toBeNull();
   });
 });
 

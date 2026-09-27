@@ -1429,10 +1429,21 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
   .board-tools { display: none; }
   .thumb-bar { display: flex; }
   /* The tray hides on phone — the thumb bar's Inventory taps the sheet —
-     so the pill owns the lane above the bar. */
+     so the pill owns the lane above the bar. The pill anchors edge to
+     edge — left 12, right 58 clears the zoom cluster's lane (10 + 36) —
+     instead of centering at a percentage a 390px screen can't hold its
+     row inside. */
   .inventory-tray { display: none !important; }
-  .arete-pill { bottom: 64px; width: min(260px, 60%); padding: 4px 11px 6px; }
+  .arete-pill {
+    bottom: 64px;
+    left: 12px;
+    right: 58px;
+    transform: none;
+    width: auto;
+    padding: 4px 9px 6px;
+  }
   .pill-row { font-size: 9px; margin-bottom: 4px; }
+  .pill-prestige { padding: 2px 7px; font-size: 8.5px; }
   .pill-rail { height: 7px; margin-top: 14px; }
   .pill-head { font-size: 8.5px; }
   .zoom-cluster { right: 10px; bottom: 64px; }
