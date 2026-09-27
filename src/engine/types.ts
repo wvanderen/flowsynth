@@ -307,6 +307,11 @@ export interface GameState {
   // to [] at load.
   gatedRows: number[];
   forge: Meter;
+  // The opening arc's one pop-up (board-redesign spec §8): the dismissal
+  // sets this once, so the card fires exactly once, ever. Lenient-defaults
+  // to false at load — a save written before the card existed is still
+  // owed its one hint.
+  arcCardSeen: boolean;
   // The charge window (§2.3): remaining output seconds banked at session
   // end by the focus-keyed generator rule, spent as that generator's output
   // during the next session's first minutes.

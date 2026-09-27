@@ -18,6 +18,7 @@ import {
   sessionRecordsNewestFirst,
 } from "../engine/records";
 import { poolOutstanding } from "../engine/trust";
+import { arcCardDue } from "../engine/arc";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
 import { ACHIEVEMENTS, achievementBoostOf, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
 import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NamedChordTerm, NoteEntry, RateSnapshot } from "../engine/types";
@@ -76,6 +77,7 @@ export function render(app: App): void {
   renderTools(app, projected);
   renderGrid(app, live, projected);
   renderInventoryTray(app);
+  renderArcCard(app);
   renderBloom(app, projected);
   renderZoomCluster(app);
   renderAretePill(app, live);
@@ -429,7 +431,7 @@ function toolActions(): ToolAction[] {
       title: (app) =>
         app.state.bankedRolls.length > 0
           ? `Forge progress ${formatNumber(Math.max(0, app.state.forge.progress))} / ${formatNumber(forgeThreshold(app.state.forge.earned))} · ${app.state.bankedRolls.length} banked choice${app.state.bankedRolls.length === 1 ? "" : "s"}`
-          : `Forge progress ${formatNumber(Math.max(0, app.state.forge.progress))} / ${formatNumber(forgeThreshold(app.state.forge.earned))} — charge feeds it`,
+          : `Forge progress ${formatNumber(Math.max(0, app.state.forge.progress))} / ${formatNumber(forgeThreshold(app.state.forge.earned))} — practice and charge feed it`,
       disabled: (app) => app.state.mode !== "upgrade" || app.state.bankedRolls.length === 0,
     },
     {
@@ -1440,6 +1442,26 @@ function renderInventoryTray(app: App): void {
     button.addEventListener("click", () => app.beginPlacing(id));
     bindPointerDrag(app, button, id);
   });
+}
+
+// The opening arc's one pop-up (§8, issue #138): after the second synth is
+// acquired, a single dismissible card — place it beside your first; the
+// dashed ghost previews the chord it would form; the × is what the pair
+// earns together. Upgrade-mode furniture over the board's top edge, clear
+// of the dock, the pill, and the zoom cluster; the ✕ dismisses once, ever
+// (arcCardSeen persists). No goals, no steps, no tutorial state — one card.
+function renderArcCard(app: App): void {
+  const card = byId("arc-card");
+  if (!card) return;
+  const due = app.state.mode === "upgrade" && arcCardDue(app.state);
+  card.hidden = !due;
+  if (!due) return;
+  if (card.dataset.renderKey) return;
+  card.dataset.renderKey = "arc";
+  card.innerHTML = `<p class="arc-copy"><strong>Place it beside your first.</strong>
+    The dashed preview shows the chord they'd form; the <span class="mono">×</span> in the chord readout is what the pair earns together.</p>
+    <button class="arc-dismiss" id="arc-card-dismiss" aria-label="Dismiss — this card never returns">✕</button>`;
+  document.getElementById("arc-card-dismiss")?.addEventListener("click", () => app.dismissArcCard());
 }
 
 /* ── Focus-app panels (popover bodies, ADR-0012) ───── */

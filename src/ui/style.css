@@ -783,6 +783,43 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 }
 .pill-head.flip { transform: translateX(-100%); }
 
+/* The opening arc's one pop-up (§8): the second synth's card, floating
+   over the board's top-left corner — clear of the dock, the readout, the
+   pill, and the zoom cluster. One dismissible card, once, ever: no goals,
+   no steps, no tutorial state behind it. */
+.arc-card {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 14;
+  max-width: min(320px, calc(100% - 24px));
+  padding: 10px 34px 10px 12px;
+  background: color-mix(in srgb, var(--panel-soft) 92%, transparent);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  backdrop-filter: blur(3px);
+  box-shadow: 0 4px 18px var(--shadow);
+}
+.arc-copy { margin: 0; font-size: 12px; line-height: 1.45; color: var(--muted); }
+.arc-copy strong { color: var(--ink); display: block; margin-bottom: 2px; }
+.arc-copy .mono { color: var(--chord-fifth); }
+.arc-dismiss {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--muted);
+  border-radius: 6px;
+  background: transparent;
+}
+.arc-dismiss:hover { color: var(--ink); background: var(--hover-bg); }
+
 /* The zoom cluster (§7): +/−/fit floating over the board's right edge. On
    portrait phone it rises above any open sheet so inspection never gets
    buried. */
@@ -1481,6 +1518,9 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
   body.bloom-sheet-open .zoom-cluster { bottom: 150px; }
   .module-bloom.sheet { bottom: 56px !important; }
   .chord-readout { top: 46px; right: 10px; }
+  /* The arc card clears the game-info strip up top by riding above the
+     Arete pill's lane at the board's lower edge. */
+  .arc-card { top: auto; bottom: 124px; left: 12px; right: 12px; max-width: none; }
 }
 
 /* The modal layer lives outside #app, so its phone presentation — sheets

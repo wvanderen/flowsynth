@@ -1,4 +1,4 @@
-import { EPS } from "./constants";
+import { BALANCE, EPS } from "./constants";
 import { syncArete } from "./accumulator";
 import { syncAchievements } from "./achievements";
 import { chargeDelivered, chargeWindowActive, computeRates, deployed } from "./economy";
@@ -61,7 +61,8 @@ export function advance(
   // step; production is exactly what the board's modules make (§2.1).
   // Board-side meters (forge progress, received charge) run in both sinks —
   // the trust table redirects only nous and practice minutes (§1); the
-  // bucket holds nous only.
+  // bucket holds nous only. Practice is the forge meter's other leg (§8):
+  // it joins below, live-sink only, beside the credited time it keys off.
   const snapshot = computeRates(state, true);
   const gained = snapshot.rate * seconds;
   if (sink === "provisional") {
@@ -99,6 +100,11 @@ export function advance(
     session.accounting.creditedSeconds += seconds;
     accrueLivePractice(state, seconds);
     result.goalsCompleted += accrueGoalProgress(state, state.activeHabitId, seconds);
+    // The forge meter's practice leg (§8): credited practice seconds feed
+    // the player-wide meter at placeholder pacing, so the opening earns
+    // its first roll from practice alone — no Forge module required.
+    // Received charge stacks on top in both sinks, above.
+    result.rollsBanked += addForgeProgress(state, BALANCE.forgePracticeRate * seconds, rng);
   }
   // The session-tick check (ADR-0015): charge exists only live in flow, so
   // the tick that holds the snapshot reports whether any module received

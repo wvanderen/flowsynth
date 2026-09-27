@@ -1,4 +1,4 @@
-import { BALANCE, ROLL_POOL } from "./constants";
+import { BALANCE, CATEGORY_OF, ROLL_POOL } from "./constants";
 import { newModuleId } from "./state";
 import type { Candidate, GameState, ModuleType, RollOffer } from "./types";
 
@@ -11,6 +11,14 @@ function rollRarity(rng: Rng): Candidate["rarity"] {
   return "rare";
 }
 
+// The opening's first roll (board-redesign spec §8) yields a synthesizer
+// candidate — the arc's beat is "the forge offers the synth it made", so a
+// pool draw without a synthesizer is re-rigged to carry one. Whether the
+// rig re-rolls a slot or guarantees the type is tuning, not spec.
+function firstRollRigged(state: GameState): boolean {
+  return state.forge.earned === 1;
+}
+
 export function generateOffer(state: GameState, rng: Rng): RollOffer {
   const pool: ModuleType[] = [...ROLL_POOL];
   const candidates: Candidate[] = [];
@@ -18,6 +26,11 @@ export function generateOffer(state: GameState, rng: Rng): RollOffer {
     const index = Math.floor(rng() * pool.length);
     const [type] = pool.splice(index, 1);
     candidates.push({ id: newModuleId(state), type, rarity: rollRarity(rng) });
+  }
+  // The rig can only ever land on the last slot: the guard means neither
+  // earlier candidate sings, so the replacement can't duplicate a type.
+  if (firstRollRigged(state) && !candidates.some((c) => CATEGORY_OF[c.type] === "synthesizer")) {
+    candidates[candidates.length - 1]!.type = "additive";
   }
   return { id: newModuleId(state), candidates: [candidates[0]!, candidates[1]!, candidates[2]!] };
 }

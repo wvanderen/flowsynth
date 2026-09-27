@@ -2259,3 +2259,39 @@ describe("the Notes stream's habit chips (§9)", () => {
     app.closeApp();
   });
 });
+
+describe("the opening arc's one pop-up (§8, issue #138)", () => {
+  function arcCard(): HTMLElement {
+    return document.getElementById("arc-card")!;
+  }
+
+  it("stays hidden through the single-synth opening", () => {
+    app.render();
+    expect(arcCard().hidden).toBe(true);
+  });
+
+  it("fires after the second synth is acquired, leans on the ghost and the ×, and dismisses once, ever", () => {
+    give(app.state, "additive", null); // the tray holds the new arrival
+    app.render();
+    expect(arcCard().hidden).toBe(false);
+    expect(arcCard().textContent).toContain("Place it beside your first");
+    expect(arcCard().textContent).toContain("dashed");
+    expect(arcCard().textContent).toContain("×");
+    document.getElementById("arc-card-dismiss")!.click();
+    expect(arcCard().hidden).toBe(true);
+    // A third synth, a re-render, a reload: it never fires again.
+    give(app.state, "additive", null);
+    app.render();
+    expect(arcCard().hidden).toBe(true);
+    const reloaded = boot();
+    reloaded.render();
+    expect(document.getElementById("arc-card")!.hidden).toBe(true);
+  });
+
+  it("never fires for non-synthesizer acquisitions", () => {
+    give(app.state, "infusor", null);
+    give(app.state, "forge", null);
+    app.render();
+    expect(arcCard().hidden).toBe(true);
+  });
+});

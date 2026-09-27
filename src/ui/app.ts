@@ -7,6 +7,7 @@ import {
   buyShelfModule,
   chooseRoll,
   combine,
+  dismissArcCard as dismissArcCardAction,
   dismissSummary as dismissSessionSummary,
   endSession,
   pauseSession,
@@ -1188,6 +1189,15 @@ export class App {
     dismissSessionSummary(this.state);
     this.ui.modal = null;
     this.say("Session banked.");
+    this.save();
+    this.render();
+  }
+
+  // The opening arc's one pop-up (§8): dismissal is once, ever — the flag
+  // persists, so the card never re-fires, this session or any later one.
+  dismissArcCard(): void {
+    const result = dismissArcCardAction(this.state);
+    if (!result.ok) return;
     this.save();
     this.render();
   }

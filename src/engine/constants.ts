@@ -59,6 +59,12 @@ export interface Balance {
   goalBaseSlots: number;
   forgeInitialThreshold: number;
   forgeThresholdGrowth: number;
+  // The practice leg of the forge meter (board-redesign spec §8): each
+  // credited practice second feeds the player-wide meter this much
+  // progress, on top of received charge — practice fills the forge even
+  // before a Forge is owned. Against the initial threshold this paces the
+  // opening's first roll at ≈ 2 minutes of practice. Provisional tuning.
+  forgePracticeRate: number;
   // The focus-keyed generator's bank ratio (§2.3): each session end banks a
   // charge window of fraction × live practice seconds. Provisional tuning.
   chargeWindowFraction: number;
@@ -96,6 +102,7 @@ export const BALANCE: Balance = {
   goalBaseSlots: 2,
   forgeInitialThreshold: 60,
   forgeThresholdGrowth: 1.5,
+  forgePracticeRate: 0.5,
   chargeWindowFraction: 0.1,
 };
 

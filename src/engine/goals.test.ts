@@ -98,8 +98,9 @@ describe("goal progress and completion", () => {
     expect(s.goals[0]!.completed).toBe(true);
     const nousBefore = s.nous;
     advance(s, 3600);
-    expect(s.nous - nousBefore).toBeCloseTo(360, 6); // carrier alone; no rewards
-    expect(s.forge.progress).toBe(0);
+    expect(s.nous - nousBefore).toBeCloseTo(360, 6); // one synth alone; no rewards
+    // The meter's growth is the practice leg's (§8) — no completion grants.
+    expect(s.forge.earned).toBe(7);
     expect(s.goals[0]!.completedCount).toBe(1);
   });
 
