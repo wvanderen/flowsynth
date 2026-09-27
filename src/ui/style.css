@@ -46,19 +46,24 @@ button:disabled { opacity: 0.35; cursor: default; }
 h1, h2, h3, p { margin: 0; }
 
 #app { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
+/* The app is the responsive container (§7): every breakpoint below is a
+   @container rule on this inline size, so the anatomy responds to the app's
+   own width — the "container breakpoint" the spec writes around. The
+   viewport-level modal layer (body-level, outside #app) stays on @media. */
+#app { container: app / inline-size; }
 
 /* ── The console (ADR-0012, ADR-0016) ──────────────── */
 
 /* Structurally above the game UI: a fixed-height rail the game can never
-   move, reflow, or dim. Monochrome graphite — color is the board's language;
-   the Enter/Exit main switch is the colored exception, and its vermillion
-   register extends to the session progress strip on the header's bottom
-   edge (issue #63) while a session runs. */
+   move, reflow, or dim. Pure control (§7): main switch, clock, pause, app
+   tiles — the production readouts live on the board ledger strip. The
+   Enter/Exit main switch keeps its vermillion register, extended by the
+   session progress strip on the header's bottom edge (issue #63). */
 .console {
   display: flex;
   align-items: center;
   gap: 16px;
-  height: 88px;
+  height: 64px;
   flex-shrink: 0;
   padding: 0 20px;
   background: var(--panel-soft);
@@ -82,20 +87,29 @@ h1, h2, h3, p { margin: 0; }
    block instead of clipping. */
 .console-session { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
 .console-clock {
-  min-width: 172px;
-  min-height: 56px;
+  min-width: 150px;
+  min-height: 52px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   flex-shrink: 0;
 }
+/* The clock is itself the plan affordance (§7): clicking it opens the Time
+   app. As a button it stays visually bare until hover. */
+.console-clock.clock-opens-time {
+  border-color: transparent;
+  background: transparent;
+  text-align: left;
+  padding: 4px 8px;
+}
+.console-clock.clock-opens-time:hover { border-color: var(--line); background: var(--panel); }
 /* The next session's shape, displayed read-only; planning lives in the Time
-   app's popover. Clock and caption fit the 172px reserve in every mode; the
-   provisional line — only present in flow — may exceed it, and the block
-   grows rather than clipping (mono digits re-widen it only when a digit
-   count turns over). */
-.session-clock { font: 28px/1.1 var(--mono); margin: 0; }
-.clock-caption { font-size: 10px; color: var(--muted); margin-top: 3px; white-space: nowrap; }
+   app's popover (§7), which the clock button itself opens. Clock and caption
+   fit the reserve in every mode; the provisional line — only present in
+   flow — may exceed it, and the block grows rather than clipping (mono
+   digits re-widen it only when a digit count turns over). */
+.session-clock { display: block; font: 28px/1.1 var(--mono); margin: 0; }
+.clock-caption { display: block; font-size: 10px; color: var(--muted); margin-top: 3px; white-space: nowrap; }
 /* The session progress strip (issue #63): the header itself is the progress
    surface — a thin highlight pinned along its bottom border, above the
    resting border line. Planned sessions fill it left-to-right; an open-ended
@@ -113,16 +127,6 @@ h1, h2, h3, p { margin: 0; }
 .session-strip > span { display: block; height: 100%; width: 0; background: var(--switch); box-shadow: 0 0 8px var(--switch-glow); }
 .session-strip.pulse > span { animation: strip-pulse 3.2s ease-in-out infinite; }
 @keyframes strip-pulse { 50% { opacity: 0.35; } }
-/* The Time app popover keeps a local track for the running session. */
-.time-track {
-  width: 100%;
-  height: 3px;
-  background: var(--line);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-top: 8px;
-}
-.time-track > span { display: block; height: 100%; background: var(--accent); }
 
 /* The Enter/Exit main switch: vermillion. Bright and animated = flow live;
    dim = idle; paused holds bright but still. */
@@ -253,40 +257,6 @@ h1, h2, h3, p { margin: 0; }
 .pref-row label { cursor: pointer; }
 .pref-row small { margin-left: auto; }
 
-/* Readout end: bare values only — production (rate with the session total
-   beneath) and the nous balance. The main switch carries the mode. */
-.console-readout {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  border-left: 1px solid var(--line);
-  padding-left: 16px;
-  flex-shrink: 0;
-}
-/* The session total sits under the rate in a reserved-width column, so a
-   growing tally never nudges its neighbors. */
-.production-slot { display: flex; flex-direction: column; gap: 1px; }
-.production-slot strong { font: 17px var(--mono); font-weight: 400; }
-.session-total { font-size: 10.5px; color: var(--muted); min-width: 20ch; white-space: nowrap; }
-#nous-balance strong {
-  font: 17px var(--mono);
-  font-weight: 400;
-  display: block;  /* Reserved right-aligned column: digits change, the layout doesn't. */
-  min-width: 6ch;
-  text-align: right;
-}
-.console-status { display: flex; align-items: center; gap: 16px; }
-.trophy-slot { display: flex; align-items: center; }
-.trophy-glyph {
-  width: 36px;
-  height: 36px;
-  padding: 7px;
-  border-radius: 7px;
-}
-.trophy-glyph svg { width: 100%; height: 100%; }
-.trophy-glyph:hover { color: var(--ink); }
-
 /* The achievements page (ADR-0015): a modal listing every feat with its
    progress bar — no secrets — grouped by the launch buckets the ADR names. */
 .modal:has(.ach-section) { width: min(820px, 100%); }
@@ -309,92 +279,78 @@ h1, h2, h3, p { margin: 0; }
 
 /* ── Workspace ─────────────────────────────────────── */
 
-.workspace { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 330px; min-height: 0; }
+/* The board is the whole workspace: the inspector sidebar is retired —
+   the expanded face is the module's only surface (its Upgrade and Combine
+   actions ride the bloom), the chord readout covers chord chips. */
+.workspace { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; }
 
-.board-panel { padding: 22px 26px 0; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-/* The heading is the chord readout's positioning context: the readout
-   hangs from it as an overlay layer, so appearing or disappearing can
-   never reflow the row and shift the grid. */
-.board-heading { flex-shrink: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; position: relative; }
-.board-heading h2 { font-size: 19px; font-weight: 500; letter-spacing: -0.02em; margin: 6px 0 4px; }
-.board-heading p { font-size: 12px; color: var(--muted); max-width: 420px; }
-.board-tools { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 4px; }
+.board-panel { padding: 14px 20px 0; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 
-.board-space { flex: 1; min-height: 0; position: relative; }
-.board-space::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at center, var(--board-glow) 0%, transparent 65%);
-  pointer-events: none;
-}
-body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite; }
-@keyframes grid-breath { 50% { opacity: 0.35; } }
-
-#grid { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; display: block; }
-
-.board-footer { flex-shrink: 0; border-top: 1px solid var(--line); padding: 14px 0 16px; position: relative; }
-/* The board legend: the Rack's three color channels (hue = category,
-   rings = rarity, light = charge). It sits at the heading row's end — the
-   board footer itself is the status monitor's, capped at three elements.
-   The rail swatch sweeps every category hue; the ring swatch is the
-   engraved rarity mark. */
-.legend { display: flex; align-items: center; gap: 14px; font-size: 9px; color: var(--muted); }
-.board-heading .legend { margin-left: auto; padding-bottom: 4px; }
-.legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
-.legend i.rail { background: linear-gradient(90deg, var(--hue-generator), var(--hue-synthesizer), var(--hue-infusor), var(--hue-forge)); }
-.legend i.ring { background: transparent; border: 1px solid var(--muted); border-radius: 50%; box-sizing: border-box; }
-.legend i.ch { background: var(--charge); }
-.legend i.am { background: var(--forge-glow); }
-
-/* ── Status monitor (ADR-0015): the horizon rail ───── */
-
-/* The monitor is the accumulator: the full-width section beneath the grid,
-   hard cap of three elements — formula chip and Forge chip on its top edge,
-   the Arete accumulator spanning beneath. It is the board footer itself, so
-   it carries no card chrome; the section's top border and padding are the
-   rail's frame. Arete wears the reserved violet; all other color comes from
-   the category hues and registers. */
-.status-monitor { min-width: 0; }
-
-.monitor-top {
+/* ── The board ledger strip (§7) ───────────────────── */
+/* Nous / Rate / Session as one bordered instrument, the feats chip beside
+   it, docked directly above the board: the board owns its production. The
+   console carries no readouts. */
+.board-ledger {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  flex-wrap: wrap;
-  /* Headroom for the beat readout riding above the rail. */
-  margin-bottom: 32px;
+  margin-bottom: 10px;
 }
-
-.monitor-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  border: 1px solid var(--line-soft);
-  border-radius: 99px;
-  padding: 5px 13px;
+.prod-ledger {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 9px;
   background: var(--panel-soft);
+  overflow: visible;
+}
+.prod-cell { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 6px 14px 7px; min-width: 84px; }
+.prod-cell + .prod-cell, .prod-cell + button.prod-cell { border-left: 1px solid var(--line); }
+.prod-label { font: 9px var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+.prod-cell strong { font: 15.5px var(--mono); font-weight: 400; white-space: nowrap; }
+
+/* The Rate cell (§7): the operand chain ending in the live total IS the
+   rate display above the 760px breakpoint — no separate ν/s figure — and
+   hover or focus discloses the value breakdown from the cell itself. Below
+   the breakpoint the equation hides, the bare total stands alone, and a tap
+   opens the formula sheet. */
+.prod-cell-rate {
+  position: relative;
+  align-items: flex-start;
+  text-align: left;
+  border-top: 0;
+  border-bottom: 0;
+  border-left: 1px solid var(--line);
+  border-right: 0;
+  border-radius: 0;
+  background: transparent;
   min-width: 0;
 }
-/* The formula chip: the live equation, with the full breakdown disclosed
-   on hover or focus. */
-.monitor-formula { position: relative; outline-offset: 4px; }
-.monitor-equation {
-  display: inline-flex;
+.rate-equation {
+  display: flex;
   align-items: center;
   gap: 5px;
+  font: 12.5px var(--mono);
+  color: var(--ink);
   white-space: nowrap;
-  font: 13px var(--mono);
-  min-height: 22px;
+  min-height: 20px;
+  max-width: 100%;
   overflow-x: auto;
+  scrollbar-width: none;
 }
-.monitor-equation .op { color: var(--muted); }
-.monitor-equation strong { font-weight: 600; color: var(--nous); }
-.monitor-term { display: inline-flex; align-items: center; gap: 4px; }
-.monitor-term svg { width: 16px; height: 16px; flex-shrink: 0; stroke: var(--muted); }
-.monitor-term .term-glyph { color: var(--muted); }
-.monitor-hint {
+.rate-equation::-webkit-scrollbar { display: none; }
+.rate-equation .op, .prod-cell-rate .op { color: var(--muted); }
+.rate-equation strong { font-weight: 600; color: var(--nous); }
+.rate-total { display: none; font: 15.5px var(--mono); font-weight: 400; }
+.rate-term { display: inline-flex; align-items: center; gap: 4px; }
+.rate-term svg { width: 15px; height: 15px; flex-shrink: 0; stroke: var(--muted); }
+.term-glyph { color: var(--muted); }
+.rate-hint {
+  position: absolute;
+  top: 6px;
+  right: 9px;
   font-size: 10px;
   color: var(--muted);
   border: 1px solid var(--line);
@@ -404,16 +360,17 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  pointer-events: none;
 }
-.monitor-formula:hover .monitor-hint,
-.monitor-formula:focus .monitor-hint { color: var(--nous); border-color: var(--nous); }
-
-.monitor-breakdown {
+.prod-cell-rate:hover .rate-hint, .prod-cell-rate:focus-visible .rate-hint { color: var(--nous); border-color: var(--nous); }
+/* The breakdown disclosure: the one formula popover, anchored to the Rate
+   cell. Hidden below the 760px breakpoint, where the tap-up sheet owns the
+   disclosure instead. */
+.rate-breakdown {
   display: none;
   position: absolute;
-  bottom: calc(100% + 10px);
-  left: 0;
+  top: calc(100% + 10px);
+  left: -1px;
   z-index: 40;
   width: 350px;
   background: var(--panel-deep);
@@ -422,10 +379,10 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   padding: 10px 12px;
   box-shadow: 0 10px 26px var(--shadow);
 }
-.monitor-formula:hover .monitor-breakdown,
-.monitor-formula:focus .monitor-breakdown,
-.monitor-formula:focus-within .monitor-breakdown { display: block; }
-.monitor-breakdown-row {
+.prod-cell-rate:hover .rate-breakdown,
+.prod-cell-rate:focus .rate-breakdown,
+.prod-cell-rate:focus-within .rate-breakdown { display: block; }
+.rate-breakdown-row {
   display: grid;
   grid-template-columns: 92px 84px 1fr;
   gap: 8px;
@@ -434,116 +391,30 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   border-bottom: 1px solid var(--line-soft);
   font-size: 12px;
 }
-.monitor-breakdown-row:last-child { border-bottom: 0; }
-.monitor-breakdown-row .mono { text-align: right; color: var(--nous); font-size: 12px; }
-.monitor-breakdown-row.total .mono,
-.monitor-breakdown-row.total .bk-name { color: var(--ink); font-weight: 600; }
+.rate-breakdown-row:last-child { border-bottom: 0; }
+.rate-breakdown-row .mono { text-align: right; color: var(--nous); font-size: 12px; }
+.rate-breakdown-row.total .mono,
+.rate-breakdown-row.total .bk-name { color: var(--ink); font-weight: 600; }
 .bk-name { font-size: 12px; color: var(--ink); }
 .bk-note { font-size: 10.5px; color: var(--muted); }
 
-/* The accumulator rail: log-scale fill on lifetime ν, inert decade
-   graduations, the horizon cap, and the beat readout riding the fill head. */
-.monitor-rail {
-  position: relative;
-  height: 14px;
-  background: var(--panel-deep);
-  border: 1px solid var(--line-soft);
-  border-radius: 7px;
-}
-.monitor-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  border-radius: 6px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--hue-synthesizer) 45%, var(--panel)), var(--nous));
-  transition: width 400ms ease-out;
-}
-.monitor-grad { position: absolute; top: -4px; bottom: -4px; width: 1px; background: var(--line-strong); }
-.monitor-grad b {
-  position: absolute;
-  top: 15px;
-  left: 50%;
-  transform: translateX(-50%);
-  font: 9px var(--mono);
-  font-weight: 400;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-}
-.monitor-horizon {
-  position: absolute;
-  top: -6px;
-  bottom: -6px;
-  right: -1px;
-  width: 3px;
-  background: var(--reserved-violet);
-  box-shadow: 0 0 8px 1px color-mix(in srgb, var(--reserved-violet) 45%, transparent);
-  border-radius: 1px;
-}
-.monitor-head {
-  position: absolute;
-  bottom: calc(100% + 5px);
-  transform: translateX(-50%);
-  font: 10px var(--mono);
-  color: var(--muted);
-  white-space: nowrap;
-}
-.monitor-head.flip { transform: translateX(-100%); }
-
-.monitor-under {
-  display: flex;
+/* The feats chip (§7): the ledger strip's neighbor, opening the feats page. */
+.feats-chip {
+  display: inline-flex;
   align-items: center;
-  gap: 14px;
-  margin-top: 28px;
-}
-.monitor-prestige {
-  flex-shrink: 0;
-  font: 10px var(--mono);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--reserved-violet);
-  border: 1px solid color-mix(in srgb, var(--reserved-violet) 45%, var(--line));
-  border-radius: 99px;
-  padding: 3px 12px;
-  background: transparent;
-}
-.monitor-prestige:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--reserved-violet) 12%, transparent);
-  border-color: var(--reserved-violet);
-}
-.monitor-prestige:disabled { opacity: 0.55; cursor: default; }
-.monitor-beat {
-  flex: 1;
-  min-width: 0;
-  text-align: center;
-  font-size: 10.5px;
+  gap: 7px;
+  padding: 7px 11px;
+  border-radius: 7px;
+  font-size: 12px;
   color: var(--muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex-shrink: 0;
 }
-.monitor-beat.minted { color: var(--reserved-violet); }
-.monitor-secondary { flex-shrink: 0; font-size: 10.5px; color: var(--muted); white-space: nowrap; }
-
+.feats-chip svg { width: 14px; height: 14px; }
+.feats-chip:hover { color: var(--ink); }
 
 /* ── Inspector ─────────────────────────────────────── */
-
-.inspector { border-left: 1px solid var(--line); padding: 26px 24px; overflow-y: auto; }
-.inspector > section, .inspector > div > section { margin-bottom: 22px; }
-
-.module-heading h1 { font-size: 26px; font-weight: 550; line-height: 1.15; margin: 10px 0 2px; }
 /* Rarity reads as text here; on faces it is engraved rings + plate tint
    (ADR-0016) — the chip stays neutral, never rarity-as-hue. */
-.rarity-chip {
-  display: inline-block;
-  font: 10px var(--mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 2px 8px;
-  border-radius: 99px;
-  border: 1px solid var(--line-strong);
-  color: var(--muted);
-  margin-bottom: 10px;
-}
-
 .focus-controls { padding-bottom: 18px; border-bottom: 1px solid var(--line-soft); }
 .focus-controls .eyebrow { display: block; margin-bottom: 12px; }
 .focus-controls .session-actions { margin: 0; }
@@ -656,17 +527,10 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .long-goal-strip .long-goal-name .mono { font-size: 11px; color: var(--charge); }
 .long-goal-strip .shop-buy { align-items: flex-end; }
 
-.level-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
-.level-heading strong { font: 30px var(--mono); font-weight: 400; }
-.level-effect { font: 13px var(--mono); color: var(--accent); }
-
 .stat-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
 .stat-row:last-child { border-bottom: 0; }
 .stat-row .mono { color: var(--ink); }
 
-/* The dissolved grid overview leaves only a pointer (issue #38). */
-.inspector-empty { padding-top: 6px; }
-body.live .inspector-empty { opacity: 0.75; }
 
 .empty-copy { color: var(--muted); font-size: 12px; font-style: italic; }
 
@@ -684,10 +548,265 @@ body.live .inspector-empty { opacity: 0.75; }
   transition: border-color 0.15s, background 0.15s, transform 0.15s;
 }
 .inventory-tile:hover { border-color: var(--line-strong); background: var(--hover-bg); transform: translateY(-2px); }
+.inventory-tile:hover .tile-hex { stroke-width: 6; }
 .inventory-tile:focus-visible { outline-offset: 3px; }
 .inventory-tile svg { width: 100%; max-width: 112px; aspect-ratio: 1; display: block; }
-.inventory-tile .hex { stroke-width: 1.4; }
-.inventory-tile .face-readout { font-size: 14px; }
+
+
+/* ── The board space and its overlays ──────────────── */
+
+.board-space { flex: 1; min-height: 0; position: relative; }
+.board-space::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, var(--board-glow) 0%, transparent 65%);
+  pointer-events: none;
+}
+body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite; }
+@keyframes grid-breath { 50% { opacity: 0.35; } }
+
+#grid { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; display: block; }
+
+/* The action row (§7): a left-edge icon dock floating over the board —
+   Catalog / Forge (count badge + charge pip) / New cell. Only the buttons
+   take pointers, so the board beneath pans and plays around them. */
+.board-tools {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 16;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.tool-icon {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--panel-veil);
+  backdrop-filter: blur(3px);
+}
+.tool-icon svg { width: 16px; height: 16px; }
+.tool-word { display: none; font-size: 8.5px; letter-spacing: 0.04em; }
+.tool-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 999px;
+  font-size: 9.5px;
+  line-height: 1;
+  padding: 2.5px 5px;
+  font-style: normal;
+}
+.tool-icon .forge-pip { position: absolute; left: 7px; right: 7px; bottom: 3px; }
+.forge-pip { display: block; height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.forge-pip i { display: block; height: 100%; width: 0; background: var(--forge-glow); }
+.board-tools button.active, .thumb-bar button.active { border-color: var(--accent); color: var(--accent); background: var(--accent-faint); }
+
+/* The bottom thumb bar (§7): the console's re-docked form on portrait
+   phone — Catalog / Forge / New cell / Inventory / Feats. Hidden at every
+   other width. */
+.thumb-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 22;
+  display: none;
+  gap: 4px;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+  background: var(--panel-veil);
+  border-top: 1px solid var(--line);
+  backdrop-filter: blur(4px);
+}
+.thumb-bar button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 2px;
+  border: none;
+  border-radius: 8px;
+  color: var(--muted);
+  min-width: 0;
+}
+.thumb-bar button svg { width: 19px; height: 19px; }
+.thumb-bar button .tool-word { display: block; font-size: 8.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.thumb-bar button:hover, .thumb-bar button.active { color: var(--ink); background: var(--hover-bg); }
+.thumb-bar .tool-badge { top: -2px; right: 50%; transform: translateX(20px); }
+
+/* The game-info strip (§7): production reads on the board surface, portrait
+   phone only — where the tutorial helptext used to sit. The strip anchors
+   edge to edge and centers its content, so its size is locked: the session
+   read ticks every render and a content-sized pill would breathe with it. */
+.game-info-strip {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  z-index: 15;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 6px 14px;
+  background: var(--panel-veil);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  backdrop-filter: blur(3px);
+  white-space: nowrap;
+}
+.info-read { display: inline-flex; align-items: baseline; gap: 4px; font: 12px var(--mono); }
+.info-read small { font-size: 10px; color: var(--muted); }
+/* The strip's rate read is the phone's door to the formula (§7): tapping it
+   opens the formula sheet — the ledger's Rate cell doesn't exist here, and
+   the operand chain never goes ambient at this width. It reads as a plain
+   strip entry, wearing the Rate cell's ⓘ. */
+.game-info-strip .info-rate {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+.game-info-strip .info-rate:hover:not(:disabled),
+.game-info-strip .info-rate:focus-visible {
+  background: none;
+  border-color: transparent;
+  color: var(--ink);
+}
+.info-hint { font-size: 10px; color: var(--muted); }
+.game-info-strip .info-rate:hover .info-hint { color: var(--ink); }
+
+/* The Arete pill (§7): the status monitor dissolved — the accumulator
+   floats free as a translucent pill over the board's bottom edge at every
+   width. Pointer-transparent except the reserved prestige button. */
+.arete-pill {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 12px;
+  z-index: 14;
+  width: min(340px, 62%);
+  padding: 6px 13px 8px;
+  background: color-mix(in srgb, var(--panel-soft) 88%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  backdrop-filter: blur(3px);
+  pointer-events: none;
+}
+.pill-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font: 10px var(--mono);
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-bottom: 5px;
+  white-space: nowrap;
+}
+/* The total owns the middle lane outright — flex: 1, centered — so ARETE
+   and the prestige button sit pinned to their edges however long the
+   lifetime figure runs. */
+.pill-row b { color: var(--ink); font-weight: 400; letter-spacing: 0; flex: 1; text-align: center; }
+.pill-prestige {
+  pointer-events: auto;
+  flex-shrink: 0;
+  font: 9px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--reserved-violet);
+  border: 1px solid color-mix(in srgb, var(--reserved-violet) 45%, var(--line));
+  border-radius: 99px;
+  padding: 2px 10px;
+  background: transparent;
+}
+.pill-prestige:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--reserved-violet) 12%, transparent);
+  border-color: var(--reserved-violet);
+}
+.pill-prestige:disabled { opacity: 0.55; cursor: default; }
+/* The rail: log-scale fill on lifetime ν, inert decade graduations, the
+   horizon cap, and the beat readout riding the fill head. The rail's top
+   margin reserves the beat's lane between row and rail. */
+.pill-rail {
+  position: relative;
+  height: 8px;
+  margin-top: 15px;
+  background: var(--panel-deep);
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+}
+.pill-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 3px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--hue-synthesizer) 45%, var(--panel)), var(--nous));
+  transition: width 400ms ease-out;
+}
+.pill-grad { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--line-strong); }
+.pill-grad b {
+  display: none;
+}
+.pill-horizon {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  right: -1px;
+  width: 3px;
+  background: var(--reserved-violet);
+  box-shadow: 0 0 8px 1px color-mix(in srgb, var(--reserved-violet) 45%, transparent);
+  border-radius: 1px;
+}
+.pill-head {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  transform: translateX(-50%);
+  font: 9px var(--mono);
+  color: var(--muted);
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--panel-soft) 85%, transparent);
+  padding: 1px 7px;
+  border-radius: 99px;
+}
+.pill-head.flip { transform: translateX(-100%); }
+
+/* The zoom cluster (§7): +/−/fit floating over the board's right edge. On
+   portrait phone it rises above any open sheet so inspection never gets
+   buried. */
+.zoom-cluster {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 24;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.zoom-cluster button {
+  width: 36px;
+  height: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel-veil);
+  backdrop-filter: blur(3px);
+}
+.zoom-cluster button svg { width: 15px; height: 15px; }
+body.bloom-sheet-open .zoom-cluster { bottom: 190px; }
 
 /* ── Hex grid ──────────────────────────────────────── */
 
@@ -722,11 +841,11 @@ body.live .inspector-empty { opacity: 0.75; }
 
 /* Rarity = finish: a faint plate tint over the chassis. The light channels
    (selection, charge, dispensing) win over the tint wherever they apply. */
-.module-node .hex, .inventory-tile .hex, .drag-ghost .hex, .candidate-tile .hex { fill: var(--plate-common); }
+.module-node .hex, .candidate-tile .hex { fill: var(--plate-common); }
 .module-node[data-rarity="uncommon"] .hex:not(.selected):not(.charged):not(.dispensing):not(.locked),
-.inventory-tile[data-rarity="uncommon"] .hex, .drag-ghost[data-rarity="uncommon"] .hex, .candidate-tile[data-rarity="uncommon"] .hex { fill: var(--plate-uncommon); }
+.candidate-tile[data-rarity="uncommon"] .hex { fill: var(--plate-uncommon); }
 .module-node[data-rarity="rare"] .hex:not(.selected):not(.charged):not(.dispensing):not(.locked),
-.inventory-tile[data-rarity="rare"] .hex, .drag-ghost[data-rarity="rare"] .hex, .candidate-tile[data-rarity="rare"] .hex { fill: var(--plate-rare); }
+.candidate-tile[data-rarity="rare"] .hex { fill: var(--plate-rare); }
 
 /* Engraved rarity rings: hairline circles under the panel's engraving. */
 .face-rings { fill: none; stroke: var(--muted); stroke-opacity: 0.3; stroke-width: 1; pointer-events: none; }
@@ -744,7 +863,7 @@ body.live .inspector-empty { opacity: 0.75; }
 .inventory-tile[data-type="forge"] .face-readout,
 .drag-ghost[data-type="forge"] .face-readout,
 .candidate-tile[data-type="forge"] .face-readout { font-size: 12px; }
-.inventory-tile .face-readout, .drag-ghost .face-readout, .candidate-tile .face-readout { font-size: 14px; }
+.drag-ghost .face-readout, .candidate-tile .face-readout { font-size: 14px; }
 /* The Forge's charge-vs-threshold readout sits in the charge register. */
 .face-readout.charge { fill: var(--charge); }
 .face-note { font: 8.5px var(--mono); letter-spacing: 0.12em; fill: var(--muted); }
@@ -790,13 +909,13 @@ body.live .inspector-empty { opacity: 0.75; }
 .chord-mark.chord-fade .chord-seam { opacity: 0.18; }
 
 /* The reserved readout: the chips, stacked vertically, pinned to the
-   heading's right end as an overlay layer — outside every layout pass, so
-   hover and selection can never shift the grid, and above the board-space
-   (z-index over the bloom's 20) so the expanded face can never cover it.
+   board-space's top right as an overlay layer — outside every layout
+   pass, so hover and selection can never shift the grid, and above the
+   board chrome (the bloom's 20) so the expanded face can never cover it.
    Pointer-transparent: it reads, it never blocks. */
 .chord-readout {
   position: absolute;
-  top: 100%;
+  top: 8px;
   right: 14px;
   z-index: 25;
   display: flex;
@@ -941,6 +1060,19 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 .bloom-upgrade-title { font-size: 12px; line-height: 1.3; white-space: nowrap; }
 .bloom-upgrade-title strong { font-weight: 600; }
 .bloom-upgrade-benefit { font-size: 11px; line-height: 1.3; color: var(--charge); }
+/* The Combine action rides the expanded face beside the Upgrade button —
+   two copies of one type and rarity merge into a stronger copy. */
+.bloom-combine {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 10px;
+  background: var(--panel-soft);
+}
+.bloom-combine-title { font-size: 11.5px; line-height: 1.3; white-space: nowrap; }
+.bloom-combine-note { font-size: 10px; line-height: 1.3; color: var(--muted); }
 
 /* Zoomed past the bloom's size, nothing pops: the affordances ride the
    closed face as a floating card anchored over the module's lower band.
@@ -959,32 +1091,73 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 }
 .module-bloom.inline .bloom-upgrade { pointer-events: auto; }
 
+/* The bloom as a bottom sheet (§7, portrait phone): the expanded face
+   re-docked over the board's lower edge, above the thumb bar — the zoom
+   cluster rises above it via body.bloom-sheet-open. */
+.module-bloom.sheet {
+  left: 10px !important;
+  right: 10px;
+  bottom: 64px !important;
+  top: auto !important;
+  width: auto !important;
+  height: auto !important;
+  filter: none;
+  animation: sheet-up 0.18s ease-out;
+}
+.bloom-sheet {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 10px 14px;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: 0 -14px 40px var(--shadow);
+  pointer-events: auto;
+}
+.bloom-sheet-tile { width: 64px; height: 64px; flex-shrink: 0; display: block; }
+.bloom-sheet-col { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.bloom-sheet-name { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bloom-sheet-note { font-size: 10.5px; color: var(--muted); }
+.bloom-sheet-contrib { font-size: 11px; color: var(--charge); }
+.bloom-sheet .bloom-upgrade { flex-shrink: 0; width: auto; margin-left: auto; }
+.bloom-sheet .bloom-combine { flex-shrink: 0; width: auto; }
+@keyframes sheet-up { from { transform: translateY(28px); opacity: 0.4; } }
+
 /* ── The board-surface tray (§5) ───────────────────── */
 /* The inventory docked over the board's bottom edge: drag a module here to
    retrieve it (the chord-breaking gesture), click an item then a cell to
    place — occupied placement swaps. Hidden while the flow board is locked. */
+/* ── The tray column (§5) ──────────────────────────── */
+/* The inventory as a collapsible column docked beside the action dock: the
+   dock's Inventory icon toggles it, and a drag or an armed placement opens
+   it for the gesture's duration — the chord-breaking drop always has a
+   visible target. Portrait phone hides it (the thumb bar taps the sheet). */
 .inventory-tray {
   position: absolute;
-  left: 50%;
-  bottom: 10px;
-  transform: translateX(-50%);
+  left: 58px;
+  top: 50%;
+  transform: translateY(-50%);
   z-index: 15;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  max-width: calc(100% - 24px);
-  padding: 7px 13px 9px;
+  gap: 8px;
+  width: 86px;
+  max-height: calc(100% - 40px);
+  padding: 9px 8px 11px;
   background: var(--panel-veil);
   border: 1px dashed var(--line-strong);
   border-radius: 12px;
   transition: border-color 0.15s, background 0.15s;
   backdrop-filter: blur(3px);
+  overflow-y: auto;
 }
 .inventory-tray.off { display: none; }
 .inventory-tray.drag-over { border-color: var(--charge); background: var(--charge-tint); }
 .tray-label { font: 10px var(--mono); letter-spacing: 0.16em; color: var(--muted); flex-shrink: 0; }
-.tray-items { display: flex; align-items: center; gap: 6px; min-height: 58px; }
-.tray-empty { font-size: 11px; color: var(--muted); font-style: italic; padding: 0 6px; }
+.tray-items { display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 40px; width: 100%; }
+.tray-empty { font-size: 10.5px; color: var(--muted); font-style: italic; text-align: center; padding: 4px 2px; }
 .tray-items .inventory-tile { width: 62px; padding: 3px 2px 5px; }
 .tray-items .inventory-tile svg { width: 100%; }
 
@@ -1000,20 +1173,6 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 }
 .drag-ghost svg { width: 100%; height: 100%; display: block; }
 .dragging { opacity: 0.35; }
-
-/* The tool button reflects the mode it toggles. */
-.board-tools button.active { border-color: var(--accent); color: var(--accent); background: var(--accent-faint); }
-
-/* The Forge tool: label over a thin shared-meter pip; the tooltip carries
-   the exact progress. */
-.tool-forge { display: inline-flex; flex-direction: column; align-items: stretch; gap: 3px; padding-bottom: 7px; }
-.forge-pip { display: block; height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; }
-.forge-pip i { display: block; height: 100%; width: 0; background: var(--forge-glow); }
-
-/* The cell tool: a quiet icon that arms frontier placement; the tooltip
-   wears the price. */
-.tool-cell { display: inline-flex; align-items: center; justify-content: center; padding: 8px 10px; }
-.tool-cell svg { width: 14px; height: 14px; }
 
 .config-label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 
@@ -1238,29 +1397,118 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 .dev-panel button { padding: 4px 8px; font-size: 11px; font-family: var(--mono); }
 
 /* ── Responsive ────────────────────────────────────── */
+/* Half-width and phone respond to the app container's own width (§7):
+   half-width is fully featured — identical anatomy, in-place compaction
+   only, nothing re-docks, nothing hides; portrait phone re-docks to the
+   thumb bar. The 760px line is the formula breakpoint (ledger.ts's
+   Rate-cell gate reads the same number); the 600px line is the phone
+   composition (render.ts's bloom gate likewise). The rules use the
+   exclusive range form — (width < Npx) — so the boundary width itself
+   stays on the desktop side, exactly as the TS gates' strict `<` reads it.
+   An inclusive max-width would strand the boundary: CSS composing as
+   phone while the gate still answers desktop (or hiding the equation
+   with no sheet door). */
 
-@media (max-width: 1180px) {
-  /* Below here the console wraps instead of clipping: its height stays
+@container app (width < 900px) {
+  /* Below here the slim console wraps instead of clipping: its height stays
      width-determined, so console use never shifts the board. */
-  .console { flex-wrap: wrap; height: auto; min-height: 0; padding: 12px 16px; gap: 10px 16px; }
+  .console { flex-wrap: wrap; height: auto; min-height: 0; padding: 10px 14px; gap: 8px 14px; }
   .console-session { order: 3; flex-basis: 100%; justify-content: space-between; }
-  .console-readout { margin-left: auto; border: 0; padding: 0; }
+  .console-apps { margin-left: auto; }
 }
 
-@media (max-width: 980px) {
-  .workspace { grid-template-columns: minmax(0, 1fr) 290px; }
-}
-
-@media (max-width: 760px) {
-  .board-panel { padding: 16px 14px 0; }
+@container app (width < 760px) {
+  .board-panel { padding: 12px 14px 0; }
+  .board-ledger { flex-wrap: wrap; }
   .session-actions { margin-left: auto; }
-  .workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(200px, 1fr) minmax(0, 0.8fr); }
-  .inspector { border-left: 0; border-top: 1px solid var(--line); padding: 16px; }
-  .monitor-equation { font-size: 12px; }
-  .monitor-breakdown { width: min(350px, calc(100vw - 60px)); }
-  .board-tools { gap: 4px; }
-  .board-tools button { padding: 7px 8px; }
+  /* The formula's breakpoint (§7): the operand chain hides, the bare total
+     stands alone, and tapping the Rate cell opens the formula sheet. The
+     hover popover dies with the hover. */
+  .rate-equation { display: none; }
+  .rate-total { display: block; }
+  .prod-cell-rate { min-width: 64px; }
+  .rate-hint { display: none; }
   .candidates, .shop-list { grid-template-columns: 1fr; }
+  .app-popover { width: min(372px, calc(100cqw - 32px)); }
+}
+
+@container app (width < 600px) {
+  /* Portrait phone (§7): the composition re-docks. Top nav = session
+     controls only (brand glyph, clock, switch, settings) — the focus-app
+     tiles hide until an app popover is open (the clock's Time popover
+     still needs its anchor); production reads move to the board-surface
+     game-info strip; the icon dock becomes the bottom thumb bar with
+     Inventory and Feats folded in; the bloom presents as a bottom sheet. */
+  .brand-name { display: none; }
+  .console { flex-wrap: nowrap; height: 56px; padding: 0 10px; gap: 8px; }
+  .console-session { order: 0; flex-basis: auto; gap: 8px; }
+  .console-clock { min-width: 0; min-height: 0; padding: 2px 6px; }
+  .session-clock { font-size: 22px; }
+  .clock-provisional { display: none; }
+  .main-switch { padding: 9px 11px; }
+  .main-switch span { display: none; }
+  .console-apps:not(.app-open) { display: none; }
+  .app-tiles { gap: 0; }
+  .app-tile { padding: 5px 6px; }
+  .app-tile-state { display: none; }
+  #console-settings { margin-left: auto; }
+  .board-ledger { display: none; }
+  .game-info-strip { display: flex; }
+  .board-tools { display: none; }
+  .thumb-bar { display: flex; }
+  /* The tray hides on phone — the thumb bar's Inventory taps the sheet —
+     so the pill owns the lane above the bar. The pill anchors edge to
+     edge — left 12, right 58 clears the zoom cluster's lane (10 + 36) —
+     instead of centering at a percentage a 390px screen can't hold its
+     row inside. */
+  .inventory-tray { display: none !important; }
+  .arete-pill {
+    bottom: 64px;
+    left: 12px;
+    right: 58px;
+    transform: none;
+    width: auto;
+    padding: 4px 9px 6px;
+  }
+  .pill-row { font-size: 9px; margin-bottom: 4px; }
+  .pill-prestige { padding: 2px 7px; font-size: 8.5px; }
+  .pill-rail { height: 7px; margin-top: 14px; }
+  /* The beat's countdown ticks every second (m:ss), so its bubble wears a
+     locked width — the longest steady-state form — and centers its text:
+     it changes what it says, never how big it is. */
+  .pill-head { font-size: 8.5px; min-width: 50ch; text-align: center; }
+  .zoom-cluster { right: 10px; bottom: 64px; }
+  body.bloom-sheet-open .zoom-cluster { bottom: 150px; }
+  .module-bloom.sheet { bottom: 56px !important; }
+  .chord-readout { top: 46px; right: 10px; }
+}
+
+/* The modal layer lives outside #app, so its phone presentation — sheets
+   rising from the bottom edge — reads the viewport. */
+@media (max-width: 600px) {
+  .modal-backdrop { padding: 10px; align-items: flex-end; }
+  .modal { width: 100%; max-height: 78vh; border-radius: 14px 14px 0 0; animation: sheet-up 0.18s ease-out; }
+}
+
+/* The formula sheet (§7) presents below the 760px *container* breakpoint —
+   the gate render.ts's Rate-cell tap reads — but the modal layer is
+   body-level, outside the #app container, so the gate's decision arrives
+   as a .sheet class on the backdrop rather than a container rule. */
+.modal-backdrop.sheet { padding: 10px; align-items: flex-end; }
+.modal-backdrop.sheet .modal { width: 100%; max-height: 78vh; border-radius: 14px 14px 0 0; animation: sheet-up 0.18s ease-out; }
+
+/* The cluster rises above the modal sheets too (§7, ADR-0029: the zoom
+   cluster alone reacts to open sheets): the modal layer is body-level and
+   fixed, so its sheets — the formula sheet's gate below 760px and, on
+   phone, every modal — would bury a board-anchored cluster entirely. The
+   body class (renderModal's) lifts it out of the board panel and clears
+   the sheets' 78vh extent. Last among the cluster's sheet rules, so a
+   modal sheet over an open bloom sheet still reads as the topmost. */
+body.modal-sheet-open .zoom-cluster {
+  position: fixed;
+  right: 10px;
+  bottom: calc(78vh + 14px);
+  z-index: 60;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1270,9 +1518,6 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
      directional), so a charged board still reads as charged. */
   .charge-line { animation: charge-flow 1.6s linear infinite !important; }
 }
-
-/* Instrument canvas and persistent module states. */
-.inspector { min-height: 0; min-width: 0; scrollbar-color: var(--line) var(--panel-soft); }
 
 .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 4px; }
 .icon-btn svg { width: 100%; height: 100%; color: var(--muted); }
@@ -1296,216 +1541,18 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .shop-hint { display: block; margin-top: 3px; font-size: 11.5px; font-style: normal; color: var(--charge); }
 .goal-slots { font: 10px var(--mono); letter-spacing: 0.06em; color: var(--muted); margin: 0 0 10px; }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   PROTOTYPE (issue #119) — console-hierarchy variants. THROWAWAY: switch
-   via ?variant=a|b|c, half-width preview via ?half, floating bar at the
-   bottom. #app becomes a size container whenever the prototype is active,
-   and the generic container rules below are mirrors of the base viewport
-   breakpoints — so ?half alone previews the current console at half width
-   with the same responsive behavior a narrowed real window gets.
-   ═══════════════════════════════════════════════════════════════════════ */
-
-body[data-variant] #app,
-body.half-preview #app { container: app / inline-size; }
-
-/* The half-width preview frames the app at a first-class half-desktop
-   width; the container queries below do the real responding. */
-body.half-preview #app {
-  max-width: 800px;
-  margin: 0 auto;
-  border-inline: 1px solid var(--line-strong);
-  box-shadow: 0 0 60px rgb(0 0 0 / 0.5);
-}
-
-/* The static legend leaves every variant: its encodings belong to the
-   surfaces that use them, and the heading row becomes pure action. */
-body[data-variant] .legend { display: none; }
-
-/* B and C retire the console's readout end entirely. */
-body[data-variant="b"] .console-readout,
-body[data-variant="c"] .console-readout { display: none; }
-
-/* ── The production ledger (shared anatomy) ────────────────────────────
-   Stock, rate, and session as three labeled cells of one instrument. */
-.prod-ledger {
-  display: flex;
-  align-items: stretch;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: var(--panel-soft);
-  overflow: hidden;
-}
-.prod-cell { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 6px 14px 7px; min-width: 84px; }
-.prod-cell + .prod-cell { border-left: 1px solid var(--line); }
-.prod-label { font: 9px var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
-.prod-cell strong { font: 15.5px var(--mono); font-weight: 400; white-space: nowrap; }
-
-/* The feats chip (B's monitor row, C's board ledger row). */
-.feats-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 11px;
-  border-radius: 7px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.feats-chip svg { width: 14px; height: 14px; }
-.feats-chip:hover { color: var(--ink); }
-
-/* ── A · Ledger console ────────────────────────────────────────────────
-   The ledger replaces the scattered readout slots; feats move to the
-   board's standardized action row. */
-body[data-variant="a"] #nous-balance { display: none; }
-body[data-variant="a"] .console-readout { gap: 12px; }
-body[data-variant="a"] .board-tools { align-items: center; }
-body[data-variant="a"] .board-tools button {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 12px;
-  border-radius: 7px;
-}
-body[data-variant="a"] .board-tools button svg { width: 14px; height: 14px; }
-body[data-variant="a"] .board-tools button span { font-size: 12px; }
-.tool-sep { width: 1px; align-self: stretch; margin: 4px 4px; background: var(--line); }
-
-/* The pip rides the button's bottom edge in A's anatomy, so every action
-   keeps the same silhouette. The base forge button is a column flex — A
-   flattens it back to the row the other actions wear. */
-body[data-variant="a"] .tool-forge { position: relative; flex-direction: row; align-items: center; padding-bottom: 7px; }
-body[data-variant="a"] .tool-forge .forge-pip { position: absolute; left: 10px; right: 10px; bottom: 4px; }
-
-/* ── Icon-only action buttons (B's row, C's dock) ────────────────────── */
-.tool-icon {
-  position: relative;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 7px;
-}
-.tool-icon svg { width: 16px; height: 16px; }
-.tool-badge {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  background: var(--accent);
-  color: var(--accent-ink);
-  border-radius: 999px;
-  font-size: 9.5px;
-  line-height: 1;
-  padding: 2.5px 5px;
-  font-style: normal;
-}
-.tool-icon .forge-pip { position: absolute; left: 7px; right: 7px; bottom: 3px; }
-body[data-variant="b"] .board-tools,
-body[data-variant="c"] .board-tools { gap: 6px; }
-
-/* ── B · Production footer ─────────────────────────────────────────────
-   The console slims to pure control; production joins the formula and the
-   feats chip on the monitor's top row. */
-body[data-variant="b"] .console { height: 64px; }
-body[data-variant="b"] .monitor-top { gap: 12px; }
-body[data-variant="b"] .monitor-top .prod-ledger { flex-shrink: 0; }
-
-/* ── C · Board ledger + dock ───────────────────────────────────────────
-   The production strip docks directly above the board; the action row
-   becomes a vertical icon dock on the board's left edge; the console clock
-   is itself the plan affordance. */
-.board-ledger { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 10px; }
-body[data-variant="c"] .board-panel { position: relative; padding-left: 66px; }
-body[data-variant="c"] .board-tools {
-  position: absolute;
-  left: 16px;
-  top: 74px;
-  bottom: 118px;
-  flex-direction: column;
-  align-items: flex-start;
+/* ── The formula sheet and the inventory sheet (§7) ── */
+/* Both are plain modal surfaces: the formula sheet is the Rate cell's
+   tap-up disclosure below the 760px breakpoint — equation plus the value
+   breakdown; the inventory sheet re-docks the board-surface tray for touch
+   on portrait phone. */
+.formula-equation { font-size: 14px; color: var(--ink); white-space: normal; }
+.formula-equation .op { color: var(--muted); }
+.formula-equation strong { color: var(--nous); }
+.formula-breakdown { margin-top: 6px; }
+.inventory-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
   gap: 8px;
-  padding-bottom: 0;
+  margin-top: 4px;
 }
-body[data-variant="c"] .board-tools .tool-icon { width: 38px; height: 38px; }
-body[data-variant="c"] .console-clock.clock-opens-time {
-  padding: 4px 8px;
-  min-width: 172px;
-  min-height: 56px;
-  text-align: left;
-  border-color: transparent;
-  background: transparent;
-}
-body[data-variant="c"] .console-clock.clock-opens-time:hover { border-color: var(--line); background: var(--panel); }
-
-/* ── Responsive parity: container mirrors of the viewport breakpoints ──
-   The half preview (and any real narrow window, where these fire at the
-   same widths) gets exactly the base layout's responsive behavior. */
-@container app (max-width: 1180px) {
-  body:is([data-variant], .half-preview) .console { flex-wrap: wrap; height: auto; min-height: 0; padding: 12px 16px; gap: 10px 16px; }
-  body[data-variant="b"] .console { height: auto; }
-  body:is([data-variant], .half-preview) .console-session { order: 3; flex-basis: 100%; justify-content: space-between; }
-  body:is([data-variant], .half-preview) .console-readout { margin-left: auto; border: 0; padding: 0; }
-}
-@container app (max-width: 980px) {
-  body:is([data-variant], .half-preview) .workspace { grid-template-columns: minmax(0, 1fr) 290px; }
-}
-@container app (max-width: 760px) {
-  body:is([data-variant], .half-preview) .board-panel { padding: 16px 14px 0; }
-  body[data-variant="c"] .board-panel { padding-left: 60px; }
-  body:is([data-variant], .half-preview) .session-actions { margin-left: auto; }
-  body:is([data-variant], .half-preview) .workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(200px, 1fr) minmax(0, 0.8fr); }
-  body:is([data-variant], .half-preview) .inspector { border-left: 0; border-top: 1px solid var(--line); padding: 16px; }
-  body:is([data-variant], .half-preview) .monitor-equation { font-size: 12px; }
-  body:is([data-variant], .half-preview) .monitor-breakdown { width: min(350px, calc(100cqw - 60px)); }
-  body:is([data-variant], .half-preview) .board-tools { gap: 4px; }
-  body:is([data-variant], .half-preview) .board-tools button { padding: 7px 8px; }
-  body[data-variant] .board-tools button.tool-icon { padding: 0; }
-  body[data-variant] .prod-cell { padding: 5px 10px 6px; min-width: 0; }
-  body[data-variant="b"] .monitor-top { flex-wrap: wrap; }
-}
-@container app (max-width: 900px) {
-  body[data-variant="b"] .monitor-top { flex-wrap: wrap; }
-  body[data-variant="a"] .tool-sep { display: none; }
-}
-@container app (max-width: 560px) {
-  body[data-variant="a"] .board-tools button span { display: none; }
-  body[data-variant="a"] .board-tools button { padding: 7px 9px; }
-}
-
-/* ── The floating switcher bar (never part of the design) ────────────── */
-.prototype-bar {
-  position: fixed;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 90;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  background: var(--panel-veil);
-  border: 1px solid var(--forge-glow);
-  border-radius: 999px;
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.5);
-  font-size: 12px;
-}
-.prototype-bar .prototype-label {
-  color: var(--forge-glow);
-  min-width: 168px;
-  text-align: center;
-  font-size: 11px;
-  letter-spacing: 0.04em;
-}
-.prototype-arrow {
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.prototype-extra { padding: 4px 10px; border-radius: 999px; font-size: 11px; }
-.prototype-extra.on { border-color: var(--charge); color: var(--charge); }
-.prototype-sep { width: 1px; height: 16px; background: var(--line-strong); }

@@ -53,18 +53,18 @@ The octave row the opening board begins on; rows are finite, generous, and symme
 The one-time premium paid on the first purchase into each new octave row. It taxes acquisition only — moving owned cells between rows is free — and does not advance the cell purchase scaler.
 
 **Expanded face**:
-The module's own face opened by a click in upgrade mode — the compact face's UI enlarged, adding only what the face doesn't say: the production contribution and the Upgrade button with its benefit. Opens only on click, never for a drag or a drop, and a drop leaves it closed; closes on outside click, Esc, or selecting elsewhere. Module panels are information surfaces, never an upgrade surface.
-_Avoid_: Move button, Return button, module panel (as an upgrade surface)
+The module's own face opened by a click in upgrade mode — the compact face's UI enlarged, adding only what the face doesn't say: the production contribution, the Upgrade button with its benefit, and the Combine button when an identical pair exists. It is the module's only surface (ADR-0026): the inspector sidebar and module panels are retired, and no second panel duplicates what the board already says.
+_Avoid_: Move button, Return button, module panel, inspector sidebar
 
 **Bloom**:
-The expanded face's plate — a fixed regular hexagon nested onto the selected module (ADR-0024), presenting below, mirrored, only when the frame's top leaves no room. It pops only when it would actually enlarge the module; past that, the upgrade affordances ride the closed face as a floating card.
+The expanded face's plate — a fixed regular hexagon nested onto the selected module (ADR-0024), presenting below, mirrored, only when the frame's top leaves no room. It pops only when it would actually enlarge the module; past that, the upgrade affordances ride the closed face as a floating card. On portrait phone it presents as a bottom sheet over the board's lower edge.
 _Avoid_: pop-up, modal
 
 **Lift-off**:
 The popped bloom standing for its module: the origin cell renders vacated while the bloom stands, since the bloom repeats every line the face carries.
 
 **Tray**:
-The board-surface inventory dock over the board's bottom edge. Drag a module off the board into it to retrieve — the chord-breaking gesture, shared with right-click retrieve — and click an item then a cell to place; occupied placement swaps. There is no management view.
+The board-surface inventory as a collapsible column docked beside the action dock — the dock's Inventory icon toggles it, and a drag or an armed placement opens it for the gesture's duration. Drag a module off the board into it to retrieve — the chord-breaking gesture, shared with right-click retrieve — and click an item then a cell to place; occupied placement swaps. Its tiles wear the minimal mark: a hexagon outlined in the category hue with the glyph alone, the full face belonging to the board and the expanded face (ADR-0027). On portrait phone the tray hides and the thumb bar's Inventory segment taps the same inventory open as a sheet. There is no management view.
 _Avoid_: inventory panel, management view
 
 ### Resources and production
@@ -142,7 +142,16 @@ The catalog's one-time guaranteed offers — the generator, one infusor, and a F
 The pure control surface carrying the Enter/Exit main switch, the clock, pause, and one tile per focus app. The main switch is the mode indicator — off, glowing live, held paused — and the clock is itself the plan affordance, opening the Time app. While a session runs, a thin progress strip along the console's bottom edge shows its progress in the switch's vermillion — filling on planned sessions, pulsing on open-ended ones, held while paused. The board never moves or dims while the console is in use.
 
 **Board ledger**:
-The strip docked above the board carrying Nous, Rate, and Session as one instrument, with the feats chip beside it — the board owns its production numbers. The Rate cell is the only door to the full formula.
+The strip docked above the board carrying Nous, Rate, and Session as one instrument, with the feats chip beside it — the board owns its production numbers. The Rate cell is the only door to the full formula: its collapsed operand chain ending in the live total is the rate display above the 760px breakpoint, and below it the bare total stands alone and a tap opens the formula as a modal sheet over a scrim. (On portrait phone the door moves to the game-info strip's rate read.)
+
+**Thumb bar**:
+The console's re-docked form on portrait phone — a bottom bar of Catalog / Forge / New cell / Inventory / Feats. The icon dock, the board-surface tray's tap access, and the feats chip all fold into it; nothing else changes.
+
+**Game-info strip**:
+The pill on the board surface, directly below the phone nav, carrying ν, rate, and session — production reads where the idle tutorial helptext used to sit. Its rate read is the phone's door to the formula sheet; the chain never goes ambient at this width. Feats appears once on phone, riding the thumb bar. Phone only; the board ledger serves every other width.
+
+**Zoom cluster**:
+The +/−/fit cluster floating over the board's right edge, beside wheel zoom. The board pans by dragging outside the grid at any zoom (inside when zoomed in), clamped so the board can never leave the frame. On portrait phone the cluster rises above any open sheet so inspection never gets buried.
 
 **Focus app**:
 A fixed-function instrument hosted by the console — Habit, Time, Notes, and Goals at launch. Apps never grant, produce, or spend nous or charge; board modules may read their state as effect inputs.

@@ -14,7 +14,8 @@ import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport } fro
 import { recordMissed, recordTargetHit } from "../engine/records";
 import { give } from "../engine/fixtures";
 import { hex, sameHex } from "../engine/hex";
-import { formatNumber } from "./format";
+import { formatFixed, formatNumber } from "./format";
+import { lensFrame } from "./zoom";
 import type { GameState } from "../engine/types";
 import type { SignalChannels } from "./signals";
 
@@ -29,12 +30,9 @@ function boot(channels?: SignalChannels, dev = false): App {
   for (const id of [
     "console-session",
     "console-apps",
-    "console-status",
-    "nous-balance",
     "board-tools",
+    "thumb-bar",
     "grid",
-    "status-monitor",
-    "inspector",
     "status",
     "modal",
     "modal-content",
@@ -96,23 +94,30 @@ describe("the console tiles", () => {
   });
 });
 
-describe("the console readout", () => {
-  it("wears bare values: no labels, nous in units, session total under the rate", () => {
+describe("the console", () => {
+  it("is pure control: no production readout, no trophy, no nous balance (§7)", () => {
     app.render();
-    expect(document.getElementById("console-status")!.textContent).not.toContain("Mode");
-    expect(document.getElementById("console-status")!.textContent).not.toContain("Production");
-    expect(document.getElementById("nous-balance")!.textContent).toMatch(/^\d+ ν$/);
-    expect(document.querySelector(".production-slot .session-total")).not.toBeNull();
-    expect(document.querySelector(".app-led")).toBeNull();
+    expect(document.getElementById("console-status")).toBeNull();
+    expect(document.getElementById("nous-balance")).toBeNull();
+    expect(document.querySelector(".production-slot")).toBeNull();
+    expect(document.querySelector(".trophy-glyph")).toBeNull();
+    // The console carries only session controls, app tiles, and settings.
+    expect(document.getElementById("console-session")!.querySelector(".main-switch")).not.toBeNull();
+    expect(document.getElementById("console-apps")).not.toBeNull();
+    expect(document.getElementById("console-settings")).not.toBeNull();
     expect(document.querySelector("#flow-switch .switch-state")).not.toBeNull();
   });
 
-  it("the upgrade-mode clock wears the target in flow styles, 'planned' as caption", () => {
+  it("the upgrade-mode clock is the plan affordance: clicking it opens the Time app", () => {
     app.state.sessionsCompleted = 1;
     app.ui.chosenTarget = 600;
     app.render();
     expect(document.querySelector("#console-session .session-clock")!.textContent).toBe("10:00");
     expect(document.querySelector("#console-session .clock-caption")!.textContent).toBe("planned");
+    document.getElementById("clock-plan")!.click();
+    expect(app.ui.app).toBe("time");
+    expect(document.getElementById("app-popover")).not.toBeNull();
+    app.closeApp();
     app.ui.chosenTarget = null;
     app.render();
     // The clock slot only ever holds clock text: an unplanned open-ended
@@ -121,25 +126,54 @@ describe("the console readout", () => {
     expect(document.querySelector("#console-session .clock-caption")!.textContent).toBe("open-ended");
   });
 
-  it("the session total only exists while a session runs", () => {
+  it("the flow clock keeps the live session; the Time popover never repeats it (§7)", () => {
     const s = app.state;
     s.sessionsCompleted = 1;
     startSession(s, 600);
     advance(s, 30);
     app.render();
-    expect(document.querySelector('[data-live="session"]')!.textContent).toContain("ν this session");
-    endSession(s);
-    app.render();
-    expect(document.querySelector('[data-live="session"]')!.textContent).toBe("");
+    expect(document.getElementById("clock-plan")).not.toBeNull();
+    document.getElementById("clock-plan")!.click();
+    const popover = document.getElementById("app-popover")!;
+    expect(popover.textContent).not.toContain("00:30");
+    expect(popover.textContent).toContain("holds the history");
+    app.closeApp();
   });
 });
 
-describe("the status monitor", () => {
-  it("carries the formula chip and accumulator only — no forge chip", () => {
+describe("the board ledger strip (§7)", () => {
+  it("docks above the board: Nous / Rate / Session as one instrument plus the feats chip", () => {
     app.render();
-    expect(document.querySelector(".monitor-forge")).toBeNull();
-    expect(document.querySelector(".monitor-formula")).not.toBeNull();
-    expect(document.querySelector(".monitor-rail")).not.toBeNull();
+    const ledger = document.getElementById("board-ledger")!;
+    expect(ledger.querySelector(".prod-ledger")).not.toBeNull();
+    const labels = [...ledger.querySelectorAll(".prod-label")].map((n) => n.textContent);
+    expect(labels).toEqual(["Nous", "Rate", "Session"]);
+    expect(ledger.querySelector('[data-live="nous"]')!.textContent).toMatch(/ν$/);
+    expect(ledger.querySelector('[data-live="rate"]')!.textContent).toMatch(/ν\/s$/);
+    expect(ledger.querySelector('[data-live="session"]')!.textContent).toBe("—");
+    expect(document.getElementById("feats-chip")).not.toBeNull();
+    // The feats chip opens the achievements page.
+    document.getElementById("feats-chip")!.click();
+    expect(app.ui.modal).toBe("achievements");
+    app.closeModal();
+  });
+
+  it("the Rate cell carries the operand chain ending in the live total; the session total only exists while a session runs", () => {
+    app.render();
+    const cell = document.getElementById("rate-cell")!;
+    expect(cell.querySelector(".rate-equation")).not.toBeNull();
+    expect(cell.querySelector('[data-live="m-synths"]')!.textContent).toBe(formatNumber(0.1));
+    expect(cell.querySelector('[data-live="m-rate"]')!.textContent).toBe(`${formatNumber(0.1)} ν/s`);
+    expect(document.querySelector('#board-ledger [data-live="session"]')!.textContent).toBe("—");
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    startSession(s, 600);
+    advance(s, 30);
+    app.render();
+    expect(document.querySelector('#board-ledger [data-live="session"]')!.textContent).toContain("ν");
+    endSession(s);
+    app.render();
+    expect(document.querySelector('#board-ledger [data-live="session"]')!.textContent).toBe("—");
   });
 
   it("names the infusor term only when uplift reaches a synthesizer", () => {
@@ -201,6 +235,113 @@ describe("the status monitor", () => {
   });
 });
 
+// The responsive gates read the #app container's inline size; tests pin it
+// directly (happy-dom lays out nothing).
+function setAppWidth(px: number): void {
+  Object.defineProperty(document.getElementById("app"), "clientWidth", { configurable: true, value: px });
+}
+
+describe("the formula disclosure (§7)", () => {
+  it("below the 760px container breakpoint, tapping the Rate cell opens the formula sheet over a scrim", () => {
+    setAppWidth(720);
+    app.render();
+    document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.modal).toBe("formula");
+    // The modal layer is body-level, so the container gate's decision rides
+    // a sheet class on the backdrop — bottom sheet over the scrim, whatever
+    // the viewport media query thinks.
+    expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(true);
+    const modal = document.getElementById("modal-content")!;
+    expect(modal.querySelector(".formula-equation")).not.toBeNull();
+    expect(modal.textContent).toContain("Empowerment");
+    expect(modal.textContent).toContain("Achievements");
+    expect(modal.textContent).toContain("no chords yet");
+    // Closing drops the sheet presentation with the modal.
+    app.closeModal();
+    expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(false);
+  });
+
+  it("the formula sheet rides the container, not the viewport", () => {
+    // A 700px container inside a wide viewport still presents as a sheet.
+    setAppWidth(700);
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1200 });
+    app.render();
+    document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.modal).toBe("formula");
+    expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(true);
+    app.closeModal();
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
+  });
+
+  it("above the breakpoint the Rate cell tap does nothing — the hover popover discloses instead", () => {
+    setAppWidth(1200);
+    app.render();
+    document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.modal).toBeNull();
+    // The hover disclosure rides the cell: the breakdown lives in the DOM.
+    expect(document.getElementById("rate-cell")!.querySelector(".rate-breakdown")).not.toBeNull();
+  });
+
+  it("the boundary width itself stays on the desktop side of the 760px line", () => {
+    // Exactly 760: the equation stands and the tap is inert — the same
+    // strict `<` the stylesheet's exclusive range (width < 760px) reads.
+    // An inclusive max-width here would hide the equation with no door.
+    setAppWidth(760);
+    app.render();
+    document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.modal).toBeNull();
+    // One pixel less: the door opens.
+    setAppWidth(759);
+    app.render();
+    document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.modal).toBe("formula");
+    app.closeModal();
+  });
+
+  it("the zoom cluster rises above an open modal sheet (§7, ADR-0029)", () => {
+    // The cluster's reaction rides a body class: up with the sheet, down
+    // when it closes — inspection never buries it.
+    setAppWidth(720);
+    app.render();
+    expect(document.body.classList.contains("modal-sheet-open")).toBe(false);
+    document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.modal).toBe("formula");
+    expect(document.body.classList.contains("modal-sheet-open")).toBe(true);
+    app.closeModal();
+    expect(document.body.classList.contains("modal-sheet-open")).toBe(false);
+  });
+});
+
+describe("the Arete pill (§7)", () => {
+  it("floats over the board's bottom edge; the status monitor element is gone", () => {
+    app.render();
+    expect(document.getElementById("status-monitor")).toBeNull();
+    expect(document.querySelector(".board-footer")).toBeNull();
+    const pill = document.getElementById("arete-pill")!;
+    expect(pill.querySelector(".pill-rail")).not.toBeNull();
+    expect(pill.querySelector(".pill-fill")).not.toBeNull();
+    expect(pill.querySelector(".pill-horizon")).not.toBeNull();
+    // The reserved prestige button rides the pill.
+    expect(pill.querySelector(".pill-prestige")).not.toBeNull();
+    expect(pill.querySelector('[data-live="p-total"]')!.textContent).toContain("lifetime");
+    // Pressing it acknowledges the horizon (ADR-0015's reserved readout).
+    (pill.querySelector(".pill-prestige") as HTMLButtonElement).click();
+    expect(app.state.horizonAcknowledged).toBe(true);
+  });
+
+  it("carries no formula chip; Forge progress rides the dock's pip", () => {
+    app.render();
+    expect(document.querySelector(".monitor-formula")).toBeNull();
+    expect(document.querySelector(".monitor-rail")).toBeNull();
+    app.state.forge.progress = 30;
+    app.render();
+    const forge = document.querySelector('#board-tools [data-op="forge"]') as HTMLElement;
+    expect(forge.querySelector(".forge-pip")).not.toBeNull();
+    expect(forge.querySelector('[data-live="forge-pip"]')!.getAttribute("style")).toContain("50");
+    expect(forge.title).toContain("30 / 60");
+  });
+});
+
 describe("the app popovers", () => {
   it("open bare: no head, no close button, no focus-controls eyebrow", () => {
     app.openApp("habit");
@@ -214,12 +355,30 @@ describe("the app popovers", () => {
   });
 });
 
-describe("the board toolbar", () => {
+describe("the action row (§7)", () => {
+  it("is a left-edge icon dock: Catalog / Forge / New cell / Inventory — no legend, no Arrange, no Chords toggle", () => {
+    app.render();
+    const dock = document.getElementById("board-tools")!;
+    const ops = [...dock.querySelectorAll("[data-op]")].map((b) => b.getAttribute("data-op"));
+    expect(ops).toEqual(["catalog", "forge", "cell", "inventory"]);
+    // The count badge rides the Forge icon; the charge pip rides beneath it.
+    expect(dock.querySelector('[data-op="forge"] .forge-pip')).not.toBeNull();
+    expect(document.querySelector(".legend")).toBeNull();
+    expect(document.getElementById("tool-manage")).toBeNull();
+    expect(document.getElementById("manage-banner")).toBeNull();
+    expect(document.getElementById("inventory-zone")).not.toBeNull();
+    // The tray column starts closed and the dock icon toggles it.
+    const zone = document.getElementById("inventory-zone") as HTMLElement;
+    expect(zone.classList.contains("off")).toBe(true);
+    dock.querySelector<HTMLButtonElement>('[data-op="inventory"]')!.click();
+    expect(zone.classList.contains("off")).toBe(false);
+    expect(app.ui.trayOpen).toBe(true);
+  });
+
   it("the Forge tool carries the shared meter pip and progress tooltip", () => {
     app.state.forge.progress = 30;
     app.render();
-    const forge = document.getElementById("tool-forge")!;
-    expect(forge.querySelector(".forge-pip")).not.toBeNull();
+    const forge = document.querySelector('#board-tools [data-op="forge"]') as HTMLButtonElement;
     expect(forge.querySelector('[data-live="forge-pip"]')!.getAttribute("style")).toContain("50");
     expect(forge.title).toContain("30 / 60");
   });
@@ -227,10 +386,10 @@ describe("the board toolbar", () => {
   it("the cell tool shows the price and arms the frontier pick", () => {
     app.state.nous = BALANCE.cellFirstCost;
     app.render();
-    document.getElementById("tool-cell")!.click();
+    document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!.click();
     expect(app.ui.buyingCell).toBe(true);
-    // Arming re-renders the toolbar; the re-queried icon is active.
-    const armed = document.getElementById("tool-cell")!;
+    // Arming re-renders the dock; the re-queried icon is active.
+    const armed = document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!;
     expect(armed.classList.contains("active")).toBe(true);
     expect(armed.title).toContain("Esc cancels");
     // Armed again toggles off; no banner element exists anywhere.
@@ -238,13 +397,39 @@ describe("the board toolbar", () => {
     expect(app.ui.buyingCell).toBe(false);
     expect(document.getElementById("buy-banner")).toBeNull();
   });
+});
 
-  it("carries no Arrange action anywhere — dragging is already live (§5)", () => {
+describe("the thumb bar (§7, portrait phone)", () => {
+  beforeEach(() => {
+    setAppWidth(390);
+  });
+
+  it("folds the dock plus Inventory and Feats into the bottom bar", () => {
+    give(app.state, "additive", null);
     app.render();
-    expect(document.getElementById("tool-manage")).toBeNull();
-    expect(document.getElementById("manage-banner")).toBeNull();
-    expect(document.getElementById("inventory-zone")).not.toBeNull();
-    expect((document.getElementById("inventory-zone") as HTMLElement).classList.contains("off")).toBe(false);
+    const bar = document.getElementById("thumb-bar")!;
+    const ops = [...bar.querySelectorAll("[data-op]")].map((b) => b.getAttribute("data-op"));
+    expect(ops).toEqual(["catalog", "forge", "cell", "inventory", "feats"]);
+    expect(bar.querySelector('[data-op="inventory"]')!.textContent).toContain("Inventory · 1");
+    expect(bar.querySelector('[data-op="feats"]')!.textContent).toContain("Feats · 0");
+    // On phone Inventory taps the sheet; feats opens the feats page.
+    bar.querySelector<HTMLButtonElement>('[data-op="inventory"]')!.click();
+    expect(app.ui.modal).toBe("inventory");
+    app.closeModal();
+    bar.querySelector<HTMLButtonElement>('[data-op="feats"]')!.click();
+    expect(app.ui.modal).toBe("achievements");
+    app.closeModal();
+  });
+
+  it("the inventory sheet arms a placement from its tiles", () => {
+    app.returnToInventory("m1");
+    app.openModal("inventory");
+    const modal = document.getElementById("modal-content")!;
+    expect(modal.querySelector('[data-inv="m1"]')).not.toBeNull();
+    (modal.querySelector('[data-inv="m1"]') as HTMLButtonElement).click();
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.placing).toBe("m1");
+    app.cancelPlacing();
   });
 });
 
@@ -355,8 +540,11 @@ describe("the always-live board (§5)", () => {
     clickCell(0, 1);
     expect(app.state.modules[0]!.pos).toEqual(hex(0, 1));
     expect(app.ui.placing).toBeNull();
-    // A placement never opens the expanded face (§5).
+    // A placement never opens the expanded face (§5) — and it presents
+    // closed: the render the landing triggers must not catch the armed
+    // placement's stale selection.
     expect(app.ui.selected).toBeNull();
+    expect(document.getElementById("module-bloom")!.hidden).toBe(true);
   });
 
   it("an armed placement previews the would-form ghosts on hover — one per forming chord", () => {
@@ -586,15 +774,32 @@ describe("the expanded face (§5)", () => {
     endSession(app.state);
   });
 
-  it("module panels no longer offer upgrades — the expanded face is the upgrade surface", () => {
+  it("the inspector is retired — the expanded face is the module's only surface", () => {
     app.render();
+    expect(document.getElementById("inspector")).toBeNull();
+    // Selecting a module opens the bloom with the Upgrade action; no panel
+    // exists to duplicate it.
     clickCell(0,0);
+    expect(bloom().hidden).toBe(false);
+    expect(bloom().querySelector("#bloom-upgrade")).not.toBeNull();
+  });
+
+  it("Combine rides the expanded face when an identical pair exists", () => {
+    give(app.state, "additive", hex(1, 0)); // G4 — same type, same rarity
     app.render();
-    const panel = document.getElementById("inspector")!;
-    expect(panel.querySelector("#upgrade-module")).toBeNull();
-    expect(panel.textContent).not.toContain("Upgrade");
-    // The panel keeps its information role.
-    expect(panel.textContent).toContain("Additive Synth");
+    clickCell(0, 0);
+    const combine = bloom().querySelector<HTMLButtonElement>("#bloom-combine")!;
+    expect(combine).not.toBeNull();
+    expect(combine.textContent).toContain("common pair");
+    // Combining merges the pair: the selected copy carries the merged
+    // rarity, its twin is consumed.
+    combine.click();
+    expect(app.state.modules).toHaveLength(1);
+    expect(app.state.modules[0]!.id).toBe("m1");
+    expect(app.state.modules[0]!.rarity).toBe("uncommon");
+    // The bloom stands on the merged copy; no second common pair, no button.
+    expect(bloom().hidden).toBe(false);
+    expect(bloom().querySelector("#bloom-combine")).toBeNull();
   });
 });
 
@@ -844,38 +1049,41 @@ describe("the enter prompt", () => {
     expect(app.state.activeHabitId).toBe(created.habit!.id);
   });
 
-  it("carries the duration affordances from the first start, visible but unpushed", () => {
+  it("carries a pointer to the Time app, not a second copy of the plan controls (§7)", () => {
     app.startFlow();
     const modal = document.getElementById("modal-content")!;
-    // The chips and free entry are present; the resting plan is open-ended
-    // and session one's steer suggests a short try (ADR-0019).
-    expect([...modal.querySelectorAll(".plan-chip")]).toHaveLength(8);
-    expect(modal.querySelectorAll(".plan-chip.active")).toHaveLength(0);
-    expect((modal.querySelector("#plan-minutes") as HTMLInputElement).value).toBe("");
-    expect(modal.querySelector("#plan-open")!.getAttribute("aria-pressed")).toBe("true");
+    // Planning lives only in the Time app — the prompt points there.
+    expect(modal.querySelectorAll(".plan-chip")).toHaveLength(0);
+    expect(modal.querySelector("#plan-minutes")).toBeNull();
+    expect(modal.querySelector(".enter-plan-hint")!.textContent).toContain("Time app");
+    // Session one's steer still rides above it (ADR-0019).
     expect(modal.querySelector(".enter-steer")!.textContent).toContain("five minutes");
   });
 
-  it("a picked chip re-renders the modal at once: the chip highlights and the footer tracks it", () => {
+  it("the Time app owns the plan affordances: a picked chip plans the next session and lights the console clock", () => {
     const created = createHabit(app.state, "Jammin");
-    app.startFlow();
-    document.querySelector<HTMLButtonElement>('#modal-content [data-plan="25"]')!.click();
+    selectHabit(app.state, created.habit!.id);
+    app.openApp("time");
+    const popover = document.getElementById("app-popover")!;
+    expect(popover.querySelectorAll(".plan-chip")).toHaveLength(8);
+    expect(popover.querySelectorAll(".plan-chip.active")).toHaveLength(0);
+    document.querySelector<HTMLButtonElement>('#app-popover [data-plan="25"]')!.click();
     expect(app.ui.chosenTarget).toBe(1500);
-    let modal = document.getElementById("modal-content")!;
-    // The renderKey fix (issue #92): the pick itself re-renders, so the
-    // chip highlights without any further interaction.
-    expect([...modal.querySelectorAll(".plan-chip.active")].map((c) => c.textContent)).toEqual(["25"]);
-    expect((modal.querySelector("#plan-minutes") as HTMLInputElement).value).toBe("25");
-    // The armed footer reads the live duration, summary included.
-    document.querySelector<HTMLButtonElement>(`#modal-content [data-enter-habit="${created.habit!.id}"]`)!.click();
-    modal = document.getElementById("modal-content")!;
-    expect(document.getElementById("enter-begin")!.textContent).toBe("Begin — Jammin · 25 min");
-    expect(modal.querySelector(".cta-summary")!.textContent).toBe("Jammin · 25 min");
-    // Open-ended stays its own mode: it re-arms as the resting plan.
-    document.getElementById("plan-open")!.click();
-    modal = document.getElementById("modal-content")!;
-    expect(modal.querySelectorAll(".plan-chip.active")).toHaveLength(0);
-    expect(document.getElementById("enter-begin")!.textContent).toBe("Begin — Jammin · open-ended");
+    // The pick re-renders the popover at once: the chip highlights.
+    expect([...document.querySelectorAll("#app-popover .plan-chip.active")].map((c) => c.textContent)).toEqual(["25"]);
+    // The console clock wears the armed plan, the Time tile's state with it.
+    expect(document.querySelector("#console-session .session-clock")!.textContent).toBe("25:00");
+    expect(document.querySelector("#console-session .clock-caption")!.textContent).toBe("planned");
+    // Open-ended stays its own mode.
+    document.querySelector<HTMLButtonElement>("#app-popover #plan-open")!.click();
+    expect(app.ui.chosenTarget).toBeNull();
+    expect(document.querySelector("#console-session .session-clock")!.textContent).toBe("--:--");
+    // The armed plan rides into the session.
+    selectHabit(app.state, created.habit!.id);
+    document.querySelector<HTMLButtonElement>('#app-popover [data-plan="25"]')!.click();
+    app.startFlow();
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.session!.target).toBe(1500);
   });
 
   it("the footer's Begin CTA arms per the kind: a habit picked, then the session counts toward it", () => {
@@ -911,8 +1119,15 @@ describe("the enter prompt", () => {
     expect(input.isConnected).toBe(true);
     expect(begin().disabled).toBe(false);
     expect(begin().textContent).toBe("Begin — Sketching · open-ended");
-    // A planned pick rides into the label too.
-    document.querySelector<HTMLButtonElement>('#modal-content [data-plan="10"]')!.click();
+    // A plan armed in the Time app rides into the label too.
+    app.openApp("time");
+    document.querySelector<HTMLButtonElement>('#app-popover [data-plan="10"]')!.click();
+    app.closeApp();
+    app.startFlow();
+    document.querySelector<HTMLButtonElement>('#modal-content [data-enter-kind="new"]')!.click();
+    const input2 = document.getElementById("enter-habit-name") as HTMLInputElement;
+    input2.value = "Sketching";
+    input2.dispatchEvent(new Event("input"));
     expect(document.getElementById("enter-begin")!.textContent).toBe("Begin — Sketching · 10 min");
     document.getElementById("enter-begin")!.click();
     expect(app.state.mode).toBe("flow");
@@ -961,25 +1176,21 @@ describe("the enter prompt", () => {
     const created = createHabit(app.state, "Jammin");
     app.startFlow();
     document.querySelector<HTMLButtonElement>(`#modal-content [data-enter-habit="${created.habit!.id}"]`)!.click();
-    document.querySelector<HTMLButtonElement>('#modal-content [data-plan="25"]')!.click();
     document.getElementById("enter-cancel")!.click();
     expect(app.ui.modal).toBeNull();
     app.startFlow();
     const modal = document.getElementById("modal-content")!;
-    // The kind-first selection resets: nothing picked, nothing armed. The
-    // chosen plan is the next session's plan (§6), so it persists — not
-    // modal furniture.
+    // The kind-first selection resets: nothing picked, nothing armed.
     expect(modal.querySelectorAll(".enter-choice.selected")).toHaveLength(0);
-    expect([...modal.querySelectorAll(".plan-chip.active")].map((c) => c.textContent)).toEqual(["25"]);
     expect((document.getElementById("enter-begin") as HTMLButtonElement).disabled).toBe(true);
     expect(document.getElementById("enter-begin")!.textContent).toBe("Select a habit");
   });
 
-  it("a picked chip plans session one; the steer leaves after the first session", () => {
-    app.startFlow();
-    document.querySelector<HTMLButtonElement>('#modal-content [data-plan="25"]')!.click();
+  it("a plan armed in the Time app plans session one; the steer leaves after the first session", () => {
+    app.openApp("time");
+    document.querySelector<HTMLButtonElement>('#app-popover [data-plan="25"]')!.click();
+    app.closeApp();
     expect(app.ui.chosenTarget).toBe(1500);
-    app.closeModal();
     const created = createHabit(app.state, "Jammin");
     selectHabit(app.state, created.habit!.id);
     app.startFlow();
@@ -1816,6 +2027,203 @@ describe("the Habit app's development summary (§9)", () => {
     expect(summary.textContent).toContain("a thought");
     // Renames resolve forward through the archived summary's habit tile.
     expect(popover.querySelector(".habit-archived .habit-name")!.textContent).toBe("Piano");
+  });
+});
+
+describe("board navigation (§7)", () => {
+  const svgEl = () => document.getElementById("grid") as unknown as SVGSVGElement;
+  const viewBox = () => svgEl().getAttribute("viewBox")!;
+
+  function mockWrap(width: number, height: number): void {
+    Object.defineProperty(svgEl(), "clientWidth", { configurable: true, value: width });
+    Object.defineProperty(svgEl(), "clientHeight", { configurable: true, value: height });
+    (svgEl() as unknown as { getBoundingClientRect: () => DOMRect }).getBoundingClientRect = () =>
+      ({ left: 0, top: 0, right: width, bottom: height, width, height, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+  }
+
+  it("the zoom cluster zooms and fits, clamped to the zoom range", () => {
+    app.render();
+    const before = viewBox();
+    document.getElementById("zoom-in")!.click();
+    const zoomed = viewBox();
+    expect(app.ui.zoom).toBeGreaterThan(1);
+    // Zoom shrinks the lens: the view narrows.
+    expect(Number(zoomed.split(" ")[2])).toBeLessThan(Number(before.split(" ")[2]));
+    for (let i = 0; i < 8; i++) document.getElementById("zoom-in")!.click();
+    expect(app.ui.zoom).toBe(3); // ZOOM_MAX
+    document.getElementById("zoom-out")!.click();
+    expect(app.ui.zoom).toBeLessThan(3);
+    document.getElementById("zoom-fit")!.click();
+    expect(app.ui.zoom).toBe(1);
+    expect(viewBox()).toBe(before);
+  });
+
+  it("zooming out below the range clamps; fitted is the floor", () => {
+    app.render();
+    const before = viewBox();
+    document.getElementById("zoom-out")!.click();
+    expect(app.ui.zoom).toBe(0.8); // ZOOM_MIN — a wider lens than fit
+    document.getElementById("zoom-fit")!.click();
+    expect(app.ui.zoom).toBe(1);
+    expect(viewBox()).toBe(before);
+  });
+
+  it("wheel zoom anchors the cursor's world point", () => {
+    app.render();
+    mockWrap(800, 600);
+    const bounds = app.boardBounds;
+    const anchor = { x: bounds.x + bounds.width * 0.7, y: bounds.y + bounds.height * 0.4 };
+    const frame = lensFrame(app.ui.zoom, app.ui.pan, bounds);
+    const u = (anchor.x - frame.view.x) / frame.view.width;
+    const v = (anchor.y - frame.view.y) / frame.view.height;
+    // happy-dom's WheelEvent carries no pointer coordinates: assign them.
+    const wheel = new WheelEvent("wheel", { deltaY: -100, cancelable: true });
+    Object.defineProperty(wheel, "clientX", { value: u * 800 });
+    Object.defineProperty(wheel, "clientY", { value: v * 600 });
+    svgEl().dispatchEvent(wheel);
+    expect(app.ui.zoom).toBeGreaterThan(1);
+    const after = lensFrame(app.ui.zoom, app.ui.pan, bounds);
+    const keptX = after.view.x + u * after.view.width;
+    const keptY = after.view.y + v * after.view.height;
+    expect(Math.abs(keptX - anchor.x)).toBeLessThan(1);
+    expect(Math.abs(keptY - anchor.y)).toBeLessThan(1);
+  });
+
+  it("the board pans by dragging outside the grid at any zoom, clamped to the board", () => {
+    app.render();
+    mockWrap(800, 600);
+    const before = lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds).view;
+    svgEl().dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 400, clientY: 300 }));
+    document.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 100, clientY: 240 }));
+    document.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, clientX: 100, clientY: 240 }));
+    expect(app.ui.pan).not.toBeNull();
+    const after = lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds).view;
+    // The drag moved the view; it never left the board's bounds.
+    expect(after.x).toBeGreaterThan(before.x);
+    expect(after.x).toBeLessThanOrEqual(app.boardBounds.x + app.boardBounds.width);
+    // A pan is a gesture, not a click: the release never falls through.
+    // (No selection change, no placement — the suppressor ate the click.)
+    expect(app.ui.selected).toBeNull();
+  });
+
+  it("press-and-move inside the grid pans only when zoomed in", () => {
+    app.render();
+    mockWrap(800, 600);
+    const empty = document.querySelector('[data-cell="0,1"]')!;
+    const fitted = lensFrame(1, app.ui.pan, app.boardBounds).view.x;
+    // At fit, an empty-cell press stays a tap — no pan.
+    empty.dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 200, clientY: 200 }));
+    document.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 100, clientY: 200 }));
+    document.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, clientX: 100, clientY: 200 }));
+    expect(lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds).view.x).toBe(fitted);
+    // Zoomed in, the same gesture walks the board.
+    document.getElementById("zoom-in")!.click();
+    const zoomed = lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds).view.x;
+    empty.dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 200, clientY: 200 }));
+    document.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 100, clientY: 200 }));
+    document.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, clientX: 100, clientY: 200 }));
+    expect(lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds).view.x).not.toBe(zoomed);
+  });
+});
+
+describe("phone anatomy (§7, below the 600px container line)", () => {
+  beforeEach(() => {
+    setAppWidth(390);
+  });
+
+  it("the top nav holds session controls only; the clock's Time popover keeps its anchor", () => {
+    app.render();
+    // At rest the focus-app tiles hide — session controls only (§7).
+    expect(document.getElementById("console-apps")!.classList.contains("app-open")).toBe(false);
+    document.getElementById("clock-plan")!.click();
+    expect(app.ui.app).toBe("time");
+    // Open, the row returns so the popover has its anchor; closing re-hides.
+    expect(document.getElementById("console-apps")!.classList.contains("app-open")).toBe(true);
+    expect(document.getElementById("app-popover")).not.toBeNull();
+    app.closeApp();
+    app.render();
+    expect(document.getElementById("console-apps")!.classList.contains("app-open")).toBe(false);
+  });
+
+  it("the bloom presents as a bottom sheet; the zoom cluster rises above it", () => {
+    app.render();
+    clickCell(0, 0);
+    const bloomEl = document.getElementById("module-bloom")!;
+    expect(bloomEl.hidden).toBe(false);
+    expect(bloomEl.classList.contains("sheet")).toBe(true);
+    expect(bloomEl.querySelector(".bloom-sheet")).not.toBeNull();
+    expect(bloomEl.querySelector(".bloom-sheet-name")!.textContent).toContain("Additive Synth");
+    expect(bloomEl.querySelector("#bloom-upgrade")).not.toBeNull();
+    expect(document.body.classList.contains("bloom-sheet-open")).toBe(true);
+    // The Arete pill floats at every width (§7): an open sheet covers the
+    // board's lower edge but never dismisses the pill itself.
+    expect(document.getElementById("arete-pill")).not.toBeNull();
+    // Deselecting closes the sheet and lowers the cluster again.
+    clickCell(0, 0);
+    expect(bloomEl.hidden).toBe(true);
+    expect(document.body.classList.contains("bloom-sheet-open")).toBe(false);
+  });
+
+  it("on phone every modal presents as a sheet, so any open modal raises the zoom cluster", () => {
+    // The modal layer reads the viewport (it lives outside #app), so the
+    // cluster's rise reads it too: at a phone viewport any open modal is a
+    // bottom sheet (§7), and the cluster must never be buried beneath one.
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+    app.render();
+    expect(document.body.classList.contains("modal-sheet-open")).toBe(false);
+    app.openModal("settings");
+    expect(app.ui.modal).toBe("settings");
+    expect(document.body.classList.contains("modal-sheet-open")).toBe(true);
+    app.closeModal();
+    expect(document.body.classList.contains("modal-sheet-open")).toBe(false);
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
+  });
+
+  it("the game-info strip carries ν, rate, and session on the board surface — no feats chip; feats rides the thumb bar once", () => {
+    app.render();
+    const strip = document.getElementById("game-info-strip")!;
+    expect(strip.querySelector('[data-live="i-nous"]')).not.toBeNull();
+    // The strip's reads are fixed-decimal: trailing zeros stay, so the row
+    // never resizes as the values drift.
+    expect(strip.querySelector('[data-live="i-rate"]')!.textContent).toBe(formatFixed(0.1));
+    expect(strip.querySelector('[data-live="i-session"]')!.textContent).toBe("—");
+    // Feats appears once on phone: the thumb bar's segment, not a second
+    // chip in the strip.
+    expect(strip.querySelector(".feats-chip")).toBeNull();
+    expect(document.querySelector('#thumb-bar [data-op="feats"]')).not.toBeNull();
+  });
+
+  it("the strip's rate read is the phone's formula door: tapping it opens the formula sheet", () => {
+    app.render();
+    // The ledger's Rate cell is display:none at this width; the strip's
+    // read takes over, and the chain stays non-ambient on the board surface.
+    const strip = document.getElementById("game-info-strip")!;
+    expect(strip.querySelector(".rate-equation")).toBeNull();
+    document.getElementById("info-rate")!.click();
+    expect(app.ui.modal).toBe("formula");
+    expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(true);
+    expect(document.getElementById("modal-content")!.querySelector(".formula-equation")).not.toBeNull();
+    app.closeModal();
+  });
+
+  it("the Arete pill floats over the board's bottom edge with its full anatomy", () => {
+    app.render();
+    const pill = document.getElementById("arete-pill")!;
+    expect(pill.querySelector(".pill-row")).not.toBeNull();
+    expect(pill.querySelector('[data-live="p-total"]')!.textContent).toContain("lifetime");
+    expect(pill.querySelector(".pill-prestige")).not.toBeNull();
+    expect(pill.querySelector(".pill-rail")).not.toBeNull();
+    expect(document.getElementById("zoom-cluster")).not.toBeNull();
+  });
+});
+
+describe("prototype retirement (§7)", () => {
+  it("the shipped UI carries no prototype switcher, demo board, or variant artifacts", () => {
+    app.render();
+    expect(document.querySelector(".prototype-bar")).toBeNull();
+    expect(document.body.dataset.variant).toBeUndefined();
+    expect(document.getElementById("status-monitor")).toBeNull();
+    expect(document.querySelector(".legend")).toBeNull();
   });
 });
 

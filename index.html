@@ -9,24 +9,22 @@
   </head>
   <body>
     <div id="app">
-      <!-- The console (ADR-0012): structurally above the game UI. On the
-           desktop layout its height is fixed, so nothing below it ever moves,
-           reflows, or dims while the console is used. (Mobile is the noted
-           future alternative, not this effort's shape.) -->
+      <!-- The console (ADR-0012): structurally above the game UI, pure
+           control (board-redesign spec §7): the main switch, the clock (itself
+           the plan affordance — clicking it opens the Time app), pause, the
+           focus-app tiles. Its height is fixed, so nothing below it ever
+           moves, reflows, or dims while the console is used. Production
+           reads live on the board ledger strip, never here. -->
       <header class="console">
         <div class="brand">
           <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
             <path d="M16 2 28 9v14l-12 7L4 23V9Z" />
             <path d="m10 20 5-10v12l7-10" />
           </svg>
-          FlowSynth
+          <span class="brand-name">FlowSynth</span>
         </div>
         <div class="console-session" id="console-session"></div>
         <div class="console-apps" id="console-apps"></div>
-        <div class="console-readout">
-          <div class="console-status" id="console-status"></div>
-          <div class="console-slot" id="nous-balance"></div>
-        </div>
         <button class="console-button" id="console-settings" aria-label="Settings" title="Settings — save data, import / export, reset">
           <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
@@ -40,30 +38,37 @@
       </header>
       <main class="workspace">
         <section class="board-panel">
-          <div class="board-heading">
+          <!-- The board ledger strip (§7): Nous / Rate / Session as one
+               bordered instrument, the feats chip beside it — the board owns
+               its production. The Rate cell carries the formula: the operand
+               chain ending in the live total (ambient above the 760px
+               breakpoint), the bare total and a tap-up formula sheet below. -->
+          <div class="board-ledger" id="board-ledger"></div>
+          <div class="board-space">
+            <svg id="grid" role="group" aria-label="Module grid"></svg>
+            <!-- The action row (§7): a left-edge icon dock floating over the
+                 board — Catalog / Forge (count badge + charge pip) / New
+                 cell. On portrait phone it re-docks as the bottom thumb bar
+                 (#thumb-bar) with Inventory and Feats folded in. -->
             <div class="board-tools" id="board-tools"></div>
-            <div class="legend">
-              <span><i class="rail"></i>Rail · category</span>
-              <span><i class="ring"></i>Rings · rarity</span>
-              <span><i class="ch"></i>Light · charge</span>
-              <span><i class="am"></i>Forge output</span>
-            </div>
+            <div class="thumb-bar" id="thumb-bar"></div>
+            <!-- The game-info strip (§7): production reads on the board
+                 surface, portrait phone only — where the tutorial helptext
+                 used to sit. -->
+            <div class="game-info-strip" id="game-info-strip"></div>
             <!-- The chord readout (§6): the reserved spot for the chord
                  name chips — every chord the selected module earns its
                  bonus from (pinned), or the hovered seam/voice's (asked).
                  Never floating over the board, never under the expanded
                  face. -->
             <div class="chord-readout" id="chord-readout" hidden></div>
+            <!-- The Arete pill (§7): the status monitor dissolved — the
+                 accumulator floats free as a translucent pill over the
+                 board's bottom edge at every width. -->
+            <div class="arete-pill" id="arete-pill"></div>
+            <div class="zoom-cluster" id="zoom-cluster"></div>
           </div>
-          <div class="board-space">
-            <svg id="grid" role="group" aria-label="Module grid"></svg>
-          </div>
-          <!-- The status monitor (ADR-0015): the board footer's whole
-               section — the full-width horizon rail, formula chip and Forge
-               chip on its top edge, the Arete accumulator spanning beneath. -->
-          <div class="board-footer status-monitor" id="status-monitor"></div>
         </section>
-        <aside class="inspector" id="inspector"></aside>
       </main>
       <p class="sr-only" id="status" role="status" aria-live="polite"></p>
     </div>
