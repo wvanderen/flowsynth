@@ -169,7 +169,7 @@ A hand-paced, one-at-a-time purchase beat for a console upgrade such as goal cap
 A repeatable real-life practice, such as piano or cooking, that develops through credited practice time and manually logged practice time and can be selected for a flow session. Its development unlocks habit-specific customization options and is separate from nous.
 
 **Habit app**:
-The always-free focus app through which the player selects the active habit for a session, or practices unstructured.
+The always-free focus app through which the player selects the active habit for a session, or practices unstructured. On phone, the launcher's entry names the selected practice inline and reads "none selected" when the next session would be unstructured (ADR-0033) — the UI's word for the unstructured choice.
 
 **Habit development summary**:
 The Habit app's per-habit view: lifetime practice time, sessions practiced, last practiced, and the habit's tagged notes. Its aggregates read the practice log — live sessions and manual logs together.

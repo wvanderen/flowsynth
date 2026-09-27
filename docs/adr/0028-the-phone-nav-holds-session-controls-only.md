@@ -1,4 +1,6 @@
-# The phone nav holds session controls only; the tiles return only while an app is open
+# The phone nav holds session controls only; the focus tiles stay retired
+
+_The original title read "…; the tiles return only while an app is open," and the amendment below retired that clause for good: the tiles no longer return._
 
 The responsive spec's phone line says the top nav holds session controls only, but the first console-and-responsive build (issue #139) kept the icon-only focus-app tiles and the settings gear in place at the 600px line, shrinking them instead of docking them out — the acceptance check read as only partially met. Review of PR #143 (2026-09-27) settled the composition. This ADR records the decision; the spec's §7 phone bullet is amended in the same change.
 

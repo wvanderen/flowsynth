@@ -2558,14 +2558,74 @@ describe("the phone launcher (§7, issue #149)", () => {
     selectHabit(app.state, habit.id);
     app.render();
     if (!app.ui.launcherOpen) launcher().click();
-    const entry = () => document.getElementById("app-launcher-habit")!;
-    expect(entry().getAttribute("aria-label")).toBe("Habit — Piano app");
-    expect(entry().querySelector(".launcher-habit-state .launcher-state-word")!.textContent).toBe("Piano");
+    const habitEntry = () => document.getElementById("app-launcher-habit")!;
+    expect(habitEntry().getAttribute("aria-label")).toBe("Habit — Piano app");
+    expect(habitEntry().querySelector(".launcher-habit-state .launcher-state-word")!.textContent).toBe("Piano");
     // Toggling the habit off reads as the unstructured choice it becomes.
     selectHabit(app.state, null);
     app.render();
-    expect(entry().getAttribute("aria-label")).toBe("Habit — none selected app");
-    expect(entry().querySelector(".launcher-state-word")!.textContent).toBe("none selected");
+    expect(habitEntry().getAttribute("aria-label")).toBe("Habit — none selected app");
+    expect(habitEntry().querySelector(".launcher-state-word")!.textContent).toBe("none selected");
+  });
+
+  it("every launcher surface is born inside the nav's one fixed row — menu, panel, and press alike", () => {
+    app.render();
+    // happy-dom lays out nothing, so the one-row claim (issue #149's
+    // acceptance check) is asserted structurally: the phone rule pins the
+    // console's height, and through menu, panel, and dismissal the header's
+    // own roster never changes — every launcher surface is a descendant of
+    // the row, never a sibling appended beside or beneath it.
+    const css = readFileSync("src/ui/style.css", "utf8");
+    const phoneBlock = css.slice(css.indexOf("@container app (width < 600px)"));
+    expect(phoneBlock.slice(0, phoneBlock.indexOf("}"))).toMatch(/\.console\s*\{[^}]*height:\s*56px/);
+    const row = () => document.querySelector("header.console")!;
+    const roster = () => [...row().children].map((el) => el.id || el.className);
+    const resting = roster();
+    launcher().click();
+    expect(document.querySelector("#app-launcher-menu")!.closest("header.console")).toBe(row());
+    expect(roster()).toEqual(resting);
+    entry("goals").click();
+    expect(document.querySelector("#app-launcher-popover")!.closest("header.console")).toBe(row());
+    expect(roster()).toEqual(resting);
+    document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.app).toBeNull();
+    expect(roster()).toEqual(resting);
+  });
+
+  it("every launcher control is a native button: pointer, keyboard, and touch drive the same click", () => {
+    app.render();
+    // Native <button> semantics are the keyboard contract (Enter and Space
+    // activate; happy-dom doesn't synthesize the click), as with the clock's
+    // disclosure — so the structural assertion is the assertion.
+    expect(launcher().tagName).toBe("BUTTON");
+    launcher().click();
+    for (const key of ["habit", "notes", "goals"] as const) {
+      const button = entry(key);
+      expect(button.tagName).toBe("BUTTON");
+      expect((button as HTMLButtonElement).disabled).toBe(false);
+    }
+  });
+
+  it("the launcher's menu swap rides closeApp's full teardown: a habit edit never leaks into the reopened panel", () => {
+    app.render();
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
+    launcher().click();
+    entry("habit").click();
+    // An in-panel rename is mid-flight when the launcher is pressed.
+    document.querySelector<HTMLButtonElement>('[data-rename]')!.click();
+    expect(app.ui.editingHabitId).not.toBeNull();
+    expect(document.querySelector("#habit-rename-input")).not.toBeNull();
+    // The launcher always means its menu — and the menu swap dismisses the
+    // panel's own surfaces with it, so reopening Habit presents a clean
+    // roster, not the stale rename form.
+    launcher().click();
+    expect(app.ui.app).toBeNull();
+    expect(app.ui.editingHabitId).toBeNull();
+    expect(app.ui.launcherOpen).toBe(true);
+    entry("habit").click();
+    expect(app.ui.app).toBe("habit");
+    expect(document.querySelector("#habit-rename-input")).toBeNull();
   });
 
   it("the launcher works mid-session too; the desktop row keeps its tiles and hosts the panel there", () => {

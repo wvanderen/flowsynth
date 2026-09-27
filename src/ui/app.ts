@@ -981,7 +981,10 @@ export class App {
   // closes. An entry press swaps the menu for that app's panel, anchored
   // beneath the launcher itself.
   launcherActivate(): void {
-    this.ui.app = null;
+    // The panel rides closeApp's full teardown — not just the app nulling —
+    // so a habit edit or drilled history can't survive the swap into the
+    // menu and leak into the panel a later press reopens.
+    this.dismissAppPanel();
     this.ui.launcherOpen = !this.ui.launcherOpen;
     this.render();
     // Keyboard callers land inside the menu they asked for; touch callers
@@ -996,10 +999,18 @@ export class App {
   }
 
   closeApp(): void {
+    this.dismissAppPanel();
+    this.render();
+  }
+
+  // The app popover's teardown without the render: the panel itself plus
+  // the panel-internal surfaces a habit edit or history drill leaves
+  // behind. Every path that takes the popover away (closeApp, Escape, the
+  // click-away closer, the launcher's menu swap) reads this one shape.
+  private dismissAppPanel(): void {
     this.ui.app = null;
     this.ui.editingHabitId = null;
     this.resetHistorySurfaces();
-    this.render();
   }
 
   // ── Session history (§9) ────────────────────────────────────────────────

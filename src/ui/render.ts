@@ -309,20 +309,16 @@ function plannedFill(elapsed: number, target: number): string {
 // A popover's scroll rides its host's rebuild (#115): captured before the
 // innerHTML swap, restored once the fresh panel binds. Shared by the clock's
 // Time popover, the tiles' popovers, and the launcher's (issue #148, #149) —
-// one shape, one spelling. Only one app popover stands at a time, but which
+// one shape, one spelling. One popover stands per host at a time, but which
 // anchor hosts it depends on the width (the tiles above the 600px line, the
 // launcher below), so the query reads the shared class, not either id.
 function popoverScroll(host: HTMLElement): number {
-  let deepest = 0;
-  for (const el of host.querySelectorAll<HTMLElement>(".app-popover")) {
-    deepest = Math.max(deepest, el.scrollTop);
-  }
-  return deepest;
+  return host.querySelector<HTMLElement>(".app-popover")?.scrollTop ?? 0;
 }
 
 function restorePopoverScroll(host: HTMLElement, scrollTop: number): void {
-  if (scrollTop <= 0) return;
-  for (const el of host.querySelectorAll<HTMLElement>(".app-popover")) el.scrollTo(0, scrollTop);
+  const popover = host.querySelector<HTMLElement>(".app-popover");
+  if (popover && scrollTop > 0) popover.scrollTo(0, scrollTop);
 }
 
 // The popover a tile or the clock anchors: present only while its app is
@@ -365,6 +361,41 @@ function appGlyphSvg(appKey: FocusApp): string {
   return `<svg viewBox="-12 -12 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${appIcon(appKey)}</svg>`;
 }
 
+// The facts every access point reads for a tile app: its display label,
+// whether it's active, its lock note, and the launcher entry's inline
+// state (issue #149) — Goals' tracker state, Habit's selected practice,
+// else a lock note. Tiles and launcher entries compose their names from
+// this one shape, so the two spellings can never drift.
+interface AppEntryFacts {
+  label: string;
+  active: boolean;
+  note: string | null;
+  // The pip class for the Goals readout; null on the other entries.
+  tracker: GoalTrackerState | null;
+  stateText: string;
+}
+
+function appEntryFacts(state: GameState, appKey: FocusApp): AppEntryFacts {
+  const label = APP_LABELS[appKey];
+  const note = appLockNote(state, appKey);
+  const tracker = appKey === "goals" ? goalTrackerState(state) : null;
+  const stateText =
+    tracker !== null
+      ? GOAL_TRACKER_WORDS[tracker]
+      : appKey === "habit"
+        ? activeHabit(state)?.name ?? "none selected"
+        : note
+          ? `locked: ${note}`
+          : "";
+  return { label, active: appActive(state, appKey), note, tracker, stateText };
+}
+
+// The qualified name the launcher entry reads: the label with its state
+// word, or the bare label when it has none.
+function appEntryName({ label, stateText }: AppEntryFacts): string {
+  return stateText ? `${label} — ${stateText}` : label;
+}
+
 function renderConsoleApps(app: App, projected: RateSnapshot): void {
   const host = byId("console-apps");
   if (!host) return;
@@ -385,14 +416,12 @@ function renderConsoleApps(app: App, projected: RateSnapshot): void {
   // The gate reads the same container width the stylesheet's phone rules
   // respond to; the bloom's sheet shape already rides it.
   const tiles = TILE_APPS.map((appKey) => {
-    const active = appActive(state, appKey);
-    const note = appLockNote(state, appKey);
+    const facts = appEntryFacts(state, appKey);
     const open = ui.app === appKey;
-    const label = APP_LABELS[appKey];
     const anchor = appKey === TILE_APPS[0] ? " first" : appKey === last ? " last" : "";
-    const title = note ? `${label} — locked: ${note}` : `${label} app`;
+    const title = facts.note ? `${facts.label} — locked: ${facts.note}` : `${facts.label} app`;
     return `<div class="app-slot${anchor}">
-      <button class="app-tile${active ? "" : " locked"}${open ? " open" : ""}" id="app-tile-${appKey}" aria-pressed="${open}" aria-label="${label}"${active ? "" : ' aria-disabled="true"'} title="${title}">
+      <button class="app-tile${facts.active ? "" : " locked"}${open ? " open" : ""}" id="app-tile-${appKey}" aria-pressed="${open}" aria-label="${facts.label}"${facts.active ? "" : ' aria-disabled="true"'} title="${title}">
         <span class="app-tile-glyph">
           ${appGlyphSvg(appKey)}
         </span>
@@ -436,25 +465,14 @@ function appLauncherHtml(app: App, phone: boolean): string {
   // tiles host their own popovers, so the launcher carries just the button.
   const panelApp = phone && ui.app !== null && TILE_APPS.includes(ui.app) ? ui.app : null;
   const expanded = ui.launcherOpen || panelApp !== null;
-  const habitName = activeHabit(state)?.name ?? null;
   const entries = TILE_APPS.map((appKey) => {
-    const label = APP_LABELS[appKey];
-    const active = appActive(state, appKey);
-    const note = appLockNote(state, appKey);
-    const tracker = appKey === "goals" ? goalTrackerState(state) : null;
+    const facts = appEntryFacts(state, appKey);
+    const { label, active, tracker, stateText } = facts;
     // Each entry's inline readout rides the launcher's one word style:
     // Goals wears the tracker's rolled-up state (issue #149), Habit names
     // the practice a session would start. The accessible name carries the
     // same words, so the two can never drift.
-    const stateText =
-      tracker !== null
-        ? GOAL_TRACKER_WORDS[tracker]
-        : appKey === "habit"
-          ? habitName ?? "none selected"
-          : note
-            ? `locked: ${note}`
-            : "";
-    const ariaLabel = stateText ? `${label} — ${stateText}` : label;
+    const ariaLabel = appEntryName(facts);
     let readout = "";
     if (tracker !== null) {
       readout = `<span class="launcher-goal-state ${tracker}" aria-hidden="true"><i class="launcher-pip"></i><span class="launcher-state-word">${stateText}</span></span>`;
