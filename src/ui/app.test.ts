@@ -2552,6 +2552,22 @@ describe("the phone launcher (§7, issue #149)", () => {
     expect(document.querySelector(".launcher-goal-state.open")).not.toBeNull();
   });
 
+  it("the Habit entry names the selected practice inline — 'none selected' when the session would be unstructured", () => {
+    app.render();
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
+    app.render();
+    if (!app.ui.launcherOpen) launcher().click();
+    const entry = () => document.getElementById("app-launcher-habit")!;
+    expect(entry().getAttribute("aria-label")).toBe("Habit — Piano app");
+    expect(entry().querySelector(".launcher-habit-state .launcher-state-word")!.textContent).toBe("Piano");
+    // Toggling the habit off reads as the unstructured choice it becomes.
+    selectHabit(app.state, null);
+    app.render();
+    expect(entry().getAttribute("aria-label")).toBe("Habit — none selected app");
+    expect(entry().querySelector(".launcher-state-word")!.textContent).toBe("none selected");
+  });
+
   it("the launcher works mid-session too; the desktop row keeps its tiles and hosts the panel there", () => {
     // Mid-session (notes are a flow-surface app): the launcher answers.
     startSession(app.state, null);

@@ -241,6 +241,10 @@ h1, h2, h3, p { margin: 0; }
   z-index: 30;
   animation: popover-in-left 0.14s ease-out;
 }
+/* The panels opened from the launcher right-anchor too: the base popover
+   rule centers on its anchor, which at the row's far end overflows a phone
+   viewport's right edge — every sub-panel, every time. */
+.app-launcher-slot .app-popover { left: auto; right: 0; transform: none; animation-name: popover-in-left; }
 .app-launcher-item {
   display: flex;
   align-items: center;
@@ -261,6 +265,11 @@ h1, h2, h3, p { margin: 0; }
 .launcher-pip { width: 8px; height: 8px; border-radius: 100%; border: 1.5px solid var(--muted); flex-shrink: 0; }
 .launcher-goal-state.none .launcher-pip { border-style: dashed; opacity: 0.75; }
 .launcher-goal-state.complete .launcher-pip { background: var(--accent); border-color: var(--accent); }
+/* The Habit entry's inline readout: the practice a session would start,
+   wearing the same muted word style as the Goals state — truncated, since
+   a habit name is the player's own. */
+.launcher-habit-state { margin-left: auto; display: flex; align-items: center; min-width: 0; }
+.launcher-habit-state .launcher-state-word { max-width: 128px; overflow: hidden; text-overflow: ellipsis; }
 .launcher-state-word { font: 10px var(--mono); letter-spacing: 0.02em; color: var(--muted); white-space: nowrap; }
 
 /* App panels open as popovers anchored directly beneath their tile — short

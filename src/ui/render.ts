@@ -436,23 +436,31 @@ function appLauncherHtml(app: App, phone: boolean): string {
   // tiles host their own popovers, so the launcher carries just the button.
   const panelApp = phone && ui.app !== null && TILE_APPS.includes(ui.app) ? ui.app : null;
   const expanded = ui.launcherOpen || panelApp !== null;
+  const habitName = activeHabit(state)?.name ?? null;
   const entries = TILE_APPS.map((appKey) => {
     const label = APP_LABELS[appKey];
     const active = appActive(state, appKey);
     const note = appLockNote(state, appKey);
     const tracker = appKey === "goals" ? goalTrackerState(state) : null;
-    const stateWord = tracker !== null ? GOAL_TRACKER_WORDS[tracker] : "";
-    // The accessible name carries the state word for Goals and the locknote
-    // for a future ladder tenant — same spelling as the tiles' titles.
-    const ariaLabel = tracker !== null
-      ? `${label} — ${stateWord}`
-      : note
-        ? `${label} — locked: ${note}`
-        : label;
-    const readout =
+    // Each entry's inline readout rides the launcher's one word style:
+    // Goals wears the tracker's rolled-up state (issue #149), Habit names
+    // the practice a session would start. The accessible name carries the
+    // same words, so the two can never drift.
+    const stateText =
       tracker !== null
-        ? `<span class="launcher-goal-state ${tracker}" aria-hidden="true"><i class="launcher-pip"></i><span class="launcher-state-word">${stateWord}</span></span>`
-        : "";
+        ? GOAL_TRACKER_WORDS[tracker]
+        : appKey === "habit"
+          ? habitName ?? "none selected"
+          : note
+            ? `locked: ${note}`
+            : "";
+    const ariaLabel = stateText ? `${label} — ${stateText}` : label;
+    let readout = "";
+    if (tracker !== null) {
+      readout = `<span class="launcher-goal-state ${tracker}" aria-hidden="true"><i class="launcher-pip"></i><span class="launcher-state-word">${stateText}</span></span>`;
+    } else if (appKey === "habit") {
+      readout = `<span class="launcher-habit-state" aria-hidden="true"><span class="launcher-state-word">${stateText}</span></span>`;
+    }
     return `<button class="app-launcher-item"${active ? "" : " disabled"} id="app-launcher-${appKey}" aria-label="${ariaLabel} app">
       ${appGlyphSvg(appKey)}
       <span class="app-launcher-word">${label}</span>
