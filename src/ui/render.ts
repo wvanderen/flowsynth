@@ -22,8 +22,8 @@ import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals"
 import { ACHIEVEMENTS, achievementBoostOf, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
 import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NamedChordTerm, NoteEntry, RateSnapshot } from "../engine/types";
 import type { App, ChordHover, EnterKind } from "./app";
-import { appIcon } from "./icons";
-import { HEX_RADIUS, hexApothem, hexPoints, moduleFace } from "./face";
+import { appIcon, moduleIcon } from "./icons";
+import { HEX_RADIUS, hexApothem, hexPoints, HUE_TOKEN_OF, moduleFace } from "./face";
 import { bloomLayout, bloomPops, bloomSpan, viewMeet, viewPoint, type ViewFrame } from "./bloom";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chipWidth, type ChordMark } from "./chordlayer";
@@ -1160,7 +1160,7 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
         ghost.className = "drag-ghost";
         if (module) ghost.dataset.rarity = module.rarity;
         ghost.innerHTML = module
-          ? hexTileSvg(module)
+          ? inventoryTileSvg(module)
           : `<svg viewBox="-75 -75 150 150" aria-hidden="true"><polygon class="hex" points="${hexPoints(HEX_RADIUS)}"/></svg>`;
         document.body.append(ghost);
         element.classList.add("dragging");
@@ -1437,7 +1437,7 @@ function renderInventoryTray(app: App): void {
       inventory
         .map(
           (m) =>
-            `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}" title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]} — click, then a cell">${hexTileSvg(m)}</button>`,
+            `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}" title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]} — click, then a cell">${inventoryTileSvg(m)}</button>`,
         )
         .join("") || `<span class="tray-empty">drag a module here to store it</span>`
     }</div>`;
@@ -1933,33 +1933,18 @@ function escapeHtml(text: string): string {
 
 /* ── Grid & inventory panel ────────────────────────── */
 
-// A canvas-style face tile — the same readout panel the board renders, with
-// nominal values for the module's level — shared by the inventory grid and
-// the live drag ghost so a carried tile looks identical to the one waiting in
-// inventory (candidate-tile pattern from the Forge).
-function hexTileSvg(module: ModuleInstance): string {
+// The inventory tile's minimal mark: a hexagon outlined in the category hue
+// with the module's glyph alone. The full readout face belongs to the board
+// and the expanded face — at tile size the engraving is noise — and the
+// tooltip carries the details the mark leaves off. Shared by the tray, the
+// phone inventory sheet, and the live drag ghost, so what you carry is
+// what waits in the tray.
+function inventoryTileSvg(module: ModuleInstance): string {
+  const hue = `var(--${HUE_TOKEN_OF[module.type]})`;
   return `<svg viewBox="-70 -70 140 140" aria-hidden="true">
-    ${moduleFace({ type: module.type, rarity: module.rarity, readout: nominalReadout(module), level: module.level })}
+    <polygon class="tile-hex" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="${hue}" stroke-width="4.5"/>
+    <g class="tile-glyph" fill="none" stroke="${hue}" stroke-width="3.5" transform="scale(1.55)">${moduleIcon(module.type)}</g>
   </svg>`;
-}
-
-// The face's prominent readout from nominal (uncharged) values.
-function nominalReadout(module: ModuleInstance): string {
-  const power = modulePower(module);
-  switch (module.type) {
-    case "additive":
-      return `+${formatNumber(BALANCE.synthRate * power)}`;
-    case "conditional":
-      return `+${formatNumber(BALANCE.synthRate * power)}`;
-    case "spacer":
-      return "⌇";
-    case "focusKeyed":
-      return `⌁${formatNumber(power)}`;
-    case "infusor":
-      return `+${formatNumber(100 * BALANCE.infusorBonus * power)}%`;
-    case "forge":
-      return `${formatNumber(power)}/s`;
-  }
 }
 
 /* ── Modals ────────────────────────────────────────── */
@@ -2079,7 +2064,7 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
       inventory
         .map(
           (m) =>
-            `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}" title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]} — tap, then a cell">${hexTileSvg(m)}</button>`,
+            `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}" title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]} — tap, then a cell">${inventoryTileSvg(m)}</button>`,
         )
         .join("") || `<p class="empty-copy">Nothing in the tray. Drag a module off the board to store it here.</p>`
     }</div>`;

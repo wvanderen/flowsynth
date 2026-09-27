@@ -548,10 +548,9 @@ h1, h2, h3, p { margin: 0; }
   transition: border-color 0.15s, background 0.15s, transform 0.15s;
 }
 .inventory-tile:hover { border-color: var(--line-strong); background: var(--hover-bg); transform: translateY(-2px); }
+.inventory-tile:hover .tile-hex { stroke-width: 6; }
 .inventory-tile:focus-visible { outline-offset: 3px; }
 .inventory-tile svg { width: 100%; max-width: 112px; aspect-ratio: 1; display: block; }
-.inventory-tile .hex { stroke-width: 1.4; }
-.inventory-tile .face-readout { font-size: 14px; }
 
 
 /* ── The board space and its overlays ──────────────── */
@@ -819,11 +818,11 @@ body.bloom-sheet-open .zoom-cluster { bottom: 190px; }
 
 /* Rarity = finish: a faint plate tint over the chassis. The light channels
    (selection, charge, dispensing) win over the tint wherever they apply. */
-.module-node .hex, .inventory-tile .hex, .drag-ghost .hex, .candidate-tile .hex { fill: var(--plate-common); }
+.module-node .hex, .candidate-tile .hex { fill: var(--plate-common); }
 .module-node[data-rarity="uncommon"] .hex:not(.selected):not(.charged):not(.dispensing):not(.locked),
-.inventory-tile[data-rarity="uncommon"] .hex, .drag-ghost[data-rarity="uncommon"] .hex, .candidate-tile[data-rarity="uncommon"] .hex { fill: var(--plate-uncommon); }
+.candidate-tile[data-rarity="uncommon"] .hex { fill: var(--plate-uncommon); }
 .module-node[data-rarity="rare"] .hex:not(.selected):not(.charged):not(.dispensing):not(.locked),
-.inventory-tile[data-rarity="rare"] .hex, .drag-ghost[data-rarity="rare"] .hex, .candidate-tile[data-rarity="rare"] .hex { fill: var(--plate-rare); }
+.candidate-tile[data-rarity="rare"] .hex { fill: var(--plate-rare); }
 
 /* Engraved rarity rings: hairline circles under the panel's engraving. */
 .face-rings { fill: none; stroke: var(--muted); stroke-opacity: 0.3; stroke-width: 1; pointer-events: none; }
@@ -841,7 +840,7 @@ body.bloom-sheet-open .zoom-cluster { bottom: 190px; }
 .inventory-tile[data-type="forge"] .face-readout,
 .drag-ghost[data-type="forge"] .face-readout,
 .candidate-tile[data-type="forge"] .face-readout { font-size: 12px; }
-.inventory-tile .face-readout, .drag-ghost .face-readout, .candidate-tile .face-readout { font-size: 14px; }
+.drag-ghost .face-readout, .candidate-tile .face-readout { font-size: 14px; }
 /* The Forge's charge-vs-threshold readout sits in the charge register. */
 .face-readout.charge { fill: var(--charge); }
 .face-note { font: 8.5px var(--mono); letter-spacing: 0.12em; fill: var(--muted); }
