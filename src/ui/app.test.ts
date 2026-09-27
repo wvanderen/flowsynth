@@ -1845,6 +1845,141 @@ describe("the planned-target affordances (§6)", () => {
   });
 });
 
+// Issue #115: a focus-control pick must patch the affected bits in place —
+// the popover and modal keep their DOM identity, focus stays on the
+// control, and scroll rides through — never a whole-surface rebuild. Node
+// identity is the assertable core of that contract.
+describe("interaction continuity (#115)", () => {
+  afterEach(() => app.closeApp());
+
+  it("a plan chip pick patches the popover in place: identity, pressed state, focus, and scroll all survive", () => {
+    app.openApp("time");
+    const popover = document.getElementById("app-popover")!;
+    const chip = document.querySelector<HTMLButtonElement>('#app-popover [data-plan="25"]')!;
+    const input = document.getElementById("plan-minutes") as HTMLInputElement;
+    const openButton = document.getElementById("plan-open")!;
+    popover.scrollTop = 120;
+    chip.focus();
+    chip.click();
+    expect(app.ui.chosenTarget).toBe(1500);
+    // Nothing rebuilt: the popover and every control kept their nodes.
+    expect(document.getElementById("app-popover")).toBe(popover);
+    expect(document.querySelector('#app-popover [data-plan="25"]')).toBe(chip);
+    expect(document.getElementById("plan-minutes")).toBe(input);
+    expect(document.getElementById("plan-open")).toBe(openButton);
+    // The picked chip's state moved at once, and the free entry followed.
+    expect(chip.classList.contains("active")).toBe(true);
+    expect(chip.getAttribute("aria-pressed")).toBe("true");
+    expect(input.value).toBe("25");
+    expect(input.disabled).toBe(false);
+    // Focus stayed on the chip; the popover's scroll offset rode through.
+    expect(document.activeElement).toBe(chip);
+    expect(popover.scrollTop).toBe(120);
+    // The Time tile's plan lettered in place with the pick.
+    expect(document.getElementById("app-tile-time")!.querySelector(".app-tile-state")!.textContent).toBe("25:00");
+  });
+
+  it("committing a custom minute value keeps focus in the minutes input", () => {
+    app.openApp("time");
+    // The resting plan is open-ended, so the free entry starts disabled; a
+    // chip pick arms it — the state the input is typed into.
+    document.querySelector<HTMLButtonElement>('#app-popover [data-plan="25"]')!.click();
+    const input = document.getElementById("plan-minutes") as HTMLInputElement;
+    input.focus();
+    input.value = "37";
+    input.dispatchEvent(new Event("change"));
+    expect(app.ui.chosenTarget).toBe(37 * 60);
+    expect(document.getElementById("plan-minutes")).toBe(input);
+    expect(input.value).toBe("37");
+    expect(document.activeElement).toBe(input);
+    // The console clock followed without touching the session controls.
+    expect(document.querySelector("#console-session .session-clock")!.textContent).toBe("37:00");
+    expect(document.getElementById("flow-switch")!.isConnected).toBe(true);
+  });
+
+  it("the open-ended toggle disables the input in place, and focus survives on the toggle", () => {
+    app.openApp("time");
+    document.querySelector<HTMLButtonElement>('#app-popover [data-plan="30"]')!.click();
+    const toggle = document.getElementById("plan-open")!;
+    const input = document.getElementById("plan-minutes") as HTMLInputElement;
+    const popover = document.getElementById("app-popover")!;
+    popover.scrollTop = 90;
+    toggle.focus();
+    toggle.click();
+    expect(app.ui.chosenTarget).toBeNull();
+    expect(document.getElementById("app-popover")).toBe(popover);
+    expect(document.getElementById("plan-open")).toBe(toggle);
+    expect(document.getElementById("plan-minutes")).toBe(input);
+    expect(input.disabled).toBe(true);
+    expect(input.value).toBe("");
+    expect(toggle.getAttribute("aria-pressed")).toBe("true");
+    expect(document.activeElement).toBe(toggle);
+    expect(popover.scrollTop).toBe(90);
+    expect(document.querySelector("#console-apps .clock-caption")!.textContent).toBe("Open-ended");
+  });
+
+  it("the enter prompt's kind switch swaps the pane without rebuilding the modal; focus survives on the tab", () => {
+    createHabit(app.state, "Jammin");
+    app.startFlow();
+    const modal = document.getElementById("modal-content")!;
+    const tab = modal.querySelector<HTMLButtonElement>('[data-enter-kind="new"]')!;
+    tab.focus();
+    tab.click();
+    expect(app.ui.enter.kind).toBe("new");
+    // The modal shell and the tab kept their nodes; the pane swapped beneath.
+    expect(document.getElementById("modal-content")).toBe(modal);
+    expect(modal.querySelector('[data-enter-kind="new"]')).toBe(tab);
+    expect(document.activeElement).toBe(tab);
+    expect(tab.getAttribute("aria-pressed")).toBe("true");
+    expect(modal.querySelector('.mode-tab[data-enter-kind="habit"]')!.getAttribute("aria-pressed")).toBe("false");
+    // The pane and footer followed at once (#95's contract).
+    expect(document.getElementById("enter-habit-name")).not.toBeNull();
+    const begin = document.getElementById("enter-begin") as HTMLButtonElement;
+    expect(begin.textContent).toBe("Name your new habit");
+    expect(begin.disabled).toBe(true);
+    expect(modal.querySelector(".cta-summary")!.textContent).toBe("name it to arm the start");
+  });
+
+  it("picking a habit in the enter prompt keeps the choice buttons and moves the footer in place", () => {
+    const created = createHabit(app.state, "Jammin");
+    createHabit(app.state, "Etudes");
+    app.startFlow();
+    const modal = document.getElementById("modal-content")!;
+    const choice = modal.querySelector<HTMLButtonElement>(`[data-enter-habit="${created.habit!.id}"]`)!;
+    const list = modal.querySelector(".enter-choices") as HTMLElement;
+    list.scrollTop = 60;
+    choice.focus();
+    choice.click();
+    expect(document.getElementById("modal-content")).toBe(modal);
+    expect(modal.querySelector(`[data-enter-habit="${created.habit!.id}"]`)).toBe(choice);
+    expect(document.activeElement).toBe(choice);
+    // The inner list is the same node, scroll untouched.
+    expect(modal.querySelector(".enter-choices")).toBe(list);
+    expect(list.scrollTop).toBe(60);
+    expect(choice.classList.contains("selected")).toBe(true);
+    expect(choice.getAttribute("aria-pressed")).toBe("true");
+    const begin = document.getElementById("enter-begin") as HTMLButtonElement;
+    expect(begin.textContent).toBe("Begin — Jammin · open-ended");
+    expect(begin.disabled).toBe(false);
+    expect(modal.querySelector(".cta-summary")!.textContent).toBe("Jammin · open-ended");
+  });
+
+  it("typed names keep the modal off the rebuild path: a later render leaves the input node alone", () => {
+    app.startFlow();
+    document.querySelector<HTMLButtonElement>('#modal-content [data-enter-kind="new"]')!.click();
+    const input = document.getElementById("enter-habit-name") as HTMLInputElement;
+    input.focus();
+    input.value = "Sketching";
+    input.dispatchEvent(new Event("input"));
+    const modal = document.getElementById("modal-content")!;
+    app.render();
+    expect(document.getElementById("modal-content")).toBe(modal);
+    expect(document.getElementById("enter-habit-name")).toBe(input);
+    expect(document.activeElement).toBe(input);
+    expect(document.getElementById("enter-begin")!.textContent).toBe("Begin — Sketching · open-ended");
+  });
+});
+
 describe("the settings preferences (§5)", () => {
   it("carries one global mute toggle that gates and persists", () => {
     app.openModal("settings");

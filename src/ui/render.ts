@@ -22,7 +22,7 @@ import { arcCardDue } from "../engine/arc";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
 import { ACHIEVEMENTS, achievementBoostOf, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
 import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NamedChordTerm, NoteEntry, RateSnapshot } from "../engine/types";
-import type { App, ChordHover, EnterKind } from "./app";
+import type { App, ChordHover, EnterKind, ModalKind } from "./app";
 import { suppressNextClick } from "./click";
 import { appIcon, moduleIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, HUE_TOKEN_OF, moduleFace } from "./face";
@@ -105,6 +105,21 @@ function wireClockPlan(app: App): void {
   });
 }
 
+// The upgrade-mode console clock's plan texts (#114, #115): the slot only
+// ever holds clock text, so a plan change swaps the two text nodes in place
+// — the clock button itself never leaves the DOM, keeping any interaction
+// with it (and the strip around it) untouched.
+function refreshConsoleClockPlan(app: App): void {
+  if (app.state.mode !== "upgrade") return;
+  const chosen = app.ui.chosenTarget;
+  const time = chosen !== null ? formatClock(chosen) : CLOCK_PLACEHOLDER;
+  const word = chosen !== null ? "planned" : OPEN_ENDED_WORD;
+  const clock = document.querySelector("#console-session .session-clock");
+  if (clock && clock.textContent !== time) clock.textContent = time;
+  const caption = document.querySelector("#console-session .clock-caption");
+  if (caption && caption.textContent !== word) caption.textContent = word;
+}
+
 // Session controls: the clock block plus the Enter/Exit main switch and the
 // pause control. The switch is the console's sole session gate — sessions
 // start and end through it — and the switch's vermillion is the one colored
@@ -120,23 +135,21 @@ function renderConsoleSession(app: App): void {
   const switchSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.2 6.6a8 8 0 1 0 11.6 0"/></svg>`;
 
   if (state.mode === "upgrade") {
-    // Structural key: only rebuild when the plan's shape or value changes, so
-    // control nodes (and in-flight clicks) survive clock ticks. The clock
-    // wears the next session's target in flow's clock styles; an unplanned
-    // open-ended shape wears a placeholder so the slot only ever holds
-    // clock text, with "planned" (or "open-ended") naming the mode in the
-    // caption slot. The key carries the target value itself (issue #114) so
-    // every accepted plan change rebuilds the clock — safe because in
-    // upgrade mode nothing ticks. No session runs, so the header's progress
-    // strip stays empty.
-    const chosen = app.ui.chosenTarget;
-    const key = `upgrade:${chosen === null ? "open" : chosen}`;
+    // Static structure: nothing here depends on light state any more, so
+    // control nodes (and in-flight clicks) survive everything in upgrade
+    // mode. The clock wears the next session's target in flow's clock
+    // styles; an unplanned open-ended shape wears a placeholder so the slot
+    // only ever holds clock text, with "planned" (or "open-ended") naming
+    // the mode in the caption slot. The plan's own values patch in place
+    // below (#115) — a plan pick never rebuilds the console session. No
+    // session runs, so the header's progress strip stays empty.
+    const key = "upgrade";
     if (host.dataset.renderKey !== key) {
       host.dataset.renderKey = key;
       host.innerHTML = `
           <button class="console-clock clock-opens-time" id="clock-plan" title="Plan — opens the Time app">
-            <span class="session-clock mono">${chosen !== null ? formatClock(chosen) : CLOCK_PLACEHOLDER}</span>
-            <span class="clock-caption">${chosen !== null ? "planned" : OPEN_ENDED_WORD}</span>
+            <span class="session-clock mono"></span>
+            <span class="clock-caption"></span>
           </button>
         <div class="session-actions">
           <button class="main-switch idle" id="flow-switch" title="Enter flow — the board locks and runs itself">
@@ -146,6 +159,7 @@ function renderConsoleSession(app: App): void {
       wireClockPlan(app);
       byId("flow-switch")?.addEventListener("click", () => app.startFlow());
     }
+    refreshConsoleClockPlan(app);
     renderSessionStrip(false);
     return;
   }
@@ -258,7 +272,9 @@ function renderConsoleApps(app: App, projected: RateSnapshot): void {
     ui.editingHabitId,
     state.notes.length,
     state.goals.map((g) => (g.completed ? "1" : "0") + g.condition.minutes + (g.condition.habitId ?? "") + g.schedule.kind).join("|"),
-    ui.chosenTarget,
+    // The chosen plan is deliberately absent (issue #115): a plan pick
+    // patches the tiles' state text in place instead of rebuilding the
+    // strip — the open popover, its focus, and its scroll all survive.
     // The history surfaces (§9): the list view, its page, the drilled
     // record, and the expanded habit summary each rebuild the popover.
     ui.historyOpen,
@@ -319,6 +335,22 @@ function renderConsoleApps(app: App, projected: RateSnapshot): void {
 // The Time tile's compact plan: the clock, or the mode word for open-ended.
 function planShort(chosenTarget: number | null): string {
   return chosenTarget === null ? OPEN_ENDED_WORD : formatClock(chosenTarget);
+}
+
+// The plan mode's caption word, shared by the planner markup and its
+// in-place patcher so the two can never drift.
+function planCaptionWord(open: boolean): string {
+  return open ? "Open-ended" : "Planned practice";
+}
+
+// The Time tile's plan state text (#115): light state, so it swaps in place
+// — a plan pick or reset never rebuilds the strip just to re-letter a tile.
+// (The Habit tile's name rides genuine rebuilds; selection and renames are
+// real state changes.)
+function refreshTimeTileState(app: App): void {
+  const state = byId("app-tile-time")?.querySelector(".app-tile-state");
+  const plan = planShort(app.ui.chosenTarget);
+  if (state && state.textContent !== plan) state.textContent = plan;
 }
 
 // The achievements page (ADR-0015): the always-visible full list — all
@@ -1774,19 +1806,58 @@ function planControlsHtml(app: App): string {
       <span class="plan-unit">min</span>
     </div>
     <button id="plan-open" class="plan-open${open ? " active" : ""}" aria-pressed="${open}">Open-ended</button>
-    <p class="clock-caption">${open ? "Open-ended" : "Planned practice"}</p>
+    <p class="clock-caption">${planCaptionWord(open)}</p>
   </div>`;
+}
+
+// The plan surfaces a control-driven change must reach without a render
+// (#115): the controls themselves, the console clock, and the Time tile.
+// Every patch is an in-place text/class/attribute swap on surviving nodes,
+// so focus, open dropdowns, and scroll all ride through untouched.
+function refreshPlanState(app: App): void {
+  refreshPlanControls(app);
+  refreshConsoleClockPlan(app);
+  refreshTimeTileState(app);
+}
+
+// The plan controls' pressed/disabled/value state, patched in place within
+// whatever scope carries them (the Time popover — or a modal should it ever
+// host them again).
+function refreshPlanControls(app: App): void {
+  const chosen = app.ui.chosenTarget;
+  const open = chosen === null;
+  const minutes = chosen === null ? null : Math.round(chosen / 60);
+  for (const chip of document.querySelectorAll<HTMLButtonElement>("[data-plan]")) {
+    const active = minutes !== null && minutes === Number(chip.getAttribute("data-plan"));
+    chip.classList.toggle("active", active);
+    chip.setAttribute("aria-pressed", String(active));
+  }
+  const input = byId("plan-minutes") as HTMLInputElement | null;
+  if (input) {
+    const value = minutes !== null ? String(minutes) : "";
+    if (input.value !== value) input.value = value;
+    input.disabled = open;
+  }
+  const openButton = byId("plan-open");
+  openButton?.classList.toggle("active", open);
+  openButton?.setAttribute("aria-pressed", String(open));
+  for (const caption of document.querySelectorAll(".time-plan .clock-caption")) {
+    const word = planCaptionWord(open);
+    if (caption.textContent !== word) caption.textContent = word;
+  }
 }
 
 // The plan affordances' binding within any scope (the Time popover or the
 // enter modal): chips pick a preset, the free entry takes any whole minute
 // from 1 to 90 (clamped, one-minute steps), and open-ended is its own mode
-// toggle.
+// toggle. Each acceptance patches the affected surfaces in place (#115) —
+// never a render, so the popover keeps its DOM identity, focus stays on the
+// control, and an open native select is never disrupted mid-gesture.
 function bindPlanControls(app: App, scope: HTMLElement): void {
   scope.querySelectorAll<HTMLButtonElement>("[data-plan]").forEach((chip) => {
     chip.addEventListener("click", () => {
       app.ui.chosenTarget = Number(chip.getAttribute("data-plan")) * 60;
-      app.render();
+      refreshPlanState(app);
     });
   });
   const planInput = scope.querySelector("#plan-minutes") as HTMLInputElement | null;
@@ -1794,12 +1865,12 @@ function bindPlanControls(app: App, scope: HTMLElement): void {
     const minutes = Math.round(Number(planInput.value));
     if (Number.isFinite(minutes) && planInput.value !== "") {
       app.ui.chosenTarget = Math.min(PLAN_MAX_MINUTES, Math.max(PLAN_MIN_MINUTES, minutes)) * 60;
-      app.render();
+      refreshPlanState(app);
     }
   });
   scope.querySelector("#plan-open")?.addEventListener("click", () => {
     app.ui.chosenTarget = null;
-    app.render();
+    refreshPlanState(app);
   });
 }
 
@@ -1919,6 +1990,7 @@ function bindAppPanel(app: App, scope: HTMLElement): void {
 // console's live session, so no clock lives here — §7.)
 function updateAppPanelLive(app: App, scope: ParentNode, projected: RateSnapshot): void {
   const { state } = app;
+  refreshTimeTileState(app);
   liveSet(scope, "habit-session", `${formatClock(state.session?.elapsed ?? 0)} of practice`);
   for (const habit of state.habits) {
     const node = scope.querySelector(`[data-habit-seconds="${habit.id}"]`);
@@ -1967,6 +2039,14 @@ function inventoryTileSvg(module: ModuleInstance): string {
 }
 
 /* ── Modals ────────────────────────────────────────── */
+
+// The modal content's rebuild key: what a modal shows, hashed. The
+// control-driven in-place patchers (the enter prompt's, issue #115) re-stamp
+// it after patching, so the patched DOM and the guard stay in agreement and
+// a later render never rebuilds what a patch already brought current.
+function modalKey(app: App, kind: ModalKind, extra: unknown): string {
+  return JSON.stringify([kind, app.ui.importError, app.state.session?.accounting.poolSeconds ?? 0, app.state.mode, extra]);
+}
 
 function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): void {
   const backdrop = byId("modal");
@@ -2031,7 +2111,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                   : kind === "inventory"
                     ? app.state.modules.filter((m) => m.pos === null).map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`)
                     : null;
-  const renderKey = JSON.stringify([kind, app.ui.importError, app.state.session?.accounting.poolSeconds ?? 0, app.state.mode, extra]);
+  const renderKey = modalKey(app, kind, extra);
   // Clock ticks must not replace a save textarea or steal dialog focus.
   if (!backdrop.hidden && content.dataset.renderKey === renderKey) return;
   backdrop.hidden = false;
@@ -2409,10 +2489,12 @@ function renderHonestyModal(app: App, content: HTMLElement): void {
 // pane serving the picked kind, and a sticky footer band (Back / live
 // summary / `Begin — {kind} · {duration}`) whose CTA arms per the kind's
 // requirement: a habit picked, a name typed, or always for unstructured. It
-// carries the duration affordances from the very first start (ADR-0019,
-// §6–7) — preset chips + free 1–90 entry, open-ended resting, session-one's
-// steer riding above — and the renderKey fix: the modal's key rides the plan
-// and the selection state, so picks re-render immediately.
+// carries the duration pointer to the Time app (ADR-0019, §6–7), with
+// session-one's steer riding above. Since #115 the prompt's own picks patch
+// in place — tabs flip, the pane swaps, the footer follows — so the modal
+// node, the tabs, and the focused control all survive the interaction; the
+// render key is re-stamped after each patch so the rebuild guard never
+// disagrees with the DOM it guards.
 // The one resolution of the selection — the only place that switches on the
 // kind. The kind's requirement (a habit picked, a name typed, or nothing for
 // unstructured) decides whether the session may start, and resolves its
@@ -2453,25 +2535,18 @@ function enterFootprint(app: App): EnterFootprint {
   return { armed: true, summary: `${what} · ${duration}`, cta: `Begin — ${what} · ${duration}` };
 }
 
-// The footprint's summary and CTA carry user-typed names; anything these
-// strings feed as markup must escape them (the in-place footer refresh sets
-// textContent, which must stay raw).
-const escapeFootprint = (footprint: EnterFootprint): EnterFootprint => ({
-  ...footprint,
-  summary: escapeHtml(footprint.summary),
-  cta: escapeHtml(footprint.cta),
-});
+// The pane's markup starts below; the footer's refresh writes the
+// footprint's raw strings with textContent, so user-typed names can never
+// become markup.
 
-function renderEnterModal(app: App, content: HTMLElement): void {
+// The picked kind's pane body — the one part of the prompt a kind switch
+// replaces; the tabs, footer, and modal shell persist around it.
+function enterPaneHtml(app: App): string {
   const { state, ui } = app;
   const enter = ui.enter;
   const habits = state.habits.filter((h) => !h.archived);
-  const footprint = escapeFootprint(enterFootprint(app));
-  const kindTab = (kind: EnterKind, label: string) =>
-    `<button class="mode-tab${enter.kind === kind ? " active" : ""}" data-enter-kind="${kind}" aria-pressed="${enter.kind === kind}">${label}</button>`;
-  let pane = "";
   if (enter.kind === "habit") {
-    pane = habits.length === 0
+    return habits.length === 0
       ? `<p class="mode-explain">No habits yet — the New habit tab names your first.</p>`
       : `<div class="enter-choices">
       ${habits
@@ -2485,23 +2560,114 @@ function renderEnterModal(app: App, content: HTMLElement): void {
         .join("")}
     </div>
     <p class="mode-explain">Pick the habit this session counts toward.</p>`;
-  } else if (enter.kind === "new") {
-    pane = `<div class="enter-create">
+  }
+  if (enter.kind === "new") {
+    return `<div class="enter-create">
       <input type="text" id="enter-habit-name" placeholder="Name it (piano, cooking…)" maxlength="40" aria-label="Name a new habit and start the session with it" value="${escapeHtml(enter.newName)}" />
     </div>
     <p class="mode-explain">A brand-new habit starts its clock with this session.</p>`;
-  } else {
-    pane = `<p class="mode-explain">No habit attached — the session runs, and nous is unaffected.</p>`;
   }
+  return `<p class="mode-explain">No habit attached — the session runs, and nous is unaffected.</p>`;
+}
+
+// The footer band's current content, written onto the surviving nodes: the
+// #95 contract (never a stale footer) without a rebuild (#115). The
+// summary and CTA carry user-typed names; textContent keeps them as text.
+function refreshEnterFooter(app: App, content: HTMLElement): void {
+  const next = enterFootprint(app);
+  const summary = content.querySelector(".cta-summary");
+  const beginButton = content.querySelector("#enter-begin") as HTMLButtonElement | null;
+  if (summary) summary.textContent = next.summary;
+  if (beginButton) {
+    beginButton.textContent = next.cta;
+    beginButton.disabled = !next.armed;
+  }
+}
+
+// The prompt's rebuild guard, re-stamped after every in-place patch so a
+// later render pass sees the patched DOM as current and skips the rebuild.
+function stampEnterKey(app: App, content: HTMLElement): void {
+  content.dataset.renderKey = modalKey(app, "enter", [app.ui.chosenTarget, app.ui.enter]);
+}
+
+function refreshEnterTabs(app: App, content: HTMLElement): void {
+  for (const button of content.querySelectorAll<HTMLButtonElement>("[data-enter-kind]")) {
+    const active = button.getAttribute("data-enter-kind") === app.ui.enter.kind;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  }
+}
+
+function refreshEnterChoices(app: App, content: HTMLElement): void {
+  const picked = app.ui.enter.habitId;
+  for (const button of content.querySelectorAll<HTMLButtonElement>("[data-enter-habit]")) {
+    const selected = button.getAttribute("data-enter-habit") === picked;
+    button.classList.toggle("selected", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  }
+}
+
+// The kind switch's structural half: the pane swaps, the pane's own controls
+// rebind, the footer follows, the guard re-stamps. The tabs and footer nodes
+// themselves never leave the DOM, so focus on them survives the swap.
+function swapEnterPane(app: App, content: HTMLElement): void {
+  const pane = content.querySelector(".mode-pane");
+  if (!pane) return;
+  pane.innerHTML = enterPaneHtml(app);
+  bindEnterPane(app, content);
+  refreshEnterFooter(app, content);
+  stampEnterKey(app, content);
+}
+
+// The pane-scoped bindings: a habit choice and the new-habit name field.
+// Rebound after every pane swap; each acceptance patches in place.
+function bindEnterPane(app: App, content: HTMLElement): void {
+  content.querySelectorAll<HTMLElement>("[data-enter-habit]").forEach((button) => {
+    button.addEventListener("click", () => {
+      app.ui.enter.habitId = button.getAttribute("data-enter-habit");
+      refreshEnterChoices(app, content);
+      refreshEnterFooter(app, content);
+      stampEnterKey(app, content);
+    });
+  });
+  const nameInput = content.querySelector("#enter-habit-name") as HTMLInputElement | null;
+  // Typing never rebuilds the modal (nothing renders in the background while
+  // the console sits in upgrade mode): the name rides ui state and the
+  // footer refreshes in place, so the caret keeps its place while the CTA
+  // arms.
+  nameInput?.addEventListener("input", () => {
+    app.ui.enter.newName = nameInput.value;
+    refreshEnterFooter(app, content);
+    stampEnterKey(app, content);
+  });
+  nameInput?.addEventListener("keydown", (event) => {
+    if ((event as KeyboardEvent).key === "Enter") {
+      event.preventDefault();
+      beginEnter(app);
+    }
+  });
+}
+
+// The shared resolution arms the action: a typed name rides the new-habit
+// path; otherwise the target is the picked habit's id, with null meaning
+// unstructured rides beginFlow directly.
+function beginEnter(app: App): void {
+  const target = enterTarget(app);
+  if (!target.armed) return;
+  if (target.newName) app.beginFlowNewHabit(target.newName);
+  else app.beginFlow(target.habitId);
+}
+
+function renderEnterModal(app: App, content: HTMLElement): void {
   content.innerHTML = `
     ${modalTop("ENTER FLOW")}
     <div class="enter-body">
       <h2 id="modal-title">What are you practicing?</h2>
       <div class="mode-tabs" role="group" aria-label="What kind of session is this?">
-        ${kindTab("habit", "A habit")}${kindTab("new", "New habit")}${kindTab("unstructured", "Unstructured")}
+        ${kindTab("habit", "A habit", app)}${kindTab("new", "New habit", app)}${kindTab("unstructured", "Unstructured", app)}
       </div>
-      <div class="mode-pane">${pane}</div>
-      ${state.sessionsCompleted === 0 ? `<p class="enter-steer small muted">A first try can be short — five minutes or so, then exit and see what the session banked.</p>` : ""}
+      <div class="mode-pane">${enterPaneHtml(app)}</div>
+      ${app.state.sessionsCompleted === 0 ? `<p class="enter-steer small muted">A first try can be short — five minutes or so, then exit and see what the session banked.</p>` : ""}
       ${
         // Planning lives only in the Time app (§7): the prompt carries a
         // pointer, not a second copy of the controls — the console clock
@@ -2511,60 +2677,26 @@ function renderEnterModal(app: App, content: HTMLElement): void {
     </div>
     <div class="footer-band">
       <button id="enter-cancel" class="small">Back</button>
-      <span class="cta-summary">${footprint.summary}</span>
-      <button id="enter-begin" class="primary" ${footprint.armed ? "" : "disabled"}>${footprint.cta}</button>
+      <span class="cta-summary"></span>
+      <button id="enter-begin" class="primary"></button>
     </div>`;
+  refreshEnterFooter(app, content);
   bindPlanControls(app, content);
-  // The same shared resolution arms the action: a typed name rides the
-  // new-habit path; otherwise the target is the picked habit's id, with null
-  // meaning unstructured rides beginFlow directly.
-  const begin = () => {
-    const target = enterTarget(app);
-    if (!target.armed) return;
-    if (target.newName) app.beginFlowNewHabit(target.newName);
-    else app.beginFlow(target.habitId);
-  };
   content.querySelectorAll<HTMLButtonElement>("[data-enter-kind]").forEach((button) => {
     button.addEventListener("click", () => {
-      enter.kind = button.getAttribute("data-enter-kind") as EnterKind;
-      app.render();
+      app.ui.enter.kind = button.getAttribute("data-enter-kind") as EnterKind;
+      refreshEnterTabs(app, content);
+      swapEnterPane(app, content);
     });
   });
-  content.querySelectorAll<HTMLElement>("[data-enter-habit]").forEach((button) => {
-    button.addEventListener("click", () => {
-      enter.habitId = button.getAttribute("data-enter-habit");
-      app.render();
-    });
-  });
-  const nameInput = byId("enter-habit-name") as HTMLInputElement | null;
-  // Typing never rebuilds the modal (nothing renders in the background while
-  // the console sits in upgrade mode): the name rides ui state and the
-  // footer refreshes in place, so the caret keeps its place while the CTA
-  // arms. The next interaction that does render rebuilds with the name kept.
-  const refreshFootprint = () => {
-    const next = enterFootprint(app);
-    const summary = content.querySelector(".cta-summary");
-    const beginButton = byId("enter-begin");
-    if (summary) summary.textContent = next.summary;
-    if (beginButton) {
-      beginButton.textContent = next.cta;
-      (beginButton as HTMLButtonElement).disabled = !next.armed;
-    }
-  };
-  nameInput?.addEventListener("input", () => {
-    enter.newName = nameInput.value;
-    refreshFootprint();
-  });
-  nameInput?.addEventListener("keydown", (event) => {
-    if ((event as KeyboardEvent).key === "Enter") {
-      event.preventDefault();
-      if (enterTarget(app).armed) begin();
-    }
-  });
-  byId("enter-begin")?.addEventListener("click", begin);
+  bindEnterPane(app, content);
+  byId("enter-begin")?.addEventListener("click", () => beginEnter(app));
   byId("enter-cancel")?.addEventListener("click", () => app.closeModal());
   wireClose(app);
 }
+
+const kindTab = (kind: EnterKind, label: string, app: App): string =>
+  `<button class="mode-tab${app.ui.enter.kind === kind ? " active" : ""}" data-enter-kind="${kind}" aria-pressed="${app.ui.enter.kind === kind}">${label}</button>`;
 
 // One voice for both honesty surfaces (§2, §8–9): the report's option
 // labels and the summary's factual event lines phrase each outcome the same
