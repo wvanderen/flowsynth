@@ -142,13 +142,13 @@ The catalog's one-time guaranteed offers — the generator, one infusor, and a F
 The pure control surface carrying the Enter/Exit main switch, the clock, pause, and one tile per focus app. The main switch is the mode indicator — off, glowing live, held paused — and the clock is itself the plan affordance, opening the Time app. While a session runs, a thin progress strip along the console's bottom edge shows its progress in the switch's vermillion — filling on planned sessions, pulsing on open-ended ones, held while paused. The board never moves or dims while the console is in use.
 
 **Board ledger**:
-The strip docked above the board carrying Nous, Rate, and Session as one instrument, with the feats chip beside it — the board owns its production numbers. The Rate cell is the only door to the full formula: its collapsed operand chain ending in the live total is the rate display above the 760px breakpoint, and below it the bare total stands alone and a tap opens the formula as a modal sheet over a scrim.
+The strip docked above the board carrying Nous, Rate, and Session as one instrument, with the feats chip beside it — the board owns its production numbers. The Rate cell is the only door to the full formula: its collapsed operand chain ending in the live total is the rate display above the 760px breakpoint, and below it the bare total stands alone and a tap opens the formula as a modal sheet over a scrim. (On portrait phone the door moves to the game-info strip's rate read.)
 
 **Thumb bar**:
 The console's re-docked form on portrait phone — a bottom bar of Catalog / Forge / New cell / Inventory / Feats. The icon dock, the board-surface tray's tap access, and the feats chip all fold into it; nothing else changes.
 
 **Game-info strip**:
-The pill on the board surface, directly below the phone nav, carrying ν, rate, and session — production reads where the idle tutorial helptext used to sit. Feats appears once on phone, riding the thumb bar. Phone only; the board ledger serves every other width.
+The pill on the board surface, directly below the phone nav, carrying ν, rate, and session — production reads where the idle tutorial helptext used to sit. Its rate read is the phone's door to the formula sheet; the chain never goes ambient at this width. Feats appears once on phone, riding the thumb bar. Phone only; the board ledger serves every other width.
 
 **Zoom cluster**:
 The +/−/fit cluster floating over the board's right edge, beside wheel zoom. The board pans by dragging outside the grid at any zoom (inside when zoomed in), clamped so the board can never leave the frame. On portrait phone the cluster rises above any open sheet so inspection never gets buried.

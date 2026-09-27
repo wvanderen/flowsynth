@@ -86,7 +86,7 @@ composite = (synths + infusor uplift) × Π chord terms
 **Portrait phone — thumb dock:**
 
 - The top nav holds **session controls only** (clock, pause, enter/exit — the clock stays the plan affordance).
-- Production reads (ν, rate, session) live in a **game-info strip** directly below the nav, on the board surface where the tutorial helptext used to sit. Feats appears once on phone — it rides the thumb bar; the strip carries no feats chip.
+- Production reads (ν, rate, session) live in a **game-info strip** directly below the nav, on the board surface where the tutorial helptext used to sit. Feats appears once on phone — it rides the thumb bar; the strip carries no feats chip. The strip's **rate read is the phone's only formula door**: tapping it opens the formula sheet over a scrim — the operand chain never goes ambient at this width.
 - The console is a **bottom thumb bar**: Catalog / Forge / New cell / Inventory / Feats.
 - The bloom presents as a **bottom sheet**; the zoom cluster rises above any open sheet so inspection never gets buried.
 

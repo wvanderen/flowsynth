@@ -2147,6 +2147,19 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     expect(document.querySelector('#thumb-bar [data-op="feats"]')).not.toBeNull();
   });
 
+  it("the strip's rate read is the phone's formula door: tapping it opens the formula sheet", () => {
+    app.render();
+    // The ledger's Rate cell is display:none at this width; the strip's
+    // read takes over, and the chain stays non-ambient on the board surface.
+    const strip = document.getElementById("game-info-strip")!;
+    expect(strip.querySelector(".rate-equation")).toBeNull();
+    document.getElementById("info-rate")!.click();
+    expect(app.ui.modal).toBe("formula");
+    expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(true);
+    expect(document.getElementById("modal-content")!.querySelector(".formula-equation")).not.toBeNull();
+    app.closeModal();
+  });
+
   it("the Arete pill floats over the board's bottom edge with its full anatomy", () => {
     app.render();
     const pill = document.getElementById("arete-pill")!;

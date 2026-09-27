@@ -647,17 +647,19 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .thumb-bar .tool-badge { top: -2px; right: 50%; transform: translateX(20px); }
 
 /* The game-info strip (§7): production reads on the board surface, portrait
-   phone only — where the tutorial helptext used to sit. */
+   phone only — where the tutorial helptext used to sit. The strip anchors
+   edge to edge and centers its content, so its size is locked: the session
+   read ticks every render and a content-sized pill would breathe with it. */
 .game-info-strip {
   position: absolute;
   top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 8px;
+  right: 8px;
   z-index: 15;
   display: none;
   align-items: center;
+  justify-content: center;
   gap: 14px;
-  max-width: 94%;
   padding: 6px 14px;
   background: var(--panel-veil);
   border: 1px solid var(--line);
@@ -668,6 +670,25 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .info-read { display: inline-flex; align-items: baseline; gap: 4px; font: 12px var(--mono); }
 .info-read small { font-size: 10px; color: var(--muted); }
 .game-info-strip .feats-chip { padding: 2px 6px; }
+/* The strip's rate read is the phone's door to the formula (§7): tapping it
+   opens the formula sheet — the ledger's Rate cell doesn't exist here, and
+   the operand chain never goes ambient at this width. It reads as a plain
+   strip entry, wearing the Rate cell's ⓘ. */
+.game-info-strip .info-rate {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+.game-info-strip .info-rate:hover:not(:disabled),
+.game-info-strip .info-rate:focus-visible {
+  background: none;
+  border-color: transparent;
+  color: var(--ink);
+}
+.info-hint { font-size: 10px; color: var(--muted); }
+.game-info-strip .info-rate:hover .info-hint { color: var(--ink); }
 
 /* The Arete pill (§7): the status monitor dissolved — the accumulator
    floats free as a translucent pill over the board's bottom edge at every
@@ -1445,7 +1466,10 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
   .pill-row { font-size: 9px; margin-bottom: 4px; }
   .pill-prestige { padding: 2px 7px; font-size: 8.5px; }
   .pill-rail { height: 7px; margin-top: 14px; }
-  .pill-head { font-size: 8.5px; }
+  /* The beat's countdown ticks every second (m:ss), so its bubble wears a
+     locked width — the longest steady-state form — and centers its text:
+     it changes what it says, never how big it is. */
+  .pill-head { font-size: 8.5px; min-width: 50ch; text-align: center; }
   .zoom-cluster { right: 10px; bottom: 64px; }
   body.bloom-sheet-open .zoom-cluster { bottom: 150px; }
   .module-bloom.sheet { bottom: 56px !important; }

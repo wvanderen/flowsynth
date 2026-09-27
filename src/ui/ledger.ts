@@ -196,8 +196,10 @@ export function updateLedgerLive(scope: ParentNode, state: GameState, rate: numb
 // ── The phone game-info strip (§7) ──────────────────────────────────────
 // Production reads on the board surface, where the tutorial helptext used
 // to sit: ν, rate, session. Feats appears once on phone — riding the thumb
-// bar — so the strip carries no feats chip. Displayed only below the 600px
-// breakpoint; the values update at every render whatever the width.
+// bar — and the rate read is the strip's one tap: it opens the formula
+// sheet, the door the ledger's Rate cell provides at every other width.
+// The chain itself never goes ambient here — a 390px board has no room.
+// Displayed only below the 600px breakpoint; values update every render.
 export function renderGameInfoStrip(app: App): void {
   const host = document.getElementById("game-info-strip");
   if (!host) return;
@@ -205,8 +207,9 @@ export function renderGameInfoStrip(app: App): void {
   if (!host.dataset.renderKey) {
     host.dataset.renderKey = "strip";
     host.innerHTML = `<span class="info-read"><small>ν</small> <strong class="mono" data-live="i-nous"></strong></span>
-      <span class="info-read"><strong class="mono" data-live="i-rate"></strong> <small>ν/s</small></span>
+      <button class="info-read info-rate" id="info-rate" title="Rate — tap for the full formula"><strong class="mono" data-live="i-rate"></strong> <small>ν/s</small><span class="info-hint" aria-hidden="true">ⓘ</span></button>
       <span class="info-read"><small>session</small> <strong class="mono" data-live="i-session"></strong></span>`;
+    document.getElementById("info-rate")?.addEventListener("click", () => app.openModal("formula"));
   }
   const set = (live: string, text: string) => liveSet(host, live, text);
   set("i-nous", formatInt(state.nous));
