@@ -85,10 +85,10 @@ composite = (synths + infusor uplift) × Π chord terms
 
 **Portrait phone — thumb dock:**
 
-- The top nav holds **session controls only** (clock, pause, enter/exit — the clock stays the plan affordance).
-- Production reads (ν, rate, session) live in a **game-info strip** directly below the nav, on the board surface where the tutorial helptext used to sit. Feats appears once on phone — it rides the thumb bar; the strip carries no feats chip. The strip's **rate read is the phone's only formula door**: tapping it opens the formula sheet over a scrim — the operand chain never goes ambient at this width.
+- The top nav holds **session controls only** (clock, pause, enter/exit, settings — the clock stays the plan affordance). The focus-app tiles return only while an app popover is open, so the clock's Time popover keeps its anchor (ADR-0028).
+- Production reads (ν, rate, session) live in a **game-info strip** directly below the nav, on the board surface where the tutorial helptext used to sit. Feats appears once on phone — it rides the thumb bar; the strip carries no feats chip. The strip's **rate read is the phone's only formula door**: tapping it opens the formula sheet over a scrim — the operand chain never goes ambient at this width (ADR-0030).
 - The console is a **bottom thumb bar**: Catalog / Forge / New cell / Inventory / Feats.
-- The bloom presents as a **bottom sheet**; the zoom cluster rises above any open sheet so inspection never gets buried.
+- The bloom presents as a **bottom sheet**; the zoom cluster rises above any open sheet so inspection never gets buried. The Arete pill is never dismissed — an open sheet covers the board's lower edge, and nothing fades the pill (ADR-0029).
 
 **Board navigation, everywhere**: the board pans by dragging outside the grid at any zoom (inside when zoomed in), clamped so a full or larger-than-screen board stays reachable; the zoom cluster (+/−/fit) plus wheel zoom remain.
 
