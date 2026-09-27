@@ -4,8 +4,9 @@
 // signature glyph as the centered centerpiece, and the contribution readout
 // beneath it. Rarity is engraved ring count plus a subtle plate tint (styled
 // from data-rarity in the stylesheet) — never hue, never glow. Shared by the
-// board, the inventory tiles, the drag ghost, and the Forge candidate
-// tiles, so a module reads identically everywhere it appears.
+// board and the Forge candidate tiles. The inventory wears the minimal mark
+// instead (hue-outlined hexagon and glyph alone, ADR-0027): at tile size the
+// engraving is noise.
 import type { ModuleType, Rarity } from "../engine/types";
 import { moduleIcon } from "./icons";
 import { META } from "./meta";

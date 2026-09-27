@@ -492,8 +492,11 @@ describe("the always-live board (§5)", () => {
     clickCell(0, 1);
     expect(app.state.modules[0]!.pos).toEqual(hex(0, 1));
     expect(app.ui.placing).toBeNull();
-    // A placement never opens the expanded face (§5).
+    // A placement never opens the expanded face (§5) — and it presents
+    // closed: the render the landing triggers must not catch the armed
+    // placement's stale selection.
     expect(app.ui.selected).toBeNull();
+    expect(document.getElementById("module-bloom")!.hidden).toBe(true);
   });
 
   it("an armed placement previews the would-form ghosts on hover — one per forming chord", () => {

@@ -975,14 +975,15 @@ export class App {
   }
 
   // The one placement landing (§5–§6), shared by the click path and the
-  // drag/touch release: a drop never opens the expanded face — an armed
-  // placement wears its module as the selection, so the drop clears it —
-  // and a chord the drop newly forms strums (§6).
+  // drag/touch release. A drop never opens the expanded face — and the
+  // armed placement carries its module as the selection, so the selection
+  // is dropped before the landing renders, never after: the module
+  // presents closed. A chord the drop newly forms strums (§6).
   private placeAndStrum(module: ModuleInstance, pos: Hex): void {
     const before = computeRates(this.state).namedChords;
+    this.ui.selected = null;
     if (this.act(placeModule(this.state, module.id, pos), `${META[module.type].name} placed.`)) {
       this.ui.placing = null;
-      this.ui.selected = null;
       this.strumFormedChords(before);
     }
   }
