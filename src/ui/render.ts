@@ -19,7 +19,7 @@ import {
 } from "../engine/records";
 import { poolOutstanding } from "../engine/trust";
 import { arcCardDue } from "../engine/arc";
-import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
+import { goalCapacity, goalRequiredSeconds, goalSummary, goalTrackerState, type GoalTrackerState } from "../engine/goals";
 import { ACHIEVEMENTS, achievementBoostOf, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
 import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NamedChordTerm, NoteEntry, RateSnapshot } from "../engine/types";
 import type { App, ChordHover, EnterKind, EnterSelection, ModalKind } from "./app";
@@ -308,13 +308,21 @@ function plannedFill(elapsed: number, target: number): string {
 
 // A popover's scroll rides its host's rebuild (#115): captured before the
 // innerHTML swap, restored once the fresh panel binds. Shared by the clock's
-// Time popover and the tiles' popovers (issue #148) — one shape, one spelling.
+// Time popover, the tiles' popovers, and the launcher's (issue #148, #149) —
+// one shape, one spelling. Only one app popover stands at a time, but which
+// anchor hosts it depends on the width (the tiles above the 600px line, the
+// launcher below), so the query reads the shared class, not either id.
 function popoverScroll(host: HTMLElement): number {
-  return (host.querySelector("#app-popover") as HTMLElement | null)?.scrollTop ?? 0;
+  let deepest = 0;
+  for (const el of host.querySelectorAll<HTMLElement>(".app-popover")) {
+    deepest = Math.max(deepest, el.scrollTop);
+  }
+  return deepest;
 }
 
 function restorePopoverScroll(host: HTMLElement, scrollTop: number): void {
-  if (scrollTop > 0) (host.querySelector("#app-popover") as HTMLElement | null)?.scrollTo(0, scrollTop);
+  if (scrollTop <= 0) return;
+  for (const el of host.querySelectorAll<HTMLElement>(".app-popover")) el.scrollTo(0, scrollTop);
 }
 
 // The popover a tile or the clock anchors: present only while its app is
@@ -351,11 +359,18 @@ function appPanelKey(app: App): string {
   ]);
 }
 
+// The one focus-app glyph every access point shares — tiles, launcher
+// entries — so the spelling can never drift between them.
+function appGlyphSvg(appKey: FocusApp): string {
+  return `<svg viewBox="-12 -12 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${appIcon(appKey)}</svg>`;
+}
+
 function renderConsoleApps(app: App, projected: RateSnapshot): void {
   const host = byId("console-apps");
   if (!host) return;
   const { state, ui } = app;
-  const key = appPanelKey(app);
+  const phone = isPhoneWidth();
+  const key = `${phone ? "phone" : "wide"}|${ui.launcherOpen ? "launcher" : "docked"}|${appPanelKey(app)}`;
   if (host.dataset.renderKey === key) {
     updateAppPanelLive(app, host, projected);
     return;
@@ -364,6 +379,11 @@ function renderConsoleApps(app: App, projected: RateSnapshot): void {
   // A newly captured note keeps the popover scrolled where the player is.
   const scrollTop = popoverScroll(host);
   const last = TILE_APPS[TILE_APPS.length - 1];
+  // One panel body, one anchor: below the 600px line the tiles are docked
+  // out, so their popovers would land where no one can see them — the
+  // launcher hosts the panel there (issue #149), the tiles everywhere else.
+  // The gate reads the same container width the stylesheet's phone rules
+  // respond to; the bloom's sheet shape already rides it.
   const tiles = TILE_APPS.map((appKey) => {
     const active = appActive(state, appKey);
     const note = appLockNote(state, appKey);
@@ -374,19 +394,80 @@ function renderConsoleApps(app: App, projected: RateSnapshot): void {
     return `<div class="app-slot${anchor}">
       <button class="app-tile${active ? "" : " locked"}${open ? " open" : ""}" id="app-tile-${appKey}" aria-pressed="${open}" aria-label="${label}"${active ? "" : ' aria-disabled="true"'} title="${title}">
         <span class="app-tile-glyph">
-          <svg viewBox="-12 -12 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${appIcon(appKey)}</svg>
+          ${appGlyphSvg(appKey)}
         </span>
       </button>
-      ${appPopoverHtml(app, appKey)}
+      ${phone ? "" : appPopoverHtml(app, appKey)}
     </div>`;
   }).join("");
-  host.innerHTML = `<div class="app-tiles">${tiles}</div>`;
+  host.innerHTML = `<div class="app-tiles">${tiles}</div>${appLauncherHtml(app, phone)}`;
   restorePopoverScroll(host, scrollTop);
   for (const appKey of TILE_APPS) {
     byId(`app-tile-${appKey}`)?.addEventListener("click", () => app.openApp(appKey));
+    byId(`app-launcher-${appKey}`)?.addEventListener("click", () => app.openApp(appKey));
   }
+  byId("app-launcher")?.addEventListener("click", () => app.launcherActivate());
   bindAppPanel(app, host);
   updateAppPanelLive(app, host, projected);
+}
+
+// The phone launcher (issue #149): one compact control that keeps Habit,
+// Notes, and Goals reachable below the 600px line — the tiles stay docked
+// out there, the clock keeps the Time entry, and the header holds its one
+// row. Closed, a single icon button; open, a compact menu whose Goals entry
+// wears the tracker's rolled-up state (none tracked / in progress / all
+// complete — a state, never an aggregate percentage; the header stays pure
+// control). Picking an entry swaps the menu for that app's panel popover,
+// anchored beneath the launcher itself at the row's far end — the same
+// .app-popover body the tiles open, carrying the launcher's own id so the
+// desktop tile copies never collide. Desktop never sees any of it: CSS
+// docks the slot out above the phone line, where the tiles stand.
+const LAUNCHER_GLYPH = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4" y="4" width="6.4" height="6.4" rx="1.6"/><rect x="13.6" y="4" width="6.4" height="6.4" rx="1.6"/><rect x="4" y="13.6" width="6.4" height="6.4" rx="1.6"/><rect x="13.6" y="13.6" width="6.4" height="6.4" rx="1.6"/></svg>`;
+
+const GOAL_TRACKER_WORDS: Record<GoalTrackerState, string> = {
+  none: "none tracked",
+  open: "in progress",
+  complete: "all complete",
+};
+
+function appLauncherHtml(app: App, phone: boolean): string {
+  const { state, ui } = app;
+  // The panel anchors here only on phone (issue #149): above the line the
+  // tiles host their own popovers, so the launcher carries just the button.
+  const panelApp = phone && ui.app !== null && TILE_APPS.includes(ui.app) ? ui.app : null;
+  const expanded = ui.launcherOpen || panelApp !== null;
+  const entries = TILE_APPS.map((appKey) => {
+    const label = APP_LABELS[appKey];
+    const active = appActive(state, appKey);
+    const note = appLockNote(state, appKey);
+    const tracker = appKey === "goals" ? goalTrackerState(state) : null;
+    const stateWord = tracker !== null ? GOAL_TRACKER_WORDS[tracker] : "";
+    // The accessible name carries the state word for Goals and the locknote
+    // for a future ladder tenant — same spelling as the tiles' titles.
+    const ariaLabel = tracker !== null
+      ? `${label} — ${stateWord}`
+      : note
+        ? `${label} — locked: ${note}`
+        : label;
+    const readout =
+      tracker !== null
+        ? `<span class="launcher-goal-state ${tracker}" aria-hidden="true"><i class="launcher-pip"></i><span class="launcher-state-word">${stateWord}</span></span>`
+        : "";
+    return `<button class="app-launcher-item"${active ? "" : " disabled"} id="app-launcher-${appKey}" aria-label="${ariaLabel} app">
+      ${appGlyphSvg(appKey)}
+      <span class="app-launcher-word">${label}</span>
+      ${readout}
+    </button>`;
+  }).join("");
+  const body = panelApp !== null
+    ? `<div class="app-popover" id="app-launcher-popover">${appPanelBody(app, panelApp)}</div>`
+    : ui.launcherOpen
+      ? `<div class="app-launcher-menu" id="app-launcher-menu" aria-label="Focus apps">${entries}</div>`
+      : "";
+  return `<div class="app-launcher-slot" id="app-launcher-slot">
+    <button class="app-launcher" id="app-launcher" aria-haspopup="true" aria-expanded="${expanded}" aria-label="Focus apps" title="Habit, Notes, and Goals">${LAUNCHER_GLYPH}</button>
+    ${body}
+  </div>`;
 }
 
 // The plan mode's caption word, shared by the planner markup and its
