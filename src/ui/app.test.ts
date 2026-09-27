@@ -66,28 +66,24 @@ afterEach(async () => {
 });
 
 describe("the console tiles", () => {
-  it("all four tiles are live from a fresh boot: Habit wears its habit, Time its plan, Notes and Goals icon-only", () => {
+  it("three icon-only tiles — Habit, Notes, Goals; Time wears none (issue #148)", () => {
     app.render();
-    const stateText = (id: string) => document.getElementById(id)?.querySelector(".app-tile-state")?.textContent ?? null;
-    expect(stateText("app-tile-habit")).toBe("no habit");
-    // Time is free from minute 0 (ADR-0019): the tile wears the resting
-    // plan, and no tile is greyed or carries a lock tooltip.
-    expect(stateText("app-tile-time")).toBe("open-ended");
-    for (const key of ["habit", "time", "notes", "goals"]) {
-      expect(document.getElementById(`app-tile-${key}`)!.classList.contains("locked")).toBe(false);
-      expect(document.getElementById(`app-tile-${key}`)!.title).not.toContain("locked");
+    for (const key of ["habit", "notes", "goals"]) {
+      const tile = document.getElementById(`app-tile-${key}`)!;
+      expect(tile.classList.contains("locked")).toBe(false);
+      expect(tile.title).not.toContain("locked");
+      // Icon-only: a glyph and an accessible name, no state text.
+      expect(tile.querySelector(".app-tile-glyph svg")).not.toBeNull();
+      expect(tile.getAttribute("aria-label")).toBeTruthy();
     }
-    expect(stateText("app-tile-notes")).toBe(null);
-    expect(stateText("app-tile-goals")).toBe(null);
-
-    const created = createHabit(app.state, "Jammin");
-    selectHabit(app.state, created.habit!.id);
-    app.render();
-    expect(stateText("app-tile-habit")).toBe("Jammin");
+    // Consistently sized: no tile carries state text, so all three are the
+    // same icon square.
+    expect(document.querySelectorAll(".app-tile-state")).toHaveLength(0);
+    expect(document.getElementById("app-tile-time")).toBeNull();
   });
 
   it("every tile opens its panel from session one", () => {
-    for (const key of ["time", "notes", "goals"] as const) {
+    for (const key of ["habit", "notes", "goals"] as const) {
       app.openApp(key);
       expect(document.getElementById("app-popover")).not.toBeNull();
       app.closeApp();
@@ -139,6 +135,87 @@ describe("the console", () => {
     expect(popover.textContent).not.toContain("00:30");
     expect(popover.textContent).toContain("holds the history");
     app.closeApp();
+  });
+});
+
+describe("the console header around Enter/Exit Flow (#148)", () => {
+  it("orders the row: brand, session cluster, icon tiles, Settings last", () => {
+    app.render();
+    const header = document.querySelector(".console")!;
+    const children = [...header.children];
+    const order = (el: Element) => children.indexOf(el);
+    expect(order(header.querySelector(".brand")!)).toBeLessThan(order(document.getElementById("console-session")!));
+    expect(order(document.getElementById("console-session")!)).toBeLessThan(order(document.getElementById("console-apps")!));
+    expect(order(document.getElementById("console-apps")!)).toBeLessThan(order(document.getElementById("console-settings")!));
+    // The session cluster is the switch's home — the header's dominant
+    // control, wearing its state light.
+    expect(document.querySelector("#console-session #flow-switch .switch-state")).not.toBeNull();
+  });
+
+  it("the clock wears a small disclosure affordance that tracks the Time popover", () => {
+    app.render();
+    const clock = () => document.getElementById("clock-plan")!;
+    expect(clock().querySelector(".clock-disclose")).not.toBeNull();
+    expect(clock().getAttribute("aria-expanded")).toBe("false");
+    clock().click();
+    expect(app.ui.app).toBe("time");
+    // The button is a native control: pointer, keyboard, and touch all
+    // drive the same click.
+    expect(clock().getAttribute("aria-expanded")).toBe("true");
+    expect(document.getElementById("app-popover")).not.toBeNull();
+    clock().click();
+    expect(app.ui.app).toBeNull();
+    expect(clock().getAttribute("aria-expanded")).toBe("false");
+    expect(document.getElementById("app-popover")).toBeNull();
+  });
+
+  it("the Time popover anchors beneath the clock and survives clicks inside it", () => {
+    app.state.sessionsCompleted = 1;
+    app.ui.chosenTarget = 600;
+    app.render();
+    document.getElementById("clock-plan")!.click();
+    const popover = document.getElementById("app-popover")!;
+    expect(document.getElementById("console-session")!.contains(popover)).toBe(true);
+    // A plan chip pick inside the popover neither closes it nor rebuilds it
+    // (#115's contract, now at the clock anchor).
+    const chip = popover.querySelector<HTMLButtonElement>('[data-plan="25"]')!;
+    chip.click();
+    expect(app.ui.app).toBe("time");
+    expect(document.getElementById("app-popover")).toBe(popover);
+    expect(app.ui.chosenTarget).toBe(1500);
+    app.closeApp();
+    expect(document.getElementById("app-popover")).toBeNull();
+  });
+
+  it("the provisional line rides beside the clock, never stacked below it", () => {
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    startSession(s, 600);
+    advance(s, 600);
+    advance(s, 1, Math.random, "provisional");
+    s.session!.accounting.poolSeconds = 300;
+    s.session!.accounting.bucketNous = 30;
+    app.render();
+    const flag = document.getElementById("session-provisional")!;
+    const anchor = document.querySelector("#console-session .clock-anchor")!;
+    expect(anchor.contains(flag)).toBe(true);
+    expect(anchor.querySelector(".clock-stack")!.contains(flag)).toBe(false);
+    expect(flag.textContent).toContain("provisional");
+    expect(flag.textContent).toContain("30 ν");
+  });
+
+  it("pause stays reachable during flow and toggles from the header", () => {
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    startSession(s, 600);
+    advance(s, 30);
+    app.render();
+    document.getElementById("pause-flow")!.click();
+    expect(app.state.mode).toBe("paused");
+    app.render();
+    expect(document.getElementById("pause-flow")!.textContent).toBe("Resume");
+    document.getElementById("pause-flow")!.click();
+    expect(app.state.mode).toBe("flow");
   });
 });
 
@@ -1842,7 +1919,7 @@ describe("the planned-target affordances (§6)", () => {
     const input = document.getElementById("plan-minutes") as HTMLInputElement;
     expect(input.disabled).toBe(true);
     expect([...document.querySelectorAll(".plan-chip.active")]).toHaveLength(0);
-    expect(document.querySelector("#console-apps .clock-caption")!.textContent).toBe("Open-ended");
+    expect(document.querySelector("#app-popover .clock-caption")!.textContent).toBe("Open-ended");
   });
 });
 
@@ -1876,8 +1953,6 @@ describe("interaction continuity (#115)", () => {
     // Focus stayed on the chip; the popover's scroll offset rode through.
     expect(document.activeElement).toBe(chip);
     expect(popover.scrollTop).toBe(120);
-    // The Time tile's plan lettered in place with the pick.
-    expect(document.getElementById("app-tile-time")!.querySelector(".app-tile-state")!.textContent).toBe("25:00");
   });
 
   it("committing a custom minute value keeps focus in the minutes input", () => {
@@ -1922,7 +1997,7 @@ describe("interaction continuity (#115)", () => {
     expect(toggle.getAttribute("aria-pressed")).toBe("true");
     expect(document.activeElement).toBe(toggle);
     expect(popover.scrollTop).toBe(90);
-    expect(document.querySelector("#console-apps .clock-caption")!.textContent).toBe("Open-ended");
+    expect(document.querySelector("#app-popover .clock-caption")!.textContent).toBe("Open-ended");
   });
 
   it("the enter prompt's kind switch swaps the pane without rebuilding the modal; focus survives on the tab", () => {
@@ -2297,18 +2372,19 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     setAppWidth(390);
   });
 
-  it("the top nav holds session controls only; the clock's Time popover keeps its anchor", () => {
+  it("the top nav holds session controls only; the clock's Time popover anchors to the clock", () => {
     app.render();
-    // At rest the focus-app tiles hide — session controls only (§7).
-    expect(document.getElementById("console-apps")!.classList.contains("app-open")).toBe(false);
+    // At rest the icon-only tiles hide — session controls only (§7) — and
+    // they stay hidden: the Time popover anchors beneath the clock's own
+    // disclosure (issue #148), not beneath a tile in the apps row.
     document.getElementById("clock-plan")!.click();
     expect(app.ui.app).toBe("time");
-    // Open, the row returns so the popover has its anchor; closing re-hides.
-    expect(document.getElementById("console-apps")!.classList.contains("app-open")).toBe(true);
-    expect(document.getElementById("app-popover")).not.toBeNull();
+    const popover = document.getElementById("app-popover")!;
+    expect(document.getElementById("console-session")!.contains(popover)).toBe(true);
+    expect(document.getElementById("console-apps")!.contains(popover)).toBe(false);
     app.closeApp();
     app.render();
-    expect(document.getElementById("console-apps")!.classList.contains("app-open")).toBe(false);
+    expect(document.getElementById("app-popover")).toBeNull();
   });
 
   it("the bloom presents as a bottom sheet; the zoom cluster rises above it", () => {

@@ -6,7 +6,7 @@ import { forgeThreshold } from "../engine/rolls";
 import { BALANCE, CATEGORY_OF, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
 import { cellNoteOf, positionInRange } from "../engine/lattice";
-import { appActive, appLockNote, FOCUS_APPS, type FocusApp } from "../engine/apps";
+import { appActive, appLockNote, TILE_APPS, type FocusApp } from "../engine/apps";
 import { isInFlowNote } from "../engine/notes";
 import { activeHabit } from "../engine/habits";
 import {
@@ -96,17 +96,16 @@ export function render(app: App): void {
 
 // The unplanned shape's two words (§6): the clock slot only ever holds clock
 // text, so an unplanned plan wears a dash placeholder there, while captions
-// and the Time tile's compact plan name the mode itself.
+// and the Time app's compact plan name the mode itself.
 const CLOCK_PLACEHOLDER = "--:--";
 const OPEN_ENDED_WORD = "open-ended";
 
 // The clock is itself the plan affordance (§7): clicking it opens the Time
-// app. Both console shapes wear the same wiring, and the clock's own click
-// must not bubble into the popover's click-away closer — the click that
-// opens the Time app would otherwise close it in the same gesture.
+// app. Both console shapes wear the same wiring; the clock anchor counts as
+// "inside" for the popover click-away closer (app.ts), so the click that
+// opens the Time popover never closes it in the same gesture.
 function wireClockPlan(app: App): void {
-  byId("clock-plan")?.addEventListener("click", (event) => {
-    event.stopPropagation();
+  byId("clock-plan")?.addEventListener("click", () => {
     app.openApp("time");
   });
 }
@@ -126,19 +125,53 @@ function refreshConsoleClockPlan(app: App): void {
   setText(caption, word);
 }
 
-// Session controls: the clock block plus the Enter/Exit main switch and the
-// pause control. The switch is the console's sole session gate — sessions
-// start and end through it — and the switch's vermillion is the one colored
-// console element: the switch itself and, while a session runs, the progress
-// strip along the header's bottom edge (issue #63). The console is pure
-// control (§7): the clock is itself the plan affordance — clicking it opens
-// the Time app — and no production readout lives here.
+// Session controls (issue #148): the clock with its Time disclosure, then
+// the Enter/Exit main switch — the console's visual center of gravity and
+// its sole session gate — with pause beside it during flow. The switch's
+// vermillion is the one colored console element: the switch itself and,
+// while a session runs, the progress strip along the header's bottom edge
+// (issue #63). The console is pure control (§7): the clock is itself the
+// plan affordance — its disclosure opens the Time app — and no production
+// readout lives here.
 function renderConsoleSession(app: App): void {
-  const { state } = app;
+  const { state, ui } = app;
   const host = byId("console-session");
   if (!host) return;
 
   const switchSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.2 6.6a8 8 0 1 0 11.6 0"/></svg>`;
+  const pauseSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5v14M15 5v14"/></svg>`;
+  const resumeSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5.5v13l10.5-6.5Z"/></svg>`;
+  const discloseSvg = `<svg class="clock-disclose" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m2.5 4.5 3.5 3.5 3.5-3.5"/></svg>`;
+
+  // The clock block: digits with the small disclosure chevron riding beside
+  // them, the caption beneath — one stable two-line stack in both modes, so
+  // the live clock never shifts vertically. The provisional line (flow only)
+  // sits beside the stack within the clock anchor (see the flow markup
+  // below): the header stays one row and nothing below it ever moves.
+  const clockButton = (title: string, ids = false): string => `
+      <button class="console-clock clock-opens-time" id="clock-plan" title="${title}">
+        <span class="clock-stack">
+          <span class="clock-row">
+            <span class="session-clock mono"${ids ? ' id="session-clock"' : ""}></span>
+            ${discloseSvg}
+          </span>
+          <span class="clock-caption"${ids ? ' id="session-caption"' : ""}></span>
+        </span>
+      </button>`;
+
+  // The Time popover anchors beneath the clock's own disclosure (issue #148):
+  // Time wears no tile, so the popover lives in the session cluster, under
+  // the affordance that opened it. Its signature rides the rebuild key; the
+  // body is only string-built when that key changes (every flow tick takes
+  // the patch path below).
+  const popoverKey = ui.app === "time" ? `time|${appPanelKey(app)}` : "shut";
+  const popoverHtml = () => (ui.app === "time" ? `<div class="app-popover" id="app-popover">${appPanelBody(app, "time")}</div>` : "");
+  const bindPopover = (scrollTop: number): void => {
+    if (ui.app !== "time") return;
+    bindAppPanel(app, host);
+    const popover = host.querySelector("#app-popover") as HTMLElement | null;
+    if (popover && scrollTop > 0) popover.scrollTo(0, scrollTop);
+  };
 
   if (state.mode === "upgrade") {
     // Static structure: nothing here depends on light state any more, so
@@ -149,14 +182,15 @@ function renderConsoleSession(app: App): void {
     // the mode in the caption slot. The plan's own values patch in place
     // below (#115) — a plan pick never rebuilds the console session. No
     // session runs, so the header's progress strip stays empty.
-    const key = "upgrade";
+    const key = `upgrade|${popoverKey}`;
     if (host.dataset.renderKey !== key) {
       host.dataset.renderKey = key;
+      const scrollTop = (host.querySelector("#app-popover") as HTMLElement | null)?.scrollTop ?? 0;
       host.innerHTML = `
-          <button class="console-clock clock-opens-time" id="clock-plan" title="Plan — opens the Time app">
-            <span class="session-clock mono"></span>
-            <span class="clock-caption"></span>
-          </button>
+        <div class="clock-anchor">
+          ${clockButton("Plan — opens the Time app")}
+          ${popoverHtml()}
+        </div>
         <div class="session-actions">
           <button class="main-switch idle" id="flow-switch" title="Enter flow — the board locks and runs itself">
             ${switchSvg}<span>Enter flow</span><i class="switch-state" aria-hidden="true"></i>
@@ -164,9 +198,11 @@ function renderConsoleSession(app: App): void {
         </div>`;
       wireClockPlan(app);
       byId("flow-switch")?.addEventListener("click", () => app.startFlow());
+      bindPopover(scrollTop);
     }
     refreshConsoleClockPlan(app);
     renderSessionStrip(false);
+    syncClockDisclosure(app);
     return;
   }
 
@@ -176,17 +212,18 @@ function renderConsoleSession(app: App): void {
   const paused = state.mode === "paused";
   const reached = target !== null && elapsed >= target;
 
-  const key = `flow:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}`;
+  const key = `flow:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}|${popoverKey}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
+    const scrollTop = (host.querySelector("#app-popover") as HTMLElement | null)?.scrollTop ?? 0;
     host.innerHTML = `
-      <button class="console-clock clock-opens-time" id="clock-plan" title="Session time — opens the Time app">
-        <span class="session-clock mono" id="session-clock"></span>
-        <span class="clock-caption" id="session-caption"></span>
+      <div class="clock-anchor">
+        ${clockButton("Session time — opens the Time app", true)}
         <span class="clock-provisional" id="session-provisional" role="status"></span>
-      </button>
+        ${popoverHtml()}
+      </div>
       <div class="session-actions">
-        <button id="pause-flow">${paused ? "Resume" : "Pause"}</button>
+        <button id="pause-flow" aria-label="${paused ? "Resume" : "Pause"}" title="${paused ? "Resume the session" : "Pause the session"}">${paused ? resumeSvg : pauseSvg}<span aria-hidden="true">${paused ? "Resume" : "Pause"}</span></button>
         <button class="main-switch ${paused ? "held" : "live"}" id="flow-switch" title="Exit flow — end the session and bank its production">
           ${switchSvg}<span>Exit flow</span><i class="switch-state" aria-hidden="true"></i>
         </button>
@@ -194,6 +231,7 @@ function renderConsoleSession(app: App): void {
     wireClockPlan(app);
     byId("pause-flow")?.addEventListener("click", () => (state.mode === "paused" ? app.resume() : app.pause()));
     byId("flow-switch")?.addEventListener("click", () => app.endFlow());
+    bindPopover(scrollTop);
   }
 
   // Live values update in place; the controls above are never replaced by ticks.
@@ -207,15 +245,24 @@ function renderConsoleSession(app: App): void {
   set("session-caption", sessionCaption(elapsed, target, paused));
   // The provisional bucket is visibly flagged while it holds (§2): the pool
   // minutes and the nous waiting on the honesty report, in the switch's
-  // vermillion so it reads from across the room.
+  // vermillion so it reads from across the room. It rides beside the clock
+  // stack — the header keeps its one row and the clock keeps its alignment.
   const accounting = session?.accounting;
   set(
     "session-provisional",
     accounting && poolOutstanding(state)
-      ? `${formatDuration(accounting.poolSeconds)} provisional · ${formatNumber(accounting.bucketNous)} ν held`
+      ? `${formatDuration(accounting.poolSeconds)} provisional · ${formatNumber(accounting.bucketNous)} ν`
       : "",
   );
   renderSessionStrip(true, elapsed, target, paused);
+  syncClockDisclosure(app);
+}
+
+// The clock's disclosure state: expanded while its Time popover is open.
+// Patched in place on the tick path, where the key is unchanged; opening
+// and closing the popover rebuilds the cluster with the popover itself.
+function syncClockDisclosure(app: App): void {
+  byId("clock-plan")?.setAttribute("aria-expanded", String(app.ui.app === "time"));
 }
 
 // The header's bottom edge is the progress surface (issue #63): a thin strip
@@ -251,23 +298,22 @@ function plannedFill(elapsed: number, target: number): string {
   return `${Math.min(100, (elapsed / target) * 100)}%`;
 }
 
-// Focus-app access (ADR-0012): one tile per app — the launch four live
-// from minute 0 (ADR-0019), each wearing its live state, with its panel
-// opening as a popover anchored directly beneath the tile. The locked-tile
+// Focus-app access (ADR-0012): one icon-only tile per tile app — Habit,
+// Notes, Goals, consistently sized (issue #148) — with its panel opening as
+// a popover anchored directly beneath the tile. Time wears no tile: the
+// console clock's disclosure opens its popover instead. The locked-tile
 // plumbing stays for a future ladder tenant; locked tiles would open
 // nothing, and the board never moves, reflows, or dims while the console
-// is used.
-// (Display names live in meta.ts's APP_LABELS.)
+// is used. (Display names live in meta.ts's APP_LABELS.)
 
-function renderConsoleApps(app: App, projected: RateSnapshot): void {
-  const host = byId("console-apps");
-  if (!host) return;
+// The app-panel popover's rebuild signature: everything an app body shows,
+// hashed. The chosen plan is deliberately absent (issue #115): a plan pick
+// patches state in place instead of rebuilding — the open popover, its
+// focus, and its scroll all survive. Shared by the tiles' popovers and the
+// clock's Time popover (issue #148), so both react to the same state.
+function appPanelKey(app: App): string {
   const { state, ui } = app;
-  // Session controls only (§7, portrait phone): the tiles row hides until an
-  // app is open — the clock's Time popover still needs its anchor — and
-  // returns the moment the popover closes.
-  host.classList.toggle("app-open", ui.app !== null);
-  const key = JSON.stringify([
+  return JSON.stringify([
     ui.app,
     state.mode,
     state.sessionsCompleted === 0,
@@ -278,9 +324,6 @@ function renderConsoleApps(app: App, projected: RateSnapshot): void {
     ui.editingHabitId,
     state.notes.length,
     state.goals.map((g) => (g.completed ? "1" : "0") + g.condition.minutes + (g.condition.habitId ?? "") + g.schedule.kind).join("|"),
-    // The chosen plan is deliberately absent (issue #115): a plan pick
-    // patches the tiles' state text in place instead of rebuilding the
-    // strip — the open popover, its focus, and its scroll all survive.
     // The history surfaces (§9): the list view, its page, the drilled
     // record, and the expanded habit summary each rebuild the popover.
     ui.historyOpen,
@@ -289,6 +332,13 @@ function renderConsoleApps(app: App, projected: RateSnapshot): void {
     ui.summaryHabitId,
     state.sessionRecords.length,
   ]);
+}
+
+function renderConsoleApps(app: App, projected: RateSnapshot): void {
+  const host = byId("console-apps");
+  if (!host) return;
+  const { state, ui } = app;
+  const key = appPanelKey(app);
   if (host.dataset.renderKey === key) {
     updateAppPanelLive(app, host, projected);
     return;
@@ -296,66 +346,36 @@ function renderConsoleApps(app: App, projected: RateSnapshot): void {
   host.dataset.renderKey = key;
   // A newly captured note keeps the popover scrolled where the player is.
   const scrollTop = (host.querySelector("#app-popover") as HTMLElement | null)?.scrollTop ?? 0;
-  const last = FOCUS_APPS[FOCUS_APPS.length - 1];
-  const tiles = FOCUS_APPS.map((appKey) => {
+  const last = TILE_APPS[TILE_APPS.length - 1];
+  const tiles = TILE_APPS.map((appKey) => {
     const active = appActive(state, appKey);
     const note = appLockNote(state, appKey);
     const open = ui.app === appKey;
     const label = APP_LABELS[appKey];
-    const anchor = appKey === FOCUS_APPS[0] ? " first" : appKey === last ? " last" : "";
-    // The tile wears the app's live state instead of its name: the Habit
-    // tile shows the selected habit (or that none is), the Time tile the
-    // current plan; Notes and Goals are icon-only. Nothing is locked at
-    // launch (ADR-0019) — no tile is spotlighted, none greyed.
-    let stateText: string | null = null;
-    if (appKey === "habit") {
-      stateText = activeHabit(state)?.name ?? "no habit";
-    } else if (appKey === "time") {
-      stateText = planShort(ui.chosenTarget);
-    }
-    const title =
-      stateText !== null && active
-        ? `${label} app`
-        : note
-          ? `${label} — locked: ${note}`
-          : `${label} app`;
+    const anchor = appKey === TILE_APPS[0] ? " first" : appKey === last ? " last" : "";
+    const title = note ? `${label} — locked: ${note}` : `${label} app`;
     return `<div class="app-slot${anchor}">
-      <button class="app-tile${active ? "" : " locked"}${open ? " open" : ""}" id="app-tile-${appKey}" aria-pressed="${open}"${active ? "" : ' aria-disabled="true"'} title="${title}">
+      <button class="app-tile${active ? "" : " locked"}${open ? " open" : ""}" id="app-tile-${appKey}" aria-pressed="${open}" aria-label="${label}"${active ? "" : ' aria-disabled="true"'} title="${title}">
         <span class="app-tile-glyph">
           <svg viewBox="-12 -12 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${appIcon(appKey)}</svg>
         </span>
-        ${stateText ? `<span class="app-tile-state">${escapeHtml(stateText)}</span>` : ""}
       </button>
       ${open ? `<div class="app-popover" id="app-popover">${appPanelBody(app, appKey)}</div>` : ""}
     </div>`;
   }).join("");
   host.innerHTML = `<div class="app-tiles">${tiles}</div>`;
   if (scrollTop > 0) (host.querySelector("#app-popover") as HTMLElement | null)?.scrollTo(0, scrollTop);
-  for (const appKey of FOCUS_APPS) {
+  for (const appKey of TILE_APPS) {
     byId(`app-tile-${appKey}`)?.addEventListener("click", () => app.openApp(appKey));
   }
   bindAppPanel(app, host);
   updateAppPanelLive(app, host, projected);
 }
 
-// The Time tile's compact plan: the clock, or the mode word for open-ended.
-function planShort(chosenTarget: number | null): string {
-  return chosenTarget === null ? OPEN_ENDED_WORD : formatClock(chosenTarget);
-}
-
 // The plan mode's caption word, shared by the planner markup and its
 // in-place patcher so the two can never drift.
 function planCaptionWord(open: boolean): string {
   return open ? "Open-ended" : "Planned practice";
-}
-
-// The Time tile's plan state text (#115): light state, so it swaps in place
-// — a plan pick or reset never rebuilds the strip just to re-letter a tile.
-// (The Habit tile's name rides genuine rebuilds; selection and renames are
-// real state changes.)
-function refreshTimeTileState(app: App): void {
-  const state = byId("app-tile-time")?.querySelector(".app-tile-state");
-  setText(state, planShort(app.ui.chosenTarget));
 }
 
 // The achievements page (ADR-0015): the always-visible full list — all
@@ -1816,13 +1836,12 @@ function planControlsHtml(app: App): string {
 }
 
 // The plan surfaces a control-driven change must reach without a render
-// (#115): the controls themselves, the console clock, and the Time tile.
-// Every patch is an in-place text/class/attribute swap on surviving nodes,
-// so focus, open dropdowns, and scroll all ride through untouched.
+// (#115): the controls themselves and the console clock. Every patch is an
+// in-place text/class/attribute swap on surviving nodes, so focus, open
+// dropdowns, and scroll all ride through untouched.
 function refreshPlanState(app: App): void {
   refreshPlanControls(app);
   refreshConsoleClockPlan(app);
-  refreshTimeTileState(app);
 }
 
 // The plan controls' pressed/disabled/value state, patched in place within
@@ -1993,7 +2012,6 @@ function bindAppPanel(app: App, scope: HTMLElement): void {
 // console's live session, so no clock lives here — §7.)
 function updateAppPanelLive(app: App, scope: ParentNode, projected: RateSnapshot): void {
   const { state } = app;
-  refreshTimeTileState(app);
   liveSet(scope, "habit-session", `${formatClock(state.session?.elapsed ?? 0)} of practice`);
   for (const habit of state.habits) {
     const node = scope.querySelector(`[data-habit-seconds="${habit.id}"]`);

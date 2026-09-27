@@ -81,21 +81,29 @@ h1, h2, h3, p { margin: 0; }
 }
 .brand svg { width: 28px; height: 28px; }
 
-/* Session controls: clock block, pause, and the main switch. The clock block
+/* Session controls (issue #148): the clock block with its Time disclosure,
+   then the Enter/Exit main switch — the header's visual center of gravity.
+   The cluster owns the flexible middle of the row, so the switch sits near
+   the center with Settings parked at the far right. The clock block
    reserves its dimensions across modes so entering or exiting flow shifts
    nothing below — the reserve is a minimum, so longer content grows the
    block instead of clipping. */
-.console-session { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+.console-session { flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 14px; }
+/* The popover anchor: the clock and its Time popover live here (issue #148)
+   — Time wears no tile, so the panel opens directly beneath the affordance
+   that discloses it. */
+.clock-anchor { position: relative; display: flex; align-items: center; flex-shrink: 0; }
+.clock-anchor .app-popover { left: 0; transform: none; animation-name: popover-in-left; }
 .console-clock {
   min-width: 150px;
   min-height: 52px;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  align-items: center;
+  gap: 12px;
   flex-shrink: 0;
 }
-/* The clock is itself the plan affordance (§7): clicking it opens the Time
-   app. As a button it stays visually bare until hover. */
+/* The clock is itself the plan affordance (§7): its small chevron discloses
+   the Time app. As a button it stays visually bare until hover. */
 .console-clock.clock-opens-time {
   border-color: transparent;
   background: transparent;
@@ -104,11 +112,16 @@ h1, h2, h3, p { margin: 0; }
 }
 .console-clock.clock-opens-time:hover { border-color: var(--line); background: var(--panel); }
 /* The next session's shape, displayed read-only; planning lives in the Time
-   app's popover (§7), which the clock button itself opens. Clock and caption
-   fit the reserve in every mode; the provisional line — only present in
-   flow — may exceed it, and the block grows rather than clipping (mono
-   digits re-widen it only when a digit count turns over). */
+   app's popover (§7), which the clock button itself opens. Digits and
+   disclosure ride one row inside a two-line stack with the caption — the
+   stack is identical in both modes, so the live clock never shifts
+   vertically. The provisional line — only present in flow — sits beside the
+   stack, keeping the header's one row and the clock's alignment. */
+.clock-stack { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.clock-row { display: flex; align-items: center; gap: 6px; }
 .session-clock { display: block; font: 28px/1.1 var(--mono); margin: 0; }
+.clock-disclose { width: 11px; height: 11px; flex-shrink: 0; color: var(--muted); margin-top: 6px; }
+.console-clock.clock-opens-time:hover .clock-disclose { color: var(--ink); }
 .clock-caption { display: block; font-size: 10px; color: var(--muted); margin-top: 3px; white-space: nowrap; }
 /* The session progress strip (issue #63): the header itself is the progress
    surface — a thin highlight pinned along its bottom border, above the
@@ -128,19 +141,22 @@ h1, h2, h3, p { margin: 0; }
 .session-strip.pulse > span { animation: strip-pulse 3.2s ease-in-out infinite; }
 @keyframes strip-pulse { 50% { opacity: 0.35; } }
 
-/* The Enter/Exit main switch: vermillion. Bright and animated = flow live;
-   dim = idle; paused holds bright but still. */
+/* The Enter/Exit main switch: vermillion, and the header's dominant element
+   (issue #148) — the largest control in the row, centered in the session
+   cluster. Bright and animated = flow live; dim = idle; paused holds bright
+   but still. */
 .main-switch {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 14px;
+  padding: 12px 18px;
+  font-size: 15px;
   font-weight: 650;
   letter-spacing: 0.02em;
-  border-radius: 7px;
+  border-radius: 8px;
   white-space: nowrap;
 }
-.main-switch svg { width: 15px; height: 15px; }
+.main-switch svg { width: 16px; height: 16px; }
 /* The switch's own state light: the mode indicator lives here now. */
 .switch-state { width: 8px; height: 8px; border-radius: 50%; border: 1px solid currentColor; opacity: 0.65; }
 .main-switch.live .switch-state { background: var(--switch-ink); border-color: var(--switch-ink); opacity: 1; box-shadow: 0 0 8px var(--switch-glow); }
@@ -161,45 +177,31 @@ h1, h2, h3, p { margin: 0; }
 .main-switch.live { animation: switch-live 2.2s ease-in-out infinite; }
 @keyframes switch-live { 50% { box-shadow: 0 0 14px 1px var(--switch-glow); } }
 
-.session-actions { display: flex; gap: 8px; flex-wrap: nowrap; }
+.session-actions { display: flex; gap: 8px; flex-wrap: nowrap; align-items: center; }
 .session-actions button { white-space: nowrap; }
+.session-actions button svg { width: 13px; height: 13px; flex-shrink: 0; }
 
-/* Focus-app tiles (ADR-0012): greyed until activated, state LED when active,
-   one-line locknote on locked tiles. Monochrome — panel access reads as ink,
-   never hue. Locked tiles open nothing. */
+/* Focus-app tiles (ADR-0012): consistently sized icon-only controls
+   (issue #148) — the state text is gone, so the three tiles read as one
+   instrument. Monochrome — panel access reads as ink, never hue. Locked
+   tiles open nothing. */
 .console-apps { display: flex; align-items: center; flex-shrink: 0; }
 .app-tiles { display: flex; gap: 3px; }
 .app-slot { position: relative; display: flex; }
 .app-tile {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 5px 8px 5px;
-  min-width: 0;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: 8px;
   background: transparent;
 }
 .app-tile:hover:not(.locked), .app-tile.open { border-color: var(--line); background: var(--panel); }
 .app-tile-glyph { display: flex; align-items: center; gap: 6px; color: var(--ink); }
 .app-tile-glyph svg { width: 19px; height: 19px; display: block; }
-/* The tile's state line: the selected habit, the planned clock, or a
-   locknote — the app name lives in the tooltip. The cap stays for the
-   free-text states (habit names, locknotes), which are one-line by design;
-   the Time tile's outputs are bounded — the mode word and at most a
-   90-minute clock — and fit it with margin. */
-.app-tile-state {
-  font: 9.5px var(--mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-  max-width: 96px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.app-tile:hover:not(.locked) .app-tile-state, .app-tile.open .app-tile-state { color: var(--ink); }
 .app-tile.locked { cursor: default; }
 .app-tile.locked .app-tile-glyph { color: var(--muted); opacity: 0.6; }
 
@@ -1308,8 +1310,13 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 .honesty-label { font-weight: 650; }
 .honesty-consequence { color: var(--muted); font-size: 12px; }
 
-/* The provisional bucket's console flag (§2): the switch's vermillion. */
-.clock-provisional { margin: 2px 0 0; font: 11.5px var(--mono); color: var(--accent); min-height: 14px; }
+/* The provisional bucket's console flag (§2): the switch's vermillion. It
+   rides beside the clock stack inside the clock anchor (issue #148) — never
+   stacked below, so the live clock keeps its vertical alignment and the
+   header keeps its one row and its contents inside the viewport. Empty (no
+   pool), it vanishes — separator included. */
+.clock-provisional { font: 11.5px var(--mono); color: var(--accent); min-height: 14px; white-space: nowrap; flex-shrink: 0; }
+.clock-provisional:not(:empty) { border-left: 1px solid var(--line); padding-left: 12px; }
 
 /* Session modals (§5.5, §5.7): the enter prompt's kind-first selection and
    the loud summary's rows. Both are plain modal surfaces — no purchase or
@@ -1446,18 +1453,32 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
    phone while the gate still answers desktop (or hiding the equation
    with no sheet door). */
 
+@container app (width < 1000px) {
+  /* The brand consolidates to its glyph one step before the row compacts
+     (issue #148): the centered session cluster is at its widest in flow,
+     and the wordmark would crowd it. */
+  .brand-name { display: none; }
+}
+
 @container app (width < 900px) {
-  /* Below here the slim console wraps instead of clipping: its height stays
-     width-determined, so console use never shifts the board. */
-  .console { flex-wrap: wrap; height: auto; min-height: 0; padding: 10px 14px; gap: 8px 14px; }
-  .console-session { order: 3; flex-basis: 100%; justify-content: space-between; }
-  .console-apps { margin-left: auto; }
+  /* Narrow desktop (issue #148): the header holds its one row — the row
+     compacts in place. Nothing wraps, nothing re-docks; the switch keeps
+     its centered, dominant post and Settings stays at the far right. */
+  .console { padding: 0 14px; gap: 10px; }
+  .console-session { gap: 10px; }
+  .console-clock { min-width: 0; }
+  .session-clock { font-size: 22px; }
+  .clock-disclose { width: 10px; height: 10px; }
+  .clock-provisional:not(:empty) { font-size: 10px; padding-left: 10px; }
+  .main-switch { padding: 10px 13px; font-size: 14px; border-radius: 7px; }
+  .main-switch svg { width: 14px; height: 14px; }
+  /* Pause keeps its icon; the word yields to the row's width budget. */
+  #pause-flow span { display: none; }
 }
 
 @container app (width < 760px) {
   .board-panel { padding: 12px 14px 0; }
   .board-ledger { flex-wrap: wrap; }
-  .session-actions { margin-left: auto; }
   /* The formula's breakpoint (§7): the operand chain hides, the bare total
      stands alone, and tapping the Rate cell opens the formula sheet. The
      hover popover dies with the hover. */
@@ -1471,23 +1492,19 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 
 @container app (width < 600px) {
   /* Portrait phone (§7): the composition re-docks. Top nav = session
-     controls only (brand glyph, clock, switch, settings) — the focus-app
-     tiles hide until an app popover is open (the clock's Time popover
-     still needs its anchor); production reads move to the board-surface
-     game-info strip; the icon dock becomes the bottom thumb bar with
-     Inventory and Feats folded in; the bloom presents as a bottom sheet. */
-  .brand-name { display: none; }
-  .console { flex-wrap: nowrap; height: 56px; padding: 0 10px; gap: 8px; }
-  .console-session { order: 0; flex-basis: auto; gap: 8px; }
-  .console-clock { min-width: 0; min-height: 0; padding: 2px 6px; }
-  .session-clock { font-size: 22px; }
+     controls only (brand glyph, clock, switch, settings) — the icon-only
+     tiles hide, and the clock's Time popover anchors to the clock itself;
+     production reads move to the board-surface game-info strip; the icon
+     dock becomes the bottom thumb bar with Inventory and Feats folded in;
+     the bloom presents as a bottom sheet. */
+  .console { height: 56px; padding: 0 10px; gap: 8px; }
+  .brand svg { width: 24px; height: 24px; }
+  .console-session { flex: 0 0 auto; gap: 8px; }
+  .console-clock { min-height: 0; padding: 2px 6px; }
   .clock-provisional { display: none; }
   .main-switch { padding: 9px 11px; }
   .main-switch span { display: none; }
-  .console-apps:not(.app-open) { display: none; }
-  .app-tiles { gap: 0; }
-  .app-tile { padding: 5px 6px; }
-  .app-tile-state { display: none; }
+  .console-apps { display: none; }
   #console-settings { margin-left: auto; }
   .board-ledger { display: none; }
   .game-info-strip { display: flex; }

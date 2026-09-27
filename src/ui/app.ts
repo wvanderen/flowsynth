@@ -578,10 +578,15 @@ export class App {
     // The dismissal intent is captured on the section itself — the one node
     // no re-render replaces — because a click that re-renders its own
     // target (a chip pick, a tile toggle) detaches that target before this
-    // document-level listener reads anything.
+    // document-level listener reads anything. The clock's Time popover
+    // (issue #148) anchors in the session cluster, so clicks inside its
+    // clock anchor count as inside too.
     let clickInsideApps = false;
     this.els["console-apps"]?.addEventListener("click", () => {
       clickInsideApps = true;
+    }, { capture: true });
+    this.els["console-session"]?.addEventListener("click", (event) => {
+      if ((event.target as Element | null)?.closest(".clock-anchor")) clickInsideApps = true;
     }, { capture: true });
     document.addEventListener("click", () => {
       const inside = clickInsideApps;
