@@ -28,6 +28,17 @@ export function formatInt(n: number): string {
   return Math.floor(n + 1e-9).toLocaleString("en-US");
 }
 
+// A readout for tight live surfaces (the Arete pill's lifetime total, the
+// phone strip's reads): always two decimals, trailing zeros kept, so a
+// value drifting through 2,426.10 never resizes its row the way the
+// trimmed "2,426.1" → "2,426.11" oscillation does. Past the exact range
+// the ladder takes over — magnitude changes are rare enough not to pulse.
+export function formatFixed(n: number): string {
+  if (!Number.isFinite(n)) return "—";
+  if (Math.abs(n) >= EXACT_LIMIT) return formatNumber(n);
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function exact(abs: number): string {
   return (Math.round(abs * 100) / 100).toLocaleString("en-US", { maximumFractionDigits: 2 });
 }

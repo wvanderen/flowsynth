@@ -718,7 +718,10 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   margin-bottom: 5px;
   white-space: nowrap;
 }
-.pill-row b { color: var(--ink); font-weight: 400; letter-spacing: 0; }
+/* The total owns the middle lane outright — flex: 1, centered — so ARETE
+   and the prestige button sit pinned to their edges however long the
+   lifetime figure runs. */
+.pill-row b { color: var(--ink); font-weight: 400; letter-spacing: 0; flex: 1; text-align: center; }
 .pill-prestige {
   pointer-events: auto;
   flex-shrink: 0;

@@ -9,7 +9,7 @@ import type { GameState, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
 import { FORMULA_BREAKPOINT_PX, containerWidth } from "./container";
 import { moduleIcon } from "./icons";
-import { chordTermLabel, formatCountdown, formatInt, formatNumber } from "./format";
+import { chordTermLabel, formatCountdown, formatFixed, formatInt, formatNumber } from "./format";
 import { liveSet } from "./live";
 
 // Compact axis vocabulary for the graduation marks and the beat's mark name.
@@ -213,8 +213,8 @@ export function renderGameInfoStrip(app: App): void {
   }
   const set = (live: string, text: string) => liveSet(host, live, text);
   set("i-nous", formatInt(state.nous));
-  set("i-rate", formatNumber(computeRates(state, state.mode === "flow").rate));
-  set("i-session", state.session ? formatNumber(state.session.earned) : "—");
+  set("i-rate", formatFixed(computeRates(state, state.mode === "flow").rate));
+  set("i-session", state.session ? formatFixed(state.session.earned) : "—");
 }
 
 // ── The Arete pill (§7) ─────────────────────────────────────────────────
@@ -262,7 +262,7 @@ export function renderAretePill(app: App): void {
     document.getElementById("prestige-button")?.addEventListener("click", () => app.acknowledgeHorizon());
   }
   const set = (live: string, text: string) => liveSet(host, live, text);
-  set("p-total", `${formatNumber(state.totalEarned)} / ${markLabel(ARETE_HORIZON)} ν lifetime`);
+  set("p-total", `${formatFixed(state.totalEarned)} / ${markLabel(ARETE_HORIZON)} ν lifetime`);
   const pos = accumulatorFill(state.totalEarned);
   const fill = host.querySelector<HTMLElement>('[data-live="p-fill"]');
   const fillWidth = `${(pos * 100).toFixed(2)}%`;

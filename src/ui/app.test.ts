@@ -14,7 +14,7 @@ import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport } fro
 import { recordMissed, recordTargetHit } from "../engine/records";
 import { give } from "../engine/fixtures";
 import { hex, sameHex } from "../engine/hex";
-import { formatNumber } from "./format";
+import { formatFixed, formatNumber } from "./format";
 import { lensFrame } from "./zoom";
 import type { GameState } from "../engine/types";
 import type { SignalChannels } from "./signals";
@@ -2139,7 +2139,9 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     app.render();
     const strip = document.getElementById("game-info-strip")!;
     expect(strip.querySelector('[data-live="i-nous"]')).not.toBeNull();
-    expect(strip.querySelector('[data-live="i-rate"]')!.textContent).toBe(formatNumber(0.1));
+    // The strip's reads are fixed-decimal: trailing zeros stay, so the row
+    // never resizes as the values drift.
+    expect(strip.querySelector('[data-live="i-rate"]')!.textContent).toBe(formatFixed(0.1));
     expect(strip.querySelector('[data-live="i-session"]')!.textContent).toBe("—");
     // Feats appears once on phone: the thumb bar's segment, not a second
     // chip in the strip.
