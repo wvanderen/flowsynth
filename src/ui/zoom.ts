@@ -29,7 +29,7 @@ export function boardBounds(points: [number, number][], padX: number, padTop: nu
   return { x: minX - padX, y: minY - padTop, width: maxX - minX + 2 * padX, height: maxY - minY + padTop + padBottom };
 }
 
-export function boundsCenter(bounds: BoardBounds): { x: number; y: number } {
+function boundsCenter(bounds: BoardBounds): { x: number; y: number } {
   return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
 }
 
@@ -45,7 +45,7 @@ export function resolvePan(pan: { x: number; y: number } | null, bounds: BoardBo
 
 // The viewBox the lens reports: the base shrunk by zoom around the pan
 // center, honoring the wrap's aspect via the svg's preserveAspectRatio.
-export function lensViewBox(zoom: number, pan: { x: number; y: number } | null, bounds: BoardBounds): string {
+function lensViewBox(zoom: number, pan: { x: number; y: number } | null, bounds: BoardBounds): string {
   const z = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom));
   const width = bounds.width / z;
   const height = bounds.height / z;
@@ -53,10 +53,9 @@ export function lensViewBox(zoom: number, pan: { x: number; y: number } | null, 
   return `${(center.x - width / 2).toFixed(2)} ${(center.y - height / 2).toFixed(2)} ${width.toFixed(2)} ${height.toFixed(2)}`;
 }
 
-// A render-cycle reading of the lens as an object — the ViewFrame the
-// bloom math consumes, plus the zoom that produced it.
+// A render-cycle reading of the lens: the viewBox string for the svg and
+// the ViewFrame the bloom math consumes, cut from the same numbers.
 export interface LensFrame {
-  zoom: number;
   viewBox: string;
   view: { x: number; y: number; width: number; height: number };
 }
@@ -68,7 +67,6 @@ export function lensFrame(zoom: number, pan: { x: number; y: number } | null, bo
   const height = bounds.height / z;
   const view = { x: center.x - width / 2, y: center.y - height / 2, width, height };
   return {
-    zoom: z,
     viewBox: `${view.x.toFixed(2)} ${view.y.toFixed(2)} ${width.toFixed(2)} ${height.toFixed(2)}`,
     view,
   };

@@ -648,7 +648,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 
 /* The game-info strip (§7): production reads on the board surface, portrait
    phone only — where the tutorial helptext used to sit. */
-.info-strip {
+.game-info-strip {
   position: absolute;
   top: 8px;
   left: 50%;
@@ -667,7 +667,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 }
 .info-read { display: inline-flex; align-items: baseline; gap: 4px; font: 12px var(--mono); }
 .info-read small { font-size: 10px; color: var(--muted); }
-.info-strip .feats-chip { padding: 2px 6px; }
+.game-info-strip .feats-chip { padding: 2px 6px; }
 
 /* The Arete pill (§7): the status monitor dissolved — the accumulator
    floats free as a translucent pill over the board's bottom edge at every
@@ -1406,10 +1406,11 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 
 @container app (max-width: 600px) {
   /* Portrait phone (§7): the composition re-docks. Top nav = session
-     controls only (one row: brand glyph, clock, switch, the icon-only app
-     tiles, settings); production reads move to the board-surface info
-     strip; the icon dock becomes the bottom thumb bar with Inventory and
-     Feats folded in; the bloom presents as a bottom sheet. */
+     controls only (brand glyph, clock, switch, settings) — the focus-app
+     tiles hide until an app popover is open (the clock's Time popover
+     still needs its anchor); production reads move to the board-surface
+     game-info strip; the icon dock becomes the bottom thumb bar with
+     Inventory and Feats folded in; the bloom presents as a bottom sheet. */
   .brand-name { display: none; }
   .console { flex-wrap: nowrap; height: 56px; padding: 0 10px; gap: 8px; }
   .console-session { order: 0; flex-basis: auto; gap: 8px; }
@@ -1418,12 +1419,13 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
   .clock-provisional { display: none; }
   .main-switch { padding: 9px 11px; }
   .main-switch span { display: none; }
-  .console-apps { margin-left: auto; }
+  .console-apps:not(.app-open) { display: none; }
   .app-tiles { gap: 0; }
   .app-tile { padding: 5px 6px; }
   .app-tile-state { display: none; }
+  #console-settings { margin-left: auto; }
   .board-ledger { display: none; }
-  .info-strip { display: flex; }
+  .game-info-strip { display: flex; }
   .board-tools { display: none; }
   .thumb-bar { display: flex; }
   /* The tray hides on phone — the thumb bar's Inventory taps the sheet —
@@ -1435,8 +1437,6 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
   .pill-head { font-size: 8.5px; }
   .zoom-cluster { right: 10px; bottom: 64px; }
   body.bloom-sheet-open .zoom-cluster { bottom: 150px; }
-  /* The open sheet owns the board's lower edge: the pill steps aside. */
-  body.bloom-sheet-open .arete-pill { opacity: 0; }
   .module-bloom.sheet { bottom: 56px !important; }
   .chord-readout { top: 46px; right: 10px; }
 }
@@ -1447,6 +1447,13 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
   .modal-backdrop { padding: 10px; align-items: flex-end; }
   .modal { width: 100%; max-height: 78vh; border-radius: 14px 14px 0 0; animation: sheet-up 0.18s ease-out; }
 }
+
+/* The formula sheet (§7) presents below the 760px *container* breakpoint —
+   the gate render.ts's Rate-cell tap reads — but the modal layer is
+   body-level, outside the #app container, so the gate's decision arrives
+   as a .sheet class on the backdrop rather than a container rule. */
+.modal-backdrop.sheet { padding: 10px; align-items: flex-end; }
+.modal-backdrop.sheet .modal { width: 100%; max-height: 78vh; border-radius: 14px 14px 0 0; animation: sheet-up 0.18s ease-out; }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

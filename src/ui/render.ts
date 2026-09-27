@@ -30,8 +30,10 @@ import { chordOverlay, chipWidth, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatDate, formatInt, formatNumber, formatPracticeMinutes, chordLiveLabel, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
-import { renderBoardLedger, renderAretePill, renderInfoStrip, ampBreakdownHtml, chordSummary, unlockedCount, FEATS_SVG } from "./ledger";
+import { renderBoardLedger, renderAretePill, renderGameInfoStrip, ampBreakdownHtml, breakdownRowsHtml, unlockedCount, FEATS_SVG } from "./ledger";
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
+import { containerWidth, FORMULA_BREAKPOINT_PX, isPhoneWidth } from "./container";
+import { liveSet } from "./live";
 
 const SPACING = 65;
 // The adjacent-center distance the chord overlay's edge trace needs: on
@@ -56,21 +58,6 @@ function currentSnapshot(state: GameState): RateSnapshot {
   return computeRates(state, state.mode === "flow");
 }
 
-// The portrait-phone breakpoint (§7): below it the console re-docks to the
-// thumb bar, the ledger dissolves into the game-info strip, and the bloom
-// presents as a bottom sheet. Both this and the 760px formula gate read the
-// #app container's inline size — the same number the stylesheet's @container
-// rules respond to (ledger.ts holds the formula twin).
-export const PHONE_MAX_PX = 600;
-
-export function isPhoneWidth(): boolean {
-  // In a measured document #app is the container; a zero reading (a layout-
-  // less test DOM) falls through to the viewport.
-  const appWidth = document.getElementById("app")?.clientWidth ?? 0;
-  const width = appWidth > 0 ? appWidth : typeof window !== "undefined" ? window.innerWidth : 0;
-  return width > 0 && width < PHONE_MAX_PX;
-}
-
 function stat(label: string, value: string): string {
   return `<div class="stat-row"><span>${label}</span><span class="mono">${value}</span></div>`;
 }
@@ -85,7 +72,7 @@ export function render(app: App): void {
   renderBloom(app);
   renderZoomCluster(app);
   renderAretePill(app);
-  renderInfoStrip(app);
+  renderGameInfoStrip(app);
   renderModal(app);
   renderDev(app);
 }
@@ -97,6 +84,17 @@ export function render(app: App): void {
 // and the Time tile's compact plan name the mode itself.
 const CLOCK_PLACEHOLDER = "--:--";
 const OPEN_ENDED_WORD = "open-ended";
+
+// The clock is itself the plan affordance (§7): clicking it opens the Time
+// app. Both console shapes wear the same wiring, and the clock's own click
+// must not bubble into the popover's click-away closer — the click that
+// opens the Time app would otherwise close it in the same gesture.
+function wireClockPlan(app: App): void {
+  byId("clock-plan")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    app.openApp("time");
+  });
+}
 
 // Session controls: the clock block plus the Enter/Exit main switch and the
 // pause control. The switch is the console's sole session gate — sessions
@@ -134,13 +132,7 @@ function renderConsoleSession(app: App): void {
             ${switchSvg}<span>Enter flow</span><i class="switch-state" aria-hidden="true"></i>
           </button>
         </div>`;
-      byId("clock-plan")?.addEventListener("click", (event) => {
-        // The clock's own click must not bubble into the popover's
-        // click-away closer — the click that opens the Time app would
-        // otherwise close it in the same gesture.
-        event.stopPropagation();
-        app.openApp("time");
-      });
+      wireClockPlan(app);
       byId("flow-switch")?.addEventListener("click", () => app.startFlow());
     }
     renderSessionStrip(false);
@@ -168,12 +160,7 @@ function renderConsoleSession(app: App): void {
           ${switchSvg}<span>Exit flow</span><i class="switch-state" aria-hidden="true"></i>
         </button>
       </div>`;
-    byId("clock-plan")?.addEventListener("click", (event) => {
-      // Same guard as the upgrade clock: the opening click must not bubble
-      // into the popover's click-away closer.
-      event.stopPropagation();
-      app.openApp("time");
-    });
+    wireClockPlan(app);
     byId("pause-flow")?.addEventListener("click", () => (state.mode === "paused" ? app.resume() : app.pause()));
     byId("flow-switch")?.addEventListener("click", () => app.endFlow());
   }
@@ -233,12 +220,6 @@ function plannedFill(elapsed: number, target: number): string {
   return `${Math.min(100, (elapsed / target) * 100)}%`;
 }
 
-// In-place text swap for a data-live node within a scope; tick-safe.
-function liveText(scope: ParentNode, live: string, text: string): void {
-  const node = scope.querySelector(`[data-live="${live}"]`);
-  if (node && node.textContent !== text) node.textContent = text;
-}
-
 // Focus-app access (ADR-0012): one tile per app — the launch four live
 // from minute 0 (ADR-0019), each wearing its live state, with its panel
 // opening as a popover anchored directly beneath the tile. The locked-tile
@@ -251,6 +232,10 @@ function renderConsoleApps(app: App): void {
   const host = byId("console-apps");
   if (!host) return;
   const { state, ui } = app;
+  // Session controls only (§7, portrait phone): the tiles row hides until an
+  // app is open — the clock's Time popover still needs its anchor — and
+  // returns the moment the popover closes.
+  host.classList.toggle("app-open", ui.app !== null);
   const key = JSON.stringify([
     ui.app,
     state.mode,
@@ -404,7 +389,14 @@ interface ToolAction {
   op: string;
   svg: string;
   label: string;
+  run: (app: App) => void;
   title: (app: App) => string;
+  // The count badge over the icon (forge's banked rolls, feats, tray).
+  badge?: (app: App) => string;
+  // A static node riding the icon (forge's charge pip).
+  media?: string;
+  // The thumb bar's word, when it carries a count the bare label doesn't.
+  word?: (app: App) => string;
   disabled?: (app: App) => boolean;
   active?: (app: App) => boolean;
 }
@@ -415,6 +407,7 @@ function toolActions(): ToolAction[] {
       op: "catalog",
       svg: TOOL_CATALOG_SVG,
       label: "Catalog",
+      run: (app) => app.openModal("catalog"),
       title: (app) => (app.state.mode === "upgrade" ? "Catalog — starter-shelf offers and board cells" : "Catalog — purchases happen between sessions"),
       disabled: (app) => app.state.mode !== "upgrade",
     },
@@ -422,6 +415,10 @@ function toolActions(): ToolAction[] {
       op: "forge",
       svg: TOOL_FORGE_SVG,
       label: "Forge",
+      run: (app) => app.openModal("forge"),
+      badge: (app) =>
+        app.state.bankedRolls.length > 0 ? `<b class="tool-badge mono">${app.state.bankedRolls.length}</b>` : "",
+      media: `<i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i>`,
       title: (app) =>
         app.state.bankedRolls.length > 0
           ? `Forge progress ${formatNumber(Math.max(0, app.state.forge.progress))} / ${formatNumber(forgeThreshold(app.state.forge.earned))} · ${app.state.bankedRolls.length} banked choice${app.state.bankedRolls.length === 1 ? "" : "s"}`
@@ -432,6 +429,10 @@ function toolActions(): ToolAction[] {
       op: "cell",
       svg: CELL_TOOL_SVG,
       label: "New cell",
+      run: (app) => {
+        if (app.ui.buyingCell) app.cancelCellPurchase();
+        else app.armCellPurchase();
+      },
       title: (app) => (app.state.mode !== "upgrade" ? "New cell — purchases happen between sessions" : app.ui.buyingCell ? "Pick a frontier hex · Esc cancels" : "New cell"),
       disabled: (app) => app.state.mode !== "upgrade",
       active: (app) => app.ui.buyingCell,
@@ -440,6 +441,20 @@ function toolActions(): ToolAction[] {
       op: "inventory",
       svg: INVENTORY_TOOL_SVG,
       label: "Inventory",
+      run: (app) => {
+        // Phone folds the tray into a sheet; every other width toggles the
+        // tray column beside the dock.
+        if (isPhoneWidth()) app.openModal("inventory");
+        else {
+          app.ui.trayOpen = !app.ui.trayOpen;
+          app.render();
+        }
+      },
+      badge: (app) => {
+        const trayCount = app.state.modules.filter((m) => m.pos === null).length;
+        return trayCount > 0 ? `<b class="tool-badge mono">${trayCount}</b>` : "";
+      },
+      word: (app) => `Inventory · ${app.state.modules.filter((m) => m.pos === null).length}`,
       title: (app) => (isPhoneWidth() ? "Inventory — the board-surface tray, tapped open" : app.ui.trayOpen ? "Inventory — close the tray" : "Inventory — open the tray"),
       active: (app) => !isPhoneWidth() && app.ui.trayOpen,
     },
@@ -447,6 +462,12 @@ function toolActions(): ToolAction[] {
       op: "feats",
       svg: FEATS_SVG,
       label: "Feats",
+      run: (app) => app.openModal("achievements"),
+      badge: (app) => {
+        const feats = unlockedCount(app.state);
+        return feats > 0 ? `<b class="tool-badge mono">${feats}</b>` : "";
+      },
+      word: (app) => `Feats · ${unlockedCount(app.state)}/${ACHIEVEMENTS.length}`,
       title: () => "Achievements — every feat, and how close the next one is",
     },
   ];
@@ -454,25 +475,6 @@ function toolActions(): ToolAction[] {
 
 const TOOL_CATALOG_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/></svg>`;
 const TOOL_FORGE_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1.8 3.2-3.2 4.6-3.2 8.4a3.2 3.2 0 0 0 6.4 0c0-1.4-.6-2.3-1.1-2.9 1.9.5 3.4 2 3.4 4.3a5.5 5.5 0 0 1-11 0C6.5 7.6 10.8 6.4 12 3Z"/></svg>`;
-
-function runToolAction(app: App, op: string): void {
-  if (op === "catalog") app.openModal("catalog");
-  else if (op === "forge") app.openModal("forge");
-  else if (op === "feats") app.openModal("achievements");
-  else if (op === "inventory") {
-    // Phone folds the tray into a sheet; every other width toggles the
-    // tray column beside the dock.
-    if (isPhoneWidth()) app.openModal("inventory");
-    else {
-      app.ui.trayOpen = !app.ui.trayOpen;
-      app.render();
-    }
-  }
-  else if (op === "cell") {
-    if (app.ui.buyingCell) app.cancelCellPurchase();
-    else app.armCellPurchase();
-  }
-}
 
 // The left-edge icon dock (§7): Catalog / Forge (count badge + charge pip)
 // / New cell, floating over the board's left edge. Hidden on portrait
@@ -497,24 +499,15 @@ function renderTools(app: App): void {
       target.dataset.renderKey = key;
       target.innerHTML = list
         .map((action) => {
-          const extra =
-            action.op === "forge"
-              ? `${forgeCount > 0 ? `<b class="tool-badge mono">${forgeCount}</b>` : ""}<i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i>`
-              : action.op === "feats"
-                ? feats > 0
-                  ? `<b class="tool-badge mono">${feats}</b>`
-                  : ""
-                : action.op === "inventory"
-                  ? trayCount > 0
-                    ? `<b class="tool-badge mono">${trayCount}</b>`
-                    : ""
-                  : "";
-          const label = action.op === "feats" ? `Feats · ${feats}/${ACHIEVEMENTS.length}` : action.op === "inventory" ? `Inventory · ${trayCount}` : action.label;
+          const extra = (action.badge?.(app) ?? "") + (action.media ?? "");
+          const label = action.word?.(app) ?? action.label;
           return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" data-op="${action.op}" aria-label="${action.label}" title="${action.title(app)}"${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${label}</small></button>`;
         })
         .join("");
       target.querySelectorAll<HTMLButtonElement>("[data-op]").forEach((button) => {
-        button.addEventListener("click", () => runToolAction(app, button.getAttribute("data-op")!));
+        button.addEventListener("click", () => {
+          actions.find((action) => action.op === button.getAttribute("data-op"))!.run(app);
+        });
       });
     }
   }
@@ -1900,7 +1893,7 @@ function bindAppPanel(app: App, scope: HTMLElement): void {
 // console's live session, so no clock lives here — §7.)
 function updateAppPanelLive(app: App, scope: ParentNode): void {
   const { state } = app;
-  liveText(scope, "habit-session", `${formatClock(state.session?.elapsed ?? 0)} of practice`);
+  liveSet(scope, "habit-session", `${formatClock(state.session?.elapsed ?? 0)} of practice`);
   for (const habit of state.habits) {
     const node = scope.querySelector(`[data-habit-seconds="${habit.id}"]`);
     const display = formatDuration(habit.seconds);
@@ -1923,7 +1916,7 @@ function updateAppPanelLive(app: App, scope: ParentNode): void {
     const price = longGoalCost(state.goalCapacityBought);
     longGoalBuy.disabled = !(state.mode === "upgrade" && wholeNous(state) >= price);
     const countdown = practiceCountdown(price, wholeNous(state), computeRates(state, true).rate) ?? "";
-    liveText(scope, "long-goal-countdown", countdown);
+    liveSet(scope, "long-goal-countdown", countdown);
   }
 }
 
@@ -1956,9 +1949,15 @@ function renderModal(app: App): void {
   const kind = app.ui.modal;
   if (!kind) {
     backdrop.hidden = true;
+    backdrop.classList.remove("sheet");
     delete content.dataset.renderKey;
     return;
   }
+  // The formula sheet's own gate (§7): below the 760px container breakpoint
+  // it presents as a sheet over the scrim. The modal layer is body-level —
+  // outside the #app container — so the gate's decision arrives as a class
+  // the stylesheet can act on, not a container rule.
+  backdrop.classList.toggle("sheet", kind === "formula" && containerWidth() < FORMULA_BREAKPOINT_PX);
   const extra =
     kind === "forge"
       ? app.state.bankedRolls.at(-1)?.id ?? null
@@ -2042,10 +2041,7 @@ function renderFormulaModal(app: App, content: HTMLElement): void {
     <p class="lead formula-equation mono">${chain}</p>
     <div class="formula-breakdown">
       ${ampBreakdownHtml(infused)}
-      <div class="rate-breakdown-row"><span class="bk-name">Chords</span><span class="mono">×${formatNumber(snapshot.chordMultiplier)}</span><span class="bk-note">${chordSummary(snapshot)}</span></div>
-      <div class="rate-breakdown-row"><span class="bk-name">Empowerment</span><span class="mono">×${formatNumber(snapshot.empowerment)}</span><span class="bk-note">charge uplift on charged modules</span></div>
-      <div class="rate-breakdown-row"><span class="bk-name">Achievements</span><span class="mono">+${Math.round((snapshot.achievementBoost - 1) * 100)}%</span><span class="bk-note">each feat adds into the boost</span></div>
-      <div class="rate-breakdown-row total"><span class="bk-name">Rate</span><span class="mono">${formatNumber(snapshot.rate)} ν/s</span><span class="bk-note">composite × empowerment × achievements</span></div>
+      ${breakdownRowsHtml(snapshot)}
     </div>`;
   wireClose(app);
 }

@@ -7,8 +7,10 @@ import { ACHIEVEMENTS, achievementBoostOf } from "../engine/achievements";
 import { computeRates } from "../engine/economy";
 import type { GameState, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
+import { FORMULA_BREAKPOINT_PX, containerWidth } from "./container";
 import { moduleIcon } from "./icons";
 import { chordTermLabel, formatCountdown, formatInt, formatNumber } from "./format";
+import { liveSet } from "./live";
 
 // Compact axis vocabulary for the graduation marks and the beat's mark name.
 function markLabel(mark: number): string {
@@ -51,6 +53,47 @@ export function ampBreakdownHtml(infused: boolean): string {
     .join("");
 }
 
+// The breakdown's legs below the amp legs — one record per row, the
+// AMP_LEGS pattern extended across the roster. The Rate cell's hover
+// popover and the formula sheet both render it, so the wording lands in
+// one place: the popover mounts live slots the tick fills (the chords note
+// moves as chords form), the sheet prints the snapshot outright.
+interface RateRow {
+  key: string;
+  name: string;
+  note: string | ((snapshot: RateSnapshot) => string);
+  liveNote?: boolean;
+  total?: boolean;
+}
+
+const RATE_ROWS: RateRow[] = [
+  { key: "chords", name: "Chords", note: (snapshot) => chordSummary(snapshot), liveNote: true },
+  { key: "emp", name: "Empowerment", note: "charge uplift on charged modules" },
+  { key: "ach", name: "Achievements", note: "each feat adds into the boost" },
+  { key: "rate", name: "Rate", note: "composite × empowerment × achievements", total: true },
+];
+
+function rowNote(row: RateRow, snapshot: RateSnapshot): string {
+  return typeof row.note === "function" ? row.note(snapshot) : row.note;
+}
+
+// A row's printed value: the multiplier, the uplift percent, or the total.
+function breakdownValue(key: string, snapshot: RateSnapshot): string {
+  if (key === "chords") return `×${formatNumber(snapshot.chordMultiplier)}`;
+  if (key === "emp") return `×${formatNumber(snapshot.empowerment)}`;
+  if (key === "ach") return `+${Math.round((snapshot.achievementBoost - 1) * 100)}%`;
+  return `${formatNumber(snapshot.rate)} ν/s`;
+}
+
+// The sheet's breakdown roster, snapshot printed (the amp legs render
+// ahead of it via ampBreakdownHtml).
+export function breakdownRowsHtml(snapshot: RateSnapshot): string {
+  return RATE_ROWS.map(
+    (row) =>
+      `<div class="rate-breakdown-row${row.total ? " total" : ""}"><span class="bk-name">${row.name}</span><span class="mono">${breakdownValue(row.key, snapshot)}</span><span class="bk-note">${rowNote(row, snapshot)}</span></div>`,
+  ).join("");
+}
+
 export function chordSummary(snapshot: RateSnapshot): string {
   const lines = snapshot.namedChords.map(chordTermLabel);
   return lines.length > 0 ? lines.join(" · ") : "no chords yet — chords are named pitch sets over connected synths";
@@ -76,10 +119,10 @@ function rateCellHtml(achieving: boolean, infused: boolean): string {
     <span class="rate-hint" aria-hidden="true">ⓘ</span>
     <span class="rate-breakdown" role="tooltip">
       ${ampBreakdownHtml(infused)}
-      <div class="rate-breakdown-row"><span class="bk-name">Chords</span><span class="mono" data-live="b-chords"></span><span class="bk-note" data-live="b-chord-note"></span></div>
-      <div class="rate-breakdown-row"><span class="bk-name">Empowerment</span><span class="mono" data-live="b-emp"></span><span class="bk-note">charge uplift on charged modules</span></div>
-      <div class="rate-breakdown-row"><span class="bk-name">Achievements</span><span class="mono" data-live="b-ach"></span><span class="bk-note">each feat adds into the boost</span></div>
-      <div class="rate-breakdown-row total"><span class="bk-name">Rate</span><span class="mono" data-live="b-rate"></span><span class="bk-note">composite × empowerment × achievements</span></div>
+      ${RATE_ROWS.map(
+        (row) =>
+          `<div class="rate-breakdown-row${row.total ? " total" : ""}"><span class="bk-name">${row.name}</span><span class="mono" data-live="b-${row.key}"></span><span class="bk-note"${row.liveNote ? ' data-live="b-chord-note"' : ""}>${typeof row.note === "string" ? row.note : ""}</span></div>`,
+      ).join("")}
     </span>
   </button>`;
 }
@@ -103,17 +146,8 @@ export function featsChipHtml(count: number, id = "feats-chip"): string {
 // The 760px container breakpoint (§7): below it the Rate cell's equation
 // hides and its tap opens the full formula as a modal sheet over a scrim.
 // Above it the collapsed operand chain is ambient and hover discloses.
-// The gate reads the #app container's own width — the same inline size the
-// stylesheet's @container rules respond to.
-const FORMULA_BREAKPOINT_PX = 760;
-
-function containerWidth(): number {
-  // In a measured document #app is the container; a zero reading (a layout-
-  // less test DOM) falls through to the viewport.
-  const width = document.getElementById("app")?.clientWidth ?? 0;
-  return width > 0 ? width : typeof window !== "undefined" ? window.innerWidth : 0;
-}
-
+// The gate reads the container's own inline size — the number the
+// stylesheet's @container rules respond to (container.ts holds it).
 export function renderBoardLedger(app: App): void {
   const host = document.getElementById("board-ledger");
   if (!host) return;
@@ -139,12 +173,6 @@ export function renderBoardLedger(app: App): void {
   updateLedgerLive(host, state, snapshot.rate, snapshot);
 }
 
-// In-place text swap for a data-live node within a scope; tick-safe.
-function liveSet(scope: ParentNode, live: string, text: string): void {
-  const node = scope.querySelector(`[data-live="${live}"]`);
-  if (node && node.textContent !== text) node.textContent = text;
-}
-
 export function updateLedgerLive(scope: ParentNode, state: GameState, rate: number, snapshot?: RateSnapshot): void {
   const set = (live: string, text: string) => liveSet(scope, live, text);
   set("nous", `${formatInt(state.nous)} ν`);
@@ -161,19 +189,16 @@ export function updateLedgerLive(scope: ParentNode, state: GameState, rate: numb
   set("m-rate", `${formatNumber(snapshot.rate)} ν/s`);
   set("b-synths", `+${formatNumber(snapshot.synths)} ν/s`);
   set("b-inf", `+${formatNumber(snapshot.infusors)} ν/s`);
-  set("b-chords", `×${formatNumber(snapshot.chordMultiplier)}`);
+  for (const row of RATE_ROWS) set(`b-${row.key}`, breakdownValue(row.key, snapshot));
   set("b-chord-note", chordSummary(snapshot));
-  set("b-emp", `×${formatNumber(snapshot.empowerment)}`);
-  set("b-ach", `+${Math.round((snapshot.achievementBoost - 1) * 100)}%`);
-  set("b-rate", `${formatNumber(snapshot.rate)} ν/s`);
 }
 
 // ── The phone game-info strip (§7) ──────────────────────────────────────
 // Production reads on the board surface, where the tutorial helptext used
 // to sit: ν, rate, session, feats. Displayed only below the 600px
 // breakpoint; the values update at every render whatever the width.
-export function renderInfoStrip(app: App): void {
-  const host = document.getElementById("info-strip");
+export function renderGameInfoStrip(app: App): void {
+  const host = document.getElementById("game-info-strip");
   if (!host) return;
   const { state } = app;
   const feats = unlockedCount(state);
@@ -183,8 +208,8 @@ export function renderInfoStrip(app: App): void {
     host.innerHTML = `<span class="info-read"><small>ν</small> <strong class="mono" data-live="i-nous"></strong></span>
       <span class="info-read"><strong class="mono" data-live="i-rate"></strong> <small>ν/s</small></span>
       <span class="info-read"><small>session</small> <strong class="mono" data-live="i-session"></strong></span>
-      ${featsChipHtml(feats, "info-feats-chip")}`;
-    document.getElementById("info-feats-chip")?.addEventListener("click", () => app.openModal("achievements"));
+      ${featsChipHtml(feats, "game-info-feats-chip")}`;
+    document.getElementById("game-info-feats-chip")?.addEventListener("click", () => app.openModal("achievements"));
   }
   const set = (live: string, text: string) => liveSet(host, live, text);
   set("i-nous", formatInt(state.nous));

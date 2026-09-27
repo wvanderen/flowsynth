@@ -247,11 +247,30 @@ describe("the formula disclosure (§7)", () => {
     app.render();
     document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.ui.modal).toBe("formula");
+    // The modal layer is body-level, so the container gate's decision rides
+    // a sheet class on the backdrop — bottom sheet over the scrim, whatever
+    // the viewport media query thinks.
+    expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(true);
     const modal = document.getElementById("modal-content")!;
     expect(modal.querySelector(".formula-equation")).not.toBeNull();
     expect(modal.textContent).toContain("Empowerment");
     expect(modal.textContent).toContain("Achievements");
     expect(modal.textContent).toContain("no chords yet");
+    // Closing drops the sheet presentation with the modal.
+    app.closeModal();
+    expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(false);
+  });
+
+  it("the formula sheet rides the container, not the viewport", () => {
+    // A 700px container inside a wide viewport still presents as a sheet.
+    setAppWidth(700);
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1200 });
+    app.render();
+    document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.modal).toBe("formula");
+    expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(true);
+    app.closeModal();
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
   });
 
   it("above the breakpoint the Rate cell tap does nothing — the hover popover discloses instead", () => {
@@ -2083,6 +2102,20 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     setAppWidth(390);
   });
 
+  it("the top nav holds session controls only; the clock's Time popover keeps its anchor", () => {
+    app.render();
+    // At rest the focus-app tiles hide — session controls only (§7).
+    expect(document.getElementById("console-apps")!.classList.contains("app-open")).toBe(false);
+    document.getElementById("clock-plan")!.click();
+    expect(app.ui.app).toBe("time");
+    // Open, the row returns so the popover has its anchor; closing re-hides.
+    expect(document.getElementById("console-apps")!.classList.contains("app-open")).toBe(true);
+    expect(document.getElementById("app-popover")).not.toBeNull();
+    app.closeApp();
+    app.render();
+    expect(document.getElementById("console-apps")!.classList.contains("app-open")).toBe(false);
+  });
+
   it("the bloom presents as a bottom sheet; the zoom cluster rises above it", () => {
     app.render();
     clickCell(0, 0);
@@ -2093,6 +2126,9 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     expect(bloomEl.querySelector(".bloom-sheet-name")!.textContent).toContain("Additive Synth");
     expect(bloomEl.querySelector("#bloom-upgrade")).not.toBeNull();
     expect(document.body.classList.contains("bloom-sheet-open")).toBe(true);
+    // The Arete pill floats at every width (§7): an open sheet covers the
+    // board's lower edge but never dismisses the pill itself.
+    expect(document.getElementById("arete-pill")).not.toBeNull();
     // Deselecting closes the sheet and lowers the cluster again.
     clickCell(0, 0);
     expect(bloomEl.hidden).toBe(true);
@@ -2101,12 +2137,12 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
 
   it("the game-info strip carries ν, rate, session, and feats on the board surface", () => {
     app.render();
-    const strip = document.getElementById("info-strip")!;
+    const strip = document.getElementById("game-info-strip")!;
     expect(strip.querySelector('[data-live="i-nous"]')).not.toBeNull();
     expect(strip.querySelector('[data-live="i-rate"]')!.textContent).toBe(formatNumber(0.1));
     expect(strip.querySelector('[data-live="i-session"]')!.textContent).toBe("—");
-    expect(document.getElementById("info-feats-chip")).not.toBeNull();
-    document.getElementById("info-feats-chip")!.click();
+    expect(document.getElementById("game-info-feats-chip")).not.toBeNull();
+    document.getElementById("game-info-feats-chip")!.click();
     expect(app.ui.modal).toBe("achievements");
     app.closeModal();
   });
