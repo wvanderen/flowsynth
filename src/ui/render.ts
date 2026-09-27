@@ -147,15 +147,17 @@ function renderConsoleSession(app: App): void {
   // them, the caption beneath — one stable two-line stack in both modes, so
   // the live clock never shifts vertically. The provisional line (flow only)
   // sits beside the stack within the clock anchor (see the flow markup
-  // below): the header stays one row and nothing below it ever moves.
-  const clockButton = (title: string, ids = false): string => `
+  // below): the header stays one row and nothing below it ever moves. The
+  // id attributes ride in only on the flow side, where the tick patcher
+  // addresses the nodes directly.
+  const clockButton = (title: string, clockAttrs = "", captionAttrs = ""): string => `
       <button class="console-clock clock-opens-time" id="clock-plan" title="${title}">
         <span class="clock-stack">
           <span class="clock-row">
-            <span class="session-clock mono"${ids ? ' id="session-clock"' : ""}></span>
+            <span class="session-clock mono"${clockAttrs}></span>
             ${discloseSvg}
           </span>
-          <span class="clock-caption"${ids ? ' id="session-caption"' : ""}></span>
+          <span class="clock-caption"${captionAttrs}></span>
         </span>
       </button>`;
 
@@ -165,12 +167,10 @@ function renderConsoleSession(app: App): void {
   // body is only string-built when that key changes (every flow tick takes
   // the patch path below).
   const popoverKey = ui.app === "time" ? `time|${appPanelKey(app)}` : "shut";
-  const popoverHtml = () => (ui.app === "time" ? `<div class="app-popover" id="app-popover">${appPanelBody(app, "time")}</div>` : "");
   const bindPopover = (scrollTop: number): void => {
     if (ui.app !== "time") return;
     bindAppPanel(app, host);
-    const popover = host.querySelector("#app-popover") as HTMLElement | null;
-    if (popover && scrollTop > 0) popover.scrollTo(0, scrollTop);
+    restorePopoverScroll(host, scrollTop);
   };
 
   if (state.mode === "upgrade") {
@@ -185,11 +185,11 @@ function renderConsoleSession(app: App): void {
     const key = `upgrade|${popoverKey}`;
     if (host.dataset.renderKey !== key) {
       host.dataset.renderKey = key;
-      const scrollTop = (host.querySelector("#app-popover") as HTMLElement | null)?.scrollTop ?? 0;
+      const scrollTop = popoverScroll(host);
       host.innerHTML = `
         <div class="clock-anchor">
           ${clockButton("Plan — opens the Time app")}
-          ${popoverHtml()}
+          ${appPopoverHtml(app, "time")}
         </div>
         <div class="session-actions">
           <button class="main-switch idle" id="flow-switch" title="Enter flow — the board locks and runs itself">
@@ -215,12 +215,12 @@ function renderConsoleSession(app: App): void {
   const key = `flow:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}|${popoverKey}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
-    const scrollTop = (host.querySelector("#app-popover") as HTMLElement | null)?.scrollTop ?? 0;
+    const scrollTop = popoverScroll(host);
     host.innerHTML = `
       <div class="clock-anchor">
-        ${clockButton("Session time — opens the Time app", true)}
+        ${clockButton("Session time — opens the Time app", ' id="session-clock"', ' id="session-caption"')}
         <span class="clock-provisional" id="session-provisional" role="status"></span>
-        ${popoverHtml()}
+        ${appPopoverHtml(app, "time")}
       </div>
       <div class="session-actions">
         <button id="pause-flow" aria-label="${paused ? "Resume" : "Pause"}" title="${paused ? "Resume the session" : "Pause the session"}">${paused ? resumeSvg : pauseSvg}<span aria-hidden="true">${paused ? "Resume" : "Pause"}</span></button>
@@ -306,6 +306,23 @@ function plannedFill(elapsed: number, target: number): string {
 // nothing, and the board never moves, reflows, or dims while the console
 // is used. (Display names live in meta.ts's APP_LABELS.)
 
+// A popover's scroll rides its host's rebuild (#115): captured before the
+// innerHTML swap, restored once the fresh panel binds. Shared by the clock's
+// Time popover and the tiles' popovers (issue #148) — one shape, one spelling.
+function popoverScroll(host: HTMLElement): number {
+  return (host.querySelector("#app-popover") as HTMLElement | null)?.scrollTop ?? 0;
+}
+
+function restorePopoverScroll(host: HTMLElement, scrollTop: number): void {
+  if (scrollTop > 0) (host.querySelector("#app-popover") as HTMLElement | null)?.scrollTo(0, scrollTop);
+}
+
+// The popover a tile or the clock anchors: present only while its app is
+// open, its body built fresh with the host.
+function appPopoverHtml(app: App, panel: FocusApp): string {
+  return app.ui.app === panel ? `<div class="app-popover" id="app-popover">${appPanelBody(app, panel)}</div>` : "";
+}
+
 // The app-panel popover's rebuild signature: everything an app body shows,
 // hashed. The chosen plan is deliberately absent (issue #115): a plan pick
 // patches state in place instead of rebuilding — the open popover, its
@@ -345,7 +362,7 @@ function renderConsoleApps(app: App, projected: RateSnapshot): void {
   }
   host.dataset.renderKey = key;
   // A newly captured note keeps the popover scrolled where the player is.
-  const scrollTop = (host.querySelector("#app-popover") as HTMLElement | null)?.scrollTop ?? 0;
+  const scrollTop = popoverScroll(host);
   const last = TILE_APPS[TILE_APPS.length - 1];
   const tiles = TILE_APPS.map((appKey) => {
     const active = appActive(state, appKey);
@@ -360,11 +377,11 @@ function renderConsoleApps(app: App, projected: RateSnapshot): void {
           <svg viewBox="-12 -12 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${appIcon(appKey)}</svg>
         </span>
       </button>
-      ${open ? `<div class="app-popover" id="app-popover">${appPanelBody(app, appKey)}</div>` : ""}
+      ${appPopoverHtml(app, appKey)}
     </div>`;
   }).join("");
   host.innerHTML = `<div class="app-tiles">${tiles}</div>`;
-  if (scrollTop > 0) (host.querySelector("#app-popover") as HTMLElement | null)?.scrollTo(0, scrollTop);
+  restorePopoverScroll(host, scrollTop);
   for (const appKey of TILE_APPS) {
     byId(`app-tile-${appKey}`)?.addEventListener("click", () => app.openApp(appKey));
   }

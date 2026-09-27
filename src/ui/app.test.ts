@@ -176,13 +176,18 @@ describe("the console header around Enter/Exit Flow (#148)", () => {
     document.getElementById("clock-plan")!.click();
     const popover = document.getElementById("app-popover")!;
     expect(document.getElementById("console-session")!.contains(popover)).toBe(true);
-    // A plan chip pick inside the popover neither closes it nor rebuilds it
-    // (#115's contract, now at the clock anchor).
+    // A plan chip pick inside the popover neither closes it nor rebuilds it:
+    // node identity, focus, and scroll all ride through (#115's contract,
+    // now at the clock anchor).
     const chip = popover.querySelector<HTMLButtonElement>('[data-plan="25"]')!;
+    popover.scrollTop = 80;
+    chip.focus();
     chip.click();
     expect(app.ui.app).toBe("time");
     expect(document.getElementById("app-popover")).toBe(popover);
     expect(app.ui.chosenTarget).toBe(1500);
+    expect(document.activeElement).toBe(chip);
+    expect(popover.scrollTop).toBe(80);
     app.closeApp();
     expect(document.getElementById("app-popover")).toBeNull();
   });
