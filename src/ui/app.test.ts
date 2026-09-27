@@ -2405,6 +2405,15 @@ describe("cross-tab save conflicts (#128)", () => {
     expect(app.state.nous).toBe(777);
   });
 
+  it("a storage event carrying an older forced write never reverts this tab's fresher memory", () => {
+    // Another tab's import or reset can land an older-stamped file; the
+    // announcement alone is not a reason to discard newer in-memory state.
+    app.state.nous = 999;
+    localStorage.setItem(STORAGE_KEY, serialize({ ...app.state, nous: 5 }, Date.now() - 60_000));
+    window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY }));
+    expect(app.state.nous).toBe(999);
+  });
+
   it("a storage event on another key changes nothing", () => {
     const before = localStorage.getItem(STORAGE_KEY);
     window.dispatchEvent(new StorageEvent("storage", { key: "some.other.key" }));

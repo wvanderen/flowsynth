@@ -416,8 +416,11 @@ export class App {
   // Converges onto a newer stored save through the one resume/reconcile
   // path (§1): the adopted save is treated exactly like a reload — a live
   // session resumes with its absence reconciled as away. False when the
-  // stored save is unreadable, in which case writes must not be blocked.
+  // slot holds nothing newer than this tab has incorporated: an unreadable
+  // slot never blocks, and another tab's forced older-stamped write (an
+  // import, a reset) must never revert this tab's fresher memory (#128).
   private adoptNewerSave(): boolean {
+    if (!this.externalNewerSave()) return false;
     const loaded = this.load();
     if (!loaded) return false;
     this.clearTransientUi();
@@ -425,14 +428,6 @@ export class App {
     this.say("Caught up to the newer save from another tab.");
     this.render();
     return true;
-  }
-
-  // The two return doors (a visibility return, a bfcache restore) share one
-  // catch-up (#128): a tab coming back adopts a newer external save before
-  // its own reconcile runs, so the stale in-memory copy can never clobber
-  // what the slot gained while the tab was away.
-  private catchUpOnReturn(): void {
-    if (this.externalNewerSave()) this.adoptNewerSave();
   }
 
   // The one writer (§10). A shared slot means the write can race another
@@ -542,7 +537,10 @@ export class App {
         this.save();
       } else {
         this.presence = true;
-        this.catchUpOnReturn();
+        // The return catch-up (#128): a save another tab wrote while we
+        // were hidden is adopted before this tab's own reconcile runs, so
+        // the stale in-memory copy never clobbers what the slot gained.
+        this.adoptNewerSave();
         this.processReturn(Date.now());
       }
     });
@@ -552,13 +550,15 @@ export class App {
     window.addEventListener("pageshow", (event) => {
       if (!(event as PageTransitionEvent).persisted) return;
       this.presence = document.visibilityState === "visible";
-      this.catchUpOnReturn();
+      this.adoptNewerSave();
       this.processReturn(Date.now());
     });
     // Another tab's save, announced here in every tab but the writer
-    // (#128): outside a live session the tab adopts at once — a cheap,
-    // invisible catch-up. Mid-flow the write guard refuses stale writes
-    // and the next visible return adopts through the reconcile path.
+    // (#128): outside a live session the tab adopts a save newer than
+    // anything it has incorporated — a cheap, invisible catch-up; another
+    // tab's forced older-stamped import or reset is left standing. Mid-flow
+    // the write guard refuses stale writes and the next visible return
+    // adopts through the reconcile path.
     window.addEventListener("storage", (event) => {
       if (event.key !== STORAGE_KEY || !this.ownsBoard()) return;
       if (this.state.mode !== "flow") this.adoptNewerSave();
