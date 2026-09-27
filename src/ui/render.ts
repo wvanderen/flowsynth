@@ -22,7 +22,7 @@ import { arcCardDue } from "../engine/arc";
 import { goalCapacity, goalRequiredSeconds, goalSummary } from "../engine/goals";
 import { ACHIEVEMENTS, achievementBoostOf, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
 import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NamedChordTerm, NoteEntry, RateSnapshot } from "../engine/types";
-import type { App, ChordHover, EnterKind, ModalKind } from "./app";
+import type { App, ChordHover, EnterKind, EnterSelection, ModalKind } from "./app";
 import { suppressNextClick } from "./click";
 import { appIcon, moduleIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, HUE_TOKEN_OF, moduleFace } from "./face";
@@ -51,6 +51,12 @@ function point({ q, r }: Hex): [number, number] {
 
 function byId(id: string): HTMLElement | null {
   return document.getElementById(id);
+}
+
+// The in-place patchers' one text write: touch the node only when its
+// content actually changes (#115).
+function setText(node: Element | null | undefined, text: string): void {
+  if (node && node.textContent !== text) node.textContent = text;
 }
 
 // The rate shown in the ledger, hexes, and formula: live during flow,
@@ -115,9 +121,9 @@ function refreshConsoleClockPlan(app: App): void {
   const time = chosen !== null ? formatClock(chosen) : CLOCK_PLACEHOLDER;
   const word = chosen !== null ? "planned" : OPEN_ENDED_WORD;
   const clock = document.querySelector("#console-session .session-clock");
-  if (clock && clock.textContent !== time) clock.textContent = time;
+  setText(clock, time);
   const caption = document.querySelector("#console-session .clock-caption");
-  if (caption && caption.textContent !== word) caption.textContent = word;
+  setText(caption, word);
 }
 
 // Session controls: the clock block plus the Enter/Exit main switch and the
@@ -349,8 +355,7 @@ function planCaptionWord(open: boolean): string {
 // real state changes.)
 function refreshTimeTileState(app: App): void {
   const state = byId("app-tile-time")?.querySelector(".app-tile-state");
-  const plan = planShort(app.ui.chosenTarget);
-  if (state && state.textContent !== plan) state.textContent = plan;
+  setText(state, planShort(app.ui.chosenTarget));
 }
 
 // The achievements page (ADR-0015): the always-visible full list — all
@@ -1821,8 +1826,7 @@ function refreshPlanState(app: App): void {
 }
 
 // The plan controls' pressed/disabled/value state, patched in place within
-// whatever scope carries them (the Time popover — or a modal should it ever
-// host them again).
+// whatever scope carries them (the Time popover or the enter prompt).
 function refreshPlanControls(app: App): void {
   const chosen = app.ui.chosenTarget;
   const open = chosen === null;
@@ -1842,8 +1846,7 @@ function refreshPlanControls(app: App): void {
   openButton?.classList.toggle("active", open);
   openButton?.setAttribute("aria-pressed", String(open));
   for (const caption of document.querySelectorAll(".time-plan .clock-caption")) {
-    const word = planCaptionWord(open);
-    if (caption.textContent !== word) caption.textContent = word;
+    setText(caption, planCaptionWord(open));
   }
 }
 
@@ -2048,6 +2051,13 @@ function modalKey(app: App, kind: ModalKind, extra: unknown): string {
   return JSON.stringify([kind, app.ui.importError, app.state.session?.accounting.poolSeconds ?? 0, app.state.mode, extra]);
 }
 
+// The enter prompt's light-state input to its rebuild key (#95, #115),
+// shared by the render guard and the in-place patchers' re-stamp so the
+// two can never drift apart.
+function enterModalExtra(app: App): [number | null, EnterSelection] {
+  return [app.ui.chosenTarget, app.ui.enter];
+}
+
 function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): void {
   const backdrop = byId("modal");
   const content = byId("modal-content");
@@ -2097,7 +2107,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
               // and the kind-first picks re-render the modal the moment they
               // change — chips highlight on pick, never a stale footer.
               : kind === "enter"
-                ? [app.ui.chosenTarget, app.ui.enter]
+                ? enterModalExtra(app)
                 // The formula sheet reprices only when a leg visibly moves:
                 // the rate quantized to whole ν/s keeps clock ticks from
                 // rebuilding (and refocusing) it every hundredth of a second.
@@ -2577,9 +2587,9 @@ function refreshEnterFooter(app: App, content: HTMLElement): void {
   const next = enterFootprint(app);
   const summary = content.querySelector(".cta-summary");
   const beginButton = content.querySelector("#enter-begin") as HTMLButtonElement | null;
-  if (summary) summary.textContent = next.summary;
+  setText(summary, next.summary);
   if (beginButton) {
-    beginButton.textContent = next.cta;
+    setText(beginButton, next.cta);
     beginButton.disabled = !next.armed;
   }
 }
@@ -2587,7 +2597,7 @@ function refreshEnterFooter(app: App, content: HTMLElement): void {
 // The prompt's rebuild guard, re-stamped after every in-place patch so a
 // later render pass sees the patched DOM as current and skips the rebuild.
 function stampEnterKey(app: App, content: HTMLElement): void {
-  content.dataset.renderKey = modalKey(app, "enter", [app.ui.chosenTarget, app.ui.enter]);
+  content.dataset.renderKey = modalKey(app, "enter", enterModalExtra(app));
 }
 
 function refreshEnterTabs(app: App, content: HTMLElement): void {

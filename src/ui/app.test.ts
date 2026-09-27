@@ -1883,7 +1883,9 @@ describe("interaction continuity (#115)", () => {
     app.openApp("time");
     // The resting plan is open-ended, so the free entry starts disabled; a
     // chip pick arms it — the state the input is typed into.
-    document.querySelector<HTMLButtonElement>('#app-popover [data-plan="25"]')!.click();
+    const chip = document.querySelector<HTMLButtonElement>('#app-popover [data-plan="25"]')!;
+    chip.click();
+    expect(chip.classList.contains("active")).toBe(true);
     const input = document.getElementById("plan-minutes") as HTMLInputElement;
     input.focus();
     input.value = "37";
@@ -1892,6 +1894,10 @@ describe("interaction continuity (#115)", () => {
     expect(document.getElementById("plan-minutes")).toBe(input);
     expect(input.value).toBe("37");
     expect(document.activeElement).toBe(input);
+    // The custom value is its own plan: the preset chip's pressed state
+    // cleared in place.
+    expect(chip.classList.contains("active")).toBe(false);
+    expect(chip.getAttribute("aria-pressed")).toBe("false");
     // The console clock followed without touching the session controls.
     expect(document.querySelector("#console-session .session-clock")!.textContent).toBe("37:00");
     expect(document.getElementById("flow-switch")!.isConnected).toBe(true);
