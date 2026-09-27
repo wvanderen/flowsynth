@@ -1,9 +1,9 @@
-import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS } from "./constants";
+import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isSynthesizerType } from "./constants";
 import { analyzeChords } from "./chords";
 import { achievementBoostOf } from "./achievements";
 import { adjacent } from "./hex";
 import { octaveRowOf, pitchOf } from "./lattice";
-import type { Contribution, DeployedModule, GameState, ModuleInstance, ModuleType, RateSnapshot } from "./types";
+import type { Contribution, DeployedModule, GameState, ModuleInstance, RateSnapshot } from "./types";
 
 export function chargedFactor(strength: number): number {
   return 1 + strength / (1 + strength);
@@ -115,7 +115,7 @@ export function deployedConductors(state: GameState): { synths: DeployedModule[]
   for (const module of deployed(state)) {
     if (module.pos === null) continue;
     const pos = module.pos;
-    if (isSynthesizer(module.type)) synths.push({ ...module, pos });
+    if (isSynthesizerType(module.type)) synths.push({ ...module, pos });
     else if (module.type === "spacer") spacers.push({ ...module, pos });
   }
   return { synths, spacers };
@@ -185,10 +185,6 @@ function infusorBonusAt(state: GameState, module: ModuleInstance, flow: boolean)
   return total;
 }
 
-function isSynthesizer(type: ModuleType): boolean {
-  return CATEGORY_OF[type] === "synthesizer";
-}
-
 // The unified rate (ADR-0021/0022; leg naming per ADR-0020 as amended by
 // ADR-0022):
 //   rate      = (synths + infusor uplift) × Π chord terms × empowerment × achievementBoost
@@ -226,7 +222,7 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
     const localBonus = infusorBonusAt(state, deployedModule, flow);
     const chargeFactor = chargedFactor(strength);
     const amplitude = modulePower(deployedModule) * (1 + localBonus);
-    if (isSynthesizer(deployedModule.type) && deployedModule.pos !== null) {
+    if (isSynthesizerType(deployedModule.type) && deployedModule.pos !== null) {
       const pos = deployedModule.pos;
       synths.push({ module: { ...deployedModule, pos }, power: modulePower(deployedModule), chargeFactor, strength, localBonus });
       continue;

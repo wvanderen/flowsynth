@@ -1,5 +1,6 @@
 import { BALANCE, EPS, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE, SHELF_TYPES } from "./constants";
 import { cellPurchasePrice, computeRates, deployedAt, findModule, levelCost, longGoalCost, rowGateOwed, wholeNous } from "./economy";
+import { arcCardDue } from "./arc";
 import { nextRungCost, appActive, LADDER_APPS, type FocusApp } from "./apps";
 import { adjacent, hexKey, isConnected, sameHex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
@@ -205,6 +206,15 @@ export function recordSummaryReflection(
 export function dismissSummary(state: GameState): ActionResult {
   if (!state.summary) return fail("No session summary to dismiss.");
   state.summary.seen = true;
+  return ok;
+}
+
+// The opening arc's one pop-up (§8): the second synthesizer's card. One
+// dismissal, ever — the flag persists, so the card never fires again
+// whatever the board grows into. Idempotent, like every dismissal.
+export function dismissArcCard(state: GameState): ActionResult {
+  if (!arcCardDue(state)) return fail("No arc card to dismiss.");
+  state.arcCardSeen = true;
   return ok;
 }
 

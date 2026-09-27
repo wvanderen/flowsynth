@@ -151,6 +151,11 @@ export function deserialize(text: string): LoadResult {
   if (!Array.isArray(raw.gatedRows)) {
     merged.gatedRows = [];
   }
+  // The arc card's seen flag (§8) lenient-defaults the same way: absent or
+  // corrupt means never dismissed — the save is still owed its one hint.
+  if (typeof raw.arcCardSeen !== "boolean") {
+    merged.arcCardSeen = false;
+  }
   // The retired 120 s reconcile dialog's frozen gap (ADR-0010 → ADR-0019):
   // a save may still carry one; drop it rather than resuming a state shape
   // this build no longer reads.

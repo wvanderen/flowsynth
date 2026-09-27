@@ -71,9 +71,12 @@ describe("board production model", () => {
     startSession(s, 600);
     const result = advance(s, 600);
     expect(result.nousEarned).toBeCloseTo(60, 6);
-    expect(s.forge.progress).toBe(0);
-    expect(s.forge.earned).toBe(0);
-    expect(result.rollsBanked).toBe(0);
+    // No generator → the charge leg never moves; the meter's only motion is
+    // the practice leg (§8): 300 progress crosses thresholds 60 + 90 + 135.
+    expect(computeRates(s, true).forgeRate).toBe(0);
+    expect(s.forge.earned).toBe(3);
+    expect(s.forge.progress).toBeCloseTo(15, 6);
+    expect(result.rollsBanked).toBe(3);
   });
 
   it("a generator feeds the adjacent Forge toward its threshold", () => {
@@ -83,9 +86,11 @@ describe("board production model", () => {
     s.chargeWindow = 600;
     expect(computeRates(s, true).forgeRate).toBeCloseTo(1, 9);
     startSession(s, null);
-    advance(s, 100);
+    advance(s, 40);
+    // Charge 40 + practice 20 (§8) = 60: the charge carries the meter to
+    // the threshold — practice alone (20) would never reach it.
     expect(s.forge.earned).toBe(1);
-    expect(s.forge.progress).toBeCloseTo(40, 6);
+    expect(s.forge.progress).toBeCloseTo(0, 6);
   });
 
   it("generators never charge themselves or each other", () => {

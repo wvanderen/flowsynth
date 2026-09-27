@@ -24,9 +24,11 @@ describe("the forge meter", () => {
     give(s, "focusKeyed", hex(2, 0));
     s.chargeWindow = 600;
     startSession(s, null);
-    advance(s, 100);
+    advance(s, 50);
+    // Charge 50 + the practice leg's 25 (§8) = 75: the charge carries the
+    // meter past the 60 threshold — practice alone would never reach it.
     expect(s.forge.earned).toBe(1);
-    expect(s.forge.progress).toBeCloseTo(40, 6);
+    expect(s.forge.progress).toBeCloseTo(15, 6);
     expect(forgeThreshold(s.forge.earned)).toBeCloseTo(90, 6);
     expect(s.bankedRolls).toHaveLength(1);
   });
@@ -39,10 +41,11 @@ describe("the forge meter", () => {
     s.chargeWindow = 600;
     startSession(s, null);
     advance(s, 600);
-    // 600 progress through thresholds 60 + 90 + 135 + 202.5 → 4 rolls, 112.5 left.
-    expect(s.forge.earned).toBe(4);
-    expect(s.forge.progress).toBeCloseTo(112.5, 6);
-    expect(s.bankedRolls).toHaveLength(4);
+    // 600 charge + 300 practice (§8) = 900 through thresholds
+    // 60 + 90 + 135 + 202.5 + 303.75 → 5 rolls, 108.75 left.
+    expect(s.forge.earned).toBe(5);
+    expect(s.forge.progress).toBeCloseTo(108.75, 6);
+    expect(s.bankedRolls).toHaveLength(5);
   });
 
   it("global progress survives layout and module changes", () => {
@@ -69,8 +72,10 @@ describe("the forge meter", () => {
     startSession(s, null);
     advance(s, 100);
     expect(forge.level).toBe(1);
-    // 100 seconds at strength 1 × power 1.2 = 120 progress: one 60 roll banks, 60 remains.
-    expect(s.forge.earned).toBe(1);
-    expect(s.forge.progress).toBeCloseTo(60, 6);
+    // 100 s at strength 1 × power 1.2 = 120 charge + 50 practice (§8) =
+    // 170: thresholds 60 + 90 cross, 20 remains — a level-0 forge lands
+    // the same two rolls with nothing carried.
+    expect(s.forge.earned).toBe(2);
+    expect(s.forge.progress).toBeCloseTo(20, 6);
   });
 });

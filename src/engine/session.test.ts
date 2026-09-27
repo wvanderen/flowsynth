@@ -43,9 +43,13 @@ describe("session rules", () => {
     const s = fresh();
     give(s, "forge", hex(1, 0));
     startSession(s, null);
-    // Carrier alone: 0.1 ν/s; the forge receives no charge (no generator).
+    // The lone opening synth: 0.1 ν/s; the forge receives no charge (no
+    // generator) — its meter fills from practice alone (§8): 1800 progress
+    // crosses six thresholds and carries 553.125.
     expect(earned(s, 3600)).toBeCloseTo(0.1 * 3600, 6);
-    expect(s.forge.progress).toBe(0);
+    expect(computeRates(s, true).forgeRate).toBe(0);
+    expect(s.forge.earned).toBe(6);
+    expect(s.forge.progress).toBeCloseTo(553.125, 6);
     expect(s.session?.target).toBeNull();
   });
 

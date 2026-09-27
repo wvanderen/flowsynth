@@ -75,17 +75,19 @@ describe("the charge window", () => {
     give(s, "forge", hex(1, 0));
     give(s, "focusKeyed", hex(2, 0));
     startSession(s, null);
-    const rng = stubRng([0.5, 0.5, 0.5, 0.5, 0.5, 0.5]);
+    const rng = stubRng(new Array(12).fill(0.5));
     advance(s, 60, rng);
-    // Strength 1 into a level-0 Forge for exactly the 60-second window:
-    // one 60-threshold roll, nothing left, then no further charge.
-    expect(s.forge.earned).toBe(1);
-    expect(s.forge.progress).toBeCloseTo(0, 6);
+    // The prep session left the meter at 3 earned, 15 carried. The measured
+    // 60 s adds strength 1 × 60 s of window charge + 30 practice (§8) =
+    // 90: no threshold, but the +90 stride is the window spending itself.
+    expect(s.forge.earned).toBe(3);
+    expect(s.forge.progress).toBeCloseTo(105, 6);
     expect(s.chargeWindow).toBeCloseTo(0, 6);
 
+    // The window is empty: the next minute moves the meter by practice only.
     advance(s, 60, rng);
-    expect(s.forge.progress).toBe(0);
-    expect(s.forge.earned).toBe(1);
+    expect(s.forge.progress).toBeCloseTo(135, 6);
+    expect(s.forge.earned).toBe(3);
   });
 
   it("the window buys charge, never nous: the board's rate is unchanged", () => {
@@ -146,7 +148,11 @@ describe("the charge window", () => {
     resumeSession(s);
     advance(s, 30);
     expect(s.chargeWindow).toBeCloseTo(0, 6);
-    expect(s.forge.progress).toBeCloseTo(0, 6);
+    // The window drained across the two live legs — 30 charge + 30 practice
+    // then 30 charge + 30 practice (§8) over the prep session's 15 carried:
+    // 105 total, and the meter never moved during the pause.
+    expect(s.forge.earned).toBe(3);
+    expect(s.forge.progress).toBeCloseTo(105, 6);
   });
 
   it("windows stack by extending the remaining duration, never the strength", () => {
@@ -161,11 +167,13 @@ describe("the charge window", () => {
     give(s, "forge", hex(1, 0));
     give(s, "focusKeyed", hex(2, 0));
     startSession(s, null);
-    advance(s, 120, stubRng([0.5, 0.5, 0.5, 0.5, 0.5, 0.5]));
-    // 120 seconds at constant strength 1: the second window extended the
-    // first instead of amplifying it. Thresholds 60 + 90 → one roll, 60 left.
-    expect(s.forge.earned).toBe(1);
-    expect(s.forge.progress).toBeCloseTo(60, 6);
+    advance(s, 120, stubRng(new Array(12).fill(0.5)));
+    // Two prep sessions leave the meter at 4 earned, 112.5 carried. The
+    // measured 120 s adds charge at constant strength 1 (the second window
+    // extended the first instead of amplifying it) plus 60 practice (§8):
+    // +180, no threshold.
+    expect(s.forge.earned).toBe(4);
+    expect(s.forge.progress).toBeCloseTo(292.5, 6);
     expect(s.chargeWindow).toBeCloseTo(0, 6);
   });
 
@@ -182,9 +190,11 @@ describe("the charge window", () => {
     // the step's remaining 40 s run uncharged.
     advance(s, 100, stubRng(new Array(12).fill(0.5)));
     expect(s.chargeWindow).toBeCloseTo(0, 6);
-    // 60 s at strength 1 crosses the 60 threshold exactly: one roll, none left.
-    expect(s.forge.earned).toBe(1);
-    expect(s.forge.progress).toBeCloseTo(0, 6);
+    // Over the prep session's 15 carried: the charged 60 s leg adds
+    // 60 charge + 30 practice, the drained 40 s leg adds practice only
+    // (20) — 125 total, no threshold. The split never over-credits.
+    expect(s.forge.earned).toBe(3);
+    expect(s.forge.progress).toBeCloseTo(125, 6);
     expect(s.session!.elapsed).toBeCloseTo(100, 6);
   });
 
@@ -194,9 +204,11 @@ describe("the charge window", () => {
     give(s, "focusKeyed", hex(2, 0));
     startSession(s, null);
     advance(s, 10);
-    // No window is banked yet — session one only accrues it — so nothing
-    // flows at all. Charge is a reserve, never a live drip.
-    expect(s.forge.progress).toBe(0);
+    // No window is banked yet — session one only accrues it — so no charge
+    // flows at all (charge is a reserve, never a live drip). Practice feeds
+    // the meter regardless (§8): 10 s → 5 progress.
+    expect(computeRates(s, true).forgeRate).toBe(0);
+    expect(s.forge.progress).toBeCloseTo(5, 6);
     expect(s.chargeWindow).toBe(0);
   });
 

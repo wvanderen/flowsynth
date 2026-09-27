@@ -43,13 +43,14 @@ describe("forge roll generation", () => {
     give(s, "focusKeyed", hex(2, 0));
     s.chargeWindow = 600;
     startSession(s, null);
+    // Charge 100 + practice 50 (§8) = 150: thresholds 60 + 90, two offers.
     advance(s, 100, stubRng(new Array(12).fill(0.3)));
-    expect(s.bankedRolls).toHaveLength(1);
+    expect(s.bankedRolls).toHaveLength(2);
     const saved = JSON.parse(JSON.stringify(s.bankedRolls[0]));
     expect(saved.candidates).toHaveLength(3);
     const before = s.nous;
     advance(s, 1);
-    expect(s.bankedRolls).toHaveLength(1);
+    expect(s.bankedRolls).toHaveLength(2);
     expect(s.nous).toBeGreaterThan(before);
   });
 });

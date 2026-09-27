@@ -59,6 +59,12 @@ export interface Balance {
   goalBaseSlots: number;
   forgeInitialThreshold: number;
   forgeThresholdGrowth: number;
+  // The practice leg of the forge meter (board-redesign spec §8): each
+  // credited practice second feeds the player-wide meter this much
+  // progress, on top of received charge — practice fills the forge even
+  // before a Forge is owned. Against the initial threshold this paces the
+  // opening's first roll at ≈ 2 minutes of practice. Provisional tuning.
+  forgePracticeRate: number;
   // The focus-keyed generator's bank ratio (§2.3): each session end banks a
   // charge window of fraction × live practice seconds. Provisional tuning.
   chargeWindowFraction: number;
@@ -96,6 +102,7 @@ export const BALANCE: Balance = {
   goalBaseSlots: 2,
   forgeInitialThreshold: 60,
   forgeThresholdGrowth: 1.5,
+  forgePracticeRate: 0.5,
   chargeWindowFraction: 0.1,
 };
 
@@ -150,6 +157,12 @@ export const CATEGORY_OF: Record<ModuleType, Category> = {
   infusor: "infusor",
   forge: "forge",
 };
+
+// The one synthesizer test, shared by the rate pass, the roll rig, and the
+// arc's acquisition count — one predicate, never three that can drift.
+export function isSynthesizerType(type: ModuleType): boolean {
+  return CATEGORY_OF[type] === "synthesizer";
+}
 
 // Chargeable is a supertype family above the category level (ADR-0012): its
 // members accumulate received charge toward a threshold. The Forge is the
