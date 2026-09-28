@@ -33,9 +33,9 @@ import { chordOverlay, chipWidth, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatDate, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
-import { renderBoardLedger, renderAretePill, renderGameInfoStrip, rateDetailsHtml, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG } from "./ledger";
+import { renderBoardLedger, renderAretePill, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG } from "./ledger";
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
-import { containerWidth, FORMULA_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX } from "./container";
+import { containerWidth, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX } from "./container";
 import { liveSet } from "./live";
 
 const SPACING = 65;
@@ -2289,8 +2289,8 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   // viewport media query sheets every modal, so the cluster's rise reads
   // the wider of the two (§7, ADR-0029: the cluster alone reacts to open
   // sheets, and inspection never buries it).
-  const sheet = (kind === "rate" && containerWidth() < FORMULA_BREAKPOINT_PX) || window.innerWidth < PHONE_MAX_PX;
-  backdrop.classList.toggle("sheet", kind === "rate" && containerWidth() < FORMULA_BREAKPOINT_PX);
+  const sheet = (kind === "rate" && containerWidth() < RATE_DETAILS_BREAKPOINT_PX) || window.innerWidth < PHONE_MAX_PX;
+  backdrop.classList.toggle("sheet", kind === "rate" && containerWidth() < RATE_DETAILS_BREAKPOINT_PX);
   document.body.classList.toggle("modal-sheet-open", sheet);
   const extra =
     kind === "forge"
@@ -2320,12 +2320,12 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
               // change — chips highlight on pick, never a stale footer.
               : kind === "enter"
                 ? enterModalExtra(app)
-                // The rate sheet reprices only when its figures visibly
-                // move — the roster, the feats count, or the rate quantized
-                // to whole ν/s — so clock ticks never rebuild (and refocus)
-                // it every hundredth of a second.
+                // The rate sheet reprices only when its roster or feats
+                // count changes — the figures themselves ride live slots
+                // the tick fills in place, so clock ticks never rebuild
+                // (and collapse) an expanded row.
                 : kind === "rate"
-                  ? [deployedRosterKey(app.state), unlockedCount(app.state), Math.round(live.rate)]
+                  ? [deployedRosterKey(app.state), unlockedCount(app.state)]
                 : kind === "inventory"
                   ? app.state.modules.filter((m) => m.pos === null).map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`)
                   // The combine review's identity: the offered pair (issue
@@ -2335,7 +2335,13 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                     : null;
   const renderKey = modalKey(app, kind, extra);
   // Clock ticks must not replace a save textarea or steal dialog focus.
-  if (!backdrop.hidden && content.dataset.renderKey === renderKey) return;
+  if (!backdrop.hidden && content.dataset.renderKey === renderKey) {
+    // The rate sheet's figures ride the same live slots the popover fills:
+    // the tick fills them in place on this no-rebuild path, so an expanded
+    // row survives the clock (ADR-0037).
+    if (kind === "rate") updateRateDetailsLive(content, app.state, live);
+    return;
+  }
   backdrop.hidden = false;
   content.dataset.renderKey = renderKey;
   if (kind === "settings") renderSettingsModal(app, content);
@@ -2357,11 +2363,12 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
 
 // The rate sheet (§7): the module-linked rate details — the total plus one
 // row per synthesizer and the other modules' effects — as a modal sheet
-// over a scrim, opened by tapping the Rate cell below the 760px breakpoint
-// or the strip's rate read on phone. The same roster the Rate cell's
-// hover popover owns above the breakpoint; the sheet is its tap-up form.
-// A synthesizer row's tap closes the sheet and selects the module, so the
-// answer lands on the board it names.
+// over a scrim below the 760px breakpoint, opened by tapping the Rate cell
+// or the strip's rate read at every width. The same roster the Rate cell's
+// hover popover owns above the breakpoint, built the same way: live slots
+// the tick fills, so an expanded row survives the clock. A synthesizer
+// row's tap closes the sheet and selects the module, so the answer lands
+// on the board it names.
 function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): void {
   // The same basis every rate figure wears — live during flow, projected
   // while arranging — so the sheet can never disagree with the ledger it
@@ -2370,7 +2377,8 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
   content.innerHTML = `
     ${modalTop("RATE")}
     <h2 id="modal-title">What makes the rate.</h2>
-    <div class="rate-details-sheet">${rateDetailsHtml(app.state, snapshot, false)}</div>`;
+    <div class="rate-details-sheet">${rateDetailsHtml(app.state, snapshot, true)}</div>`;
+  updateRateDetailsLive(content, app.state, snapshot);
   const sheet = content.querySelector(".rate-details-sheet");
   if (sheet) wireSynthPicks(sheet, (id) => {
     app.closeModal();

@@ -381,10 +381,10 @@ h1, h2, h3, p { margin: 0; }
 .prod-cell strong { font: 15.5px var(--mono); font-weight: 400; white-space: nowrap; }
 
 /* The Rate cell (§7): the final total, and the door to the module-linked
-   details. Hover or focus discloses the popover from the cell; below the
-   760px breakpoint a tap opens the same roster as a sheet. The breakdown
-   lives beside the button inside the .rate-slot wrapper — its rows are
-   interactive, and a button may carry none. */
+   details. Hover or focus discloses the popover from the cell; a tap opens
+   the same roster as a sheet at every width. The breakdown lives beside
+   the button inside the .rate-slot wrapper — its rows are interactive, and
+   a button may carry none. */
 .rate-slot {
   position: relative;
   display: flex;
@@ -422,9 +422,9 @@ h1, h2, h3, p { margin: 0; }
 }
 .rate-slot:hover .rate-hint, .rate-slot:focus-within .rate-hint { color: var(--nous); border-color: var(--nous); }
 /* The details disclosure: the one rate popover, anchored to the Rate cell.
-   Hidden below the 760px breakpoint, where the tap-up sheet owns the
-   disclosure instead (one owner per width). The roster scrolls when a
-   grown board outgrows it. */
+   Hidden below the 760px breakpoint, where the popover has no room — the
+   tap-up sheet carries the roster there, as it does at every width. The
+   roster scrolls when a grown board outgrows it. */
 .rate-breakdown {
   display: none;
   position: absolute;
@@ -1707,9 +1707,9 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 
 /* ── The rate sheet and the inventory sheet (§7) ── */
 /* Both are plain modal surfaces: the rate sheet is the Rate cell's tap-up
-   disclosure below the 760px breakpoint — the module-linked roster the
-   popover owns above it; the inventory sheet re-docks the board-surface
-   tray for touch on portrait phone. */
+   disclosure — the module-linked roster at every width, presenting as a
+   bottom sheet below the 760px breakpoint; the inventory sheet re-docks
+   the board-surface tray for touch on portrait phone. */
 .rate-details-sheet { margin-top: 6px; }
 .rate-details-sheet .rd-row { padding: 6px 0; }
 .rate-details-sheet .rd-synth summary { padding: 6px 0; }

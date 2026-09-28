@@ -396,11 +396,16 @@ describe("the rate details disclosure (§7, issue #154)", () => {
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
   });
 
-  it("above the breakpoint the Rate cell tap does nothing — the hover popover discloses instead, and a row selects its module", () => {
+  it("above the breakpoint a tap opens the sheet too, the popover stays in the DOM, and a row selects its module", () => {
     setAppWidth(1200);
     app.render();
+    // A touch surface above the line has no hover and (on iOS) no
+    // focus-on-tap, so the cell's tap is its door at every width — the
+    // sheet presents as a plain modal here, not a bottom sheet.
     document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.ui.modal).toBeNull();
+    expect(app.ui.modal).toBe("rate");
+    expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(false);
+    app.closeModal();
     // The disclosure rides the cell's slot: the roster lives in the DOM.
     expect(document.querySelector("#rate-slot .rate-breakdown")).not.toBeNull();
     // A synthesizer row's tap identifies its module on the board: the
@@ -415,21 +420,60 @@ describe("the rate details disclosure (§7, issue #154)", () => {
     // A second tap releases it.
     row.querySelector("summary")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.ui.selected).toBeNull();
+    // A click inside the expanded legs is reading, never picking: copying
+    // a figure or scrolling the roster must not select the module.
+    (row as HTMLDetailsElement).open = true;
+    row.querySelector(".rd-legs")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.selected).toBeNull();
   });
 
   it("the boundary width itself stays on the desktop side of the 760px line", () => {
-    // Exactly 760: the popover owns the disclosure and the tap is inert —
-    // the same strict `<` the stylesheet's exclusive range (width < 760px)
-    // reads. An inclusive max-width here would leave the tap with no door.
+    // Exactly 760: the tap opens the sheet as a plain modal — the sheet
+    // presentation is the strict `<` range (width < 760px) the stylesheet
+    // reads. One pixel less: the same door opens as a bottom sheet.
     setAppWidth(760);
     app.render();
     document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.ui.modal).toBeNull();
-    // One pixel less: the door opens.
+    expect(app.ui.modal).toBe("rate");
+    expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(false);
+    app.closeModal();
     setAppWidth(759);
     app.render();
     document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.ui.modal).toBe("rate");
+    expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(true);
+    app.closeModal();
+  });
+
+  it("a leg's click never closes the sheet mid-read; only a row's tap does", () => {
+    setAppWidth(720);
+    app.render();
+    document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const modal = document.getElementById("modal-content")!;
+    const row = modal.querySelector(".rd-synth") as HTMLDetailsElement;
+    row.open = true;
+    row.querySelector(".rd-legs")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.modal).toBe("rate");
+    // The row's own tap closes the sheet and lands the selection.
+    row.querySelector("summary")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.selected).toBe(row.getAttribute("data-module-id"));
+  });
+
+  it("the sheet keeps its figures live in place — a tick never rebuilds it (ADR-0037)", () => {
+    setAppWidth(720);
+    app.render();
+    document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const modal = document.getElementById("modal-content")!;
+    const row = modal.querySelector(".rd-synth") as HTMLDetailsElement;
+    row.open = true;
+    // Stamp a sentinel into a live slot: the next render must overwrite it
+    // in place (the tick's fill), not rebuild the sheet around it.
+    modal.querySelector('[data-live="b-rate"]')!.textContent = "stale";
+    app.render();
+    expect(modal.querySelector('[data-live="b-rate"]')!.textContent).not.toBe("stale");
+    expect(modal.querySelector('[data-live="b-rate"]')!.textContent).toMatch(/ν\/s$/);
+    expect(row.open).toBe(true);
     app.closeModal();
   });
 
