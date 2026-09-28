@@ -376,46 +376,35 @@ h1, h2, h3, p { margin: 0; }
   overflow: visible;
 }
 .prod-cell { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 6px 14px 7px; min-width: 84px; }
-.prod-cell + .prod-cell, .prod-cell + button.prod-cell { border-left: 1px solid var(--line); }
+.prod-cell + .prod-cell { border-left: 1px solid var(--line); }
 .prod-label { font: 9px var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
 .prod-cell strong { font: 15.5px var(--mono); font-weight: 400; white-space: nowrap; }
 
-/* The Rate cell (§7): the operand chain ending in the live total IS the
-   rate display above the 760px breakpoint — no separate ν/s figure — and
-   hover or focus discloses the value breakdown from the cell itself. Below
-   the breakpoint the equation hides, the bare total stands alone, and a tap
-   opens the formula sheet. */
-.prod-cell-rate {
+/* The Rate cell (§7): the final total, and the door to the module-linked
+   details. Hover or focus discloses the popover from the cell; below the
+   760px breakpoint a tap opens the same roster as a sheet. The breakdown
+   lives beside the button inside the .rate-slot wrapper — its rows are
+   interactive, and a button may carry none. */
+.rate-slot {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 14px 7px;
+}
+.prod-cell-rate {
+  display: flex;
+  flex-direction: column;
   align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
   text-align: left;
-  border-top: 0;
-  border-bottom: 0;
-  border-left: 1px solid var(--line);
-  border-right: 0;
-  border-radius: 0;
   background: transparent;
   min-width: 0;
+  padding: 0;
 }
-.rate-equation {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font: 12.5px var(--mono);
-  color: var(--ink);
-  white-space: nowrap;
-  min-height: 20px;
-  max-width: 100%;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.rate-equation::-webkit-scrollbar { display: none; }
-.rate-equation .op, .prod-cell-rate .op { color: var(--muted); }
-.rate-equation strong { font-weight: 600; color: var(--nous); }
-.rate-total { display: none; font: 15.5px var(--mono); font-weight: 400; }
-.rate-term { display: inline-flex; align-items: center; gap: 4px; }
-.rate-term svg { width: 15px; height: 15px; flex-shrink: 0; stroke: var(--muted); }
-.term-glyph { color: var(--muted); }
+.rate-total { font: 15.5px var(--mono); font-weight: 400; }
 .rate-hint {
   position: absolute;
   top: 6px;
@@ -431,10 +420,11 @@ h1, h2, h3, p { margin: 0; }
   justify-content: center;
   pointer-events: none;
 }
-.prod-cell-rate:hover .rate-hint, .prod-cell-rate:focus-visible .rate-hint { color: var(--nous); border-color: var(--nous); }
-/* The breakdown disclosure: the one formula popover, anchored to the Rate
-   cell. Hidden below the 760px breakpoint, where the tap-up sheet owns the
-   disclosure instead. */
+.rate-slot:hover .rate-hint, .rate-slot:focus-within .rate-hint { color: var(--nous); border-color: var(--nous); }
+/* The details disclosure: the one rate popover, anchored to the Rate cell.
+   Hidden below the 760px breakpoint, where the tap-up sheet owns the
+   disclosure instead (one owner per width). The roster scrolls when a
+   grown board outgrows it. */
 .rate-breakdown {
   display: none;
   position: absolute;
@@ -442,30 +432,66 @@ h1, h2, h3, p { margin: 0; }
   left: -1px;
   z-index: 40;
   width: 350px;
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
   background: var(--panel-deep);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px 12px;
   box-shadow: 0 10px 26px var(--shadow);
 }
-.prod-cell-rate:hover .rate-breakdown,
-.prod-cell-rate:focus .rate-breakdown,
-.prod-cell-rate:focus-within .rate-breakdown { display: block; }
-.rate-breakdown-row {
-  display: grid;
-  grid-template-columns: 92px 84px 1fr;
-  gap: 8px;
+.rate-slot:hover .rate-breakdown,
+.rate-slot:focus-within .rate-breakdown { display: block; }
+/* The module-linked rows (popover and rate sheet share them). */
+.rd-row {
+  display: flex;
   align-items: baseline;
+  gap: 8px;
   padding: 4px 0;
   border-bottom: 1px solid var(--line-soft);
   font-size: 12px;
 }
-.rate-breakdown-row:last-child { border-bottom: 0; }
-.rate-breakdown-row .mono { text-align: right; color: var(--nous); font-size: 12px; }
-.rate-breakdown-row.total .mono,
-.rate-breakdown-row.total .bk-name { color: var(--ink); font-weight: 600; }
-.bk-name { font-size: 12px; color: var(--ink); }
-.bk-note { font-size: 10.5px; color: var(--muted); }
+.rd-row:last-child { border-bottom: 0; }
+.rd-name { color: var(--ink); font-size: 12px; }
+.rd-note { font-size: 10.5px; color: var(--muted); }
+.rd-val { margin-left: auto; text-align: right; color: var(--nous); font-size: 12px; white-space: nowrap; }
+.rd-total .rd-name, .rd-total .rd-val { color: var(--ink); font-weight: 600; }
+details.rd-synth { display: block; cursor: pointer; }
+.rd-synth summary { list-style: none; display: flex; align-items: baseline; gap: 8px; }
+.rd-synth summary::-webkit-details-marker { display: none; }
+.rd-synth summary::before {
+  content: "▸";
+  color: var(--muted);
+  font-size: 9px;
+  flex-shrink: 0;
+  transition: transform 0.12s ease;
+}
+.rd-synth[open] summary::before { transform: rotate(90deg); }
+.rd-synth .rd-name { flex-shrink: 0; }
+.rd-synth[open] summary, .rd-synth.picked summary .rd-name { color: var(--nous); }
+.rd-synth.picked summary::before { color: var(--nous); }
+.rd-legs { padding: 2px 0 6px 17px; cursor: default; }
+.rd-leg {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 11.5px;
+}
+.rd-leg-name { color: var(--muted); flex-shrink: 0; }
+.rd-leg .rd-val { font-size: 11.5px; }
+.rd-leg .rd-note { margin-left: 0; }
+.rd-leg .rd-note:empty { display: none; }
+.rd-heading {
+  padding: 8px 0 2px;
+  font: 9px var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+/* The Session cell reserves its lane (ADR-0031 as applied here): the fixed
+   decimals hold the width while the session ticks. */
+.prod-cell-session strong { min-width: 9ch; }
 
 /* The feats chip (§7): the ledger strip's neighbor, opening the feats page. */
 .feats-chip {
@@ -747,10 +773,10 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 }
 .info-read { display: inline-flex; align-items: baseline; gap: 4px; font: 12px var(--mono); }
 .info-read small { font-size: 10px; color: var(--muted); }
-/* The strip's rate read is the phone's door to the formula (§7): tapping it
-   opens the formula sheet — the ledger's Rate cell doesn't exist here, and
-   the operand chain never goes ambient at this width. It reads as a plain
-   strip entry, wearing the Rate cell's ⓘ. */
+/* The strip's rate read is the phone's door to the rate details (§7,
+   ADR-0037): tapping it opens the module-linked sheet — the ledger's Rate
+   cell doesn't exist here. It reads as a plain strip entry, wearing the
+   Rate cell's ⓘ. */
 .game-info-strip .info-rate {
   border: 0;
   background: none;
@@ -1518,7 +1544,7 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 /* Half-width and phone respond to the app container's own width (§7):
    half-width is fully featured — identical anatomy, in-place compaction
    only, nothing re-docks, nothing hides; portrait phone re-docks to the
-   thumb bar. The 760px line is the formula breakpoint (ledger.ts's
+   thumb bar. The 760px line is the rate-details breakpoint (ledger.ts's
    Rate-cell gate reads the same number); the 600px line is the phone
    composition (render.ts's bloom gate likewise). The rules use the
    exclusive range form — (width < Npx) — so the boundary width itself
@@ -1553,13 +1579,12 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 @container app (width < 760px) {
   .board-panel { padding: 12px 14px 0; }
   .board-ledger { flex-wrap: wrap; }
-  /* The formula's breakpoint (§7): the operand chain hides, the bare total
-     stands alone, and tapping the Rate cell opens the formula sheet. The
-     hover popover dies with the hover. */
-  .rate-equation { display: none; }
-  .rate-total { display: block; }
+  /* The rate details' breakpoint (§7): the hover popover yields to the
+     tap-up sheet — one disclosure owner per width — and the cell keeps
+     the bare total. */
   .prod-cell-rate { min-width: 64px; }
   .rate-hint { display: none; }
+  .rate-breakdown { display: none; }
   .candidates, .shop-list { grid-template-columns: 1fr; }
   .app-popover { width: min(372px, calc(100cqw - 32px)); }
 }
@@ -1630,7 +1655,7 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
   .modal { width: 100%; max-height: 78vh; border-radius: 14px 14px 0 0; animation: sheet-up 0.18s ease-out; }
 }
 
-/* The formula sheet (§7) presents below the 760px *container* breakpoint —
+/* The rate sheet (§7) presents below the 760px *container* breakpoint —
    the gate render.ts's Rate-cell tap reads — but the modal layer is
    body-level, outside the #app container, so the gate's decision arrives
    as a .sheet class on the backdrop rather than a container rule. */
@@ -1639,7 +1664,7 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 
 /* The cluster rises above the modal sheets too (§7, ADR-0029: the zoom
    cluster alone reacts to open sheets): the modal layer is body-level and
-   fixed, so its sheets — the formula sheet's gate below 760px and, on
+   fixed, so its sheets — the rate sheet's gate below 760px and, on
    phone, every modal — would bury a board-anchored cluster entirely. The
    body class (renderModal's) lifts it out of the board panel and clears
    the sheets' 78vh extent. Last among the cluster's sheet rules, so a
@@ -1680,15 +1705,14 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .shop-hint { display: block; margin-top: 3px; font-size: 11.5px; font-style: normal; color: var(--charge); }
 .goal-slots { font: 10px var(--mono); letter-spacing: 0.06em; color: var(--muted); margin: 0 0 10px; }
 
-/* ── The formula sheet and the inventory sheet (§7) ── */
-/* Both are plain modal surfaces: the formula sheet is the Rate cell's
-   tap-up disclosure below the 760px breakpoint — equation plus the value
-   breakdown; the inventory sheet re-docks the board-surface tray for touch
-   on portrait phone. */
-.formula-equation { font-size: 14px; color: var(--ink); white-space: normal; }
-.formula-equation .op { color: var(--muted); }
-.formula-equation strong { color: var(--nous); }
-.formula-breakdown { margin-top: 6px; }
+/* ── The rate sheet and the inventory sheet (§7) ── */
+/* Both are plain modal surfaces: the rate sheet is the Rate cell's tap-up
+   disclosure below the 760px breakpoint — the module-linked roster the
+   popover owns above it; the inventory sheet re-docks the board-surface
+   tray for touch on portrait phone. */
+.rate-details-sheet { margin-top: 6px; }
+.rate-details-sheet .rd-row { padding: 6px 0; }
+.rate-details-sheet .rd-synth summary { padding: 6px 0; }
 .inventory-sheet-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));

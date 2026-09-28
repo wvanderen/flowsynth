@@ -21,7 +21,7 @@ import {
 import { poolOutstanding } from "../engine/trust";
 import { arcCardDue } from "../engine/arc";
 import { goalCapacity, goalRequiredSeconds, goalSummary, goalTrackerState, type GoalTrackerState } from "../engine/goals";
-import { ACHIEVEMENTS, achievementBoostOf, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
+import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
 import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NoteEntry, RateSnapshot } from "../engine/types";
 import type { App, ChordHover, EnterKind, EnterSelection, ModalKind } from "./app";
 import { suppressNextClick } from "./click";
@@ -33,7 +33,7 @@ import { chordOverlay, chipWidth, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatDate, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
-import { renderBoardLedger, renderAretePill, renderGameInfoStrip, ampBreakdownHtml, breakdownRowsHtml, unlockedCount, FEATS_SVG } from "./ledger";
+import { renderBoardLedger, renderAretePill, renderGameInfoStrip, rateDetailsHtml, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG } from "./ledger";
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
 import { containerWidth, FORMULA_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX } from "./container";
 import { liveSet } from "./live";
@@ -60,7 +60,7 @@ function setText(node: Element | null | undefined, text: string): void {
   if (node && node.textContent !== text) node.textContent = text;
 }
 
-// The rate shown in the ledger, hexes, and formula: live during flow,
+// The rate shown in the ledger, hexes, and rate details: live during flow,
 // projected build rate while arranging in upgrade mode. Module panels preview
 // charge separately via computeRates(state, true).
 function currentSnapshot(state: GameState): RateSnapshot {
@@ -560,7 +560,7 @@ function renderAchievementsModal(app: App, content: HTMLElement, projected: Rate
   content.innerHTML = `
     ${modalTop("ACHIEVEMENTS")}
     <h2 id="modal-title">${count} of ${ACHIEVEMENTS.length} feats.</h2>
-    <p class="lead">Every feat speeds the rate a little — they accelerate, never gate. Each one adds into the Achievements line of the live rate breakdown.</p>
+    <p class="lead">Every feat speeds the rate a little — they accelerate, never gate. Each one adds into the Achievements leg of every synthesizer row in the rate details.</p>
     ${sections}`;
   wireClose(app);
 }
@@ -2282,15 +2282,15 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
     delete content.dataset.renderKey;
     return;
   }
-  // The formula sheet's own gate (§7): below the 760px container breakpoint
+  // The rate sheet's own gate (§7): below the 760px container breakpoint
   // it presents as a sheet over the scrim. The modal layer is body-level —
   // outside the #app container — so the gate's decision arrives as a class
   // the stylesheet can act on, not a container rule. On portrait phone the
   // viewport media query sheets every modal, so the cluster's rise reads
   // the wider of the two (§7, ADR-0029: the cluster alone reacts to open
   // sheets, and inspection never buries it).
-  const sheet = (kind === "formula" && containerWidth() < FORMULA_BREAKPOINT_PX) || window.innerWidth < PHONE_MAX_PX;
-  backdrop.classList.toggle("sheet", kind === "formula" && containerWidth() < FORMULA_BREAKPOINT_PX);
+  const sheet = (kind === "rate" && containerWidth() < FORMULA_BREAKPOINT_PX) || window.innerWidth < PHONE_MAX_PX;
+  backdrop.classList.toggle("sheet", kind === "rate" && containerWidth() < FORMULA_BREAKPOINT_PX);
   document.body.classList.toggle("modal-sheet-open", sheet);
   const extra =
     kind === "forge"
@@ -2320,16 +2320,12 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
               // change — chips highlight on pick, never a stale footer.
               : kind === "enter"
                 ? enterModalExtra(app)
-                // The formula sheet reprices only when a leg visibly moves:
-                // the rate quantized to whole ν/s keeps clock ticks from
-                // rebuilding (and refocusing) it every hundredth of a second.
-                : kind === "formula"
-                  ? [
-                      achievementBoostOf(app.state) > 1,
-                      projected.infusors > 0,
-                      Math.round(live.rate),
-                      app.state.session?.earned ?? null,
-                    ]
+                // The rate sheet reprices only when its figures visibly
+                // move — the roster, the feats count, or the rate quantized
+                // to whole ν/s — so clock ticks never rebuild (and refocus)
+                // it every hundredth of a second.
+                : kind === "rate"
+                  ? [deployedRosterKey(app.state), unlockedCount(app.state), Math.round(live.rate)]
                 : kind === "inventory"
                   ? app.state.modules.filter((m) => m.pos === null).map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`)
                   // The combine review's identity: the offered pair (issue
@@ -2352,34 +2348,34 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   else if (kind === "honesty") renderHonestyModal(app, content);
   else if (kind === "enter") renderEnterModal(app, content);
   else if (kind === "summary") renderSummaryModal(app, content);
-  else if (kind === "formula") renderFormulaModal(app, content, live);
+  else if (kind === "rate") renderRateModal(app, content, live);
   else if (kind === "inventory") renderInventorySheetModal(app, content);
   else if (kind === "combine") renderCombineModal(app, content);
   const firstButton = content.querySelector("button:not([disabled])");
   (firstButton as HTMLElement | null)?.focus();
 }
 
-// The formula sheet (§7): the full formula — equation plus value
-// breakdown — as a modal sheet over a scrim, opened by tapping the Rate
-// cell below the 760px breakpoint. The one place the formula is disclosed
-// on mobile; the Rate cell's hover popover owns the disclosure above it.
-function renderFormulaModal(app: App, content: HTMLElement, live: RateSnapshot): void {
-  const { state } = app;
+// The rate sheet (§7): the module-linked rate details — the total plus one
+// row per synthesizer and the other modules' effects — as a modal sheet
+// over a scrim, opened by tapping the Rate cell below the 760px breakpoint
+// or the strip's rate read on phone. The same roster the Rate cell's
+// hover popover owns above the breakpoint; the sheet is its tap-up form.
+// A synthesizer row's tap closes the sheet and selects the module, so the
+// answer lands on the board it names.
+function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): void {
   // The same basis every rate figure wears — live during flow, projected
   // while arranging — so the sheet can never disagree with the ledger it
   // discloses.
   const snapshot = live;
-  const achieving = achievementBoostOf(state) > 1;
-  const infused = snapshot.infusors > 0;
-  const chain = `<span class="op">(</span>${formatNumber(snapshot.synths)}${infused ? ` <span class="op">+</span> ${formatNumber(snapshot.infusors)}` : ""}<span class="op">)</span> <span class="op">×</span> emp ${formatNumber(snapshot.empowerment)}${achieving ? ` <span class="op">×</span> ach +${Math.round((snapshot.achievementBoost - 1) * 100)}%` : ""} <span class="op">=</span> <strong>${formatNumber(snapshot.rate)} ν/s</strong>`;
   content.innerHTML = `
-    ${modalTop("FORMULA")}
-    <h2 id="modal-title">The live rate.</h2>
-    <p class="lead formula-equation mono">${chain}</p>
-    <div class="formula-breakdown">
-      ${ampBreakdownHtml(infused)}
-      ${breakdownRowsHtml(snapshot)}
-    </div>`;
+    ${modalTop("RATE")}
+    <h2 id="modal-title">What makes the rate.</h2>
+    <div class="rate-details-sheet">${rateDetailsHtml(app.state, snapshot, false)}</div>`;
+  const sheet = content.querySelector(".rate-details-sheet");
+  if (sheet) wireSynthPicks(sheet, (id) => {
+    app.closeModal();
+    app.select(id);
+  });
   wireClose(app);
 }
 
