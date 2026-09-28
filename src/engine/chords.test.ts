@@ -450,7 +450,8 @@ describe("save continuity", () => {
     );
     expect(after.rate).toBeCloseTo(before.rate, 9);
     for (const [id, contribution] of before.contributions) {
-      expect(after.contributions.get(id)?.chordFactor).toBeCloseTo(contribution.chordFactor, 9);
+      // Every voice in this fixture is a synthesizer: a real factor each.
+      expect(after.contributions.get(id)?.chordFactor).toBeCloseTo(contribution.chordFactor!, 9);
       expect(after.contributions.get(id)?.value).toBeCloseTo(contribution.value, 9);
     }
   });

@@ -376,8 +376,9 @@ export interface Contribution {
   value: number;
   chordTerms: number;
   // The module's local chord multiplier (ADR-0036): 1 when a synthesizer
-  // sings no chord, 0 for the categories that never chord at all.
-  chordFactor: number;
+  // sings no chord, null for the categories that never chord at all —
+  // never 0, which would read as a multiplied-to-zero voice.
+  chordFactor: number | null;
   infusorBonus: number;
   chargeFactor: number;
   chargeStrength: number;

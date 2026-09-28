@@ -15,6 +15,7 @@ Playing with the reserved readout exposed an honesty gap (issue #153, 2026-09-27
 ## Consequences
 
 - Supersedes ADR-0022's rate model clause (`rate = (synths + infusors) × Π chord terms × empowerment × achievementBoost`) and board-redesign spec §4's composite line; the leg naming of ADR-0020 survives with chord factors folded into the synths leg.
+- Amends ADR-0025's reserved-readout provisions: chips carry the ×multiplier only — the "live ν/s contribution during a session" clause dies with the board-wide claim it measured — and the readout leads with the selected or hovered module's final ν/s, so a chordless module finally has a row. The reserved, overlay-pinned placement stands.
 - Stacking economics change shape: repeated voices now spend their instances on the members that sing them instead of amplifying the whole board, so concentrated chords pay their singers more and their strangers exactly nothing. Balance numbers (bonus tiers) are untouched tuning.
 - `analyzeChords` returns per-voice multipliers and participation instead of a board multiplier; the achievements' chord read, the would-form preview, and the chord chips all key off the per-voice view.
 - The rate equation is one operand shorter; the Chords breakdown row's value is the named-terms summary itself.

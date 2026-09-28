@@ -247,8 +247,9 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
       amplitude: deployedModule.type === "spacer" ? 0 : amplitude,
       value,
       chordTerms: 0,
-      // Non-synthesizers never chord: no terms, no local factor.
-      chordFactor: 0,
+      // Non-synthesizers never chord: no terms, no local factor — null,
+      // not 0, so no reader mistakes them for a multiplied-out voice.
+      chordFactor: null,
       infusorBonus: deployedModule.type === "spacer" ? 0 : localBonus,
       chargeFactor,
       chargeStrength: strength,

@@ -1,5 +1,6 @@
 import { createInitialState, createModule } from "./state";
 import { investment } from "./economy";
+import { isSynthesizerType } from "./constants";
 import type { GameState, Hex, ModuleInstance, ModuleType, RateSnapshot } from "./types";
 
 export function fresh(): GameState {
@@ -21,7 +22,7 @@ export function give(state: GameState, type: ModuleType, pos: Hex | null, level 
 export function sumSynthValues(snapshot: RateSnapshot): number {
   let sum = 0;
   for (const contribution of snapshot.contributions.values()) {
-    if (contribution.type === "additive" || contribution.type === "conditional") sum += contribution.value;
+    if (isSynthesizerType(contribution.type)) sum += contribution.value;
   }
   return sum;
 }
