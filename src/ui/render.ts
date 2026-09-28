@@ -1,6 +1,6 @@
 import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, emittedStrength, levelCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
-import { combinePreview } from "../engine/actions";
+import { combinePreview, type CombinePreview } from "../engine/actions";
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
@@ -1117,6 +1117,16 @@ function combinesWith(app: App, id: string, twinId: string | null | undefined): 
   return twinId != null && twinId !== id && combinePreview(app.state, id, twinId) !== null;
 }
 
+// The release-side half of the combine offer (issue #152): a matching twin
+// under the release point opens the review instead of the gesture's usual
+// landing — board-to-board, tray-to-board, board-to-tray, tray-to-tray.
+// True when the offer opened and the gesture is done.
+function offerCombineDrop(app: App, id: string, twinId: string | null | undefined): boolean {
+  if (!combinesWith(app, id, twinId)) return false;
+  app.offerCombine(id, twinId);
+  return true;
+}
+
 // The register's class: green for open, amber for occupied — every cell
 // that shows the register wears one of exactly these three.
 function dropClass(register: DropRegister): string {
@@ -1387,27 +1397,17 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
       const cellNode = target?.closest("[data-cell]");
       const tileNode = target?.closest("[data-inv]");
       // A matching twin under the release point offers the combine instead
-      // (issue #152) — board-to-board, tray-to-board, board-to-tray, and
-      // tray-to-tray. Every other drop keeps its gesture: occupied cells
+      // (issue #152); every other drop keeps its gesture — occupied cells
       // swap immediately, the tray retrieves.
       if (cellNode) {
         const cell = cellNode.getAttribute("data-cell")!.split(",").map(Number);
         const pos = { q: cell[0]!, r: cell[1]! };
         const occupant = deployedAt(app.state, pos);
-        if (occupant && combinesWith(app, id, occupant.id)) {
-          app.offerCombine(id, occupant.id);
-          return;
-        }
+        if (offerCombineDrop(app, id, occupant?.id)) return;
         app.pickCellThenPlace(id, pos);
         return;
       }
-      if (tileNode) {
-        const twinId = tileNode.getAttribute("data-inv");
-        if (combinesWith(app, id, twinId)) {
-          app.offerCombine(id, twinId);
-          return;
-        }
-      }
+      if (tileNode && offerCombineDrop(app, id, tileNode.getAttribute("data-inv"))) return;
       if (target?.closest("#inventory-zone")) {
         app.returnToInventory(id);
       }
@@ -2239,6 +2239,14 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   const backdrop = byId("modal");
   const content = byId("modal-content");
   if (!backdrop || !content) return;
+  // A dead combine offer — the pair dissolved under the review (mode
+  // flipped, a twin gone) — drops before the dispatch, so the dialog always
+  // has terms to present and no render pass ever nests a closeModal render
+  // inside itself.
+  if (app.ui.modal === "combine" && combineOfferTerms(app) === null) {
+    app.ui.modal = null;
+    app.ui.combineOffer = null;
+  }
   const kind = app.ui.modal;
   if (!kind) {
     backdrop.hidden = true;
@@ -2380,23 +2388,30 @@ function modalTop(label: string): string {
   return `<div class="modal-top"><span class="eyebrow">${label}</span><button id="close-modal" aria-label="Close dialog">✕</button></div>`;
 }
 
+// The combine review's terms (issue #152), read fresh: null whenever the
+// offer is gone or its pair can no longer combine — mode flipped, a twin
+// taken. The one read both the modal dispatch and the dialog use, so a
+// dead offer can never reach the dialog's markup.
+function combineOfferTerms(
+  app: App,
+): { drag: ModuleInstance; target: ModuleInstance; preview: CombinePreview } | null {
+  const offer = app.ui.combineOffer;
+  const drag = offer ? app.state.modules.find((m) => m.id === offer.dragId) : undefined;
+  const target = offer ? app.state.modules.find((m) => m.id === offer.targetId) : undefined;
+  const preview = offer && drag && target ? combinePreview(app.state, offer.dragId, offer.targetId) : null;
+  return offer && drag && target && preview ? { drag, target, preview } : null;
+}
+
 // The combine review (issue #152): the drop's terms — resulting rarity,
 // the retained higher level, the refund — laid out before either copy is
 // consumed. Cancel (button, ✕, backdrop, Esc) lands in closeModal and
 // leaves both modules exactly as they were; confirm performs the combine
 // and the result lands where the drop target was.
 function renderCombineModal(app: App, content: HTMLElement): void {
-  const offer = app.ui.combineOffer;
-  const drag = offer ? app.state.modules.find((m) => m.id === offer.dragId) : undefined;
-  const target = offer ? app.state.modules.find((m) => m.id === offer.targetId) : undefined;
-  const preview = offer && drag && target ? combinePreview(app.state, offer.dragId, offer.targetId) : null;
-  if (!offer || !drag || !target || !preview) {
-    // The pair dissolved under the review (mode flipped, a twin gone):
-    // nothing to offer. closeModal's nested render lands the modal layer's
-    // null branch — the only way state and DOM end up agreeing here.
-    app.closeModal();
-    return;
-  }
+  // renderModal drops a dead offer before the dispatch, so the terms are
+  // always readable here — the render pass stays free of a nested
+  // closeModal render.
+  const { drag, target, preview } = combineOfferTerms(app)!;
   const pairLine = (module: ModuleInstance) => `${META[module.type].name} · ${RARITY_LABEL[module.rarity]} · LV ${module.level}`;
   const destination = target.pos === null ? "The combined copy waits in the tray." : `The combined copy holds ${cellNoteOf(target.pos)}.`;
   content.innerHTML = `

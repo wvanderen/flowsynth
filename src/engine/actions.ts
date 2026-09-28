@@ -345,6 +345,10 @@ export function combine(state: GameState, id: string, partnerId?: string): Actio
   if (state.mode !== "upgrade") return fail("Combining happens between sessions.");
   const selected = findModule(state, id);
   if (!selected) return fail("Module not found.");
+  // The checks above and the pairing below only route the failure message;
+  // every term of the act — melt, keep, level, refund, next rarity — reads
+  // from the one pure preview (ADR-0035), so confirm can never disagree
+  // with what the review offered.
   let partner: ModuleInstance | undefined;
   if (partnerId !== undefined) {
     partner = findModule(state, partnerId);
@@ -355,17 +359,14 @@ export function combine(state: GameState, id: string, partnerId?: string): Actio
     partner = findCombinePartner(state, id);
   }
   if (!partner) return fail("No second copy of this type and rarity.");
-  if (NEXT_RARITY[selected.rarity] === null) return fail("The highest rarity does not combine further.");
+  const preview = combinePreview(state, id, partner.id);
+  if (!preview) return fail("The highest rarity does not combine further.");
 
-  const melt = meltOf(selected, partner);
-  const keep = melt === selected ? partner : selected;
-
-  const refund = melt.invested;
-  state.nous += refund;
-  const nextRarity = NEXT_RARITY[keep.rarity];
-  if (nextRarity === null) return fail("The highest rarity does not combine further.");
-  keep.rarity = nextRarity;
-  keep.level = Math.max(keep.level, melt.level);
+  const melt = findModule(state, preview.meltId)!;
+  const keep = findModule(state, preview.keepId)!;
+  state.nous += preview.refund;
+  keep.rarity = preview.nextRarity;
+  keep.level = preview.level;
   // The result lands where the drop target was (issue #152): the target
   // cell when a deployed copy received the drop, the tray when the target
   // waited in inventory.
@@ -373,7 +374,7 @@ export function combine(state: GameState, id: string, partnerId?: string): Actio
   melt.pos = null;
   state.modules = state.modules.filter((m) => m.id !== melt.id);
   state.combinations++;
-  return { ok: true, refund, unlocked: checkAchievements(state) };
+  return { ok: true, refund: preview.refund, unlocked: checkAchievements(state) };
 }
 
 export function placeModule(state: GameState, id: string, pos: Hex): ActionResult {

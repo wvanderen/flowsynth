@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { combine, combinePreview, endSession, findCombinePartner, startSession, upgradeModule } from "./actions";
-import { levelCost } from "./economy";
+import { computeRates, levelCost } from "./economy";
 import { fresh, give } from "./fixtures";
 import { hex } from "./hex";
 import type { GameState, ModuleType } from "./types";
@@ -117,6 +117,28 @@ describe("combination", () => {
     expect(target.level).toBe(2);
     expect(target.pos).toBeNull();
     expect([drag, target].filter((m) => s.modules.includes(m))).toHaveLength(1);
+  });
+
+  it("a tie-melt relocates the dropped copy and the vacated cell's chord dies (#152)", () => {
+    const s = fresh();
+    // C4 (the opening synth) + G4 + C5: a Fifth and an Octave are live.
+    const drag = leveled(s, "additive", 1, hex(1, 0)); // G4
+    const target = leveled(s, "additive", 1, hex(0, 1)); // C5
+    const before = computeRates(s, true);
+    expect(before.namedChords.map((c) => c.name).sort()).toEqual(["Fifth", "Octave"]);
+
+    // A level tie melts the target: the dropped copy survives and takes the
+    // target's cell, and the G4 it vacated takes its chord down with it —
+    // the relocation recomputes, nothing stale survives.
+    const result = combine(s, drag.id, target.id);
+    expect(result.ok).toBe(true);
+    expect(drag.pos).toEqual(hex(0, 1));
+    const after = computeRates(s, true);
+    expect(after.namedChords.map((c) => c.name)).toEqual(["Octave"]);
+    // The board rates exactly like the arrangement it became.
+    const reference = fresh();
+    give(reference, "additive", hex(0, 1));
+    expect(after.chordMultiplier).toBeCloseTo(computeRates(reference, true).chordMultiplier, 9);
   });
 
   it("leaves global meters untouched and works only in upgrade mode", () => {
