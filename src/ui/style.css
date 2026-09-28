@@ -634,6 +634,16 @@ h1, h2, h3, p { margin: 0; }
 body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite; }
 @keyframes grid-breath { 50% { opacity: 0.35; } }
 
+/* Board gestures are gestures, not text edits (#151): every drag surface —
+   the grid, the popped module face, and the tray tiles — denies selection,
+   so holding or dragging never highlights labels in Chrome. */
+#grid,
+.module-bloom,
+.inventory-tray {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 #grid { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; display: block; }
 
 /* The action row (§7): a left-edge icon dock floating over the board —
@@ -1282,8 +1292,7 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 .config-label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 
 /* The lattice's note labels (ADR-0021): every cell is an absolute note —
-   empty cells wear theirs beneath the plus so columns read as one note
-   name. */
+   empty cells wear theirs so columns read as one note name. */
 .hex-note { font-size: 11px; fill: var(--muted); letter-spacing: 0.04em; }
 
 /* ── Modals ────────────────────────────────────────── */
@@ -1656,7 +1665,6 @@ body.modal-sheet-open .zoom-cluster {
 .icon-btn:hover:not(:disabled) svg { color: var(--ink); }
 .hex.empty { fill: var(--panel-deep); stroke: var(--line-strong); stroke-dasharray: 3 5; }
 .cell-node > .hex-sub { fill: var(--muted); font: 9px var(--mono); }
-.empty-plus { fill: none; stroke: var(--muted); stroke-width: 1; }
 .cell-node:hover .hex { stroke-width: 2; }
 .cell-node:focus-visible { outline: none; }
 .cell-node:focus-visible .hex { stroke: var(--ink); stroke-width: 3; }

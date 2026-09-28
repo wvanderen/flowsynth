@@ -537,6 +537,28 @@ describe("the always-live board (§5)", () => {
     expect(grid.querySelector('[data-cell="0,0"] .face-note')!.textContent).toBe("C4");
   });
 
+  it("an empty cell reads as owned space: dashed outline and note, no add prompt (#151)", () => {
+    app.render();
+    const grid = document.getElementById("grid")!;
+    const empty = grid.querySelector('[data-cell="0,1"]')!;
+    // The dashed outline and the pitch name stay; the plus and the EMPTY
+    // CELL prompt are gone — an owned cell is not an add button.
+    expect(empty.querySelector(".hex.empty")).not.toBeNull();
+    expect(empty.querySelector(".hex-note")!.textContent).toBe("C5");
+    expect(empty.querySelector(".empty-plus")).toBeNull();
+    expect(empty.textContent).not.toContain("EMPTY CELL");
+  });
+
+  it("New cell stays the purchase entry point: armed frontier hexes still carry NEW CELL (#151)", () => {
+    app.state.nous = BALANCE.cellFirstCost;
+    app.render();
+    document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!.click();
+    expect(app.ui.buyingCell).toBe(true);
+    const grid = document.getElementById("grid")!;
+    const labels = [...grid.querySelectorAll(".hex-sub")].map((n) => n.textContent);
+    expect(labels).toContain("NEW CELL");
+  });
+
   it("every module is draggable with no arrange mode — nothing pinned, nothing refused", () => {
     app.render();
     cell(0, 0).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
