@@ -1,5 +1,6 @@
 import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, emittedStrength, levelCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
+import { combinePreview } from "../engine/actions";
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
@@ -1106,24 +1107,37 @@ function isTargetCell(app: App): boolean {
    dashed hulls, one per forming chord. The hover itself lives in UiState;
    only the class/layer refresh happens here, never a re-render. */
 
-type DropRegister = "open" | "occupied";
+type DropRegister = "open" | "occupied" | "combine";
+
+// Whether a drop of `id` onto `twinId` offers the combine instead of the
+// gesture's usual landing (issue #152): a real other module, matching type
+// and rarity, short of the highest tier. The one predicate both the hover
+// register and the release read — they can never disagree.
+function combinesWith(app: App, id: string, twinId: string | null | undefined): twinId is string {
+  return twinId != null && twinId !== id && combinePreview(app.state, id, twinId) !== null;
+}
 
 // The register's class: green for open, amber for occupied — every cell
-// that shows the register wears one of exactly these two.
+// that shows the register wears one of exactly these three.
 function dropClass(register: DropRegister): string {
-  return register === "open" ? "drop-open" : "drop-occupied";
+  return register === "open" ? "drop-open" : register === "combine" ? "drop-combine" : "drop-occupied";
 }
 
 // The register a drop onto `pos` would take: occupied (amber) whenever a
 // module sits there — a swap is coming, never a confirmation — green when
-// open. Null away from the hover, in flow, or onto the carried module's
-// own cell.
+// open, and the combine register when the occupant is the dragged module's
+// matching twin under a live drag (issue #152): its own tint, its own
+// confirmation. Null away from the hover, in flow, or onto the carried
+// module's own cell.
 function dropRegister(app: App, pos: Hex): DropRegister | null {
   const hover = app.ui.dropHover;
   if (!hover || app.state.mode !== "upgrade") return null;
   if (!sameHex(hover.pos, pos)) return null;
   const occupant = deployedAt(app.state, pos);
-  if (occupant && occupant.id !== hover.moduleId) return "occupied";
+  if (occupant && occupant.id !== hover.moduleId) {
+    if (app.dragging !== null && combinesWith(app, hover.moduleId, occupant.id)) return "combine";
+    return "occupied";
+  }
   if (occupant) return null;
   return "open";
 }
@@ -1143,7 +1157,9 @@ function setDropHover(app: App, moduleId: string | null, pos: Hex | null): void 
 function refreshDropPreview(app: App): void {
   const svg = document.getElementById("grid");
   if (!svg) return;
-  svg.querySelectorAll(".hex.drop-open, .hex.drop-occupied").forEach((node) => node.classList.remove("drop-open", "drop-occupied"));
+  svg.querySelectorAll(".hex.drop-open, .hex.drop-occupied, .hex.drop-combine").forEach((node) =>
+    node.classList.remove("drop-open", "drop-occupied", "drop-combine"),
+  );
   const hover = app.ui.dropHover;
   if (hover) {
     const register = dropRegister(app, hover.pos);
@@ -1167,6 +1183,9 @@ function ghostMarksHtml(app: App, projected?: RateSnapshot): string {
   if (!module) return "";
   const conducts = CATEGORY_OF[module.type] === "synthesizer" || module.type === "spacer";
   if (!conducts) return "";
+  // A combine offer previews no swap: the drop won't rearrange voices, it
+  // will consume the twin under the pointer (issue #152).
+  if (dropRegister(app, hover.pos) === "combine") return "";
   const current = (projected ?? computeRates(app.state, true)).namedChords;
   const preview = wouldFormPreview(app.state, hover.moduleId, hover.pos);
   const newcomers = newChordTerms(current, preview.chords);
@@ -1291,9 +1310,11 @@ function bindSeamHover(app: App, svg: SVGSVGElement): void {
 // Shared pointer-drag binding for grid modules and tray items: holding the
 // face starts a live drag in upgrade mode — no arrange mode exists — the
 // bloom collapses into the ghost, and the drop lands as a placement (an
-// occupied target swaps immediately, never confirms) or a retrieval into
-// the tray. Click-placement stays available without dragging. No module
-// refuses the drag — nothing is pinned on the carrierless board (ADR-0021).
+// occupied target swaps, except a matching twin: that drop offers the
+// combine, reviewed before anything is consumed, issue #152) or a
+// retrieval into the tray. Click-placement stays available without
+// dragging. No module refuses the drag — nothing is pinned on the
+// carrierless board (ADR-0021).
 function bindPointerDrag(app: App, element: Element, moduleId: string | (() => string | null)): void {
   element.addEventListener("pointerdown", (baseEvent: Event) => {
     const event = baseEvent as PointerEvent;
@@ -1364,11 +1385,31 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
       suppressNextClick();
       const target = document.elementFromPoint(ev.clientX, ev.clientY);
       const cellNode = target?.closest("[data-cell]");
+      const tileNode = target?.closest("[data-inv]");
+      // A matching twin under the release point offers the combine instead
+      // (issue #152) — board-to-board, tray-to-board, board-to-tray, and
+      // tray-to-tray. Every other drop keeps its gesture: occupied cells
+      // swap immediately, the tray retrieves.
+      if (cellNode) {
+        const cell = cellNode.getAttribute("data-cell")!.split(",").map(Number);
+        const pos = { q: cell[0]!, r: cell[1]! };
+        const occupant = deployedAt(app.state, pos);
+        if (occupant && combinesWith(app, id, occupant.id)) {
+          app.offerCombine(id, occupant.id);
+          return;
+        }
+        app.pickCellThenPlace(id, pos);
+        return;
+      }
+      if (tileNode) {
+        const twinId = tileNode.getAttribute("data-inv");
+        if (combinesWith(app, id, twinId)) {
+          app.offerCombine(id, twinId);
+          return;
+        }
+      }
       if (target?.closest("#inventory-zone")) {
         app.returnToInventory(id);
-      } else if (cellNode) {
-        const cell = cellNode.getAttribute("data-cell")!.split(",").map(Number);
-        app.pickCellThenPlace(id, { q: cell[0]!, r: cell[1]! });
       }
     };
     const up = (ev: PointerEvent) => finish(ev, true);
@@ -1460,21 +1501,10 @@ function renderBloom(app: App, projected: RateSnapshot): void {
   const benefit = lines.benefit;
   const cost = levelCost(module.level);
   const affordable = wholeNous(state) >= cost;
-  // Combine rides the expanded face — the module's action surface: two
-  // copies of one type and rarity merge into a single stronger copy (the
-  // panel this button once lived on is retired).
-  const partner = state.modules.find((m) => m.id !== module.id && m.type === module.type && m.rarity === module.rarity);
-  const combinable = state.mode === "upgrade" && partner !== undefined && module.rarity !== "rare";
-  const combineButton = combinable
-    ? `<button class="bloom-combine" id="bloom-combine" title="Combine with its ${RARITY_LABEL[module.rarity]} twin — one stronger copy, the lower copy's upgrades refunded">
-        <span class="bloom-combine-title">Combine</span>
-        <small class="bloom-combine-note">${RARITY_LABEL[module.rarity]} pair</small>
-      </button>`
-    : "";
   // The Forge's face readout moves per tick; its face tracks it.
   const forgeTick = module.type === "forge" ? Math.floor(state.forge.progress) : 0;
   const shape = phone ? "sheet" : "pop";
-  const key = JSON.stringify([shape, module.id, module.level, module.rarity, benefit, lines.contribution, affordable, forgeTick, combinable]);
+  const key = JSON.stringify([shape, module.id, module.level, module.rarity, benefit, lines.contribution, affordable, forgeTick]);
   // One frame read for both the pop question and the positioning below.
   const svg = document.getElementById("grid");
   const viewBox = (svg?.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
@@ -1511,10 +1541,8 @@ function renderBloom(app: App, projected: RateSnapshot): void {
           <small class="bloom-sheet-contrib mono">${lines.contribution}</small>
         </div>
         ${upgradeButton}
-        ${combineButton}
       </div>`;
       byId("bloom-upgrade")?.addEventListener("click", () => app.upgrade(module.id));
-      byId("bloom-combine")?.addEventListener("click", () => app.combinePair(module.id));
       host.hidden = false;
       return;
     }
@@ -1527,7 +1555,6 @@ function renderBloom(app: App, projected: RateSnapshot): void {
       <div class="bloom-readouts">
         ${inline ? `<p class="bloom-contribution mono">${lines.contribution}</p>` : ""}
         ${upgradeButton}
-        ${combineButton}
       </div>`;
     if (inline) {
       host.innerHTML = readouts;
@@ -1557,7 +1584,6 @@ function renderBloom(app: App, projected: RateSnapshot): void {
       if (faceNode) bindPointerDrag(app, faceNode, module.id);
     }
     byId("bloom-upgrade")?.addEventListener("click", () => app.upgrade(module.id));
-    byId("bloom-combine")?.addEventListener("click", () => app.combinePair(module.id));
   }
   if (phone) {
     host.hidden = false;
@@ -2269,8 +2295,12 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                       Math.round(live.rate),
                       app.state.session?.earned ?? null,
                     ]
-                  : kind === "inventory"
-                    ? app.state.modules.filter((m) => m.pos === null).map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`)
+                : kind === "inventory"
+                  ? app.state.modules.filter((m) => m.pos === null).map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`)
+                  // The combine review's identity: the offered pair (issue
+                  // #152). The terms are read fresh on rebuild.
+                  : kind === "combine"
+                    ? [app.ui.combineOffer?.dragId ?? null, app.ui.combineOffer?.targetId ?? null]
                     : null;
   const renderKey = modalKey(app, kind, extra);
   // Clock ticks must not replace a save textarea or steal dialog focus.
@@ -2289,6 +2319,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   else if (kind === "summary") renderSummaryModal(app, content);
   else if (kind === "formula") renderFormulaModal(app, content, live);
   else if (kind === "inventory") renderInventorySheetModal(app, content);
+  else if (kind === "combine") renderCombineModal(app, content);
   const firstButton = content.querySelector("button:not([disabled])");
   (firstButton as HTMLElement | null)?.focus();
 }
@@ -2347,6 +2378,44 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
 
 function modalTop(label: string): string {
   return `<div class="modal-top"><span class="eyebrow">${label}</span><button id="close-modal" aria-label="Close dialog">✕</button></div>`;
+}
+
+// The combine review (issue #152): the drop's terms — resulting rarity,
+// the retained higher level, the refund — laid out before either copy is
+// consumed. Cancel (button, ✕, backdrop, Esc) lands in closeModal and
+// leaves both modules exactly as they were; confirm performs the combine
+// and the result lands where the drop target was.
+function renderCombineModal(app: App, content: HTMLElement): void {
+  const offer = app.ui.combineOffer;
+  const drag = offer ? app.state.modules.find((m) => m.id === offer.dragId) : undefined;
+  const target = offer ? app.state.modules.find((m) => m.id === offer.targetId) : undefined;
+  const preview = offer && drag && target ? combinePreview(app.state, offer.dragId, offer.targetId) : null;
+  if (!offer || !drag || !target || !preview) {
+    // The pair dissolved under the review (mode flipped, a twin gone):
+    // nothing to offer. closeModal's nested render lands the modal layer's
+    // null branch — the only way state and DOM end up agreeing here.
+    app.closeModal();
+    return;
+  }
+  const pairLine = (module: ModuleInstance) => `${META[module.type].name} · ${RARITY_LABEL[module.rarity]} · LV ${module.level}`;
+  const destination = target.pos === null ? "The combined copy waits in the tray." : `The combined copy holds ${cellNoteOf(target.pos)}.`;
+  content.innerHTML = `
+    ${modalTop("COMBINE")}
+    <h2 id="modal-title">Combine these two?</h2>
+    <p class="lead">${pairLine(drag)}<br />+ ${pairLine(target)}</p>
+    <div class="combine-terms">
+      <div class="stat-row"><span>Resulting rarity</span><span class="mono">${RARITY_LABEL[preview.nextRarity]}</span></div>
+      <div class="stat-row"><span>Retained level</span><span class="mono">LV ${preview.level}</span></div>
+      <div class="stat-row"><span>Upgrade refund</span><span class="mono">${formatInt(preview.refund)} ν</span></div>
+    </div>
+    <p class="lead muted">${destination}</p>
+    <div class="modal-actions">
+      <button id="combine-cancel">Keep both</button>
+      <button id="combine-confirm" class="primary">Combine</button>
+    </div>`;
+  byId("combine-cancel")?.addEventListener("click", () => app.closeModal());
+  byId("combine-confirm")?.addEventListener("click", () => app.confirmCombine());
+  wireClose(app);
 }
 
 function wireClose(app: App): void {

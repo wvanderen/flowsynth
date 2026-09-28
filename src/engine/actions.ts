@@ -10,7 +10,7 @@ import { plannedTargetHit } from "./records";
 import { rollGoalOccurrences } from "./goals";
 import { syncAchievements } from "./achievements";
 import { freshAccounting } from "./trust";
-import type { GameState, Hex, ModuleInstance, SessionReflection, ShelfType } from "./types";
+import type { GameState, Hex, ModuleInstance, Rarity, SessionReflection, ShelfType } from "./types";
 
 export interface ActionResult {
   ok: boolean;
@@ -309,6 +309,38 @@ export function findCombinePartner(state: GameState, id: string): ModuleInstance
   return state.modules.find((other) => other.id !== id && other.type === module.type && other.rarity === module.rarity);
 }
 
+// Who melts: the lower level; a level tie leaves the dropped copy (the
+// first argument) standing. The one rule both the preview and the combine
+// read — the review can never promise a different melt.
+function meltOf(selected: ModuleInstance, partner: ModuleInstance): ModuleInstance {
+  return partner.level > selected.level ? selected : partner;
+}
+
+// The confirmation's terms (issue #152): what combining these two would
+// produce, read without touching state. Null whenever the pair cannot
+// combine — wrong mode, mismatched type or rarity, or the highest tier —
+// so the caller has nothing to offer.
+export interface CombinePreview {
+  keepId: string;
+  meltId: string;
+  nextRarity: Rarity;
+  level: number;
+  refund: number;
+}
+
+export function combinePreview(state: GameState, id: string, partnerId: string): CombinePreview | null {
+  if (state.mode !== "upgrade") return null;
+  const selected = findModule(state, id);
+  const partner = findModule(state, partnerId);
+  if (!selected || !partner || selected.id === partner.id) return null;
+  if (selected.type !== partner.type || selected.rarity !== partner.rarity) return null;
+  const nextRarity = NEXT_RARITY[selected.rarity];
+  if (nextRarity === null) return null;
+  const melt = meltOf(selected, partner);
+  const keep = melt === selected ? partner : selected;
+  return { keepId: keep.id, meltId: melt.id, nextRarity, level: keep.level, refund: melt.invested };
+}
+
 export function combine(state: GameState, id: string, partnerId?: string): ActionResult {
   if (state.mode !== "upgrade") return fail("Combining happens between sessions.");
   const selected = findModule(state, id);
@@ -325,12 +357,8 @@ export function combine(state: GameState, id: string, partnerId?: string): Actio
   if (!partner) return fail("No second copy of this type and rarity.");
   if (NEXT_RARITY[selected.rarity] === null) return fail("The highest rarity does not combine further.");
 
-  let keep = selected;
-  let melt = partner;
-  if (melt.level > keep.level) {
-    keep = partner;
-    melt = selected;
-  }
+  const melt = meltOf(selected, partner);
+  const keep = melt === selected ? partner : selected;
 
   const refund = melt.invested;
   state.nous += refund;
@@ -338,10 +366,11 @@ export function combine(state: GameState, id: string, partnerId?: string): Actio
   if (nextRarity === null) return fail("The highest rarity does not combine further.");
   keep.rarity = nextRarity;
   keep.level = Math.max(keep.level, melt.level);
-  if (keep.pos === null && melt.pos !== null) {
-    keep.pos = melt.pos;
-    melt.pos = null;
-  }
+  // The result lands where the drop target was (issue #152): the target
+  // cell when a deployed copy received the drop, the tray when the target
+  // waited in inventory.
+  keep.pos = partner.pos;
+  melt.pos = null;
   state.modules = state.modules.filter((m) => m.id !== melt.id);
   state.combinations++;
   return { ok: true, refund, unlocked: checkAchievements(state) };

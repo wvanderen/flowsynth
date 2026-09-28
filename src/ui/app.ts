@@ -64,6 +64,7 @@ export type ModalKind =
   | "summary"
   | "formula"
   | "inventory"
+  | "combine"
   | null;
 
 // The enter prompt's kind-first selection (issue #92's decided shape): the
@@ -86,6 +87,13 @@ export const freshEnterSelection = (): EnterSelection => ({ kind: "habit", habit
 // hovered names every chord it sings in. The reserved readout answers.
 export type ChordHover = { kind: "chord"; key: string } | { kind: "module"; moduleId: string };
 
+// The combine offer's pair (issue #152): the module the player dropped and
+// the matching twin that received the drop.
+export interface CombineOffer {
+  dragId: string;
+  targetId: string;
+}
+
 export interface UiState {
   selected: string | null;
   // The focus app whose console popover is open, if any (ADR-0012).
@@ -105,6 +113,10 @@ export interface UiState {
   // Cell purchase (ADR-0013): armed from the catalog, resolved by clicking a
   // frontier hex. The buy only lands when a frontier cell is clicked.
   buyingCell: boolean;
+  // The combine offer (issue #152): the pair a matching drop put up for
+  // review, held while the confirmation dialog stands. Cancel clears it
+  // and both copies stay untouched. Light furniture — never saved.
+  combineOffer: CombineOffer | null;
   modal: ModalKind;
   importText: string;
   importError: string | null;
@@ -192,6 +204,7 @@ export class App {
     dropHover: null,
     chordHover: null,
     buyingCell: false,
+    combineOffer: null,
     modal: null,
     importText: "",
     importError: null,
@@ -470,6 +483,7 @@ export class App {
     this.ui.dropHover = null;
     this.ui.chordHover = null;
     this.ui.buyingCell = false;
+    this.ui.combineOffer = null;
   }
 
   importText(text: string): boolean {
@@ -929,8 +943,25 @@ export class App {
     this.act(upgradeModule(this.state, id), `${META[module.type].name} upgraded to level ${nextLevel}.`);
   }
 
-  combinePair(id: string): void {
-    this.reportCombine(combine(this.state, id));
+  // The combine offer (issue #152): a matching module-on-module drop opens
+  // the review before either copy is consumed. Confirm performs the
+  // combine; every cancel path (button, ✕, backdrop, Esc) lands in
+  // closeModal, which drops the offer and leaves both copies untouched.
+  offerCombine(dragId: string, targetId: string): void {
+    this.ui.combineOffer = { dragId, targetId };
+    this.ui.modal = "combine";
+    this.render();
+  }
+
+  confirmCombine(): void {
+    const offer = this.ui.combineOffer;
+    this.ui.combineOffer = null;
+    this.ui.modal = null;
+    if (!offer) {
+      this.render();
+      return;
+    }
+    this.reportCombine(combine(this.state, offer.dragId, offer.targetId));
   }
 
   private reportCombine(result: ActionResult): void {
@@ -1359,6 +1390,7 @@ export class App {
       return;
     }
     this.ui.modal = null;
+    this.ui.combineOffer = null;
     this.ui.importError = null;
     this.render();
   }
