@@ -1877,22 +1877,19 @@ function appPanelBody(app: App, panel: FocusApp): string {
   const habitOptions = [`<option value="">Any habit</option>`]
     .concat(state.habits.filter((h) => !h.archived).map((h) => `<option value="${h.id}">${escapeHtml(h.name)}</option>`))
     .join("");
-  // The first console long goal (ADR-0012, issue #42): goal capacity as a
-  // dashed strip in the owning app's panel — one at a time, each purchase
-  // pricing the next past the build-out. Read-only in flow.
+  // The first console long goal (ADR-0012 as amended by ADR-0034, issue
+  // #150): goal capacity sold as one compact row below the slots — one
+  // more slot per purchase, every price far past the last. Read-only in
+  // flow.
   const longGoalPrice = longGoalCost(state.goalCapacityBought);
   const longGoalAffordable = wholeNous(state) >= longGoalPrice;
   const longGoalCountdown = upgrade ? practiceCountdown(longGoalPrice, wholeNous(state), computeRates(state, true).rate) : null;
-  const longGoalStrip = `
-    <div class="long-goal-strip">
-      <div class="long-goal-info">
-        <span class="eyebrow">CONSOLE LONG GOAL · ${state.goalCapacityBought + 1}</span>
-        <p class="long-goal-name">Goal capacity <span class="mono">+${BALANCE.goalSlotsPerLongGoal} slots</span></p>
-        <small class="mono" style="color:var(--muted)">${capacity} → ${capacity + BALANCE.goalSlotsPerLongGoal} slots</small>
-      </div>
+  const longGoalRow = `
+    <div class="long-goal-row">
+      <span class="long-goal-name">One more goal slot</span>
       <span class="shop-buy">
         <button class="primary small" id="long-goal-buy" ${upgrade && longGoalAffordable ? "" : "disabled"}
-          title="${upgrade ? (longGoalAffordable ? "Buy the next beat of goal capacity" : "Not enough nous yet") : "Purchases happen between sessions"}">${formatInt(longGoalPrice)} ν</button>
+          title="${upgrade ? (longGoalAffordable ? "Buy one more goal slot" : "Not enough nous yet") : "Purchases happen between sessions"}">${formatInt(longGoalPrice)} ν</button>
         ${upgrade ? `<small class="shop-countdown mono" data-live="long-goal-countdown">${longGoalCountdown ?? ""}</small>` : `<small class="shop-countdown">between sessions</small>`}
       </span>
     </div>`;
@@ -1912,9 +1909,15 @@ function appPanelBody(app: App, panel: FocusApp): string {
       <small class="mono" data-goal-minutes="${goal.id}">${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · ×${goal.completedCount} completed` : ""}</small>
     </div>`;
   };
+  // The panel reads as a run of slots (issue #150): tracked goals first —
+  // open work above finished occurrences — then the empty add-goal slot,
+  // and the capacity purchase trails the slots.
+  const orderedGoals = [...state.goals].sort((a, b) => Number(a.completed) - Number(b.completed));
   return `<section class="focus-controls">
     <p class="goal-slots mono">${state.goals.length}/${capacity} slots${upgrade ? "" : " · locked for this session"}</p>
-    ${longGoalStrip}
+    <div class="goal-list">
+      ${orderedGoals.map(goalRow).join("") || `<p class="empty-copy">No goals yet. Goals track practice conditions.</p>`}
+    </div>
     ${upgrade && state.goals.length < capacity ? `
       <div class="goal-create">
         <select id="goal-habit" aria-label="Habit">${habitOptions}</select>
@@ -1926,9 +1929,7 @@ function appPanelBody(app: App, panel: FocusApp): string {
         </select>
         <button class="primary small" id="goal-add">Add</button>
       </div>` : ""}
-    <div class="goal-list">
-      ${state.goals.map(goalRow).join("") || `<p class="empty-copy">No goals yet. Goals track practice conditions.</p>`}
-    </div>
+    ${longGoalRow}
   </section>`;
 }
 
@@ -2151,7 +2152,7 @@ function updateAppPanelLive(app: App, scope: ParentNode, projected: RateSnapshot
     const display = `${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · ×${goal.completedCount} completed` : ""}`;
     if (minutes && minutes.textContent !== display) minutes.textContent = display;
   }
-  // The long-goal strip's affordability moves with the balance between
+  // The long-goal row's affordability moves with the balance between
   // rebuilds: the buy button and its practice-minute countdown keep
   // themselves current, like the module upgrade CTA (§7).
   const longGoalBuy = scope.querySelector("#long-goal-buy") as HTMLButtonElement | null;

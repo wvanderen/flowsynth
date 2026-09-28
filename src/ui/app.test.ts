@@ -8,14 +8,14 @@ import { recordSummaryReflection } from "../engine/actions";
 import { writeNote } from "../engine/notes";
 import { BALANCE, SAVE_VERSION } from "../engine/constants";
 import { STORAGE_KEY, serialize } from "../engine/save";
-import { computeRates } from "../engine/economy";
+import { computeRates, longGoalCost } from "../engine/economy";
 import { startSession, endSession } from "../engine/actions";
 import { advance } from "../engine/advance";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport } from "../engine/trust";
 import { recordMissed, recordTargetHit } from "../engine/records";
 import { give } from "../engine/fixtures";
 import { hex, sameHex } from "../engine/hex";
-import { formatFixed, formatNumber } from "./format";
+import { formatFixed, formatInt, formatNumber } from "./format";
 import { lensFrame } from "./zoom";
 import type { GameState } from "../engine/types";
 import type { SignalChannels } from "./signals";
@@ -2898,5 +2898,76 @@ describe("cross-tab save conflicts (#128)", () => {
     const fresh = boot();
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).version).toBe(SAVE_VERSION);
     expect(fresh.state.mode).toBe("upgrade");
+  });
+});
+
+describe("the Goals panel's slots and purchase row (#150)", () => {
+  const panel = () => document.getElementById("app-popover")!;
+
+  it("reads tracked goals first — open work above completed — then the empty add-goal slot", () => {
+    const s = app.state;
+    const habit = createHabit(s, "Piano").habit!;
+    s.goalCapacityBought = 2; // room for the add-goal slot to stand beside the tracked three
+    createGoal(s, { habitId: habit.id, minutes: 20, schedule: "daily", now: DAY });
+    const recurringDone = createGoal(s, { habitId: habit.id, minutes: 5, schedule: "daily", now: DAY }).goal!;
+    accrueGoalProgress(s, habit.id, 300); // completes the daily goal until its reset
+    const onceDone = createGoal(s, { habitId: habit.id, minutes: 5, schedule: "once", now: DAY }).goal!;
+    accrueGoalProgress(s, habit.id, 300); // completes the once goal for good
+    app.openApp("goals");
+    const rows = [...panel().querySelectorAll(".goal-row")];
+    expect(rows).toHaveLength(3);
+    expect(rows[0]!.classList.contains("done")).toBe(false);
+    expect(rows[0]!.textContent).toContain("20 min");
+    // Completed occurrences trail the open work, creation order kept.
+    expect(rows[1]!.classList.contains("done")).toBe(true);
+    expect(rows[1]!.getAttribute("data-goal")).toBe(recurringDone.id);
+    expect(rows[2]!.classList.contains("done")).toBe(true);
+    expect(rows[2]!.getAttribute("data-goal")).toBe(onceDone.id);
+    // The slots then the purchase row: the add form trails the tracked
+    // goals, the capacity purchase trails the slots.
+    const sequence = [...panel().querySelectorAll(".goal-row, .goal-create, .long-goal-row")].map(
+      (el) => el.className,
+    );
+    expect(sequence.at(-2)).toContain("goal-create");
+    expect(sequence.at(-1)).toContain("long-goal-row");
+  });
+
+  it("a full tracker hides the add form and keeps the purchase row last", () => {
+    const s = app.state;
+    const habit = createHabit(s, "Piano").habit!;
+    createGoal(s, { habitId: habit.id, minutes: 20, schedule: "daily", now: DAY });
+    createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: DAY });
+    app.openApp("goals");
+    expect(panel().querySelector(".goal-slots")!.textContent).toContain("2/2");
+    expect(panel().querySelector(".goal-create")).toBeNull();
+    const section = panel().querySelector(".focus-controls")!.children;
+    expect(section[section.length - 1]!.className).toContain("long-goal-row");
+  });
+
+  it("the purchase row is compact: one more slot at the next price, label and help text dropped", () => {
+    app.openApp("goals");
+    const row = panel().querySelector(".long-goal-row")!;
+    expect(row.textContent).not.toContain("CONSOLE LONG GOAL");
+    expect(row.textContent).not.toContain("→");
+    expect(row.textContent).not.toContain("2 → 4");
+    expect(row.querySelector(".long-goal-name")!.textContent).toBe("One more goal slot");
+    expect(row.querySelector("#long-goal-buy")!.textContent).toBe(`${formatInt(longGoalCost(0))} ν`);
+  });
+
+  it("each purchase adds exactly one slot and reveals the next, steeper price — back-to-back when affordable", () => {
+    const s = app.state;
+    s.nous = longGoalCost(0) + longGoalCost(1);
+    app.openApp("goals");
+    const slots = () => panel().querySelector(".goal-slots")!.textContent;
+    const buy = () => document.getElementById("long-goal-buy") as HTMLButtonElement;
+    expect(slots()).toContain("0/2");
+    buy()!.click();
+    expect(slots()).toContain("0/3");
+    expect(s.goalCapacityBought).toBe(1);
+    expect(buy().textContent).toBe(`${formatInt(longGoalCost(1))} ν`);
+    // No occupancy gate: the second slot buys with the tracker still empty.
+    buy().click();
+    expect(slots()).toContain("0/4");
+    expect(s.goalCapacityBought).toBe(2);
   });
 });

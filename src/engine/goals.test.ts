@@ -23,11 +23,11 @@ function withHabit(s: ReturnType<typeof fresh>, name = "Piano") {
 }
 
 describe("goal slots and creation", () => {
-  it("starts at the base two slots; capacity grows only through the console long goal", () => {
+  it("starts at the base two slots; capacity grows one slot per long-goal purchase", () => {
     const s = fresh();
     expect(goalCapacity(s)).toBe(2);
     s.goalCapacityBought = 2;
-    expect(goalCapacity(s)).toBe(6);
+    expect(goalCapacity(s)).toBe(4);
   });
 
   it("sells goal capacity as the first console long goal — Goals is free, so only nous gates it", () => {
@@ -35,17 +35,22 @@ describe("goal slots and creation", () => {
     s.nous = longGoalCost(0);
     expect(buyGoalCapacity(s).ok).toBe(true);
     expect(s.goalCapacityBought).toBe(1);
-    expect(goalCapacity(s)).toBe(4);
+    expect(goalCapacity(s)).toBe(3);
     expect(s.nous).toBe(0);
   });
 
-  it("prices each long goal past the last, one at a time", () => {
+  it("adds exactly one slot per purchase, priced far past the last, with no occupancy gate (#150)", () => {
     const s = fresh();
-    expect(longGoalCost(1)).toBeGreaterThan(longGoalCost(0));
+    // Much steeper: each slot costs over twice the previous one.
+    expect(longGoalCost(1)).toBeGreaterThan(longGoalCost(0) * 2);
+    // Successive slots ride back-to-back whenever affordable — an empty
+    // tracker never blocks a purchase.
     s.nous = longGoalCost(0) + longGoalCost(1);
     expect(buyGoalCapacity(s).ok).toBe(true);
+    expect(goalCapacity(s)).toBe(3);
     expect(buyGoalCapacity(s).ok).toBe(true);
     expect(s.goalCapacityBought).toBe(2);
+    expect(goalCapacity(s)).toBe(4);
     expect(s.nous).toBe(0);
   });
 

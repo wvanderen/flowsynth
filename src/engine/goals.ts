@@ -8,10 +8,11 @@ export type { Goal, GoalCondition, GoalSchedule };
 // charge: goal templates are conditions only (ADR-0012). Daily and weekly
 // goals reset at the local calendar boundary; one-time goals keep their
 // slot until replaced in upgrade mode. Slot capacity grows only through the
-// console long goal (issue #42): goal capacity, bought in the Goals panel.
+// console long goal (issue #42): one more slot per purchase, bought in the
+// Goals panel.
 
 export function goalCapacity(state: GameState): number {
-  return BALANCE.goalBaseSlots + state.goalCapacityBought * BALANCE.goalSlotsPerLongGoal;
+  return BALANCE.goalBaseSlots + state.goalCapacityBought;
 }
 
 export function goalRequiredSeconds(goal: Goal): number {

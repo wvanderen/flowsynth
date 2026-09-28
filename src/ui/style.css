@@ -573,7 +573,7 @@ h1, h2, h3, p { margin: 0; }
 .history-line.muted { color: var(--muted); }
 
 /* Goals: tracked practice conditions in limited slots. */
-.goal-create { display: flex; gap: 6px; flex-wrap: wrap; }
+.goal-create { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
 .goal-create select, .goal-create input { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; font-size: 12.5px; }
 .goal-create input { width: 64px; }
 .goal-create select:focus, .goal-create input:focus { border-color: var(--charge); outline: none; }
@@ -589,12 +589,11 @@ h1, h2, h3, p { margin: 0; }
 .goal-track > span { display: block; height: 100%; background: var(--charge); transition: width 400ms ease-out; }
 .goal-row.done .goal-track > span { background: var(--charge); }
 .goal-row small { color: var(--muted); font-size: 10px; }
-/* The console long goal (ADR-0012): a dashed strip in the owning app's
-   panel — the hand-paced purchase beat reads as waiting work, not a row. */
-.long-goal-strip { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px dashed var(--line-strong); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
-.long-goal-strip .long-goal-name { margin: 4px 0 2px; font-size: 13px; font-weight: 550; }
-.long-goal-strip .long-goal-name .mono { font-size: 11px; color: var(--charge); }
-.long-goal-strip .shop-buy { align-items: flex-end; }
+/* The console long goal (ADR-0012): one compact dashed row trailing the
+   Goals panel's slots — the purchase waits below the work. */
+.long-goal-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px dashed var(--line-strong); border-radius: 8px; padding: 10px 12px; margin-top: 12px; }
+.long-goal-row .long-goal-name { font-size: 13px; font-weight: 550; }
+.long-goal-row .shop-buy { align-items: flex-end; }
 
 .stat-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
 .stat-row:last-child { border-bottom: 0; }

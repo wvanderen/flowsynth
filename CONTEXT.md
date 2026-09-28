@@ -163,7 +163,8 @@ The permanent, player-wide unlock that enables a focus app, bought from the acti
 The shared, scaling price sequence for app activations with free order — each rung costs more than the last regardless of which app it opens. It rests empty at launch, hidden until its first tenant (such as Tasks) is designed; its pricing is decided with that tenant.
 
 **Console long goal**:
-A hand-paced, one-at-a-time purchase beat for a console upgrade such as goal capacity; priced past the current build-out, gated behind its app's activation, and rendered as a dashed strip in the owning app's panel.
+A purchase beat for a console upgrade such as goal capacity: each purchase adds one increment — one goal slot — and reveals the next price, much steeper. The price is the pacing: players may purchase successive increments whenever they can afford them, with no occupancy gate. Gated behind its app's activation, and rendered as one compact dashed row in the owning app's panel, trailing the slots it extends.
+_Avoid_: CONSOLE LONG GOAL label (the visible panel drops it)
 
 **Habit**:
 A repeatable real-life practice, such as piano or cooking, that develops through credited practice time and manually logged practice time and can be selected for a flow session. Its development unlocks habit-specific customization options and is separate from nous.
