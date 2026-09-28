@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { combine, endSession, findCombinePartner, startSession, upgradeModule } from "./actions";
-import { levelCost } from "./economy";
+import { combine, combinePreview, endSession, findCombinePartner, startSession, upgradeModule } from "./actions";
+import { computeRates, levelCost } from "./economy";
 import { fresh, give } from "./fixtures";
 import { hex } from "./hex";
 import type { GameState, ModuleType } from "./types";
@@ -88,8 +88,57 @@ describe("combination", () => {
     const result = combine(s, opening.id, twin.id);
     expect(result.ok).toBe(true);
     expect(s.modules.filter((m) => m.type === "additive")).toHaveLength(1);
-    // The survivor keeps the opening's cell — nothing is pinned (ADR-0021).
-    expect(s.modules[0]!.pos).toEqual(hex(0, 0));
+    // The result lands where the drop target was — the tray twin's place
+    // (#152). Nothing is pinned (ADR-0021).
+    expect(s.modules[0]!.pos).toBeNull();
+  });
+
+  it("the confirmed result lands on the drop target's cell (#152)", () => {
+    const s = fresh();
+    // The dragged copy survives on level; the target's cell wins anyway.
+    const drag = leveled(s, "additive", 2, hex(1, 0));
+    const target = leveled(s, "additive", 1, hex(0, -1));
+    const result = combine(s, drag.id, target.id);
+    expect(result.ok).toBe(true);
+    expect(result.refund).toBe(10);
+    expect(drag.pos).toEqual(hex(0, -1));
+    // Of the two inputs, exactly the survivor remains.
+    expect([drag, target].filter((m) => s.modules.includes(m))).toHaveLength(1);
+  });
+
+  it("the confirmed result waits in the tray when the drop target was there (#152)", () => {
+    const s = fresh();
+    const drag = leveled(s, "additive", 1, hex(1, 0));
+    const target = leveled(s, "additive", 2, null);
+    const result = combine(s, drag.id, target.id);
+    expect(result.ok).toBe(true);
+    // The higher-level tray copy survives, and the result stays in the tray.
+    expect(target.rarity).toBe("uncommon");
+    expect(target.level).toBe(2);
+    expect(target.pos).toBeNull();
+    expect([drag, target].filter((m) => s.modules.includes(m))).toHaveLength(1);
+  });
+
+  it("a tie-melt relocates the dropped copy and the vacated cell's chord dies (#152)", () => {
+    const s = fresh();
+    // C4 (the opening synth) + G4 + C5: a Fifth and an Octave are live.
+    const drag = leveled(s, "additive", 1, hex(1, 0)); // G4
+    const target = leveled(s, "additive", 1, hex(0, 1)); // C5
+    const before = computeRates(s, true);
+    expect(before.namedChords.map((c) => c.name).sort()).toEqual(["Fifth", "Octave"]);
+
+    // A level tie melts the target: the dropped copy survives and takes the
+    // target's cell, and the G4 it vacated takes its chord down with it —
+    // the relocation recomputes, nothing stale survives.
+    const result = combine(s, drag.id, target.id);
+    expect(result.ok).toBe(true);
+    expect(drag.pos).toEqual(hex(0, 1));
+    const after = computeRates(s, true);
+    expect(after.namedChords.map((c) => c.name)).toEqual(["Octave"]);
+    // The board rates exactly like the arrangement it became.
+    const reference = fresh();
+    give(reference, "additive", hex(0, 1));
+    expect(after.chordMultiplier).toBeCloseTo(computeRates(reference, true).chordMultiplier, 9);
   });
 
   it("leaves global meters untouched and works only in upgrade mode", () => {
@@ -104,5 +153,47 @@ describe("combination", () => {
     expect(result.ok).toBe(true);
     expect(s.forge.progress).toBeCloseTo(42, 6);
     expect(findCombinePartner(s, a.id)).toBeUndefined();
+  });
+});
+
+describe("combinePreview", () => {
+  it("reports the next rarity, the retained level, and the melt's refund without touching state", () => {
+    const s = fresh();
+    const drag = leveled(s, "additive", 1, hex(1, 0));
+    const target = leveled(s, "additive", 2, null);
+    const nous = s.nous;
+    const preview = combinePreview(s, drag.id, target.id);
+    expect(preview).not.toBeNull();
+    expect(preview!.keepId).toBe(target.id);
+    expect(preview!.meltId).toBe(drag.id);
+    expect(preview!.nextRarity).toBe("uncommon");
+    expect(preview!.level).toBe(2);
+    // The dragged level-1 copy melts; its 10 ν of upgrades come back.
+    expect(preview!.refund).toBe(10);
+    // A pure read: nothing consumed, nothing refunded, nobody moved.
+    expect(s.modules).toHaveLength(3);
+    expect(s.nous).toBe(nous);
+    expect(drag.pos).toEqual(hex(1, 0));
+    expect(target.pos).toBeNull();
+  });
+
+  it("is null for mismatched pairs, the highest rarity, and flow mode", () => {
+    const s = fresh();
+    const additive = give(s, "additive", hex(1, 0));
+    const conditional = give(s, "conditional", null);
+    expect(combinePreview(s, additive.id, conditional.id)).toBeNull();
+
+    const rareA = give(s, "infusor", null);
+    const rareB = give(s, "infusor", null);
+    rareA.rarity = "rare";
+    rareB.rarity = "rare";
+    expect(combinePreview(s, rareA.id, rareB.id)).toBeNull();
+
+    startSession(s, 600);
+    const pairA = give(s, "forge", hex(0, 1));
+    const pairB = give(s, "forge", null);
+    expect(combinePreview(s, pairA.id, pairB.id)).toBeNull();
+    endSession(s);
+    expect(combinePreview(s, pairA.id, pairB.id)).not.toBeNull();
   });
 });

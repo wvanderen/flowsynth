@@ -136,12 +136,12 @@ composite = (synths + infusor uplift) × Π chord terms
 | Ambient chord chips | ×multiplier floating at every formed chord | the reserved readout: chips on demand, one spot (§6, ADR-0025) |
 | Flow drone | quiet ambient tone under sessions | retired before landing; sound stays event-driven — strum and chime (ADR-0025) |
 | Move / Return commands | explicit move flow, bloom buttons | dragging always live; drop on inventory dock to return |
-| Drag-onto-twin combine | dropping on an identical twin offered a merge | occupied drops swap, always — pitch lives in the cell; combine stays a panel button |
+| Drag-onto-twin combine | dropping on an identical twin offered a merge | occupied drops swap, always — pitch lives in the cell; combine stayed a panel button, then moved back onto the matching drop with a review (ADR-0035) |
 | Swap confirmation | confirm-or-preview on occupied drops | swap immediately; amber preview during drag |
 | Arrange action | dock button | removed everywhere; dragging is the move |
 | Canvas legend | encoding legend | encodings live on the surfaces that use them |
 | Module panels as a separate upgrade surface | panel-based upgrades (ADR-0018) | the expanded face carries the Upgrade button |
-| Inspector sidebar | module panel + dissolved overview beside the board | retired entirely (ADR-0026); the expanded face is the module's only surface — Upgrade and Combine ride the bloom, chords answer in the reserved readout |
+| Inspector sidebar | module panel + dissolved overview beside the board | retired entirely (ADR-0026); the expanded face is the module's only surface — Upgrade rides the bloom, chords answer in the reserved readout |
 | Idle tutorial helptext | ambient instruction line | deleted; opening arc + armed hints only |
 | `welcomeAcked` | save flag for the Carrier's upgrade CTA | retired; deleted by the v6 loader |
 | Formula legs `carrier` + `harmonics` | split breakdown legs | one `synths` leg (ADR-0022) |

@@ -53,7 +53,7 @@ The octave row the opening board begins on; rows are finite, generous, and symme
 The one-time premium paid on the first purchase into each new octave row. It taxes acquisition only — moving owned cells between rows is free — and does not advance the cell purchase scaler.
 
 **Expanded face**:
-The module's own face opened by a click in upgrade mode — the compact face's UI enlarged, adding only what the face doesn't say: the production contribution, the Upgrade button with its benefit, and the Combine button when an identical pair exists. It is the module's only surface (ADR-0026): the inspector sidebar and module panels are retired, and no second panel duplicates what the board already says.
+The module's own face opened by a click in upgrade mode — the compact face's UI enlarged, adding only what the face doesn't say: the production contribution and the Upgrade button with its benefit. It is the module's only surface (ADR-0026): the inspector sidebar and module panels are retired, and no second panel duplicates what the board already says.
 _Avoid_: Move button, Return button, module panel, inspector sidebar
 
 **Bloom**:
@@ -119,7 +119,7 @@ A purchased increase to a module's core power, paid for with nous in upgrade mod
 A module quality shown as an engraved ring count and plate tint; it improves how purchased levels scale and strengthens secondary effects, rather than granting free levels.
 
 **Combination**:
-The consumption of two modules of the same type and rarity to produce one of the next rarity, retaining the higher input level and refunding the lower-level input's nous upgrade expenditure. The player chooses one input's secondary effects to retain with the new rarity's improvements.
+The consumption of two modules of the same type and rarity to produce one of the next rarity, retaining the higher input level and refunding the lower-level input's nous upgrade expenditure. It is initiated by dropping one copy onto the other (board or tray, either direction) and confirming the reviewed outcome; the result lands where the drop target was. The player chooses one input's secondary effects to retain with the new rarity's improvements.
 
 **Forge**:
 The launch chargeable module; it accumulates received charge toward thresholds that mint forge rolls.

@@ -592,7 +592,7 @@ describe("the always-live board (§5)", () => {
   });
 
   it("the drop register previews amber over occupied cells, green over open ones", () => {
-    give(app.state, "additive", hex(1, 0)); // G4 — occupies the second cell
+    give(app.state, "conditional", hex(1, 0)); // G4 — occupied, but no twin of m1
     app.render();
     document.elementFromPoint = () => cell(0, 1);
     cell(0, 0).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
@@ -607,17 +607,32 @@ describe("the always-live board (§5)", () => {
     document.dispatchEvent(new MouseEvent("pointerup", { clientX: 220, clientY: 100 }));
   });
 
-  it("a drop onto an occupied cell swaps immediately — even identical twins — never confirming", () => {
-    // Two identical synths: pitch lives in the cell, so their swap is a
-    // plain swap (§5, §8) — occupied drops swap, always, without confirm.
-    const twin = give(app.state, "additive", hex(1, 0));
+  it("the drop register wears its combine tint over a matching twin, and the release opens the review (#152)", () => {
+    give(app.state, "additive", hex(1, 0)); // G4 — the opening's common twin
+    app.render();
+    document.elementFromPoint = () => cell(1, 0);
+    cell(0, 0).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 220, clientY: 100 }));
+    expect(cell(1, 0).querySelector(".hex")!.classList.contains("drop-combine")).toBe(true);
+    expect(cell(1, 0).querySelector(".hex")!.classList.contains("drop-occupied")).toBe(false);
+    // A combine offer promises no swap: no would-form ghosts over the twin.
+    expect(ghosts()).toHaveLength(0);
+    document.dispatchEvent(new MouseEvent("pointerup", { clientX: 220, clientY: 100 }));
+    expect(app.ui.modal).toBe("combine");
+  });
+
+  it("a drop onto an occupied cell swaps immediately — unless the occupant is a matching twin — and only twins confirm", () => {
+    // A different type: pitch lives in the cell, so the swap is a plain
+    // swap (§5, §8) — occupied drops swap without confirm; the review is
+    // for matching pairs alone (#152).
+    const stranger = give(app.state, "conditional", hex(1, 0));
     app.render();
     document.elementFromPoint = () => cell(1, 0);
     cell(0, 0).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
     document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
     document.dispatchEvent(new MouseEvent("pointerup", { clientX: 220, clientY: 100 }));
     expect(app.state.modules[0]!.pos).toEqual(hex(1, 0));
-    expect(twin.pos).toEqual(hex(0, 0));
+    expect(stranger.pos).toEqual(hex(0, 0));
     expect(app.state.modules).toHaveLength(2);
     expect(app.ui.placing).toBeNull();
     expect(app.ui.modal).toBeNull();
@@ -889,22 +904,152 @@ describe("the expanded face (§5)", () => {
     expect(bloom().querySelector("#bloom-upgrade")).not.toBeNull();
   });
 
-  it("Combine rides the expanded face when an identical pair exists", () => {
-    give(app.state, "additive", hex(1, 0)); // G4 — same type, same rarity
+  it("no Combine button rides any expanded-face presentation — combining lives on the drop (#152)", () => {
+    // A live pair exists, so the old button would show if it survived.
+    give(app.state, "additive", hex(1, 0));
     app.render();
     clickCell(0, 0);
-    const combine = bloom().querySelector<HTMLButtonElement>("#bloom-combine")!;
-    expect(combine).not.toBeNull();
-    expect(combine.textContent).toContain("common pair");
-    // Combining merges the pair: the selected copy carries the merged
-    // rarity, its twin is consumed.
-    combine.click();
-    expect(app.state.modules).toHaveLength(1);
-    expect(app.state.modules[0]!.id).toBe("m1");
-    expect(app.state.modules[0]!.rarity).toBe("uncommon");
-    // The bloom stands on the merged copy; no second common pair, no button.
     expect(bloom().hidden).toBe(false);
     expect(bloom().querySelector("#bloom-combine")).toBeNull();
+    expect(document.querySelector(".bloom-combine")).toBeNull();
+    // The phone bottom sheet — the same retirement at every presentation.
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+    app.render();
+    expect(bloom().classList.contains("sheet")).toBe(true);
+    expect(bloom().querySelector("#bloom-combine")).toBeNull();
+    expect(document.querySelector(".bloom-combine")).toBeNull();
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
+  });
+});
+
+describe("combining by drop (issue #152)", () => {
+  const cell = (q: number, r: number) => document.querySelector(`[data-cell="${q},${r}"]`)!;
+  const tile = (id: string) => document.querySelector(`[data-inv="${id}"]`)!;
+
+  function dragFrom(source: Element, target: Element): void {
+    document.elementFromPoint = () => target;
+    source.dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
+    document.dispatchEvent(new MouseEvent("pointerup", { clientX: 220, clientY: 100 }));
+    // A real release synthesizes a click, which the drag's suppressor eats;
+    // happy-dom fires none, so wear the guard out exactly as the browser
+    // would — then later clicks (Combine, Keep both) land for real.
+    document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  }
+
+  it("board to board: a matching drop opens the review, and cancel leaves both copies unchanged", () => {
+    // Both copies upgraded once: the pair is level, so the review shows
+    // the twin's 10 ν as the refund.
+    const m1 = app.state.modules[0]!;
+    m1.level = 1;
+    m1.invested = 10;
+    const twin = give(app.state, "additive", hex(1, 0), 1);
+    app.render();
+    const nous = app.state.nous;
+    dragFrom(cell(0, 0), cell(1, 0));
+    expect(app.ui.modal).toBe("combine");
+    expect(app.ui.combineOffer).toEqual({ dragId: "m1", targetId: twin.id });
+    const review = document.getElementById("modal-content")!;
+    expect(review.textContent).toContain("uncommon");
+    expect(review.textContent).toContain("LV 1");
+    expect(review.textContent).toContain("10");
+    // Cancel: neither copy is consumed, nothing moves, nothing refunds.
+    document.getElementById("combine-cancel")!.click();
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.combineOffer).toBeNull();
+    expect(app.state.modules).toHaveLength(2);
+    expect(m1.pos).toEqual(hex(0, 0));
+    expect(m1.rarity).toBe("common");
+    expect(m1.level).toBe(1);
+    expect(m1.invested).toBe(10);
+    expect(twin.pos).toEqual(hex(1, 0));
+    expect(twin.level).toBe(1);
+    expect(twin.invested).toBe(10);
+    expect(app.state.nous).toBe(nous);
+  });
+
+  it("board to board: confirming consumes both — next rarity, retained level, refund, result on the target cell", () => {
+    const m1 = app.state.modules[0]!;
+    m1.level = 1;
+    m1.invested = 10;
+    give(app.state, "additive", hex(1, 0), 1); // the board twin melts (tie: the dragged copy survives)
+    app.state.nous = 0;
+    app.render();
+    dragFrom(cell(0, 0), cell(1, 0));
+    document.getElementById("combine-confirm")!.click();
+    expect(app.state.modules).toHaveLength(1);
+    const merged = app.state.modules[0]!;
+    expect(merged.id).toBe(m1.id);
+    expect(merged.rarity).toBe("uncommon");
+    expect(merged.level).toBe(1);
+    expect(merged.pos).toEqual(hex(1, 0));
+    expect(app.state.nous).toBe(10);
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.combineOffer).toBeNull();
+  });
+
+  it("board to tray: dropping a board module onto its tray twin offers the combine; the result waits in the tray", () => {
+    const twin = give(app.state, "additive", null);
+    app.render();
+    dragFrom(cell(0, 0), tile(twin.id));
+    expect(app.ui.modal).toBe("combine");
+    expect(app.ui.combineOffer).toEqual({ dragId: "m1", targetId: twin.id });
+    document.getElementById("combine-confirm")!.click();
+    expect(app.state.modules).toHaveLength(1);
+    expect(app.state.modules[0]!.rarity).toBe("uncommon");
+    expect(app.state.modules[0]!.pos).toBeNull();
+  });
+
+  it("Esc on the review cancels: the offer drops and both copies stay untouched", () => {
+    const twin = give(app.state, "additive", hex(1, 0), 1);
+    app.render();
+    dragFrom(cell(0, 0), cell(1, 0));
+    expect(app.ui.modal).toBe("combine");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.combineOffer).toBeNull();
+    expect(app.state.modules).toHaveLength(2);
+    expect(app.state.modules[0]!.pos).toEqual(hex(0, 0));
+    expect(twin.pos).toEqual(hex(1, 0));
+  });
+
+  it("tray to board: dragging a tray module onto its deployed twin keeps the target cell", () => {
+    app.returnToInventory("m1");
+    const twin = give(app.state, "additive", hex(1, 0), 2); // the tray copy melts
+    app.render();
+    dragFrom(tile("m1"), cell(1, 0));
+    expect(app.ui.modal).toBe("combine");
+    document.getElementById("combine-confirm")!.click();
+    expect(app.state.modules).toHaveLength(1);
+    expect(app.state.modules[0]!.id).toBe(twin.id);
+    expect(app.state.modules[0]!.rarity).toBe("uncommon");
+    expect(app.state.modules[0]!.level).toBe(2);
+    expect(app.state.modules[0]!.pos).toEqual(hex(1, 0));
+  });
+
+  it("tray to tray: dropping a tray module onto its tray twin offers the combine", () => {
+    app.returnToInventory("m1");
+    const twin = give(app.state, "additive", null);
+    app.render();
+    dragFrom(tile("m1"), tile(twin.id));
+    expect(app.ui.modal).toBe("combine");
+    expect(app.ui.combineOffer).toEqual({ dragId: "m1", targetId: twin.id });
+    document.getElementById("combine-confirm")!.click();
+    expect(app.state.modules).toHaveLength(1);
+    expect(app.state.modules[0]!.rarity).toBe("uncommon");
+    expect(app.state.modules[0]!.pos).toBeNull();
+  });
+
+  it("rare twins still swap — the highest rarity does not combine", () => {
+    const twin = give(app.state, "additive", hex(1, 0));
+    app.state.modules[0]!.rarity = "rare";
+    twin.rarity = "rare";
+    app.render();
+    dragFrom(cell(0, 0), cell(1, 0));
+    expect(app.ui.modal).toBeNull();
+    expect(app.state.modules[0]!.pos).toEqual(hex(1, 0));
+    expect(twin.pos).toEqual(hex(0, 0));
+    expect(app.state.modules).toHaveLength(2);
   });
 });
 
