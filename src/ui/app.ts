@@ -48,9 +48,9 @@ import { browserChannels, type SignalChannels } from "./signals";
 
 // The session modal surfaces (§5.5, §5.7): the enter prompt precedes every
 // session; the loud summary follows every one; the honesty report interrupts
-// whenever provisional time waits (§1–2). The formula sheet is the Rate
-// cell's tap-up disclosure below the 760px breakpoint (§7); the inventory
-// sheet re-docks the board-surface tray for touch on portrait phone.
+// whenever provisional time waits (§1–2). The rate sheet is the Rate cell's
+// tap-up disclosure below the 760px breakpoint (§7); the inventory sheet
+// re-docks the board-surface tray for touch on portrait phone.
 export type ModalKind =
   | "settings"
   | "catalog"
@@ -62,7 +62,7 @@ export type ModalKind =
   | "honesty"
   | "enter"
   | "summary"
-  | "formula"
+  | "rate"
   | "inventory"
   | "combine"
   | null;

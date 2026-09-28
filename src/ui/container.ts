@@ -3,7 +3,7 @@
 // stylesheet's @container literals — those rules respond to #app's inline
 // size, and so does this reader, so a gate and its CSS always agree.
 export const PHONE_MAX_PX = 600;
-export const FORMULA_BREAKPOINT_PX = 760;
+export const RATE_DETAILS_BREAKPOINT_PX = 760;
 
 // The #app container's inline size — the same number the stylesheet's
 // @container rules respond to. In a measured document #app is the

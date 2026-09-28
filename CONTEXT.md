@@ -76,7 +76,7 @@ The provisional name for the game's main progression resource, spent on permanen
 The single final nous-per-second output: the sum of the synthesizers' final figures — `(synths + infusors) × empowerment × achievementBoost`. Modules contribute terms to this shared rate rather than producing independent timed payouts.
 
 **Final ν/s**:
-One module's own production figure: its base term with its local infusor, chord, charge, and achievement effects all included (ADR-0036). The displayed figures sum to the board's rate within rounding, and the selected module's final ν/s shows in the reserved readout.
+One module's own production figure: its base term with its local infusor, chord, charge, and achievement effects all included (ADR-0036). The displayed figures sum to the board's rate within rounding, the selected module's final ν/s shows in the reserved readout, and every synthesizer's row in the rate details leads with it (ADR-0037).
 
 **Composite**:
 The board's summed uncharged amplitude: the synths leg plus the infusor uplift, each carrying its members' local chord factors (ADR-0036). There is no board-wide chord multiplier over it.
@@ -145,13 +145,16 @@ The catalog's one-time guaranteed offers — the generator, one infusor, and a F
 The pure control surface organized around the Enter/Exit main switch — the dominant, centered session gate, with the clock beside it and Settings at the far right. The main switch is the mode indicator — off, glowing live, held paused — and the clock is itself the plan affordance: a small disclosure chevron on it opens the Time app, which wears no tile (Habit, Notes, and Goals carry the console's consistently sized icon-only tiles; on portrait phone a compact launcher stands in their place and opens the same three apps from one control, its entries wearing the selected habit and the tracker's goals state — ADR-0033). While a session runs, a thin progress strip along the console's bottom edge shows its progress in the switch's vermillion — filling on planned sessions, pulsing on open-ended ones, held while paused. The board never moves or dims while the console is in use.
 
 **Board ledger**:
-The strip docked above the board carrying Nous, Rate, and Session as one instrument, with the feats chip beside it — the board owns its production numbers. The Rate cell is the only door to the full formula: its collapsed operand chain ending in the live total is the rate display above the 760px breakpoint, and below it the bare total stands alone and a tap opens the formula as a modal sheet over a scrim. (On portrait phone the door moves to the game-info strip's rate read.)
+The strip docked above the board carrying Nous, Rate, and Session as one instrument, with the feats chip beside it — the board owns its production numbers. The Rate cell shows the final total and is the only door to the rate details: hover or focus opens the module-linked roster above the 760px breakpoint, and a tap opens the same roster as a modal sheet at every width. (On portrait phone the door moves to the game-info strip's rate read.)
 
 **Thumb bar**:
 The console's re-docked form on portrait phone — a bottom bar of Catalog / Forge / New cell / Inventory / Feats. The icon dock, the board-surface tray's tap access, and the feats chip all fold into it; nothing else changes.
 
 **Game-info strip**:
-The pill on the board surface, directly below the phone nav, carrying ν, rate, and session — production reads where the idle tutorial helptext used to sit. Its rate read is the phone's door to the formula sheet; the chain never goes ambient at this width. Feats appears once on phone, riding the thumb bar. Phone only; the board ledger serves every other width.
+The pill on the board surface, directly below the phone nav, carrying ν, rate, and session — production reads where the idle tutorial helptext used to sit. Its rate read is the phone's door to the rate details sheet — the same module-linked roster the Rate cell's popover holds at wider widths. Feats appears once on phone, riding the thumb bar. Phone only; the board ledger serves every other width.
+
+**Rate details**:
+The module-linked disclosure behind the rate figures (ADR-0037): one roster shared by the Rate cell's popover and the tap-up sheet — the final total, one row per synthesizer carrying its final ν/s and expanding into its base, chord, infusor, charge, and achievement legs, and the nonproducing modules' effects with no ν/s of their own. Tapping a synthesizer row selects its module on the board.
 
 **Zoom cluster**:
 The +/−/fit cluster floating over the board's right edge, beside wheel zoom. The board pans by dragging outside the grid at any zoom (inside when zoomed in), clamped so the board can never leave the frame. On portrait phone the cluster rises above any open sheet so inspection never gets buried.

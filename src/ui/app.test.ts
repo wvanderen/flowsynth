@@ -241,39 +241,72 @@ describe("the board ledger strip (§7)", () => {
     app.closeModal();
   });
 
-  it("the Rate cell carries the operand chain ending in the live total; the session total only exists while a session runs", () => {
+  it("the Rate cell shows the final total; the session read keeps its trailing zeros while a session runs", () => {
     app.render();
     const cell = document.getElementById("rate-cell")!;
-    expect(cell.querySelector(".rate-equation")).not.toBeNull();
-    expect(cell.querySelector('[data-live="m-synths"]')!.textContent).toBe(formatNumber(0.1));
-    expect(cell.querySelector('[data-live="m-rate"]')!.textContent).toBe(`${formatNumber(0.1)} ν/s`);
+    // No operand chain: the total is the display, the module-linked details
+    // live beside the cell (issue #154).
+    expect(cell.querySelector(".rate-equation")).toBeNull();
+    expect(cell.querySelector('[data-live="rate"]')!.textContent).toBe(`${formatNumber(0.1)} ν/s`);
     expect(document.querySelector('#board-ledger [data-live="session"]')!.textContent).toBe("—");
     const s = app.state;
     s.sessionsCompleted = 1;
     startSession(s, 600);
     advance(s, 30);
     app.render();
-    expect(document.querySelector('#board-ledger [data-live="session"]')!.textContent).toContain("ν");
+    const session = document.querySelector('#board-ledger [data-live="session"]')!.textContent!;
+    // A tight live surface (ADR-0031 as applied here): fixed decimals, so
+    // the trailing zero never comes and goes mid-session.
+    expect(session).toMatch(/\.\d{2} ν$/);
     endSession(s);
     app.render();
     expect(document.querySelector('#board-ledger [data-live="session"]')!.textContent).toBe("—");
   });
 
-  it("names the infusor term only when uplift reaches a synthesizer", () => {
+  it("the details disclose nonproducing modules' effects — never a second ν/s", () => {
     app.render();
-    expect(document.querySelector('[data-live="m-inf"]')).toBeNull();
+    // The launch roster is one synthesizer: no other-modules section yet.
+    expect(document.querySelector("#rate-slot .rd-other-row")).toBeNull();
     give(app.state, "infusor", hex(0, 1));
     app.render();
-    expect(document.querySelector('[data-live="m-inf"]')).not.toBeNull();
-    expect(document.querySelector('[data-live="m-inf"]')!.textContent).toBe(formatNumber(0.02));
-    expect(document.querySelector('[data-live="b-inf"]')!.textContent).toBe(`+${formatNumber(0.02)} ν/s`);
+    const row = document.querySelector("#rate-slot .rd-other-row")!;
+    expect(row.textContent).toContain("Infusor");
+    expect(row.querySelector('[data-live^="n-"]')!.textContent).toBe("+20% to adjacent");
+    // The uplifted synthesizer's own leg carries the same uplift...
+    expect(document.querySelector("#rate-slot .rd-synth .rd-legs")!.textContent).toContain("+20%");
+    // ...and the nonproducer's row never wears a ν/s figure.
+    expect(row.textContent).not.toContain("ν/s");
   });
 
-  it("carries the unified synths leg: (synths + infusors) × emp", () => {
+  it("every synthesizer row carries its final ν/s and expands into its legs; the rows sum to the board's rate", () => {
+    const s = app.state;
+    give(s, "additive", hex(1, 0)); // G4 — a Fifth with the launch C4
+    give(s, "infusor", hex(0, 1)); // uplift on C4
     app.render();
-    expect(document.querySelector('[data-live="m-synths"]')!.textContent).toBe(formatNumber(0.1));
-    expect(document.querySelector('[data-live="m-carrier"]')).toBeNull();
-    expect(document.querySelector('[data-live="m-harmonics"]')).toBeNull();
+    const snapshot = computeRates(s);
+    const rows = [...document.querySelectorAll("#rate-slot .rd-synth")];
+    expect(rows).toHaveLength(2);
+    let sum = 0;
+    for (const row of rows) {
+      const id = row.getAttribute("data-module-id")!;
+      const text = row.querySelector(`[data-live="s-${id}-v"]`)!.textContent!;
+      expect(text).toMatch(/^\+/);
+      sum += parseFloat(text.replace(/[+,]/g, "").replace(" ν/s", ""));
+    }
+    expect(Math.abs(sum - snapshot.rate)).toBeLessThan(0.01);
+    // The total row answers with the same figure.
+    expect(document.querySelector('#rate-slot [data-live="b-rate"]')!.textContent).toBe(
+      `${formatNumber(snapshot.rate)} ν/s`,
+    );
+    // The expanded legs: base, chords (named), infusor, charge, achievements.
+    const fifth = snapshot.namedChords[0]!;
+    const legs = rows[0]!.querySelector(".rd-legs")!.textContent!;
+    expect(legs).toContain("Base");
+    expect(legs).toContain(fifth.name);
+    expect(legs).toContain("Chords");
+    expect(legs).toContain("Infusor");
+    expect(legs).toContain("Charge");
+    expect(legs).toContain("Achievements");
   });
 
   it("the session summary's legs use the new names", () => {
@@ -328,60 +361,119 @@ function setAppWidth(px: number): void {
   Object.defineProperty(document.getElementById("app"), "clientWidth", { configurable: true, value: px });
 }
 
-describe("the formula disclosure (§7)", () => {
-  it("below the 760px container breakpoint, tapping the Rate cell opens the formula sheet over a scrim", () => {
+describe("the rate details disclosure (§7, issue #154)", () => {
+  it("below the 760px container breakpoint, tapping the Rate cell opens the rate sheet over a scrim", () => {
     setAppWidth(720);
     app.render();
     document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.ui.modal).toBe("formula");
+    expect(app.ui.modal).toBe("rate");
     // The modal layer is body-level, so the container gate's decision rides
     // a sheet class on the backdrop — bottom sheet over the scrim, whatever
     // the viewport media query thinks.
     expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(true);
     const modal = document.getElementById("modal-content")!;
-    expect(modal.querySelector(".formula-equation")).not.toBeNull();
-    expect(modal.textContent).toContain("Empowerment");
-    expect(modal.textContent).toContain("Achievements");
-    expect(modal.textContent).toContain("no chords yet");
+    // The sheet is the module-linked roster the popover holds above the
+    // line: the total, one row per synthesizer with its final ν/s, printed.
+    expect(modal.textContent).toContain("What makes the rate.");
+    expect(modal.querySelector(".rd-total")).not.toBeNull();
+    expect(modal.querySelectorAll(".rd-synth")).toHaveLength(1);
+    expect(modal.querySelector(".rd-synth")!.getAttribute("data-module-id")).toBeTruthy();
+    expect(modal.querySelector(".rd-synth .rd-legs")!.textContent).toContain("Achievements");
     // Closing drops the sheet presentation with the modal.
     app.closeModal();
     expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(false);
   });
 
-  it("the formula sheet rides the container, not the viewport", () => {
+  it("the rate sheet rides the container, not the viewport", () => {
     // A 700px container inside a wide viewport still presents as a sheet.
     setAppWidth(700);
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 1200 });
     app.render();
     document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.ui.modal).toBe("formula");
+    expect(app.ui.modal).toBe("rate");
     expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(true);
     app.closeModal();
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
   });
 
-  it("above the breakpoint the Rate cell tap does nothing — the hover popover discloses instead", () => {
+  it("above the breakpoint a tap opens the sheet too, the popover stays in the DOM, and a row selects its module", () => {
     setAppWidth(1200);
     app.render();
+    // A touch surface above the line has no hover and (on iOS) no
+    // focus-on-tap, so the cell's tap is its door at every width — the
+    // sheet presents as a plain modal here, not a bottom sheet.
     document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.ui.modal).toBeNull();
-    // The hover disclosure rides the cell: the breakdown lives in the DOM.
-    expect(document.getElementById("rate-cell")!.querySelector(".rate-breakdown")).not.toBeNull();
+    expect(app.ui.modal).toBe("rate");
+    expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(false);
+    app.closeModal();
+    // The disclosure rides the cell's slot: the roster lives in the DOM.
+    expect(document.querySelector("#rate-slot .rate-breakdown")).not.toBeNull();
+    // A synthesizer row's tap identifies its module on the board: the
+    // bloom lifts the module's own face off the grid and the row wears
+    // the picked mark.
+    const row = document.querySelector("#rate-slot .rd-synth")!;
+    row.querySelector("summary")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const id = row.getAttribute("data-module-id")!;
+    expect(app.ui.selected).toBe(id);
+    expect((document.getElementById("module-bloom") as HTMLElement).hidden).toBe(false);
+    expect(row.classList.contains("picked")).toBe(true);
+    // A second tap releases it.
+    row.querySelector("summary")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.selected).toBeNull();
+    // A click inside the expanded legs is reading, never picking: copying
+    // a figure or scrolling the roster must not select the module.
+    (row as HTMLDetailsElement).open = true;
+    row.querySelector(".rd-legs")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.selected).toBeNull();
   });
 
   it("the boundary width itself stays on the desktop side of the 760px line", () => {
-    // Exactly 760: the equation stands and the tap is inert — the same
-    // strict `<` the stylesheet's exclusive range (width < 760px) reads.
-    // An inclusive max-width here would hide the equation with no door.
+    // Exactly 760: the tap opens the sheet as a plain modal — the sheet
+    // presentation is the strict `<` range (width < 760px) the stylesheet
+    // reads. One pixel less: the same door opens as a bottom sheet.
     setAppWidth(760);
     app.render();
     document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.ui.modal).toBeNull();
-    // One pixel less: the door opens.
+    expect(app.ui.modal).toBe("rate");
+    expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(false);
+    app.closeModal();
     setAppWidth(759);
     app.render();
     document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.ui.modal).toBe("formula");
+    expect(app.ui.modal).toBe("rate");
+    expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(true);
+    app.closeModal();
+  });
+
+  it("a leg's click never closes the sheet mid-read; only a row's tap does", () => {
+    setAppWidth(720);
+    app.render();
+    document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const modal = document.getElementById("modal-content")!;
+    const row = modal.querySelector(".rd-synth") as HTMLDetailsElement;
+    row.open = true;
+    row.querySelector(".rd-legs")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.modal).toBe("rate");
+    // The row's own tap closes the sheet and lands the selection.
+    row.querySelector("summary")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.selected).toBe(row.getAttribute("data-module-id"));
+  });
+
+  it("the sheet keeps its figures live in place — a tick never rebuilds it (ADR-0037)", () => {
+    setAppWidth(720);
+    app.render();
+    document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const modal = document.getElementById("modal-content")!;
+    const row = modal.querySelector(".rd-synth") as HTMLDetailsElement;
+    row.open = true;
+    // Stamp a sentinel into a live slot: the next render must overwrite it
+    // in place (the tick's fill), not rebuild the sheet around it.
+    modal.querySelector('[data-live="b-rate"]')!.textContent = "stale";
+    app.render();
+    expect(modal.querySelector('[data-live="b-rate"]')!.textContent).not.toBe("stale");
+    expect(modal.querySelector('[data-live="b-rate"]')!.textContent).toMatch(/ν\/s$/);
+    expect(row.open).toBe(true);
     app.closeModal();
   });
 
@@ -392,7 +484,7 @@ describe("the formula disclosure (§7)", () => {
     app.render();
     expect(document.body.classList.contains("modal-sheet-open")).toBe(false);
     document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.ui.modal).toBe("formula");
+    expect(app.ui.modal).toBe("rate");
     expect(document.body.classList.contains("modal-sheet-open")).toBe(true);
     app.closeModal();
     expect(document.body.classList.contains("modal-sheet-open")).toBe(false);
@@ -2633,17 +2725,24 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     expect(document.querySelector('#thumb-bar [data-op="feats"]')).not.toBeNull();
   });
 
-  it("the strip's rate read is the phone's formula door: tapping it opens the formula sheet", () => {
+  it("the strip's rate read is the phone's details door: tapping it opens the rate sheet, and a row lands on its module", () => {
     app.render();
-    // The ledger's Rate cell is display:none at this width; the strip's
-    // read takes over, and the chain stays non-ambient on the board surface.
     const strip = document.getElementById("game-info-strip")!;
+    // The ledger's Rate cell is display:none at this width; the strip's
+    // read takes over, and the module-linked roster stays one tap away.
     expect(strip.querySelector(".rate-equation")).toBeNull();
     document.getElementById("info-rate")!.click();
-    expect(app.ui.modal).toBe("formula");
+    expect(app.ui.modal).toBe("rate");
     expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(true);
-    expect(document.getElementById("modal-content")!.querySelector(".formula-equation")).not.toBeNull();
-    app.closeModal();
+    const sheet = document.getElementById("modal-content")!;
+    expect(sheet.querySelector(".rd-total")).not.toBeNull();
+    expect(sheet.querySelectorAll(".rd-synth").length).toBeGreaterThan(0);
+    // A synthesizer row's tap closes the sheet and selects the module, so
+    // the answer lands on the board it names.
+    const row = sheet.querySelector(".rd-synth")!;
+    row.querySelector("summary")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.selected).toBe(row.getAttribute("data-module-id"));
   });
 
   it("the Arete pill floats over the board's bottom edge with its full anatomy", () => {

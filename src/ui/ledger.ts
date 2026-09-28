@@ -1,15 +1,18 @@
 // The board's production surfaces (§7): the ledger strip docked above the
-// board, the formula disclosed only from its Rate cell, the Arete pill
-// floating over the board's bottom edge, and the phone's game-info strip.
-// The status monitor dissolved into these; the console carries no readouts.
+// board, the module-linked rate details disclosed from its Rate cell, the
+// Arete pill floating over the board's bottom edge, and the phone's
+// game-info strip. The status monitor dissolved into these; the console
+// carries no readouts.
 import { ARETE_GRADUATIONS, ARETE_HORIZON, accumulatorFill, nextAccumulatorMark } from "../engine/accumulator";
-import { ACHIEVEMENTS, achievementBoostOf } from "../engine/achievements";
-import type { GameState, RateSnapshot } from "../engine/types";
+import { ACHIEVEMENTS } from "../engine/achievements";
+import { BALANCE, CATEGORY_OF, isSynthesizerType } from "../engine/constants";
+import { chargedFactor, modulePower } from "../engine/economy";
+import { noteNameOf } from "../engine/lattice";
+import type { Contribution, GameState, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
-import { FORMULA_BREAKPOINT_PX, containerWidth } from "./container";
-import { moduleIcon } from "./icons";
 import { chordTermLabel, formatCountdown, formatFixed, formatInt, formatNumber } from "./format";
 import { liveSet } from "./live";
+import { META } from "./meta";
 
 // Compact axis vocabulary for the graduation marks and the beat's mark name.
 function markLabel(mark: number): string {
@@ -20,109 +23,214 @@ export function unlockedCount(state: GameState): number {
   return Object.keys(state.achievements).length;
 }
 
-// ── The formula: one record per leg ─────────────────────────────────────
-// The chip's amplitude legs (ADR-0020 as amended by ADR-0022/0036): one
-// record per leg renders both the equation term and the breakdown row, so a
-// future leg lands in one place. Chords are local, so the synths leg is
-// every synthesizer's term with its own chord factor in; the infusor leg
-// joins only once uplift reaches a synth.
-const AMP_LEGS = [
-  { key: "synths", icon: "additive", name: "Synths", note: "every synthesizer's term with its chords", always: true },
-  { key: "inf", icon: "infusor", name: "Infusors", note: "adjacent uplift on the synths", always: false },
-] as const;
-
-function termIcon(type: "additive" | "infusor"): string {
-  return `<svg viewBox="-18 -18 36 36" aria-hidden="true" fill="none" stroke-width="1.6">${moduleIcon(type)}</svg>`;
+// ── The module-linked rate details (§7) ────────────────────────────────
+// The rate is a place, not a formula: one roster every disclosure channel
+// shares — the Rate cell's hover/focus popover above the 760px breakpoint,
+// and the sheet a tap opens at every width (the phone strip's read opens
+// the same sheet). One row per synthesizer carries its final ν/s and
+// expands into the base term with the local infusor, charge, chord, and
+// achievement effects; nonproducing modules disclose what they do to
+// others with no ν/s of their own to double-count. Both channels mount
+// live slots the tick fills, so a clock tick never rebuilds (and never
+// collapses) an open roster.
+interface SynthLegs {
+  base: number;
+  chordMult: number;
+  chordLabel: string;
+  infusorBonus: number;
+  chargeFactor: number;
+  chargeStrength: number;
+  boost: number;
 }
 
-function ampEquationHtml(infused: boolean): string {
-  return AMP_LEGS.filter((leg) => leg.always || infused)
-    .map(
-      (leg, i) =>
-        `${i > 0 ? '<span class="op">+</span>' : ""}<span class="rate-term" title="${leg.name} — ${leg.note}">${termIcon(leg.icon)}<span data-live="m-${leg.key}"></span></span>`,
-    )
-    .join("");
+// One synthesizer's decomposition, straight off its contribution: the
+// legs multiply back to the final figure exactly —
+// base × chordMult × (1 + infusor) × chargeFactor × boost = value.
+function synthLegsOf(snapshot: RateSnapshot, contribution: Contribution, module: ModuleInstance): SynthLegs {
+  const chordAmp = module.type === "conditional" ? 1 + BALANCE.conditionalChordBonus * contribution.chordTerms : 1;
+  const terms = snapshot.namedChords.filter((chord) => chord.moduleIds.includes(contribution.moduleId)).map(chordTermLabel);
+  return {
+    base: BALANCE.synthRate * modulePower(module),
+    // Synthesizers always chord: the engine sets a number here — null is
+    // the non-chorders' mark, never a synth's.
+    chordMult: chordAmp * (contribution.chordFactor ?? 1),
+    chordLabel: terms.length > 0 ? terms.join(" · ") : "none",
+    infusorBonus: contribution.infusorBonus,
+    chargeFactor: contribution.chargeFactor,
+    chargeStrength: contribution.chargeStrength,
+    boost: snapshot.achievementBoost,
+  };
 }
 
-export function ampBreakdownHtml(infused: boolean): string {
-  return AMP_LEGS.filter((leg) => leg.always || infused)
-    .map(
-      (leg) =>
-        `<div class="rate-breakdown-row"><span class="bk-name">${leg.name}</span><span class="mono" data-live="b-${leg.key}"></span><span class="bk-note">${leg.note}</span></div>`,
-    )
-    .join("");
+// A nonproducing module's effect on the board, in the bloom's own
+// vocabulary — never ν/s, so nothing here reads as a second producer.
+function effectText(contribution: Contribution, module: ModuleInstance, snapshot: RateSnapshot): string {
+  const category = CATEGORY_OF[contribution.type];
+  if (category === "generator") return `⌁${formatNumber(modulePower(module))} charge`;
+  if (category === "infusor") {
+    const strength = snapshot.chargeStrength.get(contribution.moduleId) ?? 0;
+    return `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(strength))}% to adjacent`;
+  }
+  if (category === "forge") return `${formatNumber(contribution.value)} progress/s`;
+  return "silent — conducts chords";
 }
 
-// The breakdown's legs below the amp legs — one record per row, the
-// AMP_LEGS pattern extended across the roster. The Rate cell's hover
-// popover and the formula sheet both render it, so the wording lands in
-// one place: the popover mounts live slots the tick fills (the chords row
-// names its terms and multipliers), the sheet prints the snapshot outright.
-interface RateRow {
-  key: string;
-  name: string;
-  note: string;
-  total?: boolean;
+// The live-slot key scheme, one place: the roster builder and the tick's
+// filler read the same spellings, so a rename can never land in one and
+// not the other. Synth rows key per leg (`s-<id>-<leg>`), nonproducer rows
+// carry their one effect (`n-<id>`), and `b-rate` is the total.
+const RATE_TOTAL_SLOT = "b-rate";
+const synthSlot = (id: string, leg: string): string => `s-${id}-${leg}`;
+const otherSlot = (id: string): string => `n-${id}`;
+
+// One record per row: the slot texts both the roster builder and the tick
+// fill read, so a leg's wording lands in one place (the house pattern the
+// old AMP_LEGS held). Keyed by slot suffix — `v` the final figure, the
+// base/chd/inf/chg legs, `chgn` the charge note, `n` a nonproducer's
+// effect.
+function rowSlotTexts(snapshot: RateSnapshot, contribution: Contribution, module: ModuleInstance): Record<string, string> {
+  if (isSynthesizerType(contribution.type)) {
+    const legs = synthLegsOf(snapshot, contribution, module);
+    return {
+      v: `+${formatNumber(contribution.value)} ν/s`,
+      base: `${formatNumber(legs.base)} ν/s`,
+      chd: `×${formatNumber(legs.chordMult)}`,
+      inf: `+${Math.round(legs.infusorBonus * 100)}%`,
+      chg: `×${formatNumber(legs.chargeFactor)}`,
+      chgn: legs.chargeStrength > 0 ? `⌁${formatNumber(legs.chargeStrength)} charge` : "",
+    };
+  }
+  return { n: effectText(contribution, module, snapshot) };
 }
 
-const RATE_ROWS: RateRow[] = [
-  // Chords are local (ADR-0036): the row names the terms and their
-  // multipliers — never a board-wide multiplier or +ν/s claim. The value
-  // the row carries is the named-terms summary itself.
-  { key: "chords", name: "Chords", note: "each chord multiplies its own voices" },
-  { key: "emp", name: "Empowerment", note: "net charge uplift on charged modules" },
-  { key: "ach", name: "Achievements", note: "each feat adds into the boost" },
-  { key: "rate", name: "Rate", note: "(synths + infusors) × empowerment × achievements", total: true },
-];
-
-// A row's printed value: the named-terms summary, the uplift percent, or
-// the total.
-function breakdownValue(key: string, snapshot: RateSnapshot): string {
-  if (key === "chords") return chordSummary(snapshot);
-  if (key === "emp") return `×${formatNumber(snapshot.empowerment)}`;
-  if (key === "ach") return `+${Math.round((snapshot.achievementBoost - 1) * 100)}%`;
-  return `${formatNumber(snapshot.rate)} ν/s`;
+// The deployed roster's identity — id, kind, level, rarity, cell — the
+// structural key both the ledger strip and the rate sheet rebuild on (a
+// move changes a note name, an upgrade a base figure).
+export function deployedRosterKey(state: GameState): string {
+  return state.modules
+    .filter((m) => m.pos !== null)
+    .map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}:${m.pos!.q},${m.pos!.r}`)
+    .join("|");
 }
 
-// The sheet's breakdown roster, snapshot printed (the amp legs render
-// ahead of it via ampBreakdownHtml).
-export function breakdownRowsHtml(snapshot: RateSnapshot): string {
-  return RATE_ROWS.map(
-    (row) =>
-      `<div class="rate-breakdown-row${row.total ? " total" : ""}"><span class="bk-name">${row.name}</span><span class="mono">${breakdownValue(row.key, snapshot)}</span><span class="bk-note">${row.note}</span></div>`,
-  ).join("");
+// The roster both channels render. `live` mounts data-live slots the tick
+// fills (updateRateDetailsLive); the sheet passes false and prints the
+// snapshot outright.
+export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: boolean): string {
+  const val = (slot: string, content: string): string =>
+    live ? `<span class="rd-val mono" data-live="${slot}"></span>` : `<span class="rd-val mono">${content}</span>`;
+  const note = (slot: string, content: string): string =>
+    live ? `<span class="rd-note" data-live="${slot}">${content}</span>` : `<span class="rd-note">${content}</span>`;
+
+  const synths: string[] = [];
+  const others: string[] = [];
+  for (const contribution of snapshot.contributions.values()) {
+    const module = state.modules.find((m) => m.id === contribution.moduleId);
+    if (!module) continue;
+    const slots = rowSlotTexts(snapshot, contribution, module);
+    const id = contribution.moduleId;
+    if (isSynthesizerType(contribution.type)) {
+      const cellNote = contribution.pitch !== null ? noteNameOf(contribution.pitch) : "";
+      synths.push(
+        `<details class="rd-row rd-synth" data-module-id="${id}">` +
+          `<summary><span class="rd-name">${META[contribution.type].name}</span>` +
+          `<span class="rd-note mono">${cellNote}</span>` +
+          val(synthSlot(id, "v"), slots.v!) +
+          `</summary>` +
+          `<div class="rd-legs">` +
+          `<div class="rd-leg"><span class="rd-leg-name">Base</span>` +
+          val(synthSlot(id, "base"), slots.base!) +
+          `</div>` +
+          `<div class="rd-leg"><span class="rd-leg-name">Chords</span>` +
+          val(synthSlot(id, "chd"), slots.chd!) +
+          `<span class="rd-note">${synthChordNote(snapshot, contribution, module)}</span>` +
+          `</div>` +
+          `<div class="rd-leg"><span class="rd-leg-name">Infusor</span>` +
+          val(synthSlot(id, "inf"), slots.inf!) +
+          `</div>` +
+          `<div class="rd-leg"><span class="rd-leg-name">Charge</span>` +
+          val(synthSlot(id, "chg"), slots.chg!) +
+          note(synthSlot(id, "chgn"), slots.chgn!) +
+          `</div>` +
+          `<div class="rd-leg"><span class="rd-leg-name">Achievements</span>` +
+          `<span class="rd-val mono">+${Math.round((snapshot.achievementBoost - 1) * 100)}%</span></div>` +
+          `</div></details>`,
+      );
+    } else {
+      others.push(
+        `<div class="rd-row rd-other-row"><span class="rd-name">${META[contribution.type].name}</span>` +
+          val(otherSlot(id), slots.n!) +
+          `</div>`,
+      );
+    }
+  }
+
+  return (
+    `<div class="rd-row rd-total"><span class="rd-name">Rate</span>` +
+    val(RATE_TOTAL_SLOT, `${formatNumber(snapshot.rate)} ν/s`) +
+    `</div>` +
+    synths.join("") +
+    (others.length > 0
+      ? `<div class="rd-heading">Other modules — effects, no ν/s</div>${others.join("")}`
+      : "")
+  );
 }
 
-export function chordSummary(snapshot: RateSnapshot): string {
-  const lines = snapshot.namedChords.map(chordTermLabel);
-  return lines.length > 0 ? lines.join(" · ") : "no chords yet — chords are named pitch sets over connected synths";
+// The chords leg's named terms — they change only with the roster, so the
+// note prints once at build time and never needs a slot of its own. The
+// caller already holds the module; none is re-found here.
+function synthChordNote(snapshot: RateSnapshot, contribution: Contribution, module: ModuleInstance): string {
+  return synthLegsOf(snapshot, contribution, module).chordLabel;
 }
 
-// The Rate cell: the operand chain ending in the live total. Above the 760px
-// breakpoint this collapsed equation IS the rate display — no separate ν/s
-// figure — and hover or focus discloses the value breakdown. Below it the
-// equation hides, the bare total stands alone, and a tap opens the full
-// formula as a modal sheet over a scrim. Chords have no operand: they are
-// local (ADR-0036), riding inside the synths leg and named in the breakdown.
-function rateCellHtml(achieving: boolean, infused: boolean): string {
-  return `<button class="prod-cell prod-cell-rate" id="rate-cell" title="Rate — the live formula; hover for the breakdown">
+// The details' live slots: one fill per render, keyed per module, from the
+// same record the builder printed — the tick never rewords a leg.
+export function updateRateDetailsLive(scope: ParentNode, state: GameState, snapshot: RateSnapshot): void {
+  const set = (live: string, content: string) => liveSet(scope, live, content);
+  set(RATE_TOTAL_SLOT, `${formatNumber(snapshot.rate)} ν/s`);
+  for (const contribution of snapshot.contributions.values()) {
+    const module = state.modules.find((m) => m.id === contribution.moduleId);
+    if (!module) continue;
+    const id = contribution.moduleId;
+    const slots = rowSlotTexts(snapshot, contribution, module);
+    if (isSynthesizerType(contribution.type)) {
+      set(synthSlot(id, "v"), slots.v!);
+      set(synthSlot(id, "base"), slots.base!);
+      set(synthSlot(id, "chd"), slots.chd!);
+      set(synthSlot(id, "inf"), slots.inf!);
+      set(synthSlot(id, "chg"), slots.chg!);
+      set(synthSlot(id, "chgn"), slots.chgn!);
+    } else {
+      set(otherSlot(id), slots.n!);
+    }
+  }
+}
+
+// A synthesizer row's tap identifies its module on the board; each channel
+// decides what a pick means (the popover selects in place, the sheet closes
+// first so the answer lands on the board it names). A click inside the
+// expanded legs reads as text, never as a pick — copying a figure or
+// scrolling the roster must not select a module or close the sheet.
+export function wireSynthPicks(host: ParentNode, pick: (id: string) => void): void {
+  host.addEventListener("click", (event) => {
+    if ((event.target as HTMLElement).closest(".rd-legs")) return;
+    const row = (event.target as HTMLElement).closest("[data-module-id]");
+    if (row) pick(row.getAttribute("data-module-id")!);
+  });
+}
+
+// The Rate cell: the final total, and the door to the module-linked
+// details. Hover or focus discloses the popover above the 760px
+// breakpoint; a tap opens the same roster as a sheet at every width —
+// hover alone can't serve a touch surface above the line, so the cell
+// keeps a door everywhere. The breakdown sits beside the button, not
+// inside it — its rows are interactive (a synth row selects its module on
+// the board), and a button may carry none.
+function rateCellHtml(): string {
+  return `<button class="prod-cell prod-cell-rate" id="rate-cell" title="Rate — the board's live total; hover or tap for the module details">
     <span class="prod-label">Rate</span>
-    <span class="rate-equation mono" aria-label="Live rate formula">
-      <span class="op">(</span>${ampEquationHtml(infused)}
-      <span class="op">)</span>
-      <span class="op">×</span><span class="rate-term" title="Charge empowerment — continuous while modules receive charge"><span class="term-glyph">emp</span><span data-live="m-emp"></span></span>
-      ${achieving ? `<span class="op">×</span><span class="rate-term" title="Achievements — each feat adds into the boost"><span class="term-glyph">ach</span><span data-live="m-ach"></span></span>` : ""}
-      <span class="op">=</span><strong data-live="m-rate"></strong>
-    </span>
     <strong class="mono rate-total" data-live="rate"></strong>
     <span class="rate-hint" aria-hidden="true">ⓘ</span>
-    <span class="rate-breakdown" role="tooltip">
-      ${ampBreakdownHtml(infused)}
-      ${RATE_ROWS.map(
-        (row) =>
-          `<div class="rate-breakdown-row${row.total ? " total" : ""}"><span class="bk-name">${row.name}</span><span class="mono" data-live="b-${row.key}"></span><span class="bk-note">${row.note}</span></div>`,
-      ).join("")}
-    </span>
   </button>`;
 }
 
@@ -142,60 +250,72 @@ export function featsChipHtml(count: number): string {
 // ── The board ledger strip (§7) ─────────────────────────────────────────
 // Nous / Rate / Session as one bordered instrument, the feats chip beside
 // it, docked directly above the board. The console's readout end is gone.
-// The 760px container breakpoint (§7): below it the Rate cell's equation
-// hides and its tap opens the full formula as a modal sheet over a scrim.
-// Above it the collapsed operand chain is ambient and hover discloses.
-// The gate reads the container's own inline size — the number the
-// stylesheet's @container rules respond to (container.ts holds it).
+// The 760px container breakpoint (§7): above it hover or focus discloses
+// the module-linked details from the Rate cell, and a tap opens the same
+// roster as a sheet at every width — a touch surface above the line has
+// no hover, so the cell's tap is its door everywhere. The gate reads the
+// container's own inline size — the number the stylesheet's @container
+// rules respond to (container.ts holds it).
 export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
   const host = document.getElementById("board-ledger");
   if (!host) return;
   const { state } = app;
-  const achieving = achievementBoostOf(state) > 1;
-  const infused = snapshot.infusors > 0;
   const feats = unlockedCount(state);
-  const key = `${achieving ? "ach" : "plain"}:${infused ? "inf" : "plain"}:${feats}`;
+  // Structural key: the deployed roster (deployedRosterKey — a move changes
+  // a note name, an upgrade a base figure) plus the feats count rebuilds
+  // the strip; every tick-moving value updates in place through the live
+  // slots, so an open popover or an expanded row survives the clock.
+  const key = `${feats}:${deployedRosterKey(state)}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.innerHTML = `<div class="prod-ledger" role="group" aria-label="Production">
         <div class="prod-cell"><span class="prod-label">Nous</span><strong class="mono" data-live="nous"></strong></div>
-        ${rateCellHtml(achieving, infused)}
-        <div class="prod-cell"><span class="prod-label">Session</span><strong class="mono" data-live="session"></strong></div>
+        <div class="prod-cell rate-slot" id="rate-slot">
+          ${rateCellHtml()}
+          <span class="rate-breakdown" role="group" aria-label="Module-linked rate details">${rateDetailsHtml(state, snapshot, true)}</span>
+        </div>
+        <div class="prod-cell prod-cell-session"><span class="prod-label">Session</span><strong class="mono" data-live="session"></strong></div>
       </div>
       ${featsChipHtml(feats)}`;
     document.getElementById("feats-chip")?.addEventListener("click", () => app.openModal("achievements"));
-    document.getElementById("rate-cell")?.addEventListener("click", () => {
-      if (containerWidth() < FORMULA_BREAKPOINT_PX) app.openModal("formula");
-    });
+    document.getElementById("rate-cell")?.addEventListener("click", () => app.openModal("rate"));
+    // A synth row's tap selects its module: the hex wears the selected
+    // stroke and the bloom opens over it — the details name the place,
+    // the board shows it.
+    wireSynthPicks(document.querySelector("#rate-slot .rate-breakdown")!, (id) => app.select(id));
   }
-  updateLedgerLive(host, state, snapshot.rate, snapshot);
+  updateLedgerLive(host, state, snapshot, app.ui.selected);
 }
 
-export function updateLedgerLive(scope: ParentNode, state: GameState, rate: number, snapshot?: RateSnapshot): void {
+export function updateLedgerLive(
+  scope: ParentNode,
+  state: GameState,
+  snapshot: RateSnapshot,
+  selectedId: string | null = null,
+): void {
   const set = (live: string, text: string) => liveSet(scope, live, text);
   set("nous", `${formatInt(state.nous)} ν`);
-  set("rate", `${formatNumber(rate)} ν/s`);
-  set("session", state.session ? `${formatNumber(state.session.earned)} ν` : "—");
-  if (!snapshot) return;
-  // The equation's operand chain (§7): it ends in the live total, and that
-  // collapsed equation is the rate display above the 760px breakpoint.
-  set("m-synths", formatNumber(snapshot.synths));
-  set("m-inf", formatNumber(snapshot.infusors));
-  set("m-emp", formatNumber(snapshot.empowerment));
-  set("m-ach", `+${Math.round((snapshot.achievementBoost - 1) * 100)}%`);
-  set("m-rate", `${formatNumber(snapshot.rate)} ν/s`);
-  set("b-synths", `+${formatNumber(snapshot.synths)} ν/s`);
-  set("b-inf", `+${formatNumber(snapshot.infusors)} ν/s`);
-  for (const row of RATE_ROWS) set(`b-${row.key}`, breakdownValue(row.key, snapshot));
+  set("rate", `${formatNumber(snapshot.rate)} ν/s`);
+  // The session read is a tight live surface (ADR-0031 as applied here):
+  // fixed decimals so the trailing zero never comes and goes, and the
+  // cell reserves its lane in the stylesheet.
+  set("session", state.session ? `${formatFixed(state.session.earned)} ν` : "—");
+  updateRateDetailsLive(scope, state, snapshot);
+  // A row answers for the module it names: the selected module's row
+  // wears the picked mark, refreshed in place — never a rebuild.
+  for (const row of scope.querySelectorAll<HTMLElement>(".rd-synth[data-module-id]")) {
+    row.classList.toggle("picked", row.dataset.moduleId === selectedId);
+  }
 }
 
 // ── The phone game-info strip (§7) ──────────────────────────────────────
 // Production reads on the board surface, where the tutorial helptext used
 // to sit: ν, rate, session. Feats appears once on phone — riding the thumb
-// bar — and the rate read is the strip's one tap: it opens the formula
-// sheet, the door the ledger's Rate cell provides at every other width.
-// The chain itself never goes ambient here — a 390px board has no room.
-// Displayed only below the 600px breakpoint; values update every render.
+// bar — and the rate read is the strip's one tap: it opens the module-
+// linked rate details as a sheet, the same door the ledger's Rate cell
+// provides at every other width (the ledger itself dissolves below the
+// 600px breakpoint). Displayed only below the 600px breakpoint; values
+// update every render.
 export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
   const host = document.getElementById("game-info-strip");
   if (!host) return;
@@ -203,9 +323,9 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
   if (!host.dataset.renderKey) {
     host.dataset.renderKey = "strip";
     host.innerHTML = `<span class="info-read"><small>ν</small> <strong class="mono" data-live="i-nous"></strong></span>
-      <button class="info-read info-rate" id="info-rate" title="Rate — tap for the full formula"><strong class="mono" data-live="i-rate"></strong> <small>ν/s</small><span class="info-hint" aria-hidden="true">ⓘ</span></button>
+      <button class="info-read info-rate" id="info-rate" title="Rate — tap for the module details"><strong class="mono" data-live="i-rate"></strong> <small>ν/s</small><span class="info-hint" aria-hidden="true">ⓘ</span></button>
       <span class="info-read"><small>session</small> <strong class="mono" data-live="i-session"></strong></span>`;
-    document.getElementById("info-rate")?.addEventListener("click", () => app.openModal("formula"));
+    document.getElementById("info-rate")?.addEventListener("click", () => app.openModal("rate"));
   }
   const set = (live: string, text: string) => liveSet(host, live, text);
   set("i-nous", formatInt(state.nous));
