@@ -269,7 +269,7 @@ describe("the board ledger strip (§7)", () => {
     expect(document.querySelector('[data-live="b-inf"]')!.textContent).toBe(`+${formatNumber(0.02)} ν/s`);
   });
 
-  it("carries the unified synths leg: (synths + infusors) × chords × emp", () => {
+  it("carries the unified synths leg: (synths + infusors) × emp", () => {
     app.render();
     expect(document.querySelector('[data-live="m-synths"]')!.textContent).toBe(formatNumber(0.1));
     expect(document.querySelector('[data-live="m-carrier"]')).toBeNull();
@@ -285,14 +285,18 @@ describe("the board ledger strip (§7)", () => {
     app.ui.modal = "summary";
     app.render();
     const modal = document.getElementById("modal-content")!;
-    expect(modal.textContent).toContain("the synth term alone");
+    expect(modal.textContent).toContain("the synth terms alone");
     give(s, "additive", hex(1, 0)); // G4 — a Fifth for the next session
+    give(s, "infusor", hex(0, 1)); // C5 — uplift on both voices
     startSession(s, null);
     advance(s, 60);
     endSession(s);
     app.render();
-    expect(modal.textContent).toContain(`synths +${formatNumber(0.2)} ν/s`);
-    expect(modal.textContent).toContain(`chords ×${formatNumber(1.3)}`);
+    // The synths leg carries the local chords; there is no board-wide
+    // chord-multiplier claim to lean on (ADR-0036).
+    expect(modal.textContent).toContain(`synths +${formatNumber(0.26)} ν/s`);
+    expect(modal.textContent).toContain(`infusors +${formatNumber(0.052)} ν/s`);
+    expect(modal.textContent).not.toContain("chords ×");
     expect(modal.textContent).not.toContain("carrier");
     expect(modal.textContent).not.toContain("harmonics");
   });
@@ -1076,7 +1080,7 @@ describe("always-on chord feedback (§6, #137)", () => {
     expect(mark.querySelectorAll(".chord-seam")).toHaveLength(1);
   });
 
-  it("the readout is a reserved spot: every chord the module sings in, selection wins", () => {
+  it("the readout is a reserved spot: the module's final ν/s leads, every chord it sings in follows", () => {
     // The power-chord region again: C4 sings in two chords — the Octave
     // (C4·C5) and the Fifth (C4·G4).
     give(app.state, "additive", hex(1, 0));
@@ -1084,24 +1088,36 @@ describe("always-on chord feedback (§6, #137)", () => {
     give(app.state, "additive", hex(0, 1));
     app.render();
     const chips = () => [...readout().querySelectorAll(".chord-readout-chip")].map((chip) => chip.textContent);
-    // Hovering G4 — it sings the doubled Fifth (both instances share it).
+    // Hovering G4 — its final ν/s leads (it sings the doubled Fifth: both
+    // instances share it), then the chord's chip.
     cell(1, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(readout().hidden).toBe(false);
-    expect(chips()).toEqual(["Fifth ×1.3 ×2"]);
-    // Hovering C4 asks both of its chords into the spot.
+    expect(chips()).toEqual([`+${formatNumber(0.1 * 1.3 ** 2)} ν/s`, "Fifth ×1.3 ×2"]);
+    // Hovering C4 asks its ν/s and both of its chords into the spot — the
+    // octave and its one fifth instance (the other pairs C5 · G4).
     cell(0, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(chips()).toEqual(["Octave ×1.15", "Fifth ×1.3 ×2"]);
+    expect(chips()).toEqual([`+${formatNumber(0.1 * 1.15 * 1.3)} ν/s`, "Octave ×1.15", "Fifth ×1.3 ×2"]);
     // Leaving clears them.
     document.getElementById("grid")!.dispatchEvent(new MouseEvent("pointerleave"));
     expect(readout().hidden).toBe(true);
-    // Selecting C4 pins the same pair without any hover.
+    // Selecting C4 pins the same row without any hover.
     const c4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(0, 0)))!;
     app.select(c4.id);
     expect(readout().hidden).toBe(false);
-    expect(chips()).toEqual(["Octave ×1.15", "Fifth ×1.3 ×2"]);
+    expect(chips()).toEqual([`+${formatNumber(0.1 * 1.15 * 1.3)} ν/s`, "Octave ×1.15", "Fifth ×1.3 ×2"]);
     // Deselecting empties the readout again.
     app.select(c4.id);
     expect(readout().hidden).toBe(true);
+  });
+
+  it("a chordless module still shows its final ν/s in the reserved readout", () => {
+    app.render();
+    const island = give(app.state, "additive", hex(5, 0)); // its own island
+    app.render();
+    const chips = () => [...readout().querySelectorAll(".chord-readout-chip")].map((chip) => chip.textContent);
+    app.select(island.id);
+    expect(readout().hidden).toBe(false);
+    expect(chips()).toEqual([`+${formatNumber(BALANCE.synthRate)} ν/s`]);
   });
 
   it("clicking a module during flow answers the lock — no selection, no bloom", () => {
@@ -1116,23 +1132,31 @@ describe("always-on chord feedback (§6, #137)", () => {
     endSession(app.state);
   });
 
-  it("chips carry the live ν/s contribution during a session", () => {
+  it("the readout carries the module's live ν/s during a session; chips stay names and multipliers", () => {
     give(app.state, "additive", hex(1, 0));
     app.state.sessionsCompleted = 1;
     startSession(app.state, 600);
     app.render();
     // The session is live: the stylesheet pulses the focused seams; the
-    // mark group itself carries no mode class. Hovering asks the live
-    // chip into the slot.
+    // mark group itself carries no mode class. Hovering asks the module's
+    // live ν/s into the slot, and the chip names the chord without any
+    // board-wide +ν/s claim (ADR-0036).
     expect(document.body.classList.contains("live")).toBe(true);
     expect(document.querySelector('[data-key="chord-marks"].flow')).toBeNull();
+    // The expected figure reads off the same live snapshot the render used —
+    // startSession's feats ride the boost.
+    const g4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(1, 0)))!;
+    const liveValue = `+${formatNumber(computeRates(app.state, true).contributions.get(g4.id)!.value)} ν/s`;
     cell(1, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(readout().textContent).toMatch(/^Fifth ×1\.3 · \+\d[\d,.]* ν\/s$/);
+    expect(readout().textContent).toContain(liveValue);
+    expect(readout().textContent).toContain("Fifth ×1.3");
+    expect(readout().textContent).not.toMatch(/×1\.3 · \+/);
     endSession(app.state);
-    // Back in upgrade the readout returns to the multiplier alone.
+    // Back in upgrade the same row holds, at the projected figure.
     app.render();
     cell(1, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(readout().textContent).toBe("Fifth ×1.3");
+    expect(readout().textContent).toContain(liveValue);
+    expect(readout().textContent).toContain("Fifth ×1.3");
   });
 
   it("overlapping chords draw their own seams, chord-colored", () => {
@@ -1172,9 +1196,10 @@ describe("always-on chord feedback (§6, #137)", () => {
     expect(marks).toHaveLength(2);
     expect(marks.filter((mark) => mark.classList.contains("chord-focus"))).toHaveLength(1);
     expect(marks.filter((mark) => mark.classList.contains("chord-fade"))).toHaveLength(1);
-    // The selected module's chord is the one the readout names.
+    // The selected module's row leads with its final ν/s and names its chord.
     expect(readout().hidden).toBe(false);
-    expect(readout().textContent).toBe("Octave ×1.15");
+    expect(readout().textContent).toContain(`+${formatNumber(0.115)} ν/s`);
+    expect(readout().textContent).toContain("Octave ×1.15");
     // Clearing the selection unfades everything and empties the readout.
     app.select(island.id);
     expect(document.querySelectorAll(".chord-mark.chord-fade")).toHaveLength(0);
@@ -1237,10 +1262,11 @@ describe("the dev panel's synth grant (#137)", () => {
     expect(granted.type).toBe("additive");
     expect(granted.pos).toEqual(hex(1, 0)); // G4 — the opening C4's fifth
     app.render();
-    // It chords at once; selecting the granted synth names it in the
-    // reserved readout.
+    // It chords at once; selecting the granted synth names its final ν/s
+    // and its chord in the reserved readout.
     app.select(granted.id);
-    expect(document.getElementById("chord-readout")!.textContent).toBe("Fifth ×1.3");
+    expect(document.getElementById("chord-readout")!.textContent).toContain("Fifth ×1.3");
+    expect(document.getElementById("chord-readout")!.textContent).toContain(`+${formatNumber(0.13)} ν/s`);
   });
 
   it("falls back to the tray when no free cell chords with a synth", () => {

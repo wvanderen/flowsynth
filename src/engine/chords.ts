@@ -58,7 +58,8 @@ interface RootMatch {
 // the required voices at each interval class. Instances count complete
 // voice-sets — doubled voices stack (each pair of same-class voices is its
 // own Octave; a double in a triad doubles that triad) — and every instance
-// multiplies the composite by the same bonus.
+// multiplies only its member voices by the same bonus (ADR-0036): chord
+// bonuses are local, so a distant module's rate never moves.
 function matchRoots(cluster: DeployedModule[]): RootMatch[] {
   const voices = cluster.filter((m) => m.type !== "spacer");
   if (voices.length === 0) return [];
@@ -94,7 +95,12 @@ function matchRoots(cluster: DeployedModule[]): RootMatch[] {
 
 export interface ChordAnalysis {
   namedChords: NamedChordTerm[];
-  multiplier: number;
+  // Each module's local chord multiplier (ADR-0036): the product of
+  // (1 + bonus) over every chord instance it sings in — overlapping and
+  // repeated instances stack on the member, and a module in no chord is
+  // absent (read it as 1). This is the rate-relevant read: the board-wide
+  // product would claim gains for modules the chord never touches.
+  voiceMultiplier: Map<string, number>;
   // Chord instances each module participates in: the Conditional's bonus
   // counts one per instance it belongs to (ADR-0022) — a doubled cluster
   // counts every complete voice-set the module sings in.
@@ -104,17 +110,19 @@ export interface ChordAnalysis {
 // The chord pass over the deployed synthesizers and spacers: per connected
 // cluster, per pattern and root, the cluster's voices decide whether the
 // chord forms and how many instances it stacks. Overlapping instances
-// (shared voices) and disjoint same-chord clusters (separate terms) both
-// stack multiplicatively. Bonus-only: no dissonance penalties, and the
-// board's finite cell budget is the only cap.
+// (shared voices) and disjoint same-chord clusters (separate terms) stack
+// multiplicatively on their members. Bonus-only: no dissonance penalties,
+// and the board's finite cell budget is the only cap.
 export function analyzeChords(synths: DeployedModule[], spacers: DeployedModule[] = []): ChordAnalysis {
   const namedChords: NamedChordTerm[] = [];
   const participation = new Map<string, number>();
+  const voiceMultiplier = new Map<string, number>();
   for (const cluster of chordClusters([...synths, ...spacers])) {
     for (const match of matchRoots(cluster)) {
       namedChords.push(match.term);
       // The instances a specific voice belongs to: choose it at its class,
-      // then any complete combination of the other classes.
+      // then any complete combination of the other classes. Each such
+      // instance multiplies that voice alone by the term's factor.
       for (const voice of cluster) {
         if (voice.type === "spacer") continue;
         const own = match.groups.findIndex(
@@ -125,11 +133,11 @@ export function analyzeChords(synths: DeployedModule[], spacers: DeployedModule[
           choose(match.groups[own]!.length - 1, match.multiplicity[own]! - 1) *
           match.groups.reduce((total, group, i) => (i === own ? total : total * choose(group.length, match.multiplicity[i]!)), 1);
         participation.set(voice.id, (participation.get(voice.id) ?? 0) + containing);
+        voiceMultiplier.set(voice.id, (voiceMultiplier.get(voice.id) ?? 1) * (1 + match.term.bonus) ** containing);
       }
     }
   }
-  const multiplier = namedChords.reduce((acc, chord) => acc * (1 + chord.bonus) ** chord.instances, 1);
-  return { namedChords, multiplier, participation };
+  return { namedChords, voiceMultiplier, participation };
 }
 
 // The would-form pass (board-redesign spec §5–§6): what the board would

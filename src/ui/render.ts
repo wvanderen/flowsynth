@@ -4,7 +4,7 @@ import { combinePreview, type CombinePreview } from "../engine/actions";
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
-import { BALANCE, CATEGORY_OF, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
+import { BALANCE, CATEGORY_OF, isSynthesizerType, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
 import { cellNoteOf, positionInRange } from "../engine/lattice";
 import { appActive, appLockNote, TILE_APPS, type FocusApp } from "../engine/apps";
@@ -22,7 +22,7 @@ import { poolOutstanding } from "../engine/trust";
 import { arcCardDue } from "../engine/arc";
 import { goalCapacity, goalRequiredSeconds, goalSummary, goalTrackerState, type GoalTrackerState } from "../engine/goals";
 import { ACHIEVEMENTS, achievementBoostOf, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
-import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NamedChordTerm, NoteEntry, RateSnapshot } from "../engine/types";
+import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NoteEntry, RateSnapshot } from "../engine/types";
 import type { App, ChordHover, EnterKind, EnterSelection, ModalKind } from "./app";
 import { suppressNextClick } from "./click";
 import { appIcon, moduleIcon } from "./icons";
@@ -32,7 +32,7 @@ import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chipWidth, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
-import { formatDate, formatInt, formatNumber, formatPracticeMinutes, chordLiveLabel, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
+import { formatDate, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
 import { renderBoardLedger, renderAretePill, renderGameInfoStrip, ampBreakdownHtml, breakdownRowsHtml, unlockedCount, FEATS_SVG } from "./ledger";
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
 import { containerWidth, FORMULA_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX } from "./container";
@@ -778,24 +778,25 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
   const bloomLifts = selectedModule !== null && bloomPops(viewMeet(frame), HEX_RADIUS);
 
   // The chord annotation is always on (§6, #137): every formed chord wears
-  // its colored seams — no chord view, no toggle. The name chip lives in
+  // its colored seams — no chord view, no toggle. The name chips live in
   // the reserved readout beside the board (the selected module's chord, or
-  // the hovered seam/voice's); during a session it carries the live ν/s
-  // contribution. Selection (§6) is the one emphasis: the selected
-  // module's chords stay focused and the rest fade.
+  // the hovered seam/voice's), carrying names and multipliers only — never
+  // a board-wide +ν/s claim (ADR-0036). The selected module's final ν/s
+  // rides the same spot, live during flow and present with no chord at all.
+  // Selection (§6) is the one emphasis: the selected module's chords stay
+  // focused and the rest fade.
   const deployedById = new Map(state.modules.filter((m) => m.pos !== null).map((m) => [m.id, m]));
   const focusIds = selectedModule?.pos ? [selectedModule.id] : [];
-  const labelFor = flow ? (chord: NamedChordTerm) => chordLiveLabel(chord, snapshot.rate) : chordTermLabel;
   const overlay = chordOverlay({
     namedChords: snapshot.namedChords,
     posOf: (id) => deployedById.get(id)?.pos ?? null,
     point,
     radius: HEX_RADIUS,
     step: LATTICE_STEP,
-    labelFor,
+    labelFor: chordTermLabel,
     focusIds,
   });
-  chordMarksCache.set(app, overlay.marks);
+  chordReadoutCache.set(app, { marks: overlay.marks, snapshot });
 
   // Charge leads (§8, #41): uniform green patch leads, center-to-center,
   // directional generator → receiver. Leads in live flow animate; everything
@@ -915,35 +916,57 @@ function chordMarkHtml(mark: ChordMark, keyPrefix: "formed" | "ghost"): string {
 }
 
 // The mark index the hover questions read: the render's chord marks keyed
-// by mark key, with the render-time labels (flow chips carry live ν/s).
-const chordMarksCache = new WeakMap<App, ChordMark[]>();
+// by mark key, plus the render-time snapshot the module's final-ν/s chip
+// reads — the tick refreshes both, so a hover between renders is never
+// stale by more than one frame of the board.
+interface ChordReadoutCache {
+  marks: ChordMark[];
+  snapshot: RateSnapshot;
+}
+const chordReadoutCache = new WeakMap<App, ChordReadoutCache>();
 
 // The reserved readout (§6): the chips, in one place — the selected
-// module's chords win, else what the pointer rests on (a seam names its
-// chord; a module names every chord it sings in). Hidden when neither
-// asks. HTML beside the board, so the expanded face can never cover it and
-// it never moves.
+// module's chip row wins, else what the pointer rests on (a seam names its
+// chord; a module names every chord it sings in). A selected or hovered
+// synthesizer's final ν/s leads the row — live during flow, present with no
+// chord at all (ADR-0036). Only synthesizers carry the figure: nothing else
+// produces nous, and the Forge's progress-per-second is not ν/s. Hidden when
+// nothing asks. HTML beside the board, so the expanded face can never cover
+// it and it never moves.
 function updateChordReadout(app: App): void {
   const host = byId("chord-readout");
   if (!host) return;
-  const marks = chordMarksCache.get(app) ?? [];
+  const cache = chordReadoutCache.get(app);
+  const marks = cache?.marks ?? [];
+  const snapshot = cache?.snapshot;
   const selected = app.state.modules.find((m) => m.id === app.ui.selected && m.pos !== null) ?? null;
+  const hover = app.ui.chordHover;
+  const hovered =
+    hover?.kind === "module" ? (app.state.modules.find((m) => m.id === hover.moduleId) ?? null) : null;
   // Every chord the module earns its bonus from — not just the first.
   const chosen = selected
     ? marks.filter((m) => m.voices.includes(selected.id))
     : chordChipsForHover(app);
-  if (chosen.length === 0) {
+  const focus = selected ?? hovered;
+  const contribution = focus && snapshot ? snapshot.contributions.get(focus.id) : undefined;
+  const valueChip =
+    focus && contribution && isSynthesizerType(focus.type)
+      ? `<span class="chord-readout-chip chord-readout-value mono">+${formatNumber(contribution.value)} ν/s</span>`
+      : "";
+  if (!valueChip && chosen.length === 0) {
     host.hidden = true;
     host.innerHTML = "";
     return;
   }
   host.hidden = false;
-  host.innerHTML = chosen
-    .map(
-      (mark) =>
-        `<span class="chord-readout-chip mono" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.label)}</span>`,
-    )
-    .join("");
+  host.innerHTML =
+    valueChip +
+    chosen
+      .map(
+        (mark) =>
+          `<span class="chord-readout-chip mono" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.label)}</span>`,
+      )
+      .join("");
 }
 
 // The chips a hover asks for: a seam names its one chord, a module names
@@ -951,7 +974,7 @@ function updateChordReadout(app: App): void {
 function chordChipsForHover(app: App): ChordMark[] {
   const hover = app.ui.chordHover;
   if (!hover) return [];
-  const marks = chordMarksCache.get(app) ?? [];
+  const marks = chordReadoutCache.get(app)?.marks ?? [];
   return hover.kind === "chord"
     ? marks.filter((m) => m.key === hover.key)
     : marks.filter((m) => m.voices.includes(hover.moduleId));
@@ -1435,8 +1458,12 @@ interface BloomEffectInput {
   strength: number;
 }
 
-const synthBloomLines = ({ gain, value }: BloomEffectInput): { benefit: string | null; contribution: string } => ({
-  benefit: `+${formatNumber(BALANCE.synthRate * gain)} ν/s`,
+// The synth benefit is exact at every local effect: value/power is the
+// module's per-power ν/s (chord factor, infusor uplift, charge, and
+// achievements all in — ADR-0036), so one level's power gain scales it
+// directly instead of quoting a bare-term figure chords would understate.
+const synthBloomLines = ({ gain, power, value }: BloomEffectInput): { benefit: string | null; contribution: string } => ({
+  benefit: `+${formatNumber((value / power) * gain)} ν/s`,
   contribution: `+${formatNumber(value)} ν/s`,
 });
 
@@ -2344,7 +2371,7 @@ function renderFormulaModal(app: App, content: HTMLElement, live: RateSnapshot):
   const snapshot = live;
   const achieving = achievementBoostOf(state) > 1;
   const infused = snapshot.infusors > 0;
-  const chain = `<span class="op">(</span>${formatNumber(snapshot.synths)}${infused ? ` <span class="op">+</span> ${formatNumber(snapshot.infusors)}` : ""}<span class="op">)</span> <span class="op">×</span> χ ${formatNumber(snapshot.chordMultiplier)} <span class="op">×</span> emp ${formatNumber(snapshot.empowerment)}${achieving ? ` <span class="op">×</span> ach +${Math.round((snapshot.achievementBoost - 1) * 100)}%` : ""} <span class="op">=</span> <strong>${formatNumber(snapshot.rate)} ν/s</strong>`;
+  const chain = `<span class="op">(</span>${formatNumber(snapshot.synths)}${infused ? ` <span class="op">+</span> ${formatNumber(snapshot.infusors)}` : ""}<span class="op">)</span> <span class="op">×</span> emp ${formatNumber(snapshot.empowerment)}${achieving ? ` <span class="op">×</span> ach +${Math.round((snapshot.achievementBoost - 1) * 100)}%` : ""} <span class="op">=</span> <strong>${formatNumber(snapshot.rate)} ν/s</strong>`;
   content.innerHTML = `
     ${modalTop("FORMULA")}
     <h2 id="modal-title">The live rate.</h2>
@@ -3002,13 +3029,14 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
     wireClose(app);
     return;
   }
-  const synthOnly = summary.infusors === 0 && summary.chordMultiplier === 1 && summary.empowerment === 1;
+  // Chords are local (ADR-0036): the summary never claims a board-wide
+  // chord multiplier — the synths leg already carries each voice's chords.
+  const synthOnly = summary.infusors === 0 && summary.empowerment === 1;
   const breakdown = synthOnly
-    ? `the synth term alone — ${formatNumber(summary.synths)} ν/s is the whole formula`
+    ? `the synth terms alone — ${formatNumber(summary.synths)} ν/s is the whole formula`
     : [
         `synths +${formatNumber(summary.synths)} ν/s`,
         ...(summary.infusors > 0 ? [`infusors +${formatNumber(summary.infusors)} ν/s`] : []),
-        ...(summary.chordMultiplier > 1 ? [`chords ×${formatNumber(summary.chordMultiplier)}`] : []),
         ...(summary.empowerment > 1 ? [`empowerment ×${formatNumber(summary.empowerment)}`] : []),
       ].join(" · ");
   // The "unlocked this session" row (ADR-0015): in-session unlocks queue

@@ -6,9 +6,9 @@ import { BALANCE } from "./constants";
 import { fresh, give } from "./fixtures";
 import { hex } from "./hex";
 
-// The unified production model (ADR-0022):
-//   rate      = (synths + infusor uplift) × Π chord terms × empowerment × achievementBoost
-//   composite = (synths + infusor uplift) × Π chord terms
+// The unified production model (ADR-0022 as amended by ADR-0036):
+//   value(s)  = synthRate·power·chords(s)·(1+infusor)·chargeFactor·achievementBoost
+//   rate      = Σ value(s) = (synths + infusors) × empowerment × achievementBoost
 // Fresh board: one additive at C4 (0,0), empty cells G4 (1,0) and C5 (0,1) —
 // the retained three-cell footprint. Its single synth term is the whole
 // formula at game start. Chordless positions for amplitude tests sit off in
@@ -30,9 +30,10 @@ describe("board production model", () => {
     give(s, "additive", hex(2, -1)); // D4 — the octave below it
     const snapshot = computeRates(s, true);
     // The D pair forms an Octave; there is no carrier/harmonics split —
-    // every synthesizer rides the same unified base rate.
-    expect(snapshot.synths).toBeCloseTo(3 * SYNTH, 9);
-    expect(snapshot.rate).toBeCloseTo(3 * SYNTH * 1.15, 9);
+    // every synthesizer rides the same unified base rate, and the chord
+    // factor rides each member's own term.
+    expect(snapshot.synths).toBeCloseTo(SYNTH + 2 * SYNTH * 1.15, 9);
+    expect(snapshot.rate).toBeCloseTo(SYNTH + 2 * SYNTH * 1.15, 9);
   });
 
   it("amplitude scales with level and rarity", () => {

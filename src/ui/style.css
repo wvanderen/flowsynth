@@ -1050,6 +1050,12 @@ body.bloom-sheet-open .zoom-cluster { bottom: 190px; }
   letter-spacing: 0.1em;
   color: var(--cc);
 }
+/* The module's final ν/s chip (ADR-0036): the neutral production register —
+   the board's accent rather than any chord hue — since it names the module's
+   own figure, not one chord's. */
+.chord-readout-chip.chord-readout-value {
+  --cc: var(--accent);
+}
 
 /* Sounding (§6): in a live session the seams pulse on their chord's own
    period while the board stays locked — the session breathes through its

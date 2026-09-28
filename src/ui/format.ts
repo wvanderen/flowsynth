@@ -114,28 +114,12 @@ export function practiceCountdown(cost: number, nous: number, rate: number): str
   return `in ~${formatCountdown((cost - nous) / rate)} of practice`;
 }
 
-// The chord-term label every chord surface shares — the board's hull chips
-// and the formula chip's breakdown: "Fifth ×1.3", with the instance count
-// appended when a term stacks more than one ("Octave ×1.15 ×3").
+// The chord-term label every chord surface shares — the board's reserved
+// readout chips and the breakdown's chords row: "Fifth ×1.3", with the
+// instance count appended when a term stacks more than one ("Octave ×1.15
+// ×3"). Names and multipliers only — chord bonuses are local (ADR-0036),
+// so no surface claims a board-wide +ν/s for a term.
 export function chordTermLabel(chord: { name: string; bonus: number; instances: number }): string {
   const term = `${chord.name} ×${formatNumber(1 + chord.bonus)}`;
   return chord.instances > 1 ? `${term} ×${chord.instances}` : term;
-}
-
-// One chord term's share of the live rate (§6): how much ν/s would vanish if
-// the term did — rate minus the rate with the term divided back out. The
-// standard attribution, so stacked instances contribute their compounded
-// factor and the legs still sum to the whole.
-export function chordTermContribution(rate: number, chord: { bonus: number; instances: number }): number {
-  const factor = (1 + chord.bonus) ** chord.instances;
-  if (!(factor > 1)) return 0;
-  return Math.max(0, rate * (1 - 1 / factor));
-}
-
-// The board chip's in-session label (§6): the multiplier always, the live
-// ν/s contribution beside it while a session runs —
-// "Fifth ×1.3 · +2.1 ν/s".
-export function chordLiveLabel(chord: { name: string; bonus: number; instances: number }, rate: number): string {
-  const contribution = chordTermContribution(rate, chord);
-  return `${chordTermLabel(chord)} · +${formatNumber(contribution)} ν/s`;
 }

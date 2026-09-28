@@ -153,11 +153,11 @@ export interface SessionSummary {
   seconds: number;
   ratePerMinute: number;
   // The rate breakdown at session end (one synth term alone during session
-  // one): the unified synths leg plus the infusor uplift as its own named
-  // leg (ADR-0022).
+  // one): the unified synths leg (local chords included, ADR-0036) plus the
+  // infusor uplift as its own named leg (ADR-0022). No chord-multiplier
+  // row: chords are local, and a board-wide claim would overstate them.
   synths: number;
   infusors: number;
-  chordMultiplier: number;
   empowerment: number;
   // The summary's unlock row (ADR-0015): in design, inert at launch — the
   // launch apps are free from minute 0 (ADR-0019) and it fires again only
@@ -350,10 +350,10 @@ export interface GameState {
 // any voicing, any octave. `instances` is how many complete voice-sets the
 // cluster sings the pattern through (doubled voices stack; disjoint
 // same-chord clusters are separate entries), and each instance multiplies
-// the composite by the same bonus. `moduleIds` carries one representative
-// voice set for rendering; `root` is the match's root pitch class — the
-// (name, root) pair is a chord's identity across board changes (the
-// would-form preview diffs on it).
+// only its member synthesizers (ADR-0036). `moduleIds` carries one
+// representative voice set for rendering; `root` is the match's root pitch
+// class — the (name, root) pair is a chord's identity across board changes
+// (the would-form preview diffs on it).
 export interface NamedChordTerm {
   name: string;
   bonus: number;
@@ -369,28 +369,33 @@ export interface Contribution {
   // derived from coordinates, never persisted.
   pitch: number | null;
   amplitude: number;
+  // The module's final ν/s — the local infusor, chord, charge, and
+  // achievement effects all included (ADR-0036). Synthesizers only: the
+  // spacer is 0 and the Forge's value is Forge progress per second, not
+  // nous. The displayed figures sum to the board's rate.
   value: number;
   chordTerms: number;
+  // The module's local chord multiplier (ADR-0036): 1 when a synthesizer
+  // sings no chord, 0 for the categories that never chord at all.
+  chordFactor: number;
   infusorBonus: number;
   chargeFactor: number;
   chargeStrength: number;
 }
 
 // The live rate breakdown (§4; leg naming per ADR-0020 as amended by
-// ADR-0022): synths / infusors / chords / empowerment / achievements →
-// rate. The synths leg is every synthesizer's base term — one unified leg,
-// no carrier/harmonics split — with the infusor uplift split into its own
-// additive leg so the breakdown names it. Both stay uncharged so charge
-// empowerment aggregates into its own leg and the lines always multiply
-// out: rate = (synths + infusors) × chordMultiplier × empowerment ×
-// achievementBoost.
+// ADR-0022 and ADR-0036): synths / infusors / empowerment / achievements →
+// rate. Chords are local: each synthesizer's term carries its own chord
+// factor, so the synths leg is every synthesizer's term with its chords in,
+// the infusor uplift rides chord-weighted beside it, and the lines always
+// multiply out: rate = (synths + infusors) × empowerment × achievementBoost.
+// The chord terms themselves surface as names and multipliers
+// (namedChords), never as a board-wide multiplier claim.
 export interface RateSnapshot {
   synths: number;
   infusors: number;
   amplitude: number;
-  chordMultiplier: number;
   namedChords: NamedChordTerm[];
-  composite: number;
   empowerment: number;
   achievementBoost: number;
   rate: number;

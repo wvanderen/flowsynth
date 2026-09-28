@@ -137,8 +137,11 @@ describe("combination", () => {
     expect(after.namedChords.map((c) => c.name)).toEqual(["Octave"]);
     // The board rates exactly like the arrangement it became.
     const reference = fresh();
-    give(reference, "additive", hex(0, 1));
-    expect(after.chordMultiplier).toBeCloseTo(computeRates(reference, true).chordMultiplier, 9);
+    const survivor = give(reference, "additive", hex(0, 1));
+    expect(after.contributions.get(drag.id)?.chordFactor).toBeCloseTo(
+      computeRates(reference, true).contributions.get(survivor.id)?.chordFactor ?? 0,
+      9,
+    );
   });
 
   it("leaves global meters untouched and works only in upgrade mode", () => {

@@ -29,7 +29,7 @@ The absolute note a cell sounds — a property of the cell's position on the oct
 _Avoid_: harmonic number, distance-from-origin
 
 **Chord**:
-A named pitch set — octave, fifth, major triad, and kin — recognized by pitch content over a connected cluster of synthesizers, register-free: any voicing, any octave. Overlapping chords stack multiplicatively; adjacency alone is chordless.
+A named pitch set — octave, fifth, major triad, and kin — recognized by pitch content over a connected cluster of synthesizers, register-free: any voicing, any octave. Each chord instance multiplies only its member synthesizers; overlapping and repeated instances stack multiplicatively on their members, and distant modules are unchanged (ADR-0036). Adjacency alone is chordless.
 _Avoid_: Named chord (the just-intonation-run sense), Chord pair
 
 **Seam**:
@@ -37,7 +37,7 @@ The chord-colored line the board draws for a formed chord: center-to-center betw
 _Avoid_: Chord link, Pair link, Hull
 
 **Chord readout**:
-The reserved spot beside the board — the heading's right end — that names the chords a module earns its bonus from: ×multiplier always, live ν/s contribution during a session. The selected module's chords pin it; hovering a seam or a module asks. One spot, never floating over the board.
+The reserved spot beside the board — the heading's right end — where a selected (or hovered) module's row stands: its final ν/s first — live during flow, present with no chord at all — then the names and multipliers of every chord it earns its bonus from. No board-wide +ν/s claims on any chord surface (ADR-0036). The selected module's row pins it; hovering a seam or a module asks. One spot, never floating over the board.
 _Avoid_: Chord chip (the ambient-floating sense), Chord view
 
 **Spacer**:
@@ -73,13 +73,16 @@ _Avoid_: inventory panel, management view
 The provisional name for the game's main progression resource, spent on permanent upgrades. It is produced only by the board formula.
 
 **Nous production rate**:
-The single final nous-per-second output: `composite × empowerment × achievementBoost`. Modules contribute terms to this shared rate rather than producing independent timed payouts.
+The single final nous-per-second output: the sum of the synthesizers' final figures — `(synths + infusors) × empowerment × achievementBoost`. Modules contribute terms to this shared rate rather than producing independent timed payouts.
+
+**Final ν/s**:
+One module's own production figure: its base term with its local infusor, chord, charge, and achievement effects all included (ADR-0036). The displayed figures sum to the board's rate within rounding, and the selected module's final ν/s shows in the reserved readout.
 
 **Composite**:
-The board's summed and chord-multiplied amplitude: the synths leg plus the infusor uplift, times every chord term.
+The board's summed uncharged amplitude: the synths leg plus the infusor uplift, each carrying its members' local chord factors (ADR-0036). There is no board-wide chord multiplier over it.
 
 **Synth term**:
-A synthesizer's base contribution to the composite — level and rarity power only, one unified leg shared by every synthesizer. The infusor uplift rides in its own leg beside it.
+A synthesizer's base contribution to the composite — level and rarity power, with the synthesizer's own chord factor in (ADR-0036); one unified leg shared by every synthesizer. The infusor uplift rides in its own leg beside it.
 
 **Synthesizer**:
 A board module contributing a synth term to the composite; no synthesizer is spatially privileged. It is empowered while receiving charge and never produces charge.

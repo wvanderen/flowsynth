@@ -63,13 +63,19 @@ const ownsRare = (state: GameState): boolean => state.modules.some((m) => m.rari
 // is the earned total minus what still waits in the Forge.
 const rollsTaken = (state: GameState): number => Math.max(0, state.forge.earned - state.bankedRolls.length);
 
-// The chord multiplier over the deployed chord conductors — the same
-// partition the rate pass applies (generators, infusors, and forges never
-// chord; spacers conduct) — computed straight from the board so the
-// registry stays free of the rate pass.
-function chordMultiplierOf(state: GameState): number {
+// The steepest local chord multiplier any single deployed synthesizer sings
+// under (ADR-0036) — the same partition the rate pass applies (generators,
+// infusors, and forges never chord; spacers conduct) — computed straight
+// from the board so the registry stays free of the rate pass. Chords are
+// local, so the feat asks what one voice carries, never a board-wide
+// product that stacks disjoint clusters onto a single module.
+function maxVoiceMultiplierOf(state: GameState): number {
   const { synths, spacers } = deployedConductors(state);
-  return analyzeChords(synths, spacers).multiplier;
+  let max = 0;
+  for (const factor of analyzeChords(synths, spacers).voiceMultiplier.values()) {
+    max = Math.max(max, factor);
+  }
+  return max;
 }
 
 // The launch set (§6.3): seventeen feats in spec order. Names provisional.
@@ -160,9 +166,9 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     id: "power-chord",
     category: "formula",
     name: "Power chord",
-    description: "Stack chord multipliers to ×2 of the composite.",
-    evaluate: (s) => chordMultiplierOf(s) >= 2,
-    progress: (s) => fraction(chordMultiplierOf(s), 2),
+    description: "Stack chord multipliers on one synthesizer to ×2.",
+    evaluate: (s) => maxVoiceMultiplierOf(s) >= 2,
+    progress: (s) => fraction(maxVoiceMultiplierOf(s), 2),
   },
   {
     id: "fine-china",

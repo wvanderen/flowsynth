@@ -8,7 +8,7 @@ import { addPracticeLog, createHabit, selectHabit } from "./habits";
 import { writeNote } from "./notes";
 import { createGoal } from "./goals";
 import { deserialize, serialize } from "./save";
-import { fresh, give, stubRng } from "./fixtures";
+import { fresh, give, stubRng, sumSynthValues } from "./fixtures";
 import { generateOffer } from "./rolls";
 import { hex } from "./hex";
 import type { GameState } from "./types";
@@ -197,16 +197,46 @@ describe("the 17-feat launch set", () => {
     expect(s.modules.some((m) => m.rarity === "rare")).toBe(true);
   });
 
-  it("Power chord: chord multipliers stacked to ×2 of the composite", () => {
+  it("Power chord: one synthesizer carries its participating multipliers to ×2", () => {
     const s = fresh();
     completeSession(s);
-    // A 4·5·6 major triad overlapped with a 5·6·7 blues triad:
-    // 1.5 × 1.75 = ×2.625, clear of the ×2 bar. The boundary checks on
-    // each placement detect the crossing as the layout lands.
+    // A 4·5·6 major triad overlapped with a 5·6·7 blues triad: every voice
+    // in the run sings a ×1.75 and a ×1.6 term together — ×2.8, clear of
+    // the ×2 bar on its own. The boundary checks on each placement detect
+    // the crossing as the layout lands.
     for (const q of [1, 2, 3, 4, 5, 6]) s.cells.push(hex(q, 0));
-    for (const q of [1, 2, 3, 4, 5, 6]) placeModule(s, give(s, "additive", null).id, hex(q, 0));
-    expect(computeRates(s, true).chordMultiplier).toBeGreaterThan(2);
+    const first = give(s, "additive", null);
+    placeModule(s, first.id, hex(1, 0));
+    for (const q of [2, 3, 4, 5, 6]) placeModule(s, give(s, "additive", null).id, hex(q, 0));
+    // The G voice sings the root-7 major, the root-4 minor, and the
+    // root-0 major: ×1.75 × 1.6 × 1.75.
+    expect(computeRates(s, true).contributions.get(first.id)?.chordFactor).toBeGreaterThan(2);
     expect(s.achievements["power-chord"]).toBeDefined();
+  });
+
+  it("Power chord refuses the old board-wide read: disjoint stacks are not one voice's ×2", () => {
+    const s = fresh();
+    completeSession(s);
+    // C · G · D overlapping row: each voice stacks ×1.3 × 1.45 = ×1.885 —
+    // short of ×2 — while the old global product (1.3² × 1.45 ≈ 2.45)
+    // would have cleared it.
+    s.cells.push(hex(1, 0), hex(2, 0));
+    give(s, "additive", hex(1, 0)); // G4
+    give(s, "additive", hex(2, 0)); // D5
+    const def = ACHIEVEMENTS.find((a) => a.id === "power-chord")!;
+    expect(def.progress(s, { chargeDelivered: false }).current).toBeLessThan(2);
+    expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual([]);
+  });
+
+  it("Power chord unlocks persist: an earned feat survives a chordless board", () => {
+    const s = fresh();
+    completeSession(s);
+    s.achievements["power-chord"] = NOW;
+    s.achievements["first-light"] = NOW;
+    // The ledger is the truth: sync re-evaluates only the locked feats, so
+    // a board whose chords are gone never revokes what was earned.
+    expect(syncAchievements(s, { now: NOW })).toEqual([]);
+    expect(s.achievements["power-chord"]).toBe(NOW);
   });
 
   it("Power chord reads synthesizers and spacers only: other neighbors never chord", () => {
@@ -268,11 +298,11 @@ describe("the achievementBoost term", () => {
     expect(achievementBoostOf(s)).toBe(1 + 2 * BALANCE.achievementBoostPerFeat);
   });
 
-  it("enters the rate: rate = composite × empowerment × achievementBoost", () => {
+  it("enters the rate: rate = (synths + infusors) × empowerment × achievementBoost", () => {
     const s = fresh();
     const plain = computeRates(s, true);
     expect(plain.achievementBoost).toBe(1);
-    expect(plain.rate).toBeCloseTo(plain.composite * plain.empowerment, 9);
+    expect(plain.rate).toBeCloseTo(plain.amplitude * plain.empowerment, 9);
 
     s.achievements["first-light"] = NOW;
     s.achievements["roll-credit"] = NOW;
@@ -280,7 +310,9 @@ describe("the achievementBoost term", () => {
     const boosted = computeRates(s, true);
     expect(boosted.achievementBoost).toBeCloseTo(1.06, 9);
     expect(boosted.rate).toBeCloseTo(plain.rate * 1.06, 9);
-    expect(boosted.rate).toBeCloseTo(boosted.composite * boosted.empowerment * boosted.achievementBoost, 9);
+    expect(boosted.rate).toBeCloseTo(boosted.amplitude * boosted.empowerment * boosted.achievementBoost, 9);
+    // Every displayed module figure carries the boost: they sum to the rate.
+    expect(sumSynthValues(boosted)).toBeCloseTo(boosted.rate, 9);
   });
 });
 
