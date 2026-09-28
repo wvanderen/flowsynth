@@ -46,7 +46,9 @@ interface SynthLegs {
 // One synthesizer's decomposition, straight off its contribution: the
 // legs multiply back to the final figure exactly —
 // base × chordMult × (1 + infusor) × chargeFactor × boost = value.
-function synthLegsOf(snapshot: RateSnapshot, contribution: Contribution, module: ModuleInstance): SynthLegs {
+// Exported for the module rules surface (issue #155), which discloses the
+// same legs from the expanded face — one decomposition, never two.
+export function synthLegsOf(snapshot: RateSnapshot, contribution: Contribution, module: ModuleInstance): SynthLegs {
   const chordAmp = module.type === "conditional" ? 1 + BALANCE.conditionalChordBonus * contribution.chordTerms : 1;
   const terms = snapshot.namedChords.filter((chord) => chord.moduleIds.includes(contribution.moduleId)).map(chordTermLabel);
   return {

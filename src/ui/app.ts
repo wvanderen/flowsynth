@@ -65,6 +65,7 @@ export type ModalKind =
   | "rate"
   | "inventory"
   | "combine"
+  | "module"
   | null;
 
 // The enter prompt's kind-first selection (issue #92's decided shape): the
@@ -1103,13 +1104,29 @@ export class App {
     this.render();
   }
 
+  // The click-on-a-cell selection shape, shared by both modes (§5, #155):
+  // a click on an occupant selects (or switches to) it; a click anywhere
+  // else — the vacated cell included: with the bloom standing for the
+  // selected module, its own cell renders empty, and clicking it is a
+  // dismissal, never a second toggle — dismisses.
+  private toggleSelectionAt(pos: Hex): void {
+    const occupant = this.state.modules.find((m) => m.pos !== null && sameHex(m.pos, pos));
+    if (occupant && occupant.id !== this.ui.selected) {
+      this.select(occupant.id);
+    } else if (this.ui.selected !== null) {
+      this.ui.selected = null;
+      this.render();
+    }
+  }
+
   pickCell(pos: Hex): void {
     const { state, ui } = this;
     if (state.mode !== "upgrade") {
-      // The board is locked through a session (§5): modules neither expand
-      // nor select mid-session — the click answers plainly instead of
-      // looking dead. Selection returns between sessions.
-      this.say("The board is locked during flow.");
+      // The board's actions stay locked through a session — no moves, no
+      // purchases — but its answers are not (#155): a module click opens
+      // its expanded face, info only. Selection returns with the same
+      // toggle-and-dismiss shape as between sessions.
+      this.toggleSelectionAt(pos);
       return;
     }
     if (ui.buyingCell) {
@@ -1125,16 +1142,7 @@ export class App {
       this.placeAndStrum(module, pos);
       return;
     }
-    const occupant = state.modules.find((m) => m.pos !== null && sameHex(m.pos, pos));
-    if (occupant && occupant.id !== ui.selected) {
-      this.select(occupant.id);
-    } else if (ui.selected !== null) {
-      // Outside the bloom (§5) — the vacated cell included: with the bloom
-      // standing for the selected module, its own cell renders empty, and
-      // clicking it is a dismissal, never a second toggle.
-      this.ui.selected = null;
-      this.render();
-    }
+    this.toggleSelectionAt(pos);
   }
 
   pickCellThenPlace(id: string, pos: Hex): void {

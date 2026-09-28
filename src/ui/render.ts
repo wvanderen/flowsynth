@@ -34,6 +34,7 @@ import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatDate, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
 import { renderBoardLedger, renderAretePill, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG } from "./ledger";
+import { moduleRuleOf, moduleValuesHtml, updateModuleRulesLive } from "./rules";
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
 import { containerWidth, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX } from "./container";
 import { liveSet } from "./live";
@@ -85,7 +86,7 @@ export function render(app: App): void {
   renderGrid(app, live, projected);
   renderInventoryTray(app);
   renderArcCard(app);
-  renderBloom(app, projected);
+  renderBloom(app, live, projected);
   renderZoomCluster(app);
   renderAretePill(app, live);
   renderGameInfoStrip(app, live);
@@ -1485,13 +1486,30 @@ const BLOOM_EFFECTS: Record<ModuleInstance["type"], (input: BloomEffectInput) =>
   }),
 };
 
+// The help control's glyph (issue #155): one "?" on every presentation of
+// the expanded face, opening the module's rules on the modal layer.
+const HELP_GLYPH = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.2"/><path d="M9.3 9.3a2.7 2.7 0 0 1 5.3.9c0 1.8-2.6 2.2-2.6 3.7"/><path d="M12 17.1h.01"/></svg>`;
+
+// The expanded face's persistent controls, bound after each content
+// rebuild: the help control opens the module's rules dialog; the Upgrade
+// button exists only between sessions.
+function bindBloomControls(app: App, moduleId: string): void {
+  byId("bloom-help")?.addEventListener("click", () => app.openModal("module"));
+  byId("bloom-upgrade")?.addEventListener("click", () => app.upgrade(moduleId));
+}
+
 // The expanded face: the module's own hex lifted off the grid toward the
 // camera — the face itself IS the bloom, enlarged to fill it, its content
 // shifted up to make room for the Upgrade button in the lower band. The
 // ν/s unit rides the face's own readout, so nothing repeats. Opens only on
-// click, only in upgrade mode, only for a deployed module; closes on
-// outside click, Esc, or selecting elsewhere; holding the face starts the
-// live drag.
+// click, only for a deployed module, in either mode (issue #155): during
+// flow it is information only — the Upgrade control waits between sessions
+// — and closes on outside click, Esc, or selecting elsewhere; holding the
+// face starts the live drag between sessions.
+//
+// A help control rides beside the module's name on every presentation
+// (issue #155): it opens the module's full effect rules, conditions, and
+// current values on the modal layer.
 //
 // On portrait phone (§7) the bloom presents as a bottom sheet docked over
 // the board's lower edge — same content, re-docked — and the zoom cluster
@@ -1502,12 +1520,12 @@ const BLOOM_EFFECTS: Record<ModuleInstance["type"], (input: BloomEffectInput) =>
 // out-sizes the fixed bloom, and the affordances ride the closed face
 // instead — a floating upgrade card anchored over the module's lower band.
 // The host persists (the app creates it once); only the content rebuilds.
-function renderBloom(app: App, projected: RateSnapshot): void {
+function renderBloom(app: App, live: RateSnapshot, projected: RateSnapshot): void {
   const host = byId("module-bloom");
   if (!host) return;
   const { state, ui } = app;
   const module = state.modules.find((m) => m.id === ui.selected) ?? null;
-  const open = state.mode === "upgrade" && module !== null && module.pos !== null;
+  const open = module !== null && module.pos !== null;
   if (!open || !module || module.pos === null) {
     if (!host.hidden) {
       host.hidden = true;
@@ -1517,21 +1535,24 @@ function renderBloom(app: App, projected: RateSnapshot): void {
     document.body.classList.remove("bloom-sheet-open");
     return;
   }
+  const upgrade = state.mode === "upgrade";
   const phone = isPhoneWidth();
-  const snapshot = projected;
+  // The same basis every rate figure wears (§7): live during flow, the
+  // projected build rate between sessions.
+  const snapshot = upgrade ? projected : live;
   const lines = BLOOM_EFFECTS[module.type]({
     gain: modulePower(module) * (BALANCE.rarityPower[module.rarity] - 1),
     power: modulePower(module),
     value: snapshot.contributions.get(module.id)?.value ?? 0,
     strength: snapshot.chargeStrength.get(module.id) ?? 0,
   });
-  const benefit = lines.benefit;
+  const benefit = upgrade ? lines.benefit : null;
   const cost = levelCost(module.level);
   const affordable = wholeNous(state) >= cost;
   // The Forge's face readout moves per tick; its face tracks it.
   const forgeTick = module.type === "forge" ? Math.floor(state.forge.progress) : 0;
   const shape = phone ? "sheet" : "pop";
-  const key = JSON.stringify([shape, module.id, module.level, module.rarity, benefit, lines.contribution, affordable, forgeTick]);
+  const key = JSON.stringify([shape, state.mode, module.id, module.level, module.rarity, benefit, lines.contribution, affordable, forgeTick]);
   // One frame read for both the pop question and the positioning below.
   const svg = document.getElementById("grid");
   const viewBox = (svg?.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
@@ -1545,13 +1566,15 @@ function renderBloom(app: App, projected: RateSnapshot): void {
         <small class="bloom-upgrade-benefit mono">${benefit}</small>
       </button>`
     : "";
+  const helpButton = `<button class="bloom-help" id="bloom-help" aria-haspopup="dialog" title="Rules — what this module does, and its current values">${HELP_GLYPH}</button>`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.classList.toggle("sheet", phone);
     document.body.classList.toggle("bloom-sheet-open", phone);
     if (phone) {
       // The bottom sheet (§7): the face tile beside the readout column,
-      // the upgrade action at its end — same content, re-docked.
+      // the upgrade action at its end — same content, re-docked. The help
+      // control rides beside the name (issue #155).
       const face = faceReadoutFor(state, module, module.pos, snapshot, true);
       host.innerHTML = `<div class="bloom-sheet" data-type="${module.type}" data-rarity="${module.rarity}">
         <svg class="bloom-sheet-tile" viewBox="-70 -70 140 140" aria-hidden="true">${moduleFace({
@@ -1563,13 +1586,13 @@ function renderBloom(app: App, projected: RateSnapshot): void {
           level: module.level,
         })}</svg>
         <div class="bloom-sheet-col">
-          <span class="bloom-sheet-name">${META[module.type].name} · LV ${module.level}</span>
+          <span class="bloom-name-row"><span class="bloom-sheet-name">${META[module.type].name} · LV ${module.level}</span>${helpButton}</span>
           <small class="bloom-sheet-note mono">${cellNoteOf(module.pos)}</small>
           <small class="bloom-sheet-contrib mono">${lines.contribution}</small>
         </div>
         ${upgradeButton}
       </div>`;
-      byId("bloom-upgrade")?.addEventListener("click", () => app.upgrade(module.id));
+      bindBloomControls(app, module.id);
       host.hidden = false;
       return;
     }
@@ -1578,11 +1601,13 @@ function renderBloom(app: App, projected: RateSnapshot): void {
     // plate repositions on the next render once the wrap measures.)
     const inline = !bloomPops(viewMeet(frame), HEX_RADIUS);
     host.classList.toggle("inline", inline);
-    const readouts = `
-      <div class="bloom-readouts">
-        ${inline ? `<p class="bloom-contribution mono">${lines.contribution}</p>` : ""}
-        ${upgradeButton}
-      </div>`;
+    // The help control's seat follows the presentation (issue #155): beside
+    // the name on the popped plate, in the riding card when zoomed past the
+    // pop.
+    const cardRow = inline
+      ? `<div class="bloom-card-row"><p class="bloom-contribution mono">${lines.contribution}</p>${helpButton}</div>`
+      : "";
+    const readouts = `<div class="bloom-readouts">${cardRow}${upgradeButton}</div>`;
     if (inline) {
       host.innerHTML = readouts;
     } else {
@@ -1603,14 +1628,15 @@ function renderBloom(app: App, projected: RateSnapshot): void {
             level: module.level,
             variant: "bloom",
           })}</svg>
+          ${helpButton}
           ${readouts}
         </div>`;
       // Holding the face starts the live drag: the bloom collapses into the
       // ghost, and a drop leaves it closed (§5).
       const faceNode = host.querySelector(".bloom-face");
-      if (faceNode) bindPointerDrag(app, faceNode, module.id);
+      if (upgrade && faceNode) bindPointerDrag(app, faceNode, module.id);
     }
-    byId("bloom-upgrade")?.addEventListener("click", () => app.upgrade(module.id));
+    bindBloomControls(app, module.id);
   }
   if (phone) {
     host.hidden = false;
@@ -2269,11 +2295,13 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   // A dead combine offer — the pair dissolved under the review (mode
   // flipped, a twin gone) — drops before the dispatch, so the dialog always
   // has terms to present and no render pass ever nests a closeModal render
-  // inside itself.
+  // inside itself. The module rules dialog drops the same way when its
+  // module is gone or back in the tray.
   if (app.ui.modal === "combine" && combineOfferTerms(app) === null) {
     app.ui.modal = null;
     app.ui.combineOffer = null;
   }
+  if (app.ui.modal === "module" && helpedModule(app)?.pos === null) app.ui.modal = null;
   const kind = app.ui.modal;
   if (!kind) {
     backdrop.hidden = true;
@@ -2326,6 +2354,11 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                 // (and collapse) an expanded row.
                 : kind === "rate"
                   ? [deployedRosterKey(app.state), unlockedCount(app.state)]
+                : kind === "module"
+                  // The helped module's identity plus the mode (the
+                  // generator's window row rewords between sessions); the
+                  // figures themselves ride live slots the tick fills.
+                  ? [app.ui.selected, app.state.mode]
                 : kind === "inventory"
                   ? app.state.modules.filter((m) => m.pos === null).map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`)
                   // The combine review's identity: the offered pair (issue
@@ -2340,6 +2373,10 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
     // the tick fills them in place on this no-rebuild path, so an expanded
     // row survives the clock (ADR-0037).
     if (kind === "rate") updateRateDetailsLive(content, app.state, live);
+    if (kind === "module") {
+      const helped = helpedModule(app);
+      if (helped) updateModuleRulesLive(content, app.state, helped, rulesSnapshot(app, live, projected));
+    }
     return;
   }
   backdrop.hidden = false;
@@ -2355,6 +2392,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   else if (kind === "enter") renderEnterModal(app, content);
   else if (kind === "summary") renderSummaryModal(app, content);
   else if (kind === "rate") renderRateModal(app, content, live);
+  else if (kind === "module") renderModuleRulesModal(app, content, live, projected);
   else if (kind === "inventory") renderInventorySheetModal(app, content);
   else if (kind === "combine") renderCombineModal(app, content);
   const firstButton = content.querySelector("button:not([disabled])");
@@ -2384,6 +2422,44 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
     app.closeModal();
     app.select(id);
   });
+  wireClose(app);
+}
+
+// The module rules dialog (issue #155): the full effect rules, conditions,
+// and current values for the selected module — the help control beside its
+// name on the expanded face opens it, in either mode. The rules and
+// conditions are the type's one phrasing (rules.ts); the current values
+// share the rate details' decomposition and mount the same kind of live
+// slots, so the tick keeps an open dialog current without a rebuild. The
+// figures wear the same basis every rate surface wears (rulesSnapshot):
+// live during flow, projected between sessions — the basis it was built on
+// is the basis the tick fills, so the dialog can never contradict the
+// bloom face beside it.
+function helpedModule(app: App): ModuleInstance | undefined {
+  return app.state.modules.find((m) => m.id === app.ui.selected);
+}
+
+// The module surfaces' one rate basis (§7): live during flow, the projected
+// build rate between sessions — the same split the bloom face uses.
+function rulesSnapshot(app: App, live: RateSnapshot, projected: RateSnapshot): RateSnapshot {
+  return app.state.mode === "flow" ? live : projected;
+}
+
+function renderModuleRulesModal(app: App, content: HTMLElement, live: RateSnapshot, projected: RateSnapshot): void {
+  const module = helpedModule(app);
+  if (!module || module.pos === null) return;
+  const snapshot = rulesSnapshot(app, live, projected);
+  const { rule, conditions } = moduleRuleOf(module.type);
+  content.innerHTML = `
+    ${modalTop("MODULE RULES")}
+    <h2 id="modal-title">${META[module.type].name} · LV ${module.level}</h2>
+    <p class="lead muted">${RARITY_LABEL[module.rarity]} · ${cellNoteOf(module.pos)}</p>
+    <p class="rule-prose">${rule}</p>
+    <div class="history-section">Conditions</div>
+    ${conditions.map((condition) => `<p class="rule-condition">${condition}</p>`).join("")}
+    <div class="history-section">Current values</div>
+    <div class="rules-values">${moduleValuesHtml(app.state, module, snapshot)}</div>`;
+  updateModuleRulesLive(content, app.state, module, snapshot);
   wireClose(app);
 }
 

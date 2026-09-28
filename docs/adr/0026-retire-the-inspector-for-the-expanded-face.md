@@ -13,3 +13,4 @@ The board-redesign spec left the inspector (the right-hand sidebar that once hos
 - The workspace is single-column; no responsive rule re-docks or resizes an inspector.
 - Selecting a module never opens a sidebar surface; selection presents the bloom or the ride card, and chord chips answer in the reserved readout.
 - Module information not stated on the board (per-type effect prose, exact charge bookkeeping) has no surface; it returns only with a designed need.
+  - _Amended by ADR-0038 (issue #155): the designed need arrived — the expanded face's help control discloses the module's rules, conditions, and current values on the modal layer, in flow as well as between sessions. Still no sidebar; the face remains the module's only docked surface._

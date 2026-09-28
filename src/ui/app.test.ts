@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { App } from "./app";
 import { addPracticeLog, archiveHabit, createHabit, selectHabit } from "../engine/habits";
 import { createGoal, deleteGoal, goalSummary, accrueGoalProgress } from "../engine/goals";
-import { recordSummaryReflection } from "../engine/actions";
+import { recordSummaryReflection, returnModule } from "../engine/actions";
 import { writeNote } from "../engine/notes";
 import { BALANCE, SAVE_VERSION } from "../engine/constants";
 import { STORAGE_KEY, serialize } from "../engine/save";
@@ -981,12 +981,29 @@ describe("the expanded face (§5)", () => {
     expect(Number.parseFloat(bloomEl.style.top)).toBeGreaterThan(0);
   });
 
-  it("stays closed in flow — the board is locked and upgrades live between sessions", () => {
+  it("opens info-only in flow: module information mid-session, upgrades between sessions (#155)", () => {
     app.state.sessionsCompleted = 1;
     startSession(app.state, 600);
     app.render();
-    clickCell(0,0);
-    expect(bloom().hidden).toBe(true);
+    clickCell(0, 0);
+    expect(app.ui.selected).toBe("m1");
+    expect(bloom().hidden).toBe(false);
+    // Information only: the Upgrade control waits between sessions.
+    expect(bloom().querySelector("#bloom-upgrade")).toBeNull();
+    // The board's actions stay locked: holding the face starts no drag.
+    const cellNode = document.querySelector(`[data-cell="0,0"]`)!;
+    document.elementFromPoint = () => cellNode;
+    cellNode.dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
+    expect(document.querySelector(".drag-ghost")).toBeNull();
+    document.dispatchEvent(new MouseEvent("pointerup", { clientX: 220, clientY: 100 }));
+    expect(app.state.modules[0]!.pos).toEqual(hex(0, 0));
+    // The keyboard path answers too: Enter on a module's cell selects it (issue #155).
+    give(app.state, "additive", hex(1, 0));
+    app.render();
+    document.querySelector(`[data-cell="1,0"]`)!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(app.ui.selected).not.toBe("m1");
+    expect(app.ui.selected).not.toBeNull();
     endSession(app.state);
   });
 
@@ -1014,6 +1031,121 @@ describe("the expanded face (§5)", () => {
     expect(bloom().classList.contains("sheet")).toBe(true);
     expect(bloom().querySelector("#bloom-combine")).toBeNull();
     expect(document.querySelector(".bloom-combine")).toBeNull();
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
+  });
+});
+
+describe("the module rules surface (#155)", () => {
+  const bloom = () => document.getElementById("module-bloom")!;
+  const modal = () => document.getElementById("modal-content")!;
+  const openHelp = (id: string): void => {
+    app.select(id);
+    document.getElementById("bloom-help")!.click();
+  };
+
+  it("every launch module type discloses its rules, conditions, and current values", () => {
+    app.render();
+    const seats = [hex(0, 1), hex(1, 0), hex(-1, 0), hex(0, -1), hex(1, -1), hex(-1, 1)];
+    const types = ["additive", "conditional", "spacer", "focusKeyed", "infusor", "forge"] as const;
+    types.forEach((type, i) => {
+      const module = give(app.state, type, seats[i]!);
+      openHelp(module.id);
+      expect(app.ui.modal).toBe("module");
+      expect(modal().querySelector(".rule-prose")!.textContent!.length).toBeGreaterThan(20);
+      expect(modal().querySelectorAll(".rule-condition").length).toBeGreaterThan(0);
+      expect(modal().querySelectorAll(".stat-row").length).toBeGreaterThan(0);
+      app.closeModal();
+    });
+  });
+
+  it("a synthesizer's current values share the rate details' legs and multiply out to the final figure", () => {
+    give(app.state, "conditional", hex(1, 0)); // G4 — a Fifth with the opening C4
+    give(app.state, "infusor", hex(-1, 0)); // adjacent to m1
+    give(app.state, "focusKeyed", hex(0, 1)); // adjacent to m1, window below
+    app.state.chargeWindow = 300;
+    app.render();
+    openHelp("m1");
+    const snapshot = computeRates(app.state, true);
+    const contribution = snapshot.contributions.get("m1")!;
+    expect(modal().querySelector('[data-live="mr-fin"]')!.textContent).toBe(`+${formatNumber(contribution.value)} ν/s`);
+    // The legs multiply back to the final figure exactly (ADR-0036's shape):
+    // the displayed infusor and achievement figures are percents, so their
+    // factors read 1 + percent.
+    const raw = (slot: string): number =>
+      Number.parseFloat(modal().querySelector(`[data-live="${slot}"]`)!.textContent!.replace(/[^0-9.]/g, ""));
+    const product = raw("mr-base") * raw("mr-chd") * (1 + raw("mr-inf") / 100) * raw("mr-chg") * (1 + raw("mr-ach") / 100);
+    expect(Math.abs(product - contribution.value)).toBeLessThan(0.02);
+    // The chord terms ride the note slot, named as the readout names them.
+    expect(modal().querySelector('[data-live="mr-chdn"]')!.textContent).toContain("Fifth");
+    // The generator's window reads banked between sessions.
+    expect(modal().querySelector('[data-live="mr-win"]')).toBeNull();
+    app.closeModal();
+    openHelp(app.state.modules.find((m) => m.type === "focusKeyed")!.id);
+    expect(modal().querySelector('[data-live="mr-win"]')!.textContent).toBe("5 min banked");
+    app.closeModal();
+  });
+
+  it("between sessions the dialog keeps its projected basis across ticks — build basis is fill basis", () => {
+    // The banked window reads as flowing charge in the projected basis every
+    // between-sessions surface wears; a tick must not rewrite it (issue #155).
+    give(app.state, "focusKeyed", hex(0, 1));
+    app.state.chargeWindow = 300;
+    app.render();
+    openHelp("m1");
+    const chargeBefore = modal().querySelector('[data-live="mr-chg"]')!.textContent;
+    expect(chargeBefore).not.toBe("×1");
+    app.tick();
+    expect(modal().querySelector('[data-live="mr-chg"]')!.textContent).toBe(chargeBefore);
+    app.closeModal();
+  });
+
+  it("the tick fills the open dialog in place during flow — no rebuild, live values", () => {
+    const gen = give(app.state, "focusKeyed", hex(0, 1));
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, 600);
+    app.state.chargeWindow = 300;
+    app.render();
+    openHelp(gen.id);
+    expect(app.ui.modal).toBe("module");
+    const win = modal().querySelector('[data-live="mr-win"]')!;
+    expect(win.textContent).toBe("5 min left");
+    app.state.chargeWindow = 120;
+    app.tick();
+    expect(modal().querySelector('[data-live="mr-win"]')).toBe(win);
+    expect(win.textContent).toBe("2 min left");
+    endSession(app.state);
+  });
+
+  it("the help control works between sessions too, and Esc unwinds dialog then face", () => {
+    app.render();
+    openHelp("m1");
+    expect(app.ui.modal).toBe("module");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.selected).toBe("m1");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(app.ui.selected).toBeNull();
+  });
+
+  it("the rules dialog drops when its module leaves the board", () => {
+    const island = give(app.state, "additive", hex(5, 0));
+    app.render();
+    openHelp(island.id);
+    expect(app.ui.modal).toBe("module");
+    returnModule(app.state, island.id);
+    app.render();
+    expect(app.ui.modal).toBeNull();
+  });
+
+  it("the phone sheet wears the help control beside the name", () => {
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+    app.render();
+    clickCell(0, 0);
+    expect(bloom().classList.contains("sheet")).toBe(true);
+    expect(bloom().querySelector(".bloom-name-row .bloom-help")).not.toBeNull();
+    bloom().querySelector<HTMLButtonElement>("#bloom-help")!.click();
+    expect(app.ui.modal).toBe("module");
+    expect(modal().querySelector(".rule-prose")).not.toBeNull();
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
   });
 });
@@ -1212,15 +1344,15 @@ describe("always-on chord feedback (§6, #137)", () => {
     expect(chips()).toEqual([`+${formatNumber(BALANCE.synthRate)} ν/s`]);
   });
 
-  it("clicking a module during flow answers the lock — no selection, no bloom", () => {
+  it("clicking a module during flow opens its expanded face — information only (#155)", () => {
     give(app.state, "additive", hex(1, 0));
     app.state.sessionsCompleted = 1;
     startSession(app.state, 600);
     clickCell(1, 0);
-    expect(app.ui.selected).toBeNull();
+    expect(app.ui.selected).not.toBeNull();
     const bloomEl = document.getElementById("module-bloom")!;
-    expect(bloomEl.hidden).toBe(true);
-    expect(document.getElementById("status")!.textContent).toContain("locked during flow");
+    expect(bloomEl.hidden).toBe(false);
+    expect(bloomEl.querySelector("#bloom-upgrade")).toBeNull();
     endSession(app.state);
   });
 

@@ -1261,6 +1261,45 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 .bloom-sheet .bloom-upgrade { flex-shrink: 0; width: auto; margin-left: auto; }
 @keyframes sheet-up { from { transform: translateY(28px); opacity: 0.4; } }
 
+/* The help control beside the module name (#155): one "?" on every
+   presentation of the expanded face — overlaying the popped plate at the
+   name band, riding the zoomed-in card and the phone sheet's name row. It
+   opens the module's rules on the modal layer. */
+.bloom-help {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--panel-soft);
+  color: var(--muted);
+}
+.bloom-help svg { width: 15px; height: 15px; display: block; }
+.bloom-help:hover, .bloom-help:focus-visible { color: var(--ink); border-color: var(--charge); }
+/* Beside the engraved name band on the plate: the hexagon is full width
+   from 25% down, so the button's corner clears the upper-right taper. */
+.bloom-plate .bloom-help { position: absolute; top: 22%; right: 9.5%; }
+.module-bloom.inline .bloom-help, .bloom-sheet .bloom-help { position: static; }
+.bloom-card-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+.bloom-name-row { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.bloom-name-row .bloom-sheet-name { min-width: 0; }
+
+/* ── The module rules dialog (§5, issue #155) ───────── */
+/* The expanded face's help disclosure: the type's rules and conditions,
+   then its current values — the rate details' decomposition with live
+   slots. Rides the modal layer; the workspace never redocks. */
+.rule-prose { font-size: 13px; line-height: 1.55; margin: 10px 0 0; }
+.rule-condition { font-size: 12.5px; line-height: 1.5; margin: 6px 0 0; padding-left: 16px; position: relative; color: var(--ink); }
+.rule-condition::before { content: "—"; position: absolute; left: 0; color: var(--muted); }
+.rules-values { margin-top: 4px; }
+.rule-val { display: flex; flex-direction: column; align-items: flex-end; text-align: right; gap: 1px; min-width: 0; }
+.rule-val .mono { color: var(--ink); }
+.rule-note { font-size: 10.5px; color: var(--muted); text-align: right; }
+
 /* ── The board-surface tray (§5) ───────────────────── */
 /* The inventory docked over the board's bottom edge: drag a module here to
    retrieve it (the chord-breaking gesture), click an item then a cell to
