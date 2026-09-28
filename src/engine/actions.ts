@@ -277,9 +277,10 @@ export function buyActivation(state: GameState, app: FocusApp): ActionResult {
   return ok;
 }
 
-// The first console long goal (ADR-0012, issue #42): goal capacity. One at
-// a time, gated behind the Goals app's activation, each purchase pricing
-// the next past the current build-out.
+// The first console long goal (ADR-0012 as amended by ADR-0034, issue
+// #42): goal capacity. Each purchase adds exactly one slot — no occupancy
+// gate, so successive slots ride back-to-back whenever affordable — and
+// gates behind the Goals app's activation, every price far past the last.
 export function buyGoalCapacity(state: GameState): ActionResult {
   if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
   if (!appActive(state, "goals")) return fail("Goals must be active before its upgrades appear.");

@@ -30,7 +30,7 @@ import { createInitialState, createModule } from "../engine/state";
 import { appActive, type FocusApp } from "../engine/apps";
 import { writeNote } from "../engine/notes";
 import { achievementName } from "../engine/achievements";
-import { BALANCE, CATEGORY_OF, SHELF_MODULE, CHIME } from "../engine/constants";
+import { CATEGORY_OF, SHELF_MODULE, CHIME } from "../engine/constants";
 import { cellNoteOf } from "../engine/lattice";
 import {
   activeHabit,
@@ -895,10 +895,10 @@ export class App {
     this.act(buyShelfModule(this.state, type), `${META[SHELF_MODULE[type]].name} purchased — it's in your inventory.`);
   }
 
-  // The first console long goal (ADR-0012): goal capacity, one beat at a
-  // time from the Goals panel's dashed strip.
+  // The first console long goal (ADR-0012 as amended by ADR-0034): goal
+  // capacity, one slot per purchase from the Goals panel's compact row.
   buyGoalCapacityAction(): void {
-    this.act(buyGoalCapacity(this.state), `Goal capacity +${BALANCE.goalSlotsPerLongGoal} slots.`);
+    this.act(buyGoalCapacity(this.state), "One more goal slot.");
   }
 
   // Cell purchase (ADR-0013): armed from the toolbar's cell icon (or the

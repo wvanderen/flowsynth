@@ -49,13 +49,13 @@ export interface Balance {
   ladderFirstCost: number;
   ladderGrowthNumerator: bigint;
   ladderGrowthDenominator: bigint;
-  // Console long goals (ADR-0012): hand-paced, one at a time, priced past
-  // the current build-out so they never grind back-to-back. Provisional
-  // tuning; goal capacity is the first named beat.
+  // Console long goals (ADR-0012 as amended by ADR-0034, issue #150): each
+  // purchase adds one goal slot and reveals the next price, much steeper —
+  // the price is the pacing, so successive purchases are fine when
+  // affordable. Provisional tuning; goal capacity is the first named beat.
   longGoalFirstCost: number;
   longGoalGrowthNumerator: bigint;
   longGoalGrowthDenominator: bigint;
-  goalSlotsPerLongGoal: number;
   goalBaseSlots: number;
   forgeInitialThreshold: number;
   forgeThresholdGrowth: number;
@@ -98,7 +98,6 @@ export const BALANCE: Balance = {
   longGoalFirstCost: 500,
   longGoalGrowthNumerator: 5n,
   longGoalGrowthDenominator: 1n,
-  goalSlotsPerLongGoal: 2,
   goalBaseSlots: 2,
   forgeInitialThreshold: 60,
   forgeThresholdGrowth: 1.5,
