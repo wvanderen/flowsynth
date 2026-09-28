@@ -34,7 +34,7 @@ import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatDate, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
 import { renderBoardLedger, renderAretePill, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG } from "./ledger";
-import { moduleRuleOf, moduleValuesHtml, updateModuleRulesLive } from "./rules";
+import { MODULE_RULES, moduleValuesHtml, updateModuleRulesLive } from "./rules";
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
 import { containerWidth, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX } from "./container";
 import { liveSet } from "./live";
@@ -68,6 +68,14 @@ function currentSnapshot(state: GameState): RateSnapshot {
   return computeRates(state, state.mode === "flow");
 }
 
+// One pass's two rate snapshots, bundled (§7): live during flow, the
+// projected build rate while arranging — the pair the module surfaces
+// travel together.
+interface RateBasis {
+  live: RateSnapshot;
+  projected: RateSnapshot;
+}
+
 function stat(label: string, value: string): string {
   return `<div class="stat-row"><span>${label}</span><span class="mono">${value}</span></div>`;
 }
@@ -79,6 +87,7 @@ export function render(app: App): void {
   // Every surface below reads the pass's snapshot; none recomputes.
   const live = currentSnapshot(app.state);
   const projected = computeRates(app.state, true);
+  const basis: RateBasis = { live, projected };
   renderConsoleSession(app);
   renderConsoleApps(app, projected);
   renderBoardLedger(app, live);
@@ -86,11 +95,11 @@ export function render(app: App): void {
   renderGrid(app, live, projected);
   renderInventoryTray(app);
   renderArcCard(app);
-  renderBloom(app, live, projected);
+  renderBloom(app, basis);
   renderZoomCluster(app);
   renderAretePill(app, live);
   renderGameInfoStrip(app, live);
-  renderModal(app, live, projected);
+  renderModal(app, basis);
   renderDev(app);
 }
 
@@ -1520,7 +1529,7 @@ function bindBloomControls(app: App, moduleId: string): void {
 // out-sizes the fixed bloom, and the affordances ride the closed face
 // instead — a floating upgrade card anchored over the module's lower band.
 // The host persists (the app creates it once); only the content rebuilds.
-function renderBloom(app: App, live: RateSnapshot, projected: RateSnapshot): void {
+function renderBloom(app: App, basis: RateBasis): void {
   const host = byId("module-bloom");
   if (!host) return;
   const { state, ui } = app;
@@ -1539,7 +1548,7 @@ function renderBloom(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   const phone = isPhoneWidth();
   // The same basis every rate figure wears (§7): live during flow, the
   // projected build rate between sessions.
-  const snapshot = upgrade ? projected : live;
+  const snapshot = basisSnapshot(app, basis);
   const lines = BLOOM_EFFECTS[module.type]({
     gain: modulePower(module) * (BALANCE.rarityPower[module.rarity] - 1),
     power: modulePower(module),
@@ -2288,7 +2297,8 @@ function enterModalExtra(app: App): [number | null, EnterSelection] {
   return [app.ui.chosenTarget, app.ui.enter];
 }
 
-function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): void {
+function renderModal(app: App, basis: RateBasis): void {
+  const { live, projected } = basis;
   const backdrop = byId("modal");
   const content = byId("modal-content");
   if (!backdrop || !content) return;
@@ -2301,7 +2311,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
     app.ui.modal = null;
     app.ui.combineOffer = null;
   }
-  if (app.ui.modal === "module" && helpedModule(app)?.pos === null) app.ui.modal = null;
+  if (app.ui.modal === "module" && disclosedModule(app)?.pos === null) app.ui.modal = null;
   const kind = app.ui.modal;
   if (!kind) {
     backdrop.hidden = true;
@@ -2355,7 +2365,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                 : kind === "rate"
                   ? [deployedRosterKey(app.state), unlockedCount(app.state)]
                 : kind === "module"
-                  // The helped module's identity plus the mode (the
+                  // The disclosed module's identity plus the mode (the
                   // generator's window row rewords between sessions); the
                   // figures themselves ride live slots the tick fills.
                   ? [app.ui.selected, app.state.mode]
@@ -2374,8 +2384,8 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
     // row survives the clock (ADR-0037).
     if (kind === "rate") updateRateDetailsLive(content, app.state, live);
     if (kind === "module") {
-      const helped = helpedModule(app);
-      if (helped) updateModuleRulesLive(content, app.state, helped, rulesSnapshot(app, live, projected));
+      const disclosed = disclosedModule(app);
+      if (disclosed) updateModuleRulesLive(content, app.state, disclosed, basisSnapshot(app, basis));
     }
     return;
   }
@@ -2392,7 +2402,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   else if (kind === "enter") renderEnterModal(app, content);
   else if (kind === "summary") renderSummaryModal(app, content);
   else if (kind === "rate") renderRateModal(app, content, live);
-  else if (kind === "module") renderModuleRulesModal(app, content, live, projected);
+  else if (kind === "module") renderModuleRulesModal(app, content, basis);
   else if (kind === "inventory") renderInventorySheetModal(app, content);
   else if (kind === "combine") renderCombineModal(app, content);
   const firstButton = content.querySelector("button:not([disabled])");
@@ -2431,25 +2441,26 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
 // conditions are the type's one phrasing (rules.ts); the current values
 // share the rate details' decomposition and mount the same kind of live
 // slots, so the tick keeps an open dialog current without a rebuild. The
-// figures wear the same basis every rate surface wears (rulesSnapshot):
+// figures wear the same basis every rate surface wears (basisSnapshot):
 // live during flow, projected between sessions — the basis it was built on
 // is the basis the tick fills, so the dialog can never contradict the
 // bloom face beside it.
-function helpedModule(app: App): ModuleInstance | undefined {
+function disclosedModule(app: App): ModuleInstance | undefined {
   return app.state.modules.find((m) => m.id === app.ui.selected);
 }
 
 // The module surfaces' one rate basis (§7): live during flow, the projected
-// build rate between sessions — the same split the bloom face uses.
-function rulesSnapshot(app: App, live: RateSnapshot, projected: RateSnapshot): RateSnapshot {
-  return app.state.mode === "flow" ? live : projected;
+// build rate between sessions — the one split the bloom face and the rules
+// dialog share, written once.
+function basisSnapshot(app: App, basis: RateBasis): RateSnapshot {
+  return app.state.mode === "flow" ? basis.live : basis.projected;
 }
 
-function renderModuleRulesModal(app: App, content: HTMLElement, live: RateSnapshot, projected: RateSnapshot): void {
-  const module = helpedModule(app);
+function renderModuleRulesModal(app: App, content: HTMLElement, basis: RateBasis): void {
+  const module = disclosedModule(app);
   if (!module || module.pos === null) return;
-  const snapshot = rulesSnapshot(app, live, projected);
-  const { rule, conditions } = moduleRuleOf(module.type);
+  const snapshot = basisSnapshot(app, basis);
+  const { rule, conditions } = MODULE_RULES[module.type];
   content.innerHTML = `
     ${modalTop("MODULE RULES")}
     <h2 id="modal-title">${META[module.type].name} · LV ${module.level}</h2>

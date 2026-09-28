@@ -4,7 +4,7 @@
 // straight off the engine — the same decomposition the rate details use, so
 // the two surfaces can never disagree.
 import { describe, expect, it } from "vitest";
-import { moduleRuleOf, moduleValuesHtml, moduleValueRows, updateModuleRulesLive } from "./rules";
+import { MODULE_RULES, moduleValuesHtml, moduleValueRows, updateModuleRulesLive } from "./rules";
 import { MODULE_TYPES } from "../engine/constants";
 import { computeRates, modulePower } from "../engine/economy";
 import { forgeThreshold } from "../engine/rolls";
@@ -17,7 +17,7 @@ import { hex } from "../engine/hex";
 describe("module rules prose", () => {
   it("every launch module type has rules and conditions", () => {
     for (const type of MODULE_TYPES) {
-      const { rule, conditions } = moduleRuleOf(type);
+      const { rule, conditions } = MODULE_RULES[type];
       expect(rule.length, type).toBeGreaterThan(20);
       expect(conditions.length, type).toBeGreaterThan(0);
       for (const condition of conditions) {
@@ -27,9 +27,9 @@ describe("module rules prose", () => {
   });
 
   it("the numbers in the prose read off BALANCE, not hardcodes", () => {
-    expect(moduleRuleOf("infusor").rule).toContain("+20%");
-    expect(moduleRuleOf("conditional").rule).toContain("+10% per chord instance");
-    expect(moduleRuleOf("focusKeyed").rule).toContain("10% of that session's credited practice");
+    expect(MODULE_RULES.infusor.rule).toContain("+20%");
+    expect(MODULE_RULES.conditional.rule).toContain("+10% per chord instance");
+    expect(MODULE_RULES.focusKeyed.rule).toContain("10% of that session's credited practice");
   });
 });
 
@@ -91,6 +91,17 @@ describe("module current values", () => {
     expect(infusorRows.find((row) => row.label === "Received charge")!.value).toBe("none");
     const spacerRows = moduleValueRows(state, spacer, snapshot);
     expect(spacerRows.find((row) => row.label === "Wires")!.value).toBe(cellNoteOf(spacer.pos!));
+  });
+
+  it("every note slot has its note — the tick's writer can fill a mounted slot, never a missing one", () => {
+    for (const type of MODULE_TYPES) {
+      const state = fresh();
+      const module = give(state, type, hex(0, 1));
+      const rows = moduleValueRows(state, module, computeRates(state, true));
+      for (const row of rows) {
+        if (row.noteSlot) expect(row.note, `${type}:${row.label}`).toBeDefined();
+      }
+    }
   });
 
   it("the mounted markup fills through the tick's in-place writer", () => {
