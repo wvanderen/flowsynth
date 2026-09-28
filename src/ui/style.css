@@ -634,7 +634,18 @@ h1, h2, h3, p { margin: 0; }
 body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite; }
 @keyframes grid-breath { 50% { opacity: 0.35; } }
 
-#grid { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; display: block; }
+#grid {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: block;
+  /* Board gestures are gestures, not text edits (#151): dragging a module
+     or the board must never highlight the faces' or notes' labels. */
+  user-select: none;
+  -webkit-user-select: none;
+}
 
 /* The action row (§7): a left-edge icon dock floating over the board —
    Catalog / Forge (count badge + charge pip) / New cell. Only the buttons
@@ -1111,6 +1122,10 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
   pointer-events: none;
   filter: drop-shadow(0 18px 16px var(--shadow));
   animation: bloom-in 0.16s ease-out;
+  /* The popped face is a drag source too (#151): holding it starts the
+     live drag, so its labels must never select. */
+  user-select: none;
+  -webkit-user-select: none;
 }
 .module-bloom[hidden] { display: none; }
 @keyframes bloom-in { from { opacity: 0; margin-top: 7px; } }
@@ -1257,6 +1272,9 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
   transition: border-color 0.15s, background 0.15s;
   backdrop-filter: blur(3px);
   overflow-y: auto;
+  /* Tray tiles are drag sources (#151): a held tile is a gesture. */
+  user-select: none;
+  -webkit-user-select: none;
 }
 .inventory-tray.off { display: none; }
 .inventory-tray.drag-over { border-color: var(--charge); background: var(--charge-tint); }
@@ -1282,8 +1300,7 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 .config-label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 
 /* The lattice's note labels (ADR-0021): every cell is an absolute note —
-   empty cells wear theirs beneath the plus so columns read as one note
-   name. */
+   empty cells wear theirs so columns read as one note name. */
 .hex-note { font-size: 11px; fill: var(--muted); letter-spacing: 0.04em; }
 
 /* ── Modals ────────────────────────────────────────── */
@@ -1656,7 +1673,6 @@ body.modal-sheet-open .zoom-cluster {
 .icon-btn:hover:not(:disabled) svg { color: var(--ink); }
 .hex.empty { fill: var(--panel-deep); stroke: var(--line-strong); stroke-dasharray: 3 5; }
 .cell-node > .hex-sub { fill: var(--muted); font: 9px var(--mono); }
-.empty-plus { fill: none; stroke: var(--muted); stroke-width: 1; }
 .cell-node:hover .hex { stroke-width: 2; }
 .cell-node:focus-visible { outline: none; }
 .cell-node:focus-visible .hex { stroke: var(--ink); stroke-width: 3; }

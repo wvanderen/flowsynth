@@ -836,18 +836,17 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
       html += `</g>`;
       continue;
     }
-    // Vacated by the lift, or genuinely empty: the bare cell wears its
-    // note so the column still reads (board-redesign spec §2).
+    // Vacated by the lift, or genuinely empty: an owned cell reads as owned
+    // space — the dashed outline and its note, no add-button plus or EMPTY
+    // CELL prompt. Only armed-mode hints remain (board-redesign spec §7,
+    // #151); New cells stay the purchase entry point.
     let classes = "hex empty";
     if (lifted) classes += " lifted";
     if (drop) classes += ` ${dropClass(drop)}`;
     if (!module && !lifted && isTargetCell(app)) classes += " target";
     html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">
-      <polygon class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>`;
-    if (!lifted) {
-      html += `<path class="empty-plus" d="M-7-6H7M0-13V1"/><text y="24" text-anchor="middle" class="hex-sub">EMPTY CELL</text>`;
-    }
-    html += `<text y="10" text-anchor="middle" class="hex-note">${cellNoteOf(pos)}</text></g>`;
+      <polygon class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>
+      <text y="10" text-anchor="middle" class="hex-note">${cellNoteOf(pos)}</text></g>`;
   }
 
   if (frontier.length > 0) {

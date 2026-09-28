@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import renderSource from "./render.ts?raw";
 import stylesheet from "./style.css?raw";
@@ -41,6 +42,18 @@ describe("theme token table", () => {
     // not paint chassis outlines, icons, or labels in finish hues.
     expect(stylesheet.match(/stroke:\s*var\(--finish-/g)).toBeNull();
     expect(stylesheet.match(/\.hex-icon/g)).toBeNull();
+  });
+
+  it("keeps board and tray gestures from selecting text (#151)", () => {
+    // Dragging a module or the board is a gesture, not a text edit: every
+    // drag surface (grid, bloom face, tray) must deny selection so Chrome
+    // never highlights page text. (?raw CSS imports are stubbed empty under
+    // vitest, so read the file.)
+    const css = readFileSync(new URL("./style.css", import.meta.url), "utf8");
+    for (const surface of ["#grid", ".module-bloom", ".inventory-tray"]) {
+      const rule = css.match(new RegExp(`${surface.replace(".", "\\.")} \\{[^}]*\\}`))?.[0] ?? "";
+      expect(rule, surface).toContain("user-select: none");
+    }
   });
 
   it("only produces valid color values", () => {
