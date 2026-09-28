@@ -122,7 +122,6 @@ describe("the loud summary (§5.7) — every exit path, identical beats", () => 
     endSession(s);
     expect(s.summary!.synths).toBeCloseTo(0.1, 9);
     expect(s.summary!.infusors).toBe(0);
-    expect(s.summary!.chordMultiplier).toBe(1);
     expect(s.summary!.empowerment).toBe(1);
   });
 

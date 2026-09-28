@@ -119,9 +119,12 @@ describe("placement and board rules", () => {
     // Drag the opening synth off the board into the tray: the chord breaks
     // by leaving, never by swapping.
     expect(returnModule(s, s.modules[0]!.id).ok).toBe(true);
-    expect(computeRates(s, true).chordMultiplier).toBe(1);
+    expect(computeRates(s, true).contributions.get(rolled.id)?.chordFactor).toBe(1);
     placeModule(s, s.modules[0]!.id, hex(0, 0));
-    expect(computeRates(s, true).chordMultiplier).toBeCloseTo(before.chordMultiplier, 9);
+    expect(computeRates(s, true).contributions.get(rolled.id)?.chordFactor).toBeCloseTo(
+      before.contributions.get(rolled.id)?.chordFactor ?? 0,
+      9,
+    );
   });
 
   it("gameplay modules swap positions and store to inventory", () => {

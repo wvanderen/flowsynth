@@ -21,12 +21,13 @@ export function unlockedCount(state: GameState): number {
 }
 
 // ── The formula: one record per leg ─────────────────────────────────────
-// The chip's amplitude legs (ADR-0020 as amended by ADR-0022): one record
-// per leg renders both the equation term and the breakdown row, so a future
-// leg lands in one place. The synths leg is every synthesizer's unified
-// base term; the infusor leg joins only once uplift reaches a synth.
+// The chip's amplitude legs (ADR-0020 as amended by ADR-0022/0036): one
+// record per leg renders both the equation term and the breakdown row, so a
+// future leg lands in one place. Chords are local, so the synths leg is
+// every synthesizer's term with its own chord factor in; the infusor leg
+// joins only once uplift reaches a synth.
 const AMP_LEGS = [
-  { key: "synths", icon: "additive", name: "Synths", note: "every synthesizer's base term", always: true },
+  { key: "synths", icon: "additive", name: "Synths", note: "every synthesizer's term with its chords", always: true },
   { key: "inf", icon: "infusor", name: "Infusors", note: "adjacent uplift on the synths", always: false },
 ] as const;
 
@@ -55,30 +56,29 @@ export function ampBreakdownHtml(infused: boolean): string {
 // The breakdown's legs below the amp legs — one record per row, the
 // AMP_LEGS pattern extended across the roster. The Rate cell's hover
 // popover and the formula sheet both render it, so the wording lands in
-// one place: the popover mounts live slots the tick fills (the chords note
-// moves as chords form), the sheet prints the snapshot outright.
+// one place: the popover mounts live slots the tick fills (the chords row
+// names its terms and multipliers), the sheet prints the snapshot outright.
 interface RateRow {
   key: string;
   name: string;
-  note: string | ((snapshot: RateSnapshot) => string);
-  liveNote?: boolean;
+  note: string;
   total?: boolean;
 }
 
 const RATE_ROWS: RateRow[] = [
-  { key: "chords", name: "Chords", note: (snapshot) => chordSummary(snapshot), liveNote: true },
-  { key: "emp", name: "Empowerment", note: "charge uplift on charged modules" },
+  // Chords are local (ADR-0036): the row names the terms and their
+  // multipliers — never a board-wide multiplier or +ν/s claim. The value
+  // the row carries is the named-terms summary itself.
+  { key: "chords", name: "Chords", note: "each chord multiplies its own voices" },
+  { key: "emp", name: "Empowerment", note: "net charge uplift on charged modules" },
   { key: "ach", name: "Achievements", note: "each feat adds into the boost" },
-  { key: "rate", name: "Rate", note: "composite × empowerment × achievements", total: true },
+  { key: "rate", name: "Rate", note: "(synths + infusors) × empowerment × achievements", total: true },
 ];
 
-function rowNote(row: RateRow, snapshot: RateSnapshot): string {
-  return typeof row.note === "function" ? row.note(snapshot) : row.note;
-}
-
-// A row's printed value: the multiplier, the uplift percent, or the total.
+// A row's printed value: the named-terms summary, the uplift percent, or
+// the total.
 function breakdownValue(key: string, snapshot: RateSnapshot): string {
-  if (key === "chords") return `×${formatNumber(snapshot.chordMultiplier)}`;
+  if (key === "chords") return chordSummary(snapshot);
   if (key === "emp") return `×${formatNumber(snapshot.empowerment)}`;
   if (key === "ach") return `+${Math.round((snapshot.achievementBoost - 1) * 100)}%`;
   return `${formatNumber(snapshot.rate)} ν/s`;
@@ -89,7 +89,7 @@ function breakdownValue(key: string, snapshot: RateSnapshot): string {
 export function breakdownRowsHtml(snapshot: RateSnapshot): string {
   return RATE_ROWS.map(
     (row) =>
-      `<div class="rate-breakdown-row${row.total ? " total" : ""}"><span class="bk-name">${row.name}</span><span class="mono">${breakdownValue(row.key, snapshot)}</span><span class="bk-note">${rowNote(row, snapshot)}</span></div>`,
+      `<div class="rate-breakdown-row${row.total ? " total" : ""}"><span class="bk-name">${row.name}</span><span class="mono">${breakdownValue(row.key, snapshot)}</span><span class="bk-note">${row.note}</span></div>`,
   ).join("");
 }
 
@@ -102,14 +102,14 @@ export function chordSummary(snapshot: RateSnapshot): string {
 // breakpoint this collapsed equation IS the rate display — no separate ν/s
 // figure — and hover or focus discloses the value breakdown. Below it the
 // equation hides, the bare total stands alone, and a tap opens the full
-// formula as a modal sheet over a scrim.
+// formula as a modal sheet over a scrim. Chords have no operand: they are
+// local (ADR-0036), riding inside the synths leg and named in the breakdown.
 function rateCellHtml(achieving: boolean, infused: boolean): string {
   return `<button class="prod-cell prod-cell-rate" id="rate-cell" title="Rate — the live formula; hover for the breakdown">
     <span class="prod-label">Rate</span>
     <span class="rate-equation mono" aria-label="Live rate formula">
       <span class="op">(</span>${ampEquationHtml(infused)}
       <span class="op">)</span>
-      <span class="op">×</span><span class="rate-term" title="Chord terms — hover for the breakdown"><span class="term-glyph">χ</span><span data-live="m-chi"></span></span>
       <span class="op">×</span><span class="rate-term" title="Charge empowerment — continuous while modules receive charge"><span class="term-glyph">emp</span><span data-live="m-emp"></span></span>
       ${achieving ? `<span class="op">×</span><span class="rate-term" title="Achievements — each feat adds into the boost"><span class="term-glyph">ach</span><span data-live="m-ach"></span></span>` : ""}
       <span class="op">=</span><strong data-live="m-rate"></strong>
@@ -120,7 +120,7 @@ function rateCellHtml(achieving: boolean, infused: boolean): string {
       ${ampBreakdownHtml(infused)}
       ${RATE_ROWS.map(
         (row) =>
-          `<div class="rate-breakdown-row${row.total ? " total" : ""}"><span class="bk-name">${row.name}</span><span class="mono" data-live="b-${row.key}"></span><span class="bk-note"${row.liveNote ? ' data-live="b-chord-note"' : ""}>${typeof row.note === "string" ? row.note : ""}</span></div>`,
+          `<div class="rate-breakdown-row${row.total ? " total" : ""}"><span class="bk-name">${row.name}</span><span class="mono" data-live="b-${row.key}"></span><span class="bk-note">${row.note}</span></div>`,
       ).join("")}
     </span>
   </button>`;
@@ -181,14 +181,12 @@ export function updateLedgerLive(scope: ParentNode, state: GameState, rate: numb
   // collapsed equation is the rate display above the 760px breakpoint.
   set("m-synths", formatNumber(snapshot.synths));
   set("m-inf", formatNumber(snapshot.infusors));
-  set("m-chi", formatNumber(snapshot.chordMultiplier));
   set("m-emp", formatNumber(snapshot.empowerment));
   set("m-ach", `+${Math.round((snapshot.achievementBoost - 1) * 100)}%`);
   set("m-rate", `${formatNumber(snapshot.rate)} ν/s`);
   set("b-synths", `+${formatNumber(snapshot.synths)} ν/s`);
   set("b-inf", `+${formatNumber(snapshot.infusors)} ν/s`);
   for (const row of RATE_ROWS) set(`b-${row.key}`, breakdownValue(row.key, snapshot));
-  set("b-chord-note", chordSummary(snapshot));
 }
 
 // ── The phone game-info strip (§7) ──────────────────────────────────────

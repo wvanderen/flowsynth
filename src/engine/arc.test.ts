@@ -158,14 +158,15 @@ describe("the opening walk, end to end", () => {
     const second = s.modules.at(-1)!;
     expect(second.pos).toBeNull(); // the tray holds it
     // Beat four: the dashed ghost previewed this — placing beside the first
-    // forms the Fifth (C4 + G4), and the × shows in the rate.
+    // forms the Fifth (C4 + G4), and the × rides each member's own value.
     const before = computeRates(s, true);
-    expect(before.chordMultiplier).toBe(1);
+    // In the tray it never sounds: no contribution, no factor.
+    expect(before.contributions.get(second.id)).toBeUndefined();
     expect(placeModule(s, second.id, hex(1, 0)).ok).toBe(true);
     expect(cellNoteOf(second.pos!)).toBe("G4");
     const after = computeRates(s, true);
     expect(after.namedChords.map((c) => c.name)).toEqual(["Fifth"]);
-    expect(after.chordMultiplier).toBeCloseTo(1.3, 9);
+    expect(after.contributions.get(second.id)?.chordFactor).toBeCloseTo(1.3, 9);
     expect(after.rate).toBeGreaterThan(before.rate);
     // Beat five: rearranging never breaks what pitch keeps — a swap of
     // identical synths re-voices, never breaks (pitch lives in the cell).
@@ -180,7 +181,16 @@ describe("the opening walk, end to end", () => {
     const stacked = computeRates(s, true);
     expect(stacked.namedChords.map((c) => c.name).sort()).toEqual(["Fifth", "Octave"]);
     expect(placeModule(s, second.id, hex(0, 1)).ok).toBe(true); // swaps with the twin
-    expect(computeRates(s, true).chordMultiplier).toBeCloseTo(stacked.chordMultiplier, 9);
+    const swapped = computeRates(s, true);
+    expect(swapped.namedChords.map((c) => `${c.name}×${c.instances}`)).toEqual(
+      stacked.namedChords.map((c) => `${c.name}×${c.instances}`),
+    );
+    // Pitch lives in the cell: the swapped second sings exactly what the
+    // voice it replaced sang at C5.
+    expect(swapped.contributions.get(second.id)?.chordFactor).toBeCloseTo(
+      stacked.contributions.get(thirdModule.id)?.chordFactor ?? 0,
+      9,
+    );
     // The chord-breaking gesture is the tray: drag (or right-click) off the
     // board — the swap left the twin at G4 and the second at C5, so
     // retrieving the second leaves C4 + G4: the Octave dies, the Fifth
@@ -188,7 +198,7 @@ describe("the opening walk, end to end", () => {
     expect(returnModule(s, second.id).ok).toBe(true);
     const broken = computeRates(s, true);
     expect(broken.namedChords.map((c) => c.name)).toEqual(["Fifth"]);
-    expect(broken.chordMultiplier).toBeCloseTo(1.3, 9);
+    expect(broken.contributions.get(thirdModule.id)?.chordFactor).toBeCloseTo(1.3, 9);
     // No Carrier, no tutorial machinery, anywhere.
     expect(s.modules.some((m) => (m.type as string) === "carrier")).toBe(false);
     expect("welcomeAcked" in s).toBe(false);

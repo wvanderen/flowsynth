@@ -185,22 +185,25 @@ function infusorBonusAt(state: GameState, module: ModuleInstance, flow: boolean)
   return total;
 }
 
-// The unified rate (ADR-0021/0022; leg naming per ADR-0020 as amended by
-// ADR-0022):
-//   rate      = (synths + infusor uplift) × Π chord terms × empowerment × achievementBoost
-//   composite = (synths + infusor uplift) × Π chord terms
+// The unified rate (ADR-0021/0022 as amended by ADR-0036; leg naming per
+// ADR-0020): every effect lands on the synthesizer it touches, and the
+// board's rate is the sum of the modules' final figures:
+//   value(s)  = synthRate·power·chordAmp·chordFactor·(1+infusor)·chargeFactor·achievementBoost
+//   rate      = Σ value(s) = (synths + infusors) × empowerment × achievementBoost
 // Every synthesizer shares one base rate scaled by rarityPower^level — one
-// unified leg, no carrier/harmonics split — with the infusor uplift split
-// into its own additive leg so the breakdown names it. Both stay uncharged
-// so charge aggregates into the snapshot's empowerment leg and the
-// breakdown multiplies out exactly. A Conditional rides its own term with a
-// bonus per chord instance it belongs to; the spacer contributes nothing
-// and never sounds. Generators, the Forge meter, and cells are out of the
-// formula, and there is no session stage: the board is the whole production
-// (§4).
+// unified leg, no carrier/harmonics split. Chords are local (ADR-0036):
+// each instance multiplies only its member voices, so chordFactor rides the
+// synthesizer's own term and the synths/infusor legs carry it. Both legs
+// stay uncharged so charge aggregates into the snapshot's empowerment leg
+// and the breakdown multiplies out exactly. A Conditional keeps its own
+// per-chord-instance bonus (ADR-0022) on top of the local chord factor; the
+// spacer contributes nothing and never sounds. Generators, the Forge meter,
+// and cells are out of the formula, and there is no session stage: the
+// board is the whole production (§4).
 export function computeRates(state: GameState, flow: boolean = flowLive(state)): RateSnapshot {
   const contributions = new Map<string, Contribution>();
   const chargeStrength = new Map<string, number>();
+  const achievementBoost = achievementBoostOf(state);
 
   // Pass one: per-module charge, local infusor bonuses, and amplitude; forge
   // progress. Deployed synthesizers and spacers are collected for the chord
@@ -244,6 +247,9 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
       amplitude: deployedModule.type === "spacer" ? 0 : amplitude,
       value,
       chordTerms: 0,
+      // Non-synthesizers never chord: no terms, no local factor — null,
+      // not 0, so no reader mistakes them for a multiplied-out voice.
+      chordFactor: null,
       infusorBonus: deployedModule.type === "spacer" ? 0 : localBonus,
       chargeFactor,
       chargeStrength: strength,
@@ -256,53 +262,51 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
   // that can drift.
   const analysis = analyzeChords(synths.map(({ module }) => module), spacers);
 
-  // Pass three: the unified synths leg. A Conditional is its base term plus
-  // a bonus for every chord instance it belongs to; every other
-  // synthesizer is the plain term. The leg splits into the synths' base and
-  // the infusors' uplift so the breakdown can name both; the split sums
-  // back to the full amplitude.
+  // Pass three: the unified synths leg. Chords are local (ADR-0036): each
+  // synthesizer carries its own chordFactor — the product of every chord
+  // instance it sings in — and a Conditional adds its per-instance bonus
+  // (ADR-0022) on top. The leg splits into the synths' base and the
+  // infusors' uplift so the breakdown can name both; the split sums back to
+  // the full amplitude. Each module's value is its final ν/s — charge and
+  // the achievement boost included — so displayed figures sum to the rate.
   let synthsLeg = 0;
   let infusors = 0;
-  let chargedSum = 0;
+  let rate = 0;
   for (const { module, power, chargeFactor, strength, localBonus } of synths) {
     const pitch = pitchOf(module.pos);
     const chordTerms = analysis.participation.get(module.id) ?? 0;
+    const chordFactor = analysis.voiceMultiplier.get(module.id) ?? 1;
     const chordAmp = module.type === "conditional" ? 1 + BALANCE.conditionalChordBonus * chordTerms : 1;
-    const base = BALANCE.synthRate * power * chordAmp;
-    const uncharged = base * (1 + localBonus);
-    const charged = uncharged * chargeFactor;
+    const base = BALANCE.synthRate * power * chordAmp * chordFactor;
+    const value = base * (1 + localBonus) * chargeFactor * achievementBoost;
     synthsLeg += base;
     infusors += base * localBonus;
-    chargedSum += charged;
+    rate += value;
     contributions.set(module.id, {
       moduleId: module.id,
       type: module.type,
       pitch,
       amplitude: power * (1 + localBonus),
-      value: charged,
+      value,
       chordTerms,
+      chordFactor,
       infusorBonus: localBonus,
       chargeFactor,
       chargeStrength: strength,
     });
   }
 
-  const achievementBoost = achievementBoostOf(state);
   const amplitude = synthsLeg + infusors;
-  const composite = amplitude * analysis.multiplier;
-  // The boost multiplies the rate on top of charge empowerment; the
-  // empowerment leg divides it back out so the breakdown multiplies out
-  // exactly: rate = composite × empowerment × achievementBoost.
-  const rate = chargedSum * analysis.multiplier * achievementBoost;
-  const empowerment = composite > EPS ? rate / (composite * achievementBoost) : 1;
+  // The boost multiplies every module's final value; the empowerment leg
+  // divides it back out so the breakdown multiplies out exactly:
+  // rate = (synths + infusors) × empowerment × achievementBoost.
+  const empowerment = amplitude > EPS ? rate / (amplitude * achievementBoost) : 1;
 
   return {
     synths: synthsLeg,
     infusors,
     amplitude,
-    chordMultiplier: analysis.multiplier,
     namedChords: analysis.namedChords,
-    composite,
     empowerment,
     achievementBoost,
     rate,

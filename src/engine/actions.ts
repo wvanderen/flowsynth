@@ -134,7 +134,6 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
     ratePerMinute: credited > EPS ? (earned / credited) * 60 : 0,
     synths: snapshot.synths,
     infusors: snapshot.infusors,
-    chordMultiplier: snapshot.chordMultiplier,
     empowerment: snapshot.empowerment,
     // The unlock row renders inert at launch (ADR-0019, issue #83); it
     // fires again when the ladder's first tenant joins, post-launch.
