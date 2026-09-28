@@ -1,8 +1,14 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import renderSource from "./render.ts?raw";
-import stylesheet from "./style.css?raw";
 import { defaultTheme, themeCss } from "./theme";
+
+// Vitest stubs CSS imports empty (even via ?raw), so assertions that must
+// see the real stylesheet read it off disk — one canonical load for the
+// file, with comments stripped first: they carry issue references ("#151"),
+// not palette literals.
+const stylesheet = readFileSync(new URL("./style.css", import.meta.url), "utf8")
+  .replace(/\/\*[\s\S]*?\*\//g, "");
 
 const tokens = defaultTheme.tokens;
 
@@ -46,13 +52,15 @@ describe("theme token table", () => {
 
   it("keeps board and tray gestures from selecting text (#151)", () => {
     // Dragging a module or the board is a gesture, not a text edit: every
-    // drag surface (grid, bloom face, tray) must deny selection so Chrome
-    // never highlights page text. (?raw CSS imports are stubbed empty under
-    // vitest, so read the file.)
-    const css = readFileSync(new URL("./style.css", import.meta.url), "utf8");
+    // drag surface (grid, bloom face, tray) must be a selector of some rule
+    // whose body denies selection, so Chrome never highlights page text.
     for (const surface of ["#grid", ".module-bloom", ".inventory-tray"]) {
-      const rule = css.match(new RegExp(`${surface.replace(".", "\\.")} \\{[^}]*\\}`))?.[0] ?? "";
-      expect(rule, surface).toContain("user-select: none");
+      const denied = [...stylesheet.matchAll(/([^{}]+)\{([^}]*)\}/g)].some(
+        ([, selectors, body]) =>
+          selectors!.split(",").map((s) => s.trim()).includes(surface) &&
+          body!.includes("user-select: none"),
+      );
+      expect(denied, `${surface} denies text selection`).toBe(true);
     }
   });
 
@@ -81,14 +89,24 @@ describe("theme token table", () => {
   });
 
   it("is the single source the stylesheet colors through", () => {
-    // No palette literals and no color math may live in the stylesheet —
-    // every color resolves through a token custom property.
+    // No palette literals may live in the stylesheet, and the color math it
+    // runs must combine token custom properties — the same derived grammar
+    // the token table itself uses. (Literal hues live only in theme.ts.)
     expect(stylesheet).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
-    expect(stylesheet).not.toMatch(/\b(?:rgba?|hsla?|color-mix)\(/);
-    // --mono is the one non-color token the stylesheet owns.
-    const referenced = new Set([...stylesheet.matchAll(/var\(--([a-z0-9-]+)[),]/g)].map((m) => m[1]));
+    expect(stylesheet).not.toMatch(/\b(?:rgba?|hsla?)\(/);
+    const derived = /^(?:in srgb,\s*)?var\(--[a-z0-9-]+\)\s+\d+%,\s*(?:var\(--[a-z0-9-]+\)|transparent)$/;
+    for (const [, args] of stylesheet.matchAll(/color-mix\(((?:[^()]|\([^()]*\))*)\)/g)) {
+      expect(args!.replace(/\s+/g, " ").trim(), `color-mix(${args})`).toMatch(derived);
+    }
+    // --mono is the one non-color token the stylesheet owns. --cc and
+    // --seam-dur are the chord overlay's runtime properties — the markup
+    // injects them (render.ts), each resolving through a token key itself.
+    // Anything the stylesheet defines itself (e.g. the --modal-pad spacing
+    // var) resolves by definition.
+    const defined = new Set([...stylesheet.matchAll(/(^|[\s;{])--([a-z0-9-]+)\s*:/g)].map((m) => m[2]!));
+    const referenced = new Set([...stylesheet.matchAll(/var\(--([a-z0-9-]+)[),]/g)].map((m) => m[1]!));
     for (const name of referenced) {
-      expect(name === "mono" || name in tokens, `--${name} resolves`).toBe(true);
+      expect(name === "mono" || name === "cc" || name === "seam-dur" || name in tokens || defined.has(name), `--${name} resolves`).toBe(true);
     }
   });
 
