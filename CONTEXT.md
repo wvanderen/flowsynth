@@ -22,7 +22,7 @@ The function level of a board module — synthesizer, spacer, generator, infusor
 A specific module design within a category, such as the Additive Synthesizer or the focus-keyed generator, carrying its own glyph and nameplate. Forge choices contain distinct module types; different types may share the same category.
 
 **Chargeable module**:
-A supertype family above the category level whose members accumulate received charge toward thresholds that produce effects; the threshold fill is the family's shared rendering trait. The Forge is the launch instance. Continuous-charge categories (synthesizer, infusor) use received charge as continuous empowerment instead.
+A supertype family above the category level whose members accumulate received charge toward thresholds that produce effects; the threshold fill is the family's shared rendering trait. The Module Forge is the launch instance. Continuous-charge categories (synthesizer, infusor) use received charge as continuous empowerment instead.
 
 **Pitch**:
 The absolute note a cell sounds — a property of the cell's position on the octave-stack lattice, derived from its coordinates and never persisted. Columns read as one note name; the horizontal axis walks the circle of fifths.
@@ -41,7 +41,7 @@ The reserved spot beside the board — the heading's right end — where a selec
 _Avoid_: Chord chip (the ambient-floating sense), Chord view
 
 **Spacer**:
-A silent wire module occupying one cell: it never sounds and never joins a pitch set, but conducts chord adjacency through chains of wired cells. Reaches the board only through forge rolls.
+A silent wire module occupying one cell: it never sounds and never joins a pitch set, but conducts chord adjacency through chains of wired cells. Reaches the board only through module rolls.
 
 **Octave row**:
 One register of the board: the band of cells whose pitches sit in the same octave, stacked as a vertical shape.
@@ -66,6 +66,22 @@ The popped bloom standing for its module: the origin cell renders vacated while 
 **Tray**:
 The board-surface inventory as a collapsible column docked beside the action dock — the dock's Inventory icon toggles it, and a drag or an armed placement opens it for the gesture's duration. Drag a module off the board into it to retrieve — the chord-breaking gesture, shared with right-click retrieve — and click an item then a cell to place; occupied placement swaps. Its tiles wear the minimal mark: a hexagon outlined in the category hue with the glyph alone, the full face belonging to the board and the expanded face (ADR-0027). On portrait phone the tray hides and the thumb bar's Inventory segment taps the same inventory open as a sheet. There is no management view.
 _Avoid_: inventory panel, management view
+
+**Mutator Grid**:
+The board lattice's second layer, mirroring it position for position, present only while activated by the Mutator tree's entry purchase. Each cell owns one Mutator slot; modules move freely across the board while slots stay put.
+_Avoid_: enhancement grid, second board
+
+**Mutator slot**:
+One cell's place on the Mutator Grid — the cell's second face. Holds at most one mutator and modifies whatever module occupies the cell; vacant, it is inert. Slots unlock one at a time in upgrade mode and persist through prestige.
+_Avoid_: socket, gem slot
+
+**Mutator**:
+An item of the Mutator Grid: typed, carrying rarity, sitting in a Mutator slot to modify its host module's corresponding term. Launch families: power, resonance, charge. Retrieved and placed like modules, through the Mutator tray; placed mutators and the tray persist through prestige.
+_Avoid_: enhancement (the pre-design name), gem, affix
+
+**Mutator tray**:
+The Mutator Grid's inventory, mirroring the Tray's docks and gestures for mutators: minted mutators wait here, a click then a slot places, and a drag or right-click retrieves.
+_Avoid_: second inventory
 
 ### Resources and production
 
@@ -125,19 +141,29 @@ A module quality shown as an engraved ring count and plate tint; it improves how
 The consumption of two modules of the same type and rarity to produce one of the next rarity, retaining the higher input level and refunding the lower-level input's nous upgrade expenditure. It is initiated by dropping one copy onto the other (board or tray, either direction) and confirming the reviewed outcome; the result lands where the drop target was. The player chooses one input's secondary effects to retain with the new rarity's improvements.
 
 **Forge**:
-The launch chargeable module; it accumulates received charge toward thresholds that mint forge rolls.
+A chargeable module that accumulates received charge toward thresholds that mint rolls. The family splits in two — the Module Forge mints module rolls, the Mutator Forge mints mutator rolls.
+
+**Module Forge**:
+The launch Forge: the chargeable module whose thresholds mint module rolls. Its shared progress meter and banked rolls are the originals.
+
+**Mutator Forge**:
+The chargeable module whose thresholds mint mutator rolls into the Mutator tray. Catalog-exclusive until the Mutator tree's roll-pool purchase joins it; its branch keeps its own shared progress meter across deployed Mutator Forges.
 
 **Forge progress**:
-A player-wide meter to which deployed Forges contribute according to received charge and progress efficiency. Crossing its globally scaling threshold banks a roll and carries excess progress forward, independently of any individual Forge's identity.
+A branch's player-wide meter to which that branch's deployed Forges contribute according to received charge and progress efficiency — the Module Forge's and the Mutator Forge's meters are separate. Crossing a branch's globally scaling threshold banks a roll on that branch and carries excess progress forward, independently of any individual Forge's identity.
 
-**Forge roll**:
+**Module roll**:
 A charge-earned choice of one module from three generated candidates; unchosen candidates disappear without consolation resources.
+_Avoid_: forge roll (the pre-split name)
+
+**Mutator roll**:
+A charge-earned choice of one mutator from three generated candidates, delivered to the Mutator tray; unchosen candidates disappear without consolation resources.
 
 **Catalog**:
 The permanent upgrade-mode purchase surface: app activations, starter-shelf offers while available, and cells. Its activation section appears only once the ladder has a tenant. Module upgrades live on module panels, not the catalog (ADR-0018).
 
 **Starter shelf**:
-The catalog's one-time guaranteed offers — the generator, one infusor, and a Forge — hidden once acquired. It completes the non-synthesizer landscape; synthesizers come only from the opening grant and forge rolls (ADR-0022).
+The catalog's one-time guaranteed offers — the generator, one infusor, and a Module Forge — hidden once acquired. It completes the non-synthesizer landscape; synthesizers come only from the opening grant and module rolls (ADR-0022).
 
 ### The console and focus apps
 
@@ -289,7 +315,19 @@ The muted list-row flag on session records carrying a missed honesty event. Mute
 ### Progression
 
 **Arete**:
-The resource banked by prestige and by nothing else — never granted before the reset. Its base yield is one per prestige at the horizon line; what it spends on is not yet decided.
+The resource banked by prestige and by nothing else — never granted before the reset. Its base yield is one per prestige at the horizon line, and it spends on the Arete Catalog.
+
+**Arete Catalog**:
+The board-side shop of Arete purchases: a chip on the board ledger, appearing with the first banked Arete, opening the prestige sheet — production stays grouped on the board, and the console never touches Arete. Organized as trees of offerings; each tree enters at one Arete and escalates within. Purchases are permanent and survive prestige. The launch trees are the Mutator tree and the Octave tree.
+_Avoid_: prestige tree, skill tree
+
+**Mutator tree**:
+The Arete Catalog's first tree. Its entry purchase activates the Mutator Grid, grants the Mutator Forge module itself, and unlocks the first Mutator slot; later purchases add slots at escalating Arete, and a pricier purchase then joins the Mutator Forge type to the roll pool. The type is otherwise Catalog-exclusive.
+_Avoid_: enhancement tree, gem tree
+
+**Octave tree**:
+The Arete Catalog's second tree: one octave row above and one below the launch band, sold in either order at escalating Arete. Its purchase stands in the row gate for the row it opens — cells inside then buy with nous as usual — and the board caps at six octave rows this phase.
+_Avoid_: row expansion, vertical unlock
 
 **Arete accumulator**:
 The log-scale fill on the current era's nous earned toward the horizon line, drawn as the ambient horizon bar across the board's lower edge (ADR-0038); it rebases at each prestige while lifetime total nous earned stays the truth beneath. Its one figure is the bar's own log-scale percentage; no decade marks or countdown.
@@ -302,7 +340,7 @@ _Avoid_: Arete pill
 The Arete accumulator's cap — the fixed prestige threshold and the horizon bar's far end, the same every era until the horizon breaks. Reaching it opens the prestige door; it mints nothing by itself.
 
 **Prestige**:
-The reset action: once the current era's fill reaches the horizon line, prestige banks the era's Arete claim and begins the next era — module levels, nous, and charge state reset while the board's modules, cells, and placement and the whole life record persist. Performed in upgrade mode through the horizon bar's door, behind a confirm.
+The reset action: once the current era's fill reaches the horizon line, prestige banks the era's Arete claim and begins the next era — module levels, nous, and charge state reset while the board's modules, cells, and placement, the mutator layer (Catalog unlocks, Mutator slots, placed mutators, the Mutator tray), and the whole life record persist. Performed in upgrade mode through the horizon bar's door, behind a confirm.
 _Avoid_: reset (as the player-facing verb)
 
 **Achievement**:
@@ -310,10 +348,10 @@ A named feat that accelerates but never gates progress; each adds into the globa
 
 ### Deferred vocabulary
 
-The Tasks console app ships post-launch; its terms below stand as designed (ADR-0005) and join the activation ladder when built. The horizon break is deferred differently: it awaits the Arete-spending design.
+The Tasks console app ships post-launch; its terms below stand as designed (ADR-0005) and join the activation ladder when built. The horizon break is deferred to its own decision; what Arete buys is now settled — the Arete Catalog.
 
 **Horizon break**:
-The planned future act that lets score beyond the horizon line scale the prestige claim — still banked only on reset. Its unlock, curve, and surface await what Arete buys.
+The planned future act that lets score beyond the horizon line scale the prestige claim — still banked only on reset. Its unlock, curve, and surface are the horizon break's own decision.
 
 **Task**:
 A concrete action whose size is estimated and whose completion is reported by the player, initially intended to be bite-sized. Tasks can be created or completed at any time.
