@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ACHIEVEMENTS, achievementBoostOf, achievementById, syncAchievements } from "./achievements";
-import { acknowledgeHorizon, buyCell, combine, endSession, placeModule, startSession } from "./actions";
+import { ARETE_HORIZON } from "./accumulator";
+import { buyCell, combine, endSession, placeModule, startSession } from "./actions";
 import { advance } from "./advance";
 import { BALANCE } from "./constants";
 import { computeRates } from "./economy";
@@ -249,10 +250,17 @@ describe("the 17-feat launch set", () => {
     expect(def.progress(s, { chargeDelivered: false }).current).toBeCloseTo(1.3, 9);
   });
 
-  it("Eyes on the horizon: pressing the reserved prestige button", () => {
+  it("Eyes on the horizon: reaching the horizon, never the legacy acknowledgment", () => {
     const s = fresh();
     completeSession(s);
-    expect(acknowledgeHorizon(s).unlocked).toEqual(["eyes-on-the-horizon"]);
+    // The removed prestige button's flag rides in old saves, but it mints
+    // nothing (issue #156): only the crossing unlocks the feat.
+    s.horizonAcknowledged = true;
+    expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual([]);
+    s.totalEarned = ARETE_HORIZON;
+    expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual(["eyes-on-the-horizon"]);
+    // Already unlocked never re-fires.
+    expect(syncAchievements(s, { now: NOW })).toEqual([]);
   });
 
   it("Time in the seat: 100 lifetime practice minutes, live plus manual", () => {
@@ -320,7 +328,8 @@ describe("achievement persistence", () => {
   it("round-trips the id → unlockedAt map and the counters", () => {
     const s = fresh();
     completeSession(s);
-    acknowledgeHorizon(s);
+    s.totalEarned = ARETE_HORIZON;
+    syncAchievements(s, { now: NOW }); // eyes-on-the-horizon, by reaching
     s.unstructuredSessions = 3;
     s.plannedSessionsCompleted = 2;
     s.combinations = 1;
@@ -330,6 +339,23 @@ describe("achievement persistence", () => {
     expect(serialize(loaded.state!, NOW)).toBe(text);
     expect(loaded.state!.achievements["first-light"]).toBe(NOW);
     expect(loaded.state!.achievements["eyes-on-the-horizon"]).toBeDefined();
+  });
+
+  it("a legacy save keeps the feat the removed button minted, even below the horizon", () => {
+    // The old prestige button could set the flag (and mint the feat) before
+    // the crossing; a reload must neither revoke the feat nor re-mint it,
+    // and the flag alone never unlocks it anew (issue #156).
+    const s = fresh();
+    completeSession(s);
+    s.achievements["eyes-on-the-horizon"] = NOW;
+    s.horizonAcknowledged = true;
+    const loaded = deserialize(serialize(s, NOW)).state!;
+    expect(loaded.achievements["eyes-on-the-horizon"]).toBe(NOW);
+    expect(syncAchievements(loaded, { now: NOW })).toEqual([]);
+    const flagged = fresh();
+    completeSession(flagged);
+    flagged.horizonAcknowledged = true;
+    expect(syncAchievements(flagged, { now: NOW }).map((d) => d.id)).toEqual([]);
   });
 
   it("saves missing the ledger fields lenient-default them at load", () => {

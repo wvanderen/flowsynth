@@ -1,7 +1,6 @@
 import { advance } from "../engine/advance";
 import type { AdvanceResult } from "../engine/types";
 import {
-  acknowledgeHorizon,
   buyCell,
   buyGoalCapacity,
   buyShelfModule,
@@ -895,12 +894,6 @@ export class App {
     if (this.act(resumeSession(this.state), "Flow resumed.")) {
       this.syncBoundaryClock(Date.now());
     }
-  }
-
-  // The reserved prestige button (ADR-0015): inert at launch — pressing
-  // only acknowledges the horizon, and the flag stays detectable.
-  acknowledgeHorizon(): void {
-    this.act(acknowledgeHorizon(this.state), "Horizon acknowledged.");
   }
 
   buyShelf(type: ShelfType): void {

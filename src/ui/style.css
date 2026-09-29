@@ -793,104 +793,75 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .info-hint { font-size: 10px; color: var(--muted); }
 .game-info-strip .info-rate:hover .info-hint { color: var(--ink); }
 
-/* The Arete pill (§7): the status monitor dissolved — the accumulator
-   floats free as a translucent pill over the board's bottom edge at every
-   width. Pointer-transparent except the reserved prestige button. */
-.arete-pill {
+/* The ambient horizon bar (§7, issue #156): the accumulator drawn as a
+   wide curved-scale fill riding the board's lower edge at every width —
+   pointer-transparent, saying only its name. The lane clears the zoom
+   cluster's right edge (12 + 36 + gap) and the left dock's lower reach. */
+.horizon-bar {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 12px;
+  left: 24px;
+  right: 64px;
+  bottom: 8px;
   z-index: 14;
-  width: min(340px, 62%);
-  padding: 6px 13px 8px;
-  background: color-mix(in srgb, var(--panel-soft) 88%, transparent);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  backdrop-filter: blur(3px);
+  height: 60px;
   pointer-events: none;
 }
-.pill-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  font: 10px var(--mono);
-  letter-spacing: 0.12em;
-  color: var(--muted);
-  margin-bottom: 5px;
-  white-space: nowrap;
+.horizon-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.horizon-track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--panel-deep) 82%, var(--line-strong));
+  stroke-width: 7px;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
 }
-/* The total owns the middle lane outright — flex: 1, centered — so ARETE
-   and the prestige button sit pinned to their edges however long the
-   lifetime figure runs. */
-.pill-row b { color: var(--ink); font-weight: 400; letter-spacing: 0; flex: 1; text-align: center; }
-.pill-prestige {
-  pointer-events: auto;
-  flex-shrink: 0;
+/* The fill rides the same path behind a clip: the accumulator's 0–1 fill
+   position lands on the clip rect's 0–600 user-unit width, patched in
+   place by the tick (the geometry property transitions smoothly). */
+.horizon-fill {
+  fill: none;
+  stroke: url(#horizon-fill-grad);
+  stroke-width: 7px;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.horizon-clip { transition: width 400ms ease-out; }
+/* The horizon cap: the era's far end, glowing violet. */
+.horizon-cap {
+  fill: none;
+  stroke: var(--reserved-violet);
+  stroke-width: 3px;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--reserved-violet) 55%, transparent));
+}
+.horizon-bar.reached .horizon-cap { stroke-width: 4px; }
+.horizon-word {
+  position: absolute;
+  left: 16px;
+  bottom: 0;
   font: 9px var(--mono);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--reserved-violet);
-  border: 1px solid color-mix(in srgb, var(--reserved-violet) 45%, var(--line));
-  border-radius: 99px;
-  padding: 2px 10px;
-  background: transparent;
-}
-.pill-prestige:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--reserved-violet) 12%, transparent);
-  border-color: var(--reserved-violet);
-}
-.pill-prestige:disabled { opacity: 0.55; cursor: default; }
-/* The rail: log-scale fill on lifetime ν, inert decade graduations, the
-   horizon cap, and the beat readout riding the fill head. The rail's top
-   margin reserves the beat's lane between row and rail. */
-.pill-rail {
-  position: relative;
-  height: 8px;
-  margin-top: 15px;
-  background: var(--panel-deep);
-  border: 1px solid var(--line-soft);
-  border-radius: 4px;
-}
-.pill-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  border-radius: 3px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--hue-synthesizer) 45%, var(--panel)), var(--nous));
-  transition: width 400ms ease-out;
-}
-.pill-grad { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--line-strong); }
-.pill-grad b {
-  display: none;
-}
-.pill-horizon {
-  position: absolute;
-  top: -3px;
-  bottom: -3px;
-  right: -1px;
-  width: 3px;
-  background: var(--reserved-violet);
-  box-shadow: 0 0 8px 1px color-mix(in srgb, var(--reserved-violet) 45%, transparent);
-  border-radius: 1px;
-}
-.pill-head {
-  position: absolute;
-  bottom: calc(100% + 4px);
-  transform: translateX(-50%);
-  font: 9px var(--mono);
   color: var(--muted);
-  white-space: nowrap;
-  background: color-mix(in srgb, var(--panel-soft) 85%, transparent);
-  padding: 1px 7px;
-  border-radius: 99px;
 }
-.pill-head.flip { transform: translateX(-100%); }
+/* The completed state: the crossing mints the first Arete and the bar
+   keeps saying so until prestige's design lands. */
+.horizon-state {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  font: 10px var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+  white-space: nowrap;
+}
 
 /* The opening arc's one pop-up (§8): the second synth's card, floating
    over the board's top-left corner — clear of the dock, the readout, the
-   pill, and the zoom cluster. One dismissible card, once, ever: no goals,
-   no steps, no tutorial state behind it. */
+   horizon bar, and the zoom cluster. One dismissible card, once, ever: no
+   goals, no steps, no tutorial state behind it. */
 .arc-card {
   position: absolute;
   top: 12px;
@@ -1619,32 +1590,24 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
   .board-tools { display: none; }
   .thumb-bar { display: flex; }
   /* The tray hides on phone — the thumb bar's Inventory taps the sheet —
-     so the pill owns the lane above the bar. The pill anchors edge to
-     edge — left 12, right 58 clears the zoom cluster's lane (10 + 36) —
-     instead of centering at a percentage a 390px screen can't hold its
-     row inside. */
+     so the horizon bar owns the lane above the thumb bar. It anchors edge
+     to edge — left 12, right 58 clears the zoom cluster's lane (10 + 36) —
+     instead of centering at a percentage a 390px screen can't hold. */
   .inventory-tray { display: none !important; }
-  .arete-pill {
+  .horizon-bar {
     bottom: 64px;
     left: 12px;
     right: 58px;
-    transform: none;
-    width: auto;
-    padding: 4px 9px 6px;
+    height: 46px;
   }
-  .pill-row { font-size: 9px; margin-bottom: 4px; }
-  .pill-prestige { padding: 2px 7px; font-size: 8.5px; }
-  .pill-rail { height: 7px; margin-top: 14px; }
-  /* The beat's countdown ticks every second (m:ss), so its bubble wears a
-     locked width — the longest steady-state form — and centers its text:
-     it changes what it says, never how big it is. */
-  .pill-head { font-size: 8.5px; min-width: 50ch; text-align: center; }
+  .horizon-word { font-size: 8px; left: 10px; }
+  .horizon-state { font-size: 8.5px; }
   .zoom-cluster { right: 10px; bottom: 64px; }
   body.bloom-sheet-open .zoom-cluster { bottom: 150px; }
   .module-bloom.sheet { bottom: 56px !important; }
   .chord-readout { top: 46px; right: 10px; }
   /* The arc card clears the game-info strip up top by riding above the
-     Arete pill's lane at the board's lower edge. */
+     horizon bar's lane at the board's lower edge. */
   .arc-card { top: auto; bottom: 124px; left: 12px; right: 12px; max-width: none; }
 }
 

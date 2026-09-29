@@ -28,8 +28,8 @@ export function formatInt(n: number): string {
   return Math.floor(n + 1e-9).toLocaleString("en-US");
 }
 
-// A readout for tight live surfaces (the Arete pill's lifetime total, the
-// phone strip's reads): always two decimals, trailing zeros kept, so a
+// A readout for tight live surfaces (the phone strip's reads, the session
+// cell): always two decimals, trailing zeros kept, so a
 // value drifting through 2,426.10 never resizes its row the way the
 // trimmed "2,426.1" → "2,426.11" oscillation does. Past the exact range
 // the ladder takes over — magnitude changes are rare enough not to pulse.
