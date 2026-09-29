@@ -1,14 +1,16 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import renderSource from "./render.ts?raw";
 import { defaultTheme, themeCss } from "./theme";
 
 // Vitest stubs CSS imports empty (even via ?raw), so assertions that must
-// see the real stylesheet read it off disk — one canonical load for the
-// file, with comments stripped first: they carry issue references ("#151"),
-// not palette literals.
-const stylesheet = readFileSync(new URL("./style.css", import.meta.url), "utf8")
-  .replace(/\/\*[\s\S]*?\*\//g, "");
+// see real source read it off disk — one canonical load per file.
+const readSource = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
+// Stylesheet comments are stripped first: they carry issue references
+// ("#151"), not palette literals. render.ts keeps its comments — its guards
+// only read var(--…) tokens, and stripping block comments there could mangle
+// string literals.
+const stylesheet = readSource("./style.css").replace(/\/\*[\s\S]*?\*\//g, "");
+const renderSource = readSource("./render.ts");
 
 const tokens = defaultTheme.tokens;
 
