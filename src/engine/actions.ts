@@ -164,14 +164,6 @@ export function resumeSession(state: GameState): ActionResult {
   return ok;
 }
 
-// The reserved prestige button (ADR-0015): inert at launch — pressing only
-// acknowledges the horizon. The flag persists so the achievements ticket can
-// detect the gesture ("Eyes on the horizon").
-export function acknowledgeHorizon(state: GameState): ActionResult {
-  state.horizonAcknowledged = true;
-  return { ok: true, unlocked: checkAchievements(state) };
-}
-
 // The summary's reflection (§8): recorded the moment either field is
 // touched — the untouched field keeps its neutral default (empty text,
 // middle slider) — and absent while neither is. Recording is the logging,

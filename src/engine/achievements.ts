@@ -6,6 +6,7 @@
 // and nothing can unlock during session one. In-session unlocks queue into
 // the session's unlocked list (the summary's "unlocked this session" row);
 // upgrade-mode unlocks return to the caller for toasting.
+import { ARETE_HORIZON } from "./accumulator";
 import { BALANCE } from "./constants";
 import { analyzeChords } from "./chords";
 import { deployedConductors } from "./economy";
@@ -182,9 +183,12 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     id: "eyes-on-the-horizon",
     category: "formula",
     name: "Eyes on the horizon",
-    description: "Press the reserved prestige button.",
-    evaluate: (s) => s.horizonAcknowledged,
-    progress: (s) => fraction(s.horizonAcknowledged ? 1 : 0, 1),
+    description: "Reach the horizon.",
+    // Reaching the horizon is the trigger (issue #156) — never the legacy
+    // horizonAcknowledged flag, which an old save may carry without the
+    // crossing behind it.
+    evaluate: (s) => s.totalEarned >= ARETE_HORIZON,
+    progress: (s) => fraction(s.totalEarned, ARETE_HORIZON),
   },
   {
     id: "time-in-the-seat",

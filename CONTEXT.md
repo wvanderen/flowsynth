@@ -292,10 +292,14 @@ The muted list-row flag on session records carrying a missed honesty event. Mute
 The resource minted when the Arete accumulator fills. What mints it in quantity and what it spends on are prestige design, not yet decided.
 
 **Arete accumulator**:
-The log-scale fill on lifetime total nous earned toward the horizon line, floating free as a translucent pill over the board's bottom edge; its decade graduations are visible but inert.
+The log-scale fill on lifetime total nous earned toward the horizon line, drawn as the ambient horizon bar across the board's lower edge (ADR-0038) — its one figure is the bar's own log-scale percentage; no decade marks, countdown, or button.
+
+**Horizon bar**:
+The Arete accumulator's surface: the ambient, pointer-transparent curved-scale fill riding the board's lower edge at every width, spanning most of the board's breadth (ADR-0038). It says its name and its one log-scale percentage and nothing else; an open sheet may cover it, nothing dismisses it (ADR-0029).
+_Avoid_: Arete pill
 
 **Horizon line**:
-The Arete accumulator's cap — the first prestige threshold — with a reserved, inert prestige button beneath it at launch.
+The Arete accumulator's cap — the first prestige threshold, the horizon bar's far end. Reaching it mints the first Arete and the bar settles into its completed state until prestige is designed.
 
 **Achievement**:
 A named feat that accelerates but never gates progress; each adds into the global achievementBoost term of the nous rate. Detection is live, storage is the v5 save's `id → unlockedAt` map. "Feat" is flavor individual names may carry, never a second term.

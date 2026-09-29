@@ -33,7 +33,7 @@ import { chordOverlay, chipWidth, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatDate, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
-import { renderBoardLedger, renderAretePill, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG } from "./ledger";
+import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG } from "./ledger";
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
 import { containerWidth, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX } from "./container";
 import { liveSet } from "./live";
@@ -87,7 +87,7 @@ export function render(app: App): void {
   renderArcCard(app);
   renderBloom(app, projected);
   renderZoomCluster(app);
-  renderAretePill(app, live);
+  renderHorizonBar(app);
   renderGameInfoStrip(app, live);
   renderModal(app, live, projected);
   renderDev(app);
@@ -1683,7 +1683,7 @@ function renderInventoryTray(app: App): void {
 // synthesizer is acquired, a single dismissible card — place it beside
 // your first; the dashed ghost previews the chord it would form; the × is
 // what the pair earns together. Upgrade-mode furniture over the board's
-// top edge, clear of the dock, the pill, and the zoom cluster; the ✕
+// top edge, clear of the dock, the horizon bar, and the zoom cluster; the ✕
 // dismisses once, ever (arcCardSeen persists). No goals, no steps, no
 // tutorial state — one card.
 function renderArcCard(app: App): void {

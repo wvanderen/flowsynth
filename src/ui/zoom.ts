@@ -70,7 +70,7 @@ const ZOOM_CLUSTER_SVG = {
 };
 
 // The zoom cluster (§7): +/−/fit floating over the board's right edge,
-// below the chord readout and above the pill; wheel zoom rides the board.
+// below the chord readout and beside the horizon bar; wheel zoom rides the board.
 export function renderZoomCluster(app: App): void {
   const host = document.getElementById("zoom-cluster");
   if (!host) return;

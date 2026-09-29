@@ -1,13 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  ARETE_GRADUATIONS,
-  ARETE_HORIZON,
-  ARETE_LOG_FLOOR,
-  accumulatorFill,
-  nextAccumulatorMark,
-  syncArete,
-} from "./accumulator";
-import { acknowledgeHorizon, startSession } from "./actions";
+import { ARETE_HORIZON, ARETE_LOG_FLOOR, accumulatorFill, syncArete } from "./accumulator";
+import { startSession } from "./actions";
 import { advance } from "./advance";
 import { fresh } from "./fixtures";
 
@@ -26,22 +19,10 @@ describe("the Arete accumulator's log-scale fill", () => {
     expect(accumulatorFill(ARETE_HORIZON * 1_000_000)).toBe(1);
   });
 
-  it("places every decade graduation strictly inside the rail", () => {
-    for (const mark of ARETE_GRADUATIONS) {
-      const position = accumulatorFill(mark);
-      expect(position).toBeGreaterThan(0);
-      expect(position).toBeLessThan(1);
-    }
-  });
-});
-
-describe("the horizon's decade graduations", () => {
-  it("step through the decades, then yield to the horizon", () => {
-    expect(nextAccumulatorMark(0)).toBe(ARETE_GRADUATIONS[0]);
-    expect(nextAccumulatorMark(150)).toBe(1_000);
-    expect(nextAccumulatorMark(9_999)).toBe(10_000);
-    expect(nextAccumulatorMark(10_000)).toBe(ARETE_HORIZON);
-    expect(nextAccumulatorMark(ARETE_HORIZON)).toBe(ARETE_HORIZON);
+  it("sweeps visibly through the first decades of play", () => {
+    // The curved scale is the point (issue #156): early play moves the bar.
+    expect(accumulatorFill(100)).toBeCloseTo(0.25, 9);
+    expect(accumulatorFill(1_000)).toBeCloseTo(0.5, 9);
   });
 });
 
@@ -70,27 +51,6 @@ describe("filling mints Arete", () => {
     startAndAdvance(s, 100);
     expect(s.totalEarned).toBeGreaterThanOrEqual(ARETE_HORIZON);
     expect(s.arete).toBe(1);
-  });
-});
-
-describe("the reserved prestige button", () => {
-  it("records the acknowledgment for the achievements ticket", () => {
-    const s = fresh();
-    expect(s.horizonAcknowledged).toBe(false);
-    expect(acknowledgeHorizon(s).ok).toBe(true);
-    expect(s.horizonAcknowledged).toBe(true);
-  });
-
-  it("acknowledging is idempotent and never touches the economy", () => {
-    const s = fresh();
-    s.totalEarned = ARETE_HORIZON;
-    syncArete(s);
-    const nous = s.nous;
-    acknowledgeHorizon(s);
-    acknowledgeHorizon(s);
-    expect(s.horizonAcknowledged).toBe(true);
-    expect(s.arete).toBe(1);
-    expect(s.nous).toBe(nous);
   });
 });
 

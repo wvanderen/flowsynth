@@ -283,8 +283,9 @@ export interface GameState {
   nous: number;
   totalEarned: number;
   // The Arete accumulator (ADR-0015): Arete minted at the horizon, inert
-  // until prestige's design lands; and whether the reserved prestige button
-  // has been pressed — the acknowledgment the achievements ticket detects.
+  // until prestige's design lands; plus the legacy acknowledgment flag the
+  // removed prestige button once set (ADR-0038) — kept so old saves load,
+  // read by nothing (the feat triggers on the crossing, never the flag).
   arete: number;
   horizonAcknowledged: boolean;
   // One global mute (§5): gates every app sound, including the target

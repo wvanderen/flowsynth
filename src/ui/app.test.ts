@@ -7,6 +7,7 @@ import { createGoal, deleteGoal, goalSummary, accrueGoalProgress } from "../engi
 import { recordSummaryReflection } from "../engine/actions";
 import { writeNote } from "../engine/notes";
 import { BALANCE, SAVE_VERSION } from "../engine/constants";
+import { ARETE_HORIZON } from "../engine/accumulator";
 import { STORAGE_KEY, serialize } from "../engine/save";
 import { computeRates, longGoalCost } from "../engine/economy";
 import { startSession, endSession } from "../engine/actions";
@@ -491,21 +492,49 @@ describe("the rate details disclosure (§7, issue #154)", () => {
   });
 });
 
-describe("the Arete pill (§7)", () => {
-  it("floats over the board's bottom edge; the status monitor element is gone", () => {
+describe("the horizon bar (§7, issue #156)", () => {
+  it("is an ambient curve: centered label with the log percentage; no totals, marks, countdown, or button", () => {
     app.render();
     expect(document.getElementById("status-monitor")).toBeNull();
     expect(document.querySelector(".board-footer")).toBeNull();
-    const pill = document.getElementById("arete-pill")!;
-    expect(pill.querySelector(".pill-rail")).not.toBeNull();
-    expect(pill.querySelector(".pill-fill")).not.toBeNull();
-    expect(pill.querySelector(".pill-horizon")).not.toBeNull();
-    // The reserved prestige button rides the pill.
-    expect(pill.querySelector(".pill-prestige")).not.toBeNull();
-    expect(pill.querySelector('[data-live="p-total"]')!.textContent).toContain("lifetime");
-    // Pressing it acknowledges the horizon (ADR-0015's reserved readout).
-    (pill.querySelector(".pill-prestige") as HTMLButtonElement).click();
-    expect(app.state.horizonAcknowledged).toBe(true);
+    const bar = document.getElementById("horizon-bar")!;
+    expect(bar.querySelector(".horizon-track")).not.toBeNull();
+    // The label rides centered with its one figure: the bar's log percentage.
+    const word = bar.querySelector(".horizon-word")!;
+    expect(word.textContent).toContain("Arete");
+    expect(word.querySelector('[data-live="h-word"]')!.textContent).toBe("0%");
+    // No endpoint tick, no lifetime total, no decade marks, no practice
+    // beat, no prestige door.
+    expect(bar.querySelector(".horizon-cap")).toBeNull();
+    expect(bar.querySelector('[data-live="p-total"]')).toBeNull();
+    expect(bar.querySelector(".pill-grad")).toBeNull();
+    expect(bar.querySelector(".pill-head")).toBeNull();
+    expect(bar.querySelector("button")).toBeNull();
+  });
+
+  it("moves visibly in early play: clip width and label percentage follow the log scale", () => {
+    app.render();
+    const clip = document.querySelector<SVGRectElement>('#horizon-bar [data-live="h-clip"]')!;
+    // At the floor the bar starts empty.
+    expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBe(0);
+    expect(document.querySelector('#horizon-bar [data-live="h-word"]')!.textContent).toBe("0%");
+    app.state.totalEarned = 1_000;
+    app.render();
+    // Halfway through the curved scale, patched in place — no rebuild.
+    expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBe(300);
+    expect(document.querySelector('#horizon-bar [data-live="h-word"]')!.textContent).toBe("50%");
+    expect(document.querySelector(".horizon-word")).not.toBeNull();
+  });
+
+  it("reaching the horizon mints the first Arete and leaves the completed state", () => {
+    app.state.totalEarned = ARETE_HORIZON;
+    app.render();
+    const bar = document.getElementById("horizon-bar")!;
+    expect(bar.classList.contains("reached")).toBe(true);
+    expect(bar.querySelector(".horizon-state")!.textContent).toBe("First Arete reached");
+    expect(bar.querySelector(".horizon-word")).toBeNull();
+    const clip = bar.querySelector<SVGRectElement>('[data-live="h-clip"]')!;
+    expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBe(600);
   });
 
   it("carries no formula chip; Forge progress rides the dock's pip", () => {
@@ -2687,13 +2716,20 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     expect(bloomEl.querySelector(".bloom-sheet-name")!.textContent).toContain("Additive Synth");
     expect(bloomEl.querySelector("#bloom-upgrade")).not.toBeNull();
     expect(document.body.classList.contains("bloom-sheet-open")).toBe(true);
-    // The Arete pill floats at every width (§7): an open sheet covers the
-    // board's lower edge but never dismisses the pill itself.
-    expect(document.getElementById("arete-pill")).not.toBeNull();
+    // The horizon bar floats at every width (§7): an open sheet covers the
+    // board's lower edge but never dismisses the bar itself.
+    const bar = document.getElementById("horizon-bar")!;
+    expect(bar).not.toBeNull();
+    expect(bar.querySelector('[data-live="h-clip"]')).not.toBeNull();
     // Deselecting closes the sheet and lowers the cluster again.
     clickCell(0, 0);
     expect(bloomEl.hidden).toBe(true);
     expect(document.body.classList.contains("bloom-sheet-open")).toBe(false);
+    // The bar rides on: still rendered, still whole, era intact.
+    app.render();
+    const barAfter = document.getElementById("horizon-bar")!;
+    expect(barAfter.querySelector('[data-live="h-clip"]')).not.toBeNull();
+    expect(barAfter.querySelector(".horizon-word")!.textContent).toContain("Arete");
   });
 
   it("on phone every modal presents as a sheet, so any open modal raises the zoom cluster", () => {
@@ -2745,13 +2781,12 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     expect(app.ui.selected).toBe(row.getAttribute("data-module-id"));
   });
 
-  it("the Arete pill floats over the board's bottom edge with its full anatomy", () => {
+  it("the horizon bar spans the board's lower edge with its full anatomy", () => {
     app.render();
-    const pill = document.getElementById("arete-pill")!;
-    expect(pill.querySelector(".pill-row")).not.toBeNull();
-    expect(pill.querySelector('[data-live="p-total"]')!.textContent).toContain("lifetime");
-    expect(pill.querySelector(".pill-prestige")).not.toBeNull();
-    expect(pill.querySelector(".pill-rail")).not.toBeNull();
+    const bar = document.getElementById("horizon-bar")!;
+    expect(bar.querySelector(".horizon-svg")).not.toBeNull();
+    expect(bar.querySelector('[data-live="h-clip"]')).not.toBeNull();
+    expect(bar.querySelector('[data-live="h-word"]')).not.toBeNull();
     expect(document.getElementById("zoom-cluster")).not.toBeNull();
   });
 });

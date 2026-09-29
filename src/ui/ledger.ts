@@ -1,23 +1,18 @@
 // The board's production surfaces (§7): the ledger strip docked above the
 // board, the module-linked rate details disclosed from its Rate cell, the
-// Arete pill floating over the board's bottom edge, and the phone's
+// ambient horizon bar riding the board's lower edge, and the phone's
 // game-info strip. The status monitor dissolved into these; the console
 // carries no readouts.
-import { ARETE_GRADUATIONS, ARETE_HORIZON, accumulatorFill, nextAccumulatorMark } from "../engine/accumulator";
+import { ARETE_HORIZON, accumulatorFill } from "../engine/accumulator";
 import { ACHIEVEMENTS } from "../engine/achievements";
 import { BALANCE, CATEGORY_OF, isSynthesizerType } from "../engine/constants";
 import { chargedFactor, modulePower } from "../engine/economy";
 import { noteNameOf } from "../engine/lattice";
 import type { Contribution, GameState, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
-import { chordTermLabel, formatCountdown, formatFixed, formatInt, formatNumber } from "./format";
+import { chordTermLabel, formatFixed, formatInt, formatNumber } from "./format";
 import { liveSet } from "./live";
 import { META } from "./meta";
-
-// Compact axis vocabulary for the graduation marks and the beat's mark name.
-function markLabel(mark: number): string {
-  return mark >= 1000 ? `${mark / 1000}k` : String(mark);
-}
 
 export function unlockedCount(state: GameState): number {
   return Object.keys(state.achievements).length;
@@ -333,80 +328,72 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
   set("i-session", state.session ? formatFixed(state.session.earned) : "—");
 }
 
-// ── The Arete pill (§7) ─────────────────────────────────────────────────
-// The status monitor dissolved: the accumulator — log-scale rail,
-// graduations, horizon cap, riding beat head, reserved prestige button —
-// floats free as a translucent pill over the board's bottom edge at every
-// width. Forge progress keeps riding the dock's Forge pip.
-const HEAD_FLIP_AT = 0.68;
+// ── The ambient horizon bar (§7, issue #156, ADR-0038) ─────────────────
+// The Arete pill dissolved into ambience: one wide curved-scale fill —
+// the accumulator's log scale drawn as a shallow arc — riding the board's
+// lower edge at every width. No decade marks, no practice countdown, no
+// Prestige button: the bar is pointer-transparent and carries exactly one
+// figure — its own log-scale percentage, centered beneath the arc beside
+// the Arete name — until the crossing makes it say the era.
+const HORIZON_VIEW_WIDTH = 600;
 
-// The practice-relative beat: what the next mark is and how much practice
-// reaches it at the current rate. The rate basis is the board's projected
-// charged rate — the live rate during flow.
-function beatReadout(totalEarned: number, rate: number): string {
-  const mark = nextAccumulatorMark(totalEarned);
-  const label = mark === ARETE_HORIZON ? "the horizon" : markLabel(mark);
-  if (!(rate > 0)) return `next mark ${label} · waits for practice`;
-  return `next mark ${label} · ≈${formatCountdown((mark - totalEarned) / rate)} of practice at this rate`;
+// The curved rail and its log-scale fill. The fill is the same path
+// revealed by a clip rect whose width the tick patches in place — the
+// accumulator's 0–1 fill position maps to the clip's 0–600 user units,
+// dodging dash-and-pathLength quirks under a squashed viewBox. The
+// shallow symmetric arc keeps x-position monotonic in path progress, so
+// a horizontal reveal reads exactly as the fill's head.
+function horizonSvg(): string {
+  const path = "M8 42 Q 300 8 592 42";
+  return `<svg class="horizon-svg" viewBox="0 0 ${HORIZON_VIEW_WIDTH} 52" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="horizon-fill-grad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" style="stop-color: color-mix(in srgb, var(--hue-synthesizer) 45%, var(--panel))"></stop>
+          <stop offset="1" style="stop-color: var(--nous)"></stop>
+        </linearGradient>
+        <clipPath id="horizon-fill-clip" clipPathUnits="userSpaceOnUse">
+          <rect class="horizon-clip" data-live="h-clip" x="0" y="0" width="0" height="52"></rect>
+        </clipPath>
+      </defs>
+      <path class="horizon-track" d="${path}" pathLength="100"></path>
+      <path class="horizon-fill" d="${path}" clip-path="url(#horizon-fill-clip)"></path>
+    </svg>`;
 }
 
-export function renderAretePill(app: App, snapshot: RateSnapshot): void {
-  const host = document.getElementById("arete-pill");
+export function renderHorizonBar(app: App): void {
+  const host = document.getElementById("horizon-bar");
   if (!host) return;
-  const { state } = app;
-  const past = state.totalEarned >= ARETE_HORIZON;
-  // Structural key: the era flip, the prestige acknowledgment, and the
-  // graduation roster rebuild the pill; every tick-moving value updates in
-  // place so the reserved button survives clock ticks.
-  const key = `${past ? "past" : "under"}:${state.horizonAcknowledged ? "acked" : "open"}`;
+  const reached = app.state.totalEarned >= ARETE_HORIZON;
+  // Structural key: only the era flip rebuilds the bar; the fill's clip
+  // width and the label's percentage patch in place every tick, so
+  // nothing here ever churns.
+  const key = reached ? "reached" : "under";
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
-    const graduations = ARETE_GRADUATIONS.map(
-      (mark) => `<i class="pill-grad" style="left:${(accumulatorFill(mark) * 100).toFixed(2)}%"><b>${markLabel(mark)}</b></i>`,
-    ).join("");
-    const prestige = state.horizonAcknowledged
-      ? `<button class="pill-prestige" id="prestige-button" disabled title="The horizon is acknowledged. Prestige itself waits beyond it.">Acknowledged</button>`
-      : `<button class="pill-prestige" id="prestige-button" title="Reserved for prestige — arriving beyond the horizon. Pressing acknowledges the horizon.">Prestige</button>`;
-    host.innerHTML = `<div class="pill-row"><span class="pill-name">ARETE</span><b class="mono" data-live="p-total"></b>${prestige}</div>
-      <div class="pill-rail" role="img">
-        <i class="pill-fill" data-live="p-fill"></i>
-        ${graduations}
-        <i class="pill-horizon" title="The horizon · ${markLabel(ARETE_HORIZON)} lifetime ν"></i>
-        ${past ? "" : `<span class="pill-head mono" data-live="p-beat"></span>`}
-      </div>`;
-    document.getElementById("prestige-button")?.addEventListener("click", () => app.acknowledgeHorizon());
+    host.classList.toggle("reached", reached);
+    host.setAttribute("role", "img");
+    host.setAttribute(
+      "aria-label",
+      reached
+        ? "First Arete reached — the horizon lies behind you"
+        : "The Arete horizon: lifetime progress toward the first Arete",
+    );
+    host.innerHTML = `${horizonSvg()}${
+      reached
+        ? `<span class="horizon-state">First Arete reached</span>`
+        : `<span class="horizon-word">Arete <b data-live="h-word"></b></span>`
+    }`;
   }
-  const set = (live: string, text: string) => liveSet(host, live, text);
-  set("p-total", `${formatFixed(state.totalEarned)} / ${markLabel(ARETE_HORIZON)} ν lifetime`);
-  const pos = accumulatorFill(state.totalEarned);
-  const fill = host.querySelector<HTMLElement>('[data-live="p-fill"]');
-  const fillWidth = `${(pos * 100).toFixed(2)}%`;
-  if (fill && fill.style.width !== fillWidth) fill.style.width = fillWidth;
-  host.querySelector(".pill-rail")?.setAttribute(
-    "aria-label",
-    `Arete accumulator: ${formatNumber(state.totalEarned)} of ${markLabel(ARETE_HORIZON)} lifetime ν, log scale`,
-  );
-  const beat = past ? "Arete minted — the horizon is behind you" : beatReadout(state.totalEarned, snapshot.rate);
-  const head = host.querySelector<HTMLElement>('[data-live="p-beat"]');
-  if (head) {
-    if (head.textContent !== beat) head.textContent = beat;
-    head.classList.toggle("flip", pos > HEAD_FLIP_AT);
-    // The beat rides the fill head but must stay on the rail: clamp the
-    // anchor so the readout never hangs off either edge.
-    const rail = host.querySelector<HTMLElement>(".pill-rail");
-    if (rail) {
-      const railWidth = rail.clientWidth;
-      if (railWidth > 0) {
-        const margin = 4;
-        let anchorPx = pos * railWidth;
-        if (pos > HEAD_FLIP_AT) {
-          anchorPx = Math.min(anchorPx, railWidth - head.offsetWidth - margin);
-        } else {
-          anchorPx = Math.max(anchorPx, head.offsetWidth / 2 + margin);
-        }
-        const left = `${((anchorPx / railWidth) * 100).toFixed(2)}%`;
-        if (head.style.left !== left) head.style.left = left;
-      }
+  const fill = accumulatorFill(app.state.totalEarned);
+  const clip = host.querySelector<SVGRectElement>('[data-live="h-clip"]');
+  if (clip) {
+    // Numeric compare: style serializers may renormalize the stored value,
+    // and re-writing it every tick would churn the transition.
+    const width = fill * HORIZON_VIEW_WIDTH;
+    const current = Number.parseFloat(clip.style.getPropertyValue("width"));
+    if (!Number.isFinite(current) || Math.abs(current - width) >= 0.005) {
+      clip.style.setProperty("width", `${width.toFixed(2)}px`);
     }
   }
+  liveSet(host, "h-word", `${Math.round(fill * 100)}%`);
 }
