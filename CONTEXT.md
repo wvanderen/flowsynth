@@ -153,8 +153,12 @@ The chargeable module whose thresholds mint mutator rolls into the Mutator tray.
 A branch's player-wide meter to which that branch's deployed Forges contribute according to received charge and progress efficiency — the Module Forge's and the Mutator Forge's meters are separate. Crossing a branch's globally scaling threshold banks a roll on that branch and carries excess progress forward, independently of any individual Forge's identity.
 
 **Module roll**:
-A charge-earned choice of one module from three generated candidates; unchosen candidates disappear without consolation resources.
+A charge- or flow-earned choice of one module from three generated candidates; unchosen candidates disappear without consolation resources. The Forge branches and the flow meter bank into one shared queue of interchangeable rolls.
 _Avoid_: forge roll (the pre-split name)
+
+**Flow meter**:
+The player-wide meter that fills with credited practice time — present and trusted time as it runs, honesty-credited provisional minutes at reconciliation — and banks a module roll each time it crosses its fixed cadence: a one-time fast opening fill, then flat forever, never scaling. The Forge branches' shared thresholds receive no practice contribution; the flow meter is a sibling of Forge progress, not a branch of the Forge family. Its fill and earned count persist through prestige. The dock's Forge pip shows its fill.
+_Avoid_: practice meter, practice forge, flow forge, third branch
 
 **Mutator roll**:
 A charge-earned choice of one mutator from three generated candidates, delivered to the Mutator tray; unchosen candidates disappear without consolation resources.
@@ -277,7 +281,7 @@ The minutes owed honesty behind the provisional bucket: away time past a planned
 The mandatory adjudication presented when a session returns with provisional time outstanding, repeated until resolved. One answer banks or drops the bucket and sets how much of the provisional time credits: didn't practice, did what I planned, or practiced the whole time away — the middle option only where a plan exists.
 
 **Credited practice time**:
-A session's post-reconciliation practice total: live present and trusted time, plus provisional time as the honesty report credits it. Habit accrual, goal progress, the charge window, and session achievements all key off it.
+A session's post-reconciliation practice total: live present and trusted time, plus provisional time as the honesty report credits it. Habit accrual, goal progress, the charge window, the flow meter, and session achievements all key off it.
 
 **Honesty outcome**:
 The per-reconciliation record — missed, planned, or full — from which a session's honesty summary and its miss row derive.
