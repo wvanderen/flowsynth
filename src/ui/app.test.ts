@@ -493,30 +493,36 @@ describe("the rate details disclosure (§7, issue #154)", () => {
 });
 
 describe("the horizon bar (§7, issue #156)", () => {
-  it("is an ambient curve: wide anatomy, no numbers, no marks, no countdown, no button", () => {
+  it("is an ambient curve: centered label with the log percentage; no totals, marks, countdown, or button", () => {
     app.render();
     expect(document.getElementById("status-monitor")).toBeNull();
     expect(document.querySelector(".board-footer")).toBeNull();
     const bar = document.getElementById("horizon-bar")!;
     expect(bar.querySelector(".horizon-track")).not.toBeNull();
-    expect(bar.querySelector(".horizon-cap")).not.toBeNull();
-    expect(bar.querySelector(".horizon-word")!.textContent).toContain("Arete");
-    // No numeric readout, no decade marks, no practice beat, no prestige door.
+    // The label rides centered with its one figure: the bar's log percentage.
+    const word = bar.querySelector(".horizon-word")!;
+    expect(word.textContent).toContain("Arete");
+    expect(word.querySelector('[data-live="h-word"]')!.textContent).toBe("0%");
+    // No endpoint tick, no lifetime total, no decade marks, no practice
+    // beat, no prestige door.
+    expect(bar.querySelector(".horizon-cap")).toBeNull();
     expect(bar.querySelector('[data-live="p-total"]')).toBeNull();
     expect(bar.querySelector(".pill-grad")).toBeNull();
     expect(bar.querySelector(".pill-head")).toBeNull();
     expect(bar.querySelector("button")).toBeNull();
   });
 
-  it("moves visibly in early play: the fill's clip width follows the log scale", () => {
+  it("moves visibly in early play: clip width and label percentage follow the log scale", () => {
     app.render();
     const clip = document.querySelector<SVGRectElement>('#horizon-bar [data-live="h-clip"]')!;
     // At the floor the bar starts empty.
     expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBe(0);
+    expect(document.querySelector('#horizon-bar [data-live="h-word"]')!.textContent).toBe("0%");
     app.state.totalEarned = 1_000;
     app.render();
     // Halfway through the curved scale, patched in place — no rebuild.
     expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBe(300);
+    expect(document.querySelector('#horizon-bar [data-live="h-word"]')!.textContent).toBe("50%");
     expect(document.querySelector(".horizon-word")).not.toBeNull();
   });
 
@@ -2780,7 +2786,7 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     const bar = document.getElementById("horizon-bar")!;
     expect(bar.querySelector(".horizon-svg")).not.toBeNull();
     expect(bar.querySelector('[data-live="h-clip"]')).not.toBeNull();
-    expect(bar.querySelector(".horizon-cap")).not.toBeNull();
+    expect(bar.querySelector('[data-live="h-word"]')).not.toBeNull();
     expect(document.getElementById("zoom-cluster")).not.toBeNull();
   });
 });

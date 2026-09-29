@@ -331,22 +331,20 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
 // ── The ambient horizon bar (§7, issue #156, ADR-0038) ─────────────────
 // The Arete pill dissolved into ambience: one wide curved-scale fill —
 // the accumulator's log scale drawn as a shallow arc — riding the board's
-// lower edge at every width. No numeric progress, no decade marks, no
-// practice countdown, no Prestige button: the bar is pointer-transparent
-// and says only its name until the crossing makes it say the era.
+// lower edge at every width. No decade marks, no practice countdown, no
+// Prestige button: the bar is pointer-transparent and carries exactly one
+// figure — its own log-scale percentage, centered beneath the arc beside
+// the Arete name — until the crossing makes it say the era.
 const HORIZON_VIEW_WIDTH = 600;
-// The path end's x: the cap's x reads from the same constant, so the cap
-// can never drift off the curve's end.
-const HORIZON_END_X = 592;
 
-// The curved rail, its log-scale fill, and the horizon cap. The fill is
-// the same path revealed by a clip rect whose width the tick patches in
-// place — the accumulator's 0–1 fill position maps to the clip's 0–600
-// user units, dodging dash-and-pathLength quirks under a squashed
-// viewBox. The shallow symmetric arc keeps x-position monotonic in path
-// progress, so a horizontal reveal reads exactly as the fill's head.
+// The curved rail and its log-scale fill. The fill is the same path
+// revealed by a clip rect whose width the tick patches in place — the
+// accumulator's 0–1 fill position maps to the clip's 0–600 user units,
+// dodging dash-and-pathLength quirks under a squashed viewBox. The
+// shallow symmetric arc keeps x-position monotonic in path progress, so
+// a horizontal reveal reads exactly as the fill's head.
 function horizonSvg(): string {
-  const path = `M8 42 Q 300 8 ${HORIZON_END_X} 42`;
+  const path = "M8 42 Q 300 8 592 42";
   return `<svg class="horizon-svg" viewBox="0 0 ${HORIZON_VIEW_WIDTH} 52" preserveAspectRatio="none" aria-hidden="true">
       <defs>
         <linearGradient id="horizon-fill-grad" x1="0" y1="0" x2="1" y2="0">
@@ -359,7 +357,6 @@ function horizonSvg(): string {
       </defs>
       <path class="horizon-track" d="${path}" pathLength="100"></path>
       <path class="horizon-fill" d="${path}" clip-path="url(#horizon-fill-clip)"></path>
-      <path class="horizon-cap" d="M${HORIZON_END_X} 32 L${HORIZON_END_X} 51"></path>
     </svg>`;
 }
 
@@ -368,7 +365,8 @@ export function renderHorizonBar(app: App): void {
   if (!host) return;
   const reached = app.state.totalEarned >= ARETE_HORIZON;
   // Structural key: only the era flip rebuilds the bar; the fill's clip
-  // width patches in place every tick, so nothing here ever churns.
+  // width and the label's percentage patch in place every tick, so
+  // nothing here ever churns.
   const key = reached ? "reached" : "under";
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
@@ -381,17 +379,21 @@ export function renderHorizonBar(app: App): void {
         : "The Arete horizon: lifetime progress toward the first Arete",
     );
     host.innerHTML = `${horizonSvg()}${
-      reached ? `<span class="horizon-state">First Arete reached</span>` : `<span class="horizon-word">Arete</span>`
+      reached
+        ? `<span class="horizon-state">First Arete reached</span>`
+        : `<span class="horizon-word">Arete <b data-live="h-word"></b></span>`
     }`;
   }
+  const fill = accumulatorFill(app.state.totalEarned);
   const clip = host.querySelector<SVGRectElement>('[data-live="h-clip"]');
   if (clip) {
     // Numeric compare: style serializers may renormalize the stored value,
     // and re-writing it every tick would churn the transition.
-    const width = accumulatorFill(app.state.totalEarned) * HORIZON_VIEW_WIDTH;
+    const width = fill * HORIZON_VIEW_WIDTH;
     const current = Number.parseFloat(clip.style.getPropertyValue("width"));
     if (!Number.isFinite(current) || Math.abs(current - width) >= 0.005) {
       clip.style.setProperty("width", `${width.toFixed(2)}px`);
     }
   }
+  liveSet(host, "h-word", `${Math.round(fill * 100)}%`);
 }

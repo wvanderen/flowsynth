@@ -795,8 +795,8 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 
 /* The ambient horizon bar (§7, issue #156): the accumulator drawn as a
    wide curved-scale fill riding the board's lower edge at every width —
-   pointer-transparent, saying only its name. The lane clears the zoom
-   cluster's right edge (12 + 36 + gap) and the left dock's lower reach. */
+   pointer-transparent. The lane clears the zoom cluster's right edge
+   (12 + 36 + gap) and the left dock's lower reach. */
 .horizon-bar {
   position: absolute;
   left: 24px;
@@ -825,25 +825,21 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   vector-effect: non-scaling-stroke;
 }
 .horizon-clip { transition: width 400ms ease-out; }
-/* The horizon cap: the era's far end, glowing violet. */
-.horizon-cap {
-  fill: none;
-  stroke: var(--reserved-violet);
-  stroke-width: 3px;
-  stroke-linecap: round;
-  vector-effect: non-scaling-stroke;
-  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--reserved-violet) 55%, transparent));
-}
-.horizon-bar.reached .horizon-cap { stroke-width: 4px; }
+/* The label rides the arc's hollow beneath the apex, centered, with the
+   curve's ends sweeping well clear of it — the bar's one figure (its own
+   log-scale percentage) beside the name. */
 .horizon-word {
   position: absolute;
-  left: 16px;
-  bottom: 0;
+  left: 50%;
+  bottom: 5px;
+  transform: translateX(-50%);
   font: 9px var(--mono);
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--muted);
+  white-space: nowrap;
 }
+.horizon-word b { color: var(--ink); font-weight: 400; letter-spacing: 0.06em; }
 /* The completed state: the crossing mints the first Arete and the bar
    keeps saying so until prestige's design lands. */
 .horizon-state {
@@ -1600,7 +1596,7 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
     right: 58px;
     height: 46px;
   }
-  .horizon-word { font-size: 8px; left: 10px; }
+  .horizon-word { font-size: 8px; }
   .horizon-state { font-size: 8.5px; }
   .zoom-cluster { right: 10px; bottom: 64px; }
   body.bloom-sheet-open .zoom-cluster { bottom: 150px; }
