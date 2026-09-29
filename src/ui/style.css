@@ -290,8 +290,11 @@ h1, h2, h3, p { margin: 0; }
   z-index: 30;
   animation: popover-in 0.14s ease-out;
 }
-.app-slot.first .app-popover { left: 0; transform: none; animation-name: popover-in-left; }
-.app-slot.last .app-popover { left: auto; right: 0; transform: none; animation-name: popover-in-left; }
+/* Every tile popover right-anchors to its slot: the tiles park at the row's
+   right end (before Settings) at every width, so the base rule's centering
+   — and a left anchor worse still — hangs the 372px panel past the
+   viewport's right edge on narrow windows, offscreen. */
+.app-slot .app-popover { left: auto; right: 0; transform: none; animation-name: popover-in-left; }
 @keyframes popover-in { from { opacity: 0; transform: translateX(-50%) translateY(-5px); } }
 @keyframes popover-in-left { from { opacity: 0; transform: translateY(-5px); } }
 
