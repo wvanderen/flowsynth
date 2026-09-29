@@ -1,5 +1,7 @@
 # The Arete pill floats at every width and is never dismissed
 
+_Amended by ADR-0038 (issue #156): the pill is now the ambient horizon bar — the never-dismissed rule survives the rename; the prestige furniture named below is retired._
+
 The spec is explicit that the Arete accumulator floats as a translucent pill over the board's bottom edge at every width, and that only the zoom cluster reacts to open sheets ("the zoom cluster rises above any open sheet"). The first build nevertheless faded the pill out while a phone bloom sheet was open — a kindness to the sheet that silently broke the "at all widths" promise: the prestige readout and the practice countdown vanished whenever a module was inspected. The spec review of PR #143 (2026-09-26) flagged it; the fix landed the same round. This ADR records the rule so the fade is not re-added as polish later.
 
 ## Decision
@@ -10,5 +12,5 @@ The spec is explicit that the Arete accumulator floats as a translucent pill ove
 
 ## Consequences
 
-- The prestige button and the practice beat are readable at every width whenever no surface physically covers them.
+- The prestige button and the practice beat are readable at every width whenever no surface physically covers them. _Amended by ADR-0038 (issue #156): the button, the beat, and the lifetime total retire with the pill — the bar carries no furniture to keep readable; the cover, never dismiss rule stands._
 - Any future sheet that opens over the board's lower edge inherits the same rule: cover, never dismiss.
