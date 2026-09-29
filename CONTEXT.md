@@ -289,24 +289,31 @@ The muted list-row flag on session records carrying a missed honesty event. Mute
 ### Progression
 
 **Arete**:
-The resource minted when the Arete accumulator fills. What mints it in quantity and what it spends on are prestige design, not yet decided.
+The resource banked by prestige and by nothing else — never granted before the reset. Its base yield is one per prestige at the horizon line; what it spends on is not yet decided.
 
 **Arete accumulator**:
-The log-scale fill on lifetime total nous earned toward the horizon line, drawn as the ambient horizon bar across the board's lower edge (ADR-0038) — its one figure is the bar's own log-scale percentage; no decade marks, countdown, or button.
+The log-scale fill on the current era's nous earned toward the horizon line, drawn as the ambient horizon bar across the board's lower edge (ADR-0038); it rebases at each prestige while lifetime total nous earned stays the truth beneath. Its one figure is the bar's own log-scale percentage; no decade marks or countdown.
 
 **Horizon bar**:
-The Arete accumulator's surface: the ambient, pointer-transparent curved-scale fill riding the board's lower edge at every width, spanning most of the board's breadth (ADR-0038). It says its name and its one log-scale percentage and nothing else; an open sheet may cover it, nothing dismisses it (ADR-0029).
+The Arete accumulator's surface: the ambient curved-scale fill riding the board's lower edge at every width, spanning most of the board's breadth (ADR-0038), pointer-transparent except for the prestige door its completed state hosts. Before the crossing it says its name and its one log-scale percentage and nothing else; complete, the percentage readout gives way to the "Prestige and Claim X Arete" button, locked outside upgrade mode. An open sheet may cover it, nothing dismisses it (ADR-0029).
 _Avoid_: Arete pill
 
 **Horizon line**:
-The Arete accumulator's cap — the first prestige threshold, the horizon bar's far end. Reaching it mints the first Arete and the bar settles into its completed state until prestige is designed.
+The Arete accumulator's cap — the fixed prestige threshold and the horizon bar's far end, the same every era until the horizon breaks. Reaching it opens the prestige door; it mints nothing by itself.
+
+**Prestige**:
+The reset action: once the current era's fill reaches the horizon line, prestige banks the era's Arete claim and begins the next era — module levels, nous, and charge state reset while the board's modules, cells, and placement and the whole life record persist. Performed in upgrade mode through the horizon bar's door, behind a confirm.
+_Avoid_: reset (as the player-facing verb)
 
 **Achievement**:
 A named feat that accelerates but never gates progress; each adds into the global achievementBoost term of the nous rate. Detection is live, storage is the v5 save's `id → unlockedAt` map. "Feat" is flavor individual names may carry, never a second term.
 
 ### Deferred vocabulary
 
-The Tasks console app ships post-launch; its terms below stand as designed (ADR-0005) and join the activation ladder when built.
+The Tasks console app ships post-launch; its terms below stand as designed (ADR-0005) and join the activation ladder when built. The horizon break is deferred differently: it awaits the Arete-spending design.
+
+**Horizon break**:
+The planned future act that lets score beyond the horizon line scale the prestige claim — still banked only on reset. Its unlock, curve, and surface await what Arete buys.
 
 **Task**:
 A concrete action whose size is estimated and whose completion is reported by the player, initially intended to be bite-sized. Tasks can be created or completed at any time.
