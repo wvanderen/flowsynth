@@ -410,7 +410,6 @@ function renderConsoleApps(app: App, projected: RateSnapshot): void {
   host.dataset.renderKey = key;
   // A newly captured note keeps the popover scrolled where the player is.
   const scrollTop = popoverScroll(host);
-  const last = TILE_APPS[TILE_APPS.length - 1];
   // One panel body, one anchor: below the 600px line the tiles are docked
   // out, so their popovers would land where no one can see them — the
   // launcher hosts the panel there (issue #149), the tiles everywhere else.
@@ -419,9 +418,8 @@ function renderConsoleApps(app: App, projected: RateSnapshot): void {
   const tiles = TILE_APPS.map((appKey) => {
     const facts = appEntryFacts(state, appKey);
     const open = ui.app === appKey;
-    const anchor = appKey === TILE_APPS[0] ? " first" : appKey === last ? " last" : "";
     const title = facts.note ? `${facts.label} — locked: ${facts.note}` : `${facts.label} app`;
-    return `<div class="app-slot${anchor}">
+    return `<div class="app-slot">
       <button class="app-tile${facts.active ? "" : " locked"}${open ? " open" : ""}" id="app-tile-${appKey}" aria-pressed="${open}" aria-label="${facts.label}"${facts.active ? "" : ' aria-disabled="true"'} title="${title}">
         <span class="app-tile-glyph">
           ${appGlyphSvg(appKey)}
