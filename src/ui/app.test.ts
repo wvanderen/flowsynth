@@ -90,6 +90,19 @@ describe("the console tiles", () => {
       app.closeApp();
     }
   });
+
+  it("every tile's panel opens inside its own slot, with no first/last anchor classes", () => {
+    app.render();
+    for (const key of ["habit", "notes", "goals"] as const) {
+      app.openApp(key);
+      // Uniform right-anchoring: the popover lives in the tile's slot, and
+      // the slot carries no per-position anchor class for the CSS to fork on.
+      const slot = document.getElementById(`app-tile-${key}`)!.closest(".app-slot")!;
+      expect(slot.querySelector("#app-popover")).not.toBeNull();
+      expect(slot.className).toBe("app-slot");
+      app.closeApp();
+    }
+  });
 });
 
 describe("the console", () => {
