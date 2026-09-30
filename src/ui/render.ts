@@ -1239,6 +1239,12 @@ function ghostMarksHtml(app: App, projected?: RateSnapshot): string {
     step: LATTICE_STEP,
     labelFor: chordTermLabel,
   });
+  // PROTOTYPE (ticket #174, throwaway branch): ghosts wear the same seam
+  // language as formed chords — brackets, runs, note-corner polygons.
+  overlay.marks = transformChordMarks(overlay.marks, (id) => {
+    const pos = posOf(id);
+    return pos ? point(pos) : null;
+  });
   return overlay.marks.map((mark) => chordMarkHtml(mark, "ghost")).join("");
 }
 

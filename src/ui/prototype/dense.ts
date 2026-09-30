@@ -1,6 +1,12 @@
 // PROTOTYPE — throwaway artifact for wayfinder ticket #174 (map #169).
 // Never merge to main. Lives on the prototype/dense-board-174 branch.
 //
+// ITERATION THREE (second reaction): distant bridged pairs stay straight;
+// the row unlock settles on the board; the ghost previews wear the same
+// seam language as formed chords (hooked in render.ts); and the spacer
+// becomes the open wire — its plate turns transparent so the chord lines
+// run visibly through it, the face keeping only its name and note.
+//
 // ITERATION TWO (maintainer reaction to one): C wins overall and absorbs
 // A's edge seams; the refinements below are all in. A and B stay switchable
 // for reference (A now wears the same polygon language; B stays shipped).
@@ -539,6 +545,15 @@ function ensureStyle(): void {
    cells go translucent so the chord work shows through them. */
 #grid .cell-node > .hex-note { y: 0; dominant-baseline: central; }
 #grid .cell-node > .hex.empty { fill-opacity: .45; }
+
+/* The open wire (iteration three): the spacer's plate opens so the chord
+   lines run visibly through it — the conducted line IS the wire. The face
+   keeps its name and note; the glyph, readout glyph, and level line go
+   quiet, leaving a spacer nothing to say but Spacer and the pitch. */
+#grid .module-node[data-type="spacer"] .hex { fill-opacity: .1; }
+#grid .module-node[data-type="spacer"] .face-signature,
+#grid .module-node[data-type="spacer"] [data-key="readout"],
+#grid .module-node[data-type="spacer"] [data-key="level"] { display: none; }
 
 /* The selection lift (C): the cloned marks draw over everything. */
 #proto-lift { pointer-events: none; }
