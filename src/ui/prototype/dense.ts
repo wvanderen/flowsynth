@@ -342,26 +342,44 @@ function renderLift(app: App): void {
 }
 
 /* ── The spacer's window ──
-   The plate's cap and base in the cell's own user space (origin = the
-   cell center; the chassis spans ±61 with the vertical edges at
-   ±52.83): cap −61..−22, window −22..26, base 26..61. Applied as a
-   userSpaceOnUse clipPath so it lands on every spacer cell exactly. */
+   The plate keeps everything except a roughly squared window framed
+   inside it — inset from the sides like a real window, not a band
+   reaching the edges. The clip is the hex minus the window (evenodd),
+   in the cell's own user space (origin = the cell center; the chassis
+   spans ±61, vertical edges ±52.83). A hairline in the chassis stroke
+   color frames the opening, and the texts sit centered in the opaque
+   bands the window leaves: the name rides high, the note low. */
 
+const SPACER_HEX_D =
+  "M -52.83 -30.5 L 0 -61 L 52.83 -30.5 L 52.83 30.5 L 0 61 L -52.83 30.5 Z";
 const SPACER_WINDOW_D =
-  "M -52.83 -30.5 L 0 -61 L 52.83 -30.5 L 52.83 -22 L -52.83 -22 Z " +
-  "M -52.83 26 L 52.83 26 L 52.83 30.5 L 0 61 L -52.83 30.5 Z";
+  "M -26 -20 L 26 -20 L 26 24 L -26 24 Z";
 
 function openSpacerPlates(svg: SVGSVGElement): void {
   let defs = svg.querySelector("#proto-spacer-defs");
   if (!defs) {
     defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
     defs.id = "proto-spacer-defs";
-    defs.innerHTML = `<clipPath id="proto-spacer-window" clipPathUnits="userSpaceOnUse"><path d="${SPACER_WINDOW_D}"/></clipPath>`;
+    defs.innerHTML = `<clipPath id="proto-spacer-window" clipPathUnits="userSpaceOnUse"><path clip-rule="evenodd" d="${SPACER_HEX_D} ${SPACER_WINDOW_D}"/></clipPath>`;
     svg.append(defs);
   }
-  for (const node of svg.querySelectorAll<SVGElement>('.module-node[data-type="spacer"] .hex')) {
-    if (node.getAttribute("clip-path") !== "url(#proto-spacer-window)") {
-      node.setAttribute("clip-path", "url(#proto-spacer-window)");
+  for (const node of svg.querySelectorAll<SVGElement>('#grid .module-node[data-type="spacer"]')) {
+    const hex = node.querySelector<SVGElement>(".hex");
+    if (!hex) continue;
+    if (hex.getAttribute("clip-path") !== "url(#proto-spacer-window)") {
+      hex.setAttribute("clip-path", "url(#proto-spacer-window)");
+    }
+    if (!node.querySelector(".proto-spacer-frame")) {
+      const frame = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      frame.classList.add("proto-spacer-frame");
+      frame.setAttribute("x", "-28");
+      frame.setAttribute("y", "-22");
+      frame.setAttribute("width", "56");
+      frame.setAttribute("height", "48");
+      frame.setAttribute("rx", "3");
+      node.append(frame);
+      // The name rides the cap's center (SVG text x/y are attribute-only).
+      node.querySelector('[data-key="name"]')?.setAttribute("y", "-40");
     }
   }
 }
@@ -589,6 +607,14 @@ function ensureStyle(): void {
 #grid .module-node[data-type="spacer"] [data-key="level"],
 #grid .module-node[data-type="spacer"] .face-rings,
 #grid .module-node[data-type="spacer"] .face-rail { display: none; }
+/* The name rides the cap's center; the window's frame wears the chassis
+   stroke as a hairline. */
+.proto-spacer-frame {
+  fill: none;
+  stroke: var(--line-strong, #44445c);
+  stroke-width: 1.25;
+  pointer-events: none;
+}
 
 /* The selection lift (C): the cloned marks draw over everything. */
 #proto-lift { pointer-events: none; }
