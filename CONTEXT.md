@@ -76,7 +76,7 @@ One cell's place on the Mutator Grid — the cell's second face. Holds at most o
 _Avoid_: socket, gem slot
 
 **Mutator**:
-An item of the Mutator Grid: typed, carrying rarity, sitting in a Mutator slot to modify its host module's corresponding term. Launch families: power, resonance, charge. Retrieved and placed like modules, through the Mutator tray; placed mutators and the tray persist through prestige.
+An item of the Mutator Grid: typed, carrying rarity, sitting in a Mutator slot to modify its host module's corresponding term — power (the host's power), resonance (the host's chord factor, inert on a chordless host), charge (the strength the host receives). Two mutators of the same family and rarity combine into one of the next rarity. Retrieved and placed like modules, through the Mutator tray; placed mutators and the tray persist through prestige.
 _Avoid_: enhancement (the pre-design name), gem, affix
 
 **Mutator tray**:
@@ -138,7 +138,7 @@ A purchased increase to a module's core power, paid for with nous in upgrade mod
 A module quality shown as an engraved ring count and plate tint; it improves how purchased levels scale and strengthens secondary effects, rather than granting free levels.
 
 **Combination**:
-The consumption of two modules of the same type and rarity to produce one of the next rarity, retaining the higher input level and refunding the lower-level input's nous upgrade expenditure. It is initiated by dropping one copy onto the other (board or tray, either direction) and confirming the reviewed outcome; the result lands where the drop target was. The player chooses one input's secondary effects to retain with the new rarity's improvements.
+The consumption of two modules of the same type and rarity to produce one of the next rarity, retaining the higher input level and refunding the lower-level input's nous upgrade expenditure. It is initiated by dropping one copy onto the other (board or tray, either direction) and confirming the reviewed outcome; the result lands where the drop target was. The player chooses one input's secondary effects to retain with the new rarity's improvements. Mutators combine by the same gesture: two of the same family and rarity yield one mutator of the next rarity — mutators carry no levels, so nothing is retained or refunded.
 
 **Forge**:
 A chargeable module that accumulates received charge toward thresholds that mint rolls. The family splits in two — the Module Forge mints module rolls, the Mutator Forge mints mutator rolls.
@@ -161,7 +161,7 @@ The player-wide meter that fills with credited practice time — present and tru
 _Avoid_: practice meter, practice forge, flow forge, third branch
 
 **Mutator roll**:
-A charge-earned choice of one mutator from three generated candidates, delivered to the Mutator tray; unchosen candidates disappear without consolation resources.
+A charge-earned choice of one mutator from two generated candidates, delivered to the Mutator tray; unchosen candidates disappear without consolation resources.
 
 **Catalog**:
 The permanent upgrade-mode purchase surface: app activations, starter-shelf offers while available, and cells. Its activation section appears only once the ladder has a tenant. Module upgrades live on module panels, not the catalog (ADR-0018).
