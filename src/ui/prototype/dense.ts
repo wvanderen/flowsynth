@@ -341,6 +341,31 @@ function renderLift(app: App): void {
   }
 }
 
+/* ── The spacer's window ──
+   The plate's cap and base in the cell's own user space (origin = the
+   cell center; the chassis spans ±61 with the vertical edges at
+   ±52.83): cap −61..−22, window −22..26, base 26..61. Applied as a
+   userSpaceOnUse clipPath so it lands on every spacer cell exactly. */
+
+const SPACER_WINDOW_D =
+  "M -52.83 -30.5 L 0 -61 L 52.83 -30.5 L 52.83 -22 L -52.83 -22 Z " +
+  "M -52.83 26 L 52.83 26 L 52.83 30.5 L 0 61 L -52.83 30.5 Z";
+
+function openSpacerPlates(svg: SVGSVGElement): void {
+  let defs = svg.querySelector("#proto-spacer-defs");
+  if (!defs) {
+    defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    defs.id = "proto-spacer-defs";
+    defs.innerHTML = `<clipPath id="proto-spacer-window" clipPathUnits="userSpaceOnUse"><path d="${SPACER_WINDOW_D}"/></clipPath>`;
+    svg.append(defs);
+  }
+  for (const node of svg.querySelectorAll<SVGElement>('.module-node[data-type="spacer"] .hex')) {
+    if (node.getAttribute("clip-path") !== "url(#proto-spacer-window)") {
+      node.setAttribute("clip-path", "url(#proto-spacer-window)");
+    }
+  }
+}
+
 /* ── Per-frame entry, called from render() ── */
 
 function byId(id: string): HTMLElement | null {
@@ -366,6 +391,8 @@ export function renderDensePrototype(app: App): void {
   bindSpacerHover(app);
   // Shared proposals + the per-variant layers on the freshly rebuilt svg.
   fitFaceReadouts();
+  const gridSvg = document.getElementById("grid") as SVGSVGElement | null;
+  if (gridSvg) openSpacerPlates(gridSvg);
   renderLift(app);
   renderRowBands(app);
 }
@@ -553,10 +580,10 @@ function ensureStyle(): void {
    base — the bands where the name and note live — and opens a window in
    the center where the chord lines run visibly through. The face keeps
    its name and note; the glyph, readout glyph, level line, rings, and
-   rail go quiet, leaving nothing between the two bands. */
-#grid .module-node[data-type="spacer"] .hex {
-  clip-path: path("M 0 30.5 L 52.83 0 L 105.66 30.5 L 105.66 39 L 0 39 Z M 0 87 L 105.66 87 L 105.66 91.5 L 52.83 122 L 0 91.5 Z");
-}
+   rail go quiet, leaving nothing between the two bands. The window itself
+   is a userSpaceOnUse clipPath applied per cell by openSpacerPlates —
+   CSS clip-path: path() proved reference-box-dependent and clipped away
+   from the hex. */
 #grid .module-node[data-type="spacer"] .face-signature,
 #grid .module-node[data-type="spacer"] [data-key="readout"],
 #grid .module-node[data-type="spacer"] [data-key="level"],
