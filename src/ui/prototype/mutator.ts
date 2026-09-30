@@ -1,52 +1,41 @@
 // PROTOTYPE — throwaway artifact for wayfinder ticket #184 (map #169).
 // Never merge to main. Lives on the prototype/mutator-grid-184 branch.
 //
-// QUESTION — how does the Mutator Grid look and behave on the board?
-// Three variants disagree about where the layer lives and how a placed
-// mutator declares its host and effect; each carries the full interaction
-// loop (tray, place, retrieve, combine, slot unlock, faces) so they can
-// be judged whole. Contracts are ADR-0040 + ADR-0043; the board language
-// underneath is #174's accepted direction.
+// ITERATION TWO (maintainer reaction to the three-variant round): none of
+// the ambient answers expressed the intent — the Mutator Grid is a SECOND
+// GRID LAYER, viewed through a tab-like switch beside the board. Arete
+// gets its own assigned color (`--arete`, provisional violet, continuity
+// with #174's approved Arete banner — one token swap if the hue moves),
+// and the module layer marks a hosted mutator with a thin arete outline
+// on the module face. (The dot-indicator alternative is a one-mark swap.)
 //
-//   A — Second face (ambient underlay): every unlocked slot renders a
-//       sub-hex plate peeking from under its module's lower edge — the
-//       cell's second face. The plate's visible tip carries the family
-//       glyph; words live in the hover ask, the popover, and the tray
-//       tile (the notch between the row-below faces fits no more).
-//       Empty slots are dashed violet lips. The Mutator tray is a second
-//       column docked beside the inventory tray (phone: a chip above
-//       the thumb bar opening a strip).
-//   B — Corner seal (ambient on-face): no second hexagon. The slot is a
-//       small folded-corner seal riding the module's lower-right edge;
-//       placed, it fills violet with the glyph. The Mutator tray is its
-//       own collapsible chip at the board's lower edge that expands into
-//       a tile strip.
-//   C — Summoned grid (the Mutator view): at rest the board says almost
-//       nothing — placed mutators wear a tiny corner pip, empty slots a
-//       hollow one. The Mutator view fades the module board and renders
-//       the grid layer as the foreground: full slot faces with words on
-//       them, the tray pinned as a strip, unlock and combination gestures
-//       living there. Done returns to the quiet board.
+//   MODULES tab — the production board as-is; each module whose cell's
+//     slot holds a mutator wears the arete outline. Nothing else changes:
+//     chords, leads, selection, the expanded face (which still gains the
+//     mutator line).
+//   MUTATORS tab — the second grid layer: the module board rests (greyed,
+//     untouched) and the grid renders as the foreground — one slot face
+//     per cell, speaking in full words (family, glyph, rarity ticks,
+//     host, effect; inert slots say so). The Mutator tray pins as a
+//     strip; unlock, placement, retrieval, and combination live here.
 //
-// Shared across all three: hovering a slot asks the reserved readout
-// (family, rarity, effect, host — never a ν/s claim); the expanded face
-// gains a mutator line; the combination gesture mirrors the module
-// drop-and-confirm (a review before anything is consumed; mutators carry
-// no levels, so nothing is retained or refunded); slot unlock arms like a
-// cell purchase (first slot any owned cell, later ones adjacent to the
-// unlocked patch — ADR-0043); mutator rolls offer two candidates.
+// Shared rules: hover asks the reserved readout (never a ν/s claim); the
+// combination gesture mirrors the module drop-and-confirm (review before
+// anything is consumed; mutators carry no levels — nothing retained or
+// refunded); slot unlock arms like a cell purchase (first slot any owned
+// cell, later ones adjacent to the unlocked patch — ADR-0043) with the
+// pill carrying the single price; mutator rolls offer two candidates.
+// Inert cases speak — no effect claims on a chordless host, no promises
+// from a vacant slot; the rate details grow no row (ADR-0037/0043).
 //
-// Inert cases speak: resonance on a chordless host says inert; a vacant
-// slot says inert until a host lands. The rate details are untouched —
-// no mutator row (ADR-0037/0043).
-//
-// Switchable via ?variant=A|B|C on the live route (dev builds only; the
-// switcher bar bottom-center cycles with ←/→ and carries Unlock slot /
-// Mutator roll / the Mutator view). The board seeds from the playtest
-// save with nine slots (two same-family pairs to combine, one resonance
-// parked on the spacer — inert — and one vacant), a two-item Mutator
-// tray, and mock Arete for the unlock ladder. Saving is disabled while
-// the prototype runs.
+// Run: `npm run dev`, open `/?variant=1` (any ?variant= value arms the
+// prototype; `&layer=mutators` deep-links the second layer). The board
+// seeds from the playtest save wearing the layer: nine slots — two
+// same-family same-rarity pairs to combine, one resonance parked on the
+// spacer (inert), one vacant — a two-item tray, and mock Arete (20) for
+// the unlock ladder. Saving is disabled while the prototype runs. The
+// bar bottom-center carries Unlock slot / Mutator roll as judging
+// shortcuts; the real affordances are the tabs and the tray.
 import { deserialize } from "../../engine/save";
 import { computeRates, deployedAt } from "../../engine/economy";
 import { adjacent, sameHex } from "../../engine/hex";
@@ -54,19 +43,11 @@ import { cellNoteOf } from "../../engine/lattice";
 import type { GameState, Hex, ModuleInstance, Rarity } from "../../engine/types";
 import { HEX_RADIUS, hexPoints } from "../face";
 import type { App } from "../app";
-import { isPhoneWidth } from "../container";
 import { viewPoint, type ViewFrame } from "../bloom";
 import playtestSaveRaw from "./playtest-save.json?raw";
 
-export type MutatorVariant = "A" | "B" | "C";
-
-const VARIANTS: { key: MutatorVariant; name: string }[] = [
-  { key: "A", name: "A (Second face — ambient underlay)" },
-  { key: "B", name: "B (Corner seal — ambient on-face)" },
-  { key: "C", name: "C (Summoned grid — the Mutator view)" },
-];
-
 type Family = "power" | "resonance" | "charge";
+type Layer = "modules" | "mutators";
 
 interface MutItem {
   id: string;
@@ -80,12 +61,11 @@ interface MutSlot {
 }
 
 interface MutState {
+  layer: Layer;
   slots: MutSlot[];
   tray: MutItem[];
   nextId: number;
   armingUnlock: boolean;
-  view: boolean;
-  trayOpen: boolean;
   armedTray: string | null;
   movingFrom: Hex | null;
   carrying: { item: MutItem; origin: Hex | "tray" } | null;
@@ -98,12 +78,11 @@ function mut(app: App): MutState {
   let state = mutStates.get(app);
   if (!state) {
     state = {
+      layer: "modules",
       slots: [],
       tray: [],
       nextId: 1,
       armingUnlock: false,
-      view: false,
-      trayOpen: false,
       armedTray: null,
       movingFrom: null,
       carrying: null,
@@ -152,23 +131,15 @@ function rarityTicks(rarity: Rarity): string {
   return Array.from({ length: n }, (_, i) => `<circle r="1.6" cx="${((i - (n - 1) / 2) * 7).toFixed(1)}" cy="0"/>`).join("");
 }
 
-/* ── Variant plumbing ── */
+/* ── Prototype plumbing ── */
 
 export function prototypeWanted(): boolean {
   if (!import.meta.env.DEV) return false;
-  const key = new URLSearchParams(location.search).get("variant");
-  return key === "A" || key === "B" || key === "C";
+  return new URLSearchParams(location.search).has("variant");
 }
 
-function currentVariant(): MutatorVariant {
-  const key = new URLSearchParams(location.search).get("variant");
-  return key === "A" || key === "B" || key === "C" ? key : "A";
-}
-
-function setVariant(key: MutatorVariant): void {
-  const params = new URLSearchParams(location.search);
-  params.set("variant", key);
-  history.replaceState(null, "", `?${params.toString()}`);
+function deepLinkedLayer(): Layer {
+  return new URLSearchParams(location.search).get("layer") === "mutators" ? "mutators" : "modules";
 }
 
 // The prototype's own lattice projection — mirrors render.ts's `point`
@@ -196,6 +167,7 @@ export function seedMutatorBoard(app: App): void {
   app.ui.selected = null;
   app.save = () => {};
   const state = mut(app);
+  state.layer = deepLinkedLayer();
   const item = (family: Family, rarity: Rarity): MutItem => ({ id: `m${state.nextId++}`, family, rarity });
   const slot = (q: number, r: number, i: MutItem | null): void => {
     state.slots.push({ pos: { q, r }, item: i });
@@ -263,133 +235,122 @@ function hostLine(app: App, slot: MutSlot): { host: string | null; inert: string
 export function renderMutatorPrototype(app: App): void {
   if (!prototypeWanted()) return;
   ensureStyle();
-  ensureSwitcher(app);
+  ensureBar(app);
   ensureGestureBindings(app);
   const state = mut(app);
   currentState = state;
-  const variant = currentVariant();
-  document.body.classList.toggle("proto-mut-a", variant === "A");
-  document.body.classList.toggle("proto-mut-b", variant === "B");
-  document.body.classList.toggle("proto-mut-c", variant === "C");
-  document.body.classList.toggle("proto-mut-view", variant === "C" && state.view);
-  renderGridLayer(app, variant);
+  const upgrade = app.state.mode === "upgrade";
+  const gridActive = upgrade && state.layer === "mutators";
+  document.body.classList.toggle("proto-mut-live", gridActive);
+  renderTabs(app, upgrade);
+  renderGridLayer(app, gridActive);
   renderUnlockPill(app);
-  renderTray(app, variant);
-  renderPopover(app, variant);
+  renderTray(app, gridActive);
+  renderPopover(app, gridActive);
   renderBloomLine(app);
   renderOverlays(app);
 }
 
-/* ── The grid layer ── */
+/* ── The layer tabs ──
+   The tab-like switch between the board's two layers: Modules (the
+   production board) and Mutators (the second grid). Upgrade-mode
+   furniture at the board's top edge, beside the dock. */
 
-// Plate geometry (variant A): the sub-hex peeks from under the module's
-// lower edge — its visible band carries glyph + compact figure.
-const PLATE_R = 58;
-const PLATE_DY = 32;
+function renderTabs(app: App, upgrade: boolean): void {
+  const state = mut(app);
+  let host = document.getElementById("proto-mut-tabs");
+  if (!upgrade) {
+    host?.remove();
+    return;
+  }
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "proto-mut-tabs";
+    host.innerHTML = `<button class="proto-tab" data-layer="modules">Modules</button><button class="proto-tab" data-layer="mutators">Mutators</button>`;
+    host.querySelectorAll<HTMLButtonElement>("[data-layer]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const m = mut(app);
+        if (m.layer === button.getAttribute("data-layer")) return;
+        m.layer = button.getAttribute("data-layer") as Layer;
+        disarmAll(app);
+        app.render();
+      });
+    });
+    document.querySelector(".board-space")?.append(host);
+  }
+  host.classList.toggle("on-mutators", state.layer === "mutators");
+  host.querySelectorAll<HTMLButtonElement>("[data-layer]").forEach((button) => {
+    button.classList.toggle("active", button.getAttribute("data-layer") === state.layer);
+  });
+}
 
-// Seal geometry (variant B): a folded-corner triangle riding the module's
-// lower-right edge, clear of the face's note band.
-const SEAL_D = "M 14 46 L 45 33 L 41 54 Z";
+/* ── The grid layer ──
+   Modules tab: presence outlines only — a thin arete outline inset on
+   the face of every hosted mutator's module. Mutators tab: the second
+   grid as the foreground — one slot face per cell, full words. */
 
-// Pip geometry (variant C at rest): a small diamond at the same corner.
-const PIP_POINTS = "22,42 32,47 27,56 17,50";
-
-// Variant A's grab band: the plate's visible lip below the module's lower
-// edges (cell coords, the plate's offset already applied) — the hit area
-// stays off the module face, so the app's own clicks keep working.
-const LIP_POINTS = "-46,58 -24,78 0,90 24,78 46,58";
-
-// Full slot-face hex (variant C in the view): module-sized.
+// Full slot-face hex (the mutators layer): module-sized.
 const SLOT_FACE_R = 56;
+// The presence outline's inset — hugging the chassis edge, clear of the
+// rarity rings (55/50/45).
+const PRESENCE_R = 58;
 
-function renderGridLayer(app: App, variant: MutatorVariant): void {
+function renderGridLayer(app: App, gridActive: boolean): void {
   const svg = document.getElementById("grid") as SVGSVGElement | null;
   if (!svg) return;
   svg.querySelector("#proto-mut-grid")?.remove();
-  svg.querySelector("#proto-mut-under")?.remove();
   if (app.state.mode !== "upgrade") return;
   const state = mut(app);
   const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
   g.id = "proto-mut-grid";
-  const under = document.createElementNS("http://www.w3.org/2000/svg", "g");
-  under.id = "proto-mut-under";
-  const view = variant === "C" && state.view;
   const parts: string[] = [];
-  const underParts: string[] = [];
 
   const at = (pos: Hex): string => {
     const [x, y] = protoPoint(pos);
     return `transform="translate(${x.toFixed(2)},${y.toFixed(2)})"`;
   };
 
-  const slotMark = (slot: MutSlot): string => {
+  if (!gridActive) {
+    // The module layer's presence marks: the outline alone. Presence is
+    // all it says — family, effect, and words live one tab away.
+    for (const slot of state.slots) {
+      if (!slot.item) continue;
+      parts.push(`<g ${at(slot.pos)}><polygon class="proto-presence" points="${hexPoints(PRESENCE_R)}"/></g>`);
+    }
+    g.innerHTML = parts.join("");
+    svg.append(g);
+    return;
+  }
+
+  const slotFace = (slot: MutSlot): string => {
     const key = `data-mut-slot="${slot.pos.q},${slot.pos.r}"`;
-    if (view) {
-      if (slot.item) {
-        const item = slot.item;
-        const { host, inert } = hostLine(app, slot);
-        // The verdict rides the host line in the view — compact; the full
-        // words live in the hover ask and the popover.
-        const verdict = inert ? (inert.startsWith("vacant") ? "inert · no host" : "inert · no chord") : (host ?? "");
-        return `<g ${key} ${at(slot.pos)} class="proto-slot-face${inert ? " proto-inert" : ""}">
-          <polygon class="proto-slot-hex" points="${hexPoints(SLOT_FACE_R)}"/>
-          <text class="proto-slot-family" y="-32" text-anchor="middle">${FAMILY_LABEL[item.family].toUpperCase()}</text>
-          <g class="proto-slot-glyph">${mutGlyph(item.family, 1.15)}</g>
-          <g class="proto-slot-ticks" transform="translate(0 10)">${rarityTicks(item.rarity)}</g>
-          <text class="proto-slot-host" y="26" text-anchor="middle">${verdict}</text>
-          <text class="proto-slot-effect mono" y="42" text-anchor="middle">${effectShort(item.family, item.rarity)}</text>
-          <polygon class="proto-hit wide" data-mut-hit="${slot.pos.q},${slot.pos.r}" points="${hexPoints(SLOT_FACE_R)}"/>
-        </g>`;
-      }
-      return `<g ${key} ${at(slot.pos)} class="proto-slot-open">
-        <polygon class="proto-slot-hex dashed" points="${hexPoints(SLOT_FACE_R)}"/>
-        <text class="proto-slot-open-label" y="6" text-anchor="middle">OPEN SLOT</text>
+    if (slot.item) {
+      const item = slot.item;
+      const { host, inert } = hostLine(app, slot);
+      // The verdict rides the host line — compact here; the full words
+      // live in the hover ask and the popover.
+      const verdict = inert ? (inert.startsWith("vacant") ? "inert · no host" : "inert · no chord") : (host ?? "");
+      return `<g ${key} ${at(slot.pos)} class="proto-slot-face${inert ? " proto-inert" : ""}">
+        <polygon class="proto-slot-hex" points="${hexPoints(SLOT_FACE_R)}"/>
+        <text class="proto-slot-family" y="-32" text-anchor="middle">${FAMILY_LABEL[item.family].toUpperCase()}</text>
+        <g class="proto-slot-glyph">${mutGlyph(item.family, 1.15)}</g>
+        <g class="proto-slot-ticks" transform="translate(0 10)">${rarityTicks(item.rarity)}</g>
+        <text class="proto-slot-host" y="26" text-anchor="middle">${verdict}</text>
+        <text class="proto-slot-effect mono" y="42" text-anchor="middle">${effectShort(item.family, item.rarity)}</text>
         <polygon class="proto-hit wide" data-mut-hit="${slot.pos.q},${slot.pos.r}" points="${hexPoints(SLOT_FACE_R)}"/>
       </g>`;
     }
-    if (variant === "A") {
-      // The plate paints UNDER the module face — the layer splits: the
-      // hexagon beneath the cells, glyph + grab band above (the tip notch
-      // between the row-below faces is the only clear ground).
-      if (slot.item) {
-        const item = slot.item;
-        underParts.push(`<g ${key} ${at(slot.pos)} class="proto-plate">
-          <polygon class="proto-plate-hex" points="${hexPoints(PLATE_R)}" transform="translate(0 ${PLATE_DY})"/>
-        </g>`);
-        return `<g ${key} ${at(slot.pos)} class="proto-plate">
-          <g class="proto-plate-glyph" transform="translate(0 71)">${mutGlyph(item.family, 0.8)}</g>
-          <polygon class="proto-hit" data-mut-hit="${slot.pos.q},${slot.pos.r}" points="${LIP_POINTS}"/>
-        </g>`;
-      }
-      underParts.push(`<g ${key} ${at(slot.pos)} class="proto-plate proto-open">
-        <polygon class="proto-plate-hex dashed" points="${hexPoints(PLATE_R)}" transform="translate(0 ${PLATE_DY})"/>
-      </g>`);
-      return `<g ${key} ${at(slot.pos)} class="proto-plate proto-open">
-        <text class="proto-plate-open mono" y="84" text-anchor="middle">OPEN</text>
-        <polygon class="proto-hit" data-mut-hit="${slot.pos.q},${slot.pos.r}" points="${LIP_POINTS}"/>
-      </g>`;
-    }
-    // B at rest: the corner seal. C at rest: the pip.
-    if (slot.item) {
-      const item = slot.item;
-      const inner =
-        variant === "B"
-          ? `<path d="${SEAL_D}" class="proto-seal"/><g class="proto-seal-glyph">${mutGlyph(item.family, 0.55)}</g>`
-          : `<polygon class="proto-pip" points="${PIP_POINTS}"/>`;
-      return `<g ${key} ${at(slot.pos)} class="proto-rest">${inner}<path d="${SEAL_D}" class="proto-hit" data-mut-hit="${slot.pos.q},${slot.pos.r}"/></g>`;
-    }
-    const inner =
-      variant === "B"
-        ? `<path d="${SEAL_D}" class="proto-seal dashed"/>`
-        : `<polygon class="proto-pip dashed" points="${PIP_POINTS}"/>`;
-    return `<g ${key} ${at(slot.pos)} class="proto-rest proto-open">${inner}<path d="${SEAL_D}" class="proto-hit" data-mut-hit="${slot.pos.q},${slot.pos.r}"/></g>`;
+    return `<g ${key} ${at(slot.pos)} class="proto-slot-open">
+      <polygon class="proto-slot-hex dashed" points="${hexPoints(SLOT_FACE_R)}"/>
+      <text class="proto-slot-open-label" y="6" text-anchor="middle">OPEN SLOT</text>
+      <polygon class="proto-hit wide" data-mut-hit="${slot.pos.q},${slot.pos.r}" points="${hexPoints(SLOT_FACE_R)}"/>
+    </g>`;
   };
 
-  parts.push(...state.slots.map(slotMark));
+  parts.push(...state.slots.map(slotFace));
 
   // The unlock advertisement: eligible cells while the gesture is armed.
-  // One cost spot — the pill carries the price (#174's rule); the cells
-  // pulse.
+  // One cost spot — the pill carries the price (#174's rule).
   if (state.armingUnlock) {
     for (const pos of unlockTargets(app)) {
       parts.push(
@@ -402,13 +363,6 @@ function renderGridLayer(app: App, variant: MutatorVariant): void {
 
   g.innerHTML = parts.join("");
   svg.append(g);
-  if (underParts.length > 0) {
-    under.innerHTML = underParts.join("");
-    // Beneath the chord work and the module faces — the plate is
-    // background; the seams and faces draw over it.
-    const anchor = svg.querySelector('[data-key="chord-marks"]') ?? svg.querySelector(".cell-node");
-    svg.insertBefore(under, anchor);
-  }
   refreshMutRegisters();
 }
 
@@ -429,7 +383,7 @@ function slotPrice(app: App): number {
   return SLOT_PRICES[Math.min(n, SLOT_PRICES.length - 1)]!;
 }
 
-/* ── Drop registers (my marks' own land tints) ── */
+/* ── Drop registers (the land tints on slot faces) ── */
 
 let mutHoverPos: Hex | null = null;
 
@@ -443,7 +397,7 @@ function refreshMutRegisters(): void {
   if (!mutHoverPos || !carrying) return;
   const node = layer.querySelector(`[data-mut-slot="${mutHoverPos.q},${mutHoverPos.r}"]`);
   if (!node) return;
-  if (node.classList.contains("proto-open") || node.classList.contains("proto-slot-open")) {
+  if (node.classList.contains("proto-slot-open")) {
     node.classList.add("proto-land-open");
     return;
   }
@@ -463,7 +417,7 @@ function combines(a: MutItem, b: MutItem): boolean {
 function renderUnlockPill(app: App): void {
   const state = mut(app);
   let pill = document.getElementById("proto-mut-pill");
-  if (!state.armingUnlock) {
+  if (!state.armingUnlock || state.layer !== "mutators" || app.state.mode !== "upgrade") {
     pill?.remove();
     return;
   }
@@ -489,14 +443,11 @@ function disarmAll(app: App): void {
 }
 
 /* ── The Mutator tray ──
-   A desktop: a second column docked beside the inventory tray, visible
-   when the inventory tray is or a mutator gesture lives. B desktop, and
-   every phone: a collapsible chip at the board's lower edge expanding
-   into a strip — gestures force it open. C: the strip pins during the
-   view, chip hidden otherwise. */
+   The second layer's inventory: a strip pinned at the board's lower edge
+   while the Mutators tab stands (every width — phone included). */
 
 function trayTileSvg(item: MutItem): string {
-  return `<svg viewBox="-70 -70 140 140" aria-hidden="true" style="color: var(--reserved-violet)">
+  return `<svg viewBox="-70 -70 140 140" aria-hidden="true" style="color: var(--arete)">
     <polygon class="proto-tile-hex" points="${hexPoints(HEX_RADIUS)}"/>
     <g class="proto-tile-glyph">${mutGlyph(item.family, 1.6)}</g>
     <g class="proto-tile-ticks" transform="translate(0 34)">${rarityTicks(item.rarity)}</g>
@@ -504,103 +455,56 @@ function trayTileSvg(item: MutItem): string {
   </svg>`;
 }
 
-function trayForcedOpen(app: App): boolean {
+function renderTray(app: App, gridActive: boolean): void {
   const state = mut(app);
-  return state.armingUnlock || state.armedTray !== null || state.movingFrom !== null || state.carrying !== null;
-}
-
-function renderTray(app: App, variant: MutatorVariant): void {
-  const state = mut(app);
-  const upgrade = app.state.mode === "upgrade";
   let host = document.getElementById("proto-mut-tray");
-  const view = variant === "C" && state.view;
-  const phone = isPhoneWidth();
-  const strip = phone || view || variant === "B";
-  const open = !upgrade
-    ? false
-    : view
-      ? true
-      : variant === "A" && !phone
-        ? app.ui.trayOpen || app.dragging !== null || app.ui.placing !== null || trayForcedOpen(app) || state.popoverPos !== null
-        : state.trayOpen || trayForcedOpen(app);
-  if (host) {
-    const shapeChanged = host.classList.contains("proto-mut-strip") !== strip;
-    if (!upgrade || !open || shapeChanged) {
-      host.remove();
-      host = null;
-    }
-  }
-  if (!upgrade || !open) {
-    renderTrayChip(app, upgrade && !view && strip ? state.tray.length : -1);
+  if (!gridActive || app.state.mode !== "upgrade") {
+    host?.remove();
     return;
   }
-  byId("proto-mut-chip")?.remove();
   if (!host) {
     host = document.createElement("div");
     host.id = "proto-mut-tray";
-    host.classList.add(strip ? "proto-mut-strip" : "proto-mut-column");
+    host.classList.add("proto-mut-strip");
     document.querySelector(".board-space")?.append(host);
   }
-  const key = JSON.stringify([state.tray.map((i) => `${i.id}:${i.rarity}`), state.armedTray, strip, view]);
-  if (host.dataset.renderKey !== key) {
-    host.dataset.renderKey = key;
-    const unlockButton = view
-      ? `<button class="proto-mut-unlock" id="proto-mut-unlock">Unlock slot · <span class="mono">${slotPrice(app)} Arete</span></button>`
-      : "";
-    host.innerHTML = `<span class="tray-label">MUTATORS</span>
-      <div class="${strip ? "tray-items proto-strip-items" : "tray-items"}">${
-        state.tray
-          .map(
-            (item) =>
-              `<button class="inventory-tile proto-mut-tile${state.armedTray === item.id ? " armed" : ""}" data-mut-tray="${item.id}" data-rarity="${item.rarity}" title="${FAMILY_LABEL[item.family]} · ${effectText(item.family, item.rarity)} — click, then an open slot">${trayTileSvg(item)}</button>`,
-          )
-          .join("") || `<span class="tray-empty">minted mutators wait here</span>`
-      }</div>${unlockButton}`;
-    host.querySelectorAll<HTMLButtonElement>("[data-mut-tray]").forEach((button) => {
-      const id = button.getAttribute("data-mut-tray")!;
-      button.addEventListener("click", () => {
-        const m = mut(app);
-        m.armedTray = m.armedTray === id ? null : id;
-        m.popoverPos = null;
-        if (m.armedTray) app.say("Choose an open Mutator slot.");
-        app.render();
-      });
-      bindMutDrag(app, button, id);
-    });
-    byId("proto-mut-unlock")?.addEventListener("click", () => {
-      mut(app).armingUnlock = true;
-      app.render();
-    });
-  }
-}
-
-// The collapsed chip: one violet count that opens the strip.
-function renderTrayChip(app: App, count: number): void {
-  if (count < 0) {
-    byId("proto-mut-chip")?.remove();
-    return;
-  }
-  let chip = document.getElementById("proto-mut-chip");
-  if (!chip) {
-    chip = document.createElement("button");
-    chip.id = "proto-mut-chip";
-    chip.addEventListener("click", () => {
+  const key = JSON.stringify([state.tray.map((i) => `${i.id}:${i.rarity}`), state.armedTray]);
+  if (host.dataset.renderKey === key) return;
+  host.dataset.renderKey = key;
+  host.innerHTML = `<span class="tray-label">MUTATORS</span>
+    <div class="tray-items proto-strip-items">${
+      state.tray
+        .map(
+          (item) =>
+            `<button class="inventory-tile proto-mut-tile${state.armedTray === item.id ? " armed" : ""}" data-mut-tray="${item.id}" data-rarity="${item.rarity}" title="${FAMILY_LABEL[item.family]} · ${effectText(item.family, item.rarity)} — click, then an open slot">${trayTileSvg(item)}</button>`,
+        )
+        .join("") || `<span class="tray-empty">minted mutators wait here</span>`
+    }</div>
+    <button class="proto-mut-unlock" id="proto-mut-unlock">Unlock slot · <span class="mono">${slotPrice(app)} Arete</span></button>`;
+  host.querySelectorAll<HTMLButtonElement>("[data-mut-tray]").forEach((button) => {
+    const id = button.getAttribute("data-mut-tray")!;
+    button.addEventListener("click", () => {
       const m = mut(app);
-      m.trayOpen = !m.trayOpen;
+      m.armedTray = m.armedTray === id ? null : id;
+      m.popoverPos = null;
+      if (m.armedTray) app.say("Choose an open Mutator slot.");
       app.render();
     });
-    document.querySelector(".board-space")?.append(chip);
-  }
-  chip.innerHTML = `◆ <b class="mono">${count}</b> mutator${count === 1 ? "" : "s"}`;
+    bindMutDrag(app, button, id);
+  });
+  byId("proto-mut-unlock")?.addEventListener("click", () => {
+    mut(app).armingUnlock = true;
+    app.render();
+  });
 }
 
 /* ── The declaration popover ── */
 
-function renderPopover(app: App, variant: MutatorVariant): void {
+function renderPopover(app: App, gridActive: boolean): void {
   const state = mut(app);
   let host = document.getElementById("proto-mut-pop");
   const slot = state.popoverPos ? slotAt(app, state.popoverPos) : null;
-  if (!slot || !slot.item || app.state.mode !== "upgrade") {
+  if (!gridActive || !slot || !slot.item || app.state.mode !== "upgrade") {
     host?.remove();
     return;
   }
@@ -630,7 +534,7 @@ function renderPopover(app: App, variant: MutatorVariant): void {
     };
     const [cx, cy] = viewPoint(protoPoint(slot.pos), frame);
     host.style.left = `${Math.round(cx)}px`;
-    host.style.top = `${Math.round(cy - (variant === "A" ? PLATE_DY : 0))}px`;
+    host.style.top = `${Math.round(cy)}px`;
   }
   byId("proto-pop-retrieve")?.addEventListener("click", () => {
     retrieveFromSlot(app, slot.pos);
@@ -808,7 +712,9 @@ function renderRollOverlay(app: App): void {
 /* ── Gestures ──
    The layer's own capture-phase handlers on the grid svg: a mutator
    gesture (armed placement, armed move, armed unlock, or a live carry)
-   resolves on my marks and never reaches the app's cell handlers. */
+   resolves on the slot faces and never reaches the app's cell handlers.
+   All of them live on the Mutators tab; the Modules tab's outline is
+   pure read. */
 
 const boundGrids = new WeakSet<SVGSVGElement>();
 const DRAG_THRESHOLD = 8;
@@ -828,13 +734,6 @@ function ensureGestureBindings(app: App): void {
     const [q, r] = (raw ?? "").split(",").map(Number);
     return Number.isFinite(q) && Number.isFinite(r) ? { q: q!, r: r! } : null;
   };
-  const cellAt = (event: { clientX: number; clientY: number }): Hex | null => {
-    const hit = document
-      .elementFromPoint(event.clientX, event.clientY)
-      ?.closest("[data-cell],[data-mut-slot],[data-mut-unlock]");
-    if (!hit) return null;
-    return hexOf(hit.getAttribute("data-mut-slot") ?? hit.getAttribute("data-mut-unlock") ?? hit.getAttribute("data-cell"));
-  };
   const slotAtEvent = (event: { clientX: number; clientY: number }): Hex | null => {
     const hit = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-mut-slot]");
     return hit ? hexOf(hit.getAttribute("data-mut-slot")) : null;
@@ -845,22 +744,24 @@ function ensureGestureBindings(app: App): void {
   svg.addEventListener(
     "click",
     (event) => {
-      // An idle click on a placed mutator opens its declaration popover —
-      // the hit shapes sit above the app's cells, so the question is ours
-      // to answer.
+      if (mut(app).layer !== "mutators" || !currentState) {
+        // The Modules tab: no mutator gestures. (Presence marks don't
+        // even take hits.)
+        return;
+      }
+      // An idle click on a placed mutator opens its declaration popover.
       const hitTarget = (event.target as Element).closest("[data-mut-hit]");
       if (!busy(app) && hitTarget) {
         event.stopPropagation();
         const pos = hexOf(hitTarget.getAttribute("data-mut-hit"));
         if (!pos) return;
-        const state0 = currentState!;
-        state0.popoverPos = state0.popoverPos && sameHex(state0.popoverPos, pos) ? null : pos;
+        currentState.popoverPos = currentState.popoverPos && sameHex(currentState.popoverPos, pos) ? null : pos;
         app.render();
         return;
       }
-      if (!busy(app) || !currentState) return;
+      if (!busy(app)) return;
       const state = currentState;
-      const pos = cellAt(event);
+      const pos = slotAtEvent(event);
       if (state.armingUnlock) {
         event.stopPropagation();
         event.preventDefault();
@@ -906,7 +807,7 @@ function ensureGestureBindings(app: App): void {
 
   // The layer's own hover question: ask the reserved readout.
   svg.addEventListener("pointerover", (event) => {
-    if (busy(app)) return;
+    if (mut(app).layer !== "mutators" || busy(app)) return;
     const hit = (event.target as Element).closest("[data-mut-slot]");
     const host = document.getElementById("chord-readout");
     if (!hit || !host) return;
@@ -916,19 +817,20 @@ function ensureGestureBindings(app: App): void {
     if (!slot) return;
     if (!slot.item) {
       host.hidden = false;
-      host.innerHTML = `<span class="chord-readout-chip mono" style="--cc:var(--reserved-violet)">Open Mutator slot · ${cellNoteOf(slot.pos)} — inert until a host lands</span>`;
+      host.innerHTML = `<span class="chord-readout-chip mono" style="--cc:var(--arete)">Open Mutator slot · ${cellNoteOf(slot.pos)} — inert until a host lands</span>`;
       return;
     }
     const item = slot.item;
     const { host: hostName, inert } = hostLine(app, slot);
     host.hidden = false;
-    host.innerHTML = `<span class="chord-readout-chip mono" style="--cc:var(--reserved-violet)">${FAMILY_LABEL[item.family]} · ${effectText(item.family, item.rarity)}${hostName ? ` — hosts ${hostName}` : ""}${inert ? ` · ${inert}` : ""}</span>`;
+    host.innerHTML = `<span class="chord-readout-chip mono" style="--cc:var(--arete)">${FAMILY_LABEL[item.family]} · ${effectText(item.family, item.rarity)}${hostName ? ` — hosts ${hostName}` : ""}${inert ? ` · ${inert}` : ""}</span>`;
   });
 
   // Retrieve by right-click on a placed mutator.
   svg.addEventListener(
     "contextmenu",
     (event) => {
+      if (mut(app).layer !== "mutators") return;
       const hit = (event.target as Element).closest("[data-mut-hit]");
       if (!hit) return;
       event.preventDefault();
@@ -939,12 +841,13 @@ function ensureGestureBindings(app: App): void {
     true,
   );
 
-  // Carry: press a placed mutator's hit shape and drag.
+  // Carry: press a placed mutator's face and drag.
   svg.addEventListener(
     "pointerdown",
     (baseEvent: Event) => {
       const event = baseEvent as PointerEvent;
       if (event.button !== 0 || app.state.mode !== "upgrade" || busy(app) || !currentState) return;
+      if (currentState.layer !== "mutators") return;
       const hit = (event.target as Element).closest("[data-mut-hit]");
       if (!hit) return;
       const origin = hexOf(hit.getAttribute("data-mut-hit"));
@@ -970,7 +873,7 @@ function ensureGestureBindings(app: App): void {
         if (ghost) {
           ghost.style.left = `${ev.clientX}px`;
           ghost.style.top = `${ev.clientY}px`;
-          mutHoverPos = slotAtEvent(ev) ?? cellAt(ev);
+          mutHoverPos = slotAtEvent(ev);
           if (overTray(ev)) mutHoverPos = null;
           refreshMutRegisters();
           document.getElementById("proto-mut-tray")?.classList.toggle("drag-over", overTray(ev));
@@ -983,7 +886,7 @@ function ensureGestureBindings(app: App): void {
         ghost?.remove();
         document.getElementById("proto-mut-tray")?.classList.remove("drag-over");
         if (apply && moved && currentState?.carrying) {
-          const target = overTray(ev) ? "tray" : slotAtEvent(ev) ?? cellAt(ev);
+          const target = overTray(ev) ? "tray" : slotAtEvent(ev);
           finishCarry(app, target);
         } else if (currentState) currentState.carrying = null;
         mutHoverPos = null;
@@ -999,7 +902,7 @@ function ensureGestureBindings(app: App): void {
     true,
   );
 
-  // Esc cancels whatever mutator gesture stands.
+  // Esc cancels whatever mutator gesture stands, then the layer itself.
   document.addEventListener("keydown", (event) => {
     const target = event.target as HTMLElement | null;
     if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
@@ -1010,15 +913,19 @@ function ensureGestureBindings(app: App): void {
       app.render();
       return;
     }
-    if (state.view && currentVariant() === "C") {
-      state.view = false;
-      disarmAll(app);
-      app.render();
-      return;
-    }
-    if (busy(app)) {
-      disarmAll(app);
-      app.say("Mutator gesture cancelled.");
+    if (state.layer === "mutators") {
+      if (busy(app)) {
+        disarmAll(app);
+        app.say("Mutator gesture cancelled.");
+        app.render();
+        return;
+      }
+      if (state.popoverPos) {
+        state.popoverPos = null;
+        app.render();
+        return;
+      }
+      state.layer = "modules";
       app.render();
     }
   });
@@ -1175,47 +1082,23 @@ function removeFromTray(app: App, id: string): void {
   if (i >= 0) tray.splice(i, 1);
 }
 
-/* ── The switcher bar ── */
+/* ── The judging bar (shortcuts; the tabs are the real affordance) ── */
 
-function ensureSwitcher(app: App): void {
-  if (document.getElementById("proto-mut-switcher")) return;
+function ensureBar(app: App): void {
+  if (document.getElementById("proto-mut-bar")) return;
   const bar = document.createElement("div");
-  bar.id = "proto-mut-switcher";
-  bar.innerHTML = `<button data-dir="-1" aria-label="previous variant">◀</button><span id="proto-mut-switcher-label"></span><button data-dir="1" aria-label="next variant">▶</button><i class="proto-sep"></i><button class="proto-action" data-act="unlock">Unlock slot</button><button class="proto-action" data-act="roll">Mutator roll</button><button class="proto-action" data-act="view">Mutator view</button>`;
+  bar.id = "proto-mut-bar";
+  bar.innerHTML = `<button class="proto-action" data-act="unlock">Unlock slot</button><button class="proto-action" data-act="roll">Mutator roll</button>`;
   document.body.append(bar);
-  bar.querySelectorAll<HTMLButtonElement>("button[data-dir]").forEach((button) => {
-    button.addEventListener("click", () => cycleVariant(app, Number(button.dataset.dir)));
-  });
   bar.querySelector<HTMLButtonElement>('[data-act="unlock"]')?.addEventListener("click", () => {
     const state = mut(app);
+    state.layer = "mutators";
     state.armingUnlock = !state.armingUnlock;
     app.render();
   });
   bar.querySelector<HTMLButtonElement>('[data-act="roll"]')?.addEventListener("click", () => {
     mintRoll(app);
   });
-  bar.querySelector<HTMLButtonElement>('[data-act="view"]')?.addEventListener("click", () => {
-    if (currentVariant() !== "C") return;
-    const state = mut(app);
-    state.view = !state.view;
-    disarmAll(app);
-    app.render();
-  });
-  document.addEventListener("keydown", (event) => {
-    const target = event.target as HTMLElement | null;
-    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
-    if (event.key === "ArrowLeft") cycleVariant(app, -1);
-    if (event.key === "ArrowRight") cycleVariant(app, 1);
-  });
-}
-
-function cycleVariant(app: App, dir: number): void {
-  const keys = VARIANTS.map((v) => v.key);
-  const next = keys[(keys.indexOf(currentVariant()) + dir + keys.length) % keys.length]!;
-  disarmAll(app);
-  mut(app).view = false;
-  setVariant(next);
-  app.render();
 }
 
 function mintRoll(app: App): void {
@@ -1241,137 +1124,106 @@ function ensureStyle(): void {
   const style = document.createElement("style");
   style.id = "proto-mut-style";
   style.textContent = `
-#proto-mut-switcher {
+/* Arete's own register (provisional violet — continuity with #174's
+   approved Arete banner; one token swap if the hue moves. Distinct from
+   nous's pale indigo). */
+:root { --arete: #b994f5; }
+
+#proto-mut-bar {
   position: fixed; left: 50%; bottom: 10px; transform: translateX(-50%);
   z-index: 90; display: flex; align-items: center; gap: 8px;
   background: #101018; color: #e8e8f0; border: 1px solid #3a3a55; border-radius: 999px;
   padding: 6px 10px; font: 12px/1.2 system-ui, sans-serif; box-shadow: 0 6px 24px rgba(0,0,0,.5);
 }
-#proto-mut-switcher button { all: unset; cursor: pointer; padding: 2px 6px; border-radius: 6px; }
-#proto-mut-switcher button:hover { background: #26263a; }
-#proto-mut-switcher-label { white-space: nowrap; opacity: .9; }
-#proto-mut-switcher .proto-sep { width: 1px; height: 14px; background: #3a3a55; }
-#proto-mut-switcher .proto-action { border: 1px solid #3a3a55; font-weight: 600; }
-#proto-mut-switcher .proto-action[data-act="view"] { display: none; }
-body.proto-mut-c #proto-mut-switcher .proto-action[data-act="view"] { display: inline; }
+#proto-mut-bar button { all: unset; cursor: pointer; padding: 2px 8px; border-radius: 6px; font-weight: 600; }
+#proto-mut-bar button:hover { background: #26263a; }
 
-/* The violet the layer wears: the reserved category hue, read here as the
-   mutator register (provisional — Arete-adjacent violet, as #174's row
-   banner). */
-#proto-mut-grid { color: var(--reserved-violet); }
-#proto-mut-grid .proto-hit { fill: none; stroke: transparent; pointer-events: all; cursor: grab; }
-#proto-mut-grid .proto-hit { stroke-width: 16; }
-#proto-mut-grid .proto-hit.wide { stroke-width: 8; }
-
-/* ── A — the second face ── */
-.proto-plate-hex {
-  fill: color-mix(in srgb, var(--reserved-violet) 12%, var(--panel));
-  fill-opacity: .95; stroke: var(--reserved-violet); stroke-width: 2;
+/* ── The layer tabs ── */
+#proto-mut-tabs {
+  position: absolute; top: 10px; left: 66px; z-index: 22;
+  display: inline-flex; padding: 3px; gap: 2px;
+  background: var(--panel-veil); border: 1px solid var(--line-strong);
+  border-radius: 9px; backdrop-filter: blur(3px);
 }
-.proto-plate-hex.dashed { fill: color-mix(in srgb, var(--reserved-violet) 4%, transparent); stroke-dasharray: 6 5; stroke-width: 1.6; }
-.proto-plate-glyph { color: var(--reserved-violet); pointer-events: none; }
-.proto-plate-effect {
-  font-size: 11px; fill: var(--reserved-violet); letter-spacing: .02em;
-  paint-order: stroke; stroke: color-mix(in srgb, var(--panel) 88%, black); stroke-width: 3px;
+.proto-tab {
+  all: unset; cursor: pointer; padding: 5px 14px; border-radius: 6px;
+  font: 600 10.5px var(--mono, monospace); letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted);
+}
+.proto-tab:hover { color: var(--ink); background: var(--hover-bg); }
+.proto-tab.active { color: var(--ink); background: var(--hover-bg); }
+#proto-mut-tabs.on-mutators .proto-tab[data-layer="mutators"].active {
+  color: var(--arete); background: color-mix(in srgb, var(--arete) 13%, transparent);
+}
+
+/* ── The module layer: the presence outline ── */
+.proto-presence {
+  fill: none; stroke: var(--arete); stroke-width: 2; opacity: .9;
   pointer-events: none;
 }
-.proto-plate-open { font-size: 10px; fill: var(--reserved-violet); opacity: .8; letter-spacing: .14em; }
 
-/* ── B — the corner seal (and C's rest pip) ── */
-.proto-seal { fill: var(--reserved-violet); fill-opacity: .95; stroke: color-mix(in srgb, var(--reserved-violet) 55%, black); stroke-width: 1; }
-.proto-seal.dashed { fill: none; stroke: var(--reserved-violet); stroke-dasharray: 4 3; }
-.proto-rest { color: var(--accent-ink); }
-.proto-rest .proto-seal-glyph { transform: translate(33.5px 44px); pointer-events: none; }
-.proto-pip { fill: var(--reserved-violet); pointer-events: none; }
-.proto-pip.dashed { fill: none; stroke: var(--reserved-violet); stroke-dasharray: 3 2.5; }
-
-/* ── C — the summoned grid ── */
-body.proto-mut-view #grid .module-node,
-body.proto-mut-view #grid .cell-node { filter: grayscale(.85); opacity: .32; pointer-events: none; }
-body.proto-mut-view #grid .chord-mark:not(.ghost-mark) { opacity: .5; }
+/* ── The mutators layer: the second grid ── */
+body.proto-mut-live #grid .module-node,
+body.proto-mut-live #grid .cell-node { filter: grayscale(.85); opacity: .32; pointer-events: none; }
+body.proto-mut-live #grid .chord-mark:not(.ghost-mark) { opacity: .5; }
 .proto-slot-hex {
-  fill: color-mix(in srgb, var(--reserved-violet) 9%, transparent);
-  stroke: var(--reserved-violet); stroke-width: 2;
+  fill: color-mix(in srgb, var(--arete) 9%, transparent);
+  stroke: var(--arete); stroke-width: 2;
 }
-.proto-slot-hex.dashed { fill: color-mix(in srgb, var(--reserved-violet) 3%, transparent); stroke-dasharray: 7 6; stroke-width: 1.8; }
-.proto-slot-face .proto-slot-glyph { transform: translate(0 -10px); color: var(--reserved-violet); pointer-events: none; }
-.proto-slot-family { font: 600 11px var(--mono, monospace); fill: var(--reserved-violet); letter-spacing: .12em; pointer-events: none; }
+.proto-slot-hex.dashed { fill: color-mix(in srgb, var(--arete) 3%, transparent); stroke-dasharray: 7 6; stroke-width: 1.8; }
+.proto-slot-face .proto-slot-glyph { transform: translate(0 -10px); color: var(--arete); pointer-events: none; }
+.proto-slot-family { font: 600 11px var(--mono, monospace); fill: var(--arete); letter-spacing: .12em; pointer-events: none; }
 .proto-slot-effect { font-size: 12.5px; fill: var(--ink); pointer-events: none; }
 .proto-slot-host { font-size: 10px; fill: var(--muted); pointer-events: none; }
-.proto-slot-ticks { fill: var(--reserved-violet); pointer-events: none; }
-.proto-slot-inert {
-  font: italic 10px var(--mono, monospace); fill: var(--muted); letter-spacing: .02em; pointer-events: none;
-}
+.proto-slot-ticks { fill: var(--arete); pointer-events: none; }
 .proto-slot-face.proto-inert .proto-slot-effect { fill: var(--muted); }
-.proto-slot-open-label { font: 600 11px var(--mono, monospace); fill: var(--reserved-violet); opacity: .8; letter-spacing: .14em; pointer-events: none; }
+.proto-slot-open-label { font: 600 11px var(--mono, monospace); fill: var(--arete); opacity: .8; letter-spacing: .14em; pointer-events: none; }
 .proto-pulse { animation: proto-mut-pulse 1.4s ease-in-out infinite; }
 @keyframes proto-mut-pulse { 50% { stroke-width: 3.6; } }
 
-/* The land registers on my marks. */
-.proto-land-open .proto-slot-hex, .proto-land-open .proto-plate-hex { stroke: var(--charge); fill: color-mix(in srgb, var(--charge) 14%, transparent); }
-.proto-land-combine .proto-slot-hex, .proto-land-combine .proto-plate-hex,
-.proto-land-combine .proto-seal { stroke: var(--switch); stroke-width: 3.4; }
-.proto-land-combine .proto-slot-hex, .proto-land-combine .proto-plate-hex { fill: color-mix(in srgb, var(--switch) 18%, transparent); }
-.proto-land-combine .proto-seal { fill: var(--switch); }
-.proto-land-swap .proto-slot-hex, .proto-land-swap .proto-plate-hex,
-.proto-land-swap .proto-seal { stroke: var(--switch); }
-.proto-land-swap .proto-slot-hex, .proto-land-swap .proto-plate-hex { fill: color-mix(in srgb, var(--switch) 9%, transparent); }
+/* The invisible grab surfaces over the slot faces. */
+.proto-hit { fill: none; stroke: transparent; pointer-events: all; cursor: grab; }
 
-/* ── The Mutator tray ── */
-.proto-mut-column {
-  position: absolute; left: 150px; top: 50%; transform: translateY(-50%);
-  z-index: 15; display: flex; flex-direction: column; align-items: center; gap: 8px;
-  width: 86px; max-height: calc(100% - 40px); padding: 9px 8px 11px;
-  background: var(--panel-veil); border: 1px dashed var(--reserved-violet);
-  border-radius: 12px; backdrop-filter: blur(3px); overflow-y: auto;
-}
-.proto-mut-strip {
+/* The land registers on slot faces. */
+.proto-land-open .proto-slot-hex { stroke: var(--charge); fill: color-mix(in srgb, var(--charge) 14%, transparent); }
+.proto-land-combine .proto-slot-hex { stroke: var(--switch); stroke-width: 3.4; fill: color-mix(in srgb, var(--switch) 18%, transparent); }
+.proto-land-swap .proto-slot-hex { stroke: var(--switch); fill: color-mix(in srgb, var(--switch) 9%, transparent); }
+
+/* ── The Mutator tray strip (Mutators tab, every width) ── */
+#proto-mut-tray {
   position: absolute; left: 50%; transform: translateX(-50%);
-  z-index: 22; display: flex; align-items: center; gap: 8px;
+  bottom: 64px; z-index: 22;
+  display: flex; align-items: center; gap: 8px;
   width: max-content; max-width: calc(100% - 16px); padding: 8px 12px;
-  background: var(--panel-veil); border: 1px dashed var(--reserved-violet);
+  background: var(--panel-veil); border: 1px dashed var(--arete);
   border-radius: 12px; backdrop-filter: blur(3px);
 }
-body.proto-mut-c .proto-mut-strip { bottom: 70px; }
-body:not(.proto-mut-c) .proto-mut-strip { bottom: 64px; }
-.proto-mut-strip .tray-items { flex-direction: row !important; min-width: 60px; }
-.proto-mut-strip .proto-mut-tile { width: 54px; }
-.proto-mut-column .proto-mut-tile { width: 62px; padding: 3px 2px 5px; }
-.proto-mut-tile { all: unset; cursor: pointer; border-radius: 10px; }
+#proto-mut-tray .tray-label { color: var(--arete); }
+#proto-mut-tray .tray-items { flex-direction: row !important; min-width: 60px; }
+#proto-mut-tray.drag-over { border-color: var(--charge); background: var(--charge-tint); }
+.proto-mut-tile { all: unset; cursor: pointer; border-radius: 10px; width: 54px; }
 .proto-mut-tile:hover { background: var(--hover-bg); transform: translateY(-2px); }
-.proto-mut-tile.armed { outline: 2px solid var(--reserved-violet); }
-.proto-mut-tile .proto-tile-hex { fill: none; stroke: var(--reserved-violet); stroke-width: 4.5; }
+.proto-mut-tile.armed { outline: 2px solid var(--arete); }
+.proto-mut-tile .proto-tile-hex { fill: none; stroke: var(--arete); stroke-width: 4.5; }
 .proto-mut-tile .proto-tile-glyph { transform: translate(0 -6px); }
-.proto-mut-tile .proto-tile-ticks { fill: var(--reserved-violet); }
+.proto-mut-tile .proto-tile-ticks { fill: var(--arete); }
 .proto-mut-tile .proto-tile-effect { font-size: 11.5px; fill: var(--muted); }
 .proto-mut-unlock {
-  all: unset; cursor: pointer; margin-top: 4px; padding: 6px 10px; border-radius: 8px;
-  border: 1px solid var(--reserved-violet); color: var(--reserved-violet);
+  all: unset; cursor: pointer; padding: 6px 10px; border-radius: 8px;
+  border: 1px solid var(--arete); color: var(--arete);
   font: 600 10.5px var(--mono, monospace); white-space: nowrap;
 }
-.proto-mut-unlock:hover { background: color-mix(in srgb, var(--reserved-violet) 14%, transparent); }
-#proto-mut-tray { border-color: var(--reserved-violet); }
-#proto-mut-tray .tray-label { color: var(--reserved-violet); }
-#proto-mut-tray.drag-over { border-color: var(--charge); background: var(--charge-tint); }
-#proto-mut-chip {
-  position: absolute; left: 12px; bottom: 64px; z-index: 21;
-  display: flex; align-items: center; gap: 6px; padding: 8px 13px;
-  border-radius: 999px; cursor: pointer; background: rgba(20, 20, 31, 0.94);
-  border: 1px dashed var(--reserved-violet); color: var(--reserved-violet);
-  font: 600 11px/1 system-ui, sans-serif; letter-spacing: .03em;
-}
-#proto-mut-chip:hover { background: color-mix(in srgb, var(--reserved-violet) 16%, rgba(20,20,31,.94)); }
-#proto-mut-chip .mono { color: var(--ink); }
+.proto-mut-unlock:hover { background: color-mix(in srgb, var(--arete) 14%, transparent); }
 
 /* The unlock pill (mirrors the add-cell pill). */
 #proto-mut-pill {
   position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
   z-index: 22; display: flex; align-items: center; gap: 8px;
   padding: 8px 14px; border-radius: 999px; cursor: pointer;
-  background: rgba(20, 20, 31, 0.94); border: 1px solid var(--reserved-violet);
+  background: rgba(20, 20, 31, 0.94); border: 1px solid var(--arete);
   color: #f0f0f6; font: 600 11px/1 system-ui, sans-serif; letter-spacing: .04em;
 }
-#proto-mut-pill:hover { background: color-mix(in srgb, var(--reserved-violet) 18%, rgba(20,20,31,.94)); }
+#proto-mut-pill:hover { background: color-mix(in srgb, var(--arete) 18%, rgba(20,20,31,.94)); }
 #proto-mut-pill .proto-esc {
   padding: 2px 6px; border: 1px solid #55556a; border-radius: 4px;
   font: 600 9px/1 system-ui, sans-serif; color: #a0a0b8;
@@ -1379,13 +1231,13 @@ body:not(.proto-mut-c) .proto-mut-strip { bottom: 64px; }
 
 /* The declaration popover. */
 #proto-mut-pop {
-  position: absolute; transform: translate(-50%, calc(-100% - 78px));
+  position: absolute; transform: translate(-50%, calc(-100% - 70px));
   z-index: 24; width: 232px; padding: 12px 14px;
-  background: var(--panel); border: 1px solid var(--reserved-violet); border-radius: 10px;
+  background: var(--panel); border: 1px solid var(--arete); border-radius: 10px;
   box-shadow: 0 10px 30px var(--shadow); font: 12px/1.45 system-ui, sans-serif; color: var(--ink);
 }
 .proto-pop-head { display: flex; justify-content: space-between; align-items: baseline; }
-.proto-pop-family { font: 700 12px var(--mono, monospace); letter-spacing: .1em; color: var(--reserved-violet); text-transform: uppercase; }
+.proto-pop-family { font: 700 12px var(--mono, monospace); letter-spacing: .1em; color: var(--arete); text-transform: uppercase; }
 .proto-pop-rarity { font-size: 10.5px; color: var(--muted); text-transform: capitalize; }
 .proto-pop-effect { margin: 6px 0 2px; color: var(--ink); }
 .proto-pop-host { margin: 2px 0; color: var(--muted); font-size: 11.5px; }
@@ -1396,15 +1248,15 @@ body:not(.proto-mut-c) .proto-mut-strip { bottom: 64px; }
   all: unset; cursor: pointer; padding: 4px 10px; border-radius: 7px;
   border: 1px solid var(--line-strong); font: 600 11px system-ui, sans-serif;
 }
-.proto-pop-actions button:hover { background: var(--hover-bg); border-color: var(--reserved-violet); }
+.proto-pop-actions button:hover { background: var(--hover-bg); border-color: var(--arete); }
 .proto-pop-actions #proto-pop-close { margin-left: auto; padding: 4px 8px; }
 
 /* The expanded face's mutator line. */
 .proto-mut-bloom-line {
   display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
   margin: 0 0 8px; padding: 7px 10px; border-radius: 9px;
-  border: 1px dashed var(--reserved-violet);
-  color: var(--reserved-violet); font-size: 12px;
+  border: 1px dashed var(--arete);
+  color: var(--arete); font-size: 12px;
 }
 .proto-mut-bloom-line b { font-weight: 650; }
 .proto-mut-bloom-line .mono { color: var(--ink); font-size: 11.5px; }
@@ -1421,13 +1273,12 @@ body:not(.proto-mut-c) .proto-mut-strip { bottom: 64px; }
 .proto-combine-tile svg { width: 76px; }
 .proto-combine-tile small { font-size: 10.5px; color: var(--muted); }
 .proto-mut-candidates { display: flex; gap: 14px; justify-content: center; }
-.proto-mut-candidate svg { color: var(--reserved-violet); }
-.proto-mut-ghost { color: var(--reserved-violet); }
+.proto-mut-candidate svg { color: var(--arete); }
+.proto-mut-ghost { color: var(--arete); }
 
 @media (max-width: 600px) {
-  #proto-mut-switcher { left: 8px; right: 8px; transform: none; justify-content: center; flex-wrap: wrap; }
+  #proto-mut-tabs { left: 8px; }
   #proto-mut-pop { width: 200px; }
-  #proto-mut-chip { bottom: 110px; }
 }`;
   document.head.append(style);
 }
