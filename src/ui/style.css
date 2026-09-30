@@ -1283,8 +1283,10 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 .config-label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 
 /* The lattice's note labels (ADR-0021): every cell is an absolute note —
-   empty cells wear theirs so columns read as one note name. */
-.hex-note { font-size: 11px; fill: var(--muted); letter-spacing: 0.04em; }
+   empty cells wear theirs, centered on the cell, so columns read as one
+   note name. One treatment with the occupied face's note (#193): the same
+   mono register, muting, and tracking wherever a note sits. */
+.hex-note { font: 8.5px var(--mono); letter-spacing: 0.12em; fill: var(--muted); }
 
 /* ── Modals ────────────────────────────────────────── */
 
@@ -1299,6 +1301,12 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
   z-index: 50;
 }
 .modal-backdrop[hidden] { display: none; }
+/* The scrimless peek (#193): a pending module roll never blocks board
+   inspection — the backdrop drops entirely and the pointer passes through,
+   so the board stays visible, hoverable, and selectable behind the
+   centered card. Esc and the card's own ✕ dismiss. */
+.modal-backdrop.peek { background: transparent; pointer-events: none; }
+.modal-backdrop.peek .modal { pointer-events: auto; }
 .modal {
   --modal-pad: 26px;
   width: min(680px, 100%);

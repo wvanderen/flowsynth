@@ -236,13 +236,15 @@ function renderConsoleSession(app: App): void {
   }
 
   // Live values update in place; the controls above are never replaced by ticks.
-  // Planned sessions count down what remains; open-ended ones count up, with
-  // the header's progress strip pulsing calmly instead of filling.
+  // Planned sessions count down what remains — past the target the clock
+  // counts the overrun up instead of freezing at 0:00 (#193) — and
+  // open-ended ones count up, with the header's progress strip pulsing
+  // calmly instead of filling.
   const set = (id: string, text: string) => {
     const node = byId(id);
     if (node && node.textContent !== text) node.textContent = text;
   };
-  set("session-clock", formatClock(target !== null ? Math.max(0, target - elapsed) : elapsed));
+  set("session-clock", formatClock(sessionClockSeconds(elapsed, target)));
   set("session-caption", sessionCaption(elapsed, target, paused));
   // The provisional bucket is visibly flagged while it holds (§2): the pool
   // minutes and the nous waiting on the honesty report, in the switch's
@@ -282,7 +284,7 @@ function renderSessionStrip(running: boolean, elapsed = 0, target: number | null
 
 // The running-session caption shared by the console clock block and the Time
 // app's popover (§2.2). Every running state names itself — paused,
-// open-ended, target reached, or what remains of the plan.
+// open-ended, the overrun it counts, or what remains of the plan.
 function sessionCaption(elapsed: number, target: number | null, paused: boolean): string {
   const reached = target !== null && elapsed >= target;
   return paused
@@ -290,8 +292,16 @@ function sessionCaption(elapsed: number, target: number | null, paused: boolean)
     : target === null
       ? OPEN_ENDED_WORD
       : reached
-        ? "target reached"
+        ? "overrun"
         : `of ${formatClock(target)}`;
+}
+
+// The clock's figure (§2.2, #193): remaining on a planned session, the
+// elapsed overrun once the target is behind it — never a frozen 0:00 — and
+// plain elapsed on open-ended.
+function sessionClockSeconds(elapsed: number, target: number | null): number {
+  if (target === null) return elapsed;
+  return elapsed >= target ? elapsed - target : Math.max(0, target - elapsed);
 }
 
 // Share of a planned session already practiced, as a fill percentage.
@@ -646,7 +656,18 @@ function toolActions(): ToolAction[] {
         return trayCount > 0 ? `<b class="tool-badge mono">${trayCount}</b>` : "";
       },
       word: (app) => `Inventory · ${app.state.modules.filter((m) => m.pos === null).length}`,
-      title: (app) => (isPhoneWidth() ? "Inventory — the board-surface tray, tapped open" : app.ui.trayOpen ? "Inventory — close the tray" : "Inventory — open the tray"),
+      title: (app) =>
+        app.state.mode !== "upgrade"
+          ? "Inventory — the board is locked during flow"
+          : isPhoneWidth()
+            ? "Inventory — the board-surface tray, tapped open"
+            : app.ui.trayOpen
+              ? "Inventory — close the tray"
+              : "Inventory — open the tray",
+      // Gated in flow like Catalog/Forge/New cell (#193): the tray hides
+      // with the board locked, so the button arms nothing a placement
+      // could never land.
+      disabled: (app) => app.state.mode !== "upgrade",
       active: (app) => !isPhoneWidth() && app.ui.trayOpen,
     },
     {
@@ -846,7 +867,7 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
     if (!module && !lifted && isTargetCell(app)) classes += " target";
     html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">
       <polygon class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>
-      <text y="10" text-anchor="middle" class="hex-note">${cellNoteOf(pos)}</text></g>`;
+      <text y="3" text-anchor="middle" class="hex-note">${cellNoteOf(pos)}</text></g>`;
   }
 
   if (frontier.length > 0) {
@@ -1055,6 +1076,13 @@ function faceReadoutFor(state: GameState, module: ModuleInstance, pos: Hex | nul
     : { readout: `+${formatNumber(contribution?.value ?? 0)}${unit}` };
 }
 
+// The engraved level every upgrading module's face carries (#193): the
+// spacer's level buys nothing — it is silent wire, forever unupgraded — so
+// its face never wears the engraving, and "LV 0" is never seen on it.
+function faceLevel(module: ModuleInstance): number | undefined {
+  return module.type === "spacer" ? undefined : module.level;
+}
+
 function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderContext): string {
   const { ui, state } = app;
   const selected = ui.selected === module.id;
@@ -1090,7 +1118,7 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
       readout,
       ...(readoutClass ? { readoutClass } : {}),
       ...(note ? { note } : {}),
-      level: module.level,
+      level: faceLevel(module),
       hexClass: hexClass.trim(),
       under: module.type === "forge" ? waterFill(module.id, state.forge.progress / forgeThreshold(state.forge.earned)) : "",
       ...(charged ? { chargeGlow: chargeGlow(strength) } : {}),
@@ -1558,10 +1586,10 @@ function renderBloom(app: App, projected: RateSnapshot): void {
           readout: face.readout,
           ...(face.readoutClass ? { readoutClass: face.readoutClass } : {}),
           ...(face.note ? { note: face.note } : {}),
-          level: module.level,
+          level: faceLevel(module),
         })}</svg>
         <div class="bloom-sheet-col">
-          <span class="bloom-sheet-name">${META[module.type].name} · LV ${module.level}</span>
+          <span class="bloom-sheet-name">${faceLevel(module) !== undefined ? `${META[module.type].name} · LV ${module.level}` : META[module.type].name}</span>
           <small class="bloom-sheet-note mono">${cellNoteOf(module.pos)}</small>
           <small class="bloom-sheet-contrib mono">${lines.contribution}</small>
         </div>
@@ -1598,7 +1626,7 @@ function renderBloom(app: App, projected: RateSnapshot): void {
             readout: face.readout,
             ...(face.readoutClass ? { readoutClass: face.readoutClass } : {}),
             ...(face.note ? { note: face.note } : {}),
-            level: module.level,
+            level: faceLevel(module),
             variant: "bloom",
           })}</svg>
           ${readouts}
@@ -2276,6 +2304,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   if (!kind) {
     backdrop.hidden = true;
     backdrop.classList.remove("sheet");
+    backdrop.classList.remove("peek");
     document.body.classList.remove("modal-sheet-open");
     delete content.dataset.renderKey;
     return;
@@ -2289,6 +2318,12 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   // sheets, and inspection never buries it).
   const sheet = (kind === "rate" && containerWidth() < RATE_DETAILS_BREAKPOINT_PX) || window.innerWidth < PHONE_MAX_PX;
   backdrop.classList.toggle("sheet", kind === "rate" && containerWidth() < RATE_DETAILS_BREAKPOINT_PX);
+  // The scrimless peek (#193, decided in #174): a pending module roll never
+  // blocks board inspection — the backdrop drops entirely and the pointer
+  // passes through it, so the board stays visible, hoverable, and
+  // selectable while the roll waits. Esc and the modal's own ✕ dismiss.
+  backdrop.classList.toggle("peek", kind === "forge");
+  backdrop.setAttribute("aria-modal", kind === "forge" ? "false" : "true");
   document.body.classList.toggle("modal-sheet-open", sheet);
   const extra =
     kind === "forge"
@@ -2388,23 +2423,27 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
 // The inventory sheet (§7): the board-surface tray, re-docked for touch on
 // portrait phone where the thumb bar's Inventory segment taps it open.
 // Clicking an item arms the placement; the tray itself keeps the drag
-// gestures at every width.
+// gestures at every width. Gated with the dock (#193): in flow the board is
+// locked, so the sheet reads but never arms — a phone placement can never
+// land mid-session.
 function renderInventorySheetModal(app: App, content: HTMLElement): void {
   const inventory = app.state.modules.filter((m) => m.pos === null);
+  const locked = app.state.mode !== "upgrade";
   content.innerHTML = `
     ${modalTop("INVENTORY")}
     <h2 id="modal-title">Waiting for a cell.</h2>
-    <p class="lead">Tap a module, then a cell — dropping on an occupied cell swaps.</p>
+    <p class="lead">${locked ? "The board is locked during flow — placements wait for the session's end." : "Tap a module, then a cell — dropping on an occupied cell swaps."}</p>
     <div class="inventory-sheet-grid">${
       inventory
         .map(
           (m) =>
-            `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}" title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]} — tap, then a cell">${inventoryTileSvg(m)}</button>`,
+            `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}"${locked ? " disabled" : ""} title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]}${locked ? " — locked during flow" : " — tap, then a cell"}">${inventoryTileSvg(m)}</button>`,
         )
         .join("") || `<p class="empty-copy">Nothing in the tray. Drag a module off the board to store it here.</p>`
     }</div>`;
   content.querySelectorAll<HTMLButtonElement>("[data-inv]").forEach((button) => {
     button.addEventListener("click", () => {
+      if (app.state.mode !== "upgrade") return;
       const id = button.getAttribute("data-inv")!;
       app.closeModal();
       app.beginPlacing(id);
@@ -2621,24 +2660,26 @@ function renderForgeModal(app: App, content: HTMLElement): void {
   const offer = state.bankedRolls[state.bankedRolls.length - 1];
   const banked = state.bankedRolls.length;
   content.innerHTML = `
-    <div class="modal-top"><span class="eyebrow">FORGE</span><span class="small muted">${banked} banked</span></div>
+    ${modalTop(`FORGE · ${banked} banked`)}
     <h2 id="modal-title" class="sr-only">Forge choice</h2>
     ${offer ? `<div class="candidates">
       ${offer.candidates.map((candidate) => `
         <button class="candidate-tile" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${candidate.rarity}" data-type="${candidate.type}" title="Take the ${RARITY_LABEL[candidate.rarity]} ${META[candidate.type].name}">
           <svg viewBox="-70 -70 140 140" aria-hidden="true">
-            ${moduleFace({ type: candidate.type, rarity: candidate.rarity, readout: candidateReadout(candidate.type), level: 0 })}
+            ${moduleFace({ type: candidate.type, rarity: candidate.rarity, readout: candidateReadout(candidate.type) })}
           </svg>
           <span class="rarity">${RARITY_LABEL[candidate.rarity]}</span>
           <span class="candidate-scaling">+${formatNumber((BALANCE.rarityPower[candidate.rarity] - 1) * 100)}% / level · upgrades from 10 ν</span>
           <span class="candidate-effect">${forgeEffect(candidate.type, state)}</span>
         </button>`).join("")}
-    </div>` : `<p class="empty-copy">No Forge choices available.</p>`}`;
+    </div>` : `<p class="empty-copy">No Forge choices available.</p>`}
+    <p class="modal-note">The board stays live behind this card — inspect freely; ✕ or Esc puts the choice away.</p>`;
   content.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach((button) => {
     button.addEventListener("click", () => {
       app.chooseCandidate(button.getAttribute("data-offer")!, button.getAttribute("data-choice")!);
     });
   });
+  wireClose(app);
 }
 
 function renderExportModal(app: App, content: HTMLElement): void {
