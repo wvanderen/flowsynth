@@ -638,6 +638,14 @@ export class App {
         this.render();
       }
     });
+    // The Forge peek passes pointers to the board. Dismiss outside the card
+    // in capture, before a board action can replace the clicked DOM node;
+    // the same click still reaches the board for selection or other actions.
+    document.addEventListener("click", (event) => {
+      if (!this.ownsBoard() || this.ui.modal !== "forge") return;
+      if (event.composedPath().includes(this.els["modal-content"]!)) return;
+      this.closeModal();
+    }, { capture: true });
     // The Esc chain (§5): the modal eats it first; then the armed transient
     // modes unwind; then the expanded face — the selection is its open
     // state. Never while typing.

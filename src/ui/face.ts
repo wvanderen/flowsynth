@@ -78,8 +78,9 @@ export interface FaceSpec {
   readoutClass?: string;
   // Small line under the readout (a synthesizer's note name).
   note?: string;
-  // Engraved level, top center.
-  level?: number;
+  // Engraved level, top center. Explicitly undefined (the spacer's — its
+  // level buys nothing, #193) leaves the engraving off.
+  level?: number | undefined;
   // Interaction classes for the chassis polygon (selected, charged, ...).
   hexClass?: string;
   // Received-charge light (§8, #41): a 0..1 glow (chargeGlow) that scales

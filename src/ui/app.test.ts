@@ -150,6 +150,26 @@ describe("the console", () => {
     expect(popover.textContent).toContain("holds the history");
     app.closeApp();
   });
+
+  it("the planned clock counts the overrun past the target instead of freezing at 0:00 (#193)", () => {
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    startSession(s, 600);
+    advance(s, 30);
+    app.render();
+    expect(document.querySelector("#console-session .session-clock")!.textContent).toBe("09:30");
+    expect(document.querySelector("#console-session .clock-caption")!.textContent).toBe("of 10:00");
+    // Sixty seconds past the target: the clock counts the overrun, the
+    // caption names it.
+    advance(s, 630);
+    app.render();
+    expect(document.querySelector("#console-session .session-clock")!.textContent).toBe("01:00");
+    expect(document.querySelector("#console-session .clock-caption")!.textContent).toBe("overrun");
+    // Paused mid-overrun: the hold wins the caption; the frozen overrun stays.
+    app.pause();
+    expect(document.querySelector("#console-session .session-clock")!.textContent).toBe("01:00");
+    expect(document.querySelector("#console-session .clock-caption")!.textContent).toBe("paused");
+  });
 });
 
 describe("the console header around Enter/Exit Flow (#148)", () => {
@@ -642,6 +662,21 @@ describe("the action row (§7)", () => {
     expect(app.ui.buyingCell).toBe(false);
     expect(document.getElementById("buy-banner")).toBeNull();
   });
+
+  it("the Inventory dock button is disabled during flow, like Catalog/Forge/New cell (#193)", () => {
+    app.render();
+    const dockButton = () => document.querySelector<HTMLButtonElement>('#board-tools [data-op="inventory"]')!;
+    expect(dockButton().disabled).toBe(false);
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, 600);
+    app.render();
+    expect(dockButton().disabled).toBe(true);
+    expect(dockButton().title).toContain("locked during flow");
+    // Dead in flow: the tray column never opens.
+    dockButton().click();
+    expect(app.ui.trayOpen).toBe(false);
+    expect(document.getElementById("inventory-zone")!.classList.contains("off")).toBe(true);
+  });
 });
 
 describe("the thumb bar (§7, portrait phone)", () => {
@@ -676,6 +711,102 @@ describe("the thumb bar (§7, portrait phone)", () => {
     expect(app.ui.placing).toBe("m1");
     app.cancelPlacing();
   });
+
+  it("the inventory sheet cannot arm a placement during flow (#193)", () => {
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, 600);
+    const trayModule = give(app.state, "additive", null);
+    app.render();
+    // The thumb bar's Inventory segment is dead in flow, so the sheet is
+    // opened directly here — the gate the tap would ride.
+    app.openModal("inventory");
+    const modal = document.getElementById("modal-content")!;
+    const tile = modal.querySelector<HTMLButtonElement>(`[data-inv="${trayModule.id}"]`)!;
+    expect(tile.disabled).toBe(true);
+    expect(modal.textContent).toContain("locked during flow");
+    tile.click();
+    expect(app.ui.placing).toBeNull();
+    expect(app.ui.modal).toBe("inventory");
+  });
+});
+
+describe("a module roll's scrimless peek (#193)", () => {
+  // One banked roll to open the Forge with.
+  const bankRoll = (): void => {
+    app.state.sessionsCompleted = 1;
+    app.state.bankedRolls.push({
+      id: "roll1",
+      candidates: [
+        { id: "rc1", type: "additive", rarity: "common" },
+        { id: "rc2", type: "spacer", rarity: "common" },
+        { id: "rc3", type: "infusor", rarity: "uncommon" },
+      ],
+    });
+  };
+
+  it("a pending roll drops the scrim: the backdrop is pass-through and the board stays inspectable", () => {
+    bankRoll();
+    app.openModal("forge");
+    const backdrop = document.getElementById("modal")!;
+    expect(backdrop.classList.contains("peek")).toBe(true);
+    expect(backdrop.getAttribute("aria-modal")).toBe("false");
+    // Selection works through the peek and dismisses it without taking the roll.
+    clickCell(0, 0);
+    expect(app.ui.selected).toBe("m1");
+    expect(app.ui.modal).toBeNull();
+    expect(app.state.bankedRolls).toHaveLength(1);
+    app.openModal("forge");
+    expect(document.getElementById("modal-content")!.querySelectorAll(".candidate-tile")).toHaveLength(3);
+    // Candidate faces carry no engraved level (#193) — a roll is a choice of
+    // module, not of level.
+    expect(document.querySelectorAll(".candidate-tile .face-level")).toHaveLength(0);
+    // Hover works under the peek too: the reserved readout answers.
+    document.getElementById("grid")!.querySelector('[data-cell="0,0"]')!.dispatchEvent(
+      new MouseEvent("pointerover", { bubbles: true }),
+    );
+    expect(document.getElementById("chord-readout")!.hidden).toBe(false);
+    expect(document.getElementById("chord-readout")!.textContent).toContain("ν/s");
+  });
+
+  it("outside clicks dismiss the pass-through peek, while card clicks and opening it do not", () => {
+    bankRoll();
+    app.render();
+    document.querySelector<HTMLButtonElement>('#board-tools [data-op="forge"]')!.click();
+    expect(app.ui.modal).toBe("forge");
+    document.querySelector("#modal-content .modal-note")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.modal).toBe("forge");
+    document.body.click();
+    expect(app.ui.modal).toBeNull();
+    expect(app.state.bankedRolls).toHaveLength(1);
+  });
+
+  it("the peek carries a visible dismiss affordance, and Esc dismisses", () => {
+    bankRoll();
+    app.openModal("forge");
+    const close = document.getElementById("close-modal")!;
+    expect(close).not.toBeNull();
+    close.click();
+    expect(app.ui.modal).toBeNull();
+    // Esc puts the choice away too.
+    bankRoll();
+    app.openModal("forge");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(app.ui.modal).toBeNull();
+  });
+
+  it("every other modal keeps its scrim", () => {
+    app.openModal("catalog");
+    const backdrop = document.getElementById("modal")!;
+    expect(backdrop.classList.contains("peek")).toBe(false);
+    expect(backdrop.getAttribute("aria-modal")).toBe("true");
+    app.closeModal();
+    // And a closed peek clears: the next render leaves no residue.
+    bankRoll();
+    app.openModal("forge");
+    app.closeModal();
+    expect(backdrop.classList.contains("peek")).toBe(false);
+    expect(backdrop.hidden).toBe(true);
+  });
 });
 
 describe("the always-live board (§5)", () => {
@@ -709,6 +840,27 @@ describe("the always-live board (§5)", () => {
     expect(empty.querySelector(".hex-note")!.textContent).toBe("C5");
     expect(empty.querySelector(".empty-plus")).toBeNull();
     expect(empty.textContent).not.toContain("EMPTY CELL");
+  });
+
+  it("empty and occupied faces wear one note treatment: centered, in the same register (#193)", () => {
+    app.render();
+    const grid = document.getElementById("grid")!;
+    const emptyNote = grid.querySelector('[data-cell="0,1"] .hex-note')!;
+    // The empty cell's note centers on its cell — the old alignment defect.
+    expect(emptyNote.getAttribute("y")).toBe("3");
+    expect(emptyNote.getAttribute("text-anchor")).toBe("middle");
+    // The occupied face's note is where it always sat.
+    const faceNote = grid.querySelector('[data-cell="0,0"] .face-note')!;
+    expect(faceNote.textContent).toBe("C4");
+    expect(faceNote.getAttribute("y")).toBe("43");
+  });
+
+  it("a spacer face never wears a level engraving; upgrading modules keep theirs (#193)", () => {
+    give(app.state, "spacer", hex(1, 0));
+    app.render();
+    const grid = document.getElementById("grid")!;
+    expect(grid.querySelector('[data-type="spacer"] .face-level')).toBeNull();
+    expect(grid.querySelector('.module-node:not([data-type="spacer"]) .face-level')!.textContent).toBe("LV 0");
   });
 
   it("New cell stays the purchase entry point: armed frontier hexes still carry NEW CELL (#151)", () => {
@@ -963,6 +1115,8 @@ describe("the expanded face (§5)", () => {
     // The face itself is the bloom, sitting near its natural layout with no
     // button to make room for.
     expect(bloom().querySelector(".bloom-face .face-readout")!.textContent).toBe("⌇");
+    // The silent wire's expanded face carries no level either (#193).
+    expect(bloom().querySelector(".bloom-face .face-level")).toBeNull();
   });
 
   it("never opens for a drag or a drop; Esc, outside click, and selecting elsewhere close it", () => {
