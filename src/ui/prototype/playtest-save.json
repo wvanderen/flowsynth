@@ -1,0 +1,892 @@
+{
+  "app": "flowsynth",
+  "version": 6,
+  "savedAt": 1790683511392,
+  "state": {
+    "mode": "upgrade",
+    "sessionIndex": 17,
+    "sessionsCompleted": 17,
+    "unstructuredSessions": 0,
+    "plannedSessionsCompleted": 8,
+    "combinations": 20,
+    "nous": 794029507502.5,
+    "totalEarned": 2467276166764547.5,
+    "arete": 1,
+    "horizonAcknowledged": false,
+    "muted": false,
+    "notificationAsked": true,
+    "modules": [
+      {
+        "id": "m21",
+        "type": "conditional",
+        "rarity": "uncommon",
+        "level": 16,
+        "invested": 30734,
+        "pos": {
+          "q": 3,
+          "r": 0
+        }
+      },
+      {
+        "id": "m22",
+        "type": "focusKeyed",
+        "rarity": "rare",
+        "level": 57,
+        "invested": 7189319111247,
+        "pos": {
+          "q": -1,
+          "r": 0
+        }
+      },
+      {
+        "id": "m23",
+        "type": "infusor",
+        "rarity": "rare",
+        "level": 62,
+        "invested": 75385474763887,
+        "pos": {
+          "q": 0,
+          "r": 0
+        }
+      },
+      {
+        "id": "m38",
+        "type": "forge",
+        "rarity": "rare",
+        "level": 55,
+        "invested": 2808327777834,
+        "pos": {
+          "q": -1,
+          "r": 1
+        }
+      },
+      {
+        "id": "m53",
+        "type": "additive",
+        "rarity": "rare",
+        "level": 66,
+        "invested": 494046247412560,
+        "pos": {
+          "q": 1,
+          "r": 0
+        }
+      },
+      {
+        "id": "m72",
+        "type": "additive",
+        "rarity": "rare",
+        "level": 64,
+        "invested": 192986815395537,
+        "pos": {
+          "q": 0,
+          "r": 1
+        }
+      },
+      {
+        "id": "m74",
+        "type": "spacer",
+        "rarity": "common",
+        "level": 0,
+        "invested": 0,
+        "pos": {
+          "q": 1,
+          "r": 1
+        }
+      },
+      {
+        "id": "m85",
+        "type": "conditional",
+        "rarity": "common",
+        "level": 19,
+        "invested": 125920,
+        "pos": {
+          "q": 2,
+          "r": -1
+        }
+      },
+      {
+        "id": "m104",
+        "type": "additive",
+        "rarity": "uncommon",
+        "level": 12,
+        "invested": 4679,
+        "pos": {
+          "q": 2,
+          "r": 1
+        }
+      },
+      {
+        "id": "m115",
+        "type": "additive",
+        "rarity": "common",
+        "level": 18,
+        "invested": 78696,
+        "pos": {
+          "q": 1,
+          "r": 2
+        }
+      },
+      {
+        "id": "m129",
+        "type": "spacer",
+        "rarity": "common",
+        "level": 0,
+        "invested": 0,
+        "pos": {
+          "q": 2,
+          "r": 0
+        }
+      },
+      {
+        "id": "m149",
+        "type": "focusKeyed",
+        "rarity": "rare",
+        "level": 32,
+        "invested": 56713723,
+        "pos": {
+          "q": -1,
+          "r": 2
+        }
+      },
+      {
+        "id": "m150",
+        "type": "conditional",
+        "rarity": "common",
+        "level": 14,
+        "invested": 11998,
+        "pos": {
+          "q": 0,
+          "r": 2
+        }
+      },
+      {
+        "id": "m151",
+        "type": "additive",
+        "rarity": "common",
+        "level": 24,
+        "invested": 1320463,
+        "pos": {
+          "q": 0,
+          "r": -1
+        }
+      },
+      {
+        "id": "m171",
+        "type": "additive",
+        "rarity": "common",
+        "level": 0,
+        "invested": 0,
+        "pos": {
+          "q": 1,
+          "r": -1
+        }
+      },
+      {
+        "id": "m172",
+        "type": "additive",
+        "rarity": "common",
+        "level": 0,
+        "invested": 0,
+        "pos": {
+          "q": 3,
+          "r": 1
+        }
+      },
+      {
+        "id": "m173",
+        "type": "additive",
+        "rarity": "common",
+        "level": 0,
+        "invested": 0,
+        "pos": {
+          "q": 2,
+          "r": 2
+        }
+      },
+      {
+        "id": "m204",
+        "type": "additive",
+        "rarity": "common",
+        "level": 0,
+        "invested": 0,
+        "pos": {
+          "q": 4,
+          "r": -1
+        }
+      },
+      {
+        "id": "m208",
+        "type": "additive",
+        "rarity": "common",
+        "level": 0,
+        "invested": 0,
+        "pos": {
+          "q": 4,
+          "r": 0
+        }
+      },
+      {
+        "id": "m209",
+        "type": "additive",
+        "rarity": "common",
+        "level": 0,
+        "invested": 0,
+        "pos": {
+          "q": 3,
+          "r": -2
+        }
+      },
+      {
+        "id": "m210",
+        "type": "conditional",
+        "rarity": "common",
+        "level": 0,
+        "invested": 0,
+        "pos": {
+          "q": 4,
+          "r": -2
+        }
+      }
+    ],
+    "cells": [
+      {
+        "q": 0,
+        "r": 0
+      },
+      {
+        "q": 1,
+        "r": 0
+      },
+      {
+        "q": 0,
+        "r": 1
+      },
+      {
+        "q": -1,
+        "r": 1
+      },
+      {
+        "q": 1,
+        "r": -1
+      },
+      {
+        "q": 1,
+        "r": 1
+      },
+      {
+        "q": 0,
+        "r": 2
+      },
+      {
+        "q": -1,
+        "r": 2
+      },
+      {
+        "q": -1,
+        "r": 0
+      },
+      {
+        "q": 2,
+        "r": 0
+      },
+      {
+        "q": 2,
+        "r": -1
+      },
+      {
+        "q": 0,
+        "r": -1
+      },
+      {
+        "q": 1,
+        "r": 2
+      },
+      {
+        "q": 2,
+        "r": 1
+      },
+      {
+        "q": 3,
+        "r": 0
+      },
+      {
+        "q": 3,
+        "r": -1
+      },
+      {
+        "q": 3,
+        "r": 1
+      },
+      {
+        "q": 2,
+        "r": 2
+      },
+      {
+        "q": 4,
+        "r": -1
+      },
+      {
+        "q": 3,
+        "r": 2
+      },
+      {
+        "q": 2,
+        "r": -2
+      },
+      {
+        "q": 3,
+        "r": -2
+      },
+      {
+        "q": 4,
+        "r": -2
+      },
+      {
+        "q": 1,
+        "r": -2
+      },
+      {
+        "q": 2,
+        "r": 3
+      },
+      {
+        "q": 1,
+        "r": 3
+      },
+      {
+        "q": 0,
+        "r": 3
+      },
+      {
+        "q": -1,
+        "r": 3
+      },
+      {
+        "q": -2,
+        "r": 3
+      },
+      {
+        "q": 4,
+        "r": 0
+      },
+      {
+        "q": -2,
+        "r": 2
+      },
+      {
+        "q": 4,
+        "r": 1
+      },
+      {
+        "q": -2,
+        "r": 1
+      },
+      {
+        "q": 3,
+        "r": 3
+      },
+      {
+        "q": 4,
+        "r": 2
+      },
+      {
+        "q": 5,
+        "r": 1
+      },
+      {
+        "q": 5,
+        "r": 2
+      },
+      {
+        "q": 5,
+        "r": 0
+      }
+    ],
+    "cellsBought": 35,
+    "gatedRows": [
+      0,
+      1,
+      -1,
+      2,
+      3,
+      -2,
+      4
+    ],
+    "forge": {
+      "progress": 10326251.027057344,
+      "earned": 37
+    },
+    "arcCardSeen": true,
+    "chargeWindow": 215.0444999999582,
+    "bankedRolls": [],
+    "purchased": {
+      "generator": true,
+      "infusor": true,
+      "forge": true
+    },
+    "activatedApps": [],
+    "goalCapacityBought": 0,
+    "notes": [],
+    "habits": [
+      {
+        "id": "h2",
+        "name": "Dev",
+        "seconds": 14513.56000003062,
+        "archived": false
+      },
+      {
+        "id": "h3",
+        "name": "Reading",
+        "seconds": 2526.2299999995485,
+        "archived": false
+      },
+      {
+        "id": "h4",
+        "name": "Work out",
+        "seconds": 2975.126999999613,
+        "archived": false
+      }
+    ],
+    "activeHabitId": "h2",
+    "practiceLog": [
+      {
+        "id": "p18",
+        "habitId": "h2",
+        "seconds": 681.2860000000564,
+        "source": "live",
+        "at": 1790534232804
+      },
+      {
+        "id": "p32",
+        "habitId": "h2",
+        "seconds": 1568.0309999999333,
+        "source": "live",
+        "at": 1790536819126
+      },
+      {
+        "id": "p37",
+        "habitId": "h2",
+        "seconds": 451.49300000001466,
+        "source": "live",
+        "at": 1790537290889
+      },
+      {
+        "id": "p45",
+        "habitId": "h2",
+        "seconds": 763.55900000007,
+        "source": "live",
+        "at": 1790538818294
+      },
+      {
+        "id": "p52",
+        "habitId": "h3",
+        "seconds": 1309.5659999999652,
+        "source": "live",
+        "at": 1790540599641
+      },
+      {
+        "id": "p54",
+        "habitId": "h4",
+        "seconds": 1469.555000000028,
+        "source": "live",
+        "at": 1790543816339
+      },
+      {
+        "id": "p71",
+        "habitId": "h4",
+        "seconds": 1505.5719999998992,
+        "source": "live",
+        "at": 1790553485925
+      },
+      {
+        "id": "p84",
+        "habitId": "h3",
+        "seconds": 1216.6640000000402,
+        "source": "live",
+        "at": 1790599663476
+      },
+      {
+        "id": "p87",
+        "habitId": "h2",
+        "seconds": 5.279000000000002,
+        "source": "live",
+        "at": 1790627694278
+      },
+      {
+        "id": "p96",
+        "habitId": "h2",
+        "seconds": 1726.837999999806,
+        "source": "live",
+        "at": 1790629697318
+      },
+      {
+        "id": "p103",
+        "habitId": "h2",
+        "seconds": 2141.818999999586,
+        "source": "live",
+        "at": 1790633073787
+      },
+      {
+        "id": "p113",
+        "habitId": "h2",
+        "seconds": 56.08200000000009,
+        "source": "live",
+        "at": 1790633284822
+      },
+      {
+        "id": "p128",
+        "habitId": "h2",
+        "seconds": 2183.7609999996216,
+        "source": "live",
+        "at": 1790636341513
+      },
+      {
+        "id": "p148",
+        "habitId": "h2",
+        "seconds": 1135.5180000000746,
+        "source": "live",
+        "at": 1790637998311
+      },
+      {
+        "id": "p153",
+        "habitId": "h2",
+        "seconds": 1642.1479999998487,
+        "source": "live",
+        "at": 1790640252230
+      },
+      {
+        "id": "p170",
+        "habitId": "h2",
+        "seconds": 7.300999999999992,
+        "source": "live",
+        "at": 1790644898297
+      },
+      {
+        "id": "p203",
+        "habitId": "h2",
+        "seconds": 2150.444999999582,
+        "source": "live",
+        "at": 1790647134858
+      }
+    ],
+    "sessionRecords": [
+      {
+        "sessionNumber": 1,
+        "startedAt": 1790533549500,
+        "endedAt": 1790534232804,
+        "habitId": "h2",
+        "mode": "planned",
+        "plannedTarget": 600,
+        "creditedSeconds": 681.2860000000564,
+        "earned": 68.12859999999971,
+        "honestyEvents": [],
+        "reflection": null,
+        "goalsAdvanced": [],
+        "achievements": [
+          "first-light",
+          "on-the-clock"
+        ]
+      },
+      {
+        "sessionNumber": 2,
+        "startedAt": 1790535251059,
+        "endedAt": 1790536819126,
+        "habitId": "h2",
+        "mode": "planned",
+        "plannedTarget": 1800,
+        "creditedSeconds": 1568.0309999999333,
+        "earned": 554.7819120479112,
+        "honestyEvents": [],
+        "reflection": null,
+        "goalsAdvanced": [],
+        "achievements": []
+      },
+      {
+        "sessionNumber": 3,
+        "startedAt": 1790536839300,
+        "endedAt": 1790537290889,
+        "habitId": "h2",
+        "mode": "planned",
+        "plannedTarget": 480,
+        "creditedSeconds": 451.49300000001466,
+        "earned": 159.7418353440074,
+        "honestyEvents": [],
+        "reflection": null,
+        "goalsAdvanced": [],
+        "achievements": []
+      },
+      {
+        "sessionNumber": 4,
+        "startedAt": 1790538054655,
+        "endedAt": 1790538818294,
+        "habitId": "h2",
+        "mode": "open-ended",
+        "plannedTarget": null,
+        "creditedSeconds": 763.55900000007,
+        "earned": 870.3697277949559,
+        "honestyEvents": [],
+        "reflection": null,
+        "goalsAdvanced": [],
+        "achievements": [
+          "spark"
+        ]
+      },
+      {
+        "sessionNumber": 5,
+        "startedAt": 1790539290061,
+        "endedAt": 1790540599641,
+        "habitId": "h3",
+        "mode": "open-ended",
+        "plannedTarget": null,
+        "creditedSeconds": 1309.5659999999652,
+        "earned": 2313.1538171351226,
+        "honestyEvents": [],
+        "reflection": {
+          "text": "",
+          "slider": 3
+        },
+        "goalsAdvanced": [
+          {
+            "goalId": "g5",
+            "seconds": 1309.5659999999652
+          }
+        ],
+        "achievements": []
+      },
+      {
+        "sessionNumber": 6,
+        "startedAt": 1790542346761,
+        "endedAt": 1790543816339,
+        "habitId": "h4",
+        "mode": "planned",
+        "plannedTarget": 1500,
+        "creditedSeconds": 1469.555000000028,
+        "earned": 6163.473233335157,
+        "honestyEvents": [],
+        "reflection": null,
+        "goalsAdvanced": [],
+        "achievements": [
+          "time-in-the-seat"
+        ]
+      },
+      {
+        "sessionNumber": 7,
+        "startedAt": 1790551980290,
+        "endedAt": 1790553485925,
+        "habitId": "h4",
+        "mode": "planned",
+        "plannedTarget": 1500,
+        "creditedSeconds": 1505.5719999998992,
+        "earned": 12116.576276415599,
+        "honestyEvents": [],
+        "reflection": null,
+        "goalsAdvanced": [],
+        "achievements": []
+      },
+      {
+        "sessionNumber": 8,
+        "startedAt": 1790598446767,
+        "endedAt": 1790599663476,
+        "habitId": "h3",
+        "mode": "planned",
+        "plannedTarget": 1200,
+        "creditedSeconds": 1216.6640000000402,
+        "earned": 38847.11070381293,
+        "honestyEvents": [],
+        "reflection": null,
+        "goalsAdvanced": [
+          {
+            "goalId": "g5",
+            "seconds": 1216.6640000000402
+          }
+        ],
+        "achievements": []
+      },
+      {
+        "sessionNumber": 9,
+        "startedAt": 1790627688929,
+        "endedAt": 1790627694278,
+        "habitId": "h2",
+        "mode": "planned",
+        "plannedTarget": 1200,
+        "creditedSeconds": 5.279000000000002,
+        "earned": 611.6794782369442,
+        "honestyEvents": [],
+        "reflection": null,
+        "goalsAdvanced": [],
+        "achievements": []
+      },
+      {
+        "sessionNumber": 10,
+        "startedAt": 1790627970450,
+        "endedAt": 1790629697318,
+        "habitId": "h2",
+        "mode": "planned",
+        "plannedTarget": 1200,
+        "creditedSeconds": 1726.837999999806,
+        "earned": 144045.84872608294,
+        "honestyEvents": [],
+        "reflection": null,
+        "goalsAdvanced": [],
+        "achievements": [
+          "keeping-time"
+        ]
+      },
+      {
+        "sessionNumber": 11,
+        "startedAt": 1790630931892,
+        "endedAt": 1790633073787,
+        "habitId": "h2",
+        "mode": "planned",
+        "plannedTarget": 1200,
+        "creditedSeconds": 2141.818999999586,
+        "earned": 1151932.2589004466,
+        "honestyEvents": [],
+        "reflection": null,
+        "goalsAdvanced": [],
+        "achievements": []
+      },
+      {
+        "sessionNumber": 12,
+        "startedAt": 1790633228730,
+        "endedAt": 1790633284822,
+        "habitId": "h2",
+        "mode": "planned",
+        "plannedTarget": 1200,
+        "creditedSeconds": 56.08200000000009,
+        "earned": 705523.5867141123,
+        "honestyEvents": [],
+        "reflection": null,
+        "goalsAdvanced": [],
+        "achievements": []
+      },
+      {
+        "sessionNumber": 13,
+        "startedAt": 1790634157741,
+        "endedAt": 1790636341513,
+        "habitId": "h2",
+        "mode": "planned",
+        "plannedTarget": 1500,
+        "creditedSeconds": 2183.7609999996216,
+        "earned": 28189912.37840314,
+        "honestyEvents": [],
+        "reflection": null,
+        "goalsAdvanced": [],
+        "achievements": []
+      },
+      {
+        "sessionNumber": 14,
+        "startedAt": 1790636862710,
+        "endedAt": 1790637998311,
+        "habitId": "h2",
+        "mode": "planned",
+        "plannedTarget": 1500,
+        "creditedSeconds": 1135.5180000000746,
+        "earned": 15618520.512308285,
+        "honestyEvents": [],
+        "reflection": null,
+        "goalsAdvanced": [],
+        "achievements": []
+      },
+      {
+        "sessionNumber": 15,
+        "startedAt": 1790638610002,
+        "endedAt": 1790640252230,
+        "habitId": "h2",
+        "mode": "planned",
+        "plannedTarget": 1500,
+        "creditedSeconds": 1642.1479999998487,
+        "earned": 2077083773.1981516,
+        "honestyEvents": [],
+        "reflection": {
+          "text": "",
+          "slider": 4
+        },
+        "goalsAdvanced": [],
+        "achievements": []
+      },
+      {
+        "sessionNumber": 16,
+        "startedAt": 1790644890898,
+        "endedAt": 1790644898297,
+        "habitId": "h2",
+        "mode": "planned",
+        "plannedTarget": 1500,
+        "creditedSeconds": 7.300999999999992,
+        "earned": 677507116.9781425,
+        "honestyEvents": [],
+        "reflection": null,
+        "goalsAdvanced": [],
+        "achievements": []
+      },
+      {
+        "sessionNumber": 17,
+        "startedAt": 1790644984379,
+        "endedAt": 1790647134858,
+        "habitId": "h2",
+        "mode": "planned",
+        "plannedTarget": 1500,
+        "creditedSeconds": 2150.444999999582,
+        "earned": 2467273366302017.5,
+        "honestyEvents": [],
+        "reflection": {
+          "text": "",
+          "slider": 4
+        },
+        "goalsAdvanced": [],
+        "achievements": []
+      }
+    ],
+    "goals": [
+      {
+        "id": "g5",
+        "condition": {
+          "kind": "habit-minutes",
+          "habitId": "h3",
+          "minutes": 30
+        },
+        "schedule": {
+          "kind": "daily"
+        },
+        "occurrenceKey": "2026-09-28",
+        "progressSeconds": 1216.6640000000402,
+        "completed": false,
+        "completedCount": 0,
+        "createdAt": 1790533450252
+      }
+    ],
+    "achievements": {
+      "first-light": 1790534232804,
+      "on-the-clock": 1790534232804,
+      "roll-credit": 1790534243780,
+      "two-of-a-kind": 1790534692610,
+      "room-to-grow": 1790537297622,
+      "spark": 1790538054698,
+      "time-in-the-seat": 1790543810623,
+      "power-chord": 1790553542625,
+      "fine-china": 1790599819885,
+      "keeping-time": 1790629697318
+    },
+    "session": null,
+    "summary": {
+      "sessionNumber": 17,
+      "earned": 2467273366302017.5,
+      "seconds": 2150.444999999582,
+      "ratePerMinute": 68839892198196.11,
+      "synths": 4607.530263532036,
+      "infusors": 2897543.721926041,
+      "chordMultiplier": 578280.9588099908,
+      "empowerment": 1.4386279611808332,
+      "timeUnlocked": false,
+      "plannedTarget": 1500,
+      "honestyEvents": [],
+      "achievements": [],
+      "reflection": {
+        "text": "",
+        "slider": 4
+      },
+      "seen": true
+    },
+    "nextId": 211
+  }
+}

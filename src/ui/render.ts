@@ -30,6 +30,7 @@ import { HEX_RADIUS, hexApothem, hexPoints, HUE_TOKEN_OF, moduleFace } from "./f
 import { bloomLayout, bloomPops, bloomSpan, viewMeet, viewPoint, type ViewFrame } from "./bloom";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chipWidth, type ChordMark } from "./chordlayer";
+import { transformChordMarks, renderDensePrototype } from "./prototype/dense";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatDate, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
@@ -91,6 +92,8 @@ export function render(app: App): void {
   renderGameInfoStrip(app, live);
   renderModal(app, live, projected);
   renderDev(app);
+  // PROTOTYPE (ticket #174, throwaway branch): dense-board variants.
+  renderDensePrototype(app);
 }
 
 /* ── Console (ADR-0012) ────────────────────────────── */
@@ -794,6 +797,8 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
     labelFor: chordTermLabel,
     focusIds,
   });
+  // PROTOTYPE (ticket #174, throwaway branch): dense-board seam variants.
+  overlay.marks = transformChordMarks(overlay.marks);
   chordReadoutCache.set(app, { marks: overlay.marks, snapshot });
 
   // Charge leads (§8, #41): uniform green patch leads, center-to-center,

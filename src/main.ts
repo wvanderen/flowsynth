@@ -1,4 +1,5 @@
 import { App } from "./ui/app";
+import { prototypeWanted, seedDenseBoard } from "./ui/prototype/dense";
 
 const els: Record<string, HTMLElement> = {};
 for (const id of [
@@ -17,6 +18,8 @@ for (const id of [
 
 const dev = new URLSearchParams(location.search).has("dev");
 const app = new App(els, dev);
+// PROTOTYPE (ticket #174, throwaway branch): seed the dense playtest board.
+if (prototypeWanted()) seedDenseBoard(app);
 if (dev) {
   (window as unknown as Record<string, unknown>).__flowsynth = app;
 }
