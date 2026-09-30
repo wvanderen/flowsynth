@@ -798,7 +798,10 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
     focusIds,
   });
   // PROTOTYPE (ticket #174, throwaway branch): dense-board seam variants.
-  overlay.marks = transformChordMarks(overlay.marks);
+  overlay.marks = transformChordMarks(overlay.marks, (id) => {
+    const pos = deployedById.get(id)?.pos;
+    return pos ? point(pos) : null;
+  });
   chordReadoutCache.set(app, { marks: overlay.marks, snapshot });
 
   // Charge leads (§8, #41): uniform green patch leads, center-to-center,
