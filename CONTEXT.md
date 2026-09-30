@@ -319,7 +319,7 @@ The muted list-row flag on session records carrying a missed honesty event. Mute
 ### Progression
 
 **Arete**:
-The resource banked by prestige and by nothing else — never granted before the reset. Its base yield is one per prestige at the horizon line, and it spends on the Arete Catalog.
+The resource banked by prestige and by nothing else — never granted before the reset. Each prestige banks a claim that grows with the prestiges performed; once the horizon is broken, score beyond the horizon line raises the claim further, up to a hard cap. It spends on the Arete Catalog.
 
 **Arete Catalog**:
 The board-side shop of Arete purchases: a chip on the board ledger, appearing with the first banked Arete, opening the prestige sheet — production stays grouped on the board, and the console never touches Arete. Organized as trees of offerings; each tree enters at one Arete and escalates within. Purchases are permanent and survive prestige. The launch trees are the Mutator tree and the Octave tree.
@@ -341,21 +341,22 @@ The Arete accumulator's surface: the ambient curved-scale fill riding the board'
 _Avoid_: Arete pill
 
 **Horizon line**:
-The Arete accumulator's cap — the fixed prestige threshold and the horizon bar's far end, the same every era until the horizon breaks. Reaching it opens the prestige door; it mints nothing by itself.
+The Arete accumulator's cap — the fixed prestige threshold and the horizon bar's far end, the same every era. Reaching it opens the prestige door; it mints nothing by itself.
 
 **Prestige**:
 The reset action: once the current era's fill reaches the horizon line, prestige banks the era's Arete claim and begins the next era — module levels, nous, and charge state reset while the board's modules, cells, and placement, the mutator layer (Catalog unlocks, Mutator slots, placed mutators, the Mutator tray), and the whole life record persist. Performed in upgrade mode through the horizon bar's door, behind a confirm.
 _Avoid_: reset (as the player-facing verb)
+
+**Horizon break**:
+The one-time Arete Catalog purchase, standing alone beside the trees, that lets score beyond the horizon line raise the prestige claim — still banked only on reset. Until it is bought, the claim reads the prestiges performed alone and pushing past the horizon banks nothing extra.
+_Avoid_: break infinity
 
 **Achievement**:
 A named feat that accelerates but never gates progress; each adds into the global achievementBoost term of the nous rate. Detection is live, storage is the v5 save's `id → unlockedAt` map. "Feat" is flavor individual names may carry, never a second term.
 
 ### Deferred vocabulary
 
-The Tasks console app ships post-launch; its terms below stand as designed (ADR-0005) and join the activation ladder when built. The horizon break is deferred to its own decision; what Arete buys is now settled — the Arete Catalog.
-
-**Horizon break**:
-The planned future act that lets score beyond the horizon line scale the prestige claim — still banked only on reset. Its unlock, curve, and surface are the horizon break's own decision.
+The Tasks console app ships post-launch; its terms below stand as designed (ADR-0005) and join the activation ladder when built.
 
 **Task**:
 A concrete action whose size is estimated and whose completion is reported by the player, initially intended to be bite-sized. Tasks can be created or completed at any time.
