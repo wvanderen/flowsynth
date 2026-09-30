@@ -30,6 +30,7 @@ import { HEX_RADIUS, hexApothem, hexPoints, HUE_TOKEN_OF, moduleFace } from "./f
 import { bloomLayout, bloomPops, bloomSpan, viewMeet, viewPoint, type ViewFrame } from "./bloom";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chipWidth, type ChordMark } from "./chordlayer";
+import { renderMutatorPrototype } from "./prototype/mutator";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatBalance, formatDate, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
@@ -91,6 +92,8 @@ export function render(app: App): void {
   renderGameInfoStrip(app, live);
   renderModal(app, live, projected);
   renderDev(app);
+  // PROTOTYPE (ticket #184, throwaway branch): mutator-layer variants.
+  renderMutatorPrototype(app);
 }
 
 /* ── Console (ADR-0012) ────────────────────────────── */
