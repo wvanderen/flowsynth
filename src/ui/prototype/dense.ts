@@ -1,11 +1,14 @@
 // PROTOTYPE — throwaway artifact for wayfinder ticket #174 (map #169).
 // Never merge to main. Lives on the prototype/dense-board-174 branch.
 //
+// ITERATION FOUR (clarification): the spacer is NOT fully transparent —
+// its plate keeps the cap and base where the name and note sit, opening
+// only a center window where the chord lines run visibly through.
+//
 // ITERATION THREE (second reaction): distant bridged pairs stay straight;
 // the row unlock settles on the board; the ghost previews wear the same
 // seam language as formed chords (hooked in render.ts); and the spacer
-// becomes the open wire — its plate turns transparent so the chord lines
-// run visibly through it, the face keeping only its name and note.
+// becomes the open wire.
 //
 // ITERATION TWO (maintainer reaction to one): C wins overall and absorbs
 // A's edge seams; the refinements below are all in. A and B stay switchable
@@ -546,14 +549,19 @@ function ensureStyle(): void {
 #grid .cell-node > .hex-note { y: 0; dominant-baseline: central; }
 #grid .cell-node > .hex.empty { fill-opacity: .45; }
 
-/* The open wire (iteration three): the spacer's plate opens so the chord
-   lines run visibly through it — the conducted line IS the wire. The face
-   keeps its name and note; the glyph, readout glyph, and level line go
-   quiet, leaving a spacer nothing to say but Spacer and the pitch. */
-#grid .module-node[data-type="spacer"] .hex { fill-opacity: .1; }
+/* The open wire (iteration four): the spacer's plate keeps its cap and
+   base — the bands where the name and note live — and opens a window in
+   the center where the chord lines run visibly through. The face keeps
+   its name and note; the glyph, readout glyph, level line, rings, and
+   rail go quiet, leaving nothing between the two bands. */
+#grid .module-node[data-type="spacer"] .hex {
+  clip-path: path("M 0 30.5 L 52.83 0 L 105.66 30.5 L 105.66 39 L 0 39 Z M 0 87 L 105.66 87 L 105.66 91.5 L 52.83 122 L 0 91.5 Z");
+}
 #grid .module-node[data-type="spacer"] .face-signature,
 #grid .module-node[data-type="spacer"] [data-key="readout"],
-#grid .module-node[data-type="spacer"] [data-key="level"] { display: none; }
+#grid .module-node[data-type="spacer"] [data-key="level"],
+#grid .module-node[data-type="spacer"] .face-rings,
+#grid .module-node[data-type="spacer"] .face-rail { display: none; }
 
 /* The selection lift (C): the cloned marks draw over everything. */
 #proto-lift { pointer-events: none; }
