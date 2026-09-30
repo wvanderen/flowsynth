@@ -10,8 +10,8 @@ import { chargedFactor, modulePower } from "../engine/economy";
 import { noteNameOf } from "../engine/lattice";
 import type { Contribution, GameState, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
-import { chordTermLabel, formatFixed, formatInt, formatNumber } from "./format";
-import { liveSet } from "./live";
+import { chordTermLabel, formatBalance, formatFixed, formatInt, formatNumber } from "./format";
+import { liveAttr, liveSet } from "./live";
 import { META } from "./meta";
 
 export function unlockedCount(state: GameState): number {
@@ -289,7 +289,11 @@ export function updateLedgerLive(
   selectedId: string | null = null,
 ): void {
   const set = (live: string, text: string) => liveSet(scope, live, text);
-  set("nous", `${formatInt(state.nous)} ν`);
+  set("nous", `${formatBalance(state.nous)} ν`);
+  // The balance compresses past the exact range (issue #187); the exact
+  // comma-grouped value rides the read as its native tooltip, kept fresh
+  // by the same guard the text swap uses.
+  liveAttr(scope, "nous", "title", formatInt(state.nous));
   set("rate", `${formatNumber(snapshot.rate)} ν/s`);
   // The session read is a tight live surface (ADR-0031 as applied here):
   // fixed decimals so the trailing zero never comes and goes, and the
@@ -323,7 +327,9 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
     document.getElementById("info-rate")?.addEventListener("click", () => app.openModal("rate"));
   }
   const set = (live: string, text: string) => liveSet(host, live, text);
-  set("i-nous", formatInt(state.nous));
+  // Same compression as the ledger's read, same exact tooltip (issue #187).
+  set("i-nous", formatBalance(state.nous));
+  liveAttr(host, "i-nous", "title", formatInt(state.nous));
   set("i-rate", formatFixed(snapshot.rate));
   set("i-session", state.session ? formatFixed(state.session.earned) : "—");
 }

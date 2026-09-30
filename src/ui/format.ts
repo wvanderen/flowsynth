@@ -28,6 +28,19 @@ export function formatInt(n: number): string {
   return Math.floor(n + 1e-9).toLocaleString("en-US");
 }
 
+// The nous balance read (issue #187): a live value, not a price, so the
+// integer rule doesn't pin it exact — past the exact range the ladder
+// takes over, and from 1e33 the scientific ladder, per §7. Inside the
+// exact range it stays the floored integer the surfaces have always read,
+// so small balances render as before and the read only moves when the
+// whole-nous figure crosses. Pair it with formatInt for the exact
+// comma-grouped value the read's tooltip defers precision to.
+export function formatBalance(n: number): string {
+  if (!Number.isFinite(n)) return "—";
+  if (Math.abs(n) >= EXACT_LIMIT) return formatNumber(n);
+  return formatInt(n);
+}
+
 // A readout for tight live surfaces (the phone strip's reads, the session
 // cell): always two decimals, trailing zeros kept, so a
 // value drifting through 2,426.10 never resizes its row the way the
