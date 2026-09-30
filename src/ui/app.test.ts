@@ -16,7 +16,7 @@ import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport } fro
 import { recordMissed, recordTargetHit } from "../engine/records";
 import { give } from "../engine/fixtures";
 import { hex, sameHex } from "../engine/hex";
-import { formatFixed, formatInt, formatNumber } from "./format";
+import { formatBalance, formatFixed, formatInt, formatNumber } from "./format";
 import { lensFrame } from "./zoom";
 import type { GameState } from "../engine/types";
 import type { SignalChannels } from "./signals";
@@ -253,6 +253,30 @@ describe("the board ledger strip (§7)", () => {
     document.getElementById("feats-chip")!.click();
     expect(app.ui.modal).toBe("achievements");
     app.closeModal();
+  });
+
+  it("the nous read compresses instead of overflowing, with the exact value on its tooltip (issue #187)", () => {
+    const read = () => document.querySelector('#board-ledger [data-live="nous"]')!;
+    // Small balances render as before: the floored comma-grouped integer.
+    app.state.nous = 5004.32;
+    app.render();
+    expect(read().textContent).toBe("5,004 ν");
+    expect(read().getAttribute("title")).toBe("5,004");
+    // The ladder takes over past the exact range; the tooltip stays exact.
+    app.state.nous = 1_234_567;
+    app.render();
+    expect(read().textContent).toBe("1.235M ν");
+    expect(read().getAttribute("title")).toBe(formatInt(1_234_567));
+    // Scientific fallback: the figure stays in its lane at any magnitude.
+    app.state.nous = 4.072e38;
+    app.render();
+    expect(read().textContent).toBe("4.072e38 ν");
+    expect(read().getAttribute("title")).toBe(formatInt(4.072e38));
+    // A tight live surface: the compressed read holds a constant, short
+    // width as the balance ticks (ADR-0031).
+    app.state.nous = 4.072e38 + 1e30;
+    app.render();
+    expect(read().textContent!.length).toBeLessThanOrEqual("4.072e38 ν".length);
   });
 
   it("the Rate cell shows the final total; the session read keeps its trailing zeros while a session runs", () => {
@@ -1662,6 +1686,21 @@ describe("the catalog", () => {
     expect(modal.querySelectorAll("[data-activate]")).toHaveLength(0);
     expect(modal.textContent).not.toContain("activate");
   });
+
+  it("the lead line compresses the balance instead of overflowing, with the exact value on its tooltip (issue #187)", () => {
+    // The ladder takes over past the exact range…
+    app.state.nous = 1_234_567;
+    app.openModal("catalog");
+    let lead = document.querySelector("#modal-content p.lead")!;
+    expect(lead.textContent).toBe(`${formatBalance(1_234_567)} ν available.`);
+    expect(lead.querySelector("span")!.getAttribute("title")).toBe(formatInt(1_234_567));
+    // …and the scientific ladder keeps the figure in its lane.
+    app.state.nous = 4.072e38;
+    app.openModal("catalog");
+    lead = document.querySelector("#modal-content p.lead")!;
+    expect(lead.textContent).toBe(`${formatBalance(4.072e38)} ν available.`);
+    expect(lead.querySelector("span")!.getAttribute("title")).toBe(formatInt(4.072e38));
+  });
 });
 
 describe("the session clock", () => {
@@ -2772,6 +2811,22 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     // chip in the strip.
     expect(strip.querySelector(".feats-chip")).toBeNull();
     expect(document.querySelector('#thumb-bar [data-op="feats"]')).not.toBeNull();
+  });
+
+  it("the strip's ν read compresses instead of overflowing, with the exact value on its tooltip (issue #187)", () => {
+    const read = () => document.querySelector('#game-info-strip [data-live="i-nous"]')!;
+    app.state.nous = 1_234_567;
+    app.render();
+    expect(read().textContent).toBe("1.235M");
+    app.state.nous = 4.072e38;
+    app.render();
+    expect(read().textContent).toBe("4.072e38");
+    expect(read().getAttribute("title")).toBe(formatInt(4.072e38));
+    // A tight live surface: the compressed read holds a constant, short
+    // width as the balance ticks (ADR-0031).
+    app.state.nous = 4.072e38 + 1e30;
+    app.render();
+    expect(read().textContent!.length).toBeLessThanOrEqual("4.072e38".length);
   });
 
   it("the strip's rate read is the phone's details door: tapping it opens the rate sheet, and a row lands on its module", () => {

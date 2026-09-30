@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chordTermLabel, formatCountdown, formatInt, formatNumber, formatPracticeMinutes, practiceCountdown } from "./format";
+import { chordTermLabel, formatBalance, formatCountdown, formatInt, formatNumber, formatPracticeMinutes, practiceCountdown } from "./format";
 
 describe("formatNumber — the shared live-value formatter (§7)", () => {
   it("shows exact comma-grouped integers below one million", () => {
@@ -86,6 +86,38 @@ describe("formatInt — integer quantities are always exact", () => {
   it("floors fractional input", () => {
     expect(formatInt(99.9)).toBe("99");
     expect(formatInt(10.000000001)).toBe("10");
+  });
+});
+
+describe("formatBalance — the nous balance read (§7, issue #187)", () => {
+  it("renders small balances exactly as before: the floored comma-grouped integer", () => {
+    expect(formatBalance(0)).toBe("0");
+    expect(formatBalance(999.9)).toBe("999");
+    expect(formatBalance(5004.32)).toBe("5,004");
+    expect(formatBalance(999_999)).toBe("999,999");
+  });
+
+  it("walks the ladder once the balance passes the exact range", () => {
+    expect(formatBalance(1_234_567)).toBe("1.235M");
+    expect(formatBalance(12_345_678_901)).toBe("12.35B");
+    expect(formatBalance(1.234e15)).toBe("1.234Qa");
+  });
+
+  it("falls back to scientific notation so no balance overflows its lane", () => {
+    expect(formatBalance(4.072e38)).toBe("4.072e38");
+    expect(formatBalance(1.234e34)).toBe("1.234e34");
+  });
+
+  it("defers precision, never loses it: the exact read rides formatInt beside it", () => {
+    // The tooltip's exact comma-grouped value stays reachable for every
+    // magnitude the compressed read covers — 4.072e38's full figure too.
+    expect(formatInt(4.072e38)).toBe("407,200,000,000,000,000,000,000,000,000,000,000,000");
+    expect(formatInt(1_234_567.89)).toBe("1,234,567");
+  });
+
+  it("replaces non-finite values with an em dash", () => {
+    expect(formatBalance(Number.NaN)).toBe("—");
+    expect(formatBalance(Number.POSITIVE_INFINITY)).toBe("—");
   });
 });
 

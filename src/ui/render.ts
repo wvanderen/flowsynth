@@ -32,7 +32,7 @@ import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chipWidth, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
-import { formatDate, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
+import { formatBalance, formatDate, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
 import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG } from "./ledger";
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
 import { containerWidth, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX } from "./container";
@@ -2538,7 +2538,7 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
   content.innerHTML = `
     ${modalTop("CATALOG")}
     <h2 id="modal-title">Shape what comes next.</h2>
-    <p class="lead">${formatInt(state.nous)} ν available.</p>
+    <p class="lead"><span title="${formatInt(state.nous)}">${formatBalance(state.nous)}</span> ν available.</p>
     ${openShelf.length > 0 ? `
       <h3 class="catalog-section-title">Starter shelf</h3>
       <div class="shop-list">${openShelf.map((type) => {
