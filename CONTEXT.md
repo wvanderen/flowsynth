@@ -322,16 +322,17 @@ The muted list-row flag on session records carrying a missed honesty event. Mute
 The resource banked by prestige and by nothing else — never granted before the reset. Each prestige banks a claim that grows with the prestiges performed; once the horizon is broken, score beyond the horizon line raises the claim further, up to a hard cap. It spends on the Arete Catalog.
 
 **Arete Catalog**:
-The board-side shop of Arete purchases: a chip on the board ledger, appearing with the first banked Arete, opening the prestige sheet — production stays grouped on the board, and the console never touches Arete. Organized as trees of offerings; each tree enters at one Arete and escalates within. Purchases are permanent and survive prestige. The launch trees are the Mutator tree and the Octave tree.
+The board-side shop of Arete purchases: a chip on the board ledger, appearing — and unlocking — with the first Arete the first prestige banks, opening the catalog sheet — production stays grouped on the board, and the console never touches Arete. Organized as trees of offerings and standalone purchases; each tree enters at one Arete and escalates within. Purchases are permanent, act in upgrade mode only, and survive prestige. The launch offerings are the Mutator tree and the Horizon break.
+_Avoid_: prestige sheet
 _Avoid_: prestige tree, skill tree
 
 **Mutator tree**:
-The Arete Catalog's first tree. Its entry purchase activates the Mutator Grid, grants the Mutator Forge module itself, and unlocks the first Mutator slot; later purchases add slots at escalating Arete, and a pricier purchase then joins the Mutator Forge type to the roll pool. The type is otherwise Catalog-exclusive.
+The Arete Catalog's first tree. Its sheet purchases are the entry (activates the Mutator Grid, grants the Mutator Forge module itself, and unlocks the first Mutator slot) and the pricier purchase that joins the Mutator Forge type to the roll pool. Slot unlocks past the first are bought on the Mutators layer, armed like a cell purchase and priced on the tree's escalating ladder. The type is otherwise Catalog-exclusive.
 _Avoid_: enhancement tree, gem tree
 
-**Octave tree**:
-The Arete Catalog's second tree: one octave row above and one below the launch band, sold in either order at escalating Arete. Its purchase stands in the row gate for the row it opens — cells inside then buy with nous as usual — and the board caps at six octave rows this phase.
-_Avoid_: row expansion, vertical unlock
+**Row unlock**:
+The board-side Arete purchase that opens one octave row beyond the launch band — one row above and one below this phase, sold in either order at escalating Arete. It renders in add-cell mode as the shaded next row behind a single unlock banner per side, one click buying outright, and its purchase stands in the row gate for the row it opens — cells inside then buy with nous as usual. The board caps at six octave rows this phase.
+_Avoid_: Octave tree (retired), row expansion, vertical unlock
 
 **Arete accumulator**:
 The log-scale fill on the current era's nous earned toward the horizon line, drawn as the ambient horizon bar across the board's lower edge (ADR-0038); it rebases at each prestige while lifetime total nous earned stays the truth beneath. Its one figure is the bar's own log-scale percentage; no decade marks or countdown.
@@ -348,7 +349,7 @@ The reset action: once the current era's fill reaches the horizon line, prestige
 _Avoid_: reset (as the player-facing verb)
 
 **Horizon break**:
-The one-time Arete Catalog purchase, standing alone beside the trees, that lets score beyond the horizon line raise the prestige claim — still banked only on reset. Until it is bought, the claim reads the prestiges performed alone and pushing past the horizon banks nothing extra.
+The one-time Arete Catalog purchase, standing alone beside the Mutator tree, that lets score beyond the horizon line raise the prestige claim — still banked only on reset. Until it is bought, the claim reads the prestiges performed alone and pushing past the horizon banks nothing extra.
 _Avoid_: break infinity
 
 **Achievement**:
