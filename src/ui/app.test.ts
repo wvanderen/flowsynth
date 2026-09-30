@@ -750,11 +750,12 @@ describe("a module roll's scrimless peek (#193)", () => {
     const backdrop = document.getElementById("modal")!;
     expect(backdrop.classList.contains("peek")).toBe(true);
     expect(backdrop.getAttribute("aria-modal")).toBe("false");
-    // Selection works under the peek: the roll still waits, and the picked
-    // module's readout answers.
+    // Selection works through the peek and dismisses it without taking the roll.
     clickCell(0, 0);
     expect(app.ui.selected).toBe("m1");
-    expect(app.ui.modal).toBe("forge");
+    expect(app.ui.modal).toBeNull();
+    expect(app.state.bankedRolls).toHaveLength(1);
+    app.openModal("forge");
     expect(document.getElementById("modal-content")!.querySelectorAll(".candidate-tile")).toHaveLength(3);
     // Candidate faces carry no engraved level (#193) — a roll is a choice of
     // module, not of level.
@@ -765,6 +766,18 @@ describe("a module roll's scrimless peek (#193)", () => {
     );
     expect(document.getElementById("chord-readout")!.hidden).toBe(false);
     expect(document.getElementById("chord-readout")!.textContent).toContain("ν/s");
+  });
+
+  it("outside clicks dismiss the pass-through peek, while card clicks and opening it do not", () => {
+    bankRoll();
+    app.render();
+    document.querySelector<HTMLButtonElement>('#board-tools [data-op="forge"]')!.click();
+    expect(app.ui.modal).toBe("forge");
+    document.querySelector("#modal-content .modal-note")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.modal).toBe("forge");
+    document.body.click();
+    expect(app.ui.modal).toBeNull();
+    expect(app.state.bankedRolls).toHaveLength(1);
   });
 
   it("the peek carries a visible dismiss affordance, and Esc dismisses", () => {

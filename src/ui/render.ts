@@ -2321,7 +2321,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   // The scrimless peek (#193, decided in #174): a pending module roll never
   // blocks board inspection — the backdrop drops entirely and the pointer
   // passes through it, so the board stays visible, hoverable, and
-  // selectable while the roll waits. Esc and the modal's own ✕ dismiss.
+  // selectable while the roll waits. Outside clicks, Esc, and ✕ dismiss.
   backdrop.classList.toggle("peek", kind === "forge");
   backdrop.setAttribute("aria-modal", kind === "forge" ? "false" : "true");
   document.body.classList.toggle("modal-sheet-open", sheet);
@@ -2673,7 +2673,7 @@ function renderForgeModal(app: App, content: HTMLElement): void {
           <span class="candidate-effect">${forgeEffect(candidate.type, state)}</span>
         </button>`).join("")}
     </div>` : `<p class="empty-copy">No Forge choices available.</p>`}
-    <p class="modal-note">The board stays live behind this card — inspect freely; ✕ or Esc puts the choice away.</p>`;
+    <p class="modal-note">The board stays live behind this card — inspect freely; click outside, ✕ or Esc puts the choice away.</p>`;
   content.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach((button) => {
     button.addEventListener("click", () => {
       app.chooseCandidate(button.getAttribute("data-offer")!, button.getAttribute("data-choice")!);

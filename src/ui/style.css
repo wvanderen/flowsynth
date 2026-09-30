@@ -976,7 +976,7 @@ body.bloom-sheet-open .zoom-cluster { bottom: 190px; }
 .drag-ghost .face-readout, .candidate-tile .face-readout { font-size: 14px; }
 /* The Forge's charge-vs-threshold readout sits in the charge register. */
 .face-readout.charge { fill: var(--charge); }
-.face-note { font: 8.5px var(--mono); letter-spacing: 0.12em; fill: var(--muted); }
+.face-note, .hex-note { font: 8.5px var(--mono); letter-spacing: 0.12em; fill: var(--muted); }
 .face-signature { stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 
 /* Charge leads (§8, #41): uniform green patch leads, center-to-center,
@@ -1282,12 +1282,6 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 
 .config-label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 
-/* The lattice's note labels (ADR-0021): every cell is an absolute note —
-   empty cells wear theirs, centered on the cell, so columns read as one
-   note name. One treatment with the occupied face's note (#193): the same
-   mono register, muting, and tracking wherever a note sits. */
-.hex-note { font: 8.5px var(--mono); letter-spacing: 0.12em; fill: var(--muted); }
-
 /* ── Modals ────────────────────────────────────────── */
 
 .modal-backdrop {
@@ -1304,7 +1298,7 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 /* The scrimless peek (#193): a pending module roll never blocks board
    inspection — the backdrop drops entirely and the pointer passes through,
    so the board stays visible, hoverable, and selectable behind the
-   centered card. Esc and the card's own ✕ dismiss. */
+   centered card. Outside clicks, Esc, and ✕ dismiss. */
 .modal-backdrop.peek { background: transparent; pointer-events: none; }
 .modal-backdrop.peek .modal { pointer-events: auto; }
 .modal {
