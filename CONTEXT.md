@@ -156,6 +156,9 @@ The chargeable module whose thresholds mint mutator rolls into the Mutator tray.
 **Forge progress**:
 A branch's player-wide meter to which that branch's deployed Forges contribute according to received charge and progress efficiency — the Module Forge's and the Mutator Forge's meters are separate. Crossing a branch's globally scaling threshold banks a roll on that branch and carries excess progress forward, independently of any individual Forge's identity.
 
+**RITUAL**:
+A chargeable board module that amplifies the active habit's build effects while receiving charge; charge never crosses to the console, and the habit keys the module's behavior. Working name — the roster effort owns its final name and glyph.
+
 **Module roll**:
 A charge- or flow-earned choice of one module from three generated candidates; unchosen candidates disappear without consolation resources. The Forge branches and the flow meter bank into one shared queue of interchangeable rolls.
 _Avoid_: forge roll (the pre-split name)
@@ -207,7 +210,14 @@ A purchase beat for a console upgrade such as goal capacity: each purchase adds 
 _Avoid_: CONSOLE LONG GOAL label (the visible panel drops it)
 
 **Habit**:
-A repeatable real-life practice, such as piano or cooking, that develops through credited practice time and manually logged practice time and can be selected for a flow session. Its development unlocks habit-specific customization options and is separate from nous.
+A repeatable real-life practice, such as piano or cooking, that develops through credited practice time and manually logged practice time and can be selected for a flow session. Its development unlocks build nodes as practice time crosses milestones and is separate from nous.
+
+**Habit build**:
+The per-habit loadout of equipped build nodes, chosen from a shared catalog and re-pickable freely in upgrade mode; its effects apply only while that habit is the session's active habit. Builds persist through prestige.
+
+**Build node**:
+One effect option in the shared habit-build catalog, drawn from the charge/Forge branch or the nous branch; unlocked as its habit's practice time crosses milestones and equipped into the habit build's limited slots.
+_Avoid_: habit upgrade, perk
 
 **Habit app**:
 The always-free focus app through which the player selects the active habit for a session, or practices unstructured. On phone, the launcher's entry names the selected practice inline and reads "none selected" when the next session would be unstructured (ADR-0033) — the UI's word for the unstructured choice.
