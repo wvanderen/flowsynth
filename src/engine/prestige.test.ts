@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { endSession, prestige, startSession } from "./actions";
-import { ARETE_HORIZON, horizonReached } from "./accumulator";
+import { breakHorizon, endSession, prestige, startSession } from "./actions";
+import { ARETE_HORIZON, claimOf, horizonReached } from "./accumulator";
 import { BALANCE } from "./constants";
 import { advance } from "./advance";
 import { fresh, give } from "./fixtures";
@@ -187,5 +187,48 @@ describe("the prestige action", () => {
     expect(levelCost(synth.level)).toBeGreaterThan(levelCost(0));
     prestige(s);
     expect(levelCost(synth.level)).toBe(levelCost(0));
+  });
+});
+
+describe("post-break banking (ADR-0042, issue #200)", () => {
+  function brokenAt(overfill: number): GameState {
+    const s = fresh();
+    s.arete = BALANCE.horizonBreakCost;
+    expect(breakHorizon(s).ok).toBe(true);
+    s.eraEarned = ARETE_HORIZON * overfill;
+    return s;
+  }
+
+  it("an at-threshold reset banks exactly n; a decade of overfill multiplies by two", () => {
+    const s = brokenAt(1);
+    expect(prestige(s).ok).toBe(true);
+    expect(s.arete).toBe(1);
+    // The next era pushed one decade past the line: n = 2 doubles to 4.
+    s.eraEarned = ARETE_HORIZON * 10;
+    expect(claimOf(s)).toBe(4);
+    expect(prestige(s).ok).toBe(true);
+    expect(s.arete).toBe(5);
+  });
+
+  it("prestige and immediately re-resetting banks n, not a decade-multiplied claim", () => {
+    // The acceptance check: the claim reads the bar's own rebased measure —
+    // the decade's overfill died with the era that earned it.
+    const s = brokenAt(1_000_000);
+    expect(prestige(s).ok).toBe(true);
+    s.eraEarned = ARETE_HORIZON;
+    expect(claimOf(s)).toBe(2);
+  });
+
+  it("nothing banks beyond the cap even from a maximally juiced era", () => {
+    const s = brokenAt(1e30);
+    expect(prestige(s).ok).toBe(true);
+    expect(s.arete).toBe(BALANCE.horizonBreakClaimCap);
+  });
+
+  it("the break round-trips the save cleanly", () => {
+    const s = brokenAt(1);
+    const loaded = deserialize(serialize(s, 5_000));
+    expect(loaded.error).toBeUndefined();
+    expect(loaded.state!.horizonBroken).toBe(true);
   });
 });

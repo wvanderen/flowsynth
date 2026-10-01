@@ -82,7 +82,8 @@ function maxVoiceMultiplierOf(state: GameState): number {
   return max;
 }
 
-// The launch set (§6.3): seventeen feats in spec order. Names provisional.
+// The launch set (§6.3): seventeen feats in spec order, plus the horizon
+// break's encourager (ADR-0042). Names provisional.
 export const ACHIEVEMENTS: readonly AchievementDef[] = [
   {
     id: "first-light",
@@ -191,6 +192,16 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     // monotonic totalEarned, never the per-era measure prestige rebases.
     evaluate: (s) => s.totalEarned >= ARETE_HORIZON,
     progress: (s) => fraction(s.totalEarned, ARETE_HORIZON),
+  },
+  {
+    id: "breaking-the-horizon",
+    category: "formula",
+    name: "Breaking the horizon",
+    description: "Break the horizon.",
+    // The purchase is the trigger (ADR-0042): an encourager for the
+    // overfill stretch, accelerating and never gating.
+    evaluate: (s) => s.horizonBroken,
+    progress: (s) => fraction(s.horizonBroken ? 1 : 0, 1),
   },
   {
     id: "time-in-the-seat",

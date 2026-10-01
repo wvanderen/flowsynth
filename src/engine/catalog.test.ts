@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buyCatalogEntry, buyCell, buyRowUnlock, joinRollPool, prestige } from "./actions";
-import { ARETE_HORIZON } from "./accumulator";
+import { breakHorizon, buyCatalogEntry, buyCell, buyRowUnlock, joinRollPool, prestige } from "./actions";
+import { ARETE_HORIZON, claimOf } from "./accumulator";
 import { BALANCE } from "./constants";
 import { catalogOpen, rowUnlockCost, unlockableRows } from "./catalog";
 import { cellCost, cellPurchasePrice, rowGateOwed } from "./economy";
@@ -99,6 +99,58 @@ describe("the Mutator tree's sheet purchases", () => {
     prestige(s);
     expect(s.catalogEntryOwned).toBe(true);
     expect(s.rollPoolJoined).toBe(true);
+  });
+});
+
+describe("the Horizon break's purchase (issue #200)", () => {
+  it("stands alone: it needs no tree, debits its price, and reads as owned", () => {
+    const s = banked();
+    s.arete = BALANCE.horizonBreakCost;
+    expect(breakHorizon(s).ok).toBe(true);
+    expect(s.horizonBroken).toBe(true);
+    expect(s.arete).toBe(0);
+    // No Mutator side effects — the break is not a tree.
+    expect(s.catalogEntryOwned).toBe(false);
+  });
+
+  it("refuses twice, refuses short balances, and carries the feat's unlock", () => {
+    const s = banked();
+    s.arete = BALANCE.horizonBreakCost;
+    s.sessionsCompleted = 1;
+    // sessionsCompleted = 1 also arms first-light; the break's own unlock
+    // is the claim under test.
+    s.achievements["first-light"] = 1;
+    const result = breakHorizon(s);
+    expect(result.ok).toBe(true);
+    expect(result.unlocked).toEqual(["breaking-the-horizon"]);
+    expect(breakHorizon(s).ok).toBe(false);
+    const spent = banked();
+    expect(breakHorizon(spent).ok).toBe(false);
+    expect(spent.horizonBroken).toBe(false);
+  });
+
+  it("is inert outside upgrade mode", () => {
+    const s = banked();
+    s.arete = BALANCE.horizonBreakCost;
+    s.mode = "flow";
+    expect(breakHorizon(s).ok).toBe(false);
+    expect(s.horizonBroken).toBe(false);
+    s.mode = "paused";
+    expect(breakHorizon(s).ok).toBe(false);
+  });
+
+  it("persists through prestige, and the scaling rides the next era's claim", () => {
+    const s = banked();
+    s.arete = BALANCE.horizonBreakCost;
+    breakHorizon(s);
+    s.eraEarned = ARETE_HORIZON * 10;
+    prestige(s);
+    expect(s.horizonBroken).toBe(true);
+    // The fresh era reads R = 1 again: the immediately re-crossed reset
+    // banks the base n — third reset, three Arete — not a decade-multiplied
+    // claim.
+    s.eraEarned = ARETE_HORIZON;
+    expect(claimOf(s)).toBe(3);
   });
 });
 

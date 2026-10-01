@@ -650,6 +650,17 @@ describe("the horizon bar (§7, issue #156)", () => {
     expect(app.state.prestiges).toBe(2);
   });
 
+  it("post-break the door's claim carries the era's overfill, live (issue #200)", () => {
+    app.state.horizonBroken = true;
+    app.state.eraEarned = ARETE_HORIZON * 100;
+    app.render();
+    expect(document.getElementById("prestige-door")!.textContent).toContain("Claim 3 Arete");
+    // The readout grows as the era does: another decade, another point.
+    app.state.eraEarned = ARETE_HORIZON * 1000;
+    app.render();
+    expect(document.getElementById("prestige-door")!.textContent).toContain("Claim 4 Arete");
+  });
+
   it("carries no formula chip; the flow meter rides the dock's pip", () => {
     app.render();
     expect(document.querySelector(".monitor-formula")).toBeNull();
@@ -2062,7 +2073,33 @@ describe("the Arete Catalog (issue #197)", () => {
     const sheet = document.getElementById("modal-content")!;
     expect(sheet.querySelector(".modal-note")!.textContent).toContain("between sessions");
     expect((document.getElementById("buy-arete-entry") as HTMLButtonElement).disabled).toBe(true);
+    expect((document.getElementById("buy-arete-break") as HTMLButtonElement).disabled).toBe(true);
     expect(app.state.catalogEntryOwned).toBe(false);
+    expect(app.state.horizonBroken).toBe(false);
+  });
+
+  it("the Horizon break buys outright: one click debits ten Arete and reads as broken (issue #200)", () => {
+    app.state.sessionsCompleted = 1;
+    app.state.arete = BALANCE.horizonBreakCost;
+    app.openModal("arete");
+    const button = document.getElementById("buy-arete-break") as HTMLButtonElement;
+    expect(button.textContent).toContain(`${BALANCE.horizonBreakCost} Arete`);
+    button.click();
+    expect(app.state.horizonBroken).toBe(true);
+    expect(app.state.arete).toBe(0);
+    expect(app.state.achievements["breaking-the-horizon"]).toBeGreaterThan(0);
+    // The toast carries both the beat's words and the feat's unlock.
+    expect(document.getElementById("status")!.textContent).toContain("The horizon breaks");
+    expect(document.getElementById("status")!.textContent).toContain("Breaking the horizon");
+    // The beat's one visual rides the bar.
+    expect(app.breakBeatUntil).toBeGreaterThan(Date.now());
+    app.render();
+    expect(document.getElementById("horizon-bar")!.classList.contains("break-beat")).toBe(true);
+    app.render();
+    const sheet = document.getElementById("modal-content")!;
+    expect(sheet.textContent).toContain("broken");
+    // One-time: the button is gone, nothing re-charges it.
+    expect(document.getElementById("buy-arete-break")).toBeNull();
   });
 
   it("the banner buys the row in one click; cells inside then buy with nous", () => {

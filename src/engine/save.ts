@@ -87,6 +87,11 @@ export function deserialize(text: string): LoadResult {
   if (typeof raw.rollPoolJoined !== "boolean") {
     merged.rollPoolJoined = false;
   }
+  // The Horizon break (ADR-0042, issue #200) lenient-defaults the same way:
+  // absent means never bought — exactly what a pre-break save owes.
+  if (typeof raw.horizonBroken !== "boolean") {
+    merged.horizonBroken = false;
+  }
   // The Mutator layer (ADR-0043, issue #198) lenient-defaults the same
   // way: absent means the entry was never bought — no slots, no mutators,
   // no Mutator Forge fill, no pending mutator rolls — which is exactly

@@ -47,6 +47,7 @@ export function createInitialState(): GameState {
     unlockedRows: [],
     catalogEntryOwned: false,
     rollPoolJoined: false,
+    horizonBroken: false,
     mutatorSlots: [],
     mutators: [],
     forge: { progress: 0, earned: 0 },

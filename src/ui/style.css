@@ -951,6 +951,16 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 /* Locked outside upgrade mode: the readout replaces the door, muted —
    the state, not a scolding (copy is tuning). */
 .horizon-state.locked { color: var(--muted); }
+/* The horizon break's one-time beat (ADR-0042, issue #200): the purchase
+   flares the bar once in the Arete register — the moment's visual, no new
+   furniture (the class lingers inert after the animation ends until the
+   next render drops it). */
+.horizon-bar.break-beat .horizon-svg { animation: break-beat-flare 2.4s ease-out; }
+@keyframes break-beat-flare {
+  0% { filter: drop-shadow(0 0 0 transparent); }
+  12% { filter: drop-shadow(0 0 9px color-mix(in srgb, var(--arete) 65%, transparent)); }
+  100% { filter: drop-shadow(0 0 0 transparent); }
+}
 
 /* The opening arc's one pop-up (§8): the second synth's card, floating
    over the board's top-left corner — clear of the dock, the readout, the

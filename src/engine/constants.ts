@@ -40,9 +40,16 @@ export interface Balance {
   launchRowsAbove: number;
   launchRowsBelow: number;
   // The Arete Catalog's Arete prices (ADR-0040 as amended by ADR-0044,
-  // issue #197). Provisional tuning.
+  // issue #197); the break's price is ADR-0042's (issue #200). Provisional
+  // tuning.
   catalogEntryCost: number;
   rollPoolJoinCost: number;
+  horizonBreakCost: number;
+  // The broken claim's hard cap (ADR-0042, issue #200): one juiced era
+  // banks no more than this, and past the ceiling resets bank it until
+  // future work raises it. Pre-break the cap never bites. Provisional
+  // tuning.
+  horizonBreakClaimCap: number;
   // The Row unlock's escalating ladder (ADR-0044): the nth unlock costs
   // rowUnlockCosts[n], either order. Past the ladder's end the board is at
   // its six-row cap and nothing more unlocks.
@@ -122,6 +129,8 @@ export const BALANCE: Balance = {
   launchRowsBelow: 1,
   catalogEntryCost: 1,
   rollPoolJoinCost: 5,
+  horizonBreakCost: 10,
+  horizonBreakClaimCap: 25,
   rowUnlockCosts: [1, 2],
   fifthsColumns: 12,
   openingGrant: 12,

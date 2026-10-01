@@ -384,6 +384,11 @@ export interface GameState {
   // lenient-default to false.
   catalogEntryOwned: boolean;
   rollPoolJoined: boolean;
+  // The Horizon break (ADR-0042, issue #200): the one-time Catalog purchase
+  // that lets per-era overfill scale the claim — min(n × (1 + log₁₀ R), CAP)
+  // with R the era's earned ν over the horizon line. One-time, Arete-paid,
+  // persisting through prestige; lenient-defaults to false.
+  horizonBroken: boolean;
   // The Mutator Grid's unlocked slots (ADR-0043, issue #198): the cells
   // whose second face holds a mutator. The entry's first unlock may sit on
   // any owned cell; every later unlock attaches adjacent to the
