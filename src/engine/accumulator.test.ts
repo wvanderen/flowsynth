@@ -22,8 +22,8 @@ describe("the Arete accumulator's log-scale fill", () => {
 
   it("sweeps visibly through the first decades of play", () => {
     // The curved scale is the point (issue #156): early play moves the bar.
-    expect(accumulatorFill(100)).toBeCloseTo(0.25, 9);
-    expect(accumulatorFill(1_000)).toBeCloseTo(0.5, 9);
+    expect(accumulatorFill(100)).toBeCloseTo(1 / 22, 9);
+    expect(accumulatorFill(1_000)).toBeCloseTo(2 / 22, 9);
   });
 });
 

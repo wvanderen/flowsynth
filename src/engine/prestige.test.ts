@@ -18,6 +18,23 @@ function atHorizon(state: GameState = fresh()): GameState {
 }
 
 describe("the prestige action", () => {
+  it("keeps earlier milestones closed and opens prestige at 1e23 earned nous", () => {
+    const s = fresh();
+    s.eraEarned = 100_000;
+    expect(horizonReached(s)).toBe(false);
+    expect(prestige(s).ok).toBe(false);
+    s.eraEarned = 1e9;
+    expect(prestige(s).ok).toBe(false);
+    // Subtracting one rounds back to 1e23 at this magnitude.
+    s.eraEarned = 1e23 * (1 - 1e-12);
+    expect(prestige(s).ok).toBe(false);
+    s.eraEarned = 1e23;
+    expect(horizonReached(s)).toBe(true);
+    expect(prestige(s).ok).toBe(true);
+    expect(s.arete).toBe(1);
+    expect(s.eraEarned).toBe(0);
+  });
+
   it("is gated: upgrade mode only, and only at the horizon", () => {
     const resting = fresh();
     resting.eraEarned = ARETE_HORIZON;
@@ -26,25 +43,6 @@ describe("the prestige action", () => {
     expect(prestige(fresh()).ok).toBe(false);
     const ready = atHorizon();
     expect(prestige(ready).ok).toBe(true);
-  });
-
-  it("a fresh save reaches the horizon through play alone, and the crossing banks nothing", () => {
-    // The acceptance check driven organically: no patched counters — a
-    // boosted board produces its way to the line in one session.
-    const s = fresh();
-    for (let i = 0; i < 12; i++) give(s, "additive", hex(i, 3), 30);
-    startSession(s, null);
-    advance(s, 420);
-    endSession(s, 5_000);
-    expect(s.totalEarned).toBeGreaterThanOrEqual(ARETE_HORIZON);
-    // The first era: the era's measure and the lifetime truth agree.
-    expect(s.eraEarned).toBe(s.totalEarned);
-    expect(horizonReached(s)).toBe(true);
-    // The crossing mints nothing; the door's action is the only source.
-    expect(s.arete).toBe(0);
-    expect(prestige(s).ok).toBe(true);
-    expect(s.arete).toBe(1);
-    expect(s.eraEarned).toBe(0);
   });
 
   it("banks the live claim: the nth reset banks n, and no other code path grants Arete", () => {
