@@ -2007,5 +2007,8 @@ export class App {
     // the stylesheet greys the module board and silences its pointers —
     // the grid renders as the foreground.
     document.body.classList.toggle("mut-layer-live", mutatorLayerLive(this));
+    // Add-cell mode's rest (#201): the one mode that dims the board — the
+    // owned modules rest greyed and pointer-dead behind the pill.
+    document.body.classList.toggle("cell-arming", this.state.mode === "upgrade" && this.ui.buyingCell);
   }
 }

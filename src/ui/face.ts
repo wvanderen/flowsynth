@@ -107,6 +107,14 @@ export interface FaceSpec {
   // cell note drops to the lower taper as a footnote, making room for the
   // Upgrade button between readout and taper.
   variant?: "bloom";
+  // The spacer's open-wire board face (#201): the plate keeps only its cap
+  // (the nameplate, centered) and base (the cell note) — a roughly squared
+  // window framed inside the module lets the chord lines run visibly
+  // through. The glyph, readout, level line, rarity rings, and category
+  // rail all go quiet; the chassis wears the shared `spacer-window` clip
+  // (render.ts owns the def) and a hairline frame. Board faces only — the
+  // expanded face and the candidate tiles keep the full readout panel.
+  openWire?: boolean;
 }
 
 // Engraving positions per variant (y in face units; the chassis spans
@@ -121,8 +129,34 @@ const FACE_LAYOUT = {
   bloom: { level: -39, name: -26, glyph: -7, glyphScale: 0.7, readout: 11, note: 49 },
 } as const;
 
+// The open-wire window's furniture (#201): the nameplate rides the cap
+// band's center; the frame sits two units clear of the clipped opening
+// (render.ts's clipPath cuts the same rect two units inside).
+const SPACER_NAME_Y = -40;
+export const SPACER_FRAME = { x: -28, y: -22, width: 56, height: 48, rx: 3 };
+const SPACER_WINDOW_INSET = 2;
+export function spacerClipPath(): string {
+  const chassis = `M ${hexPoints(HEX_RADIUS).split(" ").join(" L ")} Z`;
+  const { x, y, width, height } = SPACER_FRAME;
+  const left = x + SPACER_WINDOW_INSET;
+  const top = y + SPACER_WINDOW_INSET;
+  const right = x + width - SPACER_WINDOW_INSET;
+  const bottom = y + height - SPACER_WINDOW_INSET;
+  return `${chassis} M ${left} ${top} L ${right} ${top} L ${right} ${bottom} L ${left} ${bottom} Z`;
+}
+
+// The long-readout fit (#201, the approved compression): past seven
+// characters the face readout steps down to 14px, past nine to 12px. The
+// stylesheet owns the sizes; the count only picks the class.
+export function readoutFitClass(readout: string): string {
+  if (readout.length > 9) return " face-readout-xs";
+  if (readout.length > 7) return " face-readout-sm";
+  return "";
+}
+
 export function moduleFace(spec: FaceSpec): string {
   const hue = `var(--${HUE_TOKEN_OF[spec.type]})`;
+  const openWire = spec.openWire === true;
   const rings = Array.from({ length: RING_COUNT[spec.rarity] }, (_, i) => `<polygon points="${hexPoints(RING_RADII[i]!)}"/>`).join("");
   // The charge light (§8, #41): the chassis fill takes the charge hue at an
   // inline fill-opacity, and the rail takes an inline stroke-opacity — both
@@ -132,12 +166,13 @@ export function moduleFace(spec: FaceSpec): string {
   const hexStyle = glow > 0 ? ` style="fill-opacity:${(CHARGED_FILL_MIN + CHARGED_FILL_SPAN * glow).toFixed(3)}"` : "";
   const railStyle = glow > 0 ? ` style="stroke-opacity:${(RAIL_CHARGED_FLOOR + RAIL_CHARGED_SPAN * glow).toFixed(3)}"` : "";
   const layout = FACE_LAYOUT[spec.variant ?? "compact"];
-  return `<polygon data-key="hex" class="hex${spec.hexClass ? ` ${spec.hexClass}` : ""}" points="${hexPoints(HEX_RADIUS)}"${hexStyle}/>${spec.under ?? ""}
-    <g data-key="rings" class="face-rings">${rings}</g>
-    <path data-key="rail" class="face-rail" d="M-39 -19V19" stroke="${hue}"${railStyle}/>
-    ${spec.level !== undefined ? `<text data-key="level" y="${layout.level}" text-anchor="middle" class="face-level">LV ${spec.level}</text>` : ""}
-    <text data-key="name" y="${layout.name}" text-anchor="middle" class="face-name">${META[spec.type].short.toUpperCase()}</text>
-    <g data-key="signature" class="face-signature" transform="translate(0 ${layout.glyph}) scale(${layout.glyphScale})" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>
-    <text data-key="readout" x="0" y="${layout.readout}" text-anchor="middle" class="face-readout${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>
-    ${spec.note ? `<text data-key="note" x="0" y="${layout.note}" text-anchor="middle" class="face-note">${spec.note}</text>` : ""}`;
+  return `<polygon data-key="hex" class="hex${spec.hexClass ? ` ${spec.hexClass}` : ""}" points="${hexPoints(HEX_RADIUS)}"${openWire ? ' clip-path="url(#spacer-window)"' : ""}${hexStyle}/>${spec.under ?? ""}
+    ${openWire ? "" : `<g data-key="rings" class="face-rings">${rings}</g>`}
+    ${openWire ? "" : `<path data-key="rail" class="face-rail" d="M-39 -19V19" stroke="${hue}"${railStyle}/>`}
+    ${!openWire && spec.level !== undefined ? `<text data-key="level" y="${layout.level}" text-anchor="middle" class="face-level">LV ${spec.level}</text>` : ""}
+    <text data-key="name" y="${openWire ? SPACER_NAME_Y : layout.name}" text-anchor="middle" class="face-name">${META[spec.type].short.toUpperCase()}</text>
+    ${openWire ? "" : `<g data-key="signature" class="face-signature" transform="translate(0 ${layout.glyph}) scale(${layout.glyphScale})" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>`}
+    ${openWire ? "" : `<text data-key="readout" x="0" y="${layout.readout}" text-anchor="middle" class="face-readout${readoutFitClass(spec.readout)}${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>`}
+    ${spec.note ? `<text data-key="note" x="0" y="${layout.note}" text-anchor="middle" class="face-note">${spec.note}</text>` : ""}
+    ${openWire ? `<rect class="spacer-frame" x="${SPACER_FRAME.x}" y="${SPACER_FRAME.y}" width="${SPACER_FRAME.width}" height="${SPACER_FRAME.height}" rx="${SPACER_FRAME.rx}"/>` : ""}`;
 }

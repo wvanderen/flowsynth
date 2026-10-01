@@ -2,15 +2,20 @@
 // leads.ts, the diagram stays pure and testable — render.ts draws the
 // markup and the stylesheet keeps every color in the token table.
 //
-// The language is the prototype's (#120): a two-voice chord seams
-// center-to-center between its voices; a chord the seams can't carry —
-// three or more voices, or a spacer-bridged pair — draws an offset
-// outline around its voices — a closed convex hull riding the gaps
-// between the faces, its corners poking out past the outer edges — drawn
-// behind the modules. Name chips live in a reserved spot by the board;
-// selection and hover are the caller's emphasis questions.
+// The language is the dense-board prototype's approved direction (#174,
+// implemented for #201): a two-voice chord seals the shared edge — twin
+// parallel lines riding the gap between the faces, so the face centers
+// stay free for the charge leads. A chord whose voices all sit on one
+// lattice line — octave columns, fifth chains, wired (spacer-conducted)
+// pairs — extends ONE continuous twin line from its first voice to its
+// last, trimmed short of the end faces; a distant bridged pair stays
+// straight through the wire, deliberately. Any chord the lines can't
+// carry — three or more voices off the lattice lines — wraps in a
+// note-corner polygon: one corner per voice, pushed just past its own
+// outline. Overlapping chord terms all draw — no pair is claimed once.
+// Name chips live in a reserved spot by the board; selection and hover
+// are the caller's emphasis questions.
 import type { Hex, NamedChordTerm } from "../engine/types";
-import { hexApothem } from "./face";
 
 export type Point = readonly [number, number];
 
@@ -29,14 +34,15 @@ export interface ChordMark {
   readonly colorVar: string;
   // The flow pulse period (seconds), per chord — the prototype's rhythm.
   readonly duration: number;
-  // A two-voice chord's drawn segments: center-to-center per qualifying
-  // pair. Chords the seams can't carry draw the outline instead.
+  // The chord's drawn segments: a two-voice chord's edge brackets (twin
+  // lines sealing the shared edge), or a collinear run's one continuous
+  // twin line, first voice to last.
   readonly seams: ChordSeam[];
-  // A chord the seams can't carry — three or more voices, or a pair
-  // beyond seam reach: the offset hull around its centers as a polygon
-  // points string — the prototype's triangle behind the modules, corners
-  // sticking out. Null when the seams carry the chord.
-  readonly outline: string | null;
+  // A chord the lines can't carry — three or more voices off the lattice
+  // lines: the note-corner polygon as points, one corner per
+  // voice pushed just past its own outline. Null when the seams carry the
+  // chord.
+  readonly outline: readonly Point[] | null;
   // The chip anchor: above the chord's topmost voice. Ghost marks (the
   // would-form preview) render their chip here; formed chords render
   // theirs in the reserved spot instead.
@@ -87,15 +93,27 @@ const FALLBACK_PULSE = 2.7;
 
 // A seam's reach: 1.9 × the hex radius — a hair over one adjacent-center
 // step, so straight and diagonal neighbors draw and anything longer is a
-// bridged pair that draws the outline instead.
+// bridged pair that runs straight through the wire instead.
 const SEAM_REACH = 1.9;
 
-// How far a seam end stops short of its voice's center: just outside the
-// chassis apothem — and always short of the gap's midpoint, so adjacent
-// seams never cross.
+// How far a run's ends stop short of their end voices' centers: just
+// outside the chassis apothem — and always short of the gap's midpoint,
+// so neighboring marks never cross.
 function seamTrim(radius: number): number {
   return radius * (Math.sqrt(3) / 2) + 2;
 }
+
+// Each bracket line's offset off the shared edge, into the gap (tuning):
+// the twin lines straddle the seam the way stitches do.
+export const EDGE_OFFSET = 1.8;
+
+// Half a two-voice bracket's length along the shared edge (tuning): the
+// seal rides the middle of the edge, clear of the corners.
+export const EDGE_HALF = 22;
+
+// How far past a voice's own outline its polygon corner reaches (tuning):
+// just past the chassis, so every corner names its voice.
+export const CORNER_REACH_PAD = 6;
 
 // Andrew's monotone chain over pixel coordinates.
 function convexHull(points: readonly Point[]): Point[] {
@@ -118,8 +136,9 @@ function convexHull(points: readonly Point[]): Point[] {
   upper.pop();
   return [...lower, ...upper];
 }
+
 // Shortest distance from a point to the polygon's boundary segments —
-// clamped to the segments, so bevel cuts measure by their endpoints.
+// clamped to the segments.
 export function edgeDistance(point: Point, polygon: readonly Point[]): number {
   let best = Infinity;
   for (let i = 0; i < polygon.length; i++) {
@@ -135,60 +154,92 @@ export function edgeDistance(point: Point, polygon: readonly Point[]): number {
   return best;
 }
 
-// How far the outline rides past the plates' facing edges (tuning): enough
-// that the stroke stays clear of the chassis, little enough to stay inside
-// the gap between neighboring faces.
-const OUTLINE_CLEARANCE = 2.5;
+// The two-voice seal: from the shared edge's midpoint — the gap between
+// the two faces — twin parallel lines ride the gap, each a stitch long,
+// offset either side of the edge. The face centers stay free for the
+// charge leads.
+function edgeBrackets([p, q]: readonly [Point, Point]): ChordSeam[] {
+  const dx = q[0] - p[0];
+  const dy = q[1] - p[1];
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-6) return [];
+  const ux = dx / len;
+  const uy = dy / len;
+  const mx = (p[0] + q[0]) / 2;
+  const my = (p[1] + q[1]) / 2;
+  const vx = -uy;
+  const vy = ux;
+  const line = (off: number): ChordSeam => ({
+    x1: Number((mx + ux * off - vx * EDGE_HALF).toFixed(2)),
+    y1: Number((my + uy * off - vy * EDGE_HALF).toFixed(2)),
+    x2: Number((mx + ux * off + vx * EDGE_HALF).toFixed(2)),
+    y2: Number((my + uy * off + vy * EDGE_HALF).toFixed(2)),
+  });
+  return [line(EDGE_OFFSET), line(-EDGE_OFFSET)];
+}
 
-// How far past the module corner the outline's corners reach (tuning): a
-// plain offset of a 60° corner would spike to twice the pad — instead the
-// corner is bevel-cut at this radius from its voice's center, just past
-// the module's own corner so the cut reads.
-const CORNER_POKE = 8;
+// Whether the points all sit on one line, and the line's unit axis with
+// the points sorted along it. Two points always are; three or more
+// decide the run against the first segment's axis.
+function collinearSpan(points: readonly Point[]): { axis: Point; ordered: Point[] } | null {
+  if (points.length < 2) return null;
+  const [p, q] = [points[0]!, points[1]!];
+  let ax = q[0] - p[0];
+  let ay = q[1] - p[1];
+  const alen = Math.hypot(ax, ay);
+  if (alen < 1e-6) return null;
+  ax /= alen;
+  ay /= alen;
+  for (let i = 2; i < points.length; i++) {
+    const rx = points[i]![0] - p[0];
+    const ry = points[i]![1] - p[1];
+    if (Math.abs(ax * ry - ay * rx) > 1e-6) return null;
+  }
+  const ordered = [...points].sort((a, b) => a[0] * ax + a[1] * ay - (b[0] * ax + b[1] * ay));
+  return { axis: [ax, ay], ordered };
+}
 
-// The outline for a chord the seams can't carry: the convex hull of the
-// voice centers, offset so its edges run straight through the gap between
-// neighboring faces — just off the plates' facing edges — with each corner
-// bevel-cut a hair past the outer module edges: the prototype's triangle
-// behind the modules. Returns the polygon as a points string.
-function outlineFor(centers: readonly Point[], radius: number, step: number): string {
-  const pad = Math.min(hexApothem(radius) + OUTLINE_CLEARANCE, step / 2);
+// One continuous twin line spanning the run, trimmed at the end voices —
+// the line passes under the faces between (marks draw beneath the
+// modules), showing only in the gaps: the open wire.
+function runSeams(ordered: readonly Point[], axis: Point, radius: number): ChordSeam[] {
+  const [ax, ay] = axis;
+  const trim = seamTrim(radius);
+  const first = ordered[0]!;
+  const last = ordered[ordered.length - 1]!;
+  const vx = -ay;
+  const vy = ax;
+  const line = (off: number): ChordSeam => ({
+    x1: Number((first[0] + ax * trim - vx * off).toFixed(2)),
+    y1: Number((first[1] + ay * trim - vy * off).toFixed(2)),
+    x2: Number((last[0] - ax * trim - vx * off).toFixed(2)),
+    y2: Number((last[1] - ay * trim - vy * off).toFixed(2)),
+  });
+  return [line(EDGE_OFFSET), line(-EDGE_OFFSET)];
+}
+
+// The note-corner polygon: each hull voice owns one corner, pushed just
+// past its own outline in the voice's outward direction — no bevel cuts,
+// no angles that loop back between notes. Returns the polygon as a
+// point array.
+function voiceOutline(centers: readonly Point[], radius: number): Point[] {
   const hull = convexHull(centers);
-  if (hull.length < 2) return "";
-  const reach = Math.sqrt(Math.max(0, (radius + CORNER_POKE) ** 2 - pad * pad));
+  if (hull.length < 2) return [];
+  const reach = radius + CORNER_REACH_PAD;
   const cx = hull.reduce((acc, p) => acc + p[0], 0) / hull.length;
   const cy = hull.reduce((acc, p) => acc + p[1], 0) / hull.length;
-  const points: string[] = [];
-  for (let i = 0; i < hull.length; i++) {
-    const a = hull[i]!;
-    const b = hull[(i + 1) % hull.length]!;
-    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-    if (len < 1e-6) continue;
-    const ux = (b[0] - a[0]) / len;
-    const uy = (b[1] - a[1]) / len;
-    let nx = (b[1] - a[1]) / len;
-    let ny = -(b[0] - a[0]) / len;
-    const mx = (a[0] + b[0]) / 2 - cx;
-    const my = (a[1] + b[1]) / 2 - cy;
-    // Outward faces away from the centroid, whichever way the hull winds.
-    if (nx * mx + ny * my < 0) {
-      nx = -nx;
-      ny = -ny;
-    }
-    // The offset edge, extended to the corner-bevel radius off each end —
-    // the spike sits BEHIND the perpendicular foot on each side, so the
-    // extension runs toward the corners, and consecutive edges' clipped
-    // ends join into the short corner bevels.
-    points.push(`${(a[0] + nx * pad - ux * reach).toFixed(2)},${(a[1] + ny * pad - uy * reach).toFixed(2)}`);
-    points.push(`${(b[0] + nx * pad + ux * reach).toFixed(2)},${(b[1] + ny * pad + uy * reach).toFixed(2)}`);
-  }
-  return points.join(" ");
+  return hull
+    .map(([x, y]) => {
+      const dx = x - cx;
+      const dy = y - cy;
+      const len = Math.hypot(dx, dy) || 1;
+      return [Number((x + (dx / len) * reach).toFixed(2)), Number((y + (dy / len) * reach).toFixed(2))] as Point;
+    });
 }
 
 // Whether a two-voice chord's voices sit beyond seam reach — a
-// spacer-conducted pair, usually. The seams can't draw it (a long line
-// would cross the faces in between), so the outline carries it, the same
-// way a bridged triad draws.
+// spacer-conducted pair, usually. The brackets can't draw it; the run
+// carries it, straight through the wire.
 export function bridgedPair(centers: readonly Point[], radius: number): boolean {
   if (centers.length !== 2) return false;
   const reach = radius * SEAM_REACH;
@@ -196,35 +247,43 @@ export function bridgedPair(centers: readonly Point[], radius: number): boolean 
   return Math.hypot(q[0] - p[0], q[1] - p[1]) > reach;
 }
 
-// The chord's drawn seams: two voices seam center-to-center (each
-// qualifying adjacent pair; `claimed` carries pair keys across chords — a
-// shared pair draws once, the first chord's color winning). Pairs beyond
-// reach draw nothing — the chord is bridged and the outline carries it.
-function seamsFor(centers: readonly Point[], radius: number, claimed: Set<string>): ChordSeam[] {
-  if (centers.length >= 3) return [];
-  const reach = radius * SEAM_REACH;
-  const trim = seamTrim(radius);
-  const seams: ChordSeam[] = [];
-  for (let a = 0; a < centers.length; a++) {
-    for (let b = a + 1; b < centers.length; b++) {
-      const p = centers[a]!;
-      const q = centers[b]!;
-      const d = Math.hypot(q[0] - p[0], q[1] - p[1]);
-      if (d > reach) continue;
-      const key = [p, q].map((pt) => `${pt[0].toFixed(1)},${pt[1].toFixed(1)}`).sort().join("|");
-      if (claimed.has(key)) continue;
-      claimed.add(key);
-      const ux = (q[0] - p[0]) / d;
-      const uy = (q[1] - p[1]) / d;
-      seams.push({
-        x1: Number((p[0] + ux * trim).toFixed(2)),
-        y1: Number((p[1] + uy * trim).toFixed(2)),
-        x2: Number((q[0] - ux * trim).toFixed(2)),
-        y2: Number((q[1] - uy * trim).toFixed(2)),
-      });
-    }
+// A chord's drawn geometry: adjacent pairs seal their shared edge with
+// brackets; everything else runs continuous when its voices line up —
+// octave columns, fifth chains, wired pairs — and wraps in the
+// note-corner polygon when they don't. Overlapping terms each draw their
+// own: no pair is claimed once.
+function geometryFor(centers: readonly Point[], radius: number): { seams: ChordSeam[]; outline: readonly Point[] | null } {
+  if (centers.length === 2 && !bridgedPair(centers, radius)) {
+    return { seams: edgeBrackets(centers as [Point, Point]), outline: null };
   }
-  return seams;
+  const span = collinearSpan(centers);
+  if (span) return { seams: runSeams(span.ordered, span.axis, radius), outline: null };
+  const outline = voiceOutline(centers, radius);
+  return { seams: [], outline: outline.length ? outline : null };
+}
+
+function pointInPolygon(x: number, y: number, polygon: readonly Point[]): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [xi, yi] = polygon[i]!;
+    const [xj, yj] = polygon[j]!;
+    if (yi! > y !== yj! > y && x! < ((xj! - xi!) * (y - yi!)) / (yj! - yi!) + xi!) inside = !inside;
+  }
+  return inside;
+}
+
+// How far a covering ask reaches from the drawn work (tuning): the gap's
+// half-width plus the twin lines' offset, with slack — a spacer's center
+// sits ~1.8px off each twin line of a run it conducts.
+const COVER_REACH = 6;
+
+// Whether a board point sits inside the mark's drawn work — within its
+// note-corner polygon, or a hair off one of its lines. The spacer ask
+// reads by containment: a wire asks the chords it conducts, and a
+// conducting spacer's selection lifts them.
+export function chordMarkCovers(mark: Pick<ChordMark, "seams" | "outline">, at: Point): boolean {
+  if (mark.outline) return pointInPolygon(at[0], at[1], mark.outline);
+  return mark.seams.some((s) => edgeDistance(at, [[s.x1, s.y1], [s.x2, s.y2]]) <= COVER_REACH);
 }
 
 // The overlay over one board's chord terms: per named chord, its drawn
@@ -232,7 +291,9 @@ function seamsFor(centers: readonly Point[], radius: number, claimed: Set<string
 // be drawn whole — it contributes nothing at all, not even light.
 // `focusIds` carries the selection's emphasis (§6): chords carrying one of
 // those ids come back focused, every other mark fades; unset, nothing
-// fades. `step` is the lattice's adjacent-center distance.
+// fades. `focusPoint` extends the same emphasis to a selection that sings
+// in no chord — the conducting spacer: chords whose drawn work covers the
+// point lift with it. `step` is the lattice's adjacent-center distance.
 export function chordOverlay(opts: {
   namedChords: readonly NamedChordTerm[];
   posOf: (id: string) => Hex | null;
@@ -241,20 +302,19 @@ export function chordOverlay(opts: {
   step: number;
   labelFor: (chord: NamedChordTerm) => string;
   focusIds?: readonly string[];
+  focusPoint?: Point | null;
 }): ChordOverlay {
-  const { namedChords, posOf, point, radius, step, labelFor } = opts;
+  const { namedChords, posOf, point, radius, labelFor } = opts;
   const focus = new Set(opts.focusIds ?? []);
-  const emphasize = focus.size > 0;
-  const claimed = new Set<string>();
+  const emphasize = focus.size > 0 || opts.focusPoint != null;
   const marks: ChordMark[] = [];
   namedChords.forEach((chord, index) => {
     const positions = chord.moduleIds.map(posOf);
     if (positions.some((pos) => pos === null)) return;
     const centers = positions.map((pos) => point(pos as Hex));
-    const seams = seamsFor(centers, radius, claimed);
-    const outline = centers.length >= 3 || bridgedPair(centers, radius) ? outlineFor(centers, radius, step) : null;
+    const { seams, outline } = geometryFor(centers, radius);
     const top = centers.reduce((a, b) => (b[1] < a[1] ? b : a));
-    marks.push({
+    const mark: ChordMark = {
       key: `chord-${index}`,
       label: labelFor(chord),
       colorVar: CHORD_HUES[chord.name] ?? FALLBACK_HUE,
@@ -265,8 +325,12 @@ export function chordOverlay(opts: {
       // The chip anchor floats above the topmost voice, a half-hex clear.
       chipY: Number((top[1] - radius * 1.18).toFixed(2)),
       voices: chord.moduleIds,
-      focused: !emphasize || chord.moduleIds.some((id) => focus.has(id)),
-    });
+      focused:
+        !emphasize ||
+        chord.moduleIds.some((id) => focus.has(id)) ||
+        (opts.focusPoint != null && chordMarkCovers({ seams, outline }, opts.focusPoint)),
+    };
+    marks.push(mark);
   });
   return { marks };
 }

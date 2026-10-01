@@ -9,7 +9,7 @@ import { writeNote } from "../engine/notes";
 import { BALANCE, SAVE_VERSION } from "../engine/constants";
 import { ARETE_HORIZON } from "../engine/accumulator";
 import { STORAGE_KEY, serialize } from "../engine/save";
-import { computeRates, cellCost, longGoalCost, affordableLevels, levelCost, levelsCost } from "../engine/economy";
+import { computeRates, cellCost, cellPurchasePrice, longGoalCost, affordableLevels, levelCost, levelsCost } from "../engine/economy";
 import { startSession, endSession } from "../engine/actions";
 import { advance } from "../engine/advance";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport } from "../engine/trust";
@@ -989,9 +989,12 @@ describe("the always-live board (§5)", () => {
     app.render();
     const grid = document.getElementById("grid")!;
     const emptyNote = grid.querySelector('[data-cell="0,1"] .hex-note')!;
-    // The empty cell's note centers on its cell — the old alignment defect.
-    expect(emptyNote.getAttribute("y")).toBe("3");
+    // The empty cell's note centers on its cell — the old alignment defect
+    // (#172), the translucent chassis (#201) letting the chord work through.
+    expect(emptyNote.getAttribute("y")).toBe("0");
+    expect(emptyNote.getAttribute("dominant-baseline")).toBe("central");
     expect(emptyNote.getAttribute("text-anchor")).toBe("middle");
+    expect(grid.querySelector('[data-cell="0,1"] .hex.empty')!.getAttribute("class")).toContain("empty");
     // The occupied face's note is where it always sat.
     const faceNote = grid.querySelector('[data-cell="0,0"] .face-note')!;
     expect(faceNote.textContent).toBe("C4");
@@ -1006,14 +1009,73 @@ describe("the always-live board (§5)", () => {
     expect(grid.querySelector('.module-node:not([data-type="spacer"]) .face-level')!.textContent).toBe("LV 0");
   });
 
-  it("New cell stays the purchase entry point: armed frontier hexes still carry NEW CELL (#151)", () => {
+  it("the armed frontier wears one cost spot: the pill carries the price, the hexes rest bare (#201)", () => {
     app.state.nous = BALANCE.cellFirstCost;
     app.render();
     document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!.click();
     expect(app.ui.buyingCell).toBe(true);
     const grid = document.getElementById("grid")!;
-    const labels = [...grid.querySelectorAll(".hex-sub")].map((n) => n.textContent);
-    expect(labels).toContain("NEW CELL");
+    // Per-hex price stamps retire: no NEW CELL label, no stamped figure,
+    // no plus — the frontier hex keeps only its accent outline.
+    expect(grid.querySelector(".hex-sub")).toBeNull();
+    const armed = [...grid.querySelectorAll(".hex.buy-here")];
+    expect(armed.length).toBeGreaterThan(0);
+    // The pill over the board's top edge carries the single cost spot.
+    const pill = document.getElementById("cell-arm-pill")!;
+    expect(pill.hidden).toBe(false);
+    expect(pill.textContent).toContain("New cell");
+    expect(pill.textContent).toContain(`${formatInt(BALANCE.cellFirstCost)} ν`);
+    expect(pill.textContent).toContain("Cancel · Esc");
+    // The pill is the cancel: one click backs out and the pill rests.
+    pill.click();
+    expect(app.ui.buyingCell).toBe(false);
+    expect(document.getElementById("cell-arm-pill")!.hidden).toBe(true);
+  });
+
+  it("the cell pill discloses unpaid frontier row premiums", () => {
+    app.state.nous = 1e6;
+    app.armCellPurchase();
+    const base = cellCost(app.state.cellsBought);
+    const premium = Math.max(...app.frontierCells().map((pos) => cellPurchasePrice(app.state, pos) - base));
+    expect(premium).toBeGreaterThan(0);
+    expect(document.getElementById("cell-arm-pill")!.textContent).toContain(`+ up to ${formatInt(premium)} ν row premium`);
+    app.state.gatedRows = [-1, 0, 1, 2];
+    app.render();
+    expect(document.getElementById("cell-arm-pill")!.textContent).not.toContain("row premium");
+  });
+
+  it("face upgrades cannot spend nous while cell purchase is armed", () => {
+    app.state.nous = 1e6;
+    app.render();
+    const button = document.querySelector<SVGElement>(".face-buy")!;
+    const module = app.state.modules.find((m) => m.id === button.dataset.module)!;
+    const level = module.level;
+    const bank = app.state.nous;
+    app.armCellPurchase();
+    expect(document.querySelector(".face-buy")).toBeNull();
+    // Even an event queued on the previous node must obey the armed mode.
+    button.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(module.level).toBe(level);
+    expect(app.state.nous).toBe(bank);
+    app.cancelCellPurchase();
+    expect(document.querySelector(".face-buy")).not.toBeNull();
+  });
+
+  it("add-cell mode is the one mode that dims the board (#201)", () => {
+    app.render();
+    expect(document.body.classList.contains("cell-arming")).toBe(false);
+    app.state.nous = BALANCE.cellFirstCost;
+    app.armCellPurchase();
+    app.render();
+    expect(document.body.classList.contains("cell-arming")).toBe(true);
+    // Owned modules rest greyed and pointer-dead behind the pill.
+    const opener = document.querySelector('[data-cell="0,0"] .module-node') as SVGElement;
+    expect(opener).not.toBeNull();
+    // Esc backs the mode out and the board wakes.
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(app.ui.buyingCell).toBe(false);
+    app.render();
+    expect(document.body.classList.contains("cell-arming")).toBe(false);
   });
 
   it("every module is draggable with no arrange mode — nothing pinned, nothing refused", () => {
@@ -1528,8 +1590,9 @@ describe("always-on chord feedback (§6, #137)", () => {
     app.render();
     const grid = document.getElementById("grid")!;
     const mark = grid.querySelector('[data-key="chord-marks"] .chord-mark')!;
-    expect(mark.querySelectorAll(".chord-seam")).toHaveLength(1);
-    // The seam wears its chord hue and pulse period.
+    // The adjacent pair seals its shared edge: twin bracket lines (#201).
+    expect(mark.querySelectorAll(".chord-seam")).toHaveLength(2);
+    // The mark wears its chord hue and pulse period.
     expect((mark as HTMLElement).style.getPropertyValue("--cc")).toBe("var(--chord-fifth)");
     expect((mark as HTMLElement).style.getPropertyValue("--seam-dur")).toBe("2.7s");
     // No chip floats over the board, and the reserved readout sits empty.
@@ -1538,7 +1601,7 @@ describe("always-on chord feedback (§6, #137)", () => {
     // No chord toggle exists: no button, no C-key beat.
     expect(document.getElementById("tool-chords")).toBeNull();
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "c" }));
-    expect(mark.querySelectorAll(".chord-seam")).toHaveLength(1);
+    expect(mark.querySelectorAll(".chord-seam")).toHaveLength(2);
   });
 
   it("the readout is a reserved spot: the module's final ν/s leads, every chord it sings in follows", () => {
@@ -1620,7 +1683,7 @@ describe("always-on chord feedback (§6, #137)", () => {
     expect(readout().textContent).toContain("Fifth ×1.3");
   });
 
-  it("overlapping chords draw their own seams, chord-colored", () => {
+  it("overlapping chords draw their own work, chord-colored (#201)", () => {
     // A power-chord region: C4 (the opening synth), G4 and C5 — the Octave
     // and the Fifth share the region, both draw.
     give(app.state, "additive", hex(1, 0));
@@ -1633,14 +1696,38 @@ describe("always-on chord feedback (§6, #137)", () => {
     // Two hues: the engine names the Octave first, the Fifth second.
     const hues = marks.map((mark) => (mark as HTMLElement).style.getPropertyValue("--cc"));
     expect(hues).toEqual(["var(--chord-octave)", "var(--chord-fifth)"]);
-    // The Octave's vertical pair seams center-to-center; the three-voice
-    // Fifth draws the offset outline polygon behind the modules.
-    expect(marks.map((mark) => mark.querySelectorAll("line.chord-seam").length)).toEqual([1, 0]);
+    // The Octave's vertical pair runs one continuous twin line down the
+    // column; the three-voice Fifth wraps the region in its note-corner
+    // polygon — both draw, no pair is claimed once (#201).
+    expect(marks.map((mark) => mark.querySelectorAll("line.chord-seam").length)).toEqual([2, 0]);
     expect(marks[1]!.querySelector("polygon.chord-loop")).not.toBeNull();
-    // The outline renders behind the modules: the marks group precedes the
-    // cell nodes (which carry data-cell, no data-key) in paint order.
+    // The chord work renders behind the modules: the marks group precedes
+    // the cell nodes (which carry data-cell, no data-key) in paint order.
     const children = [...grid.children].map((child) => child.getAttribute("data-key"));
     expect(children.indexOf("chord-marks")).toBeLessThan(children.findIndex((key) => key === null));
+  });
+
+  it("the selection lifts the focused chords over the faces; at rest the lift rests (#201)", () => {
+    give(app.state, "additive", hex(1, 0));
+    app.render();
+    const grid = document.getElementById("grid")!;
+    // At rest: the lift group stands empty — the chords whisper in the
+    // gaps, never over a face.
+    const lift = () => grid.querySelector('[data-key="chord-lift"]')!;
+    expect(lift().children).toHaveLength(0);
+    // Selecting C4 lifts its chord: the focused marks draw again over the
+    // faces, past the lift group that rides above the cell nodes.
+    const c4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(0, 0)))!;
+    app.select(c4.id);
+    expect(lift().children).toHaveLength(1);
+    const lifted = lift().querySelector(".chord-mark")!;
+    expect(lifted.classList.contains("chord-focus")).toBe(true);
+    expect(lifted.querySelectorAll(".chord-seam")).toHaveLength(2);
+    const children = [...grid.children].map((child) => child.getAttribute("data-key"));
+    expect(children.indexOf("chord-lift")).toBeGreaterThan(children.findIndex((key) => key === null));
+    // Deselecting empties the lift again.
+    app.select(c4.id);
+    expect(lift().children).toHaveLength(0);
   });
 
   it("selection focuses the selected module's chords and fades the rest", () => {
@@ -1665,6 +1752,61 @@ describe("always-on chord feedback (§6, #137)", () => {
     app.select(island.id);
     expect(document.querySelectorAll(".chord-mark.chord-fade")).toHaveLength(0);
     expect(readout().hidden).toBe(true);
+  });
+
+  it("the spacer's board face is the open wire: cap, base, window (#201)", () => {
+    give(app.state, "spacer", hex(1, 0));
+    app.render();
+    const grid = document.getElementById("grid")!;
+    // The shared clip def rides the grid once.
+    expect(grid.querySelector('clipPath[id="spacer-window"]')).not.toBeNull();
+    const face = grid.querySelector('[data-type="spacer"]')!;
+    // The chassis opens the window; the frame rides the plate.
+    expect(face.querySelector(".hex")!.getAttribute("clip-path")).toBe("url(#spacer-window)");
+    expect(face.querySelector(".spacer-frame")).not.toBeNull();
+    // Glyph, readout glyph, level line, rings, and rail all go quiet.
+    for (const key of ["signature", "readout", "rings", "rail", "level"]) {
+      expect(face.querySelector(`[data-key="${key}"]`)).toBeNull();
+    }
+    // The cap carries the name at its center; the base keeps the note.
+    const name = face.querySelector('[data-key="name"]')!;
+    expect(name.getAttribute("y")).toBe("-40");
+    expect(face.querySelector('[data-key="note"]')!.textContent).toBe("G4");
+  });
+
+  it("a spacer's hover asks its chords by containment — the wire names what it carries (#201)", () => {
+    // The wired octave: C4 and C6 with the spacer conducting between —
+    // the run passes straight through the wire's cell.
+    give(app.state, "spacer", hex(0, 1));
+    app.state.cells.push(hex(0, 2));
+    give(app.state, "additive", hex(0, 2));
+    app.render();
+    const chips = () => [...readout().querySelectorAll(".chord-readout-chip")].map((chip) => chip.textContent);
+    // Resting on the spacer asks the chord it conducts.
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    expect(readout().hidden).toBe(false);
+    expect(chips()).toEqual(["Octave ×1.15"]);
+    // Resting on an empty cell off the run asks nothing.
+    cell(1, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    expect(readout().hidden).toBe(true);
+  });
+
+  it("a conducting spacer's selection never hides the chord it serves (#201)", () => {
+    give(app.state, "spacer", hex(0, 1));
+    app.state.cells.push(hex(0, 2));
+    give(app.state, "additive", hex(0, 2));
+    app.render();
+    const spacer = app.state.modules.find((m) => m.type === "spacer")!;
+    app.select(spacer.id);
+    // The spacer sings in no chord, yet the run it carries keeps the focus
+    // register and lifts over the faces with it.
+    const mark = document.querySelector('[data-key="chord-marks"] .chord-mark')!;
+    expect(mark.classList.contains("chord-focus")).toBe(true);
+    expect(document.querySelector('[data-key="chord-lift"]')!.children).toHaveLength(1);
+    // The readout pins the carried chord, and no ν/s chip ever rides a
+    // spacer — the silent wire produces nothing (#172).
+    expect(readout().textContent).toContain("Octave ×1.15");
+    expect(readout().textContent).not.toContain("ν/s");
   });
 
   it("the bloom adds no chord line — the seams are the callout", () => {
