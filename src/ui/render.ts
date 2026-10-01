@@ -1,4 +1,5 @@
 import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, emittedStrength, levelCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
+import { claimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
 import { combinePreview, type CombinePreview } from "../engine/actions";
 import { deployedAt } from "../engine/economy";
@@ -2384,6 +2385,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   else if (kind === "export") renderExportModal(app, content);
   else if (kind === "import") renderImportModal(app, content);
   else if (kind === "reset") renderResetModal(app, content);
+  else if (kind === "prestige") renderPrestigeModal(app, content);
   else if (kind === "honesty") renderHonestyModal(app, content);
   else if (kind === "enter") renderEnterModal(app, content);
   else if (kind === "summary") renderSummaryModal(app, content);
@@ -2756,6 +2758,27 @@ function renderResetModal(app: App, content: HTMLElement): void {
     </div>`;
   byId("reset-cancel")?.addEventListener("click", () => app.closeModal());
   byId("reset-confirm")?.addEventListener("click", () => app.hardReset());
+  wireClose(app);
+}
+
+// The prestige confirm (ADR-0039): the door's second press. The claim is
+// stated live; the boundary's two sides are named plainly — what prestige
+// takes (levels, nous, charge) and what survives it (the board, tray,
+// rolls, achievements, life record, Arete). Copy is tuning, and the
+// glossary's avoided-verb rule holds: prestige is the verb, never "reset".
+function renderPrestigeModal(app: App, content: HTMLElement): void {
+  const claim = claimOf(app.state);
+  content.innerHTML = `
+    ${modalTop("PRESTIGE")}
+    <h2 id="modal-title">Begin the next era?</h2>
+    <p class="lead">Prestige banks <strong class="mono">${claim} Arete</strong> and starts the era over: module levels return to base, and your nous and charge return to the opening.</p>
+    <p class="lead muted">Your board and its placement, the tray, banked Forge rolls and progress, achievements, your whole life record, your Arete, and lifetime nous all stay.</p>
+    <div class="modal-actions">
+      <button id="prestige-cancel">Not yet</button>
+      <button id="prestige-confirm" class="primary">Prestige and claim ${claim} Arete</button>
+    </div>`;
+  byId("prestige-cancel")?.addEventListener("click", () => app.closeModal());
+  byId("prestige-confirm")?.addEventListener("click", () => app.confirmPrestige());
   wireClose(app);
 }
 

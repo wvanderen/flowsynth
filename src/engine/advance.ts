@@ -1,5 +1,4 @@
 import { BALANCE, EPS } from "./constants";
-import { syncArete } from "./accumulator";
 import { syncAchievements } from "./achievements";
 import { chargeDelivered, chargeWindowActive, computeRates, deployed } from "./economy";
 import { addForgeProgress, type Rng } from "./rolls";
@@ -14,12 +13,21 @@ import type { AdvanceResult, GameState } from "./types";
 // produces, but credits nothing until the report settles it.
 export type AdvanceSink = "live" | "provisional";
 
+// The one production-credit seam (ADR-0039): produced nous lands on the
+// balance, the lifetime truth, and the era's measure together — prestige
+// rebases only the era leg. Every nous-granting path reads this, never
+// three parallel increments that can drift.
+export function earnNous(state: GameState, amount: number): void {
+  state.nous += amount;
+  state.totalEarned += amount;
+  state.eraEarned += amount;
+}
+
 export function sumResults(a: AdvanceResult, b: AdvanceResult): AdvanceResult {
   return {
     nousEarned: a.nousEarned + b.nousEarned,
     rollsBanked: a.rollsBanked + b.rollsBanked,
     goalsCompleted: a.goalsCompleted + b.goalsCompleted,
-    areteMinted: a.areteMinted + b.areteMinted,
   };
 }
 
@@ -33,7 +41,6 @@ export function advance(
     nousEarned: 0,
     rollsBanked: 0,
     goalsCompleted: 0,
-    areteMinted: 0,
   };
   if (state.mode !== "flow" || seconds <= EPS) return result;
   const session = state.session;
@@ -72,12 +79,9 @@ export function advance(
     session.accounting.bucketNous += gained;
     session.accounting.poolSeconds += seconds;
   } else {
-    state.nous += gained;
-    state.totalEarned += gained;
+    earnNous(state, gained);
   }
   result.nousEarned += gained;
-  // Filling the accumulator mints Arete (ADR-0015).
-  result.areteMinted += syncArete(state);
   if (snapshot.forgeRate > 0) {
     result.rollsBanked += addForgeProgress(state, snapshot.forgeRate * seconds, rng);
   }

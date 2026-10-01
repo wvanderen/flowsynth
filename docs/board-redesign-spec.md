@@ -105,11 +105,11 @@ composite = (synths + infusor uplift) × Π chord terms
 - **Interaction facts the arc rides on**: pitch lives in the cell, so a swap of identical synths can never break a chord — the chord-breaking gesture is *drag off the board into the tray* (right-click retrieves by the same gesture, §5); the dashed would-form ghost (§6) is what makes the first placement intentional.
 - Exact pacing numbers (forge fill, threshold, grant size) are tuning, not spec.
 
-## 9. Persistence: v5 → v6, hybrid migration
+## 9. Persistence: v7, the clean-cut boundary
 
-*Decided by [Save and vocabulary migration, #124](https://github.com/wvanderen/flowsynth/issues/124) across two grilling rounds; recorded in ADR-0023.*
+*Decided by [Save and vocabulary migration, #124](https://github.com/wvanderen/flowsynth/issues/124) (the v5 → v6 hybrid, ADR-0023); superseded by the prestige cut (issue #194) — v7 refuses every older save with the start-fresh message (ADR-0017's pattern), no migration chain, no archive, no import path. The hybrid below is history.*
 
-- `SAVE_VERSION` = 6. **V5 saves convert once inside `deserialize`** — a hybrid migration, not a clean cut: the life record carries over, the board resets to the new opening. Anything older than v5, and future versions, hard-rejects with the start-fresh message (ADR-0017's gate stands). Exported `.json` saves follow the same rule.
+- `SAVE_VERSION` = 7. **Every save older than this build — v6 included — hard-rejects** inside `deserialize` with the start-fresh message (ADR-0017's gate stands); future versions reject as newer. Exported `.json` saves follow the same rule. Old-save continuity is not a constraint (the map's standing note): v6 saves carried the auto-minted Arete and the retired acknowledgment flag, and prestige's economy (ADR-0039/0042) supersedes both.
 - **Preserved** (life record + lifetime meta): `habits`, `practiceLog`, `notes`, `goals`, `activeHabitId`, `sessionRecords`, `achievements`, `sessionsCompleted`, `unstructuredSessions`, `plannedSessionsCompleted`, `sessionIndex`, `combinations`, `muted`, `notificationAsked`, `activatedApps`, `goalCapacityBought`, `totalEarned`, `arete`, `horizonAcknowledged`. Preserved counters keep the `syncAchievements` session-one guard from re-firing — feats can unlock from the first post-migration session.
 - **Reset to the new opening**: `modules` (Carrier row included), `cells`, `cellsBought`, `forge`, `bankedRolls`, `chargeWindow`, `purchased`, `welcomeAcked` (deleted by the loader), `session`, `summary`, `nextId`, and `nous` → the new opening grant. Rationale: balance was earned under the invalidated formula and scaler. `totalEarned`/`arete` persist as the Arete accumulator's lifetime truth.
 - **Mid-flow boundary**: a v5 save captured in `flow` or `paused` discards the live session uncredited — landing in upgrade mode on the fresh board.

@@ -392,24 +392,23 @@ describe("the board ledger strip (§7)", () => {
     expect(modal.textContent).not.toContain("harmonics");
   });
 
-  it("an old v5 save in localStorage boots migrated: life record kept, board reset", () => {
+  it("an old v6 save in localStorage boots fresh: refused with the standard version error", () => {
     const legacy = app.state;
     createHabit(legacy, "Piano");
     legacy.sessionsCompleted = 4;
     legacy.totalEarned = 2_500;
-    const file = JSON.parse(JSON.stringify({ app: "flowsynth", version: 5, savedAt: 1_000, state: legacy }));
-    file.state.welcomeAcked = true;
-    file.state.modules.push({ id: "m9", type: "carrier", rarity: "common", level: 3, invested: 66, pos: hex(1, 0) });
+    legacy.arete = 1;
+    const file = JSON.parse(JSON.stringify({ app: "flowsynth", version: 6, savedAt: 1_000, state: legacy }));
     localStorage.setItem("flowsynth.save.v1", JSON.stringify(file));
     const revived = boot();
-    expect(revived.state.sessionsCompleted).toBe(4);
-    expect(revived.state.totalEarned).toBe(2_500);
-    expect(revived.state.habits.map((h) => h.name)).toEqual(["Piano"]);
-    // The board reset to the new opening: one synthesizer at C4, grant balance.
+    // The v7 boundary refuses v6 outright (ADR-0017's pattern): no crash,
+    // no hybrid — the standard fresh-start message greets the player.
+    expect(revived.state.sessionsCompleted).toBe(0);
+    expect(revived.state.totalEarned).toBe(0);
+    expect(revived.state.arete).toBe(0);
+    expect(revived.state.habits).toHaveLength(0);
     expect(revived.state.modules).toHaveLength(1);
-    expect(revived.state.modules[0]!.pos).toEqual(hex(0, 0));
-    expect(revived.state.nous).toBe(12);
-    expect("welcomeAcked" in revived.state).toBe(false);
+    expect(document.getElementById("status")!.textContent).toMatch(/older version/);
   });
 });
 
@@ -575,7 +574,8 @@ describe("the horizon bar (§7, issue #156)", () => {
     // At the floor the bar starts empty.
     expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBe(0);
     expect(document.querySelector('#horizon-bar [data-live="h-word"]')!.textContent).toBe("0%");
-    app.state.totalEarned = 1_000;
+    // The bar reads the era's measure (ADR-0039), not the lifetime total.
+    app.state.eraEarned = 1_000;
     app.render();
     // Halfway through the curved scale, patched in place — no rebuild.
     expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBe(300);
@@ -583,15 +583,71 @@ describe("the horizon bar (§7, issue #156)", () => {
     expect(document.querySelector(".horizon-word")).not.toBeNull();
   });
 
-  it("reaching the horizon mints the first Arete and leaves the completed state", () => {
-    app.state.totalEarned = ARETE_HORIZON;
+  it("the completed era hosts the prestige door in upgrade mode (ADR-0039)", () => {
+    app.state.eraEarned = ARETE_HORIZON;
     app.render();
     const bar = document.getElementById("horizon-bar")!;
     expect(bar.classList.contains("reached")).toBe(true);
-    expect(bar.querySelector(".horizon-state")!.textContent).toBe("First Arete reached");
+    // The percentage readout gives way to the door, its claim live.
     expect(bar.querySelector(".horizon-word")).toBeNull();
+    const door = bar.querySelector<HTMLButtonElement>("#prestige-door")!;
+    expect(door.textContent).toContain("Prestige and Claim 1 Arete");
+    // The fill sits complete at the horizon.
     const clip = bar.querySelector<SVGRectElement>('[data-live="h-clip"]')!;
     expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBe(600);
+  });
+
+  it("outside upgrade mode the door shows locked — a readout, never a button", () => {
+    app.state.eraEarned = ARETE_HORIZON;
+    startSession(app.state, null);
+    app.render();
+    const bar = document.getElementById("horizon-bar")!;
+    expect(bar.querySelector("#prestige-door")).toBeNull();
+    expect(bar.querySelector("button")).toBeNull();
+    expect(bar.querySelector(".horizon-state")!.textContent).toContain("enter upgrade mode");
+    // And nothing about the locked state opens the confirm.
+    app.openPrestigeConfirm();
+    expect(app.ui.modal).toBeNull();
+  });
+
+  it("pressing the door opens a confirm; confirming banks the claim and begins the next era", () => {
+    app.state.eraEarned = ARETE_HORIZON;
+    app.state.nous = 8_000;
+    app.state.chargeWindow = 120;
+    app.render();
+    document.getElementById("prestige-door")!.click();
+    expect(app.ui.modal).toBe("prestige");
+    const content = document.getElementById("modal-content")!;
+    expect(content.textContent).toContain("1 Arete");
+    document.getElementById("prestige-confirm")!.click();
+    expect(app.ui.modal).toBeNull();
+    expect(app.state.arete).toBe(1);
+    expect(app.state.prestiges).toBe(1);
+    // The boundary: era bar rebased, nous and charge reset.
+    expect(app.state.eraEarned).toBe(0);
+    expect(app.state.nous).toBe(BALANCE.openingGrant);
+    expect(app.state.chargeWindow).toBe(0);
+    // The bar reads the fresh era: 0%, no door.
+    app.render();
+    const bar = document.getElementById("horizon-bar")!;
+    expect(bar.querySelector("#prestige-door")).toBeNull();
+    expect(document.querySelector('#horizon-bar [data-live="h-word"]')!.textContent).toBe("0%");
+  });
+
+  it("two consecutive resets bank 1 then 2, the door's claim reading live", () => {
+    app.state.eraEarned = ARETE_HORIZON;
+    app.render();
+    document.getElementById("prestige-door")!.click();
+    document.getElementById("prestige-confirm")!.click();
+    expect(app.state.arete).toBe(1);
+    app.state.eraEarned = ARETE_HORIZON;
+    app.render();
+    const door = document.getElementById("prestige-door")!;
+    expect(door.textContent).toContain("Claim 2 Arete");
+    door.click();
+    document.getElementById("prestige-confirm")!.click();
+    expect(app.state.arete).toBe(3);
+    expect(app.state.prestiges).toBe(2);
   });
 
   it("carries no formula chip; Forge progress rides the dock's pip", () => {

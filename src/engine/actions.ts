@@ -1,10 +1,11 @@
 import { BALANCE, EPS, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE, SHELF_TYPES } from "./constants";
+import { claimOf, horizonReached } from "./accumulator";
 import { cellPurchasePrice, computeRates, deployedAt, findModule, levelCost, longGoalCost, rowGateOwed, wholeNous } from "./economy";
 import { arcCardDue } from "./arc";
 import { nextRungCost, appActive, LADDER_APPS, type FocusApp } from "./apps";
 import { adjacent, hexKey, isConnected, sameHex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
-import { createModule } from "./state";
+import { createModule, openingGrant } from "./state";
 import { logSessionPractice } from "./habits";
 import { plannedTargetHit } from "./records";
 import { rollGoalOccurrences } from "./goals";
@@ -422,4 +423,30 @@ export function chooseRoll(state: GameState, offerId: string, candidateId: strin
   state.modules.push(createModule(state, candidate.type, candidate.rarity));
   // A taken candidate can be the first rare (Fine china) or Forge roll.
   return { ok: true, unlocked: checkAchievements(state) };
+}
+
+// Prestige (ADR-0039, issue #170): the door at the horizon banks the era's
+// claim and begins the next era. The only Arete source in the game — claim
+// on reset, never before — and the nth reset banks n (ADR-0042's linear
+// base). The reset boundary: owned modules (types, rarity, secondaries),
+// cells with placement, `cellsBought` and the paid row gates, tray
+// inventory, banked rolls and Forge progress, achievements and their
+// boost, the life record, the Arete balance, and lifetime `totalEarned`
+// persist; module levels return to base, nous to a fresh opening grant,
+// and the charge window resets. The era measure rebases to 0, which is the
+// bar's own rebase; the era count rises as economy-bearing engine state
+// (ADR-0038's no-new-furniture rule holds).
+export function prestige(state: GameState): ActionResult {
+  if (state.mode !== "upgrade") return fail("Prestige happens between sessions.");
+  if (!horizonReached(state)) return fail("The horizon is not reached yet.");
+  state.arete += claimOf(state);
+  state.prestiges++;
+  for (const module of state.modules) {
+    module.level = 0;
+    module.invested = 0;
+  }
+  state.nous = openingGrant();
+  state.chargeWindow = 0;
+  state.eraEarned = 0;
+  return ok;
 }

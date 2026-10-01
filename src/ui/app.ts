@@ -1,4 +1,4 @@
-import { advance } from "../engine/advance";
+import { advance, earnNous } from "../engine/advance";
 import type { AdvanceResult } from "../engine/types";
 import {
   buyCell,
@@ -11,6 +11,7 @@ import {
   endSession,
   pauseSession,
   placeModule,
+  prestige,
   recordSummaryReflection,
   resumeSession,
   returnModule,
@@ -18,7 +19,7 @@ import {
   upgradeModule,
   type ActionResult,
 } from "../engine/actions";
-import { syncArete } from "../engine/accumulator";
+import { ARETE_HORIZON, claimOf } from "../engine/accumulator";
 import { neighbors, sameHex } from "../engine/hex";
 import { newChordTerms } from "../engine/chords";
 import { computeRates } from "../engine/economy";
@@ -58,6 +59,7 @@ export type ModalKind =
   | "export"
   | "import"
   | "reset"
+  | "prestige"
   | "honesty"
   | "enter"
   | "summary"
@@ -519,6 +521,38 @@ export class App {
     this.render();
   }
 
+  // The prestige door (ADR-0039): the completed era bar's press opens the
+  // confirm; only upgrade mode's press opens anything at all — the locked
+  // readout the bar shows during a session is not a button, so this guard
+  // is belt-and-braces for keyboard foci that outlived a mode flip.
+  openPrestigeConfirm(): void {
+    if (this.state.mode !== "upgrade") {
+      this.say("Prestige happens between sessions.");
+      return;
+    }
+    if (this.state.eraEarned < ARETE_HORIZON) return;
+    this.clearTransientUi();
+    this.ui.modal = "prestige";
+    this.render();
+  }
+
+  // The confirm's answer: banks the live claim and begins the next era —
+  // levels to base, nous to a fresh grant, charge and the era bar reset;
+  // the board, tray, rolls, achievements, life record, and Arete persist.
+  confirmPrestige(): void {
+    const claim = claimOf(this.state);
+    const result = prestige(this.state);
+    if (!result.ok) {
+      this.say(result.reason ?? "The door is not open.");
+      this.render();
+      return;
+    }
+    this.ui.modal = null;
+    this.say(`Banked ${claim} Arete — the next era begins.`);
+    this.save();
+    this.render();
+  }
+
   say(text: string): void {
     const el = this.els["status"];
     if (el) el.textContent = text;
@@ -760,7 +794,6 @@ export class App {
       this.forgeFlashUntil = Date.now() + 900;
     }
     if (result.goalsCompleted > 0) notes.push(`${result.goalsCompleted} goal${result.goalsCompleted === 1 ? "" : "s"} completed.`);
-    if (result.areteMinted > 0) notes.push("Arete minted.");
     if (notes.length > 0) this.say(notes.join(" "));
   }
 
@@ -1419,10 +1452,11 @@ export class App {
   }
 
   devNous(): void {
-    this.state.nous += 100;
-    this.state.totalEarned += 100;
-    const minted = syncArete(this.state);
-    this.say(minted > 0 ? "Dev: +100 ν. The accumulator filled — Arete minted." : "Dev: +100 ν.");
+    // The dev grant produces like flow does, through the one credit seam.
+    // It mints nothing — the door opens on the crossing, and Arete still
+    // waits for the prestige action.
+    earnNous(this.state, 100);
+    this.say("Dev: +100 ν.");
     this.render();
   }
 

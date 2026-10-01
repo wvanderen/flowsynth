@@ -3,7 +3,7 @@
 // ambient horizon bar riding the board's lower edge, and the phone's
 // game-info strip. The status monitor dissolved into these; the console
 // carries no readouts.
-import { ARETE_HORIZON, accumulatorFill } from "../engine/accumulator";
+import { accumulatorFill, claimOf, horizonReached } from "../engine/accumulator";
 import { ACHIEVEMENTS } from "../engine/achievements";
 import { BALANCE, CATEGORY_OF, isSynthesizerType } from "../engine/constants";
 import { chargedFactor, modulePower } from "../engine/economy";
@@ -334,13 +334,13 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
   set("i-session", state.session ? formatFixed(state.session.earned) : "—");
 }
 
-// ── The ambient horizon bar (§7, issue #156, ADR-0038) ─────────────────
-// The Arete pill dissolved into ambience: one wide curved-scale fill —
-// the accumulator's log scale drawn as a shallow arc — riding the board's
-// lower edge at every width. No decade marks, no practice countdown, no
-// Prestige button: the bar is pointer-transparent and carries exactly one
-// figure — its own log-scale percentage, centered beneath the arc beside
-// the Arete name — until the crossing makes it say the era.
+// ── The ambient horizon bar (§7, issue #156, ADR-0038, ADR-0039) ───────
+// One wide curved-scale fill — the current era's log scale drawn as a
+// shallow arc — riding the board's lower edge at every width. Pointer-
+// transparent everywhere except the one door: when the era's fill reaches
+// the horizon, the percentage readout gives way to "Prestige and Claim X
+// Arete" (ADR-0039) — a live button in upgrade mode, a locked "prestige
+// available — enter upgrade mode" readout during a session.
 const HORIZON_VIEW_WIDTH = 600;
 
 // The curved rail and its log-scale fill. The fill is the same path
@@ -369,28 +369,35 @@ function horizonSvg(): string {
 export function renderHorizonBar(app: App): void {
   const host = document.getElementById("horizon-bar");
   if (!host) return;
-  const reached = app.state.totalEarned >= ARETE_HORIZON;
-  // Structural key: only the era flip rebuilds the bar; the fill's clip
-  // width and the label's percentage patch in place every tick, so
-  // nothing here ever churns.
-  const key = reached ? "reached" : "under";
+  const { state } = app;
+  const reached = horizonReached(state);
+  // Structural key: the era flip rebuilds the bar — under, the open door
+  // (its claim lives in the label), or the locked readout during a session.
+  // The fill's clip width and the label's percentage patch in place every
+  // tick, so nothing here ever churns.
+  const key = reached ? `door:${state.mode}:${claimOf(state)}` : "under";
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.classList.toggle("reached", reached);
-    host.setAttribute("role", "img");
-    host.setAttribute(
-      "aria-label",
-      reached
-        ? "First Arete reached — the horizon lies behind you"
-        : "The Arete horizon: lifetime progress toward the first Arete",
-    );
+    if (reached) {
+      // The door states carry live controls and text; a figure role would
+      // flatten them for assistive tech, so only the ambient bar wears it.
+      host.removeAttribute("role");
+      host.removeAttribute("aria-label");
+    } else {
+      host.setAttribute("role", "img");
+      host.setAttribute("aria-label", "The Arete horizon: this era's progress toward prestige");
+    }
     host.innerHTML = `${horizonSvg()}${
       reached
-        ? `<span class="horizon-state">First Arete reached</span>`
+        ? state.mode === "upgrade"
+          ? `<button class="prestige-door" id="prestige-door" title="Prestige — bank the era's Arete and begin the next era">Prestige and Claim <b class="mono">${claimOf(state)}</b> Arete</button>`
+          : `<span class="horizon-state locked">prestige available — enter upgrade mode</span>`
         : `<span class="horizon-word">Arete <b data-live="h-word"></b></span>`
     }`;
+    document.getElementById("prestige-door")?.addEventListener("click", () => app.openPrestigeConfirm());
   }
-  const fill = accumulatorFill(app.state.totalEarned);
+  const fill = accumulatorFill(state.eraEarned);
   const clip = host.querySelector<SVGRectElement>('[data-live="h-clip"]');
   if (clip) {
     // Numeric compare: style serializers may renormalize the stored value,
@@ -401,5 +408,5 @@ export function renderHorizonBar(app: App): void {
       clip.style.setProperty("width", `${width.toFixed(2)}px`);
     }
   }
-  liveSet(host, "h-word", `${Math.round(fill * 100)}%`);
+  if (!reached) liveSet(host, "h-word", `${Math.round(fill * 100)}%`);
 }
