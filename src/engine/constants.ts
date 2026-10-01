@@ -59,12 +59,13 @@ export interface Balance {
   goalBaseSlots: number;
   forgeInitialThreshold: number;
   forgeThresholdGrowth: number;
-  // The practice leg of the forge meter (board-redesign spec §8): each
-  // credited practice second feeds the player-wide meter this much
-  // progress, on top of received charge — practice fills the forge even
-  // before a Forge is owned. Against the initial threshold this paces the
-  // opening's first roll at ≈ 2 minutes of practice. Provisional tuning.
-  forgePracticeRate: number;
+  // The flow meter (ADR-0041): credited practice seconds fill it directly —
+  // the fill is measured in seconds, no rate leg. The opening threshold
+  // crosses once fast so the opening still teaches the loop (≈ 3 minutes,
+  // tuning 2–5), then every later crossing sits one flat cadence block out
+  // — one module roll per ≈ 30 credited minutes, forever, never scaling.
+  flowOpeningSeconds: number;
+  flowCadenceSeconds: number;
   // The focus-keyed generator's bank ratio (§2.3): each session end banks a
   // charge window of fraction × live practice seconds. Provisional tuning.
   chargeWindowFraction: number;
@@ -101,7 +102,8 @@ export const BALANCE: Balance = {
   goalBaseSlots: 2,
   forgeInitialThreshold: 60,
   forgeThresholdGrowth: 1.5,
-  forgePracticeRate: 0.5,
+  flowOpeningSeconds: 180,
+  flowCadenceSeconds: 1800,
   chargeWindowFraction: 0.1,
 };
 

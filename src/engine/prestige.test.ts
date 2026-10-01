@@ -119,6 +119,16 @@ describe("the prestige action", () => {
     expect(s.purchased).toEqual({ generator: true, infusor: true, forge: true });
   });
 
+  it("the flow meter's fill and earned count survive prestige intact (ADR-0041)", () => {
+    const s = atHorizon();
+    s.flow = { progress: 900, earned: 4 };
+    s.bankedRolls = [];
+    prestige(s);
+    expect(s.flow).toEqual({ progress: 900, earned: 4 });
+    // The reset mints nothing and un-banks nothing: the queue persists too.
+    expect(s.bankedRolls).toHaveLength(0);
+  });
+
   it("persists achievements, the life record, and lifetime totalEarned", () => {
     const s = atHorizon();
     s.achievements = { "first-light": 1_000 };

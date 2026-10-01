@@ -60,9 +60,12 @@ const goalCompletions = (state: GameState): number =>
 
 const ownsRare = (state: GameState): boolean => state.modules.some((m) => m.rarity === "rare");
 
-// Rolls taken: every mint pushes exactly one offer, so the un-taken count
-// is the earned total minus what still waits in the Forge.
-const rollsTaken = (state: GameState): number => Math.max(0, state.forge.earned - state.bankedRolls.length);
+// Rolls taken: every mint pushes exactly one offer into the one shared
+// queue (ADR-0041), so the un-taken count is the two meters' earned total
+// minus what still waits in the Forge — feats keyed on rolls taken read
+// the total, never one source.
+const rollsTaken = (state: GameState): number =>
+  Math.max(0, state.forge.earned + state.flow.earned - state.bankedRolls.length);
 
 // The steepest local chord multiplier any single deployed synthesizer sings
 // under (ADR-0036) — the same partition the rate pass applies (generators,

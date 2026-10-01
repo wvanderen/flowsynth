@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import { startSession } from "./actions";
 import { fresh, give } from "./fixtures";
-import { addForgeProgress, forgeThreshold } from "./rolls";
+import { addFlowProgress, addForgeProgress, flowThreshold, forgeThreshold } from "./rolls";
 import { hex } from "./hex";
 
 describe("the forge meter", () => {
@@ -25,12 +25,13 @@ describe("the forge meter", () => {
     s.chargeWindow = 600;
     startSession(s, null);
     advance(s, 50);
-    // Charge 50 + the practice leg's 25 (§8) = 75: the charge carries the
-    // meter past the 60 threshold — practice alone would never reach it.
-    expect(s.forge.earned).toBe(1);
-    expect(s.forge.progress).toBeCloseTo(15, 6);
-    expect(forgeThreshold(s.forge.earned)).toBeCloseTo(90, 6);
-    expect(s.bankedRolls).toHaveLength(1);
+    // Charge 50 crosses the 60 threshold only with the window's full
+    // strength — practice no longer rides this branch (ADR-0041): the
+    // 50 credited seconds sit in the flow meter instead.
+    expect(s.forge.earned).toBe(0);
+    expect(s.forge.progress).toBeCloseTo(50, 6);
+    expect(s.flow.progress).toBeCloseTo(50, 6);
+    expect(s.bankedRolls).toHaveLength(0);
   });
 
   it("duplicate forges share one increasing threshold", () => {
@@ -41,10 +42,12 @@ describe("the forge meter", () => {
     s.chargeWindow = 600;
     startSession(s, null);
     advance(s, 600);
-    // 600 charge + 300 practice (§8) = 900 through thresholds
-    // 60 + 90 + 135 + 202.5 + 303.75 → 5 rolls, 108.75 left.
-    expect(s.forge.earned).toBe(5);
-    expect(s.forge.progress).toBeCloseTo(108.75, 6);
+    // 600 charge (practice feeds the flow meter now, not this branch)
+    // through thresholds 60 + 90 + 135 + 202.5 → 4 rolls, 112.5 left.
+    expect(s.forge.earned).toBe(4);
+    expect(s.forge.progress).toBeCloseTo(112.5, 6);
+    // The same 600 credited seconds crossed the flow meter's flat cadence.
+    expect(s.flow.earned).toBe(1);
     expect(s.bankedRolls).toHaveLength(5);
   });
 
@@ -72,10 +75,38 @@ describe("the forge meter", () => {
     startSession(s, null);
     advance(s, 100);
     expect(forge.level).toBe(1);
-    // 100 s at strength 1 × power 1.2 = 120 charge + 50 practice (§8) =
-    // 170: thresholds 60 + 90 cross, 20 remains — a level-0 forge lands
-    // the same two rolls with nothing carried.
-    expect(s.forge.earned).toBe(2);
-    expect(s.forge.progress).toBeCloseTo(20, 6);
+    // 100 s at strength 1 × power 1.2 = 120 charge: the 60 threshold
+    // crosses, 60 carries — practice no longer pads this branch.
+    expect(s.forge.earned).toBe(1);
+    expect(s.forge.progress).toBeCloseTo(60, 6);
+  });
+});
+
+describe("the flow meter (ADR-0041)", () => {
+  it("fills with credited seconds and banks into the same queue", () => {
+    const s = fresh();
+    addFlowProgress(s, 180);
+    expect(s.flow.earned).toBe(1);
+    expect(s.flow.progress).toBeCloseTo(0, 6);
+    expect(s.bankedRolls).toHaveLength(1);
+    expect(s.forge.earned).toBe(0);
+  });
+
+  it("batches identically to incremental adds across the flat cadence", () => {
+    const s = fresh();
+    addFlowProgress(s, 3600);
+    expect(s.flow.earned).toBe(2);
+    expect(s.flow.progress).toBeCloseTo(1620, 6);
+
+    const t = fresh();
+    for (let i = 0; i < 36; i++) addFlowProgress(t, 100);
+    expect(t.flow.earned).toBe(s.flow.earned);
+    expect(t.flow.progress).toBeCloseTo(s.flow.progress, 6);
+  });
+
+  it("the opening fill crosses once fast; every later roll sits one flat block out", () => {
+    expect(flowThreshold(0)).toBe(180);
+    expect(flowThreshold(1)).toBe(1800);
+    expect(flowThreshold(7)).toBe(1800);
   });
 });

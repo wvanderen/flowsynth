@@ -44,12 +44,14 @@ describe("session rules", () => {
     give(s, "forge", hex(1, 0));
     startSession(s, null);
     // The lone opening synth: 0.1 ν/s; the forge receives no charge (no
-    // generator) — its meter fills from practice alone (§8): 1800 progress
-    // crosses six thresholds and carries 553.125.
+    // generator) and no practice either (ADR-0041) — the 3600 credited
+    // seconds cross the flow meter's opening fill plus one flat cadence
+    // block, carrying 1620.
     expect(earned(s, 3600)).toBeCloseTo(0.1 * 3600, 6);
     expect(computeRates(s, true).forgeRate).toBe(0);
-    expect(s.forge.earned).toBe(6);
-    expect(s.forge.progress).toBeCloseTo(553.125, 6);
+    expect(s.forge.earned).toBe(0);
+    expect(s.flow.earned).toBe(2);
+    expect(s.flow.progress).toBeCloseTo(1620, 6);
     expect(s.session?.target).toBeNull();
   });
 

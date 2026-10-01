@@ -14,7 +14,7 @@ import {
 import { advance } from "./advance";
 import { appActive } from "./apps";
 import { SHELF_TYPES } from "./constants";
-import { fresh } from "./fixtures";
+import { fresh, give, stubRng } from "./fixtures";
 import { hex } from "./hex";
 import { createHabit, selectHabit } from "./habits";
 import { deserialize, serialize } from "./save";
@@ -69,6 +69,33 @@ describe("the loud summary (§5.7) — every exit path, identical beats", () => 
     expect(s.summary!.ratePerMinute).toBeCloseTo(6, 6);
     expect(s.summary!.seen).toBe(false);
     expect(s.summary!.timeUnlocked).toBe(false);
+    // 300 s cross the opening fill: the practice roll lands and attributes.
+    expect(s.summary!.rollsFlow).toBe(1);
+    expect(s.summary!.rollsForge).toBe(0);
+  });
+
+  it("the summary's rolls line splits by source when both fired (ADR-0041)", () => {
+    const s = fresh();
+    give(s, "forge", hex(1, 0));
+    give(s, "focusKeyed", hex(2, 0));
+    s.chargeWindow = 60;
+    startSession(s, null);
+    // 180 s: the flow meter's opening fill banks one practice roll; the
+    // window's 60 s of charge banks exactly one charge roll (60 threshold),
+    // and the drained 120 s move this branch no further.
+    advance(s, 180, stubRng(new Array(12).fill(0.3)));
+    endSession(s, 1_000);
+    expect(s.summary!.rollsFlow).toBe(1);
+    expect(s.summary!.rollsForge).toBe(1);
+  });
+
+  it("a practice-only session attributes the roll to the flow meter alone", () => {
+    const s = fresh();
+    startSession(s, null);
+    advance(s, 180, stubRng(new Array(6).fill(0.3)));
+    endSession(s, 1_000);
+    expect(s.summary!.rollsFlow).toBe(1);
+    expect(s.summary!.rollsForge).toBe(0);
   });
 
   it("a manual exit after the target also summarizes (target reached or not)", () => {

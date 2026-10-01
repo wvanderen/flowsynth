@@ -132,6 +132,11 @@ export interface SessionState {
   // deleting or replacing a goal never rewrites history; the ledger dies
   // with the session object.
   goalSeconds: Record<string, number>;
+  // Rolls this session banked, by source (ADR-0041): the summary's rolls
+  // line splits practice (flow meter) from charge (Forge progress). The
+  // queue they land in is one and interchangeable — these counts only
+  // attribute.
+  rolls: RollSources;
 }
 
 // The summary's reflection (spec §8): free text plus the five-position
@@ -172,6 +177,10 @@ export interface SessionSummary {
   // Feats unlocked during the session, including at its end boundary —
   // the summary's "unlocked this session" row.
   achievements: string[];
+  // Rolls banked this session, by source (ADR-0041): the rolls line shows
+  // one source plainly and splits the two when both fired.
+  rollsFlow: number;
+  rollsForge: number;
   // The reflection (§8): records as its fields are touched, survives a
   // reload with the summary, absent (null) when untouched.
   reflection: SessionReflection | null;
@@ -266,6 +275,14 @@ export interface Goal {
 
 export type Mode = "upgrade" | "flow" | "paused";
 
+// Rolls banked during a session, attributed by source (ADR-0041): the flow
+// meter's practice crossings and the Forge branches' charge crossings. The
+// counts never gate anything — one queue, spent interchangeably.
+export interface RollSources {
+  flow: number;
+  forge: number;
+}
+
 // The console's fixed-function instruments (ADR-0012). Defined here because
 // the save state records which of them the activation ladder has unlocked.
 export type FocusApp = "habit" | "time" | "notes" | "goals";
@@ -314,6 +331,11 @@ export interface GameState {
   // to [] at load.
   gatedRows: number[];
   forge: Meter;
+  // The flow meter (ADR-0041): the player-wide meter credited practice
+  // fills, sibling of Forge progress — never a branch of the Forge family.
+  // Each crossing banks a module roll into the one shared queue. Fill and
+  // earned count persist through prestige (the #170 boundary class).
+  flow: Meter;
   // The opening arc's one pop-up (board-redesign spec §8): the dismissal
   // sets this once, so the card fires exactly once, ever. Lenient-defaults
   // to false at load — a save written before the card existed is still
@@ -415,5 +437,9 @@ export interface RateSnapshot {
 export interface AdvanceResult {
   nousEarned: number;
   rollsBanked: number;
+  // The total's split by source (ADR-0041): flow-meter crossings vs Forge
+  // charge crossings, for the session's per-source attribution.
+  rollsFlow: number;
+  rollsForge: number;
   goalsCompleted: number;
 }

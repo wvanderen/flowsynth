@@ -84,6 +84,12 @@ export function deserialize(text: string): LoadResult {
   // a save may still carry one; drop it rather than resuming a state shape
   // this build no longer reads.
   delete (merged as unknown as Record<string, unknown>).pendingGap;
+  // The session's per-source rolls ledger (ADR-0041) lenient-defaults the
+  // same way: a save written mid-flow before it exists resumes with zeroed
+  // counts, never a crash.
+  if (merged.session && !isRecord(raw.session?.rolls)) {
+    merged.session.rolls = { flow: 0, forge: 0 };
+  }
   merged.purchased = { ...fresh.purchased, ...merged.purchased };
   return { state: merged };
 }

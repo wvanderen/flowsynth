@@ -105,8 +105,10 @@ describe("goal progress and completion", () => {
     const nousBefore = s.nous;
     advance(s, 3600);
     expect(s.nous - nousBefore).toBeCloseTo(360, 6); // one synth alone; no rewards
-    // The meter's growth is the practice leg's (§8) — no completion grants.
-    expect(s.forge.earned).toBe(7);
+    // The meter's growth is the flow cadence's (ADR-0041) — no completion grants:
+    // 4200 credited seconds cross the opening fill plus two flat blocks, carrying 420.
+    expect(s.flow.earned).toBe(3);
+    expect(s.flow.progress).toBeCloseTo(420, 6);
     expect(s.goals[0]!.completedCount).toBe(1);
   });
 

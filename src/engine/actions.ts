@@ -61,6 +61,9 @@ export function startSession(state: GameState, target: number | null, now: numbe
     // The record's start stamp (§9), taken from the start gesture.
     startedAt: now,
     goalSeconds: {},
+    // The summary's rolls line (ADR-0041): per-source counts accrue as the
+    // meters cross, attributed at the mint.
+    rolls: { flow: 0, forge: 0 },
   };
   // In-session unlocks (Untethered, past session one) queue into the
   // session's summary row — the result carries nothing to toast.
@@ -155,6 +158,10 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
     // The honesty events beneath the final numbers (§8), where a dropped
     // bucket's drop is visible.
     honestyEvents: events,
+    // The rolls line (ADR-0041): this session's banked rolls, split by
+    // source — one source reads plainly, both split.
+    rollsFlow: session?.rolls.flow ?? 0,
+    rollsForge: session?.rolls.forge ?? 0,
     achievements,
     // The reflection (§8) records from the summary itself, so it starts
     // absent here.
@@ -543,7 +550,9 @@ export function chooseRoll(state: GameState, offerId: string, candidateId: strin
 // on reset, never before — and the nth reset banks n (ADR-0042's linear
 // base). The reset boundary: owned modules (types, rarity, secondaries),
 // cells with placement, `cellsBought` and the paid row gates, tray
-// inventory, banked rolls and Forge progress, achievements and their
+// inventory, banked rolls, Forge progress, and the flow meter's fill and
+// earned count (ADR-0041 — progress earned by real life time is never
+// un-earned at the moment prestige pays off), achievements and their
 // boost, the life record, the Arete balance, and lifetime `totalEarned`
 // persist; module levels return to base, nous to a fresh opening grant,
 // and the charge window resets. The era measure rebases to 0, which is the

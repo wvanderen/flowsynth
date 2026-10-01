@@ -1,6 +1,6 @@
 import { BALANCE, isSynthesizerType, ROLL_POOL } from "./constants";
 import { newModuleId } from "./state";
-import type { Candidate, GameState, ModuleType, RollOffer } from "./types";
+import type { Candidate, GameState, Meter, ModuleType, RollOffer } from "./types";
 
 export type Rng = () => number;
 
@@ -14,9 +14,12 @@ function rollRarity(rng: Rng): Candidate["rarity"] {
 // The opening's first roll (board-redesign spec §8) yields a synthesizer
 // candidate — the arc's beat is "the forge offers the synth it made", so a
 // pool draw without a synthesizer is re-rigged to carry one. Whether the
-// rig re-rolls a slot or guarantees the type is tuning, not spec.
+// rig re-rolls a slot or guarantees the type is tuning, not spec. One
+// queue, two sources (ADR-0041): the rig reads the total earned, so the
+// first roll is the rigged one whichever meter minted it — in the opening
+// that is always the flow meter.
 function firstRollRigged(state: GameState): boolean {
-  return state.forge.earned === 1;
+  return state.forge.earned + state.flow.earned === 1;
 }
 
 export function generateOffer(state: GameState, rng: Rng): RollOffer {
@@ -40,14 +43,41 @@ export function forgeThreshold(earned: number): number {
   return BALANCE.forgeInitialThreshold * BALANCE.forgeThresholdGrowth ** earned;
 }
 
-export function addForgeProgress(state: GameState, amount: number, rng: Rng = Math.random): number {
-  state.forge.progress += amount;
+// The flow meter's fixed cadence (ADR-0041): a one-time fast opening fill
+// that teaches the loop, then one flat block of credited practice per roll
+// — forever, never scaling. The fill is measured in credited seconds
+// directly, so the threshold is a duration.
+export function flowThreshold(earned: number): number {
+  return earned === 0 ? BALANCE.flowOpeningSeconds : BALANCE.flowCadenceSeconds;
+}
+
+function bankRolls(
+  meter: Meter,
+  source: "flow" | "forge",
+  amount: number,
+  threshold: (earned: number) => number,
+  state: GameState,
+  rng: Rng,
+): number {
+  meter.progress += amount;
   let rolls = 0;
-  while (state.forge.progress + 1e-9 >= forgeThreshold(state.forge.earned)) {
-    state.forge.progress = Math.max(0, state.forge.progress - forgeThreshold(state.forge.earned));
-    state.forge.earned++;
+  while (meter.progress + 1e-9 >= threshold(meter.earned)) {
+    meter.progress = Math.max(0, meter.progress - threshold(meter.earned));
+    meter.earned++;
     state.bankedRolls.push(generateOffer(state, rng));
+    // One banked-roll queue (ADR-0041): both sources push interchangeably;
+    // a live session attributes each crossing to its minting source for
+    // the summary's rolls line.
+    if (state.session) state.session.rolls[source] += 1;
     rolls++;
   }
   return rolls;
+}
+
+export function addForgeProgress(state: GameState, amount: number, rng: Rng = Math.random): number {
+  return bankRolls(state.forge, "forge", amount, forgeThreshold, state, rng);
+}
+
+export function addFlowProgress(state: GameState, seconds: number, rng: Rng = Math.random): number {
+  return bankRolls(state.flow, "flow", seconds, flowThreshold, state, rng);
 }

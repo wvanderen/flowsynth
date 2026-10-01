@@ -2,32 +2,34 @@ import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import { chooseRoll, dismissArcCard, endSession, placeModule, returnModule, startSession, upgradeModule } from "./actions";
 import { arcCardDue, synthsAcquired } from "./arc";
-import { BALANCE, CATEGORY_OF } from "./constants";
+import { CATEGORY_OF } from "./constants";
 import { computeRates } from "./economy";
 import { fresh, give, stubRng } from "./fixtures";
 import { hex } from "./hex";
 import { cellNoteOf } from "./lattice";
-import { addForgeProgress, forgeThreshold } from "./rolls";
+import { addForgeProgress, forgeThreshold, flowThreshold } from "./rolls";
 import { deserialize, serialize } from "./save";
 
 // The opening learning arc (board-redesign spec §8, issue #138): a
-// single-synth earned start — practice fills the forge, the first roll
+// single-synth earned start — practice fills the flow meter, the first roll
 // offers the synth it made, and one pop-up card fires after the second
 // acquisition, once, ever. No Carrier, no tutorial state machine.
 
-describe("practice fills the forge (§8)", () => {
-  it("the placeholder pacing crosses the first threshold at ≈ 2 minutes of practice", () => {
-    expect(BALANCE.forgeInitialThreshold / BALANCE.forgePracticeRate).toBe(120);
+describe("practice fills the flow meter (§8, ADR-0041)", () => {
+  it("the opening fill crosses once fast; the cadence is flat 30 credited minutes forever", () => {
+    expect(flowThreshold(0)).toBe(180);
+    expect(flowThreshold(1)).toBe(1800);
+    expect(flowThreshold(9)).toBe(1800);
   });
 
-  it("credited practice seconds feed the meter with no Forge owned", () => {
+  it("credited practice seconds bank the first roll with no Forge owned", () => {
     const s = fresh();
     expect(s.modules.map((m) => m.type)).toEqual(["additive"]); // no Forge, no generator
     startSession(s, null);
-    advance(s, 119, stubRng(new Array(6).fill(0.3)));
-    expect(s.forge.earned).toBe(0);
+    advance(s, 179, stubRng(new Array(6).fill(0.3)));
+    expect(s.flow.earned).toBe(0);
     advance(s, 1, stubRng(new Array(6).fill(0.3)));
-    expect(s.forge.earned).toBe(1);
+    expect(s.flow.earned).toBe(1);
     expect(s.bankedRolls).toHaveLength(1);
   });
 
@@ -35,22 +37,38 @@ describe("practice fills the forge (§8)", () => {
     const s = fresh();
     startSession(s, null);
     advance(s, 600, stubRng([]), "provisional");
-    expect(s.forge.progress).toBe(0);
-    expect(s.forge.earned).toBe(0);
+    expect(s.flow.progress).toBe(0);
+    expect(s.flow.earned).toBe(0);
   });
 
-  it("received charge stacks on top of the practice leg", () => {
+  it("after the opening fill the cadence runs flat, never scaling", () => {
+    const s = fresh();
+    startSession(s, null);
+    advance(s, 180, stubRng(new Array(6).fill(0.3)));
+    expect(s.flow.earned).toBe(1);
+    advance(s, 1799, stubRng(new Array(6).fill(0.3)));
+    expect(s.flow.earned).toBe(1);
+    advance(s, 1, stubRng(new Array(6).fill(0.3)));
+    expect(s.flow.earned).toBe(2);
+    expect(s.flow.progress).toBeCloseTo(0, 6);
+  });
+
+  it("practice never touches the Forge branch; charge never touches the flow meter", () => {
     const s = fresh();
     give(s, "forge", hex(1, 0));
     give(s, "focusKeyed", hex(2, 0));
     s.chargeWindow = 600;
     startSession(s, null);
     advance(s, 120, stubRng(new Array(12).fill(0.3)));
-    // Charge: strength 1 × 120 s = 120; practice: 0.5 × 120 = 60. Together
-    // 180 through thresholds 60 + 90 → two rolls, 30 carried.
-    expect(s.forge.earned).toBe(2);
-    expect(s.forge.progress).toBeCloseTo(30, 6);
-    expect(s.bankedRolls).toHaveLength(2);
+    // Charge: strength 1 × 120 s = 120 through the Forge branch — the 60
+    // threshold crosses, 60 carries into the 90. Practice: the same 120
+    // credited seconds fill only the flow meter, inside its 180 s opening
+    // fill.
+    expect(s.forge.earned).toBe(1);
+    expect(s.forge.progress).toBeCloseTo(60, 6);
+    expect(s.bankedRolls).toHaveLength(1);
+    expect(s.flow.earned).toBe(0);
+    expect(s.flow.progress).toBeCloseTo(120, 6);
   });
 });
 
@@ -145,10 +163,10 @@ describe("the opening walk, end to end", () => {
     expect(cellNoteOf(s.modules[0]!.pos!)).toBe("C4");
     // Beat one: the grant affords the first upgrade.
     expect(upgradeModule(s, s.modules[0]!.id).ok).toBe(true);
-    // Beat two: ~2 minutes of practice mint the first roll (the 0.9 seed
-    // draws no synthesizer, so the first-roll rig supplies the additive).
+    // Beat two: the 3-minute opening fill mints the first roll (the 0.9
+    // seed draws no synthesizer, so the first-roll rig supplies the additive).
     startSession(s, null);
-    advance(s, 120, stubRng([0.9, 0.5, 0.9, 0.5, 0.9, 0.5]));
+    advance(s, 180, stubRng([0.9, 0.5, 0.9, 0.5, 0.9, 0.5]));
     endSession(s);
     expect(s.bankedRolls).toHaveLength(1);
     // Beat three: the forge offers the synth it made — take it into the tray.
@@ -171,7 +189,9 @@ describe("the opening walk, end to end", () => {
     // Beat five: rearranging never breaks what pitch keeps — a swap of
     // identical synths re-voices, never breaks (pitch lives in the cell).
     startSession(s, null);
-    advance(s, 180, stubRng([0.0, 0.5, 0.99, 0.5, 0.99, 0.5]));
+    // One flat cadence block later, the second roll mints (the seed draws
+    // additive first — the rig is long past, later rolls draw plain).
+    advance(s, 1800, stubRng([0.0, 0.5, 0.99, 0.5, 0.99, 0.5]));
     endSession(s);
     const offer2 = s.bankedRolls[0]!;
     const third = offer2.candidates.find((c) => c.type === "additive")!;

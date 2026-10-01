@@ -77,17 +77,19 @@ describe("the charge window", () => {
     startSession(s, null);
     const rng = stubRng(new Array(12).fill(0.5));
     advance(s, 60, rng);
-    // The prep session left the meter at 3 earned, 15 carried. The measured
-    // 60 s adds strength 1 × 60 s of window charge + 30 practice (§8) =
-    // 90: no threshold, but the +90 stride is the window spending itself.
-    expect(s.forge.earned).toBe(3);
-    expect(s.forge.progress).toBeCloseTo(105, 6);
+    // The prep session's 600 credited seconds crossed only the flow meter's
+    // opening fill (ADR-0041) — this branch starts clean. The measured 60 s
+    // adds strength 1 × 60 s of window charge: the 60 threshold crosses.
+    expect(s.forge.earned).toBe(1);
+    expect(s.forge.progress).toBeCloseTo(0, 6);
     expect(s.chargeWindow).toBeCloseTo(0, 6);
 
-    // The window is empty: the next minute moves the meter by practice only.
+    // The window is empty: the next minute moves this branch by nothing —
+    // practice is the flow meter's diet, filling on beside it.
     advance(s, 60, rng);
-    expect(s.forge.progress).toBeCloseTo(135, 6);
-    expect(s.forge.earned).toBe(3);
+    expect(s.forge.progress).toBeCloseTo(0, 6);
+    expect(s.forge.earned).toBe(1);
+    expect(s.flow.progress).toBeCloseTo(540, 6);
   });
 
   it("the window buys charge, never nous: the board's rate is unchanged", () => {
@@ -148,11 +150,13 @@ describe("the charge window", () => {
     resumeSession(s);
     advance(s, 30);
     expect(s.chargeWindow).toBeCloseTo(0, 6);
-    // The window drained across the two live legs — 30 charge + 30 practice
-    // then 30 charge + 30 practice (§8) over the prep session's 15 carried:
-    // 105 total, and the meter never moved during the pause.
-    expect(s.forge.earned).toBe(3);
-    expect(s.forge.progress).toBeCloseTo(105, 6);
+    // The window drained across the two live legs — 30 + 30 charge — over
+    // this branch's clean start (the prep session filled only the flow
+    // meter): the 60 threshold crosses at the end, and the pause moved
+    // nothing.
+    expect(s.forge.earned).toBe(1);
+    expect(s.forge.progress).toBeCloseTo(0, 6);
+    expect(s.flow.progress).toBeCloseTo(480, 6);
   });
 
   it("windows stack by extending the remaining duration, never the strength", () => {
@@ -168,13 +172,13 @@ describe("the charge window", () => {
     give(s, "focusKeyed", hex(2, 0));
     startSession(s, null);
     advance(s, 120, stubRng(new Array(12).fill(0.5)));
-    // Two prep sessions leave the meter at 4 earned, 112.5 carried. The
-    // measured 120 s adds charge at constant strength 1 (the second window
-    // extended the first instead of amplifying it) plus 60 practice (§8):
-    // +180, no threshold.
-    expect(s.forge.earned).toBe(4);
-    expect(s.forge.progress).toBeCloseTo(292.5, 6);
+    // The measured 120 s adds charge at constant strength 1 (the second
+    // window extended the first instead of amplifying it): the 60 threshold
+    // crosses, 60 carries into the 90. Practice filled only the flow meter.
+    expect(s.forge.earned).toBe(1);
+    expect(s.forge.progress).toBeCloseTo(60, 6);
     expect(s.chargeWindow).toBeCloseTo(0, 6);
+    expect(s.flow.progress).toBeCloseTo(1140, 6);
   });
 
   it("a step that outlives the window splits at the boundary, never over-crediting", () => {
@@ -190,11 +194,11 @@ describe("the charge window", () => {
     // the step's remaining 40 s run uncharged.
     advance(s, 100, stubRng(new Array(12).fill(0.5)));
     expect(s.chargeWindow).toBeCloseTo(0, 6);
-    // Over the prep session's 15 carried: the charged 60 s leg adds
-    // 60 charge + 30 practice, the drained 40 s leg adds practice only
-    // (20) — 125 total, no threshold. The split never over-credits.
-    expect(s.forge.earned).toBe(3);
-    expect(s.forge.progress).toBeCloseTo(125, 6);
+    // Over this branch's clean start: the charged 60 s leg adds 60 charge —
+    // the threshold crosses exactly — and the drained 40 s leg adds nothing.
+    // The split never over-credits.
+    expect(s.forge.earned).toBe(1);
+    expect(s.forge.progress).toBeCloseTo(0, 6);
     expect(s.session!.elapsed).toBeCloseTo(100, 6);
   });
 
@@ -205,10 +209,11 @@ describe("the charge window", () => {
     startSession(s, null);
     advance(s, 10);
     // No window is banked yet — session one only accrues it — so no charge
-    // flows at all (charge is a reserve, never a live drip). Practice feeds
-    // the meter regardless (§8): 10 s → 5 progress.
+    // flows at all (charge is a reserve, never a live drip). This branch
+    // stays silent; the 10 credited seconds fill the flow meter (ADR-0041).
     expect(computeRates(s, true).forgeRate).toBe(0);
-    expect(s.forge.progress).toBeCloseTo(5, 6);
+    expect(s.forge.progress).toBeCloseTo(0, 6);
+    expect(s.flow.progress).toBeCloseTo(10, 6);
     expect(s.chargeWindow).toBe(0);
   });
 

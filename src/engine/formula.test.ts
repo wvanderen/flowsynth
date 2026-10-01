@@ -72,12 +72,16 @@ describe("board production model", () => {
     startSession(s, 600);
     const result = advance(s, 600);
     expect(result.nousEarned).toBeCloseTo(60, 6);
-    // No generator → the charge leg never moves; the meter's only motion is
-    // the practice leg (§8): 300 progress crosses thresholds 60 + 90 + 135.
+    // No generator → the charge leg never moves; practice feeds only the
+    // flow meter now (ADR-0041): 600 credited seconds cross the opening
+    // fill and carry 420.
     expect(computeRates(s, true).forgeRate).toBe(0);
-    expect(s.forge.earned).toBe(3);
-    expect(s.forge.progress).toBeCloseTo(15, 6);
-    expect(result.rollsBanked).toBe(3);
+    expect(s.forge.earned).toBe(0);
+    expect(s.flow.earned).toBe(1);
+    expect(s.flow.progress).toBeCloseTo(420, 6);
+    expect(result.rollsBanked).toBe(1);
+    expect(result.rollsFlow).toBe(1);
+    expect(result.rollsForge).toBe(0);
   });
 
   it("a generator feeds the adjacent Forge toward its threshold", () => {
@@ -87,9 +91,9 @@ describe("board production model", () => {
     s.chargeWindow = 600;
     expect(computeRates(s, true).forgeRate).toBeCloseTo(1, 9);
     startSession(s, null);
-    advance(s, 40);
-    // Charge 40 + practice 20 (§8) = 60: the charge carries the meter to
-    // the threshold — practice alone (20) would never reach it.
+    advance(s, 60);
+    // Charge 60 reaches the threshold on its own — practice is the flow
+    // meter's diet now (ADR-0041), never this branch's.
     expect(s.forge.earned).toBe(1);
     expect(s.forge.progress).toBeCloseTo(0, 6);
   });
