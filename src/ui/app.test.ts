@@ -659,7 +659,7 @@ describe("the horizon bar (§7, issue #156)", () => {
     const forge = document.querySelector('#board-tools [data-op="forge"]') as HTMLElement;
     expect(forge.querySelector(".forge-pip")).not.toBeNull();
     expect(forge.querySelector('[data-live="forge-pip"]')!.getAttribute("style")).toContain("50");
-    expect(forge.title).toContain("Flow meter 1:30 / 3:00");
+    expect(forge.querySelector(".forge-detail")!.textContent).toContain("Flow meter 1:30 / 3:00");
   });
 });
 
@@ -704,8 +704,8 @@ describe("the action row (§7)", () => {
     // The pip shows the flow meter: half of the 3-minute opening fill.
     expect(forge.querySelector('[data-live="forge-pip"]')!.getAttribute("style")).toContain("50");
     // The detail lists every meter's progress, threshold, and rate.
-    expect(forge.title).toContain("Flow meter 1:30 / 3:00 — next roll in ~1:30 of practice");
-    expect(forge.title).toContain("Forge progress 30 / 60");
+    expect(forge.querySelector(".forge-detail")!.textContent).toContain("Flow meter 1:30 / 3:00 — next roll in ~1:30 of practice");
+    expect(forge.querySelector(".forge-detail")!.textContent).toContain("Forge progress 30 / 60");
     // Open in flow too: the meter detail stays reachable while the session
     // runs (the peek never blocks the board).
     app.state.sessionsCompleted = 1;
@@ -715,6 +715,38 @@ describe("the action row (§7)", () => {
     expect(flowForge.disabled).toBe(false);
     flowForge.click();
     expect(app.ui.modal).toBe("forge");
+  });
+
+  it("focus opens live meter details without moving focus, and Escape or blur dismisses them", () => {
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, null);
+    app.render();
+    for (const host of ["board-tools", "thumb-bar"]) {
+      const forge = document.querySelector<HTMLButtonElement>(`#${host} [data-op="forge"]`)!;
+      const detail = forge.querySelector<HTMLElement>(".forge-detail")!;
+      expect(detail.hidden).toBe(true);
+      expect(forge.getAttribute("aria-describedby")).toBe(detail.id);
+      forge.focus();
+      expect(detail.hidden).toBe(false);
+      expect(document.activeElement).toBe(forge);
+      expect(app.ui.modal).toBeNull();
+      app.state.flow.progress = 90;
+      app.render();
+      expect(forge.querySelector(".forge-detail")).toBe(detail);
+      expect(detail.textContent).toContain("Flow meter 1:30 / 3:00");
+      expect(detail.textContent).toContain("Forge progress");
+      forge.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      expect(detail.hidden).toBe(true);
+      forge.blur();
+      forge.focus();
+      expect(detail.hidden).toBe(false);
+      forge.blur();
+      expect(detail.hidden).toBe(true);
+      forge.dispatchEvent(new MouseEvent("mouseenter"));
+      expect(detail.hidden).toBe(false);
+      forge.dispatchEvent(new MouseEvent("mouseleave"));
+      expect(detail.hidden).toBe(true);
+    }
   });
 
   it("the Forge modal lists both meters live, and flow only previews its candidates", () => {

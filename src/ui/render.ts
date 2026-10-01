@@ -745,12 +745,33 @@ function renderTools(app: App, projected: RateSnapshot): void {
       target.dataset.renderKey = key;
       target.innerHTML = list
         .map((action) => {
-          const extra = (action.badge?.(app) ?? "") + (action.media ?? "");
+          const detailId = `${target.id}-forge-detail`;
+          const detail = action.op === "forge"
+            ? `<span id="${detailId}" class="forge-detail" role="tooltip" hidden>${action.title(app, projected)}</span>`
+            : "";
+          const extra = (action.badge?.(app) ?? "") + (action.media ?? "") + detail;
           const label = action.word?.(app) ?? action.label;
-          return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" data-op="${action.op}" aria-label="${action.label}" title="${action.title(app, projected)}"${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${label}</small></button>`;
+          return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" data-op="${action.op}" aria-label="${action.label}" ${action.op === "forge" ? `aria-describedby="${detailId}"` : `title="${action.title(app, projected)}"`}${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${label}</small></button>`;
         })
         .join("");
       target.querySelectorAll<HTMLButtonElement>("[data-op]").forEach((button) => {
+        if (button.dataset.op === "forge") {
+          const detail = button.querySelector<HTMLElement>(".forge-detail")!;
+          let hovered = false;
+          button.addEventListener("mouseenter", () => { hovered = true; detail.hidden = false; });
+          button.addEventListener("mouseleave", () => {
+            hovered = false;
+            detail.hidden = document.activeElement !== button;
+          });
+          button.addEventListener("focus", () => { detail.hidden = false; });
+          button.addEventListener("blur", () => { detail.hidden = !hovered; });
+          button.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && !detail.hidden) {
+              detail.hidden = true;
+              event.stopPropagation();
+            }
+          });
+        }
         button.addEventListener("click", () => {
           actions.find((action) => action.op === button.getAttribute("data-op"))!.run(app);
         });
@@ -770,7 +791,8 @@ function renderTools(app: App, projected: RateSnapshot): void {
     const forgeButton = target.querySelector<HTMLButtonElement>('[data-op="forge"]');
     if (forgeButton) {
       const action = actions.find((a) => a.op === "forge")!;
-      forgeButton.title = action.title(app, projected);
+      const detail = forgeButton.querySelector<HTMLElement>(".forge-detail");
+      if (detail) detail.textContent = action.title(app, projected);
       forgeButton.disabled = action.disabled?.(app) ?? false;
     }
     const cellButton = target.querySelector<HTMLButtonElement>('[data-op="cell"]');

@@ -722,6 +722,25 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 /* The one meter detail (ADR-0041): the Forge modal's block listing every
    meter's progress, threshold, and rate — the pip's own bar at card scale,
    figures riding live slots the tick fills in place. */
+.forge-detail {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 0;
+  z-index: 1;
+  width: min(320px, calc(100cqw - 80px));
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-deep);
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: left;
+  white-space: normal;
+  cursor: default;
+}
+.forge-detail[hidden] { display: none; }
+.thumb-bar .forge-detail { left: -60px; top: auto; bottom: calc(100% + 8px); width: min(300px, calc(100cqw - 24px)); }
 .forge-meters { display: grid; gap: 8px; margin: 2px 0 12px; }
 .forge-meter { display: grid; gap: 4px; }
 .forge-meter .meter-name { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
