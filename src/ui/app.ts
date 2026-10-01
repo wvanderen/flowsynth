@@ -1,14 +1,17 @@
 import { advance, earnNous } from "../engine/advance";
 import type { AdvanceResult } from "../engine/types";
 import {
+  buyCatalogEntry,
   buyCell,
   buyGoalCapacity,
+  buyRowUnlock,
   buyShelfModule,
   chooseRoll,
   combine,
   dismissArcCard as dismissArcCardAction,
   dismissSummary as dismissSessionSummary,
   endSession,
+  joinRollPool,
   pauseSession,
   placeModule,
   prestige,
@@ -57,6 +60,7 @@ import { browserChannels, type SignalChannels } from "./signals";
 export type ModalKind =
   | "settings"
   | "catalog"
+  | "arete"
   | "forge"
   | "achievements"
   | "export"
@@ -996,6 +1000,25 @@ export class App {
     // The purchase stays in the catalog: the module lands in inventory and
     // placement happens from Grid & inventory, on the player's beat.
     this.act(buyShelfModule(this.state, type), `${META[SHELF_MODULE[type]].name} purchased — it's in your inventory.`);
+  }
+
+  // ── The Arete Catalog (issue #197) ──────────────────────────────────────
+  // The sheet purchases and the board-side Row unlock. Every landing goes
+  // through the shared act() shape — refusal says why, success saves and
+  // re-renders — and every engine action already gates on upgrade mode, so
+  // the sheet's buttons and the banner are inert outside it by the same
+  // rule.
+
+  buyCatalogEntryAction(): void {
+    this.act(buyCatalogEntry(this.state), "Mutator tree entered.");
+  }
+
+  joinRollPoolAction(): void {
+    this.act(joinRollPool(this.state), "The Mutator Forge joined the module roll pool.");
+  }
+
+  buyRowUnlockAction(row: number): void {
+    this.act(buyRowUnlock(this.state, row), "Octave row unlocked — its cells now buy with nous.");
   }
 
   // The first console long goal (ADR-0012 as amended by ADR-0034): goal

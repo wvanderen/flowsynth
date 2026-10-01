@@ -38,6 +38,10 @@ button:disabled { opacity: 0.35; cursor: default; }
 
 .primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 650; }
 .primary:hover:not(:disabled) { background: var(--accent-bright); }
+/* The Arete sheet's buy buttons (issue #197): the register rides the
+   purchase affordance too — violet, not the nous accent. */
+.primary.arete { background: var(--arete); border-color: var(--arete); color: var(--panel-deep); }
+.primary.arete:hover:not(:disabled) { background: var(--accent-bright); }
 .quiet { border: 0; color: var(--muted); padding: 7px; }
 .small { font-size: 12px; }
 .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
@@ -509,6 +513,28 @@ details.rd-synth { display: block; cursor: pointer; }
 .feats-chip svg { width: 14px; height: 14px; }
 .feats-chip:hover { color: var(--ink); }
 
+/* The Arete Catalog chip (§7, issue #197): the ledger strip's second
+   neighbor, present from the first banked Arete and opening the catalog
+   sheet. Every Arete surface wears the one --arete register (ADR-0016's
+   rule: a token, never literals); the chip glows quiet violet, loud on
+   hover. */
+.arete-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--arete);
+  background: var(--arete-faint);
+  border: 1px solid var(--arete-line);
+  flex-shrink: 0;
+}
+.arete-chip-glyph svg { width: 14px; height: 14px; display: block; }
+.arete-chip:hover,
+.arete-chip:focus-visible { color: var(--ink); background: var(--arete-faint); border-color: var(--arete); }
+.arete-word { color: var(--muted); }
+
 /* ── Inspector ─────────────────────────────────────── */
 /* Rarity reads as text here; on faces it is engraved rings + plate tint
    (ADR-0016) — the chip stays neutral, never rarity-as-hue. */
@@ -822,6 +848,24 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 }
 .info-hint { font-size: 10px; color: var(--muted); }
 .game-info-strip .info-rate:hover .info-hint { color: var(--ink); }
+/* The strip's Arete chip (issue #197): the ledger's door, re-docked for
+   phone. A compact tap target wearing the register, aligned with the
+   strip's baseline reads. */
+.game-info-strip .info-arete {
+  align-items: center;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--arete);
+}
+.game-info-strip .info-arete .arete-chip-glyph svg { width: 13px; height: 13px; }
+.game-info-strip .info-arete:hover:not(:disabled),
+.game-info-strip .info-arete:focus-visible {
+  background: none;
+  border-color: transparent;
+  color: var(--ink);
+}
 
 /* The ambient horizon bar (§7, issue #156): the accumulator drawn as a
    wide curved-scale fill riding the board's lower edge at every width —
@@ -1043,6 +1087,29 @@ body.bloom-sheet-open .zoom-cluster { bottom: 190px; }
 .lead-tip { fill: var(--charge); }
 .lead-tip-dim { fill: var(--charge); opacity: 0.5; }
 .highlight-ring { fill: none; stroke: var(--charge); stroke-width: 1.5; opacity: 0.8; pointer-events: none; }
+
+/* The Row unlock's shaded rows (§7, issue #197): the still-locked octave
+   row past the launch band shades violet behind one banner per side while
+   add-cell mode stands — the Arete register's tint at rest, and the banner
+   the one live target. Locked (unaffordable) dims the label; the click
+   still asks the engine, which answers plainly. */
+.row-band-hex { fill: var(--arete-tint); stroke: var(--arete-line); stroke-width: 1; stroke-dasharray: 5 4; }
+.row-unlock { cursor: pointer; }
+.row-unlock-label {
+  font: 500 13px var(--mono);
+  letter-spacing: 0.04em;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  fill: var(--arete);
+  paint-order: stroke;
+  stroke: var(--panel-deep);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  transition: fill 0.2s;
+}
+.row-unlock:hover .row-unlock-label,
+.row-unlock:focus-visible .row-unlock-label { fill: var(--ink); }
+.row-unlock.locked .row-unlock-label { fill: var(--muted); }
 
 /* The chord annotation (§6, #137) — the prototype's language (#120):
    two-voice chords seam center-to-center; chords the seams can't carry —
@@ -1796,6 +1863,9 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 
 .shop-list.catalog-owned .shop-item { opacity: 0.7; }
 .activation-owned { color: var(--charge); font-size: 12px; }
+/* The Arete sheet's owned mark (issue #197): the same shape as the shelf's,
+   wearing the Arete register instead of charge green. */
+.arete-owned { color: var(--arete); font-size: 12px; }
 .catalog-section-title { font: 10px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; }
 
 /* The shelf's one permanent hint (§5.8): the generator row says what charge

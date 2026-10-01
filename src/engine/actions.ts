@@ -1,5 +1,6 @@
 import { BALANCE, EPS, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE, SHELF_TYPES } from "./constants";
 import { claimOf, horizonReached } from "./accumulator";
+import { rowUnlockCost, unlockableRows } from "./catalog";
 import { affordableLevels, cellPurchasePrice, computeRates, deployedAt, findModule, levelCost, levelsCost, longGoalCost, rowGateOwed, wholeNous } from "./economy";
 import { arcCardDue } from "./arc";
 import { nextRungCost, appActive, LADDER_APPS, type FocusApp } from "./apps";
@@ -12,6 +13,10 @@ import { rollGoalOccurrences } from "./goals";
 import { syncAchievements } from "./achievements";
 import { freshAccounting } from "./trust";
 import type { GameState, Hex, ModuleInstance, Rarity, SessionReflection, ShelfType } from "./types";
+
+// The Arete purchases' shared refusal, one wording everywhere: nothing of
+// Arete acts outside upgrade mode (ADR-0044).
+const ARETE_MODE_LOCK = "Arete is spent between sessions.";
 
 export interface ActionResult {
   ok: boolean;
@@ -259,7 +264,7 @@ export function buyCell(state: GameState, pos: Hex): ActionResult {
   if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
   if (state.cells.some((c) => sameHex(c, pos))) return fail("That cell is already part of the board.");
   if (!state.cells.some((c) => adjacent(c, pos))) return fail("New cells must touch the board.");
-  if (!positionInRange(pos)) return fail("That cell lies outside the board's lattice.");
+  if (!positionInRange(state, pos)) return fail("That cell lies outside the board's lattice.");
   const row = octaveRowOf(pos);
   const gateOwed = rowGateOwed(state, row);
   const price = cellPurchasePrice(state, pos);
@@ -526,7 +531,7 @@ export function reshapeCells(state: GameState, next: Hex[]): ActionResult {
       return fail("Every deployed module needs a cell.");
     }
   }
-  if (next.some((cell) => !positionInRange(cell))) return fail("The board must stay inside the board's lattice.");
+  if (next.some((cell) => !positionInRange(state, cell))) return fail("The board must stay inside the board's lattice.");
   if (!isConnected(next)) return fail("The board must stay connected.");
   state.cells = next;
   return { ok: true, unlocked: checkAchievements(state) };
@@ -545,6 +550,49 @@ export function chooseRoll(state: GameState, offerId: string, candidateId: strin
   return { ok: true, unlocked: checkAchievements(state) };
 }
 
+// The Arete Catalog's sheet purchases (ADR-0040 as amended by ADR-0044,
+// issue #197): upgrade-mode-only, Arete-paid, one-time, and surviving
+// prestige. The entry's engine effects — the Mutator Grid's activation,
+// the Mutator Forge module, the first slot — land with the mutator
+// contracts (#198); the roll-pool join's pool append lands there too. This
+// issue banks the decisions and the debits.
+export function buyCatalogEntry(state: GameState): ActionResult {
+  if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
+  if (state.catalogEntryOwned) return fail("The Mutator tree is already entered.");
+  if (state.arete < BALANCE.catalogEntryCost) return fail("Not enough Arete.");
+  state.arete -= BALANCE.catalogEntryCost;
+  state.catalogEntryOwned = true;
+  return ok;
+}
+
+export function joinRollPool(state: GameState): ActionResult {
+  if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
+  if (!state.catalogEntryOwned) return fail("Enter the Mutator tree first.");
+  if (state.rollPoolJoined) return fail("The Mutator Forge already rolls with the pool.");
+  if (state.arete < BALANCE.rollPoolJoinCost) return fail("Not enough Arete.");
+  state.arete -= BALANCE.rollPoolJoinCost;
+  state.rollPoolJoined = true;
+  return ok;
+}
+
+// The board-side Row unlock (ADR-0044, #174's approved surface): one Arete
+// purchase opens the octave row beyond the launch band — one per side,
+// either order, the ladder escalating 1 then 2 — and the purchase stands in
+// the row gate for the row it opens, so cells inside buy with nous as
+// usual. Past the ladder's end the board is at its six-row cap: nothing is
+// unlockable, and no price exists to charge.
+export function buyRowUnlock(state: GameState, row: number): ActionResult {
+  if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
+  if (!unlockableRows(state).includes(row)) return fail("That octave row cannot be unlocked.");
+  const price = rowUnlockCost(state);
+  if (price === null) return fail("The board is at its row cap.");
+  if (state.arete < price) return fail("Not enough Arete.");
+  state.arete -= price;
+  state.unlockedRows.push(row);
+  state.gatedRows.push(row);
+  return ok;
+}
+
 // Prestige (ADR-0039, issue #170): the door at the horizon banks the era's
 // claim and begins the next era. The only Arete source in the game — claim
 // on reset, never before — and the nth reset banks n (ADR-0042's linear
@@ -554,10 +602,11 @@ export function chooseRoll(state: GameState, offerId: string, candidateId: strin
 // earned count (ADR-0041 — progress earned by real life time is never
 // un-earned at the moment prestige pays off), achievements and their
 // boost, the life record, the Arete balance, and lifetime `totalEarned`
-// persist; module levels return to base, nous to a fresh opening grant,
-// and the charge window resets. The era measure rebases to 0, which is the
-// bar's own rebase; the era count rises as economy-bearing engine state
-// (ADR-0038's no-new-furniture rule holds).
+// persist — as do the Catalog unlocks (issue #197): the Row unlock's rows
+// and the Mutator tree's purchases. Module levels return to base, nous to
+// a fresh opening grant, and the charge window resets. The era measure
+// rebases to 0, which is the bar's own rebase; the era count rises as
+// economy-bearing engine state (ADR-0038's no-new-furniture rule holds).
 export function prestige(state: GameState): ActionResult {
   if (state.mode !== "upgrade") return fail("Prestige happens between sessions.");
   if (!horizonReached(state)) return fail("The horizon is not reached yet.");

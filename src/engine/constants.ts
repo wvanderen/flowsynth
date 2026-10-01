@@ -32,9 +32,21 @@ export interface Balance {
   rowGateFirstCost: number;
   rowGateGrowthNumerator: bigint;
   rowGateGrowthDenominator: bigint;
-  // How many octave rows sit above and below the start register: rows are
-  // finite, generous, and symmetric around it (count: tuning).
-  octaveRows: number;
+  // The launch band (ADR-0022 as bounded by ADR-0040/0044, issue #197):
+  // the octave rows the launch board opens — this many above and below the
+  // start register, its own rows paid by the opening grant. The Row unlock
+  // sells one further row per side at Arete; the board caps at six octave
+  // rows this phase (count: tuning).
+  launchRowsAbove: number;
+  launchRowsBelow: number;
+  // The Arete Catalog's Arete prices (ADR-0040 as amended by ADR-0044,
+  // issue #197). Provisional tuning.
+  catalogEntryCost: number;
+  rollPoolJoinCost: number;
+  // The Row unlock's escalating ladder (ADR-0044): the nth unlock costs
+  // rowUnlockCosts[n], either order. Past the ladder's end the board is at
+  // its six-row cap and nothing more unlocks.
+  rowUnlockCosts: readonly number[];
   // How many columns the board spans: the fifths axis walks a twelve-note
   // circle, and the pitch kernel repeats every twelve columns — bounding
   // them keeps each note appearing exactly once per octave row. The axis
@@ -90,7 +102,11 @@ export const BALANCE: Balance = {
   rowGateFirstCost: 60,
   rowGateGrowthNumerator: 2n,
   rowGateGrowthDenominator: 1n,
-  octaveRows: 4,
+  launchRowsAbove: 2,
+  launchRowsBelow: 1,
+  catalogEntryCost: 1,
+  rollPoolJoinCost: 5,
+  rowUnlockCosts: [1, 2],
   fifthsColumns: 12,
   openingGrant: 12,
   ladderFirstCost: 25,

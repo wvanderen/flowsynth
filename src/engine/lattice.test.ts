@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BALANCE } from "./constants";
 import { adjacent, hex, hexDistance, hexKey } from "./hex";
 import { cellNoteOf, noteNameOf, octaveRowOf, pitchClassOf, pitchOf, positionInRange } from "./lattice";
+import { fresh } from "./fixtures";
 
 // The octave-stack lattice (ADR-0021): pitch is an absolute property of the
 // cell — 12-TET, one horizontal step walks the circle of fifths, one lattice
@@ -34,11 +35,12 @@ describe("absolute pitch", () => {
   it("each note appears exactly once per octave row", () => {
     // Within the board's finite patch, every absolute pitch belongs to one
     // cell — no aliasing anywhere on the reachable board.
+    const state = fresh();
     const seen = new Map<number, string>();
     for (let q = -30; q <= 30; q++) {
       for (let r = -30; r <= 30; r++) {
         const pos = hex(q, r);
-        if (!positionInRange(pos)) continue;
+        if (!positionInRange(state, pos)) continue;
         const pitch = pitchOf(pos);
         const key = hexKey(pos);
         expect(seen.has(pitch), `${pitch} already at ${seen.get(pitch)}, found again at ${key}`).toBe(false);
@@ -66,20 +68,39 @@ describe("octave rows", () => {
     expect(octaveRowOf(hex(12, -7))).toBe(0); // 7q/12 = 7: twelve columns right, seven rows down
   });
 
-  it("is finite and symmetric around the start register", () => {
-    expect(positionInRange(hex(0, BALANCE.octaveRows))).toBe(true);
-    expect(positionInRange(hex(0, -BALANCE.octaveRows))).toBe(true);
-    expect(positionInRange(hex(0, BALANCE.octaveRows + 1))).toBe(false);
-    expect(positionInRange(hex(0, -BALANCE.octaveRows - 1))).toBe(false);
+  it("is bounded this phase: the launch band around the start register, six rows at the cap (ADR-0040/0044)", () => {
+    const freshState = fresh();
+    // The launch band: launchRowsAbove above the start register, one below.
+    expect(positionInRange(freshState, hex(0, BALANCE.launchRowsAbove))).toBe(true);
+    expect(positionInRange(freshState, hex(0, -BALANCE.launchRowsBelow))).toBe(true);
+    // The unlock rows sit past the band: out of range until the Row unlock
+    // opens them, and a row beyond the cap is never purchasable at any
+    // spend.
+    const above = BALANCE.launchRowsAbove + 1;
+    const below = -BALANCE.launchRowsBelow - 1;
+    expect(positionInRange(freshState, hex(0, above))).toBe(false);
+    expect(positionInRange(freshState, hex(0, below))).toBe(false);
+    const unlocked = fresh();
+    unlocked.unlockedRows = [above, below];
+    expect(positionInRange(unlocked, hex(0, above))).toBe(true);
+    expect(positionInRange(unlocked, hex(0, below))).toBe(true);
+    expect(positionInRange(unlocked, hex(0, above + 1))).toBe(false);
+    expect(positionInRange(unlocked, hex(0, below - 1))).toBe(false);
   });
 
   it("the fifths axis is ungated by the range: columns walk the whole circle", () => {
     // Twelve columns, five before the start column and six after: C sits
-    // near the middle and the tritone lands at the far edge, once.
-    expect(positionInRange(hex(-5, 0))).toBe(true);
-    expect(positionInRange(hex(6, 0))).toBe(true);
-    expect(positionInRange(hex(-6, 0))).toBe(false);
-    expect(positionInRange(hex(7, 0))).toBe(false);
+    // near the middle and the tritone lands at the far edge, once. The
+    // cells probed are each column's row-0 cell — along the band the r
+    // coordinate follows floor(7q/12), so the column walk slants.
+    const state = fresh();
+    const rowZeroCell = (q: number) => hex(q, -Math.floor((7 * q) / 12));
+    for (let q = -5; q <= 6; q++) {
+      expect(octaveRowOf(rowZeroCell(q))).toBe(0);
+      expect(positionInRange(state, rowZeroCell(q))).toBe(true);
+    }
+    expect(positionInRange(state, rowZeroCell(-6))).toBe(false);
+    expect(positionInRange(state, rowZeroCell(7))).toBe(false);
   });
 });
 
