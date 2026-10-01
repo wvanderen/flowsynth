@@ -937,7 +937,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   padding: 5px 16px;
   border: 1px solid var(--line-strong);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--panel-deep) 88%, var(--nous));
+  background: color-mix(in srgb, var(--panel-deep) 88%, var(--arete));
   color: var(--ink);
   font: 10px var(--mono);
   letter-spacing: 0.14em;
@@ -945,8 +945,8 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   white-space: nowrap;
   cursor: pointer;
 }
-.prestige-door:hover { border-color: var(--nous); color: var(--nous); }
-.prestige-door b { color: var(--nous); font-weight: 700; }
+.prestige-door:hover { border-color: var(--arete); color: var(--arete); }
+.prestige-door b { color: var(--arete); font-weight: 700; }
 .prestige-door:hover b { color: var(--ink); }
 /* Locked outside upgrade mode: the readout replaces the door, muted —
    the state, not a scolding (copy is tuning). */

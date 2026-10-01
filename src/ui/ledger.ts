@@ -384,8 +384,8 @@ function horizonSvg(): string {
   return `<svg class="horizon-svg" viewBox="0 0 ${HORIZON_VIEW_WIDTH} 52" preserveAspectRatio="none" aria-hidden="true">
       <defs>
         <linearGradient id="horizon-fill-grad" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" style="stop-color: color-mix(in srgb, var(--hue-synthesizer) 45%, var(--panel))"></stop>
-          <stop offset="1" style="stop-color: var(--nous)"></stop>
+          <stop offset="0" style="stop-color: color-mix(in srgb, var(--arete) 45%, var(--panel))"></stop>
+          <stop offset="1" style="stop-color: var(--arete)"></stop>
         </linearGradient>
         <clipPath id="horizon-fill-clip" clipPathUnits="userSpaceOnUse">
           <rect class="horizon-clip" data-live="h-clip" x="0" y="0" width="0" height="52"></rect>
