@@ -3750,6 +3750,20 @@ describe("the bulk upgrade controls (#195)", () => {
     expect(s.nous).toBeLessThan(levelCost(expected));
   });
 
+  it("the dial's MAX preview follows bank changes while ×1 stays affordable", () => {
+    app.state.nous = 100;
+    app.render();
+    clickCell(0, 0);
+    const maxChip = () => document.querySelector<HTMLButtonElement>('.bloom-dial [data-bulk="max"]')!;
+    expect(maxChip().textContent).toBe(`MAX·${affordableLevels(100, 0)}`);
+    app.state.nous = 50;
+    app.render();
+    expect(app.ui.bulkCount).toBe(1);
+    const count = affordableLevels(50, 0);
+    expect(maxChip().textContent).toBe(`MAX·${count}`);
+    expect(maxChip().title).toBe(`Buy every affordable level (${count})`);
+  });
+
   it("a new selection resets the dial to ×1", () => {
     give(app.state, "additive", hex(1, 0));
     app.render();

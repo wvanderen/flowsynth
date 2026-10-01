@@ -1678,7 +1678,7 @@ function renderBloom(app: App, projected: RateSnapshot): void {
   // The Forge's face readout moves per tick; its face tracks it.
   const forgeTick = module.type === "forge" ? Math.floor(state.forge.progress) : 0;
   const shape = phone ? "sheet" : "pop";
-  const key = JSON.stringify([shape, module.id, module.level, module.rarity, ui.bulkCount, want, bulkCost, bulkBenefit, affordable, lines.contribution, forgeTick]);
+  const key = JSON.stringify([shape, module.id, module.level, module.rarity, ui.bulkCount, maxLevels, want, bulkCost, bulkBenefit, affordable, lines.contribution, forgeTick]);
   // One frame read for both the pop question and the positioning below.
   const svg = document.getElementById("grid");
   const viewBox = (svg?.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);

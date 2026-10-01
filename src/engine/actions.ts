@@ -295,15 +295,7 @@ export function buyGoalCapacity(state: GameState): ActionResult {
 }
 
 export function upgradeModule(state: GameState, id: string): ActionResult {
-  const module = findModule(state, id);
-  if (!module) return fail("Module not found.");
-  if (state.mode !== "upgrade") return fail("Upgrades happen between sessions.");
-  const cost = levelCost(module.level);
-  if (wholeNous(state) < cost) return fail("Not enough whole nous.");
-  state.nous -= cost;
-  module.invested += cost;
-  module.level++;
-  return ok;
+  return upgradeModuleLevels(state, id, 1);
 }
 
 // The bulk ladder on one module (issue #195): up to `want` levels in one
