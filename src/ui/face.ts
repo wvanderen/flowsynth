@@ -7,11 +7,20 @@
 // board and the Forge candidate tiles. The inventory wears the minimal mark
 // instead (hue-outlined hexagon and glyph alone, ADR-0027): at tile size the
 // engraving is noise.
-import type { ModuleType, Rarity } from "../engine/types";
+import type { Hex, ModuleType, Rarity } from "../engine/types";
 import { moduleIcon } from "./icons";
 import { META } from "./meta";
 
 export const HEX_RADIUS = 61;
+
+// The board lattice's projection (§7): pointy-top, spacing 65 — the one
+// projection every board-surface renderer shares (the grid's cells, the
+// chord seams, and the Mutator Grid's second layer alike).
+export const SPACING = 65;
+
+export function boardPoint({ q, r }: Hex): [number, number] {
+  return [Math.sqrt(3) * SPACING * (q + r / 2), SPACING * 1.5 * r];
+}
 
 // The face's pointy-top corner offsets, shared with every renderer that must
 // wrap or touch a hex's corners (the chord view's hulls, for one).

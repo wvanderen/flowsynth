@@ -1473,6 +1473,258 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 .drag-ghost svg { width: 100%; height: 100%; display: block; }
 .dragging { opacity: 0.35; }
 
+/* ── The Mutator Grid's layer (issue #199) ─────────── */
+/* The tabbed second grid over the board. Every surface wears the --arete
+   register (issue #197): the tabs, the slot faces, the presence outlines,
+   the tray strip, the pill, the popover. The board rests greyed beneath
+   the Mutators tab — the grid renders as the foreground, its words
+   readable over the resting chords. */
+
+/* The tab pair at the board's top edge: upgrade-mode furniture beside the
+   entry purchase, above the arc card's z and clear of the readout. */
+.mut-tabs {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  z-index: 23;
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: var(--panel-veil);
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  backdrop-filter: blur(3px);
+}
+.mut-tabs[hidden] { display: none; }
+.mut-tab {
+  padding: 5px 14px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font: 600 10.5px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+}
+.mut-tab:hover { color: var(--ink); background: var(--hover-bg); }
+.mut-tab.active { color: var(--ink); background: var(--hover-bg); }
+.mut-tabs .mut-tab[data-mut-layer="mutators"].active {
+  color: var(--arete);
+  background: var(--arete-faint);
+}
+
+/* The resting board beneath the Mutators tab: greyed, whispering, and
+   pointer-dead — every gesture resolves against the slot faces above. */
+body.mut-layer-live #grid .cell-node {
+  filter: grayscale(0.85);
+  opacity: 0.32;
+  pointer-events: none;
+}
+body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
+
+/* The Modules tab's presence outline: thin arete, hugging the chassis,
+   clear of the rarity rings. Presence only — it never speaks. */
+.mut-presence {
+  fill: none;
+  stroke: var(--arete);
+  stroke-width: 2;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* The Mutators tab's slot faces: one per unlocked cell, in words. */
+.mut-slot-hex {
+  fill: var(--arete-tint);
+  stroke: var(--arete);
+  stroke-width: 2;
+}
+.mut-slot-hex.dashed {
+  fill: color-mix(in srgb, var(--arete) 3%, transparent);
+  stroke-dasharray: 7 6;
+  stroke-width: 1.8;
+}
+.mut-slot-face .mut-slot-glyph, .mut-slot-face .mut-slot-ticks {
+  color: var(--arete);
+  fill: var(--arete);
+  pointer-events: none;
+}
+.mut-slot-family {
+  font: 600 11px var(--mono);
+  fill: var(--arete);
+  letter-spacing: 0.12em;
+  pointer-events: none;
+}
+.mut-slot-effect { font-size: 12.5px; fill: var(--ink); pointer-events: none; }
+.mut-slot-host { font-size: 10px; fill: var(--muted); pointer-events: none; }
+.mut-slot-face.mut-inert .mut-slot-effect { fill: var(--muted); }
+.mut-slot-open .mut-slot-family { opacity: 0.85; }
+.mut-pulse { animation: mut-pulse 1.4s ease-in-out infinite; }
+@keyframes mut-pulse { 50% { stroke-width: 3.6; } }
+
+/* The invisible grab surfaces over the slot faces. Touch drags are drags,
+   never scrolls — the same contract the board's own drag surfaces wear. */
+.mut-hit { fill: none; stroke: transparent; pointer-events: all; cursor: grab; touch-action: none; }
+
+/* The land registers on slot faces (the drop preview's second-layer
+   voice): green for open, the switch tint for a coming combine, its dim
+   form for a swap. */
+.mut-land-open .mut-slot-hex { stroke: var(--charge); fill: var(--charge-tint); }
+.mut-land-combine .mut-slot-hex { stroke: var(--switch); stroke-width: 3.4; fill: var(--switch-faint-strong); }
+.mut-land-swap .mut-slot-hex { stroke: var(--switch); fill: var(--switch-faint); }
+
+/* The Mutator tray's pinned strip: the second layer's inventory, docked
+   at the board's lower edge at every width — phone included, where the
+   gestures are tap-shaped. */
+.mutator-tray {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 64px;
+  z-index: 22;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100% - 16px);
+  padding: 8px 12px;
+  background: var(--panel-veil);
+  border: 1px dashed var(--arete-line);
+  border-radius: 12px;
+  backdrop-filter: blur(3px);
+}
+.mutator-tray[hidden] { display: none; }
+.mutator-tray .tray-label { color: var(--arete); }
+.mutator-tray .tray-items { flex-direction: row; min-width: 60px; width: auto; }
+.mutator-tray.drag-over { border-color: var(--charge); background: var(--charge-tint); }
+.mutator-tray .tray-empty { white-space: nowrap; }
+.mut-tile {
+  all: unset;
+  cursor: pointer;
+  border-radius: 10px;
+  width: 54px;
+  touch-action: none;
+}
+.mut-tile:hover { background: var(--hover-bg); transform: translateY(-2px); }
+.mut-tile.armed { outline: 2px solid var(--arete); }
+.mut-tile .mut-tile-hex { fill: none; stroke: currentColor; stroke-width: 4.5; }
+.mut-tile .mut-tile-glyph { color: currentColor; }
+.mut-tile .mut-tile-ticks { fill: currentColor; }
+.mut-tile .mut-tile-effect { font-size: 11.5px; fill: var(--muted); }
+.mut-unlock {
+  all: unset;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--arete);
+  color: var(--arete);
+  font: 600 10.5px var(--mono);
+  white-space: nowrap;
+}
+.mut-unlock:hover { background: var(--arete-faint); }
+
+/* The armed unlock's pill: one cost spot over the board's top edge, the
+   armed-purchase pattern's second-layer voice. */
+.mut-unlock-pill {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 24;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--panel-soft) 94%, transparent);
+  border: 1px solid var(--arete);
+  color: var(--ink);
+  font: 600 11px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: 0.04em;
+}
+.mut-unlock-pill[hidden] { display: none; }
+.mut-unlock-pill:hover { background: var(--arete-faint); }
+.mut-unlock-pill .mono { color: var(--arete); }
+.mut-unlock-pill .mut-esc {
+  padding: 2px 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  font: 600 9px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--muted);
+}
+
+/* The declaration popover: the placed mutator's full ask, with Retrieve /
+   Move riding beneath. Anchored over its slot by render. */
+.mut-popover {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 70px));
+  z-index: 24;
+  width: 232px;
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid var(--arete);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px var(--shadow);
+  font: 12px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+}
+.mut-popover[hidden] { display: none; }
+.mut-pop-head { display: flex; justify-content: space-between; align-items: baseline; }
+.mut-pop-family {
+  font: 700 12px var(--mono);
+  letter-spacing: 0.1em;
+  color: var(--arete);
+  text-transform: uppercase;
+}
+.mut-pop-rarity { font-size: 10.5px; color: var(--muted); }
+.mut-pop-effect { margin: 6px 0 2px; color: var(--ink); }
+.mut-pop-host { margin: 2px 0; color: var(--muted); font-size: 11.5px; }
+.mut-pop-host b { color: var(--ink); font-weight: 600; }
+.mut-pop-inert { margin: 4px 0 0; color: var(--muted); font-style: italic; font-size: 11.5px; }
+.mut-pop-actions { display: flex; gap: 6px; margin-top: 9px; }
+.mut-pop-actions button {
+  padding: 4px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink);
+  font: 600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  cursor: pointer;
+}
+.mut-pop-actions button:hover { background: var(--hover-bg); border-color: var(--arete); }
+.mut-pop-actions #mut-pop-close { margin-left: auto; padding: 4px 8px; }
+
+/* The expanded face's mutator line: the hosted declaration, dashed in the
+   arete register. */
+.mut-bloom-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin: 8px 0 0;
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px dashed var(--arete);
+  color: var(--arete);
+  font-size: 12px;
+}
+.mut-bloom-line b { font-weight: 650; }
+.mut-bloom-line .mono { color: var(--ink); font-size: 11.5px; }
+.mut-bloom-line i { color: var(--muted); font-size: 11px; font-style: italic; }
+.mut-bloom-glyph { display: inline-flex; }
+.mut-bloom-glyph svg { width: 18px; height: 18px; color: var(--arete); }
+
+/* The Forge modal's mutator block and the combine review's pair. */
+.mut-eyebrow { color: var(--arete); }
+.mutator-forge-block { margin-top: 14px; }
+.mut-candidates { display: flex; gap: 14px; justify-content: center; }
+.mut-candidate .candidate-effect { color: var(--muted); }
+.mut-combine-pair { display: flex; align-items: center; gap: 12px; }
+.mut-combine-tile { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+.mut-combine-tile svg { width: 76px; color: var(--arete); }
+.mut-combine-tile small { font-size: 10.5px; color: var(--muted); }
+
 .config-label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 
 /* ── Modals ────────────────────────────────────────── */
@@ -1808,6 +2060,22 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
   body.bloom-sheet-open .zoom-cluster { bottom: 150px; }
   .module-bloom.sheet { bottom: 56px !important; }
   .chord-readout { top: 46px; right: 10px; }
+  /* The Mutator layer on phone (issue #199): the tray strip pins at every
+     width — the lane above the thumb bar, edge to edge like the horizon
+     bar — and the tabs hug the board's top-left corner. */
+  .mut-tabs { left: 8px; }
+  .mutator-tray {
+    bottom: 118px;
+    left: 12px;
+    right: 58px;
+    transform: none;
+    width: auto;
+    max-width: none;
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+  .mut-unlock-pill { top: 46px; }
+  .mut-popover { width: 200px; }
   /* The arc card clears the game-info strip up top by riding above the
      horizon bar's lane at the board's lower edge. */
   .arc-card { top: auto; bottom: 124px; left: 12px; right: 12px; max-width: none; }

@@ -1,7 +1,7 @@
 import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, emittedStrength, affordableLevels, hostPower, levelCost, levelsCost, longGoalCost, wholeNous } from "../engine/economy";
 import { claimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
-import { combinePreview, levelable, type CombinePreview, upgradeAllPreview } from "../engine/actions";
+import { combinePreview, combineMutatorsPreview, levelable, type CombinePreview, upgradeAllPreview } from "../engine/actions";
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold, flowThreshold, mutatorForgeThreshold } from "../engine/rolls";
@@ -24,11 +24,11 @@ import { poolOutstanding } from "../engine/trust";
 import { arcCardDue } from "../engine/arc";
 import { goalCapacity, goalRequiredSeconds, goalSummary, goalTrackerState, type GoalTrackerState } from "../engine/goals";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
-import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, NoteEntry, RateSnapshot } from "../engine/types";
+import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, MutatorInstance, NoteEntry, Rarity, RateSnapshot } from "../engine/types";
 import type { App, ChordHover, EnterKind, EnterSelection, ModalKind } from "./app";
 import { suppressNextClick } from "./click";
 import { appIcon, moduleIcon } from "./icons";
-import { HEX_RADIUS, hexApothem, hexPoints, HUE_TOKEN_OF, moduleFace } from "./face";
+import { HEX_RADIUS, hexApothem, hexPoints, HUE_TOKEN_OF, moduleFace, boardPoint, SPACING } from "./face";
 import { bloomLayout, bloomPops, bloomSpan, viewMeet, viewPoint, type ViewFrame } from "./bloom";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chipWidth, type ChordMark } from "./chordlayer";
@@ -39,8 +39,23 @@ import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHt
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
 import { containerWidth, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX } from "./container";
 import { liveAttr, liveSet } from "./live";
+import {
+  bindMutatorLayer,
+  bloomMutatorKey,
+  hexFromAttr,
+  mutatorAskHtml,
+  mutatorBloomLineHtml,
+  mutatorEffectText,
+  mutGridDecorations,
+  mutatorTileInner,
+  mutatorTileSvg,
+  FAMILY_WORD,
+  renderMutatorPill,
+  renderMutatorPopover,
+  renderMutatorTabs,
+  renderMutatorTray,
+} from "./mutators";
 
-const SPACING = 65;
 // The adjacent-center distance the chord overlay's edge trace needs: on
 // this pointy-top lattice every neighboring center sits exactly this far
 // from its mate, whatever the direction.
@@ -52,9 +67,7 @@ const boundCells = new WeakSet<SVGElement>();
 // re-bind.
 const boundBanners = new WeakSet<SVGElement>();
 
-function point({ q, r }: Hex): [number, number] {
-  return [Math.sqrt(3) * SPACING * (q + r / 2), SPACING * 1.5 * r];
-}
+const point = boardPoint;
 
 function byId(id: string): HTMLElement | null {
   return document.getElementById(id);
@@ -96,6 +109,13 @@ export function render(app: App): void {
   renderZoomCluster(app);
   renderHorizonBar(app);
   renderGameInfoStrip(app, live);
+  // The Mutator Grid's furniture (issue #199): the tab pair, the pinned
+  // tray strip, the armed unlock's pill, and the declaration popover —
+  // each a no-op wherever its moment isn't now.
+  renderMutatorTabs(app);
+  renderMutatorTray(app);
+  renderMutatorPill(app);
+  renderMutatorPopover(app, projected);
   renderModal(app, live, projected);
   renderDev(app);
 }
@@ -629,10 +649,22 @@ function forgeMeterLine(state: GameState, forgeRate: number): string {
   }`;
 }
 
-function meterDetail(app: App, forgeRate: number): string {
-  const banked = app.state.bankedRolls.length;
+// The Mutator Forge branch's line (ADR-0043): its own meter, its own
+// figures — one line each, the same shape the other branches wear.
+function mutatorForgeMeterLine(state: GameState, mutatorRate: number): string {
+  return `Mutator Forge ${formatNumber(Math.max(0, state.mutatorForge.progress))} / ${formatNumber(mutatorForgeThreshold(state.mutatorForge.earned))}${
+    mutatorRate > 0 ? ` — ${formatNumber(mutatorRate)}/s from charge` : " — charged by deployed Mutator Forges"
+  }`;
+}
+
+function meterDetail(app: App, forgeRate: number, mutatorRate: number): string {
+  const { state } = app;
+  const banked = state.bankedRolls.length;
   const bankedNote = banked > 0 ? ` · ${banked} banked choice${banked === 1 ? "" : "s"}` : "";
-  return `${flowMeterLine(app.state)} · ${forgeMeterLine(app.state, forgeRate)}${bankedNote}`;
+  const mutBanked = state.bankedMutatorRolls.length;
+  const mutNote = mutBanked > 0 ? ` · ${mutBanked} banked mutator choice${mutBanked === 1 ? "" : "s"}` : "";
+  const mutLine = state.catalogEntryOwned ? ` · ${mutatorForgeMeterLine(state, mutatorRate)}${mutNote}` : "";
+  return `${flowMeterLine(state)} · ${forgeMeterLine(state, forgeRate)}${bankedNote}${mutLine}`;
 }
 
 // Every meter bar's fill: the clamped progress share, one build for the
@@ -663,7 +695,7 @@ function toolActions(): ToolAction[] {
       // the one detail — this read, or the Forge modal's meter block. Open
       // in flow too: the peek never blocks the board, and taking a choice
       // stays an upgrade-mode act (the engine refuses it).
-      title: (app, projected) => meterDetail(app, projected.forgeRate),
+      title: (app, projected) => meterDetail(app, projected.forgeRate, projected.mutatorForgeRate),
     },
     {
       op: "cell",
@@ -826,8 +858,9 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
   if (!svg) return;
   // The drop preview is session-bound light state: with no drag carried and
   // no placement armed, no hover can be live — stale state never survives a
-  // render.
+  // render. The Mutator layer's preview obeys the same rule (issue #199).
   if (!app.dragging && !ui.placing) ui.dropHover = null;
+  if (!app.ui.mutCarrying) ui.mutDropHover = null;
   const upgrade = state.mode === "upgrade";
   // The frontier stops at the finite octave-row band (ADR-0022): the
   // fifths axis runs free, the rows do not. The raw frontier also feeds the
@@ -976,9 +1009,15 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
   // ghost.
   html += `<g data-key="ghost-chords">${ghostMarksHtml(app, projected)}</g>`;
 
+  // The Mutator Grid's drawing (issue #199): the second layer's slot faces
+  // while the Mutators tab stands, the presence outlines while Modules
+  // does — drawn over the faces, beneath the ghosts' register.
+  html += mutGridDecorations(app, projected);
+
   updateSvg(svg, html);
   bindGridEvents(app, svg);
   bindFaceBuys(app, svg);
+  bindMutatorLayer(app, svg);
   updateChordReadout(app);
 }
 
@@ -1089,8 +1128,16 @@ function updateChordReadout(app: App): void {
   const cache = chordReadoutCache.get(app);
   const marks = cache?.marks ?? [];
   const snapshot = cache?.snapshot;
-  const selected = app.state.modules.find((m) => m.id === app.ui.selected && m.pos !== null) ?? null;
   const hover = app.ui.chordHover;
+  // The Mutator layer's ask (issue #199): the hovered slot's full
+  // declaration — or the vacant slot's inert-until-a-host promise — in the
+  // arete register. One spot, never floating over the board.
+  if (hover?.kind === "mutator") {
+    host.hidden = false;
+    host.innerHTML = mutatorAskHtml(app.state, hover.pos, snapshot ?? computeRates(app.state, true));
+    return;
+  }
+  const selected = app.state.modules.find((m) => m.id === app.ui.selected && m.pos !== null) ?? null;
   const hovered =
     hover?.kind === "module" ? (app.state.modules.find((m) => m.id === hover.moduleId) ?? null) : null;
   // Every chord the module earns its bonus from — not just the first.
@@ -1120,10 +1167,11 @@ function updateChordReadout(app: App): void {
 }
 
 // The chips a hover asks for: a seam names its one chord, a module names
-// every chord it sings in.
+// every chord it sings in. A mutator slot's ask never lands here — it
+// takes the readout's whole row for itself.
 function chordChipsForHover(app: App): ChordMark[] {
   const hover = app.ui.chordHover;
-  if (!hover) return [];
+  if (!hover || hover.kind === "mutator") return [];
   const marks = chordReadoutCache.get(app)?.marks ?? [];
   return hover.kind === "chord"
     ? marks.filter((m) => m.key === hover.key)
@@ -1143,6 +1191,7 @@ function sameChordHover(a: ChordHover | null, b: ChordHover | null): boolean {
   if (a === null || b === null) return a === b;
   if (a.kind === "chord" && b.kind === "chord") return a.key === b.key;
   if (a.kind === "module" && b.kind === "module") return a.moduleId === b.moduleId;
+  if (a.kind === "mutator" && b.kind === "mutator") return sameHex(a.pos, b.pos);
   return false;
 }
 
@@ -1598,17 +1647,26 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
 }
 
 // The grid never replaces its svg across renders, so the chord-hover
-// question binds once, delegating: over a chord's seam, that chord; over a
-// module cell, every chord the module sings in; anywhere else, none. Ghost
-// marks never answer — they promise chords that don't exist yet.
+// question binds once, delegating: over a Mutator slot, that mutator's
+// declaration (issue #199); over a chord's seam, that chord; over a module
+// cell, every chord the module sings in; anywhere else, none. Ghost marks
+// never answer — they promise chords that don't exist yet.
 const boundGrids = new WeakSet<SVGSVGElement>();
 
 function bindSeamHover(app: App, svg: SVGSVGElement): void {
   if (boundGrids.has(svg)) return;
   boundGrids.add(svg);
   svg.addEventListener("pointerover", (event) => {
-    if (app.dragging) return;
+    if (app.dragging || app.ui.mutCarrying) return;
     const target = event.target as Element;
+    const slotNode = target.closest?.("[data-mut-slot]");
+    if (slotNode) {
+      const pos = hexFromAttr(slotNode.getAttribute("data-mut-slot"));
+      if (pos) {
+        setChordHover(app, { kind: "mutator", pos });
+        return;
+      }
+    }
     const mark = target.closest?.(".chord-mark:not(.ghost-mark)");
     const key = mark?.getAttribute("data-chord");
     if (mark && key) {
@@ -1842,8 +1900,13 @@ function renderBloom(app: App, projected: RateSnapshot): void {
   // The Forge's face readout moves per tick; its face tracks it. Each
   // branch tracks its own meter (ADR-0043).
   const forgeTick = Math.floor(forgeBranchOf(state, module.type)?.progress ?? 0);
+  // The expanded face's mutator line (issue #199): the host cell's slot
+  // declaration rides the face wherever it presents — the line's presence
+  // joins the rebuild key, so placing or retrieving re-renders.
+  const mutKey = bloomMutatorKey(state, module.pos);
+  const mutLine = mutatorBloomLineHtml(state, module.pos, snapshot);
   const shape = phone ? "sheet" : "pop";
-  const key = JSON.stringify([shape, module.id, module.level, module.rarity, ui.bulkCount, maxLevels, want, bulkCost, bulkBenefit, affordable, lines.contribution, forgeTick]);
+  const key = JSON.stringify([shape, module.id, module.level, module.rarity, ui.bulkCount, maxLevels, want, bulkCost, bulkBenefit, affordable, lines.contribution, forgeTick, mutKey]);
   // One frame read for both the pop question and the positioning below.
   const svg = document.getElementById("grid");
   const viewBox = (svg?.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
@@ -1891,6 +1954,7 @@ function renderBloom(app: App, projected: RateSnapshot): void {
           <span class="bloom-sheet-name">${faceLevel(module) !== undefined ? `${META[module.type].name} · LV ${module.level}` : META[module.type].name}</span>
           <small class="bloom-sheet-note mono">${cellNoteOf(module.pos)}</small>
           <small class="bloom-sheet-contrib mono">${lines.contribution}</small>
+          ${mutLine}
         </div>
         <div class="bloom-sheet-buy">${buyColumn}</div>
       </div>`;
@@ -1906,6 +1970,7 @@ function renderBloom(app: App, projected: RateSnapshot): void {
     const readouts = `
       <div class="bloom-readouts">
         ${inline ? `<p class="bloom-contribution mono">${lines.contribution}</p>` : ""}
+        ${mutLine}
         ${buyColumn}
       </div>`;
     if (inline) {
@@ -2616,10 +2681,14 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   // A dead combine offer — the pair dissolved under the review (mode
   // flipped, a twin gone) — drops before the dispatch, so the dialog always
   // has terms to present and no render pass ever nests a closeModal render
-  // inside itself.
+  // inside itself. The mutator review obeys the same rule (issue #199).
   if (app.ui.modal === "combine" && combineOfferTerms(app) === null) {
     app.ui.modal = null;
     app.ui.combineOffer = null;
+  }
+  if (app.ui.modal === "mutcombine" && mutCombineOfferTerms(app) === null) {
+    app.ui.modal = null;
+    app.ui.mutCombineOffer = null;
   }
   const kind = app.ui.modal;
   if (!kind) {
@@ -2648,14 +2717,14 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   document.body.classList.toggle("modal-sheet-open", sheet);
   const extra =
     kind === "forge"
-      ? app.state.bankedRolls.at(-1)?.id ?? null
+      ? [app.state.bankedRolls.at(-1)?.id ?? null, app.state.bankedMutatorRolls.at(-1)?.id ?? null]
       : kind === "honesty"
         ? [app.exitPending, app.state.session?.accounting.poolSeconds ?? 0, app.state.session?.accounting.bucketNous ?? 0]
         : kind === "summary"
           // The summary's identity: a fresh session's summary must never
           // reuse the previous one's already-rendered content. The rolls
           // line's split rides along — it is captured at close with the rest.
-          ? [app.state.summary?.sessionNumber ?? null, app.state.summary?.earned ?? null, app.state.summary?.rollsFlow ?? 0, app.state.summary?.rollsForge ?? 0]
+          ? [app.state.summary?.sessionNumber ?? null, app.state.summary?.earned ?? null, app.state.summary?.rollsFlow ?? 0, app.state.summary?.rollsForge ?? 0, app.state.summary?.rollsMutator ?? 0]
             : kind === "catalog"
               ? [
                   app.ui.showAcquired,
@@ -2692,7 +2761,9 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                   // #152). The terms are read fresh on rebuild.
                   : kind === "combine"
                     ? [app.ui.combineOffer?.dragId ?? null, app.ui.combineOffer?.targetId ?? null]
-                    : null;
+                    : kind === "mutcombine"
+                      ? [app.ui.mutCombineOffer?.dragId ?? null, app.ui.mutCombineOffer?.targetId ?? null]
+                      : null;
   const renderKey = modalKey(app, kind, extra);
   // Clock ticks must not replace a save textarea or steal dialog focus.
   if (!backdrop.hidden && content.dataset.renderKey === renderKey) {
@@ -2701,7 +2772,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
     // row survives the clock (ADR-0037). The Forge meters do the same —
     // the detail stays live during flow (ADR-0041).
     if (kind === "rate") updateRateDetailsLive(content, app.state, live);
-    if (kind === "forge") updateForgeMetersLive(content, app.state, projected.forgeRate);
+    if (kind === "forge") updateForgeMetersLive(content, app.state, projected.forgeRate, projected.mutatorForgeRate);
     return;
   }
   backdrop.hidden = false;
@@ -2721,6 +2792,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   else if (kind === "rate") renderRateModal(app, content, live);
   else if (kind === "inventory") renderInventorySheetModal(app, content);
   else if (kind === "combine") renderCombineModal(app, content);
+  else if (kind === "mutcombine") renderMutCombineModal(app, content);
   const firstButton = content.querySelector("button:not([disabled])");
   (firstButton as HTMLElement | null)?.focus();
 }
@@ -2834,6 +2906,51 @@ function renderCombineModal(app: App, content: HTMLElement): void {
 
 function wireClose(app: App): void {
   byId("close-modal")?.addEventListener("click", () => app.closeModal());
+}
+
+// The mutator combine review's terms (issue #199), read fresh: null
+// whenever the offer is gone or its pair can no longer combine — mode
+// flipped, a twin taken — so a dead offer can never reach the dialog's
+// markup. Mutators carry no levels, so the terms are two rows.
+function mutCombineOfferTerms(
+  app: App,
+): { drag: MutatorInstance; target: MutatorInstance; nextRarity: Rarity } | null {
+  const offer = app.ui.mutCombineOffer;
+  const drag = offer ? app.state.mutators.find((m) => m.id === offer.dragId) : undefined;
+  const target = offer ? app.state.mutators.find((m) => m.id === offer.targetId) : undefined;
+  if (!offer || !drag || !target) return null;
+  const preview = combineMutatorsPreview(app.state, offer.dragId, offer.targetId);
+  return preview ? { drag, target, nextRarity: preview.nextRarity } : null;
+}
+
+// The mutator combine review (issue #199): the drop-and-confirm gesture's
+// second-layer voice — resulting rarity and family, the no-levels rule
+// said plainly, and the destination. Cancel (button, ✕, backdrop, Esc)
+// lands in closeModal and leaves both copies untouched; confirm performs
+// the combine and the result lands where the drop target was.
+function renderMutCombineModal(app: App, content: HTMLElement): void {
+  const { drag, target, nextRarity } = mutCombineOfferTerms(app)!;
+  const tile = (item: MutatorInstance): string =>
+    `<span class="mut-combine-tile">${mutatorTileSvg(item)}<small>${FAMILY_WORD[item.family]} · ${RARITY_LABEL[item.rarity]}</small></span>`;
+  const destination =
+    target.pos === null ? "The combined mutator waits in the Mutator tray." : `The combined mutator holds the ${cellNoteOf(target.pos)} slot.`;
+  content.innerHTML = `
+    ${modalTop("COMBINE MUTATORS")}
+    <h2 id="modal-title">Combine these two?</h2>
+    <p class="lead mut-combine-pair">${tile(drag)} <b>+</b> ${tile(target)}</p>
+    <div class="combine-terms">
+      <div class="stat-row"><span>Resulting rarity</span><span class="mono">${RARITY_LABEL[nextRarity]}</span></div>
+      <div class="stat-row"><span>Family</span><span class="mono">${FAMILY_WORD[drag.family]}</span></div>
+    </div>
+    <p class="lead muted">Mutators carry no levels — nothing is retained or refunded.</p>
+    <p class="lead muted">${destination}</p>
+    <div class="modal-actions">
+      <button id="mut-combine-cancel">Keep both</button>
+      <button id="mut-combine-confirm" class="primary">Combine</button>
+    </div>`;
+  byId("mut-combine-cancel")?.addEventListener("click", () => app.closeModal());
+  byId("mut-combine-confirm")?.addEventListener("click", () => app.confirmMutCombine());
+  wireClose(app);
 }
 
 function renderSettingsModal(app: App, content: HTMLElement): void {
@@ -3016,6 +3133,7 @@ function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
     case "focusKeyed": return `The generator — keyed to your focus<br>each session end banks a charge window (a tenth of its live practice time), spent as its output next session`;
     case "infusor": return `+${formatNumber(BALANCE.infusorBonus * 100)}% to adjacent production contributions<br>+${formatNumber(BALANCE.infusorBonus * charged * 100)}% at charge strength 1`;
     case "forge": return `1 Forge progress per received charge strength<br>Next roll: ${formatNumber(forgeThreshold(state.forge.earned))} progress`;
+    case "mutatorForge": return `1 Mutator Forge progress per received charge strength<br>Next roll: ${formatNumber(mutatorForgeThreshold(state.mutatorForge.earned))} progress`;
     default: return "Not yet active";
   }
 }
@@ -3041,7 +3159,7 @@ function candidateReadout(type: ModuleInstance["type"]): string {
 // The meter detail's live slots (ADR-0041): the figures move every tick a
 // session runs, so the open modal fills them in place — the rebuild only
 // fires when the pending offer changes, and the detail never flickers.
-function forgeMeterHtml(): string {
+function forgeMeterHtml(state: GameState): string {
   return `<div class="forge-meters">
     <div class="forge-meter">
       <span class="meter-name">Flow meter</span>
@@ -3053,26 +3171,59 @@ function forgeMeterHtml(): string {
       <span class="forge-pip" aria-hidden="true"><i data-live="modal-forge-pip"></i></span>
       <span class="meter-figures mono" data-live="modal-forge-line"></span>
     </div>
+    ${state.catalogEntryOwned ? `
+    <div class="forge-meter">
+      <span class="meter-name">Mutator Forge</span>
+      <span class="forge-pip" aria-hidden="true"><i data-live="modal-mutator-pip"></i></span>
+      <span class="meter-figures mono" data-live="modal-mutator-line"></span>
+    </div>` : ""}
   </div>`;
 }
 
-function updateForgeMetersLive(scope: ParentNode, state: GameState, forgeRate: number): void {
+function updateForgeMetersLive(scope: ParentNode, state: GameState, forgeRate: number, mutatorRate: number): void {
   const flowCap = flowThreshold(state.flow.earned);
   const forgeCap = forgeThreshold(state.forge.earned);
+  const mutatorCap = mutatorForgeThreshold(state.mutatorForge.earned);
   liveAttr(scope, "modal-flow-pip", "style", `width:${meterPipWidth(state.flow.progress, flowCap)}`);
   liveAttr(scope, "modal-forge-pip", "style", `width:${meterPipWidth(state.forge.progress, forgeCap)}`);
   liveSet(scope, "modal-flow-line", flowMeterLine(state));
   liveSet(scope, "modal-forge-line", forgeMeterLine(state, forgeRate));
+// The Mutator Forge branch's row exists only once the tree is entered
+// (issue #199): the live fills are no-ops while its nodes are absent.
+  liveAttr(scope, "modal-mutator-pip", "style", `width:${meterPipWidth(state.mutatorForge.progress, mutatorCap)}`);
+  liveSet(scope, "modal-mutator-line", mutatorForgeMeterLine(state, mutatorRate));
 }
 
 function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapshot): void {
   const { state } = app;
   const offer = state.bankedRolls[state.bankedRolls.length - 1];
   const banked = state.bankedRolls.length;
+  const mutOffer = state.bankedMutatorRolls[state.bankedMutatorRolls.length - 1];
+  const mutBanked = state.bankedMutatorRolls.length;
+  const mutatorSection = !mutOffer
+    ? ""
+    : `<div class="mutator-forge-block">
+        <span class="eyebrow mut-eyebrow">MUTATOR FORGE · ${mutBanked} banked</span>
+        <div class="candidates mut-candidates">
+          ${mutOffer.candidates
+            .map(
+              (candidate) => `
+            <button class="candidate-tile mut-candidate" data-mut-choice="${candidate.id}" data-mut-offer="${mutOffer.id}" data-rarity="${candidate.rarity}" title="Take the ${RARITY_LABEL[candidate.rarity]} ${FAMILY_WORD[candidate.family]} mutator">
+              <svg viewBox="-70 -70 140 140" aria-hidden="true" style="color: var(--arete)">
+                ${mutatorTileInner(candidate)}
+              </svg>
+              <span class="rarity">${RARITY_LABEL[candidate.rarity]}</span>
+              <span class="candidate-effect">${mutatorEffectText(candidate.family, candidate.rarity)}</span>
+            </button>`,
+            )
+            .join("")}
+        </div>
+        <p class="modal-note">Take one mutator — the other vanishes. It waits in the Mutator tray, on the Mutators layer.</p>
+      </div>`;
   content.innerHTML = `
     ${modalTop(`FORGE · ${banked} banked`)}
     <h2 id="modal-title" class="sr-only">Forge choice</h2>
-    ${forgeMeterHtml()}
+    ${forgeMeterHtml(state)}
     ${offer ? `<div class="candidates">
       ${offer.candidates.map((candidate) => `
         <button class="candidate-tile" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${candidate.rarity}" data-type="${candidate.type}" title="Take the ${RARITY_LABEL[candidate.rarity]} ${META[candidate.type].name}">
@@ -3084,11 +3235,17 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
           <span class="candidate-effect">${forgeEffect(candidate.type, state)}</span>
         </button>`).join("")}
     </div>` : `<p class="empty-copy">No choices banked yet — the meters above say how far.</p>`}
+    ${mutatorSection}
     ${state.mode !== "upgrade" ? `<p class="modal-note">Choices settle between sessions — the board stays live behind this card.</p>` : `<p class="modal-note">The board stays live behind this card — inspect freely; click outside, ✕ or Esc puts the choice away.</p>`}`;
-  updateForgeMetersLive(content, state, projected.forgeRate);
+  updateForgeMetersLive(content, state, projected.forgeRate, projected.mutatorForgeRate);
   content.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach((button) => {
     button.addEventListener("click", () => {
       app.chooseCandidate(button.getAttribute("data-offer")!, button.getAttribute("data-choice")!);
+    });
+  });
+  content.querySelectorAll<HTMLButtonElement>("[data-mut-choice]").forEach((button) => {
+    button.addEventListener("click", () => {
+      app.chooseMutatorCandidate(button.getAttribute("data-mut-offer")!, button.getAttribute("data-mut-choice")!);
     });
   });
   wireClose(app);
@@ -3524,23 +3681,23 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
         <strong>${unlocked.join(" · ")}</strong>
       </div>`
     : "";
-  // The rolls line (ADR-0041): one source reads plainly, both split —
-  // practice (flow meter) vs charge (Forge progress). The queue is one;
-  // only the attribution splits.
+  // The rolls line (ADR-0041): one source reads plainly, several split —
+  // practice (flow meter), charge (Forge progress), and the Mutator
+  // Forge's crossings (ADR-0043). The queues are their own; only the
+  // attribution splits.
   const rollsFlow = summary.rollsFlow ?? 0;
   const rollsForge = summary.rollsForge ?? 0;
-  const rolls = rollsFlow + rollsForge;
+  const rollsMutator = summary.rollsMutator ?? 0;
+  const rolls = rollsFlow + rollsForge + rollsMutator;
+  const rollSources: string[] = [];
+  if (rollsFlow > 0) rollSources.push(`${rollsFlow} from practice`);
+  if (rollsForge > 0) rollSources.push(`${rollsForge} from charge`);
+  if (rollsMutator > 0) rollSources.push(`${rollsMutator} from the Mutator Forge`);
   const rollsRow = rolls > 0
     ? `<div class="summary-row">
         <span class="summary-label">Rolls banked</span>
         <strong class="mono">${rolls} ${rolls === 1 ? "roll" : "rolls"}</strong>
-        <small class="summary-note">${
-          rollsFlow > 0 && rollsForge > 0
-            ? `${rollsFlow} from practice · ${rollsForge} from charge`
-            : rollsFlow > 0
-              ? "from practice"
-              : "from charge"
-        }</small>
+        <small class="summary-note">${rollSources.join(" · ")}</small>
       </div>`
     : "";
   const events = (summary.honestyEvents ?? [])
@@ -3610,13 +3767,15 @@ function renderDev(app: App): void {
     <button data-dev="600">+10m</button>
     <button data-dev="target">→ target</button>
     <button data-dev="nous">+100ν</button>
-    <button data-dev="synth">+synth</button>`;
+    <button data-dev="synth">+synth</button>
+    <button data-dev="mutera">mutator era</button>`;
   panel.querySelectorAll<HTMLButtonElement>("[data-dev]").forEach((button) => {
     button.addEventListener("click", () => {
       const key = button.getAttribute("data-dev")!;
       if (key === "target") app.devToTarget();
       else if (key === "nous") app.devNous();
       else if (key === "synth") app.devSynth();
+      else if (key === "mutera") app.devMutatorEra();
       else app.devAdvance(Number(key));
     });
   });
