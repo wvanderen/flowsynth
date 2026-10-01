@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CATEGORY_OF, MODULE_TYPES } from "../engine/constants";
 import type { ModuleType, Rarity } from "../engine/types";
-import { CHARGED_FILL_MIN, CHARGED_FILL_SPAN, HUE_TOKEN_OF, RAIL_CHARGED_FLOOR, RAIL_CHARGED_SPAN, RING_COUNT, moduleFace } from "./face";
+import { CHARGED_FILL_MIN, CHARGED_FILL_SPAN, HUE_TOKEN_OF, RAIL_CHARGED_FLOOR, RAIL_CHARGED_SPAN, RING_COUNT, moduleFace, readoutFitClass } from "./face";
 import { chargeGlow } from "./leads";
 import { defaultTheme } from "./theme";
 
@@ -78,5 +78,38 @@ describe("module face", () => {
     // Uncharged faces carry no inline overrides.
     expect(face()).not.toContain("fill-opacity");
     expect(face()).not.toContain("stroke-opacity");
+  });
+
+  it("the open-wire spacer keeps cap and base, opening the window between (#201)", () => {
+    const face = moduleFace({ type: "spacer", rarity: "rare", readout: "⌇", note: "G4", openWire: true });
+    // The chassis wears the shared window clip; the frame rides the plate.
+    expect(face).toContain('clip-path="url(#spacer-window)"');
+    expect(face).toContain("spacer-frame");
+    // Glyph, readout glyph, level line, rings, and rail all go quiet.
+    for (const key of ["signature", "readout", "rings", "rail", "level"]) {
+      expect(face).not.toContain(`data-key="${key}"`);
+    }
+    // The cap carries the name; the base keeps the note.
+    expect(face).toContain('data-key="name" y="-40"');
+    expect(face).toContain(">G4</text>");
+    // The rarity rings go quiet even at rare — the finish reads nowhere.
+    expect(face).not.toContain("face-rings");
+  });
+
+  it("the expanded face and candidates never wear the window — board faces only", () => {
+    const bloom = moduleFace({ type: "spacer", rarity: "common", readout: "⌇", variant: "bloom" });
+    expect(bloom).not.toContain("spacer-window");
+    expect(bloom).toContain('data-key="signature"');
+    const plain = moduleFace({ type: "spacer", rarity: "common", readout: "⌇" });
+    expect(plain).not.toContain("spacer-window");
+    expect(plain).toContain('data-key="signature"');
+  });
+
+  it("the long-readout fit picks the approved compression steps (#201)", () => {
+    expect(readoutFitClass("+0.12")).toBe("");
+    expect(readoutFitClass("+1,234")).toBe("");
+    expect(readoutFitClass("+1,234 ν")).toBe(" face-readout-sm");
+    expect(readoutFitClass("+123,456 ν")).toBe(" face-readout-xs");
+    expect(readoutFitClass("1,234/5,678")).toBe(" face-readout-xs");
   });
 });

@@ -1121,31 +1121,38 @@ body.bloom-sheet-open .zoom-cluster { bottom: 190px; }
 .row-unlock:focus-visible .row-unlock-label { fill: var(--ink); }
 .row-unlock.locked .row-unlock-label { fill: var(--muted); }
 
-/* The chord annotation (§6, #137) — the prototype's language (#120):
-   two-voice chords seam center-to-center; chords the seams can't carry —
-   three or more voices, or a spacer-bridged pair — draw the offset
-   outline polygon rendered UNDER the modules, so only the gaps between
-   the faces and the poking corners show. The hue rides --cc, the pulse
-   period --seam-dur. The name chip is not ambient and never floats: it
-   lives in the reserved readout by the board — every chord the selected
-   module earns its bonus from, or the hovered seam/voice's. Selection is
-   the only emphasis — the selected module's chords keep the focus
-   register, the rest fade. */
+/* The chord annotation (§6, #137) — the dense-board language (#174, #201):
+   two-voice chords seal the shared edge with bracket twins; chords whose
+   voices sit on one lattice line — octave columns, fifth chains, wired
+   pairs — draw one continuous twin line; anything else wraps in a
+   note-corner polygon. The work renders UNDER the modules — it lives in
+   the gaps between the faces and past the poking corners, and it
+   whispers at rest (ADR-0025: selection is the only emphasis). The hue
+   rides --cc, the pulse period --seam-dur. The name chip is not ambient
+   and never floats: it lives in the reserved readout by the board — every
+   chord the selected module earns its bonus from, or the hovered
+   seam/voice's. */
 .chord-mark { pointer-events: none; }
 .chord-seam {
   fill: none;
   stroke: var(--cc);
-  stroke-width: 4;
+  stroke-width: 2.5;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.85;
+  opacity: 0.3;
   pointer-events: stroke;
   transition: opacity 0.2s, stroke-width 0.2s;
 }
-.chord-seam.chord-loop { stroke-width: 3.5; }
-.chord-mark.chord-focus .chord-seam { stroke-width: 6; }
-.chord-mark.chord-focus .chord-seam.chord-loop { stroke-width: 5; }
-.chord-mark.chord-fade .chord-seam { opacity: 0.18; }
+.chord-mark.chord-fade .chord-seam { opacity: 0.15; }
+
+/* The selection lift (#201): the focused chords' marks draw a second time
+   over the faces, at full voice — a selected chord reads straight through
+   spacer plates and translucent empty cells — and the loop polygon carries
+   the region wash. The clones never answer the pointer: the whispering
+   seams beneath keep the hover's job. */
+#chord-lift { pointer-events: none; }
+#chord-lift .chord-seam { opacity: 1; stroke-width: 6; pointer-events: none; }
+#chord-lift .chord-seam.chord-loop { stroke-width: 5; fill: var(--cc); fill-opacity: 0.09; }
 
 /* The reserved readout: the chips, stacked vertically, pinned to the
    board-space's top right as an overlay layer — outside every layout
@@ -1183,15 +1190,15 @@ body.bloom-sheet-open .zoom-cluster { bottom: 190px; }
 
 /* Sounding (§6): in a live session the seams pulse on their chord's own
    period while the board stays locked — the session breathes through its
-   chords. Selection stays the only emphasis: a faded chord keeps its
-   fade and never joins the pulse (the animation would otherwise
-   override the fade's opacity). */
+   chords, and the breath stays inside the whisper (#201): quiet at rest,
+   loud only when asked. A faded chord keeps its fade and never joins the
+   pulse (the animation would otherwise override the fade's opacity). */
 body.live .chord-mark:not(.chord-fade) .chord-seam {
   animation: seam-pulse var(--seam-dur, 2.7s) ease-in-out infinite;
 }
 @keyframes seam-pulse {
-  0%, 100% { opacity: 0.85; }
-  50% { opacity: 0.45; }
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.55; }
 }
 
 /* The would-form ghosts (§6): dashed marks in the chord's hue, one per
@@ -2085,6 +2092,7 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
     overflow-x: auto;
   }
   .mut-unlock-pill { top: 46px; }
+  .cell-arm-pill { top: 46px; }
   .mut-popover { width: 200px; }
   /* The arc card clears the game-info strip up top by riding above the
      horizon bar's lane at the board's lower edge. */
@@ -2130,8 +2138,73 @@ body.modal-sheet-open .zoom-cluster {
 .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 4px; }
 .icon-btn svg { width: 100%; height: 100%; color: var(--muted); }
 .icon-btn:hover:not(:disabled) svg { color: var(--ink); }
-.hex.empty { fill: var(--panel-deep); stroke: var(--line-strong); stroke-dasharray: 3 5; }
+/* Empty owned cells read as owned space and stay translucent (#201) so the
+   chord work shows through them; their note centers on the cell (#172,
+   the markup carries y=0 + dominant-baseline). */
+.hex.empty { fill: var(--panel-deep); stroke: var(--line-strong); stroke-dasharray: 3 5; fill-opacity: 0.45; }
 .cell-node > .hex-sub { fill: var(--muted); font: 9px var(--mono); }
+
+/* The open-wire spacer's window frame (#201): a hairline in the chassis
+   stroke around the clipped opening; the plate's clip (spacer-window,
+   render's defs) does the cutting. */
+.spacer-frame {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 1.25;
+  pointer-events: none;
+}
+
+/* The long-readout fit (#201, the approved compression): past seven
+   characters the face's glanceable line steps to 14px, past nine to 12px —
+   it never overflows its plate on the dense board. Board faces only: the
+   bloom and candidate tiles keep their own sizing. */
+#grid .face-readout-sm { font-size: 14px; }
+#grid .face-readout-xs { font-size: 12px; }
+
+/* Add-cell mode's rest (#201): the owned board greys out — modules and
+   owned empty cells rest at a whisper, pointer-dead behind the one
+   obvious cancel — while the frontier's buy targets keep a firm accent
+   outline. No other mode ever dims the board. */
+body.cell-arming #grid .module-node,
+body.cell-arming #grid .cell-node:has(.hex.empty) {
+  filter: grayscale(0.85);
+  opacity: 0.4;
+  pointer-events: none;
+}
+body.cell-arming #grid .cell-node:has(.buy-here) { filter: none; opacity: 1; pointer-events: auto; }
+body.cell-arming #grid .hex.buy-here { stroke-width: 2.5; stroke-dasharray: none; }
+
+/* The add-cell pill (#201): the armed purchase's one cost spot over the
+   board's top edge — "New cell · <price> ν — Cancel · Esc" — and the pill
+   itself is the cancel. */
+.cell-arm-pill {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 24;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--panel-soft) 94%, transparent);
+  border: 1px solid var(--danger);
+  color: var(--ink);
+  font: 600 11px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: 0.04em;
+}
+.cell-arm-pill[hidden] { display: none; }
+.cell-arm-pill:hover { background: color-mix(in srgb, var(--danger) 20%, transparent); }
+.cell-arm-pill .mono { color: var(--accent); }
+.cell-arm-pill .pill-esc {
+  padding: 2px 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  font: 600 9px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--muted);
+}
 .cell-node:hover .hex { stroke-width: 2; }
 .cell-node:focus-visible { outline: none; }
 .cell-node:focus-visible .hex { stroke: var(--ink); stroke-width: 3; }

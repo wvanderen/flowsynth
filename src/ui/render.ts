@@ -32,7 +32,7 @@ import { appIcon, moduleIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, HUE_TOKEN_OF, moduleFace, boardPoint, SPACING } from "./face";
 import { bloomLayout, bloomPops, bloomSpan, viewMeet, viewPoint, type ViewFrame } from "./bloom";
 import { chargeGlow, chargeLeads } from "./leads";
-import { chordOverlay, chipWidth, type ChordMark } from "./chordlayer";
+import { chordOverlay, chordMarkCovers, chipWidth, type ChordMark, type ChordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatBalance, formatDate, formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
@@ -105,6 +105,7 @@ export function render(app: App): void {
   renderGrid(app, live, projected);
   renderInventoryTray(app);
   renderUpgradeAll(app);
+  renderCellArmPill(app);
   renderArcCard(app);
   renderBloom(app, projected);
   renderZoomCluster(app);
@@ -851,6 +852,35 @@ function renderTools(app: App, projected: RateSnapshot): void {
   }
 }
 
+/* ── The add-cell pill (#201): one cost spot, one obvious exit ── */
+
+// While a cell purchase is armed, the pill rides the board's top edge as
+// the mode's single cost spot — "New cell · <price> ν — Cancel · Esc" —
+// and the pill itself is the cancel: one click backs out, Esc backs it up.
+// The board greys around it (the stylesheet reads body.cell-arming); no
+// other mode ever dims. The price re-quotes as cells land, since the arm
+// persists across buys.
+const boundArmPills = new WeakSet<HTMLElement>();
+
+function renderCellArmPill(app: App): void {
+  const host = byId("cell-arm-pill");
+  if (!host) return;
+  if (!boundArmPills.has(host)) {
+    boundArmPills.add(host);
+    host.addEventListener("click", () => {
+      if (app.ui.buyingCell) app.cancelCellPurchase();
+    });
+  }
+  const arming = app.state.mode === "upgrade" && app.ui.buyingCell;
+  host.hidden = !arming;
+  if (!arming) return;
+  const markup = `New cell · <span class="mono">${formatInt(cellCost(app.state.cellsBought))} ν</span><span class="pill-esc">Cancel · Esc</span>`;
+  if (host.dataset.renderKey !== markup) {
+    host.dataset.renderKey = markup;
+    host.innerHTML = markup;
+  }
+}
+
 /* ── Hex grid ──────────────────────────────────────── */
 
 function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void {
@@ -899,15 +929,18 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
   const bloomLifts = selectedModule !== null && bloomPops(viewMeet(frame), HEX_RADIUS);
 
   // The chord annotation is always on (§6, #137): every formed chord wears
-  // its colored seams — no chord view, no toggle. The name chips live in
+  // its colored work — no chord view, no toggle. The name chips live in
   // the reserved readout beside the board (the selected module's chord, or
   // the hovered seam/voice's), carrying names and multipliers only — never
   // a board-wide +ν/s claim (ADR-0036). The selected module's final ν/s
   // rides the same spot, live during flow and present with no chord at all.
-  // Selection (§6) is the one emphasis: the selected module's chords stay
-  // focused and the rest fade.
+  // Selection (§6) is the one emphasis (#201): at rest every chord
+  // whispers in the gaps; the selection lifts the focused chords over the
+  // faces, and a conducting spacer's selection lifts the chords its wire
+  // carries — a spacer sings in no chord, so the ask reads by containment.
   const deployedById = new Map(state.modules.filter((m) => m.pos !== null).map((m) => [m.id, m]));
   const focusIds = selectedModule?.pos ? [selectedModule.id] : [];
+  const focusPoint = selectedModule?.pos && selectedModule.type === "spacer" ? point(selectedModule.pos) : null;
   const overlay = chordOverlay({
     namedChords: snapshot.namedChords,
     posOf: (id) => deployedById.get(id)?.pos ?? null,
@@ -916,6 +949,7 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
     step: LATTICE_STEP,
     labelFor: chordTermLabel,
     focusIds,
+    focusPoint,
   });
   chordReadoutCache.set(app, { marks: overlay.marks, snapshot });
 
@@ -924,7 +958,7 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
   // else — paused, upgrade mode (charge pauses between sessions, ADR-0001),
   // or a generator whose charge window is spent — sits dim and static as
   // wiring previews (ADR-0002).
-  let html = CHARGE_LEAD_DEFS;
+  let html = `${CHARGE_LEAD_DEFS}${SPACER_WINDOW_DEFS}`;
   for (const { generator, receiver, emitting } of chargeLeads(state, flow)) {
     if (generator.pos === null || receiver.pos === null) continue;
     const [x1, y1] = point(generator.pos);
@@ -938,13 +972,13 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
   // geometry, not chord content.
   html += `<g data-key="row-bands">${rowBandHtml(state, bands, point)}</g>`;
 
-  // Named-chord marks (§6): the outline polygons and seams draw UNDER the
-  // modules — the prototype's triangle behind the faces, visible only in
-  // the gaps between them and at the poking corners. With a selection
-  // standing, the selected module's chords stay focused and the rest fade
-  // (§6); in live sessions the stylesheet pulses the focused marks while
-  // the board stays locked. The readout refreshes with the same marks: a
-  // selection pins its chord's chips.
+  // Named-chord marks (§6, #201): the chord work draws UNDER the modules —
+  // visible in the gaps between the faces and past the poking corners,
+  // whispering until a selection lifts it. With a selection standing, the
+  // selected module's chords stay focused and the rest fade (§6); in live
+  // sessions the stylesheet pulses the marks quietly while the board stays
+  // locked. The readout refreshes with the same marks: a selection pins
+  // its chord's chips.
   html += `<g data-key="chord-marks">${overlay.marks
     .map((mark) => chordMarkHtml(mark, "formed"))
     .join("")}</g>`;
@@ -967,33 +1001,34 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
     // Vacated by the lift, or genuinely empty: an owned cell reads as owned
     // space — the dashed outline and its note, no add-button plus or EMPTY
     // CELL prompt. Only armed-mode hints remain (board-redesign spec §7,
-    // #151); New cells stay the purchase entry point.
+    // #151); New cells stay the purchase entry point. The chassis is
+    // translucent (#201) so the chord work shows through, and the note
+    // centers on the cell (#172).
     let classes = "hex empty";
     if (lifted) classes += " lifted";
     if (drop) classes += ` ${dropClass(drop)}`;
     if (!module && !lifted && isTargetCell(app)) classes += " target";
     html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">
       <polygon class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>
-      <text y="3" text-anchor="middle" class="hex-note">${cellNoteOf(pos)}</text></g>`;
+      <text y="0" dominant-baseline="central" text-anchor="middle" class="hex-note">${cellNoteOf(pos)}</text></g>`;
   }
 
   if (frontier.length > 0) {
     // The octave-row gate rides the quoted price (ADR-0022): a frontier hex
-    // in a row whose one-time gate is unpaid carries cell price + premium —
-    // the same cellPurchasePrice seam the buy action charges.
-    const basePrice = cellCost(state.cellsBought);
+    // in a row whose one-time gate is unpaid carries the premium — the
+    // same cellPurchasePrice seam the buy action charges.
     for (const pos of frontier) {
       const [x, y] = point(pos);
       const total = cellPurchasePrice(state, pos);
       const affordable = wholeNous(state) >= total;
       if (ui.buyingCell) {
-        // The purchase arm: every frontier hex carries its price; the buy
-        // lands only where clicked (ADR-0013).
+        // The purchase arm (#201): one cost spot — the pill over the
+        // board's top edge carries the single price, so the hexes drop
+        // their stamped figures and keep a firm accent outline. The buy
+        // lands only where clicked (ADR-0013); the accessible name keeps
+        // the hex's own figure.
         html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Buy cell here for ${formatInt(total)} nous">
           <polygon class="hex ${affordable ? "buy-here" : "future"}" points="${hexPoints(HEX_RADIUS)}"/>
-          <text y="-24" text-anchor="middle" class="hex-sub">NEW CELL</text>
-          ${affordable ? `<text y="8" text-anchor="middle" fill="var(--accent)" font-size="22">+</text>` : ""}
-          <text y="${affordable ? 34 : 8}" text-anchor="middle" class="hex-sub">${formatInt(total)} ν${total > basePrice ? " · gated" : ""}</text>
         </g>`;
       } else {
         html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Expand here">
@@ -1003,11 +1038,18 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
     }
   }
 
+  // The selection lift (#201): the focused chords draw a second time over
+  // the faces — a selected chord reads straight through spacer plates and
+  // translucent empty cells. Empty when nothing is selected: the chords
+  // whisper in the gaps and no chord ever crosses a face.
+  html += `<g data-key="chord-lift" id="chord-lift">${chordLiftHtml(overlay, selectedModule !== null && selectedModule.pos !== null)}</g>`;
+
   // The would-form ghosts (§5–§6): dashed seams and outlines over the
   // chords the hovered drop or placement would form, one per forming
-  // chord — these stay OVER the modules (the promise reads on top).
-  // Rebuilt from the live preview state so a re-render never strands a
-  // ghost.
+  // chord — these stay OVER the modules (the promise reads on top). They
+  // wear the same seam language as the formed chords (brackets, runs,
+  // note-corner polygons — #201), promising in the vocabulary the chord
+  // will land in.
   html += `<g data-key="ghost-chords">${ghostMarksHtml(app, projected)}</g>`;
 
   // The Mutator Grid's drawing (issue #199): the second layer's slot faces
@@ -1020,6 +1062,27 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
   bindFaceBuys(app, svg);
   bindMutatorLayer(app, svg);
   updateChordReadout(app);
+}
+
+// The spacer's open-wire window def (#201): the clip is the hex minus the
+// window (evenodd), in user space — every spacer's face lives in its own
+// cell's translated space (origin = the cell center), so one shared def
+// serves them all. The frame rect rides the face markup (face.ts), two
+// units clear of this opening.
+const SPACER_HEX_D = "M -52.83 -30.5 L 0 -61 L 52.83 -30.5 L 52.83 30.5 L 0 61 L -52.83 30.5 Z";
+const SPACER_WINDOW_D = "M -26 -20 L 26 -20 L 26 24 L -26 24 Z";
+const SPACER_WINDOW_DEFS = `<defs data-key="spacer-window"><clipPath id="spacer-window" clipPathUnits="userSpaceOnUse"><path clip-rule="evenodd" d="${SPACER_HEX_D} ${SPACER_WINDOW_D}"/></clipPath></defs>`;
+
+// The selection lift (#201): the focused chords' marks draw a second time
+// over the faces — the one loud pass a selection earns (ADR-0025). At rest
+// the group is empty: the chords whisper in the gaps, never over a face.
+// The wash rides the stylesheet (the loop polygon's translucent fill).
+function chordLiftHtml(overlay: ChordOverlay, lifted: boolean): string {
+  if (!lifted) return "";
+  return overlay.marks
+    .filter((mark) => mark.focused)
+    .map((mark) => chordMarkHtml(mark, "formed"))
+    .join("");
 }
 
 // ── The Row unlock's shaded rows (issue #197, #174's approved surface) ──
@@ -1079,14 +1142,15 @@ function rowBandHtml(state: GameState, bands: RowBand[], point: (pos: Hex) => [n
     .join("");
 }
 
-// One chord mark's markup (§6, prototype language #120): a two-voice chord
-// draws colored seams between its voices; a chord the seams can't carry
-// draws the offset outline polygon — the prototype's triangle, rendered
-// behind the modules so only the gaps and the poking corners show. The
+// One chord mark's markup (§6, the dense-board language #201): a
+// two-voice chord seals its shared edge with bracket twins; a collinear
+// chord draws one continuous twin line first voice to last; a chord the
+// lines can't carry draws the note-corner polygon — rendered behind the
+// modules so the work lives in the gaps and past the poking corners. The
 // mark's hue rides `--cc` and its pulse period `--seam-dur`. Ghost marks
-// preview would-form chords and wear their chip at the anchor, since the
-// promise belongs where the chord would land. `keyPrefix` keeps the two
-// layers' DOM keys apart.
+// preview would-form chords in the same vocabulary and wear their chip at
+// the anchor, since the promise belongs where the chord would land.
+// `keyPrefix` keeps the two layers' DOM keys apart.
 function chordMarkHtml(mark: ChordMark, keyPrefix: "formed" | "ghost"): string {
   const ghost = keyPrefix === "ghost";
   const emphasis = ghost ? " ghost-mark" : mark.focused ? " chord-focus" : " chord-fade";
@@ -1141,10 +1205,9 @@ function updateChordReadout(app: App): void {
   const selected = app.state.modules.find((m) => m.id === app.ui.selected && m.pos !== null) ?? null;
   const hovered =
     hover?.kind === "module" ? (app.state.modules.find((m) => m.id === hover.moduleId) ?? null) : null;
-  // Every chord the module earns its bonus from — not just the first.
-  const chosen = selected
-    ? marks.filter((m) => m.voices.includes(selected.id))
-    : chordChipsForHover(app);
+  // Every chord the module earns its bonus from — not just the first; the
+  // conducting spacer's own containment rule rides moduleChips (#201).
+  const chosen = selected ? moduleChips(selected, marks) : chordChipsForHover(app);
   const focus = selected ?? hovered;
   const contribution = focus && snapshot ? snapshot.contributions.get(focus.id) : undefined;
   const valueChip =
@@ -1167,6 +1230,14 @@ function updateChordReadout(app: App): void {
       .join("");
 }
 
+// Every chord the module earns its bonus from — not just the first. A
+// spacer sings in none: the wire asks by containment, the same rule its
+// hover reads (#201).
+const moduleChips = (module: ModuleInstance, marks: ChordMark[]): ChordMark[] =>
+  module.type === "spacer" && module.pos !== null
+    ? marks.filter((m) => chordMarkCovers(m, point(module.pos as Hex)))
+    : marks.filter((m) => m.voices.includes(module.id));
+
 // The chips a hover asks for: a seam names its one chord, a module names
 // every chord it sings in. A mutator slot's ask never lands here — it
 // takes the readout's whole row for itself.
@@ -1174,9 +1245,9 @@ function chordChipsForHover(app: App): ChordMark[] {
   const hover = app.ui.chordHover;
   if (!hover || hover.kind === "mutator") return [];
   const marks = chordReadoutCache.get(app)?.marks ?? [];
-  return hover.kind === "chord"
-    ? marks.filter((m) => m.key === hover.key)
-    : marks.filter((m) => m.voices.includes(hover.moduleId));
+  if (hover.kind === "chord") return marks.filter((m) => m.key === hover.key);
+  const module = app.state.modules.find((m) => m.id === hover.moduleId);
+  return module ? moduleChips(module, marks) : [];
 }
 
 // The hover question (§6): what the pointer rests on. Null clears. Never a
@@ -1317,6 +1388,9 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
       ...(note ? { note } : {}),
       level: faceLevel(module),
       hexClass: hexClass.trim(),
+      // The spacer's board face is the open wire (#201): cap and base only,
+      // the window between lets the chord work read through.
+      ...(module.type === "spacer" ? { openWire: true } : {}),
       under: (() => {
         const branch = forgeBranchOf(state, module.type);
         return branch ? waterFill(module.id, branch.progress / branch.threshold) : "";
