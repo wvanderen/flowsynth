@@ -3620,11 +3620,24 @@ describe("the bulk upgrade controls (#195)", () => {
     const buy = document.querySelector(".face-buy")!;
     expect(buy.querySelector(".face-buy-label")!.textContent).toBe("MAX");
     expect(buy.getAttribute("aria-label")).toContain("MAX · buy");
-    // The label flips board-wide and transiently…
+    // The MAX tooltip carries the full-sweep cost preview like every
+    // bulk surface's tooltip (the #173 resolution).
+    expect(buy.getAttribute("aria-label")).toMatch(/· \d[\d,]* ν$/);
+    expect(buy.querySelector("title")!.textContent).toMatch(/· \d[\d,]* ν$/);
+    // …and the flip is transient: keyup restores every label.
     document.dispatchEvent(new KeyboardEvent("keyup", { key: "Shift" }));
     app.render();
     expect(document.querySelector(".face-buy")!.querySelector(".face-buy-label")!.textContent).toBe("+1");
-    // …and even with the label showing MAX, a plain click still buys +1.
+    // A shift released while the window lacks focus never fires keyup —
+    // the blur drops the mode instead of leaving MAX stuck.
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Shift" }));
+    app.render();
+    expect(document.querySelector(".face-buy")!.querySelector(".face-buy-label")!.textContent).toBe("MAX");
+    window.dispatchEvent(new Event("blur"));
+    app.render();
+    expect(document.querySelector(".face-buy")!.querySelector(".face-buy-label")!.textContent).toBe("+1");
+    // Even with the label showing MAX, a plain click still buys +1: the
+    // click's own shift state is the source of truth.
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Shift" }));
     app.render();
     document.querySelector(".face-buy")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));

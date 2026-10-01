@@ -19,6 +19,7 @@ import {
   upgradeAll,
   upgradeModuleLevels,
   type ActionResult,
+  type BulkPurchase,
 } from "../engine/actions";
 import { ARETE_HORIZON, claimOf } from "../engine/accumulator";
 import { neighbors, sameHex } from "../engine/hex";
@@ -758,6 +759,14 @@ export class App {
         this.render();
       }
     });
+    // A shift released while the window lacks focus never fires keyup here:
+    // the blur drops the mode so the labels can't stick MAX (issue #195).
+    window.addEventListener("blur", () => {
+      if (this.ownsBoard() && this.ui.faceMax) {
+        this.ui.faceMax = false;
+        this.render();
+      }
+    });
   }
 
   tick(): void {
@@ -1022,40 +1031,34 @@ export class App {
   upgradeLevels(id: string, want: number | "max"): void {
     const module = this.state.modules.find((m) => m.id === id);
     if (!module) return;
-    const result = upgradeModuleLevels(this.state, id, want === "max" ? Number.MAX_SAFE_INTEGER : want);
-    if (!result.ok) {
-      this.say(result.reason ?? "That upgrade is not available.");
-      this.render();
-      return;
-    }
-    const bulk = result.bulk!;
-    this.announceUnlocks(
-      result.unlocked,
+    this.landBulk(upgradeModuleLevels(this.state, id, want), (bulk) =>
       bulk.levels === 1
         ? `${META[module.type].name} upgraded to level ${module.level}.`
         : `${META[module.type].name} +${bulk.levels} levels · ${formatInt(bulk.spent)} ν`,
     );
-    this.save();
-    this.render();
   }
 
   // The Upgrade All cluster (issue #195): the board-wide sweep — every
   // levelable module, deployed and tray alike, spacers never. The toast
   // reports what landed, whatever the chip promised.
   upgradeAllAction(want: number | "max"): void {
-    const result = upgradeAll(this.state, want);
-    if (!result.ok) {
-      this.say(result.reason ?? "Nothing to upgrade.");
-      this.render();
-      return;
-    }
-    const bulk = result.bulk!;
-    this.announceUnlocks(
-      result.unlocked,
+    this.landBulk(upgradeAll(this.state, want), (bulk) =>
       want === "max"
         ? `UPGRADE ALL MAX: ${bulk.levels} levels across ${bulk.modules} modules · ${formatNumber(bulk.spent)} ν`
         : `UPGRADE ALL +${want}: ${bulk.levels} level${bulk.levels === 1 ? "" : "s"} across the board · ${formatNumber(bulk.spent)} ν`,
     );
+  }
+
+  // The bulk actions' shared landing (issue #195): the refusal says why, a
+  // landing announces what it bought (feats riding the toast), then save
+  // and render — the act() shape with a message read off the bulk payload.
+  private landBulk(result: ActionResult, message: (bulk: BulkPurchase) => string): void {
+    if (!result.ok) {
+      this.say(result.reason ?? "That upgrade is not available.");
+      this.render();
+      return;
+    }
+    this.announceUnlocks(result.unlocked, message(result.bulk!));
     this.save();
     this.render();
   }

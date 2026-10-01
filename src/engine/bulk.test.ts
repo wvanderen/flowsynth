@@ -65,6 +65,16 @@ describe("upgradeModuleLevels", () => {
     expect(s.nous).toBe(levelCost(0) - 1);
   });
 
+  it("\"max\" buys every affordable level on the one-module ladder too", () => {
+    const s = fresh();
+    const synth = s.modules[0]!;
+    s.nous = levelsCost(0, 8) + levelCost(8) - 1;
+    const result = upgradeModuleLevels(s, synth.id, "max");
+    expect(result.ok).toBe(true);
+    expect(synth.level).toBe(8);
+    expect(s.nous).toBe(levelCost(8) - 1);
+  });
+
   it("stays behind the upgrade-mode gate", () => {
     const s = fresh();
     startSession(s, 600);

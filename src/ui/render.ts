@@ -1,7 +1,7 @@
 import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, emittedStrength, affordableLevels, levelCost, levelsCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
 import { claimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
-import { combinePreview, type CombinePreview, upgradeAllPreview } from "../engine/actions";
+import { combinePreview, levelable, type CombinePreview, upgradeAllPreview } from "../engine/actions";
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
@@ -1116,7 +1116,7 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
 
   // The face button (issue #195): one per closed, levelable face, in
   // upgrade mode only — in flow it vanishes with the purchase furniture.
-  const faceBuy = state.mode === "upgrade" && module.type !== "spacer" ? faceBuyHtml(app, module) : "";
+  const faceBuy = state.mode === "upgrade" && levelable(module) ? faceBuyHtml(app, module) : "";
 
   return `<g class="module-node${crossed ? " forge-crossed" : ""}" data-type="${module.type}" data-rarity="${module.rarity}">
     ${moduleFace({
@@ -1147,10 +1147,10 @@ const FACE_BUY_POINTS = "-25,46 25,46 7,58 -7,58";
 function faceBuyHtml(app: App, module: ModuleInstance): string {
   const max = app.ui.faceMax;
   const levels = max ? affordableLevels(wholeNous(app.state), module.level) : 1;
-  const cost = levelCost(module.level);
-  const broke = wholeNous(app.state) < (max ? levelsCost(module.level, levels) : cost);
+  const cost = max ? levelsCost(module.level, levels) : levelCost(module.level);
+  const broke = wholeNous(app.state) < cost;
   const title = max
-    ? `MAX · buy ${levels} level${levels === 1 ? "" : "s"}`
+    ? `MAX · buy ${levels} level${levels === 1 ? "" : "s"} · ${formatInt(cost)} ν`
     : `+1 level · ${formatInt(cost)} ν`;
   return `<g class="face-buy" data-key="face-buy" data-module="${module.id}" role="button" tabindex="0" aria-label="${title}">
     <polygon class="face-buy-btn${broke ? " broke" : ""}" points="${FACE_BUY_POINTS}"><title>${title}</title></polygon>
@@ -1225,7 +1225,7 @@ function renderUpgradeAll(app: App): void {
   const host = byId("upgrade-all");
   if (!host) return;
   const { state } = app;
-  const eligible = state.modules.filter((m) => m.type !== "spacer");
+  const eligible = state.modules.filter(levelable);
   const active = state.mode === "upgrade" && eligible.length > 0;
   host.hidden = !active;
   if (!active) return;

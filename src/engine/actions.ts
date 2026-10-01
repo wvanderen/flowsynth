@@ -307,27 +307,28 @@ export function upgradeModule(state: GameState, id: string): ActionResult {
 }
 
 // The bulk ladder on one module (issue #195): up to `want` levels in one
-// action, charged at the same per-level prices as `upgradeModule` — partial
-// by design, so a purchase that cannot cover its full ladder still buys
-// what the bank covers and reports the shortfall through the bulk payload.
-// Zero affordable levels refuses and touches nothing.
-export function upgradeModuleLevels(state: GameState, id: string, want: number): ActionResult {
+// action — "max" buying every affordable level — charged at the same
+// per-level prices as `upgradeModule`. Partial by design, so a purchase
+// that cannot cover its full ladder still buys what the bank covers and
+// reports the shortfall through the bulk payload. Zero affordable levels
+// refuses and touches nothing.
+export function upgradeModuleLevels(state: GameState, id: string, want: number | "max"): ActionResult {
   const module = findModule(state, id);
   if (!module) return fail("Module not found.");
   if (state.mode !== "upgrade") return fail("Upgrades happen between sessions.");
   const budget = affordableLevels(wholeNous(state), module.level);
-  const bought = Math.min(want, budget);
+  const bought = want === "max" ? budget : Math.min(want, budget);
   if (bought < 1) return fail("Not enough whole nous for even one level.");
   const spent = levelsCost(module.level, bought);
   state.nous -= spent;
   module.invested += spent;
   module.level += bought;
-  return { ok: true, bulk: { levels: bought, modules: 1, spent } };
+  return { ok: true, bulk: { levels: bought, modules: 1, spent }, unlocked: checkAchievements(state) };
 }
 
 // The spacer is silent wire (#193): its level buys nothing, so every bulk
 // surface excludes it — the one eligibility rule, read in one place.
-const levelable = (module: ModuleInstance): boolean => module.type !== "spacer";
+export const levelable = (module: ModuleInstance): boolean => module.type !== "spacer";
 
 // The board-wide sweep's plan: per-module level counts whose summed price
 // never exceeds the bank. +N walks the modules cheapest-next-level first,
@@ -385,25 +386,26 @@ export function upgradeAll(state: GameState, want: number | "max"): ActionResult
   if (!state.modules.some(levelable)) return fail("Nothing to upgrade.");
   const plan = sweepPlan(state, want);
   if (plan.size === 0) return fail("Not enough whole nous for even one level.");
-  let levels = 0;
-  let spent = 0;
+  const bulk = planTotal(state, plan);
   for (const [id, count] of plan) {
     const module = findModule(state, id)!;
-    const cost = levelsCost(module.level, count);
+    module.invested += levelsCost(module.level, count);
     module.level += count;
-    module.invested += cost;
-    levels += count;
-    spent += cost;
   }
-  state.nous -= spent;
-  return { ok: true, bulk: { levels, modules: plan.size, spent }, unlocked: checkAchievements(state) };
+  state.nous -= bulk.spent;
+  return { ok: true, bulk, unlocked: checkAchievements(state) };
 }
 
 // The sweep's shape without touching state (issue #195): the cluster's
 // tooltips preview the same plan the purchase will run, so the promise and
 // the charge can never disagree.
 export function upgradeAllPreview(state: GameState, want: number | "max"): BulkPurchase {
-  const plan = sweepPlan(state, want);
+  return planTotal(state, sweepPlan(state, want));
+}
+
+// A plan's totals, read without touching state: the levels, the modules
+// touched, and the exact spend the apply loop below charges.
+function planTotal(state: GameState, plan: Map<string, number>): BulkPurchase {
   let levels = 0;
   let spent = 0;
   for (const [id, count] of plan) {
