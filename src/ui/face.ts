@@ -41,6 +41,7 @@ export const HUE_TOKEN_OF: Record<ModuleType, string> = {
   focusKeyed: "hue-generator",
   infusor: "hue-infusor",
   forge: "hue-forge",
+  mutatorForge: "hue-forge",
 };
 
 // Rarity = finish: engraved ring count, one to three.

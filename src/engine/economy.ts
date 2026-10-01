@@ -1,12 +1,53 @@
 import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isSynthesizerType } from "./constants";
 import { analyzeChords } from "./chords";
 import { achievementBoostOf } from "./achievements";
-import { adjacent } from "./hex";
+import { adjacent, sameHex } from "./hex";
 import { octaveRowOf, pitchOf } from "./lattice";
-import type { Contribution, DeployedModule, GameState, ModuleInstance, RateSnapshot } from "./types";
+import type { Contribution, DeployedModule, GameState, Hex, ModuleInstance, MutatorFamily, MutatorInstance, Rarity, RateSnapshot } from "./types";
 
 export function chargedFactor(strength: number): number {
   return 1 + strength / (1 + strength);
+}
+
+// A mutator's magnitude (ADR-0043, issue #198): the family's base scaled
+// by the one geometric rarity rule — ×1/×2/×4 across the shared
+// common/uncommon/rare tiers. The effect multiplies its term by
+// (1 + magnitude).
+export function mutatorMagnitude(family: MutatorFamily, rarity: Rarity): number {
+  return BALANCE.mutatorMagnitudeBase[family] * BALANCE.mutatorRarityMultiplier[rarity];
+}
+
+// The cell's placed mutator, if any — the Mutator Grid mirrors the board
+// cell for cell, and a slot modifies whatever module occupies the cell.
+export function mutatorAt(state: GameState, pos: Hex | null): MutatorInstance | undefined {
+  if (pos === null) return undefined;
+  return state.mutators.find((m) => m.pos !== null && sameHex(m.pos, pos));
+}
+
+function familyMagnitudeAt(state: GameState, pos: Hex | null, family: MutatorFamily): number {
+  const mutator = mutatorAt(state, pos);
+  return mutator && mutator.family === family ? mutatorMagnitude(family, mutator.rarity) : 0;
+}
+
+function powerMagnitudeAt(state: GameState, pos: Hex | null): number {
+  return familyMagnitudeAt(state, pos, "power");
+}
+
+function resonanceMagnitudeAt(state: GameState, pos: Hex | null): number {
+  return familyMagnitudeAt(state, pos, "resonance");
+}
+
+function chargeMagnitudeAt(state: GameState, pos: Hex | null): number {
+  return familyMagnitudeAt(state, pos, "charge");
+}
+
+// The host's effective power (ADR-0043): a placed power mutator multiplies
+// its host module's power (× (1 + m)) everywhere power already appears —
+// the synthesizer's final ν/s, the uplift an infusor grants, a generator's
+// output strength, and Forge progress. A Mutator Forge boosting its own
+// branch is intended, not a bug. A tray module or a vacant slot: ×1.
+export function hostPower(state: GameState, module: ModuleInstance): number {
+  return modulePower(module) * (1 + powerMagnitudeAt(state, module.pos));
 }
 
 export function levelCost(level: number): number {
@@ -107,6 +148,15 @@ export function longGoalCost(bought: number): number {
   return geometricCeilCost(BALANCE.longGoalFirstCost, BALANCE.longGoalGrowthNumerator, BALANCE.longGoalGrowthDenominator, bought);
 }
 
+// The Mutator slot ladder (ADR-0043, issue #198): unbounded, per-item
+// priced — each unlock costs the count already unlocked's rung on the
+// 2/3/5/8/12 shape, continuing +1,+2,+3,… forever: first + (n-1)n/2 Arete.
+// The entry's own first slot never meets this price — it rides the entry.
+export function mutatorSlotCost(unlocked: number): number {
+  if (unlocked < 1) throw new Error("unlocked must be positive");
+  return BALANCE.mutatorSlotFirstCost + ((unlocked - 1) * unlocked) / 2;
+}
+
 export function investment(level: number): number {
   let total = 0;
   for (let i = 0; i < level; i++) total += levelCost(i);
@@ -182,13 +232,15 @@ export function chargeWindowActive(state: GameState): boolean {
 export function emittedStrength(state: GameState, module: ModuleInstance, flow: boolean): number {
   if (!flow || CATEGORY_OF[module.type] !== "generator" || module.pos === null) return 0;
   if (!chargeWindowActive(state)) return 0;
-  return modulePower(module);
+  return hostPower(state, module);
 }
 
-// Received charge: the sum of adjacent deployed generators' output.
-// Generators never charge themselves or each other; only the chargeable and
-// continuous-charge categories receive. The spacer receives nothing — it is
-// silent wire.
+// Received charge: the sum of adjacent deployed generators' output. A
+// charge mutator on the host's cell multiplies the strength it receives
+// (× (1 + m)) before the diminishing charge curve — inert while uncharged,
+// since zero strength stays zero. Generators never charge themselves or
+// each other; only the chargeable and continuous-charge categories
+// receive. The spacer receives nothing — it is silent wire.
 export function receivedStrength(state: GameState, module: ModuleInstance, flow: boolean): number {
   if (!CHARGE_RECEIVING_CATEGORIES.includes(CATEGORY_OF[module.type]) || module.pos === null) return 0;
   let strength = 0;
@@ -197,7 +249,7 @@ export function receivedStrength(state: GameState, module: ModuleInstance, flow:
       strength += emittedStrength(state, generator, flow);
     }
   }
-  return strength;
+  return strength * (1 + chargeMagnitudeAt(state, module.pos));
 }
 
 function infusorBonusAt(state: GameState, module: ModuleInstance, flow: boolean): number {
@@ -207,7 +259,7 @@ function infusorBonusAt(state: GameState, module: ModuleInstance, flow: boolean)
     if (CATEGORY_OF[other.type] !== "infusor" || other.pos === null) continue;
     if (!adjacent(module.pos, other.pos)) continue;
     const strength = receivedStrength(state, other, flow);
-    total += BALANCE.infusorBonus * modulePower(other) * chargedFactor(strength);
+    total += BALANCE.infusorBonus * hostPower(state, other) * chargedFactor(strength);
   }
   return total;
 }
@@ -245,25 +297,32 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
   const synths: SynthInfo[] = [];
   const spacers: DeployedModule[] = [];
   let forgeRate = 0;
+  let mutatorForgeRate = 0;
 
   for (const deployedModule of deployed(state)) {
     const strength = receivedStrength(state, deployedModule, flow);
     chargeStrength.set(deployedModule.id, strength);
     const localBonus = infusorBonusAt(state, deployedModule, flow);
     const chargeFactor = chargedFactor(strength);
-    const amplitude = modulePower(deployedModule) * (1 + localBonus);
+    const power = hostPower(state, deployedModule);
+    const amplitude = power * (1 + localBonus);
     if (isSynthesizerType(deployedModule.type) && deployedModule.pos !== null) {
       const pos = deployedModule.pos;
-      synths.push({ module: { ...deployedModule, pos }, power: modulePower(deployedModule), chargeFactor, strength, localBonus });
+      synths.push({ module: { ...deployedModule, pos }, power, chargeFactor, strength, localBonus });
       continue;
     }
     if (deployedModule.type === "spacer" && deployedModule.pos !== null) {
       spacers.push({ ...deployedModule, pos: deployedModule.pos });
     }
     let value = 0;
-    if (deployedModule.type === "forge") {
-      value = strength * modulePower(deployedModule);
-      forgeRate += value;
+    if (CATEGORY_OF[deployedModule.type] === "forge") {
+      // The Forge family's two branches (ADR-0043): the Module Forge feeds
+      // its shared meter, the Mutator Forge its own — same strength × power
+      // shape, so a power mutator boosting a Mutator Forge boosts its own
+      // branch, and a charge mutator rides the strength it receives.
+      value = strength * power;
+      if (deployedModule.type === "mutatorForge") mutatorForgeRate += value;
+      else forgeRate += value;
     }
     contributions.set(deployedModule.id, {
       moduleId: deployedModule.id,
@@ -302,7 +361,12 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
   for (const { module, power, chargeFactor, strength, localBonus } of synths) {
     const pitch = pitchOf(module.pos);
     const chordTerms = analysis.participation.get(module.id) ?? 0;
-    const chordFactor = analysis.voiceMultiplier.get(module.id) ?? 1;
+    // The resonance mutator multiplies its host's chord factor (× (1 + m),
+    // ADR-0043) — scaling with chord investment, inert on a chordless host:
+    // no instances, nothing to amplify. The Conditional's per-instance
+    // bonus (ADR-0022) is untouched — chordAmp stays outside the fold.
+    const rawChordFactor = analysis.voiceMultiplier.get(module.id) ?? 1;
+    const chordFactor = chordTerms > 0 ? rawChordFactor * (1 + resonanceMagnitudeAt(state, module.pos)) : rawChordFactor;
     const chordAmp = module.type === "conditional" ? 1 + BALANCE.conditionalChordBonus * chordTerms : 1;
     const base = BALANCE.synthRate * power * chordAmp * chordFactor;
     const value = base * (1 + localBonus) * chargeFactor * achievementBoost;
@@ -338,6 +402,7 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
     achievementBoost,
     rate,
     forgeRate,
+    mutatorForgeRate,
     contributions,
     chargeStrength,
   };

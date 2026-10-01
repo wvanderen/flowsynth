@@ -10,6 +10,9 @@ const PATHS: Record<ModuleType, string> = {
   focusKeyed: '<path d="M-6-12h12l4 8-10 8-10-8Z"/><path d="M-4-4l3 3 6-6"/>',
   infusor: '<circle r="4"/><path d="M0-15v6M0 9v6M-15 0h6M9 0h6m-20-11 5 5m12 12 5 5m0-22-5 5M-6 6l-5 5"/>',
   forge: '<path d="m0-14 12 7v14L0 14-12 7V-7Zm0 0v28m-12-21 24 14m0-14L-12 7"/>',
+  // The Mutator Forge wears the Forge chassis with a seed at its core —
+  // the second branch, minting into the Mutator tray.
+  mutatorForge: '<path d="m0-14 12 7v14L0 14-12 7V-7Zm0 0v28m-12-21 24 14m0-14L-12 7"/><circle r="2.4"/>',
 };
 
 // Focus-app glyphs (ADR-0016: geometric synthesis glyphs, every hue paired

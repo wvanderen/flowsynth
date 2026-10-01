@@ -34,7 +34,7 @@ export function freshAccounting(): SessionAccounting {
 // reconcile from the last hidden-transition save).
 export type Presence = "visible" | "away";
 
-const ZERO: AdvanceResult = { nousEarned: 0, rollsBanked: 0, rollsFlow: 0, rollsForge: 0, goalsCompleted: 0 };
+const ZERO: AdvanceResult = { nousEarned: 0, rollsBanked: 0, rollsFlow: 0, rollsForge: 0, rollsMutator: 0, goalsCompleted: 0 };
 
 export function poolOutstanding(state: GameState): boolean {
   return (state.session?.accounting.poolSeconds ?? 0) > EPS;

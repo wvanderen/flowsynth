@@ -1,10 +1,10 @@
-import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, emittedStrength, affordableLevels, levelCost, levelsCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
+import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, emittedStrength, affordableLevels, hostPower, levelCost, levelsCost, longGoalCost, wholeNous } from "../engine/economy";
 import { claimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
 import { combinePreview, levelable, type CombinePreview, upgradeAllPreview } from "../engine/actions";
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
-import { forgeThreshold, flowThreshold } from "../engine/rolls";
+import { forgeThreshold, flowThreshold, mutatorForgeThreshold } from "../engine/rolls";
 import { BALANCE, CATEGORY_OF, isSynthesizerType, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { catalogOpen, rowUnlockCost, unlockableRows } from "../engine/catalog";
 import { formatClock, formatDuration } from "../engine/clock";
@@ -1176,6 +1176,15 @@ interface RenderContext {
   drop: DropRegister | null;
 }
 
+// The Forge family's two branches (ADR-0043, issue #198) read their own
+// meters — the Module Forge's shared meter, the Mutator Forge's own — the
+// face plumbing is branch-blind beyond this lookup. Null off the family.
+function forgeBranchOf(state: GameState, type: ModuleInstance["type"]): { progress: number; threshold: number } | null {
+  if (type === "forge") return { progress: state.forge.progress, threshold: forgeThreshold(state.forge.earned) };
+  if (type === "mutatorForge") return { progress: state.mutatorForge.progress, threshold: mutatorForgeThreshold(state.mutatorForge.earned) };
+  return null;
+}
+
 // A module face's readout (ADR-0016): the prominent value beneath the
 // signature — the same glanceable line whether compact, in the tray, or
 // enlarged on the expanded face. Shared by the board node and the bloom;
@@ -1183,16 +1192,17 @@ interface RenderContext {
 // is where the ν/s figure is added (no second readout beside it).
 function faceReadoutFor(state: GameState, module: ModuleInstance, pos: Hex | null, snapshot: ReturnType<typeof computeRates>, withUnits = false): { readout: string; readoutClass?: string; note?: string } {
   const contribution = snapshot.contributions.get(module.id);
-  if (module.type === "forge") {
+  const branch = forgeBranchOf(state, module.type);
+  if (branch) {
     // The face's glanceable readout rounds; the inspector keeps exact values.
     return {
-      readout: `${formatNumber(Math.floor(Math.max(0, state.forge.progress)))}/${formatNumber(Math.round(forgeThreshold(state.forge.earned)))}`,
+      readout: `${formatNumber(Math.floor(Math.max(0, branch.progress)))}/${formatNumber(Math.round(branch.threshold))}`,
       readoutClass: "charge",
     };
   }
-  if (isSource(module)) return { readout: `⌁${formatNumber(modulePower(module))}` };
+  if (isSource(module)) return { readout: `⌁${formatNumber(hostPower(state, module))}` };
   if (module.type === "infusor") {
-    return { readout: `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(snapshot.chargeStrength.get(module.id) ?? 0))}%` };
+    return { readout: `+${formatNumber(100 * BALANCE.infusorBonus * hostPower(state, module) * chargedFactor(snapshot.chargeStrength.get(module.id) ?? 0))}%` };
   }
   if (module.type === "spacer") {
     // The spacer is silent wire: it never sounds, never joins a pitch set —
@@ -1239,7 +1249,9 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
 
   const { readout, readoutClass, note } = faceReadoutFor(state, module, pos, ctx.snapshot);
 
-  // The threshold-crossing flash fires for a moment after a roll is minted.
+  // The threshold-crossing flash fires for a moment after a module roll is
+  // minted (reportAdvance sets it from the module queue alone) — the Mutator
+  // Forge branch's flash lands with its own surface (issue #199).
   const crossed = module.type === "forge" && app.rollFlashUntil > Date.now();
 
   // The face button (issue #195): one per closed, levelable face, in
@@ -1255,7 +1267,10 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
       ...(note ? { note } : {}),
       level: faceLevel(module),
       hexClass: hexClass.trim(),
-      under: module.type === "forge" ? waterFill(module.id, state.forge.progress / forgeThreshold(state.forge.earned)) : "",
+      under: (() => {
+        const branch = forgeBranchOf(state, module.type);
+        return branch ? waterFill(module.id, branch.progress / branch.threshold) : "";
+      })(),
       ...(charged ? { chargeGlow: chargeGlow(strength) } : {}),
     })}${highlight}${faceBuy}
     </g>`;
@@ -1754,6 +1769,10 @@ const BLOOM_EFFECTS: Record<ModuleInstance["type"], (input: BloomEffectInput) =>
     benefit: `+${formatNumber(gain)} progress/s`,
     contribution: `${formatNumber(value)} progress/s while charged`,
   }),
+  mutatorForge: ({ gain, value }) => ({
+    benefit: `+${formatNumber(gain)} progress/s`,
+    contribution: `${formatNumber(value)} progress/s while charged`,
+  }),
 };
 
 // The expanded face: the module's own hex lifted off the grid toward the
@@ -1790,7 +1809,9 @@ function renderBloom(app: App, projected: RateSnapshot): void {
   }
   const phone = isPhoneWidth();
   const snapshot = projected;
-  const power = modulePower(module);
+  // The host's effective power (ADR-0043): the power mutator's uplift
+  // rides every displayed power figure, board face and bloom alike.
+  const power = hostPower(state, module);
   const effectInput = {
     power,
     value: snapshot.contributions.get(module.id)?.value ?? 0,
@@ -1818,8 +1839,9 @@ function renderBloom(app: App, projected: RateSnapshot): void {
   // Partial by design: the button stays enabled whatever the bank says —
   // a short purchase buys what it covers and says so.
   const affordable = wholeNous(state) >= bulkCost;
-  // The Forge's face readout moves per tick; its face tracks it.
-  const forgeTick = module.type === "forge" ? Math.floor(state.forge.progress) : 0;
+  // The Forge's face readout moves per tick; its face tracks it. Each
+  // branch tracks its own meter (ADR-0043).
+  const forgeTick = Math.floor(forgeBranchOf(state, module.type)?.progress ?? 0);
   const shape = phone ? "sheet" : "pop";
   const key = JSON.stringify([shape, module.id, module.level, module.rarity, ui.bulkCount, maxLevels, want, bulkCost, bulkBenefit, affordable, lines.contribution, forgeTick]);
   // One frame read for both the pop question and the positioning below.
@@ -3011,6 +3033,7 @@ function candidateReadout(type: ModuleInstance["type"]): string {
     case "infusor":
       return `+${formatNumber(BALANCE.infusorBonus * 100)}%`;
     case "forge":
+    case "mutatorForge":
       return "1/s";
   }
 }

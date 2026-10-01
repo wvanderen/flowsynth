@@ -1,7 +1,7 @@
 import { EPS } from "./constants";
 import { syncAchievements } from "./achievements";
 import { chargeDelivered, chargeWindowActive, computeRates, deployed } from "./economy";
-import { addFlowProgress, addForgeProgress, type Rng } from "./rolls";
+import { addFlowProgress, addForgeProgress, addMutatorForgeProgress, type Rng } from "./rolls";
 import { accrueLivePractice } from "./habits";
 import { accrueGoalProgress } from "./goals";
 import type { AdvanceResult, GameState } from "./types";
@@ -29,6 +29,7 @@ export function sumResults(a: AdvanceResult, b: AdvanceResult): AdvanceResult {
     rollsBanked: a.rollsBanked + b.rollsBanked,
     rollsFlow: a.rollsFlow + b.rollsFlow,
     rollsForge: a.rollsForge + b.rollsForge,
+    rollsMutator: a.rollsMutator + b.rollsMutator,
     goalsCompleted: a.goalsCompleted + b.goalsCompleted,
   };
 }
@@ -44,6 +45,7 @@ export function advance(
     rollsBanked: 0,
     rollsFlow: 0,
     rollsForge: 0,
+    rollsMutator: 0,
     goalsCompleted: 0,
   };
   if (state.mode !== "flow" || seconds <= EPS) return result;
@@ -91,6 +93,12 @@ export function advance(
     const forgeRolls = addForgeProgress(state, snapshot.forgeRate * seconds, rng);
     result.rollsForge += forgeRolls;
     result.rollsBanked += forgeRolls;
+  }
+  // The Mutator Forge branch (ADR-0043): its own meter, its own queue —
+  // charge-only, so the practice leg below never feeds it.
+  if (snapshot.mutatorForgeRate > 0) {
+    const mutatorRolls = addMutatorForgeProgress(state, snapshot.mutatorForgeRate * seconds, rng);
+    result.rollsMutator += mutatorRolls;
   }
   session.elapsed += seconds;
   // The summary's headline and rate (§5.7) accrue with the session itself,
