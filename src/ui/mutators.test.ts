@@ -374,6 +374,9 @@ describe("the slot unlock (issue #199)", () => {
     expect(pill.hidden).toBe(false);
     expect(pill.textContent).toContain("Unlock Mutator slot");
     expect(pill.textContent).toContain("3 Arete");
+    expect(document.getElementById("mut-unlock")!.textContent).not.toContain("Arete");
+    app.mutCancelGestures();
+    expect(document.getElementById("mut-unlock")!.textContent).toContain("3 Arete");
   });
 
   it("the entry's first slot is free and sits on any owned cell; eligible cells pulse", () => {
@@ -536,5 +539,55 @@ describe("flow locks the layer away", () => {
     // And the engine still refuses behind the UI's gates.
     app.mutPickSlot(hex(0, 0));
     expect(app.ui.mutPopover).toBeNull();
+  });
+});
+
+
+describe("mutator drag cancellation", () => {
+  it.each(["Escape", "layer", "flow"])("%s removes the drag and prevents its later release", (exit) => {
+    seedMutatorEra();
+    app.mutSetLayer("mutators");
+    document.elementFromPoint = () => document.getElementById("mutator-tray")!;
+    slotNode(0, 0).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
+    expect(document.querySelector(".mut-ghost")).not.toBeNull();
+    if (exit === "Escape") {
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      expect(app.ui.mutLayer).toBe("mutators");
+    } else if (exit === "layer") app.mutSetLayer("modules");
+    else app.beginFlow(null);
+    expect(document.querySelector(".mut-ghost")).toBeNull();
+    expect(app.ui.mutCarrying).toBeNull();
+    expect(app.cancelMutDrag).toBeNull();
+    app.state.mode = "upgrade";
+    app.mutSetLayer("mutators");
+    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 150, clientY: 100 }));
+    document.dispatchEvent(new MouseEvent("pointerup", { clientX: 150, clientY: 100 }));
+    expect(mutatorOf(app.state, "mu1").pos).toEqual(hex(0, 0));
+    expect(app.ui.modal).toBeNull();
+    expect(document.querySelector(".mut-ghost")).toBeNull();
+  });
+});
+
+describe("inert declarations", () => {
+  it.each(["resonance", "power"] as const)("%s promises no effect in hover or popover", (family) => {
+    seedMutatorEra();
+    const pos = family === "resonance" ? hex(0, 0) : hex(1, 0);
+    const item = family === "resonance" ? mutatorOf(app.state, "mu1") : mutatorOf(app.state, "mu3");
+    item.family = family;
+    app.mutSetLayer("mutators");
+    slotNode(pos.q, pos.r).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    expect(document.getElementById("chord-readout")!.textContent).toContain("inert");
+    expect(document.getElementById("chord-readout")!.textContent).not.toContain("%");
+    clickSlot(pos.q, pos.r);
+    expect(document.getElementById("mut-popover")!.textContent).toContain("inert");
+    expect(document.getElementById("mut-popover")!.textContent).not.toContain("%");
+    if (family === "resonance") {
+      app.mutSetLayer("modules");
+      app.select(app.state.modules[0]!.id);
+      const line = document.querySelector(".mut-bloom-line")!;
+      expect(line.textContent).toContain("inert");
+      expect(line.textContent).not.toContain("%");
+    }
   });
 });

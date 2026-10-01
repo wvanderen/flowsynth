@@ -27,6 +27,7 @@ import { ACHIEVEMENTS, achievementName, type AchievementCategory, type Achieveme
 import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, MutatorInstance, NoteEntry, Rarity, RateSnapshot } from "../engine/types";
 import type { App, ChordHover, EnterKind, EnterSelection, ModalKind } from "./app";
 import { suppressNextClick } from "./click";
+import { startPointerDrag } from "./pointer-drag";
 import { appIcon, moduleIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, HUE_TOKEN_OF, moduleFace, boardPoint, SPACING } from "./face";
 import { bloomLayout, bloomPops, bloomSpan, viewMeet, viewPoint, type ViewFrame } from "./bloom";
@@ -1698,10 +1699,6 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
     if (event.button !== 0 || app.state.mode !== "upgrade" || app.ui.buyingCell) return;
     const id = typeof moduleId === "function" ? moduleId() : moduleId;
     if (!id) return;
-    const startX = event.clientX;
-    const startY = event.clientY;
-    let moved = false;
-    let ghost: HTMLDivElement | null = null;
     let hoverTarget: Element | null = null;
     const zone = document.getElementById("inventory-zone");
 
@@ -1719,71 +1716,53 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
       if (!cellNode) setDropHover(app, id, null);
     };
 
-    const move = (ev: PointerEvent) => {
-      if (!moved && Math.hypot(ev.clientX - startX, ev.clientY - startY) > DRAG_THRESHOLD_PX) {
-        moved = true;
+    startPointerDrag(event, {
+      start: () => {
         app.dragging = id;
         const module = app.state.modules.find((m) => m.id === id);
-        // Holding the face starts the live drag (§5): the expanded face
-        // collapses into the ghost, and a drop leaves it closed.
         if (app.ui.selected === id) {
           app.ui.selected = null;
           app.render();
         }
-        // The ghost is the module's own hex tile — what you carry is what you
-        // drop — centered under the cursor.
-        ghost = document.createElement("div");
+        const ghost = document.createElement("div");
         ghost.className = "drag-ghost";
         if (module) ghost.dataset.rarity = module.rarity;
         ghost.innerHTML = module
           ? inventoryTileSvg(module)
           : `<svg viewBox="-75 -75 150 150" aria-hidden="true"><polygon class="hex" points="${hexPoints(HEX_RADIUS)}"/></svg>`;
-        document.body.append(ghost);
         element.classList.add("dragging");
-      }
-      if (ghost) {
-        ghost.style.left = `${ev.clientX}px`;
-        ghost.style.top = `${ev.clientY}px`;
-        setHoverTarget(ev);
-      }
-    };
-    const finish = (ev: PointerEvent, apply: boolean) => {
-      document.removeEventListener("pointermove", move);
-      document.removeEventListener("pointerup", up);
-      document.removeEventListener("pointercancel", cancel);
-      app.dragging = null;
-      ghost?.remove();
-      element.classList.remove("dragging");
-      hoverTarget = null;
-      setDropHover(app, null, null);
-      setChordHover(app, null);
-      zone?.classList.remove("drag-over");
-      if (!apply || !moved) return;
-      suppressNextClick();
-      const target = document.elementFromPoint(ev.clientX, ev.clientY);
-      const cellNode = target?.closest("[data-cell]");
-      const tileNode = target?.closest("[data-inv]");
-      // A matching twin under the release point offers the combine instead
-      // (issue #152); every other drop keeps its gesture — occupied cells
-      // swap immediately, the tray retrieves.
-      if (cellNode) {
-        const cell = cellNode.getAttribute("data-cell")!.split(",").map(Number);
-        const pos = { q: cell[0]!, r: cell[1]! };
-        const occupant = deployedAt(app.state, pos);
-        if (offerCombineDrop(app, id, occupant?.id)) return;
-        app.pickCellThenPlace(id, pos);
-        return;
-      }
-      if (tileNode && offerCombineDrop(app, id, tileNode.getAttribute("data-inv"))) return;
-      if (target?.closest("#inventory-zone")) {
-        app.returnToInventory(id);
-      }
-    };
-    const up = (ev: PointerEvent) => finish(ev, true);
-    const cancel = () => finish(new PointerEvent("pointerup"), false);
-    document.addEventListener("pointermove", move);
-    document.addEventListener("pointerup", up);
-    document.addEventListener("pointercancel", cancel);
+        return ghost;
+      },
+      move: setHoverTarget,
+      cleanup: () => {
+        app.dragging = null;
+        element.classList.remove("dragging");
+        hoverTarget = null;
+        setDropHover(app, null, null);
+        setChordHover(app, null);
+        zone?.classList.remove("drag-over");
+      },
+      drop: (ev) => {
+        const target = document.elementFromPoint(ev.clientX, ev.clientY);
+        const cellNode = target?.closest("[data-cell]");
+        const tileNode = target?.closest("[data-inv]");
+        // A matching twin under the release point offers the combine instead
+        // (issue #152); every other drop keeps its gesture — occupied cells
+        // swap immediately, the tray retrieves.
+        if (cellNode) {
+          const cell = cellNode.getAttribute("data-cell")!.split(",").map(Number);
+          const pos = { q: cell[0]!, r: cell[1]! };
+          const occupant = deployedAt(app.state, pos);
+          if (offerCombineDrop(app, id, occupant?.id)) return;
+          app.pickCellThenPlace(id, pos);
+          return;
+        }
+        if (tileNode && offerCombineDrop(app, id, tileNode.getAttribute("data-inv"))) return;
+        if (target?.closest("#inventory-zone")) {
+          app.returnToInventory(id);
+        }
+      },
+    });
   });
 }
 

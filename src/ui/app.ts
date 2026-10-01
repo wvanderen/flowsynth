@@ -294,6 +294,7 @@ export class App {
     mutCarrying: null,
     mutDropHover: null,
   };
+  cancelMutDrag: (() => void) | null = null;
   lastWall: number | null = null;
   // The dual-clock drift baseline at lastWall (§10): a positive step past
   // the noise floor sizes slept gaps; a negative one past it credits the
@@ -792,7 +793,7 @@ export class App {
       }
       // The Mutator layer's Esc walk (issue #199): gesture, then popover,
       // then the layer itself — the tab switch is the walk's last step.
-      if (this.ui.mutUnlockArmed || this.ui.mutArmedTray !== null || this.ui.mutMoving !== null) {
+      if (this.cancelMutDrag || this.ui.mutUnlockArmed || this.ui.mutArmedTray !== null || this.ui.mutMoving !== null) {
         this.mutCancelGestures();
         return;
       }
@@ -1123,6 +1124,7 @@ export class App {
   // popover, and the combine review's leftover offer (the modal itself
   // closes through closeModal). clearTransientUi reads this shape too.
   private mutDisarm(): void {
+    this.cancelMutDrag?.();
     this.ui.mutArmedTray = null;
     this.ui.mutUnlockArmed = false;
     this.ui.mutMoving = null;

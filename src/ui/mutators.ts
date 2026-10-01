@@ -17,7 +17,7 @@ import { adjacent, sameHex } from "../engine/hex";
 import { cellNoteOf } from "../engine/lattice";
 import type { GameState, Hex, MutatorFamily, MutatorInstance, Rarity, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
-import { suppressNextClick } from "./click";
+import { startPointerDrag } from "./pointer-drag";
 import { boardPoint, HEX_RADIUS, hexPoints } from "./face";
 import { viewPoint, type ViewFrame } from "./bloom";
 import { META, RARITY_LABEL } from "./meta";
@@ -254,7 +254,7 @@ export function renderMutatorTray(app: App): void {
   }
   const tray = state.mutators.filter((m) => m.pos === null);
   const price = mutatorSlotPrice(state);
-  const key = JSON.stringify([tray.map((m) => `${m.id}:${m.rarity}:${m.family}`), ui.mutArmedTray, state.mutatorSlots.length, state.arete]);
+  const key = JSON.stringify([tray.map((m) => `${m.id}:${m.rarity}:${m.family}`), ui.mutArmedTray, ui.mutUnlockArmed, state.mutatorSlots.length, state.arete]);
   if (host.dataset.renderKey === key) return;
   host.dataset.renderKey = key;
   host.hidden = false;
@@ -267,7 +267,7 @@ export function renderMutatorTray(app: App): void {
         )
         .join("") || `<span class="tray-empty">minted mutators wait here</span>`
     }</div>
-    <button class="mut-unlock" id="mut-unlock">Unlock slot · <span class="mono">${state.mutatorSlots.length === 0 ? "free" : `${price} Arete`}</span></button>`;
+    <button class="mut-unlock" id="mut-unlock">Unlock slot${ui.mutUnlockArmed ? "" : ` · <span class="mono">${state.mutatorSlots.length === 0 ? "free" : `${price} Arete`}</span>`}</button>`;
   host.querySelectorAll<HTMLButtonElement>("[data-mut-tray]").forEach((button) => {
     const id = button.getAttribute("data-mut-tray")!;
     button.addEventListener("click", () => app.mutArmTray(id));
@@ -329,7 +329,7 @@ export function renderMutatorPopover(app: App, snapshot: RateSnapshot): void {
     host.hidden = false;
     host.innerHTML = `
       <div class="mut-pop-head"><span class="mut-pop-family">${FAMILY_WORD[item.family]}</span><span class="mut-pop-rarity">${RARITY_LABEL[item.rarity]}</span></div>
-      <p class="mut-pop-effect mono">${mutatorEffectText(item.family, item.rarity)}</p>
+      ${inert ? "" : `<p class="mut-pop-effect mono">${mutatorEffectText(item.family, item.rarity)}</p>`}
       ${hostNameLine ? `<p class="mut-pop-host">Hosts <b>${hostNameLine}</b></p>` : ""}
       ${inert ? `<p class="mut-pop-inert">${inert}</p>` : ""}
       <div class="mut-pop-actions">
@@ -366,7 +366,7 @@ export function mutatorAskHtml(state: GameState, pos: Hex, snapshot: RateSnapsho
   }
   const host = hostName(state, pos);
   const inert = mutatorInertVerdict(state, pos, item, snapshot);
-  return `<span class="chord-readout-chip mono" style="--cc:var(--arete)">${FAMILY_WORD[item.family]} · ${mutatorEffectText(item.family, item.rarity)}${host ? ` — hosts ${host}` : ""}${inert ? ` · ${inert}` : ""}</span>`;
+  return `<span class="chord-readout-chip mono" style="--cc:var(--arete)">${FAMILY_WORD[item.family]}${inert ? "" : ` · ${mutatorEffectText(item.family, item.rarity)}`}${host ? ` — hosts ${host}` : ""}${inert ? ` · ${inert}` : ""}</span>`;
 }
 
 /* ── The expanded face's mutator line ─────────────────
@@ -387,7 +387,7 @@ export function mutatorBloomLineHtml(state: GameState, pos: Hex | null, snapshot
   return `<div class="mut-bloom-line">
     <span class="mut-bloom-glyph" aria-hidden="true"><svg viewBox="-14 -14 28 28">${mutatorGlyph(item.family, 0.8)}</svg></span>
     <b>Mutator · ${FAMILY_WORD[item.family]}</b>
-    <span class="mono">${mutatorEffectText(item.family, item.rarity)}</span>
+    ${inert ? "" : `<span class="mono">${mutatorEffectText(item.family, item.rarity)}</span>`}
     ${inert ? `<i>${inert}</i>` : ""}
   </div>`;
 }
@@ -429,7 +429,7 @@ export function refreshMutPreview(app: App): void {
    never collide. */
 
 const boundMutNodes = new WeakSet<Element>();
-const MUT_DRAG_THRESHOLD_PX = 6;
+
 
 export function bindMutatorLayer(app: App, svg: SVGSVGElement): void {
   svg.querySelectorAll<SVGGElement>("[data-mut-slot], [data-mut-unlock]").forEach((node) => {
@@ -474,10 +474,7 @@ function startMutDrag(app: App, event: PointerEvent, id: string, origin: Hex | "
   if (app.ui.mutUnlockArmed || app.ui.mutArmedTray !== null || app.ui.mutMoving !== null || app.ui.mutCarrying) return;
   const item = app.state.mutators.find((m) => m.id === id);
   if (!item) return;
-  const startX = event.clientX;
-  const startY = event.clientY;
-  let moved = false;
-  let ghost: HTMLDivElement | null = null;
+  app.cancelMutDrag?.();
   const slotAt = (ev: PointerEvent): Hex | null => {
     const hit = document.elementFromPoint(ev.clientX, ev.clientY)?.closest("[data-mut-slot]");
     return hexFromAttr(hit?.getAttribute("data-mut-slot"));
@@ -493,47 +490,33 @@ function startMutDrag(app: App, event: PointerEvent, id: string, origin: Hex | "
     return !!document.elementFromPoint(ev.clientX, ev.clientY)?.closest("#mutator-tray");
   };
   const tray = document.getElementById("mutator-tray");
-  const move = (ev: PointerEvent) => {
-    if (!moved && Math.hypot(ev.clientX - startX, ev.clientY - startY) > MUT_DRAG_THRESHOLD_PX) {
-      moved = true;
+  app.cancelMutDrag = startPointerDrag(event, {
+    start: () => {
       app.ui.mutCarrying = id;
       app.ui.mutPopover = null;
-      ghost = document.createElement("div");
+      const ghost = document.createElement("div");
       ghost.className = "drag-ghost mut-ghost";
       ghost.innerHTML = mutatorTileSvg(item);
-      document.body.append(ghost);
-    }
-    if (ghost) {
-      ghost.style.left = `${ev.clientX}px`;
-      ghost.style.top = `${ev.clientY}px`;
+      return ghost;
+    },
+    move: (ev) => {
       const pos = slotAt(ev);
       const twin = pos ? null : trayTwinAt(ev);
       app.setMutDropHover(id, pos);
-      const over = overTray(ev);
-      tray?.classList.toggle("drag-over", over);
+      tray?.classList.toggle("drag-over", overTray(ev));
       tray?.querySelectorAll(".mut-tile").forEach((tile) => {
         tile.classList.toggle("mut-land-combine", twin !== null && tile.getAttribute("data-mut-tray") === twin);
       });
-    }
-  };
-  const finish = (ev: PointerEvent, apply: boolean) => {
-    document.removeEventListener("pointermove", move);
-    document.removeEventListener("pointerup", up);
-    document.removeEventListener("pointercancel", cancel);
-    ghost?.remove();
-    tray?.classList.remove("drag-over");
-    tray?.querySelectorAll(".mut-tile.mut-land-combine").forEach((tile) => tile.classList.remove("mut-land-combine"));
-    app.ui.mutCarrying = null;
-    app.setMutDropHover(null, null);
-    if (!apply || !moved) return;
-    suppressNextClick();
-    resolveMutDrop(app, id, origin, ev, slotAt, trayTwinAt, overTray);
-  };
-  const up = (ev: PointerEvent) => finish(ev, true);
-  const cancel = (ev: PointerEvent) => finish(ev, false);
-  document.addEventListener("pointermove", move);
-  document.addEventListener("pointerup", up);
-  document.addEventListener("pointercancel", cancel);
+    },
+    cleanup: () => {
+      app.cancelMutDrag = null;
+      tray?.classList.remove("drag-over");
+      tray?.querySelectorAll(".mut-tile.mut-land-combine").forEach((tile) => tile.classList.remove("mut-land-combine"));
+      app.ui.mutCarrying = null;
+      app.setMutDropHover(null, null);
+    },
+    drop: (ev) => resolveMutDrop(app, id, origin, ev, slotAt, trayTwinAt, overTray),
+  });
 }
 
 // The release's one landing (issue #199): a matching twin under the drop
