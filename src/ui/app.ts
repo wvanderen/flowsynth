@@ -1,4 +1,4 @@
-import { advance } from "../engine/advance";
+import { advance, earnNous } from "../engine/advance";
 import type { AdvanceResult } from "../engine/types";
 import {
   buyCell,
@@ -1452,12 +1452,10 @@ export class App {
   }
 
   devNous(): void {
-    // The dev grant produces like flow does: the balance, the lifetime
-    // truth, and the era's measure together. It mints nothing — the door
-    // opens on the crossing, and Arete still waits for the reset.
-    this.state.nous += 100;
-    this.state.totalEarned += 100;
-    this.state.eraEarned += 100;
+    // The dev grant produces like flow does, through the one credit seam.
+    // It mints nothing — the door opens on the crossing, and Arete still
+    // waits for the prestige action.
+    earnNous(this.state, 100);
     this.say("Dev: +100 ν.");
     this.render();
   }

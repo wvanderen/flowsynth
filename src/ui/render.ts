@@ -2762,15 +2762,16 @@ function renderResetModal(app: App, content: HTMLElement): void {
 }
 
 // The prestige confirm (ADR-0039): the door's second press. The claim is
-// stated live; the boundary's two sides are named plainly — what the reset
+// stated live; the boundary's two sides are named plainly — what prestige
 // takes (levels, nous, charge) and what survives it (the board, tray,
-// rolls, achievements, life record, Arete). Copy is tuning.
+// rolls, achievements, life record, Arete). Copy is tuning, and the
+// glossary's avoided-verb rule holds: prestige is the verb, never "reset".
 function renderPrestigeModal(app: App, content: HTMLElement): void {
   const claim = claimOf(app.state);
   content.innerHTML = `
     ${modalTop("PRESTIGE")}
     <h2 id="modal-title">Begin the next era?</h2>
-    <p class="lead">Prestige banks <strong class="mono">${claim} Arete</strong> and starts the era over: module levels return to base, and your nous and charge reset to the opening.</p>
+    <p class="lead">Prestige banks <strong class="mono">${claim} Arete</strong> and starts the era over: module levels return to base, and your nous and charge return to the opening.</p>
     <p class="lead muted">Your board and its placement, the tray, banked Forge rolls and progress, achievements, your whole life record, your Arete, and lifetime nous all stay.</p>
     <div class="modal-actions">
       <button id="prestige-cancel">Not yet</button>

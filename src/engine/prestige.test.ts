@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { endSession, prestige, startSession } from "./actions";
-import { ARETE_HORIZON } from "./accumulator";
+import { ARETE_HORIZON, horizonReached } from "./accumulator";
 import { BALANCE } from "./constants";
 import { advance } from "./advance";
 import { fresh, give } from "./fixtures";
@@ -26,6 +26,25 @@ describe("the prestige action", () => {
     expect(prestige(fresh()).ok).toBe(false);
     const ready = atHorizon();
     expect(prestige(ready).ok).toBe(true);
+  });
+
+  it("a fresh save reaches the horizon through play alone, and the crossing banks nothing", () => {
+    // The acceptance check driven organically: no patched counters — a
+    // boosted board produces its way to the line in one session.
+    const s = fresh();
+    for (let i = 0; i < 12; i++) give(s, "additive", hex(i, 3), 30);
+    startSession(s, null);
+    advance(s, 420);
+    endSession(s, 5_000);
+    expect(s.totalEarned).toBeGreaterThanOrEqual(ARETE_HORIZON);
+    // The first era: the era's measure and the lifetime truth agree.
+    expect(s.eraEarned).toBe(s.totalEarned);
+    expect(horizonReached(s)).toBe(true);
+    // The crossing mints nothing; the door's action is the only source.
+    expect(s.arete).toBe(0);
+    expect(prestige(s).ok).toBe(true);
+    expect(s.arete).toBe(1);
+    expect(s.eraEarned).toBe(0);
   });
 
   it("banks the live claim: the nth reset banks n, and no other code path grants Arete", () => {

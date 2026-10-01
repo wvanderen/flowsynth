@@ -13,6 +13,16 @@ import type { AdvanceResult, GameState } from "./types";
 // produces, but credits nothing until the report settles it.
 export type AdvanceSink = "live" | "provisional";
 
+// The one production-credit seam (ADR-0039): produced nous lands on the
+// balance, the lifetime truth, and the era's measure together — prestige
+// rebases only the era leg. Every nous-granting path reads this, never
+// three parallel increments that can drift.
+export function earnNous(state: GameState, amount: number): void {
+  state.nous += amount;
+  state.totalEarned += amount;
+  state.eraEarned += amount;
+}
+
 export function sumResults(a: AdvanceResult, b: AdvanceResult): AdvanceResult {
   return {
     nousEarned: a.nousEarned + b.nousEarned,
@@ -69,11 +79,7 @@ export function advance(
     session.accounting.bucketNous += gained;
     session.accounting.poolSeconds += seconds;
   } else {
-    // The lifetime truth and the era's measure rise together (ADR-0039):
-    // prestige rebases only the era leg.
-    state.nous += gained;
-    state.totalEarned += gained;
-    state.eraEarned += gained;
+    earnNous(state, gained);
   }
   result.nousEarned += gained;
   if (snapshot.forgeRate > 0) {

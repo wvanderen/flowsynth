@@ -1,5 +1,5 @@
 import { DRIFT_NOISE_SECONDS, EPS, RECONCILIATION_FLOOR_SECONDS } from "./constants";
-import { advance, sumResults } from "./advance";
+import { advance, earnNous, sumResults } from "./advance";
 import { accrueLivePractice } from "./habits";
 import { accrueGoalProgress } from "./goals";
 import type { Rng } from "./rolls";
@@ -137,11 +137,8 @@ export function resolveHonestyReport(state: GameState, outcome: HonestyOutcome):
     completions = accrueGoalProgress(state, state.activeHabitId, credit);
   }
   if (outcome !== "missed" && accounting.bucketNous > 0) {
-    // The bucket's nous banks the same way live production does: the
-    // balance, the lifetime truth, and the era's measure together.
-    state.nous += accounting.bucketNous;
-    state.totalEarned += accounting.bucketNous;
-    state.eraEarned += accounting.bucketNous;
+    // The bucket's nous banks through the one production-credit seam.
+    earnNous(state, accounting.bucketNous);
     session.earned += accounting.bucketNous;
   }
   accounting.events.push({ awaySeconds: pool, outcome });
