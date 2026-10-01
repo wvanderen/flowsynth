@@ -134,6 +134,10 @@ An infusor's contribution to the composite: the local uplift it grants adjacent 
 **Module upgrade**:
 A purchased increase to a module's core power, paid for with nous in upgrade mode.
 
+**Bulk upgrade**:
+The shared +1 / +5 / +10 / MAX ladder over a module's level prices, purchasable from three upgrade-mode-only surfaces: the face button on each closed levelable face (click buys +1; shift flips every face button board-wide to MAX and a shift-click buys every affordable level), the Upgrade All cluster docked at the board's lower edge (the board-wide sweep; the tray modules' only bulk path), and the expanded face's dial (×1 / ×5 / ×10 / MAX·k with live total cost and k-level benefit). Partial by design: no control disables — a purchase buys what the bank covers and the toast reports what landed. Spacers are excluded everywhere (ADR-0045).
+_Avoid_: buy max, upgrade all button (as the only surface)
+
 **Rarity**:
 A module quality shown as an engraved ring count and plate tint; it improves how purchased levels scale and strengthens secondary effects, rather than granting free levels.
 

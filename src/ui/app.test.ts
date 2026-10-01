@@ -9,7 +9,7 @@ import { writeNote } from "../engine/notes";
 import { BALANCE, SAVE_VERSION } from "../engine/constants";
 import { ARETE_HORIZON } from "../engine/accumulator";
 import { STORAGE_KEY, serialize } from "../engine/save";
-import { computeRates, longGoalCost } from "../engine/economy";
+import { computeRates, longGoalCost, affordableLevels, levelCost, levelsCost } from "../engine/economy";
 import { startSession, endSession } from "../engine/actions";
 import { advance } from "../engine/advance";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport } from "../engine/trust";
@@ -1125,7 +1125,7 @@ describe("the expanded face (§5)", () => {
     expect(faceSvg.querySelector(":scope > [data-key='hex']")).not.toBeNull();
     expect(faceSvg.querySelector(".face-name")!.getAttribute("y")).toBe("-26");
     expect(faceSvg.querySelector(".face-readout")!.getAttribute("y")).toBe("11");
-    expect(faceSvg.querySelector(".face-note")!.getAttribute("y")).toBe("44");
+    expect(faceSvg.querySelector(".face-note")!.getAttribute("y")).toBe("49");
     expect(faceSvg.querySelector(".face-signature")!.getAttribute("transform")).toBe("translate(0 -7) scale(0.7)");
     // The module lifted off its cell: the bloom repeats every line the face
     // carries, so the origin renders vacated — no doubled module.
@@ -1155,11 +1155,17 @@ describe("the expanded face (§5)", () => {
     expect(bloom().querySelector("#bloom-upgrade")!.textContent).toContain("16 ν");
   });
 
-  it("cannot afford: the button disables", () => {
+  it("cannot afford: partial by design — the button stays enabled and buys what it can", () => {
     app.state.nous = 0;
     app.render();
     clickCell(0,0);
-    expect((bloom().querySelector("#bloom-upgrade") as HTMLButtonElement).disabled).toBe(true);
+    const button = bloom().querySelector<HTMLButtonElement>("#bloom-upgrade")!;
+    expect(button.disabled).toBe(false);
+    expect(button.title).toContain("buys what it can");
+    // The click refuses plainly: not even one level is affordable.
+    button.click();
+    expect(app.state.modules[0]!.level).toBe(0);
+    expect(document.getElementById("status")!.textContent).toContain("Not enough whole nous");
   });
 
   it("the silent wire wears no Upgrade button — a level buys it nothing", () => {
@@ -3574,5 +3580,213 @@ describe("the Goals panel's slots and purchase row (#150)", () => {
     buy().click();
     expect(slots()).toContain("0/4");
     expect(s.goalCapacityBought).toBe(2);
+  });
+});
+
+// The bulk upgrade controls (issue #195, the #173 contract): the face
+// button, the Upgrade All cluster, and the expanded face's dial — one
+// shared ladder (+1 / +5 / +10 / MAX), partial by design, upgrade-mode-only.
+describe("the bulk upgrade controls (#195)", () => {
+  const status = () => document.getElementById("status")!.textContent ?? "";
+
+  it("every closed, levelable face wears a corner button; +1 click buys one level", () => {
+    app.state.nous = 100;
+    app.render();
+    const buy = document.querySelector(".face-buy")!;
+    expect(buy.getAttribute("data-module")).toBe("m1");
+    expect(buy.querySelector(".face-buy-label")!.textContent).toBe("+1");
+    buy.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.state.modules[0]!.level).toBe(1);
+    expect(app.state.nous).toBe(90);
+    expect(status()).toContain("upgraded to level 1");
+    // The gesture stays off the cell: no bloom opened, the selection unset.
+    expect(app.ui.selected).toBeNull();
+  });
+
+  it("a shift-click buys every affordable level in one gesture", () => {
+    app.state.nous = levelsCost(0, 9);
+    app.render();
+    document.querySelector(".face-buy")!.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: true }));
+    expect(app.state.modules[0]!.level).toBe(9);
+    expect(app.state.nous).toBe(0);
+    expect(status()).toContain("+9 levels");
+  });
+
+  it("holding shift flips every face button board-wide, but the click's own shift state is the truth", () => {
+    app.state.nous = 100;
+    app.render();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Shift" }));
+    app.render();
+    const buy = document.querySelector(".face-buy")!;
+    expect(buy.querySelector(".face-buy-label")!.textContent).toBe("MAX");
+    expect(buy.getAttribute("aria-label")).toContain("MAX · buy");
+    // The MAX tooltip carries the full-sweep cost preview like every
+    // bulk surface's tooltip (the #173 resolution).
+    expect(buy.getAttribute("aria-label")).toMatch(/· \d[\d,]* ν$/);
+    expect(buy.querySelector("title")!.textContent).toMatch(/· \d[\d,]* ν$/);
+    // …and the flip is transient: keyup restores every label.
+    document.dispatchEvent(new KeyboardEvent("keyup", { key: "Shift" }));
+    app.render();
+    expect(document.querySelector(".face-buy")!.querySelector(".face-buy-label")!.textContent).toBe("+1");
+    // A shift released while the window lacks focus never fires keyup —
+    // the blur drops the mode instead of leaving MAX stuck.
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Shift" }));
+    app.render();
+    expect(document.querySelector(".face-buy")!.querySelector(".face-buy-label")!.textContent).toBe("MAX");
+    window.dispatchEvent(new Event("blur"));
+    app.render();
+    expect(document.querySelector(".face-buy")!.querySelector(".face-buy-label")!.textContent).toBe("+1");
+    // Even with the label showing MAX, a plain click still buys +1: the
+    // click's own shift state is the source of truth.
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Shift" }));
+    app.render();
+    document.querySelector(".face-buy")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.state.modules[0]!.level).toBe(1);
+  });
+
+  it("the spacer wears no face button — the silent wire never upgrades", () => {
+    give(app.state, "spacer", hex(1, 0));
+    app.render();
+    const modules = document.querySelectorAll(".module-node");
+    expect(modules).toHaveLength(2);
+    // One button, and it belongs to the opening synth.
+    expect(document.querySelectorAll(".face-buy")).toHaveLength(1);
+    expect(document.querySelector(".face-buy")!.getAttribute("data-module")).toBe("m1");
+  });
+
+  it("in flow the face buttons vanish with the purchase furniture", () => {
+    app.render();
+    expect(document.querySelectorAll(".face-buy")).toHaveLength(1);
+    startSession(app.state, 600);
+    app.render();
+    expect(document.querySelectorAll(".face-buy")).toHaveLength(0);
+    endSession(app.state);
+    app.render();
+    expect(document.querySelectorAll(".face-buy")).toHaveLength(1);
+  });
+
+  it("the Upgrade All cluster buys up to N on every levelable module, tray included, spacers never", () => {
+    const s = app.state;
+    const traySynth = give(s, "additive", null);
+    const wire = give(s, "spacer", null, 2);
+    s.nous = 40;
+    app.render();
+    const cluster = document.getElementById("upgrade-all")!;
+    expect(cluster.hidden).toBe(false);
+    expect(cluster.textContent).toContain("UPGRADE ALL");
+    cluster.querySelector<HTMLButtonElement>('[data-sweep="1"]')!.click();
+    expect(s.modules[0]!.level).toBe(1);
+    expect(traySynth.level).toBe(1);
+    expect(wire.level).toBe(2);
+    expect(s.nous).toBe(20);
+    expect(status()).toContain("UPGRADE ALL +1: 2 levels across the board · 20 ν");
+  });
+
+  it("the cluster is partial by design: the +N sweep buys what the bank covers", () => {
+    const s = app.state;
+    s.nous = levelsCost(0, 3); // three of the five wanted levels
+    app.render();
+    document.querySelector<HTMLButtonElement>('#upgrade-all [data-sweep="5"]')!.click();
+    expect(s.modules[0]!.level).toBe(3);
+    expect(s.nous).toBe(0);
+    expect(status()).toContain("UPGRADE ALL +5: 3 levels across the board");
+  });
+
+  it("MAX sweeps the bank into the cheapest next levels and reports the spend", () => {
+    const s = app.state;
+    s.nous = levelsCost(0, 8) + levelCost(8) - 1;
+    app.render();
+    const maxChip = document.querySelector<HTMLButtonElement>('#upgrade-all [data-sweep="max"]')!;
+    expect(maxChip.title).toContain("Sweep the whole bank");
+    maxChip.click();
+    expect(s.modules[0]!.level).toBe(8);
+    expect(status()).toContain("UPGRADE ALL MAX: 8 levels across 1 module");
+  });
+
+  it("the cluster quotes full-N cost previews in its tooltips", () => {
+    app.render();
+    const chip = document.querySelector<HTMLButtonElement>('#upgrade-all [data-sweep="5"]')!;
+    expect(chip.title).toContain("+5 on all 1 modules");
+    expect(chip.title).toContain(formatNumber(levelsCost(0, 5)));
+  });
+
+  it("in flow the cluster hides", () => {
+    startSession(app.state, 600);
+    app.render();
+    expect(document.getElementById("upgrade-all")!.hidden).toBe(true);
+  });
+
+  it("the dial: ×5 retitles the button, the buy lands partially, the bloom stands", () => {
+    const s = app.state;
+    s.nous = levelsCost(0, 3);
+    app.render();
+    clickCell(0, 0);
+    const dial = document.querySelector(".bloom-dial")!;
+    expect(dial.querySelectorAll(".bloom-dial-chip")).toHaveLength(4);
+    dial.querySelector<HTMLButtonElement>('[data-bulk="5"]')!.click();
+    const button = document.querySelector<HTMLButtonElement>("#bloom-upgrade")!;
+    expect(button.querySelector(".bloom-upgrade-title")!.textContent).toContain("Upgrade ×5");
+    expect(button.querySelector(".bloom-upgrade-title")!.textContent).toContain(formatInt(levelsCost(0, 5)));
+    button.click();
+    expect(s.modules[0]!.level).toBe(3);
+    expect(status()).toContain("+3 levels");
+    // The purchase keeps the bloom open, repriced for what remains.
+    expect(app.ui.selected).toBe("m1");
+    expect(document.querySelector(".bloom-upgrade-title")!.textContent).toContain("×5");
+  });
+
+  it("the dial's MAX chip counts the affordable levels and buys them all", () => {
+    const s = app.state;
+    s.nous = 1e6;
+    app.render();
+    clickCell(0, 0);
+    const expected = affordableLevels(1e6, 0);
+    const maxChip = document.querySelector<HTMLButtonElement>('.bloom-dial [data-bulk="max"]')!;
+    expect(maxChip.textContent).toBe(`MAX·${expected}`);
+    maxChip.click();
+    document.querySelector<HTMLButtonElement>("#bloom-upgrade")!.click();
+    expect(s.modules[0]!.level).toBe(expected);
+    // The bank keeps whatever a further level would outprice.
+    expect(s.nous).toBeLessThan(levelCost(expected));
+  });
+
+  it("the dial's MAX preview follows bank changes while ×1 stays affordable", () => {
+    app.state.nous = 100;
+    app.render();
+    clickCell(0, 0);
+    const maxChip = () => document.querySelector<HTMLButtonElement>('.bloom-dial [data-bulk="max"]')!;
+    expect(maxChip().textContent).toBe(`MAX·${affordableLevels(100, 0)}`);
+    app.state.nous = 50;
+    app.render();
+    expect(app.ui.bulkCount).toBe(1);
+    const count = affordableLevels(50, 0);
+    expect(maxChip().textContent).toBe(`MAX·${count}`);
+    expect(maxChip().title).toBe(`Buy every affordable level (${count})`);
+  });
+
+  it("a new selection resets the dial to ×1", () => {
+    give(app.state, "additive", hex(1, 0));
+    app.render();
+    clickCell(0, 0);
+    document.querySelector<HTMLButtonElement>('.bloom-dial [data-bulk="5"]')!.click();
+    expect(app.ui.bulkCount).toBe(5);
+    clickCell(1, 0);
+    expect(app.ui.bulkCount).toBe(1);
+    expect(document.querySelector(".bloom-upgrade-title")!.textContent).toContain("Upgrade ×1");
+  });
+
+  it("the dial rides the phone sheet's buy column", () => {
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+    app.state.nous = levelsCost(0, 3);
+    app.render();
+    clickCell(0, 0);
+    // The sheet carries the same ladder: the chip row rides the buy column.
+    document.querySelector<HTMLButtonElement>('.bloom-sheet [data-bulk="5"]')!.click();
+    const button = document.querySelector<HTMLButtonElement>("#bloom-upgrade")!;
+    expect(button.closest(".bloom-sheet-buy")).not.toBeNull();
+    expect(button.querySelector(".bloom-upgrade-title")!.textContent).toContain("Upgrade ×5");
+    button.click();
+    expect(app.state.modules[0]!.level).toBe(3);
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
   });
 });

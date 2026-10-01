@@ -1,7 +1,7 @@
-import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, emittedStrength, levelCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
+import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, emittedStrength, affordableLevels, levelCost, levelsCost, longGoalCost, modulePower, wholeNous } from "../engine/economy";
 import { claimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
-import { combinePreview, type CombinePreview } from "../engine/actions";
+import { combinePreview, levelable, type CombinePreview, upgradeAllPreview } from "../engine/actions";
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold } from "../engine/rolls";
@@ -85,6 +85,7 @@ export function render(app: App): void {
   renderTools(app, projected);
   renderGrid(app, live, projected);
   renderInventoryTray(app);
+  renderUpgradeAll(app);
   renderArcCard(app);
   renderBloom(app, projected);
   renderZoomCluster(app);
@@ -906,6 +907,7 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
 
   updateSvg(svg, html);
   bindGridEvents(app, svg);
+  bindFaceBuys(app, svg);
   updateChordReadout(app);
 }
 
@@ -1112,6 +1114,10 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
   // The threshold-crossing flash fires for a moment after a roll is minted.
   const crossed = module.type === "forge" && app.forgeFlashUntil > Date.now();
 
+  // The face button (issue #195): one per closed, levelable face, in
+  // upgrade mode only — in flow it vanishes with the purchase furniture.
+  const faceBuy = state.mode === "upgrade" && levelable(module) ? faceBuyHtml(app, module) : "";
+
   return `<g class="module-node${crossed ? " forge-crossed" : ""}" data-type="${module.type}" data-rarity="${module.rarity}">
     ${moduleFace({
       type: module.type,
@@ -1123,8 +1129,58 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
       hexClass: hexClass.trim(),
       under: module.type === "forge" ? waterFill(module.id, state.forge.progress / forgeThreshold(state.forge.earned)) : "",
       ...(charged ? { chargeGlow: chargeGlow(strength) } : {}),
-    })}${highlight}
+    })}${highlight}${faceBuy}
     </g>`;
+}
+
+// The face button (issue #195): one button per closed face, covering the
+// bottom corner — a trapezoid that follows the hexagon's own taper (top
+// edge inside the chassis, bottom corners just past the tip), so it reads
+// as face furniture rather than an overlay, and the pitch note above stays
+// readable. Click buys +1; a shift-click buys every affordable level — the
+// click's own shift state is the source of truth — while holding shift
+// flips every button's label and tooltip to MAX board-wide (ui.faceMax,
+// the Cookie Clicker pattern) so the mode is visible before the click.
+// Spacers wear none: a level buys the silent wire nothing (#193).
+const FACE_BUY_POINTS = "-25,46 25,46 7,58 -7,58";
+
+function faceBuyHtml(app: App, module: ModuleInstance): string {
+  const max = app.ui.faceMax;
+  const levels = max ? affordableLevels(wholeNous(app.state), module.level) : 1;
+  const cost = max ? levelsCost(module.level, levels) : levelCost(module.level);
+  const broke = wholeNous(app.state) < cost;
+  const title = max
+    ? `MAX · buy ${levels} level${levels === 1 ? "" : "s"} · ${formatInt(cost)} ν`
+    : `+1 level · ${formatInt(cost)} ν`;
+  return `<g class="face-buy" data-key="face-buy" data-module="${module.id}" role="button" tabindex="0" aria-label="${title}">
+    <polygon class="face-buy-btn${broke ? " broke" : ""}" points="${FACE_BUY_POINTS}"><title>${title}</title></polygon>
+    <text y="54" text-anchor="middle" class="face-buy-label">${max ? "MAX" : "+1"}</text>
+  </g>`;
+}
+
+// The face buttons bind once per node (the grid's keyed sync keeps them
+// across renders, #115's economy): the click's own shift state decides
+// +1 or MAX, and the stopPropagation keeps the gesture off the cell's
+// selection, drags, and placement.
+const boundFaceBuys = new WeakSet<Element>();
+
+function bindFaceBuys(app: App, svg: SVGSVGElement): void {
+  svg.querySelectorAll<SVGGElement>(".face-buy").forEach((node) => {
+    if (boundFaceBuys.has(node)) return;
+    boundFaceBuys.add(node);
+    node.addEventListener("pointerdown", (event) => event.stopPropagation());
+    const buy = (event: Event) => {
+      event.stopPropagation();
+      event.preventDefault();
+      const id = node.getAttribute("data-module");
+      if (!id || app.state.mode !== "upgrade") return;
+      app.upgradeLevels(id, (event as KeyboardEvent).shiftKey ? "max" : 1);
+    };
+    node.addEventListener("click", buy);
+    node.addEventListener("keydown", (event) => {
+      if ((event as KeyboardEvent).key === "Enter" || (event as KeyboardEvent).key === " ") buy(event);
+    });
+  });
 }
 
 const FILL_INSET = 3;
@@ -1148,6 +1204,51 @@ function isTargetCell(app: App): boolean {
     return true;
   }
   return false;
+}
+
+/* ── The Upgrade All cluster (§7, issue #195) ──────── */
+
+// The cluster's ladder — the shared +1 / +5 / +10 / MAX steps (issue #173's
+// approved contract). The ×5/×10 steps and sweep pacing are provisional
+// tuning.
+const SWEEP_STEPS = [1, 5, 10] as const;
+
+// One plain bold UPGRADE ALL label beside the quick-buy chips, docked at
+// the board's lower edge. +N buys up to N levels on every module, cheapest
+// modules first; MAX sweeps the globally cheapest next level until the
+// bank can't cover one. Tray modules ride the sweeps (their only bulk
+// path); spacers are excluded everywhere. Upgrade-mode-only furniture: in
+// flow the host hides with the rest of the purchase furniture. The chips
+// never disable — partial by design — and their tooltips carry the full-N
+// cost previews; the toast reports what actually landed.
+function renderUpgradeAll(app: App): void {
+  const host = byId("upgrade-all");
+  if (!host) return;
+  const { state } = app;
+  const eligible = state.modules.filter(levelable);
+  const active = state.mode === "upgrade" && eligible.length > 0;
+  host.hidden = !active;
+  if (!active) return;
+  // Rebuild only when the quoted numbers move (#115's economy): the chips
+  // carry live previews, so a roster, level, or bank change re-quotes them.
+  const key = JSON.stringify([wholeNous(state), eligible.map((m) => `${m.id}:${m.level}`)]);
+  if (host.dataset.renderKey === key) return;
+  host.dataset.renderKey = key;
+  const chips = SWEEP_STEPS.map((n) => {
+    const total = eligible.reduce((sum, m) => sum + levelsCost(m.level, n), 0);
+    return `<button class="sweep-chip" data-sweep="${n}" title="+${n} on all ${eligible.length} modules · ${formatNumber(total)} ν (buys cheapest-first if broke)">+${n}</button>`;
+  }).join("");
+  const max = upgradeAllPreview(state, "max");
+  host.innerHTML = `
+    <span class="sweep-label">UPGRADE ALL</span>
+    ${chips}
+    <button class="sweep-chip" data-sweep="max" title="Sweep the whole bank into the cheapest next levels: ~${max.levels} levels across ${max.modules} modules · ${formatNumber(max.spent)} ν">MAX</button>`;
+  host.querySelectorAll<HTMLButtonElement>("[data-sweep]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const step = button.getAttribute("data-sweep")!;
+      app.upgradeAllAction(step === "max" ? "max" : Number(step));
+    });
+  });
 }
 
 /* ── Live drop preview (§5–§6) ───────────────────────────────────────────
@@ -1546,19 +1647,38 @@ function renderBloom(app: App, projected: RateSnapshot): void {
   }
   const phone = isPhoneWidth();
   const snapshot = projected;
-  const lines = BLOOM_EFFECTS[module.type]({
-    gain: modulePower(module) * (BALANCE.rarityPower[module.rarity] - 1),
-    power: modulePower(module),
+  const power = modulePower(module);
+  const effectInput = {
+    power,
     value: snapshot.contributions.get(module.id)?.value ?? 0,
     strength: snapshot.chargeStrength.get(module.id) ?? 0,
+  };
+  const lines = BLOOM_EFFECTS[module.type]({
+    ...effectInput,
+    gain: power * (BALANCE.rarityPower[module.rarity] - 1),
   });
-  const benefit = lines.benefit;
-  const cost = levelCost(module.level);
-  const affordable = wholeNous(state) >= cost;
+  // The dial (issue #195): the Upgrade button gains the shared ladder —
+  // ×1 / ×5 / ×10 / MAX·k — with the total cost and the k-level benefit
+  // (the one-level line's shape, scaled by the power gain over k levels).
+  // The count holds per module: a new selection starts at ×1.
+  if (ui.bulkModuleId !== module.id) {
+    ui.bulkModuleId = module.id;
+    ui.bulkCount = 1;
+  }
+  const maxLevels = affordableLevels(wholeNous(state), module.level);
+  const want = ui.bulkCount === "max" ? maxLevels : ui.bulkCount;
+  const bulkCost = levelsCost(module.level, want);
+  const bulkBenefit = BLOOM_EFFECTS[module.type]({
+    ...effectInput,
+    gain: power * (BALANCE.rarityPower[module.rarity] ** want - 1),
+  }).benefit;
+  // Partial by design: the button stays enabled whatever the bank says —
+  // a short purchase buys what it covers and says so.
+  const affordable = wholeNous(state) >= bulkCost;
   // The Forge's face readout moves per tick; its face tracks it.
   const forgeTick = module.type === "forge" ? Math.floor(state.forge.progress) : 0;
   const shape = phone ? "sheet" : "pop";
-  const key = JSON.stringify([shape, module.id, module.level, module.rarity, benefit, lines.contribution, affordable, forgeTick]);
+  const key = JSON.stringify([shape, module.id, module.level, module.rarity, ui.bulkCount, maxLevels, want, bulkCost, bulkBenefit, affordable, lines.contribution, forgeTick]);
   // One frame read for both the pop question and the positioning below.
   const svg = document.getElementById("grid");
   const viewBox = (svg?.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
@@ -1566,19 +1686,32 @@ function renderBloom(app: App, projected: RateSnapshot): void {
     view: { x: viewBox[0] ?? 0, y: viewBox[1] ?? 0, width: viewBox[2] ?? 0, height: viewBox[3] ?? 0 },
     box: { width: svg?.clientWidth ?? 0, height: svg?.clientHeight ?? 0 },
   };
+  // The dial rides the button in every shape (§7, issue #195): a chip row
+  // above the button on the popped plate and the riding card, and inside
+  // the sheet's buy column on phone.
+  const benefit = lines.benefit;
+  const dial = benefit
+    ? `<div class="bloom-dial" role="group" aria-label="Upgrade count">${([1, 5, 10, "max"] as const)
+        .map((option) => {
+          const active = option === ui.bulkCount;
+          return `<button class="bloom-dial-chip${active ? " active" : ""}" data-bulk="${option}" aria-pressed="${active}" title="${option === "max" ? `Buy every affordable level (${maxLevels})` : `Buy ${option} levels`}">${option === "max" ? `MAX·${maxLevels}` : `×${option}`}</button>`;
+        })
+        .join("")}</div>`
+    : "";
   const upgradeButton = benefit
-    ? `<button class="bloom-upgrade" id="bloom-upgrade" ${affordable ? "" : "disabled"} title="${affordable ? "Upgrade this module" : "Not enough whole nous"}">
-        <span class="bloom-upgrade-title">Upgrade · <strong class="mono">${formatInt(cost)} ν</strong></span>
-        <small class="bloom-upgrade-benefit mono">${benefit}</small>
+    ? `<button class="bloom-upgrade" id="bloom-upgrade" title="${affordable ? `Buy ${want} level${want === 1 ? "" : "s"}` : `Not enough for all ${want} — buys what it can`}">
+        <span class="bloom-upgrade-title">Upgrade ×${want} · <strong class="mono">${formatInt(bulkCost)} ν</strong></span>
+        <small class="bloom-upgrade-benefit mono">${bulkBenefit ?? ""}</small>
       </button>`
     : "";
+  const buyColumn = `${dial}${upgradeButton}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.classList.toggle("sheet", phone);
     document.body.classList.toggle("bloom-sheet-open", phone);
     if (phone) {
       // The bottom sheet (§7): the face tile beside the readout column,
-      // the upgrade action at its end — same content, re-docked.
+      // the dial and upgrade action at its end — same content, re-docked.
       const face = faceReadoutFor(state, module, module.pos, snapshot, true);
       host.innerHTML = `<div class="bloom-sheet" data-type="${module.type}" data-rarity="${module.rarity}">
         <svg class="bloom-sheet-tile" viewBox="-70 -70 140 140" aria-hidden="true">${moduleFace({
@@ -1594,9 +1727,9 @@ function renderBloom(app: App, projected: RateSnapshot): void {
           <small class="bloom-sheet-note mono">${cellNoteOf(module.pos)}</small>
           <small class="bloom-sheet-contrib mono">${lines.contribution}</small>
         </div>
-        ${upgradeButton}
+        <div class="bloom-sheet-buy">${buyColumn}</div>
       </div>`;
-      byId("bloom-upgrade")?.addEventListener("click", () => app.upgrade(module.id));
+      wireBloomBuy(app, host, module.id);
       host.hidden = false;
       return;
     }
@@ -1608,7 +1741,7 @@ function renderBloom(app: App, projected: RateSnapshot): void {
     const readouts = `
       <div class="bloom-readouts">
         ${inline ? `<p class="bloom-contribution mono">${lines.contribution}</p>` : ""}
-        ${upgradeButton}
+        ${buyColumn}
       </div>`;
     if (inline) {
       host.innerHTML = readouts;
@@ -1637,7 +1770,7 @@ function renderBloom(app: App, projected: RateSnapshot): void {
       const faceNode = host.querySelector(".bloom-face");
       if (faceNode) bindPointerDrag(app, faceNode, module.id);
     }
-    byId("bloom-upgrade")?.addEventListener("click", () => app.upgrade(module.id));
+    wireBloomBuy(app, host, module.id);
   }
   if (phone) {
     host.hidden = false;
@@ -1668,6 +1801,28 @@ function renderBloom(app: App, projected: RateSnapshot): void {
     host.style.height = `${layout.height}px`;
   }
   host.hidden = false;
+}
+
+// The bloom's buy column wiring (issue #195), shared by all three shapes:
+// the button buys the dial's selected count — partial by design, the toast
+// reports what landed — and a chip pick re-renders so the cost, the
+// benefit, and the MAX·k count follow. The stopPropagation keeps the
+// gesture inside the bloom (its host's capture listener already holds the
+// outside-click token).
+function wireBloomBuy(app: App, host: HTMLElement, moduleId: string): void {
+  const { ui } = app;
+  byId("bloom-upgrade")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    app.upgradeLevels(moduleId, ui.bulkCount);
+  });
+  host.querySelectorAll<HTMLButtonElement>("[data-bulk]").forEach((chip) => {
+    chip.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const raw = chip.getAttribute("data-bulk")!;
+      ui.bulkCount = raw === "max" ? "max" : (Number(raw) as 1 | 5 | 10);
+      app.render();
+    });
+  });
 }
 
 // The board-surface tray (§5): the inventory as a collapsible column docked

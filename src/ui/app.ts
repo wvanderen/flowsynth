@@ -16,8 +16,10 @@ import {
   resumeSession,
   returnModule,
   startSession,
-  upgradeModule,
+  upgradeAll,
+  upgradeModuleLevels,
   type ActionResult,
+  type BulkPurchase,
 } from "../engine/actions";
 import { ARETE_HORIZON, claimOf } from "../engine/accumulator";
 import { neighbors, sameHex } from "../engine/hex";
@@ -25,6 +27,7 @@ import { newChordTerms } from "../engine/chords";
 import { computeRates } from "../engine/economy";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
 import { formatClock } from "../engine/clock";
+import { formatInt, formatNumber } from "./format";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
 import { createInitialState, createModule } from "../engine/state";
 import { appActive, type FocusApp } from "../engine/apps";
@@ -147,6 +150,13 @@ export interface UiState {
   // Inventory icon; drags and placements open it temporarily whatever this
   // says. Light furniture — never saved.
   trayOpen: boolean;
+  // The bulk-upgrade surfaces (issue #195): the expanded face's dial count,
+  // held per module so a new selection starts at ×1, and the shift-held
+  // MAX mode every face button's label flips into board-wide (Cookie
+  // Clicker pattern). Light furniture — never saved.
+  bulkCount: 1 | 5 | 10 | "max";
+  bulkModuleId: string | null;
+  faceMax: boolean;
 }
 
 interface LoadedSave {
@@ -220,6 +230,9 @@ export class App {
     zoom: 1,
     pan: null,
     trayOpen: false,
+    bulkCount: 1,
+    bulkModuleId: null,
+    faceMax: false,
   };
   lastWall: number | null = null;
   // The dual-clock drift baseline at lastWall (§10): a positive step past
@@ -333,6 +346,13 @@ export class App {
       tray.id = "inventory-zone";
       tray.className = "inventory-tray";
       space.append(tray);
+    }
+    if (!document.getElementById("upgrade-all")) {
+      const cluster = document.createElement("div");
+      cluster.id = "upgrade-all";
+      cluster.className = "upgrade-all";
+      cluster.hidden = true;
+      space.append(cluster);
     }
   }
 
@@ -485,6 +505,12 @@ export class App {
     this.ui.chordHover = null;
     this.ui.buyingCell = false;
     this.ui.combineOffer = null;
+    // The bulk surfaces are upgrade-mode furniture (issue #195): entering
+    // flow drops them with the rest, the shift mode included — a shift
+    // held through the start gesture never leaks into the locked board.
+    this.ui.bulkCount = 1;
+    this.ui.bulkModuleId = null;
+    this.ui.faceMax = false;
   }
 
   importText(text: string): boolean {
@@ -709,6 +735,35 @@ export class App {
       }
       if (this.ui.selected) {
         this.ui.selected = null;
+        this.render();
+      }
+    });
+    // The face buttons' shift mode (issue #195): holding shift flips every
+    // face button's label and tooltip to MAX board-wide — the Cookie
+    // Clicker pattern, visible before the click. The click's own shift
+    // state remains the source of truth for what buys; this flip only
+    // shows the mode. Never while typing.
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Shift" || event.repeat || !this.ownsBoard()) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.isContentEditable || target.matches("input, textarea, select"))) return;
+      if (this.state.mode === "upgrade" && !this.ui.faceMax) {
+        this.ui.faceMax = true;
+        this.render();
+      }
+    });
+    document.addEventListener("keyup", (event) => {
+      if (event.key !== "Shift" || !this.ownsBoard()) return;
+      if (this.ui.faceMax) {
+        this.ui.faceMax = false;
+        this.render();
+      }
+    });
+    // A shift released while the window lacks focus never fires keyup here:
+    // the blur drops the mode so the labels can't stick MAX (issue #195).
+    window.addEventListener("blur", () => {
+      if (this.ownsBoard() && this.ui.faceMax) {
+        this.ui.faceMax = false;
         this.render();
       }
     });
@@ -970,11 +1025,42 @@ export class App {
     this.render();
   }
 
-  upgrade(id: string): void {
+  // The bulk ladder on one module (issue #195): the expanded face's button
+  // and the face button. One level keeps the familiar line; a multi-level
+  // landing reports what it bought, not what it wanted.
+  upgradeLevels(id: string, want: number | "max"): void {
     const module = this.state.modules.find((m) => m.id === id);
     if (!module) return;
-    const nextLevel = module.level + 1;
-    this.act(upgradeModule(this.state, id), `${META[module.type].name} upgraded to level ${nextLevel}.`);
+    this.landBulk(upgradeModuleLevels(this.state, id, want), (bulk) =>
+      bulk.levels === 1
+        ? `${META[module.type].name} upgraded to level ${module.level}.`
+        : `${META[module.type].name} +${bulk.levels} levels · ${formatInt(bulk.spent)} ν`,
+    );
+  }
+
+  // The Upgrade All cluster (issue #195): the board-wide sweep — every
+  // levelable module, deployed and tray alike, spacers never. The toast
+  // reports what landed, whatever the chip promised.
+  upgradeAllAction(want: number | "max"): void {
+    this.landBulk(upgradeAll(this.state, want), (bulk) =>
+      want === "max"
+        ? `UPGRADE ALL MAX: ${bulk.levels} levels across ${bulk.modules} modules · ${formatNumber(bulk.spent)} ν`
+        : `UPGRADE ALL +${want}: ${bulk.levels} level${bulk.levels === 1 ? "" : "s"} across the board · ${formatNumber(bulk.spent)} ν`,
+    );
+  }
+
+  // The bulk actions' shared landing (issue #195): the refusal says why, a
+  // landing announces what it bought (feats riding the toast), then save
+  // and render — the act() shape with a message read off the bulk payload.
+  private landBulk(result: ActionResult, message: (bulk: BulkPurchase) => string): void {
+    if (!result.ok) {
+      this.say(result.reason ?? "That upgrade is not available.");
+      this.render();
+      return;
+    }
+    this.announceUnlocks(result.unlocked, message(result.bulk!));
+    this.save();
+    this.render();
   }
 
   // The combine offer (issue #152): a matching module-on-module drop opens

@@ -1205,6 +1205,26 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 .bloom-upgrade-title strong { font-weight: 600; }
 .bloom-upgrade-benefit { font-size: 11px; line-height: 1.3; color: var(--charge); }
 
+/* The expanded face's dial (§5, issue #195): the shared ladder as a chip
+   row riding the button — ×1 / ×5 / ×10 / MAX·k, the picked chip in the
+   accent register. Partial by design: no chip or button ever disables. */
+.bloom-dial { display: flex; gap: 3px; width: 100%; }
+.bloom-dial-chip {
+  flex: 1;
+  text-align: center;
+  padding: 2px 0;
+  border-radius: 6px;
+  font: 600 10px/1.2 var(--mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.bloom-dial-chip:hover { background: var(--hover-bg); border-color: var(--line-strong); }
+.bloom-dial-chip.active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+/* The dial adds a row to the bloom's button band: drop the band lower and
+   widen it so the chips clear the face's production line, with the note
+   footnoted deeper into the taper (issue #195). */
+.bloom-readouts { bottom: 46px; width: 176px; }
+
 /* Zoomed past the bloom's size, nothing pops: the affordances ride the
    closed face as a floating card anchored over the module's lower band.
    Only the button is interactive — the face beneath keeps its drags. */
@@ -1212,8 +1232,8 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 .module-bloom.inline .bloom-readouts {
   bottom: auto;
   transform: none;
-  margin-left: 32px;
-  width: 160px;
+  margin-left: 24px;
+  width: 176px;
   padding: 8px 10px;
   background: var(--panel-veil);
   border: 1px solid var(--line);
@@ -1251,8 +1271,62 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 .bloom-sheet-name { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bloom-sheet-note { font-size: 10.5px; color: var(--muted); }
 .bloom-sheet-contrib { font-size: 11px; color: var(--charge); }
-.bloom-sheet .bloom-upgrade { flex-shrink: 0; width: auto; margin-left: auto; }
+/* The dial rides the sheet (§7, issue #195): the buy column stacks the
+   chip row over the button at the row's end. */
+.bloom-sheet-buy { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; margin-left: auto; }
+.bloom-sheet .bloom-upgrade { flex-shrink: 0; width: 100%; }
 @keyframes sheet-up { from { transform: translateY(28px); opacity: 0.4; } }
+
+/* The face button (issue #195): one per closed face, covering the bottom
+   corner as face furniture — a chassis-veil trapezoid in the accent
+   register, the pitch note above staying readable. A face the bank can't
+   touch dims its stroke; it never disables (partial by design). */
+.face-buy { cursor: pointer; }
+.face-buy-btn {
+  fill: var(--panel-veil);
+  stroke: var(--accent);
+  stroke-width: 1;
+  cursor: pointer;
+}
+.face-buy-btn:hover { fill: var(--accent-soft); }
+.face-buy-btn.broke { stroke: var(--line-strong); }
+.face-buy-label {
+  fill: var(--ink);
+  font: 600 8px var(--mono);
+  letter-spacing: 0.04em;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+/* The Upgrade All cluster (§7, issue #195): the plain bold label beside
+   the quick-buy chips, docked at the board's lower edge in the face-chip
+   visual language. */
+.upgrade-all {
+  position: absolute;
+  left: 12px;
+  bottom: 84px;
+  z-index: 18;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.upgrade-all[hidden] { display: none; }
+.sweep-label {
+  padding: 0 6px 0 2px;
+  color: var(--ink);
+  font: 700 10px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: 0.08em;
+}
+.sweep-chip {
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--panel-veil);
+  border-color: var(--accent);
+  color: var(--ink);
+  font: 600 10px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: 0.04em;
+}
+.sweep-chip:hover { background: var(--accent-soft); border-color: var(--accent); }
 
 /* ── The board-surface tray (§5) ───────────────────── */
 /* The inventory docked over the board's bottom edge: drag a module here to
@@ -1623,6 +1697,14 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
     left: 12px;
     right: 58px;
     height: 46px;
+  }
+  /* The Upgrade All cluster re-docks above the thumb bar (issue #195),
+     centered across the board's lower edge. */
+  .upgrade-all {
+    left: 8px;
+    right: 8px;
+    bottom: 76px;
+    justify-content: center;
   }
   .horizon-word { font-size: 8px; }
   .horizon-state { font-size: 8.5px; }
