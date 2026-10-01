@@ -535,6 +535,9 @@ export function reshapeCells(state: GameState, next: Hex[]): ActionResult {
       return fail("Every deployed module needs a cell.");
     }
   }
+  if (state.mutatorSlots.some((slot) => !keys.has(hexKey(slot)))) {
+    return fail("Every unlocked Mutator slot needs its cell.");
+  }
   if (next.some((cell) => !positionInRange(state, cell))) return fail("The board must stay inside the board's lattice.");
   if (!isConnected(next)) return fail("The board must stay connected.");
   state.cells = next;

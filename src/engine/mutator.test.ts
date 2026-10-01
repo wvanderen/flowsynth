@@ -7,6 +7,7 @@ import {
   combineMutatorsPreview,
   placeMutator,
   returnMutator,
+  reshapeCells,
   unlockMutatorSlot,
   endSession,
   prestige,
@@ -502,6 +503,23 @@ describe("mutator combination", () => {
 });
 
 describe("the slot ladder", () => {
+  it.each([false, true])("reshaping preserves unlocked slots (occupied: %s)", (occupied) => {
+    const s = entered();
+    expect(unlockMutatorSlot(s, hex(0, 1)).ok).toBe(true);
+    if (occupied) {
+      const mutator = mint(s, "power");
+      expect(placeMutator(s, mutator.id, hex(0, 1)).ok).toBe(true);
+    }
+    const before = serialize(s);
+    expect(reshapeCells(s, [hex(0, 0), hex(1, 0), hex(1, -1)]).ok).toBe(false);
+    expect(serialize(s)).toBe(before);
+
+    // Cells without slots can still move while the unlocked patch stays put.
+    expect(reshapeCells(s, [hex(0, 0), hex(0, 1), hex(1, -1)]).ok).toBe(true);
+    expect(s.mutatorSlots).toEqual([hex(0, 1)]);
+    if (occupied) expect(s.mutators[0]!.pos).toEqual(hex(0, 1));
+  });
+
   it("prices ride the 2/3/5/8/12 shape and keep climbing", () => {
     expect([1, 2, 3, 4, 5, 6, 7].map(mutatorSlotCost)).toEqual([2, 3, 5, 8, 12, 17, 23]);
   });
