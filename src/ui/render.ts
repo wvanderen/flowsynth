@@ -29,7 +29,7 @@ import type { App, ChordHover, EnterKind, EnterSelection, ModalKind } from "./ap
 import { suppressNextClick } from "./click";
 import { startPointerDrag } from "./pointer-drag";
 import { appIcon, moduleIcon } from "./icons";
-import { HEX_RADIUS, hexApothem, hexPoints, HUE_TOKEN_OF, moduleFace, boardPoint, SPACING } from "./face";
+import { HEX_RADIUS, hexApothem, hexPoints, HUE_TOKEN_OF, moduleFace, boardPoint, SPACING, spacerClipPath } from "./face";
 import { bloomLayout, bloomPops, bloomSpan, viewMeet, viewPoint, type ViewFrame } from "./bloom";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chordMarkCovers, chipWidth, type ChordMark, type ChordOverlay } from "./chordlayer";
@@ -874,7 +874,11 @@ function renderCellArmPill(app: App): void {
   const arming = app.state.mode === "upgrade" && app.ui.buyingCell;
   host.hidden = !arming;
   if (!arming) return;
-  const markup = `New cell · <span class="mono">${formatInt(cellCost(app.state.cellsBought))} ν</span><span class="pill-esc">Cancel · Esc</span>`;
+  const basePrice = cellCost(app.state.cellsBought);
+  const premiums = app.frontierCells().map((pos) => cellPurchasePrice(app.state, pos) - basePrice);
+  const maxPremium = Math.max(0, ...premiums);
+  const premiumNote = maxPremium > 0 ? ` (+ up to ${formatInt(maxPremium)} ν row premium)` : "";
+  const markup = `New cell · <span class="mono">${formatInt(basePrice)} ν${premiumNote}</span><span class="pill-esc">Cancel · Esc</span>`;
   if (host.dataset.renderKey !== markup) {
     host.dataset.renderKey = markup;
     host.innerHTML = markup;
@@ -1069,9 +1073,7 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
 // cell's translated space (origin = the cell center), so one shared def
 // serves them all. The frame rect rides the face markup (face.ts), two
 // units clear of this opening.
-const SPACER_HEX_D = "M -52.83 -30.5 L 0 -61 L 52.83 -30.5 L 52.83 30.5 L 0 61 L -52.83 30.5 Z";
-const SPACER_WINDOW_D = "M -26 -20 L 26 -20 L 26 24 L -26 24 Z";
-const SPACER_WINDOW_DEFS = `<defs data-key="spacer-window"><clipPath id="spacer-window" clipPathUnits="userSpaceOnUse"><path clip-rule="evenodd" d="${SPACER_HEX_D} ${SPACER_WINDOW_D}"/></clipPath></defs>`;
+const SPACER_WINDOW_DEFS = `<defs data-key="spacer-window"><clipPath id="spacer-window" clipPathUnits="userSpaceOnUse"><path clip-rule="evenodd" d="${spacerClipPath()}"/></clipPath></defs>`;
 
 // The selection lift (#201): the focused chords' marks draw a second time
 // over the faces — the one loud pass a selection earns (ADR-0025). At rest
@@ -1156,7 +1158,7 @@ function chordMarkHtml(mark: ChordMark, keyPrefix: "formed" | "ghost"): string {
   const emphasis = ghost ? " ghost-mark" : mark.focused ? " chord-focus" : " chord-fade";
   const style = `--cc:var(--${mark.colorVar});--seam-dur:${mark.duration}s`;
   const lines = mark.outline
-    ? `<polygon class="chord-seam chord-loop" points="${mark.outline}"/>`
+    ? `<polygon class="chord-seam chord-loop" points="${mark.outline.map((p) => p.join(",")).join(" ")}"/>`
     : mark.seams
         .map(
           (s) =>
@@ -1377,7 +1379,7 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
 
   // The face button (issue #195): one per closed, levelable face, in
   // upgrade mode only — in flow it vanishes with the purchase furniture.
-  const faceBuy = state.mode === "upgrade" && levelable(module) ? faceBuyHtml(app, module) : "";
+  const faceBuy = state.mode === "upgrade" && !app.ui.buyingCell && levelable(module) ? faceBuyHtml(app, module) : "";
 
   return `<g class="module-node${crossed ? " forge-crossed" : ""}" data-type="${module.type}" data-rarity="${module.rarity}">
     ${moduleFace({
@@ -1440,7 +1442,7 @@ function bindFaceBuys(app: App, svg: SVGSVGElement): void {
       event.stopPropagation();
       event.preventDefault();
       const id = node.getAttribute("data-module");
-      if (!id || app.state.mode !== "upgrade") return;
+      if (!id || app.state.mode !== "upgrade" || app.ui.buyingCell) return;
       app.upgradeLevels(id, (event as KeyboardEvent).shiftKey ? "max" : 1);
     };
     node.addEventListener("click", buy);

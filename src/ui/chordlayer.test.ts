@@ -130,7 +130,7 @@ describe("the dense-board seam language (#201)", () => {
     const mark = overlay.marks[0]!;
     expect(mark.seams).toHaveLength(0);
     expect(mark.outline).not.toBeNull();
-    const polygon = mark.outline!.split(" ").map((p) => p.split(",").map(Number) as [number, number]);
+    const polygon = mark.outline!;
     // One corner per voice: the L's hull holds all three voices.
     expect(polygon).toHaveLength(3);
     const centers = Object.values(region).map((h) => point(h));

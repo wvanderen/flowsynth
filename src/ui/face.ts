@@ -134,6 +134,16 @@ const FACE_LAYOUT = {
 // (render.ts's clipPath cuts the same rect two units inside).
 const SPACER_NAME_Y = -40;
 export const SPACER_FRAME = { x: -28, y: -22, width: 56, height: 48, rx: 3 };
+const SPACER_WINDOW_INSET = 2;
+export function spacerClipPath(): string {
+  const chassis = `M ${hexPoints(HEX_RADIUS).split(" ").join(" L ")} Z`;
+  const { x, y, width, height } = SPACER_FRAME;
+  const left = x + SPACER_WINDOW_INSET;
+  const top = y + SPACER_WINDOW_INSET;
+  const right = x + width - SPACER_WINDOW_INSET;
+  const bottom = y + height - SPACER_WINDOW_INSET;
+  return `${chassis} M ${left} ${top} L ${right} ${top} L ${right} ${bottom} L ${left} ${bottom} Z`;
+}
 
 // The long-readout fit (#201, the approved compression): past seven
 // characters the face readout steps down to 14px, past nine to 12px. The

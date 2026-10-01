@@ -2178,6 +2178,9 @@ body.cell-arming #grid .hex.buy-here { stroke-width: 2.5; stroke-dasharray: none
    board's top edge — "New cell · <price> ν — Cancel · Esc" — and the pill
    itself is the cancel. */
 .cell-arm-pill {
+  max-width: calc(100% - 24px);
+  flex-wrap: wrap;
+  justify-content: center;
   position: absolute;
   top: 10px;
   left: 50%;
@@ -2192,7 +2195,7 @@ body.cell-arming #grid .hex.buy-here { stroke-width: 2.5; stroke-dasharray: none
   background: color-mix(in srgb, var(--panel-soft) 94%, transparent);
   border: 1px solid var(--danger);
   color: var(--ink);
-  font: 600 11px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font: 600 11px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   letter-spacing: 0.04em;
 }
 .cell-arm-pill[hidden] { display: none; }

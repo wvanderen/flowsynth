@@ -39,10 +39,10 @@ export interface ChordMark {
   // twin line, first voice to last.
   readonly seams: ChordSeam[];
   // A chord the lines can't carry — three or more voices off the lattice
-  // lines: the note-corner polygon as a points string, one corner per
+  // lines: the note-corner polygon as points, one corner per
   // voice pushed just past its own outline. Null when the seams carry the
   // chord.
-  readonly outline: string | null;
+  readonly outline: readonly Point[] | null;
   // The chip anchor: above the chord's topmost voice. Ghost marks (the
   // would-form preview) render their chip here; formed chords render
   // theirs in the reserved spot instead.
@@ -221,10 +221,10 @@ function runSeams(ordered: readonly Point[], axis: Point, radius: number): Chord
 // The note-corner polygon: each hull voice owns one corner, pushed just
 // past its own outline in the voice's outward direction — no bevel cuts,
 // no angles that loop back between notes. Returns the polygon as a
-// points string.
-function voiceOutline(centers: readonly Point[], radius: number): string {
+// point array.
+function voiceOutline(centers: readonly Point[], radius: number): Point[] {
   const hull = convexHull(centers);
-  if (hull.length < 2) return "";
+  if (hull.length < 2) return [];
   const reach = radius + CORNER_REACH_PAD;
   const cx = hull.reduce((acc, p) => acc + p[0], 0) / hull.length;
   const cy = hull.reduce((acc, p) => acc + p[1], 0) / hull.length;
@@ -233,9 +233,8 @@ function voiceOutline(centers: readonly Point[], radius: number): string {
       const dx = x - cx;
       const dy = y - cy;
       const len = Math.hypot(dx, dy) || 1;
-      return `${(x + (dx / len) * reach).toFixed(2)},${(y + (dy / len) * reach).toFixed(2)}`;
-    })
-    .join(" ");
+      return [Number((x + (dx / len) * reach).toFixed(2)), Number((y + (dy / len) * reach).toFixed(2))] as Point;
+    });
 }
 
 // Whether a two-voice chord's voices sit beyond seam reach — a
@@ -253,23 +252,14 @@ export function bridgedPair(centers: readonly Point[], radius: number): boolean 
 // octave columns, fifth chains, wired pairs — and wraps in the
 // note-corner polygon when they don't. Overlapping terms each draw their
 // own: no pair is claimed once.
-function geometryFor(centers: readonly Point[], radius: number): { seams: ChordSeam[]; outline: string | null } {
+function geometryFor(centers: readonly Point[], radius: number): { seams: ChordSeam[]; outline: readonly Point[] | null } {
   if (centers.length === 2 && !bridgedPair(centers, radius)) {
     return { seams: edgeBrackets(centers as [Point, Point]), outline: null };
   }
   const span = collinearSpan(centers);
   if (span) return { seams: runSeams(span.ordered, span.axis, radius), outline: null };
-  return { seams: [], outline: voiceOutline(centers, radius) || null };
-}
-
-function parsePoints(text: string): Point[] {
-  return text
-    .trim()
-    .split(/\s+/)
-    .map((pair) => {
-      const [x, y] = pair.split(",").map(Number);
-      return [x!, y!] as Point;
-    });
+  const outline = voiceOutline(centers, radius);
+  return { seams: [], outline: outline.length ? outline : null };
 }
 
 function pointInPolygon(x: number, y: number, polygon: readonly Point[]): boolean {
@@ -292,7 +282,7 @@ const COVER_REACH = 6;
 // reads by containment: a wire asks the chords it conducts, and a
 // conducting spacer's selection lifts them.
 export function chordMarkCovers(mark: Pick<ChordMark, "seams" | "outline">, at: Point): boolean {
-  if (mark.outline) return pointInPolygon(at[0], at[1], parsePoints(mark.outline));
+  if (mark.outline) return pointInPolygon(at[0], at[1], mark.outline);
   return mark.seams.some((s) => edgeDistance(at, [[s.x1, s.y1], [s.x2, s.y2]]) <= COVER_REACH);
 }
 

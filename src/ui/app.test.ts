@@ -9,7 +9,7 @@ import { writeNote } from "../engine/notes";
 import { BALANCE, SAVE_VERSION } from "../engine/constants";
 import { ARETE_HORIZON } from "../engine/accumulator";
 import { STORAGE_KEY, serialize } from "../engine/save";
-import { computeRates, cellCost, longGoalCost, affordableLevels, levelCost, levelsCost } from "../engine/economy";
+import { computeRates, cellCost, cellPurchasePrice, longGoalCost, affordableLevels, levelCost, levelsCost } from "../engine/economy";
 import { startSession, endSession } from "../engine/actions";
 import { advance } from "../engine/advance";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport } from "../engine/trust";
@@ -1030,6 +1030,35 @@ describe("the always-live board (§5)", () => {
     pill.click();
     expect(app.ui.buyingCell).toBe(false);
     expect(document.getElementById("cell-arm-pill")!.hidden).toBe(true);
+  });
+
+  it("the cell pill discloses unpaid frontier row premiums", () => {
+    app.state.nous = 1e6;
+    app.armCellPurchase();
+    const base = cellCost(app.state.cellsBought);
+    const premium = Math.max(...app.frontierCells().map((pos) => cellPurchasePrice(app.state, pos) - base));
+    expect(premium).toBeGreaterThan(0);
+    expect(document.getElementById("cell-arm-pill")!.textContent).toContain(`+ up to ${formatInt(premium)} ν row premium`);
+    app.state.gatedRows = [-1, 0, 1, 2];
+    app.render();
+    expect(document.getElementById("cell-arm-pill")!.textContent).not.toContain("row premium");
+  });
+
+  it("face upgrades cannot spend nous while cell purchase is armed", () => {
+    app.state.nous = 1e6;
+    app.render();
+    const button = document.querySelector<SVGElement>(".face-buy")!;
+    const module = app.state.modules.find((m) => m.id === button.dataset.module)!;
+    const level = module.level;
+    const bank = app.state.nous;
+    app.armCellPurchase();
+    expect(document.querySelector(".face-buy")).toBeNull();
+    // Even an event queued on the previous node must obey the armed mode.
+    button.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(module.level).toBe(level);
+    expect(app.state.nous).toBe(bank);
+    app.cancelCellPurchase();
+    expect(document.querySelector(".face-buy")).not.toBeNull();
   });
 
   it("add-cell mode is the one mode that dims the board (#201)", () => {
