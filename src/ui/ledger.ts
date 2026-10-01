@@ -439,6 +439,11 @@ export function renderHorizonBar(app: App): void {
     }`;
     document.getElementById("prestige-door")?.addEventListener("click", () => app.openPrestigeConfirm());
   }
+  // The break beat (ADR-0042, issue #200): the purchase's one visual, a
+  // flare on the bar it plays once and only once. Evaluated every render so
+  // the class drops when the window closes; a class that outlives the
+  // animation is inert.
+  host.classList.toggle("break-beat", app.breakBeatUntil > Date.now());
   const fill = accumulatorFill(state.eraEarned);
   const clip = host.querySelector<SVGRectElement>('[data-live="h-clip"]');
   if (clip) {

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ARETE_HORIZON, ARETE_LOG_FLOOR, accumulatorFill, claimOf, horizonReached } from "./accumulator";
-import { prestige, startSession } from "./actions";
+import { breakHorizon, prestige, startSession } from "./actions";
 import { advance } from "./advance";
+import { BALANCE } from "./constants";
 import { fresh } from "./fixtures";
 
 describe("the Arete accumulator's log-scale fill", () => {
@@ -76,6 +77,56 @@ describe("the linear claim (ADR-0042's base)", () => {
     prestige(s);
     expect(s.arete).toBe(3);
     expect(claimOf(s)).toBe(3);
+  });
+});
+
+describe("the broken claim (ADR-0042's overfill scaling)", () => {
+  // The break is a purchase: every test here buys it first.
+  function broken(prestiges = 0): ReturnType<typeof fresh> {
+    const s = fresh();
+    s.prestiges = prestiges;
+    s.arete = BALANCE.horizonBreakCost;
+    expect(breakHorizon(s).ok).toBe(true);
+    return s;
+  }
+
+  it("pre-break the cap never bites: every reset banks exactly n whatever the overfill", () => {
+    const s = fresh();
+    s.eraEarned = ARETE_HORIZON * 1_000_000;
+    expect(claimOf(s)).toBe(1);
+    prestige(s);
+    expect(s.arete).toBe(1);
+  });
+
+  it("an at-threshold reset banks exactly n: the scale floors at the base", () => {
+    const s = broken(4);
+    s.eraEarned = ARETE_HORIZON;
+    expect(claimOf(s)).toBe(5);
+  });
+
+  it("decades past the horizon multiply by (1 + log₁₀ R), rounded down to whole Arete", () => {
+    const s = broken();
+    // One decade: claim = 1 × (1 + 1) = 2. Two: 3.
+    s.eraEarned = ARETE_HORIZON * 10;
+    expect(claimOf(s)).toBe(2);
+    s.eraEarned = ARETE_HORIZON * 100;
+    expect(claimOf(s)).toBe(3);
+    // A fractional decade floors: R ≈ 31.6 → ×2.5 → 2 (from n = 1).
+    s.eraEarned = ARETE_HORIZON * Math.sqrt(1000);
+    expect(claimOf(s)).toBe(2);
+  });
+
+  it("nothing banks beyond the cap, even from a maximally juiced era", () => {
+    const s = broken(30);
+    s.eraEarned = ARETE_HORIZON * 1e12;
+    expect(claimOf(s)).toBe(BALANCE.horizonBreakClaimCap);
+  });
+
+  it("the formula reads the per-era measure, never lifetime totalEarned", () => {
+    const s = broken();
+    s.totalEarned = ARETE_HORIZON * 1e9;
+    s.eraEarned = ARETE_HORIZON;
+    expect(claimOf(s)).toBe(1);
   });
 });
 

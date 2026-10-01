@@ -3055,12 +3055,12 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
 // The Arete Catalog sheet (ADR-0040 as amended by ADR-0044, issue #197):
 // the board-ledger chip's door, holding exactly what no board affordance
 // carries — the Mutator tree's entry and roll-pool join, and the Horizon
-// break listing whose purchase logic lands with the horizon break issue
-// (the slot is reserved, the goalpost visible from the first banked
-// Arete). The sheet stays pure: the surface-bought ladders — the Row
-// unlock's banner, the Mutators layer's slot ladder — never appear here as
-// rows. Every purchase acts in upgrade mode only; outside it the buttons
-// stand inert and the sheet says so.
+// break standing alone beside the tree (ADR-0042, issue #200), visible
+// from the first banked Arete so the goalpost shows through the whole
+// pre-break stretch. The sheet stays pure: the surface-bought ladders —
+// the Row unlock's banner, the Mutators layer's slot ladder — never appear
+// here as rows. Every purchase acts in upgrade mode only; outside it the
+// buttons stand inert and the sheet says so.
 function renderAreteCatalogModal(app: App, content: HTMLElement): void {
   const { state } = app;
   const upgrade = state.mode === "upgrade";
@@ -3069,12 +3069,14 @@ function renderAreteCatalogModal(app: App, content: HTMLElement): void {
     `<span class="shop-buy"><button class="primary arete" id="${id}"${upgrade ? "" : " disabled"} title="${upgrade ? `Spend ${price} Arete` : "Arete is spent between sessions"}">${price} Arete</button></span>`;
   const entry = state.catalogEntryOwned;
   const joined = state.rollPoolJoined;
+  const broken = state.horizonBroken;
   const entryBuy = entry ? ownedWord("entered") : areteBuyButton("buy-arete-entry", BALANCE.catalogEntryCost);
   const poolBuy = joined
     ? ownedWord("joined")
     : entry
       ? areteBuyButton("buy-arete-pool", BALANCE.rollPoolJoinCost)
       : `<span class="shop-buy"><button class="primary arete" id="buy-arete-pool" disabled title="Enter the Mutator tree first">Enter first</button></span>`;
+  const breakBuy = broken ? ownedWord("broken") : areteBuyButton("buy-arete-break", BALANCE.horizonBreakCost);
   content.innerHTML = `
     ${modalTop("ARETE CATALOG")}
     <h2 id="modal-title">What banked Arete buys.</h2>
@@ -3092,14 +3094,15 @@ function renderAreteCatalogModal(app: App, content: HTMLElement): void {
     </div>
     <h3 class="catalog-section-title">Horizon break</h3>
     <div class="shop-list">
-      <div class="shop-item">
-        <div><h3>Horizon break</h3><small>Score past the horizon line raises each prestige's claim — still banked only on reset.</small></div>
-        <span class="shop-buy"><button class="primary arete" disabled title="The break's purchase arrives with the horizon break">Soon</button></span>
+      <div class="shop-item${broken ? " owned" : ""}">
+        <div><h3>Horizon break</h3><small>Score past the horizon line raises each prestige's claim, up to a hard cap — still banked only on reset.</small></div>
+        ${breakBuy}
       </div>
     </div>
     ${upgrade ? "" : `<p class="modal-note">Arete is spent between sessions — enter upgrade mode to buy.</p>`}`;
   byId("buy-arete-entry")?.addEventListener("click", () => app.buyCatalogEntryAction());
   byId("buy-arete-pool")?.addEventListener("click", () => app.joinRollPoolAction());
+  byId("buy-arete-break")?.addEventListener("click", () => app.breakHorizonAction());
   wireClose(app);
 }
 

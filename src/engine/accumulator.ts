@@ -5,6 +5,7 @@
 // truth underneath (and is what the "Eyes on the horizon" feat reads).
 // Arete mints nowhere: the crossing only opens the door; the reset action
 // banks the claim. The floor and horizon are provisional tuning.
+import { BALANCE } from "./constants";
 import type { GameState } from "./types";
 
 // Lifetime ν where the visible log scale begins.
@@ -28,9 +29,17 @@ export function horizonReached(state: GameState): boolean {
   return state.eraEarned >= ARETE_HORIZON;
 }
 
-// The live prestige claim (ADR-0042's linear base): the nth prestige banks
-// n Arete. Post-break overfill scaling rides on top of this base later;
-// the base never changes.
+// The live prestige claim (ADR-0042). The base is linear forever: the nth
+// prestige banks n. Once the horizon break is owned, per-era overfill
+// scales on top — R is the era's earned ν over the horizon line (the bar's
+// own rebased measure, never lifetime; R ≥ 1 under the floored scale), the
+// decade coefficient is log₁₀ by contract, and the product sits under a
+// hard cap. The scale floors at n, so an at-threshold reset banks exactly
+// n; claims round down to whole Arete (rounding is tuning), which also
+// keeps the pre-break claim and the floor identical.
 export function claimOf(state: GameState): number {
-  return state.prestiges + 1;
+  const n = state.prestiges + 1;
+  if (!state.horizonBroken) return n;
+  const R = Math.max(state.eraEarned / ARETE_HORIZON, 1);
+  return Math.min(Math.floor(n * (1 + Math.log10(R))), BALANCE.horizonBreakClaimCap);
 }

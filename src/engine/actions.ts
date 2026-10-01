@@ -583,6 +583,21 @@ export function joinRollPool(state: GameState): ActionResult {
   return ok;
 }
 
+// The Horizon break (ADR-0042, issue #200): the one-time Catalog purchase
+// standing alone beside the trees. Buying it flips the claim's overfill
+// scaling on (claimOf); nothing else changes — the horizon line never
+// moves, and Arete still banks only on reset. The purchase can flip the
+// "breaking the horizon" feat, so it checks at the boundary like any
+// feat-bearing action.
+export function breakHorizon(state: GameState): ActionResult {
+  if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
+  if (state.horizonBroken) return fail("The horizon is already broken.");
+  if (state.arete < BALANCE.horizonBreakCost) return fail("Not enough Arete.");
+  state.arete -= BALANCE.horizonBreakCost;
+  state.horizonBroken = true;
+  return { ok: true, unlocked: checkAchievements(state) };
+}
+
 // The board-side Row unlock (ADR-0044, #174's approved surface): one Arete
 // purchase opens the octave row beyond the launch band — one per side,
 // either order, the ladder escalating 1 then 2 — and the purchase stands in
@@ -736,7 +751,8 @@ export function combineMutators(state: GameState, id: string, partnerId?: string
 // and the Mutator tree's purchases — and, with them, the whole mutator
 // layer (issue #198): the unlocked Mutator slots, the placed mutators, and
 // the Mutator tray with its pending rolls and its Forge branch's fill and
-// earned count. Module levels return to base, nous to
+// earned count — and the Horizon break (issue #200), whose overfill scaling
+// rides claimOf forever after. Module levels return to base, nous to
 // a fresh opening grant, and the charge window resets. The era measure
 // rebases to 0, which is the bar's own rebase; the era count rises as
 // economy-bearing engine state (ADR-0038's no-new-furniture rule holds).

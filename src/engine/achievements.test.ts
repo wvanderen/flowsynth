@@ -32,10 +32,10 @@ function unlockIds(s: GameState): string[] {
 }
 
 describe("the achievement registry", () => {
-  it("ships the 17-feat launch set with unique ids and copy", () => {
-    expect(ACHIEVEMENTS).toHaveLength(17);
+  it("ships the 17-feat launch set plus the break's encourager, with unique ids and copy", () => {
+    expect(ACHIEVEMENTS).toHaveLength(18);
     const ids = ACHIEVEMENTS.map((a) => a.id);
-    expect(new Set(ids).size).toBe(17);
+    expect(new Set(ids).size).toBe(18);
     for (const def of ACHIEVEMENTS) {
       expect(def.name.length).toBeGreaterThan(0);
       expect(def.description.length).toBeGreaterThan(0);
@@ -295,6 +295,21 @@ describe("the 17-feat launch set", () => {
     // The era rebases at prestige; the feat stays unlocked regardless.
     s.eraEarned = 0;
     expect(s.achievements["eyes-on-the-horizon"]).toBe(NOW);
+  });
+
+  it("Breaking the horizon: the purchase is the trigger, awarded once, never gating", () => {
+    const s = fresh();
+    completeSession(s);
+    // Overfill and reach alone do not break anything — the purchase does.
+    // (The lifetime total stays under the horizon here, so "Eyes on the
+    // horizon" stays shut too.)
+    s.eraEarned = ARETE_HORIZON * 100;
+    expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual([]);
+    s.horizonBroken = true;
+    expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual(["breaking-the-horizon"]);
+    // Once, ever.
+    expect(syncAchievements(s, { now: NOW })).toEqual([]);
+    expect(s.achievements["breaking-the-horizon"]).toBe(NOW);
   });
 
   it("Time in the seat: 100 lifetime practice minutes, live plus manual", () => {
