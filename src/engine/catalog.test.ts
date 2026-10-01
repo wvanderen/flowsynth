@@ -19,11 +19,19 @@ const UNLOCK_ABOVE = LAUNCH_TOP + 1;
 const UNLOCK_BELOW = LAUNCH_BOTTOM - 1;
 
 // A fresh state standing just past its first prestige: the Catalog's lock
-// is the balance, so every Arete question starts here.
+// is the first Arete reset, so every Arete question starts here.
 function banked(): ReturnType<typeof fresh> {
   const s = fresh();
   s.eraEarned = ARETE_HORIZON;
   prestige(s);
+  return s;
+}
+
+// The opening board grown to the unlock boundary: a cell in row 2 above and
+// one in row −1 below, so each frontier reaches its side's unlock row —
+// the frontier-adjacency the banner's click and the engine's gate share.
+function atBoundary(s: ReturnType<typeof fresh>): ReturnType<typeof fresh> {
+  s.cells.push(hex(0, LAUNCH_TOP), hex(0, LAUNCH_BOTTOM));
   return s;
 }
 
@@ -95,8 +103,8 @@ describe("the Mutator tree's sheet purchases", () => {
 });
 
 describe("the Row unlock", () => {
-  it("offers exactly one row above and one below the launch band", () => {
-    const s = banked();
+  it("offers exactly one row above and one below the launch band, reached by the board", () => {
+    const s = atBoundary(banked());
     expect(unlockableRows(s)).toEqual([UNLOCK_ABOVE, UNLOCK_BELOW]);
     // Either order: unlocking the below row first leaves only the above.
     expect(buyRowUnlock(s, UNLOCK_BELOW).ok).toBe(true);
@@ -106,8 +114,14 @@ describe("the Row unlock", () => {
     expect(unlockableRows(s)).toEqual([]);
   });
 
-  it("escalates 1 then 2, either order", () => {
+  it("refuses a row the board does not touch — no banner, no other path", () => {
     const s = banked();
+    expect(buyRowUnlock(s, UNLOCK_ABOVE).ok).toBe(false);
+    expect(s.unlockedRows).toEqual([]);
+  });
+
+  it("escalates 1 then 2, either order", () => {
+    const s = atBoundary(banked());
     expect(rowUnlockCost(s)).toBe(1);
     expect(buyRowUnlock(s, UNLOCK_ABOVE).ok).toBe(true);
     expect(s.arete).toBe(0);
@@ -121,7 +135,7 @@ describe("the Row unlock", () => {
   });
 
   it("refuses rows the ladder does not sell and unaffordable purchases", () => {
-    const s = banked();
+    const s = atBoundary(banked());
     expect(buyRowUnlock(s, LAUNCH_TOP).ok).toBe(false);
     expect(buyRowUnlock(s, UNLOCK_BELOW - 1).ok).toBe(false);
     s.arete = 0;
@@ -130,22 +144,20 @@ describe("the Row unlock", () => {
   });
 
   it("is inert outside upgrade mode", () => {
-    const s = banked();
+    const s = atBoundary(banked());
     s.mode = "flow";
     expect(buyRowUnlock(s, UNLOCK_ABOVE).ok).toBe(false);
     expect(s.unlockedRows).toEqual([]);
   });
 
   it("the purchase stands in the row gate: cells inside buy with nous as usual", () => {
-    const s = banked();
+    const s = atBoundary(banked());
     buyRowUnlock(s, UNLOCK_ABOVE);
     expect(rowGateOwed(s, UNLOCK_ABOVE)).toBe(false);
     expect(s.gatedRows).toContain(UNLOCK_ABOVE);
     // The unlocked row is in range, and its first cell prices at the bare
     // scaler — no gate premium on top.
     expect(positionInRange(s, hex(0, UNLOCK_ABOVE))).toBe(true);
-    const frontier = hex(0, LAUNCH_TOP);
-    s.cells.push(frontier);
     expect(cellPurchasePrice(s, hex(0, UNLOCK_ABOVE))).toBe(cellCost(s.cellsBought));
     // And the buy lands with nous alone.
     s.nous = cellCost(s.cellsBought);
@@ -154,7 +166,7 @@ describe("the Row unlock", () => {
   });
 
   it("a row beyond the cap is unpurchasable at any spend", () => {
-    const s = banked();
+    const s = atBoundary(banked());
     s.arete = 100;
     buyRowUnlock(s, UNLOCK_ABOVE);
     buyRowUnlock(s, UNLOCK_BELOW);
@@ -162,14 +174,12 @@ describe("the Row unlock", () => {
     // whatever the nous — can land there.
     expect(positionInRange(s, hex(0, UNLOCK_ABOVE + 1))).toBe(false);
     expect(positionInRange(s, hex(0, UNLOCK_BELOW - 1))).toBe(false);
-    const near = hex(0, UNLOCK_ABOVE);
-    s.cells.push(near);
     s.nous = 1e9;
     expect(buyCell(s, hex(0, UNLOCK_ABOVE + 1)).ok).toBe(false);
   });
 
   it("unlocked rows persist through prestige", () => {
-    const s = banked();
+    const s = atBoundary(banked());
     buyRowUnlock(s, UNLOCK_ABOVE);
     s.eraEarned = ARETE_HORIZON;
     prestige(s);

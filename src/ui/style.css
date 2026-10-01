@@ -41,7 +41,7 @@ button:disabled { opacity: 0.35; cursor: default; }
 /* The Arete sheet's buy buttons (issue #197): the register rides the
    purchase affordance too — violet, not the nous accent. */
 .primary.arete { background: var(--arete); border-color: var(--arete); color: var(--panel-deep); }
-.primary.arete:hover:not(:disabled) { background: var(--accent-bright); }
+.primary.arete:hover:not(:disabled) { background: var(--arete-bright); border-color: var(--arete-bright); }
 .quiet { border: 0; color: var(--muted); padding: 7px; }
 .small { font-size: 12px; }
 .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }

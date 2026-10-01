@@ -97,7 +97,9 @@ const semantics = {
   "charge-line": "color-mix(in srgb, var(--charge) 38%, transparent)",
   // The Arete register's derivatives (issue #197): the unlock banner's
   // shaded row, the chip's wash, and the sheet's accents all mix from the
-  // one token, the way the charge family does.
+  // one token, the way the charge family does. The bright stop keeps the
+  // buy buttons' hover inside the register.
+  "arete-bright": "color-mix(in srgb, var(--arete) 72%, var(--ink))",
   "arete-faint": "color-mix(in srgb, var(--arete) 13%, var(--panel-soft))",
   "arete-tint": "color-mix(in srgb, var(--arete) 9%, transparent)",
   "arete-line": "color-mix(in srgb, var(--arete) 38%, transparent)",

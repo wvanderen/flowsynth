@@ -342,9 +342,9 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
   const host = document.getElementById("game-info-strip");
   if (!host) return;
   const { state } = app;
-  // The chip joins at the first banked Arete: the strip rebuilds once at
-  // that flip — purchases move the balance through the live slot, never a
-  // rebuild.
+    // The chip joins at the first Arete reset: the strip rebuilds once at
+    // that flip — the prestige count is the lock (issue #197), and the
+    // balance moves through the live slot, never a rebuild.
   const key = catalogOpen(state) ? "strip-arete" : "strip";
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;

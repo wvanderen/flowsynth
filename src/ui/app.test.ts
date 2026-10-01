@@ -2012,7 +2012,8 @@ describe("the Arete Catalog (issue #197)", () => {
     expect(document.getElementById("arete-chip")).toBeNull();
     expect(document.querySelector(".info-arete")).toBeNull();
     // Even with the board grown to the unlock boundary and add-cell mode
-    // armed, the banner never renders — the lock is the balance itself.
+    // armed, the banner never renders — the lock is the prestige count
+    // (the first Arete reset), and nothing has reset yet.
     app.state.cells.push(hex(0, 2), hex(0, -1));
     app.armCellPurchase();
     app.render();

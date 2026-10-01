@@ -4,7 +4,7 @@ import { rowUnlockCost, unlockableRows } from "./catalog";
 import { affordableLevels, cellPurchasePrice, computeRates, deployedAt, findModule, levelCost, levelsCost, longGoalCost, rowGateOwed, wholeNous } from "./economy";
 import { arcCardDue } from "./arc";
 import { nextRungCost, appActive, LADDER_APPS, type FocusApp } from "./apps";
-import { adjacent, hexKey, isConnected, sameHex } from "./hex";
+import { adjacent, hexKey, isConnected, neighbors, sameHex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
 import { createModule, openingGrant } from "./state";
 import { logSessionPractice } from "./habits";
@@ -579,11 +579,17 @@ export function joinRollPool(state: GameState): ActionResult {
 // purchase opens the octave row beyond the launch band — one per side,
 // either order, the ladder escalating 1 then 2 — and the purchase stands in
 // the row gate for the row it opens, so cells inside buy with nous as
-// usual. Past the ladder's end the board is at its six-row cap: nothing is
-// unlockable, and no price exists to charge.
+// usual. The board must reach the row it unlocks (frontier-adjacent rows
+// only, matching the banner's construction): a row the board doesn't touch
+// has no banner to click and opens by no other path. Past the ladder's end
+// the board is at its six-row cap: nothing is unlockable, and no price
+// exists to charge.
 export function buyRowUnlock(state: GameState, row: number): ActionResult {
   if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
   if (!unlockableRows(state).includes(row)) return fail("That octave row cannot be unlocked.");
+  if (!state.cells.some((cell) => neighbors(cell).some((n) => octaveRowOf(n) === row))) {
+    return fail("The board must reach the octave row it unlocks.");
+  }
   const price = rowUnlockCost(state);
   if (price === null) return fail("The board is at its row cap.");
   if (state.arete < price) return fail("Not enough Arete.");
