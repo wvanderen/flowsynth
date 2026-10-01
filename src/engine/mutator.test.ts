@@ -510,9 +510,9 @@ describe("the slot ladder", () => {
       const mutator = mint(s, "power");
       expect(placeMutator(s, mutator.id, hex(0, 1)).ok).toBe(true);
     }
-    const before = serialize(s);
+    const before = serialize(s, 5_000);
     expect(reshapeCells(s, [hex(0, 0), hex(1, 0), hex(1, -1)]).ok).toBe(false);
-    expect(serialize(s)).toBe(before);
+    expect(serialize(s, 5_000)).toBe(before);
 
     // Cells without slots can still move while the unlocked patch stays put.
     expect(reshapeCells(s, [hex(0, 0), hex(0, 1), hex(1, -1)]).ok).toBe(true);

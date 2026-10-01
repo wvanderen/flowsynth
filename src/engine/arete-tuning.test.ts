@@ -11,6 +11,7 @@ import type { GameState, Hex } from "./types";
 
 // Repeatable balance experiment using actual purchases, offers and production.
 // Five sessions are a checkpoint, not a deadline. No resets or free modules.
+const THRESHOLDS = [100_000, 1e6, 1e9, 1e12, 1e23, 1e25];
 function seeded(seed: number): () => number {
   return () => {
     seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
@@ -81,7 +82,7 @@ function scenario(seed: number, shape: "compact" | "fifths") {
     // record the first crossing to within one minute of credited play.
     for (let minute = 1; minute <= 30; minute++) {
       advance(state, 60, rng);
-      for (const threshold of [100_000, 1e6, 1e9, 1e12]) {
+      for (const threshold of THRESHOLDS) {
         if (state.eraEarned >= threshold && !crossings.has(threshold)) crossings.set(threshold, (session - 1) * 30 + minute);
       }
     }
@@ -102,7 +103,9 @@ describe("first Arete tuning (#157)", () => {
       expect(state.arete).toBe(0);
       expect(Number.isFinite(state.eraEarned)).toBe(true);
       report.push({ shape, seed, fiveSessionNous: Math.round(rows[4]!.earned), fiveSessionCells: rows[4]!.cells,
-        ...Object.fromEntries([100_000, 1e6, 1e9, 1e12].map((threshold) => [String(threshold), crossings.get(threshold) ?? ">1440"])),
+        ...Object.fromEntries(THRESHOLDS.map((threshold) => [String(threshold), crossings.get(threshold) ?? ">1440"])),
+        earned16h: rows[31]!.earned.toExponential(4), synths16h: rows[31]!.synths,
+        earned24h: rows[47]!.earned.toExponential(4), synths24h: rows[47]!.synths,
         horizonSession: rows.find((r) => r.earned >= ARETE_HORIZON)?.session ?? ">48", finalCells: state.cells.length,
       });
       if (shape === "compact") {
