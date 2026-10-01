@@ -1,6 +1,6 @@
 # Musical harmony scoring: evidence and decision options
 
-Research for [Musical harmony evidence: scoring deliberate arrangements without banning dissonance](https://github.com/wvanderen/flowsynth/issues/216), under [FlowSynth next iteration: specialized habits, module identities, and deliberate harmony](https://github.com/wvanderen/flowsynth/issues/212). Investigated 2026-10-01. This records evidence and candidate experiments, not a gameplay decision.
+Research for [Musical harmony evidence: scoring deliberate arrangements without banning dissonance](https://github.com/wvanderen/flowsynth/issues/216), under [Habit specialization and musical modules: next iteration decision map](https://github.com/wvanderen/flowsynth/issues/212). Investigated 2026-10-01. This records evidence and candidate experiments, not a gameplay decision.
 
 ## Finding
 
