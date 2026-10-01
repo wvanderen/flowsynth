@@ -1,5 +1,4 @@
 import { BALANCE, EPS } from "./constants";
-import { syncArete } from "./accumulator";
 import { syncAchievements } from "./achievements";
 import { chargeDelivered, chargeWindowActive, computeRates, deployed } from "./economy";
 import { addForgeProgress, type Rng } from "./rolls";
@@ -19,7 +18,6 @@ export function sumResults(a: AdvanceResult, b: AdvanceResult): AdvanceResult {
     nousEarned: a.nousEarned + b.nousEarned,
     rollsBanked: a.rollsBanked + b.rollsBanked,
     goalsCompleted: a.goalsCompleted + b.goalsCompleted,
-    areteMinted: a.areteMinted + b.areteMinted,
   };
 }
 
@@ -33,7 +31,6 @@ export function advance(
     nousEarned: 0,
     rollsBanked: 0,
     goalsCompleted: 0,
-    areteMinted: 0,
   };
   if (state.mode !== "flow" || seconds <= EPS) return result;
   const session = state.session;
@@ -72,12 +69,13 @@ export function advance(
     session.accounting.bucketNous += gained;
     session.accounting.poolSeconds += seconds;
   } else {
+    // The lifetime truth and the era's measure rise together (ADR-0039):
+    // prestige rebases only the era leg.
     state.nous += gained;
     state.totalEarned += gained;
+    state.eraEarned += gained;
   }
   result.nousEarned += gained;
-  // Filling the accumulator mints Arete (ADR-0015).
-  result.areteMinted += syncArete(state);
   if (snapshot.forgeRate > 0) {
     result.rollsBanked += addForgeProgress(state, snapshot.forgeRate * seconds, rng);
   }

@@ -281,13 +281,19 @@ export interface GameState {
   plannedSessionsCompleted: number;
   combinations: number;
   nous: number;
+  // Lifetime ν earned — the monotonic truth underneath every era (ADR-0039).
+  // The "Eyes on the horizon" feat reads this, never the per-era measure.
   totalEarned: number;
-  // The Arete accumulator (ADR-0015): Arete minted at the horizon, inert
-  // until prestige's design lands; plus the legacy acknowledgment flag the
-  // removed prestige button once set (ADR-0038) — kept so old saves load,
-  // read by nothing (the feat triggers on the crossing, never the flag).
+  // The current era's earned ν (ADR-0039): the accumulator's per-era
+  // measure. Rebases to 0 at each prestige; lifetime totalEarned does not.
+  eraEarned: number;
+  // Banked prestige (ADR-0039): Arete arrives only through the reset
+  // action — the nth prestige banks n (ADR-0042's linear base), and no
+  // code path grants it otherwise, permanently.
   arete: number;
-  horizonAcknowledged: boolean;
+  // The era/prestige count (ADR-0039): economy-bearing state (the claim
+  // reads it), still awaiting a surface (ADR-0038's one-figure discipline).
+  prestiges: number;
   // One global mute (§5): gates every app sound, including the target
   // chime's hidden re-fires. No volume slider, no per-sound mix.
   muted: boolean;
@@ -410,5 +416,4 @@ export interface AdvanceResult {
   nousEarned: number;
   rollsBanked: number;
   goalsCompleted: number;
-  areteMinted: number;
 }

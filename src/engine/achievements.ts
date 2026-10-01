@@ -184,9 +184,8 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     category: "formula",
     name: "Eyes on the horizon",
     description: "Reach the horizon.",
-    // Reaching the horizon is the trigger (issue #156) — never the legacy
-    // horizonAcknowledged flag, which an old save may carry without the
-    // crossing behind it.
+    // The lifetime crossing is the trigger (ADR-0039): the feat reads the
+    // monotonic totalEarned, never the per-era measure prestige rebases.
     evaluate: (s) => s.totalEarned >= ARETE_HORIZON,
     progress: (s) => fraction(s.totalEarned, ARETE_HORIZON),
   },

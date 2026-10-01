@@ -230,8 +230,8 @@ export const RECONCILIATION_FLOOR_SECONDS = 180;
 export const REFLECTION_SLIDER_POSITIONS = 5;
 export const REFLECTION_SLIDER_NEUTRAL = 3;
 
-// ADR-0023: SAVE_VERSION 6 — the carrierless board. V5 saves convert once
-// inside deserialize (hybrid migration: the life record carries over, the
-// board resets to the new opening); anything older, and any future version,
-// hard-rejects with the start-fresh message (ADR-0017's gate stands).
-export const SAVE_VERSION = 6;
+// ADR-0017's pattern at the v7 boundary (issue #194): SAVE_VERSION 7 — the
+// prestige cut. V6 saves hard-reject with the start-fresh message (old-save
+// continuity is not a constraint; the map's standing note), and so does
+// anything older or newer. No migration chain exists.
+export const SAVE_VERSION = 7;

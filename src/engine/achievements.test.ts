@@ -250,17 +250,21 @@ describe("the 17-feat launch set", () => {
     expect(def.progress(s, { chargeDelivered: false }).current).toBeCloseTo(1.3, 9);
   });
 
-  it("Eyes on the horizon: reaching the horizon, never the legacy acknowledgment", () => {
+  it("Eyes on the horizon: the lifetime crossing, never the era's measure", () => {
     const s = fresh();
     completeSession(s);
-    // The removed prestige button's flag rides in old saves, but it mints
-    // nothing (issue #156): only the crossing unlocks the feat.
-    s.horizonAcknowledged = true;
+    // The per-era rebasing must never leak into the feat (ADR-0039): a
+    // fresh era's fill is not the feat, and a past crossing stays earned
+    // whatever the current era says.
+    s.eraEarned = ARETE_HORIZON;
     expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual([]);
     s.totalEarned = ARETE_HORIZON;
     expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual(["eyes-on-the-horizon"]);
     // Already unlocked never re-fires.
     expect(syncAchievements(s, { now: NOW })).toEqual([]);
+    // The era rebases at prestige; the feat stays unlocked regardless.
+    s.eraEarned = 0;
+    expect(s.achievements["eyes-on-the-horizon"]).toBe(NOW);
   });
 
   it("Time in the seat: 100 lifetime practice minutes, live plus manual", () => {
@@ -341,21 +345,15 @@ describe("achievement persistence", () => {
     expect(loaded.state!.achievements["eyes-on-the-horizon"]).toBeDefined();
   });
 
-  it("a legacy save keeps the feat the removed button minted, even below the horizon", () => {
-    // The old prestige button could set the flag (and mint the feat) before
-    // the crossing; a reload must neither revoke the feat nor re-mint it,
-    // and the flag alone never unlocks it anew (issue #156).
+  it("an unlocked feat survives a reload that predates the field's checks", () => {
+    // A save carrying the feat must neither lose it nor re-fire it on the
+    // next boundary, whatever the current era's measure reads (issue #156).
     const s = fresh();
     completeSession(s);
     s.achievements["eyes-on-the-horizon"] = NOW;
-    s.horizonAcknowledged = true;
     const loaded = deserialize(serialize(s, NOW)).state!;
     expect(loaded.achievements["eyes-on-the-horizon"]).toBe(NOW);
     expect(syncAchievements(loaded, { now: NOW })).toEqual([]);
-    const flagged = fresh();
-    completeSession(flagged);
-    flagged.horizonAcknowledged = true;
-    expect(syncAchievements(flagged, { now: NOW }).map((d) => d.id)).toEqual([]);
   });
 
   it("saves missing the ledger fields lenient-default them at load", () => {

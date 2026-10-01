@@ -1,5 +1,4 @@
 import { DRIFT_NOISE_SECONDS, EPS, RECONCILIATION_FLOOR_SECONDS } from "./constants";
-import { syncArete } from "./accumulator";
 import { advance, sumResults } from "./advance";
 import { accrueLivePractice } from "./habits";
 import { accrueGoalProgress } from "./goals";
@@ -35,7 +34,7 @@ export function freshAccounting(): SessionAccounting {
 // reconcile from the last hidden-transition save).
 export type Presence = "visible" | "away";
 
-const ZERO: AdvanceResult = { nousEarned: 0, rollsBanked: 0, goalsCompleted: 0, areteMinted: 0 };
+const ZERO: AdvanceResult = { nousEarned: 0, rollsBanked: 0, goalsCompleted: 0 };
 
 export function poolOutstanding(state: GameState): boolean {
   return (state.session?.accounting.poolSeconds ?? 0) > EPS;
@@ -138,10 +137,12 @@ export function resolveHonestyReport(state: GameState, outcome: HonestyOutcome):
     completions = accrueGoalProgress(state, state.activeHabitId, credit);
   }
   if (outcome !== "missed" && accounting.bucketNous > 0) {
+    // The bucket's nous banks the same way live production does: the
+    // balance, the lifetime truth, and the era's measure together.
     state.nous += accounting.bucketNous;
     state.totalEarned += accounting.bucketNous;
+    state.eraEarned += accounting.bucketNous;
     session.earned += accounting.bucketNous;
-    syncArete(state);
   }
   accounting.events.push({ awaySeconds: pool, outcome });
   accounting.poolSeconds = 0;
