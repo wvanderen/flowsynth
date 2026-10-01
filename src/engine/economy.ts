@@ -16,6 +16,33 @@ export function levelCost(level: number): number {
   return Number((numerator + denominator - 1n) / denominator);
 }
 
+// The bulk ladder's price (issue #195): k consecutive levels from `fromLevel`
+// sum the one-level curve exactly — the bulk actions charge these same
+// per-level prices one at a time, so preview and charge can never drift.
+export function levelsCost(fromLevel: number, count: number): number {
+  let total = 0;
+  for (let i = 0; i < count; i++) total += levelCost(fromLevel + i);
+  return total;
+}
+
+// How many whole-nous levels a budget buys from `fromLevel` — the MAX
+// reading of the ladder. The growth curve outgrows any finite budget, so
+// the count is naturally bounded; the cap only keeps a pathological bank
+// from spinning the loop.
+const AFFORDABLE_LEVEL_CAP = 500;
+
+export function affordableLevels(nous: number, fromLevel: number): number {
+  let count = 0;
+  let spent = 0;
+  while (count < AFFORDABLE_LEVEL_CAP) {
+    const next = levelCost(fromLevel + count);
+    if (spent + next > nous) break;
+    spent += next;
+    count++;
+  }
+  return count;
+}
+
 // The shared pricing shape (ADR-0013): a geometric scaler charged in whole
 // nous, ceiling-exact like level costs — the cell scaler, the activation
 // ladder, and the console long goals all ride this one curve.

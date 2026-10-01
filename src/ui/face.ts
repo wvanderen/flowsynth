@@ -103,10 +103,12 @@ export interface FaceSpec {
 // ±61). The compact face is the board's own; the bloom re-centers its
 // content over the hexagon's full-width band with an even vertical rhythm
 // — title block, signature, production line, button band, and the cell
-// note footnoted into the taper — each step a similar breath apart.
+// note footnoted into the taper — each step a similar breath apart. The
+// note sits deep in the taper (issue #195): the dial widens the button
+// band, so the footnote yields the room.
 const FACE_LAYOUT = {
   compact: { level: FACE_LEVEL_Y, name: FACE_NAME_Y, glyph: 0, glyphScale: FACE_GLYPH_SCALE, readout: FACE_READOUT_Y, note: FACE_NOTE_Y },
-  bloom: { level: -39, name: -26, glyph: -7, glyphScale: 0.7, readout: 11, note: 44 },
+  bloom: { level: -39, name: -26, glyph: -7, glyphScale: 0.7, readout: 11, note: 49 },
 } as const;
 
 export function moduleFace(spec: FaceSpec): string {
