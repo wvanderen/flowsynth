@@ -64,6 +64,42 @@ describe("persistence", () => {
     expect(corrupt.state!.gatedRows).toEqual([]);
   });
 
+  it("saves lenient-default the Catalog unlocks (issue #197)", () => {
+    // A save written before the Arete Catalog existed owes no unlocks it
+    // can't know about: absent fields read as never unlocked, never bought.
+    const file = JSON.parse(serialize(fresh()));
+    delete file.state.unlockedRows;
+    delete file.state.catalogEntryOwned;
+    delete file.state.rollPoolJoined;
+    const absent = deserialize(JSON.stringify(file));
+    expect(absent.error).toBeUndefined();
+    expect(absent.state!.unlockedRows).toEqual([]);
+    expect(absent.state!.catalogEntryOwned).toBe(false);
+    expect(absent.state!.rollPoolJoined).toBe(false);
+    file.state.unlockedRows = null;
+    file.state.catalogEntryOwned = null;
+    file.state.rollPoolJoined = null;
+    const corrupt = deserialize(JSON.stringify(file));
+    expect(corrupt.error).toBeUndefined();
+    expect(corrupt.state!.unlockedRows).toEqual([]);
+    expect(corrupt.state!.catalogEntryOwned).toBe(false);
+    expect(corrupt.state!.rollPoolJoined).toBe(false);
+  });
+
+  it("Catalog unlocks round-trip through the save (issue #197)", () => {
+    const s = fresh();
+    s.arete = 3;
+    s.unlockedRows = [3, -2];
+    s.catalogEntryOwned = true;
+    s.rollPoolJoined = true;
+    const loaded = deserialize(serialize(s, 5_000));
+    expect(loaded.error).toBeUndefined();
+    expect(loaded.state!.unlockedRows).toEqual([3, -2]);
+    expect(loaded.state!.catalogEntryOwned).toBe(true);
+    expect(loaded.state!.rollPoolJoined).toBe(true);
+    expect(loaded.state!.arete).toBe(3);
+  });
+
   it("resuming from a mid-flow save does not duplicate rewards", () => {
     const build = () => {
       const s = fresh();

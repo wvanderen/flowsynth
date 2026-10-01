@@ -250,12 +250,12 @@ describe("the octave-row gate (ADR-0022)", () => {
     // Move the whole opening up first (free, ungated): row 2 now sits on
     // the board without ever being paid for…
     expect(returnModule(s, s.modules[0]!.id).ok).toBe(true);
-    expect(reshapeCells(s, [hex(0, 2), hex(1, 2), hex(0, 3)]).ok).toBe(true);
-    // …but acquisition is what gates: the first purchase into row 3 pays
+    expect(reshapeCells(s, [hex(0, 1), hex(1, 1), hex(0, 2)]).ok).toBe(true);
+    // …but acquisition is what gates: the first purchase into row 2 pays
     // its premium however the board is shaped.
-    expect(buyCell(s, hex(1, 3)).ok).toBe(true);
-    expect(s.nous).toBeCloseTo(1e6 - cellCost(0) - rowGateCost(3), 6);
-    expect(s.gatedRows).toEqual([0, 1, 3]);
+    expect(buyCell(s, hex(1, 2)).ok).toBe(true);
+    expect(s.nous).toBeCloseTo(1e6 - cellCost(0) - rowGateCost(2), 6);
+    expect(s.gatedRows).toEqual([0, 1, 2]);
   });
 
   it("moving owned cells between rows is free and ungated — even past every gate", () => {
@@ -265,9 +265,10 @@ describe("the octave-row gate (ADR-0022)", () => {
     // Nothing is pinned (ADR-0021): the opening synth returns to the tray
     // so the reshape owns every cell it keeps.
     expect(returnModule(s, s.modules[0]!.id).ok).toBe(true);
-    // Reshape the whole board up into rows 2–3: no gate, no charge —
-    // gates tax acquisition only, never movement.
-    const next = [hex(0, 2), hex(1, 2), hex(0, 3), hex(1, 1)];
+    // Reshape the board across the band, row −1 included — a row whose
+    // gate was never paid: no gate, no charge — gates tax acquisition
+    // only, never movement.
+    const next = [hex(0, -1), hex(0, 0), hex(0, 1), hex(0, 2)];
     const nousBefore = s.nous;
     expect(s.cells.length).toBe(next.length);
     expect(reshapeCells(s, next).ok).toBe(true);
@@ -278,12 +279,15 @@ describe("the octave-row gate (ADR-0022)", () => {
   it("rows are finite: purchases beyond the band are refused", () => {
     const s = fresh();
     s.nous = 1e9;
-    for (const pos of [hex(0, 2), hex(0, 3), hex(0, 4)]) {
+    for (const pos of [hex(0, 2), hex(0, -1)]) {
       expect(buyCell(s, pos).ok, `${pos.q},${pos.r}`).toBe(true);
     }
-    expect(buyCell(s, hex(0, 5)).ok).toBe(false); // row 5 — beyond ±4
+    expect(buyCell(s, hex(0, 3)).ok).toBe(false); // row 3 — the Row unlock's to sell
+    expect(buyCell(s, hex(0, 4)).ok).toBe(false); // row 4 — beyond the six-row cap
     // Columns stop at the circle of fifths too: twelve names, no aliases.
-    for (const pos of [hex(2, 0), hex(3, 0), hex(4, 0), hex(5, 0), hex(6, 0)]) {
+    // The probes walk row 0 — along the band r follows floor(7q/12), and
+    // each step touches the last.
+    for (const pos of [hex(2, -1), hex(3, -1), hex(4, -2), hex(5, -2), hex(6, -3)]) {
       expect(buyCell(s, pos).ok, `${pos.q},${pos.r}`).toBe(true);
     }
     expect(buyCell(s, hex(7, -4)).ok).toBe(false); // column 7 — past F♯

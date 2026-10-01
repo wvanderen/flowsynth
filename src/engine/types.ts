@@ -330,6 +330,20 @@ export interface GameState {
   // max-distance scalar, so purchase order never matters; lenient-defaults
   // to [] at load.
   gatedRows: number[];
+  // Octave rows the Row unlock has opened (ADR-0040 as amended by
+  // ADR-0044, issue #197): the one Arete row per side beyond the launch
+  // band. The purchase stands in the row gate too — the row also joins
+  // gatedRows — so cells inside buy with nous as usual. Persists through
+  // prestige; lenient-defaults to [] at load.
+  unlockedRows: number[];
+  // The Arete Catalog's Mutator tree purchases (ADR-0040 as amended by
+  // ADR-0044, issue #197): the entry — the Mutator Grid's activation, the
+  // Mutator Forge module itself, and the first slot's unlock, whose engine
+  // effects land with the mutator contracts (#198) — and the pricier join
+  // that admits the Mutator Forge type to the module roll pool. One-time,
+  // Arete-paid, and persisting through prestige; lenient-default to false.
+  catalogEntryOwned: boolean;
+  rollPoolJoined: boolean;
   forge: Meter;
   // The flow meter (ADR-0041): the player-wide meter credited practice
   // fills, sibling of Forge progress — never a branch of the Forge family.

@@ -6,8 +6,9 @@ import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold, flowThreshold } from "../engine/rolls";
 import { BALANCE, CATEGORY_OF, isSynthesizerType, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
+import { catalogOpen, rowUnlockCost, unlockableRows } from "../engine/catalog";
 import { formatClock, formatDuration } from "../engine/clock";
-import { cellNoteOf, positionInRange } from "../engine/lattice";
+import { cellNoteOf, octaveRowOf, positionInRange } from "../engine/lattice";
 import { appActive, appLockNote, TILE_APPS, type FocusApp } from "../engine/apps";
 import { isInFlowNote } from "../engine/notes";
 import { activeHabit } from "../engine/habits";
@@ -46,6 +47,10 @@ const SPACING = 65;
 const LATTICE_STEP = Math.sqrt(3) * SPACING;
 const DRAG_THRESHOLD_PX = 6;
 const boundCells = new WeakSet<SVGElement>();
+// The Row unlock banners' one-binding ledger, the boundCells pattern: the
+// svg persists across renders, so a surviving banner node must never
+// re-bind.
+const boundBanners = new WeakSet<SVGElement>();
 
 function point({ q, r }: Hex): [number, number] {
   return [Math.sqrt(3) * SPACING * (q + r / 2), SPACING * 1.5 * r];
@@ -825,9 +830,15 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
   if (!app.dragging && !ui.placing) ui.dropHover = null;
   const upgrade = state.mode === "upgrade";
   // The frontier stops at the finite octave-row band (ADR-0022): the
-  // fifths axis runs free, the rows do not.
-  const frontier = upgrade && ui.buyingCell ? app.frontierCells().filter(positionInRange) : [];
-  const allCells = [...state.cells, ...frontier];
+  // fifths axis runs free, the rows do not. The raw frontier also feeds the
+  // Row unlock's shaded rows (issue #197): while add-cell mode stands, the
+  // still-locked rows just past the launch band shade violet behind one
+  // banner each — frontier-adjacent rows only, so at most one above and
+  // one below can ever stand.
+  const rawFrontier = upgrade && ui.buyingCell ? app.frontierCells() : [];
+  const bands = upgrade && ui.buyingCell && catalogOpen(state) ? rowUnlockBands(state, rawFrontier) : [];
+  const frontier = rawFrontier.filter((pos) => positionInRange(state, pos));
+  const allCells = [...state.cells, ...frontier, ...bands.flatMap((band) => band.hexes)];
   const coords = allCells.map(point);
   // The lens's base (§7): the board's own bounds with breathing room —
   // the top pad carries the chord chips, which float ~1.2 hex radii above
@@ -887,6 +898,11 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
     const cls = emitting ? "charge-line" : "charge-preview-line";
     html += `<line data-key="charge-${generator.id}-${receiver.id}" class="${cls}" ${leadSegment(x1, y1, x2, y2)}/>`;
   }
+
+  // The Row unlock's shaded rows (issue #197): background work, behind the
+  // chord marks and the faces — the promise the banner carries is board
+  // geometry, not chord content.
+  html += `<g data-key="row-bands">${rowBandHtml(state, bands, point)}</g>`;
 
   // Named-chord marks (§6): the outline polygons and seams draw UNDER the
   // modules — the prototype's triangle behind the faces, visible only in
@@ -964,6 +980,63 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
   bindGridEvents(app, svg);
   bindFaceBuys(app, svg);
   updateChordReadout(app);
+}
+
+// ── The Row unlock's shaded rows (issue #197, #174's approved surface) ──
+// In add-cell mode, each still-locked octave row just past the launch band
+// renders shaded violet behind a single "Unlock this octave row · ⟨Arete⟩"
+// banner — the unlock is one unit per row, cost over the whole thing, one
+// click buying outright in upgrade mode. Only frontier-adjacent rows
+// render at all, and the ladder holds exactly one row per side, so at most
+// one banner above and one below can ever stand; past the ladder the board
+// is at its six-row cap and nothing renders. The banner is inert outside
+// upgrade mode by the engine's own gate — and it never renders before the
+// first prestige, because no Arete surface is reachable before it.
+interface RowBand {
+  row: number;
+  cost: number;
+  affordable: boolean;
+  hexes: Hex[];
+}
+
+function rowUnlockBands(state: GameState, rawFrontier: Hex[]): RowBand[] {
+  const cost = rowUnlockCost(state);
+  if (cost === null) return [];
+  const bands: RowBand[] = [];
+  for (const row of unlockableRows(state)) {
+    const hexes = rawFrontier.filter((pos) => octaveRowOf(pos) === row);
+    if (hexes.length === 0) continue;
+    bands.push({ row, cost, affordable: state.arete >= cost, hexes });
+  }
+  return bands;
+}
+
+// One band's markup: the shaded hexes (the frontier cells that touch the
+// row) with the banner label clamped to the owned board's span and
+// anchored away from it — the raw band can span far more columns than the
+// player's board, and the label belongs over the board it extends.
+function rowBandHtml(state: GameState, bands: RowBand[], point: (pos: Hex) => [number, number]): string {
+  if (bands.length === 0) return "";
+  const owned = state.cells.map(point);
+  const minX = Math.min(...owned.map(([x]) => x));
+  const maxX = Math.max(...owned.map(([x]) => x));
+  const boardCy = owned.reduce((a, [, y]) => a + y, 0) / owned.length;
+  return bands
+    .map((band) => {
+      const pts = band.hexes.map(point);
+      const hexes = pts
+        .map(
+          ([x, y]) =>
+            `<polygon class="row-band-hex" points="${hexPoints(HEX_RADIUS)}" transform="translate(${x.toFixed(2)},${y.toFixed(2)})"/>`,
+        )
+        .join("");
+      const cx = Math.min(maxX, Math.max(minX, pts.reduce((a, [x]) => a + x, 0) / pts.length));
+      const cy = pts.reduce((a, [, y]) => a + y, 0) / pts.length;
+      const dir = cy < boardCy ? -1 : 1;
+      const label = `Unlock this octave row · ${band.cost} Arete`;
+      return `<g class="row-band">${hexes}<g class="row-unlock${band.affordable ? "" : " locked"}" data-unlock-row="${band.row}" role="button" tabindex="0" aria-label="${label}"><text class="row-unlock-label mono" x="${cx.toFixed(2)}" y="${(cy + dir * (HEX_RADIUS + 20)).toFixed(2)}">${label}</text></g></g>`;
+    })
+    .join("");
 }
 
 // One chord mark's markup (§6, prototype language #120): a two-voice chord
@@ -1490,6 +1563,21 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
       document.addEventListener("pointercancel", cancel);
     });
     bindPointerDrag(app, node, () => deployedAt(app.state, position())?.id ?? null);
+  });
+  // The Row unlock's banner (issue #197): one click buys the row outright —
+  // the engine owns the mode gate and the refusal wording, so an inert or
+  // unaffordable banner answers plainly instead of looking dead.
+  svg.querySelectorAll<SVGElement>("[data-unlock-row]").forEach((node) => {
+    if (boundBanners.has(node)) return;
+    boundBanners.add(node);
+    const row = () => Number(node.getAttribute("data-unlock-row"));
+    node.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        app.buyRowUnlockAction(row());
+      }
+    });
+    node.addEventListener("click", () => app.buyRowUnlockAction(row()));
   });
   bindSeamHover(app, svg);
 }
@@ -2546,16 +2634,21 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
           // reuse the previous one's already-rendered content. The rolls
           // line's split rides along — it is captured at close with the rest.
           ? [app.state.summary?.sessionNumber ?? null, app.state.summary?.earned ?? null, app.state.summary?.rollsFlow ?? 0, app.state.summary?.rollsForge ?? 0]
-          : kind === "catalog"
-            ? [
-                app.ui.showAcquired,
-                wholeNous(app.state),
-                JSON.stringify(app.state.purchased),
-                app.state.cellsBought,
-                app.state.activatedApps.join("|"),
-                // Module-upgrade rows reprice with levels, moves, and the roster.
-                app.state.modules.map((m) => `${m.id}:${m.level}:${m.rarity}:${m.pos ? "d" : "i"}`).join("|"),
-              ]
+            : kind === "catalog"
+              ? [
+                  app.ui.showAcquired,
+                  wholeNous(app.state),
+                  JSON.stringify(app.state.purchased),
+                  app.state.cellsBought,
+                  app.state.activatedApps.join("|"),
+                  // Module-upgrade rows reprice with levels, moves, and the roster.
+                  app.state.modules.map((m) => `${m.id}:${m.level}:${m.rarity}:${m.pos ? "d" : "i"}`).join("|"),
+                ]
+              // The Arete sheet's own identity (issue #197): the balance and
+              // the owned flags. The mode rides modalKey, so entering or
+              // leaving flow re-renders the inert/active button states.
+              : kind === "arete"
+                ? [app.state.arete, app.state.catalogEntryOwned, app.state.rollPoolJoined]
             : kind === "achievements"
               // Quantized progress: an open page refreshes when a bar visibly
               // moves, not on every clock tick.
@@ -2593,6 +2686,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   content.dataset.renderKey = renderKey;
   if (kind === "settings") renderSettingsModal(app, content);
   else if (kind === "catalog") renderCatalogModal(app, content);
+  else if (kind === "arete") renderAreteCatalogModal(app, content);
   else if (kind === "forge") renderForgeModal(app, content, projected);
   else if (kind === "achievements") renderAchievementsModal(app, content, projected);
   else if (kind === "export") renderExportModal(app, content);
@@ -2837,6 +2931,57 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
     app.ui.showAcquired = (event.target as HTMLInputElement).checked;
     app.render();
   });
+  wireClose(app);
+}
+
+// The Arete Catalog sheet (ADR-0040 as amended by ADR-0044, issue #197):
+// the board-ledger chip's door, holding exactly what no board affordance
+// carries — the Mutator tree's entry and roll-pool join, and the Horizon
+// break listing whose purchase logic lands with the horizon break issue
+// (the slot is reserved, the goalpost visible from the first banked
+// Arete). The sheet stays pure: the surface-bought ladders — the Row
+// unlock's banner, the Mutators layer's slot ladder — never appear here as
+// rows. Every purchase acts in upgrade mode only; outside it the buttons
+// stand inert and the sheet says so.
+function renderAreteCatalogModal(app: App, content: HTMLElement): void {
+  const { state } = app;
+  const upgrade = state.mode === "upgrade";
+  const ownedWord = (word: string): string => `<span class="shop-buy"><span class="arete-owned mono">${word}</span></span>`;
+  const areteBuyButton = (id: string, price: number): string =>
+    `<span class="shop-buy"><button class="primary arete" id="${id}"${upgrade ? "" : " disabled"} title="${upgrade ? `Spend ${price} Arete` : "Arete is spent between sessions"}">${price} Arete</button></span>`;
+  const entry = state.catalogEntryOwned;
+  const joined = state.rollPoolJoined;
+  const entryBuy = entry ? ownedWord("entered") : areteBuyButton("buy-arete-entry", BALANCE.catalogEntryCost);
+  const poolBuy = joined
+    ? ownedWord("joined")
+    : entry
+      ? areteBuyButton("buy-arete-pool", BALANCE.rollPoolJoinCost)
+      : `<span class="shop-buy"><button class="primary arete" id="buy-arete-pool" disabled title="Enter the Mutator tree first">Enter first</button></span>`;
+  content.innerHTML = `
+    ${modalTop("ARETE CATALOG")}
+    <h2 id="modal-title">What banked Arete buys.</h2>
+    <p class="lead"><b class="mono">${formatInt(state.arete)}</b> Arete banked. Purchases are permanent, survive prestige, and happen between sessions.</p>
+    <h3 class="catalog-section-title">Mutator tree</h3>
+    <div class="shop-list">
+      <div class="shop-item${entry ? " owned" : ""}">
+        <div><h3>Entry</h3><small>Activates the Mutator Grid, grants the Mutator Forge module itself, and unlocks the first Mutator slot.</small></div>
+        ${entryBuy}
+      </div>
+      <div class="shop-item${joined ? " owned" : ""}">
+        <div><h3>Roll-pool join</h3><small>The Mutator Forge type joins the module roll pool as one uniform, unweighted entry.</small></div>
+        ${poolBuy}
+      </div>
+    </div>
+    <h3 class="catalog-section-title">Horizon break</h3>
+    <div class="shop-list">
+      <div class="shop-item">
+        <div><h3>Horizon break</h3><small>Score past the horizon line raises each prestige's claim — still banked only on reset.</small></div>
+        <span class="shop-buy"><button class="primary arete" disabled title="The break's purchase arrives with the horizon break">Soon</button></span>
+      </div>
+    </div>
+    ${upgrade ? "" : `<p class="modal-note">Arete is spent between sessions — enter upgrade mode to buy.</p>`}`;
+  byId("buy-arete-entry")?.addEventListener("click", () => app.buyCatalogEntryAction());
+  byId("buy-arete-pool")?.addEventListener("click", () => app.joinRollPoolAction());
   wireClose(app);
 }
 

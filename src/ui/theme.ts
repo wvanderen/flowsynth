@@ -47,10 +47,14 @@ const hues = {
 // Resource registers — the register rule: a resource wears the luminous glow
 // register of its producing category's hue (generator ⇄ charge green,
 // synthesizer ⇄ nous indigo). Interactive roles pick from the same families.
+// Arete is its own register (issue #197): the prestige resource's violet —
+// the prototype's — worn by every Arete surface; it produces from no
+// category, so it stands beside them rather than under one.
 const resources = {
   charge: "#9affa8",
   nous: "#cbcaff",
   "forge-glow": "#eecb82",
+  arete: "#b994f5",
 } as const;
 
 const interactive = {
@@ -91,6 +95,14 @@ const semantics = {
   "charge-faint": "color-mix(in srgb, var(--charge) 13%, var(--panel-soft))",
   "charge-tint": "color-mix(in srgb, var(--charge) 7%, transparent)",
   "charge-line": "color-mix(in srgb, var(--charge) 38%, transparent)",
+  // The Arete register's derivatives (issue #197): the unlock banner's
+  // shaded row, the chip's wash, and the sheet's accents all mix from the
+  // one token, the way the charge family does. The bright stop keeps the
+  // buy buttons' hover inside the register.
+  "arete-bright": "color-mix(in srgb, var(--arete) 72%, var(--ink))",
+  "arete-faint": "color-mix(in srgb, var(--arete) 13%, var(--panel-soft))",
+  "arete-tint": "color-mix(in srgb, var(--arete) 9%, transparent)",
+  "arete-line": "color-mix(in srgb, var(--arete) 38%, transparent)",
   "forge-faint": "color-mix(in srgb, var(--forge-glow) 15%, var(--panel-soft))",
   "danger-faint": "color-mix(in srgb, var(--danger) 13%, var(--panel-soft))",
   "meter-fill": "color-mix(in srgb, var(--accent) 40%, var(--line))",

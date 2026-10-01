@@ -9,7 +9,7 @@ import { writeNote } from "../engine/notes";
 import { BALANCE, SAVE_VERSION } from "../engine/constants";
 import { ARETE_HORIZON } from "../engine/accumulator";
 import { STORAGE_KEY, serialize } from "../engine/save";
-import { computeRates, longGoalCost, affordableLevels, levelCost, levelsCost } from "../engine/economy";
+import { computeRates, cellCost, longGoalCost, affordableLevels, levelCost, levelsCost } from "../engine/economy";
 import { startSession, endSession } from "../engine/actions";
 import { advance } from "../engine/advance";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport } from "../engine/trust";
@@ -1992,6 +1992,122 @@ describe("the catalog", () => {
     lead = document.querySelector("#modal-content p.lead")!;
     expect(lead.textContent).toBe(`${formatBalance(4.072e38)} ν available.`);
     expect(lead.querySelector("span")!.getAttribute("title")).toBe(formatInt(4.072e38));
+  });
+});
+
+describe("the Arete Catalog (issue #197)", () => {
+  const UNLOCK_ABOVE = BALANCE.launchRowsAbove + 1;
+  const UNLOCK_BELOW = -BALANCE.launchRowsBelow - 1;
+
+  function bankFirstArete(): void {
+    app.state.eraEarned = ARETE_HORIZON;
+    app.render();
+    document.getElementById("prestige-door")!.click();
+    document.getElementById("prestige-confirm")!.click();
+    expect(app.state.arete).toBe(1);
+  }
+
+  it("before the first prestige no Arete surface exists anywhere", () => {
+    app.render();
+    expect(document.getElementById("arete-chip")).toBeNull();
+    expect(document.querySelector(".info-arete")).toBeNull();
+    // Even with the board grown to the unlock boundary and add-cell mode
+    // armed, the banner never renders — the lock is the prestige count
+    // (the first Arete reset), and nothing has reset yet.
+    app.state.cells.push(hex(0, 2), hex(0, -1));
+    app.armCellPurchase();
+    app.render();
+    expect(document.querySelector("[data-unlock-row]")).toBeNull();
+  });
+
+  it("the first banked Arete raises the chip on the ledger, and it opens the sheet", () => {
+    bankFirstArete();
+    app.render();
+    const chip = document.getElementById("arete-chip")!;
+    expect(chip.textContent).toContain("Catalog");
+    expect(chip.textContent).toContain("1");
+    chip.click();
+    expect(app.ui.modal).toBe("arete");
+    const sheet = document.getElementById("modal-content")!;
+    expect(sheet.textContent).toContain("Mutator tree");
+    expect(sheet.textContent).toContain("Horizon break");
+    // The sheet stays pure: no informational rows for the surface-bought
+    // ladders.
+    expect(sheet.textContent).not.toContain("octave row");
+  });
+
+  it("the sheet's purchases debit Arete: the entry, then the pool join behind it", () => {
+    app.state.arete = BALANCE.catalogEntryCost + BALANCE.rollPoolJoinCost;
+    app.openModal("arete");
+    // The join sits behind the entry.
+    const join = document.getElementById("buy-arete-pool") as HTMLButtonElement;
+    expect(join.disabled).toBe(true);
+    document.getElementById("buy-arete-entry")!.click();
+    expect(app.state.catalogEntryOwned).toBe(true);
+    expect(app.state.arete).toBe(BALANCE.rollPoolJoinCost);
+    app.render();
+    document.getElementById("buy-arete-pool")!.click();
+    expect(app.state.rollPoolJoined).toBe(true);
+    expect(app.state.arete).toBe(0);
+    app.render();
+    const sheet = document.getElementById("modal-content")!;
+    expect(sheet.textContent).toContain("entered");
+    expect(sheet.textContent).toContain("joined");
+  });
+
+  it("the sheet's buttons stand inert outside upgrade mode", () => {
+    app.state.arete = 3;
+    startSession(app.state, null);
+    app.openModal("arete");
+    const sheet = document.getElementById("modal-content")!;
+    expect(sheet.querySelector(".modal-note")!.textContent).toContain("between sessions");
+    expect((document.getElementById("buy-arete-entry") as HTMLButtonElement).disabled).toBe(true);
+    expect(app.state.catalogEntryOwned).toBe(false);
+  });
+
+  it("the banner buys the row in one click; cells inside then buy with nous", () => {
+    bankFirstArete();
+    // Grow to the unlock boundary: rows 2 and −1 owned, so each frontier
+    // touches its side's unlock row.
+    app.state.cells.push(hex(0, 2), hex(0, -1));
+    app.armCellPurchase();
+    app.render();
+    const banners = document.querySelectorAll("[data-unlock-row]");
+    expect(banners).toHaveLength(2);
+    expect(banners[0]!.getAttribute("data-unlock-row")).toBe(String(UNLOCK_ABOVE));
+    const label = banners[0]!.textContent!;
+    expect(label).toContain("Unlock this octave row");
+    expect(label).toContain("1 Arete");
+    // One click, outright: the row opens and its gate stands paid.
+    (banners[0] as SVGElement).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.state.unlockedRows).toEqual([UNLOCK_ABOVE]);
+    expect(app.state.arete).toBe(0);
+    app.render();
+    // The bought row's band is gone; the other side's banner escalates to 2.
+    expect(document.querySelector(`[data-unlock-row="${UNLOCK_ABOVE}"]`)).toBeNull();
+    expect(document.querySelector(`[data-unlock-row="${UNLOCK_BELOW}"]`)!.textContent).toContain("2 Arete");
+    // Cells inside the unlocked row buy with nous as usual — no gate
+    // premium, in range for the frontier.
+    const price = cellCost(app.state.cellsBought);
+    app.state.nous = price;
+    app.render();
+    const frontierInRow = document.querySelector(`[data-cell="0,${UNLOCK_ABOVE}"]`);
+    expect(frontierInRow).not.toBeNull();
+    frontierInRow!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.state.cells.some((c) => c.q === 0 && c.r === UNLOCK_ABOVE)).toBe(true);
+    expect(app.state.nous).toBe(0);
+  });
+
+  it("a row beyond the cap never renders a banner and refuses the buy", () => {
+    app.state.arete = 10;
+    app.state.unlockedRows = [UNLOCK_ABOVE, UNLOCK_BELOW];
+    app.state.cells.push(hex(0, 2), hex(0, -1));
+    app.armCellPurchase();
+    app.render();
+    expect(document.querySelectorAll("[data-unlock-row]")).toHaveLength(0);
+    app.buyRowUnlockAction(UNLOCK_ABOVE + 1);
+    expect(app.state.unlockedRows).toEqual([UNLOCK_ABOVE, UNLOCK_BELOW]);
+    expect(app.state.arete).toBe(10);
   });
 });
 

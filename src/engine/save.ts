@@ -75,6 +75,18 @@ export function deserialize(text: string): LoadResult {
   if (!Array.isArray(raw.gatedRows)) {
     merged.gatedRows = [];
   }
+  // The Row unlock's ledger and the Mutator tree's sheet purchases
+  // (issue #197) lenient-default the same way: absent means never unlocked,
+  // never bought — which is also exactly what a pre-Catalog save owes.
+  if (!Array.isArray(raw.unlockedRows)) {
+    merged.unlockedRows = [];
+  }
+  if (typeof raw.catalogEntryOwned !== "boolean") {
+    merged.catalogEntryOwned = false;
+  }
+  if (typeof raw.rollPoolJoined !== "boolean") {
+    merged.rollPoolJoined = false;
+  }
   // The arc card's seen flag (§8) lenient-defaults the same way: absent or
   // corrupt means never dismissed — the save is still owed its one hint.
   if (typeof raw.arcCardSeen !== "boolean") {

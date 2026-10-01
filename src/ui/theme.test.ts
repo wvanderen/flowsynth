@@ -39,6 +39,13 @@ describe("theme token table", () => {
     expect(tokens["hue-spacer"]).toBeDefined();
   });
 
+  it("carries the Arete register: the one token every Arete surface wears (issue #197)", () => {
+    expect(tokens.arete).toBe("#b994f5");
+    expect(tokens["arete-faint"]).toMatch(/^color-mix\(in srgb, var\(--arete\) 13%/);
+    expect(tokens["arete-tint"]).toMatch(/^color-mix\(in srgb, var\(--arete\) 9%/);
+    expect(tokens["arete-line"]).toMatch(/^color-mix\(in srgb, var\(--arete\) 38%/);
+  });
+
   it("derives the rarity plate tints from the finish tokens", () => {
     for (const rarity of ["common", "uncommon", "rare"]) {
       expect(tokens[`plate-${rarity}`], rarity).toMatch(/^color-mix\(in srgb, var\(--finish-/);
