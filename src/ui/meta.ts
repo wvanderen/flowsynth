@@ -7,6 +7,7 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
   focusKeyed: { name: "Focus-Keyed Generator", short: "Focus-Gen", role: "Charge from focus" },
   infusor: { name: "Infusor", short: "Infusor", role: "Neighbor bonuses" },
   forge: { name: "Forge", short: "Forge", role: "Rolls at threshold" },
+  mutatorForge: { name: "Mutator Forge", short: "Mut. Forge", role: "Mutator rolls at threshold" },
 };
 
 // The shelf's one permanent hint (§5.8): the guaranteed generator row names

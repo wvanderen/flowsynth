@@ -1,4 +1,4 @@
-import type { Category, ModuleType, Rarity, ShelfType } from "./types";
+import type { Category, ModuleType, MutatorFamily, Rarity, ShelfType } from "./types";
 
 export interface Balance {
   // One unified synthesizer base rate (ADR-0022): every synthesizer shares
@@ -71,6 +71,22 @@ export interface Balance {
   goalBaseSlots: number;
   forgeInitialThreshold: number;
   forgeThresholdGrowth: number;
+  // The Mutator Forge branch (ADR-0043, issue #198): ADR-0009's shared-meter
+  // pattern on its own constants — growth ≈×2, steeper than the module
+  // branch's ×1.5 — paced so the first mutator roll lands within the first
+  // post-entry era. Charge-only; no practice leg (ADR-0041). Provisional
+  // tuning.
+  mutatorForgeInitialThreshold: number;
+  mutatorForgeThresholdGrowth: number;
+  // The mutator families' base magnitudes (ADR-0043): the effect multiplies
+  // its term by (1 + magnitude), and rarity scales the base ×1/×2/×4 across
+  // the shared common/uncommon/rare tiers. Provisional tuning.
+  mutatorMagnitudeBase: Record<MutatorFamily, number>;
+  mutatorRarityMultiplier: Record<Rarity, number>;
+  // The slot ladder's base (ADR-0043): the nth unlock past the entry's
+  // free first slot costs first + (n-1)n/2 Arete — the 2/3/5/8/12 shape,
+  // unbounded. Provisional tuning.
+  mutatorSlotFirstCost: number;
   // The flow meter (ADR-0041): credited practice seconds fill it directly —
   // the fill is measured in seconds, no rate leg. The opening threshold
   // crosses once fast so the opening still teaches the loop (≈ 3 minutes,
@@ -118,6 +134,11 @@ export const BALANCE: Balance = {
   goalBaseSlots: 2,
   forgeInitialThreshold: 60,
   forgeThresholdGrowth: 1.5,
+  mutatorForgeInitialThreshold: 240,
+  mutatorForgeThresholdGrowth: 2,
+  mutatorMagnitudeBase: { power: 0.5, resonance: 0.5, charge: 0.5 },
+  mutatorRarityMultiplier: { common: 1, uncommon: 2, rare: 4 },
+  mutatorSlotFirstCost: 2,
   flowOpeningSeconds: 180,
   flowCadenceSeconds: 1800,
   chargeWindowFraction: 0.1,
@@ -173,6 +194,10 @@ export const CATEGORY_OF: Record<ModuleType, Category> = {
   focusKeyed: "generator",
   infusor: "infusor",
   forge: "forge",
+  // The Mutator Forge is the Forge family's second branch (ADR-0043): the
+  // same chargeable category, its own meter. Membership is decided per
+  // category, never per type.
+  mutatorForge: "forge",
 };
 
 // The one synthesizer test, shared by the rate pass, the roll rig, and the
@@ -207,8 +232,17 @@ export const MODULE_TYPES: readonly ModuleType[] = [
 
 // The forge roll pool (ADR-0022): every module type rolls — no module is
 // granted or privileged anymore, and the spacer ships through rolls only,
-// never the shelf.
+// never the shelf. The Mutator Forge type stands outside it until the
+// Mutator tree's roll-pool purchase appends it (ADR-0043) — one uniform,
+// unweighted entry, read per state in rolls.ts.
 export const ROLL_POOL: readonly ModuleType[] = MODULE_TYPES;
+
+// The Mutator Forge type's pool entry, appended when the roll-pool join is
+// owned (ADR-0043): the purchase buys membership, nothing else.
+export const POOL_JOIN_TYPE: ModuleType = "mutatorForge";
+
+// The launch mutator families (ADR-0043), uniform in mutator rolls.
+export const MUTATOR_FAMILIES: readonly MutatorFamily[] = ["power", "resonance", "charge"];
 
 // The starter shelf (ADR-0022): one-time offers completing the
 // non-synthesizer landscape — the generator, one infusor, and the Forge.

@@ -100,6 +100,82 @@ describe("persistence", () => {
     expect(loaded.state!.arete).toBe(3);
   });
 
+  it("saves lenient-default the Mutator layer (issue #198)", () => {
+    // A save written before the mutator layer existed owes no slots, no
+    // mutators, no branch meter, no pending mutator rolls — absent fields
+    // read as the entry never bought. Corrupt fields fall back the same.
+    const file = JSON.parse(serialize(fresh()));
+    delete file.state.mutatorSlots;
+    delete file.state.mutators;
+    delete file.state.mutatorForge;
+    delete file.state.bankedMutatorRolls;
+    const absent = deserialize(JSON.stringify(file));
+    expect(absent.error).toBeUndefined();
+    expect(absent.state!.mutatorSlots).toEqual([]);
+    expect(absent.state!.mutators).toEqual([]);
+    expect(absent.state!.mutatorForge).toEqual({ progress: 0, earned: 0 });
+    expect(absent.state!.bankedMutatorRolls).toEqual([]);
+    file.state.mutatorSlots = null;
+    file.state.mutators = 42;
+    file.state.mutatorForge = "gone";
+    file.state.bankedMutatorRolls = {};
+    const corrupt = deserialize(JSON.stringify(file));
+    expect(corrupt.error).toBeUndefined();
+    expect(corrupt.state!.mutatorSlots).toEqual([]);
+    expect(corrupt.state!.mutators).toEqual([]);
+    expect(corrupt.state!.mutatorForge).toEqual({ progress: 0, earned: 0 });
+    expect(corrupt.state!.bankedMutatorRolls).toEqual([]);
+  });
+
+  it("the Mutator layer round-trips through the save (issue #198)", () => {
+    const s = fresh();
+    s.mutatorSlots = [hex(0, 1), hex(1, 0)];
+    s.mutators = [
+      { id: "mu1", family: "power", rarity: "uncommon", pos: hex(0, 1) },
+      { id: "mu2", family: "charge", rarity: "rare", pos: null },
+    ];
+    s.mutatorForge = { progress: 33, earned: 2 };
+    s.bankedMutatorRolls = [
+      {
+        id: "mo1",
+        candidates: [
+          { id: "mc1", family: "resonance", rarity: "common" },
+          { id: "mc2", family: "power", rarity: "rare" },
+        ],
+      },
+    ];
+    const loaded = deserialize(serialize(s, 6_000));
+    expect(loaded.error).toBeUndefined();
+    expect(loaded.state!.mutatorSlots).toEqual([hex(0, 1), hex(1, 0)]);
+    expect(loaded.state!.mutators).toEqual(s.mutators);
+    expect(loaded.state!.mutatorForge).toEqual({ progress: 33, earned: 2 });
+    expect(loaded.state!.bankedMutatorRolls).toEqual(s.bankedMutatorRolls);
+  });
+
+  it("a pre-mutator entry owner loads owing its grant, exactly once (issue #198)", () => {
+    // The sheet purchase (#197) predates the entry's engine effects: a
+    // save holding the owned flag without the Mutator Forge module loads
+    // with the grant backfilled — the purchase itself refuses as owned.
+    const file = JSON.parse(serialize(fresh()));
+    file.state.catalogEntryOwned = true;
+    const loaded = deserialize(JSON.stringify(file));
+    expect(loaded.error).toBeUndefined();
+    const forge = loaded.state!.modules.filter((m) => m.type === "mutatorForge");
+    expect(forge).toHaveLength(1);
+    expect(forge[0]!.rarity).toBe("common");
+    expect(forge[0]!.pos).toBeNull();
+    // Idempotent: reloading the backfilled save grants nothing further.
+    const reloaded = deserialize(serialize(loaded.state!, 6_000));
+    expect(reloaded.state!.modules.filter((m) => m.type === "mutatorForge")).toHaveLength(1);
+    // An entry owner who already rolled a second Mutator Forge from the
+    // joined pool (a lost module forge to combination is impossible, so
+    // any mutatorForge at all means the grant landed) is left alone.
+    file.state.modules.push({ id: "m9", type: "mutatorForge", rarity: "uncommon", level: 0, invested: 0, pos: null });
+    const owning = deserialize(JSON.stringify(file));
+    expect(owning.state!.modules.filter((m) => m.type === "mutatorForge")).toHaveLength(1);
+    expect(owning.state!.modules.at(-1)!.rarity).toBe("uncommon");
+  });
+
   it("resuming from a mid-flow save does not duplicate rewards", () => {
     const build = () => {
       const s = fresh();

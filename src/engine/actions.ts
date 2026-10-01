@@ -1,18 +1,18 @@
 import { BALANCE, EPS, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE, SHELF_TYPES } from "./constants";
 import { claimOf, horizonReached } from "./accumulator";
 import { rowUnlockCost, unlockableRows } from "./catalog";
-import { affordableLevels, cellPurchasePrice, computeRates, deployedAt, findModule, levelCost, levelsCost, longGoalCost, rowGateOwed, wholeNous } from "./economy";
+import { affordableLevels, cellPurchasePrice, computeRates, deployedAt, findModule, levelCost, levelsCost, longGoalCost, mutatorSlotCost, rowGateOwed, wholeNous } from "./economy";
 import { arcCardDue } from "./arc";
 import { nextRungCost, appActive, LADDER_APPS, type FocusApp } from "./apps";
-import { adjacent, hexKey, isConnected, neighbors, sameHex } from "./hex";
+import { adjacent, hex, hexKey, isConnected, neighbors, sameHex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
-import { createModule, openingGrant } from "./state";
+import { createModule, createMutator, openingGrant } from "./state";
 import { logSessionPractice } from "./habits";
 import { plannedTargetHit } from "./records";
 import { rollGoalOccurrences } from "./goals";
 import { syncAchievements } from "./achievements";
 import { freshAccounting } from "./trust";
-import type { GameState, Hex, ModuleInstance, Rarity, SessionReflection, ShelfType } from "./types";
+import type { GameState, Hex, ModuleInstance, MutatorInstance, Rarity, SessionReflection, ShelfType } from "./types";
 
 // The Arete purchases' shared refusal, one wording everywhere: nothing of
 // Arete acts outside upgrade mode (ADR-0044).
@@ -67,8 +67,9 @@ export function startSession(state: GameState, target: number | null, now: numbe
     startedAt: now,
     goalSeconds: {},
     // The summary's rolls line (ADR-0041): per-source counts accrue as the
-    // meters cross, attributed at the mint.
-    rolls: { flow: 0, forge: 0 },
+    // meters cross, attributed at the mint — the Mutator Forge's crossings
+    // attribute to their own source (ADR-0043).
+    rolls: { flow: 0, forge: 0, mutator: 0 },
   };
   // In-session unlocks (Untethered, past session one) queue into the
   // session's summary row — the result carries nothing to toast.
@@ -164,9 +165,12 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
     // bucket's drop is visible.
     honestyEvents: events,
     // The rolls line (ADR-0041): this session's banked rolls, split by
-    // source — one source reads plainly, both split.
+    // source — one source reads plainly, both split. The Mutator Forge's
+    // crossings (ADR-0043) capture beside them; the summary's rolls line
+    // grows the mutator split with the Mutators layer's UI.
     rollsFlow: session?.rolls.flow ?? 0,
     rollsForge: session?.rolls.forge ?? 0,
+    rollsMutator: session?.rolls.mutator ?? 0,
     achievements,
     // The reflection (§8) records from the summary itself, so it starts
     // absent here.
@@ -552,16 +556,17 @@ export function chooseRoll(state: GameState, offerId: string, candidateId: strin
 
 // The Arete Catalog's sheet purchases (ADR-0040 as amended by ADR-0044,
 // issue #197): upgrade-mode-only, Arete-paid, one-time, and surviving
-// prestige. The entry's engine effects — the Mutator Grid's activation,
-// the Mutator Forge module, the first slot — land with the mutator
-// contracts (#198); the roll-pool join's pool append lands there too. This
-// issue banks the decisions and the debits.
+// prestige. The entry's engine effects landed with the mutator contracts
+// (issue #198): the Mutator Forge module joins the Tray, and the first
+// Mutator slot rides the entry — free, on whatever owned cell the player
+// arms it on (unlockMutatorSlot's empty-patch case).
 export function buyCatalogEntry(state: GameState): ActionResult {
   if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
   if (state.catalogEntryOwned) return fail("The Mutator tree is already entered.");
   if (state.arete < BALANCE.catalogEntryCost) return fail("Not enough Arete.");
   state.arete -= BALANCE.catalogEntryCost;
   state.catalogEntryOwned = true;
+  state.modules.push(createModule(state, "mutatorForge", "common"));
   return ok;
 }
 
@@ -599,6 +604,122 @@ export function buyRowUnlock(state: GameState, row: number): ActionResult {
   return ok;
 }
 
+// ── The Mutator layer's engine (ADR-0043, issue #198) ───────────────────
+
+// The slot ladder's unlock (ADR-0043): the entry's first slot sits free on
+// any owned cell — the empty-patch case, its price already inside the
+// entry — and every later unlock attaches adjacent to the already-unlocked
+// patch, the growth-constrained gesture, paying the ladder's rung for the
+// count already unlocked. Slots stay put forever; modules move freely
+// across them.
+export function unlockMutatorSlot(state: GameState, pos: Hex): ActionResult {
+  if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
+  if (!state.catalogEntryOwned) return fail("Enter the Mutator tree first.");
+  if (!state.cells.some((c) => sameHex(c, pos))) return fail("That cell is not part of the board.");
+  if (state.mutatorSlots.some((s) => sameHex(s, pos))) return fail("That cell already holds a Mutator slot.");
+  const first = state.mutatorSlots.length === 0;
+  if (!first) {
+    if (!state.mutatorSlots.some((slot) => adjacent(slot, pos))) {
+      return fail("A new Mutator slot must attach to the unlocked patch.");
+    }
+    const price = mutatorSlotCost(state.mutatorSlots.length);
+    if (state.arete < price) return fail("Not enough Arete.");
+    state.arete -= price;
+  }
+  state.mutatorSlots.push(hex(pos.q, pos.r));
+  return ok;
+}
+
+// Placing a mutator (the Mutator tray's gesture): a tray mutator placed
+// into an unlocked slot. An occupied slot swaps, mirroring the board's
+// free-swap rule; a mutator needs no host — a slot on a vacant cell holds
+// it inert.
+export function placeMutator(state: GameState, id: string, pos: Hex): ActionResult {
+  if (state.mode !== "upgrade") return fail("The grid is locked during flow.");
+  const mutator = state.mutators.find((m) => m.id === id);
+  if (!mutator) return fail("Mutator not found.");
+  if (!state.mutatorSlots.some((s) => sameHex(s, pos))) return fail("That cell holds no Mutator slot.");
+  if (mutator.pos !== null && sameHex(mutator.pos, pos)) return ok;
+  const occupant = state.mutators.find((m) => m.pos !== null && sameHex(m.pos, pos));
+  if (occupant) occupant.pos = mutator.pos;
+  mutator.pos = hex(pos.q, pos.r);
+  return ok;
+}
+
+// Retrieving a mutator (the drag or right-click gesture): back to the
+// Mutator tray, its slot left vacant and inert.
+export function returnMutator(state: GameState, id: string): ActionResult {
+  if (state.mode !== "upgrade") return fail("The grid is locked during flow.");
+  const mutator = state.mutators.find((m) => m.id === id);
+  if (!mutator) return fail("Mutator not found.");
+  if (mutator.pos === null) return fail("This mutator is already in the Mutator tray.");
+  mutator.pos = null;
+  return ok;
+}
+
+// The mutator roll's choice (ADR-0043): two candidates, the chosen one
+// minted into the Mutator tray, the unchosen vanished without consolation.
+export function chooseMutatorRoll(state: GameState, offerId: string, candidateId: string): ActionResult {
+  if (state.mode !== "upgrade") return fail("Forge choices belong to upgrade mode.");
+  const index = state.bankedMutatorRolls.findIndex((o) => o.id === offerId);
+  if (index === -1) return fail("That roll is not banked.");
+  const offer = state.bankedMutatorRolls[index]!;
+  const candidate = offer.candidates.find((c) => c.id === candidateId);
+  if (!candidate) return fail("That candidate is not part of this roll.");
+  state.bankedMutatorRolls.splice(index, 1);
+  state.mutators.push(createMutator(state, candidate.family, candidate.rarity));
+  return ok;
+}
+
+// The mutator combination's terms (ADR-0043): two of the same family and
+// rarity yield one of the next rarity, same family — mutators carry no
+// levels, so nothing is retained or refunded. The kept copy is the drop
+// target (the second argument), mirroring the module gesture's landing;
+// null whenever the pair cannot combine.
+export interface MutatorCombinePreview {
+  keepId: string;
+  meltId: string;
+  nextRarity: Rarity;
+}
+
+export function combineMutatorsPreview(state: GameState, id: string, partnerId: string): MutatorCombinePreview | null {
+  if (state.mode !== "upgrade") return null;
+  const selected = state.mutators.find((m) => m.id === id);
+  const partner = state.mutators.find((m) => m.id === partnerId);
+  if (!selected || !partner || selected.id === partner.id) return null;
+  if (selected.family !== partner.family || selected.rarity !== partner.rarity) return null;
+  const nextRarity = NEXT_RARITY[selected.rarity];
+  if (nextRarity === null) return null;
+  return { keepId: partner.id, meltId: selected.id, nextRarity };
+}
+
+export function combineMutators(state: GameState, id: string, partnerId?: string): ActionResult {
+  if (state.mode !== "upgrade") return fail("Combining happens between sessions.");
+  const selected = state.mutators.find((m) => m.id === id);
+  if (!selected) return fail("Mutator not found.");
+  let partner: MutatorInstance | undefined;
+  if (partnerId !== undefined) {
+    partner = state.mutators.find((m) => m.id === partnerId);
+    if (!partner || partner.id === selected.id || partner.family !== selected.family || partner.rarity !== selected.rarity) {
+      return fail("Those mutators cannot be combined.");
+    }
+  } else {
+    partner = state.mutators.find((m) => m.id !== id && m.family === selected.family && m.rarity === selected.rarity);
+  }
+  if (!partner) return fail("No second copy of this family and rarity.");
+  const preview = combineMutatorsPreview(state, id, partner.id);
+  if (!preview) return fail("The highest rarity does not combine further.");
+
+  const melt = state.mutators.find((m) => m.id === preview.meltId)!;
+  const keep = state.mutators.find((m) => m.id === preview.keepId)!;
+  keep.rarity = preview.nextRarity;
+  // The result lands where the drop target was (ADR-0035's gesture) — the
+  // kept copy is the target, so it never moves; a tray target combines in
+  // the tray.
+  state.mutators = state.mutators.filter((m) => m.id !== melt.id);
+  return ok;
+}
+
 // Prestige (ADR-0039, issue #170): the door at the horizon banks the era's
 // claim and begins the next era. The only Arete source in the game — claim
 // on reset, never before — and the nth reset banks n (ADR-0042's linear
@@ -609,7 +730,10 @@ export function buyRowUnlock(state: GameState, row: number): ActionResult {
 // un-earned at the moment prestige pays off), achievements and their
 // boost, the life record, the Arete balance, and lifetime `totalEarned`
 // persist — as do the Catalog unlocks (issue #197): the Row unlock's rows
-// and the Mutator tree's purchases. Module levels return to base, nous to
+// and the Mutator tree's purchases — and, with them, the whole mutator
+// layer (issue #198): the unlocked Mutator slots, the placed mutators, and
+// the Mutator tray with its pending rolls and its Forge branch's fill and
+// earned count. Module levels return to base, nous to
 // a fresh opening grant, and the charge window resets. The era measure
 // rebases to 0, which is the bar's own rebase; the era count rises as
 // economy-bearing engine state (ADR-0038's no-new-furniture rule holds).

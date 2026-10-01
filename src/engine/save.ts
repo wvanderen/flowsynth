@@ -1,4 +1,4 @@
-import { createInitialState } from "./state";
+import { createInitialState, createModule } from "./state";
 import { SAVE_VERSION } from "./constants";
 import type { GameState } from "./types";
 
@@ -87,6 +87,30 @@ export function deserialize(text: string): LoadResult {
   if (typeof raw.rollPoolJoined !== "boolean") {
     merged.rollPoolJoined = false;
   }
+  // The Mutator layer (ADR-0043, issue #198) lenient-defaults the same
+  // way: absent means the entry was never bought — no slots, no mutators,
+  // no Mutator Forge fill, no pending mutator rolls — which is exactly
+  // what a pre-mutator save owes.
+  if (!Array.isArray(raw.mutatorSlots)) {
+    merged.mutatorSlots = [];
+  }
+  if (!Array.isArray(raw.mutators)) {
+    merged.mutators = [];
+  }
+  if (!Array.isArray(raw.bankedMutatorRolls)) {
+    merged.bankedMutatorRolls = [];
+  }
+  if (!isRecord(raw.mutatorForge)) {
+    merged.mutatorForge = { progress: 0, earned: 0 };
+  }
+  // The entry's grant backfills (issue #198): a save written between the
+  // sheet purchase (#197) and the entry's engine effects carries the owned
+  // flag without the Mutator Forge module it grants — the purchase refuses
+  // as owned, so loading grants what the entry owed. The first slot needs
+  // no backfill: its free placement rides unlockMutatorSlot's empty patch.
+  if (merged.catalogEntryOwned && !merged.modules.some((module) => module.type === "mutatorForge")) {
+    merged.modules.push(createModule(merged, "mutatorForge", "common"));
+  }
   // The arc card's seen flag (§8) lenient-defaults the same way: absent or
   // corrupt means never dismissed — the save is still owed its one hint.
   if (typeof raw.arcCardSeen !== "boolean") {
@@ -100,7 +124,7 @@ export function deserialize(text: string): LoadResult {
   // same way: a save written mid-flow before it exists resumes with zeroed
   // counts, never a crash.
   if (merged.session && !isRecord(raw.session?.rolls)) {
-    merged.session.rolls = { flow: 0, forge: 0 };
+    merged.session.rolls = { flow: 0, forge: 0, mutator: 0 };
   }
   merged.purchased = { ...fresh.purchased, ...merged.purchased };
   return { state: merged };

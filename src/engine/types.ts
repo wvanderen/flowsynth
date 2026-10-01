@@ -25,7 +25,13 @@ export type InfusorType = "infusor";
 
 export type ForgeType = "forge";
 
-export type ModuleType = SynthesizerType | SpacerType | GeneratorType | InfusorType | ForgeType;
+// The Mutator Forge (ADR-0043, issue #198): the Forge family's second
+// branch — the chargeable module whose thresholds mint mutator rolls.
+// Catalog-exclusive until the Mutator tree's roll-pool purchase joins it
+// to the module roll pool.
+export type MutatorForgeType = "mutatorForge";
+
+export type ModuleType = SynthesizerType | SpacerType | GeneratorType | InfusorType | ForgeType | MutatorForgeType;
 
 export interface Hex {
   q: number;
@@ -54,6 +60,34 @@ export interface Candidate {
 export interface RollOffer {
   id: string;
   candidates: [Candidate, Candidate, Candidate];
+}
+
+// The mutator families (ADR-0043): power rides the host's power term,
+// resonance the host's chord factor, charge the strength the host
+// receives. One geometric rarity rule scales each family's base.
+export type MutatorFamily = "power" | "resonance" | "charge";
+
+// A mutator sits in a Mutator slot — its cell's second face — and modifies
+// whatever module occupies that cell; `pos === null` waits in the Mutator
+// tray. No levels: rarity alone scales the family's magnitude.
+export interface MutatorInstance {
+  id: string;
+  family: MutatorFamily;
+  rarity: Rarity;
+  pos: Hex | null;
+}
+
+export interface MutatorCandidate {
+  id: string;
+  family: MutatorFamily;
+  rarity: Rarity;
+}
+
+// A mutator roll offers exactly two candidates (ADR-0043) — three families
+// cannot fill three meaningful slots — and no first-roll rig.
+export interface MutatorRollOffer {
+  id: string;
+  candidates: [MutatorCandidate, MutatorCandidate];
 }
 
 export interface Meter {
@@ -181,6 +215,10 @@ export interface SessionSummary {
   // one source plainly and splits the two when both fired.
   rollsFlow: number;
   rollsForge: number;
+  // The Mutator Forge's crossings this session (ADR-0043): captured at
+  // close beside the other sources; the summary's rolls line grows its
+  // mutator split with the Mutators layer's UI.
+  rollsMutator: number;
   // The reflection (§8): records as its fields are touched, survives a
   // reload with the summary, absent (null) when untouched.
   reflection: SessionReflection | null;
@@ -277,10 +315,12 @@ export type Mode = "upgrade" | "flow" | "paused";
 
 // Rolls banked during a session, attributed by source (ADR-0041): the flow
 // meter's practice crossings and the Forge branches' charge crossings. The
-// counts never gate anything — one queue, spent interchangeably.
+// counts never gate anything — module rolls share one queue, mutator rolls
+// bank into the Mutator tray's own.
 export interface RollSources {
   flow: number;
   forge: number;
+  mutator: number;
 }
 
 // The console's fixed-function instruments (ADR-0012). Defined here because
@@ -338,13 +378,29 @@ export interface GameState {
   unlockedRows: number[];
   // The Arete Catalog's Mutator tree purchases (ADR-0040 as amended by
   // ADR-0044, issue #197): the entry — the Mutator Grid's activation, the
-  // Mutator Forge module itself, and the first slot's unlock, whose engine
-  // effects land with the mutator contracts (#198) — and the pricier join
-  // that admits the Mutator Forge type to the module roll pool. One-time,
-  // Arete-paid, and persisting through prestige; lenient-default to false.
+  // Mutator Forge module itself, and the first slot's unlock (#198) — and
+  // the pricier join that admits the Mutator Forge type to the module roll
+  // pool. One-time, Arete-paid, and persisting through prestige;
+  // lenient-default to false.
   catalogEntryOwned: boolean;
   rollPoolJoined: boolean;
+  // The Mutator Grid's unlocked slots (ADR-0043, issue #198): the cells
+  // whose second face holds a mutator. The entry's first unlock may sit on
+  // any owned cell; every later unlock attaches adjacent to the
+  // already-unlocked patch. Unbounded, per-item priced on the tree's
+  // escalating ladder; persists through prestige; lenient-defaults to [].
+  mutatorSlots: Hex[];
+  // Every owned mutator — placed (pos = its slot cell) or waiting in the
+  // Mutator tray (pos = null). Placed mutators and the tray persist
+  // through prestige; lenient-defaults to [].
+  mutators: MutatorInstance[];
   forge: Meter;
+  // The Mutator Forge branch's own meter (ADR-0043, issue #198): ADR-0009's
+  // shared-meter pattern with its own constants — growth ≈×2, charge-only
+  // (no practice leg, ADR-0041). Each crossing banks a mutator roll into
+  // the Mutator tray's queue. Fill and earned count persist through
+  // prestige; lenient-defaults to an empty meter.
+  mutatorForge: Meter;
   // The flow meter (ADR-0041): the player-wide meter credited practice
   // fills, sibling of Forge progress — never a branch of the Forge family.
   // Each crossing banks a module roll into the one shared queue. Fill and
@@ -360,6 +416,11 @@ export interface GameState {
   // during the next session's first minutes.
   chargeWindow: number;
   bankedRolls: RollOffer[];
+  // The Mutator tray's own pending-roll queue (ADR-0043, issue #198): the
+  // Mutator Forge branch's crossings bank here — two candidates each,
+  // unchosen candidates vanish. Persists through prestige; lenient-defaults
+  // to [].
+  bankedMutatorRolls: MutatorRollOffer[];
   purchased: Record<ShelfType, boolean>;
   // The activation ladder's permanent record (ADR-0013): apps unlocked by
   // rung purchases, in purchase order — free order, globally rising rungs.
@@ -444,6 +505,11 @@ export interface RateSnapshot {
   achievementBoost: number;
   rate: number;
   forgeRate: number;
+  // The Mutator Forge branch's progress rate (ADR-0043, issue #198): the
+  // sum over deployed Mutator Forges of received strength × power — its
+  // own meter, never the Module Forge's. The power mutator boosting its
+  // own branch here is intended.
+  mutatorForgeRate: number;
   contributions: Map<string, Contribution>;
   chargeStrength: Map<string, number>;
 }
@@ -455,5 +521,8 @@ export interface AdvanceResult {
   // charge crossings, for the session's per-source attribution.
   rollsFlow: number;
   rollsForge: number;
+  // The Mutator Forge branch's crossings (ADR-0043): mutator rolls bank
+  // into the Mutator tray's own queue, counted beside the module rolls.
+  rollsMutator: number;
   goalsCompleted: number;
 }

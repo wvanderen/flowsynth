@@ -1,6 +1,6 @@
 import { BALANCE } from "./constants";
 import { hex } from "./hex";
-import type { GameState, ModuleInstance, ModuleType, Rarity } from "./types";
+import type { GameState, ModuleInstance, ModuleType, MutatorFamily, MutatorInstance, Rarity } from "./types";
 
 // The opening board (board-redesign spec §8, ADR-0022): the three-cell
 // opening footprint is retained — its geometry, not its Carrier rationale.
@@ -47,11 +47,15 @@ export function createInitialState(): GameState {
     unlockedRows: [],
     catalogEntryOwned: false,
     rollPoolJoined: false,
+    mutatorSlots: [],
+    mutators: [],
     forge: { progress: 0, earned: 0 },
+    mutatorForge: { progress: 0, earned: 0 },
     flow: { progress: 0, earned: 0 },
     arcCardSeen: false,
     chargeWindow: 0,
     bankedRolls: [],
+    bankedMutatorRolls: [],
     purchased: { generator: false, infusor: false, forge: false },
     activatedApps: [],
     goalCapacityBought: 0,
@@ -83,6 +87,17 @@ export function createModule(state: GameState, type: ModuleType, rarity: Rarity)
     rarity,
     level: 0,
     invested: 0,
+    pos: null,
+  };
+}
+
+// A mutator waits in the Mutator tray (pos = null) until placed into an
+// unlocked slot; no levels — rarity alone scales the family's magnitude.
+export function createMutator(state: GameState, family: MutatorFamily, rarity: Rarity): MutatorInstance {
+  return {
+    id: newModuleId(state),
+    family,
+    rarity,
     pos: null,
   };
 }

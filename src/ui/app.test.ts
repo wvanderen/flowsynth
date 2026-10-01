@@ -2207,6 +2207,7 @@ describe("the session clock", () => {
       achievements: [],
       rollsFlow: 1,
       rollsForge: 0,
+      rollsMutator: 0,
       reflection: null,
       seen: false,
     };

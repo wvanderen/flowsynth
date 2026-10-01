@@ -7,7 +7,7 @@ import { accumulatorFill, claimOf, horizonReached } from "../engine/accumulator"
 import { ACHIEVEMENTS } from "../engine/achievements";
 import { catalogOpen } from "../engine/catalog";
 import { BALANCE, CATEGORY_OF, isSynthesizerType } from "../engine/constants";
-import { chargedFactor, modulePower } from "../engine/economy";
+import { chargedFactor, hostPower } from "../engine/economy";
 import { noteNameOf } from "../engine/lattice";
 import type { Contribution, GameState, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
@@ -42,11 +42,15 @@ interface SynthLegs {
 // One synthesizer's decomposition, straight off its contribution: the
 // legs multiply back to the final figure exactly —
 // base × chordMult × (1 + infusor) × chargeFactor × boost = value.
-function synthLegsOf(snapshot: RateSnapshot, contribution: Contribution, module: ModuleInstance): SynthLegs {
+// The base and chord legs carry the mutators' folds (ADR-0043): the power
+// mutator rides the host's power, the resonance mutator rides the chord
+// factor the contribution already reports — the legs stay the engine's
+// own, no mutator row joins the roster (ADR-0037).
+function synthLegsOf(state: GameState, snapshot: RateSnapshot, contribution: Contribution, module: ModuleInstance): SynthLegs {
   const chordAmp = module.type === "conditional" ? 1 + BALANCE.conditionalChordBonus * contribution.chordTerms : 1;
   const terms = snapshot.namedChords.filter((chord) => chord.moduleIds.includes(contribution.moduleId)).map(chordTermLabel);
   return {
-    base: BALANCE.synthRate * modulePower(module),
+    base: BALANCE.synthRate * hostPower(state, module),
     // Synthesizers always chord: the engine sets a number here — null is
     // the non-chorders' mark, never a synth's.
     chordMult: chordAmp * (contribution.chordFactor ?? 1),
@@ -60,12 +64,12 @@ function synthLegsOf(snapshot: RateSnapshot, contribution: Contribution, module:
 
 // A nonproducing module's effect on the board, in the bloom's own
 // vocabulary — never ν/s, so nothing here reads as a second producer.
-function effectText(contribution: Contribution, module: ModuleInstance, snapshot: RateSnapshot): string {
+function effectText(state: GameState, contribution: Contribution, module: ModuleInstance, snapshot: RateSnapshot): string {
   const category = CATEGORY_OF[contribution.type];
-  if (category === "generator") return `⌁${formatNumber(modulePower(module))} charge`;
+  if (category === "generator") return `⌁${formatNumber(hostPower(state, module))} charge`;
   if (category === "infusor") {
     const strength = snapshot.chargeStrength.get(contribution.moduleId) ?? 0;
-    return `+${formatNumber(100 * BALANCE.infusorBonus * modulePower(module) * chargedFactor(strength))}% to adjacent`;
+    return `+${formatNumber(100 * BALANCE.infusorBonus * hostPower(state, module) * chargedFactor(strength))}% to adjacent`;
   }
   if (category === "forge") return `${formatNumber(contribution.value)} progress/s`;
   return "silent — conducts chords";
@@ -84,9 +88,9 @@ const otherSlot = (id: string): string => `n-${id}`;
 // old AMP_LEGS held). Keyed by slot suffix — `v` the final figure, the
 // base/chd/inf/chg legs, `chgn` the charge note, `n` a nonproducer's
 // effect.
-function rowSlotTexts(snapshot: RateSnapshot, contribution: Contribution, module: ModuleInstance): Record<string, string> {
+function rowSlotTexts(state: GameState, snapshot: RateSnapshot, contribution: Contribution, module: ModuleInstance): Record<string, string> {
   if (isSynthesizerType(contribution.type)) {
-    const legs = synthLegsOf(snapshot, contribution, module);
+    const legs = synthLegsOf(state, snapshot, contribution, module);
     return {
       v: `+${formatNumber(contribution.value)} ν/s`,
       base: `${formatNumber(legs.base)} ν/s`,
@@ -96,17 +100,25 @@ function rowSlotTexts(snapshot: RateSnapshot, contribution: Contribution, module
       chgn: legs.chargeStrength > 0 ? `⌁${formatNumber(legs.chargeStrength)} charge` : "",
     };
   }
-  return { n: effectText(contribution, module, snapshot) };
+  return { n: effectText(state, contribution, module, snapshot) };
 }
 
 // The deployed roster's identity — id, kind, level, rarity, cell — the
 // structural key both the ledger strip and the rate sheet rebuild on (a
-// move changes a note name, an upgrade a base figure).
+// move changes a note name, an upgrade a base figure). The placed
+// mutators ride in the key too (issue #198): a mutator placed onto or
+// retrieved from a host's cell folds into that host's legs, so the same
+// roster must rebuild when the layer changes under it.
 export function deployedRosterKey(state: GameState): string {
-  return state.modules
+  const modules = state.modules
     .filter((m) => m.pos !== null)
     .map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}:${m.pos!.q},${m.pos!.r}`)
     .join("|");
+  const mutators = state.mutators
+    .filter((m) => m.pos !== null)
+    .map((m) => `${m.id}:${m.family}:${m.rarity}:${m.pos!.q},${m.pos!.r}`)
+    .join("|");
+  return `${modules}#${mutators}`;
 }
 
 // The roster both channels render. `live` mounts data-live slots the tick
@@ -123,7 +135,7 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
   for (const contribution of snapshot.contributions.values()) {
     const module = state.modules.find((m) => m.id === contribution.moduleId);
     if (!module) continue;
-    const slots = rowSlotTexts(snapshot, contribution, module);
+    const slots = rowSlotTexts(state, snapshot, contribution, module);
     const id = contribution.moduleId;
     if (isSynthesizerType(contribution.type)) {
       const cellNote = contribution.pitch !== null ? noteNameOf(contribution.pitch) : "";
@@ -139,7 +151,7 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
           `</div>` +
           `<div class="rd-leg"><span class="rd-leg-name">Chords</span>` +
           val(synthSlot(id, "chd"), slots.chd!) +
-          `<span class="rd-note">${synthChordNote(snapshot, contribution, module)}</span>` +
+          `<span class="rd-note">${synthChordNote(state, snapshot, contribution, module)}</span>` +
           `</div>` +
           `<div class="rd-leg"><span class="rd-leg-name">Infusor</span>` +
           val(synthSlot(id, "inf"), slots.inf!) +
@@ -175,8 +187,8 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
 // The chords leg's named terms — they change only with the roster, so the
 // note prints once at build time and never needs a slot of its own. The
 // caller already holds the module; none is re-found here.
-function synthChordNote(snapshot: RateSnapshot, contribution: Contribution, module: ModuleInstance): string {
-  return synthLegsOf(snapshot, contribution, module).chordLabel;
+function synthChordNote(state: GameState, snapshot: RateSnapshot, contribution: Contribution, module: ModuleInstance): string {
+  return synthLegsOf(state, snapshot, contribution, module).chordLabel;
 }
 
 // The details' live slots: one fill per render, keyed per module, from the
@@ -188,7 +200,7 @@ export function updateRateDetailsLive(scope: ParentNode, state: GameState, snaps
     const module = state.modules.find((m) => m.id === contribution.moduleId);
     if (!module) continue;
     const id = contribution.moduleId;
-    const slots = rowSlotTexts(snapshot, contribution, module);
+    const slots = rowSlotTexts(state, snapshot, contribution, module);
     if (isSynthesizerType(contribution.type)) {
       set(synthSlot(id, "v"), slots.v!);
       set(synthSlot(id, "base"), slots.base!);
