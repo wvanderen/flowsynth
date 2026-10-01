@@ -650,16 +650,16 @@ describe("the horizon bar (§7, issue #156)", () => {
     expect(app.state.prestiges).toBe(2);
   });
 
-  it("carries no formula chip; Forge progress rides the dock's pip", () => {
+  it("carries no formula chip; the flow meter rides the dock's pip", () => {
     app.render();
     expect(document.querySelector(".monitor-formula")).toBeNull();
     expect(document.querySelector(".monitor-rail")).toBeNull();
-    app.state.forge.progress = 30;
+    app.state.flow.progress = 90;
     app.render();
     const forge = document.querySelector('#board-tools [data-op="forge"]') as HTMLElement;
     expect(forge.querySelector(".forge-pip")).not.toBeNull();
     expect(forge.querySelector('[data-live="forge-pip"]')!.getAttribute("style")).toContain("50");
-    expect(forge.title).toContain("30 / 60");
+    expect(forge.title).toContain("Flow meter 1:30 / 3:00");
   });
 });
 
@@ -696,12 +696,56 @@ describe("the action row (§7)", () => {
     expect(app.ui.trayOpen).toBe(true);
   });
 
-  it("the Forge tool carries the shared meter pip and progress tooltip", () => {
+  it("the Forge tool carries the flow-meter pip and the one meter detail (ADR-0041)", () => {
+    app.state.flow.progress = 90;
     app.state.forge.progress = 30;
     app.render();
     const forge = document.querySelector('#board-tools [data-op="forge"]') as HTMLButtonElement;
+    // The pip shows the flow meter: half of the 3-minute opening fill.
     expect(forge.querySelector('[data-live="forge-pip"]')!.getAttribute("style")).toContain("50");
-    expect(forge.title).toContain("30 / 60");
+    // The detail lists every meter's progress, threshold, and rate.
+    expect(forge.title).toContain("Flow meter 1:30 / 3:00 — next roll in ~1:30 of practice");
+    expect(forge.title).toContain("Forge progress 30 / 60");
+    // Open in flow too: the meter detail stays reachable while the session
+    // runs (the peek never blocks the board).
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, null);
+    app.render();
+    const flowForge = document.querySelector<HTMLButtonElement>('#board-tools [data-op="forge"]')!;
+    expect(flowForge.disabled).toBe(false);
+    flowForge.click();
+    expect(app.ui.modal).toBe("forge");
+  });
+
+  it("the Forge modal lists both meters live, and flow only previews its candidates", () => {
+    app.state.forge.progress = 30;
+    app.state.bankedRolls.push({
+      id: "offer",
+      candidates: [
+        { id: "c1", type: "additive", rarity: "common" },
+        { id: "c2", type: "spacer", rarity: "common" },
+        { id: "c3", type: "infusor", rarity: "common" },
+      ],
+    });
+    app.openModal("forge");
+    const modal = document.getElementById("modal-content")!;
+    expect(modal.querySelector(".forge-meters")).not.toBeNull();
+    expect(modal.querySelector('[data-live="modal-flow-line"]')!.textContent).toContain("Flow meter 0:00 / 3:00");
+    expect(modal.querySelector('[data-live="modal-forge-line"]')!.textContent).toContain("30 / 60");
+    // Live slots fill in place as the meters move.
+    app.state.flow.progress = 90;
+    app.render();
+    expect(modal.querySelector('[data-live="modal-flow-line"]')!.textContent).toContain("1:30 / 3:00");
+    app.closeModal();
+    // In flow, the take is refused by the engine and the modal says so.
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, null);
+    app.openModal("forge");
+    const peek = document.getElementById("modal-content")!;
+    expect(peek.textContent).toContain("Choices settle between sessions");
+    (peek.querySelector<HTMLButtonElement>("[data-choice]")!).click();
+    expect(app.state.bankedRolls).toHaveLength(1);
+    app.closeModal();
   });
 
   it("the cell tool shows the price and arms the frontier pick", () => {
@@ -1995,6 +2039,49 @@ describe("the session clock", () => {
     expect(modal.textContent).toContain("great");
     // The reserved slot rides above dismissal.
     expect(slider.compareDocumentPosition(continueButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("the summary's rolls line reads one source plainly and splits both (ADR-0041)", () => {
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    // Practice only: one flow-minted roll.
+    s.summary = {
+      sessionNumber: 2,
+      earned: 30,
+      seconds: 300,
+      ratePerMinute: 6,
+      synths: 0.1,
+      infusors: 0,
+      empowerment: 1,
+      timeUnlocked: false,
+      plannedTarget: null,
+      honestyEvents: [],
+      achievements: [],
+      rollsFlow: 1,
+      rollsForge: 0,
+      reflection: null,
+      seen: false,
+    };
+    app.ui.modal = "summary";
+    app.render();
+    let modal = document.getElementById("modal-content")!;
+    expect(modal.textContent).toContain("Rolls banked");
+    expect(modal.textContent).toContain("1 roll");
+    expect(modal.textContent).toContain("from practice");
+    expect(modal.textContent).not.toContain("from charge");
+    // Both sources: the line splits its attribution.
+    s.summary.rollsFlow = 2;
+    s.summary.rollsForge = 1;
+    app.render();
+    modal = document.getElementById("modal-content")!;
+    expect(modal.textContent).toContain("3 rolls");
+    expect(modal.textContent).toContain("2 from practice · 1 from charge");
+    // No rolls at all: no row.
+    s.summary.rollsFlow = 0;
+    s.summary.rollsForge = 0;
+    app.render();
+    expect(document.getElementById("modal-content")!.textContent).not.toContain("Rolls banked");
+    app.closeModal();
   });
 });
 

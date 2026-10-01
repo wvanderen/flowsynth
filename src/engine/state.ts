@@ -45,6 +45,7 @@ export function createInitialState(): GameState {
     cellsBought: 0,
     gatedRows: [...OPENING_GATED_ROWS],
     forge: { progress: 0, earned: 0 },
+    flow: { progress: 0, earned: 0 },
     arcCardSeen: false,
     chargeWindow: 0,
     bankedRolls: [],

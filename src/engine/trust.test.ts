@@ -390,6 +390,36 @@ describe("the honesty report", () => {
     expect(s.habits[0]!.seconds).toBeCloseTo(900, 6);
     expect(s.goals[0]!.completed).toBe(true);
   });
+
+  it("honesty-credited provisional minutes top the flow meter up, beside habits and goals (ADR-0041)", () => {
+    const s = fresh();
+    startSession(s, null);
+    away(s, 180);
+    expect(s.flow.earned).toBe(0);
+    const resolution = resolveHonestyReport(s, "full");
+    expect(resolution.ok).toBe(true);
+    expect(resolution.rollsBanked).toBe(1);
+    expect(s.flow.earned).toBe(1);
+    // One queue: the practice-minted roll waits beside any charge-minted one.
+    expect(s.bankedRolls).toHaveLength(1);
+    // A miss credits nothing — the meter never moves on a drop.
+    away(s, 180);
+    expect(resolveHonestyReport(s, "missed").rollsBanked).toBe(0);
+    expect(s.flow.earned).toBe(1);
+    expect(s.flow.progress).toBeCloseTo(0, 6);
+  });
+
+  it("the 'did what I planned' answer tops the meter with only the plan-covered slice", () => {
+    const s = fresh();
+    startSession(s, 600);
+    advance(s, 600);
+    away(s, 300);
+    resolveHonestyReport(s, "planned");
+    // C rises to max(C, T) = 600, so the pool's 300 s credit nothing here:
+    // the meter holds at the 600 s fill (one opening crossing, 420 carried).
+    expect(s.flow.earned).toBe(1);
+    expect(s.flow.progress).toBeCloseTo(420, 6);
+  });
 });
 
 describe("credited practice time is the consumers' seam", () => {

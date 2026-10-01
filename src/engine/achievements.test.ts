@@ -69,6 +69,36 @@ describe("the achievement registry", () => {
     expect(syncAchievements(s, { now: NOW + 1 })).toEqual([]);
   });
 
+  it("feats keyed on rolls taken read both sources' total (ADR-0041)", () => {
+    const s = fresh();
+    completeSession(s);
+    // One practice-minted roll, taken: the total earned minus the queue.
+    s.flow.earned = 1;
+    expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual(["roll-credit"]);
+    // One from each source, both still waiting: none was taken yet.
+    const second = fresh();
+    completeSession(second);
+    second.flow.earned = 1;
+    second.forge.earned = 1;
+    for (const id of ["wait-a", "wait-b"]) {
+      second.bankedRolls.push({
+        id,
+        candidates: [
+          { id: `${id}-c1`, type: "additive", rarity: "common" },
+          { id: `${id}-c2`, type: "spacer", rarity: "common" },
+          { id: `${id}-c3`, type: "infusor", rarity: "common" },
+        ],
+      });
+    }
+    // completeSession already fired first-light at its end boundary; the
+    // two-source total with both rolls waiting is zero taken — no credit.
+    syncAchievements(second, { now: NOW });
+    expect(second.achievements["roll-credit"]).toBeUndefined();
+    // Taking one crosses the feat on the total, whichever source minted.
+    second.bankedRolls.pop();
+    expect(syncAchievements(second, { now: NOW + 1 }).map((d) => d.id)).toEqual(["roll-credit"]);
+  });
+
   it("queues in-session unlocks into the summary row instead of toasting", () => {
     const s = fresh();
     completeSession(s);

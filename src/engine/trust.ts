@@ -2,7 +2,7 @@ import { DRIFT_NOISE_SECONDS, EPS, RECONCILIATION_FLOOR_SECONDS } from "./consta
 import { advance, earnNous, sumResults } from "./advance";
 import { accrueLivePractice } from "./habits";
 import { accrueGoalProgress } from "./goals";
-import type { Rng } from "./rolls";
+import { addFlowProgress, type Rng } from "./rolls";
 import type { AdvanceResult, GameState, HonestyOutcome, SessionAccounting } from "./types";
 
 export type { HonestyOutcome };
@@ -34,7 +34,7 @@ export function freshAccounting(): SessionAccounting {
 // reconcile from the last hidden-transition save).
 export type Presence = "visible" | "away";
 
-const ZERO: AdvanceResult = { nousEarned: 0, rollsBanked: 0, goalsCompleted: 0 };
+const ZERO: AdvanceResult = { nousEarned: 0, rollsBanked: 0, rollsFlow: 0, rollsForge: 0, goalsCompleted: 0 };
 
 export function poolOutstanding(state: GameState): boolean {
   return (state.session?.accounting.poolSeconds ?? 0) > EPS;
@@ -107,6 +107,9 @@ export interface HonestyResolution {
   reason?: string;
   // Goal occurrences the credited provisional minutes completed.
   completions?: number;
+  // Module rolls the credited provisional minutes banked through the flow
+  // meter (ADR-0041): honesty-credited time fills it like live time.
+  rollsBanked?: number;
 }
 
 // The honesty report's answer (spec §2): settles the whole outstanding pool
@@ -114,7 +117,11 @@ export interface HonestyResolution {
 // bucket; did what I planned credits up to the plan (C rises to max(C, T));
 // practiced the whole time away credits fully. Both non-missed answers bank
 // the bucket. The recorded event is the reconciliation's factual line.
-export function resolveHonestyReport(state: GameState, outcome: HonestyOutcome): HonestyResolution {
+export function resolveHonestyReport(
+  state: GameState,
+  outcome: HonestyOutcome,
+  rng: Rng = Math.random,
+): HonestyResolution {
   if (state.mode !== "flow") return { ok: false, reason: "No session is running." };
   const session = state.session;
   if (!session) return { ok: false, reason: "No session is running." };
@@ -131,10 +138,15 @@ export function resolveHonestyReport(state: GameState, outcome: HonestyOutcome):
     credit = Math.min(pool, Math.max(0, session.target! - accounting.creditedSeconds));
   }
   let completions = 0;
+  let rollsBanked = 0;
   if (credit > EPS) {
     accounting.creditedSeconds += credit;
     accrueLivePractice(state, credit);
     completions = accrueGoalProgress(state, state.activeHabitId, credit);
+    // Every credited minute counts (ADR-0041): honesty-credited provisional
+    // minutes top the flow meter up here, beside habits and goals — the
+    // same one concept the live minutes fill with.
+    rollsBanked = addFlowProgress(state, credit, rng);
   }
   if (outcome !== "missed" && accounting.bucketNous > 0) {
     // The bucket's nous banks through the one production-credit seam.
@@ -144,5 +156,5 @@ export function resolveHonestyReport(state: GameState, outcome: HonestyOutcome):
   accounting.events.push({ awaySeconds: pool, outcome });
   accounting.poolSeconds = 0;
   accounting.bucketNous = 0;
-  return { ok: true, completions };
+  return { ok: true, completions, rollsBanked };
 }

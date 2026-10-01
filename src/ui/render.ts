@@ -4,7 +4,7 @@ import { newChordTerms, wouldFormPreview } from "../engine/chords";
 import { combinePreview, levelable, type CombinePreview, upgradeAllPreview } from "../engine/actions";
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
-import { forgeThreshold } from "../engine/rolls";
+import { forgeThreshold, flowThreshold } from "../engine/rolls";
 import { BALANCE, CATEGORY_OF, isSynthesizerType, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { formatClock, formatDuration } from "../engine/clock";
 import { cellNoteOf, positionInRange } from "../engine/lattice";
@@ -33,11 +33,11 @@ import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chipWidth, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
-import { formatBalance, formatDate, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
+import { formatBalance, formatDate, formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
 import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG } from "./ledger";
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
 import { containerWidth, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX } from "./container";
-import { liveSet } from "./live";
+import { liveAttr, liveSet } from "./live";
 
 const SPACING = 65;
 // The adjacent-center distance the chord overlay's edge trace needs: on
@@ -593,7 +593,9 @@ interface ToolAction {
   svg: string;
   label: string;
   run: (app: App) => void;
-  title: (app: App) => string;
+  // The charge-projected snapshot rides along (§7's one-pass rule): the
+  // meters' rates read it instead of recomputing.
+  title: (app: App, projected: RateSnapshot) => string;
   // The count badge over the icon (forge's banked rolls, feats, tray).
   badge?: (app: App) => string;
   // A static node riding the icon (forge's charge pip).
@@ -602,6 +604,36 @@ interface ToolAction {
   word?: (app: App) => string;
   disabled?: (app: App) => boolean;
   active?: (app: App) => boolean;
+}
+
+// The one meter detail (ADR-0041): every meter's progress, threshold, and
+// rate, one line each — the dock pip's hover/focus read and the Forge
+// modal's detail block share these builders, so neither can drift. The
+// flow meter's fill is credited practice time, so its figures are
+// durations and its rate reads as practice remaining; the charge branch's
+// are Forge progress points and its rate the projected contribution.
+function flowMeterLine(state: GameState): string {
+  const threshold = flowThreshold(state.flow.earned);
+  const remaining = Math.max(0, threshold - state.flow.progress);
+  return `Flow meter ${formatCountdown(state.flow.progress)} / ${formatCountdown(threshold)} — next roll in ~${formatCountdown(remaining)} of practice`;
+}
+
+function forgeMeterLine(state: GameState, forgeRate: number): string {
+  return `Forge progress ${formatNumber(Math.max(0, state.forge.progress))} / ${formatNumber(forgeThreshold(state.forge.earned))}${
+    forgeRate > 0 ? ` — ${formatNumber(forgeRate)}/s from charge` : " — charged by deployed Forges"
+  }`;
+}
+
+function meterDetail(app: App, forgeRate: number): string {
+  const banked = app.state.bankedRolls.length;
+  const bankedNote = banked > 0 ? ` · ${banked} banked choice${banked === 1 ? "" : "s"}` : "";
+  return `${flowMeterLine(app.state)} · ${forgeMeterLine(app.state, forgeRate)}${bankedNote}`;
+}
+
+// Every meter bar's fill: the clamped progress share, one build for the
+// dock pip and the modal's card-scale bars alike.
+function meterPipWidth(progress: number, cap: number): string {
+  return `${(Math.min(1, Math.max(0, progress / cap)) * 100).toFixed(1)}%`;
 }
 
 function toolActions(): ToolAction[] {
@@ -622,11 +654,11 @@ function toolActions(): ToolAction[] {
       badge: (app) =>
         app.state.bankedRolls.length > 0 ? `<b class="tool-badge mono">${app.state.bankedRolls.length}</b>` : "",
       media: `<i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i>`,
-      title: (app) =>
-        app.state.bankedRolls.length > 0
-          ? `Forge progress ${formatNumber(Math.max(0, app.state.forge.progress))} / ${formatNumber(forgeThreshold(app.state.forge.earned))} · ${app.state.bankedRolls.length} banked choice${app.state.bankedRolls.length === 1 ? "" : "s"}`
-          : `Forge progress ${formatNumber(Math.max(0, app.state.forge.progress))} / ${formatNumber(forgeThreshold(app.state.forge.earned))} — practice and charge feed it`,
-      disabled: (app) => app.state.mode !== "upgrade" || app.state.bankedRolls.length === 0,
+      // The pip shows the flow meter (ADR-0041); hover, focus, or tap opens
+      // the one detail — this read, or the Forge modal's meter block. Open
+      // in flow too: the peek never blocks the board, and taking a choice
+      // stays an upgrade-mode act (the engine refuses it).
+      title: (app, projected) => meterDetail(app, projected.forgeRate),
     },
     {
       op: "cell",
@@ -715,7 +747,7 @@ function renderTools(app: App, projected: RateSnapshot): void {
         .map((action) => {
           const extra = (action.badge?.(app) ?? "") + (action.media ?? "");
           const label = action.word?.(app) ?? action.label;
-          return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" data-op="${action.op}" aria-label="${action.label}" title="${action.title(app)}"${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${label}</small></button>`;
+          return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" data-op="${action.op}" aria-label="${action.label}" title="${action.title(app, projected)}"${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${label}</small></button>`;
         })
         .join("");
       target.querySelectorAll<HTMLButtonElement>("[data-op]").forEach((button) => {
@@ -726,24 +758,25 @@ function renderTools(app: App, projected: RateSnapshot): void {
     }
   }
 
-  // Live under the structural rebuild: the Forge pip tracks the shared
-  // meter, and the cell icon wears the current price and affordability.
-  const cap = forgeThreshold(state.forge.earned);
+  // Live under the structural rebuild: the Forge pip tracks the flow meter
+  // (ADR-0041) and its read stays the one meter detail, live during flow;
+  // the cell icon wears the current price and affordability.
+  const flowCap = flowThreshold(state.flow.earned);
   for (const target of [host, thumb]) {
     if (!target) continue;
     const pip = target.querySelector<HTMLElement>('[data-live="forge-pip"]');
-    const pipWidth = `${(Math.min(1, Math.max(0, state.forge.progress / cap)) * 100).toFixed(1)}%`;
+    const pipWidth = meterPipWidth(state.flow.progress, flowCap);
     if (pip && pip.style.width !== pipWidth) pip.style.width = pipWidth;
     const forgeButton = target.querySelector<HTMLButtonElement>('[data-op="forge"]');
     if (forgeButton) {
       const action = actions.find((a) => a.op === "forge")!;
-      forgeButton.title = action.title(app);
+      forgeButton.title = action.title(app, projected);
       forgeButton.disabled = action.disabled?.(app) ?? false;
     }
     const cellButton = target.querySelector<HTMLButtonElement>('[data-op="cell"]');
     if (cellButton && state.mode === "upgrade") {
       const action = actions.find((a) => a.op === "cell")!;
-      cellButton.title = action.title(app);
+      cellButton.title = action.title(app, projected);
       cellButton.classList.toggle("active", ui.buyingCell);
       cellButton.setAttribute("aria-pressed", String(ui.buyingCell));
       if (ui.buyingCell) {
@@ -1112,7 +1145,7 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
   const { readout, readoutClass, note } = faceReadoutFor(state, module, pos, ctx.snapshot);
 
   // The threshold-crossing flash fires for a moment after a roll is minted.
-  const crossed = module.type === "forge" && app.forgeFlashUntil > Date.now();
+  const crossed = module.type === "forge" && app.rollFlashUntil > Date.now();
 
   // The face button (issue #195): one per closed, levelable face, in
   // upgrade mode only — in flow it vanishes with the purchase furniture.
@@ -2488,8 +2521,9 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
         ? [app.exitPending, app.state.session?.accounting.poolSeconds ?? 0, app.state.session?.accounting.bucketNous ?? 0]
         : kind === "summary"
           // The summary's identity: a fresh session's summary must never
-          // reuse the previous one's already-rendered content.
-          ? [app.state.summary?.sessionNumber ?? null, app.state.summary?.earned ?? null]
+          // reuse the previous one's already-rendered content. The rolls
+          // line's split rides along — it is captured at close with the rest.
+          ? [app.state.summary?.sessionNumber ?? null, app.state.summary?.earned ?? null, app.state.summary?.rollsFlow ?? 0, app.state.summary?.rollsForge ?? 0]
           : kind === "catalog"
             ? [
                 app.ui.showAcquired,
@@ -2527,15 +2561,17 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   if (!backdrop.hidden && content.dataset.renderKey === renderKey) {
     // The rate sheet's figures ride the same live slots the popover fills:
     // the tick fills them in place on this no-rebuild path, so an expanded
-    // row survives the clock (ADR-0037).
+    // row survives the clock (ADR-0037). The Forge meters do the same —
+    // the detail stays live during flow (ADR-0041).
     if (kind === "rate") updateRateDetailsLive(content, app.state, live);
+    if (kind === "forge") updateForgeMetersLive(content, app.state, projected.forgeRate);
     return;
   }
   backdrop.hidden = false;
   content.dataset.renderKey = renderKey;
   if (kind === "settings") renderSettingsModal(app, content);
   else if (kind === "catalog") renderCatalogModal(app, content);
-  else if (kind === "forge") renderForgeModal(app, content);
+  else if (kind === "forge") renderForgeModal(app, content, projected);
   else if (kind === "achievements") renderAchievementsModal(app, content, projected);
   else if (kind === "export") renderExportModal(app, content);
   else if (kind === "import") renderImportModal(app, content);
@@ -2812,13 +2848,41 @@ function candidateReadout(type: ModuleInstance["type"]): string {
   }
 }
 
-function renderForgeModal(app: App, content: HTMLElement): void {
+// The meter detail's live slots (ADR-0041): the figures move every tick a
+// session runs, so the open modal fills them in place — the rebuild only
+// fires when the pending offer changes, and the detail never flickers.
+function forgeMeterHtml(): string {
+  return `<div class="forge-meters">
+    <div class="forge-meter">
+      <span class="meter-name">Flow meter</span>
+      <span class="forge-pip" aria-hidden="true"><i data-live="modal-flow-pip"></i></span>
+      <span class="meter-figures mono" data-live="modal-flow-line"></span>
+    </div>
+    <div class="forge-meter">
+      <span class="meter-name">Forge progress</span>
+      <span class="forge-pip" aria-hidden="true"><i data-live="modal-forge-pip"></i></span>
+      <span class="meter-figures mono" data-live="modal-forge-line"></span>
+    </div>
+  </div>`;
+}
+
+function updateForgeMetersLive(scope: ParentNode, state: GameState, forgeRate: number): void {
+  const flowCap = flowThreshold(state.flow.earned);
+  const forgeCap = forgeThreshold(state.forge.earned);
+  liveAttr(scope, "modal-flow-pip", "style", `width:${meterPipWidth(state.flow.progress, flowCap)}`);
+  liveAttr(scope, "modal-forge-pip", "style", `width:${meterPipWidth(state.forge.progress, forgeCap)}`);
+  liveSet(scope, "modal-flow-line", flowMeterLine(state));
+  liveSet(scope, "modal-forge-line", forgeMeterLine(state, forgeRate));
+}
+
+function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapshot): void {
   const { state } = app;
   const offer = state.bankedRolls[state.bankedRolls.length - 1];
   const banked = state.bankedRolls.length;
   content.innerHTML = `
     ${modalTop(`FORGE · ${banked} banked`)}
     <h2 id="modal-title" class="sr-only">Forge choice</h2>
+    ${forgeMeterHtml()}
     ${offer ? `<div class="candidates">
       ${offer.candidates.map((candidate) => `
         <button class="candidate-tile" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${candidate.rarity}" data-type="${candidate.type}" title="Take the ${RARITY_LABEL[candidate.rarity]} ${META[candidate.type].name}">
@@ -2829,8 +2893,9 @@ function renderForgeModal(app: App, content: HTMLElement): void {
           <span class="candidate-scaling">+${formatNumber((BALANCE.rarityPower[candidate.rarity] - 1) * 100)}% / level · upgrades from 10 ν</span>
           <span class="candidate-effect">${forgeEffect(candidate.type, state)}</span>
         </button>`).join("")}
-    </div>` : `<p class="empty-copy">No Forge choices available.</p>`}
-    <p class="modal-note">The board stays live behind this card — inspect freely; click outside, ✕ or Esc puts the choice away.</p>`;
+    </div>` : `<p class="empty-copy">No choices banked yet — the meters above say how far.</p>`}
+    ${state.mode !== "upgrade" ? `<p class="modal-note">Choices settle between sessions — the board stays live behind this card.</p>` : `<p class="modal-note">The board stays live behind this card — inspect freely; click outside, ✕ or Esc puts the choice away.</p>`}`;
+  updateForgeMetersLive(content, state, projected.forgeRate);
   content.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach((button) => {
     button.addEventListener("click", () => {
       app.chooseCandidate(button.getAttribute("data-offer")!, button.getAttribute("data-choice")!);
@@ -3269,6 +3334,25 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
         <strong>${unlocked.join(" · ")}</strong>
       </div>`
     : "";
+  // The rolls line (ADR-0041): one source reads plainly, both split —
+  // practice (flow meter) vs charge (Forge progress). The queue is one;
+  // only the attribution splits.
+  const rollsFlow = summary.rollsFlow ?? 0;
+  const rollsForge = summary.rollsForge ?? 0;
+  const rolls = rollsFlow + rollsForge;
+  const rollsRow = rolls > 0
+    ? `<div class="summary-row">
+        <span class="summary-label">Rolls banked</span>
+        <strong class="mono">${rolls} ${rolls === 1 ? "roll" : "rolls"}</strong>
+        <small class="summary-note">${
+          rollsFlow > 0 && rollsForge > 0
+            ? `${rollsFlow} from practice · ${rollsForge} from charge`
+            : rollsFlow > 0
+              ? "from practice"
+              : "from charge"
+        }</small>
+      </div>`
+    : "";
   const events = (summary.honestyEvents ?? [])
     .map((event) => `<p class="summary-event">${honestyEventLine(event)}</p>`)
     .join("");
@@ -3286,6 +3370,7 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
         <strong class="mono">${formatNumber(summary.ratePerMinute)} ν <small>per practice minute</small></strong>
         <small class="summary-note">${breakdown}</small>
       </div>
+      ${rollsRow}
       ${unlockRow}
       ${summary.timeUnlocked
         ? `<div class="summary-row unlock">

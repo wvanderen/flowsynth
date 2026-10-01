@@ -719,6 +719,15 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .forge-pip i { display: block; height: 100%; width: 0; background: var(--forge-glow); }
 .board-tools button.active, .thumb-bar button.active { border-color: var(--accent); color: var(--accent); background: var(--accent-faint); }
 
+/* The one meter detail (ADR-0041): the Forge modal's block listing every
+   meter's progress, threshold, and rate — the pip's own bar at card scale,
+   figures riding live slots the tick fills in place. */
+.forge-meters { display: grid; gap: 8px; margin: 2px 0 12px; }
+.forge-meter { display: grid; gap: 4px; }
+.forge-meter .meter-name { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.forge-meter .forge-pip { height: 5px; }
+.forge-meter .meter-figures { font-size: 11px; color: var(--muted); }
+
 /* The bottom thumb bar (§7): the console's re-docked form on portrait
    phone — Catalog / Forge / New cell / Inventory / Feats. Hidden at every
    other width. */
