@@ -15,3 +15,10 @@ The report renderer expects at least twelve sessions. `simulate.py --sessions N`
 The four policies are documented in the generated report. They only spend guaranteed starter copies and levels, bank all Forge rolls, and hold core placement fixed while searching gameplay placements. This avoids inventing unresolved type-draw rules and makes the numeric comparison reproducible, but cannot establish a global best strategy or validate engagement.
 
 Changing `baseline.json` requires rerunning both generation commands. `economy-results.json` contains each session's income, spending, pre-management layout, end-of-management levels, reward counts, residual global progress, and queued charge. A 10^12 cumulative-nous guard stops runaway sensitivity runs; it is not a game limit.
+
+## Current first-Arete tuning
+
+The Python model above predates the local chord economy. For issue #157,
+run the real-engine scenario with `npm test -- src/engine/arete-tuning.test.ts`.
+Its seeded board expansion routes, five-session checkpoints, and extended
+crossing measurements are documented in [the tuning record](../../docs/arete-tuning.md).

@@ -12,7 +12,9 @@ import type { GameState } from "./types";
 export const ARETE_LOG_FLOOR = 10;
 
 // The prestige threshold — the horizon line that caps each era's fill.
-export const ARETE_HORIZON = 100_000;
+// Provisional expansion-led tuning (#157); evidence and limits live in
+// docs/arete-tuning.md. Five sessions are an observation window, not a goal.
+export const ARETE_HORIZON = 1_000_000_000;
 
 // The fill's log-scale position: 0 at the floor, 1 at the horizon, clamped
 // outside so pre-floor eras and past-horizon overfill both render sanely.

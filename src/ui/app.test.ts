@@ -577,9 +577,9 @@ describe("the horizon bar (§7, issue #156)", () => {
     // The bar reads the era's measure (ADR-0039), not the lifetime total.
     app.state.eraEarned = 1_000;
     app.render();
-    // Halfway through the curved scale, patched in place — no rebuild.
-    expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBe(300);
-    expect(document.querySelector('#horizon-bar [data-live="h-word"]')!.textContent).toBe("50%");
+    // A quarter through the raised horizon's scale, patched in place — no rebuild.
+    expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBe(150);
+    expect(document.querySelector('#horizon-bar [data-live="h-word"]')!.textContent).toBe("25%");
     expect(document.querySelector(".horizon-word")).not.toBeNull();
   });
 
