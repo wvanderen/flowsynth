@@ -1,0 +1,300 @@
+<!doctype html>
+<!-- PROTOTYPE (throwaway) for issue #219 — Module identity: names and a redesigned glyph family.
+     Three art directions for the next-iteration roster's names and glyphs, each rendered in the
+     real contexts: compact board face, bloom, and tray tile, plus a small-size/grayscale
+     legibility strip. Layout constants and styles are copied from src/ui/face.ts,
+     src/ui/render.ts (inventoryTileSvg, waterFill) and src/ui/style.css; theme tokens from
+     src/ui/theme.ts. Numbers are provisional. Double-click this file to run — no build. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE — roster glyph families · #219</title>
+<style>
+  :root {
+    --bg: #0d1122; --panel: #141a30; --panel-soft: #111627; --panel-deep: #0a0e1b;
+    --line: #2a3150; --line-soft: #222841; --line-strong: #414a75;
+    --ink: #e5e9f5; --muted: #99a1c2;
+    --hue-generator: #238858; --hue-synthesizer: #6360d4; --hue-spacer: #8a93a8;
+    --hue-infusor: #1f95b5; --hue-forge: #bc9239;
+    /* PROPOSALS under test: the two unbound reserved hues take the two new categories;
+       RITUAL wears the console's switch vermillion (channel-boundary question). */
+    --hue-voice: #9d7bea; --hue-conduit: #d9b84a; --hue-ritual: #cc603d;
+    --charge: #9affa8; --nous: #cbcaff;
+    --hex-face: color-mix(in srgb, #141a30 58%, #0d1122);
+    --plate-common: color-mix(in srgb, #b4bdd8 4%, var(--hex-face));
+    --plate-uncommon: color-mix(in srgb, #7fd0a8 9%, var(--hex-face));
+    --plate-rare: color-mix(in srgb, #b39cf2 14%, var(--hex-face));
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 13px/1.5 var(--mono); padding-bottom: 90px; }
+  body.gray .stage { filter: grayscale(1); }
+  header { padding: 22px 28px 4px; max-width: 1560px; margin: 0 auto; }
+  header h1 { font: 700 15px var(--mono); letter-spacing: .06em; margin: 0 0 4px; }
+  header p { color: var(--muted); margin: 0; max-width: 110ch; }
+  header .eyebrow { font: 10px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+  .stage { max-width: 1560px; margin: 0 auto; padding: 12px 28px; }
+  section h2 { font: 600 11px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin: 26px 0 10px; border-top: 1px solid var(--line-soft); padding-top: 18px; }
+  section h2:first-child { border-top: 0; padding-top: 6px; }
+  .blurb { color: var(--muted); margin: 2px 0 14px; max-width: 100ch; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .facecard { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 8px 6px 9px; border-radius: 10px; }
+  .facecard svg { display: block; }
+  .facecard .cap { font: 600 10px var(--mono); letter-spacing: .05em; }
+  .facecard .role { font: 9px var(--mono); color: var(--muted); text-align: center; max-width: 128px; }
+  .names { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  .names th { font: 600 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 5px 14px 5px 0; border-bottom: 1px solid var(--line-soft); }
+  .names td { padding: 5px 14px 5px 0; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  .names td:first-child { font-weight: 700; }
+  .names .short { color: var(--muted); }
+  .flags { color: var(--muted); max-width: 110ch; }
+  .flags li { margin: 4px 0; }
+  /* face furniture (copied from style.css) */
+  .hex { fill: var(--plate-common); stroke: var(--line-strong); stroke-width: 1; }
+  .hex.bloom { stroke-width: 1.2; }
+  .face-rings { fill: none; stroke: var(--muted); stroke-opacity: .3; stroke-width: 1; }
+  .face-rail { fill: none; stroke-width: 5; stroke-linecap: round; }
+  .face-name { font: 700 8.5px var(--mono); letter-spacing: .13em; fill: var(--ink); }
+  .face-level { font: 8px var(--mono); letter-spacing: .1em; fill: var(--muted); }
+  .face-readout { font: 500 17px var(--mono); fill: var(--ink); }
+  .face-readout-sm { font-size: 14px; }
+  .face-readout-xs { font-size: 12px; }
+  .face-note { font: 8.5px var(--mono); letter-spacing: .12em; fill: var(--muted); }
+  .face-signature { stroke-linecap: round; stroke-linejoin: round; }
+  .water-fill { fill: var(--charge); opacity: .22; }
+  .spacer-frame { fill: none; stroke: var(--line-soft); stroke-width: 1; }
+  /* floating switcher */
+  .bar { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; background: var(--panel-deep); border: 1px solid var(--line-strong); border-radius: 99px; padding: 9px 16px; box-shadow: 0 6px 24px rgba(2,4,12,.6); z-index: 10; }
+  .bar button { background: var(--panel); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 8px; font: 700 14px var(--mono); width: 34px; height: 30px; cursor: pointer; }
+  .bar button:hover { background: var(--panel-soft); }
+  .bar .label { font: 700 12px var(--mono); letter-spacing: .08em; min-width: 200px; text-align: center; }
+  .bar label { display: flex; gap: 6px; align-items: center; color: var(--muted); font-size: 11px; cursor: pointer; }
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">PROTOTYPE · throwaway · issue #219</div>
+  <h1>Module identity: names and a redesigned glyph family</h1>
+  <p>Art directions for the roster chosen in ADR-0048, each shown on the real surfaces — compact board face, bloom, tray tile — with category/rarity/charge channels preserved. <strong>D is the proposed mix</strong> (A's identity base plus your overrides); A–C remain for reference. Use ← / → or the bar below; toggle grayscale for contrast/legibility. All numbers provisional.</p>
+</header>
+<div class="stage" id="stage"></div>
+<div class="bar">
+  <button id="prev" title="Previous variant">‹</button>
+  <span class="label" id="label"></span>
+  <button id="next" title="Next variant">›</button>
+  <label><input type="checkbox" id="gray"> grayscale</label>
+</div>
+<script>
+/* ── shared glyph constants (existing module icons, src/ui/icons.ts) ── */
+const SPACER = '<path d="M-13 0h7l4-6 5 12 5-12 4 6h4"/><circle r="1.6" cx="-13" cy="0"/><circle r="1.6" cx="12" cy="0"/>';
+const FORGE = '<path d="m0-14 12 7v14L0 14-12 7V-7Zm0 0v28m-12-21 24 14m0-14L-12 7"/>';
+const MUTFORGE = FORGE + '<circle r="2.4"/>';
+const PENTA = 'M-6-12h12l4 8-10 8-10-8Z';
+const GEN = { focus: `<path d="${PENTA}"/><path d="M-4-4l3 3 6-6"/>`, note: `<path d="${PENTA}"/><path d="M-4-3h8M-4 1h5"/>`, goal: `<path d="${PENTA}"/><path d="M-4-5v9M-4-5h6l-2 2.5 2 2.5h-6"/>` };
+
+/* ── the three art directions ── */
+const VARIANTS = [
+  {
+    id: 'D', name: 'D — The mix (A base)',
+    blurb: 'A is the identity direction, with the human\u2019s overrides: generators drop the pentagon for the C bolt (Focus bare; Note and Goal wear a corner mark), Booster becomes outward chevrons — it affects neighbors, voices take C\u2019s Echo and Bend while the plain voice keeps A\u2019s Harmonizer diamond, the Mutator Forge wears a seeded hexagon core (B\u2019s Harm candidate) on the Forge chassis, and the spacer\u2019s open window is hexagonal so the plate reads as a ring. Bloom glyph/readout spacing opened up (the overlap you flagged).',
+    names: { osc: ['Oscillator','OSC'], blaster: ['Blaster','BLST'], booster: ['Booster','BOOST'], focus: ['Focus Generator','FOCUS'], note: ['Note Generator','NOTE'], goal: ['Goal Generator','GOAL'], harmonizer: ['Harmonizer','HARM'], mirror: ['Echo','ECHO'], shift: ['Bend','BEND'], amplifier: ['Amplifier','AMP'], ritual: ['RITUAL','RITUAL'] },
+    glyphs: {
+      osc: '<path d="M-12 0C-8-10-4-10 0 0C4 10 8 10 12 0"/>',
+      blaster: '<path d="M-12 5V-5H-3V5H6V-5H12"/>',
+      booster: '<circle r="2.2"/><path d="M-5-7-13 0-5 7M5-7 13 0 5 7"/>',
+      focus: '<path d="M2-13-6 1H0L-2 13 6-1H0Z"/>',
+      note: '<path d="M2-13-6 1H0L-2 13 6-1H0Z"/><path d="M5-11h6M5-7h6"/>',
+      goal: '<path d="M2-13-6 1H0L-2 13 6-1H0Z"/><path d="M5-7l2.5 2.5L12-10"/>',
+      harmonizer: '<path d="M0-10 8 0 0 10-8 0Z"/>',
+      mirror: '<circle r="2.2" cx="-7" cy="-6"/><circle r="3.4" cx="7" cy="6"/><path d="M-5.2-4.7 4.8 4.4"/>',
+      shift: '<path d="M-12 6H-2L2-6H12"/><path d="M8-9.5 12-6 8-2.5"/>',
+      amplifier: '<path d="M-13 0H2M-3-7 5 0-3 7M5-7 13 0 5 7"/>',
+      ritual: '<path d="M0-8A8 8 0 1 1-6.9-4"/><path d="M-11.1-2.5-6.9-4-6.1.4"/><path d="M-3.5 2.5q1.75-3 3.5 0t3.5 0"/>',
+      mutforge: '<path d="m0-14 12 7v14L0 14-12 7V-7Z"/><path d="M0-5.5 4.8-2.7V2.7L0 5.5-4.8 2.7V-2.7Z"/><circle r="1.5"/>',
+    },
+  },
+  {
+    id: 'A', name: 'A — Studio rack',
+    blurb: 'The adopted directions land: Oscillator and Booster. One wave language — every signal module is a waveform on a scope; silent voices read as muted toneheads (diamonds); RITUAL wears the habit cycle around a sustained wave. Blaster stays (a square pulse: charge-gated sound).',
+    names: { osc: ['Oscillator','OSC'], blaster: ['Blaster','BLST'], booster: ['Booster','BOOST'], focus: ['Focus Generator','FOCUS'], note: ['Note Generator','NOTE'], goal: ['Goal Generator','GOAL'], harmonizer: ['Harmonizer','HARM'], mirror: ['Mirror','MIRROR'], shift: ['Shift','SHIFT'], amplifier: ['Amplifier','AMP'], ritual: ['RITUAL','RITUAL'] },
+    glyphs: {
+      osc: '<path d="M-12 0C-8-10-4-10 0 0C4 10 8 10 12 0"/>',
+      blaster: '<path d="M-12 5V-5H-3V5H6V-5H12"/>',
+      booster: '<path d="M-12 0C-9-4-6-4-3 0C0 4 3 4 6 0C8-7 10-7 12 0"/>',
+      harmonizer: '<path d="M0-10 8 0 0 10-8 0Z"/>',
+      mirror: '<path d="M0-11 4-7 0-3-4-7Z"/><path d="M0-1 7 6 0 13-7 6Z"/>',
+      shift: '<path d="M0-10 8 0 0 10-8 0Z"/><path d="M0-10V-14M-2.5-11.5 0-14 2.5-11.5"/>',
+      amplifier: '<path d="M-13 0H2M-3-7 5 0-3 7M5-7 13 0 5 7"/>',
+      ritual: '<path d="M0-8A8 8 0 1 1-6.9-4"/><path d="M-11.1-2.5-6.9-4-6.1.4"/><path d="M-3.5 2.5q1.75-3 3.5 0t3.5 0"/>',
+    },
+  },
+  {
+    id: 'B', name: 'B — Forge lineage',
+    blurb: 'The conservative set: working names keep (Additive, Infusor, RITUAL — renames only where a collision forces one). Glyphs are angular geometric marks kin to the Forge chassis — the roster reads as one engraved family; voices are polygons (seeded hexagon, hourglass, shifted parallelogram).',
+    names: { osc: ['Additive Synth','ADDITIVE'], blaster: ['Blaster','BLASTER'], booster: ['Infusor','INFUSOR'], focus: ['Focus Generator','FOCUS'], note: ['Note Generator','NOTE'], goal: ['Goal Generator','GOAL'], harmonizer: ['Harmonizer','HARM'], mirror: ['Mirror','MIRROR'], shift: ['Shift','SHIFT'], amplifier: ['Amplifier','AMPLIFIER'], ritual: ['RITUAL','RITUAL'] },
+    glyphs: {
+      osc: '<path d="M-12 0H12M0-12V12"/>',
+      blaster: '<path d="M0-12V12M-12 0H12M-8.5-8.5 8.5 8.5M8.5-8.5-8.5 8.5"/>',
+      booster: '<circle r="4"/><path d="M0-15v6M0 9v6M-15 0h6M9 0h6m-20-11 5 5m12 12 5 5m0-22-5 5M-6 6l-5 5"/>',
+      harmonizer: '<path d="M0-11 9.5-5.5V5.5L0 11-9.5 5.5V-5.5Z"/><circle r="2.4"/>',
+      mirror: '<path d="M-9-11H9L-9 11H9Z"/>',
+      shift: '<path d="M-4-10H12L4 10H-12Z"/>',
+      amplifier: '<path d="M-6-10 8 0-6 10Z"/><path d="M-13 0h7M8 0h5"/>',
+      ritual: '<path d="M0-11A11 11 0 1 1-7.8 7.8"/><circle r="2.2"/>',
+    },
+  },
+  {
+    id: 'C', name: 'C — Signal path',
+    blurb: 'The evocative set: renames carry the identity — Arc (charge-sourced), Drone / Echo / Bend (the silent voices), Refrain (RITUAL, a repeated musical line — the habit cycle worn literally). Glyphs read as a patch diagram: nodes, wires, gain wedges.',
+    names: { osc: ['Oscillator','OSC'], blaster: ['Arc','ARC'], booster: ['Booster','BOOST'], focus: ['Focus Generator','FOCUS'], note: ['Note Generator','NOTE'], goal: ['Goal Generator','GOAL'], harmonizer: ['Drone','DRONE'], mirror: ['Echo','ECHO'], shift: ['Bend','BEND'], amplifier: ['Amplifier','AMP'], ritual: ['Refrain','REFRAIN'] },
+    glyphs: {
+      osc: '<circle r="1.7" cx="-12" cy="0"/><circle r="1.7" cx="12" cy="0"/><path d="M-10.3 0C-7-9-3-9 0 0C3 9 7 9 10.3 0"/>',
+      blaster: '<path d="M2-13-6 1H0L-2 13 6-1H0Z"/>',
+      booster: '<path d="M-12-4h6L12-9V9L-6 4h-6Z"/>',
+      harmonizer: '<path d="M-13 0H13"/><circle r="2.6"/>',
+      mirror: '<circle r="2.2" cx="-7" cy="-6"/><circle r="3.4" cx="7" cy="6"/><path d="M-5.2-4.7 4.8 4.4"/>',
+      shift: '<path d="M-12 6H-2L2-6H12"/><path d="M8-9.5 12-6 8-2.5"/>',
+      amplifier: '<path d="M-13 0H3"/><path d="M3 0l9-6M3 0l9 6"/><path d="M8.7-5.5 12-6l-.4 3.6M8.7 5.5 12 6l-.4-3.6"/>',
+      ritual: '<path d="M0-8A8 8 0 1 1-6.9-4"/><path d="M-11.1-2.5-6.9-4-6.1.4"/><circle r="1.8"/>',
+    },
+  },
+];
+
+/* ── the roster shown (roles/hues per ADR-0048; numbers provisional) ── */
+const HUES = { synth: 'var(--hue-synthesizer)', infusor: 'var(--hue-infusor)', gen: 'var(--hue-generator)', voice: 'var(--hue-voice)', conduit: 'var(--hue-conduit)', ritual: 'var(--hue-ritual)', spacer: 'var(--hue-spacer)', forge: 'var(--hue-forge)' };
+const TYPES = [
+  { key: 'osc',       hue: 'synth',   readout: '+12.4 ν/s',  note: 'C4',    rarity: 'rare',     level: 3, role: 'Base producer — level, chords, charge' },
+  { key: 'blaster',   hue: 'synth',   readout: '+3.1 ν/s',   note: 'G3',    rarity: 'uncommon', level: 2, role: 'Charge-sourced producer' },
+  { key: 'booster',   hue: 'infusor', readout: '+25%',                      rarity: 'uncommon', level: 2, role: 'Neighbor uplift' },
+  { key: 'focus',     hue: 'gen',     readout: '1,240/4,000',               rarity: 'common',   level: 4, role: 'Charge from focus time' },
+  { key: 'note',      hue: 'gen',     readout: '380/1,200',                 rarity: 'common',   level: 1, role: 'Charge from notes' },
+  { key: 'goal',      hue: 'gen',     readout: '2,500',                     rarity: 'uncommon', level: 2, role: 'Charge from goals' },
+  { key: 'harmonizer',hue: 'voice',   readout: '+8%',        note: 'E4',    rarity: 'uncommon', level: 2, role: 'Silent voice — own pitch' },
+  { key: 'mirror',    hue: 'voice',   readout: '+8%',        note: 'E3',    rarity: 'common',   level: 1, role: 'Silent voice — neighbor, octave down' },
+  { key: 'shift',     hue: 'voice',   readout: '+8%',        note: 'F♯4',   rarity: 'rare',     level: 3, role: 'Silent voice — ♯/♭ shifted pitch' },
+  { key: 'amplifier', hue: 'conduit', readout: '×1.5',                      rarity: 'uncommon', level: 2, role: 'Routes charge onward, with gain' },
+  { key: 'ritual',    hue: 'ritual',  readout: '×2.0',       note: 'PIANO', rarity: 'rare',     level: 3, role: 'Amplifies the habit build while charged', fill: .55 },
+  { key: 'spacer',    hue: 'spacer',  openWire: true,                       role: 'Silent wire — conducts chords' },
+  { key: 'forge',     hue: 'forge',   readout: '1,240/4,000',               rarity: 'common',   level: 2, role: 'Mints module rolls', fill: .6 },
+  { key: 'mutforge',  hue: 'forge',   readout: '620/2,500',                 rarity: 'uncommon', level: 1, role: 'Mints mutator rolls', fill: .25 },
+];
+const CONST_GLYPHS = { spacer: SPACER, forge: FORGE, mutforge: MUTFORGE, focus: GEN.focus, note: GEN.note, goal: GEN.goal };
+const FALLBACK_SHORT = { spacer: 'SPACER', forge: 'FORGE', mutforge: 'MUT. FORGE' };
+const FALLBACK_FULL = { spacer: 'Spacer', forge: 'Module Forge', mutforge: 'Mutator Forge' };
+
+/* ── renderers copied from face.ts / render.ts ── */
+function hexPoints(radius) {
+  return Array.from({ length: 6 }, (_, i) => {
+    const a = ((60 * i - 30) * Math.PI) / 180;
+    return [radius * Math.cos(a), radius * Math.sin(a)].map(v => v.toFixed(4)).join(',');
+  }).join(' ');
+}
+function readoutFitClass(t) { return t.length > 9 ? ' face-readout-xs' : t.length > 7 ? ' face-readout-sm' : ''; }
+const LAYOUT = { compact: { level: -31, name: -18, glyph: 0, gs: .8, readout: 30, note: 43 }, bloom: { level: -39, name: -26, glyph: -12, gs: .7, readout: 16, note: 49 } };
+/* the spacer's open-wire face as a hex ring: the plate is the chassis minus an
+   inner hexagon window, so the outer part reads as a ring (human feedback, #219) */
+function openWireSvg(t, v, opts = {}) {
+  const ringId = `ring-${v.id}-${t.key}-${opts.salt ?? 'x'}`;
+  const poly = r => 'M' + hexPoints(r).split(' ').join('L') + 'Z';
+  return `<svg viewBox="-70 -70 140 140" width="${opts.w ?? 130}" height="${opts.w ?? 130}">` +
+    `<clipPath id="${ringId}"><path clip-rule="evenodd" d="${poly(61)} ${poly(36)}"/></clipPath>` +
+    `<polygon class="hex" points="${hexPoints(61)}" clip-path="url(#${ringId})"/>` +
+    `<polygon fill="none" stroke="var(--line-soft)" stroke-width="1" points="${hexPoints(36)}"/>` +
+    `<text class="face-name" y="-40" text-anchor="middle">${v.names[t.key]?.[1] ?? FALLBACK_SHORT[t.key]}</text>` +
+    `</svg>`;
+}
+function faceSvg(t, v, opts = {}) {
+  if (t.openWire) return openWireSvg(t, v, opts);
+  const hue = HUES[t.hue];
+  const bloom = opts.bloom;
+  const L = bloom ? LAYOUT.bloom : LAYOUT.compact;
+  const rings = t.rarity && !t.openWire ? Array.from({ length: { common: 1, uncommon: 2, rare: 3 }[t.rarity] }, (_, i) => `<polygon points="${hexPoints([55, 50, 45][i])}"/>`).join('') : '';
+  let s = `<svg viewBox="-70 -70 140 140" width="${opts.w ?? 130}" height="${opts.w ?? 130}">`;
+  s += `<polygon class="hex${bloom ? ' bloom' : ''}" data-rarity="${t.rarity ?? ''}" points="${hexPoints(61)}"/>`;
+  if (t.fill != null) s += `<clipPath id="w-${v.id}-${t.key}-${opts.salt ?? ''}"><polygon points="${hexPoints(58)}"/></clipPath><rect class="water-fill" clip-path="url(#w-${v.id}-${t.key}-${opts.salt ?? ''})" x="-58" y="${(58 - 116 * t.fill).toFixed(2)}" width="116" height="${(116 * t.fill).toFixed(2)}"/>`;
+  if (rings) s += `<g class="face-rings">${rings}</g>`;
+  if (!t.openWire) s += `<path class="face-rail" d="M-39 -19V19" stroke="${hue}"/>`;
+  if (!t.openWire && t.level != null) s += `<text class="face-level" y="${L.level}" text-anchor="middle">LV ${t.level}</text>`;
+  s += `<text class="face-name" y="${L.name}" text-anchor="middle">${v.names[t.key]?.[1] ?? FALLBACK_SHORT[t.key]}</text>`;
+  if (!t.openWire) s += `<g class="face-signature" transform="translate(0 ${L.glyph}) scale(${L.gs})" fill="none" stroke="${hue}" stroke-width="2">${v.glyphs[t.key] ?? CONST_GLYPHS[t.key]}</g>`;
+  if (!t.openWire && t.readout) s += `<text class="face-readout${readoutFitClass(t.readout)}" y="${L.readout}" text-anchor="middle">${t.readout}</text>`;
+  if (!t.openWire && t.note) s += `<text class="face-note" y="${L.note}" text-anchor="middle">${t.note}</text>`;
+  return s + '</svg>';
+}
+function tileSvg(t, v, w) {
+  const hue = HUES[t.hue];
+  /* the spacer's tile wears an unfilled inner hexagon — the module's ring face,
+     not the wire (human feedback, #219) */
+  const inner = t.openWire
+    ? `<polygon fill="none" stroke="${hue}" stroke-width="3.5" points="${hexPoints(20)}"/>`
+    : `<g fill="none" stroke="${hue}" stroke-width="3.5" transform="scale(1.55)">${v.glyphs[t.key] ?? CONST_GLYPHS[t.key]}</g>`;
+  return `<svg viewBox="-70 -70 140 140" width="${w}" height="${w}"><polygon fill="none" stroke="${hue}" stroke-width="4.5" points="${hexPoints(61)}"/>${inner}</svg>`;
+}
+function bareGlyph(t, v, w) {
+  return `<svg viewBox="-16 -16 32 32" width="${w}" height="${w}"><g fill="none" stroke="${HUES[t.hue]}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${v.glyphs[t.key] ?? CONST_GLYPHS[t.key]}</g></svg>`;
+}
+function card(inner, cap, role) {
+  return `<div class="facecard">${inner}${cap ? `<span class="cap">${cap}</span>` : ''}${role ? `<span class="role">${role}</span>` : ''}</div>`;
+}
+
+/* ── page assembly ── */
+function renderVariant(v) {
+  let h = `<section><h2>Board faces — compact</h2><div class="row">`;
+  for (const t of TYPES) h += card(faceSvg(t, v), v.names[t.key]?.[0] ?? FALLBACK_FULL[t.key], t.role);
+  h += `</div></section>`;
+  const osc = TYPES[0], harm = TYPES[6];
+  h += `<section><h2>Bloom — expanded face</h2><div class="row">`;
+  h += card(faceSvg(osc, v, { bloom: true, w: 190, salt: 'b1' }), v.names.osc[0], 'rare — check the glyph against the 3-ring stack');
+  h += card(faceSvg(harm, v, { bloom: true, w: 190, salt: 'b2' }), v.names.harmonizer[0], 'uncommon silent voice');
+  h += `</div></section>`;
+  h += `<section><h2>Tray tiles — the minimal mark (62px, real tray size)</h2><div class="row">`;
+  for (const t of TYPES) h += card(tileSvg(t, v, 62), v.names[t.key]?.[1] ?? FALLBACK_SHORT[t.key]);
+  h += `</div></section>`;
+  h += `<section><h2>Worst case — 40px tiles and 19px bare glyphs</h2><div class="row">`;
+  for (const t of TYPES) h += card(tileSvg(t, v, 40));
+  for (const t of TYPES) h += card(bareGlyph(t, v, 19));
+  h += `</div></section>`;
+  h += `<section><h2>Names</h2><table class="names"><tr><th>Type</th><th>Full name</th><th>Faceplate</th><th>Role</th></tr>`;
+  for (const t of TYPES) h += `<tr><td>${v.names[t.key]?.[0] ?? FALLBACK_FULL[t.key]}</td><td class="short">${v.names[t.key]?.[0] ?? FALLBACK_FULL[t.key]}</td><td class="short">${v.names[t.key]?.[1] ?? FALLBACK_SHORT[t.key]}</td><td class="short">${t.role}</td></tr>`;
+  h += `</table></section>`;
+  return h;
+}
+const stage = document.getElementById('stage');
+let idx = 0;
+function showFull() {
+  const v = VARIANTS[idx];
+  let h = `<div class="blurb"><strong>${v.name}.</strong> ${v.blurb}</div>` + renderVariant(v);
+  /* channels demo: rarity trio + charged rail — identical every variant */
+  h += `<section><h2>Channels demo (identical in all variants)</h2><div class="row">`;
+  for (const r of ['common', 'uncommon', 'rare']) h += card(faceSvg({ ...TYPES[0], rarity: r }, v, { salt: r }), r);
+  h += `</div></section>`;
+  h += `<section><h2>Open flags for the human</h2><ul class="flags">` +
+    `<li><strong>Settled:</strong> category hues keep as proposed — silent voice → reserved violet, charge conduit → reserved yellow, RITUAL → the console's vermillion.</li>` +
+    `<li><strong>Confirm in D:</strong> the Mutator Forge's seeded-hexagon core (B's Harm candidate) on the Forge chassis, and the spacer's hexagonal ring window.</li>` +
+    `<li><strong>Implementation note:</strong> the bloom overlap you flagged reproduces with face.ts's bloom layout (glyph −7 / readout 11); D opens it to glyph −12 / readout 16 — carry that into face.ts's FACE_LAYOUT when folding in.</li>` +
+    `<li>Silent voices' face notes (E4/E3/F♯4) and how seams/hulls mark them as muted participants are other tickets' decisions — shown here only for legibility.</li>` +
+    `</ul></section>`;
+  stage.innerHTML = h;
+  document.getElementById('label').textContent = v.name;
+  location.hash = v.id;
+}
+function step(d) { idx = (idx + d + VARIANTS.length) % VARIANTS.length; showFull(); }
+document.getElementById('prev').onclick = () => step(-1);
+document.getElementById('next').onclick = () => step(1);
+document.getElementById('gray').onchange = e => document.body.classList.toggle('gray', e.target.checked);
+addEventListener('keydown', e => {
+  if (/input|textarea/i.test(document.activeElement?.tagName ?? '')) return;
+  if (e.key === 'ArrowLeft') step(-1);
+  if (e.key === 'ArrowRight') step(1);
+});
+const fromHash = VARIANTS.findIndex(v => v.id === location.hash.slice(1).toUpperCase());
+idx = fromHash >= 0 ? fromHash : 0;
+showFull();
+addEventListener('hashchange', () => {
+  const i = VARIANTS.findIndex(v => v.id === location.hash.slice(1).toUpperCase());
+  if (i >= 0 && i !== idx) { idx = i; showFull(); }
+});
+</script>
+</body>
+</html>
