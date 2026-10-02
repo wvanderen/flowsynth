@@ -1,4 +1,5 @@
 import { App } from "./ui/app";
+import { armChordLibraryPrototype } from "./ui/prototype/chord-library";
 
 const els: Record<string, HTMLElement> = {};
 for (const id of [
@@ -17,6 +18,8 @@ for (const id of [
 
 const dev = new URLSearchParams(location.search).has("dev");
 const app = new App(els, dev);
+// PROTOTYPE (ticket #218, throwaway branch): the chord-library variants.
+armChordLibraryPrototype();
 if (dev) {
   (window as unknown as Record<string, unknown>).__flowsynth = app;
 }
