@@ -39,6 +39,7 @@ import { formatBalance, formatDate, formatCountdown, formatInt, formatNumber, fo
 import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG } from "./ledger";
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
 import { containerWidth, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX } from "./container";
+import { protoBloom, protoFaceBuy, protoForgeLockButtons, protoForgeNote, protoReflect, protoSweepSuffix } from "./prototype/polish";
 import { liveAttr, liveSet } from "./live";
 import {
   bindMutatorLayer,
@@ -1421,9 +1422,13 @@ function faceBuyHtml(app: App, module: ModuleInstance): string {
   const title = max
     ? `MAX · buy ${levels} level${levels === 1 ? "" : "s"} · ${formatInt(cost)} ν`
     : `+1 level · ${formatInt(cost)} ν`;
-  return `<g class="face-buy" data-key="face-buy" data-module="${module.id}" role="button" tabindex="0" aria-label="${title}">
-    <polygon class="face-buy-btn${broke ? " broke" : ""}" points="${FACE_BUY_POINTS}"><title>${title}</title></polygon>
-    <text y="54" text-anchor="middle" class="face-buy-label">${max ? "MAX" : "+1"}</text>
+  // PROTOTYPE (#220, throwaway branch): the unaffordable-state overrides.
+  const proto = protoFaceBuy(max, levels, cost, levelCost(module.level), wholeNous(app.state));
+  const label = proto?.label ?? (max ? "MAX" : "+1");
+  const read = proto?.title ?? title;
+  return `<g class="face-buy" data-key="face-buy" data-module="${module.id}" role="button" tabindex="0" aria-label="${read}">
+    <polygon class="face-buy-btn${broke ? " broke" : ""}" points="${FACE_BUY_POINTS}"><title>${read}</title></polygon>
+    <text y="54" text-anchor="middle" class="face-buy-label">${label}</text>
   </g>`;
 }
 
@@ -1505,13 +1510,16 @@ function renderUpgradeAll(app: App): void {
   host.dataset.renderKey = key;
   const chips = SWEEP_STEPS.map((n) => {
     const total = eligible.reduce((sum, m) => sum + levelsCost(m.level, n), 0);
-    return `<button class="sweep-chip" data-sweep="${n}" title="+${n} on all ${eligible.length} modules · ${formatNumber(total)} ν (buys cheapest-first if broke)">+${n}</button>`;
+    // PROTOTYPE (#220): the zero-buy suffix when nothing is affordable.
+    const suffix = protoSweepSuffix(state);
+    return `<button class="sweep-chip" data-sweep="${n}" title="+${n} on all ${eligible.length} modules · ${formatNumber(total)} ν (buys cheapest-first if broke)${suffix}">+${n}</button>`;
   }).join("");
   const max = upgradeAllPreview(state, "max");
+  const maxSuffix = protoSweepSuffix(state);
   host.innerHTML = `
     <span class="sweep-label">UPGRADE ALL</span>
     ${chips}
-    <button class="sweep-chip" data-sweep="max" title="Sweep the whole bank into the cheapest next levels: ~${max.levels} levels across ${max.modules} modules · ${formatNumber(max.spent)} ν">MAX</button>`;
+    <button class="sweep-chip" data-sweep="max" title="Sweep the whole bank into the cheapest next levels: ~${max.levels} levels across ${max.modules} modules · ${formatNumber(max.spent)} ν${maxSuffix}">MAX</button>`;
   host.querySelectorAll<HTMLButtonElement>("[data-sweep]").forEach((button) => {
     button.addEventListener("click", () => {
       const step = button.getAttribute("data-sweep")!;
@@ -1973,16 +1981,20 @@ function renderBloom(app: App, projected: RateSnapshot): void {
   // above the button on the popped plate and the riding card, and inside
   // the sheet's buy column on phone.
   const benefit = lines.benefit;
+  // PROTOTYPE (#220): the unaffordable-state overrides for dial and button.
+  const proto = protoBloom(maxLevels, levelCost(module.level), wholeNous(state), want);
   const dial = benefit
     ? `<div class="bloom-dial" role="group" aria-label="Upgrade count">${([1, 5, 10, "max"] as const)
         .map((option) => {
           const active = option === ui.bulkCount;
-          return `<button class="bloom-dial-chip${active ? " active" : ""}" data-bulk="${option}" aria-pressed="${active}" title="${option === "max" ? `Buy every affordable level (${maxLevels})` : `Buy ${option} levels`}">${option === "max" ? `MAX·${maxLevels}` : `×${option}`}</button>`;
+          const maxRead = proto ? proto.maxLabel : `MAX·${maxLevels}`;
+          const maxTip = proto ? proto.maxTitle : `Buy every affordable level (${maxLevels})`;
+          return `<button class="bloom-dial-chip${active ? " active" : ""}" data-bulk="${option}" aria-pressed="${active}" title="${option === "max" ? maxTip : `Buy ${option} levels`}">${option === "max" ? maxRead : `×${option}`}</button>`;
         })
         .join("")}</div>`
     : "";
   const upgradeButton = benefit
-    ? `<button class="bloom-upgrade" id="bloom-upgrade" title="${affordable ? `Buy ${want} level${want === 1 ? "" : "s"}` : `Not enough for all ${want} — buys what it can`}">
+    ? `<button class="bloom-upgrade" id="bloom-upgrade" title="${proto ? proto.buttonTitle : affordable ? `Buy ${want} level${want === 1 ? "" : "s"}` : `Not enough for all ${want} — buys what it can`}">
         <span class="bloom-upgrade-title">Upgrade ×${want} · <strong class="mono">${formatInt(bulkCost)} ν</strong></span>
         <small class="bloom-upgrade-benefit mono">${bulkBenefit ?? ""}</small>
       </button>`
@@ -3258,6 +3270,9 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
   const banked = state.bankedRolls.length;
   const mutOffer = state.bankedMutatorRolls[state.bankedMutatorRolls.length - 1];
   const mutBanked = state.bankedMutatorRolls.length;
+  // PROTOTYPE (#220, throwaway branch): the in-flow lock contracts.
+  const protoNote = protoForgeNote(state);
+  const protoLock = protoForgeLockButtons(state);
   const mutatorSection = !mutOffer
     ? ""
     : `<div class="mutator-forge-block">
@@ -3266,7 +3281,7 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
           ${mutOffer.candidates
             .map(
               (candidate) => `
-            <button class="candidate-tile mut-candidate" data-mut-choice="${candidate.id}" data-mut-offer="${mutOffer.id}" data-rarity="${candidate.rarity}" title="Take the ${RARITY_LABEL[candidate.rarity]} ${FAMILY_WORD[candidate.family]} mutator">
+            <button class="candidate-tile mut-candidate"${protoLock ? " disabled" : ""} data-mut-choice="${candidate.id}" data-mut-offer="${mutOffer.id}" data-rarity="${candidate.rarity}" title="Take the ${RARITY_LABEL[candidate.rarity]} ${FAMILY_WORD[candidate.family]} mutator">
               <svg viewBox="-70 -70 140 140" aria-hidden="true" style="color: var(--arete)">
                 ${mutatorTileInner(candidate)}
               </svg>
@@ -3284,7 +3299,7 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
     ${forgeMeterHtml(state)}
     ${offer ? `<div class="candidates">
       ${offer.candidates.map((candidate) => `
-        <button class="candidate-tile" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${candidate.rarity}" data-type="${candidate.type}" title="Take the ${RARITY_LABEL[candidate.rarity]} ${META[candidate.type].name}">
+        <button class="candidate-tile"${protoLock ? " disabled" : ""} data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${candidate.rarity}" data-type="${candidate.type}" title="Take the ${RARITY_LABEL[candidate.rarity]} ${META[candidate.type].name}">
           <svg viewBox="-70 -70 140 140" aria-hidden="true">
             ${moduleFace({ type: candidate.type, rarity: candidate.rarity, readout: candidateReadout(candidate.type) })}
           </svg>
@@ -3294,7 +3309,7 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
         </button>`).join("")}
     </div>` : `<p class="empty-copy">No choices banked yet — the meters above say how far.</p>`}
     ${mutatorSection}
-    ${state.mode !== "upgrade" ? `<p class="modal-note">Choices settle between sessions — the board stays live behind this card.</p>` : `<p class="modal-note">The board stays live behind this card — inspect freely; click outside, ✕ or Esc puts the choice away.</p>`}`;
+    ${protoNote !== null ? `<p class="modal-note">${protoNote}</p>` : state.mode !== "upgrade" ? `<p class="modal-note">Choices settle between sessions — the board stays live behind this card.</p>` : `<p class="modal-note">The board stays live behind this card — inspect freely; click outside, ✕ or Esc puts the choice away.</p>`}`;
   updateForgeMetersLive(content, state, projected.forgeRate, projected.mutatorForgeRate);
   content.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -3791,7 +3806,7 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
       <input type="text" id="summary-reflection-text" aria-label="Reflect on the session in words" value="${escapeHtml(reflection?.text ?? "")}" />
       <div class="reflection-slider">
         <span class="reflection-end">rough</span>
-        <input type="range" id="summary-reflection-slider" min="1" max="${REFLECTION_SLIDER_POSITIONS}" step="1" value="${reflection?.slider ?? REFLECTION_SLIDER_NEUTRAL}" aria-label="How the session went, rough to great" />
+        <input type="range" id="summary-reflection-slider" min="1" max="${REFLECTION_SLIDER_POSITIONS}" step="${protoReflect().step}" class="${protoReflect().cls}" value="${reflection?.slider ?? REFLECTION_SLIDER_NEUTRAL}" aria-label="How the session went, rough to great" />
         <span class="reflection-end">great</span>
       </div>
     </div>

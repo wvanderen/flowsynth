@@ -208,7 +208,9 @@ export function recordSummaryReflection(
   state.summary.reflection = {
     text: part.text ?? current.text,
     // The decided range is clamped here, not only in the DOM control.
-    slider: Math.min(REFLECTION_SLIDER_POSITIONS, Math.max(1, Math.round(part.slider ?? current.slider))),
+    // PROTOTYPE (#220, throwaway branch): continuous — decimals survive; the
+    // real contract decides whether the engine rounds, bands, or stores raw.
+    slider: Math.min(REFLECTION_SLIDER_POSITIONS, Math.max(1, part.slider ?? current.slider)),
   };
   // The record's reflection slot (§9) fills from the same touch: the
   // reflection records after close (it rides the summary), and this is the
