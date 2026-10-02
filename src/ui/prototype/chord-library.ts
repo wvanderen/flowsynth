@@ -323,10 +323,10 @@ function latticeGlyph(def: ChordDef, size: number, labels: "recipe" | "root" | "
   // The board's own pointy-top axial mapping (face.ts boardPoint),
   // scaled to fit.
   const unit = offsets.map((o) => ({ x: Math.sqrt(3) * (o.dq + o.dr / 2), y: 1.5 * o.dr }));
-  const half = size / 2 - 5;
+  const half = size / 2 - 2;
   const mx = Math.max(...unit.map((p) => Math.abs(p.x))) + Math.sqrt(3) / 2 + 0.3;
   const my = Math.max(...unit.map((p) => Math.abs(p.y))) + 1 + 0.3;
-  const u = Math.min(half / Math.max(mx, my), 12);
+  const u = Math.min(half / Math.max(mx, my), 15);
   const R = u * 0.92;
   const at = (o: { dq: number; dr: number }): Pt => ({ x: size / 2 + Math.sqrt(3) * (o.dq + o.dr / 2) * u, y: size / 2 + 1.5 * o.dr * u });
   const pts = offsets.map(at);
@@ -417,12 +417,12 @@ function renderFieldGuide(): string {
     // its wire gaps are the invitation; the hairline tracks progress.
     if (!known) {
       return `<article class="p218-guide-card locked">
-        ${latticeGlyph(def, 124, "hidden")}
+        ${latticeGlyph(def, 176, "hidden")}
         <div class="p218-meter"><i style="width:${(heard.roots.size / 12) * 100}%"></i></div>
       </article>`;
     }
     return `<article class="p218-guide-card">
-      ${latticeGlyph(def, 124, "recipe")}
+      ${latticeGlyph(def, 176, "recipe")}
       <h3>${def.name}</h3>
       <p class="p218-bonus">${pct(def.bonus)} while it sings ${bonusLine(heard.roots.size)}</p>
       <div class="p218-meter"><i style="width:${(heard.roots.size / 12) * 100}%"></i></div>
@@ -479,7 +479,7 @@ function renderCandidates(mode: "cards" | "none"): string {
   if (mode === "none") return "";
   const cards = PROPOSED.map(
     (def) => `<article class="p218-guide-card proposed">
-      ${latticeGlyph(def, 112, "recipe")}
+      ${latticeGlyph(def, 160, "recipe")}
       <h3>${def.name} <span class="p218-stamp">candidate</span></h3>
       <p class="p218-bonus">would pay ${pct(def.bonus)}</p>
     </article>`,
@@ -700,7 +700,7 @@ const STYLE = `
 .p218-root.on .p218-root-state { color: var(--accent); }
 /* field guide + cards */
 .p218-guide { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 12px; }
-.p218-guide-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-soft); padding: 16px 14px 18px; position: relative; overflow: hidden; min-height: 208px; }
+.p218-guide-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-soft); padding: 16px 14px 18px; position: relative; overflow: hidden; min-height: 268px; }
 .p218-guide-card h3 { margin: 0; font: 14px var(--mono); }
 .p218-guide-card.locked { border-style: dashed; }
 .p218-guide-card.proposed { border-style: dashed; background: transparent; }
