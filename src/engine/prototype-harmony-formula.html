@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE · Harmony scoring formula — FlowSynth #226</title>
+<style>
+  :root {
+    --ink: #1d232b;
+    --muted: #66707c;
+    --faint: #a7b0ba;
+    --line: #e3e7ec;
+    --panel: #f7f8fa;
+    --accent: #c2461f;
+    --accent-soft: #f8e8e1;
+    --good: #1f7a4d;
+    --good-soft: #e3f2ea;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 15px/1.55 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: #fff;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 28px 24px 80px; }
+  .proto-banner {
+    background: var(--accent);
+    color: #fff;
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 3px;
+  }
+  h1 { font-size: 24px; margin: 14px 0 6px; letter-spacing: -0.01em; }
+  .question {
+    color: var(--muted);
+    max-width: 74ch;
+    margin: 0 0 8px;
+  }
+  .question b { color: var(--ink); }
+  section { margin-top: 34px; }
+  h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--muted);
+    margin: 0 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
+  .formula {
+    font-size: 16px;
+    margin: 4px 0;
+  }
+  .formula code, td code, .stepwatch code, .critique code {
+    font: 14px/1.4 "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 6px;
+    white-space: nowrap;
+  }
+  .formula .q { color: var(--accent); font-weight: 700; }
+  .fnote { color: var(--muted); font-size: 13.5px; margin-top: 10px; max-width: 78ch; }
+
+  .cols { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 22px; }
+  @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+
+  .ring {
+    position: relative;
+    width: 340px;
+    height: 340px;
+    margin: 6px auto 0;
+  }
+  .node {
+    position: absolute;
+    width: 88px;
+    margin: -30px 0 0 -44px;
+    text-align: center;
+    user-select: none;
+  }
+  .node .name { font-weight: 700; font-size: 14px; }
+  .node.off .name { color: var(--faint); }
+  .node.on .name { color: var(--accent); }
+  .node .count {
+    display: inline-block;
+    min-width: 22px;
+    margin: 2px 4px 0;
+    font: 700 13px/20px "SF Mono", ui-monospace, Menlo, monospace;
+  }
+  .node button {
+    width: 22px; height: 22px;
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 50%;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--ink);
+    padding: 0;
+  }
+  .node button:hover { border-color: var(--accent); color: var(--accent); }
+  .node .ringdot {
+    position: absolute;
+    left: 50%; top: -14px;
+    width: 8px; height: 8px;
+    margin-left: -4px;
+    border-radius: 50%;
+    background: var(--line);
+  }
+  .node.on .ringdot { background: var(--accent); }
+
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .presets button, .stepbtn {
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 7px;
+    padding: 7px 12px;
+    font-size: 13.5px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  .presets button:hover, .stepbtn:hover { border-color: var(--accent); color: var(--accent); }
+  .presets button.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+  .knobs { margin-top: 18px; display: grid; gap: 10px; font-size: 13.5px; color: var(--muted); }
+  .knobs label { display: flex; align-items: center; gap: 10px; }
+  .knobs input[type=range] { flex: 1; accent-color: var(--accent); }
+  .knobs .val { font: 700 12.5px "SF Mono", ui-monospace, Menlo, monospace; color: var(--ink); min-width: 46px; text-align: right; }
+  .knobs select { border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; font-size: 13px; background: #fff; color: var(--ink); }
+
+  .readout table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .readout th {
+    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--muted); padding: 4px 8px 6px; border-bottom: 1px solid var(--line);
+  }
+  .readout td { padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .readout td.num { text-align: right; font: 12.5px "SF Mono", ui-monospace, Menlo, monospace; white-space: nowrap; }
+  .component { margin-bottom: 16px; }
+  .component h3 {
+    margin: 0 0 6px;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .component h3 .sym { color: var(--accent); font: 700 13px "SF Mono", ui-monospace, Menlo, monospace; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+  .chip {
+    background: #fff; border: 1px solid var(--line); border-radius: 6px;
+    padding: 2px 8px; font-size: 12.5px;
+  }
+  .chip b { font: 700 12px "SF Mono", ui-monospace, Menlo, monospace; }
+  .neutral-note {
+    background: var(--panel); border: 1px dashed var(--faint); border-radius: 8px;
+    padding: 8px 12px; font-size: 13px; color: var(--muted); margin: 8px 0 12px;
+  }
+  .qline {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin: 4px 0 16px;
+    font-size: 14.5px;
+  }
+  .qline b { font: 700 15px "SF Mono", ui-monospace, Menlo, monospace; }
+  .totals { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
+  .totals .cell {
+    flex: 1 1 160px;
+    background: #fff; border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .totals .cell .k { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+  .totals .cell .v { font: 700 18px "SF Mono", ui-monospace, Menlo, monospace; margin-top: 2px; }
+  .totals .cell.delta { border-color: var(--good); background: var(--good-soft); }
+  .totals .cell.delta .v { color: var(--good); }
+
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .tabs button {
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 7px 7px 0 0;
+    padding: 8px 14px;
+    font-size: 13.5px;
+    cursor: pointer;
+    color: var(--muted);
+  }
+  .tabs button.active { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  .walk { border: 1px solid var(--line); border-radius: 0 10px 10px 10px; padding: 18px 20px; background: #fff; }
+  .walk p.intro { color: var(--muted); margin: 0 0 12px; max-width: 78ch; }
+  .steps { display: grid; gap: 12px; }
+  .step { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+  .step.current { border-color: var(--accent); background: var(--accent-soft); }
+  .step .stephead { display: flex; align-items: center; gap: 10px; }
+  .step .stepno {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--ink); color: #fff;
+    font: 700 12px/22px "SF Mono", ui-monospace, Menlo, monospace;
+    text-align: center; flex: none;
+  }
+  .step.current .stepno { background: var(--accent); }
+  .step .watch { color: var(--muted); font-size: 13.5px; margin-top: 8px; }
+  .step .watch b { color: var(--ink); }
+
+  .critique { margin: 12px 0 0; padding-left: 20px; color: var(--muted); font-size: 13.5px; }
+  .critique li { margin-bottom: 6px; }
+  .critique b { color: var(--ink); }
+  .rootpicker { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  .rootpicker button {
+    border: 1px solid var(--line); background: #fff; border-radius: 6px;
+    padding: 4px 9px; font: 600 12.5px "SF Mono", ui-monospace, Menlo, monospace; cursor: pointer;
+  }
+  .rootpicker button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .verdict { font-size: 13.5px; color: var(--muted); margin-top: 8px; }
+  .verdict b { color: var(--accent); }
+  .foot { color: var(--faint); font-size: 12.5px; margin-top: 40px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="proto-banner">Prototype · throwaway</div>
+  <h1>Harmony scoring: which concrete formula?</h1>
+  <p class="question">
+    The harmony decision (<a href="https://github.com/wvanderen/flowsynth/issues/217">#217</a>) fixed the <b>shape</b>: quality scores each
+    connected formation symbolically — named-chord value plus a bounded tension/complexity term over <b>deduplicated pitch classes</b> —
+    and never drops below neutral. This demo puts a <b>concrete formula</b> on trial: which tension measure, which complexity measure,
+    how the bound clamps — checked by marginal production on the formations that decide it. Everything below is one simplified board:
+    every pitch class you raise is a voice; all selected voices form <b>one connected formation</b>; register and octaves are invisible by
+    design. Magnitudes are provisional tuning — react to the shape.
+  </p>
+
+  <section>
+    <h2>The shape on trial</h2>
+    <div class="panel">
+      <div class="formula">
+        voice factor&nbsp;=&nbsp;<code>Π(1 + bonus)</code> over the named instances it sings&nbsp;×&nbsp;<span class="q">Q</span>
+      </div>
+      <div class="formula">
+        <span class="q">Q</span>&nbsp;=&nbsp;<code>clamp(1 + complexity − tension, 1, cap)</code> — one per formation, over deduplicated classes
+      </div>
+      <p class="fnote">
+        Tension weighs every <b>pair</b> of distinct pitch classes by interval class. Complexity pays per distinct class past the first.
+        The clamp is two-sided: tension can only pull Q back down to <b>neutral ×1.00</b>, complexity can only stack up to the cap.
+        A formation that names no chord stays at exactly ×1.00 — chord-sourced production only. Tune the two knobs below and watch the
+        clamp change its mind.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Formation &amp; knobs</h2>
+    <div class="cols">
+      <div>
+        <div class="ring" id="ring"></div>
+        <div class="presets" id="presets"></div>
+      </div>
+      <div class="panel knobs">
+        <label>Complexity rate c
+          <input type="range" id="kRate" min="0" max="0.15" step="0.005" value="0.06">
+          <span class="val" id="kRateVal">0.060</span>
+        </label>
+        <label>Quality cap
+          <input type="range" id="kCap" min="1" max="1.5" step="0.05" value="1.25">
+          <span class="val" id="kCapVal">1.25</span>
+        </label>
+        <label style="gap: 10px;">Q lands on
+          <select id="kScope">
+            <option value="all">every producing member</option>
+            <option value="singers">named singers only</option>
+          </select>
+        </label>
+        <p class="fnote" style="margin-top: 6px;">
+          The tension weights themselves are fixed on trial defaults — semitone 1.0, tritone 0.5, whole tone 0.2, thirds and fifths 0
+          — react to the table through what it does to the formations below, then tell me which weights feel wrong.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Readout — every component on its own line</h2>
+    <div class="panel readout" id="readout"></div>
+  </section>
+
+  <section>
+    <h2>The alternative on paper — shared-reference harmonicity</h2>
+    <div class="panel" id="alt"></div>
+  </section>
+
+  <section>
+    <h2>Guided checks — the formations that decide it</h2>
+    <div class="tabs" id="tabs"></div>
+    <div class="walk" id="walk"></div>
+  </section>
+
+  <p class="foot">
+    PROTOTYPE — throwaway, never merges. Class-space simplification of <code>src/engine/chords.ts</code>: one connected formation,
+    register-free, spacers and silent voices folded into the voices they'd sing beside. Numbers are provisional tuning per the map's
+    standing note.
+  </p>
+</div>
+
+<script>
+"use strict";
+
+const NOTE = ["C","D♭","D","E♭","E","F","F♯","G","A♭","A","B♭","B"];
+const IC_NAME = {1:"semitone",2:"whole tone",3:"minor third",4:"major third",5:"perfect fourth/fifth",6:"tritone"};
+const TENSION = {1:1.0, 2:0.2, 3:0, 4:0, 5:0, 6:0.5};
+const HARMONIC = {0:1.0, 1:0.10, 2:0.35, 3:0.60, 4:0.70, 5:0.85, 6:0.08, 7:0.90, 8:0.50, 9:0.50, 10:0.25, 11:0.12};
+const INTERVAL_NAME = {0:"octave",1:"semitone",2:"whole tone",3:"minor third",4:"major third",5:"perfect fourth",6:"tritone",7:"perfect fifth",8:"minor sixth",9:"major sixth",10:"minor seventh",11:"major seventh"};
+
+const VOCAB = [
+  {name:"Octave", intervals:[0,0], bonus:0.15},
+  {name:"Fifth", intervals:[0,7], bonus:0.30},
+  {name:"Flat seventh", intervals:[0,10], bonus:0.45},
+  {name:"Suspended fourth", intervals:[0,5,7], bonus:0.55},
+  {name:"Minor triad", intervals:[0,3,7], bonus:0.60},
+  {name:"Diminished triad", intervals:[0,3,6], bonus:0.65},
+  {name:"Augmented triad", intervals:[0,4,8], bonus:0.65},
+  {name:"Major triad", intervals:[0,4,7], bonus:0.75},
+  {name:"Minor seventh", intervals:[0,3,7,10], bonus:0.90},
+  {name:"Dominant seventh", intervals:[0,4,7,10], bonus:0.95},
+  {name:"Major seventh", intervals:[0,4,7,11], bonus:1.05},
+];
+
+function choose(k, m) {
+  if (k < m) return 0;
+  let out = 1;
+  for (let i = 0; i < m; i++) out = (out * (k - i)) / (i + 1);
+  return Math.round(out);
+}
+
+function distinctClasses(counts) {
+  const out = [];
+  for (let c = 0; c < 12; c++) if (counts[c] > 0) out.push(c);
+  return out;
+}
+
+function namedTerms(counts) {
+  const terms = [];
+  for (const def of VOCAB) {
+    const uniq = [...new Set(def.intervals)].sort((a,b) => a-b);
+    const mult = uniq.map(iv => def.intervals.filter(x => x === iv).length);
+    for (let root = 0; root < 12; root++) {
+      const cls = uniq.map(iv => (root + iv) % 12);
+      if (cls.some((c,i) => counts[c] < mult[i])) continue;
+      const instances = cls.reduce((t,c,i) => t * choose(counts[c], mult[i]), 1);
+      if (instances < 1) continue;
+      const perClass = {};
+      cls.forEach((c,i) => {
+        perClass[c] = choose(counts[c]-1, mult[i]-1) *
+          cls.reduce((t,o,j) => j === i ? t : t * choose(counts[o], mult[j]), 1);
+      });
+      terms.push({name:def.name, bonus:def.bonus, root, instances, cls, perClass});
+    }
+  }
+  return terms;
+}
+
+function classProduct(terms, c) {
+  let p = 1;
+  for (const t of terms) {
+    const n = t.perClass[c];
+    if (n) p *= (1 + t.bonus) ** n;
+  }
+  return p;
+}
+
+function tensionBreakdown(counts) {
+  const ds = distinctClasses(counts);
+  const rows = [];
+  let total = 0;
+  for (let i = 0; i < ds.length; i++) {
+    for (let j = i+1; j < ds.length; j++) {
+      const d = Math.abs(ds[i] - ds[j]);
+      const ic = Math.min(d, 12 - d);
+      const w = TENSION[ic];
+      total += w;
+      if (w > 0) rows.push({a:ds[i], b:ds[j], ic, w});
+    }
+  }
+  rows.sort((x,y) => y.w - x.w);
+  return {rows, total};
+}
+
+function analyze(counts, knobs) {
+  const ds = distinctClasses(counts);
+  const terms = namedTerms(counts);
+  const tension = tensionBreakdown(counts);
+  const C = knobs.rate * Math.max(0, ds.length - 1);
+  const named = terms.length > 0;
+  const interior = 1 + C - tension.total;
+  const Q = !named ? 1 : Math.min(knobs.cap, Math.max(1, interior));
+  const singers = new Set();
+  terms.forEach(t => t.cls.forEach(c => singers.add(c)));
+  const members = ds.map(c => {
+    const product = classProduct(terms, c);
+    const applies = knobs.scope === "all" || singers.has(c);
+    return {c, product, instances: terms.filter(t => t.perClass[c]).length, Q: applies ? Q : 1, final: product * (applies ? Q : 1)};
+  });
+  const voices = counts.reduce((t,n) => t+n, 0);
+  const totalToday = members.reduce((t,m) => t + m.product * counts[m.c], 0);
+  const totalQ = members.reduce((t,m) => t + m.final * counts[m.c], 0);
+  return {ds, terms, tension, C, named, interior, Q, floorBinds: named && interior < 1, capBinds: named && interior > knobs.cap, members, totalToday, totalQ, voices};
+}
+
+function sharedReference(counts, root) {
+  const ds = distinctClasses(counts);
+  const rows = ds.map(c => ({c, iv: (c - root + 12) % 12, h: HARMONIC[(c - root + 12) % 12]}));
+  const H = rows.reduce((t,r) => t + r.h, 0);
+  const Qalt = Math.min(1.25, Math.max(1, 1 + 0.15 * (H - 1.2)));
+  return {rows, H, Qalt};
+}
+
+const PRESETS = [
+  {label:"C major", counts:{0:1,4:1,7:1}},
+  {label:"C7", counts:{0:1,4:1,7:1,10:1}},
+  {label:"Cmaj7", counts:{0:1,4:1,7:1,11:1}},
+  {label:"Doubled root", counts:{0:2,4:1,7:1}},
+  {label:"Bridged C + D♭", counts:{0:1,1:1,4:1,5:1,7:1,8:1}},
+  {label:"C + F♯", counts:{0:1,4:1,6:1,7:1}},
+  {label:"Fifths stack", counts:{0:1,2:1,7:1}},
+  {label:"Unnamed cluster", counts:{0:1,1:1,4:1}},
+  {label:"Whole tone", counts:{0:1,2:1,4:1,6:1,8:1,10:1}},
+];
+
+const WALKTHROUGHS = [
+  {
+    tab:"1 · Bridged chromatic triads",
+    intro:"Two major triads a semitone apart, wired into one formation by a spacer. Today's bonus-only board pays both triads in full and asks nothing. Watch what quality does — and what it refuses to do.",
+    steps:[
+      {label:"Build C major alone", counts:{0:1,4:1,7:1}, watch:"Clean triad: <b>zero tension</b>, so complexity pays unopposed — Q rides <b>above neutral</b>. This is the in-key baseline every expansion competes with."},
+      {label:"Bridge in the D♭ major triad", counts:{0:1,1:1,4:1,5:1,7:1,8:1}, watch:"Both triads still name and pay their instance bonuses — and <b>fourteen overlapping terms</b> ride along (F minor, C augmented, even a D♭ major seventh): today's subset matcher pays every recipe inside the mass. Tension outruns complexity and the <b>floor clamps Q at exactly 1.00</b> — but the stacking alone already beats any clean board. Question to react to: 'no quality bonus' cannot price chromatic density <i>down</i>, only refuse to price it up. If that's not enough, the lever is named-value or the clamp itself, not Q."},
+      {label:"Compare: the same six cells stacked in key", counts:{0:1,4:1,5:1,7:1,9:1}, watch:"C major with F major folded in — no semitones beyond E–F, both triads name, and <b>Q still floors</b>: five classes carry enough whole-tone and third weight to outrun the offset. The honest shape reading: <b>quality favors the small clean formation; named value favors density, in or out of key</b>. React to whether that trade is the one you want players to feel."},
+    ],
+  },
+  {
+    tab:"2 · Doubled roots",
+    intro:"Quality reads deduplicated pitch classes — register and multiplicity stay invisible to it. Doublings change only the named instances. Watch quality refuse to move while the instance product climbs.",
+    steps:[
+      {label:"C major, one voice per class", counts:{0:1,4:1,7:1}, watch:"Baseline: Q above neutral, every voice sings one Major-triad instance."},
+      {label:"Double the root", counts:{0:2,4:1,7:1}, watch:"Content unchanged — <b>Q identical</b>. What moved is instances: an Octave pairs the two C voices, and the Major triad now completes twice — note the asymmetry the engine already has: <b>E and G each sing both instances</b> while each C sings one. The doubled root's own voices earn less than the third does. Is that the honest read?"},
+      {label:"Triple the root", counts:{0:3,4:1,7:1}, watch:"Triad instances triple, two more Octaves form — and still <b>Q has not moved</b>. Quality tracks content; voices buy stacking. The dedup check passes if you agree the third triad instance is 'more chord' but not 'better chord'."},
+    ],
+  },
+  {
+    tab:"3 · Tense-but-organized",
+    intro:"The posture decision: a deliberately tense complex sonority can outproduce a plain consonant one, and quality never drops below neutral. Push a clean triad into grittier territory and watch where the wins come from.",
+    steps:[
+      {label:"C major", counts:{0:1,4:1,7:1}, watch:"The consonant baseline — Q above neutral from complexity alone."},
+      {label:"Add the flat seventh → C7", counts:{0:1,4:1,7:1,10:1}, watch:"The tritone and whole tones <b>eat the whole complexity offset</b> and the floor clamps Q to 1.00. But the Dominant-seventh instance bonus (+0.95 vs +0.75) carries the total <b>past</b> C major. Tense-but-organized wins — through named value, not quality. Does the split feel right, or should Q itself reward organized tension?"},
+      {label:"Soften it → Cmaj7", counts:{0:1,4:1,7:1,11:1}, watch:"The plush jazz sonority pays <b>full semitone weight</b> for its major seventh — the same interval class as an inner-voice m2 grind — and Q floors at 1.00 even as its instance bonus (+1.05) still wins the total. React to the table: should the M7-above-the-root weigh less than a chromatic cluster rub?"},
+      {label:"Then land a Shift voice: C major + F♯", counts:{0:1,4:1,6:1,7:1}, watch:"Back to the triad, plus one accidental — and even here the F♯ <b>still names something</b>: F♯–E read from F♯ is ten semitones, a Flat seventh on F♯ itself. Every whole-tone-adjacent accidental catches that pair term; the ♭9 over C7 named four diminished triads. True silence is rare — ic1/ic4-only pair sets like C·D♭·E (the <b>Unnamed cluster</b> preset, chordless, exactly ×1.00). Finding for the reaction: <b>this vocabulary under subset matching names nearly every three-class cluster</b> — 'bears tension only' mostly bites two-class accidental landings, not rich chromatic masses. Is that what 'named by discovery' should mean?"},
+    ],
+  },
+  {
+    tab:"4 · Register-free dedup",
+    intro:"The board is register-free: quality reads the pitch-class set, so where voices sit — packed or spread across octaves — cannot move it. In class space this is true by construction; the steps make the consequence explicit.",
+    steps:[
+      {label:"C major, packed", counts:{0:1,4:1,7:1}, watch:"One readout."},
+      {label:"Spread the voices across three octaves", counts:{0:1,4:1,7:1}, watch:"Nothing moves — <b>the readout is identical</b>. Register is invisible by construction; there is no spacing term to discover. Confirm this is the decision you want carried into implementation (no spacing, no voicing bonus)."},
+      {label:"Double every voice", counts:{0:2,4:2,7:2}, watch:"Every class's instance product multiplies (Octaves everywhere, triad instances stack) — and <b>Q is byte-identical</b> to the single-voice readout. The Mirror voice's future dream: doublings sweeten instances, never quality."},
+    ],
+  },
+  {
+    tab:"5 · The alternative on paper",
+    intro:"The shared-reference harmonicity model: score each pitch class by the just-ratio simplicity of its interval above an assumed reference root. Same formations as the checks above — now under the alternative. React to whether it survives.",
+    steps:[
+      {label:"C major, reference root C", counts:{0:1,4:1,7:1}, watch:"Reference C: octave, fifth, major third — high harmonicity, Q_alt above neutral. Looks plausible — <b>for this one formation</b>."},
+      {label:"Same three pitches, reference root A", counts:{0:1,4:1,7:1}, watch:"<b>The pitches did not change — the verdict did.</b> Against A the same C-major triad reads as minor thirds and a minor seventh: lower harmonicity, lower Q_alt. A formation's quality now depends on which end you read it from, and the board has no canonical root to give."},
+      {label:"Bridged C + D♭, pick either reference", counts:{0:1,1:1,4:1,5:1,7:1,8:1}, watch:"Two triads, two roots — <b>which reference?</b> Either choice flatters one triad and slurs the other; the symbolic model needs no answer because it weighs <b>pairs</b>, not roots. Bitonality breaks the reference model structurally."},
+      {label:"C7 under the reference model", counts:{0:1,4:1,7:1,10:1}, watch:"Against C the flat seventh scores near the bottom of the ladder: the model can only say 'worse'. It has no complexity offset, no posture — <b>a deliberately tense sonority can never outproduce a plain one</b>. This is the paper case for keeping the symbolic shape."},
+    ],
+  },
+];
+
+const state = {
+  counts: Array(12).fill(0),
+  knobs: {rate: 0.06, cap: 1.25, scope: "all"},
+  altRoot: 0,
+  preset: "C major",
+  walk: 0,
+  step: 0,
+};
+
+function setState(counts, presetLabel) {
+  state.counts = Array(12).fill(0);
+  for (const [k,v] of Object.entries(counts)) state.counts[+k] = v;
+  if (presetLabel !== undefined) state.preset = presetLabel;
+}
+
+function fmt(n, d=2) { return n.toFixed(d); }
+function pct(n) { return (n >= 0 ? "+" : "") + (n*100).toFixed(1) + "%"; }
+
+function renderRing() {
+  const ring = document.getElementById("ring");
+  ring.innerHTML = "";
+  for (let i = 0; i < 12; i++) {
+    const pc = (i * 7) % 12;
+    const ang = -90 + i * 30;
+    const rad = ang * Math.PI / 180;
+    const x = 170 + 148 * Math.cos(rad);
+    const y = 170 + 148 * Math.sin(rad);
+    const node = document.createElement("div");
+    node.className = "node " + (state.counts[pc] > 0 ? "on" : "off");
+    node.style.left = x + "px";
+    node.style.top = y + "px";
+    node.innerHTML = `<span class="ringdot"></span><div class="name">${NOTE[pc]}</div>
+      <button data-d="-1" data-pc="${pc}">−</button><span class="count">${state.counts[pc] || "·"}</span><button data-d="1" data-pc="${pc}">+</button>`;
+    ring.appendChild(node);
+  }
+}
+
+function renderReadout() {
+  const a = analyze(state.counts, state.knobs);
+  const el = document.getElementById("readout");
+  if (a.voices === 0) {
+    el.innerHTML = `<p style="color:var(--muted);margin:4px 0;">Raise at least one pitch class, or pick a preset.</p>`;
+    renderAlt(a);
+    return;
+  }
+  const chips = a.ds.map(c => `<span class="chip"><b>${NOTE[c]}</b> ×${state.counts[c]}</span>`).join("");
+  const termsRows = a.terms.map(t =>
+    `<tr><td><b>${t.name}</b> on ${NOTE[t.root]}</td><td>${t.cls.map(c => NOTE[c]).join(" · ")}</td>
+     <td class="num">×${fmt(1 + t.bonus)}</td><td class="num">${t.instances === 1 ? "1 instance" : t.instances + " instances"}</td></tr>`).join("");
+  const tensionRows = a.tension.rows.map(r =>
+    `<tr><td>${NOTE[r.a]}–${NOTE[r.b]}</td><td>${IC_NAME[r.ic]}</td><td class="num">${fmt(r.w)}</td></tr>`).join("");
+  const clampWord = !a.named ? "exactly neutral — no named chord"
+    : a.floorBinds ? `<b>floor binds</b> — tension ${fmt(a.tension.total)} outruns complexity ${fmt(a.C)}` 
+    : a.capBinds ? `<b>cap binds</b> — complexity outran the ${fmt(state.knobs.cap)} ceiling`
+    : "<b>interior</b> — no clamp touched";
+  const memberRows = a.members.map(m => {
+    const sings = m.instances > 0
+      ? m.instances + (m.instances === 1 ? " term" : " terms") + ` → ×${fmt(m.product)}`
+      : (state.knobs.scope === "singers" ? "sings nothing → ×1.00" : `sings nothing → ×${fmt(m.product)} × ${fmt(m.Q)} = ×${fmt(m.final)}`);
+    return `<tr><td><b>${NOTE[m.c]}</b> ×${state.counts[m.c]}</td><td>${sings}</td><td class="num">×${fmt(m.Q)}</td><td class="num">×${fmt(m.final)}</td></tr>`;
+  }).join("");
+  const delta = a.totalToday > 0 ? a.totalQ / a.totalToday - 1 : 0;
+  el.innerHTML = `
+    <div class="chips">${chips}</div>
+    ${a.named ? `
+    <div class="component"><h3><span class="sym">Named value</span> — the instances each voice sings</h3>
+      <table><tr><th>Term</th><th>Classes</th><th class="num">Per instance</th><th class="num">Stacking</th></tr>${termsRows}</table>
+    </div>` : `
+    <div class="neutral-note">No named chord — the formation stays at <b>exactly ×1.00</b> (chord-sourced production only). Unnamed content bears tension and earns nothing.</div>`}
+    <div class="cols">
+      <div class="component"><h3><span class="sym">Tension</span> — over ${a.ds.length} deduplicated classes</h3>
+        ${a.tension.rows.length ? `<table><tr><th>Pair</th><th>Interval</th><th class="num">Weight</th></tr>${tensionRows}</table>
+        <p style="margin:6px 0 0;font-size:13px;color:var(--muted);">T&nbsp;=&nbsp;<b>${fmt(a.tension.total)}</b></p>`
+        : `<p style="color:var(--muted);font-size:13px;margin:4px 0;">No tense pair — T&nbsp;=&nbsp;<b>0.00</b></p>`}
+      </div>
+      <div class="component"><h3><span class="sym">Complexity</span></h3>
+        <p style="margin:4px 0;font-size:13.5px;">C = ${fmt(state.knobs.rate,3)} × (${a.ds.length} − 1) = <b>${fmt(a.C)}</b></p>
+      </div>
+    </div>
+    <div class="qline">Q&nbsp;=&nbsp;clamp(1&nbsp;+&nbsp;${fmt(a.C)}&nbsp;−&nbsp;${fmt(a.tension.total)},&nbsp;1,&nbsp;${fmt(state.knobs.cap)})&nbsp;=&nbsp;<b>×${fmt(a.Q)}</b> — ${clampWord}</div>
+    <div class="component"><h3><span class="sym">Voices</span> — instance product × Q</h3>
+      <table><tr><th>Voice</th><th>Named stacking</th><th class="num">Q</th><th class="num">Final</th></tr>${memberRows}</table>
+    </div>
+    <div class="totals">
+      <div class="cell"><div class="k">Total — today, bonus-only</div><div class="v">${fmt(a.totalToday)}</div></div>
+      <div class="cell"><div class="k">Total — with quality</div><div class="v">${fmt(a.totalQ)}</div></div>
+      <div class="cell delta"><div class="k">Marginal quality delta</div><div class="v">${pct(delta)}</div></div>
+    </div>`;
+  renderAlt(a);
+}
+
+function renderAlt(a) {
+  const r = sharedReference(state.counts, state.altRoot);
+  const el = document.getElementById("alt");
+  if (a.voices === 0) { el.innerHTML = `<p style="color:var(--muted);margin:4px 0;">Raise a formation to compare.</p>`; return; }
+  const rows = r.rows.map(x => `<tr><td><b>${NOTE[x.c]}</b></td><td>${INTERVAL_NAME[x.iv]} above ${NOTE[state.altRoot]}</td><td class="num">${fmt(x.h)}</td></tr>`).join("");
+  el.innerHTML = `
+    <p style="margin:2px 0 8px;color:var(--muted);max-width:80ch;">
+      Score every distinct class by the simplicity of its interval above one assumed reference root, sum it, normalize. This is the
+      model the decision says to beat on paper before any multiplier commits — <b>same formation, both columns</b>.
+    </p>
+    <div class="rootpicker">${NOTE.map((n,i) => `<button data-root="${i}" class="${i === state.altRoot ? "active" : ""}">${n}</button>`).join("")}</div>
+    <div class="cols">
+      <div class="component"><h3><span class="sym">H</span> — reference ${NOTE[state.altRoot]}</h3>
+        <table><tr><th>Class</th><th>Interval</th><th class="num">Weight</th></tr>${rows}</table>
+        <p style="margin:6px 0 0;font-size:13px;">H&nbsp;=&nbsp;<b>${fmt(r.H)}</b></p>
+      </div>
+      <div class="component"><h3><span class="sym">Side by side</span></h3>
+        <table><tr><th>Model</th><th class="num">Verdict</th></tr>
+          <tr><td>Symbolic (the shape on trial)</td><td class="num"><b>×${fmt(a.Q)}</b></td></tr>
+          <tr><td>Shared-reference harmonicity</td><td class="num"><b>×${fmt(r.Qalt)}</b></td></tr>
+        </table>
+        <ul class="critique">
+          <li><b>Reference problem:</b> switch the root above — same pitches, different verdict. The board has no canonical root to hand the model.</li>
+          <li><b>Bitonality:</b> bridged triads with competing roots get an arbitrary score either way; the symbolic model weighs pairs and needs no answer.</li>
+          <li><b>No posture:</b> harmonicity can only score tension down — there is no offset, so deliberately tense complex sonorities can never win.</li>
+          <li><b>Doubling-blind in the wrong way:</b> reference weights are per-class too, but its verdict can't separate "organized" from "sparse" the way complexity past-first-class does.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="verdict">Paper read: the reference model loses on <b>attribution</b> (whose root?) and <b>posture</b> (tension can only subtract). Its one virtue — perceptual grounding — is already out of scope until the game renders a real simultaneous mix.</p>`;
+}
+
+const WALK_DESC = ["the happy path","a tricky edge case","an attempt at something that should fail"];
+function renderWalk() {
+  const tabs = document.getElementById("tabs");
+  tabs.innerHTML = "";
+  WALKTHROUGHS.forEach((w, i) => {
+    const b = document.createElement("button");
+    b.textContent = w.tab;
+    if (i === state.walk) b.classList.add("active");
+    b.onclick = () => { state.walk = i; state.step = 0; renderWalk(); };
+    tabs.appendChild(b);
+  });
+  const w = WALKTHROUGHS[state.walk];
+  const box = document.getElementById("walk");
+  box.innerHTML = `<p class="intro">${w.intro}</p><div class="steps"></div>`;
+  const steps = box.querySelector(".steps");
+  w.steps.forEach((s, i) => {
+    const div = document.createElement("div");
+    div.className = "step" + (i === state.step ? " current" : "");
+    div.innerHTML = `<div class="stephead"><span class="stepno">${i+1}</span><button class="stepbtn" data-i="${i}">${s.label}</button></div>
+      ${i <= state.step ? `<div class="watch">${s.watch}</div>` : ""}`;
+    steps.appendChild(div);
+  });
+  box.querySelectorAll(".stepbtn").forEach(btn => {
+    btn.onclick = () => {
+      const i = +btn.dataset.i;
+      state.step = i;
+      setState(WALKTHROUGHS[state.walk].steps[i].counts, WALKTHROUGHS[state.walk].tab + " · step " + (i+1));
+      renderAll();
+    };
+  });
+}
+
+function renderPresets() {
+  const el = document.getElementById("presets");
+  el.innerHTML = "";
+  PRESETS.forEach(p => {
+    const b = document.createElement("button");
+    b.textContent = p.label;
+    if (state.preset === p.label) b.classList.add("active");
+    b.onclick = () => { setState(p.counts, p.label); renderAll(); };
+    el.appendChild(b);
+  });
+}
+
+function renderAll() {
+  renderRing();
+  renderPresets();
+  renderReadout();
+  renderWalk();
+}
+
+document.getElementById("ring").addEventListener("click", e => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  const pc = +btn.dataset.pc;
+  const d = +btn.dataset.d;
+  state.counts[pc] = Math.min(4, Math.max(0, state.counts[pc] + d));
+  state.preset = "";
+  renderAll();
+});
+document.getElementById("kRate").addEventListener("input", e => {
+  state.knobs.rate = +e.target.value;
+  document.getElementById("kRateVal").textContent = fmt(state.knobs.rate, 3);
+  renderReadout();
+});
+document.getElementById("kCap").addEventListener("input", e => {
+  state.knobs.cap = +e.target.value;
+  document.getElementById("kCapVal").textContent = fmt(state.knobs.cap);
+  renderReadout();
+});
+document.getElementById("kScope").addEventListener("change", e => {
+  state.knobs.scope = e.target.value;
+  renderReadout();
+});
+document.getElementById("alt").addEventListener("click", e => {
+  const btn = e.target.closest("button[data-root]");
+  if (!btn) return;
+  state.altRoot = +btn.dataset.root;
+  renderReadout();
+});
+
+setState(PRESETS[0].counts, PRESETS[0].label);
+renderAll();
+</script>
+</body>
+</html>
