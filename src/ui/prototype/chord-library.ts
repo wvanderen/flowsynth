@@ -2,11 +2,11 @@
 // Never merge to main. Lives on the prototype/chord-library-218 branch.
 //
 // QUESTION: what browsable chord library makes known and undiscovered
-// chords understandable — glyphs with notes labeled at corners, unlocked
-// vs undiscovered entries, discovery triggers, and whether a small
-// permanent discovery bonus supports exploration? And what does
-// discovery even key on: the chord class, its root, the voicing, or the
-// concrete formation? Each variant answers that differently.
+// chords understandable — glyphs, unlocked vs undiscovered entries,
+// discovery triggers, and whether a small permanent discovery bonus
+// supports exploration? And what does discovery even key on: the chord
+// class, its root, the voicing, or the concrete formation? Each variant
+// answers that differently.
 //
 //   A "Atlas" — class × root grid. Discovery keys on (class, root):
 //     first time a C-root Major triad forms, the C cell under Major
@@ -18,15 +18,23 @@
 //     formation (class + root), each entry carrying its voicing
 //     history; a compact class reference rides beside it.
 //
+// ITERATION TWO (maintainer reaction to the first round): B is the
+// frontrunner, the discovery bonus earns its place, all six candidates
+// should enter the vocabulary, and the door lands on the board ledger.
+// The first glyph did not speak the board's language, so it is gone:
+// every glyph is now a mini octave-stack lattice — the chord's voices
+// as small module hexes at their canonical cheapest placements (the
+// honest geometry: an M3 sits three wire cells out and the glyph
+// sprawls exactly that far), with the chord's annotation overlaid in
+// its hue — ADR-0025's language: an adjacent pair draws the trimmed
+// seam center-to-center; a bridged pair or three-plus voices draw the
+// offset outline. Unheard classes render dashed with "?" labels;
+// candidates render dashed and hueless — not yet in the vocabulary.
+//
 // Shared, so the human reacts to the differences that matter:
-//   - One glyph language everywhere: the board's hexagon with the
-//     chord's notes as corner dots, labeled (recipe labels R/3/5 for a
-//     class view, real note names C/E/G for a root view; "?" while the
-//     class is unheard).
-//   - A probe strip: toggle pitch classes, watch the matcher answer.
-//     Live classes discover; proposed candidates answer "unnamed
-//     sonority — tension only" (the #217 handoff) so the human can
-//     react to which candidates should enter the vocabulary.
+//   - A probe cluster: toggle pitch classes, watch the matcher answer.
+//     Live classes discover (flash + entry); proposed candidates answer
+//     "unnamed sonority — tension only" (the #217 handoff).
 //   - The discovery bonus as a bar toggle: every entry gains or loses
 //     its "+1% / discovery" line and the total. The mechanic is on
 //     trial, not the number (numbers are tuning per the map).
@@ -191,52 +199,123 @@ function probeDiscover(): void {
   }
 }
 
-// ── Glyphs: the board's hexagon, notes as labeled corner dots ───────
+// ── Glyphs: mini octave-stack lattices in the board's own language ──
 
-function glyphSvg(def: ChordDef, size: number, labels: "recipe" | "root" | "hidden", root = 0, hue?: string): string {
-  const stroke = hue ?? "var(--line-strong)";
-  const fill = hue ? `color-mix(in srgb, ${hue} 16%, var(--panel))` : "var(--hex-face)";
-  const heard = classKnown(def);
-  const labelColor = labels === "hidden" || !heard ? "var(--muted)" : "var(--ink)";
-  // Corner anchors (pointy-top hexagon), evenly spread over the used count.
-  const n = def.intervals.length;
-  const corners = [0, 1, 2, 3].slice(0, Math.max(n, 2));
-  const angle = (i: number): number => -90 + (360 / Math.max(n, 2)) * i;
-  const cx = size / 2;
-  const hexR = size / 2 - 14;
-  const hexPath = (() => {
-    const pts: string[] = [];
-    for (let i = 0; i < 6; i++) {
-      const a = ((-90 + 60 * i) * Math.PI) / 180;
-      pts.push(`${(cx + hexR * Math.cos(a)).toFixed(1)},${(cx + hexR * Math.sin(a)).toFixed(1)}`);
+// The chord hues are the seams' colors (theme tokens) — the glyph's
+// annotation wears exactly what the board draws.
+const HUES: Record<string, string> = {
+  octave: "var(--chord-octave)",
+  fifth: "var(--chord-fifth)",
+  flat7: "var(--chord-flat-seventh)",
+  minor: "var(--chord-minor-triad)",
+  major: "var(--chord-major-triad)",
+};
+
+// The canonical cheapest lattice offset for an interval class: the
+// (dq, dr) with 7·dq + 12·dr ≡ interval (mod 12) at minimal hex
+// distance — where a player would actually build the voice. The
+// sprawl is the truth: an M3 lands three wire cells out and the
+// glyph is exactly as wide as the chord is expensive.
+function latticeOffset(interval: number): { dq: number; dr: number; dist: number } {
+  const target = ((interval % 12) + 12) % 12;
+  let best: { dq: number; dr: number; dist: number } | null = null;
+  for (let dq = -6; dq <= 6; dq++) {
+    for (let dr = -6; dr <= 6; dr++) {
+      if ((((7 * dq + 12 * dr) % 12) + 12) % 12 !== target) continue;
+      const dist = (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2;
+      if (!best || dist < best.dist || (dist === best.dist && Math.abs(dr) < Math.abs(best.dr))) best = { dq, dr, dist };
     }
-    return `M${pts.join(" L")} Z`;
-  })();
-  const dots = def.intervals
-    .map((interval, i) => {
-      const a = (angle(corners[i]!) * Math.PI) / 180;
-      const dx = cx + (hexR + 9) * Math.cos(a);
-      const dy = cx + (hexR + 9) * Math.sin(a);
-      const dotX = cx + hexR * Math.cos(a);
-      const dotY = cx + hexR * Math.sin(a);
-      const pc = labels === "root" ? (root + interval) % 12 : interval;
-      const text =
-        labels === "hidden" || (!heard && labels === "root")
-          ? "?"
-          : labels === "root"
-            ? noteOf(pc)
-            : def.id === "octave" && i === 1
-              ? "R·8"
-              : INTERVAL_LABEL[interval] ?? "?";
-      const anchor = dx < cx - 2 ? "end" : dx > cx + 2 ? "start" : "middle";
-      const lx = dx < cx - 2 ? dx - 4 : dx > cx + 2 ? dx + 4 : dx;
-      return `<circle cx="${dotX.toFixed(1)}" cy="${dotY.toFixed(1)}" r="3.4" fill="${heard || labels === "recipe" ? stroke : "var(--line)"}" />
-        <text x="${lx.toFixed(1)}" y="${(dy + 3).toFixed(1)}" text-anchor="${anchor}" fill="${labelColor}" font-size="10.5" font-family="var(--mono)">${text}</text>`;
+  }
+  return best!;
+}
+
+interface Pt {
+  x: number;
+  y: number;
+}
+
+// Angle sort around the centroid — the hull through a chord's voice
+// centers, the offset-outline's path. Every launch chord's voices sit
+// on their own hull, so no point is ever dropped.
+function hullOf(pts: Pt[]): Pt[] {
+  const cx = pts.reduce((t, p) => t + p.x, 0) / pts.length;
+  const cy = pts.reduce((t, p) => t + p.y, 0) / pts.length;
+  return [...pts].sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
+}
+
+function hexPathAt(cx: number, cy: number, s: number): string {
+  const pts: string[] = [];
+  for (let i = 0; i < 6; i++) {
+    const a = (60 * i * Math.PI) / 180;
+    pts.push(`${(cx + s * Math.cos(a)).toFixed(1)},${(cy + s * Math.sin(a)).toFixed(1)}`);
+  }
+  return `M${pts.join(" L")} Z`;
+}
+
+function latticeGlyph(def: ChordDef, size: number, labels: "recipe" | "root" | "hidden", root = 0): string {
+  const hue = HUES[def.id];
+  const seam = hue ?? "var(--muted)";
+  const heard = classKnown(def);
+  const dashed = !heard || def.status === "proposed";
+  const inVocabulary = def.status === "live";
+  // The Octave is two voices of one class a register apart — offsets by
+  // hand, since both intervals are class 0.
+  const offsets = def.id === "octave" ? [
+    { dq: 0, dr: 0, dist: 0 },
+    { dq: 0, dr: 1, dist: 1 },
+  ] : def.intervals.map(latticeOffset);
+  const SQRT3 = Math.sqrt(3);
+  const unit = offsets.map((o) => ({ x: 1.5 * o.dq, y: SQRT3 * (o.dr + o.dq / 2) }));
+  // Fit the arrangement, then cap the mini hex so small chords stay
+  // legible rather than blowing up.
+  const half = size / 2 - 4;
+  const mx = Math.max(...unit.map((p) => Math.abs(p.x))) + 1;
+  const my = Math.max(...unit.map((p) => Math.abs(p.y))) + SQRT3 / 2;
+  const s = Math.min(half / Math.max(mx, my), 13);
+  const pts = unit.map((p) => ({ x: size / 2 + p.x * s, y: size / 2 + p.y * s }));
+  const label = (interval: number, i: number): string =>
+    labels === "hidden"
+      ? "?"
+      : labels === "root"
+        ? noteOf(root + interval)
+        : def.id === "octave" && i === 1
+          ? "R·8"
+          : INTERVAL_LABEL[interval] ?? "?";
+  const fontSize = Math.max(7.5, Math.min(10, s * 0.75));
+  const voices = pts
+    .map((p, i) => {
+      const text = s >= 8 ? label(def.intervals[i]!, i) : "";
+      return `<path d="${hexPathAt(p.x, p.y, s)}" fill="${heard && inVocabulary ? `color-mix(in srgb, ${seam} 18%, var(--panel))` : "var(--panel)"}"
+        stroke="${heard ? seam : "var(--line)"}" stroke-width="1.3" ${dashed ? 'stroke-dasharray="3.5 2.5"' : ""} />
+      <text x="${p.x.toFixed(1)}" y="${(p.y + fontSize * 0.35).toFixed(1)}" text-anchor="middle" fill="${heard ? "var(--ink)" : "var(--muted)"}"
+        font-size="${fontSize.toFixed(1)}" font-family="var(--mono)">${text}</text>`;
     })
     .join("");
+  // ADR-0025's annotation language: an adjacent pair carries the trimmed
+  // seam center-to-center; a bridged pair (the ♭7 and kin) or three-plus
+  // voices draw the offset outline instead. Candidates stay hueless —
+  // not yet in the vocabulary.
+  let annotation = "";
+  const adjacentPair = def.intervals.length === 2 && offsets[1]!.dist === 1;
+  if (adjacentPair) {
+    const [a, b] = pts;
+    const dx = b!.x - a!.x;
+    const dy = b!.y - a!.y;
+    const len = Math.hypot(dx, dy);
+    const trim = s * 0.85;
+    const ax = a!.x + (dx / len) * trim;
+    const ay = a!.y + (dy / len) * trim;
+    const bx = b!.x - (dx / len) * trim;
+    const by = b!.y - (dy / len) * trim;
+    annotation = `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}"
+      stroke="${heard ? seam : "var(--line)"}" stroke-width="2.6" stroke-linecap="round" ${dashed ? 'stroke-dasharray="4 3"' : ""} />`;
+  } else {
+    const ring = hullOf(pts).map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ") + " Z";
+    annotation = `<path d="${ring}" fill="${heard && inVocabulary ? `color-mix(in srgb, ${seam} 9%, transparent)` : "transparent"}"
+      stroke="${heard ? seam : "var(--line)"}" stroke-width="1.6" stroke-linejoin="round" ${dashed ? 'stroke-dasharray="5 4"' : ""} />`;
+  }
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true">
-    <path d="${hexPath}" fill="${fill}" stroke="${heard || labels === "recipe" ? stroke : "var(--line)"}" stroke-width="1.4" ${heard ? "" : 'stroke-dasharray="4 3"'} />
-    ${dots}
+    ${annotation}${voices}
   </svg>`;
 }
 
@@ -259,7 +338,7 @@ function renderAtlas(): string {
     }).join("");
     return `<section class="p218-class">
       <div class="p218-class-head">
-        ${glyphSvg(def, 64, "recipe")}
+        ${latticeGlyph(def, 76, "recipe")}
         <div>
           <h3>${known ? def.name : "Undiscovered"}</h3>
           <p class="p218-recipe">${def.intervals.map((i) => (def.id === "octave" && i === 0 ? "R" : INTERVAL_LABEL[i]!)).join(" · ")}
@@ -283,7 +362,7 @@ function renderFieldGuide(): string {
     const heard = rootsHeard(def);
     const known = classKnown(def);
     return `<article class="p218-guide-card ${known ? "" : "locked"}">
-      ${glyphSvg(def, 92, known ? "recipe" : "hidden")}
+      ${latticeGlyph(def, 108, known ? "recipe" : "hidden")}
       <div class="p218-guide-body">
         <h3>${known ? def.name : "· · ·"}</h3>
         <p class="p218-recipe">${def.intervals.length} voices · ${WIRES[def.id] ?? "—"} ${WIRES[def.id] === 1 ? "wire" : "wires"}${known ? ` · first heard ${heard.firstAt}` : " · recipe unconfirmed"}</p>
@@ -307,7 +386,7 @@ function renderAnthology(): string {
       const def = LIVE.find((d) => d.id === event.chordId)!;
       const vCount = state.voicings.get(`${event.chordId}|${event.root}`)?.size ?? 1;
       return `<article class="p218-entry">
-        ${glyphSvg(def, 56, "root", event.root)}
+        ${latticeGlyph(def, 104, "root", event.root)}
         <div>
           <h3>${def.name} · ${noteOf(event.root)}</h3>
           <p class="p218-recipe">first formed session #${event.session} · ${vCount} voicing${vCount === 1 ? "" : "s"}</p>
@@ -344,7 +423,7 @@ function renderCandidates(mode: "cards" | "none"): string {
   if (mode === "none") return "";
   const cards = PROPOSED.map(
     (def) => `<article class="p218-guide-card proposed">
-      ${glyphSvg(def, 84, "recipe")}
+      ${latticeGlyph(def, 96, "recipe")}
       <div class="p218-guide-body">
         <h3>${def.name} <span class="p218-stamp">candidate</span></h3>
         <p class="p218-recipe">${def.intervals.map((i) => INTERVAL_LABEL[i]!).join(" · ")} · ${def.intervals.length} voices</p>
