@@ -39,7 +39,7 @@ import { formatBalance, formatDate, formatCountdown, formatInt, formatNumber, fo
 import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG } from "./ledger";
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
 import { containerWidth, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX } from "./container";
-import { protoBloom, protoFaceBuy, protoForgeLockButtons, protoForgeNote, protoReflect, protoSweepSuffix } from "./prototype/polish";
+import { protoBloom, protoFaceBuy, protoForgeDockLocked, protoForgeDockSuffix, protoForgeLockButtons, protoForgeNote, protoReflect, protoSweepSuffix } from "./prototype/polish";
 import { liveAttr, liveSet } from "./live";
 import {
   bindMutatorLayer,
@@ -698,7 +698,14 @@ function toolActions(): ToolAction[] {
       // the one detail — this read, or the Forge modal's meter block. Open
       // in flow too: the peek never blocks the board, and taking a choice
       // stays an upgrade-mode act (the engine refuses it).
-      title: (app, projected) => meterDetail(app, projected.forgeRate, projected.mutatorForgeRate),
+      // PROTOTYPE (#220): forge=3 locks the sheet in flow instead — the
+      // tooltip carries the meter read plus the lock reason.
+      disabled: (app) => protoForgeDockLocked(app.state),
+      title: (app, projected) => {
+        const read = meterDetail(app, projected.forgeRate, projected.mutatorForgeRate);
+        const lock = protoForgeDockSuffix(app.state);
+        return lock ? `${read}${lock}` : read;
+      },
     },
     {
       op: "cell",

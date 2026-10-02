@@ -19,14 +19,17 @@
 //                 "+1"→"+0", "MAX"→"MAX·0" on faces, so the nothing-to-buy
 //                 state is unmistakable at a glance without disabling.
 //
-//   rate=0|1|2    The rate-hover overlay's size (350px × min(60vh, 420px)
+//   rate=0|1|2|3  The rate-hover overlay's size (350px × min(60vh, 420px)
 //                 today; a grown roster scrolls in a thin column).
 //     0 current   350px wide, 420px tall cap.
 //     1 roomy     460px wide, min(76vh, 640px) tall.
 //     2 ledger-wide — the popover spans the board ledger's own width
 //                 (min(560px, ledger width)), same taller cap.
+//     3 VERDICT   — whole ledger is the hover/focus area, the inner
+//                 hairline (the rate cell's button border and the ⓘ pill's
+//                 static ring) gone, popover drops ledger-wide.
 //
-//   forge=0|1|2   Forge choices locked during flow (today the modal opens
+//   forge=0|1|2|3 Forge choices locked during flow (today the modal opens
 //                 in flow — the peek — and a Take click dies on an engine
 //                 toast: "Forge choices belong to upgrade mode.").
 //     0 current   Active tiles; the click refuses via toast.
@@ -37,6 +40,10 @@
 //                 mid-session; the module/mutator waits in its tray until
 //                 the session ends (placement stays flow-locked). The note
 //                 states that consequence.
+//     3 VERDICT   — the sheet never expands in flow: the dock button
+//                 disables, its tooltip carries the meter read plus the
+//                 lock reason, and the badge/pip stay as the visual
+//                 indicator. Tooltip and indicator are the in-flow info.
 //
 //   reflect=0|1|2 The reflection slider (five positions today; the map asks
 //                 for continuous, minding existing 1–5 save values — the
@@ -44,8 +51,12 @@
 //                 ints stay valid points and nothing migrates).
 //     0 current   min=1 max=5 step=1, neutral 3.
 //     1 continuous — step=any, a small neutral tick at center.
-//     2 ends respond — variant 1 plus the rough/great end labels brighten
+//     2 VERDICT   — continuous plus the rough/great end labels brighten
 //                 as the thumb approaches them (no bands, no numbers).
+//
+// Reviewed verdicts (issue #220, 2026-10-02) are each surface's default:
+// a naked dev URL shows the decided contracts; pass ?face=0 etc. for the
+// controls.
 //
 // The board seeds in code (no save file): a representative mid-game blob —
 // some faces affordable, several expensive veterans broke, tray module,
@@ -62,19 +73,29 @@ import type { App } from "../app";
 type Surface = "face" | "rate" | "forge" | "reflect";
 
 const SURFACES: { key: Surface; label: string; variants: string[] }[] = [
-  { key: "face", label: "Face", variants: ["current", "shortfall tooltips", "zero reads zero"] },
-  { key: "rate", label: "Rate hover", variants: ["current 350px", "roomy 460px", "ledger-wide"] },
-  { key: "forge", label: "Forge in flow", variants: ["current: toast refusal", "inline lock", "take during flow"] },
-  { key: "reflect", label: "Reflection", variants: ["five positions", "continuous", "continuous, ends respond"] },
+  { key: "face", label: "Face", variants: ["current", "shortfall tooltips", "zero reads zero ◀ verdict"] },
+  { key: "rate", label: "Rate hover", variants: ["current 350px", "roomy 460px", "ledger-wide (cell hover)", "whole ledger is the hover ◀ verdict"] },
+  { key: "forge", label: "Forge in flow", variants: ["current: toast refusal", "inline lock", "take during flow", "sheet locked in flow ◀ verdict"] },
+  { key: "reflect", label: "Reflection", variants: ["five positions", "continuous", "continuous, ends respond ◀ verdict"] },
 ];
 
+// The reviewed verdicts (issue #220): each surface's default on this branch.
+const DEFAULTS: Record<Surface, number> = { face: 2, rate: 3, forge: 3, reflect: 2 };
+const MAXES: Record<Surface, number> = { face: 2, rate: 3, forge: 3, reflect: 2 };
+
 export function polishActive(): boolean {
-  return import.meta.env.DEV;
+  // Dev builds only — and never under the test runner, whose contract is
+  // main's, not the prototype's.
+  return import.meta.env.DEV && !import.meta.env.VITEST;
 }
 
 function variantOf(surface: Surface): number {
+  // Inert off the dev server (tests, prod): every hook reads its variant
+  // through here, so the controls keep main's exact behavior.
+  if (!polishActive()) return 0;
   const raw = Number(new URLSearchParams(location.search).get(surface));
-  return raw >= 1 && raw <= 2 ? raw : 0;
+  if (!Number.isFinite(raw) || raw < 1) return DEFAULTS[surface];
+  return Math.min(Math.floor(raw), MAXES[surface]);
 }
 
 function setVariant(surface: Surface, value: number): void {
@@ -150,6 +171,20 @@ body.proto-rate-1 .rate-breakdown { width: 460px; max-height: min(76vh, 640px); 
 body.proto-rate-2 .prod-ledger { position: relative; }
 body.proto-rate-2 .rate-slot { position: static; }
 body.proto-rate-2 .rate-breakdown { left: 0; width: min(560px, 100%); max-height: min(76vh, 640px); }
+/* rate=3 VERDICT: the whole ledger is the hover/focus area; the inner
+   hairline — the rate cell's button border and the ⓘ pill's static ring —
+   gone; popover drops ledger-wide. */
+body.proto-rate-3 .prod-ledger { position: relative; }
+body.proto-rate-3 .rate-slot { position: static; }
+body.proto-rate-3 .prod-cell-rate { border-color: transparent; }
+body.proto-rate-3 .prod-ledger:hover .prod-cell-rate,
+body.proto-rate-3 .prod-ledger:focus-within .prod-cell-rate { background: transparent; border-color: transparent; }
+body.proto-rate-3 .rate-hint { border-color: transparent; }
+body.proto-rate-3 .prod-ledger:hover .rate-hint,
+body.proto-rate-3 .prod-ledger:focus-within .rate-hint { color: var(--nous); }
+body.proto-rate-3 .prod-ledger:hover .rate-breakdown,
+body.proto-rate-3 .prod-ledger:focus-within .rate-breakdown { display: block; }
+body.proto-rate-3 .rate-breakdown { left: 0; width: min(560px, 100%); max-height: min(76vh, 640px); }
 
 /* forge=1 inline lock */
 body.proto-forge-1 .candidate-tile[disabled] { opacity: .45; cursor: default; }
@@ -181,7 +216,7 @@ function mountBar(): void {
       <button data-dir="1" aria-label="next">›</button>
     </div>`,
     ).join("")}
-    <button class="proto-reset">reset all to controls</button>`;
+    <button class="proto-reset">reset to verdicts</button>`;
   document.body.appendChild(bar);
   bar.addEventListener("click", (event) => {
     const target = event.target as HTMLElement;
@@ -190,7 +225,7 @@ function mountBar(): void {
       const surface = row.dataset.surface as Surface;
       lastSurface = surface;
       const dir = Number((target.closest("button") as HTMLElement)?.dataset.dir ?? 0);
-      if (dir) setVariant(surface, (variantOf(surface) + dir + 3) % 3);
+      if (dir) setVariant(surface, (variantOf(surface) + dir + MAXES[surface] + 1) % (MAXES[surface] + 1));
       return;
     }
     if (target.classList.contains("proto-reset")) {
@@ -203,7 +238,8 @@ function mountBar(): void {
     const tag = (event.target as HTMLElement)?.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA" || (event.target as HTMLElement)?.isContentEditable) return;
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-    setVariant(lastSurface, (variantOf(lastSurface) + (event.key === "ArrowRight" ? 1 : -1) + 3) % 3);
+    const dir = event.key === "ArrowRight" ? 1 : -1;
+    setVariant(lastSurface, (variantOf(lastSurface) + dir + MAXES[lastSurface] + 1) % (MAXES[lastSurface] + 1));
   });
 }
 
@@ -218,6 +254,7 @@ export function mountPolishPrototype(app: App): void {
   const classes = [
     variantOf("rate") === 1 && "proto-rate-1",
     variantOf("rate") === 2 && "proto-rate-2",
+    variantOf("rate") === 3 && "proto-rate-3",
     variantOf("forge") === 1 && "proto-forge-1",
     variantOf("reflect") >= 1 && `proto-reflect-${variantOf("reflect")}`,
   ].filter(Boolean) as string[];
@@ -331,6 +368,18 @@ export function protoForgeNote(state: GameState): string | null {
 // Whether the Forge tiles render disabled (forge=1 in flow).
 export function protoForgeLockButtons(state: GameState): boolean {
   return variantOf("forge") === 1 && state.mode !== "upgrade";
+}
+
+// forge=3 VERDICT: the dock's Forge button disables in flow — the sheet
+// never expands — and its tooltip carries the meter read plus the lock
+// reason. The banked badge and the pip stay visible as the indicator.
+export function protoForgeDockLocked(state: GameState): boolean {
+  return variantOf("forge") === 3 && state.mode !== "upgrade";
+}
+
+export function protoForgeDockSuffix(state: GameState): string | null {
+  if (variantOf("forge") !== 3 || state.mode === "upgrade") return null;
+  return " — choices settle between sessions.";
 }
 
 // The reflection slider's step and emphasis class, or the current read.
