@@ -108,10 +108,16 @@ _Avoid_: Synth (in domain documentation)
 A habit-independent resource produced by generators that empowers or charges other modules; its state is preserved between flow sessions.
 
 **Generator**:
-A board module that produces charge. Remaining output belongs to the generator and follows it when moved. The launch generator is the focus-keyed generator (ADR-0018 retired the plain generator pre-release); other generators with different requirements come later.
+A board module that produces charge. Remaining output belongs to the generator and follows it when moved; a console fact credits every owned generator of the matching type, board or tray. The launch generator is the focus-keyed generator (ADR-0018 retired the plain generator pre-release); note and goal generators read the console's notes and goals through the board seam (ADR-0047).
 
 **Charge window**:
-The charge budget banked at session end by the focus-keyed generator, sized as a fraction of that session's credited practice time and spent as output during the next session's first minutes. Manual practice logs never create one.
+The focus-keyed generator's charge budget, banked at session end into each owned focus-keyed generator, sized as a fraction of that session's credited practice time and spent as output during the next session's first minutes. Manual practice logs never create one.
+
+**Note pool**:
+A note generator's reserve, credited the moment a note is written — in flow or between sessions, tagged or not — sized linearly by the note's character count up to a per-note cap. Notes are append-only; a deleted note, if one ever can be, refunds nothing.
+
+**Goal reserve**:
+A goal generator's reserve, credited at a goal's completion: a multiple of the charge window the goal's practice duration would have banked, prorated by the live share of the goal's progress. Recurring goals credit once per occurrence; overlapping completions each credit.
 
 **Output strength**:
 The rate at which a generator delivers charge to each eligible adjacent module, without dividing output among neighbors. Strengths from simultaneously active generators add at each receiver.
