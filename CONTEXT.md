@@ -16,7 +16,7 @@ One hexagonal place on the board. Cells are bought with nous on a geometric scal
 A unit occupying one cell on the board, with gameplay effects derived from its category and, in many cases, a connection to a real-life practice or supporting interaction.
 
 **Module category**:
-The function level of a board module — synthesizer, spacer, generator, infusor, or forge at launch. Category carries the module's hue.
+The function level of a board module — synthesizer, spacer, generator, infusor, or forge at launch; the silent-voice and charge-conduit categories (working names) join in the roster iteration. Category carries the module's hue.
 
 **Module type**:
 A specific module design within a category, such as the Additive Synthesizer or the focus-keyed generator, carrying its own glyph and nameplate. Forge choices contain distinct module types; different types may share the same category.
@@ -25,11 +25,11 @@ A specific module design within a category, such as the Additive Synthesizer or 
 A supertype family above the category level whose members accumulate received charge toward thresholds that produce effects; the threshold fill is the family's shared rendering trait. The Module Forge is the launch instance. Continuous-charge categories (synthesizer, infusor) use received charge as continuous empowerment instead.
 
 **Pitch**:
-The absolute note a cell sounds — a property of the cell's position on the octave-stack lattice, derived from its coordinates and never persisted. Columns read as one note name; the horizontal axis walks the circle of fifths.
+The absolute note a cell sounds — a property of the cell's position on the octave-stack lattice, derived from its coordinates and never persisted. No module ever rewrites a cell's pitch; pitch modifiers sound derived pitches on their own voice only. Columns read as one note name; the horizontal axis walks the circle of fifths.
 _Avoid_: harmonic number, distance-from-origin
 
 **Chord**:
-A named pitch set — octave, fifth, major triad, and kin — recognized by pitch content over a connected cluster of synthesizers, register-free: any voicing, any octave. Each chord instance multiplies only its member synthesizers; overlapping and repeated instances stack multiplicatively on their members, and distant modules are unchanged (ADR-0036). Adjacency alone is chordless.
+A named pitch set — octave, fifth, major triad, and kin — recognized by pitch content over a connected cluster of voices — synthesizers and silent voices, register-free: any voicing, any octave. Each chord instance multiplies only its member synthesizers; overlapping and repeated instances stack multiplicatively on their members, and distant modules are unchanged (ADR-0036). Adjacency alone is chordless.
 _Avoid_: Named chord (the just-intonation-run sense), Chord pair
 
 **Seam**:
@@ -42,6 +42,29 @@ _Avoid_: Chord chip (the ambient-floating sense), Chord view
 
 **Spacer**:
 A silent wire module occupying one cell: it never sounds and never joins a pitch set, but conducts chord adjacency through chains of wired cells. Reaches the board only through module rolls.
+
+**Silent voice**:
+A silent pitched module of its own category: it produces no nous, but its pitch counts in clusters — it forms and completes chords and conducts them as a voice — and every chord instance it sings in gains a level-scaled bonus uplift landing on all singing members, stacking additively across silent voices. Working category name; its members are the Harmonizer, the Mirror voice, and the Shift voice.
+_Avoid_: Harmonizer (for the whole category)
+
+**Harmonizer**:
+The plain silent voice: it sings its own cell's pitch. Replaces the Conditional in place, retiring its per-instance chord-bonus mechanic.
+_Avoid_: Conditional
+
+**Mirror voice**:
+A silent voice singing an adjacent voice's pitch one octave down — a guaranteed Octave pairing that doubles the neighbor's chord content without touching its pitch or readout. Working name (the Sub Bass direction).
+_Avoid_: Sub Bass (the working direction name)
+
+**Shift voice**:
+A silent voice singing its own pitch altered by a player-picked small interval — the ♯/♭ family, ±1 at launch; its selectable shift set grows with rarity, while level scales its uplift like every silent voice. Working name (the Accidental direction, with FM folded in).
+_Avoid_: Accidental, FM (a separate module)
+
+**Charge conduit**:
+A silent category of the charge economy whose members neither produce charge nor sing: they route received charge onward. Its launch member is the Amplifier. Working name.
+_Avoid_: relay
+
+**Amplifier**:
+A charge conduit that re-broadcasts received charge to its other neighbors at received strength × a level-scaled gain; relayed charge counts fully as receiving charge everywhere, and a hop-depth cap guards cycles. It is not a generator and produces nothing.
 
 **Octave row**:
 One register of the board: the band of cells whose pitches sit in the same octave, stacked as a vertical shape.
@@ -101,8 +124,12 @@ The board's summed uncharged amplitude: the synths leg plus the infusor uplift, 
 A synthesizer's base contribution to the composite — level and rarity power, with the synthesizer's own chord factor in (ADR-0036); one unified leg shared by every synthesizer. The infusor uplift rides in its own leg beside it.
 
 **Synthesizer**:
-A board module contributing a synth term to the composite; no synthesizer is spatially privileged. It is empowered while receiving charge and never produces charge.
+A board module contributing a synth term to the composite; no synthesizer is spatially privileged. It is empowered while receiving charge and never produces charge. Renaming to Oscillator is adopted in direction; final naming is the roster prototype's.
 _Avoid_: Synth (in domain documentation)
+
+**Blaster**:
+A synthesizer-category voice converting received charge into its synth term — the category's second producer role. It sings and forms chords even uncharged at zero output, takes chord factors and infusor uplift, and takes no second charged-empowerment pass: the conversion curve replaces the charge factor.
+_Avoid_: converter
 
 **Charge**:
 A habit-independent resource produced by generators that empowers or charges other modules; its state is preserved between flow sessions.
