@@ -107,13 +107,14 @@ export interface FaceSpec {
   // cell note drops to the lower taper as a footnote, making room for the
   // Upgrade button between readout and taper.
   variant?: "bloom";
-  // The spacer's open-wire board face (#201): the plate keeps only its cap
-  // (the nameplate, centered) and base (the cell note) — a roughly squared
-  // window framed inside the module lets the chord lines run visibly
-  // through. The glyph, readout, level line, rarity rings, and category
-  // rail all go quiet; the chassis wears the shared `spacer-window` clip
-  // (render.ts owns the def) and a hairline frame. Board faces only — the
-  // expanded face and the candidate tiles keep the full readout panel.
+  // The spacer's open-wire board face (#201, ring window per issue #219):
+  // the plate keeps only its cap (the nameplate, centered) and base (the
+  // cell note) — a hexagonal ring window framed inside the module lets the
+  // chord lines run visibly through. The glyph, readout, level line,
+  // rarity rings, and category rail all go quiet; the chassis wears the
+  // shared `spacer-window` clip (render.ts owns the def) and a hairline
+  // traces the inner edge. Board faces only — the expanded face and the
+  // candidate tiles keep the full readout panel.
   openWire?: boolean;
 }
 
@@ -126,23 +127,25 @@ export interface FaceSpec {
 // band, so the footnote yields the room.
 const FACE_LAYOUT = {
   compact: { level: FACE_LEVEL_Y, name: FACE_NAME_Y, glyph: 0, glyphScale: FACE_GLYPH_SCALE, readout: FACE_READOUT_Y, note: FACE_NOTE_Y },
-  bloom: { level: -39, name: -26, glyph: -7, glyphScale: 0.7, readout: 11, note: 49 },
+  // The bloom re-proportions (issue #219, validated in the prototype): the
+  // glyph opens to −12 and the readout to 16 — the tighter −7/11 pair
+  // overlaps at bloom scale. The note yields a little deeper into the
+  // taper (the #195 principle): the #195 button band follows the readout
+  // down, and the footnote keeps its clearance beneath it.
+  bloom: { level: -39, name: -26, glyph: -12, glyphScale: 0.7, readout: 16, note: 55 },
 } as const;
 
-// The open-wire window's furniture (#201): the nameplate rides the cap
-// band's center; the frame sits two units clear of the clipped opening
-// (render.ts's clipPath cuts the same rect two units inside).
+// The open-wire window's furniture (issue #219): the plate clips as a
+// hexagonal ring window — the chassis minus an inner hexagon — so the
+// module reads as a ring the chords run through, and the nameplate rides
+// the top band inside the chassis. The hairline traces the inner edge.
 const SPACER_NAME_Y = -40;
-export const SPACER_FRAME = { x: -28, y: -22, width: 56, height: 48, rx: 3 };
-const SPACER_WINDOW_INSET = 2;
+export const SPACER_WINDOW_RADIUS = 36;
+// One hexagon subpath as a clip-path segment.
+const hexSubpath = (radius: number): string => `M ${hexPoints(radius).split(" ").join(" L ")} Z`;
 export function spacerClipPath(): string {
-  const chassis = `M ${hexPoints(HEX_RADIUS).split(" ").join(" L ")} Z`;
-  const { x, y, width, height } = SPACER_FRAME;
-  const left = x + SPACER_WINDOW_INSET;
-  const top = y + SPACER_WINDOW_INSET;
-  const right = x + width - SPACER_WINDOW_INSET;
-  const bottom = y + height - SPACER_WINDOW_INSET;
-  return `${chassis} M ${left} ${top} L ${right} ${top} L ${right} ${bottom} L ${left} ${bottom} Z`;
+  // Even-odd: the inner hexagon cuts the chassis into a ring.
+  return `${hexSubpath(HEX_RADIUS)} ${hexSubpath(SPACER_WINDOW_RADIUS)}`;
 }
 
 // The long-readout fit (#201, the approved compression): past seven
@@ -174,5 +177,5 @@ export function moduleFace(spec: FaceSpec): string {
     ${openWire ? "" : `<g data-key="signature" class="face-signature" transform="translate(0 ${layout.glyph}) scale(${layout.glyphScale})" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>`}
     ${openWire ? "" : `<text data-key="readout" x="0" y="${layout.readout}" text-anchor="middle" class="face-readout${readoutFitClass(spec.readout)}${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>`}
     ${spec.note ? `<text data-key="note" x="0" y="${layout.note}" text-anchor="middle" class="face-note">${spec.note}</text>` : ""}
-    ${openWire ? `<rect class="spacer-frame" x="${SPACER_FRAME.x}" y="${SPACER_FRAME.y}" width="${SPACER_FRAME.width}" height="${SPACER_FRAME.height}" rx="${SPACER_FRAME.rx}"/>` : ""}`;
+    ${openWire ? `<polygon data-key="spacer-frame" class="spacer-frame" points="${hexPoints(SPACER_WINDOW_RADIUS)}"/>` : ""}`;
 }

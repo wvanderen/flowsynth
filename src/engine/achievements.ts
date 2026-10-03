@@ -171,7 +171,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     id: "power-chord",
     category: "formula",
     name: "Power chord",
-    description: "Stack chord multipliers on one synthesizer to ×2.",
+    description: "Stack chord multipliers on one synth to ×2.",
     evaluate: (s) => maxVoiceMultiplierOf(s) >= 2,
     progress: (s) => fraction(maxVoiceMultiplierOf(s), 2),
   },

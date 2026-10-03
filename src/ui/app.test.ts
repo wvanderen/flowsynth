@@ -328,9 +328,9 @@ describe("the board ledger strip (§7)", () => {
     give(app.state, "infusor", hex(0, 1));
     app.render();
     const row = document.querySelector("#rate-slot .rd-other-row")!;
-    expect(row.textContent).toContain("Infusor");
+    expect(row.textContent).toContain("Booster");
     expect(row.querySelector('[data-live^="n-"]')!.textContent).toBe("+20% to adjacent");
-    // The uplifted synthesizer's own leg carries the same uplift...
+    // The uplifted synth's own leg carries the same uplift...
     expect(document.querySelector("#rate-slot .rd-synth .rd-legs")!.textContent).toContain("+20%");
     // ...and the nonproducer's row never wears a ν/s figure.
     expect(row.textContent).not.toContain("ν/s");
@@ -362,7 +362,7 @@ describe("the board ledger strip (§7)", () => {
     expect(legs).toContain("Base");
     expect(legs).toContain(fifth.name);
     expect(legs).toContain("Chords");
-    expect(legs).toContain("Infusor");
+    expect(legs).toContain("Booster");
     expect(legs).toContain("Charge");
     expect(legs).toContain("Achievements");
   });
@@ -386,7 +386,7 @@ describe("the board ledger strip (§7)", () => {
     // The synths leg carries the local chords; there is no board-wide
     // chord-multiplier claim to lean on (ADR-0036).
     expect(modal.textContent).toContain(`synths +${formatNumber(0.26)} ν/s`);
-    expect(modal.textContent).toContain(`infusors +${formatNumber(0.052)} ν/s`);
+    expect(modal.textContent).toContain(`boosters +${formatNumber(0.052)} ν/s`);
     expect(modal.textContent).not.toContain("chords ×");
     expect(modal.textContent).not.toContain("carrier");
     expect(modal.textContent).not.toContain("harmonics");
@@ -1261,7 +1261,7 @@ describe("the expanded face (§5)", () => {
     // The plate carries the enlarged face — glyph, level, short name, note —
     // and no second module inside it: one face, filling the bloom.
     expect(bloom().querySelectorAll(".bloom-face")).toHaveLength(1);
-    expect(bloom().querySelector(".bloom-face .face-name")!.textContent).toBe("ADDITIVE");
+    expect(bloom().querySelector(".bloom-face .face-name")!.textContent).toBe("OSC");
     expect(bloom().querySelector(".bloom-face .face-level")!.textContent).toBe("LV 0");
     expect(bloom().querySelector(".bloom-face .face-note")!.textContent).toBe("C4");
     // The ν/s unit rides the face's own readout — no repeated readout.
@@ -1273,9 +1273,9 @@ describe("the expanded face (§5)", () => {
     const faceSvg = bloom().querySelector(".bloom-face")!;
     expect(faceSvg.querySelector(":scope > [data-key='hex']")).not.toBeNull();
     expect(faceSvg.querySelector(".face-name")!.getAttribute("y")).toBe("-26");
-    expect(faceSvg.querySelector(".face-readout")!.getAttribute("y")).toBe("11");
-    expect(faceSvg.querySelector(".face-note")!.getAttribute("y")).toBe("49");
-    expect(faceSvg.querySelector(".face-signature")!.getAttribute("transform")).toBe("translate(0 -7) scale(0.7)");
+    expect(faceSvg.querySelector(".face-readout")!.getAttribute("y")).toBe("16");
+    expect(faceSvg.querySelector(".face-note")!.getAttribute("y")).toBe("55");
+    expect(faceSvg.querySelector(".face-signature")!.getAttribute("transform")).toBe("translate(0 -12) scale(0.7)");
     // The module lifted off its cell: the bloom repeats every line the face
     // carries, so the origin renders vacated — no doubled module.
     expect(document.querySelector('[data-cell="0,0"] .module-node')).toBeNull();
@@ -3396,7 +3396,7 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     expect(bloomEl.hidden).toBe(false);
     expect(bloomEl.classList.contains("sheet")).toBe(true);
     expect(bloomEl.querySelector(".bloom-sheet")).not.toBeNull();
-    expect(bloomEl.querySelector(".bloom-sheet-name")!.textContent).toContain("Additive Synth");
+    expect(bloomEl.querySelector(".bloom-sheet-name")!.textContent).toContain("Oscillator");
     expect(bloomEl.querySelector("#bloom-upgrade")).not.toBeNull();
     expect(document.body.classList.contains("bloom-sheet-open")).toBe(true);
     // The horizon bar floats at every width (§7): an open sheet covers the

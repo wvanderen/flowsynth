@@ -33,9 +33,12 @@ describe("theme token table", () => {
     expect(tokens.switch).toBe("#cc603d");
   });
 
-  it("reserves the unbound hues and wires the spacer's grey", () => {
-    expect(tokens["reserved-yellow"]).toBeDefined();
-    expect(tokens["reserved-violet"]).toBeDefined();
+  it("binds the reserved hues to the new categories and wires the spacer's grey (#219)", () => {
+    // Silent voice takes the reserved violet, charge conduit the reserved
+    // yellow, and RITUAL wears the console's switch vermillion.
+    expect(tokens["hue-voice"]).toBe("#9d7bea");
+    expect(tokens["hue-conduit"]).toBe("#d9b84a");
+    expect(tokens["hue-ritual"]).toBe("#cc603d");
     expect(tokens["hue-spacer"]).toBeDefined();
   });
 

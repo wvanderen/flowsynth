@@ -129,7 +129,7 @@ describe("the Mutators layer's slot faces", () => {
     expect(face).not.toBeNull();
     const words = face.textContent ?? "";
     expect(words).toContain("POWER");
-    expect(words).toContain("Additive Synth · C4");
+    expect(words).toContain("Oscillator · C4");
     expect(words).toContain("PWR +50%");
     expect(words).not.toContain("ν/s");
     expect(words).not.toContain("ν");
@@ -223,7 +223,7 @@ describe("the gestures (issue #199)", () => {
     expect(popover.hidden).toBe(false);
     expect(popover.textContent).toContain("Power");
     expect(popover.textContent).toContain("+50% to this module's power");
-    expect(popover.textContent).toContain("Additive Synth · C4");
+    expect(popover.textContent).toContain("Oscillator · C4");
     document.getElementById("mut-pop-retrieve")!.click();
     expect(mutatorOf(app.state, "mu1").pos).toBeNull();
     expect(app.ui.mutPopover).toBeNull();
@@ -486,7 +486,7 @@ describe("the readouts (issue #199)", () => {
     slotNode(0, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     const readout = document.getElementById("chord-readout")!;
     expect(readout.hidden).toBe(false);
-    expect(readout.textContent).toContain("Power · +50% to this module's power — hosts Additive Synth · C4");
+    expect(readout.textContent).toContain("Power · +50% to this module's power — hosts Oscillator · C4");
     expect(readout.textContent).not.toContain("ν/s");
   });
 
