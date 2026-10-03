@@ -16,20 +16,20 @@ One hexagonal place on the board. Cells are bought with nous on a geometric scal
 A unit occupying one cell on the board, with gameplay effects derived from its category and, in many cases, a connection to a real-life practice or supporting interaction.
 
 **Module category**:
-The function level of a board module — synthesizer, spacer, generator, infusor, or forge at launch; the silent-voice and charge-conduit categories (working names) join in the roster iteration. Category carries the module's hue.
+The function level of a board module — oscillator, spacer, generator, booster, or forge at launch; the silent-voice and charge-conduit categories (working names, confirmed) join with the roster iteration. Categories take their display words from their modules (issue #219): the former synthesizer category is the oscillator category, the former infusor the booster category. Category carries the module's hue.
 
 **Module type**:
-A specific module design within a category, such as the Additive Synthesizer or the focus-keyed generator, carrying its own glyph and nameplate. Forge choices contain distinct module types; different types may share the same category.
+A specific module design within a category, such as the Oscillator or the Focus Generator, carrying its own glyph and nameplate. Forge choices contain distinct module types; different types may share the same category.
 
 **Chargeable module**:
-A supertype family above the category level whose members accumulate received charge toward thresholds that produce effects; the threshold fill is the family's shared rendering trait. The Module Forge is the launch instance. Continuous-charge categories (synthesizer, infusor) use received charge as continuous empowerment instead.
+A supertype family above the category level whose members accumulate received charge toward thresholds that produce effects; the threshold fill is the family's shared rendering trait. The Module Forge is the launch instance. Continuous-charge categories (oscillator, booster) use received charge as continuous empowerment instead.
 
 **Pitch**:
 The absolute note a cell sounds — a property of the cell's position on the octave-stack lattice, derived from its coordinates and never persisted. No module ever rewrites a cell's pitch; pitch modifiers sound derived pitches on their own voice only. Columns read as one note name; the horizontal axis walks the circle of fifths.
 _Avoid_: harmonic number, distance-from-origin
 
 **Chord**:
-A named pitch set — octave, fifth, major triad, and kin — recognized by pitch content over a connected cluster of voices — synthesizers and silent voices, register-free: any voicing, any octave. Each chord instance multiplies only its member synthesizers; overlapping and repeated instances stack multiplicatively on their members, and distant modules are unchanged (ADR-0036). Adjacency alone is chordless.
+A named pitch set — octave, fifth, major triad, and kin — recognized by pitch content over a connected cluster of voices — oscillators and silent voices, register-free: any voicing, any octave. Each chord instance multiplies only its member oscillators; overlapping and repeated instances stack multiplicatively on their members, and distant modules are unchanged (ADR-0036). Adjacency alone is chordless.
 _Avoid_: Named chord (the just-intonation-run sense), Chord pair
 
 **Seam**:
@@ -44,20 +44,20 @@ _Avoid_: Chord chip (the ambient-floating sense), Chord view
 A silent wire module occupying one cell: it never sounds and never joins a pitch set, but conducts chord adjacency through chains of wired cells. Reaches the board only through module rolls.
 
 **Silent voice**:
-A silent pitched module of its own category: it produces no nous, but its pitch counts in clusters — it forms and completes chords and conducts them as a voice — and every chord instance it sings in gains a level-scaled bonus uplift landing on all singing members, stacking additively across silent voices. Working category name; its members are the Harmonizer, the Mirror voice, and the Shift voice.
+A silent pitched module of its own category: it produces no nous, but its pitch counts in clusters — it forms and completes chords and conducts them as a voice — and every chord instance it sings in gains a level-scaled bonus uplift landing on all singing members, stacking additively across silent voices. Confirmed working name (issue #219); its members are the Harmonizer, the Echo, and the Bend.
 _Avoid_: Harmonizer (for the whole category)
 
 **Harmonizer**:
 The plain silent voice: it sings its own cell's pitch. Replaces the Conditional in place, retiring its per-instance chord-bonus mechanic.
 _Avoid_: Conditional
 
-**Mirror voice**:
-A silent voice singing an adjacent voice's pitch one octave down — a guaranteed Octave pairing that doubles the neighbor's chord content without touching its pitch or readout. Working name (the Sub Bass direction).
-_Avoid_: Sub Bass (the working direction name)
+**Echo**:
+A silent voice singing an adjacent voice's pitch one octave down — a guaranteed Octave pairing that doubles the neighbor's chord content without touching its pitch or readout. Final name (issue #219; the Sub Bass direction).
+_Avoid_: Sub Bass, Mirror voice (the working name)
 
-**Shift voice**:
-A silent voice singing its own pitch altered by a player-picked small interval — the ♯/♭ family, ±1 at launch; its selectable shift set grows with rarity, while level scales its uplift like every silent voice. Working name (the Accidental direction, with FM folded in).
-_Avoid_: Accidental, FM (a separate module)
+**Bend**:
+A silent voice singing its own pitch altered by a player-picked small interval — the ♯/♭ family, ±1 at launch; its selectable shift set grows with rarity, while level scales its uplift like every silent voice. Final name (issue #219; the Accidental direction, with FM folded in).
+_Avoid_: Accidental, FM (a separate module), Shift voice (the working name)
 
 **Charge conduit**:
 A silent category of the charge economy whose members neither produce charge nor sing: they route received charge onward. Its launch member is the Amplifier. Working name.
@@ -112,43 +112,43 @@ _Avoid_: second inventory
 The provisional name for the game's main progression resource, spent on permanent upgrades. It is produced only by the board formula.
 
 **Nous production rate**:
-The single final nous-per-second output: the sum of the synthesizers' final figures — `(synths + infusors) × empowerment × achievementBoost`. Modules contribute terms to this shared rate rather than producing independent timed payouts.
+The single final nous-per-second output: the sum of the oscillators' final figures — `(synths + boosters) × empowerment × achievementBoost`. Modules contribute terms to this shared rate rather than producing independent timed payouts.
 
 **Final ν/s**:
-One module's own production figure: its base term with its local infusor, chord, charge, and achievement effects all included (ADR-0036). The displayed figures sum to the board's rate within rounding, the selected module's final ν/s shows in the reserved readout, and every synthesizer's row in the rate details leads with it (ADR-0037).
+One module's own production figure: its base term with its local booster, chord, charge, and achievement effects all included (ADR-0036). The displayed figures sum to the board's rate within rounding, the selected module's final ν/s shows in the reserved readout, and every oscillator's row in the rate details leads with it (ADR-0037).
 
 **Composite**:
-The board's summed uncharged amplitude: the synths leg plus the infusor uplift, each carrying its members' local chord factors (ADR-0036). There is no board-wide chord multiplier over it.
+The board's summed uncharged amplitude: the synths leg plus the booster uplift, each carrying its members' local chord factors (ADR-0036). There is no board-wide chord multiplier over it.
 
 **Formation quality**:
 The connected formation's symbolic quality factor Q — one per formation, riding inside every producing member's chord factor beside the named-instance product (ADR-0036, ADR-0049). Scored over the formation's deduplicated pitch classes: `Q = clamp(1 + complexity − max(0, tension − A), Qmin, cap)` — pair-based tension by interval class, a per-class complexity offset, a tension allowance A forgiven to named formations, and a floor materially below neutral so chromatic density is priced down; chordless formations sit at exactly ×1.00. Read aloud as its own named term ("Formation ×1.12"). Prototype magnitudes — semitone 1.0 / tritone 0.5 / whole tone 0.2 tension, 0.06 complexity rate, A 0.70, Q ∈ [0.05, 1.25] — are provisional tuning.
 _Avoid_: harmony score, chord quality (the discovery-library sense)
 
 **Synth term**:
-A synthesizer's base contribution to the composite — level and rarity power, with the synthesizer's own chord factor in (ADR-0036); one unified leg shared by every synthesizer. The infusor uplift rides in its own leg beside it.
+An oscillator's base contribution to the composite — level and rarity power, with the oscillator's own chord factor in (ADR-0036); one unified leg shared by every oscillator. The booster uplift rides in its own leg beside it. The leg keeps the historical "synth" name (ADR-0014).
 
-**Synthesizer**:
-A board module contributing a synth term to the composite; no synthesizer is spatially privileged. It is empowered while receiving charge and never produces charge. Renaming to Oscillator is adopted in direction; final naming is the roster prototype's.
-_Avoid_: Synth (in domain documentation)
+**Oscillator**:
+An oscillator-category board module contributing a synth term to the composite; no oscillator is spatially privileged. It is empowered while receiving charge and never produces charge. Renamed from Synthesizer with issue #219; the category follows the module.
+_Avoid_: Synthesizer, Additive Synthesizer
 
 **Blaster**:
-A synthesizer-category voice converting received charge into its synth term — the category's second producer role. It sings and forms chords even uncharged at zero output, takes chord factors and infusor uplift, and takes no second charged-empowerment pass: the conversion curve replaces the charge factor.
+An oscillator-category voice converting received charge into its synth term — the category's second producer role. It sings and forms chords even uncharged at zero output, takes chord factors and booster uplift, and takes no second charged-empowerment pass: the conversion curve replaces the charge factor.
 _Avoid_: converter
 
 **Charge**:
 A habit-independent resource produced by generators that empowers or charges other modules; its state is preserved between flow sessions.
 
 **Generator**:
-A board module that produces charge. Remaining output belongs to the generator and follows it when moved; a console fact credits every owned generator of the matching type, board or tray. The launch generator is the focus-keyed generator (ADR-0018 retired the plain generator pre-release); note and goal generators read the console's notes and goals through the board seam (ADR-0047).
+A board module that produces charge. Remaining output belongs to the generator and follows it when moved; a console fact credits every owned generator of the matching type, board or tray. The Focus Generator is the launch generator (ADR-0018 retired the plain generator pre-release); the Note Generator and Goal Generator join with the reserve iteration, reading the console's notes and goals through the board seam (ADR-0047).
 
 **Charge window**:
-The focus-keyed generator's charge budget, banked at session end into each owned focus-keyed generator, sized as a fraction of that session's credited practice time and spent as output during the next session's first minutes. Manual practice logs never create one.
+A Focus Generator's charge budget, banked at session end into each owned Focus Generator, sized as a fraction of that session's credited practice time and spent as output during the next session's first minutes. Manual practice logs never create one.
 
 **Note pool**:
-A note generator's reserve, credited the moment a note is written — in flow or between sessions, tagged or not — sized linearly by the note's character count up to a per-note cap. Notes are append-only; a deleted note, if one ever can be, refunds nothing.
+A Note Generator's reserve, credited the moment a note is written — in flow or between sessions, tagged or not — sized linearly by the note's character count up to a per-note cap. Notes are append-only; a deleted note, if one ever can be, refunds nothing.
 
 **Goal reserve**:
-A goal generator's reserve, credited at a goal's completion: a multiple of the charge window the goal's practice duration would have banked, prorated by the live share of the goal's progress. Recurring goals credit once per occurrence; overlapping completions each credit.
+A Goal Generator's reserve, credited at a goal's completion: a multiple of the charge window the goal's practice duration would have banked, prorated by the live share of the goal's progress. Recurring goals credit once per occurrence; overlapping completions each credit.
 
 **Output strength**:
 The rate at which a generator delivers charge to each eligible adjacent module, without dividing output among neighbors. Strengths from simultaneously active generators add at each receiver.
@@ -159,12 +159,13 @@ The amount of live flow time for which a generator's output remains available; s
 **Charged empowerment**:
 An increase to a module's specified effect while receiving charge, increasing with received strength with diminishing returns. Its numerical curve remains to be balanced.
 
-**Infusor**:
-A board module that improves a specified effect of eligible adjacent modules, with its bonus strengthened while receiving charge.
-_Avoid_: Infuser
+**Booster**:
+A board module that improves a specified effect of eligible adjacent modules, with its bonus strengthened while receiving charge. Renamed from Infusor with issue #219 — rename-only; the uplift role is unchanged.
+_Avoid_: Infusor, Infuser
 
-**Infusor term**:
-An infusor's contribution to the composite: the local uplift it grants adjacent synthesizers' amplitudes, named as its own additive leg in the live rate breakdown.
+**Booster term**:
+A Booster's contribution to the composite: the local uplift it grants adjacent oscillators' amplitudes, named as its own additive leg in the live rate breakdown (ADR-0020).
+_Avoid_: Infusor term
 
 ### Quality and acquisition
 
@@ -194,7 +195,7 @@ The chargeable module whose thresholds mint mutator rolls into the Mutator tray.
 A branch's player-wide meter to which that branch's deployed Forges contribute according to received charge and progress efficiency — the Module Forge's and the Mutator Forge's meters are separate. Crossing a branch's globally scaling threshold banks a roll on that branch and carries excess progress forward, independently of any individual Forge's identity.
 
 **RITUAL**:
-A chargeable board module that amplifies the active habit's build effects while receiving charge; charge never crosses to the console, and the habit keys the module's behavior. Working name — the roster effort owns its final name and glyph.
+A chargeable board module that amplifies the active habit's build effects while receiving charge; charge never crosses to the console, and the habit keys the module's behavior. Named and designed by issue #219 — the habit-cycle ring glyph in the switch vermillion; it arrives through the module-roll pool only.
 
 **Module roll**:
 A charge- or flow-earned choice of one module from three generated candidates; unchosen candidates disappear without consolation resources. The Forge branches and the flow meter bank into one shared queue of interchangeable rolls.
@@ -211,7 +212,7 @@ A charge-earned choice of one mutator from two generated candidates, delivered t
 The permanent upgrade-mode purchase surface: app activations, starter-shelf offers while available, and cells. Its activation section appears only once the ladder has a tenant. Module upgrades live on module panels, not the catalog (ADR-0018).
 
 **Starter shelf**:
-The catalog's one-time guaranteed offers — the generator, one infusor, and a Module Forge — hidden once acquired. It completes the non-synthesizer landscape; synthesizers come only from the opening grant and module rolls (ADR-0022).
+The catalog's one-time guaranteed offers — the Focus Generator, one Booster, and a Module Forge — hidden once acquired. It completes the non-oscillator landscape; oscillators come only from the opening grant and module rolls (ADR-0022).
 
 ### The console and focus apps
 
@@ -228,7 +229,7 @@ The console's re-docked form on portrait phone — a bottom bar of Catalog / For
 The pill on the board surface, directly below the phone nav, carrying ν, rate, and session — production reads where the idle tutorial helptext used to sit. Its rate read is the phone's door to the rate details sheet — the same module-linked roster the Rate cell's popover holds at wider widths. Feats appears once on phone, riding the thumb bar. Phone only; the board ledger serves every other width.
 
 **Rate details**:
-The module-linked disclosure behind the rate figures (ADR-0037): one roster shared by the Rate cell's popover and the tap-up sheet — the final total, one row per synthesizer carrying its final ν/s and expanding into its base, chord, infusor, charge, and achievement legs, and the nonproducing modules' effects with no ν/s of their own. Tapping a synthesizer row selects its module on the board.
+The module-linked disclosure behind the rate figures (ADR-0037): one roster shared by the Rate cell's popover and the tap-up sheet — the final total, one row per oscillator carrying its final ν/s and expanding into its base, chord, booster, charge, and achievement legs, and the nonproducing modules' effects with no ν/s of their own. Tapping an oscillator row selects its module on the board.
 
 **Zoom cluster**:
 The +/−/fit cluster floating over the board's right edge, beside wheel zoom. The board pans by dragging outside the grid at any zoom (inside when zoomed in), clamped so the board can never leave the frame. On portrait phone the cluster rises above any open sheet so inspection never gets buried.
