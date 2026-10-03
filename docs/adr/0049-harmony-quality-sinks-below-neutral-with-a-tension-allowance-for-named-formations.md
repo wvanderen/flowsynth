@@ -1,0 +1,20 @@
+# Harmony quality sinks below neutral, with a tension allowance for named formations
+
+The decision map (issue #212, ticket #226, 2026-10-03) prototyped the concrete formula graduating from the harmony scoring decision (issue #217): which tension measure, which complexity measure, how the bound clamps. Marginal-production checks on the representative formations showed that #217's never-below-neutral floor cannot price chromatic density down — the bridged C/D♭ hexad matches fourteen overlapping named terms (F minor, C augmented, a D♭ major seventh among them) and stacks one voice to ×67 while Q sits floored at ×1.00: density is refused a bonus, never punished. The maintainer's verdict: the main value of Q is punishing chromatic density, so the floor must go.
+
+## Decision
+
+- **The production shape stands (issue #217):** each producing member's chord factor is Π(1 + named bonus per sung instance) × Q — one Q per connected formation, applied once per member, chord-sourced production only. A formation that names no chord stays at exactly ×1.00.
+- **Q = clamp(1 + complexity − max(0, tension − A), Qmin, cap).** This supersedes #217's "the factor never drops below neutral": Qmin is materially below 1 (prototyped 0.05) and cap above 1 (prototyped 1.25).
+- **Tension** is a pair-based symbolic term over the formation's deduplicated pitch classes — every pair of distinct classes weighed by interval class (prototyped: semitone 1.0, tritone 0.5, whole tone 0.2, thirds and fifths 0). **Complexity** pays linearly per distinct class past the first (prototyped rate 0.06).
+- **The tension allowance A** (prototyped 0.70): every named formation gets A of its tension forgiven before the clamp, so free-floor tension bites unnamed density hardest. The compensation must be structural: uniform bonus scaling cannot restore the posture once tension bites named value, because scaling every bonus by k cancels in every comparison.
+- **The three-way balance is the acceptance check**, re-runnable per knob setting: tense-but-organized (a dominant seventh) and lush organized (a major seventh) must each outproduce a clean major triad per voice, and the bridged chromatic mass must lose to it. The prototyped magnitudes pass all three (per-voice ×7.09 / ×5.25 / ×1.50 against a clean ×2.35).
+- **Shared-reference harmonicity is rejected on paper**, discharging #217's comparison obligation: the model's verdict changes with an assumed reference root the board does not have, it cannot score bitonal formations except arbitrarily, and with no complexity offset it has no posture — deliberately tense complex sonorities can never outproduce plain ones.
+
+## Consequences
+
+- Issue #217's posture line is superseded; everything else stands — locality (ADR-0036 extended, Q rides inside each member's chord factor), register-free deduplication, silent voices in the quality's pitch set, and resonance mutators multiplying the whole chord factor including Q.
+- Dense chromatic masses are priced down only through a near-zero Qmin because named stacking is multiplicative — the ×67 hexad voice needs a floor near ×0 to lose to a clean board. The untested alternative lever, capping how many chord terms one voice may stack, is recorded for implementation planning; no cap is adopted this iteration.
+- Q lands on every producing member (issue #217 stands); confining it to named singers remains an implementation-tuning option, invisible whenever Q sits at its floor.
+- The vocabulary under subset matching names nearly every three-class cluster — the ♭9 over a dominant seventh names four diminished triads, and F♯ over C major still catches a Flat seventh on itself. "Bears tension only" content is therefore mostly two-class accidental landings (ic1/ic4-only pair sets such as C·D♭·E), a framing the chord discovery library inherits (issue #218).
+- All magnitudes — tension weights, complexity rate, allowance, floor, cap — are provisional tuning per the map's standing note. The prototype lives on the throwaway branch `prototype/harmony-formula-226` (never merges); the balance-check harness and component-exposed readout are there to lift.

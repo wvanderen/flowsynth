@@ -120,6 +120,10 @@ One module's own production figure: its base term with its local infusor, chord,
 **Composite**:
 The board's summed uncharged amplitude: the synths leg plus the infusor uplift, each carrying its members' local chord factors (ADR-0036). There is no board-wide chord multiplier over it.
 
+**Formation quality**:
+The connected formation's symbolic quality factor Q — one per formation, riding inside every producing member's chord factor beside the named-instance product (ADR-0036, ADR-0049). Scored over the formation's deduplicated pitch classes: `Q = clamp(1 + complexity − max(0, tension − A), Qmin, cap)` — pair-based tension by interval class, a per-class complexity offset, a tension allowance A forgiven to named formations, and a floor materially below neutral so chromatic density is priced down; chordless formations sit at exactly ×1.00. Read aloud as its own named term ("Formation ×1.12"). Prototype magnitudes — semitone 1.0 / tritone 0.5 / whole tone 0.2 tension, 0.06 complexity rate, A 0.70, Q ∈ [0.05, 1.25] — are provisional tuning.
+_Avoid_: harmony score, chord quality (the discovery-library sense)
+
 **Synth term**:
 A synthesizer's base contribution to the composite — level and rarity power, with the synthesizer's own chord factor in (ADR-0036); one unified leg shared by every synthesizer. The infusor uplift rides in its own leg beside it.
 
