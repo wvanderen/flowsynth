@@ -225,9 +225,10 @@
   <h1>Harmony scoring: which concrete formula?</h1>
   <p class="question">
     The harmony decision (<a href="https://github.com/wvanderen/flowsynth/issues/217">#217</a>) fixed the <b>shape</b>: quality scores each
-    connected formation symbolically — named-chord value plus a bounded tension/complexity term over <b>deduplicated pitch classes</b> —
-    and never drops below neutral. This demo puts a <b>concrete formula</b> on trial: which tension measure, which complexity measure,
-    how the bound clamps — checked by marginal production on the formations that decide it. Everything below is one simplified board:
+    connected formation symbolically — named-chord value plus a bounded tension/complexity term over <b>deduplicated pitch classes</b>.
+    This demo puts a <b>concrete formula</b> on trial: which tension measure, which complexity measure, how the bound clamps — checked by
+    marginal production on the formations that decide it. The decision's <b>never-below-neutral floor is now on trial too</b>: its main
+    value may be punishing chromatic density, which a neutral floor forbids. Everything below is one simplified board:
     every pitch class you raise is a voice; all selected voices form <b>one connected formation</b>; register and octaves are invisible by
     design. Magnitudes are provisional tuning — react to the shape.
   </p>
@@ -243,9 +244,11 @@
       </div>
       <p class="fnote">
         Tension weighs every <b>pair</b> of distinct pitch classes by interval class. Complexity pays per distinct class past the first.
-        The clamp is two-sided: tension can only pull Q back down to <b>neutral ×1.00</b>, complexity can only stack up to the cap.
-        A formation that names no chord stays at exactly ×1.00 — chord-sourced production only. Tune the two knobs below and watch the
-        clamp change its mind.
+        The clamp's shape is the question: the <b>decided floor</b> holds Q at or above neutral ×1.00 — tension can only cancel quality
+        gains, never price density down. The <b>free floor</b> lets Q sink below neutral so chromatic mass is punished — and then the
+        <b>tension allowance</b> becomes the compensation named value needs: every named formation gets A of its tension forgiven before
+        the clamp, or lush sonorities pay their own instance bonuses back. A formation that names no chord stays at exactly ×1.00 either
+        way — chord-sourced production only.
       </p>
     </div>
   </section>
@@ -266,6 +269,20 @@
           <input type="range" id="kCap" min="1" max="1.5" step="0.05" value="1.25">
           <span class="val" id="kCapVal">1.25</span>
         </label>
+        <label>Floor mode
+          <select id="kFloor">
+            <option value="neutral">Q ≥ ×1.00 — decided #217</option>
+            <option value="free">free floor — Q may sink below neutral</option>
+          </select>
+        </label>
+        <label>Free floor min
+          <input type="range" id="kQmin" min="0" max="1" step="0.05" value="0.25">
+          <span class="val" id="kQminVal">0.25</span>
+        </label>
+        <label>Tension allowance A
+          <input type="range" id="kAllow" min="0" max="1" step="0.05" value="0">
+          <span class="val" id="kAllowVal">0.00</span>
+        </label>
         <label style="gap: 10px;">Q lands on
           <select id="kScope">
             <option value="all">every producing member</option>
@@ -274,7 +291,8 @@
         </label>
         <p class="fnote" style="margin-top: 6px;">
           The tension weights themselves are fixed on trial defaults — semitone 1.0, tritone 0.5, whole tone 0.2, thirds and fifths 0
-          — react to the table through what it does to the formations below, then tell me which weights feel wrong.
+          — react to the table through what it does to the formations below, then tell me which weights feel wrong. The allowance is the
+          compensation lever: every named formation gets A tension forgiven before the clamp, so tension bites unnamed density hardest.
         </p>
       </div>
     </div>
@@ -283,6 +301,11 @@
   <section>
     <h2>Readout — every component on its own line</h2>
     <div class="panel readout" id="readout"></div>
+  </section>
+
+  <section>
+    <h2>The three-way balance — the checks this formula must pass</h2>
+    <div class="panel readout" id="balance"></div>
   </section>
 
   <section>
@@ -386,14 +409,17 @@ function tensionBreakdown(counts) {
   return {rows, total};
 }
 
-function analyze(counts, knobs) {
+function analyze(countsIn, knobs) {
+  const counts = Array.isArray(countsIn) ? countsIn : Array.from({length: 12}, (_, i) => countsIn[i] || 0);
   const ds = distinctClasses(counts);
   const terms = namedTerms(counts);
   const tension = tensionBreakdown(counts);
   const C = knobs.rate * Math.max(0, ds.length - 1);
   const named = terms.length > 0;
-  const interior = 1 + C - tension.total;
-  const Q = !named ? 1 : Math.min(knobs.cap, Math.max(1, interior));
+  const tEff = Math.max(0, tension.total - (knobs.allow || 0));
+  const interior = 1 + C - tEff;
+  const lo = knobs.floor === "free" ? knobs.qmin : 1;
+  const Q = !named ? 1 : Math.min(knobs.cap, Math.max(lo, interior));
   const singers = new Set();
   terms.forEach(t => t.cls.forEach(c => singers.add(c)));
   const members = ds.map(c => {
@@ -404,7 +430,7 @@ function analyze(counts, knobs) {
   const voices = counts.reduce((t,n) => t+n, 0);
   const totalToday = members.reduce((t,m) => t + m.product * counts[m.c], 0);
   const totalQ = members.reduce((t,m) => t + m.final * counts[m.c], 0);
-  return {ds, terms, tension, C, named, interior, Q, floorBinds: named && interior < 1, capBinds: named && interior > knobs.cap, members, totalToday, totalQ, voices};
+  return {ds, terms, tension, tEff, C, named, interior, lo, Q, floorBinds: named && interior < lo, capBinds: named && interior > knobs.cap, members, totalToday, totalQ, voices};
 }
 
 function sharedReference(counts, root) {
@@ -434,7 +460,8 @@ const WALKTHROUGHS = [
     steps:[
       {label:"Build C major alone", counts:{0:1,4:1,7:1}, watch:"Clean triad: <b>zero tension</b>, so complexity pays unopposed — Q rides <b>above neutral</b>. This is the in-key baseline every expansion competes with."},
       {label:"Bridge in the D♭ major triad", counts:{0:1,1:1,4:1,5:1,7:1,8:1}, watch:"Both triads still name and pay their instance bonuses — and <b>fourteen overlapping terms</b> ride along (F minor, C augmented, even a D♭ major seventh): today's subset matcher pays every recipe inside the mass. Tension outruns complexity and the <b>floor clamps Q at exactly 1.00</b> — but the stacking alone already beats any clean board. Question to react to: 'no quality bonus' cannot price chromatic density <i>down</i>, only refuse to price it up. If that's not enough, the lever is named-value or the clamp itself, not Q."},
-      {label:"Compare: the same six cells stacked in key", counts:{0:1,4:1,5:1,7:1,9:1}, watch:"C major with F major folded in — no semitones beyond E–F, both triads name, and <b>Q still floors</b>: five classes carry enough whole-tone and third weight to outrun the offset. The honest shape reading: <b>quality favors the small clean formation; named value favors density, in or out of key</b>. React to whether that trade is the one you want players to feel."},
+      {label:"Flip the floor: let Q bite", counts:{0:1,1:1,4:1,5:1,7:1,8:1}, knob:{floor:"free"}, watch:"The challenge, applied: Q may now sink below neutral. At the 0.25 free-floor default the mass's average voice <b>still beats the clean board</b> — ×25-of-stacking swallows a quarter-weight Q. Watch the balance panel below: drag the free floor toward zero and find where the mass actually loses, then watch what the same setting did to the two posture checks."},
+      {label:"Forgive named tension: allowance 0.70", counts:{0:1,1:1,4:1,5:1,7:1,8:1}, knob:{floor:"free", allow:0.7}, watch:"The compensation the challenge predicts: every named formation gets 0.70 of its tension forgiven before the clamp, so tension bites unnamed density hardest. Posture and lush flip <b>✓</b> — C7 and Cmaj7 keep their wins — and with the free floor near zero the density check passes too. <b>The challenge is viable</b>: the price is a floor that approaches ×0 for dense masses. The other lever — capping how many terms one voice may stack — lives beyond this prototype, should a near-zero floor feel too blunt."},
     ],
   },
   {
@@ -451,7 +478,7 @@ const WALKTHROUGHS = [
     intro:"The posture decision: a deliberately tense complex sonority can outproduce a plain consonant one, and quality never drops below neutral. Push a clean triad into grittier territory and watch where the wins come from.",
     steps:[
       {label:"C major", counts:{0:1,4:1,7:1}, watch:"The consonant baseline — Q above neutral from complexity alone."},
-      {label:"Add the flat seventh → C7", counts:{0:1,4:1,7:1,10:1}, watch:"The tritone and whole tones <b>eat the whole complexity offset</b> and the floor clamps Q to 1.00. But the Dominant-seventh instance bonus (+0.95 vs +0.75) carries the total <b>past</b> C major. Tense-but-organized wins — through named value, not quality. Does the split feel right, or should Q itself reward organized tension?"},
+      {label:"Add the flat seventh → C7", counts:{0:1,4:1,7:1,10:1}, watch:"The tritone and whole tones <b>eat the whole complexity offset</b> and the floor clamps Q to 1.00. But the Dominant-seventh instance bonus (+0.95 vs +0.75) carries the total <b>past</b> C major. Tense-but-organized wins — through named value, not quality. Flip the floor mode and C7's Q sinks to ×0.48 — stacking still carries it, but watch the lush check: Cmaj7 does not survive the same treatment. The allowance lever is the compensation named value needs once tension bites. Does the split feel right, or should Q itself reward organized tension?"},
       {label:"Soften it → Cmaj7", counts:{0:1,4:1,7:1,11:1}, watch:"The plush jazz sonority pays <b>full semitone weight</b> for its major seventh — the same interval class as an inner-voice m2 grind — and Q floors at 1.00 even as its instance bonus (+1.05) still wins the total. React to the table: should the M7-above-the-root weigh less than a chromatic cluster rub?"},
       {label:"Then land a Shift voice: C major + F♯", counts:{0:1,4:1,6:1,7:1}, watch:"Back to the triad, plus one accidental — and even here the F♯ <b>still names something</b>: F♯–E read from F♯ is ten semitones, a Flat seventh on F♯ itself. Every whole-tone-adjacent accidental catches that pair term; the ♭9 over C7 named four diminished triads. True silence is rare — ic1/ic4-only pair sets like C·D♭·E (the <b>Unnamed cluster</b> preset, chordless, exactly ×1.00). Finding for the reaction: <b>this vocabulary under subset matching names nearly every three-class cluster</b> — 'bears tension only' mostly bites two-class accidental landings, not rich chromatic masses. Is that what 'named by discovery' should mean?"},
     ],
@@ -477,14 +504,29 @@ const WALKTHROUGHS = [
   },
 ];
 
+const DEFAULT_KNOBS = {rate: 0.06, cap: 1.25, scope: "all", floor: "neutral", qmin: 0.25, allow: 0};
+
 const state = {
   counts: Array(12).fill(0),
-  knobs: {rate: 0.06, cap: 1.25, scope: "all"},
+  knobs: {...DEFAULT_KNOBS},
   altRoot: 0,
   preset: "C major",
   walk: 0,
   step: 0,
 };
+
+function syncKnobs() {
+  document.getElementById("kRate").value = state.knobs.rate;
+  document.getElementById("kRateVal").textContent = fmt(state.knobs.rate, 3);
+  document.getElementById("kCap").value = state.knobs.cap;
+  document.getElementById("kCapVal").textContent = fmt(state.knobs.cap);
+  document.getElementById("kQmin").value = state.knobs.qmin;
+  document.getElementById("kQminVal").textContent = fmt(state.knobs.qmin);
+  document.getElementById("kAllow").value = state.knobs.allow;
+  document.getElementById("kAllowVal").textContent = fmt(state.knobs.allow);
+  document.getElementById("kFloor").value = state.knobs.floor;
+  document.getElementById("kScope").value = state.knobs.scope;
+}
 
 function setState(counts, presetLabel) {
   state.counts = Array(12).fill(0);
@@ -529,7 +571,7 @@ function renderReadout() {
   const tensionRows = a.tension.rows.map(r =>
     `<tr><td>${NOTE[r.a]}–${NOTE[r.b]}</td><td>${IC_NAME[r.ic]}</td><td class="num">${fmt(r.w)}</td></tr>`).join("");
   const clampWord = !a.named ? "exactly neutral — no named chord"
-    : a.floorBinds ? `<b>floor binds</b> — tension ${fmt(a.tension.total)} outruns complexity ${fmt(a.C)}` 
+    : a.floorBinds ? `<b>floor binds</b> at ×${fmt(a.lo)} — effective tension ${fmt(a.tEff)} outruns complexity ${fmt(a.C)}`
     : a.capBinds ? `<b>cap binds</b> — complexity outran the ${fmt(state.knobs.cap)} ceiling`
     : "<b>interior</b> — no clamp touched";
   const memberRows = a.members.map(m => {
@@ -549,14 +591,14 @@ function renderReadout() {
     <div class="cols">
       <div class="component"><h3><span class="sym">Tension</span> — over ${a.ds.length} deduplicated classes</h3>
         ${a.tension.rows.length ? `<table><tr><th>Pair</th><th>Interval</th><th class="num">Weight</th></tr>${tensionRows}</table>
-        <p style="margin:6px 0 0;font-size:13px;color:var(--muted);">T&nbsp;=&nbsp;<b>${fmt(a.tension.total)}</b></p>`
+        <p style="margin:6px 0 0;font-size:13px;color:var(--muted);">T&nbsp;=&nbsp;<b>${fmt(a.tension.total)}</b>${state.knobs.allow > 0 ? ` − allowance ${fmt(state.knobs.allow)} → effective <b>${fmt(a.tEff)}</b>` : ""}</p>`
         : `<p style="color:var(--muted);font-size:13px;margin:4px 0;">No tense pair — T&nbsp;=&nbsp;<b>0.00</b></p>`}
       </div>
       <div class="component"><h3><span class="sym">Complexity</span></h3>
         <p style="margin:4px 0;font-size:13.5px;">C = ${fmt(state.knobs.rate,3)} × (${a.ds.length} − 1) = <b>${fmt(a.C)}</b></p>
       </div>
     </div>
-    <div class="qline">Q&nbsp;=&nbsp;clamp(1&nbsp;+&nbsp;${fmt(a.C)}&nbsp;−&nbsp;${fmt(a.tension.total)},&nbsp;1,&nbsp;${fmt(state.knobs.cap)})&nbsp;=&nbsp;<b>×${fmt(a.Q)}</b> — ${clampWord}</div>
+    <div class="qline">Q&nbsp;=&nbsp;clamp(1&nbsp;+&nbsp;${fmt(a.C)}&nbsp;−&nbsp;${fmt(a.tEff)},&nbsp;${fmt(a.lo)},&nbsp;${fmt(state.knobs.cap)})&nbsp;=&nbsp;<b>×${fmt(a.Q)}</b> — ${clampWord}</div>
     <div class="component"><h3><span class="sym">Voices</span> — instance product × Q</h3>
       <table><tr><th>Voice</th><th>Named stacking</th><th class="num">Q</th><th class="num">Final</th></tr>${memberRows}</table>
     </div>
@@ -600,6 +642,34 @@ function renderAlt(a) {
     <p class="verdict">Paper read: the reference model loses on <b>attribution</b> (whose root?) and <b>posture</b> (tension can only subtract). Its one virtue — perceptual grounding — is already out of scope until the game renders a real simultaneous mix.</p>`;
 }
 
+const BALANCE_CHECKS = [
+  {label:"Tense-but-organized — C7", counts:{0:1,4:1,7:1,10:1}, shouldWin:true},
+  {label:"Lush organized — Cmaj7", counts:{0:1,4:1,7:1,11:1}, shouldWin:true},
+  {label:"Chromatic density — bridged C + D♭", counts:{0:1,1:1,4:1,5:1,7:1,8:1}, shouldWin:false},
+];
+
+function renderBalance() {
+  const el = document.getElementById("balance");
+  const avg = (c) => { const a = analyze(c, state.knobs); return a.voices ? a.totalQ / a.voices : 0; };
+  const clean = avg({0:1,4:1,7:1});
+  const rows = BALANCE_CHECKS.map(ch => {
+    const v = avg(ch.counts);
+    const wins = v > clean;
+    const ok = wins === ch.shouldWin;
+    const word = ch.shouldWin ? (wins ? "beats" : "loses to") : (wins ? "still beats" : "loses to");
+    return `<tr><td><b>${ch.label}</b></td><td class="num">×${fmt(v)}</td><td class="num">×${fmt(clean)}</td>
+      <td class="num" style="color:${ok ? "var(--good)" : "var(--accent)"};font-weight:700">${ok ? "✓" : "✗"} ${word} the clean board</td></tr>`;
+  }).join("");
+  el.innerHTML = `
+    <p style="margin:2px 0 8px;color:var(--muted);max-width:82ch;">
+      Three formations re-run through the current knobs against a clean C major triad, per voice. The decided posture wants the first
+      two to win; the challenge says the mass must lose — and under the decided ×1.00 floor the third check can never pass, because
+      tension cannot reach below neutral. Flip the floor mode and tune the free floor and the allowance to search for a setting that
+      passes all three at once.
+    </p>
+    <table><tr><th>Check</th><th class="num">Avg voice</th><th class="num">Clean C major</th><th class="num">Verdict</th></tr>${rows}</table>`;
+}
+
 const WALK_DESC = ["the happy path","a tricky edge case","an attempt at something that should fail"];
 function renderWalk() {
   const tabs = document.getElementById("tabs");
@@ -608,7 +678,7 @@ function renderWalk() {
     const b = document.createElement("button");
     b.textContent = w.tab;
     if (i === state.walk) b.classList.add("active");
-    b.onclick = () => { state.walk = i; state.step = 0; renderWalk(); };
+    b.onclick = () => { state.walk = i; state.step = 0; Object.assign(state.knobs, DEFAULT_KNOBS); syncKnobs(); renderAll(); };
     tabs.appendChild(b);
   });
   const w = WALKTHROUGHS[state.walk];
@@ -625,8 +695,10 @@ function renderWalk() {
   box.querySelectorAll(".stepbtn").forEach(btn => {
     btn.onclick = () => {
       const i = +btn.dataset.i;
+      const s = WALKTHROUGHS[state.walk].steps[i];
       state.step = i;
-      setState(WALKTHROUGHS[state.walk].steps[i].counts, WALKTHROUGHS[state.walk].tab + " · step " + (i+1));
+      setState(s.counts, WALKTHROUGHS[state.walk].tab + " · step " + (i+1));
+      if (s.knob) { Object.assign(state.knobs, s.knob); syncKnobs(); }
       renderAll();
     };
   });
@@ -648,6 +720,7 @@ function renderAll() {
   renderRing();
   renderPresets();
   renderReadout();
+  renderBalance();
   renderWalk();
 }
 
@@ -669,6 +742,24 @@ document.getElementById("kCap").addEventListener("input", e => {
   state.knobs.cap = +e.target.value;
   document.getElementById("kCapVal").textContent = fmt(state.knobs.cap);
   renderReadout();
+  renderBalance();
+});
+document.getElementById("kFloor").addEventListener("change", e => {
+  state.knobs.floor = e.target.value;
+  renderReadout();
+  renderBalance();
+});
+document.getElementById("kQmin").addEventListener("input", e => {
+  state.knobs.qmin = +e.target.value;
+  document.getElementById("kQminVal").textContent = fmt(state.knobs.qmin);
+  renderReadout();
+  renderBalance();
+});
+document.getElementById("kAllow").addEventListener("input", e => {
+  state.knobs.allow = +e.target.value;
+  document.getElementById("kAllowVal").textContent = fmt(state.knobs.allow);
+  renderReadout();
+  renderBalance();
 });
 document.getElementById("kScope").addEventListener("change", e => {
   state.knobs.scope = e.target.value;
