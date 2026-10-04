@@ -520,6 +520,28 @@ describe("the rate details disclosure (§7, issue #154)", () => {
     expect(app.ui.selected).toBe(row.getAttribute("data-module-id"));
   });
 
+  it("above the line the whole ledger is the door; below it nothing changes (#233)", () => {
+    // The door's contract lives in the stylesheet's ≥760px container block:
+    // the strip is the hover/focus area, the popover drops ledger-wide, the
+    // rate cell's inner hairline (button border and hover fill) is dead, and
+    // the ⓘ ring brightens with the ledger — never the cell.
+    const css = readFileSync("src/ui/style.css", "utf8");
+    const mark = "@container app (width >= 760px)";
+    expect(css).toContain(mark);
+    const after = css.indexOf(mark);
+    const door = css.slice(after, css.indexOf("\n}", after));
+    expect(door).toContain(".prod-ledger { position: relative; }");
+    expect(door).toContain(".rate-slot { position: static; }");
+    expect(door).toContain(".prod-cell-rate { border-color: transparent; }");
+    expect(door).toContain(".prod-ledger:hover .prod-cell-rate");
+    expect(door).toContain(".rate-breakdown { left: 0; width: min(560px, 100%); max-height: min(76vh, 640px); }");
+    expect(door).toContain(".prod-ledger:hover .rate-breakdown");
+    expect(door).toContain(".prod-ledger:focus-within .rate-breakdown { display: block; }");
+    // The disclosure's geometry below the line is untouched.
+    const base = css.slice(css.indexOf(".rate-breakdown {"), css.indexOf(mark));
+    expect(base).toContain("width: 350px");
+  });
+
   it("the sheet keeps its figures live in place — a tick never rebuilds it (ADR-0037)", () => {
     setAppWidth(720);
     app.render();
@@ -721,20 +743,41 @@ describe("the action row (§7)", () => {
     // The detail lists every meter's progress, threshold, and rate.
     expect(forge.querySelector(".forge-detail")!.textContent).toContain("Flow meter 1:30 / 3:00 — next roll in ~1:30 of practice");
     expect(forge.querySelector(".forge-detail")!.textContent).toContain("Forge progress 30 / 60");
-    // Open in flow too: the meter detail stays reachable while the session
-    // runs (the peek never blocks the board).
+    // The sheet locks in flow (#233): the dock button disables, the pip
+    // stays as the indicator, and the tooltip carries the meter read plus
+    // the lock reason. The click never expands the sheet mid-session.
     app.state.sessionsCompleted = 1;
     startSession(app.state, null);
     app.render();
     const flowForge = document.querySelector<HTMLButtonElement>('#board-tools [data-op="forge"]')!;
-    expect(flowForge.disabled).toBe(false);
+    expect(flowForge.disabled).toBe(true);
+    expect(flowForge.querySelector('[data-live="forge-pip"]')).not.toBeNull();
+    expect(flowForge.querySelector(".forge-detail")!.textContent).toContain("choices settle between sessions.");
     flowForge.click();
-    expect(app.ui.modal).toBe("forge");
+    expect(app.ui.modal).toBeNull();
+  });
+
+  it("in flow the locked Forge reads its meters on hover, both dock and thumb bar (#233)", () => {
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, null);
+    app.render();
+    for (const host of ["board-tools", "thumb-bar"]) {
+      const forge = document.querySelector<HTMLButtonElement>(`#${host} [data-op="forge"]`)!;
+      expect(forge.disabled).toBe(true);
+      const detail = forge.querySelector<HTMLElement>(".forge-detail")!;
+      forge.dispatchEvent(new MouseEvent("mouseenter"));
+      expect(detail.hidden).toBe(false);
+      expect(detail.textContent).toContain("Flow meter");
+      expect(detail.textContent).toContain("choices settle between sessions.");
+      forge.dispatchEvent(new MouseEvent("mouseleave"));
+      expect(detail.hidden).toBe(true);
+      forge.click();
+      expect(app.ui.modal).toBeNull();
+    }
   });
 
   it("focus opens live meter details without moving focus, and Escape or blur dismisses them", () => {
-    app.state.sessionsCompleted = 1;
-    startSession(app.state, null);
+    app.state.flow.progress = 90;
     app.render();
     for (const host of ["board-tools", "thumb-bar"]) {
       const forge = document.querySelector<HTMLButtonElement>(`#${host} [data-op="forge"]`)!;
@@ -784,15 +827,17 @@ describe("the action row (§7)", () => {
     app.render();
     expect(modal.querySelector('[data-live="modal-flow-line"]')!.textContent).toContain("1:30 / 3:00");
     app.closeModal();
-    // In flow, the take is refused by the engine and the modal says so.
+    // The sheet locks in flow (#233): the dock refuses, the modal never
+    // opens, and the banked roll waits for the session's end — the engine's
+    // guard stands behind the UI's locked door.
     app.state.sessionsCompleted = 1;
     startSession(app.state, null);
-    app.openModal("forge");
-    const peek = document.getElementById("modal-content")!;
-    expect(peek.textContent).toContain("Choices settle between sessions");
-    (peek.querySelector<HTMLButtonElement>("[data-choice]")!).click();
+    app.render();
+    const forgeButton = document.querySelector<HTMLButtonElement>('#board-tools [data-op="forge"]')!;
+    expect(forgeButton.disabled).toBe(true);
+    forgeButton.click();
+    expect(app.ui.modal).toBeNull();
     expect(app.state.bankedRolls).toHaveLength(1);
-    app.closeModal();
   });
 
   it("the cell tool shows the price and arms the frontier pick", () => {
@@ -1343,17 +1388,35 @@ describe("the expanded face (§5)", () => {
     expect(bloom().querySelector("#bloom-upgrade")!.textContent).toContain("16 ν");
   });
 
-  it("cannot afford: partial by design — the button stays enabled and buys what it can", () => {
+  it("cannot afford: zero reads zero — the shortfall leads, nothing disables (ADR-0045, #233)", () => {
     app.state.nous = 0;
     app.render();
     clickCell(0,0);
     const button = bloom().querySelector<HTMLButtonElement>("#bloom-upgrade")!;
     expect(button.disabled).toBe(false);
-    expect(button.title).toContain("buys what it can");
-    // The click refuses plainly: not even one level is affordable.
+    // The zero-affordable tooltip leads with the shortfall.
+    expect(button.title).toBe("+0 — 10 ν short of one level");
+    // The dial's MAX chip reads MAX·0 and carries the same read.
+    const maxChip = document.querySelector<HTMLButtonElement>('.bloom-dial [data-bulk="max"]')!;
+    expect(maxChip.textContent).toBe("MAX·0");
+    expect(maxChip.title).toBe("MAX · buys 0 — 10 ν short");
+    // The click still refuses plainly: not even one level is affordable.
     button.click();
     expect(app.state.modules[0]!.level).toBe(0);
     expect(document.getElementById("status")!.textContent).toContain("Not enough whole nous");
+  });
+
+  it("a short bank keeps the ordinary partial read when some levels are affordable", () => {
+    // The bank covers three of the five wanted levels.
+    app.state.nous = levelsCost(0, 3);
+    app.render();
+    clickCell(0,0);
+    document.querySelector<HTMLButtonElement>('.bloom-dial [data-bulk="5"]')!.click();
+    const button = bloom().querySelector<HTMLButtonElement>("#bloom-upgrade")!;
+    expect(button.disabled).toBe(false);
+    expect(button.title).toBe("Not enough for all 5 — buys what it can");
+    // The MAX chip still counts the affordable levels.
+    expect(document.querySelector<HTMLButtonElement>('.bloom-dial [data-bulk="max"]')!.textContent).toBe("MAX·3");
   });
 
   it("the silent wire wears no Upgrade button — a level buys it nothing", () => {
@@ -2412,10 +2475,11 @@ describe("the session clock", () => {
     const continueButton = document.getElementById("summary-continue")!;
     expect(slider).not.toBeNull();
     expect(text).not.toBeNull();
-    // Five positions, end labels only, the middle neutral and the default.
+    // The 1–5 range holds, continuous (#233): end labels only, the middle
+    // neutral and the default, decimals welcome.
     expect(slider.min).toBe("1");
     expect(slider.max).toBe("5");
-    expect(slider.step).toBe("1");
+    expect(slider.step).toBe("any");
     expect(slider.value).toBe("3");
     expect(text.value).toBe("");
     expect(modal.textContent).toContain("How did it go?");
@@ -2610,6 +2674,45 @@ describe("the close-out choreography (§8)", () => {
     slider.value = "5";
     slider.dispatchEvent(new Event("input"));
     expect(app.state.summary!.reflection).toEqual({ text: "held the plan", slider: 5 });
+  });
+
+  it("the continuous slider stores decimals and the ends respond to the thumb (#233)", () => {
+    endPlannedSession(60);
+    const slider = document.getElementById("summary-reflection-slider") as HTMLInputElement;
+    const rough = slider.previousElementSibling as HTMLElement;
+    const great = slider.nextElementSibling as HTMLElement;
+    const rest = 0.7;
+    // Untouched, both labels rest at the muted tint — no bands, no numbers.
+    expect(Number(rough.style.opacity || rest)).toBeCloseTo(rest);
+    // A decimal touch stores raw — the engine clamps the range, not the step.
+    slider.value = "4.5";
+    slider.dispatchEvent(new Event("input"));
+    expect(app.state.summary!.reflection).toEqual({ text: "", slider: 4.5 });
+    // The ends brighten as the thumb nears them; nothing else moves.
+    expect(Number(rough.style.opacity)).toBeCloseTo(0.35 + 0.65 * (1 - 0.875), 2);
+    expect(Number(great.style.opacity)).toBeCloseTo(0.35 + 0.65 * 0.875, 2);
+    slider.value = "1";
+    slider.dispatchEvent(new Event("input"));
+    expect(Number(rough.style.opacity)).toBeCloseTo(1, 2);
+    expect(Number(great.style.opacity)).toBeCloseTo(0.35, 2);
+    expect(app.state.summary!.reflection).toEqual({ text: "", slider: 1 });
+  });
+
+  it("a stored decimal reflection re-opens with its ends already reading the thumb", () => {
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    startSession(s, 600);
+    advance(s, 60);
+    endSession(s);
+    recordSummaryReflection(s, { slider: 2.5 });
+    app.ui.modal = "summary";
+    app.render();
+    const slider = document.getElementById("summary-reflection-slider") as HTMLInputElement;
+    expect(slider.value).toBe("2.5");
+    const rough = slider.previousElementSibling as HTMLElement;
+    const great = slider.nextElementSibling as HTMLElement;
+    expect(Number(rough.style.opacity)).toBeCloseTo(0.35 + 0.65 * 0.625, 2);
+    expect(Number(great.style.opacity)).toBeCloseTo(0.35 + 0.65 * 0.375, 2);
   });
 
   it("an untouched reflection stays absent when dismissed via Continue", () => {
@@ -4180,6 +4283,54 @@ describe("the bulk upgrade controls (#195)", () => {
     const chip = document.querySelector<HTMLButtonElement>('#upgrade-all [data-sweep="5"]')!;
     expect(chip.title).toContain("+5 on all 1 modules");
     expect(chip.title).toContain(formatNumber(levelsCost(0, 5)));
+  });
+
+  it("zero reads zero on the face: the shortfall leads, the label says +0 (ADR-0045, #233)", () => {
+    // The opening synth's next level costs 10 ν; the bank covers none.
+    app.state.nous = 4;
+    app.render();
+    const buy = document.querySelector(".face-buy")!;
+    expect(buy.querySelector(".face-buy-label")!.textContent).toBe("+0");
+    expect(buy.getAttribute("aria-label")).toBe("+0 — 6 ν short of one level");
+    expect(buy.querySelector("title")!.textContent).toBe("+0 — 6 ν short of one level");
+    // Nothing disables: the click runs and the engine refuses plainly.
+    (buy as HTMLElement).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.state.modules[0]!.level).toBe(0);
+  });
+
+  it("the MAX flip reads MAX·0 when nothing is affordable", () => {
+    app.state.nous = 4;
+    app.render();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Shift" }));
+    app.render();
+    const buy = document.querySelector(".face-buy")!;
+    expect(buy.querySelector(".face-buy-label")!.textContent).toBe("MAX·0");
+    expect(buy.getAttribute("aria-label")).toBe("MAX · buys 0 — 6 ν short");
+    document.dispatchEvent(new KeyboardEvent("keyup", { key: "Shift" }));
+  });
+
+  it("an affordable face keeps its ordinary read", () => {
+    app.state.nous = 10;
+    app.render();
+    const buy = document.querySelector(".face-buy")!;
+    expect(buy.querySelector(".face-buy-label")!.textContent).toBe("+1");
+    expect(buy.getAttribute("aria-label")).toBe("+1 level · 10 ν");
+  });
+
+  it("when nothing is affordable every sweep tooltip gains the zero-buy suffix (#233)", () => {
+    // The cheapest next level on the board is 10 ν; the bank covers none.
+    app.state.nous = 4;
+    app.render();
+    const cluster = document.getElementById("upgrade-all")!;
+    for (const chip of cluster.querySelectorAll<HTMLButtonElement>(".sweep-chip")) {
+      expect(chip.title).toMatch(/ — buys 0: need 6 ν more$/);
+    }
+    // A bank past the cheapest level drops the suffix everywhere.
+    app.state.nous = 10;
+    app.render();
+    for (const chip of cluster.querySelectorAll<HTMLButtonElement>(".sweep-chip")) {
+      expect(chip.title).not.toContain("buys 0");
+    }
   });
 
   it("in flow the cluster hides", () => {

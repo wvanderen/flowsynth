@@ -499,6 +499,29 @@ details.rd-synth { display: block; cursor: pointer; }
    decimals hold the width while the session ticks. */
 .prod-cell-session strong { min-width: 9ch; }
 
+/* The whole ledger is the door (#233, the #220 verdict): above the 760px
+   breakpoint a hover or focus anywhere on the strip opens the roster, and
+   the popover drops ledger-wide from the strip itself. The rate cell's
+   inner hairline is dead — the global button border and its hover fill
+   leak nowhere — and the ⓘ ring sits borderless at rest, brightening with
+   the ledger's hover. Below the line nothing changes: the tap-up sheet
+   stays the door and the cell keeps its border and ring. The synth-row
+   pick wiring inside the popover is untouched. */
+@container app (width >= 760px) {
+  .prod-ledger { position: relative; }
+  .rate-slot { position: static; }
+  .prod-cell-rate { border-color: transparent; }
+  .prod-ledger:hover .prod-cell-rate,
+  .prod-ledger:focus-within .prod-cell-rate { background: transparent; border-color: transparent; }
+  .rate-hint { border-color: transparent; }
+  .rate-slot:hover .rate-hint, .rate-slot:focus-within .rate-hint { border-color: transparent; }
+  .prod-ledger:hover .rate-hint,
+  .prod-ledger:focus-within .rate-hint { color: var(--nous); }
+  .rate-breakdown { left: 0; width: min(560px, 100%); max-height: min(76vh, 640px); }
+  .prod-ledger:hover .rate-breakdown,
+  .prod-ledger:focus-within .rate-breakdown { display: block; }
+}
+
 /* The feats chip (§7): the ledger strip's neighbor, opening the feats page. */
 .feats-chip {
   display: inline-flex;
@@ -2086,7 +2109,9 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
 .summary-reflection input[type="text"]:focus { border-color: var(--charge); outline: none; }
 .reflection-slider { display: flex; align-items: center; gap: 10px; }
 .reflection-slider input[type="range"] { flex: 1; accent-color: var(--accent); }
-.reflection-end { font-size: 11px; color: var(--muted); }
+/* The ends respond (#233): the labels rest muted and brighten as the thumb
+   nears them — opacity alone, no bands, no numbers. */
+.reflection-end { font-size: 11px; color: var(--muted); opacity: 0.7; transition: opacity 0.12s; }
 
 /* ── Dev panel ─────────────────────────────────────── */
 

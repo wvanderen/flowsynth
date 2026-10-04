@@ -17,7 +17,7 @@ import { cellCost, computeRates, wholeNous } from "./economy";
 import { fresh, give, stubRng } from "./fixtures";
 import { generateOffer } from "./rolls";
 import { hex, isConnected, sameHex } from "./hex";
-import { BALANCE, REFLECTION_SLIDER_NEUTRAL, SHELF_TYPES } from "./constants";
+import { BALANCE, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_TYPES } from "./constants";
 import { applyGap, flushPendingAway, resolveHonestyReport } from "./trust";
 import type { ShelfType } from "./types";
 
@@ -356,6 +356,21 @@ describe("the summary's final numbers and reflection (§8)", () => {
     endSession(t, 5_000);
     recordSummaryReflection(t, { text: "tight" });
     expect(t.summary!.reflection).toEqual({ text: "tight", slider: REFLECTION_SLIDER_NEUTRAL });
+  });
+
+  it("the continuous slider stores decimals; the clamp holds the 1–5 range (#233)", () => {
+    const s = fresh();
+    startSession(s, 600);
+    advance(s, 60);
+    endSession(s, 5_000);
+    // Decimals survive raw: saved integers stay valid points, nothing rounds.
+    recordSummaryReflection(s, { slider: 2.5 });
+    expect(s.summary!.reflection).toEqual({ text: "", slider: 2.5 });
+    // The range still clamps, whatever the DOM might hand over.
+    recordSummaryReflection(s, { slider: 9 });
+    expect(s.summary!.reflection!.slider).toBe(REFLECTION_SLIDER_POSITIONS);
+    recordSummaryReflection(s, { slider: -3 });
+    expect(s.summary!.reflection!.slider).toBe(1);
   });
 
   it("recording needs a summary; neither field touched leaves the reflection absent", () => {
