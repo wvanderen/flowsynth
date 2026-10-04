@@ -85,7 +85,7 @@ describe("the carrierless opening board", () => {
     const forge = s.modules.find((m) => m.type === "forge")!;
     expect(placeModule(s, generator.id, hex(1, 0)).ok).toBe(true);
     expect(placeModule(s, forge.id, hex(0, 1)).ok).toBe(true);
-    s.chargeWindow = 60;
+    generator.reserve = 60;
     const snapshot = computeRates(s, true);
     expect(snapshot.chargeStrength.get(forge.id)).toBe(1);
     expect(snapshot.forgeRate).toBe(1);
@@ -109,7 +109,7 @@ describe("the carrierless opening board", () => {
     expect(restored.modules).toHaveLength(1);
     expect(restored.modules[0]!.pos).toEqual(hex(0, 0));
     expect(restored.nous).toBe(BALANCE.openingGrant);
-    expect(SAVE_VERSION).toBe(7);
+    expect(SAVE_VERSION).toBe(8);
   });
 });
 

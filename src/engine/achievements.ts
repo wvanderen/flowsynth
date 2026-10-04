@@ -9,7 +9,7 @@
 import { ARETE_HORIZON } from "./accumulator";
 import { BALANCE } from "./constants";
 import { analyzeChords } from "./chords";
-import { deployedConductors } from "./economy";
+import { deployedVoices } from "./economy";
 import { isInFlowNote } from "./notes";
 import type { GameState } from "./types";
 
@@ -67,16 +67,18 @@ const ownsRare = (state: GameState): boolean => state.modules.some((m) => m.rari
 const rollsTaken = (state: GameState): number =>
   Math.max(0, state.forge.earned + state.flow.earned - state.bankedRolls.length);
 
-// The steepest local chord multiplier any single deployed synthesizer sings
-// under (ADR-0036) — the same partition the rate pass applies (generators,
-// infusors, and forges never chord; spacers conduct) — computed straight
-// from the board so the registry stays free of the rate pass. Chords are
-// local, so the feat asks what one voice carries, never a board-wide
-// product that stacks disjoint clusters onto a single module.
+// The steepest local chord multiplier any single deployed voice sings
+// under (ADR-0036, raised by ADR-0049) — the same partition the rate pass
+// applies (only oscillators and silent voices sing; spacers conduct) —
+// computed straight from the board so the registry stays free of the rate
+// pass. Chords are local, so the feat asks what one voice carries, never a
+// board-wide product that stacks disjoint formations onto a single module.
+// The formation quality Q rides inside the factor (ADR-0049): Q counts
+// toward the ×2.
 function maxVoiceMultiplierOf(state: GameState): number {
-  const { synths, spacers } = deployedConductors(state);
+  const { singers, spacers } = deployedVoices(state);
   let max = 0;
-  for (const factor of analyzeChords(synths, spacers).voiceMultiplier.values()) {
+  for (const factor of analyzeChords(singers, spacers).voiceMultiplier.values()) {
     max = Math.max(max, factor);
   }
   return max;
@@ -171,7 +173,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     id: "power-chord",
     category: "formula",
     name: "Power chord",
-    description: "Stack chord multipliers on one synth to ×2.",
+    description: "Stack chord multipliers on one voice to ×2 — the Formation term counts.",
     evaluate: (s) => maxVoiceMultiplierOf(s) >= 2,
     progress: (s) => fraction(maxVoiceMultiplierOf(s), 2),
   },

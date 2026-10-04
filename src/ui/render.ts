@@ -5,10 +5,10 @@ import { combinePreview, combineMutatorsPreview, levelable, type CombinePreview,
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold, flowThreshold, mutatorForgeThreshold } from "../engine/rolls";
-import { BALANCE, CATEGORY_OF, isSynthesizerType, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
+import { BALANCE, CATEGORY_OF, isOscillatorType, isVoiceType, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { catalogOpen, rowUnlockCost, unlockableRows } from "../engine/catalog";
 import { formatClock, formatDuration } from "../engine/clock";
-import { cellNoteOf, octaveRowOf, positionInRange } from "../engine/lattice";
+import { cellNoteOf, noteNameOf, octaveRowOf, pitchOf, positionInRange } from "../engine/lattice";
 import { appActive, appLockNote, TILE_APPS, type FocusApp } from "../engine/apps";
 import { isInFlowNote } from "../engine/notes";
 import { activeHabit } from "../engine/habits";
@@ -945,6 +945,8 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
   const deployedById = new Map(state.modules.filter((m) => m.pos !== null).map((m) => [m.id, m]));
   const focusIds = selectedModule?.pos ? [selectedModule.id] : [];
   const focusPoint = selectedModule?.pos && selectedModule.type === "spacer" ? point(selectedModule.pos) : null;
+  // The silent voices (ADR-0048): the chords they sing in draw muted.
+  const silentIds = new Set(state.modules.filter((m) => CATEGORY_OF[m.type] === "silentVoice").map((m) => m.id));
   const overlay = chordOverlay({
     namedChords: snapshot.namedChords,
     posOf: (id) => deployedById.get(id)?.pos ?? null,
@@ -954,6 +956,7 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
     labelFor: chordTermLabel,
     focusIds,
     focusPoint,
+    silentIds,
   });
   chordReadoutCache.set(app, { marks: overlay.marks, snapshot });
 
@@ -1156,13 +1159,15 @@ function rowBandHtml(state: GameState, bands: RowBand[], point: (pos: Hex) => [n
 function chordMarkHtml(mark: ChordMark, keyPrefix: "formed" | "ghost"): string {
   const ghost = keyPrefix === "ghost";
   const emphasis = ghost ? " ghost-mark" : mark.focused ? " chord-focus" : " chord-fade";
+  // The muted participant's mark (ADR-0048): a chord a silent voice sings
+  // in draws dashed — the standing language for silent and promised work.
   const style = `--cc:var(--${mark.colorVar});--seam-dur:${mark.duration}s`;
   const lines = mark.outline
-    ? `<polygon class="chord-seam chord-loop" points="${mark.outline.map((p) => p.join(",")).join(" ")}"/>`
+    ? `<polygon class="chord-seam chord-loop${mark.muted ? " chord-muted" : ""}" points="${mark.outline.map((p) => p.join(",")).join(" ")}"/>`
     : mark.seams
         .map(
           (s) =>
-            `<line class="chord-seam${ghost ? " ghost-seam" : ""}" x1="${s.x1}" y1="${s.y1}" x2="${s.x2}" y2="${s.y2}"/>`,
+            `<line class="chord-seam${ghost ? " ghost-seam" : ""}${mark.muted ? " chord-muted" : ""}" x1="${s.x1}" y1="${s.y1}" x2="${s.x2}" y2="${s.y2}"/>`,
         )
         .join("");
   const chip = ghost
@@ -1184,11 +1189,11 @@ const chordReadoutCache = new WeakMap<App, ChordReadoutCache>();
 // The reserved readout (§6): the chips, in one place — the selected
 // module's chip row wins, else what the pointer rests on (a seam names its
 // chord; a module names every chord it sings in). A selected or hovered
-// synthesizer's final ν/s leads the row — live during flow, present with no
-// chord at all (ADR-0036). Only synthesizers carry the figure: nothing else
-// produces nous, and the Forge's progress-per-second is not ν/s. Hidden when
-// nothing asks. HTML beside the board, so the expanded face can never cover
-// it and it never moves.
+// oscillator's final ν/s leads the row — live during flow, present with no
+// chord at all (ADR-0036). Only producers carry the figure: nothing else
+// produces nous, and the Forge's progress-per-second is not ν/s. Hidden
+// when nothing asks. HTML beside the board, so the expanded face can never
+// cover it and it never moves.
 function updateChordReadout(app: App): void {
   const host = byId("chord-readout");
   if (!host) return;
@@ -1213,10 +1218,17 @@ function updateChordReadout(app: App): void {
   const focus = selected ?? hovered;
   const contribution = focus && snapshot ? snapshot.contributions.get(focus.id) : undefined;
   const valueChip =
-    focus && contribution && isSynthesizerType(focus.type)
+    focus && contribution && isOscillatorType(focus.type)
       ? `<span class="chord-readout-chip chord-readout-value mono">+${formatNumber(contribution.value)} ν/s</span>`
       : "";
-  if (!valueChip && chosen.length === 0) {
+  // The formation quality's own named term (ADR-0049): every member of a
+  // named formation reads it — "Formation ×1.12" — chord-sourced, so a
+  // chordless formation never shows one.
+  const formationChip =
+    contribution && contribution.formationQ !== 1
+      ? `<span class="chord-readout-chip chord-readout-formation mono">Formation ×${formatNumber(contribution.formationQ)}</span>`
+      : "";
+  if (!valueChip && !formationChip && chosen.length === 0) {
     host.hidden = true;
     host.innerHTML = "";
     return;
@@ -1224,10 +1236,13 @@ function updateChordReadout(app: App): void {
   host.hidden = false;
   host.innerHTML =
     valueChip +
+    formationChip +
     chosen
       .map(
         (mark) =>
-          `<span class="chord-readout-chip mono" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.label)}</span>`,
+          // The muted participant's mark (ADR-0048): a chord a silent voice
+          // sings in wears the same dashed treatment its seams carry.
+          `<span class="chord-readout-chip mono${mark.muted ? " chord-readout-muted" : ""}" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.label)}</span>`,
       )
       .join("");
 }
@@ -1332,7 +1347,26 @@ function faceReadoutFor(state: GameState, module: ModuleInstance, pos: Hex | nul
     // its face says so and names the cell it wires.
     return pos ? { readout: "⌇", note: cellNoteOf(pos) } : { readout: "⌇" };
   }
-  // Synthesizers wear their contribution with the cell's note beneath it:
+  const category = CATEGORY_OF[module.type];
+  if (category === "silentVoice") {
+    // The silent voices sing nothing of their own: the face names the
+    // derived pitch the module sings (the Echo's neighbor an octave down,
+    // the Bend's altered cell) — or its silence.
+    const pitch = contribution?.pitch ?? null;
+    return pos
+      ? { readout: pitch !== null ? noteNameOf(pitch) : "—", note: cellNoteOf(pos) }
+      : { readout: pitch !== null ? noteNameOf(pitch) : "—" };
+  }
+  if (category === "conduit") {
+    // The Amplifier routes: the face shows the strength it relays — what
+    // it received, times its level-scaled gain.
+    const strength = snapshot.chargeStrength.get(module.id) ?? 0;
+    const gain = 1 + BALANCE.amplifierGainPerLevel * module.level;
+    return pos
+      ? { readout: `⌁${formatNumber(strength * gain)}`, note: cellNoteOf(pos) }
+      : { readout: `⌁${formatNumber(strength * gain)}` };
+  }
+  // Oscillators wear their contribution with the cell's note beneath it:
   // pitch lives in the cell (ADR-0021).
   const unit = withUnits ? " ν/s" : "";
   return pos
@@ -1611,8 +1645,8 @@ function ghostMarksHtml(app: App, projected?: RateSnapshot): string {
   if (!hover || app.state.mode !== "upgrade") return "";
   const module = app.state.modules.find((m) => m.id === hover.moduleId);
   if (!module) return "";
-  const conducts = CATEGORY_OF[module.type] === "synthesizer" || module.type === "spacer";
-  if (!conducts) return "";
+  // Voices and spacers conduct (ADR-0048); nothing else previews chords.
+  if (!isVoiceType(module.type) && module.type !== "spacer") return "";
   // A combine offer previews no swap: the drop won't rearrange voices, it
   // will consume the twin under the pointer (issue #152).
   if (dropRegister(app, hover.pos) === "combine") return "";
@@ -1622,6 +1656,12 @@ function ghostMarksHtml(app: App, projected?: RateSnapshot): string {
   if (newcomers.length === 0) return "";
   const deployedById = new Map(app.state.modules.filter((m) => m.pos !== null).map((m) => [m.id, m]));
   const posOf = (id: string): Hex | null => (id === hover.moduleId ? hover.pos : preview.positions.get(id) ?? deployedById.get(id)?.pos ?? null);
+  // The ghost's silent set: the deployed silent voices plus the dragged
+  // module when it is one — the promise must read muted before it lands.
+  const silentIds = new Set(
+    app.state.modules.filter((m) => CATEGORY_OF[m.type] === "silentVoice").map((m) => m.id),
+  );
+  if (CATEGORY_OF[module.type] === "silentVoice") silentIds.add(module.id);
   const overlay = chordOverlay({
     namedChords: newcomers,
     posOf,
@@ -1629,6 +1669,7 @@ function ghostMarksHtml(app: App, projected?: RateSnapshot): string {
     radius: HEX_RADIUS,
     step: LATTICE_STEP,
     labelFor: chordTermLabel,
+    silentIds,
   });
   return overlay.marks.map((mark) => chordMarkHtml(mark, "ghost")).join("");
 }
@@ -1855,10 +1896,14 @@ interface BloomEffectInput {
   power: number;
   value: number;
   strength: number;
+  // The module's own level (the relay read reads it).
+  level: number;
+  // The level count the benefit previews (1, or the dial's k).
+  levels: number;
 }
 
 // The synth benefit is exact at every local effect: value/power is the
-// module's per-power ν/s (chord factor, infusor uplift, charge, and
+// module's per-power ν/s (chord factor, booster uplift, charge, and
 // achievements all in — ADR-0036), so one level's power gain scales it
 // directly instead of quoting a bare-term figure chords would understate.
 const synthBloomLines = ({ gain, power, value }: BloomEffectInput): { benefit: string | null; contribution: string } => ({
@@ -1866,13 +1911,30 @@ const synthBloomLines = ({ gain, power, value }: BloomEffectInput): { benefit: s
   contribution: `+${formatNumber(value)} ν/s`,
 });
 
+// The silent voices' expanded-face lines: the level buys the chord-
+// instance uplift (ADR-0048), never production — the contribution names
+// the uplift the module stands for.
+const silentBloomLines = ({ levels }: BloomEffectInput): { benefit: string | null; contribution: string } => ({
+  benefit: `+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * levels)}% chord-instance uplift`,
+  contribution: `+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/LV to chord instances`,
+});
+
 const BLOOM_EFFECTS: Record<ModuleInstance["type"], (input: BloomEffectInput) => { benefit: string | null; contribution: string }> = {
   additive: synthBloomLines,
-  conditional: synthBloomLines,
+  // The Blaster's charge conversion replaces the charge factor: one level
+  // scales its whole charge-sourced term (ADR-0048).
+  blaster: synthBloomLines,
+  harmonizer: silentBloomLines,
+  echo: silentBloomLines,
+  bend: silentBloomLines,
+  amplifier: ({ strength, level, levels }) => ({
+    benefit: `+${formatNumber(100 * BALANCE.amplifierGainPerLevel * levels)}% relay gain`,
+    contribution: `relays ⌁${formatNumber(strength)} received × +${Math.round(100 * BALANCE.amplifierGainPerLevel * level)}%`,
+  }),
   spacer: () => ({ benefit: null, contribution: "silent — conducts chords, produces nothing" }),
   focusKeyed: ({ gain, power }) => ({
     benefit: `+${formatNumber(gain)} strength`,
-    contribution: `${formatNumber(power)} charge strength while its window lasts`,
+    contribution: `${formatNumber(power)} charge strength while its reserve lasts`,
   }),
   infusor: ({ gain, power, strength }) => ({
     benefit: `+${formatNumber(100 * BALANCE.infusorBonus * gain)}% uplift`,
@@ -1929,10 +1991,12 @@ function renderBloom(app: App, projected: RateSnapshot): void {
     power,
     value: snapshot.contributions.get(module.id)?.value ?? 0,
     strength: snapshot.chargeStrength.get(module.id) ?? 0,
+    level: module.level,
   };
   const lines = BLOOM_EFFECTS[module.type]({
     ...effectInput,
     gain: power * (BALANCE.rarityPower[module.rarity] - 1),
+    levels: 1,
   });
   // The dial (issue #195): the Upgrade button gains the shared ladder —
   // ×1 / ×5 / ×10 / MAX·k — with the total cost and the k-level benefit
@@ -1948,6 +2012,7 @@ function renderBloom(app: App, projected: RateSnapshot): void {
   const bulkBenefit = BLOOM_EFFECTS[module.type]({
     ...effectInput,
     gain: power * (BALANCE.rarityPower[module.rarity] ** want - 1),
+    levels: want,
   }).benefit;
   // Partial by design: the button stays enabled whatever the bank says —
   // a short purchase buys what it covers and says so.
@@ -1961,7 +2026,7 @@ function renderBloom(app: App, projected: RateSnapshot): void {
   const mutKey = bloomMutatorKey(state, module.pos);
   const mutLine = mutatorBloomLineHtml(state, module.pos, snapshot);
   const shape = phone ? "sheet" : "pop";
-  const key = JSON.stringify([shape, module.id, module.level, module.rarity, ui.bulkCount, maxLevels, want, bulkCost, bulkBenefit, affordable, lines.contribution, forgeTick, mutKey]);
+  const key = JSON.stringify([shape, module.id, module.level, module.rarity, module.shift, ui.bulkCount, maxLevels, want, bulkCost, bulkBenefit, affordable, lines.contribution, forgeTick, mutKey]);
   // One frame read for both the pop question and the positioning below.
   const svg = document.getElementById("grid");
   const viewBox = (svg?.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
@@ -1987,7 +2052,20 @@ function renderBloom(app: App, projected: RateSnapshot): void {
         <small class="bloom-upgrade-benefit mono">${bulkBenefit ?? ""}</small>
       </button>`
     : "";
-  const buyColumn = `${dial}${upgradeButton}`;
+  // The Bend's player-picked shift (ADR-0048): the rarity's selectable
+  // ♯/♭ steps, one chip each — the pick is permanent configuration, changed
+  // freely in upgrade mode like every other reconfiguration.
+  const shiftPicker =
+    module.type === "bend"
+      ? `<div class="bloom-shift" role="group" aria-label="Pitch shift">${BALANCE.bendShifts[module.rarity]
+          .map((shift) => {
+            const active = (module.shift ?? 1) === shift;
+            const label = `${shift > 0 ? "♯" : "♭"}${Math.abs(shift)}`;
+            return `<button class="bloom-shift-chip${active ? " active" : ""}" data-shift="${shift}" aria-pressed="${active}" title="${shift > 0 ? "Sharp" : "Flat"} ${Math.abs(shift)} — sings ${noteNameOf(pitchOf(module.pos!) + shift)}">${label}</button>`;
+          })
+          .join("")}</div>`
+      : "";
+  const buyColumn = `${shiftPicker}${dial}${upgradeButton}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.classList.toggle("sheet", phone);
@@ -2106,6 +2184,14 @@ function wireBloomBuy(app: App, host: HTMLElement, moduleId: string): void {
       const raw = chip.getAttribute("data-bulk")!;
       ui.bulkCount = raw === "max" ? "max" : (Number(raw) as 1 | 5 | 10);
       app.render();
+    });
+  });
+  // The Bend's shift pick (ADR-0048): one chip per selectable step, the
+  // action refusing out-of-set shifts — the picker only offers the set.
+  host.querySelectorAll<HTMLButtonElement>("[data-shift]").forEach((chip) => {
+    chip.addEventListener("click", (event) => {
+      event.stopPropagation();
+      app.setBendShift(moduleId, Number(chip.getAttribute("data-shift")));
     });
   });
 }
@@ -3195,9 +3281,13 @@ function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
   const charged = chargedFactor(1);
   switch (type) {
     case "additive": return `+${formatNumber(BALANCE.synthRate)} ν/s unified synth term<br>+${formatNumber(BALANCE.synthRate * charged)} ν/s at charge strength 1`;
-    case "conditional": return `+${formatNumber(BALANCE.synthRate)} ν/s synth term<br>+${formatNumber(100 * BALANCE.conditionalChordBonus)}% per chord instance it belongs to`;
+    case "blaster": return `converts received charge into its synth term — ×${formatNumber(charged - 1)} at charge strength 1<br>sings and completes chords even uncharged, at zero output`;
+    case "harmonizer": return `silent voice — sings its cell's pitch, produces nothing<br>+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/LV to every chord instance it sings in`;
+    case "echo": return `silent voice — sings an adjacent voice's pitch one octave down<br>+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/LV to every chord instance it sings in`;
+    case "bend": return `silent voice — sings its cell's pitch altered by its picked shift<br>+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/LV to every chord instance it sings in`;
+    case "amplifier": return `re-broadcasts received charge at +${formatNumber(100 * BALANCE.amplifierGainPerLevel)}%/LV<br>relayed charge counts fully at receivers; ${BALANCE.amplifierHopCap} hops deep at most`;
     case "spacer": return `Silent wire — never sounds, never joins a pitch set<br>conducts chord adjacency through chains of wired cells`;
-    case "focusKeyed": return `The generator — keyed to your focus<br>each session end banks a charge window (a tenth of its live practice time), spent as its output next session`;
+    case "focusKeyed": return `The generator — keyed to your focus<br>each session end banks a reserve (a tenth of its live practice time), spent as its output next session`;
     case "infusor": return `+${formatNumber(BALANCE.infusorBonus * 100)}% to adjacent production contributions<br>+${formatNumber(BALANCE.infusorBonus * charged * 100)}% at charge strength 1`;
     case "forge": return `1 Forge progress per received charge strength<br>Next roll: ${formatNumber(forgeThreshold(state.forge.earned))} progress`;
     case "mutatorForge": return `1 Mutator Forge progress per received charge strength<br>Next roll: ${formatNumber(mutatorForgeThreshold(state.mutatorForge.earned))} progress`;
@@ -3208,9 +3298,14 @@ function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
 function candidateReadout(type: ModuleInstance["type"]): string {
   switch (type) {
     case "additive":
+    case "blaster":
       return `+${formatNumber(BALANCE.synthRate)}`;
-    case "conditional":
-      return `+${formatNumber(BALANCE.synthRate)}`;
+    case "harmonizer":
+    case "echo":
+    case "bend":
+      return "silent";
+    case "amplifier":
+      return "relay";
     case "spacer":
       return "⌇";
     case "focusKeyed":

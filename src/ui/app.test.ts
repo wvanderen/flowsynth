@@ -383,10 +383,12 @@ describe("the board ledger strip (§7)", () => {
     advance(s, 60);
     endSession(s);
     app.render();
-    // The synths leg carries the local chords; there is no board-wide
-    // chord-multiplier claim to lean on (ADR-0036).
-    expect(modal.textContent).toContain(`synths +${formatNumber(0.26)} ν/s`);
-    expect(modal.textContent).toContain(`boosters +${formatNumber(0.052)} ν/s`);
+    // The synths leg carries the local chords — including the formation's
+    // quality — and there is no board-wide chord-multiplier claim to lean
+    // on (ADR-0036).
+    const q = 1 + BALANCE.complexityRate;
+    expect(modal.textContent).toContain(`synths +${formatNumber(0.26 * q)} ν/s`);
+    expect(modal.textContent).toContain(`boosters +${formatNumber(0.052 * q)} ν/s`);
     expect(modal.textContent).not.toContain("chords ×");
     expect(modal.textContent).not.toContain("carrier");
     expect(modal.textContent).not.toContain("harmonics");
@@ -613,7 +615,8 @@ describe("the horizon bar (§7, issue #156)", () => {
   it("pressing the door opens a confirm; confirming banks the claim and begins the next era", () => {
     app.state.eraEarned = ARETE_HORIZON;
     app.state.nous = 8_000;
-    app.state.chargeWindow = 120;
+    const prestigeGen = give(app.state, "focusKeyed", hex(2, 0));
+    prestigeGen.reserve = 120;
     app.render();
     document.getElementById("prestige-door")!.click();
     expect(app.ui.modal).toBe("prestige");
@@ -626,7 +629,7 @@ describe("the horizon bar (§7, issue #156)", () => {
     // The boundary: era bar rebased, nous and charge reset.
     expect(app.state.eraEarned).toBe(0);
     expect(app.state.nous).toBe(BALANCE.openingGrant);
-    expect(app.state.chargeWindow).toBe(0);
+    expect(app.state.modules.every((m) => m.reserve === 0)).toBe(true);
     // The bar reads the fresh era: 0%, no door.
     app.render();
     const bar = document.getElementById("horizon-bar")!;
@@ -1111,7 +1114,7 @@ describe("the always-live board (§5)", () => {
   });
 
   it("the drop register previews amber over occupied cells, green over open ones", () => {
-    give(app.state, "conditional", hex(1, 0)); // G4 — occupied, but no twin of m1
+    give(app.state, "harmonizer", hex(1, 0)); // G4 — occupied, but no twin of m1
     app.render();
     document.elementFromPoint = () => cell(0, 1);
     cell(0, 0).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
@@ -1144,7 +1147,7 @@ describe("the always-live board (§5)", () => {
     // A different type: pitch lives in the cell, so the swap is a plain
     // swap (§5, §8) — occupied drops swap without confirm; the review is
     // for matching pairs alone (#152).
-    const stranger = give(app.state, "conditional", hex(1, 0));
+    const stranger = give(app.state, "harmonizer", hex(1, 0));
     app.render();
     document.elementFromPoint = () => cell(1, 0);
     cell(0, 0).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
@@ -1616,11 +1619,22 @@ describe("always-on chord feedback (§6, #137)", () => {
     // instances share it), then the chord's chip.
     cell(1, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(readout().hidden).toBe(false);
-    expect(chips()).toEqual([`+${formatNumber(0.1 * 1.3 ** 2)} ν/s`, "Fifth ×1.3 ×2"]);
+    // The formation quality is its own named term (ADR-0049) and rides the
+    // ν/s: classes {0,7}, one class of complexity.
+    expect(chips()).toEqual([
+      `+${formatNumber(0.1 * 1.3 ** 2 * (1 + BALANCE.complexityRate))} ν/s`,
+      "Formation ×1.06",
+      "Fifth ×1.3 ×2",
+    ]);
     // Hovering C4 asks its ν/s and both of its chords into the spot — the
     // octave and its one fifth instance (the other pairs C5 · G4).
     cell(0, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(chips()).toEqual([`+${formatNumber(0.1 * 1.15 * 1.3)} ν/s`, "Octave ×1.15", "Fifth ×1.3 ×2"]);
+    expect(chips()).toEqual([
+      `+${formatNumber(0.1 * 1.15 * 1.3 * (1 + BALANCE.complexityRate))} ν/s`,
+      "Formation ×1.06",
+      "Octave ×1.15",
+      "Fifth ×1.3 ×2",
+    ]);
     // Leaving clears them.
     document.getElementById("grid")!.dispatchEvent(new MouseEvent("pointerleave"));
     expect(readout().hidden).toBe(true);
@@ -1628,7 +1642,12 @@ describe("always-on chord feedback (§6, #137)", () => {
     const c4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(0, 0)))!;
     app.select(c4.id);
     expect(readout().hidden).toBe(false);
-    expect(chips()).toEqual([`+${formatNumber(0.1 * 1.15 * 1.3)} ν/s`, "Octave ×1.15", "Fifth ×1.3 ×2"]);
+    expect(chips()).toEqual([
+      `+${formatNumber(0.1 * 1.15 * 1.3 * (1 + BALANCE.complexityRate))} ν/s`,
+      "Formation ×1.06",
+      "Octave ×1.15",
+      "Fifth ×1.3 ×2",
+    ]);
     // Deselecting empties the readout again.
     app.select(c4.id);
     expect(readout().hidden).toBe(true);
@@ -1869,7 +1888,9 @@ describe("the dev panel's synth grant (#137)", () => {
     // and its chord in the reserved readout.
     app.select(granted.id);
     expect(document.getElementById("chord-readout")!.textContent).toContain("Fifth ×1.3");
-    expect(document.getElementById("chord-readout")!.textContent).toContain(`+${formatNumber(0.13)} ν/s`);
+    expect(document.getElementById("chord-readout")!.textContent).toContain(
+      `+${formatNumber(0.1 * 1.3 * (1 + BALANCE.complexityRate))} ν/s`,
+    );
   });
 
   it("falls back to the tray when no free cell chords with a synth", () => {

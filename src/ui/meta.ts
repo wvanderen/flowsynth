@@ -1,12 +1,15 @@
 import type { FocusApp, ModuleType, Rarity, ShelfType } from "../engine/types";
 
-// The final names and faceplates (issue #219, wave 1): display-layer only —
-// the storage type keys are untouched and no save migration happens. `name`
-// is the full name every tooltip, roster row, and toast reads; `short` is
-// the face's compact nameplate.
+// The final names and faceplates (issue #219, wave 1; roster types wave 2):
+// display-layer only — `name` is the full name every tooltip, roster row,
+// and toast reads; `short` is the face's compact nameplate.
 export const META: Record<ModuleType, { name: string; short: string; role: string }> = {
   additive: { name: "Oscillator", short: "OSC", role: "Synth term" },
-  conditional: { name: "Harmonizer", short: "HARM", role: "Synth term + chord bonus" },
+  blaster: { name: "Blaster", short: "BLST", role: "Charge into synth term" },
+  harmonizer: { name: "Harmonizer", short: "HARM", role: "Silent voice — its cell's pitch" },
+  echo: { name: "Echo", short: "ECHO", role: "Silent voice — neighbor, one octave down" },
+  bend: { name: "Bend", short: "BEND", role: "Silent voice — its pitch, shifted" },
+  amplifier: { name: "Amplifier", short: "AMP", role: "Relays charge onward" },
   spacer: { name: "Spacer", short: "Spacer", role: "Silent wire" },
   focusKeyed: { name: "Focus Generator", short: "FOCUS", role: "Charge from focus" },
   infusor: { name: "Booster", short: "BOOST", role: "Neighbor bonuses" },

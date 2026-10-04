@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buyCell, buyShelfModule, chooseRoll, endSession, placeModule, prestige, startSession, upgradeModuleLevels } from "./actions";
 import { advance } from "./advance";
 import { ARETE_HORIZON, horizonReached } from "./accumulator";
-import { isSynthesizerType } from "./constants";
+import { isOscillatorType } from "./constants";
 import { computeRates } from "./economy";
 import { neighbors, sameHex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
@@ -35,7 +35,7 @@ function frontier(state: GameState, shape: "compact" | "fifths"): Hex[] {
 function manage(state: GameState, shape: "compact" | "fifths"): void {
   // Accept a synthesizer when offered; otherwise keep the first real draw.
   for (const offer of [...state.bankedRolls]) {
-    const candidate = offer.candidates.find((c) => isSynthesizerType(c.type)) ?? offer.candidates[0];
+    const candidate = offer.candidates.find((c) => isOscillatorType(c.type)) ?? offer.candidates[0];
     expect(chooseRoll(state, offer.id, candidate.id).ok).toBe(true);
   }
   // At most one shelf purchase and two cells per break, preserving room
@@ -50,7 +50,7 @@ function manage(state: GameState, shape: "compact" | "fifths"): void {
   }
   // Greedy vacant-cell placement: a modest preview-driven player, not an
   // exhaustive layout search. Include Forge output so support has value.
-  for (const module of [...state.modules].sort((a, b) => Number(isSynthesizerType(b.type)) - Number(isSynthesizerType(a.type)))) {
+  for (const module of [...state.modules].sort((a, b) => Number(isOscillatorType(b.type)) - Number(isOscillatorType(a.type)))) {
     if (module.pos !== null) continue;
     const vacancies = state.cells.filter((c) => !state.modules.some((m) => m.pos && sameHex(m.pos, c)));
     let best: Hex | undefined;
@@ -66,7 +66,7 @@ function manage(state: GameState, shape: "compact" | "fifths"): void {
   }
   // Three upgrade gestures, each capped at five levels; rotate through
   // deployed synthesizers rather than spend everything on one voice.
-  const synths = state.modules.filter((m) => m.pos && isSynthesizerType(m.type)).sort((a, b) => a.level - b.level);
+  const synths = state.modules.filter((m) => m.pos && isOscillatorType(m.type)).sort((a, b) => a.level - b.level);
   for (const module of synths.slice(0, 3)) upgradeModuleLevels(state, module.id, 5);
 }
 
@@ -87,7 +87,7 @@ function scenario(seed: number, shape: "compact" | "fifths") {
       }
     }
     expect(endSession(state, session * 1800000).ok).toBe(true);
-    rows.push({ session, earned: state.eraEarned, cells: state.cells.length, synths: state.modules.filter((m) => m.pos && isSynthesizerType(m.type)).length });
+    rows.push({ session, earned: state.eraEarned, cells: state.cells.length, synths: state.modules.filter((m) => m.pos && isOscillatorType(m.type)).length });
   }
   return { state, rows, crossings };
 }

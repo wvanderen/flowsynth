@@ -1,4 +1,4 @@
-import { isSynthesizerType } from "./constants";
+import { isOscillatorType } from "./constants";
 import type { GameState } from "./types";
 
 // The opening learning arc (board-redesign spec §8, issue #138): a
@@ -6,10 +6,10 @@ import type { GameState } from "./types";
 // lives in state.ts; this module carries the arc's one piece of learned
 // state — the card that fires when the second synthesizer arrives.
 
-// Every synthesizer the player has acquired, tray or board. The opening
+// Every oscillator the player has acquired, tray or board. The opening
 // grants one; the arc's card keys off the second.
 export function synthsAcquired(state: GameState): number {
-  return state.modules.filter((m) => isSynthesizerType(m.type)).length;
+  return state.modules.filter((m) => isOscillatorType(m.type)).length;
 }
 
 // Whether the one pop-up is due: after the second acquisition, until its

@@ -25,8 +25,8 @@ describe("theme token table", () => {
 
   it("carries the ADR-0016 category hue table", () => {
     expect(tokens["hue-generator"]).toBe("#238858");
-    expect(tokens["hue-synthesizer"]).toBe("#6360d4");
-    expect(tokens["hue-infusor"]).toBe("#1f95b5");
+    expect(tokens["hue-oscillator"]).toBe("#6360d4");
+    expect(tokens["hue-booster"]).toBe("#1f95b5");
     expect(tokens["hue-forge"]).toBe("#bc9239");
     expect(tokens.charge).toBe("#9affa8");
     expect(tokens.nous).toBe("#cbcaff");

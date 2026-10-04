@@ -14,7 +14,7 @@ describe("charge leads — the patch wire diagram (§8, #41)", () => {
   it("runs one directional lead per adjacent generator → receiver pair", () => {
     const s = flowing();
     const generator = give(s, "focusKeyed", hex(1, 0));
-    s.chargeWindow = 60;
+    generator.reserve = 60;
     const carrier = s.modules[0]!; // pinned at the origin, adjacent to (1,0)
     const forge = give(s, "forge", hex(2, 0));
     const leads = chargeLeads(s, true);
@@ -28,7 +28,8 @@ describe("charge leads — the patch wire diagram (§8, #41)", () => {
     const s = flowing();
     const gen = give(s, "focusKeyed", hex(1, 0));
     const keyed = give(s, "focusKeyed", hex(2, 0));
-    s.chargeWindow = 60;
+    gen.reserve = 60;
+    keyed.reserve = 60;
     const pairs = chargeLeads(s, true).map((l) => [l.generator.id, l.receiver.id]);
     expect(pairs).not.toContainEqual([gen.id, keyed.id]);
     expect(pairs).not.toContainEqual([keyed.id, gen.id]);
@@ -42,17 +43,16 @@ describe("charge leads — the patch wire diagram (§8, #41)", () => {
     expect(leads.map((l) => l.receiver.type)).toEqual(["additive"]);
   });
 
-  it("emits nothing live from a spent charge window — the wiring dims, not vanishes", () => {
+  it("emits nothing live from a spent reserve — the wiring dims, not vanishes", () => {
     const s = flowing();
-    s.chargeWindow = 0;
     const keyed = give(s, "focusKeyed", hex(1, 0));
     const fromKeyed = () => chargeLeads(s, true).filter((l) => l.generator.id === keyed.id);
     // The lead stays (dim preview in the renderer) but flags no emission.
     expect(fromKeyed().map((l) => l.emitting)).toEqual([false]);
-    s.chargeWindow = 30;
+    keyed.reserve = 30;
     expect(fromKeyed().map((l) => l.emitting)).toEqual([true]);
-    // Between sessions nothing flows, whatever the window holds (ADR-0001).
-    s.chargeWindow = 60;
+    // Between sessions nothing flows, whatever the reserve holds (ADR-0001).
+    keyed.reserve = 60;
     expect(chargeLeads(s, false).every((l) => !l.emitting)).toBe(true);
   });
 });

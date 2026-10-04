@@ -24,6 +24,7 @@ import {
   resumeSession,
   returnModule,
   returnMutator,
+  setBendShift,
   startSession,
   unlockMutatorSlot,
   upgradeAll,
@@ -1374,6 +1375,13 @@ export class App {
     );
   }
 
+  // The Bend's player-picked shift (ADR-0048): one chip per selectable
+  // step on the expanded face. The pick re-pitches the module's voice —
+  // the chords move the moment it lands.
+  setBendShift(id: string, shift: number): void {
+    this.act(setBendShift(this.state, id, shift), `Bend re-pitched ${shift > 0 ? "sharp" : "flat"} ${Math.abs(shift)}.`);
+  }
+
   // The Upgrade All cluster (issue #195): the board-wide sweep — every
   // levelable module, deployed and tray alike, spacers never. The toast
   // reports what landed, whatever the chip promised.
@@ -1910,7 +1918,7 @@ export class App {
       return;
     }
     const occupied = new Set(this.state.modules.filter((m) => m.pos !== null).map((m) => `${m.pos!.q},${m.pos!.r}`));
-    const chordsWith = this.state.modules.filter((m) => m.pos !== null && CATEGORY_OF[m.type] === "synthesizer");
+    const chordsWith = this.state.modules.filter((m) => m.pos !== null && CATEGORY_OF[m.type] === "oscillator");
     const cell =
       this.state.cells.find(
         (cell) =>

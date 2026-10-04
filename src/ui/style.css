@@ -1187,6 +1187,26 @@ body.bloom-sheet-open .zoom-cluster { bottom: 190px; }
 .chord-readout-chip.chord-readout-value {
   --cc: var(--accent);
 }
+/* The formation quality's own named term (ADR-0049): the board's muted ink
+   — a formation-level read, never one chord's hue. */
+.chord-readout-chip.chord-readout-formation {
+  --cc: var(--muted);
+}
+/* The muted participant's chip (ADR-0048): a chord a silent voice sings in
+   reads dashed — the same convention its seams carry. */
+.chord-readout-chip.chord-readout-muted {
+  border-style: dashed;
+  opacity: 0.72;
+}
+/* The muted participant's seams (ADR-0048): a chord a silent voice sings
+   in draws dashed — the game's standing language for silent and promised
+   work — a hair quieter than its sounding kin. */
+.chord-seam.chord-muted {
+  stroke-dasharray: 5 4;
+  opacity: 0.24;
+}
+.chord-mark.chord-fade .chord-seam.chord-muted { opacity: 0.12; }
+#chord-lift .chord-seam.chord-muted { opacity: 0.8; }
 
 /* Sounding (§6): in a live session the seams pulse on their chord's own
    period while the board stays locked — the session breathes through its
@@ -1271,7 +1291,7 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
   pointer-events: auto;
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   background:
-    radial-gradient(ellipse at 50% 30%, color-mix(in srgb, var(--hue-synthesizer) 7%, transparent), transparent 70%),
+    radial-gradient(ellipse at 50% 30%, color-mix(in srgb, var(--hue-oscillator) 7%, transparent), transparent 70%),
     var(--panel);
   border-radius: 12px;
 }
@@ -1332,6 +1352,24 @@ body.live .chord-mark:not(.chord-fade) .chord-seam {
 }
 .bloom-dial-chip:hover { background: var(--hover-bg); border-color: var(--line-strong); }
 .bloom-dial-chip.active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+/* The Bend's shift picker (ADR-0048): the same chip-row language as the
+   dial, wearing the silent-voice violet — the pick re-pitches the voice,
+   so the active chip stays lit. */
+.bloom-shift { display: flex; gap: 3px; width: 100%; }
+.bloom-shift-chip {
+  flex: 1;
+  text-align: center;
+  padding: 2px 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  font: 600 10px/1.2 var(--mono);
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.bloom-shift-chip:hover { background: var(--hover-bg); border-color: var(--line-strong); }
+.bloom-shift-chip.active { background: var(--hue-voice); border-color: var(--hue-voice); color: var(--accent-ink); }
 /* The dial adds a row to the bloom's button band: drop the band lower and
    widen it so the chips clear the face's production line, with the note
    footnoted deeper into the taper (issue #195). The production line itself

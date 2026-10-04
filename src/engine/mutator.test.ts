@@ -114,7 +114,7 @@ describe("the power family", () => {
     const s = fresh();
     give(s, "forge", hex(2, 0));
     give(s, "focusKeyed", hex(1, 0));
-    s.chargeWindow = 100;
+    s.modules.find((m) => m.type === "focusKeyed")!.reserve = 100;
     const plain = computeRates(s, true).forgeRate;
     mint(s, "power", "common", hex(2, 0));
     const boosted = computeRates(s, true).forgeRate;
@@ -126,7 +126,7 @@ describe("the power family", () => {
     const s = fresh();
     give(s, "mutatorForge", hex(2, 0));
     give(s, "focusKeyed", hex(1, 0));
-    s.chargeWindow = 100;
+    s.modules.find((m) => m.type === "focusKeyed")!.reserve = 100;
     const plain = computeRates(s, true).mutatorForgeRate;
     mint(s, "power", "common", hex(2, 0));
     const boosted = computeRates(s, true).mutatorForgeRate;
@@ -139,7 +139,7 @@ describe("the power family", () => {
     const s = fresh();
     const synth = s.modules[0]!; // the starter synth at (0,0)
     give(s, "focusKeyed", hex(1, 0));
-    s.chargeWindow = 100;
+    s.modules.find((m) => m.type === "focusKeyed")!.reserve = 100;
     expect(computeRates(s, true).chargeStrength.get(synth.id)).toBeCloseTo(1);
     mint(s, "power", "common", hex(1, 0));
     expect(computeRates(s, true).chargeStrength.get(synth.id)).toBeCloseTo(1 + mutatorMagnitude("power", "common"));
@@ -150,7 +150,7 @@ describe("the power family", () => {
     const synth = s.modules[0]!;
     give(s, "infusor", hex(1, 0));
     give(s, "focusKeyed", hex(2, 0));
-    s.chargeWindow = 100;
+    s.modules.find((m) => m.type === "focusKeyed")!.reserve = 100;
     // 0.2 × power 1 × chargedFactor(strength 1): the plain uplift.
     expect(computeRates(s, true).contributions.get(synth.id)!.infusorBonus).toBeCloseTo(BALANCE.infusorBonus * 1.5);
     mint(s, "power", "common", hex(1, 0));
@@ -175,9 +175,10 @@ describe("the resonance family", () => {
     const snapshot = computeRates(s, false);
     const ca = snapshot.contributions.get(a.id)!;
     const cb = snapshot.contributions.get(b.id)!;
-    // A Fifth's ×1.3, folded ×1.5 on the hosted voice alone.
-    expect(ca.chordFactor).toBeCloseTo(1.3 * 1.5);
-    expect(cb.chordFactor).toBeCloseTo(1.3);
+    // A Fifth's ×1.3 × the pair's Q, folded ×1.5 on the hosted voice alone.
+    const q = ca.formationQ;
+    expect(ca.chordFactor).toBeCloseTo(1.3 * q * 1.5);
+    expect(cb.chordFactor).toBeCloseTo(1.3 * q);
     expect(ca.value / cb.value).toBeCloseTo(1.5);
     expect(snapshot.namedChords[0]!.bonus).toBeCloseTo(0.3);
   });
@@ -205,16 +206,18 @@ describe("the resonance family", () => {
     expect(spacerAfter.chordFactor).toBeNull();
   });
 
-  it("leaves the Conditional's per-instance bonus untouched", () => {
+  it("folds the silent voice's uplift inside the one multiplier — nothing rides outside it", () => {
     const s = fresh();
-    const a = give(s, "conditional", hex(2, 0));
+    const harm = give(s, "harmonizer", hex(2, 0), 2); // +0.10 uplift
     give(s, "additive", hex(3, 0));
-    const plain = computeRates(s, false).contributions.get(a.id)!;
+    const plain = computeRates(s, false).contributions.get(harm.id)!;
     expect(plain.chordTerms).toBe(1);
     mint(s, "resonance", "common", hex(2, 0));
-    const folded = computeRates(s, false).contributions.get(a.id)!;
+    const folded = computeRates(s, false).contributions.get(harm.id)!;
     expect(folded.chordTerms).toBe(plain.chordTerms);
-    expect(folded.value / plain.value).toBeCloseTo(1 + mutatorMagnitude("resonance", "common"));
+    // The uplift already rode inside the factor; the resonance fold
+    // multiplies the whole thing — the mutator's ratio is exact.
+    expect(folded.chordFactor! / plain.chordFactor!).toBeCloseTo(1 + mutatorMagnitude("resonance", "common"));
   });
 });
 
@@ -229,7 +232,7 @@ describe("the charge family", () => {
     expect(dry.chargeStrength.get(synth.id)).toBe(0);
     expect(dry.contributions.get(synth.id)!.chargeFactor).toBe(1);
     // Charged: strength ×(1 + m) before chargedFactor.
-    s.chargeWindow = 100;
+    s.modules.find((m) => m.type === "focusKeyed")!.reserve = 100;
     const wet = computeRates(s, true);
     const strength = wet.chargeStrength.get(synth.id)!;
     expect(strength).toBeCloseTo(1 + mutatorMagnitude("charge", "common"));
@@ -241,7 +244,7 @@ describe("the charge family", () => {
     const synth = s.modules[0]!;
     give(s, "infusor", hex(1, 0));
     give(s, "focusKeyed", hex(2, 0));
-    s.chargeWindow = 100;
+    s.modules.find((m) => m.type === "focusKeyed")!.reserve = 100;
     const plain = computeRates(s, true).contributions.get(synth.id)!.infusorBonus;
     expect(plain).toBeCloseTo(BALANCE.infusorBonus * (1 + 1 / 2));
     mint(s, "charge", "common", hex(1, 0));
@@ -253,7 +256,7 @@ describe("the charge family", () => {
     const s = fresh();
     give(s, "mutatorForge", hex(2, 0));
     give(s, "focusKeyed", hex(1, 0));
-    s.chargeWindow = 100;
+    s.modules.find((m) => m.type === "focusKeyed")!.reserve = 100;
     const plain = computeRates(s, true).mutatorForgeRate;
     mint(s, "charge", "common", hex(2, 0));
     const fed = computeRates(s, true).mutatorForgeRate;
@@ -311,7 +314,7 @@ describe("the Mutator Forge branch", () => {
     const s = fresh();
     give(s, "mutatorForge", hex(2, 0));
     give(s, "focusKeyed", hex(1, 0));
-    s.chargeWindow = 30;
+    s.modules.find((m) => m.type === "focusKeyed")!.reserve = 30;
     startSession(s, null);
     const result = advance(s, 30);
     // strength 1 × 30 s: short of the threshold, but the meter moves —
@@ -330,7 +333,7 @@ describe("the Mutator Forge branch", () => {
     give(s, "focusKeyed", hex(1, 0));
     // One session's banked window at the launch fraction covers the first
     // threshold: strength 1 across 240 credited seconds.
-    s.chargeWindow = 0.1 * 2_400;
+    s.modules.find((m) => m.type === "focusKeyed")!.reserve = 0.1 * 2_400;
     startSession(s, null);
     const result = advance(s, 240);
     expect(result.rollsMutator).toBe(1);

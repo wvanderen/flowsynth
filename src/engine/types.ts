@@ -1,13 +1,32 @@
 export type Rarity = "common" | "uncommon" | "rare";
 
-// ADR-0012 category landscape, amended by ADR-0021: board modules are
-// module → category → type. The spacer joins as its own silent category.
-export type Category = "synthesizer" | "spacer" | "generator" | "infusor" | "forge";
+// ADR-0048's roster landscape, on ADR-0021's module → category → type shape:
+// board modules are module → category → type. The spacer is its own silent
+// category; the silent-voice and charge-conduit categories join with the
+// roster iteration, and the synthesizer/infusor categories take their
+// display words from their modules (issue #219): oscillator and booster.
+export type Category =
+  | "oscillator"
+  | "silentVoice"
+  | "spacer"
+  | "generator"
+  | "booster"
+  | "forge"
+  | "conduit";
 
-// Synthesizers contribute synth terms to the nous composite — one unified
-// leg shared by every synthesizer (ADR-0022). The Carrier is deleted:
-// no synthesizer is spatially privileged.
-export type SynthesizerType = "additive" | "conditional";
+// Oscillators contribute synth terms to the nous composite — one unified
+// leg shared by every oscillator (ADR-0022, ADR-0048). The Blaster is the
+// category's second producer role: it converts received charge into its
+// synth term, singing and completing chords even uncharged at zero output.
+export type OscillatorType = "additive" | "blaster";
+
+// The silent-voice category (ADR-0048): silent pitched modules that produce
+// no nous but count in chord clusters — they form and complete chords and
+// conduct them as voices. Differentiated only by pitch source: the
+// Harmonizer sings its own cell's pitch, the Echo an adjacent voice's pitch
+// one octave down, the Bend its own pitch altered by a player-picked small
+// interval.
+export type SilentVoiceType = "harmonizer" | "echo" | "bend";
 
 // The spacer (ADR-0021): a silent wire occupying one cell. It never sounds,
 // never joins a pitch set, and never produces — it only conducts chord
@@ -24,14 +43,26 @@ export type GeneratorType = "focusKeyed";
 export type InfusorType = "infusor";
 
 export type ForgeType = "forge";
-
 // The Mutator Forge (ADR-0043, issue #198): the Forge family's second
 // branch — the chargeable module whose thresholds mint mutator rolls.
 // Catalog-exclusive until the Mutator tree's roll-pool purchase joins it
 // to the module roll pool.
 export type MutatorForgeType = "mutatorForge";
 
-export type ModuleType = SynthesizerType | SpacerType | GeneratorType | InfusorType | ForgeType | MutatorForgeType;
+// The charge-conduit category (ADR-0048): silent modules that neither
+// produce charge nor sing — they route received charge onward. Its launch
+// member is the Amplifier.
+export type ConduitType = "amplifier";
+
+export type ModuleType =
+  | OscillatorType
+  | SilentVoiceType
+  | SpacerType
+  | GeneratorType
+  | InfusorType
+  | ForgeType
+  | MutatorForgeType
+  | ConduitType;
 
 export interface Hex {
   q: number;
@@ -45,6 +76,18 @@ export interface ModuleInstance {
   level: number;
   invested: number;
   pos: Hex | null;
+  // The module's own reserve (ADR-0047, the v8 surface): the player-wide
+  // charge-window scalar generalized per module. The Focus Generator banks
+  // output seconds here at session end and spends 1 s/s while deployed;
+  // the Note and Goal generators join the same surface with their
+  // reserves. Charge state — reset at prestige. Lenient-defaulted to 0 at
+  // load.
+  reserve: number;
+  // The Bend's player-picked shift (ADR-0048): semitones added to its
+  // cell's pitch. The selectable set grows with rarity only (±1 at launch,
+  // ±2 joining at rare); null on every other type. Lenient-defaulted at
+  // load — a Bend loads with the ♯ pick.
+  shift: number | null;
 }
 
 // A module known to sit on the board — the shape chord math and rate passes
@@ -416,10 +459,6 @@ export interface GameState {
   // to false at load — a save written before the card existed is still
   // owed its one hint.
   arcCardSeen: boolean;
-  // The charge window (§2.3): remaining output seconds banked at session
-  // end by the focus-keyed generator rule, spent as that generator's output
-  // during the next session's first minutes.
-  chargeWindow: number;
   bankedRolls: RollOffer[];
   // The Mutator tray's own pending-roll queue (ADR-0043, issue #198): the
   // Mutator Forge branch's crossings bank here — two candidates each,
@@ -447,11 +486,27 @@ export interface GameState {
   // The achievement ledger (ADR-0015): achievement id → unlockedAt (epoch
   // ms). Definitions live in code, never in the save.
   achievements: Record<string, number>;
+  // The chord discovery library's ledger (#218, the v8 surface): chord
+  // class → its discovery record — whether a live formation of the class
+  // has formed, when it was first heard, and how many distinct roots have
+  // rung it. Persists through prestige like the feats ledger;
+  // lenient-defaults to {} at load.
+  chordDiscovery: Record<string, ChordDiscovery>;
   session: SessionState | null;
   // The last session's loud summary (§5.7): set at every session end,
   // dismissed once by the player, replaced by the next session's end.
   summary: SessionSummary | null;
   nextId: number;
+}
+
+// One chord class's discovery record (#218): keyed by the class name in the
+// save's v8 surface. `formed` flips with the first live formation (the
+// would-form ghosts never discover); `firstFormedAt` stamps it (epoch ms);
+// `rootsHeard` counts the distinct roots the class has rung.
+export interface ChordDiscovery {
+  formed: boolean;
+  firstFormedAt: number;
+  rootsHeard: number;
 }
 
 // A recognized chord instance group (ADR-0021/0022): one entry per matched
@@ -479,15 +534,22 @@ export interface Contribution {
   pitch: number | null;
   amplitude: number;
   // The module's final ν/s — the local infusor, chord, charge, and
-  // achievement effects all included (ADR-0036). Synthesizers only: the
-  // spacer is 0 and the Forge's value is Forge progress per second, not
-  // nous. The displayed figures sum to the board's rate.
+  // achievement effects all included (ADR-0036). Oscillators only: silent
+  // voices, spacers, and conduits are 0 and the Forge's value is Forge
+  // progress per second, not nous. The displayed figures sum to the board's
+  // rate.
   value: number;
   chordTerms: number;
-  // The module's local chord multiplier (ADR-0036): 1 when a synthesizer
-  // sings no chord, null for the categories that never chord at all —
-  // never 0, which would read as a multiplied-to-zero voice.
+  // The module's local chord multiplier (ADR-0036): the formation's named
+  // product × its quality Q (ADR-0049) — 1 when the module sings no chord,
+  // null for the categories that never chord at all — never 0, which would
+  // read as a multiplied-to-zero voice. Silent voices carry their display
+  // factor as muted participants; they produce nothing for it to multiply.
   chordFactor: number | null;
+  // The formation quality Q the module's cluster scored (ADR-0049): its own
+  // named term per member — read aloud as "Formation ×1.12". Exactly 1
+  // whenever the formation names no chord (chordless is exactly neutral).
+  formationQ: number;
   infusorBonus: number;
   chargeFactor: number;
   chargeStrength: number;

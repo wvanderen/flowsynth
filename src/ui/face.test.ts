@@ -17,11 +17,24 @@ describe("module face", () => {
       expect(face.split(token).length - 1, type).toBe(2);
     }
     // The hue law holds with no exceptions (ADR-0021): rail hue = category
-    // hue for every type, the spacer's silent category included.
+    // hue for every type, the spacer's silent category included — with the
+    // two reserved bindings issue #219 bound: the silent voices wear
+    // hue-voice, the conduit hue-conduit.
+    const TOKEN_OF_CATEGORY: Record<string, string> = {
+      oscillator: "hue-oscillator",
+      silentVoice: "hue-voice",
+      conduit: "hue-conduit",
+      spacer: "hue-spacer",
+      generator: "hue-generator",
+      booster: "hue-booster",
+      forge: "hue-forge",
+    };
     for (const type of MODULE_TYPES) {
-      expect(HUE_TOKEN_OF[type], type).toBe(`hue-${CATEGORY_OF[type]}`);
+      expect(HUE_TOKEN_OF[type], type).toBe(TOKEN_OF_CATEGORY[CATEGORY_OF[type]]);
     }
     expect(defaultTheme.tokens["hue-spacer"]).toBeDefined();
+    expect(defaultTheme.tokens["hue-voice"]).toBeDefined();
+    expect(defaultTheme.tokens["hue-conduit"]).toBeDefined();
   });
 
   it("engraves rarity as ring count — 1, 2, 3 — never a hue", () => {
@@ -127,12 +140,16 @@ describe("module face", () => {
     expect(compact).toContain('data-key="readout" x="0" y="30"');
   });
 
-  it("wears the wave-1 names and the D-set glyph family (#219)", () => {
-    // Renames are display-layer: the type keys stay, META carries the
-    // final names, and the faceplate is the short uppercased.
+  it("wears the final names and the D-set glyph family (#219, roster wave 2)", () => {
+    // META carries the final names, and the faceplate is the short
+    // uppercased.
     const names: Record<string, [string, string]> = {
       additive: ["Oscillator", "OSC"],
-      conditional: ["Harmonizer", "HARM"],
+      blaster: ["Blaster", "BLST"],
+      harmonizer: ["Harmonizer", "HARM"],
+      echo: ["Echo", "ECHO"],
+      bend: ["Bend", "BEND"],
+      amplifier: ["Amplifier", "AMP"],
       focusKeyed: ["Focus Generator", "FOCUS"],
       infusor: ["Booster", "BOOST"],
       spacer: ["Spacer", "SPACER"],
@@ -146,9 +163,10 @@ describe("module face", () => {
       );
     }
     // The D-set glyphs: sine, diamond, bolt, chevrons around a dot, the
-    // seeded-hexagon Mutator Forge on the bare chassis.
+    // seeded-hexagon Mutator Forge on the bare chassis — plus the roster's
+    // own marks.
     expect(moduleIcon("additive")).toBe('<path d="M-12 0C-8-10-4-10 0 0C4 10 8 10 12 0"/>');
-    expect(moduleIcon("conditional")).toBe('<path d="M0-10 8 0 0 10-8 0Z"/>');
+    expect(moduleIcon("harmonizer")).toBe('<path d="M0-10 8 0 0 10-8 0Z"/>');
     expect(moduleIcon("focusKeyed")).toBe('<path d="M2-13-6 1H0L-2 13 6-1H0Z"/>');
     expect(moduleIcon("infusor")).toBe('<circle r="2.2"/><path d="M-5-7-13 0-5 7M5-7 13 0 5 7"/>');
     expect(moduleIcon("mutatorForge")).toContain('<path d="M0-5.5 4.8-2.7V2.7L0 5.5-4.8 2.7V-2.7Z"/><circle r="1.5"/>');
@@ -156,6 +174,12 @@ describe("module face", () => {
     // Module Forge's.
     expect(moduleIcon("mutatorForge")).not.toContain("v28");
     expect(moduleIcon("forge")).toContain("v28");
+    // The roster glyphs: the Echo's doubled waves, the Bend's kink, the
+    // Blaster's bolt-cored sine, the Amplifier's through-flow.
+    expect(moduleIcon("echo")).toContain("M-6 0C-4-5-2-5 0 0C2 5 4 5 6 0");
+    expect(moduleIcon("bend")).toContain("M-12 2C-8-8-5-8-2 0L2 0");
+    expect(moduleIcon("blaster")).toContain("fill=\"currentColor\"");
+    expect(moduleIcon("amplifier")).toContain("M-9 0h5M4 0h5");
   });
 
   it("the long-readout fit picks the approved compression steps (#201)", () => {

@@ -1,10 +1,10 @@
 import { EPS } from "./constants";
 import { syncAchievements } from "./achievements";
-import { chargeDelivered, chargeWindowActive, computeRates, deployed } from "./economy";
+import { chargeDelivered, computeRates, deployed } from "./economy";
 import { addFlowProgress, addForgeProgress, addMutatorForgeProgress, type Rng } from "./rolls";
 import { accrueLivePractice } from "./habits";
 import { accrueGoalProgress } from "./goals";
-import type { AdvanceResult, GameState } from "./types";
+import type { AdvanceResult, GameState, ModuleInstance } from "./types";
 
 // Where a span's produced nous lands and whether it credits practice
 // (focus-tool spec §1–3). "live" is present or trusted time: banks, credits,
@@ -53,18 +53,26 @@ export function advance(
   if (!session) return result;
 
   // The board is locked during flow, so the rate is constant across the
-  // step — except at the charge-window boundary: a step that outlives the
-  // window splits there, so the drained generator stops crediting the
-  // remainder (the rate really does change mid-step, once).
-  if (
-    chargeWindowActive(state) &&
-    state.chargeWindow + EPS < seconds &&
-    deployed(state).some((m) => m.type === "focusKeyed")
-  ) {
-    // Capture the split point first: the first leg drains the window, so
+  // step — except at a reserve boundary: a deployed generator whose
+  // remaining duration runs out mid-step splits there, so the drained
+  // generator stops crediting the remainder (the rate really does change
+  // mid-step, once — one boundary per step, the recursion walks them all).
+  // The reserves are per module now (ADR-0047): the earliest emptying one
+  // is the split.
+  const liveGenerators: ModuleInstance[] = [];
+  let earliest = Infinity;
+  for (const module of deployed(state)) {
+    if (module.type !== "focusKeyed") continue;
+    if (module.reserve > EPS) {
+      liveGenerators.push(module);
+      earliest = Math.min(earliest, module.reserve);
+    }
+  }
+  if (earliest !== Infinity && earliest + EPS < seconds) {
+    // Capture the split point first: the first leg drains the reserve, so
     // reading it in the second call's argument would re-advance the whole
     // step uncharged.
-    const split = state.chargeWindow;
+    const split = earliest;
     const first = advance(state, split, rng, sink);
     const second = advance(state, seconds - split, rng, sink);
     return sumResults(first, second);
@@ -105,12 +113,13 @@ export function advance(
   // so pauses never count into either; provisional production stays out
   // until its bucket banks.
   if (sink === "live") session.earned += gained;
-  // The charge window is a time budget, not a rate: a deployed focus-keyed
-  // generator spends one window second per flow second, elapsing even with
-  // no eligible neighbors (the remaining-duration vocabulary). Undeployed,
-  // it produces no output and the window holds.
-  if (chargeWindowActive(state) && deployed(state).some((m) => m.type === "focusKeyed")) {
-    state.chargeWindow = Math.max(0, state.chargeWindow - seconds);
+  // Each generator's reserve is a time budget of its own (ADR-0047): a
+  // deployed focus-keyed generator spends one reserve second per flow
+  // second, elapsing even with no eligible neighbors (the
+  // remaining-duration vocabulary). Undeployed, it produces no output and
+  // its reserve holds.
+  for (const module of liveGenerators) {
+    module.reserve = Math.max(0, module.reserve - seconds);
   }
   if (sink === "live") {
     // Practice credits only from present and trusted time — nothing ever

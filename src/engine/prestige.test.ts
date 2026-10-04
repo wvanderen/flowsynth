@@ -63,7 +63,7 @@ describe("the prestige action", () => {
     const s = atHorizon();
     const synth = give(s, "additive", hex(1, 0), 4);
     const traySpacer = give(s, "spacer", null, 2);
-    const rare = give(s, "conditional", hex(0, 1), 6);
+    const rare = give(s, "harmonizer", hex(0, 1), 6);
     rare.rarity = "rare";
     prestige(s);
     expect(s.modules.map((m) => m.id)).toContain(synth.id);
@@ -77,13 +77,14 @@ describe("the prestige action", () => {
     expect(traySpacer.pos).toBeNull();
   });
 
-  it("resets nous to a fresh opening grant and zeroes the charge window", () => {
+  it("resets nous to a fresh opening grant and zeroes the reserves", () => {
     const s = atHorizon();
     s.nous = 9_999;
-    s.chargeWindow = 480;
+    const gen = give(s, "focusKeyed", hex(2, 0));
+    gen.reserve = 480;
     prestige(s);
     expect(s.nous).toBe(BALANCE.openingGrant);
-    expect(s.chargeWindow).toBe(0);
+    expect(s.modules.every((m) => m.reserve === 0)).toBe(true);
   });
 
   it("persists the board: cells, placement, cellsBought, and the paid row gates", () => {

@@ -1,14 +1,40 @@
 import type { Category, ModuleType, MutatorFamily, Rarity, ShelfType } from "./types";
 
 export interface Balance {
-  // One unified synthesizer base rate (ADR-0022): every synthesizer shares
+  // One unified oscillator base rate (ADR-0022): every oscillator shares
   // it, scaled by rarityPower^level. The carrier/harmonics split dies with
   // the distinction it served. Provisional tuning.
   synthRate: number;
-  // The Conditional's bonus (ADR-0022): +10% per named-chord instance it
-  // belongs to (constant: tuning).
-  conditionalChordBonus: number;
   infusorBonus: number;
+  // ── Harmony quality (ADR-0049): Q = clamp(1 + complexity − max(0,
+  // tension − A), Qmin, cap) over the formation's deduplicated pitch
+  // classes. All magnitudes provisional tuning per the map's standing note.
+  // Pair-based symbolic tension by interval class: semitone 1.0, whole tone
+  // 0.2, tritone 0.5; thirds and fifths weigh nothing.
+  tensionWeights: Readonly<Record<number, number>>;
+  // Linear complexity per distinct class past the first.
+  complexityRate: number;
+  // The tension allowance A forgiven to named formations before the clamp.
+  tensionAllowance: number;
+  // The floor — materially below neutral, so chromatic density is priced
+  // down — and the cap above neutral.
+  qualityFloor: number;
+  qualityCap: number;
+  // ── Roster tuning (ADR-0048): the silent-voice category trait is a
+  // level-scaled uplift to every chord instance's bonus a silent voice
+  // sings in, additive across silent voices, landing on all singing
+  // members.
+  silentVoiceUpliftPerLevel: number;
+  // The Amplifier re-broadcasts received charge at received strength × a
+  // level-scaled gain; a hop-depth cap guards relay cycles.
+  amplifierGainPerLevel: number;
+  amplifierHopCap: number;
+  // The Bend's selectable shift set grows with rarity only (±1 at launch;
+  // ±2 joins at rare — each further step at the next rarity, tuning).
+  bendShifts: Record<Rarity, readonly number[]>;
+  // The Bend's mint default (the ♯, ADR-0048) and the load default for a
+  // pre-roster module.
+  bendDefaultShift: number;
   // ADR-0015's global achievement term: each unlocked feat adds this much
   // into the boost, additively (boost = 1 + feats × per-feat). Nous-rate
   // only. Provisional tuning (~+2% each).
@@ -110,8 +136,17 @@ export interface Balance {
 // until the tuning fronts land.
 export const BALANCE: Balance = {
   synthRate: 0.1,
-  conditionalChordBonus: 0.1,
   infusorBonus: 0.2,
+  tensionWeights: { 1: 1.0, 2: 0.2, 3: 0, 4: 0, 5: 0, 6: 0.5 },
+  complexityRate: 0.06,
+  tensionAllowance: 0.7,
+  qualityFloor: 0.05,
+  qualityCap: 1.25,
+  silentVoiceUpliftPerLevel: 0.05,
+  amplifierGainPerLevel: 0.2,
+  amplifierHopCap: 4,
+  bendShifts: { common: [-1, 1], uncommon: [-1, 1], rare: [-2, -1, 1, 2] },
+  bendDefaultShift: 1,
   achievementBoostPerFeat: 0.02,
   upgradeFirstCost: 10,
   upgradeCostGrowthNumerator: 8n,
@@ -153,13 +188,15 @@ export const BALANCE: Balance = {
   chargeWindowFraction: 0.1,
 };
 
-// The launch chord vocabulary (ADR-0021/0022): register-free pitch sets —
-// interval classes above the root, mod 12, with multiplicity (the Octave is
-// two voices of the same class). Recognition is by pitch content over a
-// connected cluster: any voicing, any octave. Bonus tiers track the spacer
-// ladder's construction cost — a ♭7 costs one wire cell, m3/M6 two, M3/m6
-// three — so harder chords cost more board and earn bigger multipliers
-// (tiers: tuning).
+// The chord vocabulary (#218's eleven classes, ADR-0021/0022 as extended by
+// ADR-0048/0049): register-free pitch sets — interval classes above the
+// root, mod 12, with multiplicity (the Octave is two voices of the same
+// class). Recognition is by pitch content over a connected formation: any
+// voicing, any octave. Bonus tiers track the wire ladder's construction
+// cost — a ♭7 costs one wire cell, m3/M6 two, M3/m6 three — and the six
+// new classes ride the tuning table's tiers (all magnitudes: tuning).
+// Bend ±1 content landing in these recipes earns named value; anything
+// outside bears tension only.
 export interface NamedChordDef {
   name: string;
   intervals: number[];
@@ -170,8 +207,14 @@ export const NAMED_CHORDS: readonly NamedChordDef[] = [
   { name: "Octave", intervals: [0, 0], bonus: 0.15 },
   { name: "Fifth", intervals: [0, 7], bonus: 0.3 },
   { name: "Flat seventh", intervals: [0, 10], bonus: 0.45 },
+  { name: "Suspended fourth", intervals: [0, 5, 7], bonus: 0.55 },
   { name: "Minor triad", intervals: [0, 3, 7], bonus: 0.6 },
+  { name: "Diminished triad", intervals: [0, 3, 6], bonus: 0.65 },
+  { name: "Augmented triad", intervals: [0, 4, 8], bonus: 0.65 },
   { name: "Major triad", intervals: [0, 4, 7], bonus: 0.75 },
+  { name: "Minor seventh", intervals: [0, 3, 7, 10], bonus: 0.9 },
+  { name: "Dominant seventh", intervals: [0, 4, 7, 10], bonus: 0.95 },
+  { name: "Major seventh", intervals: [0, 4, 7, 11], bonus: 1.05 },
 ];
 
 // The target chime (focus-tool spec §4–5): one synthesized just-intonation
@@ -196,12 +239,20 @@ export const CHIME = {
   maxChimes: 3,
 };
 
+// The category of every module type (ADR-0048's roster on ADR-0012's
+// landscape): oscillators and the Blaster sing; the Harmonizer, Echo, and
+// Bend are the silent voices; the Amplifier founds the charge conduit; the
+// spacer is its own silent wire category.
 export const CATEGORY_OF: Record<ModuleType, Category> = {
-  additive: "synthesizer",
-  conditional: "synthesizer",
+  additive: "oscillator",
+  blaster: "oscillator",
+  harmonizer: "silentVoice",
+  echo: "silentVoice",
+  bend: "silentVoice",
+  amplifier: "conduit",
   spacer: "spacer",
   focusKeyed: "generator",
-  infusor: "infusor",
+  infusor: "booster",
   forge: "forge",
   // The Mutator Forge is the Forge family's second branch (ADR-0043): the
   // same chargeable category, its own meter. Membership is decided per
@@ -209,30 +260,46 @@ export const CATEGORY_OF: Record<ModuleType, Category> = {
   mutatorForge: "forge",
 };
 
-// The one synthesizer test, shared by the rate pass, the roll rig, and the
+// The one oscillator test, shared by the rate pass, the roll rig, and the
 // arc's acquisition count — one predicate, never three that can drift.
-export function isSynthesizerType(type: ModuleType): boolean {
-  return CATEGORY_OF[type] === "synthesizer";
+export function isOscillatorType(type: ModuleType): boolean {
+  return CATEGORY_OF[type] === "oscillator";
+}
+
+// The one singer test (ADR-0048): oscillators and silent voices sing into
+// formations — every other category never joins a pitch set. One predicate
+// for the rate pass, the partition, and the UI's conductor checks.
+export function isVoiceType(type: ModuleType): boolean {
+  const category = CATEGORY_OF[type];
+  return category === "oscillator" || category === "silentVoice";
 }
 
 // Chargeable is a supertype family above the category level (ADR-0012): its
 // members accumulate received charge toward a threshold. The Forge is the
-// sole launch instance. Continuous-charge categories use received charge as
+// launch instance. Continuous-charge categories use received charge as
 // continuous empowerment instead. Membership is decided per category —
-// never per type. The spacer receives nothing: it is silent wire.
+// never per type. The spacer receives nothing: it is silent wire; the
+// silent voices sing unamplified — their uplift keys off level alone; and
+// the conduit routes what it receives rather than spending it on itself.
 export const CHARGEABLE_CATEGORIES: readonly Category[] = ["forge"];
 
-export const CONTINUOUS_CHARGE_CATEGORIES: readonly Category[] = ["synthesizer", "infusor"];
+export const CONTINUOUS_CHARGE_CATEGORIES: readonly Category[] = ["oscillator", "booster"];
 
-// The union of the two families: the categories that receive charge at all.
+// The union of the two families plus the conduit: the categories that
+// receive charge at all.
 export const CHARGE_RECEIVING_CATEGORIES: readonly Category[] = [
   ...CHARGEABLE_CATEGORIES,
   ...CONTINUOUS_CHARGE_CATEGORIES,
+  "conduit",
 ];
 
 export const MODULE_TYPES: readonly ModuleType[] = [
   "additive",
-  "conditional",
+  "blaster",
+  "harmonizer",
+  "echo",
+  "bend",
+  "amplifier",
   "spacer",
   "focusKeyed",
   "infusor",
@@ -291,8 +358,11 @@ export const RECONCILIATION_FLOOR_SECONDS = 180;
 export const REFLECTION_SLIDER_POSITIONS = 5;
 export const REFLECTION_SLIDER_NEUTRAL = 3;
 
-// ADR-0017's pattern at the v7 boundary (issue #194): SAVE_VERSION 7 — the
-// prestige cut. V6 saves hard-reject with the start-fresh message (old-save
-// continuity is not a constraint; the map's standing note), and so does
-// anything older or newer. No migration chain exists.
-export const SAVE_VERSION = 7;
+// ADR-0017's pattern at the v8 boundary (issue #229, the iteration's one
+// migration): SAVE_VERSION 8 — the roster cut. V7 saves migrate in place
+// (the Conditional becomes its Harmonizer, the charge window generalizes to
+// per-module reserves, the chord discovery ledger defaults empty, and the
+// build-node unlocks derive from habit.seconds — waves 3–5 build on these
+// surfaces with no further bump); anything older rejects with the
+// start-fresh message, and there is no migration chain past one step.
+export const SAVE_VERSION = 8;

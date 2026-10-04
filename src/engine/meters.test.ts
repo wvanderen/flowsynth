@@ -22,7 +22,7 @@ describe("the forge meter", () => {
     const s = fresh();
     give(s, "forge", hex(1, 0));
     give(s, "focusKeyed", hex(2, 0));
-    s.chargeWindow = 600;
+    s.modules.find((m) => m.type === "focusKeyed")!.reserve = 600;
     startSession(s, null);
     advance(s, 50);
     // Charge 50 crosses the 60 threshold only with the window's full
@@ -39,7 +39,7 @@ describe("the forge meter", () => {
     give(s, "forge", hex(1, 0));
     give(s, "forge", hex(0, 1));
     give(s, "focusKeyed", hex(2, 0));
-    s.chargeWindow = 600;
+    s.modules.find((m) => m.type === "focusKeyed")!.reserve = 600;
     startSession(s, null);
     advance(s, 600);
     // 600 charge (practice feeds the flow meter now, not this branch)
@@ -71,7 +71,7 @@ describe("the forge meter", () => {
     const s = fresh();
     const forge = give(s, "forge", hex(1, 0), 1);
     give(s, "focusKeyed", hex(2, 0));
-    s.chargeWindow = 600;
+    s.modules.find((m) => m.type === "focusKeyed")!.reserve = 600;
     startSession(s, null);
     advance(s, 100);
     expect(forge.level).toBe(1);

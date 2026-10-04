@@ -1,15 +1,32 @@
 import type { FocusApp } from "../engine/apps";
 import type { ModuleType } from "../engine/types";
 
-// The D-set glyph language (issue #219, wave 1): one wave family — the
-// Oscillator's bare sine, the Harmonizer's muted tonehead diamond, the
-// generators' bolt, the Booster's outward chevrons around a center dot.
+// The D-set glyph language (issue #219, wave 1; roster glyphs wave 2): one
+// wave family — the Oscillator's bare sine, the Harmonizer's muted tonehead
+// diamond, the generators' bolt, the Booster's outward chevrons around a
+// center dot — extended by the roster's own marks: the Blaster's charged
+// sine, the Echo's doubled waves, the Bend's bent line, the Amplifier's
+// through-flowing chevrons.
 const PATHS: Record<ModuleType, string> = {
   // The Oscillator: a bare sine — the scope trace, one full period.
   additive: '<path d="M-12 0C-8-10-4-10 0 0C4 10 8 10 12 0"/>',
   // The Harmonizer: the diamond — a muted tonehead (it sweetens, never
   // multiplies its own production).
-  conditional: '<path d="M0-10 8 0 0 10-8 0Z"/>',
+  harmonizer: '<path d="M0-10 8 0 0 10-8 0Z"/>',
+  // The Echo: the sine doubled — two waveforms, the second nested inside
+  // the first at half size (the octave down it sings).
+  echo: '<path d="M-12 0C-8-10-4-10 0 0C4 10 8 10 12 0"/><path d="M-6 0C-4-5-2-5 0 0C2 5 4 5 6 0"/>',
+  // The Bend: the sine with one inflection flattened mid-travel — the
+  // ♯/♭ shift it sings with, drawn as the kink in an otherwise level trace.
+  bend: '<path d="M-12 2C-8-8-5-8-2 0L2 0C5 8 8 8 12-2"/>',
+  // The Amplifier: two outward chevrons pushing a center dot onward —
+  // charge in one side, out the other, stronger (the Booster's mark turned
+  // into a conduit: same chevrons, the dot riding the flow between them).
+  amplifier: '<circle r="2.2"/><path d="M-6-7-13 0-6 7M6-7 13 0 6 7"/><path d="M-9 0h5M4 0h5"/>',
+  // The Blaster: the sine wearing its charge — the scope trace plus the
+  // generator's bolt at its core (the oscillator category's second
+  // producer, converting received charge into its term).
+  blaster: '<path d="M-12 0C-8-10-4-10 0 0C4 10 8 10 12 0"/><path d="M1.5-9-4-1H0L-1.5 9 4 1H0Z" fill="currentColor" stroke="none"/>',
   // The spacer's wire glyph (ADR-0021): a silent conductor stepping through
   // one cell — a running wire with solder points, never a voice. The board
   // face and tray tile render the ring window instead (issue #219); the

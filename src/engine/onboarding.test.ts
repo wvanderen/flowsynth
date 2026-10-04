@@ -78,7 +78,7 @@ describe("the loud summary (§5.7) — every exit path, identical beats", () => 
     const s = fresh();
     give(s, "forge", hex(1, 0));
     give(s, "focusKeyed", hex(2, 0));
-    s.chargeWindow = 60;
+    s.modules.find((m) => m.type === "focusKeyed")!.reserve = 60;
     startSession(s, null);
     // 180 s: the flow meter's opening fill banks one practice roll; the
     // window's 60 s of charge banks exactly one charge roll (60 threshold),

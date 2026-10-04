@@ -33,15 +33,16 @@ const substrate = {
 // The category hue table (ADR-0016, amended by ADR-0021; the reserved hues
 // bound by issue #219, wave 1). Hue = category; per-type identity rides the
 // glyph and nameplate. The spacer wears a muted wire grey — its own silent
-// category. The formerly reserved violet and yellow bind to the categories
-// arriving with the roster waves — silent voice and charge conduit — and
-// RITUAL wears the console's switch vermillion: the one habit-keyed board
-// module carries the session color.
+// category. The formerly reserved violet and yellow are the categories that
+// arrived with the roster (ADR-0048) — silent voice and charge conduit —
+// and RITUAL wears the console's switch vermillion: the one habit-keyed
+// board module carries the session color. The oscillator and booster hues
+// kept their values through the category rename (issue #219).
 const hues = {
   "hue-generator": "#238858",
-  "hue-synthesizer": "#6360d4",
+  "hue-oscillator": "#6360d4",
   "hue-spacer": "#8a93a8",
-  "hue-infusor": "#1f95b5",
+  "hue-booster": "#1f95b5",
   "hue-forge": "#bc9239",
   "hue-voice": "#9d7bea",
   "hue-conduit": "#d9b84a",
@@ -81,13 +82,21 @@ const finishes = {
 
 // Chord annotation hues (§6): one hue per named chord — the seams' identity
 // in the prototype's chord-feedback language (#120). Annotation, not
-// category: these never ride a module face.
+// category: these never ride a module face. The six classes #218 added ride
+// the same table (issue #229); unknown names take the Octave fallback in
+// chordlayer.ts.
 const chords = {
   "chord-octave": "#8f8ce8",
   "chord-fifth": "#3fb5c9",
   "chord-flat-seventh": "#a86ad4",
+  "chord-suspended-fourth": "#5aa8d4",
   "chord-minor-triad": "#d4657f",
+  "chord-diminished-triad": "#c46a9e",
+  "chord-augmented-triad": "#d48a6a",
   "chord-major-triad": "#e09a5a",
+  "chord-minor-seventh": "#b06ad0",
+  "chord-dominant-seventh": "#d06a9a",
+  "chord-major-seventh": "#e8b06a",
 } as const;
 
 // Semantic surfaces and states, derived from the primitives above so a theme

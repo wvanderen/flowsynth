@@ -9,15 +9,15 @@ import { hex } from "./hex";
 describe("forge roll generation", () => {
   it("samples three distinct types from the launch pool", () => {
     const s = fresh();
-    const rng = stubRng([0.0, 0.99, 0.2, 0.5, 0.3, 0.5]);
+    const rng = stubRng([0.0, 0.99, 0.6, 0.5, 0.7, 0.5]);
     const offer = generateOffer(s, rng);
     const types = offer.candidates.map((c) => c.type);
     expect(new Set(types).size).toBe(3);
     for (const type of types) {
       expect(ROLL_POOL).toContain(type);
     }
-    // Draws without replacement: additive, then spacer (index 1 of the
-    // remaining five), then focus-keyed generator (index 1 of four).
+    // Draws without replacement over the ten-type pool: additive, then
+    // spacer, then focus-keyed generator.
     expect(types).toEqual(["additive", "spacer", "focusKeyed"]);
   });
 
@@ -27,21 +27,25 @@ describe("forge roll generation", () => {
     expect(offer.candidates.map((c) => c.rarity)).toEqual(["common", "uncommon", "rare"]);
   });
 
-  it("the pool is every launch module type — the spacer ships through rolls only", () => {
+  it("the pool is every launch module type — the roster rolls, the spacer ships through rolls only", () => {
     expect(ROLL_POOL).toContain("additive");
-    expect(ROLL_POOL).toContain("conditional");
+    expect(ROLL_POOL).toContain("blaster");
+    expect(ROLL_POOL).toContain("harmonizer");
+    expect(ROLL_POOL).toContain("echo");
+    expect(ROLL_POOL).toContain("bend");
+    expect(ROLL_POOL).toContain("amplifier");
     expect(ROLL_POOL).toContain("spacer");
     expect(ROLL_POOL).toContain("focusKeyed");
     expect(ROLL_POOL).toContain("infusor");
     expect(ROLL_POOL).toContain("forge");
-    expect(ROLL_POOL).toHaveLength(6);
+    expect(ROLL_POOL).toHaveLength(10);
   });
 
   it("persists outcomes when the roll is earned, not when it is revealed", () => {
     const s = fresh();
     give(s, "forge", hex(1, 0));
     give(s, "focusKeyed", hex(2, 0));
-    s.chargeWindow = 600;
+    s.modules.find((m) => m.type === "focusKeyed")!.reserve = 600;
     startSession(s, null);
     // Charge 100 crosses 60, carries 40; the 100 credited seconds sit
     // inside the flow meter's opening fill — one offer, from the charge
