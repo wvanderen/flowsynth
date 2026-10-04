@@ -317,11 +317,13 @@ export function activeBuildGeneratorStrength(state: GameState, flow = flowLive(s
 // and rarity), plus the steady-conduit build node's flat +1 when the
 // active habit equips it (ADR-0046 — output strength is the node's whole
 // effect). Only generators produce charge (§2.3 boundary rule), and the
-// launch generator is the focus-keyed one (ADR-0018): it spends its own
-// banked reserve (ADR-0047 — the charge window generalized per module),
-// emitting at full strength only while reserve seconds remain, spending a
-// second of reserve per second of live flow (the remaining-duration
-// vocabulary). Undeployed, it produces no output and the reserve holds.
+// family is the three keyed types (ADR-0047): the focus, note, and goal
+// generators each spend their own banked reserve, emitting at full
+// strength only while reserve seconds remain, spending a second of
+// reserve per second of live flow (the remaining-duration vocabulary).
+// Undeployed, it produces no output and the reserve holds. Level, rarity,
+// and mutators scale this strength only — banked duration is flat, never
+// double-counted.
 // The `steadyBonus` default is the ambient active-build read — by
 // construction the same amplified figure the rate pass threads through
 // the relay net, so a UI caller

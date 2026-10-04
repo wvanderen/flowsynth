@@ -16,9 +16,9 @@ describe("forge roll generation", () => {
     for (const type of types) {
       expect(ROLL_POOL).toContain(type);
     }
-    // Draws without replacement over the ten-type pool: additive, then
-    // spacer, then focus-keyed generator.
-    expect(types).toEqual(["additive", "spacer", "focusKeyed"]);
+    // Draws without replacement over the thirteen-type pool: additive,
+    // then focusKeyed, then noteKeyed.
+    expect(types).toEqual(["additive", "focusKeyed", "noteKeyed"]);
   });
 
   it("rolls each candidate's rarity independently", () => {
@@ -37,9 +37,11 @@ describe("forge roll generation", () => {
     expect(ROLL_POOL).toContain("ritual");
     expect(ROLL_POOL).toContain("spacer");
     expect(ROLL_POOL).toContain("focusKeyed");
+    expect(ROLL_POOL).toContain("noteKeyed");
+    expect(ROLL_POOL).toContain("goalKeyed");
     expect(ROLL_POOL).toContain("infusor");
     expect(ROLL_POOL).toContain("forge");
-    expect(ROLL_POOL).toHaveLength(11);
+    expect(ROLL_POOL).toHaveLength(13);
   });
 
   it("persists outcomes when the roll is earned, not when it is revealed", () => {

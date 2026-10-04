@@ -1,11 +1,14 @@
 import { BALANCE, EPS } from "./constants";
+import { creditOwnedGenerators } from "./reserves";
 import type { Goal, GoalCondition, GoalSchedule, GameState } from "./types";
 export type { Goal, GoalCondition, GoalSchedule };
 
 // Goals (issue #6). A goal tracks a practice condition ("Piano, 20 minutes
 // a day") in a limited slot. Progress accrues only while the goal is active
-// — earlier practice never counts retroactively. Completions carry no
-// charge: goal templates are conditions only (ADR-0012). Daily and weekly
+// — earlier practice never counts retroactively. Completions grant nothing
+// themselves — goal templates are conditions only (ADR-0012) — but the
+// completion tick is the fact each owned Goal Generator reads, banking its
+// reserve a multiple of the focus equivalent (ADR-0047). Daily and weekly
 // goals reset at the local calendar boundary; one-time goals keep their
 // slot until replaced in upgrade mode. Slot capacity grows only through the
 // console long goal (issue #42): one more slot per purchase, bought in the
@@ -56,6 +59,7 @@ export function rollGoalOccurrences(state: GameState, now: number): void {
     if (goal.occurrenceKey !== key) {
       goal.occurrenceKey = key;
       goal.progressSeconds = 0;
+      goal.liveSeconds = 0;
       goal.completed = false;
     }
   }
@@ -83,6 +87,7 @@ export function createGoal(state: GameState, input: GoalCreateInput): { ok: bool
     schedule,
     occurrenceKey: occurrenceKeyFor(schedule, input.now),
     progressSeconds: 0,
+    liveSeconds: 0,
     completed: false,
     completedCount: 0,
     createdAt: input.now,
@@ -106,14 +111,48 @@ export function goalSummary(state: GameState, goal: Goal): string {
   return `${name} · ${goal.condition.minutes} min ${SCHEDULE_LABEL[goal.schedule.kind]}`;
 }
 
+// Load-time normalization for the goal's live-share surface (ADR-0047): a
+// goal saved before the generators wave carries no live slice —
+// lenient-defaulted to 0, the honest reading (the completion's live share
+// would read 0, banking nothing) and exactly what a fresh shape writes.
+// Mutates in place over the merged state's goal list.
+export function normalizeGoals(goals: Goal[]): void {
+  for (const goal of goals) {
+    if (!goal || typeof goal !== "object") continue;
+    if (typeof goal.liveSeconds !== "number" || !Number.isFinite(goal.liveSeconds)) goal.liveSeconds = 0;
+  }
+}
+
+// The Goal Generator's completion credit (ADR-0047): completing a goal of
+// M minutes banks k × the focus equivalent (chargeWindowFraction × M)
+// into every owned Goal Generator, board or tray alike — prorated by the
+// live share of the goal's progress, so manual-only completions bank
+// nothing (the honesty boundary) and mixed practice banks its live share.
+// Recurring goals credit once per occurrence — this fires at the
+// completion tick, and the occurrence reset re-opens the goal — and
+// overlapping completions each credit. No size floor: goal slots and the
+// practice itself keep farming self-limiting.
+function creditGoalGenerators(state: GameState, goal: Goal): void {
+  if (goal.progressSeconds <= EPS || goal.liveSeconds <= EPS) return;
+  creditOwnedGenerators(
+    state,
+    "goalKeyed",
+    BALANCE.goalReserveMultiple * BALANCE.chargeWindowFraction * goal.condition.minutes * 60 * (goal.liveSeconds / goal.progressSeconds),
+  );
+}
+
 // Accrues qualifying practice and completes goals. Unstructured practice
 // (habitId null) counts toward any-habit goals; specific-habit goals only
-// accrue from their habit. Returns the number of occurrences completed.
-// While a session is live, every credited second is also ledged onto the
-// session's own advancement map (§9), snapshotting into the record at close
-// — manual logs never pass through here with a session live, so they never
-// join the snapshot.
-export function accrueGoalProgress(state: GameState, habitId: string | null, seconds: number): number {
+// accrue from their habit. The `source` splits the honesty boundary
+// (ADR-0047): "live" is credited present, trusted, and honesty-credited
+// time (the advance and reconciliation paths); "manual" is a player
+// practice log, which advances the condition but never joins the live
+// slice. Returns the number of occurrences completed. While a session is
+// live, every credited second is also ledged onto the session's own
+// advancement map (§9), snapshotting into the record at close — manual
+// logs never pass through here with a session live, so they never join
+// the snapshot.
+export function accrueGoalProgress(state: GameState, habitId: string | null, seconds: number, source: "live" | "manual" = "live"): number {
   if (seconds <= EPS) return 0;
   let completions = 0;
   for (const goal of state.goals) {
@@ -121,12 +160,14 @@ export function accrueGoalProgress(state: GameState, habitId: string | null, sec
     if (goal.condition.kind !== "habit-minutes") continue;
     if (goal.condition.habitId !== null && goal.condition.habitId !== habitId) continue;
     goal.progressSeconds += seconds;
+    if (source === "live") goal.liveSeconds += seconds;
     const session = state.session;
     if (session) session.goalSeconds[goal.id] = (session.goalSeconds[goal.id] ?? 0) + seconds;
     if (goal.progressSeconds >= goalRequiredSeconds(goal)) {
       goal.completed = true;
       goal.completedCount++;
       completions++;
+      creditGoalGenerators(state, goal);
     }
   }
   return completions;

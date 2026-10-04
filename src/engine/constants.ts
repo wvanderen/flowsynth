@@ -141,6 +141,19 @@ export interface Balance {
   // The focus-keyed generator's bank ratio (§2.3): each session end banks a
   // charge window of fraction × live practice seconds. Provisional tuning.
   chargeWindowFraction: number;
+  // The Note Generator's credit (ADR-0047): every note written credits each
+  // owned Note Generator output seconds sized linearly by the note's
+  // character count at this rate, under a per-note cap. No minimum, no
+  // per-day cap, no similarity detection. Provisional tuning
+  // (1 s/char, 5-minute cap).
+  noteCreditPerChar: number;
+  noteCreditCapSeconds: number;
+  // The Goal Generator's multiple k (ADR-0047): completing a goal of M
+  // minutes banks k × the focus equivalent (chargeWindowFraction × M),
+  // prorated by the live share of the goal's progress — substantially
+  // stronger than practicing the same duration, which is the point.
+  // Provisional tuning (k = 5).
+  goalReserveMultiple: number;
 }
 
 // Provisional tuning throughout; the redesign spec's numbers are not final
@@ -199,6 +212,9 @@ export const BALANCE: Balance = {
   flowOpeningSeconds: 180,
   flowCadenceSeconds: 1800,
   chargeWindowFraction: 0.1,
+  noteCreditPerChar: 1,
+  noteCreditCapSeconds: 300,
+  goalReserveMultiple: 5,
 };
 
 // The chord vocabulary (#218's eleven classes, ADR-0021/0022 as extended by
@@ -267,6 +283,11 @@ export const CATEGORY_OF: Record<ModuleType, Category> = {
   ritual: "ritual",
   spacer: "spacer",
   focusKeyed: "generator",
+  // The two roll-pool generators of ADR-0047's wave: the Note Generator
+  // credits at the written-note fact, the Goal Generator at the completion
+  // tick — same category, same reserve surface, different fact.
+  noteKeyed: "generator",
+  goalKeyed: "generator",
   infusor: "booster",
   forge: "forge",
   // The Mutator Forge is the Forge family's second branch (ADR-0043): the
@@ -321,6 +342,8 @@ export const MODULE_TYPES: readonly ModuleType[] = [
   "ritual",
   "spacer",
   "focusKeyed",
+  "noteKeyed",
+  "goalKeyed",
   "infusor",
   "forge",
 ];

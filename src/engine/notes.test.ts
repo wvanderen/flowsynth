@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import { endSession, startSession } from "./actions";
-import { fresh } from "./fixtures";
+import { BALANCE } from "./constants";
+import { fresh, give } from "./fixtures";
 import { createHabit, selectHabit } from "./habits";
-import { NOTE_BETWEEN_SESSIONS, writeNote } from "./notes";
+import { hex } from "./hex";
+import { NOTE_BETWEEN_SESSIONS, noteReserveCredit, writeNote } from "./notes";
 import { deserialize, serialize } from "./save";
 
 describe("notes app", () => {
@@ -103,5 +105,60 @@ describe("notes app", () => {
     expect(s.notes[0]!.habitId).toBeNull();
     expect(s.notes[0]!.at).toBe(5_000);
     expect(s.notes[0]!.atElapsed).toBe(NOTE_BETWEEN_SESSIONS);
+  });
+});
+
+// The Note Generator's reserve (ADR-0047, wave 5): every note written — in
+// flow or between sessions, tagged or not — credits each owned Note
+// Generator's reserve the moment it is written, sized linearly by the
+// stored text's character count under the per-note cap. No minimum, no
+// per-day cap, no similarity detection; board and tray alike.
+describe("the Note Generator's reserve", () => {
+  it("a note written between sessions credits every owned Note Generator, board and tray alike", () => {
+    const s = fresh();
+    const board = give(s, "noteKeyed", hex(2, 0));
+    const tray = give(s, "noteKeyed", null);
+    writeNote(s, "hello"); // 5 characters
+    expect(board.reserve).toBeCloseTo(5, 6);
+    expect(tray.reserve).toBeCloseTo(5, 6);
+  });
+
+  it("credit sizes by character count under the per-note cap", () => {
+    expect(noteReserveCredit("abcd")).toBe(4);
+    // Past the cap the credit flattens — a 400-character note banks the
+    // cap, not 400 s.
+    expect(noteReserveCredit("x".repeat(400))).toBe(BALANCE.noteCreditCapSeconds);
+    const s = fresh();
+    give(s, "noteKeyed", null);
+    writeNote(s, "x".repeat(400));
+    expect(s.modules.find((m) => m.type === "noteKeyed")!.reserve).toBe(BALANCE.noteCreditCapSeconds);
+  });
+
+  it("notes credit in flow and while paused too — the fact is the write, not the mode", () => {
+    const s = fresh();
+    const gen = give(s, "noteKeyed", null);
+    startSession(s, 600);
+    writeNote(s, "flow"); // 4 characters
+    s.mode = "paused";
+    writeNote(s, "paused"); // 6 characters
+    endSession(s);
+    expect(gen.reserve).toBeCloseTo(10, 6);
+  });
+
+  it("short jottings credit — no minimum length — and notes stack", () => {
+    const s = fresh();
+    const gen = give(s, "noteKeyed", null);
+    writeNote(s, "a");
+    writeNote(s, "bb");
+    expect(gen.reserve).toBeCloseTo(3, 6);
+  });
+
+  it("the reserve survives a save round-trip beside its note", () => {
+    const s = fresh();
+    give(s, "noteKeyed", null);
+    writeNote(s, "persisted thought"); // 17 characters
+    const result = deserialize(serialize(s));
+    expect(result.error).toBeUndefined();
+    expect(result.state!.modules.find((m) => m.type === "noteKeyed")!.reserve).toBeCloseTo(17, 6);
   });
 });

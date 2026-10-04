@@ -37,9 +37,13 @@ export type SpacerType = "spacer";
 
 // Generators produce charge. The launch generator is the focus-keyed one
 // (ADR-0018): it reads focus state, and its charge-window rule is the §2.3
-// launch exception. The plain "generator" type was retired pre-release —
-// every generator banks its window and releases it next session.
-export type GeneratorType = "focusKeyed";
+// launch exception. The note- and goal-keyed generators join the roll pool
+// with ADR-0047's wave: each reads its console fact as an effect input
+// (ADR-0012) and credits its own reserve at the fact — notes at the
+// moment they are written, goals at their completion tick. The plain
+// "generator" type was retired pre-release — every generator banks its
+// window and releases it next session.
+export type GeneratorType = "focusKeyed" | "noteKeyed" | "goalKeyed";
 
 export type InfusorType = "infusor";
 
@@ -364,6 +368,13 @@ export interface Goal {
   schedule: GoalSchedule;
   occurrenceKey: string;
   progressSeconds: number;
+  // The occurrence's live slice of `progressSeconds` (ADR-0047): credited
+  // present, trusted, and honesty-credited seconds — manual logs never
+  // join it. The Goal Generator's completion credit prorates by this
+  // share, so a manual-only completion banks nothing; the reset at a
+  // recurring occurrence's boundary clears it. Lenient-defaulted to 0 at
+  // load.
+  liveSeconds: number;
   completed: boolean;
   completedCount: number;
   createdAt: number;

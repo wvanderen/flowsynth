@@ -1,4 +1,6 @@
 import { syncAchievements } from "./achievements";
+import { BALANCE } from "./constants";
+import { creditOwnedGenerators } from "./reserves";
 import type { GameState } from "./types";
 
 // Notes (issue #4), now a pure fixed-function instrument (ADR-0012): notes
@@ -19,21 +21,37 @@ export function isInFlowNote(note: { atElapsed: number }): boolean {
   return note.atElapsed !== NOTE_BETWEEN_SESSIONS;
 }
 
+// The Note Generator's credit size (ADR-0047): output seconds sized
+// linearly by the note's character count, under the per-note cap. No
+// minimum, no per-day cap, no similarity detection — trust-based, like the
+// honesty system. One shared read for the writer and any surface that
+// quotes the sizing.
+export function noteReserveCredit(text: string): number {
+  return Math.min(text.length * BALANCE.noteCreditPerChar, BALANCE.noteCreditCapSeconds);
+}
+
 export function writeNote(state: GameState, text: string, now: number = 0): { ok: boolean; reason?: string } {
   const trimmed = text.trim();
   if (!trimmed) return { ok: false, reason: "Write something first." };
+  const stored = trimmed.slice(0, 2000);
   const live = state.session !== null;
   state.notes.push({
     id: `n${state.nextId++}`,
     sessionId: state.sessionIndex,
     atElapsed: live ? state.session!.elapsed : NOTE_BETWEEN_SESSIONS,
-    text: trimmed.slice(0, 2000),
+    text: stored,
     // The habit-keyed tag (§9): the active habit while a session runs —
     // flow or paused, same session — null when unstructured or between
     // sessions.
     habitId: live ? state.activeHabitId : null,
     at: now,
   });
+  // The console fact's credit (ADR-0047): the note banks the moment it is
+  // written — in flow or between sessions, tagged or not — crediting every
+  // owned Note Generator's reserve, sized by the stored text's character
+  // count under the cap. Notes are append-only, so there is no refund
+  // path; a future delete never refunds.
+  creditOwnedGenerators(state, "noteKeyed", noteReserveCredit(stored));
   // The boundary check (ADR-0015): Marginalia and the note ladder unlock
   // here; a live session queues them into its summary row.
   syncAchievements(state);

@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import { buyGoalCapacity, endSession, startSession } from "./actions";
-import { fresh } from "./fixtures";
+import { fresh, give } from "./fixtures";
 import { addPracticeLog, createHabit, selectHabit } from "./habits";
+import { hex } from "./hex";
 import {
   accrueGoalProgress,
   createGoal,
@@ -13,6 +14,7 @@ import {
 } from "./goals";
 import { longGoalCost } from "./economy";
 import { deserialize, serialize } from "./save";
+import { applyGap, flushPendingAway, resolveHonestyReport } from "./trust";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -228,5 +230,113 @@ describe("persistence", () => {
     const loaded = deserialize(serialize(s))!;
     expect(loaded.state!.goals).toHaveLength(1);
     expect(loaded.state!.goals[0]!.progressSeconds).toBeCloseTo(240, 6);
+  });
+});
+
+// The Goal Generator's reserve (ADR-0047, wave 5): completing a goal of M
+// minutes banks k × the focus equivalent (chargeWindowFraction × M) into
+// every owned Goal Generator, board or tray alike, prorated by the live
+// share of the goal's progress — manual-only completions bank nothing,
+// mixed practice banks its live share. Recurring goals credit once per
+// occurrence; overlapping completions each credit.
+describe("the Goal Generator's reserve", () => {
+  it("a live completion banks k × the focus equivalent into every owned Goal Generator", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const board = give(s, "goalKeyed", hex(2, 0));
+    const tray = give(s, "goalKeyed", null);
+    createGoal(s, { habitId: habit.id, minutes: 20, schedule: "once", now: 1 });
+    startSession(s, 600);
+    advance(s, 600);
+    advance(s, 600); // 1200 s live — completes the 20-minute goal
+    // 5 × 0.1 × 1200 s = 600 s of reserve, per generator.
+    expect(board.reserve).toBeCloseTo(600, 6);
+    expect(tray.reserve).toBeCloseTo(600, 6);
+  });
+
+  it("a half-live, half-manual completion banks exactly the live share of the k× multiple", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const gen = give(s, "goalKeyed", null);
+    createGoal(s, { habitId: habit.id, minutes: 20, schedule: "once", now: 1 });
+    startSession(s, 600);
+    advance(s, 600); // half the goal live
+    endSession(s);
+    addPracticeLog(s, habit.id, 10, 5_000); // the other half manual — completes it
+    // liveShare 0.5 × (5 × 0.1 × 1200) = 300 s.
+    expect(gen.reserve).toBeCloseTo(300, 6);
+  });
+
+  it("a manual-only completion banks nothing", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const gen = give(s, "goalKeyed", null);
+    createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 });
+    addPracticeLog(s, habit.id, 10, 2_000);
+    expect(s.goals[0]!.completed).toBe(true);
+    expect(gen.reserve).toBe(0);
+  });
+
+  it("honesty-credited completions bank as live — the reconciliation tick credits", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const gen = give(s, "goalKeyed", null);
+    createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 });
+    startSession(s, null);
+    applyGap(s, 900, "away", 0); // open-ended past the floor: provisional
+    flushPendingAway(s);
+    expect(s.goals[0]!.progressSeconds).toBe(0);
+    resolveHonestyReport(s, "full");
+    // The whole pool credited live: 5 × 0.1 × 600 × (900/900) = 300 s.
+    expect(s.goals[0]!.completed).toBe(true);
+    expect(gen.reserve).toBeCloseTo(300, 6);
+  });
+
+  it("recurring goals credit once per occurrence — the reset re-opens the bank", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const monday = Date.UTC(2026, 8, 14, 10);
+    const gen = give(s, "goalKeyed", null);
+    createGoal(s, { habitId: habit.id, minutes: 10, schedule: "daily", now: monday });
+    accrueGoalProgress(s, habit.id, 600);
+    expect(gen.reserve).toBeCloseTo(300, 6);
+    rollGoalOccurrences(s, monday + DAY); // next day: fresh occurrence
+    accrueGoalProgress(s, habit.id, 600);
+    // The second occurrence credited again — 600 s total, not 300.
+    expect(gen.reserve).toBeCloseTo(600, 6);
+  });
+
+  it("overlapping completions each credit", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const gen = give(s, "goalKeyed", null);
+    createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 });
+    createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 2 });
+    accrueGoalProgress(s, habit.id, 600); // completes both at once
+    // Each goal's own credit lands: 2 × 300 s on the one generator.
+    expect(gen.reserve).toBeCloseTo(600, 6);
+  });
+
+  it("the occurrence reset clears the live slice with the progress", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const monday = Date.UTC(2026, 8, 14, 10);
+    createGoal(s, { habitId: habit.id, minutes: 10, schedule: "daily", now: monday });
+    accrueGoalProgress(s, habit.id, 300);
+    expect(s.goals[0]!.liveSeconds).toBeCloseTo(300, 6);
+    rollGoalOccurrences(s, monday + DAY);
+    expect(s.goals[0]!.liveSeconds).toBe(0);
+    expect(s.goals[0]!.progressSeconds).toBe(0);
+  });
+
+  it("a goal saved before the generators wave loads with its live slice defaulted empty", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 });
+    const saved = JSON.parse(serialize(s));
+    delete saved.state.goals[0].liveSeconds;
+    const result = deserialize(JSON.stringify(saved));
+    expect(result.error).toBeUndefined();
+    expect(result.state!.goals[0]!.liveSeconds).toBe(0);
   });
 });

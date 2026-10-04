@@ -6,7 +6,7 @@ new types and game-design concepts — the engine keys and records live in code
 design thinking lives. The roster table reflects the code as of the last
 update; when a type lands, update the table in the same change.
 
-Last updated: 2026-10-04 (wave 2 roster + harmony scoring, issue #229)
+Last updated: 2026-10-04 (wave 5 Note/Goal generators, issue #232)
 
 ## Roster
 
@@ -20,6 +20,8 @@ Last updated: 2026-10-04 (wave 2 roster + harmony scoring, issue #229)
 | `amplifier` | Amplifier | AMP | conduit | `hue-conduit` | through-flowing chevrons | Roll pool only | `⌁relayed` |
 | `spacer` | Spacer | Spacer | spacer | `hue-spacer` | ring window (board) / wire | Roll pool only | `⌇` |
 | `focusKeyed` | Focus Generator | FOCUS | generator | `hue-generator` | bolt, bare | Starter shelf ("generator", 40) and roll pool | `⌁power` |
+| `noteKeyed` | Note Generator | NOTE | generator | `hue-generator` | bolt, double-line corner mark | Roll pool only | `⌁power` |
+| `goalKeyed` | Goal Generator | GOAL | generator | `hue-generator` | bolt, check corner mark | Roll pool only | `⌁power` |
 | `infusor` | Booster | BOOST | booster | `hue-booster` | outward chevrons around a center dot | Starter shelf (40) and roll pool | `+«%»` |
 | `forge` | Forge | FORGE | forge | `hue-forge` | hex prism | Starter shelf (80) and roll pool | `«charge»/«threshold»` (charge register) |
 | `mutatorForge` | Mutator Forge | MUT. FORGE | forge | `hue-forge` | seeded-hexagon core on the chassis | Mutator tree entry | `«charge»/«threshold»` (charge register) |
@@ -46,11 +48,15 @@ All rollable types roll at 99% common / 0.9% uncommon / 0.1% rare
   nothing (ADR-0048).
 - **spacer** — silent wire: never sounds, never joins a pitch set,
   conducts chord adjacency through chains of wired cells (ADR-0021).
-- **generator** — produces charge (the only producer). The focus-keyed
-  rule (ADR-0018, reserves generalized per module by ADR-0047): banks a
-  reserve at session end (`chargeWindowFraction` = 0.1 of live seconds
-  into each owned generator, board or tray), spends 1 s/s of it while
-  deployed.
+- **generator** — produces charge (the only producer). Each generator owns
+  its reserve (ADR-0047) and spends 1 s/s of it while deployed. The
+  focus-keyed rule (ADR-0018): banks at session end
+  (`chargeWindowFraction` = 0.1 of live seconds). The Note Generator
+  (issue #232) credits at the written-note fact — the stored text's
+  character count × 1 s, 5-minute cap per note. The Goal Generator
+  (issue #232) credits at the completion tick — k = 5 × the focus
+  equivalent, prorated by the goal's live share. Every console fact
+  credits each owned generator of its type, board or tray alike.
 - **booster** — no synth term; empowers adjacent modules' amplitude
   (`infusorBonus` = 0.2 × power × charge factor per adjacent booster).
   Receives charge as continuous empowerment.
@@ -112,6 +118,25 @@ receivers only (never charges generators, never itself). Session end
 banks 0.1 × credited practice into every owned focus generator — board or
 tray alike; prestige resets reserves.
 
+### Note Generator (`noteKeyed`)
+The written-note fact's generator (ADR-0047, issue #232): every note
+written — in flow or between sessions, tagged or not — credits each owned
+Note Generator's reserve the moment it lands, sized by the stored text's
+character count (`noteCreditPerChar` = 1 s/char) under the per-note cap
+(`noteCreditCapSeconds` = 300). No minimum, no per-day cap, no similarity
+detection; notes are append-only, so a future delete never refunds.
+Delivery is the family's shared shape — emission, burn, prestige, and
+combination behave exactly as the Focus Generator's.
+
+### Goal Generator (`goalKeyed`)
+The completion tick's generator (ADR-0047, issue #232): completing a goal
+of M minutes banks `goalReserveMultiple` (= 5) × the focus equivalent
+(`chargeWindowFraction` × M) into each owned Goal Generator, prorated by
+the live share of the goal's progress — manual-only completions bank
+nothing, mixed practice banks its live share. Recurring goals credit once
+per occurrence; overlapping completions each credit. Delivery is the
+family's shared shape.
+
 ### Booster (`infusor`)
 Empowers neighbors' amplitude, not the composite directly. Charge it to
 sharpen its bonus (diminishing-returns curve).
@@ -134,8 +159,9 @@ below.
 
 The D-set glyph family (issue #219, lifted from
 `prototype/module-identity-glyphs`) settled the launch marks: the
-Oscillator's bare sine, the Harmonizer's diamond, the generators' bolt
-(corner marks distinguish the Note/Goal generators when they land), the
+Oscillator's bare sine, the Harmonizer's diamond, the generators' bolt —
+the Focus Generator bare, the Note Generator with a double-line corner
+mark, the Goal Generator with a check corner mark (issue #232) — the
 Booster's outward chevrons around a center dot, and the Mutator Forge's
 seeded-hexagon core on the Forge chassis. The roster wave added the
 silent voices and the conduit (issue #229): the Echo's doubled waves (the

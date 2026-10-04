@@ -255,3 +255,71 @@ describe("the focus generator's reserve", () => {
     expect(theGenerator(result.state!).reserve).toBeCloseTo(60, 6);
   });
 });
+
+// The keyed family's shared surface (ADR-0047, wave 5): the note and goal
+// generators join the focus generator's reserve semantics unchanged — one
+// burn rule, one standing vocabulary, one prestige reset. Delivery is the
+// focus generator's too: level, rarity, and mutators scale output strength
+// only, never the banked duration.
+describe("the note and goal reserves share the focus generator's surface", () => {
+  it("note and goal reserves burn 1 s/s in flow even without eligible neighbors", () => {
+    const s = fresh();
+    const note = give(s, "noteKeyed", hex(2, 0));
+    const goal = give(s, "goalKeyed", null); // tray copies hold until placed
+    note.reserve = 60;
+    goal.reserve = 60;
+    startSession(s, null);
+    advance(s, 60);
+    expect(note.reserve).toBeCloseTo(0, 6);
+    // Undeployed, the tray copy produces nothing and its reserve holds.
+    expect(goal.reserve).toBeCloseTo(60, 6);
+    note.reserve = 60;
+    advance(s, 100);
+    // A step that outlives the reserve clamps at empty, never negative.
+    expect(note.reserve).toBe(0);
+  });
+
+  it("a drained note reserve buys charge like any generator's — strength, never duration", () => {
+    const s = fresh();
+    const note = give(s, "noteKeyed", hex(2, 0));
+    give(s, "forge", hex(1, 0));
+    note.reserve = 60;
+    startSession(s, null);
+    // Strength 1 × 60 s of reserve charge: the 60 threshold crosses.
+    advance(s, 60, stubRng(new Array(12).fill(0.5)));
+    expect(s.forge.earned).toBe(1);
+    expect(note.reserve).toBeCloseTo(0, 6);
+  });
+
+  it("level scales the note reserve's delivery strength only — never the banked duration", () => {
+    const s = fresh();
+    const note = give(s, "noteKeyed", hex(2, 0), 2); // power 1.2²
+    give(s, "forge", hex(1, 0));
+    note.reserve = 17; // the credit a 17-character note banked — flat, sizing never reads level
+    startSession(s, null);
+    advance(s, 10, stubRng(new Array(12).fill(0.5)));
+    // The same 17 s budget delivers at strength 1.44 — the rate reads it,
+    // the duration never grew.
+    expect(note.reserve).toBeCloseTo(7, 6);
+    expect(computeRates(s, true).forgeRate).toBeCloseTo(1.44, 6);
+  });
+
+  it("reserves survive upgrade mode (the paused board) — only flow burns them", () => {
+    const s = fresh();
+    const goal = give(s, "goalKeyed", hex(2, 0));
+    goal.reserve = 60;
+    startSession(s, null);
+    advance(s, 30);
+    pauseSession(s);
+    advance(s, 100); // paused: no production, no burn
+    expect(goal.reserve).toBeCloseTo(30, 6);
+    resumeSession(s);
+    advance(s, 30);
+    expect(goal.reserve).toBeCloseTo(0, 6);
+    // Between sessions the reserve sits untouched.
+    endSession(s);
+    goal.reserve = 45;
+    startSession(s, null);
+    expect(goal.reserve).toBeCloseTo(45, 6);
+  });
+});

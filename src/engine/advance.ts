@@ -1,4 +1,4 @@
-import { EPS } from "./constants";
+import { CATEGORY_OF, EPS } from "./constants";
 import { syncAchievements } from "./achievements";
 import { syncChordDiscoveries } from "./library";
 import { chargeDelivered, computeRates, deployed } from "./economy";
@@ -59,11 +59,12 @@ export function advance(
   // generator stops crediting the remainder (the rate really does change
   // mid-step, once — one boundary per step, the recursion walks them all).
   // The reserves are per module now (ADR-0047): the earliest emptying one
-  // is the split.
+  // is the split. Every generator type drains — the focus, note, and goal
+  // generators share the one surface.
   const liveGenerators: ModuleInstance[] = [];
   let earliest = Infinity;
   for (const module of deployed(state)) {
-    if (module.type !== "focusKeyed") continue;
+    if (CATEGORY_OF[module.type] !== "generator") continue;
     if (module.reserve > EPS) {
       liveGenerators.push(module);
       earliest = Math.min(earliest, module.reserve);
@@ -115,8 +116,8 @@ export function advance(
   // until its bucket banks.
   if (sink === "live") session.earned += gained;
   // Each generator's reserve is a time budget of its own (ADR-0047): a
-  // deployed focus-keyed generator spends one reserve second per flow
-  // second, elapsing even with no eligible neighbors (the
+  // deployed generator — any of the three keyed types — spends one reserve
+  // second per flow second, elapsing even with no eligible neighbors (the
   // remaining-duration vocabulary). Undeployed, it produces no output and
   // its reserve holds.
   for (const module of liveGenerators) {

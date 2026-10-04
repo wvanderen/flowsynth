@@ -75,7 +75,7 @@ describe("practice fills the flow meter (§8, ADR-0041)", () => {
 describe("the first roll yields a synthesizer candidate (§8)", () => {
   it("re-rigs a synthless first draw to carry a synthesizer", () => {
     const s = fresh();
-    // 0.9 draws: forge, infusor, focusKeyed — no synthesizer.
+    // 0.9 draws: infusor, goalKeyed, noteKeyed — no synthesizer.
     addForgeProgress(s, forgeThreshold(0), stubRng([0.9, 0.5, 0.9, 0.5, 0.9, 0.5]));
     const offer = s.bankedRolls[0]!;
     expect(offer.candidates.some((c) => CATEGORY_OF[c.type] === "oscillator")).toBe(true);
@@ -89,21 +89,20 @@ describe("the first roll yields a synthesizer candidate (§8)", () => {
     addForgeProgress(s, forgeThreshold(0), stubRng([0.9, 0.5, 0.9, 0.5, 0.9, 0.5]));
     expect(s.bankedRolls[0]!.candidates.some((c) => c.type === "additive")).toBe(true);
     // The same seed on the second roll: the same synthless draw stands
-    // (RITUAL joins the pool at index 6, shifting the draw's picks).
+    // (the note and goal generators join the pool beside RITUAL, shifting
+    // the draw's picks).
     addForgeProgress(s, forgeThreshold(1), stubRng([0.9, 0.5, 0.9, 0.5, 0.9, 0.5]));
     const second = s.bankedRolls[1]!.candidates.map((c) => c.type);
-    expect(second).toEqual(["infusor", "forge", "focusKeyed"]);
+    expect(second).toEqual(["infusor", "goalKeyed", "noteKeyed"]);
   });
 
   it("a draw that already sings is left alone", () => {
     const s = fresh();
-    // 0.0/0.2/0.3 draws: additive, spacer, focusKeyed — a synthesizer is
-    // already here, so the rig never touches the draw.
-    // 0.05/0.6/0.7 draws over the roster pool: additive, spacer,
-    // focusKeyed — a synthesizer is already here, so the rig never touches
+    // 0.05/0.6/0.7 draws over the roster pool: additive, focusKeyed,
+    // noteKeyed — a synthesizer is already here, so the rig never touches
     // the draw.
     addForgeProgress(s, forgeThreshold(0), stubRng([0.05, 0.5, 0.6, 0.5, 0.7, 0.5]));
-    expect(s.bankedRolls[0]!.candidates.map((c) => c.type)).toEqual(["additive", "spacer", "focusKeyed"]);
+    expect(s.bankedRolls[0]!.candidates.map((c) => c.type)).toEqual(["additive", "focusKeyed", "noteKeyed"]);
   });
 });
 

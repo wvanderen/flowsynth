@@ -13,6 +13,8 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
   ritual: { name: "RITUAL", short: "RITUAL", role: "Amplifies the active habit's build while charged" },
   spacer: { name: "Spacer", short: "Spacer", role: "Silent wire" },
   focusKeyed: { name: "Focus Generator", short: "FOCUS", role: "Charge from focus" },
+  noteKeyed: { name: "Note Generator", short: "NOTE", role: "Charge from notes" },
+  goalKeyed: { name: "Goal Generator", short: "GOAL", role: "Charge from goals" },
   infusor: { name: "Booster", short: "BOOST", role: "Neighbor bonuses" },
   forge: { name: "Forge", short: "Forge", role: "Rolls at threshold" },
   mutatorForge: { name: "Mutator Forge", short: "Mut. Forge", role: "Mutator rolls at threshold" },
