@@ -54,15 +54,17 @@ export function equipSlotsFor(seconds: number): number {
 export type BuildBranch = "charge" | "nous";
 
 // One catalog entry. `milestone` indexes BUILD_MILESTONE_SECONDS — both
-// branches unlock their node at the same practice time. `stacking` marks a
-// base node's second copy: its magnitude adds to the base's (the spec's
-// "stacks" entries).
+// branches unlock their node at the same practice time. `magnitude` is the
+// node's effect size (the one place the number lives — the UI derives its
+// display from these fields). `stacking` marks a base node's second copy:
+// its magnitude adds to the base's (the spec's "stacks" entries).
 export interface BuildNodeDef {
   id: string;
   branch: BuildBranch;
   name: string;
   milestone: number;
   effect: string;
+  magnitude: number;
   stacking?: boolean;
 }
 
@@ -70,19 +72,19 @@ export interface BuildNodeDef {
 // table): six rungs, one node per branch per rung.
 export const BUILD_NODES: readonly BuildNodeDef[] = [
   // ── Charge / Forge-progress branch ──
-  { id: "charge-tap", branch: "charge", name: "Charge tap", milestone: 0, effect: "+10% Focus Generator window bank" },
-  { id: "steady-conduit", branch: "charge", name: "Steady conduit", milestone: 1, effect: "+1 output strength, owned generators" },
-  { id: "forge-hand", branch: "charge", name: "Forge hand", milestone: 2, effect: "+10% Forge progress efficiency" },
-  { id: "charge-tap-ii", branch: "charge", name: "Charge tap II", milestone: 3, effect: "+15% window bank", stacking: true },
-  { id: "ritual-attunement", branch: "charge", name: "RITUAL attunement", milestone: 4, effect: "+25% RITUAL amplification" },
-  { id: "forge-hand-ii", branch: "charge", name: "Forge hand II", milestone: 5, effect: "+15% Forge efficiency", stacking: true },
+  { id: "charge-tap", branch: "charge", name: "Charge tap", milestone: 0, effect: "+10% Focus Generator window bank", magnitude: 0.1 },
+  { id: "steady-conduit", branch: "charge", name: "Steady conduit", milestone: 1, effect: "+1 output strength, owned generators", magnitude: 1 },
+  { id: "forge-hand", branch: "charge", name: "Forge hand", milestone: 2, effect: "+10% Forge progress efficiency", magnitude: 0.1 },
+  { id: "charge-tap-ii", branch: "charge", name: "Charge tap II", milestone: 3, effect: "+15% window bank", magnitude: 0.15, stacking: true },
+  { id: "ritual-attunement", branch: "charge", name: "RITUAL attunement", milestone: 4, effect: "+25% RITUAL amplification", magnitude: 0.25 },
+  { id: "forge-hand-ii", branch: "charge", name: "Forge hand II", milestone: 5, effect: "+15% Forge efficiency", magnitude: 0.15, stacking: true },
   // ── Nous-production branch ──
-  { id: "weights", branch: "nous", name: "Weights", milestone: 0, effect: "+5% synth term" },
-  { id: "pitch-ear", branch: "nous", name: "Pitch ear", milestone: 1, effect: "+10% named-chord instance bonuses" },
-  { id: "steady-hand", branch: "nous", name: "Steady hand", milestone: 2, effect: "+10% booster uplift" },
-  { id: "weights-ii", branch: "nous", name: "Weights II", milestone: 3, effect: "+10% synth term", stacking: true },
-  { id: "feat-resonance", branch: "nous", name: "Feat resonance", milestone: 4, effect: "+10% achievementBoost" },
-  { id: "deep-practice", branch: "nous", name: "Deep practice", milestone: 5, effect: "+15% named-chord bonuses", stacking: true },
+  { id: "weights", branch: "nous", name: "Weights", milestone: 0, effect: "+5% synth term", magnitude: 0.05 },
+  { id: "pitch-ear", branch: "nous", name: "Pitch ear", milestone: 1, effect: "+10% named-chord instance bonuses", magnitude: 0.1 },
+  { id: "steady-hand", branch: "nous", name: "Steady hand", milestone: 2, effect: "+10% booster uplift", magnitude: 0.1 },
+  { id: "weights-ii", branch: "nous", name: "Weights II", milestone: 3, effect: "+10% synth term", magnitude: 0.1, stacking: true },
+  { id: "feat-resonance", branch: "nous", name: "Feat resonance", milestone: 4, effect: "+10% achievementBoost", magnitude: 0.1 },
+  { id: "deep-practice", branch: "nous", name: "Deep practice", milestone: 5, effect: "+15% named-chord bonuses", magnitude: 0.15, stacking: true },
 ];
 
 const NODE_BY_ID: ReadonlyMap<string, BuildNodeDef> = new Map(BUILD_NODES.map((node) => [node.id, node]));
@@ -122,21 +124,6 @@ export interface BuildFactors {
   achievementBoost: number;
 }
 
-const MAGNITUDE_OF: Record<string, number> = {
-  "charge-tap": 0.1,
-  "steady-conduit": 1,
-  "forge-hand": 0.1,
-  "charge-tap-ii": 0.15,
-  "ritual-attunement": 0.25,
-  "forge-hand-ii": 0.15,
-  weights: 0.05,
-  "pitch-ear": 0.1,
-  "steady-hand": 0.1,
-  "weights-ii": 0.1,
-  "feat-resonance": 0.1,
-  "deep-practice": 0.15,
-};
-
 const ZERO_FACTORS: BuildFactors = {
   windowBank: 0,
   generatorStrength: 0,
@@ -154,35 +141,34 @@ const ZERO_FACTORS: BuildFactors = {
 export function baseBuildFactors(habit: Habit | undefined): BuildFactors {
   const factors: BuildFactors = { ...ZERO_FACTORS };
   for (const node of equippedNodes(habit)) {
-    const magnitude = MAGNITUDE_OF[node.id] ?? 0;
     switch (node.id) {
       case "charge-tap":
       case "charge-tap-ii":
-        factors.windowBank += magnitude;
+        factors.windowBank += node.magnitude;
         break;
       case "steady-conduit":
-        factors.generatorStrength += magnitude;
+        factors.generatorStrength += node.magnitude;
         break;
       case "forge-hand":
       case "forge-hand-ii":
-        factors.forgeEfficiency += magnitude;
+        factors.forgeEfficiency += node.magnitude;
         break;
       case "ritual-attunement":
-        factors.ritualAttunement += magnitude;
+        factors.ritualAttunement += node.magnitude;
         break;
       case "weights":
       case "weights-ii":
-        factors.synthTerm += magnitude;
+        factors.synthTerm += node.magnitude;
         break;
       case "pitch-ear":
       case "deep-practice":
-        factors.namedChordBonus += magnitude;
+        factors.namedChordBonus += node.magnitude;
         break;
       case "steady-hand":
-        factors.boosterUplift += magnitude;
+        factors.boosterUplift += node.magnitude;
         break;
       case "feat-resonance":
-        factors.achievementBoost += magnitude;
+        factors.achievementBoost += node.magnitude;
         break;
     }
   }

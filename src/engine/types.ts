@@ -57,7 +57,7 @@ export type ConduitType = "amplifier";
 
 // RITUAL (ADR-0046): the chargeable-family board module that amplifies the
 // active habit's equipped build effects while receiving charge — continuous
-// empowerment, the family's synthesizer/infusor mode, not threshold fill.
+// empowerment, the family's continuous-charge mode, not threshold fill.
 // Habit-keyed: it wears the switch vermillion and arrives through the
 // module-roll pool only.
 export type RitualType = "ritual";

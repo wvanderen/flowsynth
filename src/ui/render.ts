@@ -1,4 +1,4 @@
-import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, emittedStrength, affordableLevels, hostPower, levelCost, levelsCost, longGoalCost, wholeNous } from "../engine/economy";
+import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, emittedStrength, affordableLevels, hostPower, levelCost, levelsCost, longGoalCost, ritualAmpOf, wholeNous } from "../engine/economy";
 import { claimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
 import { combinePreview, combineMutatorsPreview, levelable, type CombinePreview, upgradeAllPreview } from "../engine/actions";
@@ -1418,10 +1418,10 @@ function faceReadoutFor(state: GameState, module: ModuleInstance, pos: Hex | nul
   }
   if (category === "ritual") {
     // RITUAL amplifies: the face shows the factor the module itself is
-    // delivering onto the active habit's build right now — ×1.00 while
+    // delivering onto the active habit's build right now — ×1 while
     // uncharged, rising with received strength (ADR-0046).
     const strength = snapshot.chargeStrength.get(module.id) ?? 0;
-    const amp = 1 + BALANCE.ritualAmpPerLevel * module.level * chargedFactor(strength);
+    const amp = 1 + ritualAmpOf(module.level, strength);
     return pos
       ? { readout: `×${formatNumber(amp)}`, note: cellNoteOf(pos) }
       : { readout: `×${formatNumber(amp)}` };
@@ -1993,7 +1993,7 @@ const BLOOM_EFFECTS: Record<ModuleInstance["type"], (input: BloomEffectInput) =>
   }),
   ritual: ({ strength, level, levels }) => ({
     benefit: `+${formatNumber(100 * BALANCE.ritualAmpPerLevel * levels)}% build amplification`,
-    contribution: `amplifies the active habit's build ×${formatNumber(1 + BALANCE.ritualAmpPerLevel * level * chargedFactor(strength))} while charged`,
+    contribution: `amplifies the active habit's build ×${formatNumber(1 + ritualAmpOf(level, strength))} while charged`,
   }),
   spacer: () => ({ benefit: null, contribution: "silent — conducts chords, produces nothing" }),
   focusKeyed: ({ gain, power }) => ({

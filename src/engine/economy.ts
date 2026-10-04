@@ -284,6 +284,21 @@ function relayNet(state: GameState, flow: boolean, steadyBonus: number): RelayNe
   return { received, relay };
 }
 
+// One deployed RITUAL's own amplification contribution (ADR-0046): its
+// level-scaled base through the charged-empowerment curve of the strength
+// it receives — the face readout and the bloom's contribution line share
+// this one read with the rate pass. Zero while uncharged.
+export function ritualAmpOf(level: number, strength: number): number {
+  return BALANCE.ritualAmpPerLevel * level * chargedFactor(strength);
+}
+
+// The active build's flat generator-strength bonus (steady conduit), at
+// its base magnitude — the charge infrastructure reads it un-amplified;
+// RITUAL amplifies the rate pass's application points, not the relay net.
+export function activeBuildGeneratorStrength(state: GameState): number {
+  return baseBuildFactors(activeHabit(state)).generatorStrength;
+}
+
 // A generator's charge output: strength scales with its amplitude (level
 // and rarity), plus the steady-conduit build node's flat +1 when the
 // active habit equips it (ADR-0046 — output strength is the node's whole
@@ -293,17 +308,14 @@ function relayNet(state: GameState, flow: boolean, steadyBonus: number): RelayNe
 // emitting at full strength only while reserve seconds remain, spending a
 // second of reserve per second of live flow (the remaining-duration
 // vocabulary). Undeployed, it produces no output and the reserve holds.
+// The `steadyBonus` default is the ambient active-build read — by
+// construction the same figure the rate pass threads through the relay
+// net (both read baseBuildFactors(activeHabit(state))), so a UI caller
+// omitting it can never disagree with the pass.
 export function emittedStrength(state: GameState, module: ModuleInstance, flow: boolean, steadyBonus: number = activeBuildGeneratorStrength(state)): number {
   if (!flow || CATEGORY_OF[module.type] !== "generator" || module.pos === null) return 0;
   if (module.reserve <= EPS) return 0;
   return hostPower(state, module) + steadyBonus;
-}
-
-// The active build's flat generator-strength bonus (steady conduit), at
-// its base magnitude — the charge infrastructure reads it un-amplified;
-// RITUAL amplifies the rate pass's application points, not the relay net.
-export function activeBuildGeneratorStrength(state: GameState): number {
-  return baseBuildFactors(activeHabit(state)).generatorStrength;
 }
 
 // The charge a module receives, read off a relay net — the one shared read
@@ -407,7 +419,7 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
   for (const module of placed) {
     if (module.type !== "ritual") continue;
     const strength = strengthOf(module);
-    if (strength > 0) rawAmplification += BALANCE.ritualAmpPerLevel * module.level * chargedFactor(strength);
+    if (strength > 0) rawAmplification += ritualAmpOf(module.level, strength);
   }
   rawAmplification *= 1 + build.ritualAttunement;
   const factors = amplifyFactors(build, rawAmplification);
