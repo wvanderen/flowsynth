@@ -7,6 +7,7 @@ import { fresh, give } from "./fixtures";
 import { setBendShift } from "./actions";
 import { BUILD_MILESTONE_SECONDS, buildUnlocksFor, equipSlotsFor } from "./builds";
 import { hex } from "./hex";
+import { createMutator } from "./state";
 import { pitchOf } from "./lattice";
 
 // The roster wave (ADR-0048) and the harmony formula (ADR-0049): the
@@ -330,6 +331,38 @@ describe("the Amplifier (ADR-0048)", () => {
     // are ×1, so the far receiver sees the generator's own output.
     expect(snapshot.chargeStrength.get(second.id)).toBeCloseTo(1, 9);
     expect(snapshot.chargeStrength.get(far.id)).toBeCloseTo(1, 9);
+  });
+
+  it("an empty neighboring generator does not interrupt a live relay chain", () => {
+    const s = fresh();
+    const gen = give(s, "focusKeyed", hex(2, -2));
+    gen.reserve = 60;
+    give(s, "amplifier", hex(1, -1));
+    const second = give(s, "amplifier", hex(1, 0));
+    const far = give(s, "additive", hex(2, 0));
+    give(s, "focusKeyed", hex(0, 1)); // empty, adjacent only to the second relay
+    const snapshot = computeRates(s, true);
+    expect(snapshot.chargeStrength.get(second.id)).toBeCloseTo(1, 9);
+    expect(snapshot.chargeStrength.get(far.id)).toBeCloseTo(1, 9);
+    expect(computeRates(s, false).chargeStrength.get(far.id)).toBe(0);
+  });
+
+  it("charge mutators strengthen every relay hop exactly once", () => {
+    const s = fresh();
+    const gen = give(s, "focusKeyed", hex(2, -2));
+    gen.reserve = 60;
+    const first = give(s, "amplifier", hex(1, -1), 3);
+    const second = give(s, "amplifier", hex(1, 0));
+    const far = give(s, "additive", hex(2, 0));
+    for (const amp of [first, second]) {
+      const mutator = createMutator(s, "charge", "common");
+      mutator.pos = amp.pos;
+      s.mutators.push(mutator);
+    }
+    const snapshot = computeRates(s, true);
+    expect(snapshot.chargeStrength.get(first.id)).toBeCloseTo(1.5, 9);
+    expect(snapshot.chargeStrength.get(second.id)).toBeCloseTo(2.4 * 1.5, 9);
+    expect(snapshot.chargeStrength.get(far.id)).toBeCloseTo(2.4 * 1.5, 9);
   });
 
   it("the hop-depth cap guards cycles: an amplifier beyond it receives nothing", () => {

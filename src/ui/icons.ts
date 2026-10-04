@@ -26,7 +26,7 @@ const PATHS: Record<ModuleType, string> = {
   // The Blaster: the sine wearing its charge — the scope trace plus the
   // generator's bolt at its core (the oscillator category's second
   // producer, converting received charge into its term).
-  blaster: '<path d="M-12 0C-8-10-4-10 0 0C4 10 8 10 12 0"/><path d="M1.5-9-4-1H0L-1.5 9 4 1H0Z" fill="currentColor" stroke="none"/>',
+  blaster: '<path d="M-12 0C-8-10-4-10 0 0C4 10 8 10 12 0"/><path d="M1.5-9-4-1H0L-1.5 9 4 1H0Z"/>',
   // The spacer's wire glyph (ADR-0021): a silent conductor stepping through
   // one cell — a running wire with solder points, never a voice. The board
   // face and tray tile render the ring window instead (issue #219); the

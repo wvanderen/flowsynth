@@ -178,7 +178,8 @@ describe("module face", () => {
     // Blaster's bolt-cored sine, the Amplifier's through-flow.
     expect(moduleIcon("echo")).toContain("M-6 0C-4-5-2-5 0 0C2 5 4 5 6 0");
     expect(moduleIcon("bend")).toContain("M-12 2C-8-8-5-8-2 0L2 0");
-    expect(moduleIcon("blaster")).toContain("fill=\"currentColor\"");
+    expect(moduleIcon("blaster")).not.toContain("fill=");
+    expect(moduleIcon("blaster")).not.toContain("stroke=\"none\"");
     expect(moduleIcon("amplifier")).toContain("M-9 0h5M4 0h5");
   });
 

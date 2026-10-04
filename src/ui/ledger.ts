@@ -78,7 +78,7 @@ function effectText(state: GameState, contribution: Contribution, module: Module
   if (category === "silentVoice") {
     const uplift = BALANCE.silentVoiceUpliftPerLevel * module.level;
     const pitch = contribution.pitch !== null ? noteNameOf(contribution.pitch) : "mute";
-    return `sings ${pitch} · +${Math.round(uplift * 100)}% per level to chord instances`;
+    return `sings ${pitch} · Formation ×${formatNumber(contribution.formationQ)} · +${Math.round(uplift * 100)}% per level to chord instances`;
   }
   if (category === "conduit") {
     const strength = snapshot.chargeStrength.get(contribution.moduleId) ?? 0;

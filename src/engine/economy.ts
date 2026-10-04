@@ -236,8 +236,8 @@ function generatorStrengthAt(state: GameState, pos: Hex, flow: boolean): number 
 // hop-depth cap bounds the chain — an amplifier beyond it relays nothing,
 // which is what guards cycles (equal depths never feed each other).
 interface RelayNet {
-  // Amplifier id → the raw strength it received (generators + lower
-  // amplifiers' relays).
+  // Amplifier id → generators + lower amplifiers' relays, with the
+  // host's charge mutator applied.
   received: Map<string, number>;
   // Amplifier id → its re-broadcast strength (received × gain).
   relay: Map<string, number>;
@@ -248,8 +248,10 @@ function relayNet(state: GameState, flow: boolean): RelayNet {
   const received = new Map<string, number>();
   const relay = new Map<string, number>();
   const depth = new Map<string, number>();
+  // Empty generators cannot anchor a relay depth: they must not cut off
+  // charge arriving through an emitting generator's longer path.
   let frontier = amplifiers.filter((amp) =>
-    deployedGenerators(state).some((g) => g.pos !== null && adjacent(amp.pos!, g.pos!)),
+    deployedGenerators(state).some((g) => emittedStrength(state, g, flow) > 0 && adjacent(amp.pos!, g.pos!)),
   );
   let level = 1;
   while (frontier.length > 0 && level <= BALANCE.amplifierHopCap) {
@@ -262,6 +264,7 @@ function relayNet(state: GameState, flow: boolean): RelayNet {
           strength += relay.get(other.id) ?? 0;
         }
       }
+      strength *= 1 + chargeMagnitudeAt(state, amp.pos);
       received.set(amp.id, strength);
       relay.set(amp.id, strength * (1 + BALANCE.amplifierGainPerLevel * amp.level));
     }
@@ -302,7 +305,7 @@ function receivedOn(
   if (module.type === "amplifier") {
     // Its own received: what the relay pass credited it — generators plus
     // strictly-lower-depth relays — before its re-broadcast gain.
-    return (net.received.get(module.id) ?? 0) * (1 + chargeMagnitudeAt(state, module.pos));
+    return net.received.get(module.id) ?? 0;
   }
   let strength = generatorStrengthAt(state, module.pos, flow);
   for (const amplifier of placed) {
