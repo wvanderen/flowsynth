@@ -610,7 +610,7 @@ function renderAchievementsModal(app: App, content: HTMLElement, projected: Rate
   content.innerHTML = `
     ${modalTop("ACHIEVEMENTS")}
     <h2 id="modal-title">${count} of ${ACHIEVEMENTS.length} feats.</h2>
-    <p class="lead">Every feat speeds the rate a little — they accelerate, never gate. Each one adds into the Achievements leg of every synth row in the rate details.</p>
+    <p class="lead">Each feat adds into the Achievements leg of every synth row in the rate details.</p>
     ${sections}`;
   wireClose(app);
 }
@@ -3585,7 +3585,7 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
         </button>`).join("")}
     </div>` : `<p class="empty-copy">No choices banked yet — the meters above say how far.</p>`}
     ${mutatorSection}
-    <p class="modal-note">The board stays live behind this card — inspect freely; click outside, ✕ or Esc puts the choice away.</p>`;
+    <p class="modal-note">Click outside, ✕ or Esc puts the choice away.</p>`;
   updateForgeMetersLive(content, state, projected.forgeRate, projected.mutatorForgeRate);
   content.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach((button) => {
     button.addEventListener("click", () => {
