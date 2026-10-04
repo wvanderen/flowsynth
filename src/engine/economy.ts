@@ -292,11 +292,25 @@ export function ritualAmpOf(level: number, strength: number): number {
   return BALANCE.ritualAmpPerLevel * level * chargedFactor(strength);
 }
 
-// The active build's flat generator-strength bonus (steady conduit), at
-// its base magnitude — the charge infrastructure reads it un-amplified;
-// RITUAL amplifies the rate pass's application points, not the relay net.
-export function activeBuildGeneratorStrength(state: GameState): number {
-  return baseBuildFactors(activeHabit(state)).generatorStrength;
+// Read RITUAL against the base charge network once, then amplify delivery.
+// This prevents Steady conduit feeding its own amplification recursively.
+function ritualAmplificationFor(state: GameState, flow: boolean): number {
+  const build = baseBuildFactors(activeHabit(state));
+  const placed = deployed(state);
+  const net = relayNet(state, flow, build.generatorStrength);
+  let amplification = 0;
+  for (const module of placed) {
+    if (module.type === "ritual") {
+      const strength = receivedOn(state, module, flow, placed, net, build.generatorStrength);
+      if (strength > 0) amplification += ritualAmpOf(module.level, strength);
+    }
+  }
+  return amplification * (1 + build.ritualAttunement);
+}
+
+export function activeBuildGeneratorStrength(state: GameState, flow = flowLive(state)): number {
+  const base = baseBuildFactors(activeHabit(state)).generatorStrength;
+  return base === 0 ? 0 : base * (1 + ritualAmplificationFor(state, flow));
 }
 
 // A generator's charge output: strength scales with its amplitude (level
@@ -309,10 +323,10 @@ export function activeBuildGeneratorStrength(state: GameState): number {
 // second of reserve per second of live flow (the remaining-duration
 // vocabulary). Undeployed, it produces no output and the reserve holds.
 // The `steadyBonus` default is the ambient active-build read — by
-// construction the same figure the rate pass threads through the relay
-// net (both read baseBuildFactors(activeHabit(state))), so a UI caller
+// construction the same amplified figure the rate pass threads through
+// the relay net, so a UI caller
 // omitting it can never disagree with the pass.
-export function emittedStrength(state: GameState, module: ModuleInstance, flow: boolean, steadyBonus: number = activeBuildGeneratorStrength(state)): number {
+export function emittedStrength(state: GameState, module: ModuleInstance, flow: boolean, steadyBonus: number = activeBuildGeneratorStrength(state, flow)): number {
   if (!flow || CATEGORY_OF[module.type] !== "generator" || module.pos === null) return 0;
   if (module.reserve <= EPS) return 0;
   return hostPower(state, module) + steadyBonus;
@@ -352,7 +366,8 @@ function receivedOn(
 // other, amplifiers never feed generators, and only the receiving
 // categories receive. The spacer receives nothing — it is silent wire.
 export function receivedStrength(state: GameState, module: ModuleInstance, flow: boolean): number {
-  return receivedOn(state, module, flow, deployed(state), relayNet(state, flow, activeBuildGeneratorStrength(state)), activeBuildGeneratorStrength(state));
+  const bonus = activeBuildGeneratorStrength(state, flow);
+  return receivedOn(state, module, flow, deployed(state), relayNet(state, flow, bonus), bonus);
 }
 
 function infusorBonusAt(
@@ -394,35 +409,12 @@ function infusorBonusAt(
 export function computeRates(state: GameState, flow: boolean = flowLive(state)): RateSnapshot {
   const contributions = new Map<string, Contribution>();
   const chargeStrength = new Map<string, number>();
-  // The active habit's build (ADR-0046): effects run only while the habit
-  // is the session's active habit — unstructured sessions run no build,
-  // and switching habits drops the effects the same tick. The relay net
-  // below carries the steady-conduit bonus at its base magnitude (the
-  // charge infrastructure computes once, before any amplification is
-  // known); every other application point reads the amplified factors.
-  const habit = activeHabit(state);
-  const build = baseBuildFactors(habit);
-  const net = relayNet(state, flow, build.generatorStrength);
-  // deployed() filters pos non-null; the cast carries that through.
-  const placed = deployed(state) as DeployedModule[];
-
-  // The charge a module receives, read off the one relay net.
-  const strengthOf = (module: ModuleInstance): number => receivedOn(state, module, flow, placed, net, build.generatorStrength);
-
-  // RITUAL's amplification (ADR-0046): each deployed ritual receiving
-  // charge adds its level-scaled amp through the charged-empowerment
-  // curve — continuous with received strength, zero when uncharged. The
-  // attunement node scales the amplification itself, never its own
-  // magnitude. Charge stays board-side throughout: the module reads
-  // strength and scales build effects, nothing crosses to the console.
-  let rawAmplification = 0;
-  for (const module of placed) {
-    if (module.type !== "ritual") continue;
-    const strength = strengthOf(module);
-    if (strength > 0) rawAmplification += ritualAmpOf(module.level, strength);
-  }
-  rawAmplification *= 1 + build.ritualAttunement;
+  const build = baseBuildFactors(activeHabit(state));
+  const rawAmplification = ritualAmplificationFor(state, flow);
   const factors = amplifyFactors(build, rawAmplification);
+  const net = relayNet(state, flow, factors.generatorStrength);
+  const placed = deployed(state) as DeployedModule[];
+  const strengthOf = (module: ModuleInstance): number => receivedOn(state, module, flow, placed, net, factors.generatorStrength);
 
   const achievementBoost = achievementBoostOf(state) * (1 + factors.achievementBoost);
   const discoveryBoost = discoveryBoostOf(state);
@@ -459,7 +451,7 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
     if (isVoiceType(deployedModule.type)) {
       // The steady-hand node (ADR-0046) scales the booster uplift the
       // oscillator reads — the active build's touch on the booster leg.
-      const localBonus = category === "silentVoice" ? 0 : infusorBonusAt(state, deployedModule, flow, placed, net, build.generatorStrength) * (1 + factors.boosterUplift);
+      const localBonus = category === "silentVoice" ? 0 : infusorBonusAt(state, deployedModule, flow, placed, net, factors.generatorStrength) * (1 + factors.boosterUplift);
       // The charge term each producer applies: the additive's charged
       // empowerment, or the Blaster's conversion — the curve that replaces
       // the charge factor (ADR-0048). The silent voice sings nothing of

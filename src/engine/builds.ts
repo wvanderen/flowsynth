@@ -65,6 +65,7 @@ export interface BuildNodeDef {
   milestone: number;
   effect: string;
   magnitude: number;
+  unit?: "flat";
   stacking?: boolean;
 }
 
@@ -72,20 +73,25 @@ export interface BuildNodeDef {
 // table): six rungs, one node per branch per rung.
 export const BUILD_NODES: readonly BuildNodeDef[] = [
   // ── Charge / Forge-progress branch ──
-  { id: "charge-tap", branch: "charge", name: "Charge tap", milestone: 0, effect: "+10% Focus Generator window bank", magnitude: 0.1 },
-  { id: "steady-conduit", branch: "charge", name: "Steady conduit", milestone: 1, effect: "+1 output strength, owned generators", magnitude: 1 },
-  { id: "forge-hand", branch: "charge", name: "Forge hand", milestone: 2, effect: "+10% Forge progress efficiency", magnitude: 0.1 },
-  { id: "charge-tap-ii", branch: "charge", name: "Charge tap II", milestone: 3, effect: "+15% window bank", magnitude: 0.15, stacking: true },
-  { id: "ritual-attunement", branch: "charge", name: "RITUAL attunement", milestone: 4, effect: "+25% RITUAL amplification", magnitude: 0.25 },
-  { id: "forge-hand-ii", branch: "charge", name: "Forge hand II", milestone: 5, effect: "+15% Forge efficiency", magnitude: 0.15, stacking: true },
+  { id: "charge-tap", branch: "charge", name: "Charge tap", milestone: 0, effect: "Focus Generator window bank", magnitude: 0.1 },
+  { id: "steady-conduit", branch: "charge", name: "Steady conduit", milestone: 1, effect: "output strength, owned generators", unit: "flat", magnitude: 1 },
+  { id: "forge-hand", branch: "charge", name: "Forge hand", milestone: 2, effect: "Forge progress efficiency", magnitude: 0.1 },
+  { id: "charge-tap-ii", branch: "charge", name: "Charge tap II", milestone: 3, effect: "window bank", magnitude: 0.15, stacking: true },
+  { id: "ritual-attunement", branch: "charge", name: "RITUAL attunement", milestone: 4, effect: "RITUAL amplification", magnitude: 0.25 },
+  { id: "forge-hand-ii", branch: "charge", name: "Forge hand II", milestone: 5, effect: "Forge efficiency", magnitude: 0.15, stacking: true },
   // ── Nous-production branch ──
-  { id: "weights", branch: "nous", name: "Weights", milestone: 0, effect: "+5% synth term", magnitude: 0.05 },
-  { id: "pitch-ear", branch: "nous", name: "Pitch ear", milestone: 1, effect: "+10% named-chord instance bonuses", magnitude: 0.1 },
-  { id: "steady-hand", branch: "nous", name: "Steady hand", milestone: 2, effect: "+10% booster uplift", magnitude: 0.1 },
-  { id: "weights-ii", branch: "nous", name: "Weights II", milestone: 3, effect: "+10% synth term", magnitude: 0.1, stacking: true },
-  { id: "feat-resonance", branch: "nous", name: "Feat resonance", milestone: 4, effect: "+10% achievementBoost", magnitude: 0.1 },
-  { id: "deep-practice", branch: "nous", name: "Deep practice", milestone: 5, effect: "+15% named-chord bonuses", magnitude: 0.15, stacking: true },
+  { id: "weights", branch: "nous", name: "Weights", milestone: 0, effect: "synth term", magnitude: 0.05 },
+  { id: "pitch-ear", branch: "nous", name: "Pitch ear", milestone: 1, effect: "named-chord instance bonuses", magnitude: 0.1 },
+  { id: "steady-hand", branch: "nous", name: "Steady hand", milestone: 2, effect: "booster uplift", magnitude: 0.1 },
+  { id: "weights-ii", branch: "nous", name: "Weights II", milestone: 3, effect: "synth term", magnitude: 0.1, stacking: true },
+  { id: "feat-resonance", branch: "nous", name: "Feat resonance", milestone: 4, effect: "achievementBoost", magnitude: 0.1 },
+  { id: "deep-practice", branch: "nous", name: "Deep practice", milestone: 5, effect: "named-chord bonuses", magnitude: 0.15, stacking: true },
 ];
+
+export function buildNodeEffect(node: BuildNodeDef): string {
+  const amount = node.unit === "flat" ? node.magnitude : Number((node.magnitude * 100).toFixed(6));
+  return `+${amount}${node.unit === "flat" ? "" : "%"} ${node.effect}`;
+}
 
 const NODE_BY_ID: ReadonlyMap<string, BuildNodeDef> = new Map(BUILD_NODES.map((node) => [node.id, node]));
 

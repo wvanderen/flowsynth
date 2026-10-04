@@ -12,7 +12,7 @@ import { cellNoteOf, noteNameOf, octaveRowOf, pitchOf, positionInRange } from ".
 import { appActive, appLockNote, TILE_APPS, type FocusApp } from "../engine/apps";
 import { isInFlowNote } from "../engine/notes";
 import { activeHabit } from "../engine/habits";
-import { activeBuildFactors, buildUnlocksFor, BUILD_NODES, BUILD_MILESTONE_SECONDS, equipSlotsFor, equippedNodes } from "../engine/builds";
+import { activeBuildFactors, buildNodeEffect, buildUnlocksFor, BUILD_NODES, BUILD_MILESTONE_SECONDS, equipSlotsFor, equippedNodes } from "../engine/builds";
 import {
   habitRecordName,
   habitPracticeSummary,
@@ -2390,12 +2390,12 @@ function habitBuildHtml(app: App, habit: Habit): string {
           : "The build is read-only during flow";
       return `<button class="build-node${isEquipped ? " equipped" : ""}" data-${isEquipped ? "unequip" : "equip"}="${node.id}" data-habit="${habit.id}" title="${title}">
           <span class="build-node-mark mono" aria-hidden="true">${isEquipped ? equippedIndex + 1 : "+"}</span>
-          <span class="build-node-name">${escapeHtml(node.name)}<small>${escapeHtml(node.effect)}${stackNote}</small></span>
+          <span class="build-node-name">${escapeHtml(node.name)}<small>${escapeHtml(buildNodeEffect(node))}${stackNote}</small></span>
         </button>`;
     }
     return `<div class="build-node locked" title="Unlocks at ${formatDuration(milestoneSeconds)} of practice on this habit">
         <span class="build-node-mark mono" aria-hidden="true">·</span>
-        <span class="build-node-name">${escapeHtml(node.name)}<small>unlocks at ${formatDuration(milestoneSeconds)} · ${escapeHtml(node.effect)}</small></span>
+        <span class="build-node-name">${escapeHtml(node.name)}<small>unlocks at ${formatDuration(milestoneSeconds)} · ${escapeHtml(buildNodeEffect(node))}</small></span>
       </div>`;
   }).join("");
   return `<div class="habit-build">

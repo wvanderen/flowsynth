@@ -5,6 +5,7 @@ import {
   BUILD_MILESTONE_SECONDS,
   BUILD_NODES,
   baseBuildFactors,
+  buildNodeEffect,
   buildFactorsFor,
   buildUnlocksFor,
   equipBuildNode,
@@ -15,7 +16,7 @@ import {
   unlockedNodes,
 } from "./builds";
 import { BALANCE, ROLL_POOL } from "./constants";
-import { computeRates, receivedStrength } from "./economy";
+import { computeRates, emittedStrength, receivedStrength, ritualAmpOf } from "./economy";
 import { addPracticeLog, createHabit, selectHabit } from "./habits";
 import { fresh, give } from "./fixtures";
 import { hex } from "./hex";
@@ -35,6 +36,13 @@ function habitOf(s: GameState, seconds: number, name = "Piano"): Habit {
   habit.seconds = seconds;
   return habit;
 }
+
+it("derives effect text from tuned magnitudes", () => {
+  const node = BUILD_NODES.find((entry) => entry.id === "weights")!;
+  expect(buildNodeEffect({ ...node, magnitude: 0.125 })).toBe("+12.5% synth term");
+  const conduit = BUILD_NODES.find((entry) => entry.id === "steady-conduit")!;
+  expect(buildNodeEffect({ ...conduit, magnitude: 2 })).toBe("+2 output strength, owned generators");
+});
 
 describe("the milestone and slot ladders", () => {
   it("a habit past 1h has its first nodes unlocked in both branches and one slot", () => {
@@ -285,6 +293,33 @@ describe("RITUAL", () => {
     expect(charged.ritualAmplification).toBeCloseTo(amp, 6);
     // The amplification scales the node's magnitude: +5% → +5% × (1 + amp).
     expect(charged.synths).toBeCloseTo(BALANCE.synthRate * (1 + 0.05 * (1 + amp)), 6);
+  });
+
+  it("amplifies Steady conduit across direct and relayed charge delivery", () => {
+    const s = fresh();
+    const generator = give(s, "focusKeyed", hex(2, 0));
+    generator.reserve = 600;
+    const ritual = give(s, "ritual", hex(1, 0));
+    const amplifier = give(s, "amplifier", hex(3, 0));
+    const forge = give(s, "forge", hex(4, 0));
+    const habit = habitOf(s, 5 * 3600);
+    equipBuildNode(s, habit.id, "steady-conduit");
+    selectHabit(s, habit.id);
+    const plain = computeRates(s, true);
+    ritual.level = 2;
+    const charged = computeRates(s, true);
+    const baseOutput = emittedStrength(s, generator, true, 1);
+    const amp = ritualAmpOf(ritual.level, baseOutput);
+    const output = baseOutput + amp;
+    expect(charged.ritualAmplification).toBeCloseTo(amp, 6);
+    expect(emittedStrength(s, generator, true)).toBeCloseTo(output, 6);
+    expect(charged.chargeStrength.get(ritual.id)).toBeCloseTo(output, 6);
+    expect(charged.chargeStrength.get(amplifier.id)).toBeCloseTo(output, 6);
+    expect(charged.chargeStrength.get(forge.id)).toBeGreaterThan(plain.chargeStrength.get(forge.id)!);
+    expect(receivedStrength(s, forge, true)).toBeCloseTo(charged.chargeStrength.get(forge.id)!, 6);
+    generator.reserve = 0;
+    expect(computeRates(s, true).ritualAmplification).toBe(0);
+    expect(receivedStrength(s, forge, true)).toBe(0);
   });
 
   it("RITUAL attunement scales the amplification itself, never its own magnitude", () => {
