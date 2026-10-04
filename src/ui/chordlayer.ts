@@ -78,7 +78,9 @@ export function chipWidth(label: string): number {
 
 // Per-chord hue tokens and pulse periods (the prototype's rhythm table,
 // extended to #218's eleven classes; unknown names take the fallbacks).
-const CHORD_HUES: Record<string, string> = {
+// Exported — the chord library's glyphs (#230) ride the same hues, so the
+// card wears exactly what the board's seams draw.
+export const CHORD_HUES: Record<string, string> = {
   Octave: "chord-octave",
   Fifth: "chord-fifth",
   "Flat seventh": "chord-flat-seventh",

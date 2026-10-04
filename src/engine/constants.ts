@@ -39,6 +39,11 @@ export interface Balance {
   // into the boost, additively (boost = 1 + feats × per-feat). Nous-rate
   // only. Provisional tuning (~+2% each).
   achievementBoostPerFeat: number;
+  // The chord library's discovery bonus (#218, issue #230): each discovered
+  // class adds this much into its own permanent global leg, riding every
+  // oscillator's final value beside the achievements boost. Provisional
+  // tuning (~+1% each).
+  discoveryBonusPerClass: number;
   upgradeFirstCost: number;
   upgradeCostGrowthNumerator: bigint;
   upgradeCostGrowthDenominator: bigint;
@@ -148,6 +153,7 @@ export const BALANCE: Balance = {
   bendShifts: { common: [-1, 1], uncommon: [-1, 1], rare: [-2, -1, 1, 2] },
   bendDefaultShift: 1,
   achievementBoostPerFeat: 0.02,
+  discoveryBonusPerClass: 0.01,
   upgradeFirstCost: 10,
   upgradeCostGrowthNumerator: 8n,
   upgradeCostGrowthDenominator: 5n,

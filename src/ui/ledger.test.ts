@@ -1,10 +1,11 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
 import { computeRates } from "../engine/economy";
-import { fresh, give } from "../engine/fixtures";
+import { syncChordDiscoveries } from "../engine/library";
+import { fresh, give, sumSynthValues } from "../engine/fixtures";
 import { hex } from "../engine/hex";
 import { formatNumber } from "./format";
-import { rateDetailsHtml, updateRateDetailsLive } from "./ledger";
+import { libraryChipHtml, rateDetailsHtml, updateRateDetailsLive } from "./ledger";
 
 describe("silent voices' formation quality in rate details", () => {
   it.each(["harmonizer", "echo", "bend"] as const)("shows %s quality in both sheet and live rows", (type) => {
@@ -34,5 +35,35 @@ describe("silent voices' formation quality in rate details", () => {
     voice.pos = hex(10, 0);
     updateRateDetailsLive(live, state, computeRates(state, false));
     expect(row.textContent).toContain(`Formation ×${formatNumber(1)}`);
+  });
+});
+
+describe("the discovery bonus in the rate details (issue #230)", () => {
+  it("every synth row carries the Discoveries leg the rate multiplies out with", () => {
+    const state = fresh();
+    give(state, "additive", hex(1, 0));
+    syncChordDiscoveries(state, { now: 100 });
+    const snapshot = computeRates(state, false);
+    expect(snapshot.discoveryBoost).toBeCloseTo(1.01, 10);
+    const sheet = document.createElement("div");
+    sheet.innerHTML = rateDetailsHtml(state, snapshot, false);
+    const legs = [...sheet.querySelectorAll(".rd-leg")].map((leg) => leg.textContent);
+    expect(legs.filter((text) => text!.includes("Discoveries"))).toHaveLength(2);
+    for (const synth of sheet.querySelectorAll(".rd-synth")) {
+      const leg = [...synth.querySelectorAll(".rd-leg")].find((row) => row.textContent!.includes("Discoveries"));
+      expect(leg!.textContent).toContain("+1%");
+    }
+    // The legs multiply back to the final figure exactly, discovery leg
+    // included.
+    expect(sumSynthValues(snapshot)).toBeCloseTo(snapshot.rate, 6);
+  });
+
+  it("the library chip reads the ledger's count", () => {
+    const state = fresh();
+    give(state, "additive", hex(1, 0));
+    syncChordDiscoveries(state, { now: 100 });
+    const chip = document.createElement("div");
+    chip.innerHTML = libraryChipHtml(state);
+    expect(chip.querySelector(".library-chip")!.textContent).toContain("1/11 chords");
   });
 });

@@ -1,5 +1,6 @@
 import { EPS } from "./constants";
 import { syncAchievements } from "./achievements";
+import { syncChordDiscoveries } from "./library";
 import { chargeDelivered, computeRates, deployed } from "./economy";
 import { addFlowProgress, addForgeProgress, addMutatorForgeProgress, type Rng } from "./rolls";
 import { accrueLivePractice } from "./habits";
@@ -139,5 +140,8 @@ export function advance(
   // the tick that holds the snapshot reports whether any module received
   // it (Spark). Unlocks queue into the session's summary row.
   syncAchievements(state, { chargeDelivered: chargeDelivered(snapshot) });
+  // The chord library rides the same tick (issue #230): the live terms are
+  // already in hand, so the sync never recomputes the formation analysis.
+  syncChordDiscoveries(state, { chords: snapshot.namedChords });
   return result;
 }

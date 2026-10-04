@@ -1,6 +1,6 @@
 import { BALANCE } from "./constants";
 import { hex } from "./hex";
-import type { GameState, ModuleInstance, ModuleType, MutatorFamily, MutatorInstance, Rarity } from "./types";
+import type { ChordDiscovery, GameState, ModuleInstance, ModuleType, MutatorFamily, MutatorInstance, Rarity } from "./types";
 
 // The opening board (board-redesign spec §8, ADR-0022): the three-cell
 // opening footprint is retained — its geometry, not its Carrier rationale.
@@ -106,6 +106,24 @@ export function normalizeModules(modules: ModuleInstance[]): void {
   for (const module of modules) {
     if (typeof module.reserve !== "number" || !Number.isFinite(module.reserve)) module.reserve = 0;
     if (typeof module.shift !== "number") module.shift = module.type === "bend" ? BALANCE.bendDefaultShift : null;
+  }
+}
+
+// Load-time normalization for the discovery ledger's per-entry surface
+// (issue #230): an entry saved before wave 3 carries the count alone — the
+// root set lenient-defaults empty while the saved count is respected, so
+// history never shrinks; corrupt figures re-derive from what remains.
+// Mutates in place over the merged state's ledger.
+export function normalizeChordDiscovery(ledger: Record<string, ChordDiscovery>): void {
+  for (const record of Object.values(ledger)) {
+    if (!record || typeof record !== "object") continue;
+    if (!Array.isArray(record.roots)) record.roots = [];
+    if (typeof record.rootsHeard !== "number" || !Number.isFinite(record.rootsHeard)) {
+      record.rootsHeard = record.roots.length;
+    }
+    if (typeof record.firstFormedAt !== "number" || !Number.isFinite(record.firstFormedAt)) {
+      record.firstFormedAt = 0;
+    }
   }
 }
 

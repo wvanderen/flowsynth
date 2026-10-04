@@ -1,4 +1,4 @@
-import { createInitialState, createModule, normalizeModules } from "./state";
+import { createInitialState, createModule, normalizeChordDiscovery, normalizeModules } from "./state";
 import { SAVE_VERSION } from "./constants";
 import type { GameState } from "./types";
 
@@ -147,6 +147,10 @@ export function deserialize(text: string): LoadResult {
   if (!isRecord(raw.chordDiscovery)) {
     merged.chordDiscovery = {};
   }
+  // The ledger's per-entry root set (issue #230) lenient-defaults the way
+  // the per-module surface does: a pre-wave-3 entry carries the count
+  // alone, and the set waits empty beneath it.
+  normalizeChordDiscovery(merged.chordDiscovery);
   // The v7 → v8 migration (issue #229): transform in place, before the
   // per-module normalization below reads the new shape.
   if (migrating) {

@@ -5,7 +5,7 @@ import { combinePreview, combineMutatorsPreview, levelable, type CombinePreview,
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold, flowThreshold, mutatorForgeThreshold } from "../engine/rolls";
-import { BALANCE, CATEGORY_OF, isOscillatorType, isVoiceType, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
+import { BALANCE, CATEGORY_OF, isOscillatorType, isVoiceType, NAMED_CHORDS, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { catalogOpen, rowUnlockCost, unlockableRows } from "../engine/catalog";
 import { formatClock, formatDuration } from "../engine/clock";
 import { cellNoteOf, noteNameOf, octaveRowOf, pitchOf, positionInRange } from "../engine/lattice";
@@ -36,7 +36,9 @@ import { chordOverlay, chordMarkCovers, chipWidth, type ChordMark, type ChordOve
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatBalance, formatDate, formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
-import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG } from "./ledger";
+import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG } from "./ledger";
+import { libraryCardHtml } from "./library";
+import { discoveryCount, discoveryBoostOf, rootsHeardOf } from "../engine/library";
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
 import { containerWidth, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX } from "./container";
 import { liveAttr, liveSet } from "./live";
@@ -568,6 +570,12 @@ function achProgressKey(app: App, projected: RateSnapshot): string {
   }).join(",");
 }
 
+// The library sheet's refresh signature (issue #230): the discovery count
+// plus every class's roots-heard figure — a hairline moving is a rebuild.
+function discoveryKey(state: GameState): string {
+  return `${discoveryCount(state)}|${NAMED_CHORDS.map((def) => rootsHeardOf(state, def.name)).join(",")}`;
+}
+
 function achRowHtml(app: App, def: AchievementDef, ctx: AchievementContext): string {
   const unlockedAt = app.state.achievements[def.id];
   const { current, goal } = def.progress(app.state, ctx);
@@ -599,6 +607,24 @@ function renderAchievementsModal(app: App, content: HTMLElement, projected: Rate
     <h2 id="modal-title">${count} of ${ACHIEVEMENTS.length} feats.</h2>
     <p class="lead">Every feat speeds the rate a little — they accelerate, never gate. Each one adds into the Achievements leg of every synth row in the rate details.</p>
     ${sections}`;
+  wireClose(app);
+}
+
+// The chord library's field guide (issue #230): one card per chord class,
+// discovered or not. The first live formation of a class names it forever;
+// the sheet reads the ledger — glyph, name, bonus, roots-heard hairline on
+// a known card, the hueless dashed silhouette on an unknown one — and the
+// header carries the ledger's total: each discovered class adds +1%
+// (tuning) into the rate, permanently, across prestige.
+function renderLibraryModal(app: App, content: HTMLElement): void {
+  const { state } = app;
+  const count = discoveryCount(state);
+  const cards = NAMED_CHORDS.map((def) => libraryCardHtml(def, state.chordDiscovery[def.name])).join("");
+  content.innerHTML = `
+    ${modalTop("CHORD LIBRARY")}
+    <h2 id="modal-title">${count} of ${NAMED_CHORDS.length} classes discovered.</h2>
+    <p class="lead">The first live formation of a chord class names it forever. Each discovery adds its +${Math.round(BALANCE.discoveryBonusPerClass * 100)}% to the rate — <span class="mono">+${Math.round((discoveryBoostOf(state) - 1) * 100)}%</span> so far, permanent across prestige. The hairline counts the distinct roots a class has rung.</p>
+    <div class="library-grid">${cards}</div>`;
   wireClose(app);
 }
 
@@ -755,6 +781,21 @@ function toolActions(): ToolAction[] {
       word: (app) => `Feats · ${unlockedCount(app.state)}/${ACHIEVEMENTS.length}`,
       title: () => "Achievements — every feat, and how close the next one is",
     },
+    {
+      // The chord library rides the thumb bar beside Feats (issue #230):
+      // the ledger chip is wide-surface furniture, and the ledger dissolves
+      // below the 600px line — the door stays reachable there.
+      op: "library",
+      svg: LIBRARY_SVG,
+      label: "Library",
+      run: (app) => app.openModal("library"),
+      badge: (app) => {
+        const found = discoveryCount(app.state);
+        return found > 0 ? `<b class="tool-badge mono">${found}</b>` : "";
+      },
+      word: (app) => `Library · ${discoveryCount(app.state)}/${NAMED_CHORDS.length}`,
+      title: () => "Chord library — the field guide of chord classes",
+    },
   ];
 }
 
@@ -769,11 +810,15 @@ function renderTools(app: App, projected: RateSnapshot): void {
   const host = byId("board-tools");
   const thumb = byId("thumb-bar");
   const actions = toolActions();
-  const dockActions = actions.filter((action) => action.op !== "feats");
+  // The dock carries the board actions; Feats and the chord library live
+  // beside the ledger on wide surfaces and ride the thumb bar alone on
+  // phone, where the ledger dissolves.
+  const dockActions = actions.filter((action) => action.op !== "feats" && action.op !== "library");
   const feats = unlockedCount(state);
+  const discoveries = discoveryCount(state);
   const forgeCount = state.bankedRolls.length;
   const trayCount = state.modules.filter((m) => m.pos === null).length;
-  const key = JSON.stringify(["dock", state.mode, forgeCount, ui.buyingCell, feats, trayCount]);
+  const key = JSON.stringify(["dock", state.mode, forgeCount, ui.buyingCell, feats, discoveries, trayCount]);
 
   for (const [target, list] of [
     [host, dockActions],
@@ -2894,6 +2939,10 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
               // Quantized progress: an open page refreshes when a bar visibly
               // moves, not on every clock tick.
               ? achProgressKey(app, projected)
+              // The library's own ledger signature (issue #230): a discovery
+              // or a new root re-renders the sheet.
+              : kind === "library"
+                ? discoveryKey(app.state)
               // The enter prompt's own selection state (issue #95): the plan
               // and the kind-first picks re-render the modal the moment they
               // change — chips highlight on pick, never a stale footer.
@@ -2904,7 +2953,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                 // the tick fills in place, so clock ticks never rebuild
                 // (and collapse) an expanded row.
                 : kind === "rate"
-                  ? [deployedRosterKey(app.state), unlockedCount(app.state)]
+                  ? [deployedRosterKey(app.state), unlockedCount(app.state), discoveryCount(app.state)]
                 : kind === "inventory"
                   ? app.state.modules.filter((m) => m.pos === null).map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`)
                   // The combine review's identity: the offered pair (issue
@@ -2932,6 +2981,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   else if (kind === "arete") renderAreteCatalogModal(app, content);
   else if (kind === "forge") renderForgeModal(app, content, projected);
   else if (kind === "achievements") renderAchievementsModal(app, content, projected);
+  else if (kind === "library") renderLibraryModal(app, content);
   else if (kind === "export") renderExportModal(app, content);
   else if (kind === "import") renderImportModal(app, content);
   else if (kind === "reset") renderResetModal(app, content);

@@ -835,15 +835,19 @@ describe("the thumb bar (§7, portrait phone)", () => {
     app.render();
     const bar = document.getElementById("thumb-bar")!;
     const ops = [...bar.querySelectorAll("[data-op]")].map((b) => b.getAttribute("data-op"));
-    expect(ops).toEqual(["catalog", "forge", "cell", "inventory", "feats"]);
+    expect(ops).toEqual(["catalog", "forge", "cell", "inventory", "feats", "library"]);
     expect(bar.querySelector('[data-op="inventory"]')!.textContent).toContain("Inventory · 1");
     expect(bar.querySelector('[data-op="feats"]')!.textContent).toContain("Feats · 0");
-    // On phone Inventory taps the sheet; feats opens the feats page.
+    // On phone Inventory taps the sheet; feats opens the feats page; the
+    // library opens the field guide (issue #230).
     bar.querySelector<HTMLButtonElement>('[data-op="inventory"]')!.click();
     expect(app.ui.modal).toBe("inventory");
     app.closeModal();
     bar.querySelector<HTMLButtonElement>('[data-op="feats"]')!.click();
     expect(app.ui.modal).toBe("achievements");
+    app.closeModal();
+    bar.querySelector<HTMLButtonElement>('[data-op="library"]')!.click();
+    expect(app.ui.modal).toBe("library");
     app.closeModal();
   });
 
@@ -856,6 +860,37 @@ describe("the thumb bar (§7, portrait phone)", () => {
     expect(app.ui.modal).toBeNull();
     expect(app.ui.placing).toBe("m1");
     app.cancelPlacing();
+  });
+
+  it("the chord library's door and cards (issue #230)", () => {
+    // A placement forms the board's first Fifth: the discovery lands at
+    // the action boundary, the ledger chip counts it, and the field guide
+    // names the class.
+    const tray = give(app.state, "additive", null);
+    app.pickCellThenPlace(tray.id, hex(1, 0));
+    app.render();
+    expect(app.state.chordDiscovery["Fifth"]?.formed).toBe(true);
+    const chip = document.getElementById("library-chip")!;
+    expect(chip.textContent).toContain("1/11 chords");
+    chip.click();
+    expect(app.ui.modal).toBe("library");
+    const modal = document.getElementById("modal-content")!;
+    expect(modal.textContent).toContain("1 of 11 classes discovered");
+    const named = [...modal.querySelectorAll(".library-card:not(.locked)")];
+    expect(named).toHaveLength(1);
+    expect(named[0]!.querySelector("h3")!.textContent).toBe("Fifth");
+    // Every undiscovered class is the silhouette alone — no name, no copy.
+    const locked = [...modal.querySelectorAll(".library-card.locked")];
+    expect(locked).toHaveLength(10);
+    for (const card of locked) {
+      expect(card.querySelector("h3")).toBeNull();
+      expect(card.querySelector(".chord-glyph")).not.toBeNull();
+    }
+    // The rate details carry the discovery bonus beside the feats'.
+    app.closeModal();
+    const breakdown = document.querySelector("#rate-slot .rate-breakdown")!;
+    expect(breakdown.textContent).toContain("Discoveries");
+    expect(breakdown.textContent).toContain("+1%");
   });
 
   it("the inventory sheet cannot arm a placement during flow (#193)", () => {
