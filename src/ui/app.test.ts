@@ -3,6 +3,7 @@ import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { App } from "./app";
 import { addPracticeLog, archiveHabit, createHabit, selectHabit } from "../engine/habits";
+import { equipBuildNode } from "../engine/builds";
 import { createGoal, deleteGoal, goalSummary, accrueGoalProgress } from "../engine/goals";
 import { recordSummaryReflection } from "../engine/actions";
 import { writeNote } from "../engine/notes";
@@ -4259,5 +4260,50 @@ describe("the bulk upgrade controls (#195)", () => {
     button.click();
     expect(app.state.modules[0]!.level).toBe(3);
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
+  });
+});
+
+describe("the habit build (ADR-0046, wave 4)", () => {
+  it("reads the shared catalog in the development summary: slots, equipped, unlocked, locked", () => {
+    const created = createHabit(app.state, "Piano");
+    const habit = created.habit!;
+    habit.seconds = 5 * 3600; // one slot; charge-tap and weights unlocked
+    equipBuildNode(app.state, habit.id, "weights");
+    app.openApp("habit");
+    document.querySelector<HTMLButtonElement>(`[data-summary="${habit.id}"]`)!.click();
+    const build = document.querySelector("#app-popover .habit-build")!;
+    expect(build.textContent).toContain("1/1 slots");
+    expect(build.textContent).toContain("effects only while this habit is active");
+    const equipped = build.querySelector(".build-node.equipped")!;
+    expect(equipped.textContent).toContain("Weights");
+    expect(equipped.getAttribute("data-unequip")).toBe("weights");
+    expect(build.querySelector('[data-equip="charge-tap"]')).not.toBeNull();
+    // Locked rungs name the milestone they owe and render no button.
+    const locked = build.querySelector(".build-node.locked")!;
+    expect(locked.textContent).toContain("unlocks at 15 h");
+    expect(build.querySelector('[data-equip="forge-hand"]')).toBeNull();
+  });
+
+  it("equips and unequips through the panel — free respec, upgrade mode only", () => {
+    const created = createHabit(app.state, "Piano");
+    const habit = created.habit!;
+    habit.seconds = 3600;
+    const nousBefore = app.state.nous;
+    app.openApp("habit");
+    document.querySelector<HTMLButtonElement>(`[data-summary="${habit.id}"]`)!.click();
+    document.querySelector<HTMLButtonElement>('[data-equip="charge-tap"]')!.click();
+    expect(habit.build).toEqual(["charge-tap"]);
+    document.querySelector<HTMLButtonElement>('[data-unequip="charge-tap"]')!.click();
+    expect(habit.build).toEqual([]);
+    expect(app.state.nous).toBe(nousBefore);
+  });
+
+  it("a fresh habit's summary points at the practice that unlocks the first nodes", () => {
+    createHabit(app.state, "Piano");
+    const habit = app.state.habits[0]!;
+    app.openApp("habit");
+    document.querySelector<HTMLButtonElement>(`[data-summary="${habit.id}"]`)!.click();
+    expect(document.querySelector("#app-popover .habit-build")).toBeNull();
+    expect(document.querySelector("#app-popover .habit-summary")!.textContent).toContain("Build nodes unlock with practice time");
   });
 });

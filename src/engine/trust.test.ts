@@ -370,7 +370,7 @@ describe("the honesty report", () => {
 
   it("credited provisional time accrues the habit and goals only when the report credits it", () => {
     const s = fresh();
-    s.habits.push({ id: "h1", name: "Piano", seconds: 0, archived: false });
+    s.habits.push({ id: "h1", name: "Piano", seconds: 0, archived: false, build: [] });
     s.activeHabitId = "h1";
     s.goals.push({
       id: "g1",
@@ -426,7 +426,7 @@ describe("the honesty report", () => {
 describe("credited practice time is the consumers' seam", () => {
   it("the practice-log entry, the charge window, and the summary key off C — never raw elapsed", () => {
     const s = fresh();
-    s.habits.push({ id: "h1", name: "Piano", seconds: 0, archived: false });
+    s.habits.push({ id: "h1", name: "Piano", seconds: 0, archived: false, build: [] });
     s.activeHabitId = "h1";
     startSession(s, 600);
     advance(s, 600);

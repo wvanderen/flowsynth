@@ -1,4 +1,4 @@
-import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, emittedStrength, affordableLevels, hostPower, levelCost, levelsCost, longGoalCost, wholeNous } from "../engine/economy";
+import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, emittedStrength, affordableLevels, hostPower, levelCost, levelsCost, longGoalCost, ritualAmpOf, wholeNous } from "../engine/economy";
 import { claimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
 import { combinePreview, combineMutatorsPreview, levelable, type CombinePreview, upgradeAllPreview } from "../engine/actions";
@@ -12,6 +12,7 @@ import { cellNoteOf, noteNameOf, octaveRowOf, pitchOf, positionInRange } from ".
 import { appActive, appLockNote, TILE_APPS, type FocusApp } from "../engine/apps";
 import { isInFlowNote } from "../engine/notes";
 import { activeHabit } from "../engine/habits";
+import { activeBuildFactors, buildNodeEffect, buildUnlocksFor, BUILD_NODES, BUILD_MILESTONE_SECONDS, equipSlotsFor, equippedNodes } from "../engine/builds";
 import {
   habitRecordName,
   habitPracticeSummary,
@@ -382,7 +383,11 @@ function appPanelKey(app: App): string {
     state.sessionsCompleted === 0,
     state.activatedApps.join("|"),
     state.goalCapacityBought,
-    state.habits.map((h) => `${h.archived ? "·" : ""}${h.name}`).join("|"),
+    // The habit build (ADR-0046) rides the signature: the unlocked-rung
+    // count (never raw seconds — those move every live tick) and the
+    // equipped picks, so an equip or a milestone crossing rebuilds the
+    // popover.
+    state.habits.map((h) => `${h.archived ? "·" : ""}${h.name}:${buildUnlocksFor(h.seconds)}:${h.build.join(",")}`).join("|"),
     state.activeHabitId,
     ui.editingHabitId,
     state.notes.length,
@@ -1411,6 +1416,16 @@ function faceReadoutFor(state: GameState, module: ModuleInstance, pos: Hex | nul
       ? { readout: `⌁${formatNumber(strength * gain)}`, note: cellNoteOf(pos) }
       : { readout: `⌁${formatNumber(strength * gain)}` };
   }
+  if (category === "ritual") {
+    // RITUAL amplifies: the face shows the factor the module itself is
+    // delivering onto the active habit's build right now — ×1 while
+    // uncharged, rising with received strength (ADR-0046).
+    const strength = snapshot.chargeStrength.get(module.id) ?? 0;
+    const amp = 1 + ritualAmpOf(module.level, strength);
+    return pos
+      ? { readout: `×${formatNumber(amp)}`, note: cellNoteOf(pos) }
+      : { readout: `×${formatNumber(amp)}` };
+  }
   // Oscillators wear their contribution with the cell's note beneath it:
   // pitch lives in the cell (ADR-0021).
   const unit = withUnits ? " ν/s" : "";
@@ -1696,7 +1711,7 @@ function ghostMarksHtml(app: App, projected?: RateSnapshot): string {
   // will consume the twin under the pointer (issue #152).
   if (dropRegister(app, hover.pos) === "combine") return "";
   const current = (projected ?? computeRates(app.state, true)).namedChords;
-  const preview = wouldFormPreview(app.state, hover.moduleId, hover.pos);
+  const preview = wouldFormPreview(app.state, hover.moduleId, hover.pos, 1 + activeBuildFactors(app.state).namedChordBonus);
   const newcomers = newChordTerms(current, preview.chords);
   if (newcomers.length === 0) return "";
   const deployedById = new Map(app.state.modules.filter((m) => m.pos !== null).map((m) => [m.id, m]));
@@ -1975,6 +1990,10 @@ const BLOOM_EFFECTS: Record<ModuleInstance["type"], (input: BloomEffectInput) =>
   amplifier: ({ strength, level, levels }) => ({
     benefit: `+${formatNumber(100 * BALANCE.amplifierGainPerLevel * levels)}% relay gain`,
     contribution: `relays ⌁${formatNumber(strength)} received × +${Math.round(100 * BALANCE.amplifierGainPerLevel * level)}%`,
+  }),
+  ritual: ({ strength, level, levels }) => ({
+    benefit: `+${formatNumber(100 * BALANCE.ritualAmpPerLevel * levels)}% build amplification`,
+    contribution: `amplifies the active habit's build ×${formatNumber(1 + ritualAmpOf(level, strength))} while charged`,
   }),
   spacer: () => ({ benefit: null, contribution: "silent — conducts chords, produces nothing" }),
   focusKeyed: ({ gain, power }) => ({
@@ -2345,10 +2364,52 @@ function habitChipHtml(state: GameState, note: NoteEntry): string {
   return note.habitId !== null ? `<span class="habit-chip">${escapeHtml(habitRecordName(state, note.habitId))}</span>` : "";
 }
 
+// The habit build (ADR-0046, wave 4): the shared catalog read against the
+// habit's own practice time — equipped nodes first (a click unequips; the
+// respec is free), then the unlocked-unequipped, then the locked rungs
+// with the milestone each still owes. Equipping is upgrade-mode only and
+// counts against the slot ladder; the effects apply only while this habit
+// is the session's active habit.
+function habitBuildHtml(app: App, habit: Habit): string {
+  const { state } = app;
+  const upgrade = state.mode === "upgrade";
+  const slots = equipSlotsFor(habit.seconds);
+  const equipped = equippedNodes(habit);
+  const rows = BUILD_NODES.map((node) => {
+    const milestoneSeconds = BUILD_MILESTONE_SECONDS[node.milestone]!;
+    const equippedIndex = habit.build.indexOf(node.id);
+    const stackNote = node.stacking ? " · stacks" : "";
+    if (habit.seconds >= milestoneSeconds) {
+      const isEquipped = equippedIndex >= 0;
+      const title = isEquipped
+        ? `Unequip ${node.name} — respec is free`
+        : upgrade
+          ? equipped.length < slots
+            ? `Equip ${node.name} — respec is free`
+            : `No slot free — ${slots} equipped; unequip one first`
+          : "The build is read-only during flow";
+      return `<button class="build-node${isEquipped ? " equipped" : ""}" data-${isEquipped ? "unequip" : "equip"}="${node.id}" data-habit="${habit.id}" title="${title}">
+          <span class="build-node-mark mono" aria-hidden="true">${isEquipped ? equippedIndex + 1 : "+"}</span>
+          <span class="build-node-name">${escapeHtml(node.name)}<small>${escapeHtml(buildNodeEffect(node))}${stackNote}</small></span>
+        </button>`;
+    }
+    return `<div class="build-node locked" title="Unlocks at ${formatDuration(milestoneSeconds)} of practice on this habit">
+        <span class="build-node-mark mono" aria-hidden="true">·</span>
+        <span class="build-node-name">${escapeHtml(node.name)}<small>unlocks at ${formatDuration(milestoneSeconds)} · ${escapeHtml(buildNodeEffect(node))}</small></span>
+      </div>`;
+  }).join("");
+  return `<div class="habit-build">
+    <span class="eyebrow">BUILD</span>
+    <p class="small muted mono">${equipped.length}/${slots} slots · effects only while this habit is active</p>
+    <div class="build-nodes">${rows}</div>
+  </div>`;
+}
+
 // The development summary (§9): lifetime practice (the development total),
 // sessions practiced and last practiced — aggregates off the practice log,
-// live sessions and manual logs together — and the habit's tagged notes
-// beneath, newest first, each with its date and in-session stamp.
+// live sessions and manual logs together — the habit's build (ADR-0046),
+// and the habit's tagged notes beneath, newest first, each with its date
+// and in-session stamp.
 function habitSummaryHtml(app: App, habit: Habit): string {
   const { state } = app;
   const { sessions, lastPracticed } = habitPracticeSummary(state, habit.id);
@@ -2360,6 +2421,7 @@ function habitSummaryHtml(app: App, habit: Habit): string {
     ${stat("Lifetime practice", formatDuration(habit.seconds))}
     ${stat("Sessions practiced", String(sessions))}
     ${stat("Last practiced", lastPracticed !== null && lastPracticed > 0 ? formatDate(lastPracticed, true) : "—")}
+    ${habit.seconds > 0 ? habitBuildHtml(app, habit) : `<p class="small muted">Build nodes unlock with practice time — 1h for the first.</p>`}
     ${noteRows ? `<div class="note-list">${noteRows}</div>` : `<p class="small muted">No tagged notes yet.</p>`}
   </div>`;
 }
@@ -2717,6 +2779,22 @@ function bindAppPanel(app: App, scope: HTMLElement): void {
     button.addEventListener("click", () => {
       const id = button.getAttribute("data-summary");
       if (id) app.toggleHabitSummary(id);
+    });
+  });
+  // The habit build (ADR-0046): equip and unequip are free respecs in
+  // upgrade mode — the engine answers for the slot and unlock rules.
+  scope.querySelectorAll<HTMLElement>("[data-equip]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nodeId = button.getAttribute("data-equip");
+      const habitId = button.getAttribute("data-habit");
+      if (nodeId && habitId) app.equipBuildNodeAction(habitId, nodeId);
+    });
+  });
+  scope.querySelectorAll<HTMLElement>("[data-unequip]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nodeId = button.getAttribute("data-unequip");
+      const habitId = button.getAttribute("data-habit");
+      if (nodeId && habitId) app.unequipBuildNodeAction(habitId, nodeId);
     });
   });
   // The history surfaces (§9): the affordance swaps the Time panel body to
@@ -3336,6 +3414,7 @@ function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
     case "echo": return `silent voice — sings an adjacent voice's pitch one octave down<br>+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/LV to every chord instance it sings in`;
     case "bend": return `silent voice — sings its cell's pitch altered by its picked shift<br>+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/LV to every chord instance it sings in`;
     case "amplifier": return `re-broadcasts received charge at +${formatNumber(100 * BALANCE.amplifierGainPerLevel)}%/LV<br>relayed charge counts fully at receivers; ${BALANCE.amplifierHopCap} hops deep at most`;
+    case "ritual": return `amplifies the active habit's equipped build +${formatNumber(BALANCE.ritualAmpPerLevel * 100)}%/LV while receiving charge<br>charge never crosses to the console — the habit keys the module`;
     case "spacer": return `Silent wire — never sounds, never joins a pitch set<br>conducts chord adjacency through chains of wired cells`;
     case "focusKeyed": return `The generator — keyed to your focus<br>each session end banks a reserve (a tenth of its live practice time), spent as its output next session`;
     case "infusor": return `+${formatNumber(BALANCE.infusorBonus * 100)}% to adjacent production contributions<br>+${formatNumber(BALANCE.infusorBonus * charged * 100)}% at charge strength 1`;
@@ -3356,6 +3435,8 @@ function candidateReadout(type: ModuleInstance["type"]): string {
       return "silent";
     case "amplifier":
       return "relay";
+    case "ritual":
+      return "amp";
     case "spacer":
       return "⌇";
     case "focusKeyed":

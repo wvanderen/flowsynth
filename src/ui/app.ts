@@ -54,6 +54,7 @@ import {
   renameHabit,
   selectHabit,
 } from "../engine/habits";
+import { equipBuildNode, unequipBuildNode } from "../engine/builds";
 import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
 import type { GameState, Hex, ModuleInstance, MutatorFamily, MutatorInstance, NamedChordTerm, Rarity, ShelfType } from "../engine/types";
 import { render } from "./render";
@@ -1705,6 +1706,14 @@ export class App {
       this.say(result.reason ?? "Could not log practice.");
     }
     this.render();
+  }
+
+  equipBuildNodeAction(habitId: string, nodeId: string): void {
+    this.habitAction(() => equipBuildNode(this.state, habitId, nodeId), "Node equipped — respec is free.");
+  }
+
+  unequipBuildNodeAction(habitId: string, nodeId: string): void {
+    this.habitAction(() => unequipBuildNode(this.state, habitId, nodeId), "Node unequipped.");
   }
 
   // ── Goals (#6) ──────────────────────────────────────────────────────────

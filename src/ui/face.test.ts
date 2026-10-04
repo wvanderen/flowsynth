@@ -24,6 +24,7 @@ describe("module face", () => {
       oscillator: "hue-oscillator",
       silentVoice: "hue-voice",
       conduit: "hue-conduit",
+      ritual: "hue-ritual",
       spacer: "hue-spacer",
       generator: "hue-generator",
       booster: "hue-booster",
@@ -150,6 +151,7 @@ describe("module face", () => {
       echo: ["Echo", "ECHO"],
       bend: ["Bend", "BEND"],
       amplifier: ["Amplifier", "AMP"],
+      ritual: ["RITUAL", "RITUAL"],
       focusKeyed: ["Focus Generator", "FOCUS"],
       infusor: ["Booster", "BOOST"],
       spacer: ["Spacer", "SPACER"],
@@ -181,6 +183,9 @@ describe("module face", () => {
     expect(moduleIcon("blaster")).not.toContain("fill=");
     expect(moduleIcon("blaster")).not.toContain("stroke=\"none\"");
     expect(moduleIcon("amplifier")).toContain("M-9 0h5M4 0h5");
+    // RITUAL: the habit-cycle ring around a sustained wave.
+    expect(moduleIcon("ritual")).toContain('<circle r="11"/>');
+    expect(moduleIcon("ritual")).toContain("M-6.5 0C-4.3-5-2.2-5 0 0C2.2 5 4.3 5 6.5 0");
   });
 
   it("the long-readout fit picks the approved compression steps (#201)", () => {

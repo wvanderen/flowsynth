@@ -88,10 +88,11 @@ describe("the first roll yields a synthesizer candidate (§8)", () => {
     const s = fresh();
     addForgeProgress(s, forgeThreshold(0), stubRng([0.9, 0.5, 0.9, 0.5, 0.9, 0.5]));
     expect(s.bankedRolls[0]!.candidates.some((c) => c.type === "additive")).toBe(true);
-    // The same seed on the second roll: the same synthless draw stands.
+    // The same seed on the second roll: the same synthless draw stands
+    // (RITUAL joins the pool at index 6, shifting the draw's picks).
     addForgeProgress(s, forgeThreshold(1), stubRng([0.9, 0.5, 0.9, 0.5, 0.9, 0.5]));
     const second = s.bankedRolls[1]!.candidates.map((c) => c.type);
-    expect(second).toEqual(["forge", "infusor", "focusKeyed"]);
+    expect(second).toEqual(["infusor", "forge", "focusKeyed"]);
   });
 
   it("a draw that already sings is left alone", () => {

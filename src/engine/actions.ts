@@ -8,6 +8,7 @@ import { adjacent, hex, hexKey, isConnected, neighbors, sameHex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
 import { createModule, createMutator, openingGrant } from "./state";
 import { logSessionPractice } from "./habits";
+import { activeBuildFactors } from "./builds";
 import { plannedTargetHit } from "./records";
 import { rollGoalOccurrences } from "./goals";
 import { syncAchievements } from "./achievements";
@@ -110,11 +111,15 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
   // ADR-0019): ending any session banks a charge window of fraction ×
   // credited practice time — per generator since the v8 surface (ADR-0047):
   // every owned focus generator banks its own, board or tray alike, and
-  // banked windows extend that generator's remaining duration. Manual
-  // practice logs never pass through here and never bank one.
+  // banked windows extend that generator's remaining duration. The
+  // charge-tap build nodes (ADR-0046) scale the bank — the active habit's
+  // magnitudes at their base (no RITUAL amplification: the amplification
+  // rides received charge, and no charge is received at session end).
+  // Manual practice logs never pass through here and never bank one.
   if (credited > EPS) {
+    const windowBank = 1 + activeBuildFactors(state).windowBank;
     for (const module of state.modules) {
-      if (module.type === "focusKeyed") module.reserve += BALANCE.chargeWindowFraction * credited;
+      if (module.type === "focusKeyed") module.reserve += BALANCE.chargeWindowFraction * credited * windowBank;
     }
   }
   logSessionPractice(state, credited, now);

@@ -104,7 +104,7 @@ interface RootMatch {
 // voices is its own Octave; a double in a triad doubles that triad) — and
 // every instance multiplies only its member voices (ADR-0036): chord
 // bonuses are local, so a distant module's rate never moves.
-function matchRoots(singers: Singer[]): RootMatch[] {
+function matchRoots(singers: Singer[], bonusScale: number): RootMatch[] {
   if (singers.length === 0) return [];
   const matches: RootMatch[] = [];
   const byClass: Singer[][] = Array.from({ length: 12 }, () => []);
@@ -125,7 +125,7 @@ function matchRoots(singers: Singer[]): RootMatch[] {
       // shown chordless while its instances multiply the rate.
       const moduleIds = groups.flatMap((group) => group.map(({ module }) => module.id));
       matches.push({
-        term: { name: def.name, bonus: def.bonus, instances, moduleIds, root },
+        term: { name: def.name, bonus: def.bonus * bonusScale, instances, moduleIds, root },
         groups,
         multiplicity,
       });
@@ -199,8 +199,11 @@ export interface ChordAnalysis {
 // the chord forms and how many instances stack; the formation scores one
 // Q; every member's factor is its instance product × Q. Overlapping
 // instances (shared voices) and disjoint same-chord formations (separate
-// terms) stack multiplicatively on their members.
-export function analyzeChords(singers: Singer[], spacers: DeployedModule[] = []): ChordAnalysis {
+// terms) stack multiplicatively on their members. `bonusScale` scales
+// every named instance's bonus — the active build's pitch-ear nodes
+// (ADR-0046) pass their factor, the displayed bonus riding the term so the
+// chips and the rate never disagree; the formation quality is untouched.
+export function analyzeChords(singers: Singer[], spacers: DeployedModule[] = [], bonusScale = 1): ChordAnalysis {
   const namedChords: NamedChordTerm[] = [];
   const participation = new Map<string, number>();
   const voiceMultiplier = new Map<string, number>();
@@ -215,7 +218,7 @@ export function analyzeChords(singers: Singer[], spacers: DeployedModule[] = [])
     // Deduplicated pitch classes from the derived pitches — the Q read is
     // register-free and multiplicity-blind (ADR-0049).
     const classes = [...new Set(members.map((m) => mod12(pitchById.get(m.id)!)))];
-    const matches = matchRoots(clusterSingers);
+    const matches = matchRoots(clusterSingers, bonusScale);
     const named = matches.length > 0;
     const q = formationQuality(classes, formationTension(classes), named);
     // The named-instance product per voice, accumulated across terms —
@@ -365,7 +368,7 @@ export interface WouldFormPreview {
   positions: ReadonlyMap<string, Hex>;
 }
 
-export function wouldFormPreview(state: GameState, id: string, target: Hex): WouldFormPreview {
+export function wouldFormPreview(state: GameState, id: string, target: Hex, bonusScale = 1): WouldFormPreview {
   const dragged = state.modules.find((m) => m.id === id);
   if (!dragged) return { chords: [], positions: new Map() };
   const positions = new Map<string, Hex>([[id, target]]);
@@ -389,7 +392,7 @@ export function wouldFormPreview(state: GameState, id: string, target: Hex): Wou
   }
   const placed = hypothetical.filter((m): m is DeployedModule => m.pos !== null);
   const { singers, spacers } = partitionVoices(placed);
-  return { chords: analyzeChords(singers, spacers).namedChords, positions };
+  return { chords: analyzeChords(singers, spacers, bonusScale).namedChords, positions };
 }
 
 // The newcomers between two chord-term lists — the would-form ghosts. A

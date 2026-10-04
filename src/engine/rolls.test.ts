@@ -34,11 +34,12 @@ describe("forge roll generation", () => {
     expect(ROLL_POOL).toContain("echo");
     expect(ROLL_POOL).toContain("bend");
     expect(ROLL_POOL).toContain("amplifier");
+    expect(ROLL_POOL).toContain("ritual");
     expect(ROLL_POOL).toContain("spacer");
     expect(ROLL_POOL).toContain("focusKeyed");
     expect(ROLL_POOL).toContain("infusor");
     expect(ROLL_POOL).toContain("forge");
-    expect(ROLL_POOL).toHaveLength(10);
+    expect(ROLL_POOL).toHaveLength(11);
   });
 
   it("persists outcomes when the roll is earned, not when it is revealed", () => {

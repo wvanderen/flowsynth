@@ -52,6 +52,7 @@ export const HUE_TOKEN_OF: Record<ModuleType, string> = {
   echo: "hue-voice",
   bend: "hue-voice",
   amplifier: "hue-conduit",
+  ritual: "hue-ritual",
   spacer: "hue-spacer",
   focusKeyed: "hue-generator",
   infusor: "hue-booster",

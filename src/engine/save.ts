@@ -1,4 +1,5 @@
 import { createInitialState, createModule, normalizeChordDiscovery, normalizeModules } from "./state";
+import { normalizeHabitBuilds } from "./builds";
 import { SAVE_VERSION } from "./constants";
 import type { GameState } from "./types";
 
@@ -151,6 +152,12 @@ export function deserialize(text: string): LoadResult {
   // the per-module surface does: a pre-wave-3 entry carries the count
   // alone, and the set waits empty beneath it.
   normalizeChordDiscovery(merged.chordDiscovery);
+  // The habit builds (ADR-0046, wave 4) lenient-default the same way: a
+  // habit saved before the builds wave carries no build, and unknown node
+  // ids drop — the catalog is code, the save only ids. The unlocks
+  // themselves are never stored: they derive idempotently from
+  // habit.seconds at read time (the v8 promise — no second bump).
+  normalizeHabitBuilds(merged.habits);
   // The v7 → v8 migration (issue #229): transform in place, before the
   // per-module normalization below reads the new shape.
   if (migrating) {

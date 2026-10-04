@@ -16,7 +16,7 @@ One hexagonal place on the board. Cells are bought with nous on a geometric scal
 A unit occupying one cell on the board, with gameplay effects derived from its category and, in many cases, a connection to a real-life practice or supporting interaction.
 
 **Module category**:
-The function level of a board module — oscillator, spacer, generator, booster, or forge at launch; the silent-voice and charge-conduit categories (working names, confirmed) join with the roster iteration. Categories take their display words from their modules (issue #219): the former synthesizer category is the oscillator category, the former infusor the booster category. Category carries the module's hue.
+The function level of a board module — oscillator, spacer, generator, booster, or forge at launch; the silent-voice and charge-conduit categories (working names, confirmed) joined with the roster iteration, and the habit-keyed ritual category — RITUAL, its one member — joins with the builds iteration. Categories take their display words from their modules (issue #219): the former synthesizer category is the oscillator category, the former infusor the booster category. Category carries the module's hue.
 
 **Module type**:
 A specific module design within a category, such as the Oscillator or the Focus Generator, carrying its own glyph and nameplate. Forge choices contain distinct module types; different types may share the same category.

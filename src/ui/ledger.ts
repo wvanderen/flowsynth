@@ -7,7 +7,7 @@ import { accumulatorFill, claimOf, horizonReached } from "../engine/accumulator"
 import { ACHIEVEMENTS } from "../engine/achievements";
 import { catalogOpen } from "../engine/catalog";
 import { BALANCE, CATEGORY_OF, isOscillatorType, NAMED_CHORDS } from "../engine/constants";
-import { chargedFactor, hostPower } from "../engine/economy";
+import { activeBuildGeneratorStrength, chargedFactor, hostPower } from "../engine/economy";
 import { discoveryCount } from "../engine/library";
 import { noteNameOf } from "../engine/lattice";
 import type { Contribution, GameState, ModuleInstance, RateSnapshot } from "../engine/types";
@@ -73,7 +73,11 @@ function synthLegsOf(state: GameState, snapshot: RateSnapshot, contribution: Con
 // vocabulary — never ν/s, so nothing here reads as a second producer.
 function effectText(state: GameState, contribution: Contribution, module: ModuleInstance, snapshot: RateSnapshot): string {
   const category = CATEGORY_OF[contribution.type];
-  if (category === "generator") return `⌁${formatNumber(hostPower(state, module))} charge`;
+  if (category === "generator") {
+    // The steady-conduit node (ADR-0046) rides the emitted strength — the
+    // +1 is part of the charge the module delivers.
+    return `⌁${formatNumber(hostPower(state, module) + activeBuildGeneratorStrength(state))} charge`;
+  }
   if (category === "booster") {
     const strength = snapshot.chargeStrength.get(contribution.moduleId) ?? 0;
     return `+${formatNumber(100 * BALANCE.infusorBonus * hostPower(state, module) * chargedFactor(strength))}% to adjacent`;
@@ -86,6 +90,11 @@ function effectText(state: GameState, contribution: Contribution, module: Module
   if (category === "conduit") {
     const strength = snapshot.chargeStrength.get(contribution.moduleId) ?? 0;
     return `relays ⌁${formatNumber(strength)} × +${Math.round(BALANCE.amplifierGainPerLevel * module.level * 100)}%`;
+  }
+  if (category === "ritual") {
+    const amp = snapshot.ritualAmplification;
+    const strength = snapshot.chargeStrength.get(contribution.moduleId) ?? 0;
+    return `amplifies the active habit's build ×${formatNumber(1 + amp)} while charged · ⌁${formatNumber(strength)} received`;
   }
   if (category === "forge") return `${formatNumber(contribution.value)} progress/s`;
   return "silent — conducts chords";
@@ -136,6 +145,14 @@ export function deployedRosterKey(state: GameState): string {
     .map((m) => `${m.id}:${m.family}:${m.rarity}:${m.pos!.q},${m.pos!.r}`)
     .join("|");
   return `${modules}#${mutators}`;
+}
+
+// The active build's signature (ADR-0046): which habit is selected and
+// what it has equipped — the build's effects fold into the roster's legs
+// and the RITUAL row, so an equip or a habit switch must rebuild the strip.
+export function activeBuildKey(state: GameState): string {
+  const habit = state.habits.find((h) => h.id === state.activeHabitId);
+  return `${state.activeHabitId ?? "-"}:${habit ? habit.build.join(",") : ""}`;
 }
 
 // The roster both channels render. `live` mounts data-live slots the tick
@@ -326,12 +343,13 @@ export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
   // prestige rebuilds the strip the moment the figure moves.
   const chip = catalogOpen(state) ? areteChipHtml(state) : "";
   // Structural key: the deployed roster (deployedRosterKey — a move changes
-  // a note name, an upgrade a base figure) plus the feats count and the
+  // a note name, an upgrade a base figure), the active build (an equip or
+  // habit switch folds into the legs), plus the feats count and the
   // discovery count (the strip carries both ledgers' chips and the rate
   // details' static boost legs) rebuilds the strip; every tick-moving value
   // updates in place through the live slots, so an open popover or an
   // expanded row survives the clock.
-  const key = `${state.arete}:${feats}:${discoveries}:${deployedRosterKey(state)}`;
+  const key = `${state.arete}:${feats}:${discoveries}:${activeBuildKey(state)}:${deployedRosterKey(state)}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.innerHTML = `<div class="prod-ledger" role="group" aria-label="Production">

@@ -24,7 +24,7 @@ export function createHabit(state: GameState, name: string): { ok: boolean; reas
   if (state.mode !== "upgrade") return { ok: false, reason: "Habits are managed between sessions." };
   const trimmed = cleanName(name);
   if (!trimmed) return { ok: false, reason: "Give the habit a name." };
-  const habit: Habit = { id: `h${state.nextId++}`, name: trimmed, seconds: 0, archived: false };
+  const habit: Habit = { id: `h${state.nextId++}`, name: trimmed, seconds: 0, archived: false, build: [] };
   state.habits.push(habit);
   return { ok: true, habit };
 }
