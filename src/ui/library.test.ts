@@ -67,6 +67,51 @@ describe("glyph rendering", () => {
     expect(svg).toContain('stroke="var(--line-strong)" stroke-width="1"');
   });
 
+  it("keeps every recipe label on discovered chords, including sprawling recipes", () => {
+    for (const chord of NAMED_CHORDS) {
+      const host = document.createElement("div");
+      host.innerHTML = chordGlyphSvg(chord, true);
+      const labels = [...host.querySelectorAll("text")].map((text) => text.textContent);
+      const intervals = chord.name === "Octave" ? [0, 12] : chord.intervals;
+      expect(labels, chord.name).toEqual(intervals.map((interval) => interval === 0 ? "R" : String(interval)));
+    }
+  });
+
+  it("keeps undiscovered names out of accessible labels", () => {
+    for (const chord of NAMED_CHORDS) {
+      const host = document.createElement("div");
+      host.innerHTML = chordGlyphSvg(chord, false);
+      expect(host.querySelector("svg")?.getAttribute("aria-label")).toBe("Undiscovered chord glyph");
+      expect(host.textContent?.trim()).toBe("");
+    }
+  });
+
+  it("encloses every voice face in a nondegenerate outline for every chord", () => {
+    const points = (path: Element): number[][] =>
+      [...path.getAttribute("d")!.matchAll(/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/g)]
+        .map((match) => [Number(match[1]), Number(match[2])]);
+    for (const chord of NAMED_CHORDS) {
+      const host = document.createElement("div");
+      host.innerHTML = chordGlyphSvg(chord, true);
+      const outline = points(host.querySelector('path[stroke-width="1.6"]')!);
+      const area = outline.reduce((sum, [x, y], i) => {
+        const next = outline[(i + 1) % outline.length]!;
+        return sum + x! * next[1]! - y! * next[0]!;
+      }, 0);
+      expect(Math.abs(area), chord.name).toBeGreaterThan(1);
+      for (const face of host.querySelectorAll('path[stroke-width="1.3"]')) {
+        for (const [x, y] of points(face)) {
+          for (let i = 0; i < outline.length; i++) {
+            const a = outline[i]!;
+            const b = outline[(i + 1) % outline.length]!;
+            const cross = (b[0]! - a[0]!) * (y! - a[1]!) - (b[1]! - a[1]!) * (x! - a[0]!);
+            expect(cross * Math.sign(area), chord.name).toBeGreaterThanOrEqual(-0.1);
+          }
+        }
+      }
+    }
+  });
+
   it("every one of the eleven classes renders both states", () => {
     for (const chord of NAMED_CHORDS) {
       expect(chordGlyphSvg(chord, true)).toContain("<svg");

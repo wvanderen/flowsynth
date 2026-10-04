@@ -134,7 +134,7 @@ export const EDGE_HALF = 22;
 export const CORNER_REACH_PAD = 6;
 
 // Andrew's monotone chain over pixel coordinates.
-function convexHull(points: readonly Point[]): Point[] {
+export function convexHull(points: readonly Point[]): Point[] {
   if (points.length < 3) return [...points];
   const sorted = [...points].sort((p, q) => p[0] - q[0] || p[1] - q[1]);
   const cross = (o: Point, a: Point, b: Point): number =>

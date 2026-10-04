@@ -16,8 +16,8 @@
 
 import type { ChordDiscovery } from "../engine/types";
 import type { NamedChordDef } from "../engine/constants";
-import { CHORD_HUES } from "./chordlayer";
-import { hexCorner } from "./face";
+import { CHORD_HUES, convexHull } from "./chordlayer";
+import { boardPoint, hexCorner, SPACING } from "./face";
 import { formatNumber } from "./format";
 
 // The canonical cheapest lattice offset for an interval class: the (dq, dr)
@@ -25,7 +25,7 @@ import { formatNumber } from "./format";
 // would actually build the voice. The register axis never changes pitch
 // class (12·dr ≡ 0), so ties across dr are the norm; among equals the
 // glyph takes the position euclidean-closest to the root in pixel space,
-// stable on |dr| — the compact spread, never a degenerate collinear hull.
+// stable on |dr| — the compact spread.
 // The sprawl still tells the truth: an M3 lands three wire cells out and
 // the glyph is exactly as wide as the chord is expensive.
 export interface LatticeOffset {
@@ -41,7 +41,7 @@ export function latticeOffset(interval: number): LatticeOffset {
     if ((((7 * dq) % 12) + 12) % 12 !== target) continue;
     for (let dr = 6; dr >= -6; dr--) {
       const dist = (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2;
-      const eu = Math.hypot(Math.sqrt(3) * (dq + dr / 2), 1.5 * dr);
+      const eu = Math.hypot(...boardPoint({ q: dq, r: dr })) / SPACING;
       if (!best || dist < best.dist || (dist === best.dist && eu < best.eu - 1e-9)) best = { dq, dr, dist, eu };
     }
   }
@@ -82,17 +82,6 @@ export function wireCells(from: AxialCell, to: AxialCell): AxialCell[] {
 interface Pt {
   x: number;
   y: number;
-}
-
-// Angle sort around the centroid — the hull through a chord's voice
-// centers, the offset-outline's path. Every chord's voices sit on their
-// own hull, so no point is ever dropped; a fully collinear set (the
-// fifths-axis sevenths) traces its own spine, which reads as the chord's
-// line.
-function hullOf(pts: Pt[]): Pt[] {
-  const cx = pts.reduce((t, p) => t + p.x, 0) / pts.length;
-  const cy = pts.reduce((t, p) => t + p.y, 0) / pts.length;
-  return [...pts].sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
 }
 
 // A two-voice ring: the capsule around both centers, sampled — no arc
@@ -154,22 +143,26 @@ export function chordGlyphSvg(def: NamedChordDef, discovered: boolean): string {
     : def.intervals.map(latticeOffset);
   // The board's own pointy-top axial mapping (face.ts boardPoint), scaled
   // to fill the viewBox.
-  const unit = offsets.map((o) => ({ x: Math.sqrt(3) * (o.dq + o.dr / 2), y: 1.5 * o.dr }));
+  const unitPoint = ({ dq, dr }: AxialCell): Pt => {
+    const [x, y] = boardPoint({ q: dq, r: dr });
+    return { x: x / SPACING, y: y / SPACING };
+  };
+  const unit = offsets.map(unitPoint);
   const half = GLYPH_VIEW / 2 - 2;
   const mx = Math.max(...unit.map((p) => Math.abs(p.x))) + Math.sqrt(3) / 2 + 0.3;
   const my = Math.max(...unit.map((p) => Math.abs(p.y))) + 1 + 0.3;
   const u = Math.min(half / Math.max(mx, my), half / 1.8);
   const R = u * 0.92;
-  const at = (o: AxialCell): Pt => ({
-    x: GLYPH_VIEW / 2 + Math.sqrt(3) * (o.dq + o.dr / 2) * u,
-    y: GLYPH_VIEW / 2 + 1.5 * o.dr * u,
-  });
+  const at = (o: AxialCell): Pt => {
+    const { x, y } = unitPoint(o);
+    return { x: GLYPH_VIEW / 2 + x * u, y: GLYPH_VIEW / 2 + y * u };
+  };
   const pts = offsets.map(at);
-  const fontSize = Math.max(6.5, Math.min(11, R * 0.62));
+  const fontSize = Math.min(11, R * 0.9);
   const voices = pts
     .map((p, i) => {
       const interval = def.name === "Octave" && i === 1 ? 12 : def.intervals[i]!;
-      const text = discovered && R >= 6 ? voiceLabel(interval) : "";
+      const text = discovered ? voiceLabel(interval) : "";
       const label = text
         ? `<text x="${p.x.toFixed(1)}" y="${(p.y + fontSize * 0.35).toFixed(1)}" text-anchor="middle" fill="var(--ink)"
         font-size="${fontSize.toFixed(1)}" font-family="var(--mono)">${text}</text>`
@@ -196,13 +189,17 @@ export function chordGlyphSvg(def: NamedChordDef, discovered: boolean): string {
   }
   // Every chord of two or more voices draws the offset-outline polygon —
   // the capsule around a pair, the hull through three or more. Undiscovered,
-  // the ring stays transparent: silhouette only.
+  // the ring stays transparent: silhouette only. Taking the hull of the
+  // expanded faces also encloses collinear voices without collapsing.
   const ring = offsets.length === 2
-    ? capsulePath(pts[0]!, pts[1]!, R * 0.98)
-    : hullOf(pts).map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ") + " Z";
+    ? capsulePath(pts[0]!, pts[1]!, R * 1.1)
+    : convexHull(pts.flatMap((p) => Array.from({ length: 6 }, (_, i) => {
+        const [dx, dy] = hexCorner(R * 1.1, i);
+        return [p.x + dx, p.y + dy] as const;
+      }))).map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ") + " Z";
   const annotation = `<path d="${ring}" fill="${discovered && hue ? `color-mix(in srgb, var(--${hue}) 9%, transparent)` : "transparent"}"
     stroke="${seam}" stroke-width="1.6" stroke-linejoin="round" ${discovered ? "" : 'stroke-dasharray="5 4"'} />`;
-  return `<svg class="chord-glyph" viewBox="0 0 ${GLYPH_VIEW} ${GLYPH_VIEW}" role="img" aria-label="${def.name} glyph" preserveAspectRatio="xMidYMid meet">
+  return `<svg class="chord-glyph" viewBox="0 0 ${GLYPH_VIEW} ${GLYPH_VIEW}" role="img" aria-label="${discovered ? `${def.name} glyph` : "Undiscovered chord glyph"}" preserveAspectRatio="xMidYMid meet">
     ${ghosts.join("")}${annotation}${voices}
   </svg>`;
 }
