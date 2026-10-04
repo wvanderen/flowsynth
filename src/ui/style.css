@@ -646,6 +646,37 @@ details.rd-synth { display: block; cursor: pointer; }
 .summary-toggle[aria-pressed="true"] { color: var(--ink); }
 .habit-summary { border: 1px solid var(--line-soft); border-top: 0; border-radius: 0 0 8px 8px; margin: -2px 0 6px; padding: 9px 11px; display: grid; gap: 2px; }
 .habit-summary .note-list { margin-top: 8px; }
+
+/* The habit build (ADR-0046): the shared catalog read against the habit's
+   own practice time — equipped nodes numbered by slot, unlocked nodes one
+   click away, locked rungs naming the milestone they still owe. Equipped
+   wear the switch vermillion's faint wash: the build runs with the session
+   color, and RITUAL amplifies it board-side. */
+.habit-build { margin-top: 8px; display: grid; gap: 6px; }
+.habit-build .eyebrow { margin-bottom: 0; }
+.habit-build > p { margin: 0; font-size: 10.5px; }
+.build-nodes { display: grid; gap: 4px; }
+.build-node {
+  display: flex; align-items: center; gap: 9px;
+  width: 100%; text-align: left;
+  border: 1px solid var(--line-soft); border-radius: 7px;
+  background: transparent; color: var(--ink);
+  padding: 5px 9px;
+}
+button.build-node { cursor: pointer; }
+button.build-node:hover { background: var(--hover-bg); border-color: var(--line); }
+.build-node.equipped { border-color: var(--switch); background: var(--switch-faint); }
+.build-node.locked { color: var(--muted); }
+.build-node-mark {
+  width: 18px; height: 18px; flex-shrink: 0;
+  display: grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 5px;
+  font-size: 10px; color: var(--muted);
+}
+.build-node.equipped .build-node-mark { border-color: var(--switch); color: var(--switch); }
+.build-node-name { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.35; }
+.build-node-name small { display: block; color: var(--muted); font-size: 10.5px; }
+.build-node.locked .build-node-name { color: var(--muted); }
 .habit-archived { margin-top: 12px; display: grid; gap: 6px; }
 .habit-archived > .eyebrow { margin-bottom: 2px; }
 .habit-archived .habit-pick.archived { cursor: default; color: var(--muted); }

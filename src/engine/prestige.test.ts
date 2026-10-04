@@ -131,7 +131,7 @@ describe("the prestige action", () => {
   it("persists achievements, the life record, and lifetime totalEarned", () => {
     const s = atHorizon();
     s.achievements = { "first-light": 1_000 };
-    s.habits.push({ id: "h1", name: "Piano", seconds: 600, archived: false });
+    s.habits.push({ id: "h1", name: "Piano", seconds: 600, archived: false, build: [] });
     s.activeHabitId = "h1";
     s.practiceLog.push({ id: "p1", habitId: "h1", seconds: 60, source: "live", at: 1_000 });
     s.notes.push({ id: "n1", sessionId: 1, atElapsed: 30, text: "kept", habitId: "h1", at: 1_000 });

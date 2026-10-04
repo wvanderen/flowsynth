@@ -67,3 +67,26 @@ describe("the discovery bonus in the rate details (issue #230)", () => {
     expect(chip.querySelector(".library-chip")!.textContent).toContain("1/11 chords");
   });
 });
+
+describe("the RITUAL row (ADR-0046, wave 4)", () => {
+  it("names its amplification of the active build, charged or not", () => {
+    const state = fresh();
+    const ritual = give(state, "ritual", hex(1, 0));
+    const generator = give(state, "focusKeyed", hex(2, 0));
+    ritual.level = 1;
+    generator.reserve = 600;
+    const snapshot = computeRates(state, true);
+    const sheet = document.createElement("div");
+    sheet.innerHTML = rateDetailsHtml(state, snapshot, false);
+    const row = [...sheet.querySelectorAll(".rd-other-row")].find((el) => el.textContent!.includes("RITUAL"))!;
+    expect(row.textContent).toContain(`amplifies the active habit's build ×${formatNumber(1 + snapshot.ritualAmplification)} while charged`);
+    // Uncharged, the factor sits at its floor.
+    generator.reserve = 0;
+    const cold = computeRates(state, true);
+    expect(cold.ritualAmplification).toBe(0);
+    const coldSheet = document.createElement("div");
+    coldSheet.innerHTML = rateDetailsHtml(state, cold, false);
+    const coldRow = [...coldSheet.querySelectorAll(".rd-other-row")].find((el) => el.textContent!.includes("RITUAL"))!;
+    expect(coldRow.textContent).toContain(`×${formatNumber(1)} while charged`);
+  });
+});

@@ -23,6 +23,10 @@ const PATHS: Record<ModuleType, string> = {
   // charge in one side, out the other, stronger (the Booster's mark turned
   // into a conduit: same chevrons, the dot riding the flow between them).
   amplifier: '<circle r="2.2"/><path d="M-6-7-13 0-6 7M6-7 13 0 6 7"/><path d="M-9 0h5M4 0h5"/>',
+  // RITUAL: the habit-cycle ring around a sustained wave (issue #219) —
+  // the Habit app's ring language closed into a full circle, the scope
+  // trace sustained inside it; the one habit-keyed board module.
+  ritual: '<circle r="11"/><path d="M-6.5 0C-4.3-5-2.2-5 0 0C2.2 5 4.3 5 6.5 0"/>',
   // The Blaster: the sine wearing its charge — the scope trace plus the
   // generator's bolt at its core (the oscillator category's second
   // producer, converting received charge into its term).
