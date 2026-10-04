@@ -5,7 +5,7 @@ import { combinePreview, combineMutatorsPreview, levelable, type CombinePreview,
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold, flowThreshold, mutatorForgeThreshold } from "../engine/rolls";
-import { BALANCE, CATEGORY_OF, isOscillatorType, isVoiceType, NAMED_CHORDS, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
+import { BALANCE, CATEGORY_OF, isOscillatorType, isVoiceType, NAMED_CHORDS, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { catalogOpen, rowUnlockCost, unlockableRows } from "../engine/catalog";
 import { formatClock, formatDuration } from "../engine/clock";
 import { cellNoteOf, noteNameOf, octaveRowOf, pitchOf, positionInRange } from "../engine/lattice";
@@ -1511,6 +1511,19 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
 // Spacers wear none: a level buys the silent wire nothing (#193).
 const FACE_BUY_POINTS = "-25,46 25,46 7,58 -7,58";
 
+// The zero-affordable reads (#233, ADR-0045): the face button and the
+// bloom's dial share the zero-state labels and the shortfall-leading
+// tooltips, so the two surfaces can never drift apart.
+function zeroBuyRead(bank: number, nextCost: number): { plusLabel: string; maxLabel: string; plusTip: string; maxTip: string } {
+  const short = formatInt(nextCost - bank);
+  return {
+    plusLabel: "+0",
+    maxLabel: "MAX·0",
+    plusTip: `+0 — ${short} ν short of one level`,
+    maxTip: `MAX · buys 0 — ${short} ν short`,
+  };
+}
+
 function faceBuyHtml(app: App, module: ModuleInstance): string {
   const max = app.ui.faceMax;
   const bank = wholeNous(app.state);
@@ -1520,14 +1533,13 @@ function faceBuyHtml(app: App, module: ModuleInstance): string {
   // Zero reads zero (#233, ADR-0045): when nothing is affordable the label
   // says so — "+0" / "MAX·0" — and every unaffordable tooltip leads with the
   // shortfall. Nothing disables; a click still buys what the bank covers.
-  const nextCost = levelCost(module.level);
+  const zero = zeroBuyRead(bank, levelCost(module.level));
   const zeroBuy = max ? levels === 0 : cost > bank;
-  const short = formatInt(nextCost - bank);
-  const label = zeroBuy ? (max ? "MAX·0" : "+0") : max ? "MAX" : "+1";
+  const label = zeroBuy ? (max ? zero.maxLabel : zero.plusLabel) : max ? "MAX" : "+1";
   const title = zeroBuy
     ? max
-      ? `MAX · buys 0 — ${short} ν short`
-      : `+0 — ${short} ν short of one level`
+      ? zero.maxTip
+      : zero.plusTip
     : max
       ? `MAX · buy ${levels} level${levels === 1 ? "" : "s"} · ${formatInt(cost)} ν`
       : `+1 level · ${formatInt(cost)} ν`;
@@ -2109,13 +2121,14 @@ function renderBloom(app: App, projected: RateSnapshot): void {
   }).benefit;
   // Partial by design: the button stays enabled whatever the bank says —
   // a short purchase buys what it covers and says so.
-  const affordable = wholeNous(state) >= bulkCost;
+  const bank = wholeNous(state);
+  const affordable = bank >= bulkCost;
   // Zero reads zero (#233, ADR-0045): the dial's zero-affordable state —
   // MAX·0 on the chip, and both unaffordable tooltips lead with the
-  // shortfall. Nothing disables.
-  const nextCost = levelCost(module.level);
-  const zeroBuy = maxLevels === 0 && nextCost > wholeNous(state);
-  const short = formatInt(nextCost - wholeNous(state));
+  // shortfall. Nothing disables. maxLevels is 0 exactly when the bank
+  // can't cover the next single level.
+  const zero = zeroBuyRead(bank, levelCost(module.level));
+  const zeroBuy = maxLevels === 0;
   // The Forge's face readout moves per tick; its face tracks it. Each
   // branch tracks its own meter (ADR-0043).
   const forgeTick = Math.floor(forgeBranchOf(state, module.type)?.progress ?? 0);
@@ -2127,7 +2140,7 @@ function renderBloom(app: App, projected: RateSnapshot): void {
   const shape = phone ? "sheet" : "pop";
   // The zero-state's shortfall figure rides the rebuild key: it is the one
   // quoted number that can move while the bank stays short of one level.
-  const key = JSON.stringify([shape, module.id, module.level, module.rarity, module.shift, ui.bulkCount, maxLevels, want, bulkCost, bulkBenefit, affordable, lines.contribution, forgeTick, mutKey, zeroBuy ? short : ""]);
+  const key = JSON.stringify([shape, module.id, module.level, module.rarity, module.shift, ui.bulkCount, maxLevels, want, bulkCost, bulkBenefit, affordable, lines.contribution, forgeTick, mutKey, zeroBuy ? zero.plusTip : ""]);
   // One frame read for both the pop question and the positioning below.
   const svg = document.getElementById("grid");
   const viewBox = (svg?.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
@@ -2139,8 +2152,8 @@ function renderBloom(app: App, projected: RateSnapshot): void {
   // above the button on the popped plate and the riding card, and inside
   // the sheet's buy column on phone.
   const benefit = lines.benefit;
-  const maxRead = zeroBuy ? "MAX·0" : `MAX·${maxLevels}`;
-  const maxTip = zeroBuy ? `MAX · buys 0 — ${short} ν short` : `Buy every affordable level (${maxLevels})`;
+  const maxRead = zeroBuy ? zero.maxLabel : `MAX·${maxLevels}`;
+  const maxTip = zeroBuy ? zero.maxTip : `Buy every affordable level (${maxLevels})`;
   const dial = benefit
     ? `<div class="bloom-dial" role="group" aria-label="Upgrade count">${([1, 5, 10, "max"] as const)
         .map((option) => {
@@ -2150,7 +2163,7 @@ function renderBloom(app: App, projected: RateSnapshot): void {
         .join("")}</div>`
     : "";
   const upgradeButton = benefit
-    ? `<button class="bloom-upgrade" id="bloom-upgrade" title="${zeroBuy ? `+0 — ${short} ν short of one level` : affordable ? `Buy ${want} level${want === 1 ? "" : "s"}` : `Not enough for all ${want} — buys what it can`}">
+    ? `<button class="bloom-upgrade" id="bloom-upgrade" title="${zeroBuy ? zero.plusTip : affordable ? `Buy ${want} level${want === 1 ? "" : "s"}` : `Not enough for all ${want} — buys what it can`}">
         <span class="bloom-upgrade-title">Upgrade ×${want} · <strong class="mono">${formatInt(bulkCost)} ν</strong></span>
         <small class="bloom-upgrade-benefit mono">${bulkBenefit ?? ""}</small>
       </button>`
@@ -3994,13 +4007,19 @@ function honestyEventLine(event: HonestyEvent): string {
 // logs the same.
 
 // The ends' response (#233): each label's opacity rises as the thumb nears
-// it — a continuous read with no bands and no numbers.
+// it — a continuous read with no bands and no numbers. Dim is the far-end
+// floor and span the brightening range; at the neutral middle the formula
+// reads 0.675, the stylesheet's resting 0.7 standing in only before the
+// first paint.
+const REFLECT_END_DIM = 0.35;
+const REFLECT_END_SPAN = 0.65;
+
 function reflectEndsOf(el: HTMLInputElement): void {
-  const t = (el.valueAsNumber - 1) / (REFLECTION_SLIDER_POSITIONS - 1);
+  const t = (el.valueAsNumber - REFLECTION_SLIDER_MIN) / (REFLECTION_SLIDER_POSITIONS - REFLECTION_SLIDER_MIN);
   const rough = el.previousElementSibling as HTMLElement | null;
   const great = el.nextElementSibling as HTMLElement | null;
-  if (rough) rough.style.opacity = (0.35 + 0.65 * (1 - t)).toFixed(3);
-  if (great) great.style.opacity = (0.35 + 0.65 * t).toFixed(3);
+  if (rough) rough.style.opacity = (REFLECT_END_DIM + REFLECT_END_SPAN * (1 - t)).toFixed(3);
+  if (great) great.style.opacity = (REFLECT_END_DIM + REFLECT_END_SPAN * t).toFixed(3);
 }
 
 function renderSummaryModal(app: App, content: HTMLElement): void {
@@ -4096,10 +4115,10 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
     // opacity alone, no bands, no numbers.
     reflectEndsOf(el);
   });
-  // A half-touched reflection survives a reload beside its summary (§8);
-  // the rebuilt slider's ends read the stored thumb, not the resting tint.
+  // The ends always read the thumb — the formula governs from first paint;
+  // a stored decimal re-opens with its own emphasis.
   const sliderEl = byId("summary-reflection-slider") as HTMLInputElement | null;
-  if (sliderEl && reflection) reflectEndsOf(sliderEl);
+  if (sliderEl) reflectEndsOf(sliderEl);
   byId("summary-continue")?.addEventListener("click", () => app.dismissSummary());
   wireClose(app);
 }

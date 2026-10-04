@@ -394,9 +394,12 @@ export const DRIFT_NOISE_SECONDS = 0.05;
 // retired 120 s confirm-or-discard threshold (ADR-0019).
 export const RECONCILIATION_FLOOR_SECONDS = 180;
 
-// The summary reflection's slider (focus-tool spec §8): five positions,
-// rough ↔ great, the middle neutral and the default. Decided shape, not
-// tuning; the render reads both so the range and its default stay paired.
+// The summary reflection's slider (focus-tool spec §8): a continuous
+// rough ↔ great read (#233) on the 1–5 scale — the range and the neutral
+// middle are decided shape, not tuning; decimals store raw, saved integers
+// stay valid points. The render reads all three so the scale and its
+// default stay paired.
+export const REFLECTION_SLIDER_MIN = 1;
 export const REFLECTION_SLIDER_POSITIONS = 5;
 export const REFLECTION_SLIDER_NEUTRAL = 3;
 

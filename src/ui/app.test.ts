@@ -2681,8 +2681,9 @@ describe("the close-out choreography (§8)", () => {
     const slider = document.getElementById("summary-reflection-slider") as HTMLInputElement;
     const rough = slider.previousElementSibling as HTMLElement;
     const great = slider.nextElementSibling as HTMLElement;
-    const rest = 0.7;
-    // Untouched, both labels rest at the muted tint — no bands, no numbers.
+    const rest = 0.675;
+    // Untouched, both labels rest at the neutral thumb's read — no bands,
+    // no numbers.
     expect(Number(rough.style.opacity || rest)).toBeCloseTo(rest);
     // A decimal touch stores raw — the engine clamps the range, not the step.
     slider.value = "4.5";
