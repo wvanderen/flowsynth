@@ -5,7 +5,7 @@ import { combinePreview, combineMutatorsPreview, levelable, type CombinePreview,
 import { deployedAt } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold, flowThreshold, mutatorForgeThreshold } from "../engine/rolls";
-import { BALANCE, CATEGORY_OF, isOscillatorType, isVoiceType, NAMED_CHORDS, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
+import { BALANCE, CATEGORY_OF, isOscillatorType, isVoiceType, NAMED_CHORDS, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { catalogOpen, rowUnlockCost, unlockableRows } from "../engine/catalog";
 import { formatClock, formatDuration } from "../engine/clock";
 import { cellNoteOf, noteNameOf, octaveRowOf, pitchOf, positionInRange } from "../engine/lattice";
@@ -725,10 +725,14 @@ function toolActions(): ToolAction[] {
         app.state.bankedRolls.length > 0 ? `<b class="tool-badge mono">${app.state.bankedRolls.length}</b>` : "",
       media: `<i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i>`,
       // The pip shows the flow meter (ADR-0041); hover, focus, or tap opens
-      // the one detail — this read, or the Forge modal's meter block. Open
-      // in flow too: the peek never blocks the board, and taking a choice
-      // stays an upgrade-mode act (the engine refuses it).
-      title: (app, projected) => meterDetail(app, projected.forgeRate, projected.mutatorForgeRate),
+      // the one detail — the live meter read, in flow suffixed with the lock
+      // reason (#233): the sheet never expands during a session, and the
+      // badge and pip stay as the visual indicator.
+      disabled: (app) => app.state.mode !== "upgrade",
+      title: (app, projected) => {
+        const read = meterDetail(app, projected.forgeRate, projected.mutatorForgeRate);
+        return app.state.mode !== "upgrade" ? `${read} — choices settle between sessions.` : read;
+      },
     },
     {
       op: "cell",
@@ -1507,17 +1511,41 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
 // Spacers wear none: a level buys the silent wire nothing (#193).
 const FACE_BUY_POINTS = "-25,46 25,46 7,58 -7,58";
 
+// The zero-affordable reads (#233, ADR-0045): the face button and the
+// bloom's dial share the zero-state labels and the shortfall-leading
+// tooltips, so the two surfaces can never drift apart.
+function zeroBuyRead(bank: number, nextCost: number): { plusLabel: string; maxLabel: string; plusTip: string; maxTip: string } {
+  const short = formatInt(nextCost - bank);
+  return {
+    plusLabel: "+0",
+    maxLabel: "MAX·0",
+    plusTip: `+0 — ${short} ν short of one level`,
+    maxTip: `MAX · buys 0 — ${short} ν short`,
+  };
+}
+
 function faceBuyHtml(app: App, module: ModuleInstance): string {
   const max = app.ui.faceMax;
-  const levels = max ? affordableLevels(wholeNous(app.state), module.level) : 1;
+  const bank = wholeNous(app.state);
+  const levels = max ? affordableLevels(bank, module.level) : 1;
   const cost = max ? levelsCost(module.level, levels) : levelCost(module.level);
-  const broke = wholeNous(app.state) < cost;
-  const title = max
-    ? `MAX · buy ${levels} level${levels === 1 ? "" : "s"} · ${formatInt(cost)} ν`
-    : `+1 level · ${formatInt(cost)} ν`;
+  const broke = bank < cost;
+  // Zero reads zero (#233, ADR-0045): when nothing is affordable the label
+  // says so — "+0" / "MAX·0" — and every unaffordable tooltip leads with the
+  // shortfall. Nothing disables; a click still buys what the bank covers.
+  const zero = zeroBuyRead(bank, levelCost(module.level));
+  const zeroBuy = max ? levels === 0 : cost > bank;
+  const label = zeroBuy ? (max ? zero.maxLabel : zero.plusLabel) : max ? "MAX" : "+1";
+  const title = zeroBuy
+    ? max
+      ? zero.maxTip
+      : zero.plusTip
+    : max
+      ? `MAX · buy ${levels} level${levels === 1 ? "" : "s"} · ${formatInt(cost)} ν`
+      : `+1 level · ${formatInt(cost)} ν`;
   return `<g class="face-buy" data-key="face-buy" data-module="${module.id}" role="button" tabindex="0" aria-label="${title}">
     <polygon class="face-buy-btn${broke ? " broke" : ""}" points="${FACE_BUY_POINTS}"><title>${title}</title></polygon>
-    <text y="54" text-anchor="middle" class="face-buy-label">${max ? "MAX" : "+1"}</text>
+    <text y="54" text-anchor="middle" class="face-buy-label">${label}</text>
   </g>`;
 }
 
@@ -1583,7 +1611,9 @@ const SWEEP_STEPS = [1, 5, 10] as const;
 // path); spacers are excluded everywhere. Upgrade-mode-only furniture: in
 // flow the host hides with the rest of the purchase furniture. The chips
 // never disable — partial by design — and their tooltips carry the full-N
-// cost previews; the toast reports what actually landed.
+// cost previews; the toast reports what actually landed. When nothing is
+// affordable, every tooltip gains the zero-read suffix (#233, ADR-0045):
+// the shortfall to the cheapest next level on the board.
 function renderUpgradeAll(app: App): void {
   const host = byId("upgrade-all");
   if (!host) return;
@@ -1597,15 +1627,18 @@ function renderUpgradeAll(app: App): void {
   const key = JSON.stringify([wholeNous(state), eligible.map((m) => `${m.id}:${m.level}`)]);
   if (host.dataset.renderKey === key) return;
   host.dataset.renderKey = key;
+  const bank = wholeNous(state);
+  const cheapest = Math.min(...eligible.map((m) => levelCost(m.level)));
+  const zeroSuffix = bank < cheapest ? ` — buys 0: need ${formatInt(cheapest - bank)} ν more` : "";
   const chips = SWEEP_STEPS.map((n) => {
     const total = eligible.reduce((sum, m) => sum + levelsCost(m.level, n), 0);
-    return `<button class="sweep-chip" data-sweep="${n}" title="+${n} on all ${eligible.length} modules · ${formatNumber(total)} ν (buys cheapest-first if broke)">+${n}</button>`;
+    return `<button class="sweep-chip" data-sweep="${n}" title="+${n} on all ${eligible.length} modules · ${formatNumber(total)} ν (buys cheapest-first if broke)${zeroSuffix}">+${n}</button>`;
   }).join("");
   const max = upgradeAllPreview(state, "max");
   host.innerHTML = `
     <span class="sweep-label">UPGRADE ALL</span>
     ${chips}
-    <button class="sweep-chip" data-sweep="max" title="Sweep the whole bank into the cheapest next levels: ~${max.levels} levels across ${max.modules} modules · ${formatNumber(max.spent)} ν">MAX</button>`;
+    <button class="sweep-chip" data-sweep="max" title="Sweep the whole bank into the cheapest next levels: ~${max.levels} levels across ${max.modules} modules · ${formatNumber(max.spent)} ν${zeroSuffix}">MAX</button>`;
   host.querySelectorAll<HTMLButtonElement>("[data-sweep]").forEach((button) => {
     button.addEventListener("click", () => {
       const step = button.getAttribute("data-sweep")!;
@@ -2088,7 +2121,14 @@ function renderBloom(app: App, projected: RateSnapshot): void {
   }).benefit;
   // Partial by design: the button stays enabled whatever the bank says —
   // a short purchase buys what it covers and says so.
-  const affordable = wholeNous(state) >= bulkCost;
+  const bank = wholeNous(state);
+  const affordable = bank >= bulkCost;
+  // Zero reads zero (#233, ADR-0045): the dial's zero-affordable state —
+  // MAX·0 on the chip, and both unaffordable tooltips lead with the
+  // shortfall. Nothing disables. maxLevels is 0 exactly when the bank
+  // can't cover the next single level.
+  const zero = zeroBuyRead(bank, levelCost(module.level));
+  const zeroBuy = maxLevels === 0;
   // The Forge's face readout moves per tick; its face tracks it. Each
   // branch tracks its own meter (ADR-0043).
   const forgeTick = Math.floor(forgeBranchOf(state, module.type)?.progress ?? 0);
@@ -2098,7 +2138,9 @@ function renderBloom(app: App, projected: RateSnapshot): void {
   const mutKey = bloomMutatorKey(state, module.pos);
   const mutLine = mutatorBloomLineHtml(state, module.pos, snapshot);
   const shape = phone ? "sheet" : "pop";
-  const key = JSON.stringify([shape, module.id, module.level, module.rarity, module.shift, ui.bulkCount, maxLevels, want, bulkCost, bulkBenefit, affordable, lines.contribution, forgeTick, mutKey]);
+  // The zero-state's shortfall figure rides the rebuild key: it is the one
+  // quoted number that can move while the bank stays short of one level.
+  const key = JSON.stringify([shape, module.id, module.level, module.rarity, module.shift, ui.bulkCount, maxLevels, want, bulkCost, bulkBenefit, affordable, lines.contribution, forgeTick, mutKey, zeroBuy ? zero.plusTip : ""]);
   // One frame read for both the pop question and the positioning below.
   const svg = document.getElementById("grid");
   const viewBox = (svg?.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
@@ -2110,16 +2152,18 @@ function renderBloom(app: App, projected: RateSnapshot): void {
   // above the button on the popped plate and the riding card, and inside
   // the sheet's buy column on phone.
   const benefit = lines.benefit;
+  const maxRead = zeroBuy ? zero.maxLabel : `MAX·${maxLevels}`;
+  const maxTip = zeroBuy ? zero.maxTip : `Buy every affordable level (${maxLevels})`;
   const dial = benefit
     ? `<div class="bloom-dial" role="group" aria-label="Upgrade count">${([1, 5, 10, "max"] as const)
         .map((option) => {
           const active = option === ui.bulkCount;
-          return `<button class="bloom-dial-chip${active ? " active" : ""}" data-bulk="${option}" aria-pressed="${active}" title="${option === "max" ? `Buy every affordable level (${maxLevels})` : `Buy ${option} levels`}">${option === "max" ? `MAX·${maxLevels}` : `×${option}`}</button>`;
+          return `<button class="bloom-dial-chip${active ? " active" : ""}" data-bulk="${option}" aria-pressed="${active}" title="${option === "max" ? maxTip : `Buy ${option} levels`}">${option === "max" ? maxRead : `×${option}`}</button>`;
         })
         .join("")}</div>`
     : "";
   const upgradeButton = benefit
-    ? `<button class="bloom-upgrade" id="bloom-upgrade" title="${affordable ? `Buy ${want} level${want === 1 ? "" : "s"}` : `Not enough for all ${want} — buys what it can`}">
+    ? `<button class="bloom-upgrade" id="bloom-upgrade" title="${zeroBuy ? zero.plusTip : affordable ? `Buy ${want} level${want === 1 ? "" : "s"}` : `Not enough for all ${want} — buys what it can`}">
         <span class="bloom-upgrade-title">Upgrade ×${want} · <strong class="mono">${formatInt(bulkCost)} ν</strong></span>
         <small class="bloom-upgrade-benefit mono">${bulkBenefit ?? ""}</small>
       </button>`
@@ -3541,7 +3585,7 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
         </button>`).join("")}
     </div>` : `<p class="empty-copy">No choices banked yet — the meters above say how far.</p>`}
     ${mutatorSection}
-    ${state.mode !== "upgrade" ? `<p class="modal-note">Choices settle between sessions — the board stays live behind this card.</p>` : `<p class="modal-note">The board stays live behind this card — inspect freely; click outside, ✕ or Esc puts the choice away.</p>`}`;
+    <p class="modal-note">The board stays live behind this card — inspect freely; click outside, ✕ or Esc puts the choice away.</p>`;
   updateForgeMetersLive(content, state, projected.forgeRate, projected.mutatorForgeRate);
   content.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -3956,10 +4000,28 @@ function honestyEventLine(event: HonestyEvent): string {
 // time shows credited minutes in the history list's format; the honesty
 // events sit beneath as neutral factual lines, where a dropped bucket's
 // drop is visible — and there is no raw wall-duration row. The reflection's
-// reserved slot rides above dismissal: free text plus a five-position
-// rough–great slider, end labels only, middle neutral and the default. It
-// records as either field is touched and stays absent otherwise, so every
-// dismissal path — Continue, ✕, backdrop, Esc — logs the same.
+// reserved slot rides above dismissal: free text plus a continuous
+// rough–great slider (the 1–5 range holds; #233), end labels only, middle
+// neutral and the default. It records as either field is touched and stays
+// absent otherwise, so every dismissal path — Continue, ✕, backdrop, Esc —
+// logs the same.
+
+// The ends' response (#233): each label's opacity rises as the thumb nears
+// it — a continuous read with no bands and no numbers. Dim is the far-end
+// floor and span the brightening range; at the neutral middle the formula
+// reads 0.675, the stylesheet's resting 0.7 standing in only before the
+// first paint.
+const REFLECT_END_DIM = 0.35;
+const REFLECT_END_SPAN = 0.65;
+
+function reflectEndsOf(el: HTMLInputElement): void {
+  const t = (el.valueAsNumber - REFLECTION_SLIDER_MIN) / (REFLECTION_SLIDER_POSITIONS - REFLECTION_SLIDER_MIN);
+  const rough = el.previousElementSibling as HTMLElement | null;
+  const great = el.nextElementSibling as HTMLElement | null;
+  if (rough) rough.style.opacity = (REFLECT_END_DIM + REFLECT_END_SPAN * (1 - t)).toFixed(3);
+  if (great) great.style.opacity = (REFLECT_END_DIM + REFLECT_END_SPAN * t).toFixed(3);
+}
+
 function renderSummaryModal(app: App, content: HTMLElement): void {
   const summary = app.state.summary;
   if (!summary) {
@@ -4038,7 +4100,7 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
       <input type="text" id="summary-reflection-text" aria-label="Reflect on the session in words" value="${escapeHtml(reflection?.text ?? "")}" />
       <div class="reflection-slider">
         <span class="reflection-end">rough</span>
-        <input type="range" id="summary-reflection-slider" min="1" max="${REFLECTION_SLIDER_POSITIONS}" step="1" value="${reflection?.slider ?? REFLECTION_SLIDER_NEUTRAL}" aria-label="How the session went, rough to great" />
+        <input type="range" id="summary-reflection-slider" min="1" max="${REFLECTION_SLIDER_POSITIONS}" step="any" value="${reflection?.slider ?? REFLECTION_SLIDER_NEUTRAL}" aria-label="How the session went, rough to great" />
         <span class="reflection-end">great</span>
       </div>
     </div>
@@ -4047,8 +4109,16 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
     app.recordReflectionText((event.target as HTMLInputElement).value);
   });
   byId("summary-reflection-slider")?.addEventListener("input", (event) => {
-    app.recordReflectionSlider(Number((event.target as HTMLInputElement).value));
+    const el = event.target as HTMLInputElement;
+    app.recordReflectionSlider(el.valueAsNumber);
+    // The ends respond (#233): each label brightens as the thumb nears it —
+    // opacity alone, no bands, no numbers.
+    reflectEndsOf(el);
   });
+  // The ends always read the thumb — the formula governs from first paint;
+  // a stored decimal re-opens with its own emphasis.
+  const sliderEl = byId("summary-reflection-slider") as HTMLInputElement | null;
+  if (sliderEl) reflectEndsOf(sliderEl);
   byId("summary-continue")?.addEventListener("click", () => app.dismissSummary());
   wireClose(app);
 }

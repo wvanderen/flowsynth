@@ -1,4 +1,4 @@
-import { BALANCE, EPS, NEXT_RARITY, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE, SHELF_TYPES } from "./constants";
+import { BALANCE, EPS, NEXT_RARITY, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE, SHELF_TYPES } from "./constants";
 import { claimOf, horizonReached } from "./accumulator";
 import { rowUnlockCost, unlockableRows } from "./catalog";
 import { affordableLevels, cellPurchasePrice, computeRates, deployedAt, findModule, levelCost, levelsCost, longGoalCost, mutatorSlotCost, rowGateOwed, wholeNous } from "./economy";
@@ -222,8 +222,10 @@ export function recordSummaryReflection(
   const current = state.summary.reflection ?? { text: "", slider: REFLECTION_SLIDER_NEUTRAL };
   state.summary.reflection = {
     text: part.text ?? current.text,
-    // The decided range is clamped here, not only in the DOM control.
-    slider: Math.min(REFLECTION_SLIDER_POSITIONS, Math.max(1, Math.round(part.slider ?? current.slider))),
+    // The decided range is clamped here, not only in the DOM control. The
+    // slider is continuous (#233): the range holds and decimals store raw —
+    // saved integers stay valid points on the same scale, nothing migrates.
+    slider: Math.min(REFLECTION_SLIDER_POSITIONS, Math.max(REFLECTION_SLIDER_MIN, part.slider ?? current.slider)),
   };
   // The record's reflection slot (§9) fills from the same touch: the
   // reflection records after close (it rides the summary), and this is the
