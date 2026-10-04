@@ -99,7 +99,7 @@ export function mutatorLayerLive(app: App): boolean {
 }
 
 // The host line's name: the module's own nameplate over the cell's note —
-// "Additive Synth · G4". Null on a hostless cell.
+// "Oscillator · G4". Null on a hostless cell.
 function hostName(state: GameState, pos: Hex): string | null {
   const module = deployedAt(state, pos);
   return module ? `${META[module.type].name} · ${cellNoteOf(pos)}` : null;
@@ -356,8 +356,8 @@ export function renderMutatorPopover(app: App, snapshot: RateSnapshot): void {
 
 /* ── The reserved readout's ask ───────────────────────
    Hovering a slot asks the full declaration into the reserved readout
-   (issue #199): "Power · +50% to this module's power — hosts Additive
-   Synth · G4"; a vacant slot asks "inert until a host lands". */
+   (issue #199): "Power · +50% to this module's power — hosts Oscillator
+   · G4"; a vacant slot asks "inert until a host lands". */
 
 export function mutatorAskHtml(state: GameState, pos: Hex, snapshot: RateSnapshot): string {
   const item = mutatorAt(state, pos);

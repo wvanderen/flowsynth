@@ -597,7 +597,7 @@ function renderAchievementsModal(app: App, content: HTMLElement, projected: Rate
   content.innerHTML = `
     ${modalTop("ACHIEVEMENTS")}
     <h2 id="modal-title">${count} of ${ACHIEVEMENTS.length} feats.</h2>
-    <p class="lead">Every feat speeds the rate a little — they accelerate, never gate. Each one adds into the Achievements leg of every synthesizer row in the rate details.</p>
+    <p class="lead">Every feat speeds the rate a little — they accelerate, never gate. Each one adds into the Achievements leg of every synth row in the rate details.</p>
     ${sections}`;
   wireClose(app);
 }
@@ -2703,12 +2703,21 @@ function escapeHtml(text: string): string {
 // and the expanded face — at tile size the engraving is noise — and the
 // tooltip carries the details the mark leaves off. Shared by the tray, the
 // phone inventory sheet, and the live drag ghost, so what you carry is
-// what waits in the tray.
+// what waits in the tray. The spacer wears its module's ring instead of
+// the wire (issue #219): an unfilled inner hexagon matching its board face.
+// The spacer tile's inner hexagon (issue #219, prototype-validated): sized
+// to the other tiles' glyph footprint, not the face's full window.
+const SPACER_TILE_RADIUS = 20;
+
 function inventoryTileSvg(module: ModuleInstance): string {
   const hue = `var(--${HUE_TOKEN_OF[module.type]})`;
+  const mark =
+    module.type === "spacer"
+      ? `<polygon fill="none" stroke="${hue}" stroke-width="3.5" points="${hexPoints(SPACER_TILE_RADIUS)}"/>`
+      : `<g class="tile-glyph" fill="none" stroke="${hue}" stroke-width="3.5" transform="scale(1.55)">${moduleIcon(module.type)}</g>`;
   return `<svg viewBox="-70 -70 140 140" aria-hidden="true">
     <polygon class="tile-hex" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="${hue}" stroke-width="4.5"/>
-    <g class="tile-glyph" fill="none" stroke="${hue}" stroke-width="3.5" transform="scale(1.55)">${moduleIcon(module.type)}</g>
+    ${mark}
   </svg>`;
 }
 
@@ -3727,7 +3736,7 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
     ? `the synth terms alone — ${formatNumber(summary.synths)} ν/s is the whole formula`
     : [
         `synths +${formatNumber(summary.synths)} ν/s`,
-        ...(summary.infusors > 0 ? [`infusors +${formatNumber(summary.infusors)} ν/s`] : []),
+        ...(summary.infusors > 0 ? [`boosters +${formatNumber(summary.infusors)} ν/s`] : []),
         ...(summary.empowerment > 1 ? [`empowerment ×${formatNumber(summary.empowerment)}`] : []),
       ].join(" · ");
   // The "unlocked this session" row (ADR-0015): in-session unlocks queue

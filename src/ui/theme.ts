@@ -30,18 +30,22 @@ const substrate = {
   "board-glow": "rgba(99, 96, 212, 0.14)",
 } as const;
 
-// The category hue table (ADR-0016, amended by ADR-0021). Hue = category;
-// per-type identity rides the glyph and nameplate. The spacer wears a muted
-// wire grey — its own silent category. Yellow and violet stay unbound for
-// future categories.
+// The category hue table (ADR-0016, amended by ADR-0021; the reserved hues
+// bound by issue #219, wave 1). Hue = category; per-type identity rides the
+// glyph and nameplate. The spacer wears a muted wire grey — its own silent
+// category. The formerly reserved violet and yellow bind to the categories
+// arriving with the roster waves — silent voice and charge conduit — and
+// RITUAL wears the console's switch vermillion: the one habit-keyed board
+// module carries the session color.
 const hues = {
   "hue-generator": "#238858",
   "hue-synthesizer": "#6360d4",
   "hue-spacer": "#8a93a8",
   "hue-infusor": "#1f95b5",
   "hue-forge": "#bc9239",
-  "reserved-yellow": "#d9b84a",
-  "reserved-violet": "#9d7bea",
+  "hue-voice": "#9d7bea",
+  "hue-conduit": "#d9b84a",
+  "hue-ritual": "#cc603d",
 } as const;
 
 // Resource registers — the register rule: a resource wears the luminous glow

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { CATEGORY_OF, MODULE_TYPES } from "../engine/constants";
 import type { ModuleType, Rarity } from "../engine/types";
-import { CHARGED_FILL_MIN, CHARGED_FILL_SPAN, HUE_TOKEN_OF, RAIL_CHARGED_FLOOR, RAIL_CHARGED_SPAN, RING_COUNT, moduleFace, readoutFitClass } from "./face";
+import { CHARGED_FILL_MIN, CHARGED_FILL_SPAN, HUE_TOKEN_OF, RAIL_CHARGED_FLOOR, RAIL_CHARGED_SPAN, RING_COUNT, moduleFace, readoutFitClass, spacerClipPath, SPACER_WINDOW_RADIUS, hexPoints } from "./face";
 import { chargeGlow } from "./leads";
+import { META } from "./meta";
+import { moduleIcon } from "./icons";
 import { defaultTheme } from "./theme";
 
 const RARITIES: Rarity[] = ["common", "uncommon", "rare"];
@@ -80,11 +82,14 @@ describe("module face", () => {
     expect(face()).not.toContain("stroke-opacity");
   });
 
-  it("the open-wire spacer keeps cap and base, opening the window between (#201)", () => {
+  it("the open-wire spacer keeps cap and base, opening the window between (#201, ring window #219)", () => {
     const face = moduleFace({ type: "spacer", rarity: "rare", readout: "⌇", note: "G4", openWire: true });
-    // The chassis wears the shared window clip; the frame rides the plate.
+    // The chassis wears the shared window clip; the hairline rides the
+    // plate. Both are polygons now: the clip is the evenodd ring (chassis
+    // minus inner hexagon), the hairline traces the inner hexagon.
     expect(face).toContain('clip-path="url(#spacer-window)"');
-    expect(face).toContain("spacer-frame");
+    expect(face).toContain('data-key="spacer-frame"');
+    expect(face).not.toContain("<rect");
     // Glyph, readout glyph, level line, rings, and rail all go quiet.
     for (const key of ["signature", "readout", "rings", "rail", "level"]) {
       expect(face).not.toContain(`data-key="${key}"`);
@@ -94,6 +99,12 @@ describe("module face", () => {
     expect(face).toContain(">G4</text>");
     // The rarity rings go quiet even at rare — the finish reads nowhere.
     expect(face).not.toContain("face-rings");
+    // The ring window's two halves agree: the clip carries chassis and
+    // inner hexagon as two subpaths (the evenodd pair), and the hairline
+    // traces the same inner hexagon.
+    expect(spacerClipPath()).toContain(" Z M ");
+    expect(spacerClipPath().match(/M /g)).toHaveLength(2);
+    expect(face).toContain(`points="${hexPoints(SPACER_WINDOW_RADIUS)}"`);
   });
 
   it("the expanded face and candidates never wear the window — board faces only", () => {
@@ -103,6 +114,48 @@ describe("module face", () => {
     const plain = moduleFace({ type: "spacer", rarity: "common", readout: "⌇" });
     expect(plain).not.toContain("spacer-window");
     expect(plain).toContain('data-key="signature"');
+  });
+
+  it("the bloom re-proportions with the prototype's opened spacing (#219)", () => {
+    // The −7/11 pair overlapped at bloom scale; the prototype validated
+    // glyph −12 / readout 16 and that is what ships.
+    const bloom = moduleFace({ type: "additive", rarity: "common", readout: "+1", variant: "bloom" });
+    expect(bloom).toContain('data-key="signature" class="face-signature" transform="translate(0 -12) scale(0.7)"');
+    expect(bloom).toContain('data-key="readout" x="0" y="16"');
+    const compact = moduleFace({ type: "additive", rarity: "common", readout: "+1" });
+    expect(compact).toContain('data-key="signature" class="face-signature" transform="translate(0 0) scale(0.8)"');
+    expect(compact).toContain('data-key="readout" x="0" y="30"');
+  });
+
+  it("wears the wave-1 names and the D-set glyph family (#219)", () => {
+    // Renames are display-layer: the type keys stay, META carries the
+    // final names, and the faceplate is the short uppercased.
+    const names: Record<string, [string, string]> = {
+      additive: ["Oscillator", "OSC"],
+      conditional: ["Harmonizer", "HARM"],
+      focusKeyed: ["Focus Generator", "FOCUS"],
+      infusor: ["Booster", "BOOST"],
+      spacer: ["Spacer", "SPACER"],
+      forge: ["Forge", "FORGE"],
+      mutatorForge: ["Mutator Forge", "MUT. FORGE"],
+    };
+    for (const type of MODULE_TYPES as ModuleType[]) {
+      expect(META[type].name, type).toBe(names[type]![0]);
+      expect(moduleFace({ type, rarity: "common", readout: "+1" })).toContain(
+        `>${META[type].short.toUpperCase()}</text>`,
+      );
+    }
+    // The D-set glyphs: sine, diamond, bolt, chevrons around a dot, the
+    // seeded-hexagon Mutator Forge on the bare chassis.
+    expect(moduleIcon("additive")).toBe('<path d="M-12 0C-8-10-4-10 0 0C4 10 8 10 12 0"/>');
+    expect(moduleIcon("conditional")).toBe('<path d="M0-10 8 0 0 10-8 0Z"/>');
+    expect(moduleIcon("focusKeyed")).toBe('<path d="M2-13-6 1H0L-2 13 6-1H0Z"/>');
+    expect(moduleIcon("infusor")).toBe('<circle r="2.2"/><path d="M-5-7-13 0-5 7M5-7 13 0 5 7"/>');
+    expect(moduleIcon("mutatorForge")).toContain('<path d="M0-5.5 4.8-2.7V2.7L0 5.5-4.8 2.7V-2.7Z"/><circle r="1.5"/>');
+    // The Mutator Forge's chassis drops the lattice — distinct from the
+    // Module Forge's.
+    expect(moduleIcon("mutatorForge")).not.toContain("v28");
+    expect(moduleIcon("forge")).toContain("v28");
   });
 
   it("the long-readout fit picks the approved compression steps (#201)", () => {

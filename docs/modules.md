@@ -6,7 +6,7 @@ new types and game-design concepts — the engine keys and records live in code
 design thinking lives. The roster table reflects the code as of the last
 update; when a type lands, update the table in the same change.
 
-Last updated: 2026-09-21
+Last updated: 2026-10-03 (wave 1 module identity, issue #228)
 
 > **Superseded provisions (2026-09-25).** The playtest-driven board redesign ([board redesign spec](board-redesign-spec.md), ADR-0021/0022) deletes the `carrier` type, replaces pitch-as-distance with the octave-stack lattice, and rebuilds chords as register-free pitch sets with a new `spacer` wire category. This catalog describes the code as it ships today and updates when the redesigned types land; until then, its carrier, pitch, chord, and composite provisions are superseded by the board redesign spec.
 
@@ -15,10 +15,10 @@ Last updated: 2026-09-21
 | Key | Name | Nameplate | Category | Hue | Glyph | Symbol | Origin | Face readout |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `carrier` | Carrier | CARRIER | synthesizer | `hue-carrier` (white — sole hue-law exception) | circle with rays | ◉ | Granted at the origin, pinned, never rolled or shelved | `+value` |
-| `additive` | Additive Synthesizer | ADDITIVE | synthesizer | `hue-synthesizer` | plus cross | + | Starter shelf (40) and roll pool | `+value`, note `P«pitch»` |
-| `conditional` | Conditional Synthesizer | CONDITIONAL | synthesizer | `hue-synthesizer` | saltire cross | × | Roll pool only | `+value`, note `P«pitch»` |
-| `focusKeyed` | Focus-Keyed Generator | FOCUS-GEN | generator | `hue-generator` | shield with check | ⌁ | Starter shelf ("generator", 40) and roll pool | `⌁power` |
-| `infusor` | Infusor | INFUSOR | infusor | `hue-infusor` | circle with rays | ✳ | Starter shelf (40) and roll pool | `+«%»` |
+| `additive` | Oscillator | OSC | synthesizer | `hue-synthesizer` | bare sine | + | Starter shelf (40) and roll pool | `+value`, note `P«pitch»` |
+| `conditional` | Harmonizer | HARM | synthesizer | `hue-synthesizer` | diamond (muted tonehead) | × | Roll pool only | `+value`, note `P«pitch»` |
+| `focusKeyed` | Focus Generator | FOCUS | generator | `hue-generator` | bolt, bare | ⌁ | Starter shelf ("generator", 40) and roll pool | `⌁power` |
+| `infusor` | Booster | BOOST | infusor | `hue-infusor` | outward chevrons around a center dot | ✳ | Starter shelf (40) and roll pool | `+«%»` |
 | `forge` | Forge | FORGE | forge | `hue-forge` | hex prism | ⬡ | Starter shelf (80) and roll pool | `«charge»/«threshold»` (charge register) |
 
 All rollable types roll at 99% common / 0.9% uncommon / 0.1% rare
@@ -41,8 +41,11 @@ All rollable types roll at 99% common / 0.9% uncommon / 0.1% rare
 
 Composite (ADR-0014; leg naming per ADR-0020): `rate = (carrier + harmonics +
 infusors) × Π chord terms × empowerment × achievementBoost`. The carrier and
-harmonic legs are the synths' base terms; infusor uplift is named in its own
-additive leg, so the breakdown multiplies out exactly.
+harmonic legs are the synths' base terms; booster uplift (the infusor
+category's leg, renamed with issue #219) is named in its own additive leg, so
+the breakdown multiplies out exactly. Category display words follow their
+modules (oscillator, booster) per issue #219; the storage category keys are
+unchanged.
 
 ## Per-module notes
 
@@ -55,19 +58,19 @@ The face marks the pin with panel hardware (ADR-0016): a bare white lock
 top-center above the engraved level and three chassis bolts at alternating
 corners; a drag attempt refuses with a shake and the pinned sentence.
 
-### Additive Synthesizer (`additive`)
+### Oscillator (`additive`)
 The plain harmonic term: `additiveRate` = 0.05/s × amplitude. On the shelf so
-the octave chord (Carrier + adjacent Additive) is teachable in session one.
+the octave chord (Carrier + adjacent Oscillator) is teachable in session one.
 
-### Conditional Synthesizer (`conditional`)
+### Harmonizer (`conditional`)
 Amplitude term plus `conditionalPairBonus` = 0.1 per chord pair it
 participates in. Roll-only — the shelf stays four offers.
 
-### Focus-Keyed Generator (`focusKeyed`)
+### Focus Generator (`focusKeyed`)
 Emits charge at power while flow is live and window time remains; adjacent
 receivers only (never charges generators, never itself).
 
-### Infusor (`infusor`)
+### Booster (`infusor`)
 Empowers neighbors' amplitude, not the composite directly. Charge it to
 sharpen its bonus (diminishing-returns curve).
 
@@ -90,11 +93,15 @@ above or the readout below.
 The `moduleSymbol` characters (◉ + × ⌁ ✳ ⬡) are text fallbacks, not the
 face artwork.
 
-Known flag: the infusor's glyph is a near-twin of the Carrier's — both
-are a circle with eight rays, differing only in radii — while the two
-wear cyan and white. ADR-0016 pairs every hue with a glyph, so
-differentiate the infusor glyph before ship; log sketch iterations in
-[Concepts](#concepts).
+The D-set glyph family (issue #219, lifted from
+`prototype/module-identity-glyphs`) settled the roster's marks: the
+Oscillator's bare sine, the Harmonizer's diamond, the generators' bolt
+(corner marks distinguish the Note/Goal generators when they land), the
+Booster's outward chevrons around a center dot, and the Mutator Forge's
+seeded-hexagon core on the Forge chassis. Two spacers' specials: the board
+face clips as a hexagonal ring window (chassis minus inner hexagon,
+nameplate at y −40), and the tray tile wears an unfilled inner hexagon
+(`inventoryTileSvg` special case) instead of the wire glyph.
 
 Design intent: hand-drawn glyphs, one per type, readable at board scale and
 at inventory-tile scale. Log sketch iterations and rationale in

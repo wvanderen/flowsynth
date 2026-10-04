@@ -153,7 +153,7 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
           val(synthSlot(id, "chd"), slots.chd!) +
           `<span class="rd-note">${synthChordNote(state, snapshot, contribution, module)}</span>` +
           `</div>` +
-          `<div class="rd-leg"><span class="rd-leg-name">Infusor</span>` +
+          `<div class="rd-leg"><span class="rd-leg-name">Booster</span>` +
           val(synthSlot(id, "inf"), slots.inf!) +
           `</div>` +
           `<div class="rd-leg"><span class="rd-leg-name">Charge</span>` +
