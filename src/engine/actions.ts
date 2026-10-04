@@ -11,6 +11,7 @@ import { logSessionPractice } from "./habits";
 import { plannedTargetHit } from "./records";
 import { rollGoalOccurrences } from "./goals";
 import { syncAchievements } from "./achievements";
+import { syncChordDiscoveries } from "./library";
 import { freshAccounting } from "./trust";
 import type { GameState, Hex, ModuleInstance, MutatorInstance, Rarity, SessionReflection, ShelfType } from "./types";
 
@@ -44,9 +45,13 @@ function fail(reason: string): ActionResult {
   return { ok: false, reason };
 }
 
-// The action-boundary check (ADR-0015): run after any state-mutating action
-// that can flip a feat. Returns the ids for the result's unlocked field.
-function checkAchievements(state: GameState): string[] {
+// The action-boundary check (ADR-0015 + issue #230): the two permanent
+// live ledgers sync together after any state-mutating action — feats and
+// chord discoveries both read the board they sit behind. Returns the feats'
+// ids for the result's unlocked field; discoveries carry no toast of their
+// own — the board's readout names the chord the moment it forms.
+function checkUnlocks(state: GameState): string[] {
+  syncChordDiscoveries(state);
   return syncAchievements(state).map((def) => def.id);
 }
 
@@ -282,7 +287,7 @@ export function buyCell(state: GameState, pos: Hex): ActionResult {
   state.cells.push(pos);
   state.cellsBought++;
   if (gateOwed) state.gatedRows.push(row);
-  return { ok: true, unlocked: checkAchievements(state) };
+  return { ok: true, unlocked: checkUnlocks(state) };
 }
 
 // The activation ladder's purchase (ADR-0013): the rung price is shared —
@@ -336,7 +341,7 @@ export function upgradeModuleLevels(state: GameState, id: string, want: number |
   state.nous -= spent;
   module.invested += spent;
   module.level += bought;
-  return { ok: true, bulk: { levels: bought, modules: 1, spent }, unlocked: checkAchievements(state) };
+  return { ok: true, bulk: { levels: bought, modules: 1, spent }, unlocked: checkUnlocks(state) };
 }
 
 // The spacer is silent wire (#193): its level buys nothing, so every bulk
@@ -406,7 +411,7 @@ export function upgradeAll(state: GameState, want: number | "max"): ActionResult
     module.level += count;
   }
   state.nous -= bulk.spent;
-  return { ok: true, bulk, unlocked: checkAchievements(state) };
+  return { ok: true, bulk, unlocked: checkUnlocks(state) };
 }
 
 // The sweep's shape without touching state (issue #195): the cluster's
@@ -500,7 +505,7 @@ export function combine(state: GameState, id: string, partnerId?: string): Actio
   melt.pos = null;
   state.modules = state.modules.filter((m) => m.id !== melt.id);
   state.combinations++;
-  return { ok: true, refund: preview.refund, unlocked: checkAchievements(state) };
+  return { ok: true, refund: preview.refund, unlocked: checkUnlocks(state) };
 }
 
 export function placeModule(state: GameState, id: string, pos: Hex): ActionResult {
@@ -516,7 +521,7 @@ export function placeModule(state: GameState, id: string, pos: Hex): ActionResul
   if (occupant) occupant.pos = module.pos;
   module.pos = pos;
   // Layout changes move the chord multiplier (Power chord).
-  return { ok: true, unlocked: checkAchievements(state) };
+  return { ok: true, unlocked: checkUnlocks(state) };
 }
 
 export function returnModule(state: GameState, id: string): ActionResult {
@@ -546,7 +551,7 @@ export function reshapeCells(state: GameState, next: Hex[]): ActionResult {
   if (next.some((cell) => !positionInRange(state, cell))) return fail("The board must stay inside the board's lattice.");
   if (!isConnected(next)) return fail("The board must stay connected.");
   state.cells = next;
-  return { ok: true, unlocked: checkAchievements(state) };
+  return { ok: true, unlocked: checkUnlocks(state) };
 }
 
 export function chooseRoll(state: GameState, offerId: string, candidateId: string): ActionResult {
@@ -559,7 +564,7 @@ export function chooseRoll(state: GameState, offerId: string, candidateId: strin
   state.bankedRolls.splice(index, 1);
   state.modules.push(createModule(state, candidate.type, candidate.rarity));
   // A taken candidate can be the first rare (Fine china) or Forge roll.
-  return { ok: true, unlocked: checkAchievements(state) };
+  return { ok: true, unlocked: checkUnlocks(state) };
 }
 
 // The Arete Catalog's sheet purchases (ADR-0040 as amended by ADR-0044,
@@ -600,7 +605,7 @@ export function breakHorizon(state: GameState): ActionResult {
   if (state.arete < BALANCE.horizonBreakCost) return fail("Not enough Arete.");
   state.arete -= BALANCE.horizonBreakCost;
   state.horizonBroken = true;
-  return { ok: true, unlocked: checkAchievements(state) };
+  return { ok: true, unlocked: checkUnlocks(state) };
 }
 
 // The board-side Row unlock (ADR-0044, #174's approved surface): one Arete
@@ -792,5 +797,5 @@ export function setBendShift(state: GameState, id: string, shift: number): Actio
     return fail("That shift is outside this rarity's set.");
   }
   module.shift = shift;
-  return { ok: true, unlocked: checkAchievements(state) };
+  return { ok: true, unlocked: checkUnlocks(state) };
 }

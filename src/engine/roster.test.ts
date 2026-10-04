@@ -418,7 +418,7 @@ describe("the v8 save surface", () => {
     const s = fresh();
     const gen = give(s, "focusKeyed", hex(2, 0));
     gen.reserve = 42;
-    s.chordDiscovery["Major triad"] = { formed: true, firstFormedAt: 1000, rootsHeard: 2 };
+    s.chordDiscovery["Major triad"] = { formed: true, firstFormedAt: 1000, rootsHeard: 2, roots: [0, 7] };
     const loaded = deserialize(serialize(s, 7));
     expect(loaded.state!.chordDiscovery["Major triad"]?.formed).toBe(true);
     expect(loaded.state!.modules.find((m) => m.type === "focusKeyed")?.reserve).toBeCloseTo(42, 9);

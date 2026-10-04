@@ -72,6 +72,7 @@ export type ModalKind =
   | "arete"
   | "forge"
   | "achievements"
+  | "library"
   | "export"
   | "import"
   | "reset"

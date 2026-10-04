@@ -499,14 +499,19 @@ export interface GameState {
   nextId: number;
 }
 
-// One chord class's discovery record (#218): keyed by the class name in the
-// save's v8 surface. `formed` flips with the first live formation (the
-// would-form ghosts never discover); `firstFormedAt` stamps it (epoch ms);
-// `rootsHeard` counts the distinct roots the class has rung.
+// One chord class's discovery record (#218, the v8 surface): keyed by the
+// class name in the save's v8 surface. `formed` flips with the first live
+// formation (the would-form ghosts never discover); `firstFormedAt` stamps
+// it (epoch ms); `rootsHeard` counts the distinct roots the class has rung.
 export interface ChordDiscovery {
   formed: boolean;
   firstFormedAt: number;
   rootsHeard: number;
+  // The distinct roots themselves (issue #230, wave 3's growth of the
+  // surface) — the truth `rootsHeard` counts, grown by the discovery sync
+  // and never rewritten. Lenient-defaulted to [] at load, with a save's
+  // carried count respected so history never shrinks.
+  roots: number[];
 }
 
 // A recognized chord instance group (ADR-0021/0022): one entry per matched
@@ -556,13 +561,14 @@ export interface Contribution {
 }
 
 // The live rate breakdown (§4; leg naming per ADR-0020 as amended by
-// ADR-0022 and ADR-0036): synths / infusors / empowerment / achievements →
-// rate. Chords are local: each synthesizer's term carries its own chord
-// factor, so the synths leg is every synthesizer's term with its chords in,
-// the infusor uplift rides chord-weighted beside it, and the lines always
-// multiply out: rate = (synths + infusors) × empowerment × achievementBoost.
-// The chord terms themselves surface as names and multipliers
-// (namedChords), never as a board-wide multiplier claim.
+// ADR-0022 and ADR-0036): synths / infusors / empowerment / achievements /
+// discoveries → rate. Chords are local: each synthesizer's term carries its
+// own chord factor, so the synths leg is every synthesizer's term with its
+// chords in, the infusor uplift rides chord-weighted beside it, and the
+// lines always multiply out: rate = (synths + infusors) × empowerment ×
+// achievementBoost × discoveryBoost. The chord terms themselves surface as
+// names and multipliers (namedChords), never as a board-wide multiplier
+// claim.
 export interface RateSnapshot {
   synths: number;
   infusors: number;
@@ -570,6 +576,11 @@ export interface RateSnapshot {
   namedChords: NamedChordTerm[];
   empowerment: number;
   achievementBoost: number;
+  // The chord library's permanent discovery bonus (issue #230): each
+  // discovered class adds BALANCE.discoveryBonusPerClass into one global
+  // leg, riding every oscillator's final value beside the achievements
+  // boost. Nous-rate only.
+  discoveryBoost: number;
   rate: number;
   forgeRate: number;
   // The Mutator Forge branch's progress rate (ADR-0043, issue #198): the

@@ -1,6 +1,7 @@
 import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isVoiceType } from "./constants";
 import { analyzeChords, partitionVoices, type Singer } from "./chords";
 import { achievementBoostOf } from "./achievements";
+import { discoveryBoostOf } from "./library";
 import { adjacent, sameHex } from "./hex";
 import { octaveRowOf } from "./lattice";
 import type { Contribution, DeployedModule, GameState, Hex, ModuleInstance, MutatorFamily, MutatorInstance, Rarity, RateSnapshot } from "./types";
@@ -349,8 +350,8 @@ function infusorBonusAt(
 // ADR-0049; leg naming per ADR-0020): every effect lands on the producer
 // it touches, and the board's rate is the sum of the modules' final
 // figures:
-//   value(s)  = synthRate·power·chordFactor·(1+infusor)·charge·achievementBoost
-//   rate      = Σ value(s) = (synths + boosters) × empowerment × achievementBoost
+//   value(s)  = synthRate·power·chordFactor·(1+infusor)·charge·achievementBoost·discoveryBoost
+//   rate      = Σ value(s) = (synths + boosters) × empowerment × achievementBoost × discoveryBoost
 // Every oscillator shares one base rate scaled by rarityPower^level — one
 // unified leg, no carrier/harmonics split. Chords are local (ADR-0036):
 // the formation's named instance product × its quality Q (ADR-0049) rides
@@ -367,6 +368,7 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
   const contributions = new Map<string, Contribution>();
   const chargeStrength = new Map<string, number>();
   const achievementBoost = achievementBoostOf(state);
+  const discoveryBoost = discoveryBoostOf(state);
   const net = relayNet(state, flow);
   // deployed() filters pos non-null; the cast carries that through.
   const placed = deployed(state) as DeployedModule[];
@@ -481,7 +483,7 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
     // The silent voice sings nothing of its own: its factor is display
     // only — the muted participant's read. The producers' value carries
     // the whole chain.
-    const value = silent ? 0 : base * (1 + localBonus) * chargeTerm * achievementBoost;
+    const value = silent ? 0 : base * (1 + localBonus) * chargeTerm * achievementBoost * discoveryBoost;
     if (!silent) {
       synthsLeg += base;
       boosters += base * localBonus;
@@ -503,12 +505,13 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
   }
 
   const amplitude = synthsLeg + boosters;
-  // The boost multiplies every module's final value; the empowerment leg
-  // divides it back out so the breakdown multiplies out exactly:
-  // rate = (synths + boosters) × empowerment × achievementBoost. The
-  // Blaster's conversion rides inside its value, so a converting Blaster
-  // reads as empowerment on its own terms — the leg split stays exact.
-  const empowerment = amplitude > EPS ? rate / (amplitude * achievementBoost) : 1;
+  // The boosts multiply every module's final value; the empowerment leg
+  // divides them back out so the breakdown multiplies out exactly:
+  // rate = (synths + boosters) × empowerment × achievementBoost ×
+  // discoveryBoost. The Blaster's conversion rides inside its value, so a
+  // converting Blaster reads as empowerment on its own terms — the leg
+  // split stays exact.
+  const empowerment = amplitude > EPS ? rate / (amplitude * achievementBoost * discoveryBoost) : 1;
 
   return {
     synths: synthsLeg,
@@ -517,6 +520,7 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
     namedChords: analysis.namedChords,
     empowerment,
     achievementBoost,
+    discoveryBoost,
     rate,
     forgeRate,
     mutatorForgeRate,

@@ -6,8 +6,9 @@
 import { accumulatorFill, claimOf, horizonReached } from "../engine/accumulator";
 import { ACHIEVEMENTS } from "../engine/achievements";
 import { catalogOpen } from "../engine/catalog";
-import { BALANCE, CATEGORY_OF, isOscillatorType } from "../engine/constants";
+import { BALANCE, CATEGORY_OF, isOscillatorType, NAMED_CHORDS } from "../engine/constants";
 import { chargedFactor, hostPower } from "../engine/economy";
+import { discoveryCount } from "../engine/library";
 import { noteNameOf } from "../engine/lattice";
 import type { Contribution, GameState, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
@@ -38,6 +39,7 @@ interface SynthLegs {
   chargeFactor: number;
   chargeStrength: number;
   boost: number;
+  discovery: number;
 }
 
 // One oscillator's decomposition, straight off its contribution: the legs
@@ -63,6 +65,7 @@ function synthLegsOf(state: GameState, snapshot: RateSnapshot, contribution: Con
     chargeFactor: contribution.chargeFactor,
     chargeStrength: contribution.chargeStrength,
     boost: snapshot.achievementBoost,
+    discovery: snapshot.discoveryBoost,
   };
 }
 
@@ -179,6 +182,8 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
           `</div>` +
           `<div class="rd-leg"><span class="rd-leg-name">Achievements</span>` +
           `<span class="rd-val mono">+${Math.round((snapshot.achievementBoost - 1) * 100)}%</span></div>` +
+          `<div class="rd-leg"><span class="rd-leg-name">Discoveries</span>` +
+          `<span class="rd-val mono">+${Math.round((snapshot.discoveryBoost - 1) * 100)}%</span></div>` +
           `</div></details>`,
       );
     } else {
@@ -273,6 +278,20 @@ export function featsChipHtml(count: number): string {
   return `<button class="feats-chip" id="feats-chip" title="Achievements — every feat, and how close the next one is">${FEATS_SVG}<span class="mono">${count}/${ACHIEVEMENTS.length} feats</span></button>`;
 }
 
+// ── The chord library chip (§7, issue #230) ─────────────────────────────
+// The ledger strip's neighbor beside the feats chip, opening the chord
+// library's field guide — the discovery ledger's one door. Exact control
+// shape is implementation detail; this rides the feats chip's own pattern.
+export const LIBRARY_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+  <path d="M12 2.5 20.2 7.25v9.5L12 21.5 3.8 16.75v-9.5Z"/>
+  <path d="M12 7.2 16.2 9.6v4.8L12 16.8l-4.2-2.4V9.6Z"/>
+</svg>`;
+
+export function libraryChipHtml(state: GameState): string {
+  const count = discoveryCount(state);
+  return `<button class="library-chip" id="library-chip" title="Chord library — the field guide of chord classes">${LIBRARY_SVG}<span class="mono">${count}/${NAMED_CHORDS.length} chords</span></button>`;
+}
+
 // ── The Arete Catalog chip (§7, issue #197) ─────────────────────────────
 // The board-ledger chip that appears with the first banked Arete and opens
 // the catalog sheet — the one door to what no board affordance carries.
@@ -301,15 +320,18 @@ export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
   if (!host) return;
   const { state } = app;
   const feats = unlockedCount(state);
+  const discoveries = discoveryCount(state);
   // The Catalog chip rides the ledger from the first banked Arete
   // (issue #197); its balance joins the structural key, so a purchase or a
   // prestige rebuilds the strip the moment the figure moves.
   const chip = catalogOpen(state) ? areteChipHtml(state) : "";
   // Structural key: the deployed roster (deployedRosterKey — a move changes
-  // a note name, an upgrade a base figure) plus the feats count rebuilds
-  // the strip; every tick-moving value updates in place through the live
-  // slots, so an open popover or an expanded row survives the clock.
-  const key = `${state.arete}:${feats}:${deployedRosterKey(state)}`;
+  // a note name, an upgrade a base figure) plus the feats count and the
+  // discovery count (the strip carries both ledgers' chips and the rate
+  // details' static boost legs) rebuilds the strip; every tick-moving value
+  // updates in place through the live slots, so an open popover or an
+  // expanded row survives the clock.
+  const key = `${state.arete}:${feats}:${discoveries}:${deployedRosterKey(state)}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.innerHTML = `<div class="prod-ledger" role="group" aria-label="Production">
@@ -321,10 +343,12 @@ export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
         <div class="prod-cell prod-cell-session"><span class="prod-label">Session</span><strong class="mono" data-live="session"></strong></div>
       </div>
       ${chip}
-      ${featsChipHtml(feats)}`;
+      ${featsChipHtml(feats)}
+      ${libraryChipHtml(state)}`;
     document.getElementById("feats-chip")?.addEventListener("click", () => app.openModal("achievements"));
     document.getElementById("rate-cell")?.addEventListener("click", () => app.openModal("rate"));
     document.getElementById("arete-chip")?.addEventListener("click", () => app.openModal("arete"));
+    document.getElementById("library-chip")?.addEventListener("click", () => app.openModal("library"));
     // A synth row's tap selects its module: the hex wears the selected
     // stroke and the bloom opens over it — the details name the place,
     // the board shows it.
