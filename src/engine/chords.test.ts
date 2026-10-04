@@ -7,38 +7,59 @@ import { fresh, give, sumSynthValues } from "./fixtures";
 import { hex } from "./hex";
 import { pitchOf } from "./lattice";
 
-// The chord model (ADR-0021/0022, amended by ADR-0036): register-free pitch
-// sets over connected clusters of synthesizers — any voicing, any octave.
-// Chord bonuses are LOCAL: each instance multiplies only its member
-// synthesizers, so overlapping and repeated instances stack on their voices
-// while distant modules are untouched. The spacer conducts adjacency through
-// chains of wired cells; bridged chords match by pitch content. Adjacency
-// alone is chordless: the anonymous pair bonus is gone.
+// The chord model (ADR-0021/0022, extended by ADR-0048/0049): register-free
+// pitch sets over connected formations of oscillators and silent voices —
+// any voicing, any octave. Chord bonuses are LOCAL: each instance multiplies
+// only its member voices, so overlapping and repeated instances stack on
+// their voices while distant modules are untouched. The spacer conducts
+// adjacency through chains of wired cells; bridged chords match by pitch
+// content. Adjacency alone is chordless: the anonymous pair bonus is gone.
+// Every formation scores one quality Q (ADR-0049) that rides each member's
+// factor exactly once.
 //
 // Lattice recap (see lattice.test.ts): (0,0) is C4; (±1, 0) steps a fifth;
 // (0, ±1) steps an octave. The opening board is C4 (0,0), G4 (1,0), C5 (0,1)
 // with the opening synthesizer pre-placed at C4.
 
+// The formation quality for the tensionless two-class formations these
+// tests build ({0,7}, {0,10}, {0,2}): complexity alone, tension forgiven.
+const q2 = 1 + BALANCE.complexityRate;
+// The three-class triads ({0,3,7}, {0,4,7}, {0,2,7}): the small tensions
+// are forgiven whole to the named formation.
+const q3 = 1 + BALANCE.complexityRate * 2;
+// Raw named-instance factors — the formation's Q multiplies on top, once.
 const fifth = 1 + 0.3;
 const octave = 1 + 0.15;
 const flatSeventh = 1 + 0.45;
+const suspendedFourth = 1 + 0.55;
 
 // A synthesizer's final ν/s: base × chord factor × infusor × charge ×
 // achievements (charge and achievements at unity in these fixtures).
 const voiceValue = (power: number, factor: number): number => BALANCE.synthRate * power * factor;
 
 describe("the named vocabulary is pitch-class sets", () => {
-  it("spells the launch vocabulary with bonuses tracking the wire ladder", () => {
+  it("spells #218's eleven classes with bonuses tracking the wire ladder", () => {
     expect(NAMED_CHORDS.map((c) => `${c.name}:${c.intervals.join(",")}`)).toEqual([
       "Octave:0,0",
       "Fifth:0,7",
       "Flat seventh:0,10",
+      "Suspended fourth:0,5,7",
       "Minor triad:0,3,7",
+      "Diminished triad:0,3,6",
+      "Augmented triad:0,4,8",
       "Major triad:0,4,7",
+      "Minor seventh:0,3,7,10",
+      "Dominant seventh:0,4,7,10",
+      "Major seventh:0,4,7,11",
     ]);
-    for (let i = 1; i < NAMED_CHORDS.length; i++) {
-      expect(NAMED_CHORDS[i]!.bonus).toBeGreaterThan(NAMED_CHORDS[i - 1]!.bonus);
-    }
+    // Harder chords cost more board and earn bigger multipliers — within
+    // each tier; the six new classes ride the tuning table's tiers.
+    expect(NAMED_CHORDS.find((c) => c.name === "Major seventh")!.bonus).toBeGreaterThan(
+      NAMED_CHORDS.find((c) => c.name === "Major triad")!.bonus,
+    );
+    expect(NAMED_CHORDS.find((c) => c.name === "Dominant seventh")!.bonus).toBeGreaterThan(
+      NAMED_CHORDS.find((c) => c.name === "Minor triad")!.bonus,
+    );
   });
 });
 
@@ -56,11 +77,12 @@ describe("register-free recognition", () => {
     const g = give(s, "additive", hex(1, 0)); // G4
     const snapshot = computeRates(s, true);
     expect(snapshot.namedChords.map((c) => `${c.name}×${c.instances}`)).toEqual(["Fifth×1"]);
-    // Local: both members carry ×1.3 and the rate is the sum of their
-    // final figures — not the bare terms times a board-wide multiplier.
-    expect(snapshot.contributions.get("m1")?.value).toBeCloseTo(voiceValue(1, fifth), 9);
-    expect(snapshot.contributions.get(g.id)?.value).toBeCloseTo(voiceValue(1, fifth), 9);
-    expect(snapshot.rate).toBeCloseTo(2 * BALANCE.synthRate * fifth, 9);
+    // Local: both members carry ×1.3 × the pair's Q and the rate is the
+    // sum of their final figures — not the bare terms times a board-wide
+    // multiplier.
+    expect(snapshot.contributions.get("m1")?.value).toBeCloseTo(voiceValue(1, fifth * q2), 9);
+    expect(snapshot.contributions.get(g.id)?.value).toBeCloseTo(voiceValue(1, fifth * q2), 9);
+    expect(snapshot.rate).toBeCloseTo(2 * BALANCE.synthRate * fifth * q2, 9);
   });
 
   it("the octave stacks vertically: C4 · C5 form an Octave", () => {
@@ -79,16 +101,17 @@ describe("register-free recognition", () => {
     const snapshot = computeRates(s, true);
     const names = snapshot.namedChords.map((c) => `${c.name}×${c.instances}`).sort();
     // Register-free: C4 pairs with each G — a fifth and a twelfth are the
-    // same pitch content — while the G pair stacks its own octave.
+    // same pitch content — while the G pair stacks its own octave. One
+    // formation, one Q.
     expect(names).toEqual(["Fifth×2", "Octave×1"]);
-    // Every voice carries its own stacked factor: C4 sings two fifths, each
-    // G a fifth and their octave.
+    // Every voice carries its own stacked factor × the formation's Q: C4
+    // sings two fifths, each G a fifth and their octave.
     const factors = [...snapshot.contributions.values()]
       .filter((c) => c.type === "additive")
       .map((c) => c.chordFactor)
       .sort();
-    expect(factors).toEqual([fifth * octave, fifth * octave, fifth ** 2]);
-    expect(snapshot.rate).toBeCloseTo(BALANCE.synthRate * (fifth ** 2 + 2 * fifth * octave), 9);
+    expect(factors).toEqual([fifth * octave * q2, fifth * octave * q2, fifth ** 2 * q2]);
+    expect(snapshot.rate).toBeCloseTo(BALANCE.synthRate * (fifth ** 2 + 2 * fifth * octave) * q2, 9);
   });
 
   it("adjacency alone is chordless: bridged non-matching voices pay nothing", () => {
@@ -139,21 +162,27 @@ describe("instances stack on their members", () => {
     const far = give(s, "additive", hex(5, 0)); // B6 — its own island, chordless
     const snapshot = computeRates(s, true);
     // Register-free matching is generous (the accepted risk): as pitch
-    // classes C is D's flat seventh, whatever octave either sits in.
+    // classes C is D's flat seventh, whatever octave either sits in. The
+    // bridged trio's classes {0,2,7}: the whole-tone pair's 0.2 is forgiven
+    // whole to the named formation.
     const names = snapshot.namedChords.map((c) => `${c.name}×${c.instances}`).sort();
-    expect(names).toEqual(["Fifth×1", "Fifth×1", "Flat seventh×1"]);
-    // Each cluster voice stacks the factors of the two instances it sings
-    // in: C (fifth + flat seventh), G (both fifths), D (fifth + flat
-    // seventh).
-    expect(snapshot.contributions.get("m1")?.chordFactor).toBeCloseTo(fifth * flatSeventh, 9);
-    expect(snapshot.contributions.get("m1")?.chordTerms).toBe(2);
-    expect(snapshot.contributions.get("m2")?.chordFactor).toBeCloseTo(fifth ** 2, 9);
-    expect(snapshot.contributions.get("m2")?.chordTerms).toBe(2);
-    expect(snapshot.contributions.get("m3")?.chordFactor).toBeCloseTo(fifth * flatSeventh, 9);
-    expect(snapshot.contributions.get("m3")?.chordTerms).toBe(2);
+    // The 11-class vocabulary: the quartal stack is a Suspended fourth on
+    // G — every cluster voice sings it.
+    expect(names).toEqual(["Fifth×1", "Fifth×1", "Flat seventh×1", "Suspended fourth×1"]);
+    const qTrio = 1 + BALANCE.complexityRate * 2;
+    // Each cluster voice stacks the factors of the instances it sings in ×
+    // the trio's Q: C and D (fifth + flat seventh + sus fourth), G (both
+    // fifths + sus fourth).
+    expect(snapshot.contributions.get("m1")?.chordFactor).toBeCloseTo(fifth * flatSeventh * suspendedFourth * qTrio, 9);
+    expect(snapshot.contributions.get("m1")?.chordTerms).toBe(3);
+    expect(snapshot.contributions.get("m2")?.chordFactor).toBeCloseTo(fifth ** 2 * suspendedFourth * qTrio, 9);
+    expect(snapshot.contributions.get("m2")?.chordTerms).toBe(3);
+    expect(snapshot.contributions.get("m3")?.chordFactor).toBeCloseTo(fifth * flatSeventh * suspendedFourth * qTrio, 9);
+    expect(snapshot.contributions.get("m3")?.chordTerms).toBe(3);
     // The distant module is unchanged: no factor, no term, bare value.
     expect(far.pos).not.toBeNull();
     expect(snapshot.contributions.get(far.id)?.chordFactor).toBe(1);
+    expect(snapshot.contributions.get(far.id)?.formationQ).toBe(1);
     expect(snapshot.contributions.get(far.id)?.chordTerms).toBe(0);
     expect(snapshot.contributions.get(far.id)?.value).toBeCloseTo(BALANCE.synthRate, 9);
     // The displayed figures sum to the board rate within rounding.
@@ -168,10 +197,10 @@ describe("instances stack on their members", () => {
     const names = snapshot.namedChords.map((c) => `${c.name}×${c.instances}`).sort();
     // Fifth×2: C pairs with each G. Octave×1: the G pair.
     expect(names).toEqual(["Fifth×2", "Octave×1"]);
-    // C4 sings two fifths; each G its fifth and their octave.
-    expect(snapshot.contributions.get("m1")?.chordFactor).toBeCloseTo(fifth ** 2, 9);
+    // C4 sings two fifths; each G its fifth and their octave — one Q.
+    expect(snapshot.contributions.get("m1")?.chordFactor).toBeCloseTo(fifth ** 2 * q2, 9);
     for (const id of ["m2", "m3"]) {
-      expect(snapshot.contributions.get(id)?.chordFactor).toBeCloseTo(fifth * octave, 9);
+      expect(snapshot.contributions.get(id)?.chordFactor).toBeCloseTo(fifth * octave * q2, 9);
     }
   });
 
@@ -182,12 +211,12 @@ describe("instances stack on their members", () => {
     give(s, "additive", hex(6, 0)); // F♯7 — …ringing its own Fifth
     const snapshot = computeRates(s, true);
     expect(snapshot.namedChords.map((c) => c.name)).toEqual(["Fifth", "Fifth"]);
-    // Each cluster's pair carries ×1.3 locally; no voice carries the other
-    // cluster's factor.
+    // Each cluster's pair carries ×1.3 × its own Q locally; no voice
+    // carries the other cluster's factor or quality.
     for (const id of ["m1", "m2", "m3", "m4"]) {
-      expect(snapshot.contributions.get(id)?.chordFactor).toBeCloseTo(fifth, 9);
+      expect(snapshot.contributions.get(id)?.chordFactor).toBeCloseTo(fifth * q2, 9);
     }
-    expect(snapshot.rate).toBeCloseTo(4 * BALANCE.synthRate * fifth, 9);
+    expect(snapshot.rate).toBeCloseTo(4 * BALANCE.synthRate * fifth * q2, 9);
   });
 
   it("a disconnected synthesizer is unchanged by every chord on the board", () => {
@@ -212,9 +241,9 @@ describe("the spacer conducts", () => {
     give(s, "additive", hex(-2, 2)); // B♭4 — one wire cell out
     const snapshot = computeRates(s, true);
     expect(snapshot.namedChords.map((c) => `${c.name}×${c.instances}`)).toEqual(["Flat seventh×1"]);
-    expect(snapshot.contributions.get("m1")?.chordFactor).toBeCloseTo(flatSeventh, 9);
-    expect(snapshot.contributions.get("m3")?.chordFactor).toBeCloseTo(flatSeventh, 9);
-    expect(snapshot.rate).toBeCloseTo(2 * BALANCE.synthRate * flatSeventh, 9);
+    expect(snapshot.contributions.get("m1")?.chordFactor).toBeCloseTo(flatSeventh * q2, 9);
+    expect(snapshot.contributions.get("m3")?.chordFactor).toBeCloseTo(flatSeventh * q2, 9);
+    expect(snapshot.rate).toBeCloseTo(2 * BALANCE.synthRate * flatSeventh * q2, 9);
   });
 
   it("chains of wired cells conduct — a minor triad across two wires", () => {
@@ -227,11 +256,12 @@ describe("the spacer conducts", () => {
     const names = snapshot.namedChords.map((c) => `${c.name}×${c.instances}`).sort();
     // The adjacent C · G pair rings its Fifth alongside the bridged triad —
     // and register-free, the triad root C holds C4, G4, and E♭4, so both C4
-    // and G4 sing in the Fifth and the triad; E♭4 only the triad.
+    // and G4 sing in the Fifth and the triad; E♭4 only the triad. One
+    // formation, one Q.
     expect(names).toEqual(["Fifth×1", "Minor triad×1"]);
-    expect(snapshot.contributions.get("m1")?.chordFactor).toBeCloseTo(fifth * 1.6, 9);
-    expect(snapshot.contributions.get("m2")?.chordFactor).toBeCloseTo(fifth * 1.6, 9);
-    expect(snapshot.contributions.get("m5")?.chordFactor).toBeCloseTo(1.6, 9);
+    expect(snapshot.contributions.get("m1")?.chordFactor).toBeCloseTo(fifth * 1.6 * q3, 9);
+    expect(snapshot.contributions.get("m2")?.chordFactor).toBeCloseTo(fifth * 1.6 * q3, 9);
+    expect(snapshot.contributions.get("m5")?.chordFactor).toBeCloseTo(1.6 * q3, 9);
   });
 
   it("a major triad costs three wires — the ladder's top rung", () => {
@@ -244,7 +274,7 @@ describe("the spacer conducts", () => {
     const snapshot = computeRates(s, true);
     const names = snapshot.namedChords.map((c) => `${c.name}×${c.instances}`).sort();
     expect(names).toEqual(["Fifth×1", "Major triad×1"]);
-    expect(snapshot.contributions.get("m1")?.chordFactor).toBeCloseTo(fifth * 1.75, 9);
+    expect(snapshot.contributions.get("m1")?.chordFactor).toBeCloseTo(fifth * 1.75 * q3, 9);
   });
 
   it("the spacer never joins a pitch set and never produces", () => {
@@ -266,7 +296,7 @@ describe("the spacer conducts", () => {
     // content rings a flat seventh (D's root, C a register-free ♭7 below).
     const bridged = computeRates(s, true);
     expect(bridged.namedChords.map((c) => `${c.name}×${c.instances}`)).toEqual(["Flat seventh×1"]);
-    expect(bridged.contributions.get("m1")?.chordFactor).toBeCloseTo(flatSeventh, 9);
+    expect(bridged.contributions.get("m1")?.chordFactor).toBeCloseTo(flatSeventh * q2, 9);
     // Without the wire they are two islands: adjacency gone, chord gone —
     // the wire was the only conductor, and both voices fall back to bare.
     wire.pos = null;
@@ -277,53 +307,35 @@ describe("the spacer conducts", () => {
   });
 });
 
-describe("conditional synthesizers", () => {
-  it("pay their base term plus 10% per chord instance they belong to", () => {
+describe("the silent voice sings nothing of its own (the Conditional's mechanic is dead)", () => {
+  it("the Harmonizer produces zero while its uplift rides the members", () => {
     const s = fresh();
-    give(s, "conditional", hex(1, 0)); // G4 — one Fifth instance with C4
+    const harm = give(s, "harmonizer", hex(1, 0)); // G4 — one Fifth instance with C4
     const snapshot = computeRates(s, true);
-    expect(snapshot.contributions.get("m2")?.chordTerms).toBe(1);
-    // The conditional's own bonus multiplies inside its term, and the
-    // chord's ×1.3 rides it locally — per instance bonus retained.
-    expect(snapshot.contributions.get("m2")?.value).toBeCloseTo(
-      BALANCE.synthRate * (1 + BALANCE.conditionalChordBonus) * fifth,
-      9,
-    );
-    expect(snapshot.contributions.get("m1")?.value).toBeCloseTo(BALANCE.synthRate * fifth, 9);
-    expect(snapshot.rate).toBeCloseTo(BALANCE.synthRate * fifth * (2 + BALANCE.conditionalChordBonus), 9);
+    expect(snapshot.contributions.get(harm.id)?.chordTerms).toBe(1);
+    expect(snapshot.contributions.get(harm.id)?.value).toBe(0);
+    // The chord's ×1.3 rides the producer with the formation's Q; the
+    // silent voice earns it nothing beyond its (level-0) uplift.
+    expect(snapshot.contributions.get("m1")?.value).toBeCloseTo(BALANCE.synthRate * fifth * q2, 9);
+    expect(snapshot.rate).toBeCloseTo(BALANCE.synthRate * fifth * q2, 9);
   });
 
-  it("count every instance they sing in — the bridge rings twice", () => {
+  it("stay plain amplitude when chordless — and never read as producers", () => {
     const s = fresh();
-    give(s, "conditional", hex(1, 0)); // G4
-    give(s, "additive", hex(2, 0)); // D5 — conditional bridges two Fifths
+    const harm = give(s, "harmonizer", hex(3, 0)); // A5 — its own island
     const snapshot = computeRates(s, true);
-    expect(snapshot.contributions.get("m2")?.chordTerms).toBe(2);
-    expect(snapshot.contributions.get("m2")?.chordFactor).toBeCloseTo(fifth ** 2, 9);
-    expect(snapshot.contributions.get("m2")?.value).toBeCloseTo(
-      BALANCE.synthRate * (1 + 2 * BALANCE.conditionalChordBonus) * fifth ** 2,
-      9,
-    );
-    // The conditional's own bonus rides inside its displayed figure — the
-    // figures still sum to the board rate.
-    expect(sumSynthValues(snapshot)).toBeCloseTo(snapshot.rate, 9);
+    expect(snapshot.contributions.get(harm.id)?.chordTerms).toBe(0);
+    expect(snapshot.contributions.get(harm.id)?.chordFactor).toBe(1);
+    expect(snapshot.contributions.get(harm.id)?.formationQ).toBe(1);
+    expect(snapshot.rate).toBeCloseTo(BALANCE.synthRate, 9);
   });
 
-  it("stay plain amplitude when chordless", () => {
-    const s = fresh();
-    give(s, "conditional", hex(3, 0)); // A5 — its own island
-    const snapshot = computeRates(s, true);
-    expect(snapshot.contributions.get("m2")?.chordTerms).toBe(0);
-    expect(snapshot.contributions.get("m2")?.chordFactor).toBe(1);
-    expect(snapshot.rate).toBeCloseTo(2 * BALANCE.synthRate, 9);
-  });
-
-  it("additives never take the per-instance bonus", () => {
+  it("additives never take a per-instance bonus on top of the factor", () => {
     const s = fresh();
     give(s, "additive", hex(1, 0));
     const snapshot = computeRates(s, true);
     expect(snapshot.contributions.get("m2")?.chordTerms).toBe(1);
-    expect(snapshot.contributions.get("m2")?.value).toBeCloseTo(BALANCE.synthRate * fifth, 9);
+    expect(snapshot.contributions.get("m2")?.value).toBeCloseTo(BALANCE.synthRate * fifth * q2, 9);
   });
 });
 
@@ -333,10 +345,10 @@ describe("the local rate breakdown", () => {
     give(s, "additive", hex(1, 0)); // G4 — Fifth with C4
     give(s, "infusor", hex(0, 1)); // C5 — adjacent to both C4 and G4
     const snapshot = computeRates(s, true);
-    // The infusor touches both synths: uplift is its own leg, chord-weighted
+    // The booster touches both synths: uplift is its own leg, chord-weighted
     // so the amplitude splits exactly across legs.
-    expect(snapshot.infusors).toBeCloseTo(2 * BALANCE.synthRate * fifth * BALANCE.infusorBonus, 9);
-    expect(snapshot.synths).toBeCloseTo(2 * BALANCE.synthRate * fifth, 9);
+    expect(snapshot.infusors).toBeCloseTo(2 * BALANCE.synthRate * fifth * q2 * BALANCE.infusorBonus, 9);
+    expect(snapshot.synths).toBeCloseTo(2 * BALANCE.synthRate * fifth * q2, 9);
     expect(snapshot.amplitude).toBeCloseTo(snapshot.synths + snapshot.infusors, 9);
     expect(snapshot.empowerment).toBeCloseTo(1, 9);
     expect(snapshot.achievementBoost).toBe(1);
@@ -347,15 +359,16 @@ describe("the local rate breakdown", () => {
     const s = fresh();
     give(s, "additive", hex(1, 0)); // G4 — Fifth with C4
     s.achievements["first-light"] = 1; // one feat: +2% board-wide
-    s.chargeWindow = 60;
     give(s, "focusKeyed", hex(1, 1)); // G5's cell — adjacent to G4 only
+    const gen = s.modules.find((m) => m.type === "focusKeyed")!;
+    gen.reserve = 60;
     const snapshot = computeRates(s, true);
     const boost = 1 + BALANCE.achievementBoostPerFeat;
     const charge = chargedFactor(1);
     // C4: chord only. G4: chord + charge.
-    expect(snapshot.contributions.get("m1")?.value).toBeCloseTo(BALANCE.synthRate * fifth * boost, 9);
+    expect(snapshot.contributions.get("m1")?.value).toBeCloseTo(BALANCE.synthRate * fifth * q2 * boost, 9);
     expect(snapshot.contributions.get("m2")?.value).toBeCloseTo(
-      BALANCE.synthRate * fifth * charge * boost,
+      BALANCE.synthRate * fifth * q2 * charge * boost,
       9,
     );
     // Displayed figures sum to the board rate within rounding.
@@ -365,7 +378,7 @@ describe("the local rate breakdown", () => {
 
   it("keeps empowerment at unity when only chords boost the rate", () => {
     const s = fresh();
-    give(s, "conditional", hex(1, 0));
+    give(s, "harmonizer", hex(1, 0));
     give(s, "additive", hex(2, 0));
     const snapshot = computeRates(s, true);
     expect(snapshot.empowerment).toBe(1);
@@ -379,9 +392,10 @@ describe("the local rate breakdown", () => {
     const contribution = snapshot.contributions.get(g.id)!;
     expect(contribution.pitch).toBe(67);
     expect(contribution.amplitude).toBeCloseTo(1.2 ** 2, 9);
-    expect(contribution.chordFactor).toBeCloseTo(fifth, 9);
-    expect(contribution.value).toBeCloseTo(BALANCE.synthRate * contribution.amplitude * fifth, 9);
+    expect(contribution.chordFactor).toBeCloseTo(fifth * q2, 9);
+    expect(contribution.value).toBeCloseTo(BALANCE.synthRate * contribution.amplitude * fifth * q2, 9);
     expect(contribution.chordTerms).toBe(1);
+    expect(contribution.formationQ).toBeCloseTo(q2, 9);
   });
 
   it("exposes the pitch of every deployed synthesizer", () => {
@@ -399,12 +413,12 @@ describe("cluster shape", () => {
     const s = fresh();
     const island = [give(s, "additive", hex(-5, 3)), give(s, "additive", hex(-4, 3))];
     const analysis = analyzeChords(
-      island.map((m) => ({ ...m, pos: m.pos! })),
+      island.map((m) => ({ module: { ...m, pos: m.pos! }, pitch: pitchOf(m.pos!) })),
     );
     // (-5,3) is A♭6 (class 8); (-4,3) is E♭7 (class 3): a fifth apart.
     expect(analysis.namedChords.map((c) => `${c.name}×${c.instances}`)).toEqual(["Fifth×1"]);
     for (const module of island) {
-      expect(analysis.voiceMultiplier.get(module.id)).toBeCloseTo(fifth, 9);
+      expect(analysis.voiceMultiplier.get(module.id)).toBeCloseTo(fifth * q2, 9);
     }
   });
 
@@ -413,7 +427,8 @@ describe("cluster shape", () => {
     // C4 · G4 · D5 · D6: the G4 bridges the cluster, and register-free the
     // G pairs with both Ds (root-G Fifth ×2) while the ♭7 rings twice
     // against D — D5 sings the root-C Fifth, a root-G Fifth, the ♭7, and
-    // its octave with D6, stacking past ×2 on its own.
+    // its octave with D6, stacking past ×2 on its own. Classes {0,2,7}:
+    // the whole-tone pair is forgiven whole to the named formation.
     give(s, "additive", hex(1, 0)); // G4 — the bridge
     give(s, "additive", hex(2, 0)); // D5
     give(s, "additive", hex(2, 1)); // D6
@@ -423,15 +438,21 @@ describe("cluster shape", () => {
       "Fifth×2",
       "Flat seventh×2",
       "Octave×1",
+      "Suspended fourth×2",
     ]);
-    // C4: the root-C Fifth and both ♭7 instances.
-    expect(snapshot.contributions.get("m1")?.chordFactor).toBeCloseTo(fifth * flatSeventh ** 2, 9);
+    const qTrio = 1 + BALANCE.complexityRate * 2;
+    // C4: the root-C Fifth, both ♭7 instances, and the sus fourth ×2.
+    expect(snapshot.contributions.get("m1")?.chordFactor).toBeCloseTo(
+      fifth * flatSeventh ** 2 * suspendedFourth ** 2 * qTrio,
+      9,
+    );
     const d5 = snapshot.contributions.get("m3")?.chordFactor;
-    expect(d5).toBeCloseTo(fifth * flatSeventh * octave, 9);
-    expect(d5).toBeGreaterThan(2);
-    // Each voice carries exactly its own instances: G4 sings three fifths,
-    // D6 one fifth, one ♭7, its octave.
-    expect(snapshot.contributions.get("m2")?.chordFactor).toBeCloseTo(fifth ** 3, 9);
+    expect(d5).toBeCloseTo(fifth * flatSeventh * octave * suspendedFourth * qTrio, 9);
+    expect(d5!).toBeGreaterThan(2);
+    // Each voice carries exactly its own instances × the one Q: G4 sings
+    // three fifths and both sus fourths, D6 one fifth, one ♭7, its octave,
+    // its sus fourth.
+    expect(snapshot.contributions.get("m2")?.chordFactor).toBeCloseTo(fifth ** 3 * suspendedFourth ** 2 * qTrio, 9);
     expect(snapshot.contributions.get("m4")?.chordFactor).toBeCloseTo(d5!, 9);
   });
 });

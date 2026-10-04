@@ -50,6 +50,10 @@ export interface ChordMark {
   readonly chipY: number;
   // The chord's voice ids — the hover reveal's lookup on the mark node.
   readonly voices: readonly string[];
+  // Whether a silent voice sings in this chord (ADR-0048's honest
+  // convention): the mark draws dashed — the game's standing language for
+  // silent and promised work — and its readout chip wears the muted style.
+  readonly muted: boolean;
   // Whether this chord carries one of the caller's focus ids (§6): the
   // selected module's chords emphasize, the rest fade. Always true when no
   // focus is asked for.
@@ -73,20 +77,32 @@ export function chipWidth(label: string): number {
 }
 
 // Per-chord hue tokens and pulse periods (the prototype's rhythm table,
-// extended to the launch vocabulary; unknown names take the fallbacks).
+// extended to #218's eleven classes; unknown names take the fallbacks).
 const CHORD_HUES: Record<string, string> = {
   Octave: "chord-octave",
   Fifth: "chord-fifth",
   "Flat seventh": "chord-flat-seventh",
+  "Suspended fourth": "chord-suspended-fourth",
   "Minor triad": "chord-minor-triad",
+  "Diminished triad": "chord-diminished-triad",
+  "Augmented triad": "chord-augmented-triad",
   "Major triad": "chord-major-triad",
+  "Minor seventh": "chord-minor-seventh",
+  "Dominant seventh": "chord-dominant-seventh",
+  "Major seventh": "chord-major-seventh",
 };
 const CHORD_PULSE: Record<string, number> = {
   Octave: 3.4,
   Fifth: 2.7,
   "Flat seventh": 3.0,
+  "Suspended fourth": 2.9,
   "Minor triad": 2.4,
+  "Diminished triad": 2.2,
+  "Augmented triad": 2.5,
   "Major triad": 2.7,
+  "Minor seventh": 2.8,
+  "Dominant seventh": 2.6,
+  "Major seventh": 3.1,
 };
 const FALLBACK_HUE = "chord-octave";
 const FALLBACK_PULSE = 2.7;
@@ -293,7 +309,9 @@ export function chordMarkCovers(mark: Pick<ChordMark, "seams" | "outline">, at: 
 // those ids come back focused, every other mark fades; unset, nothing
 // fades. `focusPoint` extends the same emphasis to a selection that sings
 // in no chord — the conducting spacer: chords whose drawn work covers the
-// point lift with it. `step` is the lattice's adjacent-center distance.
+// point lift with it. `silentIds` names the silent voices (ADR-0048): a
+// chord any of them sings in draws muted — dashed seams, dashed chip.
+// `step` is the lattice's adjacent-center distance.
 export function chordOverlay(opts: {
   namedChords: readonly NamedChordTerm[];
   posOf: (id: string) => Hex | null;
@@ -303,9 +321,11 @@ export function chordOverlay(opts: {
   labelFor: (chord: NamedChordTerm) => string;
   focusIds?: readonly string[];
   focusPoint?: Point | null;
+  silentIds?: ReadonlySet<string>;
 }): ChordOverlay {
   const { namedChords, posOf, point, radius, labelFor } = opts;
   const focus = new Set(opts.focusIds ?? []);
+  const silent = opts.silentIds ?? new Set<string>();
   const emphasize = focus.size > 0 || opts.focusPoint != null;
   const marks: ChordMark[] = [];
   namedChords.forEach((chord, index) => {
@@ -325,6 +345,7 @@ export function chordOverlay(opts: {
       // The chip anchor floats above the topmost voice, a half-hex clear.
       chipY: Number((top[1] - radius * 1.18).toFixed(2)),
       voices: chord.moduleIds,
+      muted: chord.moduleIds.some((id) => silent.has(id)),
       focused:
         !emphasize ||
         chord.moduleIds.some((id) => focus.has(id)) ||

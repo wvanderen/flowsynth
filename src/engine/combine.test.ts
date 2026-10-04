@@ -18,8 +18,8 @@ function leveled(state: GameState, type: ModuleType, level: number, pos: { q: nu
 describe("combination", () => {
   it("consumes both inputs and produces the next rarity keeping the higher level", () => {
     const s = fresh();
-    const a = leveled(s, "conditional", 2, hex(1, 0));
-    const b = leveled(s, "conditional", 1, hex(0, -1));
+    const a = leveled(s, "harmonizer", 2, hex(1, 0));
+    const b = leveled(s, "harmonizer", 1, hex(0, -1));
     s.nous = 0;
     const result = combine(s, b.id);
     expect(result.ok).toBe(true);
@@ -28,7 +28,7 @@ describe("combination", () => {
     expect(a.level).toBe(2);
     expect(a.invested).toBe(26);
     expect(s.nous).toBeCloseTo(10, 6);
-    expect(s.modules.filter((m) => m.type === "conditional")).toHaveLength(1);
+    expect(s.modules.filter((m) => m.type === "harmonizer")).toHaveLength(1);
     expect(a.pos).toEqual(hex(1, 0));
   });
 
@@ -183,7 +183,7 @@ describe("combinePreview", () => {
   it("is null for mismatched pairs, the highest rarity, and flow mode", () => {
     const s = fresh();
     const additive = give(s, "additive", hex(1, 0));
-    const conditional = give(s, "conditional", null);
+    const conditional = give(s, "harmonizer", null);
     expect(combinePreview(s, additive.id, conditional.id)).toBeNull();
 
     const rareA = give(s, "infusor", null);

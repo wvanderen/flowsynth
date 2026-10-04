@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ACHIEVEMENTS, achievementBoostOf, achievementById, syncAchievements } from "./achievements";
 import { ARETE_HORIZON } from "./accumulator";
-import { buyCell, combine, endSession, placeModule, startSession } from "./actions";
+import { buyCell, combine, endSession, startSession } from "./actions";
 import { advance } from "./advance";
 import { BALANCE } from "./constants";
 import { computeRates } from "./economy";
@@ -193,7 +193,7 @@ describe("the 17-feat launch set", () => {
     completeSession(s);
     give(s, "focusKeyed", hex(1, 0));
     give(s, "infusor", hex(0, 1));
-    s.chargeWindow = 60;
+    s.modules.find((m) => m.type === "focusKeyed")!.reserve = 60;
     startSession(s, null);
     advance(s, 1);
     expect(s.session!.unlocked).toContain("spark");
@@ -228,32 +228,32 @@ describe("the 17-feat launch set", () => {
     expect(s.modules.some((m) => m.rarity === "rare")).toBe(true);
   });
 
-  it("Power chord: one synthesizer carries its participating multipliers to ×2", () => {
+  it("Power chord: one voice carries its participating multipliers to ×2", () => {
     const s = fresh();
     completeSession(s);
-    // A 4·5·6 major triad overlapped with a 5·6·7 blues triad: every voice
-    // in the run sings a ×1.75 and a ×1.6 term together — ×2.8, clear of
-    // the ×2 bar on its own. The boundary checks on each placement detect
-    // the crossing as the layout lands.
-    for (const q of [1, 2, 3, 4, 5, 6]) s.cells.push(hex(q, 0));
-    const first = give(s, "additive", null);
-    placeModule(s, first.id, hex(1, 0));
-    for (const q of [2, 3, 4, 5, 6]) placeModule(s, give(s, "additive", null).id, hex(q, 0));
-    // The G voice sings the root-7 major, the root-4 minor, and the
-    // root-0 major: ×1.75 × 1.6 × 1.75.
-    expect(computeRates(s, true).contributions.get(first.id)?.chordFactor).toBeGreaterThan(2);
+    // C4 · G4 · D5 · D6: the bridged D voice sings the root-C Fifth, a
+    // root-G Fifth, the ♭7 twice, its octave, and the sus fourth — well
+    // past ×2 on its own (the Formation term rides inside).
+    s.cells.push(hex(1, 0), hex(2, 0), hex(2, 1));
+    give(s, "additive", hex(1, 0)); // G4 — the bridge
+    const d5 = give(s, "additive", hex(2, 0)); // D5
+    give(s, "additive", hex(2, 1)); // D6
+    expect(computeRates(s, true).contributions.get(d5.id)?.chordFactor).toBeGreaterThan(2);
+    // The live detection crosses as the layout lands — here, at the sync.
+    expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toContain("power-chord");
     expect(s.achievements["power-chord"]).toBeDefined();
   });
 
   it("Power chord refuses the old board-wide read: disjoint stacks are not one voice's ×2", () => {
     const s = fresh();
     completeSession(s);
-    // C · G · D overlapping row: each voice stacks ×1.3 × 1.45 = ×1.885 —
-    // short of ×2 — while the old global product (1.3² × 1.45 ≈ 2.45)
-    // would have cleared it.
-    s.cells.push(hex(1, 0), hex(2, 0));
-    give(s, "additive", hex(1, 0)); // G4
-    give(s, "additive", hex(2, 0)); // D5
+    // Two far Fifths: each voice carries ×1.3 × its pair's Q ≈ ×1.38 —
+    // short of ×2 — while the old global product (≈ 1.38⁴) would have
+    // cleared it many times over.
+    s.cells.push(hex(1, 0), hex(5, 0), hex(6, 0));
+    give(s, "additive", hex(1, 0)); // G4 — Fifth with the opening C4
+    give(s, "additive", hex(5, 0)); // B6
+    give(s, "additive", hex(6, 0)); // F♯7 — Fifth with B6
     const def = ACHIEVEMENTS.find((a) => a.id === "power-chord")!;
     expect(def.progress(s, { chargeDelivered: false }).current).toBeLessThan(2);
     expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual([]);
@@ -274,10 +274,10 @@ describe("the 17-feat launch set", () => {
     const s = fresh();
     completeSession(s);
     s.cells.push(hex(2, 0));
-    give(s, "additive", hex(1, 0)); // G4 — a Fifth with the opening C4: ×1.3
-    give(s, "focusKeyed", hex(2, 0)); // not a synth — would add another fifth if it voiced
+    give(s, "additive", hex(1, 0)); // G4 — a Fifth with the opening C4
+    give(s, "focusKeyed", hex(2, 0)); // not a voice — would add another fifth if it sang
     const def = ACHIEVEMENTS.find((a) => a.id === "power-chord")!;
-    expect(def.progress(s, { chargeDelivered: false }).current).toBeCloseTo(1.3, 9);
+    expect(def.progress(s, { chargeDelivered: false }).current).toBeCloseTo(1.3 * (1 + BALANCE.complexityRate), 9);
   });
 
   it("Eyes on the horizon: the lifetime crossing, never the era's measure", () => {

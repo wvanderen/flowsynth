@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import { endSession, pauseSession, startSession } from "./actions";
 import { RECONCILIATION_FLOOR_SECONDS } from "./constants";
-import { fresh } from "./fixtures";
+import { fresh, give } from "./fixtures";
+import { hex } from "./hex";
 import { deserialize, serialize } from "./save";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport } from "./trust";
 import type { GameState } from "./types";
@@ -432,13 +433,25 @@ describe("credited practice time is the consumers' seam", () => {
     away(s, 300);
     resolveHonestyReport(s, "full");
     endSession(s, 5_000);
-    // C = 900: the log entry, the window (0.1 × C), and the summary agree.
+    // C = 900: the log entry, the reserves (0.1 × C per owned generator),
+    // and the summary agree. The opening board owns no generator — nothing
+    // banks here.
     expect(s.practiceLog).toHaveLength(1);
     expect(s.practiceLog[0]!.seconds).toBeCloseTo(900, 6);
     expect(s.practiceLog[0]!.source).toBe("live");
-    expect(s.chargeWindow).toBeCloseTo(90, 6);
     expect(s.summary!.seconds).toBeCloseTo(900, 6);
     expect(s.summary!.earned).toBeCloseTo(90, 6);
+  });
+
+  it("a banked reserve lands on every owned focus generator, board or tray", () => {
+    const s = fresh();
+    const board = give(s, "focusKeyed", hex(2, 0));
+    const tray = give(s, "focusKeyed", null);
+    startSession(s, 600);
+    advance(s, 600);
+    endSession(s, 5_000);
+    expect(board.reserve).toBeCloseTo(60, 6);
+    expect(tray.reserve).toBeCloseTo(60, 6);
   });
 
   it("a reported miss never suppresses a presence-earned target hit", () => {

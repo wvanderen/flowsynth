@@ -42,13 +42,19 @@ export function hexApothem(radius: number): number {
 
 // Hue = category: the rail and signature wear the category hue; per-type
 // identity rides the glyph and nameplate. The spacer wears its own muted
-// wire hue — its own module category (ADR-0021), never a synthesizer.
+// wire hue — its own module category (ADR-0021), never an oscillator; the
+// silent voices wear the reserved violet, the conduit the reserved yellow
+// (issue #219's bound hues).
 export const HUE_TOKEN_OF: Record<ModuleType, string> = {
-  additive: "hue-synthesizer",
-  conditional: "hue-synthesizer",
+  additive: "hue-oscillator",
+  blaster: "hue-oscillator",
+  harmonizer: "hue-voice",
+  echo: "hue-voice",
+  bend: "hue-voice",
+  amplifier: "hue-conduit",
   spacer: "hue-spacer",
   focusKeyed: "hue-generator",
-  infusor: "hue-infusor",
+  infusor: "hue-booster",
   forge: "hue-forge",
   mutatorForge: "hue-forge",
 };

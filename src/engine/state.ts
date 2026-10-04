@@ -54,7 +54,6 @@ export function createInitialState(): GameState {
     mutatorForge: { progress: 0, earned: 0 },
     flow: { progress: 0, earned: 0 },
     arcCardSeen: false,
-    chargeWindow: 0,
     bankedRolls: [],
     bankedMutatorRolls: [],
     purchased: { generator: false, infusor: false, forge: false },
@@ -67,6 +66,7 @@ export function createInitialState(): GameState {
     sessionRecords: [],
     goals: [],
     achievements: {},
+    chordDiscovery: {},
     session: null,
     summary: null,
     nextId: 1,
@@ -89,7 +89,24 @@ export function createModule(state: GameState, type: ModuleType, rarity: Rarity)
     level: 0,
     invested: 0,
     pos: null,
+    // Reserves are charge state — every module holds one, zero until a
+    // generator rule banks into it (ADR-0047).
+    reserve: 0,
+    // The Bend's player-picked shift defaults to the ♯ (ADR-0048); null on
+    // every other type.
+    shift: type === "bend" ? BALANCE.bendDefaultShift : null,
   };
+}
+
+// Load-time normalization for the v8 per-module surface (issue #229): a
+// module saved before the roster wave carries no reserve or shift —
+// lenient-defaulted exactly as the fresh shape would write them. Mutates in
+// place over the merged state's module list.
+export function normalizeModules(modules: ModuleInstance[]): void {
+  for (const module of modules) {
+    if (typeof module.reserve !== "number" || !Number.isFinite(module.reserve)) module.reserve = 0;
+    if (typeof module.shift !== "number") module.shift = module.type === "bend" ? BALANCE.bendDefaultShift : null;
+  }
 }
 
 // A mutator waits in the Mutator tray (pos = null) until placed into an

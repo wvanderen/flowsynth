@@ -240,7 +240,7 @@ describe("cells as direct nous purchases", () => {
     expect(additive.pos).toEqual(hex(2, 0));
     // The first acquired module is placeable without buying a cell first.
     const s2 = fresh();
-    const conditional = give(s2, "conditional", null);
+    const conditional = give(s2, "harmonizer", null);
     expect(placeModule(s2, conditional.id, hex(1, 0)).ok).toBe(true);
   });
 });
@@ -253,7 +253,7 @@ describe("conservation", () => {
     give(s, "forge", hex(0, 1));
     give(s, "focusKeyed", hex(2, 0));
     s.cells.push(hex(2, 0));
-    s.chargeWindow = 1200;
+    s.modules.find((m) => m.type === "focusKeyed")!.reserve = 1200;
     // The opening grant (issue #43) sits in the balance before anything is
     // earned; conservation reads earned = (final − starting) + spent.
     const startingNous = s.nous;

@@ -103,10 +103,15 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
   if (targetHit) state.plannedSessionsCompleted++;
   // The focus-keyed generator's rule (§2.3, ADR-0012; basis amended by
   // ADR-0019): ending any session banks a charge window of fraction ×
-  // credited practice time. Banked windows extend the remaining duration —
-  // the spec's only stacking rule. Manual practice logs never pass through
-  // here and never bank one.
-  state.chargeWindow += BALANCE.chargeWindowFraction * credited;
+  // credited practice time — per generator since the v8 surface (ADR-0047):
+  // every owned focus generator banks its own, board or tray alike, and
+  // banked windows extend that generator's remaining duration. Manual
+  // practice logs never pass through here and never bank one.
+  if (credited > EPS) {
+    for (const module of state.modules) {
+      if (module.type === "focusKeyed") module.reserve += BALANCE.chargeWindowFraction * credited;
+    }
+  }
   logSessionPractice(state, credited, now);
   rollGoalOccurrences(state, now);
   // The session-end boundary check (ADR-0015): First light, On the clock,
@@ -766,7 +771,26 @@ export function prestige(state: GameState): ActionResult {
     module.invested = 0;
   }
   state.nous = openingGrant();
-  state.chargeWindow = 0;
+  // Reserves are charge state (ADR-0047): they reset with everything else
+  // charge-shaped. Builds, unlocks, and the discovery ledger persist.
+  for (const module of state.modules) {
+    module.reserve = 0;
+  }
   state.eraEarned = 0;
   return ok;
+}
+
+// The Bend's player-picked shift (ADR-0048): one of the rarity's selectable
+// ♯/♭ steps, added to the cell's pitch. Upgrade-mode-only like every other
+// reconfiguration — the board is locked during flow.
+export function setBendShift(state: GameState, id: string, shift: number): ActionResult {
+  if (state.mode !== "upgrade") return fail("The grid is locked during flow.");
+  const module = findModule(state, id);
+  if (!module) return fail("Module not found.");
+  if (module.type !== "bend") return fail("Only the Bend picks a shift.");
+  if (!BALANCE.bendShifts[module.rarity].includes(shift)) {
+    return fail("That shift is outside this rarity's set.");
+  }
+  module.shift = shift;
+  return { ok: true, unlocked: checkAchievements(state) };
 }

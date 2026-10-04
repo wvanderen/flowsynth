@@ -6,7 +6,7 @@
 import { accumulatorFill, claimOf, horizonReached } from "../engine/accumulator";
 import { ACHIEVEMENTS } from "../engine/achievements";
 import { catalogOpen } from "../engine/catalog";
-import { BALANCE, CATEGORY_OF, isSynthesizerType } from "../engine/constants";
+import { BALANCE, CATEGORY_OF, isOscillatorType } from "../engine/constants";
 import { chargedFactor, hostPower } from "../engine/economy";
 import { noteNameOf } from "../engine/lattice";
 import type { Contribution, GameState, ModuleInstance, RateSnapshot } from "../engine/types";
@@ -23,14 +23,15 @@ export function unlockedCount(state: GameState): number {
 // The rate is a place, not a formula: one roster every disclosure channel
 // shares — the Rate cell's hover/focus popover above the 760px breakpoint,
 // and the sheet a tap opens at every width (the phone strip's read opens
-// the same sheet). One row per synthesizer carries its final ν/s and
-// expands into the base term with the local infusor, charge, chord, and
-// achievement effects; nonproducing modules disclose what they do to
-// others with no ν/s of their own to double-count. Both channels mount
-// live slots the tick fills, so a clock tick never rebuilds (and never
-// collapses) an open roster.
+// the same sheet). One row per oscillator carries its final ν/s and
+// expands into the base term with the local booster, formation quality,
+// chord, charge, and achievement effects; nonproducing modules disclose
+// what they do to others with no ν/s of their own to double-count. Both
+// channels mount live slots the tick fills, so a clock tick never rebuilds
+// (and never collapses) an open roster.
 interface SynthLegs {
   base: number;
+  formationQ: number;
   chordMult: number;
   chordLabel: string;
   infusorBonus: number;
@@ -39,21 +40,24 @@ interface SynthLegs {
   boost: number;
 }
 
-// One synthesizer's decomposition, straight off its contribution: the
-// legs multiply back to the final figure exactly —
-// base × chordMult × (1 + infusor) × chargeFactor × boost = value.
-// The base and chord legs carry the mutators' folds (ADR-0043): the power
-// mutator rides the host's power, the resonance mutator rides the chord
-// factor the contribution already reports — the legs stay the engine's
-// own, no mutator row joins the roster (ADR-0037).
+// One oscillator's decomposition, straight off its contribution: the legs
+// multiply back to the final figure exactly —
+// base × formationQ × chords × (1 + infusor) × chargeFactor × boost = value.
+// The formation quality is its own named leg (ADR-0049: "Formation ×1.12"),
+// the chord leg carries the named-instance product alone. The base and
+// chord legs carry the mutators' folds (ADR-0043): the power mutator rides
+// the host's power, the resonance mutator rides the chord factor the
+// contribution already reports — the legs stay the engine's own, no
+// mutator row joins the roster (ADR-0037).
 function synthLegsOf(state: GameState, snapshot: RateSnapshot, contribution: Contribution, module: ModuleInstance): SynthLegs {
-  const chordAmp = module.type === "conditional" ? 1 + BALANCE.conditionalChordBonus * contribution.chordTerms : 1;
   const terms = snapshot.namedChords.filter((chord) => chord.moduleIds.includes(contribution.moduleId)).map(chordTermLabel);
   return {
     base: BALANCE.synthRate * hostPower(state, module),
-    // Synthesizers always chord: the engine sets a number here — null is
-    // the non-chorders' mark, never a synth's.
-    chordMult: chordAmp * (contribution.chordFactor ?? 1),
+    formationQ: contribution.formationQ,
+    // The chord leg carries the named-instance product with the resonance
+    // mutator's fold — the contribution's whole factor minus the formation
+    // quality's own named leg, so the legs still multiply out exactly.
+    chordMult: (contribution.chordFactor ?? 1) / contribution.formationQ,
     chordLabel: terms.length > 0 ? terms.join(" · ") : "none",
     infusorBonus: contribution.infusorBonus,
     chargeFactor: contribution.chargeFactor,
@@ -67,9 +71,18 @@ function synthLegsOf(state: GameState, snapshot: RateSnapshot, contribution: Con
 function effectText(state: GameState, contribution: Contribution, module: ModuleInstance, snapshot: RateSnapshot): string {
   const category = CATEGORY_OF[contribution.type];
   if (category === "generator") return `⌁${formatNumber(hostPower(state, module))} charge`;
-  if (category === "infusor") {
+  if (category === "booster") {
     const strength = snapshot.chargeStrength.get(contribution.moduleId) ?? 0;
     return `+${formatNumber(100 * BALANCE.infusorBonus * hostPower(state, module) * chargedFactor(strength))}% to adjacent`;
+  }
+  if (category === "silentVoice") {
+    const uplift = BALANCE.silentVoiceUpliftPerLevel * module.level;
+    const pitch = contribution.pitch !== null ? noteNameOf(contribution.pitch) : "mute";
+    return `sings ${pitch} · Formation ×${formatNumber(contribution.formationQ)} · +${Math.round(uplift * 100)}% per level to chord instances`;
+  }
+  if (category === "conduit") {
+    const strength = snapshot.chargeStrength.get(contribution.moduleId) ?? 0;
+    return `relays ⌁${formatNumber(strength)} × +${Math.round(BALANCE.amplifierGainPerLevel * module.level * 100)}%`;
   }
   if (category === "forge") return `${formatNumber(contribution.value)} progress/s`;
   return "silent — conducts chords";
@@ -86,14 +99,15 @@ const otherSlot = (id: string): string => `n-${id}`;
 // One record per row: the slot texts both the roster builder and the tick
 // fill read, so a leg's wording lands in one place (the house pattern the
 // old AMP_LEGS held). Keyed by slot suffix — `v` the final figure, the
-// base/chd/inf/chg legs, `chgn` the charge note, `n` a nonproducer's
+// base/fmt/chd/inf/chg legs, `chgn` the charge note, `n` a nonproducer's
 // effect.
 function rowSlotTexts(state: GameState, snapshot: RateSnapshot, contribution: Contribution, module: ModuleInstance): Record<string, string> {
-  if (isSynthesizerType(contribution.type)) {
+  if (isOscillatorType(contribution.type)) {
     const legs = synthLegsOf(state, snapshot, contribution, module);
     return {
       v: `+${formatNumber(contribution.value)} ν/s`,
       base: `${formatNumber(legs.base)} ν/s`,
+      fmt: `×${formatNumber(legs.formationQ)}`,
       chd: `×${formatNumber(legs.chordMult)}`,
       inf: `+${Math.round(legs.infusorBonus * 100)}%`,
       chg: `×${formatNumber(legs.chargeFactor)}`,
@@ -137,7 +151,7 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
     if (!module) continue;
     const slots = rowSlotTexts(state, snapshot, contribution, module);
     const id = contribution.moduleId;
-    if (isSynthesizerType(contribution.type)) {
+    if (isOscillatorType(contribution.type)) {
       const cellNote = contribution.pitch !== null ? noteNameOf(contribution.pitch) : "";
       synths.push(
         `<details class="rd-row rd-synth" data-module-id="${id}">` +
@@ -149,9 +163,12 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
           `<div class="rd-leg"><span class="rd-leg-name">Base</span>` +
           val(synthSlot(id, "base"), slots.base!) +
           `</div>` +
+          `<div class="rd-leg"><span class="rd-leg-name">Formation</span>` +
+          val(synthSlot(id, "fmt"), slots.fmt!) +
+          `<span class="rd-note">${synthChordNote(state, snapshot, contribution, module)}</span>` +
+          `</div>` +
           `<div class="rd-leg"><span class="rd-leg-name">Chords</span>` +
           val(synthSlot(id, "chd"), slots.chd!) +
-          `<span class="rd-note">${synthChordNote(state, snapshot, contribution, module)}</span>` +
           `</div>` +
           `<div class="rd-leg"><span class="rd-leg-name">Booster</span>` +
           val(synthSlot(id, "inf"), slots.inf!) +
@@ -201,9 +218,10 @@ export function updateRateDetailsLive(scope: ParentNode, state: GameState, snaps
     if (!module) continue;
     const id = contribution.moduleId;
     const slots = rowSlotTexts(state, snapshot, contribution, module);
-    if (isSynthesizerType(contribution.type)) {
+    if (isOscillatorType(contribution.type)) {
       set(synthSlot(id, "v"), slots.v!);
       set(synthSlot(id, "base"), slots.base!);
+      set(synthSlot(id, "fmt"), slots.fmt!);
       set(synthSlot(id, "chd"), slots.chd!);
       set(synthSlot(id, "inf"), slots.inf!);
       set(synthSlot(id, "chg"), slots.chg!);

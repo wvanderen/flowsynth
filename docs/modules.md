@@ -6,77 +6,120 @@ new types and game-design concepts — the engine keys and records live in code
 design thinking lives. The roster table reflects the code as of the last
 update; when a type lands, update the table in the same change.
 
-Last updated: 2026-10-03 (wave 1 module identity, issue #228)
-
-> **Superseded provisions (2026-09-25).** The playtest-driven board redesign ([board redesign spec](board-redesign-spec.md), ADR-0021/0022) deletes the `carrier` type, replaces pitch-as-distance with the octave-stack lattice, and rebuilds chords as register-free pitch sets with a new `spacer` wire category. This catalog describes the code as it ships today and updates when the redesigned types land; until then, its carrier, pitch, chord, and composite provisions are superseded by the board redesign spec.
+Last updated: 2026-10-04 (wave 2 roster + harmony scoring, issue #229)
 
 ## Roster
 
-| Key | Name | Nameplate | Category | Hue | Glyph | Symbol | Origin | Face readout |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `carrier` | Carrier | CARRIER | synthesizer | `hue-carrier` (white — sole hue-law exception) | circle with rays | ◉ | Granted at the origin, pinned, never rolled or shelved | `+value` |
-| `additive` | Oscillator | OSC | synthesizer | `hue-synthesizer` | bare sine | + | Starter shelf (40) and roll pool | `+value`, note `P«pitch»` |
-| `conditional` | Harmonizer | HARM | synthesizer | `hue-synthesizer` | diamond (muted tonehead) | × | Roll pool only | `+value`, note `P«pitch»` |
-| `focusKeyed` | Focus Generator | FOCUS | generator | `hue-generator` | bolt, bare | ⌁ | Starter shelf ("generator", 40) and roll pool | `⌁power` |
-| `infusor` | Booster | BOOST | infusor | `hue-infusor` | outward chevrons around a center dot | ✳ | Starter shelf (40) and roll pool | `+«%»` |
-| `forge` | Forge | FORGE | forge | `hue-forge` | hex prism | ⬡ | Starter shelf (80) and roll pool | `«charge»/«threshold»` (charge register) |
+| Key | Name | Nameplate | Category | Hue | Glyph | Origin | Face readout |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `additive` | Oscillator | OSC | oscillator | `hue-oscillator` | bare sine | Opening grant and roll pool | `+value`, note `P«pitch»` |
+| `blaster` | Blaster | BLST | oscillator | `hue-oscillator` | bolt-cored sine | Roll pool only | `+value` (0 uncharged), note `P«pitch»` |
+| `harmonizer` | Harmonizer | HARM | silent voice | `hue-voice` | diamond (muted tonehead) | Roll pool only | the pitch it sings, note `P«cell»` |
+| `echo` | Echo | ECHO | silent voice | `hue-voice` | doubled waves | Roll pool only | the pitch it sings, note `P«cell»` |
+| `bend` | Bend | BEND | silent voice | `hue-voice` | kinked line | Roll pool only | the pitch it sings, note `P«cell»` |
+| `amplifier` | Amplifier | AMP | conduit | `hue-conduit` | through-flowing chevrons | Roll pool only | `⌁relayed` |
+| `spacer` | Spacer | Spacer | spacer | `hue-spacer` | ring window (board) / wire | Roll pool only | `⌇` |
+| `focusKeyed` | Focus Generator | FOCUS | generator | `hue-generator` | bolt, bare | Starter shelf ("generator", 40) and roll pool | `⌁power` |
+| `infusor` | Booster | BOOST | booster | `hue-booster` | outward chevrons around a center dot | Starter shelf (40) and roll pool | `+«%»` |
+| `forge` | Forge | FORGE | forge | `hue-forge` | hex prism | Starter shelf (80) and roll pool | `«charge»/«threshold»` (charge register) |
+| `mutatorForge` | Mutator Forge | MUT. FORGE | forge | `hue-forge` | seeded-hexagon core on the chassis | Mutator tree entry | `«charge»/«threshold»` (charge register) |
 
 All rollable types roll at 99% common / 0.9% uncommon / 0.1% rare
 (`BALANCE.rarityProbability`); rarities combine upward at the Forge.
 
 ## Category laws
 
-- **synthesizer** — contributes a harmonic term to the composite; pitch is
-  hex distance from the Carrier + 1. Receives charge as continuous
-  empowerment.
-- **generator** — produces charge (the only producer). The focus-keyed rule
-  (ADR-0018): banks a charge window at session end
-  (`chargeWindowFraction` = 0.1 of live seconds), spends it during the next
-  session's flow.
-- **infusor** — no harmonic term; empowers adjacent modules' amplitude
-  (`infusorBonus` = 0.2 × power × charge factor per adjacent infusor).
+- **oscillator** — contributes a synth term to the composite; pitch is the
+  cell's own (ADR-0021: cell-owned, never persisted). Receives charge as
+  continuous empowerment. Two producer roles (ADR-0048): the Oscillator's
+  base term, and the Blaster's charge-sourced term — the conversion curve
+  replaces the charge factor, and the Blaster sings and completes chords
+  even uncharged at zero output.
+- **silent voice** — produces no nous; its derived pitch counts in
+  formations (forms and completes chords, conducts as a voice). Category
+  trait (ADR-0048): a level-scaled uplift (+5%/LV, tuning) to every chord
+  instance's bonus it sings in, additive across silent voices, landing on
+  all singing members. Silent voices do not receive charge.
+- **conduit** — receives charge and re-broadcasts it onward at received
+  strength × a level-scaled gain (+20%/LV, tuning); relayed charge counts
+  fully at receivers; a hop-depth cap (4, tuning) guards cycles. Produces
+  nothing (ADR-0048).
+- **spacer** — silent wire: never sounds, never joins a pitch set,
+  conducts chord adjacency through chains of wired cells (ADR-0021).
+- **generator** — produces charge (the only producer). The focus-keyed
+  rule (ADR-0018, reserves generalized per module by ADR-0047): banks a
+  reserve at session end (`chargeWindowFraction` = 0.1 of live seconds
+  into each owned generator, board or tray), spends 1 s/s of it while
+  deployed.
+- **booster** — no synth term; empowers adjacent modules' amplitude
+  (`infusorBonus` = 0.2 × power × charge factor per adjacent booster).
   Receives charge as continuous empowerment.
 - **forge** — chargeable (ADR-0012): accumulates received charge toward a
-  rolling threshold (initial 60, ×1.5 growth); crossing mints a roll offer.
+  rolling threshold (initial 60, ×1.5 growth); crossing mints a roll
+  offer. The Mutator Forge is the second branch (ADR-0043), its own meter.
 
-Composite (ADR-0014; leg naming per ADR-0020): `rate = (carrier + harmonics +
-infusors) × Π chord terms × empowerment × achievementBoost`. The carrier and
-harmonic legs are the synths' base terms; booster uplift (the infusor
-category's leg, renamed with issue #219) is named in its own additive leg, so
-the breakdown multiplies out exactly. Category display words follow their
-modules (oscillator, booster) per issue #219; the storage category keys are
-unchanged.
+Composite (ADR-0014; leg naming per ADR-0020 as amended by ADR-0036 and
+ADR-0049): `rate = (synths + boosters) × empowerment × achievementBoost`,
+with each producer's chord factor — the formation's named-instance product
+× its quality Q — riding its own term. Q is its own named term per member
+("Formation ×1.12") in the readout and rate details; chordless formations
+sit at exactly ×1.00 (ADR-0049).
 
 ## Per-module notes
 
-### Carrier (`carrier`)
-The granted origin (ADR-0013): common, pinned at (0,0), immovable,
-unsellable. Base term `carrierRate` = 0.1/s — the whole formula in session
-one. Sets every cell's pitch globally by distance.
-
-The face marks the pin with panel hardware (ADR-0016): a bare white lock
-top-center above the engraved level and three chassis bolts at alternating
-corners; a drag attempt refuses with a shake and the pinned sentence.
-
 ### Oscillator (`additive`)
-The plain harmonic term: `additiveRate` = 0.05/s × amplitude. On the shelf so
-the octave chord (Carrier + adjacent Oscillator) is teachable in session one.
+The plain synth term: `synthRate` = 0.1/s × rarity power. From the opening
+grant and rolls, so the first chord is teachable in session one.
 
-### Harmonizer (`conditional`)
-Amplitude term plus `conditionalPairBonus` = 0.1 per chord pair it
-participates in. Roll-only — the shelf stays four offers.
+### Blaster (`blaster`)
+The oscillator category's second producer role (ADR-0048): converts
+received charge into its synth term with the conversion curve
+`strength/(1+strength)` — ×0 uncharged, ×1 at the asymptote — replacing
+the charge factor entirely (no second empowerment pass). Chord membership
+is structural: it sings and completes chords even uncharged at zero
+output, and never starves cellmates (generators never divide output).
+
+### Harmonizer (`harmonizer`)
+The plain silent voice (ADR-0048): sings its own cell's pitch, produces
+nothing. Transformed in place from the `conditional` at the v8 boundary —
+the per-instance chordAmp mechanic died with it. Its level buys the
+category's chord-instance uplift.
+
+### Echo (`echo`)
+Sings an adjacent voice's derived pitch one octave down — a guaranteed
+Octave pairing that doubles the neighbor's chord content without touching
+its pitch or readout. Lowest-id adjacent voice when several qualify;
+sings nothing when no voice is adjacent; echo chains descend octave by
+octave and a cycle sings nothing.
+
+### Bend (`bend`)
+Sings its own cell's pitch altered by its player-picked shift — ♯/♭ ±1 at
+launch, ±2 joining at rare; the selectable set grows with rarity only
+(`BALANCE.bendShifts`). The pick lives on the expanded face and re-pitches
+the voice instantly; a shift landing in a vocabulary recipe earns named
+value like any voice.
+
+### Amplifier (`amplifier`)
+The conduit category's launch member (ADR-0048): receives from adjacent
+generators and strictly-lower-hop amplifiers, re-broadcasts at received ×
+(1 + 0.20 × level) to its other neighbors. Relayed charge counts fully as
+receiving charge everywhere — empowerment, Forge thresholds. The hop cap
+(4) bounds chains; equal-depth amplifiers never feed each other.
 
 ### Focus Generator (`focusKeyed`)
-Emits charge at power while flow is live and window time remains; adjacent
-receivers only (never charges generators, never itself).
+Emits charge at power while flow is live and its reserve holds; adjacent
+receivers only (never charges generators, never itself). Session end
+banks 0.1 × credited practice into every owned focus generator — board or
+tray alike; prestige resets reserves.
 
 ### Booster (`infusor`)
 Empowers neighbors' amplitude, not the composite directly. Charge it to
 sharpen its bonus (diminishing-returns curve).
 
-### Forge (`forge`)
-Accumulates received charge (`strength × power`) into the shared meter; a
-threshold crossing banks a roll offer of three candidates.
+### Forge (`forge`) / Mutator Forge (`mutatorForge`)
+Accumulate received charge (`strength × power`) into their branch's
+shared meter; a threshold crossing banks a roll offer — module rolls into
+the one shared queue, mutator rolls into the Mutator tray.
 
 ## Glyph authoring notes
 
@@ -84,28 +127,25 @@ Signature glyphs are stroke-only SVG fragments (no fill) authored in a
 ±15 coordinate space centered on (0,0), in `src/ui/icons.ts` (`PATHS`).
 On the face they render centered at `FACE_GLYPH_SCALE` (0.8, in
 `src/ui/face.ts` alongside the face's nameplate/readout/note offsets),
-stroke width 2 (pre-scale), in the category hue. The monitor
-(`src/ui/monitor.ts`) reuses the same fragment at stroke width 1.6. Keep
-geometry inside ±15 and remember the whole module face shares the hex —
-the ±12 box the glyph occupies at 0.8 scale must not fight the nameplate
-above or the readout below.
-
-The `moduleSymbol` characters (◉ + × ⌁ ✳ ⬡) are text fallbacks, not the
-face artwork.
+stroke width 2 (pre-scale), in the category hue. Keep geometry inside ±15
+and remember the whole module face shares the hex — the ±12 box the glyph
+occupies at 0.8 scale must not fight the nameplate above or the readout
+below.
 
 The D-set glyph family (issue #219, lifted from
-`prototype/module-identity-glyphs`) settled the roster's marks: the
+`prototype/module-identity-glyphs`) settled the launch marks: the
 Oscillator's bare sine, the Harmonizer's diamond, the generators' bolt
 (corner marks distinguish the Note/Goal generators when they land), the
 Booster's outward chevrons around a center dot, and the Mutator Forge's
-seeded-hexagon core on the Forge chassis. Two spacers' specials: the board
-face clips as a hexagonal ring window (chassis minus inner hexagon,
-nameplate at y −40), and the tray tile wears an unfilled inner hexagon
-(`inventoryTileSvg` special case) instead of the wire glyph.
-
-Design intent: hand-drawn glyphs, one per type, readable at board scale and
-at inventory-tile scale. Log sketch iterations and rationale in
-[Concepts](#concepts) until a glyph is settled.
+seeded-hexagon core on the Forge chassis. The roster wave added the
+silent voices and the conduit (issue #229): the Echo's doubled waves (the
+octave down it sings), the Bend's kinked line (the ♯/♭ shift), the
+Blaster's bolt-cored sine (the charge inside the term), and the
+Amplifier's through-flowing chevrons (charge in one side, out the other).
+Two spacers' specials: the board face clips as a hexagonal ring window
+(chassis minus inner hexagon, nameplate at y −40), and the tray tile
+wears an unfilled inner hexagon (`inventoryTileSvg` special case) instead
+of the wire glyph.
 
 ## Concepts
 
@@ -126,19 +166,17 @@ until it moves into the roster table with a landed change.
 The `Record<ModuleType, …>` maps make the type checker enumerate most
 touchpoints — add the key and follow the compile errors:
 
-1. `src/engine/types.ts` — add to the category union (`SynthesizerType`,
-   `GeneratorType`, …) or mint a new category `Category` there.
+1. `src/engine/types.ts` — add to the category union (`OscillatorType`,
+   `SilentVoiceType`, …) or mint a new category `Category` there.
 2. `src/engine/constants.ts` — `CATEGORY_OF`, `MODULE_TYPES` (order is the
-   roll pool minus the Carrier), `CHARGEABLE_CATEGORIES` /
-   `CONTINUOUS_CHARGE_CATEGORIES` for the charge law, `SYNTH_BASE_RATE` in
-   `src/engine/economy.ts` if it harmonics, shelf plumbing
-   (`SHELF_TYPES` / `SHELF_MODULE` / `shelfPrices`) if it sells.
-3. `src/ui/icons.ts` — `PATHS` glyph and `moduleSymbol` fallback.
-4. `src/ui/meta.ts` — `META` name / nameplate short / role.
-5. `src/ui/face.ts` — `HUE_TOKEN_OF`; the token must exist in
+   roll pool), `CHARGEABLE_CATEGORIES` / `CONTINUOUS_CHARGE_CATEGORIES` /
+   `CHARGE_RECEIVING_CATEGORIES` for the charge law, `BALANCE` for its
+   magnitudes, shelf plumbing (`SHELF_TYPES` / `SHELF_MODULE` /
+   `shelfPrices`) if it sells.
+3. `src/engine/chords.ts` — if it sings: a derived-pitch case in
+   `voicePitchOf`.
+4. `src/ui/icons.ts` — `PATHS` glyph.
+5. `src/ui/meta.ts` — `META` name / nameplate short / role.
+6. `src/ui/face.ts` — `HUE_TOKEN_OF`; the token must exist in
    `src/ui/theme.ts` and follow the category→hue law (`face.test.ts`
    asserts both).
-6. Engine behavior — contribution math in `src/engine/economy.ts`, chord
-   participation in `src/engine/chords.ts` if it pitches, actions/rolls as
-   needed.
-7. Update the roster table above in the same change.

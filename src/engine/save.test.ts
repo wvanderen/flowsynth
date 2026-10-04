@@ -10,19 +10,36 @@ import { writeNote } from "./notes";
 import { hex } from "./hex";
 import type { GameState } from "./types";
 
-// The v7 boundary (issue #194, ADR-0017's pattern): the prestige cut is a
-// clean break. Every save older than this build — v6 included — rejects
-// with the start-fresh message; there is no migration chain, no archive,
-// and no import path for rejected versions. Old saves are disposable per
-// the map's standing note.
+// The v8 boundary (issue #229): the roster cut. A v7 save migrates in
+// place — the Conditional becomes its Harmonizer, the charge window maps
+// onto the focus generators' reserves, the discovery ledger defaults
+// empty — and the life record is never wiped. Every version older than v7
+// still rejects with the start-fresh message; there is no chain past one
+// step.
 
-// Fabricate a v6 save from a live v7 state: force the version and salt it
+// Fabricate a v6 save from a live state: force the version and salt it
 // with the field only a v6 build would write (the legacy acknowledgment
 // flag the removed prestige button once set).
 function asV6(state: GameState, savedAt = 1_000): string {
   const file = JSON.parse(serialize(state, savedAt));
   file.version = 6;
   file.state.horizonAcknowledged = true;
+  return JSON.stringify(file);
+}
+
+// Fabricate a v7 save from a live v8 state: force the version, revert the
+// migrated shape (the Conditional key, the scalar window), and strip the
+// fields the v8 build writes.
+function asV7(state: GameState, savedAt = 1_000): string {
+  const file = JSON.parse(serialize(state, savedAt));
+  file.version = 7;
+  for (const module of file.state.modules) {
+    if (module.type === "harmonizer") module.type = "conditional";
+    delete module.reserve;
+    delete module.shift;
+  }
+  (file.state as Record<string, unknown>).chargeWindow = 120;
+  delete file.state.chordDiscovery;
   return JSON.stringify(file);
 }
 
@@ -46,7 +63,7 @@ describe("persistence", () => {
   it("saves carry the current version", () => {
     const parsed = JSON.parse(serialize(fresh()));
     expect(parsed.version).toBe(SAVE_VERSION);
-    expect(parsed.version).toBe(7);
+    expect(parsed.version).toBe(8);
   });
 
   it("saves lenient-default the gate ledger", () => {
@@ -180,8 +197,8 @@ describe("persistence", () => {
     const build = () => {
       const s = fresh();
       give(s, "forge", hex(1, 0));
-      give(s, "focusKeyed", hex(2, 0));
-      s.chargeWindow = 600;
+      const gen = give(s, "focusKeyed", hex(2, 0));
+      gen.reserve = 600;
       startSession(s, 600);
       return s;
     };
@@ -244,8 +261,8 @@ describe("persistence", () => {
   });
 });
 
-describe("the v7 version gate (ADR-0017's pattern, issue #194)", () => {
-  it("rejects v6 and every older version; there is no migrate chain", () => {
+describe("the version gate (ADR-0017's pattern)", () => {
+  it("rejects v6 and every older version; there is no chain past one step", () => {
     for (const version of [1, 4, 5, 6]) {
       const text = serialize(fresh()).replace(`"version": ${SAVE_VERSION}`, `"version": ${version}`);
       const result = deserialize(text);
@@ -271,14 +288,83 @@ describe("the v7 version gate (ADR-0017's pattern, issue #194)", () => {
     expect(deserialize('{"app":"flowsynth","version":99,"state":{}}').error).toBeDefined();
     expect(deserialize('{"app":"flowsynth","version":7,"state":{"mode":"weird"}}').error).toBeDefined();
     expect(deserialize('{"app":"flowsynth","version":7}').error).toBeDefined();
-    expect(deserialize('{"app":"flowsynth","version":8,"state":{}}').error).toMatch(/newer than this build/i);
+    expect(deserialize('{"app":"flowsynth","version":9,"state":{}}').error).toMatch(/newer than this build/i);
   });
 
-  it("exported v7 saves load unchanged", () => {
+  it("exported saves load unchanged", () => {
     const s = fresh();
     writeNote(s, "portable", 1_000);
     const loaded = deserialize(serialize(s, 42));
     expect(loaded.error).toBeUndefined();
     expect(loaded.state!.notes[0]!.text).toBe("portable");
+  });
+});
+
+describe("the v7 → v8 migration (issue #229)", () => {
+  it("a v7 save loads: the Conditional is now its Harmonizer, singing its cell's pitch", () => {
+    const s = fresh();
+    const conditional = give(s, "harmonizer", hex(1, 0)); // built as the migrated shape
+    (conditional as { type: string }).type = "conditional"; // the pre-migration key
+    const loaded = deserialize(asV7(s));
+    expect(loaded.error).toBeUndefined();
+    const migrated = loaded.state!.modules.find((m) => m.id === conditional.id)!;
+    expect(migrated.type).toBe("harmonizer");
+    // Same cell, same level — nothing about the board moved.
+    expect(migrated.pos).toEqual(hex(1, 0));
+    expect(migrated.level).toBe(conditional.level);
+  });
+
+  it("the charge window maps onto the focus generators' reserves", () => {
+    const s = fresh();
+    const gen = give(s, "focusKeyed", hex(2, 0));
+    const loaded = deserialize(asV7(s));
+    expect(loaded.error).toBeUndefined();
+    expect(loaded.state!.modules.find((m) => m.id === gen.id)!.reserve).toBeCloseTo(120, 9);
+    // The scalar is gone from the loaded shape.
+    expect((loaded.state as unknown as Record<string, unknown>).chargeWindow).toBeUndefined();
+  });
+
+  it("modules saved before the roster lenient-default their reserve and shift", () => {
+    const s = fresh();
+    const bend = give(s, "bend", hex(-1, 0));
+    const loaded = deserialize(asV7(s));
+    const modules = loaded.state!.modules;
+    expect(modules.find((m) => m.id === bend.id)!.shift).toBe(1); // the ♯ default
+    expect(modules.every((m) => typeof m.reserve === "number")).toBe(true);
+  });
+
+  it("the chord discovery ledger defaults empty and the life record is intact", () => {
+    const s = fresh();
+    s.sessionRecords.push({
+      sessionNumber: 1,
+      startedAt: 1,
+      endedAt: 2,
+      habitId: null,
+      mode: "open-ended",
+      plannedTarget: null,
+      creditedSeconds: 60,
+      earned: 6,
+      honestyEvents: [],
+      reflection: null,
+      goalsAdvanced: [],
+      achievements: [],
+    });
+    s.notes.push({ id: "n1", sessionId: 1, atElapsed: 10, text: "kept", habitId: null, at: 3 });
+    const before = { records: s.sessionRecords.length, notes: s.notes.length, habits: s.habits.length };
+    const loaded = deserialize(asV7(s));
+    expect(loaded.state!.chordDiscovery).toEqual({});
+    expect(loaded.state!.sessionRecords.length).toBe(before.records);
+    expect(loaded.state!.notes.length).toBe(before.notes);
+    expect(loaded.state!.habits.length).toBe(before.habits);
+    expect(loaded.state!.notes[0]!.text).toBe("kept");
+  });
+
+  it("the migration is one-time: a migrated v8 save reloads unchanged", () => {
+    const s = fresh();
+    give(s, "harmonizer", hex(1, 0));
+    const first = deserialize(asV7(s)).state!;
+    const second = deserialize(serialize(first, 1_000));
+    expect(second.error).toBeUndefined();
+    expect(serialize(second.state!, 1_000)).toBe(serialize(first, 1_000));
   });
 });

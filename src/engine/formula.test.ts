@@ -59,7 +59,7 @@ describe("board production model", () => {
   it("charge empowers adjacent synthesizers and infusors while the window lasts", () => {
     const s = fresh();
     give(s, "focusKeyed", hex(0, 1)); // C5 — adjacent to the opening C4
-    s.chargeWindow = 60;
+    s.modules.find((m) => m.type === "focusKeyed")!.reserve = 60;
     const live = computeRates(s, true);
     expect(live.rate).toBeCloseTo(SYNTH * chargedFactor(1), 9);
     // Charge exists only while flow is live: no session, no empowerment.
@@ -88,7 +88,7 @@ describe("board production model", () => {
     const s = fresh();
     give(s, "forge", hex(1, 0));
     give(s, "focusKeyed", hex(2, 0));
-    s.chargeWindow = 600;
+    s.modules.find((m) => m.type === "focusKeyed")!.reserve = 600;
     expect(computeRates(s, true).forgeRate).toBeCloseTo(1, 9);
     startSession(s, null);
     advance(s, 60);
@@ -102,7 +102,8 @@ describe("board production model", () => {
     const s = fresh();
     const generator = give(s, "focusKeyed", hex(1, 0));
     const second = give(s, "focusKeyed", hex(2, 0));
-    s.chargeWindow = 60;
+    generator.reserve = 60;
+    second.reserve = 60;
     const snapshot = computeRates(s, true);
     expect(snapshot.chargeStrength.get(generator.id)).toBe(0);
     expect(snapshot.chargeStrength.get(second.id)).toBe(0);
@@ -115,7 +116,7 @@ describe("board production model", () => {
     const s = fresh();
     give(s, "focusKeyed", hex(1, 0));
     give(s, "focusKeyed", hex(0, 1));
-    s.chargeWindow = 60;
+    for (const m of s.modules) if (m.type === "focusKeyed") m.reserve = 60;
     expect(computeRates(s, true).rate).toBeCloseTo(SYNTH * chargedFactor(2), 9);
   });
 
@@ -133,7 +134,7 @@ describe("board production model", () => {
     give(s, "additive", hex(1, 0));
     give(s, "forge", hex(0, 1));
     give(s, "focusKeyed", hex(2, 0));
-    s.chargeWindow = 600;
+    s.modules.find((m) => m.type === "focusKeyed")!.reserve = 600;
     startSession(s, 600);
     advance(s, 100);
     s.mode = "paused";
@@ -151,7 +152,7 @@ describe("upgrade costs and rarity power", () => {
 
   it("level zero power is one for every rarity", () => {
     for (const rarity of ["common", "uncommon", "rare"] as const) {
-      expect(modulePower({ id: "x", type: "forge", rarity, level: 0, invested: 0, pos: null })).toBe(1);
+      expect(modulePower({ id: "x", type: "forge", rarity, level: 0, invested: 0, pos: null, reserve: 0, shift: null })).toBe(1);
     }
   });
 
