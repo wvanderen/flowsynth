@@ -1,5 +1,6 @@
 import { createInitialState, createModule, normalizeChordDiscovery, normalizeModules } from "./state";
 import { normalizeHabitBuilds } from "./builds";
+import { normalizeGoals } from "./goals";
 import { SAVE_VERSION } from "./constants";
 import type { GameState } from "./types";
 
@@ -158,6 +159,11 @@ export function deserialize(text: string): LoadResult {
   // themselves are never stored: they derive idempotently from
   // habit.seconds at read time (the v8 promise — no second bump).
   normalizeHabitBuilds(merged.habits);
+  // The goals' live-share surface (ADR-0047, wave 5) lenient-defaults the
+  // same way: a goal saved before the generators wave carries no live
+  // slice, which reads — honestly — as a manual-only history that banks
+  // nothing at its next completion.
+  normalizeGoals(merged.goals);
   // The v7 → v8 migration (issue #229): transform in place, before the
   // per-module normalization below reads the new shape.
   if (migrating) {

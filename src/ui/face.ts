@@ -55,6 +55,8 @@ export const HUE_TOKEN_OF: Record<ModuleType, string> = {
   ritual: "hue-ritual",
   spacer: "hue-spacer",
   focusKeyed: "hue-generator",
+  noteKeyed: "hue-generator",
+  goalKeyed: "hue-generator",
   infusor: "hue-booster",
   forge: "hue-forge",
   mutatorForge: "hue-forge",

@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import { buyCell, buyShelfModule, chooseRoll, endSession, placeModule, prestige, startSession, upgradeModuleLevels } from "./actions";
 import { advance } from "./advance";
 import { ARETE_HORIZON, horizonReached } from "./accumulator";
-import { isOscillatorType } from "./constants";
+import { CATEGORY_OF, isOscillatorType } from "./constants";
 import { computeRates } from "./economy";
+import { createGoal, deleteGoal } from "./goals";
 import { neighbors, sameHex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
+import { writeNote } from "./notes";
 import { createInitialState } from "./state";
 import type { GameState, Hex } from "./types";
 
@@ -33,11 +35,23 @@ function frontier(state: GameState, shape: "compact" | "fifths"): Hex[] {
 }
 
 function manage(state: GameState, shape: "compact" | "fifths"): void {
-  // Accept a synthesizer when offered; otherwise keep the first real draw.
+  // Accept a synthesizer when offered; otherwise a keyed generator — the
+  // console facts below keep one fed, so it is a real draw (ADR-0047) —
+  // otherwise keep the first candidate.
   for (const offer of [...state.bankedRolls]) {
-    const candidate = offer.candidates.find((c) => isOscillatorType(c.type)) ?? offer.candidates[0];
+    const candidate =
+      offer.candidates.find((c) => isOscillatorType(c.type)) ??
+      offer.candidates.find((c) => CATEGORY_OF[c.type] === "generator") ??
+      offer.candidates[0];
     expect(chooseRoll(state, offer.id, candidate.id).ok).toBe(true);
   }
+  // A modest player keeps one small goal tracked at all times — re-minted
+  // each break because the sim's clock compresses days into sessions, so a
+  // completed daily never rolls over. Completing it is the Goal
+  // Generator's console fact (ADR-0047): the pool's keyed generators earn
+  // their reserves through play, never for free.
+  for (const goal of [...state.goals]) deleteGoal(state, goal.id);
+  expect(createGoal(state, { habitId: null, minutes: 25, schedule: "once", now: 0 }).ok).toBe(true);
   // At most one shelf purchase and two cells per break, preserving room
   // for expansion before spending the rest on levels.
   for (const type of ["generator", "forge", "infusor"] as const) {
@@ -64,10 +78,12 @@ function manage(state: GameState, shape: "compact" | "fifths"): void {
     module.pos = null;
     if (best) expect(placeModule(state, module.id, best).ok).toBe(true);
   }
-  // Three upgrade gestures, each capped at five levels; rotate through
-  // deployed synthesizers rather than spend everything on one voice.
+  // Five-level gestures over every deployed synthesizer, cheapest voice
+  // first — the low-tail sweep raises the whole chorus until the bank runs
+  // dry (the bank-limited shape the bulk ladder ships, over the grown
+  // roster the diluted pool and the keyed generators now carry).
   const synths = state.modules.filter((m) => m.pos && isOscillatorType(m.type)).sort((a, b) => a.level - b.level);
-  for (const module of synths.slice(0, 3)) upgradeModuleLevels(state, module.id, 5);
+  for (const module of synths) upgradeModuleLevels(state, module.id, 5);
 }
 
 function scenario(seed: number, shape: "compact" | "fifths") {
@@ -78,6 +94,9 @@ function scenario(seed: number, shape: "compact" | "fifths") {
   for (let session = 1; session <= 48; session++) {
     manage(state, shape);
     expect(startSession(state, 1800, (session - 1) * 1800000).ok).toBe(true);
+    // One jotting per session — the Note Generator's console fact
+    // (ADR-0047), credited by character count under the cap.
+    writeNote(state, "keep the shoulders down and the wrist loose through the scale run");
     // Minute steps bound achievement and charge-boundary timing, and
     // record the first crossing to within one minute of credited play.
     for (let minute = 1; minute <= 30; minute++) {

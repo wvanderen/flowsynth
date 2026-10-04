@@ -82,6 +82,12 @@ describe("the prestige action", () => {
     s.nous = 9_999;
     const gen = give(s, "focusKeyed", hex(2, 0));
     gen.reserve = 480;
+    // The keyed family's reserves are all charge state (ADR-0047): the
+    // note and goal pools empty at prestige beside the focus window.
+    const note = give(s, "noteKeyed", hex(0, 1));
+    const goal = give(s, "goalKeyed", null);
+    note.reserve = 300;
+    goal.reserve = 750;
     prestige(s);
     expect(s.nous).toBe(BALANCE.openingGrant);
     expect(s.modules.every((m) => m.reserve === 0)).toBe(true);

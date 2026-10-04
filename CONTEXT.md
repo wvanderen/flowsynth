@@ -139,7 +139,7 @@ _Avoid_: converter
 A habit-independent resource produced by generators that empowers or charges other modules; its state is preserved between flow sessions.
 
 **Generator**:
-A board module that produces charge. Remaining output belongs to the generator and follows it when moved; a console fact credits every owned generator of the matching type, board or tray. The Focus Generator is the launch generator (ADR-0018 retired the plain generator pre-release); the Note Generator and Goal Generator join with the reserve iteration, reading the console's notes and goals through the board seam (ADR-0047).
+A board module that produces charge. Remaining output belongs to the generator and follows it when moved; a console fact credits every owned generator of the matching type, board or tray. The Focus Generator is the launch generator (ADR-0018 retired the plain generator pre-release); the Note Generator and Goal Generator joined with the reserve iteration, reading the console's notes and goals through the board seam (ADR-0047).
 
 **Charge window**:
 A Focus Generator's charge budget, banked at session end into each owned Focus Generator, sized as a fraction of that session's credited practice time and spent as output during the next session's first minutes. Manual practice logs never create one.
@@ -276,13 +276,13 @@ The focus app providing planned targets and timing tools, and the home of sessio
 A practice duration or milestone set within the Time app — a preset quick pick or free entry from 1 to 90 minutes in 1-minute steps — that a session can aim at and hit; hits are recorded in the session summary.
 
 **Notes app**:
-The focus app for recording notes — during a flow session or between sessions. Notes carry no charge or economy effect; tagged notes wear their habit as a chip.
+The focus app for recording notes — during a flow session or between sessions. Notes produce nothing themselves; a written note is the fact each owned Note Generator reads, crediting its reserve by the note's character count (ADR-0047). Tagged notes wear their habit as a chip.
 
 **Habit-keyed note**:
 A note tagged with the session's selected habit at capture, surfaced in that habit's development summary and chipped in the Notes stream. Unstructured and upgrade-mode notes go untagged.
 
 **Goals app**:
-The focus app for tracking goals; completion is the tracking itself, surfaced in the session summary. Its capacity grows through console long goals.
+The focus app for tracking goals; completion is the tracking itself, surfaced in the session summary. A completion is the fact each owned Goal Generator reads, crediting its reserve a multiple of the focus equivalent prorated by the goal's live share (ADR-0047). Its capacity grows through console long goals.
 
 **Goal**:
 A practice condition to fulfill, such as practicing piano for twenty minutes or practicing four specified habits in a day, accruing progress only while active. Goals may qualify practice by habit or other criteria, and a session may advance several goals.

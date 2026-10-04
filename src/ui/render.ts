@@ -1979,6 +1979,15 @@ const silentBloomLines = ({ levels }: BloomEffectInput): { benefit: string | nul
   contribution: `+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/LV to chord instances`,
 });
 
+// The generators' expanded-face lines (ADR-0047): delivery is one shared
+// shape — level scales output strength only, never the banked duration —
+// so all three keyed types read identically here; what differs is the
+// fact that banks them, and the Forge-candidate sheet says that.
+const generatorBloomLines = ({ gain, power }: BloomEffectInput): { benefit: string | null; contribution: string } => ({
+  benefit: `+${formatNumber(gain)} strength`,
+  contribution: `${formatNumber(power)} charge strength while its reserve lasts`,
+});
+
 const BLOOM_EFFECTS: Record<ModuleInstance["type"], (input: BloomEffectInput) => { benefit: string | null; contribution: string }> = {
   additive: synthBloomLines,
   // The Blaster's charge conversion replaces the charge factor: one level
@@ -1996,10 +2005,9 @@ const BLOOM_EFFECTS: Record<ModuleInstance["type"], (input: BloomEffectInput) =>
     contribution: `amplifies the active habit's build ×${formatNumber(1 + ritualAmpOf(level, strength))} while charged`,
   }),
   spacer: () => ({ benefit: null, contribution: "silent — conducts chords, produces nothing" }),
-  focusKeyed: ({ gain, power }) => ({
-    benefit: `+${formatNumber(gain)} strength`,
-    contribution: `${formatNumber(power)} charge strength while its reserve lasts`,
-  }),
+  focusKeyed: generatorBloomLines,
+  noteKeyed: generatorBloomLines,
+  goalKeyed: generatorBloomLines,
   infusor: ({ gain, power, strength }) => ({
     benefit: `+${formatNumber(100 * BALANCE.infusorBonus * gain)}% uplift`,
     contribution: `+${formatNumber(100 * BALANCE.infusorBonus * power * chargedFactor(strength))}% to adjacent`,
@@ -3417,6 +3425,8 @@ function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
     case "ritual": return `amplifies the active habit's equipped build +${formatNumber(BALANCE.ritualAmpPerLevel * 100)}%/LV while receiving charge<br>charge never crosses to the console — the habit keys the module`;
     case "spacer": return `Silent wire — never sounds, never joins a pitch set<br>conducts chord adjacency through chains of wired cells`;
     case "focusKeyed": return `The generator — keyed to your focus<br>each session end banks a reserve (a tenth of its live practice time), spent as its output next session`;
+    case "noteKeyed": return `The generator — keyed to your notes<br>every note written banks its reserve (${formatNumber(BALANCE.noteCreditPerChar)} s per character, ${formatNumber(BALANCE.noteCreditCapSeconds / 60)} min cap per note), spent as its output in flow`;
+    case "goalKeyed": return `The generator — keyed to your goals<br>each completion banks its reserve (${formatNumber(BALANCE.goalReserveMultiple)}× the focus equivalent, by the goal's live share), spent as its output in flow`;
     case "infusor": return `+${formatNumber(BALANCE.infusorBonus * 100)}% to adjacent production contributions<br>+${formatNumber(BALANCE.infusorBonus * charged * 100)}% at charge strength 1`;
     case "forge": return `1 Forge progress per received charge strength<br>Next roll: ${formatNumber(forgeThreshold(state.forge.earned))} progress`;
     case "mutatorForge": return `1 Mutator Forge progress per received charge strength<br>Next roll: ${formatNumber(mutatorForgeThreshold(state.mutatorForge.earned))} progress`;
@@ -3440,6 +3450,8 @@ function candidateReadout(type: ModuleInstance["type"]): string {
     case "spacer":
       return "⌇";
     case "focusKeyed":
+    case "noteKeyed":
+    case "goalKeyed":
       return "⌁1";
     case "infusor":
       return `+${formatNumber(BALANCE.infusorBonus * 100)}%`;

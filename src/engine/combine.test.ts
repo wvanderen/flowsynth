@@ -199,4 +199,20 @@ describe("combinePreview", () => {
     endSession(s);
     expect(combinePreview(s, pairA.id, pairB.id)).not.toBeNull();
   });
+
+  // ADR-0047 (wave 5): reserves are charge state owned per module — the
+  // consumed copy's unspent reserve is forfeited with it, the survivor's
+  // carries on under the next rarity. Never summed, never refunded.
+  it("combining two Note Generators forfeits the consumed one's unspent reserve and keeps the survivor's", () => {
+    const s = fresh();
+    const survivor = give(s, "noteKeyed", hex(2, 0));
+    const consumed = give(s, "noteKeyed", null);
+    survivor.reserve = 100;
+    consumed.reserve = 40;
+    const result = combine(s, survivor.id, consumed.id);
+    expect(result.ok).toBe(true);
+    expect(s.modules.find((m) => m.type === "noteKeyed")).toBe(survivor);
+    expect(survivor.rarity).toBe("uncommon");
+    expect(survivor.reserve).toBeCloseTo(100, 6);
+  });
 });

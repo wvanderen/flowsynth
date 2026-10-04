@@ -142,7 +142,10 @@ export function resolveHonestyReport(
   if (credit > EPS) {
     accounting.creditedSeconds += credit;
     accrueLivePractice(state, credit);
-    completions = accrueGoalProgress(state, state.activeHabitId, credit);
+    // Honesty-credited minutes are the live side of the boundary (ADR-0047):
+    // the completion tick here banks the goal generator's credit exactly as
+    // a mid-session tick would — only manual logs prorate to zero.
+    completions = accrueGoalProgress(state, state.activeHabitId, credit, "live");
     // Every credited minute counts (ADR-0041): honesty-credited provisional
     // minutes top the flow meter up here, beside habits and goals — the
     // same one concept the live minutes fill with.

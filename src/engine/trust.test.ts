@@ -378,6 +378,7 @@ describe("the honesty report", () => {
       schedule: { kind: "once" },
       occurrenceKey: "once",
       progressSeconds: 0,
+      liveSeconds: 0,
       completed: false,
       completedCount: 0,
       createdAt: 0,

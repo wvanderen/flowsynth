@@ -153,6 +153,8 @@ describe("module face", () => {
       amplifier: ["Amplifier", "AMP"],
       ritual: ["RITUAL", "RITUAL"],
       focusKeyed: ["Focus Generator", "FOCUS"],
+      noteKeyed: ["Note Generator", "NOTE"],
+      goalKeyed: ["Goal Generator", "GOAL"],
       infusor: ["Booster", "BOOST"],
       spacer: ["Spacer", "SPACER"],
       forge: ["Forge", "FORGE"],
@@ -170,6 +172,10 @@ describe("module face", () => {
     expect(moduleIcon("additive")).toBe('<path d="M-12 0C-8-10-4-10 0 0C4 10 8 10 12 0"/>');
     expect(moduleIcon("harmonizer")).toBe('<path d="M0-10 8 0 0 10-8 0Z"/>');
     expect(moduleIcon("focusKeyed")).toBe('<path d="M2-13-6 1H0L-2 13 6-1H0Z"/>');
+    // The keyed siblings: the bolt with the corner mark each fact wears —
+    // the Note's ruled double line, the Goal's completion check (#232).
+    expect(moduleIcon("noteKeyed")).toBe('<path d="M2-13-6 1H0L-2 13 6-1H0Z"/><path d="M5-14.5l3.5 3.5M7.5-15.5 11-12"/>');
+    expect(moduleIcon("goalKeyed")).toBe('<path d="M2-13-6 1H0L-2 13 6-1H0Z"/><path d="M4.5-11.5 7-9 11.5-14.5"/>');
     expect(moduleIcon("infusor")).toBe('<circle r="2.2"/><path d="M-5-7-13 0-5 7M5-7 13 0 5 7"/>');
     expect(moduleIcon("mutatorForge")).toContain('<path d="M0-5.5 4.8-2.7V2.7L0 5.5-4.8 2.7V-2.7Z"/><circle r="1.5"/>');
     // The Mutator Forge's chassis drops the lattice — distinct from the

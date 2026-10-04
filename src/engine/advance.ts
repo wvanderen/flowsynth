@@ -1,10 +1,10 @@
-import { EPS } from "./constants";
+import { CATEGORY_OF, EPS } from "./constants";
 import { syncAchievements } from "./achievements";
 import { syncChordDiscoveries } from "./library";
 import { chargeDelivered, computeRates, deployed } from "./economy";
 import { addFlowProgress, addForgeProgress, addMutatorForgeProgress, type Rng } from "./rolls";
 import { accrueLivePractice } from "./habits";
-import { accrueGoalProgress } from "./goals";
+import { accrueGoalProgress, secondsUntilGoalCompletion } from "./goals";
 import type { AdvanceResult, GameState, ModuleInstance } from "./types";
 
 // Where a span's produced nous lands and whether it credits practice
@@ -54,25 +54,28 @@ export function advance(
   if (!session) return result;
 
   // The board is locked during flow, so the rate is constant across the
-  // step — except at a reserve boundary: a deployed generator whose
+  // step — except at reserve depletion or live goal completion. A generator whose
   // remaining duration runs out mid-step splits there, so the drained
   // generator stops crediting the remainder (the rate really does change
   // mid-step, once — one boundary per step, the recursion walks them all).
   // The reserves are per module now (ADR-0047): the earliest emptying one
-  // is the split.
+  // is one split boundary. Every generator type drains — the focus, note, and goal
+  // generators share the one surface.
   const liveGenerators: ModuleInstance[] = [];
   let earliest = Infinity;
   for (const module of deployed(state)) {
-    if (module.type !== "focusKeyed") continue;
+    if (CATEGORY_OF[module.type] !== "generator") continue;
     if (module.reserve > EPS) {
       liveGenerators.push(module);
       earliest = Math.min(earliest, module.reserve);
     }
   }
+  // A live goal completion banks reserve mid-span, so it is another rate
+  // boundary even when every generator starts empty.
+  if (sink === "live") earliest = Math.min(earliest, secondsUntilGoalCompletion(state, state.activeHabitId));
   if (earliest !== Infinity && earliest + EPS < seconds) {
-    // Capture the split point first: the first leg drains the reserve, so
-    // reading it in the second call's argument would re-advance the whole
-    // step uncharged.
+    // Capture the boundary before advancing: the first leg can drain a
+    // reserve or complete a goal, changing the second leg's output.
     const split = earliest;
     const first = advance(state, split, rng, sink);
     const second = advance(state, seconds - split, rng, sink);
@@ -115,8 +118,8 @@ export function advance(
   // until its bucket banks.
   if (sink === "live") session.earned += gained;
   // Each generator's reserve is a time budget of its own (ADR-0047): a
-  // deployed focus-keyed generator spends one reserve second per flow
-  // second, elapsing even with no eligible neighbors (the
+  // deployed generator — any of the three keyed types — spends one reserve
+  // second per flow second, elapsing even with no eligible neighbors (the
   // remaining-duration vocabulary). Undeployed, it produces no output and
   // its reserve holds.
   for (const module of liveGenerators) {
