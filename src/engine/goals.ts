@@ -141,6 +141,24 @@ function creditGoalGenerators(state: GameState, goal: Goal): void {
   );
 }
 
+function acceptsPractice(goal: Goal, habitId: string | null): boolean {
+  return !goal.completed && goal.condition.kind === "habit-minutes"
+    && (goal.condition.habitId === null || goal.condition.habitId === habitId);
+}
+
+// Live advancement must stop at the next completion: its credit can change
+// generator output for the rest of the span. Provisional time never calls
+// this seam because it does not advance goals until reconciliation.
+export function secondsUntilGoalCompletion(state: GameState, habitId: string | null): number {
+  let earliest = Infinity;
+  for (const goal of state.goals) {
+    if (!acceptsPractice(goal, habitId)) continue;
+    const remaining = goalRequiredSeconds(goal) - goal.progressSeconds;
+    if (remaining > EPS) earliest = Math.min(earliest, remaining);
+  }
+  return earliest;
+}
+
 // Accrues qualifying practice and completes goals. Unstructured practice
 // (habitId null) counts toward any-habit goals; specific-habit goals only
 // accrue from their habit. The `source` splits the honesty boundary
@@ -156,13 +174,14 @@ export function accrueGoalProgress(state: GameState, habitId: string | null, sec
   if (seconds <= EPS) return 0;
   let completions = 0;
   for (const goal of state.goals) {
-    if (goal.completed) continue;
-    if (goal.condition.kind !== "habit-minutes") continue;
-    if (goal.condition.habitId !== null && goal.condition.habitId !== habitId) continue;
-    goal.progressSeconds += seconds;
-    if (source === "live") goal.liveSeconds += seconds;
+    if (!acceptsPractice(goal, habitId)) continue;
+    // Only practice up to completion belongs to this occurrence. Excess
+    // time still counts as practice, but cannot change its live share.
+    const qualifying = Math.min(seconds, Math.max(0, goalRequiredSeconds(goal) - goal.progressSeconds));
+    goal.progressSeconds += qualifying;
+    if (source === "live") goal.liveSeconds += qualifying;
     const session = state.session;
-    if (session) session.goalSeconds[goal.id] = (session.goalSeconds[goal.id] ?? 0) + seconds;
+    if (session) session.goalSeconds[goal.id] = (session.goalSeconds[goal.id] ?? 0) + qualifying;
     if (goal.progressSeconds >= goalRequiredSeconds(goal)) {
       goal.completed = true;
       goal.completedCount++;

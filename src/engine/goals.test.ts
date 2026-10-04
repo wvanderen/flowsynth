@@ -240,6 +240,53 @@ describe("persistence", () => {
 // mixed practice banks its live share. Recurring goals credit once per
 // occurrence; overlapping completions each credit.
 describe("the Goal Generator's reserve", () => {
+  it.each(["live", "manual"] as const)("caps an oversized %s completion at the remaining goal duration", (source) => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const gen = give(s, "goalKeyed", null);
+    createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 });
+    accrueGoalProgress(s, habit.id, 300, source === "live" ? "manual" : "live");
+    accrueGoalProgress(s, habit.id, 3600, source);
+    expect(s.goals[0]!.progressSeconds).toBe(600);
+    expect(s.goals[0]!.liveSeconds).toBe(300);
+    expect(gen.reserve).toBeCloseTo(150, 6);
+  });
+
+  it("a large manual log preserves the live share earned before completion", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const gen = give(s, "goalKeyed", null);
+    createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 });
+    startSession(s, null);
+    advance(s, 300);
+    endSession(s);
+    addPracticeLog(s, habit.id, 60, 2_000);
+    expect(gen.reserve).toBeCloseTo(150, 6);
+  });
+
+  it("trusted batches deliver and drain completion credits like one-second ticks", () => {
+    function scenario() {
+      const s = fresh();
+      const board = give(s, "goalKeyed", hex(1, 0));
+      const tray = give(s, "goalKeyed", null);
+      createGoal(s, { habitId: null, minutes: 1, schedule: "once", now: 1 });
+      createGoal(s, { habitId: null, minutes: 2, schedule: "once", now: 1 });
+      startSession(s, 600);
+      return { s, board, tray };
+    }
+    const batch = scenario();
+    const ticks = scenario();
+    applyGap(batch.s, 600, "away", 0, () => 0.5);
+    const result = flushPendingAway(batch.s, () => 0.5);
+    for (let i = 0; i < 600; i++) advance(ticks.s, 1, () => 0.5);
+    expect(result.goalsCompleted).toBe(2);
+    expect(batch.board.reserve).toBe(0);
+    expect(batch.tray.reserve).toBe(90);
+    expect(batch.s.nous).toBeCloseTo(ticks.s.nous, 6);
+    expect(batch.s.forge.progress).toBeCloseTo(ticks.s.forge.progress, 6);
+    expect(batch.s.session!.goalSeconds).toEqual(ticks.s.session!.goalSeconds);
+  });
+
   it("a live completion banks k × the focus equivalent into every owned Goal Generator", () => {
     const s = fresh();
     const habit = withHabit(s);
