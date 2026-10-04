@@ -354,7 +354,7 @@ The period between flow sessions when the player configures and upgrades the boa
 The modal every flow session ends with in upgrade mode, after the honesty report when one is owed: the session's banked nous headline, credited practice minutes, the achieved rate with its breakdown, its honesty event lines as neutral factual lines, and any unlocks. The reflection rides in it above dismissal.
 
 **Reflection**:
-The optional insight capture in the session summary: free text plus a five-position valence slider (rough ↔ great), neutral middle default. Recorded when either part is touched, absent otherwise; pure insight at launch — nothing reads it.
+The optional insight capture in the session summary: free text plus a continuous valence slider (rough ↔ great), neutral middle default and end labels that brighten as the thumb nears. Recorded when either part is touched, absent otherwise; pure insight at launch — nothing reads it.
 
 **Practice-minute countdown**:
 The affordability estimate on upgrade-mode purchase surfaces, projecting the current board's next-session rate ("in ~3:40 of practice"); hidden when already affordable or when no rate exists. Never shown in-session or in the summary.
