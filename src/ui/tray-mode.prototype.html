@@ -1,0 +1,549 @@
+<!doctype html>
+<!-- THROWAWAY PROTOTYPE · wayfinder #246 "Unify module and mutator controls and trays"
+     Question: how should module/mutator mode govern Add, Catalog, and the tray as one
+     coherent interaction model? Three tray compositions, switchable via ?variant=A|B|C:
+       A · Pinned column   — always-open column at the board's right edge (no Inventory dock icon)
+       B · Collapsible     — ADR-0027's column beside the dock, now dual-face (Inventory icon toggles)
+       C · Lower strip     — always-open instrument strip above the horizon bar (no Inventory icon)
+     All variants share the mode-directed model: one mode (Modules/Mutators) directs the
+     board tabs, Add (cells vs slot unlocks), the Catalog's landing face, and the tray's face.
+     Also demonstrable: armed placement, swap, retrieval (right-click), combining, mode
+     switches cancelling armed actions, the pre-entry locked states, phone sheet.
+     Illustrative figures; no saves. Run: python3 -m http.server 5174  -->
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FlowSynth · tray &amp; mode unification prototype</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap');
+:root{color-scheme:dark;--bg:#0d1122;--panel:#141a30;--panel-deep:#0a0e1b;--soft:#2a3150;--line:#414a75;--ink:#e5e9f5;--muted:#99a1c2;--nous:#cbcaff;--arete:#b994f5;--charge:#9affa8;--switch:#cc603d;--clip:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 'IBM Plex Sans',sans-serif}
+button{font:600 16px 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:inherit;background:none;border:1px solid var(--line);padding:9px 13px;min-height:44px;cursor:pointer}
+button:hover:not(:disabled){background:#252d48}button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+button:disabled{color:var(--muted);border-color:var(--soft);cursor:default}
+h1{font:600 22px 'Barlow Condensed',sans-serif;margin:0}
+.mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+.dim{color:var(--muted)}.arete{color:var(--arete)}.nous{color:var(--nous)}
+header{height:64px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--soft);padding:0 26px;gap:18px}
+.session{display:flex;align-items:center;gap:16px}.session .mono{font-size:20px}
+.notice{padding:6px 26px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--soft)}
+.ledger{display:flex;align-items:center;gap:26px;padding:12px 26px;border-bottom:1px solid var(--soft);font-size:14px}
+.ledger .value{font-size:20px}
+.ledger .push{margin-left:auto;display:flex;gap:20px}
+main{padding:10px 26px 40px}
+/* ── board frame ── */
+.board-wrap{position:relative;max-width:980px;margin:0 auto;min-height:620px}
+.mode-tabs{position:absolute;left:8px;top:2px;z-index:5;display:flex;gap:6px}
+.mode-tabs button{min-height:38px;padding:6px 14px;font-size:17px;color:var(--muted)}
+.mode-tabs button[aria-pressed=true]{color:var(--ink);box-shadow:inset 0 -3px var(--ink)}
+.mode-tabs button.locked{border-style:dashed}
+.mode-tabs button.locked .lockmark{color:var(--arete);margin-left:6px}
+svg#board{width:100%;display:block}
+svg#board .cell{fill:var(--panel);stroke:var(--soft);stroke-width:1.5}
+svg#board .cell.frontier{fill:#10152a;stroke:#222841;stroke-dasharray:5 5}
+svg#board .cell.owned-empty{stroke:var(--line)}
+svg#board .pulse{animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{stroke-opacity:.25}}
+@media(prefers-reduced-motion:reduce){svg#board .pulse{animation:none}}
+svg#board .modules-layer .face-hex{fill:var(--panel);stroke:var(--soft)}
+svg#board text{pointer-events:none}
+.nameplate{font:600 14px 'Barlow Condensed',sans-serif;fill:var(--ink);letter-spacing:.03em}
+.lvl{font:11px 'IBM Plex Mono',monospace;fill:var(--muted)}
+.readout{font:15px 'IBM Plex Mono',monospace;fill:var(--ink)}
+.slot-family{font:600 15px 'Barlow Condensed',sans-serif;fill:var(--arete);letter-spacing:.1em}
+.slot-host{font:10.5px 'IBM Plex Sans',sans-serif;fill:var(--muted)}
+.slot-effect{font:11px 'IBM Plex Mono',monospace;fill:var(--arete)}
+body[data-mode=mutators] #modules-layer{opacity:.25;pointer-events:none}
+body[data-mode=modules] #slots-layer .mut-slot-face,body[data-mode=modules] #slots-layer .mut-slot-open{pointer-events:none}
+.unlock-target .cell{stroke:var(--arete);stroke-dasharray:5 5;fill:#181233}
+.armed-frontier .cell{stroke:var(--nous);fill:#161b36}
+.place-target .cell{stroke:var(--ink)}
+.swap-target .cell{stroke:#e0c36a}
+/* ── dock ── */
+.dock{position:absolute;left:0;top:56px;z-index:6;display:flex;flex-direction:column;gap:8px}
+.dock button{position:relative;width:64px;height:58px;padding:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:color-mix(in srgb,var(--panel) 88%,transparent);backdrop-filter:blur(2px)}
+.dock button svg{width:20px;height:20px}
+.dock button .dl{font-size:12px;font-weight:600;line-height:1;color:var(--muted)}
+.dock button .price{font:10px 'IBM Plex Mono',monospace;line-height:1;color:var(--ink)}
+.dock button[aria-pressed=true]{box-shadow:inset 0 0 0 2px var(--ink)}
+.dock .badge{position:absolute;top:-7px;right:-4px;font:11px 'IBM Plex Mono',monospace;background:var(--panel-deep);border:1px solid var(--line);padding:1px 5px}
+/* ── tray shells (per variant) ── */
+.tray{position:absolute;z-index:6;display:flex;background:color-mix(in srgb,var(--panel) 92%,transparent);backdrop-filter:blur(3px);clip-path:var(--clip);border:1px solid var(--line)}
+.tray-head{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--soft)}
+.tray-head .tt{font:600 13px 'Barlow Condensed',sans-serif;letter-spacing:.14em;color:var(--muted)}
+.seg{display:flex;gap:0}
+.seg button{min-height:30px;padding:4px 10px;font-size:14px;color:var(--muted);border:0;border-top:1px solid var(--soft);border-bottom:1px solid var(--soft)}
+.seg button:first-child{border-left:1px solid var(--soft);border-radius:0}
+.seg button+button{border-right:1px solid var(--soft)}
+.seg button[aria-pressed=true]{color:var(--ink);background:#222946;box-shadow:inset 0 -2px var(--ink)}
+.tray-body{display:flex;gap:8px;padding:10px;overflow:auto;align-content:flex-start}
+.tile{width:62px;height:62px;padding:4px;flex:0 0 auto;display:grid;place-items:center;border:1px solid transparent;background:none}
+.tile:hover{border-color:var(--line)}
+.tile.armed{box-shadow:inset 0 0 0 2px var(--ink)}
+.tile.combine-hit{box-shadow:inset 0 0 0 2px #e0c36a}
+.tile svg{width:100%;height:100%}
+.tray-count{padding:6px 10px;font-size:12px;color:var(--muted);border-top:1px solid var(--soft)}
+.tray-empty{font-size:13px;color:var(--muted);padding:14px 6px;max-width:150px}
+.tray-lock{display:flex;flex-direction:column;gap:10px;align-items:center;padding:14px}
+.tray-lock button{border-color:var(--arete);color:var(--arete);display:flex;flex-direction:column;gap:4px}
+/* A: pinned column, right edge, always open */
+body[data-variant=A] .tray{top:52px;right:0;bottom:96px;flex-direction:column;width:134px}
+body[data-variant=A] .tray-head,body[data-variant=B] .tray-head{flex-direction:column;align-items:stretch;gap:6px}
+body[data-variant=A] .seg,body[data-variant=B] .seg{flex-direction:column}
+body[data-variant=A] .seg button,body[data-variant=B] .seg button{border:1px solid var(--soft);border-top:0;text-align:left}
+body[data-variant=A] .seg button:first-child,body[data-variant=B] .seg button:first-child{border-top:1px solid var(--soft)}
+body[data-variant=A] .tray-body{flex-direction:column;flex:1}
+body[data-variant=A] .tray-count{margin-top:auto}
+/* B: collapsible column beside the dock */
+body[data-variant=B] .tray{top:56px;left:76px;bottom:96px;flex-direction:column;width:134px}
+body[data-variant=B] .tray-body{flex-direction:column;flex:1}
+body[data-variant=B] .tray-count{margin-top:auto}
+body[data-variant=B] .tray.closed{display:none}
+/* C: lower strip above the horizon */
+body[data-variant=C] .tray{left:8px;right:8px;bottom:34px;flex-direction:column}
+body[data-variant=C] .tray-body{flex-direction:row}
+body[data-variant=C] .tray-count{margin-left:auto;border:0;padding:6px 10px 10px;align-self:flex-end}
+/* ── armed pill · toast · horizon · popover ── */
+.pill{position:absolute;left:50%;transform:translateX(-50%);bottom:110px;z-index:7;background:var(--panel-deep);border:1px solid var(--ink);padding:10px 16px;font:600 16px 'Barlow Condensed',sans-serif;letter-spacing:.04em;display:flex;gap:14px;align-items:center}
+.pill .esc{font:12px 'IBM Plex Mono',monospace;color:var(--muted)}
+.toast{position:absolute;left:12px;bottom:8px;z-index:7;font:13px 'IBM Plex Mono',monospace;color:var(--muted)}
+.horizon{position:absolute;left:4%;right:4%;bottom:6px;display:flex;gap:12px;align-items:center;font:12px 'IBM Plex Mono',monospace;color:var(--muted);pointer-events:none}
+.horizon .bar{height:3px;flex:1;background:var(--soft)}.horizon .bar i{display:block;height:100%;background:var(--arete)}
+.popover{position:absolute;z-index:8;background:var(--panel-deep);border:1px solid var(--line);padding:10px;display:flex;flex-direction:column;gap:6px;min-width:120px}
+.popover .pk{font:600 15px 'Barlow Condensed',sans-serif}
+.popover .pe{font:12px 'IBM Plex Mono',monospace;color:var(--arete)}
+.popover button{min-height:34px;padding:4px 10px;font-size:14px}
+/* ── sheets (catalog · phone inventory · combine review) ── */
+.veil{position:fixed;inset:0;z-index:20;background:#05070fd9;display:none;align-items:center;justify-content:center}
+.veil.open{display:flex}
+.sheet{background:var(--panel);clip-path:var(--clip);border:1px solid var(--line);width:min(620px,94vw);height:min(600px,88vh);display:flex;flex-direction:column}
+.sheet-head{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--soft)}
+.sheet-head .idmark{margin-left:auto;font-size:20px}
+.sheet-body{overflow:auto;padding:6px 18px 20px}
+.cat-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0;border-top:1px solid var(--soft)}
+.cat-row h3{font:600 19px 'Barlow Condensed',sans-serif;margin:0}
+.cat-row p{margin:4px 0 0;font-size:13px;color:var(--muted)}
+.cat-row .price{flex-shrink:0}
+.cat-row .owned{font:12px 'IBM Plex Mono',monospace;box-shadow:inset 0 -1px var(--muted);padding:6px 2px;color:var(--muted)}
+.cat-sec h2{font:600 22px 'Barlow Condensed',sans-serif;margin:18px 0 4px}
+.entry-screen{min-height:380px;display:flex;align-items:center;justify-content:center}
+.entry-screen button{border-color:var(--arete);color:var(--arete);display:flex;flex-direction:column;gap:8px;padding:24px 28px;font-size:22px}
+.lockmark-big{color:var(--arete)}
+/* ── phone ── */
+.thumb{display:none}
+body.phone .tray,body.phone .dock{display:none!important}
+body.phone .thumb{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--panel-deep);border-top:1px solid var(--line)}
+body.phone .thumb button{flex:1;border:0;border-left:1px solid var(--soft);display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px;min-height:56px;font-size:13px}
+body.phone .thumb button:first-child{border-left:0}.thumb button svg{width:18px;height:18px}
+body.phone .badge{font:11px 'IBM Plex Mono',monospace;color:var(--muted)}
+body.phone .pill{bottom:120px}
+body.phone .board-wrap{min-height:430px}
+@media(max-width:820px){
+ header{padding:10px 16px}main{padding:8px 10px 150px}
+ .dock,.tray{display:none!important}
+ .board-wrap{min-height:430px}
+ .pill{bottom:120px}
+ .thumb{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--panel-deep);border-top:1px solid var(--line)}
+ .thumb button{flex:1;border:0;border-left:1px solid var(--soft);display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px;min-height:56px;font-size:13px}
+ .thumb button:first-child{border-left:0}.thumb button svg{width:18px;height:18px}
+ .thumb .badge{font:11px 'IBM Plex Mono',monospace;color:var(--muted)}
+ .sheet{width:100vw;max-width:100vw;height:74vh;align-self:flex-end}
+ .veil{align-items:flex-end}
+}
+body.phone .sheet{width:100vw;max-width:100vw;height:74vh}
+body.phone .veil{align-items:flex-end}
+/* ── switcher (prototype furniture) ── */
+.switcher{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:30;display:flex;gap:8px;align-items:center;background:#e8eaf5;color:#10142b;border-radius:999px;padding:5px 8px;box-shadow:0 8px 24px #0007;font:600 14px 'Barlow Condensed',sans-serif}
+.switcher button{border:0;min-height:34px;padding:4px 12px;color:#10142b}
+.switcher button:hover{background:#c6cddd}
+.switcher .vl{min-width:170px;text-align:center}
+@media(max-width:820px){.switcher{bottom:auto;top:10px}.switcher .vl{min-width:120px}}
+</style>
+<body data-variant="A" data-mode="modules" data-entry="1">
+<header><h1>FlowSynth</h1><div class="session"><span class="dim">upgrade mode</span><span class="mono">20:00</span></div></header>
+<div class="notice">Throwaway interaction prototype · figures illustrative · no saves · phone: resize ≤ 820px, Inventory opens the unified sheet</div>
+<div class="ledger"><span class="value mono nous" id="led-nous">1.24k ν</span><span class="value mono nous">18.6 ν/s</span><span class="value mono arete" id="led-arete">6 ◇</span><div class="push"><span class="dim">Feats 6/18</span><span class="dim">Chords 4/11</span></div></div>
+<main><div class="board-wrap">
+  <div class="mode-tabs" id="mode-tabs"></div>
+  <svg id="board" viewBox="0 0 960 620" aria-label="module board"></svg>
+  <div class="dock" id="dock"></div>
+  <div class="tray" id="tray"></div>
+  <div class="pill" id="pill" hidden></div>
+  <div class="toast" id="toast"></div>
+  <div class="horizon"><span>HORIZON</span><div class="bar"><i style="width:62%"></i></div><span>62%</span></div>
+  <div class="popover" id="popover" hidden></div>
+</div></main>
+<div class="veil" id="veil"><div class="sheet" id="sheet"></div></div>
+<div class="thumb" id="thumb"></div>
+<div class="switcher">
+  <button id="prev" aria-label="Previous variant">←</button><span class="vl" id="vl"></span><button id="next" aria-label="Next variant">→</button>
+  <button id="entry-toggle"></button><button id="reset">Reset</button>
+</div>
+<script>
+"use strict";
+/* ── identity ── */
+const HUE={oscillator:"#6360d4",generator:"#238858",booster:"#1f95b5",forge:"#bc9239",spacer:"#8a93a8"};
+const GLYPH={
+ oscillator:'<path d="M-12 0C-8-10-4-10 0 0C4 10 8 10 12 0"/>',
+ generator:'<path d="M2-13-6 1H0L-2 13 6-1H0Z"/>',
+ booster:'<circle r="2.2"/><path d="M-5-7-13 0-5 7M5-7 13 0 5 7"/>',
+ forge:'<path d="m0-14 12 7v14L0 14-12 7V-7Zm0 0v28m-12-21 24 14m0-14L-12 7"/>'};
+const MUT_GLYPH={
+ power:'<path d="M-9 9 0-11 9 9"/><path d="M-4.5 9h9"/>',
+ resonance:'<path d="M-11 0q5.5-10 11 0t11 0"/><circle r="1.7" cx="-11" cy="0"/><circle r="1.7" cx="11" cy="0"/>',
+ charge:'<path d="M3.5-12-7.5 2.5H-1L-3.5 12 7.5-2.5H1Z"/>'};
+const FAMILY={power:"Power",resonance:"Resonance",charge:"Charge"};
+const RARITY_TICKS=r=>{const n={common:1,uncommon:2,rare:3}[r];return Array.from({length:n},(_,i)=>`<circle r="1.8" cx="${(i-(n-1)/2)*7}" cy="0"/>`).join("")};
+const hexPath=r=>`M0 ${-r} ${r*.866} ${-r/2}V${r/2}L0 ${r} ${-r*.866} ${r/2}V${-r/2}Z`;
+const R=58, px=(q,r)=>[480+100*(q+r/2),285+87*r];
+/* ── state ── */
+const S={
+ variant:(new URLSearchParams(location.search).get("variant")||"A"),
+ mode:"modules", entry:true, nous:1240, arete:6, cellPrice:12,
+ owned:[["0,0"],["1,0"],["-1,0"],["0,1"],["1,1"],["-1,1"],["2,0"],["0,-1"]].map(x=>x[0]),
+ occupiedCells:{"0,0":"osc1","1,0":"osc2","-1,1":"gen1","1,1":"forg1"},
+ mods:{
+  osc1:{id:"osc1",type:"oscillator",name:"Oscillator",rarity:"common",level:12,pos:"0,0"},
+  osc2:{id:"osc2",type:"oscillator",name:"Oscillator",rarity:"common",level:7,pos:"1,0"},
+  gen1:{id:"gen1",type:"generator",name:"Focus Generator",rarity:"uncommon",level:4,pos:"-1,1"},
+  forg1:{id:"forg1",type:"forge",name:"Module Forge",rarity:"common",level:3,pos:"1,1"},
+  inv1:{id:"inv1",type:"oscillator",name:"Oscillator",rarity:"common",level:5,pos:null},
+  inv2:{id:"inv2",type:"booster",name:"Booster",rarity:"uncommon",level:2,pos:null},
+  inv3:{id:"inv3",type:"forge",name:"Mutator Forge",rarity:"common",level:1,pos:null}},
+ muts:{
+  m1:{id:"m1",family:"power",rarity:"common",pos:"0,0"},
+  m2:{id:"m2",family:"power",rarity:"common",pos:null},
+  m3:{id:"m3",family:"power",rarity:"common",pos:null},
+  m4:{id:"m4",family:"resonance",rarity:"uncommon",pos:null}},
+ slots:["0,0","2,0"],
+ armed:null, sheet:null, sheetArg:null, trayOpen:true, nextId:100,
+ mutEffect(f,r){const b={power:40,resonance:40,charge:40}[f];const m={common:1,uncommon:2,rare:4}[r];return `+${b*m}%`},
+ slotPrice(){return S.slots.length===0?0:[0,2,3,5,8,12,20][Math.min(S.slots.length,6)]},
+};
+const FRONTIER=[["1,-1"],["-1,-1"],["2,1"],["-2,1"],["0,2"],["-1,2"],["1,2"],["-2,0"],["2,-1"]].map(x=>x[0]);
+const say=(t)=>{const el=document.getElementById("toast");el.textContent=t;clearTimeout(say.t);say.t=setTimeout(()=>el.textContent="",3200)};
+const fmt=n=>n>=1000?`${(n/1000).toFixed(2)}k`:String(n);
+/* ── board svg ── */
+function boardSvg(){
+ const g=[];
+ for(const key of FRONTIER){const[q,r]=key.split(",").map(Number);const[x,y]=px(q,r);
+  g.push(`<g class="${S.armed?.kind==="cell"?"armed-frontier pulse":""}" data-frontier="${key}" transform="translate(${x},${y})" role="button" tabindex="0" aria-label="frontier hex"><path class="cell frontier" d="${hexPath(R)}"/></g>`)}
+ for(const key of S.owned){const[q,r]=key.split(",").map(Number);const[x,y]=px(q,r);const occ=S.occupiedCells[key];
+  const placeReg=S.armed?.kind==="place"&&S.armed.inv==="mods"?(occ?"swap-target":"place-target"):"";
+  g.push(`<g class="${placeReg}" data-cell="${key}" transform="translate(${x},${y})" role="button" tabindex="0" aria-label="${occ?"occupied":"open"} cell">
+   <path class="cell ${occ?"":"owned-empty"}" d="${hexPath(R)}"/></g>`)}
+ const mods=Object.values(S.mods).filter(m=>m.pos);
+ const modG=mods.map(m=>{const[q,r]=m.pos.split(",").map(Number);const[x,y]=px(q,r);const hue=HUE[m.type];
+  const read=m.type==="oscillator"?`${(m.level*1.55).toFixed(1)} ν/s`:m.type==="generator"?"0.8/s":m.type==="forge"?"41%":"";
+  return `<g class="module-face" data-module="${m.id}" transform="translate(${x},${y})" role="button" tabindex="0" aria-label="${m.name} · ${m.rarity}">
+   <path class="face-hex" d="${hexPath(R-2)}"/><path d="${hexPath(R-8)}" fill="none" stroke="${hue}" stroke-width="4"/>
+   <text class="lvl" y="${-R+18}" text-anchor="middle">LV ${m.level}</text>
+   <text class="nameplate" y="${-R+34}" text-anchor="middle">${m.name.toUpperCase()}</text>
+   <g transform="scale(1.2)" fill="none" stroke="${hue}" stroke-width="2.4" stroke-linecap="round">${GLYPH[m.type]}</g>
+   ${read?`<text class="readout" y="${R-14}" text-anchor="middle">${read}</text>`:""}</g>`}).join("");
+ const seam=`<path d="M${px(0,0)[0]} ${px(0,0)[1]}L${px(1,0)[0]} ${px(1,0)[1]}" stroke="#8f8ce0" stroke-width="2.5" opacity=".8"/>`;
+ const presence=(S.mode==="modules")?S.slots.map(key=>{const mut=Object.values(S.muts).find(mm=>mm.pos===key);if(!mut)return"";const[q,r]=key.split(",").map(Number);const[x,y]=px(q,r);
+  return `<path d="${hexPath(R+3)}" transform="translate(${x},${y})" fill="none" stroke="var(--arete)" stroke-width="1.3" opacity=".6"/>`}).join(""):"";
+ let slotG="";
+ if(S.mode==="mutators"){
+  slotG=S.slots.map(key=>{const[q,r]=key.split(",").map(Number);const[x,y]=px(q,r);
+   const mut=Object.values(S.muts).find(mm=>mm.pos===key);
+   if(mut){const mod=Object.values(S.mods).find(mm=>mm.pos===key);
+    const host=mod?`hosts ${mod.name} · ${key==="0,0"?"G4":"D5"}`:"";
+    return `<g class="mut-slot-face" data-slot="${key}" transform="translate(${x},${y})" role="button" tabindex="0" aria-label="${FAMILY[mut.family]} mutator, ${mut.rarity}${host?`, ${host}`:", inert · no host"}">
+     <path d="${hexPath(R-4)}" fill="#141a30" stroke="var(--arete)" stroke-width="2"/>
+     <text class="slot-family" y="${-R+22}" text-anchor="middle">${FAMILY[mut.family].toUpperCase()}</text>
+     <g transform="translate(0,2) scale(1.15)" fill="none" stroke="var(--arete)" stroke-width="2.4" stroke-linecap="round">${MUT_GLYPH[mut.family]}</g>
+     <g transform="translate(0,22)" fill="var(--arete)">${RARITY_TICKS(mut.rarity)}</g>
+     <text class="slot-host" y="${R-20}" text-anchor="middle">${host||"inert · no host"}</text>
+     <text class="slot-effect" y="${R-7}" text-anchor="middle">${FAMILY[mut.family].slice(0,3).toUpperCase()} ${S.mutEffect(mut.family,mut.rarity)}</text>
+    </g>`}
+   return `<g class="mut-slot-open" data-slot="${key}" transform="translate(${x},${y})" role="button" tabindex="0" aria-label="open Mutator slot — inert until a host lands">
+    <path d="${hexPath(R-4)}" fill="none" stroke="var(--arete)" stroke-width="1.5" stroke-dasharray="5 5" opacity=".8"/>
+    <text class="slot-family" y="-4" text-anchor="middle" font-size="12">OPEN SLOT</text>
+    <text class="slot-host" y="14" text-anchor="middle">inert · no host</text></g>`}).join("");
+  if(S.armed?.kind==="unlock")for(const key of S.owned.filter(k=>!S.slots.includes(k))){const[q,r]=key.split(",").map(Number);const[x,y]=px(q,r);
+   slotG+=`<g class="unlock-target pulse" data-unlock="${key}" transform="translate(${x},${y})" role="button" tabindex="0" aria-label="unlock slot here"><path class="cell" d="${hexPath(R)}"/></g>`}
+ }
+ document.getElementById("board").innerHTML=`<g id="cells-layer">${g.join("")}</g><g id="modules-layer">${seam}${modG}</g><g id="slots-layer">${presence}${slotG}</g>`;
+}
+/* ── tiles ── */
+function modTile(m){const hue=HUE[m.type];return `<svg viewBox="-40 -40 80 80" aria-hidden="true"><path d="${hexPath(34)}" fill="none" stroke="${hue}" stroke-width="2.5"/><g transform="scale(1.05)" fill="none" stroke="${hue}" stroke-width="2.6" stroke-linecap="round">${GLYPH[m.type]}</g></svg>`}
+function mutTile(m){return `<svg viewBox="-40 -40 80 80" aria-hidden="true" style="color:var(--arete)"><path d="${hexPath(34)}" fill="none" stroke="currentColor" stroke-width="2.5"/><g transform="translate(0,-6) scale(1.5)" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">${MUT_GLYPH[m.family]}</g><g transform="translate(0,20)" fill="currentColor">${RARITY_TICKS(m.rarity)}</g><text y="34" text-anchor="middle" fill="currentColor" style="font:10px 'IBM Plex Mono',monospace">${FAMILY[m.family].slice(0,3).toUpperCase()} ${S.mutEffect(m.family,m.rarity)}</text></svg>`}
+/* ── tray (shared builder, variant shells) ── */
+function trayHtml(){
+ const face=S.mode;
+ const items=face==="modules"?Object.values(S.mods).filter(m=>m.pos===null):Object.values(S.muts).filter(m=>m.pos===null);
+ const locked=face==="mutators"&&!S.entry;
+ const head=`<div class="tray-head"><span class="tt">TRAY</span>
+   <div class="seg" role="group" aria-label="tray face">
+    <button data-seg="modules" aria-pressed="${face==="modules"}">MODULES</button>
+    <button data-seg="mutators" aria-pressed="${face==="mutators"}" class="${S.entry?"":"locked"}" ${S.entry?"":'title="The Mutator layer waits behind the Arete Catalog · 1 ◇"'}>MUTATORS${S.entry?"":' <span class="lockmark">◇</span>'}</button>
+   </div></div>`;
+ if(locked)return head+`<div class="tray-lock"><span class="dim" style="font-size:13px">no Mutator tray</span><button id="tray-entry">Unlock Mutator Layer<span class="mono">1 ◇</span></button></div>`;
+ const tiles=items.map(m=>face==="modules"
+   ?`<button class="tile${S.armed?.kind==="place"&&S.armed.id===m.id?" armed":""}" data-tile="mods:${m.id}" title="${m.name} · ${m.rarity}${m.level?` · LV ${m.level}`:""} — click, then a cell">${modTile(m)}</button>`
+   :`<button class="tile${S.armed?.kind==="place"&&S.armed.id===m.id?" armed":""}" data-tile="muts:${m.id}" title="${FAMILY[m.family]} · ${m.rarity} · ${S.mutEffect(m.family,m.rarity)} to this module's ${m.family==="power"?"power":m.family==="resonance"?"chord factor":"received strength"} — click, then a slot">${mutTile(m)}</button>`).join("");
+ const body=items.length?`<div class="tray-body">${tiles}</div>`:`<div class="tray-body"><span class="tray-empty">${face==="modules"?"retrieved modules wait here":"minted mutators wait here"}</span></div>`;
+ return head+body+`<div class="tray-count mono">${items.length} in tray</div>`;
+}
+function renderTray(){
+ const host=document.getElementById("tray");
+ host.innerHTML=trayHtml();
+ host.classList.toggle("closed",S.variant==="B"&&!S.trayOpen);
+ host.querySelectorAll("[data-seg]").forEach(b=>b.addEventListener("click",()=>setMode(b.dataset.seg)));
+ const entryBtn=host.querySelector("#tray-entry");if(entryBtn)entryBtn.addEventListener("click",()=>openCatalog("arete"));
+ host.querySelectorAll("[data-tile]").forEach(b=>{
+  const[inv,id]=b.dataset.tile.split(":");
+  b.addEventListener("click",()=>armPlace(inv,id));
+  b.addEventListener("pointerdown",e=>{if(e.button===0)startTileDrag(e,inv,id)});
+ });
+}
+/* ── mode ── */
+function setMode(m){
+ if(m==="mutators"&&!S.entry){openCatalog("arete");return}
+ if(S.mode===m)return;
+ if(S.armed){S.armed=null;say("Armed action cancelled — the mode changed.")}
+ S.mode=m;renderAll();
+}
+function renderTabs(){
+ const host=document.getElementById("mode-tabs");
+ host.innerHTML=`<button aria-pressed="${S.mode==="modules"}" data-seg="modules">MODULES</button>
+  <button aria-pressed="${S.mode==="mutators"}" data-seg="mutators" class="${S.entry?"":"locked"}" ${S.entry?"":'title="The Mutator layer waits behind the Arete Catalog · 1 ◇"'}>MUTATORS${S.entry?"":' <span class="lockmark">◇</span>'}</button>`;
+ host.querySelectorAll("[data-seg]").forEach(b=>b.addEventListener("click",()=>{
+  if(b.dataset.seg==="mutators"&&!S.entry)openCatalog("arete");else setMode(b.dataset.seg)}));
+}
+/* ── dock ── */
+const DOCK_SVG={
+ catalog:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/></svg>',
+ forge:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3c1.8 3.2-3.2 4.6-3.2 8.4a3.2 3.2 0 0 0 6.4 0c0-1.4-.6-2.3-1.1-2.9 1.9.5 3.4 2 3.4 4.3a5.5 5.5 0 0 1-11 0C6.5 7.6 10.8 6.4 12 3Z"/></svg>',
+ add:'<svg viewBox="-10 -10 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M0-6v12M-6 0h12"/></svg>',
+ inventory:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/></svg>'};
+function renderDock(){
+ const host=document.getElementById("dock");if(!host)return;
+ const mut=S.mode==="mutators";
+ const addLabel=mut?"Unlock slot":"New cell";
+ const addPrice=mut?`${S.slotPrice()||"free"} ◇`:`${S.cellPrice} ν`;
+ const addTitle=mut?(S.entry?`Unlock Mutator slot · ${S.slotPrice()||"free"} ◇ — pick a highlighted cell`:"The Mutator layer waits behind the Arete Catalog · 1 ◇"):`New cell · ${S.cellPrice} ν — pick a frontier hex`;
+ const mutCount=Object.values(S.muts).filter(m=>m.pos===null).length;
+ const modCount=Object.values(S.mods).filter(m=>m.pos===null).length;
+ const invCount=S.mode==="mutators"?mutCount:modCount;
+ const btns=[
+  {op:"catalog",label:"Catalog",run:()=>openCatalog(S.mode==="mutators"?"arete":"nous"),title:mut?"Catalog — opens on the ◇ Arete face":"Catalog — opens on the ν nous face"},
+  {op:"forge",label:"Forge",badge:"2",title:"Flow meter · Forge progress · banked choices"},
+  {op:"add",label:addLabel,price:addPrice,title:addTitle,pressed:S.armed?.kind==="cell"||S.armed?.kind==="unlock",run:()=>{
+    if(!S.entry&&mut){openCatalog("arete");return}
+    if(mut)armUnlock();else armCell()},
+  },
+ ];
+ if(S.variant==="B")btns.push({op:"inventory",label:"Inventory",badge:String(invCount),pressed:S.trayOpen,run:()=>{S.trayOpen=!S.trayOpen;renderTray();renderDock()},title:S.trayOpen?"Inventory — close the tray":"Inventory — open the tray"});
+ host.innerHTML=btns.map(b=>`<button ${b.pressed?'aria-pressed="true"':""} title="${b.title}">${DOCK_SVG[b.op]}<span class="dl">${b.label}</span>${b.price?`<span class="price">${b.price}</span>`:""}${b.badge?`<span class="badge">${b.badge}</span>`:""}</button>`).join("");
+ host.querySelectorAll("button").forEach((b,i)=>b.addEventListener("click",btns[i].run));
+}
+/* ── armed actions ── */
+function armCell(){if(S.sheet){S.sheet=null;renderSheet()}if(S.armed?.kind==="cell"){S.armed=null}else{S.armed={kind:"cell"};say("Pick a frontier hex.")}renderAll()}
+function armUnlock(){if(S.sheet){S.sheet=null;renderSheet()}if(S.armed?.kind==="unlock"){S.armed=null}else{S.armed={kind:"unlock"};say(S.slots.length?"Pick a highlighted cell — unlocks attach to the patch.":"Pick any owned cell.")}renderAll()}
+function armPlace(inv,id){
+ if(S.sheet){S.sheet=null;renderSheet()}
+ if(S.armed?.kind==="place"&&S.armed.id===id){S.armed=null}else{S.armed={kind:"place",inv,id};
+  say(inv==="mods"?"Pick a cell — occupied swaps.":"Pick a Mutator slot — occupied swaps.")}
+ renderAll();
+}
+function renderPill(){
+ const el=document.getElementById("pill");const a=S.armed;
+ if(!a){el.hidden=true;return}
+ let html="";
+ if(a.kind==="cell")html=`New cell · <span class="mono">${S.cellPrice} ν</span><span class="esc">Cancel · Esc</span>`;
+ if(a.kind==="unlock")html=`Unlock Mutator slot · <span class="mono">${S.slotPrice()||"free"} ◇</span><span class="esc">Cancel · Esc</span>`;
+ if(a.kind==="place"){const it=a.inv==="mods"?S.mods[a.id]:S.muts[a.id];
+  const nm=a.inv==="mods"?it.name:FAMILY[it.family];
+  html=`Placing ${nm} — pick a ${a.inv==="mods"?"cell":"Mutator slot"}<span class="esc">Cancel · Esc</span>`}
+ el.innerHTML=html;el.hidden=false;
+ el.onclick=()=>{S.armed=null;renderAll()};
+}
+/* ── board clicks ── */
+document.getElementById("board").addEventListener("click",e=>{
+ const t=e.target.closest("[data-frontier],[data-cell],[data-unlock],[data-slot],[data-module]");if(!t)return;
+ if(t.dataset.frontier&&S.armed?.kind==="cell"){S.nous-=S.cellPrice;S.cellPrice=Math.round(S.cellPrice*1.6);
+  S.owned.push(t.dataset.frontier);S.armed=null;say(`Cell bought — ${S.owned.length} owned.`);renderAll();return}
+ if(t.dataset.unlock&&S.armed?.kind==="unlock"){const price=S.slotPrice();S.arete-=price;S.slots.push(t.dataset.unlock);
+  S.armed=null;say(`Mutator slot unlocked at ${t.dataset.unlock}${price?` — ${price} ◇ left`:""}.`);renderAll();return}
+ if(t.dataset.cell&&S.armed?.kind==="place"&&S.armed.inv==="mods"){
+  const key=t.dataset.cell;const prev=S.occupiedCells[key];
+  if(prev){S.mods[prev].pos=null;S.mods[S.armed.id].pos=key;S.occupiedCells[key]=S.armed.id;say(`Placed — the previous module waits in the tray.`)}
+  else{S.mods[S.armed.id].pos=key;S.occupiedCells[key]=S.armed.id;say("Placed.")}
+  S.armed=null;renderAll();return}
+ if(t.dataset.slot&&S.armed?.kind==="place"&&S.armed.inv==="muts"){
+  const key=t.dataset.slot;const twin=Object.values(S.muts).find(mm=>mm.pos===key);
+  if(twin&&twin.family===S.muts[S.armed.id].family&&twin.rarity===S.muts[S.armed.id].rarity){openCombine(S.armed.id,twin.id,"slot");return}
+  if(twin){twin.pos=null}
+  S.muts[S.armed.id].pos=key;S.armed=null;say(twin?"Mutator placed — the previous one waits in the Mutator tray.":"Mutator placed.");renderAll();return}
+ if(t.dataset.module&&S.mode==="modules"&&!S.armed){openPopover(t.dataset.module,t);return}
+ if(t.dataset.slot&&S.mode==="mutators"&&!S.armed){const mut=Object.values(S.muts).find(mm=>mm.pos===t.dataset.slot);
+  if(mut)openMutPopover(mut,t);return}
+});
+document.getElementById("board").addEventListener("contextmenu",e=>{
+ const t=e.target.closest("[data-module],[data-slot]");if(!t)return;e.preventDefault();
+ if(t.dataset.module&&S.mode==="modules"){const m=S.mods[t.dataset.module];const at=m.pos;m.pos=null;delete S.occupiedCells[at];
+  if(S.variant==="B")S.trayOpen=true;say(`${m.name} retrieved to the tray.`);renderAll()}
+ if(t.dataset.slot&&S.mode==="mutators"){const mut=Object.values(S.muts).find(mm=>mm.pos===t.dataset.slot);
+  if(mut){mut.pos=null;if(S.variant==="B")S.trayOpen=true;say(`${FAMILY[mut.family]} retrieved to the Mutator tray.`);renderAll()}}
+});
+/* ── popovers ── */
+function openPopover(id,el){const m=S.mods[id];const p=document.getElementById("popover");
+ p.innerHTML=`<span class="pk">${m.name} · ${m.rarity}</span><span class="pe mono">${(m.level*1.55).toFixed(1)} ν/s</span>
+  <button id="pv-ret">Retrieve</button><button id="pv-x" aria-label="Close">✕</button>`;
+ p.hidden=false;const r=el.getBoundingClientRect(),w=document.querySelector(".board-wrap").getBoundingClientRect();
+ p.style.left=(r.left-w.left+r.width+8)+"px";p.style.top=(r.top-w.top)+"px";
+ p.querySelector("#pv-ret").onclick=()=>{m.pos=null;delete S.occupiedCells[m.pos??""];if(S.variant==="B")S.trayOpen=true;p.hidden=true;say(`${m.name} retrieved to the tray.`);renderAll()};
+ p.querySelector("#pv-x").onclick=()=>p.hidden=true;
+}
+function openMutPopover(mut,el){const p=document.getElementById("popover");
+ p.innerHTML=`<span class="pk">${FAMILY[mut.family]} · ${mut.rarity}</span><span class="pe mono">${S.mutEffect(mut.family,mut.rarity)} to this module's ${mut.family}</span>
+  <button id="pv-ret">Retrieve</button><button id="pv-x" aria-label="Close">✕</button>`;
+ p.hidden=false;const r=el.getBoundingClientRect(),w=document.querySelector(".board-wrap").getBoundingClientRect();
+ p.style.left=(r.left-w.left+r.width/2-60)+"px";p.style.top=(r.top-w.top-120)+"px";
+ p.querySelector("#pv-ret").onclick=()=>{mut.pos=null;if(S.variant==="B")S.trayOpen=true;p.hidden=true;say(`${FAMILY[mut.family]} retrieved to the Mutator tray.`);renderAll()};
+ p.querySelector("#pv-x").onclick=()=>p.hidden=true;
+}
+/* ── tray drag (combine twin / drop nowhere) ── */
+let drag=null;
+function startTileDrag(e,inv,id){
+ if(S.armed)return;
+ const tile=document.querySelector(`[data-tile="${inv}:${id}"]`);if(!tile)return;
+ const item=inv==="mods"?S.mods[id]:S.muts[id];
+ const ghost=document.createElement("div");ghost.className="tile";ghost.style.cssText="position:fixed;z-index:50;pointer-events:none;width:62px;height:62px;opacity:.9";
+ ghost.innerHTML=inv==="mods"?modTile(item):mutTile(item);document.body.append(ghost);
+ drag={inv,id,ghost};
+ const move=ev=>{ghost.style.left=ev.clientX-31+"px";ghost.style.top=ev.clientY-31+"px";
+  const hit=document.elementFromPoint(ev.clientX,ev.clientY)?.closest(`[data-tile="${inv}:"]`)||document.elementFromPoint(ev.clientX,ev.clientY)?.closest("[data-tile]");
+  document.querySelectorAll(".tile.combine-hit").forEach(t=>t.classList.remove("combine-hit"));
+  if(hit&&hit.dataset.tile!==`${inv}:${id}`){const[hinv,hid]=hit.dataset.tile.split(":");
+   const a=item,b=hinv==="mods"?S.mods[hid]:S.muts[hid];
+   const same=hinv===inv&&a.family===b.family&&a.rarity===b.rarity||hinv===inv&&a.type===b.type&&a.rarity===b.rarity;
+   if(same)hit.classList.add("combine-hit")}};
+ const up=ev=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);ghost.remove();
+  document.querySelectorAll(".tile.combine-hit").forEach(t=>t.classList.remove("combine-hit"));
+  const hit=document.elementFromPoint(ev.clientX,ev.clientY)?.closest("[data-tile]");
+  if(hit&&hit.dataset.tile!==`${inv}:${id}`){const[hinv,hid]=hit.dataset.tile.split(":");
+   const a=item,b=hinv==="mods"?S.mods[hid]:S.muts[hid];
+   const same=hinv===inv&&((a.family&&a.family===b.family||a.type&&a.type===b.type)&&a.rarity===b.rarity);
+   if(same){openCombine(id,hid,inv);return}}
+  drag=null};
+ window.addEventListener("pointermove",move);window.addEventListener("pointerup",up);move(e);
+}
+/* ── combine review ── */
+function openCombine(aId,bId,origin){
+ S.armed=null;
+ const a=S.mods[aId]||S.muts[aId],b=S.mods[bId]||S.muts[bId];
+ const isMod=!!a.type;const sheet=document.getElementById("sheet");const veil=document.getElementById("veil");
+ const head=isMod?`<h3 style="font:600 22px 'Barlow Condensed'">${a.name} + ${b.name}</h3><p class="dim" style="margin:4px 0 0">Combines into one ${a.name} · uncommon — retains the higher level, refunds the lower's upgrade spend.</p>`
+   :`<h3 style="font:600 22px 'Barlow Condensed'">${FAMILY[a.family]} · ${a.rarity} ×2</h3><p class="dim" style="margin:4px 0 0">Combines into one ${FAMILY[a.family]} · uncommon — same family, next rarity.</p>`;
+ sheet.innerHTML=`<div class="sheet-head"><span class="tt" style="font:600 14px 'Barlow Condensed';letter-spacing:.14em;color:var(--muted)">${isMod?"COMBINE MODULES":"COMBINE MUTATORS"}</span><span class="idmark">${isMod?"ν":"◇"}</span></div>
+  <div class="sheet-body"><div style="display:flex;gap:14px;align-items:center;padding:18px 0">${isMod?modTile(a):mutTile(a)}<span class="dim">+</span>${isMod?modTile(b):mutTile(b)}<span class="dim">→</span><span style="filter:brightness(1.3)">${isMod?modTile({...a,rarity:"uncommon"}):mutTile({...a,rarity:"uncommon"})}</span></div>
+  ${head}<div style="display:flex;gap:10px;padding:16px 0"><button id="cb-go" style="border-color:var(--ink)">Combine</button><button id="cb-no">Keep both</button></div></div>`;
+ veil.classList.add("open");
+ sheet.querySelector("#cb-go").onclick=()=>{
+  if(isMod){const keep=a.level>=b.level?a:b;keep.rarity="uncommon";keep.pos=a.pos||b.pos||null;
+   if(b.pos)S.occupiedCells[b.pos]=keep.id;else if(a.pos)S.occupiedCells[a.pos]=keep.id;
+   delete S.mods[aId===keep.id?bId:aId];say(`${keep.name} combined to uncommon · LV ${keep.level}.`)}
+  else{a.rarity="uncommon";a.pos=a.pos||b.pos||null;delete S.muts[bId];say(`${FAMILY[a.family]} mutator combined to uncommon.`)}
+  veil.classList.remove("open");renderAll()};
+ sheet.querySelector("#cb-no").onclick=()=>{veil.classList.remove("open");renderAll()};
+}
+/* ── catalog sheet ── */
+function openCatalog(face){
+ if(face==="arete"&&!S.entry)face="arete";
+ S.sheet="catalog";S.sheetArg=face||(S.mode==="mutators"?"arete":"nous");renderSheet();
+}
+function renderSheet(){
+ const veil=document.getElementById("veil"),sheet=document.getElementById("sheet");
+ if(!S.sheet){veil.classList.remove("open");return}
+ veil.classList.add("open");
+ if(S.sheet==="inventory"){sheet.innerHTML=`<div class="sheet-head"><span class="tt" style="font:600 14px 'Barlow Condensed';letter-spacing:.14em;color:var(--muted)">TRAY</span>
+   <div class="seg" style="margin-left:12px"><button data-seg="modules" aria-pressed="${S.mode==="modules"}">MODULES</button><button data-seg="mutators" aria-pressed="${S.mode==="mutators"}">MUTATORS</button></div>
+   <button class="idmark" id="sh-x" aria-label="Close" style="border:0">✕</button></div>
+  <div class="sheet-body">${trayBodyOnly()}</div>`;
+ sheet.querySelectorAll("[data-seg]").forEach(b=>b.addEventListener("click",()=>setMode(b.dataset.seg)));
+ sheet.querySelector("#sh-x").onclick=()=>{S.sheet=null;renderSheet()};return}
+ const face=S.sheetArg;
+ const head=`<div class="sheet-head">
+   <div class="seg"><button data-face="nous" aria-pressed="${face==="nous"}">ν nous</button><button data-face="arete" aria-pressed="${face==="arete"}">◇ Arete</button></div>
+   <span class="idmark ${face==="arete"?"arete":"nous"}">${face==="arete"?"◇":"ν"}</span></div>`;
+ let body="";
+ if(face==="nous"){
+  body=`<div class="cat-sec"><h2>Starter shelf</h2>
+   <div class="cat-row"><div><h3>Focus Generator</h3><p>Converts credited practice into charge</p></div><span class="owned">in inventory</span></div>
+   <div class="cat-row"><div><h3>Booster</h3><p>Uplifts adjacent oscillators</p></div><button class="price mono" ${S.nous<45?"disabled":""} data-buy-nous="45">45 ν</button></div>
+   <div class="cat-row"><div><h3>Module Forge</h3><p>Fill with charge → module draft</p></div><button class="price mono" ${S.nous<30?"disabled":""} data-buy-nous="30">30 ν</button></div>
+   <h2>Board</h2>
+   <div class="cat-row"><div><h3>New cell</h3><p class="mono">next · ${S.cellPrice} ν</p></div><button class="price" id="cat-add">Add</button></div>
+  </div>`;
+ }else if(!S.entry){
+  body=`<div class="entry-screen"><button id="cat-entry"><span>Unlock Mutator Layer</span><span class="mono">1 ◇</span></button></div>`;
+ }else{
+  body=`<div class="cat-sec"><h2>Upgrades</h2>
+   <div class="cat-row"><div><h3>Mutator Layer</h3><p>Unlocks: Mutator Grid · 1 slot · 1 roll · Arete Catalog</p></div><span class="owned">ACQUIRED</span></div>
+   <div class="cat-row"><div><h3>Horizon break</h3><p class="mono">score past the line raises the claim</p></div><span class="owned">ACQUIRED</span></div>
+   <h2>Unlocks</h2>
+   <div class="cat-row"><div><h3>Mutator Forge joins rolls</h3><p class="mono">5 ◇</p></div><button class="price" ${S.arete<5?"disabled":""} id="cat-pool">Buy</button></div>
+   <div class="cat-row"><div><h3>Next slot</h3><p class="mono">${S.slotPrice()||"free"} ◇ — armed from Add, on the Mutators mode</p></div><button class="price" id="cat-slot">Add</button></div>
+  </div>`;
+ }
+ sheet.innerHTML=head+`<div class="sheet-body">${body}</div>`;
+ sheet.querySelectorAll("[data-face]").forEach(b=>b.addEventListener("click",()=>{S.sheetArg=b.dataset.face;renderSheet()}));
+ const close=document.createElement("button");close.textContent="✕";close.setAttribute("aria-label","Close");close.style.cssText="border:0;margin-left:10px";close.onclick=()=>{S.sheet=null;renderSheet()};
+ sheet.querySelector(".sheet-head").append(close);
+ sheet.querySelectorAll("[data-buy-nous]").forEach(b=>b.addEventListener("click",()=>{S.nous-=+b.dataset.buyNous;say("Bought — it waits in the tray.");renderAll();renderSheet()}));
+ sheet.querySelector("#cat-add")?.addEventListener("click",()=>{S.sheet=null;renderSheet();S.mode==="mutators"?armUnlock():armCell()});
+ sheet.querySelector("#cat-entry")?.addEventListener("click",()=>{S.arete-=1;S.entry=true;S.slots.length||S.slots.push("0,-1");
+  say("Mutator layer entered — the grid unlocks, the first slot rides free.");renderAll();renderSheet()});
+ sheet.querySelector("#cat-pool")?.addEventListener("click",()=>{S.arete-=5;say("The Mutator Forge joins future module rolls.");renderAll();renderSheet()});
+ sheet.querySelector("#cat-slot")?.addEventListener("click",()=>{S.sheet=null;renderSheet();setMode("mutators");armUnlock()});
+}
+function trayBodyOnly(){
+ const face=S.mode;const items=face==="modules"?Object.values(S.mods).filter(m=>m.pos===null):Object.values(S.muts).filter(m=>m.pos===null);
+ if(face==="mutators"&&!S.entry)return `<div class="tray-lock"><button id="tray-entry2">Unlock Mutator Layer<span class="mono">1 ◇</span></button></div>`;
+ return items.length?`<div style="display:flex;gap:8px;flex-wrap:wrap;padding:10px 0">${items.map(m=>face==="modules"
+  ?`<button class="tile${S.armed?.kind==="place"&&S.armed.id===m.id?" armed":""}" data-tile="mods:${m.id}" title="${m.name} · ${m.rarity} — click, then a cell">${modTile(m)}</button>`
+  :`<button class="tile${S.armed?.kind==="place"&&S.armed.id===m.id?" armed":""}" data-tile="muts:${m.id}" title="${FAMILY[m.family]} · ${m.rarity} — click, then a slot">${mutTile(m)}</button>`).join("")}</div>`
+ :`<p class="dim" style="padding:12px 0">${face==="modules"?"retrieved modules wait here":"minted mutators wait here"}</p>`;
+}
+/* ── phone ── */
+function renderThumb(){
+ const host=document.getElementById("thumb");if(!host)return;
+ const mut=S.mode==="mutators";
+ const segs=[
+  {label:"Catalog",svg:DOCK_SVG.catalog,run:()=>openCatalog(S.mode==="mutators"?"arete":"nous")},
+  {label:"Forge",svg:DOCK_SVG.forge,badge:"2",run:()=>say("Forge — meters and banked choices (out of scope here)")},
+  {label:mut?"Add slot":"New cell",svg:DOCK_SVG.add,run:()=>S.mode==="mutators"?armUnlock():armCell()},
+  {label:`Inventory · ${Object.values(S.mode==="mutators"?S.muts:S.mods).filter(m=>m.pos===null).length}`,svg:DOCK_SVG.inventory,run:()=>{S.sheet="inventory";renderSheet()}},
+  {label:"Collection",svg:DOCK_SVG.catalog,run:()=>say("Collection — feats and chords (settled in Align focus tools)")},
+ ];
+ host.innerHTML=segs.map(s=>`<button>${s.svg}<span>${s.label}${s.badge?` <span class="badge" style="position:static">${s.badge}</span>`:""}</span></button>`).join("");
+ host.querySelectorAll("button").forEach((b,i)=>b.addEventListener("click",segs[i].run));
+}
+/* ── ledger · esc · switcher ── */
+function renderLedger(){
+ document.getElementById("led-nous").textContent=`${fmt(Math.max(0,S.nous))} ν`;
+ document.getElementById("led-arete").textContent=S.entry?`${Math.max(0,S.arete)} ◇`:`— ◇`;
+ document.getElementById("led-arete").classList.toggle("dim",!S.entry);
+}
+function renderAll(){document.body.dataset.mode=S.mode;renderTabs();boardSvg();renderDock();renderTray();renderPill();renderLedger();renderThumb()}
+document.addEventListener("keydown",e=>{
+ if(e.key!=="Escape")return;
+ const p=document.getElementById("popover");if(!p.hidden){p.hidden=true;return}
+ if(S.sheet){S.sheet=null;renderSheet();return}
+ if(S.armed){S.armed=null;renderAll();return}
+});
+const NAMES={A:"Pinned column",B:"Collapsible dual-face",C:"Lower strip"};
+function setVariant(v){S.variant=v;document.body.dataset.variant=v;const u=new URL(location);u.searchParams.set("variant",v);history.replaceState(null,"",u);
+ document.getElementById("vl").textContent=`${v} · ${NAMES[v]}`;renderAll()}
+function cycle(n){const order=["A","B","C"];setVariant(order[(order.indexOf(S.variant)+n+3)%3])}
+document.getElementById("prev").onclick=()=>cycle(-1);document.getElementById("next").onclick=()=>cycle(1);
+document.addEventListener("keydown",e=>{if(e.key==="ArrowLeft")cycle(-1);if(e.key==="ArrowRight")cycle(1)});
+document.getElementById("entry-toggle").onclick=()=>{S.entry=!S.entry;if(!S.entry&&S.mode==="mutators")S.mode="modules";renderAll();renderEntryToggle()};
+function renderEntryToggle(){document.getElementById("entry-toggle").textContent=S.entry?"Entry: owned":"Entry: not owned"}
+document.getElementById("reset").onclick=()=>location.reload();
+/* ── boot ── */
+if(new URLSearchParams(location.search).has("phone"))document.body.classList.add("phone");
+const v=new URLSearchParams(location.search).get("variant")||"A";setVariant(["A","B","C"].includes(v)?v:"A");renderEntryToggle();renderAll();
+</script></body></html>
