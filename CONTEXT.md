@@ -217,7 +217,15 @@ The catalog's one-time guaranteed offers — the Focus Generator, one Booster, a
 ### The console and focus apps
 
 **Console**:
-The pure control surface organized around the Enter/Exit main switch — the dominant, centered session gate, with the clock beside it and Settings at the far right. The main switch is the mode indicator — off, glowing live, held paused — and the clock is itself the plan affordance: a small disclosure chevron on it opens the Time app, which wears no tile (Habit, Notes, and Goals carry the console's consistently sized icon-only tiles; on portrait phone a compact launcher stands in their place and opens the same three apps from one control, its entries wearing the selected habit and the tracker's goals state — ADR-0033). While a session runs, a thin progress strip along the console's bottom edge shows its progress in the switch's vermillion — filling on planned sessions, pulsing on open-ended ones, held while paused. The board never moves or dims while the console is in use.
+The pure control surface organized around the focus banner — the console's single row of focus information and controls. While a session runs, a thin progress strip along the console's bottom edge shows its progress in the switch's vermillion — filling on planned sessions, pulsing on open-ended ones, held while paused. The board never moves or dims while the console is in use.
+
+**Focus banner**:
+The console's row of focus information and controls (ADR-0050): the Enter/Exit main switch — the dominant, centered session gate, glowing live or held paused — the clock beside it, Settings at the far right, and between them the selected habit's name and one thin progress bar per open tracked goal (at most three, overflow as a count; `none selected` when the next session would be unstructured; no furniture when nothing is tracked). One icon opens the Focus control sheet; Notes carries its own launcher icon beside it. On portrait phone the banner is the phone nav.
+_Avoid_: app tiles, launcher (ADR-0033 retired)
+
+**Focus control sheet**:
+The sheet that gathers every focus function but capture, behind face navigation in a fixed frame (ADR-0050): PLAN — session setup and confirmation, carrying the ready readout, the session habit selection including the unstructured choice, and the planned target — HABIT — management and development of practices — GOALS, and HISTORY. Opens on PLAN. Time, Habit, and Goals remain focus apps as the sheet's faces; a switch press with confirmation on opens the sheet at PLAN and its ready readout starts the session, while a Settings preference starts sessions instantly on the last plan and active habit.
+_Avoid_: enter flow dialog (retired into PLAN)
 
 **Board ledger**:
 The strip docked above the board carrying Nous, Rate, and Session as one instrument, with the feats chip beside it — the board owns its production numbers. The Rate cell shows the final total, and above the 760px breakpoint the whole strip is the door to the rate details: a hover or focus anywhere on it opens the module-linked roster as a ledger-wide popover (the Rate cell wears no inner border of its own — the strip is the affordance, not the cell); a tap on the cell opens the same roster as a modal sheet at every width. (On portrait phone the door moves to the game-info strip's rate read.)
@@ -258,7 +266,7 @@ One effect option in the shared habit-build catalog, drawn from the charge/Forge
 _Avoid_: habit upgrade, perk
 
 **Habit app**:
-The always-free focus app through which the player selects the active habit for a session, or practices unstructured. On phone, the launcher's entry names the selected practice inline and reads "none selected" when the next session would be unstructured (ADR-0033) — the UI's word for the unstructured choice.
+The always-free focus app for naming and developing practices. Its selection surface moved to the Focus control sheet's PLAN face, where each session's active habit — or unstructured practice — is chosen; the sheet's HABIT face carries management: the development summary, build nodes, rename, and archive (ADR-0050).
 
 **Habit development summary**:
 The Habit app's per-habit view: lifetime practice time, sessions practiced, last practiced, and the habit's tagged notes. Its aggregates read the practice log — live sessions and manual logs together.
@@ -270,19 +278,19 @@ A stretch of consecutive days on which any credited practice was logged for a ha
 The per-habit day-grid of logged practice minutes in the Habit app's development summary. Joins post-launch. _Avoid_: heatmap
 
 **Time app**:
-The focus app providing planned targets and timing tools, and the home of session history; active from the very first session, with no economy coupling.
+The focus app providing planned targets and timing tools, and the home of session history; active from the very first session, with no economy coupling. It presents as the Focus control sheet's PLAN and HISTORY faces, with no launcher of its own (ADR-0050).
 
 **Planned target**:
 A practice duration or milestone set within the Time app — a preset quick pick or free entry from 1 to 90 minutes in 1-minute steps — that a session can aim at and hit; hits are recorded in the session summary.
 
 **Notes app**:
-The focus app for recording notes — during a flow session or between sessions. Notes produce nothing themselves; a written note is the fact each owned Note Generator reads, crediting its reserve by the note's character count (ADR-0047). Tagged notes wear their habit as a chip.
+The focus app for recording notes — during a flow session or between sessions. Notes produce nothing themselves; a written note is the fact each owned Note Generator reads, crediting its reserve by the note's character count (ADR-0047). Tagged notes wear their habit as a chip. It stands apart from session planning: its own launcher icon opens its own minimal sheet of capture and browse, ahead of a later, larger rework (ADR-0050).
 
 **Habit-keyed note**:
 A note tagged with the session's selected habit at capture, surfaced in that habit's development summary and chipped in the Notes stream. Unstructured and upgrade-mode notes go untagged.
 
 **Goals app**:
-The focus app for tracking goals; completion is the tracking itself, surfaced in the session summary. A completion is the fact each owned Goal Generator reads, crediting its reserve a multiple of the focus equivalent prorated by the goal's live share (ADR-0047). Its capacity grows through console long goals.
+The focus app for tracking goals; completion is the tracking itself, surfaced in the session summary. A completion is the fact each owned Goal Generator reads, crediting its reserve a multiple of the focus equivalent prorated by the goal's live share (ADR-0047). Its capacity grows through console long goals. It presents as the Focus control sheet's GOALS face (ADR-0050).
 
 **Goal**:
 A practice condition to fulfill, such as practicing piano for twenty minutes or practicing four specified habits in a day, accruing progress only while active. Goals may qualify practice by habit or other criteria, and a session may advance several goals.
