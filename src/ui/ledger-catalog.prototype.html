@@ -1,11 +1,12 @@
 <!doctype html>
 <!-- THROWAWAY PROTOTYPE (wayfinder #245): the composition from live review — the clipped
-     instrument ledger carries grouped resource reads (nous · rate · arete) left and
-     icon-count chips (feats, chords) right; an explicit Catalog door on the dock/thumb bar
-     opens the one-shop tabbed sheet (ν nous / ◇ Arete faces, fixed frame). Feats/chords
-     stubs show where their bonuses live instead. Era (pre-prestige / first Arete /
-     entered), mode (upgrade / flow), and a telegraph-slot toggle drive the locked, empty,
-     and inert states. Illustrative figures, in-memory only, no saves.
+     instrument ledger carries grouped resource reads (nous · rate · arete-with-symbol)
+     left and icon-count chips (feats, chords) right, with the dim arete slot standing
+     before the first prestige; an explicit Catalog door on the dock/thumb bar opens the
+     one-shop tabbed sheet (ν nous / ◇ Arete faces, fixed frame). On phone the thumb bar's
+     feats/chords segments fold into one launcher segment. Feats/chords stubs show where
+     their bonuses live. Era (pre-prestige / first Arete / entered) and mode (upgrade /
+     flow) drive the locked, empty, and inert states. Illustrative figures, no saves.
      Run: python3 -m http.server 5174 → /src/ui/ledger-catalog.prototype.html -->
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FlowSynth · ledger &amp; catalog navigation prototype</title>
 <style>
@@ -39,6 +40,7 @@ h1,h2,h3,.name,nav{font-family:'Barlow Condensed',sans-serif;font-weight:600}h1{
 .instrument{margin:14px 26px 0;background:var(--line);clip-path:var(--clip);padding:1px}
 .instrument-inner{background:var(--panel);clip-path:var(--clip);display:flex;align-items:center;gap:24px;padding:16px 24px}
 .figure{display:flex;align-items:baseline;gap:6px}
+.figure svg{width:15px;height:15px;flex:none}
 .figure b{font:500 27px 'IBM Plex Mono';font-variant-numeric:tabular-nums}.figure small{font:600 15px 'Barlow Condensed';color:var(--muted)}
 .figure.nunit small{color:var(--nous)}
 .figure.arete{color:var(--arete)}.figure.arete small{color:var(--arete)}
@@ -47,6 +49,13 @@ h1,h2,h3,.name,nav{font-family:'Barlow Condensed',sans-serif;font-weight:600}h1{
 .chip-ico{display:flex;align-items:center;gap:8px;font:600 17px 'Barlow Condensed';padding:8px 14px;min-height:40px}
 .chip-ico svg{width:17px;height:17px}
 .chip-ico .mono{font-size:15px;font-variant-numeric:tabular-nums}
+/* the phone launcher: one thumb-bar segment holding the ledger chips' sheets */
+.launch-rows{display:grid;gap:14px}
+.launch-row{display:flex;align-items:center;gap:14px;width:100%;padding:16px;font-size:20px}
+.launch-row svg{width:19px;height:19px;flex:none}
+.launch-row .mono{font-size:16px;margin-left:auto;color:var(--muted)}
+.back{border:0;min-height:0;padding:6px 10px;color:var(--muted);font-size:16px}
+.back:hover:not(:disabled){background:none;color:var(--ink)}
 /* board scene + dock */
 .scene{position:relative;padding:8px 26px 90px}
 .board{width:100%;display:flex;justify-content:center}
@@ -137,7 +146,6 @@ h1,h2,h3,.name,nav{font-family:'Barlow Condensed',sans-serif;font-weight:600}h1{
 <div class="switcher">
   <span class="seg" id="era-seg"></span>
   <span class="seg" id="mode-seg"></span>
-  <label><input type="checkbox" id="telegraph"> pre-prestige slot</label>
 </div>
 <script>
 'use strict';
@@ -146,10 +154,9 @@ const GLYPH_S = `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stro
 const S = {
   era: 'banked',          // pre | banked | entered
   mode: 'upgrade',        // upgrade | flow
-  telegraph: false,
   bank: 1,                // illustrative banked Arete
   poolJoined: false, accelBought: false, breakBought: false,
-  sheet: null,            // null | {kind:'catalog',face} | {kind:'feats'} | {kind:'chords'}
+  sheet: null,            // null | {kind:'catalog',face} | {kind:'launcher'} | {kind:'feats'} | {kind:'chords'}
 };
 const ERAS = { pre: 'Before prestige', banked: 'First Arete', entered: 'Entered' };
 const MODES = { upgrade: 'Upgrade mode', flow: 'In flow' };
@@ -162,7 +169,7 @@ const flowNote = () => upgrade() ? '' : `<p class="flow-note">Arete is spent bet
 const FEATS_ICO = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>`;
 const CHORDS_ICO = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2.5 20.2 7.25v9.5L12 21.5 3.8 16.75v-9.5Z"/><path d="M12 7.2 16.2 9.6v4.8L12 16.8l-4.2-2.4V9.6Z"/></svg>`;
 function areteRead() {
-  if (S.era === 'pre') return S.telegraph ? `<span class="figure arete" title="Banked by prestige"><b class="mono dim">—</b><small>◇</small></span>` : '';
+  if (S.era === 'pre') return `<span class="figure arete dim" title="Banked by prestige"><b class="mono">—</b><small>${GLYPH_S}</small></span>`;
   return `<span class="figure arete" title="Arete — banked by prestige; spent in the catalog"><b class="mono">${S.bank}</b><small>${GLYPH_S}</small></span>`;
 }
 function ledgerHtml() {
@@ -188,9 +195,7 @@ function dockHtml() {
 function stripHtml() {
   return `<span class="figure nunit" title="Nous"><b class="mono">1.24k</b><small>ν</small></span>
     <span class="figure" title="Rate — tap opens the module details in production"><b class="mono">18.6</b><small>ν/s</small></span>
-    ${S.era === 'pre'
-      ? (S.telegraph ? `<span class="figure arete" title="Banked by prestige"><b class="mono dim">—</b><small>◇</small></span>` : '')
-      : `<span class="figure arete" title="Arete — banked by prestige"><b class="mono">${S.bank}</b><small>${GLYPH_S}</small></span>`}`;
+    ${areteRead()}`;
 }
 function thumbHtml() {
   const inert = !upgrade();
@@ -199,8 +204,7 @@ function thumbHtml() {
     <button ${inert ? 'disabled' : ''}>Forge</button>
     <button ${inert ? 'disabled' : ''}>New cell</button>
     <button>Inventory</button>
-    <button data-open="feats">Feats</button>
-    <button data-open="chords">Chords</button>`;
+    <button data-open="launcher">More</button>`;
 }
 
 /* ── sheet content ── */
@@ -256,12 +260,23 @@ function chordsContent() {
     <article class="catalog-row"><div><h3 class="mono">4/11</h3><p>Discovered classes add <b class="mono">+8% ν</b> to the rate — the same figure the rate details carry as their Discoveries leg.</p></div></article>
   </section></div>`;
 }
+/* the phone launcher: one thumb-bar segment holding the ledger chips' destinations */
+function launcherContent() {
+  return `<div class="sheet-body" style="margin-top:26px"><div class="launch-rows">
+    <button class="launch-row" data-launch="feats">${FEATS_ICO}<span>Feats</span><span class="mono">6/18</span></button>
+    <button class="launch-row" data-launch="chords">${CHORDS_ICO}<span>Chords</span><span class="mono">4/11</span></button>
+  </div></div>`;
+}
+function stubWithBack(body) {
+  return `<button class="back" data-launch="back">‹ More</button><div class="sheet-body" style="margin-top:10px">${body}</div>`;
+}
 
 /* ── sheet chrome: one shop, two faces, fixed frame ── */
 function sheetFrame(sheet) {
+  if (sheet.kind === 'launcher') return `<div class="panel"><div class="panel-inner">${launcherContent()}</div></div>`;
   if (sheet.kind !== 'catalog') {
     const body = sheet.kind === 'feats' ? featsContent() : chordsContent();
-    return `<div class="panel"><div class="panel-inner"><span class="identity" style="color:var(--ink)">${sheet.kind === 'feats' ? FEATS_ICO : CHORDS_ICO}</span><div class="sheet-body">${body}</div></div></div>`;
+    return `<div class="panel"><div class="panel-inner"><span class="identity" style="color:var(--ink)">${sheet.kind === 'feats' ? FEATS_ICO : CHORDS_ICO}</span>${stubWithBack(body)}</div></div>`;
   }
   const face = sheet.face;
   const tab = (f, mark, word) => `<button data-face-tab="${f}" aria-pressed="${face === f}" data-face="${f}" ${S.era === 'pre' && f === 'arete' ? 'disabled title="Banked by prestige"' : `title="${word}"`}>${mark}<span>${word}</span></button>`;
@@ -294,7 +309,13 @@ document.addEventListener('click', (e) => {
   const opener = e.target.closest('[data-open]');
   if (opener) {
     const kind = opener.dataset.open;
-    S.sheet = kind === 'feats' || kind === 'chords' ? { kind } : { kind: 'catalog', face: kind === 'arete' ? 'arete' : 'nous' };
+    S.sheet = kind === 'feats' || kind === 'chords' ? { kind } : kind === 'launcher' ? { kind: 'launcher' } : { kind: 'catalog', face: 'nous' };
+    renderSheet(); return;
+  }
+  const launch = e.target.closest('[data-launch]');
+  if (launch) {
+    const to = launch.dataset.launch;
+    S.sheet = to === 'back' ? { kind: 'launcher' } : { kind: to };
     renderSheet(); return;
   }
   const tab = e.target.closest('[data-face-tab]');
@@ -347,9 +368,7 @@ function applyEra(k) {
 function syncSegs() {
   seg(document.getElementById('era-seg'), ERAS, 'era', applyEra);
   seg(document.getElementById('mode-seg'), MODES, 'mode', (k) => { S.mode = k; syncSegs(); renderAll(); });
-  document.getElementById('telegraph').checked = S.telegraph;
 }
-document.getElementById('telegraph').onchange = (e) => { S.telegraph = e.target.checked; renderLedger(); };
 syncSegs(); renderAll();
 </script>
 </body></html>
