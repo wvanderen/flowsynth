@@ -27,7 +27,7 @@ body[data-variant=B] .catalog-sections{grid-template-columns:1.3fr 1fr;gap:48px}
 const variants=['A','B','C'],names={A:'Clipped side panel',B:'Shared lower panel',C:'Open instrument folio'};let variant=new URLSearchParams(location.search).get('variant')||'A';if(!variants.includes(variant))variant='A';
 function renderVariant(){document.body.dataset.variant=variant;document.querySelector('#variant-label').textContent=variant+' · '+names[variant];const u=new URL(location);u.searchParams.set('variant',variant);history.replaceState(null,'',u)}function cycle(n){variant=variants[(variants.indexOf(variant)+n+3)%3];renderVariant()}document.querySelector('#prev').onclick=()=>cycle(-1);document.querySelector('#next').onclick=()=>cycle(1);document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea,[contenteditable]'))return;if(e.key==='ArrowLeft')cycle(-1);if(e.key==='ArrowRight')cycle(1)});renderVariant();
 let unlocked=false;
-const tip=(id,label,text)=>`<span class="tooltip-host"><button class="tip" aria-describedby="${id}" aria-expanded="false"><i>${label}</i></button><span class="tooltip" id="${id}" role="tooltip">${text}</span></span>`;
+const tip=(id,label,text)=>`<span class="tooltip-host"><button class="tip" aria-describedby="${id}" aria-expanded="false">${label}</button><span class="tooltip" id="${id}" role="tooltip">${text}</span></span>`;
 function renderCatalog(){document.querySelector('#catalog-body').innerHTML=unlocked?`
 <div class="catalog-sections"><section><h2>Upgrades</h2>
 <article class="catalog-row"><div><h3>Mutator Layer</h3><p>Unlocks: Mutator Grid, 1 Mutator slot,<br>1 Mutator roll, Arete Catalog</p></div><span class="owned completion">ACQUIRED</span></article>
