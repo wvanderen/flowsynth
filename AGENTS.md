@@ -18,4 +18,4 @@ Fresh worktrees carry no `node_modules` — run `npm install` before your first 
 
 - `npm run check` — typecheck (tsc)
 - `npm test` — full suite (~30s); `src/ui/app.test.ts` is the slow file, so iterate one failing test with `npx vitest run <file> -t '<name>'`
-- Rendering regressions: run `tools/ui/check-rendering.ts` against `npm run dev` opened at `/?dev=1`, from devtools
+- UI regressions: run `npx vitest run src/ui/app.test.ts` for current rendering and interaction checks. For browser layout and animation checks, inspect `npm run dev` opened at `/?dev=1`.
