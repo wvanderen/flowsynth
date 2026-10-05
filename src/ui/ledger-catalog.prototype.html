@@ -4,7 +4,8 @@
      left and icon-count chips (feats, chords) right, with the dim arete slot standing
      before the first prestige; an explicit Catalog door on the dock/thumb bar opens the
      one-shop tabbed sheet (ν nous / ◇ Arete faces, fixed frame). On phone the thumb bar's
-     feats/chords segments fold into one launcher segment. Feats/chords stubs show where
+     feats/chords segments fold into one Collection launcher (named by live review; it will
+     eventually also view all unlocked module and mutator types). Feats/chords stubs show where
      their bonuses live. Era (pre-prestige / first Arete / entered) and mode (upgrade /
      flow) drive the locked, empty, and inert states. Illustrative figures, no saves.
      Run: python3 -m http.server 5174 → /src/ui/ledger-catalog.prototype.html -->
@@ -204,7 +205,7 @@ function thumbHtml() {
     <button ${inert ? 'disabled' : ''}>Forge</button>
     <button ${inert ? 'disabled' : ''}>New cell</button>
     <button>Inventory</button>
-    <button data-open="launcher">More</button>`;
+    <button data-open="launcher">Collection</button>`;
 }
 
 /* ── sheet content ── */
@@ -268,7 +269,7 @@ function launcherContent() {
   </div></div>`;
 }
 function stubWithBack(body) {
-  return `<button class="back" data-launch="back">‹ More</button><div class="sheet-body" style="margin-top:10px">${body}</div>`;
+  return `<button class="back" data-launch="back">‹ Collection</button><div class="sheet-body" style="margin-top:10px">${body}</div>`;
 }
 
 /* ── sheet chrome: one shop, two faces, fixed frame ── */
