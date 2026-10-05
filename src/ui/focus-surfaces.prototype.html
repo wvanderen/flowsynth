@@ -1,0 +1,473 @@
+<!doctype html>
+<!-- THROWAWAY: three structural presentations for FlowSynth's focus apps, modals and dev console, judged against the agreed instrument standards (#243). Illustrative figures, no saves or game mutations. Run: python3 -m http.server 5174 -->
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FlowSynth · focus surfaces prototype</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap');
+:root{color-scheme:dark;--bg:#0d1122;--panel:#141a30;--line:#414a75;--soft:#2a3150;--ink:#e5e9f5;--muted:#99a1c2;--nous:#cbcaff;--arete:#b994f5;--charge:#9affa8;--switch:#cc603d;--clip:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 'IBM Plex Sans',sans-serif}button{font:600 16px 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:inherit;background:none;border:1px solid var(--line);padding:9px 14px;min-height:44px;cursor:pointer}button:hover:not(:disabled){background:#252d48}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--ink);outline-offset:3px}button:disabled{color:var(--muted);border-color:var(--soft);cursor:default}input,textarea,select{font:15px 'IBM Plex Sans',sans-serif;color:var(--ink);background:var(--bg);border:1px solid var(--soft);padding:9px 11px;min-height:44px;border-radius:0}select{padding:9px 6px}::placeholder{color:var(--muted)}h1,h2,h3,.name{font-family:'Barlow Condensed',sans-serif;font-weight:600;margin:0}.mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}.dim{color:var(--muted)}.charge{color:var(--charge)}.switch{color:var(--switch)}.eyeline{font:600 12px 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+/* ---- stage & mock console ---- */
+#stage{position:relative;margin:0 auto;max-width:1120px;min-height:calc(100vh - 96px);padding-bottom:130px}
+.consol{display:flex;align-items:center;gap:18px;padding:14px 22px;border-bottom:1px solid var(--soft)}
+.consol .brand{font-size:20px}
+.consol .clock{display:flex;align-items:baseline;gap:8px;border:0;padding:4px 6px}
+.consol .clock .mono{font-size:19px}
+.consol .flow{color:var(--switch);border-color:var(--switch)}
+.banner-reads{margin-left:auto;display:flex;align-items:center;gap:18px}
+.bread{display:flex;align-items:baseline;gap:8px;white-space:nowrap}
+.gbars{display:flex;flex-direction:column;gap:4px;width:92px}
+.gbar{display:block;height:3px;background:var(--soft)}
+.gbar i{display:block;height:100%;background:var(--switch)}
+.gbar.done i{background:var(--charge)}
+.tiles{display:flex;gap:8px;margin-left:14px}
+.tile{width:44px;height:44px;display:grid;place-items:center;padding:0;font-size:15px}
+.tile[aria-pressed=true]{box-shadow:inset 0 -3px var(--ink);border-color:var(--ink)}
+.gear{margin-left:8px}
+.notice{padding:8px 22px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--soft)}
+/* ---- popover & modal shells ---- */
+.anchor{display:flex;justify-content:center;padding:26px 40px}
+.popover{width:min(372px,100%)}
+.backdrop{position:absolute;inset:0;background:#070a15cc;display:flex;align-items:flex-start;justify-content:center;padding:48px 20px;z-index:5}
+.modal{width:min(680px,100%);max-height:calc(100% - 60px);overflow:auto}
+/* ---- clipped plate + open divisions ---- */
+.plate{background:var(--line);clip-path:var(--clip);padding:1px}
+.plate-in{background:var(--panel);clip-path:var(--clip);padding:20px 24px 18px}
+.head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:12px}
+.head .name{font-size:21px}
+.head .state{font-size:13px}
+.rule{border:0;border-top:1px solid var(--soft);margin:0}
+.row{padding:13px 0;border-top:1px solid var(--soft);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.row>:first-child{margin-top:0}.row:first-of-type{border-top:0}
+.rows{display:flex;flex-direction:column}
+.row .grow{flex:1;min-width:0}
+.name{font-size:18px}
+.sub{display:block;font-size:13px;color:var(--muted);margin:3px 0 0}
+.fig{font-size:16px}
+.ghost{border-color:transparent;padding:6px 8px;min-height:40px;color:var(--muted)}
+.ghost:hover:not(:disabled){color:var(--ink)}
+.backlink{border:0;padding:4px 0;min-height:36px;color:var(--muted);letter-spacing:.1em}
+.backlink:hover:not(:disabled){background:none;color:var(--ink)}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.chip{min-height:44px;padding:8px 12px;font-size:16px}
+.chip[aria-pressed=true]{box-shadow:inset 0 -3px var(--switch);border-color:var(--switch)}
+.free{display:flex;align-items:center;gap:8px}
+.free input{width:74px;text-align:right}
+.track{display:block;height:3px;background:var(--soft);margin-top:8px}
+.track i{display:block;height:100%;background:var(--switch)}
+.done .track i{background:var(--charge)}
+.dot{width:10px;height:10px;border:1.5px solid var(--ink);border-radius:50%;flex-shrink:0}
+.dot.on{background:var(--ink)}
+.marksel{box-shadow:inset 3px 0 0 var(--ink);padding-left:10px}
+.acq{font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:var(--muted);box-shadow:inset 0 -1px var(--muted);padding:5px 0;white-space:nowrap}
+.node{min-height:44px;display:flex;align-items:center;gap:9px;padding:8px 10px;font-size:15px}
+.node.equipped{box-shadow:inset 0 0 0 1.5px var(--switch)}
+.node.locked{color:var(--muted);border-color:var(--soft);border-style:dashed}
+.notetext{margin:4px 0 0;font-size:14px}
+.choice{width:100%;text-align:left;display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:13px 14px}
+.choice .sub{color:var(--muted)}
+.slider{display:flex;align-items:center;gap:10px;width:100%}
+.slider input{flex:1;min-height:0;padding:0;border:0;accent-color:var(--switch)}
+.slider .end{font-size:13px;color:var(--muted)}
+.actions{display:flex;justify-content:flex-end;gap:10px;padding-top:14px}
+.danger{color:var(--switch);border-color:var(--switch)}
+/* ---- split stage (variant C) ---- */
+.split{display:grid;grid-template-columns:138px 1fr;min-height:380px}
+.split .list{border-right:1px solid var(--soft);padding-right:14px;display:flex;flex-direction:column;gap:2px}
+.split .list .row{border-top:0;padding:10px 4px}
+.split .detail{padding-left:16px;min-width:0}
+.split .detail .row:first-of-type{border-top:0}
+/* ---- variant B: dense figure-led ledger ---- */
+body[data-variant=B] .plate-in{padding:16px 18px 14px}
+body[data-variant=B] .row{padding:8px 0;gap:8px}
+body[data-variant=B] .name{font-size:16px}
+body[data-variant=B] .fig{font-size:15px}
+body[data-variant=B] .row .fig{order:-1}
+body[data-variant=B] .row{justify-content:flex-start}
+body[data-variant=B] .eyeline{font-size:11px}
+body[data-variant=B] .sub{font-size:12px}
+body[data-variant=B] button{padding:7px 11px}
+body[data-variant=B] .head{padding-bottom:8px}
+body[data-variant=B] .modal{width:min(560px,100%)}
+/* ---- focus control sheet ---- */
+.sheet{width:min(560px,100%)}
+.facetabs{display:flex;gap:6px;padding-bottom:12px}
+.ftab{min-height:38px;padding:6px 12px;font-size:15px;color:var(--muted)}
+.ftab[aria-pressed=true]{color:var(--ink);box-shadow:inset 0 -2px var(--ink);border-color:var(--ink)}
+.switch-in{color:var(--switch);border-color:var(--switch)}
+.switch-in:hover:not(:disabled){background:var(--bg)}
+/* ---- phone presentation ---- */
+body[data-device=phone] #stage{max-width:392px;min-height:calc(100vh - 40px)}
+body[data-device=phone] .consol{padding:10px 14px;gap:10px}
+body[data-device=phone] .consol .brand{display:none}
+body[data-device=phone] .banner-reads{gap:12px}
+body[data-device=phone] .banner-reads .bread .name{font-size:15px}
+body[data-device=phone] .gbars{width:64px}
+body[data-device=phone] .tiles .tile{width:40px;height:40px}
+body[data-device=phone] .anchor{padding:18px 14px;justify-content:center}
+body[data-device=phone] .popover{width:100%}
+body[data-device=phone] .backdrop{align-items:flex-end;padding:0}
+body[data-device=phone] .modal{width:100%;max-height:82%;margin-bottom:0}
+body[data-device=phone] .split{grid-template-columns:1fr}
+body[data-device=phone] .split .list{border-right:0;border-bottom:1px solid var(--soft);padding:0 0 8px;flex-direction:row;overflow-x:auto}
+body[data-device=phone] .split .list .row{white-space:nowrap}
+body[data-device=phone] .split .detail{padding-left:0;padding-top:10px}
+/* ---- dev panel with drag handle ---- */
+.dev{position:absolute;left:14px;bottom:64px;z-index:8;display:flex;align-items:stretch;background:#10152aeb;border:1px solid var(--line);box-shadow:0 4px 14px #0006}
+.dev .grip{cursor:grab;touch-action:none;display:grid;place-items:center;padding:0 7px;border:0;color:var(--muted);min-height:40px;min-width:22px;letter-spacing:2px;font-size:12px}
+.dev .grip:hover{color:var(--ink);background:none}
+.dev .grip:active{cursor:grabbing}
+.dev .tag{font:600 11px 'IBM Plex Mono',monospace;color:var(--charge);align-self:center;margin-right:2px}
+.dev button{border:0;border-left:1px solid var(--soft);padding:6px 9px;min-height:40px;font:500 12px 'IBM Plex Mono',monospace;letter-spacing:0}
+.dev button:hover{background:#252d48}
+/* ---- tooltips ---- */
+.tooltip-host{position:relative;display:inline-block}
+.tip{padding:2px 4px;border:0;min-height:36px;font:inherit;text-align:left;background:none}
+.tip:hover:not(:disabled){background:none;color:var(--nous)}
+.tooltip{display:none;position:absolute;right:0;top:100%;width:min(280px,80vw);padding:13px 15px;border:1px solid var(--line);background:#0a0e1b;color:var(--ink);font:14px/1.5 'IBM Plex Sans',sans-serif;z-index:9;box-shadow:0 8px 20px #0005;text-align:left}
+.tooltip-host:hover .tooltip,.tooltip-host:focus-within .tooltip,.tooltip-host.show .tooltip{display:block}
+/* ---- switcher bar ---- */
+.switcher{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:20;display:flex;gap:8px;align-items:center;background:#c6cddd;color:#0d1122;padding:7px 9px;box-shadow:0 6px 18px #0007}
+.switcher button{min-height:38px;padding:5px 12px;color:#0d1122;border-color:#0d112233}
+.switcher button:hover:not(:disabled){background:#b4bccc}
+.switcher select{min-height:38px;padding:4px 8px;color:#0d1122;background:#fff;border:1px solid #0d112233;font:600 14px 'Barlow Condensed'}
+.switcher span{font:600 15px 'Barlow Condensed';min-width:200px;text-align:center}
+@media(max-width:760px){.switcher{flex-wrap:wrap;justify-content:center;width:max-content;max-width:calc(100% - 16px)}.switcher span{min-width:150px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto;transition:none;animation:none}}
+::selection{background:var(--nous);color:var(--bg)}
+</style>
+</head>
+<body>
+<div class="notice">Throwaway visual study · figures illustrative · no game saves</div>
+<div id="stage">
+  <div class="consol">
+    <span class="brand name">FLOWSYNTH</span>
+    <button class="clock" id="nav-time" title="Focus control"><span class="mono">20:00</span><span class="eyeline" id="clock-word">PLANNED</span></button>
+    <button class="flow" id="switch-mock">Enter flow</button>
+    <div class="banner-reads" role="group" aria-label="Focus reads">
+      <span class="bread"><span class="name">Piano</span></span>
+      <span class="gbars" aria-label="Goal progress">
+        <span class="gbar"><i style="width:62%"></i></span>
+        <span class="gbar done"><i style="width:100%"></i></span>
+      </span>
+    </div>
+    <div class="tiles">
+      <button class="tile" id="nav-focus" aria-pressed="false" aria-label="Focus control sheet">◎</button>
+      <button class="tile" id="nav-notes" aria-pressed="false" aria-label="Notes">✎</button>
+    </div>
+    <button class="gear tile" id="nav-settings" aria-label="Settings">⚙</button>
+  </div>
+  <div id="surface"></div>
+  <div class="dev" id="dev-panel">
+    <button class="grip" id="dev-grip" aria-label="Drag to move dev console" title="Drag to move">⠿</button>
+    <span class="tag">DEV</span>
+    <button>+1m</button><button>+10m</button><button>→ target</button><button>+100ν</button><button>+synth</button><button>+era</button>
+  </div>
+</div>
+<div class="switcher">
+  <select id="surface-select" aria-label="Surface"></select>
+  <select id="mode-select" aria-label="Mode"><option value="upgrade">Upgrade</option><option value="flow">Flow</option></select>
+  <select id="device-select" aria-label="Device"><option value="desktop">Desktop</option><option value="phone">Phone</option></select>
+  <button id="prev" aria-label="Previous variant">←</button>
+  <span id="variant-label"></span>
+  <button id="next" aria-label="Next variant">→</button>
+</div>
+<script>
+const D={
+ plan:{chips:[10,15,20,25,30,45,60,90],current:20,free:'20'},
+ history:[
+  {when:'OCT 04',habit:'Piano',min:'20:00',chip:'hit',id:11},
+  {when:'OCT 03',habit:'Piano',min:'0:00',chip:'miss',id:10},
+  {when:'OCT 02',habit:'Unstructured',min:'15:00',chip:'hit',id:9},
+  {when:'SEP 30',habit:'Cooking',min:'45:00',chip:'hit',id:8},
+ ],
+ drill:{no:11,when:'OCT 04 · 14:02',habit:'Piano',plan:'20:00 planned',practice:'42 min credited',earned:'312 ν',honesty:'22 min away · didn\'t practice',reflection:'“Hands felt loose by the end.” · rough-leaning',goals:'Piano · 20 min a day — hit'},
+ habits:[
+  {id:'piano',name:'Piano',life:'12:40',sessions:23,last:'yesterday',build:[['Metronome','+charge window'],['Legato lift','+boost while charged'],['Charge window','→ larger bank'],null,null],locked:'first node at 1:00:00',notes:[
+   {when:'OCT 04 · S3',text:'Left hand transitions late on bar 12.'},
+   {when:'SEP 28 · S1',text:'Slow passages feel cleaner after warmup.'}]},
+  {id:'cook',name:'Cooking',life:'3:05',sessions:7,last:'3 days ago',build:[null,null,null,null,null],locked:'first node at 1:00:00',notes:[]},
+ ],
+ logMin:'30',
+ notes:[
+  {when:'OCT 04 · S3 · 12:34',habit:'Piano',text:'Left hand transitions late on bar 12 — slow that passage tomorrow.'},
+  {when:'OCT 03 · between sessions',habit:null,text:'Try adding salt earlier in the simmer, not at the end.'},
+  {when:'OCT 02 · S1 · 09:12',habit:null,text:'Board reads calmer after moving the booster mid-chain.'},
+ ],
+ goals:[
+  {name:'Piano · 20 min a day',status:'12:34 to go',frac:.62,times:'12:00 / 20:00',count:'×3',done:false},
+  {name:'Four habits in a day',status:'complete · resets Monday',frac:1,times:'',count:'×2',done:true},
+ ],
+ slots:'2/3',
+ longGoal:{price:'45 ν',when:'between sessions'},
+ summary:{no:12,nous:'148 ν',practice:'20 min',rate:'7.4 ν/min',break:'synth terms 5.9 ν/min · booster uplift +1.1 · empowerment ×1.06',rolls:'1 · flow',unlocked:'Charge window',events:['22 min away · didn\'t practice']},
+ honesty:{eyebrow:'HONESTY REPORT',title:'While you were away',read:'22 min away · past your plan',held:'150 ν held',note:'Nothing already banked is taken back.',choices:[
+  ['Didn\'t practice','drops the 22 min · banks 0 ν'],
+  ['Did what I planned','credits to the plan · releases 128 ν'],
+  ['Practiced the whole time away','credits all 22 min · releases 150 ν'],
+ ]},
+};
+const tip=(id,label,text)=>`<span class="tooltip-host"><button class="tip" aria-describedby="${id}" aria-expanded="false">${label}</button><span class="tooltip" id="${id}" role="tooltip">${text}</span></span>`;
+const S={surface:'time',variant:'A',device:'desktop',mode:'upgrade'};
+const NAMES={focus:'Focus control sheet',time:'Time (legacy)',habit:'Habit (legacy)',notes:'Notes',goals:'Goals (legacy)',settings:'Settings',summary:'Session summary',honesty:'Honesty report'};
+const VNAMES={A:'Ruled folio',B:'Figure-led ledger',C:'Split stage'};
+
+/* ---------- Time ---------- */
+function timePlan(withHistory=true){
+ const p=D.plan;
+ const rows=`
+  <div class="chips" role="group" aria-label="Preset targets">${p.chips.map(m=>`<button class="chip" aria-pressed="${m===p.current}">${m}</button>`).join('')}</div>
+  <div class="row"><div class="free"><input class="mono" value="${p.free}" aria-label="Minutes"><span class="eyeline">MIN</span></div><button class="grow" style="text-align:left">Open-ended</button></div>
+  <div class="row"><span class="grow name">${tip('plan-tip','Planned practice','The chime, a notification and the tab title fire at the target. Past it, presence keeps banking and away time turns provisional.')}</span><span class="fig mono">20:00</span></div>`;
+ return rows+(withHistory?`<div class="row">${historyEntry()}</div>`:'');
+}
+function timeFlow(){
+ return `<div class="row"><span class="grow name">Session</span><span class="fig mono">12:34</span><span class="eyeline">OPEN</span></div>
+ <div class="row">${historyEntry()}</div>`;
+}
+function historyEntry(){return `<span class="grow name">${S.variant==='B'?'':'History'}</span><span class="fig mono dim">24</span><button class="ghost" aria-label="Open history">→</button>`}
+function historyList(){
+ return `<button class="backlink">← TIME</button><div class="rows">${D.history.map(h=>`
+  <div class="row" role="button" tabindex="0" data-drill="${h.id}"><span class="fig mono dim">${h.when}</span><span class="grow name">${h.habit}</span><span class="fig mono">${h.min}</span><span class="acq"${h.chip==='miss'?' style="color:var(--muted)"':' style="color:var(--charge)"'}>${h.chip==='hit'?'HIT':'MISS'}</span></div>`).join('')}</div>
+  <div class="row"><button class="ghost grow" style="text-align:left">Show 20 more</button></div>`;
+}
+function historyDrill(){
+ const d=D.drill;
+ const line=(k,v)=>`<div class="row"><span class="eyeline" style="width:86px">${k}</span><span class="grow fig mono">${v}</span></div>`;
+ return `<button class="backlink">← HISTORY</button>
+  <div class="head"><span class="name">Session ${d.no} · ${d.habit}</span></div>
+  <div class="rows">${line('WHEN',d.when)}${line('PLAN',d.plan)}${line('PRACTICE',d.practice)}${line('EARNED',d.earned)}
+  <div class="row"><span class="eyeline" style="width:86px">HONESTY</span><span class="grow">${d.honesty}</span></div>
+  <div class="row"><span class="eyeline" style="width:86px">REFLECTION</span><span class="grow" style="font-size:14px">${d.reflection}</span></div>
+  <div class="row"><span class="eyeline" style="width:86px">GOALS</span><span class="grow">${d.goals}</span></div></div>`;
+}
+function renderTime(drill){
+ if(drill==='drill')return wrap('TIME','history · 24 sessions',historyList());
+ if(drill==='drill2')return wrap('TIME','session 11',historyDrill());
+ return wrap('TIME',S.mode==='flow'?'in flow':'plan · 20:00',S.mode==='flow'?timeFlow():timePlan());
+}
+
+/* ---------- Habit ---------- */
+function habitList(){
+ const rows=D.habits.map(h=>S.variant==='B'?`
+  <div class="row ${h.id===S.habitPick?'marksel':''}" role="button" tabindex="0" data-habit="${h.id}" aria-pressed="${h.id===S.habitPick}">
+   <span class="fig mono">${h.life}</span><span class="fig mono dim">${h.sessions}×</span>
+   <span class="grow"><span class="name">${h.name}</span></span>
+   ${h.id===S.active?'<span class="dot on"></span>':''}<span class="mono dim">→</span>
+  </div>`:`
+  <div class="row ${h.id===S.habitPick?'marksel':''}" role="button" tabindex="0" data-habit="${h.id}" aria-pressed="${h.id===S.habitPick}">
+   <span class="dot ${h.id===S.active?'on':''}" title="${h.id===S.active?'Active habit':''}"></span>
+   <span class="grow"><span class="name">${h.name}</span><span class="sub mono">${h.sessions} sessions · ${h.life}</span></span>
+   <button class="ghost" aria-label="Rename ${h.name}">✎</button><button class="ghost" aria-label="Archive ${h.name}">⨯</button>
+   <span class="fig mono dim">→</span>
+  </div>`).join('');
+ const create=`<div class="row"><input class="grow" placeholder="Name a practice" aria-label="New habit name"><button>Add</button></div>`;
+ const log=S.variant==='B'
+  ?`<div class="row"><span class="fig mono">${D.logMin}</span><span class="grow">${tip('log-tip','practice, manual','Credits practice without a session. Manual logs never produce nous or charge.')}</span><button>Log</button></div>`
+  :`<div class="row"><span class="grow">${tip('log-tip','Log practice','Credits practice without a session. Manual logs never produce nous or charge.')}</span><input class="mono" style="width:64px;text-align:right" value="${D.logMin}" aria-label="Minutes"><button>Log</button></div>`;
+ if(S.mode==='flow'){
+  const h=D.habits.find(x=>x.id===S.active);
+  return `<div class="row"><span class="grow name">${h?h.name:'Unstructured practice'}</span><span class="eyeline">ACTIVE</span></div>
+   <div class="row"><span class="grow">This session</span><span class="fig mono">12:34</span></div>
+   <div class="row"><span class="sub">Selection is locked during flow.</span></div>`;
+ }
+ return rows+`<hr class="rule">`+create+`<hr class="rule">`+log;
+}
+function habitDetail(h){
+ const nodes=h.build.map((n,i)=>n?`<button class="node equipped"><span class="grow" style="text-align:left"><span class="name">${n[0]}</span><span class="sub">${n[1]}</span></span></button>`
+  :`<button class="node locked"><span class="grow" style="text-align:left">Slot ${i+1}</span></button>`).join('');
+ const notes=h.notes.length?h.notes.map(n=>`<div class="row"><span class="grow"><span class="fig mono dim">${n.when}</span><p class="notetext">${n.text}</p></span></div>`).join(''):`<div class="row"><span class="sub">No tagged notes.</span></div>`;
+ return `<button class="backlink" data-back>← HABITS</button>
+  <div class="head"><span class="name">${h.name}</span><span class="acq">SELECTED</span></div>
+  <div class="rows">
+   <div class="row"><span class="grow">Lifetime</span><span class="fig mono">${h.life}</span></div>
+   <div class="row"><span class="grow">Sessions</span><span class="fig mono">${h.sessions}</span></div>
+   <div class="row"><span class="grow">Last practiced</span><span class="fig mono">${h.last}</span></div>
+  </div><hr class="rule">
+  <div class="head" style="padding-bottom:4px"><span class="eyeline">${tip('node-tip','BUILD · '+h.build.filter(Boolean).length+'/'+h.build.length+' SLOTS','Nodes unlock as practice time crosses milestones — 1:00:00 for the first. Effects apply only while this habit is active.')}</span><span class="sub">while this habit is active</span></div>
+  <div class="rows">${nodes}</div><hr class="rule">
+  <div class="head" style="padding-bottom:4px"><span class="eyeline">TAGGED NOTES · ${h.notes.length}</span></div>
+  <div class="rows">${notes}</div>`;
+}
+function renderHabit(){
+ if(S.habitPick&&S.variant!=='C')return wrap('HABIT','development',habitDetail(D.habits.find(h=>h.id===S.habitPick)));
+ if(S.variant==='C'){
+  const h=D.habits.find(x=>x.id===(S.habitPick||'piano'));
+  return wrap('HABIT',S.mode==='flow'?'in flow':'2 practices',`<div class="split"><div class="list">${S.mode==='upgrade'?D.habits.map(x=>`<div class="row ${x.id===h.id?'marksel':''}" role="button" tabindex="0" data-habit="${x.id}"><span class="grow name">${x.name}</span><span class="fig mono dim">${x.life}</span></div>`).join('')+`<div class="row"><span class="sub">+ add</span></div>`:`<div class="row"><span class="grow name">${D.habits.find(x=>x.id===S.active).name}</span></div>`}</div><div class="detail">${habitDetail(h).replace('<button class="backlink" data-back>← HABITS</button>','')}</div></div>`);
+ }
+ return wrap('HABIT',S.mode==='flow'?'in flow':'2 practices',habitList());
+}
+
+/* ---------- Notes ---------- */
+function renderNotes(){
+ const stream=D.notes.map(n=>`
+  <div class="row"><span class="grow"><span class="fig mono dim">${n.when}</span>${n.habit?` <span class="acq">${n.habit.toUpperCase()}</span>`:''}<p class="notetext">${n.text}</p></span></div>`).join('');
+ return wrap('NOTES',S.mode==='flow'?'session 3':'stream',`
+  <div class="row"><textarea class="grow" rows="2" placeholder="What are you noticing?" style="resize:vertical"></textarea></div>
+  <div class="row"><span class="grow">${tip('note-tip','','A written note credits each owned Note Generator by its length. Tagging follows the session\'s habit.')}</span><button>Capture</button></div>
+  <hr class="rule"><div class="rows">${stream}</div>`);
+}
+
+/* ---------- Goals ---------- */
+function goalList(){
+ const rows=D.goals.map(g=>`
+  <div class="row ${g.done?'done':''}"><span class="grow"><span class="name">${g.name}</span><span class="sub mono">${g.times?g.times+' · ':''}${g.count} ${g.status}</span><span class="track"><i style="width:${g.frac*100}%"></i></span></span>
+  ${S.mode==='upgrade'?`<button class="ghost" aria-label="Delete goal">⨯</button>`:''}</div>`).join('');
+ const create=`<div class="row"><select class="grow" aria-label="Habit"><option>Any habit</option><option>Piano</option><option>Cooking</option></select><input class="mono" style="width:66px;text-align:right" value="20" aria-label="Minutes"><select aria-label="Schedule"><option>daily</option><option>weekly</option><option>once</option></select><button>+</button></div>`;
+ const long=`<div class="row"><span class="grow name" style="color:var(--muted)">One more goal slot</span><span class="fig mono dim">${tip('lg-tip',D.longGoal.price,'Buys one slot now. Each purchase raises the next price. '+D.longGoal.when+'.')}</span><button class="ghost">Buy</button></div>`;
+ return `<div class="row"><span class="grow">${tip('slots-tip','Goal slots','Available slots limit tracked goals. Completion is the tracking — each completion credits a Goal Generator\'s reserve.')}</span><span class="fig mono">${D.slots}</span></div>
+  <div class="rows">${rows}</div><hr class="rule">${create}<hr class="rule">${long}`;
+}
+function renderGoals(){
+ if(S.variant==='C'){
+  const g=D.goals[0];
+  return wrap('GOALS',D.slots+' slots',`<div class="split"><div class="list">${D.goals.map((x,i)=>`<div class="row ${i===0?'marksel':''}" role="button" tabindex="0"><span class="grow name">${x.name}</span></div>`).join('')+`<div class="row"><span class="sub">+ new goal</span></div>`}</div><div class="detail">
+   <div class="head"><span class="name">${g.name}</span></div>
+   <div class="rows">
+    <div class="row"><span class="grow">Status</span><span class="fig mono">${g.status}</span></div>
+    <div class="row"><span class="grow">Progress</span><span class="fig mono">${g.times} ${g.count}</span></div>
+   </div><span class="track" style="display:block;margin:10px 0"><i style="width:${g.frac*100}%"></i></span><hr class="rule">${goalList().split('<hr class="rule">')[2]}</div></div>`);
+ }
+ return wrap('GOALS',S.mode==='flow'?D.slots+' slots · locked':'',goalList());
+}
+
+/* ---------- Settings (modal) ---------- */
+function renderSettings(){
+ return modal('SETTINGS','',`
+  <div class="rows">
+   <div class="row"><span class="grow name">Mute all sound</span>${tip('mute-tip','<span class="mono dim">i</span>','Silences every sound, the target chime included.')}<button aria-pressed="false">Off</button></div>
+   <div class="row"><span class="grow name">Save data</span><span class="sub grow">saves automatically on this device</span></div>
+   <div class="row"><button class="grow" style="text-align:left">Export save</button><button class="grow" style="text-align:left">Import save</button></div>
+   <div class="row"><button class="danger grow" style="text-align:left">Reset progress</button></div>
+  </div>`,true);
+}
+
+/* ---------- Summary (modal) ---------- */
+function renderSummary(){
+ const s=D.summary;
+ const line=(k,v,extra='')=>`<div class="row"><span class="eyeline" style="width:92px">${k}</span><span class="grow fig mono">${v}</span>${extra}</div>`;
+ const body=`
+  <div class="head" style="align-items:baseline"><span class="fig mono" style="font-size:34px;color:var(--nous)">${s.nous}</span><span class="eyeline">BANKED · SESSION ${s.no}</span></div>
+  <div class="rows">${line('PRACTICE',s.practice)}
+  <div class="row"><span class="eyeline" style="width:92px">${tip('rate-tip','RATE',s.break)}</span><span class="grow fig mono">${s.rate}</span></div>
+  ${line('ROLLS',s.rolls)}${line('UNLOCKED',s.unlocked,'<span class="acq" style="color:var(--charge)">NEW</span>')}
+  ${s.events.map(e=>`<div class="row"><span class="eyeline" style="width:92px">HONESTY</span><span class="grow">${e}</span></div>`).join('')}</div>
+  <hr class="rule">
+  <div class="row"><span class="eyeline" style="width:92px;align-self:flex-start;padding-top:12px">REFLECT</span><span class="grow"><input class="grow" style="width:100%" placeholder="One line, optional" aria-label="Reflection"><span class="slider"><span class="end">rough</span><input type="range" min="1" max="5" step="1" value="3" aria-label="Valence"><span class="end">great</span></span></span></div>
+  <div class="actions"><button>Continue</button></div>`;
+ return modal(`SESSION ${s.no} · SUMMARY`,'',body,true);
+}
+
+/* ---------- Honesty (modal) ---------- */
+function renderHonesty(){
+ const h=D.honesty;
+ const choices=h.choices.map(([l,c])=>`<div class="row" style="padding-top:8px"><button class="choice"><span class="name">${l}</span><span class="sub mono">${c}</span></button></div>`).join('');
+ return modal(h.eyebrow,h.title,`
+  <div class="rows">
+   <div class="row"><span class="grow fig mono" style="font-size:19px">${h.read}</span><span class="acq" style="color:var(--nous)">${h.held}</span></div>
+   <div class="row"><span class="sub">${h.note}</span></div>
+  </div><hr class="rule"><div class="rows">${choices}</div>`,false);
+}
+
+/* ---------- Focus control sheet ---------- */
+function renderFocus(){
+ const face=S.face||'plan';
+ const tabs=[['plan','PLAN'],['habit','HABIT'],['goals','GOALS'],['history','HISTORY']];
+ const enterRow=`<div class="row" style="border-top:0;padding-top:0"><span class="grow"><span class="name">Ready · Piano</span><span class="sub mono">20:00 planned · 2 goals tracked</span></span><button class="switch-in">Enter flow</button></div><hr class="rule">
+ <div class="row"><span class="grow">${tip('pick-tip','Session habit','The practice this session credits — or none for unstructured practice.')}</span><select aria-label="Session habit"><option>Piano</option><option>Cooking</option><option>none selected</option></select></div><hr class="rule">`;
+ let body='';
+ if(face==='plan')body=enterRow+timePlan(false);
+ else if(face==='habit')body=habitList();
+ else if(face==='goals')body=goalList();
+ else body=historyList();
+ const nav=`<div class="facetabs" role="tablist" aria-label="Focus sections">${tabs.map(([k,l])=>`<button class="ftab" data-face="${k}" aria-pressed="${k===face}">${l}</button>`).join('')}</div>`;
+ return `<div class="anchor"><section class="plate sheet" aria-label="Focus control sheet"><div class="plate-in">
+  <div class="head"><span class="name">FOCUS</span><span class="eyeline state">${face==='plan'?'ready · 20:00 planned':face}</span><button class="ghost" id="close-x" aria-label="Close" style="min-height:30px;padding:0 6px">✕</button></div>
+  ${nav}${body}</div></section></div>`;
+}
+
+/* ---------- shells ---------- */
+function wrap(title,state,body){
+ return `<div class="anchor"><section class="plate popover" aria-label="${title} app"><div class="plate-in">
+  <div class="head"><span class="name">${title}</span><span class="eyeline state">${state}</span></div>
+  ${body}</div></section></div>`;
+}
+function modal(eyebrow,title,body,dismissible){
+ return `<div class="backdrop"><section class="plate modal" role="dialog" aria-modal="true" aria-label="${eyebrow}"><div class="plate-in">
+  <div class="head"><span class="eyeline">${eyebrow}${dismissible?' <button class="ghost" id="close-x" aria-label="Close" style="min-height:30px;padding:0 6px">✕</button>':''}</span></div>
+  ${title?`<h2 class="name" style="font-size:26px;margin:0 0 10px">${title}</h2>`:''}
+  ${body}</div></section></div>`;
+}
+
+/* ---------- render ---------- */
+let drill=null;
+function render(){
+ const el=document.querySelector('#surface');
+ document.body.dataset.variant=S.variant;document.body.dataset.device=S.device;
+ if(S.surface==='time'&&drill){el.innerHTML=renderTime(drill);bindHistory();return}
+ if(S.surface==='time'){el.innerHTML=renderTime();bindTime();bindHistory()}
+ else if(S.surface==='focus'){
+  el.innerHTML=renderFocus();bindCommon();
+  document.querySelectorAll('[data-face]').forEach(b=>b.onclick=()=>{S.face=b.dataset.face;render()});
+  if(document.querySelector('[data-drill]'))bindHistory();
+  const bk=document.querySelector('.backdrop');if(bk)bk.onclick=e=>{if(e.target===bk){S.surface='time';render()}};
+ }
+ else if(S.surface==='habit')el.innerHTML=renderHabit();
+ else if(S.surface==='notes')el.innerHTML=renderNotes();
+ else if(S.surface==='goals')el.innerHTML=renderGoals();
+ else if(S.surface==='settings')el.innerHTML=renderSettings();
+ else if(S.surface==='summary')el.innerHTML=renderSummary();
+ else if(S.surface==='honesty')el.innerHTML=renderHonesty();
+ bindCommon();
+ document.querySelectorAll('#stage .tiles .tile').forEach(t=>t.setAttribute('aria-pressed',String(t.id==='nav-'+S.surface||(S.surface==='focus'&&t.id==='nav-time'))));
+ document.querySelector('#nav-settings').setAttribute('aria-pressed',String(S.surface==='settings'));
+ const u=new URL(location);u.searchParams.set('variant',S.variant);u.searchParams.set('surface',S.surface);u.searchParams.set('device',S.device);u.searchParams.set('mode',S.mode);if(S.face)u.searchParams.set('face',S.face);if(S.habitPick)u.searchParams.set('habit',S.habitPick);history.replaceState(null,'',u);
+}
+function bindCommon(){
+ document.querySelectorAll('.tip').forEach(b=>b.onclick=e=>{e.stopPropagation();const host=b.closest('.tooltip-host');const show=!host.classList.contains('show');document.querySelectorAll('.tooltip-host').forEach(h=>h.classList.remove('show'));document.querySelectorAll('.tip').forEach(t=>t.setAttribute('aria-expanded','false'));host.classList.toggle('show',show);b.setAttribute('aria-expanded',String(show))});
+ document.querySelectorAll('[data-habit]').forEach(r=>r.onclick=()=>{S.habitPick=r.dataset.habit;render()});
+ document.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{S.habitPick=null;render()});
+ const x=document.querySelector('#close-x');if(x)x.onclick=()=>{S.surface='time';render()};
+ const bk=document.querySelector('.backdrop');if(bk&&document.querySelector('#close-x'))bk.onclick=e=>{if(e.target===bk){S.surface='time';render()}};
+}
+function bindHistory(){
+ document.querySelectorAll('[data-drill]').forEach(r=>{r.onclick=()=>{drill='drill2';render()};r.onkeydown=e=>{if(e.key==='Enter'){drill='drill2';render()}}});
+ const back=document.querySelector('.backlink');if(back&&back.textContent.includes('HISTORY'))back.onclick=()=>{drill=null;render()};
+}
+function bindTime(){/* chips illustrative */}
+document.querySelector('#nav-time').onclick=()=>{S.surface='focus';drill=null;render()};
+document.querySelector('#nav-focus').onclick=()=>{S.surface='focus';drill=null;render()};
+document.querySelector('#nav-notes').onclick=()=>{S.surface='notes';render()};
+document.querySelector('#nav-settings').onclick=()=>{S.surface='settings';render()};
+document.querySelector('#switch-mock').onclick=()=>{S.mode=S.mode==='flow'?'upgrade':'flow';document.querySelector('#switch-mock').textContent=S.mode==='flow'?'Exit flow':'Enter flow';render()};
+document.addEventListener('keydown',e=>{
+ if(e.target.matches('input,textarea,select,[contenteditable]'))return;
+ if(e.key==='Escape'){document.querySelectorAll('.tooltip-host').forEach(h=>h.classList.remove('show'));document.querySelectorAll('.tip').forEach(t=>t.setAttribute('aria-expanded','false'))}
+});
+/* switcher bar */
+const sel=document.querySelector('#surface-select');
+Object.entries(NAMES).forEach(([k,v])=>{const o=document.createElement('option');o.value=k;o.textContent=v;sel.append(o)});
+sel.onchange=()=>{S.surface=sel.value;drill=null;render()};
+document.querySelector('#mode-select').onchange=e=>{S.mode=e.target.value;render()};
+document.querySelector('#device-select').onchange=e=>{S.device=e.target.value;render()};
+const variants=['A','B','C'];
+function renderVariant(){document.querySelector('#variant-label').textContent=S.variant+' · '+VNAMES[S.variant]}
+function cycle(n){S.variant=variants[(variants.indexOf(S.variant)+n+3)%3];renderVariant();render()}
+document.querySelector('#prev').onclick=()=>cycle(-1);document.querySelector('#next').onclick=()=>cycle(1);
+document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea,select,[contenteditable]'))return;if(e.key==='ArrowLeft')cycle(-1);if(e.key==='ArrowRight')cycle(1)});
+/* dev panel drag */
+(function(){const el=document.querySelector('#dev-panel'),grip=document.querySelector('#dev-grip'),stage=document.querySelector('#stage');let drag=null;
+grip.addEventListener('pointerdown',e=>{const r=el.getBoundingClientRect(),s=stage.getBoundingClientRect();drag={dx:e.clientX-r.left,dy:e.clientY-r.top,ox:r.left-s.left,oy:r.top-s.top,sx:e.clientX,sy:e.clientY};grip.setPointerCapture(e.pointerId);e.preventDefault()});
+grip.addEventListener('pointermove',e=>{if(!drag)return;const s=stage.getBoundingClientRect();let nx=drag.ox+e.clientX-drag.sx,ny=drag.oy+e.clientY-drag.sy;nx=Math.max(4,Math.min(nx,s.width-el.offsetWidth-4));ny=Math.max(4,Math.min(ny,s.height-el.offsetHeight-4));el.style.left=nx+'px';el.style.top=ny+'px';el.style.bottom='auto'});
+grip.addEventListener('pointerup',()=>drag=null);grip.addEventListener('pointercancel',()=>drag=null)})();
+/* init */
+const q=new URLSearchParams(location.search);
+if(variants.includes(q.get('variant')))S.variant=q.get('variant');
+if(NAMES[q.get('surface')])S.surface=q.get('surface');
+if(['desktop','phone'].includes(q.get('device')))S.device=q.get('device');
+if(['upgrade','flow'].includes(q.get('mode')))S.mode=q.get('mode');
+if(q.get('habit'))S.habitPick=q.get('habit');
+if(['plan','habit','goals','history'].includes(q.get('face')))S.face=q.get('face');
+sel.value=S.surface;document.querySelector('#mode-select').value=S.mode;document.querySelector('#device-select').value=S.device;
+if(S.mode==='flow')document.querySelector('#switch-mock').textContent='Exit flow';
+renderVariant();render();
+</script>
+</body></html>
