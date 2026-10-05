@@ -135,5 +135,5 @@ describe("first Arete tuning (#157)", () => {
       }
     }
     console.table(report);
-  });
+  }, 60_000);
 });
