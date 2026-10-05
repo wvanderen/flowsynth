@@ -156,6 +156,7 @@ const S = {
   era: 'banked',          // pre | banked | entered
   mode: 'upgrade',        // upgrade | flow
   bank: 1,                // illustrative banked Arete
+  lastFace: 'nous',       // the shop remembers the face it was last open on
   poolJoined: false, accelBought: false, breakBought: false,
   sheet: null,            // null | {kind:'catalog',face} | {kind:'launcher'} | {kind:'feats'} | {kind:'chords'}
 };
@@ -310,7 +311,10 @@ document.addEventListener('click', (e) => {
   const opener = e.target.closest('[data-open]');
   if (opener) {
     const kind = opener.dataset.open;
-    S.sheet = kind === 'feats' || kind === 'chords' ? { kind } : kind === 'launcher' ? { kind: 'launcher' } : { kind: 'catalog', face: 'nous' };
+    if (kind === 'feats' || kind === 'chords') S.sheet = { kind };
+    else if (kind === 'launcher') S.sheet = { kind: 'launcher' };
+    // the door remembers the face; the locked arete tab falls back to nous
+    else S.sheet = { kind: 'catalog', face: S.era === 'pre' && S.lastFace === 'arete' ? 'nous' : S.lastFace };
     renderSheet(); return;
   }
   const launch = e.target.closest('[data-launch]');
@@ -320,7 +324,7 @@ document.addEventListener('click', (e) => {
     renderSheet(); return;
   }
   const tab = e.target.closest('[data-face-tab]');
-  if (tab && !tab.disabled) { S.sheet.face = tab.dataset.face; renderSheet(); return; }
+  if (tab && !tab.disabled) { S.sheet.face = tab.dataset.face; S.lastFace = tab.dataset.face; renderSheet(); return; }
   const buy = e.target.closest('[data-buy]');
   if (buy && !buy.disabled) {
     const costs = { accel: 3, break: 10, pool: 5 };
