@@ -79,6 +79,13 @@ const isMain = process.argv[1] !== undefined && import.meta.url === pathToFileUR
 if (isMain) {
   main().catch((error) => {
     console.error(error);
+    // Best-effort: the crash belongs in the log too, so a server that dies
+    // before or during startup still leaves its failure readable there.
+    try {
+      fs.appendFileSync(logFile, `[${new Date().toISOString()}] FATAL ${error?.stack ?? error}\n`);
+    } catch {
+      // Logging is best-effort.
+    }
     process.exitCode = 1;
   });
 }

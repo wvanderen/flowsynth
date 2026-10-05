@@ -14,7 +14,21 @@ export default defineConfig({
       // artifacts neither contain nor serve the endpoint.
       name: "flowsynth-dev-provenance",
       configureServer(server) {
-        server.middlewares.use("/-/dev/provenance", (_req, res) => {
+        // Unmounted on purpose: connect's use(path) prefix-matches only at a
+        // "/" boundary and would hand /-/dev/provenanceX to the SPA fallback.
+        // Registered bare, the route is exact and everything else — methods
+        // included — 404s rather than leaking provenance.
+        server.middlewares.use((req, res, next) => {
+          const url = req.url ?? "";
+          if (!url.startsWith("/-/dev/provenance")) {
+            next();
+            return;
+          }
+          if (req.method !== "GET" || url !== "/-/dev/provenance") {
+            res.statusCode = 404;
+            res.end();
+            return;
+          }
           res.setHeader("Content-Type", "application/json; charset=utf-8");
           res.setHeader("Cache-Control", "no-store");
           res.end(JSON.stringify(devProvenance(), null, 2));

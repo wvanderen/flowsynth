@@ -25,7 +25,7 @@ describe("production build purity (issue #253)", () => {
     for (const file of files) {
       const text = fs.readFileSync(file, "utf8");
       expect(text, file).not.toContain(repoRoot);
-      expect(text, file).not.toMatch(/\/Users\//);
+      expect(text, file).not.toMatch(/\/(?:Users|home)\//);
       expect(text, file).not.toContain("-/dev/provenance");
       expect(text, file).not.toContain("dev-server.mjs");
     }
