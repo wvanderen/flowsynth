@@ -12,7 +12,13 @@
 .consol .clock{display:flex;align-items:baseline;gap:8px;border:0;padding:4px 6px}
 .consol .clock .mono{font-size:19px}
 .consol .flow{color:var(--switch);border-color:var(--switch)}
-.tiles{display:flex;gap:8px;margin-left:auto}
+.banner-reads{margin-left:auto;display:flex;align-items:center;gap:18px}
+.bread{display:flex;align-items:baseline;gap:8px;white-space:nowrap}
+.gbars{display:flex;flex-direction:column;gap:4px;width:92px}
+.gbar{display:block;height:3px;background:var(--soft)}
+.gbar i{display:block;height:100%;background:var(--switch)}
+.gbar.done i{background:var(--charge)}
+.tiles{display:flex;gap:8px;margin-left:14px}
 .tile{width:44px;height:44px;display:grid;place-items:center;padding:0;font-size:15px}
 .tile[aria-pressed=true]{box-shadow:inset 0 -3px var(--ink);border-color:var(--ink)}
 .gear{margin-left:8px}
@@ -81,10 +87,20 @@ body[data-variant=B] .sub{font-size:12px}
 body[data-variant=B] button{padding:7px 11px}
 body[data-variant=B] .head{padding-bottom:8px}
 body[data-variant=B] .modal{width:min(560px,100%)}
+/* ---- focus control sheet ---- */
+.sheet{width:min(560px,100%)}
+.facetabs{display:flex;gap:6px;padding-bottom:12px}
+.ftab{min-height:38px;padding:6px 12px;font-size:15px;color:var(--muted)}
+.ftab[aria-pressed=true]{color:var(--ink);box-shadow:inset 0 -2px var(--ink);border-color:var(--ink)}
+.switch-in{color:var(--switch);border-color:var(--switch)}
+.switch-in:hover:not(:disabled){background:var(--bg)}
 /* ---- phone presentation ---- */
 body[data-device=phone] #stage{max-width:392px;min-height:calc(100vh - 40px)}
 body[data-device=phone] .consol{padding:10px 14px;gap:10px}
 body[data-device=phone] .consol .brand{display:none}
+body[data-device=phone] .banner-reads{gap:12px}
+body[data-device=phone] .banner-reads .bread .name{font-size:15px}
+body[data-device=phone] .gbars{width:64px}
 body[data-device=phone] .tiles .tile{width:40px;height:40px}
 body[data-device=phone] .anchor{padding:18px 14px;justify-content:center}
 body[data-device=phone] .popover{width:100%}
@@ -124,12 +140,18 @@ body[data-device=phone] .split .detail{padding-left:0;padding-top:10px}
 <div id="stage">
   <div class="consol">
     <span class="brand name">FLOWSYNTH</span>
-    <button class="clock" id="nav-time" title="Time"><span class="mono">20:00</span><span class="eyeline" id="clock-word">PLANNED</span></button>
+    <button class="clock" id="nav-time" title="Focus control"><span class="mono">20:00</span><span class="eyeline" id="clock-word">PLANNED</span></button>
     <button class="flow" id="switch-mock">Enter flow</button>
-    <div class="tiles" role="group" aria-label="Focus apps">
-      <button class="tile" id="nav-habit" aria-pressed="false">HAB</button>
-      <button class="tile" id="nav-notes" aria-pressed="false">NOT</button>
-      <button class="tile" id="nav-goals" aria-pressed="false">GOA</button>
+    <div class="banner-reads" role="group" aria-label="Focus reads">
+      <span class="bread"><span class="eyeline">HABIT</span><span class="name">Piano</span></span>
+      <span class="gbars" aria-label="Goal progress">
+        <span class="gbar"><i style="width:62%"></i></span>
+        <span class="gbar done"><i style="width:100%"></i></span>
+      </span>
+    </div>
+    <div class="tiles">
+      <button class="tile" id="nav-focus" aria-pressed="false" aria-label="Focus control sheet">◎</button>
+      <button class="tile" id="nav-notes" aria-pressed="false" aria-label="Notes">✎</button>
     </div>
     <button class="gear tile" id="nav-settings" aria-label="Settings">⚙</button>
   </div>
@@ -185,17 +207,17 @@ const D={
 };
 const tip=(id,label,text)=>`<span class="tooltip-host"><button class="tip" aria-describedby="${id}" aria-expanded="false">${label}</button><span class="tooltip" id="${id}" role="tooltip">${text}</span></span>`;
 const S={surface:'time',variant:'A',device:'desktop',mode:'upgrade'};
-const NAMES={time:'Time',habit:'Habit',notes:'Notes',goals:'Goals',settings:'Settings',summary:'Session summary',honesty:'Honesty report'};
+const NAMES={focus:'Focus control sheet',time:'Time (legacy)',habit:'Habit (legacy)',notes:'Notes',goals:'Goals (legacy)',settings:'Settings',summary:'Session summary',honesty:'Honesty report'};
 const VNAMES={A:'Ruled folio',B:'Figure-led ledger',C:'Split stage'};
 
 /* ---------- Time ---------- */
-function timePlan(){
+function timePlan(withHistory=true){
  const p=D.plan;
  const rows=`
   <div class="chips" role="group" aria-label="Preset targets">${p.chips.map(m=>`<button class="chip" aria-pressed="${m===p.current}">${m}</button>`).join('')}</div>
   <div class="row"><div class="free"><input class="mono" value="${p.free}" aria-label="Minutes"><span class="eyeline">MIN</span></div><button class="grow" style="text-align:left">Open-ended</button></div>
   <div class="row"><span class="grow name">${tip('plan-tip','Planned practice','The chime, a notification and the tab title fire at the target. Past it, presence keeps banking and away time turns provisional.')}</span><span class="fig mono">20:00</span></div>`;
- return rows+`<div class="row">${historyEntry()}</div>`;
+ return rows+(withHistory?`<div class="row">${historyEntry()}</div>`:'');
 }
 function timeFlow(){
  return `<div class="row"><span class="grow name">Session</span><span class="fig mono">12:34</span><span class="eyeline">OPEN</span></div>
@@ -345,6 +367,22 @@ function renderHonesty(){
   </div><hr class="rule"><div class="rows">${choices}</div>`,false);
 }
 
+/* ---------- Focus control sheet ---------- */
+function renderFocus(){
+ const face=S.face||'plan';
+ const tabs=[['plan','PLAN'],['habit','HABIT'],['goals','GOALS'],['history','HISTORY']];
+ const enterRow=`<div class="row" style="border-top:0;padding-top:0"><span class="grow"><span class="name">Ready · Piano</span><span class="sub mono">20:00 planned · 2 goals tracked</span></span><button class="switch-in">Enter flow</button></div><hr class="rule">`;
+ let body='';
+ if(face==='plan')body=enterRow+timePlan(false);
+ else if(face==='habit')body=habitList();
+ else if(face==='goals')body=goalList();
+ else body=historyList();
+ const nav=`<div class="facetabs" role="tablist" aria-label="Focus sections">${tabs.map(([k,l])=>`<button class="ftab" data-face="${k}" aria-pressed="${k===face}">${l}</button>`).join('')}</div>`;
+ return `<div class="anchor"><section class="plate sheet" aria-label="Focus control sheet"><div class="plate-in">
+  <div class="head"><span class="name">FOCUS</span><span class="eyeline state">${face==='plan'?'ready · 20:00 planned':face}</span><button class="ghost" id="close-x" aria-label="Close" style="min-height:30px;padding:0 6px">✕</button></div>
+  ${nav}${body}</div></section></div>`;
+}
+
 /* ---------- shells ---------- */
 function wrap(title,state,body){
  return `<div class="anchor"><section class="plate popover" aria-label="${title} app"><div class="plate-in">
@@ -365,6 +403,12 @@ function render(){
  document.body.dataset.variant=S.variant;document.body.dataset.device=S.device;
  if(S.surface==='time'&&drill){el.innerHTML=renderTime(drill);bindHistory();return}
  if(S.surface==='time'){el.innerHTML=renderTime();bindTime();bindHistory()}
+ else if(S.surface==='focus'){
+  el.innerHTML=renderFocus();bindCommon();
+  document.querySelectorAll('[data-face]').forEach(b=>b.onclick=()=>{S.face=b.dataset.face;render()});
+  if(document.querySelector('[data-drill]'))bindHistory();
+  const bk=document.querySelector('.backdrop');if(bk)bk.onclick=e=>{if(e.target===bk){S.surface='time';render()}};
+ }
  else if(S.surface==='habit')el.innerHTML=renderHabit();
  else if(S.surface==='notes')el.innerHTML=renderNotes();
  else if(S.surface==='goals')el.innerHTML=renderGoals();
@@ -372,10 +416,9 @@ function render(){
  else if(S.surface==='summary')el.innerHTML=renderSummary();
  else if(S.surface==='honesty')el.innerHTML=renderHonesty();
  bindCommon();
- document.querySelectorAll('#stage .tiles .tile').forEach(t=>t.setAttribute('aria-pressed',String(t.id==='nav-'+S.surface)));
- document.querySelector('#nav-time').setAttribute('aria-pressed',String(S.surface==='time'));
+ document.querySelectorAll('#stage .tiles .tile').forEach(t=>t.setAttribute('aria-pressed',String(t.id==='nav-'+S.surface||(S.surface==='focus'&&t.id==='nav-time'))));
  document.querySelector('#nav-settings').setAttribute('aria-pressed',String(S.surface==='settings'));
- const u=new URL(location);u.searchParams.set('variant',S.variant);u.searchParams.set('surface',S.surface);u.searchParams.set('device',S.device);u.searchParams.set('mode',S.mode);if(S.habitPick)u.searchParams.set('habit',S.habitPick);history.replaceState(null,'',u);
+ const u=new URL(location);u.searchParams.set('variant',S.variant);u.searchParams.set('surface',S.surface);u.searchParams.set('device',S.device);u.searchParams.set('mode',S.mode);if(S.face)u.searchParams.set('face',S.face);if(S.habitPick)u.searchParams.set('habit',S.habitPick);history.replaceState(null,'',u);
 }
 function bindCommon(){
  document.querySelectorAll('.tip').forEach(b=>b.onclick=e=>{e.stopPropagation();const host=b.closest('.tooltip-host');const show=!host.classList.contains('show');document.querySelectorAll('.tooltip-host').forEach(h=>h.classList.remove('show'));document.querySelectorAll('.tip').forEach(t=>t.setAttribute('aria-expanded','false'));host.classList.toggle('show',show);b.setAttribute('aria-expanded',String(show))});
@@ -389,10 +432,9 @@ function bindHistory(){
  const back=document.querySelector('.backlink');if(back&&back.textContent.includes('HISTORY'))back.onclick=()=>{drill=null;render()};
 }
 function bindTime(){/* chips illustrative */}
-document.querySelector('#nav-time').onclick=()=>{S.surface='time';drill=null;render()};
-document.querySelector('#nav-habit').onclick=()=>{S.surface='habit';render()};
+document.querySelector('#nav-time').onclick=()=>{S.surface='focus';drill=null;render()};
+document.querySelector('#nav-focus').onclick=()=>{S.surface='focus';drill=null;render()};
 document.querySelector('#nav-notes').onclick=()=>{S.surface='notes';render()};
-document.querySelector('#nav-goals').onclick=()=>{S.surface='goals';render()};
 document.querySelector('#nav-settings').onclick=()=>{S.surface='settings';render()};
 document.querySelector('#switch-mock').onclick=()=>{S.mode=S.mode==='flow'?'upgrade':'flow';document.querySelector('#switch-mock').textContent=S.mode==='flow'?'Exit flow':'Enter flow';render()};
 document.addEventListener('keydown',e=>{
@@ -422,6 +464,7 @@ if(NAMES[q.get('surface')])S.surface=q.get('surface');
 if(['desktop','phone'].includes(q.get('device')))S.device=q.get('device');
 if(['upgrade','flow'].includes(q.get('mode')))S.mode=q.get('mode');
 if(q.get('habit'))S.habitPick=q.get('habit');
+if(['plan','habit','goals','history'].includes(q.get('face')))S.face=q.get('face');
 sel.value=S.surface;document.querySelector('#mode-select').value=S.mode;document.querySelector('#device-select').value=S.device;
 if(S.mode==='flow')document.querySelector('#switch-mock').textContent='Exit flow';
 renderVariant();render();
