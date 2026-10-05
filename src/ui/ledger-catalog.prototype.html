@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- THROWAWAY PROTOTYPE (wayfinder #245): three variants of the board ledger's composition
-     and the Arete-catalog navigation — (A) two doors, (B) one shop with two faces,
-     (C) ledger as instrument — desktop and phone side by side, switchable via ?variant=.
-     Era (pre-prestige / first Arete / entered) and mode (upgrade / flow) toggles drive the
+<!-- THROWAWAY PROTOTYPE (wayfinder #245): the grafted composition from live review —
+     the ledger-as-instrument panel (figures are the doors) over the one-shop tabbed
+     sheet (ν nous / ◇ Arete faces, fixed size). Era (pre-prestige / first Arete /
+     entered), mode (upgrade / flow), telegraph-slot and chip-bonus toggles drive the
      locked, empty, and inert states. Illustrative figures, in-memory only, no saves.
-     Run: python3 -m http.server 5174 → /src/ui/ledger-catalog.prototype.html?variant=A -->
+     Run: python3 -m http.server 5174 → /src/ui/ledger-catalog.prototype.html -->
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FlowSynth · ledger &amp; catalog navigation prototype</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap');
@@ -17,13 +17,12 @@ h1,h2,h3,.name,nav{font-family:'Barlow Condensed',sans-serif;font-weight:600}h1{
 .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}.dim{color:var(--muted)}.arete{color:var(--arete)}
 .notice{padding:7px 26px;border-bottom:1px solid var(--soft);font:13px 'IBM Plex Sans';color:var(--muted)}
 /* ── switcher (prototype chrome, not the design) ── */
-.switcher{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:#c6cddd;color:#12172b;border-radius:999px;padding:7px 12px;box-shadow:0 8px 24px #0008;z-index:50;font:600 14px 'Barlow Condensed'}
-.switcher{flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 24px)}
+.switcher{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:#c6cddd;color:#12172b;border-radius:999px;padding:7px 12px;box-shadow:0 8px 24px #0008;z-index:50;font:600 14px 'Barlow Condensed';flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 24px)}
 .switcher button{border:0;min-height:0;padding:4px 10px;font:inherit;color:inherit;border-radius:999px;white-space:nowrap}
-.switcher button:hover:not(:disabled){background:#aeb6c9}.switcher > span{min-width:170px;text-align:center}
+.switcher button:hover:not(:disabled){background:#aeb6c9}
 .switcher .seg{display:flex;gap:2px;background:#12172b;border-radius:999px;padding:3px}
 .switcher .seg button{color:#c6cddd;font-size:13.5px}.switcher .seg button[aria-pressed=true]{background:#c6cddd;color:#12172b}
-.switcher label{display:flex;align-items:center;gap:5px;font:500 12.5px 'IBM Plex Sans';cursor:pointer;max-width:120px}
+.switcher label{display:flex;align-items:center;gap:5px;font:500 12.5px 'IBM Plex Sans';cursor:pointer;max-width:130px}
 /* ── stage: desktop + phone frames side by side ── */
 .stage{display:flex;gap:26px;padding:16px 26px 120px;align-items:flex-start}
 .frame{position:relative;height:790px;background:var(--bg);border:1px solid var(--soft);overflow:hidden;flex-shrink:0}
@@ -34,30 +33,18 @@ h1,h2,h3,.name,nav{font-family:'Barlow Condensed',sans-serif;font-weight:600}h1{
 .top{height:64px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--soft);padding:0 26px;gap:16px}
 .top .session{display:flex;align-items:center;gap:16px}.top .mono{font-size:19px}
 .top .flow{color:var(--switch);border-color:var(--switch)}.top .flow:hover:not(:disabled){background:var(--bg);color:#e28a69}
-/* ── the ledger, per variant ── */
-.ledger{display:flex;align-items:center;gap:26px;padding:18px 26px;border-bottom:1px solid var(--soft)}
-.read{display:flex;align-items:baseline;gap:6px}
-.read b{font:500 24px 'IBM Plex Mono';font-variant-numeric:tabular-nums}.read small{font:600 14px 'Barlow Condensed';color:var(--muted)}
-.read small.nunit{color:var(--nous)}
-.chip{display:flex;align-items:center;gap:8px;font:600 17px 'Barlow Condensed';padding:8px 14px;min-height:40px}
-.chip .mono{font-size:15px}.chip .bonus{color:var(--muted);font-size:14px}
-.chip svg,.door svg,.figure svg{width:17px;height:17px}
-.door{display:flex;align-items:center;gap:9px;font-size:19px;padding:8px 16px;min-height:40px}
-.door.arete{color:var(--arete);border-color:var(--arete)}.door.arete:hover:not(:disabled){background:#1c1533}
-.door .mono,.chip .mono{font-variant-numeric:tabular-nums}
-/* B: arete read — a figure that opens the shop, not a boxed door */
-.read.as-button{border:0;padding:6px 4px;min-height:0;font:inherit;cursor:pointer}.read.as-button:hover:not(:disabled){background:none;color:var(--arete)}
-/* C: ledger as one clipped instrument panel; figures are the controls */
+/* ── the ledger: one clipped instrument panel; the figures are the doors ── */
 .instrument{margin:14px 26px 0;background:var(--line);clip-path:var(--clip);padding:1px}
 .instrument-inner{background:var(--panel);clip-path:var(--clip);display:flex;align-items:center;gap:24px;padding:16px 24px}
 .figure{border:0;padding:8px 10px;min-height:0;display:flex;align-items:baseline;gap:6px;cursor:pointer}
 .figure b{font:500 27px 'IBM Plex Mono';font-variant-numeric:tabular-nums}.figure small{font:600 15px 'Barlow Condensed';color:var(--muted)}
 .figure:hover:not(:disabled){background:none;box-shadow:inset 0 -3px var(--ink)}
+.figure.nunit small{color:var(--nous)}
 .figure.arete{color:var(--arete);margin-left:auto}.figure.arete small{color:var(--arete)}
+.figure svg,.ghost svg{width:17px;height:17px}
 .ghost{border:0;min-height:0;padding:8px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;font:600 17px 'Barlow Condensed'}
 .ghost:hover:not(:disabled){background:none;box-shadow:inset 0 -3px var(--ink)}
 .ghost .mono{font-size:15px;font-variant-numeric:tabular-nums}.ghost .bonus{color:var(--muted);font-size:14px}
-.ghost svg,.figure svg{width:17px;height:17px}
 /* board scene + dock */
 .scene{position:relative;padding:8px 26px 90px}
 .board{width:100%;display:flex;justify-content:center}
@@ -67,18 +54,20 @@ h1,h2,h3,.name,nav{font-family:'Barlow Condensed',sans-serif;font-weight:600}h1{
 /* horizon (context, not subject) */
 .horizon{position:absolute;bottom:12px;left:4%;right:4%;display:flex;gap:12px;align-items:center;font:13px 'IBM Plex Sans';color:var(--muted)}
 .horizon .track{height:3px;flex:1;background:var(--soft);position:relative}.horizon .track i{position:absolute;inset:0 54% 0 0;background:var(--arete)}
-/* ── sheets & side panel (desktop) ── */
+/* ── the one shop: tabbed sheet, fixed size ── */
 .scrim{position:absolute;inset:0;background:#05081499;display:none;z-index:10}.scrim.open{display:block}
-.sheet{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(600px,94%);max-height:86%;overflow:auto}
-.panel{background:var(--line);clip-path:var(--clip);padding:1px}
-.panel-inner{background:var(--panel);clip-path:var(--clip);padding:26px 28px;position:relative}
-.identity{position:absolute;top:20px;right:22px;color:var(--arete)}.identity svg{width:28px;height:28px}
+.sheet{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(620px,94%);height:min(600px,88%)}
+.panel{background:var(--line);clip-path:var(--clip);padding:1px;height:100%}
+.panel-inner{background:var(--panel);clip-path:var(--clip);padding:26px 28px;position:relative;height:100%;display:flex;flex-direction:column}
+.identity{position:absolute;top:20px;right:22px;color:var(--arete)}.identity svg{width:28px;height:30px}
+.identity.nous{color:var(--nous)}.identity.nous b{font:500 24px 'IBM Plex Mono'}
 .face-switch{position:absolute;top:18px;left:22px;display:flex;gap:4px}
 .face-switch button{border:0;min-height:0;padding:6px 10px;display:flex;align-items:center;gap:6px;font-size:17px;color:var(--muted)}
 .face-switch button svg{width:15px;height:15px}
 .face-switch button[aria-pressed=true]{color:var(--ink);box-shadow:inset 0 -3px var(--ink)}
 .face-switch button:disabled{opacity:.45}
 .face-switch button[data-face=nous][aria-pressed=true]{color:var(--nous)}.face-switch button[data-face=arete][aria-pressed=true]{color:var(--arete)}
+.sheet-body{flex:1;overflow:auto;margin-top:44px;min-height:0}
 .catalog-sections{display:grid;gap:30px}
 .catalog-sections h2{margin:0 0 4px}
 .kind{font:13.5px 'IBM Plex Sans';color:var(--muted)}
@@ -88,29 +77,23 @@ h1,h2,h3,.name,nav{font-family:'Barlow Condensed',sans-serif;font-weight:600}h1{
 .price.arete{color:var(--arete);border-color:var(--arete)}.price.arete:hover:not(:disabled){background:#1c1533}
 .completion{font:12px 'IBM Plex Mono';box-shadow:inset 0 -1px var(--muted);padding:8px 2px;flex-shrink:0;color:var(--muted)}
 .empty-copy{color:var(--muted);font-size:14px;margin:12px 0 0}
-.entry-screen{min-height:340px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.entry-screen{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
 .entry-buy{border-color:var(--arete);color:var(--arete);display:flex;flex-direction:column;align-items:center;gap:10px;padding:26px 30px;font-size:26px}
 .entry-buy:hover:not(:disabled){background:#1c1533}
 .flow-note{color:var(--muted);font:14px 'IBM Plex Sans';margin:16px 0 0}
-.side-panel{position:absolute;right:0;top:152px;bottom:0;width:min(440px,46%);transform:translateX(105%);transition:transform .22s ease-out;z-index:9}
-.side-panel.open{transform:none}
-.side-panel .panel{height:100%}.side-panel .panel-inner{height:100%;overflow:auto}
-@media(prefers-reduced-motion:reduce){.side-panel{transition:none}}
 /* ── phone frame ── */
 .p-strip{display:flex;align-items:center;gap:16px;padding:12px 16px;border-bottom:1px solid var(--soft)}
-.p-strip .read b{font-size:19px}.p-strip .read small{font-size:13px}
-.p-strip .door{min-height:36px;padding:6px 12px;font-size:16px;gap:7px;margin-left:auto}
-.p-strip .door svg{width:15px;height:15px}
-.p-strip .as-button{margin-left:auto}
+.p-strip .figure{padding:6px 4px}.p-strip .figure b{font-size:19px}.p-strip .figure small{font-size:13px}
+.p-strip .figure.arete{margin-left:auto}
 .p-board{display:flex;justify-content:center;padding-top:44px}
 .p-board svg{width:320px}
 .p-thumb{position:absolute;bottom:0;left:0;right:0;display:flex;border-top:1px solid var(--line);background:var(--panel)}
 .p-thumb button{flex:1;border:0;border-left:1px solid var(--soft);font-size:15.5px;padding:12px 2px;min-height:52px}
 .p-thumb button:first-child{border-left:0}
 .p-thumb button:disabled{opacity:.5}
-.p-sheet{position:absolute;left:0;right:0;bottom:0;top:auto;transform:none;width:auto;max-height:72%;max-width:none}
+.p-sheet{position:absolute;left:0;right:0;bottom:0;top:auto;transform:none;width:auto;height:74%;max-width:none;max-height:none}
 .p-sheet .panel-inner{clip-path:polygon(0 14px,100% 0,100% 100%,0 100%)}
-.entry-screen{min-height:240px}
+.entry-screen{height:100%}
 /* tooltips (standards pattern: hover, focus, tap; Escape dismisses) */
 .tooltip-host{position:relative;display:inline-block}
 .tip{padding:0;border:0;min-height:0;font:inherit;text-align:left;cursor:help}
@@ -118,8 +101,8 @@ h1,h2,h3,.name,nav{font-family:'Barlow Condensed',sans-serif;font-weight:600}h1{
 .tooltip{display:none;position:absolute;left:0;top:100%;width:min(270px,72vw);padding:13px 15px;border:1px solid var(--line);background:#0a0e1b;color:var(--ink);font:14px/1.5 'IBM Plex Sans';z-index:20;box-shadow:0 8px 20px #0005}
 .tooltip-host:hover .tooltip,.tooltip-host:focus-within .tooltip,.tooltip-host.show .tooltip{display:block}
 </style>
-<body data-variant="A" data-era="banked" data-mode="upgrade">
-<div class="notice">Throwaway navigation study · Arete mark and Accelerator are placeholders · illustrative figures, no saves · ledger loses the session read in every variant</div>
+<body data-era="banked" data-mode="upgrade">
+<div class="notice">Throwaway navigation study · Arete mark and Accelerator are placeholders · illustrative figures, no saves · ledger loses the session read</div>
 <div class="stage">
   <section class="frame desktop" aria-label="Desktop composition">
     <header class="top"><h1>FlowSynth</h1><div class="session"><span class="mono">20:00</span><button class="flow">Enter flow</button></div></header>
@@ -135,7 +118,6 @@ h1,h2,h3,.name,nav{font-family:'Barlow Condensed',sans-serif;font-weight:600}h1{
     </div>
     <div class="horizon"><span>Arete</span><span class="track"><i></i></span><span class="mono">46%</span></div>
     <div class="scrim" id="desk-scrim"></div>
-    <aside class="side-panel" id="side-panel"></aside>
   </section>
   <section class="frame phone" aria-label="Phone composition">
     <div class="p-strip" id="p-strip"></div>
@@ -150,82 +132,63 @@ h1,h2,h3,.name,nav{font-family:'Barlow Condensed',sans-serif;font-weight:600}h1{
   </section>
 </div>
 <div class="switcher">
-  <button id="prev" aria-label="Previous variant">←</button><span id="variant-label"></span><button id="next" aria-label="Next variant">→</button>
   <span class="seg" id="era-seg"></span>
   <span class="seg" id="mode-seg"></span>
   <label><input type="checkbox" id="telegraph"> pre-prestige slot</label>
+  <label><input type="checkbox" id="bonuses" checked> chip bonuses</label>
 </div>
 <script>
 'use strict';
 const GLYPH = `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 25 16 5 27 25 M9 19H23 M16 5V25"/></svg>`;
 const GLYPH_S = `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M5 25 16 5 27 25 M9 19H23 M16 5V25"/></svg>`;
 const S = {
-  variant: new URLSearchParams(location.search).get('variant') || 'A',
   era: 'banked',          // pre | banked | entered
   mode: 'upgrade',        // upgrade | flow
   telegraph: false,
+  bonuses: true,
   bank: 1,                // illustrative banked Arete
   poolJoined: false, accelBought: false, breakBought: false,
-  sheet: null,            // {kind:'arete'|'nous'} (A) or {kind:'catalog', face} (B/C)
+  sheet: null,            // null | { face: 'nous' | 'arete' }
 };
-const VARIANTS = { A: 'Two doors', B: 'One shop, two faces', C: 'Ledger as instrument' };
 const ERAS = { pre: 'Before prestige', banked: 'First Arete', entered: 'Entered' };
 const MODES = { upgrade: 'Upgrade mode', flow: 'In flow' };
-const NAMES = ['A', 'B', 'C'];
-if (!VARIANTS[S.variant]) S.variant = 'A';
 
 const tip = (id, label, text) => `<span class="tooltip-host"><button class="tip" aria-describedby="${id}" aria-expanded="false">${label}</button><span class="tooltip" id="${id}" role="tooltip">${text}</span></span>`;
 const upgrade = () => S.mode === 'upgrade';
 const flowNote = () => upgrade() ? '' : `<p class="flow-note">Arete is spent between sessions — enter upgrade mode to buy.</p>`;
+const bonus = (span) => S.bonuses ? span : '';
 
-/* ── desktop ledger, per variant ── */
-function areteReadDesktop() {
-  if (S.era === 'pre') return S.telegraph ? `<span class="read" title="Banked by prestige"><b class="mono dim">—</b><small class="dim">◇</small></span>` : '';
-  if (S.variant === 'A') return `<button class="door arete" data-open="arete" title="Arete Catalog — what banked Arete buys">${GLYPH}<b class="mono">${S.bank}</b><span>Arete</span></button>`;
-  const open = S.variant === 'B' ? 'as-button' : 'figure';
-  return `<button class="read ${open} arete" data-open="catalog" data-face="arete" title="Arete Catalog"><b class="mono">${S.bank}</b><small>${GLYPH_S}</small></button>`;
+/* ── the ledger ── */
+function areteFigure() {
+  if (S.era === 'pre') return S.telegraph ? `<span class="figure arete" style="cursor:default" title="Banked by prestige"><b class="mono dim">—</b><small>◇</small></span>` : '';
+  return `<button class="figure arete" data-open="arete" title="Arete Catalog"><b class="mono">${S.bank}</b><small>${GLYPH_S}</small></button>`;
 }
 function ledgerHtml() {
-  const reads = `<span class="read"><b class="mono" title="1,240 nous">1.24k</b><small class="nunit">ν</small></span>
-    <span class="read"><b class="mono">18.6</b><small>ν/s</small></span>`;
-  if (S.variant === 'C') {
-    return `<div class="instrument"><div class="instrument-inner">
-      <button class="figure arete-noun" data-open="catalog" data-face="nous" title="Catalog — starter-shelf offers and board cells"><b class="mono">1.24k</b><small>ν</small></button>
-      <span class="figure" title="Rate — module details live on the ledger's Rate door in production"><b class="mono">18.6</b><small>ν/s</small></span>
-      <button class="ghost" data-open="feats">Feats <b class="mono">6/18</b><span class="bonus mono">+12%</span></button>
-      <button class="ghost" data-open="chords">Chords <b class="mono">4/11</b><span class="bonus mono">+8% ν</span></button>
-      ${areteReadDesktop().replace('read figure', 'figure')}
-    </div></div>`;
-  }
-  return `<div class="ledger">${reads}<span style="flex:1"></span>${areteReadDesktop()}
-    <button class="chip" data-open="feats">Feats <b class="mono">6/18</b><span class="bonus mono">+12%</span></button>
-    <button class="chip" data-open="chords">Chords <b class="mono">4/11</b><span class="bonus mono">+8% ν</span></button>
-  </div>`;
+  return `<div class="instrument"><div class="instrument-inner">
+    <button class="figure nunit" data-open="nous" title="The nous shop — starter-shelf offers and board cells"><b class="mono">1.24k</b><small>ν</small></button>
+    <span class="figure" title="Rate — the module details keep their own door in production"><b class="mono">18.6</b><small>ν/s</small></span>
+    <button class="ghost" data-open="feats">Feats <b class="mono">6/18</b>${bonus('<span class="bonus mono">+12%</span>')}</button>
+    <button class="ghost" data-open="chords">Chords <b class="mono">4/11</b>${bonus('<span class="bonus mono">+8% ν</span>')}</button>
+    ${areteFigure()}
+  </div></div>`;
 }
-/* ── dock + phone ── */
 function dockHtml() {
   const inert = !upgrade();
-  const catalogBtn = S.variant === 'C' ? ''
-    : `<button ${inert ? 'disabled' : ''} title="Catalog — starter-shelf offers and board cells" data-open="${S.variant === 'B' ? 'catalog' : 'nous'}" data-face="nous">Catalog</button>`;
-  return catalogBtn + `
+  return `
     <button ${inert ? 'disabled' : ''} title="Forge — settle banked choices">Forge</button>
     <button ${inert ? 'disabled' : ''} title="New cell — arm a frontier purchase">New cell</button>
     <button title="Inventory — the tray">Inventory</button>`;
 }
 function stripHtml() {
-  const arete = S.era === 'pre'
-    ? (S.telegraph ? `<span class="read" title="Banked by prestige"><b class="mono dim">—</b><small class="dim">◇</small></span>` : '')
-    : S.variant === 'A'
-      ? `<button class="door arete" data-open="arete" title="Arete Catalog">${GLYPH_S}<b class="mono">${S.bank}</b></button>`
-      : `<button class="read as-button arete" data-open="catalog" data-face="arete" title="Arete Catalog"><b class="mono">${S.bank}</b><small>${GLYPH_S}</small></button>`;
-  return `<span class="read"><b class="mono">1.24k</b><small class="nunit">ν</small></span>
-    <span class="read"><b class="mono">18.6</b><small>ν/s</small></span>${arete}`;
+  return `<button class="figure nunit" data-open="nous" title="The nous shop"><b class="mono">1.24k</b><small>ν</small></button>
+    <span class="figure" title="Rate — tap opens the module details in production"><b class="mono">18.6</b><small>ν/s</small></span>
+    ${S.era === 'pre'
+      ? (S.telegraph ? `<span class="figure arete" style="cursor:default" title="Banked by prestige"><b class="mono dim">—</b><small>◇</small></span>` : '')
+      : `<button class="figure arete" data-open="arete" title="Arete Catalog"><b class="mono">${S.bank}</b><small>${GLYPH_S}</small></button>`}`;
 }
 function thumbHtml() {
   const inert = !upgrade();
-  const catalogBtn = S.variant === 'C' ? ''
-    : `<button ${inert ? 'disabled' : ''} data-open="${S.variant === 'B' ? 'catalog' : 'nous'}" data-face="nous">Catalog</button>`;
-  return catalogBtn + `
+  return `
     <button ${inert ? 'disabled' : ''}>Forge</button>
     <button ${inert ? 'disabled' : ''}>New cell</button>
     <button>Inventory</button>
@@ -273,18 +236,14 @@ function nousContent() {
   </section></div>`;
 }
 
-/* ── sheet chrome per variant ── */
-function sheetFrame(inner, kind, face) {
-  if (S.variant !== 'B' && S.variant !== 'C' || kind !== 'catalog') {
-    const heading = kind === 'arete' ? '' : `<h2>Catalog</h2><p class="kind" style="margin:0 0 14px">Shape what comes next.</p>`;
-    return `<div class="panel"><div class="panel-inner">${kind === 'arete' ? `<span class="identity">${GLYPH}</span>` : heading}${inner}</div></div>`;
-  }
-  // B/C: one shop, two faces — the face switch rides the panel's top edge
+/* ── sheet chrome: one shop, two faces, fixed frame ── */
+function sheetFrame(face) {
   const tab = (f, mark, word) => `<button data-face-tab="${f}" aria-pressed="${face === f}" data-face="${f}" ${S.era === 'pre' && f === 'arete' ? 'disabled title="Banked by prestige"' : `title="${word}"`}>${mark}<span>${word}</span></button>`;
+  const identity = face === 'nous' ? `<span class="identity nous"><b class="mono">ν</b></span>` : `<span class="identity">${GLYPH}</span>`;
   return `<div class="panel"><div class="panel-inner">
-    <span class="face-switch">${tab('nous', '<b class="mono">ν</b>', 'Catalog')}${tab('arete', GLYPH_S, 'Arete')}</span>
-    <span class="identity" style="${face === 'nous' ? 'color:var(--nous)' : ''}">${face === 'nous' ? '' : GLYPH}</span>
-    <div style="margin-top:40px">${face === 'arete' ? areteContent() : nousContent()}</div>
+    <span class="face-switch">${tab('nous', '<b class="mono">ν</b>', 'nous')}${tab('arete', GLYPH_S, 'Arete')}</span>
+    ${identity}
+    <div class="sheet-body">${face === 'arete' ? areteContent() : nousContent()}</div>
   </div></div>`;
 }
 
@@ -296,19 +255,12 @@ function renderLedger() {
   document.getElementById('p-thumb').innerHTML = thumbHtml();
 }
 function renderSheet() {
-  const desk = document.getElementById('desk-scrim'), side = document.getElementById('side-panel'), ph = document.getElementById('ph-scrim');
+  const desk = document.getElementById('desk-scrim'), ph = document.getElementById('ph-scrim');
   const open = !!S.sheet;
-  desk.classList.toggle('open', open && S.variant !== 'C');
-  side.classList.toggle('open', open && S.variant === 'C');
-  ph.classList.toggle('open', open);
-  if (!open) { desk.innerHTML = ''; side.innerHTML = ''; ph.innerHTML = ''; return; }
-  const phoneSheet = `<div class="sheet p-sheet">${sheetFrame(sheetInner(), S.sheet.kind, S.sheet.face)}</div>`;
-  ph.innerHTML = phoneSheet;
-  if (S.variant === 'C') side.innerHTML = sheetFrame(sheetInner(), S.sheet.kind, S.sheet.face);
-  else desk.innerHTML = `<div class="sheet">${sheetFrame(sheetInner(), S.sheet.kind, S.sheet.face)}</div>`;
+  desk.classList.toggle('open', open); ph.classList.toggle('open', open);
+  desk.innerHTML = open ? `<div class="sheet">${sheetFrame(S.sheet.face)}</div>` : '';
+  ph.innerHTML = open ? `<div class="sheet p-sheet">${sheetFrame(S.sheet.face)}</div>` : '';
 }
-const sheetInner = () => S.sheet.kind === 'arete' || (S.sheet.kind === 'catalog' && S.sheet.face === 'arete') ? areteContent() : nousContent();
-
 function renderAll() { renderLedger(); renderSheet(); }
 
 /* ── events ── */
@@ -317,11 +269,11 @@ document.addEventListener('click', (e) => {
   if (opener) {
     const kind = opener.dataset.open;
     if (kind === 'feats' || kind === 'chords') return; // out of this study's scope; no sheet
-    S.sheet = kind === 'catalog' ? { kind: 'catalog', face: opener.dataset.face || 'nous' } : { kind };
+    S.sheet = { face: kind === 'arete' ? 'arete' : 'nous' };
     renderSheet(); return;
   }
   const tab = e.target.closest('[data-face-tab]');
-  if (tab && !tab.disabled) { S.sheet.face = tab.dataset.faceTab; renderSheet(); return; }
+  if (tab && !tab.disabled) { S.sheet.face = tab.dataset.face; renderSheet(); return; }
   const buy = e.target.closest('[data-buy]');
   if (buy && !buy.disabled) {
     const costs = { accel: 3, break: 10, pool: 5 };
@@ -353,17 +305,9 @@ document.addEventListener('keydown', (e) => {
     document.querySelectorAll('.tooltip-host').forEach((h) => h.classList.remove('show'));
     renderSheet();
   }
-  if (e.key === 'ArrowLeft') cycle(-1);
-  if (e.key === 'ArrowRight') cycle(1);
 });
 
 /* ── switcher chrome ── */
-function cycle(n) {
-  S.variant = NAMES[(NAMES.indexOf(S.variant) + n + 3) % 3];
-  S.sheet = null;
-  syncUrl(); syncSegs(); renderAll();
-}
-function syncUrl() { const u = new URL(location); u.searchParams.set('variant', S.variant); history.replaceState(null, '', u); }
 function seg(container, entries, key, onpick) {
   container.innerHTML = Object.entries(entries).map(([k, w]) => `<button data-k="${k}" aria-pressed="${S[key] === k}">${w}</button>`).join('');
   container.querySelectorAll('button').forEach((b) => b.onclick = () => onpick(b.dataset.k));
@@ -378,12 +322,11 @@ function applyEra(k) {
 function syncSegs() {
   seg(document.getElementById('era-seg'), ERAS, 'era', applyEra);
   seg(document.getElementById('mode-seg'), MODES, 'mode', (k) => { S.mode = k; syncSegs(); renderAll(); });
-  document.getElementById('variant-label').textContent = `${S.variant} · ${VARIANTS[S.variant]}`;
   document.getElementById('telegraph').checked = S.telegraph;
+  document.getElementById('bonuses').checked = S.bonuses;
 }
-document.getElementById('prev').onclick = () => cycle(-1);
-document.getElementById('next').onclick = () => cycle(1);
 document.getElementById('telegraph').onchange = (e) => { S.telegraph = e.target.checked; renderLedger(); };
-syncUrl(); syncSegs(); renderAll();
+document.getElementById('bonuses').onchange = (e) => { S.bonuses = e.target.checked; renderLedger(); };
+syncSegs(); renderAll();
 </script>
 </body></html>
