@@ -77,22 +77,30 @@ svg .wire{stroke:var(--dim)}
 body.phone .sheet-wrap{padding:24px 0 120px;justify-content:center}
 body.phone .panel{width:400px;max-width:100%}
 body.phone .panel-inner{min-height:560px}
-@media(max-width:640px){
- .context{padding:10px 16px}.context .notice{display:none}
- .sheet-wrap{padding:16px 12px 120px}.panel-inner{padding:18px 16px}
- .sheet-head h2{font-size:26px}.sheet-head .bonus{font-size:15px}
- .a-grid{grid-template-columns:1fr 1fr}.a-cell{min-height:200px;padding:12px}.a-cell .name{font-size:20px}.a-cell.undiscovered{min-height:120px}
- .b-sheet{grid-template-columns:1fr;gap:18px}
- .b-index{flex-direction:row;overflow-x:auto;border-top:0;border-bottom:1px solid var(--soft);padding-bottom:4px}
- .b-row{border-bottom:0;border-right:1px solid var(--soft);flex-shrink:0;padding:6px 10px;min-height:44px}
- .b-row[aria-current=true]{box-shadow:inset 0 -3px var(--ink)}
- .b-row .name{display:none}.b-row.locked .name{display:none}
- .b-stage h3{font-size:32px}
- .c-row{grid-template-columns:52px minmax(0,1fr) auto;gap:12px}
- .c-row .glyph-cell svg{width:46px;height:46px}.c-row .name{font-size:21px}
- .c-row .roots,.c-row .bonus{grid-column:2}.c-row{grid-template-rows:auto auto}
- .c-row.locked{grid-template-columns:44px minmax(0,1fr)}
-}
+/* Narrow — real ≤640px viewport or the Phone frame: the sheet reflows. B's stage becomes a compact row over the index, both as rows. */
+.narrow .context{padding:10px 16px}
+.narrow .context .notice{display:none}
+.narrow .sheet-wrap{padding:16px 12px 120px}
+.narrow .panel-inner{padding:18px 16px}
+.narrow .sheet-head h2{font-size:26px}.narrow .sheet-head .bonus{font-size:15px}
+.narrow .a-grid{grid-template-columns:1fr 1fr}
+.narrow .a-cell{min-height:200px;padding:12px}.narrow .a-cell .name{font-size:20px}
+.narrow .a-cell.undiscovered{min-height:120px}
+.narrow .b-sheet{grid-template-columns:1fr;gap:12px}
+.narrow .b-stage{order:-1;display:grid;grid-template-columns:112px minmax(0,1fr);gap:2px 14px;align-items:center;text-align:left;padding-top:0}
+.narrow .b-stage>*{grid-column:2}
+.narrow .b-stage .glyph-big{grid-column:1;grid-row:1/7;width:112px}
+.narrow .b-stage h3{font-size:26px;margin:0}
+.narrow .b-stage .bonus{font-size:15px}
+.narrow .b-roots{margin-top:2px;gap:10px}
+.narrow .b-roots svg{width:64px;height:64px}
+.narrow .b-roots .cap{font-size:12.5px}.narrow .b-roots .cap b{font-size:15px}
+.narrow .c-row{grid-template-columns:52px minmax(0,1fr) auto;grid-template-areas:"g n b" "g r a";row-gap:2px}
+.narrow .c-row .glyph-cell{grid-area:g}.narrow .c-row .name{grid-area:n;font-size:21px}
+.narrow .c-row .bonus{grid-area:b}.narrow .c-row .roots{grid-area:r}
+.narrow .c-row .count-line{grid-area:a}
+.narrow .c-row .glyph-cell svg{width:46px;height:46px}
+.narrow .c-row.locked{grid-template-columns:44px minmax(0,1fr)}
 </style>
 <body>
 <div class="context"><h1>FlowSynth</h1><button class="chip" aria-haspopup="dialog"><svg viewBox="0 0 100 100" aria-hidden="true" id="chip-glyph"></svg><span class="mono">Chords (4/11) <span style="color:var(--nous)">+4% ν</span></span></button><span class="notice">Throwaway study · illustrative state · no saves</span></div>
@@ -234,7 +242,10 @@ const variants={A:{name:'Field-guide grid',render:renderA},B:{name:'Index + glyp
 let variant=new URLSearchParams(location.search).get('variant')||'A';
 if(!variants[variant])variant='A';
 let phone=new URLSearchParams(location.search).get('phone')==='1';
-function render(){document.body.classList.toggle('phone',phone);
+const narrowMq=matchMedia('(max-width:640px)');
+narrowMq.addEventListener?.('change',applyNarrow);
+function applyNarrow(){document.body.classList.toggle('narrow',phone||narrowMq.matches)}
+function render(){applyNarrow();document.body.classList.toggle('phone',phone);
  document.getElementById('phone-toggle').setAttribute('aria-pressed',String(phone));
  document.getElementById('variant-label').textContent=variant+' · '+variants[variant].name;
  document.getElementById('sheet').innerHTML=variants[variant].render();wire()}
