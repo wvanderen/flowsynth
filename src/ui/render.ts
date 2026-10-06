@@ -3492,10 +3492,13 @@ function capacityShopHtml(app: App): string {
   const discount = capacityDiscountShare(state);
   const upgrade = state.mode === "upgrade";
   const off = discount > 0 ? ` (${Math.round(discount * 100)}% off)` : "";
+  // The deeper mechanics ride the button's native tooltip (the standards'
+  // tooltip rule): the spend, the ladder's own progression term, and the
+  // reset stay one hover away without an explanatory paragraph.
   const buy = price === null
     ? `<span class="shop-buy"><span class="activation-owned mono">${capacityCeilingsLeft(state) ? "capped" : "complete"}</span></span>`
     : shopBuyHtml({
-        attrs: `data-buy-capacity="1" title="${upgrade ? `Spend ${formatInt(price)} ν${off} — one more whole chord for every voice` : "Purchases happen between sessions"}"`,
+        attrs: `data-buy-capacity="1" title="${upgrade ? `Spend ${formatInt(price)} ν${off} — one more whole chord for every voice. Whole chords, never levels or rarity.` : "Purchases happen between sessions"}"`,
         price,
         affordable: upgrade && wholeNous(state) >= price,
         countdown: upgradeCountdown(app, price),
@@ -3512,8 +3515,7 @@ function capacityShopHtml(app: App): string {
         <div><h3>Harmonic capacity <span class="mono">${capacity}/${ceiling}</span></h3><small>Every voice — current and future — sings one more whole chord. Prestige returns the voices to one.</small></div>
         ${buy}${note}
       </div>
-    </div>
-    <p class="small muted" style="margin:6px 0 0">Whole chords, never levels or rarity — this ladder prices the board's harmony alone.</p>`;
+    </div>`;
 }
 
 // Whether the Arete sheet can still raise the capacity ceiling: the shared
@@ -3661,18 +3663,16 @@ function areteBuyButtonHtml(app: App, id: string, price: number): string {
 function renderAreteCatalogModal(app: App, content: HTMLElement): void {
   const { state } = app;
   const upgrade = state.mode === "upgrade";
-  const ownedWord = areteOwnedWord;
-  const areteBuyButton = (id: string, price: number): string => areteBuyButtonHtml(app, id, price);
   const entry = state.catalogEntryOwned;
   const joined = state.rollPoolJoined;
   const broken = state.horizonBroken;
-  const entryBuy = entry ? ownedWord("entered") : areteBuyButton("buy-arete-entry", BALANCE.catalogEntryCost);
+  const entryBuy = entry ? areteOwnedWord("entered") : areteBuyButtonHtml(app, "buy-arete-entry", BALANCE.catalogEntryCost);
   const poolBuy = joined
-    ? ownedWord("joined")
+    ? areteOwnedWord("joined")
     : entry
-      ? areteBuyButton("buy-arete-pool", BALANCE.rollPoolJoinCost)
+      ? areteBuyButtonHtml(app, "buy-arete-pool", BALANCE.rollPoolJoinCost)
       : `<span class="shop-buy"><button class="primary arete" id="buy-arete-pool" disabled title="Enter the Mutator tree first">Enter first</button></span>`;
-  const breakBuy = broken ? ownedWord("broken") : areteBuyButton("buy-arete-break", BALANCE.horizonBreakCost);
+  const breakBuy = broken ? areteOwnedWord("broken") : areteBuyButtonHtml(app, "buy-arete-break", BALANCE.horizonBreakCost);
   content.innerHTML = `
     ${modalTop("ARETE CATALOG")}
     <h2 id="modal-title">What banked Arete buys.</h2>

@@ -31,7 +31,7 @@ import type { GameState } from "./types";
 // centralized provisional tuning — these tests pin the ladder's shape and
 // honesty, never the figures as settled balance.
 
-function affordable(state: GameState, _rung?: number): void {
+function affordable(state: GameState): void {
   state.nous = BALANCE.capacityPrices.reduce((sum, price) => sum + price, 0) * 2;
 }
 
@@ -47,7 +47,7 @@ describe("the nous capacity ladder (#259)", () => {
     // fifth) and a module that joins after the purchase.
     const existing = give(state, "additive", hex(1, 0));
     expect(placeModule(state, existing.id, hex(1, 0)).ok).toBe(true);
-    affordable(state, 0);
+    affordable(state);
 
     const price = nextCapacityPrice(state)!;
     expect(price).toBe(BALANCE.capacityPrices[0]);
@@ -66,7 +66,7 @@ describe("the nous capacity ladder (#259)", () => {
 
   it("needs only nous and upgrade mode — no earnings gate, no per-module path", () => {
     const state = fresh();
-    affordable(state, 0);
+    affordable(state);
     // A fresh save: zero sessions, zero prestiges, and the purchase lands.
     expect(state.sessionsCompleted).toBe(0);
     expect(state.prestiges).toBe(0);
@@ -76,15 +76,15 @@ describe("the nous capacity ladder (#259)", () => {
 
   it("the first-era ladder sells two rungs — capacity two, then three — and then caps", () => {
     const state = fresh();
-    affordable(state, 0);
+    affordable(state);
     expect(buyCapacity(state).ok).toBe(true);
-    affordable(state, 1);
+    affordable(state);
     expect(nextCapacityPrice(state)).toBe(BALANCE.capacityPrices[1]);
     expect(buyCapacity(state).ok).toBe(true);
     expect(voiceCapacityOf(state)).toBe(3);
     expect(capacityCeiling(state)).toBe(3);
     // Capped: the refusal touches nothing, and no price is quoted.
-    affordable(state, 2);
+    affordable(state);
     const result = buyCapacity(state);
     expect(result.ok).toBe(false);
     expect(state.capacityBought).toBe(2);
@@ -94,7 +94,7 @@ describe("the nous capacity ladder (#259)", () => {
 
   it("refuses in flow mode without spending", () => {
     const state = fresh();
-    affordable(state, 0);
+    affordable(state);
     expect(startSession(state, null).ok).toBe(true);
     const before = state.nous;
     const result = buyCapacity(state);
@@ -103,6 +103,24 @@ describe("the nous capacity ladder (#259)", () => {
     expect(state.capacityBought).toBe(0);
     endSession(state);
     expect(buyCapacity(state).ok).toBe(true);
+  });
+
+  it("refuses when the bank cannot cover the quoted price — no partial spend", () => {
+    const state = fresh();
+    const price = nextCapacityPrice(state)!;
+    state.nous = price - 1;
+    const result = buyCapacity(state);
+    expect(result.ok).toBe(false);
+    expect(state.nous).toBe(price - 1);
+    expect(state.capacityBought).toBe(0);
+    // One nous short at the discounted rung refuses the same way.
+    state.arete = BALANCE.capacityDiscountCosts[0]!;
+    expect(buyCapacityDiscount(state).ok).toBe(true);
+    const discounted = nextCapacityPrice(state)!;
+    expect(discounted).toBeLessThan(price);
+    state.nous = discounted - 1;
+    expect(buyCapacity(state).ok).toBe(false);
+    expect(state.nous).toBe(discounted - 1);
   });
 });
 
@@ -158,7 +176,7 @@ describe("the Arete offerings (#259)", () => {
   it("the nous ladder keeps its own upgrade-mode gate beside the offerings", () => {
     const state = fresh();
     state.arete = 100;
-    affordable(state, 0);
+    affordable(state);
     // Purchases ride the ordinary boundary check like every feat-bearing
     // action — unlocks ride home through the same door.
     const result = buyCapacity(state);
@@ -172,7 +190,7 @@ describe("prestige and the ladder (#259)", () => {
     const state = fresh();
     setAllocationEnabled(state, true);
     state.arete = 100;
-    affordable(state, 0);
+    affordable(state);
     expect(buyCapacity(state).ok).toBe(true);
     expect(buyCapacity(state).ok).toBe(true);
     expect(buyCapacityCeiling(state).ok).toBe(true);
@@ -204,7 +222,7 @@ describe("prestige and the ladder (#259)", () => {
   it("the reset era repurchases through the discounted, ceiling-raised ladder", () => {
     const state = fresh();
     state.arete = 100;
-    affordable(state, 0);
+    affordable(state);
     buyCapacity(state);
     buyCapacity(state);
     buyCapacityCeiling(state);
@@ -227,7 +245,7 @@ describe("the ladder on the save surface (#259)", () => {
   it("upgrade ownership survives save and reload", () => {
     const state = fresh();
     state.arete = 100;
-    affordable(state, 0);
+    affordable(state);
     buyCapacity(state);
     buyCapacity(state);
     buyCapacityCeiling(state);
@@ -242,7 +260,7 @@ describe("the ladder on the save surface (#259)", () => {
 
   it("older saves default to zero without resetting unrelated resources", () => {
     const state = fresh();
-    affordable(state, 0);
+    affordable(state);
     buyCapacity(state);
     state.nous = 4321;
     // Strip the ladder's fields exactly as a pre-ladder save would lack
@@ -259,7 +277,7 @@ describe("the ladder on the save surface (#259)", () => {
     expect(voiceCapacityOf(loaded)).toBe(1);
   });
 
-  it("corrupt counts degrade to zero, and an over-purchased save clamps at the ceiling", () => {
+  it("corrupt counts degrade to zero, over-purchased rungs clamp at the ceiling, and over-owned offerings clamp at the ladder", () => {
     const file = JSON.parse(serialize(fresh()));
     file.state.capacityBought = "many";
     file.state.capacityCeilings = -3;
@@ -271,5 +289,15 @@ describe("the ladder on the save surface (#259)", () => {
     const wild = fresh();
     wild.capacityBought = 99;
     expect(voiceCapacityOf(wild)).toBe(capacityCeiling(wild));
+    // An implausible offering count clamps at its ladder's end, so the
+    // owned read can never disagree with the prices and shares quoted.
+    const hoard = fresh();
+    hoard.capacityCeilings = 99;
+    hoard.capacityDiscounts = 99;
+    const reloaded = deserialize(serialize(hoard)).state!;
+    expect(reloaded.capacityCeilings).toBe(BALANCE.capacityCeilingCosts.length);
+    expect(reloaded.capacityDiscounts).toBe(BALANCE.capacityDiscountCosts.length);
+    expect(capacityDiscountShare(reloaded)).toBeCloseTo(0.4, 9);
+    expect(nextCeilingPrice(reloaded)).toBeNull();
   });
 });

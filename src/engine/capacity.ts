@@ -7,6 +7,11 @@
 import { BALANCE } from "./constants";
 import type { GameState } from "./types";
 
+// The first-era ladder's base reach (issue #259): two nous purchases on
+// top of the opening one — the prototype ceiling of three — before any
+// Arete unlock raises it.
+const BASE_RUNGS = 2;
+
 // The per-voice whole-chord budget — the figure every rate pass and
 // readout shares (through economy's voiceCapacityOf, the one accessor
 // ADR-0052 reserved for this ladder). Clamped into the ceiling, so a
@@ -17,9 +22,10 @@ export function capacityOf(state: GameState): number {
 
 // The capacity the ladder can currently reach: the first-era prototype
 // ceiling (three — two nous purchases) plus each owned Arete ceiling
-// unlock (four, then five).
+// unlock (four, then five), never past the rung list a re-tuned ladder
+// can actually price.
 export function capacityCeiling(state: GameState): number {
-  return 1 + Math.min(BALANCE.capacityPrices.length, 2 + state.capacityCeilings);
+  return 1 + Math.min(BALANCE.capacityPrices.length, BASE_RUNGS + state.capacityCeilings);
 }
 
 // The next rung's whole-nous price, the owned Arete discounts folded in
