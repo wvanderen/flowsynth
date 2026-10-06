@@ -1,13 +1,16 @@
-// The achievement framework (ADR-0015, §6.3): a static, pure registry of
-// feats — definitions live in code, never in the save; the save stores only
-// `id → unlockedAt`. Feats accelerate, never gate: each adds ~+2% (tuning)
-// into the single global achievementBoost term of the nous rate. Detection
-// is live: syncAchievements runs at action boundaries and session ticks,
-// and nothing can unlock during session one. In-session unlocks queue into
-// the session's unlocked list (the summary's "unlocked this session" row);
-// upgrade-mode unlocks return to the caller for toasting.
+// The achievement framework (ADR-0015, §6.3 as amended): a static, pure
+// registry of feats — definitions live in code, never in the save; the save
+// stores only `id → unlockedAt`. Feats accelerate, never gate: each adds
+// ~+2% (tuning) into the single global achievementBoost term of the nous
+// rate, and that term stays the only reward — a milestone's row names the
+// beat's own existing unlock, expose-only (no feat ever owns a gate).
+// Detection is live: syncAchievements runs at action boundaries and session
+// ticks, and nothing can unlock during session one. In-session unlocks
+// queue into the session's unlocked list (the summary's "unlocked this
+// session" row); upgrade-mode unlocks return to the caller for toasting;
+// the eager resume sync stamps silently (SyncOptions.silent).
 import { ARETE_HORIZON } from "./accumulator";
-import { BALANCE } from "./constants";
+import { BALANCE, SHELF_TYPES } from "./constants";
 import { analyzeChords } from "./chords";
 import { deployedVoices } from "./economy";
 import { isInFlowNote } from "./notes";
@@ -20,14 +23,29 @@ export interface AchievementProgress {
 
 // ADR-0015's five launch buckets: "practice capstones, console encouragers,
 // board-and-economy encouragers, formula-and-horizon feats, and counter
-// ladder seeds". The achievements page groups by them.
-export type AchievementCategory = "practice" | "console" | "board" | "formula" | "ladder";
+// ladder seeds". The achievements page groups encouragers by them;
+// milestone feats (the amendment) sit outside the buckets and render as
+// their own first group.
+export type AchievementCategory = "practice" | "console" | "board" | "formula" | "ladder" | "milestone";
 
 export interface AchievementDef {
   id: string;
   name: string;
   description: string;
   category: AchievementCategory;
+  // The amendment's split: milestone feats commemorate a singular
+  // progression beat — one per beat, binary, encouraging nothing. Only
+  // milestones set this; encouragers leave it unset.
+  milestone?: true;
+  // The milestone's beat's own existing unlock, named on its row — the
+  // expose-only alternative to owning a reward.
+  unlock?: string;
+  // What stands before the beat, named by the un-crossed row's tooltip.
+  gate?: string;
+  // The row's icon slot: a stroke glyph in the instrument's line language.
+  // Unique marks for every feat land with the icons ticket; encouragers
+  // carry none until then.
+  icon?: string;
   // Pure predicate over saved state — the unlock condition.
   evaluate: (state: GameState, ctx: AchievementContext) => boolean;
   // Pure read for the achievements page's progress bars; no secrets at launch.
@@ -84,9 +102,90 @@ function maxVoiceMultiplierOf(state: GameState): number {
   return max;
 }
 
+// The milestone feats' marks (provisional): stroke glyphs in the
+// instrument's line language. Unique marks for all 23 land with the icons
+// ticket; encouragers carry no mark until then.
+const MUTATOR_GRID_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z"/></svg>`;
+const ROLL_POOL_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 20.2 7.25v9.5L12 21.5 3.8 16.75v-9.5Z"/><path d="M12 8.2v7.6M8.2 12h7.6"/></svg>`;
+const PRESTIGE_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2.8 21.2 12 12 21.2 2.8 12Z"/></svg>`;
+const FIRST_ROW_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 6.5h16M4 17.5h16"/><path d="M7 12h10"/></svg>`;
+const SHELF_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M3.5 20.5h17"/><path d="M7.5 20.5v-7H11v7M13 20.5V9h3.5v11.5"/></svg>`;
+
+// The milestone feats (ADR-0015 amended, issue #268): one per singular
+// progression beat, commemorating it without owning its gate — each beat's
+// gate stays on its own surface (the Arete Catalog, the accumulator, the
+// shelf). The row names the beat's own existing unlock; the +2% ν boost is
+// the only reward. The feats page's Milestones section is built explicitly
+// from the milestone flag; leading the array keeps every plain list read —
+// and detection — milestone-first too.
+const MILESTONES: readonly AchievementDef[] = [
+  {
+    id: "mutator-entry",
+    category: "milestone",
+    milestone: true,
+    name: "Mutator entry",
+    description: "Buy the Mutator tree's entry in the Arete Catalog.",
+    unlock: "Mutator Grid on",
+    gate: "The entry is bought in the Arete Catalog — the Catalog opens with the first banked Arete.",
+    icon: MUTATOR_GRID_SVG,
+    evaluate: (s) => s.catalogEntryOwned,
+    progress: (s) => fraction(s.catalogEntryOwned ? 1 : 0, 1),
+  },
+  {
+    id: "roll-pool-join",
+    category: "milestone",
+    milestone: true,
+    name: "Roll-pool join",
+    description: "Join the Mutator Forge to the roll pool.",
+    unlock: "In future rolls",
+    gate: "The join is bought in the Arete Catalog, behind the Mutator tree's entry.",
+    icon: ROLL_POOL_SVG,
+    evaluate: (s) => s.rollPoolJoined,
+    progress: (s) => fraction(s.rollPoolJoined ? 1 : 0, 1),
+  },
+  {
+    id: "first-prestige",
+    category: "milestone",
+    milestone: true,
+    name: "First prestige",
+    description: "Bank your first Arete at the horizon.",
+    unlock: "The first Arete banks",
+    gate: "Prestige stands at the horizon — fill the accumulator with lifetime nous, then bank the era.",
+    icon: PRESTIGE_SVG,
+    evaluate: (s) => s.prestiges >= 1,
+    progress: (s) => fraction(s.prestiges, 1),
+  },
+  {
+    id: "first-row",
+    category: "milestone",
+    milestone: true,
+    name: "First row",
+    description: "Unlock an octave row beyond the launch band.",
+    unlock: "An octave row joins the board",
+    gate: "In New cell mode, reach the next octave row and buy its board unlock banner with Arete.",
+    icon: FIRST_ROW_SVG,
+    evaluate: (s) => s.unlockedRows.length >= 1,
+    progress: (s) => fraction(s.unlockedRows.length, 1),
+  },
+  {
+    id: "shelf-complete",
+    category: "milestone",
+    milestone: true,
+    name: "Shelf completion",
+    description: "Buy all three starter-shelf offers.",
+    unlock: "Generator, Booster, and Forge owned",
+    gate: "The starter shelf sells the Focus Generator, a Booster, and the Forge — one purchase each.",
+    icon: SHELF_SVG,
+    evaluate: (s) => SHELF_TYPES.every((type) => s.purchased[type]),
+    progress: (s) => fraction(SHELF_TYPES.filter((type) => s.purchased[type]).length, SHELF_TYPES.length),
+  },
+];
+
 // The launch set (§6.3): seventeen feats in spec order, plus the horizon
-// break's encourager (ADR-0042). Names provisional.
+// break's encourager (ADR-0042), led by the milestone feats. Names
+// provisional.
 export const ACHIEVEMENTS: readonly AchievementDef[] = [
+  ...MILESTONES,
   {
     id: "first-light",
     category: "practice",
@@ -258,13 +357,18 @@ export interface SyncOptions {
   // True when the caller has a live rate snapshot showing a module actually
   // receiving charge (the Spark trigger; charge exists only in flow).
   chargeDelivered?: boolean;
+  // The eager resume sync (ADR-0015 amended): already-satisfied milestones
+  // grant silently on load — `unlockedAt` stamps, no toast, and nothing
+  // joins a live session's "unlocked this session" row.
+  silent?: boolean;
 }
 
 // The one detection entry point: evaluates every definition against the
 // current state, records unlocks with their timestamps, queues in-session
-// unlocks into the session's summary row, and returns the newly unlocked
-// definitions (upgrade-mode callers toast them). Nothing can unlock during
-// session one, and already-unlocked feats never re-fire.
+// unlocks into the session's summary row (unless silent), and returns the
+// newly unlocked definitions (upgrade-mode callers toast them; the resume
+// caller discards them). Nothing can unlock during session one, and
+// already-unlocked feats never re-fire.
 export function syncAchievements(state: GameState, options: SyncOptions = {}): AchievementDef[] {
   if (state.sessionsCompleted === 0) return [];
   const ctx: AchievementContext = { chargeDelivered: options.chargeDelivered ?? false };
@@ -276,7 +380,7 @@ export function syncAchievements(state: GameState, options: SyncOptions = {}): A
     state.achievements[def.id] = now;
     unlocked.push(def);
   }
-  if (state.session !== null) {
+  if (!options.silent && state.session !== null) {
     state.session.unlocked.push(...unlocked.map((def) => def.id));
   }
   return unlocked;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ACHIEVEMENTS, achievementBoostOf, achievementById, syncAchievements } from "./achievements";
 import { ARETE_HORIZON } from "./accumulator";
-import { buyCell, combine, endSession, startSession } from "./actions";
+import { buyCatalogEntry, buyCell, buyRowUnlock, buyShelfModule, combine, endSession, joinRollPool, prestige, startSession } from "./actions";
 import { advance } from "./advance";
 import { BALANCE } from "./constants";
 import { computeRates } from "./economy";
@@ -32,13 +32,37 @@ function unlockIds(s: GameState): string[] {
 }
 
 describe("the achievement registry", () => {
-  it("ships the 17-feat launch set plus the break's encourager, with unique ids and copy", () => {
-    expect(ACHIEVEMENTS).toHaveLength(18);
+  it("ships 23 feats — five milestones leading 18 encouragers — with unique ids and copy", () => {
+    expect(ACHIEVEMENTS).toHaveLength(23);
     const ids = ACHIEVEMENTS.map((a) => a.id);
-    expect(new Set(ids).size).toBe(18);
+    expect(new Set(ids).size).toBe(23);
     for (const def of ACHIEVEMENTS) {
       expect(def.name.length).toBeGreaterThan(0);
       expect(def.description.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("splits the registry by the milestone flag: five beats, first, carrying the row facts", () => {
+    const milestones = ACHIEVEMENTS.filter((d) => d.milestone);
+    expect(milestones.map((d) => d.id)).toEqual([
+      "mutator-entry",
+      "roll-pool-join",
+      "first-prestige",
+      "first-row",
+      "shelf-complete",
+    ]);
+    // The page builds the Milestones section from the flag itself; leading
+    // the array keeps every plain list read milestone-first as well.
+    expect(ACHIEVEMENTS.slice(0, milestones.length)).toEqual([...milestones]);
+    for (const def of milestones) {
+      expect(def.category).toBe("milestone");
+      // The beat's own unlock and its gate are named; the icon slot fills.
+      expect(def.unlock).toBeTruthy();
+      expect(def.gate).toBeTruthy();
+      expect(def.icon).toContain("<svg");
+    }
+    for (const def of ACHIEVEMENTS) {
+      if (!def.milestone) expect(def.category).not.toBe("milestone");
     }
   });
 
@@ -112,6 +136,71 @@ describe("the achievement registry", () => {
     endSession(s, NOW);
     expect(s.summary!.achievements).toEqual(["untethered", "marginalia"]);
     expect(unlockIds(s)).toEqual(["first-light", "untethered", "marginalia"]);
+  });
+});
+
+describe("the milestone feats (ADR-0015 amended)", () => {
+  it("each commemorates its beat: entry, pool join, prestige, first row, shelf", () => {
+    const s = fresh();
+    completeSession(s);
+    s.purchased.generator = true;
+    s.purchased.infusor = true;
+    expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual([]);
+    s.catalogEntryOwned = true;
+    expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual(["mutator-entry"]);
+    s.rollPoolJoined = true;
+    expect(syncAchievements(s, { now: NOW + 1 }).map((d) => d.id)).toEqual(["roll-pool-join"]);
+    s.prestiges = 1;
+    expect(syncAchievements(s, { now: NOW + 2 }).map((d) => d.id)).toEqual(["first-prestige"]);
+    s.unlockedRows.push(2);
+    expect(syncAchievements(s, { now: NOW + 3 }).map((d) => d.id)).toEqual(["first-row"]);
+    s.purchased.forge = true;
+    expect(syncAchievements(s, { now: NOW + 4 }).map((d) => d.id)).toEqual(["shelf-complete"]);
+  });
+
+  it("the eager resume sync grants already-satisfied milestones silently", () => {
+    const s = fresh();
+    completeSession(s);
+    // A pre-existing save's shape: the beats crossed, the ledger not yet.
+    s.catalogEntryOwned = true;
+    s.rollPoolJoined = true;
+    s.prestiges = 1;
+    s.unlockedRows.push(2);
+    for (const type of ["generator", "infusor", "forge"] as const) s.purchased[type] = true;
+    // The load's silent grant lands before anything else reads the ledger.
+    const granted = syncAchievements(s, { silent: true });
+    expect(granted.map((d) => d.id)).toEqual([
+      "mutator-entry",
+      "roll-pool-join",
+      "first-prestige",
+      "first-row",
+      "shelf-complete",
+    ]);
+    for (const def of granted) expect(typeof s.achievements[def.id]).toBe("number");
+    // A live session riding the load gains no summary row from it, and the
+    // stamps stand — nothing re-fires live.
+    selectHabit(s, s.habits.find((h) => !h.archived)!.id);
+    startSession(s, null);
+    expect(s.session!.unlocked).toEqual([]);
+    expect(syncAchievements(s, { now: NOW })).toEqual([]);
+    expect(s.session!.unlocked).toEqual([]);
+  });
+
+  it("milestones grant at their actions' boundaries like any feat", () => {
+    const s = fresh();
+    completeSession(s);
+    s.eraEarned = ARETE_HORIZON;
+    expect(prestige(s).unlocked).toEqual(["first-prestige"]);
+    expect(buyCatalogEntry(s).unlocked).toEqual(["mutator-entry"]);
+    s.arete = BALANCE.rollPoolJoinCost;
+    expect(joinRollPool(s).unlocked).toEqual(["roll-pool-join"]);
+    s.cells.push(hex(0, BALANCE.launchRowsAbove));
+    s.arete = 1;
+    expect(buyRowUnlock(s, BALANCE.launchRowsAbove + 1).unlocked).toEqual(["first-row"]);
+    s.purchased.generator = true;
+    s.purchased.infusor = true;
+    s.nous = BALANCE.shelfPrices.forge;
+    expect(buyShelfModule(s, "forge").unlocked).toEqual(["shelf-complete"]);
   });
 });
 

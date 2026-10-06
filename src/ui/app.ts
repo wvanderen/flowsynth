@@ -43,7 +43,7 @@ import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type
 import { createInitialState, createModule } from "../engine/state";
 import { appActive, type FocusApp } from "../engine/apps";
 import { writeNote } from "../engine/notes";
-import { achievementName } from "../engine/achievements";
+import { achievementName, syncAchievements } from "../engine/achievements";
 import { CATEGORY_OF, SHELF_MODULE, CHIME } from "../engine/constants";
 import { cellNoteOf } from "../engine/lattice";
 import {
@@ -432,6 +432,11 @@ export class App {
   // (ADR-0019).
   private resumeFromSave(loaded: LoadedSave): void {
     this.state = loaded.state;
+    // The eager achievement sync (ADR-0015 amended): a pre-existing save's
+    // already-satisfied milestones grant silently on load — `unlockedAt`
+    // stamps here, with no toast and nothing joining a live session's
+    // "unlocked this session" row. The session-one guard stands.
+    syncAchievements(this.state, { silent: true });
     this.knownSavedAt = loaded.savedAt;
     this.lastWall = null;
     this.presence = document.visibilityState === "visible";
@@ -648,7 +653,7 @@ export class App {
       return;
     }
     this.ui.modal = null;
-    this.say(`Banked ${claim} Arete — the next era begins.`);
+    this.announceUnlocks(result.unlocked, `Banked ${claim} Arete — the next era begins.`);
     this.save();
     this.render();
   }
@@ -962,7 +967,7 @@ export class App {
       .map(achievementName);
     this.say(
       names.length > 0
-        ? `${otherwise}${otherwise ? " " : ""}Achievement unlocked — ${names.join(", ")}.`
+        ? `${otherwise}${otherwise ? " " : ""}Feat unlocked — ${names.join(", ")}.`
         : otherwise,
     );
   }

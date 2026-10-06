@@ -117,9 +117,11 @@ describe("the Horizon break's purchase (issue #200)", () => {
     const s = banked();
     s.arete = BALANCE.horizonBreakCost;
     s.sessionsCompleted = 1;
-    // sessionsCompleted = 1 also arms first-light; the break's own unlock
-    // is the claim under test.
+    // sessionsCompleted = 1 also arms first-light and the banked
+    // first-prestige; both are pre-stamped so the break's own unlock is
+    // the claim under test.
     s.achievements["first-light"] = 1;
+    s.achievements["first-prestige"] = 1;
     const result = breakHorizon(s);
     expect(result.ok).toBe(true);
     expect(result.unlocked).toEqual(["breaking-the-horizon"]);

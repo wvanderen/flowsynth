@@ -268,7 +268,7 @@ export function buyShelfModule(state: GameState, type: ShelfType): ActionResult 
   state.nous -= price;
   state.purchased[type] = true;
   state.modules.push(createModule(state, SHELF_MODULE[type], "common"));
-  return ok;
+  return { ok: true, unlocked: checkUnlocks(state) };
 }
 
 // Cells (ADR-0013, amended by ADR-0022): direct nous purchases, bought and
@@ -587,7 +587,7 @@ export function buyCatalogEntry(state: GameState): ActionResult {
   state.arete -= BALANCE.catalogEntryCost;
   state.catalogEntryOwned = true;
   state.modules.push(createModule(state, "mutatorForge", "common"));
-  return ok;
+  return { ok: true, unlocked: checkUnlocks(state) };
 }
 
 export function joinRollPool(state: GameState): ActionResult {
@@ -597,7 +597,7 @@ export function joinRollPool(state: GameState): ActionResult {
   if (state.arete < BALANCE.rollPoolJoinCost) return fail("Not enough Arete.");
   state.arete -= BALANCE.rollPoolJoinCost;
   state.rollPoolJoined = true;
-  return ok;
+  return { ok: true, unlocked: checkUnlocks(state) };
 }
 
 // The Horizon break (ADR-0042, issue #200): the one-time Catalog purchase
@@ -636,7 +636,7 @@ export function buyRowUnlock(state: GameState, row: number): ActionResult {
   state.arete -= price;
   state.unlockedRows.push(row);
   state.gatedRows.push(row);
-  return ok;
+  return { ok: true, unlocked: checkUnlocks(state) };
 }
 
 // ── The Mutator layer's engine (ADR-0043, issue #198) ───────────────────
@@ -789,7 +789,7 @@ export function prestige(state: GameState): ActionResult {
     module.reserve = 0;
   }
   state.eraEarned = 0;
-  return ok;
+  return { ok: true, unlocked: checkUnlocks(state) };
 }
 
 // The Bend's player-picked shift (ADR-0048): one of the rarity's selectable
