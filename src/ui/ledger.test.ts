@@ -65,7 +65,7 @@ describe("the discovery bonus in the rate details (issue #230)", () => {
     syncChordDiscoveries(state, { now: 100 });
     const chip = document.createElement("div");
     chip.innerHTML = libraryChipHtml(state);
-    expect(chip.querySelector(".library-chip")!.textContent).toContain("1/11 chords");
+    expect(chip.querySelector(".ledger-chip")!.textContent).toContain("1/11");
   });
 });
 

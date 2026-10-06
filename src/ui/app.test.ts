@@ -324,7 +324,7 @@ describe("the feats page's milestone group (issue #268)", () => {
     expect(document.getElementById("status")!.textContent).not.toContain("Feat unlocked");
     // The chip reads the full count — the five milestones plus first-light.
     booted.render();
-    expect(document.getElementById("feats-chip")!.textContent).toContain("6/23 feats");
+    expect(document.getElementById("feats-chip")!.textContent).toContain("6/23");
     booted.openModal("achievements");
     expect(document.getElementById("modal-content")!.querySelector("#modal-title")!.textContent).toBe("6 of 23 feats.");
     const crossed = document.querySelectorAll(".ach-milestone.crossed");
@@ -366,21 +366,60 @@ describe("the feats page's encourager icons (issue #269)", () => {
   });
 });
 
-describe("the board ledger strip (§7)", () => {
-  it("docks above the board: Nous / Rate / Session as one instrument plus the feats chip", () => {
+describe("the board ledger (§7, issue #270)", () => {
+  it("docks above the board: grouped resource reads left, paired feats/chords chips right, no session read", () => {
     app.render();
     const ledger = document.getElementById("board-ledger")!;
-    expect(ledger.querySelector(".prod-ledger")).not.toBeNull();
-    const labels = [...ledger.querySelectorAll(".prod-label")].map((n) => n.textContent);
-    expect(labels).toEqual(["Nous", "Rate", "Session"]);
-    expect(ledger.querySelector('[data-live="nous"]')!.textContent).toMatch(/ν$/);
-    expect(ledger.querySelector('[data-live="rate"]')!.textContent).toMatch(/ν\/s$/);
-    expect(ledger.querySelector('[data-live="session"]')!.textContent).toBe("—");
-    expect(document.getElementById("feats-chip")).not.toBeNull();
-    // The feats chip opens the achievements page.
+    // One clipped instrument panel: the plate carries the ledger face.
+    expect(ledger.querySelector(".inst-panel > .inst-panel-face.ledger-face")).not.toBeNull();
+    // The resources group left — value and unit, no labels.
+    const nous = ledger.querySelector('[data-live="nous"]')!;
+    expect(nous.textContent).toMatch(/^\d/);
+    expect(nous.nextElementSibling!.textContent).toBe("ν");
+    const rate = ledger.querySelector('[data-live="rate"]')!;
+    expect(rate.textContent).toMatch(/\/s$|^[\d.]+$/);
+    expect(rate.parentElement!.textContent).toContain("ν/s");
+    // The session read has left; no label rides any figure.
+    expect(ledger.querySelector('[data-live="session"]')).toBeNull();
+    expect(ledger.querySelectorAll(".prod-label")).toHaveLength(0);
+    // Before the first prestige the arete slot stands dim: `— ◇`.
+    const arete = ledger.querySelector(".ledger-arete")!;
+    expect(arete.classList.contains("arete-dim")).toBe(true);
+    expect(arete.querySelector("b")!.textContent).toBe("—");
+    expect(arete.querySelector(".arete-mark svg")).not.toBeNull();
+    // The hairline, then the paired chips: icon + count.
+    expect(ledger.querySelector(".ledger-rule")).not.toBeNull();
+    expect(document.getElementById("feats-chip")!.textContent).toContain("0/23");
+    expect(document.getElementById("feats-chip")!.querySelector("svg")).not.toBeNull();
+    expect(document.getElementById("library-chip")!.textContent).toContain("0/11");
+    // The chips open their sheets.
     document.getElementById("feats-chip")!.click();
     expect(app.ui.modal).toBe("achievements");
     app.closeModal();
+    document.getElementById("library-chip")!.click();
+    expect(app.ui.modal).toBe("library");
+    app.closeModal();
+  });
+
+  it("bonuses never ride the ledger face — they live in the sheets and the rate details' legs", () => {
+    app.state.achievements["first-light"] = Date.now();
+    app.render();
+    // The panel's own reads carry no bonus figure anywhere.
+    const face = document.querySelector("#board-ledger .ledger-face")!.textContent!;
+    expect(face).not.toContain("%");
+    // The feats sheet names the shared effect…
+    app.openModal("achievements");
+    expect(document.getElementById("modal-content")!.textContent).toContain("+2% ν");
+    app.closeModal();
+    // …the chords sheet the discovery bonus…
+    app.openModal("library");
+    expect(document.getElementById("modal-content")!.textContent).toContain("+1%");
+    app.closeModal();
+    // …and the rate details carry both as legs (ADR-0037's one roster).
+    app.render();
+    const breakdown = document.querySelector("#board-ledger .rate-breakdown")!.textContent!;
+    expect(breakdown).toContain("Achievements");
+    expect(breakdown).toContain("Discoveries");
   });
 
   it("the nous read compresses instead of overflowing, with the exact value on its tooltip (issue #187)", () => {
@@ -388,58 +427,50 @@ describe("the board ledger strip (§7)", () => {
     // Small balances render as before: the floored comma-grouped integer.
     app.state.nous = 5004.32;
     app.render();
-    expect(read().textContent).toBe("5,004 ν");
+    expect(read().textContent).toBe("5,004");
     expect(read().getAttribute("title")).toBe("5,004");
     // The ladder takes over past the exact range; the tooltip stays exact.
     app.state.nous = 1_234_567;
     app.render();
-    expect(read().textContent).toBe("1.235M ν");
+    expect(read().textContent).toBe("1.235M");
     expect(read().getAttribute("title")).toBe(formatInt(1_234_567));
     // Scientific fallback: the figure stays in its lane at any magnitude.
     app.state.nous = 4.072e38;
     app.render();
-    expect(read().textContent).toBe("4.072e38 ν");
+    expect(read().textContent).toBe("4.072e38");
     expect(read().getAttribute("title")).toBe(formatInt(4.072e38));
     // A tight live surface: the compressed read holds a constant, short
     // width as the balance ticks (ADR-0031).
     app.state.nous = 4.072e38 + 1e30;
     app.render();
-    expect(read().textContent!.length).toBeLessThanOrEqual("4.072e38 ν".length);
+    expect(read().textContent!.length).toBeLessThanOrEqual("4.072e38".length);
   });
 
-  it("the Rate cell shows the final total; the session read keeps its trailing zeros while a session runs", () => {
+  it("the rate figure shows the final total and no session read exists anywhere on the panel", () => {
     app.render();
     const cell = document.getElementById("rate-cell")!;
     // No operand chain: the total is the display, the module-linked details
-    // live beside the cell (issue #154).
+    // disclose beside the panel (issue #154).
     expect(cell.querySelector(".rate-equation")).toBeNull();
-    expect(cell.querySelector('[data-live="rate"]')!.textContent).toBe(`${formatNumber(0.1)} ν/s`);
-    expect(document.querySelector('#board-ledger [data-live="session"]')!.textContent).toBe("—");
-    const s = app.state;
-    s.sessionsCompleted = 1;
-    startSession(s, 600);
-    advance(s, 30);
-    app.render();
-    const session = document.querySelector('#board-ledger [data-live="session"]')!.textContent!;
-    // A tight live surface (ADR-0031 as applied here): fixed decimals, so
-    // the trailing zero never comes and goes mid-session.
-    expect(session).toMatch(/\.\d{2} ν$/);
-    endSession(s);
-    app.render();
-    expect(document.querySelector('#board-ledger [data-live="session"]')!.textContent).toBe("—");
+    expect(cell.querySelector('[data-live="rate"]')!.textContent).toBe(formatNumber(0.1));
+    expect(document.querySelector('#board-ledger [data-live="session"]')).toBeNull();
+    expect(document.querySelector('#game-info-strip [data-live="i-session"]')).toBeNull();
+    // The arete read rides its live slot once banked; the telegraph slot
+    // carries none before it.
+    expect(document.querySelector('#board-ledger [data-live="arete"]')).toBeNull();
   });
 
   it("the details disclose nonproducing modules' effects — never a second ν/s", () => {
     app.render();
     // The launch roster is one synthesizer: no other-modules section yet.
-    expect(document.querySelector("#rate-slot .rd-other-row")).toBeNull();
+    expect(document.querySelector("#board-ledger .rd-other-row")).toBeNull();
     give(app.state, "infusor", hex(0, 1));
     app.render();
-    const row = document.querySelector("#rate-slot .rd-other-row")!;
+    const row = document.querySelector("#board-ledger .rd-other-row")!;
     expect(row.textContent).toContain("Booster");
     expect(row.querySelector('[data-live^="n-"]')!.textContent).toBe("+20% to adjacent");
     // The uplifted synth's own leg carries the same uplift...
-    expect(document.querySelector("#rate-slot .rd-synth .rd-legs")!.textContent).toContain("+20%");
+    expect(document.querySelector("#board-ledger .rd-synth .rd-legs")!.textContent).toContain("+20%");
     // ...and the nonproducer's row never wears a ν/s figure.
     expect(row.textContent).not.toContain("ν/s");
   });
@@ -450,7 +481,7 @@ describe("the board ledger strip (§7)", () => {
     give(s, "infusor", hex(0, 1)); // uplift on C4
     app.render();
     const snapshot = computeRates(s);
-    const rows = [...document.querySelectorAll("#rate-slot .rd-synth")];
+    const rows = [...document.querySelectorAll("#board-ledger .rd-synth")];
     expect(rows).toHaveLength(2);
     let sum = 0;
     for (const row of rows) {
@@ -461,7 +492,7 @@ describe("the board ledger strip (§7)", () => {
     }
     expect(Math.abs(sum - snapshot.rate)).toBeLessThan(0.01);
     // The total row answers with the same figure.
-    expect(document.querySelector('#rate-slot [data-live="b-rate"]')!.textContent).toBe(
+    expect(document.querySelector('#board-ledger [data-live="b-rate"]')!.textContent).toBe(
       `${formatNumber(snapshot.rate)} ν/s`,
     );
     // The expanded legs: base, chords (named), infusor, charge, achievements.
@@ -577,12 +608,13 @@ describe("the rate details disclosure (§7, issue #154)", () => {
     expect(app.ui.modal).toBe("rate");
     expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(false);
     app.closeModal();
-    // The disclosure rides the cell's slot: the roster lives in the DOM.
-    expect(document.querySelector("#rate-slot .rate-breakdown")).not.toBeNull();
+    // The disclosure rides the ledger's own slot: the roster lives in the
+    // DOM, mounted beside the clipped panel.
+    expect(document.querySelector("#board-ledger .rate-breakdown")).not.toBeNull();
     // A synthesizer row's tap identifies its module on the board: the
     // bloom lifts the module's own face off the grid and the row wears
     // the state grammar's inset marker.
-    const row = document.querySelector("#rate-slot .rd-synth")!;
+    const row = document.querySelector("#board-ledger .rd-synth")!;
     row.querySelector(".rd-pick")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     const id = row.getAttribute("data-module-id")!;
     expect(app.ui.selected).toBe(id);
@@ -635,25 +667,21 @@ describe("the rate details disclosure (§7, issue #154)", () => {
 
   it("above the line the whole ledger is the door; below it nothing changes (#233)", () => {
     // The door's contract lives in the stylesheet's ≥760px container block:
-    // the strip is the hover/focus area, the popover drops ledger-wide, the
-    // rate cell's inner hairline (button border and hover fill) is dead, and
-    // the ⓘ ring brightens with the ledger — never the cell.
+    // the panel is the hover/focus area, the popover drops ledger-wide from
+    // beneath the clipped plate, and the ⓘ ring brightens with the ledger —
+    // never the figure alone.
     const css = readFileSync("src/ui/style.css", "utf8");
     const mark = "@container app (width >= 760px)";
     expect(css).toContain(mark);
     const after = css.indexOf(mark);
     const door = css.slice(after, css.indexOf("\n}", after));
-    expect(door).toContain(".prod-ledger { position: relative; }");
-    expect(door).toContain(".rate-slot { position: static; }");
-    expect(door).toContain(".prod-cell-rate { border-color: transparent; }");
-    expect(door).toContain(".prod-ledger:hover .prod-cell-rate");
-    expect(door).toContain(".rate-breakdown { left: 0; width: min(560px, 100%); }");
     expect(door).toContain(".rate-breakdown .inst-panel-face { max-height: min(76vh, 640px); }");
-    expect(door).toContain(".prod-ledger:hover .rate-breakdown");
-    expect(door).toContain(".prod-ledger:focus-within .rate-breakdown { display: block; }");
-    // The disclosure's geometry below the line is untouched.
+    expect(door).toContain(".board-ledger:hover .rate-breakdown");
+    expect(door).toContain(".board-ledger:focus-within .rate-breakdown { display: block; }");
+    // The disclosure's ledger-wide geometry is the base rule — the popover
+    // mounts outside the clipped plate, so no hover override moves it.
     const base = css.slice(css.indexOf(".rate-breakdown {"), css.indexOf(mark));
-    expect(base).toContain("width: 350px");
+    expect(base).toContain("width: min(560px, 100%)");
   });
 
   it("the sheet keeps its figures live in place — a tick never rebuilds it (ADR-0037)", () => {
@@ -993,25 +1021,86 @@ describe("the thumb bar (§7, portrait phone)", () => {
     setAppWidth(390);
   });
 
-  it("folds the dock plus Inventory and Feats into the bottom bar", () => {
+  it("holds five segments — Catalog / Forge / New cell / Inventory / Collection (issue #270)", () => {
     give(app.state, "additive", null);
     app.render();
     const bar = document.getElementById("thumb-bar")!;
     const ops = [...bar.querySelectorAll("[data-op]")].map((b) => b.getAttribute("data-op"));
-    expect(ops).toEqual(["catalog", "forge", "cell", "inventory", "feats", "library"]);
+    expect(ops).toEqual(["catalog", "forge", "cell", "inventory", "collection"]);
     expect(bar.querySelector('[data-op="inventory"]')!.textContent).toContain("Inventory · 1");
-    expect(bar.querySelector('[data-op="feats"]')!.textContent).toContain("Feats · 0");
-    // On phone Inventory taps the sheet; feats opens the feats page; the
-    // library opens the field guide (issue #230).
+    // The feats and chords segments are gone — Collection is their sole
+    // phone door now, and the dock never grew a sixth icon.
+    expect(bar.querySelector('[data-op="feats"]')).toBeNull();
+    expect(bar.querySelector('[data-op="library"]')).toBeNull();
+    // The dock never grew a Collection icon (or any sixth): it stays
+    // Catalog / Forge / New cell / Inventory.
+    expect(document.querySelectorAll("#board-tools [data-op]")).toHaveLength(4);
+    // On phone Inventory taps the sheet; Collection opens the launcher.
     bar.querySelector<HTMLButtonElement>('[data-op="inventory"]')!.click();
     expect(app.ui.modal).toBe("inventory");
     app.closeModal();
-    bar.querySelector<HTMLButtonElement>('[data-op="feats"]')!.click();
+    bar.querySelector<HTMLButtonElement>('[data-op="collection"]')!.click();
+    expect(app.ui.modal).toBe("collection");
+    app.closeModal();
+  });
+
+  it("the Collection launcher's rows reach both sheets behind a back control (issue #270)", () => {
+    app.state.achievements["first-light"] = Date.now();
+    app.openModal("collection");
+    const modal = document.getElementById("modal-content")!;
+    // The launcher reads both ledgers: icon, name, count — no other copy.
+    expect(modal.querySelector(".eyebrow")!.textContent).toBe("COLLECTION");
+    const rows = [...modal.querySelectorAll<HTMLButtonElement>(".collection-row")];
+    expect(rows).toHaveLength(2);
+    expect(rows[0]!.querySelector("svg")).not.toBeNull();
+    expect(rows[0]!.textContent).toContain("Feats");
+    expect(rows[0]!.textContent).toContain("1/23");
+    expect(rows[1]!.textContent).toContain("Chords");
+    expect(rows[1]!.textContent).toContain("0/11");
+    // The feats row opens the feats sheet, and the sheet carries the
+    // launcher's back control on phone.
+    rows[0]!.click();
     expect(app.ui.modal).toBe("achievements");
-    app.closeModal();
-    bar.querySelector<HTMLButtonElement>('[data-op="library"]')!.click();
+    const back = document.getElementById("modal-back")!;
+    expect(back.textContent).toBe("‹ Collection");
+    back.click();
+    expect(app.ui.modal).toBe("collection");
+    // The chords row reaches the field guide the same way.
+    rows[1]!.click();
     expect(app.ui.modal).toBe("library");
+    document.getElementById("modal-back")!.click();
+    expect(app.ui.modal).toBe("collection");
     app.closeModal();
+  });
+
+  it("the back control belongs to the phone launcher flow only; the desktop chips open the sheets bare", () => {
+    // Desktop width: the feats sheet has no back control — the ledger chip
+    // is its door, and there is nothing to walk back to.
+    setAppWidth(1200);
+    app.render();
+    app.openModal("achievements");
+    expect(document.getElementById("modal-back")).toBeNull();
+    app.closeModal();
+    app.openModal("library");
+    expect(document.getElementById("modal-back")).toBeNull();
+    app.closeModal();
+    // Phone width: both sheets carry it.
+    setAppWidth(390);
+    app.render();
+    app.openModal("achievements");
+    expect(document.getElementById("modal-back")).not.toBeNull();
+    app.closeModal();
+    app.openModal("library");
+    expect(document.getElementById("modal-back")).not.toBeNull();
+  });
+
+  it("the arete read's canonical mark rides the stylesheet's 15px contract (issue #270)", () => {
+    // The mark's size is a spec figure, not tuning: one rule serves both
+    // faces of the ledger, and the contract test pins it like the door's.
+    const css = readFileSync("src/ui/style.css", "utf8");
+    const rule = css.slice(css.indexOf(".arete-mark svg {"), css.indexOf("}", css.indexOf(".arete-mark svg {")));
+    expect(rule).toContain("width: 15px");
+    expect(rule).toContain("height: 15px");
   });
 
   it("the inventory sheet arms a placement from its tiles", () => {
@@ -1034,7 +1123,7 @@ describe("the thumb bar (§7, portrait phone)", () => {
     app.render();
     expect(app.state.chordDiscovery["Fifth"]?.formed).toBe(true);
     const chip = document.getElementById("library-chip")!;
-    expect(chip.textContent).toContain("1/11 chords");
+    expect(chip.textContent).toContain("1/11");
     chip.click();
     expect(app.ui.modal).toBe("library");
     const modal = document.getElementById("modal-content")!;
@@ -1051,7 +1140,7 @@ describe("the thumb bar (§7, portrait phone)", () => {
     }
     // The rate details carry the discovery bonus beside the feats'.
     app.closeModal();
-    const breakdown = document.querySelector("#rate-slot .rate-breakdown")!;
+    const breakdown = document.querySelector("#board-ledger .rate-breakdown")!;
     expect(breakdown.textContent).toContain("Discoveries");
     expect(breakdown.textContent).toContain("+1%");
   });
@@ -2595,10 +2684,20 @@ describe("the Arete Catalog (issue #197)", () => {
     expect(app.state.arete).toBe(1);
   }
 
-  it("before the first prestige no Arete surface exists anywhere", () => {
+  it("before the first prestige the ledger and strip carry the dim telegraph slot (issue #270)", () => {
     app.render();
-    expect(document.getElementById("arete-chip")).toBeNull();
-    expect(document.querySelector(".info-arete")).toBeNull();
+    // No live arete read and no door anywhere — the dim slot is the surface.
+    expect(document.getElementById("arete-read")).toBeNull();
+    expect(document.querySelector('#board-ledger [data-live="arete"]')).toBeNull();
+    expect(document.getElementById("info-arete")).toBeNull();
+    // The slot is unconditional: `— ◇`, dim, on both faces of the ledger.
+    const ledgerSlot = document.querySelector("#board-ledger .ledger-arete")!;
+    expect(ledgerSlot.classList.contains("arete-dim")).toBe(true);
+    expect(ledgerSlot.querySelector("b")!.textContent).toBe("—");
+    expect(ledgerSlot.querySelector(".arete-mark svg")).not.toBeNull();
+    const stripSlot = document.querySelector("#game-info-strip .info-arete")!;
+    expect(stripSlot.classList.contains("arete-dim")).toBe(true);
+    expect(stripSlot.querySelector("b")!.textContent).toBe("—");
     // Even with the board grown to the unlock boundary and add-cell mode
     // armed, the banner never renders — the lock is the prestige count
     // (the first Arete reset), and nothing has reset yet.
@@ -2608,13 +2707,14 @@ describe("the Arete Catalog (issue #197)", () => {
     expect(document.querySelector("[data-unlock-row]")).toBeNull();
   });
 
-  it("the first banked Arete raises the chip on the ledger, and it opens the sheet", () => {
+  it("the first banked Arete raises the read on the ledger, and it opens the sheet", () => {
     bankFirstArete();
     app.render();
-    const chip = document.getElementById("arete-chip")!;
-    expect(chip.textContent).toContain("Catalog");
-    expect(chip.textContent).toContain("1");
-    chip.click();
+    const read = document.getElementById("arete-read")!;
+    expect(read.classList.contains("arete-dim")).toBe(false);
+    expect(read.querySelector(".arete-mark svg")).not.toBeNull();
+    expect(read.querySelector('[data-live="arete"]')!.textContent).toBe("1");
+    read.click();
     expect(app.ui.modal).toBe("arete");
     const sheet = document.getElementById("modal-content")!;
     expect(sheet.textContent).toContain("Mutator tree");
@@ -3906,18 +4006,33 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
   });
 
-  it("the game-info strip carries ν, rate, and session on the board surface — no feats chip; feats rides the thumb bar once", () => {
+  it("the game-info strip carries the resource reads only — no session, no chips; Collection is the feats/chords door (issue #270)", () => {
     app.render();
     const strip = document.getElementById("game-info-strip")!;
+    // The grouped reads: value then unit.
     expect(strip.querySelector('[data-live="i-nous"]')).not.toBeNull();
-    // The strip's reads are fixed-decimal: trailing zeros stay, so the row
-    // never resizes as the values drift.
+    expect(strip.querySelector('[data-live="i-nous"]')!.nextElementSibling!.textContent).toBe("ν");
+    // The strip's read is fixed-decimal (ADR-0031 as applied here):
+    // trailing zeros stay, so the centered pill never breathes.
     expect(strip.querySelector('[data-live="i-rate"]')!.textContent).toBe(formatFixed(0.1));
-    expect(strip.querySelector('[data-live="i-session"]')!.textContent).toBe("—");
-    // Feats appears once on phone: the thumb bar's segment, not a second
-    // chip in the strip.
-    expect(strip.querySelector(".feats-chip")).toBeNull();
-    expect(document.querySelector('#thumb-bar [data-op="feats"]')).not.toBeNull();
+    // The session read has left the strip.
+    expect(strip.querySelector('[data-live="i-session"]')).toBeNull();
+    // No feats or chords chips — Collection owns their phone entry, and
+    // the thumb bar holds it exactly once.
+    expect(strip.querySelector(".ledger-chip")).toBeNull();
+    const collection = document.querySelector('#thumb-bar [data-op="collection"]');
+    expect(collection).not.toBeNull();
+    expect(document.querySelectorAll('#thumb-bar [data-op="collection"]')).toHaveLength(1);
+  });
+
+  it("the strip's arete read carries the dim telegraph slot before the first prestige", () => {
+    app.render();
+    const strip = document.getElementById("game-info-strip")!;
+    const slot = strip.querySelector(".info-arete")!;
+    expect(slot.classList.contains("arete-dim")).toBe(true);
+    expect(slot.querySelector("b")!.textContent).toBe("—");
+    expect(slot.querySelector(".arete-mark svg")).not.toBeNull();
+    expect(strip.querySelector('[data-live="i-arete"]')).toBeNull();
   });
 
   it("the strip's ν read compresses instead of overflowing, with the exact value on its tooltip (issue #187)", () => {

@@ -76,6 +76,7 @@ export type ModalKind =
   | "forge"
   | "achievements"
   | "library"
+  | "collection"
   | "export"
   | "import"
   | "reset"

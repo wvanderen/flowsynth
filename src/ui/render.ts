@@ -660,12 +660,13 @@ function renderAchievementsModal(app: App, content: HTMLElement, projected: Rate
     </section>`;
   }).join("");
   content.innerHTML = `
-    ${modalTop("FEATS")}
+    ${modalTop("FEATS", undefined, isPhoneWidth() ? "Collection" : undefined)}
     <h2 id="modal-title">${count} of ${ACHIEVEMENTS.length} feats.</h2>
     <p class="lead">Every feat speeds the rate a little — they accelerate, never gate. Each one adds into the Achievements leg of every synth row in the rate details.</p>
     ${milestoneSection}${sections}`;
   const list = content.querySelector(".ach-milestones");
   if (list) wireTooltips(list);
+  wireCollectionBack(app);
   wireClose(app);
 }
 
@@ -679,12 +680,42 @@ function renderLibraryModal(app: App, content: HTMLElement): void {
   const { state } = app;
   const count = discoveryCount(state);
   const cards = NAMED_CHORDS.map((def) => libraryCardHtml(def, state.chordDiscovery[def.name])).join("");
+  // On phone the sheet's one entry is Collection (issue #270): the back
+  // control rides the head, returning to the launcher that opened it.
+  const back = isPhoneWidth() ? "Collection" : undefined;
   content.innerHTML = `
-    ${modalTop("CHORD LIBRARY")}
+    ${modalTop("CHORD LIBRARY", undefined, back)}
     <h2 id="modal-title">${count} of ${NAMED_CHORDS.length} classes discovered.</h2>
     <p class="lead">The first live formation of a chord class names it forever. Each discovery adds its +${Math.round(BALANCE.discoveryBonusPerClass * 100)}% to the rate — <span class="mono">+${Math.round((discoveryBoostOf(state) - 1) * 100)}%</span> so far, permanent across prestige. The hairline counts the distinct roots a class has rung.</p>
     <div class="library-grid">${cards}</div>`;
+  wireCollectionBack(app);
   wireClose(app);
+}
+
+// The Collection launcher (issue #270): the phone thumb bar's fifth
+// segment, holding the feats and chords entries the ledger chips carry at
+// wider widths — one row per ledger, icon and count leading to its sheet.
+// Its future scope — viewing all unlocked module and mutator types — is
+// recorded as deferred, not built.
+function renderCollectionModal(app: App, content: HTMLElement): void {
+  const feats = unlockedCount(app.state);
+  const chords = discoveryCount(app.state);
+  content.innerHTML = `
+    ${modalTop("COLLECTION", "modal-title")}
+    <div class="collection-rows">
+      <button class="collection-row" id="collection-feats" title="Feats — the full list, and how close the next one is">${FEATS_SVG}<span class="t-condensed">Feats</span><span class="mono">${feats}/${ACHIEVEMENTS.length}</span></button>
+      <button class="collection-row" id="collection-chords" title="Chord library — the field guide of chord classes">${LIBRARY_SVG}<span class="t-condensed">Chords</span><span class="mono">${chords}/${NAMED_CHORDS.length}</span></button>
+    </div>`;
+  byId("collection-feats")?.addEventListener("click", () => app.openModal("achievements"));
+  byId("collection-chords")?.addEventListener("click", () => app.openModal("library"));
+  wireClose(app);
+}
+
+// The launcher's back control (#270): one binding for whichever sheet
+// carries it — a tap returns to the launcher instead of putting the sheet
+// away.
+function wireCollectionBack(app: App): void {
+  byId("modal-back")?.addEventListener("click", () => app.openModal("collection"));
 }
 
 // ── The action row (§7): a left-edge icon dock ──────
@@ -695,11 +726,13 @@ const INVENTORY_TOOL_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="no
 
 // The action definitions the dock and the thumb bar are both built from:
 // Catalog / Forge (count badge + charge pip) / New cell / Inventory
-// everywhere, with Feats folded into the phone's thumb bar (§7). Arrange
-// has no job anywhere — dragging is already live (§5) — and the canvas
-// legend is gone: its encodings belong to the surfaces that use them.
-// Inventory presents twice: on phone the thumb bar taps open the sheet;
-// at every other width the dock icon toggles the tray column beside it.
+// everywhere, and Collection folded into the phone's thumb bar (§7, issue
+// #270) — the launcher that absorbs the phone's feats and chords entries.
+// Arrange has no job anywhere — dragging is already live (§5) — and the
+// canvas legend is gone: its encodings belong to the surfaces that use
+// them. Inventory presents twice: on phone the thumb bar taps open the
+// sheet; at every other width the dock icon toggles the tray column beside
+// it.
 interface ToolAction {
   op: string;
   svg: string;
@@ -833,55 +866,41 @@ function toolActions(): ToolAction[] {
       active: (app) => !isPhoneWidth() && app.ui.trayOpen,
     },
     {
-      op: "feats",
-      svg: FEATS_SVG,
-      label: "Feats",
-      run: (app) => app.openModal("achievements"),
-      badge: (app) => {
-        const feats = unlockedCount(app.state);
-        return feats > 0 ? `<b class="tool-badge mono">${feats}</b>` : "";
-      },
-      word: (app) => `Feats · ${unlockedCount(app.state)}/${ACHIEVEMENTS.length}`,
-      title: () => "Feats — the full list, and how close the next one is",
-    },
-    {
-      // The chord library rides the thumb bar beside Feats (issue #230):
-      // the ledger chip is wide-surface furniture, and the ledger dissolves
-      // below the 600px line — the door stays reachable there.
-      op: "library",
-      svg: LIBRARY_SVG,
-      label: "Library",
-      run: (app) => app.openModal("library"),
-      badge: (app) => {
-        const found = discoveryCount(app.state);
-        return found > 0 ? `<b class="tool-badge mono">${found}</b>` : "";
-      },
-      word: (app) => `Library · ${discoveryCount(app.state)}/${NAMED_CHORDS.length}`,
-      title: () => "Chord library — the field guide of chord classes",
+      // Collection rides the thumb bar as its fifth segment (issue #270):
+      // the launcher absorbing the phone's feats and chords entries — the
+      // ledger chips are wide-surface furniture, and the ledger dissolves
+      // below the 600px line.
+      op: "collection",
+      svg: COLLECTION_TOOL_SVG,
+      label: "Collection",
+      run: (app) => app.openModal("collection"),
+      title: () => "Collection — feats and the chord library",
     },
   ];
 }
+
+// The Collection mark (issue #270): two adjacent cells in the hex voice —
+// the board's things, gathered.
+const COLLECTION_TOOL_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M9 2.5 14.2 5.5v6L9 14.5 3.8 11.5v-6Z"/><path d="M15 9.5 20.2 12.5v6L15 21.5 9.8 18.5v-6Z"/></svg>`;
 
 const TOOL_CATALOG_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/></svg>`;
 const TOOL_FORGE_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1.8 3.2-3.2 4.6-3.2 8.4a3.2 3.2 0 0 0 6.4 0c0-1.4-.6-2.3-1.1-2.9 1.9.5 3.4 2 3.4 4.3a5.5 5.5 0 0 1-11 0C6.5 7.6 10.8 6.4 12 3Z"/></svg>`;
 
 // The left-edge icon dock (§7): Catalog / Forge (count badge + charge pip)
 // / New cell, floating over the board's left edge. Hidden on portrait
-// phone, where the same actions ride the bottom thumb bar.
+// phone, where the same actions plus Collection ride the bottom thumb bar.
 function renderTools(app: App, projected: RateSnapshot): void {
   const { state, ui } = app;
   const host = byId("board-tools");
   const thumb = byId("thumb-bar");
   const actions = toolActions();
-  // The dock carries the board actions; Feats and the chord library live
-  // beside the ledger on wide surfaces and ride the thumb bar alone on
-  // phone, where the ledger dissolves.
-  const dockActions = actions.filter((action) => action.op !== "feats" && action.op !== "library");
-  const feats = unlockedCount(state);
-  const discoveries = discoveryCount(state);
+  // The dock carries the board actions; Collection is the thumb bar's
+  // fifth segment alone on phone, where the ledger — and with it the
+  // feats/chords chips — dissolves (issue #270).
+  const dockActions = actions.filter((action) => action.op !== "collection");
   const forgeCount = state.bankedRolls.length;
   const trayCount = state.modules.filter((m) => m.pos === null).length;
-  const key = JSON.stringify(["dock", state.mode, forgeCount, ui.buyingCell, feats, discoveries, trayCount]);
+  const key = JSON.stringify(["dock", state.mode, forgeCount, ui.buyingCell, trayCount]);
 
   for (const [target, list] of [
     [host, dockActions],
@@ -3123,14 +3142,17 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
               // leaving flow re-renders the inert/active button states.
               : kind === "arete"
                 ? [app.state.arete, app.state.catalogEntryOwned, app.state.rollPoolJoined]
-            : kind === "achievements"
-              // Quantized progress: an open page refreshes when a bar visibly
-              // moves, not on every clock tick.
-              ? achProgressKey(app, projected)
-              // The library's own ledger signature (issue #230): a discovery
-              // or a new root re-renders the sheet.
-              : kind === "library"
-                ? discoveryKey(app.state)
+              : kind === "achievements"
+                // Quantized progress: an open page refreshes when a bar visibly
+                // moves, not on every clock tick.
+                ? achProgressKey(app, projected)
+                // The library's own ledger signature (issue #230): a discovery
+                // or a new root re-renders the sheet.
+                : kind === "library"
+                  ? discoveryKey(app.state)
+                // The launcher's rows read both ledgers' counts (issue #270).
+                : kind === "collection"
+                  ? [unlockedCount(app.state), discoveryCount(app.state)]
               // The enter prompt's own selection state (issue #95): the plan
               // and the kind-first picks re-render the modal the moment they
               // change — chips highlight on pick, never a stale footer.
@@ -3170,6 +3192,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   else if (kind === "forge") renderForgeModal(app, content, projected);
   else if (kind === "achievements") renderAchievementsModal(app, content, projected);
   else if (kind === "library") renderLibraryModal(app, content);
+  else if (kind === "collection") renderCollectionModal(app, content);
   else if (kind === "export") renderExportModal(app, content);
   else if (kind === "import") renderImportModal(app, content);
   else if (kind === "reset") renderResetModal(app, content);
@@ -3250,9 +3273,16 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
 // The modal head's one row: the eyebrow that names the surface and the ✕
 // that puts it away. `titleId` hands the accessible name to the eyebrow
 // for surfaces that carry no other heading — the backdrop's
-// aria-labelledby points there.
-function modalTop(label: string, titleId?: string): string {
-  return `<div class="modal-top"><span class="eyebrow"${titleId ? ` id="${titleId}"` : ""}>${label}</span><button id="close-modal" aria-label="Close dialog">✕</button></div>`;
+// aria-labelledby points there. `backLabel` mounts the launcher's return
+// control (issue #270) ahead of the eyebrow: on phone the feats and chords
+// sheets sit behind a "‹ Collection" door, and the tap walks back one
+// level instead of closing everything.
+function modalTop(label: string, titleId?: string, backLabel?: string): string {
+  const eyebrow = `<span class="eyebrow"${titleId ? ` id="${titleId}"` : ""}>${label}</span>`;
+  const lead = backLabel
+    ? `<button class="modal-back" id="modal-back">‹ ${backLabel}</button>${eyebrow}`
+    : eyebrow;
+  return `<div class="modal-top"><span class="modal-lead">${lead}</span><button id="close-modal" aria-label="Close dialog">✕</button></div>`;
 }
 
 // The combine review's terms (issue #152), read fresh: null whenever the
