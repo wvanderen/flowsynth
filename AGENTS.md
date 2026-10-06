@@ -12,6 +12,10 @@ Canonical defaults: role name = label string (`needs-triage`, `needs-info`, `rea
 
 Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
+## UI surfaces
+
+When changing or reviewing a UI surface (panel, sheet, readout, control, or its copy), read `docs/instrument-standards.md` first and judge the changed surface against the pinned prototype there; capture desktop and phone evidence per `docs/agents/visual-evidence.md`, and record checks that cannot run as unavailable.
+
 ## Checks
 
 Fresh worktrees carry no `node_modules` — run `npm install` before your first check. Then:

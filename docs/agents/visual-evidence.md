@@ -24,6 +24,6 @@ The response's `worktree` must equal `git rev-parse --show-toplevel` in the chec
 
 ## 3. Capture desktop and phone against that same server
 
-Verify and screenshot both a desktop and a ~390px phone viewport from the verified URL. A viewport pass that fails or cannot run is recorded as incomplete — never claimed as verified.
+Verify and screenshot both a desktop and a ~390px phone viewport from the verified URL. A viewport pass that fails or cannot run is recorded as incomplete — never claimed as verified. The evidence backs a review against the [instrument standards](../instrument-standards.md), which also requires keyboard/touch disclosure checks, non-color state distinctions, and reduced-motion behavior where applicable.
 
 The launcher, its log, and the provenance endpoint are development-only: `vite build` ships neither the endpoint nor any absolute local path (asserted by `tools/build-purity.test.ts`).

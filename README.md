@@ -6,6 +6,7 @@ FlowSynth is an incremental focus game whose configurable hex grid runs during r
 - [Economy experiment report](docs/economy-report.md): deterministic route comparisons, upgrade sensitivity, and combination tradeoffs.
 - [Run the economy experiment](tools/economy/README.md): standard-library Python commands and assumptions.
 - [Validated prototype UX](docs/validated-prototype-ux.md): approved layout, interactions, and prototype source reference.
+- [Instrument standards](docs/instrument-standards.md): the approved presentation language for UI surfaces, with the pinned prototype, review criteria, and evidence requirements.
 - [Domain glossary](CONTEXT.md) and [design decisions](docs/adr/).
 
 ## First playable (issue #1)
