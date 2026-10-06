@@ -714,6 +714,7 @@ describe("the horizon bar (§7, issue #156)", () => {
   });
 
   it("pressing the door opens a confirm; confirming banks the claim and begins the next era", () => {
+    app.state.sessionsCompleted = 1;
     app.state.eraEarned = ARETE_HORIZON;
     app.state.nous = 8_000;
     const prestigeGen = give(app.state, "focusKeyed", hex(2, 0));
@@ -723,10 +724,14 @@ describe("the horizon bar (§7, issue #156)", () => {
     expect(app.ui.modal).toBe("prestige");
     const content = document.getElementById("modal-content")!;
     expect(content.textContent).toContain("1 Arete");
+    expect(content.textContent).toContain("feats");
+    expect(content.textContent).not.toContain("achievements");
     document.getElementById("prestige-confirm")!.click();
     expect(app.ui.modal).toBeNull();
     expect(app.state.arete).toBe(1);
     expect(app.state.prestiges).toBe(1);
+    expect(document.getElementById("status")!.textContent).toContain("Banked 1 Arete");
+    expect(document.getElementById("status")!.textContent).toContain("Feat unlocked — First prestige");
     // The boundary: era bar rebased, nous and charge reset.
     expect(app.state.eraEarned).toBe(0);
     expect(app.state.nous).toBe(BALANCE.openingGrant);

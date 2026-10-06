@@ -162,7 +162,7 @@ const MILESTONES: readonly AchievementDef[] = [
     name: "First row",
     description: "Unlock an octave row beyond the launch band.",
     unlock: "An octave row joins the board",
-    gate: "Rows unlock in the Arete Catalog once the board reaches the octave row.",
+    gate: "In New cell mode, reach the next octave row and buy its board unlock banner with Arete.",
     icon: FIRST_ROW_SVG,
     evaluate: (s) => s.unlockedRows.length >= 1,
     progress: (s) => fraction(s.unlockedRows.length, 1),

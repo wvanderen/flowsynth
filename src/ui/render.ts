@@ -3740,7 +3740,7 @@ function renderPrestigeModal(app: App, content: HTMLElement): void {
     ${modalTop("PRESTIGE")}
     <h2 id="modal-title">Begin the next era?</h2>
     <p class="lead">Prestige banks <strong class="mono">${claim} Arete</strong> and starts the era over: module levels return to base, and your nous and charge return to the opening.</p>
-    <p class="lead muted">Your board and its placement, the tray, banked Forge rolls and progress, achievements, your whole life record, your Arete, and lifetime nous all stay.</p>
+    <p class="lead muted">Your board and its placement, the tray, banked Forge rolls and progress, feats, your whole life record, your Arete, and lifetime nous all stay.</p>
     <div class="modal-actions">
       <button id="prestige-cancel">Not yet</button>
       <button id="prestige-confirm" class="primary">Prestige and claim ${claim} Arete</button>

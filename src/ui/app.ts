@@ -653,7 +653,7 @@ export class App {
       return;
     }
     this.ui.modal = null;
-    this.say(`Banked ${claim} Arete — the next era begins.`);
+    this.announceUnlocks(result.unlocked, `Banked ${claim} Arete — the next era begins.`);
     this.save();
     this.render();
   }
