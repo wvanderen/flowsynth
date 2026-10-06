@@ -98,9 +98,8 @@ body[data-variant=B] .modal{width:min(560px,100%)}
 body[data-device=phone] #stage{max-width:392px;min-height:calc(100vh - 40px)}
 body[data-device=phone] .consol{padding:10px 14px;gap:10px}
 body[data-device=phone] .consol .brand{display:none}
-body[data-device=phone] .banner-reads{gap:12px}
-body[data-device=phone] .banner-reads .bread .name{font-size:15px}
-body[data-device=phone] .gbars{width:64px}
+body[data-device=phone] .banner-reads{display:none}
+body[data-device=phone] #surface .banner-reads{display:flex}
 body[data-device=phone] .tiles .tile{width:40px;height:40px}
 body[data-device=phone] .anchor{padding:18px 14px;justify-content:center}
 body[data-device=phone] .popover{width:100%}
@@ -118,6 +117,9 @@ body[data-device=phone] .split .detail{padding-left:0;padding-top:10px}
 .dev .tag{font:600 11px 'IBM Plex Mono',monospace;color:var(--charge);align-self:center;margin-right:2px}
 .dev button{border:0;border-left:1px solid var(--soft);padding:6px 9px;min-height:40px;font:500 12px 'IBM Plex Mono',monospace;letter-spacing:0}
 .dev button:hover{background:#252d48}
+/* ---- banner count chip + study captions ---- */
+.cnt{font:500 11px 'IBM Plex Mono',monospace;color:var(--muted);letter-spacing:.06em;white-space:nowrap}
+.capt{font:600 12px 'Barlow Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:18px 0 6px}
 /* ---- tooltips ---- */
 .tooltip-host{position:relative;display:inline-block}
 .tip{padding:2px 4px;border:0;min-height:36px;font:inherit;text-align:left;background:none}
@@ -142,13 +144,7 @@ body[data-device=phone] .split .detail{padding-left:0;padding-top:10px}
     <span class="brand name">FLOWSYNTH</span>
     <button class="clock" id="nav-time" title="Focus control"><span class="mono">20:00</span><span class="eyeline" id="clock-word">PLANNED</span></button>
     <button class="flow" id="switch-mock">Enter flow</button>
-    <div class="banner-reads" role="group" aria-label="Focus reads">
-      <span class="bread"><span class="name">Piano</span></span>
-      <span class="gbars" aria-label="Goal progress">
-        <span class="gbar"><i style="width:62%"></i></span>
-        <span class="gbar done"><i style="width:100%"></i></span>
-      </span>
-    </div>
+    <div class="banner-reads" id="banner-reads" role="group" aria-label="Focus reads"></div>
     <div class="tiles">
       <button class="tile" id="nav-focus" aria-pressed="false" aria-label="Focus control sheet">◎</button>
       <button class="tile" id="nav-notes" aria-pressed="false" aria-label="Notes">✎</button>
@@ -206,17 +202,17 @@ const D={
  ]},
 };
 const tip=(id,label,text)=>`<span class="tooltip-host"><button class="tip" aria-describedby="${id}" aria-expanded="false">${label}</button><span class="tooltip" id="${id}" role="tooltip">${text}</span></span>`;
-const S={surface:'time',variant:'A',device:'desktop',mode:'upgrade'};
-const NAMES={focus:'Focus control sheet',time:'Time (legacy)',habit:'Habit (legacy)',notes:'Notes',goals:'Goals (legacy)',settings:'Settings',summary:'Session summary',honesty:'Honesty report'};
+const S={surface:'time',variant:'A',device:'desktop',mode:'upgrade',active:'piano'};
+const NAMES={focus:'Focus control sheet',time:'Time (legacy)',habit:'Habit (legacy)',notes:'Notes',goals:'Goals (legacy)',settings:'Settings',summary:'Session summary',honesty:'Honesty report',banner:'Banner edge states'};
 const VNAMES={A:'Ruled folio',B:'Figure-led ledger',C:'Split stage'};
 
 /* ---------- Time ---------- */
-function timePlan(withHistory=true){
- const p=D.plan;
+function timePlan(withHistory=true,lock=false){
+ const p=D.plan;const dis=lock?'disabled':'';
  const rows=`
-  <div class="chips" role="group" aria-label="Preset targets">${p.chips.map(m=>`<button class="chip" aria-pressed="${m===p.current}">${m}</button>`).join('')}</div>
-  <div class="row"><div class="free"><input class="mono" value="${p.free}" aria-label="Minutes"><span class="eyeline">MIN</span></div><button class="grow" style="text-align:left">Open-ended</button></div>
-  <div class="row"><span class="grow name">${tip('plan-tip','Planned practice','The chime, a notification and the tab title fire at the target. Past it, presence keeps banking and away time turns provisional.')}</span><span class="fig mono">20:00</span></div>`;
+  <div class="chips" role="group" aria-label="Preset targets">${p.chips.map(m=>`<button class="chip" ${dis} aria-pressed="${m===p.current}">${m}</button>`).join('')}</div>
+  <div class="row"><div class="free"><input class="mono" value="${p.free}" aria-label="Minutes" ${dis}><span class="eyeline">MIN</span></div><button class="grow" style="text-align:left" ${dis}>Open-ended</button></div>
+  <div class="row"><span class="grow name">${tip('plan-tip','Planned practice','The chime, a notification and the tab title fire at the target. Past it, presence keeps banking and away time turns provisional.')}</span><span class="fig mono">${lock?`<span data-elapsed>${fmt(S.elapsed||754)}</span>`:'20:00'}</span></div>`;
  return rows+(withHistory?`<div class="row">${historyEntry()}</div>`:'');
 }
 function timeFlow(){
@@ -272,11 +268,16 @@ function habitList(){
  return rows+`<hr class="rule">`+create+`<hr class="rule">`+log;
 }
 function habitDetail(h){
- const nodes=h.build.map((n,i)=>n?`<button class="node equipped"><span class="grow" style="text-align:left"><span class="name">${n[0]}</span><span class="sub">${n[1]}</span></span></button>`
+ const flow=S.mode==='flow';
+ const nodes=h.build.map((n,i)=>n?`<button class="node equipped"${flow?' disabled':''}><span class="grow" style="text-align:left"><span class="name">${n[0]}</span><span class="sub">${n[1]}</span></span></button>`
   :`<button class="node locked"><span class="grow" style="text-align:left">Slot ${i+1}</span></button>`).join('');
  const notes=h.notes.length?h.notes.map(n=>`<div class="row"><span class="grow"><span class="fig mono dim">${n.when}</span><p class="notetext">${n.text}</p></span></div>`).join(''):`<div class="row"><span class="sub">No tagged notes.</span></div>`;
+ const mgmt=flow?'':`<button class="ghost" aria-label="Rename ${h.name}">✎</button><button class="ghost" aria-label="Archive ${h.name}">⨯</button>`;
+ const log=flow
+  ?`<hr class="rule"><div class="row"><span class="sub">Manual logs wait for upgrade mode.</span></div>`
+  :`<hr class="rule"><div class="row"><span class="grow">${tip('log-tip-'+h.id,'Log practice','Credits practice without a session. Manual logs never produce nous or charge.')}</span><input class="mono" style="width:64px;text-align:right" value="30" aria-label="Minutes"><button>Log</button></div>`;
  return `<button class="backlink" data-back>← HABITS</button>
-  <div class="head"><span class="name">${h.name}</span><span class="acq">SELECTED</span></div>
+  <div class="head"><span class="name">${h.name}</span><span class="acq">SELECTED</span>${mgmt}</div>
   <div class="rows">
    <div class="row"><span class="grow">Lifetime</span><span class="fig mono">${h.life}</span></div>
    <div class="row"><span class="grow">Sessions</span><span class="fig mono">${h.sessions}</span></div>
@@ -285,7 +286,22 @@ function habitDetail(h){
   <div class="head" style="padding-bottom:4px"><span class="eyeline">${tip('node-tip','BUILD · '+h.build.filter(Boolean).length+'/'+h.build.length+' SLOTS','Nodes unlock as practice time crosses milestones — 1:00:00 for the first. Effects apply only while this habit is active.')}</span><span class="sub">while this habit is active</span></div>
   <div class="rows">${nodes}</div><hr class="rule">
   <div class="head" style="padding-bottom:4px"><span class="eyeline">TAGGED NOTES · ${h.notes.length}</span></div>
-  <div class="rows">${notes}</div>`;
+  <div class="rows">${notes}</div>${log}`;
+}
+function habitIndex(){
+ const rows=D.habits.map(h=>`<div class="row ${h.id===S.habitPick?'marksel':''}" role="button" tabindex="0" data-habit="${h.id}" aria-pressed="${h.id===S.habitPick}">
+  <span class="fig mono">${h.life}</span><span class="fig mono dim">${h.sessions}×</span>
+  <span class="grow name">${h.name}</span>${h.id===S.active?'<span class="dot on" title="Active habit"></span>':''}<span class="mono dim">→</span></div>`).join('');
+ const add=S.mode==='flow'?'<div class="row"><span class="sub">Adding waits for upgrade mode.</span></div>':'<div class="row"><input class="grow" placeholder="Name a practice" aria-label="New habit name"><button>Add</button></div>';
+ return rows+`<hr class="rule">`+add;
+}
+function habitFace(){
+ if(S.device==='phone'){
+  if(S.habitPick)return habitDetail(D.habits.find(h=>h.id===S.habitPick));
+  return habitIndex();
+ }
+ const h=D.habits.find(x=>x.id===(S.habitPick||D.habits[0].id));
+ return `<div class="split"><div class="list">${habitIndex()}</div><div class="detail">${habitDetail(h).replace('<button class="backlink" data-back>← HABITS</button>','')}</div></div>`;
 }
 function renderHabit(){
  if(S.habitPick&&S.variant!=='C')return wrap('HABIT','development',habitDetail(D.habits.find(h=>h.id===S.habitPick)));
@@ -298,12 +314,16 @@ function renderHabit(){
 
 /* ---------- Notes ---------- */
 function renderNotes(){
+ const face=S.notesFace||'capture';
+ const state=S.mode==='flow'?'session '+D.summary.no:'between sessions';
+ const capture=`<div class="row"><textarea class="grow" rows="3" placeholder="What are you noticing?" style="resize:vertical"></textarea></div>
+  <div class="row"><span class="grow">${tip('note-tip','','A written note credits each owned Note Generator by its length. Tagging follows the session\'s habit.')}</span>${S.mode==='flow'?'<span class="acq">· PIANO</span>':''}<button>Capture</button></div>`;
  const stream=D.notes.map(n=>`
   <div class="row"><span class="grow"><span class="fig mono dim">${n.when}</span>${n.habit?` <span class="acq">${n.habit.toUpperCase()}</span>`:''}<p class="notetext">${n.text}</p></span></div>`).join('');
- return wrap('NOTES',S.mode==='flow'?'session 3':'stream',`
-  <div class="row"><textarea class="grow" rows="2" placeholder="What are you noticing?" style="resize:vertical"></textarea></div>
-  <div class="row"><span class="grow">${tip('note-tip','','A written note credits each owned Note Generator by its length. Tagging follows the session\'s habit.')}</span><button>Capture</button></div>
-  <hr class="rule"><div class="rows">${stream}</div>`);
+ const nav=`<div class="facetabs" role="tablist" aria-label="Notes sections">${[['capture','CAPTURE'],['logged','LOGGED']].map(([k,l])=>`<button class="ftab" data-notes-face="${k}" aria-pressed="${k===face}">${l}</button>`).join('')}</div>`;
+ return `<div class="anchor"><section class="plate sheet" aria-label="Notes"><div class="plate-in">
+  <div class="head"><span class="name">NOTES</span><span class="eyeline state">${state}</span><button class="ghost" id="close-x" aria-label="Close" style="min-height:30px;padding:0 6px">✕</button></div>
+  ${nav}${face==='capture'?capture:`<div class="rows">${stream}</div>`}</div></section></div>`;
 }
 
 /* ---------- Goals ---------- */
@@ -311,8 +331,8 @@ function goalList(){
  const rows=D.goals.map(g=>`
   <div class="row ${g.done?'done':''}"><span class="grow"><span class="name">${g.name}</span><span class="sub mono">${g.times?g.times+' · ':''}${g.count} ${g.status}</span><span class="track"><i style="width:${g.frac*100}%"></i></span></span>
   ${S.mode==='upgrade'?`<button class="ghost" aria-label="Delete goal">⨯</button>`:''}</div>`).join('');
- const create=`<div class="row"><select class="grow" aria-label="Habit"><option>Any habit</option><option>Piano</option><option>Cooking</option></select><input class="mono" style="width:66px;text-align:right" value="20" aria-label="Minutes"><select aria-label="Schedule"><option>daily</option><option>weekly</option><option>once</option></select><button>+</button></div>`;
- const long=`<div class="row"><span class="grow name" style="color:var(--muted)">One more goal slot</span><span class="fig mono dim">${tip('lg-tip',D.longGoal.price,'Buys one slot now. Each purchase raises the next price. '+D.longGoal.when+'.')}</span><button class="ghost">Buy</button></div>`;
+ const create=`<div class="row"><select class="grow" aria-label="Habit"${S.mode==='flow'?' disabled':''}><option>Any habit</option><option>Piano</option><option>Cooking</option></select><input class="mono" style="width:66px;text-align:right" value="20" aria-label="Minutes"${S.mode==='flow'?' disabled':''}><select aria-label="Schedule"${S.mode==='flow'?' disabled':''}><option>daily</option><option>weekly</option><option>once</option></select><button${S.mode==='flow'?' disabled':''}>+</button></div>`;
+ const long=`<div class="row"><span class="grow name" style="color:var(--muted)">One more goal slot</span><span class="fig mono dim">${tip('lg-tip',D.longGoal.price,'Buys one slot now. Each purchase raises the next price. '+D.longGoal.when+'.')}</span><button class="ghost"${S.mode==='flow'?' disabled':''}>Buy</button></div>`;
  return `<div class="row"><span class="grow">${tip('slots-tip','Goal slots','Available slots limit tracked goals. Completion is the tracking — each completion credits a Goal Generator\'s reserve.')}</span><span class="fig mono">${D.slots}</span></div>
   <div class="rows">${rows}</div><hr class="rule">${create}<hr class="rule">${long}`;
 }
@@ -326,7 +346,7 @@ function renderGoals(){
     <div class="row"><span class="grow">Progress</span><span class="fig mono">${g.times} ${g.count}</span></div>
    </div><span class="track" style="display:block;margin:10px 0"><i style="width:${g.frac*100}%"></i></span><hr class="rule">${goalList().split('<hr class="rule">')[2]}</div></div>`);
  }
- return wrap('GOALS',S.mode==='flow'?D.slots+' slots · locked':'',goalList());
+ return wrap('GOALS',S.mode==='flow'?D.slots+' slots · live':'',goalList());
 }
 
 /* ---------- Settings (modal) ---------- */
@@ -368,19 +388,27 @@ function renderHonesty(){
 }
 
 /* ---------- Focus control sheet ---------- */
+function liveGoals(){
+ return `<div class="head" style="padding-bottom:4px"><span class="eyeline">GOALS · LIVE</span></div><div class="rows">${D.goals.map(g=>`<div class="row"><span class="grow"><span class="name">${g.name}</span><span class="sub mono">${g.done?'complete':Math.round(g.frac*100)+'% · counting'}</span><span class="track"><i style="width:${g.done?100:Math.min(100,Math.round((g.frac+(S.elapsed||0)/3600)*100))}%"></i></span></span></div>`).join('')}</div>`;
+}
 function renderFocus(){
  const face=S.face||'plan';
+ const flow=S.mode==='flow';
  const tabs=[['plan','PLAN'],['habit','HABIT'],['goals','GOALS'],['history','HISTORY']];
- const enterRow=`<div class="row" style="border-top:0;padding-top:0"><span class="grow"><span class="name">Ready · Piano</span><span class="sub mono">20:00 planned · 2 goals tracked</span></span><button class="switch-in">Enter flow</button></div><hr class="rule">
- <div class="row"><span class="grow">${tip('pick-tip','Session habit','The practice this session credits — or none for unstructured practice.')}</span><select aria-label="Session habit"><option>Piano</option><option>Cooking</option><option>none selected</option></select></div><hr class="rule">`;
+ const enterRow=flow
+  ?`<div class="row" style="border-top:0;padding-top:0"><span class="grow"><span class="name">Running · Piano</span><span class="sub mono"><span data-elapsed>${fmt(S.elapsed||754)}</span> of 20:00 · target fires at 20:00</span></span><button class="switch-in" id="end-flow">End flow</button></div><hr class="rule">
+  <div class="row"><span class="grow">${tip('pick-tip','Session habit','Locked while the session runs — habit and plan were set at entry.')}</span><span class="name">Piano</span></div><hr class="rule">`
+  :`<div class="row" style="border-top:0;padding-top:0"><span class="grow"><span class="name">Ready · Piano</span><span class="sub mono">20:00 planned · 2 goals tracked</span></span><button class="switch-in">Enter flow</button></div><hr class="rule">
+  <div class="row"><span class="grow">${tip('pick-tip','Session habit','The practice this session credits — or none for unstructured practice.')}</span><select aria-label="Session habit"><option>Piano</option><option>Cooking</option><option>none selected</option></select></div><hr class="rule">`;
  let body='';
- if(face==='plan')body=enterRow+timePlan(false);
- else if(face==='habit')body=habitList();
+ if(face==='plan')body=enterRow+timePlan(false,flow)+(flow?liveGoals():'');
+ else if(face==='habit')body=habitFace();
  else if(face==='goals')body=goalList();
  else body=historyList();
  const nav=`<div class="facetabs" role="tablist" aria-label="Focus sections">${tabs.map(([k,l])=>`<button class="ftab" data-face="${k}" aria-pressed="${k===face}">${l}</button>`).join('')}</div>`;
+ const state=flow?'in flow · '+(face==='plan'?fmt(S.elapsed||754)+' in':face):face==='plan'?'ready · 20:00 planned':face;
  return `<div class="anchor"><section class="plate sheet" aria-label="Focus control sheet"><div class="plate-in">
-  <div class="head"><span class="name">FOCUS</span><span class="eyeline state">${face==='plan'?'ready · 20:00 planned':face}</span><button class="ghost" id="close-x" aria-label="Close" style="min-height:30px;padding:0 6px">✕</button></div>
+  <div class="head"><span class="name">FOCUS</span><span class="eyeline state">${state}</span><button class="ghost" id="close-x" aria-label="Close" style="min-height:30px;padding:0 6px">✕</button></div>
   ${nav}${body}</div></section></div>`;
 }
 
@@ -397,22 +425,69 @@ function modal(eyebrow,title,body,dismissible){
   ${body}</div></section></div>`;
 }
 
+/* ---------- banner reads ---------- */
+function fmt(s){s=Math.max(0,Math.round(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
+function syncSwitch(){const b=document.querySelector('#switch-mock');if(b)b.textContent=S.mode==='flow'?'Exit flow':'Enter flow'}
+function renderClock(){
+ const c=document.querySelector('#nav-time .mono'),w=document.querySelector('#clock-word');if(!c||!w)return;
+ if(S.mode==='flow'){c.textContent=fmt(S.elapsed||0);w.textContent='IN FLOW'}else{c.textContent='20:00';w.textContent='PLANNED'}
+}
+function barsFor(goals){
+ if(!goals.length)return{html:'',rest:0};
+ const open=goals.filter(g=>!g.done).sort((a,b)=>b.frac-a.frac);
+ const show=open.slice(0,3);
+ for(const g of goals.filter(g=>g.done)){if(show.length>=3)break;show.push(g)}
+ return{html:`<span class="gbars" aria-label="Goal progress">${show.map(g=>`<span class="gbar${g.done?' done':''}"><i style="width:${Math.round(g.frac*100)}%"></i></span>`).join('')}</span>`,rest:goals.length-show.length};
+}
+function renderBanner(){
+ const el=document.querySelector('#banner-reads');if(!el)return;
+ const g=D.goals.map(x=>S.mode==='flow'?{...x,frac:Math.min(1,x.frac+(S.elapsed||0)/3600)}:x);
+ const{html,rest}=barsFor(g);
+ el.innerHTML=`<span class="bread"><span class="name">Piano</span></span>${html}${rest>0?`<span class="cnt">+${rest}</span>`:''}`;
+}
+function renderBannerStudy(){
+ const row=(cap,habit,goals,note)=>{
+  const{html,rest}=barsFor(goals);
+  return `<div class="capt">${cap}</div><div class="consol" style="border:1px solid var(--soft)">
+   <button class="clock" tabindex="-1"><span class="mono">20:00</span><span class="eyeline">PLANNED</span></button><button class="flow" tabindex="-1">Enter flow</button>
+   <div class="banner-reads">${habit?`<span class="bread"><span class="name">${habit}</span></span>`:''}${html}${rest>0?`<span class="cnt">+${rest}</span>`:''}</div>
+   <div class="tiles"><button class="tile" tabindex="-1">◎</button><button class="tile" tabindex="-1">✎</button></div><button class="gear tile" tabindex="-1">⚙</button></div>
+   <div class="capt" style="padding-top:4px;text-transform:none;letter-spacing:0;font:400 13px 'IBM Plex Sans',sans-serif">${note}</div>`};
+ return row('Nothing tracked · no bars, no furniture','Piano',[],'The habit name leads; nothing else renders until a goal is tracked.')
+  +row('Every goal complete','Piano',[{frac:1,done:true},{frac:1,done:true}],'Full bars hold in the charge green until the slots are replaced.')
+  +row('Overflow · five tracked, two complete','Piano',[{frac:.9},{frac:.4},{frac:.05},{frac:1,done:true},{frac:1,done:true}],'In-progress goals take the three bars, nearest complete first; the count follows.')
+  +row('Zero habits','none selected',[],'The ADR’s word for the unstructured next session.');
+}
+setInterval(()=>{
+ if(S.mode!=='flow')return;
+ S.elapsed=(S.elapsed||0)+1;
+ const c=document.querySelector('#nav-time .mono');if(c)c.textContent=fmt(S.elapsed);
+ document.querySelectorAll('[data-elapsed]').forEach(n=>n.textContent=fmt(S.elapsed));
+ renderBanner();
+},1000);
+
 /* ---------- render ---------- */
 let drill=null;
 function render(){
  const el=document.querySelector('#surface');
  document.body.dataset.variant=S.variant;document.body.dataset.device=S.device;
+ syncSwitch();renderClock();renderBanner();
  if(S.surface==='time'&&drill){el.innerHTML=renderTime(drill);bindHistory();return}
  if(S.surface==='time'){el.innerHTML=renderTime();bindTime();bindHistory()}
  else if(S.surface==='focus'){
   el.innerHTML=renderFocus();bindCommon();
   document.querySelectorAll('[data-face]').forEach(b=>b.onclick=()=>{S.face=b.dataset.face;render()});
+  const ef=document.querySelector('#end-flow');if(ef)ef.onclick=()=>{S.mode='upgrade';S.elapsed=null;render()};
   if(document.querySelector('[data-drill]'))bindHistory();
   const bk=document.querySelector('.backdrop');if(bk)bk.onclick=e=>{if(e.target===bk){S.surface='time';render()}};
  }
+ else if(S.surface==='notes'){
+  el.innerHTML=renderNotes();bindCommon();
+  document.querySelectorAll('[data-notes-face]').forEach(b=>b.onclick=()=>{S.notesFace=b.dataset.notesFace;render()});
+ }
  else if(S.surface==='habit')el.innerHTML=renderHabit();
- else if(S.surface==='notes')el.innerHTML=renderNotes();
  else if(S.surface==='goals')el.innerHTML=renderGoals();
+ else if(S.surface==='banner')el.innerHTML=renderBannerStudy();
  else if(S.surface==='settings')el.innerHTML=renderSettings();
  else if(S.surface==='summary')el.innerHTML=renderSummary();
  else if(S.surface==='honesty')el.innerHTML=renderHonesty();
@@ -437,7 +512,7 @@ document.querySelector('#nav-time').onclick=()=>{S.surface='focus';drill=null;re
 document.querySelector('#nav-focus').onclick=()=>{S.surface='focus';drill=null;render()};
 document.querySelector('#nav-notes').onclick=()=>{S.surface='notes';render()};
 document.querySelector('#nav-settings').onclick=()=>{S.surface='settings';render()};
-document.querySelector('#switch-mock').onclick=()=>{S.mode=S.mode==='flow'?'upgrade':'flow';document.querySelector('#switch-mock').textContent=S.mode==='flow'?'Exit flow':'Enter flow';render()};
+document.querySelector('#switch-mock').onclick=()=>{S.mode=S.mode==='flow'?'upgrade':'flow';S.elapsed=S.mode==='flow'?754:null;render()};
 document.addEventListener('keydown',e=>{
  if(e.target.matches('input,textarea,select,[contenteditable]'))return;
  if(e.key==='Escape'){document.querySelectorAll('.tooltip-host').forEach(h=>h.classList.remove('show'));document.querySelectorAll('.tip').forEach(t=>t.setAttribute('aria-expanded','false'))}
@@ -446,7 +521,7 @@ document.addEventListener('keydown',e=>{
 const sel=document.querySelector('#surface-select');
 Object.entries(NAMES).forEach(([k,v])=>{const o=document.createElement('option');o.value=k;o.textContent=v;sel.append(o)});
 sel.onchange=()=>{S.surface=sel.value;drill=null;render()};
-document.querySelector('#mode-select').onchange=e=>{S.mode=e.target.value;render()};
+document.querySelector('#mode-select').onchange=e=>{S.mode=e.target.value;S.elapsed=S.mode==='flow'?754:null;render()};
 document.querySelector('#device-select').onchange=e=>{S.device=e.target.value;render()};
 const variants=['A','B','C'];
 function renderVariant(){document.querySelector('#variant-label').textContent=S.variant+' · '+VNAMES[S.variant]}
@@ -467,7 +542,7 @@ if(['upgrade','flow'].includes(q.get('mode')))S.mode=q.get('mode');
 if(q.get('habit'))S.habitPick=q.get('habit');
 if(['plan','habit','goals','history'].includes(q.get('face')))S.face=q.get('face');
 sel.value=S.surface;document.querySelector('#mode-select').value=S.mode;document.querySelector('#device-select').value=S.device;
-if(S.mode==='flow')document.querySelector('#switch-mock').textContent='Exit flow';
+if(S.mode==='flow'){S.elapsed=754;document.querySelector('#switch-mock').textContent='Exit flow'}
 renderVariant();render();
 </script>
 </body></html>
