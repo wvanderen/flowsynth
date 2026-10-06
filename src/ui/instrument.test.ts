@@ -87,6 +87,48 @@ describe("the tooltip layer's pinning and dismissal", () => {
     expect(escaped).toBe(0);
   });
 
+  it.each(["focusin", "pointerover"])("Escape dismisses %s disclosure and preserves the next Escape", (access) => {
+    const { first } = tipHost();
+    first.focus();
+    first.dispatchEvent(access === "focusin"
+      ? new FocusEvent(access, { bubbles: true })
+      : new PointerEvent(access, { bubbles: true }));
+    const body = document.getElementById("body-a")!;
+    expect(body.classList.contains("inst-show")).toBe(true);
+    const escape = new KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+    first.dispatchEvent(escape);
+    expect(body.classList.contains("inst-show")).toBe(false);
+    expect(document.activeElement).toBe(first);
+    let passed = false;
+    const listener = () => { passed = true; };
+    document.addEventListener("keydown", listener);
+    first.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    document.removeEventListener("keydown", listener);
+    expect(passed).toBe(true);
+    first.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    first.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    expect(body.classList.contains("inst-show")).toBe(true);
+  });
+
+  it("Escape dismisses hover even when keyboard focus is elsewhere", () => {
+    const { first } = tipHost();
+    first.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(document.getElementById("body-a")!.classList.contains("inst-show")).toBe(false);
+  });
+
+  it("surface closure and tap-away dismiss focus and hover as well as pins", () => {
+    const { host, first } = tipHost();
+    first.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    first.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+    first.click();
+    closeTooltips(host);
+    expect(document.getElementById("body-a")!.classList.contains("inst-show")).toBe(false);
+    first.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    document.body.click();
+    expect(document.getElementById("body-a")!.classList.contains("inst-show")).toBe(false);
+  });
+
   it("Escape with nothing pinned passes through untouched", () => {
     tipHost();
     let escaped = 0;

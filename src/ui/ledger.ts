@@ -13,7 +13,7 @@ import { noteNameOf } from "../engine/lattice";
 import type { Contribution, GameState, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
 import { chordTermLabel, formatBalance, formatFixed, formatInt, formatNumber } from "./format";
-import { wireTooltips } from "./instrument";
+import { tooltipBodies, wireTooltips } from "./instrument";
 import { liveAttr, liveSet } from "./live";
 import { META } from "./meta";
 
@@ -256,7 +256,10 @@ function synthChordNote(state: GameState, snapshot: RateSnapshot, contribution: 
 // The details' live slots: one fill per render, keyed per module, from the
 // same record the builder printed — the tick never rewords a leg.
 export function updateRateDetailsLive(scope: ParentNode, state: GameState, snapshot: RateSnapshot): void {
-  const set = (live: string, content: string) => liveSet(scope, live, content);
+  const roots = [scope, ...tooltipBodies(scope)];
+  const set = (live: string, content: string) => {
+    for (const root of roots) liveSet(root, live, content);
+  };
   set(RATE_TOTAL_SLOT, `${formatNumber(snapshot.rate)} ν/s`);
   for (const contribution of snapshot.contributions.values()) {
     const module = state.modules.find((m) => m.id === contribution.moduleId);

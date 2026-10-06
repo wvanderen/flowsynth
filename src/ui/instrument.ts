@@ -83,11 +83,22 @@ function sync(tip: HTMLElement): void {
   if (show) place(tip, body);
 }
 
-// Pin or unpin every pinned tooltip in the scope, restoring each trigger's
+// Portaled bodies still belong to the surface containing their triggers.
+// Callers updating live content include these roots without reaching into
+// another roster's tooltip (both channels can exist simultaneously).
+export function tooltipBodies(host: ParentNode): HTMLElement[] {
+  return [...host.querySelectorAll<HTMLElement>(".inst-tip")]
+    .map(bodyOf)
+    .filter((body): body is HTMLElement => body !== null && portaled.has(body));
+}
+
+// Dismiss every access state in the scope, restoring each trigger's
 // expanded state — the one teardown every dismissal path shares.
 export function closeTooltips(host: ParentNode): void {
-  for (const tip of host.querySelectorAll<HTMLElement>(".inst-tip.show")) {
-    tip.classList.remove("show");
+  for (const tip of host.querySelectorAll<HTMLElement>(".inst-tip.over, .inst-tip.focused, .inst-tip.show")) {
+    // Keep focus on its control. Clearing the access states hides the body
+    // until a fresh pointer entry, focus entry, or explicit tap opens it.
+    tip.classList.remove("show", "over", "focused");
     tip.querySelector(".inst-tip-trigger")?.setAttribute("aria-expanded", "false");
     sync(tip);
   }
@@ -138,18 +149,19 @@ export function wireTooltips(host: ParentNode): void {
       event.stopPropagation();
       return;
     }
-    // A tap anywhere else in the surface dismisses: the pinned tooltip is
+    // A tap anywhere else in the surface dismisses: the tooltip is
     // transient state, not furniture.
     closeTooltips(host);
   });
-  // A tap that never enters the surface dismisses too — a pinned tooltip
+  // A tap that never enters the surface dismisses too — a tooltip
   // must not outlive the tap that moves the pointer elsewhere — and the
   // same pass reaps whatever orphan a rebuild left behind.
   document.addEventListener(
     "click",
     (event) => {
+      if (host instanceof Node && !host.isConnected) return;
       if (event.target instanceof Node && host.contains(event.target)) return;
-      if (host.querySelector(".inst-tip.show")) closeTooltips(host);
+      closeTooltips(host);
       sweep();
     },
     true,
@@ -166,14 +178,14 @@ export function wireTooltips(host: ParentNode): void {
     },
     true,
   );
-  host.addEventListener("keydown", (event) => {
+  document.addEventListener("keydown", (event) => {
+    if (host instanceof Node && !host.isConnected) return;
     if ((event as KeyboardEvent).key !== "Escape") return;
-    const open = host.querySelector<HTMLElement>(".inst-tip.show .inst-tip-trigger");
+    const open = host.querySelector<HTMLElement>(".inst-tip.show, .inst-tip.focused, .inst-tip.over");
     if (!open) return;
     // Escape dismisses the tooltip first and the surface never sees it:
     // the sheet beneath stays until a second Escape.
     event.stopPropagation();
     closeTooltips(host);
-    open.blur();
-  });
+  }, true);
 }
