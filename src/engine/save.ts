@@ -153,6 +153,12 @@ export function deserialize(text: string): LoadResult {
   // the per-module surface does: a pre-wave-3 entry carries the count
   // alone, and the set waits empty beneath it.
   normalizeChordDiscovery(merged.chordDiscovery);
+  // The allocation retention hint (issue #258) lenient-defaults the same
+  // way: a save written before the capacity economy carries no keys, and
+  // the next allocation simply falls back to the solver's stable order.
+  if (!Array.isArray(raw.activeChords)) {
+    merged.activeChords = [];
+  }
   // The habit builds (ADR-0046, wave 4) lenient-default the same way: a
   // habit saved before the builds wave carries no build, and unknown node
   // ids drop — the catalog is code, the save only ids. The unlocks

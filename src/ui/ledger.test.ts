@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
-import { computeRates } from "../engine/economy";
+import { allocateRates, computeRates } from "../engine/economy";
 import { syncChordDiscoveries } from "../engine/library";
 import { fresh, give, sumSynthValues } from "../engine/fixtures";
 import { hex } from "../engine/hex";
@@ -146,5 +146,71 @@ describe("portaled rate legs", () => {
     updateRateDetailsLive(hosts[1]!, state, changed);
     expect(bodies[1]!.textContent).toBe(bodies[0]!.textContent);
     for (const body of bodies) expect(body.parentElement).toBe(document.body);
+  });
+});
+
+describe("the capacity read in the rate details (issue #258)", () => {
+  function allocated(state: Parameters<typeof allocateRates>[0]) {
+    return allocateRates(state, false).snapshot;
+  }
+
+  it("every synth row carries the Capacity leg and names its idle candidates", () => {
+    const state = fresh();
+    // C4 with a doubled G: one Fifth earns, the other stays a recognized
+    // idle — the row reads 1/1 and names the idle candidate without
+    // implying a production gain.
+    give(state, "additive", hex(1, 0));
+    give(state, "additive", hex(1, 1));
+    const snapshot = allocated(state);
+    expect(snapshot.allocation).toBeDefined();
+    const sheet = document.createElement("div");
+    sheet.innerHTML = rateDetailsHtml(state, snapshot, false);
+    for (const synth of sheet.querySelectorAll(".rd-synth")) {
+      const cap = [...synth.querySelectorAll(".rd-leg")].find((row) => row.textContent!.includes("Capacity"));
+      expect(cap!.querySelector(".rd-val")!.textContent).toMatch(/^\d\/1$/);
+    }
+    const busy = snapshot.allocation!.active.flatMap((instance) => instance.memberIds);
+    for (const id of busy) {
+      const row = sheet.querySelector(`[data-module-id="${id}"]`)!;
+      expect(row.textContent).toContain("idle — earns nothing:");
+      expect(row.textContent).toContain("Fifth ×1.3");
+    }
+    // The live slots fill with the same wording.
+    const live = document.createElement("div");
+    live.innerHTML = rateDetailsHtml(state, snapshot, true);
+    updateRateDetailsLive(live, state, snapshot);
+    for (const id of busy) {
+      expect(live.querySelector(`[data-live="s-${id}-cap"]`)!.textContent).toBe("1/1");
+      expect(live.querySelector(`[data-live="s-${id}-idl"]`)!.textContent).toContain("idle — earns nothing");
+    }
+  });
+
+  it("a chordless row reads 0/1 with no idle note", () => {
+    const state = fresh();
+    const island = give(state, "additive", hex(5, 0));
+    const snapshot = allocated(state);
+    const sheet = document.createElement("div");
+    sheet.innerHTML = rateDetailsHtml(state, snapshot, false);
+    const row = sheet.querySelector(`[data-module-id="${island.id}"]`)!;
+    const cap = [...row.querySelectorAll(".rd-leg")].find((leg) => leg.textContent!.includes("Capacity"));
+    expect(cap!.querySelector(".rd-val")!.textContent).toBe("0/1");
+    expect(row.textContent).not.toContain("idle — earns nothing");
+  });
+
+  it("the silent voice's effect line carries its capacity spend", () => {
+    const state = fresh();
+    // A G with a Harmonizer on G, alone on their island: the G-Octave is
+    // the only candidate, and the silent voice spends its unit in it.
+    state.modules[0]!.pos = hex(9, 0); // the opening C4, out of earshot
+    state.cells.push(hex(9, 0));
+    state.cells.push(hex(1, 0), hex(1, 1));
+    const harmonizer = give(state, "harmonizer", hex(1, 1));
+    give(state, "additive", hex(1, 0));
+    const snapshot = allocated(state);
+    expect(snapshot.allocation!.used.get(harmonizer.id)).toBe(1);
+    const sheet = document.createElement("div");
+    sheet.innerHTML = rateDetailsHtml(state, snapshot, false);
+    const row = [...sheet.querySelectorAll(".rd-other-row")].find((other) => other.textContent!.includes("sings"))!;
+    expect(row.textContent).toContain("capacity 1/1");
   });
 });

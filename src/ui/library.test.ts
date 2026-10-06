@@ -142,4 +142,17 @@ describe("field-guide cards", () => {
     expect(html).toContain("library-hairline");
     expect(html).toContain("width:0.0%");
   });
+
+  it("a discovered card names its singing state — active bonus or recognized idle (#258)", () => {
+    const record: ChordDiscovery = { formed: true, firstFormedAt: 1, rootsHeard: 1, roots: [0] };
+    const singing = libraryCardHtml(def("Major triad"), record, true);
+    expect(singing).toContain("singing now");
+    expect(singing).toContain("library-state-active");
+    expect(singing).toContain('class="library-card singing"');
+    const idle = libraryCardHtml(def("Major triad"), record, false);
+    expect(idle).toContain("heard — not singing");
+    expect(idle).not.toContain("singing now");
+    // The default is the honest one: recognized, not singing.
+    expect(libraryCardHtml(def("Major triad"), record)).toContain("heard — not singing");
+  });
 });

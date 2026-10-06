@@ -518,6 +518,14 @@ export interface GameState {
   // rung it. Persists through prestige like the feats ledger;
   // lenient-defaults to {} at load.
   chordDiscovery: Record<string, ChordDiscovery>;
+  // The live allocation's retention hint (issue #258, the harmonic-
+  // capacity design): the active instance keys of the last authoritative
+  // allocation. The engine's allocation sync reads it as the solver's
+  // `keep` hint and writes the new active keys back, so equal-output
+  // allocations hold their active set across recomputation — and,
+  // persisted, across save/reload. The empty list simply falls back to the
+  // solver's stable order; lenient-defaults to [] at load.
+  activeChords: string[];
   session: SessionState | null;
   // The last session's loud summary (§5.7): set at every session end,
   // dismissed once by the player, replaced by the next session's end.
@@ -555,6 +563,42 @@ export interface NamedChordTerm {
   instances: number;
   moduleIds: string[];
   root: number;
+}
+
+// One complete voice-set the board recognized (issue #258, the harmonic-
+// capacity design): the atom of allocation. Active instances earn their
+// bonus on every member and consume one capacity unit apiece; recognized
+// but idle instances earn nothing and spend nothing — they still count as
+// discoveries. `key` is the stable identity (pattern, root, sorted
+// members) allocations retain across recomputation.
+export interface RecognizedInstance {
+  key: string;
+  name: string;
+  root: number;
+  bonus: number;
+  memberIds: string[];
+}
+
+// The live board's whole-chord allocation summary (issue #258): the reads
+// every surface needs to distinguish recognized chords from active
+// bonuses. Present only when the snapshot came through the authoritative
+// allocation pass; the plain recognizer's snapshots leave it unset.
+export interface AllocationSummary {
+  // The economy-wide per-voice budget — one at this stage — and the
+  // units each singing voice's active instances consume.
+  capacity: number;
+  used: Map<string, number>;
+  // The selected instances. Active seams and bonus terms read these
+  // alone.
+  active: readonly RecognizedInstance[];
+  // Their keys, as a set — the "is this term earning?" test.
+  activeKeys: ReadonlySet<string>;
+  // Every complete voice-set the board recognized, active or not — the
+  // discovery read and the idle candidates' source.
+  recognized: readonly RecognizedInstance[];
+  // False when the solver's budget tripped and the best incumbent stands
+  // uncertified — never silently substituted.
+  certified: boolean;
 }
 
 export interface Contribution {
@@ -621,6 +665,10 @@ export interface RateSnapshot {
   mutatorForgeRate: number;
   contributions: Map<string, Contribution>;
   chargeStrength: Map<string, number>;
+  // The authoritative allocation's summary (issue #258) when this snapshot
+  // came through the allocating pass — the default recognizer leaves it
+  // unset, and readers must treat absence as "no allocation read".
+  allocation?: AllocationSummary;
 }
 
 export interface AdvanceResult {

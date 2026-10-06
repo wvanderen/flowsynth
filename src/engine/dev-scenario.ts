@@ -1,8 +1,6 @@
-import { CATEGORY_OF } from "./constants";
-import { computeRates, mutatorAt, mutatorMagnitude, type ChordPass } from "./economy";
+import { allocateRates } from "./economy";
 import { createInitialState, createModule } from "./state";
-import { allocateChords, type AllocationRead, type AllocationVoiceParams } from "./allocation";
-import type { ChordAnalysis } from "./chords";
+import type { AllocationRead } from "./allocation";
 import type { GameState, ModuleType, RateSnapshot } from "./types";
 
 // The development board's scenario (issue #257): a fixed, deterministic
@@ -53,50 +51,23 @@ export function createDevScenario(): GameState {
   return state;
 }
 
-// The chordless pass — the weights' source. Every non-chord leg of the
-// real rate pass shows up in a voice's chordless final ν/s: local charge,
-// the adjacent booster, the active build's factors, achievements,
-// discoveries. Resonance rides separately (it multiplies only
-// participants, so the solver carries it beside the weight).
-const emptyPass: ChordPass = (): ChordAnalysis => ({
-  namedChords: [],
-  voiceMultiplier: new Map(),
-  formationQ: new Map(),
-  namedFormation: new Map(),
-  participation: new Map(),
-});
-
+// The development board's result: the allocated snapshot plus the raw
+// solver read the board's rows and stress table inspect.
 export interface DevBoardResult {
   snapshot: RateSnapshot;
   read: AllocationRead;
 }
 
-// The development board's one computation: chordless weights through the
-// real engine, whole-chord allocation against them, then the allocated
-// analysis riding the same real engine — the rate, every voice's final
-// ν/s, and the capacity reads all come from the one seam. The rate pass
-// threads its own named-bonus scale into the allocator (the active
-// build's pitch-ear factor, exactly as the default chord pass receives
-// it), and the returned allocation's keys feed the next call's retention
-// hint.
+// The development board's one computation: the same authoritative
+// two-pass the live game runs (economy.allocateRates — chordless weights
+// through the real engine, whole-chord allocation against them, then the
+// allocated analysis riding the same real engine), with the board's
+// configurable capacity and retention hint threaded through. The returned
+// allocation's keys feed the next call's hint.
 export function allocatedDevScenarioRates(
   scenario: GameState,
   capacity: number,
   keep: ReadonlySet<string> | null,
 ): DevBoardResult {
-  const bare = computeRates(scenario, true, emptyPass);
-  const params = new Map<string, AllocationVoiceParams>();
-  for (const module of scenario.modules) {
-    const category = CATEGORY_OF[module.type];
-    if (category !== "oscillator" && category !== "silentVoice") continue;
-    const mutator = mutatorAt(scenario, module.pos);
-    const resonance = mutator && mutator.family === "resonance" ? mutatorMagnitude(mutator.family, mutator.rarity) : 0;
-    params.set(module.id, { weight: bare.contributions.get(module.id)?.value ?? 0, resonance });
-  }
-  let read: AllocationRead | null = null;
-  const snapshot = computeRates(scenario, true, (singers, spacers, bonusScale) => {
-    read = allocateChords(singers, spacers, { capacity, params, bonusScale, ...(keep ? { keep } : {}) });
-    return read.analysis;
-  });
-  return { snapshot, read: read! };
+  return allocateRates(scenario, true, { capacity, ...(keep ? { keep } : {}) });
 }

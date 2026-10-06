@@ -214,15 +214,22 @@ function hairlineHtml(record: ChordDiscovery | undefined): string {
 
 // One field-guide card: glyph, name, bonus, hairline — nothing else on a
 // discovered card, and the glyph-only silhouette (hairline still at the
-// bottom edge) on an undiscovered one.
-export function libraryCardHtml(def: NamedChordDef, record: ChordDiscovery | undefined): string {
+// bottom edge) on an undiscovered one. `singing` distinguishes the class's
+// active bonus from its mere recognition (issue #258): a discovered class
+// whose instances the allocation left idle reads as heard, never as
+// earning.
+export function libraryCardHtml(def: NamedChordDef, record: ChordDiscovery | undefined, singing: boolean = false): string {
   if (record?.formed !== true) {
     return `<article class="library-card locked">${chordGlyphSvg(def, false)}${hairlineHtml(record)}</article>`;
   }
-  return `<article class="library-card">
+  const state = singing
+    ? `<p class="library-state mono library-state-active">singing now</p>`
+    : `<p class="library-state mono">heard — not singing</p>`;
+  return `<article class="library-card${singing ? " singing" : ""}">
     ${chordGlyphSvg(def, true)}
     <h3>${def.name}</h3>
     <p class="library-bonus mono">×${formatNumber(1 + def.bonus)} while it sings</p>
+    ${state}
     ${hairlineHtml(record)}
   </article>`;
 }
