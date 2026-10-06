@@ -37,8 +37,8 @@ import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chordMarkCovers, chipWidth, type ChordMark, type ChordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
-import { formatBalance, formatDate, formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
-import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG } from "./ledger";
+import { formatDate, formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
+import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG } from "./ledger";
 import { closeTooltips, wireTooltips } from "./instrument";
 import { libraryCardHtml } from "./library";
 import { discoveryCount, discoveryBoostOf, rootsHeardOf } from "../engine/library";
@@ -808,7 +808,7 @@ function toolActions(): ToolAction[] {
       svg: TOOL_CATALOG_SVG,
       label: "Catalog",
       run: (app) => app.openModal("catalog"),
-      title: (app) => (app.state.mode === "upgrade" ? "Catalog — starter-shelf offers and board cells" : "Catalog — purchases happen between sessions"),
+      title: (app) => (app.state.mode === "upgrade" ? "Catalog — the nous shop and the Arete catalog" : "Catalog — purchases happen between sessions"),
       disabled: (app) => app.state.mode !== "upgrade",
     },
     {
@@ -3170,6 +3170,11 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
           ? [app.state.summary?.sessionNumber ?? null, app.state.summary?.earned ?? null, app.state.summary?.rollsFlow ?? 0, app.state.summary?.rollsForge ?? 0, app.state.summary?.rollsMutator ?? 0]
             : kind === "catalog"
               ? [
+                  // The tabbed shop's own identity (issue #271): the face,
+                  // the balance, and every owned flag. The mode rides
+                  // modalKey, so entering or leaving flow re-renders the
+                  // muted button states.
+                  app.ui.catalogFace,
                   app.ui.showAcquired,
                   wholeNous(app.state),
                   JSON.stringify(app.state.purchased),
@@ -3177,12 +3182,12 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                   app.state.activatedApps.join("|"),
                   // Module-upgrade rows reprice with levels, moves, and the roster.
                   app.state.modules.map((m) => `${m.id}:${m.level}:${m.rarity}:${m.pos ? "d" : "i"}`).join("|"),
+                  catalogOpen(app.state),
+                  app.state.arete,
+                  app.state.catalogEntryOwned,
+                  app.state.rollPoolJoined,
+                  app.state.horizonBroken,
                 ]
-              // The Arete sheet's own identity (issue #197): the balance and
-              // the owned flags. The mode rides modalKey, so entering or
-              // leaving flow re-renders the inert/active button states.
-              : kind === "arete"
-                ? [app.state.arete, app.state.catalogEntryOwned, app.state.rollPoolJoined]
               : kind === "achievements"
                 // Quantized progress: an open page refreshes when a bar visibly
                 // moves, not on every clock tick.
@@ -3228,9 +3233,11 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   }
   backdrop.hidden = false;
   content.dataset.renderKey = renderKey;
+  // The catalog is the one fixed-frame sheet (issue #271): the class swaps
+  // the free modal box for the 620×600 clipped panel (74vh phone sheet).
+  content.classList.toggle("catalog-modal", kind === "catalog");
   if (kind === "settings") renderSettingsModal(app, content);
   else if (kind === "catalog") renderCatalogModal(app, content);
-  else if (kind === "arete") renderAreteCatalogModal(app, content);
   else if (kind === "forge") renderForgeModal(app, content, projected);
   else if (kind === "achievements") renderAchievementsModal(app, content, projected);
   else if (kind === "library") renderLibraryModal(app, content, live);
@@ -3470,10 +3477,98 @@ function shopBuyHtml(options: {
   return `<span class="shop-buy">${button}${small}</span>`;
 }
 
+// ── The catalog (issue #271) ────────────────────────────────────────────
+// The one tabbed shop behind the dock's (and thumb bar's) labeled Catalog
+// door. The face switch reads `ν nous` / `◇ Arete` and is the sheet's only
+// title — identity rides the active face's resource mark, and no balance
+// repeats inside (the ledgers own the figures). The frame is fixed at
+// every width — 620×600 on desktop, a 74%-height bottom sheet on phone —
+// so a face switch never resizes it; the switch and identity stay pinned
+// while the body scrolls. The arete face appears at the first banked
+// Arete (the prestige-count lock, never the balance): before the Mutator
+// entry it is the single centered unlock lock screen; the purchase
+// reveals Upgrades (the entry's ACQUIRED rewards line, the inert
+// Accelerator placeholder, the Horizon break) and Unlocks (the roll-pool
+// join, empty once joined). Prices mute when unaffordable or in flow
+// ("spent between sessions"). One feats surface per screen stands
+// elsewhere (ADR-0030 unamended).
 function renderCatalogModal(app: App, content: HTMLElement): void {
-  const { state, ui } = app;
-  const shelfTypes = Object.keys(BALANCE.shelfPrices) as (keyof typeof BALANCE.shelfPrices)[];
+  const { ui } = app;
+  const areteFace = ui.catalogFace === "arete";
+  const faceTab = (face: "nous" | "arete", mark: string, word: string): string =>
+    `<button class="catalog-face-tab" data-catalog-face="${face}" aria-pressed="${ui.catalogFace === face}"${
+      face === "arete" && !catalogOpen(app.state)
+        ? ' disabled title="Banked by prestige — the Arete face appears at the first reset"'
+        : ` title="${face === "nous" ? "The nous shop" : "The Arete catalog"}"`
+    }>${mark}<span>${word}</span></button>`;
+  const identity = areteFace
+    ? `<span class="catalog-identity" aria-hidden="true">${ARETE_SVG}</span>`
+    : `<span class="catalog-identity catalog-identity-nous" aria-hidden="true"><b class="mono">ν</b></span>`;
+  content.innerHTML = `<div class="catalog-frame">
+    <div class="catalog-top">
+      <span class="catalog-face-switch" role="group" id="modal-title" aria-label="Catalog">${faceTab("nous", '<b class="mono">ν</b>', "nous")}${faceTab("arete", ARETE_SVG, "Arete")}</span>
+      ${identity}
+      <button id="close-modal" aria-label="Close dialog">✕</button>
+    </div>
+    <div class="catalog-body">${areteFace ? catalogAreteFaceHtml(app) : catalogNousFaceHtml(app)}</div>
+  </div>`;
+  content.querySelectorAll<HTMLButtonElement>("[data-catalog-face]").forEach((button) => {
+    button.addEventListener("click", () => {
+      app.ui.catalogFace = button.getAttribute("data-catalog-face") as "nous" | "arete";
+      app.render();
+    });
+  });
+  content.querySelectorAll<HTMLButtonElement>("[data-buy]").forEach((button) => {
+    button.addEventListener("click", () => {
+      app.buyShelf(button.getAttribute("data-buy") as keyof typeof BALANCE.shelfPrices);
+    });
+  });
+  byId("buy-arete-entry")?.addEventListener("click", () => app.buyCatalogEntryAction());
+  byId("buy-arete-pool")?.addEventListener("click", () => app.joinRollPoolAction());
+  byId("buy-arete-break")?.addEventListener("click", () => app.breakHorizonAction());
+  byId("catalog-show-acquired")?.addEventListener("change", (event) => {
+    app.ui.showAcquired = (event.target as HTMLInputElement).checked;
+    app.render();
+  });
+  wireTooltips(content);
+  wireClose(app);
+}
 
+// The catalog's price affordance (issue #271): the outline price button in
+// the register the row sells in — muted by the disabled state whenever the
+// price is out of reach or flow holds the purse ("spent between sessions")
+// — over its practice-minute countdown while arranging. The title reads the
+// one state the button is in (spend / not enough / between sessions); a
+// caller that needs its own words (the cell row's arm instruction) puts a
+// title in attrs and the built one stands down.
+function catalogPriceHtml(options: {
+  attrs?: string;
+  price: number;
+  affordable: boolean;
+  hold?: boolean;
+  countdown?: string | null;
+  arete?: boolean;
+}): string {
+  const unit = options.arete ? "Arete" : "ν";
+  const disabled = options.hold || !options.affordable;
+  const title = options.attrs?.includes("title=")
+    ? ""
+    : ` title="${options.hold ? "Purchases happen between sessions" : options.affordable ? `Spend ${formatInt(options.price)} ${unit}` : `Not enough ${unit === "ν" ? "nous" : "Arete"}`}"`;
+  return `<span class="shop-buy"><button class="price${options.arete ? " arete" : ""}" ${options.attrs ?? ""}${title}${
+    disabled ? " disabled" : ""
+  }>${formatInt(options.price)} ${unit}</button>${
+    options.countdown ? `<small class="shop-countdown mono">${options.countdown}</small>` : ""
+  }</span>`;
+}
+
+// The nous face: the starter shelf while offers stand, and the acquired
+// shelf behind its toggle. Cells are not a sheet row — the purchase arms
+// from the dock's New cell and commits on the board's frontier, where the
+// price lives.
+function catalogNousFaceHtml(app: App): string {
+  const { state, ui } = app;
+  const upgrade = state.mode === "upgrade";
+  const shelfTypes = Object.keys(BALANCE.shelfPrices) as (keyof typeof BALANCE.shelfPrices)[];
   // One-time shelf offers on top; acquired items demote below the checkbox.
   const openShelf = shelfTypes.filter((type) => !state.purchased[type]);
   const ownedShelf = shelfTypes.filter((type) => state.purchased[type]);
@@ -3484,115 +3579,126 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
   // path. The section returns with the ladder's first tenant, priced by
   // that tenant's effort; the rung markup is not preserved here.
 
-  // Cells (ADR-0013): the permanent catalog row. The price is not quoted
-  // here — it lives where the purchase commits, on the board's frontier.
-  const cellPrice = cellCost(state.cellsBought);
-  const cellAffordable = wholeNous(state) >= cellPrice;
-  const cellCountdown = upgradeCountdown(app, cellPrice);
-
-  content.innerHTML = `
-    ${modalTop("CATALOG")}
-    <h2 id="modal-title">Shape what comes next.</h2>
-    <p class="lead"><span title="${formatInt(state.nous)}">${formatBalance(state.nous)}</span> ν available.</p>
-    ${openShelf.length > 0 ? `
-      <h3 class="catalog-section-title">Starter shelf</h3>
-      <div class="shop-list">${openShelf.map((type) => {
-        const price = BALANCE.shelfPrices[type];
-        const affordable = wholeNous(state) >= price;
-        const countdown = upgradeCountdown(app, price);
-        const hint = SHELF_HINTS[type];
-        const moduleMeta = META[SHELF_MODULE[type]];
-        return `<div class="shop-item">
-          <div><h3>${moduleMeta.name}</h3><small>${moduleMeta.role}</small>${hint ? `<em class="shop-hint">${hint}</em>` : ""}</div>
-          ${shopBuyHtml({ attrs: `data-buy="${type}"`, price, affordable, countdown })}
-        </div>`;
-      }).join("")}</div>` : ""}
-    ${openShelf.length === 0 ? `<p class="empty-copy">The shelf is empty.</p>` : ""}
-    <h3 class="catalog-section-title">Cells</h3>
-    <div class="shop-list">
-      <div class="shop-item">
-        <div><h3>Board cell</h3><small>Empty hexes to place modules on — you choose where it touches the board.</small></div>
-        ${shopBuyHtml({
-          attrs: `id="buy-cell" title="${cellAffordable ? "Arm the purchase — pick a frontier hex on the board" : "Not enough nous"}"`,
-          price: cellPrice,
-          affordable: cellAffordable,
-          countdown: cellCountdown,
+  const shelfRows = openShelf
+    .map((type) => {
+      const price = BALANCE.shelfPrices[type];
+      const hint = SHELF_HINTS[type];
+      const moduleMeta = META[SHELF_MODULE[type]];
+      return `<article class="catalog-row">
+        <div><h3 class="t-condensed">${moduleMeta.name}</h3><p class="t-note">${moduleMeta.role}</p>${
+          hint ? `<p class="shop-hint t-note">${hint}</p>` : ""
+        }</div>
+        ${catalogPriceHtml({
+          attrs: `data-buy="${type}"`,
+          price,
+          affordable: wholeNous(state) >= price,
+          hold: !upgrade,
+          countdown: upgrade ? upgradeCountdown(app, price) : null,
         })}
-      </div>
-    </div>
-    <p class="small muted" style="margin:6px 0 0">Each purchase raises the next price.</p>
-    <label class="catalog-toggle"><input type="checkbox" id="catalog-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${ownedShelf.length}/${shelfTypes.length})</label>
-    ${ui.showAcquired && ownedShelf.length > 0 ? `
-      <h3 class="catalog-section-title">Acquired</h3>
-      <div class="shop-list catalog-owned">
-        ${ownedShelf.map((type) => `<div class="shop-item owned"><div><h3>${META[SHELF_MODULE[type]].name}</h3><small>${META[SHELF_MODULE[type]].role}</small></div><span class="activation-owned mono">in inventory</span></div>`).join("")}
-      </div>` : ""}
-    <p class="modal-note">Shelf offers hide once acquired; roll copies stay, as combination material.</p>`;
-  content.querySelectorAll<HTMLButtonElement>("[data-buy]").forEach((button) => {
-    button.addEventListener("click", () => {
-      app.buyShelf(button.getAttribute("data-buy") as keyof typeof BALANCE.shelfPrices);
-    });
-  });
-  byId("buy-cell")?.addEventListener("click", () => app.armCellPurchase());
-  byId("catalog-show-acquired")?.addEventListener("change", (event) => {
-    app.ui.showAcquired = (event.target as HTMLInputElement).checked;
-    app.render();
-  });
-  wireClose(app);
+      </article>`;
+    })
+    .join("");
+  return `<div class="catalog-sections">
+    ${
+      openShelf.length > 0
+        ? `<section>
+            <h2 class="t-condensed">Starter shelf</h2>
+            <div class="catalog-rows">${shelfRows}</div>
+          </section>`
+        : `<p class="empty-copy">The shelf is empty.</p>`
+    }
+  </div>
+  <label class="catalog-toggle"><input type="checkbox" id="catalog-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${ownedShelf.length}/${shelfTypes.length})</label>
+  ${
+    ui.showAcquired && ownedShelf.length > 0
+      ? `<div class="catalog-rows catalog-owned">${ownedShelf
+          .map(
+            (type) =>
+              `<article class="catalog-row"><div><h3 class="t-condensed">${META[SHELF_MODULE[type]].name}</h3><p class="t-note">${META[SHELF_MODULE[type]].role}</p></div><span class="activation-owned mono">in inventory</span></article>`,
+          )
+          .join("")}</div>`
+      : ""
+  }
+  <p class="catalog-note t-note">Shelf offers hide once acquired; roll copies stay, as combination material.</p>
+  ${upgrade ? "" : `<p class="modal-note">Purchases happen between sessions — enter upgrade mode to buy.</p>`}`;
 }
 
-// The Arete Catalog sheet (ADR-0040 as amended by ADR-0044, issue #197):
-// the board-ledger chip's door, holding exactly what no board affordance
-// carries — the Mutator tree's entry and roll-pool join, and the Horizon
-// break standing alone beside the tree (ADR-0042, issue #200), visible
-// from the first banked Arete so the goalpost shows through the whole
-// pre-break stretch. The sheet stays pure: the surface-bought ladders —
-// the Row unlock's banner, the Mutators layer's slot ladder — never appear
-// here as rows. Every purchase acts in upgrade mode only; outside it the
-// buttons stand inert and the sheet says so.
-function renderAreteCatalogModal(app: App, content: HTMLElement): void {
+// The arete face's one engraved mark: the acquisition word in the state
+// grammar's own class (the prototype's completion read).
+function catalogOwnedHtml(word: string): string {
+  return `<span class="shop-buy"><span class="st-acquired">${word}</span></span>`;
+}
+
+// The tooltip layer's one trigger beside a row name — deeper mechanics
+// live here, never in an expandable section (the instrument standards).
+function catalogTipHtml(id: string, name: string, text: string): string {
+  return `${name}<span class="inst-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${id}" aria-label="The mechanics of ${name}">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${text}</span></span>`;
+}
+
+// The Accelerator row's provisional figure (the prototype's): the row is
+// an inert placeholder — the price never charges, the button never arms —
+// so the number lives here alone, named for what it is.
+const ACCELERATOR_PLACEHOLDER_PRICE = 3;
+
+// The arete face: the single centered lock screen until the Mutator entry
+// is bought, then the Upgrades and Unlocks sections. The lock screen is
+// the face's one offer — the entry itself; the sections appear only once
+// it stands acquired.
+function catalogAreteFaceHtml(app: App): string {
   const { state } = app;
   const upgrade = state.mode === "upgrade";
-  const ownedWord = (word: string): string => `<span class="shop-buy"><span class="arete-owned mono">${word}</span></span>`;
-  const areteBuyButton = (id: string, price: number): string =>
-    `<span class="shop-buy"><button class="primary arete" id="${id}"${upgrade ? "" : " disabled"} title="${upgrade ? `Spend ${price} Arete` : "Arete is spent between sessions"}">${price} Arete</button></span>`;
-  const entry = state.catalogEntryOwned;
-  const joined = state.rollPoolJoined;
-  const broken = state.horizonBroken;
-  const entryBuy = entry ? ownedWord("entered") : areteBuyButton("buy-arete-entry", BALANCE.catalogEntryCost);
-  const poolBuy = joined
-    ? ownedWord("joined")
-    : entry
-      ? areteBuyButton("buy-arete-pool", BALANCE.rollPoolJoinCost)
-      : `<span class="shop-buy"><button class="primary arete" id="buy-arete-pool" disabled title="Enter the Mutator tree first">Enter first</button></span>`;
-  const breakBuy = broken ? ownedWord("broken") : areteBuyButton("buy-arete-break", BALANCE.horizonBreakCost);
-  content.innerHTML = `
-    ${modalTop("ARETE CATALOG")}
-    <h2 id="modal-title">What banked Arete buys.</h2>
-    <p class="lead"><b class="mono">${formatInt(state.arete)}</b> Arete banked. Purchases are permanent, survive prestige, and happen between sessions.</p>
-    <h3 class="catalog-section-title">Mutator tree</h3>
-    <div class="shop-list">
-      <div class="shop-item${entry ? " owned" : ""}">
-        <div><h3>Entry</h3><small>Activates the Mutator Grid, grants the Mutator Forge module itself, and unlocks the first Mutator slot.</small></div>
-        ${entryBuy}
-      </div>
-      <div class="shop-item${joined ? " owned" : ""}">
-        <div><h3>Roll-pool join</h3><small>The Mutator Forge type joins the module roll pool as one uniform, unweighted entry.</small></div>
-        ${poolBuy}
-      </div>
-    </div>
-    <h3 class="catalog-section-title">Horizon break</h3>
-    <div class="shop-list">
-      <div class="shop-item${broken ? " owned" : ""}">
-        <div><h3>Horizon break</h3><small>Score past the horizon line raises each prestige's claim, up to a hard cap — still banked only on reset.</small></div>
-        ${breakBuy}
-      </div>
+  if (!state.catalogEntryOwned) {
+    const affordable = state.arete >= BALANCE.catalogEntryCost;
+    const entryTitle = upgrade ? (affordable ? `Spend ${BALANCE.catalogEntryCost} Arete` : "Not enough Arete") : "Arete is spent between sessions";
+    return `<div class="entry-screen">
+      <button class="entry-buy" id="buy-arete-entry"${upgrade && affordable ? "" : " disabled"} title="${entryTitle}"><span>Unlock Mutator Layer</span><span class="mono">${BALANCE.catalogEntryCost} Arete</span></button>
     </div>
     ${upgrade ? "" : `<p class="modal-note">Arete is spent between sessions — enter upgrade mode to buy.</p>`}`;
-  byId("buy-arete-entry")?.addEventListener("click", () => app.buyCatalogEntryAction());
-  byId("buy-arete-pool")?.addEventListener("click", () => app.joinRollPoolAction());
-  byId("buy-arete-break")?.addEventListener("click", () => app.breakHorizonAction());
-  wireClose(app);
+  }
+  const areteBuy = (id: string, price: number): string =>
+    catalogPriceHtml({
+      attrs: `id="${id}"`,
+      price,
+      affordable: state.arete >= price,
+      hold: !upgrade,
+      arete: true,
+    });
+  const joined = state.rollPoolJoined;
+  const broken = state.horizonBroken;
+  return `<div class="catalog-sections">
+    <section>
+      <h2 class="t-condensed">Upgrades</h2>
+      <div class="catalog-rows">
+        <article class="catalog-row">
+          <div><h3 class="t-condensed">Mutator layer</h3><p class="t-note">Unlocks: Mutator Grid · 1 Mutator slot · 1 Mutator roll · this catalog</p></div>
+          ${catalogOwnedHtml("ACQUIRED")}
+        </article>
+        <article class="catalog-row">
+          <div><h3 class="t-condensed">${catalogTipHtml("cat-accel-tip", "Arete Accelerator", "A placeholder — no offer stands behind it yet; each prestige's claim still grows only with prestiges performed.")} <span class="kind">(placeholder)</span></h3></div>
+          ${catalogPriceHtml({ attrs: 'disabled title="A placeholder — no offer yet"', price: ACCELERATOR_PLACEHOLDER_PRICE, affordable: false, arete: true })}
+        </article>
+        <article class="catalog-row">
+          <div><h3 class="t-condensed">${catalogTipHtml("cat-break-tip", "Horizon break", "Score past the horizon line raises each prestige's claim, up to a hard cap — still banked only on reset.")}</h3></div>
+          ${broken ? catalogOwnedHtml("broken") : areteBuy("buy-arete-break", BALANCE.horizonBreakCost)}
+        </article>
+      </div>
+    </section>
+    <section>
+      <h2 class="t-condensed">Unlocks</h2>
+      <div class="catalog-rows">
+        ${
+          joined
+            ? ""
+            : `<article class="catalog-row">
+                <div><h3 class="t-condensed">${catalogTipHtml("cat-pool-tip", "Mutator Forge", "Will appear in future rolls — the type joins the module roll pool as one uniform, unweighted entry.")} <span class="kind">(module type)</span></h3><p class="t-note">Fill with charge → Mutator draft</p></div>
+                ${areteBuy("buy-arete-pool", BALANCE.rollPoolJoinCost)}
+              </article>`
+        }
+        ${joined ? `<p class="empty-copy">Nothing waits — future objects appear in future rolls.</p>` : ""}
+      </div>
+    </section>
+  </div>
+  ${upgrade ? "" : `<p class="modal-note">Arete is spent between sessions — enter upgrade mode to buy.</p>`}`;
 }
 
 function forgeEffect(type: ModuleInstance["type"], state: GameState): string {

@@ -569,18 +569,10 @@ h1, h2, h3, p { margin: 0; }
 .ledger-rate:hover .rate-hint, .ledger-rate:focus-within .rate-hint { color: var(--nous); border-color: var(--nous); }
 /* The arete read: the balance in its color, the canonical mark at 15px.
    Before the first prestige the slot stands dim — `— ◇` — the
-   unconditional telegraph that prestige will bank here. */
+   unconditional telegraph that prestige will bank here. A read, never a
+   door (issue #271): the Catalog segment owns the shop. */
 .ledger-arete { color: var(--arete); }
 .arete-mark svg { width: 15px; height: 15px; display: block; }
-button.ledger-arete {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  padding: 0;
-  font: inherit;
-}
-button.ledger-arete:hover:not(:disabled),
-button.ledger-arete:focus-visible { background: transparent; border-color: transparent; color: var(--arete-bright); }
 .arete-dim { color: var(--muted); }
 .arete-dim .arete-mark { color: var(--muted); }
 /* The hairline division, then the chips right-aligned: paired icon +
@@ -1094,24 +1086,10 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .game-info-strip .info-rate:hover .info-hint { color: var(--ink); }
 /* The strip's arete read (issue #270): the same grouped resource the
    ledger carries — the balance in the register, the canonical mark at
-   15px, the dim `— ◇` telegraph before the first prestige. From the first
-   prestige it keeps the sheet as its tap-through door until the Catalog
-   door absorbs it (issue #271). */
+   15px, the dim `— ◇` telegraph before the first prestige. A read, never
+   a door (issue #271): the thumb bar's Catalog segment owns the shop. */
 .game-info-strip .info-arete {
   color: var(--arete);
-}
-button.info-arete {
-  align-items: baseline;
-  border: 0;
-  background: none;
-  padding: 0;
-  font: inherit;
-}
-.game-info-strip button.info-arete:hover:not(:disabled),
-.game-info-strip button.info-arete:focus-visible {
-  background: none;
-  border-color: transparent;
-  color: var(--arete-bright);
 }
 .game-info-strip .info-arete.arete-dim { color: var(--muted); }
 
@@ -2160,12 +2138,6 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
 .candidate-tile .candidate-scaling { font: 10.5px var(--mono); color: var(--muted); text-align: center; }
 .candidate-tile .candidate-effect { font-size: 11.5px; color: var(--muted); text-align: center; line-height: 1.7; }
 
-.shop-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.shop-item { border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.shop-item button { white-space: nowrap; }
-.shop-item h3 { font-size: 13.5px; font-weight: 550; }
-.shop-item small { color: var(--muted); }
-.shop-item .price { font-family: var(--mono); white-space: nowrap; }
 .shop-buy { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .shop-countdown, .countdown { font: 11px var(--mono); color: var(--muted); white-space: nowrap; }
 .countdown { font-size: 11.5px; margin: 0 0 8px; white-space: normal; }
@@ -2486,7 +2458,7 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
      the bare total. */
   .rate-hint { display: none; }
   .rate-breakdown { display: none; }
-  .candidates, .shop-list { grid-template-columns: 1fr; }
+  .candidates { grid-template-columns: 1fr; }
   .app-popover { width: min(372px, calc(100cqw - 32px)); }
 }
 
@@ -2686,11 +2658,7 @@ body.cell-arming #grid .hex.buy-here { stroke-width: 2.5; stroke-dasharray: none
 select { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 5px; padding: 8px; max-width: 100%; }
 ::selection { background: var(--accent); color: var(--accent-ink); }
 
-.shop-list.catalog-owned .shop-item { opacity: 0.7; }
 .activation-owned { color: var(--charge); font-size: 12px; }
-/* The Arete sheet's owned mark (issue #197): the same shape as the shelf's,
-   wearing the Arete register instead of charge green. */
-.arete-owned { color: var(--arete); font-size: 12px; }
 .catalog-section-title { font: 10px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; }
 
 /* The shelf's one permanent hint (§5.8): the generator row says what charge
@@ -2712,4 +2680,118 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
   gap: 8px;
   margin-top: 4px;
+}
+
+/* ── The catalog (issue #271) ────────────────────────────────────────── */
+/* The one tabbed shop behind the Catalog door: a fixed clipped panel —
+   620×600 on desktop — whose face switch and identity stay pinned while
+   the body scrolls, so a face switch never resizes the frame. The
+   two-layer clip is the instrument panel's own (rim plate under face). */
+.modal.catalog-modal {
+  width: min(620px, 100%);
+  height: min(600px, 88vh);
+  max-height: none;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 1px;
+  background: var(--line-strong);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  clip-path: var(--inst-clip);
+}
+.catalog-frame {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-deep);
+  clip-path: var(--inst-clip);
+  padding: 14px 22px 18px;
+}
+.catalog-top { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.catalog-face-switch { display: flex; gap: 2px; margin-right: auto; }
+.catalog-face-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  min-height: 44px;
+  padding: 6px 10px;
+  font: 600 15px var(--font-condensed);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.catalog-face-tab svg { width: 14px; height: 14px; }
+.catalog-face-tab .mono { font-size: 14px; }
+.catalog-face-tab:hover:not(:disabled) { background: none; border-color: transparent; color: var(--ink); }
+.catalog-face-tab[aria-pressed="true"] { color: var(--ink); box-shadow: inset 0 -3px var(--ink); }
+.catalog-face-tab[data-catalog-face="nous"][aria-pressed="true"] { color: var(--nous); }
+.catalog-face-tab[data-catalog-face="arete"][aria-pressed="true"] { color: var(--arete); }
+.catalog-identity { display: flex; align-items: center; color: var(--arete); }
+.catalog-identity svg { width: 22px; height: 22px; }
+.catalog-identity .mono { font-size: 20px; }
+.catalog-identity-nous { color: var(--nous); }
+/* The scrollable body: the pinned head never moves; the content does. */
+.catalog-body { flex: 1; min-height: 0; overflow-y: auto; margin-top: 8px; }
+.catalog-sections { display: grid; gap: 24px; }
+.catalog-sections h2 { font: 600 17px var(--font-condensed); text-transform: uppercase; letter-spacing: 0.07em; margin: 0 0 2px; }
+.catalog-rows { display: grid; }
+/* Open divisions, never cards: rule-separated rows, name and note left,
+   the price affordance right. */
+.catalog-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 13px 0;
+  border-top: 1px solid var(--line-soft);
+}
+.catalog-row h3 { font-size: 15px; }
+.catalog-row p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+.catalog-row .kind { font: 400 11.5px var(--font-sans); text-transform: none; letter-spacing: 0; color: var(--muted); }
+.catalog-row .price { flex-shrink: 0; white-space: nowrap; font-family: var(--mono); font-size: 13px; }
+.catalog-row .price.arete { color: var(--arete); border-color: var(--arete-line); }
+.catalog-row .price.arete:hover:not(:disabled) { background: var(--arete-faint); border-color: var(--arete); }
+.catalog-note { font-size: 11.5px; color: var(--muted); margin: 8px 0 0; }
+.catalog-owned .catalog-row { opacity: 0.7; }
+/* The arete face's lock screen: the face's single centered offer, pre-entry. */
+.entry-screen { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+.entry-buy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 30px;
+  border-color: var(--arete-line);
+  color: var(--arete);
+  font: 600 20px var(--font-condensed);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.entry-buy .mono { font-size: 14px; text-transform: none; letter-spacing: 0.02em; }
+.entry-buy:hover:not(:disabled) { background: var(--arete-faint); border-color: var(--arete); }
+/* Phone: the frame becomes the 74%-height bottom sheet whose top edge
+   rises to the right (the prototype's sheet silhouette; the bottom edge
+   meets the screen square). Rim and face wear the SAME polygon — a
+   mismatched inner clip would show the plate through the face in corner
+   triangles. The viewport media query alone carries it — every modal
+   sheets on phone (the .sheet class is the rate gate's, below the 760px
+   container line). */
+@media (max-width: 600px) {
+  .modal.catalog-modal,
+  .catalog-frame {
+    clip-path: polygon(0 14px, 100% 0, 100% 100%, 0 100%);
+  }
+  .modal.catalog-modal {
+    height: 74vh;
+    max-height: none;
+    border-radius: 0;
+  }
+  .catalog-frame { padding: 12px 16px 16px; }
+  .catalog-row { gap: 10px; }
 }
