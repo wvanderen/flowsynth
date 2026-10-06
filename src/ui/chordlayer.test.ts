@@ -288,3 +288,34 @@ describe("selection emphasis (§6)", () => {
     expect(overlay.marks[0]!.voices).toEqual(["m1", "m2"]);
   });
 });
+
+describe("the idle candidates (issue #258)", () => {
+  it("inactive chords draw their own marks after the active ones, flagged idle", () => {
+    const overlay = overlayWith([chord("Fifth", ["m1", "m2"])], {
+      inactiveChords: [chord("Octave", ["m3", "m4"]), chord("Fifth", ["m1", "m3"])],
+    });
+    expect(overlay.marks).toHaveLength(3);
+    expect(overlay.marks[0]!.inactive).toBe(false);
+    expect(overlay.marks[0]!.key).toBe("chord-0");
+    for (const mark of overlay.marks.slice(1)) {
+      expect(mark.inactive).toBe(true);
+      expect(mark.key).toMatch(/^chord-idle-\d$/);
+    }
+  });
+
+  it("an inactive chord keeps its full geometry and hover identity", () => {
+    const overlay = overlayWith([chord("Fifth", ["m1", "m2"])], {
+      inactiveChords: [chord("Fifth", ["m3", "m4"])],
+    });
+    const idle = overlay.marks[1]!;
+    expect(idle.seams).toHaveLength(2);
+    expect(idle.voices).toEqual(["m3", "m4"]);
+    expect(idle.focused).toBe(true);
+  });
+
+  it("no inactive chords, no idle marks — the plain call is unchanged", () => {
+    const overlay = overlayWith([chord("Fifth", ["m1", "m2"])]);
+    expect(overlay.marks).toHaveLength(1);
+    expect(overlay.marks[0]!.inactive).toBe(false);
+  });
+});

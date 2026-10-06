@@ -11,8 +11,7 @@
 // the eager resume sync stamps silently (SyncOptions.silent).
 import { ARETE_HORIZON } from "./accumulator";
 import { BALANCE, SHELF_TYPES } from "./constants";
-import { analyzeChords } from "./chords";
-import { deployedVoices } from "./economy";
+import { displayedRates, maxChordFactorOf } from "./economy";
 import { isInFlowNote } from "./notes";
 import type { GameState } from "./types";
 
@@ -56,9 +55,14 @@ export interface AchievementDef {
 
 // Inputs the caller may know better than the state alone: charge only
 // exists live during flow, so the tick that has the rate snapshot passes
-// whether any module actually received charge.
+// whether any module actually received charge. The allocated pass's
+// maximum chord factor rides beside it (issue #258): the feats that read
+// production factors read the factor actually earned, and the tick that
+// already ran the authoritative allocation hands it over rather than
+// paying for a second solve.
 export interface AchievementContext {
   chargeDelivered: boolean;
+  maxChordFactor?: number;
 }
 
 const fraction = (numerator: number, denominator: number): AchievementProgress => ({
@@ -87,21 +91,13 @@ const ownsRare = (state: GameState): boolean => state.modules.some((m) => m.rari
 const rollsTaken = (state: GameState): number =>
   Math.max(0, state.forge.earned + state.flow.earned - state.bankedRolls.length);
 
-// The steepest local chord multiplier any single deployed voice sings
-// under (ADR-0036, raised by ADR-0049) — the same partition the rate pass
-// applies (only oscillators and silent voices sing; spacers conduct) —
-// computed straight from the board so the registry stays free of the rate
-// pass. Chords are local, so the feat asks what one voice carries, never a
-// board-wide product that stacks disjoint formations onto a single module.
-// The formation quality Q rides inside the factor (ADR-0049): Q counts
-// toward the ×2.
-function maxVoiceMultiplierOf(state: GameState): number {
-  const { singers, spacers } = deployedVoices(state);
-  let max = 0;
-  for (const factor of analyzeChords(singers, spacers).voiceMultiplier.values()) {
-    max = Math.max(max, factor);
-  }
-  return max;
+// The steepest final chord factor of one deployed voice: formation and
+// resonance included. Both ordinary and development gameplay read the
+// same snapshot their production uses; a tick/action caller passes its
+// existing snapshot's maximum to avoid a second rate pass.
+function maxVoiceMultiplierOf(state: GameState, ctx: AchievementContext): number {
+  if (ctx.maxChordFactor !== undefined) return ctx.maxChordFactor;
+  return maxChordFactorOf(displayedRates(state, true));
 }
 
 // The feat marks (issue #269): 23 unique stroke glyphs in the instrument's
@@ -305,8 +301,8 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     description: "Stack chord multipliers on one voice to ×2 — the Formation term counts.",
     // The written interval: two note heads beamed as one voice's chord.
     icon: glyph('<circle cx="8.5" cy="15.5" r="2.3"/><circle cx="15.5" cy="8.5" r="2.3"/><path d="M10.8 15.5V7l7-2.5V8.5"/>'),
-    evaluate: (s) => maxVoiceMultiplierOf(s) >= 2,
-    progress: (s) => fraction(maxVoiceMultiplierOf(s), 2),
+    evaluate: (s, ctx) => maxVoiceMultiplierOf(s, ctx) >= 2,
+    progress: (s, ctx) => fraction(maxVoiceMultiplierOf(s, ctx), 2),
   },
   {
     id: "fine-china",
@@ -403,6 +399,9 @@ export interface SyncOptions {
   // True when the caller has a live rate snapshot showing a module actually
   // receiving charge (the Spark trigger; charge exists only in flow).
   chargeDelivered?: boolean;
+  // The final snapshot's earned maximum chord factor (issue #258),
+  // including resonance. Absent, the feat uses the gated display pass.
+  maxChordFactor?: number;
   // The eager resume sync (ADR-0015 amended): already-satisfied milestones
   // grant silently on load — `unlockedAt` stamps, no toast, and nothing
   // joins a live session's "unlocked this session" row.
@@ -417,7 +416,10 @@ export interface SyncOptions {
 // already-unlocked feats never re-fire.
 export function syncAchievements(state: GameState, options: SyncOptions = {}): AchievementDef[] {
   if (state.sessionsCompleted === 0) return [];
-  const ctx: AchievementContext = { chargeDelivered: options.chargeDelivered ?? false };
+  const ctx: AchievementContext = {
+    chargeDelivered: options.chargeDelivered ?? false,
+    ...(options.maxChordFactor !== undefined ? { maxChordFactor: options.maxChordFactor } : {}),
+  };
   const now = options.now ?? Date.now();
   const unlocked: AchievementDef[] = [];
   for (const def of ACHIEVEMENTS) {

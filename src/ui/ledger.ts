@@ -9,6 +9,7 @@ import { accumulatorFill, claimOf, horizonReached } from "../engine/accumulator"
 import { ACHIEVEMENTS } from "../engine/achievements";
 import { catalogOpen } from "../engine/catalog";
 import { BALANCE, CATEGORY_OF, isOscillatorType, NAMED_CHORDS } from "../engine/constants";
+import { idleTermsOf } from "../engine/allocation";
 import { activeBuildGeneratorStrength, chargedFactor, hostPower } from "../engine/economy";
 import { discoveryCount } from "../engine/library";
 import { noteNameOf } from "../engine/lattice";
@@ -45,6 +46,12 @@ interface SynthLegs {
   chargeStrength: number;
   boost: number;
   discovery: number;
+  // The capacity read (issue #258): the singer's used/available whole-
+  // chord budget, and the recognized-but-idle candidates it qualifies for
+  // — named, never counted in the chord leg.
+  capacity: number;
+  used: number;
+  idleLabel: string;
 }
 
 // One oscillator's decomposition, straight off its contribution: the legs
@@ -58,6 +65,21 @@ interface SynthLegs {
 // mutator row joins the roster (ADR-0037).
 function synthLegsOf(state: GameState, snapshot: RateSnapshot, contribution: Contribution, module: ModuleInstance): SynthLegs {
   const terms = snapshot.namedChords.filter((chord) => chord.moduleIds.includes(contribution.moduleId)).map(chordTermLabel);
+  // The idle candidates (issue #258): recognized voice-sets the module
+  // sings in that the allocation didn't select — the shared idle mapping,
+  // deduplicated by identity so a doubled G's second Fifth reads once.
+  const allocation = snapshot.allocation;
+  const idle: string[] = [];
+  if (allocation) {
+    const seen = new Set<string>();
+    for (const term of idleTermsOf(allocation)) {
+      if (!term.moduleIds.includes(contribution.moduleId)) continue;
+      const identity = `${term.name}|${term.root}`;
+      if (seen.has(identity)) continue;
+      seen.add(identity);
+      idle.push(chordTermLabel(term));
+    }
+  }
   return {
     base: BALANCE.synthRate * hostPower(state, module),
     formationQ: contribution.formationQ,
@@ -71,6 +93,9 @@ function synthLegsOf(state: GameState, snapshot: RateSnapshot, contribution: Con
     chargeStrength: contribution.chargeStrength,
     boost: snapshot.achievementBoost,
     discovery: snapshot.discoveryBoost,
+    capacity: allocation?.capacity ?? 1,
+    used: allocation?.used.get(contribution.moduleId) ?? 0,
+    idleLabel: idle.join(" · "),
   };
 }
 
@@ -90,7 +115,11 @@ function effectText(state: GameState, contribution: Contribution, module: Module
   if (category === "silentVoice") {
     const uplift = BALANCE.silentVoiceUpliftPerLevel * module.level;
     const pitch = contribution.pitch !== null ? noteNameOf(contribution.pitch) : "mute";
-    return `sings ${pitch} · Formation ×${formatNumber(contribution.formationQ)} · +${Math.round(uplift * 100)}% per level to chord instances`;
+    // The capacity read (issue #258): silent voices spend a unit on every
+    // chord they sing in — the count rides their effect line.
+    const allocation = snapshot.allocation;
+    const capacity = allocation ? ` · capacity ${allocation.used.get(contribution.moduleId) ?? 0}/${allocation.capacity}` : "";
+    return `sings ${pitch} · Formation ×${formatNumber(contribution.formationQ)} · +${Math.round(uplift * 100)}% per level to chord instances${capacity}`;
   }
   if (category === "conduit") {
     const strength = snapshot.chargeStrength.get(contribution.moduleId) ?? 0;
@@ -103,6 +132,13 @@ function effectText(state: GameState, contribution: Contribution, module: Module
   }
   if (category === "forge") return `${formatNumber(contribution.value)} progress/s`;
   return "silent — conducts chords";
+}
+
+// The idle candidates' note (issue #258), one wording for the roster
+// builder's prefill and the tick's fill alike: recognized, not selected —
+// never a production claim.
+function idleNote(idleLabel: string): string {
+  return idleLabel ? `idle — earns nothing: ${idleLabel}` : "";
 }
 
 // The live-slot key scheme, one place: the roster builder and the tick's
@@ -126,9 +162,11 @@ function rowSlotTexts(state: GameState, snapshot: RateSnapshot, contribution: Co
       base: `${formatNumber(legs.base)} ν/s`,
       fmt: `×${formatNumber(legs.formationQ)}`,
       chd: `×${formatNumber(legs.chordMult)}`,
+      cap: `${legs.used}/${legs.capacity}`,
       inf: `+${Math.round(legs.infusorBonus * 100)}%`,
       chg: `×${formatNumber(legs.chargeFactor)}`,
       chgn: legs.chargeStrength > 0 ? `⌁${formatNumber(legs.chargeStrength)} charge` : "",
+      idl: legs.idleLabel,
     };
   }
   return { n: effectText(state, contribution, module, snapshot) };
@@ -213,6 +251,10 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
           `<div class="rd-leg"><span class="rd-leg-name">Chords</span>` +
           val(synthSlot(id, "chd"), slots.chd!) +
           `</div>` +
+          (snapshot.allocation ? `<div class="rd-leg"><span class="rd-leg-name">Capacity</span>` +
+          val(synthSlot(id, "cap"), slots.cap!) +
+          note(synthSlot(id, "idl"), idleNote(slots.idl!)) +
+          `</div>` : "") +
           `<div class="rd-leg"><span class="rd-leg-name">Booster</span>` +
           val(synthSlot(id, "inf"), slots.inf!) +
           `</div>` +
@@ -241,6 +283,11 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
     `<div class="rd-row rd-total"><span class="rd-name t-condensed">Rate</span>` +
     val(RATE_TOTAL_SLOT, `${formatNumber(snapshot.rate)} ν/s`) +
     `</div>` +
+    (snapshot.allocation ?
+      `<div class="rd-row rd-allocation-state"${snapshot.allocation.certified ? " hidden" : ""}>` +
+      `<span class="rd-name t-condensed">Allocation uncertified</span>` +
+      `<span class="inst-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-label="Why allocation is uncertified" aria-describedby="allocation-tip-${ns}-${seq}">ⓘ</button>` +
+      `<span class="inst-tip-body" id="allocation-tip-${ns}-${seq}" role="tooltip">Search budget reached. This development allocation is the best result found; maximum production is unproven.</span></span></div>` : "") +
     synths.join("") +
     (others.length > 0
       ? `<div class="rd-heading">Other modules — effects, no ν/s</div>${others.join("")}`
@@ -263,6 +310,9 @@ export function updateRateDetailsLive(scope: ParentNode, state: GameState, snaps
     for (const root of roots) liveSet(root, live, content);
   };
   set(RATE_TOTAL_SLOT, `${formatNumber(snapshot.rate)} ν/s`);
+  for (const status of scope.querySelectorAll<HTMLElement>(".rd-allocation-state")) {
+    status.hidden = snapshot.allocation?.certified !== false;
+  }
   for (const contribution of snapshot.contributions.values()) {
     const module = state.modules.find((m) => m.id === contribution.moduleId);
     if (!module) continue;
@@ -273,6 +323,8 @@ export function updateRateDetailsLive(scope: ParentNode, state: GameState, snaps
       set(synthSlot(id, "base"), slots.base!);
       set(synthSlot(id, "fmt"), slots.fmt!);
       set(synthSlot(id, "chd"), slots.chd!);
+      set(synthSlot(id, "cap"), slots.cap!);
+      set(synthSlot(id, "idl"), idleNote(slots.idl!));
       set(synthSlot(id, "inf"), slots.inf!);
       set(synthSlot(id, "chg"), slots.chg!);
       set(synthSlot(id, "chgn"), slots.chgn!);
@@ -386,10 +438,11 @@ export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
   // Structural key: the deployed roster (deployedRosterKey — a move changes
   // a note name, an upgrade a base figure), the active build (an equip or
   // habit switch folds into the legs), plus the counts the chips and the
-  // rate details' static boost legs read; every tick-moving value updates
-  // in place through the live slots, so an open popover or an expanded row
+  // rate details' static boost legs read, and the allocation gate's flip
+  // (issue #258) rebuilds the strip; every tick-moving value updates in
+  // place through the live slots, so an open popover or an expanded row
   // survives the clock.
-  const key = `${banked ? state.arete : "pre"}:${feats}:${discoveries}:${activeBuildKey(state)}:${deployedRosterKey(state)}`;
+  const key = `${banked ? state.arete : "pre"}:${feats}:${discoveries}:${!!snapshot.allocation}:${activeBuildKey(state)}:${deployedRosterKey(state)}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.innerHTML = `<div class="inst-panel ledger-panel"><div class="inst-panel-face ledger-face" role="group" aria-label="Production">
