@@ -1,4 +1,5 @@
 import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, hostPower, levelCost, levelsCost, longGoalCost, ritualAmpOf, wholeNous } from "../engine/economy";
+import { idleTermsOf, summaryTermsOf } from "../engine/allocation";
 import { claimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
 import { combinePreview, combineMutatorsPreview, levelable, type CombinePreview, upgradeAllPreview } from "../engine/actions";
@@ -25,7 +26,7 @@ import { poolOutstanding } from "../engine/trust";
 import { arcCardDue } from "../engine/arc";
 import { goalCapacity, goalRequiredSeconds, goalSummary, goalTrackerState, type GoalTrackerState } from "../engine/goals";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
-import type { DeployedModule, GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, MutatorInstance, NamedChordTerm, NoteEntry, Rarity, RateSnapshot } from "../engine/types";
+import type { DeployedModule, GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, MutatorInstance, NoteEntry, Rarity, RateSnapshot } from "../engine/types";
 import { DEV_BOARD_CAPACITIES, type App, type ChordHover, type EnterKind, type EnterSelection, type ModalKind } from "./app";
 import { suppressNextClick } from "./click";
 import { startPointerDrag } from "./pointer-drag";
@@ -92,18 +93,6 @@ function setText(node: Element | null | undefined, text: string): void {
 // readout — reads the same allocation the production tick runs.
 function currentSnapshot(state: GameState): RateSnapshot {
   return displayedRates(state, state.mode === "flow");
-}
-
-// The snapshot's recognized-but-idle candidates as chord terms (issue
-// #258): what the board sings but the allocation didn't select. Absent an
-// allocation read, nothing is idle — the plain recognizer's every term is
-// already in namedChords.
-function idleTermsOf(snapshot: RateSnapshot): NamedChordTerm[] {
-  const allocation = snapshot.allocation;
-  if (!allocation) return [];
-  return allocation.recognized
-    .filter((instance) => !allocation.activeKeys.has(instance.key))
-    .map((instance) => ({ name: instance.name, bonus: instance.bonus, instances: 1, moduleIds: [...instance.memberIds], root: instance.root }));
 }
 
 function stat(label: string, value: string): string {
@@ -1065,8 +1054,10 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
     namedChords: snapshot.namedChords,
     // The recognized-but-idle candidates (issue #258): the board sings
     // them, the allocation didn't select them — dimmer, dotted, never
-    // pulsing. The active seams dominate.
-    inactiveChords: idleTermsOf(snapshot),
+    // pulsing. The active seams dominate. Absent an allocation read,
+    // nothing is idle — the plain recognizer's every term is already in
+    // namedChords.
+    inactiveChords: snapshot.allocation ? idleTermsOf(snapshot.allocation) : [],
     posOf: (id) => deployedById.get(id)?.pos ?? null,
     point,
     radius: HEX_RADIUS,
@@ -1833,9 +1824,7 @@ function ghostMarksHtml(app: App, projected?: RateSnapshot): string {
   // the board will sing, active or idle — what the player does with a full
   // capacity is the placement preview's own question (#260).
   const basis = projected ?? computeRates(app.state, true);
-  const current = basis.allocation
-    ? basis.allocation.recognized.map((instance) => ({ name: instance.name, bonus: instance.bonus, instances: 1, moduleIds: [...instance.memberIds], root: instance.root }))
-    : basis.namedChords;
+  const current = basis.allocation ? summaryTermsOf(basis.allocation) : basis.namedChords;
   const preview = wouldFormPreview(app.state, hover.moduleId, hover.pos, 1 + activeBuildFactors(app.state).namedChordBonus);
   const newcomers = newChordTerms(current, preview.chords);
   if (newcomers.length === 0) return "";

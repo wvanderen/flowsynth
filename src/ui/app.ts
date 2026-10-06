@@ -35,7 +35,7 @@ import {
 import { ARETE_HORIZON, claimOf } from "../engine/accumulator";
 import { neighbors, hex, sameHex } from "../engine/hex";
 import { newChordTerms } from "../engine/chords";
-import { allocateRates, mutatorAt } from "../engine/economy";
+import { activeChordKeysOf, allocateRates, mutatorAt } from "../engine/economy";
 import { recognizedTermsOf } from "../engine/allocation";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
 import { formatClock } from "../engine/clock";
@@ -958,7 +958,7 @@ export class App {
     // Same snapshot basis as the caller's `before`, so the diff can't lie
     // if the two calls ever drift apart.
     const after = allocateRates(this.state, this.state.mode === "flow", {
-      keep: new Set(this.state.activeChords ?? []),
+      keep: activeChordKeysOf(this.state),
     }).read;
     const newcomers = newChordTerms(before, recognizedTermsOf(after));
     if (newcomers.length === 0) return;
@@ -1658,7 +1658,7 @@ export class App {
   // presents closed. A chord the drop newly forms strums (§6).
   private placeAndStrum(module: ModuleInstance, pos: Hex): void {
     const before = recognizedTermsOf(
-      allocateRates(this.state, this.state.mode === "flow", { keep: new Set(this.state.activeChords ?? []) }).read,
+      allocateRates(this.state, this.state.mode === "flow", { keep: activeChordKeysOf(this.state) }).read,
     );
     this.ui.selected = null;
     if (this.act(placeModule(this.state, module.id, pos), `${META[module.type].name} placed.`)) {

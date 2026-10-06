@@ -684,12 +684,19 @@ export function allocateRates(
   return { snapshot, read: allocated };
 }
 
+// The retention hint's one read (issue #258): the state's stored active
+// keys as the solver's keep set — the sync writes it, the display twin and
+// the strum read it, and no caller re-derives the default.
+export function activeChordKeysOf(state: GameState): ReadonlySet<string> {
+  return new Set(state.activeChords ?? []);
+}
+
 // The live game's one allocation sync: the authoritative two-pass with the
 // state's stored keys as the retention hint, the new active keys written
 // back — equal-output allocations hold their active set across
 // recomputation and, persisted with the save, across reload (#258).
 export function syncAllocation(state: GameState, flow: boolean = flowLive(state)): AllocatedRates {
-  const result = allocateRates(state, flow, { keep: new Set(state.activeChords ?? []) });
+  const result = allocateRates(state, flow, { keep: activeChordKeysOf(state) });
   state.activeChords = result.read.instances.map((instance) => instance.key);
   return result;
 }
@@ -698,5 +705,5 @@ export function syncAllocation(state: GameState, flow: boolean = flowLive(state)
 // two-pass on the same stored hint, writing nothing — every readout shows
 // the allocation production actually chose, never a parallel answer.
 export function displayedRates(state: GameState, flow: boolean = flowLive(state)): RateSnapshot {
-  return allocateRates(state, flow, { keep: new Set(state.activeChords ?? []) }).snapshot;
+  return allocateRates(state, flow, { keep: activeChordKeysOf(state) }).snapshot;
 }

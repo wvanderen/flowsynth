@@ -158,6 +158,26 @@ describe("one-capacity voices (#258)", () => {
     expect(after.snapshot.contributions.get(c.id)!.chordFactor).toBe(1);
   });
 
+  it("charge alone reselects the active chord", () => {
+    const state = fresh();
+    // C4 shared by two candidates: the Fifth (with a loud G4) and the ♭7
+    // (with a quiet B♭). Uncharged the Fifth earns more even counting the
+    // voice each leaves idle; a charged generator beside B♭ alone lifts
+    // the ♭7's spend past it and takes the shared voice's one unit.
+    placed(state, "additive", 1, 0, 4);
+    placed(state, "additive", -2, 0);
+    placed(state, "spacer", -1, 0);
+    const generator = placed(state, "focusKeyed", -3, 0, 2);
+    generator.reserve = 0;
+    const uncharged = allocateRates(state, true);
+    expect(uncharged.snapshot.allocation!.active.map((i) => i.name)).toEqual(["Fifth"]);
+    generator.reserve = 3600;
+    const charged = allocateRates(state, true);
+    expect(charged.snapshot.allocation!.active.map((i) => i.name)).toEqual(["Flat seventh"]);
+    const bflat = state.modules.find((m) => m.pos !== null && m.pos.q === -2 && m.pos.r === 0)!;
+    expect(charged.snapshot.contributions.get(bflat.id)!.chargeFactor).toBeGreaterThan(1);
+  });
+
   it("equal-output allocations retain the state's active set across syncs and reload", () => {
     const state = fresh();
     // C4 with a doubled G: the two Fifths are exactly equal in output, so

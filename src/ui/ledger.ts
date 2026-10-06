@@ -7,6 +7,7 @@ import { accumulatorFill, claimOf, horizonReached } from "../engine/accumulator"
 import { ACHIEVEMENTS } from "../engine/achievements";
 import { catalogOpen } from "../engine/catalog";
 import { BALANCE, CATEGORY_OF, isOscillatorType, NAMED_CHORDS } from "../engine/constants";
+import { idleTermsOf } from "../engine/allocation";
 import { activeBuildGeneratorStrength, chargedFactor, hostPower } from "../engine/economy";
 import { discoveryCount } from "../engine/library";
 import { noteNameOf } from "../engine/lattice";
@@ -63,18 +64,18 @@ interface SynthLegs {
 function synthLegsOf(state: GameState, snapshot: RateSnapshot, contribution: Contribution, module: ModuleInstance): SynthLegs {
   const terms = snapshot.namedChords.filter((chord) => chord.moduleIds.includes(contribution.moduleId)).map(chordTermLabel);
   // The idle candidates (issue #258): recognized voice-sets the module
-  // sings in that the allocation didn't select. Deduplicated by identity,
-  // so a doubled G's second Fifth reads once.
+  // sings in that the allocation didn't select — the shared idle mapping,
+  // deduplicated by identity so a doubled G's second Fifth reads once.
   const allocation = snapshot.allocation;
   const idle: string[] = [];
   if (allocation) {
     const seen = new Set<string>();
-    for (const instance of allocation.recognized) {
-      if (allocation.activeKeys.has(instance.key) || !instance.memberIds.includes(contribution.moduleId)) continue;
-      const identity = `${instance.name}|${instance.root}`;
+    for (const term of idleTermsOf(allocation)) {
+      if (!term.moduleIds.includes(contribution.moduleId)) continue;
+      const identity = `${term.name}|${term.root}`;
       if (seen.has(identity)) continue;
       seen.add(identity);
-      idle.push(chordTermLabel({ name: instance.name, bonus: instance.bonus, instances: 1 }));
+      idle.push(chordTermLabel(term));
     }
   }
   return {

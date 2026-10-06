@@ -1,6 +1,6 @@
 import { BALANCE, CATEGORY_OF, NAMED_CHORDS } from "./constants";
 import { chordClusters, formationQuality, formationTension, type ChordAnalysis, type Singer } from "./chords";
-import type { DeployedModule, NamedChordTerm, RecognizedInstance } from "./types";
+import type { AllocationSummary, DeployedModule, NamedChordTerm, RecognizedInstance } from "./types";
 
 // Whole-chord capacity allocation (issue #257, carrying the confirmed
 // harmonic-capacity design — its ADR lives in the design tree's numbering,
@@ -671,13 +671,26 @@ export function allocateChords(singers: Singer[], spacers: DeployedModule[] = []
 // sync's exact input, active and idle alike (one entry per instance). The
 // mapping is derived, never stored alongside the read.
 export function recognizedTermsOf(read: AllocationRead): NamedChordTerm[] {
-  return read.recognizedInstances.map((inst) => ({
-    name: inst.name,
-    bonus: inst.bonus,
-    instances: 1,
-    moduleIds: [...inst.memberIds],
-    root: inst.root,
-  }));
+  return read.recognizedInstances.map(termOfInstance);
+}
+
+// The summary's recognized voice-sets — active and idle — as the same
+// terms: the would-form ghost's recognition diff reads this.
+export function summaryTermsOf(summary: AllocationSummary): NamedChordTerm[] {
+  return summary.recognized.map(termOfInstance);
+}
+
+// The summary's recognized-but-idle candidates as the same terms — the
+// board's dotted seams, the readout's idle chips, and the rate details'
+// idle notes all read this one mapping, never a private re-derivation.
+export function idleTermsOf(summary: AllocationSummary): NamedChordTerm[] {
+  return summary.recognized
+    .filter((instance) => !summary.activeKeys.has(instance.key))
+    .map(termOfInstance);
+}
+
+function termOfInstance(instance: RecognizedInstance): NamedChordTerm {
+  return { name: instance.name, bonus: instance.bonus, instances: 1, moduleIds: [...instance.memberIds], root: instance.root };
 }
 
 // The steepest chord factor any voice actually earns under the analysis —
