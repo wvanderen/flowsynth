@@ -38,6 +38,7 @@ import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatBalance, formatDate, formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
 import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG } from "./ledger";
+import { closeTooltips, wireTooltips } from "./instrument";
 import { libraryCardHtml } from "./library";
 import { discoveryCount, discoveryBoostOf, rootsHeardOf } from "../engine/library";
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
@@ -3022,6 +3023,10 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
     backdrop.classList.remove("peek");
     document.body.classList.remove("modal-sheet-open");
     delete content.dataset.renderKey;
+    // A pinned tooltip's body lives at document body level (instrument.ts's
+    // portal), so hiding the sheet would otherwise leave it floating over
+    // the board — the close puts every tooltip of the sheet away with it.
+    closeTooltips(content);
     return;
   }
   // The rate sheet's own gate (§7): below the 760px container breakpoint
@@ -3132,7 +3137,9 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
 // over a scrim below the 760px breakpoint, opened by tapping the Rate cell
 // or the strip's rate read at every width. The same roster the Rate cell's
 // hover popover owns above the breakpoint, built the same way: live slots
-// the tick fills, so an expanded row survives the clock. A synthesizer
+// the tick fills, so an expanded row survives the clock. The surface
+// carries no header of its own — the eyebrow names it and the roster
+// speaks (the instrument standards' identity rule) — and a synthesizer
 // row's tap closes the sheet and selects the module, so the answer lands
 // on the board it names.
 function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): void {
@@ -3141,15 +3148,17 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
   // discloses.
   const snapshot = live;
   content.innerHTML = `
-    ${modalTop("RATE")}
-    <h2 id="modal-title">What makes the rate.</h2>
-    <div class="rate-details-sheet">${rateDetailsHtml(app.state, snapshot, true)}</div>`;
+    ${modalTop("RATE", "modal-title")}
+    <div class="rate-details-sheet">${rateDetailsHtml(app.state, snapshot, true, "sheet")}</div>`;
   updateRateDetailsLive(content, app.state, snapshot);
   const sheet = content.querySelector(".rate-details-sheet");
-  if (sheet) wireSynthPicks(sheet, (id) => {
-    app.closeModal();
-    app.select(id);
-  });
+  if (sheet) {
+    wireSynthPicks(sheet, (id) => {
+      app.closeModal();
+      app.select(id);
+    });
+    wireTooltips(sheet);
+  }
   wireClose(app);
 }
 
@@ -3185,8 +3194,12 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
   wireClose(app);
 }
 
-function modalTop(label: string): string {
-  return `<div class="modal-top"><span class="eyebrow">${label}</span><button id="close-modal" aria-label="Close dialog">✕</button></div>`;
+// The modal head's one row: the eyebrow that names the surface and the ✕
+// that puts it away. `titleId` hands the accessible name to the eyebrow
+// for surfaces that carry no other heading — the backdrop's
+// aria-labelledby points there.
+function modalTop(label: string, titleId?: string): string {
+  return `<div class="modal-top"><span class="eyebrow"${titleId ? ` id="${titleId}"` : ""}>${label}</span><button id="close-modal" aria-label="Close dialog">✕</button></div>`;
 }
 
 // The combine review's terms (issue #152), read fresh: null whenever the

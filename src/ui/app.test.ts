@@ -434,7 +434,11 @@ describe("the rate details disclosure (§7, issue #154)", () => {
     const modal = document.getElementById("modal-content")!;
     // The sheet is the module-linked roster the popover holds above the
     // line: the total, one row per synthesizer with its final ν/s, printed.
-    expect(modal.textContent).toContain("What makes the rate.");
+    // The surface carries no header of its own — the eyebrow names it and
+    // the roster speaks (the instrument standards' identity rule), and the
+    // eyebrow carries the dialog's accessible name.
+    expect(modal.querySelector("h2")).toBeNull();
+    expect(document.getElementById("modal-title")!.textContent).toBe("RATE");
     expect(modal.querySelector(".rd-total")).not.toBeNull();
     expect(modal.querySelectorAll(".rd-synth")).toHaveLength(1);
     expect(modal.querySelector(".rd-synth")!.getAttribute("data-module-id")).toBeTruthy();
@@ -470,21 +474,24 @@ describe("the rate details disclosure (§7, issue #154)", () => {
     expect(document.querySelector("#rate-slot .rate-breakdown")).not.toBeNull();
     // A synthesizer row's tap identifies its module on the board: the
     // bloom lifts the module's own face off the grid and the row wears
-    // the picked mark.
+    // the state grammar's inset marker.
     const row = document.querySelector("#rate-slot .rd-synth")!;
-    row.querySelector("summary")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    row.querySelector(".rd-pick")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     const id = row.getAttribute("data-module-id")!;
     expect(app.ui.selected).toBe(id);
     expect((document.getElementById("module-bloom") as HTMLElement).hidden).toBe(false);
-    expect(row.classList.contains("picked")).toBe(true);
+    expect(row.classList.contains("st-selected")).toBe(true);
     // A second tap releases it.
-    row.querySelector("summary")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    row.querySelector(".rd-pick")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.ui.selected).toBeNull();
-    // A click inside the expanded legs is reading, never picking: copying
+    // A click inside the tooltip's legs is reading, never picking: copying
     // a figure or scrolling the roster must not select the module.
-    (row as HTMLDetailsElement).open = true;
     row.querySelector(".rd-legs")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.ui.selected).toBeNull();
+    // And the ⓘ trigger is the tooltip's own: pinning it never picks.
+    row.querySelector(".inst-tip-trigger")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.selected).toBeNull();
+    expect(row.querySelector(".inst-tip")!.classList.contains("show")).toBe(true);
   });
 
   it("the boundary width itself stays on the desktop side of the 760px line", () => {
@@ -510,12 +517,11 @@ describe("the rate details disclosure (§7, issue #154)", () => {
     app.render();
     document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     const modal = document.getElementById("modal-content")!;
-    const row = modal.querySelector(".rd-synth") as HTMLDetailsElement;
-    row.open = true;
+    const row = modal.querySelector(".rd-synth")!;
     row.querySelector(".rd-legs")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.ui.modal).toBe("rate");
     // The row's own tap closes the sheet and lands the selection.
-    row.querySelector("summary")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    row.querySelector(".rd-pick")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.ui.modal).toBeNull();
     expect(app.ui.selected).toBe(row.getAttribute("data-module-id"));
   });
@@ -534,7 +540,8 @@ describe("the rate details disclosure (§7, issue #154)", () => {
     expect(door).toContain(".rate-slot { position: static; }");
     expect(door).toContain(".prod-cell-rate { border-color: transparent; }");
     expect(door).toContain(".prod-ledger:hover .prod-cell-rate");
-    expect(door).toContain(".rate-breakdown { left: 0; width: min(560px, 100%); max-height: min(76vh, 640px); }");
+    expect(door).toContain(".rate-breakdown { left: 0; width: min(560px, 100%); }");
+    expect(door).toContain(".rate-breakdown .inst-panel-face { max-height: min(76vh, 640px); }");
     expect(door).toContain(".prod-ledger:hover .rate-breakdown");
     expect(door).toContain(".prod-ledger:focus-within .rate-breakdown { display: block; }");
     // The disclosure's geometry below the line is untouched.
@@ -547,15 +554,13 @@ describe("the rate details disclosure (§7, issue #154)", () => {
     app.render();
     document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     const modal = document.getElementById("modal-content")!;
-    const row = modal.querySelector(".rd-synth") as HTMLDetailsElement;
-    row.open = true;
     // Stamp a sentinel into a live slot: the next render must overwrite it
     // in place (the tick's fill), not rebuild the sheet around it.
     modal.querySelector('[data-live="b-rate"]')!.textContent = "stale";
     app.render();
     expect(modal.querySelector('[data-live="b-rate"]')!.textContent).not.toBe("stale");
     expect(modal.querySelector('[data-live="b-rate"]')!.textContent).toMatch(/ν\/s$/);
-    expect(row.open).toBe(true);
+    expect(modal.querySelector(".rd-synth")).not.toBeNull();
     app.closeModal();
   });
 
@@ -3636,7 +3641,7 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     // A synthesizer row's tap closes the sheet and selects the module, so
     // the answer lands on the board it names.
     const row = sheet.querySelector(".rd-synth")!;
-    row.querySelector("summary")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    row.querySelector(".rd-pick")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.ui.modal).toBeNull();
     expect(app.ui.selected).toBe(row.getAttribute("data-module-id"));
   });

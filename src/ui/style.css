@@ -4,6 +4,17 @@
      custom properties before first paint. The stylesheet colors exclusively
      through those tokens — never literals. */
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* The instrument's type roles (issue #267): condensed technical lettering
+     for names and controls, monospace tabular figures for readouts (--mono,
+     the .mono class), readable sans for notes and longer mechanics. Exact
+     faces are implementation tuning — these stacks stand in until fonts are
+     licensed; the roles, not the faces, are the standard. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-condensed: "Arial Narrow", "Helvetica Neue Condensed", "Liberation Sans Narrow", Arial, sans-serif;
+  /* The panel silhouette (issue #267): one clipped pair of outer corners —
+     top-right and bottom-left — that an instrument panel may wear. Clipping
+     defines the panel's silhouette, never decoration on inner controls. */
+  --inst-clip: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
 }
 
 * { box-sizing: border-box; }
@@ -14,7 +25,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font: 14px/1.5 var(--font-sans);
 }
 
 button, select, input, textarea { font: inherit; }
@@ -55,6 +66,98 @@ h1, h2, h3, p { margin: 0; }
    own width — the "container breakpoint" the spec writes around. The
    viewport-level modal layer (body-level, outside #app) stays on @media. */
 #app { container: app / inline-size; }
+
+/* ── Instrument primitives (issue #267) ────────────── */
+/* The instrument standards (docs/instrument-standards.md) as shared code:
+   every surface builds from these classes instead of re-inventing them.
+   The rate-details roster renders through them as the reference surface;
+   the remaining surfaces adopt them on their own tickets. */
+
+/* Panels: flat plates whose occasional clipped outer corners are the
+   silhouette, never decoration. The two-layer build (a rim-colored plate
+   under a face that carries the same clip) draws a hairline that follows
+   the diagonal corners — a plain border cannot. Inside a panel: open
+   divisions and hairline rules, never rounded cards or nested boxes. */
+.inst-panel {
+  display: block;
+  background: var(--line-strong);
+  clip-path: var(--inst-clip);
+  padding: 1px;
+}
+.inst-panel-face {
+  display: block;
+  background: var(--panel-deep);
+  clip-path: var(--inst-clip);
+  padding: 8px 12px;
+}
+
+/* Type roles: condensed technical lettering names and controls, monospace
+   tabular figures read out (--mono, .mono), readable sans carries notes
+   and longer mechanics (the body face, --font-sans). */
+.t-condensed {
+  font-family: var(--font-condensed);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.t-note { font-family: var(--font-sans); }
+
+/* The state grammar, recognizable without color alone: a muted outline is
+   unavailable, a clear outline available, a firm inset marker selected, an
+   engraved mark acquired. Hue may reinforce; it is never the only cue.
+   Every state here is static styling, so reduced motion (the global
+   block's animation/transition kill) takes nothing from it. */
+.st-unavailable { border-color: var(--line-soft); color: var(--muted); }
+.st-available { border-color: var(--line-strong); }
+.st-selected { box-shadow: inset 0 -3px var(--ink); }
+.st-acquired {
+  color: var(--muted);
+  font: 11px var(--mono);
+  letter-spacing: 0.08em;
+  box-shadow: inset 0 -1px var(--muted);
+}
+
+/* The tooltip layer: deeper mechanics live only here — never expandable
+   detail sections. The body renders beside its trigger and is portal-
+   parented and placed at it by instrument.ts's wiring (a clipped or
+   scrolling ancestor would cut a floating body away), which also carries
+   the access states: hover, keyboard focus, and the touch pin each land
+   as the one `inst-show` class. Escape or a tap-away dismisses. Whatever
+   must stay visible — names, effects, prices, purchase state — renders
+   outside the tooltip, never inside it alone. */
+.inst-tip { position: relative; display: inline-flex; flex-shrink: 0; }
+.inst-tip-trigger {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--muted);
+  background: transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+.inst-tip-trigger:hover:not(:disabled) { background: transparent; color: var(--nous); border-color: var(--nous); }
+.inst-tip-body {
+  display: none;
+  position: fixed;
+  left: 0;
+  top: 0;
+  /* Above every host surface: the portal lifts the body over the modal
+     layer (z 50) and the zoom cluster's sheet reaction (z 60) too. */
+  z-index: 65;
+  width: min(230px, 60vw);
+  padding: 8px 10px;
+  background: var(--panel-deep);
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 20px var(--shadow);
+  text-align: left;
+  font-family: var(--font-sans);
+}
+.inst-tip-body.inst-show { display: block; }
 
 /* ── The console (ADR-0012, ADR-0016) ──────────────── */
 
@@ -427,10 +530,15 @@ h1, h2, h3, p { margin: 0; }
   pointer-events: none;
 }
 .rate-slot:hover .rate-hint, .rate-slot:focus-within .rate-hint { color: var(--nous); border-color: var(--nous); }
-/* The details disclosure: the one rate popover, anchored to the Rate cell.
-   Hidden below the 760px breakpoint, where the popover has no room — the
-   tap-up sheet carries the roster there, as it does at every width. The
-   roster scrolls when a grown board outgrows it. */
+/* The details disclosure: the one rate popover, anchored to the Rate cell —
+   the roster as a clipped instrument panel (.inst-panel over .inst-panel-face,
+   issue #267). The wrapper carries only position; the plate's rim is its own
+   definition over the board — no drop shadow here, since a filtered ancestor
+   would claim the tooltips' fixed positioning (instrument.ts). The face is
+   the scroll container, so its own clip stays fixed while the rows move, and
+   the tooltip bodies rise free of both. Hidden below the 760px breakpoint,
+   where the popover has no room — the tap-up sheet carries the roster there,
+   as it does at every width. */
 .rate-breakdown {
   display: none;
   position: absolute;
@@ -438,50 +546,57 @@ h1, h2, h3, p { margin: 0; }
   left: -1px;
   z-index: 40;
   width: 350px;
-  max-height: min(60vh, 420px);
-  overflow-y: auto;
-  background: var(--panel-deep);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 10px 12px;
-  box-shadow: 0 10px 26px var(--shadow);
 }
+.rate-breakdown .inst-panel-face { max-height: min(60vh, 420px); overflow-y: auto; }
 .rate-slot:hover .rate-breakdown,
 .rate-slot:focus-within .rate-breakdown { display: block; }
-/* The module-linked rows (popover and rate sheet share them). */
+/* The module-linked rows (popover and rate sheet share them): flat rule-line
+   readouts through the instrument primitives — condensed names, mono
+   figures, hairline divisions, never rounded cards. */
 .rd-row {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  padding: 4px 0;
-  border-bottom: 1px solid var(--line-soft);
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
   font-size: 12px;
 }
 .rd-row:last-child { border-bottom: 0; }
-.rd-name { color: var(--ink); font-size: 12px; }
+.rd-name { color: var(--ink); font-size: 12.5px; }
 .rd-note { font-size: 10.5px; color: var(--muted); }
 .rd-val { margin-left: auto; text-align: right; color: var(--nous); font-size: 12px; white-space: nowrap; }
 .rd-total .rd-name, .rd-total .rd-val { color: var(--ink); font-weight: 600; }
-details.rd-synth { display: block; cursor: pointer; }
-.rd-synth summary { list-style: none; display: flex; align-items: baseline; gap: 8px; }
-.rd-synth summary::-webkit-details-marker { display: none; }
-.rd-synth summary::before {
-  content: "▸";
-  color: var(--muted);
-  font-size: 9px;
-  flex-shrink: 0;
-  transition: transform 0.12s ease;
+/* The synth row: the name is the pick (a real button, so Enter and Space
+   work), the ⓘ pins the legs tooltip, the final figure stays critical at
+   the right edge — visible without opening anything. */
+.rd-pick {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.15s;
 }
-.rd-synth[open] summary::before { transform: rotate(90deg); }
+.rd-pick:hover:not(:disabled) { background: transparent; border-color: transparent; color: var(--nous); }
+.rd-pick:focus-visible { outline-offset: 2px; }
 .rd-synth .rd-name { flex-shrink: 0; }
-.rd-synth[open] summary, .rd-synth.picked summary .rd-name { color: var(--nous); }
-.rd-synth.picked summary::before { color: var(--nous); }
-.rd-legs { padding: 2px 0 6px 17px; cursor: default; }
+/* The selected row wears the state grammar's firm inset marker — readable
+   without color — with the nous name as reinforcement only. */
+.rd-synth.st-selected .rd-name { color: var(--nous); }
+/* A synth row's legs: the tooltip layer's body content. Each leg is one
+   rule-free line — label, figure, note — the whole decomposition readable
+   as the multiplication it is. */
+.rd-legs { display: grid; gap: 2px; padding: 2px 0; cursor: default; }
 .rd-leg {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  padding: 2px 0;
   font-size: 11.5px;
 }
 .rd-leg-name { color: var(--muted); flex-shrink: 0; }
@@ -517,7 +632,8 @@ details.rd-synth { display: block; cursor: pointer; }
   .rate-slot:hover .rate-hint, .rate-slot:focus-within .rate-hint { border-color: transparent; }
   .prod-ledger:hover .rate-hint,
   .prod-ledger:focus-within .rate-hint { color: var(--nous); }
-  .rate-breakdown { left: 0; width: min(560px, 100%); max-height: min(76vh, 640px); }
+  .rate-breakdown { left: 0; width: min(560px, 100%); }
+  .rate-breakdown .inst-panel-face { max-height: min(76vh, 640px); }
   .prod-ledger:hover .rate-breakdown,
   .prod-ledger:focus-within .rate-breakdown { display: block; }
 }
@@ -2304,7 +2420,10 @@ body.modal-sheet-open .zoom-cluster {
   * { animation: none !important; transition: none !important; }
   /* The charge lead's flow is state communication, not ornament: it is the
      only motion that survives the reduce-motion switch (small, slow, and
-     directional), so a charged board still reads as charged. */
+     directional), so a charged board still reads as charged. The instrument
+     primitives add no motion of their own — tooltips open instantly and
+     every state rides static outlines, inset markers, and engraved marks,
+     so the state grammar survives this switch intact. */
   .charge-line { animation: charge-flow 1.6s linear infinite !important; }
 }
 
@@ -2404,10 +2523,11 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 /* Both are plain modal surfaces: the rate sheet is the Rate cell's tap-up
    disclosure — the module-linked roster at every width, presenting as a
    bottom sheet below the 760px breakpoint; the inventory sheet re-docks
-   the board-surface tray for touch on portrait phone. */
+   the board-surface tray for touch on portrait phone. The roster's rows
+   render through the instrument primitives directly on the sheet — no
+   panel inside the modal frame, which would be a nested box. */
 .rate-details-sheet { margin-top: 6px; }
-.rate-details-sheet .rd-row { padding: 6px 0; }
-.rate-details-sheet .rd-synth summary { padding: 6px 0; }
+.rate-details-sheet .rd-row { padding: 7px 0; }
 .inventory-sheet-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
