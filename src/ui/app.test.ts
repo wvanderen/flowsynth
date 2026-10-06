@@ -18,7 +18,7 @@ import { recordMissed, recordTargetHit } from "../engine/records";
 import { give } from "../engine/fixtures";
 import { createInitialState } from "../engine/state";
 import { hex, sameHex } from "../engine/hex";
-import { formatBalance, formatFixed, formatInt, formatNumber } from "./format";
+import { formatFixed, formatInt, formatNumber } from "./format";
 import { lensFrame } from "./zoom";
 import type { GameState } from "../engine/types";
 import type { SignalChannels } from "./signals";
@@ -2657,19 +2657,192 @@ describe("the catalog", () => {
     expect(modal.textContent).not.toContain("activate");
   });
 
-  it("the lead line compresses the balance instead of overflowing, with the exact value on its tooltip (issue #187)", () => {
-    // The ladder takes over past the exact range…
+  it("carries no balance and no second title — the ledgers own the figures (issue #271)", () => {
     app.state.nous = 1_234_567;
     app.openModal("catalog");
-    let lead = document.querySelector("#modal-content p.lead")!;
-    expect(lead.textContent).toBe(`${formatBalance(1_234_567)} ν available.`);
-    expect(lead.querySelector("span")!.getAttribute("title")).toBe(formatInt(1_234_567));
-    // …and the scientific ladder keeps the figure in its lane.
-    app.state.nous = 4.072e38;
+    const sheet = document.getElementById("modal-content")!;
+    // The balance line is gone: the sheet repeats no figure the ledger reads.
+    expect(sheet.querySelector("p.lead")).toBeNull();
+    expect(sheet.textContent).not.toContain("available");
+    // And the face switch is the sheet's only name — no CATALOG eyebrow.
+    expect(sheet.querySelector(".eyebrow")).toBeNull();
+    expect(sheet.textContent).not.toContain("CATALOG");
+  });
+});
+
+describe("the catalog door (issue #271)", () => {
+  const switchFace = (face: "nous" | "arete"): void =>
+    document.querySelector<HTMLButtonElement>(`[data-catalog-face="${face}"]`)!.click();
+
+  function bankFirstArete(): void {
+    app.state.eraEarned = ARETE_HORIZON;
+    app.render();
+    document.getElementById("prestige-door")!.click();
+    document.getElementById("prestige-confirm")!.click();
+    expect(app.state.arete).toBe(1);
+  }
+
+  it("the face switch reads ν nous / ◇ Arete, and names the dialog without a duplicated title", () => {
     app.openModal("catalog");
-    lead = document.querySelector("#modal-content p.lead")!;
-    expect(lead.textContent).toBe(`${formatBalance(4.072e38)} ν available.`);
-    expect(lead.querySelector("span")!.getAttribute("title")).toBe(formatInt(4.072e38));
+    const sheet = document.getElementById("modal-content")!;
+    const tabs = [...sheet.querySelectorAll<HTMLButtonElement>(".catalog-face-tab")];
+    expect(tabs).toHaveLength(2);
+    expect(tabs[0]!.getAttribute("data-catalog-face")).toBe("nous");
+    expect(tabs[0]!.textContent).toContain("nous");
+    expect(tabs[0]!.querySelector(".mono")!.textContent).toBe("ν");
+    expect(tabs[1]!.getAttribute("data-catalog-face")).toBe("arete");
+    expect(tabs[1]!.textContent).toContain("Arete");
+    expect(tabs[1]!.querySelector("svg")).not.toBeNull();
+    // The switch carries the dialog's accessible name — the door's word.
+    expect(document.getElementById("modal-title")!.getAttribute("aria-label")).toBe("Catalog");
+  });
+
+  it("the frame is fixed: a 620×600 clipped panel on desktop, a 74%-height bottom sheet on phone, body scrolls", () => {
+    app.openModal("catalog");
+    expect(document.getElementById("modal-content")!.classList.contains("catalog-modal")).toBe(true);
+    const css = readFileSync("src/ui/style.css", "utf8");
+    const frame = css.slice(css.indexOf(".modal.catalog-modal"), css.indexOf(".catalog-frame"));
+    expect(frame).toContain("width: min(620px, 100%)");
+    expect(frame).toContain("height: min(600px, 88vh)");
+    expect(frame).toContain("overflow: hidden");
+    expect(frame).toContain("clip-path: var(--inst-clip)");
+    const phone = css.slice(css.indexOf("@media (max-width: 600px) {\n  .modal.catalog-modal"));
+    expect(phone).toContain("height: 74vh");
+    const body = css.slice(css.indexOf(".catalog-body"), css.indexOf(".catalog-sections"));
+    expect(body).toContain("overflow-y: auto");
+  });
+
+  it("pre-prestige the arete face does not exist: its tab stands locked and the door falls back to nous", () => {
+    // A stale memory can never open a face that is not there yet.
+    app.ui.catalogFace = "arete";
+    app.openModal("catalog");
+    expect(app.ui.catalogFace).toBe("nous");
+    const areteTab = document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!;
+    expect(areteTab.disabled).toBe(true);
+    expect(areteTab.title).toContain("prestige");
+    // The nous face is the shop.
+    expect(document.getElementById("buy-cell")).not.toBeNull();
+  });
+
+  it("the shop appears at the first banked Arete, and the door remembers the last face", () => {
+    bankFirstArete();
+    app.openModal("catalog");
+    expect(document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!.disabled).toBe(false);
+    switchFace("arete");
+    expect(app.ui.catalogFace).toBe("arete");
+    app.closeModal();
+    app.openModal("catalog");
+    // The memory holds: the door opens on the arete face. (The mode-wins
+    // override lands with the mode-unification ticket, #246.)
+    expect(app.ui.catalogFace).toBe("arete");
+    expect(document.getElementById("buy-cell")).toBeNull();
+  });
+
+  it("pre-entry the arete face is the single centered lock screen; the purchase reveals Upgrades and Unlocks", () => {
+    app.state.prestiges = 1;
+    app.state.arete = BALANCE.catalogEntryCost;
+    app.openModal("catalog");
+    switchFace("arete");
+    let sheet = document.getElementById("modal-content")!;
+    const lock = sheet.querySelector(".entry-screen")!;
+    expect(lock.textContent).toContain("Unlock Mutator Layer");
+    expect(lock.textContent).toContain(`${BALANCE.catalogEntryCost} Arete`);
+    expect(sheet.textContent).not.toContain("Upgrades");
+    expect(sheet.textContent).not.toContain("Unlocks");
+    // The lock screen's price mutes when the Arete is spent elsewhere — the
+    // board's Row unlock can spend the bank before the entry is bought.
+    app.state.arete = 0;
+    app.render();
+    expect((document.getElementById("buy-arete-entry") as HTMLButtonElement).disabled).toBe(true);
+    app.state.arete = BALANCE.catalogEntryCost;
+    app.render();
+    document.getElementById("buy-arete-entry")!.click();
+    expect(app.state.catalogEntryOwned).toBe(true);
+    sheet = document.getElementById("modal-content")!;
+    expect(sheet.querySelector(".entry-screen")).toBeNull();
+    const headings = [...sheet.querySelectorAll(".catalog-sections h2")].map((h) => h.textContent);
+    expect(headings).toEqual(["Upgrades", "Unlocks"]);
+    // The entry's row reads ACQUIRED with its rewards line.
+    const entryRow = [...sheet.querySelectorAll(".catalog-row")].find((r) => r.textContent!.includes("Mutator layer"))!;
+    expect(entryRow.textContent).toContain("ACQUIRED");
+    expect(entryRow.textContent).toContain("Mutator Grid");
+    expect(entryRow.textContent).toContain("1 Mutator roll");
+    expect(entryRow.querySelector(".st-acquired")).not.toBeNull();
+  });
+
+  it("the Accelerator stands as an inert placeholder — priced, never buyable", () => {
+    app.state.prestiges = 1;
+    app.state.catalogEntryOwned = true;
+    app.state.arete = 100;
+    app.openModal("catalog");
+    switchFace("arete");
+    const sheet = document.getElementById("modal-content")!;
+    const accel = [...sheet.querySelectorAll(".catalog-row")].find((r) => r.textContent!.includes("Accelerator"))!;
+    expect(accel.textContent).toContain("placeholder");
+    const button = accel.querySelector<HTMLButtonElement>("button.price")!;
+    expect(button.disabled).toBe(true);
+    button.click();
+    expect(app.state.arete).toBe(100);
+    // The tooltip layer carries the placeholder's mechanics.
+    const tip = accel.querySelector(".inst-tip-body")!;
+    expect(tip.textContent).toContain("placeholder");
+    const trigger = accel.querySelector<HTMLElement>(".inst-tip-trigger")!;
+    trigger.focus();
+    expect(tip.classList.contains("inst-show")).toBe(true);
+    trigger.blur();
+    expect(tip.classList.contains("inst-show")).toBe(false);
+  });
+
+  it("the roll-pool join carries the future-rolls tooltip; joining empties the section", () => {
+    app.state.prestiges = 1;
+    app.state.catalogEntryOwned = true;
+    app.state.arete = BALANCE.rollPoolJoinCost;
+    app.openModal("catalog");
+    switchFace("arete");
+    const sheet = document.getElementById("modal-content")!;
+    const tip = [...sheet.querySelectorAll(".inst-tip-body")].find((t) => t.textContent!.includes("future rolls"))!;
+    expect(tip).not.toBeNull();
+    document.getElementById("buy-arete-pool")!.click();
+    expect(app.state.rollPoolJoined).toBe(true);
+    expect(sheet.textContent).toContain("future objects appear in future rolls");
+    expect(document.getElementById("buy-arete-pool")).toBeNull();
+  });
+
+  it("prices mute when unaffordable: the break's price and a shelf offer stand inert without the resource", () => {
+    app.state.prestiges = 1;
+    app.state.catalogEntryOwned = true;
+    app.state.arete = 0;
+    app.state.nous = 0;
+    app.openModal("catalog");
+    switchFace("arete");
+    expect((document.getElementById("buy-arete-break") as HTMLButtonElement).disabled).toBe(true);
+    switchFace("nous");
+    const shelfButton = document.querySelector<HTMLButtonElement>('[data-buy="generator"]')!;
+    expect(shelfButton.disabled).toBe(true);
+    expect((document.getElementById("buy-cell") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("prices mute in flow: the lock screen's entry stands inert with the between-sessions note", () => {
+    app.state.prestiges = 1;
+    app.state.arete = 3;
+    startSession(app.state, null);
+    app.openModal("catalog");
+    switchFace("arete");
+    const sheet = document.getElementById("modal-content")!;
+    expect(sheet.querySelector(".modal-note")!.textContent).toContain("between sessions");
+    expect((document.getElementById("buy-arete-entry") as HTMLButtonElement).disabled).toBe(true);
+    expect(app.state.catalogEntryOwned).toBe(false);
+  });
+
+  it("in flow the revealed shop mutes too: the break's price stands inert", () => {
+    app.state.prestiges = 1;
+    app.state.catalogEntryOwned = true;
+    app.state.arete = BALANCE.horizonBreakCost;
+    startSession(app.state, null);
+    app.openModal("catalog");
+    switchFace("arete");
+    expect((document.getElementById("buy-arete-break") as HTMLButtonElement).disabled).toBe(true);
+    expect(app.state.horizonBroken).toBe(false);
   });
 });
 
@@ -2708,58 +2881,66 @@ describe("the Arete Catalog (issue #197)", () => {
     expect(document.querySelector("[data-unlock-row]")).toBeNull();
   });
 
-  it("the first banked Arete raises the read on the ledger, and it opens the sheet", () => {
+  it("the first banked Arete raises the read on the ledger — a read, never a door (issue #271)", () => {
     bankFirstArete();
     app.render();
-    const read = document.getElementById("arete-read")!;
-    expect(read.classList.contains("arete-dim")).toBe(false);
-    expect(read.querySelector(".arete-mark svg")).not.toBeNull();
-    expect(read.querySelector('[data-live="arete"]')!.textContent).toBe("1");
-    read.click();
-    expect(app.ui.modal).toBe("arete");
+    // The old tap-through door is gone; the read is the surface.
+    expect(document.getElementById("arete-read")).toBeNull();
+    const figure = document.querySelector("#board-ledger .ledger-arete")!;
+    expect(figure.classList.contains("arete-dim")).toBe(false);
+    expect(figure.querySelector(".arete-mark svg")).not.toBeNull();
+    expect(figure.querySelector('[data-live="arete"]')!.textContent).toBe("1");
+    figure.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.modal).toBeNull();
+    // The tabbed shop rides the Catalog door instead.
+    document.querySelector<HTMLButtonElement>('#board-tools [data-op="catalog"]')!.click();
+    expect(app.ui.modal).toBe("catalog");
+    expect(app.ui.catalogFace).toBe("nous");
     const sheet = document.getElementById("modal-content")!;
-    expect(sheet.textContent).toContain("Mutator tree");
-    expect(sheet.textContent).toContain("Horizon break");
-    // The sheet stays pure: no informational rows for the surface-bought
-    // ladders.
-    expect(sheet.textContent).not.toContain("octave row");
+    expect(sheet.querySelector('[data-catalog-face="arete"]')).not.toBeNull();
   });
 
-  it("the sheet's purchases debit Arete: the entry, then the pool join behind it", () => {
+  it("the arete face's purchases debit Arete: the lock screen's entry, then the pool join behind it", () => {
+    app.state.prestiges = 1;
     app.state.arete = BALANCE.catalogEntryCost + BALANCE.rollPoolJoinCost;
-    app.openModal("arete");
-    // The join sits behind the entry.
-    const join = document.getElementById("buy-arete-pool") as HTMLButtonElement;
-    expect(join.disabled).toBe(true);
+    app.openModal("catalog");
+    document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!.click();
+    // The join sits behind the entry: pre-entry the face is the lock screen.
+    expect(document.getElementById("buy-arete-pool")).toBeNull();
     document.getElementById("buy-arete-entry")!.click();
     expect(app.state.catalogEntryOwned).toBe(true);
     expect(app.state.arete).toBe(BALANCE.rollPoolJoinCost);
-    app.render();
-    document.getElementById("buy-arete-pool")!.click();
+    const join = document.getElementById("buy-arete-pool") as HTMLButtonElement;
+    expect(join.disabled).toBe(false);
+    join.click();
     expect(app.state.rollPoolJoined).toBe(true);
     expect(app.state.arete).toBe(0);
-    app.render();
     const sheet = document.getElementById("modal-content")!;
-    expect(sheet.textContent).toContain("entered");
-    expect(sheet.textContent).toContain("joined");
+    expect(sheet.textContent).toContain("future objects appear in future rolls");
   });
 
-  it("the sheet's buttons stand inert outside upgrade mode", () => {
+  it("the face's buttons stand inert outside upgrade mode", () => {
+    app.state.prestiges = 1;
+    app.state.catalogEntryOwned = true;
     app.state.arete = 3;
     startSession(app.state, null);
-    app.openModal("arete");
+    app.openModal("catalog");
+    document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!.click();
     const sheet = document.getElementById("modal-content")!;
     expect(sheet.querySelector(".modal-note")!.textContent).toContain("between sessions");
-    expect((document.getElementById("buy-arete-entry") as HTMLButtonElement).disabled).toBe(true);
     expect((document.getElementById("buy-arete-break") as HTMLButtonElement).disabled).toBe(true);
-    expect(app.state.catalogEntryOwned).toBe(false);
+    expect((document.getElementById("buy-arete-pool") as HTMLButtonElement).disabled).toBe(true);
     expect(app.state.horizonBroken).toBe(false);
+    expect(app.state.rollPoolJoined).toBe(false);
   });
 
   it("the Horizon break buys outright: one click debits ten Arete and reads as broken (issue #200)", () => {
     app.state.sessionsCompleted = 1;
+    app.state.prestiges = 1;
+    app.state.catalogEntryOwned = true;
     app.state.arete = BALANCE.horizonBreakCost;
-    app.openModal("arete");
+    app.openModal("catalog");
+    document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!.click();
     const button = document.getElementById("buy-arete-break") as HTMLButtonElement;
     expect(button.textContent).toContain(`${BALANCE.horizonBreakCost} Arete`);
     button.click();

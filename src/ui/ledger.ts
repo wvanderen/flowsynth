@@ -336,14 +336,14 @@ export function libraryChipHtml(state: GameState): string {
   return `<button class="ledger-chip" id="library-chip" aria-label="Chords" title="Chord library — the field guide of chord classes">${LIBRARY_SVG}<span class="mono">${count}/${NAMED_CHORDS.length}</span></button>`;
 }
 
-// ── The arete read (§7, issue #197 → #270) ──────────────────────────────
+// ── The arete read (§7, issue #197 → #270 → #271) ───────────────────────
 // The ledger's third grouped resource: the banked Arete in its color, the
 // canonical mark at 15px. The telegraph slot is unconditional: before the
 // first Arete the read is a dim `— ◇` — the lock itself teaches that
-// prestige will bank here. From the first prestige the read wears the
-// balance and keeps the sheet as its tap-through door until the Catalog
-// door absorbs it (issue #271).
-const ARETE_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+// prestige will bank here. The read is a read, never a door (issue #271):
+// the labeled Catalog door owns the shop, and the balance spends through
+// the catalog's arete face.
+export const ARETE_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
   <path d="M12 2.5 20 8l-3.2 13H7.2L4 8l8-5.5Z"/>
   <path d="M12 2.5 9.4 21M12 2.5l2.6 18.5M4.6 8.4h14.8"/>
 </svg>`;
@@ -358,7 +358,7 @@ export function areteLedgerHtml(state: GameState): string {
   if (!catalogOpen(state)) {
     return `<span class="ledger-fig ledger-arete arete-dim" title="Arete — banked by prestige">${areteTelegraphHtml()}</span>`;
   }
-  return `<button class="ledger-fig ledger-arete" id="arete-read" aria-label="Arete Catalog" title="Arete — banked by prestige; spent in the Arete Catalog"><b class="mono" data-live="arete"></b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small></button>`;
+  return `<span class="ledger-fig ledger-arete" title="Arete — banked by prestige; spent in the catalog"><b class="mono" data-live="arete"></b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small></span>`;
 }
 
 // ── The board ledger (§7, issue #270) ───────────────────────────────────
@@ -407,7 +407,6 @@ export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
       <div class="rate-breakdown" role="group" aria-label="Module-linked rate details"><span class="inst-panel"><span class="inst-panel-face">${rateDetailsHtml(state, snapshot, true, "pop")}</span></span></div>`;
     document.getElementById("feats-chip")?.addEventListener("click", () => app.openModal("achievements"));
     document.getElementById("rate-cell")?.addEventListener("click", () => app.openModal("rate"));
-    document.getElementById("arete-read")?.addEventListener("click", () => app.openModal("arete"));
     document.getElementById("library-chip")?.addEventListener("click", () => app.openModal("library"));
     // A synth row's tap selects its module: the hex wears the selected
     // stroke and the bloom opens over it — the row names the place,
@@ -449,10 +448,10 @@ export function updateLedgerLive(
 // (issue #270). The rate read stays the strip's one tap: it opens the
 // module-linked rate details as a sheet, the same door the ledger's rate
 // figure provides at every other width (the ledger itself dissolves below
-// the 600px breakpoint). The arete read keeps the sheet as its tap-through
-// door until the Catalog door absorbs it (issue #271), and the telegraph
-// slot stands dim before the first prestige. Displayed only below the
-// 600px breakpoint; values update every render.
+// the 600px breakpoint). The arete read is a read, never a door (issue
+// #271) — the thumb bar's Catalog segment owns the shop — and the
+// telegraph slot stands dim before the first prestige. Displayed only
+// below the 600px breakpoint; values update every render.
 export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
   const host = document.getElementById("game-info-strip");
   if (!host) return;
@@ -467,11 +466,10 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
       <button class="info-read info-rate" id="info-rate" aria-label="Rate details" title="Rate — tap for the module details"><b class="mono" data-live="i-rate"></b><small aria-hidden="true">ν/s</small><span class="info-hint" aria-hidden="true">ⓘ</span></button>
       ${
         catalogOpen(state)
-          ? `<button class="info-read info-arete" id="info-arete" aria-label="Arete Catalog" title="Arete — banked by prestige; spent in the Arete Catalog"><b class="mono" data-live="i-arete"></b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small></button>`
+          ? `<span class="info-read info-arete" title="Arete — banked by prestige; spent in the catalog"><b class="mono" data-live="i-arete"></b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small></span>`
           : `<span class="info-read info-arete arete-dim" title="Arete — banked by prestige">${areteTelegraphHtml()}</span>`
       }</div>`;
     document.getElementById("info-rate")?.addEventListener("click", () => app.openModal("rate"));
-    document.getElementById("info-arete")?.addEventListener("click", () => app.openModal("arete"));
   }
   const set = (live: string, text: string) => liveSet(host, live, text);
   // Same compression as the ledger's read, same exact tooltip (issue #187).
