@@ -71,6 +71,11 @@
 .danger{color:var(--switch);border-color:var(--switch)}
 /* ---- split stage (variant C) ---- */
 .split{display:grid;grid-template-columns:138px 1fr;min-height:380px}
+.split.habits{grid-template-columns:192px 1fr}
+.split.habits .list .grow{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.split .list .addrow{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.split .list .addrow input{width:100%;min-width:0}
+.split .list .addrow button{align-self:flex-end}
 .split .list{border-right:1px solid var(--soft);padding-right:14px;display:flex;flex-direction:column;gap:2px}
 .split .list .row{border-top:0;padding:10px 4px}
 .split .detail{padding-left:16px;min-width:0}
@@ -277,7 +282,7 @@ function habitDetail(h){
   ?`<hr class="rule"><div class="row"><span class="sub">Manual logs wait for upgrade mode.</span></div>`
   :`<hr class="rule"><div class="row"><span class="grow">${tip('log-tip-'+h.id,'Log practice','Credits practice without a session. Manual logs never produce nous or charge.')}</span><input class="mono" style="width:64px;text-align:right" value="30" aria-label="Minutes"><button>Log</button></div>`;
  return `<button class="backlink" data-back>← HABITS</button>
-  <div class="head"><span class="name">${h.name}</span><span class="acq">SELECTED</span>${mgmt}</div>
+  <div class="head"><span style="display:flex;align-items:baseline;gap:10px;min-width:0"><span class="name">${h.name}</span>${h.id===S.active?'<span class="acq">ACTIVE</span>':''}</span><span style="display:flex;gap:6px">${mgmt}</span></div>
   <div class="rows">
    <div class="row"><span class="grow">Lifetime</span><span class="fig mono">${h.life}</span></div>
    <div class="row"><span class="grow">Sessions</span><span class="fig mono">${h.sessions}</span></div>
@@ -291,8 +296,8 @@ function habitDetail(h){
 function habitIndex(){
  const rows=D.habits.map(h=>`<div class="row ${h.id===S.habitPick?'marksel':''}" role="button" tabindex="0" data-habit="${h.id}" aria-pressed="${h.id===S.habitPick}">
   <span class="fig mono">${h.life}</span><span class="fig mono dim">${h.sessions}×</span>
-  <span class="grow name">${h.name}</span>${h.id===S.active?'<span class="dot on" title="Active habit"></span>':''}<span class="mono dim">→</span></div>`).join('');
- const add=S.mode==='flow'?'<div class="row"><span class="sub">Adding waits for upgrade mode.</span></div>':'<div class="row"><input class="grow" placeholder="Name a practice" aria-label="New habit name"><button>Add</button></div>';
+  <span class="grow name">${h.name}</span>${h.id===S.active?'<span class="dot on" title="Active habit"></span>':''}</div>`).join('');
+ const add=S.mode==='flow'?'<div class="row"><span class="sub">Adding waits for upgrade mode.</span></div>':'<div class="row addrow"><input placeholder="Name a practice" aria-label="New habit name"><button>Add</button></div>';
  return rows+`<hr class="rule">`+add;
 }
 function habitFace(){
@@ -301,7 +306,7 @@ function habitFace(){
   return habitIndex();
  }
  const h=D.habits.find(x=>x.id===(S.habitPick||D.habits[0].id));
- return `<div class="split"><div class="list">${habitIndex()}</div><div class="detail">${habitDetail(h).replace('<button class="backlink" data-back>← HABITS</button>','')}</div></div>`;
+ return `<div class="split habits"><div class="list">${habitIndex()}</div><div class="detail">${habitDetail(h).replace('<button class="backlink" data-back>← HABITS</button>','')}</div></div>`;
 }
 function renderHabit(){
  if(S.habitPick&&S.variant!=='C')return wrap('HABIT','development',habitDetail(D.habits.find(h=>h.id===S.habitPick)));
