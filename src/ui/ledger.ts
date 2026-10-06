@@ -43,6 +43,12 @@ interface SynthLegs {
   chargeStrength: number;
   boost: number;
   discovery: number;
+  // The capacity read (issue #258): the singer's used/available whole-
+  // chord budget, and the recognized-but-idle candidates it qualifies for
+  // — named, never counted in the chord leg.
+  capacity: number;
+  used: number;
+  idleLabel: string;
 }
 
 // One oscillator's decomposition, straight off its contribution: the legs
@@ -56,6 +62,21 @@ interface SynthLegs {
 // mutator row joins the roster (ADR-0037).
 function synthLegsOf(state: GameState, snapshot: RateSnapshot, contribution: Contribution, module: ModuleInstance): SynthLegs {
   const terms = snapshot.namedChords.filter((chord) => chord.moduleIds.includes(contribution.moduleId)).map(chordTermLabel);
+  // The idle candidates (issue #258): recognized voice-sets the module
+  // sings in that the allocation didn't select. Deduplicated by identity,
+  // so a doubled G's second Fifth reads once.
+  const allocation = snapshot.allocation;
+  const idle: string[] = [];
+  if (allocation) {
+    const seen = new Set<string>();
+    for (const instance of allocation.recognized) {
+      if (allocation.activeKeys.has(instance.key) || !instance.memberIds.includes(contribution.moduleId)) continue;
+      const identity = `${instance.name}|${instance.root}`;
+      if (seen.has(identity)) continue;
+      seen.add(identity);
+      idle.push(chordTermLabel({ name: instance.name, bonus: instance.bonus, instances: 1 }));
+    }
+  }
   return {
     base: BALANCE.synthRate * hostPower(state, module),
     formationQ: contribution.formationQ,
@@ -69,6 +90,9 @@ function synthLegsOf(state: GameState, snapshot: RateSnapshot, contribution: Con
     chargeStrength: contribution.chargeStrength,
     boost: snapshot.achievementBoost,
     discovery: snapshot.discoveryBoost,
+    capacity: allocation?.capacity ?? 1,
+    used: allocation?.used.get(contribution.moduleId) ?? 0,
+    idleLabel: idle.join(" · "),
   };
 }
 
@@ -88,7 +112,11 @@ function effectText(state: GameState, contribution: Contribution, module: Module
   if (category === "silentVoice") {
     const uplift = BALANCE.silentVoiceUpliftPerLevel * module.level;
     const pitch = contribution.pitch !== null ? noteNameOf(contribution.pitch) : "mute";
-    return `sings ${pitch} · Formation ×${formatNumber(contribution.formationQ)} · +${Math.round(uplift * 100)}% per level to chord instances`;
+    // The capacity read (issue #258): silent voices spend a unit on every
+    // chord they sing in — the count rides their effect line.
+    const allocation = snapshot.allocation;
+    const capacity = allocation ? ` · capacity ${allocation.used.get(contribution.moduleId) ?? 0}/${allocation.capacity}` : "";
+    return `sings ${pitch} · Formation ×${formatNumber(contribution.formationQ)} · +${Math.round(uplift * 100)}% per level to chord instances${capacity}`;
   }
   if (category === "conduit") {
     const strength = snapshot.chargeStrength.get(contribution.moduleId) ?? 0;
@@ -101,6 +129,13 @@ function effectText(state: GameState, contribution: Contribution, module: Module
   }
   if (category === "forge") return `${formatNumber(contribution.value)} progress/s`;
   return "silent — conducts chords";
+}
+
+// The idle candidates' note (issue #258), one wording for the roster
+// builder's prefill and the tick's fill alike: recognized, not selected —
+// never a production claim.
+function idleNote(idleLabel: string): string {
+  return idleLabel ? `idle — earns nothing: ${idleLabel}` : "";
 }
 
 // The live-slot key scheme, one place: the roster builder and the tick's
@@ -124,9 +159,11 @@ function rowSlotTexts(state: GameState, snapshot: RateSnapshot, contribution: Co
       base: `${formatNumber(legs.base)} ν/s`,
       fmt: `×${formatNumber(legs.formationQ)}`,
       chd: `×${formatNumber(legs.chordMult)}`,
+      cap: `${legs.used}/${legs.capacity}`,
       inf: `+${Math.round(legs.infusorBonus * 100)}%`,
       chg: `×${formatNumber(legs.chargeFactor)}`,
       chgn: legs.chargeStrength > 0 ? `⌁${formatNumber(legs.chargeStrength)} charge` : "",
+      idl: legs.idleLabel,
     };
   }
   return { n: effectText(state, contribution, module, snapshot) };
@@ -211,6 +248,10 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
           `<div class="rd-leg"><span class="rd-leg-name">Chords</span>` +
           val(synthSlot(id, "chd"), slots.chd!) +
           `</div>` +
+          `<div class="rd-leg"><span class="rd-leg-name">Capacity</span>` +
+          val(synthSlot(id, "cap"), slots.cap!) +
+          note(synthSlot(id, "idl"), idleNote(slots.idl!)) +
+          `</div>` +
           `<div class="rd-leg"><span class="rd-leg-name">Booster</span>` +
           val(synthSlot(id, "inf"), slots.inf!) +
           `</div>` +
@@ -271,6 +312,8 @@ export function updateRateDetailsLive(scope: ParentNode, state: GameState, snaps
       set(synthSlot(id, "base"), slots.base!);
       set(synthSlot(id, "fmt"), slots.fmt!);
       set(synthSlot(id, "chd"), slots.chd!);
+      set(synthSlot(id, "cap"), slots.cap!);
+      set(synthSlot(id, "idl"), idleNote(slots.idl!));
       set(synthSlot(id, "inf"), slots.inf!);
       set(synthSlot(id, "chg"), slots.chg!);
       set(synthSlot(id, "chgn"), slots.chgn!);

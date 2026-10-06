@@ -720,6 +720,12 @@ h1, h2, h3, p { margin: 0; }
 }
 .library-card h3 { margin: 0; font: 14px var(--mono); font-weight: 400; }
 .library-card .library-bonus { margin: 0; font-size: 11.5px; color: var(--muted); }
+/* The singing-state line (issue #258): recognized versus active bonus,
+   distinguished without color alone — the active card wears the firm
+   outline, the idle line reads in words. */
+.library-card .library-state { margin: 0; font-size: 10.5px; letter-spacing: 0.08em; color: var(--muted); }
+.library-card .library-state-active { color: var(--accent); }
+.library-card.singing { border-color: var(--accent); }
 .library-hairline {
   position: absolute;
   left: 0;
@@ -1450,6 +1456,20 @@ body.bloom-sheet-open .zoom-cluster { bottom: 190px; }
   border-style: dashed;
   opacity: 0.72;
 }
+/* The capacity and earned-factor chips (issue #258): the selected voice's
+   own state — budget spent and chord term earned — in the neutral
+   registers, never a chord hue. */
+.chord-readout-chip.chord-readout-capacity,
+.chord-readout-chip.chord-readout-factor {
+  --cc: var(--muted);
+}
+/* The idle candidate's chip (issue #258): recognized, earning nothing —
+   dashed and quiet, the readout's side of the board's dotted seams. */
+.chord-readout-chip.chord-readout-idle {
+  --cc: var(--muted);
+  border-style: dashed;
+  opacity: 0.62;
+}
 /* The muted participant's seams (ADR-0048): a chord a silent voice sings
    in draws dashed — the game's standing language for silent and promised
    work — a hair quieter than its sounding kin. */
@@ -1460,12 +1480,28 @@ body.bloom-sheet-open .zoom-cluster { bottom: 190px; }
 .chord-mark.chord-fade .chord-seam.chord-muted { opacity: 0.12; }
 #chord-lift .chord-seam.chord-muted { opacity: 0.8; }
 
+/* The idle candidate's seams (issue #258): a recognized chord the
+   allocation didn't select draws dotted and dim — present, nameable, and
+   unmistakably not earning. It never joins the live pulse: idle panels
+   stay quiet, and the active seams dominate the board. */
+.chord-mark.chord-idle .chord-seam {
+  stroke-dasharray: 1.5 4;
+  opacity: 0.14;
+}
+.chord-mark.chord-fade.chord-idle .chord-seam { opacity: 0.08; }
+#chord-lift .chord-mark.chord-idle .chord-seam {
+  stroke-dasharray: 1.5 4;
+  opacity: 0.45;
+  stroke-width: 4;
+}
+
 /* Sounding (§6): in a live session the seams pulse on their chord's own
    period while the board stays locked — the session breathes through its
    chords, and the breath stays inside the whisper (#201): quiet at rest,
    loud only when asked. A faded chord keeps its fade and never joins the
-   pulse (the animation would otherwise override the fade's opacity). */
-body.live .chord-mark:not(.chord-fade) .chord-seam {
+   pulse (the animation would otherwise override the fade's opacity); the
+   idle candidates stay quiet with it (issue #258). */
+body.live .chord-mark:not(.chord-fade):not(.chord-idle) .chord-seam {
   animation: seam-pulse var(--seam-dur, 2.7s) ease-in-out infinite;
 }
 @keyframes seam-pulse {

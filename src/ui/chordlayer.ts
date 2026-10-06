@@ -54,6 +54,11 @@ export interface ChordMark {
   // convention): the mark draws dashed — the game's standing language for
   // silent and promised work — and its readout chip wears the muted style.
   readonly muted: boolean;
+  // Whether this chord is a recognized candidate the allocation left idle
+  // (issue #258): drawn in the same geometry, dimmer and dotted, and
+  // never pulsing — it earns nothing, so it isn't live activity. The
+  // active seams dominate; the idle candidates whisper beneath them.
+  readonly inactive: boolean;
   // Whether this chord carries one of the caller's focus ids (§6): the
   // selected module's chords emphasize, the rest fade. Always true when no
   // focus is asked for.
@@ -313,9 +318,13 @@ export function chordMarkCovers(mark: Pick<ChordMark, "seams" | "outline">, at: 
 // in no chord — the conducting spacer: chords whose drawn work covers the
 // point lift with it. `silentIds` names the silent voices (ADR-0048): a
 // chord any of them sings in draws muted — dashed seams, dashed chip.
-// `step` is the lattice's adjacent-center distance.
+// `step` is the lattice's adjacent-center distance. `inactiveChords`
+// (issue #258) carries the recognized-but-idle candidates: each draws its
+// own mark, flagged inactive, after the active ones — the board shows
+// every chord it sings, and the active bonuses dominate it.
 export function chordOverlay(opts: {
   namedChords: readonly NamedChordTerm[];
+  inactiveChords?: readonly NamedChordTerm[];
   posOf: (id: string) => Hex | null;
   point: (h: Hex) => Point;
   radius: number;
@@ -330,14 +339,14 @@ export function chordOverlay(opts: {
   const silent = opts.silentIds ?? new Set<string>();
   const emphasize = focus.size > 0 || opts.focusPoint != null;
   const marks: ChordMark[] = [];
-  namedChords.forEach((chord, index) => {
+  const markFor = (chord: NamedChordTerm, index: number, inactive: boolean): void => {
     const positions = chord.moduleIds.map(posOf);
     if (positions.some((pos) => pos === null)) return;
     const centers = positions.map((pos) => point(pos as Hex));
     const { seams, outline } = geometryFor(centers, radius);
     const top = centers.reduce((a, b) => (b[1] < a[1] ? b : a));
     const mark: ChordMark = {
-      key: `chord-${index}`,
+      key: `${inactive ? "chord-idle" : "chord"}-${index}`,
       label: labelFor(chord),
       colorVar: CHORD_HUES[chord.name] ?? FALLBACK_HUE,
       duration: CHORD_PULSE[chord.name] ?? FALLBACK_PULSE,
@@ -348,12 +357,15 @@ export function chordOverlay(opts: {
       chipY: Number((top[1] - radius * 1.18).toFixed(2)),
       voices: chord.moduleIds,
       muted: chord.moduleIds.some((id) => silent.has(id)),
+      inactive,
       focused:
         !emphasize ||
         chord.moduleIds.some((id) => focus.has(id)) ||
         (opts.focusPoint != null && chordMarkCovers({ seams, outline }, opts.focusPoint)),
     };
     marks.push(mark);
-  });
+  };
+  namedChords.forEach((chord, index) => markFor(chord, index, false));
+  (opts.inactiveChords ?? []).forEach((chord, index) => markFor(chord, index, true));
   return { marks };
 }

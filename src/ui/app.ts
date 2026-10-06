@@ -35,7 +35,8 @@ import {
 import { ARETE_HORIZON, claimOf } from "../engine/accumulator";
 import { neighbors, hex, sameHex } from "../engine/hex";
 import { newChordTerms } from "../engine/chords";
-import { computeRates, mutatorAt } from "../engine/economy";
+import { allocateRates, mutatorAt } from "../engine/economy";
+import { recognizedTermsOf } from "../engine/allocation";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
 import { formatClock } from "../engine/clock";
 import { formatInt, formatNumber } from "./format";
@@ -948,12 +949,18 @@ export class App {
 
   // The formation strum (§6): a placement that forms a chord strums it —
   // the drop gesture is the audio unlock, and the global mute silences it.
-  // The seams already said it; this is garnish, not information.
+  // The seams already said it; this is garnish, not information. The diff
+  // runs on recognition (issue #258): a chord the board newly sings is the
+  // discovery moment, active or idle. The read rides the state's stored
+  // hint, writing nothing — the action boundary already synced it.
   private strumFormedChords(before: readonly NamedChordTerm[]): void {
     if (this.state.muted) return;
     // Same snapshot basis as the caller's `before`, so the diff can't lie
     // if the two calls ever drift apart.
-    const newcomers = newChordTerms(before, computeRates(this.state).namedChords);
+    const after = allocateRates(this.state, this.state.mode === "flow", {
+      keep: new Set(this.state.activeChords ?? []),
+    }).read;
+    const newcomers = newChordTerms(before, recognizedTermsOf(after));
     if (newcomers.length === 0) return;
     this.audio = this.channels.unlockAudio(this.audio);
     this.channels.playStrum(this.audio, newcomers);
@@ -1650,7 +1657,9 @@ export class App {
   // is dropped before the landing renders, never after: the module
   // presents closed. A chord the drop newly forms strums (§6).
   private placeAndStrum(module: ModuleInstance, pos: Hex): void {
-    const before = computeRates(this.state).namedChords;
+    const before = recognizedTermsOf(
+      allocateRates(this.state, this.state.mode === "flow", { keep: new Set(this.state.activeChords ?? []) }).read,
+    );
     this.ui.selected = null;
     if (this.act(placeModule(this.state, module.id, pos), `${META[module.type].name} placed.`)) {
       this.ui.placing = null;

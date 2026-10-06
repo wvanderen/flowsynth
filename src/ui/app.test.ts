@@ -1789,33 +1789,43 @@ describe("always-on chord feedback (§6, #137)", () => {
     expect(mark.querySelectorAll(".chord-seam")).toHaveLength(2);
   });
 
-  it("the readout is a reserved spot: the module's final ν/s leads, every chord it sings in follows", () => {
+  it("the readout is a reserved spot: ν/s, capacity, earned factor, then its chords", () => {
     // The power-chord region again: C4 sings in two chords — the Octave
-    // (C4·C5) and the Fifth (C4·G4).
+    // (C4·C5) and the Fifth (C4·G4). At capacity one only one instance
+    // earns: the C4·G4 Fifth; the doubled fifth and the Octave stay
+    // recognized idles (issue #258).
     give(app.state, "additive", hex(1, 0));
     app.state.cells.push(hex(0, 1));
     give(app.state, "additive", hex(0, 1));
     app.render();
     const chips = () => [...readout().querySelectorAll(".chord-readout-chip")].map((chip) => chip.textContent);
-    // Hovering G4 — its final ν/s leads (it sings the doubled Fifth: both
-    // instances share it), then the chord's chip.
+    // Hovering G4 — its final ν/s leads, then its capacity, then the total
+    // earned factor (instance × formation), then the named terms: the
+    // active chord, then the idle candidate it qualifies for but can't
+    // afford (#258).
     cell(1, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(readout().hidden).toBe(false);
     // The formation quality is its own named term (ADR-0049) and rides the
-    // ν/s: classes {0,7}, one class of complexity.
+    // factor: classes {0,7}, one class of complexity.
+    const earned = formatNumber(1.3 * (1 + BALANCE.complexityRate));
     expect(chips()).toEqual([
-      `+${formatNumber(0.1 * 1.3 ** 2 * (1 + BALANCE.complexityRate))} ν/s`,
+      `+${formatNumber(0.1 * 1.3 * (1 + BALANCE.complexityRate))} ν/s`,
+      "Capacity 1/1",
+      `×${earned}`,
       "Formation ×1.06",
-      "Fifth ×1.3 ×2",
+      "Fifth ×1.3",
+      "Fifth ×1.3 · idle",
     ]);
-    // Hovering C4 asks its ν/s and both of its chords into the spot — the
-    // octave and its one fifth instance (the other pairs C5 · G4).
+    // Hovering C4 asks its own row — the same earned Fifth, and the idle
+    // Octave is the candidate it shares.
     cell(0, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(chips()).toEqual([
-      `+${formatNumber(0.1 * 1.15 * 1.3 * (1 + BALANCE.complexityRate))} ν/s`,
+      `+${formatNumber(0.1 * 1.3 * (1 + BALANCE.complexityRate))} ν/s`,
+      "Capacity 1/1",
+      `×${earned}`,
       "Formation ×1.06",
-      "Octave ×1.15",
-      "Fifth ×1.3 ×2",
+      "Fifth ×1.3",
+      "Octave ×1.15 · idle",
     ]);
     // Leaving clears them.
     document.getElementById("grid")!.dispatchEvent(new MouseEvent("pointerleave"));
@@ -1825,24 +1835,26 @@ describe("always-on chord feedback (§6, #137)", () => {
     app.select(c4.id);
     expect(readout().hidden).toBe(false);
     expect(chips()).toEqual([
-      `+${formatNumber(0.1 * 1.15 * 1.3 * (1 + BALANCE.complexityRate))} ν/s`,
+      `+${formatNumber(0.1 * 1.3 * (1 + BALANCE.complexityRate))} ν/s`,
+      "Capacity 1/1",
+      `×${earned}`,
       "Formation ×1.06",
-      "Octave ×1.15",
-      "Fifth ×1.3 ×2",
+      "Fifth ×1.3",
+      "Octave ×1.15 · idle",
     ]);
     // Deselecting empties the readout again.
     app.select(c4.id);
     expect(readout().hidden).toBe(true);
   });
 
-  it("a chordless module still shows its final ν/s in the reserved readout", () => {
+  it("a chordless module still shows its final ν/s — at zero capacity spent, factor ×1", () => {
     app.render();
     const island = give(app.state, "additive", hex(5, 0)); // its own island
     app.render();
     const chips = () => [...readout().querySelectorAll(".chord-readout-chip")].map((chip) => chip.textContent);
     app.select(island.id);
     expect(readout().hidden).toBe(false);
-    expect(chips()).toEqual([`+${formatNumber(BALANCE.synthRate)} ν/s`]);
+    expect(chips()).toEqual([`+${formatNumber(BALANCE.synthRate)} ν/s`, "Capacity 0/1", "×1"]);
   });
 
   it("clicking a module during flow answers the lock — no selection, no bloom", () => {
@@ -1884,24 +1896,26 @@ describe("always-on chord feedback (§6, #137)", () => {
     expect(readout().textContent).toContain("Fifth ×1.3");
   });
 
-  it("overlapping chords draw their own work, chord-colored (#201)", () => {
-    // A power-chord region: C4 (the opening synth), G4 and C5 — the Octave
-    // and the Fifth share the region, both draw.
+  it("overlapping chords draw their own work, chord-colored (#201); idles draw dimmer (#258)", () => {
+    // A power-chord region: C4 (the opening synth), G4 and C5 — the active
+    // Fifth draws full-voice, and the recognized idles (the doubled fifth,
+    // the Octave) draw their own dotted marks beneath it.
     give(app.state, "additive", hex(1, 0));
     app.state.cells.push(hex(0, 1));
     give(app.state, "additive", hex(0, 1));
     app.render();
     const grid = document.getElementById("grid")!;
     const marks = [...grid.querySelectorAll('[data-key="chord-marks"] .chord-mark')];
-    expect(marks).toHaveLength(2);
-    // Two hues: the engine names the Octave first, the Fifth second.
+    expect(marks).toHaveLength(3);
+    // The active seam dominates: the first mark is the earning Fifth; the
+    // idles carry the chord-idle class (issue #258).
+    expect(marks[0]!.classList.contains("chord-idle")).toBe(false);
+    expect(marks[0]!.querySelectorAll("line.chord-seam").length).toBeGreaterThan(0);
+    expect(marks.slice(1).every((mark) => mark.classList.contains("chord-idle"))).toBe(true);
+    // The idle hues: the engine names the Octave and the doubled Fifth.
     const hues = marks.map((mark) => (mark as HTMLElement).style.getPropertyValue("--cc"));
-    expect(hues).toEqual(["var(--chord-octave)", "var(--chord-fifth)"]);
-    // The Octave's vertical pair runs one continuous twin line down the
-    // column; the three-voice Fifth wraps the region in its note-corner
-    // polygon — both draw, no pair is claimed once (#201).
-    expect(marks.map((mark) => mark.querySelectorAll("line.chord-seam").length)).toEqual([2, 0]);
-    expect(marks[1]!.querySelector("polygon.chord-loop")).not.toBeNull();
+    expect(hues).toContain("var(--chord-fifth)");
+    expect(hues).toContain("var(--chord-octave)");
     // The chord work renders behind the modules: the marks group precedes
     // the cell nodes (which carry data-cell, no data-key) in paint order.
     const children = [...grid.children].map((child) => child.getAttribute("data-key"));
@@ -4738,5 +4752,59 @@ describe("the habit build (ADR-0046, wave 4)", () => {
     document.querySelector<HTMLButtonElement>(`[data-summary="${habit.id}"]`)!.click();
     expect(document.querySelector("#app-popover .habit-build")).toBeNull();
     expect(document.querySelector("#app-popover .habit-summary")!.textContent).toContain("Build nodes unlock with practice time");
+  });
+});
+
+describe("the one-capacity economy on the board (#258)", () => {
+  const readout = () => document.getElementById("chord-readout") as HTMLElement;
+
+  it("selection survives a capacity-driven chord replacement; the readout follows the new set", () => {
+    // C4 · G4 earns the Fifth. Moving the G up an octave breaks it: at
+    // capacity one the pair can sing the Fifth or the Octave, never both —
+    // the active set replaces while C4 stays selected, and the readout
+    // follows the new whole chord with no stale claim.
+    give(app.state, "additive", hex(1, 0));
+    app.render();
+    const c4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(0, 0)))!;
+    app.select(c4.id);
+    expect(readout().textContent).toContain("Capacity 1/1");
+    expect(readout().textContent).toContain("Fifth ×1.3");
+    const g = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(1, 0)))!;
+    app.state.cells.push(hex(0, 1));
+    g.pos = hex(0, 1);
+    app.render();
+    expect(app.ui.selected).toBe(c4.id);
+    expect(readout().textContent).toContain("Capacity 1/1");
+    expect(readout().textContent).toContain("Octave ×1.15");
+    expect(readout().textContent).not.toContain("Fifth");
+    expect(readout().textContent).not.toContain("idle");
+  });
+
+  it("the library names the singing class and demotes it when the chord breaks", () => {
+    // The placement runs the real action boundary: the discovery lands,
+    // and the field guide names the class singing. Returning the module
+    // demotes the card — discovered stays, singing goes.
+    const tray = give(app.state, "additive", null);
+    app.pickCellThenPlace(tray.id, hex(1, 0));
+    app.render();
+    app.openModal("library");
+    let sheet = document.getElementById("modal-content")!;
+    expect(sheet.textContent).toContain("singing now");
+    app.closeModal();
+    app.returnToInventory(tray.id);
+    app.openModal("library");
+    sheet = document.getElementById("modal-content")!;
+    expect(sheet.textContent).not.toContain("singing now");
+    expect(sheet.textContent).toContain("heard — not singing");
+  });
+
+  it("the allocation rides the real save/reload path deterministically", () => {
+    give(app.state, "additive", hex(1, 0));
+    app.render();
+    const saved = localStorage.getItem(STORAGE_KEY)!;
+    expect(saved).toContain("activeChords");
+    const rebooted = boot();
+    rebooted.render();
+    expect(rebooted.state.activeChords).toEqual(app.state.activeChords);
   });
 });

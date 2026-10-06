@@ -1,4 +1,4 @@
-import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, emittedStrength, affordableLevels, hostPower, levelCost, levelsCost, longGoalCost, ritualAmpOf, wholeNous } from "../engine/economy";
+import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, hostPower, levelCost, levelsCost, longGoalCost, ritualAmpOf, wholeNous } from "../engine/economy";
 import { claimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
 import { combinePreview, combineMutatorsPreview, levelable, type CombinePreview, upgradeAllPreview } from "../engine/actions";
@@ -25,7 +25,7 @@ import { poolOutstanding } from "../engine/trust";
 import { arcCardDue } from "../engine/arc";
 import { goalCapacity, goalRequiredSeconds, goalSummary, goalTrackerState, type GoalTrackerState } from "../engine/goals";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
-import type { DeployedModule, GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, MutatorInstance, NoteEntry, Rarity, RateSnapshot } from "../engine/types";
+import type { DeployedModule, GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, MutatorInstance, NamedChordTerm, NoteEntry, Rarity, RateSnapshot } from "../engine/types";
 import { DEV_BOARD_CAPACITIES, type App, type ChordHover, type EnterKind, type EnterSelection, type ModalKind } from "./app";
 import { suppressNextClick } from "./click";
 import { startPointerDrag } from "./pointer-drag";
@@ -86,9 +86,24 @@ function setText(node: Element | null | undefined, text: string): void {
 
 // The rate shown in the ledger, hexes, and rate details: live during flow,
 // projected build rate while arranging in upgrade mode. Module panels preview
-// charge separately via computeRates(state, true).
+// charge separately via displayedRates(state, true). The authoritative
+// allocation pass (issue #258) is the display basis: the board earns from
+// the selected whole chords, so every readout — ledger, faces, seams,
+// readout — reads the same allocation the production tick runs.
 function currentSnapshot(state: GameState): RateSnapshot {
-  return computeRates(state, state.mode === "flow");
+  return displayedRates(state, state.mode === "flow");
+}
+
+// The snapshot's recognized-but-idle candidates as chord terms (issue
+// #258): what the board sings but the allocation didn't select. Absent an
+// allocation read, nothing is idle — the plain recognizer's every term is
+// already in namedChords.
+function idleTermsOf(snapshot: RateSnapshot): NamedChordTerm[] {
+  const allocation = snapshot.allocation;
+  if (!allocation) return [];
+  return allocation.recognized
+    .filter((instance) => !allocation.activeKeys.has(instance.key))
+    .map((instance) => ({ name: instance.name, bonus: instance.bonus, instances: 1, moduleIds: [...instance.memberIds], root: instance.root }));
 }
 
 function stat(label: string, value: string): string {
@@ -101,7 +116,7 @@ export function render(app: App): void {
   // charge-projected basis the panels, bloom, and countdowns preview.
   // Every surface below reads the pass's snapshot; none recomputes.
   const live = currentSnapshot(app.state);
-  const projected = computeRates(app.state, true);
+  const projected = displayedRates(app.state, true);
   renderConsoleSession(app);
   renderConsoleApps(app, projected);
   renderBoardLedger(app, live);
@@ -662,10 +677,14 @@ function renderAchievementsModal(app: App, content: HTMLElement, projected: Rate
 // a known card, the hueless dashed silhouette on an unknown one — and the
 // header carries the ledger's total: each discovered class adds +1%
 // (tuning) into the rate, permanently, across prestige.
-function renderLibraryModal(app: App, content: HTMLElement): void {
+function renderLibraryModal(app: App, content: HTMLElement, snapshot?: RateSnapshot): void {
   const { state } = app;
   const count = discoveryCount(state);
-  const cards = NAMED_CHORDS.map((def) => libraryCardHtml(def, state.chordDiscovery[def.name])).join("");
+  // The singing classes (issue #258): the allocation's active instances
+  // name the classes whose bonuses are on the board right now — a
+  // discovered class without one reads as heard, never as earning.
+  const singing = new Set((snapshot?.allocation?.active ?? []).map((instance) => instance.name));
+  const cards = NAMED_CHORDS.map((def) => libraryCardHtml(def, state.chordDiscovery[def.name], singing.has(def.name))).join("");
   content.innerHTML = `
     ${modalTop("CHORD LIBRARY")}
     <h2 id="modal-title">${count} of ${NAMED_CHORDS.length} classes discovered.</h2>
@@ -1044,6 +1063,10 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
   const silentIds = new Set(state.modules.filter((m) => CATEGORY_OF[m.type] === "silentVoice").map((m) => m.id));
   const overlay = chordOverlay({
     namedChords: snapshot.namedChords,
+    // The recognized-but-idle candidates (issue #258): the board sings
+    // them, the allocation didn't select them — dimmer, dotted, never
+    // pulsing. The active seams dominate.
+    inactiveChords: idleTermsOf(snapshot),
     posOf: (id) => deployedById.get(id)?.pos ?? null,
     point,
     radius: HEX_RADIUS,
@@ -1254,6 +1277,9 @@ function rowBandHtml(state: GameState, bands: RowBand[], point: (pos: Hex) => [n
 function chordMarkHtml(mark: ChordMark, keyPrefix: "formed" | "ghost"): string {
   const ghost = keyPrefix === "ghost";
   const emphasis = ghost ? " ghost-mark" : mark.focused ? " chord-focus" : " chord-fade";
+  // The idle candidate's mark (issue #258): dimmed and dotted, never
+  // pulsing — it earns nothing, so it isn't live activity.
+  const idle = mark.inactive ? " chord-idle" : "";
   // The muted participant's mark (ADR-0048): a chord a silent voice sings
   // in draws dashed — the standing language for silent and promised work.
   const style = `--cc:var(--${mark.colorVar});--seam-dur:${mark.duration}s`;
@@ -1268,7 +1294,7 @@ function chordMarkHtml(mark: ChordMark, keyPrefix: "formed" | "ghost"): string {
   const chip = ghost
     ? `<rect class="chord-chip" x="${(mark.chipX - chipWidth(mark.label) / 2).toFixed(2)}" y="${(mark.chipY - 11.5).toFixed(2)}" width="${chipWidth(mark.label).toFixed(2)}" height="15" rx="4"/><text class="chord-label mono" x="${mark.chipX}" y="${mark.chipY}">${escapeHtml(mark.label)}</text>`
     : "";
-  return `<g data-key="${keyPrefix}-${escapeHtml(mark.key)}" class="chord-mark${emphasis}"${ghost ? "" : ` data-chord="${escapeHtml(mark.key)}" data-voices="${escapeHtml(mark.voices.join(" "))}"`} style="${style}">${lines}${chip}</g>`;
+  return `<g data-key="${keyPrefix}-${escapeHtml(mark.key)}" class="chord-mark${emphasis}${idle}"${ghost ? "" : ` data-chord="${escapeHtml(mark.key)}" data-voices="${escapeHtml(mark.voices.join(" "))}"`} style="${style}">${lines}${chip}</g>`;
 }
 
 // The mark index the hover questions read: the render's chord marks keyed
@@ -1301,7 +1327,7 @@ function updateChordReadout(app: App): void {
   // arete register. One spot, never floating over the board.
   if (hover?.kind === "mutator") {
     host.hidden = false;
-    host.innerHTML = mutatorAskHtml(app.state, hover.pos, snapshot ?? computeRates(app.state, true));
+    host.innerHTML = mutatorAskHtml(app.state, hover.pos, snapshot ?? displayedRates(app.state, true));
     return;
   }
   const selected = app.state.modules.find((m) => m.id === app.ui.selected && m.pos !== null) ?? null;
@@ -1316,6 +1342,22 @@ function updateChordReadout(app: App): void {
     focus && contribution && isOscillatorType(focus.type)
       ? `<span class="chord-readout-chip chord-readout-value mono">+${formatNumber(contribution.value)} ν/s</span>`
       : "";
+  // The capacity read (issue #258): the focused singer's used/available
+  // whole-chord budget — spacers conduct and consume none, so they never
+  // wear the chip.
+  const allocation = snapshot?.allocation;
+  const sings = focus && (isOscillatorType(focus.type) || CATEGORY_OF[focus.type] === "silentVoice");
+  const capacityChip =
+    focus && sings && allocation
+      ? `<span class="chord-readout-chip chord-readout-capacity mono">Capacity ${allocation.used.get(focus.id) ?? 0}/${allocation.capacity}</span>`
+      : "";
+  // The total earned chord factor (issue #258): the selected oscillator's
+  // whole chord term — instance product × formation × resonance — the one
+  // figure the seam terms multiply into.
+  const factorChip =
+    focus && contribution && isOscillatorType(focus.type) && contribution.chordFactor !== null
+      ? `<span class="chord-readout-chip chord-readout-factor mono">×${formatNumber(contribution.chordFactor)}</span>`
+      : "";
   // The formation quality's own named term (ADR-0049): every member of a
   // named formation reads it — "Formation ×1.12" — chord-sourced, so a
   // chordless formation never shows one.
@@ -1323,7 +1365,7 @@ function updateChordReadout(app: App): void {
     contribution && contribution.formationQ !== 1
       ? `<span class="chord-readout-chip chord-readout-formation mono">Formation ×${formatNumber(contribution.formationQ)}</span>`
       : "";
-  if (!valueChip && !formationChip && chosen.length === 0) {
+  if (!valueChip && !capacityChip && !factorChip && !formationChip && chosen.length === 0) {
     host.hidden = true;
     host.innerHTML = "";
     return;
@@ -1331,13 +1373,16 @@ function updateChordReadout(app: App): void {
   host.hidden = false;
   host.innerHTML =
     valueChip +
+    capacityChip +
+    factorChip +
     formationChip +
     chosen
-      .map(
-        (mark) =>
-          // The muted participant's mark (ADR-0048): a chord a silent voice
-          // sings in wears the same dashed treatment its seams carry.
-          `<span class="chord-readout-chip mono${mark.muted ? " chord-readout-muted" : ""}" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.label)}</span>`,
+      .map((mark) =>
+        // The muted participant's mark (ADR-0048): a chord a silent voice
+        // sings in wears the same dashed treatment its seams carry. The
+        // idle candidate's chip (issue #258) reads its own style and the
+        // "idle" word — recognized, earning nothing.
+        `<span class="chord-readout-chip mono${mark.muted ? " chord-readout-muted" : ""}${mark.inactive ? " chord-readout-idle" : ""}" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.inactive ? `${mark.label} · idle` : mark.label)}</span>`,
       )
       .join("");
 }
@@ -1784,7 +1829,13 @@ function ghostMarksHtml(app: App, projected?: RateSnapshot): string {
   // A combine offer previews no swap: the drop won't rearrange voices, it
   // will consume the twin under the pointer (issue #152).
   if (dropRegister(app, hover.pos) === "combine") return "";
-  const current = (projected ?? computeRates(app.state, true)).namedChords;
+  // The diff runs on recognition (issue #258): a ghost promises a chord
+  // the board will sing, active or idle — what the player does with a full
+  // capacity is the placement preview's own question (#260).
+  const basis = projected ?? computeRates(app.state, true);
+  const current = basis.allocation
+    ? basis.allocation.recognized.map((instance) => ({ name: instance.name, bonus: instance.bonus, instances: 1, moduleIds: [...instance.memberIds], root: instance.root }))
+    : basis.namedChords;
   const preview = wouldFormPreview(app.state, hover.moduleId, hover.pos, 1 + activeBuildFactors(app.state).namedChordBonus);
   const newcomers = newChordTerms(current, preview.chords);
   if (newcomers.length === 0) return "";
@@ -2694,7 +2745,7 @@ function appPanelBody(app: App, panel: FocusApp): string {
   // flow.
   const longGoalPrice = longGoalCost(state.goalCapacityBought);
   const longGoalAffordable = wholeNous(state) >= longGoalPrice;
-  const longGoalCountdown = upgrade ? practiceCountdown(longGoalPrice, wholeNous(state), computeRates(state, true).rate) : null;
+  const longGoalCountdown = upgrade ? practiceCountdown(longGoalPrice, wholeNous(state), displayedRates(state, true).rate) : null;
   const longGoalRow = `
     <div class="long-goal-row">
       <span class="long-goal-name">One more goal slot</span>
@@ -3115,9 +3166,10 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
               // moves, not on every clock tick.
               ? achProgressKey(app, projected)
               // The library's own ledger signature (issue #230): a discovery
-              // or a new root re-renders the sheet.
+              // or a new root re-renders the sheet — as does the singing
+              // set (issue #258): a class flipping active/idle rebuilds.
               : kind === "library"
-                ? discoveryKey(app.state)
+                ? [discoveryKey(app.state), (live.allocation?.active ?? []).map((i) => i.name).sort().join(",")]
               // The enter prompt's own selection state (issue #95): the plan
               // and the kind-first picks re-render the modal the moment they
               // change — chips highlight on pick, never a stale footer.
@@ -3156,7 +3208,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   else if (kind === "arete") renderAreteCatalogModal(app, content);
   else if (kind === "forge") renderForgeModal(app, content, projected);
   else if (kind === "achievements") renderAchievementsModal(app, content, projected);
-  else if (kind === "library") renderLibraryModal(app, content);
+  else if (kind === "library") renderLibraryModal(app, content, live);
   else if (kind === "export") renderExportModal(app, content);
   else if (kind === "import") renderImportModal(app, content);
   else if (kind === "reset") renderResetModal(app, content);
@@ -3358,7 +3410,7 @@ function renderSettingsModal(app: App, content: HTMLElement): void {
 // board's projected next-session rate (the charged preview, whatever the
 // current mode); null (hidden) when affordable or rateless.
 function upgradeCountdown(app: App, cost: number): string | null {
-  return practiceCountdown(cost, wholeNous(app.state), computeRates(app.state, true).rate);
+  return practiceCountdown(cost, wholeNous(app.state), displayedRates(app.state, true).rate);
 }
 
 // The one purchase affordance every buy row wears (§7, issue #150): the

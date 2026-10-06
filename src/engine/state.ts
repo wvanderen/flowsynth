@@ -67,6 +67,7 @@ export function createInitialState(): GameState {
     goals: [],
     achievements: {},
     chordDiscovery: {},
+    activeChords: [],
     session: null,
     summary: null,
     nextId: 1,

@@ -11,8 +11,8 @@
 // the eager resume sync stamps silently (SyncOptions.silent).
 import { ARETE_HORIZON } from "./accumulator";
 import { BALANCE, SHELF_TYPES } from "./constants";
-import { analyzeChords } from "./chords";
-import { deployedVoices } from "./economy";
+import { allocateRates } from "./economy";
+import { maxVoiceFactorOf } from "./allocation";
 import { isInFlowNote } from "./notes";
 import type { GameState } from "./types";
 
@@ -54,9 +54,14 @@ export interface AchievementDef {
 
 // Inputs the caller may know better than the state alone: charge only
 // exists live during flow, so the tick that has the rate snapshot passes
-// whether any module actually received charge.
+// whether any module actually received charge. The allocated pass's
+// maximum chord factor rides beside it (issue #258): the feats that read
+// production factors read the factor actually earned, and the tick that
+// already ran the authoritative allocation hands it over rather than
+// paying for a second solve.
 export interface AchievementContext {
   chargeDelivered: boolean;
+  maxChordFactor?: number;
 }
 
 const fraction = (numerator: number, denominator: number): AchievementProgress => ({
@@ -86,20 +91,18 @@ const rollsTaken = (state: GameState): number =>
   Math.max(0, state.forge.earned + state.flow.earned - state.bankedRolls.length);
 
 // The steepest local chord multiplier any single deployed voice sings
-// under (ADR-0036, raised by ADR-0049) — the same partition the rate pass
-// applies (only oscillators and silent voices sing; spacers conduct) —
-// computed straight from the board so the registry stays free of the rate
-// pass. Chords are local, so the feat asks what one voice carries, never a
-// board-wide product that stacks disjoint formations onto a single module.
-// The formation quality Q rides inside the factor (ADR-0049): Q counts
-// toward the ×2.
-function maxVoiceMultiplierOf(state: GameState): number {
-  const { singers, spacers } = deployedVoices(state);
-  let max = 0;
-  for (const factor of analyzeChords(singers, spacers).voiceMultiplier.values()) {
-    max = Math.max(max, factor);
-  }
-  return max;
+// under (ADR-0036, raised by ADR-0049) — the factor the voice actually
+// earns under the authoritative whole-chord allocation (issue #258): only
+// active instances multiply, formation quality rides the allocated
+// participants, and an unallocated voice sits at exactly ×1. The caller
+// that already holds the allocated pass's maximum passes it in the
+// context; absent, the same two-pass allocation runs here. Chords are
+// local, so the feat asks what one voice carries, never a board-wide
+// product that stacks disjoint formations onto a single module.
+function maxVoiceMultiplierOf(state: GameState, ctx: AchievementContext): number {
+  if (ctx.maxChordFactor !== undefined) return ctx.maxChordFactor;
+  const { read } = allocateRates(state, true);
+  return maxVoiceFactorOf(read.analysis);
 }
 
 // The milestone feats' marks (provisional): stroke glyphs in the
@@ -273,8 +276,8 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     category: "formula",
     name: "Power chord",
     description: "Stack chord multipliers on one voice to ×2 — the Formation term counts.",
-    evaluate: (s) => maxVoiceMultiplierOf(s) >= 2,
-    progress: (s) => fraction(maxVoiceMultiplierOf(s), 2),
+    evaluate: (s, ctx) => maxVoiceMultiplierOf(s, ctx) >= 2,
+    progress: (s, ctx) => fraction(maxVoiceMultiplierOf(s, ctx), 2),
   },
   {
     id: "fine-china",
@@ -357,6 +360,10 @@ export interface SyncOptions {
   // True when the caller has a live rate snapshot showing a module actually
   // receiving charge (the Spark trigger; charge exists only in flow).
   chargeDelivered?: boolean;
+  // The authoritative allocation's earned maximum chord factor (issue
+  // #258), passed by the caller that already ran the pass. Absent, the
+  // power-chord feat's reads run the same two-pass allocation themselves.
+  maxChordFactor?: number;
   // The eager resume sync (ADR-0015 amended): already-satisfied milestones
   // grant silently on load — `unlockedAt` stamps, no toast, and nothing
   // joins a live session's "unlocked this session" row.
@@ -371,7 +378,10 @@ export interface SyncOptions {
 // already-unlocked feats never re-fire.
 export function syncAchievements(state: GameState, options: SyncOptions = {}): AchievementDef[] {
   if (state.sessionsCompleted === 0) return [];
-  const ctx: AchievementContext = { chargeDelivered: options.chargeDelivered ?? false };
+  const ctx: AchievementContext = {
+    chargeDelivered: options.chargeDelivered ?? false,
+    ...(options.maxChordFactor !== undefined ? { maxChordFactor: options.maxChordFactor } : {}),
+  };
   const now = options.now ?? Date.now();
   const unlocked: AchievementDef[] = [];
   for (const def of ACHIEVEMENTS) {

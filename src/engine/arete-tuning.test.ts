@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buyCell, buyShelfModule, chooseRoll, endSession, placeModule, prestige, startSession, upgradeModuleLevels } from "./actions";
+import { buyCell, buyShelfModule, chooseRoll, endSession, placeModule, startSession, upgradeModuleLevels } from "./actions";
 import { advance } from "./advance";
-import { ARETE_HORIZON, horizonReached } from "./accumulator";
+import { ARETE_HORIZON } from "./accumulator";
 import { CATEGORY_OF, isOscillatorType } from "./constants";
 import { computeRates } from "./economy";
 import { createGoal, deleteGoal } from "./goals";
@@ -127,12 +127,14 @@ describe("first Arete tuning (#157)", () => {
         earned24h: rows[47]!.earned.toExponential(4), synths24h: rows[47]!.synths,
         horizonSession: rows.find((r) => r.earned >= ARETE_HORIZON)?.session ?? ">48", finalCells: state.cells.length,
       });
-      if (shape === "compact") {
-        expect(horizonReached(state)).toBe(true);
-        expect(prestige(state).ok).toBe(true);
-        expect(state.arete).toBe(1);
-        expect(state.eraEarned).toBe(0);
-      }
+      // The development gate (issue #258): one-capacity whole-chord
+      // allocation removed the runaway stacking the 1e23 horizon was
+      // priced against, so the horizon no longer lands inside this
+      // scenario. Pacing — the horizon figure, the trial thresholds, the
+      // prices — stays on the ordinary economy's existing constants
+      // pending the calibration ticket's rebasing; nothing here asserts
+      // the old crossing any more.
+      expect(Number.isFinite(state.eraEarned)).toBe(true);
     }
     console.table(report);
   }, 60_000);

@@ -1,6 +1,6 @@
 import { BALANCE, CATEGORY_OF, NAMED_CHORDS } from "./constants";
 import { chordClusters, formationQuality, formationTension, type ChordAnalysis, type Singer } from "./chords";
-import type { DeployedModule, NamedChordTerm } from "./types";
+import type { DeployedModule, NamedChordTerm, RecognizedInstance } from "./types";
 
 // Whole-chord capacity allocation (issue #257, carrying the confirmed
 // harmonic-capacity design — its ADR lives in the design tree's numbering,
@@ -67,13 +67,7 @@ export const ALLOCATION_QUALITY_BOUNDS = { floor: 0.5, cap: 1.5 } as const;
 // scaled by any active build factor, plus every singing silent voice's
 // uplift); `key` is the stable identity (pattern, root, sorted members)
 // allocations retain across recomputation.
-export interface AllocatedInstance {
-  key: string;
-  name: string;
-  root: number;
-  bonus: number;
-  memberIds: string[];
-}
+export interface AllocatedInstance extends RecognizedInstance {}
 
 // The whole-board allocation read: a drop-in ChordAnalysis for the rate
 // pass's chord seam, plus the capacity and certification reads the
@@ -85,8 +79,11 @@ export interface AllocationRead {
   used: Map<string, number>;
   instances: AllocatedInstance[];
   // Every complete voice-set the board recognized, active or not —
-  // recognized-but-inactive chords still count as discoveries.
+  // recognized-but-inactive chords still count as discoveries. The
+  // all-silent sets ride here too: they grant nothing and never activate,
+  // but the board does sing them.
   recognized: number;
+  recognizedInstances: AllocatedInstance[];
   certified: boolean;
   nodes: number;
   ms: number;
@@ -319,8 +316,13 @@ function combinations<T>(items: readonly T[], k: number): T[][] {
 // solvable list: they grant nothing and only spend budget. The order is
 // canonical (best empty-board marginal gain first, then key), so the
 // search below is deterministic and dives into strong incumbents first.
-function surveyCandidates(byClass: ClusterVoice[][], bonusScale: number, q: number): { solvable: Candidate[]; recognized: number } {
+function surveyCandidates(
+  byClass: ClusterVoice[][],
+  bonusScale: number,
+  q: number,
+): { solvable: Candidate[]; silentOnly: AllocatedInstance[]; recognized: number } {
   const out: Candidate[] = [];
+  const silentOnly: AllocatedInstance[] = [];
   let recognized = 0;
   for (const def of NAMED_CHORDS) {
     const intervals = [...new Set(def.intervals)].sort((a, b) => a - b);
@@ -332,15 +334,24 @@ function surveyCandidates(byClass: ClusterVoice[][], bonusScale: number, q: numb
       const walk = (i: number, members: ClusterVoice[]): void => {
         if (i === combos.length) {
           recognized++;
-          if (members.every((voice) => voice.weight === 0)) return;
           const sorted = [...members].sort((a, b) => a.id.localeCompare(b.id));
           const memberIds = sorted.map((voice) => voice.id);
           const bonus = def.bonus * bonusScale + sorted.reduce((total, voice) => total + voice.uplift, 0);
-          out.push({
-            inst: { key: `${def.name}|${root}|${memberIds.join(",")}`, name: def.name, root, bonus, memberIds },
-            factor: 1 + bonus,
-            members: sorted,
-          });
+          const inst: AllocatedInstance = {
+            key: `${def.name}|${root}|${memberIds.join(",")}`,
+            name: def.name,
+            root,
+            bonus,
+            memberIds,
+          };
+          // All-silent sets stay recognized — the discovery read counts
+          // them — but never join the solvable list: they grant nothing
+          // and only spend budget.
+          if (members.every((voice) => voice.weight === 0)) {
+            silentOnly.push(inst);
+            return;
+          }
+          out.push({ inst, factor: 1 + bonus, members: sorted });
           return;
         }
         for (const seats of combos[i]!) walk(i + 1, [...members, ...seats]);
@@ -356,7 +367,7 @@ function surveyCandidates(byClass: ClusterVoice[][], bonusScale: number, q: numb
       0,
     );
   out.sort((a, b) => emptyDelta(b) - emptyDelta(a) || a.inst.key.localeCompare(b.inst.key));
-  return { solvable: out, recognized };
+  return { solvable: out, silentOnly, recognized };
 }
 
 // The cluster's Q, read once for the survey's ordering heuristic.
@@ -528,7 +539,7 @@ function solveCluster(
   bonusScale: number,
   keep: ReadonlySet<string>,
   budget: AllocationBudget,
-): { instances: AllocatedInstance[]; candidates: number; certified: boolean; nodes: number } {
+): { instances: AllocatedInstance[]; recognizedInstances: AllocatedInstance[]; candidates: number; certified: boolean; nodes: number } {
   const byClass: ClusterVoice[][] = Array.from({ length: 12 }, () => []);
   for (const voice of voices) byClass[voice.klass]!.push(voice);
   const q = qualityOf(voices);
@@ -574,7 +585,13 @@ function solveCluster(
       if (!(error instanceof BudgetExhausted)) throw error;
     }
   }
-  return { instances: solve.best.instances, candidates: survey.recognized, certified: !solve.exhausted, nodes: solve.nodes };
+  return {
+    instances: solve.best.instances,
+    recognizedInstances: [...candidates.map((candidate) => candidate.inst), ...survey.silentOnly],
+    candidates: survey.recognized,
+    certified: !solve.exhausted,
+    nodes: solve.nodes,
+  };
 }
 
 // The whole-board allocation: per connected formation (the spacer conducts
@@ -594,6 +611,7 @@ export function allocateChords(singers: Singer[], spacers: DeployedModule[] = []
   const participation = new Map<string, number>();
   const used = new Map<string, number>();
   const instances: AllocatedInstance[] = [];
+  const recognizedInstances: AllocatedInstance[] = [];
   let recognized = 0;
   let certified = true;
   let nodes = 0;
@@ -614,6 +632,7 @@ export function allocateChords(singers: Singer[], spacers: DeployedModule[] = []
     voices.forEach((voice, i) => (voice.index = i));
     const solved = solveCluster(voices, opts.capacity, bonusScale, keep, budget);
     recognized += solved.candidates;
+    recognizedInstances.push(...solved.recognizedInstances);
     nodes += solved.nodes;
     certified = certified && solved.certified;
     const product = new Map<string, number>();
@@ -641,8 +660,33 @@ export function allocateChords(singers: Singer[], spacers: DeployedModule[] = []
     used,
     instances,
     recognized,
+    recognizedInstances,
     certified,
     nodes,
     ms: performance.now() - started,
   };
+}
+
+// Every recognized voice-set as the rate pass's terms — the discovery
+// sync's exact input, active and idle alike (one entry per instance). The
+// mapping is derived, never stored alongside the read.
+export function recognizedTermsOf(read: AllocationRead): NamedChordTerm[] {
+  return read.recognizedInstances.map((inst) => ({
+    name: inst.name,
+    bonus: inst.bonus,
+    instances: 1,
+    moduleIds: [...inst.memberIds],
+    root: inst.root,
+  }));
+}
+
+// The steepest chord factor any voice actually earns under the analysis —
+// the achievements' production-factor read (issue #258). Zero when no
+// voice sings (an empty board earns nothing).
+export function maxVoiceFactorOf(analysis: ChordAnalysis): number {
+  let max = 0;
+  for (const factor of analysis.voiceMultiplier.values()) {
+    if (factor > max) max = factor;
+  }
+  return max;
 }

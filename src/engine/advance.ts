@@ -1,7 +1,8 @@
 import { CATEGORY_OF, EPS } from "./constants";
 import { syncAchievements } from "./achievements";
 import { syncChordDiscoveries } from "./library";
-import { chargeDelivered, computeRates, deployed } from "./economy";
+import { chargeDelivered, deployed, syncAllocation } from "./economy";
+import { maxVoiceFactorOf, recognizedTermsOf } from "./allocation";
 import { addFlowProgress, addForgeProgress, addMutatorForgeProgress, type Rng } from "./rolls";
 import { accrueLivePractice } from "./habits";
 import { accrueGoalProgress, secondsUntilGoalCompletion } from "./goals";
@@ -89,7 +90,11 @@ export function advance(
   // bucket holds nous only. Practice is the flow meter's whole diet
   // (ADR-0041): it joins below, live-sink only, beside the credited time
   // it keys off — it feeds no Forge branch's threshold.
-  const snapshot = computeRates(state, true);
+  // The authoritative allocation pass (issue #258): the board earns from
+  // the selected whole chords only, recomputed every step so charge,
+  // upgrades, and placement reselections land. The retention hint rides
+  // the state and is written back here.
+  const { snapshot, read } = syncAllocation(state, true);
   const gained = snapshot.rate * seconds;
   if (sink === "provisional") {
     // Provisional nous never touches the balance: it waits in the bucket
@@ -141,10 +146,16 @@ export function advance(
   }
   // The session-tick check (ADR-0015): charge exists only live in flow, so
   // the tick that holds the snapshot reports whether any module received
-  // it (Spark). Unlocks queue into the session's summary row.
-  syncAchievements(state, { chargeDelivered: chargeDelivered(snapshot) });
-  // The chord library rides the same tick (issue #230): the live terms are
-  // already in hand, so the sync never recomputes the formation analysis.
-  syncChordDiscoveries(state, { chords: snapshot.namedChords });
+  // it (Spark). Unlocks queue into the session's summary row. The feats
+  // that read production factors read the factor actually earned — the
+  // allocated pass's own maximum (issue #258).
+  syncAchievements(state, {
+    chargeDelivered: chargeDelivered(snapshot),
+    maxChordFactor: maxVoiceFactorOf(read.analysis),
+  });
+  // The chord library rides the same tick (issue #230): every recognized
+  // voice-set — active or idle — is available to discovery; only the
+  // active ones populate the bonus terms (issue #258).
+  syncChordDiscoveries(state, { chords: recognizedTermsOf(read) });
   return result;
 }
