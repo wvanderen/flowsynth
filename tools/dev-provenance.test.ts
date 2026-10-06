@@ -29,7 +29,7 @@ const testServer = async () =>
 function expectProvenance(actual: Record<string, unknown>): void {
   expect(actual.app).toBe("flowsynth");
   expect(actual.worktree).toBe(git("rev-parse", "--show-toplevel"));
-  expect(actual.branch).toBe(git("branch", "--show-current"));
+  expect(actual.branch).toBe(git("branch", "--show-current") || null);
   expect(actual.commit).toBe(git("rev-parse", "HEAD"));
 }
 
