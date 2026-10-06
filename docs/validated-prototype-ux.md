@@ -18,6 +18,8 @@ The user accepted the prototype’s game feel and UX on 2026-09-12. The explorat
 
 This approval validates the interaction and visual direction, not production readiness or final economy balance. Build the first playable separately from the throwaway HTML. No application stack is selected by this prototype.
 
+For how surfaces present — panel geometry, type, state grammar, disclosure — the authoritative reference is the [instrument standards](instrument-standards.md); this document stands for the accepted interaction layout, not presentation.
+
 The prototype uses staged state, in-memory outcomes, a visible-page clock, and only a subset of focus modules. Production work still needs durable local saves, import/export, sleep/recovery handling, a reliable clock, real onboarding, and the scoped engine from the first-playable brief. Pointer dragging is implemented but has not been manually exercised; click-based placement, inventory return, and swaps were checked. On-grid focus quick actions and the remaining core focus tools are recorded future direction, not silently added to the minimum scope.
 
 ## Primary source
