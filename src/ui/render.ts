@@ -3492,13 +3492,10 @@ function capacityShopHtml(app: App): string {
   const discount = capacityDiscountShare(state);
   const upgrade = state.mode === "upgrade";
   const off = discount > 0 ? ` (${Math.round(discount * 100)}% off)` : "";
-  // The deeper mechanics ride the button's native tooltip (the standards'
-  // tooltip rule): the spend, the ladder's own progression term, and the
-  // reset stay one hover away without an explanatory paragraph.
   const buy = price === null
     ? `<span class="shop-buy"><span class="activation-owned mono">${capacityCeilingsLeft(state) ? "capped" : "complete"}</span></span>`
     : shopBuyHtml({
-        attrs: `data-buy-capacity="1" title="${upgrade ? `Spend ${formatInt(price)} ν${off} — one more whole chord for every voice. Whole chords, never levels or rarity.` : "Purchases happen between sessions"}"`,
+        attrs: `data-buy-capacity="1"`,
         price,
         affordable: upgrade && wholeNous(state) >= price,
         countdown: upgradeCountdown(app, price),
@@ -3508,14 +3505,21 @@ function capacityShopHtml(app: App): string {
       ? `<small class="shop-countdown">The ceiling stands — the Arete Catalog sells the next rung.</small>`
       : ""
     : "";
+  const mechanics = `Every current and future voice gains one whole-chord unit per purchase; levels and rarity stay distinct. Prestige returns capacity to one.${price === null ? "" : ` Spend ${formatInt(price)} ν${off}. Purchases happen between sessions.`}`;
   return `
-    <h3 class="catalog-section-title">Harmonic capacity</h3>
-    <div class="shop-list">
-      <div class="shop-item">
-        <div><h3>Harmonic capacity <span class="mono">${capacity}/${ceiling}</span></h3><small>Every voice — current and future — sings one more whole chord. Prestige returns the voices to one.</small></div>
-        ${buy}${note}
+    <section class="capacity-catalog">
+      <div class="shop-list">
+        <div class="shop-item">
+          <div><h3>Harmonic capacity <span class="mono">${capacity}/${ceiling}</span> ${capacityTooltipHtml("capacity-tip", "Harmonic capacity mechanics", mechanics)}</h3><small>+1 whole chord per voice</small>${note}</div>
+          ${buy}
+        </div>
       </div>
-    </div>`;
+    </section>`;
+}
+
+// Independent disclosure stays reachable when the purchase is unavailable.
+function capacityTooltipHtml(id: string, label: string, mechanics: string): string {
+  return `<span class="inst-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${id}" aria-label="${label}">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${mechanics}</span></span>`;
 }
 
 // Whether the Arete sheet can still raise the capacity ceiling: the shared
@@ -3594,6 +3598,8 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
     app.ui.showAcquired = (event.target as HTMLInputElement).checked;
     app.render();
   });
+  const capacitySection = content.querySelector(".capacity-catalog");
+  if (capacitySection) wireTooltips(capacitySection);
   wireClose(app);
 }
 
@@ -3615,38 +3621,32 @@ function capacityAreteHtml(app: App): string {
   const { state } = app;
   const ceilings = state.capacityCeilings;
   const discounts = state.capacityDiscounts;
-  const ceilingBuy = (id: string, price: number, owned: boolean, locked: boolean): string =>
+  const offeringBuy = (id: string, price: number, owned: boolean, locked: boolean, ownedWord: string): string =>
     owned
-      ? areteOwnedWord("raised")
+      ? areteOwnedWord(ownedWord)
       : locked
-        ? `<span class="shop-buy"><button class="primary arete" id="${id}" disabled title="Own the first ceiling first">After the first</button></span>`
-        : areteBuyButtonHtml(app, id, price);
-  const discountBuy = (id: string, price: number, owned: boolean, locked: boolean): string =>
-    owned
-      ? areteOwnedWord("owned")
-      : locked
-        ? `<span class="shop-buy"><button class="primary arete" id="${id}" disabled title="Own the first discount first">After the first</button></span>`
+        ? `<span class="shop-buy"><button class="primary arete" id="${id}" disabled>After the first</button></span>`
         : areteBuyButtonHtml(app, id, price);
   return `
-    <h3 class="catalog-section-title">Harmonic capacity</h3>
+    <section class="capacity-catalog"><h3 class="catalog-section-title">Harmonic capacity</h3>
     <div class="shop-list">
       <div class="shop-item${ceilings > 0 ? " owned" : ""}">
-        <div><h3>First ceiling <span class="kind">capacity four</span></h3><small>The nous ladder sells one rung further.</small></div>
-        ${ceilingBuy("buy-capacity-ceiling-1", BALANCE.capacityCeilingCosts[0]!, ceilings > 0, false)}
+        <div><h3>First ceiling <span class="kind">capacity four</span> ${capacityTooltipHtml("ceiling-1-tip", "First ceiling mechanics", "Permanently lets the nous ladder sell one rung further. Survives prestige.")}</h3><small>The nous ladder sells one rung further.</small></div>
+        ${offeringBuy("buy-capacity-ceiling-1", BALANCE.capacityCeilingCosts[0]!, ceilings > 0, false, "raised")}
       </div>
       <div class="shop-item${ceilings > 1 ? " owned" : ""}">
-        <div><h3>Second ceiling <span class="kind">capacity five</span></h3><small>One rung past the first unlock.</small></div>
-        ${ceilingBuy("buy-capacity-ceiling-2", BALANCE.capacityCeilingCosts[1]!, ceilings > 1, ceilings === 0)}
+        <div><h3>Second ceiling <span class="kind">capacity five</span> ${capacityTooltipHtml("ceiling-2-tip", "Second ceiling mechanics", "Own the first ceiling first. Permanently adds one rung beyond the first unlock. Survives prestige.")}</h3><small>One rung past the first unlock.</small></div>
+        ${offeringBuy("buy-capacity-ceiling-2", BALANCE.capacityCeilingCosts[1]!, ceilings > 1, ceilings === 0, "raised")}
       </div>
       <div class="shop-item${discounts > 0 ? " owned" : ""}">
-        <div><h3>First discount <span class="kind">20% off</span></h3><small>Every capacity rung costs a fifth less nous.</small></div>
-        ${discountBuy("buy-capacity-discount-1", BALANCE.capacityDiscountCosts[0]!, discounts > 0, false)}
+        <div><h3>First discount <span class="kind">20% off</span> ${capacityTooltipHtml("discount-1-tip", "First discount mechanics", "Permanently takes 20% off every original capacity price. Survives prestige.")}</h3><small>Every capacity rung costs a fifth less nous.</small></div>
+        ${offeringBuy("buy-capacity-discount-1", BALANCE.capacityDiscountCosts[0]!, discounts > 0, false, "owned")}
       </div>
       <div class="shop-item${discounts > 1 ? " owned" : ""}">
-        <div><h3>Second discount <span class="kind">40% off in total</span></h3><small>Every capacity rung costs its original price, less two fifths.</small></div>
-        ${discountBuy("buy-capacity-discount-2", BALANCE.capacityDiscountCosts[1]!, discounts > 1, discounts === 0)}
+        <div><h3>Second discount <span class="kind">40% off in total</span> ${capacityTooltipHtml("discount-2-tip", "Second discount mechanics", "Own the first discount first. Permanently takes 40% in total off original capacity prices. Survives prestige.")}</h3><small>Every capacity rung costs its original price, less two fifths.</small></div>
+        ${offeringBuy("buy-capacity-discount-2", BALANCE.capacityDiscountCosts[1]!, discounts > 1, discounts === 0, "owned")}
       </div>
-    </div>`;
+    </div></section>`;
 }
 
 // The Arete sheet rows' shared purchase words (the sheet's own grammar):
@@ -3704,6 +3704,8 @@ function renderAreteCatalogModal(app: App, content: HTMLElement): void {
   byId("buy-capacity-ceiling-2")?.addEventListener("click", () => app.buyCapacityCeilingAction());
   byId("buy-capacity-discount-1")?.addEventListener("click", () => app.buyCapacityDiscountAction());
   byId("buy-capacity-discount-2")?.addEventListener("click", () => app.buyCapacityDiscountAction());
+  const capacitySection = content.querySelector(".capacity-catalog");
+  if (capacitySection) wireTooltips(capacitySection);
   wireClose(app);
 }
 

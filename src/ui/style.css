@@ -2713,3 +2713,11 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   gap: 8px;
   margin-top: 4px;
 }
+
+/* Capacity offerings follow the pinned catalog's open, rule-separated rows. */
+.capacity-catalog .shop-list { display: block; }
+.capacity-catalog .shop-item { border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 14px 0; }
+.capacity-catalog .shop-item > div { min-width: 0; }
+.capacity-catalog .shop-item h3 { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.capacity-catalog .shop-countdown { display: block; }
+.capacity-catalog .inst-tip-trigger { width: 44px; height: 44px; }

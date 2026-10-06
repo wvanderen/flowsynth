@@ -5053,6 +5053,32 @@ describe("the harmonic-capacity ladder (#259)", () => {
     expect(countdown.textContent).toContain("of practice");
   });
 
+  it("capacity disclosure stays reachable with unavailable purchases and dismisses before the sheet", () => {
+    app.state.nous = 0;
+    app.openModal("catalog");
+    const trigger = document.querySelector<HTMLButtonElement>(".capacity-catalog .inst-tip-trigger")!;
+    expect(document.querySelector<HTMLButtonElement>("[data-buy-capacity]")!.disabled).toBe(true);
+    trigger.focus();
+    const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+    expect(body.classList.contains("inst-show")).toBe(true);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(body.classList.contains("inst-show")).toBe(false);
+    expect(document.querySelector("[data-buy-capacity]")).not.toBeNull();
+    trigger.click();
+    expect(body.classList.contains("inst-show")).toBe(true);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    document.getElementById("modal-title")!.click();
+    expect(body.classList.contains("inst-show")).toBe(false);
+    app.closeModal();
+    app.openModal("arete");
+    const locked = document.getElementById("buy-capacity-ceiling-2")!.closest(".shop-item")!;
+    const lockedTrigger = locked.querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
+    lockedTrigger.focus();
+    const lockedBody = document.getElementById(lockedTrigger.getAttribute("aria-describedby")!)!;
+    expect(lockedBody.classList.contains("inst-show")).toBe(true);
+    expect(lockedBody.textContent).toContain("Own the first ceiling first");
+  });
+
   it("the rung is inert in flow mode — the purchase is upgrade-mode-only on the surface too", () => {
     app.state.nous = 1_000;
     startSession(app.state, null);
