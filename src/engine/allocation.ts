@@ -58,6 +58,10 @@ export interface AllocationBudget {
 
 export const DEFAULT_ALLOCATION_BUDGET: AllocationBudget = { maxNodes: 250_000, maxMs: 750 };
 
+// Issue #257's adopted development range; the default production chord
+// pass retains ADR-0049's provisional tuning.
+export const ALLOCATION_QUALITY_BOUNDS = { floor: 0.5, cap: 1.5 } as const;
+
 // One complete voice-set the board recognizes — the atom of allocation.
 // `bonus` is the bonus the instance actually carries (the named bonus
 // scaled by any active build factor, plus every singing silent voice's
@@ -358,7 +362,7 @@ function surveyCandidates(byClass: ClusterVoice[][], bonusScale: number, q: numb
 // The cluster's Q, read once for the survey's ordering heuristic.
 function qualityOf(voices: ClusterVoice[]): number {
   const classes = [...new Set(voices.map((voice) => voice.klass))].sort((a, b) => a - b);
-  return formationQuality(classes, formationTension(classes), true);
+  return formationQuality(classes, formationTension(classes), true, ALLOCATION_QUALITY_BOUNDS);
 }
 
 // Each voice's bound material: which ordered candidates contain it, and

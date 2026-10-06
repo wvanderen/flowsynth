@@ -57,7 +57,7 @@ import {
 import { equipBuildNode, unequipBuildNode } from "../engine/builds";
 import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
 import { allocatedDevScenarioRates, createDevScenario, type DevBoardResult } from "../engine/dev-scenario";
-import type { StressRow } from "../engine/allocation-stress";
+import type { StressProgress, StressRow } from "../engine/allocation-stress";
 import type { GameState, Hex, ModuleInstance, MutatorFamily, MutatorInstance, NamedChordTerm, Rarity, ShelfType } from "../engine/types";
 import { render } from "./render";
 import { FAMILY_WORD, mutatorLayerLive, refreshMutPreview } from "./mutators";
@@ -140,6 +140,8 @@ export interface DevBoardState {
   selected: string | null;
   keep: ReadonlySet<string> | null;
   stress: StressRow[] | null;
+  stressRunning: boolean;
+  stressError: string | null;
 }
 
 // The configurable capacities (issue #257): one through five — one the
@@ -2003,12 +2005,14 @@ export class App {
   // reads. Never saved — the scenario rebuilds identically on every boot.
 
   devBoard: DevBoardState | null = null;
+  private devStressWorker: Worker | null = null;
 
   devToggleBoard(): void {
     if (!this.dev) return;
+    this.devBoardCancelStress();
     this.devBoard = this.devBoard
       ? null
-      : { scenario: createDevScenario(), capacity: 1, selected: null, keep: null, stress: null };
+      : { scenario: createDevScenario(), capacity: 1, selected: null, keep: null, stress: null, stressRunning: false, stressError: null };
     this.render();
   }
 
@@ -2055,6 +2059,9 @@ export class App {
 
   devBoardReset(): void {
     if (!this.devBoard) return;
+    this.devBoardCancelStress();
+    this.devBoard.stress = null;
+    this.devBoard.stressError = null;
     this.devBoard.scenario = createDevScenario();
     this.devBoard.capacity = 1;
     this.devBoard.selected = null;
@@ -2075,14 +2082,46 @@ export class App {
   // engine suite prints, through the same allocator.
   devBoardStress(): void {
     if (!this.devBoard) return;
-    this.devBoard.stress = [];
+    if (this.devBoard.stressRunning) {
+      this.devBoardCancelStress();
+      this.render();
+      return;
+    }
+    const board = this.devBoard;
+    board.stress = [];
+    board.stressError = null;
+    board.stressRunning = true;
     this.render();
-    void import("../engine/allocation-stress").then(({ runAllocationStress }) => {
-      if (this.devBoard) {
-        this.devBoard.stress = runAllocationStress();
+    try {
+      const worker = new Worker(new URL("../engine/allocation-stress.worker.ts", import.meta.url), { type: "module" });
+      this.devStressWorker = worker;
+      worker.onmessage = ({ data }: MessageEvent<StressProgress>) => {
+        if (this.devBoard !== board || this.devStressWorker !== worker) return;
+        if ("row" in data) board.stress!.push(data.row);
+        else {
+          if ("error" in data) board.stressError = data.error;
+          this.devBoardCancelStress();
+        }
         this.render();
-      }
-    });
+      };
+      worker.onerror = () => {
+        if (this.devBoard !== board || this.devStressWorker !== worker) return;
+        board.stressError = "Stress run failed. Try again.";
+        this.devBoardCancelStress();
+        this.render();
+      };
+      worker.postMessage(null);
+    } catch {
+      board.stressError = "Stress worker unavailable. Try again.";
+      this.devBoardCancelStress();
+      this.render();
+    }
+  }
+
+  private devBoardCancelStress(): void {
+    this.devStressWorker?.terminate();
+    this.devStressWorker = null;
+    if (this.devBoard) this.devBoard.stressRunning = false;
   }
 
   // The board's one computation — pure, re-derived on demand by its

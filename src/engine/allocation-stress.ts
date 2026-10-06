@@ -1,7 +1,7 @@
 import { BALANCE } from "./constants";
 import { chordClusters, formationQuality, formationTension, type Singer } from "./chords";
 import { hex } from "./hex";
-import { allocateChords, type AllocationRead, type AllocationVoiceParams } from "./allocation";
+import { ALLOCATION_QUALITY_BOUNDS, allocateChords, type AllocationRead, type AllocationVoiceParams } from "./allocation";
 import type { DeployedModule, ModuleType } from "./types";
 
 // The repeatable stress comparison (issue #257): whole-chord allocation
@@ -37,6 +37,8 @@ export interface StressRow {
   ms: number;
   value: number;
 }
+
+export type StressProgress = { row: StressRow } | { done: true } | { error: string };
 
 let nextId = 1;
 
@@ -95,7 +97,7 @@ export function triadBoard(clusters: number, uniform: boolean): StressFixture {
 }
 
 // The monolithic chromatic mass: every pitch class voiced ⌈n/12⌉ times on
-// one connected grid — semitone tension floors Q at ×0.05, so activation
+// one connected grid — semitone tension floors Q at ×0.5, so activation
 // trades against idleness and the candidate count explodes combinatorially
 // (the 72-voice case recognizes 60,660 voice-sets). The deliberately
 // pathological upper bound.
@@ -152,7 +154,7 @@ export function totalValueOf(fixture: StressFixture, read: AllocationRead): numb
     }
   }
   const classes = [...new Set(fixture.singers.map(({ pitch }) => ((Math.round(pitch) % 12) + 12) % 12))];
-  const q = read.instances.length > 0 ? formationQuality(classes, formationTension(classes), true) : 1;
+  const q = read.instances.length > 0 ? formationQuality(classes, formationTension(classes), true, ALLOCATION_QUALITY_BOUNDS) : 1;
   let total = 0;
   for (const { module } of fixture.singers) {
     const { weight } = fixture.params.get(module.id)!;
@@ -162,7 +164,7 @@ export function totalValueOf(fixture: StressFixture, read: AllocationRead): numb
   return total;
 }
 
-export function runAllocationStress(): StressRow[] {
+export function runAllocationStress(onRow?: (row: StressRow) => void): StressRow[] {
   const rows: StressRow[] = [];
   for (const fixture of stressFixtures()) {
     const clusters = countClusters(fixture);
@@ -172,7 +174,7 @@ export function runAllocationStress(): StressRow[] {
         params: fixture.params,
         budget: STRESS_BUDGET,
       });
-      rows.push({
+      const row: StressRow = {
         fixture: fixture.name,
         voices: fixture.singers.length,
         capacity,
@@ -182,7 +184,9 @@ export function runAllocationStress(): StressRow[] {
         certified: read.certified,
         ms: read.ms,
         value: totalValueOf(fixture, read),
-      });
+      };
+      rows.push(row);
+      onRow?.(row);
     }
   }
   return rows;

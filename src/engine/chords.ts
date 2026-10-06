@@ -84,11 +84,16 @@ export function formationTension(classes: readonly number[]): number {
 // A), Qmin, cap) — the allowance A forgiven to named formations, the floor
 // materially below neutral so chromatic density is priced down. Chordless
 // formations never reach this: exactly ×1.00.
-export function formationQuality(classes: readonly number[], tension: number, named: boolean): number {
+export function formationQuality(
+  classes: readonly number[],
+  tension: number,
+  named: boolean,
+  bounds = { floor: BALANCE.qualityFloor, cap: BALANCE.qualityCap },
+): number {
   if (!named) return 1;
   const complexity = BALANCE.complexityRate * Math.max(0, classes.length - 1);
   const effective = Math.max(0, tension - BALANCE.tensionAllowance);
-  return Math.min(BALANCE.qualityCap, Math.max(BALANCE.qualityFloor, 1 + complexity - effective));
+  return Math.min(bounds.cap, Math.max(bounds.floor, 1 + complexity - effective));
 }
 
 interface RootMatch {

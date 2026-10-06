@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { BALANCE, CATEGORY_OF, NAMED_CHORDS } from "./constants";
-import { chordClusters, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
+import { chordClusters, formationQuality, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
 import { computeRates } from "./economy";
-import { allocateChords, type AllocatedInstance, type AllocationVoiceParams } from "./allocation";
+import { ALLOCATION_QUALITY_BOUNDS, allocateChords, type AllocatedInstance, type AllocationVoiceParams } from "./allocation";
 import { fresh, give, sumSynthValues } from "./fixtures";
 import { hex } from "./hex";
 import type { DeployedModule, GameState, ModuleType } from "./types";
@@ -35,7 +35,7 @@ function oracleQuality(classes: readonly number[]): number {
   }
   const complexity = BALANCE.complexityRate * Math.max(0, classes.length - 1);
   const effective = Math.max(0, tension - BALANCE.tensionAllowance);
-  return Math.min(BALANCE.qualityCap, Math.max(BALANCE.qualityFloor, 1 + complexity - effective));
+  return Math.min(1.5, Math.max(0.5, 1 + complexity - effective));
 }
 
 interface OracleVoice {
@@ -242,6 +242,16 @@ const fifthKey = (a: string, b: string): string => `Fifth|0|${sortIds([a, b]).jo
 // ── The suites ────────────────────────────────────────────────────────
 
 describe("whole-chord capacity allocation (#257)", () => {
+  it("uses the adopted development Q range without changing production tuning", () => {
+    const classes = Array.from({ length: 12 }, (_, i) => i);
+    // Feed both extremes through the shared quality seam: the development
+    // pass has its own bounds, while the default remains production's.
+    expect(formationQuality(classes, 0, true, ALLOCATION_QUALITY_BOUNDS)).toBe(1.5);
+    expect(formationQuality(classes, 100, true, ALLOCATION_QUALITY_BOUNDS)).toBe(0.5);
+    expect(formationQuality(classes, 0, true)).toBe(1.25);
+    expect(formationQuality(classes, 100, true)).toBe(0.05);
+  });
+
   it("consumes one unit on every singing member, silent voices included, and never exceeds a budget", () => {
     // A doubled C-major shape — C·C·E·E·G·G bridged by spacers — with a
     // shared harmonizer singing G: at capacity 1 each voice sings at most
@@ -275,7 +285,7 @@ describe("whole-chord capacity allocation (#257)", () => {
   });
 
   it("keeps the empty allocation when activating chords would reduce production", () => {
-    // Classes {0,1,2,7} — semitone tension floors Q at ×0.05, so the one
+    // Classes {0,1,2,7} — semitone tension floors Q at ×0.5, so the one
     // candidate Fifth pays its members less than idling does.
     const s = scenario();
     addVoice(s, "additive", { q: 0, r: 0 }); // C

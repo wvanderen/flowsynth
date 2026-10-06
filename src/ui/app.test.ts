@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { App } from "./app";
 import { addPracticeLog, archiveHabit, createHabit, selectHabit } from "../engine/habits";
@@ -2024,6 +2024,18 @@ describe("the dev panel's synth grant (#137)", () => {
 });
 
 describe("the dev allocation board (#257)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  class StressWorker {
+    static latest: StressWorker;
+    onmessage: ((event: MessageEvent) => void) | null = null;
+    onerror: (() => void) | null = null;
+    terminate = vi.fn();
+    postMessage = vi.fn();
+    constructor() { StressWorker.latest = this; }
+    send(data: unknown): void { this.onmessage?.({ data } as MessageEvent); }
+  }
+
   const openBoard = (): App => {
     const devApp = boot(undefined, true);
     devApp.devToggleBoard();
@@ -2147,6 +2159,65 @@ describe("the dev allocation board (#257)", () => {
     expect(devApp.devBoard!.capacity).toBe(1);
     const after = devApp.devBoardResult()!;
     expect(after.read.instances.map((i) => i.key)).toEqual(first.read.instances.map((i) => i.key));
+  });
+
+  it("exposes module identity and keeps selection and keyboard focus across recomputation", () => {
+    openBoard();
+    const cell = document.querySelector<HTMLButtonElement>('[data-devcell="0,0"]')!;
+    expect(cell.getAttribute("aria-label")).toBe("Oscillator at C4");
+    expect(cell.querySelector("svg .tile-glyph")).not.toBeNull();
+    cell.focus();
+    cell.click();
+    expect(document.activeElement?.getAttribute("data-devcell")).toBe("0,0");
+    expect(document.activeElement?.getAttribute("aria-pressed")).toBe("true");
+    expect(document.querySelector('.dev-voice.picked')?.getAttribute("aria-pressed")).toBe("true");
+    document.querySelector<HTMLButtonElement>('[data-devcap="5"]')!.click();
+    expect(document.querySelector('[data-devcap="5"]')?.getAttribute("aria-pressed")).toBe("true");
+    expect(document.querySelector('[data-devcap="1"]')?.getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("streams stress results while board controls remain usable, and ignores cancelled work", () => {
+    vi.stubGlobal("Worker", StressWorker);
+    const devApp = openBoard();
+    devApp.devBoardStress();
+    const worker = StressWorker.latest;
+    expect(worker.postMessage).toHaveBeenCalledOnce();
+    expect(devApp.devBoard!.stressRunning).toBe(true);
+    devApp.devBoardSetCapacity(3);
+    expect(devApp.devBoard!.capacity).toBe(3);
+    const row = { fixture: "triads-6", voices: 6, capacity: 1, clusters: 1, candidates: 15, instances: 2, certified: true, ms: 5, value: 1 };
+    worker.send({ row });
+    expect(document.querySelector('.dev-board-stress')?.textContent).toContain("triads-6");
+    expect(devApp.devBoard!.stress).toHaveLength(1);
+    devApp.devBoardStress(); // The running button cancels.
+    expect(worker.terminate).toHaveBeenCalledOnce();
+    expect(devApp.devBoard!.stressRunning).toBe(false);
+    worker.send({ row });
+    expect(devApp.devBoard!.stress).toHaveLength(1);
+    devApp.devBoardStress();
+    const next = StressWorker.latest;
+    devApp.devToggleBoard();
+    expect(next.terminate).toHaveBeenCalledOnce();
+    devApp.devToggleBoard();
+    next.send({ row });
+    expect(devApp.devBoard!.stress).toBeNull();
+  });
+
+  it("finishes or reports failed stress workers and allows retry", () => {
+    vi.stubGlobal("Worker", StressWorker);
+    const devApp = openBoard();
+    devApp.devBoardStress();
+    StressWorker.latest.send({ done: true });
+    expect(devApp.devBoard!.stressRunning).toBe(false);
+    expect(StressWorker.latest.terminate).toHaveBeenCalledOnce();
+    devApp.devBoardStress();
+    StressWorker.latest.onerror!();
+    expect(devApp.devBoard!.stressRunning).toBe(false);
+    expect(document.querySelector('#dev-board [role="alert"]')?.textContent).toContain("Try again");
+    devApp.devBoardStress();
+    expect(devApp.devBoard!.stressError).toBeNull();
+    devApp.devBoardReset();
+    expect(StressWorker.latest.terminate).toHaveBeenCalledOnce();
   });
 });
 

@@ -91,15 +91,15 @@ describe("the allocation stress ladder (#257)", () => {
   });
 
   it("holds the pathological monolith to its documented limit", () => {
-    // The 72-voice chromatic mass recognizes 60,660 candidates. Where the
-    // empty allocation provably wins (low capacity: Q floors at ×0.05 and
-    // no stack of instances pays for the naming), the solve certifies;
-    // where deep stacking could pay (capacity 5), the budget bounds the
-    // search and the row reports an incumbent honestly — never a silent
-    // heuristic, never a truncated candidate list.
+    // At the adopted ×0.5 floor, activation can pay even at capacity 1.
+    // Large chromatic monoliths exhaust the node budget at every capacity;
+    // report incumbents honestly without truncating the candidate space.
     for (const row of rows) {
-      if (row.fixture === "chromatic-72" && row.capacity <= 2) expect(row.certified).toBe(true);
-      if (row.fixture === "chromatic-72") expect(row.candidates).toBe(60660);
+      if (row.fixture === "chromatic-72") {
+        expect(row.certified).toBe(false);
+        expect(row.candidates).toBe(60660);
+        expect(row.instances).toBeGreaterThan(0);
+      }
     }
     const all72 = rows.filter((row) => row.voices === 72);
     expect(all72.length).toBeGreaterThanOrEqual(15);
@@ -158,7 +158,7 @@ describe("the allocation stress ladder (#257)", () => {
         tension += BALANCE.tensionWeights[Math.min(d, 12 - d)] ?? 0;
       }
     }
-    const q = Math.min(BALANCE.qualityCap, Math.max(BALANCE.qualityFloor, 1 + BALANCE.complexityRate * (classes.length - 1) - Math.max(0, tension - BALANCE.tensionAllowance)));
+    const q = Math.min(1.5, Math.max(0.5, 1 + BALANCE.complexityRate * (classes.length - 1) - Math.max(0, tension - BALANCE.tensionAllowance)));
     for (const capacity of [1, 2, 3, 4, 5]) {
       let best = voices.reduce((total, v) => total + v.weight, 0);
       for (let mask = 0; mask < 1 << flat.length; mask++) {

@@ -4192,7 +4192,7 @@ function renderDevBoard(app: App): void {
     return module?.pos ? cellNoteOf(module.pos) : "—";
   };
   const capacityButtons = DEV_BOARD_CAPACITIES.map(
-    (n) => `<button data-devcap="${n}" class="${n === board.capacity ? "on" : ""}" aria-label="Capacity ${n}">${n}</button>`,
+    (n) => `<button data-devcap="${n}" class="${n === board.capacity ? "on" : ""}" aria-pressed="${n === board.capacity}" aria-label="Capacity ${n}">${n}</button>`,
   ).join("");
   const voiceRows = [...voices]
     .sort((a, b) => a.pos!.r - b.pos!.r || a.pos!.q - b.pos!.q || a.id.localeCompare(b.id))
@@ -4202,9 +4202,9 @@ function renderDevBoard(app: App): void {
       const contribution = snapshot.contributions.get(module.id);
       const factor = read.analysis.voiceMultiplier.get(module.id) ?? 1;
       const selected = board.selected === module.id ? " picked" : "";
-      return `<button class="dev-voice${selected}" data-devvoice="${module.id}">
+      return `<button class="dev-voice${selected}" data-devvoice="${module.id}" aria-pressed="${board.selected === module.id}">
           <span class="dev-note">${module.pos ? cellNoteOf(module.pos) : "—"}</span>
-          <span class="dev-type">${module.type === "additive" ? "syn" : module.type === "harmonizer" ? "harm" : module.type}</span>
+          <span class="dev-type">${META[module.type].short}</span>
           <span class="dev-lvl">L${module.level}</span>
           <span class="dev-cap">${used}/${board.capacity}</span>
           <span class="dev-factor mono">×${factor.toFixed(2)}</span>
@@ -4235,14 +4235,13 @@ function renderDevBoard(app: App): void {
       const occupant = placed.find((m) => m.pos!.q === q && m.pos!.r === r);
       const owner = occupant ? (board.selected === occupant.id ? " sel" : occupant.type === "spacer" ? " wire" : " voice") : inScenario ? " free" : " off";
       const label = occupant
-        ? occupant.type === "spacer"
-          ? "·"
-          : cellNoteOf(occupant.pos!)
-        : inScenario
-          ? "+"
-          : "";
+        ? `${inventoryTileSvg(occupant)}<span>${cellNoteOf(occupant.pos!)}</span>`
+        : inScenario ? "+" : "";
+      const accessibleName = occupant
+        ? `${META[occupant.type].name} at ${cellNoteOf(occupant.pos!)}`
+        : `Move selected module to ${cellNoteOf({ q, r })}`;
       cells.push(
-        `<button class="dev-cell${owner}" data-devcell="${q},${r}" ${inScenario ? "" : "disabled"}>${label}</button>`,
+        `<button class="dev-cell${owner}" data-devcell="${q},${r}" aria-label="${accessibleName}" ${occupant ? `aria-pressed="${board.selected === occupant.id}"` : ""} ${inScenario ? "" : "disabled"}>${label}</button>`,
       );
     }
     gridRows.push(`<div class="dev-row">${cells.join("")}</div>`);
@@ -4257,6 +4256,12 @@ function renderDevBoard(app: App): void {
         )
         .join("")
     : "";
+  const focused = document.activeElement;
+  const focusKey = focused instanceof HTMLElement && panel.contains(focused)
+    ? ["data-devcap", "data-devvoice", "data-devcell", "data-devboard"].find((attr) => focused.hasAttribute(attr))
+    : undefined;
+  const focusValue = focusKey ? focused!.getAttribute(focusKey) : null;
+  const scrollTop = panel.scrollTop;
   panel.innerHTML = `
     <div class="dev-board-head">
       <span>ALLOCATION BOARD</span>
@@ -4268,7 +4273,7 @@ function renderDevBoard(app: App): void {
       <span>capacity</span>
       ${capacityButtons}
       <button data-devboard="reset">reset</button>
-      <button data-devboard="stress">stress</button>
+      <button data-devboard="stress">${board.stressRunning ? "cancel stress" : "stress"}</button>
     </div>
     <div class="dev-board-grid">${gridRows.join("")}</div>
     <div class="dev-board-instances">${instanceChips || '<span class="dev-empty">no active instances</span>'}</div>
@@ -4279,7 +4284,13 @@ function renderDevBoard(app: App): void {
         <button data-devboard="power-up" ${board.selected ? "" : "disabled"}>+ power</button>
       </div>
     </div>
-    ${board.stress ? `<div class="dev-board-stress">${stressRows}</div>` : ""}`;
+    ${board.stress ? `<div class="dev-board-stress" aria-busy="${board.stressRunning}"><span role="status">${board.stressRunning ? "Running" : "Results"} · ${board.stress.length} solves</span>${stressRows}</div>` : ""}
+    ${board.stressError ? `<p role="alert">${escapeHtml(board.stressError)}</p>` : ""}`;
+  if (focusKey && focusValue !== null) {
+    [...panel.querySelectorAll<HTMLButtonElement>(`[${focusKey}]`)]
+      .find((button) => button.getAttribute(focusKey) === focusValue)?.focus({ preventScroll: true });
+  }
+  panel.scrollTop = scrollTop;
   panel.querySelectorAll<HTMLButtonElement>("[data-devcap]").forEach((button) => {
     button.addEventListener("click", () => app.devBoardSetCapacity(Number(button.getAttribute("data-devcap"))));
   });
