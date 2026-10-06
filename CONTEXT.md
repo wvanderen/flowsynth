@@ -220,7 +220,7 @@ _Avoid_: practice meter, practice forge, flow forge, third branch
 A choice of one mutator from two generated candidates, delivered to the Mutator tray; unchosen candidates disappear without consolation resources. Every roll is charge-earned except the first, which the Mutator tree's entry purchase itself performs.
 
 **Catalog**:
-The permanent upgrade-mode purchase surface: app activations, starter-shelf offers while available, and cells. Its activation section appears only once the ladder has a tenant. Module upgrades live on module panels, not the catalog (ADR-0018).
+The tabbed shop behind the labeled Catalog door on the dock (desktop) and thumb bar (phone): the `ν nous` face carries the starter shelf and — once the ladder has a tenant — app activations; the `◇ Arete` face is the Arete Catalog. Cells are no sheet row — the purchase arms from the dock's New cell and commits on the board's frontier. The door opens on the last-used face and falls back to nous before the first prestige (the mode-wins override lands with mode unification). The frame is fixed — a 620×600 clipped panel on desktop, a 74%-height bottom sheet on phone — and a face switch never resizes it: the switch and identity stay pinned while the body scrolls. Purchases act in upgrade mode only; prices mute when unaffordable or in flow. Module upgrades live on module panels, not the catalog (ADR-0018).
 
 **Starter shelf**:
 The catalog's one-time guaranteed offers — the Focus Generator, one Booster, and a Module Forge — hidden once acquired. It completes the non-oscillator landscape; oscillators come only from the opening grant and module rolls (ADR-0022).
@@ -388,12 +388,11 @@ The muted list-row flag on session records carrying a missed honesty event. Mute
 The resource banked by prestige and by nothing else — never granted before the reset. Each prestige banks a claim that grows with the prestiges performed; once the horizon is broken, score beyond the horizon line raises the claim further, up to a hard cap. It spends on the Arete Catalog.
 
 **Arete Catalog**:
-The board-side shop of Arete purchases: its sheet unlocks with the first Arete the first prestige banks — production stays grouped on the board, and the console never touches Arete. Organized as trees of offerings and standalone purchases; each tree enters at one Arete and escalates within. Purchases are permanent, act in upgrade mode only, and survive prestige. The launch offerings are the Mutator tree and the Horizon break.
-_Avoid_: prestige sheet
-_Avoid_: prestige tree, skill tree
+The catalog's `◇ Arete` face. It appears with the first Arete the first prestige banks — the prestige count is the lock, never the balance, so spending down to zero never re-locks it. Before the Mutator tree's entry the face is the single centered Unlock Mutator Layer lock screen; the entry purchase reveals the Upgrades section (the entry's ACQUIRED rewards line, the inert Accelerator placeholder, the Horizon break) and the Unlocks section (the roll-pool join, empty once joined). Purchases are permanent, act in upgrade mode only, and survive prestige.
+_Avoid_: prestige sheet, prestige tree, skill tree
 
 **Mutator tree**:
-The Arete Catalog's first tree. Its sheet purchases are the entry (activates the Mutator Grid, grants the Mutator Forge module itself, unlocks the first Mutator slot, and performs the first Mutator roll) and the pricier purchase that joins the Mutator Forge type to the roll pool. Slot unlocks past the first are bought on the Mutators layer, armed like a cell purchase and priced on the tree's escalating ladder. The type is otherwise Catalog-exclusive.
+The Arete Catalog's first tree. Its purchases are the entry (activates the Mutator Grid, grants the Mutator Forge module itself, unlocks the first Mutator slot, and performs the first Mutator roll) and the pricier purchase that joins the Mutator Forge type to the roll pool. Slot unlocks past the first are bought on the Mutators layer, armed like a cell purchase and priced on the tree's escalating ladder. The type is otherwise Catalog-exclusive.
 _Avoid_: enhancement tree, gem tree
 
 **Row unlock**:

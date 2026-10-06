@@ -36,6 +36,7 @@ import {
   type BulkPurchase,
 } from "../engine/actions";
 import { ARETE_HORIZON, claimOf } from "../engine/accumulator";
+import { catalogOpen } from "../engine/catalog";
 import { neighbors, hex, sameHex } from "../engine/hex";
 import { newChordTerms } from "../engine/chords";
 import { displayedRates, setAllocationEnabled, mutatorAt } from "../engine/economy";
@@ -76,7 +77,6 @@ import { browserChannels, type SignalChannels } from "./signals";
 export type ModalKind =
   | "settings"
   | "catalog"
-  | "arete"
   | "forge"
   | "achievements"
   | "library"
@@ -189,6 +189,11 @@ export interface UiState {
   // reset every time the prompt opens.
   enter: EnterSelection;
   showAcquired: boolean;
+  // The catalog door's face memory (issue #271): the tabbed shop opens on
+  // the face it last showed — the mode-wins override lands with #246. The
+  // arete face exists only from the first banked Arete, so a stale memory
+  // falls back to nous at open. Light furniture — never saved.
+  catalogFace: "nous" | "arete";
   editingHabitId: string | null;
   // Session history (§9): the Time app's list view, its page size, and the
   // record drilled into. Light furniture — cleared with the popover.
@@ -311,6 +316,7 @@ export class App {
     chosenTarget: null,
     enter: freshEnterSelection(),
     showAcquired: false,
+    catalogFace: "nous",
     editingHabitId: null,
     historyOpen: false,
     historyLimit: HISTORY_PAGE_ROWS,
@@ -1130,11 +1136,11 @@ export class App {
   }
 
   // ── The Arete Catalog (issue #197) ──────────────────────────────────────
-  // The sheet purchases and the board-side Row unlock. Every landing goes
-  // through the shared act() shape — refusal says why, success saves and
-  // re-renders — and every engine action already gates on upgrade mode, so
-  // the sheet's buttons and the banner are inert outside it by the same
-  // rule.
+  // The catalog's arete-face purchases (issue #271) and the board-side Row
+  // unlock. Every landing goes through the shared act() shape — refusal
+  // says why, success saves and re-renders — and every engine action
+  // already gates on upgrade mode, so the face's buttons and the banner
+  // are inert outside it by the same rule.
 
   buyCatalogEntryAction(): void {
     this.act(buyCatalogEntry(this.state), "Mutator tree entered.");
@@ -1917,6 +1923,13 @@ export class App {
 
   openModal(kind: ModalKind): void {
     this.ui.modal = kind;
+    // The catalog door remembers the face it last showed (issue #271); the
+    // arete face exists only from the first banked Arete — the prestige
+    // count is the lock — so a stale memory falls back to nous. The
+    // mode-wins override lands with #246.
+    if (kind === "catalog" && this.ui.catalogFace === "arete" && !catalogOpen(this.state)) {
+      this.ui.catalogFace = "nous";
+    }
     if (kind === "import") this.ui.importText = "";
     this.render();
   }
