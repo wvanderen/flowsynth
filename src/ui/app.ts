@@ -56,6 +56,8 @@ import {
 } from "../engine/habits";
 import { equipBuildNode, unequipBuildNode } from "../engine/builds";
 import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
+import { allocatedDevScenarioRates, createDevScenario, type DevBoardResult } from "../engine/dev-scenario";
+import type { StressProgress, StressRow } from "../engine/allocation-stress";
 import type { GameState, Hex, ModuleInstance, MutatorFamily, MutatorInstance, NamedChordTerm, Rarity, ShelfType } from "../engine/types";
 import { render } from "./render";
 import { FAMILY_WORD, mutatorLayerLive, refreshMutPreview } from "./mutators";
@@ -125,6 +127,27 @@ export interface MutCombineOffer {
   dragId: string;
   targetId: string;
 }
+
+// The development allocation board's whole state (#257): the deterministic
+// scenario board, the selected whole-chord capacity, the selected voice,
+// the previous answer's keys (the retention hint — advanced at each
+// mutation, so equal-output allocations hold their active set across
+// changes), and the in-browser stress rows when run. Light furniture —
+// never saved.
+export interface DevBoardState {
+  scenario: GameState;
+  capacity: number;
+  selected: string | null;
+  keep: ReadonlySet<string> | null;
+  stress: StressRow[] | null;
+  stressRunning: boolean;
+  stressError: string | null;
+}
+
+// The configurable capacities (issue #257): one through five — one the
+// shipped start, three the first-era ceiling, four and five the Arete
+// ceiling unlocks.
+export const DEV_BOARD_CAPACITIES = [1, 2, 3, 4, 5] as const;
 
 export interface UiState {
   selected: string | null;
@@ -1978,6 +2001,139 @@ export class App {
     this.say("Dev: mutator era granted — the Mutators layer stands.");
     this.save();
     this.render();
+  }
+
+  // The development allocation board (#257 hands-on): a deterministic
+  // scenario board solved through the real rate path at a configurable
+  // whole-chord capacity. Capacity, voice power, and placement are the
+  // levers; active instances, per-voice budget, and final ν/s are the
+  // reads. Never saved — the scenario rebuilds identically on every boot.
+
+  devBoard: DevBoardState | null = null;
+  private devStressWorker: Worker | null = null;
+
+  devToggleBoard(): void {
+    if (!this.dev) return;
+    this.devBoardCancelStress();
+    this.devBoard = this.devBoard
+      ? null
+      : { scenario: createDevScenario(), capacity: 1, selected: null, keep: null, stress: null, stressRunning: false, stressError: null };
+    this.render();
+  }
+
+  devBoardSetCapacity(capacity: number): void {
+    if (!this.devBoard || !(DEV_BOARD_CAPACITIES as readonly number[]).includes(capacity)) return;
+    this.devBoardAdvanceKeep();
+    this.devBoard.capacity = capacity;
+    this.render();
+  }
+
+  devBoardSelect(id: string | null): void {
+    if (!this.devBoard) return;
+    this.devBoard.selected = this.devBoard.selected === id ? null : id;
+    this.render();
+  }
+
+  // Placement: a selected voice moves to the clicked free scenario cell;
+  // a clicked occupied cell selects its voice instead.
+  devBoardMoveTo(q: number, r: number): void {
+    if (!this.devBoard) return;
+    const occupant = this.devBoard.scenario.modules.find((m) => m.pos !== null && m.pos.q === q && m.pos.r === r);
+    if (occupant) {
+      this.devBoard.selected = occupant.id;
+      this.render();
+      return;
+    }
+    if (!this.devBoard.selected) return;
+    if (!this.devBoard.scenario.cells.some((c) => c.q === q && c.r === r)) return;
+    const moving = this.devBoard.scenario.modules.find((m) => m.id === this.devBoard!.selected);
+    if (!moving || moving.pos === null) return;
+    this.devBoardAdvanceKeep();
+    moving.pos = { q, r };
+    this.render();
+  }
+
+  devBoardPower(delta: number): void {
+    if (!this.devBoard || !this.devBoard.selected) return;
+    const module = this.devBoard.scenario.modules.find((m) => m.id === this.devBoard!.selected);
+    if (!module) return;
+    this.devBoardAdvanceKeep();
+    module.level = Math.max(0, Math.min(24, module.level + delta));
+    this.render();
+  }
+
+  devBoardReset(): void {
+    if (!this.devBoard) return;
+    this.devBoardCancelStress();
+    this.devBoard.stress = null;
+    this.devBoard.stressError = null;
+    this.devBoard.scenario = createDevScenario();
+    this.devBoard.capacity = 1;
+    this.devBoard.selected = null;
+    this.devBoard.keep = null;
+    this.render();
+  }
+
+  // The retention hint advances at each board mutation — the answer the
+  // player was just shown is the active set the next solve retains on
+  // equal output.
+  private devBoardAdvanceKeep(): void {
+    if (!this.devBoard) return;
+    const { read } = allocatedDevScenarioRates(this.devBoard.scenario, this.devBoard.capacity, this.devBoard.keep);
+    this.devBoard.keep = new Set(read.instances.map((instance) => instance.key));
+  }
+
+  // The repeatable stress ladder, in the browser: the same rows the
+  // engine suite prints, through the same allocator.
+  devBoardStress(): void {
+    if (!this.devBoard) return;
+    if (this.devBoard.stressRunning) {
+      this.devBoardCancelStress();
+      this.render();
+      return;
+    }
+    const board = this.devBoard;
+    board.stress = [];
+    board.stressError = null;
+    board.stressRunning = true;
+    this.render();
+    try {
+      const worker = new Worker(new URL("../engine/allocation-stress.worker.ts", import.meta.url), { type: "module" });
+      this.devStressWorker = worker;
+      worker.onmessage = ({ data }: MessageEvent<StressProgress>) => {
+        if (this.devBoard !== board || this.devStressWorker !== worker) return;
+        if ("row" in data) board.stress!.push(data.row);
+        else {
+          if ("error" in data) board.stressError = data.error;
+          this.devBoardCancelStress();
+        }
+        this.render();
+      };
+      worker.onerror = () => {
+        if (this.devBoard !== board || this.devStressWorker !== worker) return;
+        board.stressError = "Stress run failed. Try again.";
+        this.devBoardCancelStress();
+        this.render();
+      };
+      worker.postMessage(null);
+    } catch {
+      board.stressError = "Stress worker unavailable. Try again.";
+      this.devBoardCancelStress();
+      this.render();
+    }
+  }
+
+  private devBoardCancelStress(): void {
+    this.devStressWorker?.terminate();
+    this.devStressWorker = null;
+    if (this.devBoard) this.devBoard.stressRunning = false;
+  }
+
+  // The board's one computation — pure, re-derived on demand by its
+  // renderer; the retention hint advances only at mutations.
+  devBoardResult(): DevBoardResult | null {
+    if (!this.devBoard) return null;
+    return allocatedDevScenarioRates(this.devBoard.scenario, this.devBoard.capacity, this.devBoard.keep);
   }
 
   frontierCells(): Hex[] {

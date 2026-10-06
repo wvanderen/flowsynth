@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { App } from "./app";
 import { addPracticeLog, archiveHabit, createHabit, selectHabit } from "../engine/habits";
@@ -7,7 +7,7 @@ import { equipBuildNode } from "../engine/builds";
 import { createGoal, deleteGoal, goalSummary, accrueGoalProgress } from "../engine/goals";
 import { recordSummaryReflection } from "../engine/actions";
 import { writeNote } from "../engine/notes";
-import { BALANCE, SAVE_VERSION } from "../engine/constants";
+import { BALANCE, SAVE_VERSION, isVoiceType } from "../engine/constants";
 import { ARETE_HORIZON } from "../engine/accumulator";
 import { STORAGE_KEY, serialize } from "../engine/save";
 import { computeRates, cellCost, cellPurchasePrice, longGoalCost, affordableLevels, levelCost, levelsCost } from "../engine/economy";
@@ -2103,6 +2103,204 @@ describe("the dev panel's synth grant (#137)", () => {
     app = boot();
     app.render();
     expect(document.getElementById("dev-panel")).toBeNull();
+  });
+});
+
+describe("the dev allocation board (#257)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  class StressWorker {
+    static latest: StressWorker;
+    onmessage: ((event: MessageEvent) => void) | null = null;
+    onerror: (() => void) | null = null;
+    terminate = vi.fn();
+    postMessage = vi.fn();
+    constructor() { StressWorker.latest = this; }
+    send(data: unknown): void { this.onmessage?.({ data } as MessageEvent); }
+  }
+
+  const openBoard = (): App => {
+    const devApp = boot(undefined, true);
+    devApp.devToggleBoard();
+    return devApp;
+  };
+  const solverLine = (): string => document.querySelector('[data-dev="solver"]')!.textContent!;
+  const rateLine = (): string => document.querySelector('#dev-board [data-dev="rate"]')!.textContent!;
+  const voiceRow = (id: string): HTMLElement => document.querySelector(`[data-devvoice="${id}"]`)!;
+  const scenarioVoiceIds = (devApp: App): string[] =>
+    devApp.devBoard!.scenario.modules.filter((m) => m.pos !== null && isVoiceType(m.type)).map((m) => m.id);
+
+  it("opens dev-only, through the real rate path, with capacity and certification reads", () => {
+    const devApp = openBoard();
+    expect(document.getElementById("dev-board")).not.toBeNull();
+    // The rate is a real snapshot figure through the allocation seam.
+    expect(rateLine()).toMatch(/ν\/s$/);
+    // The solver line reads instances, candidates, timing, certification.
+    expect(solverLine()).toMatch(/cands/);
+    expect(solverLine()).toMatch(/certified/);
+    // Every voice row carries used/available capacity and a final ν/s.
+    for (const id of scenarioVoiceIds(devApp)) {
+      const row = voiceRow(id);
+      expect(row.querySelector(".dev-cap")!.textContent).toMatch(/^(\d)\/(\d)$/);
+    }
+    devApp.devToggleBoard();
+    expect(document.getElementById("dev-board")).toBeNull();
+    // Non-dev boots never see the board.
+    app.render();
+    expect(document.getElementById("dev-board")).toBeNull();
+    app.devToggleBoard();
+    expect(document.getElementById("dev-board")).toBeNull();
+  });
+
+  it("changing capacity changes the active set through the whole-chord budget", () => {
+    const devApp = openBoard();
+    const reads = (board: App): { instances: string[]; maxUsed: number } => {
+      const result = board.devBoardResult()!;
+      return {
+        instances: result.read.instances.map((i) => i.key),
+        maxUsed: Math.max(...[...result.read.used.values()]),
+      };
+    };
+    devApp.devBoardSetCapacity(1);
+    const atOne = reads(devApp);
+    devApp.devBoardSetCapacity(5);
+    const atFive = reads(devApp);
+    // Capacity 1 never exceeds any voice's budget; capacity 5 activates a
+    // strictly richer web of instances on the same board.
+    expect(atOne.maxUsed).toBeLessThanOrEqual(1);
+    expect(atFive.instances.length).toBeGreaterThan(atOne.instances.length);
+    expect(atFive.maxUsed).toBeGreaterThan(1);
+    // The panel's instance chips follow.
+    expect(document.querySelectorAll(".dev-instance").length).toBe(atFive.instances.length);
+  });
+
+  it("changing a voice's power recomputes its actual final production", () => {
+    const devApp = openBoard();
+    devApp.devBoardSetCapacity(2);
+    const ids = scenarioVoiceIds(devApp);
+    // Pick the loudest voice — its ν/s must rise with power.
+    let target = ids[0]!;
+    let best = -1;
+    for (const id of ids) {
+      const row = voiceRow(id);
+      if (!row.textContent!.includes("harm")) {
+        const value = Number(row.querySelector(".dev-value")!.textContent!.replace(/[^0-9.]/g, ""));
+        if (value > best) {
+          best = value;
+          target = id;
+        }
+      }
+    }
+    devApp.devBoardSelect(target);
+    devApp.devBoardPower(3);
+    const after = Number(voiceRow(target).querySelector(".dev-value")!.textContent!.replace(/[^0-9.]/g, ""));
+    expect(after).toBeGreaterThan(best);
+  });
+
+  it("moving a voice recomputes the active chords", () => {
+    const devApp = openBoard();
+    devApp.devBoardSetCapacity(2);
+    const before = devApp.devBoardResult()!;
+    const moved = devApp.devBoard!.scenario.modules.find(
+      (m) => m.pos !== null && m.type === "additive" && m.pos.q === 1,
+    )!;
+    devApp.devBoardSelect(moved.id);
+    // Formation two's dyad has a free cell beside it.
+    devApp.devBoardMoveTo(1, 3);
+    const after = devApp.devBoardResult()!;
+    expect(after.read.instances.map((i) => i.key)).not.toEqual(before.read.instances.map((i) => i.key));
+    // And the readout path still sums: the rate is the figures' sum.
+    let sum = 0;
+    for (const contribution of after.snapshot.contributions.values()) {
+      if (contribution.type === "additive" || contribution.type === "blaster") sum += contribution.value;
+    }
+    expect(sum).toBeCloseTo(after.snapshot.rate, 9);
+  });
+
+  it("retains its active set across a change that returns the board to equal output", () => {
+    const devApp = openBoard();
+    devApp.devBoardSetCapacity(2);
+    const first = devApp.devBoardResult()!;
+    // Power up and back down: the board lands on identical weights, so the
+    // solver faces its own previous optimum as one equal-output tie — and
+    // retains it (the hint advanced at each mutation).
+    const aVoice = scenarioVoiceIds(devApp)[0]!;
+    devApp.devBoardSelect(aVoice);
+    devApp.devBoardPower(1);
+    devApp.devBoardPower(-1);
+    const again = devApp.devBoardResult()!;
+    expect(again.read.instances.map((i) => i.key)).toEqual(first.read.instances.map((i) => i.key));
+  });
+
+  it("reset rebuilds the deterministic scenario", () => {
+    const devApp = openBoard();
+    const first = devApp.devBoardResult()!;
+    devApp.devBoardSetCapacity(3);
+    devApp.devBoardSelect(scenarioVoiceIds(devApp)[0]!);
+    devApp.devBoardPower(4);
+    devApp.devBoardReset();
+    expect(devApp.devBoard!.capacity).toBe(1);
+    const after = devApp.devBoardResult()!;
+    expect(after.read.instances.map((i) => i.key)).toEqual(first.read.instances.map((i) => i.key));
+  });
+
+  it("exposes module identity and keeps selection and keyboard focus across recomputation", () => {
+    openBoard();
+    const cell = document.querySelector<HTMLButtonElement>('[data-devcell="0,0"]')!;
+    expect(cell.getAttribute("aria-label")).toBe("Oscillator at C4");
+    expect(cell.querySelector("svg .tile-glyph")).not.toBeNull();
+    cell.focus();
+    cell.click();
+    expect(document.activeElement?.getAttribute("data-devcell")).toBe("0,0");
+    expect(document.activeElement?.getAttribute("aria-pressed")).toBe("true");
+    expect(document.querySelector('.dev-voice.picked')?.getAttribute("aria-pressed")).toBe("true");
+    document.querySelector<HTMLButtonElement>('[data-devcap="5"]')!.click();
+    expect(document.querySelector('[data-devcap="5"]')?.getAttribute("aria-pressed")).toBe("true");
+    expect(document.querySelector('[data-devcap="1"]')?.getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("streams stress results while board controls remain usable, and ignores cancelled work", () => {
+    vi.stubGlobal("Worker", StressWorker);
+    const devApp = openBoard();
+    devApp.devBoardStress();
+    const worker = StressWorker.latest;
+    expect(worker.postMessage).toHaveBeenCalledOnce();
+    expect(devApp.devBoard!.stressRunning).toBe(true);
+    devApp.devBoardSetCapacity(3);
+    expect(devApp.devBoard!.capacity).toBe(3);
+    const row = { fixture: "triads-6", voices: 6, capacity: 1, clusters: 1, candidates: 15, instances: 2, certified: true, ms: 5, value: 1 };
+    worker.send({ row });
+    expect(document.querySelector('.dev-board-stress')?.textContent).toContain("triads-6");
+    expect(devApp.devBoard!.stress).toHaveLength(1);
+    devApp.devBoardStress(); // The running button cancels.
+    expect(worker.terminate).toHaveBeenCalledOnce();
+    expect(devApp.devBoard!.stressRunning).toBe(false);
+    worker.send({ row });
+    expect(devApp.devBoard!.stress).toHaveLength(1);
+    devApp.devBoardStress();
+    const next = StressWorker.latest;
+    devApp.devToggleBoard();
+    expect(next.terminate).toHaveBeenCalledOnce();
+    devApp.devToggleBoard();
+    next.send({ row });
+    expect(devApp.devBoard!.stress).toBeNull();
+  });
+
+  it("finishes or reports failed stress workers and allows retry", () => {
+    vi.stubGlobal("Worker", StressWorker);
+    const devApp = openBoard();
+    devApp.devBoardStress();
+    StressWorker.latest.send({ done: true });
+    expect(devApp.devBoard!.stressRunning).toBe(false);
+    expect(StressWorker.latest.terminate).toHaveBeenCalledOnce();
+    devApp.devBoardStress();
+    StressWorker.latest.onerror!();
+    expect(devApp.devBoard!.stressRunning).toBe(false);
+    expect(document.querySelector('#dev-board [role="alert"]')?.textContent).toContain("Try again");
+    devApp.devBoardStress();
+    expect(devApp.devBoard!.stressError).toBeNull();
+    devApp.devBoardReset();
+    expect(StressWorker.latest.terminate).toHaveBeenCalledOnce();
   });
 });
 

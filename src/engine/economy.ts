@@ -1,5 +1,5 @@
 import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isVoiceType } from "./constants";
-import { analyzeChords, partitionVoices, type Singer } from "./chords";
+import { analyzeChords, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
 import { achievementBoostOf } from "./achievements";
 import { activeHabit } from "./habits";
 import { baseBuildFactors, amplifyFactors } from "./builds";
@@ -390,6 +390,15 @@ function infusorBonusAt(
   return total;
 }
 
+// The chord pass the rate snapshot runs over its deployed voices — the
+// authoritative allocation seam (issue #257): the default is today's
+// uncapped recognition (ADR-0049); the development board passes the
+// capacity allocator's drop-in analysis so allocation quality and
+// performance ride the one real rate path instead of a parallel read. The
+// bonusScale is the active build's named-chord factor, threaded exactly as
+// the default pass threads it.
+export type ChordPass = (singers: Singer[], spacers: DeployedModule[], bonusScale: number) => ChordAnalysis;
+
 // The unified rate (ADR-0021/0022 as amended by ADR-0036, ADR-0048, and
 // ADR-0049; leg naming per ADR-0020): every effect lands on the producer
 // it touches, and the board's rate is the sum of the modules' final
@@ -408,7 +417,11 @@ function infusorBonusAt(
 // charge onward, the silent voices sweeten the chords they sing in.
 // Generators, the Forge meters, and cells are out of the formula, and
 // there is no session stage: the board is the whole production (§4).
-export function computeRates(state: GameState, flow: boolean = flowLive(state)): RateSnapshot {
+export function computeRates(
+  state: GameState,
+  flow: boolean = flowLive(state),
+  chordPass: ChordPass = analyzeChords,
+): RateSnapshot {
   const contributions = new Map<string, Contribution>();
   const chargeStrength = new Map<string, number>();
   const build = baseBuildFactors(activeHabit(state));
@@ -508,7 +521,7 @@ export function computeRates(state: GameState, flow: boolean = flowLive(state)):
   // and deep-practice nodes (ADR-0046) scale every named instance's bonus;
   // the formation quality and the silent-voice uplift are untouched — the
   // chord-touching levers stayed with the harmony contracts.
-  const analysis = analyzeChords(singers, spacers, 1 + factors.namedChordBonus);
+  const analysis = chordPass(singers, spacers, 1 + factors.namedChordBonus);
 
   // Pass three: the unified synths leg. Chords are local (ADR-0036): each
   // oscillator carries its own chordFactor — the formation's named product
