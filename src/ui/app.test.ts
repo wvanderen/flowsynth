@@ -333,6 +333,40 @@ describe("the feats page's milestone group (issue #268)", () => {
   });
 });
 
+describe("the feats page's encourager icons (issue #269)", () => {
+  it("every encourager row leads with its unique icon", () => {
+    app.openModal("achievements");
+    const rows = [...document.querySelectorAll(".ach-row")];
+    expect(rows).toHaveLength(18);
+    const marks = rows.map((row) => row.querySelector(".ach-icon svg")!.innerHTML);
+    expect(new Set(marks).size).toBe(18);
+  });
+
+  it("an un-crossed encourager reads muted with its progress figures, no done-mark", () => {
+    app.state.sessionsCompleted = 1;
+    app.openModal("achievements");
+    const row = document.querySelector(".ach-row:not(.unlocked)")!;
+    expect(row.querySelector(".ach-mark")).toBeNull();
+    // The four facts: icon, name, the shared effect, the state figures.
+    expect(row.querySelector(".ach-icon svg")).not.toBeNull();
+    expect(row.querySelector(".ach-effect")!.textContent).toBe("+2% ν");
+    expect(row.querySelector(".ach-readout")!.textContent).toMatch(/\d+ \/ \d+/);
+  });
+
+  it("a crossed encourager wears the engraved done-mark in place of figures", () => {
+    app.state.sessionsCompleted = 1;
+    app.state.achievements["first-light"] = Date.now();
+    app.openModal("achievements");
+    const row = [...document.querySelectorAll(".ach-row")].find(
+      (candidate) => candidate.querySelector(".ach-name")!.textContent === "First light",
+    )!;
+    expect(row.classList.contains("unlocked")).toBe(true);
+    expect(row.querySelector(".ach-mark")!.textContent).toBe("✓");
+    expect(row.querySelector(".ach-readout")).toBeNull();
+    expect(row.querySelector(".ach-effect")!.textContent).toBe("+2% ν");
+  });
+});
+
 describe("the board ledger strip (§7)", () => {
   it("docks above the board: Nous / Rate / Session as one instrument plus the feats chip", () => {
     app.render();

@@ -41,10 +41,12 @@ export interface AchievementDef {
   unlock?: string;
   // What stands before the beat, named by the un-crossed row's tooltip.
   gate?: string;
-  // The row's icon slot: a stroke glyph in the instrument's line language.
-  // Unique marks for every feat land with the icons ticket; encouragers
-  // carry none until then.
-  icon?: string;
+  // The row's icon slot: a unique stroke glyph in the instrument's line
+  // language (issue #269) — one mark per feat, legible at the ledger
+  // chip's 14px and the feats row's 22px, and mute by itself: state rides
+  // the row (the engraved done-mark acquired, the muted voice un-crossed),
+  // never the glyph.
+  icon: string;
   // Pure predicate over saved state — the unlock condition.
   evaluate: (state: GameState, ctx: AchievementContext) => boolean;
   // Pure read for the achievements page's progress bars; no secrets at launch.
@@ -98,14 +100,17 @@ function maxVoiceMultiplierOf(state: GameState, ctx: AchievementContext): number
   return maxChordFactorOf(displayedRates(state, true));
 }
 
-// The milestone feats' marks (provisional): stroke glyphs in the
-// instrument's line language. Unique marks for all 23 land with the icons
-// ticket; encouragers carry no mark until then.
-const MUTATOR_GRID_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z"/></svg>`;
-const ROLL_POOL_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 20.2 7.25v9.5L12 21.5 3.8 16.75v-9.5Z"/><path d="M12 8.2v7.6M8.2 12h7.6"/></svg>`;
-const PRESTIGE_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2.8 21.2 12 12 21.2 2.8 12Z"/></svg>`;
-const FIRST_ROW_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 6.5h16M4 17.5h16"/><path d="M7 12h10"/></svg>`;
-const SHELF_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M3.5 20.5h17"/><path d="M7.5 20.5v-7H11v7M13 20.5V9h3.5v11.5"/></svg>`;
+// The feat marks (issue #269): 23 unique stroke glyphs in the instrument's
+// line language — the wave, the hexagon, the ring, the bolt, the ruled
+// line — each readable at the chip's 14px and the row's 22px without
+// color. Filled dots are the set's only solid notes, marking the one
+// taken, the one escaped, the pivot. No mark repeats another feat's, and
+// none reuses a module's or an app's glyph paths (asserted in the
+// registry tests); the hexagon family reads through its interiors — the
+// join's plus, the open cell's dash, the pair — never through two alike
+// marks.
+const glyph = (body: string): string =>
+  `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
 
 // The milestone feats (ADR-0015 amended, issue #268): one per singular
 // progression beat, commemorating it without owning its gate — each beat's
@@ -123,7 +128,7 @@ const MILESTONES: readonly AchievementDef[] = [
     description: "Buy the Mutator tree's entry in the Arete Catalog.",
     unlock: "Mutator Grid on",
     gate: "The entry is bought in the Arete Catalog — the Catalog opens with the first banked Arete.",
-    icon: MUTATOR_GRID_SVG,
+    icon: glyph('<path d="M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z"/>'),
     evaluate: (s) => s.catalogEntryOwned,
     progress: (s) => fraction(s.catalogEntryOwned ? 1 : 0, 1),
   },
@@ -135,7 +140,8 @@ const MILESTONES: readonly AchievementDef[] = [
     description: "Join the Mutator Forge to the roll pool.",
     unlock: "In future rolls",
     gate: "The join is bought in the Arete Catalog, behind the Mutator tree's entry.",
-    icon: ROLL_POOL_SVG,
+    // The join: the mutator hexagon with the pool's plus.
+    icon: glyph('<path d="M12 2.5 20.2 7.25v9.5L12 21.5 3.8 16.75v-9.5Z"/><path d="M12 8.2v7.6M8.2 12h7.6"/>'),
     evaluate: (s) => s.rollPoolJoined,
     progress: (s) => fraction(s.rollPoolJoined ? 1 : 0, 1),
   },
@@ -147,7 +153,8 @@ const MILESTONES: readonly AchievementDef[] = [
     description: "Bank your first Arete at the horizon.",
     unlock: "The first Arete banks",
     gate: "Prestige stands at the horizon — fill the accumulator with lifetime nous, then bank the era.",
-    icon: PRESTIGE_SVG,
+    // The Arete mark landing on the bank line — the era banked.
+    icon: glyph('<path d="M12 2 20.1 7.9 17 17.4H7L3.9 7.9 12 2Z"/><path d="M4.5 21h15"/>'),
     evaluate: (s) => s.prestiges >= 1,
     progress: (s) => fraction(s.prestiges, 1),
   },
@@ -159,7 +166,7 @@ const MILESTONES: readonly AchievementDef[] = [
     description: "Unlock an octave row beyond the launch band.",
     unlock: "An octave row joins the board",
     gate: "In New cell mode, reach the next octave row and buy its board unlock banner with Arete.",
-    icon: FIRST_ROW_SVG,
+    icon: glyph('<path d="M4 6.5h16M4 17.5h16"/><path d="M7 12h10"/>'),
     evaluate: (s) => s.unlockedRows.length >= 1,
     progress: (s) => fraction(s.unlockedRows.length, 1),
   },
@@ -171,7 +178,7 @@ const MILESTONES: readonly AchievementDef[] = [
     description: "Buy all three starter-shelf offers.",
     unlock: "Generator, Booster, and Forge owned",
     gate: "The starter shelf sells the Focus Generator, a Booster, and the Forge — one purchase each.",
-    icon: SHELF_SVG,
+    icon: glyph('<path d="M3.5 20.5h17"/><path d="M7.5 20.5v-7H11v7M13 20.5V9h3.5v11.5"/>'),
     evaluate: (s) => SHELF_TYPES.every((type) => s.purchased[type]),
     progress: (s) => fraction(SHELF_TYPES.filter((type) => s.purchased[type]).length, SHELF_TYPES.length),
   },
@@ -187,6 +194,8 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     category: "practice",
     name: "First light",
     description: "Complete your first flow session.",
+    // The dawn: the half-risen body over the horizon line, one ray up.
+    icon: glyph('<path d="M4 17h16M7 17a5 5 0 0 1 10 0M12 6v2.5M6.2 10.8l1.4 1.4M17.8 10.8l-1.4 1.4"/>'),
     evaluate: (s) => s.sessionsCompleted >= 1,
     progress: (s) => fraction(s.sessionsCompleted, 1),
   },
@@ -195,6 +204,8 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     category: "console",
     name: "Off the clock",
     description: "Log practice manually for the first time.",
+    // The hand-entered entry: the pencil.
+    icon: glyph('<path d="m4.5 19.5 1-4L16.6 4.4a2 2 0 0 1 2.8 2.8L8.3 18.3l-3.8 1.2Z"/><path d="m14.8 6.2 3 3"/>'),
     evaluate: (s) => manualLogCount(s) >= 1,
     progress: (s) => fraction(manualLogCount(s), 1),
   },
@@ -203,6 +214,8 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     category: "console",
     name: "Kept promise",
     description: "Complete a goal in the Goals app.",
+    // The target hit: the bullseye's two rings.
+    icon: glyph('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/>'),
     evaluate: (s) => goalCompletions(s) >= 1,
     progress: (s) => fraction(goalCompletions(s), 1),
   },
@@ -211,6 +224,8 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     category: "console",
     name: "Untethered",
     description: "Start an unstructured session.",
+    // The released tether: the ring open, its bead detached in the gap.
+    icon: glyph('<path d="M13.5 3.6A8.5 8.5 0 1 0 19.4 7.7"/><circle cx="16.9" cy="5" r="2.1"/>'),
     evaluate: (s) => s.unstructuredSessions >= 1,
     progress: (s) => fraction(s.unstructuredSessions, 1),
   },
@@ -220,7 +235,9 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     name: "Marginalia",
     description: "Write a note during a flow session.",
     // Between-session notes (ADR-0018) don't count — the feat is the
-    // in-flow capture.
+    // in-flow capture. The ruled page whose last line sings: the note
+    // written while the flow runs.
+    icon: glyph('<path d="M5 4.5h14M5 10.5h14"/><path d="M5 16.5c1.2-2.4 2.3-2.4 3.5 0s2.3 2.4 3.5 0 2.3-2.4 3.5 0 2.3 2.4 3.5 0"/>'),
     evaluate: (s) => s.notes.some(isInFlowNote),
     progress: (s) => fraction(s.notes.filter(isInFlowNote).length, 1),
   },
@@ -229,6 +246,9 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     category: "console",
     name: "On the clock",
     description: "Complete a planned session to its target.",
+    // The timed session: the stopwatch, crown and all — not the console's
+    // bare clock face.
+    icon: glyph('<circle cx="12" cy="13.5" r="7.5"/><path d="M9.8 2.8h4.4M12 2.8v3.2"/><path d="M12 13.5V9M12 13.5l2.8 1.8"/>'),
     evaluate: (s) => s.plannedSessionsCompleted >= 1,
     progress: (s) => fraction(s.plannedSessionsCompleted, 1),
   },
@@ -237,6 +257,9 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     category: "board",
     name: "Room to grow",
     description: "Buy your first cell.",
+    // The open cell itself: the dashed hexagon the board shows before the
+    // purchase fills it.
+    icon: glyph('<path d="M12 2.5 20.2 7.25v9.5L12 21.5 3.8 16.75v-9.5L12 2.5Z" stroke-dasharray="3.2 2.4"/>'),
     evaluate: (s) => s.cellsBought >= 1,
     progress: (s) => fraction(s.cellsBought, 1),
   },
@@ -245,6 +268,9 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     category: "board",
     name: "Spark",
     description: "Deliver charge to a module during flow.",
+    // The delivered charge: the bolt over its ground — the module the
+    // charge lands in.
+    icon: glyph('<path d="M14 1.5 8 11h4L10.5 18l6-9.5H13L14 1.5Z"/><path d="M6 20.2h12M9 22.8h6"/>'),
     evaluate: (_s, ctx) => ctx.chargeDelivered,
     progress: (_s, ctx) => fraction(ctx.chargeDelivered ? 1 : 0, 1),
   },
@@ -253,6 +279,8 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     category: "board",
     name: "Roll credit",
     description: "Take your first Forge roll.",
+    // The draw: two candidates offered, the filled one taken.
+    icon: glyph('<circle cx="8" cy="6.5" r="2.6"/><circle cx="16" cy="6.5" r="2.6"/><circle cx="12" cy="17.5" r="2.2" fill="currentColor" stroke="none"/>'),
     evaluate: (s) => rollsTaken(s) >= 1,
     progress: (s) => fraction(rollsTaken(s), 1),
   },
@@ -261,6 +289,8 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     category: "board",
     name: "Two of a kind",
     description: "Combine a pair of modules for the first time.",
+    // The pair: two hexagon voices side by side, about to be one.
+    icon: glyph('<path d="M7.2 6.8l4.5 2.6v5.2l-4.5 2.6-4.5-2.6V9.4Z"/><path d="M16.8 6.8l4.5 2.6v5.2l-4.5 2.6-4.5-2.6V9.4Z"/>'),
     evaluate: (s) => s.combinations >= 1,
     progress: (s) => fraction(s.combinations, 1),
   },
@@ -269,6 +299,8 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     category: "formula",
     name: "Power chord",
     description: "Stack chord multipliers on one voice to ×2 — the Formation term counts.",
+    // The written interval: two note heads beamed as one voice's chord.
+    icon: glyph('<circle cx="8.5" cy="15.5" r="2.3"/><circle cx="15.5" cy="8.5" r="2.3"/><path d="M10.8 15.5V7l7-2.5V8.5"/>'),
     evaluate: (s, ctx) => maxVoiceMultiplierOf(s, ctx) >= 2,
     progress: (s, ctx) => fraction(maxVoiceMultiplierOf(s, ctx), 2),
   },
@@ -277,6 +309,8 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     category: "board",
     name: "Fine china",
     description: "Own a rare module.",
+    // The gem: faceted, girdled — the rarity the shelf never sells.
+    icon: glyph('<path d="M7.5 4h9l4 5.5L12 20 3.5 9.5 7.5 4Z"/><path d="M3.5 9.5h17M9.5 9.5 12 20l2.5-10.5"/>'),
     evaluate: (s) => ownsRare(s),
     progress: (s) => fraction(ownsRare(s) ? 1 : 0, 1),
   },
@@ -287,6 +321,8 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     description: "Reach the horizon.",
     // The lifetime crossing is the trigger (ADR-0039): the feat reads the
     // monotonic totalEarned, never the per-era measure prestige rebases.
+    // The body rising to the horizon arc.
+    icon: glyph('<path d="M2.5 18.5q9.5-10 19 0"/><circle cx="12" cy="8" r="2" fill="currentColor" stroke="none"/>'),
     evaluate: (s) => s.totalEarned >= ARETE_HORIZON,
     progress: (s) => fraction(s.totalEarned, ARETE_HORIZON),
   },
@@ -296,7 +332,9 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     name: "Breaking the horizon",
     description: "Break the horizon.",
     // The purchase is the trigger (ADR-0042): an encourager for the
-    // overfill stretch, accelerating and never gating.
+    // overfill stretch, accelerating and never gating. The arc broken, the
+    // body already past it.
+    icon: glyph('<path d="M2.5 18.5q6.5-7 11.5-7.8"/><path d="M17.8 11.2q2.4.6 3.7 2.3"/><circle cx="16.8" cy="5.2" r="2" fill="currentColor" stroke="none"/>'),
     evaluate: (s) => s.horizonBroken,
     progress: (s) => fraction(s.horizonBroken ? 1 : 0, 1),
   },
@@ -305,6 +343,8 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     category: "practice",
     name: "Time in the seat",
     description: "Log 100 lifetime practice minutes, live or manual.",
+    // The tally: four strokes and the strike — minutes counted.
+    icon: glyph('<path d="M5 5.5v13M9.7 5.5v13M14.4 5.5v13M19.1 5.5v13"/><path d="M2.8 15.5 21.2 8.5"/>'),
     evaluate: (s) => totalPracticeSeconds(s) >= 100 * 60,
     progress: (s) => fraction(totalPracticeSeconds(s), 100 * 60),
   },
@@ -313,6 +353,8 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     category: "ladder",
     name: "Keeping time",
     description: "Complete 10 flow sessions.",
+    // The metronome: the steady beat the sessions keep.
+    icon: glyph('<path d="M8.6 3.5h6.8L19 20.5H5L8.6 3.5Z"/><path d="M12 14.5 16 6.5"/><circle cx="12" cy="14.5" r="1.2" fill="currentColor" stroke="none"/>'),
     evaluate: (s) => s.sessionsCompleted >= 10,
     progress: (s) => fraction(s.sessionsCompleted, 10),
   },
@@ -321,6 +363,8 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     category: "practice",
     name: "Marathoner",
     description: "Practice 10 lifetime hours across flow sessions.",
+    // The long road: receding edges, the dashed center line.
+    icon: glyph('<path d="M9 4 6 20M15 4 18 20"/><path d="M12 6.5v2M12 11v2M12 15.5v2"/>'),
     evaluate: (s) => livePracticeSeconds(s) >= 10 * 3600,
     progress: (s) => fraction(livePracticeSeconds(s), 10 * 3600),
   },
@@ -329,6 +373,8 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     category: "ladder",
     name: "Commonplace book",
     description: "Record 25 notes.",
+    // The open book: the collected pages.
+    icon: glyph('<path d="M12 5.5C10 4 7.5 3.5 4 3.5v14c3.5 0 6 .5 8 2 2-1.5 4.5-2 8-2v-14c-3.5 0-6 .5-8 2Z"/><path d="M12 5.5v14"/>'),
     evaluate: (s) => s.notes.length >= 25,
     progress: (s) => fraction(s.notes.length, 25),
   },

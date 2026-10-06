@@ -1,0 +1,40 @@
+[
+  {
+    "name": "desktop",
+    "provenance": {
+      "app": "flowsynth",
+      "worktree": "/Users/eggfam/.t3/worktrees/flowsynth/t3code-f6a5c0fa",
+      "branch": "fix/pr285-feat-rows",
+      "commit": "8183ea53b4c18be95457eda957fcb87a8ca5aaa4"
+    },
+    "layout": {
+      "width": 1280,
+      "motion": true,
+      "overflow": [],
+      "marks": 1
+    },
+    "keyboardOpen": 1,
+    "keyboardClosed": true,
+    "tapOpen": 1,
+    "tapClosed": true
+  },
+  {
+    "name": "phone",
+    "provenance": {
+      "app": "flowsynth",
+      "worktree": "/Users/eggfam/.t3/worktrees/flowsynth/t3code-f6a5c0fa",
+      "branch": "fix/pr285-feat-rows",
+      "commit": "8183ea53b4c18be95457eda957fcb87a8ca5aaa4"
+    },
+    "layout": {
+      "width": 390,
+      "motion": true,
+      "overflow": [],
+      "marks": 1
+    },
+    "keyboardOpen": 1,
+    "keyboardClosed": true,
+    "tapOpen": 1,
+    "tapClosed": true
+  }
+]
