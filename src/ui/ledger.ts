@@ -356,7 +356,7 @@ function areteTelegraphHtml(): string {
 
 export function areteLedgerHtml(state: GameState): string {
   if (!catalogOpen(state)) {
-    return `<span class="ledger-fig ledger-arete arete-dim" title="Arete — banked by prestige">${areteTelegraphHtml()}</span>`;
+    return `<span class="ledger-fig ledger-arete arete-dim" title="Unlocks at first Arete Reset">${areteTelegraphHtml()}</span>`;
   }
   return `<span class="ledger-fig ledger-arete" title="Arete — banked by prestige; spent in the catalog"><b class="mono" data-live="arete"></b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small></span>`;
 }
@@ -467,7 +467,7 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
       ${
         catalogOpen(state)
           ? `<span class="info-read info-arete" title="Arete — banked by prestige; spent in the catalog"><b class="mono" data-live="i-arete"></b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small></span>`
-          : `<span class="info-read info-arete arete-dim" title="Arete — banked by prestige">${areteTelegraphHtml()}</span>`
+          : `<span class="info-read info-arete arete-dim" title="Unlocks at first Arete Reset">${areteTelegraphHtml()}</span>`
       }</div>`;
     document.getElementById("info-rate")?.addEventListener("click", () => app.openModal("rate"));
   }

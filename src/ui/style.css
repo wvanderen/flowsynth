@@ -2736,16 +2736,22 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 }
 .entry-buy .mono { font-size: 14px; text-transform: none; letter-spacing: 0.02em; }
 .entry-buy:hover:not(:disabled) { background: var(--arete-faint); border-color: var(--arete); }
-/* Phone: the frame becomes the 74%-height bottom sheet, top corners the
-   only clipped pair (the bottom edge meets the screen). The viewport media
-   query alone carries it — every modal sheets on phone (the .sheet class
-   is the rate gate's, below the 760px container line). */
+/* Phone: the frame becomes the 74%-height bottom sheet whose top edge
+   rises to the right (the prototype's sheet silhouette; the bottom edge
+   meets the screen square). Rim and face wear the SAME polygon — a
+   mismatched inner clip would show the plate through the face in corner
+   triangles. The viewport media query alone carries it — every modal
+   sheets on phone (the .sheet class is the rate gate's, below the 760px
+   container line). */
 @media (max-width: 600px) {
+  .modal.catalog-modal,
+  .catalog-frame {
+    clip-path: polygon(0 14px, 100% 0, 100% 100%, 0 100%);
+  }
   .modal.catalog-modal {
     height: 74vh;
     max-height: none;
     border-radius: 0;
-    clip-path: polygon(0 14px, 100% 0, 100% 100%, 0 100%);
   }
   .catalog-frame { padding: 12px 16px 16px; }
   .catalog-row { gap: 10px; }

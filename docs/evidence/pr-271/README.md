@@ -18,7 +18,10 @@ banked, entry owned/unowned, illustrative balances.
 - [Desktop arete lock](desktop-arete-lock.png) and
   [phone arete lock](phone-arete-lock.png): pre-entry the arete face is the
   single centered `Unlock Mutator Layer · 1 Arete` lock screen; no
-  Upgrades/Unlocks anywhere. Phone sheet measured 623px ≈ 74vh.
+  Upgrades/Unlocks anywhere. The phone sheet presents at 74vh (measured 623px
+  ≈ 74% of the 842px frame) with its top edge rising to the right — rim and
+  face share one clip polygon, so no plate shows through in corner
+  triangles and the edges run clean.
 - [Desktop arete entered](desktop-arete-entered.png) and
   [phone arete entered](phone-arete-entered.png): the purchase reveals
   Upgrades (entry ACQUIRED with its rewards line, the inert Accelerator

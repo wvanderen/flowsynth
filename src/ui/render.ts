@@ -3481,7 +3481,6 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
       app.buyShelf(button.getAttribute("data-buy") as keyof typeof BALANCE.shelfPrices);
     });
   });
-  byId("buy-cell")?.addEventListener("click", () => app.armCellPurchase());
   byId("buy-arete-entry")?.addEventListener("click", () => app.buyCatalogEntryAction());
   byId("buy-arete-pool")?.addEventListener("click", () => app.joinRollPoolAction());
   byId("buy-arete-break")?.addEventListener("click", () => app.breakHorizonAction());
@@ -3520,8 +3519,10 @@ function catalogPriceHtml(options: {
   }</span>`;
 }
 
-// The nous face: the starter shelf while offers stand, the permanent cell
-// row, and the acquired shelf behind its toggle.
+// The nous face: the starter shelf while offers stand, and the acquired
+// shelf behind its toggle. Cells are not a sheet row — the purchase arms
+// from the dock's New cell and commits on the board's frontier, where the
+// price lives.
 function catalogNousFaceHtml(app: App): string {
   const { state, ui } = app;
   const upgrade = state.mode === "upgrade";
@@ -3536,10 +3537,6 @@ function catalogNousFaceHtml(app: App): string {
   // path. The section returns with the ladder's first tenant, priced by
   // that tenant's effort; the rung markup is not preserved here.
 
-  // Cells (ADR-0013): the permanent catalog row. The price is not quoted
-  // abstractly — it is the frontier's next price, armed where it commits.
-  const cellPrice = cellCost(state.cellsBought);
-  const cellCountdown = upgrade ? upgradeCountdown(app, cellPrice) : null;
   const shelfRows = openShelf
     .map((type) => {
       const price = BALANCE.shelfPrices[type];
@@ -3568,20 +3565,6 @@ function catalogNousFaceHtml(app: App): string {
           </section>`
         : `<p class="empty-copy">The shelf is empty.</p>`
     }
-    <section>
-      <h2 class="t-condensed">Cells</h2>
-      <div class="catalog-rows">
-        <article class="catalog-row">
-          <div><h3 class="t-condensed">Board cell</h3><p class="t-note">Empty hexes to place modules on — the frontier prices the next one.</p></div>
-          ${catalogPriceHtml({
-            attrs: `id="buy-cell" title="${upgrade ? (wholeNous(state) >= cellPrice ? "Arm the purchase — pick a frontier hex on the board" : "Not enough nous") : "Purchases happen between sessions"}"`,
-            price: cellPrice,
-            affordable: upgrade && wholeNous(state) >= cellPrice,
-            countdown: cellCountdown,
-          })}        </article>
-      </div>
-      <p class="catalog-note t-note">Each purchase raises the next price.</p>
-    </section>
   </div>
   <label class="catalog-toggle"><input type="checkbox" id="catalog-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${ownedShelf.length}/${shelfTypes.length})</label>
   ${

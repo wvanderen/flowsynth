@@ -2642,10 +2642,13 @@ describe("the catalog", () => {
     expect(app.state.purchased.generator).toBe(true);
   });
 
-  it("the cell row quotes the actual price", () => {
+  it("carries no cell row — cells arm from the dock's New cell, never a sheet row", () => {
     app.openModal("catalog");
-    const cellButton = document.getElementById("buy-cell")!;
-    expect(cellButton.textContent).toContain(`${BALANCE.cellFirstCost} ν`);
+    const modal = document.getElementById("modal-content")!;
+    expect(document.getElementById("buy-cell")).toBeNull();
+    expect(modal.textContent).not.toContain("Board cell");
+    expect(modal.textContent).not.toContain("Cells");
+    expect(modal.textContent).not.toContain("Each purchase raises the next price.");
   });
 
   it("omits the activation section while the ladder rests empty — no telegraph, no pricing", () => {
@@ -2720,8 +2723,8 @@ describe("the catalog door (issue #271)", () => {
     const areteTab = document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!;
     expect(areteTab.disabled).toBe(true);
     expect(areteTab.title).toContain("prestige");
-    // The nous face is the shop.
-    expect(document.getElementById("buy-cell")).not.toBeNull();
+    // The nous face is the shop: the shelf's offers stand.
+    expect(document.querySelector('[data-buy="generator"]')).not.toBeNull();
   });
 
   it("the shop appears at the first banked Arete, and the door remembers the last face", () => {
@@ -2735,7 +2738,7 @@ describe("the catalog door (issue #271)", () => {
     // The memory holds: the door opens on the arete face. (The mode-wins
     // override lands with the mode-unification ticket, #246.)
     expect(app.ui.catalogFace).toBe("arete");
-    expect(document.getElementById("buy-cell")).toBeNull();
+    expect(document.querySelector('[data-buy="generator"]')).toBeNull();
   });
 
   it("pre-entry the arete face is the single centered lock screen; the purchase reveals Upgrades and Unlocks", () => {
@@ -2819,7 +2822,6 @@ describe("the catalog door (issue #271)", () => {
     switchFace("nous");
     const shelfButton = document.querySelector<HTMLButtonElement>('[data-buy="generator"]')!;
     expect(shelfButton.disabled).toBe(true);
-    expect((document.getElementById("buy-cell") as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("prices mute in flow: the lock screen's entry stands inert with the between-sessions note", () => {
@@ -2864,13 +2866,16 @@ describe("the Arete Catalog (issue #197)", () => {
     expect(document.getElementById("arete-read")).toBeNull();
     expect(document.querySelector('#board-ledger [data-live="arete"]')).toBeNull();
     expect(document.getElementById("info-arete")).toBeNull();
-    // The slot is unconditional: `— ◇`, dim, on both faces of the ledger.
+    // The slot is unconditional: `— ◇`, dim, on both faces of the ledger,
+    // and its tooltip names the lock it teaches.
     const ledgerSlot = document.querySelector("#board-ledger .ledger-arete")!;
     expect(ledgerSlot.classList.contains("arete-dim")).toBe(true);
+    expect(ledgerSlot.getAttribute("title")).toBe("Unlocks at first Arete Reset");
     expect(ledgerSlot.querySelector("b")!.textContent).toBe("—");
     expect(ledgerSlot.querySelector(".arete-mark svg")).not.toBeNull();
     const stripSlot = document.querySelector("#game-info-strip .info-arete")!;
     expect(stripSlot.classList.contains("arete-dim")).toBe(true);
+    expect(stripSlot.getAttribute("title")).toBe("Unlocks at first Arete Reset");
     expect(stripSlot.querySelector("b")!.textContent).toBe("—");
     // Even with the board grown to the unlock boundary and add-cell mode
     // armed, the banner never renders — the lock is the prestige count
