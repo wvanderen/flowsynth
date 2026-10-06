@@ -67,8 +67,9 @@ function choose(k: number, m: number): number {
 const mod12 = (pitch: number): number => ((Math.round(pitch) % 12) + 12) % 12;
 
 // Pair-based symbolic tension (ADR-0049): every pair of distinct classes
-// weighed by interval class. Tuning in BALANCE.tensionWeights.
-function formationTension(classes: readonly number[]): number {
+// weighed by interval class. Tuning in BALANCE.tensionWeights. Shared by
+// the chord pass and the capacity allocator's formation read.
+export function formationTension(classes: readonly number[]): number {
   let total = 0;
   for (let i = 0; i < classes.length; i++) {
     for (let j = i + 1; j < classes.length; j++) {

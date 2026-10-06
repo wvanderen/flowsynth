@@ -25,8 +25,8 @@ import { poolOutstanding } from "../engine/trust";
 import { arcCardDue } from "../engine/arc";
 import { goalCapacity, goalRequiredSeconds, goalSummary, goalTrackerState, type GoalTrackerState } from "../engine/goals";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
-import type { GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, MutatorInstance, NoteEntry, Rarity, RateSnapshot } from "../engine/types";
-import type { App, ChordHover, EnterKind, EnterSelection, ModalKind } from "./app";
+import type { DeployedModule, GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, MutatorInstance, NoteEntry, Rarity, RateSnapshot } from "../engine/types";
+import { DEV_BOARD_CAPACITIES, type App, type ChordHover, type EnterKind, type EnterSelection, type ModalKind } from "./app";
 import { suppressNextClick } from "./click";
 import { startPointerDrag } from "./pointer-drag";
 import { appIcon, moduleIcon } from "./icons";
@@ -123,6 +123,7 @@ export function render(app: App): void {
   renderMutatorPopover(app, projected);
   renderModal(app, live, projected);
   renderDev(app);
+  renderDevBoard(app);
 }
 
 /* ── Console (ADR-0012) ────────────────────────────── */
@@ -4143,7 +4144,8 @@ function renderDev(app: App): void {
     <button data-dev="target">→ target</button>
     <button data-dev="nous">+100ν</button>
     <button data-dev="synth">+synth</button>
-    <button data-dev="mutera">mutator era</button>`;
+    <button data-dev="mutera">mutator era</button>
+    <button data-dev="board">${app.devBoard ? "close board" : "board"}</button>`;
   panel.querySelectorAll<HTMLButtonElement>("[data-dev]").forEach((button) => {
     button.addEventListener("click", () => {
       const key = button.getAttribute("data-dev")!;
@@ -4151,7 +4153,149 @@ function renderDev(app: App): void {
       else if (key === "nous") app.devNous();
       else if (key === "synth") app.devSynth();
       else if (key === "mutera") app.devMutatorEra();
+      else if (key === "board") app.devToggleBoard();
       else app.devAdvance(Number(key));
     });
+  });
+}
+
+/* ── Dev allocation board (#257) ───────────────────── */
+
+// The development board's panel: capacity one through five, the scenario
+// board itself, and the reads — active instances, every voice's
+// used/available budget, and final ν/s — all from the real rate path.
+// Per the instrument standards: one flat panel, open divisions, compact
+// name/state/effect readouts, no explanatory prose.
+function renderDevBoard(app: App): void {
+  let panel = byId("dev-board");
+  if (!app.dev || !app.devBoard) {
+    panel?.remove();
+    return;
+  }
+  const board = app.devBoard;
+  const { snapshot, read } = app.devBoardResult() ?? { snapshot: null, read: null };
+  if (!snapshot || !read) {
+    panel?.remove();
+    return;
+  }
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.className = "dev-board";
+    panel.id = "dev-board";
+    document.body.append(panel);
+  }
+  const scenario = board.scenario;
+  const placed = scenario.modules.filter((m): m is DeployedModule => m.pos !== null);
+  const voices = placed.filter((m) => isVoiceType(m.type));
+  const noteOf = (id: string): string => {
+    const module = scenario.modules.find((m) => m.id === id);
+    return module?.pos ? cellNoteOf(module.pos) : "—";
+  };
+  const capacityButtons = DEV_BOARD_CAPACITIES.map(
+    (n) => `<button data-devcap="${n}" class="${n === board.capacity ? "on" : ""}" aria-label="Capacity ${n}">${n}</button>`,
+  ).join("");
+  const voiceRows = [...voices]
+    .sort((a, b) => a.pos!.r - b.pos!.r || a.pos!.q - b.pos!.q || a.id.localeCompare(b.id))
+    .map((module) => {
+      const used = read.used.get(module.id) ?? 0;
+      const silent = CATEGORY_OF[module.type] === "silentVoice";
+      const contribution = snapshot.contributions.get(module.id);
+      const factor = read.analysis.voiceMultiplier.get(module.id) ?? 1;
+      const selected = board.selected === module.id ? " picked" : "";
+      return `<button class="dev-voice${selected}" data-devvoice="${module.id}">
+          <span class="dev-note">${module.pos ? cellNoteOf(module.pos) : "—"}</span>
+          <span class="dev-type">${module.type === "additive" ? "syn" : module.type === "harmonizer" ? "harm" : module.type}</span>
+          <span class="dev-lvl">L${module.level}</span>
+          <span class="dev-cap">${used}/${board.capacity}</span>
+          <span class="dev-factor mono">×${factor.toFixed(2)}</span>
+          <span class="dev-value mono">${silent ? "—" : `${formatNumber(contribution?.value ?? 0)} ν/s`}</span>
+        </button>`;
+    })
+    .join("");
+  const instanceChips = read.instances
+    .map(
+      (instance) =>
+        `<span class="dev-instance">${instance.name} ×${(1 + instance.bonus).toFixed(2)} @${noteNameOf(
+          60 + instance.root,
+        )} · ${instance.memberIds.map(noteOf).join("·")}</span>`,
+    )
+    .join("");
+  // The scenario grid over the board's own bounding box: every cell a
+  // button — a click moves the selected voice to a free cell, or selects
+  // the voice occupying it.
+  const minQ = Math.min(...scenario.cells.map((c) => c.q));
+  const maxQ = Math.max(...scenario.cells.map((c) => c.q));
+  const minR = Math.min(...scenario.cells.map((c) => c.r));
+  const maxR = Math.max(...scenario.cells.map((c) => c.r));
+  const gridRows: string[] = [];
+  for (let r = minR; r <= maxR; r++) {
+    const cells: string[] = [];
+    for (let q = minQ; q <= maxQ; q++) {
+      const inScenario = scenario.cells.some((c) => c.q === q && c.r === r);
+      const occupant = placed.find((m) => m.pos!.q === q && m.pos!.r === r);
+      const owner = occupant ? (board.selected === occupant.id ? " sel" : occupant.type === "spacer" ? " wire" : " voice") : inScenario ? " free" : " off";
+      const label = occupant
+        ? occupant.type === "spacer"
+          ? "·"
+          : cellNoteOf(occupant.pos!)
+        : inScenario
+          ? "+"
+          : "";
+      cells.push(
+        `<button class="dev-cell${owner}" data-devcell="${q},${r}" ${inScenario ? "" : "disabled"}>${label}</button>`,
+      );
+    }
+    gridRows.push(`<div class="dev-row">${cells.join("")}</div>`);
+  }
+  const stressRows = board.stress
+    ? board.stress
+        .map(
+          (row) =>
+            `<div class="dev-stress-row${row.certified ? "" : " uncert"}">${row.fixture} · cap ${row.capacity} · ${row.candidates} cands · ${row.instances} inst · ${row.ms.toFixed(0)} ms · ${
+              row.certified ? "certified" : "incumbent"
+            }</div>`,
+        )
+        .join("")
+    : "";
+  panel.innerHTML = `
+    <div class="dev-board-head">
+      <span>ALLOCATION BOARD</span>
+      <span class="mono" data-dev="rate">${formatNumber(snapshot.rate)} ν/s</span>
+      <span class="mono" data-dev="solver">${read.instances.length} inst · ${read.recognized} cands · ${read.nodes} nodes · ${read.ms.toFixed(1)} ms · ${read.certified ? "certified" : "incumbent"}</span>
+      <button data-devboard="close" aria-label="Close allocation board">✕</button>
+    </div>
+    <div class="dev-board-cap">
+      <span>capacity</span>
+      ${capacityButtons}
+      <button data-devboard="reset">reset</button>
+      <button data-devboard="stress">stress</button>
+    </div>
+    <div class="dev-board-grid">${gridRows.join("")}</div>
+    <div class="dev-board-instances">${instanceChips || '<span class="dev-empty">no active instances</span>'}</div>
+    <div class="dev-board-voices">
+      ${voiceRows}
+      <div class="dev-power">
+        <button data-devboard="power-down" ${board.selected ? "" : "disabled"}>− power</button>
+        <button data-devboard="power-up" ${board.selected ? "" : "disabled"}>+ power</button>
+      </div>
+    </div>
+    ${board.stress ? `<div class="dev-board-stress">${stressRows}</div>` : ""}`;
+  panel.querySelectorAll<HTMLButtonElement>("[data-devcap]").forEach((button) => {
+    button.addEventListener("click", () => app.devBoardSetCapacity(Number(button.getAttribute("data-devcap"))));
+  });
+  panel.querySelectorAll<HTMLButtonElement>("[data-devvoice]").forEach((button) => {
+    button.addEventListener("click", () => app.devBoardSelect(button.getAttribute("data-devvoice")));
+  });
+  panel.querySelectorAll<HTMLButtonElement>("[data-devcell]").forEach((button) => {
+    const [q, r] = button.getAttribute("data-devcell")!.split(",").map(Number);
+    button.addEventListener("click", () => app.devBoardMoveTo(q!, r!));
+  });
+  panel.querySelectorAll<HTMLButtonElement>("[data-devboard]").forEach((button) => {
+    const key = button.getAttribute("data-devboard")!;
+    if (key === "close") button.addEventListener("click", () => app.devToggleBoard());
+    else if (key === "reset") button.addEventListener("click", () => app.devBoardReset());
+    else if (key === "stress") button.addEventListener("click", () => app.devBoardStress());
+    else if (key === "power-up") button.addEventListener("click", () => app.devBoardPower(1));
+    else if (key === "power-down") button.addEventListener("click", () => app.devBoardPower(-1));
   });
 }

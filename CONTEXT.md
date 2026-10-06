@@ -40,6 +40,17 @@ _Avoid_: Chord link, Pair link, Hull
 The reserved spot beside the board — the heading's right end — where a selected (or hovered) module's row stands: its final ν/s first — live during flow, present with no chord at all — then the names and multipliers of every chord it earns its bonus from. No board-wide +ν/s claims on any chord surface (ADR-0036). The selected module's row pins it; hovering a seam or a module asks. One spot, never floating over the board.
 _Avoid_: Chord chip (the ambient-floating sense), Chord view
 
+**Harmonic capacity**:
+The whole-chord budget every voice owns — silent voices included, uniform across the board, one through five on the development board. An active chord instance consumes one unit on every participating voice; no partial chord earns anything and no budget is exceeded. Development slice (ADR-0051, issue #257): the economy ladders — Catalog purchases, Arete ceilings, the prestige reset — are decided but not yet shipped.
+
+**Allocation**:
+The automatic selection of which recognized chord instances activate: it maximizes the summed final ν/s of the board's oscillators — charge, boosters, resonance, active build factors and silent-voice uplift included — with the empty allocation available whenever activating would reduce production. Equal-output allocations retain the previous active set, then fall back to a stable order. An unallocated voice keeps exactly ×1; the formation's quality multiplies only participants.
+_Avoid_: Manual chord assignment
+
+**Certified allocation**:
+The allocator's honesty flag: the exact search completed within its budget, so the chosen allocation is proven optimal — never presumed. A budget that trips reports an incumbent and says so; candidates are never truncated and a heuristic is never silently substituted (ADR-0051).
+_Avoid_: Heuristic allocation (as a silent substitute)
+
 **Spacer**:
 A silent wire module occupying one cell: it never sounds and never joins a pitch set, but conducts chord adjacency through chains of wired cells. Reaches the board only through module rolls.
 

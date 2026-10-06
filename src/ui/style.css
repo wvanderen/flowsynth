@@ -2146,6 +2146,94 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
 .dev-panel span { font: 9px var(--mono); letter-spacing: 0.1em; color: var(--forge-glow); margin-right: 4px; }
 .dev-panel button { padding: 4px 8px; font-size: 11px; font-family: var(--mono); }
 
+/* ── Dev allocation board (#257) ───────────────────── */
+/* A development-only instrument panel: one flat panel, open divisions,
+   compact readouts — judged against the instrument standards like any
+   surface, never shipped to players. */
+
+.dev-board {
+  position: fixed;
+  right: 12px;
+  top: 12px;
+  z-index: 41;
+  width: min(440px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  background: var(--panel-veil);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dev-board-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 6px;
+}
+.dev-board-head > span:first-child { font: 9px var(--mono); letter-spacing: 0.1em; color: var(--forge-glow); flex: 0 0 auto; }
+.dev-board-head .mono { font: 11px var(--mono); }
+.dev-board-head [data-dev="solver"] { color: var(--muted); font-size: 10px; margin-left: auto; }
+.dev-board-cap { display: flex; align-items: center; gap: 4px; }
+.dev-board-cap > span { font: 9px var(--mono); letter-spacing: 0.1em; color: var(--muted); margin-right: 4px; }
+.dev-board-cap button { padding: 3px 8px; font: 11px var(--mono); }
+.dev-board-cap button.on { box-shadow: inset 0 0 0 2px var(--line-strong); }
+.dev-board-cap button[data-devboard="reset"], .dev-board-cap button[data-devboard="stress"] { margin-left: auto; }
+.dev-board-grid { display: flex; flex-direction: column; gap: 2px; align-items: center; }
+.dev-row { display: flex; gap: 2px; }
+.dev-row:nth-child(even) { margin-left: 11px; }
+.dev-cell {
+  width: 26px;
+  height: 26px;
+  font: 8px var(--mono);
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: transparent;
+}
+.dev-cell.voice { border-color: var(--line-strong); }
+.dev-cell.wire { color: var(--muted); border-style: dashed; }
+.dev-cell.free { border-style: dotted; color: var(--muted); }
+.dev-cell.off { visibility: hidden; }
+.dev-cell.sel { box-shadow: inset 0 0 0 2px var(--line-strong); }
+.dev-board-instances { display: flex; flex-direction: column; border-top: 1px solid var(--line); padding-top: 6px; }
+.dev-instance {
+  font: 9px var(--mono);
+  padding: 3px 2px;
+  white-space: nowrap;
+}
+.dev-instance + .dev-instance { border-top: 1px solid var(--line-soft); }
+.dev-empty { font: 10px var(--mono); color: var(--muted); }
+.dev-board-voices { display: flex; flex-direction: column; gap: 2px; border-top: 1px solid var(--line); padding-top: 6px; }
+.dev-voice {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 3px 6px;
+  font: 10px var(--mono);
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  text-align: left;
+}
+.dev-voice.picked { border-color: var(--line-strong); }
+.dev-note { width: 34px; }
+.dev-type { width: 38px; color: var(--muted); }
+.dev-lvl { width: 30px; color: var(--muted); }
+.dev-cap { width: 30px; }
+.dev-factor { width: 52px; }
+.dev-value { margin-left: auto; }
+.dev-power { display: flex; gap: 6px; margin-top: 4px; }
+.dev-board-stress { border-top: 1px solid var(--line); padding-top: 6px; display: flex; flex-direction: column; gap: 2px; }
+.dev-stress-row { font: 9px var(--mono); color: var(--ink); }
+.dev-stress-row.uncert { color: var(--muted); }
+
 /* ── Responsive ────────────────────────────────────── */
 /* Half-width and phone respond to the app container's own width (§7):
    half-width is fully featured — identical anatomy, in-place compaction
