@@ -1050,19 +1050,19 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   right: 8px;
   z-index: 15;
   display: none;
+}
+.game-info-face {
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 14px;
   padding: 6px 14px;
-  background: var(--panel-veil);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  backdrop-filter: blur(3px);
   white-space: nowrap;
 }
 .info-read { display: inline-flex; align-items: baseline; gap: 4px; font: 12px var(--mono); }
 .info-read b { font-weight: 400; }
 .info-read small { font-size: 10px; color: var(--muted); }
+.ledger-fig .arete-mark, .info-read .arete-mark { color: inherit; }
 /* The strip's rate read is the phone's door to the rate details (§7,
    ADR-0037): tapping it opens the module-linked sheet — the ledger's rate
    figure doesn't exist here. It reads as a plain strip entry, wearing the
@@ -2059,8 +2059,8 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
 .modal-back {
   border: 0;
   background: none;
-  padding: 2px 4px;
-  min-height: 0;
+  padding: 2px 8px;
+  min-height: 44px;
   color: var(--muted);
   font: 600 13px var(--font-condensed);
   text-transform: uppercase;
@@ -2474,7 +2474,7 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
   .console-apps { margin-left: auto; }
   #console-settings { margin-left: 0; }
   .board-ledger { display: none; }
-  .game-info-strip { display: flex; }
+  .game-info-strip { display: block; }
   .board-tools { display: none; }
   .thumb-bar { display: flex; }
   /* The tray hides on phone — the thumb bar's Inventory taps the sheet —

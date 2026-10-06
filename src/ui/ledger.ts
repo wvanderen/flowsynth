@@ -303,7 +303,7 @@ export function wireSynthPicks(host: ParentNode, pick: (id: string) => void): vo
 // beside the clipped panel, not inside it — a clip-path ancestor cuts a
 // floating child's paint, and the popover hangs below the panel's edge.
 function rateCellHtml(): string {
-  return `<button class="ledger-fig-btn" id="rate-cell" title="Rate — the board's live total; hover or tap for the module details">
+  return `<button class="ledger-fig-btn" id="rate-cell" aria-label="Rate details" title="Rate — the board's live total; hover or tap for the module details">
     <b class="mono" data-live="rate"></b><small aria-hidden="true">ν/s</small>
     <span class="rate-hint" aria-hidden="true">ⓘ</span>
   </button>`;
@@ -319,7 +319,7 @@ export const FEATS_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none
 </svg>`;
 
 export function featsChipHtml(count: number): string {
-  return `<button class="ledger-chip" id="feats-chip" title="Feats — the full list, and how close the next one is">${FEATS_SVG}<span class="mono">${count}/${ACHIEVEMENTS.length}</span></button>`;
+  return `<button class="ledger-chip" id="feats-chip" aria-label="Feats" title="Feats — the full list, and how close the next one is">${FEATS_SVG}<span class="mono">${count}/${ACHIEVEMENTS.length}</span></button>`;
 }
 
 // ── The chord library chip (§7, issue #230) ─────────────────────────────
@@ -333,7 +333,7 @@ export const LIBRARY_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="no
 
 export function libraryChipHtml(state: GameState): string {
   const count = discoveryCount(state);
-  return `<button class="ledger-chip" id="library-chip" title="Chord library — the field guide of chord classes">${LIBRARY_SVG}<span class="mono">${count}/${NAMED_CHORDS.length}</span></button>`;
+  return `<button class="ledger-chip" id="library-chip" aria-label="Chords" title="Chord library — the field guide of chord classes">${LIBRARY_SVG}<span class="mono">${count}/${NAMED_CHORDS.length}</span></button>`;
 }
 
 // ── The arete read (§7, issue #197 → #270) ──────────────────────────────
@@ -358,7 +358,7 @@ export function areteLedgerHtml(state: GameState): string {
   if (!catalogOpen(state)) {
     return `<span class="ledger-fig ledger-arete arete-dim" title="Arete — banked by prestige">${areteTelegraphHtml()}</span>`;
   }
-  return `<button class="ledger-fig ledger-arete" id="arete-read" title="Arete — banked by prestige; spent in the Arete Catalog"><b class="mono" data-live="arete"></b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small></button>`;
+  return `<button class="ledger-fig ledger-arete" id="arete-read" aria-label="Arete Catalog" title="Arete — banked by prestige; spent in the Arete Catalog"><b class="mono" data-live="arete"></b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small></button>`;
 }
 
 // ── The board ledger (§7, issue #270) ───────────────────────────────────
@@ -463,13 +463,13 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
   const key = catalogOpen(state) ? "strip-banked" : "strip-pre";
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
-    host.innerHTML = `<span class="info-read" title="Nous — the board's banked resource"><b class="mono" data-live="i-nous"></b><small aria-hidden="true">ν</small></span>
-      <button class="info-read info-rate" id="info-rate" title="Rate — tap for the module details"><b class="mono" data-live="i-rate"></b><small aria-hidden="true">ν/s</small><span class="info-hint" aria-hidden="true">ⓘ</span></button>
+    host.innerHTML = `<div class="inst-panel-face game-info-face"><span class="info-read" title="Nous — the board's banked resource"><b class="mono" data-live="i-nous"></b><small aria-hidden="true">ν</small></span>
+      <button class="info-read info-rate" id="info-rate" aria-label="Rate details" title="Rate — tap for the module details"><b class="mono" data-live="i-rate"></b><small aria-hidden="true">ν/s</small><span class="info-hint" aria-hidden="true">ⓘ</span></button>
       ${
         catalogOpen(state)
-          ? `<button class="info-read info-arete" id="info-arete" title="Arete — banked by prestige; spent in the Arete Catalog"><b class="mono" data-live="i-arete"></b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small></button>`
+          ? `<button class="info-read info-arete" id="info-arete" aria-label="Arete Catalog" title="Arete — banked by prestige; spent in the Arete Catalog"><b class="mono" data-live="i-arete"></b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small></button>`
           : `<span class="info-read info-arete arete-dim" title="Arete — banked by prestige">${areteTelegraphHtml()}</span>`
-      }`;
+      }</div>`;
     document.getElementById("info-rate")?.addEventListener("click", () => app.openModal("rate"));
     document.getElementById("info-arete")?.addEventListener("click", () => app.openModal("arete"));
   }
