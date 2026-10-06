@@ -66,6 +66,16 @@ describe("the achievement registry", () => {
     }
   });
 
+  it("every feat carries its own mark — 23 distinct glyphs (issue #269)", () => {
+    const icons = ACHIEVEMENTS.map((d) => d.icon);
+    // The instrument's line language: one stroke wrapper, one voice.
+    for (const icon of icons) {
+      expect(icon).toContain('<svg viewBox="0 0 24 24"');
+      expect(icon).toContain('stroke="currentColor"');
+    }
+    expect(new Set(icons).size).toBe(23);
+  });
+
   it("never unlocks anything during session one", () => {
     const s = fresh();
     createHabit(s, "Piano");
