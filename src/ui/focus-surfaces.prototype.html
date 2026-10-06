@@ -280,7 +280,9 @@ function habitDetail(h){
  const mgmt=flow?'':`<button class="ghost" aria-label="Rename ${h.name}">✎</button><button class="ghost" aria-label="Archive ${h.name}">⨯</button>`;
  const log=flow
   ?`<hr class="rule"><div class="row"><span class="sub">Manual logs wait for upgrade mode.</span></div>`
-  :`<hr class="rule"><div class="row"><span class="grow">${tip('log-tip-'+h.id,'Log practice','Credits practice without a session. Manual logs never produce nous or charge.')}</span><input class="mono" style="width:64px;text-align:right" value="30" aria-label="Minutes"><button>Log</button></div>`;
+  :S.logging
+   ?`<hr class="rule"><div class="row"><span class="grow">${tip('log-tip-'+h.id,'practice, manual','Credits practice without a session. Manual logs never produce nous or charge.')}</span><input class="mono" style="width:64px;text-align:right" value="30" aria-label="Minutes"><button>Log</button><button class="ghost" id="log-cancel" aria-label="Cancel logging">✕</button></div>`
+   :`<hr class="rule"><div class="row"><span class="grow name">Log practice</span>${tip('log-tip-'+h.id,'<span class="mono dim">i</span>','Credits practice without a session. Manual logs never produce nous or charge.')}<button id="log-open">Log practice</button></div>`;
  return `<button class="backlink" data-back>← HABITS</button>
   <div class="head"><span style="display:flex;align-items:baseline;gap:10px;min-width:0"><span class="name">${h.name}</span>${h.id===S.active?'<span class="acq">ACTIVE</span>':''}</span><span style="display:flex;gap:6px">${mgmt}</span></div>
   <div class="rows">
@@ -294,14 +296,17 @@ function habitDetail(h){
   <div class="rows">${notes}</div>${log}`;
 }
 function habitIndex(){
- return D.habits.map(h=>`<div class="row ${h.id===S.habitPick?'marksel':''}" role="button" tabindex="0" data-habit="${h.id}" aria-pressed="${h.id===S.habitPick}">
+ const rows=D.habits.map(h=>`<div class="row ${h.id===S.habitPick?'marksel':''}" role="button" tabindex="0" data-habit="${h.id}" aria-pressed="${h.id===S.habitPick}">
   <span class="fig mono">${h.life}</span><span class="fig mono dim">${h.sessions}×</span>
   <span class="grow name">${h.name}</span>${h.id===S.active?'<span class="dot on" title="Active habit"></span>':''}</div>`).join('');
+ const add=S.mode==='flow'?'<div class="row"><span class="sub">Adding waits for upgrade mode.</span></div>'
+  :S.adding?'<div class="row"><input class="grow" placeholder="Name a practice" aria-label="New habit name"><button>Add</button><button class="ghost" id="add-cancel" aria-label="Cancel adding">✕</button></div>'
+  :'<div class="row"><button class="grow" style="text-align:left" id="add-open">Add practice</button></div>';
+ return rows+`<hr class="rule">`+add;
 }
 function habitFace(){
- const h=D.habits.find(x=>x.id===(S.habitPick||D.habits[0].id));
- const add=S.mode==='flow'?'<div class="row"><span class="sub">Adding waits for upgrade mode.</span></div>':'<div class="row"><input class="grow" placeholder="Name a practice" aria-label="New habit name"><button>Add</button></div>';
- return habitIndex()+`<hr class="rule">`+habitDetail(h).replace('<button class="backlink" data-back>← HABITS</button>','')+add;
+ if(S.habitPick)return habitDetail(D.habits.find(h=>h.id===S.habitPick));
+ return habitIndex();
 }
 function renderHabit(){
  if(S.habitPick&&S.variant!=='C')return wrap('HABIT','development',habitDetail(D.habits.find(h=>h.id===S.habitPick)));
@@ -476,7 +481,11 @@ function render(){
  if(S.surface==='time'){el.innerHTML=renderTime();bindTime();bindHistory()}
  else if(S.surface==='focus'){
   el.innerHTML=renderFocus();bindCommon();
-  document.querySelectorAll('[data-face]').forEach(b=>b.onclick=()=>{S.face=b.dataset.face;render()});
+  document.querySelectorAll('[data-face]').forEach(b=>b.onclick=()=>{S.face=b.dataset.face;S.adding=false;S.logging=false;render()});
+  const ao=document.querySelector('#add-open');if(ao)ao.onclick=()=>{S.adding=true;render()};
+  const ac=document.querySelector('#add-cancel');if(ac)ac.onclick=()=>{S.adding=false;render()};
+  const lo=document.querySelector('#log-open');if(lo)lo.onclick=()=>{S.logging=true;render()};
+  const lc=document.querySelector('#log-cancel');if(lc)lc.onclick=()=>{S.logging=false;render()};
   const ef=document.querySelector('#end-flow');if(ef)ef.onclick=()=>{S.mode='upgrade';S.elapsed=null;render()};
   if(document.querySelector('[data-drill]'))bindHistory();
   const bk=document.querySelector('.backdrop');if(bk)bk.onclick=e=>{if(e.target===bk){S.surface='time';render()}};
@@ -499,7 +508,7 @@ function render(){
 function bindCommon(){
  document.querySelectorAll('.tip').forEach(b=>b.onclick=e=>{e.stopPropagation();const host=b.closest('.tooltip-host');const show=!host.classList.contains('show');document.querySelectorAll('.tooltip-host').forEach(h=>h.classList.remove('show'));document.querySelectorAll('.tip').forEach(t=>t.setAttribute('aria-expanded','false'));host.classList.toggle('show',show);b.setAttribute('aria-expanded',String(show))});
  document.querySelectorAll('[data-habit]').forEach(r=>r.onclick=()=>{S.habitPick=r.dataset.habit;render()});
- document.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{S.habitPick=null;render()});
+ document.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{S.habitPick=null;S.logging=false;render()});
  const x=document.querySelector('#close-x');if(x)x.onclick=()=>{S.surface='time';render()};
  const bk=document.querySelector('.backdrop');if(bk&&document.querySelector('#close-x'))bk.onclick=e=>{if(e.target===bk){S.surface='time';render()}};
 }
