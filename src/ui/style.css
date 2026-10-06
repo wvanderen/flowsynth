@@ -440,8 +440,9 @@ h1, h2, h3, p { margin: 0; }
 .modal:has(.ach-section) { width: min(820px, 100%); }
 .ach-section { margin-top: 18px; }
 .ach-section .catalog-section-title { margin-bottom: 10px; }
-.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px 18px; }
-.ach-row { display: flex; align-items: flex-start; gap: 10px; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px 12px; }
+.ach-grid { display: flex; flex-direction: column; }
+.ach-row { display: flex; align-items: flex-start; gap: 10px; border-bottom: 1px solid var(--line); padding: 9px 2px; }
+.ach-row:last-child { border-bottom: 0; }
 .ach-body { flex: 1; min-width: 0; }
 .ach-head { display: flex; align-items: baseline; gap: 8px; }
 .ach-name { font-size: 13px; color: var(--muted); min-width: 0; }
