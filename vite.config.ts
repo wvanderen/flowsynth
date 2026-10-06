@@ -1,10 +1,40 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from "vite";
 import { defaultTheme, themeCss } from "./src/ui/theme";
+import { devProvenance } from "./tools/dev/provenance";
 
 export default defineConfig({
   base: "./",
   plugins: [
+    {
+      // Issue #253: development-only provenance at /-/dev/provenance, so a
+      // browser can confirm which worktree and commit a preview serves
+      // before evidence is captured from it. configureServer exists only on
+      // the dev server — never in vite build or vite preview — so production
+      // artifacts neither contain nor serve the endpoint.
+      name: "flowsynth-dev-provenance",
+      configureServer(server) {
+        // Unmounted on purpose: connect's use(path) prefix-matches only at a
+        // "/" boundary and would hand /-/dev/provenanceX to the SPA fallback.
+        // Registered bare, the route is exact and everything else — methods
+        // included — 404s rather than leaking provenance.
+        server.middlewares.use((req, res, next) => {
+          const url = req.url ?? "";
+          if (!url.startsWith("/-/dev/provenance")) {
+            next();
+            return;
+          }
+          if (req.method !== "GET" || url !== "/-/dev/provenance") {
+            res.statusCode = 404;
+            res.end();
+            return;
+          }
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.setHeader("Cache-Control", "no-store");
+          res.end(JSON.stringify(devProvenance(), null, 2));
+        });
+      },
+    },
     {
       // The ADR-0016 token table is data (src/ui/theme.ts), so the page's
       // custom properties are injected from it into <head> — before first
@@ -16,7 +46,7 @@ export default defineConfig({
     },
   ],
   test: {
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "tools/**/*.test.ts"],
     environment: "node",
   },
 });

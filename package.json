@@ -5,7 +5,7 @@
   "type": "module",
   "description": "FlowSynth first playable: a modular focus instrument driven by real practice.",
   "scripts": {
-    "dev": "vite",
+    "dev": "node tools/dev-server.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -14,6 +14,7 @@
     "deploy:vercel": "vercel build --prod && vercel deploy --prebuilt --prod"
   },
   "devDependencies": {
+    "@types/node": "^22.20.5",
     "happy-dom": "^20.14.5",
     "typescript": "~5.8.3",
     "vite": "^6.3.5",
