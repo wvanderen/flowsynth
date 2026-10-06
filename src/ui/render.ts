@@ -567,6 +567,10 @@ const ACHIEVEMENT_CATEGORY_ORDER: readonly AchievementCategory[] = ["practice", 
 // here so the copy can never drift from the tuning constant.
 const FEAT_EFFECT_READ = `+${Math.round(BALANCE.achievementBoostPerFeat * 100)}% ν`;
 
+// The engraved done-mark, the state grammar's acquired voice — one mark
+// for every crossed feat row, milestone or encourager.
+const ACH_MARK = `<span class="ach-mark" role="img" aria-label="acquired">✓</span>`;
+
 // A feat's crossed bit: the ledger is the truth, everywhere it's asked.
 const crossedOf = (app: App, id: string): boolean => app.state.achievements[id] !== undefined;
 
@@ -596,14 +600,23 @@ function achRowHtml(app: App, def: AchievementDef, ctx: AchievementContext): str
   const unlockedAt = app.state.achievements[def.id];
   const { current, goal } = def.progress(app.state, ctx);
   const fraction = Math.min(1, goal > 0 ? current / goal : 1);
-  const readout = unlockedAt !== undefined ? "done" : `${formatNumber(current)} / ${formatNumber(goal)}`;
+  // The four facts (ADR-0015 amended, issue #269): the unique icon, the
+  // name, the shared effect, and the state — the engraved done-mark
+  // crossed, the progress figures uncrossed. The description carries the
+  // concrete act; the progress bar restocks the state at a glance.
+  const readout =
+    unlockedAt !== undefined ? ACH_MARK : `<span class="ach-readout mono">${formatNumber(current)} / ${formatNumber(goal)}</span>`;
   return `<div class="ach-row${unlockedAt !== undefined ? " unlocked" : ""}">
-    <div class="ach-head">
-      <span class="ach-name">${def.name}</span>
-      <span class="ach-readout mono">${readout}</span>
+    <span class="ach-icon" aria-hidden="true">${def.icon}</span>
+    <div class="ach-body">
+      <div class="ach-head">
+        <span class="ach-name">${def.name}</span>
+        <span class="ach-effect mono">${FEAT_EFFECT_READ}</span>
+        ${readout}
+      </div>
+      <p class="ach-desc">${def.description}</p>
+      <div class="ach-track" aria-hidden="true"><i style="width:${(fraction * 100).toFixed(1)}%"></i></div>
     </div>
-    <p class="ach-desc">${def.description}</p>
-    <div class="ach-track" aria-hidden="true"><i style="width:${(fraction * 100).toFixed(1)}%"></i></div>
   </div>`;
 }
 
@@ -618,9 +631,9 @@ function milestoneRowHtml(app: App, def: AchievementDef): string {
     crossed || !def.gate
       ? ""
       : `<span class="inst-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${tipId}" aria-label="${def.name} — what stands before it">ⓘ</button><span class="inst-tip-body" id="${tipId}" role="tooltip">${def.gate}</span></span>`;
-  const mark = crossed ? `<span class="ach-mark" role="img" aria-label="acquired">✓</span>` : "";
+  const mark = crossed ? ACH_MARK : "";
   return `<div class="ach-milestone${crossed ? " crossed" : ""}">
-    <span class="ach-icon" aria-hidden="true">${def.icon ?? ""}</span>
+    <span class="ach-icon" aria-hidden="true">${def.icon}</span>
     <span class="ach-read"><span class="ach-name">${def.name}</span><span class="ach-sep" aria-hidden="true"> · </span><span class="ach-unlock">${def.unlock ?? ""}</span><span class="ach-sep" aria-hidden="true"> · </span><span class="ach-effect mono">${FEAT_EFFECT_READ}</span></span>
     ${mark}${gateTip}
   </div>`;
