@@ -122,6 +122,24 @@ export interface Balance {
   // tuning.
   mutatorForgeInitialThreshold: number;
   mutatorForgeThresholdGrowth: number;
+  // The harmonic-capacity ladder (issue #259, the confirmed design's
+  // first-era prototype): four nous rungs, each adding one whole-chord
+  // unit to every voice. The first two open inside the base ceiling
+  // (capacity two, then three); the Arete ceiling unlocks open rungs three
+  // and four (prototype maximums four and five). Strictly finite. These
+  // are centralized provisional prices for calibration — the numerical
+  // prototype's 1,000/100,000 rungs are explicitly not adopted tuning.
+  capacityPrices: readonly number[];
+  // The Arete offerings beside the ladder (issue #259): two permanent
+  // ceiling unlocks, and two discounts off the original nous prices — 20%,
+  // then 40% in total. Every ceiling costs more than the discount standing
+  // beside it. Strictly finite; provisional tuning.
+  capacityCeilingCosts: readonly number[];
+  capacityDiscountCosts: readonly number[];
+  // The discount shares themselves (issue #259): the nth owned discount
+  // grants discounts[n-1] off the original prices — later rungs replace,
+  // never stack past, the quoted shape.
+  capacityDiscountShares: readonly number[];
   // The mutator families' base magnitudes (ADR-0043): the effect multiplies
   // its term by (1 + magnitude), and rarity scales the base ×1/×2/×4 across
   // the shared common/uncommon/rare tiers. Provisional tuning.
@@ -208,6 +226,10 @@ export const BALANCE: Balance = {
   mutatorForgeThresholdGrowth: 2,
   mutatorMagnitudeBase: { power: 0.5, resonance: 0.5, charge: 0.5 },
   mutatorRarityMultiplier: { common: 1, uncommon: 2, rare: 4 },
+  capacityPrices: [600, 30_000, 1_500_000, 75_000_000],
+  capacityCeilingCosts: [6, 14],
+  capacityDiscountCosts: [3, 7],
+  capacityDiscountShares: [0.2, 0.4],
   mutatorSlotFirstCost: 2,
   flowOpeningSeconds: 180,
   flowCadenceSeconds: 1800,

@@ -104,6 +104,15 @@ export function deserialize(text: string): LoadResult {
   if (typeof raw.horizonBroken !== "boolean") {
     merged.horizonBroken = false;
   }
+  // The harmonic-capacity ladder (issue #259) lenient-defaults the same
+  // way: absent or corrupt counts read as zero — no purchases this era, no
+  // Arete offerings owned — exactly what a pre-ladder save owes, and
+  // nothing unrelated resets with them.
+  for (const field of ["capacityBought", "capacityCeilings", "capacityDiscounts"] as const) {
+    const value = raw[field];
+    merged[field] =
+      typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+  }
   // The Mutator layer (ADR-0043, issue #198) lenient-defaults the same
   // way: absent means the entry was never bought — no slots, no mutators,
   // no Mutator Forge fill, no pending mutator rolls — which is exactly

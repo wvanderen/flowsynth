@@ -1,6 +1,9 @@
 import { advance, earnNous } from "../engine/advance";
 import type { AdvanceResult } from "../engine/types";
 import {
+  buyCapacity,
+  buyCapacityCeiling,
+  buyCapacityDiscount,
   buyCatalogEntry,
   buyCell,
   buyGoalCapacity,
@@ -1153,6 +1156,20 @@ export class App {
 
   buyRowUnlockAction(row: number): void {
     this.act(buyRowUnlock(this.state, row), "Octave row unlocked — its cells now buy with nous.");
+  }
+
+  // The harmonic-capacity ladder's landings (issue #259): the nous rung
+  // and the two Arete offerings, each through the shared act() shape.
+  buyCapacityAction(): void {
+    this.act(buyCapacity(this.state), "Harmonic capacity raised — every voice carries one more chord.");
+  }
+
+  buyCapacityCeilingAction(): void {
+    this.act(buyCapacityCeiling(this.state), "The capacity ceiling rises — the nous ladder sells one rung further.");
+  }
+
+  buyCapacityDiscountAction(): void {
+    this.act(buyCapacityDiscount(this.state), "Capacity rungs cost less nous.");
   }
 
   // The first console long goal (ADR-0012 as amended by ADR-0034): goal

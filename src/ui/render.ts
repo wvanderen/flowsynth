@@ -1,4 +1,4 @@
-import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, hostPower, levelCost, levelsCost, longGoalCost, ritualAmpOf, wholeNous } from "../engine/economy";
+import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, hostPower, levelCost, levelsCost, longGoalCost, ritualAmpOf, voiceCapacityOf, wholeNous } from "../engine/economy";
 import { idleTermsOf, summaryTermsOf } from "../engine/allocation";
 import { claimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
@@ -8,6 +8,7 @@ import { adjacent, sameHex } from "../engine/hex";
 import { forgeThreshold, flowThreshold, mutatorForgeThreshold } from "../engine/rolls";
 import { BALANCE, CATEGORY_OF, isOscillatorType, isVoiceType, NAMED_CHORDS, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { catalogOpen, rowUnlockCost, unlockableRows } from "../engine/catalog";
+import { capacityCeiling, capacityDiscountShare, nextCapacityPrice, nextCeilingPrice } from "../engine/capacity";
 import { formatClock, formatDuration } from "../engine/clock";
 import { cellNoteOf, noteNameOf, octaveRowOf, pitchOf, positionInRange } from "../engine/lattice";
 import { appActive, appLockNote, TILE_APPS, type FocusApp } from "../engine/apps";
@@ -3175,6 +3176,11 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                   JSON.stringify(app.state.purchased),
                   app.state.cellsBought,
                   app.state.activatedApps.join("|"),
+                  // The capacity ladder's owned state (issue #259): the row's
+                  // figure, price, and capped word re-read with the ladder.
+                  app.state.capacityBought,
+                  app.state.capacityCeilings,
+                  app.state.capacityDiscounts,
                   // Module-upgrade rows reprice with levels, moves, and the roster.
                   app.state.modules.map((m) => `${m.id}:${m.level}:${m.rarity}:${m.pos ? "d" : "i"}`).join("|"),
                 ]
@@ -3182,7 +3188,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
               // the owned flags. The mode rides modalKey, so entering or
               // leaving flow re-renders the inert/active button states.
               : kind === "arete"
-                ? [app.state.arete, app.state.catalogEntryOwned, app.state.rollPoolJoined]
+                ? [app.state.arete, app.state.catalogEntryOwned, app.state.rollPoolJoined, app.state.capacityCeilings, app.state.capacityDiscounts]
               : kind === "achievements"
                 // Quantized progress: an open page refreshes when a bar visibly
                 // moves, not on every clock tick.
@@ -3470,6 +3476,52 @@ function shopBuyHtml(options: {
   return `<span class="shop-buy">${button}${small}</span>`;
 }
 
+// The harmonic-capacity row (issue #259, the confirmed design beside
+// ADR-0050): the nous Catalog's global ladder. One development-only row —
+// the allocation model it serves stays behind the development gate, so
+// ordinary play shows no capacity controls (ADR-0052). Bought, unavailable
+// and capped states ride the shop row's own grammar: the per-voice figure
+// reads the ladder's progress, the disabled price carries the
+// practice-minute estimate, and the capped word points at the Arete sheet
+// while its ceiling unlocks remain.
+function capacityShopHtml(app: App): string {
+  const { state } = app;
+  const capacity = voiceCapacityOf(state);
+  const ceiling = capacityCeiling(state);
+  const price = nextCapacityPrice(state);
+  const discount = capacityDiscountShare(state);
+  const upgrade = state.mode === "upgrade";
+  const off = discount > 0 ? ` (${Math.round(discount * 100)}% off)` : "";
+  const buy = price === null
+    ? `<span class="shop-buy"><span class="activation-owned mono">${capacityCeilingsLeft(state) ? "capped" : "complete"}</span></span>`
+    : shopBuyHtml({
+        attrs: `data-buy-capacity="1" title="${upgrade ? `Spend ${formatInt(price)} ν${off} — one more whole chord for every voice` : "Purchases happen between sessions"}"`,
+        price,
+        affordable: upgrade && wholeNous(state) >= price,
+        countdown: upgradeCountdown(app, price),
+      });
+  const note = price === null
+    ? capacityCeilingsLeft(state)
+      ? `<small class="shop-countdown">The ceiling stands — the Arete Catalog sells the next rung.</small>`
+      : ""
+    : "";
+  return `
+    <h3 class="catalog-section-title">Harmonic capacity</h3>
+    <div class="shop-list">
+      <div class="shop-item">
+        <div><h3>Harmonic capacity <span class="mono">${capacity}/${ceiling}</span></h3><small>Every voice — current and future — sings one more whole chord. Prestige returns the voices to one.</small></div>
+        ${buy}${note}
+      </div>
+    </div>
+    <p class="small muted" style="margin:6px 0 0">Whole chords, never levels or rarity — this ladder prices the board's harmony alone.</p>`;
+}
+
+// Whether the Arete sheet can still raise the capacity ceiling: the shared
+// read behind the capped row's pointer and the sheet's own rows.
+function capacityCeilingsLeft(state: GameState): boolean {
+  return nextCeilingPrice(state) !== null;
+}
+
 function renderCatalogModal(app: App, content: HTMLElement): void {
   const { state, ui } = app;
   const shelfTypes = Object.keys(BALANCE.shelfPrices) as (keyof typeof BALANCE.shelfPrices)[];
@@ -3508,6 +3560,7 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
         </div>`;
       }).join("")}</div>` : ""}
     ${openShelf.length === 0 ? `<p class="empty-copy">The shelf is empty.</p>` : ""}
+    ${app.dev ? capacityShopHtml(app) : ""}
     <h3 class="catalog-section-title">Cells</h3>
     <div class="shop-list">
       <div class="shop-item">
@@ -3533,6 +3586,7 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
       app.buyShelf(button.getAttribute("data-buy") as keyof typeof BALANCE.shelfPrices);
     });
   });
+  content.querySelector<HTMLButtonElement>("[data-buy-capacity]")?.addEventListener("click", () => app.buyCapacityAction());
   byId("buy-cell")?.addEventListener("click", () => app.armCellPurchase());
   byId("catalog-show-acquired")?.addEventListener("change", (event) => {
     app.ui.showAcquired = (event.target as HTMLInputElement).checked;
@@ -3550,12 +3604,65 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
 // the Row unlock's banner, the Mutators layer's slot ladder — never appear
 // here as rows. Every purchase acts in upgrade mode only; outside it the
 // buttons stand inert and the sheet says so.
+// The Arete sheet's harmonic-capacity offerings (issue #259): two
+// permanent ceiling unlocks and two discounts beside the nous ladder.
+// Development-only like the ladder row — the model they serve stays behind
+// the development gate. Each pair climbs in order; every ceiling costs
+// more than the discount standing beside it.
+function capacityAreteHtml(app: App): string {
+  const { state } = app;
+  const ceilings = state.capacityCeilings;
+  const discounts = state.capacityDiscounts;
+  const ceilingBuy = (id: string, price: number, owned: boolean, locked: boolean): string =>
+    owned
+      ? areteOwnedWord("raised")
+      : locked
+        ? `<span class="shop-buy"><button class="primary arete" id="${id}" disabled title="Own the first ceiling first">After the first</button></span>`
+        : areteBuyButtonHtml(app, id, price);
+  const discountBuy = (id: string, price: number, owned: boolean, locked: boolean): string =>
+    owned
+      ? areteOwnedWord("owned")
+      : locked
+        ? `<span class="shop-buy"><button class="primary arete" id="${id}" disabled title="Own the first discount first">After the first</button></span>`
+        : areteBuyButtonHtml(app, id, price);
+  return `
+    <h3 class="catalog-section-title">Harmonic capacity</h3>
+    <div class="shop-list">
+      <div class="shop-item${ceilings > 0 ? " owned" : ""}">
+        <div><h3>First ceiling <span class="kind">capacity four</span></h3><small>The nous ladder sells one rung further.</small></div>
+        ${ceilingBuy("buy-capacity-ceiling-1", BALANCE.capacityCeilingCosts[0]!, ceilings > 0, false)}
+      </div>
+      <div class="shop-item${ceilings > 1 ? " owned" : ""}">
+        <div><h3>Second ceiling <span class="kind">capacity five</span></h3><small>One rung past the first unlock.</small></div>
+        ${ceilingBuy("buy-capacity-ceiling-2", BALANCE.capacityCeilingCosts[1]!, ceilings > 1, ceilings === 0)}
+      </div>
+      <div class="shop-item${discounts > 0 ? " owned" : ""}">
+        <div><h3>First discount <span class="kind">20% off</span></h3><small>Every capacity rung costs a fifth less nous.</small></div>
+        ${discountBuy("buy-capacity-discount-1", BALANCE.capacityDiscountCosts[0]!, discounts > 0, false)}
+      </div>
+      <div class="shop-item${discounts > 1 ? " owned" : ""}">
+        <div><h3>Second discount <span class="kind">40% off in total</span></h3><small>Every capacity rung costs its original price, less two fifths.</small></div>
+        ${discountBuy("buy-capacity-discount-2", BALANCE.capacityDiscountCosts[1]!, discounts > 1, discounts === 0)}
+      </div>
+    </div>`;
+}
+
+// The Arete sheet rows' shared purchase words (the sheet's own grammar):
+// the engraved completion word and the Arete price button, mode-gated.
+function areteOwnedWord(word: string): string {
+  return `<span class="shop-buy"><span class="arete-owned mono">${word}</span></span>`;
+}
+
+function areteBuyButtonHtml(app: App, id: string, price: number): string {
+  const upgrade = app.state.mode === "upgrade";
+  return `<span class="shop-buy"><button class="primary arete" id="${id}"${upgrade ? "" : " disabled"} title="${upgrade ? `Spend ${price} Arete` : "Arete is spent between sessions"}">${price} Arete</button></span>`;
+}
+
 function renderAreteCatalogModal(app: App, content: HTMLElement): void {
   const { state } = app;
   const upgrade = state.mode === "upgrade";
-  const ownedWord = (word: string): string => `<span class="shop-buy"><span class="arete-owned mono">${word}</span></span>`;
-  const areteBuyButton = (id: string, price: number): string =>
-    `<span class="shop-buy"><button class="primary arete" id="${id}"${upgrade ? "" : " disabled"} title="${upgrade ? `Spend ${price} Arete` : "Arete is spent between sessions"}">${price} Arete</button></span>`;
+  const ownedWord = areteOwnedWord;
+  const areteBuyButton = (id: string, price: number): string => areteBuyButtonHtml(app, id, price);
   const entry = state.catalogEntryOwned;
   const joined = state.rollPoolJoined;
   const broken = state.horizonBroken;
@@ -3588,10 +3695,15 @@ function renderAreteCatalogModal(app: App, content: HTMLElement): void {
         ${breakBuy}
       </div>
     </div>
+    ${app.dev ? capacityAreteHtml(app) : ""}
     ${upgrade ? "" : `<p class="modal-note">Arete is spent between sessions — enter upgrade mode to buy.</p>`}`;
   byId("buy-arete-entry")?.addEventListener("click", () => app.buyCatalogEntryAction());
   byId("buy-arete-pool")?.addEventListener("click", () => app.joinRollPoolAction());
   byId("buy-arete-break")?.addEventListener("click", () => app.breakHorizonAction());
+  byId("buy-capacity-ceiling-1")?.addEventListener("click", () => app.buyCapacityCeilingAction());
+  byId("buy-capacity-ceiling-2")?.addEventListener("click", () => app.buyCapacityCeilingAction());
+  byId("buy-capacity-discount-1")?.addEventListener("click", () => app.buyCapacityDiscountAction());
+  byId("buy-capacity-discount-2")?.addEventListener("click", () => app.buyCapacityDiscountAction());
   wireClose(app);
 }
 
@@ -3822,10 +3934,13 @@ function renderResetModal(app: App, content: HTMLElement): void {
 // glossary's avoided-verb rule holds: prestige is the verb, never "reset".
 function renderPrestigeModal(app: App, content: HTMLElement): void {
   const claim = claimOf(app.state);
+  // The capacity clause (issue #259) rides only where the capacity model
+  // exists — ordinary play shows no capacity surfaces (ADR-0052).
+  const capacityClause = app.dev ? ", purchased capacity returns to one" : "";
   content.innerHTML = `
     ${modalTop("PRESTIGE")}
     <h2 id="modal-title">Begin the next era?</h2>
-    <p class="lead">Prestige banks <strong class="mono">${claim} Arete</strong> and starts the era over: module levels return to base, and your nous and charge return to the opening.</p>
+    <p class="lead">Prestige banks <strong class="mono">${claim} Arete</strong> and starts the era over: module levels return to base${capacityClause}, and your nous and charge return to the opening.</p>
     <p class="lead muted">Your board and its placement, the tray, banked Forge rolls and progress, feats, your whole life record, your Arete, and lifetime nous all stay.</p>
     <div class="modal-actions">
       <button id="prestige-cancel">Not yet</button>
