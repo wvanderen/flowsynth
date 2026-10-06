@@ -249,10 +249,10 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
           `<div class="rd-leg"><span class="rd-leg-name">Chords</span>` +
           val(synthSlot(id, "chd"), slots.chd!) +
           `</div>` +
-          `<div class="rd-leg"><span class="rd-leg-name">Capacity</span>` +
+          (snapshot.allocation ? `<div class="rd-leg"><span class="rd-leg-name">Capacity</span>` +
           val(synthSlot(id, "cap"), slots.cap!) +
           note(synthSlot(id, "idl"), idleNote(slots.idl!)) +
-          `</div>` +
+          `</div>` : "") +
           `<div class="rd-leg"><span class="rd-leg-name">Booster</span>` +
           val(synthSlot(id, "inf"), slots.inf!) +
           `</div>` +
@@ -281,6 +281,11 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
     `<div class="rd-row rd-total"><span class="rd-name t-condensed">Rate</span>` +
     val(RATE_TOTAL_SLOT, `${formatNumber(snapshot.rate)} ν/s`) +
     `</div>` +
+    (snapshot.allocation ?
+      `<div class="rd-row rd-allocation-state"${snapshot.allocation.certified ? " hidden" : ""}>` +
+      `<span class="rd-name t-condensed">Allocation uncertified</span>` +
+      `<span class="inst-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-label="Why allocation is uncertified" aria-describedby="allocation-tip-${ns}-${seq}">ⓘ</button>` +
+      `<span class="inst-tip-body" id="allocation-tip-${ns}-${seq}" role="tooltip">Search budget reached. This development allocation is the best result found; maximum production is unproven.</span></span></div>` : "") +
     synths.join("") +
     (others.length > 0
       ? `<div class="rd-heading">Other modules — effects, no ν/s</div>${others.join("")}`
@@ -303,6 +308,9 @@ export function updateRateDetailsLive(scope: ParentNode, state: GameState, snaps
     for (const root of roots) liveSet(root, live, content);
   };
   set(RATE_TOTAL_SLOT, `${formatNumber(snapshot.rate)} ν/s`);
+  for (const status of scope.querySelectorAll<HTMLElement>(".rd-allocation-state")) {
+    status.hidden = snapshot.allocation?.certified !== false;
+  }
   for (const contribution of snapshot.contributions.values()) {
     const module = state.modules.find((m) => m.id === contribution.moduleId);
     if (!module) continue;
@@ -419,7 +427,7 @@ export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
   // details' static boost legs) rebuilds the strip; every tick-moving value
   // updates in place through the live slots, so an open popover or an
   // expanded row survives the clock.
-  const key = `${state.arete}:${feats}:${discoveries}:${activeBuildKey(state)}:${deployedRosterKey(state)}`;
+  const key = `${state.arete}:${feats}:${discoveries}:${!!snapshot.allocation}:${activeBuildKey(state)}:${deployedRosterKey(state)}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.innerHTML = `<div class="prod-ledger" role="group" aria-label="Production">

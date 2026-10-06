@@ -10,12 +10,13 @@ import { writeNote } from "../engine/notes";
 import { BALANCE, SAVE_VERSION, isVoiceType } from "../engine/constants";
 import { ARETE_HORIZON } from "../engine/accumulator";
 import { STORAGE_KEY, serialize } from "../engine/save";
-import { computeRates, cellCost, cellPurchasePrice, longGoalCost, affordableLevels, levelCost, levelsCost } from "../engine/economy";
+import { displayedRates, computeRates, cellCost, cellPurchasePrice, longGoalCost, affordableLevels, levelCost, levelsCost } from "../engine/economy";
 import { startSession, endSession } from "../engine/actions";
 import { advance } from "../engine/advance";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport } from "../engine/trust";
 import { recordMissed, recordTargetHit } from "../engine/records";
 import { give } from "../engine/fixtures";
+import * as allocation from "../engine/allocation";
 import { createInitialState } from "../engine/state";
 import { hex, sameHex } from "../engine/hex";
 import { formatBalance, formatFixed, formatInt, formatNumber } from "./format";
@@ -1790,6 +1791,7 @@ describe("always-on chord feedback (§6, #137)", () => {
   });
 
   it("the readout is a reserved spot: ν/s, capacity, earned factor, then its chords", () => {
+    app = boot(undefined, true);
     // The power-chord region again: C4 sings in two chords — the Octave
     // (C4·C5) and the Fifth (C4·G4). At capacity one only one instance
     // earns: the C4·G4 Fifth; the doubled fifth and the Octave stay
@@ -1848,6 +1850,7 @@ describe("always-on chord feedback (§6, #137)", () => {
   });
 
   it("a chordless module still shows its final ν/s — at zero capacity spent, factor ×1", () => {
+    app = boot(undefined, true);
     app.render();
     const island = give(app.state, "additive", hex(5, 0)); // its own island
     app.render();
@@ -1897,6 +1900,7 @@ describe("always-on chord feedback (§6, #137)", () => {
   });
 
   it("overlapping chords draw their own work, chord-colored (#201); idles draw dimmer (#258)", () => {
+    app = boot(undefined, true);
     // A power-chord region: C4 (the opening synth), G4 and C5 — the active
     // Fifth draws full-voice, and the recognized idles (the doubled fifth,
     // the Octave) draw their own dotted marks beneath it.
@@ -4756,7 +4760,56 @@ describe("the habit build (ADR-0046, wave 4)", () => {
 });
 
 describe("the one-capacity economy on the board (#258)", () => {
+  beforeEach(() => { app = boot(undefined, true); });
   const readout = () => document.getElementById("chord-readout") as HTMLElement;
+
+  it("ordinary reloads keep the uncapped engine and omit capacity UI even after a dev save", () => {
+    const fifth = give(app.state, "additive", null);
+    app.pickCellThenPlace(fifth.id, hex(1, 0));
+    const octave = give(app.state, "additive", null);
+    app.pickCellThenPlace(octave.id, hex(0, 1));
+    app.save();
+    app = boot();
+    expect(app.dev).toBe(false);
+    expect(displayedRates(app.state, true)).toEqual(computeRates(app.state, true));
+    app.select(app.state.modules[0]!.id);
+    expect(readout().textContent).not.toContain("Capacity");
+    expect(document.querySelector(".chord-idle")).toBeNull();
+    app.openModal("rate");
+    expect(document.getElementById("modal-content")!.textContent).not.toContain("Capacity");
+    app.closeModal();
+    app.openModal("library");
+    expect(document.getElementById("modal-content")!.textContent).toContain("singing now");
+  });
+
+  it("uncertified development results are named on the board and in rate details", () => {
+    const solve = allocation.allocateChords;
+    const spy = vi.spyOn(allocation, "allocateChords").mockImplementation((singers, spacers, opts) =>
+      solve(singers, spacers, { ...opts, budget: { maxNodes: 0, maxMs: Infinity } }),
+    );
+    try {
+      give(app.state, "additive", hex(1, 0));
+      app.select(app.state.modules[0]!.id);
+      expect(readout().textContent).toContain("Allocation uncertified");
+      app.openModal("rate");
+      const sheet = document.getElementById("modal-content")!;
+      const status = sheet.querySelector<HTMLElement>(".rd-allocation-state")!;
+      expect(status.hidden).toBe(false);
+      const trigger = status.querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
+      trigger.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      const tip = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+      expect(tip.classList.contains("inst-show")).toBe(true);
+      expect(tip.textContent).toContain("maximum production is unproven");
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      expect(tip.classList.contains("inst-show")).toBe(false);
+      spy.mockRestore();
+      app.render();
+      expect(readout().textContent).not.toContain("Allocation uncertified");
+      expect(status.hidden).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
+  });
 
   it("selection survives a capacity-driven chord replacement; the readout follows the new set", () => {
     // C4 · G4 earns the Fifth. Moving the G up an octave breaks it: at
@@ -4803,7 +4856,7 @@ describe("the one-capacity economy on the board (#258)", () => {
     app.render();
     const saved = localStorage.getItem(STORAGE_KEY)!;
     expect(saved).toContain("activeChords");
-    const rebooted = boot();
+    const rebooted = boot(undefined, true);
     rebooted.render();
     expect(rebooted.state.activeChords).toEqual(app.state.activeChords);
   });

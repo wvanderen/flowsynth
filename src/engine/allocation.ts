@@ -692,14 +692,3 @@ export function idleTermsOf(summary: AllocationSummary): NamedChordTerm[] {
 function termOfInstance(instance: RecognizedInstance): NamedChordTerm {
   return { name: instance.name, bonus: instance.bonus, instances: 1, moduleIds: [...instance.memberIds], root: instance.root };
 }
-
-// The steepest chord factor any voice actually earns under the analysis —
-// the achievements' production-factor read (issue #258). Zero when no
-// voice sings (an empty board earns nothing).
-export function maxVoiceFactorOf(analysis: ChordAnalysis): number {
-  let max = 0;
-  for (const factor of analysis.voiceMultiplier.values()) {
-    if (factor > max) max = factor;
-  }
-  return max;
-}

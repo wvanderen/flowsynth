@@ -1,8 +1,8 @@
 import { CATEGORY_OF, EPS } from "./constants";
 import { syncAchievements } from "./achievements";
 import { syncChordDiscoveries } from "./library";
-import { chargeDelivered, deployed, syncAllocation } from "./economy";
-import { maxVoiceFactorOf, recognizedTermsOf } from "./allocation";
+import { chargeDelivered, maxChordFactorOf, deployed, syncRates } from "./economy";
+import { summaryTermsOf } from "./allocation";
 import { addFlowProgress, addForgeProgress, addMutatorForgeProgress, type Rng } from "./rolls";
 import { accrueLivePractice } from "./habits";
 import { accrueGoalProgress, secondsUntilGoalCompletion } from "./goals";
@@ -90,11 +90,11 @@ export function advance(
   // bucket holds nous only. Practice is the flow meter's whole diet
   // (ADR-0041): it joins below, live-sink only, beside the credited time
   // it keys off — it feeds no Forge branch's threshold.
-  // The authoritative allocation pass (issue #258): the board earns from
+  // The gated production pass (issue #258): development boards earn from
   // the selected whole chords only, recomputed every step so charge,
   // upgrades, and placement reselections land. The retention hint rides
   // the state and is written back here.
-  const { snapshot, read } = syncAllocation(state, true);
+  const snapshot = syncRates(state, true);
   const gained = snapshot.rate * seconds;
   if (sink === "provisional") {
     // Provisional nous never touches the balance: it waits in the bucket
@@ -151,11 +151,11 @@ export function advance(
   // allocated pass's own maximum (issue #258).
   syncAchievements(state, {
     chargeDelivered: chargeDelivered(snapshot),
-    maxChordFactor: maxVoiceFactorOf(read.analysis),
+    maxChordFactor: maxChordFactorOf(snapshot),
   });
   // The chord library rides the same tick (issue #230): every recognized
   // voice-set — active or idle — is available to discovery; only the
   // active ones populate the bonus terms (issue #258).
-  syncChordDiscoveries(state, { chords: recognizedTermsOf(read) });
+  syncChordDiscoveries(state, { chords: snapshot.allocation ? summaryTermsOf(snapshot.allocation) : snapshot.namedChords });
   return result;
 }

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { ACHIEVEMENTS, achievementBoostOf, achievementById, syncAchievements } from "./achievements";
 import { ARETE_HORIZON } from "./accumulator";
-import { buyCatalogEntry, buyCell, buyRowUnlock, buyShelfModule, combine, endSession, joinRollPool, prestige, startSession } from "./actions";
+import { buyCatalogEntry, buyCell, buyRowUnlock, buyShelfModule, combine, endSession, joinRollPool, placeModule, prestige, startSession } from "./actions";
 import { advance } from "./advance";
 import { BALANCE } from "./constants";
-import { allocateRates, computeRates } from "./economy";
+import { allocateRates, computeRates, displayedRates, setAllocationEnabled } from "./economy";
 import { addPracticeLog, createHabit, selectHabit } from "./habits";
 import { writeNote } from "./notes";
 import { createGoal } from "./goals";
@@ -319,6 +319,7 @@ describe("the 17-feat launch set", () => {
 
   it("Power chord: one voice carries its earned whole chord past ×2", () => {
     const s = fresh();
+    setAllocationEnabled(s, true);
     completeSession(s);
     // C4 · G4 · E4 · B♭ (q = −2), spacer-bridged into one formation: a dominant
     // seventh. At capacity one the chord is the one instance the voices
@@ -338,6 +339,35 @@ describe("the 17-feat launch set", () => {
     // The live detection crosses as the layout lands — here, at the sync.
     expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toContain("power-chord");
     expect(s.achievements["power-chord"]).toBeDefined();
+  });
+
+  it.each([false, true])("Power chord includes earned resonance in progress, action and tick checks (allocation %s)", (development) => {
+    const setup = () => {
+      const s = fresh();
+      setAllocationEnabled(s, development);
+      s.sessionsCompleted = 1;
+      s.mutatorSlots.push(hex(0, 0));
+      s.mutators.push({ id: "resonance", family: "resonance", rarity: "common", pos: hex(0, 0) });
+      return s;
+    };
+    const s = setup();
+    give(s, "additive", hex(1, 0));
+    const earned = displayedRates(s, true).contributions.get(s.modules[0]!.id)!.chordFactor!;
+    expect(earned / 1.5).toBeLessThan(2);
+    expect(earned).toBeGreaterThan(2);
+    const def = ACHIEVEMENTS.find((a) => a.id === "power-chord")!;
+    expect(def.progress(s, { chargeDelivered: false }).current).toBe(2);
+    expect(syncAchievements(s).map((d) => d.id)).toContain("power-chord");
+
+    const action = setup();
+    const g = give(action, "additive", null);
+    expect(placeModule(action, g.id, hex(1, 0)).unlocked).toContain("power-chord");
+
+    const tick = setup();
+    startSession(tick, null);
+    give(tick, "additive", hex(1, 0));
+    advance(tick, 1);
+    expect(tick.achievements["power-chord"]).toBeDefined();
   });
 
   it("Power chord refuses the old board-wide read: disjoint stacks are not one voice's ×2", () => {

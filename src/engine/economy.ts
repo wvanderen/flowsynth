@@ -1,6 +1,6 @@
 import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isVoiceType } from "./constants";
 import { analyzeChords, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
-import { allocateChords, type AllocationRead, type AllocationVoiceParams } from "./allocation";
+import { allocateChords, DEFAULT_ALLOCATION_BUDGET, type AllocationBudget, type AllocationRead, type AllocationVoiceParams } from "./allocation";
 import { achievementBoostOf } from "./achievements";
 import { activeHabit } from "./habits";
 import { baseBuildFactors, amplifyFactors } from "./builds";
@@ -606,8 +606,8 @@ export function computeRates(
 // (the global nous Catalog purchases, ceiling, prestige reset) is the
 // economy's next ticket (#259): this accessor is the one place that
 // ladder can land, so every read below and every readout stays on one
-// figure. The stage stays development-gated: the ordinary economy's
-// prices and horizon await full calibration before release.
+// figure. The allocation model stays development-gated; ordinary play
+// keeps its uncapped production until calibration validates release.
 export function voiceCapacityOf(_state: GameState): number {
   return 1;
 }
@@ -638,6 +638,7 @@ export interface AllocateRatesOptions {
   // The previous allocation's active keys — the retention hint. Default:
   // none (the solver's stable fallback decides ties).
   keep?: ReadonlySet<string>;
+  budget?: AllocationBudget;
 }
 
 // The authoritative allocation pass (issue #258): the real rate pass run
@@ -669,6 +670,7 @@ export function allocateRates(
       params,
       bonusScale,
       ...(options.keep ? { keep: options.keep } : {}),
+      ...(options.budget ? { budget: options.budget } : {}),
     });
     return read.analysis;
   });
@@ -691,19 +693,50 @@ export function activeChordKeysOf(state: GameState): ReadonlySet<string> {
   return new Set(state.activeChords ?? []);
 }
 
-// The live game's one allocation sync: the authoritative two-pass with the
+// Runtime opt-in, never a save field: a development save cannot enable
+// the experimental economy when opened in an ordinary tab.
+const allocationEnabledStates = new WeakSet<GameState>();
+
+export function setAllocationEnabled(state: GameState, enabled: boolean): void {
+  if (enabled) allocationEnabledStates.add(state);
+  else allocationEnabledStates.delete(state);
+}
+
+// Live development reads must agree across ticks, display and reload.
+// Keep the deterministic node cap; the separate stress/scenario board
+// retains its wall-clock safety valve and reports its own results.
+const LIVE_ALLOCATION_BUDGET: AllocationBudget = { ...DEFAULT_ALLOCATION_BUDGET, maxMs: Infinity };
+
+// The development game's one allocation sync: the authoritative two-pass with the
 // state's stored keys as the retention hint, the new active keys written
 // back — equal-output allocations hold their active set across
 // recomputation and, persisted with the save, across reload (#258).
 export function syncAllocation(state: GameState, flow: boolean = flowLive(state)): AllocatedRates {
-  const result = allocateRates(state, flow, { keep: activeChordKeysOf(state) });
+  const result = allocateRates(state, flow, { keep: activeChordKeysOf(state), budget: LIVE_ALLOCATION_BUDGET });
   state.activeChords = result.read.instances.map((instance) => instance.key);
   return result;
 }
 
-// The display twin of the sync (issue #258): the same authoritative
-// two-pass on the same stored hint, writing nothing — every readout shows
-// the allocation production actually chose, never a parallel answer.
+// The display twin of syncRates: ordinary recognition unless explicitly
+// development-enabled, then the same allocation and stored retention hint.
 export function displayedRates(state: GameState, flow: boolean = flowLive(state)): RateSnapshot {
-  return allocateRates(state, flow, { keep: activeChordKeysOf(state) }).snapshot;
+  return allocationEnabledStates.has(state)
+    ? allocateRates(state, flow, { keep: activeChordKeysOf(state), budget: LIVE_ALLOCATION_BUDGET }).snapshot
+    : computeRates(state, flow);
+}
+
+// Production, action checks and summaries share the display's gate.
+// Only the development path writes an allocation retention hint.
+export function syncRates(state: GameState, flow: boolean = flowLive(state)): RateSnapshot {
+  return allocationEnabledStates.has(state) ? syncAllocation(state, flow).snapshot : computeRates(state, flow);
+}
+
+// Final contribution factors include formation quality and resonance.
+// An analysis alone precedes the resonance fold and cannot answer a feat.
+export function maxChordFactorOf(snapshot: RateSnapshot): number {
+  let max = 0;
+  for (const contribution of snapshot.contributions.values()) {
+    max = Math.max(max, contribution.chordFactor ?? 0);
+  }
+  return max;
 }

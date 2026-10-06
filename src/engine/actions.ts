@@ -1,8 +1,8 @@
 import { BALANCE, EPS, NEXT_RARITY, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE, SHELF_TYPES } from "./constants";
 import { claimOf, horizonReached } from "./accumulator";
 import { rowUnlockCost, unlockableRows } from "./catalog";
-import { affordableLevels, cellPurchasePrice, chargeDelivered, deployedAt, findModule, levelCost, levelsCost, longGoalCost, mutatorSlotCost, rowGateOwed, syncAllocation, wholeNous } from "./economy";
-import { maxVoiceFactorOf, recognizedTermsOf } from "./allocation";
+import { affordableLevels, cellPurchasePrice, chargeDelivered, maxChordFactorOf, deployedAt, findModule, levelCost, levelsCost, longGoalCost, mutatorSlotCost, rowGateOwed, syncRates, wholeNous } from "./economy";
+import { summaryTermsOf } from "./allocation";
 import { arcCardDue } from "./arc";
 import { nextRungCost, appActive, LADDER_APPS, type FocusApp } from "./apps";
 import { adjacent, hex, hexKey, isConnected, neighbors, sameHex } from "./hex";
@@ -49,19 +49,19 @@ function fail(reason: string): ActionResult {
 
 // The action-boundary check (ADR-0015 + issue #230): the two permanent
 // live ledgers sync together after any state-mutating action — feats and
-// chord discoveries both read the board they sit behind. One authoritative
-// allocation (issue #258) serves both: every recognized voice-set — active
+// chord discoveries both read the board they sit behind. The gated rate
+// pass (issue #258) serves both. In development play: every recognized voice-set — active
 // or idle — stays available to discovery, the feats that read production
 // factors read the factor actually earned, and the retention hint advances
 // with the board. Returns the feats' ids for the result's unlocked field;
 // discoveries carry no toast of their own — the board's readout names the
 // chord the moment it forms.
 function checkUnlocks(state: GameState): string[] {
-  const { snapshot, read } = syncAllocation(state, true);
-  syncChordDiscoveries(state, { chords: recognizedTermsOf(read) });
+  const snapshot = syncRates(state, true);
+  syncChordDiscoveries(state, { chords: snapshot.allocation ? summaryTermsOf(snapshot.allocation) : snapshot.namedChords });
   return syncAchievements(state, {
     chargeDelivered: chargeDelivered(snapshot),
-    maxChordFactor: maxVoiceFactorOf(read.analysis),
+    maxChordFactor: maxChordFactorOf(snapshot),
   }).map((def) => def.id);
 }
 
@@ -166,7 +166,7 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
   // achieved with the breakdown legs — whatever the length or exit. The
   // unlock row stays in design but never fires at launch (ADR-0019): the
   // launch apps are free from minute 0, so there is nothing to unlock.
-  const snapshot = syncAllocation(state, true).snapshot;
+  const snapshot = syncRates(state, true);
   state.summary = {
     sessionNumber: state.sessionsCompleted,
     // The headline is banked nous — a dropped bucket is absent from it,

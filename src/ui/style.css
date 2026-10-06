@@ -582,6 +582,7 @@ h1, h2, h3, p { margin: 0; }
   font-size: 12px;
 }
 .rd-row:last-child { border-bottom: 0; }
+.rd-allocation-state[hidden] { display: none; }
 .rd-name { color: var(--ink); font-size: 12.5px; }
 .rd-note { font-size: 10.5px; color: var(--muted); }
 .rd-val { margin-left: auto; text-align: right; color: var(--nous); font-size: 12px; white-space: nowrap; }
@@ -1460,9 +1461,11 @@ body.bloom-sheet-open .zoom-cluster { bottom: 190px; }
    own state — budget spent and chord term earned — in the neutral
    registers, never a chord hue. */
 .chord-readout-chip.chord-readout-capacity,
-.chord-readout-chip.chord-readout-factor {
+.chord-readout-chip.chord-readout-factor,
+.chord-readout-chip.chord-readout-uncertified {
   --cc: var(--muted);
 }
+.chord-readout-chip.chord-readout-uncertified { border-style: dashed; }
 /* The idle candidate's chip (issue #258): recognized, earning nothing —
    dashed and quiet, the readout's side of the board's dotted seams. */
 .chord-readout-chip.chord-readout-idle {

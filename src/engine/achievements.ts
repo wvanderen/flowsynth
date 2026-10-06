@@ -11,8 +11,7 @@
 // the eager resume sync stamps silently (SyncOptions.silent).
 import { ARETE_HORIZON } from "./accumulator";
 import { BALANCE, SHELF_TYPES } from "./constants";
-import { allocateRates } from "./economy";
-import { maxVoiceFactorOf } from "./allocation";
+import { displayedRates, maxChordFactorOf } from "./economy";
 import { isInFlowNote } from "./notes";
 import type { GameState } from "./types";
 
@@ -90,19 +89,13 @@ const ownsRare = (state: GameState): boolean => state.modules.some((m) => m.rari
 const rollsTaken = (state: GameState): number =>
   Math.max(0, state.forge.earned + state.flow.earned - state.bankedRolls.length);
 
-// The steepest local chord multiplier any single deployed voice sings
-// under (ADR-0036, raised by ADR-0049) — the factor the voice actually
-// earns under the authoritative whole-chord allocation (issue #258): only
-// active instances multiply, formation quality rides the allocated
-// participants, and an unallocated voice sits at exactly ×1. The caller
-// that already holds the allocated pass's maximum passes it in the
-// context; absent, the same two-pass allocation runs here. Chords are
-// local, so the feat asks what one voice carries, never a board-wide
-// product that stacks disjoint formations onto a single module.
+// The steepest final chord factor of one deployed voice: formation and
+// resonance included. Both ordinary and development gameplay read the
+// same snapshot their production uses; a tick/action caller passes its
+// existing snapshot's maximum to avoid a second rate pass.
 function maxVoiceMultiplierOf(state: GameState, ctx: AchievementContext): number {
   if (ctx.maxChordFactor !== undefined) return ctx.maxChordFactor;
-  const { read } = allocateRates(state, true);
-  return maxVoiceFactorOf(read.analysis);
+  return maxChordFactorOf(displayedRates(state, true));
 }
 
 // The milestone feats' marks (provisional): stroke glyphs in the
@@ -360,9 +353,8 @@ export interface SyncOptions {
   // True when the caller has a live rate snapshot showing a module actually
   // receiving charge (the Spark trigger; charge exists only in flow).
   chargeDelivered?: boolean;
-  // The authoritative allocation's earned maximum chord factor (issue
-  // #258), passed by the caller that already ran the pass. Absent, the
-  // power-chord feat's reads run the same two-pass allocation themselves.
+  // The final snapshot's earned maximum chord factor (issue #258),
+  // including resonance. Absent, the feat uses the gated display pass.
   maxChordFactor?: number;
   // The eager resume sync (ADR-0015 amended): already-satisfied milestones
   // grant silently on load — `unlockedAt` stamps, no toast, and nothing

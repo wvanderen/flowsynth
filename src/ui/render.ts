@@ -88,9 +88,9 @@ function setText(node: Element | null | undefined, text: string): void {
 // The rate shown in the ledger, hexes, and rate details: live during flow,
 // projected build rate while arranging in upgrade mode. Module panels preview
 // charge separately via displayedRates(state, true). The authoritative
-// allocation pass (issue #258) is the display basis: the board earns from
-// the selected whole chords, so every readout — ledger, faces, seams,
-// readout — reads the same allocation the production tick runs.
+// gate (issue #258) is the display basis: uncapped ordinary production,
+// selected whole chords in development play. Every readout uses the
+// same model as the production tick.
 function currentSnapshot(state: GameState): RateSnapshot {
   return displayedRates(state, state.mode === "flow");
 }
@@ -672,7 +672,7 @@ function renderLibraryModal(app: App, content: HTMLElement, snapshot?: RateSnaps
   // The singing classes (issue #258): the allocation's active instances
   // name the classes whose bonuses are on the board right now — a
   // discovered class without one reads as heard, never as earning.
-  const singing = new Set((snapshot?.allocation?.active ?? []).map((instance) => instance.name));
+  const singing = new Set((snapshot?.namedChords ?? []).map((term) => term.name));
   const cards = NAMED_CHORDS.map((def) => libraryCardHtml(def, state.chordDiscovery[def.name], singing.has(def.name))).join("");
   content.innerHTML = `
     ${modalTop("CHORD LIBRARY")}
@@ -1365,6 +1365,7 @@ function updateChordReadout(app: App): void {
   host.innerHTML =
     valueChip +
     capacityChip +
+    (allocation && !allocation.certified ? `<span class="chord-readout-chip chord-readout-uncertified mono">Allocation uncertified</span>` : "") +
     factorChip +
     formationChip +
     chosen
@@ -1823,7 +1824,7 @@ function ghostMarksHtml(app: App, projected?: RateSnapshot): string {
   // The diff runs on recognition (issue #258): a ghost promises a chord
   // the board will sing, active or idle — what the player does with a full
   // capacity is the placement preview's own question (#260).
-  const basis = projected ?? computeRates(app.state, true);
+  const basis = projected ?? displayedRates(app.state, true);
   const current = basis.allocation ? summaryTermsOf(basis.allocation) : basis.namedChords;
   const preview = wouldFormPreview(app.state, hover.moduleId, hover.pos, 1 + activeBuildFactors(app.state).namedChordBonus);
   const newcomers = newChordTerms(current, preview.chords);
@@ -3158,7 +3159,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
               // or a new root re-renders the sheet — as does the singing
               // set (issue #258): a class flipping active/idle rebuilds.
               : kind === "library"
-                ? [discoveryKey(app.state), (live.allocation?.active ?? []).map((i) => i.name).sort().join(",")]
+                ? [discoveryKey(app.state), live.namedChords.map((i) => i.name).sort().join(",")]
               // The enter prompt's own selection state (issue #95): the plan
               // and the kind-first picks re-render the modal the moment they
               // change — chips highlight on pick, never a stale footer.
