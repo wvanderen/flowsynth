@@ -206,7 +206,7 @@ The player-wide meter that fills with credited practice time — present and tru
 _Avoid_: practice meter, practice forge, flow forge, third branch
 
 **Mutator roll**:
-A charge-earned choice of one mutator from two generated candidates, delivered to the Mutator tray; unchosen candidates disappear without consolation resources.
+A choice of one mutator from two generated candidates, delivered to the Mutator tray; unchosen candidates disappear without consolation resources. Every roll is charge-earned except the first, which the Mutator tree's entry purchase itself performs.
 
 **Catalog**:
 The permanent upgrade-mode purchase surface: app activations, starter-shelf offers while available, and cells. Its activation section appears only once the ladder has a tenant. Module upgrades live on module panels, not the catalog (ADR-0018).
@@ -379,7 +379,7 @@ _Avoid_: prestige sheet
 _Avoid_: prestige tree, skill tree
 
 **Mutator tree**:
-The Arete Catalog's first tree. Its sheet purchases are the entry (activates the Mutator Grid, grants the Mutator Forge module itself, and unlocks the first Mutator slot) and the pricier purchase that joins the Mutator Forge type to the roll pool. Slot unlocks past the first are bought on the Mutators layer, armed like a cell purchase and priced on the tree's escalating ladder. The type is otherwise Catalog-exclusive.
+The Arete Catalog's first tree. Its sheet purchases are the entry (activates the Mutator Grid, grants the Mutator Forge module itself, unlocks the first Mutator slot, and performs the first Mutator roll) and the pricier purchase that joins the Mutator Forge type to the roll pool. Slot unlocks past the first are bought on the Mutators layer, armed like a cell purchase and priced on the tree's escalating ladder. The type is otherwise Catalog-exclusive.
 _Avoid_: enhancement tree, gem tree
 
 **Row unlock**:
@@ -405,7 +405,7 @@ The one-time Arete Catalog purchase, standing alone beside the Mutator tree, tha
 _Avoid_: break infinity
 
 **Achievement**:
-A named feat that accelerates but never gates progress; each adds into the global achievementBoost term of the nous rate. Detection is live, storage is the v5 save's `id → unlockedAt` map. "Feat" is flavor individual names may carry, never a second term.
+A named feat that accelerates but never gates progress; each adds into the global achievementBoost term of the nous rate. Detection is live, storage is the save's `id → unlockedAt` map, definitions in code. "Feat" is the player-facing word for an achievement on every surface — headers, chips, dock labels, toasts; "achievement" stays the system term.
 
 ### Deferred vocabulary
 

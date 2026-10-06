@@ -19,3 +19,7 @@ ADR-0039 fixed the first prestige loop — flat 1 Arete per reset, board and lif
 - Two follow-up tickets feed the ordered handoff: "Mutator layer contracts: launch types, minting, and slot unlocks" and "Mutator layer interaction: grid rendering, slots, and tray".
 - Parked with seeds for a future effort: later Catalog trees (rarity access, era head start, automatic leveling) and the reset layer above prestige — working name Apotheum: slots and mutators retained on such a reset, the Mutator Grid deactivated until Arete re-activates it for the super-era. The entry purchase's activation semantics exist for exactly that hook.
 - All numbers — entry prices, the slot ladder, mutator magnitudes, row prices, the six-row cap — are provisional tuning.
+
+## Amendment — the entry performs the first roll (2026-10-06)
+
+The instrument map ([#242](https://github.com/wvanderen/flowsynth/issues/242), ticket [#247](https://github.com/wvanderen/flowsynth/issues/247)) extends the entry purchase's contents with **one performed, unrigged Mutator roll**; the full sequence and its boundaries are recorded on [ADR-0044](0044-keep-the-arete-catalog-with-the-mutator-tree-and-the-break.md).
