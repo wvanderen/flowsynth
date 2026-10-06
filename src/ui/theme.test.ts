@@ -66,7 +66,7 @@ describe("theme token table", () => {
     // Dragging a module or the board is a gesture, not a text edit: every
     // drag surface (grid, bloom face, tray) must be a selector of some rule
     // whose body denies selection, so Chrome never highlights page text.
-    for (const surface of ["#grid", ".module-bloom", ".inventory-tray"]) {
+    for (const surface of ["#grid", ".module-bloom", ".tray-column", ".inventory-tray"]) {
       const denied = [...stylesheet.matchAll(/([^{}]+)\{([^}]*)\}/g)].some(
         ([, selectors, body]) =>
           selectors!.split(",").map((s) => s.trim()).includes(surface) &&

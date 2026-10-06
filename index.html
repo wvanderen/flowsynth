@@ -51,9 +51,9 @@
           <div class="board-ledger" id="board-ledger"></div>
           <div class="board-space">
             <svg id="grid" role="group" aria-label="Module grid"></svg>
-            <!-- The action row (§7): a left-edge icon dock floating over the
-                 board — Catalog / Forge (count badge + charge pip) / New
-                 cell. On portrait phone it re-docks as the bottom thumb
+            <!-- The action row (§7): a left-edge icon dock floating over
+                 the board — Catalog / Forge (count badge + charge pip) /
+                 Add. On portrait phone it re-docks as the bottom thumb
                  bar (#thumb-bar) with Inventory and Collection folded in. -->
             <div class="board-tools" id="board-tools"></div>
             <div class="thumb-bar" id="thumb-bar"></div>
@@ -78,18 +78,30 @@
             <div class="arc-card" id="arc-card" hidden></div>
             <!-- The Mutator Grid's layer furniture (issue #199): the
                  Modules / Mutators tab pair at the board's top edge
-                 (upgrade mode only, beside the entry purchase), the
-                 Mutator tray's pinned strip, the armed unlock's pill, and
-                 the placed mutator's declaration popover — all resting
-                 empty until the Mutators layer stands. -->
+                 (upgrade mode only, beside the entry purchase), the armed
+                 unlock's pill, and the placed mutator's declaration
+                 popover — all resting empty until the Mutators layer
+                 stands. -->
             <div class="mut-tabs" id="mut-tabs" hidden></div>
-            <div class="mutator-tray" id="mutator-tray" hidden></div>
             <button class="mut-unlock-pill" id="mut-unlock-pill" hidden></button>
             <div class="mut-popover" id="mut-popover" hidden></div>
             <!-- The add-cell pill (#201): the armed purchase's one cost
                  spot — "New cell · <price> ν — Cancel · Esc" — and the
                  cancel itself. Resting empty whenever the mode isn't now. -->
             <button class="cell-arm-pill" id="cell-arm-pill" hidden></button>
+            <!-- The tray column (§5, ADR-0027 as amended): the inventory as
+                 an always-open pinned column docked at the board's right
+                 edge in upgrade mode, dual-face under the Modules /
+                 Mutators head — the same single switch as #mut-tabs; the
+                 modules face (#inventory-zone) and the Mutators face
+                 (#mutator-tray) swap beneath it. Portrait phone unfolds
+                 the column: the head and the modules face hide, and the
+                 Mutators face re-pins as the strip above the thumb bar. -->
+            <div class="tray-column" id="tray-column">
+              <div class="tray-head" id="tray-head" hidden></div>
+              <div class="inventory-tray" id="inventory-zone"></div>
+              <div class="mutator-tray" id="mutator-tray" hidden></div>
+            </div>
             <div class="zoom-cluster" id="zoom-cluster"></div>
           </div>
         </section>

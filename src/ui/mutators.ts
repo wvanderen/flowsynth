@@ -142,33 +142,41 @@ export function mutatorSlotPrice(state: GameState): number {
 }
 
 /* ── The layer tabs ───────────────────────────────────
-   The tab pair at the board's top edge (issue #199): upgrade-mode
-   furniture beside the entry purchase — in flow neither tab nor layer
-   exists, and a player without the entry never sees them at all. */
+   One switch, two mounts (issue #272): the tab pair at the board's top
+   edge and the tray column's head render the same ui.mutLayer — flipping
+   either flips both, and neither peeks independently. Upgrade-mode
+   furniture beside the entry purchase; in flow neither exists, and a
+   player without the entry never sees them at all. */
 
 export function mutatorLayerWanted(app: App): boolean {
   return app.state.mode === "upgrade" && app.state.catalogEntryOwned;
 }
 
-export function renderMutatorTabs(app: App): void {
-  const host = document.getElementById("mut-tabs");
-  if (!host) return;
-  if (!mutatorLayerWanted(app)) {
-    host.hidden = true;
-    host.innerHTML = "";
-    delete host.dataset.renderKey;
-    return;
-  }
+function mutTabPairHtml(app: App): string {
   const { ui } = app;
-  const key = ui.mutLayer;
-  if (host.dataset.renderKey === key) return;
-  host.dataset.renderKey = key;
-  host.hidden = false;
-  host.innerHTML = `<button class="mut-tab${ui.mutLayer === "modules" ? " active" : ""}" data-mut-layer="modules" aria-pressed="${ui.mutLayer === "modules"}">Modules</button>
+  return `<button class="mut-tab${ui.mutLayer === "modules" ? " active" : ""}" data-mut-layer="modules" aria-pressed="${ui.mutLayer === "modules"}">Modules</button>
     <button class="mut-tab${ui.mutLayer === "mutators" ? " active" : ""}" data-mut-layer="mutators" aria-pressed="${ui.mutLayer === "mutators"}">Mutators</button>`;
-  host.querySelectorAll<HTMLButtonElement>("[data-mut-layer]").forEach((button) => {
-    button.addEventListener("click", () => app.mutSetLayer(button.getAttribute("data-mut-layer") as "modules" | "mutators"));
-  });
+}
+
+export function renderMutatorTabs(app: App): void {
+  for (const host of [document.getElementById("mut-tabs"), document.getElementById("tray-head")]) {
+    if (!host) continue;
+    if (!mutatorLayerWanted(app)) {
+      host.hidden = true;
+      host.innerHTML = "";
+      delete host.dataset.renderKey;
+      continue;
+    }
+    const key = app.ui.mutLayer;
+    if (host.dataset.renderKey !== key) {
+      host.dataset.renderKey = key;
+      host.innerHTML = mutTabPairHtml(app);
+      host.querySelectorAll<HTMLButtonElement>("[data-mut-layer]").forEach((button) => {
+        button.addEventListener("click", () => app.mutSetLayer(button.getAttribute("data-mut-layer") as "modules" | "mutators"));
+      });
+    }
+    host.hidden = false;
+  }
 }
 
 /* ── The grid decorations ─────────────────────────────
@@ -238,9 +246,10 @@ function mutSlotFaceHtml(app: App, pos: Hex, snapshot: RateSnapshot): string {
 }
 
 /* ── The Mutator tray ─────────────────────────────────
-   The second layer's inventory: a strip pinned at the board's lower edge
-   while the Mutators tab stands — every width, phone included, where the
-   gestures are tap-shaped. The unlock button rides its end. */
+   The second layer's inventory (issue #272): the tray column's Mutators
+   face at every wide width — the head above names it — re-pinned as the
+   strip above the thumb bar on portrait phone. The unlock button rides
+   its end until Add takes the arm (#273). */
 
 export function renderMutatorTray(app: App): void {
   const host = document.getElementById("mutator-tray");
@@ -258,8 +267,7 @@ export function renderMutatorTray(app: App): void {
   if (host.dataset.renderKey === key) return;
   host.dataset.renderKey = key;
   host.hidden = false;
-  host.innerHTML = `<span class="tray-label">MUTATORS</span>
-    <div class="tray-items mut-strip-items">${
+  host.innerHTML = `<div class="tray-items mut-strip-items">${
       tray
         .map(
           (item) =>

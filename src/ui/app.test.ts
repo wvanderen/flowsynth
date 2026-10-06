@@ -860,23 +860,52 @@ describe("the app popovers", () => {
 });
 
 describe("the action row (§7)", () => {
-  it("is a left-edge icon dock: Catalog / Forge / New cell / Inventory — no legend, no Arrange, no Chords toggle", () => {
+  it("is a left-edge icon dock: Catalog / Forge / Add — Inventory left with the tray's collapse toggle (#272)", () => {
     app.render();
     const dock = document.getElementById("board-tools")!;
     const ops = [...dock.querySelectorAll("[data-op]")].map((b) => b.getAttribute("data-op"));
-    expect(ops).toEqual(["catalog", "forge", "cell", "inventory"]);
+    expect(ops).toEqual(["catalog", "forge", "cell"]);
+    // The dock reads Add: the cell tool's accessible name and its title.
+    const add = dock.querySelector<HTMLButtonElement>('[data-op="cell"]')!;
+    expect(add.getAttribute("aria-label")).toBe("Add");
+    expect(add.title).toContain("Add — ");
     // The count badge rides the Forge icon; the charge pip rides beneath it.
     expect(dock.querySelector('[data-op="forge"] .forge-pip')).not.toBeNull();
     expect(document.querySelector(".legend")).toBeNull();
     expect(document.getElementById("tool-manage")).toBeNull();
     expect(document.getElementById("manage-banner")).toBeNull();
-    expect(document.getElementById("inventory-zone")).not.toBeNull();
-    // The tray column starts closed and the dock icon toggles it.
+    // The tray column stands at the board's right edge, always open in
+    // upgrade mode: head, modules face, and no collapse anywhere.
+    const column = document.getElementById("tray-column")!;
+    expect(column).not.toBeNull();
     const zone = document.getElementById("inventory-zone") as HTMLElement;
-    expect(zone.classList.contains("off")).toBe(true);
-    dock.querySelector<HTMLButtonElement>('[data-op="inventory"]')!.click();
     expect(zone.classList.contains("off")).toBe(false);
-    expect(app.ui.trayOpen).toBe(true);
+    expect("trayOpen" in app.ui).toBe(false);
+  });
+
+  it("the tray column swaps faces with the mode's one switch (#272)", () => {
+    app.state.mode = "upgrade";
+    app.state.catalogEntryOwned = true;
+    app.render();
+    const head = document.getElementById("tray-head")!;
+    const zone = document.getElementById("inventory-zone")!;
+    const mutTray = document.getElementById("mutator-tray")!;
+    // The Modules face stands; the Mutators face waits.
+    expect(head.hidden).toBe(false);
+    expect(zone.classList.contains("off")).toBe(false);
+    expect(mutTray.hidden).toBe(true);
+    // The head flips the global mode; the board tabs follow.
+    head.querySelector<HTMLButtonElement>('[data-mut-layer="mutators"]')!.click();
+    expect(app.ui.mutLayer).toBe("mutators");
+    expect(document.querySelector('#mut-tabs [data-mut-layer="mutators"]')!.classList.contains("active")).toBe(true);
+    expect(head.querySelector('[data-mut-layer="mutators"]')!.classList.contains("active")).toBe(true);
+    expect(zone.classList.contains("off")).toBe(true);
+    expect(mutTray.hidden).toBe(false);
+    // And the board tab flips both back — one switch, two mounts.
+    document.querySelector<HTMLButtonElement>('#mut-tabs [data-mut-layer="modules"]')!.click();
+    expect(app.ui.mutLayer).toBe("modules");
+    expect(zone.classList.contains("off")).toBe(false);
+    expect(mutTray.hidden).toBe(true);
   });
 
   it("the Forge tool carries the flow-meter pip and the one meter detail (ADR-0041)", () => {
@@ -1001,19 +1030,24 @@ describe("the action row (§7)", () => {
     expect(document.getElementById("buy-banner")).toBeNull();
   });
 
-  it("the Inventory dock button is disabled during flow, like Catalog/Forge/New cell (#193)", () => {
+  it("flow locks the dock's three tools, and the tray column hides with the board (#272)", () => {
     app.render();
-    const dockButton = () => document.querySelector<HTMLButtonElement>('#board-tools [data-op="inventory"]')!;
-    expect(dockButton().disabled).toBe(false);
+    const dockOps = () => [...document.querySelectorAll<HTMLButtonElement>('#board-tools [data-op]')];
+    // Catalog and Forge stand open in upgrade mode; Add is price-gated.
+    expect(dockOps()[0]!.disabled).toBe(false);
+    expect(dockOps()[1]!.disabled).toBe(false);
+    expect(document.getElementById("inventory-zone")!.classList.contains("off")).toBe(false);
     app.state.sessionsCompleted = 1;
     startSession(app.state, 600);
     app.render();
-    expect(dockButton().disabled).toBe(true);
-    expect(dockButton().title).toContain("locked during flow");
-    // Dead in flow: the tray column never opens.
-    dockButton().click();
-    expect(app.ui.trayOpen).toBe(false);
+    // No Inventory button exists to lock — the dock reads Catalog/Forge/Add,
+    // every tool disabled, and the column gone with the locked board.
+    expect(dockOps().map((b) => b.getAttribute("data-op"))).toEqual(["catalog", "forge", "cell"]);
+    for (const button of dockOps()) expect(button.disabled).toBe(true);
+    expect(dockOps()[0]!.title).toContain("purchases happen between sessions");
+    expect(dockOps()[2]!.title).toBe("Add — purchases happen between sessions");
     expect(document.getElementById("inventory-zone")!.classList.contains("off")).toBe(true);
+    expect(document.getElementById("tray-head")!.hidden).toBe(true);
   });
 });
 
@@ -1022,21 +1056,22 @@ describe("the thumb bar (§7, portrait phone)", () => {
     setAppWidth(390);
   });
 
-  it("holds five segments — Catalog / Forge / New cell / Inventory / Collection (issue #270)", () => {
+  it("holds five segments — Catalog / Forge / Add / Inventory / Collection (issue #270)", () => {
     give(app.state, "additive", null);
     app.render();
     const bar = document.getElementById("thumb-bar")!;
     const ops = [...bar.querySelectorAll("[data-op]")].map((b) => b.getAttribute("data-op"));
     expect(ops).toEqual(["catalog", "forge", "cell", "inventory", "collection"]);
+    expect(bar.querySelector('[data-op="cell"] .tool-word')!.textContent).toBe("Add");
     expect(bar.querySelector('[data-op="inventory"] .tool-word')!.textContent).toBe("Inventory");
     expect(bar.querySelector('[data-op="inventory"] .tool-badge')!.textContent).toBe("1");
     // The feats and chords segments are gone — Collection is their sole
-    // phone door now, and the dock never grew a sixth icon.
+    // phone door now, and the dock never grew a fourth icon.
     expect(bar.querySelector('[data-op="feats"]')).toBeNull();
     expect(bar.querySelector('[data-op="library"]')).toBeNull();
-    // The dock never grew a Collection icon (or any sixth): it stays
-    // Catalog / Forge / New cell / Inventory.
-    expect(document.querySelectorAll("#board-tools [data-op]")).toHaveLength(4);
+    // The dock never grew a Collection or Inventory icon: it stays
+    // Catalog / Forge / Add (issue #272).
+    expect(document.querySelectorAll("#board-tools [data-op]")).toHaveLength(3);
     // On phone Inventory taps the sheet; Collection opens the launcher.
     bar.querySelector<HTMLButtonElement>('[data-op="inventory"]')!.click();
     expect(app.ui.modal).toBe("inventory");
@@ -1315,7 +1350,7 @@ describe("the always-live board (§5)", () => {
     // The pill over the board's top edge carries the single cost spot.
     const pill = document.getElementById("cell-arm-pill")!;
     expect(pill.hidden).toBe(false);
-    expect(pill.textContent).toContain("New cell");
+    expect(pill.textContent).toContain("Add");
     expect(pill.textContent).toContain(`${formatInt(BALANCE.cellFirstCost)} ν`);
     expect(pill.textContent).toContain("Cancel · Esc");
     // The pill is the cancel: one click backs out and the pill rests.
@@ -2660,7 +2695,7 @@ describe("the catalog", () => {
     expect(app.state.purchased.generator).toBe(true);
   });
 
-  it("carries no cell row — cells arm from the dock's New cell, never a sheet row", () => {
+  it("carries no cell row — cells arm from the dock's Add, never a sheet row", () => {
     app.openModal("catalog");
     const modal = document.getElementById("modal-content")!;
     expect(document.getElementById("buy-cell")).toBeNull();

@@ -98,8 +98,8 @@ _Avoid_: pop-up, modal
 The popped bloom standing for its module: the origin cell renders vacated while the bloom stands, since the bloom repeats every line the face carries.
 
 **Tray**:
-The board-surface inventory as a collapsible column docked beside the action dock — the dock's Inventory icon toggles it, and a drag or an armed placement opens it for the gesture's duration. Drag a module off the board into it to retrieve — the chord-breaking gesture, shared with right-click retrieve — and click an item then a cell to place; occupied placement swaps. Its tiles wear the minimal mark: a hexagon outlined in the category hue with the glyph alone, the full face belonging to the board and the expanded face (ADR-0027). On portrait phone the tray hides and the thumb bar's Inventory segment taps the same inventory open as a sheet. There is no management view.
-_Avoid_: inventory panel, management view
+The board-surface inventory as an always-open pinned column docked at the board's right edge in upgrade mode, dual-face under the Modules/Mutators head — the same single switch the board tabs carry; flipping either flips both (issue #272, ADR-0027 as amended). The Modules face holds the inventory: drag a module off the board into it to retrieve — the chord-breaking gesture, shared with right-click retrieve — and click an item then a cell to place; occupied placement swaps. The Mutators face is the Mutator tray (its own entry). Tiles wear the minimal mark: a hexagon outlined in the module's category hue, or the arete register for mutators, with the glyph alone — the full face belonging to the board and the expanded face (ADR-0027). Flow locks the board and hides the column with it; on portrait phone the column unfolds and the thumb bar's Inventory segment taps the same inventory open as a sheet. There is no management view and no collapse.
+_Avoid_: inventory panel, management view, collapsible tray
 
 **Mutator Grid**:
 The board lattice's second layer, mirroring it position for position, present only while activated by the Mutator tree's entry purchase. Each cell owns one Mutator slot; modules move freely across the board while slots stay put.
@@ -114,7 +114,7 @@ An item of the Mutator Grid: typed, carrying rarity, sitting in a Mutator slot t
 _Avoid_: enhancement (the pre-design name), gem, affix
 
 **Mutator tray**:
-The Mutator Grid's inventory, mirroring the Tray's docks and gestures for mutators: minted mutators wait here, a click then a slot places, and a drag or right-click retrieves.
+The Mutator Grid's inventory — the tray column's Mutators face under the shared Modules/Mutators head: minted mutators wait here, a click then a slot places, and a drag or right-click retrieves. On portrait phone it re-pins as the strip above the thumb bar.
 _Avoid_: second inventory
 
 ### Resources and production
@@ -220,7 +220,7 @@ _Avoid_: practice meter, practice forge, flow forge, third branch
 A choice of one mutator from two generated candidates, delivered to the Mutator tray; unchosen candidates disappear without consolation resources. Every roll is charge-earned except the first, which the Mutator tree's entry purchase itself performs.
 
 **Catalog**:
-The tabbed shop behind the labeled Catalog door on the dock (desktop) and thumb bar (phone): the `ν nous` face carries the starter shelf and — once the ladder has a tenant — app activations; the `◇ Arete` face is the Arete Catalog. Cells are no sheet row — the purchase arms from the dock's New cell and commits on the board's frontier. The door opens on the last-used face and falls back to nous before the first prestige (the mode-wins override lands with mode unification). The frame is fixed — a 620×600 clipped panel on desktop, a 74%-height bottom sheet on phone — and a face switch never resizes it: the switch and identity stay pinned while the body scrolls. Purchases act in upgrade mode only; prices mute when unaffordable or in flow. Module upgrades live on module panels, not the catalog (ADR-0018).
+The tabbed shop behind the labeled Catalog door on the dock (desktop) and thumb bar (phone): the `ν nous` face carries the starter shelf and — once the ladder has a tenant — app activations; the `◇ Arete` face is the Arete Catalog. Cells are no sheet row — the purchase arms from the dock's Add and commits on the board's frontier. The door opens on the last-used face and falls back to nous before the first prestige (the mode-wins override lands with mode unification). The frame is fixed — a 620×600 clipped panel on desktop, a 74%-height bottom sheet on phone — and a face switch never resizes it: the switch and identity stay pinned while the body scrolls. Purchases act in upgrade mode only; prices mute when unaffordable or in flow. Module upgrades live on module panels, not the catalog (ADR-0018).
 
 **Starter shelf**:
 The catalog's one-time guaranteed offers — the Focus Generator, one Booster, and a Module Forge — hidden once acquired. It completes the non-oscillator landscape; oscillators come only from the opening grant and module rolls (ADR-0022).
@@ -234,7 +234,7 @@ The pure control surface organized around the Enter/Exit main switch — the dom
 One clipped instrument panel docked above the board — the board owns its production numbers. The resources group left: nous, rate, and the arete read, each value with its unit, no session read anywhere on it. The arete read wears the resource's color and its canonical mark; before the first prestige it stands as a dim `— ◇` slot — the unconditional telegraph that prestige will bank there. A hairline then separates the feats and chords chips, right-aligned as paired icon + count chips. The rate read is the door to the rate details: above the 760px breakpoint a hover or focus anywhere on the panel opens the module-linked roster as a ledger-wide popover (the rate read wears no inner border of its own — the panel is the affordance, not the figure); a tap on the rate read opens the same roster as a modal sheet at every width. (On portrait phone the door moves to the game-info strip's rate read.) Bonuses never ride the ledger — they show in the feats and chords sheets and in the rate details' Achievements and Discoveries legs (ADR-0037's one roster).
 
 **Thumb bar**:
-The console's re-docked form on portrait phone — a bottom bar of five segments: Catalog / Forge / New cell / Inventory / **Collection**. The icon dock, the board-surface tray's tap access, and the ledger's feats and chords chips all fold into it — the two ledgers through Collection; nothing else changes.
+The console's re-docked form on portrait phone — a bottom bar of five segments: Catalog / Forge / Add / Inventory / **Collection**. The icon dock, the board-surface tray's tap access, and the ledger's feats and chords chips all fold into it — the two ledgers through Collection; nothing else changes.
 
 **Game-info strip**:
 The ledger's phone face on the board surface — the grouped resource reads (ν, rate, arete) and nothing else, where the idle tutorial helptext used to sit. Its rate read is the phone's door to the rate details sheet — the same module-linked roster the ledger's popover holds at wider widths — and its arete read keeps the dim pre-prestige slot. No feats or chords chips: Collection provides their sole phone entry. Phone only; the board ledger serves every other width.
