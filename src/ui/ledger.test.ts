@@ -68,6 +68,34 @@ describe("the discovery bonus in the rate details (issue #230)", () => {
   });
 });
 
+describe("the roster through the instrument primitives (issue #267)", () => {
+  it("no expandable detail sections: the legs live in the tooltip layer, the figure stays visible", () => {
+    const state = fresh();
+    give(state, "additive", hex(1, 0));
+    const snapshot = computeRates(state, false);
+    const sheet = document.createElement("div");
+    sheet.innerHTML = rateDetailsHtml(state, snapshot, false);
+    // The standards' disclosure rule: deeper mechanics never ride an
+    // expandable section.
+    expect(sheet.querySelector("details")).toBeNull();
+    expect(sheet.querySelector("summary")).toBeNull();
+    const row = sheet.querySelector(".rd-synth")!;
+    // The tooltip trigger discloses the legs…
+    expect(row.querySelector(".inst-tip-trigger")!.getAttribute("aria-describedby")).toBeTruthy();
+    expect(row.querySelector(".inst-tip-body .rd-legs")!.textContent).toContain("Base");
+    expect(row.querySelector(".inst-tip-body .rd-legs")!.textContent).toContain("Discoveries");
+    // …while the final figure renders outside it: critical state stays
+    // visible without opening anything.
+    const figure = row.children[row.children.length - 1]!;
+    expect(figure.classList.contains("rd-val")).toBe(true);
+    expect(figure.textContent).toMatch(/^\+/);
+    // The name is the pick affordance — a real button, so keyboard callers
+    // reach it.
+    expect(row.querySelector(".rd-pick")!.tagName).toBe("BUTTON");
+    expect(row.querySelector(".rd-pick .rd-name")!.classList.contains("t-condensed")).toBe(true);
+  });
+});
+
 describe("the RITUAL row (ADR-0046, wave 4)", () => {
   it("names its amplification of the active build, charged or not", () => {
     const state = fresh();

@@ -13,6 +13,7 @@ import { noteNameOf } from "../engine/lattice";
 import type { Contribution, GameState, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App } from "./app";
 import { chordTermLabel, formatBalance, formatFixed, formatInt, formatNumber } from "./format";
+import { wireTooltips } from "./instrument";
 import { liveAttr, liveSet } from "./live";
 import { META } from "./meta";
 
@@ -24,12 +25,14 @@ export function unlockedCount(state: GameState): number {
 // The rate is a place, not a formula: one roster every disclosure channel
 // shares — the Rate cell's hover/focus popover above the 760px breakpoint,
 // and the sheet a tap opens at every width (the phone strip's read opens
-// the same sheet). One row per oscillator carries its final ν/s and
-// expands into the base term with the local booster, formation quality,
-// chord, charge, and achievement effects; nonproducing modules disclose
-// what they do to others with no ν/s of their own to double-count. Both
-// channels mount live slots the tick fills, so a clock tick never rebuilds
-// (and never collapses) an open roster.
+// the same sheet). One row per oscillator carries its final ν/s; its leg
+// decomposition — base term, local booster, formation quality, chord,
+// charge, achievement and discovery effects — lives in the row's tooltip
+// (the instrument standards' disclosure rule: deeper mechanics in the
+// tooltip layer, never an expandable section). Nonproducing modules
+// disclose what they do to others with no ν/s of their own to
+// double-count. Both channels mount live slots the tick fills, so a clock
+// tick never rebuilds (and never collapses) an open roster.
 interface SynthLegs {
   base: number;
   formationQ: number;
@@ -155,10 +158,23 @@ export function activeBuildKey(state: GameState): string {
   return `${state.activeHabitId ?? "-"}:${habit ? habit.build.join(",") : ""}`;
 }
 
-// The roster both channels render. `live` mounts data-live slots the tick
-// fills (updateRateDetailsLive); the sheet passes false and prints the
-// snapshot outright.
-export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: boolean): string {
+// Tooltip ids must never repeat across rebuilds: a replaced roster's
+// portaled tooltip body outlives it at document body level (instrument.ts),
+// and a reused id would alias the old body to the new trigger. One
+// sequence token per build keeps every roster instance's ids its own, so
+// the wiring's sweep can tell an orphan from a living body.
+let rosterSeq = 0;
+
+// The roster both channels render, through the instrument primitives
+// (issue #267): every row is a flat rule-line readout — condensed name,
+// mono figure — and a synthesizer's deeper mechanics (its leg
+// decomposition) live only in the tooltip layer, never an expandable
+// <details>. `live` mounts data-live slots the tick fills
+// (updateRateDetailsLive); the sheet passes false and prints the snapshot
+// outright. `ns` namespaces the tooltip ids: the popover and the sheet can
+// stand in the DOM at the same time, and an id may repeat for no one.
+export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: boolean, ns = "pop"): string {
+  const seq = ++rosterSeq;
   const val = (slot: string, content: string): string =>
     live ? `<span class="rd-val mono" data-live="${slot}"></span>` : `<span class="rd-val mono">${content}</span>`;
   const note = (slot: string, content: string): string =>
@@ -173,12 +189,17 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
     const id = contribution.moduleId;
     if (isOscillatorType(contribution.type)) {
       const cellNote = contribution.pitch !== null ? noteNameOf(contribution.pitch) : "";
+      const name = META[contribution.type].name;
+      const tipId = `rd-tip-${ns}-${seq}-${id}`;
       synths.push(
-        `<details class="rd-row rd-synth" data-module-id="${id}">` +
-          `<summary><span class="rd-name">${META[contribution.type].name}</span>` +
+        `<div class="rd-row rd-synth" data-module-id="${id}">` +
+          `<button class="rd-pick" type="button" title="${name} — show it on the board">` +
+          `<span class="rd-name t-condensed">${name}</span>` +
           `<span class="rd-note mono">${cellNote}</span>` +
-          val(synthSlot(id, "v"), slots.v!) +
-          `</summary>` +
+          `</button>` +
+          `<span class="inst-tip">` +
+          `<button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${tipId}" aria-label="The legs of the ${name}'s rate">ⓘ</button>` +
+          `<span class="inst-tip-body" id="${tipId}" role="tooltip">` +
           `<div class="rd-legs">` +
           `<div class="rd-leg"><span class="rd-leg-name">Base</span>` +
           val(synthSlot(id, "base"), slots.base!) +
@@ -201,11 +222,13 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
           `<span class="rd-val mono">+${Math.round((snapshot.achievementBoost - 1) * 100)}%</span></div>` +
           `<div class="rd-leg"><span class="rd-leg-name">Discoveries</span>` +
           `<span class="rd-val mono">+${Math.round((snapshot.discoveryBoost - 1) * 100)}%</span></div>` +
-          `</div></details>`,
+          `</div></span></span>` +
+          val(synthSlot(id, "v"), slots.v!) +
+          `</div>`,
       );
     } else {
       others.push(
-        `<div class="rd-row rd-other-row"><span class="rd-name">${META[contribution.type].name}</span>` +
+        `<div class="rd-row rd-other-row"><span class="rd-name t-condensed">${META[contribution.type].name}</span>` +
           val(otherSlot(id), slots.n!) +
           `</div>`,
       );
@@ -213,7 +236,7 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
   }
 
   return (
-    `<div class="rd-row rd-total"><span class="rd-name">Rate</span>` +
+    `<div class="rd-row rd-total"><span class="rd-name t-condensed">Rate</span>` +
     val(RATE_TOTAL_SLOT, `${formatNumber(snapshot.rate)} ν/s`) +
     `</div>` +
     synths.join("") +
@@ -257,11 +280,11 @@ export function updateRateDetailsLive(scope: ParentNode, state: GameState, snaps
 // A synthesizer row's tap identifies its module on the board; each channel
 // decides what a pick means (the popover selects in place, the sheet closes
 // first so the answer lands on the board it names). A click inside the
-// expanded legs reads as text, never as a pick — copying a figure or
-// scrolling the roster must not select a module or close the sheet.
+// tooltip layer reads as reading, never as a pick — pinning a tooltip or
+// copying a leg figure must not select a module or close the sheet.
 export function wireSynthPicks(host: ParentNode, pick: (id: string) => void): void {
   host.addEventListener("click", (event) => {
-    if ((event.target as HTMLElement).closest(".rd-legs")) return;
+    if ((event.target as HTMLElement).closest(".inst-tip")) return;
     const row = (event.target as HTMLElement).closest("[data-module-id]");
     if (row) pick(row.getAttribute("data-module-id")!);
   });
@@ -356,7 +379,7 @@ export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
         <div class="prod-cell"><span class="prod-label">Nous</span><strong class="mono" data-live="nous"></strong></div>
         <div class="prod-cell rate-slot" id="rate-slot">
           ${rateCellHtml()}
-          <span class="rate-breakdown" role="group" aria-label="Module-linked rate details">${rateDetailsHtml(state, snapshot, true)}</span>
+          <div class="rate-breakdown" role="group" aria-label="Module-linked rate details"><span class="inst-panel"><span class="inst-panel-face">${rateDetailsHtml(state, snapshot, true, "pop")}</span></span></div>
         </div>
         <div class="prod-cell prod-cell-session"><span class="prod-label">Session</span><strong class="mono" data-live="session"></strong></div>
       </div>
@@ -368,9 +391,10 @@ export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
     document.getElementById("arete-chip")?.addEventListener("click", () => app.openModal("arete"));
     document.getElementById("library-chip")?.addEventListener("click", () => app.openModal("library"));
     // A synth row's tap selects its module: the hex wears the selected
-    // stroke and the bloom opens over it — the details name the place,
-    // the board shows it.
+    // stroke and the bloom opens over it — the row names the place,
+    // the board shows it. The tooltip layer pins and dismisses beside it.
     wireSynthPicks(document.querySelector("#rate-slot .rate-breakdown")!, (id) => app.select(id));
+    wireTooltips(document.querySelector("#rate-slot .rate-breakdown")!);
   }
   updateLedgerLive(host, state, snapshot, app.ui.selected);
 }
@@ -393,10 +417,11 @@ export function updateLedgerLive(
   // cell reserves its lane in the stylesheet.
   set("session", state.session ? `${formatFixed(state.session.earned)} ν` : "—");
   updateRateDetailsLive(scope, state, snapshot);
-  // A row answers for the module it names: the selected module's row
-  // wears the picked mark, refreshed in place — never a rebuild.
+  // A row answers for the module it names: the selected module's row wears
+  // the state grammar's firm inset marker (`.st-selected`) — readable
+  // without color — refreshed in place, never a rebuild.
   for (const row of scope.querySelectorAll<HTMLElement>(".rd-synth[data-module-id]")) {
-    row.classList.toggle("picked", row.dataset.moduleId === selectedId);
+    row.classList.toggle("st-selected", row.dataset.moduleId === selectedId);
   }
 }
 
