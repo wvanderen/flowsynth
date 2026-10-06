@@ -318,7 +318,7 @@ export const FEATS_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none
 </svg>`;
 
 export function featsChipHtml(count: number): string {
-  return `<button class="feats-chip" id="feats-chip" title="Achievements — every feat, and how close the next one is">${FEATS_SVG}<span class="mono">${count}/${ACHIEVEMENTS.length} feats</span></button>`;
+  return `<button class="feats-chip" id="feats-chip" title="Feats — the full list, and how close the next one is">${FEATS_SVG}<span class="mono">${count}/${ACHIEVEMENTS.length} feats</span></button>`;
 }
 
 // ── The chord library chip (§7, issue #230) ─────────────────────────────

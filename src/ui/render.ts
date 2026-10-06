@@ -548,31 +548,41 @@ function planCaptionWord(open: boolean): string {
   return open ? "Open-ended" : "Planned practice";
 }
 
-// The achievements page (ADR-0015): the always-visible full list — all
-// seventeen feats with progress bars, none hidden, grouped by the launch
-// buckets the ADR names. Spark's progress rides the charge preview; it
-// reads zero between sessions, as charge does.
+// The feats page (ADR-0015 as amended): the always-visible full list — the
+// milestone feats lead as their own group, then the five buckets the ADR
+// names with their progress bars; none hidden. Spark's progress rides the
+// charge preview; it reads zero between sessions, as charge does.
 const ACHIEVEMENT_CATEGORY_LABEL: Record<AchievementCategory, string> = {
   practice: "Practice capstones",
   console: "Console encouragers",
   board: "Board & economy",
   formula: "Formula & horizon",
   ladder: "Counter ladder",
+  milestone: "Milestones",
 };
 
 const ACHIEVEMENT_CATEGORY_ORDER: readonly AchievementCategory[] = ["practice", "console", "board", "formula", "ladder"];
+
+// The one reward every feat shares (ADR-0015): the global boost leg, read
+// here so the copy can never drift from the tuning constant.
+const FEAT_EFFECT_READ = `+${Math.round(BALANCE.achievementBoostPerFeat * 100)}% ν`;
+
+// A feat's crossed bit: the ledger is the truth, everywhere it's asked.
+const crossedOf = (app: App, id: string): boolean => app.state.achievements[id] !== undefined;
 
 function achievementContextOf(app: App, projected: RateSnapshot): AchievementContext {
   return { chargeDelivered: app.state.mode === "flow" && chargeDelivered(projected) };
 }
 
-// The open page's refresh signature: each feat's progress quantized to a
-// percent, so a rebuild only happens when a bar visibly moves.
+// The open page's refresh signature: each feat's crossed bit plus its
+// progress quantized to a percent, so a rebuild only happens when the page
+// visibly changes.
 function achProgressKey(app: App, projected: RateSnapshot): string {
   const ctx = achievementContextOf(app, projected);
   return ACHIEVEMENTS.map((def) => {
+    const crossed = crossedOf(app, def.id) ? 1 : 0;
     const { current, goal } = def.progress(app.state, ctx);
-    return String(Math.round((Math.min(1, goal > 0 ? current / goal : 1)) * 100));
+    return `${crossed}:${Math.round((Math.min(1, goal > 0 ? current / goal : 1)) * 100)}`;
   }).join(",");
 }
 
@@ -597,11 +607,38 @@ function achRowHtml(app: App, def: AchievementDef, ctx: AchievementContext): str
   </div>`;
 }
 
+// A milestone's row (ADR-0015 amended): the four compact facts — icon,
+// name, the beat's own existing unlock, the shared +2% ν effect — closing
+// in the state: an engraved done-mark when crossed; muted with the gate
+// named in the tooltip layer when not.
+function milestoneRowHtml(app: App, def: AchievementDef): string {
+  const crossed = crossedOf(app, def.id);
+  const tipId = `ach-gate-${def.id}`;
+  const gateTip =
+    crossed || !def.gate
+      ? ""
+      : `<span class="inst-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${tipId}" aria-label="${def.name} — what stands before it">ⓘ</button><span class="inst-tip-body" id="${tipId}" role="tooltip">${def.gate}</span></span>`;
+  const mark = crossed ? `<span class="ach-mark" role="img" aria-label="acquired">✓</span>` : "";
+  return `<div class="ach-milestone${crossed ? " crossed" : ""}">
+    <span class="ach-icon" aria-hidden="true">${def.icon ?? ""}</span>
+    <span class="ach-read"><span class="ach-name">${def.name}</span><span class="ach-sep" aria-hidden="true"> · </span><span class="ach-unlock">${def.unlock ?? ""}</span><span class="ach-sep" aria-hidden="true"> · </span><span class="ach-effect mono">${FEAT_EFFECT_READ}</span></span>
+    ${mark}${gateTip}
+  </div>`;
+}
+
 function renderAchievementsModal(app: App, content: HTMLElement, projected: RateSnapshot): void {
   const ctx = achievementContextOf(app, projected);
   const count = Object.keys(app.state.achievements).length;
+  const milestones = ACHIEVEMENTS.filter((def) => def.milestone);
+  const milestoneSection =
+    milestones.length === 0
+      ? ""
+      : `<section class="ach-section">
+    <h3 class="catalog-section-title">${ACHIEVEMENT_CATEGORY_LABEL.milestone}</h3>
+    <div class="ach-milestones">${milestones.map((def) => milestoneRowHtml(app, def)).join("")}</div>
+  </section>`;
   const sections = ACHIEVEMENT_CATEGORY_ORDER.map((category) => {
-    const feats = ACHIEVEMENTS.filter((def) => def.category === category);
+    const feats = ACHIEVEMENTS.filter((def) => !def.milestone && def.category === category);
     if (feats.length === 0) return "";
     return `<section class="ach-section">
       <h3 class="catalog-section-title">${ACHIEVEMENT_CATEGORY_LABEL[category]}</h3>
@@ -609,10 +646,12 @@ function renderAchievementsModal(app: App, content: HTMLElement, projected: Rate
     </section>`;
   }).join("");
   content.innerHTML = `
-    ${modalTop("ACHIEVEMENTS")}
+    ${modalTop("FEATS")}
     <h2 id="modal-title">${count} of ${ACHIEVEMENTS.length} feats.</h2>
     <p class="lead">Every feat speeds the rate a little — they accelerate, never gate. Each one adds into the Achievements leg of every synth row in the rate details.</p>
-    ${sections}`;
+    ${milestoneSection}${sections}`;
+  const list = content.querySelector(".ach-milestones");
+  if (list) wireTooltips(list);
   wireClose(app);
 }
 
@@ -789,7 +828,7 @@ function toolActions(): ToolAction[] {
         return feats > 0 ? `<b class="tool-badge mono">${feats}</b>` : "";
       },
       word: (app) => `Feats · ${unlockedCount(app.state)}/${ACHIEVEMENTS.length}`,
-      title: () => "Achievements — every feat, and how close the next one is",
+      title: () => "Feats — the full list, and how close the next one is",
     },
     {
       // The chord library rides the thumb bar beside Feats (issue #230):

@@ -160,7 +160,10 @@ describe("the prestige action", () => {
     s.muted = true;
     s.totalEarned = ARETE_HORIZON;
     prestige(s);
-    expect(s.achievements).toEqual({ "first-light": 1_000 });
+    // The pre-existing stamp persists; the boundary's live sync grants the
+    // feats the fixture's counters satisfy (detection is tested elsewhere).
+    expect(s.achievements["first-light"]).toBe(1_000);
+    expect(typeof s.achievements["first-prestige"]).toBe("number");
     expect(s.habits).toHaveLength(1);
     expect(s.practiceLog).toHaveLength(1);
     expect(s.notes).toHaveLength(1);

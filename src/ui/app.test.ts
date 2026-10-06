@@ -16,6 +16,7 @@ import { advance } from "../engine/advance";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport } from "../engine/trust";
 import { recordMissed, recordTargetHit } from "../engine/records";
 import { give } from "../engine/fixtures";
+import { createInitialState } from "../engine/state";
 import { hex, sameHex } from "../engine/hex";
 import { formatBalance, formatFixed, formatInt, formatNumber } from "./format";
 import { lensFrame } from "./zoom";
@@ -256,6 +257,78 @@ describe("the console header around Enter/Exit Flow (#148)", () => {
     expect(document.getElementById("pause-flow")!.textContent).toBe("Resume");
     document.getElementById("pause-flow")!.click();
     expect(app.state.mode).toBe("flow");
+  });
+});
+
+describe("the feats page's milestone group (issue #268)", () => {
+  it("leads with Milestones; each row carries icon, name, unlock, and effect", () => {
+    app.state.sessionsCompleted = 1;
+    app.state.achievements["mutator-entry"] = Date.now();
+    app.openModal("achievements");
+    const content = document.getElementById("modal-content")!;
+    expect(content.querySelector(".eyebrow")!.textContent).toBe("FEATS");
+    expect(content.querySelector("#modal-title")!.textContent).toBe("1 of 23 feats.");
+    const sections = [...content.querySelectorAll(".ach-section")];
+    expect(sections[0]!.querySelector(".catalog-section-title")!.textContent).toBe("Milestones");
+    const rows = [...sections[0]!.querySelectorAll(".ach-milestone")];
+    expect(rows).toHaveLength(5);
+    const entry = rows[0]!;
+    expect(entry.querySelector(".ach-name")!.textContent).toBe("Mutator entry");
+    expect(entry.querySelector(".ach-unlock")!.textContent).toBe("Mutator Grid on");
+    expect(entry.querySelector(".ach-effect")!.textContent).toBe("+2% ν");
+    expect(entry.querySelector(".ach-icon svg")).not.toBeNull();
+    // The engraved done-mark is the crossed row's state.
+    expect(entry.classList.contains("crossed")).toBe(true);
+    expect(entry.querySelector(".ach-mark")).not.toBeNull();
+    expect(entry.querySelector(".inst-tip")).toBeNull();
+    // Milestones precede every encourager bucket.
+    const titles = sections.map((s) => s.querySelector(".catalog-section-title")!.textContent);
+    expect(titles[0]).toBe("Milestones");
+    expect(titles).toContain("Practice capstones");
+    expect(titles).toContain("Counter ladder");
+  });
+
+  it("an un-crossed milestone reads muted with its effect visible, its tooltip naming the gate", () => {
+    app.openModal("achievements");
+    const row = document.querySelector(".ach-milestone:not(.crossed)")!;
+    expect(row.querySelector(".ach-name")!.textContent).toBe("Mutator entry");
+    expect(row.querySelector(".ach-unlock")!.textContent).toBe("Mutator Grid on");
+    expect(row.querySelector(".ach-effect")!.textContent).toBe("+2% ν");
+    expect(row.querySelector(".ach-mark")).toBeNull();
+    const tip = row.querySelector(".inst-tip-body")!;
+    expect(tip.textContent).toContain("Arete Catalog");
+    // The gate tooltip rides the instrument layer: focus opens it.
+    const trigger = row.querySelector<HTMLElement>(".inst-tip-trigger")!;
+    trigger.focus();
+    expect(tip.classList.contains("inst-show")).toBe(true);
+    trigger.blur();
+    expect(tip.classList.contains("inst-show")).toBe(false);
+  });
+
+  it("a pre-existing save's satisfied milestones grant silently on load (N/23, no toast)", () => {
+    const s = createInitialState();
+    s.sessionsCompleted = 1;
+    s.catalogEntryOwned = true;
+    s.rollPoolJoined = true;
+    s.prestiges = 1;
+    s.unlockedRows.push(2);
+    s.purchased = { generator: true, infusor: true, forge: true };
+    localStorage.setItem(STORAGE_KEY, serialize(s, Date.now() - 1_000));
+    const booted = boot();
+    // first-light rides along: the save's completed session satisfies it
+    // unstamped — the eager sync is achievement-wide, and silent throughout.
+    expect([...Object.keys(booted.state.achievements)].sort()).toEqual(
+      ["first-light", "first-prestige", "first-row", "mutator-entry", "roll-pool-join", "shelf-complete"].sort(),
+    );
+    // No toast announced the retro-grant.
+    expect(document.getElementById("status")!.textContent).not.toContain("Feat unlocked");
+    // The chip reads the full count — the five milestones plus first-light.
+    booted.render();
+    expect(document.getElementById("feats-chip")!.textContent).toContain("6/23 feats");
+    booted.openModal("achievements");
+    expect(document.getElementById("modal-content")!.querySelector("#modal-title")!.textContent).toBe("6 of 23 feats.");
+    const crossed = document.querySelectorAll(".ach-milestone.crossed");
+    expect(crossed).toHaveLength(5);
   });
 });
 
