@@ -1023,18 +1023,21 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 }
 .thumb-bar button {
   flex: 1;
+  height: auto;
+  min-height: 48px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   padding: 6px 2px;
   border: none;
   border-radius: 8px;
   color: var(--muted);
   min-width: 0;
 }
-.thumb-bar button svg { width: 19px; height: 19px; }
-.thumb-bar button .tool-word { display: block; font-size: 8.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.thumb-bar button svg { width: 19px; height: 19px; flex-shrink: 0; }
+.thumb-bar .forge-pip { display: none; }
+.thumb-bar button .tool-word { display: block; font-size: 9px; line-height: 1.5; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .thumb-bar button:hover, .thumb-bar button.active { color: var(--ink); background: var(--hover-bg); }
 .thumb-bar .tool-badge { top: -2px; right: 50%; transform: translateX(20px); }
 
@@ -2476,7 +2479,7 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
   .board-ledger { display: none; }
   .game-info-strip { display: block; }
   .board-tools { display: none; }
-  .thumb-bar { display: flex; }
+  .thumb-bar { display: flex; left: -14px; right: -14px; }
   /* The tray hides on phone — the thumb bar's Inventory taps the sheet —
      so the horizon bar owns the lane above the thumb bar. It anchors edge
      to edge — left 12, right 58 clears the zoom cluster's lane (10 + 36) —
@@ -2506,7 +2509,7 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
   /* The Mutator layer on phone (issue #199): the tray strip pins at every
      width — the lane above the thumb bar, edge to edge like the horizon
      bar — and the tabs hug the board's top-left corner. */
-  .mut-tabs { left: 8px; }
+  .mut-tabs { left: 8px; top: 52px; }
   .mutator-tray {
     bottom: 118px;
     left: 12px;

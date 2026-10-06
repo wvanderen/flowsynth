@@ -1027,7 +1027,8 @@ describe("the thumb bar (§7, portrait phone)", () => {
     const bar = document.getElementById("thumb-bar")!;
     const ops = [...bar.querySelectorAll("[data-op]")].map((b) => b.getAttribute("data-op"));
     expect(ops).toEqual(["catalog", "forge", "cell", "inventory", "collection"]);
-    expect(bar.querySelector('[data-op="inventory"]')!.textContent).toContain("Inventory · 1");
+    expect(bar.querySelector('[data-op="inventory"] .tool-word')!.textContent).toBe("Inventory");
+    expect(bar.querySelector('[data-op="inventory"] .tool-badge')!.textContent).toBe("1");
     // The feats and chords segments are gone — Collection is their sole
     // phone door now, and the dock never grew a sixth icon.
     expect(bar.querySelector('[data-op="feats"]')).toBeNull();

@@ -916,7 +916,7 @@ function renderTools(app: App, projected: RateSnapshot): void {
             ? `<span id="${detailId}" class="forge-detail" role="tooltip" hidden>${action.title(app, projected)}</span>`
             : "";
           const extra = (action.badge?.(app) ?? "") + (action.media ?? "") + detail;
-          const label = action.word?.(app) ?? action.label;
+          const label = target === thumb ? action.label : action.word?.(app) ?? action.label;
           return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" data-op="${action.op}" aria-label="${action.label}" ${action.op === "forge" ? `aria-describedby="${detailId}"` : `title="${action.title(app, projected)}"`}${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${label}</small></button>`;
         })
         .join("");
