@@ -42,24 +42,24 @@
       </header>
       <main class="workspace">
         <section class="board-panel">
-          <!-- The board ledger strip (§7): Nous / Rate / Session as one
-               bordered instrument, the feats chip beside it — the board owns
-               its production. The Rate cell shows the final total: hover or
-               focus opens the module-linked rate details above the 760px
-               breakpoint, a tap opens the same roster as a sheet below. -->
+          <!-- The board ledger (§7, issue #270): one clipped instrument
+               panel — the grouped resource reads (ν · ν/s · ◇) left, the
+               feats and chords chips right. The rate figure shows the
+               final total: hover or focus opens the module-linked rate
+               details above the 760px breakpoint, a tap opens the same
+               roster as a sheet below. -->
           <div class="board-ledger" id="board-ledger"></div>
           <div class="board-space">
             <svg id="grid" role="group" aria-label="Module grid"></svg>
             <!-- The action row (§7): a left-edge icon dock floating over the
                  board — Catalog / Forge (count badge + charge pip) / New
-                 cell. On portrait phone it re-docks as the bottom thumb bar
-                 (#thumb-bar) with Inventory and Feats folded in. -->
+                 cell. On portrait phone it re-docks as the bottom thumb
+                 bar (#thumb-bar) with Inventory and Collection folded in. -->
             <div class="board-tools" id="board-tools"></div>
             <div class="thumb-bar" id="thumb-bar"></div>
-            <!-- The game-info strip (§7): production reads on the board
-                 surface, portrait phone only — where the tutorial helptext
-                 used to sit. -->
-            <div class="game-info-strip" id="game-info-strip"></div>
+            <!-- The game-info strip (§7, issue #270): the ledger's resource
+                 reads on the board surface, portrait phone only. -->
+            <div class="inst-panel game-info-strip" id="game-info-strip"></div>
             <!-- The chord readout (§6): the reserved spot for the chord
                  name chips — every chord the selected module earns its
                  bonus from (pinned), or the hovered seam/voice's (asked).

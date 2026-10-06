@@ -1,7 +1,9 @@
-// The board's production surfaces (§7): the ledger strip docked above the
-// board, the module-linked rate details disclosed from its Rate cell, the
-// ambient horizon bar riding the board's lower edge, and the phone's
-// game-info strip. The status monitor dissolved into these; the console
+// The board's production surfaces (§7, issue #270): the ledger — one
+// clipped instrument panel docked above the board (grouped resource reads
+// left, the feats/chords chips right) — the module-linked rate details
+// disclosed from its rate figure, the ambient horizon bar riding the
+// board's lower edge, and the phone game-info strip carrying the same
+// resource reads alone. The session read has left the ledger; the console
 // carries no readouts.
 import { accumulatorFill, claimOf, horizonReached } from "../engine/accumulator";
 import { ACHIEVEMENTS } from "../engine/achievements";
@@ -293,17 +295,16 @@ export function wireSynthPicks(host: ParentNode, pick: (id: string) => void): vo
   });
 }
 
-// The Rate cell: the final total, and the door to the module-linked
-// details. Hover or focus discloses the popover above the 760px
-// breakpoint; a tap opens the same roster as a sheet at every width —
-// hover alone can't serve a touch surface above the line, so the cell
-// keeps a door everywhere. The breakdown sits beside the button, not
-// inside it — its rows are interactive (a synth row selects its module on
-// the board), and a button may carry none.
+// The rate figure: the grouped read's middle term — the final total and
+// the door to the module-linked details. Hover or focus discloses the
+// popover above the 760px breakpoint; a tap opens the same roster as a
+// sheet at every width — hover alone can't serve a touch surface above
+// the line, so the figure keeps a door everywhere. The breakdown mounts
+// beside the clipped panel, not inside it — a clip-path ancestor cuts a
+// floating child's paint, and the popover hangs below the panel's edge.
 function rateCellHtml(): string {
-  return `<button class="prod-cell prod-cell-rate" id="rate-cell" title="Rate — the board's live total; hover or tap for the module details">
-    <span class="prod-label">Rate</span>
-    <strong class="mono rate-total" data-live="rate"></strong>
+  return `<button class="ledger-fig-btn" id="rate-cell" aria-label="Rate details" title="Rate — the board's live total; hover or tap for the module details">
+    <b class="mono" data-live="rate"></b><small aria-hidden="true">ν/s</small>
     <span class="rate-hint" aria-hidden="true">ⓘ</span>
   </button>`;
 }
@@ -318,7 +319,7 @@ export const FEATS_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none
 </svg>`;
 
 export function featsChipHtml(count: number): string {
-  return `<button class="feats-chip" id="feats-chip" title="Feats — the full list, and how close the next one is">${FEATS_SVG}<span class="mono">${count}/${ACHIEVEMENTS.length} feats</span></button>`;
+  return `<button class="ledger-chip" id="feats-chip" aria-label="Feats" title="Feats — the full list, and how close the next one is">${FEATS_SVG}<span class="mono">${count}/${ACHIEVEMENTS.length}</span></button>`;
 }
 
 // ── The chord library chip (§7, issue #230) ─────────────────────────────
@@ -332,72 +333,87 @@ export const LIBRARY_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="no
 
 export function libraryChipHtml(state: GameState): string {
   const count = discoveryCount(state);
-  return `<button class="library-chip" id="library-chip" title="Chord library — the field guide of chord classes">${LIBRARY_SVG}<span class="mono">${count}/${NAMED_CHORDS.length} chords</span></button>`;
+  return `<button class="ledger-chip" id="library-chip" aria-label="Chords" title="Chord library — the field guide of chord classes">${LIBRARY_SVG}<span class="mono">${count}/${NAMED_CHORDS.length}</span></button>`;
 }
 
-// ── The Arete Catalog chip (§7, issue #197) ─────────────────────────────
-// The board-ledger chip that appears with the first banked Arete and opens
-// the catalog sheet — the one door to what no board affordance carries.
-// Before the first prestige there is no Arete, so no surface renders at
-// all; the lock is the balance itself.
+// ── The arete read (§7, issue #197 → #270) ──────────────────────────────
+// The ledger's third grouped resource: the banked Arete in its color, the
+// canonical mark at 15px. The telegraph slot is unconditional: before the
+// first Arete the read is a dim `— ◇` — the lock itself teaches that
+// prestige will bank here. From the first prestige the read wears the
+// balance and keeps the sheet as its tap-through door until the Catalog
+// door absorbs it (issue #271).
 const ARETE_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
   <path d="M12 2.5 20 8l-3.2 13H7.2L4 8l8-5.5Z"/>
   <path d="M12 2.5 9.4 21M12 2.5l2.6 18.5M4.6 8.4h14.8"/>
 </svg>`;
 
-export function areteChipHtml(state: GameState): string {
-  return `<button class="arete-chip" id="arete-chip" title="Arete Catalog — what banked Arete buys"><span class="arete-chip-glyph" aria-hidden="true">${ARETE_SVG}</span><span>Catalog</span><b class="mono">${formatInt(state.arete)}</b><span class="arete-word">Arete</span></button>`;
+// The telegraph slot's one markup, both faces of the ledger: a dim `— ◇`
+// until the first prestige banks the first Arete.
+function areteTelegraphHtml(): string {
+  return `<b class="mono">—</b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small>`;
 }
 
-// ── The board ledger strip (§7) ─────────────────────────────────────────
-// Nous / Rate / Session as one bordered instrument, the feats chip beside
-// it, docked directly above the board. The console's readout end is gone.
-// The 760px container breakpoint (§7): above it hover or focus discloses
-// the module-linked details from the Rate cell, and a tap opens the same
-// roster as a sheet at every width — a touch surface above the line has
-// no hover, so the cell's tap is its door everywhere. The gate reads the
-// container's own inline size — the number the stylesheet's @container
-// rules respond to (container.ts holds it).
+export function areteLedgerHtml(state: GameState): string {
+  if (!catalogOpen(state)) {
+    return `<span class="ledger-fig ledger-arete arete-dim" title="Arete — banked by prestige">${areteTelegraphHtml()}</span>`;
+  }
+  return `<button class="ledger-fig ledger-arete" id="arete-read" aria-label="Arete Catalog" title="Arete — banked by prestige; spent in the Arete Catalog"><b class="mono" data-live="arete"></b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small></button>`;
+}
+
+// ── The board ledger (§7, issue #270) ───────────────────────────────────
+// One clipped instrument panel docked above the board: the resources group
+// left — `1.24k ν · 18.6 ν/s · 6 ◇`, the arete read in its color with the
+// canonical mark at 15px — then a hairline, then the feats and chords
+// chips right-aligned as paired icon + count chips. The session read has
+// left; bonuses live in the sheets and the rate details' legs, never here.
+// The 760px container breakpoint (§7): above it hover or focus anywhere on
+// the strip discloses the module-linked details, and a tap on the rate
+// figure opens the same roster as a sheet at every width — a touch surface
+// above the line has no hover, so the figure's tap is its door everywhere.
+// The gate reads the container's own inline size — the number the
+// stylesheet's @container rules respond to (container.ts holds it).
 export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
   const host = document.getElementById("board-ledger");
   if (!host) return;
   const { state } = app;
   const feats = unlockedCount(state);
   const discoveries = discoveryCount(state);
-  // The Catalog chip rides the ledger from the first banked Arete
-  // (issue #197); its balance joins the structural key, so a purchase or a
-  // prestige rebuilds the strip the moment the figure moves.
-  const chip = catalogOpen(state) ? areteChipHtml(state) : "";
+  // The arete read's flip (dim slot ↔ banked read) joins the structural
+  // key with the balance, so a purchase or a prestige rebuilds the strip
+  // the moment the figure moves.
+  const banked = catalogOpen(state);
   // Structural key: the deployed roster (deployedRosterKey — a move changes
   // a note name, an upgrade a base figure), the active build (an equip or
-  // habit switch folds into the legs), plus the feats count and the
-  // discovery count (the strip carries both ledgers' chips and the rate
-  // details' static boost legs) rebuilds the strip; every tick-moving value
-  // updates in place through the live slots, so an open popover or an
-  // expanded row survives the clock.
-  const key = `${state.arete}:${feats}:${discoveries}:${activeBuildKey(state)}:${deployedRosterKey(state)}`;
+  // habit switch folds into the legs), plus the counts the chips and the
+  // rate details' static boost legs read; every tick-moving value updates
+  // in place through the live slots, so an open popover or an expanded row
+  // survives the clock.
+  const key = `${banked ? state.arete : "pre"}:${feats}:${discoveries}:${activeBuildKey(state)}:${deployedRosterKey(state)}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
-    host.innerHTML = `<div class="prod-ledger" role="group" aria-label="Production">
-        <div class="prod-cell"><span class="prod-label">Nous</span><strong class="mono" data-live="nous"></strong></div>
-        <div class="prod-cell rate-slot" id="rate-slot">
+    host.innerHTML = `<div class="inst-panel ledger-panel"><div class="inst-panel-face ledger-face" role="group" aria-label="Production">
+        <span class="ledger-fig" title="Nous — the board's banked resource"><b class="mono" data-live="nous"></b><small class="nous-unit" aria-hidden="true">ν</small></span>
+        <span class="ledger-fig ledger-rate" id="rate-slot">
           ${rateCellHtml()}
-          <div class="rate-breakdown" role="group" aria-label="Module-linked rate details"><span class="inst-panel"><span class="inst-panel-face">${rateDetailsHtml(state, snapshot, true, "pop")}</span></span></div>
-        </div>
-        <div class="prod-cell prod-cell-session"><span class="prod-label">Session</span><strong class="mono" data-live="session"></strong></div>
-      </div>
-      ${chip}
-      ${featsChipHtml(feats)}
-      ${libraryChipHtml(state)}`;
+        </span>
+        ${areteLedgerHtml(state)}
+        <span class="ledger-rule" aria-hidden="true"></span>
+        <span class="ledger-chips">
+          ${featsChipHtml(feats)}
+          ${libraryChipHtml(state)}
+        </span>
+      </div></div>
+      <div class="rate-breakdown" role="group" aria-label="Module-linked rate details"><span class="inst-panel"><span class="inst-panel-face">${rateDetailsHtml(state, snapshot, true, "pop")}</span></span></div>`;
     document.getElementById("feats-chip")?.addEventListener("click", () => app.openModal("achievements"));
     document.getElementById("rate-cell")?.addEventListener("click", () => app.openModal("rate"));
-    document.getElementById("arete-chip")?.addEventListener("click", () => app.openModal("arete"));
+    document.getElementById("arete-read")?.addEventListener("click", () => app.openModal("arete"));
     document.getElementById("library-chip")?.addEventListener("click", () => app.openModal("library"));
     // A synth row's tap selects its module: the hex wears the selected
     // stroke and the bloom opens over it — the row names the place,
     // the board shows it. The tooltip layer pins and dismisses beside it.
-    wireSynthPicks(document.querySelector("#rate-slot .rate-breakdown")!, (id) => app.select(id));
-    wireTooltips(document.querySelector("#rate-slot .rate-breakdown")!);
+    wireSynthPicks(host.querySelector(".rate-breakdown")!, (id) => app.select(id));
+    wireTooltips(host.querySelector(".rate-breakdown")!);
   }
   updateLedgerLive(host, state, snapshot, app.ui.selected);
 }
@@ -409,16 +425,14 @@ export function updateLedgerLive(
   selectedId: string | null = null,
 ): void {
   const set = (live: string, text: string) => liveSet(scope, live, text);
-  set("nous", `${formatBalance(state.nous)} ν`);
   // The balance compresses past the exact range (issue #187); the exact
   // comma-grouped value rides the read as its native tooltip, kept fresh
-  // by the same guard the text swap uses.
+  // by the same guard the text swap uses. The unit rides the figure's own
+  // small — the slot carries the number alone.
+  set("nous", formatBalance(state.nous));
   liveAttr(scope, "nous", "title", formatInt(state.nous));
-  set("rate", `${formatNumber(snapshot.rate)} ν/s`);
-  // The session read is a tight live surface (ADR-0031 as applied here):
-  // fixed decimals so the trailing zero never comes and goes, and the
-  // cell reserves its lane in the stylesheet.
-  set("session", state.session ? `${formatFixed(state.session.earned)} ν` : "—");
+  set("rate", formatNumber(snapshot.rate));
+  if (catalogOpen(state)) set("arete", formatInt(state.arete));
   updateRateDetailsLive(scope, state, snapshot);
   // A row answers for the module it names: the selected module's row wears
   // the state grammar's firm inset marker (`.st-selected`) — readable
@@ -428,30 +442,34 @@ export function updateLedgerLive(
   }
 }
 
-// ── The phone game-info strip (§7) ──────────────────────────────────────
-// Production reads on the board surface, where the tutorial helptext used
-// to sit: ν, rate, session. Feats appears once on phone — riding the thumb
-// bar — and the rate read is the strip's one tap: it opens the module-
-// linked rate details as a sheet, the same door the ledger's Rate cell
-// provides at every other width (the ledger itself dissolves below the
-// 600px breakpoint). The Arete Catalog chip rides the strip too from the
-// first banked Arete (issue #197) — the ledger is gone there, and the
-// sheet must stay reachable. Displayed only below the 600px breakpoint;
-// values update every render.
+// ── The phone game-info strip (§7, issue #270) ──────────────────────────
+// The ledger's phone face: the same grouped resource reads on the board
+// surface — ν, rate, arete — and nothing else. No session read, no
+// feats/chords chips: Collection owns both entries from the thumb bar
+// (issue #270). The rate read stays the strip's one tap: it opens the
+// module-linked rate details as a sheet, the same door the ledger's rate
+// figure provides at every other width (the ledger itself dissolves below
+// the 600px breakpoint). The arete read keeps the sheet as its tap-through
+// door until the Catalog door absorbs it (issue #271), and the telegraph
+// slot stands dim before the first prestige. Displayed only below the
+// 600px breakpoint; values update every render.
 export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
   const host = document.getElementById("game-info-strip");
   if (!host) return;
   const { state } = app;
-    // The chip joins at the first Arete reset: the strip rebuilds once at
-    // that flip — the prestige count is the lock (issue #197), and the
-    // balance moves through the live slot, never a rebuild.
-  const key = catalogOpen(state) ? "strip-arete" : "strip";
+  // The read's flip (dim slot ↔ banked read) is the strip's one structural
+  // boundary: the rebuild happens once at the prestige that banks the
+  // first Arete, and every tick-moving value updates through live slots.
+  const key = catalogOpen(state) ? "strip-banked" : "strip-pre";
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
-    host.innerHTML = `<span class="info-read"><small>ν</small> <strong class="mono" data-live="i-nous"></strong></span>
-      <button class="info-read info-rate" id="info-rate" title="Rate — tap for the module details"><strong class="mono" data-live="i-rate"></strong> <small>ν/s</small><span class="info-hint" aria-hidden="true">ⓘ</span></button>
-      <span class="info-read"><small>session</small> <strong class="mono" data-live="i-session"></strong></span>
-      ${catalogOpen(state) ? `<button class="info-read info-arete" id="info-arete" title="Arete Catalog — what banked Arete buys"><span class="arete-chip-glyph" aria-hidden="true">${ARETE_SVG}</span><strong class="mono" data-live="i-arete"></strong> <small>Arete</small></button>` : ""}`;
+    host.innerHTML = `<div class="inst-panel-face game-info-face"><span class="info-read" title="Nous — the board's banked resource"><b class="mono" data-live="i-nous"></b><small aria-hidden="true">ν</small></span>
+      <button class="info-read info-rate" id="info-rate" aria-label="Rate details" title="Rate — tap for the module details"><b class="mono" data-live="i-rate"></b><small aria-hidden="true">ν/s</small><span class="info-hint" aria-hidden="true">ⓘ</span></button>
+      ${
+        catalogOpen(state)
+          ? `<button class="info-read info-arete" id="info-arete" aria-label="Arete Catalog" title="Arete — banked by prestige; spent in the Arete Catalog"><b class="mono" data-live="i-arete"></b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small></button>`
+          : `<span class="info-read info-arete arete-dim" title="Arete — banked by prestige">${areteTelegraphHtml()}</span>`
+      }</div>`;
     document.getElementById("info-rate")?.addEventListener("click", () => app.openModal("rate"));
     document.getElementById("info-arete")?.addEventListener("click", () => app.openModal("arete"));
   }
@@ -459,8 +477,9 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
   // Same compression as the ledger's read, same exact tooltip (issue #187).
   set("i-nous", formatBalance(state.nous));
   liveAttr(host, "i-nous", "title", formatInt(state.nous));
+  // A tight live surface (ADR-0031 as applied here): fixed decimals, so
+  // the centered pill never breathes with the rate's trailing digits.
   set("i-rate", formatFixed(snapshot.rate));
-  set("i-session", state.session ? formatFixed(state.session.earned) : "—");
   if (catalogOpen(state)) set("i-arete", formatInt(state.arete));
 }
 

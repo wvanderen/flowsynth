@@ -498,60 +498,63 @@ h1, h2, h3, p { margin: 0; }
 
 .board-panel { padding: 14px 20px 0; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 
-/* ── The board ledger strip (§7) ───────────────────── */
-/* Nous / Rate / Session as one bordered instrument, the feats chip beside
-   it, docked directly above the board: the board owns its production. The
-   console carries no readouts. */
+/* ── The board ledger (§7, issue #270) ─────────────── */
+/* One clipped instrument panel docked above the board: the resources
+   group left — nous, rate, arete, each value + unit, no labels — then a
+   hairline, then the feats and chords chips right-aligned as paired
+   icon + count chips. The session read lives elsewhere; the console
+   carries no readouts. The wrapper holds the popover that hangs below
+   the panel: a clip-path ancestor would cut its paint, so the details
+   mount outside the clipped plate. */
 .board-ledger {
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
+  position: relative;
   margin-bottom: 10px;
 }
-.prod-ledger {
+.ledger-face {
   display: flex;
-  align-items: stretch;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: var(--panel-soft);
-  overflow: visible;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  padding: 9px 16px;
 }
-.prod-cell { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 6px 14px 7px; min-width: 84px; }
-.prod-cell + .prod-cell { border-left: 1px solid var(--line); }
-.prod-label { font: 9px var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
-.prod-cell strong { font: 15.5px var(--mono); font-weight: 400; white-space: nowrap; }
-
-/* The Rate cell (§7): the final total, and the door to the module-linked
-   details. Hover or focus discloses the popover from the cell; a tap opens
-   the same roster as a sheet at every width. The breakdown lives beside
-   the button inside the .rate-slot wrapper — its rows are interactive, and
-   a button may carry none. */
-.rate-slot {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 2px;
-  padding: 6px 14px 7px;
+/* The grouped resource read: mono figures, the unit small beside them —
+   units identify the figures, no labels. */
+.ledger-fig {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
 }
-.prod-cell-rate {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 2px;
-  text-align: left;
+.ledger-fig b { font: 15.5px var(--mono); font-weight: 400; }
+/* The unit stays lowercase — the ν is the resource's own glyph, and the
+   uppercase transform would rewrite it. */
+.ledger-fig small {
+  font: 600 10.5px var(--font-condensed);
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.ledger-fig .nous-unit { color: var(--nous); }
+/* The rate figure is the door to the module-linked details: a real
+   button, bare at rest, the ⓘ ring at its shoulder. */
+.ledger-rate { position: relative; }
+.ledger-fig-btn {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  border: 0;
+  border-radius: 0;
   background: transparent;
-  min-width: 0;
   padding: 0;
+  font: inherit;
+  color: inherit;
 }
-.rate-total { font: 15.5px var(--mono); font-weight: 400; }
+.ledger-fig-btn:hover:not(:disabled),
+.ledger-fig-btn:focus-visible { background: transparent; border-color: transparent; color: var(--ink); }
 .rate-hint {
   position: absolute;
-  top: 6px;
-  right: 9px;
+  top: -4px;
+  right: -14px;
   font-size: 10px;
   color: var(--muted);
   border: 1px solid var(--line);
@@ -563,27 +566,54 @@ h1, h2, h3, p { margin: 0; }
   justify-content: center;
   pointer-events: none;
 }
-.rate-slot:hover .rate-hint, .rate-slot:focus-within .rate-hint { color: var(--nous); border-color: var(--nous); }
-/* The details disclosure: the one rate popover, anchored to the Rate cell —
-   the roster as a clipped instrument panel (.inst-panel over .inst-panel-face,
-   issue #267). The wrapper carries only position; the plate's rim is its own
-   definition over the board — no drop shadow here, since a filtered ancestor
-   would claim the tooltips' fixed positioning (instrument.ts). The face is
-   the scroll container, so its own clip stays fixed while the rows move, and
-   the tooltip bodies rise free of both. Hidden below the 760px breakpoint,
-   where the popover has no room — the tap-up sheet carries the roster there,
-   as it does at every width. */
+.ledger-rate:hover .rate-hint, .ledger-rate:focus-within .rate-hint { color: var(--nous); border-color: var(--nous); }
+/* The arete read: the balance in its color, the canonical mark at 15px.
+   Before the first prestige the slot stands dim — `— ◇` — the
+   unconditional telegraph that prestige will bank here. */
+.ledger-arete { color: var(--arete); }
+.arete-mark svg { width: 15px; height: 15px; display: block; }
+button.ledger-arete {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+}
+button.ledger-arete:hover:not(:disabled),
+button.ledger-arete:focus-visible { background: transparent; border-color: transparent; color: var(--arete-bright); }
+.arete-dim { color: var(--muted); }
+.arete-dim .arete-mark { color: var(--muted); }
+/* The hairline division, then the chips right-aligned: paired icon +
+   count, opening their sheets. */
+.ledger-rule { width: 1px; align-self: stretch; margin: 1px 0; background: var(--line); }
+.ledger-chips { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.ledger-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.ledger-chip svg { width: 14px; height: 14px; }
+.ledger-chip:hover:not(:disabled) { color: var(--ink); }
+/* The details disclosure: the one rate popover, ledger-wide beneath the
+   panel — the roster as a clipped instrument panel (.inst-panel over
+   .inst-panel-face, issue #267). It mounts outside the clipped plate (a
+   clip-path ancestor would cut its paint) and shows only above the 760px
+   breakpoint, where the hover door lives; below the line the tap-up sheet
+   carries the roster, as it does at every width. */
 .rate-breakdown {
   display: none;
   position: absolute;
   top: calc(100% + 10px);
-  left: -1px;
+  left: 0;
   z-index: 40;
-  width: 350px;
+  width: min(560px, 100%);
 }
 .rate-breakdown .inst-panel-face { max-height: min(60vh, 420px); overflow-y: auto; }
-.rate-slot:hover .rate-breakdown,
-.rate-slot:focus-within .rate-breakdown { display: block; }
 /* The module-linked rows (popover and rate sheet share them): flat rule-line
    readouts through the instrument primitives — condensed names, mono
    figures, hairline divisions, never rounded cards. */
@@ -644,63 +674,21 @@ h1, h2, h3, p { margin: 0; }
   text-transform: uppercase;
   color: var(--muted);
 }
-/* The Session cell reserves its lane (ADR-0031 as applied here): the fixed
-   decimals hold the width while the session ticks. */
-.prod-cell-session strong { min-width: 9ch; }
-
 /* The whole ledger is the door (#233, the #220 verdict): above the 760px
    breakpoint a hover or focus anywhere on the strip opens the roster, and
-   the popover drops ledger-wide from the strip itself. The rate cell's
-   inner hairline is dead — the global button border and its hover fill
-   leak nowhere — and the ⓘ ring sits borderless at rest, brightening with
-   the ledger's hover. Below the line nothing changes: the tap-up sheet
-   stays the door and the cell keeps its border and ring. The synth-row
-   pick wiring inside the popover is untouched. */
+   the popover drops ledger-wide from beneath the panel. The ⓘ ring sits
+   borderless at rest, brightening with the ledger's hover. Below the line
+   nothing changes: the tap-up sheet stays the door and the ring stays
+   hidden. The synth-row pick wiring inside the popover is untouched. */
 @container app (width >= 760px) {
-  .prod-ledger { position: relative; }
-  .rate-slot { position: static; }
-  .prod-cell-rate { border-color: transparent; }
-  .prod-ledger:hover .prod-cell-rate,
-  .prod-ledger:focus-within .prod-cell-rate { background: transparent; border-color: transparent; }
   .rate-hint { border-color: transparent; }
-  .rate-slot:hover .rate-hint, .rate-slot:focus-within .rate-hint { border-color: transparent; }
-  .prod-ledger:hover .rate-hint,
-  .prod-ledger:focus-within .rate-hint { color: var(--nous); }
-  .rate-breakdown { left: 0; width: min(560px, 100%); }
+  .ledger-rate:hover .rate-hint, .ledger-rate:focus-within .rate-hint { border-color: transparent; }
+  .board-ledger:hover .rate-hint,
+  .board-ledger:focus-within .rate-hint { color: var(--nous); }
   .rate-breakdown .inst-panel-face { max-height: min(76vh, 640px); }
-  .prod-ledger:hover .rate-breakdown,
-  .prod-ledger:focus-within .rate-breakdown { display: block; }
+  .board-ledger:hover .rate-breakdown,
+  .board-ledger:focus-within .rate-breakdown { display: block; }
 }
-
-/* The feats chip (§7): the ledger strip's neighbor, opening the feats page. */
-.feats-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 11px;
-  border-radius: 7px;
-  font-size: 12px;
-  color: var(--muted);
-  flex-shrink: 0;
-}
-.feats-chip svg { width: 14px; height: 14px; }
-.feats-chip:hover { color: var(--ink); }
-
-/* The chord library chip (§7, issue #230): the ledger strip's neighbor
-   beside the feats chip, opening the field guide. The feats chip's own
-   pattern, one door over. */
-.library-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 11px;
-  border-radius: 7px;
-  font-size: 12px;
-  color: var(--muted);
-  flex-shrink: 0;
-}
-.library-chip svg { width: 14px; height: 14px; }
-.library-chip:hover { color: var(--ink); }
 
 /* The chord library's field guide (issue #230): glyph-first cards — the
    glyph fills the card's top space (the prototype's fixed box dies here),
@@ -747,28 +735,6 @@ h1, h2, h3, p { margin: 0; }
   height: 100%;
   background: var(--meter-fill);
 }
-
-/* The Arete Catalog chip (§7, issue #197): the ledger strip's second
-   neighbor, present from the first banked Arete and opening the catalog
-   sheet. Every Arete surface wears the one --arete register (ADR-0016's
-   rule: a token, never literals); the chip glows quiet violet, loud on
-   hover. */
-.arete-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 11px;
-  border-radius: 7px;
-  font-size: 12px;
-  color: var(--arete);
-  background: var(--arete-faint);
-  border: 1px solid var(--arete-line);
-  flex-shrink: 0;
-}
-.arete-chip-glyph svg { width: 14px; height: 14px; display: block; }
-.arete-chip:hover,
-.arete-chip:focus-visible { color: var(--ink); background: var(--arete-faint); border-color: var(--arete); }
-.arete-word { color: var(--muted); }
 
 /* ── Inspector ─────────────────────────────────────── */
 /* Rarity reads as text here; on faces it is engraved rings + plate tint
@@ -1039,9 +1005,9 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .forge-meter .forge-pip { height: 5px; }
 .forge-meter .meter-figures { font-size: 11px; color: var(--muted); }
 
-/* The bottom thumb bar (§7): the console's re-docked form on portrait
-   phone — Catalog / Forge / New cell / Inventory / Feats. Hidden at every
-   other width. */
+/* The bottom thumb bar (§7, issue #270): the console's re-docked form on
+   portrait phone — Catalog / Forge / New cell / Inventory / Collection.
+   Hidden at every other width. */
 .thumb-bar {
   position: absolute;
   left: 0;
@@ -1057,25 +1023,29 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 }
 .thumb-bar button {
   flex: 1;
+  height: auto;
+  min-height: 48px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   padding: 6px 2px;
   border: none;
   border-radius: 8px;
   color: var(--muted);
   min-width: 0;
 }
-.thumb-bar button svg { width: 19px; height: 19px; }
-.thumb-bar button .tool-word { display: block; font-size: 8.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.thumb-bar button svg { width: 19px; height: 19px; flex-shrink: 0; }
+.thumb-bar .forge-pip { display: none; }
+.thumb-bar button .tool-word { display: block; font-size: 9px; line-height: 1.5; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .thumb-bar button:hover, .thumb-bar button.active { color: var(--ink); background: var(--hover-bg); }
 .thumb-bar .tool-badge { top: -2px; right: 50%; transform: translateX(20px); }
 
-/* The game-info strip (§7): production reads on the board surface, portrait
-   phone only — where the tutorial helptext used to sit. The strip anchors
-   edge to edge and centers its content, so its size is locked: the session
-   read ticks every render and a content-sized pill would breathe with it. */
+/* The game-info strip (§7, issue #270): the ledger's resource reads on
+   the board surface, portrait phone only — ν, rate, arete, nothing else.
+   The strip anchors edge to edge and centers its content, so its size is
+   locked: the rate read ticks every render and a content-sized pill would
+   breathe with it. */
 .game-info-strip {
   position: absolute;
   top: 8px;
@@ -1083,22 +1053,23 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   right: 8px;
   z-index: 15;
   display: none;
+}
+.game-info-face {
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 14px;
   padding: 6px 14px;
-  background: var(--panel-veil);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  backdrop-filter: blur(3px);
   white-space: nowrap;
 }
 .info-read { display: inline-flex; align-items: baseline; gap: 4px; font: 12px var(--mono); }
+.info-read b { font-weight: 400; }
 .info-read small { font-size: 10px; color: var(--muted); }
+.ledger-fig .arete-mark, .info-read .arete-mark { color: inherit; }
 /* The strip's rate read is the phone's door to the rate details (§7,
-   ADR-0037): tapping it opens the module-linked sheet — the ledger's Rate
-   cell doesn't exist here. It reads as a plain strip entry, wearing the
-   Rate cell's ⓘ. */
+   ADR-0037): tapping it opens the module-linked sheet — the ledger's rate
+   figure doesn't exist here. It reads as a plain strip entry, wearing the
+   rate figure's ⓘ. */
 .game-info-strip .info-rate {
   border: 0;
   background: none;
@@ -1114,24 +1085,28 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 }
 .info-hint { font-size: 10px; color: var(--muted); }
 .game-info-strip .info-rate:hover .info-hint { color: var(--ink); }
-/* The strip's Arete chip (issue #197): the ledger's door, re-docked for
-   phone. A compact tap target wearing the register, aligned with the
-   strip's baseline reads. */
+/* The strip's arete read (issue #270): the same grouped resource the
+   ledger carries — the balance in the register, the canonical mark at
+   15px, the dim `— ◇` telegraph before the first prestige. From the first
+   prestige it keeps the sheet as its tap-through door until the Catalog
+   door absorbs it (issue #271). */
 .game-info-strip .info-arete {
-  align-items: center;
+  color: var(--arete);
+}
+button.info-arete {
+  align-items: baseline;
   border: 0;
   background: none;
   padding: 0;
   font: inherit;
-  color: var(--arete);
 }
-.game-info-strip .info-arete .arete-chip-glyph svg { width: 13px; height: 13px; }
-.game-info-strip .info-arete:hover:not(:disabled),
-.game-info-strip .info-arete:focus-visible {
+.game-info-strip button.info-arete:hover:not(:disabled),
+.game-info-strip button.info-arete:focus-visible {
   background: none;
   border-color: transparent;
-  color: var(--ink);
+  color: var(--arete-bright);
 }
+.game-info-strip .info-arete.arete-dim { color: var(--muted); }
 
 /* The ambient horizon bar (§7, issue #156): the accumulator drawn as a
    wide curved-scale fill riding the board's lower edge at every width —
@@ -2081,6 +2056,42 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
   box-shadow: 0 24px 80px var(--shadow);
 }
 .modal-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.modal-lead { display: flex; align-items: center; gap: 10px; min-width: 0; }
+/* The launcher's back control (issue #270): the phone feats/chords
+   sheets' return door — a quiet word, loud on hover. */
+.modal-back {
+  border: 0;
+  background: none;
+  padding: 2px 8px;
+  min-height: 44px;
+  color: var(--muted);
+  font: 600 13px var(--font-condensed);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.modal-back:hover:not(:disabled) { background: none; border-color: transparent; color: var(--ink); }
+/* The Collection launcher's rows (issue #270): icon, name, count — one
+   rule-separated open list, the sheets one tap behind each row. */
+.collection-rows { display: grid; margin-top: 6px; }
+.collection-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 6px;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+.collection-row:first-child { border-top: 1px solid var(--line-soft); }
+.collection-row:hover:not(:disabled) { background: var(--hover-bg); border-color: var(--line-soft); color: var(--ink); }
+.collection-row svg { width: 18px; height: 18px; flex-shrink: 0; }
+.collection-row .t-condensed { font-size: 15px; }
+.collection-row .mono { margin-left: auto; color: var(--muted); }
 .modal h2 { font-size: 21px; font-weight: 500; letter-spacing: -0.02em; }
 .modal .lead { color: var(--muted); margin: 8px 0 18px; }
 .modal-note { font-size: 11.5px; color: var(--muted); margin-top: 16px; }
@@ -2431,11 +2442,9 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
 
 @container app (width < 760px) {
   .board-panel { padding: 12px 14px 0; }
-  .board-ledger { flex-wrap: wrap; }
   /* The rate details' breakpoint (§7): the hover popover yields to the
-     tap-up sheet — one disclosure owner per width — and the cell keeps
+     tap-up sheet — one disclosure owner per width — and the figure keeps
      the bare total. */
-  .prod-cell-rate { min-width: 64px; }
   .rate-hint { display: none; }
   .rate-breakdown { display: none; }
   .candidates, .shop-list { grid-template-columns: 1fr; }
@@ -2468,9 +2477,9 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
   .console-apps { margin-left: auto; }
   #console-settings { margin-left: 0; }
   .board-ledger { display: none; }
-  .game-info-strip { display: flex; }
+  .game-info-strip { display: block; }
   .board-tools { display: none; }
-  .thumb-bar { display: flex; }
+  .thumb-bar { display: flex; left: -14px; right: -14px; }
   /* The tray hides on phone — the thumb bar's Inventory taps the sheet —
      so the horizon bar owns the lane above the thumb bar. It anchors edge
      to edge — left 12, right 58 clears the zoom cluster's lane (10 + 36) —
@@ -2500,7 +2509,7 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
   /* The Mutator layer on phone (issue #199): the tray strip pins at every
      width — the lane above the thumb bar, edge to edge like the horizon
      bar — and the tabs hug the board's top-left corner. */
-  .mut-tabs { left: 8px; }
+  .mut-tabs { left: 8px; top: 52px; }
   .mutator-tray {
     bottom: 118px;
     left: 12px;
