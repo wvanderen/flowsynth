@@ -1179,6 +1179,19 @@ describe("the thumb bar (§7, portrait phone)", () => {
     const tile = modalAfter.querySelector<HTMLButtonElement>('[data-mut-tray="mu2"]')!;
     expect(tile).not.toBeNull();
     expect(tile.querySelector(".mut-tile-hex")).not.toBeNull();
+    const detail = tile.closest(".inst-tip")!;
+    const trigger = detail.querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
+    const tooltip = () => document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+    tile.focus();
+    expect(tooltip().classList.contains("inst-show")).toBe(true);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(tooltip().classList.contains("inst-show")).toBe(false);
+    expect(app.ui.modal).toBe("inventory");
+    trigger.click();
+    expect(tooltip().classList.contains("inst-show")).toBe(true);
+    expect(app.ui.mutArmedTray).toBeNull();
+    document.body.click();
+    expect(tooltip().classList.contains("inst-show")).toBe(false);
     // Tapping a mutator tile arms it and puts the sheet away, so the slot
     // taps land on a visible board.
     tile.click();
@@ -1193,6 +1206,7 @@ describe("the thumb bar (§7, portrait phone)", () => {
     // Scrimless and click-through: the sheet is a docked panel, never a
     // blocking dialog (issue #272 review).
     expect(backdrop.classList.contains("peek-tray")).toBe(true);
+    expect(backdrop.getAttribute("aria-modal")).toBe("false");
     expect(backdrop.classList.contains("drag-through")).toBe(false);
     const board = app.state.modules[0]!;
     expect(board.pos).not.toBeNull();
@@ -1297,7 +1311,7 @@ describe("the thumb bar (§7, portrait phone)", () => {
     const tile = modal.querySelector<HTMLButtonElement>(`[data-inv="${trayModule.id}"]`)!;
     expect(tile.disabled).toBe(true);
     // The lock reason rides the tooltip layer — no explanatory paragraph.
-    expect(tile.title).toContain("locked during flow");
+    expect(document.getElementById(tile.getAttribute("aria-describedby")!)!.textContent).toContain("locked during flow");
     tile.click();
     expect(app.ui.placing).toBeNull();
     expect(app.ui.modal).toBe("inventory");

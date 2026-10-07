@@ -2817,3 +2817,7 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   .catalog-frame { padding: 12px 16px 16px; }
   .catalog-row { gap: 10px; }
 }
+
+/* Separate disclosure keeps the tray tile itself a placement/drag target. */
+.tray-tile-detail { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.tray-tile-detail > .inst-tip-trigger { min-width: 44px; min-height: 44px; }

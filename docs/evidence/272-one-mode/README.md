@@ -27,3 +27,41 @@ The preview pipeline's desktop captures render the live 1,402px window cropped a
 
 - **Reduced-motion emulation**: unavailable in this preview; source-verified (the global `animation: none` stills the unlock pulse; the pill and dashed outlines carry the armed state).
 - **True touch drag**: unavailable; pointer-level drags were exercised by the automated drag tests and the pointer-driven captures, which is not claimed as a touch pass.
+
+## PR #291 review fixes (2026-10-07)
+
+The Inventory tray now declares `aria-modal="false"`. Both sheet faces use
+instrument tooltips with a separate 44px disclosure target; inspecting details
+never arms placement. The tile remains the tap-to-place and drag target.
+
+Review server provenance verified at `http://localhost:5175/-/dev/provenance`:
+worktree `/private/tmp/flowsynth-review-291`, commit `33450592` plus these review
+fixes. `tray-disclosure-review.png` shows the real sheet and open disclosure,
+without moving the tray column or changing its docking geometry. The live
+viewport measured 1402 × 877; the screenshot pipeline still crops at 1280px.
+This screenshot demonstrates disclosure, not the full desktop docking position.
+
+Verified live: focus entry opens disclosure; Escape dismisses the tooltip while
+keeping Inventory open; clicking the separate disclosure button opens details
+without arming a mutator. Automated regressions also cover tap-away dismissal,
+subsequent tile placement, and the non-modal ARIA declaration.
+
+### Outstanding visual checks — unavailable
+
+- **390px phone composition:** both freeform 390 × 844 and the iPhone 12 Pro
+  preset resize timed out. The earlier 546px captures are breakpoint examples,
+  not a successful approximately-390px viewport pass.
+- **Uncropped desktop column composition:** the capture pipeline crops the real
+  right edge. Earlier translated screenshots illustrate faces only, not the
+  final docking position. Live geometry confirms the column's right edge is
+  12px inside the board space; no new screenshot claims a full layout pass.
+- **True touch disclosure and dragging:** no touch-input emulation available;
+  button-click tests do not establish a physical touch pass.
+- **Non-color four-state visual review:** no complete grayscale state sequence
+  captured; unavailable, not verified.
+- **Reduced-motion emulation:** unavailable; the existing global reduced-motion
+  rule remains source-verified only.
+
+Source comparison with the pinned instrument prototype: disclosure uses the
+shared instrument tooltip layer, without expandable cards or explanatory prose.
+The canonical glyph, effect, rarity ticks, and separate placement gesture remain.

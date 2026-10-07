@@ -3187,7 +3187,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   // passes through it, so the board stays visible, hoverable, and
   // selectable while the roll waits. Outside clicks, Esc, and ✕ dismiss.
   backdrop.classList.toggle("peek", kind === "forge");
-  backdrop.setAttribute("aria-modal", kind === "forge" ? "false" : "true");
+  backdrop.setAttribute("aria-modal", kind === "forge" || kind === "inventory" ? "false" : "true");
   document.body.classList.toggle("modal-sheet-open", sheet);
   const extra =
     kind === "forge"
@@ -3341,6 +3341,11 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
 // swap. No how-to prose: the tiles and the gestures are the
 // instructions. Gated with the dock (#193): in flow the board is locked,
 // so the sheet reads but never arms.
+// Disclosure has its own touch target so inspecting a tile never arms placement.
+function trayTileDisclosure(id: string, name: string, mechanics: string): string {
+  return `<button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${id}" aria-label="About ${escapeHtml(name)}">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${escapeHtml(name)} · ${escapeHtml(mechanics)}</span>`;
+}
+
 function renderInventorySheetModal(app: App, content: HTMLElement): void {
   const { state, ui } = app;
   const locked = state.mode !== "upgrade";
@@ -3353,7 +3358,7 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
         mutTray
           .map(
             (item) =>
-              `<button class="inventory-tile mut-tile" data-mut-tray="${item.id}" data-rarity="${item.rarity}"${locked ? " disabled" : ""} title="${FAMILY_WORD[item.family]} · ${RARITY_LABEL[item.rarity]} · ${mutatorEffectText(item.family, item.rarity)}${locked ? " — locked during flow" : " — tap, then a slot"}">${mutatorTileSvg(item)}</button>`,
+              `<span class="inst-tip tray-tile-detail"><button class="inventory-tile mut-tile" data-mut-tray="${item.id}" data-rarity="${item.rarity}"${locked ? " disabled" : ""} aria-label="${FAMILY_WORD[item.family]} · ${RARITY_LABEL[item.rarity]}" aria-describedby="tray-mut-${item.id}">${mutatorTileSvg(item)}</button>${trayTileDisclosure(`tray-mut-${item.id}`, FAMILY_WORD[item.family], `${RARITY_LABEL[item.rarity]} · ${mutatorEffectText(item.family, item.rarity)} — ${locked ? "locked during flow" : "tap, then a slot"}`)}</span>`,
           )
           .join("") || `<span class="tray-empty">minted mutators wait here</span>`
       }</div>`
@@ -3361,7 +3366,7 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
         inventory
           .map(
             (m) =>
-              `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}"${locked ? " disabled" : ""} title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]}${locked ? " — locked during flow" : " — tap, then a cell"}">${inventoryTileSvg(m)}</button>`,
+              `<span class="inst-tip tray-tile-detail"><button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}"${locked ? " disabled" : ""} aria-label="${META[m.type].name} · ${RARITY_LABEL[m.rarity]}" aria-describedby="tray-module-${m.id}">${inventoryTileSvg(m)}</button>${trayTileDisclosure(`tray-module-${m.id}`, META[m.type].name, `${RARITY_LABEL[m.rarity]} — ${locked ? "locked during flow" : "tap, then a cell"}`)}</span>`,
           )
           .join("") || `<span class="tray-empty">drag a module here to store it</span>`
       }</div>`;
@@ -3390,6 +3395,8 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
   content.querySelectorAll<HTMLButtonElement>("[data-mut-layer]").forEach((button) => {
     button.addEventListener("click", () => app.mutSetLayer(button.getAttribute("data-mut-layer") as "modules" | "mutators"));
   });
+  const grid = content.querySelector(".inventory-sheet-grid");
+  if (grid) wireTooltips(grid);
   wireClose(app);
 }
 
