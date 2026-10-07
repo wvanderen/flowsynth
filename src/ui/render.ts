@@ -46,6 +46,7 @@ import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "
 import { containerWidth, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX } from "./container";
 import { liveAttr, liveSet } from "./live";
 import {
+  bindMutatorDrag,
   bindMutatorLayer,
   bloomMutatorKey,
   hexFromAttr,
@@ -55,6 +56,8 @@ import {
   mutGridDecorations,
   mutatorTileInner,
   mutatorTileSvg,
+  mutTabPairHtml,
+  mutatorLayerWanted,
   FAMILY_WORD,
   renderMutatorPill,
   renderMutatorPopover,
@@ -2014,12 +2017,21 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
     if (!id) return;
     let hoverTarget: Element | null = null;
     const zone = document.getElementById("inventory-zone");
+    // The phone tray sheet doubles as the drag target while it stands
+    // (issue #272 review): dropping a board module onto the open sheet
+    // retrieves, the same chord-breaking gesture the column takes.
+    const overSheet = (ev: PointerEvent): Element | null => {
+      if (app.ui.modal !== "inventory") return null;
+      return document.elementFromPoint(ev.clientX, ev.clientY)?.closest("#modal-content") ?? null;
+    };
 
     const setHoverTarget = (ev: PointerEvent) => {
       const hit = document.elementFromPoint(ev.clientX, ev.clientY);
       const cellNode = hit?.closest("[data-cell]") ?? null;
       const overZone = !!hit?.closest("#inventory-zone");
+      const sheet = overSheet(ev);
       zone?.classList.toggle("drag-over", overZone);
+      sheet?.classList.toggle("drag-over", !overZone);
       if (cellNode !== hoverTarget) {
         hoverTarget = cellNode;
         const [q, r] = (hoverTarget?.getAttribute("data-cell") ?? "").split(",").map(Number);
@@ -2054,6 +2066,7 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
         setDropHover(app, null, null);
         setChordHover(app, null);
         zone?.classList.remove("drag-over");
+        document.getElementById("modal-content")?.classList.remove("drag-over");
       },
       drop: (ev) => {
         const target = document.elementFromPoint(ev.clientX, ev.clientY);
@@ -2072,6 +2085,10 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
         }
         if (tileNode && offerCombineDrop(app, id, tileNode.getAttribute("data-inv"))) return;
         if (target?.closest("#inventory-zone")) {
+          app.returnToInventory(id);
+          return;
+        }
+        if (overSheet(ev)) {
           app.returnToInventory(id);
         }
       },
@@ -2417,12 +2434,12 @@ function wireBloomBuy(app: App, host: HTMLElement, moduleId: string): void {
 
 // The tray column's Modules face (§5, ADR-0027 as amended, issue #272):
 // the inventory as an always-open pinned column at the board's right edge —
-// no collapse toggle, no gesture-reopen; the head above names the face, and
-// the Mutators face swaps in while that layer stands. Flow hides the column
-// with the locked board, and portrait phone replaces it with the sheet
-// (the stylesheet unfolds the column there). Retrieve by dropping a module
-// into the face, place by clicking an item then a cell (occupied placement
-// swaps).
+// no collapse toggle, no gesture-reopen, no second switch (the board tabs
+// drive the face), and the Mutators face swaps in while that layer stands.
+// Flow hides the column with the locked board, and portrait phone replaces
+// it with the tray sheet (the stylesheet unfolds the column there).
+// Retrieve by dropping a module into the face, place by clicking an item
+// then a cell (occupied placement swaps).
 function renderInventoryTray(app: App): void {
   const tray = byId("inventory-zone");
   if (!tray) return;
@@ -3198,7 +3215,15 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                 : kind === "rate"
                   ? [deployedRosterKey(app.state), unlockedCount(app.state), discoveryCount(app.state)]
                 : kind === "inventory"
-                  ? app.state.modules.filter((m) => m.pos === null).map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`)
+                  ? [
+                      app.state.modules.filter((m) => m.pos === null).map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`),
+                      // The tray sheet's face rides the global switch, and
+                      // the Mutators face re-reads the tray (issue #272).
+                      mutatorLayerWanted(app) ? app.ui.mutLayer : "modules",
+                      mutatorLayerWanted(app)
+                        ? app.state.mutators.filter((m) => m.pos === null).map((m) => `${m.id}:${m.family}:${m.rarity}`)
+                        : [],
+                    ]
                   // The combine review's identity: the offered pair (issue
                   // #152). The terms are read fresh on rebuild.
                   : kind === "combine"
@@ -3273,34 +3298,64 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
   wireClose(app);
 }
 
-// The inventory sheet (§7): the board-surface tray, re-docked for touch on
-// portrait phone where the thumb bar's Inventory segment taps it open.
-// Clicking an item arms the placement; the tray itself keeps the drag
-// gestures at every width. Gated with the dock (#193): in flow the board is
-// locked, so the sheet reads but never arms — a phone placement can never
-// land mid-session.
+// The tray sheet (§7, issue #272 review): the tray column, re-docked for
+// touch on portrait phone where the thumb bar's Inventory segment taps it
+// open. Dual-face under the same Modules / Mutators switch the board tabs
+// carry — the sheet's toggle flips the global mode — wearing the
+// minimal-mark tiles and the same gestures: tap a tile then a cell or
+// slot places (the sheet puts away so the board is visible), a live drag
+// carries between board and sheet in both directions, occupied targets
+// swap. No how-to prose: the tiles and the gestures are the
+// instructions. Gated with the dock (#193): in flow the board is locked,
+// so the sheet reads but never arms.
 function renderInventorySheetModal(app: App, content: HTMLElement): void {
-  const inventory = app.state.modules.filter((m) => m.pos === null);
-  const locked = app.state.mode !== "upgrade";
+  const { state, ui } = app;
+  const locked = state.mode !== "upgrade";
+  const wanted = mutatorLayerWanted(app);
+  const mutators = wanted && ui.mutLayer === "mutators";
+  const inventory = state.modules.filter((m) => m.pos === null);
+  const mutTray = wanted ? state.mutators.filter((m) => m.pos === null) : [];
+  const face = mutators
+    ? `<div class="inventory-sheet-grid tray-sheet-tiles">${
+        mutTray
+          .map(
+            (item) =>
+              `<button class="inventory-tile mut-tile" data-mut-tray="${item.id}" data-rarity="${item.rarity}"${locked ? " disabled" : ""} title="${FAMILY_WORD[item.family]} · ${RARITY_LABEL[item.rarity]} · ${mutatorEffectText(item.family, item.rarity)}${locked ? " — locked during flow" : " — tap, then a slot"}">${mutatorTileSvg(item)}</button>`,
+          )
+          .join("") || `<span class="tray-empty">minted mutators wait here</span>`
+      }</div>`
+    : `<div class="inventory-sheet-grid">${
+        inventory
+          .map(
+            (m) =>
+              `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}"${locked ? " disabled" : ""} title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]}${locked ? " — locked during flow" : " — tap, then a cell"}">${inventoryTileSvg(m)}</button>`,
+          )
+          .join("") || `<span class="tray-empty">drag a module here to store it</span>`
+      }</div>`;
   content.innerHTML = `
-    ${modalTop("INVENTORY")}
-    <h2 id="modal-title">Waiting for a cell.</h2>
-    <p class="lead">${locked ? "The board is locked during flow — placements wait for the session's end." : "Tap a module, then a cell — dropping on an occupied cell swaps."}</p>
-    <div class="inventory-sheet-grid">${
-      inventory
-        .map(
-          (m) =>
-            `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}"${locked ? " disabled" : ""} title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]}${locked ? " — locked during flow" : " — tap, then a cell"}">${inventoryTileSvg(m)}</button>`,
-        )
-        .join("") || `<p class="empty-copy">Nothing in the tray. Drag a module off the board to store it here.</p>`
-    }</div>`;
+    ${modalTop("INVENTORY", "modal-title")}
+    ${wanted ? `<div class="mut-tabs tray-switch" role="group" aria-label="Tray face">${mutTabPairHtml(app)}</div>` : ""}
+    ${face}`;
   content.querySelectorAll<HTMLButtonElement>("[data-inv]").forEach((button) => {
+    const id = button.getAttribute("data-inv")!;
     button.addEventListener("click", () => {
       if (app.state.mode !== "upgrade") return;
-      const id = button.getAttribute("data-inv")!;
       app.closeModal();
       app.beginPlacing(id);
     });
+    bindPointerDrag(app, button, id);
+  });
+  content.querySelectorAll<HTMLButtonElement>("[data-mut-tray]").forEach((button) => {
+    const id = button.getAttribute("data-mut-tray")!;
+    button.addEventListener("click", () => {
+      if (app.state.mode !== "upgrade") return;
+      app.closeModal();
+      app.mutArmTray(id);
+    });
+    bindMutatorDrag(app, button, id, "tray");
+  });
+  content.querySelectorAll<HTMLButtonElement>("[data-mut-layer]").forEach((button) => {
+    button.addEventListener("click", () => app.mutSetLayer(button.getAttribute("data-mut-layer") as "modules" | "mutators"));
   });
   wireClose(app);
 }

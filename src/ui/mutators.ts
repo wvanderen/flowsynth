@@ -142,41 +142,44 @@ export function mutatorSlotPrice(state: GameState): number {
 }
 
 /* ── The layer tabs ───────────────────────────────────
-   One switch, two mounts (issue #272): the tab pair at the board's top
-   edge and the tray column's head render the same ui.mutLayer — flipping
-   either flips both, and neither peeks independently. Upgrade-mode
-   furniture beside the entry purchase; in flow neither exists, and a
-   player without the entry never sees them at all. */
+   The tab pair at the board's top edge (issue #199): the one Modules /
+   Mutators switch — the tray column's faces and the phone tray sheet all
+   read its state, and none carries a second one (issue #272 review).
+   Upgrade-mode furniture beside the entry purchase; in flow neither tab
+   nor layer exists, and a player without the entry never sees them. */
 
 export function mutatorLayerWanted(app: App): boolean {
   return app.state.mode === "upgrade" && app.state.catalogEntryOwned;
 }
 
-function mutTabPairHtml(app: App): string {
+// The pair's one markup, shared by the board tabs and the phone tray
+// sheet's switch — the same two buttons wherever the switch stands.
+export function mutTabPairHtml(app: App): string {
   const { ui } = app;
   return `<button class="mut-tab${ui.mutLayer === "modules" ? " active" : ""}" data-mut-layer="modules" aria-pressed="${ui.mutLayer === "modules"}">Modules</button>
     <button class="mut-tab${ui.mutLayer === "mutators" ? " active" : ""}" data-mut-layer="mutators" aria-pressed="${ui.mutLayer === "mutators"}">Mutators</button>`;
 }
 
 export function renderMutatorTabs(app: App): void {
-  for (const host of [document.getElementById("mut-tabs"), document.getElementById("tray-head")]) {
-    if (!host) continue;
-    if (!mutatorLayerWanted(app)) {
-      host.hidden = true;
-      host.innerHTML = "";
-      delete host.dataset.renderKey;
-      continue;
-    }
-    const key = app.ui.mutLayer;
-    if (host.dataset.renderKey !== key) {
-      host.dataset.renderKey = key;
-      host.innerHTML = mutTabPairHtml(app);
-      host.querySelectorAll<HTMLButtonElement>("[data-mut-layer]").forEach((button) => {
-        button.addEventListener("click", () => app.mutSetLayer(button.getAttribute("data-mut-layer") as "modules" | "mutators"));
-      });
-    }
-    host.hidden = false;
+  const host = document.getElementById("mut-tabs");
+  if (!host) return;
+  if (!mutatorLayerWanted(app)) {
+    host.hidden = true;
+    host.innerHTML = "";
+    delete host.dataset.renderKey;
+    return;
   }
+  const key = app.ui.mutLayer;
+  if (host.dataset.renderKey === key) {
+    host.hidden = false;
+    return;
+  }
+  host.dataset.renderKey = key;
+  host.hidden = false;
+  host.innerHTML = mutTabPairHtml(app);
+  host.querySelectorAll<HTMLButtonElement>("[data-mut-layer]").forEach((button) => {
+    button.addEventListener("click", () => app.mutSetLayer(button.getAttribute("data-mut-layer") as "modules" | "mutators"));
+  });
 }
 
 /* ── The grid decorations ─────────────────────────────
@@ -494,10 +497,15 @@ function startMutDrag(app: App, event: PointerEvent, id: string, origin: Hex | "
     const hit = document.elementFromPoint(ev.clientX, ev.clientY)?.closest("[data-mut-tray]");
     return hit?.getAttribute("data-mut-tray") ?? null;
   };
-  const overTray = (ev: PointerEvent): boolean => {
-    return !!document.elementFromPoint(ev.clientX, ev.clientY)?.closest("#mutator-tray");
+  const trayHitAt = (ev: PointerEvent): Element | null => {
+    // The phone tray sheet counts as the tray while it stands (issue #272
+    // review): dropping a placed mutator onto the open sheet retrieves.
+    const hit = document.elementFromPoint(ev.clientX, ev.clientY);
+    return hit?.closest("#mutator-tray") ?? (app.ui.modal === "inventory" ? hit?.closest("#modal-content") ?? null : null);
   };
+  const overTray = (ev: PointerEvent): boolean => trayHitAt(ev) !== null;
   const tray = document.getElementById("mutator-tray");
+  const sheet = () => (app.ui.modal === "inventory" ? document.getElementById("modal-content") : null);
   app.cancelMutDrag = startPointerDrag(event, {
     start: () => {
       app.ui.mutCarrying = id;
@@ -511,15 +519,22 @@ function startMutDrag(app: App, event: PointerEvent, id: string, origin: Hex | "
       const pos = slotAt(ev);
       const twin = pos ? null : trayTwinAt(ev);
       app.setMutDropHover(id, pos);
-      tray?.classList.toggle("drag-over", overTray(ev));
-      tray?.querySelectorAll(".mut-tile").forEach((tile) => {
+      const sheetNode = sheet();
+      const over = overTray(ev);
+      tray?.classList.toggle("drag-over", over);
+      sheetNode?.classList.toggle("drag-over", over && !tray?.classList.contains("drag-over"));
+      const tileScope = sheetNode ?? tray;
+      tileScope?.querySelectorAll(".mut-tile").forEach((tile) => {
         tile.classList.toggle("mut-land-combine", twin !== null && tile.getAttribute("data-mut-tray") === twin);
       });
     },
     cleanup: () => {
       app.cancelMutDrag = null;
       tray?.classList.remove("drag-over");
-      tray?.querySelectorAll(".mut-tile.mut-land-combine").forEach((tile) => tile.classList.remove("mut-land-combine"));
+      sheet()?.classList.remove("drag-over");
+      for (const scope of [tray, sheet()]) {
+        scope?.querySelectorAll(".mut-tile.mut-land-combine").forEach((tile) => tile.classList.remove("mut-land-combine"));
+      }
       app.ui.mutCarrying = null;
       app.setMutDropHover(null, null);
     },

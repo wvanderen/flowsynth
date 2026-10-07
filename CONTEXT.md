@@ -98,8 +98,8 @@ _Avoid_: pop-up, modal
 The popped bloom standing for its module: the origin cell renders vacated while the bloom stands, since the bloom repeats every line the face carries.
 
 **Tray**:
-The board-surface inventory as an always-open pinned column docked at the board's right edge in upgrade mode, dual-face under the Modules/Mutators head — the same single switch the board tabs carry; flipping either flips both (issue #272, ADR-0027 as amended). The Modules face holds the inventory: drag a module off the board into it to retrieve — the chord-breaking gesture, shared with right-click retrieve — and click an item then a cell to place; occupied placement swaps. The Mutators face is the Mutator tray (its own entry). Tiles wear the minimal mark: a hexagon outlined in the module's category hue, or the arete register for mutators, with the glyph alone — the full face belonging to the board and the expanded face (ADR-0027). Flow locks the board and hides the column with it; on portrait phone the column unfolds and the thumb bar's Inventory segment taps the same inventory open as a sheet. There is no management view and no collapse.
-_Avoid_: inventory panel, management view, collapsible tray
+The board-surface inventory as an always-open pinned column docked at the board's right edge in upgrade mode, dual-face under the board tabs' Modules/Mutators switch — the one switch, which the column carries no copy of (issue #272). The Modules face holds the inventory: drag a module off the board into it to retrieve — the chord-breaking gesture, shared with right-click retrieve — and click an item then a cell to place; occupied placement swaps. The Mutators face is the Mutator tray (its own entry). Tiles wear the minimal mark: a hexagon outlined in the module's category hue, or the arete register for mutators, with the glyph alone — the full face belonging to the board and the expanded face (ADR-0027). Flow locks the board and hides the column with it; on portrait phone the column unfolds and the thumb bar's Inventory segment taps the same tray open as a dual-face sheet — the switch rides the sheet there, its tiles keep the gestures, and a live drag carries between board and sheet both ways. There is no management view and no collapse.
+_Avoid_: inventory panel, management view, collapsible tray, second switch
 
 **Mutator Grid**:
 The board lattice's second layer, mirroring it position for position, present only while activated by the Mutator tree's entry purchase. Each cell owns one Mutator slot; modules move freely across the board while slots stay put.
@@ -114,7 +114,7 @@ An item of the Mutator Grid: typed, carrying rarity, sitting in a Mutator slot t
 _Avoid_: enhancement (the pre-design name), gem, affix
 
 **Mutator tray**:
-The Mutator Grid's inventory — the tray column's Mutators face under the shared Modules/Mutators head: minted mutators wait here, a click then a slot places, and a drag or right-click retrieves. On portrait phone it re-pins as the strip above the thumb bar.
+The Mutator Grid's inventory — the tray column's Mutators face, switched by the board tabs: minted mutators wait here, a click then a slot places, and a drag or right-click retrieves. On portrait phone it re-pins as the strip above the thumb bar, and the tray sheet's Mutators face carries the same tiles.
 _Avoid_: second inventory
 
 ### Resources and production

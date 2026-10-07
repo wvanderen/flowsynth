@@ -528,7 +528,7 @@ describe("the never-say rules (issue #199)", () => {
 });
 
 describe("the tray column (issue #272)", () => {
-  it("the Mutator tray is the column's face — the head above it is the same switch as the board tabs", () => {
+  it("the Mutator tray is the column's face, switched by the board tabs alone", () => {
     seedMutatorEra();
     const column = document.getElementById("tray-column")!;
     const mutTray = document.getElementById("mutator-tray")!;
@@ -542,25 +542,16 @@ describe("the tray column (issue #272)", () => {
     expect(tile.querySelector(".mut-tile-hex")).not.toBeNull();
     // The unlock arm rides the face's end.
     expect(mutTray.querySelector("#mut-unlock")).not.toBeNull();
-    // The head and the board tabs agree — one switch, two mounts.
-    const headButton = document.querySelector<HTMLButtonElement>('#tray-head [data-mut-layer="modules"]')!;
-    expect(headButton.classList.contains("active")).toBe(false);
-    headButton.click();
-    expect(app.ui.mutLayer).toBe("modules");
-    expect(mutTray.hidden).toBe(true);
-    expect(document.querySelector('#mut-tabs [data-mut-layer="mutators"]')!.classList.contains("active")).toBe(false);
-    expect(document.querySelector('#mut-tabs [data-mut-layer="modules"]')!.classList.contains("active")).toBe(true);
+    // The column wears no second switch — the board tabs are the one.
+    expect(document.getElementById("tray-head")).toBeNull();
+    expect(column.querySelectorAll("[data-mut-layer]")).toHaveLength(0);
   });
 
-  it("the head never shows before the entry, and flow clears the whole column", () => {
-    app.render();
-    expect(document.getElementById("tray-head")!.hidden).toBe(true);
+  it("flow clears the whole column", () => {
     seedMutatorEra();
     app.mutSetLayer("mutators");
-    expect(document.getElementById("tray-head")!.hidden).toBe(false);
     app.beginFlow(null);
     app.render();
-    expect(document.getElementById("tray-head")!.hidden).toBe(true);
     expect(document.getElementById("mutator-tray")!.hidden).toBe(true);
     expect(document.getElementById("inventory-zone")!.classList.contains("off")).toBe(true);
   });

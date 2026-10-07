@@ -883,25 +883,24 @@ describe("the action row (§7)", () => {
     expect("trayOpen" in app.ui).toBe(false);
   });
 
-  it("the tray column swaps faces with the mode's one switch (#272)", () => {
+  it("the tray column wears no second switch — the board tabs drive its faces (#272)", () => {
     app.state.mode = "upgrade";
     app.state.catalogEntryOwned = true;
     app.render();
-    const head = document.getElementById("tray-head")!;
     const zone = document.getElementById("inventory-zone")!;
     const mutTray = document.getElementById("mutator-tray")!;
+    // The column carries no switcher of its own: the board tabs under the
+    // ledger are the one Modules / Mutators switch.
+    expect(document.getElementById("tray-head")).toBeNull();
+    expect(document.querySelectorAll("[data-mut-layer]")).toHaveLength(2);
     // The Modules face stands; the Mutators face waits.
-    expect(head.hidden).toBe(false);
     expect(zone.classList.contains("off")).toBe(false);
     expect(mutTray.hidden).toBe(true);
-    // The head flips the global mode; the board tabs follow.
-    head.querySelector<HTMLButtonElement>('[data-mut-layer="mutators"]')!.click();
+    // The board tabs flip the column's face with the global mode.
+    document.querySelector<HTMLButtonElement>('#mut-tabs [data-mut-layer="mutators"]')!.click();
     expect(app.ui.mutLayer).toBe("mutators");
-    expect(document.querySelector('#mut-tabs [data-mut-layer="mutators"]')!.classList.contains("active")).toBe(true);
-    expect(head.querySelector('[data-mut-layer="mutators"]')!.classList.contains("active")).toBe(true);
     expect(zone.classList.contains("off")).toBe(true);
     expect(mutTray.hidden).toBe(false);
-    // And the board tab flips both back — one switch, two mounts.
     document.querySelector<HTMLButtonElement>('#mut-tabs [data-mut-layer="modules"]')!.click();
     expect(app.ui.mutLayer).toBe("modules");
     expect(zone.classList.contains("off")).toBe(false);
@@ -1047,7 +1046,6 @@ describe("the action row (§7)", () => {
     expect(dockOps()[0]!.title).toContain("purchases happen between sessions");
     expect(dockOps()[2]!.title).toBe("Add — purchases happen between sessions");
     expect(document.getElementById("inventory-zone")!.classList.contains("off")).toBe(true);
-    expect(document.getElementById("tray-head")!.hidden).toBe(true);
   });
 });
 
@@ -1140,15 +1138,82 @@ describe("the thumb bar (§7, portrait phone)", () => {
     expect(rule).toContain("height: 15px");
   });
 
-  it("the inventory sheet arms a placement from its tiles", () => {
+  it("the inventory sheet arms a placement from its tiles, and carries no how-to prose", () => {
     app.returnToInventory("m1");
     app.openModal("inventory");
     const modal = document.getElementById("modal-content")!;
     expect(modal.querySelector('[data-inv="m1"]')).not.toBeNull();
+    // The tiles are the instructions: no heading, no explanatory lead.
+    expect(modal.querySelector("h2")).toBeNull();
+    expect(modal.querySelector(".lead")).toBeNull();
     (modal.querySelector('[data-inv="m1"]') as HTMLButtonElement).click();
     expect(app.ui.modal).toBeNull();
     expect(app.ui.placing).toBe("m1");
     app.cancelPlacing();
+  });
+
+  it("the tray sheet wears the mode's switch — flipping it swaps the face and the board tabs follow (issue #272)", () => {
+    const s = app.state;
+    s.mode = "upgrade";
+    s.catalogEntryOwned = true;
+    s.mutatorSlots = [hex(0, 0)];
+    s.mutators = [
+      { id: "mu1", family: "power", rarity: "common", pos: hex(0, 0) },
+      { id: "mu2", family: "charge", rarity: "uncommon", pos: null },
+    ];
+    app.returnToInventory("m1");
+    app.openModal("inventory");
+    const modal = document.getElementById("modal-content")!;
+    // The switch rides the sheet; the modules face stands first.
+    const pair = [...modal.querySelectorAll("[data-mut-layer]")];
+    expect(pair).toHaveLength(2);
+    expect(modal.querySelector('[data-inv="m1"]')).not.toBeNull();
+    expect(modal.querySelector("[data-mut-tray]")).toBeNull();
+    // Flipping the sheet's switch turns the global mode: the sheet swaps
+    // to the arete-register mutator tiles, the board tabs follow.
+    (modal.querySelector('[data-mut-layer="mutators"]') as HTMLButtonElement).click();
+    expect(app.ui.mutLayer).toBe("mutators");
+    expect(document.querySelector('#mut-tabs [data-mut-layer="mutators"]')!.classList.contains("active")).toBe(true);
+    const modalAfter = document.getElementById("modal-content")!;
+    expect(modalAfter.querySelector('[data-inv="m1"]')).toBeNull();
+    const tile = modalAfter.querySelector<HTMLButtonElement>('[data-mut-tray="mu2"]')!;
+    expect(tile).not.toBeNull();
+    expect(tile.querySelector(".mut-tile-hex")).not.toBeNull();
+    // Tapping a mutator tile arms it and puts the sheet away, so the slot
+    // taps land on a visible board.
+    tile.click();
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.mutArmedTray).toBe("mu2");
+    app.mutCancelGestures();
+  });
+
+  it("the tray sheet's tiles drag: the backdrop turns drag-through, and a drop back onto the sheet retrieves", async () => {
+    app.openModal("inventory");
+    const modal = document.getElementById("modal")!;
+    const board = app.state.modules[0]!;
+    expect(board.pos).not.toBeNull();
+    // The drag's release suppresses the synthetic post-drop click; drain
+    // the suppressor before this test ends.
+    try {
+      // A sheet tile's drag marks the visible backdrop drag-through while
+      // it moves — the scrim stops eating the board hits beneath.
+      const cellNode = () => document.querySelector<SVGGElement>('[data-cell="0,0"]')!;
+      document.elementFromPoint = () => cellNode();
+      cellNode().dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+      document.dispatchEvent(new MouseEvent("pointermove", { clientX: 160, clientY: 90 }));
+      expect(document.querySelector(".drag-ghost")).not.toBeNull();
+      expect(modal.classList.contains("drag-through")).toBe(true);
+      // The drop back onto the open sheet retrieves — the chord-breaking
+      // gesture against the sheet.
+      document.elementFromPoint = () => document.getElementById("modal-content")!;
+      document.dispatchEvent(new MouseEvent("pointerup", { clientX: 200, clientY: 600 }));
+      expect(board.pos).toBeNull();
+      expect(modal.classList.contains("drag-through")).toBe(false);
+      expect(app.ui.modal).toBe("inventory");
+    } finally {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
+    }
   });
 
   it("the chord library's door and cards (issue #230)", () => {
@@ -1193,7 +1258,8 @@ describe("the thumb bar (§7, portrait phone)", () => {
     const modal = document.getElementById("modal-content")!;
     const tile = modal.querySelector<HTMLButtonElement>(`[data-inv="${trayModule.id}"]`)!;
     expect(tile.disabled).toBe(true);
-    expect(modal.textContent).toContain("locked during flow");
+    // The lock reason rides the tooltip layer — no explanatory paragraph.
+    expect(tile.title).toContain("locked during flow");
     tile.click();
     expect(app.ui.placing).toBeNull();
     expect(app.ui.modal).toBe("inventory");

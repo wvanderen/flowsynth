@@ -1764,24 +1764,11 @@ body.live .chord-mark:not(.chord-fade):not(.chord-idle) .chord-seam {
      Mutators layer) its box must never catch a board gesture. */
   pointer-events: none;
 }
-.tray-column .tray-head,
 .tray-column .inventory-tray,
 .tray-column .mutator-tray { pointer-events: auto; }
 .tray-column[hidden] { display: none; }
-/* The head: the same Modules / Mutators switch the board tabs carry,
-   pinned as the column's crown. */
-.tray-head {
-  flex-shrink: 0;
-  display: inline-flex;
-  padding: 3px;
-  gap: 2px;
-  background: var(--panel-veil);
-  border: 1px solid var(--line-strong);
-  border-radius: 9px;
-  backdrop-filter: blur(3px);
-}
-.tray-head[hidden] { display: none; }
-.tray-head .mut-tab { flex: 1; padding: 5px 6px; }
+/* The board tabs carry the column's one switch (issue #272 review) — the
+   column wears no second one; the faces read ui.mutLayer alone. */
 .inventory-tray {
   flex: 1 1 auto;
   min-height: 0;
@@ -2087,6 +2074,12 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
    centered card. Outside clicks, Esc, and ✕ dismiss. */
 .modal-backdrop.peek { background: transparent; pointer-events: none; }
 .modal-backdrop.peek .modal { pointer-events: auto; }
+/* Drag-through (issue #272 review): while a drag is live over the open
+   tray sheet, the scrim stops intercepting so drops resolve against the
+   board beneath — the sheet itself keeps its events, so a drop back onto
+   it retrieves. */
+.modal-backdrop.drag-through { pointer-events: none; }
+.modal-backdrop.drag-through .modal { pointer-events: auto; }
 .modal {
   --modal-pad: 26px;
   width: min(680px, 100%);
@@ -2524,7 +2517,6 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
      anchors against the board space again, edge to edge — left 12, right
      58 clears the zoom cluster's lane (10 + 36) — like the horizon bar. */
   .tray-column { display: contents; }
-  .tray-head { display: none; }
   .inventory-tray { display: none !important; }
   .horizon-bar {
     bottom: 64px;
@@ -2718,6 +2710,16 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   gap: 8px;
   margin-top: 4px;
 }
+/* The tray sheet's face switch (issue #272 review): the board tabs' pair
+   re-docked inside the sheet — the same two buttons, static here. */
+.mut-tabs.tray-switch {
+  position: static;
+  display: inline-flex;
+  width: max-content;
+  margin: 2px 0 12px;
+}
+/* The sheet's retrieval highlight — the column's drag-over voice. */
+.modal.drag-over { border-color: var(--charge); }
 
 /* ── The catalog (issue #271) ────────────────────────────────────────── */
 /* The one tabbed shop behind the Catalog door: a fixed clipped panel —

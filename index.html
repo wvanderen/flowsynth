@@ -91,14 +91,15 @@
             <button class="cell-arm-pill" id="cell-arm-pill" hidden></button>
             <!-- The tray column (§5, ADR-0027 as amended): the inventory as
                  an always-open pinned column docked at the board's right
-                 edge in upgrade mode, dual-face under the Modules /
-                 Mutators head — the same single switch as #mut-tabs; the
-                 modules face (#inventory-zone) and the Mutators face
-                 (#mutator-tray) swap beneath it. Portrait phone unfolds
-                 the column: the head and the modules face hide, and the
-                 Mutators face re-pins as the strip above the thumb bar. -->
+                 edge in upgrade mode, dual-face under the board tabs'
+                 Modules / Mutators switch (#mut-tabs — the one switch; the
+                 column carries no second one). The modules face
+                 (#inventory-zone) and the Mutators face (#mutator-tray)
+                 swap beneath it. Portrait phone unfolds the column: the
+                 modules face hides and the Mutators face re-pins as the
+                 strip above the thumb bar, while the thumb bar's Inventory
+                 segment opens the same tray as the dual-face sheet. -->
             <div class="tray-column" id="tray-column">
-              <div class="tray-head" id="tray-head" hidden></div>
               <div class="inventory-tray" id="inventory-zone"></div>
               <div class="mutator-tray" id="mutator-tray" hidden></div>
             </div>
