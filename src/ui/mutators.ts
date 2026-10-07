@@ -21,6 +21,7 @@ import { startPointerDrag } from "./pointer-drag";
 import { boardPoint, HEX_RADIUS, hexPoints } from "./face";
 import { viewPoint, type ViewFrame } from "./bloom";
 import { META, RARITY_LABEL } from "./meta";
+import { wireTooltips } from "./instrument";
 
 // The families' words, one spelling everywhere — slot faces, the tray, the
 // readout ask, the popover, the Forge modal, the toasts.
@@ -165,12 +166,14 @@ export function mutatorTabsWanted(app: App): boolean {
 // outline and the lock mark telegraph the entry, and the click — resolved
 // by mutSetLayer — walks to the Catalog's entry screen instead of flipping
 // the mode.
-export function mutTabPairHtml(app: App): string {
+export function mutTabPairHtml(app: App, tipId = "board-mutator-entry"): string {
   const { ui, state } = app;
   const locked = !state.catalogEntryOwned;
   return `<button class="mut-tab${ui.mutLayer === "modules" ? " active" : ""}" data-mut-layer="modules" aria-pressed="${ui.mutLayer === "modules"}">Modules</button>
-    <button class="mut-tab${ui.mutLayer === "mutators" ? " active" : ""}${locked ? " locked" : ""}" data-mut-layer="mutators" aria-pressed="${ui.mutLayer === "mutators"}"${locked ? ' title="Unlocks with the Mutator entry"' : ""}>${locked ? LOCK_MARK : ""}Mutators</button>`;
+    <button class="mut-tab${ui.mutLayer === "mutators" ? " active" : ""}${locked ? " locked" : ""}" data-mut-layer="mutators" aria-pressed="${ui.mutLayer === "mutators"}"${locked ? ' aria-label="Mutators — locked; open Catalog entry"' : ""}>${locked ? LOCK_MARK : ""}Mutators</button>${locked ? `<span class="inst-tip mut-entry-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${tipId}" aria-label="About unlocking Mutators">ⓘ</button><span class="inst-tip-body" id="${tipId}" role="tooltip">Unlocks with the Mutator entry</span></span>` : ""}`;
 }
+
+const wiredTabs = new WeakSet<HTMLElement>();
 
 // The locked face's one mark (issue #273 review): a padlock in the
 // instrument's stroke language — the layer is locked, not merely elsewhere.
@@ -179,6 +182,7 @@ const LOCK_MARK = `<svg class="mut-tab-lock" viewBox="0 0 12 12" aria-hidden="tr
 export function renderMutatorTabs(app: App): void {
   const host = document.getElementById("mut-tabs");
   if (!host) return;
+  if (!wiredTabs.has(host)) { wireTooltips(host); wiredTabs.add(host); }
   if (!mutatorTabsWanted(app)) {
     host.hidden = true;
     host.innerHTML = "";

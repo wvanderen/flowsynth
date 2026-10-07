@@ -90,3 +90,55 @@ server serves the working tree). Dev-scenario state was staged through the
   entry screen carry no animation, source-verified.
 - **True touch input**: unavailable; the sheet-switch and thumb-bar paths
   were driven through programmatic clicks on the real bindings.
+
+
+## Review fixes — 2026-10-07
+
+The follow-up fixes replace the locked-tab native title with the shared
+instrument disclosure on both board and sheet, and add visible six-second
+mode-cancellation feedback alongside the existing live-region announcement.
+A repeated cancellation resets the display time; clean switches stay silent.
+
+Captured from `http://localhost:5176/`, with `/-/dev/provenance` verified
+in the capture browser: worktree
+`/Users/eggfam/.t3/worktrees/flowsynth/t3code-2adb91c4`, branch
+`t3code/review-pr-292`, commit `e1b4436` plus the review-fix working tree.
+
+- `desktop-locked-disclosure-review.png`: the locked Modules/Mutators pair
+  and its open shared disclosure.
+- `desktop-visible-cancel-review.png`: the visible cancellation notice.
+- `phone-frame-locked-disclosure-review.png`: the bottom sheet, locked
+  face, and open disclosure at 390×844 CSS pixels.
+- `phone-frame-entry-review.png`: the locked sheet action opens the entry
+  screen while the mode stays Modules.
+- `phone-frame-visible-cancel-review.png`: the cancellation notice above
+  the five-segment thumb bar at phone width.
+
+**Phone capture method:** native preview resizing still timed out. A local,
+same-origin iframe (`.dev/phone-review.html`, development-only and ignored)
+ran the actual app from this checkout at `innerWidth=390`, `innerHeight=844`.
+The screenshot retains the enclosing desktop canvas and labels the phone
+frame explicitly. This verifies the phone CSS composition, including real
+media and container queries; native device emulation and true touch input
+remain unavailable. The original phone-evidence gap is now supplemented by
+these phone-frame captures, rather than treating desktop sheet markup as a
+phone pass.
+
+Live assertions verified entry landing without changing mode, five thumb
+segments, the notice's visible text and bounds, and disclosure focus-event
+opening, Escape dismissal without closing the sheet, and click opening.
+Desktop keyboard traversal was also verified using native Tab/Shift-Tab:
+trusted focus events observed the tooltip displayed. The preview loses focus
+between automation calls, so this was recorded during the focus event rather
+than inferred from a later screenshot. True touch gestures remain unavailable.
+Automated integration tests cover focus and tap/click bindings, Escape and
+tap-away dismissal, and preservation of the entry action.
+The new notice and locked controls do not animate; reduced-motion emulation
+and greyscale checks remain unavailable.
+
+Checks: `npm run check` passed; `NODE_OPTIONS=--max-old-space-size=8192 npm test`
+passed all 50 files and 1,093 tests, including both UI regression files.
+The mechanical design detector reported only incumbent styles outside the
+changed rules. The new notice preserves the flat panel style, readable ink,
+quiet motion, and pointer-dead feedback; the disclosure uses the pinned
+prototype's instrument tooltip layer with a 44px touch target.

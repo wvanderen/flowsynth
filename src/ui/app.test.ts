@@ -2971,12 +2971,16 @@ describe("the catalog door (issue #271)", () => {
     app.mutSetLayer("mutators");
     expect(app.ui.buyingCell).toBe(false);
     expect(document.getElementById("status")!.textContent).toContain("cell purchase cancelled");
+    const toast = document.getElementById("mode-toast")!;
+    expect(toast.hidden).toBe(false);
+    expect(toast.textContent).toContain("cell purchase cancelled");
     // A tray placement dies the same way, walking back.
     app.mutArmTray("mu2");
     expect(app.ui.mutArmedTray).toBe("mu2");
     app.mutSetLayer("modules");
     expect(app.ui.mutArmedTray).toBeNull();
     expect(document.getElementById("status")!.textContent).toContain("mutator placement cancelled");
+    expect(toast.textContent).toContain("mutator placement cancelled");
     // A module placement too — the tray-tile arm rides the same rule.
     const trayId = give(s, "additive", null).id;
     app.beginPlacing(trayId);
@@ -2989,6 +2993,7 @@ describe("the catalog door (issue #271)", () => {
     const quiet = document.getElementById("status")!.textContent;
     app.mutSetLayer("modules");
     expect(document.getElementById("status")!.textContent).toBe(quiet);
+    expect(toast.textContent).toBe(quiet);
     // The Esc walk is unchanged: Esc unwinds the slot-unlock arm before it
     // ever touches the mode.
     app.mutSetLayer("mutators");
@@ -2999,6 +3004,28 @@ describe("the catalog door (issue #271)", () => {
     expect(app.ui.mutLayer).toBe("mutators");
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(app.ui.mutLayer).toBe("modules");
+  });
+
+  it("cancellation feedback expires and a later cancellation gets its full display time", () => {
+    vi.useFakeTimers();
+    try {
+      app.state.catalogEntryOwned = true;
+      app.armCellPurchase();
+      app.mutSetLayer("mutators");
+      const toast = document.getElementById("mode-toast")!;
+      expect(toast.hidden).toBe(false);
+      vi.advanceTimersByTime(5000);
+      app.mutArmUnlock();
+      app.mutSetLayer("modules");
+      expect(toast.textContent).toContain("slot unlock cancelled");
+      vi.advanceTimersByTime(1000);
+      expect(toast.hidden).toBe(false);
+      vi.advanceTimersByTime(5000);
+      expect(toast.hidden).toBe(true);
+      expect(document.getElementById("status")!.textContent).toContain("slot unlock cancelled");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("the door opens on the mode's face — mode wins over the last-face memory (issue #273)", () => {

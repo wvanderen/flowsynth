@@ -1913,6 +1913,27 @@ body.live .chord-mark:not(.chord-fade):not(.chord-idle) .chord-seam {
   vertical-align: -1.5px;
   margin-right: 5px;
 }
+.mut-entry-tip { align-items: center; }
+.mut-entry-tip > .inst-tip-trigger { width: 44px; height: 44px; }
+
+/* Cancellation feedback stays above the phone thumb bar and clear of
+   board gestures. The live region announces the same words separately. */
+.mode-toast {
+  position: fixed;
+  z-index: 64;
+  left: 50%;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel-deep);
+  color: var(--ink);
+  font: 14px var(--font-sans);
+  pointer-events: none;
+}
 
 /* The resting board beneath the Mutators tab: greyed, whispering, and
    pointer-dead — every gesture resolves against the slot faces above. */

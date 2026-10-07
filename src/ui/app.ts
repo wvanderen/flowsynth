@@ -394,6 +394,7 @@ export class App {
   // frontier cells (§7): the lens the zoom and pan clamp against.
   boardBounds = { x: -100, y: -100, width: 200, height: 200 };
   private els: Record<string, HTMLElement>;
+  private modeToastTimer: number | undefined;
 
   constructor(els: Record<string, HTMLElement>, dev: boolean, channels: SignalChannels = browserChannels) {
     this.els = els;
@@ -1212,7 +1213,17 @@ export class App {
     if (this.ui.mutMoving !== null) cancelled.push("mutator move");
     this.mutDisarm();
     this.ui.mutLayer = layer;
-    if (cancelled.length > 0) this.say(`Mode changed — ${cancelled.join(" and ")} cancelled.`);
+    if (cancelled.length > 0) {
+      const message = `Mode changed — ${cancelled.join(" and ")} cancelled.`;
+      this.say(message);
+      const toast = document.getElementById("mode-toast");
+      if (toast) {
+        window.clearTimeout(this.modeToastTimer);
+        toast.textContent = message;
+        toast.hidden = false;
+        this.modeToastTimer = window.setTimeout(() => { toast.hidden = true; }, 6000);
+      }
+    }
     this.render();
   }
 

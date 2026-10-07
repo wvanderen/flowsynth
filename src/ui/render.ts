@@ -3543,7 +3543,7 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
       }</div>`;
   content.innerHTML = `
     ${modalTop("INVENTORY", "modal-title")}
-    ${state.mode === "upgrade" ? `<div class="mut-tabs tray-switch" role="group" aria-label="Tray face">${mutTabPairHtml(app)}</div>` : ""}
+    ${state.mode === "upgrade" ? `<div class="mut-tabs tray-switch" role="group" aria-label="Tray face">${mutTabPairHtml(app, "sheet-mutator-entry")}</div>` : ""}
     ${face}`;
   content.querySelectorAll<HTMLButtonElement>("[data-inv]").forEach((button) => {
     const id = button.getAttribute("data-inv")!;
@@ -3568,6 +3568,8 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
   });
   const grid = content.querySelector(".inventory-sheet-grid");
   if (grid) wireTooltips(grid);
+  const switchHost = content.querySelector(".tray-switch");
+  if (switchHost) wireTooltips(switchHost);
   wireClose(app);
 }
 
