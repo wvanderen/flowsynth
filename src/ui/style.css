@@ -159,6 +159,70 @@ h1, h2, h3, p { margin: 0; }
 }
 .inst-tip-body.inst-show { display: block; }
 
+/* The ruled folio (#279, the refit's base presentation for the remaining
+   surfaces): a headline figure over hairline-ruled readout rows — keys in
+   the condensed lettering, figures right-aligned mono, deeper mechanics in
+   the tooltip layer. Open divisions only — hairline rules, never nested
+   boxes or rounded cards. */
+.folio-rows { display: flex; flex-direction: column; }
+.folio-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid var(--line-soft);
+}
+.folio-row:first-child { border-top: 0; }
+.folio-key {
+  width: 92px;
+  flex-shrink: 0;
+  font: 600 11px var(--font-condensed);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.folio-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.folio-fig { font-size: 15px; font-weight: 500; text-align: right; }
+.folio-sub { font-size: 11px; color: var(--muted); text-align: right; }
+/* A neutral factual line — the honesty events, the reassurance — muted
+   sans in the row's body, never a figure voice. */
+.folio-line { flex: 1; min-width: 0; font-size: 12.5px; color: var(--muted); }
+/* The engraved NEW mark: the state grammar's acquired voice in the charge
+   hue — readable without color (the engraving carries it). */
+.folio-new {
+  flex-shrink: 0;
+  font: 11px var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--charge);
+  box-shadow: inset 0 -1px var(--charge);
+  padding-bottom: 1px;
+}
+/* The folio's key-as-tooltip-trigger (the RATE row): the condensed key is
+   the trigger itself, chrome reset — hover, focus, and touch pin the body. */
+.folio-key-tip {
+  border: 0;
+  border-radius: 0;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 2px 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  background: transparent;
+}
+.folio-key-tip:hover:not(:disabled),
+.folio-key-tip:focus-visible { background: transparent; color: var(--nous); }
+
 /* ── The console (ADR-0012, ADR-0016) ──────────────── */
 
 /* Structurally above the game UI: a fixed-height rail the game can never
@@ -2294,25 +2358,40 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
 /* The combine review (#152): the drop's terms as plain stat rows. */
 .combine-terms { margin-top: 14px; }
 
-/* The honesty report (§2): consequence-carrying choices, no dismiss. */
-.honesty-choices { display: grid; gap: 8px; margin-top: 14px; }
+/* The honesty report (§2, #279): the readout leads, the one reassurance
+   stays visible, and the consequence-carrying choices are full-width
+   rule-line rows — open divisions, never rounded cards. */
+.honesty-readout .folio-row { align-items: baseline; }
+.honesty-read { flex: 1; min-width: 0; font-size: 17px; font-variant-numeric: tabular-nums; }
+.honesty-held {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--nous);
+  box-shadow: inset 0 -1px var(--nous);
+  padding-bottom: 2px;
+}
+.honesty-choices { display: flex; flex-direction: column; margin-top: 16px; border-top: 1px solid var(--line-soft); }
 .honesty-choice {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 3px;
+  gap: 4px;
   width: 100%;
-  padding: 11px 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--panel-soft);
+  padding: 13px 2px;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  border-radius: 0;
+  background: transparent;
   color: var(--ink);
   text-align: left;
   cursor: pointer;
+  transition: background 0.15s;
 }
-.honesty-choice:hover { border-color: var(--accent); }
-.honesty-label { font-weight: 650; }
-.honesty-consequence { color: var(--muted); font-size: 12px; }
+.honesty-choice:last-child { border-bottom: 0; }
+.honesty-choice:hover { background: var(--hover-bg); }
+.honesty-label { font: 600 16px var(--font-condensed); letter-spacing: 0.03em; }
+.honesty-consequence { color: var(--muted); font-size: 11.5px; }
 
 /* The provisional bucket's console flag (§2): the switch's vermillion. It
    rides beside the clock stack inside the clock anchor (issue #148) — never
@@ -2389,30 +2468,25 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
 /* The prompt's plan block borrows the Time panel's; a little separation
    above, and its caption sits closer than the popover's. */
 #modal-content .time-plan { margin-top: 12px; }
-.summary-headline strong { font-weight: 600; color: var(--accent); }
-.summary-rows { display: grid; gap: 8px; margin-top: 16px; }
-.summary-row {
-  display: grid;
-  grid-template-columns: 150px 1fr;
-  grid-template-rows: auto auto;
-  column-gap: 14px;
+/* The summary's ruled folio (#279): the banked-nous headline figure — the
+   readout is the identity, no sentence restates it — over hairline-ruled
+   rows; the reflection's reserved slot rides beneath a rule, above
+   dismissal. */
+.summary-head {
+  display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 11px 14px;
+  gap: 4px 14px;
+  margin: 2px 0 8px;
 }
-.summary-row > strong { font-size: 15px; font-weight: 600; }
-.summary-row > strong small { font-size: 11.5px; font-weight: 400; color: var(--muted); }
-.summary-label { font: 10px var(--mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
-.summary-note { grid-column: 2; font-size: 11.5px; color: var(--muted); }
-.summary-row.unlock { border-color: var(--charge-line); background: var(--charge-faint); }
-.summary-row.unlock > strong { color: var(--charge); }
-/* The summary's honesty events and reflection slot (§8): neutral factual
-   lines beneath the final numbers; the reflection rides above dismissal. */
-.summary-events { display: grid; gap: 2px; margin: 10px 2px 0; }
-.summary-event { margin: 0; font-size: 11.5px; color: var(--muted); }
-.summary-reflection { display: grid; gap: 8px; margin-top: 14px; }
-.summary-reflection input[type="text"] {
+.summary-earned { font-size: 34px; font-weight: 500; color: var(--nous); font-variant-numeric: tabular-nums; }
+/* The reflection row: the key top-aligned, the fields stacked in the
+   row's body. */
+.folio-reflect { margin-top: 16px; border-top: 1px solid var(--line-soft); }
+.folio-reflect .folio-row { align-items: flex-start; }
+.folio-reflect .folio-key { padding-top: 10px; }
+.folio-reflect .folio-main { align-items: stretch; gap: 10px; }
+.folio-reflect input[type="text"] {
   width: 100%;
   background: var(--panel-soft);
   color: var(--ink);
@@ -2421,7 +2495,15 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
   padding: 9px 12px;
   font-size: 13px;
 }
-.summary-reflection input[type="text"]:focus { border-color: var(--charge); outline: none; }
+.folio-reflect input[type="text"]:focus { border-color: var(--charge); outline: none; }
+.folio-reflect .reflection-slider { padding: 0 2px; }
+/* The phone folio (#279): the key column narrows and the headline scales
+   down; rows stay one rule each, figures right-aligned. */
+@media (max-width: 600px) {
+  .folio-row { gap: 10px; }
+  .folio-key { width: 72px; }
+  .summary-earned { font-size: 28px; }
+}
 .reflection-slider { position: relative; display: flex; align-items: center; gap: 10px; }
 .reflection-slider input[type="range"] { flex: 1; accent-color: var(--accent); }
 /* The neutral tick (#233): a small center mark on the continuous range —
