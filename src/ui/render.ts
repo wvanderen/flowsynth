@@ -832,25 +832,30 @@ function toolActions(): ToolAction[] {
       },
     },
     {
-      // Add, mode-directed (issue #272 review; #246's contract): module
-      // mode arms the next cell's purchase, mutator mode arms the slot
-      // unlock — Arete slot unlocking lives in Add, never a tray card.
-      // Arming from the thumb bar puts the tray sheet away, so the
-      // pulsing targets stand on a visible board.
+      // Add, mode-directed (#246's contract, #273's lock): module mode arms
+      // the next cell's purchase, mutator mode arms the slot unlock —
+      // Arete slot unlocking lives in Add, never a tray card. Pre-entry a
+      // mutator-mode Add cannot stand (the locked switch never flips the
+      // mode) — but if one ever does, it walks to the ◇ entry screen like
+      // every other locked Mutators control. Arming from the thumb bar puts
+      // the tray sheet away, so the pulsing targets stand on a visible
+      // board.
       op: "cell",
       svg: CELL_TOOL_SVG,
       label: "Add",
       run: (app) => {
-        const mutatorArm = app.state.mode === "upgrade" && app.state.catalogEntryOwned && app.ui.mutLayer === "mutators";
         if (app.ui.modal === "inventory") app.closeModal();
-        if (mutatorArm) {
+        if (app.state.mode === "upgrade" && app.ui.mutLayer === "mutators") {
+          if (!app.state.catalogEntryOwned) {
+            app.openMutatorEntry();
+            return;
+          }
           if (app.ui.mutUnlockArmed) app.mutCancelGestures();
           else app.mutArmUnlock();
-        } else if (app.ui.buyingCell) {
-          app.cancelCellPurchase();
-        } else {
-          app.armCellPurchase();
+          return;
         }
+        if (app.ui.buyingCell) app.cancelCellPurchase();
+        else app.armCellPurchase();
       },
       title: (app) =>
         app.state.mode !== "upgrade"
@@ -3413,10 +3418,11 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                       app.state.modules.filter((m) => m.pos === null).map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`),
                       // The tray sheet's face rides the global switch, and
                       // the Mutators face re-reads the tray (issue #272).
-                      mutatorLayerWanted(app) ? app.ui.mutLayer : "modules",
-                      mutatorLayerWanted(app)
-                        ? app.state.mutators.filter((m) => m.pos === null).map((m) => `${m.id}:${m.family}:${m.rarity}`)
-                        : [],
+                      // The entry's ownership rides too: the purchase
+                      // unlocks the switch's locked face (issue #273).
+                      app.ui.mutLayer,
+                      app.state.catalogEntryOwned,
+                      app.state.mutators.filter((m) => m.pos === null).map((m) => `${m.id}:${m.family}:${m.rarity}`),
                     ]
                   // The combine review's identity: the offered pair (issue
                   // #152). The terms are read fresh on rebuild.
@@ -3538,7 +3544,7 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
       }</div>`;
   content.innerHTML = `
     ${modalTop("INVENTORY", "modal-title")}
-    ${wanted ? `<div class="mut-tabs tray-switch" role="group" aria-label="Tray face">${mutTabPairHtml(app)}</div>` : ""}
+    ${state.mode === "upgrade" ? `<div class="mut-tabs tray-switch" role="group" aria-label="Tray face">${mutTabPairHtml(app)}</div>` : ""}
     ${face}`;
   content.querySelectorAll<HTMLButtonElement>("[data-inv]").forEach((button) => {
     const id = button.getAttribute("data-inv")!;

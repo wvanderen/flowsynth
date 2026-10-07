@@ -145,31 +145,45 @@ export function mutatorSlotPrice(state: GameState): number {
    The tab pair at the board's top edge (issue #199): the one Modules /
    Mutators switch — the tray column's faces and the phone tray sheet all
    read its state, and none carries a second one (issue #272 review).
-   Upgrade-mode furniture beside the entry purchase; in flow neither tab
-   nor layer exists, and a player without the entry never sees them. */
+   Upgrade-mode furniture; in flow neither tab nor layer exists. Pre-entry
+   the pair stands locked-but-visible (issue #273). */
 
 export function mutatorLayerWanted(app: App): boolean {
   return app.state.mode === "upgrade" && app.state.catalogEntryOwned;
 }
 
+// The tabs stand through upgrade mode — locked-but-visible before the
+// entry purchase (issue #273), live beside it after; flow shows neither
+// tab nor layer.
+export function mutatorTabsWanted(app: App): boolean {
+  return app.state.mode === "upgrade";
+}
+
 // The pair's one markup, shared by the board tabs and the phone tray
 // sheet's switch — the same two buttons wherever the switch stands.
+// Pre-entry the Mutators face is locked-but-visible (issue #273): a muted
+// outline and the arete ◇ telegraph the entry, and the click — resolved by
+// mutSetLayer — walks to the Catalog's entry screen instead of flipping
+// the mode.
 export function mutTabPairHtml(app: App): string {
-  const { ui } = app;
+  const { ui, state } = app;
+  const locked = !state.catalogEntryOwned;
   return `<button class="mut-tab${ui.mutLayer === "modules" ? " active" : ""}" data-mut-layer="modules" aria-pressed="${ui.mutLayer === "modules"}">Modules</button>
-    <button class="mut-tab${ui.mutLayer === "mutators" ? " active" : ""}" data-mut-layer="mutators" aria-pressed="${ui.mutLayer === "mutators"}">Mutators</button>`;
+    <button class="mut-tab${ui.mutLayer === "mutators" ? " active" : ""}${locked ? " locked" : ""}" data-mut-layer="mutators" aria-pressed="${ui.mutLayer === "mutators"}"${locked ? ' title="Unlocks with the Mutator entry"' : ""}>${locked ? "◇ " : ""}Mutators</button>`;
 }
 
 export function renderMutatorTabs(app: App): void {
   const host = document.getElementById("mut-tabs");
   if (!host) return;
-  if (!mutatorLayerWanted(app)) {
+  if (!mutatorTabsWanted(app)) {
     host.hidden = true;
     host.innerHTML = "";
     delete host.dataset.renderKey;
     return;
   }
-  const key = app.ui.mutLayer;
+  // The face and the entry's ownership both shape the pair — the purchase
+  // unlocks the locked face in place.
+  const key = `${app.ui.mutLayer}:${app.state.catalogEntryOwned}`;
   if (host.dataset.renderKey === key) {
     host.hidden = false;
     return;

@@ -89,13 +89,34 @@ afterEach(async () => {
 });
 
 describe("the tab pair (issue #199)", () => {
-  it("never shows before the entry purchase — the layer does not exist yet", () => {
+  it("pre-entry the pair stands locked-but-visible: muted outline + ◇, and the click opens the entry screen (#273)", () => {
     app.render();
-    expect(document.getElementById("mut-tabs")!.hidden).toBe(true);
+    const tabs = document.getElementById("mut-tabs")!;
+    expect(tabs.hidden).toBe(false);
+    const lockedTab = document.querySelector<HTMLButtonElement>('[data-mut-layer="mutators"]')!;
+    expect(lockedTab.classList.contains("locked")).toBe(true);
+    expect(lockedTab.textContent).toContain("◇");
     expect(app.ui.mutLayer).toBe("modules");
+    // The click never flips the mode — it walks to the ◇ entry screen.
+    lockedTab.click();
+    expect(app.ui.mutLayer).toBe("modules");
+    expect(app.ui.modal).toBe("catalog");
+    expect(app.ui.catalogFace).toBe("nous"); // pre-prestige: the arete face cannot stand yet
     // Arming the unlock without the entry says so and arms nothing.
+    app.closeModal();
     app.mutArmUnlock();
     expect(app.ui.mutUnlockArmed).toBe(false);
+  });
+
+  it("past the first prestige, the locked tab's click lands on the ◇ entry screen itself", () => {
+    app.state.prestiges = 1;
+    app.state.arete = 0;
+    app.render();
+    document.querySelector<HTMLButtonElement>('[data-mut-layer="mutators"]')!.click();
+    expect(app.ui.mutLayer).toBe("modules");
+    expect(app.ui.modal).toBe("catalog");
+    expect(app.ui.catalogFace).toBe("arete");
+    expect(document.querySelector(".entry-screen")).not.toBeNull();
   });
 
   it("stands in upgrade mode once the tree is entered, and flow shows neither tab nor layer", () => {

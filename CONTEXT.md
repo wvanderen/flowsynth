@@ -114,7 +114,7 @@ An item of the Mutator Grid: typed, carrying rarity, sitting in a Mutator slot t
 _Avoid_: enhancement (the pre-design name), gem, affix
 
 **Mutator tray**:
-The Mutator Grid's inventory — the tray column's Mutators face, switched by the board tabs: minted mutators wait here, a click then a slot places, and a drag or right-click retrieves. On portrait phone the tray sheet's Mutators face carries the same tiles; no always-on strip stands there.
+The Mutator Grid's inventory — the tray column's Mutators face, switched by the board tabs: minted mutators wait here, a click then a slot places, and a drag or right-click retrieves. Pre-entry the face is locked-but-visible — a muted outline and the ◇ — and clicking it (tab, tray face, or Add) opens the Catalog on the entry screen; it never flips the mode. On portrait phone the tray sheet's Mutators face carries the same tiles; no always-on strip stands there.
 _Avoid_: second inventory, unlock card
 
 ### Resources and production
@@ -224,7 +224,7 @@ _Avoid_: practice meter, practice forge, flow forge, third branch
 A choice of one mutator from two generated candidates, delivered to the Mutator tray; unchosen candidates disappear without consolation resources. Every roll is charge-earned except the first, which the Mutator tree's entry purchase itself performs.
 
 **Catalog**:
-The tabbed shop behind the labeled Catalog door on the dock (desktop) and thumb bar (phone): the `ν nous` face carries the starter shelf and — once the ladder has a tenant — app activations; the `◇ Arete` face is the Arete Catalog. Cells are no sheet row — the purchase arms from the dock's Add and commits on the board's frontier. The door opens on the last-used face and falls back to nous before the first prestige (the mode-wins override lands with mode unification). The frame is fixed — a 620×600 clipped panel on desktop, a 74%-height bottom sheet on phone — and a face switch never resizes it: the switch and identity stay pinned while the body scrolls. Purchases act in upgrade mode only; prices mute when unaffordable or in flow. Module upgrades live on module panels, not the catalog (ADR-0018).
+The tabbed shop behind the labeled Catalog door on the dock (desktop) and thumb bar (phone): the `ν nous` face carries the starter shelf and — once the ladder has a tenant — app activations; the `◇ Arete` face is the Arete Catalog. Cells are no sheet row — the purchase arms from the dock's Add and commits on the board's frontier. The door opens on the mode's face — module mode on ν, mutator mode on ◇ — the mode wins over any last-face memory, falling back to nous before the first prestige. The frame is fixed — a 620×600 clipped panel on desktop, a 74%-height bottom sheet on phone — and a face switch never resizes it: the switch and identity stay pinned while the body scrolls. Purchases act in upgrade mode only; prices mute when unaffordable or in flow. Module upgrades live on module panels, not the catalog (ADR-0018).
 
 **Starter shelf**:
 The catalog's one-time guaranteed offers — the Focus Generator, one Booster, and a Module Forge — hidden once acquired. It completes the non-oscillator landscape; oscillators come only from the opening grant and module rolls (ADR-0022).
