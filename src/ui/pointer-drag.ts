@@ -1,7 +1,7 @@
-import { suppressNextClick } from "./click";
+import type { App } from "./app";
 
 // Both grids share pointer ownership and cleanup; their targeting stays local.
-export function startPointerDrag(event: PointerEvent, handlers: {
+export function startPointerDrag(app: App, event: PointerEvent, handlers: {
   start: () => HTMLElement;
   move: (event: PointerEvent) => void;
   cleanup: () => void;
@@ -9,6 +9,7 @@ export function startPointerDrag(event: PointerEvent, handlers: {
 }): () => void {
   let ghost: HTMLElement | null = null;
   let finished = false;
+  let forget = () => {};
   const move = (next: PointerEvent) => {
     if (next.pointerId !== event.pointerId) return;
     if (!ghost && Math.hypot(next.clientX - event.clientX, next.clientY - event.clientY) > 6) {
@@ -23,13 +24,14 @@ export function startPointerDrag(event: PointerEvent, handlers: {
   const finish = (next?: PointerEvent) => {
     if (finished) return;
     finished = true;
+    forget();
     document.removeEventListener("pointermove", move);
     document.removeEventListener("pointerup", up);
     document.removeEventListener("pointercancel", cancel);
     const moved = ghost !== null;
     ghost?.remove();
     handlers.cleanup();
-    if (moved) suppressNextClick();
+    if (moved && !app.released) app.suppressClick();
     if (next && moved) handlers.drop(next);
   };
   const up = (next: PointerEvent) => {
@@ -41,5 +43,7 @@ export function startPointerDrag(event: PointerEvent, handlers: {
   document.addEventListener("pointermove", move);
   document.addEventListener("pointerup", up);
   document.addEventListener("pointercancel", cancel);
-  return () => finish();
+  const stop = () => finish();
+  forget = app.ownCleanup(stop);
+  return stop;
 }

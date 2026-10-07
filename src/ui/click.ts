@@ -1,13 +1,18 @@
-// One-shot click suppression shared by every drag path (§5, §7): a gesture
-// that ends in a release must not fall through to whatever sits under it —
-// the release is the drag's end, never a click. The capture-phase listener
-// eats exactly the next click; the timeout frees the document if no click
-// ever comes.
-export function suppressNextClick(): void {
-  const suppress = (clickEvent: Event) => {
-    clickEvent.preventDefault();
-    clickEvent.stopImmediatePropagation();
+// A release click belongs to its gesture. Both the listener and its timer
+// are cancellable so they cannot swallow a replacement instrument's click.
+export function suppressNextClick(onFinish: () => void = () => {}): () => void {
+  const target = document;
+  const finish = () => {
+    clearTimeout(timer);
+    target.removeEventListener("click", suppress, true);
+    onFinish();
   };
-  document.addEventListener("click", suppress, { capture: true, once: true });
-  setTimeout(() => document.removeEventListener("click", suppress, true), 0);
+  const suppress = (event: Event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    finish();
+  };
+  target.addEventListener("click", suppress, { capture: true, once: true });
+  const timer = setTimeout(finish, 0);
+  return finish;
 }

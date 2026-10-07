@@ -29,7 +29,6 @@ import { goalCapacity, goalRequiredSeconds, goalSummary, goalTrackerState, type 
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
 import type { DeployedModule, GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, MutatorInstance, NoteEntry, NamedChordTerm, Rarity, RateSnapshot } from "../engine/types";
 import { DEV_BOARD_CAPACITIES, type App, type ChordHover, type EnterKind, type EnterSelection, type ModalKind } from "./app";
-import { suppressNextClick } from "./click";
 import { startPointerDrag } from "./pointer-drag";
 import { appIcon, moduleIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, HUE_TOKEN_OF, moduleFace, boardPoint, SPACING, spacerClipPath } from "./face";
@@ -149,7 +148,7 @@ const OPEN_ENDED_WORD = "open-ended";
 // "inside" for the popover click-away closer (app.ts), so the click that
 // opens the Time popover never closes it in the same gesture.
 function wireClockPlan(app: App): void {
-  byId("clock-plan")?.addEventListener("click", () => {
+  app.listen(byId("clock-plan"), "click", () => {
     app.openApp("time");
   });
 }
@@ -241,7 +240,7 @@ function renderConsoleSession(app: App): void {
           </button>
         </div>`;
       wireClockPlan(app);
-      byId("flow-switch")?.addEventListener("click", () => app.startFlow());
+      app.listen(byId("flow-switch"), "click", () => app.startFlow());
       bindPopover(scrollTop);
     }
     refreshConsoleClockPlan(app);
@@ -273,8 +272,8 @@ function renderConsoleSession(app: App): void {
         </button>
       </div>`;
     wireClockPlan(app);
-    byId("pause-flow")?.addEventListener("click", () => (state.mode === "paused" ? app.resume() : app.pause()));
-    byId("flow-switch")?.addEventListener("click", () => app.endFlow());
+    app.listen(byId("pause-flow"), "click", () => (state.mode === "paused" ? app.resume() : app.pause()));
+    app.listen(byId("flow-switch"), "click", () => app.endFlow());
     bindPopover(scrollTop);
   }
 
@@ -488,10 +487,10 @@ function renderConsoleApps(app: App, projected: RateSnapshot): void {
   host.innerHTML = `<div class="app-tiles">${tiles}</div>${appLauncherHtml(app, phone)}`;
   restorePopoverScroll(host, scrollTop);
   for (const appKey of TILE_APPS) {
-    byId(`app-tile-${appKey}`)?.addEventListener("click", () => app.openApp(appKey));
-    byId(`app-launcher-${appKey}`)?.addEventListener("click", () => app.openApp(appKey));
+    app.listen(byId(`app-tile-${appKey}`), "click", () => app.openApp(appKey));
+    app.listen(byId(`app-launcher-${appKey}`), "click", () => app.openApp(appKey));
   }
-  byId("app-launcher")?.addEventListener("click", () => app.launcherActivate());
+  app.listen(byId("app-launcher"), "click", () => app.launcherActivate());
   bindAppPanel(app, host);
   updateAppPanelLive(app, host, projected);
 }
@@ -674,7 +673,7 @@ function renderAchievementsModal(app: App, content: HTMLElement, projected: Rate
     <p class="lead">Every feat speeds the rate a little — they accelerate, never gate. Each one adds into the Achievements leg of every synth row in the rate details.</p>
     ${milestoneSection}${sections}`;
   const list = content.querySelector(".ach-milestones");
-  if (list) wireTooltips(list);
+  if (list) wireTooltips(list, app.signal);
   wireCollectionBack(app);
   wireClose(app);
 }
@@ -719,8 +718,8 @@ function renderCollectionModal(app: App, content: HTMLElement): void {
       <button class="collection-row" id="collection-feats" title="Feats — the full list, and how close the next one is">${FEATS_SVG}<span class="t-condensed">Feats</span><span class="mono">${feats}/${ACHIEVEMENTS.length}</span></button>
       <button class="collection-row" id="collection-chords" title="Chord library — the field guide of chord classes">${LIBRARY_SVG}<span class="t-condensed">Chords</span><span class="mono">${chords}/${NAMED_CHORDS.length}</span></button>
     </div>`;
-  byId("collection-feats")?.addEventListener("click", () => app.openModal("achievements"));
-  byId("collection-chords")?.addEventListener("click", () => app.openModal("library"));
+  app.listen(byId("collection-feats"), "click", () => app.openModal("achievements"));
+  app.listen(byId("collection-chords"), "click", () => app.openModal("library"));
   wireClose(app);
 }
 
@@ -728,7 +727,7 @@ function renderCollectionModal(app: App, content: HTMLElement): void {
 // carries it — a tap returns to the launcher instead of putting the sheet
 // away.
 function wireCollectionBack(app: App): void {
-  byId("modal-back")?.addEventListener("click", () => app.openModal("collection"));
+  app.listen(byId("modal-back"), "click", () => app.openModal("collection"));
 }
 
 // ── The action row (§7): a left-edge icon dock ──────
@@ -953,21 +952,21 @@ function renderTools(app: App, projected: RateSnapshot): void {
         if (button.dataset.op === "forge") {
           const detail = button.querySelector<HTMLElement>(".forge-detail")!;
           let hovered = false;
-          button.addEventListener("mouseenter", () => { hovered = true; detail.hidden = false; });
-          button.addEventListener("mouseleave", () => {
+          app.listen(button, "mouseenter", () => { hovered = true; detail.hidden = false; });
+          app.listen(button, "mouseleave", () => {
             hovered = false;
             detail.hidden = document.activeElement !== button;
           });
-          button.addEventListener("focus", () => { detail.hidden = false; });
-          button.addEventListener("blur", () => { detail.hidden = !hovered; });
-          button.addEventListener("keydown", (event) => {
+          app.listen(button, "focus", () => { detail.hidden = false; });
+          app.listen(button, "blur", () => { detail.hidden = !hovered; });
+          app.listen(button, "keydown", (event) => {
             if (event.key === "Escape" && !detail.hidden) {
               detail.hidden = true;
               event.stopPropagation();
             }
           });
         }
-        button.addEventListener("click", () => {
+        app.listen(button, "click", () => {
           actions.find((action) => action.op === button.getAttribute("data-op"))!.run(app);
         });
       });
@@ -1028,7 +1027,7 @@ function renderCellArmPill(app: App): void {
   if (!host) return;
   if (!boundArmPills.has(host)) {
     boundArmPills.add(host);
-    host.addEventListener("click", () => {
+    app.listen(host, "click", () => {
       if (app.ui.buyingCell) app.cancelCellPurchase();
     });
   }
@@ -1359,7 +1358,7 @@ interface ChordReadoutCache {
   snapshot: RateSnapshot;
 }
 const chordReadoutCache = new WeakMap<App, ChordReadoutCache>();
-const wiredReadouts = new WeakSet<HTMLElement>();
+
 
 // The reserved readout (§6): the chips, in one place — the selected
 // module's chip row wins, else what the pointer rests on (a seam names its
@@ -1373,7 +1372,7 @@ const wiredReadouts = new WeakSet<HTMLElement>();
 function updateChordReadout(app: App): void {
   const host = byId("chord-readout");
   if (!host) return;
-  if (!wiredReadouts.has(host)) { wireTooltips(host); wiredReadouts.add(host); }
+  wireTooltips(host, app.signal);
   const cache = chordReadoutCache.get(app);
   const marks = cache?.marks ?? [];
   const snapshot = cache?.snapshot;
@@ -1544,6 +1543,7 @@ function chordChipsForHover(app: App): ChordMark[] {
 // The hover question (§6): what the pointer rests on. Null clears. Never a
 // re-render — the readout updates in place.
 function setChordHover(app: App, hover: ChordHover | null): void {
+  if (app.released) return;
   const next = hover ?? null;
   if (sameChordHover(app.ui.chordHover, next)) return;
   app.ui.chordHover = next;
@@ -1779,7 +1779,7 @@ function bindFaceBuys(app: App, svg: SVGSVGElement): void {
   svg.querySelectorAll<SVGGElement>(".face-buy").forEach((node) => {
     if (boundFaceBuys.has(node)) return;
     boundFaceBuys.add(node);
-    node.addEventListener("pointerdown", (event) => event.stopPropagation());
+    app.listen(node, "pointerdown", (event) => event.stopPropagation());
     const buy = (event: Event) => {
       event.stopPropagation();
       event.preventDefault();
@@ -1787,8 +1787,8 @@ function bindFaceBuys(app: App, svg: SVGSVGElement): void {
       if (!id || app.state.mode !== "upgrade" || app.ui.buyingCell) return;
       app.upgradeLevels(id, (event as KeyboardEvent).shiftKey ? "max" : 1);
     };
-    node.addEventListener("click", buy);
-    node.addEventListener("keydown", (event) => {
+    app.listen(node, "click", buy);
+    app.listen(node, "keydown", (event) => {
       if ((event as KeyboardEvent).key === "Enter" || (event as KeyboardEvent).key === " ") buy(event);
     });
   });
@@ -1860,7 +1860,7 @@ function renderUpgradeAll(app: App): void {
     ${chips}
     <button class="sweep-chip" data-sweep="max" title="Sweep the whole bank into the cheapest next levels: ~${max.levels} levels across ${max.modules} modules · ${formatNumber(max.spent)} ν${zeroSuffix}">MAX</button>`;
   host.querySelectorAll<HTMLButtonElement>("[data-sweep]").forEach((button) => {
-    button.addEventListener("click", () => {
+    app.listen(button, "click", () => {
       const step = button.getAttribute("data-sweep")!;
       app.upgradeAllAction(step === "max" ? "max" : Number(step));
     });
@@ -1929,6 +1929,7 @@ function dropRegister(app: App, pos: Hex): DropRegister | null {
 // A retrieval (`retrieval` true, pos null) is the tray's hover: the drop
 // would take the module off the board (#260).
 function setDropHover(app: App, moduleId: string | null, pos: Hex | null, retrieval = false): void {
+  if (app.released) return;
   app.ui.dropHover = moduleId !== null && (pos !== null || retrieval) ? { moduleId, pos } : null;
   refreshDropPreview(app);
 }
@@ -2073,14 +2074,14 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
       const [q, r] = node.getAttribute("data-cell")!.split(",").map(Number);
       return { q: q!, r: r! };
     };
-    node.addEventListener("keydown", (event) => {
+    app.listen(node, "keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         app.pickCell(position());
       }
     });
-    node.addEventListener("click", () => app.pickCell(position()));
-    node.addEventListener("contextmenu", (event) => {
+    app.listen(node, "click", () => app.pickCell(position()));
+    app.listen(node, "contextmenu", (event) => {
       event.preventDefault();
       app.rightClickCell(position());
     });
@@ -2088,11 +2089,11 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
     // resting on a module or a seam asks that chord into the readout.
     // The armed placement previews on hover (§5–§6): ghosts over the
     // would-form chords, the drop register over the hovered cell.
-    node.addEventListener("pointerenter", () => {
+    app.listen(node, "pointerenter", () => {
       if (app.dragging || app.state.mode !== "upgrade") return;
       setDropHover(app, app.ui.placing, position());
     });
-    node.addEventListener("pointerleave", () => {
+    app.listen(node, "pointerleave", () => {
       if (app.dragging || app.state.mode !== "upgrade") return;
       if (app.ui.dropHover?.pos != null && sameHex(app.ui.dropHover.pos, position())) setDropHover(app, null, null);
     });
@@ -2101,7 +2102,7 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
     // armed previews live as the finger slides, and the release places. A
     // quick tap still places on the click — nothing here fires before the
     // drag threshold.
-    node.addEventListener("pointerdown", (baseEvent: Event) => {
+    app.listen(node, "pointerdown", (baseEvent: Event) => {
       const event = baseEvent as PointerEvent;
       if (event.button !== 0 || app.state.mode !== "upgrade" || app.ui.buyingCell) return;
       if (!app.ui.placing || app.dragging) return;
@@ -2119,14 +2120,19 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
         if (!previewing && Math.hypot(ev.clientX - startX, ev.clientY - startY) > DRAG_THRESHOLD_PX) previewing = true;
         if (previewing) setDropHover(app, id, cellAt(ev));
       };
-      const finish = (ev: PointerEvent, apply: boolean) => {
+      let finished = false;
+      let forget = () => {};
+      const finish = (ev?: PointerEvent, apply = false) => {
+        if (finished) return;
+        finished = true;
+        forget();
         document.removeEventListener("pointermove", move);
         document.removeEventListener("pointerup", up);
         document.removeEventListener("pointercancel", cancel);
-        const pos = cellAt(ev);
+        const pos = ev ? cellAt(ev) : null;
         setDropHover(app, null, null);
-        if (!apply || !previewing) return;
-        suppressNextClick();
+        if (app.released || !apply || !previewing) return;
+        app.suppressClick();
         if (pos) app.pickCellThenPlace(id, pos);
       };
       const up = (ev: PointerEvent) => finish(ev, true);
@@ -2134,6 +2140,7 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
       document.addEventListener("pointermove", move);
       document.addEventListener("pointerup", up);
       document.addEventListener("pointercancel", cancel);
+      forget = app.ownCleanup(() => finish());
     });
     bindPointerDrag(app, node, () => deployedAt(app.state, position())?.id ?? null);
   });
@@ -2144,13 +2151,13 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
     if (boundBanners.has(node)) return;
     boundBanners.add(node);
     const row = () => Number(node.getAttribute("data-unlock-row"));
-    node.addEventListener("keydown", (event) => {
+    app.listen(node, "keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         app.buyRowUnlockAction(row());
       }
     });
-    node.addEventListener("click", () => app.buyRowUnlockAction(row()));
+    app.listen(node, "click", () => app.buyRowUnlockAction(row()));
   });
   bindSeamHover(app, svg);
 }
@@ -2165,7 +2172,7 @@ const boundGrids = new WeakSet<SVGSVGElement>();
 function bindSeamHover(app: App, svg: SVGSVGElement): void {
   if (boundGrids.has(svg)) return;
   boundGrids.add(svg);
-  svg.addEventListener("pointerover", (event) => {
+  app.listen(svg, "pointerover", (event) => {
     if (app.dragging || app.ui.mutCarrying) return;
     const target = event.target as Element;
     const slotNode = target.closest?.("[data-mut-slot]");
@@ -2187,7 +2194,7 @@ function bindSeamHover(app: App, svg: SVGSVGElement): void {
     const id = cellNode && Number.isFinite(q) ? deployedAt(app.state, { q: q!, r: r! })?.id ?? null : null;
     setChordHover(app, id ? { kind: "module", moduleId: id } : null);
   });
-  svg.addEventListener("pointerleave", () => {
+  app.listen(svg, "pointerleave", () => {
     if (app.dragging) return;
     setChordHover(app, null);
   });
@@ -2202,7 +2209,7 @@ function bindSeamHover(app: App, svg: SVGSVGElement): void {
 // dragging. No module refuses the drag — nothing is pinned on the
 // carrierless board (ADR-0021).
 function bindPointerDrag(app: App, element: Element, moduleId: string | (() => string | null)): void {
-  element.addEventListener("pointerdown", (baseEvent: Event) => {
+  app.listen(element, "pointerdown", (baseEvent: Event) => {
     const event = baseEvent as PointerEvent;
     if (event.button !== 0 || app.state.mode !== "upgrade" || app.ui.buyingCell) return;
     const id = typeof moduleId === "function" ? moduleId() : moduleId;
@@ -2235,7 +2242,7 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
       if (!cellNode) setDropHover(app, id, null, overZone);
     };
 
-    startPointerDrag(event, {
+    startPointerDrag(app, event, {
       start: () => {
         app.dragging = id;
         const module = app.state.modules.find((m) => m.id === id);
@@ -2604,12 +2611,12 @@ function renderBloom(app: App, projected: RateSnapshot): void {
 // outside-click token).
 function wireBloomBuy(app: App, host: HTMLElement, moduleId: string): void {
   const { ui } = app;
-  byId("bloom-upgrade")?.addEventListener("click", (event) => {
+  app.listen(byId("bloom-upgrade"), "click", (event) => {
     event.stopPropagation();
     app.upgradeLevels(moduleId, ui.bulkCount);
   });
   host.querySelectorAll<HTMLButtonElement>("[data-bulk]").forEach((chip) => {
-    chip.addEventListener("click", (event) => {
+    app.listen(chip, "click", (event) => {
       event.stopPropagation();
       const raw = chip.getAttribute("data-bulk")!;
       ui.bulkCount = raw === "max" ? "max" : (Number(raw) as 1 | 5 | 10);
@@ -2619,7 +2626,7 @@ function wireBloomBuy(app: App, host: HTMLElement, moduleId: string): void {
   // The Bend's shift pick (ADR-0048): one chip per selectable step, the
   // action refusing out-of-set shifts — the picker only offers the set.
   host.querySelectorAll<HTMLButtonElement>("[data-shift]").forEach((chip) => {
-    chip.addEventListener("click", (event) => {
+    app.listen(chip, "click", (event) => {
       event.stopPropagation();
       app.setBendShift(moduleId, Number(chip.getAttribute("data-shift")));
     });
@@ -2654,7 +2661,7 @@ function renderInventoryTray(app: App): void {
   }</div>`;
   tray.querySelectorAll<HTMLButtonElement>("[data-inv]").forEach((button) => {
     const id = button.getAttribute("data-inv")!;
-    button.addEventListener("click", () => app.beginPlacing(id));
+    app.listen(button, "click", () => app.beginPlacing(id));
     bindPointerDrag(app, button, id);
   });
 }
@@ -2677,7 +2684,7 @@ function renderArcCard(app: App): void {
   card.innerHTML = `<p class="arc-copy"><strong>Place it beside your first.</strong>
     The dashed preview shows the chord they'd form; the <span class="mono">×</span> in the chord readout is what the pair earns together.</p>
     <button class="arc-dismiss" id="arc-card-dismiss" aria-label="Dismiss — this card never returns">✕</button>`;
-  document.getElementById("arc-card-dismiss")?.addEventListener("click", () => app.dismissArcCard());
+  app.listen(document.getElementById("arc-card-dismiss"), "click", () => app.dismissArcCard());
 }
 
 /* ── Focus-app panels (popover bodies, ADR-0012) ───── */
@@ -3086,20 +3093,21 @@ function refreshPlanControls(app: App): void {
 // control, and an open native select is never disrupted mid-gesture.
 function bindPlanControls(app: App, scope: HTMLElement): void {
   scope.querySelectorAll<HTMLButtonElement>("[data-plan]").forEach((chip) => {
-    chip.addEventListener("click", () => {
+    app.listen(chip, "click", () => {
       app.ui.chosenTarget = Number(chip.getAttribute("data-plan")) * 60;
       refreshPlanState(app);
     });
   });
   const planInput = scope.querySelector("#plan-minutes") as HTMLInputElement | null;
-  planInput?.addEventListener("change", () => {
+  app.listen(planInput, "change", () => {
+    if (!planInput) return;
     const minutes = Math.round(Number(planInput.value));
     if (Number.isFinite(minutes) && planInput.value !== "") {
       app.ui.chosenTarget = Math.min(PLAN_MAX_MINUTES, Math.max(PLAN_MIN_MINUTES, minutes)) * 60;
       refreshPlanState(app);
     }
   });
-  scope.querySelector("#plan-open")?.addEventListener("click", () => {
+  app.listen(scope.querySelector("#plan-open"), "click", () => {
     app.ui.chosenTarget = null;
     refreshPlanState(app);
   });
@@ -3107,12 +3115,12 @@ function bindPlanControls(app: App, scope: HTMLElement): void {
 
 function bindAppPanel(app: App, scope: HTMLElement): void {
   bindPlanControls(app, scope);
-  scope.querySelector("#habit-create")?.addEventListener("click", () => {
+  app.listen(scope.querySelector("#habit-create"), "click", () => {
     const input = scope.querySelector("#habit-name-input") as HTMLInputElement | null;
     if (input) app.createHabitAction(input.value);
   });
   const nameInput = scope.querySelector("#habit-name-input");
-  nameInput?.addEventListener("keydown", (event) => {
+  app.listen(nameInput, "keydown", (event) => {
     if ((event as KeyboardEvent).key === "Enter") {
       event.preventDefault();
       const input = event.target as HTMLInputElement;
@@ -3120,10 +3128,10 @@ function bindAppPanel(app: App, scope: HTMLElement): void {
     }
   });
   scope.querySelectorAll<HTMLElement>("[data-pick]").forEach((button) => {
-    button.addEventListener("click", () => app.selectHabitAction(button.getAttribute("data-pick")));
+    app.listen(button, "click", () => app.selectHabitAction(button.getAttribute("data-pick")));
   });
   scope.querySelectorAll<HTMLElement>("[data-rename]").forEach((button) => {
-    button.addEventListener("click", () => {
+    app.listen(button, "click", () => {
       app.ui.editingHabitId = button.getAttribute("data-rename");
       app.render();
       const input = scope.querySelector("#habit-rename-input") as HTMLInputElement | null;
@@ -3132,14 +3140,14 @@ function bindAppPanel(app: App, scope: HTMLElement): void {
     });
   });
   scope.querySelectorAll<HTMLElement>("[data-archive]").forEach((button) => {
-    button.addEventListener("click", () => {
+    app.listen(button, "click", () => {
       const id = button.getAttribute("data-archive");
       if (id) app.archiveHabitAction(id);
     });
   });
   // The development summary toggle (§9): one habit expanded at a time.
   scope.querySelectorAll<HTMLElement>("[data-summary]").forEach((button) => {
-    button.addEventListener("click", () => {
+    app.listen(button, "click", () => {
       const id = button.getAttribute("data-summary");
       if (id) app.toggleHabitSummary(id);
     });
@@ -3147,14 +3155,14 @@ function bindAppPanel(app: App, scope: HTMLElement): void {
   // The habit build (ADR-0046): equip and unequip are free respecs in
   // upgrade mode — the engine answers for the slot and unlock rules.
   scope.querySelectorAll<HTMLElement>("[data-equip]").forEach((button) => {
-    button.addEventListener("click", () => {
+    app.listen(button, "click", () => {
       const nodeId = button.getAttribute("data-equip");
       const habitId = button.getAttribute("data-habit");
       if (nodeId && habitId) app.equipBuildNodeAction(habitId, nodeId);
     });
   });
   scope.querySelectorAll<HTMLElement>("[data-unequip]").forEach((button) => {
-    button.addEventListener("click", () => {
+    app.listen(button, "click", () => {
       const nodeId = button.getAttribute("data-unequip");
       const habitId = button.getAttribute("data-habit");
       if (nodeId && habitId) app.unequipBuildNodeAction(habitId, nodeId);
@@ -3163,20 +3171,20 @@ function bindAppPanel(app: App, scope: HTMLElement): void {
   // The history surfaces (§9): the affordance swaps the Time panel body to
   // the list; rows drill in; the tail pages; back unwinds one level — out of
   // the drill-down to the list, out of the list to the Time panel itself.
-  scope.querySelector("#time-history")?.addEventListener("click", () => app.openHistory());
-  scope.querySelector("#history-back")?.addEventListener("click", () => {
+  app.listen(scope.querySelector("#time-history"), "click", () => app.openHistory());
+  app.listen(scope.querySelector("#history-back"), "click", () => {
     if (app.ui.drillSession !== null) app.closeDrill();
     else app.closeHistory();
   });
-  scope.querySelector("#history-more")?.addEventListener("click", () => app.moreHistory());
+  app.listen(scope.querySelector("#history-more"), "click", () => app.moreHistory());
   scope.querySelectorAll<HTMLElement>("[data-drill]").forEach((row) => {
-    row.addEventListener("click", () => {
+    app.listen(row, "click", () => {
       const number = Number(row.getAttribute("data-drill"));
       if (Number.isFinite(number)) app.openDrill(number);
     });
   });
   const renameInput = scope.querySelector("#habit-rename-input");
-  renameInput?.addEventListener("keydown", (event) => {
+  app.listen(renameInput, "keydown", (event) => {
     if ((event as KeyboardEvent).key === "Enter") {
       event.preventDefault();
       const id = app.ui.editingHabitId;
@@ -3188,16 +3196,16 @@ function bindAppPanel(app: App, scope: HTMLElement): void {
       app.render();
     }
   });
-  scope.querySelector("#habit-rename-save")?.addEventListener("click", () => {
+  app.listen(scope.querySelector("#habit-rename-save"), "click", () => {
     const id = app.ui.editingHabitId;
     const input = scope.querySelector("#habit-rename-input") as HTMLInputElement | null;
     if (id && input) app.renameHabitAction(id, input.value);
   });
-  scope.querySelector("#habit-log-add")?.addEventListener("click", () => {
+  app.listen(scope.querySelector("#habit-log-add"), "click", () => {
     const input = scope.querySelector("#habit-log-minutes") as HTMLInputElement | null;
     if (input && input.value) app.logPracticeAction(Number(input.value));
   });
-  scope.querySelector("#goal-add")?.addEventListener("click", () => {
+  app.listen(scope.querySelector("#goal-add"), "click", () => {
     const habitSelect = scope.querySelector("#goal-habit") as HTMLSelectElement | null;
     const minutesInput = scope.querySelector("#goal-minutes") as HTMLInputElement | null;
     const scheduleSelect = scope.querySelector("#goal-schedule") as HTMLSelectElement | null;
@@ -3208,9 +3216,9 @@ function bindAppPanel(app: App, scope: HTMLElement): void {
       scheduleSelect.value as "once" | "daily" | "weekly",
     );
   });
-  scope.querySelector("#long-goal-buy")?.addEventListener("click", () => app.buyGoalCapacityAction());
+  app.listen(scope.querySelector("#long-goal-buy"), "click", () => app.buyGoalCapacityAction());
   scope.querySelectorAll<HTMLElement>("[data-goal-delete]").forEach((button) => {
-    button.addEventListener("click", () => {
+    app.listen(button, "click", () => {
       const id = button.getAttribute("data-goal-delete");
       if (id) app.deleteGoalAction(id);
     });
@@ -3223,8 +3231,8 @@ function bindAppPanel(app: App, scope: HTMLElement): void {
     const fresh = scope.querySelector("#note-composer") as HTMLTextAreaElement | null;
     if (fresh) fresh.focus();
   };
-  scope.querySelector("#note-save")?.addEventListener("click", saveNote);
-  composer?.addEventListener("keydown", (event) => {
+  app.listen(scope.querySelector("#note-save"), "click", saveNote);
+  app.listen(composer, "keydown", (event) => {
     if ((event as KeyboardEvent).key === "Enter" && ((event as KeyboardEvent).metaKey || (event as KeyboardEvent).ctrlKey)) {
       event.preventDefault();
       saveNote();
@@ -3496,8 +3504,8 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
     wireSynthPicks(sheet, (id) => {
       app.closeModal();
       app.select(id);
-    });
-    wireTooltips(sheet);
+    }, app);
+    wireTooltips(sheet, app.signal);
   }
   wireClose(app);
 }
@@ -3547,7 +3555,7 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
     ${face}`;
   content.querySelectorAll<HTMLButtonElement>("[data-inv]").forEach((button) => {
     const id = button.getAttribute("data-inv")!;
-    button.addEventListener("click", () => {
+    app.listen(button, "click", () => {
       if (app.state.mode !== "upgrade") return;
       app.closeModal();
       app.beginPlacing(id);
@@ -3556,7 +3564,7 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
   });
   content.querySelectorAll<HTMLButtonElement>("[data-mut-tray]").forEach((button) => {
     const id = button.getAttribute("data-mut-tray")!;
-    button.addEventListener("click", () => {
+    app.listen(button, "click", () => {
       if (app.state.mode !== "upgrade") return;
       app.closeModal();
       app.mutArmTray(id);
@@ -3564,12 +3572,12 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
     bindMutatorDrag(app, button, id, "tray");
   });
   content.querySelectorAll<HTMLButtonElement>("[data-mut-layer]").forEach((button) => {
-    button.addEventListener("click", () => app.mutSetLayer(button.getAttribute("data-mut-layer") as "modules" | "mutators"));
+    app.listen(button, "click", () => app.mutSetLayer(button.getAttribute("data-mut-layer") as "modules" | "mutators"));
   });
   const grid = content.querySelector(".inventory-sheet-grid");
-  if (grid) wireTooltips(grid);
+  if (grid) wireTooltips(grid, app.signal);
   const switchHost = content.querySelector(".tray-switch");
-  if (switchHost) wireTooltips(switchHost);
+  if (switchHost) wireTooltips(switchHost, app.signal);
   wireClose(app);
 }
 
@@ -3628,13 +3636,13 @@ function renderCombineModal(app: App, content: HTMLElement): void {
       <button id="combine-cancel">Keep both</button>
       <button id="combine-confirm" class="primary">Combine</button>
     </div>`;
-  byId("combine-cancel")?.addEventListener("click", () => app.closeModal());
-  byId("combine-confirm")?.addEventListener("click", () => app.confirmCombine());
+  app.listen(byId("combine-cancel"), "click", () => app.closeModal());
+  app.listen(byId("combine-confirm"), "click", () => app.confirmCombine());
   wireClose(app);
 }
 
 function wireClose(app: App): void {
-  byId("close-modal")?.addEventListener("click", () => app.closeModal());
+  app.listen(byId("close-modal"), "click", () => app.closeModal());
 }
 
 // The mutator combine review's terms (issue #199), read fresh: null
@@ -3677,8 +3685,8 @@ function renderMutCombineModal(app: App, content: HTMLElement): void {
       <button id="mut-combine-cancel">Keep both</button>
       <button id="mut-combine-confirm" class="primary">Combine</button>
     </div>`;
-  byId("mut-combine-cancel")?.addEventListener("click", () => app.closeModal());
-  byId("mut-combine-confirm")?.addEventListener("click", () => app.confirmMutCombine());
+  app.listen(byId("mut-combine-cancel"), "click", () => app.closeModal());
+  app.listen(byId("mut-combine-confirm"), "click", () => app.confirmMutCombine());
   wireClose(app);
 }
 
@@ -3691,11 +3699,11 @@ function renderSettingsModal(app: App, content: HTMLElement): void {
       <small class="muted">silences every sound, the target chime included</small>
     </div>
     <div class="modal-actions"><button id="settings-export">Export save</button><button id="settings-import">Import save</button><button id="settings-reset">Reset progress</button></div>`;
-  byId("pref-mute")?.addEventListener("change", (event) => {
+  app.listen(byId("pref-mute"), "change", (event) => {
     app.setMuted((event.target as HTMLInputElement).checked);
   });
   for (const kind of ["export", "import", "reset"] as const) {
-    byId(`settings-${kind}`)?.addEventListener("click", () => app.openModal(kind));
+    app.listen(byId(`settings-${kind}`), "click", () => app.openModal(kind));
   }
   wireClose(app);
 }
@@ -3863,33 +3871,33 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
     <div class="catalog-body">${areteFace ? catalogAreteFaceHtml(app) : catalogNousFaceHtml(app)}</div>
   </div>`;
   content.querySelectorAll<HTMLButtonElement>("[data-catalog-face]").forEach((button) => {
-    button.addEventListener("click", () => {
+    app.listen(button, "click", () => {
       app.ui.catalogFace = button.getAttribute("data-catalog-face") as "nous" | "arete";
       app.render();
     });
   });
   content.querySelectorAll<HTMLButtonElement>("[data-buy]").forEach((button) => {
-    button.addEventListener("click", () => {
+    app.listen(button, "click", () => {
       app.buyShelf(button.getAttribute("data-buy") as keyof typeof BALANCE.shelfPrices);
     });
   });
-  content.querySelector<HTMLButtonElement>("[data-buy-capacity]")?.addEventListener("click", () => app.buyCapacityAction());
+  app.listen(content.querySelector<HTMLButtonElement>("[data-buy-capacity]"), "click", () => app.buyCapacityAction());
   for (const id of ["buy-capacity-ceiling-1", "buy-capacity-ceiling-2"]) {
-    byId(id)?.addEventListener("click", () => app.buyCapacityCeilingAction());
+    app.listen(byId(id), "click", () => app.buyCapacityCeilingAction());
   }
   for (const id of ["buy-capacity-discount-1", "buy-capacity-discount-2"]) {
-    byId(id)?.addEventListener("click", () => app.buyCapacityDiscountAction());
+    app.listen(byId(id), "click", () => app.buyCapacityDiscountAction());
   }
-  byId("buy-arete-entry")?.addEventListener("click", () => app.buyCatalogEntryAction());
-  byId("buy-arete-pool")?.addEventListener("click", () => app.joinRollPoolAction());
-  byId("buy-arete-break")?.addEventListener("click", () => app.breakHorizonAction());
-  byId("catalog-show-acquired")?.addEventListener("change", (event) => {
+  app.listen(byId("buy-arete-entry"), "click", () => app.buyCatalogEntryAction());
+  app.listen(byId("buy-arete-pool"), "click", () => app.joinRollPoolAction());
+  app.listen(byId("buy-arete-break"), "click", () => app.breakHorizonAction());
+  app.listen(byId("catalog-show-acquired"), "change", (event) => {
     app.ui.showAcquired = (event.target as HTMLInputElement).checked;
     app.render();
   });
   // A face rebuild replaces this root, so disclosure listeners cannot
   // accumulate on the stable modal content and toggle a tap twice.
-  wireTooltips(content.querySelector(".catalog-frame")!);
+  wireTooltips(content.querySelector(".catalog-frame")!, app.signal);
   wireClose(app);
 }
 
@@ -4193,12 +4201,12 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
     <p class="modal-note">The board stays live behind this card — inspect freely; click outside, ✕ or Esc puts the choice away.</p>`;
   updateForgeMetersLive(content, state, projected.forgeRate, projected.mutatorForgeRate);
   content.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach((button) => {
-    button.addEventListener("click", () => {
+    app.listen(button, "click", () => {
       app.chooseCandidate(button.getAttribute("data-offer")!, button.getAttribute("data-choice")!);
     });
   });
   content.querySelectorAll<HTMLButtonElement>("[data-mut-choice]").forEach((button) => {
-    button.addEventListener("click", () => {
+    app.listen(button, "click", () => {
       app.chooseMutatorCandidate(button.getAttribute("data-mut-offer")!, button.getAttribute("data-mut-choice")!);
     });
   });
@@ -4216,7 +4224,7 @@ function renderExportModal(app: App, content: HTMLElement): void {
       <button id="export-copy">Copy to clipboard</button>
       <button id="export-download" class="primary">Download .json</button>
     </div>`;
-  byId("export-copy")?.addEventListener("click", async () => {
+  app.listen(byId("export-copy"), "click", async () => {
     const textarea = byId("export-text") as HTMLTextAreaElement | null;
     if (!textarea) return;
     textarea.select();
@@ -4228,7 +4236,7 @@ function renderExportModal(app: App, content: HTMLElement): void {
       app.say("Save selected — copy it with ⌘C / Ctrl+C.");
     }
   });
-  byId("export-download")?.addEventListener("click", () => {
+  app.listen(byId("export-download"), "click", () => {
     const blob = new Blob([text], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
@@ -4256,13 +4264,14 @@ function renderImportModal(app: App, content: HTMLElement): void {
     ${app.ui.importError ? `<p class="import-error">${app.ui.importError}</p>` : ""}`;
   const textarea = byId("import-text") as HTMLTextAreaElement | null;
   const file = byId("import-file") as HTMLInputElement | null;
-  byId("import-browse")?.addEventListener("click", () => file?.click());
-  file?.addEventListener("change", async () => {
-    const fileItem = file.files?.[0];
+  app.listen(byId("import-browse"), "click", () => file?.click());
+  app.listen(file, "change", async () => {
+    const fileItem = file?.files?.[0];
     if (!fileItem || !textarea) return;
-    textarea.value = await fileItem.text();
+    const text = await fileItem.text();
+    if (!app.released) textarea.value = text;
   });
-  byId("import-apply")?.addEventListener("click", () => {
+  app.listen(byId("import-apply"), "click", () => {
     if (textarea) app.importText(textarea.value);
   });
   wireClose(app);
@@ -4277,8 +4286,8 @@ function renderResetModal(app: App, content: HTMLElement): void {
       <button id="reset-cancel">Keep playing</button>
       <button id="reset-confirm" class="primary" style="background:var(--danger);border-color:var(--danger)">Erase everything</button>
     </div>`;
-  byId("reset-cancel")?.addEventListener("click", () => app.closeModal());
-  byId("reset-confirm")?.addEventListener("click", () => app.hardReset());
+  app.listen(byId("reset-cancel"), "click", () => app.closeModal());
+  app.listen(byId("reset-confirm"), "click", () => app.hardReset());
   wireClose(app);
 }
 
@@ -4301,8 +4310,8 @@ function renderPrestigeModal(app: App, content: HTMLElement): void {
       <button id="prestige-cancel">Not yet</button>
       <button id="prestige-confirm" class="primary">Prestige and claim ${claim} Arete</button>
     </div>`;
-  byId("prestige-cancel")?.addEventListener("click", () => app.closeModal());
-  byId("prestige-confirm")?.addEventListener("click", () => app.confirmPrestige());
+  app.listen(byId("prestige-cancel"), "click", () => app.closeModal());
+  app.listen(byId("prestige-confirm"), "click", () => app.confirmPrestige());
   wireClose(app);
 }
 
@@ -4361,7 +4370,7 @@ function renderHonestyModal(app: App, content: HTMLElement): void {
         .join("")}
     </div>`;
   content.querySelectorAll<HTMLButtonElement>("[data-honesty]").forEach((button) => {
-    button.addEventListener("click", () => {
+    app.listen(button, "click", () => {
       app.resolveHonesty(button.getAttribute("data-honesty") as "missed" | "planned" | "full");
     });
   });
@@ -4508,7 +4517,7 @@ function swapEnterPane(app: App, content: HTMLElement): void {
 // Rebound after every pane swap; each acceptance patches in place.
 function bindEnterPane(app: App, content: HTMLElement): void {
   content.querySelectorAll<HTMLElement>("[data-enter-habit]").forEach((button) => {
-    button.addEventListener("click", () => {
+    app.listen(button, "click", () => {
       app.ui.enter.habitId = button.getAttribute("data-enter-habit");
       refreshEnterChoices(app, content);
       refreshEnterFooter(app, content);
@@ -4520,12 +4529,13 @@ function bindEnterPane(app: App, content: HTMLElement): void {
   // the console sits in upgrade mode): the name rides ui state and the
   // footer refreshes in place, so the caret keeps its place while the CTA
   // arms.
-  nameInput?.addEventListener("input", () => {
+  app.listen(nameInput, "input", () => {
+    if (!nameInput) return;
     app.ui.enter.newName = nameInput.value;
     refreshEnterFooter(app, content);
     stampEnterKey(app, content);
   });
-  nameInput?.addEventListener("keydown", (event) => {
+  app.listen(nameInput, "keydown", (event) => {
     if ((event as KeyboardEvent).key === "Enter") {
       event.preventDefault();
       beginEnter(app);
@@ -4568,15 +4578,15 @@ function renderEnterModal(app: App, content: HTMLElement): void {
   refreshEnterFooter(app, content);
   bindPlanControls(app, content);
   content.querySelectorAll<HTMLButtonElement>("[data-enter-kind]").forEach((button) => {
-    button.addEventListener("click", () => {
+    app.listen(button, "click", () => {
       app.ui.enter.kind = button.getAttribute("data-enter-kind") as EnterKind;
       refreshEnterTabs(app, content);
       swapEnterPane(app, content);
     });
   });
   bindEnterPane(app, content);
-  byId("enter-begin")?.addEventListener("click", () => beginEnter(app));
-  byId("enter-cancel")?.addEventListener("click", () => app.closeModal());
+  app.listen(byId("enter-begin"), "click", () => beginEnter(app));
+  app.listen(byId("enter-cancel"), "click", () => app.closeModal());
   wireClose(app);
 }
 
@@ -4713,10 +4723,10 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
       </div>
     </div>
     <div class="modal-actions"><button id="summary-continue" class="primary">Continue</button></div>`;
-  byId("summary-reflection-text")?.addEventListener("input", (event) => {
+  app.listen(byId("summary-reflection-text"), "input", (event) => {
     app.recordReflectionText((event.target as HTMLInputElement).value);
   });
-  byId("summary-reflection-slider")?.addEventListener("input", (event) => {
+  app.listen(byId("summary-reflection-slider"), "input", (event) => {
     const el = event.target as HTMLInputElement;
     app.recordReflectionSlider(el.valueAsNumber);
     // The ends respond (#233): each label brightens as the thumb nears it —
@@ -4727,7 +4737,7 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
   // a stored decimal re-opens with its own emphasis.
   const sliderEl = byId("summary-reflection-slider") as HTMLInputElement | null;
   if (sliderEl) reflectEndsOf(sliderEl);
-  byId("summary-continue")?.addEventListener("click", () => app.dismissSummary());
+  app.listen(byId("summary-continue"), "click", () => app.dismissSummary());
   wireClose(app);
 }
 
@@ -4754,7 +4764,7 @@ function renderDev(app: App): void {
     <button data-dev="mutera">mutator era</button>
     <button data-dev="board">${app.devBoard ? "close board" : "board"}</button>`;
   panel.querySelectorAll<HTMLButtonElement>("[data-dev]").forEach((button) => {
-    button.addEventListener("click", () => {
+    app.listen(button, "click", () => {
       const key = button.getAttribute("data-dev")!;
       if (key === "target") app.devToTarget();
       else if (key === "nous") app.devNous();
@@ -4899,21 +4909,21 @@ function renderDevBoard(app: App): void {
   }
   panel.scrollTop = scrollTop;
   panel.querySelectorAll<HTMLButtonElement>("[data-devcap]").forEach((button) => {
-    button.addEventListener("click", () => app.devBoardSetCapacity(Number(button.getAttribute("data-devcap"))));
+    app.listen(button, "click", () => app.devBoardSetCapacity(Number(button.getAttribute("data-devcap"))));
   });
   panel.querySelectorAll<HTMLButtonElement>("[data-devvoice]").forEach((button) => {
-    button.addEventListener("click", () => app.devBoardSelect(button.getAttribute("data-devvoice")));
+    app.listen(button, "click", () => app.devBoardSelect(button.getAttribute("data-devvoice")));
   });
   panel.querySelectorAll<HTMLButtonElement>("[data-devcell]").forEach((button) => {
     const [q, r] = button.getAttribute("data-devcell")!.split(",").map(Number);
-    button.addEventListener("click", () => app.devBoardMoveTo(q!, r!));
+    app.listen(button, "click", () => app.devBoardMoveTo(q!, r!));
   });
   panel.querySelectorAll<HTMLButtonElement>("[data-devboard]").forEach((button) => {
     const key = button.getAttribute("data-devboard")!;
-    if (key === "close") button.addEventListener("click", () => app.devToggleBoard());
-    else if (key === "reset") button.addEventListener("click", () => app.devBoardReset());
-    else if (key === "stress") button.addEventListener("click", () => app.devBoardStress());
-    else if (key === "power-up") button.addEventListener("click", () => app.devBoardPower(1));
-    else if (key === "power-down") button.addEventListener("click", () => app.devBoardPower(-1));
+    if (key === "close") app.listen(button, "click", () => app.devToggleBoard());
+    else if (key === "reset") app.listen(button, "click", () => app.devBoardReset());
+    else if (key === "stress") app.listen(button, "click", () => app.devBoardStress());
+    else if (key === "power-up") app.listen(button, "click", () => app.devBoardPower(1));
+    else if (key === "power-down") app.listen(button, "click", () => app.devBoardPower(-1));
   });
 }

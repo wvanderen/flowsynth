@@ -46,7 +46,30 @@ export default defineConfig({
     },
   ],
   test: {
-    include: ["src/**/*.test.ts", "tools/**/*.test.ts"],
-    environment: "node",
+    // UI files share one thread to bound DOM memory. Each file still gets
+    // an isolated environment; engine files retain the parallel fork pool.
+    poolOptions: { threads: { minThreads: 1, maxThreads: 1 } },
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "engine",
+          include: ["src/engine/**/*.test.ts", "tools/**/*.test.ts"],
+          environment: "node",
+          pool: "forks",
+          isolate: true,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "ui",
+          include: ["src/ui/**/*.test.ts"],
+          environment: "node",
+          pool: "threads",
+          isolate: true,
+        },
+      },
+    ],
   },
 });

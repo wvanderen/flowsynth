@@ -323,6 +323,10 @@ A player-reported record of practice outside a running session that can satisfy 
 
 ### Sessions
 
+**Shared save**:
+The persisted game progress shared by the browser's tabs. A tab protects newer shared progress from being replaced by its older working copy, and adopts newer progress when it can safely reconcile its session.
+
+
 **Flow session**:
 A period of real-life practice during which the board runs automatically and the console supports focus activities such as taking notes.
 
