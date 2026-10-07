@@ -458,6 +458,17 @@ export interface GameState {
   // with R the era's earned ν over the horizon line. One-time, Arete-paid,
   // persisting through prestige; lenient-defaults to false.
   horizonBroken: boolean;
+  // The harmonic-capacity ladder (issue #259, the confirmed design beside
+  // ADR-0050). `capacityBought` counts this era's nous Catalog purchases —
+  // each adds one whole-chord unit to every current and future voice, and
+  // prestige returns it to zero. `capacityCeilings` and `capacityDiscounts`
+  // count the Arete Catalog's permanent offerings — ceiling unlocks (the
+  // prototype maximums four and five) and price discounts (20%, then 40% in
+  // total) — which persist through prestige. All three lenient-default to 0
+  // at load; the ladder's math lives in capacity.ts alone.
+  capacityBought: number;
+  capacityCeilings: number;
+  capacityDiscounts: number;
   // The Mutator Grid's unlocked slots (ADR-0043, issue #198): the cells
   // whose second face holds a mutator. The entry's first unlock may sit on
   // any owned cell; every later unlock attaches adjacent to the

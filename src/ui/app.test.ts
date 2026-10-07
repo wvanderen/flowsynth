@@ -5197,3 +5197,177 @@ describe("the one-capacity economy on the board (#258)", () => {
     expect(rebooted.state.activeChords).toEqual(app.state.activeChords);
   });
 });
+
+describe("the harmonic-capacity ladder (#259)", () => {
+  beforeEach(() => { app = boot(undefined, true); });
+  const readoutText = (): string => (document.getElementById("chord-readout") as HTMLElement).textContent ?? "";
+
+  it("ordinary play shows no capacity surfaces in either catalog", () => {
+    app = boot();
+    app.state.arete = 5;
+    app.openModal("catalog");
+    expect(document.getElementById("modal-content")!.textContent).not.toContain("Harmonic capacity");
+    app.closeModal();
+    app.state.prestiges = 1;
+    app.state.catalogEntryOwned = true;
+    app.ui.catalogFace = "arete";
+    app.openModal("catalog");
+    expect(document.getElementById("modal-content")!.textContent).not.toContain("Harmonic capacity");
+  });
+
+  it("the catalog row quotes the rung's price and benefit, and the purchase lands", () => {
+    app.state.nous = 1_000;
+    app.openModal("catalog");
+    const modal = document.getElementById("modal-content")!;
+    expect(modal.textContent).toContain("Harmonic capacity");
+    expect(modal.textContent).toContain("1/3");
+    const button = document.querySelector<HTMLButtonElement>("[data-buy-capacity]")!;
+    expect(button.textContent!.trim()).toBe(`${formatInt(BALANCE.capacityPrices[0]!)} ν`);
+    expect(button.disabled).toBe(false);
+    button.click();
+    expect(app.state.capacityBought).toBe(1);
+    // The modal re-rendered onto the next rung: figure, price, and the
+    // remaining headroom all moved.
+    const next = document.querySelector<HTMLButtonElement>("[data-buy-capacity]")!;
+    expect(next.textContent!.trim()).toBe(`${formatInt(BALANCE.capacityPrices[1]!)} ν`);
+    expect(document.getElementById("modal-content")!.textContent).toContain("2/3");
+  });
+
+  it("the unaffordable rung reads as disabled with its practice-minute estimate", () => {
+    app.state.nous = 0;
+    app.openModal("catalog");
+    const button = document.querySelector<HTMLButtonElement>("[data-buy-capacity]")!;
+    expect(button.disabled).toBe(true);
+    const countdown = button.closest(".shop-buy")!.querySelector(".shop-countdown")!;
+    expect(countdown.textContent).toContain("of practice");
+  });
+
+  it("capacity disclosure stays reachable with unavailable purchases and dismisses before the sheet", () => {
+    app.state.nous = 0;
+    app.openModal("catalog");
+    const trigger = document.querySelector<HTMLButtonElement>(".capacity-catalog .inst-tip-trigger")!;
+    expect(document.querySelector<HTMLButtonElement>("[data-buy-capacity]")!.disabled).toBe(true);
+    trigger.focus();
+    const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+    expect(body.classList.contains("inst-show")).toBe(true);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(body.classList.contains("inst-show")).toBe(false);
+    expect(document.querySelector("[data-buy-capacity]")).not.toBeNull();
+    trigger.click();
+    expect(body.classList.contains("inst-show")).toBe(true);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    document.getElementById("modal-title")!.click();
+    expect(body.classList.contains("inst-show")).toBe(false);
+    app.closeModal();
+    app.state.prestiges = 1;
+    app.state.catalogEntryOwned = true;
+    app.ui.catalogFace = "arete";
+    app.openModal("catalog");
+    const locked = document.getElementById("buy-capacity-ceiling-2")!.closest(".catalog-row")!;
+    const lockedTrigger = locked.querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
+    lockedTrigger.focus();
+    const lockedBody = document.getElementById(lockedTrigger.getAttribute("aria-describedby")!)!;
+    expect(lockedBody.classList.contains("inst-show")).toBe(true);
+    expect(lockedBody.textContent).toContain("Own the first ceiling first");
+    lockedTrigger.click();
+    expect(lockedBody.classList.contains("inst-show")).toBe(true);
+    expect(lockedTrigger.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("the rung is inert in flow mode — the purchase is upgrade-mode-only on the surface too", () => {
+    app.state.nous = 1_000;
+    startSession(app.state, null);
+    app.openModal("catalog");
+    const button = document.querySelector<HTMLButtonElement>("[data-buy-capacity]")!;
+    expect(button.disabled).toBe(true);
+    button.click();
+    expect(app.state.capacityBought).toBe(0);
+  });
+
+  it("the capped row names the ceiling and points at the Arete sheet; the sold-out ladder reads complete", () => {
+    app.state.capacityBought = 2;
+    app.openModal("catalog");
+    let modal = document.getElementById("modal-content")!;
+    expect(modal.textContent).toContain("3/3");
+    expect(modal.textContent).toContain("capped");
+    expect(modal.textContent).toContain("Arete Catalog");
+    expect(document.querySelector("[data-buy-capacity]")).toBeNull();
+    // With both ceiling unlocks owned and every rung sold, the pointer
+    // goes too — nothing is left to sell.
+    app.state.capacityCeilings = 2;
+    app.state.capacityBought = 4;
+    app.render();
+    modal = document.getElementById("modal-content")!;
+    expect(modal.textContent).toContain("complete");
+    expect(modal.textContent).not.toContain("capped");
+  });
+
+  it("a purchase immediately re-runs the allocation and the board's readouts", () => {
+    give(app.state, "additive", hex(1, 0));
+    app.render();
+    const c4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(0, 0)))!;
+    app.select(c4.id);
+    expect(readoutText()).toContain("Capacity 1/1");
+    app.state.nous = 1_000;
+    app.buyCapacityAction();
+    expect(readoutText()).toContain("Capacity 1/2");
+  });
+
+  it("the Arete sheet sells the two ceilings and two discounts, each pair in order", () => {
+    app.state.arete = 100;
+    app.state.prestiges = 1;
+    app.state.catalogEntryOwned = true;
+    app.ui.catalogFace = "arete";
+    app.openModal("catalog");
+    const sheet = () => document.getElementById("modal-content")!;
+    expect(sheet().textContent).toContain("Harmonic capacity");
+    expect(sheet().textContent).toContain("capacity four");
+    expect(sheet().textContent).toContain("capacity five");
+    const secondCeiling = document.getElementById("buy-capacity-ceiling-2") as HTMLButtonElement;
+    const secondDiscount = document.getElementById("buy-capacity-discount-2") as HTMLButtonElement;
+    expect(secondCeiling.disabled).toBe(true);
+    expect(secondDiscount.disabled).toBe(true);
+    document.getElementById("buy-capacity-ceiling-1")!.click();
+    expect(app.state.capacityCeilings).toBe(1);
+    app.render();
+    expect(sheet().textContent).toContain("raised");
+    const nextCeiling = document.getElementById("buy-capacity-ceiling-2") as HTMLButtonElement;
+    expect(nextCeiling.disabled).toBe(false);
+    expect(nextCeiling.textContent).toContain(`${BALANCE.capacityCeilingCosts[1]} Arete`);
+    nextCeiling.click();
+    expect(app.state.capacityCeilings).toBe(2);
+    app.render();
+    expect(document.getElementById("buy-capacity-ceiling-1")).toBeNull();
+    document.getElementById("buy-capacity-discount-1")!.click();
+    document.getElementById("buy-capacity-discount-2")!.click();
+    expect(app.state.capacityDiscounts).toBe(2);
+    app.render();
+    expect(sheet().textContent).toContain("owned");
+    expect(document.getElementById("buy-capacity-discount-1")).toBeNull();
+  });
+
+  it("the sheet's capacity offerings stand inert outside upgrade mode", () => {
+    app.state.arete = 100;
+    startSession(app.state, null);
+    app.state.prestiges = 1;
+    app.state.catalogEntryOwned = true;
+    app.ui.catalogFace = "arete";
+    app.openModal("catalog");
+    for (const id of ["buy-capacity-ceiling-1", "buy-capacity-discount-1"]) {
+      expect((document.getElementById(id) as HTMLButtonElement).disabled).toBe(true);
+    }
+    document.getElementById("buy-capacity-ceiling-1")!.click();
+    expect(app.state.capacityCeilings).toBe(0);
+  });
+
+  it("ladder ownership rides the real save/reload path through the app", () => {
+    app.state.nous = 1_000;
+    app.buyCapacityAction();
+    const saved = localStorage.getItem(STORAGE_KEY)!;
+    expect(saved).toContain("capacityBought");
+    const rebooted = boot(undefined, true);
+    expect(rebooted.state.capacityBought).toBe(1);
+    expect(rebooted.state.nous).toBe(app.state.nous);
+  });
+});
+

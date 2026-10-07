@@ -2795,3 +2795,9 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   .catalog-frame { padding: 12px 16px 16px; }
   .catalog-row { gap: 10px; }
 }
+
+/* Capacity disclosure remains a touch target beside the open catalog rows. */
+.capacity-catalog .catalog-row > div { min-width: 0; }
+.capacity-catalog .catalog-row h3 { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.capacity-catalog .shop-countdown { display: block; }
+.capacity-catalog .inst-tip-trigger { width: 44px; height: 44px; }

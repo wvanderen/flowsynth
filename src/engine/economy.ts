@@ -1,6 +1,7 @@
 import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isVoiceType } from "./constants";
 import { analyzeChords, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
 import { allocateChords, DEFAULT_ALLOCATION_BUDGET, type AllocationBudget, type AllocationRead, type AllocationVoiceParams } from "./allocation";
+import { capacityOf } from "./capacity";
 import { achievementBoostOf } from "./achievements";
 import { activeHabit } from "./habits";
 import { baseBuildFactors, amplifyFactors } from "./builds";
@@ -598,18 +599,20 @@ export function computeRates(
   };
 }
 
-// Every voice's whole-chord budget (issue #258, carrying the confirmed
-// harmonic-capacity design): one at this stage. Every current and newly
-// acquired singing module opens at one unit, rarity never alters it, and
-// spacers — conducting wire, never singers — consume none by construction
-// (the allocator budgets singing members only). The ladder that raises it
-// (the global nous Catalog purchases, ceiling, prestige reset) is the
-// economy's next ticket (#259): this accessor is the one place that
-// ladder can land, so every read below and every readout stays on one
-// figure. The allocation model stays development-gated; ordinary play
-// keeps its uncapped production until calibration validates release.
-export function voiceCapacityOf(_state: GameState): number {
-  return 1;
+// Every voice's whole-chord budget (issues #258/#259, the confirmed
+// harmonic-capacity design): one at a fresh save, raised by the global nous
+// Catalog ladder, capped by the ceiling the Arete offerings raise, and
+// reset to one by prestige. Every current and newly acquired singing
+// module opens at one unit, rarity never alters it, and spacers —
+// conducting wire, never singers — consume none by construction (the
+// allocator budgets singing members only). The ladder's math lives in
+// capacity.ts; this accessor stays the one read every rate pass and
+// readout shares, so the purchase ladder landed in exactly the one place
+// ADR-0052 reserved. The allocation model stays development-gated;
+// ordinary play keeps its uncapped production until calibration validates
+// release.
+export function voiceCapacityOf(state: GameState): number {
+  return capacityOf(state);
 }
 
 // The chordless pass — the weights' source for the authoritative
