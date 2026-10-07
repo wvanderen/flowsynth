@@ -69,12 +69,12 @@ const mod12 = (pitch: number): number => ((Math.round(pitch) % 12) + 12) % 12;
 // Pair-based symbolic tension (ADR-0049): every pair of distinct classes
 // weighed by interval class. Tuning in BALANCE.tensionWeights. Shared by
 // the chord pass and the capacity allocator's formation read.
-export function formationTension(classes: readonly number[]): number {
+export function formationTension(classes: readonly number[], weights: Readonly<Record<number, number>> = BALANCE.tensionWeights): number {
   let total = 0;
   for (let i = 0; i < classes.length; i++) {
     for (let j = i + 1; j < classes.length; j++) {
       const d = Math.abs(classes[i]! - classes[j]!);
-      total += BALANCE.tensionWeights[Math.min(d, 12 - d)] ?? 0;
+      total += weights[Math.min(d, 12 - d)] ?? 0;
     }
   }
   return total;
@@ -83,16 +83,22 @@ export function formationTension(classes: readonly number[]): number {
 // The formation quality (ADR-0049): clamp(1 + complexity − max(0, tension −
 // A), Qmin, cap) — the allowance A forgiven to named formations, the floor
 // materially below neutral so chromatic density is priced down. Chordless
-// formations never reach this: exactly ×1.00.
+// formations never reach this: exactly ×1.00. The magnitudes default to
+// the production tuning; the allocator passes its own (issue #260) with
+// the adopted 0.5–1.5 bounds.
 export function formationQuality(
   classes: readonly number[],
   tension: number,
   named: boolean,
   bounds = { floor: BALANCE.qualityFloor, cap: BALANCE.qualityCap },
+  magnitudes: { complexityRate: number; tensionAllowance: number } = {
+    complexityRate: BALANCE.complexityRate,
+    tensionAllowance: BALANCE.tensionAllowance,
+  },
 ): number {
   if (!named) return 1;
-  const complexity = BALANCE.complexityRate * Math.max(0, classes.length - 1);
-  const effective = Math.max(0, tension - BALANCE.tensionAllowance);
+  const complexity = magnitudes.complexityRate * Math.max(0, classes.length - 1);
+  const effective = Math.max(0, tension - magnitudes.tensionAllowance);
   return Math.min(bounds.cap, Math.max(bounds.floor, 1 + complexity - effective));
 }
 
@@ -191,8 +197,18 @@ export interface ChordAnalysis {
   voiceMultiplier: Map<string, number>;
   // The formation quality each module's cluster scored (ADR-0049): its own
   // named term per member — read aloud as "Formation ×1.12". Exactly 1 on
-  // a chordless formation.
+  // a chordless formation. The capacity allocator sets this to the APPLIED
+  // production term (issue #260: exactly 1 on a voice carrying no active
+  // chord, whatever its formation measured) and reports the formation's
+  // measured quality separately in formationMeasuredQ.
   formationQ: Map<string, number>;
+  // The formation quality as measured (issue #260): one read per connected
+  // formation, scored over every singing voice it holds — voices whose
+  // recognized chords sat inactive included — whether or not any chord
+  // activated. Present only on the allocation pass; the plain recognizer
+  // applies its Q to every member, so its formationQ already is the
+  // measurement.
+  formationMeasuredQ?: Map<string, number>;
   // Whether each module's formation named at least one chord — the
   // resonance mutator's live gate (inert on a chordless host).
   namedFormation: Map<string, boolean>;
@@ -359,6 +375,47 @@ export function partitionVoices(placed: DeployedModule[]): { singers: Singer[]; 
   return { singers, spacers };
 }
 
+// The hypothetical board a drop would make (issue #260, factored out of
+// the would-form preview so the placement projection rides the identical
+// placement semantics): `id` moves to `target` — or, when target is null,
+// off the board, exactly as returnModule retrieves it. An occupant at the
+// target swaps out — to the mover's cell when the drop came from the
+// board, off the board when it came from the tray — exactly as placeModule
+// commits it. Unmoved modules pass through by reference; the moved ones
+// are fresh copies, so the real state is never touched.
+export interface HypotheticalBoard {
+  modules: ModuleInstance[];
+  positions: ReadonlyMap<string, Hex>;
+}
+
+export function hypotheticalBoardFor(state: GameState, id: string, target: Hex | null): HypotheticalBoard {
+  const dragged = state.modules.find((m) => m.id === id);
+  if (!dragged) return { modules: state.modules, positions: new Map() };
+  const positions = new Map<string, Hex>();
+  const modules: ModuleInstance[] = [];
+  for (const module of state.modules) {
+    if (module.id === id) {
+      if (target === null) {
+        modules.push({ ...module, pos: null });
+        continue;
+      }
+      positions.set(id, target);
+      modules.push({ ...module, pos: target });
+      continue;
+    }
+    if (module.pos === null) continue;
+    if (target !== null && module.pos.q === target.q && module.pos.r === target.r) {
+      // The occupant swaps out — to the mover's cell when the drop came
+      // from the board, off the board when it came from the tray.
+      modules.push(dragged.pos ? { ...module, pos: dragged.pos } : { ...module, pos: null });
+      if (dragged.pos) positions.set(module.id, dragged.pos);
+      continue;
+    }
+    modules.push(module);
+  }
+  return { modules, positions };
+}
+
 // The would-form pass (board-redesign spec §5–§6): what the board would
 // carry after the drop. `chords` is the hypothetical board's named-chord
 // terms; `positions` maps every module the drop moves to its would-be cell
@@ -377,26 +434,8 @@ export interface WouldFormPreview {
 export function wouldFormPreview(state: GameState, id: string, target: Hex, bonusScale = 1): WouldFormPreview {
   const dragged = state.modules.find((m) => m.id === id);
   if (!dragged) return { chords: [], positions: new Map() };
-  const positions = new Map<string, Hex>([[id, target]]);
-  const hypothetical: ModuleInstance[] = [];
-  for (const module of state.modules) {
-    if (module.id === id) {
-      hypothetical.push({ ...module, pos: target });
-      continue;
-    }
-    if (module.pos === null) continue;
-    if (module.pos.q === target.q && module.pos.r === target.r) {
-      // The occupant swaps out — to the mover's cell when the drop came
-      // from the board, off the board when it came from the tray.
-      hypothetical.push(
-        dragged.pos ? { ...module, pos: dragged.pos } : { ...module, pos: null },
-      );
-      if (dragged.pos) positions.set(module.id, dragged.pos);
-      continue;
-    }
-    hypothetical.push(module);
-  }
-  const placed = hypothetical.filter((m): m is DeployedModule => m.pos !== null);
+  const { modules, positions } = hypotheticalBoardFor(state, id, target);
+  const placed = modules.filter((m): m is DeployedModule => m.pos !== null);
   const { singers, spacers } = partitionVoices(placed);
   return { chords: analyzeChords(singers, spacers, bonusScale).namedChords, positions };
 }

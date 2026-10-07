@@ -1,11 +1,12 @@
 import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isVoiceType } from "./constants";
-import { analyzeChords, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
+import { analyzeChords, hypotheticalBoardFor, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
 import { allocateChords, DEFAULT_ALLOCATION_BUDGET, type AllocationBudget, type AllocationRead, type AllocationVoiceParams } from "./allocation";
 import { capacityOf } from "./capacity";
-import { achievementBoostOf } from "./achievements";
+import { achievementBoostOf, syncAchievements } from "./achievements";
 import { activeHabit } from "./habits";
 import { baseBuildFactors, amplifyFactors } from "./builds";
-import { discoveryBoostOf } from "./library";
+import { discoveryBoostOf, syncChordDiscoveries } from "./library";
+import { summaryTermsOf } from "./allocation";
 import { adjacent, sameHex } from "./hex";
 import { octaveRowOf } from "./lattice";
 import type { Contribution, DeployedModule, GameState, Hex, ModuleInstance, MutatorFamily, MutatorInstance, Rarity, RateSnapshot } from "./types";
@@ -511,6 +512,7 @@ export function computeRates(
       // their display factor from the chord pass below.
       chordFactor: null,
       formationQ: 1,
+      formationMeasuredQ: 1,
       infusorBonus: 0,
       chargeFactor: chargedFactor(strength),
       chargeStrength: strength,
@@ -540,7 +542,13 @@ export function computeRates(
     const silent = CATEGORY_OF[module.type] === "silentVoice";
     const chordTerms = analysis.participation.get(module.id) ?? 0;
     const rawChordFactor = analysis.voiceMultiplier.get(module.id) ?? 1;
+    // The applied formation term (issue #260): exactly 1 on a voice
+    // carrying no active chord, whatever its formation measured — the
+    // allocator's formationQ map already carries the distinction, and the
+    // measured read rides beside it for the surfaces that show the
+    // formation's posture.
     const formationQ = analysis.formationQ.get(module.id) ?? 1;
+    const formationMeasuredQ = analysis.formationMeasuredQ?.get(module.id) ?? formationQ;
     const named = analysis.namedFormation.get(module.id) === true;
     // The resonance mutator multiplies the whole chord factor including Q
     // (ADR-0043 as carried by ADR-0049) — scaling with chord investment,
@@ -567,6 +575,7 @@ export function computeRates(
       chordTerms,
       chordFactor: pitch === null ? null : chordFactor,
       formationQ,
+      formationMeasuredQ,
       infusorBonus: localBonus,
       chargeFactor: chargeTerm,
       chargeStrength: strength,
@@ -726,6 +735,63 @@ export function displayedRates(state: GameState, flow: boolean = flowLive(state)
   return allocationEnabledStates.has(state)
     ? allocateRates(state, flow, { keep: activeChordKeysOf(state), budget: LIVE_ALLOCATION_BUDGET }).snapshot
     : computeRates(state, flow);
+}
+
+// The placement projection (issue #260): the authoritative economy a drop
+// would commit, read before anything moves. The hypothetical board is the
+// one placeModule and returnModule write — the mover at its target (or off
+// the board on a retrieval), an occupant swapped out exactly as the drop
+// swaps it — and the commit's own boundary beats fold onto copied ledgers
+// (the allocation retention hint, the chord library, the feats) before the
+// display pass reads, so the previewed figures are the figures the
+// commit's render shows, discovery and achievement legs included. The
+// `current` snapshot rides the identical basis, so the deltas a preview
+// reads are the ones the commit delivers — a drop can never disagree with
+// what it promised.
+export interface PlacementProjection {
+  current: RateSnapshot;
+  projected: RateSnapshot;
+}
+
+export function projectPlacement(
+  state: GameState,
+  id: string,
+  target: Hex | null,
+  flow: boolean = flowLive(state),
+): PlacementProjection {
+  const { modules } = hypotheticalBoardFor(state, id, target);
+  const enabled = allocationEnabledStates.has(state);
+  // The copied state the commit rehearses against: the hypothetical board,
+  // fresh ledgers (records copied member-deep — the syncs write in place),
+  // and the allocation gate re-attached to the copy.
+  const hypothetical: GameState = {
+    ...state,
+    modules,
+    activeChords: [...state.activeChords],
+    achievements: { ...state.achievements },
+    chordDiscovery: Object.fromEntries(
+      Object.entries(state.chordDiscovery).map(([name, record]) => [name, { ...record, roots: [...record.roots] }]),
+    ),
+  };
+  if (enabled) setAllocationEnabled(hypothetical, true);
+  // The commit's own sequence over the copy: the gated boundary sync
+  // (which in development writes the retention hint the display then
+  // reads), then the library and feat ledgers against the landed board.
+  const landed = syncRates(hypothetical, true);
+  syncChordDiscoveries(hypothetical, {
+    chords: landed.allocation ? summaryTermsOf(landed.allocation) : landed.namedChords,
+    now: 0,
+  });
+  syncAchievements(hypothetical, {
+    chargeDelivered: chargeDelivered(landed),
+    maxChordFactor: maxChordFactorOf(landed),
+    now: 0,
+    silent: true,
+  });
+  return {
+    current: displayedRates(state, flow),
+    projected: displayedRates(hypothetical, flow),
+  };
 }
 
 // Production, action checks and summaries share the display's gate.

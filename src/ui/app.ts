@@ -163,9 +163,11 @@ export interface UiState {
   // furniture — never saved; cleared with the transient modes.
   launcherOpen: boolean;
   placing: string | null;
-  // The live drop preview (§5–§6): the module a drag or armed placement is
-  // pointing at, and the cell it hovers. Null whenever nothing hovers.
-  dropHover: { moduleId: string; pos: Hex } | null;
+  // The live drop preview (§5–§6, #260): the module a drag or armed
+  // placement is pointing at, and the cell it hovers — null pos while the
+  // carried module hovers the inventory zone, the retrieval preview. Null
+  // whenever nothing hovers.
+  dropHover: { moduleId: string; pos: Hex | null } | null;
   // The chord the pointer rests on (§6): a hovered seam's chord or a
   // hovered module's chords, asked into the reserved readout. Light
   // furniture — never saved, cleared with the transient modes.
@@ -1680,13 +1682,15 @@ export class App {
 
   // The one placement landing (§5–§6), shared by the click path and the
   // drag/touch release. A drop never opens the expanded face — and the
-  // armed placement carries its module as the selection, so the selection
-  // is dropped before the landing renders, never after: the module
-  // presents closed. A chord the drop newly forms strums (§6).
+  // armed placement carries its module as the selection, so that
+  // selection is dropped before the landing renders, never after: the
+  // module presents closed. An unrelated selection — another module's
+  // open bloom — survives the landing (#260: a placement must not cost
+  // the player their selection). A chord the drop newly forms strums (§6).
   private placeAndStrum(module: ModuleInstance, pos: Hex): void {
     const snapshot = displayedRates(this.state, this.state.mode === "flow");
     const before = snapshot.allocation ? summaryTermsOf(snapshot.allocation) : snapshot.namedChords;
-    this.ui.selected = null;
+    if (this.ui.selected === module.id) this.ui.selected = null;
     if (this.act(placeModule(this.state, module.id, pos), `${META[module.type].name} placed.`)) {
       this.ui.placing = null;
       this.strumFormedChords(before);

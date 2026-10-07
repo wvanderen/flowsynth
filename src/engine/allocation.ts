@@ -62,6 +62,24 @@ export const DEFAULT_ALLOCATION_BUDGET: AllocationBudget = { maxNodes: 250_000, 
 // pass retains ADR-0049's provisional tuning.
 export const ALLOCATION_QUALITY_BOUNDS = { floor: 0.5, cap: 1.5 } as const;
 
+// The allocator's formation quality (issue #260): the ADR-0049 shape over
+// the allocation magnitudes — BALANCE.allocationComplexityRate,
+// allocationTensionWeights, and allocationTensionAllowance — inside the
+// adopted 0.5–1.5 bounds, so organized formations meaningfully spread the
+// range instead of wearing a lifted cap over the production curve. One
+// helper both the solver and the surfaces read; the independent oracle in
+// allocation.test.ts re-implements it from the same BALANCE knobs.
+export function allocationQualityOf(classes: readonly number[]): number {
+  const sorted = [...new Set(classes)].sort((a, b) => a - b);
+  return formationQuality(
+    sorted,
+    formationTension(sorted, BALANCE.allocationTensionWeights),
+    true,
+    ALLOCATION_QUALITY_BOUNDS,
+    { complexityRate: BALANCE.allocationComplexityRate, tensionAllowance: BALANCE.allocationTensionAllowance },
+  );
+}
+
 // One complete voice-set the board recognizes — the atom of allocation.
 // `bonus` is the bonus the instance actually carries (the named bonus
 // scaled by any active build factor, plus every singing silent voice's
@@ -372,8 +390,7 @@ function surveyCandidates(
 
 // The cluster's Q, read once for the survey's ordering heuristic.
 function qualityOf(voices: ClusterVoice[]): number {
-  const classes = [...new Set(voices.map((voice) => voice.klass))].sort((a, b) => a - b);
-  return formationQuality(classes, formationTension(classes), true, ALLOCATION_QUALITY_BOUNDS);
+  return allocationQualityOf(voices.map((voice) => voice.klass));
 }
 
 // Each voice's bound material: which ordered candidates contain it, and
@@ -607,6 +624,7 @@ export function allocateChords(singers: Singer[], spacers: DeployedModule[] = []
   const namedChords: NamedChordTerm[] = [];
   const voiceMultiplier = new Map<string, number>();
   const formationQ = new Map<string, number>();
+  const formationMeasuredQ = new Map<string, number>();
   const namedFormation = new Map<string, boolean>();
   const participation = new Map<string, number>();
   const used = new Map<string, number>();
@@ -645,18 +663,27 @@ export function allocateChords(singers: Singer[], spacers: DeployedModule[] = []
         counts.set(id, (counts.get(id) ?? 0) + 1);
       }
     }
-    const q = solved.instances.length > 0 ? qualityOf(voices) : 1;
+    // The formation's two quality reads (issue #260): the measured Q —
+    // scored over every singing voice in the formation, whichever chords
+    // activated, and read whenever the formation recognizes a chord at
+    // all — and the applied production term, which only active
+    // participants receive. A formation whose every recognized chord sat
+    // idle measures its Q but applies exactly ×1 to every voice; a
+    // chordless formation is exactly neutral in both reads.
+    const qMeasured = solved.candidates > 0 ? qualityOf(voices) : 1;
+    const qApplied = solved.instances.length > 0 ? qMeasured : 1;
     for (const voice of voices) {
       const count = counts.get(voice.id) ?? 0;
       used.set(voice.id, count);
       participation.set(voice.id, count);
-      voiceMultiplier.set(voice.id, count > 0 ? (product.get(voice.id) ?? 1) * q : 1);
-      formationQ.set(voice.id, q);
+      voiceMultiplier.set(voice.id, count > 0 ? (product.get(voice.id) ?? 1) * qApplied : 1);
+      formationQ.set(voice.id, count > 0 ? qApplied : 1);
+      formationMeasuredQ.set(voice.id, qMeasured);
       namedFormation.set(voice.id, count > 0);
     }
   }
   return {
-    analysis: { namedChords, voiceMultiplier, formationQ, namedFormation, participation },
+    analysis: { namedChords, voiceMultiplier, formationQ, formationMeasuredQ, namedFormation, participation },
     used,
     instances,
     recognized,
