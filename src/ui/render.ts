@@ -47,6 +47,7 @@ import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "
 import { containerWidth, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX } from "./container";
 import { liveAttr, liveSet } from "./live";
 import {
+  bindMutatorDrag,
   bindMutatorLayer,
   bloomMutatorKey,
   hexFromAttr,
@@ -54,8 +55,11 @@ import {
   mutatorBloomLineHtml,
   mutatorEffectText,
   mutGridDecorations,
+  mutatorSlotPrice,
   mutatorTileInner,
   mutatorTileSvg,
+  mutTabPairHtml,
+  mutatorLayerWanted,
   FAMILY_WORD,
   renderMutatorPill,
   renderMutatorPopover,
@@ -734,14 +738,13 @@ const CELL_TOOL_SVG = `<svg viewBox="-10 -10 20 20" aria-hidden="true" fill="non
 const INVENTORY_TOOL_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/></svg>`;
 
 // The action definitions the dock and the thumb bar are both built from:
-// Catalog / Forge (count badge + charge pip) / New cell / Inventory
-// everywhere, and Collection folded into the phone's thumb bar (§7, issue
-// #270) — the launcher that absorbs the phone's feats and chords entries.
-// Arrange has no job anywhere — dragging is already live (§5) — and the
-// canvas legend is gone: its encodings belong to the surfaces that use
-// them. Inventory presents twice: on phone the thumb bar taps open the
-// sheet; at every other width the dock icon toggles the tray column beside
-// it.
+// Catalog / Forge (count badge + charge pip) / Add everywhere, and
+// Collection and Inventory folded into the phone's thumb bar (§7, issue
+// #270). Arrange has no job anywhere — dragging is already live (§5) — and
+// the canvas legend is gone: its encodings belong to the surfaces that use
+// them. Inventory presents once: the wide-surface dock lost the icon when
+// the tray column stopped collapsing (issue #272), so the thumb bar's
+// segment taps the sheet — the phone face of the same tray.
 interface ToolAction {
   op: string;
   svg: string;
@@ -754,8 +757,6 @@ interface ToolAction {
   badge?: (app: App) => string;
   // A static node riding the icon (forge's charge pip).
   media?: string;
-  // The thumb bar's word, when it carries a count the bare label doesn't.
-  word?: (app: App) => string;
   disabled?: (app: App) => boolean;
   active?: (app: App) => boolean;
 }
@@ -831,48 +832,60 @@ function toolActions(): ToolAction[] {
       },
     },
     {
+      // Add, mode-directed (issue #272 review; #246's contract): module
+      // mode arms the next cell's purchase, mutator mode arms the slot
+      // unlock — Arete slot unlocking lives in Add, never a tray card.
+      // Arming from the thumb bar puts the tray sheet away, so the
+      // pulsing targets stand on a visible board.
       op: "cell",
       svg: CELL_TOOL_SVG,
-      label: "New cell",
+      label: "Add",
       run: (app) => {
-        if (app.ui.buyingCell) app.cancelCellPurchase();
-        else app.armCellPurchase();
+        const mutatorArm = app.state.mode === "upgrade" && app.state.catalogEntryOwned && app.ui.mutLayer === "mutators";
+        if (app.ui.modal === "inventory") app.closeModal();
+        if (mutatorArm) {
+          if (app.ui.mutUnlockArmed) app.mutCancelGestures();
+          else app.mutArmUnlock();
+        } else if (app.ui.buyingCell) {
+          app.cancelCellPurchase();
+        } else {
+          app.armCellPurchase();
+        }
       },
-      title: (app) => (app.state.mode !== "upgrade" ? "New cell — purchases happen between sessions" : app.ui.buyingCell ? "Pick a frontier hex · Esc cancels" : "New cell"),
+      title: (app) =>
+        app.state.mode !== "upgrade"
+          ? "Add — purchases happen between sessions"
+          : app.state.catalogEntryOwned && app.ui.mutLayer === "mutators"
+            ? app.ui.mutUnlockArmed
+              ? "Pick an eligible cell · Esc cancels"
+              : `Unlock a Mutator slot — ${mutatorSlotPrice(app.state) === 0 ? "the first is free" : `${formatInt(mutatorSlotPrice(app.state))} Arete`}`
+            : app.ui.buyingCell
+              ? "Pick a frontier hex · Esc cancels"
+              : "Add a cell",
       disabled: (app) => app.state.mode !== "upgrade",
-      active: (app) => app.ui.buyingCell,
+      active: (app) => app.ui.buyingCell || app.ui.mutUnlockArmed,
     },
     {
+      // The tray's phone face (issue #272): the wide-surface dock lost the
+      // Inventory icon when the column stopped collapsing — the thumb bar's
+      // segment toggles the tray sheet.
       op: "inventory",
       svg: INVENTORY_TOOL_SVG,
       label: "Inventory",
       run: (app) => {
-        // Phone folds the tray into a sheet; every other width toggles the
-        // tray column beside the dock.
-        if (isPhoneWidth()) app.openModal("inventory");
-        else {
-          app.ui.trayOpen = !app.ui.trayOpen;
-          app.render();
-        }
+        if (app.ui.modal === "inventory") app.closeModal();
+        else app.openModal("inventory");
       },
       badge: (app) => {
         const trayCount = app.state.modules.filter((m) => m.pos === null).length;
         return trayCount > 0 ? `<b class="tool-badge mono">${trayCount}</b>` : "";
       },
-      word: (app) => `Inventory · ${app.state.modules.filter((m) => m.pos === null).length}`,
       title: (app) =>
-        app.state.mode !== "upgrade"
-          ? "Inventory — the board is locked during flow"
-          : isPhoneWidth()
-            ? "Inventory — the board-surface tray, tapped open"
-            : app.ui.trayOpen
-              ? "Inventory — close the tray"
-              : "Inventory — open the tray",
-      // Gated in flow like Catalog/Forge/New cell (#193): the tray hides
-      // with the board locked, so the button arms nothing a placement
-      // could never land.
+        app.state.mode !== "upgrade" ? "Inventory — the board is locked during flow" : "Inventory — the board-surface tray, tapped open",
+      // Gated in flow like Catalog/Forge/Add (#193): the tray hides with
+      // the board locked, so the button arms nothing a placement could
+      // never land.
       disabled: (app) => app.state.mode !== "upgrade",
-      active: (app) => !isPhoneWidth() && app.ui.trayOpen,
     },
     {
       // Collection rides the thumb bar as its fifth segment (issue #270):
@@ -896,20 +909,23 @@ const TOOL_CATALOG_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none
 const TOOL_FORGE_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1.8 3.2-3.2 4.6-3.2 8.4a3.2 3.2 0 0 0 6.4 0c0-1.4-.6-2.3-1.1-2.9 1.9.5 3.4 2 3.4 4.3a5.5 5.5 0 0 1-11 0C6.5 7.6 10.8 6.4 12 3Z"/></svg>`;
 
 // The left-edge icon dock (§7): Catalog / Forge (count badge + charge pip)
-// / New cell, floating over the board's left edge. Hidden on portrait
-// phone, where the same actions plus Collection ride the bottom thumb bar.
+// / Add, floating over the board's left edge (issue #272 — the Inventory
+// icon left with the tray's collapse toggle). Hidden on portrait phone,
+// where the same actions plus Inventory and Collection ride the bottom
+// thumb bar.
 function renderTools(app: App, projected: RateSnapshot): void {
   const { state, ui } = app;
   const host = byId("board-tools");
   const thumb = byId("thumb-bar");
   const actions = toolActions();
-  // The dock carries the board actions; Collection is the thumb bar's
-  // fifth segment alone on phone, where the ledger — and with it the
-  // feats/chords chips — dissolves (issue #270).
-  const dockActions = actions.filter((action) => action.op !== "collection");
+  // The dock carries the board actions; Inventory and Collection ride the
+  // thumb bar alone on phone — Inventory taps the tray's sheet (the column
+  // never collapses, so the dock needs no toggle), and Collection is the
+  // feats/chords launcher where the ledger dissolves (issue #270).
+  const dockActions = actions.filter((action) => action.op !== "collection" && action.op !== "inventory");
   const forgeCount = state.bankedRolls.length;
   const trayCount = state.modules.filter((m) => m.pos === null).length;
-  const key = JSON.stringify(["dock", state.mode, forgeCount, ui.buyingCell, trayCount]);
+  const key = JSON.stringify(["dock", state.mode, ui.mutLayer, ui.mutUnlockArmed, forgeCount, ui.buyingCell, trayCount]);
 
   for (const [target, list] of [
     [host, dockActions],
@@ -925,8 +941,7 @@ function renderTools(app: App, projected: RateSnapshot): void {
             ? `<span id="${detailId}" class="forge-detail" role="tooltip" hidden>${action.title(app, projected)}</span>`
             : "";
           const extra = (action.badge?.(app) ?? "") + (action.media ?? "") + detail;
-          const label = target === thumb ? action.label : action.word?.(app) ?? action.label;
-          return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" data-op="${action.op}" aria-label="${action.label}" ${action.op === "forge" ? `aria-describedby="${detailId}"` : `title="${action.title(app, projected)}"`}${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${label}</small></button>`;
+          return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" data-op="${action.op}" aria-label="${action.label}" ${action.op === "forge" ? `aria-describedby="${detailId}"` : `title="${action.title(app, projected)}"`}${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${action.label}</small></button>`;
         })
         .join("");
       target.querySelectorAll<HTMLButtonElement>("[data-op]").forEach((button) => {
@@ -974,14 +989,19 @@ function renderTools(app: App, projected: RateSnapshot): void {
     if (cellButton && state.mode === "upgrade") {
       const action = actions.find((a) => a.op === "cell")!;
       cellButton.title = action.title(app, projected);
-      cellButton.classList.toggle("active", ui.buyingCell);
-      cellButton.setAttribute("aria-pressed", String(ui.buyingCell));
-      if (ui.buyingCell) {
+      // The Add icon carries the mode's arm: the cell price in module
+      // mode, the slot-unlock arm in mutator mode (issue #272 review).
+      const mutatorArm = state.catalogEntryOwned && ui.mutLayer === "mutators";
+      cellButton.classList.toggle("active", mutatorArm ? ui.mutUnlockArmed : ui.buyingCell);
+      cellButton.setAttribute("aria-pressed", String(mutatorArm ? ui.mutUnlockArmed : ui.buyingCell));
+      if (mutatorArm) {
+        cellButton.disabled = false;
+      } else if (ui.buyingCell) {
         cellButton.disabled = false;
       } else {
         const price = cellCost(state.cellsBought);
         const countdown = practiceCountdown(price, wholeNous(state), projected.rate);
-        cellButton.title = `New cell — ${formatInt(price)} ν${countdown ? ` · ${countdown}` : ""}`;
+        cellButton.title = `Add — ${formatInt(price)} ν${countdown ? ` · ${countdown}` : ""}`;
         cellButton.disabled = wholeNous(state) < price;
       }
     }
@@ -991,7 +1011,7 @@ function renderTools(app: App, projected: RateSnapshot): void {
 /* ── The add-cell pill (#201): one cost spot, one obvious exit ── */
 
 // While a cell purchase is armed, the pill rides the board's top edge as
-// the mode's single cost spot — "New cell · <price> ν — Cancel · Esc" —
+// the mode's single cost spot — "Add · <price> ν — Cancel · Esc" —
 // and the pill itself is the cancel: one click backs out, Esc backs it up.
 // The board greys around it (the stylesheet reads body.cell-arming); no
 // other mode ever dims. The price re-quotes as cells land, since the arm
@@ -1014,7 +1034,7 @@ function renderCellArmPill(app: App): void {
   const premiums = app.frontierCells().map((pos) => cellPurchasePrice(app.state, pos) - basePrice);
   const maxPremium = Math.max(0, ...premiums);
   const premiumNote = maxPremium > 0 ? ` (+ up to ${formatInt(maxPremium)} ν row premium)` : "";
-  const markup = `New cell · <span class="mono">${formatInt(basePrice)} ν${premiumNote}</span><span class="pill-esc">Cancel · Esc</span>`;
+  const markup = `Add · <span class="mono">${formatInt(basePrice)} ν${premiumNote}</span><span class="pill-esc">Cancel · Esc</span>`;
   if (host.dataset.renderKey !== markup) {
     host.dataset.renderKey = markup;
     host.innerHTML = markup;
@@ -2184,12 +2204,21 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
     if (!id) return;
     let hoverTarget: Element | null = null;
     const zone = document.getElementById("inventory-zone");
+    // The phone tray sheet doubles as the drag target while it stands
+    // (issue #272 review): dropping a board module onto the open sheet
+    // retrieves, the same chord-breaking gesture the column takes.
+    const overSheet = (ev: PointerEvent): Element | null => {
+      if (app.ui.modal !== "inventory") return null;
+      return document.elementFromPoint(ev.clientX, ev.clientY)?.closest("#modal-content") ?? null;
+    };
 
     const setHoverTarget = (ev: PointerEvent) => {
       const hit = document.elementFromPoint(ev.clientX, ev.clientY);
       const cellNode = hit?.closest("[data-cell]") ?? null;
       const overZone = !!hit?.closest("#inventory-zone");
+      const sheet = overSheet(ev);
       zone?.classList.toggle("drag-over", overZone);
+      sheet?.classList.toggle("drag-over", !overZone);
       if (cellNode !== hoverTarget) {
         hoverTarget = cellNode;
         const [q, r] = (hoverTarget?.getAttribute("data-cell") ?? "").split(",").map(Number);
@@ -2226,6 +2255,7 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
         setDropHover(app, null, null);
         setChordHover(app, null);
         zone?.classList.remove("drag-over");
+        document.getElementById("modal-content")?.classList.remove("drag-over");
       },
       drop: (ev) => {
         const target = document.elementFromPoint(ev.clientX, ev.clientY);
@@ -2244,6 +2274,10 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
         }
         if (tileNode && offerCombineDrop(app, id, tileNode.getAttribute("data-inv"))) return;
         if (target?.closest("#inventory-zone")) {
+          app.returnToInventory(id);
+          return;
+        }
+        if (overSheet(ev)) {
           app.returnToInventory(id);
         }
       },
@@ -2587,35 +2621,32 @@ function wireBloomBuy(app: App, host: HTMLElement, moduleId: string): void {
   });
 }
 
-// The board-surface tray (§5): the inventory as a collapsible column docked
-// beside the action dock. The dock's Inventory icon toggles it; a drag or
-// an armed placement opens it for the moment regardless, so the
-// chord-breaking gesture always has a visible target. Retrieve by dropping
-// a module onto it, place by clicking an item then a cell (occupied
-// placement swaps). On portrait phone the tray hides — the thumb bar's
-// Inventory segment taps the same inventory open as a sheet.
+// The tray column's Modules face (§5, ADR-0027 as amended, issue #272):
+// the inventory as an always-open pinned column at the board's right edge —
+// no collapse toggle, no gesture-reopen, no second switch (the board tabs
+// drive the face), and the Mutators face swaps in while that layer stands.
+// Flow hides the column with the locked board, and portrait phone replaces
+// it with the tray sheet (the stylesheet unfolds the column there).
+// Retrieve by dropping a module into the face, place by clicking an item
+// then a cell (occupied placement swaps).
 function renderInventoryTray(app: App): void {
   const tray = byId("inventory-zone");
   if (!tray) return;
   const { state, ui } = app;
-  const upgrade = state.mode === "upgrade";
-  // Explicit open wins; a carried module or an armed placement opens the
-  // column for the gesture's duration whatever the toggle says.
-  const open = upgrade && (ui.trayOpen || app.dragging !== null || ui.placing !== null);
+  const open = state.mode === "upgrade" && ui.mutLayer === "modules";
   tray.classList.toggle("off", !open);
   const inventory = state.modules.filter((m) => m.pos === null);
-  const key = JSON.stringify([upgrade, open, inventory.map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`)]);
+  const key = JSON.stringify(inventory.map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`));
   if (tray.dataset.renderKey === key) return;
   tray.dataset.renderKey = key;
-  tray.innerHTML = `<span class="tray-label">TRAY</span>
-    <div class="tray-items">${
-      inventory
-        .map(
-          (m) =>
-            `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}" title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]} — click, then a cell">${inventoryTileSvg(m)}</button>`,
-        )
-        .join("") || `<span class="tray-empty">drag a module here to store it</span>`
-    }</div>`;
+  tray.innerHTML = `<div class="tray-items">${
+    inventory
+      .map(
+        (m) =>
+          `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}" title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]} — click, then a cell">${inventoryTileSvg(m)}</button>`,
+      )
+      .join("") || `<span class="tray-empty">drag a module here to store it</span>`
+  }</div>`;
   tray.querySelectorAll<HTMLButtonElement>("[data-inv]").forEach((button) => {
     const id = button.getAttribute("data-inv")!;
     button.addEventListener("click", () => app.beginPlacing(id));
@@ -3317,7 +3348,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   // passes through it, so the board stays visible, hoverable, and
   // selectable while the roll waits. Outside clicks, Esc, and ✕ dismiss.
   backdrop.classList.toggle("peek", kind === "forge");
-  backdrop.setAttribute("aria-modal", kind === "forge" ? "false" : "true");
+  backdrop.setAttribute("aria-modal", kind === "forge" || kind === "inventory" ? "false" : "true");
   document.body.classList.toggle("modal-sheet-open", sheet);
   const extra =
     kind === "forge"
@@ -3378,7 +3409,15 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                 : kind === "rate"
                   ? [deployedRosterKey(app.state), unlockedCount(app.state), discoveryCount(app.state)]
                 : kind === "inventory"
-                  ? app.state.modules.filter((m) => m.pos === null).map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`)
+                  ? [
+                      app.state.modules.filter((m) => m.pos === null).map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`),
+                      // The tray sheet's face rides the global switch, and
+                      // the Mutators face re-reads the tray (issue #272).
+                      mutatorLayerWanted(app) ? app.ui.mutLayer : "modules",
+                      mutatorLayerWanted(app)
+                        ? app.state.mutators.filter((m) => m.pos === null).map((m) => `${m.id}:${m.family}:${m.rarity}`)
+                        : [],
+                    ]
                   // The combine review's identity: the offered pair (issue
                   // #152). The terms are read fresh on rebuild.
                   : kind === "combine"
@@ -3402,6 +3441,11 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   // The catalog is the one fixed-frame sheet (issue #271): the class swaps
   // the free modal box for the 620×600 clipped panel (74vh phone sheet).
   content.classList.toggle("catalog-modal", kind === "catalog");
+  // The tray sheet is the one scrimless modal (issue #272 review): the
+  // board behind stays visible, clickable, and draggable-through — the
+  // sheet is a docked panel, never a blocking dialog. The backdrop keeps
+  // its class fresh so another kind's scrim returns.
+  backdrop.classList.toggle("peek-tray", kind === "inventory");
   if (kind === "settings") renderSettingsModal(app, content);
   else if (kind === "catalog") renderCatalogModal(app, content);
   else if (kind === "forge") renderForgeModal(app, content, projected);
@@ -3453,35 +3497,72 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
   wireClose(app);
 }
 
-// The inventory sheet (§7): the board-surface tray, re-docked for touch on
-// portrait phone where the thumb bar's Inventory segment taps it open.
-// Clicking an item arms the placement; the tray itself keeps the drag
-// gestures at every width. Gated with the dock (#193): in flow the board is
-// locked, so the sheet reads but never arms — a phone placement can never
-// land mid-session.
+// The tray sheet (§7, issue #272 review): the tray column, re-docked for
+// touch on portrait phone where the thumb bar's Inventory segment taps it
+// open. Dual-face under the same Modules / Mutators switch the board tabs
+// carry — the sheet's toggle flips the global mode — wearing the
+// minimal-mark tiles and the same gestures: tap a tile then a cell or
+// slot places (the sheet puts away so the board is visible), a live drag
+// carries between board and sheet in both directions, occupied targets
+// swap. No how-to prose: the tiles and the gestures are the
+// instructions. Gated with the dock (#193): in flow the board is locked,
+// so the sheet reads but never arms.
+// Disclosure has its own touch target so inspecting a tile never arms placement.
+function trayTileDisclosure(id: string, name: string, mechanics: string): string {
+  return `<button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${id}" aria-label="About ${escapeHtml(name)}">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${escapeHtml(name)} · ${escapeHtml(mechanics)}</span>`;
+}
+
 function renderInventorySheetModal(app: App, content: HTMLElement): void {
-  const inventory = app.state.modules.filter((m) => m.pos === null);
-  const locked = app.state.mode !== "upgrade";
+  const { state, ui } = app;
+  const locked = state.mode !== "upgrade";
+  const wanted = mutatorLayerWanted(app);
+  const mutators = wanted && ui.mutLayer === "mutators";
+  const inventory = state.modules.filter((m) => m.pos === null);
+  const mutTray = wanted ? state.mutators.filter((m) => m.pos === null) : [];
+  const face = mutators
+    ? `<div class="inventory-sheet-grid tray-sheet-tiles">${
+        mutTray
+          .map(
+            (item) =>
+              `<span class="inst-tip tray-tile-detail"><button class="inventory-tile mut-tile" data-mut-tray="${item.id}" data-rarity="${item.rarity}"${locked ? " disabled" : ""} aria-label="${FAMILY_WORD[item.family]} · ${RARITY_LABEL[item.rarity]}" aria-describedby="tray-mut-${item.id}">${mutatorTileSvg(item)}</button>${trayTileDisclosure(`tray-mut-${item.id}`, FAMILY_WORD[item.family], `${RARITY_LABEL[item.rarity]} · ${mutatorEffectText(item.family, item.rarity)} — ${locked ? "locked during flow" : "tap, then a slot"}`)}</span>`,
+          )
+          .join("") || `<span class="tray-empty">minted mutators wait here</span>`
+      }</div>`
+    : `<div class="inventory-sheet-grid">${
+        inventory
+          .map(
+            (m) =>
+              `<span class="inst-tip tray-tile-detail"><button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}"${locked ? " disabled" : ""} aria-label="${META[m.type].name} · ${RARITY_LABEL[m.rarity]}" aria-describedby="tray-module-${m.id}">${inventoryTileSvg(m)}</button>${trayTileDisclosure(`tray-module-${m.id}`, META[m.type].name, `${RARITY_LABEL[m.rarity]} — ${locked ? "locked during flow" : "tap, then a cell"}`)}</span>`,
+          )
+          .join("") || `<span class="tray-empty">drag a module here to store it</span>`
+      }</div>`;
   content.innerHTML = `
-    ${modalTop("INVENTORY")}
-    <h2 id="modal-title">Waiting for a cell.</h2>
-    <p class="lead">${locked ? "The board is locked during flow — placements wait for the session's end." : "Tap a module, then a cell — dropping on an occupied cell swaps."}</p>
-    <div class="inventory-sheet-grid">${
-      inventory
-        .map(
-          (m) =>
-            `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}"${locked ? " disabled" : ""} title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]}${locked ? " — locked during flow" : " — tap, then a cell"}">${inventoryTileSvg(m)}</button>`,
-        )
-        .join("") || `<p class="empty-copy">Nothing in the tray. Drag a module off the board to store it here.</p>`
-    }</div>`;
+    ${modalTop("INVENTORY", "modal-title")}
+    ${wanted ? `<div class="mut-tabs tray-switch" role="group" aria-label="Tray face">${mutTabPairHtml(app)}</div>` : ""}
+    ${face}`;
   content.querySelectorAll<HTMLButtonElement>("[data-inv]").forEach((button) => {
+    const id = button.getAttribute("data-inv")!;
     button.addEventListener("click", () => {
       if (app.state.mode !== "upgrade") return;
-      const id = button.getAttribute("data-inv")!;
       app.closeModal();
       app.beginPlacing(id);
     });
+    bindPointerDrag(app, button, id);
   });
+  content.querySelectorAll<HTMLButtonElement>("[data-mut-tray]").forEach((button) => {
+    const id = button.getAttribute("data-mut-tray")!;
+    button.addEventListener("click", () => {
+      if (app.state.mode !== "upgrade") return;
+      app.closeModal();
+      app.mutArmTray(id);
+    });
+    bindMutatorDrag(app, button, id, "tray");
+  });
+  content.querySelectorAll<HTMLButtonElement>("[data-mut-layer]").forEach((button) => {
+    button.addEventListener("click", () => app.mutSetLayer(button.getAttribute("data-mut-layer") as "modules" | "mutators"));
+  });
+  const grid = content.querySelector(".inventory-sheet-grid");
+  if (grid) wireTooltips(grid);
   wireClose(app);
 }
 

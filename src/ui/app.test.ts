@@ -860,23 +860,51 @@ describe("the app popovers", () => {
 });
 
 describe("the action row (§7)", () => {
-  it("is a left-edge icon dock: Catalog / Forge / New cell / Inventory — no legend, no Arrange, no Chords toggle", () => {
+  it("is a left-edge icon dock: Catalog / Forge / Add — Inventory left with the tray's collapse toggle (#272)", () => {
     app.render();
     const dock = document.getElementById("board-tools")!;
     const ops = [...dock.querySelectorAll("[data-op]")].map((b) => b.getAttribute("data-op"));
-    expect(ops).toEqual(["catalog", "forge", "cell", "inventory"]);
+    expect(ops).toEqual(["catalog", "forge", "cell"]);
+    // The dock reads Add: the cell tool's accessible name and its title.
+    const add = dock.querySelector<HTMLButtonElement>('[data-op="cell"]')!;
+    expect(add.getAttribute("aria-label")).toBe("Add");
+    expect(add.title).toContain("Add — ");
     // The count badge rides the Forge icon; the charge pip rides beneath it.
     expect(dock.querySelector('[data-op="forge"] .forge-pip')).not.toBeNull();
     expect(document.querySelector(".legend")).toBeNull();
     expect(document.getElementById("tool-manage")).toBeNull();
     expect(document.getElementById("manage-banner")).toBeNull();
-    expect(document.getElementById("inventory-zone")).not.toBeNull();
-    // The tray column starts closed and the dock icon toggles it.
+    // The tray column stands at the board's right edge, always open in
+    // upgrade mode: head, modules face, and no collapse anywhere.
+    const column = document.getElementById("tray-column")!;
+    expect(column).not.toBeNull();
     const zone = document.getElementById("inventory-zone") as HTMLElement;
-    expect(zone.classList.contains("off")).toBe(true);
-    dock.querySelector<HTMLButtonElement>('[data-op="inventory"]')!.click();
     expect(zone.classList.contains("off")).toBe(false);
-    expect(app.ui.trayOpen).toBe(true);
+    expect("trayOpen" in app.ui).toBe(false);
+  });
+
+  it("the tray column wears no second switch — the board tabs drive its faces (#272)", () => {
+    app.state.mode = "upgrade";
+    app.state.catalogEntryOwned = true;
+    app.render();
+    const zone = document.getElementById("inventory-zone")!;
+    const mutTray = document.getElementById("mutator-tray")!;
+    // The column carries no switcher of its own: the board tabs under the
+    // ledger are the one Modules / Mutators switch.
+    expect(document.getElementById("tray-head")).toBeNull();
+    expect(document.querySelectorAll("[data-mut-layer]")).toHaveLength(2);
+    // The Modules face stands; the Mutators face waits.
+    expect(zone.classList.contains("off")).toBe(false);
+    expect(mutTray.hidden).toBe(true);
+    // The board tabs flip the column's face with the global mode.
+    document.querySelector<HTMLButtonElement>('#mut-tabs [data-mut-layer="mutators"]')!.click();
+    expect(app.ui.mutLayer).toBe("mutators");
+    expect(zone.classList.contains("off")).toBe(true);
+    expect(mutTray.hidden).toBe(false);
+    document.querySelector<HTMLButtonElement>('#mut-tabs [data-mut-layer="modules"]')!.click();
+    expect(app.ui.mutLayer).toBe("modules");
+    expect(zone.classList.contains("off")).toBe(false);
+    expect(mutTray.hidden).toBe(true);
   });
 
   it("the Forge tool carries the flow-meter pip and the one meter detail (ADR-0041)", () => {
@@ -1001,18 +1029,22 @@ describe("the action row (§7)", () => {
     expect(document.getElementById("buy-banner")).toBeNull();
   });
 
-  it("the Inventory dock button is disabled during flow, like Catalog/Forge/New cell (#193)", () => {
+  it("flow locks the dock's three tools, and the tray column hides with the board (#272)", () => {
     app.render();
-    const dockButton = () => document.querySelector<HTMLButtonElement>('#board-tools [data-op="inventory"]')!;
-    expect(dockButton().disabled).toBe(false);
+    const dockOps = () => [...document.querySelectorAll<HTMLButtonElement>('#board-tools [data-op]')];
+    // Catalog and Forge stand open in upgrade mode; Add is price-gated.
+    expect(dockOps()[0]!.disabled).toBe(false);
+    expect(dockOps()[1]!.disabled).toBe(false);
+    expect(document.getElementById("inventory-zone")!.classList.contains("off")).toBe(false);
     app.state.sessionsCompleted = 1;
     startSession(app.state, 600);
     app.render();
-    expect(dockButton().disabled).toBe(true);
-    expect(dockButton().title).toContain("locked during flow");
-    // Dead in flow: the tray column never opens.
-    dockButton().click();
-    expect(app.ui.trayOpen).toBe(false);
+    // No Inventory button exists to lock — the dock reads Catalog/Forge/Add,
+    // every tool disabled, and the column gone with the locked board.
+    expect(dockOps().map((b) => b.getAttribute("data-op"))).toEqual(["catalog", "forge", "cell"]);
+    for (const button of dockOps()) expect(button.disabled).toBe(true);
+    expect(dockOps()[0]!.title).toContain("purchases happen between sessions");
+    expect(dockOps()[2]!.title).toBe("Add — purchases happen between sessions");
     expect(document.getElementById("inventory-zone")!.classList.contains("off")).toBe(true);
   });
 });
@@ -1022,21 +1054,22 @@ describe("the thumb bar (§7, portrait phone)", () => {
     setAppWidth(390);
   });
 
-  it("holds five segments — Catalog / Forge / New cell / Inventory / Collection (issue #270)", () => {
+  it("holds five segments — Catalog / Forge / Add / Inventory / Collection (issue #270)", () => {
     give(app.state, "additive", null);
     app.render();
     const bar = document.getElementById("thumb-bar")!;
     const ops = [...bar.querySelectorAll("[data-op]")].map((b) => b.getAttribute("data-op"));
     expect(ops).toEqual(["catalog", "forge", "cell", "inventory", "collection"]);
+    expect(bar.querySelector('[data-op="cell"] .tool-word')!.textContent).toBe("Add");
     expect(bar.querySelector('[data-op="inventory"] .tool-word')!.textContent).toBe("Inventory");
     expect(bar.querySelector('[data-op="inventory"] .tool-badge')!.textContent).toBe("1");
     // The feats and chords segments are gone — Collection is their sole
-    // phone door now, and the dock never grew a sixth icon.
+    // phone door now, and the dock never grew a fourth icon.
     expect(bar.querySelector('[data-op="feats"]')).toBeNull();
     expect(bar.querySelector('[data-op="library"]')).toBeNull();
-    // The dock never grew a Collection icon (or any sixth): it stays
-    // Catalog / Forge / New cell / Inventory.
-    expect(document.querySelectorAll("#board-tools [data-op]")).toHaveLength(4);
+    // The dock never grew a Collection or Inventory icon: it stays
+    // Catalog / Forge / Add (issue #272).
+    expect(document.querySelectorAll("#board-tools [data-op]")).toHaveLength(3);
     // On phone Inventory taps the sheet; Collection opens the launcher.
     bar.querySelector<HTMLButtonElement>('[data-op="inventory"]')!.click();
     expect(app.ui.modal).toBe("inventory");
@@ -1105,15 +1138,134 @@ describe("the thumb bar (§7, portrait phone)", () => {
     expect(rule).toContain("height: 15px");
   });
 
-  it("the inventory sheet arms a placement from its tiles", () => {
+  it("the inventory sheet arms a placement from its tiles, and carries no how-to prose", () => {
     app.returnToInventory("m1");
     app.openModal("inventory");
     const modal = document.getElementById("modal-content")!;
     expect(modal.querySelector('[data-inv="m1"]')).not.toBeNull();
+    // The tiles are the instructions: no heading, no explanatory lead.
+    expect(modal.querySelector("h2")).toBeNull();
+    expect(modal.querySelector(".lead")).toBeNull();
     (modal.querySelector('[data-inv="m1"]') as HTMLButtonElement).click();
     expect(app.ui.modal).toBeNull();
     expect(app.ui.placing).toBe("m1");
     app.cancelPlacing();
+  });
+
+  it("the tray sheet wears the mode's switch — flipping it swaps the face and the board tabs follow (issue #272)", () => {
+    const s = app.state;
+    s.mode = "upgrade";
+    s.catalogEntryOwned = true;
+    s.mutatorSlots = [hex(0, 0)];
+    s.mutators = [
+      { id: "mu1", family: "power", rarity: "common", pos: hex(0, 0) },
+      { id: "mu2", family: "charge", rarity: "uncommon", pos: null },
+    ];
+    app.returnToInventory("m1");
+    app.openModal("inventory");
+    const modal = document.getElementById("modal-content")!;
+    // The switch rides the sheet; the modules face stands first.
+    const pair = [...modal.querySelectorAll("[data-mut-layer]")];
+    expect(pair).toHaveLength(2);
+    expect(modal.querySelector('[data-inv="m1"]')).not.toBeNull();
+    expect(modal.querySelector("[data-mut-tray]")).toBeNull();
+    // Flipping the sheet's switch turns the global mode: the sheet swaps
+    // to the arete-register mutator tiles, the board tabs follow.
+    (modal.querySelector('[data-mut-layer="mutators"]') as HTMLButtonElement).click();
+    expect(app.ui.mutLayer).toBe("mutators");
+    expect(document.querySelector('#mut-tabs [data-mut-layer="mutators"]')!.classList.contains("active")).toBe(true);
+    const modalAfter = document.getElementById("modal-content")!;
+    expect(modalAfter.querySelector('[data-inv="m1"]')).toBeNull();
+    const tile = modalAfter.querySelector<HTMLButtonElement>('[data-mut-tray="mu2"]')!;
+    expect(tile).not.toBeNull();
+    expect(tile.querySelector(".mut-tile-hex")).not.toBeNull();
+    const detail = tile.closest(".inst-tip")!;
+    const trigger = detail.querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
+    const tooltip = () => document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+    tile.focus();
+    expect(tooltip().classList.contains("inst-show")).toBe(true);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(tooltip().classList.contains("inst-show")).toBe(false);
+    expect(app.ui.modal).toBe("inventory");
+    trigger.click();
+    expect(tooltip().classList.contains("inst-show")).toBe(true);
+    expect(app.ui.mutArmedTray).toBeNull();
+    document.body.click();
+    expect(tooltip().classList.contains("inst-show")).toBe(false);
+    // Tapping a mutator tile arms it and puts the sheet away, so the slot
+    // taps land on a visible board.
+    tile.click();
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.mutArmedTray).toBe("mu2");
+    app.mutCancelGestures();
+  });
+
+  it("the tray sheet stands scrimless — the board behind stays live, and a drop onto the sheet retrieves", async () => {
+    app.openModal("inventory");
+    const backdrop = document.getElementById("modal")!;
+    // Scrimless and click-through: the sheet is a docked panel, never a
+    // blocking dialog (issue #272 review).
+    expect(backdrop.classList.contains("peek-tray")).toBe(true);
+    expect(backdrop.getAttribute("aria-modal")).toBe("false");
+    expect(backdrop.classList.contains("drag-through")).toBe(false);
+    const board = app.state.modules[0]!;
+    expect(board.pos).not.toBeNull();
+    // The drag's release suppresses the synthetic post-drop click; drain
+    // the suppressor before this test ends.
+    try {
+      // A board drop onto the open sheet retrieves — the chord-breaking
+      // gesture against the sheet, with the board live behind it.
+      const cellNode = () => document.querySelector<SVGGElement>('[data-cell="0,0"]')!;
+      document.elementFromPoint = () => cellNode();
+      cellNode().dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+      document.dispatchEvent(new MouseEvent("pointermove", { clientX: 160, clientY: 90 }));
+      expect(document.querySelector(".drag-ghost")).not.toBeNull();
+      document.elementFromPoint = () => document.getElementById("modal-content")!;
+      document.dispatchEvent(new MouseEvent("pointerup", { clientX: 200, clientY: 600 }));
+      expect(board.pos).toBeNull();
+      expect(app.ui.modal).toBe("inventory");
+      // Another modal kind drops the scrimless standing.
+      app.openModal("forge");
+      expect(backdrop.classList.contains("peek-tray")).toBe(false);
+      app.closeModal();
+    } finally {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
+    }
+  });
+
+  it("Add arms the mode's action — the cell in module mode, the slot unlock in mutator mode", () => {
+    const s = app.state;
+    s.mode = "upgrade";
+    s.catalogEntryOwned = true;
+    s.mutatorSlots = [hex(0, 0)];
+    s.mutators = [{ id: "mu1", family: "power", rarity: "common", pos: hex(0, 0) }];
+    app.render();
+    // Module mode: the cell purchase (the icon prices at zero ν, so grant
+    // the first cell's cost — the same affordably-armed shape as desktop).
+    app.state.nous = BALANCE.cellFirstCost;
+    app.render();
+    document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!.click();
+    expect(app.ui.buyingCell).toBe(true);
+    expect(app.ui.mutUnlockArmed).toBe(false);
+    app.cancelCellPurchase();
+    // Mutator mode: the slot unlock, armed from Add — never a tray card.
+    app.mutSetLayer("mutators");
+    app.render();
+    const add = document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!;
+    expect(add.title).toContain("Unlock a Mutator slot — 2 Arete");
+    add.click();
+    expect(app.ui.mutUnlockArmed).toBe(true);
+    expect(app.ui.buyingCell).toBe(false);
+    expect(document.getElementById("mut-unlock-pill")!.hidden).toBe(false);
+    // The Add tool's tray-sheet pass: arming from the thumb bar puts the
+    // sheet away so the pulsing targets stand on a visible board.
+    app.mutCancelGestures();
+    app.openModal("inventory");
+    document.querySelector<HTMLButtonElement>('#thumb-bar [data-op="cell"], #board-tools [data-op="cell"]')!.click();
+    expect(app.ui.mutUnlockArmed).toBe(true);
+    expect(app.ui.modal).toBeNull();
+    app.mutCancelGestures();
   });
 
   it("the chord library's door and cards (issue #230)", () => {
@@ -1158,7 +1310,8 @@ describe("the thumb bar (§7, portrait phone)", () => {
     const modal = document.getElementById("modal-content")!;
     const tile = modal.querySelector<HTMLButtonElement>(`[data-inv="${trayModule.id}"]`)!;
     expect(tile.disabled).toBe(true);
-    expect(modal.textContent).toContain("locked during flow");
+    // The lock reason rides the tooltip layer — no explanatory paragraph.
+    expect(document.getElementById(tile.getAttribute("aria-describedby")!)!.textContent).toContain("locked during flow");
     tile.click();
     expect(app.ui.placing).toBeNull();
     expect(app.ui.modal).toBe("inventory");
@@ -1315,7 +1468,7 @@ describe("the always-live board (§5)", () => {
     // The pill over the board's top edge carries the single cost spot.
     const pill = document.getElementById("cell-arm-pill")!;
     expect(pill.hidden).toBe(false);
-    expect(pill.textContent).toContain("New cell");
+    expect(pill.textContent).toContain("Add");
     expect(pill.textContent).toContain(`${formatInt(BALANCE.cellFirstCost)} ν`);
     expect(pill.textContent).toContain("Cancel · Esc");
     // The pill is the cancel: one click backs out and the pill rests.
@@ -2661,7 +2814,7 @@ describe("the catalog", () => {
     expect(app.state.purchased.generator).toBe(true);
   });
 
-  it("carries no cell row — cells arm from the dock's New cell, never a sheet row", () => {
+  it("carries no cell row — cells arm from the dock's Add, never a sheet row", () => {
     app.openModal("catalog");
     const modal = document.getElementById("modal-content")!;
     expect(document.getElementById("buy-cell")).toBeNull();
@@ -5613,4 +5766,3 @@ describe("the harmonic-capacity ladder (#259)", () => {
     expect(rebooted.state.nous).toBe(app.state.nous);
   });
 });
-

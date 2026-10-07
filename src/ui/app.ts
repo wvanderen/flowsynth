@@ -209,10 +209,6 @@ export interface UiState {
   // saved; fit resets zoom to 1 and the pan to null.
   zoom: number;
   pan: { x: number; y: number } | null;
-  // The tray column's explicit state (§5): toggled from the dock's
-  // Inventory icon; drags and placements open it temporarily whatever this
-  // says. Light furniture — never saved.
-  trayOpen: boolean;
   // The bulk-upgrade surfaces (issue #195): the expanded face's dial count,
   // held per module so a new selection starts at ×1, and the shift-held
   // MAX mode every face button's label flips into board-wide (Cookie
@@ -326,7 +322,6 @@ export class App {
     summaryHabitId: null,
     zoom: 1,
     pan: null,
-    trayOpen: false,
     bulkCount: 1,
     bulkModuleId: null,
     faceMax: false,
@@ -438,9 +433,11 @@ export class App {
   }
 
   // The board-surface overlays (§5): the expanded-face bloom and the
-  // inventory tray live over the board's own space, so their hosts are
+  // Upgrade All cluster live over the board's own space, so their hosts are
   // created once here — the bloom's outside-click ledger binds against a
-  // node that never moves, and no render ever has to bootstrap one.
+  // node that never moves, and no render ever has to bootstrap one. The
+  // tray column's hosts are index.html's own (the always-open column never
+  // bootstraps).
   private ensureBoardOverlays(): void {
     const space = document.querySelector(".board-space");
     if (!space) return;
@@ -450,12 +447,6 @@ export class App {
       bloom.className = "module-bloom";
       bloom.hidden = true;
       space.append(bloom);
-    }
-    if (!document.getElementById("inventory-zone")) {
-      const tray = document.createElement("div");
-      tray.id = "inventory-zone";
-      tray.className = "inventory-tray";
-      space.append(tray);
     }
     if (!document.getElementById("upgrade-all")) {
       const cluster = document.createElement("div");
@@ -1231,9 +1222,10 @@ export class App {
     this.render();
   }
 
-  // The slot unlock's arm (issue #199): one pill carries the price and
-  // eligible cells pulse; the click resolution lands in mutPickSlot. The
-  // gesture lives on the Mutators layer, so arming walks there first.
+  // The slot unlock's arm (issue #199, re-docked by the #272 review): Add
+  // arms it in mutator mode — one pill carries the price and eligible
+  // cells pulse; the click resolution lands in mutPickSlot. The arm never
+  // walks the player to the Mutators face; the mode directs it.
   mutArmUnlock(): void {
     if (this.state.mode !== "upgrade") {
       this.say("Arete is spent between sessions.");
@@ -1244,7 +1236,6 @@ export class App {
       return;
     }
     this.mutDisarm();
-    this.ui.mutLayer = "mutators";
     this.ui.mutUnlockArmed = true;
     this.render();
   }
