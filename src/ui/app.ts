@@ -968,6 +968,7 @@ export class App {
   // The global mute (§5) gates every app sound, including the chime's
   // hidden re-fires. No volume slider, no per-sound mix.
   private unlockAudio(): void {
+    if (this.released) return;
     const existing = this.audio;
     this.audio = this.channels.unlockAudio(existing);
     if (!existing && this.channels === browserChannels) this.ownedAudio = this.audio;
@@ -1035,6 +1036,7 @@ export class App {
   // the Habit app already made the choice, so the prompt never asks twice.
   // The prompt only opens when no habit is selected (or on a fresh save).
   startFlow(): void {
+    if (this.released) return;
     if (this.state.mode !== "upgrade") return;
     const habit = activeHabit(this.state);
     if (habit) {
@@ -1049,6 +1051,7 @@ export class App {
   }
 
   beginFlow(habitId: string | null): void {
+    if (this.released) return;
     selectHabit(this.state, habitId);
     // Time is free from the very first session (ADR-0019), so session one
     // can be planned; the enter prompt's duration affordances stay visible

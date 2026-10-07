@@ -201,6 +201,26 @@ describe("App lifetime", () => {
     expect(app.state.mode).toBe("upgrade");
   });
 
+  it("released Apps cannot start sessions or reacquire browser audio", () => {
+    const created = vi.fn();
+    class Audio {
+      state = "running";
+      close = vi.fn(async () => {});
+      constructor() { created(); }
+    }
+    vi.stubGlobal("AudioContext", Audio);
+    const app = fixture.boot();
+    app.dispose();
+    app.startFlow();
+    expect(app.ui.modal).toBeNull();
+    app.beginFlow(null);
+    app.dispose();
+    expect(app.state.mode).toBe("upgrade");
+    expect(app.audio).toBeNull();
+    expect(created).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("closes browser-owned audio once and leaves borrowed audio alone", () => {
     const close = vi.fn(async () => {});
     class Audio {
