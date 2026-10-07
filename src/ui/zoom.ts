@@ -4,7 +4,6 @@
 // larger-than-screen board always stays reachable. World coordinates never
 // move — seams, chips, and bloom frames are zoom-agnostic by construction.
 import type { App } from "./app";
-import { suppressNextClick } from "./click";
 
 // The zoom range (prototype tuning, #121): fitted is 1; a hair below 1 lets
 // a wide board letterbox more tightly, 3× is comfortably inside a face.
@@ -80,9 +79,9 @@ export function renderZoomCluster(app: App): void {
     <button id="zoom-in" aria-label="Zoom in" title="Zoom in">${ZOOM_CLUSTER_SVG.in}</button>
     <button id="zoom-out" aria-label="Zoom out" title="Zoom out">${ZOOM_CLUSTER_SVG.out}</button>
     <button id="zoom-fit" aria-label="Fit the board" title="Fit the board">${ZOOM_CLUSTER_SVG.fit}</button>`;
-  host.querySelector("#zoom-in")?.addEventListener("click", () => zoomBy(app, ZOOM_STEP));
-  host.querySelector("#zoom-out")?.addEventListener("click", () => zoomBy(app, 1 / ZOOM_STEP));
-  host.querySelector("#zoom-fit")?.addEventListener("click", () => fitBoard(app));
+  app.listen(host.querySelector("#zoom-in"), "click", () => zoomBy(app, ZOOM_STEP));
+  app.listen(host.querySelector("#zoom-out"), "click", () => zoomBy(app, 1 / ZOOM_STEP));
+  app.listen(host.querySelector("#zoom-fit"), "click", () => fitBoard(app));
 }
 
 // Zooming keeps one world point fixed: with a pointer anchor that is the
@@ -137,7 +136,7 @@ export function bindBoardNavigation(app: App, svg: SVGSVGElement): void {
   if (panBoundBoards.has(svg)) return;
   panBoundBoards.add(svg);
 
-  svg.addEventListener("wheel", (event) => {
+  app.listen(svg, "wheel", (event) => {
     event.preventDefault();
     // Scroll up zooms in; scroll down eases back out.
     zoomAtPointer(app, event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP, event.clientX, event.clientY);
@@ -164,30 +163,36 @@ export function bindBoardNavigation(app: App, svg: SVGSVGElement): void {
       // only thing that moves.
       svg.setAttribute("viewBox", lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds).viewBox);
     };
+    let finished = false;
+    let forget = () => {};
     const finish = () => {
+      if (finished) return;
+      finished = true;
+      forget();
       document.removeEventListener("pointermove", move);
       document.removeEventListener("pointerup", finish);
       document.removeEventListener("pointercancel", finish);
-      if (moved) {
+      if (moved && !app.released) {
         // A pan is a gesture, not a click: the release must not fall
         // through to whatever cell sits under it.
-        suppressNextClick();
+        app.suppressClick();
         app.render();
       }
     };
     document.addEventListener("pointermove", move);
     document.addEventListener("pointerup", finish);
     document.addEventListener("pointercancel", finish);
+    forget = app.ownCleanup(finish);
   };
 
   // Outside the grid — the bare svg — pans at any zoom.
-  svg.addEventListener("pointerdown", (event) => {
+  app.listen(svg, "pointerdown", (event) => {
     if (event.target === svg) startPan(event);
   });
 
   // Press-and-move on an empty cell pans too once zoomed in: the world
   // under the finger follows it. At fitted zoom the tap stays a tap.
-  svg.addEventListener("pointerdown", (event) => {
+  app.listen(svg, "pointerdown", (event) => {
     if (event.target === svg || event.button !== 0) return;
     if (app.ui.zoom <= 1) return;
     const cellNode = (event.target as Element).closest?.("[data-cell]");

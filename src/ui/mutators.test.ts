@@ -1,37 +1,18 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
-import { readFileSync } from "node:fs";
-import { App } from "./app";
+import type { App } from "./app";
+import { createAppFixture } from "./testing/app-fixture";
 import { combineMutatorsPreview } from "../engine/actions";
 import { hex, sameHex } from "../engine/hex";
 import type { GameState, Hex, MutatorFamily, MutatorInstance, Rarity } from "../engine/types";
-import type { SignalChannels } from "./signals";
 
 // The Mutator Grid's UI (issue #199): the tabbed second layer, its slot
 // faces and presence outlines, the tray strip, the gestures, the unlock
 // arm, and the rolls — booted on the real index.html skeleton, every
 // landing routed through the engine actions from #198.
 
-function boot(channels?: SignalChannels): App {
-  const html = readFileSync("index.html", "utf8");
-  const body = html.slice(html.indexOf("<body>") + 6, html.lastIndexOf("</body>"));
-  document.body.innerHTML = body;
-  const els: Record<string, HTMLElement> = {};
-  for (const id of [
-    "console-session",
-    "console-apps",
-    "board-tools",
-    "thumb-bar",
-    "grid",
-    "status",
-    "modal",
-    "modal-content",
-  ]) {
-    const element = document.getElementById(id);
-    if (element) els[id] = element;
-  }
-  return new App(els, false, channels);
-}
+const fixture = createAppFixture();
+const boot = fixture.boot;
 
 let app: App;
 
@@ -81,21 +62,71 @@ beforeEach(() => {
   app = boot();
 });
 
-// Synthetic drags install a once-capture click suppressor with a timer;
-// drain it and drop any elementFromPoint mock the test left behind.
-afterEach(async () => {
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
-});
+afterEach(() => fixture.release());
 
 describe("the tab pair (issue #199)", () => {
-  it("never shows before the entry purchase — the layer does not exist yet", () => {
+  it("the locked tab's mechanics open by focus and tap on board and sheet; Escape and tap-away dismiss without entering", () => {
+    const checkDisclosure = (host: HTMLElement) => {
+      const trigger = host.querySelector<HTMLButtonElement>(".mut-entry-tip .inst-tip-trigger")!;
+      const body = () => document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+      trigger.focus();
+      expect(body().classList.contains("inst-show")).toBe(true);
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      expect(body().classList.contains("inst-show")).toBe(false);
+      trigger.click();
+      expect(trigger.getAttribute("aria-expanded")).toBe("true");
+      expect(body().classList.contains("inst-show")).toBe(true);
+      document.body.click();
+      expect(body().classList.contains("inst-show")).toBe(false);
+      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      expect(app.ui.mutLayer).toBe("modules");
+      expect(host.querySelector("[data-mut-layer=mutators]")!.hasAttribute("title")).toBe(false);
+    };
+    checkDisclosure(document.getElementById("mut-tabs")!);
+    expect(app.ui.modal).toBeNull();
+    app.openModal("inventory");
+    checkDisclosure(document.querySelector<HTMLElement>(".tray-switch")!);
+    expect(app.ui.modal).toBe("inventory");
+    // The action still opens the entry immediately, independently of disclosure.
+    document.querySelector<HTMLButtonElement>(".tray-switch [data-mut-layer=mutators]")!.click();
+    expect(app.ui.modal).toBe("catalog");
+    expect(app.ui.catalogFace).toBe("arete");
+  });
+
+  it("pre-entry the pair stands locked-but-visible: muted outline + lock, and the click previews the entry screen (#273)", () => {
     app.render();
-    expect(document.getElementById("mut-tabs")!.hidden).toBe(true);
+    const tabs = document.getElementById("mut-tabs")!;
+    expect(tabs.hidden).toBe(false);
+    const lockedTab = document.querySelector<HTMLButtonElement>('[data-mut-layer="mutators"]')!;
+    expect(lockedTab.classList.contains("locked")).toBe(true);
+    // The lock mark, not the arete register — the layer is locked.
+    expect(lockedTab.querySelector(".mut-tab-lock")).not.toBeNull();
+    expect(lockedTab.textContent).not.toContain("◇");
     expect(app.ui.mutLayer).toBe("modules");
+    // The click never flips the mode — it walks to the ◇ entry screen,
+    // pre-prestige included: the preview of the future entry.
+    lockedTab.click();
+    expect(app.ui.mutLayer).toBe("modules");
+    expect(app.ui.modal).toBe("catalog");
+    expect(app.ui.catalogFace).toBe("arete");
+    expect(document.querySelector(".entry-screen")).not.toBeNull();
+    // The entry cannot sell pre-prestige: its price mutes.
+    expect((document.getElementById("buy-arete-entry") as HTMLButtonElement).disabled).toBe(true);
     // Arming the unlock without the entry says so and arms nothing.
+    app.closeModal();
     app.mutArmUnlock();
     expect(app.ui.mutUnlockArmed).toBe(false);
+  });
+
+  it("past the first prestige, the locked tab's click lands on the ◇ entry screen itself", () => {
+    app.state.prestiges = 1;
+    app.state.arete = 0;
+    app.render();
+    document.querySelector<HTMLButtonElement>('[data-mut-layer="mutators"]')!.click();
+    expect(app.ui.mutLayer).toBe("modules");
+    expect(app.ui.modal).toBe("catalog");
+    expect(app.ui.catalogFace).toBe("arete");
+    expect(document.querySelector(".entry-screen")).not.toBeNull();
   });
 
   it("stands in upgrade mode once the tree is entered, and flow shows neither tab nor layer", () => {
@@ -364,19 +395,39 @@ describe("the gestures (issue #199)", () => {
   }
 });
 
-describe("the slot unlock (issue #199)", () => {
-  it("the tray's unlock button arms the gesture; the pill carries the price", () => {
+describe("the slot unlock (issue #199, re-docked by the #272 review)", () => {
+  it("Add arms the unlock in mutator mode; the pill carries the price and no tray card does", () => {
     seedMutatorEra();
     app.mutSetLayer("mutators");
-    document.getElementById("mut-unlock")!.click();
+    // The unlock lives in Add, never a tray card.
+    expect(document.getElementById("mut-unlock")).toBeNull();
+    const add = document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!;
+    expect(add.getAttribute("aria-label")).toBe("Add");
+    expect(add.title).toContain("Unlock a Mutator slot — 3 Arete");
+    add.click();
     expect(app.ui.mutUnlockArmed).toBe(true);
     const pill = document.getElementById("mut-unlock-pill")!;
     expect(pill.hidden).toBe(false);
     expect(pill.textContent).toContain("Unlock Mutator slot");
     expect(pill.textContent).toContain("3 Arete");
-    expect(document.getElementById("mut-unlock")!.textContent).not.toContain("Arete");
+    // The armed Add wears the arm: active, cancel-worded.
+    const armed = document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!;
+    expect(armed.classList.contains("active")).toBe(true);
+    expect(armed.title).toContain("Pick an eligible cell · Esc cancels");
     app.mutCancelGestures();
-    expect(document.getElementById("mut-unlock")!.textContent).toContain("3 Arete");
+    expect(document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!.title).toContain("Unlock a Mutator slot");
+  });
+
+  it("Add in module mode still arms the cell purchase — the mode directs the arm", () => {
+    seedMutatorEra();
+    app.state.nous = 500;
+    app.render();
+    const add = document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!;
+    expect(add.title).toContain("Add — ");
+    add.click();
+    expect(app.ui.buyingCell).toBe(true);
+    expect(app.ui.mutUnlockArmed).toBe(false);
+    app.cancelCellPurchase();
   });
 
   it("the entry's first slot is free and sits on any owned cell; eligible cells pulse", () => {
@@ -385,8 +436,9 @@ describe("the slot unlock (issue #199)", () => {
     s.catalogEntryOwned = true;
     s.arete = 5;
     app.render();
+    app.mutSetLayer("mutators");
     app.mutArmUnlock();
-    expect(app.ui.mutLayer).toBe("mutators");
+    expect(app.ui.mutUnlockArmed).toBe(true);
     expect(document.getElementById("mut-unlock-pill")!.textContent).toContain("free");
     const pulses = [...document.querySelectorAll("#grid .mut-unlock-target")];
     expect(pulses).toHaveLength(3);
@@ -404,6 +456,7 @@ describe("the slot unlock (issue #199)", () => {
     s.arete = 10;
     s.mutatorSlots = [hex(0, 0)];
     app.render();
+    app.mutSetLayer("mutators");
     app.mutArmUnlock();
     // (1,0) is adjacent to the patch: 2 Arete.
     unlockNode(1, 0).dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -524,6 +577,36 @@ describe("the never-say rules (issue #199)", () => {
       expect(face.textContent).not.toContain("ν/s");
     }
     expect(document.getElementById("status")!.textContent).not.toContain("ν/s");
+  });
+});
+
+describe("the tray column (issue #272)", () => {
+  it("the Mutator tray is the column's face, switched by the board tabs alone", () => {
+    seedMutatorEra();
+    const column = document.getElementById("tray-column")!;
+    const mutTray = document.getElementById("mutator-tray")!;
+    expect(mutTray.hidden).toBe(true);
+    app.mutSetLayer("mutators");
+    // The face lives inside the column, wearing the minimal-mark tiles.
+    expect(mutTray.hidden).toBe(false);
+    expect(column.contains(mutTray)).toBe(true);
+    const tile = mutTray.querySelector<HTMLButtonElement>('[data-mut-tray="mu2"]')!;
+    expect(tile).not.toBeNull();
+    expect(tile.querySelector(".mut-tile-hex")).not.toBeNull();
+    // The unlock arm lives in Add — no tray card carries it.
+    expect(mutTray.querySelector("#mut-unlock")).toBeNull();
+    // The column wears no second switch — the board tabs are the one.
+    expect(document.getElementById("tray-head")).toBeNull();
+    expect(column.querySelectorAll("[data-mut-layer]")).toHaveLength(0);
+  });
+
+  it("flow clears the whole column", () => {
+    seedMutatorEra();
+    app.mutSetLayer("mutators");
+    app.beginFlow(null);
+    app.render();
+    expect(document.getElementById("mutator-tray")!.hidden).toBe(true);
+    expect(document.getElementById("inventory-zone")!.classList.contains("off")).toBe(true);
   });
 });
 

@@ -920,10 +920,11 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 @keyframes grid-breath { 50% { opacity: 0.35; } }
 
 /* Board gestures are gestures, not text edits (#151): every drag surface —
-   the grid, the popped module face, and the tray tiles — denies selection,
+   the grid, the popped module face, and the tray column — denies selection,
    so holding or dragging never highlights labels in Chrome. */
 #grid,
 .module-bloom,
+.tray-column,
 .inventory-tray {
   user-select: none;
   -webkit-user-select: none;
@@ -932,7 +933,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 #grid { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; display: block; }
 
 /* The action row (§7): a left-edge icon dock floating over the board —
-   Catalog / Forge (count badge + charge pip) / New cell. Only the buttons
+   Catalog / Forge (count badge + charge pip) / Add. Only the buttons
    take pointers, so the board beneath pans and plays around them. */
 .board-tools {
   position: absolute;
@@ -1005,7 +1006,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .forge-meter .meter-figures { font-size: 11px; color: var(--muted); }
 
 /* The bottom thumb bar (§7, issue #270): the console's re-docked form on
-   portrait phone — Catalog / Forge / New cell / Inventory / Collection.
+   portrait phone — Catalog / Forge / Add / Inventory / Collection.
    Hidden at every other width. */
 .thumb-bar {
   position: absolute;
@@ -1793,27 +1794,43 @@ body.live .chord-mark:not(.chord-fade):not(.chord-idle) .chord-seam {
 }
 .sweep-chip:hover { background: var(--accent-soft); border-color: var(--accent); }
 
-/* ── The board-surface tray (§5) ───────────────────── */
-/* The inventory docked over the board's bottom edge: drag a module here to
-   retrieve it (the chord-breaking gesture), click an item then a cell to
-   place — occupied placement swaps. Hidden while the flow board is locked. */
-/* ── The tray column (§5) ──────────────────────────── */
-/* The inventory as a collapsible column docked beside the action dock: the
-   dock's Inventory icon toggles it, and a drag or an armed placement opens
-   it for the gesture's duration — the chord-breaking drop always has a
-   visible target. Portrait phone hides it (the thumb bar taps the sheet). */
-.inventory-tray {
+/* ── The tray column (§5, ADR-0027 as amended) ─────── */
+/* The inventory as an always-open pinned column docked at the board's
+   right edge in upgrade mode: the Modules / Mutators head over two
+   swapping faces — category-hue module tiles, arete-register mutator
+   tiles. No collapse, no gesture-reopen; flow hides the column with the
+   locked board, and portrait phone unfolds it (the head and the modules
+   face hide there; the Mutators face re-pins as the strip above the
+   thumb bar). Drag a module into the Modules face to retrieve it — the
+   chord-breaking gesture — click an item then a cell to place. */
+.tray-column {
   position: absolute;
-  left: 58px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   z-index: 15;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: 96px;
+  max-height: calc(100% - 104px);
+  /* The column is a frame, not a surface: with both faces away (flow, the
+     Mutators layer) its box must never catch a board gesture. */
+  pointer-events: none;
+}
+.tray-column .inventory-tray,
+.tray-column .mutator-tray { pointer-events: auto; }
+.tray-column[hidden] { display: none; }
+/* The board tabs carry the column's one switch (issue #272 review) — the
+   column wears no second one; the faces read ui.mutLayer alone. */
+.inventory-tray {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 8px;
-  width: 86px;
-  max-height: calc(100% - 40px);
   padding: 9px 8px 11px;
   background: var(--panel-veil);
   border: 1px dashed var(--line-strong);
@@ -1824,7 +1841,6 @@ body.live .chord-mark:not(.chord-fade):not(.chord-idle) .chord-seam {
 }
 .inventory-tray.off { display: none; }
 .inventory-tray.drag-over { border-color: var(--charge); background: var(--charge-tint); }
-.tray-label { font: 10px var(--mono); letter-spacing: 0.16em; color: var(--muted); flex-shrink: 0; }
 .tray-items { display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 40px; width: 100%; }
 .tray-empty { font-size: 10.5px; color: var(--muted); font-style: italic; text-align: center; padding: 4px 2px; }
 .tray-items .inventory-tile { width: 62px; padding: 3px 2px 5px; }
@@ -1879,9 +1895,44 @@ body.live .chord-mark:not(.chord-fade):not(.chord-idle) .chord-seam {
 }
 .mut-tab:hover { color: var(--ink); background: var(--hover-bg); }
 .mut-tab.active { color: var(--ink); background: var(--hover-bg); }
-.mut-tabs .mut-tab[data-mut-layer="mutators"].active {
+.mut-tab[data-mut-layer="mutators"].active {
   color: var(--arete);
   background: var(--arete-faint);
+}
+/* Pre-entry the Mutators face is locked-but-visible (issue #273): the
+   state grammar's muted outline plus the lock mark in the label — the
+   click walks to the catalog's entry screen, it never flips the mode. */
+.mut-tab.locked {
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.mut-tab.locked:hover { color: var(--muted); background: transparent; }
+.mut-tab-lock {
+  width: 11px;
+  height: 11px;
+  vertical-align: -1.5px;
+  margin-right: 5px;
+}
+.mut-entry-tip { align-items: center; }
+.mut-entry-tip > .inst-tip-trigger { width: 44px; height: 44px; }
+
+/* Cancellation feedback stays above the phone thumb bar and clear of
+   board gestures. The live region announces the same words separately. */
+.mode-toast {
+  position: fixed;
+  z-index: 64;
+  left: 50%;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel-deep);
+  color: var(--ink);
+  font: 14px var(--font-sans);
+  pointer-events: none;
 }
 
 /* The resting board beneath the Mutators tab: greyed, whispering, and
@@ -1943,31 +1994,27 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
 .mut-land-combine .mut-slot-hex { stroke: var(--switch); stroke-width: 3.4; fill: var(--switch-faint-strong); }
 .mut-land-swap .mut-slot-hex { stroke: var(--switch); fill: var(--switch-faint); }
 
-/* The Mutator tray's pinned strip: the second layer's inventory, docked
-   at the board's lower edge at every width — phone included, where the
-   gestures are tap-shaped. */
+/* The Mutator tray (issue #272): the tray column's Mutators face —
+   arete-register tiles in the minimal mark under the column's head. The
+   unlock button rides the face's end until Add takes the arm (#273). */
 .mutator-tray {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 64px;
-  z-index: 22;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 8px;
-  width: max-content;
-  max-width: calc(100% - 16px);
-  padding: 8px 12px;
+  width: 100%;
+  padding: 9px 8px 11px;
   background: var(--panel-veil);
   border: 1px dashed var(--arete-line);
   border-radius: 12px;
   backdrop-filter: blur(3px);
+  overflow-y: auto;
 }
 .mutator-tray[hidden] { display: none; }
-.mutator-tray .tray-label { color: var(--arete); }
-.mutator-tray .tray-items { flex-direction: row; min-width: 60px; width: auto; }
 .mutator-tray.drag-over { border-color: var(--charge); background: var(--charge-tint); }
-.mutator-tray .tray-empty { white-space: nowrap; }
+.mutator-tray .tray-items { width: 100%; }
 .mut-tile {
   all: unset;
   cursor: pointer;
@@ -1981,17 +2028,6 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
 .mut-tile .mut-tile-glyph { color: currentColor; }
 .mut-tile .mut-tile-ticks { fill: currentColor; }
 .mut-tile .mut-tile-effect { font-size: 11.5px; fill: var(--muted); }
-.mut-unlock {
-  all: unset;
-  cursor: pointer;
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--arete);
-  color: var(--arete);
-  font: 600 10.5px var(--mono);
-  white-space: nowrap;
-}
-.mut-unlock:hover { background: var(--arete-faint); }
 
 /* The armed unlock's pill: one cost spot over the board's top edge, the
    armed-purchase pattern's second-layer voice. */
@@ -2116,6 +2152,12 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
    centered card. Outside clicks, Esc, and ✕ dismiss. */
 .modal-backdrop.peek { background: transparent; pointer-events: none; }
 .modal-backdrop.peek .modal { pointer-events: auto; }
+/* The tray sheet's scrimless standing (issue #272 review): the phone tray
+   is a docked panel, never a blocking dialog — the board behind stays
+   fully live (clicks, drags to and from the sheet) while it stands. The
+   ✕, Esc, and a second Inventory tap put it away. */
+.modal-backdrop.peek-tray { background: transparent; pointer-events: none; }
+.modal-backdrop.peek-tray .modal { pointer-events: auto; }
 .modal {
   --modal-pad: 26px;
   width: min(680px, 100%);
@@ -2546,10 +2588,13 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
   .game-info-strip { display: block; }
   .board-tools { display: none; }
   .thumb-bar { display: flex; left: -14px; right: -14px; }
-  /* The tray hides on phone — the thumb bar's Inventory taps the sheet —
-     so the horizon bar owns the lane above the thumb bar. It anchors edge
-     to edge — left 12, right 58 clears the zoom cluster's lane (10 + 36) —
-     instead of centering at a percentage a 390px screen can't hold. */
+  /* The tray column unfolds on phone (issue #272): the head and the
+     modules face hide — the thumb bar's Inventory taps the sheet — and
+     the Mutators face re-pins as the strip in the lane above the thumb
+     bar. display:contents dissolves the column's box so the strip
+     anchors against the board space again, edge to edge — left 12, right
+     58 clears the zoom cluster's lane (10 + 36) — like the horizon bar. */
+  .tray-column { display: contents; }
   .inventory-tray { display: none !important; }
   .horizon-bar {
     bottom: 64px;
@@ -2572,20 +2617,12 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
   body.bloom-sheet-open .zoom-cluster { bottom: 150px; }
   .module-bloom.sheet { bottom: 56px !important; }
   .chord-readout { top: 46px; right: 10px; }
-  /* The Mutator layer on phone (issue #199): the tray strip pins at every
-     width — the lane above the thumb bar, edge to edge like the horizon
-     bar — and the tabs hug the board's top-left corner. */
+  /* The Mutator layer on phone (issue #199, reworked by the #272
+     review): the always-on strip card is gone — the tray sheet's
+     Mutators face carries the tiles, and Add arms the slot unlock — so
+     only the tabs hug the board's top-left corner. */
   .mut-tabs { left: 8px; top: 52px; }
-  .mutator-tray {
-    bottom: 118px;
-    left: 12px;
-    right: 58px;
-    transform: none;
-    width: auto;
-    max-width: none;
-    justify-content: flex-start;
-    overflow-x: auto;
-  }
+  .mutator-tray { display: none !important; }
   .mut-unlock-pill { top: 46px; }
   .cell-arm-pill { top: 46px; }
   .mut-popover { width: 200px; }
@@ -2673,7 +2710,7 @@ body.cell-arming #grid .cell-node:has(.buy-here) { filter: none; opacity: 1; poi
 body.cell-arming #grid .hex.buy-here { stroke-width: 2.5; stroke-dasharray: none; }
 
 /* The add-cell pill (#201): the armed purchase's one cost spot over the
-   board's top edge — "New cell · <price> ν — Cancel · Esc" — and the pill
+   board's top edge — "Add · <price> ν — Cancel · Esc" — and the pill
    itself is the cancel. */
 .cell-arm-pill {
   max-width: calc(100% - 24px);
@@ -2736,6 +2773,26 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   gap: 8px;
   margin-top: 4px;
 }
+/* The tray sheet's face switch (issue #272 review): the board tabs' pair
+   re-docked inside the sheet — the same two buttons, static here. */
+.mut-tabs.tray-switch {
+  position: static;
+  display: inline-flex;
+  width: max-content;
+  margin: 2px 0 12px;
+}
+/* The sheet's retrieval highlight — the column's drag-over voice. */
+.modal.drag-over { border-color: var(--charge); }
+/* Both faces' tiles present at one size in the sheet, and a press on a
+   tile is a drag, never a scroll (touch-action) — the sheet's gestures
+   are the column's. */
+.tray-sheet-tiles .mut-tile,
+.inventory-sheet-grid .inventory-tile {
+  width: 100%;
+  max-width: 112px;
+  touch-action: none;
+}
+.tray-sheet-tiles .mut-tile svg { width: 100%; }
 
 /* ── The catalog (issue #271) ────────────────────────────────────────── */
 /* The one tabbed shop behind the Catalog door: a fixed clipped panel —
@@ -2851,6 +2908,9 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   .catalog-row { gap: 10px; }
 }
 
+/* Separate disclosure keeps the tray tile itself a placement/drag target. */
+.tray-tile-detail { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.tray-tile-detail > .inst-tip-trigger { min-width: 44px; min-height: 44px; }
 /* Capacity disclosure remains a touch target beside the open catalog rows. */
 .capacity-catalog .catalog-row > div { min-width: 0; }
 .capacity-catalog .catalog-row h3 { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }

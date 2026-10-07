@@ -98,8 +98,8 @@ _Avoid_: pop-up, modal
 The popped bloom standing for its module: the origin cell renders vacated while the bloom stands, since the bloom repeats every line the face carries.
 
 **Tray**:
-The board-surface inventory as a collapsible column docked beside the action dock — the dock's Inventory icon toggles it, and a drag or an armed placement opens it for the gesture's duration. Drag a module off the board into it to retrieve — the chord-breaking gesture, shared with right-click retrieve — and click an item then a cell to place; occupied placement swaps. Its tiles wear the minimal mark: a hexagon outlined in the category hue with the glyph alone, the full face belonging to the board and the expanded face (ADR-0027). On portrait phone the tray hides and the thumb bar's Inventory segment taps the same inventory open as a sheet. There is no management view.
-_Avoid_: inventory panel, management view
+The board-surface inventory as an always-open pinned column docked at the board's right edge in upgrade mode, dual-face under the board tabs' Modules/Mutators switch — the one switch, which the column carries no copy of (issue #272). The Modules face holds the inventory: drag a module off the board into it to retrieve — the chord-breaking gesture, shared with right-click retrieve — and click an item then a cell to place; occupied placement swaps. The Mutators face is the Mutator tray (its own entry). Tiles wear the minimal mark: a hexagon outlined in the module's category hue, or the arete register for mutators, with the glyph alone — the full face belonging to the board and the expanded face (ADR-0027). Flow locks the board and hides the column with it; on portrait phone the column unfolds and the thumb bar's Inventory segment taps the same tray open as a scrimless dual-face sheet — the board behind stays live; the switch rides the sheet there, its tiles keep the gestures at one size, and a live drag carries between board and sheet both ways. There is no management view and no collapse.
+_Avoid_: inventory panel, management view, collapsible tray, second switch
 
 **Mutator Grid**:
 The board lattice's second layer, mirroring it position for position, present only while activated by the Mutator tree's entry purchase. Each cell owns one Mutator slot; modules move freely across the board while slots stay put.
@@ -114,8 +114,8 @@ An item of the Mutator Grid: typed, carrying rarity, sitting in a Mutator slot t
 _Avoid_: enhancement (the pre-design name), gem, affix
 
 **Mutator tray**:
-The Mutator Grid's inventory, mirroring the Tray's docks and gestures for mutators: minted mutators wait here, a click then a slot places, and a drag or right-click retrieves.
-_Avoid_: second inventory
+The Mutator Grid's inventory — the tray column's Mutators face, switched by the board tabs: minted mutators wait here, a click then a slot places, and a drag or right-click retrieves. Pre-entry the face is locked-but-visible — a muted outline and the lock mark — and clicking it (tab, tray face, or Add) opens the Catalog on the entry screen as a preview of the future entry; it never flips the mode. On portrait phone the tray sheet's Mutators face carries the same tiles; no always-on strip stands there.
+_Avoid_: second inventory, unlock card
 
 ### Resources and production
 
@@ -224,7 +224,7 @@ _Avoid_: practice meter, practice forge, flow forge, third branch
 A choice of one mutator from two generated candidates, delivered to the Mutator tray; unchosen candidates disappear without consolation resources. Every roll is charge-earned except the first, which the Mutator tree's entry purchase itself performs.
 
 **Catalog**:
-The tabbed shop behind the labeled Catalog door on the dock (desktop) and thumb bar (phone): the `ν nous` face carries the starter shelf and — once the ladder has a tenant — app activations; the `◇ Arete` face is the Arete Catalog. Cells are no sheet row — the purchase arms from the dock's New cell and commits on the board's frontier. The door opens on the last-used face and falls back to nous before the first prestige (the mode-wins override lands with mode unification). The frame is fixed — a 620×600 clipped panel on desktop, a 74%-height bottom sheet on phone — and a face switch never resizes it: the switch and identity stay pinned while the body scrolls. Purchases act in upgrade mode only; prices mute when unaffordable or in flow. Module upgrades live on module panels, not the catalog (ADR-0018).
+The tabbed shop behind the labeled Catalog door on the dock (desktop) and thumb bar (phone): the `ν nous` face carries the starter shelf and — once the ladder has a tenant — app activations; the `◇ Arete` face is the Arete Catalog. Cells are no sheet row — the purchase arms from the dock's Add and commits on the board's frontier. The door opens on the mode's face — module mode on ν, mutator mode on ◇ — the mode wins over any last-face memory. The ◇ tab stands open from the start; before the first prestige it shows the entry purchase screen as the preview of the future entry, its price muted while no banked Arete can pay. The frame is fixed — a 620×600 clipped panel on desktop, a 74%-height bottom sheet on phone — and a face switch never resizes it: the switch and identity stay pinned while the body scrolls. Purchases act in upgrade mode only; prices mute when unaffordable or in flow. Module upgrades live on module panels, not the catalog (ADR-0018).
 
 **Starter shelf**:
 The catalog's one-time guaranteed offers — the Focus Generator, one Booster, and a Module Forge — hidden once acquired. It completes the non-oscillator landscape; oscillators come only from the opening grant and module rolls (ADR-0022).
@@ -238,7 +238,7 @@ The pure control surface organized around the Enter/Exit main switch — the dom
 One clipped instrument panel docked above the board — the board owns its production numbers. The resources group left: nous, rate, and the arete read, each value with its unit, no session read anywhere on it. The arete read wears the resource's color and its canonical mark; before the first prestige it stands as a dim `— ◇` slot — the unconditional telegraph that prestige will bank there. A hairline then separates the feats and chords chips, right-aligned as paired icon + count chips. The rate read is the door to the rate details: above the 760px breakpoint a hover or focus anywhere on the panel opens the module-linked roster as a ledger-wide popover (the rate read wears no inner border of its own — the panel is the affordance, not the figure); a tap on the rate read opens the same roster as a modal sheet at every width. (On portrait phone the door moves to the game-info strip's rate read.) Bonuses never ride the ledger — they show in the feats and chords sheets and in the rate details' Achievements and Discoveries legs (ADR-0037's one roster).
 
 **Thumb bar**:
-The console's re-docked form on portrait phone — a bottom bar of five segments: Catalog / Forge / New cell / Inventory / **Collection**. The icon dock, the board-surface tray's tap access, and the ledger's feats and chords chips all fold into it — the two ledgers through Collection; nothing else changes.
+The console's re-docked form on portrait phone — a bottom bar of five segments: Catalog / Forge / Add / Inventory / **Collection**. The icon dock, the board-surface tray's tap access, and the ledger's feats and chords chips all fold into it — the two ledgers through Collection; nothing else changes.
 
 **Game-info strip**:
 The ledger's phone face on the board surface — the grouped resource reads (ν, rate, arete) and nothing else, where the idle tutorial helptext used to sit. Its rate read is the phone's door to the rate details sheet — the same module-linked roster the ledger's popover holds at wider widths — and its arete read keeps the dim pre-prestige slot. No feats or chords chips: Collection provides their sole phone entry. Phone only; the board ledger serves every other width.
@@ -323,6 +323,10 @@ A player-reported record of practice outside a running session that can satisfy 
 
 ### Sessions
 
+**Shared save**:
+The persisted game progress shared by the browser's tabs. A tab protects newer shared progress from being replaced by its older working copy, and adopts newer progress when it can safely reconcile its session.
+
+
 **Flow session**:
 A period of real-life practice during which the board runs automatically and the console supports focus activities such as taking notes.
 
@@ -392,11 +396,11 @@ The muted list-row flag on session records carrying a missed honesty event. Mute
 The resource banked by prestige and by nothing else — never granted before the reset. Each prestige banks a claim that grows with the prestiges performed; once the horizon is broken, score beyond the horizon line raises the claim further, up to a hard cap. It spends on the Arete Catalog.
 
 **Arete Catalog**:
-The catalog's `◇ Arete` face. It appears with the first Arete the first prestige banks — the prestige count is the lock, never the balance, so spending down to zero never re-locks it. Before the Mutator tree's entry the face is the single centered Unlock Mutator Layer lock screen; the entry purchase reveals the Upgrades section (the entry's ACQUIRED rewards line, the inert Accelerator placeholder, the Horizon break) and the Unlocks section (the roll-pool join, empty once joined). Purchases are permanent, act in upgrade mode only, and survive prestige.
+The catalog's `◇ Arete` face. Its tab stands open from the start — the face never locks on the prestige count; before the Mutator tree's entry it is the single centered Unlock Mutator Layer purchase screen, shown from the first session as the preview of the future entry with its price muted (Arete arrives only through prestige, so the purchase cannot land early). The entry purchase reveals the Upgrades section (the entry's ACQUIRED rewards line, the inert Accelerator placeholder, the Horizon break) and the Unlocks section (the roll-pool join, empty once joined). Purchases are permanent, act in upgrade mode only, and survive prestige.
 _Avoid_: prestige sheet, prestige tree, skill tree
 
 **Mutator tree**:
-The Arete Catalog's first tree. Its purchases are the entry (activates the Mutator Grid, grants the Mutator Forge module itself, unlocks the first Mutator slot, and performs the first Mutator roll) and the pricier purchase that joins the Mutator Forge type to the roll pool. Slot unlocks past the first are bought on the Mutators layer, armed like a cell purchase and priced on the tree's escalating ladder. The type is otherwise Catalog-exclusive.
+The Arete Catalog's first tree. Its purchases are the entry (activates the Mutator Grid, grants the Mutator Forge module itself, unlocks the first Mutator slot, and performs the first Mutator roll) and the pricier purchase that joins the Mutator Forge type to the roll pool. Slot unlocks past the first are armed from the dock's Add in mutator mode — like a cell purchase, priced on the tree's escalating ladder. The type is otherwise Catalog-exclusive.
 _Avoid_: enhancement tree, gem tree
 
 **Row unlock**:

@@ -21,6 +21,7 @@ import { startPointerDrag } from "./pointer-drag";
 import { boardPoint, HEX_RADIUS, hexPoints } from "./face";
 import { viewPoint, type ViewFrame } from "./bloom";
 import { META, RARITY_LABEL } from "./meta";
+import { wireTooltips } from "./instrument";
 
 // The families' words, one spelling everywhere — slot faces, the tray, the
 // readout ask, the popover, the Forge modal, the toasts.
@@ -142,32 +143,62 @@ export function mutatorSlotPrice(state: GameState): number {
 }
 
 /* ── The layer tabs ───────────────────────────────────
-   The tab pair at the board's top edge (issue #199): upgrade-mode
-   furniture beside the entry purchase — in flow neither tab nor layer
-   exists, and a player without the entry never sees them at all. */
+   The tab pair at the board's top edge (issue #199): the one Modules /
+   Mutators switch — the tray column's faces and the phone tray sheet all
+   read its state, and none carries a second one (issue #272 review).
+   Upgrade-mode furniture; in flow neither tab nor layer exists. Pre-entry
+   the pair stands locked-but-visible (issue #273). */
 
 export function mutatorLayerWanted(app: App): boolean {
   return app.state.mode === "upgrade" && app.state.catalogEntryOwned;
 }
 
+// The tabs stand through upgrade mode — locked-but-visible before the
+// entry purchase (issue #273), live beside it after; flow shows neither
+// tab nor layer.
+export function mutatorTabsWanted(app: App): boolean {
+  return app.state.mode === "upgrade";
+}
+
+// The pair's one markup, shared by the board tabs and the phone tray
+// sheet's switch — the same two buttons wherever the switch stands.
+// Pre-entry the Mutators face is locked-but-visible (issue #273): a muted
+// outline and the lock mark telegraph the entry, and the click — resolved
+// by mutSetLayer — walks to the Catalog's entry screen instead of flipping
+// the mode.
+export function mutTabPairHtml(app: App, tipId = "board-mutator-entry"): string {
+  const { ui, state } = app;
+  const locked = !state.catalogEntryOwned;
+  return `<button class="mut-tab${ui.mutLayer === "modules" ? " active" : ""}" data-mut-layer="modules" aria-pressed="${ui.mutLayer === "modules"}">Modules</button>
+    <button class="mut-tab${ui.mutLayer === "mutators" ? " active" : ""}${locked ? " locked" : ""}" data-mut-layer="mutators" aria-pressed="${ui.mutLayer === "mutators"}"${locked ? ' aria-label="Mutators — locked; open Catalog entry"' : ""}>${locked ? LOCK_MARK : ""}Mutators</button>${locked ? `<span class="inst-tip mut-entry-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${tipId}" aria-label="About unlocking Mutators">ⓘ</button><span class="inst-tip-body" id="${tipId}" role="tooltip">Unlocks with the Mutator entry</span></span>` : ""}`;
+}
+
+// The locked face's one mark (issue #273 review): a padlock in the
+// instrument's stroke language — the layer is locked, not merely elsewhere.
+const LOCK_MARK = `<svg class="mut-tab-lock" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.7" y="5.4" width="6.6" height="4.9" rx="1.1"/><path d="M4.2 5.4V3.9a1.8 1.8 0 0 1 3.6 0v1.5"/></svg>`;
+
 export function renderMutatorTabs(app: App): void {
   const host = document.getElementById("mut-tabs");
   if (!host) return;
-  if (!mutatorLayerWanted(app)) {
+  wireTooltips(host, app.signal);
+  if (!mutatorTabsWanted(app)) {
     host.hidden = true;
     host.innerHTML = "";
     delete host.dataset.renderKey;
     return;
   }
-  const { ui } = app;
-  const key = ui.mutLayer;
-  if (host.dataset.renderKey === key) return;
+  // The face and the entry's ownership both shape the pair — the purchase
+  // unlocks the locked face in place.
+  const key = `${app.ui.mutLayer}:${app.state.catalogEntryOwned}`;
+  if (host.dataset.renderKey === key) {
+    host.hidden = false;
+    return;
+  }
   host.dataset.renderKey = key;
   host.hidden = false;
-  host.innerHTML = `<button class="mut-tab${ui.mutLayer === "modules" ? " active" : ""}" data-mut-layer="modules" aria-pressed="${ui.mutLayer === "modules"}">Modules</button>
-    <button class="mut-tab${ui.mutLayer === "mutators" ? " active" : ""}" data-mut-layer="mutators" aria-pressed="${ui.mutLayer === "mutators"}">Mutators</button>`;
+  host.innerHTML = mutTabPairHtml(app);
   host.querySelectorAll<HTMLButtonElement>("[data-mut-layer]").forEach((button) => {
-    button.addEventListener("click", () => app.mutSetLayer(button.getAttribute("data-mut-layer") as "modules" | "mutators"));
+    app.listen(button, "click", () => app.mutSetLayer(button.getAttribute("data-mut-layer") as "modules" | "mutators"));
   });
 }
 
@@ -238,9 +269,12 @@ function mutSlotFaceHtml(app: App, pos: Hex, snapshot: RateSnapshot): string {
 }
 
 /* ── The Mutator tray ─────────────────────────────────
-   The second layer's inventory: a strip pinned at the board's lower edge
-   while the Mutators tab stands — every width, phone included, where the
-   gestures are tap-shaped. The unlock button rides its end. */
+   The second layer's inventory (issue #272): the tray column's Mutators
+   face at every wide width — minted mutators wait here, and the
+   placement, combine, and retrieval gestures live here. The slot unlock
+   is Add's arm, not a tray card (the #272 review); on portrait phone the
+   face hides with the column — the tray sheet's Mutators face carries
+   the same tiles there. */
 
 export function renderMutatorTray(app: App): void {
   const host = document.getElementById("mutator-tray");
@@ -253,27 +287,23 @@ export function renderMutatorTray(app: App): void {
     return;
   }
   const tray = state.mutators.filter((m) => m.pos === null);
-  const price = mutatorSlotPrice(state);
-  const key = JSON.stringify([tray.map((m) => `${m.id}:${m.rarity}:${m.family}`), ui.mutArmedTray, ui.mutUnlockArmed, state.mutatorSlots.length, state.arete]);
+  const key = JSON.stringify([tray.map((m) => `${m.id}:${m.rarity}:${m.family}`), ui.mutArmedTray]);
   if (host.dataset.renderKey === key) return;
   host.dataset.renderKey = key;
   host.hidden = false;
-  host.innerHTML = `<span class="tray-label">MUTATORS</span>
-    <div class="tray-items mut-strip-items">${
+  host.innerHTML = `<div class="tray-items mut-strip-items">${
       tray
         .map(
           (item) =>
             `<button class="inventory-tile mut-tile${ui.mutArmedTray === item.id ? " armed" : ""}" data-mut-tray="${item.id}" data-rarity="${item.rarity}" title="${FAMILY_WORD[item.family]} · ${RARITY_LABEL[item.rarity]} · ${mutatorEffectText(item.family, item.rarity)} — tap, then a slot">${mutatorTileSvg(item)}</button>`,
         )
         .join("") || `<span class="tray-empty">minted mutators wait here</span>`
-    }</div>
-    <button class="mut-unlock" id="mut-unlock">Unlock slot${ui.mutUnlockArmed ? "" : ` · <span class="mono">${state.mutatorSlots.length === 0 ? "free" : `${price} Arete`}</span>`}</button>`;
+    }</div>`;
   host.querySelectorAll<HTMLButtonElement>("[data-mut-tray]").forEach((button) => {
     const id = button.getAttribute("data-mut-tray")!;
-    button.addEventListener("click", () => app.mutArmTray(id));
+    app.listen(button, "click", () => app.mutArmTray(id));
     bindMutatorDrag(app, button, id, "tray");
   });
-  document.getElementById("mut-unlock")?.addEventListener("click", () => app.mutArmUnlock());
 }
 
 /* ── The unlock pill ──────────────────────────────────
@@ -301,7 +331,7 @@ export function renderMutatorPill(app: App): void {
   // WeakSet keeps a stale test document from doubling it).
   if (boundPills.has(host)) return;
   boundPills.add(host);
-  host.addEventListener("click", () => app.mutCancelGestures());
+  app.listen(host, "click", () => app.mutCancelGestures());
 }
 
 /* ── The declaration popover ──────────────────────────
@@ -337,9 +367,9 @@ export function renderMutatorPopover(app: App, snapshot: RateSnapshot): void {
         <button id="mut-pop-move">Move</button>
         <button id="mut-pop-close" aria-label="Close">✕</button>
       </div>`;
-    document.getElementById("mut-pop-retrieve")?.addEventListener("click", () => app.mutPopoverRetrieve());
-    document.getElementById("mut-pop-move")?.addEventListener("click", () => app.mutPopoverMove());
-    document.getElementById("mut-pop-close")?.addEventListener("click", () => app.mutClosePopover());
+    app.listen(document.getElementById("mut-pop-retrieve"), "click", () => app.mutPopoverRetrieve());
+    app.listen(document.getElementById("mut-pop-move"), "click", () => app.mutPopoverMove());
+    app.listen(document.getElementById("mut-pop-close"), "click", () => app.mutClosePopover());
   }
   // Position over the slot on every pass — the lens may have moved.
   const svg = document.getElementById("grid");
@@ -438,18 +468,18 @@ export function bindMutatorLayer(app: App, svg: SVGSVGElement): void {
     const position = (): Hex => {
       return hexFromAttr(node.getAttribute("data-mut-slot") ?? node.getAttribute("data-mut-unlock"))!;
     };
-    node.addEventListener("keydown", (event) => {
+    app.listen(node, "keydown", (event) => {
       if ((event as KeyboardEvent).key === "Enter" || (event as KeyboardEvent).key === " ") {
         event.preventDefault();
         app.mutPickSlot(position());
       }
     });
-    node.addEventListener("click", () => app.mutPickSlot(position()));
-    node.addEventListener("contextmenu", (event) => {
+    app.listen(node, "click", () => app.mutPickSlot(position()));
+    app.listen(node, "contextmenu", (event) => {
       event.preventDefault();
       app.mutRightClickSlot(position());
     });
-    node.addEventListener("pointerdown", (baseEvent: Event) => {
+    app.listen(node, "pointerdown", (baseEvent: Event) => {
       const event = baseEvent as PointerEvent;
       if (event.button !== 0) return;
       const pos = position();
@@ -463,7 +493,7 @@ export function bindMutatorLayer(app: App, svg: SVGSVGElement): void {
 // Tray-tile drag binding: press a tile, drag it to a slot (or onto a
 // matching twin waiting in the tray).
 export function bindMutatorDrag(app: App, element: Element, id: string, origin: Hex | "tray"): void {
-  element.addEventListener("pointerdown", (baseEvent: Event) => {
+  app.listen(element, "pointerdown", (baseEvent: Event) => {
     const event = baseEvent as PointerEvent;
     if (event.button !== 0 || app.state.mode !== "upgrade") return;
     startMutDrag(app, event, id, origin);
@@ -486,11 +516,16 @@ function startMutDrag(app: App, event: PointerEvent, id: string, origin: Hex | "
     const hit = document.elementFromPoint(ev.clientX, ev.clientY)?.closest("[data-mut-tray]");
     return hit?.getAttribute("data-mut-tray") ?? null;
   };
-  const overTray = (ev: PointerEvent): boolean => {
-    return !!document.elementFromPoint(ev.clientX, ev.clientY)?.closest("#mutator-tray");
+  const trayHitAt = (ev: PointerEvent): Element | null => {
+    // The phone tray sheet counts as the tray while it stands (issue #272
+    // review): dropping a placed mutator onto the open sheet retrieves.
+    const hit = document.elementFromPoint(ev.clientX, ev.clientY);
+    return hit?.closest("#mutator-tray") ?? (app.ui.modal === "inventory" ? hit?.closest("#modal-content") ?? null : null);
   };
+  const overTray = (ev: PointerEvent): boolean => trayHitAt(ev) !== null;
   const tray = document.getElementById("mutator-tray");
-  app.cancelMutDrag = startPointerDrag(event, {
+  const sheet = () => (app.ui.modal === "inventory" ? document.getElementById("modal-content") : null);
+  app.cancelMutDrag = startPointerDrag(app, event, {
     start: () => {
       app.ui.mutCarrying = id;
       app.ui.mutPopover = null;
@@ -503,15 +538,22 @@ function startMutDrag(app: App, event: PointerEvent, id: string, origin: Hex | "
       const pos = slotAt(ev);
       const twin = pos ? null : trayTwinAt(ev);
       app.setMutDropHover(id, pos);
-      tray?.classList.toggle("drag-over", overTray(ev));
-      tray?.querySelectorAll(".mut-tile").forEach((tile) => {
+      const sheetNode = sheet();
+      const over = overTray(ev);
+      tray?.classList.toggle("drag-over", over);
+      sheetNode?.classList.toggle("drag-over", over && !tray?.classList.contains("drag-over"));
+      const tileScope = sheetNode ?? tray;
+      tileScope?.querySelectorAll(".mut-tile").forEach((tile) => {
         tile.classList.toggle("mut-land-combine", twin !== null && tile.getAttribute("data-mut-tray") === twin);
       });
     },
     cleanup: () => {
       app.cancelMutDrag = null;
       tray?.classList.remove("drag-over");
-      tray?.querySelectorAll(".mut-tile.mut-land-combine").forEach((tile) => tile.classList.remove("mut-land-combine"));
+      sheet()?.classList.remove("drag-over");
+      for (const scope of [tray, sheet()]) {
+        scope?.querySelectorAll(".mut-tile.mut-land-combine").forEach((tile) => tile.classList.remove("mut-land-combine"));
+      }
       app.ui.mutCarrying = null;
       app.setMutDropHover(null, null);
     },

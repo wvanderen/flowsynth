@@ -36,12 +36,12 @@ import {
   type BulkPurchase,
 } from "../engine/actions";
 import { ARETE_HORIZON, claimOf } from "../engine/accumulator";
-import { catalogOpen } from "../engine/catalog";
 import { neighbors, hex, sameHex } from "../engine/hex";
 import { newChordTerms } from "../engine/chords";
 import { displayedRates, setAllocationEnabled, mutatorAt } from "../engine/economy";
 import { summaryTermsOf } from "../engine/allocation";
-import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
+import { serialize, STORAGE_KEY } from "../engine/save";
+import { SharedSave, browserSaveStorage, type LoadedSave } from "./shared-save";
 import { formatClock } from "../engine/clock";
 import { formatInt, formatNumber } from "./format";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
@@ -68,6 +68,7 @@ import { render } from "./render";
 import { FAMILY_WORD, mutatorLayerLive, refreshMutPreview } from "./mutators";
 import { HISTORY_PAGE_ROWS, META } from "./meta";
 import { browserChannels, type SignalChannels } from "./signals";
+import { suppressNextClick } from "./click";
 
 // The session modal surfaces (§5.5, §5.7): the enter prompt precedes every
 // session; the loud summary follows every one; the honesty report interrupts
@@ -191,10 +192,12 @@ export interface UiState {
   // reset every time the prompt opens.
   enter: EnterSelection;
   showAcquired: boolean;
-  // The catalog door's face memory (issue #271): the tabbed shop opens on
-  // the face it last showed — the mode-wins override lands with #246. The
-  // arete face exists only from the first banked Arete, so a stale memory
-  // falls back to nous at open. Light furniture — never saved.
+  // The catalog's standing face — which tab shows and what the in-sheet
+  // switch flips. The door itself no longer reads a memory here: mode wins
+  // at open (issue #273), and the locked MUTATORS controls name the entry
+  // face themselves. The arete face exists only from the first banked
+  // Arete, so a face the shop cannot show falls back to nous at open.
+  // Light furniture — never saved.
   catalogFace: "nous" | "arete";
   editingHabitId: string | null;
   // Session history (§9): the Time app's list view, its page size, and the
@@ -209,10 +212,6 @@ export interface UiState {
   // saved; fit resets zoom to 1 and the pan to null.
   zoom: number;
   pan: { x: number; y: number } | null;
-  // The tray column's explicit state (§5): toggled from the dock's
-  // Inventory icon; drags and placements open it temporarily whatever this
-  // says. Light furniture — never saved.
-  trayOpen: boolean;
   // The bulk-upgrade surfaces (issue #195): the expanded face's dial count,
   // held per module so a new selection starts at ×1, and the shift-held
   // MAX mode every face button's label flips into board-wide (Cookie
@@ -250,11 +249,6 @@ export interface UiState {
   mutDropHover: { mutatorId: string; pos: Hex } | null;
 }
 
-interface LoadedSave {
-  state: GameState;
-  savedAt: number;
-}
-
 // The chime's re-fire ledger for the running overrun (§4): how many chimes
 // have sounded, when the last one did, and whether a visible return or a
 // pause has acknowledged and silenced the rest. Ephemeral — never saved.
@@ -266,28 +260,6 @@ interface ChimeState {
 
 const freshChimeState = (): ChimeState => ({ chimes: 0, lastChimeAt: 0, acknowledged: false });
 
-type ParsedSave = LoadedSave | { error: string };
-
-// The save file's wall-clock stamp, or null when the file carries none a
-// guard can trust — a broken stamp must never block a legitimate write
-// (#128).
-function savedAtOf(raw: string): number | null {
-  try {
-    const savedAt = (JSON.parse(raw) as { savedAt?: unknown }).savedAt;
-    return typeof savedAt === "number" && Number.isFinite(savedAt) ? savedAt : null;
-  } catch {
-    return null;
-  }
-}
-
-function parseSave(text: string): ParsedSave {
-  const result = deserialize(text);
-  if (result.error || !result.state) {
-    return { error: result.error ?? "unknown error" };
-  }
-  return { state: result.state, savedAt: savedAtOf(text) ?? Date.now() };
-}
-
 // The dual clock (focus-tool spec §1, §10): drift between the wall clock
 // and the monotonic one. performance.now() does not advance while the
 // machine sleeps; Date.now() does — so a positive step in this drift across
@@ -297,6 +269,83 @@ function dualDriftMs(): number {
 }
 
 export class App {
+  private readonly lifetime = new AbortController();
+  private readonly cleanups = new Set<() => void>();
+  // Weak references let replaced render descendants be collected while
+  // still allowing release to remove handlers from any surviving node.
+  private readonly listeners = new Set<{
+    target: WeakRef<EventTarget>;
+    handler: WeakRef<EventListener>;
+    type: string;
+    capture: boolean;
+  }>();
+  get released(): boolean { return this.lifetime.signal.aborted; }
+  get signal(): AbortSignal { return this.lifetime.signal; }
+
+  // Temporary resources unregister on completion, so renders and gestures
+  // cannot grow the lifetime ledger indefinitely.
+  ownCleanup(cleanup: () => void): () => void {
+    if (this.released) { cleanup(); return () => {}; }
+    this.cleanups.add(cleanup);
+    return () => { this.cleanups.delete(cleanup); };
+  }
+
+  listen<K extends keyof GlobalEventHandlersEventMap>(
+    target: EventTarget | null | undefined,
+    type: K,
+    handler: (event: GlobalEventHandlersEventMap[K]) => void,
+    options?: boolean | AddEventListenerOptions,
+  ): void {
+    if (!target || this.released) return;
+    const guarded: EventListener = (event) => {
+      if (!this.released) handler(event as GlobalEventHandlersEventMap[K]);
+    };
+    target.addEventListener(type, guarded, options);
+    this.listeners.add({ target: new WeakRef(target), handler: new WeakRef(guarded), type,
+      capture: typeof options === "boolean" ? options : !!options?.capture });
+  }
+
+  private sweepListeners(): void {
+    for (const listener of this.listeners) {
+      const target = listener.target.deref();
+      const handler = listener.handler.deref();
+      if (!target || !handler || (target instanceof Node && !target.isConnected)) {
+        if (target && handler) target.removeEventListener(listener.type, handler, listener.capture);
+        this.listeners.delete(listener);
+      }
+    }
+  }
+
+  suppressClick(): void {
+    if (this.released) return;
+    let forget = () => {};
+    const cancel = suppressNextClick(() => forget());
+    forget = this.ownCleanup(cancel);
+  }
+
+  // Release is terminal, idempotent, and deliberately never saves.
+  dispose(): void {
+    if (this.released) return;
+    this.lifetime.abort();
+    window.clearTimeout(this.modeToastTimer);
+    for (const listener of this.listeners) {
+      listener.target.deref()?.removeEventListener(listener.type, listener.handler.deref() ?? null, listener.capture);
+    }
+    this.listeners.clear();
+    for (const cleanup of this.cleanups) cleanup();
+    this.cleanups.clear();
+    this.dragging = null;
+    this.cancelMutDrag = null;
+    this.ui.dropHover = null;
+    this.ui.mutCarrying = null;
+    this.ui.mutDropHover = null;
+    this.devBoardCancelStress();
+    const audio = this.ownedAudio;
+    this.audio = null;
+    this.ownedAudio = null;
+    if (audio) void audio.close().catch(() => {});
+  }
+
   private currentState: GameState = createInitialState();
   get state(): GameState { return this.currentState; }
   set state(state: GameState) {
@@ -331,7 +380,6 @@ export class App {
     summaryHabitId: null,
     zoom: 1,
     pan: null,
-    trayOpen: false,
     bulkCount: 1,
     bulkModuleId: null,
     faceMax: false,
@@ -361,11 +409,7 @@ export class App {
   // and greet() passes the observation on.
   private resumedFromDiscard = false;
   lastSaveWall = 0;
-  // The newest stored save this tab has incorporated — by loading at boot,
-  // writing, or adopting (#128). A slot entry newer than this was written
-  // by another tab: this tab's memory predates it, so writing would
-  // silently discard that tab's progress and save() refuses instead.
-  private knownSavedAt = 0;
+  private readonly sharedSave = new SharedSave(browserSaveStorage);
   dev: boolean;
   // The session's AudioContext (§4): created or resumed inside the start
   // gesture, kept for the target chime. Null where Web Audio is
@@ -376,6 +420,7 @@ export class App {
   // that.
   signals: ChimeState = freshChimeState();
   private channels: SignalChannels;
+  private ownedAudio: AudioContext | null = null;
   // The Forge's threshold-crossing flash: a roll was minted, so its face
   // flashes until this wall-clock moment.
   rollFlashUntil = 0;
@@ -403,6 +448,7 @@ export class App {
   // frontier cells (§7): the lens the zoom and pan clamp against.
   boardBounds = { x: -100, y: -100, width: 200, height: 200 };
   private els: Record<string, HTMLElement>;
+  private modeToastTimer: number | undefined;
 
   constructor(els: Record<string, HTMLElement>, dev: boolean, channels: SignalChannels = browserChannels) {
     this.els = els;
@@ -417,35 +463,27 @@ export class App {
     rollGoalOccurrences(this.state, Date.now());
     this.ensureBoardOverlays();
     this.bindGlobalEvents();
-    document.getElementById("console-settings")?.addEventListener("click", () => this.openModal("settings"));
+    document.getElementById("console-settings")?.addEventListener("click", () => this.openModal("settings"), { signal: this.signal });
     this.greet();
     this.render();
     this.save();
   }
 
   private load(): LoadedSave | null {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      const parsed = parseSave(raw);
-      if ("error" in parsed) {
-        this.loadNotice = `Could not load the local save: ${parsed.error}`;
-        // A rejected file (an unknown version, say) is ours to overwrite:
-        // record its stamp so the fresh save this boot is about to write is
-        // never blocked by the very file that was refused (#128).
-        this.knownSavedAt = savedAtOf(raw) ?? this.knownSavedAt;
-        return null;
-      }
-      return parsed;
-    } catch {
+    const parsed = this.sharedSave.load();
+    if (parsed && "error" in parsed) {
+      this.loadNotice = `Could not load the local save: ${parsed.error}`;
       return null;
     }
+    return parsed;
   }
 
   // The board-surface overlays (§5): the expanded-face bloom and the
-  // inventory tray live over the board's own space, so their hosts are
+  // Upgrade All cluster live over the board's own space, so their hosts are
   // created once here — the bloom's outside-click ledger binds against a
-  // node that never moves, and no render ever has to bootstrap one.
+  // node that never moves, and no render ever has to bootstrap one. The
+  // tray column's hosts are index.html's own (the always-open column never
+  // bootstraps).
   private ensureBoardOverlays(): void {
     const space = document.querySelector(".board-space");
     if (!space) return;
@@ -455,12 +493,6 @@ export class App {
       bloom.className = "module-bloom";
       bloom.hidden = true;
       space.append(bloom);
-    }
-    if (!document.getElementById("inventory-zone")) {
-      const tray = document.createElement("div");
-      tray.id = "inventory-zone";
-      tray.className = "inventory-tray";
-      space.append(tray);
     }
     if (!document.getElementById("upgrade-all")) {
       const cluster = document.createElement("div");
@@ -483,7 +515,7 @@ export class App {
     // stamps here, with no toast and nothing joining a live session's
     // "unlocked this session" row. The session-one guard stands.
     syncAchievements(this.state, { silent: true });
-    this.knownSavedAt = loaded.savedAt;
+    this.sharedSave.incorporate(loaded.savedAt);
     this.lastWall = null;
     this.presence = document.visibilityState === "visible";
     this.exitPending = false;
@@ -511,7 +543,7 @@ export class App {
   // the body), and a stale instance must never act on — or re-render — a
   // newer instance's board.
   private ownsBoard(): boolean {
-    return this.els["grid"]?.isConnected === true;
+    return !this.released && this.els["grid"]?.isConnected === true;
   }
 
   // The boundary clock's baseline: wall moment and dual-clock drift move
@@ -553,25 +585,6 @@ export class App {
     this.tick();
   }
 
-  // The stored save's stamp, read fresh at every check: the slot is shared,
-  // so any read may observe another tab's write (#128). Null when absent or
-  // unreadable — a broken stamp never counts as newer, never blocks.
-  private storedSavedAt(): number | null {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw === null ? null : savedAtOf(raw);
-    } catch {
-      return null;
-    }
-  }
-
-  // Whether the slot holds a save this tab never loaded, wrote, or adopted —
-  // another tab's write, which this tab's memory predates (#128).
-  private externalNewerSave(): boolean {
-    const stored = this.storedSavedAt();
-    return stored !== null && stored > this.knownSavedAt;
-  }
-
   // Converges onto a newer stored save through the one resume/reconcile
   // path (§1): the adopted save is treated exactly like a reload — a live
   // session resumes with its absence reconciled as away. False when the
@@ -579,7 +592,7 @@ export class App {
   // slot never blocks, and another tab's forced older-stamped write (an
   // import, a reset) must never revert this tab's fresher memory (#128).
   private adoptNewerSave(): boolean {
-    if (!this.externalNewerSave()) return false;
+    if (!this.sharedSave.isNewer()) return false;
     const loaded = this.load();
     if (!loaded) return false;
     this.clearTransientUi();
@@ -589,25 +602,11 @@ export class App {
     return true;
   }
 
-  // The one writer (§10). A shared slot means the write can race another
-  // tab's (#128): when the slot holds a save newer than anything this tab
-  // has incorporated, the write would silently discard that tab's progress,
-  // so it is refused — the tab stays on its own copy until a storage event
-  // (outside flow) or a return adopts the newer save. A tab whose own write
-  // is the newest thing in the slot — the single-tab case — saves through
-  // unchanged. Explicit import and reset force their write: a deliberate
-  // choice outranks the stamp. The stamp is claimed only after the slot
-  // accepted the write: a failed write (private browsing, full storage)
-  // must never read as incorporated.
+  // Session timing owns the throttle: a refused write is not an attempt,
+  // while a failed storage write still advances the attempt's wall clock.
   save(now: number = Date.now(), force = false): void {
-    if (!force && this.externalNewerSave()) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, serialize(this.state, now));
-      this.knownSavedAt = now;
-    } catch {
-      // Private browsing or full storage: the session continues without durable saves.
-    }
-    this.lastSaveWall = now;
+    if (this.released) return;
+    if (this.sharedSave.write(this.state, now, force) !== "refused") this.lastSaveWall = now;
   }
 
   exportText(): string {
@@ -639,7 +638,8 @@ export class App {
   }
 
   importText(text: string): boolean {
-    const parsed = parseSave(text);
+    if (this.released) return false;
+    const parsed = this.sharedSave.parse(text);
     if ("error" in parsed) {
       this.ui.importError = parsed.error;
       this.render();
@@ -705,6 +705,7 @@ export class App {
   }
 
   say(text: string): void {
+    if (this.released) return;
     const el = this.els["status"];
     if (el) el.textContent = text;
   }
@@ -731,6 +732,7 @@ export class App {
 
   private bindGlobalEvents(): void {
     document.addEventListener("visibilitychange", () => {
+      if (!this.ownsBoard()) return;
       if (document.visibilityState === "hidden") {
         // The gap that just ended was present: classify it, then persist —
         // the transition to hidden is the last reliably observable save
@@ -747,16 +749,16 @@ export class App {
         this.adoptNewerSave();
         this.processReturn(Date.now());
       }
-    });
+    }, { signal: this.signal });
     // A bfcache restore is a return: the frozen stretch classifies as away,
     // and a save another tab wrote while this page sat frozen is adopted
     // through the same reconcile path (#128).
     window.addEventListener("pageshow", (event) => {
-      if (!(event as PageTransitionEvent).persisted) return;
+      if (!this.ownsBoard() || !(event as PageTransitionEvent).persisted) return;
       this.presence = document.visibilityState === "visible";
       this.adoptNewerSave();
       this.processReturn(Date.now());
-    });
+    }, { signal: this.signal });
     // Another tab's save, announced here in every tab but the writer
     // (#128): outside a live session the tab adopts a save newer than
     // anything it has incorporated — a cheap, invisible catch-up; another
@@ -766,17 +768,22 @@ export class App {
     window.addEventListener("storage", (event) => {
       if (event.key !== STORAGE_KEY || !this.ownsBoard()) return;
       if (this.state.mode !== "flow") this.adoptNewerSave();
-    });
+    }, { signal: this.signal });
     // Focus loss alone is not away, but focus is a boundary: a stalled or
     // throttled clock catches up here with presence unchanged.
-    window.addEventListener("focus", () => this.processReturn(Date.now()));
-    window.addEventListener("beforeunload", () => this.save());
+    window.addEventListener("focus", () => {
+      if (this.ownsBoard()) this.processReturn(Date.now());
+    }, { signal: this.signal });
+    window.addEventListener("beforeunload", () => {
+      if (this.ownsBoard()) this.save();
+    }, { signal: this.signal });
     // The tick timer can outlive its document (a discarded environment, a
     // torn-down test): a dead document is simply not ours to tick.
-    window.setInterval(() => {
-      if (typeof document === "undefined") return;
+    const timer = window.setInterval(() => {
+      if (typeof document === "undefined" || !this.ownsBoard()) return;
       this.tick();
     }, 100);
+    this.ownCleanup(() => window.clearInterval(timer));
     // A popover is light furniture: clicking anywhere outside the console's
     // app section dismisses it. The board never dims beneath it (ADR-0012).
     // The dismissal intent is captured on the section itself — the one node
@@ -788,10 +795,10 @@ export class App {
     let clickInsideApps = false;
     this.els["console-apps"]?.addEventListener("click", () => {
       clickInsideApps = true;
-    }, { capture: true });
+    }, { capture: true, signal: this.signal });
     this.els["console-session"]?.addEventListener("click", (event) => {
       if ((event.target as Element | null)?.closest(".clock-anchor")) clickInsideApps = true;
-    }, { capture: true });
+    }, { capture: true, signal: this.signal });
     document.addEventListener("click", () => {
       // A stale instance's closer must never close — or re-render — a newer
       // instance's board (§1's ownership rule, as the bloom closer below
@@ -802,13 +809,13 @@ export class App {
       if (inside) return;
       if (this.ui.app !== null) this.closeApp();
       else if (this.ui.launcherOpen) this.closeLauncher();
-    });
+    }, { signal: this.signal });
     // The expanded face closes on outside click (§5): the bloom host's
     // capture-phase click drops a token (see the ledger above), and the
     // document-level closer consumes tokens before dismissing anything.
     document.getElementById("module-bloom")?.addEventListener("click", () => {
       this.bloomClickTokens++;
-    }, { capture: true });
+    }, { capture: true, signal: this.signal });
     document.addEventListener("click", () => {
       if (!this.ownsBoard()) return;
       if (this.bloomClickTokens > 0) {
@@ -822,7 +829,7 @@ export class App {
         this.ui.selected = null;
         this.render();
       }
-    });
+    }, { signal: this.signal });
     // The Forge peek passes pointers to the board. Dismiss outside the card
     // in capture, before a board action can replace the clicked DOM node;
     // the same click still reaches the board for selection or other actions.
@@ -830,7 +837,7 @@ export class App {
       if (!this.ownsBoard() || this.ui.modal !== "forge") return;
       if (event.composedPath().includes(this.els["modal-content"]!)) return;
       this.closeModal();
-    }, { capture: true });
+    }, { capture: true, signal: this.signal });
     // The Esc chain (§5): the modal eats it first; then the armed transient
     // modes unwind; then the expanded face — the selection is its open
     // state. Never while typing.
@@ -877,7 +884,7 @@ export class App {
         this.ui.selected = null;
         this.render();
       }
-    });
+    }, { signal: this.signal });
     // The face buttons' shift mode (issue #195): holding shift flips every
     // face button's label and tooltip to MAX board-wide — the Cookie
     // Clicker pattern, visible before the click. The click's own shift
@@ -891,14 +898,14 @@ export class App {
         this.ui.faceMax = true;
         this.render();
       }
-    });
+    }, { signal: this.signal });
     document.addEventListener("keyup", (event) => {
       if (event.key !== "Shift" || !this.ownsBoard()) return;
       if (this.ui.faceMax) {
         this.ui.faceMax = false;
         this.render();
       }
-    });
+    }, { signal: this.signal });
     // A shift released while the window lacks focus never fires keyup here:
     // the blur drops the mode so the labels can't stick MAX (issue #195).
     window.addEventListener("blur", () => {
@@ -906,10 +913,11 @@ export class App {
         this.ui.faceMax = false;
         this.render();
       }
-    });
+    }, { signal: this.signal });
   }
 
   tick(): void {
+    if (this.released) return;
     // Recurring goals roll on every tick, not only across flow boundaries:
     // a tab resting in upgrade mode must read the new day's state too —
     // the launcher's Goals entry with it (issue #149). Idempotent with the
@@ -964,6 +972,13 @@ export class App {
 
   // The global mute (§5) gates every app sound, including the chime's
   // hidden re-fires. No volume slider, no per-sound mix.
+  private unlockAudio(): void {
+    if (this.released) return;
+    const existing = this.audio;
+    this.audio = this.channels.unlockAudio(existing);
+    if (!existing && this.channels === browserChannels) this.ownedAudio = this.audio;
+  }
+
   private playChime(): void {
     if (this.state.muted) return;
     this.channels.playChime(this.audio);
@@ -982,7 +997,7 @@ export class App {
     const after = displayedRates(this.state, this.state.mode === "flow");
     const newcomers = newChordTerms(before, after.allocation ? summaryTermsOf(after.allocation) : after.namedChords);
     if (newcomers.length === 0) return;
-    this.audio = this.channels.unlockAudio(this.audio);
+    this.unlockAudio();
     this.channels.playStrum(this.audio, newcomers);
   }
 
@@ -1026,6 +1041,7 @@ export class App {
   // the Habit app already made the choice, so the prompt never asks twice.
   // The prompt only opens when no habit is selected (or on a fresh save).
   startFlow(): void {
+    if (this.released) return;
     if (this.state.mode !== "upgrade") return;
     const habit = activeHabit(this.state);
     if (habit) {
@@ -1040,6 +1056,7 @@ export class App {
   }
 
   beginFlow(habitId: string | null): void {
+    if (this.released) return;
     selectHabit(this.state, habitId);
     // Time is free from the very first session (ADR-0019), so session one
     // can be planned; the enter prompt's duration affordances stay visible
@@ -1058,7 +1075,7 @@ export class App {
     this.clearTransientUi();
     // The start gesture is the audio unlock (§4, §10): the session's
     // context is created or resumed here, so the chime can sound later.
-    this.audio = this.channels.unlockAudio(this.audio);
+    this.unlockAudio();
     this.signals = freshChimeState();
     this.askNotificationPermissionOnce(this.ui.chosenTarget);
     this.say(
@@ -1198,12 +1215,44 @@ export class App {
   // drift from the contracts those tests pin. Upgrade-mode-only: each
   // engine gate owns its refusal, and the renderers simply stop drawing.
 
-  // The tab switch. Switching layers drops every mutator transient together
-  // — the gestures are the layer's, they never survive the walk-away.
+  // The tab switch — the one Modules / Mutators switch's landing (issues
+  // #272, #273). Two rules ride it:
+  // · Pre-entry the Mutators face is locked-but-visible: requesting it never
+  //   flips the mode — it opens the Catalog on the ◇ entry screen instead.
+  // · A real mode change cancels the armed actions with a toast (the cell
+  //   arm, a tray placement, the slot-unlock arm — #246's contract); the
+  //   Esc walk stays Esc.
   mutSetLayer(layer: "modules" | "mutators"): void {
     if (this.ui.mutLayer === layer) return;
+    if (layer === "mutators" && !this.state.catalogEntryOwned) {
+      this.openMutatorEntry();
+      return;
+    }
+    const cancelled: string[] = [];
+    if (this.ui.buyingCell) {
+      this.ui.buyingCell = false;
+      cancelled.push("cell purchase");
+    }
+    if (this.ui.placing) {
+      this.ui.placing = null;
+      cancelled.push("placement");
+    }
+    if (this.ui.mutUnlockArmed) cancelled.push("slot unlock");
+    if (this.ui.mutArmedTray !== null) cancelled.push("mutator placement");
+    if (this.ui.mutMoving !== null) cancelled.push("mutator move");
     this.mutDisarm();
     this.ui.mutLayer = layer;
+    if (cancelled.length > 0) {
+      const message = `Mode changed — ${cancelled.join(" and ")} cancelled.`;
+      this.say(message);
+      const toast = document.getElementById("mode-toast");
+      if (toast) {
+        window.clearTimeout(this.modeToastTimer);
+        toast.textContent = message;
+        toast.hidden = false;
+        this.modeToastTimer = window.setTimeout(() => { toast.hidden = true; }, 6000);
+      }
+    }
     this.render();
   }
 
@@ -1236,9 +1285,10 @@ export class App {
     this.render();
   }
 
-  // The slot unlock's arm (issue #199): one pill carries the price and
-  // eligible cells pulse; the click resolution lands in mutPickSlot. The
-  // gesture lives on the Mutators layer, so arming walks there first.
+  // The slot unlock's arm (issue #199, re-docked by the #272 review): Add
+  // arms it in mutator mode — one pill carries the price and eligible
+  // cells pulse; the click resolution lands in mutPickSlot. The arm never
+  // walks the player to the Mutators face; the mode directs it.
   mutArmUnlock(): void {
     if (this.state.mode !== "upgrade") {
       this.say("Arete is spent between sessions.");
@@ -1249,7 +1299,6 @@ export class App {
       return;
     }
     this.mutDisarm();
-    this.ui.mutLayer = "mutators";
     this.ui.mutUnlockArmed = true;
     this.render();
   }
@@ -1408,6 +1457,7 @@ export class App {
   // The live drop preview over the second layer (issue #199): hover state
   // changes refresh the land registers in place — never a render.
   setMutDropHover(mutatorId: string | null, pos: Hex | null): void {
+    if (this.released) return;
     this.ui.mutDropHover = mutatorId && pos ? { mutatorId, pos } : null;
     refreshMutPreview(this);
   }
@@ -1931,14 +1981,40 @@ export class App {
   }
 
   openModal(kind: ModalKind): void {
-    this.ui.modal = kind;
-    // The catalog door remembers the face it last showed (issue #271); the
-    // arete face exists only from the first banked Arete — the prestige
-    // count is the lock — so a stale memory falls back to nous. The
-    // mode-wins override lands with #246.
-    if (kind === "catalog" && this.ui.catalogFace === "arete" && !catalogOpen(this.state)) {
-      this.ui.catalogFace = "nous";
+    // The catalog door opens on the mode's face — mode wins (issue #273):
+    // mutator mode lands on the ◇ face, module mode on ν, and no last-face
+    // memory outlives the trip. The locked MUTATORS controls' landing goes
+    // through openMutatorEntry, which names its own face instead.
+    if (kind === "catalog") {
+      // Mutator mode ⇒ the ◇ face, module mode ⇒ ν. Mutator mode implies
+      // the catalog is open (the entry costs the first reset's Arete), so
+      // the face it names always stands.
+      this.openCatalogOnFace(this.ui.mutLayer === "mutators" ? "arete" : "nous");
+      return;
     }
+    this.openModalDirect(kind);
+  }
+
+  // The locked MUTATORS controls' one landing (issue #273): the Catalog on
+  // the ◇ entry screen — the tab, the tray face, and Add all walk here, the
+  // mode never flips, and nothing arms. The walk is the preview of the
+  // future entry, pre-prestige included: the entry's price mutes (Arete
+  // cannot exist before the first reset banks it), so the screen teaches
+  // without selling. The door's own mode-wins landing keeps its pre-
+  // prestige nous fallback; only this walk names the face outright.
+  openMutatorEntry(): void {
+    this.openCatalogOnFace("arete");
+  }
+
+  // The catalog's one opener, face named: the mode-wins door and the entry
+  // landing both arrive here — the face is decided before the sheet stands.
+  private openCatalogOnFace(face: "nous" | "arete"): void {
+    this.ui.catalogFace = face;
+    this.openModalDirect("catalog");
+  }
+
+  private openModalDirect(kind: ModalKind): void {
+    this.ui.modal = kind;
     if (kind === "import") this.ui.importText = "";
     this.render();
   }
@@ -2026,10 +2102,15 @@ export class App {
 
   // Dev grant of the whole mutator era (#199 hands-on): the entry, the
   // Mutator Forge in the tray, two slots wearing a combine pair, an inert
-  // resonance, a vacant slot, a tray item, and Arete for the ladder.
+  // resonance, a vacant slot, a tray item, and Arete for the ladder. The
+  // grant is a coherent era: owning the entry implies the first prestige
+  // happened (the entry spends Arete only prestige banks), so the
+  // prestige count rides too — otherwise the arete face's prestige-count
+  // lock would dead-end the Catalog's tab under the grant.
   devMutatorEra(): void {
     const s = this.state;
     s.mode = "upgrade";
+    s.prestiges = Math.max(s.prestiges, 1);
     s.catalogEntryOwned = true;
     s.arete = Math.max(s.arete, 20);
     if (!s.modules.some((m) => m.type === "mutatorForge")) {
@@ -2137,6 +2218,7 @@ export class App {
   // The repeatable stress ladder, in the browser: the same rows the
   // engine suite prints, through the same allocator.
   devBoardStress(): void {
+    if (this.released) return;
     if (!this.devBoard) return;
     if (this.devBoard.stressRunning) {
       this.devBoardCancelStress();
@@ -2230,7 +2312,9 @@ export class App {
   }
 
   render(): void {
+    if (this.released) return;
     render(this);
+    this.sweepListeners();
     this.syncTitle();
     document.body.classList.toggle("live", this.state.mode === "flow");
     // The second layer's grey (issue #199): while the Mutators tab stands,
