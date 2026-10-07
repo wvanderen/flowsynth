@@ -30,11 +30,11 @@ function oracleQuality(classes: readonly number[]): number {
   for (let i = 0; i < classes.length; i++) {
     for (let j = i + 1; j < classes.length; j++) {
       const d = Math.abs(classes[i]! - classes[j]!);
-      tension += BALANCE.tensionWeights[Math.min(d, 12 - d)] ?? 0;
+      tension += BALANCE.allocationTensionWeights[Math.min(d, 12 - d)] ?? 0;
     }
   }
-  const complexity = BALANCE.complexityRate * Math.max(0, classes.length - 1);
-  const effective = Math.max(0, tension - BALANCE.tensionAllowance);
+  const complexity = BALANCE.allocationComplexityRate * Math.max(0, classes.length - 1);
+  const effective = Math.max(0, tension - BALANCE.allocationTensionAllowance);
   return Math.min(1.5, Math.max(0.5, 1 + complexity - effective));
 }
 

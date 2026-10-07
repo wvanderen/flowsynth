@@ -10,7 +10,7 @@ import { writeNote } from "../engine/notes";
 import { BALANCE, SAVE_VERSION, isVoiceType } from "../engine/constants";
 import { ARETE_HORIZON } from "../engine/accumulator";
 import { STORAGE_KEY, serialize } from "../engine/save";
-import { displayedRates, computeRates, cellCost, cellPurchasePrice, longGoalCost, affordableLevels, levelCost, levelsCost } from "../engine/economy";
+import { displayedRates, computeRates, cellCost, cellPurchasePrice, longGoalCost, affordableLevels, levelCost, levelsCost, projectPlacement } from "../engine/economy";
 import { startSession, endSession } from "../engine/actions";
 import { advance } from "../engine/advance";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport } from "../engine/trust";
@@ -2085,13 +2085,14 @@ describe("always-on chord feedback (§6, #137)", () => {
     cell(1, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(readout().hidden).toBe(false);
     // The formation quality is its own named term (ADR-0049) and rides the
-    // factor: classes {0,7}, one class of complexity.
-    const earned = formatNumber(1.3 * (1 + BALANCE.complexityRate));
+    // factor: classes {0,7}, one class of complexity — scored on the
+    // allocation's own magnitudes (#260).
+    const earned = formatNumber(1.3 * (1 + BALANCE.allocationComplexityRate));
     expect(chips()).toEqual([
-      `+${formatNumber(0.1 * 1.3 * (1 + BALANCE.complexityRate))} ν/s`,
+      `+${formatNumber(0.1 * 1.3 * (1 + BALANCE.allocationComplexityRate))} ν/s`,
       "Capacity 1/1",
       `×${earned}`,
-      "Formation ×1.06",
+      "Formation ×1.12",
       "Fifth ×1.3",
       "Fifth ×1.3 · idle",
     ]);
@@ -2099,10 +2100,10 @@ describe("always-on chord feedback (§6, #137)", () => {
     // Octave is the candidate it shares.
     cell(0, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(chips()).toEqual([
-      `+${formatNumber(0.1 * 1.3 * (1 + BALANCE.complexityRate))} ν/s`,
+      `+${formatNumber(0.1 * 1.3 * (1 + BALANCE.allocationComplexityRate))} ν/s`,
       "Capacity 1/1",
       `×${earned}`,
-      "Formation ×1.06",
+      "Formation ×1.12",
       "Fifth ×1.3",
       "Octave ×1.15 · idle",
     ]);
@@ -2114,10 +2115,10 @@ describe("always-on chord feedback (§6, #137)", () => {
     app.select(c4.id);
     expect(readout().hidden).toBe(false);
     expect(chips()).toEqual([
-      `+${formatNumber(0.1 * 1.3 * (1 + BALANCE.complexityRate))} ν/s`,
+      `+${formatNumber(0.1 * 1.3 * (1 + BALANCE.allocationComplexityRate))} ν/s`,
       "Capacity 1/1",
       `×${earned}`,
-      "Formation ×1.06",
+      "Formation ×1.12",
       "Fifth ×1.3",
       "Octave ×1.15 · idle",
     ]);
@@ -2366,7 +2367,7 @@ describe("the dev panel's synth grant (#137)", () => {
     app.select(granted.id);
     expect(document.getElementById("chord-readout")!.textContent).toContain("Fifth ×1.3");
     expect(document.getElementById("chord-readout")!.textContent).toContain(
-      `+${formatNumber(0.1 * 1.3 * (1 + BALANCE.complexityRate))} ν/s`,
+      `+${formatNumber(0.1 * 1.3 * (1 + BALANCE.allocationComplexityRate))} ν/s`,
     );
   });
 
@@ -5348,5 +5349,420 @@ describe("the one-capacity economy on the board (#258)", () => {
     const rebooted = boot(undefined, true);
     rebooted.render();
     expect(rebooted.state.activeChords).toEqual(app.state.activeChords);
+  });
+});
+
+describe("placement previews with capacity-aware production (#260)", () => {
+  beforeEach(() => { app = boot(undefined, true); });
+  const readout = () => document.getElementById("chord-readout") as HTMLElement;
+  const chips = () => [...readout().querySelectorAll(".chord-readout-chip")].map((chip) => chip.textContent);
+  const cell = (q: number, r: number) => document.querySelector(`[data-cell="${q},${r}"]`)!;
+  const ghostLabels = () =>
+    [...document.querySelectorAll(".ghost-mark .chord-label")].map((node) => node.textContent);
+  // The delta chip's exact contract: signed, rounded at the readout's own
+  // precision — pinned here so the preview's lead figure cannot drift.
+  const deltaText = (projection: ReturnType<typeof projectPlacement>): string => {
+    const rounded = Math.round((projection.projected.rate - projection.current.rate) * 100) / 100;
+    if (Math.abs(rounded) < 0.005) return "±0";
+    return rounded > 0 ? `+${formatNumber(rounded)}` : `-${formatNumber(Math.abs(rounded))}`;
+  };
+
+  it("an armed placement previews the projected board: figures, delta, and the quality scale", () => {
+    // C4 · G4 earns the Fifth at capacity one. Hovering the armed tray
+    // synth over C5 projects the whole board through the same allocation
+    // that commits the drop — the Fifth holds, the newcomer's Octave and
+    // doubled Fifth stay idle, and the preview says so, discovery legs
+    // included.
+    give(app.state, "additive", hex(1, 0));
+    app.state.cells.push(hex(0, 1));
+    const traySynth = give(app.state, "additive", null);
+    app.render();
+    const projection = projectPlacement(app.state, traySynth.id, hex(0, 1), false);
+    document.querySelector<HTMLButtonElement>(`[data-inv="${traySynth.id}"]`)!.click();
+    expect(app.ui.placing).toBe(traySynth.id);
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
+    expect(app.ui.dropHover).toEqual({ moduleId: traySynth.id, pos: hex(0, 1) });
+    expect(readout().hidden).toBe(false);
+    expect(projection.projected.rate).toBeGreaterThan(projection.current.rate);
+    expect(chips()).toEqual([
+      `Placement ${deltaText(projection)} ν/s`,
+      `+${formatNumber(projection.projected.contributions.get(traySynth.id)!.value)} ν/s`,
+      "Capacity 0/1",
+      "×1",
+      "Fifth ×1.3 · idle",
+      "Octave ×1.15 · idle",
+    ]);
+    // The applied formation term is absent — the placed voice carries no
+    // active chord — but the formation's measured quality still reads on
+    // the low-to-high scale, marker at the measurement.
+    const scale = readout().querySelector<HTMLElement>(".chord-readout-scale")!;
+    expect(scale).not.toBeNull();
+    expect(scale.getAttribute("data-q")).toBe(String(1 + BALANCE.allocationComplexityRate));
+    expect(readout().querySelector(".scale-marker")).not.toBeNull();
+    // The preview is transient: leaving the cell restores the readout and
+    // the board never moved.
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerleave", { bubbles: true }));
+    expect(app.ui.dropHover).toBeNull();
+    expect(readout().hidden).toBe(true);
+    expect(traySynth.pos).toBeNull();
+    // Esc cancels the arm the same way.
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
+    expect(readout().hidden).toBe(false);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(app.ui.placing).toBeNull();
+    expect(readout().hidden).toBe(true);
+  });
+
+  it("the committed placement agrees with the preview; the selected readout retains the figures", () => {
+    give(app.state, "additive", hex(1, 0));
+    app.state.cells.push(hex(0, 1));
+    const traySynth = give(app.state, "additive", null);
+    app.render();
+    document.querySelector<HTMLButtonElement>(`[data-inv="${traySynth.id}"]`)!.click();
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
+    const previewed = chips().slice(1); // the projected voice row, past the delta chip
+    expect(previewed.length).toBeGreaterThan(0);
+    const before = displayedRates(app.state, true).rate;
+    clickCell(0, 1);
+    expect(traySynth.pos).toEqual(hex(0, 1));
+    // The board delivered the projected rate, the commit's discovery beat
+    // included — the projection and the landing are one economy.
+    expect(displayedRates(app.state, true).rate).toBeGreaterThan(before);
+    // And the placed voice's selected row carries the same chips.
+    app.select(traySynth.id);
+    expect(chips()).toEqual(previewed);
+    const scale = readout().querySelector<HTMLElement>(".chord-readout-scale")!;
+    expect(scale.getAttribute("data-q")).toBe(String(1 + BALANCE.allocationComplexityRate));
+  });
+
+  it("ghost promises classify by the projected allocation — idle says idle", () => {
+    // The C5 drop's newcomers (the Octave and the doubled Fifth) both sit
+    // idle at capacity one: the ghosts say so, in the dotted quiet
+    // register with "· idle" on their chips.
+    give(app.state, "additive", hex(1, 0));
+    app.state.cells.push(hex(0, 1));
+    const traySynth = give(app.state, "additive", null);
+    app.render();
+    document.querySelector<HTMLButtonElement>(`[data-inv="${traySynth.id}"]`)!.click();
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
+    expect(ghostLabels().sort()).toEqual(["Fifth ×1.3 ×2 · idle", "Octave ×1.15 · idle"]);
+    expect(document.querySelectorAll(".ghost-mark.chord-idle")).toHaveLength(2);
+    // A promise the capacity can afford stays an earning promise: the
+    // lone C4's Fifth previews without the idle word.
+    app = boot(undefined, true);
+    const tray = give(app.state, "additive", null);
+    app.render();
+    document.querySelector<HTMLButtonElement>(`[data-inv="${tray.id}"]`)!.click();
+    cell(1, 0).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
+    expect(ghostLabels()).toEqual(["Fifth ×1.3"]);
+    expect(document.querySelectorAll(".ghost-mark.chord-idle")).toHaveLength(0);
+  });
+
+  it("a capacity-driven replacement previews honestly and commits without stale claims", () => {
+    // C4 · G4 earns the Fifth. Dropping a B♭ beside C4 (a wire bridging
+    // the gap) offers the Flat seventh the shared voice's one unit wants
+    // more: the preview names the replacement, and the commit leaves the
+    // displaced Fifth an idle claim — never a stale active one beside it.
+    give(app.state, "additive", hex(1, 0));
+    app.state.cells.push(hex(-1, 0), hex(-2, 0));
+    give(app.state, "spacer", hex(-1, 0));
+    const traySynth = give(app.state, "additive", null);
+    app.render();
+    const before = displayedRates(app.state, true).rate;
+    document.querySelector<HTMLButtonElement>(`[data-inv="${traySynth.id}"]`)!.click();
+    cell(-2, 0).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
+    // The newcomer earns: its ghost promises without the idle word.
+    expect(ghostLabels()).toEqual(["Flat seventh ×1.45"]);
+    const projection = projectPlacement(app.state, traySynth.id, hex(-2, 0), false);
+    expect(projection.projected.rate).toBeGreaterThan(projection.current.rate);
+    const q3 = 1 + 2 * BALANCE.allocationComplexityRate;
+    // The moved voice's row: it earns the ♭7's whole term. The displaced
+    // Fifth is G4's idle candidate — the commit's assertions below read it
+    // there, where it belongs.
+    expect(chips()).toEqual([
+      `Placement ${deltaText(projection)} ν/s`,
+      `+${formatNumber(projection.projected.contributions.get(traySynth.id)!.value)} ν/s`,
+      "Capacity 1/1",
+      `×${formatNumber((1 + 0.45) * q3)}`,
+      `Formation ×${formatNumber(q3)}`,
+      "Flat seventh ×1.45",
+    ]);
+    const scale = readout().querySelector<HTMLElement>(".chord-readout-scale")!;
+    expect(scale.getAttribute("data-q")).toBe(String(q3));
+    // Commit: the ♭7 takes C4's unit, the Fifth demotes to idle, and no
+    // surface claims the Fifth twice.
+    clickCell(-2, 0);
+    expect(traySynth.pos).toEqual(hex(-2, 0));
+    expect(displayedRates(app.state, true).rate).toBeGreaterThan(before);
+    const snapshot = displayedRates(app.state, true);
+    expect(snapshot.allocation!.active.map((instance) => instance.name)).toEqual(["Flat seventh"]);
+    const g4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(1, 0)))!;
+    app.select(g4.id);
+    expect(readout().textContent).toContain("Fifth ×1.3 · idle");
+    expect(chips().filter((chip) => chip === "Fifth ×1.3")).toHaveLength(0);
+    expect(document.querySelectorAll('[data-key="chord-marks"] .chord-idle')).toHaveLength(1);
+  });
+
+  it("a drag over the tray previews the retrieval, and the drop delivers it", () => {
+    give(app.state, "additive", hex(1, 0));
+    app.render();
+    const g4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(1, 0)))!;
+    const before = displayedRates(app.state, true).rate;
+    const zone = document.getElementById("inventory-zone")!;
+    document.elementFromPoint = () => zone;
+    try {
+      cell(1, 0).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+      document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
+      expect(app.ui.dropHover).toEqual({ moduleId: g4.id, pos: null });
+      expect(readout().hidden).toBe(false);
+      // The board loses the Fifth: the delta says so, the departing voice
+      // reads zero, and nothing would form.
+      expect(chips()[0]).toBe(`Placement -${formatNumber(before - 0.1)} ν/s`);
+      expect(chips()).toContain("+0 ν/s");
+      expect(chips()).toContain("Capacity 0/1");
+      expect(ghostLabels()).toEqual([]);
+      document.dispatchEvent(new MouseEvent("pointerup", { clientX: 130, clientY: 110 }));
+      expect(g4.pos).toBeNull();
+      expect(displayedRates(app.state, true).rate).toBeCloseTo(0.1, 9);
+      expect(app.ui.dropHover).toBeNull();
+    } finally {
+      delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
+    }
+  });
+
+  it("a matching twin drag offers combination without a swap preview", () => {
+    give(app.state, "additive", hex(1, 0));
+    app.render();
+    document.elementFromPoint = () => cell(1, 0);
+    try {
+      cell(0, 0).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+      document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
+      expect(document.querySelector(".drop-combine")).not.toBeNull();
+      expect(readout().querySelector(".chord-readout-preview")).toBeNull();
+      expect(ghostLabels()).toEqual([]);
+      document.dispatchEvent(new MouseEvent("pointerup", { clientX: 130, clientY: 100 }));
+      expect(document.getElementById("modal-content")!.textContent).toContain("Combine");
+    } finally {
+      delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
+    }
+  });
+
+  it("readout disclosures open by focus and tap, and dismiss before placement cancellation", () => {
+    give(app.state, "additive", hex(1, 0));
+    const mover = give(app.state, "additive", null);
+    app.render();
+    document.querySelector<HTMLButtonElement>(`[data-inv="${mover.id}"]`)!.click();
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
+    const trigger = readout().querySelector<HTMLButtonElement>(".readout-tip-trigger")!;
+    trigger.focus();
+    const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+    expect(body.classList.contains("inst-show")).toBe(true);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(body.classList.contains("inst-show")).toBe(false);
+    expect(app.ui.placing).toBe(mover.id);
+    trigger.click();
+    expect(body.classList.contains("inst-show")).toBe(true);
+    document.body.click();
+    expect(body.classList.contains("inst-show")).toBe(false);
+  });
+
+  it("an unrelated selection survives another module's placement", () => {
+    give(app.state, "additive", hex(1, 0));
+    app.state.cells.push(hex(0, 1), hex(2, 0));
+    give(app.state, "additive", hex(2, 0));
+    app.render();
+    const c4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(0, 0)))!;
+    const d4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(2, 0)))!;
+    app.select(c4.id);
+    expect(app.ui.selected).toBe(c4.id);
+    // Drag D4 onto C5: the placement lands, and C4 stays selected with
+    // its readout following the board the landing made — the active
+    // Fifth holds, the Octave the drop recognizes stays an idle candidate.
+    document.elementFromPoint = () => cell(0, 1);
+    try {
+      cell(2, 0).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+      document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
+      document.dispatchEvent(new MouseEvent("pointerup", { clientX: 130, clientY: 110 }));
+      expect(d4.pos).toEqual(hex(0, 1));
+      expect(app.ui.selected).toBe(c4.id);
+      expect(readout().hidden).toBe(false);
+      expect(readout().textContent).toContain("Fifth ×1.3");
+      expect(readout().textContent).toContain("Octave ×1.15 · idle");
+    } finally {
+      delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
+    }
+  });
+});
+
+describe("the harmonic-capacity ladder (#259)", () => {
+  beforeEach(() => { app = boot(undefined, true); });
+  const readoutText = (): string => (document.getElementById("chord-readout") as HTMLElement).textContent ?? "";
+
+  it("ordinary play shows no capacity surfaces in either catalog", () => {
+    app = boot();
+    app.state.arete = 5;
+    app.openModal("catalog");
+    expect(document.getElementById("modal-content")!.textContent).not.toContain("Harmonic capacity");
+    app.closeModal();
+    app.state.prestiges = 1;
+    app.state.catalogEntryOwned = true;
+    app.ui.catalogFace = "arete";
+    app.openModal("catalog");
+    expect(document.getElementById("modal-content")!.textContent).not.toContain("Harmonic capacity");
+  });
+
+  it("the catalog row quotes the rung's price and benefit, and the purchase lands", () => {
+    app.state.nous = 1_000;
+    app.openModal("catalog");
+    const modal = document.getElementById("modal-content")!;
+    expect(modal.textContent).toContain("Harmonic capacity");
+    expect(modal.textContent).toContain("1/3");
+    const button = document.querySelector<HTMLButtonElement>("[data-buy-capacity]")!;
+    expect(button.textContent!.trim()).toBe(`${formatInt(BALANCE.capacityPrices[0]!)} ν`);
+    expect(button.disabled).toBe(false);
+    button.click();
+    expect(app.state.capacityBought).toBe(1);
+    // The modal re-rendered onto the next rung: figure, price, and the
+    // remaining headroom all moved.
+    const next = document.querySelector<HTMLButtonElement>("[data-buy-capacity]")!;
+    expect(next.textContent!.trim()).toBe(`${formatInt(BALANCE.capacityPrices[1]!)} ν`);
+    expect(document.getElementById("modal-content")!.textContent).toContain("2/3");
+  });
+
+  it("the unaffordable rung reads as disabled with its practice-minute estimate", () => {
+    app.state.nous = 0;
+    app.openModal("catalog");
+    const button = document.querySelector<HTMLButtonElement>("[data-buy-capacity]")!;
+    expect(button.disabled).toBe(true);
+    const countdown = button.closest(".shop-buy")!.querySelector(".shop-countdown")!;
+    expect(countdown.textContent).toContain("of practice");
+  });
+
+  it("capacity disclosure stays reachable with unavailable purchases and dismisses before the sheet", () => {
+    app.state.nous = 0;
+    app.openModal("catalog");
+    const trigger = document.querySelector<HTMLButtonElement>(".capacity-catalog .inst-tip-trigger")!;
+    expect(document.querySelector<HTMLButtonElement>("[data-buy-capacity]")!.disabled).toBe(true);
+    trigger.focus();
+    const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+    expect(body.classList.contains("inst-show")).toBe(true);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(body.classList.contains("inst-show")).toBe(false);
+    expect(document.querySelector("[data-buy-capacity]")).not.toBeNull();
+    trigger.click();
+    expect(body.classList.contains("inst-show")).toBe(true);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    document.getElementById("modal-title")!.click();
+    expect(body.classList.contains("inst-show")).toBe(false);
+    app.closeModal();
+    app.state.prestiges = 1;
+    app.state.catalogEntryOwned = true;
+    app.ui.catalogFace = "arete";
+    app.openModal("catalog");
+    const locked = document.getElementById("buy-capacity-ceiling-2")!.closest(".catalog-row")!;
+    const lockedTrigger = locked.querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
+    lockedTrigger.focus();
+    const lockedBody = document.getElementById(lockedTrigger.getAttribute("aria-describedby")!)!;
+    expect(lockedBody.classList.contains("inst-show")).toBe(true);
+    expect(lockedBody.textContent).toContain("Own the first ceiling first");
+    lockedTrigger.click();
+    expect(lockedBody.classList.contains("inst-show")).toBe(true);
+    expect(lockedTrigger.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("the rung is inert in flow mode — the purchase is upgrade-mode-only on the surface too", () => {
+    app.state.nous = 1_000;
+    startSession(app.state, null);
+    app.openModal("catalog");
+    const button = document.querySelector<HTMLButtonElement>("[data-buy-capacity]")!;
+    expect(button.disabled).toBe(true);
+    button.click();
+    expect(app.state.capacityBought).toBe(0);
+  });
+
+  it("the capped row names the ceiling and points at the Arete sheet; the sold-out ladder reads complete", () => {
+    app.state.capacityBought = 2;
+    app.openModal("catalog");
+    let modal = document.getElementById("modal-content")!;
+    expect(modal.textContent).toContain("3/3");
+    expect(modal.textContent).toContain("capped");
+    expect(modal.textContent).toContain("Arete Catalog");
+    expect(document.querySelector("[data-buy-capacity]")).toBeNull();
+    // With both ceiling unlocks owned and every rung sold, the pointer
+    // goes too — nothing is left to sell.
+    app.state.capacityCeilings = 2;
+    app.state.capacityBought = 4;
+    app.render();
+    modal = document.getElementById("modal-content")!;
+    expect(modal.textContent).toContain("complete");
+    expect(modal.textContent).not.toContain("capped");
+  });
+
+  it("a purchase immediately re-runs the allocation and the board's readouts", () => {
+    give(app.state, "additive", hex(1, 0));
+    app.render();
+    const c4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(0, 0)))!;
+    app.select(c4.id);
+    expect(readoutText()).toContain("Capacity 1/1");
+    app.state.nous = 1_000;
+    app.buyCapacityAction();
+    expect(readoutText()).toContain("Capacity 1/2");
+  });
+
+  it("the Arete sheet sells the two ceilings and two discounts, each pair in order", () => {
+    app.state.arete = 100;
+    app.state.prestiges = 1;
+    app.state.catalogEntryOwned = true;
+    app.ui.catalogFace = "arete";
+    app.openModal("catalog");
+    const sheet = () => document.getElementById("modal-content")!;
+    expect(sheet().textContent).toContain("Harmonic capacity");
+    expect(sheet().textContent).toContain("capacity four");
+    expect(sheet().textContent).toContain("capacity five");
+    const secondCeiling = document.getElementById("buy-capacity-ceiling-2") as HTMLButtonElement;
+    const secondDiscount = document.getElementById("buy-capacity-discount-2") as HTMLButtonElement;
+    expect(secondCeiling.disabled).toBe(true);
+    expect(secondDiscount.disabled).toBe(true);
+    document.getElementById("buy-capacity-ceiling-1")!.click();
+    expect(app.state.capacityCeilings).toBe(1);
+    app.render();
+    expect(sheet().textContent).toContain("raised");
+    const nextCeiling = document.getElementById("buy-capacity-ceiling-2") as HTMLButtonElement;
+    expect(nextCeiling.disabled).toBe(false);
+    expect(nextCeiling.textContent).toContain(`${BALANCE.capacityCeilingCosts[1]} Arete`);
+    nextCeiling.click();
+    expect(app.state.capacityCeilings).toBe(2);
+    app.render();
+    expect(document.getElementById("buy-capacity-ceiling-1")).toBeNull();
+    document.getElementById("buy-capacity-discount-1")!.click();
+    document.getElementById("buy-capacity-discount-2")!.click();
+    expect(app.state.capacityDiscounts).toBe(2);
+    app.render();
+    expect(sheet().textContent).toContain("owned");
+    expect(document.getElementById("buy-capacity-discount-1")).toBeNull();
+  });
+
+  it("the sheet's capacity offerings stand inert outside upgrade mode", () => {
+    app.state.arete = 100;
+    startSession(app.state, null);
+    app.state.prestiges = 1;
+    app.state.catalogEntryOwned = true;
+    app.ui.catalogFace = "arete";
+    app.openModal("catalog");
+    for (const id of ["buy-capacity-ceiling-1", "buy-capacity-discount-1"]) {
+      expect((document.getElementById(id) as HTMLButtonElement).disabled).toBe(true);
+    }
+    document.getElementById("buy-capacity-ceiling-1")!.click();
+    expect(app.state.capacityCeilings).toBe(0);
+  });
+
+  it("ladder ownership rides the real save/reload path through the app", () => {
+    app.state.nous = 1_000;
+    app.buyCapacityAction();
+    const saved = localStorage.getItem(STORAGE_KEY)!;
+    expect(saved).toContain("capacityBought");
+    const rebooted = boot(undefined, true);
+    expect(rebooted.state.capacityBought).toBe(1);
+    expect(rebooted.state.nous).toBe(app.state.nous);
   });
 });

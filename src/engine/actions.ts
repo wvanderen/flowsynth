@@ -1,6 +1,7 @@
 import { BALANCE, EPS, NEXT_RARITY, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE, SHELF_TYPES } from "./constants";
 import { claimOf, horizonReached } from "./accumulator";
 import { rowUnlockCost, unlockableRows } from "./catalog";
+import { nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "./capacity";
 import { affordableLevels, cellPurchasePrice, chargeDelivered, maxChordFactorOf, deployedAt, findModule, levelCost, levelsCost, longGoalCost, mutatorSlotCost, rowGateOwed, syncRates, wholeNous } from "./economy";
 import { summaryTermsOf } from "./allocation";
 import { arcCardDue } from "./arc";
@@ -546,7 +547,7 @@ export function returnModule(state: GameState, id: string): ActionResult {
   if (!module) return fail("Module not found.");
   if (module.pos === null) return fail("This module is already in inventory.");
   module.pos = null;
-  return ok;
+  return { ok: true, unlocked: checkUnlocks(state) };
 }
 
 // Reshaping moves owned cells anywhere within the finite row band — always
@@ -764,6 +765,48 @@ export function combineMutators(state: GameState, id: string, partnerId?: string
   return ok;
 }
 
+// The harmonic-capacity purchase (issue #259, the confirmed design beside
+// ADR-0050): the nous Catalog's global ladder. One purchase spends its
+// quoted whole-nous price exactly and adds one whole-chord unit to every
+// current and future voice — the price is the milestone, so no earned-nous
+// gate and no per-module purchase exists. The ladder is strictly finite;
+// the ceiling's further rungs stand for sale in the Arete Catalog.
+export function buyCapacity(state: GameState): ActionResult {
+  if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
+  const price = nextCapacityPrice(state);
+  if (price === null) return fail("The capacity ladder is capped.");
+  if (wholeNous(state) < price) return fail("Not enough whole nous.");
+  state.nous -= price;
+  state.capacityBought++;
+  return { ok: true, unlocked: checkUnlocks(state) };
+}
+
+// The Arete offerings beside the capacity ladder (issue #259): two
+// permanent ceiling unlocks — each lets the nous ladder sell one rung
+// further, to prototype maximums four and five — and two discounts off the
+// original rung prices, 20% then 40% in total. One-time, Arete-paid, and
+// surviving prestige; every ceiling costs more than the discount standing
+// beside it.
+export function buyCapacityCeiling(state: GameState): ActionResult {
+  if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
+  const price = nextCeilingPrice(state);
+  if (price === null) return fail("Both ceiling unlocks are owned.");
+  if (state.arete < price) return fail("Not enough Arete.");
+  state.arete -= price;
+  state.capacityCeilings++;
+  return { ok: true, unlocked: checkUnlocks(state) };
+}
+
+export function buyCapacityDiscount(state: GameState): ActionResult {
+  if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
+  const price = nextDiscountPrice(state);
+  if (price === null) return fail("Both discounts are owned.");
+  if (state.arete < price) return fail("Not enough Arete.");
+  state.arete -= price;
+  state.capacityDiscounts++;
+  return { ok: true, unlocked: checkUnlocks(state) };
+}
+
 // Prestige (ADR-0039, issue #170): the door at the horizon banks the era's
 // claim and begins the next era. The only Arete source in the game — claim
 // on reset, never before — and the nth reset banks n (ADR-0042's linear
@@ -778,8 +821,11 @@ export function combineMutators(state: GameState, id: string, partnerId?: string
 // layer (issue #198): the unlocked Mutator slots, the placed mutators, and
 // the Mutator tray with its pending rolls and its Forge branch's fill and
 // earned count — and the Horizon break (issue #200), whose overfill scaling
-// rides claimOf forever after. Module levels return to base, nous to
-// a fresh opening grant, and the charge window resets. The era measure
+// rides claimOf forever after, and the Arete offerings beside the harmonic-
+// capacity ladder (issue #259): the owned ceiling unlocks and discounts.
+// Module levels return to base, nous to
+// a fresh opening grant, and the charge window resets — as does the
+// ladder's purchased capacity (issue #259): the voices return to one. The era measure
 // rebases to 0, which is the bar's own rebase; the era count rises as
 // economy-bearing engine state (ADR-0038's no-new-furniture rule holds).
 export function prestige(state: GameState): ActionResult {
@@ -797,6 +843,12 @@ export function prestige(state: GameState): ActionResult {
   for (const module of state.modules) {
     module.reserve = 0;
   }
+  // The harmonic-capacity ladder resets with the levels (issue #259):
+  // purchased capacity is era progress like everything else the era
+  // trained — the voices return to one and the rungs must be earned again
+  // through practice. The Arete offerings persist: ceilings and discounts
+  // are permanent Catalog purchases.
+  state.capacityBought = 0;
   state.eraEarned = 0;
   return { ok: true, unlocked: checkUnlocks(state) };
 }

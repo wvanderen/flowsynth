@@ -1,7 +1,7 @@
 import { createInitialState, createModule, normalizeChordDiscovery, normalizeModules } from "./state";
 import { normalizeHabitBuilds } from "./builds";
 import { normalizeGoals } from "./goals";
-import { SAVE_VERSION } from "./constants";
+import { BALANCE, SAVE_VERSION } from "./constants";
 import type { GameState } from "./types";
 
 export interface SaveFile {
@@ -104,6 +104,23 @@ export function deserialize(text: string): LoadResult {
   if (typeof raw.horizonBroken !== "boolean") {
     merged.horizonBroken = false;
   }
+  // The harmonic-capacity ladder (issue #259) lenient-defaults the same
+  // way: absent or corrupt counts read as zero — no purchases this era, no
+  // Arete offerings owned — exactly what a pre-ladder save owes, and
+  // nothing unrelated resets with them. An implausibly large offering
+  // count clamps at the ladder's end, so "both owned" can never disagree
+  // with the prices and shares those rows quote; purchases clamp where
+  // they are read (capacity.ts's ceiling).
+  const clampOffering = (value: unknown, ladder: readonly number[]): number =>
+    typeof value === "number" && Number.isFinite(value) && value > 0
+      ? Math.min(Math.floor(value), ladder.length)
+      : 0;
+  merged.capacityBought =
+    typeof raw.capacityBought === "number" && Number.isFinite(raw.capacityBought) && raw.capacityBought > 0
+      ? Math.floor(raw.capacityBought)
+      : 0;
+  merged.capacityCeilings = clampOffering(raw.capacityCeilings, BALANCE.capacityCeilingCosts);
+  merged.capacityDiscounts = clampOffering(raw.capacityDiscounts, BALANCE.capacityDiscountCosts);
   // The Mutator layer (ADR-0043, issue #198) lenient-defaults the same
   // way: absent means the entry was never bought — no slots, no mutators,
   // no Mutator Forge fill, no pending mutator rolls — which is exactly

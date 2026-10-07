@@ -1441,6 +1441,51 @@ body.bloom-sheet-open .zoom-cluster { bottom: 190px; }
   border-style: dashed;
   opacity: 0.62;
 }
+/* The placement projection's lead chip (issue #260): the board-rate delta
+   a hovering drop would commit, in the accent's neutral register. */
+.chord-readout-chip.chord-readout-preview {
+  --cc: var(--accent);
+}
+/* The total chord factor is the readout's prominent figure (#260): the
+   one number the named terms multiply into, so it carries weight where
+   the capacity and uncertified reads stay quiet. */
+.chord-readout-chip.chord-readout-factor {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+/* The quality scale (issue #260): the formation's measured Q on the
+   low-to-high read — floor and cap end ticks, a taller neutral tick, and
+   the firm inset marker where the formation sits. Position and weight
+   carry the read, so it survives greyscale; no motion — a previewed or
+   standing formation is a reading, not live activity. */
+.chord-readout-scale {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 2px 6px;
+  background: var(--panel-deep);
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+}
+.chord-readout-scale .scale-track {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+.chord-readout-scale .scale-tick {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+.chord-readout-scale .scale-tick-neutral {
+  stroke-width: 1.5;
+}
+.chord-readout-scale .scale-marker {
+  fill: var(--ink);
+}
+.chord-readout-scale .scale-end {
+  font: 9px var(--mono);
+  fill: var(--muted);
+}
 /* The muted participant's seams (ADR-0048): a chord a silent voice sings
    in draws dashed — the game's standing language for silent and promised
    work — a hair quieter than its sounding kin. */
@@ -1505,6 +1550,16 @@ body.live .chord-mark:not(.chord-fade):not(.chord-idle) .chord-seam {
   opacity: 0.85;
   pointer-events: none;
 }
+/* The projected-idle ghost (issue #260): a promise the projected capacity
+   cannot afford — the same dotted quiet register the board's idle
+   candidates wear, dimmer than the earning promise beside it, its chip
+   saying "idle". */
+.chord-mark.ghost-mark.chord-idle .chord-seam {
+  stroke-dasharray: 1.5 4;
+  opacity: 0.3;
+}
+.chord-mark.ghost-mark.chord-idle .chord-chip { opacity: 0.6; }
+.chord-mark.ghost-mark.chord-idle .chord-label { opacity: 0.6; }
 
 /* The lit receiver breathes: charge state is feedback, not decoration, so
    the pulse rides the same 0..1 glow the face already carries inline. */
@@ -2821,3 +2876,22 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 /* Separate disclosure keeps the tray tile itself a placement/drag target. */
 .tray-tile-detail { display: flex; flex-direction: column; align-items: center; min-width: 0; }
 .tray-tile-detail > .inst-tip-trigger { min-width: 44px; min-height: 44px; }
+/* Capacity disclosure remains a touch target beside the open catalog rows. */
+.capacity-catalog .catalog-row > div { min-width: 0; }
+.capacity-catalog .catalog-row h3 { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.capacity-catalog .shop-countdown { display: block; }
+.capacity-catalog .inst-tip-trigger { width: 44px; height: 44px; }
+
+/* Readout figures themselves open the shared disclosure layer. */
+.readout-tip .readout-tip-trigger {
+  width: auto;
+  height: auto;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  font: inherit;
+  transition: none;
+}
+.readout-tip-trigger:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
