@@ -772,7 +772,8 @@ h1, h2, h3, p { margin: 0; }
   border: 0;
   width: auto;
   height: auto;
-  min-height: 0;
+  min-width: 44px;
+  min-height: 44px;
   padding: 4px 2px;
   border-radius: 0;
   font: inherit;

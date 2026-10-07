@@ -721,6 +721,9 @@ function renderLibraryModal(app: App, content: HTMLElement, snapshot?: RateSnaps
     app.listen(row, "click", () => {
       app.ui.chordStage = row.dataset.chord ?? null;
       app.render();
+      // The rebuild replaces the row and initially focuses the modal's
+      // first control. Keep selection in the index for the next keypress.
+      content.querySelector<HTMLButtonElement>('.chord-row[aria-current="true"]')?.focus();
     });
   });
   wireTooltips(content, app.signal);

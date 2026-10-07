@@ -284,11 +284,16 @@ describe("the thumb bar (§7, portrait phone)", () => {
     expect(activeBody.textContent).toContain("Instances stack on their members");
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(activeBody.classList.contains("inst-show")).toBe(false);
-    // Selecting a row puts that class on the stage.
+    // Selecting a row puts that class on the stage and keeps keyboard
+    // focus in the index after the sheet replaces its markup.
+    (locked[0] as HTMLButtonElement).focus();
     (locked[0] as HTMLButtonElement).click();
+    expect(document.activeElement).toBe(modal.querySelector('.chord-row[aria-current="true"]'));
     const stageName = document.querySelector("#modal-content .chord-stage-name")!.textContent!;
     expect(stageName).not.toBe("Fifth");
     expect(document.querySelector("#modal-content .chord-stage")!.textContent).toContain("·····");
+    modal.querySelector<HTMLButtonElement>('.chord-row[data-chord="Fifth"]')!.click();
+    expect(document.activeElement).toBe(modal.querySelector('.chord-row[data-chord="Fifth"]'));
     // The rate details carry the discovery bonus beside the feats'.
     app.closeModal();
     const breakdown = document.querySelector("#board-ledger .rate-breakdown")!;
