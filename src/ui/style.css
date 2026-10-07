@@ -1900,13 +1900,19 @@ body.live .chord-mark:not(.chord-fade):not(.chord-idle) .chord-seam {
   background: var(--arete-faint);
 }
 /* Pre-entry the Mutators face is locked-but-visible (issue #273): the
-   state grammar's muted outline plus the arete ◇ in the label — the click
-   walks to the catalog's entry screen, it never flips the mode. */
+   state grammar's muted outline plus the lock mark in the label — the
+   click walks to the catalog's entry screen, it never flips the mode. */
 .mut-tab.locked {
   color: var(--muted);
   box-shadow: inset 0 0 0 1px var(--line);
 }
 .mut-tab.locked:hover { color: var(--muted); background: transparent; }
+.mut-tab-lock {
+  width: 11px;
+  height: 11px;
+  vertical-align: -1.5px;
+  margin-right: 5px;
+}
 
 /* The resting board beneath the Mutators tab: greyed, whispering, and
    pointer-dead — every gesture resolves against the slot faces above. */

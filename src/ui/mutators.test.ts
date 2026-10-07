@@ -89,19 +89,25 @@ afterEach(async () => {
 });
 
 describe("the tab pair (issue #199)", () => {
-  it("pre-entry the pair stands locked-but-visible: muted outline + ◇, and the click opens the entry screen (#273)", () => {
+  it("pre-entry the pair stands locked-but-visible: muted outline + lock, and the click previews the entry screen (#273)", () => {
     app.render();
     const tabs = document.getElementById("mut-tabs")!;
     expect(tabs.hidden).toBe(false);
     const lockedTab = document.querySelector<HTMLButtonElement>('[data-mut-layer="mutators"]')!;
     expect(lockedTab.classList.contains("locked")).toBe(true);
-    expect(lockedTab.textContent).toContain("◇");
+    // The lock mark, not the arete register — the layer is locked.
+    expect(lockedTab.querySelector(".mut-tab-lock")).not.toBeNull();
+    expect(lockedTab.textContent).not.toContain("◇");
     expect(app.ui.mutLayer).toBe("modules");
-    // The click never flips the mode — it walks to the ◇ entry screen.
+    // The click never flips the mode — it walks to the ◇ entry screen,
+    // pre-prestige included: the preview of the future entry.
     lockedTab.click();
     expect(app.ui.mutLayer).toBe("modules");
     expect(app.ui.modal).toBe("catalog");
-    expect(app.ui.catalogFace).toBe("nous"); // pre-prestige: the arete face cannot stand yet
+    expect(app.ui.catalogFace).toBe("arete");
+    expect(document.querySelector(".entry-screen")).not.toBeNull();
+    // The entry cannot sell pre-prestige: its price mutes.
+    expect((document.getElementById("buy-arete-entry") as HTMLButtonElement).disabled).toBe(true);
     // Arming the unlock without the entry says so and arms nothing.
     app.closeModal();
     app.mutArmUnlock();

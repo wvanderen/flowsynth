@@ -162,15 +162,19 @@ export function mutatorTabsWanted(app: App): boolean {
 // The pair's one markup, shared by the board tabs and the phone tray
 // sheet's switch — the same two buttons wherever the switch stands.
 // Pre-entry the Mutators face is locked-but-visible (issue #273): a muted
-// outline and the arete ◇ telegraph the entry, and the click — resolved by
-// mutSetLayer — walks to the Catalog's entry screen instead of flipping
+// outline and the lock mark telegraph the entry, and the click — resolved
+// by mutSetLayer — walks to the Catalog's entry screen instead of flipping
 // the mode.
 export function mutTabPairHtml(app: App): string {
   const { ui, state } = app;
   const locked = !state.catalogEntryOwned;
   return `<button class="mut-tab${ui.mutLayer === "modules" ? " active" : ""}" data-mut-layer="modules" aria-pressed="${ui.mutLayer === "modules"}">Modules</button>
-    <button class="mut-tab${ui.mutLayer === "mutators" ? " active" : ""}${locked ? " locked" : ""}" data-mut-layer="mutators" aria-pressed="${ui.mutLayer === "mutators"}"${locked ? ' title="Unlocks with the Mutator entry"' : ""}>${locked ? "◇ " : ""}Mutators</button>`;
+    <button class="mut-tab${ui.mutLayer === "mutators" ? " active" : ""}${locked ? " locked" : ""}" data-mut-layer="mutators" aria-pressed="${ui.mutLayer === "mutators"}"${locked ? ' title="Unlocks with the Mutator entry"' : ""}>${locked ? LOCK_MARK : ""}Mutators</button>`;
 }
+
+// The locked face's one mark (issue #273 review): a padlock in the
+// instrument's stroke language — the layer is locked, not merely elsewhere.
+const LOCK_MARK = `<svg class="mut-tab-lock" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.7" y="5.4" width="6.6" height="4.9" rx="1.1"/><path d="M4.2 5.4V3.9a1.8 1.8 0 0 1 3.6 0v1.5"/></svg>`;
 
 export function renderMutatorTabs(app: App): void {
   const host = document.getElementById("mut-tabs");

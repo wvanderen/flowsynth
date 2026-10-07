@@ -2902,30 +2902,34 @@ describe("the catalog door (issue #271)", () => {
   });
 
   it("pre-entry the locked Mutators controls walk to the ◇ entry screen (#273)", () => {
-    // Past the first prestige but short of the entry: the entry screen is
-    // the arete face's one offer, and every locked control lands on it.
-    app.state.prestiges = 1;
-    app.state.arete = BALANCE.catalogEntryCost;
+    // Short of the entry: the entry screen is the arete face's one offer,
+    // and every locked control lands on it — pre-prestige included, where
+    // the walk is the preview of the future entry (the price mutes).
+    app.state.prestiges = 0;
+    app.state.arete = 0;
     app.render();
-    // The board tab: locked, muted, ◇ — and its click never flips the mode.
+    // The board tab: locked, muted, lock-marked — its click never flips
+    // the mode.
     const tab = document.querySelector<HTMLButtonElement>('#mut-tabs [data-mut-layer="mutators"]')!;
     expect(tab.classList.contains("locked")).toBe(true);
-    expect(tab.textContent).toContain("◇");
+    expect(tab.querySelector(".mut-tab-lock")).not.toBeNull();
     tab.click();
     expect(app.ui.mutLayer).toBe("modules");
     expect(app.ui.modal).toBe("catalog");
     expect(app.ui.catalogFace).toBe("arete");
     expect(document.querySelector(".entry-screen")).not.toBeNull();
+    expect((document.getElementById("buy-arete-entry") as HTMLButtonElement).disabled).toBe(true);
     app.closeModal();
     // The tray sheet's switch wears the same locked face, landing the same.
     app.openModal("inventory");
     const sheetTab = document.querySelector<HTMLButtonElement>('#modal-content [data-mut-layer="mutators"]')!;
     expect(sheetTab.classList.contains("locked")).toBe(true);
-    expect(sheetTab.textContent).toContain("◇");
+    expect(sheetTab.querySelector(".mut-tab-lock")).not.toBeNull();
     sheetTab.click();
     expect(app.ui.mutLayer).toBe("modules");
     expect(app.ui.modal).toBe("catalog");
     expect(app.ui.catalogFace).toBe("arete");
+    expect(document.querySelector(".entry-screen")).not.toBeNull();
     app.closeModal();
     // A mutator-mode Add without the entry walks there too — the one Add
     // shape that never arms (defensive: the locked switch never leaves the
@@ -2941,14 +2945,6 @@ describe("the catalog door (issue #271)", () => {
     expect(app.ui.catalogFace).toBe("arete");
     expect(app.ui.mutLayer).toBe("mutators"); // the mode never flipped
     app.closeModal();
-    // Pre-prestige the entry screen cannot stand — the walk falls back to ν.
-    app.state.prestiges = 0;
-    app.state.catalogEntryOwned = false;
-    app.ui.mutLayer = "modules";
-    app.render();
-    document.querySelector<HTMLButtonElement>('#mut-tabs [data-mut-layer="mutators"]')!.click();
-    expect(app.ui.modal).toBe("catalog");
-    expect(app.ui.catalogFace).toBe("nous");
   });
 
   it("a mode change cancels the armed actions with a toast; the Esc walk stays Esc (#273)", () => {

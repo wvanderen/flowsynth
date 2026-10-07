@@ -36,7 +36,6 @@ import {
   type BulkPurchase,
 } from "../engine/actions";
 import { ARETE_HORIZON, claimOf } from "../engine/accumulator";
-import { catalogOpen } from "../engine/catalog";
 import { neighbors, hex, sameHex } from "../engine/hex";
 import { newChordTerms } from "../engine/chords";
 import { displayedRates, setAllocationEnabled, mutatorAt } from "../engine/economy";
@@ -1946,7 +1945,10 @@ export class App {
     // memory outlives the trip. The locked MUTATORS controls' landing goes
     // through openMutatorEntry, which names its own face instead.
     if (kind === "catalog") {
-      this.openCatalogOnFace(this.ui.mutLayer === "mutators" ? this.areteFaceIfOpen() : "nous");
+      // Mutator mode ⇒ the ◇ face, module mode ⇒ ν. Mutator mode implies
+      // the catalog is open (the entry costs the first reset's Arete), so
+      // the face it names always stands.
+      this.openCatalogOnFace(this.ui.mutLayer === "mutators" ? "arete" : "nous");
       return;
     }
     this.openModalDirect(kind);
@@ -1954,15 +1956,13 @@ export class App {
 
   // The locked MUTATORS controls' one landing (issue #273): the Catalog on
   // the ◇ entry screen — the tab, the tray face, and Add all walk here, the
-  // mode never flips, and nothing arms.
+  // mode never flips, and nothing arms. The walk is the preview of the
+  // future entry, pre-prestige included: the entry's price mutes (Arete
+  // cannot exist before the first reset banks it), so the screen teaches
+  // without selling. The door's own mode-wins landing keeps its pre-
+  // prestige nous fallback; only this walk names the face outright.
   openMutatorEntry(): void {
-    this.openCatalogOnFace(this.areteFaceIfOpen());
-  }
-
-  // The arete face's one clamp: a face the shop cannot show falls back to
-  // nous — pre-prestige the prestige-count lock keeps it closed.
-  private areteFaceIfOpen(): "nous" | "arete" {
-    return catalogOpen(this.state) ? "arete" : "nous";
+    this.openCatalogOnFace("arete");
   }
 
   // The catalog's one opener, face named: the mode-wins door and the entry

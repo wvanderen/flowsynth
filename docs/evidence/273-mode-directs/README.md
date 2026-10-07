@@ -11,11 +11,14 @@ server serves the working tree). Dev-scenario state was staged through the
 
 - **desktop-pre-entry-locked-tab.png** — pre-entry upgrade mode: the board
   tabs stand with the Mutators face locked-but-visible — the muted outline
-  plus the `◇ MUTATORS` label; the mode rests on Modules.
+  plus the lock mark (`🔒 MUTATORS`); the mode rests on Modules.
 - **desktop-entry-screen-from-locked-tab.png** — one click on the locked
-  `◇ MUTATORS` tab: the Catalog opens directly on the ◇ entry screen
-  (`Unlock Mutator Layer · 1 Arete`); the mode never flipped (asserted live:
-  `ui.mutLayer` stayed `modules`).
+  MUTATORS tab, pre-prestige: the Catalog opens directly on the ◇ entry
+  screen (`Unlock Mutator Layer · 1 Arete`) as the preview of the future
+  entry — the entry's price mutes (the button stands disabled; Arete cannot
+  exist before the first reset, and the ledger's arete read shows the dim
+  `— ◇` slot). The mode never flipped (asserted live: `ui.mutLayer` stayed
+  `modules`).
 - **desktop-mode-cancel.png** — mutator mode after a mode change that
   cancelled an armed cell purchase: the toast rode the status read
   (`Mode changed — cell purchase cancelled.`, asserted live), the cell arm is
@@ -37,7 +40,10 @@ server serves the working tree). Dev-scenario state was staged through the
 ## Live-asserted behaviors (this server, this working tree)
 
 - Mode-wins door: mutator mode → arete face; module mode → nous face even
-  with a staged arete memory; pre-prestige fallback to nous stands.
+  with a staged arete memory.
+- Locked walk previews the entry screen at every progression state,
+  pre-prestige included, with the entry's price muted; the door's own
+  landing keeps the mode-wins rule.
 - Mode change cancels armed actions with a toast: cell arm, mutator tray
   placement, module placement, slot unlock; a clean switch stays silent.
 - Thumb-bar Add with the tray sheet open: the sheet is put away (modal

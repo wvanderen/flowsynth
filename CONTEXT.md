@@ -114,7 +114,7 @@ An item of the Mutator Grid: typed, carrying rarity, sitting in a Mutator slot t
 _Avoid_: enhancement (the pre-design name), gem, affix
 
 **Mutator tray**:
-The Mutator Grid's inventory — the tray column's Mutators face, switched by the board tabs: minted mutators wait here, a click then a slot places, and a drag or right-click retrieves. Pre-entry the face is locked-but-visible — a muted outline and the ◇ — and clicking it (tab, tray face, or Add) opens the Catalog on the entry screen; it never flips the mode. On portrait phone the tray sheet's Mutators face carries the same tiles; no always-on strip stands there.
+The Mutator Grid's inventory — the tray column's Mutators face, switched by the board tabs: minted mutators wait here, a click then a slot places, and a drag or right-click retrieves. Pre-entry the face is locked-but-visible — a muted outline and the lock mark — and clicking it (tab, tray face, or Add) opens the Catalog on the entry screen as a preview of the future entry; it never flips the mode. On portrait phone the tray sheet's Mutators face carries the same tiles; no always-on strip stands there.
 _Avoid_: second inventory, unlock card
 
 ### Resources and production
