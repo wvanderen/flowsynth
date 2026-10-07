@@ -36,7 +36,6 @@ import {
   type BulkPurchase,
 } from "../engine/actions";
 import { ARETE_HORIZON, claimOf } from "../engine/accumulator";
-import { catalogOpen } from "../engine/catalog";
 import { neighbors, hex, sameHex } from "../engine/hex";
 import { newChordTerms } from "../engine/chords";
 import { displayedRates, setAllocationEnabled, mutatorAt } from "../engine/economy";
@@ -191,10 +190,12 @@ export interface UiState {
   // reset every time the prompt opens.
   enter: EnterSelection;
   showAcquired: boolean;
-  // The catalog door's face memory (issue #271): the tabbed shop opens on
-  // the face it last showed — the mode-wins override lands with #246. The
-  // arete face exists only from the first banked Arete, so a stale memory
-  // falls back to nous at open. Light furniture — never saved.
+  // The catalog's standing face — which tab shows and what the in-sheet
+  // switch flips. The door itself no longer reads a memory here: mode wins
+  // at open (issue #273), and the locked MUTATORS controls name the entry
+  // face themselves. The arete face exists only from the first banked
+  // Arete, so a face the shop cannot show falls back to nous at open.
+  // Light furniture — never saved.
   catalogFace: "nous" | "arete";
   editingHabitId: string | null;
   // Session history (§9): the Time app's list view, its page size, and the
@@ -393,6 +394,7 @@ export class App {
   // frontier cells (§7): the lens the zoom and pan clamp against.
   boardBounds = { x: -100, y: -100, width: 200, height: 200 };
   private els: Record<string, HTMLElement>;
+  private modeToastTimer: number | undefined;
 
   constructor(els: Record<string, HTMLElement>, dev: boolean, channels: SignalChannels = browserChannels) {
     this.els = els;
@@ -1184,12 +1186,44 @@ export class App {
   // drift from the contracts those tests pin. Upgrade-mode-only: each
   // engine gate owns its refusal, and the renderers simply stop drawing.
 
-  // The tab switch. Switching layers drops every mutator transient together
-  // — the gestures are the layer's, they never survive the walk-away.
+  // The tab switch — the one Modules / Mutators switch's landing (issues
+  // #272, #273). Two rules ride it:
+  // · Pre-entry the Mutators face is locked-but-visible: requesting it never
+  //   flips the mode — it opens the Catalog on the ◇ entry screen instead.
+  // · A real mode change cancels the armed actions with a toast (the cell
+  //   arm, a tray placement, the slot-unlock arm — #246's contract); the
+  //   Esc walk stays Esc.
   mutSetLayer(layer: "modules" | "mutators"): void {
     if (this.ui.mutLayer === layer) return;
+    if (layer === "mutators" && !this.state.catalogEntryOwned) {
+      this.openMutatorEntry();
+      return;
+    }
+    const cancelled: string[] = [];
+    if (this.ui.buyingCell) {
+      this.ui.buyingCell = false;
+      cancelled.push("cell purchase");
+    }
+    if (this.ui.placing) {
+      this.ui.placing = null;
+      cancelled.push("placement");
+    }
+    if (this.ui.mutUnlockArmed) cancelled.push("slot unlock");
+    if (this.ui.mutArmedTray !== null) cancelled.push("mutator placement");
+    if (this.ui.mutMoving !== null) cancelled.push("mutator move");
     this.mutDisarm();
     this.ui.mutLayer = layer;
+    if (cancelled.length > 0) {
+      const message = `Mode changed — ${cancelled.join(" and ")} cancelled.`;
+      this.say(message);
+      const toast = document.getElementById("mode-toast");
+      if (toast) {
+        window.clearTimeout(this.modeToastTimer);
+        toast.textContent = message;
+        toast.hidden = false;
+        this.modeToastTimer = window.setTimeout(() => { toast.hidden = true; }, 6000);
+      }
+    }
     this.render();
   }
 
@@ -1917,14 +1951,40 @@ export class App {
   }
 
   openModal(kind: ModalKind): void {
-    this.ui.modal = kind;
-    // The catalog door remembers the face it last showed (issue #271); the
-    // arete face exists only from the first banked Arete — the prestige
-    // count is the lock — so a stale memory falls back to nous. The
-    // mode-wins override lands with #246.
-    if (kind === "catalog" && this.ui.catalogFace === "arete" && !catalogOpen(this.state)) {
-      this.ui.catalogFace = "nous";
+    // The catalog door opens on the mode's face — mode wins (issue #273):
+    // mutator mode lands on the ◇ face, module mode on ν, and no last-face
+    // memory outlives the trip. The locked MUTATORS controls' landing goes
+    // through openMutatorEntry, which names its own face instead.
+    if (kind === "catalog") {
+      // Mutator mode ⇒ the ◇ face, module mode ⇒ ν. Mutator mode implies
+      // the catalog is open (the entry costs the first reset's Arete), so
+      // the face it names always stands.
+      this.openCatalogOnFace(this.ui.mutLayer === "mutators" ? "arete" : "nous");
+      return;
     }
+    this.openModalDirect(kind);
+  }
+
+  // The locked MUTATORS controls' one landing (issue #273): the Catalog on
+  // the ◇ entry screen — the tab, the tray face, and Add all walk here, the
+  // mode never flips, and nothing arms. The walk is the preview of the
+  // future entry, pre-prestige included: the entry's price mutes (Arete
+  // cannot exist before the first reset banks it), so the screen teaches
+  // without selling. The door's own mode-wins landing keeps its pre-
+  // prestige nous fallback; only this walk names the face outright.
+  openMutatorEntry(): void {
+    this.openCatalogOnFace("arete");
+  }
+
+  // The catalog's one opener, face named: the mode-wins door and the entry
+  // landing both arrive here — the face is decided before the sheet stands.
+  private openCatalogOnFace(face: "nous" | "arete"): void {
+    this.ui.catalogFace = face;
+    this.openModalDirect("catalog");
+  }
+
+  private openModalDirect(kind: ModalKind): void {
+    this.ui.modal = kind;
     if (kind === "import") this.ui.importText = "";
     this.render();
   }
@@ -2012,10 +2072,15 @@ export class App {
 
   // Dev grant of the whole mutator era (#199 hands-on): the entry, the
   // Mutator Forge in the tray, two slots wearing a combine pair, an inert
-  // resonance, a vacant slot, a tray item, and Arete for the ladder.
+  // resonance, a vacant slot, a tray item, and Arete for the ladder. The
+  // grant is a coherent era: owning the entry implies the first prestige
+  // happened (the entry spends Arete only prestige banks), so the
+  // prestige count rides too — otherwise the arete face's prestige-count
+  // lock would dead-end the Catalog's tab under the grant.
   devMutatorEra(): void {
     const s = this.state;
     s.mode = "upgrade";
+    s.prestiges = Math.max(s.prestiges, 1);
     s.catalogEntryOwned = true;
     s.arete = Math.max(s.arete, 20);
     if (!s.modules.some((m) => m.type === "mutatorForge")) {
