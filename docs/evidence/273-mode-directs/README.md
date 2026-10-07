@@ -44,6 +44,10 @@ server serves the working tree). Dev-scenario state was staged through the
 - Locked walk previews the entry screen at every progression state,
   pre-prestige included, with the entry's price muted; the door's own
   landing keeps the mode-wins rule.
+- The dev era grant ("mutator era" button) grants a coherent era — the
+  entry implies the first prestige — so the Catalog's arete tab stands
+  enabled under the grant and both face switches answer (asserted live
+  after the review fix; pinned by the catalog-door suite).
 - Mode change cancels armed actions with a toast: cell arm, mutator tray
   placement, module placement, slot unlock; a clean switch stays silent.
 - Thumb-bar Add with the tray sheet open: the sheet is put away (modal

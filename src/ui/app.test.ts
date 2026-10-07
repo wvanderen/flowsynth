@@ -3020,6 +3020,23 @@ describe("the catalog door (issue #271)", () => {
     app.mutSetLayer("modules");
   });
 
+  it("the dev era grant keeps the arete tab standing — the prestige lock agrees with the owned entry", () => {
+    // The grant owns the entry, so the first prestige rode along: the
+    // prestige-count lock must not dead-end the Catalog's arete tab.
+    app.devMutatorEra();
+    app.openModal("catalog");
+    expect(app.ui.catalogFace).toBe("arete"); // mutator mode directs the face
+    const areteTab = document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!;
+    expect(areteTab.disabled).toBe(false);
+    expect(document.querySelector(".entry-screen")).toBeNull();
+    // The face answers: switch away and back, still live.
+    switchFace("nous");
+    expect(app.ui.catalogFace).toBe("nous");
+    switchFace("arete");
+    expect(app.ui.catalogFace).toBe("arete");
+    app.closeModal();
+  });
+
   it("pre-entry the arete face is the single centered lock screen; the purchase reveals Upgrades and Unlocks", () => {
     app.state.prestiges = 1;
     app.state.arete = BALANCE.catalogEntryCost;

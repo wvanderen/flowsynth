@@ -2061,10 +2061,15 @@ export class App {
 
   // Dev grant of the whole mutator era (#199 hands-on): the entry, the
   // Mutator Forge in the tray, two slots wearing a combine pair, an inert
-  // resonance, a vacant slot, a tray item, and Arete for the ladder.
+  // resonance, a vacant slot, a tray item, and Arete for the ladder. The
+  // grant is a coherent era: owning the entry implies the first prestige
+  // happened (the entry spends Arete only prestige banks), so the
+  // prestige count rides too — otherwise the arete face's prestige-count
+  // lock would dead-end the Catalog's tab under the grant.
   devMutatorEra(): void {
     const s = this.state;
     s.mode = "upgrade";
+    s.prestiges = Math.max(s.prestiges, 1);
     s.catalogEntryOwned = true;
     s.arete = Math.max(s.arete, 20);
     if (!s.modules.some((m) => m.type === "mutatorForge")) {
