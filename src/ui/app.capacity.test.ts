@@ -3,7 +3,7 @@ import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import type { App } from "./app";
 import { BALANCE, isVoiceType } from "../engine/constants";
 import { STORAGE_KEY } from "../engine/save";
-import { displayedRates, computeRates, allocateRates, projectPlacement } from "../engine/economy";
+import { displayedRates, allocateRates, projectPlacement } from "../engine/economy";
 import { give } from "../engine/fixtures";
 import * as allocation from "../engine/allocation";
 import { hex, sameHex } from "../engine/hex";

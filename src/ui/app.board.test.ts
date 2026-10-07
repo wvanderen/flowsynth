@@ -6,7 +6,7 @@ import { createHabit } from "../engine/habits";
 import { equipBuildNode } from "../engine/builds";
 import { BALANCE } from "../engine/constants";
 import { ARETE_HORIZON, ARETE_LOG_FLOOR } from "../engine/accumulator";
-import { computeRates, displayedRates, allocateRates, cellCost, cellPurchasePrice, affordableLevels, levelCost, levelsCost } from "../engine/economy";
+import { displayedRates, allocateRates, cellCost, cellPurchasePrice, affordableLevels, levelCost, levelsCost } from "../engine/economy";
 import { startSession, endSession } from "../engine/actions";
 import { advance } from "../engine/advance";
 import { give } from "../engine/fixtures";
