@@ -247,6 +247,10 @@ export interface UiState {
   // lives exactly as long as one drag gesture.
   mutCarrying: string | null;
   mutDropHover: { mutatorId: string; pos: Hex } | null;
+  // The chord sheet's selected class (issue #278): the name on the stage.
+  // Light furniture — never saved; a null falls back to the first
+  // discovered class when the sheet renders.
+  chordStage: string | null;
 }
 
 // The chime's re-fire ledger for the running overrun (§4): how many chimes
@@ -391,6 +395,7 @@ export class App {
     mutCombineOffer: null,
     mutCarrying: null,
     mutDropHover: null,
+    chordStage: null,
   };
   cancelMutDrag: (() => void) | null = null;
   lastWall: number | null = null;
