@@ -1,5 +1,5 @@
-import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, hostPower, levelCost, levelsCost, longGoalCost, ritualAmpOf, voiceCapacityOf, wholeNous } from "../engine/economy";
-import { idleTermsOf, summaryTermsOf } from "../engine/allocation";
+import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, hostPower, levelCost, levelsCost, longGoalCost, projectPlacement, ritualAmpOf, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
+import { ALLOCATION_QUALITY_BOUNDS, idleTermsOf, summaryTermsOf } from "../engine/allocation";
 import { claimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
 import { combinePreview, combineMutatorsPreview, levelable, type CombinePreview, upgradeAllPreview } from "../engine/actions";
@@ -27,7 +27,7 @@ import { poolOutstanding } from "../engine/trust";
 import { arcCardDue } from "../engine/arc";
 import { goalCapacity, goalRequiredSeconds, goalSummary, goalTrackerState, type GoalTrackerState } from "../engine/goals";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
-import type { DeployedModule, GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, MutatorInstance, NoteEntry, Rarity, RateSnapshot } from "../engine/types";
+import type { DeployedModule, GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, MutatorInstance, NoteEntry, NamedChordTerm, Rarity, RateSnapshot } from "../engine/types";
 import { DEV_BOARD_CAPACITIES, type App, type ChordHover, type EnterKind, type EnterSelection, type ModalKind } from "./app";
 import { suppressNextClick } from "./click";
 import { startPointerDrag } from "./pointer-drag";
@@ -35,7 +35,7 @@ import { appIcon, moduleIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, HUE_TOKEN_OF, moduleFace, boardPoint, SPACING, spacerClipPath } from "./face";
 import { bloomLayout, bloomPops, bloomSpan, viewMeet, viewPoint, type ViewFrame } from "./bloom";
 import { chargeGlow, chargeLeads } from "./leads";
-import { chordOverlay, chordMarkCovers, chipWidth, type ChordMark, type ChordOverlay } from "./chordlayer";
+import { chordOverlay, chordMarkCovers, chipWidth, CHORD_HUES, type ChordMark, type ChordOverlay } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatDate, formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
@@ -1032,6 +1032,10 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
   // render. The Mutator layer's preview obeys the same rule (issue #199).
   if (!app.dragging && !ui.placing) ui.dropHover = null;
   if (!app.ui.mutCarrying) ui.mutDropHover = null;
+  // A state change always rides a render (act), so the placement
+  // projection never outlives the pass that could stale it (#260) — the
+  // hover refresh recomputes it on demand.
+  dropProjectionCache.delete(app);
   const upgrade = state.mode === "upgrade";
   // The frontier stops at the finite octave-row band (ADR-0022): the
   // fifths axis runs free, the rows do not. The raw frontier also feeds the
@@ -1333,12 +1337,13 @@ const chordReadoutCache = new WeakMap<App, ChordReadoutCache>();
 
 // The reserved readout (§6): the chips, in one place — the selected
 // module's chip row wins, else what the pointer rests on (a seam names its
-// chord; a module names every chord it sings in). A selected or hovered
-// oscillator's final ν/s leads the row — live during flow, present with no
-// chord at all (ADR-0036). Only producers carry the figure: nothing else
-// produces nous, and the Forge's progress-per-second is not ν/s. Hidden
-// when nothing asks. HTML beside the board, so the expanded face can never
-// cover it and it never moves.
+// chord; a module names every chord it sings in). While a placement
+// gesture hovers a valid target, the projection owns the spot (#260). A
+// selected or hovered oscillator's final ν/s leads the row — live during
+// flow, present with no chord at all (ADR-0036). Only producers carry the
+// figure: nothing else produces nous, and the Forge's progress-per-second
+// is not ν/s. Hidden when nothing asks. HTML beside the board, so the
+// expanded face can never cover it and it never moves.
 function updateChordReadout(app: App): void {
   const host = byId("chord-readout");
   if (!host) return;
@@ -1352,6 +1357,17 @@ function updateChordReadout(app: App): void {
   if (hover?.kind === "mutator") {
     host.hidden = false;
     host.innerHTML = mutatorAskHtml(app.state, hover.pos, snapshot ?? displayedRates(app.state, true));
+    return;
+  }
+  // The placement projection (issue #260): while a drop hovers a valid
+  // target — a cell the register would take, or the tray under a carried
+  // module — the gesture owns the reserved spot. The row is transient by
+  // construction: it renders only while the hover lives, so cancel
+  // restores whatever was standing.
+  const preview = dropProjection(app);
+  if (preview) {
+    host.hidden = false;
+    host.innerHTML = placementPreviewHtml(app, preview);
     return;
   }
   const selected = app.state.modules.find((m) => m.id === app.ui.selected && m.pos !== null) ?? null;
@@ -1375,21 +1391,26 @@ function updateChordReadout(app: App): void {
     focus && sings && allocation
       ? `<span class="chord-readout-chip chord-readout-capacity mono">Capacity ${allocation.used.get(focus.id) ?? 0}/${allocation.capacity}</span>`
       : "";
-  // The total earned chord factor (issue #258): the selected oscillator's
-  // whole chord term — instance product × formation × resonance — the one
-  // figure the seam terms multiply into.
+  // The total earned chord factor (issue #258, prominent per #260): the
+  // selected oscillator's whole chord term — instance product × formation
+  // × resonance — the one figure the seam terms multiply into.
   const factorChip =
     focus && contribution && isOscillatorType(focus.type) && contribution.chordFactor !== null
       ? `<span class="chord-readout-chip chord-readout-factor mono">×${formatNumber(contribution.chordFactor)}</span>`
       : "";
-  // The formation quality's own named term (ADR-0049): every member of a
-  // named formation reads it — "Formation ×1.12" — chord-sourced, so a
-  // chordless formation never shows one.
+  // The applied formation term (ADR-0049, applied per #260): only a voice
+  // carrying an active chord reads one — "Formation ×1.12" — chord-sourced
+  // and earned. The scale beside it carries the formation's measured
+  // quality, the posture the voice sits in whether or not it sings.
   const formationChip =
     contribution && contribution.formationQ !== 1
       ? `<span class="chord-readout-chip chord-readout-formation mono">Formation ×${formatNumber(contribution.formationQ)}</span>`
       : "";
-  if (!valueChip && !capacityChip && !factorChip && !formationChip && chosen.length === 0) {
+  const scaleChip =
+    contribution && sings && (contribution.formationMeasuredQ !== 1 || contribution.formationQ !== 1)
+      ? qualityScaleHtml(contribution.formationMeasuredQ, allocation ? ALLOCATION_QUALITY_BOUNDS : { floor: BALANCE.qualityFloor, cap: BALANCE.qualityCap })
+      : "";
+  if (!valueChip && !capacityChip && !factorChip && !formationChip && !scaleChip && chosen.length === 0) {
     host.hidden = true;
     host.innerHTML = "";
     return;
@@ -1401,6 +1422,7 @@ function updateChordReadout(app: App): void {
     (allocation && !allocation.certified ? `<span class="chord-readout-chip chord-readout-uncertified mono">Allocation uncertified</span>` : "") +
     factorChip +
     formationChip +
+    scaleChip +
     chosen
       .map((mark) =>
         // The muted participant's mark (ADR-0048): a chord a silent voice
@@ -1410,6 +1432,96 @@ function updateChordReadout(app: App): void {
         `<span class="chord-readout-chip mono${mark.muted ? " chord-readout-muted" : ""}${mark.inactive ? " chord-readout-idle" : ""}" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.inactive ? `${mark.label} · idle` : mark.label)}</span>`,
       )
       .join("");
+}
+
+// The low-to-high quality scale (issue #260): where the formation's
+// measured Q sits between the floor and the cap — the chromatic end and
+// the organized end, a taller tick at neutral. The marker is a firm inset
+// bar (the instrument grammar's selected register), so the read survives
+// greyscale; the figures ride the Formation chip and the tooltip.
+function qualityScaleHtml(measured: number, bounds: { floor: number; cap: number }): string {
+  const span = bounds.cap - bounds.floor;
+  const at = (q: number): number => 14 + Math.min(1, Math.max(0, (q - bounds.floor) / span)) * 72;
+  const x = at(measured);
+  const neutral = at(1);
+  const label = `Formation quality — ×${formatNumber(bounds.floor)} chromatic to ×${formatNumber(bounds.cap)} organized, ×1 neutral; this formation measures ×${formatNumber(measured)}`;
+  return `<span class="chord-readout-scale" data-q="${measured}" role="img" aria-label="${label}" title="${label}"><svg viewBox="0 0 100 20" width="100" height="20" aria-hidden="true"><line class="scale-track" x1="14" y1="6" x2="86" y2="6"/><line class="scale-tick" x1="14" y1="3" x2="14" y2="9"/><line class="scale-tick scale-tick-neutral" x1="${neutral.toFixed(1)}" y1="1" x2="${neutral.toFixed(1)}" y2="11"/><line class="scale-tick" x1="86" y1="3" x2="86" y2="9"/><rect class="scale-marker" x="${(x - 1.5).toFixed(1)}" y="2.5" width="3" height="7"/><text class="scale-end mono" x="14" y="18" text-anchor="middle">${formatNumber(bounds.floor)}</text><text class="scale-end mono" x="86" y="18" text-anchor="middle">${formatNumber(bounds.cap)}</text></svg></span>`;
+}
+
+// A delta figure for the preview rows (#260): explicit sign, monospace,
+// rounding at the readout's own precision so a projected +0.0124 doesn't
+// read as noise. Zero reads as an exact ±0.
+function formatDelta(delta: number): string {
+  const rounded = Math.round(delta * 100) / 100;
+  if (Math.abs(rounded) < 0.005) return "±0";
+  return rounded > 0 ? `+${formatNumber(rounded)}` : `-${formatNumber(Math.abs(rounded))}`;
+}
+
+// The placement projection's row (issue #260): the moved voice's resulting
+// figures — final ν/s, total chord factor, applied formation term and its
+// scale, used/available capacity, the chord terms it would earn — each
+// from the projected board, with the change against the current board in
+// the tooltip and the board's own rate delta said outright. The retrieval
+// reads the departure the same way. Every figure commits with the drop:
+// the projection is the same authoritative pass placeModule lands in.
+function placementPreviewHtml(app: App, projection: PlacementProjection): string {
+  const hover = app.ui.dropHover!;
+  const module = app.state.modules.find((m) => m.id === hover.moduleId)!;
+  const retrieving = hover.pos === null;
+  const allocation = projection.projected.allocation;
+  const before = projection.current.contributions.get(module.id);
+  const after = projection.projected.contributions.get(module.id);
+  const rateDelta = projection.projected.rate - projection.current.rate;
+  const was = (figure: number | undefined, word: string): string =>
+    figure === undefined ? "" : ` — was ${word} ${formatNumber(figure)}`;
+  const rows: string[] = [
+    `<span class="chord-readout-chip chord-readout-preview mono" title="${retrieving ? "Retrieved" : "Placed"}: the board reads ${formatNumber(projection.projected.rate)} ν/s after, ${formatNumber(projection.current.rate)} ν/s now">Placement ${formatDelta(rateDelta)} ν/s</span>`,
+  ];
+  const sings = isVoiceType(module.type);
+  if (sings) {
+    if (isOscillatorType(module.type)) {
+      rows.push(
+        `<span class="chord-readout-chip chord-readout-value mono" title="Final ν/s after the drop${was(before?.value, "+")}">${after ? `+${formatNumber(after.value)}` : "+0"} ν/s</span>`,
+      );
+    }
+    if (allocation) {
+      const currentAllocation = projection.current.allocation;
+      const wasCapacity = currentAllocation ? ` — was ${currentAllocation.used.get(module.id) ?? 0}/${currentAllocation.capacity}` : "";
+      rows.push(
+        `<span class="chord-readout-chip chord-readout-capacity mono" title="Whole-chord budget after the drop${wasCapacity}">Capacity ${allocation.used.get(module.id) ?? 0}/${allocation.capacity}</span>`,
+      );
+    }
+    if (after && after.chordFactor !== null) {
+      rows.push(
+        `<span class="chord-readout-chip chord-readout-factor mono" title="Total chord factor after the drop${was(before?.chordFactor ?? undefined, "×")}">×${formatNumber(after.chordFactor)}</span>`,
+      );
+      if (after.formationQ !== 1) {
+        rows.push(`<span class="chord-readout-chip chord-readout-formation mono" title="The applied formation term after the drop${was(before?.formationQ !== 1 ? before?.formationQ : undefined, "×")}">Formation ×${formatNumber(after.formationQ)}</span>`);
+      }
+      if (after.formationMeasuredQ !== 1 || after.formationQ !== 1) {
+        rows.push(qualityScaleHtml(after.formationMeasuredQ, allocation ? ALLOCATION_QUALITY_BOUNDS : { floor: BALANCE.qualityFloor, cap: BALANCE.qualityCap }));
+      }
+    }
+    // The chord terms the projected voice would earn — the same per-entry
+    // chips the live row carries, active first, idle candidates labeled.
+    const active = projection.projected.namedChords.filter((term) => term.moduleIds.includes(module.id));
+    const idle = allocation ? idleTermsOf(allocation).filter((term) => term.moduleIds.includes(module.id)) : [];
+    for (const [terms, idleTerm] of [
+      [active, false],
+      [idle, true],
+    ] as const) {
+      for (const term of terms) {
+        const muted = term.moduleIds.some((id) => app.state.modules.find((m) => m.id === id && CATEGORY_OF[m.type] === "silentVoice"));
+        rows.push(
+          `<span class="chord-readout-chip mono${muted ? " chord-readout-muted" : ""}${idleTerm ? " chord-readout-idle" : ""}" style="--cc:var(--${CHORD_HUES[term.name] ?? "chord-octave"})">${escapeHtml(chordTermLabel(term))}${idleTerm ? " · idle" : ""}</span>`,
+        );
+      }
+    }
+  }
+  if (allocation && !allocation.certified) {
+    rows.push(`<span class="chord-readout-chip chord-readout-uncertified mono">Allocation uncertified</span>`);
+  }
+  return rows.join("");
 }
 
 // Every chord the module earns its bonus from — not just the first. A
@@ -1758,12 +1870,17 @@ function renderUpgradeAll(app: App): void {
   });
 }
 
-/* ── Live drop preview (§5–§6) ───────────────────────────────────────────
+/* ── Live drop preview (§5–§6, #260) ─────────────────────────────────────
    While a drag crosses the board, or an armed placement hovers a cell, the
    target wears its drop register — amber over an occupied cell (a swap is
    coming), green over an open one — and the would-form ghosts draw as
-   dashed hulls, one per forming chord. The hover itself lives in UiState;
-   only the class/layer refresh happens here, never a re-render. */
+   dashed hulls, one per forming chord, classified by the projected
+   allocation (a ghost the capacity can afford promises earnings; one it
+   would leave idle says so). The reserved readout carries the placement
+   projection: the moved voice's resulting figures and the board's rate
+   delta, all from the same authoritative pass that commits the drop. The
+   hover itself lives in UiState; only the class/layer/readout refresh
+   happens here, never a re-render. */
 
 type DropRegister = "open" | "occupied" | "combine";
 
@@ -1795,11 +1912,11 @@ function dropClass(register: DropRegister): string {
 // module sits there — a swap is coming, never a confirmation — green when
 // open, and the combine register when the occupant is the dragged module's
 // matching twin under a live drag (issue #152): its own tint, its own
-// confirmation. Null away from the hover, in flow, or onto the carried
-// module's own cell.
+// confirmation. Null away from the hover, over the tray (the retrieval
+// preview owns that read), in flow, or onto the carried module's own cell.
 function dropRegister(app: App, pos: Hex): DropRegister | null {
   const hover = app.ui.dropHover;
-  if (!hover || app.state.mode !== "upgrade") return null;
+  if (!hover || hover.pos === null || app.state.mode !== "upgrade") return null;
   if (!sameHex(hover.pos, pos)) return null;
   const occupant = deployedAt(app.state, pos);
   if (occupant && occupant.id !== hover.moduleId) {
@@ -1811,9 +1928,11 @@ function dropRegister(app: App, pos: Hex): DropRegister | null {
 }
 
 // Hover state changes refresh the preview in place — classes on the target
-// hex plus the ghost layer — never a full render.
-function setDropHover(app: App, moduleId: string | null, pos: Hex | null): void {
-  app.ui.dropHover = moduleId && pos ? { moduleId, pos } : null;
+// hex, the ghost layer, and the reserved readout — never a full render.
+// A retrieval (`retrieval` true, pos null) is the tray's hover: the drop
+// would take the module off the board (#260).
+function setDropHover(app: App, moduleId: string | null, pos: Hex | null, retrieval = false): void {
+  app.ui.dropHover = moduleId !== null && (pos !== null || retrieval) ? { moduleId, pos } : null;
   refreshDropPreview(app);
 }
 
@@ -1829,7 +1948,7 @@ function refreshDropPreview(app: App): void {
     node.classList.remove("drop-open", "drop-occupied", "drop-combine"),
   );
   const hover = app.ui.dropHover;
-  if (hover) {
+  if (hover && hover.pos !== null) {
     const register = dropRegister(app, hover.pos);
     if (register) {
       svg.querySelector(`[data-cell="${hover.pos.q},${hover.pos.r}"] .hex`)?.classList.add(dropClass(register));
@@ -1837,31 +1956,95 @@ function refreshDropPreview(app: App): void {
   }
   const layer = svg.querySelector('[data-key="ghost-chords"]');
   if (layer) layer.innerHTML = ghostMarksHtml(app);
+  // The reserved readout carries the projection while the gesture lives;
+  // cancel restores whatever row was standing (#260).
+  updateChordReadout(app);
+}
+
+// ── The placement projection (issue #260) ──────────────────────────────
+// The drop hover's one computation: the authoritative pass over the
+// hypothetical board (economy.projectPlacement — the same allocation and
+// economy calculation that commits the move), cached per hover target. A
+// render clears it (any state change rides a render); the hover refresh
+// and the readout recompute it on demand.
+interface DropProjectionCache {
+  moduleId: string;
+  posKey: string;
+  result: PlacementProjection;
+}
+const dropProjectionCache = new WeakMap<App, DropProjectionCache>();
+
+function dropProjection(app: App): PlacementProjection | null {
+  const hover = app.ui.dropHover;
+  if (!hover || app.state.mode !== "upgrade") return null;
+  const module = app.state.modules.find((m) => m.id === hover.moduleId);
+  if (!module) return null;
+  // Valid targets only: the combine register previews nothing (the twin's
+  // review owns its own terms), and the carried module's own cell is a
+  // no-op. Over the tray, only a live drag reads the retrieval.
+  if (hover.pos !== null) {
+    if (dropRegister(app, hover.pos) === null) return null;
+  } else if (app.dragging !== hover.moduleId) {
+    return null;
+  }
+  const posKey = hover.pos ? `${hover.pos.q},${hover.pos.r}` : "tray";
+  const cached = dropProjectionCache.get(app);
+  if (cached && cached.moduleId === hover.moduleId && cached.posKey === posKey) return cached.result;
+  // Placement is upgrade-mode-only (the board locks in flow), so the
+  // projection always reads the arranging basis the readout shows.
+  const result = projectPlacement(app.state, hover.moduleId, hover.pos, false);
+  dropProjectionCache.set(app, { moduleId: hover.moduleId, posKey, result });
+  return result;
 }
 
 // The would-form ghost markup (§6): dashed hulls with name chips, one per
 // chord the drop would newly form, drawn over the voices' would-be
 // positions. What breaks is expressed by what disappears — breaking is
 // never previewed. The render pass hands its projected snapshot over; the
-// drag-hover path (no pass in flight) computes its own.
+// drag-hover path (no pass in flight) computes its own. The projection
+// classifies each promise (#260): a chord the projected allocation would
+// activate previews as the earning promise it is; one the capacity would
+// leave idle says so — the dotted quiet register, "· idle" on its chip —
+// so a full budget never promises earnings it cannot afford.
 function ghostMarksHtml(app: App, projected?: RateSnapshot): string {
   const hover = app.ui.dropHover;
   if (!hover || app.state.mode !== "upgrade") return "";
+  // A retrieval hovers no cell: nothing would form, only leave.
+  if (hover.pos === null) return "";
   const module = app.state.modules.find((m) => m.id === hover.moduleId);
   if (!module) return "";
   // Voices and spacers conduct (ADR-0048); nothing else previews chords.
   if (!isVoiceType(module.type) && module.type !== "spacer") return "";
   // A combine offer previews no swap: the drop won't rearrange voices, it
   // will consume the twin under the pointer (issue #152).
-  if (dropRegister(app, hover.pos) === "combine") return "";
+  if (hover.pos !== null && dropRegister(app, hover.pos) === "combine") return "";
   // The diff runs on recognition (issue #258): a ghost promises a chord
-  // the board will sing, active or idle — what the player does with a full
-  // capacity is the placement preview's own question (#260).
+  // the board will sing, active or idle — and the placement projection
+  // (#260) says which, from the same authoritative allocation the commit
+  // runs.
   const basis = projected ?? displayedRates(app.state, true);
   const current = basis.allocation ? summaryTermsOf(basis.allocation) : basis.namedChords;
   const preview = wouldFormPreview(app.state, hover.moduleId, hover.pos, 1 + activeBuildFactors(app.state).namedChordBonus);
   const newcomers = newChordTerms(current, preview.chords);
   if (newcomers.length === 0) return "";
+  const allocation = dropProjection(app)?.projected.allocation;
+  // The promise's honesty is per instance (#260): a newcomer class counts
+  // as earning only when the projected allocation activates one of the
+  // instances the drop adds — a retained instance (the class merely
+  // doubling) leaves the new copy an idle promise.
+  const currentActive = basis.allocation?.activeKeys;
+  const activates = (chord: NamedChordTerm): boolean =>
+    !allocation ||
+    allocation.recognized.some(
+      (instance) =>
+        instance.name === chord.name &&
+        instance.root === chord.root &&
+        allocation.activeKeys.has(instance.key) &&
+        !(currentActive?.has(instance.key) ?? false),
+    );
+  const promised = newcomers.filter(activates);
+  const idleNewcomers = newcomers.filter((chord) => !activates(chord));
+  if (promised.length === 0 && idleNewcomers.length === 0) return "";
   const deployedById = new Map(app.state.modules.filter((m) => m.pos !== null).map((m) => [m.id, m]));
   const posOf = (id: string): Hex | null => (id === hover.moduleId ? hover.pos : preview.positions.get(id) ?? deployedById.get(id)?.pos ?? null);
   // The ghost's silent set: the deployed silent voices plus the dragged
@@ -1870,13 +2053,15 @@ function ghostMarksHtml(app: App, projected?: RateSnapshot): string {
     app.state.modules.filter((m) => CATEGORY_OF[m.type] === "silentVoice").map((m) => m.id),
   );
   if (CATEGORY_OF[module.type] === "silentVoice") silentIds.add(module.id);
+  const idleIdentities = new Set(idleNewcomers.map((chord) => `${chord.name}|${chord.root}`));
   const overlay = chordOverlay({
-    namedChords: newcomers,
+    namedChords: promised,
+    inactiveChords: idleNewcomers,
     posOf,
     point,
     radius: HEX_RADIUS,
     step: LATTICE_STEP,
-    labelFor: chordTermLabel,
+    labelFor: (chord) => chordTermLabel(chord) + (idleIdentities.has(`${chord.name}|${chord.root}`) ? " · idle" : ""),
     silentIds,
   });
   return overlay.marks.map((mark) => chordMarkHtml(mark, "ghost")).join("");
@@ -1911,7 +2096,7 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
     });
     node.addEventListener("pointerleave", () => {
       if (app.dragging || app.state.mode !== "upgrade") return;
-      if (app.ui.dropHover && sameHex(app.ui.dropHover.pos, position())) setDropHover(app, null, null);
+      if (app.ui.dropHover?.pos != null && sameHex(app.ui.dropHover.pos, position())) setDropHover(app, null, null);
     });
     // Placement rides the pointer too (§5–§6): a touch press has no hover
     // phase before its tap, so pressing an open cell while a placement is
@@ -2036,9 +2221,11 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
         hoverTarget = cellNode;
         const [q, r] = (hoverTarget?.getAttribute("data-cell") ?? "").split(",").map(Number);
         const pos = Number.isFinite(q) && Number.isFinite(r) ? { q: q!, r: r! } : null;
-        setDropHover(app, id, pos);
+        // Over the tray the drop retrieves (#260): the hover reads the
+        // removal's projection instead of a cell's.
+        setDropHover(app, id, pos, overZone);
       }
-      if (!cellNode) setDropHover(app, id, null);
+      if (!cellNode) setDropHover(app, id, null, overZone);
     };
 
     startPointerDrag(event, {

@@ -155,10 +155,10 @@ describe("the allocation stress ladder (#257)", () => {
     for (let i = 0; i < classes.length; i++) {
       for (let j = i + 1; j < classes.length; j++) {
         const d = Math.abs(classes[i]! - classes[j]!);
-        tension += BALANCE.tensionWeights[Math.min(d, 12 - d)] ?? 0;
+        tension += BALANCE.allocationTensionWeights[Math.min(d, 12 - d)] ?? 0;
       }
     }
-    const q = Math.min(1.5, Math.max(0.5, 1 + BALANCE.complexityRate * (classes.length - 1) - Math.max(0, tension - BALANCE.tensionAllowance)));
+    const q = Math.min(1.5, Math.max(0.5, 1 + BALANCE.allocationComplexityRate * (classes.length - 1) - Math.max(0, tension - BALANCE.allocationTensionAllowance)));
     for (const capacity of [1, 2, 3, 4, 5]) {
       let best = voices.reduce((total, v) => total + v.weight, 0);
       for (let mask = 0; mask < 1 << flat.length; mask++) {

@@ -20,6 +20,20 @@ export interface Balance {
   // down — and the cap above neutral.
   qualityFloor: number;
   qualityCap: number;
+  // ── Allocation harmony quality (issue #260, the adopted Q ∈ [0.5, 1.5]
+  // development range from #257): the ADR-0049 curve over its own
+  // magnitudes, retuned so organized formations meaningfully spread the
+  // range rather than merely wearing a higher cap — complexity pays harder
+  // (octaves ×1.00, fifths ×1.12, triads ×1.24, organized sevenths ×1.36,
+  // lush organized clusters toward ×1.48) while the allowance still
+  // forgives an organized seventh and chromatic density sinks to the
+  // ×0.5 floor. Production recognition keeps the magnitudes above; the
+  // curves share nothing but shape. An upper bound of two stays an
+  // experimental comparison (allocation.test.ts), never the shipped
+  // default.
+  allocationTensionWeights: Readonly<Record<number, number>>;
+  allocationComplexityRate: number;
+  allocationTensionAllowance: number;
   // ── Roster tuning (ADR-0048): the silent-voice category trait is a
   // level-scaled uplift to every chord instance's bonus a silent voice
   // sings in, additive across silent voices, landing on all singing
@@ -184,6 +198,9 @@ export const BALANCE: Balance = {
   tensionAllowance: 0.7,
   qualityFloor: 0.05,
   qualityCap: 1.25,
+  allocationTensionWeights: { 1: 1.0, 2: 0.2, 6: 0.5 },
+  allocationComplexityRate: 0.12,
+  allocationTensionAllowance: 0.8,
   silentVoiceUpliftPerLevel: 0.05,
   amplifierGainPerLevel: 0.2,
   amplifierHopCap: 4,

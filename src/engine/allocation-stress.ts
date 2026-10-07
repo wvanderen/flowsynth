@@ -1,7 +1,7 @@
 import { BALANCE } from "./constants";
-import { chordClusters, formationQuality, formationTension, type Singer } from "./chords";
+import { chordClusters, type Singer } from "./chords";
 import { hex } from "./hex";
-import { ALLOCATION_QUALITY_BOUNDS, allocateChords, type AllocationRead, type AllocationVoiceParams } from "./allocation";
+import { allocationQualityOf, allocateChords, type AllocationRead, type AllocationVoiceParams } from "./allocation";
 import type { DeployedModule, ModuleType } from "./types";
 
 // The repeatable stress comparison (issue #257): whole-chord allocation
@@ -154,7 +154,7 @@ export function totalValueOf(fixture: StressFixture, read: AllocationRead): numb
     }
   }
   const classes = [...new Set(fixture.singers.map(({ pitch }) => ((Math.round(pitch) % 12) + 12) % 12))];
-  const q = read.instances.length > 0 ? formationQuality(classes, formationTension(classes), true, ALLOCATION_QUALITY_BOUNDS) : 1;
+  const q = read.instances.length > 0 ? allocationQualityOf(classes) : 1;
   let total = 0;
   for (const { module } of fixture.singers) {
     const { weight } = fixture.params.get(module.id)!;

@@ -632,10 +632,19 @@ export interface Contribution {
   // read as a multiplied-to-zero voice. Silent voices carry their display
   // factor as muted participants; they produce nothing for it to multiply.
   chordFactor: number | null;
-  // The formation quality Q the module's cluster scored (ADR-0049): its own
-  // named term per member — read aloud as "Formation ×1.12". Exactly 1
-  // whenever the formation names no chord (chordless is exactly neutral).
+  // The formation quality Q the module's cluster scored (ADR-0049), as
+  // APPLIED to this module's production (issue #260): the named term its
+  // chord factor actually carries — exactly 1 whenever the voice carries no
+  // active chord (capacity left it unallocated) and whenever the formation
+  // names no chord. Read aloud as "Formation ×1.12".
   formationQ: number;
+  // The formation quality as MEASURED (issue #260): one read per connected
+  // formation, scored over every singing voice it holds — voices whose
+  // recognized chords sat inactive included — whether or not any chord
+  // activated. The quality scale reads this; the applied term above is
+  // what the breakdown multiplies. Equals formationQ on the plain
+  // recognizer's pass.
+  formationMeasuredQ: number;
   infusorBonus: number;
   chargeFactor: number;
   chargeStrength: number;
