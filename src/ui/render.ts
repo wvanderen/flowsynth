@@ -40,7 +40,7 @@ import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HI
 import { formatDate, formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
 import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG } from "./ledger";
 import { closeTooltips, wireTooltips } from "./instrument";
-import { libraryCardHtml } from "./library";
+import { instancesByClass, instancesKeyOf, libraryHeaderHtml, libraryIndexRowHtml, libraryStageHtml } from "./library";
 import { discoveryCount, discoveryBoostOf, rootsHeardOf } from "../engine/library";
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
 import { containerWidth, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX } from "./container";
@@ -678,28 +678,52 @@ function renderAchievementsModal(app: App, content: HTMLElement, projected: Rate
   wireClose(app);
 }
 
-// The chord library's field guide (issue #230): one card per chord class,
-// discovered or not. The first live formation of a class names it forever;
-// the sheet reads the ledger — glyph, name, bonus, roots-heard hairline on
-// a known card, the hueless dashed silhouette on an unknown one — and the
-// header carries the ledger's total: each discovered class adds +1%
-// (tuning) into the rate, permanently, across prestige.
+// The chord sheet (issue #230, reworked by #278): an index of the eleven
+// classes beside a large selected-glyph stage. The header reads the
+// ledger — `Chords (4/11) (+4% ν)`, no explanatory paragraph — and every
+// deeper mechanic (the discovery bonus, the instance stacking, the roots
+// history) lives in the tooltip layer. Selecting an index row puts that
+// class on the stage; the selection is light furniture (ui.chordStage),
+// falling back to the lead discovered row. The index lists discovered
+// classes first; within each group the difficulty ladder's order stands.
 function renderLibraryModal(app: App, content: HTMLElement, snapshot?: RateSnapshot): void {
   const { state } = app;
   const count = discoveryCount(state);
-  // The singing classes (issue #258): the allocation's active instances
-  // name the classes whose bonuses are on the board right now — a
-  // discovered class without one reads as heard, never as earning.
-  const singing = new Set((snapshot?.namedChords ?? []).map((term) => term.name));
-  const cards = NAMED_CHORDS.map((def) => libraryCardHtml(def, state.chordDiscovery[def.name], singing.has(def.name))).join("");
+  // Standing instances per class, summed over the live rate pass's terms —
+  // the stage's active read and the index's per-class counts share this
+  // one map, so neither can drift from the allocation.
+  const instances = instancesByClass(snapshot?.namedChords ?? []);
+  const ringing = NAMED_CHORDS
+    .filter((def) => (instances.get(def.name) ?? 0) > 0)
+    .map((def) => ({ name: def.name, instances: instances.get(def.name)! }));
+  const activeTotal = ringing.reduce((total, chord) => total + chord.instances, 0);
+  const discovered = NAMED_CHORDS.filter((def) => state.chordDiscovery[def.name]?.formed === true);
+  const locked = NAMED_CHORDS.filter((def) => state.chordDiscovery[def.name]?.formed !== true);
+  const ordered = [...discovered, ...locked];
+  const selected = ordered.some((def) => def.name === app.ui.chordStage)
+    ? app.ui.chordStage!
+    : (discovered[0] ?? locked[0]!).name;
+  const rows = ordered
+    .map((def) => libraryIndexRowHtml(def, state.chordDiscovery[def.name], instances.get(def.name) ?? 0, def.name === selected))
+    .join("");
+  const stageDef = NAMED_CHORDS.find((def) => def.name === selected)!;
   // On phone the sheet's one entry is Collection (issue #270): the back
   // control rides the head, returning to the launcher that opened it.
   const back = isPhoneWidth() ? "Collection" : undefined;
   content.innerHTML = `
-    ${modalTop("CHORD LIBRARY", undefined, back)}
-    <h2 id="modal-title">${count} of ${NAMED_CHORDS.length} classes discovered.</h2>
-    <p class="lead">The first live formation of a chord class names it forever. Each discovery adds its +${Math.round(BALANCE.discoveryBonusPerClass * 100)}% to the rate — <span class="mono">+${Math.round((discoveryBoostOf(state) - 1) * 100)}%</span> so far, permanent across prestige. The hairline counts the distinct roots a class has rung.</p>
-    <div class="library-grid">${cards}</div>`;
+    ${modalTop(null, undefined, back)}
+    ${libraryHeaderHtml(count, NAMED_CHORDS.length, Math.round(BALANCE.discoveryBonusPerClass * 100), Math.round((discoveryBoostOf(state) - 1) * 100))}
+    <div class="chord-sheet">
+      <div class="chord-index">${rows}</div>
+      ${libraryStageHtml(stageDef, state.chordDiscovery[selected], activeTotal, ringing)}
+    </div>`;
+  content.querySelectorAll<HTMLButtonElement>(".chord-row").forEach((row) => {
+    app.listen(row, "click", () => {
+      app.ui.chordStage = row.dataset.chord ?? null;
+      app.render();
+    });
+  });
+  wireTooltips(content, app.signal);
   wireCollectionBack(app);
   wireClose(app);
 }
@@ -3402,10 +3426,12 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                 // moves, not on every clock tick.
                 ? achProgressKey(app, projected)
                 // The library's own ledger signature (issue #230): a discovery
-                // or a new root re-renders the sheet — as does the singing
-                // set (issue #258): a class flipping active/idle rebuilds.
+                // or a new root re-renders the sheet — as does the live
+                // instance tally (#278): a class flipping active/idle or
+                // stacking another instance rebuilds, and so does the stage
+                // selection.
                 : kind === "library"
-                  ? [discoveryKey(app.state), live.namedChords.map((i) => i.name).sort().join(",")]
+                  ? [app.ui.chordStage, discoveryKey(app.state), instancesKeyOf(instancesByClass(live.namedChords))]
                 // The launcher's rows read both ledgers' counts (issue #270).
                 : kind === "collection"
                   ? [unlockedCount(app.state), discoveryCount(app.state)]
@@ -3584,12 +3610,14 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
 // The modal head's one row: the eyebrow that names the surface and the ✕
 // that puts it away. `titleId` hands the accessible name to the eyebrow
 // for surfaces that carry no other heading — the backdrop's
-// aria-labelledby points there. `backLabel` mounts the launcher's return
-// control (issue #270) ahead of the eyebrow: on phone the feats and chords
-// sheets sit behind a "‹ Collection" door, and the tap walks back one
-// level instead of closing everything.
-function modalTop(label: string, titleId?: string, backLabel?: string): string {
-  const eyebrow = `<span class="eyebrow"${titleId ? ` id="${titleId}"` : ""}>${label}</span>`;
+// aria-labelledby points there. A null label skips the eyebrow: a surface
+// whose readout is its header (the chord sheet's `Chords (4/11) (+4% ν)`,
+// #278) carries no duplicated identity beside it. `backLabel` mounts the
+// launcher's return control (issue #270) ahead of the eyebrow: on phone
+// the feats and chords sheets sit behind a "‹ Collection" door, and the
+// tap walks back one level instead of closing everything.
+function modalTop(label: string | null, titleId?: string, backLabel?: string): string {
+  const eyebrow = label ? `<span class="eyebrow"${titleId ? ` id="${titleId}"` : ""}>${label}</span>` : "";
   const lead = backLabel
     ? `<button class="modal-back" id="modal-back">‹ ${backLabel}</button>${eyebrow}`
     : eyebrow;

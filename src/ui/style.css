@@ -683,56 +683,101 @@ h1, h2, h3, p { margin: 0; }
   .board-ledger:focus-within .rate-breakdown { display: block; }
 }
 
-/* The chord library's field guide (issue #230): glyph-first cards — the
-   glyph fills the card's top space (the prototype's fixed box dies here),
-   and the card carries glyph, name, bonus, and the roots-heard hairline,
-   nothing else. Locked cards are the dashed silhouette alone, the hairline
-   waiting at the bottom edge. */
-.library-grid {
+/* The chord sheet (#278): the eleven-class index beside the selected
+   class's stage. Open divisions only — hairline-ruled index rows, never
+   nested cards — and the header is the count readout itself. */
+.chord-head { margin: 4px 0 16px; }
+.chord-sheet {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
-  gap: 12px;
-  margin-top: 14px;
+  grid-template-columns: 264px minmax(0, 1fr);
+  gap: 30px;
+  align-items: start;
 }
-.library-card {
-  position: relative;
+.chord-index {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line-soft);
+}
+.chord-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--line-soft);
+  padding: 6px 8px;
+  min-height: 44px;
+  text-align: left;
+  background: transparent;
+  color: inherit;
+}
+.chord-row:hover:not(:disabled) { background: var(--hover-bg); border-color: var(--line-soft); color: inherit; }
+/* The selected row wears the state grammar's firm inset marker — readable
+   without color — with aria-current as the non-visual channel. */
+.chord-row[aria-current="true"] { box-shadow: inset 3px 0 var(--ink); }
+.chord-row .chord-glyph { width: 32px; height: 32px; flex-shrink: 0; }
+.chord-row.locked { color: var(--muted); }
+.chord-row.locked .chord-glyph { opacity: 0.75; }
+.chord-row-name { font: 600 17px var(--font-condensed); letter-spacing: 0.04em; }
+.chord-row.locked .chord-row-name { letter-spacing: 0.18em; }
+.chord-count {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+/* The active pip: the live-activity mark in the class's hue — the pulse
+   is decoration, the dot is the state, so the reduced-motion switch (the
+   global animation kill) leaves the count readable and the pip present. */
+.chord-pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pip, var(--accent));
+  flex-shrink: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .chord-pip { animation: chord-pip 2.6s ease-in-out infinite; }
+}
+@keyframes chord-pip {
+  50% { opacity: 0.35; }
+}
+.chord-stage {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 14px 14px 18px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--panel-soft);
-  overflow: hidden;
-  min-height: 230px;
+  gap: 12px;
+  text-align: center;
+  padding-top: 10px;
+  min-width: 0;
 }
-.library-card.locked { border-style: dashed; }
-.library-card .chord-glyph {
-  width: 100%;
-  flex: 1 1 auto;
+.chord-stage .glyph-big { width: min(320px, 100%); }
+.chord-stage-name { font: 600 40px/1.05 var(--font-condensed); letter-spacing: 0.03em; }
+.chord-stage-read {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font: 500 16px var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.chord-stage-hint { color: var(--muted); font-size: 13px; }
+/* The figure-as-trigger: a visible mono readout that opens its own
+   tooltip — hover, focus, and touch — never hidden behind it. The shared
+   trigger's hover state carries the affordance; only the chrome resets. */
+.tip-figure {
+  border: 0;
+  width: auto;
+  height: auto;
   min-height: 0;
-}
-.library-card h3 { margin: 0; font: 14px var(--mono); font-weight: 400; }
-.library-card .library-bonus { margin: 0; font-size: 11.5px; color: var(--muted); }
-/* The singing-state line (issue #258): recognized versus active bonus,
-   distinguished without color alone — the active card wears the firm
-   outline, the idle line reads in words. */
-.library-card .library-state { margin: 0; font-size: 10.5px; letter-spacing: 0.08em; color: var(--muted); }
-.library-card .library-state-active { color: var(--accent); }
-.library-card.singing { border-color: var(--accent); }
-.library-hairline {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 3px;
-  background: var(--line-soft);
-}
-.library-hairline i {
-  display: block;
-  height: 100%;
-  background: var(--meter-fill);
+  padding: 4px 2px;
+  border-radius: 0;
+  font: inherit;
+  color: inherit;
+  background: transparent;
 }
 
 /* ── Inspector ─────────────────────────────────────── */
@@ -2636,6 +2681,25 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
 @media (max-width: 600px) {
   .modal-backdrop { padding: 10px; align-items: flex-end; }
   .modal { width: 100%; max-height: 78vh; border-radius: 14px 14px 0 0; animation: sheet-up 0.18s ease-out; }
+  /* The chord sheet's phone reflow (#278): the stage becomes the compact
+     top row — small glyph left, name and the figure reads beside it — and
+     the index a full-width row list below. The sheet itself scrolls. */
+  .chord-sheet { grid-template-columns: 1fr; gap: 10px; }
+  .chord-stage {
+    order: -1;
+    display: grid;
+    grid-template-columns: 104px minmax(0, 1fr);
+    gap: 4px 14px;
+    align-items: center;
+    text-align: left;
+    padding-top: 0;
+  }
+  .chord-stage > * { grid-column: 2; }
+  .chord-stage .glyph-big { grid-column: 1; grid-row: 1 / span 4; width: 104px; }
+  .chord-stage-name { font-size: 24px; }
+  .chord-stage-read { justify-content: flex-start; gap: 4px 12px; font-size: 13px; }
+  .chord-row .chord-glyph { width: 40px; height: 40px; }
+  .chord-row-name { font-size: 19px; }
 }
 
 /* The rate sheet (§7) presents below the 760px *container* breakpoint —

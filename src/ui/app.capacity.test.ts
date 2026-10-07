@@ -239,7 +239,7 @@ describe("the one-capacity economy on the board (#258)", () => {
     expect(document.getElementById("modal-content")!.textContent).not.toContain("Capacity");
     app.closeModal();
     app.openModal("library");
-    expect(document.getElementById("modal-content")!.textContent).toContain("singing now");
+    expect(document.querySelector("#modal-content .chord-count")!.textContent).toContain("×1");
   });
 
   it("uncertified development results are named on the board and in rate details", () => {
@@ -293,22 +293,23 @@ describe("the one-capacity economy on the board (#258)", () => {
     expect(readout().textContent).not.toContain("idle");
   });
 
-  it("the library names the singing class and demotes it when the chord breaks", () => {
+  it("the library counts the singing class's standing instances and demotes them when the chord breaks (#258, #278)", () => {
     // The placement runs the real action boundary: the discovery lands,
-    // and the field guide names the class singing. Returning the module
-    // demotes the card — discovered stays, singing goes.
+    // and the sheet's index counts the class's standing instance. Returning
+    // the module breaks the chord — discovered stays, the count goes.
     const tray = give(app.state, "additive", null);
     app.pickCellThenPlace(tray.id, hex(1, 0));
     app.render();
     app.openModal("library");
     let sheet = document.getElementById("modal-content")!;
-    expect(sheet.textContent).toContain("singing now");
+    const count = sheet.querySelector(".chord-count")!;
+    expect(count.textContent).toContain("×1");
+    expect(count.querySelector(".chord-pip")).not.toBeNull();
     app.closeModal();
     app.returnToInventory(tray.id);
     app.openModal("library");
     sheet = document.getElementById("modal-content")!;
-    expect(sheet.textContent).not.toContain("singing now");
-    expect(sheet.textContent).toContain("heard — not singing");
+    expect(sheet.querySelector(".chord-count")).toBeNull();
   });
 
   it("the allocation rides the real save/reload path deterministically", () => {
