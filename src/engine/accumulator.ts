@@ -20,11 +20,16 @@ export const ARETE_LOG_FLOOR = 1e3;
 // belonged to the uncapped stacking model the capacity design retires.
 export const ARETE_HORIZON = 7e6;
 
+// The visible scale's decade count — the one span read, shared by the
+// fill and the surfaces that quote its geometry.
+export function accumulatorSpan(): number {
+  return Math.log10(ARETE_HORIZON) - Math.log10(ARETE_LOG_FLOOR);
+}
+
 // The fill's log-scale position: 0 at the floor, 1 at the horizon, clamped
 // outside so pre-floor eras and past-horizon overfill both render sanely.
 export function accumulatorFill(eraEarned: number): number {
-  const span = Math.log10(ARETE_HORIZON) - Math.log10(ARETE_LOG_FLOOR);
-  const position = (Math.log10(Math.max(eraEarned, ARETE_LOG_FLOOR)) - Math.log10(ARETE_LOG_FLOOR)) / span;
+  const position = (Math.log10(Math.max(eraEarned, ARETE_LOG_FLOOR)) - Math.log10(ARETE_LOG_FLOOR)) / accumulatorSpan();
   return Math.min(1, Math.max(0, position));
 }
 

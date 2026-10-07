@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ARETE_HORIZON, ARETE_LOG_FLOOR, accumulatorFill, claimOf, horizonReached } from "./accumulator";
+import { ARETE_HORIZON, ARETE_LOG_FLOOR, accumulatorFill, accumulatorSpan, claimOf, horizonReached } from "./accumulator";
 import { breakHorizon, prestige, startSession } from "./actions";
 import { advance } from "./advance";
 import { BALANCE } from "./constants";
@@ -22,9 +22,8 @@ describe("the Arete accumulator's log-scale fill", () => {
 
   it("sweeps visibly through the first decades of play", () => {
     // The curved scale is the point (issue #156): early play moves the bar.
-    const span = Math.log10(ARETE_HORIZON) - Math.log10(ARETE_LOG_FLOOR);
-    expect(accumulatorFill(ARETE_LOG_FLOOR * 10)).toBeCloseTo(1 / span, 9);
-    expect(accumulatorFill(ARETE_LOG_FLOOR * 100)).toBeCloseTo(2 / span, 9);
+    expect(accumulatorFill(ARETE_LOG_FLOOR * 10)).toBeCloseTo(1 / accumulatorSpan(), 9);
+    expect(accumulatorFill(ARETE_LOG_FLOOR * 100)).toBeCloseTo(2 / accumulatorSpan(), 9);
   });
 });
 

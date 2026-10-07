@@ -1,7 +1,7 @@
 # 0053 — The capacity ladder sells through the Catalogs, and prestige returns the voices to one
 
 Date: 2026-10-06
-Status: Accepted (development slice — the ordinary economy stays on its existing path pending full calibration)
+Status: Accepted; §5's development gate and the provisional prices were superseded by the release calibration (ADR-0055, issue #262)
 Issue: #259
 
 ## Context

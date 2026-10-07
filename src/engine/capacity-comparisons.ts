@@ -1,4 +1,4 @@
-import { allocateRates, investment, levelCost, maxChordFactorOf, type AllocatedRates } from "./economy";
+import { allocateRates, investment, maxChordFactorOf, type AllocatedRates } from "./economy";
 import { allocationQualityOf } from "./allocation";
 import { BALANCE, CATEGORY_OF } from "./constants";
 import { createHabit, selectHabit } from "./habits";
@@ -57,7 +57,6 @@ export interface ComparisonRow {
   // comparison's budget leaves unspent.
   spent: number;
   unspent: number;
-  notes: string;
 }
 
 // The shelf prices a fixture's support roster represents — oscillators
@@ -130,7 +129,6 @@ export function compareBoard(family: string, budget: number, board: ComparisonBo
       certified: rates.read.certified,
       spent,
       unspent: budget - spent,
-      notes: "",
     });
   }
   return rows;
@@ -247,5 +245,3 @@ export function qualityOfBoard(board: ComparisonBoard): number {
   return allocationQualityOf(classes);
 }
 
-// The level-cost read for budget accounting elsewhere.
-export { investment, levelCost };

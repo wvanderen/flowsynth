@@ -78,7 +78,7 @@ A 30-session ordinary run measured **900/900 solves certified** (worst solve 193
 - Selecting a voice shows the capacity readout (`Capacity 3/3`, total chord factor ×2.14, applied formation term) with active and idle instance chips; the chord library chip and modal agree (10/11 classes).
 - The rebased horizon bar renders sanely (97% at 5.2e6 of 7e6); a real 30-minute session earned through the allocation path.
 - Large-board interaction at desktop width: bounded ~200–300 ms per selection on the deliberately messy uncertified board (see certification above); placement previews are cached per hovered cell, not per pointer move.
-- Phone-viewport capture: **unavailable** in the reviewing tool (viewport resize timed out); the phone surfaces' geometry is asserted by the committed UI tests (the catalog's 74%-height bottom sheet among them). Recorded as unavailable, not claimed.
+- Phone-viewport capture: **unavailable** in the reviewing tool (viewport resize timed out across repeated attempts); the phone surfaces' geometry is asserted by the committed phone suites instead — `app.phone.test.ts` (38 phone-layout checks) and the catalog sheet's 74%-height phone frame among them — all passing on the released tree. Recorded as unavailable, not claimed.
 
 ## Existing saves and the rebased horizon
 

@@ -5,7 +5,7 @@ import type { App } from "./app";
 import { createHabit } from "../engine/habits";
 import { equipBuildNode } from "../engine/builds";
 import { BALANCE } from "../engine/constants";
-import { ARETE_HORIZON, ARETE_LOG_FLOOR } from "../engine/accumulator";
+import { ARETE_HORIZON, ARETE_LOG_FLOOR, accumulatorSpan } from "../engine/accumulator";
 import { displayedRates, allocateRates, cellCost, cellPurchasePrice, affordableLevels, levelCost, levelsCost } from "../engine/economy";
 import { startSession, endSession } from "../engine/actions";
 import { advance } from "../engine/advance";
@@ -407,9 +407,8 @@ describe("the horizon bar (§7, issue #156)", () => {
     // 7e6), patched in place — no rebuild.
     app.state.eraEarned = ARETE_LOG_FLOOR * 100;
     app.render();
-    const span = Math.log10(ARETE_HORIZON) - Math.log10(ARETE_LOG_FLOOR);
-    expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBeCloseTo(600 * (2 / span), 1);
-    expect(document.querySelector('#horizon-bar [data-live="h-word"]')!.textContent).toBe(`${Math.floor((100 * 2) / span)}%`);
+    expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBeCloseTo(600 * (2 / accumulatorSpan()), 1);
+    expect(document.querySelector('#horizon-bar [data-live="h-word"]')!.textContent).toBe(`${Math.floor((100 * 2) / accumulatorSpan())}%`);
     expect(document.querySelector(".horizon-word")).not.toBeNull();
   });
 

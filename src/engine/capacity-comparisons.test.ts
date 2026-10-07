@@ -5,12 +5,12 @@ import {
   doubledDominantSeventh,
   doubledMajorSeventh,
   doubledTriad,
-  investment,
   qualityOfBoard,
   spendOf,
   type ComparisonBoard,
   type ComparisonRow,
 } from "./capacity-comparisons";
+import { investment } from "./economy";
 import type { Rarity } from "./types";
 
 // The complete-board comparison record (issue #262): the strategy axes the
