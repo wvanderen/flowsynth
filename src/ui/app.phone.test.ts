@@ -242,10 +242,10 @@ describe("the thumb bar (§7, portrait phone)", () => {
     app.mutCancelGestures();
   });
 
-  it("the chord library's door and cards (issue #230)", () => {
+  it("the chord sheet's door, index, and stage (issue #230, reworked by #278)", () => {
     // A placement forms the board's first Fifth: the discovery lands at
-    // the action boundary, the ledger chip counts it, and the field guide
-    // names the class.
+    // the action boundary, the ledger chip counts it, and the sheet's
+    // index names the class on its stage.
     const tray = give(app.state, "additive", null);
     app.pickCellThenPlace(tray.id, hex(1, 0));
     app.render();
@@ -255,17 +255,45 @@ describe("the thumb bar (§7, portrait phone)", () => {
     chip.click();
     expect(app.ui.modal).toBe("library");
     const modal = document.getElementById("modal-content")!;
-    expect(modal.textContent).toContain("1 of 11 classes discovered");
-    const named = [...modal.querySelectorAll(".library-card:not(.locked)")];
+    // The header is the count readout — no explanatory paragraph.
+    expect(modal.querySelector("#modal-title")!.textContent).toContain("Chords (1/11)");
+    expect(modal.querySelector(".lead")).toBeNull();
+    // The discovered class leads the index and stands on the stage.
+    const named = [...modal.querySelectorAll(".chord-row:not(.locked)")];
     expect(named).toHaveLength(1);
-    expect(named[0]!.querySelector("h3")!.textContent).toBe("Fifth");
-    // Every undiscovered class is the silhouette alone — no name, no copy.
-    const locked = [...modal.querySelectorAll(".library-card.locked")];
+    expect(named[0]!.getAttribute("data-chord")).toBe("Fifth");
+    expect(named[0]!.getAttribute("aria-current")).toBe("true");
+    expect(modal.querySelector(".chord-stage-name")!.textContent).toBe("Fifth");
+    // Every undiscovered class is the dashes and the dim silhouette —
+    // no name, no copy.
+    const locked = [...modal.querySelectorAll(".chord-row.locked")];
     expect(locked).toHaveLength(10);
-    for (const card of locked) {
-      expect(card.querySelector("h3")).toBeNull();
-      expect(card.querySelector(".chord-glyph")).not.toBeNull();
+    for (const row of locked) {
+      expect(row.textContent).not.toContain("Fifth");
+      expect(row.querySelector(".chord-glyph")).not.toBeNull();
     }
+    // The active read counts standing instances; its tooltip names the
+    // class ringing and states the stacking — reachable by keyboard focus,
+    // dismissed by Escape (#278).
+    const activeTrigger = modal.querySelector<HTMLButtonElement>('[aria-describedby="chord-tip-active"]')!;
+    expect(activeTrigger.textContent).toBe("1 active");
+    activeTrigger.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    const activeBody = document.getElementById("chord-tip-active")!;
+    expect(activeBody.classList.contains("inst-show")).toBe(true);
+    expect(activeBody.textContent).toContain("Fifth ×1");
+    expect(activeBody.textContent).toContain("Instances stack on their members");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(activeBody.classList.contains("inst-show")).toBe(false);
+    // Selecting a row puts that class on the stage and keeps keyboard
+    // focus in the index after the sheet replaces its markup.
+    (locked[0] as HTMLButtonElement).focus();
+    (locked[0] as HTMLButtonElement).click();
+    expect(document.activeElement).toBe(modal.querySelector('.chord-row[aria-current="true"]'));
+    const stageName = document.querySelector("#modal-content .chord-stage-name")!.textContent!;
+    expect(stageName).not.toBe("Fifth");
+    expect(document.querySelector("#modal-content .chord-stage")!.textContent).toContain("·····");
+    modal.querySelector<HTMLButtonElement>('.chord-row[data-chord="Fifth"]')!.click();
+    expect(document.activeElement).toBe(modal.querySelector('.chord-row[data-chord="Fifth"]'));
     // The rate details carry the discovery bonus beside the feats'.
     app.closeModal();
     const breakdown = document.querySelector("#board-ledger .rate-breakdown")!;
