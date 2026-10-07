@@ -34,3 +34,15 @@ export function createAppFixture() {
     },
   };
 }
+
+export function clickCell(q: number, r: number): void {
+  document.querySelector(`[data-cell="${q},${r}"]`)!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+}
+
+export function setAppWidth(px: number): void {
+  Object.defineProperty(document.getElementById("app"), "clientWidth", { configurable: true, value: px });
+}
+
+export function setVisibility(state: "visible" | "hidden"): void {
+  Object.defineProperty(document, "visibilityState", { configurable: true, value: state });
+}

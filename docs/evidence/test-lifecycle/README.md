@@ -1,4 +1,4 @@
-# App lifecycle checkpoint
+# Test architecture evidence
 
 2026-10-07. Checkout: `/Users/eggfam/.t3/worktrees/flowsynth/t3code-a423c3cb`; branch `t3code/optimize-test-suite-performance`; starting commit `99571039ef2592877db50b91a09d438d1067e492`. Measurements and browser captures include the uncommitted lifecycle changes.
 
@@ -39,10 +39,31 @@ Launched this checkout with `npm run dev`, serving `http://localhost:5173/?dev`.
 - **Unavailable:** phone browser capture. T3 preview freeform resize to 390×844 timed out. Desktop resize also timed out. Existing automated phone interaction cases passed; they do not substitute for browser layout evidence.
 - **Unavailable:** physical touch and reduced-motion browser emulation; the preview exposes no corresponding control. Click pinning and keyboard access were verified. No animation or motion styles changed.
 
-## Next design decisions
+## Shared-save and domain-suite checkpoint
 
-Lifecycle and fixture ownership resolve the immediate test blocker. Further work should earn its depth through locality and navigation, rather than assume it is needed to fix memory.
+The second checkpoint keeps session reconciliation and save-attempt throttling in App. `SharedSave` owns fresh timestamp reads, guarded/forced writes, rejected-save accounting, and ownership after accepted writes. Its production adapter accesses browser storage lazily; its tests use memory storage and controlled time. Save format and reconciliation order remain unchanged (ADR-0019 and ADR-0032).
 
-For candidate 2, shared-save ownership is a more cohesive module than all session/save orchestration: concentrate stamp validation, rejected-save accounting, guarded writes, and accepted-write bookkeeping; preserve App's one resume/reconciliation path and adoption sequencing (ADR-0019 and ADR-0032). Keep browser-event wiring cases as integration checks and test policy through memory storage and controlled time adapters.
+Seventeen module cases cover older/newest owners, ties, malformed or absent stamps, forced replacement, independent tabs, adoption, rejected versions/imports, and storage failures. Five direct save-policy UI cases moved to this suite. Browser events, import/reset, boot rejection, and reconciliation remain integration checks; an added integration assertion distinguishes failed-write throttling from refusal.
 
-For candidate 3, the shared fixture is already established. Splitting the large suite by board/gestures, console/focus, catalog/progression, session/save, phone, and capacity/placement improves navigation; file parallelism and aggregate worker memory need measurement if scheduling changes.
+The 305 remaining App scenarios are distributed across six files, each with local fixture ownership:
+
+| Domain | File | Tests |
+| --- | --- | --- |
+| Console and focus | `src/ui/app.test.ts` | 44 |
+| Board and gestures | `src/ui/app.board.test.ts` | 113 |
+| Catalog and progression | `src/ui/app.catalog.test.ts` | 34 |
+| Session and save | `src/ui/app.session.test.ts` | 60 |
+| Phone | `src/ui/app.phone.test.ts` | 32 |
+| Capacity and placement | `src/ui/app.capacity.test.ts` | 22 |
+
+An AST comparison against the lifecycle checkpoint confirmed that the only removed UI assertions are the five migrated policy cases; the throttle assertion is the only added App case. Signal recording, cell clicks, container width, and visibility helpers are shared without exporting mutable App state.
+
+Vitest's `ui` project uses one thread with file isolation enabled. The `engine` project retains parallel forks. `npm test` runs both; `npx vitest run --project ui` runs all UI regressions. AGENTS.md now documents these commands.
+
+| Run | Heap setting | Result | Wall time | Maximum resident memory |
+| --- | --- | --- | --- | --- |
+| Shared-save extraction and domain split, `npm test` | Default (`NODE_OPTIONS` unset) | 57 files / 1,113 tests passed | 48.78 s | 800,899,072 bytes |
+
+Compared with the lifecycle-only checkpoint, measured maximum resident memory decreased by approximately 54%; command wall time increased by 3.74 s. This is one measurement under concurrent machine load, not a guaranteed speed or memory ratio. The full run includes a passing provenance test whose short-lived Vite server logged a dependency-scan shutdown warning; it did not fail a test or produce an unhandled test error. `npm run check` and `git diff --check` pass. Raw log: `/tmp/flowsynth-architecture-final.log`; focused policy/integration log: `/tmp/flowsynth-shared-save-focused.log`.
+
+This checkpoint changes storage orchestration and test scheduling, with no further visual surface changes. The browser checks and unavailable phone evidence above remain the applicable visual evidence.
