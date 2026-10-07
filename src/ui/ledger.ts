@@ -339,12 +339,14 @@ export function updateRateDetailsLive(scope: ParentNode, state: GameState, snaps
 // first so the answer lands on the board it names). A click inside the
 // tooltip layer reads as reading, never as a pick — pinning a tooltip or
 // copying a leg figure must not select a module or close the sheet.
-export function wireSynthPicks(host: ParentNode, pick: (id: string) => void): void {
-  host.addEventListener("click", (event) => {
+export function wireSynthPicks(host: ParentNode, pick: (id: string) => void, owner?: App): void {
+  const listener = (event: Event) => {
     if ((event.target as HTMLElement).closest(".inst-tip")) return;
     const row = (event.target as HTMLElement).closest("[data-module-id]");
     if (row) pick(row.getAttribute("data-module-id")!);
-  });
+  };
+  if (owner) owner.listen(host, "click", listener);
+  else host.addEventListener("click", listener);
 }
 
 // The rate figure: the grouped read's middle term — the final total and
@@ -458,14 +460,14 @@ export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
         </span>
       </div></div>
       <div class="rate-breakdown" role="group" aria-label="Module-linked rate details"><span class="inst-panel"><span class="inst-panel-face">${rateDetailsHtml(state, snapshot, true, "pop")}</span></span></div>`;
-    document.getElementById("feats-chip")?.addEventListener("click", () => app.openModal("achievements"));
-    document.getElementById("rate-cell")?.addEventListener("click", () => app.openModal("rate"));
-    document.getElementById("library-chip")?.addEventListener("click", () => app.openModal("library"));
+    app.listen(document.getElementById("feats-chip"), "click", () => app.openModal("achievements"));
+    app.listen(document.getElementById("rate-cell"), "click", () => app.openModal("rate"));
+    app.listen(document.getElementById("library-chip"), "click", () => app.openModal("library"));
     // A synth row's tap selects its module: the hex wears the selected
     // stroke and the bloom opens over it — the row names the place,
     // the board shows it. The tooltip layer pins and dismisses beside it.
-    wireSynthPicks(host.querySelector(".rate-breakdown")!, (id) => app.select(id));
-    wireTooltips(host.querySelector(".rate-breakdown")!);
+    wireSynthPicks(host.querySelector(".rate-breakdown")!, (id) => app.select(id), app);
+    wireTooltips(host.querySelector(".rate-breakdown")!, app.signal);
   }
   updateLedgerLive(host, state, snapshot, app.ui.selected);
 }
@@ -522,7 +524,7 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
           ? `<span class="info-read info-arete" title="Arete — banked by prestige; spent in the catalog"><b class="mono" data-live="i-arete"></b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small></span>`
           : `<span class="info-read info-arete arete-dim" title="Unlocks at first Arete Reset">${areteTelegraphHtml()}</span>`
       }</div>`;
-    document.getElementById("info-rate")?.addEventListener("click", () => app.openModal("rate"));
+    app.listen(document.getElementById("info-rate"), "click", () => app.openModal("rate"));
   }
   const set = (live: string, text: string) => liveSet(host, live, text);
   // Same compression as the ledger's read, same exact tooltip (issue #187).
@@ -595,7 +597,7 @@ export function renderHorizonBar(app: App): void {
           : `<span class="horizon-state locked">prestige available — enter upgrade mode</span>`
         : `<span class="horizon-word">Arete <b data-live="h-word"></b></span>`
     }`;
-    document.getElementById("prestige-door")?.addEventListener("click", () => app.openPrestigeConfirm());
+    app.listen(document.getElementById("prestige-door"), "click", () => app.openPrestigeConfirm());
   }
   // The break beat (ADR-0042, issue #200): the purchase's one visual, a
   // flare on the bar it plays once and only once. Evaluated every render so

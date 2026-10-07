@@ -178,7 +178,7 @@ export function renderMutatorTabs(app: App): void {
   host.hidden = false;
   host.innerHTML = mutTabPairHtml(app);
   host.querySelectorAll<HTMLButtonElement>("[data-mut-layer]").forEach((button) => {
-    button.addEventListener("click", () => app.mutSetLayer(button.getAttribute("data-mut-layer") as "modules" | "mutators"));
+    app.listen(button, "click", () => app.mutSetLayer(button.getAttribute("data-mut-layer") as "modules" | "mutators"));
   });
 }
 
@@ -281,7 +281,7 @@ export function renderMutatorTray(app: App): void {
     }</div>`;
   host.querySelectorAll<HTMLButtonElement>("[data-mut-tray]").forEach((button) => {
     const id = button.getAttribute("data-mut-tray")!;
-    button.addEventListener("click", () => app.mutArmTray(id));
+    app.listen(button, "click", () => app.mutArmTray(id));
     bindMutatorDrag(app, button, id, "tray");
   });
 }
@@ -311,7 +311,7 @@ export function renderMutatorPill(app: App): void {
   // WeakSet keeps a stale test document from doubling it).
   if (boundPills.has(host)) return;
   boundPills.add(host);
-  host.addEventListener("click", () => app.mutCancelGestures());
+  app.listen(host, "click", () => app.mutCancelGestures());
 }
 
 /* ── The declaration popover ──────────────────────────
@@ -347,9 +347,9 @@ export function renderMutatorPopover(app: App, snapshot: RateSnapshot): void {
         <button id="mut-pop-move">Move</button>
         <button id="mut-pop-close" aria-label="Close">✕</button>
       </div>`;
-    document.getElementById("mut-pop-retrieve")?.addEventListener("click", () => app.mutPopoverRetrieve());
-    document.getElementById("mut-pop-move")?.addEventListener("click", () => app.mutPopoverMove());
-    document.getElementById("mut-pop-close")?.addEventListener("click", () => app.mutClosePopover());
+    app.listen(document.getElementById("mut-pop-retrieve"), "click", () => app.mutPopoverRetrieve());
+    app.listen(document.getElementById("mut-pop-move"), "click", () => app.mutPopoverMove());
+    app.listen(document.getElementById("mut-pop-close"), "click", () => app.mutClosePopover());
   }
   // Position over the slot on every pass — the lens may have moved.
   const svg = document.getElementById("grid");
@@ -448,18 +448,18 @@ export function bindMutatorLayer(app: App, svg: SVGSVGElement): void {
     const position = (): Hex => {
       return hexFromAttr(node.getAttribute("data-mut-slot") ?? node.getAttribute("data-mut-unlock"))!;
     };
-    node.addEventListener("keydown", (event) => {
+    app.listen(node, "keydown", (event) => {
       if ((event as KeyboardEvent).key === "Enter" || (event as KeyboardEvent).key === " ") {
         event.preventDefault();
         app.mutPickSlot(position());
       }
     });
-    node.addEventListener("click", () => app.mutPickSlot(position()));
-    node.addEventListener("contextmenu", (event) => {
+    app.listen(node, "click", () => app.mutPickSlot(position()));
+    app.listen(node, "contextmenu", (event) => {
       event.preventDefault();
       app.mutRightClickSlot(position());
     });
-    node.addEventListener("pointerdown", (baseEvent: Event) => {
+    app.listen(node, "pointerdown", (baseEvent: Event) => {
       const event = baseEvent as PointerEvent;
       if (event.button !== 0) return;
       const pos = position();
@@ -473,7 +473,7 @@ export function bindMutatorLayer(app: App, svg: SVGSVGElement): void {
 // Tray-tile drag binding: press a tile, drag it to a slot (or onto a
 // matching twin waiting in the tray).
 export function bindMutatorDrag(app: App, element: Element, id: string, origin: Hex | "tray"): void {
-  element.addEventListener("pointerdown", (baseEvent: Event) => {
+  app.listen(element, "pointerdown", (baseEvent: Event) => {
     const event = baseEvent as PointerEvent;
     if (event.button !== 0 || app.state.mode !== "upgrade") return;
     startMutDrag(app, event, id, origin);
@@ -505,7 +505,7 @@ function startMutDrag(app: App, event: PointerEvent, id: string, origin: Hex | "
   const overTray = (ev: PointerEvent): boolean => trayHitAt(ev) !== null;
   const tray = document.getElementById("mutator-tray");
   const sheet = () => (app.ui.modal === "inventory" ? document.getElementById("modal-content") : null);
-  app.cancelMutDrag = startPointerDrag(event, {
+  app.cancelMutDrag = startPointerDrag(app, event, {
     start: () => {
       app.ui.mutCarrying = id;
       app.ui.mutPopover = null;

@@ -68,6 +68,7 @@ import { render } from "./render";
 import { FAMILY_WORD, mutatorLayerLive, refreshMutPreview } from "./mutators";
 import { HISTORY_PAGE_ROWS, META } from "./meta";
 import { browserChannels, type SignalChannels } from "./signals";
+import { suppressNextClick } from "./click";
 
 // The session modal surfaces (§5.5, §5.7): the enter prompt precedes every
 // session; the loud summary follows every one; the honesty report interrupts
@@ -293,6 +294,82 @@ function dualDriftMs(): number {
 }
 
 export class App {
+  private readonly lifetime = new AbortController();
+  private readonly cleanups = new Set<() => void>();
+  // Weak references let replaced render descendants be collected while
+  // still allowing release to remove handlers from any surviving node.
+  private readonly listeners = new Set<{
+    target: WeakRef<EventTarget>;
+    handler: WeakRef<EventListener>;
+    type: string;
+    capture: boolean;
+  }>();
+  get released(): boolean { return this.lifetime.signal.aborted; }
+  get signal(): AbortSignal { return this.lifetime.signal; }
+
+  // Temporary resources unregister on completion, so renders and gestures
+  // cannot grow the lifetime ledger indefinitely.
+  ownCleanup(cleanup: () => void): () => void {
+    if (this.released) { cleanup(); return () => {}; }
+    this.cleanups.add(cleanup);
+    return () => { this.cleanups.delete(cleanup); };
+  }
+
+  listen<K extends keyof GlobalEventHandlersEventMap>(
+    target: EventTarget | null | undefined,
+    type: K,
+    handler: (event: GlobalEventHandlersEventMap[K]) => void,
+    options?: boolean | AddEventListenerOptions,
+  ): void {
+    if (!target || this.released) return;
+    const guarded: EventListener = (event) => {
+      if (!this.released) handler(event as GlobalEventHandlersEventMap[K]);
+    };
+    target.addEventListener(type, guarded, options);
+    this.listeners.add({ target: new WeakRef(target), handler: new WeakRef(guarded), type,
+      capture: typeof options === "boolean" ? options : !!options?.capture });
+  }
+
+  private sweepListeners(): void {
+    for (const listener of this.listeners) {
+      const target = listener.target.deref();
+      const handler = listener.handler.deref();
+      if (!target || !handler || (target instanceof Node && !target.isConnected)) {
+        if (target && handler) target.removeEventListener(listener.type, handler, listener.capture);
+        this.listeners.delete(listener);
+      }
+    }
+  }
+
+  suppressClick(): void {
+    if (this.released) return;
+    let forget = () => {};
+    const cancel = suppressNextClick(() => forget());
+    forget = this.ownCleanup(cancel);
+  }
+
+  // Release is terminal, idempotent, and deliberately never saves.
+  dispose(): void {
+    if (this.released) return;
+    this.lifetime.abort();
+    for (const listener of this.listeners) {
+      listener.target.deref()?.removeEventListener(listener.type, listener.handler.deref() ?? null, listener.capture);
+    }
+    this.listeners.clear();
+    for (const cleanup of this.cleanups) cleanup();
+    this.cleanups.clear();
+    this.dragging = null;
+    this.cancelMutDrag = null;
+    this.ui.dropHover = null;
+    this.ui.mutCarrying = null;
+    this.ui.mutDropHover = null;
+    this.devBoardCancelStress();
+    const audio = this.ownedAudio;
+    this.audio = null;
+    this.ownedAudio = null;
+    if (audio) void audio.close().catch(() => {});
+  }
+
   private currentState: GameState = createInitialState();
   get state(): GameState { return this.currentState; }
   set state(state: GameState) {
@@ -366,6 +443,7 @@ export class App {
   // that.
   signals: ChimeState = freshChimeState();
   private channels: SignalChannels;
+  private ownedAudio: AudioContext | null = null;
   // The Forge's threshold-crossing flash: a roll was minted, so its face
   // flashes until this wall-clock moment.
   rollFlashUntil = 0;
@@ -407,7 +485,7 @@ export class App {
     rollGoalOccurrences(this.state, Date.now());
     this.ensureBoardOverlays();
     this.bindGlobalEvents();
-    document.getElementById("console-settings")?.addEventListener("click", () => this.openModal("settings"));
+    document.getElementById("console-settings")?.addEventListener("click", () => this.openModal("settings"), { signal: this.signal });
     this.greet();
     this.render();
     this.save();
@@ -497,7 +575,7 @@ export class App {
   // the body), and a stale instance must never act on — or re-render — a
   // newer instance's board.
   private ownsBoard(): boolean {
-    return this.els["grid"]?.isConnected === true;
+    return !this.released && this.els["grid"]?.isConnected === true;
   }
 
   // The boundary clock's baseline: wall moment and dual-clock drift move
@@ -586,6 +664,7 @@ export class App {
   // accepted the write: a failed write (private browsing, full storage)
   // must never read as incorporated.
   save(now: number = Date.now(), force = false): void {
+    if (this.released) return;
     if (!force && this.externalNewerSave()) return;
     try {
       localStorage.setItem(STORAGE_KEY, serialize(this.state, now));
@@ -625,6 +704,7 @@ export class App {
   }
 
   importText(text: string): boolean {
+    if (this.released) return false;
     const parsed = parseSave(text);
     if ("error" in parsed) {
       this.ui.importError = parsed.error;
@@ -691,6 +771,7 @@ export class App {
   }
 
   say(text: string): void {
+    if (this.released) return;
     const el = this.els["status"];
     if (el) el.textContent = text;
   }
@@ -717,6 +798,7 @@ export class App {
 
   private bindGlobalEvents(): void {
     document.addEventListener("visibilitychange", () => {
+      if (!this.ownsBoard()) return;
       if (document.visibilityState === "hidden") {
         // The gap that just ended was present: classify it, then persist —
         // the transition to hidden is the last reliably observable save
@@ -733,16 +815,16 @@ export class App {
         this.adoptNewerSave();
         this.processReturn(Date.now());
       }
-    });
+    }, { signal: this.signal });
     // A bfcache restore is a return: the frozen stretch classifies as away,
     // and a save another tab wrote while this page sat frozen is adopted
     // through the same reconcile path (#128).
     window.addEventListener("pageshow", (event) => {
-      if (!(event as PageTransitionEvent).persisted) return;
+      if (!this.ownsBoard() || !(event as PageTransitionEvent).persisted) return;
       this.presence = document.visibilityState === "visible";
       this.adoptNewerSave();
       this.processReturn(Date.now());
-    });
+    }, { signal: this.signal });
     // Another tab's save, announced here in every tab but the writer
     // (#128): outside a live session the tab adopts a save newer than
     // anything it has incorporated — a cheap, invisible catch-up; another
@@ -752,17 +834,22 @@ export class App {
     window.addEventListener("storage", (event) => {
       if (event.key !== STORAGE_KEY || !this.ownsBoard()) return;
       if (this.state.mode !== "flow") this.adoptNewerSave();
-    });
+    }, { signal: this.signal });
     // Focus loss alone is not away, but focus is a boundary: a stalled or
     // throttled clock catches up here with presence unchanged.
-    window.addEventListener("focus", () => this.processReturn(Date.now()));
-    window.addEventListener("beforeunload", () => this.save());
+    window.addEventListener("focus", () => {
+      if (this.ownsBoard()) this.processReturn(Date.now());
+    }, { signal: this.signal });
+    window.addEventListener("beforeunload", () => {
+      if (this.ownsBoard()) this.save();
+    }, { signal: this.signal });
     // The tick timer can outlive its document (a discarded environment, a
     // torn-down test): a dead document is simply not ours to tick.
-    window.setInterval(() => {
-      if (typeof document === "undefined") return;
+    const timer = window.setInterval(() => {
+      if (typeof document === "undefined" || !this.ownsBoard()) return;
       this.tick();
     }, 100);
+    this.ownCleanup(() => window.clearInterval(timer));
     // A popover is light furniture: clicking anywhere outside the console's
     // app section dismisses it. The board never dims beneath it (ADR-0012).
     // The dismissal intent is captured on the section itself — the one node
@@ -774,10 +861,10 @@ export class App {
     let clickInsideApps = false;
     this.els["console-apps"]?.addEventListener("click", () => {
       clickInsideApps = true;
-    }, { capture: true });
+    }, { capture: true, signal: this.signal });
     this.els["console-session"]?.addEventListener("click", (event) => {
       if ((event.target as Element | null)?.closest(".clock-anchor")) clickInsideApps = true;
-    }, { capture: true });
+    }, { capture: true, signal: this.signal });
     document.addEventListener("click", () => {
       // A stale instance's closer must never close — or re-render — a newer
       // instance's board (§1's ownership rule, as the bloom closer below
@@ -788,13 +875,13 @@ export class App {
       if (inside) return;
       if (this.ui.app !== null) this.closeApp();
       else if (this.ui.launcherOpen) this.closeLauncher();
-    });
+    }, { signal: this.signal });
     // The expanded face closes on outside click (§5): the bloom host's
     // capture-phase click drops a token (see the ledger above), and the
     // document-level closer consumes tokens before dismissing anything.
     document.getElementById("module-bloom")?.addEventListener("click", () => {
       this.bloomClickTokens++;
-    }, { capture: true });
+    }, { capture: true, signal: this.signal });
     document.addEventListener("click", () => {
       if (!this.ownsBoard()) return;
       if (this.bloomClickTokens > 0) {
@@ -808,7 +895,7 @@ export class App {
         this.ui.selected = null;
         this.render();
       }
-    });
+    }, { signal: this.signal });
     // The Forge peek passes pointers to the board. Dismiss outside the card
     // in capture, before a board action can replace the clicked DOM node;
     // the same click still reaches the board for selection or other actions.
@@ -816,7 +903,7 @@ export class App {
       if (!this.ownsBoard() || this.ui.modal !== "forge") return;
       if (event.composedPath().includes(this.els["modal-content"]!)) return;
       this.closeModal();
-    }, { capture: true });
+    }, { capture: true, signal: this.signal });
     // The Esc chain (§5): the modal eats it first; then the armed transient
     // modes unwind; then the expanded face — the selection is its open
     // state. Never while typing.
@@ -863,7 +950,7 @@ export class App {
         this.ui.selected = null;
         this.render();
       }
-    });
+    }, { signal: this.signal });
     // The face buttons' shift mode (issue #195): holding shift flips every
     // face button's label and tooltip to MAX board-wide — the Cookie
     // Clicker pattern, visible before the click. The click's own shift
@@ -877,14 +964,14 @@ export class App {
         this.ui.faceMax = true;
         this.render();
       }
-    });
+    }, { signal: this.signal });
     document.addEventListener("keyup", (event) => {
       if (event.key !== "Shift" || !this.ownsBoard()) return;
       if (this.ui.faceMax) {
         this.ui.faceMax = false;
         this.render();
       }
-    });
+    }, { signal: this.signal });
     // A shift released while the window lacks focus never fires keyup here:
     // the blur drops the mode so the labels can't stick MAX (issue #195).
     window.addEventListener("blur", () => {
@@ -892,10 +979,11 @@ export class App {
         this.ui.faceMax = false;
         this.render();
       }
-    });
+    }, { signal: this.signal });
   }
 
   tick(): void {
+    if (this.released) return;
     // Recurring goals roll on every tick, not only across flow boundaries:
     // a tab resting in upgrade mode must read the new day's state too —
     // the launcher's Goals entry with it (issue #149). Idempotent with the
@@ -950,6 +1038,12 @@ export class App {
 
   // The global mute (§5) gates every app sound, including the chime's
   // hidden re-fires. No volume slider, no per-sound mix.
+  private unlockAudio(): void {
+    const existing = this.audio;
+    this.audio = this.channels.unlockAudio(existing);
+    if (!existing && this.channels === browserChannels) this.ownedAudio = this.audio;
+  }
+
   private playChime(): void {
     if (this.state.muted) return;
     this.channels.playChime(this.audio);
@@ -968,7 +1062,7 @@ export class App {
     const after = displayedRates(this.state, this.state.mode === "flow");
     const newcomers = newChordTerms(before, after.allocation ? summaryTermsOf(after.allocation) : after.namedChords);
     if (newcomers.length === 0) return;
-    this.audio = this.channels.unlockAudio(this.audio);
+    this.unlockAudio();
     this.channels.playStrum(this.audio, newcomers);
   }
 
@@ -1044,7 +1138,7 @@ export class App {
     this.clearTransientUi();
     // The start gesture is the audio unlock (§4, §10): the session's
     // context is created or resumed here, so the chime can sound later.
-    this.audio = this.channels.unlockAudio(this.audio);
+    this.unlockAudio();
     this.signals = freshChimeState();
     this.askNotificationPermissionOnce(this.ui.chosenTarget);
     this.say(
@@ -1394,6 +1488,7 @@ export class App {
   // The live drop preview over the second layer (issue #199): hover state
   // changes refresh the land registers in place — never a render.
   setMutDropHover(mutatorId: string | null, pos: Hex | null): void {
+    if (this.released) return;
     this.ui.mutDropHover = mutatorId && pos ? { mutatorId, pos } : null;
     refreshMutPreview(this);
   }
@@ -2123,6 +2218,7 @@ export class App {
   // The repeatable stress ladder, in the browser: the same rows the
   // engine suite prints, through the same allocator.
   devBoardStress(): void {
+    if (this.released) return;
     if (!this.devBoard) return;
     if (this.devBoard.stressRunning) {
       this.devBoardCancelStress();
@@ -2216,7 +2312,9 @@ export class App {
   }
 
   render(): void {
+    if (this.released) return;
     render(this);
+    this.sweepListeners();
     this.syncTitle();
     document.body.classList.toggle("live", this.state.mode === "flow");
     // The second layer's grey (issue #199): while the Mutators tab stands,

@@ -1,37 +1,18 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
-import { readFileSync } from "node:fs";
-import { App } from "./app";
+import type { App } from "./app";
+import { createAppFixture } from "./testing/app-fixture";
 import { combineMutatorsPreview } from "../engine/actions";
 import { hex, sameHex } from "../engine/hex";
 import type { GameState, Hex, MutatorFamily, MutatorInstance, Rarity } from "../engine/types";
-import type { SignalChannels } from "./signals";
 
 // The Mutator Grid's UI (issue #199): the tabbed second layer, its slot
 // faces and presence outlines, the tray strip, the gestures, the unlock
 // arm, and the rolls — booted on the real index.html skeleton, every
 // landing routed through the engine actions from #198.
 
-function boot(channels?: SignalChannels): App {
-  const html = readFileSync("index.html", "utf8");
-  const body = html.slice(html.indexOf("<body>") + 6, html.lastIndexOf("</body>"));
-  document.body.innerHTML = body;
-  const els: Record<string, HTMLElement> = {};
-  for (const id of [
-    "console-session",
-    "console-apps",
-    "board-tools",
-    "thumb-bar",
-    "grid",
-    "status",
-    "modal",
-    "modal-content",
-  ]) {
-    const element = document.getElementById(id);
-    if (element) els[id] = element;
-  }
-  return new App(els, false, channels);
-}
+const fixture = createAppFixture();
+const boot = fixture.boot;
 
 let app: App;
 
@@ -81,12 +62,7 @@ beforeEach(() => {
   app = boot();
 });
 
-// Synthetic drags install a once-capture click suppressor with a timer;
-// drain it and drop any elementFromPoint mock the test left behind.
-afterEach(async () => {
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
-});
+afterEach(() => fixture.release());
 
 describe("the tab pair (issue #199)", () => {
   it("never shows before the entry purchase — the layer does not exist yet", () => {

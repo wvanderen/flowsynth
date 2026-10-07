@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
-import { App } from "./app";
+import type { App } from "./app";
+import { createAppFixture } from "./testing/app-fixture";
 import { addPracticeLog, archiveHabit, createHabit, selectHabit } from "../engine/habits";
 import { equipBuildNode } from "../engine/builds";
 import { createGoal, deleteGoal, goalSummary, accrueGoalProgress } from "../engine/goals";
@@ -27,26 +28,8 @@ import type { SignalChannels } from "./signals";
 // UI smoke tests: the console chrome, the enter-prompt gating, and the
 // catalog's shelf behavior, booted on the real index.html skeleton.
 
-function boot(channels?: SignalChannels, dev = false): App {
-  const html = readFileSync("index.html", "utf8");
-  const body = html.slice(html.indexOf("<body>") + 6, html.lastIndexOf("</body>"));
-  document.body.innerHTML = body;
-  const els: Record<string, HTMLElement> = {};
-  for (const id of [
-    "console-session",
-    "console-apps",
-    "board-tools",
-    "thumb-bar",
-    "grid",
-    "status",
-    "modal",
-    "modal-content",
-  ]) {
-    const element = document.getElementById(id);
-    if (element) els[id] = element;
-  }
-  return new App(els, dev, channels);
-}
+const fixture = createAppFixture();
+const boot = fixture.boot;
 
 let app: App;
 
@@ -60,14 +43,7 @@ beforeEach(() => {
   app = boot();
 });
 
-// A synthetic drag installs a once-capture click suppressor (killing the
-// browser's post-drop click) that removes itself on a timer; drain that
-// timer so it never swallows the next test's clicks, and drop any
-// elementFromPoint mock the test left behind.
-afterEach(async () => {
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
-});
+afterEach(() => fixture.release());
 
 describe("the console tiles", () => {
   it("three icon-only tiles — Habit, Notes, Goals; Time wears none (issue #148)", () => {
@@ -1101,7 +1077,7 @@ describe("the thumb bar (§7, portrait phone)", () => {
     back.click();
     expect(app.ui.modal).toBe("collection");
     // The chords row reaches the field guide the same way.
-    rows[1]!.click();
+    modal.querySelector<HTMLButtonElement>("#collection-chords")!.click();
     expect(app.ui.modal).toBe("library");
     document.getElementById("modal-back")!.click();
     expect(app.ui.modal).toBe("collection");

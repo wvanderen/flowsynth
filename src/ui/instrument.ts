@@ -31,14 +31,17 @@
 
 // The live bodies this document is currently portal-parented. Keyed by the
 // body element; the sweep walks it.
-const portaled = new Set<HTMLElement>();
+const portaled = new Map<HTMLElement, HTMLElement>();
+const bindings = new Map<ParentNode, { signal?: AbortSignal; release: () => void }>();
 
 // Reap portaled bodies whose trigger has left the document — a surface
 // rebuild replaces its markup and orphans whatever was open.
 function sweep(): void {
-  for (const body of [...portaled]) {
-    const id = body.id;
-    if (id && !document.querySelector(`[aria-describedby="${CSS.escape(id)}"]`)) {
+  for (const [host, binding] of bindings) {
+    if (host instanceof Node && !host.isConnected) binding.release();
+  }
+  for (const [body, tip] of portaled) {
+    if (!tip.isConnected) {
       body.remove();
       portaled.delete(body);
     }
@@ -77,7 +80,7 @@ function sync(tip: HTMLElement): void {
   const show = tip.classList.contains("over") || tip.classList.contains("focused") || tip.classList.contains("show");
   if (show && body.parentElement !== document.body) {
     document.body.appendChild(body);
-    portaled.add(body);
+    portaled.set(body, tip);
   }
   body.classList.toggle("inst-show", show);
   if (show) place(tip, body);
@@ -107,8 +110,28 @@ export function closeTooltips(host: ParentNode): void {
 // The tooltip layer's wiring for one surface. Attach once to the surface's
 // stable root — a rebuild replaces the root, so the listeners go with it,
 // and the attach sweep reaps what the replaced surface left behind.
-export function wireTooltips(host: ParentNode): void {
+export function wireTooltips(host: ParentNode, signal?: AbortSignal): () => void {
   sweep();
+  const existing = bindings.get(host);
+  if (existing && existing.signal === signal) return existing.release;
+  existing?.release();
+  if (signal?.aborted) return () => {};
+  const lifetime = new AbortController();
+  const release = () => {
+    // Remove portals before the host disappears; IDs may be reused by the
+    // next instrument, so a later orphan sweep cannot identify ownership.
+    for (const [body, tip] of portaled) {
+      if (host.contains(tip)) {
+        body.remove();
+        portaled.delete(body);
+      }
+    }
+    lifetime.abort();
+    signal?.removeEventListener("abort", release);
+    bindings.delete(host);
+  };
+  bindings.set(host, { ...(signal ? { signal } : {}), release });
+  signal?.addEventListener("abort", release, { once: true });
   const tipOf = (target: EventTarget | null): HTMLElement | null =>
     target instanceof HTMLElement ? target.closest<HTMLElement>(".inst-tip") : null;
   host.addEventListener("pointerover", (event) => {
@@ -116,25 +139,25 @@ export function wireTooltips(host: ParentNode): void {
     if (!tip || tip.contains((event as PointerEvent).relatedTarget as Node | null)) return;
     tip.classList.add("over");
     sync(tip);
-  });
+  }, { signal: lifetime.signal });
   host.addEventListener("pointerout", (event) => {
     const tip = tipOf(event.target);
     if (!tip || tip.contains((event as PointerEvent).relatedTarget as Node | null)) return;
     tip.classList.remove("over");
     sync(tip);
-  });
+  }, { signal: lifetime.signal });
   host.addEventListener("focusin", (event) => {
     const tip = tipOf(event.target);
     if (!tip) return;
     tip.classList.add("focused");
     sync(tip);
-  });
+  }, { signal: lifetime.signal });
   host.addEventListener("focusout", (event) => {
     const tip = tipOf(event.target);
     if (!tip || tip.contains((event as PointerEvent).relatedTarget as Node | null)) return;
     tip.classList.remove("focused");
     sync(tip);
-  });
+  }, { signal: lifetime.signal });
   host.addEventListener("click", (event) => {
     if (event.target instanceof HTMLElement && event.target.closest(".inst-tip-trigger")) {
       const tip = event.target.closest<HTMLElement>(".inst-tip")!;
@@ -152,7 +175,7 @@ export function wireTooltips(host: ParentNode): void {
     // A tap anywhere else in the surface dismisses: the tooltip is
     // transient state, not furniture.
     closeTooltips(host);
-  });
+  }, { signal: lifetime.signal });
   // A tap that never enters the surface dismisses too — a tooltip
   // must not outlive the tap that moves the pointer elsewhere — and the
   // same pass reaps whatever orphan a rebuild left behind.
@@ -163,8 +186,7 @@ export function wireTooltips(host: ParentNode): void {
       if (event.target instanceof Node && host.contains(event.target)) return;
       closeTooltips(host);
       sweep();
-    },
-    true,
+    }, { capture: true, signal: lifetime.signal },
   );
   // A scroll anywhere in the surface re-places the visible bodies — a
   // pinned tooltip must never detach from its trigger.
@@ -175,8 +197,7 @@ export function wireTooltips(host: ParentNode): void {
         const body = bodyOf(tip);
         if (body) place(tip, body);
       }
-    },
-    true,
+    }, { capture: true, signal: lifetime.signal },
   );
   document.addEventListener("keydown", (event) => {
     if (host instanceof Node && !host.isConnected) return;
@@ -187,5 +208,6 @@ export function wireTooltips(host: ParentNode): void {
     // the sheet beneath stays until a second Escape.
     event.stopPropagation();
     closeTooltips(host);
-  }, true);
+  }, { capture: true, signal: lifetime.signal });
+  return release;
 }

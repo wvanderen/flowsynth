@@ -21,6 +21,6 @@ if (dev) {
   (window as unknown as Record<string, unknown>).__flowsynth = app;
 }
 
-document.getElementById("modal")?.addEventListener("click", (event) => {
+app.listen(document.getElementById("modal"), "click", (event) => {
   if (event.target === event.currentTarget) app.closeModal();
 });

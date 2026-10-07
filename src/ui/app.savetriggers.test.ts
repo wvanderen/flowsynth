@@ -1,29 +1,14 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
-import { readFileSync } from "node:fs";
-import { App } from "./app";
+import type { App } from "./app";
+import { createAppFixture } from "./testing/app-fixture";
 import { STORAGE_KEY, serialize } from "../engine/save";
 import { startSession } from "../engine/actions";
 
-// Issue #128's positive trigger coverage: each of the three save triggers
-// writes through when the tab holds the newest state. These tests live in
-// their own file because they dispatch real window events, which reach
-// every App instance still bound to the window; a file that never forges
-// the suite's future-stamped test saves (Date.now() + 60_000) keeps every
-// earlier tab's guard knowledge in the real past, so the tab under test —
-// the slot's latest writer — is the only one whose save can land.
-
-function boot(): App {
-  const html = readFileSync("index.html", "utf8");
-  const body = html.slice(html.indexOf("<body>") + 6, html.lastIndexOf("</body>"));
-  document.body.innerHTML = body;
-  const els: Record<string, HTMLElement> = {};
-  for (const id of ["console-session", "console-apps", "board-tools", "thumb-bar", "grid", "status", "modal", "modal-content"]) {
-    const element = document.getElementById(id);
-    if (element) els[id] = element;
-  }
-  return new App(els, false, undefined);
-}
+// Real browser-event coverage for the shared save slot. Every instance
+// belongs to the fixture and is released after its scenario.
+const fixture = createAppFixture();
+const boot = fixture.boot;
 
 // happy-dom exposes visibilityState as a prototype getter; an own
 // property override flips it per test (restored after each).
@@ -38,10 +23,7 @@ beforeEach(() => {
   app = boot();
 });
 
-afterEach(async () => {
-  setVisibility("visible");
-  await new Promise((resolve) => setTimeout(resolve, 0));
-});
+afterEach(() => fixture.release());
 
 const storedNous = () => JSON.parse(localStorage.getItem(STORAGE_KEY)!).state.nous as number;
 
