@@ -98,7 +98,7 @@ _Avoid_: pop-up, modal
 The popped bloom standing for its module: the origin cell renders vacated while the bloom stands, since the bloom repeats every line the face carries.
 
 **Tray**:
-The board-surface inventory as an always-open pinned column docked at the board's right edge in upgrade mode, dual-face under the board tabs' Modules/Mutators switch — the one switch, which the column carries no copy of (issue #272). The Modules face holds the inventory: drag a module off the board into it to retrieve — the chord-breaking gesture, shared with right-click retrieve — and click an item then a cell to place; occupied placement swaps. The Mutators face is the Mutator tray (its own entry). Tiles wear the minimal mark: a hexagon outlined in the module's category hue, or the arete register for mutators, with the glyph alone — the full face belonging to the board and the expanded face (ADR-0027). Flow locks the board and hides the column with it; on portrait phone the column unfolds and the thumb bar's Inventory segment taps the same tray open as a dual-face sheet — the switch rides the sheet there, its tiles keep the gestures, and a live drag carries between board and sheet both ways. There is no management view and no collapse.
+The board-surface inventory as an always-open pinned column docked at the board's right edge in upgrade mode, dual-face under the board tabs' Modules/Mutators switch — the one switch, which the column carries no copy of (issue #272). The Modules face holds the inventory: drag a module off the board into it to retrieve — the chord-breaking gesture, shared with right-click retrieve — and click an item then a cell to place; occupied placement swaps. The Mutators face is the Mutator tray (its own entry). Tiles wear the minimal mark: a hexagon outlined in the module's category hue, or the arete register for mutators, with the glyph alone — the full face belonging to the board and the expanded face (ADR-0027). Flow locks the board and hides the column with it; on portrait phone the column unfolds and the thumb bar's Inventory segment taps the same tray open as a scrimless dual-face sheet — the board behind stays live; the switch rides the sheet there, its tiles keep the gestures at one size, and a live drag carries between board and sheet both ways. There is no management view and no collapse.
 _Avoid_: inventory panel, management view, collapsible tray, second switch
 
 **Mutator Grid**:
@@ -114,8 +114,8 @@ An item of the Mutator Grid: typed, carrying rarity, sitting in a Mutator slot t
 _Avoid_: enhancement (the pre-design name), gem, affix
 
 **Mutator tray**:
-The Mutator Grid's inventory — the tray column's Mutators face, switched by the board tabs: minted mutators wait here, a click then a slot places, and a drag or right-click retrieves. On portrait phone it re-pins as the strip above the thumb bar, and the tray sheet's Mutators face carries the same tiles.
-_Avoid_: second inventory
+The Mutator Grid's inventory — the tray column's Mutators face, switched by the board tabs: minted mutators wait here, a click then a slot places, and a drag or right-click retrieves. On portrait phone the tray sheet's Mutators face carries the same tiles; no always-on strip stands there.
+_Avoid_: second inventory, unlock card
 
 ### Resources and production
 
@@ -392,7 +392,7 @@ The catalog's `◇ Arete` face. It appears with the first Arete the first presti
 _Avoid_: prestige sheet, prestige tree, skill tree
 
 **Mutator tree**:
-The Arete Catalog's first tree. Its purchases are the entry (activates the Mutator Grid, grants the Mutator Forge module itself, unlocks the first Mutator slot, and performs the first Mutator roll) and the pricier purchase that joins the Mutator Forge type to the roll pool. Slot unlocks past the first are bought on the Mutators layer, armed like a cell purchase and priced on the tree's escalating ladder. The type is otherwise Catalog-exclusive.
+The Arete Catalog's first tree. Its purchases are the entry (activates the Mutator Grid, grants the Mutator Forge module itself, unlocks the first Mutator slot, and performs the first Mutator roll) and the pricier purchase that joins the Mutator Forge type to the roll pool. Slot unlocks past the first are armed from the dock's Add in mutator mode — like a cell purchase, priced on the tree's escalating ladder. The type is otherwise Catalog-exclusive.
 _Avoid_: enhancement tree, gem tree
 
 **Row unlock**:

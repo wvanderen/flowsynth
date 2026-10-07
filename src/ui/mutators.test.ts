@@ -364,19 +364,39 @@ describe("the gestures (issue #199)", () => {
   }
 });
 
-describe("the slot unlock (issue #199)", () => {
-  it("the tray's unlock button arms the gesture; the pill carries the price", () => {
+describe("the slot unlock (issue #199, re-docked by the #272 review)", () => {
+  it("Add arms the unlock in mutator mode; the pill carries the price and no tray card does", () => {
     seedMutatorEra();
     app.mutSetLayer("mutators");
-    document.getElementById("mut-unlock")!.click();
+    // The unlock lives in Add, never a tray card.
+    expect(document.getElementById("mut-unlock")).toBeNull();
+    const add = document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!;
+    expect(add.getAttribute("aria-label")).toBe("Add");
+    expect(add.title).toContain("Unlock a Mutator slot — 3 Arete");
+    add.click();
     expect(app.ui.mutUnlockArmed).toBe(true);
     const pill = document.getElementById("mut-unlock-pill")!;
     expect(pill.hidden).toBe(false);
     expect(pill.textContent).toContain("Unlock Mutator slot");
     expect(pill.textContent).toContain("3 Arete");
-    expect(document.getElementById("mut-unlock")!.textContent).not.toContain("Arete");
+    // The armed Add wears the arm: active, cancel-worded.
+    const armed = document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!;
+    expect(armed.classList.contains("active")).toBe(true);
+    expect(armed.title).toContain("Pick an eligible cell · Esc cancels");
     app.mutCancelGestures();
-    expect(document.getElementById("mut-unlock")!.textContent).toContain("3 Arete");
+    expect(document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!.title).toContain("Unlock a Mutator slot");
+  });
+
+  it("Add in module mode still arms the cell purchase — the mode directs the arm", () => {
+    seedMutatorEra();
+    app.state.nous = 500;
+    app.render();
+    const add = document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!;
+    expect(add.title).toContain("Add — ");
+    add.click();
+    expect(app.ui.buyingCell).toBe(true);
+    expect(app.ui.mutUnlockArmed).toBe(false);
+    app.cancelCellPurchase();
   });
 
   it("the entry's first slot is free and sits on any owned cell; eligible cells pulse", () => {
@@ -385,8 +405,9 @@ describe("the slot unlock (issue #199)", () => {
     s.catalogEntryOwned = true;
     s.arete = 5;
     app.render();
+    app.mutSetLayer("mutators");
     app.mutArmUnlock();
-    expect(app.ui.mutLayer).toBe("mutators");
+    expect(app.ui.mutUnlockArmed).toBe(true);
     expect(document.getElementById("mut-unlock-pill")!.textContent).toContain("free");
     const pulses = [...document.querySelectorAll("#grid .mut-unlock-target")];
     expect(pulses).toHaveLength(3);
@@ -404,6 +425,7 @@ describe("the slot unlock (issue #199)", () => {
     s.arete = 10;
     s.mutatorSlots = [hex(0, 0)];
     app.render();
+    app.mutSetLayer("mutators");
     app.mutArmUnlock();
     // (1,0) is adjacent to the patch: 2 Arete.
     unlockNode(1, 0).dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -540,8 +562,8 @@ describe("the tray column (issue #272)", () => {
     const tile = mutTray.querySelector<HTMLButtonElement>('[data-mut-tray="mu2"]')!;
     expect(tile).not.toBeNull();
     expect(tile.querySelector(".mut-tile-hex")).not.toBeNull();
-    // The unlock arm rides the face's end.
-    expect(mutTray.querySelector("#mut-unlock")).not.toBeNull();
+    // The unlock arm lives in Add — no tray card carries it.
+    expect(mutTray.querySelector("#mut-unlock")).toBeNull();
     // The column wears no second switch — the board tabs are the one.
     expect(document.getElementById("tray-head")).toBeNull();
     expect(column.querySelectorAll("[data-mut-layer]")).toHaveLength(0);

@@ -1187,33 +1187,71 @@ describe("the thumb bar (§7, portrait phone)", () => {
     app.mutCancelGestures();
   });
 
-  it("the tray sheet's tiles drag: the backdrop turns drag-through, and a drop back onto the sheet retrieves", async () => {
+  it("the tray sheet stands scrimless — the board behind stays live, and a drop onto the sheet retrieves", async () => {
     app.openModal("inventory");
-    const modal = document.getElementById("modal")!;
+    const backdrop = document.getElementById("modal")!;
+    // Scrimless and click-through: the sheet is a docked panel, never a
+    // blocking dialog (issue #272 review).
+    expect(backdrop.classList.contains("peek-tray")).toBe(true);
+    expect(backdrop.classList.contains("drag-through")).toBe(false);
     const board = app.state.modules[0]!;
     expect(board.pos).not.toBeNull();
     // The drag's release suppresses the synthetic post-drop click; drain
     // the suppressor before this test ends.
     try {
-      // A sheet tile's drag marks the visible backdrop drag-through while
-      // it moves — the scrim stops eating the board hits beneath.
+      // A board drop onto the open sheet retrieves — the chord-breaking
+      // gesture against the sheet, with the board live behind it.
       const cellNode = () => document.querySelector<SVGGElement>('[data-cell="0,0"]')!;
       document.elementFromPoint = () => cellNode();
       cellNode().dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
       document.dispatchEvent(new MouseEvent("pointermove", { clientX: 160, clientY: 90 }));
       expect(document.querySelector(".drag-ghost")).not.toBeNull();
-      expect(modal.classList.contains("drag-through")).toBe(true);
-      // The drop back onto the open sheet retrieves — the chord-breaking
-      // gesture against the sheet.
       document.elementFromPoint = () => document.getElementById("modal-content")!;
       document.dispatchEvent(new MouseEvent("pointerup", { clientX: 200, clientY: 600 }));
       expect(board.pos).toBeNull();
-      expect(modal.classList.contains("drag-through")).toBe(false);
       expect(app.ui.modal).toBe("inventory");
+      // Another modal kind drops the scrimless standing.
+      app.openModal("forge");
+      expect(backdrop.classList.contains("peek-tray")).toBe(false);
+      app.closeModal();
     } finally {
       await new Promise((resolve) => setTimeout(resolve, 0));
       delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
     }
+  });
+
+  it("Add arms the mode's action — the cell in module mode, the slot unlock in mutator mode", () => {
+    const s = app.state;
+    s.mode = "upgrade";
+    s.catalogEntryOwned = true;
+    s.mutatorSlots = [hex(0, 0)];
+    s.mutators = [{ id: "mu1", family: "power", rarity: "common", pos: hex(0, 0) }];
+    app.render();
+    // Module mode: the cell purchase (the icon prices at zero ν, so grant
+    // the first cell's cost — the same affordably-armed shape as desktop).
+    app.state.nous = BALANCE.cellFirstCost;
+    app.render();
+    document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!.click();
+    expect(app.ui.buyingCell).toBe(true);
+    expect(app.ui.mutUnlockArmed).toBe(false);
+    app.cancelCellPurchase();
+    // Mutator mode: the slot unlock, armed from Add — never a tray card.
+    app.mutSetLayer("mutators");
+    app.render();
+    const add = document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!;
+    expect(add.title).toContain("Unlock a Mutator slot — 2 Arete");
+    add.click();
+    expect(app.ui.mutUnlockArmed).toBe(true);
+    expect(app.ui.buyingCell).toBe(false);
+    expect(document.getElementById("mut-unlock-pill")!.hidden).toBe(false);
+    // The Add tool's tray-sheet pass: arming from the thumb bar puts the
+    // sheet away so the pulsing targets stand on a visible board.
+    app.mutCancelGestures();
+    app.openModal("inventory");
+    document.querySelector<HTMLButtonElement>('#thumb-bar [data-op="cell"], #board-tools [data-op="cell"]')!.click();
+    expect(app.ui.mutUnlockArmed).toBe(true);
+    expect(app.ui.modal).toBeNull();
+    app.mutCancelGestures();
   });
 
   it("the chord library's door and cards (issue #230)", () => {

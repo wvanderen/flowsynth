@@ -250,9 +250,11 @@ function mutSlotFaceHtml(app: App, pos: Hex, snapshot: RateSnapshot): string {
 
 /* ── The Mutator tray ─────────────────────────────────
    The second layer's inventory (issue #272): the tray column's Mutators
-   face at every wide width — the head above names it — re-pinned as the
-   strip above the thumb bar on portrait phone. The unlock button rides
-   its end until Add takes the arm (#273). */
+   face at every wide width — minted mutators wait here, and the
+   placement, combine, and retrieval gestures live here. The slot unlock
+   is Add's arm, not a tray card (the #272 review); on portrait phone the
+   face hides with the column — the tray sheet's Mutators face carries
+   the same tiles there. */
 
 export function renderMutatorTray(app: App): void {
   const host = document.getElementById("mutator-tray");
@@ -265,8 +267,7 @@ export function renderMutatorTray(app: App): void {
     return;
   }
   const tray = state.mutators.filter((m) => m.pos === null);
-  const price = mutatorSlotPrice(state);
-  const key = JSON.stringify([tray.map((m) => `${m.id}:${m.rarity}:${m.family}`), ui.mutArmedTray, ui.mutUnlockArmed, state.mutatorSlots.length, state.arete]);
+  const key = JSON.stringify([tray.map((m) => `${m.id}:${m.rarity}:${m.family}`), ui.mutArmedTray]);
   if (host.dataset.renderKey === key) return;
   host.dataset.renderKey = key;
   host.hidden = false;
@@ -277,14 +278,12 @@ export function renderMutatorTray(app: App): void {
             `<button class="inventory-tile mut-tile${ui.mutArmedTray === item.id ? " armed" : ""}" data-mut-tray="${item.id}" data-rarity="${item.rarity}" title="${FAMILY_WORD[item.family]} · ${RARITY_LABEL[item.rarity]} · ${mutatorEffectText(item.family, item.rarity)} — tap, then a slot">${mutatorTileSvg(item)}</button>`,
         )
         .join("") || `<span class="tray-empty">minted mutators wait here</span>`
-    }</div>
-    <button class="mut-unlock" id="mut-unlock">Unlock slot${ui.mutUnlockArmed ? "" : ` · <span class="mono">${state.mutatorSlots.length === 0 ? "free" : `${price} Arete`}</span>`}</button>`;
+    }</div>`;
   host.querySelectorAll<HTMLButtonElement>("[data-mut-tray]").forEach((button) => {
     const id = button.getAttribute("data-mut-tray")!;
     button.addEventListener("click", () => app.mutArmTray(id));
     bindMutatorDrag(app, button, id, "tray");
   });
-  document.getElementById("mut-unlock")?.addEventListener("click", () => app.mutArmUnlock());
 }
 
 /* ── The unlock pill ──────────────────────────────────

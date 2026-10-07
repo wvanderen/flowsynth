@@ -1925,7 +1925,6 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
 .mutator-tray[hidden] { display: none; }
 .mutator-tray.drag-over { border-color: var(--charge); background: var(--charge-tint); }
 .mutator-tray .tray-items { width: 100%; }
-.mutator-tray .mut-unlock { white-space: normal; width: 100%; text-align: center; }
 .mut-tile {
   all: unset;
   cursor: pointer;
@@ -1939,17 +1938,6 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
 .mut-tile .mut-tile-glyph { color: currentColor; }
 .mut-tile .mut-tile-ticks { fill: currentColor; }
 .mut-tile .mut-tile-effect { font-size: 11.5px; fill: var(--muted); }
-.mut-unlock {
-  all: unset;
-  cursor: pointer;
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--arete);
-  color: var(--arete);
-  font: 600 10.5px var(--mono);
-  white-space: nowrap;
-}
-.mut-unlock:hover { background: var(--arete-faint); }
 
 /* The armed unlock's pill: one cost spot over the board's top edge, the
    armed-purchase pattern's second-layer voice. */
@@ -2074,12 +2062,12 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
    centered card. Outside clicks, Esc, and ✕ dismiss. */
 .modal-backdrop.peek { background: transparent; pointer-events: none; }
 .modal-backdrop.peek .modal { pointer-events: auto; }
-/* Drag-through (issue #272 review): while a drag is live over the open
-   tray sheet, the scrim stops intercepting so drops resolve against the
-   board beneath — the sheet itself keeps its events, so a drop back onto
-   it retrieves. */
-.modal-backdrop.drag-through { pointer-events: none; }
-.modal-backdrop.drag-through .modal { pointer-events: auto; }
+/* The tray sheet's scrimless standing (issue #272 review): the phone tray
+   is a docked panel, never a blocking dialog — the board behind stays
+   fully live (clicks, drags to and from the sheet) while it stands. The
+   ✕, Esc, and a second Inventory tap put it away. */
+.modal-backdrop.peek-tray { background: transparent; pointer-events: none; }
+.modal-backdrop.peek-tray .modal { pointer-events: auto; }
 .modal {
   --modal-pad: 26px;
   width: min(680px, 100%);
@@ -2539,27 +2527,12 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
   body.bloom-sheet-open .zoom-cluster { bottom: 150px; }
   .module-bloom.sheet { bottom: 56px !important; }
   .chord-readout { top: 46px; right: 10px; }
-  /* The Mutator layer on phone (issue #199): the tray re-pins as the
-     strip — the lane above the thumb bar, edge to edge like the horizon
-     bar — and the tabs hug the board's top-left corner. */
+  /* The Mutator layer on phone (issue #199, reworked by the #272
+     review): the always-on strip card is gone — the tray sheet's
+     Mutators face carries the tiles, and Add arms the slot unlock — so
+     only the tabs hug the board's top-left corner. */
   .mut-tabs { left: 8px; top: 52px; }
-  .mutator-tray {
-    position: absolute;
-    z-index: 22;
-    flex-direction: row;
-    bottom: 118px;
-    left: 12px;
-    right: 58px;
-    width: auto;
-    max-width: none;
-    padding: 8px 12px;
-    justify-content: flex-start;
-    overflow-x: auto;
-    overflow-y: hidden;
-  }
-  .mutator-tray .tray-items { flex-direction: row; width: auto; min-width: 60px; }
-  .mutator-tray .tray-empty { white-space: nowrap; }
-  .mutator-tray .mut-unlock { white-space: nowrap; width: auto; }
+  .mutator-tray { display: none !important; }
   .mut-unlock-pill { top: 46px; }
   .cell-arm-pill { top: 46px; }
   .mut-popover { width: 200px; }
@@ -2720,6 +2693,16 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 }
 /* The sheet's retrieval highlight — the column's drag-over voice. */
 .modal.drag-over { border-color: var(--charge); }
+/* Both faces' tiles present at one size in the sheet, and a press on a
+   tile is a drag, never a scroll (touch-action) — the sheet's gestures
+   are the column's. */
+.tray-sheet-tiles .mut-tile,
+.inventory-sheet-grid .inventory-tile {
+  width: 100%;
+  max-width: 112px;
+  touch-action: none;
+}
+.tray-sheet-tiles .mut-tile svg { width: 100%; }
 
 /* ── The catalog (issue #271) ────────────────────────────────────────── */
 /* The one tabbed shop behind the Catalog door: a fixed clipped panel —

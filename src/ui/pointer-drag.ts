@@ -1,17 +1,5 @@
 import { suppressNextClick } from "./click";
 
-// While a drag is live over an open sheet (the phone tray sheet), the
-// backdrop's scrim would eat every board hit — drops resolve through
-// elementFromPoint, which sees only the topmost element. A live drag
-// marks the visible backdrop drag-through: the scrim stops intercepting,
-// the sheet itself keeps its events, so a drop on the board lands and a
-// drop back onto the sheet retrieves. Same shape as the scrimless peek
-// (#193); removed the moment the drag ends.
-function setDragThrough(on: boolean): void {
-  const backdrop = document.getElementById("modal");
-  if (backdrop && !backdrop.hidden) backdrop.classList.toggle("drag-through", on);
-}
-
 // Both grids share pointer ownership and cleanup; their targeting stays local.
 export function startPointerDrag(event: PointerEvent, handlers: {
   start: () => HTMLElement;
@@ -26,7 +14,6 @@ export function startPointerDrag(event: PointerEvent, handlers: {
     if (!ghost && Math.hypot(next.clientX - event.clientX, next.clientY - event.clientY) > 6) {
       ghost = handlers.start();
       document.body.append(ghost);
-      setDragThrough(true);
     }
     if (!ghost) return;
     ghost.style.left = `${next.clientX}px`;
@@ -41,7 +28,6 @@ export function startPointerDrag(event: PointerEvent, handlers: {
     document.removeEventListener("pointercancel", cancel);
     const moved = ghost !== null;
     ghost?.remove();
-    setDragThrough(false);
     handlers.cleanup();
     if (moved) suppressNextClick();
     if (next && moved) handlers.drop(next);

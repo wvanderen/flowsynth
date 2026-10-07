@@ -1203,9 +1203,10 @@ export class App {
     this.render();
   }
 
-  // The slot unlock's arm (issue #199): one pill carries the price and
-  // eligible cells pulse; the click resolution lands in mutPickSlot. The
-  // gesture lives on the Mutators layer, so arming walks there first.
+  // The slot unlock's arm (issue #199, re-docked by the #272 review): Add
+  // arms it in mutator mode — one pill carries the price and eligible
+  // cells pulse; the click resolution lands in mutPickSlot. The arm never
+  // walks the player to the Mutators face; the mode directs it.
   mutArmUnlock(): void {
     if (this.state.mode !== "upgrade") {
       this.say("Arete is spent between sessions.");
@@ -1216,7 +1217,6 @@ export class App {
       return;
     }
     this.mutDisarm();
-    this.ui.mutLayer = "mutators";
     this.ui.mutUnlockArmed = true;
     this.render();
   }

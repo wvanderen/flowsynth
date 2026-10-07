@@ -54,6 +54,7 @@ import {
   mutatorBloomLineHtml,
   mutatorEffectText,
   mutGridDecorations,
+  mutatorSlotPrice,
   mutatorTileInner,
   mutatorTileSvg,
   mutTabPairHtml,
@@ -830,28 +831,50 @@ function toolActions(): ToolAction[] {
       },
     },
     {
-      // Add (issue #272's dock reading; the mode-directed arming — the
-      // slot unlock in mutator mode — lands with #273): the next cell's
-      // one armed purchase.
+      // Add, mode-directed (issue #272 review; #246's contract): module
+      // mode arms the next cell's purchase, mutator mode arms the slot
+      // unlock — Arete slot unlocking lives in Add, never a tray card.
+      // Arming from the thumb bar puts the tray sheet away, so the
+      // pulsing targets stand on a visible board.
       op: "cell",
       svg: CELL_TOOL_SVG,
       label: "Add",
       run: (app) => {
-        if (app.ui.buyingCell) app.cancelCellPurchase();
-        else app.armCellPurchase();
+        const mutatorArm = app.state.mode === "upgrade" && app.state.catalogEntryOwned && app.ui.mutLayer === "mutators";
+        if (app.ui.modal === "inventory") app.closeModal();
+        if (mutatorArm) {
+          if (app.ui.mutUnlockArmed) app.mutCancelGestures();
+          else app.mutArmUnlock();
+        } else if (app.ui.buyingCell) {
+          app.cancelCellPurchase();
+        } else {
+          app.armCellPurchase();
+        }
       },
-      title: (app) => (app.state.mode !== "upgrade" ? "Add — purchases happen between sessions" : app.ui.buyingCell ? "Pick a frontier hex · Esc cancels" : "Add a cell"),
+      title: (app) =>
+        app.state.mode !== "upgrade"
+          ? "Add — purchases happen between sessions"
+          : app.state.catalogEntryOwned && app.ui.mutLayer === "mutators"
+            ? app.ui.mutUnlockArmed
+              ? "Pick an eligible cell · Esc cancels"
+              : `Unlock a Mutator slot — ${mutatorSlotPrice(app.state) === 0 ? "the first is free" : `${formatInt(mutatorSlotPrice(app.state))} Arete`}`
+            : app.ui.buyingCell
+              ? "Pick a frontier hex · Esc cancels"
+              : "Add a cell",
       disabled: (app) => app.state.mode !== "upgrade",
-      active: (app) => app.ui.buyingCell,
+      active: (app) => app.ui.buyingCell || app.ui.mutUnlockArmed,
     },
     {
       // The tray's phone face (issue #272): the wide-surface dock lost the
       // Inventory icon when the column stopped collapsing — the thumb bar's
-      // segment taps the same inventory open as a sheet.
+      // segment toggles the tray sheet.
       op: "inventory",
       svg: INVENTORY_TOOL_SVG,
       label: "Inventory",
-      run: (app) => app.openModal("inventory"),
+      run: (app) => {
+        if (app.ui.modal === "inventory") app.closeModal();
+        else app.openModal("inventory");
+      },
       badge: (app) => {
         const trayCount = app.state.modules.filter((m) => m.pos === null).length;
         return trayCount > 0 ? `<b class="tool-badge mono">${trayCount}</b>` : "";
@@ -901,7 +924,7 @@ function renderTools(app: App, projected: RateSnapshot): void {
   const dockActions = actions.filter((action) => action.op !== "collection" && action.op !== "inventory");
   const forgeCount = state.bankedRolls.length;
   const trayCount = state.modules.filter((m) => m.pos === null).length;
-  const key = JSON.stringify(["dock", state.mode, forgeCount, ui.buyingCell, trayCount]);
+  const key = JSON.stringify(["dock", state.mode, ui.mutLayer, ui.mutUnlockArmed, forgeCount, ui.buyingCell, trayCount]);
 
   for (const [target, list] of [
     [host, dockActions],
@@ -965,9 +988,14 @@ function renderTools(app: App, projected: RateSnapshot): void {
     if (cellButton && state.mode === "upgrade") {
       const action = actions.find((a) => a.op === "cell")!;
       cellButton.title = action.title(app, projected);
-      cellButton.classList.toggle("active", ui.buyingCell);
-      cellButton.setAttribute("aria-pressed", String(ui.buyingCell));
-      if (ui.buyingCell) {
+      // The Add icon carries the mode's arm: the cell price in module
+      // mode, the slot-unlock arm in mutator mode (issue #272 review).
+      const mutatorArm = state.catalogEntryOwned && ui.mutLayer === "mutators";
+      cellButton.classList.toggle("active", mutatorArm ? ui.mutUnlockArmed : ui.buyingCell);
+      cellButton.setAttribute("aria-pressed", String(mutatorArm ? ui.mutUnlockArmed : ui.buyingCell));
+      if (mutatorArm) {
+        cellButton.disabled = false;
+      } else if (ui.buyingCell) {
         cellButton.disabled = false;
       } else {
         const price = cellCost(state.cellsBought);
@@ -3247,6 +3275,11 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   // The catalog is the one fixed-frame sheet (issue #271): the class swaps
   // the free modal box for the 620×600 clipped panel (74vh phone sheet).
   content.classList.toggle("catalog-modal", kind === "catalog");
+  // The tray sheet is the one scrimless modal (issue #272 review): the
+  // board behind stays visible, clickable, and draggable-through — the
+  // sheet is a docked panel, never a blocking dialog. The backdrop keeps
+  // its class fresh so another kind's scrim returns.
+  backdrop.classList.toggle("peek-tray", kind === "inventory");
   if (kind === "settings") renderSettingsModal(app, content);
   else if (kind === "catalog") renderCatalogModal(app, content);
   else if (kind === "forge") renderForgeModal(app, content, projected);
