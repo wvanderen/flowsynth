@@ -7,6 +7,14 @@ worktree `/Users/eggfam/.t3/worktrees/flowsynth/t3code-9243d257`, branch
 server serves the working tree). Dev-scenario state was staged through the
 `?dev=1` handle and hard-reset after the captures.
 
+- **store-arete-tab-open-from-start.png** — the #292 store review's decision
+  (ADR-0044 amendment): on a fresh, never-prestiged save the Catalog's
+  arete tab stands enabled, and its face is the entry purchase screen —
+  `Unlock Mutator Layer · 1 Arete` with the price muted (asserted live:
+  buy disabled, tab enabled, ν⇄◇ switching answers both ways). The ledger's
+  dim `— ◇` telegraph and the board's row-unlock banners keep their
+  first-reset gate; only the tab opened.
+
 ## What the captures show
 
 - **desktop-pre-entry-locked-tab.png** — pre-entry upgrade mode: the board

@@ -3384,7 +3384,6 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                   app.state.capacityDiscounts,
                   // Module-upgrade rows reprice with levels, moves, and the roster.
                   app.state.modules.map((m) => `${m.id}:${m.level}:${m.rarity}:${m.pos ? "d" : "i"}`).join("|"),
-                  catalogOpen(app.state),
                   app.state.arete,
                   app.state.catalogEntryOwned,
                   app.state.rollPoolJoined,
@@ -3843,12 +3842,13 @@ function areteBuyButtonHtml(app: App, id: string, price: number): string {
 function renderCatalogModal(app: App, content: HTMLElement): void {
   const { ui } = app;
   const areteFace = ui.catalogFace === "arete";
+  // The arete tab stands open from the start (issue #292 review): before
+  // the first prestige its face is the entry purchase screen — the preview
+  // of the future entry, price muted — never a locked tab.
   const faceTab = (face: "nous" | "arete", mark: string, word: string): string =>
-    `<button class="catalog-face-tab" data-catalog-face="${face}" aria-pressed="${ui.catalogFace === face}"${
-      face === "arete" && !catalogOpen(app.state)
-        ? ' disabled title="Banked by prestige — the Arete face appears at the first reset"'
-        : ` title="${face === "nous" ? "The nous shop" : "The Arete catalog"}"`
-    }>${mark}<span>${word}</span></button>`;
+    `<button class="catalog-face-tab" data-catalog-face="${face}" aria-pressed="${ui.catalogFace === face}" title="${
+      face === "nous" ? "The nous shop" : "The Arete catalog"
+    }">${mark}<span>${word}</span></button>`;
   const identity = areteFace
     ? `<span class="catalog-identity" aria-hidden="true">${ARETE_SVG}</span>`
     : `<span class="catalog-identity catalog-identity-nous" aria-hidden="true"><b class="mono">ν</b></span>`;

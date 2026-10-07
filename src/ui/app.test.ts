@@ -2887,17 +2887,24 @@ describe("the catalog door (issue #271)", () => {
     expect(body).toContain("overflow-y: auto");
   });
 
-  it("pre-prestige the arete face does not exist: its tab stands locked and the door falls back to nous", () => {
-    // The door's own fallback: pre-prestige the face cannot stand, and a
-    // stale memory can never open it.
+  it("the arete tab stands open from the start: pre-prestige its face is the entry purchase screen (#292 review)", () => {
+    // The door itself still follows the mode — module mode lands on ν.
     app.state.prestiges = 0;
     app.ui.catalogFace = "arete";
     app.openModal("catalog");
     expect(app.ui.catalogFace).toBe("nous");
+    expect(document.querySelector('[data-buy="generator"]')).not.toBeNull();
+    // The tab is live, not locked: switching shows the entry purchase
+    // screen, its price muted — Arete cannot exist before the first reset.
     const areteTab = document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!;
-    expect(areteTab.disabled).toBe(true);
-    expect(areteTab.title).toContain("prestige");
-    // The nous face is the shop: the shelf's offers stand.
+    expect(areteTab.disabled).toBe(false);
+    areteTab.click();
+    expect(app.ui.catalogFace).toBe("arete");
+    expect(document.querySelector(".entry-screen")).not.toBeNull();
+    expect((document.getElementById("buy-arete-entry") as HTMLButtonElement).disabled).toBe(true);
+    // And back — both faces answer at every progression state.
+    switchFace("nous");
+    expect(app.ui.catalogFace).toBe("nous");
     expect(document.querySelector('[data-buy="generator"]')).not.toBeNull();
   });
 
