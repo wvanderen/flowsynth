@@ -300,7 +300,12 @@ export class App {
   private currentState: GameState = createInitialState();
   get state(): GameState { return this.currentState; }
   set state(state: GameState) {
-    setAllocationEnabled(state, this.dev);
+    // The allocation model is the game's production path since the
+    // harmonic-capacity release (#262): every state — ordinary or
+    // development — rides the whole-chord selector. The `dev` flag now
+    // gates only the development surfaces (the dev panel and the stress
+    // board), never the economy.
+    setAllocationEnabled(state, true);
     this.currentState = state;
   }
   ui: UiState = {

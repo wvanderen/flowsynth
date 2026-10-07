@@ -243,7 +243,7 @@ export const BALANCE: Balance = {
   mutatorForgeThresholdGrowth: 2,
   mutatorMagnitudeBase: { power: 0.5, resonance: 0.5, charge: 0.5 },
   mutatorRarityMultiplier: { common: 1, uncommon: 2, rare: 4 },
-  capacityPrices: [600, 30_000, 1_500_000, 75_000_000],
+  capacityPrices: [600, 30_000, 700_000, 5_000_000],
   capacityCeilingCosts: [6, 14],
   capacityDiscountCosts: [3, 7],
   capacityDiscountShares: [0.2, 0.4],

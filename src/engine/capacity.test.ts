@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ARETE_HORIZON } from "./accumulator";
+import { ARETE_HORIZON, horizonReached } from "./accumulator";
 import {
   capacityCeiling,
   capacityDiscountShare,
@@ -275,6 +275,33 @@ describe("the ladder on the save surface (#259)", () => {
     expect(loaded.capacityDiscounts).toBe(0);
     expect(loaded.nous).toBe(4321);
     expect(voiceCapacityOf(loaded)).toBe(1);
+  });
+
+  it("a pre-calibration bank survives the rebased horizon with its board and record, door open (#262)", () => {
+    // The rebased horizon (issue #262) moves the crossing from 1e23 to
+    // 7e6. A save banked under the old figure — an ordinary save that
+    // practiced for tens of hours, or a development save — carries an
+    // eraEarned far past the new line: the door stands open at first
+    // load. The documented consequence is that crossing, never a wipe:
+    // the board, its inventory, the tray, and the life record all
+    // survive into the next era, and the claim banks exactly the linear
+    // base.
+    const state = fresh();
+    affordable(state);
+    state.eraEarned = 1e23;
+    state.totalEarned = 1e23;
+    const file = JSON.parse(serialize(state));
+    const loaded = deserialize(JSON.stringify(file)).state!;
+    expect(horizonReached(loaded)).toBe(true);
+    const sessionsBefore = loaded.sessionsCompleted;
+    const cellsBefore = loaded.cells.length;
+    expect(prestige(loaded).ok).toBe(true);
+    expect(loaded.arete).toBe(1);
+    expect(loaded.eraEarned).toBe(0);
+    expect(horizonReached(loaded)).toBe(false);
+    expect(loaded.cells.length).toBe(cellsBefore);
+    expect(loaded.sessionsCompleted).toBe(sessionsBefore);
+    expect(loaded.totalEarned).toBe(1e23);
   });
 
   it("corrupt counts degrade to zero, over-purchased rungs clamp at the ceiling, and over-owned offerings clamp at the ladder", () => {

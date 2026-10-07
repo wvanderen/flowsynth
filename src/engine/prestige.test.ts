@@ -18,17 +18,17 @@ function atHorizon(state: GameState = fresh()): GameState {
 }
 
 describe("the prestige action", () => {
-  it("keeps earlier milestones closed and opens prestige at 1e23 earned nous", () => {
+  it("keeps earlier milestones closed and opens prestige at the horizon earned nous", () => {
     const s = fresh();
     s.eraEarned = 100_000;
     expect(horizonReached(s)).toBe(false);
     expect(prestige(s).ok).toBe(false);
-    s.eraEarned = 1e9;
+    s.eraEarned = ARETE_HORIZON / 2;
     expect(prestige(s).ok).toBe(false);
-    // Subtracting one rounds back to 1e23 at this magnitude.
-    s.eraEarned = 1e23 * (1 - 1e-12);
+    // Subtracting one rounds back to the horizon at this magnitude.
+    s.eraEarned = ARETE_HORIZON * (1 - 1e-12);
     expect(prestige(s).ok).toBe(false);
-    s.eraEarned = 1e23;
+    s.eraEarned = ARETE_HORIZON;
     expect(horizonReached(s)).toBe(true);
     expect(prestige(s).ok).toBe(true);
     expect(s.arete).toBe(1);

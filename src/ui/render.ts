@@ -3644,13 +3644,12 @@ function shopBuyHtml(options: {
 }
 
 // The harmonic-capacity row (issue #259, the confirmed design beside
-// ADR-0050): the nous Catalog's global ladder. One development-only row —
-// the allocation model it serves stays behind the development gate, so
-// ordinary play shows no capacity controls (ADR-0052). Bought, unavailable
-// and capped states ride the shop row's own grammar: the per-voice figure
-// reads the ladder's progress, the disabled price carries the
-// practice-minute estimate, and the capped word points at the Arete sheet
-// while its ceiling unlocks remain.
+// ADR-0050): the nous Catalog's global ladder, the game's production path
+// since the release calibration (#262). Bought, unavailable and capped
+// states ride the shop row's own grammar: the per-voice figure reads the
+// ladder's progress, the disabled price carries the practice-minute
+// estimate, and the capped word points at the Arete sheet while its
+// ceiling unlocks remain.
 function capacityShopHtml(app: App): string {
   const { state } = app;
   const capacity = voiceCapacityOf(state);
@@ -3877,7 +3876,7 @@ function catalogNousFaceHtml(app: App): string {
           </section>`
         : `<p class="empty-copy">The shelf is empty.</p>`
     }
-    ${app.dev ? capacityShopHtml(app) : ""}
+    ${capacityShopHtml(app)}
   </div>
   <label class="catalog-toggle"><input type="checkbox" id="catalog-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${ownedShelf.length}/${shelfTypes.length})</label>
   ${
@@ -3968,7 +3967,7 @@ function catalogAreteFaceHtml(app: App): string {
         ${joined ? `<p class="empty-copy">Nothing waits — future objects appear in future rolls.</p>` : ""}
       </div>
     </section>
-    ${app.dev ? capacityAreteHtml(app) : ""}
+    ${capacityAreteHtml(app)}
   </div>
   ${upgrade ? "" : `<p class="modal-note">Arete is spent between sessions — enter upgrade mode to buy.</p>`}`;
 }
@@ -4200,9 +4199,9 @@ function renderResetModal(app: App, content: HTMLElement): void {
 // glossary's avoided-verb rule holds: prestige is the verb, never "reset".
 function renderPrestigeModal(app: App, content: HTMLElement): void {
   const claim = claimOf(app.state);
-  // The capacity clause (issue #259) rides only where the capacity model
-  // exists — ordinary play shows no capacity surfaces (ADR-0052).
-  const capacityClause = app.dev ? ", purchased capacity returns to one" : "";
+  // The capacity clause (issue #259): purchased capacity is era progress,
+  // so the modal names it among what prestige takes.
+  const capacityClause = ", purchased capacity returns to one";
   content.innerHTML = `
     ${modalTop("PRESTIGE")}
     <h2 id="modal-title">Begin the next era?</h2>
