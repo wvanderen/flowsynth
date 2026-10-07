@@ -547,7 +547,7 @@ export function returnModule(state: GameState, id: string): ActionResult {
   if (!module) return fail("Module not found.");
   if (module.pos === null) return fail("This module is already in inventory.");
   module.pos = null;
-  return ok;
+  return { ok: true, unlocked: checkUnlocks(state) };
 }
 
 // Reshaping moves owned cells anywhere within the finite row band — always

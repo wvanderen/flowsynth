@@ -2856,3 +2856,17 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .capacity-catalog .catalog-row h3 { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .capacity-catalog .shop-countdown { display: block; }
 .capacity-catalog .inst-tip-trigger { width: 44px; height: 44px; }
+
+/* Readout figures themselves open the shared disclosure layer. */
+.readout-tip .readout-tip-trigger {
+  width: auto;
+  height: auto;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  font: inherit;
+  transition: none;
+}
+.readout-tip-trigger:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }

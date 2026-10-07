@@ -3,7 +3,10 @@ import { placeModule, returnModule } from "./actions";
 import { allocationQualityOf, ALLOCATION_QUALITY_BOUNDS } from "./allocation";
 import { formationQuality, formationTension } from "./chords";
 import { BALANCE } from "./constants";
-import { computeRates, displayedRates, projectPlacement, setAllocationEnabled } from "./economy";
+import { computeRates, displayedRates, projectPlacement, setAllocationEnabled, syncRates, maxChordFactorOf, chargeDelivered } from "./economy";
+import { syncAchievements } from "./achievements";
+import { syncChordDiscoveries } from "./library";
+import { summaryTermsOf } from "./allocation";
 import { fresh, give } from "./fixtures";
 import { hex } from "./hex";
 import type { GameState, ModuleInstance } from "./types";
@@ -239,5 +242,27 @@ describe("the placement projection (#260)", () => {
     projectPlacement(state, g.id, hex(col(9), 0), true);
     projectPlacement(state, g.id, null, true);
     expect(JSON.stringify(state.modules.map((m) => [m.id, m.pos]))).toBe(before);
+  });
+});
+
+
+describe("retrieval boundary agreement", () => {
+  it("commits a newly earned feat when removal improves the remaining formation", () => {
+    const state = fresh();
+    state.cells = [];
+    state.modules = [];
+    state.sessionsCompleted = 1;
+    setAllocationEnabled(state, true);
+    for (const q of [0, 1, 4, 5]) placed(state, "additive", q);
+    const dissonance = placed(state, "additive", 7);
+    bridgeRow(state, 8);
+    const initial = syncRates(state, true);
+    syncChordDiscoveries(state, { chords: summaryTermsOf(initial.allocation!) });
+    syncAchievements(state, { maxChordFactor: maxChordFactorOf(initial), chargeDelivered: chargeDelivered(initial) });
+    const preview = projectPlacement(state, dissonance.id, null, false);
+    expect(returnModule(state, dissonance.id).ok).toBe(true);
+    const actual = displayedRates(state, false);
+    expect(actual.achievementBoost).toBeGreaterThan(initial.achievementBoost);
+    expect(actual).toEqual(preview.projected);
   });
 });

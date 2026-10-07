@@ -1334,6 +1334,7 @@ interface ChordReadoutCache {
   snapshot: RateSnapshot;
 }
 const chordReadoutCache = new WeakMap<App, ChordReadoutCache>();
+const wiredReadouts = new WeakSet<HTMLElement>();
 
 // The reserved readout (§6): the chips, in one place — the selected
 // module's chip row wins, else what the pointer rests on (a seam names its
@@ -1347,6 +1348,7 @@ const chordReadoutCache = new WeakMap<App, ChordReadoutCache>();
 function updateChordReadout(app: App): void {
   const host = byId("chord-readout");
   if (!host) return;
+  if (!wiredReadouts.has(host)) { wireTooltips(host); wiredReadouts.add(host); }
   const cache = chordReadoutCache.get(app);
   const marks = cache?.marks ?? [];
   const snapshot = cache?.snapshot;
@@ -1356,7 +1358,7 @@ function updateChordReadout(app: App): void {
   // arete register. One spot, never floating over the board.
   if (hover?.kind === "mutator") {
     host.hidden = false;
-    host.innerHTML = mutatorAskHtml(app.state, hover.pos, snapshot ?? displayedRates(app.state, true));
+    setReadoutHtml(host, mutatorAskHtml(app.state, hover.pos, snapshot ?? displayedRates(app.state, true)));
     return;
   }
   // The placement projection (issue #260): while a drop hovers a valid
@@ -1367,7 +1369,7 @@ function updateChordReadout(app: App): void {
   const preview = dropProjection(app);
   if (preview) {
     host.hidden = false;
-    host.innerHTML = placementPreviewHtml(app, preview);
+    setReadoutHtml(host, placementPreviewHtml(app, preview));
     return;
   }
   const selected = app.state.modules.find((m) => m.id === app.ui.selected && m.pos !== null) ?? null;
@@ -1377,52 +1379,14 @@ function updateChordReadout(app: App): void {
   // conducting spacer's own containment rule rides moduleChips (#201).
   const chosen = selected ? moduleChips(selected, marks) : chordChipsForHover(app);
   const focus = selected ?? hovered;
-  const contribution = focus && snapshot ? snapshot.contributions.get(focus.id) : undefined;
-  const valueChip =
-    focus && contribution && isOscillatorType(focus.type)
-      ? `<span class="chord-readout-chip chord-readout-value mono">+${formatNumber(contribution.value)} ν/s</span>`
-      : "";
-  // The capacity read (issue #258): the focused singer's used/available
-  // whole-chord budget — spacers conduct and consume none, so they never
-  // wear the chip.
-  const allocation = snapshot?.allocation;
-  const sings = focus && (isOscillatorType(focus.type) || CATEGORY_OF[focus.type] === "silentVoice");
-  const capacityChip =
-    focus && sings && allocation
-      ? `<span class="chord-readout-chip chord-readout-capacity mono">Capacity ${allocation.used.get(focus.id) ?? 0}/${allocation.capacity}</span>`
-      : "";
-  // The total earned chord factor (issue #258, prominent per #260): the
-  // selected oscillator's whole chord term — instance product × formation
-  // × resonance — the one figure the seam terms multiply into.
-  const factorChip =
-    focus && contribution && isOscillatorType(focus.type) && contribution.chordFactor !== null
-      ? `<span class="chord-readout-chip chord-readout-factor mono">×${formatNumber(contribution.chordFactor)}</span>`
-      : "";
-  // The applied formation term (ADR-0049, applied per #260): only a voice
-  // carrying an active chord reads one — "Formation ×1.12" — chord-sourced
-  // and earned. The scale beside it carries the formation's measured
-  // quality, the posture the voice sits in whether or not it sings.
-  const formationChip =
-    contribution && contribution.formationQ !== 1
-      ? `<span class="chord-readout-chip chord-readout-formation mono">Formation ×${formatNumber(contribution.formationQ)}</span>`
-      : "";
-  const scaleChip =
-    contribution && sings && (contribution.formationMeasuredQ !== 1 || contribution.formationQ !== 1)
-      ? qualityScaleHtml(contribution.formationMeasuredQ, allocation ? ALLOCATION_QUALITY_BOUNDS : { floor: BALANCE.qualityFloor, cap: BALANCE.qualityCap })
-      : "";
-  if (!valueChip && !capacityChip && !factorChip && !formationChip && !scaleChip && chosen.length === 0) {
+  const metrics = focus && snapshot ? voiceMetricsHtml(focus, snapshot) : "";
+  if (!metrics && chosen.length === 0) {
     host.hidden = true;
-    host.innerHTML = "";
+    setReadoutHtml(host, "");
     return;
   }
   host.hidden = false;
-  host.innerHTML =
-    valueChip +
-    capacityChip +
-    (allocation && !allocation.certified ? `<span class="chord-readout-chip chord-readout-uncertified mono">Allocation uncertified</span>` : "") +
-    factorChip +
-    formationChip +
-    scaleChip +
+  setReadoutHtml(host, metrics +
     chosen
       .map((mark) =>
         // The muted participant's mark (ADR-0048): a chord a silent voice
@@ -1431,7 +1395,48 @@ function updateChordReadout(app: App): void {
         // "idle" word — recognized, earning nothing.
         `<span class="chord-readout-chip mono${mark.muted ? " chord-readout-muted" : ""}${mark.inactive ? " chord-readout-idle" : ""}" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.inactive ? `${mark.label} · idle` : mark.label)}</span>`,
       )
-      .join("");
+      .join(""));
+}
+
+// Preserve focused/pinned disclosures when an unchanged readout refreshes.
+const readoutMarkup = new WeakMap<HTMLElement, string>();
+function setReadoutHtml(host: HTMLElement, html: string): void {
+  if (readoutMarkup.get(host) === html) return;
+  closeTooltips(host);
+  host.innerHTML = html;
+  readoutMarkup.set(host, html);
+}
+
+// Selected and projected voices share one figure grammar and disclosure layer.
+function readoutDisclosureHtml(kind: string, content: string, mechanics: string): string {
+  const id = `readout-${kind}-tip`;
+  return `<span class="inst-tip readout-tip"><button class="inst-tip-trigger readout-tip-trigger" type="button" aria-expanded="false" aria-describedby="${id}"${kind === "quality" ? ` aria-label="${escapeHtml(mechanics)}"` : ""}>${content}</button><span class="inst-tip-body" id="${id}" role="tooltip">${escapeHtml(mechanics)}</span></span>`;
+}
+
+function readoutFigureHtml(kind: string, text: string, mechanics: string): string {
+  return readoutDisclosureHtml(kind, `<span class="chord-readout-chip chord-readout-${kind} mono">${escapeHtml(text)}</span>`, mechanics);
+}
+
+function voiceMetricsHtml(module: ModuleInstance, snapshot: RateSnapshot, current?: RateSnapshot): string {
+  if (!isVoiceType(module.type)) return "";
+  const after = snapshot.contributions.get(module.id);
+  const before = current?.contributions.get(module.id);
+  const allocation = snapshot.allocation;
+  const was = (value: number | null | undefined, unit: string): string =>
+    value == null ? "" : ` — was ${unit}${formatNumber(value)}`;
+  const rows: string[] = [];
+  if (isOscillatorType(module.type)) rows.push(readoutFigureHtml("value", `+${formatNumber(after?.value ?? 0)} ν/s`, `Final ν/s${was(before?.value, "+")}`));
+  if (allocation) {
+    const prior = current?.allocation;
+    rows.push(readoutFigureHtml("capacity", `Capacity ${allocation.used.get(module.id) ?? 0}/${allocation.capacity}`, `Whole-chord budget${prior ? ` — was ${prior.used.get(module.id) ?? 0}/${prior.capacity}` : ""}`));
+    if (!allocation.certified) rows.push(`<span class="chord-readout-chip chord-readout-uncertified mono">Allocation uncertified</span>`);
+  }
+  if (after) {
+    if (isOscillatorType(module.type) && after.chordFactor !== null) rows.push(readoutFigureHtml("factor", `×${formatNumber(after.chordFactor)}`, `Total chord factor${was(before?.chordFactor, "×")}`));
+    if (after.formationQ !== 1) rows.push(readoutFigureHtml("formation", `Formation ×${formatNumber(after.formationQ)}`, `Applied formation term${was(before?.formationQ, "×")}`));
+    if (after.formationMeasuredQ !== 1 || after.formationQ !== 1) rows.push(qualityScaleHtml(after.formationMeasuredQ, allocation ? ALLOCATION_QUALITY_BOUNDS : { floor: BALANCE.qualityFloor, cap: BALANCE.qualityCap }));
+  }
+  return rows.join("");
 }
 
 // The low-to-high quality scale (issue #260): where the formation's
@@ -1445,7 +1450,7 @@ function qualityScaleHtml(measured: number, bounds: { floor: number; cap: number
   const x = at(measured);
   const neutral = at(1);
   const label = `Formation quality — ×${formatNumber(bounds.floor)} chromatic to ×${formatNumber(bounds.cap)} organized, ×1 neutral; this formation measures ×${formatNumber(measured)}`;
-  return `<span class="chord-readout-scale" data-q="${measured}" role="img" aria-label="${label}" title="${label}"><svg viewBox="0 0 100 20" width="100" height="20" aria-hidden="true"><line class="scale-track" x1="14" y1="6" x2="86" y2="6"/><line class="scale-tick" x1="14" y1="3" x2="14" y2="9"/><line class="scale-tick scale-tick-neutral" x1="${neutral.toFixed(1)}" y1="1" x2="${neutral.toFixed(1)}" y2="11"/><line class="scale-tick" x1="86" y1="3" x2="86" y2="9"/><rect class="scale-marker" x="${(x - 1.5).toFixed(1)}" y="2.5" width="3" height="7"/><text class="scale-end mono" x="14" y="18" text-anchor="middle">${formatNumber(bounds.floor)}</text><text class="scale-end mono" x="86" y="18" text-anchor="middle">${formatNumber(bounds.cap)}</text></svg></span>`;
+  return readoutDisclosureHtml("quality", `<span class="chord-readout-scale" data-q="${measured}"><svg viewBox="0 0 100 20" width="100" height="20" aria-hidden="true"><line class="scale-track" x1="14" y1="6" x2="86" y2="6"/><line class="scale-tick" x1="14" y1="3" x2="14" y2="9"/><line class="scale-tick scale-tick-neutral" x1="${neutral.toFixed(1)}" y1="1" x2="${neutral.toFixed(1)}" y2="11"/><line class="scale-tick" x1="86" y1="3" x2="86" y2="9"/><rect class="scale-marker" x="${(x - 1.5).toFixed(1)}" y="2.5" width="3" height="7"/><text class="scale-end mono" x="14" y="18" text-anchor="middle">${formatNumber(bounds.floor)}</text><text class="scale-end mono" x="86" y="18" text-anchor="middle">${formatNumber(bounds.cap)}</text></svg></span>`, label);
 }
 
 // A delta figure for the preview rows (#260): explicit sign, monospace,
@@ -1469,39 +1474,9 @@ function placementPreviewHtml(app: App, projection: PlacementProjection): string
   const module = app.state.modules.find((m) => m.id === hover.moduleId)!;
   const retrieving = hover.pos === null;
   const allocation = projection.projected.allocation;
-  const before = projection.current.contributions.get(module.id);
-  const after = projection.projected.contributions.get(module.id);
   const rateDelta = projection.projected.rate - projection.current.rate;
-  const was = (figure: number | undefined, word: string): string =>
-    figure === undefined ? "" : ` — was ${word} ${formatNumber(figure)}`;
-  const rows: string[] = [
-    `<span class="chord-readout-chip chord-readout-preview mono" title="${retrieving ? "Retrieved" : "Placed"}: the board reads ${formatNumber(projection.projected.rate)} ν/s after, ${formatNumber(projection.current.rate)} ν/s now">Placement ${formatDelta(rateDelta)} ν/s</span>`,
-  ];
-  const sings = isVoiceType(module.type);
-  if (sings) {
-    if (isOscillatorType(module.type)) {
-      rows.push(
-        `<span class="chord-readout-chip chord-readout-value mono" title="Final ν/s after the drop${was(before?.value, "+")}">${after ? `+${formatNumber(after.value)}` : "+0"} ν/s</span>`,
-      );
-    }
-    if (allocation) {
-      const currentAllocation = projection.current.allocation;
-      const wasCapacity = currentAllocation ? ` — was ${currentAllocation.used.get(module.id) ?? 0}/${currentAllocation.capacity}` : "";
-      rows.push(
-        `<span class="chord-readout-chip chord-readout-capacity mono" title="Whole-chord budget after the drop${wasCapacity}">Capacity ${allocation.used.get(module.id) ?? 0}/${allocation.capacity}</span>`,
-      );
-    }
-    if (after && after.chordFactor !== null) {
-      rows.push(
-        `<span class="chord-readout-chip chord-readout-factor mono" title="Total chord factor after the drop${was(before?.chordFactor ?? undefined, "×")}">×${formatNumber(after.chordFactor)}</span>`,
-      );
-      if (after.formationQ !== 1) {
-        rows.push(`<span class="chord-readout-chip chord-readout-formation mono" title="The applied formation term after the drop${was(before?.formationQ !== 1 ? before?.formationQ : undefined, "×")}">Formation ×${formatNumber(after.formationQ)}</span>`);
-      }
-      if (after.formationMeasuredQ !== 1 || after.formationQ !== 1) {
-        rows.push(qualityScaleHtml(after.formationMeasuredQ, allocation ? ALLOCATION_QUALITY_BOUNDS : { floor: BALANCE.qualityFloor, cap: BALANCE.qualityCap }));
-      }
-    }
+  const rows = [readoutFigureHtml("preview", `Placement ${formatDelta(rateDelta)} ν/s`, `${retrieving ? "Retrieved" : "Placed"}: the board reads ${formatNumber(projection.projected.rate)} ν/s after, ${formatNumber(projection.current.rate)} ν/s now`), voiceMetricsHtml(module, projection.projected, projection.current)];
+  if (isVoiceType(module.type)) {
     // The chord terms the projected voice would earn — the same per-entry
     // chips the live row carries, active first, idle candidates labeled.
     const active = projection.projected.namedChords.filter((term) => term.moduleIds.includes(module.id));
@@ -1517,9 +1492,6 @@ function placementPreviewHtml(app: App, projection: PlacementProjection): string
         );
       }
     }
-  }
-  if (allocation && !allocation.certified) {
-    rows.push(`<span class="chord-readout-chip chord-readout-uncertified mono">Allocation uncertified</span>`);
   }
   return rows.join("");
 }
@@ -1983,7 +1955,8 @@ function dropProjection(app: App): PlacementProjection | null {
   // review owns its own terms), and the carried module's own cell is a
   // no-op. Over the tray, only a live drag reads the retrieval.
   if (hover.pos !== null) {
-    if (dropRegister(app, hover.pos) === null) return null;
+    const register = dropRegister(app, hover.pos);
+    if (register === null || register === "combine") return null;
   } else if (app.dragging !== hover.moduleId) {
     return null;
   }

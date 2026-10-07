@@ -5377,6 +5377,42 @@ describe("placement previews with capacity-aware production (#260)", () => {
     }
   });
 
+  it("a matching twin drag offers combination without a swap preview", () => {
+    give(app.state, "additive", hex(1, 0));
+    app.render();
+    document.elementFromPoint = () => cell(1, 0);
+    try {
+      cell(0, 0).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+      document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
+      expect(document.querySelector(".drop-combine")).not.toBeNull();
+      expect(readout().querySelector(".chord-readout-preview")).toBeNull();
+      expect(ghostLabels()).toEqual([]);
+      document.dispatchEvent(new MouseEvent("pointerup", { clientX: 130, clientY: 100 }));
+      expect(document.getElementById("modal-content")!.textContent).toContain("Combine");
+    } finally {
+      delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
+    }
+  });
+
+  it("readout disclosures open by focus and tap, and dismiss before placement cancellation", () => {
+    give(app.state, "additive", hex(1, 0));
+    const mover = give(app.state, "additive", null);
+    app.render();
+    document.querySelector<HTMLButtonElement>(`[data-inv="${mover.id}"]`)!.click();
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
+    const trigger = readout().querySelector<HTMLButtonElement>(".readout-tip-trigger")!;
+    trigger.focus();
+    const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+    expect(body.classList.contains("inst-show")).toBe(true);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(body.classList.contains("inst-show")).toBe(false);
+    expect(app.ui.placing).toBe(mover.id);
+    trigger.click();
+    expect(body.classList.contains("inst-show")).toBe(true);
+    document.body.click();
+    expect(body.classList.contains("inst-show")).toBe(false);
+  });
+
   it("an unrelated selection survives another module's placement", () => {
     give(app.state, "additive", hex(1, 0));
     app.state.cells.push(hex(0, 1), hex(2, 0));
