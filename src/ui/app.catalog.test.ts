@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import type { App } from "./app";
 import { BALANCE } from "../engine/constants";
@@ -107,30 +107,188 @@ describe("the catalog door (issue #271)", () => {
     expect(body).toContain("overflow-y: auto");
   });
 
-  it("pre-prestige the arete face does not exist: its tab stands locked and the door falls back to nous", () => {
-    // A stale memory can never open a face that is not there yet.
+  it("the arete tab stands open from the start: pre-prestige its face is the entry purchase screen (#292 review)", () => {
+    // The door itself still follows the mode — module mode lands on ν.
+    app.state.prestiges = 0;
     app.ui.catalogFace = "arete";
     app.openModal("catalog");
     expect(app.ui.catalogFace).toBe("nous");
+    expect(document.querySelector('[data-buy="generator"]')).not.toBeNull();
+    // The tab is live, not locked: switching shows the entry purchase
+    // screen, its price muted — Arete cannot exist before the first reset.
     const areteTab = document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!;
-    expect(areteTab.disabled).toBe(true);
-    expect(areteTab.title).toContain("prestige");
-    // The nous face is the shop: the shelf's offers stand.
+    expect(areteTab.disabled).toBe(false);
+    areteTab.click();
+    expect(app.ui.catalogFace).toBe("arete");
+    expect(document.querySelector(".entry-screen")).not.toBeNull();
+    expect((document.getElementById("buy-arete-entry") as HTMLButtonElement).disabled).toBe(true);
+    // And back — both faces answer at every progression state.
+    switchFace("nous");
+    expect(app.ui.catalogFace).toBe("nous");
     expect(document.querySelector('[data-buy="generator"]')).not.toBeNull();
   });
 
-  it("the shop appears at the first banked Arete, and the door remembers the last face", () => {
+  it("pre-entry the locked Mutators controls walk to the ◇ entry screen (#273)", () => {
+    // Short of the entry: the entry screen is the arete face's one offer,
+    // and every locked control lands on it — pre-prestige included, where
+    // the walk is the preview of the future entry (the price mutes).
+    app.state.prestiges = 0;
+    app.state.arete = 0;
+    app.render();
+    // The board tab: locked, muted, lock-marked — its click never flips
+    // the mode.
+    const tab = document.querySelector<HTMLButtonElement>('#mut-tabs [data-mut-layer="mutators"]')!;
+    expect(tab.classList.contains("locked")).toBe(true);
+    expect(tab.querySelector(".mut-tab-lock")).not.toBeNull();
+    tab.click();
+    expect(app.ui.mutLayer).toBe("modules");
+    expect(app.ui.modal).toBe("catalog");
+    expect(app.ui.catalogFace).toBe("arete");
+    expect(document.querySelector(".entry-screen")).not.toBeNull();
+    expect((document.getElementById("buy-arete-entry") as HTMLButtonElement).disabled).toBe(true);
+    app.closeModal();
+    // The tray sheet's switch wears the same locked face, landing the same.
+    app.openModal("inventory");
+    const sheetTab = document.querySelector<HTMLButtonElement>('#modal-content [data-mut-layer="mutators"]')!;
+    expect(sheetTab.classList.contains("locked")).toBe(true);
+    expect(sheetTab.querySelector(".mut-tab-lock")).not.toBeNull();
+    sheetTab.click();
+    expect(app.ui.mutLayer).toBe("modules");
+    expect(app.ui.modal).toBe("catalog");
+    expect(app.ui.catalogFace).toBe("arete");
+    expect(document.querySelector(".entry-screen")).not.toBeNull();
+    app.closeModal();
+    // A mutator-mode Add without the entry walks there too — the one Add
+    // shape that never arms (defensive: the locked switch never leaves the
+    // mode at mutators pre-entry, so the state is staged here). The grant
+    // keeps the cell-priced icon affordably armed, so the click lands.
+    app.state.nous = BALANCE.cellFirstCost;
+    app.ui.mutLayer = "mutators";
+    app.render();
+    document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!.click();
+    expect(app.ui.mutUnlockArmed).toBe(false);
+    expect(app.ui.buyingCell).toBe(false);
+    expect(app.ui.modal).toBe("catalog");
+    expect(app.ui.catalogFace).toBe("arete");
+    expect(app.ui.mutLayer).toBe("mutators"); // the mode never flipped
+    app.closeModal();
+  });
+
+  it("a mode change cancels the armed actions with a toast; the Esc walk stays Esc (#273)", () => {
+    const s = app.state;
+    s.mode = "upgrade";
+    s.catalogEntryOwned = true;
+    s.arete = 20;
+    s.mutatorSlots = [hex(0, 0)];
+    s.mutators = [
+      { id: "mu1", family: "power", rarity: "common", pos: hex(0, 0) },
+      { id: "mu2", family: "charge", rarity: "uncommon", pos: null },
+    ];
+    app.render();
+    // The cell arm dies at the mode change, named by the toast.
+    app.armCellPurchase();
+    expect(app.ui.buyingCell).toBe(true);
+    app.mutSetLayer("mutators");
+    expect(app.ui.buyingCell).toBe(false);
+    expect(document.getElementById("status")!.textContent).toContain("cell purchase cancelled");
+    const toast = document.getElementById("mode-toast")!;
+    expect(toast.hidden).toBe(false);
+    expect(toast.textContent).toContain("cell purchase cancelled");
+    // A tray placement dies the same way, walking back.
+    app.mutArmTray("mu2");
+    expect(app.ui.mutArmedTray).toBe("mu2");
+    app.mutSetLayer("modules");
+    expect(app.ui.mutArmedTray).toBeNull();
+    expect(document.getElementById("status")!.textContent).toContain("mutator placement cancelled");
+    expect(toast.textContent).toContain("mutator placement cancelled");
+    // A module placement too — the tray-tile arm rides the same rule.
+    const trayId = give(s, "additive", null).id;
+    app.beginPlacing(trayId);
+    expect(app.ui.placing).toBe(trayId);
+    app.mutSetLayer("mutators");
+    expect(app.ui.placing).toBeNull();
+    expect(document.getElementById("status")!.textContent).toContain("placement cancelled");
+    // A clean switch is silent — the toast stands still, no phantom
+    // cancellations.
+    const quiet = document.getElementById("status")!.textContent;
+    app.mutSetLayer("modules");
+    expect(document.getElementById("status")!.textContent).toBe(quiet);
+    expect(toast.textContent).toBe(quiet);
+    // The Esc walk is unchanged: Esc unwinds the slot-unlock arm before it
+    // ever touches the mode.
+    app.mutSetLayer("mutators");
+    app.mutArmUnlock();
+    expect(app.ui.mutUnlockArmed).toBe(true);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(app.ui.mutUnlockArmed).toBe(false);
+    expect(app.ui.mutLayer).toBe("mutators");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(app.ui.mutLayer).toBe("modules");
+  });
+
+  it("cancellation feedback expires and a later cancellation gets its full display time", () => {
+    vi.useFakeTimers();
+    try {
+      app.state.catalogEntryOwned = true;
+      app.armCellPurchase();
+      app.mutSetLayer("mutators");
+      const toast = document.getElementById("mode-toast")!;
+      expect(toast.hidden).toBe(false);
+      vi.advanceTimersByTime(5000);
+      app.mutArmUnlock();
+      app.mutSetLayer("modules");
+      expect(toast.textContent).toContain("slot unlock cancelled");
+      vi.advanceTimersByTime(1000);
+      expect(toast.hidden).toBe(false);
+      vi.advanceTimersByTime(5000);
+      expect(toast.hidden).toBe(true);
+      expect(document.getElementById("status")!.textContent).toContain("slot unlock cancelled");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("the door opens on the mode's face — mode wins over the last-face memory (issue #273)", () => {
     bankFirstArete();
+    // Module mode: the door lands on ν, whatever the memory says — a face
+    // switched to arete and left there does not survive the trip.
     app.openModal("catalog");
     expect(document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!.disabled).toBe(false);
     switchFace("arete");
     expect(app.ui.catalogFace).toBe("arete");
     app.closeModal();
     app.openModal("catalog");
-    // The memory holds: the door opens on the arete face. (The mode-wins
-    // override lands with the mode-unification ticket, #246.)
+    expect(app.ui.catalogFace).toBe("nous");
+    expect(document.querySelector('[data-buy="generator"]')).not.toBeNull();
+    app.closeModal();
+    // Mutator mode: the door lands on ◇ — the face the mode directs, the
+    // in-sheet memory never overriding it.
+    app.state.catalogEntryOwned = true;
+    app.state.arete = 5;
+    app.render();
+    app.mutSetLayer("mutators");
+    app.ui.catalogFace = "nous";
+    app.openModal("catalog");
     expect(app.ui.catalogFace).toBe("arete");
-    expect(document.querySelector('[data-buy="generator"]')).toBeNull();
+    expect(document.querySelector(".entry-screen")).toBeNull();
+    app.mutSetLayer("modules");
+  });
+
+  it("the dev era grant keeps the arete tab standing — the prestige lock agrees with the owned entry", () => {
+    // The grant owns the entry, so the first prestige rode along: the
+    // prestige-count lock must not dead-end the Catalog's arete tab.
+    app.devMutatorEra();
+    app.openModal("catalog");
+    expect(app.ui.catalogFace).toBe("arete"); // mutator mode directs the face
+    const areteTab = document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!;
+    expect(areteTab.disabled).toBe(false);
+    expect(document.querySelector(".entry-screen")).toBeNull();
+    // The face answers: switch away and back, still live.
+    switchFace("nous");
+    expect(app.ui.catalogFace).toBe("nous");
+    switchFace("arete");
+    expect(app.ui.catalogFace).toBe("arete");
+    app.closeModal();
   });
 
   it("pre-entry the arete face is the single centered lock screen; the purchase reveals Upgrades and Unlocks", () => {
@@ -452,7 +610,9 @@ describe("the harmonic-capacity ladder (#259)", () => {
     app.closeModal();
     app.state.prestiges = 1;
     app.state.catalogEntryOwned = true;
-    app.ui.catalogFace = "arete";
+    // Mutator mode directs the door to the arete face (issue #273); the
+    // dev capacity offerings ride both faces, and ordinary play shows none.
+    app.ui.mutLayer = "mutators";
     app.openModal("catalog");
     expect(document.getElementById("modal-content")!.textContent).not.toContain("Harmonic capacity");
   });
@@ -503,7 +663,9 @@ describe("the harmonic-capacity ladder (#259)", () => {
     app.closeModal();
     app.state.prestiges = 1;
     app.state.catalogEntryOwned = true;
-    app.ui.catalogFace = "arete";
+    // The mode directs the face (issue #273): mutator mode is how the door
+    // lands on the arete sheet now.
+    app.ui.mutLayer = "mutators";
     app.openModal("catalog");
     const locked = document.getElementById("buy-capacity-ceiling-2")!.closest(".catalog-row")!;
     const lockedTrigger = locked.querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
@@ -559,7 +721,8 @@ describe("the harmonic-capacity ladder (#259)", () => {
     app.state.arete = 100;
     app.state.prestiges = 1;
     app.state.catalogEntryOwned = true;
-    app.ui.catalogFace = "arete";
+    // Mutator mode directs the door to the arete face (issue #273).
+    app.ui.mutLayer = "mutators";
     app.openModal("catalog");
     const sheet = () => document.getElementById("modal-content")!;
     expect(sheet().textContent).toContain("Harmonic capacity");
@@ -593,8 +756,12 @@ describe("the harmonic-capacity ladder (#259)", () => {
     startSession(app.state, null);
     app.state.prestiges = 1;
     app.state.catalogEntryOwned = true;
-    app.ui.catalogFace = "arete";
+    // Flow keeps the mode furniture off (clearTransientUi), so the door's
+    // mode-wins lands on ν — stage the arete face the way the in-sheet
+    // switch would.
     app.openModal("catalog");
+    app.ui.catalogFace = "arete";
+    app.render();
     for (const id of ["buy-capacity-ceiling-1", "buy-capacity-discount-1"]) {
       expect((document.getElementById(id) as HTMLButtonElement).disabled).toBe(true);
     }

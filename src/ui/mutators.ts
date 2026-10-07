@@ -21,6 +21,7 @@ import { startPointerDrag } from "./pointer-drag";
 import { boardPoint, HEX_RADIUS, hexPoints } from "./face";
 import { viewPoint, type ViewFrame } from "./bloom";
 import { META, RARITY_LABEL } from "./meta";
+import { wireTooltips } from "./instrument";
 
 // The families' words, one spelling everywhere — slot faces, the tray, the
 // readout ask, the popover, the Forge modal, the toasts.
@@ -145,31 +146,50 @@ export function mutatorSlotPrice(state: GameState): number {
    The tab pair at the board's top edge (issue #199): the one Modules /
    Mutators switch — the tray column's faces and the phone tray sheet all
    read its state, and none carries a second one (issue #272 review).
-   Upgrade-mode furniture beside the entry purchase; in flow neither tab
-   nor layer exists, and a player without the entry never sees them. */
+   Upgrade-mode furniture; in flow neither tab nor layer exists. Pre-entry
+   the pair stands locked-but-visible (issue #273). */
 
 export function mutatorLayerWanted(app: App): boolean {
   return app.state.mode === "upgrade" && app.state.catalogEntryOwned;
 }
 
+// The tabs stand through upgrade mode — locked-but-visible before the
+// entry purchase (issue #273), live beside it after; flow shows neither
+// tab nor layer.
+export function mutatorTabsWanted(app: App): boolean {
+  return app.state.mode === "upgrade";
+}
+
 // The pair's one markup, shared by the board tabs and the phone tray
 // sheet's switch — the same two buttons wherever the switch stands.
-export function mutTabPairHtml(app: App): string {
-  const { ui } = app;
+// Pre-entry the Mutators face is locked-but-visible (issue #273): a muted
+// outline and the lock mark telegraph the entry, and the click — resolved
+// by mutSetLayer — walks to the Catalog's entry screen instead of flipping
+// the mode.
+export function mutTabPairHtml(app: App, tipId = "board-mutator-entry"): string {
+  const { ui, state } = app;
+  const locked = !state.catalogEntryOwned;
   return `<button class="mut-tab${ui.mutLayer === "modules" ? " active" : ""}" data-mut-layer="modules" aria-pressed="${ui.mutLayer === "modules"}">Modules</button>
-    <button class="mut-tab${ui.mutLayer === "mutators" ? " active" : ""}" data-mut-layer="mutators" aria-pressed="${ui.mutLayer === "mutators"}">Mutators</button>`;
+    <button class="mut-tab${ui.mutLayer === "mutators" ? " active" : ""}${locked ? " locked" : ""}" data-mut-layer="mutators" aria-pressed="${ui.mutLayer === "mutators"}"${locked ? ' aria-label="Mutators — locked; open Catalog entry"' : ""}>${locked ? LOCK_MARK : ""}Mutators</button>${locked ? `<span class="inst-tip mut-entry-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${tipId}" aria-label="About unlocking Mutators">ⓘ</button><span class="inst-tip-body" id="${tipId}" role="tooltip">Unlocks with the Mutator entry</span></span>` : ""}`;
 }
+
+// The locked face's one mark (issue #273 review): a padlock in the
+// instrument's stroke language — the layer is locked, not merely elsewhere.
+const LOCK_MARK = `<svg class="mut-tab-lock" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.7" y="5.4" width="6.6" height="4.9" rx="1.1"/><path d="M4.2 5.4V3.9a1.8 1.8 0 0 1 3.6 0v1.5"/></svg>`;
 
 export function renderMutatorTabs(app: App): void {
   const host = document.getElementById("mut-tabs");
   if (!host) return;
-  if (!mutatorLayerWanted(app)) {
+  wireTooltips(host, app.signal);
+  if (!mutatorTabsWanted(app)) {
     host.hidden = true;
     host.innerHTML = "";
     delete host.dataset.renderKey;
     return;
   }
-  const key = app.ui.mutLayer;
+  // The face and the entry's ownership both shape the pair — the purchase
+  // unlocks the locked face in place.
+  const key = `${app.ui.mutLayer}:${app.state.catalogEntryOwned}`;
   if (host.dataset.renderKey === key) {
     host.hidden = false;
     return;

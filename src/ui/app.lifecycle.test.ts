@@ -42,6 +42,26 @@ describe("App lifetime", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it("release cancels mode feedback and removes locked-tab disclosure", () => {
+    const app = fixture.boot();
+    const tip = document.querySelector<HTMLButtonElement>("#mut-tabs .inst-tip-trigger")!;
+    tip.click();
+    const body = document.getElementById(tip.getAttribute("aria-describedby")!)!;
+    expect(body.parentElement).toBe(document.body);
+    app.dispose();
+    expect(body.isConnected).toBe(false);
+    const current = fixture.boot();
+    current.state.catalogEntryOwned = true;
+    current.ui.buyingCell = true;
+    current.mutSetLayer("mutators");
+    const toast = document.getElementById("mode-toast")!;
+    expect(toast.hidden).toBe(false);
+    current.dispose();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.advanceTimersByTime(6000);
+    expect(toast.hidden).toBe(false);
+  });
+
   it("the fixture releases every boot, including instances replaced in the DOM", () => {
     const first = fixture.boot();
     const second = fixture.boot();
