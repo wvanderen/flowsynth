@@ -123,7 +123,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
     }
     return;
   }
-  wireTooltips(host, app.signal);
+  const releaseTooltips = wireTooltips(host, app.signal);
   const pos = detail.pos;
   const upgrade = state.mode === "upgrade";
   const flow = !upgrade;
@@ -140,7 +140,10 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
     pos.r,
     detail.face,
     module ? `${module.id}:${module.type}:${module.level}:${module.rarity}:${module.shift}` : "empty",
-    module ? Math.floor(forgeBranchOf(state, module.type)?.progress ?? 0) : 0,
+    module ? forgeBranchOf(state, module.type) : null,
+    module ? faceReadoutFor(state, module, pos, snapshot, true) : null,
+    module ? snapshot.chargeStrength.get(module.id) ?? 0 : 0,
+    mutItem ? mutatorInertVerdict(state, pos, mutItem, snapshot) : null,
     mutItem ? `${mutItem.id}:${mutItem.rarity}:${mutItem.family}` : mutItem,
     state.mutatorSlots.length,
     state.catalogEntryOwned,
@@ -153,9 +156,15 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
     host.hidden = false;
     return;
   }
-  // The live readouts rebuild the stack on every flow tick; the scroll
-  // rides the rebuild (the app-popover pattern) so a read never loses its
-  // place.
+  // A changed read rebuilds the stack. Preserve the focused control and
+  // scroll, and retire portaled tooltips before reusing chord disclosure IDs.
+  const focused = document.activeElement;
+  const focusAttribute = focused instanceof HTMLElement && host.contains(focused)
+    ? ["id", "data-detail-face", "data-bulk", "data-shift", "aria-describedby"]
+        .find((attribute) => focused.hasAttribute(attribute))
+    : undefined;
+  const focusValue = focusAttribute ? focused!.getAttribute(focusAttribute) : null;
+  releaseTooltips();
   const grid = host.querySelector<HTMLElement>(".hex-detail-grid");
   const scrollTop = grid?.scrollTop ?? 0;
   host.dataset.renderKey = key;
@@ -185,6 +194,12 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   const freshGrid = host.querySelector<HTMLElement>(".hex-detail-grid");
   if (freshGrid && scrollTop > 0) freshGrid.scrollTo(0, scrollTop);
   host.hidden = false;
+  wireTooltips(host, app.signal);
+  if (focusAttribute && focusValue !== null) {
+    [...host.querySelectorAll<HTMLElement>(`[${focusAttribute}]`)]
+      .find((control) => control.getAttribute(focusAttribute) === focusValue)
+      ?.focus({ preventScroll: true });
+  }
 }
 
 /* ── The Mutators face ──────────────────────────────── */
@@ -336,7 +351,7 @@ function moduleLayerHtml(app: App, pos: Hex, module: ModuleInstance | undefined,
     })}<polygon class="hex-stack-marker" points="${hexPoints(58)}"/></svg>`;
     tip = {
       id,
-      html: `<span class="inst-tip-body" id="${id}" role="tooltip">${META[module.type].name} · ${RARITY_LABEL[module.rarity]}${read.note ? ` · sings ${read.note}` : ""}</span>`,
+      html: `<span class="inst-tip-body" id="${id}" role="tooltip">${META[module.type].name} · ${RARITY_LABEL[module.rarity]}${faceLevel(module) !== undefined ? ` · level ${module.level}` : ""} · ${read.readout}${read.note ? ` · sings ${read.note}` : ""}${charged ? " · charged" : ""}</span>`,
     };
   }
   // The rail's upgrade affordances: the shared ladder riding the button,

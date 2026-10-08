@@ -6,6 +6,7 @@ import { createAppFixture, clickCell, setAppWidth } from "./testing/app-fixture"
 import { give } from "../engine/fixtures";
 import { hex, sameHex } from "../engine/hex";
 import { startSession, endSession } from "../engine/actions";
+import { renderHexDetail } from "./hexdetail";
 import { formatInt, formatNumber } from "./format";
 import { levelsCost, displayedRates } from "../engine/economy";
 import type { MutatorFamily, MutatorInstance, Rarity } from "../engine/types";
@@ -512,5 +513,69 @@ describe("the phone face (issue #295)", () => {
     document.getElementById("hex-detail-return")!.click();
     expect(app.ui.detail).toBeNull();
     setAppWidth(1200);
+  });
+});
+
+
+describe("live detail review regressions (PR #301)", () => {
+  it("updates charge effects, glow, and accessible readout without a chord row", () => {
+    const module = give(app.state, "amplifier", hex(1, 0));
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, 600);
+    app.openDetail(hex(1, 0));
+    const snapshot = displayedRates(app.state, true);
+    snapshot.chargeStrength.set(module.id, 10);
+    renderHexDetail(app, snapshot, snapshot, "");
+    expect(faceSvg("modules").textContent).toContain("⌁10");
+    expect(faceSvg("modules").querySelector(".charged")).not.toBeNull();
+    const face = section("modules").querySelector<HTMLElement>("[data-detail-face]")!;
+    const description = document.getElementById(face.getAttribute("aria-describedby")!)!;
+    expect(description.textContent).toContain("level 0");
+    expect(description.textContent).toContain("⌁10");
+    face.focus();
+    snapshot.chargeStrength.set(module.id, 0);
+    renderHexDetail(app, snapshot, snapshot, "");
+    expect(faceSvg("modules").textContent).toContain("⌁0");
+    expect(faceSvg("modules").querySelector(".charged")).toBeNull();
+    expect(document.activeElement?.getAttribute("data-detail-face")).toBe("modules");
+    const updatedFace = document.activeElement!;
+    expect(document.getElementById(updatedFace.getAttribute("aria-describedby")!)!.textContent).toContain("⌁0");
+  });
+
+  it("keeps Return and an open chord disclosure focused across unchanged flow renders", () => {
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, 600);
+    app.openDetail(hex(0, 0));
+    const back = document.getElementById("hex-detail-return")!;
+    back.focus();
+    app.render();
+    expect(document.activeElement).toBe(back);
+    const trigger = detail().querySelector<HTMLElement>(".hex-chord-row .inst-tip-trigger")!;
+    trigger.focus();
+    const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+    expect(body.classList.contains("inst-show")).toBe(true);
+    app.render();
+    expect(document.activeElement).toBe(trigger);
+    expect(body.isConnected).toBe(true);
+    expect(body.classList.contains("inst-show")).toBe(true);
+  });
+
+  it("restores chord disclosure focus and removes its old portal when live values change", () => {
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, 600);
+    app.openDetail(hex(0, 0));
+    const trigger = detail().querySelector<HTMLElement>(".hex-chord-row .inst-tip-trigger")!;
+    const id = trigger.getAttribute("aria-describedby")!;
+    const chordRow = detail().querySelector(".hex-chord-row")!.innerHTML;
+    trigger.focus();
+    const oldBody = document.getElementById(id)!;
+    const snapshot = displayedRates(app.state, true);
+    const module = app.state.modules.find((m) => m.pos && sameHex(m.pos, hex(0, 0)))!;
+    snapshot.contributions.get(module.id)!.value += 1;
+    renderHexDetail(app, snapshot, snapshot, chordRow);
+    expect(document.activeElement?.getAttribute("aria-describedby")).toBe(id);
+    expect(oldBody.isConnected).toBe(false);
+    expect(document.querySelectorAll(`[id="${id}"]`)).toHaveLength(1);
+    expect(document.getElementById(id)!.classList.contains("inst-show")).toBe(true);
   });
 });

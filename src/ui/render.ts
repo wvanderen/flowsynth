@@ -1467,13 +1467,12 @@ function voiceMetricsHtml(module: ModuleInstance, snapshot: RateSnapshot, curren
 // formation and its scale, every chord instance it sings in — with the
 // ν/s figure left off (the enlarged face carries it). The conducting
 // spacer asks by containment, the same rule its hover reads (#201).
-let detailChordSeq = 0;
 function detailChordRowHtml(app: App, snapshot: RateSnapshot): string {
   const detail = app.ui.detail;
   if (!detail) return "";
   const module = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, detail.pos));
   if (!module) return "";
-  const idScope = `detail-${++detailChordSeq}`;
+  const idScope = `detail-${module.id}`;
   const marks = chordReadoutCache.get(app)?.marks ?? [];
   const metrics = voiceMetricsHtml(module, snapshot, undefined, idScope, false);
   const chips = moduleChips(module, marks)

@@ -1868,6 +1868,7 @@ body.hex-detail-open .upgrade-all {
     accent register. Partial by design: no chip or button ever disables. */
 .hex-dial { display: flex; gap: 3px; width: 100%; }
 .hex-dial-chip {
+  min-height: 44px;
   flex: 1;
   text-align: center;
   padding: 2px 0;
@@ -1886,6 +1887,7 @@ body.hex-detail-open .upgrade-all {
     so the active chip stays lit. */
 .hex-shift { display: flex; gap: 3px; width: 100%; }
 .hex-shift-chip {
+  min-height: 44px;
   flex: 1;
   text-align: center;
   padding: 2px 0;
