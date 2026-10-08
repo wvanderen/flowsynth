@@ -245,7 +245,7 @@ describe("the Mutators face in detail", () => {
     expect(faceSvg("mutators").textContent).toContain("POWER");
     // The face carries the compact declaration; the full sentence rides
     // the tooltip layer.
-    expect(faceSvg("mutators").textContent).toContain("PWR +50%");
+    expect(faceSvg("mutators").textContent).toContain("+50%");
     const trigger = mutators.querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
     trigger.focus();
     expect(document.getElementById(trigger.getAttribute("aria-describedby")!)!.textContent).toContain("+50% to this module's power");

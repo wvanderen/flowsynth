@@ -20,16 +20,16 @@
 // reordering. Editing lives in upgrade mode only: during flow the same
 // cross-section opens read-only, its readouts live, its controls gone —
 // the click still answers the lock.
-import { affordableLevels, deployedAt, displayedRates, hostPower, levelCost, levelsCost, mutatorAt, wholeNous } from "../engine/economy";
+import { affordableLevels, deployedAt, displayedRates, hostPower, levelCost, levelsCost, mutatorAt, mutatorMagnitude, wholeNous } from "../engine/economy";
 import { BALANCE } from "../engine/constants";
 import { sameHex } from "../engine/hex";
 import { cellNoteOf, noteNameOf, pitchOf } from "../engine/lattice";
-import type { GameState, Hex, ModuleInstance, RateSnapshot } from "../engine/types";
+import type { GameState, Hex, ModuleInstance, MutatorInstance, RateSnapshot } from "../engine/types";
 import type { App, DetailFace } from "./app";
 import { HEX_RADIUS, hexPoints, moduleFace, forgeBranchOf, faceLevel, faceReadoutFor, waterFill, zeroBuyRead } from "./face";
 import { chargeGlow } from "./leads";
 import { formatInt, formatNumber } from "./format";
-import { FAMILY_WORD, rarityTicks, effectShort, mutatorEffectText, mutatorGlyph, mutatorInertVerdict, mutatorSlotPrice, mutatorUnlockTargets } from "./mutators";
+import { FAMILY_WORD, rarityTicks, mutatorEffectText, mutatorGlyph, mutatorInertVerdict, mutatorSlotPrice, mutatorUnlockTargets } from "./mutators";
 import { META, RARITY_LABEL } from "./meta";
 import { isPhoneWidth } from "./container";
 import { wireTooltips } from "./instrument";
@@ -274,13 +274,16 @@ function mutatorChassisHtml(state: GameState, pos: Hex, snapshot: RateSnapshot):
   }
   const inert = mutatorInertVerdict(state, pos, item, snapshot);
   const id = detailTipId();
+  // The engraving keeps every line inside the chassis taper: the family
+  // word in the wide top band, the glyph at center, the rarity ticks and
+  // the compact percentage beneath — the full sentence rides the tooltip.
   return {
     chassis: `<svg class="hex-stack-mut occupied${inert ? " mut-inert" : ""}" viewBox="-70 -70 140 140" aria-hidden="true">
       <polygon class="mut-slot-hex" points="${hexPoints(56)}"/>
-      <text class="mut-slot-family" y="-32" text-anchor="middle">${FAMILY_WORD[item.family].toUpperCase()}</text>
-      <g class="mut-slot-glyph" transform="translate(0 -8) scale(1.6)">${mutatorGlyph(item.family, 1)}</g>
-      <g class="mut-slot-ticks" transform="translate(0 26) scale(2.2)">${rarityTicks(item.rarity)}</g>
-      <text class="mut-slot-effect mono" y="48" text-anchor="middle">${inert ?? effectShort(item.family, item.rarity)}</text>
+      <text class="mut-slot-family" y="-26" text-anchor="middle">${FAMILY_WORD[item.family].toUpperCase()}</text>
+      <g class="mut-slot-glyph" transform="translate(0 -2) scale(1.5)">${mutatorGlyph(item.family, 1)}</g>
+      <g class="mut-slot-ticks" transform="translate(0 22) scale(2.2)">${rarityTicks(item.rarity)}</g>
+      <text class="mut-slot-effect mono" y="44" text-anchor="middle">${inert ?? mutatorShortPercent(item.family, item.rarity)}</text>
       <polygon class="hex-stack-marker" points="${hexPoints(53)}"/>
     </svg>`,
     tip: {
@@ -448,3 +451,10 @@ function wireDetailMutatorActions(app: App, pos: Hex): void {
 
 let detailTipSeq = 0;
 const detailTipId = (): string => `detail-tip-${++detailTipSeq}`;
+
+// The face's compact percentage (the chassis taper fits little more):
+// the concrete effect as its own figure — the family word above says
+// what it modifies, the tooltip carries the full sentence.
+function mutatorShortPercent(family: MutatorInstance["family"], rarity: MutatorInstance["rarity"]): string {
+  return `+${Math.round(mutatorMagnitude(family, rarity) * 100)}%`;
+}

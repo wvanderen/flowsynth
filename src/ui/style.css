@@ -1698,20 +1698,28 @@ body.hex-detail-open .upgrade-all {
   color: var(--switch);
 }
 /* The cross-section: two rows (Mutators above Modules, always) by two
-   columns (the stack, then the action rail). The composition centers as
-   a group; a short stage scrolls. */
+   columns (the stack, then the action rail). Every child states its post —
+   an empty rail row must never let a face slide into the rail's column.
+   The composition centers as a group; a short stage scrolls. */
 .hex-detail-grid {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   display: grid;
-  grid-template-columns: auto minmax(240px, 320px);
+  grid-template-columns: auto auto;
   align-items: center;
   justify-content: center;
-  align-content: center;
+  /* Safe centering: an overflowing stage falls back to start so the top
+     rows stay reachable and the chord row never clips under the rail. */
+  align-content: safe center;
   column-gap: 44px;
   padding: 4px 8px 12px;
 }
+.hex-detail-layer.mutators { grid-column: 1; grid-row: 1; }
+.hex-detail-layer.modules { grid-column: 1; grid-row: 2; }
+.hex-rail-row { grid-column: 2; }
+.hex-rail-row.mutators { grid-row: 1; }
+.hex-rail-row.modules { grid-row: 2; }
 .hex-detail-layer {
   display: flex;
   flex-direction: column;
@@ -1756,6 +1764,12 @@ body.hex-detail-open .upgrade-all {
    rhythm, dialed for the detail's scale — the readout prominent, the
    nameplate condensed, the note a footnote in the taper. */
 .hex-stack-face { color: var(--ink); }
+/* The engraving reads ink, exactly as the board's faces do (the board
+   scopes `.module-node text`); the level and note keep their muted fill,
+   the Forge's readout its charge register. */
+.hex-stack-face text { fill: var(--ink); pointer-events: none; }
+.hex-stack-face .face-level, .hex-stack-face .face-note { fill: var(--muted); }
+.hex-stack-face .hex { fill: var(--plate-common); }
 .hex-stack-face .face-level { font-size: 8px; }
 .hex-stack-face .face-name { font-size: 9px; letter-spacing: 0.16em; }
 .hex-stack-face .face-readout { font-size: 11px; }
@@ -1804,6 +1818,9 @@ body.hex-detail-open .upgrade-all {
   gap: 8px;
   align-self: stretch;
   padding: 18px 2px;
+  /* The rail's own width: the column is auto so it collapses when both
+     rows yield (an open slot under a spacer, say) and the stack centers. */
+  width: min(300px, 36vw);
   min-width: 0;
 }
 .hex-rail-row:empty { display: none; }
@@ -1884,20 +1901,21 @@ body.hex-detail-open .upgrade-all {
 .hex-shift-chip.active { background: var(--hue-voice); border-color: var(--hue-voice); color: var(--accent-ink); }
 
 /* The detail as a bottom sheet (§7, portrait phone): the same
-   cross-section re-docked over the board's lower edge — one column, the
-   stack on top, each action row under its own face. */
-.hex-detail.sheet { inset: auto 8px 64px; --detail-hex: clamp(170px, 42vw, 230px); }
-.hex-detail.sheet .hex-detail-scene { max-height: min(72vh, 560px); }
+   cross-section re-docked over the board's lower edge — the full stage,
+   top-anchored under the game-info strip, one column, the stack on top,
+   each action row under its own face, scrolling within the sheet. */
+.hex-detail.sheet { inset: 8px 8px 64px; --detail-hex: clamp(170px, 42vw, 230px); }
 .hex-detail.sheet .hex-detail-grid {
   grid-template-columns: 1fr;
-  justify-content: stretch;
   align-content: start;
+  justify-content: stretch;
   column-gap: 0;
   padding-bottom: 8px;
 }
+.hex-detail.sheet .hex-detail-grid > * { grid-column: auto; grid-row: auto; }
 .hex-detail.sheet .hex-detail-layer { padding: 8px 0 4px; }
 .hex-detail.sheet .hex-chord-row { max-width: none; }
-.hex-detail.sheet .hex-rail-row { padding: 10px 2px; }
+.hex-detail.sheet .hex-rail-row { padding: 10px 2px; width: auto; }
 
 /* The face button (issue #195): one per closed face, covering the bottom
    corner as face furniture — a chassis-veil trapezoid in the accent
@@ -2802,7 +2820,7 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
      sheet over the thumb bar; the module row wraps so the buy column takes
      the full width beneath the identity column. */
   .hex-detail { inset: 8px; }
-  .hex-detail.sheet { inset: auto 8px 60px; }
+  .hex-detail.sheet { inset: 8px 8px 60px; }
   /* The layer legend on phone (issue #295): the strip hugs the board's
      left edge below the game-info strip, clear of the thumb bar — and
      yields to the detail sheet, whose faces carry the selection. */

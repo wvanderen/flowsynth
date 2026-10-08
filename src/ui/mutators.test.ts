@@ -162,7 +162,7 @@ describe("the Mutators layer's slot faces", () => {
     const words = face.textContent ?? "";
     expect(words).toContain("POWER");
     expect(words).toContain("Oscillator · C4");
-    expect(words).toContain("PWR +50%");
+    expect(words).toContain("+50%");
     expect(words).not.toContain("ν/s");
     expect(words).not.toContain("ν");
     // The tray twin waits; the hostless cell's charge mutator says so.
@@ -253,7 +253,7 @@ describe("the gestures (issue #199)", () => {
     expect(app.ui.detail).toEqual({ pos: hex(0, 0), face: "mutators" });
     const mutators = document.querySelector(".hex-detail-layer.mutators")!;
     expect(mutators.textContent).toContain("POWER");
-    expect(mutators.textContent).toContain("PWR +50%");
+    expect(mutators.textContent).toContain("+50%");
     // The hosting relation is the stack itself — the face never says "hosts".
     expect(mutators.textContent).not.toContain("Oscillator · C4");
     document.getElementById("detail-mutator-retrieve")!.click();
@@ -539,7 +539,7 @@ describe("the readouts (issue #199)", () => {
     // no text column repeats it beside the module.
     const mutators = document.querySelector(".hex-detail-layer.mutators")!;
     expect(mutators.textContent).toContain("POWER");
-    expect(mutators.textContent).toContain("PWR +50%");
+    expect(mutators.textContent).toContain("+50%");
     expect(document.querySelector(".hex-detail-mutline")).toBeNull();
   });
 });
