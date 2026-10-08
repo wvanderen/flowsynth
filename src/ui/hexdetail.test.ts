@@ -177,6 +177,13 @@ describe("the Mutators face in detail", () => {
     const mutators = section("mutators");
     expect(mutators.querySelector("svg.locked, .hex-stack-mut.locked")).not.toBeNull();
     expect(faceSvg("mutators").textContent).toContain("LOCKED");
+    // A locked layer is never selectable: the detail stays on Modules,
+    // whether the locked face or the legend's locked symbol asks.
+    mutators.querySelector<HTMLButtonElement>('[data-detail-face="mutators"]')!.click();
+    expect(app.ui.detail!.face).toBe("modules");
+    document.querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
+    expect(app.ui.detail!.face).toBe("modules");
+    expect(section("modules").classList.contains("selected")).toBe(true);
     // The layer's mechanics ride the tooltip: focus discloses the entry rule.
     const trigger = mutators.querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
     trigger.focus();
@@ -435,7 +442,10 @@ describe("the vertical layer legend (issue #295)", () => {
     const legend = document.getElementById("layer-legend")!;
     const mutators = legend.querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!;
     expect(mutators.classList.contains("locked")).toBe(true);
+    // One mark per state: the padlock alone stands for the locked layer —
+    // the arete register joins only when the layer unlocks.
     expect(mutators.querySelector(".mut-tab-lock")).not.toBeNull();
+    expect(mutators.querySelectorAll("svg")).toHaveLength(1);
     expect(mutators.getAttribute("aria-pressed")).toBe("false");
     // The ⓘ trigger opens by focus…
     const trigger = legend.querySelector<HTMLButtonElement>(".inst-tip-trigger")!;

@@ -1503,11 +1503,13 @@ export class App {
   // The one opener: any owned cell's idle click lands here, whichever
   // layer stood — the armed gestures resolve before this is ever reached
   // (pickCell and mutPickSlot own their branches). The face defaults to
-  // the layer the click arrived on; in flow the cross-section opens
-  // read-only.
+  // the layer the click arrived on — never a locked layer (pre-entry the
+  // Mutators face cannot be emphasized, in the detail or anywhere); in
+  // flow the cross-section opens read-only.
   openDetail(pos: Hex, face: DetailFace = "modules"): void {
     const owned = this.state.cells.some((cell) => sameHex(cell, pos));
     if (!owned) return;
+    if (face === "mutators" && !this.state.catalogEntryOwned) face = "modules";
     this.ui.detail = { pos: { q: pos.q, r: pos.r }, face };
     this.ui.chordHover = null;
     this.render();
@@ -1532,11 +1534,14 @@ export class App {
 
   // A face selection inside the detail (issue #295): emphasis moves, the
   // section's controls take focus, and the vertical legend synchronizes —
-  // the stack order never changes. Post-entry the grid's layer follows the
-  // selection, so the return lands on the face the player last read;
-  // pre-entry the locked face emphasizes without ever flipping the grid.
+  // the stack order never changes. A layer that has not been unlocked is
+  // never selectable: pre-entry the detail stays on Modules, whatever
+  // clicks the locked face or its legend symbol. Post-entry the grid's
+  // layer follows the selection, so the return lands on the face the
+  // player last read.
   detailFace(face: DetailFace): void {
     if (!this.ui.detail || this.ui.detail.face === face) return;
+    if (face === "mutators" && !this.state.catalogEntryOwned) return;
     this.ui.detail = { ...this.ui.detail, face };
     if (this.state.mode === "upgrade" && this.state.catalogEntryOwned) this.ui.mutLayer = face;
     this.render();

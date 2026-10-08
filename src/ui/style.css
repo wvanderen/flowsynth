@@ -1902,9 +1902,9 @@ body.hex-detail-open .upgrade-all {
 
 /* The detail as a bottom sheet (§7, portrait phone): the same
    cross-section re-docked over the board's lower edge — the full stage,
-   top-anchored under the game-info strip, one column, the stack on top,
+   top-anchored below the game-info strip, one column, the stack on top,
    each action row under its own face, scrolling within the sheet. */
-.hex-detail.sheet { inset: 8px 8px 64px; --detail-hex: clamp(170px, 42vw, 230px); }
+.hex-detail.sheet { inset: 56px 8px 64px; --detail-hex: clamp(170px, 42vw, 230px); }
 .hex-detail.sheet .hex-detail-grid {
   grid-template-columns: 1fr;
   align-content: start;
@@ -2116,6 +2116,9 @@ body.hex-detail-open .upgrade-all {
 .legend-symbol:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .legend-symbol.locked svg { width: 12px; height: 12px; }
 .mut-tab-lock { width: 12px; height: 10px; }
+/* The legend's locked mark speaks alone at the symbols' own weight —
+   the padlock scales to the layer marks' size, never a second glyph. */
+.legend-symbol.locked .mut-tab-lock { width: 17px; height: 14px; }
 
 /* Cancellation feedback stays above the phone thumb bar and clear of
    board gestures. The live region announces the same words separately. */
@@ -2820,7 +2823,7 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
      sheet over the thumb bar; the module row wraps so the buy column takes
      the full width beneath the identity column. */
   .hex-detail { inset: 8px; }
-  .hex-detail.sheet { inset: 8px 8px 60px; }
+  .hex-detail.sheet { inset: 56px 8px 60px; }
   /* The layer legend on phone (issue #295): the strip hugs the board's
      left edge below the game-info strip, clear of the thumb bar — and
      yields to the detail sheet, whose faces carry the selection. */

@@ -183,8 +183,10 @@ export function layerLegendHtml(app: App, tipId = "legend-mutator-entry"): strin
   const active = layerLegendActiveFace(app);
   const locked = !state.catalogEntryOwned;
   const mutatorsSelected = active === "mutators";
+  // One mark per state: the padlock stands for the locked layer, the
+  // arete register for the unlocked one — never both at once.
   return `<button class="legend-symbol${active === "modules" ? " active" : ""}" data-legend-layer="modules" aria-pressed="${active === "modules"}" aria-label="Modules layer" title="Modules — the production grid">${LAYER_MODULES_SVG}</button>
-    <span class="legend-entry${locked ? " locked" : ""}"><button class="legend-symbol${mutatorsSelected ? " active" : ""}${locked ? " locked" : ""}" data-legend-layer="mutators" aria-pressed="${mutatorsSelected}" aria-label="Mutators layer — locked; open Catalog entry" title="${locked ? "Mutators — locked; unlocks with the Mutator entry" : "Mutators — the slots over the modules"}">${locked ? LOCK_MARK : ""}${LAYER_MUTATORS_SVG}</button>${locked ? `<span class="inst-tip legend-entry-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${tipId}" aria-label="About unlocking Mutators">ⓘ</button><span class="inst-tip-body" id="${tipId}" role="tooltip">Unlocks with the Mutator entry</span></span>` : ""}</span>`;
+    <span class="legend-entry${locked ? " locked" : ""}"><button class="legend-symbol${mutatorsSelected ? " active" : ""}${locked ? " locked" : ""}" data-legend-layer="mutators" aria-pressed="${mutatorsSelected}" aria-label="Mutators layer — locked; open Catalog entry" title="${locked ? "Mutators — locked; unlocks with the Mutator entry" : "Mutators — the slots over the modules"}">${locked ? LOCK_MARK : LAYER_MUTATORS_SVG}</button>${locked ? `<span class="inst-tip legend-entry-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${tipId}" aria-label="About unlocking Mutators">ⓘ</button><span class="inst-tip-body" id="${tipId}" role="tooltip">Unlocks with the Mutator entry</span></span>` : ""}</span>`;
 }
 
 const boundLegends = new WeakSet<HTMLElement>();
