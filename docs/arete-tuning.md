@@ -1,5 +1,7 @@
 # First Arete horizon tuning (#157)
 
+> **Superseded (issue #262).** This records the historical 1e23 horizon decision, which belonged to the uncapped chord-stacking economy ADR-0050/ADR-0055 retire. The released horizon is 7e6 with the finite capacity ladder, calibrated and guarded by `capacity-calibration.test.ts` (evidence in `docs/capacity-release-tuning.md` and ADR-0055). The experiment below ran a no-capacity policy under the uncapped economy and no longer describes released play; it is retained as provenance only.
+
 ## Decision
 
 Raise the provisional per-era prestige threshold to **1e23 earned nous**, superseding the initial 1e9 proposal. The target is roughly **16 hours of credited practice** for expanding chord boards, not 16 hours of wall-clock use or a guaranteed reset time. Keep the logarithmic floor at 10 and the existing prestige claim/reset rules. This is an early-game objective after developing a board, not a reward promised after five sessions. Five 30-minute sessions are a diagnostic checkpoint, not the optimization target. Board expansion, chord discovery, and creative experimentation are the intended progression; a minimal board reaching an easy reset is not the design goal.

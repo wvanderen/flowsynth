@@ -41,7 +41,7 @@ The reserved spot beside the board — the heading's right end — where a selec
 _Avoid_: Chord chip (the ambient-floating sense), Chord view
 
 **Harmonic capacity**:
-The whole-chord budget every voice owns — silent voices included, uniform across the board, one through five on the development board. An active chord instance consumes one unit on every participating voice; no partial chord earns anything and no budget is exceeded. Development slice (ADR-0051, issue #257): the economy ladders — Catalog purchases, Arete ceilings, the prestige reset — are decided but not yet shipped.
+The whole-chord budget every voice owns — silent voices included, uniform across the board, one through five (the shipped ladder's full reach, ADR-0055). An active chord instance consumes one unit on every participating voice; no partial chord earns anything and no budget is exceeded. Shipped for ordinary play: the Catalog purchases, the Arete ceilings and discounts, and the prestige reset are live (ADR-0053 as released by ADR-0055, issue #262).
 
 **Allocation**:
 The automatic selection of which recognized chord instances activate: it maximizes the summed final ν/s of the board's oscillators — charge, boosters, resonance, active build factors and silent-voice uplift included — with the empty allocation available whenever activating would reduce production. Equal-output allocations retain the previous active set, then fall back to a stable order. An unallocated voice keeps exactly ×1; the formation's quality multiplies only participants.

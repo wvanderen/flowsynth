@@ -16,7 +16,8 @@ const STARTER_CELLS: { q: number; r: number }[] = [
 // their one-time gates are paid by the same grant that places the cells, so
 // the start register is never "new" to the economy (ADR-0022 — gate distance
 // counts from it).
-const OPENING_GATED_ROWS: number[] = [0, 1];
+// The rows whose octave-row gates the opening grants as paid (ADR-0022).
+export const OPENING_GATED_ROWS: number[] = [0, 1];
 
 // The opening grant (ADR-0022): a nous grant that affords — but no longer
 // exactly equals — the pre-placed synthesizer's first upgrade. Everything

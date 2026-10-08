@@ -3,7 +3,7 @@ import { placeModule, returnModule } from "./actions";
 import { allocationQualityOf, ALLOCATION_QUALITY_BOUNDS } from "./allocation";
 import { formationQuality, formationTension } from "./chords";
 import { BALANCE } from "./constants";
-import { computeRates, displayedRates, projectPlacement, setAllocationEnabled, syncRates, maxChordFactorOf, chargeDelivered } from "./economy";
+import { displayedRates, projectPlacement, syncRates, maxChordFactorOf, chargeDelivered } from "./economy";
 import { syncAchievements } from "./achievements";
 import { syncChordDiscoveries } from "./library";
 import { summaryTermsOf } from "./allocation";
@@ -124,7 +124,6 @@ describe("measured versus applied formation quality (#260)", () => {
     const state = fresh();
     state.cells = [];
     state.modules = [];
-    setAllocationEnabled(state, true);
     // A doubled C class beside E and G: the triad's two C-seats compete,
     // and at capacity one the solver spends each voice once — the lighter
     // C stays unallocated inside the same named, actively singing
@@ -156,7 +155,6 @@ describe("measured versus applied formation quality (#260)", () => {
     const state = fresh();
     state.cells = [];
     state.modules = [];
-    setAllocationEnabled(state, true);
     // A doubled C against C♯ and D: the Octave is recognized, but the
     // floor prices the formation so activation would reduce production —
     // nothing activates, and the formation still measures.
@@ -180,7 +178,6 @@ describe("the placement projection (#260)", () => {
     const state = fresh();
     state.cells = [];
     state.modules = [];
-    setAllocationEnabled(state, true);
     const g = placed(state, "additive", col(7));
     placed(state, "additive", col(4));
     bridgeRow(state, col(7));
@@ -196,7 +193,6 @@ describe("the placement projection (#260)", () => {
     const state = fresh();
     state.cells = [];
     state.modules = [];
-    setAllocationEnabled(state, true);
     const c = placed(state, "additive", col(0));
     const e = placed(state, "additive", col(4));
     bridgeRow(state, col(4));
@@ -217,7 +213,7 @@ describe("the placement projection (#260)", () => {
     expect(displayedRates(state, true)).toEqual(retrieval.projected);
   });
 
-  it("rides the ordinary uncapped economy outside development", () => {
+  it("rides the one allocation economy everywhere — no development dependence", () => {
     const state = fresh();
     state.cells = [];
     state.modules = [];
@@ -226,16 +222,15 @@ describe("the placement projection (#260)", () => {
     bridgeRow(state, col(7));
     state.cells.push(hex(col(9), 0));
     const preview = projectPlacement(state, g.id, hex(col(9), 0), true);
-    expect(preview.projected.allocation).toBeUndefined();
+    expect(preview.projected.allocation).toBeDefined();
     expect(placeModule(state, g.id, hex(col(9), 0)).ok).toBe(true);
-    expect(computeRates(state, true)).toEqual(preview.projected);
+    expect(displayedRates(state, true)).toEqual(preview.projected);
   });
 
   it("never touches the live state it projects", () => {
     const state = fresh();
     state.cells = [];
     state.modules = [];
-    setAllocationEnabled(state, true);
     const g = placed(state, "additive", col(7));
     bridgeRow(state, col(7));
     const before = JSON.stringify(state.modules.map((m) => [m.id, m.pos]));
@@ -252,7 +247,6 @@ describe("retrieval boundary agreement", () => {
     state.cells = [];
     state.modules = [];
     state.sessionsCompleted = 1;
-    setAllocationEnabled(state, true);
     for (const q of [0, 1, 4, 5]) placed(state, "additive", q);
     const dissonance = placed(state, "additive", 7);
     bridgeRow(state, 8);

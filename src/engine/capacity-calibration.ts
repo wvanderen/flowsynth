@@ -4,6 +4,7 @@ import {
   buyCapacity,
   buyCapacityCeiling,
   buyCapacityDiscount,
+  buyCatalogEntry,
   buyCell,
   buyShelfModule,
   chooseRoll,
@@ -16,7 +17,7 @@ import {
 } from "./actions";
 import { nextCapacityPrice } from "./capacity";
 import { CATEGORY_OF, isOscillatorType } from "./constants";
-import { allocateRates, levelCost, setAllocationEnabled, wholeNous } from "./economy";
+import { allocateRates, levelCost, wholeNous } from "./economy";
 import { createGoal, deleteGoal } from "./goals";
 import { neighbors, sameHex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
@@ -26,9 +27,10 @@ import type { GameState, Hex } from "./types";
 
 // The harmonic-capacity calibration harness (issue #262): the authoritative
 // progression run — real purchases, rolls, charge, practice advancement and
-// prestige through the engine's own actions, with the allocation model
-// enabled so every rate reads the whole-chord selector — repeatable across
-// seeds and policies. The horizon never influences within-era behavior
+// prestige through the engine's own actions, on the allocation economy every
+// state rides by default (the whole-chord selector is the production path) —
+// repeatable across seeds and policies. The horizon never influences
+// within-era behavior
 // (prestige only fires at the crossing), so one run records its full
 // (minute, eraEarned) trajectory and capacity milestones, and candidate
 // horizons read against that record; the adopted tuning's final evidence
@@ -238,10 +240,15 @@ function manage(state: GameState, policy: CalibrationPolicy, minute: number): Ca
   } else {
     upgradeAll(state, "max");
   }
-  // The Arete offerings: the cheapest affordable one each break —
-  // discounts price under the ceilings by design, and they order the
-  // purchases.
+  // The Arete offerings: the playable purchase path (issue #262's rerun
+  // gate). The Catalog entry is the offerings' mandatory prerequisite —
+  // the face's lock screen — so the prompt player pays it at the first
+  // break that can afford it, then buys the cheapest affordable offering
+  // each break (discounts price under the ceilings by design, and they
+  // order the purchases). Every purchase rides the engine's own action
+  // gates, so the ledger's Arete side carries the prerequisite too.
   if (policy.arete === "prompt") {
+    if (!state.catalogEntryOwned) buyCatalogEntry(state);
     for (;;) {
       if (buyCapacityDiscount(state).ok) continue;
       if (buyCapacityCeiling(state).ok) continue;
@@ -298,20 +305,27 @@ export interface ProgressionRecord {
   policy: string;
   eras: EraTrajectory[];
   claims: number[];
-  areteSpent: { ceilings: number; discounts: number };
+  // The Arete ledger, prerequisite spending included: the Catalog entry
+  // (0 or 1 — the offerings' mandatory prerequisite, paid on the playable
+  // path) and the offering purchase counts.
+  areteSpent: { entry: number; ceilings: number; discounts: number };
   totalMinutes: number;
 }
 
-// A full progression: fresh state, allocation enabled, eras until the cap
-// or the era count. Each prestige fires at the crossing and banks the
-// live claim; the Arete offerings ride the following era's breaks.
+// A full progression: fresh state on the default allocation economy, eras
+// until the cap or the era count. Each prestige fires at the crossing and
+// banks the live claim; the Arete offerings ride the following era's
+// breaks behind the Catalog entry.
 export function runProgression(seed: number, policy: CalibrationPolicy, opts: ProgressionOptions): ProgressionRecord {
   const state = createInitialState();
-  setAllocationEnabled(state, true);
   const rng = seededRng(seed);
   const eras: EraTrajectory[] = [];
   const claims: number[] = [];
-  const owned = { ceilings: state.capacityCeilings, discounts: state.capacityDiscounts };
+  const owned = {
+    entry: state.catalogEntryOwned ? 1 : 0,
+    ceilings: state.capacityCeilings,
+    discounts: state.capacityDiscounts,
+  };
   for (let era = 1; era <= opts.eras; era++) {
     const trajectory = runEra(state, rng, policy, era, opts);
     eras.push(trajectory);
@@ -326,7 +340,11 @@ export function runProgression(seed: number, policy: CalibrationPolicy, opts: Pr
     policy: policy.name,
     eras,
     claims,
-    areteSpent: { ceilings: state.capacityCeilings - owned.ceilings, discounts: state.capacityDiscounts - owned.discounts },
+    areteSpent: {
+      entry: (state.catalogEntryOwned ? 1 : 0) - owned.entry,
+      ceilings: state.capacityCeilings - owned.ceilings,
+      discounts: state.capacityDiscounts - owned.discounts,
+    },
     totalMinutes: eras.reduce((total, era) => total + era.minutes, 0),
   };
 }

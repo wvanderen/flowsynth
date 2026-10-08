@@ -786,9 +786,12 @@ export function buyCapacity(state: GameState): ActionResult {
 // further, to prototype maximums four and five — and two discounts off the
 // original rung prices, 20% then 40% in total. One-time, Arete-paid, and
 // surviving prestige; every ceiling costs more than the discount standing
-// beside it.
+// beside it. Both render only past the Arete Catalog's entry (the face's
+// lock screen), so the entry is their mandatory prerequisite here too —
+// the playable purchase path the harness buys (issue #262).
 export function buyCapacityCeiling(state: GameState): ActionResult {
   if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
+  if (!state.catalogEntryOwned) return fail("Enter the Arete Catalog first.");
   const price = nextCeilingPrice(state);
   if (price === null) return fail("Both ceiling unlocks are owned.");
   if (state.arete < price) return fail("Not enough Arete.");
@@ -799,6 +802,7 @@ export function buyCapacityCeiling(state: GameState): ActionResult {
 
 export function buyCapacityDiscount(state: GameState): ActionResult {
   if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
+  if (!state.catalogEntryOwned) return fail("Enter the Arete Catalog first.");
   const price = nextDiscountPrice(state);
   if (price === null) return fail("Both discounts are owned.");
   if (state.arete < price) return fail("Not enough Arete.");

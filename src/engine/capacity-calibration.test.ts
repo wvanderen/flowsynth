@@ -4,8 +4,9 @@ import { AGGRESSIVE, ORDINARY, PUSHY, runProgression } from "./capacity-calibrat
 
 // The harmonic-capacity release calibration (issue #262): the adopted
 // tuning's pacing record, run through the authoritative progression —
-// real purchases, practice advancement and prestige, never free
-// resources — with the allocation model enabled. The first era crosses
+// real purchases (Catalog entry and prerequisites included), practice
+// advancement and prestige, never free resources — on the allocation
+// economy every state rides by default. The first era crosses
 // the horizon near twenty credited hours of ordinary play and the second
 // lands provisionally near seventy percent of that; both are tuning
 // targets with tolerance bands here, not hard gates. The always-on tier
@@ -56,7 +57,9 @@ describe("the harmonic-capacity release calibration (#262)", () => {
     for (const policy of [ORDINARY, AGGRESSIVE]) {
       const rec = runProgression(157, policy, { eras: 10, maxSessions: 80, stepSeconds: 120 });
       expect(rec.eras.length).toBe(10);
-      expect(rec.areteSpent).toEqual({ ceilings: 2, discounts: 2 });
+      // The playable Arete path: the Catalog entry paid first, then both
+      // ladders complete (two discounts, two ceilings).
+      expect(rec.areteSpent).toEqual({ entry: 1, ceilings: 2, discounts: 2 });
       const rungs = new Set(rec.eras.flatMap((era) => era.milestones.map((milestone) => milestone.rung)));
       expect(rungs).toContain(1);
       expect(rungs).toContain(2);
@@ -65,7 +68,8 @@ describe("the harmonic-capacity release calibration (#262)", () => {
       for (const era of rec.eras) {
         expect(era.minutes).toBeGreaterThan(rec.eras[0]!.minutes * 0.4);
       }
-      // The claims bank the era count, one per prestige.
+      // The claims bank the era count, one per prestige — the linear base
+      // the harness's at-threshold resets always see.
       expect(rec.claims).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     }
   });

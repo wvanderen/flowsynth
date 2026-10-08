@@ -705,36 +705,29 @@ export function activeChordKeysOf(state: GameState): ReadonlySet<string> {
   return new Set(state.activeChords ?? []);
 }
 
-// Runtime opt-in, never a save field: a development save cannot enable
-// the experimental economy when opened in an ordinary tab.
-const allocationEnabledStates = new WeakSet<GameState>();
-
-export function setAllocationEnabled(state: GameState, enabled: boolean): void {
-  if (enabled) allocationEnabledStates.add(state);
-  else allocationEnabledStates.delete(state);
-}
-
-// Live development reads must agree across ticks, display and reload.
+// Live allocation reads must agree across ticks, display and reload.
 // Keep the deterministic node cap; the separate stress/scenario board
 // retains its wall-clock safety valve and reports its own results.
 const LIVE_ALLOCATION_BUDGET: AllocationBudget = { ...DEFAULT_ALLOCATION_BUDGET, maxMs: Infinity };
 
-// The development game's one allocation sync: the authoritative two-pass with the
+// The game's one allocation sync: the authoritative two-pass with the
 // state's stored keys as the retention hint, the new active keys written
 // back — equal-output allocations hold their active set across
 // recomputation and, persisted with the save, across reload (#258).
+// Since the release calibration (#262) this is the only production path:
+// every state — new, loaded, or reset — rides the whole-chord selector,
+// with no caller opt-in anywhere.
 export function syncAllocation(state: GameState, flow: boolean = flowLive(state)): AllocatedRates {
   const result = allocateRates(state, flow, { keep: activeChordKeysOf(state), budget: LIVE_ALLOCATION_BUDGET });
   state.activeChords = result.read.instances.map((instance) => instance.key);
   return result;
 }
 
-// The display twin of syncRates: ordinary recognition unless explicitly
-// development-enabled, then the same allocation and stored retention hint.
+// The display twin of syncRates: the same allocation and stored retention
+// hint. The uncapped pass stays available as the explicit helper
+// `computeRates` for legacy comparisons and tests — never the default.
 export function displayedRates(state: GameState, flow: boolean = flowLive(state)): RateSnapshot {
-  return allocationEnabledStates.has(state)
-    ? allocateRates(state, flow, { keep: activeChordKeysOf(state), budget: LIVE_ALLOCATION_BUDGET }).snapshot
-    : computeRates(state, flow);
+  return allocateRates(state, flow, { keep: activeChordKeysOf(state), budget: LIVE_ALLOCATION_BUDGET }).snapshot;
 }
 
 // The placement projection (issue #260): the authoritative economy a drop
@@ -760,10 +753,9 @@ export function projectPlacement(
   flow: boolean = flowLive(state),
 ): PlacementProjection {
   const { modules } = hypotheticalBoardFor(state, id, target);
-  const enabled = allocationEnabledStates.has(state);
-  // The copied state the commit rehearses against: the hypothetical board,
-  // fresh ledgers (records copied member-deep — the syncs write in place),
-  // and the allocation gate re-attached to the copy.
+  // The copied state the commit rehearses against: the hypothetical board
+  // and fresh ledgers (records copied member-deep — the syncs write in
+  // place).
   const hypothetical: GameState = {
     ...state,
     modules,
@@ -773,10 +765,9 @@ export function projectPlacement(
       Object.entries(state.chordDiscovery).map(([name, record]) => [name, { ...record, roots: [...record.roots] }]),
     ),
   };
-  if (enabled) setAllocationEnabled(hypothetical, true);
-  // The commit's own sequence over the copy: the gated boundary sync
-  // (which in development writes the retention hint the display then
-  // reads), then the library and feat ledgers against the landed board.
+  // The commit's own sequence over the copy: the boundary sync (which
+  // writes the retention hint the display then reads), then the library
+  // and feat ledgers against the landed board.
   const landed = syncRates(hypothetical, true);
   syncChordDiscoveries(hypothetical, {
     chords: landed.allocation ? summaryTermsOf(landed.allocation) : landed.namedChords,
@@ -794,10 +785,10 @@ export function projectPlacement(
   };
 }
 
-// Production, action checks and summaries share the display's gate.
-// Only the development path writes an allocation retention hint.
+// Production, action checks and summaries share the display's one path.
+// The sync writes the allocation retention hint.
 export function syncRates(state: GameState, flow: boolean = flowLive(state)): RateSnapshot {
-  return allocationEnabledStates.has(state) ? syncAllocation(state, flow).snapshot : computeRates(state, flow);
+  return syncAllocation(state, flow).snapshot;
 }
 
 // Final contribution factors include formation quality and resonance.

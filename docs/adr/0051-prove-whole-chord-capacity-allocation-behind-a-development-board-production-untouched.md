@@ -1,7 +1,7 @@
 # 0051 — Prove whole-chord capacity allocation behind a development board, production untouched
 
 Date: 2026-10-06
-Status: Accepted (development slice)
+Status: Accepted (development slice — the board's production path was released onto the allocation economy by ADR-0055, issue #262; the development board survives as the dev panel and stress board)
 Issue: #257 (carrying the confirmed harmonic-capacity design; its own ADR lives in the design tree's numbering and the issue states the behavior independently)
 
 ## Context
