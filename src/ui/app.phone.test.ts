@@ -443,7 +443,7 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     const detailEl = document.getElementById("hex-detail")!;
     expect(detailEl.hidden).toBe(false);
     expect(detailEl.classList.contains("sheet")).toBe(true);
-    expect(detailEl.querySelector(".hex-detail-layer.modules .hex-detail-name")!.textContent).toContain("Oscillator");
+    expect(detailEl.querySelector(".hex-detail-layer.modules .hex-stack-face")!.textContent).toContain("OSC");
     expect(detailEl.querySelector("#detail-upgrade")).not.toBeNull();
     expect(document.body.classList.contains("hex-detail-open")).toBe(true);
     // The horizon bar floats at every width (§7): an open sheet covers the

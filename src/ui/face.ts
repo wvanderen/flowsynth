@@ -279,6 +279,21 @@ export function faceLevel(module: ModuleInstance): number | undefined {
   return module.type === "spacer" ? undefined : module.level;
 }
 
+// The Forge's threshold fill (ADR-0016): a charge-register waterline
+// clipped to the chassis, risen by the branch's progress share. Shared by
+// the board node and the Hex detail's enlarged face.
+const FILL_INSET = 3;
+
+export function waterFill(moduleId: string, progress: number): string {
+  const clamped = Math.min(1, Math.max(0, progress));
+  const radius = HEX_RADIUS - FILL_INSET;
+  const height = 2 * radius * clamped;
+  const y = radius - height;
+  const clipId = `water-${moduleId}`;
+  return `<clipPath id="${clipId}"><polygon points="${hexPoints(radius)}"/></clipPath>
+    <rect data-key="fill" clip-path="url(#${clipId})" class="water-fill" x="${-radius}" y="${y}" width="${2 * radius}" height="${height}"/>`;
+}
+
 // The zero-affordable reads (#233, ADR-0045): the face button and the
 // detail's dial share the zero-state labels and the shortfall-leading
 // tooltips, so the two surfaces can never drift apart.

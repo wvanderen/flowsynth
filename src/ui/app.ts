@@ -1540,10 +1540,10 @@ export class App {
     this.ui.detail = { ...this.ui.detail, face };
     if (this.state.mode === "upgrade" && this.state.catalogEntryOwned) this.ui.mutLayer = face;
     this.render();
-    // The emphasis lands with the rebuild; the face's head control takes
-    // focus so the keyboard follows the selection.
+    // The emphasis lands with the rebuild; the face's chassis takes focus
+    // so the keyboard follows the selection.
     (
-      document.querySelector<HTMLElement>(`[data-detail-section="${face}"] .hex-detail-layer-head`) ??
+      document.querySelector<HTMLElement>(`[data-detail-section="${face}"] [data-detail-face]`) ??
       document.querySelector<HTMLElement>(`[data-detail-section="${face}"]`)
     )?.focus();
   }

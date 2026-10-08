@@ -37,7 +37,7 @@ The chord-colored line the board draws for a formed chord: center-to-center betw
 _Avoid_: Chord link, Pair link, Hull
 
 **Chord readout**:
-The reserved spot beside the board — the heading's right end — where a hovered module's row stands: its final ν/s first — live during flow, present with no chord at all — then the names and multipliers of every chord it earns its bonus from. No board-wide +ν/s claims on any chord surface (ADR-0036). Hovering a seam or a module asks; the module's own facts live in its Hex detail (issue #295). While a placement gesture hovers a valid target, the placement preview owns the spot (ADR-0054). One spot, never floating over the board.
+The reserved spot beside the board — the heading's right end — where a hovered module's row stands: its final ν/s first — live during flow, present with no chord at all — then the names and multipliers of every chord it earns its bonus from. No board-wide +ν/s claims on any chord surface (ADR-0036). Hovering a seam or a module asks; the opened cell's chord facts stand in its Hex detail's chord row instead (issue #295, ADR-0055). While a placement gesture hovers a valid target, the placement preview owns the spot (ADR-0054). One spot, never floating over the board.
 _Avoid_: Chord chip (the ambient-floating sense), Chord view
 
 **Harmonic capacity**:
@@ -87,12 +87,12 @@ The octave row the opening board begins on; rows are finite, generous, and symme
 The one-time premium paid on the first purchase into each new octave row. It taxes acquisition only — moving owned cells between rows is free — and does not advance the cell purchase scaler.
 
 **Expanded face**:
-Retired vocabulary — the module bloom's face, superseded by the **Hex detail** (issue #295): the module's editing surface is the detail's Modules face now, and the only expanded presentation left is the detail tile.
+Retired vocabulary — the module bloom's face, superseded by the **Hex detail** (issue #295): the module's editing surface is the detail's Modules face now, and the only expanded presentation left is the detail's own module face.
 _Avoid_: bloom, pop-up
 
 **Hex detail**:
-An owned board coordinate's full-stack cross-section, opened by any owned cell's idle click (issue #295) — the module bloom's successor. It stands where the grid stood, at every width, showing the fixed layer stack at that one cell: the Mutators face above the Modules face, both visible, never reordered. Each face reads name + state + concrete effect with its action costs; editing belongs to upgrade mode, and during flow the same cross-section opens read-only with live readouts. An explicit Return control and Escape give the grid back with its layer, position, and zoom intact; another Hex requires returning first.
-_Avoid_: pop-up, modal, inspector, bloom
+An owned board coordinate's full-stack cross-section, opened by any owned cell's idle click (issue #295, presented as the frameless stack of ADR-0055) — the module bloom's successor. It stands where the grid stood, at every width, showing the fixed layer stack at that one cell: the Mutators face above the Modules face, both visible, never reordered. The faces themselves carry the information — the module face at full engraving, the slot face in the state grammar — and the composition adds only what the faces cannot say: the action rail beside the stack, the chord row in the reserved readout's grammar, and the tooltip layer beneath. Editing belongs to upgrade mode, and during flow the same cross-section opens read-only with live readouts. An explicit Return control and Escape give the grid back with its layer, position, and zoom intact; another Hex requires returning first.
+_Avoid_: pop-up, modal, inspector, bloom, detail panel, hosts line
 
 **Layer legend**:
 The vertical strip of layer symbols at the board's left edge (issue #295) — the one Modules / Mutators switch, shared by the grid and the Hex detail: on the grid it flips the layer, in the detail it emphasizes the face, and it synchronizes with both. The selected face wears the firm inset marker; pre-entry the Mutators symbol stands locked-but-visible, its click walking to the Catalog's entry screen. Upgrade-mode furniture: flow shows neither legend nor layer.

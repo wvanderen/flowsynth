@@ -31,7 +31,7 @@ import type { DeployedModule, GameState, Goal, Habit, Hex, HonestyEvent, Honesty
 import { DEV_BOARD_CAPACITIES, type App, type ChordHover, type EnterKind, type EnterSelection, type ModalKind } from "./app";
 import { startPointerDrag } from "./pointer-drag";
 import { appIcon, moduleIcon } from "./icons";
-import { HEX_RADIUS, hexApothem, hexPoints, HUE_TOKEN_OF, moduleFace, boardPoint, SPACING, spacerClipPath, forgeBranchOf, faceReadoutFor, faceLevel, zeroBuyRead, isSource } from "./face";
+import { HEX_RADIUS, hexApothem, hexPoints, HUE_TOKEN_OF, moduleFace, boardPoint, SPACING, spacerClipPath, forgeBranchOf, faceReadoutFor, faceLevel, waterFill, zeroBuyRead, isSource } from "./face";
 import { renderHexDetail } from "./hexdetail";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chordMarkCovers, chipWidth, CHORD_HUES, type ChordMark } from "./chordlayer";
@@ -119,8 +119,13 @@ export function render(app: App): void {
   renderCellArmPill(app);
   renderArcCard(app);
   // The Hex detail (issue #295): the bloom's successor — an owned cell's
-  // cross-section standing where the grid stood, at every width.
-  renderHexDetail(app, live, projected);
+  // cross-section standing where the grid stood, at every width. The
+  // chord row is the readout's own grammar, computed here so the reserved
+  // vocabulary never forks (render owns it, the detail mounts it).
+  const detailChordRow = app.ui.detail
+    ? detailChordRowHtml(app, app.state.mode === "upgrade" ? projected : live)
+    : "";
+  renderHexDetail(app, live, projected, detailChordRow);
   renderZoomCluster(app);
   renderHorizonBar(app);
   renderGameInfoStrip(app, live);
@@ -1423,16 +1428,19 @@ function setReadoutHtml(host: HTMLElement, html: string): void {
 }
 
 // Selected and projected voices share one figure grammar and disclosure layer.
-function readoutDisclosureHtml(kind: string, content: string, mechanics: string): string {
-  const id = `readout-${kind}-tip`;
-  return `<span class="inst-tip readout-tip"><button class="inst-tip-trigger readout-tip-trigger" type="button" aria-expanded="false" aria-describedby="${id}"${kind === "quality" ? ` aria-label="${escapeHtml(mechanics)}"` : ""}>${content}</button><span class="inst-tip-body" id="${id}" role="tooltip">${escapeHtml(mechanics)}</span></span>`;
+// `idKey` scopes the disclosure's id — a surface hosting two rows (the
+// reserved readout and the Hex detail's chord row) must never mint the
+// same id twice (the ledger's portal rule).
+function readoutDisclosureHtml(idKey: string, content: string, mechanics: string): string {
+  const id = `${idKey}-tip`;
+  return `<span class="inst-tip readout-tip"><button class="inst-tip-trigger readout-tip-trigger" type="button" aria-expanded="false" aria-describedby="${id}"${idKey.endsWith("quality") ? ` aria-label="${escapeHtml(mechanics)}"` : ""}>${content}</button><span class="inst-tip-body" id="${id}" role="tooltip">${escapeHtml(mechanics)}</span></span>`;
 }
 
-function readoutFigureHtml(kind: string, text: string, mechanics: string): string {
-  return readoutDisclosureHtml(kind, `<span class="chord-readout-chip chord-readout-${kind} mono">${escapeHtml(text)}</span>`, mechanics);
+function readoutFigureHtml(idKey: string, text: string, mechanics: string): string {
+  return readoutDisclosureHtml(idKey, `<span class="chord-readout-chip chord-readout-${idKey.replace(/^.*-/, "")} mono">${escapeHtml(text)}</span>`, mechanics);
 }
 
-function voiceMetricsHtml(module: ModuleInstance, snapshot: RateSnapshot, current?: RateSnapshot): string {
+function voiceMetricsHtml(module: ModuleInstance, snapshot: RateSnapshot, current?: RateSnapshot, idScope = "readout", withValue = true): string {
   if (!isVoiceType(module.type)) return "";
   const after = snapshot.contributions.get(module.id);
   const before = current?.contributions.get(module.id);
@@ -1440,18 +1448,40 @@ function voiceMetricsHtml(module: ModuleInstance, snapshot: RateSnapshot, curren
   const was = (value: number | null | undefined, unit: string): string =>
     value == null ? "" : ` — was ${unit}${formatNumber(value)}`;
   const rows: string[] = [];
-  if (isOscillatorType(module.type)) rows.push(readoutFigureHtml("value", `+${formatNumber(after?.value ?? 0)} ν/s`, `Final ν/s${was(before?.value, "+")}`));
+  if (withValue && isOscillatorType(module.type)) rows.push(readoutFigureHtml(`${idScope}-value`, `+${formatNumber(after?.value ?? 0)} ν/s`, `Final ν/s${was(before?.value, "+")}`));
   if (allocation) {
     const prior = current?.allocation;
-    rows.push(readoutFigureHtml("capacity", `Capacity ${allocation.used.get(module.id) ?? 0}/${allocation.capacity}`, `Whole-chord budget${prior ? ` — was ${prior.used.get(module.id) ?? 0}/${prior.capacity}` : ""}`));
+    rows.push(readoutFigureHtml(`${idScope}-capacity`, `Capacity ${allocation.used.get(module.id) ?? 0}/${allocation.capacity}`, `Whole-chord budget${prior ? ` — was ${prior.used.get(module.id) ?? 0}/${prior.capacity}` : ""}`));
     if (!allocation.certified) rows.push(`<span class="chord-readout-chip chord-readout-uncertified mono">Allocation uncertified</span>`);
   }
   if (after) {
-    if (isOscillatorType(module.type) && after.chordFactor !== null) rows.push(readoutFigureHtml("factor", `×${formatNumber(after.chordFactor)}`, `Total chord factor${was(before?.chordFactor, "×")}`));
-    if (after.formationQ !== 1) rows.push(readoutFigureHtml("formation", `Formation ×${formatNumber(after.formationQ)}`, `Applied formation term${was(before?.formationQ, "×")}`));
-    if (after.formationMeasuredQ !== 1 || after.formationQ !== 1) rows.push(qualityScaleHtml(after.formationMeasuredQ, allocation ? ALLOCATION_QUALITY_BOUNDS : { floor: BALANCE.qualityFloor, cap: BALANCE.qualityCap }));
+    if (isOscillatorType(module.type) && after.chordFactor !== null) rows.push(readoutFigureHtml(`${idScope}-factor`, `×${formatNumber(after.chordFactor)}`, `Total chord factor${was(before?.chordFactor, "×")}`));
+    if (after.formationQ !== 1) rows.push(readoutFigureHtml(`${idScope}-formation`, `Formation ×${formatNumber(after.formationQ)}`, `Applied formation term${was(before?.formationQ, "×")}`));
+    if (after.formationMeasuredQ !== 1 || after.formationQ !== 1) rows.push(qualityScaleHtml(after.formationMeasuredQ, allocation ? ALLOCATION_QUALITY_BOUNDS : { floor: BALANCE.qualityFloor, cap: BALANCE.qualityCap }, `${idScope}-quality`));
   }
   return rows.join("");
+}
+
+// The Hex detail's chord row (issue #295): the opened voice's chord facts
+// in the reserved readout's own grammar — capacity, total chord factor,
+// formation and its scale, every chord instance it sings in — with the
+// ν/s figure left off (the enlarged face carries it). The conducting
+// spacer asks by containment, the same rule its hover reads (#201).
+let detailChordSeq = 0;
+function detailChordRowHtml(app: App, snapshot: RateSnapshot): string {
+  const detail = app.ui.detail;
+  if (!detail) return "";
+  const module = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, detail.pos));
+  if (!module) return "";
+  const idScope = `detail-${++detailChordSeq}`;
+  const marks = chordReadoutCache.get(app)?.marks ?? [];
+  const metrics = voiceMetricsHtml(module, snapshot, undefined, idScope, false);
+  const chips = moduleChips(module, marks)
+    .map((mark) =>
+      `<span class="chord-readout-chip mono${mark.muted ? " chord-readout-muted" : ""}${mark.inactive ? " chord-readout-idle" : ""}" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.inactive ? `${mark.label} · idle` : mark.label)}</span>`,
+    )
+    .join("");
+  return metrics + chips;
 }
 
 // The low-to-high quality scale (issue #260): where the formation's
@@ -1459,13 +1489,13 @@ function voiceMetricsHtml(module: ModuleInstance, snapshot: RateSnapshot, curren
 // the organized end, a taller tick at neutral. The marker is a firm inset
 // bar (the instrument grammar's selected register), so the read survives
 // greyscale; the figures ride the Formation chip and the tooltip.
-function qualityScaleHtml(measured: number, bounds: { floor: number; cap: number }): string {
+function qualityScaleHtml(measured: number, bounds: { floor: number; cap: number }, idKey = "readout-quality"): string {
   const span = bounds.cap - bounds.floor;
   const at = (q: number): number => 14 + Math.min(1, Math.max(0, (q - bounds.floor) / span)) * 72;
   const x = at(measured);
   const neutral = at(1);
   const label = `Formation quality — ×${formatNumber(bounds.floor)} chromatic to ×${formatNumber(bounds.cap)} organized, ×1 neutral; this formation measures ×${formatNumber(measured)}`;
-  return readoutDisclosureHtml("quality", `<span class="chord-readout-scale" data-q="${measured}"><svg viewBox="0 0 100 20" width="100" height="20" aria-hidden="true"><line class="scale-track" x1="14" y1="6" x2="86" y2="6"/><line class="scale-tick" x1="14" y1="3" x2="14" y2="9"/><line class="scale-tick scale-tick-neutral" x1="${neutral.toFixed(1)}" y1="1" x2="${neutral.toFixed(1)}" y2="11"/><line class="scale-tick" x1="86" y1="3" x2="86" y2="9"/><rect class="scale-marker" x="${(x - 1.5).toFixed(1)}" y="2.5" width="3" height="7"/><text class="scale-end mono" x="14" y="18" text-anchor="middle">${formatNumber(bounds.floor)}</text><text class="scale-end mono" x="86" y="18" text-anchor="middle">${formatNumber(bounds.cap)}</text></svg></span>`, label);
+  return readoutDisclosureHtml(idKey, `<span class="chord-readout-scale" data-q="${measured}"><svg viewBox="0 0 100 20" width="100" height="20" aria-hidden="true"><line class="scale-track" x1="14" y1="6" x2="86" y2="6"/><line class="scale-tick" x1="14" y1="3" x2="14" y2="9"/><line class="scale-tick scale-tick-neutral" x1="${neutral.toFixed(1)}" y1="1" x2="${neutral.toFixed(1)}" y2="11"/><line class="scale-tick" x1="86" y1="3" x2="86" y2="9"/><rect class="scale-marker" x="${(x - 1.5).toFixed(1)}" y="2.5" width="3" height="7"/><text class="scale-end mono" x="14" y="18" text-anchor="middle">${formatNumber(bounds.floor)}</text><text class="scale-end mono" x="86" y="18" text-anchor="middle">${formatNumber(bounds.cap)}</text></svg></span>`, label);
 }
 
 // A delta figure for the preview rows (#260): explicit sign, monospace,
@@ -1684,18 +1714,6 @@ function bindFaceBuys(app: App, svg: SVGSVGElement): void {
       if ((event as KeyboardEvent).key === "Enter" || (event as KeyboardEvent).key === " ") buy(event);
     });
   });
-}
-
-const FILL_INSET = 3;
-
-function waterFill(moduleId: string, progress: number): string {
-  const clamped = Math.min(1, Math.max(0, progress));
-  const radius = HEX_RADIUS - FILL_INSET;
-  const height = 2 * radius * clamped;
-  const y = radius - height;
-  const clipId = `water-${moduleId}`;
-  return `<clipPath id="${clipId}"><polygon points="${hexPoints(radius)}"/></clipPath>
-    <rect data-key="fill" clip-path="url(#${clipId})" class="water-fill" x="${-radius}" y="${y}" width="${2 * radius}" height="${height}"/>`;
 }
 
 function isTargetCell(app: App): boolean {

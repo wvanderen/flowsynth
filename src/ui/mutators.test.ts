@@ -252,13 +252,14 @@ describe("the gestures (issue #199)", () => {
     clickSlot(0, 0);
     expect(app.ui.detail).toEqual({ pos: hex(0, 0), face: "mutators" });
     const mutators = document.querySelector(".hex-detail-layer.mutators")!;
-    expect(mutators.textContent).toContain("Power");
-    expect(mutators.textContent).toContain("+50% to this module's power");
-    expect(mutators.textContent).toContain("Oscillator · C4");
+    expect(mutators.textContent).toContain("POWER");
+    expect(mutators.textContent).toContain("PWR +50%");
+    // The hosting relation is the stack itself — the face never says "hosts".
+    expect(mutators.textContent).not.toContain("Oscillator · C4");
     document.getElementById("detail-mutator-retrieve")!.click();
     expect(mutatorOf(app.state, "mu1").pos).toBeNull();
     expect(app.ui.detail).toEqual({ pos: hex(0, 0), face: "mutators" });
-    expect(document.querySelector(".hex-detail-layer.mutators")!.textContent).toContain("Open slot");
+    expect(document.querySelector(".hex-detail-layer.mutators")!.textContent).toContain("OPEN SLOT");
   });
 
   it("dragging a placed mutator onto a matching twin opens the combine review; confirm combines", async () => {
@@ -531,12 +532,15 @@ describe("the readouts (issue #199)", () => {
     expect(readout.textContent).toContain("Open Mutator slot · C5 — inert until a host lands");
   });
 
-  it("the Hex detail's module face gains the mutator line (issue #295)", () => {
+  it("the Hex detail's declaration lives on the mutator face alone (issue #295)", () => {
     seedMutatorEra();
     app.openDetail(hex(0, 0));
-    const line = document.querySelector(".hex-detail-mutline")!;
-    expect(line.textContent).toContain("Mutator · Power");
-    expect(line.textContent).toContain("+50% to this module's power");
+    // The stack carries the declaration once — the arete face above — and
+    // no text column repeats it beside the module.
+    const mutators = document.querySelector(".hex-detail-layer.mutators")!;
+    expect(mutators.textContent).toContain("POWER");
+    expect(mutators.textContent).toContain("PWR +50%");
+    expect(document.querySelector(".hex-detail-mutline")).toBeNull();
   });
 });
 
@@ -641,9 +645,8 @@ describe("inert declarations", () => {
     expect(document.querySelector(".hex-detail-layer.mutators")!.textContent).toContain("inert");
     expect(document.querySelector(".hex-detail-layer.mutators")!.textContent).not.toContain("%");
     if (family === "resonance") {
-      const line = document.querySelector(".hex-detail-mutline")!;
-      expect(line.textContent).toContain("inert");
-      expect(line.textContent).not.toContain("%");
+      // The verdict rides the mutator face alone; no module-face line repeats it.
+      expect(document.querySelector(".hex-detail-mutline")).toBeNull();
     }
   });
 });

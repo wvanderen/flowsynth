@@ -45,7 +45,10 @@ export function mutatorEffectText(family: MutatorFamily, rarity: Rarity): string
   return `${pct} to the strength this module receives`;
 }
 
-function effectShort(family: MutatorFamily, rarity: Rarity): string {
+// The face-scale effect read: the family's short word over its percentage —
+// what fits a chassis engraving. The full sentence lives in the tooltip
+// layer. Shared with the Hex detail's mutator chassis (issue #295).
+export function effectShort(family: MutatorFamily, rarity: Rarity): string {
   return `${FAMILY_SHORT[family]} ${mutatorEffectText(family, rarity).split(" ")[0]}`;
 }
 
@@ -63,7 +66,8 @@ export function mutatorGlyph(family: MutatorFamily, scale = 1): string {
 }
 
 // Rarity = engraved ticks here, the module face's ring count in miniature.
-function rarityTicks(rarity: Rarity): string {
+// Shared with the Hex detail's mutator chassis (issue #295).
+export function rarityTicks(rarity: Rarity): string {
   const n = { common: 1, uncommon: 2, rare: 3 }[rarity];
   return Array.from({ length: n }, (_, i) => `<circle r="1.6" cx="${((i - (n - 1) / 2) * 7).toFixed(1)}" cy="0"/>`).join("");
 }

@@ -11,10 +11,13 @@ import { levelsCost, displayedRates } from "../engine/economy";
 import type { MutatorFamily, MutatorInstance, Rarity } from "../engine/types";
 
 // The Hex detail (issue #295): the module bloom's successor — an owned
-// cell's full-stack cross-section replacing the grid, the fixed
-// Mutators-over-Modules stack, the vertical layer legend shared by grid
-// and detail, and the return contract (explicit control and Escape,
-// preserving the layer, position, and zoom).
+// cell's full-stack cross-section replacing the grid. The presentation is
+// the instrument, not a menu: the module face below at bloom scale (the
+// face itself is the plate — no text column re-speaks it), the Mutators
+// face above in the arete register (its state in the four-state grammar),
+// the action rail beside the stack, the chord row in the reserved
+// readout's grammar, and the return contract (explicit control and
+// Escape, preserving the layer, position, and zoom).
 
 const fixture = createAppFixture();
 const boot = fixture.boot;
@@ -32,6 +35,7 @@ const open = () => !detail().hidden;
 const sections = () => [...detail().querySelectorAll<HTMLElement>(".hex-detail-layer")];
 const section = (face: "modules" | "mutators") =>
   detail().querySelector<HTMLElement>(`.hex-detail-layer.${face}`)!;
+const faceSvg = (face: "modules" | "mutators") => section(face).querySelector<SVGElement>(".hex-stack-chassis svg")!;
 const grid = () => document.getElementById("grid") as unknown as SVGSVGElement;
 
 function mut(id: string, family: MutatorFamily, rarity: Rarity, pos: Hex_json | null): MutatorInstance {
@@ -61,15 +65,29 @@ describe("opening the cross-section (issue #295)", () => {
     // The grid keeps its geometry — the return restores it by standing
     // still — but yields the surface.
     expect(grid().classList.length).toBeGreaterThanOrEqual(0);
-    // The module face reads name + level + note + effect, and the panel
-    // names the place.
-    const modules = section("modules");
-    expect(modules.querySelector(".hex-detail-name")!.textContent).toContain("Oscillator · LV 0");
-    expect(modules.querySelector(".hex-detail-note")!.textContent).toBe("C4");
-    expect(modules.querySelector(".hex-detail-contrib")!.textContent).toBe(`+${formatNumber(0.1)} ν/s`);
-    expect(detail().querySelector(".hex-detail-place")!.textContent).toContain("C4");
+    // The face itself is the plate: the enlarged engraving carries name,
+    // level, pitch, and the live contribution with its unit.
+    const engraving = faceSvg("modules").textContent ?? "";
+    expect(engraving).toContain("OSC");
+    expect(engraving).toContain("LV 0");
+    expect(engraving).toContain("C4");
+    expect(engraving).toContain(`+${formatNumber(0.1)} ν/s`);
+    // No text column re-speaks the face, and no header band repeats the
+    // place (the standards: no second panel beside what the face says).
+    expect(detail().querySelector(".hex-detail-name, .hex-detail-col, .hex-detail-place")).toBeNull();
     // The return control stands.
     expect(document.getElementById("hex-detail-return")).not.toBeNull();
+  });
+
+  it("the chord row mounts beside the module face in the readout's grammar", () => {
+    app.render();
+    clickCell(0, 0);
+    const row = section("modules").querySelector(".hex-chord-row")!;
+    expect(row).not.toBeNull();
+    // The ν/s figure stays off the row — the enlarged face carries it.
+    expect(row.textContent).not.toContain("ν/s");
+    // The voice's chord facts ride the reserved grammar's own chips.
+    expect(row.textContent).toContain("chord factor");
   });
 
   it("an empty owned cell opens too: the empty Module place shows its state", () => {
@@ -77,8 +95,11 @@ describe("opening the cross-section (issue #295)", () => {
     clickCell(0, 1);
     expect(open()).toBe(true);
     const modules = section("modules");
-    expect(modules.querySelector(".hex-detail-name")!.textContent).toBe("Empty place");
-    expect(modules.querySelector(".hex-detail-note")!.textContent).toBe("C5");
+    expect(modules.getAttribute("aria-label")).toContain("empty place at C5");
+    // The dashed chassis carries the cell's own pitch — the place's identity.
+    expect(faceSvg("modules")).toBeTruthy();
+    expect(faceSvg("modules")!.querySelector(".hex.empty")).not.toBeNull();
+    expect(faceSvg("modules").textContent).toContain("C5");
     // No upgrade column on an empty place.
     expect(modules.querySelector("#detail-upgrade")).toBeNull();
   });
@@ -97,7 +118,7 @@ describe("opening the cross-section (issue #295)", () => {
     expect(section("mutators").classList.contains("selected")).toBe(false);
   });
 
-  it("a face selection emphasizes its section, focuses its controls, and syncs the legend", () => {
+  it("a face selection emphasizes its section, focuses its control, and syncs the legend", () => {
     seedEra();
     app.render();
     clickCell(0, 0);
@@ -112,13 +133,27 @@ describe("opening the cross-section (issue #295)", () => {
     expect(section("modules").classList.contains("selected")).toBe(false);
     expect(legend().querySelector<HTMLElement>('[data-legend-layer="mutators"]')!.classList.contains("active")).toBe(true);
     expect(legend().querySelector<HTMLElement>('[data-legend-layer="modules"]')!.classList.contains("active")).toBe(false);
-    expect(document.activeElement).toBe(section("mutators").querySelector(".hex-detail-layer-head"));
+    expect(document.activeElement).toBe(section("mutators").querySelector("[data-detail-face]"));
     // Post-entry the grid's layer follows the selection, so the return
     // lands on the face the player last read.
     expect(app.ui.mutLayer).toBe("mutators");
-    // A section head selects too.
+    // A face's own chassis selects too.
     document.querySelector<HTMLButtonElement>('[data-detail-face="modules"]')!.click();
     expect(app.ui.detail!.face).toBe("modules");
+  });
+
+  it("the emphasized face wears the firm inset marker; the other stays present, dimmed", () => {
+    seedEra();
+    app.render();
+    clickCell(0, 0);
+    // The state grammar's marker is a drawn stroke on each chassis —
+    // readable without color — and the stylesheet shows it on the
+    // emphasized layer only.
+    expect(section("modules").querySelector(".hex-stack-marker")).not.toBeNull();
+    expect(section("mutators").querySelector(".hex-stack-marker")).not.toBeNull();
+    const css = readFileSync("src/ui/style.css", "utf8");
+    expect(css).toMatch(/\.hex-detail-layer\.selected \.hex-stack-marker[^{]*\{[^}]*display:\s*block/);
+    expect(css).toMatch(/\.hex-stack-marker[^{]*\{[^}]*display:\s*none/);
   });
 
   it("the rate roster's pick opens the module's Hex detail and marks its row", () => {
@@ -136,12 +171,19 @@ describe("opening the cross-section (issue #295)", () => {
 });
 
 describe("the Mutators face in detail", () => {
-  it("pre-entry the locked place shows its state and offers the Catalog entry", () => {
+  it("pre-entry the locked place wears the muted outline and offers the Catalog entry", () => {
     app.render();
     clickCell(0, 1);
     const mutators = section("mutators");
-    expect(mutators.querySelector(".hex-detail-name")!.textContent).toBe("Locked");
-    expect(mutators.querySelector(".hex-detail-note")!.textContent).toContain("Mutator entry");
+    expect(mutators.querySelector("svg.locked, .hex-stack-mut.locked")).not.toBeNull();
+    expect(faceSvg("mutators").textContent).toContain("LOCKED");
+    // The layer's mechanics ride the tooltip: focus discloses the entry rule.
+    const trigger = mutators.querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
+    trigger.focus();
+    expect(document.getElementById(trigger.getAttribute("aria-describedby")!)!.classList.contains("inst-show")).toBe(true);
+    expect(document.getElementById(trigger.getAttribute("aria-describedby")!)!.textContent).toContain("Mutator entry");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(document.getElementById(trigger.getAttribute("aria-describedby")!)!.classList.contains("inst-show")).toBe(false);
     // The entry action walks to the ◇ face; Escape returns to the detail,
     // the entry not bought.
     document.getElementById("detail-mutator-entry")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -164,8 +206,8 @@ describe("the Mutators face in detail", () => {
     button.click();
     expect(app.state.mutatorSlots.some((slot) => sameHex(slot, hex(0, 1)))).toBe(true);
     expect(app.state.arete).toBe(18);
-    // The panel refreshes into the vacant-slot state.
-    expect(section("mutators").textContent).toContain("Open slot");
+    // The stack refreshes into the vacant-slot state.
+    expect(section("mutators").textContent).toContain("OPEN SLOT");
     expect(section("mutators").textContent).toContain("inert · no host");
   });
 
@@ -182,34 +224,43 @@ describe("the Mutators face in detail", () => {
     expect(app.state.arete).toBe(5);
   });
 
-  it("an ineligible cell names the adjacency rule instead of pricing", () => {
+  it("an ineligible cell wears the muted outline and names the adjacency rule", () => {
     seedEra();
     app.state.cells.push(hex(2, 0)); // owned, but not beside the patch
     app.render();
     clickCell(2, 0);
-    const mutators = section("mutators");
-    expect(mutators.querySelector(".hex-detail-name")!.textContent).toBe("No slot");
+    expect(faceSvg("mutators").textContent).toContain("NO SLOT");
+    expect(faceSvg("mutators")!.querySelector(".mut-slot-hex.muted")).not.toBeNull();
     expect(document.getElementById("detail-mutator-unlock")).toBeNull();
-    expect(mutators.querySelector(".hex-detail-noslot")!.textContent).toBe("beside the patch");
+    // The refusal names its rule in the mutator rail's own row.
+    const noslot = detail().querySelector(".hex-rail-row.mutators .hex-detail-noslot")!;
+    expect(noslot.textContent).toBe("beside the patch");
   });
 
-  it("a placed mutator's declaration lives here; Retrieve lands it in the tray", () => {
+  it("a placed mutator's declaration is its own face above the stack — hosts is never said", () => {
     seedEra();
     app.render();
     clickCell(0, 0);
     const mutators = section("mutators");
-    expect(mutators.querySelector(".hex-detail-name")!.textContent).toContain("Power");
-    expect(mutators.textContent).toContain("common");
-    expect(mutators.textContent).toContain("+50% to this module's power");
-    expect(mutators.textContent).toContain("hosts Oscillator · C4");
-    // The module face carries the same fact as its mutator line.
-    expect(section("modules").querySelector(".hex-detail-mutline")!.textContent).toContain("Mutator · Power");
+    expect(faceSvg("mutators").textContent).toContain("POWER");
+    // The face carries the compact declaration; the full sentence rides
+    // the tooltip layer.
+    expect(faceSvg("mutators").textContent).toContain("PWR +50%");
+    const trigger = mutators.querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
+    trigger.focus();
+    expect(document.getElementById(trigger.getAttribute("aria-describedby")!)!.textContent).toContain("+50% to this module's power");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    // The hosting relation is the stack itself: the module occupies the
+    // position directly below, so no face repeats "hosts" — and no text
+    // column repeats the mutator beside its module.
+    expect(mutators.textContent).not.toContain("hosts");
+    expect(section("modules").querySelector(".hex-detail-mutline")).toBeNull();
     document.getElementById("detail-mutator-retrieve")!.click();
     expect(app.state.mutators.find((m) => m.id === "mu1")!.pos).toBeNull();
-    expect(section("mutators").textContent).toContain("Open slot");
+    expect(section("mutators").textContent).toContain("OPEN SLOT");
   });
 
-  it("an inert mutator promises no effect, in the declaration and the module line", () => {
+  it("an inert mutator promises no effect on its own face", () => {
     seedEra();
     app.state.mutators[0]!.family = "resonance";
     app.render();
@@ -217,7 +268,6 @@ describe("the Mutators face in detail", () => {
     const mutators = section("mutators");
     expect(mutators.textContent).toContain("inert · no chord");
     expect(mutators.textContent).not.toContain("+");
-    expect(section("modules").querySelector(".hex-detail-mutline")!.textContent).toContain("inert");
   });
 });
 
@@ -227,12 +277,12 @@ describe("the upgrade column in detail", () => {
     app.render();
     clickCell(0, 0);
     const button = () => document.querySelector<HTMLButtonElement>("#detail-upgrade")!;
-    expect(button().querySelector(".bloom-upgrade-title")!.textContent).toContain(formatInt(10));
+    expect(button().querySelector(".hex-upgrade-title")!.textContent).toContain(formatInt(10));
     button().click();
     expect(app.state.modules[0]!.level).toBe(1);
     expect(app.state.nous).toBe(20);
     expect(open()).toBe(true);
-    expect(button().querySelector(".bloom-upgrade-title")!.textContent).toContain(formatInt(16));
+    expect(button().querySelector(".hex-upgrade-title")!.textContent).toContain(formatInt(16));
   });
 
   it("cannot afford: zero reads zero — the shortfall leads, nothing disables", () => {
@@ -242,7 +292,7 @@ describe("the upgrade column in detail", () => {
     const button = document.querySelector<HTMLButtonElement>("#detail-upgrade")!;
     expect(button.disabled).toBe(false);
     expect(button.title).toBe("+0 — 10 ν short of one level");
-    const maxChip = document.querySelector<HTMLButtonElement>('.bloom-dial [data-bulk="max"]')!;
+    const maxChip = document.querySelector<HTMLButtonElement>('.hex-dial [data-bulk="max"]')!;
     expect(maxChip.textContent).toBe("MAX·0");
   });
 
@@ -251,14 +301,14 @@ describe("the upgrade column in detail", () => {
     app.state.nous = levelsCost(0, 3);
     app.render();
     clickCell(0, 0);
-    document.querySelector<HTMLButtonElement>('.bloom-dial [data-bulk="5"]')!.click();
+    document.querySelector<HTMLButtonElement>('.hex-dial [data-bulk="5"]')!.click();
     expect(app.ui.bulkCount).toBe(5);
     // Selecting another Hex requires returning to the grid first.
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     expect(app.ui.detail).toBeNull();
     clickCell(1, 0);
     expect(app.ui.bulkCount).toBe(1);
-    expect(document.querySelector(".bloom-upgrade-title")!.textContent).toContain("Upgrade ×1");
+    expect(document.querySelector(".hex-upgrade-title")!.textContent).toContain("Upgrade ×1");
   });
 
   it("the silent wire wears no Upgrade button", () => {
@@ -266,7 +316,9 @@ describe("the upgrade column in detail", () => {
     app.render();
     clickCell(1, 0);
     expect(section("modules").querySelector("#detail-upgrade")).toBeNull();
-    expect(section("modules").querySelector(".hex-detail-contrib")!.textContent).toContain("silent");
+    // The face speaks the wire's silence; no text column carries a line.
+    expect(faceSvg("modules").textContent).toContain("⌇");
+    expect(section("modules").querySelector(".hex-detail-contrib")).toBeNull();
   });
 
   it("the Bend's shift picker re-pitches from the detail", () => {
@@ -288,13 +340,13 @@ describe("read-only during flow (issue #295)", () => {
     clickCell(1, 0);
     expect(open()).toBe(true);
     expect(detail().querySelector(".hex-detail-readonly")!.textContent).toContain("read-only");
-    // Live readouts stand; every editing control is gone. The figure is
-    // the live pass's own — the session's legs included.
+    // Live readouts stand on the face; every editing control is gone. The
+    // figure is the live pass's own — the session's legs included.
     const live = displayedRates(app.state, true);
     const value = live.contributions.get(app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(1, 0)))!.id)!.value;
-    expect(section("modules").querySelector(".hex-detail-contrib")!.textContent).toBe(`+${formatNumber(value)} ν/s`);
+    expect(faceSvg("modules").textContent).toContain(`+${formatNumber(value)} ν/s`);
     expect(document.getElementById("detail-upgrade")).toBeNull();
-    expect(section("modules").querySelector(".bloom-dial")).toBeNull();
+    expect(section("modules").querySelector(".hex-dial")).toBeNull();
     expect(document.getElementById("detail-mutator-retrieve")).toBeNull();
     endSession(app.state);
   });
@@ -305,7 +357,7 @@ describe("read-only during flow (issue #295)", () => {
     app.render();
     clickCell(0, 1);
     expect(open()).toBe(true);
-    expect(section("modules").textContent).toContain("Empty place");
+    expect(section("modules").getAttribute("aria-label")).toContain("empty place");
     expect(document.getElementById("detail-mutator-unlock")).toBeNull();
     expect(document.getElementById("detail-mutator-entry")).toBeNull();
     endSession(app.state);
@@ -437,7 +489,7 @@ describe("the vertical layer legend (issue #295)", () => {
 });
 
 describe("the phone face (issue #295)", () => {
-  it("the grid yields to the same panel, re-docked as a bottom sheet", () => {
+  it("the grid yields to the same cross-section, re-docked as a bottom sheet", () => {
     setAppWidth(500);
     app.state.nous = 30;
     app.render();

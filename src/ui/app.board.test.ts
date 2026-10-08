@@ -1682,18 +1682,18 @@ describe("the bulk upgrade controls (#195)", () => {
     s.nous = levelsCost(0, 3);
     app.render();
     clickCell(0, 0);
-    const dial = document.querySelector(".bloom-dial")!;
-    expect(dial.querySelectorAll(".bloom-dial-chip")).toHaveLength(4);
+    const dial = document.querySelector(".hex-dial")!;
+    expect(dial.querySelectorAll(".hex-dial-chip")).toHaveLength(4);
     dial.querySelector<HTMLButtonElement>('[data-bulk="5"]')!.click();
     const button = document.querySelector<HTMLButtonElement>("#detail-upgrade")!;
-    expect(button.querySelector(".bloom-upgrade-title")!.textContent).toContain("Upgrade ×5");
-    expect(button.querySelector(".bloom-upgrade-title")!.textContent).toContain(formatInt(levelsCost(0, 5)));
+    expect(button.querySelector(".hex-upgrade-title")!.textContent).toContain("Upgrade ×5");
+    expect(button.querySelector(".hex-upgrade-title")!.textContent).toContain(formatInt(levelsCost(0, 5)));
     button.click();
     expect(s.modules[0]!.level).toBe(3);
     expect(status()).toContain("+3 levels");
     // The purchase keeps the detail open, repriced for what remains.
     expect(app.ui.detail).toEqual({ pos: hex(0, 0), face: "modules" });
-    expect(document.querySelector(".bloom-upgrade-title")!.textContent).toContain("×5");
+    expect(document.querySelector(".hex-upgrade-title")!.textContent).toContain("×5");
   });
 
   it("the dial's MAX chip counts the affordable levels and buys them all", () => {
@@ -1702,7 +1702,7 @@ describe("the bulk upgrade controls (#195)", () => {
     app.render();
     clickCell(0, 0);
     const expected = affordableLevels(1e6, 0);
-    const maxChip = document.querySelector<HTMLButtonElement>('.bloom-dial [data-bulk="max"]')!;
+    const maxChip = document.querySelector<HTMLButtonElement>('.hex-dial [data-bulk="max"]')!;
     expect(maxChip.textContent).toBe(`MAX·${expected}`);
     maxChip.click();
     document.querySelector<HTMLButtonElement>("#detail-upgrade")!.click();
@@ -1715,7 +1715,7 @@ describe("the bulk upgrade controls (#195)", () => {
     app.state.nous = 100;
     app.render();
     clickCell(0, 0);
-    const maxChip = () => document.querySelector<HTMLButtonElement>('.bloom-dial [data-bulk="max"]')!;
+    const maxChip = () => document.querySelector<HTMLButtonElement>('.hex-dial [data-bulk="max"]')!;
     expect(maxChip().textContent).toBe(`MAX·${affordableLevels(100, 0)}`);
     app.state.nous = 50;
     app.render();
@@ -1729,7 +1729,7 @@ describe("the bulk upgrade controls (#195)", () => {
     give(app.state, "additive", hex(1, 0));
     app.render();
     clickCell(0, 0);
-    document.querySelector<HTMLButtonElement>('.bloom-dial [data-bulk="5"]')!.click();
+    document.querySelector<HTMLButtonElement>('.hex-dial [data-bulk="5"]')!.click();
     expect(app.ui.bulkCount).toBe(5);
     // The grid yielded to the detail: its surface is retired (pointer-dead
     // and hidden), so no other Hex is reachable from here.
@@ -1738,7 +1738,7 @@ describe("the bulk upgrade controls (#195)", () => {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     clickCell(1, 0);
     expect(app.ui.bulkCount).toBe(1);
-    expect(document.querySelector(".bloom-upgrade-title")!.textContent).toContain("Upgrade ×1");
+    expect(document.querySelector(".hex-upgrade-title")!.textContent).toContain("Upgrade ×1");
   });
 
   it("the dial rides the phone detail sheet's buy column", () => {
@@ -1749,8 +1749,8 @@ describe("the bulk upgrade controls (#195)", () => {
     // The sheet carries the same ladder: the chip row rides the buy column.
     document.querySelector<HTMLButtonElement>('.hex-detail.sheet [data-bulk="5"]')!.click();
     const button = document.querySelector<HTMLButtonElement>("#detail-upgrade")!;
-    expect(button.closest(".hex-detail-buy")).not.toBeNull();
-    expect(button.querySelector(".bloom-upgrade-title")!.textContent).toContain("Upgrade ×5");
+    expect(button.closest(".hex-rail-row.modules")).not.toBeNull();
+    expect(button.querySelector(".hex-upgrade-title")!.textContent).toContain("Upgrade ×5");
     button.click();
     expect(app.state.modules[0]!.level).toBe(3);
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
