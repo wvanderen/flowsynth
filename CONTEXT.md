@@ -37,7 +37,7 @@ The chord-colored line the board draws for a formed chord: center-to-center betw
 _Avoid_: Chord link, Pair link, Hull
 
 **Chord readout**:
-The reserved spot beside the board — the heading's right end — where a selected (or hovered) module's row stands: its final ν/s first — live during flow, present with no chord at all — then the names and multipliers of every chord it earns its bonus from. No board-wide +ν/s claims on any chord surface (ADR-0036). The selected module's row pins it; hovering a seam or a module asks. While a placement gesture hovers a valid target, the placement preview owns the spot (ADR-0054). One spot, never floating over the board.
+The reserved spot beside the board — the heading's right end — where a hovered module's row stands: its final ν/s first — live during flow, present with no chord at all — then the names and multipliers of every chord it earns its bonus from. No board-wide +ν/s claims on any chord surface (ADR-0036). Hovering a seam or a module asks; the opened cell's chord facts stand in its Hex detail's chord row instead (issue #295, ADR-0055). While a placement gesture hovers a valid target, the placement preview owns the spot (ADR-0054). One spot, never floating over the board.
 _Avoid_: Chord chip (the ambient-floating sense), Chord view
 
 **Harmonic capacity**:
@@ -87,18 +87,19 @@ The octave row the opening board begins on; rows are finite, generous, and symme
 The one-time premium paid on the first purchase into each new octave row. It taxes acquisition only — moving owned cells between rows is free — and does not advance the cell purchase scaler.
 
 **Expanded face**:
-The module's own face opened by a click in upgrade mode — the compact face's UI enlarged, adding only what the face doesn't say: the production contribution and the Upgrade button with its benefit. It is the module's only surface (ADR-0026): the inspector sidebar and module panels are retired, and no second panel duplicates what the board already says.
-_Avoid_: Move button, Return button, module panel, inspector sidebar
+Retired vocabulary — the module bloom's face, superseded by the **Hex detail** (issue #295): the module's editing surface is the detail's Modules face now, and the only expanded presentation left is the detail's own module face.
+_Avoid_: bloom, pop-up
 
-**Bloom**:
-The expanded face's plate — a fixed regular hexagon nested onto the selected module (ADR-0024), presenting below, mirrored, only when the frame's top leaves no room. It pops only when it would actually enlarge the module; past that, the upgrade affordances ride the closed face as a floating card. On portrait phone it presents as a bottom sheet over the board's lower edge.
-_Avoid_: pop-up, modal
+**Hex detail**:
+An owned board coordinate's full-stack cross-section, opened by any owned cell's idle click (issue #295, presented as the frameless stack of ADR-0055) — the module bloom's successor. It stands where the grid stood, at every width, showing the fixed layer stack at that one cell: the Mutators face above the Modules face, both visible, never reordered. The faces themselves carry the information — the module face at full engraving, the slot face in the state grammar — and the composition adds only what the faces cannot say: the action rail beside the stack, the chord row in the reserved readout's grammar, and the tooltip layer beneath. Editing belongs to upgrade mode, and during flow the same cross-section opens read-only with live readouts. An explicit Return control and Escape give the grid back with its layer, position, and zoom intact; another Hex requires returning first.
+_Avoid_: pop-up, modal, inspector, bloom, detail panel, hosts line
 
-**Lift-off**:
-The popped bloom standing for its module: the origin cell renders vacated while the bloom stands, since the bloom repeats every line the face carries.
+**Layer legend**:
+The vertical strip of layer symbols at the board's left edge (issue #295) — the one Modules / Mutators switch, shared by the grid and the Hex detail: on the grid it flips the layer, in the detail it emphasizes the face, and it synchronizes with both. The selected face wears the firm inset marker; pre-entry the Mutators symbol stands locked-but-visible, its click walking to the Catalog's entry screen. Upgrade-mode furniture: flow shows neither legend nor layer.
+_Avoid_: tabs, second switch
 
 **Tray**:
-The board-surface inventory as an always-open pinned column docked at the board's right edge in upgrade mode, dual-face under the board tabs' Modules/Mutators switch — the one switch, which the column carries no copy of (issue #272). The Modules face holds the inventory: drag a module off the board into it to retrieve — the chord-breaking gesture, shared with right-click retrieve — and click an item then a cell to place; occupied placement swaps. The Mutators face is the Mutator tray (its own entry). Tiles wear the minimal mark: a hexagon outlined in the module's category hue, or the arete register for mutators, with the glyph alone — the full face belonging to the board and the expanded face (ADR-0027). Flow locks the board and hides the column with it; on portrait phone the column unfolds and the thumb bar's Inventory segment taps the same tray open as a scrimless dual-face sheet — the board behind stays live; the switch rides the sheet there, its tiles keep the gestures at one size, and a live drag carries between board and sheet both ways. There is no management view and no collapse.
+The board-surface inventory as an always-open pinned column docked at the board's right edge in upgrade mode, dual-face under the layer legend's Modules/Mutators switch — the one switch, which the column carries no copy of (issue #272, the legend by issue #295). The Modules face holds the inventory: drag a module off the board into it to retrieve — the chord-breaking gesture, shared with right-click retrieve — and click an item then a cell to place; occupied placement swaps. The Mutators face is the Mutator tray (its own entry). Tiles wear the minimal mark: a hexagon outlined in the module's category hue, or the arete register for mutators, with the glyph alone — the full face belonging to the board and the expanded face (ADR-0027). Flow locks the board and hides the column with it; on portrait phone the column unfolds and the thumb bar's Inventory segment taps the same tray open as a scrimless dual-face sheet — the board behind stays live; the switch rides the sheet there, its tiles keep the gestures at one size, and a live drag carries between board and sheet both ways. There is no management view and no collapse.
 _Avoid_: inventory panel, management view, collapsible tray, second switch
 
 **Mutator Grid**:
@@ -114,7 +115,7 @@ An item of the Mutator Grid: typed, carrying rarity, sitting in a Mutator slot t
 _Avoid_: enhancement (the pre-design name), gem, affix
 
 **Mutator tray**:
-The Mutator Grid's inventory — the tray column's Mutators face, switched by the board tabs: minted mutators wait here, a click then a slot places, and a drag or right-click retrieves. Pre-entry the face is locked-but-visible — a muted outline and the lock mark — and clicking it (tab, tray face, or Add) opens the Catalog on the entry screen as a preview of the future entry; it never flips the mode. On portrait phone the tray sheet's Mutators face carries the same tiles; no always-on strip stands there.
+The Mutator Grid's inventory — the tray column's Mutators face, switched by the layer legend: minted mutators wait here, a click then a slot places, and a drag or right-click retrieves. Pre-entry the face is locked-but-visible — a muted outline and the lock mark — and clicking it (tab, tray face, or Add) opens the Catalog on the entry screen as a preview of the future entry; it never flips the mode. On portrait phone the tray sheet's Mutators face carries the same tiles; no always-on strip stands there.
 _Avoid_: second inventory, unlock card
 
 ### Resources and production
@@ -126,7 +127,7 @@ The provisional name for the game's main progression resource, spent on permanen
 The single final nous-per-second output: the sum of the oscillators' final figures — `(synths + boosters) × empowerment × achievementBoost`. Modules contribute terms to this shared rate rather than producing independent timed payouts.
 
 **Final ν/s**:
-One module's own production figure: its base term with its local booster, chord, charge, and achievement effects all included (ADR-0036). The displayed figures sum to the board's rate within rounding, the selected module's final ν/s shows in the reserved readout, and every oscillator's row in the rate details leads with it (ADR-0037).
+One module's own production figure: its base term with its local booster, chord, charge, and achievement effects all included (ADR-0036). The displayed figures sum to the board's rate within rounding, a hovered module's final ν/s leads the reserved readout (the Hex detail's face carries it too, issue #295), and every oscillator's row in the rate details leads with it (ADR-0037).
 
 **Composite**:
 The board's summed uncharged amplitude: the synths leg plus the booster uplift, each carrying its members' local chord factors (ADR-0036). There is no board-wide chord multiplier over it.
