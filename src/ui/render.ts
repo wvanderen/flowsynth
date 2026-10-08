@@ -1,16 +1,16 @@
-import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, hostPower, levelCost, levelsCost, longGoalCost, projectPlacement, ritualAmpOf, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
+import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, levelCost, levelsCost, longGoalCost, projectPlacement, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
 import { ALLOCATION_QUALITY_BOUNDS, idleTermsOf, summaryTermsOf } from "../engine/allocation";
 import { claimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
 import { combinePreview, combineMutatorsPreview, levelable, type CombinePreview, upgradeAllPreview } from "../engine/actions";
 import { deployedAt } from "../engine/economy";
-import { adjacent, sameHex } from "../engine/hex";
+import { sameHex } from "../engine/hex";
 import { forgeThreshold, flowThreshold, mutatorForgeThreshold } from "../engine/rolls";
 import { BALANCE, CATEGORY_OF, isOscillatorType, isVoiceType, NAMED_CHORDS, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { catalogOpen, rowUnlockCost, unlockableRows } from "../engine/catalog";
 import { capacityCeiling, capacityDiscountShare, nextCapacityPrice, nextCeilingPrice } from "../engine/capacity";
 import { formatClock, formatDuration } from "../engine/clock";
-import { cellNoteOf, noteNameOf, octaveRowOf, pitchOf, positionInRange } from "../engine/lattice";
+import { cellNoteOf, noteNameOf, octaveRowOf, positionInRange } from "../engine/lattice";
 import { appActive, appLockNote, TILE_APPS, type FocusApp } from "../engine/apps";
 import { isInFlowNote } from "../engine/notes";
 import { activeHabit } from "../engine/habits";
@@ -31,10 +31,10 @@ import type { DeployedModule, GameState, Goal, Habit, Hex, HonestyEvent, Honesty
 import { DEV_BOARD_CAPACITIES, type App, type ChordHover, type EnterKind, type EnterSelection, type ModalKind } from "./app";
 import { startPointerDrag } from "./pointer-drag";
 import { appIcon, moduleIcon } from "./icons";
-import { HEX_RADIUS, hexApothem, hexPoints, HUE_TOKEN_OF, moduleFace, boardPoint, SPACING, spacerClipPath } from "./face";
-import { bloomLayout, bloomPops, bloomSpan, viewMeet, viewPoint, type ViewFrame } from "./bloom";
+import { HEX_RADIUS, hexApothem, hexPoints, HUE_TOKEN_OF, moduleFace, boardPoint, SPACING, spacerClipPath, forgeBranchOf, faceReadoutFor, faceLevel, zeroBuyRead, isSource } from "./face";
+import { renderHexDetail } from "./hexdetail";
 import { chargeGlow, chargeLeads } from "./leads";
-import { chordOverlay, chordMarkCovers, chipWidth, CHORD_HUES, type ChordMark, type ChordOverlay } from "./chordlayer";
+import { chordOverlay, chordMarkCovers, chipWidth, CHORD_HUES, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
 import { formatDate, formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
@@ -48,22 +48,19 @@ import { liveAttr, liveSet } from "./live";
 import {
   bindMutatorDrag,
   bindMutatorLayer,
-  bloomMutatorKey,
   hexFromAttr,
   mutatorAskHtml,
-  mutatorBloomLineHtml,
   mutatorEffectText,
   mutGridDecorations,
   mutatorSlotPrice,
   mutatorTileInner,
   mutatorTileSvg,
-  mutTabPairHtml,
+  layerLegendHtml,
   mutatorLayerWanted,
   FAMILY_WORD,
   renderMutatorPill,
-  renderMutatorPopover,
-  renderMutatorTabs,
   renderMutatorTray,
+  renderLayerLegend,
 } from "./mutators";
 
 // The adjacent-center distance the chord overlay's edge trace needs: on
@@ -114,22 +111,25 @@ export function render(app: App): void {
   renderConsoleApps(app, projected);
   renderBoardLedger(app, live);
   renderTools(app, projected);
-  renderGrid(app, live, projected);
+  // The Hex detail replaces the grid (issue #295): while it stands the
+  // grid renders nothing — another Hex is unreachable until the return.
+  if (!app.ui.detail) renderGrid(app, live, projected);
   renderInventoryTray(app);
   renderUpgradeAll(app);
   renderCellArmPill(app);
   renderArcCard(app);
-  renderBloom(app, projected);
+  // The Hex detail (issue #295): the bloom's successor — an owned cell's
+  // cross-section standing where the grid stood, at every width.
+  renderHexDetail(app, live, projected);
   renderZoomCluster(app);
   renderHorizonBar(app);
   renderGameInfoStrip(app, live);
-  // The Mutator Grid's furniture (issue #199): the tab pair, the pinned
-  // tray strip, the armed unlock's pill, and the declaration popover —
-  // each a no-op wherever its moment isn't now.
-  renderMutatorTabs(app);
+  // The Mutator Grid's furniture (issue #199): the vertical layer legend,
+  // the pinned tray strip, the armed unlock's pill — each a no-op wherever
+  // its moment isn't now.
+  renderLayerLegend(app);
   renderMutatorTray(app);
   renderMutatorPill(app);
-  renderMutatorPopover(app, projected);
   renderModal(app, live, projected);
   renderDev(app);
   renderDevBoard(app);
@@ -871,6 +871,9 @@ function toolActions(): ToolAction[] {
       label: "Add",
       run: (app) => {
         if (app.ui.modal === "inventory") app.closeModal();
+        // Add expands the board — a grid gesture (#295): from the detail it
+        // returns the grid first, then arms per the mode's own contract.
+        if (app.ui.detail) app.closeDetail();
         if (app.state.mode === "upgrade" && app.ui.mutLayer === "mutators") {
           if (!app.state.catalogEntryOwned) {
             app.openMutatorEntry();
@@ -1111,31 +1114,16 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
 
   const flow = state.mode === "flow";
   const snapshot = live;
-  const selectedModule = state.modules.find((m) => m.id === ui.selected) ?? null;
-  // One frame for every bloom placement question: the lens's world view
-  // plus the wrap's css-pixel size, read together (§5).
-  const frame: ViewFrame = {
-    view: lens.view,
-    box: { width: svg.clientWidth, height: svg.clientHeight },
-  };
-  // The lift-off (§5): when the expanded face pops, it IS the module's hex
-  // lifted toward the camera — the origin cell renders vacated while the
-  // bloom stands, since the bloom repeats every line the face carries.
-  const bloomLifts = selectedModule !== null && bloomPops(viewMeet(frame), HEX_RADIUS);
-
   // The chord annotation is always on (§6, #137): every formed chord wears
   // its colored work — no chord view, no toggle. The name chips live in
-  // the reserved readout beside the board (the selected module's chord, or
-  // the hovered seam/voice's), carrying names and multipliers only — never
+  // the reserved readout beside the board (the hovered seam's or voice's,
+  // asked on pointer rest), carrying names and multipliers only — never
   // a board-wide +ν/s claim (ADR-0036). The selected module's final ν/s
   // rides the same spot, live during flow and present with no chord at all.
-  // Selection (§6) is the one emphasis (#201): at rest every chord
-  // whispers in the gaps; the selection lifts the focused chords over the
-  // faces, and a conducting spacer's selection lifts the chords its wire
-  // carries — a spacer sings in no chord, so the ask reads by containment.
+  // Emphasis rides hover and the Hex detail now (issue #295) — the grid
+  // itself whispers its chords in the gaps, never over a face.
   const deployedById = new Map(state.modules.filter((m) => m.pos !== null).map((m) => [m.id, m]));
-  const focusIds = selectedModule?.pos ? [selectedModule.id] : [];
-  const focusPoint = selectedModule?.pos && selectedModule.type === "spacer" ? point(selectedModule.pos) : null;
+  const focusPoint = null;
   // The silent voices (ADR-0048): the chords they sing in draw muted.
   const silentIds = new Set(state.modules.filter((m) => CATEGORY_OF[m.type] === "silentVoice").map((m) => m.id));
   const overlay = chordOverlay({
@@ -1151,7 +1139,7 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
     radius: HEX_RADIUS,
     step: LATTICE_STEP,
     labelFor: chordTermLabel,
-    focusIds,
+    focusIds: [],
     focusPoint,
     silentIds,
   });
@@ -1178,11 +1166,10 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
 
   // Named-chord marks (§6, #201): the chord work draws UNDER the modules —
   // visible in the gaps between the faces and past the poking corners,
-  // whispering until a selection lifts it. With a selection standing, the
-  // selected module's chords stay focused and the rest fade (§6); in live
-  // sessions the stylesheet pulses the marks quietly while the board stays
-  // locked. The readout refreshes with the same marks: a selection pins
-  // its chord's chips.
+  // whispering in the gaps; no chord ever crosses a face. In live sessions
+  // the stylesheet pulses the marks quietly while the board stays locked.
+  // The readout refreshes with the same marks: a hovered voice's chips ask
+  // into the reserved spot.
   html += `<g data-key="chord-marks">${overlay.marks
     .map((mark) => chordMarkHtml(mark, "formed"))
     .join("")}</g>`;
@@ -1190,28 +1177,22 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
   for (const pos of state.cells) {
     const [x, y] = point(pos);
     const module = deployedAt(state, pos);
-    // The lift-off (§5): with a popped bloom standing for the selected
-    // module, its own cell renders vacated — the bloom repeats every line
-    // the face carries, so the doubled face beneath adds nothing.
-    const lifted = bloomLifts && module !== undefined && module.id === ui.selected;
     const drop = dropRegister(app, pos);
     const label = module ? `${META[module.type].name} at ${cellNoteOf(pos)}` : `Empty cell · ${cellNoteOf(pos)}`;
-    if (module && !lifted) {
+    if (module) {
       html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">`;
-      html += moduleNode(app, module, pos, { snapshot, selectedModule, drop });
+      html += moduleNode(app, module, pos, { snapshot, drop });
       html += `</g>`;
       continue;
     }
-    // Vacated by the lift, or genuinely empty: an owned cell reads as owned
-    // space — the dashed outline and its note, no add-button plus or EMPTY
-    // CELL prompt. Only armed-mode hints remain (board-redesign spec §7,
-    // #151); New cells stay the purchase entry point. The chassis is
-    // translucent (#201) so the chord work shows through, and the note
-    // centers on the cell (#172).
+    // An empty owned cell reads as owned space — the dashed outline and
+    // its note, no add-button plus or EMPTY CELL prompt. Only armed-mode
+    // hints remain (board-redesign spec §7, #151); New cells stay the
+    // purchase entry point. The chassis is translucent (#201) so the chord
+    // work shows through, and the note centers on the cell (#172).
     let classes = "hex empty";
-    if (lifted) classes += " lifted";
     if (drop) classes += ` ${dropClass(drop)}`;
-    if (!module && !lifted && isTargetCell(app)) classes += " target";
+    if (isTargetCell(app)) classes += " target";
     html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">
       <polygon class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>
       <text y="0" dominant-baseline="central" text-anchor="middle" class="hex-note">${cellNoteOf(pos)}</text></g>`;
@@ -1241,12 +1222,6 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
       }
     }
   }
-
-  // The selection lift (#201): the focused chords draw a second time over
-  // the faces — a selected chord reads straight through spacer plates and
-  // translucent empty cells. Empty when nothing is selected: the chords
-  // whisper in the gaps and no chord ever crosses a face.
-  html += `<g data-key="chord-lift" id="chord-lift">${chordLiftHtml(overlay, selectedModule !== null && selectedModule.pos !== null)}</g>`;
 
   // The would-form ghosts (§5–§6): dashed seams and outlines over the
   // chords the hovered drop or placement would form, one per forming
@@ -1279,14 +1254,6 @@ const SPACER_WINDOW_DEFS = `<defs data-key="spacer-window"><clipPath id="spacer-
 // over the faces — the one loud pass a selection earns (ADR-0025). At rest
 // the group is empty: the chords whisper in the gaps, never over a face.
 // The wash rides the stylesheet (the loop polygon's translucent fill).
-function chordLiftHtml(overlay: ChordOverlay, lifted: boolean): string {
-  if (!lifted) return "";
-  return overlay.marks
-    .filter((mark) => mark.focused)
-    .map((mark) => chordMarkHtml(mark, "formed"))
-    .join("");
-}
-
 // ── The Row unlock's shaded rows (issue #197, #174's approved surface) ──
 // In add-cell mode, each still-locked octave row just past the launch band
 // renders shaded violet behind a single "Unlock this octave row · ⟨Arete⟩"
@@ -1387,21 +1354,19 @@ interface ChordReadoutCache {
 const chordReadoutCache = new WeakMap<App, ChordReadoutCache>();
 
 
-// The reserved readout (§6): the chips, in one place — the selected
-// module's chip row wins, else what the pointer rests on (a seam names its
-// chord; a module names every chord it sings in). While a placement
-// gesture hovers a valid target, the projection owns the spot (#260). A
-// selected or hovered oscillator's final ν/s leads the row — live during
-// flow, present with no chord at all (ADR-0036). Only producers carry the
-// figure: nothing else produces nous, and the Forge's progress-per-second
-// is not ν/s. Hidden when nothing asks. HTML beside the board, so the
-// expanded face can never cover it and it never moves.
+// The reserved readout (§6): the chips, in one place — what the pointer
+// rests on (a seam names its chord; a module names every chord it sings
+// in). While a placement gesture hovers a valid target, the projection
+// owns the spot (#260). A hovered oscillator's final ν/s leads the row —
+// live during flow, present with no chord at all (ADR-0036). Only
+// producers carry the figure: nothing else produces nous, and the Forge's
+// progress-per-second is not ν/s. Hidden when nothing asks. HTML beside
+// the board, so the Hex detail can never cover it and it never moves.
 function updateChordReadout(app: App): void {
   const host = byId("chord-readout");
   if (!host) return;
   wireTooltips(host, app.signal);
   const cache = chordReadoutCache.get(app);
-  const marks = cache?.marks ?? [];
   const snapshot = cache?.snapshot;
   const hover = app.ui.chordHover;
   // The Mutator layer's ask (issue #199): the hovered slot's full
@@ -1423,13 +1388,12 @@ function updateChordReadout(app: App): void {
     setReadoutHtml(host, placementPreviewHtml(app, preview));
     return;
   }
-  const selected = app.state.modules.find((m) => m.id === app.ui.selected && m.pos !== null) ?? null;
   const hovered =
     hover?.kind === "module" ? (app.state.modules.find((m) => m.id === hover.moduleId) ?? null) : null;
   // Every chord the module earns its bonus from — not just the first; the
   // conducting spacer's own containment rule rides moduleChips (#201).
-  const chosen = selected ? moduleChips(selected, marks) : chordChipsForHover(app);
-  const focus = selected ?? hovered;
+  const chosen = chordChipsForHover(app);
+  const focus = hovered;
   const metrics = focus && snapshot ? voiceMetricsHtml(focus, snapshot) : "";
   if (!metrics && chosen.length === 0) {
     host.hidden = true;
@@ -1585,8 +1549,12 @@ function sameChordHover(a: ChordHover | null, b: ChordHover | null): boolean {
   return false;
 }
 
-// Generators are the sole charge source category (ADR-0012).
-const isSource = (m: ModuleInstance) => CATEGORY_OF[m.type] === "generator";
+interface RenderContext {
+  snapshot: ReturnType<typeof computeRates>;
+  // The live drop register over this cell (§5): amber for occupied, green
+  // for open. Null away from the hover.
+  drop: DropRegister | null;
+}
 
 // Directional tips for the patch leads, in the charge register: full for
 // live flow, dimmed for everything that only previews the wiring.
@@ -1607,94 +1575,8 @@ function leadSegment(x1: number, y1: number, x2: number, y2: number): string {
   return `x1="${(x1 + ux * LEAD_PAD).toFixed(2)}" y1="${(y1 + uy * LEAD_PAD).toFixed(2)}" x2="${(x2 - ux * LEAD_PAD).toFixed(2)}" y2="${(y2 - uy * LEAD_PAD).toFixed(2)}"`;
 }
 
-interface RenderContext {
-  snapshot: ReturnType<typeof computeRates>;
-  selectedModule: ModuleInstance | null;
-  // The live drop register over this cell (§5): amber for occupied, green
-  // for open. Null away from the hover.
-  drop: DropRegister | null;
-}
-
-// The Forge family's two branches (ADR-0043, issue #198) read their own
-// meters — the Module Forge's shared meter, the Mutator Forge's own — the
-// face plumbing is branch-blind beyond this lookup. Null off the family.
-function forgeBranchOf(state: GameState, type: ModuleInstance["type"]): { progress: number; threshold: number } | null {
-  if (type === "forge") return { progress: state.forge.progress, threshold: forgeThreshold(state.forge.earned) };
-  if (type === "mutatorForge") return { progress: state.mutatorForge.progress, threshold: mutatorForgeThreshold(state.mutatorForge.earned) };
-  return null;
-}
-
-// A module face's readout (ADR-0016): the prominent value beneath the
-// signature — the same glanceable line whether compact, in the tray, or
-// enlarged on the expanded face. Shared by the board node and the bloom;
-// the bloom takes the contribution with its unit, since the enlarged face
-// is where the ν/s figure is added (no second readout beside it).
-function faceReadoutFor(state: GameState, module: ModuleInstance, pos: Hex | null, snapshot: ReturnType<typeof computeRates>, withUnits = false): { readout: string; readoutClass?: string; note?: string } {
-  const contribution = snapshot.contributions.get(module.id);
-  const branch = forgeBranchOf(state, module.type);
-  if (branch) {
-    // The face's glanceable readout rounds; the inspector keeps exact values.
-    return {
-      readout: `${formatNumber(Math.floor(Math.max(0, branch.progress)))}/${formatNumber(Math.round(branch.threshold))}`,
-      readoutClass: "charge",
-    };
-  }
-  if (isSource(module)) return { readout: `⌁${formatNumber(hostPower(state, module))}` };
-  if (module.type === "infusor") {
-    return { readout: `+${formatNumber(100 * BALANCE.infusorBonus * hostPower(state, module) * chargedFactor(snapshot.chargeStrength.get(module.id) ?? 0))}%` };
-  }
-  if (module.type === "spacer") {
-    // The spacer is silent wire: it never sounds, never joins a pitch set —
-    // its face says so and names the cell it wires.
-    return pos ? { readout: "⌇", note: cellNoteOf(pos) } : { readout: "⌇" };
-  }
-  const category = CATEGORY_OF[module.type];
-  if (category === "silentVoice") {
-    // The silent voices sing nothing of their own: the face names the
-    // derived pitch the module sings (the Echo's neighbor an octave down,
-    // the Bend's altered cell) — or its silence.
-    const pitch = contribution?.pitch ?? null;
-    return pos
-      ? { readout: pitch !== null ? noteNameOf(pitch) : "—", note: cellNoteOf(pos) }
-      : { readout: pitch !== null ? noteNameOf(pitch) : "—" };
-  }
-  if (category === "conduit") {
-    // The Amplifier routes: the face shows the strength it relays — what
-    // it received, times its level-scaled gain.
-    const strength = snapshot.chargeStrength.get(module.id) ?? 0;
-    const gain = 1 + BALANCE.amplifierGainPerLevel * module.level;
-    return pos
-      ? { readout: `⌁${formatNumber(strength * gain)}`, note: cellNoteOf(pos) }
-      : { readout: `⌁${formatNumber(strength * gain)}` };
-  }
-  if (category === "ritual") {
-    // RITUAL amplifies: the face shows the factor the module itself is
-    // delivering onto the active habit's build right now — ×1 while
-    // uncharged, rising with received strength (ADR-0046).
-    const strength = snapshot.chargeStrength.get(module.id) ?? 0;
-    const amp = 1 + ritualAmpOf(module.level, strength);
-    return pos
-      ? { readout: `×${formatNumber(amp)}`, note: cellNoteOf(pos) }
-      : { readout: `×${formatNumber(amp)}` };
-  }
-  // Oscillators wear their contribution with the cell's note beneath it:
-  // pitch lives in the cell (ADR-0021).
-  const unit = withUnits ? " ν/s" : "";
-  return pos
-    ? { readout: `+${formatNumber(contribution?.value ?? 0)}${unit}`, note: cellNoteOf(pos) }
-    : { readout: `+${formatNumber(contribution?.value ?? 0)}${unit}` };
-}
-
-// The engraved level every upgrading module's face carries (#193): the
-// spacer's level buys nothing — it is silent wire, forever unupgraded — so
-// its face never wears the engraving, and "LV 0" is never seen on it.
-function faceLevel(module: ModuleInstance): number | undefined {
-  return module.type === "spacer" ? undefined : module.level;
-}
-
 function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderContext): string {
-  const { ui, state } = app;
-  const selected = ui.selected === module.id;
+  const { state } = app;
   // Charge is session-bound: the snapshot is flow-gated, so any strength it
   // reports is live. Receivers brighten with their received strength, and a
   // generator lights only while it actually emits (a spent charge window
@@ -1704,16 +1586,9 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
   const emittingNow = state.mode === "flow" && isSource(module) && emittedStrength(state, module, true) > 0;
 
   let hexClass = "";
-  if (selected) hexClass += " selected";
   if (charged) hexClass += " charged";
   if (emittingNow) hexClass += " dispensing";
   if (ctx.drop) hexClass += ` ${dropClass(ctx.drop)}`;
-
-  // Highlight eligible receivers while a generator is selected in upgrade mode.
-  let highlight = "";
-  if (app.state.mode === "upgrade" && ctx.selectedModule && isSource(ctx.selectedModule) && module.id !== ctx.selectedModule.id && module.pos && ctx.selectedModule.pos && adjacent(module.pos, ctx.selectedModule.pos)) {
-    highlight = `<polygon data-key="preview" class="highlight-ring" points="${hexPoints(HEX_RADIUS - 4)}"/>`;
-  }
 
   const { readout, readoutClass, note } = faceReadoutFor(state, module, pos, ctx.snapshot);
 
@@ -1743,7 +1618,7 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
         return branch ? waterFill(module.id, branch.progress / branch.threshold) : "";
       })(),
       ...(charged ? { chargeGlow: chargeGlow(strength) } : {}),
-    })}${highlight}${faceBuy}
+    })}${faceBuy}
     </g>`;
 }
 
@@ -1761,16 +1636,6 @@ const FACE_BUY_POINTS = "-25,46 25,46 7,58 -7,58";
 // The zero-affordable reads (#233, ADR-0045): the face button and the
 // bloom's dial share the zero-state labels and the shortfall-leading
 // tooltips, so the two surfaces can never drift apart.
-function zeroBuyRead(bank: number, nextCost: number): { plusLabel: string; maxLabel: string; plusTip: string; maxTip: string } {
-  const short = formatInt(nextCost - bank);
-  return {
-    plusLabel: "+0",
-    maxLabel: "MAX·0",
-    plusTip: `+0 — ${short} ν short of one level`,
-    maxTip: `MAX · buys 0 — ${short} ν short`,
-  };
-}
-
 function faceBuyHtml(app: App, module: ModuleInstance): string {
   const max = app.ui.faceMax;
   const bank = wholeNous(app.state);
@@ -2273,10 +2138,6 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
       start: () => {
         app.dragging = id;
         const module = app.state.modules.find((m) => m.id === id);
-        if (app.ui.selected === id) {
-          app.ui.selected = null;
-          app.render();
-        }
         const ghost = document.createElement("div");
         ghost.className = "drag-ghost";
         if (module) ghost.dataset.rarity = module.rarity;
@@ -2324,341 +2185,7 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
   });
 }
 
-/* ── Expanded face + board tray (§5) ───────────────── */
-
-// The expanded face's two effect lines (§5), one entry per module type —
-// the single place a type's face phrasing lives. The Upgrade button's
-// benefit states what one level buys at that level's gain; the production
-// contribution states what the compact face doesn't say, at live values.
-// The silent wire buys nothing with a level, so its benefit is null and it
-// wears no button at all.
-interface BloomEffectInput {
-  gain: number;
-  power: number;
-  value: number;
-  strength: number;
-  // The module's own level (the relay read reads it).
-  level: number;
-  // The level count the benefit previews (1, or the dial's k).
-  levels: number;
-}
-
-// The synth benefit is exact at every local effect: value/power is the
-// module's per-power ν/s (chord factor, booster uplift, charge, and
-// achievements all in — ADR-0036), so one level's power gain scales it
-// directly instead of quoting a bare-term figure chords would understate.
-const synthBloomLines = ({ gain, power, value }: BloomEffectInput): { benefit: string | null; contribution: string } => ({
-  benefit: `+${formatNumber((value / power) * gain)} ν/s`,
-  contribution: `+${formatNumber(value)} ν/s`,
-});
-
-// The silent voices' expanded-face lines: the level buys the chord-
-// instance uplift (ADR-0048), never production — the contribution names
-// the uplift the module stands for.
-const silentBloomLines = ({ levels }: BloomEffectInput): { benefit: string | null; contribution: string } => ({
-  benefit: `+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * levels)}% chord-instance uplift`,
-  contribution: `+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/LV to chord instances`,
-});
-
-// The generators' expanded-face lines (ADR-0047): delivery is one shared
-// shape — level scales output strength only, never the banked duration —
-// so all three keyed types read identically here; what differs is the
-// fact that banks them, and the Forge-candidate sheet says that.
-const generatorBloomLines = ({ gain, power }: BloomEffectInput): { benefit: string | null; contribution: string } => ({
-  benefit: `+${formatNumber(gain)} strength`,
-  contribution: `${formatNumber(power)} charge strength while its reserve lasts`,
-});
-
-const BLOOM_EFFECTS: Record<ModuleInstance["type"], (input: BloomEffectInput) => { benefit: string | null; contribution: string }> = {
-  additive: synthBloomLines,
-  // The Blaster's charge conversion replaces the charge factor: one level
-  // scales its whole charge-sourced term (ADR-0048).
-  blaster: synthBloomLines,
-  harmonizer: silentBloomLines,
-  echo: silentBloomLines,
-  bend: silentBloomLines,
-  amplifier: ({ strength, level, levels }) => ({
-    benefit: `+${formatNumber(100 * BALANCE.amplifierGainPerLevel * levels)}% relay gain`,
-    contribution: `relays ⌁${formatNumber(strength)} received × +${Math.round(100 * BALANCE.amplifierGainPerLevel * level)}%`,
-  }),
-  ritual: ({ strength, level, levels }) => ({
-    benefit: `+${formatNumber(100 * BALANCE.ritualAmpPerLevel * levels)}% build amplification`,
-    contribution: `amplifies the active habit's build ×${formatNumber(1 + ritualAmpOf(level, strength))} while charged`,
-  }),
-  spacer: () => ({ benefit: null, contribution: "silent — conducts chords, produces nothing" }),
-  focusKeyed: generatorBloomLines,
-  noteKeyed: generatorBloomLines,
-  goalKeyed: generatorBloomLines,
-  infusor: ({ gain, power, strength }) => ({
-    benefit: `+${formatNumber(100 * BALANCE.infusorBonus * gain)}% uplift`,
-    contribution: `+${formatNumber(100 * BALANCE.infusorBonus * power * chargedFactor(strength))}% to adjacent`,
-  }),
-  forge: ({ gain, value }) => ({
-    benefit: `+${formatNumber(gain)} progress/s`,
-    contribution: `${formatNumber(value)} progress/s while charged`,
-  }),
-  mutatorForge: ({ gain, value }) => ({
-    benefit: `+${formatNumber(gain)} progress/s`,
-    contribution: `${formatNumber(value)} progress/s while charged`,
-  }),
-};
-
-// The expanded face: the module's own hex lifted off the grid toward the
-// camera — the face itself IS the bloom, enlarged to fill it, its content
-// shifted up to make room for the Upgrade button in the lower band. The
-// ν/s unit rides the face's own readout, so nothing repeats. Opens only on
-// click, only in upgrade mode, only for a deployed module; closes on
-// outside click, Esc, or selecting elsewhere; holding the face starts the
-// live drag.
-//
-// On portrait phone (§7) the bloom presents as a bottom sheet docked over
-// the board's lower edge — same content, re-docked — and the zoom cluster
-// rises above it so inspection never gets buried.
-//
-// The pop only happens when it would actually enlarge the module: zoomed
-// far in (few cells filling the wrap), the on-screen module already
-// out-sizes the fixed bloom, and the affordances ride the closed face
-// instead — a floating upgrade card anchored over the module's lower band.
-// The host persists (the app creates it once); only the content rebuilds.
-function renderBloom(app: App, projected: RateSnapshot): void {
-  const host = byId("module-bloom");
-  if (!host) return;
-  const { state, ui } = app;
-  const module = state.modules.find((m) => m.id === ui.selected) ?? null;
-  const open = state.mode === "upgrade" && module !== null && module.pos !== null;
-  if (!open || !module || module.pos === null) {
-    if (!host.hidden) {
-      host.hidden = true;
-      host.innerHTML = "";
-      delete host.dataset.renderKey;
-    }
-    document.body.classList.remove("bloom-sheet-open");
-    return;
-  }
-  const phone = isPhoneWidth();
-  const snapshot = projected;
-  // The host's effective power (ADR-0043): the power mutator's uplift
-  // rides every displayed power figure, board face and bloom alike.
-  const power = hostPower(state, module);
-  const effectInput = {
-    power,
-    value: snapshot.contributions.get(module.id)?.value ?? 0,
-    strength: snapshot.chargeStrength.get(module.id) ?? 0,
-    level: module.level,
-  };
-  const lines = BLOOM_EFFECTS[module.type]({
-    ...effectInput,
-    gain: power * (BALANCE.rarityPower[module.rarity] - 1),
-    levels: 1,
-  });
-  // The dial (issue #195): the Upgrade button gains the shared ladder —
-  // ×1 / ×5 / ×10 / MAX·k — with the total cost and the k-level benefit
-  // (the one-level line's shape, scaled by the power gain over k levels).
-  // The count holds per module: a new selection starts at ×1.
-  if (ui.bulkModuleId !== module.id) {
-    ui.bulkModuleId = module.id;
-    ui.bulkCount = 1;
-  }
-  const maxLevels = affordableLevels(wholeNous(state), module.level);
-  const want = ui.bulkCount === "max" ? maxLevels : ui.bulkCount;
-  const bulkCost = levelsCost(module.level, want);
-  const bulkBenefit = BLOOM_EFFECTS[module.type]({
-    ...effectInput,
-    gain: power * (BALANCE.rarityPower[module.rarity] ** want - 1),
-    levels: want,
-  }).benefit;
-  // Partial by design: the button stays enabled whatever the bank says —
-  // a short purchase buys what it covers and says so.
-  const bank = wholeNous(state);
-  const affordable = bank >= bulkCost;
-  // Zero reads zero (#233, ADR-0045): the dial's zero-affordable state —
-  // MAX·0 on the chip, and both unaffordable tooltips lead with the
-  // shortfall. Nothing disables. maxLevels is 0 exactly when the bank
-  // can't cover the next single level.
-  const zero = zeroBuyRead(bank, levelCost(module.level));
-  const zeroBuy = maxLevels === 0;
-  // The Forge's face readout moves per tick; its face tracks it. Each
-  // branch tracks its own meter (ADR-0043).
-  const forgeTick = Math.floor(forgeBranchOf(state, module.type)?.progress ?? 0);
-  // The expanded face's mutator line (issue #199): the host cell's slot
-  // declaration rides the face wherever it presents — the line's presence
-  // joins the rebuild key, so placing or retrieving re-renders.
-  const mutKey = bloomMutatorKey(state, module.pos);
-  const mutLine = mutatorBloomLineHtml(state, module.pos, snapshot);
-  const shape = phone ? "sheet" : "pop";
-  // The zero-state's shortfall figure rides the rebuild key: it is the one
-  // quoted number that can move while the bank stays short of one level.
-  const key = JSON.stringify([shape, module.id, module.level, module.rarity, module.shift, ui.bulkCount, maxLevels, want, bulkCost, bulkBenefit, affordable, lines.contribution, forgeTick, mutKey, zeroBuy ? zero.plusTip : ""]);
-  // One frame read for both the pop question and the positioning below.
-  const svg = document.getElementById("grid");
-  const viewBox = (svg?.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
-  const frame: ViewFrame = {
-    view: { x: viewBox[0] ?? 0, y: viewBox[1] ?? 0, width: viewBox[2] ?? 0, height: viewBox[3] ?? 0 },
-    box: { width: svg?.clientWidth ?? 0, height: svg?.clientHeight ?? 0 },
-  };
-  // The dial rides the button in every shape (§7, issue #195): a chip row
-  // above the button on the popped plate and the riding card, and inside
-  // the sheet's buy column on phone.
-  const benefit = lines.benefit;
-  const maxRead = zeroBuy ? zero.maxLabel : `MAX·${maxLevels}`;
-  const maxTip = zeroBuy ? zero.maxTip : `Buy every affordable level (${maxLevels})`;
-  const dial = benefit
-    ? `<div class="bloom-dial" role="group" aria-label="Upgrade count">${([1, 5, 10, "max"] as const)
-        .map((option) => {
-          const active = option === ui.bulkCount;
-          return `<button class="bloom-dial-chip${active ? " active" : ""}" data-bulk="${option}" aria-pressed="${active}" title="${option === "max" ? maxTip : `Buy ${option} levels`}">${option === "max" ? maxRead : `×${option}`}</button>`;
-        })
-        .join("")}</div>`
-    : "";
-  const upgradeButton = benefit
-    ? `<button class="bloom-upgrade" id="bloom-upgrade" title="${zeroBuy ? zero.plusTip : affordable ? `Buy ${want} level${want === 1 ? "" : "s"}` : `Not enough for all ${want} — buys what it can`}">
-        <span class="bloom-upgrade-title">Upgrade ×${want} · <strong class="mono">${formatInt(bulkCost)} ν</strong></span>
-        <small class="bloom-upgrade-benefit mono">${bulkBenefit ?? ""}</small>
-      </button>`
-    : "";
-  // The Bend's player-picked shift (ADR-0048): the rarity's selectable
-  // ♯/♭ steps, one chip each — the pick is permanent configuration, changed
-  // freely in upgrade mode like every other reconfiguration.
-  const shiftPicker =
-    module.type === "bend"
-      ? `<div class="bloom-shift" role="group" aria-label="Pitch shift">${BALANCE.bendShifts[module.rarity]
-          .map((shift) => {
-            const active = (module.shift ?? 1) === shift;
-            const label = `${shift > 0 ? "♯" : "♭"}${Math.abs(shift)}`;
-            return `<button class="bloom-shift-chip${active ? " active" : ""}" data-shift="${shift}" aria-pressed="${active}" title="${shift > 0 ? "Sharp" : "Flat"} ${Math.abs(shift)} — sings ${noteNameOf(pitchOf(module.pos!) + shift)}">${label}</button>`;
-          })
-          .join("")}</div>`
-      : "";
-  const buyColumn = `${shiftPicker}${dial}${upgradeButton}`;
-  if (host.dataset.renderKey !== key) {
-    host.dataset.renderKey = key;
-    host.classList.toggle("sheet", phone);
-    document.body.classList.toggle("bloom-sheet-open", phone);
-    if (phone) {
-      // The bottom sheet (§7): the face tile beside the readout column,
-      // the dial and upgrade action at its end — same content, re-docked.
-      const face = faceReadoutFor(state, module, module.pos, snapshot, true);
-      host.innerHTML = `<div class="bloom-sheet" data-type="${module.type}" data-rarity="${module.rarity}">
-        <svg class="bloom-sheet-tile" viewBox="-70 -70 140 140" aria-hidden="true">${moduleFace({
-          type: module.type,
-          rarity: module.rarity,
-          readout: face.readout,
-          ...(face.readoutClass ? { readoutClass: face.readoutClass } : {}),
-          ...(face.note ? { note: face.note } : {}),
-          level: faceLevel(module),
-        })}</svg>
-        <div class="bloom-sheet-col">
-          <span class="bloom-sheet-name">${faceLevel(module) !== undefined ? `${META[module.type].name} · LV ${module.level}` : META[module.type].name}</span>
-          <small class="bloom-sheet-note mono">${cellNoteOf(module.pos)}</small>
-          <small class="bloom-sheet-contrib mono">${lines.contribution}</small>
-          ${mutLine}
-        </div>
-        <div class="bloom-sheet-buy">${buyColumn}</div>
-      </div>`;
-      wireBloomBuy(app, host, module.id);
-      host.hidden = false;
-      return;
-    }
-    // Ride the closed face when the pop would shrink the module. (No layout
-    // yet — hidden or unmeasured — degrades to unit scale by design; the
-    // plate repositions on the next render once the wrap measures.)
-    const inline = !bloomPops(viewMeet(frame), HEX_RADIUS);
-    host.classList.toggle("inline", inline);
-    const readouts = `
-      <div class="bloom-readouts">
-        ${inline ? `<p class="bloom-contribution mono">${lines.contribution}</p>` : ""}
-        ${mutLine}
-        ${buyColumn}
-      </div>`;
-    if (inline) {
-      host.innerHTML = readouts;
-    } else {
-      // The face fills the bloom hexagon exactly (viewBox = the hexagon's
-      // bounding box), re-proportioned for the bloom: the engraving
-      // recenters over the full-width band, the cell note footnotes into
-      // the taper, and the button band sits between readout and taper. The
-      // enlarged readout carries the ν/s unit itself, so nothing repeats.
-      const face = faceReadoutFor(state, module, module.pos, snapshot, true);
-      host.innerHTML = `
-        <div class="bloom-plate" data-type="${module.type}" data-rarity="${module.rarity}">
-          <svg class="bloom-face" viewBox="-52.8282 -61 105.6563 122" preserveAspectRatio="none" aria-hidden="true">${moduleFace({
-            type: module.type,
-            rarity: module.rarity,
-            readout: face.readout,
-            ...(face.readoutClass ? { readoutClass: face.readoutClass } : {}),
-            ...(face.note ? { note: face.note } : {}),
-            level: faceLevel(module),
-            variant: "bloom",
-          })}</svg>
-          ${readouts}
-        </div>`;
-      // Holding the face starts the live drag: the bloom collapses into the
-      // ghost, and a drop leaves it closed (§5).
-      const faceNode = host.querySelector(".bloom-face");
-      if (faceNode) bindPointerDrag(app, faceNode, module.id);
-    }
-    wireBloomBuy(app, host, module.id);
-  }
-  if (phone) {
-    host.hidden = false;
-    return;
-  }
-  // Position over the module's cell on every render — the board may have
-  // grown or reflowed since the last one.
-  const [cx, cy] = viewPoint(point(module.pos), frame);
-  if (host.classList.contains("inline")) {
-    // The card rides the closed face's lower band: centered, its body over
-    // the taper below the face's note — hanging past the tip a little at
-    // threshold zooms, where the taper is too tight to hold it. The same
-    // clamp as the popped plate (bloomSpan).
-    const { left, width } = bloomSpan(cx, frame);
-    const halfHeight = viewMeet(frame) * HEX_RADIUS;
-    host.style.left = `${Math.round(left)}px`;
-    host.style.top = `${Math.round(cy + halfHeight * 0.85 - 34)}px`;
-    host.style.width = `${width}px`;
-    host.style.height = "auto";
-    host.classList.remove("below");
-  } else {
-    const layout = bloomLayout(point(module.pos), HEX_RADIUS, frame);
-    host.hidden = false;
-    host.classList.toggle("below", layout.below);
-    host.style.left = `${Math.round(layout.left)}px`;
-    host.style.top = `${Math.round(layout.top)}px`;
-    host.style.width = `${layout.width}px`;
-    host.style.height = `${layout.height}px`;
-  }
-  host.hidden = false;
-}
-
-// The bloom's buy column wiring (issue #195), shared by all three shapes:
-// the button buys the dial's selected count — partial by design, the toast
-// reports what landed — and a chip pick re-renders so the cost, the
-// benefit, and the MAX·k count follow. The stopPropagation keeps the
-// gesture inside the bloom (its host's capture listener already holds the
-// outside-click token).
-function wireBloomBuy(app: App, host: HTMLElement, moduleId: string): void {
-  const { ui } = app;
-  app.listen(byId("bloom-upgrade"), "click", (event) => {
-    event.stopPropagation();
-    app.upgradeLevels(moduleId, ui.bulkCount);
-  });
-  host.querySelectorAll<HTMLButtonElement>("[data-bulk]").forEach((chip) => {
-    app.listen(chip, "click", (event) => {
-      event.stopPropagation();
-      const raw = chip.getAttribute("data-bulk")!;
-      ui.bulkCount = raw === "max" ? "max" : (Number(raw) as 1 | 5 | 10);
-      app.render();
-    });
-  });
-  // The Bend's shift pick (ADR-0048): one chip per selectable step, the
-  // action refusing out-of-set shifts — the picker only offers the set.
-  host.querySelectorAll<HTMLButtonElement>("[data-shift]").forEach((chip) => {
-    app.listen(chip, "click", (event) => {
-      event.stopPropagation();
-      app.setBendShift(moduleId, Number(chip.getAttribute("data-shift")));
-    });
-  });
-}
+/* ── Board tray (§5, ADR-0027 as amended) ──────────── */
 
 // The tray column's Modules face (§5, ADR-0027 as amended, issue #272):
 // the inventory as an always-open pinned column at the board's right edge —
@@ -3532,7 +3059,7 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
   if (sheet) {
     wireSynthPicks(sheet, (id) => {
       app.closeModal();
-      app.select(id);
+      app.openModuleDetail(id);
     }, app);
     wireTooltips(sheet, app.signal);
   }
@@ -3580,7 +3107,7 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
       }</div>`;
   content.innerHTML = `
     ${modalTop("INVENTORY", "modal-title")}
-    ${state.mode === "upgrade" ? `<div class="mut-tabs tray-switch" role="group" aria-label="Tray face">${mutTabPairHtml(app, "sheet-mutator-entry")}</div>` : ""}
+    ${state.mode === "upgrade" ? `<div class="layer-legend tray-switch" role="group" aria-label="Tray face">${layerLegendHtml(app, "sheet-mutator-entry")}</div>` : ""}
     ${face}`;
   content.querySelectorAll<HTMLButtonElement>("[data-inv]").forEach((button) => {
     const id = button.getAttribute("data-inv")!;
@@ -3600,8 +3127,14 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
     });
     bindMutatorDrag(app, button, id, "tray");
   });
-  content.querySelectorAll<HTMLButtonElement>("[data-mut-layer]").forEach((button) => {
-    app.listen(button, "click", () => app.mutSetLayer(button.getAttribute("data-mut-layer") as "modules" | "mutators"));
+  content.querySelectorAll<HTMLButtonElement>("[data-legend-layer]").forEach((button) => {
+    app.listen(button, "click", () => {
+      const layer = button.getAttribute("data-legend-layer") as "modules" | "mutators";
+      // The sheet can stand over the Hex detail; the switch reads which
+      // surface it serves, exactly like the legend strip does.
+      if (app.ui.detail) app.detailFace(layer);
+      else app.mutSetLayer(layer);
+    });
   });
   const grid = content.querySelector(".inventory-sheet-grid");
   if (grid) wireTooltips(grid, app.signal);

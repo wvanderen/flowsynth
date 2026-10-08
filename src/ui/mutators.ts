@@ -19,7 +19,6 @@ import type { GameState, Hex, MutatorFamily, MutatorInstance, Rarity, RateSnapsh
 import type { App } from "./app";
 import { startPointerDrag } from "./pointer-drag";
 import { boardPoint, HEX_RADIUS, hexPoints } from "./face";
-import { viewPoint, type ViewFrame } from "./bloom";
 import { META, RARITY_LABEL } from "./meta";
 import { wireTooltips } from "./instrument";
 
@@ -51,14 +50,15 @@ function effectShort(family: MutatorFamily, rarity: Rarity): string {
 }
 
 // The family glyph strokes, drawn centered on the origin like the module
-// icons — the tray, slot faces, and the expanded face's line share them.
+// icons — the tray, slot faces, and the Hex detail's mutator face share
+// them (issue #295).
 const FAMILY_GLYPH: Record<MutatorFamily, string> = {
   power: '<path d="M-9 9 0-11 9 9"/><path d="M-4.5 9h9"/>',
   resonance: '<path d="M-11 0q5.5-10 11 0t11 0"/><circle r="1.7" cx="-11" cy="0"/><circle r="1.7" cx="11" cy="0"/>',
   charge: '<path d="M3.5-12-7.5 2.5H-1L-3.5 12 7.5-2.5H1Z"/>',
 };
 
-function mutatorGlyph(family: MutatorFamily, scale = 1): string {
+export function mutatorGlyph(family: MutatorFamily, scale = 1): string {
   return `<g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" transform="scale(${scale})">${FAMILY_GLYPH[family]}</g>`;
 }
 
@@ -99,9 +99,16 @@ export function mutatorLayerLive(app: App): boolean {
   return app.state.mode === "upgrade" && app.state.catalogEntryOwned && app.ui.mutLayer === "mutators";
 }
 
+// Whether the layer can stand at all: upgrade mode with the entry owned —
+// the tray sheet's Mutators face reads it.
+export function mutatorLayerWanted(app: App): boolean {
+  return app.state.mode === "upgrade" && app.state.catalogEntryOwned;
+}
+
 // The host line's name: the module's own nameplate over the cell's note —
-// "Oscillator · G4". Null on a hostless cell.
-function hostName(state: GameState, pos: Hex): string | null {
+// "Oscillator · G4". Null on a hostless cell. Shared with the Hex detail's
+// mutator face (issue #295).
+export function hostName(state: GameState, pos: Hex): string | null {
   const module = deployedAt(state, pos);
   return module ? `${META[module.type].name} · ${cellNoteOf(pos)}` : null;
 }
@@ -142,65 +149,81 @@ export function mutatorSlotPrice(state: GameState): number {
   return state.mutatorSlots.length === 0 ? 0 : mutatorSlotCost(state.mutatorSlots.length);
 }
 
-/* ── The layer tabs ───────────────────────────────────
-   The tab pair at the board's top edge (issue #199): the one Modules /
-   Mutators switch — the tray column's faces and the phone tray sheet all
-   read its state, and none carries a second one (issue #272 review).
-   Upgrade-mode furniture; in flow neither tab nor layer exists. Pre-entry
-   the pair stands locked-but-visible (issue #273). */
+/* ── The vertical layer legend ────────────────────────
+   The one Modules / Mutators switch (issue #295), replacing the tab pair:
+   a vertical strip of layer symbols shared by the grid and the Hex detail
+   — the grid reads ui.mutLayer, the detail reads ui.detail.face, and one
+   builder renders both so the vocabulary can never drift. Upgrade-mode
+   furniture; flow shows neither legend nor layer. Pre-entry the Mutator
+   symbol stands locked-but-visible (issue #273): muted outline, the lock
+   mark, and the click walks to the Catalog's entry screen instead of
+   flipping the mode.
 
-export function mutatorLayerWanted(app: App): boolean {
-  return app.state.mode === "upgrade" && app.state.catalogEntryOwned;
+   State grammar (instrument standards): the selected face wears the firm
+   inset marker — readable without color; locked wears the muted outline.
+   Every symbol carries an accessible name and a native tooltip; the
+   locked face's mechanics ride the ⓘ disclosure beside it. */
+
+export function layerLegendActiveFace(app: App): "modules" | "mutators" {
+  return app.ui.detail ? app.ui.detail.face : app.ui.mutLayer;
 }
 
-// The tabs stand through upgrade mode — locked-but-visible before the
-// entry purchase (issue #273), live beside it after; flow shows neither
-// tab nor layer.
-export function mutatorTabsWanted(app: App): boolean {
-  return app.state.mode === "upgrade";
-}
+// The layers' symbols: the hex chassis for modules — the board's module
+// voice — and the arete mark for mutators, the layer's own register. One
+// spelling shared with the Hex detail's section heads (issue #295).
+export const LAYER_MODULES_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2.6 20.2 7.3v9.4L12 21.4 3.8 16.7V7.3Z"/><path d="M12 8.2v7.6M8.4 10.1l7.2 3.8M15.6 10.1l-7.2 3.8"/></svg>`;
+export const LAYER_MUTATORS_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2.5 20 8l-3.2 13H7.2L4 8l8-5.5Z"/><path d="M12 2.5 9.4 21M12 2.5l2.6 18.5M4.6 8.4h14.8"/></svg>`;
 
-// The pair's one markup, shared by the board tabs and the phone tray
-// sheet's switch — the same two buttons wherever the switch stands.
-// Pre-entry the Mutators face is locked-but-visible (issue #273): a muted
-// outline and the lock mark telegraph the entry, and the click — resolved
-// by mutSetLayer — walks to the Catalog's entry screen instead of flipping
-// the mode.
-export function mutTabPairHtml(app: App, tipId = "board-mutator-entry"): string {
-  const { ui, state } = app;
+export function layerLegendHtml(app: App, tipId = "legend-mutator-entry"): string {
+  const { state } = app;
+  const active = layerLegendActiveFace(app);
   const locked = !state.catalogEntryOwned;
-  return `<button class="mut-tab${ui.mutLayer === "modules" ? " active" : ""}" data-mut-layer="modules" aria-pressed="${ui.mutLayer === "modules"}">Modules</button>
-    <button class="mut-tab${ui.mutLayer === "mutators" ? " active" : ""}${locked ? " locked" : ""}" data-mut-layer="mutators" aria-pressed="${ui.mutLayer === "mutators"}"${locked ? ' aria-label="Mutators — locked; open Catalog entry"' : ""}>${locked ? LOCK_MARK : ""}Mutators</button>${locked ? `<span class="inst-tip mut-entry-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${tipId}" aria-label="About unlocking Mutators">ⓘ</button><span class="inst-tip-body" id="${tipId}" role="tooltip">Unlocks with the Mutator entry</span></span>` : ""}`;
+  const mutatorsSelected = active === "mutators";
+  return `<button class="legend-symbol${active === "modules" ? " active" : ""}" data-legend-layer="modules" aria-pressed="${active === "modules"}" aria-label="Modules layer" title="Modules — the production grid">${LAYER_MODULES_SVG}</button>
+    <span class="legend-entry${locked ? " locked" : ""}"><button class="legend-symbol${mutatorsSelected ? " active" : ""}${locked ? " locked" : ""}" data-legend-layer="mutators" aria-pressed="${mutatorsSelected}" aria-label="Mutators layer — locked; open Catalog entry" title="${locked ? "Mutators — locked; unlocks with the Mutator entry" : "Mutators — the slots over the modules"}">${locked ? LOCK_MARK : ""}${LAYER_MUTATORS_SVG}</button>${locked ? `<span class="inst-tip legend-entry-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${tipId}" aria-label="About unlocking Mutators">ⓘ</button><span class="inst-tip-body" id="${tipId}" role="tooltip">Unlocks with the Mutator entry</span></span>` : ""}</span>`;
 }
 
-// The locked face's one mark (issue #273 review): a padlock in the
-// instrument's stroke language — the layer is locked, not merely elsewhere.
-const LOCK_MARK = `<svg class="mut-tab-lock" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.7" y="5.4" width="6.6" height="4.9" rx="1.1"/><path d="M4.2 5.4V3.9a1.8 1.8 0 0 1 3.6 0v1.5"/></svg>`;
+const boundLegends = new WeakSet<HTMLElement>();
 
-export function renderMutatorTabs(app: App): void {
-  const host = document.getElementById("mut-tabs");
+export function renderLayerLegend(app: App): void {
+  const host = document.getElementById("layer-legend");
   if (!host) return;
   wireTooltips(host, app.signal);
-  if (!mutatorTabsWanted(app)) {
+  // Upgrade-mode furniture beside the entry purchase; flow shows neither
+  // legend nor layer (the Hex detail presents read-only there instead).
+  if (app.state.mode !== "upgrade") {
     host.hidden = true;
     host.innerHTML = "";
     delete host.dataset.renderKey;
     return;
   }
-  // The face and the entry's ownership both shape the pair — the purchase
-  // unlocks the locked face in place.
-  const key = `${app.ui.mutLayer}:${app.state.catalogEntryOwned}`;
+  const key = `${layerLegendActiveFace(app)}:${app.state.catalogEntryOwned}`;
   if (host.dataset.renderKey === key) {
     host.hidden = false;
     return;
   }
   host.dataset.renderKey = key;
   host.hidden = false;
-  host.innerHTML = mutTabPairHtml(app);
-  host.querySelectorAll<HTMLButtonElement>("[data-mut-layer]").forEach((button) => {
-    app.listen(button, "click", () => app.mutSetLayer(button.getAttribute("data-mut-layer") as "modules" | "mutators"));
+  host.innerHTML = layerLegendHtml(app);
+  // The rebuild replaces the buttons, so the switch re-binds with it; the
+  // WeakSet only keeps a stale test document from doubling the binding on
+  // the strip's own live region.
+  if (boundLegends.has(host)) return;
+  boundLegends.add(host);
+  host.addEventListener("click", (event) => {
+    const button = (event.target as Element | null)?.closest?.("[data-legend-layer]");
+    if (!button) return;
+    const layer = button.getAttribute("data-legend-layer") as "modules" | "mutators";
+    // In the detail the switch emphasizes the face; on the grid it is the
+    // one Modules / Mutators switch it always was.
+    if (app.ui.detail && !app.released) app.detailFace(layer);
+    else if (!app.released) app.mutSetLayer(layer);
   });
 }
+
+// The locked face's one mark (issue #273 review): a padlock in the
+// instrument's stroke language — the layer is locked, not merely elsewhere.
+const LOCK_MARK = `<svg class="mut-tab-lock" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.7" y="5.4" width="6.6" height="4.9" rx="1.1"/><path d="M4.2 5.4V3.9a1.8 1.8 0 0 1 3.6 0v1.5"/></svg>`;
 
 /* ── The grid decorations ─────────────────────────────
    The layer's own drawing inside the board svg: on the Mutators tab, one
@@ -334,56 +357,6 @@ export function renderMutatorPill(app: App): void {
   app.listen(host, "click", () => app.mutCancelGestures());
 }
 
-/* ── The declaration popover ──────────────────────────
-   An idle click on a placed mutator asks its full declaration — family,
-   rarity, effect, host — with Retrieve / Move riding beneath (issue
-   #199). Anchored over its slot, zoom-agnostic through the lens frame. */
-
-export function renderMutatorPopover(app: App, snapshot: RateSnapshot): void {
-  const host = document.getElementById("mut-popover");
-  if (!host) return;
-  const { state, ui } = app;
-  const item = ui.mutPopover ? state.mutators.find((m) => m.id === ui.mutPopover && m.pos !== null) : null;
-  if (!item || item.pos === null || !mutatorLayerLive(app)) {
-    host.hidden = true;
-    host.innerHTML = "";
-    delete host.dataset.renderKey;
-    return;
-  }
-  const pos = item.pos;
-  const hostNameLine = hostName(state, pos);
-  const inert = mutatorInertVerdict(state, pos, item, snapshot);
-  const key = JSON.stringify([item.id, item.rarity, hostNameLine, inert]);
-  if (host.dataset.renderKey !== key) {
-    host.dataset.renderKey = key;
-    host.hidden = false;
-    host.innerHTML = `
-      <div class="mut-pop-head"><span class="mut-pop-family">${FAMILY_WORD[item.family]}</span><span class="mut-pop-rarity">${RARITY_LABEL[item.rarity]}</span></div>
-      ${inert ? "" : `<p class="mut-pop-effect mono">${mutatorEffectText(item.family, item.rarity)}</p>`}
-      ${hostNameLine ? `<p class="mut-pop-host">Hosts <b>${hostNameLine}</b></p>` : ""}
-      ${inert ? `<p class="mut-pop-inert">${inert}</p>` : ""}
-      <div class="mut-pop-actions">
-        <button id="mut-pop-retrieve">Retrieve</button>
-        <button id="mut-pop-move">Move</button>
-        <button id="mut-pop-close" aria-label="Close">✕</button>
-      </div>`;
-    app.listen(document.getElementById("mut-pop-retrieve"), "click", () => app.mutPopoverRetrieve());
-    app.listen(document.getElementById("mut-pop-move"), "click", () => app.mutPopoverMove());
-    app.listen(document.getElementById("mut-pop-close"), "click", () => app.mutClosePopover());
-  }
-  // Position over the slot on every pass — the lens may have moved.
-  const svg = document.getElementById("grid");
-  const viewBox = (svg?.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
-  const frame: ViewFrame = {
-    view: { x: viewBox[0] ?? 0, y: viewBox[1] ?? 0, width: viewBox[2] ?? 0, height: viewBox[3] ?? 0 },
-    box: { width: svg?.clientWidth ?? 0, height: svg?.clientHeight ?? 0 },
-  };
-  const [cx, cy] = viewPoint(boardPoint(pos), frame);
-  host.style.left = `${Math.round(cx)}px`;
-  host.style.top = `${Math.round(cy)}px`;
-  host.hidden = false;
-}
-
 /* ── The reserved readout's ask ───────────────────────
    Hovering a slot asks the full declaration into the reserved readout
    (issue #199): "Power · +50% to this module's power — hosts Oscillator
@@ -397,29 +370,6 @@ export function mutatorAskHtml(state: GameState, pos: Hex, snapshot: RateSnapsho
   const host = hostName(state, pos);
   const inert = mutatorInertVerdict(state, pos, item, snapshot);
   return `<span class="chord-readout-chip mono" style="--cc:var(--arete)">${FAMILY_WORD[item.family]}${inert ? "" : ` · ${mutatorEffectText(item.family, item.rarity)}`}${host ? ` — hosts ${host}` : ""}${inert ? ` · ${inert}` : ""}</span>`;
-}
-
-/* ── The expanded face's mutator line ─────────────────
-   The module's own face gains the mutator line when its cell's slot holds
-   one — the declaration plus the inert verdict when it stands idle. */
-
-export function bloomMutatorKey(state: GameState, pos: Hex | null): string {
-  if (!pos) return "";
-  const item = mutatorAt(state, pos);
-  return item ? `${item.id}:${item.rarity}` : "";
-}
-
-export function mutatorBloomLineHtml(state: GameState, pos: Hex | null, snapshot: RateSnapshot): string {
-  if (!pos) return "";
-  const item = mutatorAt(state, pos);
-  if (!item) return "";
-  const inert = mutatorInertVerdict(state, pos, item, snapshot);
-  return `<div class="mut-bloom-line">
-    <span class="mut-bloom-glyph" aria-hidden="true"><svg viewBox="-14 -14 28 28">${mutatorGlyph(item.family, 0.8)}</svg></span>
-    <b>Mutator · ${FAMILY_WORD[item.family]}</b>
-    ${inert ? "" : `<span class="mono">${mutatorEffectText(item.family, item.rarity)}</span>`}
-    ${inert ? `<i>${inert}</i>` : ""}
-  </div>`;
 }
 
 /* ── The live drop preview ────────────────────────────
@@ -501,7 +451,7 @@ export function bindMutatorDrag(app: App, element: Element, id: string, origin: 
 }
 
 function startMutDrag(app: App, event: PointerEvent, id: string, origin: Hex | "tray"): void {
-  if (app.ui.mutUnlockArmed || app.ui.mutArmedTray !== null || app.ui.mutMoving !== null || app.ui.mutCarrying) return;
+  if (app.ui.mutUnlockArmed || app.ui.mutArmedTray !== null || app.ui.mutCarrying) return;
   const item = app.state.mutators.find((m) => m.id === id);
   if (!item) return;
   app.cancelMutDrag?.();
@@ -528,7 +478,6 @@ function startMutDrag(app: App, event: PointerEvent, id: string, origin: Hex | "
   app.cancelMutDrag = startPointerDrag(app, event, {
     start: () => {
       app.ui.mutCarrying = id;
-      app.ui.mutPopover = null;
       const ghost = document.createElement("div");
       ghost.className = "drag-ghost mut-ghost";
       ghost.innerHTML = mutatorTileSvg(item);

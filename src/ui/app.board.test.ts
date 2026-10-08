@@ -270,25 +270,23 @@ describe("the rate details disclosure (§7, issue #154)", () => {
     // The disclosure rides the ledger's own slot: the roster lives in the
     // DOM, mounted beside the clipped panel.
     expect(document.querySelector("#board-ledger .rate-breakdown")).not.toBeNull();
-    // A synthesizer row's tap identifies its module on the board: the
-    // bloom lifts the module's own face off the grid and the row wears
-    // the state grammar's inset marker.
+    // A synthesizer row's tap names its module's place: the Hex detail
+    // opens on it (issue #295) and the row wears the state grammar's
+    // inset marker.
     const row = document.querySelector("#board-ledger .rd-synth")!;
     row.querySelector(".rd-pick")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     const id = row.getAttribute("data-module-id")!;
-    expect(app.ui.selected).toBe(id);
-    expect((document.getElementById("module-bloom") as HTMLElement).hidden).toBe(false);
+    expect(app.ui.detail).not.toBeNull();
+    expect(app.state.modules.find((m) => m.id === id)!.pos).toEqual(app.ui.detail!.pos);
+    expect((document.getElementById("hex-detail") as HTMLElement).hidden).toBe(false);
     expect(row.classList.contains("st-selected")).toBe(true);
-    // A second tap releases it.
-    row.querySelector(".rd-pick")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.ui.selected).toBeNull();
     // A click inside the tooltip's legs is reading, never picking: copying
-    // a figure or scrolling the roster must not select the module.
+    // a figure or scrolling the roster must not open another detail.
     row.querySelector(".rd-legs")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.ui.selected).toBeNull();
+    expect(app.state.modules.find((m) => m.id === id)!.pos).toEqual(app.ui.detail!.pos);
     // And the ⓘ trigger is the tooltip's own: pinning it never picks.
     row.querySelector(".inst-tip-trigger")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.ui.selected).toBeNull();
+    expect(app.state.modules.find((m) => m.id === id)!.pos).toEqual(app.ui.detail!.pos);
     expect(row.querySelector(".inst-tip")!.classList.contains("show")).toBe(true);
   });
 
@@ -318,10 +316,10 @@ describe("the rate details disclosure (§7, issue #154)", () => {
     const row = modal.querySelector(".rd-synth")!;
     row.querySelector(".rd-legs")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.ui.modal).toBe("rate");
-    // The row's own tap closes the sheet and lands the selection.
+    // The row's own tap closes the sheet and opens the module's Hex detail.
     row.querySelector(".rd-pick")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.ui.modal).toBeNull();
-    expect(app.ui.selected).toBe(row.getAttribute("data-module-id"));
+    expect(app.state.modules.find((m) => m.id === row.getAttribute("data-module-id"))!.pos).toEqual(app.ui.detail!.pos);
   });
 
   it("above the line the whole ledger is the door; below it nothing changes (#233)", () => {
@@ -534,19 +532,19 @@ describe("the action row (§7)", () => {
     app.render();
     const zone = document.getElementById("inventory-zone")!;
     const mutTray = document.getElementById("mutator-tray")!;
-    // The column carries no switcher of its own: the board tabs under the
-    // ledger are the one Modules / Mutators switch.
+    // The column carries no switcher of its own: the vertical layer legend
+    // at the board's edge is the one Modules / Mutators switch (issue #295).
     expect(document.getElementById("tray-head")).toBeNull();
-    expect(document.querySelectorAll("[data-mut-layer]")).toHaveLength(2);
+    expect(document.querySelectorAll("[data-legend-layer]")).toHaveLength(2);
     // The Modules face stands; the Mutators face waits.
     expect(zone.classList.contains("off")).toBe(false);
     expect(mutTray.hidden).toBe(true);
-    // The board tabs flip the column's face with the global mode.
-    document.querySelector<HTMLButtonElement>('#mut-tabs [data-mut-layer="mutators"]')!.click();
+    // The legend flips the column's face with the global mode.
+    document.querySelector<HTMLButtonElement>('#layer-legend [data-legend-layer="mutators"]')!.click();
     expect(app.ui.mutLayer).toBe("mutators");
     expect(zone.classList.contains("off")).toBe(true);
     expect(mutTray.hidden).toBe(false);
-    document.querySelector<HTMLButtonElement>('#mut-tabs [data-mut-layer="modules"]')!.click();
+    document.querySelector<HTMLButtonElement>('#layer-legend [data-legend-layer="modules"]')!.click();
     expect(app.ui.mutLayer).toBe("modules");
     expect(zone.classList.contains("off")).toBe(false);
     expect(mutTray.hidden).toBe(true);
@@ -714,11 +712,13 @@ describe("a module roll's scrimless peek (#193)", () => {
     const backdrop = document.getElementById("modal")!;
     expect(backdrop.classList.contains("peek")).toBe(true);
     expect(backdrop.getAttribute("aria-modal")).toBe("false");
-    // Selection works through the peek and dismisses it without taking the roll.
+    // The board answers through the peek (the Hex detail opens, issue
+    // #295) and the click dismisses it without taking the roll.
     clickCell(0, 0);
-    expect(app.ui.selected).toBe("m1");
+    expect(app.ui.detail).not.toBeNull();
     expect(app.ui.modal).toBeNull();
     expect(app.state.bankedRolls).toHaveLength(1);
+    app.closeDetail();
     app.openModal("forge");
     expect(document.getElementById("modal-content")!.querySelectorAll(".candidate-tile")).toHaveLength(3);
     // Candidate faces carry no engraved level (#193) — a roll is a choice of
@@ -776,7 +776,6 @@ describe("a module roll's scrimless peek (#193)", () => {
 describe("the always-live board (§5)", () => {
   const cell = (q: number, r: number) => document.querySelector(`[data-cell="${q},${r}"]`)!;
   const ghosts = () => document.getElementById("grid")!.querySelectorAll(".ghost-mark");
-  const bloom = () => document.getElementById("module-bloom")!;
 
   afterEach(() => {
     delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
@@ -911,24 +910,19 @@ describe("the always-live board (§5)", () => {
     expect(document.querySelector(".drag-ghost")).toBeNull();
   });
 
-  it("holding the face starts a live drag; the bloom collapses into the ghost; a drop leaves it closed", () => {
+  it("holding the face starts a live drag; a drop lands the move and opens no detail", () => {
     app.render();
-    // Click opens the expanded face.
-    clickCell(0, 0);
-    expect(app.ui.selected).toBe("m1");
-    expect(bloom().hidden).toBe(false);
-    // Holding the face and moving: the ghost appears, the face collapses.
+    // Holding the face and moving: the ghost appears.
     document.elementFromPoint = () => cell(0, 0);
     cell(0, 0).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
     document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
     expect(document.querySelector(".drag-ghost")).not.toBeNull();
-    expect(app.ui.selected).toBeNull();
-    expect(bloom().hidden).toBe(true);
-    // Dropping back on the origin cell moves nothing — and opens nothing.
+    // Dropping back on the origin cell moves nothing — and opens nothing:
+    // a drop never opens the Hex detail (§5).
     document.dispatchEvent(new MouseEvent("pointerup", { clientX: 130, clientY: 110 }));
     expect(app.state.modules[0]!.pos).toEqual(hex(0, 0));
-    expect(app.ui.selected).toBeNull();
-    expect(bloom().hidden).toBe(true);
+    expect(app.ui.detail).toBeNull();
+    expect(document.getElementById("hex-detail")!.hidden).toBe(true);
   });
 
   it("the drop register previews amber over occupied cells, green over open ones", () => {
@@ -1000,11 +994,10 @@ describe("the always-live board (§5)", () => {
     clickCell(0, 1);
     expect(app.state.modules[0]!.pos).toEqual(hex(0, 1));
     expect(app.ui.placing).toBeNull();
-    // A placement never opens the expanded face (§5) — and it presents
-    // closed: the render the landing triggers must not catch the armed
-    // placement's stale selection.
-    expect(app.ui.selected).toBeNull();
-    expect(document.getElementById("module-bloom")!.hidden).toBe(true);
+    // A placement never opens the Hex detail (§5) — the gesture keeps its
+    // own landing.
+    expect(app.ui.placing).toBeNull();
+    expect(document.getElementById("hex-detail")!.hidden).toBe(true);
   });
 
   it("an armed placement previews the would-form ghosts on hover — one per forming chord", () => {
@@ -1045,7 +1038,7 @@ describe("the always-live board (§5)", () => {
     document.dispatchEvent(new MouseEvent("pointerup", { clientX: 130, clientY: 110 }));
     expect(traySynth.pos).toEqual(hex(0, 1));
     expect(app.ui.placing).toBeNull();
-    expect(app.ui.selected).toBeNull();
+    expect(app.ui.detail).toBeNull();
     expect(ghosts()).toHaveLength(0);
   });
 
@@ -1071,222 +1064,8 @@ describe("the always-live board (§5)", () => {
   });
 });
 
-describe("the expanded face (§5)", () => {
-  const bloom = () => document.getElementById("module-bloom")!;
-
-  it("click opens it above the module; the face itself is the bloom", () => {
-    app.render();
-    clickCell(0,0);
-    expect(app.ui.selected).toBe("m1");
-    expect(bloom().hidden).toBe(false);
-    // The plate carries the enlarged face — glyph, level, short name, note —
-    // and no second module inside it: one face, filling the bloom.
-    expect(bloom().querySelectorAll(".bloom-face")).toHaveLength(1);
-    expect(bloom().querySelector(".bloom-face .face-name")!.textContent).toBe("OSC");
-    expect(bloom().querySelector(".bloom-face .face-level")!.textContent).toBe("LV 0");
-    expect(bloom().querySelector(".bloom-face .face-note")!.textContent).toBe("C4");
-    // The ν/s unit rides the face's own readout — no repeated readout.
-    expect(bloom().querySelector(".bloom-face .face-readout")!.textContent).toBe(`+${formatNumber(0.1)} ν/s`);
-    expect(bloom().querySelector(".bloom-contribution")).toBeNull();
-    // The bloom re-proportions the engraving: the chassis hexagon stays a
-    // direct child of the svg, and the rhythm is even — title block over
-    // the signature, production line at button level, note in the taper.
-    const faceSvg = bloom().querySelector(".bloom-face")!;
-    expect(faceSvg.querySelector(":scope > [data-key='hex']")).not.toBeNull();
-    expect(faceSvg.querySelector(".face-name")!.getAttribute("y")).toBe("-26");
-    expect(faceSvg.querySelector(".face-readout")!.getAttribute("y")).toBe("16");
-    expect(faceSvg.querySelector(".face-note")!.getAttribute("y")).toBe("55");
-    expect(faceSvg.querySelector(".face-signature")!.getAttribute("transform")).toBe("translate(0 -12) scale(0.7)");
-    // The module lifted off its cell: the bloom repeats every line the face
-    // carries, so the origin renders vacated — no doubled module.
-    expect(document.querySelector('[data-cell="0,0"] .module-node')).toBeNull();
-    expect(document.querySelector('[data-cell="0,0"] .hex.lifted')).not.toBeNull();
-    // …and the Upgrade button: title line with the price, benefit as its
-    // subtitle.
-    const button = bloom().querySelector<HTMLButtonElement>("#bloom-upgrade")!;
-    expect(button.querySelector(".bloom-upgrade-title")!.textContent).toContain("Upgrade");
-    expect(button.querySelector(".bloom-upgrade-title")!.textContent).toContain("10 ν");
-    expect(button.querySelector(".bloom-upgrade-benefit")!.textContent).toBe("+0.02 ν/s");
-    // The vacated cell still toggles its module — click it closed.
-    clickCell(0,0);
-    expect(app.ui.selected).toBeNull();
-    expect(document.querySelector('[data-cell="0,0"] .module-node')).not.toBeNull();
-  });
-
-  it("the upgrade button upgrades the module and keeps the bloom open", () => {
-    app.state.nous = 30;
-    app.render();
-    clickCell(0,0);
-    bloom().querySelector<HTMLButtonElement>("#bloom-upgrade")!.click();
-    expect(app.state.modules[0]!.level).toBe(1);
-    expect(app.state.nous).toBe(20);
-    // Still selected: the bloom stands, repriced.
-    expect(app.ui.selected).toBe("m1");
-    expect(bloom().querySelector("#bloom-upgrade")!.textContent).toContain("16 ν");
-  });
-
-  it("cannot afford: zero reads zero — the shortfall leads, nothing disables (ADR-0045, #233)", () => {
-    app.state.nous = 0;
-    app.render();
-    clickCell(0,0);
-    const button = bloom().querySelector<HTMLButtonElement>("#bloom-upgrade")!;
-    expect(button.disabled).toBe(false);
-    // The zero-affordable tooltip leads with the shortfall.
-    expect(button.title).toBe("+0 — 10 ν short of one level");
-    // The dial's MAX chip reads MAX·0 and carries the same read.
-    const maxChip = document.querySelector<HTMLButtonElement>('.bloom-dial [data-bulk="max"]')!;
-    expect(maxChip.textContent).toBe("MAX·0");
-    expect(maxChip.title).toBe("MAX · buys 0 — 10 ν short");
-    // The click still refuses plainly: not even one level is affordable.
-    button.click();
-    expect(app.state.modules[0]!.level).toBe(0);
-    expect(document.getElementById("status")!.textContent).toContain("Not enough whole nous");
-  });
-
-  it("a short bank keeps the ordinary partial read when some levels are affordable", () => {
-    // The bank covers three of the five wanted levels.
-    app.state.nous = levelsCost(0, 3);
-    app.render();
-    clickCell(0,0);
-    document.querySelector<HTMLButtonElement>('.bloom-dial [data-bulk="5"]')!.click();
-    const button = bloom().querySelector<HTMLButtonElement>("#bloom-upgrade")!;
-    expect(button.disabled).toBe(false);
-    expect(button.title).toBe("Not enough for all 5 — buys what it can");
-    // The MAX chip still counts the affordable levels.
-    expect(document.querySelector<HTMLButtonElement>('.bloom-dial [data-bulk="max"]')!.textContent).toBe("MAX·3");
-  });
-
-  it("the silent wire wears no Upgrade button — a level buys it nothing", () => {
-    give(app.state, "spacer", hex(1, 0));
-    app.render();
-    clickCell(1,0);
-    expect(bloom().hidden).toBe(false);
-    expect(bloom().querySelector("#bloom-upgrade")).toBeNull();
-    // The face itself is the bloom, sitting near its natural layout with no
-    // button to make room for.
-    expect(bloom().querySelector(".bloom-face .face-readout")!.textContent).toBe("⌇");
-    // The silent wire's expanded face carries no level either (#193).
-    expect(bloom().querySelector(".bloom-face .face-level")).toBeNull();
-  });
-
-  it("never opens for a drag or a drop; Esc, outside click, and selecting elsewhere close it", () => {
-    app.render();
-    // Open on click.
-    clickCell(0,0);
-    expect(bloom().hidden).toBe(false);
-    // Esc closes.
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    app.render();
-    expect(bloom().hidden).toBe(true);
-    expect(app.ui.selected).toBeNull();
-    // Selecting elsewhere moves it.
-    give(app.state, "additive", hex(1, 0));
-    app.render();
-    clickCell(1,0);
-    expect(app.ui.selected).not.toBe("m1");
-    expect(bloom().hidden).toBe(false);
-    // Outside click — an empty cell — closes it.
-    clickCell(0,1);
-    expect(app.ui.selected).toBeNull();
-    expect(bloom().hidden).toBe(true);
-  });
-
-  it("clicking the bloom's own upgrade button never closes it", () => {
-    app.state.nous = 30;
-    app.render();
-    clickCell(0,0);
-    expect(bloom().hidden).toBe(false);
-    // The upgrade runs, and the bloom stands: its own click never closes it.
-    bloom().querySelector<HTMLButtonElement>("#bloom-upgrade")!.click();
-    expect(app.state.modules[0]!.level).toBe(1);
-    expect(bloom().hidden).toBe(false);
-  });
-
-  it("zoomed past the bloom's size, the affordances ride the closed face and nothing pops", () => {
-    // A roomy wrap on the tiny opening board: the on-screen module dwarfs
-    // the fixed bloom, so an expanded face would only shrink it.
-    const svg = document.getElementById("grid") as unknown as SVGSVGElement;
-    Object.defineProperty(svg, "clientWidth", { configurable: true, value: 2000 });
-    Object.defineProperty(svg, "clientHeight", { configurable: true, value: 2000 });
-    app.render();
-    clickCell(0,0);
-    const bloomEl = document.getElementById("module-bloom")!;
-    expect(bloomEl.hidden).toBe(false);
-    expect(bloomEl.classList.contains("inline")).toBe(true);
-    // No plate, no second face: just the upgrade card over the module.
-    expect(bloomEl.querySelector(".bloom-plate")).toBeNull();
-    expect(bloomEl.querySelector(".bloom-face")).toBeNull();
-    expect(bloomEl.querySelector(".bloom-contribution")!.textContent).toBe(`+${formatNumber(0.1)} ν/s`);
-    expect(bloomEl.querySelector("#bloom-upgrade")).not.toBeNull();
-    // The upgrade still works from the closed face.
-    bloomEl.querySelector<HTMLButtonElement>("#bloom-upgrade")!.click();
-    expect(app.state.modules[0]!.level).toBe(1);
-  });
-
-  it("positions over the module: nested above, mirrored below when the top leaves no room", () => {
-    const svg = document.getElementById("grid") as unknown as SVGSVGElement;
-    // A tall, narrow wrap: the scaled board sits small enough for the bloom
-    // to enlarge the module, with letterbox slack to separate the rows.
-    Object.defineProperty(svg, "clientWidth", { configurable: true, value: 550 });
-    Object.defineProperty(svg, "clientHeight", { configurable: true, value: 800 });
-    app.state.cells.push(hex(0, 2));
-    // The opening C4 (0,0) is the board's topmost cell: nesting above would
-    // leave the frame, so the bloom presents below — mirrored onto the
-    // cell's lower edges.
-    app.render();
-    clickCell(0,0);
-    const bloomEl = document.getElementById("module-bloom")!;
-    expect(bloomEl.hidden).toBe(false);
-    expect(bloomEl.classList.contains("below")).toBe(true);
-    expect(bloomEl.style.width).toBe("256px");
-    // C5 (0,1) sits a full octave row lower: the bloom nests above — its
-    // bottom corners resting on the cell's upper edges — and clears the
-    // wrap's left edge.
-    give(app.state, "additive", hex(0, 1));
-    app.render();
-    clickCell(0,1);
-    expect(bloomEl.classList.contains("below")).toBe(false);
-    const left = Number.parseFloat(bloomEl.style.left);
-    expect(left).toBeGreaterThanOrEqual(0);
-    expect(Number.parseFloat(bloomEl.style.top)).toBeGreaterThan(0);
-  });
-
-  it("stays closed in flow — the board is locked and upgrades live between sessions", () => {
-    app.state.sessionsCompleted = 1;
-    startSession(app.state, 600);
-    app.render();
-    clickCell(0,0);
-    expect(bloom().hidden).toBe(true);
-    endSession(app.state);
-  });
-
-  it("the inspector is retired — the expanded face is the module's only surface", () => {
-    app.render();
-    expect(document.getElementById("inspector")).toBeNull();
-    // Selecting a module opens the bloom with the Upgrade action; no panel
-    // exists to duplicate it.
-    clickCell(0,0);
-    expect(bloom().hidden).toBe(false);
-    expect(bloom().querySelector("#bloom-upgrade")).not.toBeNull();
-  });
-
-  it("no Combine button rides any expanded-face presentation — combining lives on the drop (#152)", () => {
-    // A live pair exists, so the old button would show if it survived.
-    give(app.state, "additive", hex(1, 0));
-    app.render();
-    clickCell(0, 0);
-    expect(bloom().hidden).toBe(false);
-    expect(bloom().querySelector("#bloom-combine")).toBeNull();
-    expect(document.querySelector(".bloom-combine")).toBeNull();
-    // The phone bottom sheet — the same retirement at every presentation.
-    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
-    app.render();
-    expect(bloom().classList.contains("sheet")).toBe(true);
-    expect(bloom().querySelector("#bloom-combine")).toBeNull();
-    expect(document.querySelector(".bloom-combine")).toBeNull();
-    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
-  });
-});
+// The expanded face's suite (§5) retired with the bloom: the Hex detail's
+// coverage lives in hexdetail.test.ts (issue #295).
 
 describe("combining by drop (issue #152)", () => {
   const cell = (q: number, r: number) => document.querySelector(`[data-cell="${q},${r}"]`)!;
@@ -1486,43 +1265,29 @@ describe("always-on chord feedback (§6, #137)", () => {
     // Leaving clears them.
     document.getElementById("grid")!.dispatchEvent(new MouseEvent("pointerleave"));
     expect(readout().hidden).toBe(true);
-    // Selecting C4 pins the same row without any hover.
-    const c4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(0, 0)))!;
-    app.select(c4.id);
-    expect(readout().hidden).toBe(false);
-    expect(chips()).toEqual([
-      `+${formatNumber(0.1 * 1.3 * (1 + BALANCE.allocationComplexityRate))} ν/s`,
-      "Capacity 1/1",
-      `×${earned}`,
-      "Formation ×1.12",
-      "Fifth ×1.3",
-      "Octave ×1.15 · idle",
-    ]);
-    // Deselecting empties the readout again.
-    app.select(c4.id);
-    expect(readout().hidden).toBe(true);
   });
 
   it("a chordless module still shows its final ν/s — at zero capacity spent, factor ×1", () => {
     app = boot(undefined, true);
     app.render();
-    const island = give(app.state, "additive", hex(5, 0)); // its own island
+    give(app.state, "additive", hex(5, 0)); // its own island
+    app.state.cells.push(hex(5, 0));
     app.render();
     const chips = () => [...readout().querySelectorAll(".chord-readout-chip")].map((chip) => chip.textContent);
-    app.select(island.id);
+    const cellAt = document.querySelector('[data-cell="5,0"]')!;
+    cellAt.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(readout().hidden).toBe(false);
     expect(chips()).toEqual([`+${formatNumber(BALANCE.synthRate)} ν/s`, "Capacity 0/1", "×1"]);
   });
 
-  it("clicking a module during flow answers the lock — no selection, no bloom", () => {
+  it("clicking a module during flow answers the lock — a read-only cross-section, no bloom", () => {
     give(app.state, "additive", hex(1, 0));
     app.state.sessionsCompleted = 1;
     startSession(app.state, 600);
     clickCell(1, 0);
-    expect(app.ui.selected).toBeNull();
-    const bloomEl = document.getElementById("module-bloom")!;
-    expect(bloomEl.hidden).toBe(true);
-    expect(document.getElementById("status")!.textContent).toContain("locked during flow");
+    expect(document.getElementById("hex-detail")!.hidden).toBe(false);
+    expect(document.getElementById("hex-detail")!.textContent).toContain("read-only");
+    expect(document.getElementById("status")!.textContent).not.toContain("locked during flow");
     endSession(app.state);
   });
 
@@ -1580,51 +1345,31 @@ describe("always-on chord feedback (§6, #137)", () => {
     expect(children.indexOf("chord-marks")).toBeLessThan(children.findIndex((key) => key === null));
   });
 
-  it("the selection lifts the focused chords over the faces; at rest the lift rests (#201)", () => {
+  // The selection lift and its focus/fade registers (#201) retired with
+  // the bloom (issue #295): the grid's chords whisper in the gaps, the
+  // hover asks name them in the reserved readout, and the Hex detail
+  // carries the focused module's facts.
+
+  it("a detail adds no chord line — the seams are the callout", () => {
     give(app.state, "additive", hex(1, 0));
     app.render();
-    const grid = document.getElementById("grid")!;
-    // At rest: the lift group stands empty — the chords whisper in the
-    // gaps, never over a face.
-    const lift = () => grid.querySelector('[data-key="chord-lift"]')!;
-    expect(lift().children).toHaveLength(0);
-    // Selecting C4 lifts its chord: the focused marks draw again over the
-    // faces, past the lift group that rides above the cell nodes.
-    const c4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(0, 0)))!;
-    app.select(c4.id);
-    expect(lift().children).toHaveLength(1);
-    const lifted = lift().querySelector(".chord-mark")!;
-    expect(lifted.classList.contains("chord-focus")).toBe(true);
-    expect(lifted.querySelectorAll(".chord-seam")).toHaveLength(2);
-    const children = [...grid.children].map((child) => child.getAttribute("data-key"));
-    expect(children.indexOf("chord-lift")).toBeGreaterThan(children.findIndex((key) => key === null));
-    // Deselecting empties the lift again.
-    app.select(c4.id);
-    expect(lift().children).toHaveLength(0);
+    clickCell(0, 0);
+    const detailEl = document.getElementById("hex-detail")!;
+    expect(detailEl.hidden).toBe(false);
+    expect(detailEl.querySelector(".chord-seam, .chord-chip, .chord-label")).toBeNull();
   });
 
-  it("selection focuses the selected module's chords and fades the rest", () => {
-    // Two chords in separate clusters: the opening Fifth and an island
-    // Octave down the board.
-    give(app.state, "additive", hex(1, 0));
-    app.state.cells.push(hex(3, 0), hex(3, 1));
-    give(app.state, "additive", hex(3, 0));
-    give(app.state, "additive", hex(3, 1));
+  it("a conducting spacer's ask names the chord it carries — by containment (#201)", () => {
+    give(app.state, "spacer", hex(0, 1));
+    app.state.cells.push(hex(0, 2));
+    give(app.state, "additive", hex(0, 2));
     app.render();
-    const island = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(3, 0)))!;
-    app.select(island.id);
-    const marks = [...document.querySelectorAll('[data-key="chord-marks"] > g')];
-    expect(marks).toHaveLength(2);
-    expect(marks.filter((mark) => mark.classList.contains("chord-focus"))).toHaveLength(1);
-    expect(marks.filter((mark) => mark.classList.contains("chord-fade"))).toHaveLength(1);
-    // The selected module's row leads with its final ν/s and names its chord.
+    // Resting on the spacer asks the chord it conducts; no ν/s chip ever
+    // rides a spacer — the silent wire produces nothing (#172).
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(readout().hidden).toBe(false);
-    expect(readout().textContent).toContain(`+${formatNumber(0.115)} ν/s`);
     expect(readout().textContent).toContain("Octave ×1.15");
-    // Clearing the selection unfades everything and empties the readout.
-    app.select(island.id);
-    expect(document.querySelectorAll(".chord-mark.chord-fade")).toHaveLength(0);
-    expect(readout().hidden).toBe(true);
+    expect(readout().textContent).not.toContain("ν/s");
   });
 
   it("the spacer's board face is the open wire: cap, base, window (#201)", () => {
@@ -1662,33 +1407,6 @@ describe("always-on chord feedback (§6, #137)", () => {
     // Resting on an empty cell off the run asks nothing.
     cell(1, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(readout().hidden).toBe(true);
-  });
-
-  it("a conducting spacer's selection never hides the chord it serves (#201)", () => {
-    give(app.state, "spacer", hex(0, 1));
-    app.state.cells.push(hex(0, 2));
-    give(app.state, "additive", hex(0, 2));
-    app.render();
-    const spacer = app.state.modules.find((m) => m.type === "spacer")!;
-    app.select(spacer.id);
-    // The spacer sings in no chord, yet the run it carries keeps the focus
-    // register and lifts over the faces with it.
-    const mark = document.querySelector('[data-key="chord-marks"] .chord-mark')!;
-    expect(mark.classList.contains("chord-focus")).toBe(true);
-    expect(document.querySelector('[data-key="chord-lift"]')!.children).toHaveLength(1);
-    // The readout pins the carried chord, and no ν/s chip ever rides a
-    // spacer — the silent wire produces nothing (#172).
-    expect(readout().textContent).toContain("Octave ×1.15");
-    expect(readout().textContent).not.toContain("ν/s");
-  });
-
-  it("the bloom adds no chord line — the seams are the callout", () => {
-    give(app.state, "additive", hex(1, 0));
-    app.render();
-    clickCell(0, 0);
-    const bloomEl = document.getElementById("module-bloom")!;
-    expect(bloomEl.hidden).toBe(false);
-    expect(bloomEl.querySelector(".chord-seam, .chord-chip, .chord-label")).toBeNull();
   });
 
   it("a placement that forms a chord strums it, behind the mute", () => {
@@ -1738,9 +1456,9 @@ describe("the dev panel's synth grant (#137)", () => {
     expect(granted.type).toBe("additive");
     expect(granted.pos).toEqual(hex(1, 0)); // G4 — the opening C4's fifth
     app.render();
-    // It chords at once; selecting the granted synth names its final ν/s
+    // It chords at once; resting on the granted synth names its final ν/s
     // and its chord in the reserved readout.
-    app.select(granted.id);
+    document.querySelector('[data-cell="1,0"]')!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(document.getElementById("chord-readout")!.textContent).toContain("Fifth ×1.3");
     expect(document.getElementById("chord-readout")!.textContent).toContain(
       `+${formatNumber(0.1 * 1.3 * (1 + BALANCE.allocationComplexityRate))} ν/s`,
@@ -1794,8 +1512,8 @@ describe("the bulk upgrade controls (#195)", () => {
     expect(app.state.modules[0]!.level).toBe(1);
     expect(app.state.nous).toBe(90);
     expect(status()).toContain("upgraded to level 1");
-    // The gesture stays off the cell: no bloom opened, the selection unset.
-    expect(app.ui.selected).toBeNull();
+    // The gesture stays off the cell: no Hex detail opened.
+    expect(app.ui.detail).toBeNull();
   });
 
   it("a shift-click buys every affordable level in one gesture", () => {
@@ -1959,7 +1677,7 @@ describe("the bulk upgrade controls (#195)", () => {
     expect(document.getElementById("upgrade-all")!.hidden).toBe(true);
   });
 
-  it("the dial: ×5 retitles the button, the buy lands partially, the bloom stands", () => {
+  it("the dial: ×5 retitles the button, the buy lands partially, the detail stands", () => {
     const s = app.state;
     s.nous = levelsCost(0, 3);
     app.render();
@@ -1967,14 +1685,14 @@ describe("the bulk upgrade controls (#195)", () => {
     const dial = document.querySelector(".bloom-dial")!;
     expect(dial.querySelectorAll(".bloom-dial-chip")).toHaveLength(4);
     dial.querySelector<HTMLButtonElement>('[data-bulk="5"]')!.click();
-    const button = document.querySelector<HTMLButtonElement>("#bloom-upgrade")!;
+    const button = document.querySelector<HTMLButtonElement>("#detail-upgrade")!;
     expect(button.querySelector(".bloom-upgrade-title")!.textContent).toContain("Upgrade ×5");
     expect(button.querySelector(".bloom-upgrade-title")!.textContent).toContain(formatInt(levelsCost(0, 5)));
     button.click();
     expect(s.modules[0]!.level).toBe(3);
     expect(status()).toContain("+3 levels");
-    // The purchase keeps the bloom open, repriced for what remains.
-    expect(app.ui.selected).toBe("m1");
+    // The purchase keeps the detail open, repriced for what remains.
+    expect(app.ui.detail).toEqual({ pos: hex(0, 0), face: "modules" });
     expect(document.querySelector(".bloom-upgrade-title")!.textContent).toContain("×5");
   });
 
@@ -1987,7 +1705,7 @@ describe("the bulk upgrade controls (#195)", () => {
     const maxChip = document.querySelector<HTMLButtonElement>('.bloom-dial [data-bulk="max"]')!;
     expect(maxChip.textContent).toBe(`MAX·${expected}`);
     maxChip.click();
-    document.querySelector<HTMLButtonElement>("#bloom-upgrade")!.click();
+    document.querySelector<HTMLButtonElement>("#detail-upgrade")!.click();
     expect(s.modules[0]!.level).toBe(expected);
     // The bank keeps whatever a further level would outprice.
     expect(s.nous).toBeLessThan(levelCost(expected));
@@ -2007,26 +1725,31 @@ describe("the bulk upgrade controls (#195)", () => {
     expect(maxChip().title).toBe(`Buy every affordable level (${count})`);
   });
 
-  it("a new selection resets the dial to ×1", () => {
+  it("a new detail resets the dial to ×1 — another Hex needs the grid", () => {
     give(app.state, "additive", hex(1, 0));
     app.render();
     clickCell(0, 0);
     document.querySelector<HTMLButtonElement>('.bloom-dial [data-bulk="5"]')!.click();
     expect(app.ui.bulkCount).toBe(5);
+    // The grid yielded to the detail: its surface is retired (pointer-dead
+    // and hidden), so no other Hex is reachable from here.
+    expect(document.body.classList.contains("hex-detail-open")).toBe(true);
+    // Returning and opening the other module starts its dial fresh.
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     clickCell(1, 0);
     expect(app.ui.bulkCount).toBe(1);
     expect(document.querySelector(".bloom-upgrade-title")!.textContent).toContain("Upgrade ×1");
   });
 
-  it("the dial rides the phone sheet's buy column", () => {
+  it("the dial rides the phone detail sheet's buy column", () => {
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
     app.state.nous = levelsCost(0, 3);
     app.render();
     clickCell(0, 0);
     // The sheet carries the same ladder: the chip row rides the buy column.
-    document.querySelector<HTMLButtonElement>('.bloom-sheet [data-bulk="5"]')!.click();
-    const button = document.querySelector<HTMLButtonElement>("#bloom-upgrade")!;
-    expect(button.closest(".bloom-sheet-buy")).not.toBeNull();
+    document.querySelector<HTMLButtonElement>('.hex-detail.sheet [data-bulk="5"]')!.click();
+    const button = document.querySelector<HTMLButtonElement>("#detail-upgrade")!;
+    expect(button.closest(".hex-detail-buy")).not.toBeNull();
     expect(button.querySelector(".bloom-upgrade-title")!.textContent).toContain("Upgrade ×5");
     button.click();
     expect(app.state.modules[0]!.level).toBe(3);

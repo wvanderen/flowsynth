@@ -155,8 +155,18 @@ export interface DevBoardState {
 // ceiling unlocks.
 export const DEV_BOARD_CAPACITIES = [1, 2, 3, 4, 5] as const;
 
+export type DetailFace = "modules" | "mutators";
+
+// The Hex detail's standing state (issue #295): the owned board coordinate
+// whose cross-section replaces the grid, and which layer's face is
+// emphasized — the fixed stack shows both, Mutators above Modules. Light
+// furniture — never saved.
+export interface HexDetail {
+  pos: Hex;
+  face: DetailFace;
+}
+
 export interface UiState {
-  selected: string | null;
   // The focus app whose console popover is open, if any (ADR-0012).
   app: FocusApp | null;
   // The phone launcher's menu (issue #149): the one compact entry point
@@ -224,6 +234,10 @@ export interface UiState {
   // furniture beside the entry purchase; flow shows neither tab nor layer.
   // Light furniture — never saved.
   mutLayer: "modules" | "mutators";
+  // The Hex detail (issue #295): the owned cell whose cross-section stands
+  // in the grid's place, and the face emphasized inside it. Null rests the
+  // grid. Light furniture — never saved; cleared with the transient modes.
+  detail: HexDetail | null;
   // The Mutator tray item armed for click-then-slot placement (issue #199,
   // mirroring ui.placing). Light furniture — never saved.
   mutArmedTray: string | null;
@@ -232,12 +246,6 @@ export interface UiState {
   // free on any owned cell, later ones adjacent to the patch, priced. Light
   // furniture — never saved.
   mutUnlockArmed: boolean;
-  // The popover's armed move (issue #199): the placed mutator waiting for a
-  // vacant slot to move to. Light furniture — never saved.
-  mutMoving: string | null;
-  // The declaration popover's mutator (issue #199): the placed mutator whose
-  // Retrieve / Move popover stands. Light furniture — never saved.
-  mutPopover: string | null;
   // The mutator combine offer (issue #199): the pair a matching drop put up
   // for review. Cancel clears it and both copies stay untouched. Light
   // furniture — never saved.
@@ -357,7 +365,6 @@ export class App {
     this.currentState = state;
   }
   ui: UiState = {
-    selected: null,
     app: null,
     launcherOpen: false,
     placing: null,
@@ -383,10 +390,9 @@ export class App {
     bulkModuleId: null,
     faceMax: false,
     mutLayer: "modules",
+    detail: null,
     mutArmedTray: null,
     mutUnlockArmed: false,
-    mutMoving: null,
-    mutPopover: null,
     mutCombineOffer: null,
     mutCarrying: null,
     mutDropHover: null,
@@ -431,15 +437,6 @@ export class App {
   // Set when the stored save was rejected (e.g. the ADR-0017 v5 clean cut):
   // the message must survive the constructor's greeting.
   private loadNotice: string | null = null;
-  // The expanded face's outside-click ledger (§5): one one-shot token
-  // count with two writers. The click that opens the bloom bubbles to the
-  // document after select() has dropped a token, and clicks inside the
-  // bloom — the Upgrade button included, whose re-render detaches it before
-  // the document listener reads anything — are captured on the bloom host,
-  // the one node no re-render replaces. The document-level closer consumes
-  // one token per click instead of closing what the click opened or stands
-  // in; a click with no token is outside, and dismisses.
-  private bloomClickTokens = 0;
   // The module a pointer drag is carrying, if any — pointerleave must not
   // clear a drag's hover preview just because the ghost crosses a cell
   // boundary. Ephemeral: lives exactly as long as one drag gesture.
@@ -478,21 +475,19 @@ export class App {
     return parsed;
   }
 
-  // The board-surface overlays (§5): the expanded-face bloom and the
-  // Upgrade All cluster live over the board's own space, so their hosts are
-  // created once here — the bloom's outside-click ledger binds against a
-  // node that never moves, and no render ever has to bootstrap one. The
-  // tray column's hosts are index.html's own (the always-open column never
-  // bootstraps).
+  // The board-surface overlays (§5): the Hex detail panel and the Upgrade
+  // All cluster live over the board's own space, so their hosts are created
+  // once here — no render ever has to bootstrap one. The tray column's
+  // hosts are index.html's own (the always-open column never bootstraps).
   private ensureBoardOverlays(): void {
     const space = document.querySelector(".board-space");
     if (!space) return;
-    if (!document.getElementById("module-bloom")) {
-      const bloom = document.createElement("div");
-      bloom.id = "module-bloom";
-      bloom.className = "module-bloom";
-      bloom.hidden = true;
-      space.append(bloom);
+    if (!document.getElementById("hex-detail")) {
+      const detail = document.createElement("div");
+      detail.id = "hex-detail";
+      detail.className = "hex-detail";
+      detail.hidden = true;
+      space.append(detail);
     }
     if (!document.getElementById("upgrade-all")) {
       const cluster = document.createElement("div");
@@ -616,7 +611,6 @@ export class App {
   // The transient interaction modes are mutually exclusive: every exit path
   // (import, reset, session start, arming another mode) clears them together.
   private clearTransientUi(): void {
-    this.ui.selected = null;
     this.ui.app = null;
     this.ui.launcherOpen = false;
     this.ui.placing = null;
@@ -630,6 +624,9 @@ export class App {
     this.ui.bulkCount = 1;
     this.ui.bulkModuleId = null;
     this.ui.faceMax = false;
+    // The Hex detail is transient furniture too (issue #295): the board
+    // under it re-enters at rest — grid showing, layer reset.
+    this.ui.detail = null;
     // The Mutator Grid's layer and gestures are upgrade-mode furniture too
     // (issue #199): flow shows neither tab nor layer, and every armed
     // gesture unwinds with the rest.
@@ -810,26 +807,6 @@ export class App {
       if (this.ui.app !== null) this.closeApp();
       else if (this.ui.launcherOpen) this.closeLauncher();
     }, { signal: this.signal });
-    // The expanded face closes on outside click (§5): the bloom host's
-    // capture-phase click drops a token (see the ledger above), and the
-    // document-level closer consumes tokens before dismissing anything.
-    document.getElementById("module-bloom")?.addEventListener("click", () => {
-      this.bloomClickTokens++;
-    }, { capture: true, signal: this.signal });
-    document.addEventListener("click", () => {
-      if (!this.ownsBoard()) return;
-      if (this.bloomClickTokens > 0) {
-        this.bloomClickTokens--;
-        return;
-      }
-      // A tray selection (an inventory module) wears no bloom: outside
-      // clicks must not fight the armed placement.
-      const selected = this.state.modules.find((m) => m.id === this.ui.selected);
-      if (this.ui.selected !== null && selected?.pos !== null) {
-        this.ui.selected = null;
-        this.render();
-      }
-    }, { signal: this.signal });
     // The Forge peek passes pointers to the board. Dismiss outside the card
     // in capture, before a board action can replace the clicked DOM node;
     // the same click still reaches the board for selection or other actions.
@@ -838,9 +815,11 @@ export class App {
       if (event.composedPath().includes(this.els["modal-content"]!)) return;
       this.closeModal();
     }, { capture: true, signal: this.signal });
-    // The Esc chain (§5): the modal eats it first; then the armed transient
-    // modes unwind; then the expanded face — the selection is its open
-    // state. Never while typing.
+    // The Esc chain (§5, issue #295): the modal eats it first; then the
+    // armed transient modes unwind — an armed placement cancels before the
+    // Hex detail closes; then the detail itself returns the grid with its
+    // layer, position, and zoom intact; then the Mutators layer; then the
+    // console furniture. Never while typing.
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape" || !this.ownsBoard()) return;
       const target = event.target;
@@ -857,15 +836,16 @@ export class App {
         this.cancelCellPurchase();
         return;
       }
-      // The Mutator layer's Esc walk (issue #199): gesture, then popover,
-      // then the layer itself — the tab switch is the walk's last step.
-      if (this.cancelMutDrag || this.ui.mutUnlockArmed || this.ui.mutArmedTray !== null || this.ui.mutMoving !== null) {
+      // The Mutator layer's Esc walk (issue #199): gesture first.
+      if (this.cancelMutDrag || this.ui.mutUnlockArmed || this.ui.mutArmedTray !== null) {
         this.mutCancelGestures();
         return;
       }
-      if (this.ui.mutPopover) {
-        this.ui.mutPopover = null;
-        this.render();
+      // The Hex detail's return (issue #295): Escape is the keyboard's
+      // return control — the grid comes back with its layer, position, and
+      // zoom exactly as the detail found them.
+      if (this.ui.detail) {
+        this.closeDetail();
         return;
       }
       if (this.ui.mutLayer === "mutators") {
@@ -878,11 +858,6 @@ export class App {
       }
       if (this.ui.launcherOpen) {
         this.closeLauncher();
-        return;
-      }
-      if (this.ui.selected) {
-        this.ui.selected = null;
-        this.render();
       }
     }, { signal: this.signal });
     // The face buttons' shift mode (issue #195): holding shift flips every
@@ -1239,7 +1214,6 @@ export class App {
     }
     if (this.ui.mutUnlockArmed) cancelled.push("slot unlock");
     if (this.ui.mutArmedTray !== null) cancelled.push("mutator placement");
-    if (this.ui.mutMoving !== null) cancelled.push("mutator move");
     this.mutDisarm();
     this.ui.mutLayer = layer;
     if (cancelled.length > 0) {
@@ -1256,15 +1230,13 @@ export class App {
     this.render();
   }
 
-  // The transient mutator furniture's one teardown: armed gestures, the
-  // popover, and the combine review's leftover offer (the modal itself
-  // closes through closeModal). clearTransientUi reads this shape too.
+  // The transient mutator furniture's one teardown: armed gestures and the
+  // combine review's leftover offer (the modal itself closes through
+  // closeModal). clearTransientUi reads this shape too.
   private mutDisarm(): void {
     this.cancelMutDrag?.();
     this.ui.mutArmedTray = null;
     this.ui.mutUnlockArmed = false;
-    this.ui.mutMoving = null;
-    this.ui.mutPopover = null;
     this.ui.mutCarrying = null;
     this.ui.mutDropHover = null;
   }
@@ -1278,7 +1250,6 @@ export class App {
   // The Mutator tray's click-then-slot arm (issue #199): the tap-shaped
   // placement — tap a tray tile, tap a slot.
   mutArmTray(id: string): void {
-    this.ui.mutPopover = null;
     this.ui.mutUnlockArmed = false;
     this.ui.mutArmedTray = this.ui.mutArmedTray === id ? null : id;
     if (this.ui.mutArmedTray) this.say("Choose a Mutator slot.");
@@ -1303,10 +1274,10 @@ export class App {
     this.render();
   }
 
-  // The slot click's one resolution (issue #199): the armed unlock buys,
-  // the armed tray item places (an occupied slot swaps, occupant to the
-  // tray), the armed move lands on a vacant slot, and an idle click asks
-  // the placed mutator's declaration popover.
+  // The slot click's one resolution (issue #199, detail by #295): the
+  // armed unlock buys, the armed tray item places (an occupied slot swaps,
+  // occupant to the tray) — and an idle click opens the cell's Hex detail
+  // on the Mutators face, the declaration having moved there.
   mutPickSlot(pos: Hex): void {
     const { state, ui } = this;
     if (state.mode !== "upgrade" || !state.catalogEntryOwned) return;
@@ -1335,23 +1306,7 @@ export class App {
       this.mutPlace(id, pos);
       return;
     }
-    if (ui.mutMoving !== null) {
-      const id = ui.mutMoving;
-      const occupied = mutatorAt(state, pos) !== undefined;
-      if (occupied) {
-        this.say("That slot is held — drag the mutator onto it to swap or combine.");
-        this.render();
-        return;
-      }
-      ui.mutMoving = null;
-      this.act(placeMutator(state, id, pos), `Mutator moved to ${cellNoteOf(pos)}.`);
-      return;
-    }
-    const occupant = mutatorAt(state, pos);
-    if (occupant) {
-      ui.mutPopover = ui.mutPopover === occupant.id ? null : occupant.id;
-      this.render();
-    }
+    this.openDetail(pos, "mutators");
   }
 
   // Right-click retrieve (issue #199): the same chord-breaking gesture as
@@ -1375,33 +1330,7 @@ export class App {
 
   mutRetrieve(id: string): void {
     const family = this.state.mutators.find((m) => m.id === id)?.family;
-    this.ui.mutPopover = null;
     this.act(returnMutator(this.state, id), `${family ? FAMILY_WORD[family] : "Mutator"} retrieved to the Mutator tray.`);
-  }
-
-  // The popover's two actions (issue #199): retrieve in place, or arm the
-  // move that ends on a vacant slot's click.
-  mutPopoverRetrieve(): void {
-    const id = this.ui.mutPopover;
-    if (id) this.mutRetrieve(id);
-  }
-
-  mutPopoverMove(): void {
-    const id = this.ui.mutPopover;
-    this.ui.mutPopover = null;
-    if (!id) {
-      this.render();
-      return;
-    }
-    this.ui.mutMoving = id;
-    this.say("Choose an open Mutator slot.");
-    this.render();
-  }
-
-  mutClosePopover(): void {
-    if (!this.ui.mutPopover) return;
-    this.ui.mutPopover = null;
-    this.render();
   }
 
   // The mutator combine offer (issue #199): a matching twin under the drop
@@ -1564,14 +1493,77 @@ export class App {
     this.render();
   }
 
-  select(id: string | null): void {
-    const opening = id !== null && this.ui.selected !== id;
-    this.ui.selected = this.ui.selected === id ? null : id;
-    this.ui.app = null;
-    this.ui.placing = null;
-    // The click that opens the bloom bubbles to the document-level closer;
-    // it drops a token so the same click never closes what it opened (§5).
-    if (opening && this.ui.selected !== null) this.bloomClickTokens++;
+  // ── The Hex detail (issue #295) ──────────────────────────────────────────
+  // The module bloom's successor: an owned cell's full-stack cross-section,
+  // standing where the grid stood — Mutators above Modules in a fixed
+  // stack, both visible, the vertical legend synchronized beside them.
+  // The grid's placement/drag gestures keep the grid; the detail's own
+  // editing surface is read-only during flow.
+
+  // The one opener: any owned cell's idle click lands here, whichever
+  // layer stood — the armed gestures resolve before this is ever reached
+  // (pickCell and mutPickSlot own their branches). The face defaults to
+  // the layer the click arrived on; in flow the cross-section opens
+  // read-only.
+  openDetail(pos: Hex, face: DetailFace = "modules"): void {
+    const owned = this.state.cells.some((cell) => sameHex(cell, pos));
+    if (!owned) return;
+    this.ui.detail = { pos: { q: pos.q, r: pos.r }, face };
+    this.ui.chordHover = null;
+    this.render();
+  }
+
+  // A rate-roster row's tap names its module's place (§7): the same door
+  // as the cell click, one hop removed.
+  openModuleDetail(id: string): void {
+    const module = this.state.modules.find((m) => m.id === id);
+    if (!module || module.pos === null) return;
+    this.openDetail(module.pos, "modules");
+  }
+
+  // The explicit return (issue #295): the grid comes back showing the
+  // layer it keeps — position and zoom never moved, so they restore by
+  // standing still.
+  closeDetail(): void {
+    if (!this.ui.detail) return;
+    this.ui.detail = null;
+    this.render();
+  }
+
+  // A face selection inside the detail (issue #295): emphasis moves, the
+  // section's controls take focus, and the vertical legend synchronizes —
+  // the stack order never changes. Post-entry the grid's layer follows the
+  // selection, so the return lands on the face the player last read;
+  // pre-entry the locked face emphasizes without ever flipping the grid.
+  detailFace(face: DetailFace): void {
+    if (!this.ui.detail || this.ui.detail.face === face) return;
+    this.ui.detail = { ...this.ui.detail, face };
+    if (this.state.mode === "upgrade" && this.state.catalogEntryOwned) this.ui.mutLayer = face;
+    this.render();
+    // The emphasis lands with the rebuild; the face's head control takes
+    // focus so the keyboard follows the selection.
+    (
+      document.querySelector<HTMLElement>(`[data-detail-section="${face}"] .hex-detail-layer-head`) ??
+      document.querySelector<HTMLElement>(`[data-detail-section="${face}"]`)
+    )?.focus();
+  }
+
+  // The detail's direct slot purchase (issue #295): the price rides the
+  // button; the engine owns eligibility and its refusal wording.
+  mutUnlockAt(pos: Hex): void {
+    if (this.state.mode !== "upgrade") {
+      this.say("Arete is spent between sessions.");
+      return;
+    }
+    const first = this.state.mutatorSlots.length === 0;
+    const result = unlockMutatorSlot(this.state, pos);
+    if (!result.ok) {
+      this.say(result.reason ?? "That cell cannot take a Mutator slot.");
+      this.render();
+      return;
+    }
+    this.say(`Mutator slot unlocked at ${cellNoteOf(pos)}${first ? "" : ` — ${formatInt(this.state.arete)} Arete left`}.`);
+    this.save();
     this.render();
   }
 
@@ -1585,7 +1577,6 @@ export class App {
     // One popover at a time (issue #149): opening an app — from a tile, a
     // launcher entry, or the clock — always dismisses the launcher's menu.
     this.ui.launcherOpen = false;
-    this.ui.selected = null;
     this.ui.placing = null;
     this.resetHistorySurfaces();
     this.render();
@@ -1681,7 +1672,6 @@ export class App {
   }
 
   beginPlacing(id: string): void {
-    this.ui.selected = id;
     this.ui.app = null;
     this.ui.placing = id;
     this.say("Choose a cell. Occupied modules swap positions.");
@@ -1690,18 +1680,12 @@ export class App {
 
   pickCell(pos: Hex): void {
     const { state, ui } = this;
-    if (state.mode !== "upgrade") {
-      // The board is locked through a session (§5): modules neither expand
-      // nor select mid-session — the click answers plainly instead of
-      // looking dead. Selection returns between sessions.
-      this.say("The board is locked during flow.");
-      return;
-    }
     // The Mutators layer owns the board's clicks while it stands (issue
     // #199): the module board rests greyed and pointer-dead, and a focused
     // cell's Enter must not reach past it either.
-    if (ui.mutLayer === "mutators") return;
+    if (state.mode === "upgrade" && ui.mutLayer === "mutators") return;
     if (ui.buyingCell) {
+      if (state.mode !== "upgrade") return;
       // The arm persists across buys: sweep several cells, then back out
       // yourself via the banner's Cancel (or Esc). act() re-renders each
       // time, so the banner hint and hex prices step to the next scaler rung.
@@ -1709,21 +1693,17 @@ export class App {
       return;
     }
     if (ui.placing) {
+      if (state.mode !== "upgrade") return;
       const module = state.modules.find((m) => m.id === ui.placing);
       if (!module) return;
       this.placeAndStrum(module, pos);
       return;
     }
-    const occupant = state.modules.find((m) => m.pos !== null && sameHex(m.pos, pos));
-    if (occupant && occupant.id !== ui.selected) {
-      this.select(occupant.id);
-    } else if (ui.selected !== null) {
-      // Outside the bloom (§5) — the vacated cell included: with the bloom
-      // standing for the selected module, its own cell renders empty, and
-      // clicking it is a dismissal, never a second toggle.
-      this.ui.selected = null;
-      this.render();
-    }
+    // The Hex detail's one door (issue #295): any owned cell's idle click —
+    // a module's, or an empty place's — opens the cross-section. In flow
+    // the board is locked (§5) and the detail opens read-only: the click
+    // still answers the lock, with live readouts and no editing.
+    this.openDetail(pos, "modules");
   }
 
   pickCellThenPlace(id: string, pos: Hex): void {
@@ -1736,16 +1716,11 @@ export class App {
   }
 
   // The one placement landing (§5–§6), shared by the click path and the
-  // drag/touch release. A drop never opens the expanded face — and the
-  // armed placement carries its module as the selection, so that
-  // selection is dropped before the landing renders, never after: the
-  // module presents closed. An unrelated selection — another module's
-  // open bloom — survives the landing (#260: a placement must not cost
-  // the player their selection). A chord the drop newly forms strums (§6).
+  // drag/touch release. A drop never opens the detail — a placement keeps
+  // its gesture. A chord the drop newly forms strums (§6).
   private placeAndStrum(module: ModuleInstance, pos: Hex): void {
     const snapshot = displayedRates(this.state, this.state.mode === "flow");
     const before = snapshot.allocation ? summaryTermsOf(snapshot.allocation) : snapshot.namedChords;
-    if (this.ui.selected === module.id) this.ui.selected = null;
     if (this.act(placeModule(this.state, module.id, pos), `${META[module.type].name} placed.`)) {
       this.ui.placing = null;
       this.strumFormedChords(before);
@@ -1870,7 +1845,6 @@ export class App {
     }
     const added = this.state.modules[this.state.modules.length - 1]!;
     this.ui.modal = null;
-    this.ui.selected = added.id;
     this.ui.placing = added.id;
     const more = this.state.bankedRolls.length > 0 ? ` ${this.state.bankedRolls.length} more choice${this.state.bankedRolls.length === 1 ? "" : "s"} wait in the Forge.` : "";
     this.announceUnlocks(

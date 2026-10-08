@@ -72,27 +72,33 @@
                  marks, no countdown, no button. -->
             <div class="horizon-bar" id="horizon-bar"></div>
             <!-- The opening arc's one pop-up (§8): the second
-                 synthesizer's card — place it beside your first; the
-                 dashed ghost previews the chord; the × is what the pair
-                 earns. Dismissible once; it never fires again. -->
+                 synthesizer's card — place it beside your first; the dashed
+                 ghost previews the chord; the × is what the pair earns.
+                 Dismissible once; it never fires again. -->
             <div class="arc-card" id="arc-card" hidden></div>
-            <!-- The Mutator Grid's layer furniture (issue #199): the
-                 Modules / Mutators tab pair at the board's top edge
-                 (upgrade mode only, beside the entry purchase), the armed
-                 unlock's pill, and the placed mutator's declaration
-                 popover — all resting empty until the Mutators layer
-                 stands. -->
-            <div class="mut-tabs" id="mut-tabs" hidden></div>
+            <!-- The Hex detail (issue #295): the module bloom's successor —
+                 an owned cell's full-stack cross-section standing where the
+                 grid stood, Mutators above Modules in a fixed stack, with
+                 its explicit Return control. Resting empty until a click
+                 opens it. -->
+            <div class="hex-detail" id="hex-detail" hidden></div>
+            <!-- The vertical layer legend (issue #295): the one Modules /
+                 Mutators switch as symbol buttons, shared by the grid and
+                 the Hex detail — the grid reads the layer, the detail reads
+                 the emphasized face. Upgrade-mode furniture; the Mutators
+                 symbol stands locked-but-visible pre-entry (#273). -->
+            <div class="layer-legend" id="layer-legend" hidden></div>
+            <!-- The armed unlock's pill (issue #199) — resting empty until
+                 the arm stands. -->
             <button class="mut-unlock-pill" id="mut-unlock-pill" hidden></button>
-            <div class="mut-popover" id="mut-popover" hidden></div>
             <!-- The add-cell pill (#201): the armed purchase's one cost
                  spot — "New cell · <price> ν — Cancel · Esc" — and the
                  cancel itself. Resting empty whenever the mode isn't now. -->
             <button class="cell-arm-pill" id="cell-arm-pill" hidden></button>
             <!-- The tray column (§5, ADR-0027 as amended): the inventory as
                  an always-open pinned column docked at the board's right
-                 edge in upgrade mode, dual-face under the board tabs'
-                 Modules / Mutators switch (#mut-tabs — the one switch; the
+                 edge in upgrade mode, dual-face under the vertical layer
+                 legend's switch (#layer-legend — the one switch; the
                  column carries no second one). The modules face
                  (#inventory-zone) and the Mutators face (#mutator-tray)
                  swap beneath it. Portrait phone unfolds the column: the

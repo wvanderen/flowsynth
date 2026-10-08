@@ -8,7 +8,7 @@ import { STORAGE_KEY } from "../engine/save";
 import { cellCost } from "../engine/economy";
 import { startSession } from "../engine/actions";
 import { give } from "../engine/fixtures";
-import { hex, sameHex } from "../engine/hex";
+import { hex } from "../engine/hex";
 import { formatInt } from "./format";
 import { createAppFixture } from "./testing/app-fixture";
 
@@ -135,9 +135,9 @@ describe("the catalog door (issue #271)", () => {
     app.state.prestiges = 0;
     app.state.arete = 0;
     app.render();
-    // The board tab: locked, muted, lock-marked — its click never flips
-    // the mode.
-    const tab = document.querySelector<HTMLButtonElement>('#mut-tabs [data-mut-layer="mutators"]')!;
+    // The legend's symbol: locked, muted, lock-marked — its click never
+    // flips the mode (issue #295's strip carries the switch now).
+    const tab = document.querySelector<HTMLButtonElement>('#layer-legend [data-legend-layer="mutators"]')!;
     expect(tab.classList.contains("locked")).toBe(true);
     expect(tab.querySelector(".mut-tab-lock")).not.toBeNull();
     tab.click();
@@ -149,7 +149,7 @@ describe("the catalog door (issue #271)", () => {
     app.closeModal();
     // The tray sheet's switch wears the same locked face, landing the same.
     app.openModal("inventory");
-    const sheetTab = document.querySelector<HTMLButtonElement>('#modal-content [data-mut-layer="mutators"]')!;
+    const sheetTab = document.querySelector<HTMLButtonElement>('#modal-content [data-legend-layer="mutators"]')!;
     expect(sheetTab.classList.contains("locked")).toBe(true);
     expect(sheetTab.querySelector(".mut-tab-lock")).not.toBeNull();
     sheetTab.click();
@@ -709,8 +709,7 @@ describe("the harmonic-capacity ladder (#259)", () => {
   it("a purchase immediately re-runs the allocation and the board's readouts", () => {
     give(app.state, "additive", hex(1, 0));
     app.render();
-    const c4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(0, 0)))!;
-    app.select(c4.id);
+    document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(readoutText()).toContain("Capacity 1/1");
     app.state.nous = 1_000;
     app.buyCapacityAction();

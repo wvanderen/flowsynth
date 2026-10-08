@@ -138,16 +138,17 @@ describe("the thumb bar (§7, portrait phone)", () => {
     app.returnToInventory("m1");
     app.openModal("inventory");
     const modal = document.getElementById("modal-content")!;
-    // The switch rides the sheet; the modules face stands first.
-    const pair = [...modal.querySelectorAll("[data-mut-layer]")];
+    // The switch rides the sheet (the layer legend's symbols, issue #295);
+    // the modules face stands first.
+    const pair = [...modal.querySelectorAll("[data-legend-layer]")];
     expect(pair).toHaveLength(2);
     expect(modal.querySelector('[data-inv="m1"]')).not.toBeNull();
     expect(modal.querySelector("[data-mut-tray]")).toBeNull();
     // Flipping the sheet's switch turns the global mode: the sheet swaps
-    // to the arete-register mutator tiles, the board tabs follow.
-    (modal.querySelector('[data-mut-layer="mutators"]') as HTMLButtonElement).click();
+    // to the arete-register mutator tiles, the board legend follows.
+    (modal.querySelector('[data-legend-layer="mutators"]') as HTMLButtonElement).click();
     expect(app.ui.mutLayer).toBe("mutators");
-    expect(document.querySelector('#mut-tabs [data-mut-layer="mutators"]')!.classList.contains("active")).toBe(true);
+    expect(document.querySelector('#layer-legend [data-legend-layer="mutators"]')!.classList.contains("active")).toBe(true);
     const modalAfter = document.getElementById("modal-content")!;
     expect(modalAfter.querySelector('[data-inv="m1"]')).toBeNull();
     const tile = modalAfter.querySelector<HTMLButtonElement>('[data-mut-tray="mu2"]')!;
@@ -391,9 +392,9 @@ describe("board navigation (§7)", () => {
     // The drag moved the view; it never left the board's bounds.
     expect(after.x).toBeGreaterThan(before.x);
     expect(after.x).toBeLessThanOrEqual(app.boardBounds.x + app.boardBounds.width);
-    // A pan is a gesture, not a click: the release never falls through.
-    // (No selection change, no placement — the suppressor ate the click.)
-    expect(app.ui.selected).toBeNull();
+    // A pan is a gesture, not a click: the release never falls through —
+    // the suppressor ate the click, so no Hex detail opened.
+    expect(app.ui.detail).toBeNull();
   });
 
   it("press-and-move inside the grid pans only when zoomed in", () => {
@@ -436,25 +437,24 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     expect(document.getElementById("app-popover")).toBeNull();
   });
 
-  it("the bloom presents as a bottom sheet; the zoom cluster rises above it", () => {
+  it("the Hex detail presents as a bottom sheet replacing the grid", () => {
     app.render();
     clickCell(0, 0);
-    const bloomEl = document.getElementById("module-bloom")!;
-    expect(bloomEl.hidden).toBe(false);
-    expect(bloomEl.classList.contains("sheet")).toBe(true);
-    expect(bloomEl.querySelector(".bloom-sheet")).not.toBeNull();
-    expect(bloomEl.querySelector(".bloom-sheet-name")!.textContent).toContain("Oscillator");
-    expect(bloomEl.querySelector("#bloom-upgrade")).not.toBeNull();
-    expect(document.body.classList.contains("bloom-sheet-open")).toBe(true);
+    const detailEl = document.getElementById("hex-detail")!;
+    expect(detailEl.hidden).toBe(false);
+    expect(detailEl.classList.contains("sheet")).toBe(true);
+    expect(detailEl.querySelector(".hex-detail-layer.modules .hex-detail-name")!.textContent).toContain("Oscillator");
+    expect(detailEl.querySelector("#detail-upgrade")).not.toBeNull();
+    expect(document.body.classList.contains("hex-detail-open")).toBe(true);
     // The horizon bar floats at every width (§7): an open sheet covers the
     // board's lower edge but never dismisses the bar itself.
     const bar = document.getElementById("horizon-bar")!;
     expect(bar).not.toBeNull();
     expect(bar.querySelector('[data-live="h-clip"]')).not.toBeNull();
-    // Deselecting closes the sheet and lowers the cluster again.
-    clickCell(0, 0);
-    expect(bloomEl.hidden).toBe(true);
-    expect(document.body.classList.contains("bloom-sheet-open")).toBe(false);
+    // The return control closes the sheet and restores the grid.
+    document.getElementById("hex-detail-return")!.click();
+    expect(detailEl.hidden).toBe(true);
+    expect(document.body.classList.contains("hex-detail-open")).toBe(false);
     // The bar rides on: still rendered, still whole, era intact.
     app.render();
     const barAfter = document.getElementById("horizon-bar")!;
@@ -534,12 +534,12 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     const sheet = document.getElementById("modal-content")!;
     expect(sheet.querySelector(".rd-total")).not.toBeNull();
     expect(sheet.querySelectorAll(".rd-synth").length).toBeGreaterThan(0);
-    // A synthesizer row's tap closes the sheet and selects the module, so
-    // the answer lands on the board it names.
+    // A synthesizer row's tap closes the sheet and opens the module's Hex
+    // detail, so the answer lands on the cross-section it names (issue #295).
     const row = sheet.querySelector(".rd-synth")!;
     row.querySelector(".rd-pick")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.ui.modal).toBeNull();
-    expect(app.ui.selected).toBe(row.getAttribute("data-module-id"));
+    expect(app.state.modules.find((m) => m.id === row.getAttribute("data-module-id"))!.pos).toEqual(app.ui.detail!.pos);
   });
 
   it("the horizon bar spans the board's lower edge with its full anatomy", () => {

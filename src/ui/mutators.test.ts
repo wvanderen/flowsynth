@@ -6,10 +6,12 @@ import { combineMutatorsPreview } from "../engine/actions";
 import { hex, sameHex } from "../engine/hex";
 import type { GameState, Hex, MutatorFamily, MutatorInstance, Rarity } from "../engine/types";
 
-// The Mutator Grid's UI (issue #199): the tabbed second layer, its slot
-// faces and presence outlines, the tray strip, the gestures, the unlock
-// arm, and the rolls — booted on the real index.html skeleton, every
-// landing routed through the engine actions from #198.
+// The Mutator Grid's UI (issue #199): the vertical layer legend (issue
+// #295), the second layer's slot faces and presence outlines, the tray
+// strip, the gestures, the unlock arm, and the rolls — booted on the real
+// index.html skeleton, every landing routed through the engine actions
+// from #198. The idle slot click opens the Hex detail (issue #295), the
+// declaration having moved there.
 
 const fixture = createAppFixture();
 const boot = fixture.boot;
@@ -64,10 +66,10 @@ beforeEach(() => {
 
 afterEach(() => fixture.release());
 
-describe("the tab pair (issue #199)", () => {
-  it("the locked tab's mechanics open by focus and tap on board and sheet; Escape and tap-away dismiss without entering", () => {
+describe("the vertical layer legend (issue #295)", () => {
+  it("the locked symbol's mechanics open by focus and tap on strip and sheet; Escape and tap-away dismiss without entering", () => {
     const checkDisclosure = (host: HTMLElement) => {
-      const trigger = host.querySelector<HTMLButtonElement>(".mut-entry-tip .inst-tip-trigger")!;
+      const trigger = host.querySelector<HTMLButtonElement>(".legend-entry-tip .inst-tip-trigger")!;
       const body = () => document.getElementById(trigger.getAttribute("aria-describedby")!)!;
       trigger.focus();
       expect(body().classList.contains("inst-show")).toBe(true);
@@ -80,32 +82,32 @@ describe("the tab pair (issue #199)", () => {
       expect(body().classList.contains("inst-show")).toBe(false);
       expect(trigger.getAttribute("aria-expanded")).toBe("false");
       expect(app.ui.mutLayer).toBe("modules");
-      expect(host.querySelector("[data-mut-layer=mutators]")!.hasAttribute("title")).toBe(false);
+      // The locked symbol carries its own tooltip too (issue #295: every
+      // symbol has one); the ⓘ carries the mechanics beside it.
+      expect(host.querySelector("[data-legend-layer=mutators]")!.getAttribute("title")).toContain("locked");
     };
-    checkDisclosure(document.getElementById("mut-tabs")!);
+    checkDisclosure(document.getElementById("layer-legend")!);
     expect(app.ui.modal).toBeNull();
     app.openModal("inventory");
     checkDisclosure(document.querySelector<HTMLElement>(".tray-switch")!);
     expect(app.ui.modal).toBe("inventory");
     // The action still opens the entry immediately, independently of disclosure.
-    document.querySelector<HTMLButtonElement>(".tray-switch [data-mut-layer=mutators]")!.click();
+    document.querySelector<HTMLButtonElement>(".tray-switch [data-legend-layer=mutators]")!.click();
     expect(app.ui.modal).toBe("catalog");
     expect(app.ui.catalogFace).toBe("arete");
   });
 
-  it("pre-entry the pair stands locked-but-visible: muted outline + lock, and the click previews the entry screen (#273)", () => {
+  it("pre-entry the strip stands locked-but-visible: muted outline + lock, and the click previews the entry screen (#273)", () => {
     app.render();
-    const tabs = document.getElementById("mut-tabs")!;
-    expect(tabs.hidden).toBe(false);
-    const lockedTab = document.querySelector<HTMLButtonElement>('[data-mut-layer="mutators"]')!;
-    expect(lockedTab.classList.contains("locked")).toBe(true);
-    // The lock mark, not the arete register — the layer is locked.
-    expect(lockedTab.querySelector(".mut-tab-lock")).not.toBeNull();
-    expect(lockedTab.textContent).not.toContain("◇");
+    const legend = document.getElementById("layer-legend")!;
+    expect(legend.hidden).toBe(false);
+    const lockedSymbol = document.querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!;
+    expect(lockedSymbol.classList.contains("locked")).toBe(true);
+    // The lock mark rides the symbol; the click never flips the mode — it
+    // walks to the ◇ entry screen, pre-prestige included.
+    expect(lockedSymbol.querySelector(".mut-tab-lock")).not.toBeNull();
     expect(app.ui.mutLayer).toBe("modules");
-    // The click never flips the mode — it walks to the ◇ entry screen,
-    // pre-prestige included: the preview of the future entry.
-    lockedTab.click();
+    lockedSymbol.click();
     expect(app.ui.mutLayer).toBe("modules");
     expect(app.ui.modal).toBe("catalog");
     expect(app.ui.catalogFace).toBe("arete");
@@ -118,27 +120,27 @@ describe("the tab pair (issue #199)", () => {
     expect(app.ui.mutUnlockArmed).toBe(false);
   });
 
-  it("past the first prestige, the locked tab's click lands on the ◇ entry screen itself", () => {
+  it("past the first prestige, the locked symbol's click lands on the ◇ entry screen itself", () => {
     app.state.prestiges = 1;
     app.state.arete = 0;
     app.render();
-    document.querySelector<HTMLButtonElement>('[data-mut-layer="mutators"]')!.click();
+    document.querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
     expect(app.ui.mutLayer).toBe("modules");
     expect(app.ui.modal).toBe("catalog");
     expect(app.ui.catalogFace).toBe("arete");
     expect(document.querySelector(".entry-screen")).not.toBeNull();
   });
 
-  it("stands in upgrade mode once the tree is entered, and flow shows neither tab nor layer", () => {
+  it("stands in upgrade mode once the tree is entered, and flow shows neither legend nor layer", () => {
     seedMutatorEra();
-    expect(document.getElementById("mut-tabs")!.hidden).toBe(false);
+    expect(document.getElementById("layer-legend")!.hidden).toBe(false);
     app.mutSetLayer("mutators");
     expect(document.body.classList.contains("mut-layer-live")).toBe(true);
     // Entering flow clears the layer with the rest of the transient modes.
     app.beginFlow(null);
     expect(app.ui.mutLayer).toBe("modules");
     expect(app.ui.mutUnlockArmed).toBe(false);
-    expect(document.getElementById("mut-tabs")!.hidden).toBe(true);
+    expect(document.getElementById("layer-legend")!.hidden).toBe(true);
     expect(document.body.classList.contains("mut-layer-live")).toBe(false);
   });
 
@@ -148,7 +150,6 @@ describe("the tab pair (issue #199)", () => {
     app.mutArmTray("mu2");
     app.mutSetLayer("modules");
     expect(app.ui.mutArmedTray).toBeNull();
-    expect(app.ui.mutPopover).toBeNull();
   });
 });
 
@@ -245,42 +246,19 @@ describe("the gestures (issue #199)", () => {
     expect(mutatorOf(app.state, "mu1").pos).toBeNull();
   });
 
-  it("an idle click opens the declaration popover; Retrieve lands it in the tray", () => {
+  it("an idle click opens the cell's Hex detail on the Mutators face; Retrieve lands it in the tray", () => {
     seedMutatorEra();
     app.mutSetLayer("mutators");
     clickSlot(0, 0);
-    expect(app.ui.mutPopover).toBe("mu1");
-    const popover = document.getElementById("mut-popover")!;
-    expect(popover.hidden).toBe(false);
-    expect(popover.textContent).toContain("Power");
-    expect(popover.textContent).toContain("+50% to this module's power");
-    expect(popover.textContent).toContain("Oscillator · C4");
-    document.getElementById("mut-pop-retrieve")!.click();
+    expect(app.ui.detail).toEqual({ pos: hex(0, 0), face: "mutators" });
+    const mutators = document.querySelector(".hex-detail-layer.mutators")!;
+    expect(mutators.textContent).toContain("Power");
+    expect(mutators.textContent).toContain("+50% to this module's power");
+    expect(mutators.textContent).toContain("Oscillator · C4");
+    document.getElementById("detail-mutator-retrieve")!.click();
     expect(mutatorOf(app.state, "mu1").pos).toBeNull();
-    expect(app.ui.mutPopover).toBeNull();
-  });
-
-  it("the popover's Move arms a move that lands on a vacant slot", () => {
-    seedMutatorEra();
-    app.state.mutatorSlots.push(hex(0, 1));
-    app.render();
-    app.mutSetLayer("mutators");
-    clickSlot(0, 0);
-    document.getElementById("mut-pop-move")!.click();
-    expect(app.ui.mutMoving).toBe("mu1");
-    clickSlot(0, 1);
-    expect(mutatorOf(app.state, "mu1").pos).toEqual(hex(0, 1));
-    expect(app.ui.mutMoving).toBeNull();
-  });
-
-  it("the armed move refuses a held slot and says drag instead", () => {
-    seedMutatorEra();
-    app.mutSetLayer("mutators");
-    clickSlot(0, 0);
-    document.getElementById("mut-pop-move")!.click();
-    clickSlot(1, 0);
-    expect(mutatorOf(app.state, "mu1").pos).toEqual(hex(0, 0));
-    expect(app.ui.mutMoving).toBe("mu1");
+    expect(app.ui.detail).toEqual({ pos: hex(0, 0), face: "mutators" });
+    expect(document.querySelector(".hex-detail-layer.mutators")!.textContent).toContain("Open slot");
   });
 
   it("dragging a placed mutator onto a matching twin opens the combine review; confirm combines", async () => {
@@ -374,7 +352,7 @@ describe("the gestures (issue #199)", () => {
     expect(app.ui.modal).toBe("mutcombine");
   });
 
-  it("the Esc walk backs out: gesture, then popover, then the layer", () => {
+  it("the Esc walk backs out: gesture, then the detail, then the layer", () => {
     seedMutatorEra();
     app.mutSetLayer("mutators");
     app.mutArmTray("mu2");
@@ -382,9 +360,9 @@ describe("the gestures (issue #199)", () => {
     expect(app.ui.mutArmedTray).toBeNull();
     expect(app.ui.mutLayer).toBe("mutators");
     clickSlot(0, 0);
-    expect(app.ui.mutPopover).toBe("mu1");
+    expect(app.ui.detail).not.toBeNull();
     pressEscape();
-    expect(app.ui.mutPopover).toBeNull();
+    expect(app.ui.detail).toBeNull();
     expect(app.ui.mutLayer).toBe("mutators");
     pressEscape();
     expect(app.ui.mutLayer).toBe("modules");
@@ -553,13 +531,10 @@ describe("the readouts (issue #199)", () => {
     expect(readout.textContent).toContain("Open Mutator slot · C5 — inert until a host lands");
   });
 
-  it("the expanded face gains the mutator line", () => {
+  it("the Hex detail's module face gains the mutator line (issue #295)", () => {
     seedMutatorEra();
-    const synth = app.state.modules[0]!;
-    app.select(synth.id);
-    const bloom = document.getElementById("module-bloom")!;
-    expect(bloom.hidden).toBe(false);
-    const line = bloom.querySelector(".mut-bloom-line")!;
+    app.openDetail(hex(0, 0));
+    const line = document.querySelector(".hex-detail-mutline")!;
     expect(line.textContent).toContain("Mutator · Power");
     expect(line.textContent).toContain("+50% to this module's power");
   });
@@ -595,9 +570,9 @@ describe("the tray column (issue #272)", () => {
     expect(tile.querySelector(".mut-tile-hex")).not.toBeNull();
     // The unlock arm lives in Add — no tray card carries it.
     expect(mutTray.querySelector("#mut-unlock")).toBeNull();
-    // The column wears no second switch — the board tabs are the one.
+    // The column wears no second switch — the legend is the one.
     expect(document.getElementById("tray-head")).toBeNull();
-    expect(column.querySelectorAll("[data-mut-layer]")).toHaveLength(0);
+    expect(column.querySelectorAll("[data-legend-layer]")).toHaveLength(0);
   });
 
   it("flow clears the whole column", () => {
@@ -616,12 +591,12 @@ describe("flow locks the layer away", () => {
     app.mutSetLayer("mutators");
     app.beginFlow(null);
     app.render();
-    expect(document.getElementById("mut-tabs")!.hidden).toBe(true);
+    expect(document.getElementById("layer-legend")!.hidden).toBe(true);
     expect(document.getElementById("mutator-tray")!.hidden).toBe(true);
     expect(document.querySelector("#grid [data-mut-slot]")).toBeNull();
     // And the engine still refuses behind the UI's gates.
     app.mutPickSlot(hex(0, 0));
-    expect(app.ui.mutPopover).toBeNull();
+    expect(app.ui.detail).toBeNull();
   });
 });
 
@@ -653,7 +628,7 @@ describe("mutator drag cancellation", () => {
 });
 
 describe("inert declarations", () => {
-  it.each(["resonance", "power"] as const)("%s promises no effect in hover or popover", (family) => {
+  it.each(["resonance", "power"] as const)("%s promises no effect in hover or detail", (family) => {
     seedMutatorEra();
     const pos = family === "resonance" ? hex(0, 0) : hex(1, 0);
     const item = family === "resonance" ? mutatorOf(app.state, "mu1") : mutatorOf(app.state, "mu3");
@@ -663,12 +638,10 @@ describe("inert declarations", () => {
     expect(document.getElementById("chord-readout")!.textContent).toContain("inert");
     expect(document.getElementById("chord-readout")!.textContent).not.toContain("%");
     clickSlot(pos.q, pos.r);
-    expect(document.getElementById("mut-popover")!.textContent).toContain("inert");
-    expect(document.getElementById("mut-popover")!.textContent).not.toContain("%");
+    expect(document.querySelector(".hex-detail-layer.mutators")!.textContent).toContain("inert");
+    expect(document.querySelector(".hex-detail-layer.mutators")!.textContent).not.toContain("%");
     if (family === "resonance") {
-      app.mutSetLayer("modules");
-      app.select(app.state.modules[0]!.id);
-      const line = document.querySelector(".mut-bloom-line")!;
+      const line = document.querySelector(".hex-detail-mutline")!;
       expect(line.textContent).toContain("inert");
       expect(line.textContent).not.toContain("%");
     }

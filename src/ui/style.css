@@ -969,7 +969,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
    the grid, the popped module face, and the tray column — denies selection,
    so holding or dragging never highlights labels in Chrome. */
 #grid,
-.module-bloom,
+.hex-detail,
 .tray-column,
 .inventory-tray {
   user-select: none;
@@ -1295,7 +1295,6 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   backdrop-filter: blur(3px);
 }
 .zoom-cluster button svg { width: 15px; height: 15px; }
-body.bloom-sheet-open .zoom-cluster { bottom: 190px; }
 
 /* ── Hex grid ──────────────────────────────────────── */
 
@@ -1630,60 +1629,193 @@ body.live .chord-mark:not(.chord-fade):not(.chord-idle) .chord-seam {
    the merge that refunds upgrade nous, its own review to confirm. */
 .hex.drop-combine { stroke: var(--nous); stroke-width: 2.5; fill: color-mix(in srgb, var(--nous) 12%, transparent); }
 
-/* ── The expanded face (§5) ────────────────────────── */
-/* The module's own hex lifted off the grid toward the camera: the face
-   itself IS the bloom — enlarged to fill the hexagonal plate, its content
-   shifted up to make room for the Upgrade button in the lower band. The
-   host is a positioned plate; pointer-events live on the plate and button
-   only, so the hexagon's corner gaps never block the board beneath. */
-.module-bloom {
-  position: absolute;
-  z-index: 20;
+/* ── The Hex detail (§5, issue #295) ───────────────── */
+/* The module bloom's successor: an owned cell's full-stack cross-section
+   standing where the grid stood, at every width. One clipped instrument
+   panel (the standards' silhouette), open hairline divisions between the
+   layer sections — never nested cards. The fixed stack shows both layers,
+   Mutators above Modules; the emphasized face wears the state grammar's
+   firm inset marker and full strength while the other stays present. */
+body.hex-detail-open #grid,
+body.hex-detail-open .tray-column,
+body.hex-detail-open .zoom-cluster,
+body.hex-detail-open .chord-readout,
+body.hex-detail-open .arc-card {
   pointer-events: none;
-  filter: drop-shadow(0 18px 16px var(--shadow));
-  animation: bloom-in 0.16s ease-out;
+  opacity: 0;
+  visibility: hidden;
 }
-.module-bloom[hidden] { display: none; }
-@keyframes bloom-in { from { opacity: 0; margin-top: 7px; } }
-.bloom-plate {
+.hex-detail {
   position: absolute;
-  inset: 0;
-  pointer-events: auto;
-  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  background:
-    radial-gradient(ellipse at 50% 30%, color-mix(in srgb, var(--hue-oscillator) 7%, transparent), transparent 70%),
-    var(--panel);
-  border-radius: 12px;
+  /* The left inset clears the layer legend's strip, which stands in both
+     modes (issue #295); the panel hugs it without crossing it. */
+  inset: 10px 12px 10px 64px;
+  z-index: 22;
+  pointer-events: none;
 }
-/* The face fills the plate exactly: the svg's viewBox is the hexagon's own
-   bounding box, so the module's hex IS the bloom. Text sizes are in svg
-   units — the bloom re-proportions the engraving for the larger chassis. */
-.bloom-plate .bloom-face { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.bloom-plate .hex { fill: var(--plate-common); stroke-width: 1.2; }
-.bloom-plate[data-rarity="uncommon"] .hex { fill: var(--plate-uncommon); }
-.bloom-plate[data-rarity="rare"] .hex { fill: var(--plate-rare); }
-.bloom-plate text { fill: var(--ink); }
-.bloom-face .face-level { font-size: 9px; }
-.bloom-face .face-name { font-size: 10px; }
-/* The production line sits at the button's own level in the hierarchy —
-   present, not dominant. */
-.bloom-face .face-readout { font-size: 7px; }
-.bloom-face .face-note { font-size: 6.2px; letter-spacing: 0.14em; }
-/* The upgrade affordances ride the band between readout and taper. */
-.bloom-readouts {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 58px;
-  width: 150px;
+.hex-detail[hidden] { display: none; }
+.hex-detail-panel {
+  /* The catalog door's proportions (issue #271): a fixed-width clipped
+     instrument panel, hugging its content, clear of the legend strip.
+     No entry animation: the panel rebuilds on every flow tick's live
+     readout, and idle panels stay quiet (the instrument standards). */
+  width: min(620px, 100%);
+  max-height: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
+  pointer-events: auto;
 }
-.bloom-contribution { margin: 0; font-size: 12.5px; color: var(--nous); white-space: nowrap; }
-/* Title line carries the action and its price; the benefit subtitles
-   beneath it. */
+.hex-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  background: var(--line-strong);
+  clip-path: var(--inst-clip);
+}
+.hex-detail-place {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  font-family: var(--font-condensed);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.hex-detail-coords { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; }
+.hex-detail-readonly {
+  font: 600 10px var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--switch);
+}
+.hex-detail-return {
+  margin-left: auto;
+  padding: 5px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--panel-soft);
+  font: 600 11px var(--font-condensed);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  cursor: pointer;
+}
+.hex-detail-return:hover { border-color: var(--accent); color: var(--accent); }
+.hex-detail-face {
+  flex: 1;
+  min-height: 0;
+  background: var(--panel-deep);
+  clip-path: var(--inst-clip);
+  padding: 0 12px 12px;
+  overflow-y: auto;
+}
+/* The fixed stack: Mutators above Modules, in that order always. The
+   selected face's controls focus and the section reads at full strength;
+   the other stays present behind the emphasis. */
+.hex-detail-layer {
+  border-top: 1px solid var(--line);
+  padding: 10px 2px 12px;
+  opacity: 0.62;
+  transition: opacity 0.15s;
+  outline: none;
+}
+.hex-detail-face > .hex-detail-layer:first-child { border-top: none; }
+.hex-detail-layer.selected { opacity: 1; }
+.hex-detail-layer:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.hex-detail-layer-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px 3px 6px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  font: 600 11px var(--font-condensed);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+}
+.hex-detail-layer-head:hover { color: var(--ink); background: var(--hover-bg); }
+.hex-detail-layer-symbol { width: 16px; height: 16px; display: inline-flex; }
+.hex-detail-layer-symbol svg { width: 100%; height: 100%; }
+.hex-detail-layer-head.selected {
+  color: var(--ink);
+  /* The state grammar's firm inset marker — readable without color. */
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+.hex-detail-layer-head[data-detail-face="mutators"].selected { color: var(--arete); }
+.hex-detail-body { padding: 8px 4px 0; }
+.hex-detail-module {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-soft);
+}
+.hex-detail-tile { width: 76px; height: 76px; flex-shrink: 0; display: block; }
+.hex-detail-tile .hex { fill: var(--plate-common); stroke-width: 1.2; }
+.hex-detail-tile text { fill: var(--ink); }
+.hex-detail-tile .face-level { font-size: 9px; }
+.hex-detail-tile .face-name { font-size: 10px; }
+.hex-detail-tile .face-readout { font-size: 8px; }
+.hex-detail-tile .face-note { font-size: 6.5px; letter-spacing: 0.12em; }
+.hex-detail-tile .hex.empty { fill: transparent; stroke: var(--line-strong); stroke-dasharray: 5 4; }
+.hex-detail-tile .hex-note { font-size: 12px; fill: var(--muted); }
+.hex-detail-col { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hex-detail-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hex-detail-rarity { font-weight: 400; font-size: 11px; color: var(--muted); }
+.hex-detail-note { font-size: 11px; color: var(--muted); }
+.hex-detail-contrib { font-size: 12px; color: var(--charge); }
+.hex-detail-buy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+  width: 172px;
+}
+/* The detail's one-line actions (unlock, retrieve, catalog entry). */
+.hex-action {
+  padding: 7px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--panel-soft);
+  font: 600 11.5px var(--font-condensed);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--arete);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.hex-action:hover { border-color: var(--arete); background: var(--arete-faint); }
+.hex-detail-noslot { font-size: 11px; color: var(--muted); }
+.hex-detail-lock { width: 30px; height: 30px; flex-shrink: 0; display: inline-flex; color: var(--muted); }
+.hex-detail-lock svg { width: 100%; height: 100%; }
+.hex-detail-glyph { width: 34px; height: 34px; flex-shrink: 0; display: inline-flex; }
+.hex-detail-glyph svg { width: 100%; height: 100%; }
+.hex-detail-mutline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--ink);
+}
+.hex-detail-mutline b { font-weight: 600; white-space: nowrap; }
+.hex-detail-mutline .mono { color: var(--arete); }
+.hex-detail-mutinert { color: var(--muted); font-style: normal; }
+.hex-detail-mutglyph { width: 15px; height: 15px; display: inline-flex; flex-shrink: 0; }
+.hex-detail-mutglyph svg { width: 100%; height: 100%; }
+.mut-inert .hex-detail-contrib { color: var(--muted); }
+
+/* The upgrade affordances (§5, issue #195): the shared ladder riding the
+   button — the same chip rows the retired bloom carried. */
 .bloom-upgrade {
   width: 100%;
   display: flex;
@@ -1692,13 +1824,16 @@ body.live .chord-mark:not(.chord-fade):not(.chord-idle) .chord-seam {
   gap: 1px;
   padding: 7px 10px;
   background: var(--panel-soft);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  cursor: pointer;
 }
 .bloom-upgrade-title { font-size: 12px; line-height: 1.3; white-space: nowrap; }
 .bloom-upgrade-title strong { font-weight: 600; }
 .bloom-upgrade-benefit { font-size: 11px; line-height: 1.3; color: var(--charge); }
 
-/* The expanded face's dial (§5, issue #195): the shared ladder as a chip
-   row riding the button — ×1 / ×5 / ×10 / MAX·k, the picked chip in the
+/* The detail's dial (§5, issue #195): the shared ladder as a chip row
+   riding the button — ×1 / ×5 / ×10 / MAX·k, the picked chip in the
    accent register. Partial by design: no chip or button ever disables. */
 .bloom-dial { display: flex; gap: 3px; width: 100%; }
 .bloom-dial-chip {
@@ -1730,64 +1865,16 @@ body.live .chord-mark:not(.chord-fade):not(.chord-idle) .chord-seam {
 }
 .bloom-shift-chip:hover { background: var(--hover-bg); border-color: var(--line-strong); }
 .bloom-shift-chip.active { background: var(--hue-voice); border-color: var(--hue-voice); color: var(--accent-ink); }
-/* The dial adds a row to the bloom's button band: drop the band lower and
-   widen it so the chips clear the face's production line, with the note
-   footnoted deeper into the taper (issue #195). The production line itself
-   moved down with the #219 bloom spacing (readout 16), so the band follows
-   it to keep the chips clear. */
-.bloom-readouts { bottom: 34px; width: 176px; }
 
-/* Zoomed past the bloom's size, nothing pops: the affordances ride the
-   closed face as a floating card anchored over the module's lower band.
-   Only the button is interactive — the face beneath keeps its drags. */
-.module-bloom.inline { filter: none; }
-.module-bloom.inline .bloom-readouts {
-  bottom: auto;
-  transform: none;
-  margin-left: 24px;
-  width: 176px;
-  padding: 8px 10px;
-  background: var(--panel-veil);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  backdrop-filter: blur(2px);
+/* The detail as a bottom sheet (§7, portrait phone): the same panel
+   re-docked over the board's lower edge, above the thumb bar. */
+.hex-detail.sheet {
+  inset: auto 8px 64px;
 }
-.module-bloom.inline .bloom-upgrade { pointer-events: auto; }
-
-/* The bloom as a bottom sheet (§7, portrait phone): the expanded face
-   re-docked over the board's lower edge, above the thumb bar — the zoom
-   cluster rises above it via body.bloom-sheet-open. */
-.module-bloom.sheet {
-  left: 10px !important;
-  right: 10px;
-  bottom: 64px !important;
-  top: auto !important;
-  width: auto !important;
-  height: auto !important;
-  filter: none;
-  animation: sheet-up 0.18s ease-out;
+.hex-detail.sheet .hex-detail-panel {
+  height: auto;
+  max-height: min(72vh, 560px);
 }
-.bloom-sheet {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  padding: 10px 14px;
-  background: var(--panel);
-  border: 1px solid var(--line-strong);
-  border-radius: 12px;
-  box-shadow: 0 -14px 40px var(--shadow);
-  pointer-events: auto;
-}
-.bloom-sheet-tile { width: 64px; height: 64px; flex-shrink: 0; display: block; }
-.bloom-sheet-col { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.bloom-sheet-name { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bloom-sheet-note { font-size: 10.5px; color: var(--muted); }
-.bloom-sheet-contrib { font-size: 11px; color: var(--charge); }
-/* The dial rides the sheet (§7, issue #195): the buy column stacks the
-   chip row over the button at the row's end. */
-.bloom-sheet-buy { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; margin-left: auto; }
-.bloom-sheet .bloom-upgrade { flex-shrink: 0; width: 100%; }
-@keyframes sheet-up { from { transform: translateY(28px); opacity: 0.4; } }
 
 /* The face button (issue #195): one per closed face, covering the bottom
    corner as face furniture — a chassis-veil trapezoid in the accent
@@ -1912,14 +1999,23 @@ body.live .chord-mark:not(.chord-fade):not(.chord-idle) .chord-seam {
    the Mutators tab — the grid renders as the foreground, its words
    readable over the resting chords. */
 
-/* The tab pair at the board's top edge: upgrade-mode furniture beside the
-   entry purchase, above the arc card's z and clear of the readout. */
-.mut-tabs {
+/* ── The vertical layer legend (issue #295) ────────── */
+/* The one Modules / Mutators switch as symbol buttons, shared by the grid
+   and the Hex detail: the grid reads the layer, the detail reads the
+   emphasized face, and the strip synchronizes with both. Upgrade-mode
+   furniture beside the entry purchase; flow shows neither legend nor
+   layer. The selected face wears the state grammar's firm inset marker —
+   readable without color — and every symbol carries its accessible name
+   and native tooltip. */
+.layer-legend {
   position: absolute;
-  top: 10px;
+  /* Beneath the action dock on the board's left edge: the two vertical
+     strips share the edge without sharing pixels. */
   left: 12px;
+  top: calc(50% + 82px);
   z-index: 23;
   display: inline-flex;
+  flex-direction: column;
   padding: 3px;
   gap: 2px;
   background: var(--panel-veil);
@@ -1927,40 +2023,58 @@ body.live .chord-mark:not(.chord-fade):not(.chord-idle) .chord-seam {
   border-radius: 9px;
   backdrop-filter: blur(3px);
 }
-.mut-tabs[hidden] { display: none; }
-.mut-tab {
-  padding: 5px 14px;
+.layer-legend[hidden] { display: none; }
+.layer-legend .legend-entry { display: inline-flex; }
+.legend-entry.locked { flex-direction: column; align-items: center; gap: 1px; }
+.legend-entry .legend-entry-tip .inst-tip-trigger {
+  width: auto;
+  height: auto;
+  padding: 1px 3px;
   border: none;
-  border-radius: 6px;
   background: transparent;
-  font: 600 10.5px var(--mono);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 10px;
+  line-height: 1;
   color: var(--muted);
   cursor: pointer;
 }
-.mut-tab:hover { color: var(--ink); background: var(--hover-bg); }
-.mut-tab.active { color: var(--ink); background: var(--hover-bg); }
-.mut-tab[data-mut-layer="mutators"].active {
+.legend-symbol {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.legend-symbol svg { width: 17px; height: 17px; }
+.legend-symbol:hover { color: var(--ink); background: var(--hover-bg); }
+.legend-symbol.active {
+  color: var(--ink);
+  background: var(--hover-bg);
+  /* The state grammar's firm inset marker — readable without color. */
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+.legend-symbol[data-legend-layer="mutators"].active {
   color: var(--arete);
   background: var(--arete-faint);
 }
 /* Pre-entry the Mutators face is locked-but-visible (issue #273): the
-   state grammar's muted outline plus the lock mark in the label — the
-   click walks to the catalog's entry screen, it never flips the mode. */
-.mut-tab.locked {
+   state grammar's muted outline plus the lock mark — the click walks to
+   the catalog's entry screen, it never flips the mode. */
+.legend-symbol.locked {
   color: var(--muted);
   box-shadow: inset 0 0 0 1px var(--line);
+  flex-direction: column;
+  gap: 1px;
 }
-.mut-tab.locked:hover { color: var(--muted); background: transparent; }
-.mut-tab-lock {
-  width: 11px;
-  height: 11px;
-  vertical-align: -1.5px;
-  margin-right: 5px;
-}
-.mut-entry-tip { align-items: center; }
-.mut-entry-tip > .inst-tip-trigger { width: 44px; height: 44px; }
+.legend-symbol.locked:hover { color: var(--muted); background: transparent; }
+.legend-symbol:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.legend-symbol.locked svg { width: 12px; height: 12px; }
+.mut-tab-lock { width: 12px; height: 10px; }
 
 /* Cancellation feedback stays above the phone thumb bar and clear of
    board gestures. The live region announces the same words separately. */
@@ -2613,8 +2727,8 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
      its panel popover anchoring beneath the launcher, and the clock's Time
      popover anchors to the clock itself. Production reads move to the
      board-surface game-info strip; the icon dock becomes the bottom thumb
-     bar with Inventory and Feats folded in; the bloom presents as a bottom
-     sheet. */
+     bar with Inventory and Feats folded in; the Hex detail presents as a
+     bottom sheet (issue #295). */
   .console { height: 56px; padding: 0 10px; gap: 8px; }
   .brand svg { width: 24px; height: 24px; }
   .console-session { flex: 0 0 auto; gap: 8px; }
@@ -2660,18 +2774,23 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
   .horizon-state { font-size: 8.5px; }
   .prestige-door { font-size: 8.5px; padding: 4px 12px; }
   .zoom-cluster { right: 10px; bottom: 64px; }
-  body.bloom-sheet-open .zoom-cluster { bottom: 150px; }
-  .module-bloom.sheet { bottom: 56px !important; }
   .chord-readout { top: 46px; right: 10px; }
-  /* The Mutator layer on phone (issue #199, reworked by the #272
-     review): the always-on strip card is gone — the tray sheet's
-     Mutators face carries the tiles, and Add arms the slot unlock — so
-     only the tabs hug the board's top-left corner. */
-  .mut-tabs { left: 8px; top: 52px; }
+  /* The Hex detail on phone (issue #295): the panel re-docks as a bottom
+     sheet over the thumb bar; the module row wraps so the buy column takes
+     the full width beneath the identity column. */
+  .hex-detail { inset: 8px; }
+  .hex-detail.sheet { inset: auto 8px 60px; }
+  .hex-detail-module { flex-wrap: wrap; }
+  .hex-detail-tile { width: 56px; height: 56px; }
+  .hex-detail-col { flex: 1 1 140px; }
+  .hex-detail-buy { width: 100%; margin-left: 0; }
+  .hex-detail-mutline { flex-wrap: wrap; }
+  /* The layer legend on phone (issue #295): the strip hugs the board's
+     left edge below the game-info strip, clear of the thumb bar. */
+  .layer-legend { left: 8px; top: auto; bottom: 76px; transform: none; }
   .mutator-tray { display: none !important; }
   .mut-unlock-pill { top: 46px; }
   .cell-arm-pill { top: 46px; }
-  .mut-popover { width: 200px; }
   /* The arc card clears the game-info strip up top by riding above the
      horizon bar's lane at the board's lower edge. */
   .arc-card { top: auto; bottom: 124px; left: 12px; right: 12px; max-width: none; }
@@ -2838,11 +2957,12 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   gap: 8px;
   margin-top: 4px;
 }
-/* The tray sheet's face switch (issue #272 review): the board tabs' pair
-   re-docked inside the sheet — the same two buttons, static here. */
-.mut-tabs.tray-switch {
+/* The tray sheet's face switch (issue #272 review): the layer legend's
+   symbols re-docked inside the sheet, horizontal — the same two buttons,
+   static here. */
+.layer-legend.tray-switch {
   position: static;
-  display: inline-flex;
+  flex-direction: row;
   width: max-content;
   margin: 2px 0 12px;
 }

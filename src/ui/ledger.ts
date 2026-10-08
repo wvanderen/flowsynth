@@ -10,7 +10,7 @@ import { ACHIEVEMENTS } from "../engine/achievements";
 import { catalogOpen } from "../engine/catalog";
 import { BALANCE, CATEGORY_OF, isOscillatorType, NAMED_CHORDS } from "../engine/constants";
 import { idleTermsOf } from "../engine/allocation";
-import { activeBuildGeneratorStrength, chargedFactor, hostPower } from "../engine/economy";
+import { activeBuildGeneratorStrength, chargedFactor, deployedAt, hostPower } from "../engine/economy";
 import { discoveryCount } from "../engine/library";
 import { noteNameOf } from "../engine/lattice";
 import type { Contribution, GameState, ModuleInstance, RateSnapshot } from "../engine/types";
@@ -463,13 +463,14 @@ export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
     app.listen(document.getElementById("feats-chip"), "click", () => app.openModal("achievements"));
     app.listen(document.getElementById("rate-cell"), "click", () => app.openModal("rate"));
     app.listen(document.getElementById("library-chip"), "click", () => app.openModal("library"));
-    // A synth row's tap selects its module: the hex wears the selected
-    // stroke and the bloom opens over it — the row names the place,
-    // the board shows it. The tooltip layer pins and dismisses beside it.
-    wireSynthPicks(host.querySelector(".rate-breakdown")!, (id) => app.select(id), app);
+    // A synth row's tap names its module's place (§7, issue #295): the
+    // tap opens the module's Hex detail — the row names the place, the
+    // cross-section shows it. The tooltip layer pins and dismisses beside it.
+    wireSynthPicks(host.querySelector(".rate-breakdown")!, (id) => app.openModuleDetail(id), app);
     wireTooltips(host.querySelector(".rate-breakdown")!, app.signal);
   }
-  updateLedgerLive(host, state, snapshot, app.ui.selected);
+  const detailModule = app.ui.detail ? deployedAt(state, app.ui.detail.pos) : undefined;
+  updateLedgerLive(host, state, snapshot, detailModule?.id ?? null);
 }
 
 export function updateLedgerLive(
