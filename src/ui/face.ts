@@ -306,3 +306,28 @@ export function zeroBuyRead(bank: number, nextCost: number): { plusLabel: string
     maxTip: `MAX · buys 0 — ${short} ν short`,
   };
 }
+
+/* ── The inventory tile's minimal mark (ADR-0027) ───── */
+
+// A hexagon outlined in the category hue with the module's glyph alone.
+// The full readout face belongs to the board and the expanded face — at
+// tile size the engraving is noise — and the tooltip carries the details
+// the mark leaves off. Shared by the tray, the phone inventory sheet, the
+// live drag ghost, and the Hex detail's inventory (issue #296), so what
+// you carry is what waits in the tray. The spacer wears its module's ring
+// instead of the wire (issue #219): an unfilled inner hexagon matching its
+// board face, sized to the other tiles' glyph footprint, not the face's
+// full window.
+const SPACER_TILE_RADIUS = 20;
+
+export function inventoryTileSvg(module: ModuleInstance): string {
+  const hue = `var(--${HUE_TOKEN_OF[module.type]})`;
+  const mark =
+    module.type === "spacer"
+      ? `<polygon fill="none" stroke="${hue}" stroke-width="3.5" points="${hexPoints(SPACER_TILE_RADIUS)}"/>`
+      : `<g class="tile-glyph" fill="none" stroke="${hue}" stroke-width="3.5" transform="scale(1.55)">${moduleIcon(module.type)}</g>`;
+  return `<svg viewBox="-70 -70 140 140" aria-hidden="true">
+    <polygon class="tile-hex" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="${hue}" stroke-width="4.5"/>
+    ${mark}
+  </svg>`;
+}

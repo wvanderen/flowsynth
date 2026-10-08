@@ -1761,9 +1761,11 @@ body.hex-detail-open .upgrade-all {
   text-transform: uppercase;
   color: var(--switch);
 }
-/* The cross-section: two rows (Mutators above Modules, always) by two
-   columns (the stack, then the action rail). Every child states its post —
-   an empty rail row must never let a face slide into the rail's column.
+/* The cross-section: two rows (Mutators above Modules, always) by three
+   columns (the stack, the action rail, and — while a layer's Add or Swap
+   opened it, issue #296 — the tray). Every child states its post — an
+   empty rail row must never let a face slide into the rail's column, and
+   the closed tray lets the composition center as it was.
    The composition centers as a group; a short stage scrolls. */
 .hex-detail-grid {
   flex: 1;
@@ -1907,6 +1909,57 @@ body.hex-detail-open .upgrade-all {
 }
 .hex-action:hover { border-color: var(--arete); background: var(--arete-faint); }
 .hex-detail-noslot { font-size: 11px; color: var(--muted); }
+
+/* The detail's inventory (issue #296): the tray re-docked beside the stack
+   while a layer's Add or Swap stands open — an open division with a
+   hairline, never a card. Its tiles place straight into the detail's
+   place; Cancel closes without changes. */
+.hex-detail-tray {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-left: 1px solid var(--line);
+  padding: 12px 4px 12px 20px;
+  max-height: 100%;
+  min-width: 0;
+}
+.hex-detail-tray-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.hex-detail-tray-cancel {
+  padding: 5px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--panel-soft);
+  font: 600 10px var(--font-condensed);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.hex-detail-tray-cancel:hover { border-color: var(--accent); color: var(--accent); }
+.hex-detail-tray-items {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  overflow-y: auto;
+  padding: 2px;
+}
+.hex-detail-tray-items .inventory-tile { width: 62px; padding: 3px 2px 5px; }
+.hex-detail-tray-items .inventory-tile svg { width: 100%; }
+.hex-detail-tray .tray-empty { max-width: 130px; }
+/* The sheet re-docks the tray under its face's rail, full width. */
+.hex-detail.sheet .hex-detail-tray { border-left: none; border-top: 1px solid var(--line); padding: 10px 2px; }
+.hex-detail.sheet .hex-detail-tray-items { flex-direction: row; flex-wrap: wrap; justify-content: center; }
 
 /* The upgrade affordances (§5, issue #195): the shared ladder riding the
    button — the same chip rows the retired bloom carried. */
