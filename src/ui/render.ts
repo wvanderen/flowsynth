@@ -4349,10 +4349,13 @@ function renderPrestigeModal(app: App, content: HTMLElement): void {
 // The honesty report (focus-tool spec §2): the mandatory adjudication when
 // a session returns with provisional time outstanding. One surface, both
 // uses — mid-session and at exit (framing copy differs) — never merged into
-// the dismissible summary. The away minutes and the bucket are stated up
-// top; each option carries its consequences inline as its label; the answer
-// banks or drops the bucket in one move. Non-dismissible (ADR-0019): it
-// settles, or the player leaves and the next return re-presents it,
+// the dismissible summary. The ruled folio (#279): the readout leads —
+// away time against the plan, the held bucket beside it — the one
+// reassurance ("Nothing already banked is taken back.") stays visible, and
+// each option is a full-width rule-line row carrying its consequence as a
+// mono line: the whole adjudication readable without opening anything. The
+// answer banks or drops the bucket in one move. Non-dismissible (ADR-0019):
+// it settles, or the player leaves and the next return re-presents it,
 // recalculated.
 function renderHonestyModal(app: App, content: HTMLElement): void {
   const session = app.state.session;
@@ -4360,10 +4363,7 @@ function renderHonestyModal(app: App, content: HTMLElement): void {
   const bucket = session?.accounting.bucketNous ?? 0;
   const target = session?.target ?? null;
   const planned = target !== null;
-  const hold = `${formatNumber(bucket)} ν held in the bucket`;
-  const head = planned
-    ? `${formatDuration(pool)} away past your plan — ${hold}.`
-    : `${formatDuration(pool)} away — ${hold}.`;
+  const read = `${formatDuration(pool)} away${planned ? " · past your plan" : ""}`;
   const options: { outcome: "missed" | "planned" | "full"; label: string; consequence: string }[] = [
     {
       outcome: "missed",
@@ -4388,14 +4388,16 @@ function renderHonestyModal(app: App, content: HTMLElement): void {
   content.innerHTML = `
     <div class="modal-top"><span class="eyebrow">${app.exitPending ? "BEFORE YOU WRAP UP" : "HONESTY REPORT"}</span></div>
     <h2 id="modal-title">While you were away</h2>
-    <p class="lead">${head}</p>
-    <p class="small muted">Nothing is final until you answer${planned ? " — only the time past your plan is waiting" : ""}. What already banked stays banked.</p>
+    <div class="folio-rows honesty-readout">
+      <div class="folio-row"><span class="honesty-read mono">${read}</span><span class="honesty-held mono">${formatNumber(bucket)} ν held</span></div>
+      <div class="folio-row"><span class="folio-line">Nothing already banked is taken back.</span></div>
+    </div>
     <div class="honesty-choices">
       ${options
         .map(
           (option) => `<button class="honesty-choice" data-honesty="${option.outcome}">
         <span class="honesty-label">${option.label}</span>
-        <small class="honesty-consequence">${option.consequence}</small>
+        <small class="honesty-consequence mono">${option.consequence}</small>
       </button>`,
         )
         .join("")}
@@ -4645,15 +4647,17 @@ function honestyEventLine(event: HonestyEvent): string {
 }
 
 // The loud summary (§5.7, §8): shown once per session end, however the
-// session ended — final numbers only. The headline is banked nous; practice
-// time shows credited minutes in the history list's format; the honesty
-// events sit beneath as neutral factual lines, where a dropped bucket's
-// drop is visible — and there is no raw wall-duration row. The reflection's
-// reserved slot rides above dismissal: free text plus a continuous
-// rough–great slider (the 1–5 range holds; #233), end labels only, middle
-// neutral and the default. It records as either field is touched and stays
-// absent otherwise, so every dismissal path — Continue, ✕, backdrop, Esc —
-// logs the same.
+// session ended — final numbers only. The ruled folio (#279): the banked
+// nous headline — the figure IS the identity, no sentence restates it —
+// over hairline-ruled readout rows (practice, rate, rolls, unlocks, the
+// honesty events as neutral factual lines), the rate breakdown living in
+// the RATE row's tooltip layer and every unlock wearing the NEW mark.
+// Practice time shows credited minutes in the history list's format, and
+// there is no raw wall-duration row. The reflection's reserved slot rides
+// above dismissal: free text plus a continuous rough–great slider (the
+// 1–5 range holds; #233), end labels only, middle neutral and the default.
+// It records as either field is touched and stays absent otherwise, so
+// every dismissal path — Continue, ✕, backdrop, Esc — logs the same.
 
 // The ends' response (#233): each label's opacity rises as the thumb nears
 // it — a continuous read with no bands and no numbers. Dim is the far-end
@@ -4688,15 +4692,22 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
         ...(summary.infusors > 0 ? [`boosters +${formatNumber(summary.infusors)} ν/s`] : []),
         ...(summary.empowerment > 1 ? [`empowerment ×${formatNumber(summary.empowerment)}`] : []),
       ].join(" · ");
-  // The "unlocked this session" row (ADR-0015): in-session unlocks queue
-  // here instead of toasting, whatever the exit path.
+  // The unlock rows (ADR-0015): in-session unlocks queue here instead of
+  // toasting, whatever the exit path — each wearing the engraved NEW mark.
   const unlocked = (summary.achievements ?? []).map(achievementName);
-  const unlockRow = unlocked.length > 0
-    ? `<div class="summary-row unlock">
-        <span class="summary-label">Unlocked this session</span>
-        <strong>${unlocked.join(" · ")}</strong>
-      </div>`
-    : "";
+  const NEW_MARK = `<span class="folio-new" aria-label="new this session">NEW</span>`;
+  const unlockRows = [
+    ...(unlocked.length > 0
+      ? [
+          `<div class="folio-row folio-unlock"><span class="folio-key">Unlocked</span><span class="folio-main"><span class="folio-fig mono">${unlocked.join(" · ")}</span></span>${NEW_MARK}</div>`,
+        ]
+      : []),
+    ...(summary.timeUnlocked
+      ? [
+          `<div class="folio-row folio-unlock"><span class="folio-key">Unlocked</span><span class="folio-main"><span class="folio-fig mono">Time your flow sessions</span></span>${NEW_MARK}</div>`,
+        ]
+      : []),
+  ].join("");
   // The rolls line (ADR-0041): one source reads plainly, several split —
   // practice (flow meter), charge (Forge progress), and the Mutator
   // Forge's crossings (ADR-0043). The queues are their own; only the
@@ -4710,50 +4721,51 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
   if (rollsForge > 0) rollSources.push(`${rollsForge} from charge`);
   if (rollsMutator > 0) rollSources.push(`${rollsMutator} from the Mutator Forge`);
   const rollsRow = rolls > 0
-    ? `<div class="summary-row">
-        <span class="summary-label">Rolls banked</span>
-        <strong class="mono">${rolls} ${rolls === 1 ? "roll" : "rolls"}</strong>
-        <small class="summary-note">${rollSources.join(" · ")}</small>
+    ? `<div class="folio-row">
+        <span class="folio-key">Rolls</span>
+        <span class="folio-main"><span class="folio-fig mono">${rolls} ${rolls === 1 ? "roll" : "rolls"}</span>${
+          rollSources.length > 0 ? `<span class="folio-sub mono">${rollSources.join(" · ")}</span>` : ""
+        }</span>
       </div>`
     : "";
   const events = (summary.honestyEvents ?? [])
-    .map((event) => `<p class="summary-event">${honestyEventLine(event)}</p>`)
+    .map((event) => `<div class="folio-row"><span class="folio-key">Honesty</span><span class="folio-line">${honestyEventLine(event)}</span></div>`)
     .join("");
   const reflection = summary.reflection;
   content.innerHTML = `
-    ${modalTop(`SESSION ${summary.sessionNumber} · SUMMARY`)}
-    <h2 id="modal-title" class="summary-headline">This session earned <strong class="mono">${formatNumber(summary.earned)}</strong> nous</h2>
-    <div class="summary-rows">
-      <div class="summary-row">
-        <span class="summary-label">Practice time</span>
-        <strong class="mono">${formatPracticeMinutes(summary.seconds, summary.plannedTarget ?? null)}</strong>
-      </div>
-      <div class="summary-row">
-        <span class="summary-label">Rate achieved</span>
-        <strong class="mono">${formatNumber(summary.ratePerMinute)} ν <small>per practice minute</small></strong>
-        <small class="summary-note">${breakdown}</small>
+    ${modalTop(null)}
+    <h2 id="modal-title" class="summary-head">
+      <span class="summary-earned mono">${formatNumber(summary.earned)} ν</span>
+      <span class="eyebrow">Banked · Session ${summary.sessionNumber}</span>
+    </h2>
+    <div class="folio-rows">
+      <div class="folio-row"><span class="folio-key">Practice</span><span class="folio-main"><span class="folio-fig mono">${formatPracticeMinutes(summary.seconds, summary.plannedTarget ?? null)}</span></span></div>
+      <div class="folio-row">
+        <span class="folio-key inst-tip">
+          <button class="inst-tip-trigger tip-figure folio-key-tip" type="button" aria-expanded="false" aria-describedby="summary-rate-tip" aria-label="Rate — the breakdown">Rate&nbsp;<span aria-hidden="true">ⓘ</span></button>
+          <span class="inst-tip-body" id="summary-rate-tip" role="tooltip">${breakdown}</span>
+        </span>
+        <span class="folio-main"><span class="folio-fig mono">${formatNumber(summary.ratePerMinute)} ν/min</span></span>
       </div>
       ${rollsRow}
-      ${unlockRow}
-      ${summary.timeUnlocked
-        ? `<div class="summary-row unlock">
-        <span class="summary-label">New feature unlocked</span>
-        <strong>Time your flow sessions</strong>
-        <small class="summary-note">The Time app is live.</small>
-      </div>`
-        : ""}
+      ${unlockRows}
+      ${events}
     </div>
-    ${events ? `<div class="summary-events">${events}</div>` : ""}
-    <div class="summary-reflection">
-      <span class="summary-label">How did it go?</span>
-      <input type="text" id="summary-reflection-text" aria-label="Reflect on the session in words" value="${escapeHtml(reflection?.text ?? "")}" />
-      <div class="reflection-slider">
-        <span class="reflection-end">rough</span>
-        <input type="range" id="summary-reflection-slider" min="1" max="${REFLECTION_SLIDER_POSITIONS}" step="any" value="${reflection?.slider ?? REFLECTION_SLIDER_NEUTRAL}" aria-label="How the session went, rough to great" />
-        <span class="reflection-end">great</span>
+    <div class="folio-rows folio-reflect">
+      <div class="folio-row">
+        <span class="folio-key">Reflect</span>
+        <div class="folio-main">
+          <input type="text" id="summary-reflection-text" placeholder="One line, optional" aria-label="Reflect on the session in words" value="${escapeHtml(reflection?.text ?? "")}" />
+          <div class="reflection-slider">
+            <span class="reflection-end">rough</span>
+            <input type="range" id="summary-reflection-slider" min="1" max="${REFLECTION_SLIDER_POSITIONS}" step="any" value="${reflection?.slider ?? REFLECTION_SLIDER_NEUTRAL}" aria-label="How the session went, rough to great" />
+            <span class="reflection-end">great</span>
+          </div>
+        </div>
       </div>
     </div>
     <div class="modal-actions"><button id="summary-continue" class="primary">Continue</button></div>`;
+  wireTooltips(content, app.signal);
   app.listen(byId("summary-reflection-text"), "input", (event) => {
     app.recordReflectionText((event.target as HTMLInputElement).value);
   });
