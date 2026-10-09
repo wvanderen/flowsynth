@@ -232,30 +232,24 @@ describe("the edge states derived from existing state", () => {
     expect(app.state.session!.target).toBeNull();
   });
 
-  it("zero habits never blocks entry: the Enter flow control stands and the prompt answers", () => {
+  it("zero habits never blocks entry: the Enter flow control starts unstructured", () => {
     expect(app.state.habits).toHaveLength(0);
     const frame = openFace("plan");
     const enter = frame.querySelector<HTMLButtonElement>("#focus-enter")!;
     expect(enter.disabled).toBe(false);
     enter.click();
-    // The kind-first prompt opens — unstructured is one pane away.
-    expect(app.ui.modal).toBe("enter");
-    expect(document.getElementById("modal-content")!.textContent).toContain("Unstructured");
-    app.closeModal();
-    // And through the prompt, the unstructured session starts.
-    document.querySelector<HTMLButtonElement>('[data-enter-kind="unstructured"]')!.click();
-    document.getElementById("enter-begin")!.click();
     expect(app.state.mode).toBe("flow");
     expect(app.state.activeHabitId).toBeNull();
   });
 
-  it("no habit selected reads as ready without naming a practice; entry opens the prompt", () => {
+  it("no habit selected reads as ready without naming a practice; entry runs unstructured", () => {
     createHabit(app.state, "Piano"); // exists but not selected
     const frame = openFace("plan");
     expect(frame.querySelector(".focus-ready")!.textContent).toBe("Ready");
     expect((document.getElementById("focus-habit-select") as HTMLSelectElement).value).toBe("");
     document.querySelector<HTMLButtonElement>("#focus-enter")!.click();
-    expect(app.ui.modal).toBe("enter");
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.activeHabitId).toBeNull();
   });
 
   it("manual logs carry their boundary in the tooltip layer, not as prose", () => {

@@ -71,8 +71,9 @@ import { HISTORY_PAGE_ROWS, META } from "./meta";
 import { browserChannels, type SignalChannels } from "./signals";
 import { suppressNextClick } from "./click";
 
-// The session modal surfaces (§5.5, §5.7): the enter prompt precedes every
-// session; the loud summary follows every one; the honesty report interrupts
+// The session modal surfaces (§5.5, §5.7): the session starts through the
+// Focus sheet's PLAN face (or instantly, per the session-start preference);
+// the loud summary follows every session; the honesty report interrupts
 // whenever provisional time waits (§1–2). The rate sheet is the Rate cell's
 // tap-up disclosure below the 760px breakpoint (§7); the inventory sheet
 // re-docks the board-surface tray for touch on portrait phone.
@@ -88,29 +89,12 @@ export type ModalKind =
   | "reset"
   | "prestige"
   | "honesty"
-  | "enter"
   | "summary"
   | "rate"
   | "inventory"
   | "combine"
   | "mutcombine"
   | null;
-
-// The enter prompt's kind-first selection (issue #92's decided shape): the
-// segmented control decides what kind of session this is before any
-// specifics — pick from the habits you have, name a brand-new one, or run
-// with no habit attached.
-export type EnterKind = "habit" | "new" | "unstructured";
-
-// The prompt's selection state, one clump: the kind tab that holds, the
-// habit the habit tab has picked, and the new-habit name as typed.
-export interface EnterSelection {
-  kind: EnterKind;
-  habitId: string | null;
-  newName: string;
-}
-
-export const freshEnterSelection = (): EnterSelection => ({ kind: "habit", habitId: null, newName: "" });
 
 // The detail's keyboard landing (issue #296): the emphasized face's own
 // chassis takes focus — where a tray's consumed tile used to stand, the
@@ -226,9 +210,13 @@ export interface UiState {
   // even session one can be planned from here; the affordances stay
   // visible but unpushed.
   chosenTarget: number | null;
-  // The enter prompt's kind-first selection (issue #95). Light furniture —
-  // reset every time the prompt opens.
-  enter: EnterSelection;
+  // The session-start preference (issue #280): on, the main switch opens
+  // the Focus sheet's PLAN face — the enter confirmation's home, with the
+  // ready readout, the habit select (none selected is unstructured), the
+  // planned target, and the Enter flow control. Off, the switch starts flow
+  // at once from the last plan and active habit. Light furniture — never
+  // saved: the refit iteration adds no persisted key.
+  confirmEntry: boolean;
   showAcquired: boolean;
   // The catalog's standing face — which tab shows and what the in-sheet
   // switch flips. The door itself no longer reads a memory here: mode wins
@@ -429,7 +417,7 @@ export class App {
     importText: "",
     importError: null,
     chosenTarget: null,
-    enter: freshEnterSelection(),
+    confirmEntry: true,
     showAcquired: false,
     catalogFace: "nous",
     editingHabitId: null,
@@ -852,7 +840,9 @@ export class App {
     // target (a chip pick, a tile toggle) detaches that target before this
     // document-level listener reads anything. The clock's Time popover
     // (issue #148) anchors in the session cluster, so clicks inside its
-    // clock anchor count as inside too.
+    // clock anchor count as inside too — as does the main switch, whose
+    // confirmation path (#280) opens the sheet: the opening click must
+    // never close it in the same gesture.
     let clickInsideApps = false;
     this.els["console-apps"]?.addEventListener("click", () => {
       clickInsideApps = true;
@@ -861,7 +851,7 @@ export class App {
       const target = event.target as Element | null;
       // Pause/resume belongs to the ongoing capture: keep Notes standing
       // so the clock transition cannot dismiss an unsaved draft.
-      if (target?.closest(".clock-anchor") || (this.ui.app === "notes" && target?.closest("#pause-flow"))) clickInsideApps = true;
+      if (target?.closest(".clock-anchor, #flow-switch") || (this.ui.app === "notes" && target?.closest("#pause-flow"))) clickInsideApps = true;
     }, { capture: true, signal: this.signal });
     document.addEventListener("click", () => {
       // A stale instance's closer must never close — or re-render — a newer
@@ -1079,22 +1069,28 @@ export class App {
     );
   }
 
-  // The Enter switch: with a habit selected the session starts directly —
-  // the Habit app already made the choice, so the prompt never asks twice.
-  // The prompt only opens when no habit is selected (or on a fresh save).
+  // The Enter switch (issue #280): the session-start preference picks the
+  // path. Confirmation off commits the PLAN read at once — the fallback
+  // chain is the read's own, so no plan ever set is open-ended and no habit
+  // selected is unstructured. Confirmation on opens the Focus sheet's PLAN
+  // face, the enter confirmation's home. Zero habits never blocks either
+  // path.
   startFlow(): void {
     if (this.released) return;
     if (this.state.mode !== "upgrade") return;
-    const habit = activeHabit(this.state);
-    if (habit) {
-      this.beginFlow(habit.id);
+    if (!this.ui.confirmEntry) {
+      this.beginFlowFromPlan();
       return;
     }
     this.clearTransientUi();
-    // The kind-first selection starts fresh every time the prompt opens.
-    this.ui.enter = freshEnterSelection();
-    this.ui.modal = "enter";
-    this.render();
+    this.openApp("time");
+  }
+
+  // The PLAN face's read, committed (#280): the selected habit rides in —
+  // none selected is unstructured — and the last plan arms the session.
+  // One resolution for both entry paths, so they can never drift.
+  beginFlowFromPlan(): void {
+    this.beginFlow(activeHabit(this.state)?.id ?? null);
   }
 
   beginFlow(habitId: string | null): void {
@@ -1141,19 +1137,6 @@ export class App {
     if (this.channels.notificationPermission() === "default") {
       this.channels.requestNotificationPermission();
     }
-  }
-
-  // The prompt's create field (§5.5): naming a new practice adds the habit
-  // to the Habit app — the first, on a fresh instrument — and starts the
-  // session with it selected, so its development accrues from this session.
-  beginFlowNewHabit(name: string): void {
-    const result = createHabit(this.state, name);
-    if (!result.ok || !result.habit) {
-      this.say(result.reason ?? "Could not add the habit.");
-      this.render();
-      return;
-    }
-    this.beginFlow(result.habit.id);
   }
 
   endFlow(): void {

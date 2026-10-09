@@ -17,7 +17,7 @@ import { poolOutstanding } from "../engine/trust";
 import { arcCardDue } from "../engine/arc";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
 import type { DeployedModule, GameState, Hex, ModuleInstance, MutatorInstance, NamedChordTerm, Rarity, RateSnapshot } from "../engine/types";
-import { DEV_BOARD_CAPACITIES, type App, type ChordHover, type EnterKind, type EnterSelection, type ModalKind } from "./app";
+import { DEV_BOARD_CAPACITIES, type App, type ChordHover, type ModalKind } from "./app";
 import {
   bindFocusSheet,
   bindNotesSheet,
@@ -2251,13 +2251,6 @@ function modalKey(app: App, kind: ModalKind, extra: unknown): string {
   return JSON.stringify([kind, app.ui.importError, app.state.session?.accounting.poolSeconds ?? 0, app.state.mode, extra]);
 }
 
-// The enter prompt's light-state input to its rebuild key (#95, #115),
-// shared by the render guard and the in-place patchers' re-stamp so the
-// two can never drift apart.
-function enterModalExtra(app: App): [number | null, EnterSelection] {
-  return [app.ui.chosenTarget, app.ui.enter];
-}
-
 function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): void {
   const backdrop = byId("modal");
   const content = byId("modal-content");
@@ -2351,11 +2344,6 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                 // The launcher's rows read both ledgers' counts (issue #270).
                 : kind === "collection"
                   ? [unlockedCount(app.state), discoveryCount(app.state)]
-              // The enter prompt's own selection state (issue #95): the plan
-              // and the kind-first picks re-render the modal the moment they
-              // change — chips highlight on pick, never a stale footer.
-              : kind === "enter"
-                ? enterModalExtra(app)
                 // The rate sheet reprices only when its roster or feats
                 // count changes — the figures themselves ride live slots
                 // the tick fills in place, so clock ticks never rebuild
@@ -2412,7 +2400,6 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   else if (kind === "reset") renderResetModal(app, content);
   else if (kind === "prestige") renderPrestigeModal(app, content);
   else if (kind === "honesty") renderHonestyModal(app, content);
-  else if (kind === "enter") renderEnterModal(app, content);
   else if (kind === "summary") renderSummaryModal(app, content);
   else if (kind === "rate") renderRateModal(app, content, live);
   else if (kind === "inventory") renderInventorySheetModal(app, content);
@@ -2640,15 +2627,52 @@ function renderMutCombineModal(app: App, content: HTMLElement): void {
   wireClose(app);
 }
 
+// Settings as a readout stack (§5, #249's resolution, issue #280): the
+// eyebrow is the identity — no title beside it — over hairline-ruled
+// preference rows. The session-start preference selects instant flow vs
+// PLAN confirmation; the mute row's scope lives in the tooltip layer;
+// "saves automatically on this device" is the one quiet line; reset wears
+// the switch color.
 function renderSettingsModal(app: App, content: HTMLElement): void {
-  content.innerHTML = `${modalTop("PREFERENCES")}<h2 id="modal-title">Settings</h2>
-    <p class="lead">Progress saves automatically on this device.</p>
-    <div class="pref-row">
-      <input type="checkbox" id="pref-mute" ${app.state.muted ? "checked" : ""} />
-      <label for="pref-mute">Mute all sound</label>
-      <small class="muted">silences every sound, the target chime included</small>
+  content.innerHTML = `
+    ${modalTop("SETTINGS", "modal-title")}
+    <div class="folio-rows settings-rows">
+      <div class="folio-row">
+        <span class="folio-key">Session start</span>
+        <span class="folio-main">
+          <span class="pref-control">
+            <label for="pref-confirm">confirm each entry</label>
+            <input type="checkbox" id="pref-confirm" ${app.ui.confirmEntry ? "checked" : ""} aria-label="Confirm each session start on the PLAN face" />
+          </span>
+        </span>
+        ${infoTipHtml(
+          "settings-session-tip",
+          "Session start — the confirmation",
+          `On, the main switch opens the Focus sheet's PLAN face: the ready readout, the habit (none selected is unstructured), the planned target, and Enter flow. Off, the switch starts flow at once — the last plan (open-ended if none) and the active habit (unstructured if none).`,
+        )}
+      </div>
+      <div class="folio-row">
+        <span class="folio-key">Sound</span>
+        <span class="folio-main">
+          <span class="pref-control">
+            <label for="pref-mute">mute all sound</label>
+            <input type="checkbox" id="pref-mute" ${app.state.muted ? "checked" : ""} aria-label="Mute all sound" />
+          </span>
+        </span>
+        ${infoTipHtml("settings-mute-tip", "Mute — the scope", "Silences every sound, the target chime included.")}
+      </div>
+      <div class="folio-row">
+        <span class="folio-key">Save data</span>
+        <span class="folio-main"><span class="folio-sub">saves automatically on this device</span></span>
+      </div>
     </div>
-    <div class="modal-actions"><button id="settings-export">Export save</button><button id="settings-import">Import save</button><button id="settings-reset">Reset progress</button></div>`;
+    <div class="modal-actions">
+      <button id="settings-export">Export save</button><button id="settings-import">Import save</button><button id="settings-reset" class="settings-reset">Reset progress</button>
+    </div>`;
+  wireTooltips(content, app.signal);
+  app.listen(byId("pref-confirm"), "change", (event) => {
+    app.ui.confirmEntry = (event.target as HTMLInputElement).checked;
+  });
   app.listen(byId("pref-mute"), "change", (event) => {
     app.setMuted((event.target as HTMLInputElement).checked);
   });
@@ -2699,7 +2723,7 @@ function capacityShopHtml(app: App): string {
     <section class="capacity-catalog">
       <div class="catalog-rows">
         <div class="catalog-row">
-          <div><h3 class="t-condensed">Harmonic capacity <span class="mono">${capacity}/${ceiling}</span> ${capacityTooltipHtml("capacity-tip", "Harmonic capacity mechanics", mechanics)}</h3><small>+1 whole chord per voice</small>${note}</div>
+          <div><h3 class="t-condensed">Harmonic capacity <span class="mono">${capacity}/${ceiling}</span> ${infoTipHtml("capacity-tip", "Harmonic capacity mechanics", mechanics)}</h3><small>+1 whole chord per voice</small>${note}</div>
           ${buy}
         </div>
       </div>
@@ -2707,7 +2731,8 @@ function capacityShopHtml(app: App): string {
 }
 
 // Independent disclosure stays reachable when the purchase is unavailable.
-function capacityTooltipHtml(id: string, label: string, mechanics: string): string {
+// The one ⓘ-trigger shape every modal's tooltip layer wears.
+function infoTipHtml(id: string, label: string, mechanics: string): string {
   return `<span class="inst-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${id}" aria-label="${label}">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${mechanics}</span></span>`;
 }
 
@@ -2731,19 +2756,19 @@ function capacityAreteHtml(app: App): string {
     <section class="capacity-catalog"><h2 class="t-condensed">Harmonic capacity</h2>
     <div class="catalog-rows">
       <div class="catalog-row${ceilings > 0 ? " owned" : ""}">
-        <div><h3 class="t-condensed">First ceiling <span class="kind">capacity four</span> ${capacityTooltipHtml("ceiling-1-tip", "First ceiling mechanics", "Permanently lets the nous ladder sell one rung further. Survives prestige.")}</h3><small>The nous ladder sells one rung further.</small></div>
+        <div><h3 class="t-condensed">First ceiling <span class="kind">capacity four</span> ${infoTipHtml("ceiling-1-tip", "First ceiling mechanics", "Permanently lets the nous ladder sell one rung further. Survives prestige.")}</h3><small>The nous ladder sells one rung further.</small></div>
         ${offeringBuy("buy-capacity-ceiling-1", BALANCE.capacityCeilingCosts[0]!, ceilings > 0, false, "raised")}
       </div>
       <div class="catalog-row${ceilings > 1 ? " owned" : ""}">
-        <div><h3 class="t-condensed">Second ceiling <span class="kind">capacity five</span> ${capacityTooltipHtml("ceiling-2-tip", "Second ceiling mechanics", "Own the first ceiling first. Permanently adds one rung beyond the first unlock. Survives prestige.")}</h3><small>One rung past the first unlock.</small></div>
+        <div><h3 class="t-condensed">Second ceiling <span class="kind">capacity five</span> ${infoTipHtml("ceiling-2-tip", "Second ceiling mechanics", "Own the first ceiling first. Permanently adds one rung beyond the first unlock. Survives prestige.")}</h3><small>One rung past the first unlock.</small></div>
         ${offeringBuy("buy-capacity-ceiling-2", BALANCE.capacityCeilingCosts[1]!, ceilings > 1, ceilings === 0, "raised")}
       </div>
       <div class="catalog-row${discounts > 0 ? " owned" : ""}">
-        <div><h3 class="t-condensed">First discount <span class="kind">20% off</span> ${capacityTooltipHtml("discount-1-tip", "First discount mechanics", "Permanently takes 20% off every original capacity price. Survives prestige.")}</h3><small>Every capacity rung costs a fifth less nous.</small></div>
+        <div><h3 class="t-condensed">First discount <span class="kind">20% off</span> ${infoTipHtml("discount-1-tip", "First discount mechanics", "Permanently takes 20% off every original capacity price. Survives prestige.")}</h3><small>Every capacity rung costs a fifth less nous.</small></div>
         ${offeringBuy("buy-capacity-discount-1", BALANCE.capacityDiscountCosts[0]!, discounts > 0, false, "owned")}
       </div>
       <div class="catalog-row${discounts > 1 ? " owned" : ""}">
-        <div><h3 class="t-condensed">Second discount <span class="kind">40% off in total</span> ${capacityTooltipHtml("discount-2-tip", "Second discount mechanics", "Own the first discount first. Permanently takes 40% in total off original capacity prices. Survives prestige.")}</h3><small>Every capacity rung costs its original price, less two fifths.</small></div>
+        <div><h3 class="t-condensed">Second discount <span class="kind">40% off in total</span> ${infoTipHtml("discount-2-tip", "Second discount mechanics", "Own the first discount first. Permanently takes 40% in total off original capacity prices. Survives prestige.")}</h3><small>Every capacity rung costs its original price, less two fifths.</small></div>
         ${offeringBuy("buy-capacity-discount-2", BALANCE.capacityDiscountCosts[1]!, discounts > 1, discounts === 0, "owned")}
       </div>
     </div></section>`;
@@ -3304,220 +3329,6 @@ function renderHonestyModal(app: App, content: HTMLElement): void {
 }
 
 /* ── Session modals (§5.5, §5.7) ───────────────────── */
-
-// The enter prompt's decided shape (issue #92, built by #95): selection is
-// kind-first — a segmented `A habit | New habit | Unstructured` control, a
-// pane serving the picked kind, and a sticky footer band (Back / live
-// summary / `Begin — {kind} · {duration}`) whose CTA arms per the kind's
-// requirement: a habit picked, a name typed, or always for unstructured. It
-// carries the duration pointer to the Time app (ADR-0019, §6–7), with
-// session-one's steer riding above. Since #115 the prompt's own picks patch
-// in place — tabs flip, the pane swaps, the footer follows — so the modal
-// node, the tabs, and the focused control all survive the interaction; the
-// render key is re-stamped after each patch so the rebuild guard never
-// disagrees with the DOM it guards.
-// The one resolution of the selection — the only place that switches on the
-// kind. The kind's requirement (a habit picked, a name typed, or nothing for
-// unstructured) decides whether the session may start, and resolves its
-// target: the picked habit's id, or the trimmed new-habit name.
-function enterTarget(app: App): { armed: boolean; habitId: string | null; newName: string } {
-  const { ui, state } = app;
-  if (ui.enter.kind === "habit") {
-    const habit = ui.enter.habitId === null ? undefined : state.habits.find((h) => h.id === ui.enter.habitId && !h.archived);
-    return { armed: habit !== undefined, habitId: habit?.id ?? null, newName: "" };
-  }
-  if (ui.enter.kind === "new") {
-    const newName = ui.enter.newName.trim();
-    return { armed: newName !== "", habitId: null, newName };
-  }
-  return { armed: true, habitId: null, newName: "" };
-}
-
-interface EnterFootprint {
-  armed: boolean;
-  summary: string;
-  cta: string;
-}
-
-// The footer band's current content, read off the shared resolution.
-function enterFootprint(app: App): EnterFootprint {
-  const duration = app.ui.chosenTarget === null ? "open-ended" : `${Math.round(app.ui.chosenTarget / 60)} min`;
-  const target = enterTarget(app);
-  if (!target.armed) {
-    return app.ui.enter.kind === "new"
-      ? { armed: false, summary: "name it to arm the start", cta: "Name your new habit" }
-      : { armed: false, summary: "no habit picked yet", cta: "Select a habit" };
-  }
-  const what = target.newName
-    ? target.newName
-    : target.habitId === null
-      ? "unstructured"
-      : (app.state.habits.find((h) => h.id === target.habitId)?.name ?? "unstructured");
-  return { armed: true, summary: `${what} · ${duration}`, cta: `Begin — ${what} · ${duration}` };
-}
-
-// The pane's markup starts below; the footer's refresh writes the
-// footprint's raw strings with textContent, so user-typed names can never
-// become markup.
-
-// The picked kind's pane body — the one part of the prompt a kind switch
-// replaces; the tabs, footer, and modal shell persist around it.
-function enterPaneHtml(app: App): string {
-  const { state, ui } = app;
-  const enter = ui.enter;
-  const habits = state.habits.filter((h) => !h.archived);
-  if (enter.kind === "habit") {
-    return habits.length === 0
-      ? `<p class="mode-explain">No habits yet — the New habit tab names your first.</p>`
-      : `<div class="enter-choices">
-      ${habits
-        .map(
-          (habit) => `<button class="enter-choice${enter.habitId === habit.id ? " selected" : ""}" data-enter-habit="${habit.id}" aria-pressed="${enter.habitId === habit.id}">
-        <span class="dot"></span>
-        <span class="enter-choice-name">${escapeHtml(habit.name)}</span>
-        <small class="mono">${formatDuration(habit.seconds)}</small>
-      </button>`,
-        )
-        .join("")}
-    </div>
-    <p class="mode-explain">Pick the habit this session counts toward.</p>`;
-  }
-  if (enter.kind === "new") {
-    return `<div class="enter-create">
-      <input type="text" id="enter-habit-name" placeholder="Name it (piano, cooking…)" maxlength="40" aria-label="Name a new habit and start the session with it" value="${escapeHtml(enter.newName)}" />
-    </div>
-    <p class="mode-explain">A brand-new habit starts its clock with this session.</p>`;
-  }
-  return `<p class="mode-explain">No habit attached — the session runs, and nous is unaffected.</p>`;
-}
-
-// The footer band's current content, written onto the surviving nodes: the
-// #95 contract (never a stale footer) without a rebuild (#115). The
-// summary and CTA carry user-typed names; textContent keeps them as text.
-function refreshEnterFooter(app: App, content: HTMLElement): void {
-  const next = enterFootprint(app);
-  const summary = content.querySelector(".cta-summary");
-  const beginButton = content.querySelector("#enter-begin") as HTMLButtonElement | null;
-  setText(summary, next.summary);
-  if (beginButton) {
-    setText(beginButton, next.cta);
-    beginButton.disabled = !next.armed;
-  }
-}
-
-// The prompt's rebuild guard, re-stamped after every in-place patch so a
-// later render pass sees the patched DOM as current and skips the rebuild.
-function stampEnterKey(app: App, content: HTMLElement): void {
-  content.dataset.renderKey = modalKey(app, "enter", enterModalExtra(app));
-}
-
-function refreshEnterTabs(app: App, content: HTMLElement): void {
-  for (const button of content.querySelectorAll<HTMLButtonElement>("[data-enter-kind]")) {
-    const active = button.getAttribute("data-enter-kind") === app.ui.enter.kind;
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-pressed", String(active));
-  }
-}
-
-function refreshEnterChoices(app: App, content: HTMLElement): void {
-  const picked = app.ui.enter.habitId;
-  for (const button of content.querySelectorAll<HTMLButtonElement>("[data-enter-habit]")) {
-    const selected = button.getAttribute("data-enter-habit") === picked;
-    button.classList.toggle("selected", selected);
-    button.setAttribute("aria-pressed", String(selected));
-  }
-}
-
-// The kind switch's structural half: the pane swaps, the pane's own controls
-// rebind, the footer follows, the guard re-stamps. The tabs and footer nodes
-// themselves never leave the DOM, so focus on them survives the swap.
-function swapEnterPane(app: App, content: HTMLElement): void {
-  const pane = content.querySelector(".mode-pane");
-  if (!pane) return;
-  pane.innerHTML = enterPaneHtml(app);
-  bindEnterPane(app, content);
-  refreshEnterFooter(app, content);
-  stampEnterKey(app, content);
-}
-
-// The pane-scoped bindings: a habit choice and the new-habit name field.
-// Rebound after every pane swap; each acceptance patches in place.
-function bindEnterPane(app: App, content: HTMLElement): void {
-  content.querySelectorAll<HTMLElement>("[data-enter-habit]").forEach((button) => {
-    app.listen(button, "click", () => {
-      app.ui.enter.habitId = button.getAttribute("data-enter-habit");
-      refreshEnterChoices(app, content);
-      refreshEnterFooter(app, content);
-      stampEnterKey(app, content);
-    });
-  });
-  const nameInput = content.querySelector("#enter-habit-name") as HTMLInputElement | null;
-  // Typing never rebuilds the modal (nothing renders in the background while
-  // the console sits in upgrade mode): the name rides ui state and the
-  // footer refreshes in place, so the caret keeps its place while the CTA
-  // arms.
-  app.listen(nameInput, "input", () => {
-    if (!nameInput) return;
-    app.ui.enter.newName = nameInput.value;
-    refreshEnterFooter(app, content);
-    stampEnterKey(app, content);
-  });
-  app.listen(nameInput, "keydown", (event) => {
-    if ((event as KeyboardEvent).key === "Enter") {
-      event.preventDefault();
-      beginEnter(app);
-    }
-  });
-}
-
-// The shared resolution arms the action: a typed name rides the new-habit
-// path; otherwise the target is the picked habit's id, with null meaning
-// unstructured rides beginFlow directly.
-function beginEnter(app: App): void {
-  const target = enterTarget(app);
-  if (!target.armed) return;
-  if (target.newName) app.beginFlowNewHabit(target.newName);
-  else app.beginFlow(target.habitId);
-}
-
-function renderEnterModal(app: App, content: HTMLElement): void {
-  content.innerHTML = `
-    ${modalTop("ENTER FLOW")}
-    <div class="enter-body">
-      <h2 id="modal-title">What are you practicing?</h2>
-      <div class="mode-tabs" role="group" aria-label="What kind of session is this?">
-        ${kindTab("habit", "A habit", app)}${kindTab("new", "New habit", app)}${kindTab("unstructured", "Unstructured", app)}
-      </div>
-      <div class="mode-pane">${enterPaneHtml(app)}</div>
-      ${app.state.sessionsCompleted === 0 ? `<p class="enter-steer small muted">A first try can be short — five minutes or so, then exit and see what the session banked.</p>` : ""}
-      ${
-        // Planning lives only in the Focus sheet's PLAN face (§7): the
-        // prompt carries a pointer, not a second copy of the controls —
-        // the console clock opens the sheet where the plan is set.
-        `<p class="enter-plan-hint small muted">Planning lives in the Focus sheet — set it there (or tap the clock), or enter open-ended.</p>`
-      }
-    </div>
-    <div class="footer-band">
-      <button id="enter-cancel" class="small">Back</button>
-      <span class="cta-summary"></span>
-      <button id="enter-begin" class="primary"></button>
-    </div>`;
-  refreshEnterFooter(app, content);
-  content.querySelectorAll<HTMLButtonElement>("[data-enter-kind]").forEach((button) => {
-    app.listen(button, "click", () => {
-      app.ui.enter.kind = button.getAttribute("data-enter-kind") as EnterKind;
-      refreshEnterTabs(app, content);
-      swapEnterPane(app, content);
-    });
-  });
-  bindEnterPane(app, content);
-  app.listen(byId("enter-begin"), "click", () => beginEnter(app));
-  app.listen(byId("enter-cancel"), "click", () => app.closeModal());
-  wireClose(app);
-}
-
-const kindTab = (kind: EnterKind, label: string, app: App): string =>
-  `<button class="mode-tab${app.ui.enter.kind === kind ? " active" : ""}" data-enter-kind="${kind}" aria-pressed="${app.ui.enter.kind === kind}">${label}</button>`;
 
 // The loud summary (§5.7, §8): shown once per session end, however the
 // session ended — final numbers only. The ruled folio (#279): the banked
