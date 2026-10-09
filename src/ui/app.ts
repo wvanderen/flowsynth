@@ -64,6 +64,7 @@ import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
 import { allocatedDevScenarioRates, createDevScenario, type DevBoardResult } from "../engine/dev-scenario";
 import type { StressProgress, StressRow } from "../engine/allocation-stress";
 import type { GameState, Hex, ModuleInstance, MutatorFamily, MutatorInstance, NamedChordTerm, Rarity, ShelfType } from "../engine/types";
+import type { FocusFace } from "./focus";
 import { render } from "./render";
 import { FAMILY_WORD, mutatorLayerLive, refreshMutPreview } from "./mutators";
 import { HISTORY_PAGE_ROWS, META } from "./meta";
@@ -176,6 +177,12 @@ export const DEV_BOARD_CAPACITIES = [1, 2, 3, 4, 5] as const;
 
 export type DetailFace = "modules" | "mutators";
 
+// The Focus sheet's on-demand forms (ADR-0050, issue #275): add and log on
+// the HABIT face, create on the GOALS face stand as action buttons until
+// pressed, then reveal their input row. Light furniture — never saved;
+// closed by Escape, a landing, and every sheet teardown.
+export type FocusForm = "habit-add" | "habit-log" | "goal-create";
+
 // The Hex detail's standing state (issue #295): the owned board coordinate
 // whose cross-section replaces the grid, and which layer's face is
 // emphasized — the fixed stack shows both, Mutators above Modules. Light
@@ -235,13 +242,19 @@ export interface UiState {
   // Light furniture — never saved.
   catalogFace: "nous" | "arete";
   editingHabitId: string | null;
-  // Session history (§9): the Time app's list view, its page size, and the
-  // record drilled into. Light furniture — cleared with the popover.
+  // The Focus sheet's revealed form (ADR-0050, issue #275): which on-demand
+  // action-button form stands, if any. Light furniture — cleared with the
+  // transient modes.
+  focusForm: FocusForm | null;
+  // Session history (§9): the sheet's HISTORY face, its page size, and the
+  // record drilled into. Light furniture — cleared with the sheet.
   historyOpen: boolean;
   historyLimit: number;
   drillSession: number | null;
-  // The Habit app's expanded development summary (§9): one habit at a time.
-  summaryHabitId: string | null;
+  // The HABIT face's drilled habit (§9): the development detail one at a
+  // time, reached from the figure-led list's rows. Light furniture — never
+  // saved.
+  detailHabitId: string | null;
   // Board navigation (§7): the zoom level and the world point the wrap
   // holds at its center — null means fitted. Light furniture — never
   // saved; fit resets zoom to 1 and the pan to null.
@@ -421,10 +434,11 @@ export class App {
     showAcquired: false,
     catalogFace: "nous",
     editingHabitId: null,
+    focusForm: null,
     historyOpen: false,
     historyLimit: HISTORY_PAGE_ROWS,
     drillSession: null,
-    summaryHabitId: null,
+    detailHabitId: null,
     zoom: 1,
     pan: null,
     bulkCount: 1,
@@ -656,6 +670,7 @@ export class App {
   private clearTransientUi(): void {
     this.ui.app = null;
     this.ui.launcherOpen = false;
+    this.ui.focusForm = null;
     this.ui.placing = null;
     this.ui.dropHover = null;
     this.ui.chordHover = null;
@@ -1753,6 +1768,34 @@ export class App {
     this.render();
   }
 
+  // The Focus sheet's facetab landing (ADR-0050, issue #275): tabs select a
+  // face — they are radio-like, never toggles — so a tab for the standing
+  // app unwinds that face's inner surfaces to its root instead of closing.
+  showFocusFace(face: FocusFace): void {
+    const { ui } = this;
+    if (face === "history") {
+      // HISTORY is the time app's own face: crossing from another face
+      // swaps the app first — openApp toggles, so only cross, never
+      // re-press — then the body swaps to the list.
+      if (ui.app !== "time") this.openApp("time");
+      this.openHistory();
+      return;
+    }
+    const host: FocusApp = face === "plan" ? "time" : face;
+    if (ui.app !== host) {
+      this.openApp(host);
+      return;
+    }
+    // Already the right app: unwind to the face's root in place.
+    if (face === "plan" && ui.historyOpen) {
+      this.closeHistory();
+      return;
+    }
+    if (face === "habit" && ui.detailHabitId !== null) ui.detailHabitId = null;
+    ui.focusForm = null;
+    this.render();
+  }
+
   // The phone launcher (issue #149): one compact control that keeps Habit,
   // Notes, and Goals reachable below the 600px line. Pressing it always
   // means "my menu": any open app popover gives way, and a second press
@@ -1782,12 +1825,13 @@ export class App {
   }
 
   // The app popover's teardown without the render: the panel itself plus
-  // the panel-internal surfaces a habit edit or history drill leaves
-  // behind. Every path that takes the popover away (closeApp, Escape, the
-  // click-away closer, the launcher's menu swap) reads this one shape.
+  // the panel-internal surfaces a habit edit, a drill, or a revealed form
+  // leaves behind. Every path that takes the sheet away (closeApp, Escape,
+  // the click-away closer, the launcher's menu swap) reads this one shape.
   private dismissAppPanel(): void {
     this.ui.app = null;
     this.ui.editingHabitId = null;
+    this.ui.focusForm = null;
     this.resetHistorySurfaces();
   }
 
@@ -1799,22 +1843,23 @@ export class App {
     this.ui.drillSession = null;
   }
 
-  // Both history surfaces clear together when the popover swaps apps or
-  // closes: the Time list view and the Habit development summary.
+  // The history surfaces clear together when the sheet swaps faces or
+  // closes: the HISTORY face's list and drill, and the HABIT face's drilled
+  // detail.
   private resetHistorySurfaces(): void {
     this.resetHistoryUi();
-    this.ui.summaryHabitId = null;
+    this.ui.detailHabitId = null;
   }
 
-  // The Time app's history affordance: the panel body swaps to the
-  // newest-first record list. One-way in — only the back control leaves it.
+  // The HISTORY facetab's body: the newest-first record list. One-way in —
+  // only the facetabs leave it.
   openHistory(): void {
     this.resetHistoryUi();
     this.ui.historyOpen = true;
     this.render();
   }
 
-  // Back past the list itself: the Time panel body returns.
+  // Back to the PLAN face: the facetab, not a control inside the body.
   closeHistory(): void {
     this.resetHistoryUi();
     this.render();
@@ -1836,10 +1881,35 @@ export class App {
     this.render();
   }
 
-  // The Habit app's per-habit development summary: one expanded at a time.
-  toggleHabitSummary(id: string): void {
-    this.ui.summaryHabitId = this.ui.summaryHabitId === id ? null : id;
+  // The HABIT face's drill (§9, #255): a list row opens the habit's
+  // development detail — one at a time; the back control returns to the
+  // list. A revealed form collapses with the drill — the detail is its own
+  // surface, not a form holder.
+  openHabitDetail(id: string): void {
+    this.ui.detailHabitId = id;
+    this.ui.focusForm = null;
     this.render();
+  }
+
+  closeHabitDetail(): void {
+    this.ui.detailHabitId = null;
+    this.render();
+  }
+
+  // The on-demand forms (ADR-0050, issue #275): pressing an action button
+  // reveals its input row; a second press, a landing, or Escape collapses
+  // it. The keyboard lands in the input it asked for.
+  // Each revealed form's landing control — the input the keyboard asks for.
+  static readonly FOCUS_FORM_FOCUS: Record<FocusForm, string> = {
+    "habit-add": "habit-name-input",
+    "habit-log": "habit-log-minutes",
+    "goal-create": "goal-habit",
+  };
+
+  setFocusForm(form: FocusForm | null): void {
+    this.ui.focusForm = this.ui.focusForm === form ? null : form;
+    this.render();
+    if (this.ui.focusForm) document.getElementById(App.FOCUS_FORM_FOCUS[this.ui.focusForm])?.focus();
   }
 
   beginPlacing(id: string): void {
@@ -1919,9 +1989,11 @@ export class App {
   habitAction(
     run: () => { ok: boolean; reason?: string },
     success: string,
+    onSuccess?: () => void,
   ): void {
     const result = run();
     if (result.ok) {
+      onSuccess?.();
       this.say(success);
       this.save();
     } else {
@@ -1931,7 +2003,10 @@ export class App {
   }
 
   createHabitAction(name: string): void {
-    this.habitAction(() => createHabit(this.state, name), `${name.trim()} added to your habits.`);
+    // A landing collapses the revealed form; a refusal keeps it standing.
+    this.habitAction(() => createHabit(this.state, name), `${name.trim()} added to your habits.`, () => {
+      this.ui.focusForm = null;
+    });
   }
 
   renameHabitAction(id: string, name: string): void {
@@ -1965,6 +2040,7 @@ export class App {
     }
     const result = addPracticeLog(this.state, habit.id, minutes, Date.now());
     if (result.ok) {
+      this.ui.focusForm = null;
       const goalNote =
         result.completions && result.completions > 0
           ? ` A goal completed.`
@@ -1990,6 +2066,7 @@ export class App {
   createGoalAction(habitId: string | null, minutes: number, schedule: "once" | "daily" | "weekly"): void {
     const result = createGoal(this.state, { habitId, minutes, schedule, now: Date.now() });
     if (result.ok) {
+      this.ui.focusForm = null;
       this.save();
       this.say("Goal added.");
     } else {

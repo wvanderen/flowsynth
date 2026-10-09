@@ -45,25 +45,36 @@ describe("the console tiles", () => {
     expect(document.getElementById("app-tile-time")).toBeNull();
   });
 
-  it("every tile opens its panel from session one", () => {
-    for (const key of ["habit", "notes", "goals"] as const) {
+  it("every tile opens the Focus sheet from session one; notes keeps its own popover", () => {
+    for (const key of ["habit", "goals"] as const) {
       app.openApp(key);
-      expect(document.getElementById("app-popover")).not.toBeNull();
+      const sheet = document.getElementById("app-popover")!;
+      expect(sheet.classList.contains("focus-sheet")).toBe(true);
+      expect(document.getElementById("console-session")!.contains(sheet)).toBe(true);
       app.closeApp();
     }
+    app.openApp("notes");
+    const popover = document.getElementById("app-popover")!;
+    expect(document.getElementById("console-apps")!.contains(popover)).toBe(true);
+    app.closeApp();
   });
 
-  it("every tile's panel opens inside its own slot, with no first/last anchor classes", () => {
+  it("habit and goals walk into the one sheet; notes anchors in its own slot (ADR-0050)", () => {
     app.render();
-    for (const key of ["habit", "notes", "goals"] as const) {
+    for (const key of ["habit", "goals"] as const) {
       app.openApp(key);
-      // Uniform right-anchoring: the popover lives in the tile's slot, and
-      // the slot carries no per-position anchor class for the CSS to fork on.
-      const slot = document.getElementById(`app-tile-${key}`)!.closest(".app-slot")!;
-      expect(slot.querySelector("#app-popover")).not.toBeNull();
-      expect(slot.className).toBe("app-slot");
+      // One frame, four faces: the sheet lives under the clock's own
+      // disclosure, whatever face the tile walked in on.
+      const sheet = document.getElementById("app-popover")!;
+      expect(document.getElementById("console-session")!.contains(sheet)).toBe(true);
+      expect(sheet.querySelector(`[data-face="${key}"]`)!.getAttribute("aria-pressed")).toBe("true");
       app.closeApp();
     }
+    app.openApp("notes");
+    const slot = document.getElementById("app-tile-notes")!.closest(".app-slot")!;
+    expect(slot.querySelector("#app-popover")).not.toBeNull();
+    expect(slot.className).toBe("app-slot");
+    app.closeApp();
   });
 });
 
@@ -99,17 +110,25 @@ describe("the console", () => {
     expect(document.querySelector("#console-session .clock-caption")!.textContent).toBe("open-ended");
   });
 
-  it("the flow clock keeps the live session; the Time popover never repeats it (§7)", () => {
+  it("in flow the PLAN face is the running read: live elapsed, End flow, targets disabled (ADR-0050)", () => {
     const s = app.state;
     s.sessionsCompleted = 1;
     startSession(s, 600);
     advance(s, 30);
     app.render();
-    expect(document.getElementById("clock-plan")).not.toBeNull();
     document.getElementById("clock-plan")!.click();
-    const popover = document.getElementById("app-popover")!;
-    expect(popover.textContent).not.toContain("00:30");
-    expect(popover.textContent).toContain("holds the history");
+    const sheet = document.getElementById("app-popover")!;
+    // The running read: the session figures lead, End flow mirrors the main
+    // switch, and the plan targets stand visibly disabled.
+    expect(sheet.querySelector('[data-live="focus-elapsed"]')!.textContent).toBe("00:30");
+    expect(sheet.querySelector("#focus-end")!.textContent).toBe("End flow");
+    expect(sheet.textContent).not.toContain("Enter flow");
+    for (const chip of sheet.querySelectorAll<HTMLButtonElement>(".plan-chip")) expect(chip.disabled).toBe(true);
+    expect((sheet.querySelector("#plan-minutes") as HTMLInputElement).disabled).toBe(true);
+    expect((sheet.querySelector("#plan-open") as HTMLButtonElement).disabled).toBe(true);
+    // End flow lands where the main switch does.
+    sheet.querySelector<HTMLButtonElement>("#focus-end")!.click();
+    expect(app.state.mode).not.toBe("flow");
     app.closeApp();
   });
 
@@ -327,8 +346,18 @@ describe("the feats page's encourager icons (issue #269)", () => {
 });
 
 describe("the app popovers", () => {
-  it("open bare: no head, no close button, no focus-controls eyebrow", () => {
+  it("the Focus sheet wears the ruled-folio frame: head, facetabs, close; the notes popover stays bare", () => {
     app.openApp("habit");
+    const sheet = document.getElementById("app-popover")!;
+    expect(sheet.querySelector(".focus-head .focus-name")!.textContent).toBe("FOCUS");
+    expect(sheet.querySelector("#focus-close")).not.toBeNull();
+    const tabs = [...sheet.querySelectorAll(".ftab")].map((t) => t.textContent);
+    expect(tabs).toEqual(["PLAN", "HABIT", "GOALS", "HISTORY"]);
+    // No expandable detail furniture: the deeper mechanics live in the
+    // tooltip layer.
+    expect(sheet.querySelector("details")).toBeNull();
+    app.closeApp();
+    app.openApp("notes");
     const popover = document.getElementById("app-popover")!;
     expect(popover.querySelector(".popover-head")).toBeNull();
     expect(popover.querySelector("#app-close")).toBeNull();
@@ -391,7 +420,8 @@ describe("the planned-target affordances (§6)", () => {
     const input = document.getElementById("plan-minutes") as HTMLInputElement;
     expect(input.disabled).toBe(true);
     expect([...document.querySelectorAll(".plan-chip.active")]).toHaveLength(0);
-    expect(document.querySelector("#app-popover .clock-caption")!.textContent).toBe("Open-ended");
+    expect(document.getElementById("focus-plan-word")!.textContent).toBe("Open-ended");
+    expect(document.getElementById("focus-plan-figure")!.textContent).toBe("—");
   });
 });
 
@@ -469,7 +499,7 @@ describe("interaction continuity (#115)", () => {
     expect(toggle.getAttribute("aria-pressed")).toBe("true");
     expect(document.activeElement).toBe(toggle);
     expect(popover.scrollTop).toBe(90);
-    expect(document.querySelector("#app-popover .clock-caption")!.textContent).toBe("Open-ended");
+    expect(document.getElementById("focus-plan-word")!.textContent).toBe("Open-ended");
   });
 
   it("the enter prompt's kind switch swaps the pane without rebuilding the modal; focus survives on the tab", () => {
@@ -548,7 +578,7 @@ describe("the settings preferences (§5)", () => {
   });
 });
 
-describe("the Time app's history (§9)", () => {
+describe("the sheet's HISTORY face (§9)", () => {
   function runHitSession(): void {
     const s = app.state;
     s.sessionsCompleted = 1;
@@ -567,9 +597,14 @@ describe("the Time app's history (§9)", () => {
     endSession(s, DAY + 1_900_000);
   }
 
+  function openHistoryFace(): void {
+    app.openApp("time");
+    document.querySelector<HTMLButtonElement>('[data-face="history"]')!.click();
+  }
+
   afterEach(() => app.closeApp());
 
-  it("the affordance opens the list: newest first, date · habit · credited minutes · chips", () => {
+  it("the facetab opens the list: newest first, date · habit · credited minutes · chips", () => {
     const s = app.state;
     const habit = createHabit(s, "Piano").habit!;
     selectHabit(s, habit.id);
@@ -577,8 +612,7 @@ describe("the Time app's history (§9)", () => {
     selectHabit(s, null);
     runMissSession();
     s.sessionRecords[0]!.startedAt = DAY; // the hit ran the day under test
-    app.openApp("time");
-    document.getElementById("time-history")!.click();
+    openHistoryFace();
     const panel = document.getElementById("app-popover")!;
     const rows = [...panel.querySelectorAll(".history-row")];
     expect(rows).toHaveLength(2);
@@ -601,27 +635,25 @@ describe("the Time app's history (§9)", () => {
       startSession(s, null, DAY + i * 1000);
       endSession(s, DAY + i * 1000 + 500);
     }
-    app.openApp("time");
-    document.getElementById("time-history")!.click();
+    openHistoryFace();
     expect(document.getElementById("app-popover")!.querySelectorAll(".history-row")).toHaveLength(20);
     document.getElementById("history-more")!.click();
     expect(document.getElementById("app-popover")!.querySelectorAll(".history-row")).toHaveLength(21);
     expect(document.getElementById("history-more")).toBeNull();
   });
 
-  it("back from the list returns to the Time panel", () => {
+  it("the PLAN facetab returns from the list; the drill's back control returns to the list", () => {
     const s = app.state;
     s.sessionsCompleted = 1;
     startSession(s, null, DAY);
     endSession(s, DAY + 500);
-    app.openApp("time");
-    document.getElementById("time-history")!.click();
+    openHistoryFace();
     expect(document.getElementById("app-popover")!.querySelector(".history-row")).not.toBeNull();
-    document.getElementById("history-back")!.click();
-    // The panel body is the planner again, not the record list.
+    document.querySelector<HTMLButtonElement>('[data-face="plan"]')!.click();
+    // The sheet body is the planner again, not the record list.
     expect(document.getElementById("app-popover")!.querySelector(".history-row")).toBeNull();
-    expect(document.getElementById("app-popover")!.querySelector(".plan-chips")).not.toBeNull();
-    expect(document.getElementById("time-history")).not.toBeNull();
+    expect(document.getElementById("app-popover")!.querySelector(".plan-chip")).not.toBeNull();
+    expect(document.querySelector('[data-face="plan"]')!.getAttribute("aria-pressed")).toBe("true");
   });
 
   it("a row drills into the full record; notes and the rate breakdown stay out", () => {
@@ -634,8 +666,7 @@ describe("the Time app's history (§9)", () => {
     advance(s, 120);
     endSession(s, DAY + 600_000);
     recordSummaryReflection(s, { text: "held focus", slider: 5 });
-    app.openApp("time");
-    document.getElementById("time-history")!.click();
+    openHistoryFace();
     document.querySelector<HTMLButtonElement>(`[data-drill="1"]`)!.click();
     const panel = document.getElementById("app-popover")!;
     expect(panel.textContent).toContain("Session 1 · Piano");
@@ -669,8 +700,7 @@ describe("the Time app's history (§9)", () => {
     const record = s.sessionRecords[0]!;
     expect(recordTargetHit(record)).toBe(true);
     expect(recordMissed(record)).toBe(true);
-    app.openApp("time");
-    document.getElementById("time-history")!.click();
+    openHistoryFace();
     const row = document.querySelector(".history-row")!;
     expect(row.querySelectorAll(".history-chip")).toHaveLength(1);
     expect(row.querySelector(".history-chip.miss")).not.toBeNull();
@@ -681,8 +711,7 @@ describe("the Time app's history (§9)", () => {
 
   it("the drill-down renders each honesty event as a neutral factual line", () => {
     runMissSession();
-    app.openApp("time");
-    document.getElementById("time-history")!.click();
+    openHistoryFace();
     document.querySelector<HTMLButtonElement>('[data-drill="1"]')!.click();
     const panel = document.getElementById("app-popover")!;
     expect(panel.textContent).toContain("5 min away · didn't practice");
@@ -691,10 +720,10 @@ describe("the Time app's history (§9)", () => {
   });
 });
 
-describe("the Habit app's development summary (§9)", () => {
+describe("the HABIT face's development detail (§9)", () => {
   afterEach(() => app.closeApp());
 
-  it("aggregates read the practice log; tagged notes list newest first", () => {
+  it("a list row drills into the detail: aggregates read the practice log; tagged notes list newest first", () => {
     const s = app.state;
     const habit = createHabit(s, "Piano").habit!;
     selectHabit(s, habit.id);
@@ -705,8 +734,8 @@ describe("the Habit app's development summary (§9)", () => {
     endSession(s, DAY + 120_000);
     addPracticeLog(s, habit.id, 10, DAY + 500_000);
     app.openApp("habit");
-    document.querySelector<HTMLButtonElement>(`[data-summary="${habit.id}"]`)!.click();
-    const summary = document.querySelector(`[data-summary-for="${habit.id}"]`)!;
+    document.querySelector<HTMLButtonElement>(`[data-drill-habit="${habit.id}"]`)!.click();
+    const summary = document.querySelector(".habit-detail-read")!;
     expect(summary.textContent).toContain("1 min"); // lifetime = credited 60s
     expect(summary.textContent).toContain("Sessions practiced");
     expect(summary.textContent).toContain("1");
@@ -717,9 +746,12 @@ describe("the Habit app's development summary (§9)", () => {
     // The stamp carries the date and the in-session clock.
     expect(summary.querySelector(".note-when")!.textContent).toContain("Sep 18");
     expect(summary.querySelector(".note-when")!.textContent).toContain("S1 ·");
+    // Back returns to the figure-led list.
+    document.getElementById("habit-detail-back")!.click();
+    expect(document.querySelector(".habit-ledger-row")).not.toBeNull();
   });
 
-  it("archiving hides the habit from selection but keeps its summary reachable", () => {
+  it("archiving hides the habit from selection but keeps its detail reachable", () => {
     const s = app.state;
     const habit = createHabit(s, "Piano").habit!;
     selectHabit(s, habit.id);
@@ -729,14 +761,15 @@ describe("the Habit app's development summary (§9)", () => {
     endSession(s, DAY + 120_000);
     archiveHabit(s, habit.id);
     app.openApp("habit");
-    const popover = document.getElementById("app-popover")!;
-    expect(popover.querySelector(`[data-pick="${habit.id}"]`)).toBeNull();
-    expect(popover.textContent).toContain("ARCHIVED");
-    document.querySelector<HTMLButtonElement>(`.habit-archived [data-summary="${habit.id}"]`)!.click();
-    const summary = document.querySelector(`[data-summary-for="${habit.id}"]`)!;
+    const sheet = document.getElementById("app-popover")!;
+    expect(sheet.textContent).toContain("ARCHIVED");
+    document.querySelector<HTMLButtonElement>(`.habit-archived [data-drill-habit="${habit.id}"]`)!.click();
+    const summary = document.querySelector(".habit-detail-read")!;
     expect(summary.textContent).toContain("a thought");
-    // Renames resolve forward through the archived summary's habit tile.
-    expect(popover.querySelector(".habit-archived .habit-name")!.textContent).toBe("Piano");
+    // The archived detail carries no select/rename/archive head.
+    expect(sheet.querySelector("[data-pick]")).toBeNull();
+    expect(sheet.querySelector("[data-rename]")).toBeNull();
+    expect(sheet.querySelector("[data-archive]")).toBeNull();
   });
 });
 
@@ -773,20 +806,20 @@ describe("the Notes stream's habit chips (§9)", () => {
   });
 });
 
-describe("the Goals panel's slots and purchase row (#150)", () => {
-  const panel = () => document.getElementById("app-popover")!;
+describe("the GOALS face's slots and purchase row (#150)", () => {
+  const sheet = () => document.getElementById("app-popover")!;
 
-  it("reads tracked goals first — open work above completed — then the empty add-goal slot", () => {
+  it("reads tracked goals first — open work above completed — then the on-demand create action", () => {
     const s = app.state;
     const habit = createHabit(s, "Piano").habit!;
-    s.goalCapacityBought = 2; // room for the add-goal slot to stand beside the tracked three
+    s.goalCapacityBought = 2; // room for the create action to stand beside the tracked three
     createGoal(s, { habitId: habit.id, minutes: 20, schedule: "daily", now: DAY });
     const recurringDone = createGoal(s, { habitId: habit.id, minutes: 5, schedule: "daily", now: DAY }).goal!;
     accrueGoalProgress(s, habit.id, 300); // completes the daily goal until its reset
     const onceDone = createGoal(s, { habitId: habit.id, minutes: 5, schedule: "once", now: DAY }).goal!;
     accrueGoalProgress(s, habit.id, 300); // completes the once goal for good
     app.openApp("goals");
-    const rows = [...panel().querySelectorAll(".goal-row")];
+    const rows = [...sheet().querySelectorAll(".goal-row")];
     expect(rows).toHaveLength(3);
     expect(rows[0]!.classList.contains("done")).toBe(false);
     expect(rows[0]!.textContent).toContain("20 min");
@@ -795,30 +828,31 @@ describe("the Goals panel's slots and purchase row (#150)", () => {
     expect(rows[1]!.getAttribute("data-goal")).toBe(recurringDone.id);
     expect(rows[2]!.classList.contains("done")).toBe(true);
     expect(rows[2]!.getAttribute("data-goal")).toBe(onceDone.id);
-    // The slots then the purchase row: the add form trails the tracked
-    // goals, the capacity purchase trails the slots.
-    const sequence = [...panel().querySelectorAll(".goal-row, .goal-create, .long-goal-row")].map(
-      (el) => el.className,
-    );
-    expect(sequence.at(-2)).toContain("goal-create");
+    // The create form is on-demand: the action button stands where the
+    // slots have room, the capacity purchase trails the face.
+    const sequence = [...sheet().querySelectorAll(".goal-row, .focus-actions, .long-goal-row")].map((el) => el.className);
     expect(sequence.at(-1)).toContain("long-goal-row");
+    expect(sheet().querySelector("#goal-add")).toBeNull();
+    sheet().querySelector<HTMLButtonElement>("#goal-create-open")!.click();
+    expect(sheet().querySelector("#goal-add")).not.toBeNull();
   });
 
-  it("a full tracker hides the add form and keeps the purchase row last", () => {
+  it("a full tracker hides the create action and keeps the purchase row last", () => {
     const s = app.state;
     const habit = createHabit(s, "Piano").habit!;
     createGoal(s, { habitId: habit.id, minutes: 20, schedule: "daily", now: DAY });
     createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: DAY });
     app.openApp("goals");
-    expect(panel().querySelector(".goal-slots")!.textContent).toContain("2/2");
-    expect(panel().querySelector(".goal-create")).toBeNull();
-    const section = panel().querySelector(".focus-controls")!.children;
-    expect(section[section.length - 1]!.className).toContain("long-goal-row");
+    expect(sheet().querySelector("#focus-slots-read")!.textContent).toContain("2/2");
+    expect(sheet().querySelector("#goal-create-open")).toBeNull();
+    // The purchase row trails the face — the sheet body's last block.
+    const lastBlock = sheet().querySelector(".focus-sheet-face")!.lastElementChild!;
+    expect(lastBlock.querySelector(".long-goal-row")).not.toBeNull();
   });
 
   it("the purchase row is compact: one more slot at the next price, label and help text dropped", () => {
     app.openApp("goals");
-    const row = panel().querySelector(".long-goal-row")!;
+    const row = sheet().querySelector(".long-goal-row")!;
     expect(row.textContent).not.toContain("CONSOLE LONG GOAL");
     expect(row.textContent).not.toContain("→");
     expect(row.textContent).not.toContain("2 → 4");
@@ -830,7 +864,7 @@ describe("the Goals panel's slots and purchase row (#150)", () => {
     const s = app.state;
     s.nous = longGoalCost(0) + longGoalCost(1);
     app.openApp("goals");
-    const slots = () => panel().querySelector(".goal-slots")!.textContent;
+    const slots = () => sheet().querySelector("#focus-slots-read")!.textContent;
     const buy = () => document.getElementById("long-goal-buy") as HTMLButtonElement;
     expect(slots()).toContain("0/2");
     buy()!.click();

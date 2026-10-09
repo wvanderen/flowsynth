@@ -1,4 +1,4 @@
-import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, levelCost, levelsCost, longGoalCost, projectPlacement, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
+import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, levelCost, levelsCost, projectPlacement, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
 import { ALLOCATION_QUALITY_BOUNDS, idleTermsOf, summaryTermsOf } from "../engine/allocation";
 import { claimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
@@ -12,23 +12,26 @@ import { capacityCeiling, capacityDiscountShare, nextCapacityPrice, nextCeilingP
 import { formatClock, formatDuration } from "../engine/clock";
 import { cellNoteOf, noteNameOf, octaveRowOf, positionInRange } from "../engine/lattice";
 import { appActive, appLockNote, TILE_APPS, type FocusApp } from "../engine/apps";
-import { isInFlowNote } from "../engine/notes";
-import { activeHabit } from "../engine/habits";
-import { activeBuildFactors, buildNodeEffect, buildUnlocksFor, BUILD_NODES, BUILD_MILESTONE_SECONDS, equipSlotsFor, equippedNodes } from "../engine/builds";
-import {
-  habitRecordName,
-  habitPracticeSummary,
-  habitTaggedNotes,
-  recordMissed,
-  recordTargetHit,
-  sessionRecordsNewestFirst,
-} from "../engine/records";
+import { activeBuildFactors } from "../engine/builds";
+import { habitRecordName } from "../engine/records";
 import { poolOutstanding } from "../engine/trust";
 import { arcCardDue } from "../engine/arc";
-import { goalCapacity, goalRequiredSeconds, goalSummary, goalTrackerState, type GoalTrackerState } from "../engine/goals";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
-import type { DeployedModule, GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, MutatorInstance, NoteEntry, NamedChordTerm, Rarity, RateSnapshot } from "../engine/types";
+import type { DeployedModule, GameState, Hex, ModuleInstance, MutatorInstance, NoteEntry, NamedChordTerm, Rarity, RateSnapshot } from "../engine/types";
 import { DEV_BOARD_CAPACITIES, type App, type ChordHover, type EnterKind, type EnterSelection, type ModalKind } from "./app";
+import {
+  bindFocusSheet,
+  escapeHtml,
+  focusSheetHtml,
+  focusSheetKey,
+  honestyEventLine,
+  noteStampHtml,
+  outcomeLabel,
+  refreshConsoleClockPlan,
+  sessionCaption,
+  setText,
+  updateFocusSheetLive,
+} from "./focus";
 import { startPointerDrag } from "./pointer-drag";
 import { appIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, moduleFace, boardPoint, SPACING, spacerClipPath, forgeBranchOf, faceReadoutFor, faceLevel, waterFill, zeroBuyRead, isSource, inventoryTileSvg } from "./face";
@@ -36,8 +39,8 @@ import { renderHexDetail } from "./hexdetail";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chordMarkCovers, chipWidth, CHORD_HUES, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
-import { PLAN_MIN_MINUTES, PLAN_MAX_MINUTES, PLAN_PRESET_MINUTES, APP_LABELS, HISTORY_PAGE_ROWS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
-import { formatDate, formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown, secondsToMinutes } from "./format";
+import { APP_LABELS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
+import { formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown } from "./format";
 import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG } from "./ledger";
 import { closeTooltips, wireTooltips } from "./instrument";
 import { instancesByClass, instancesKeyOf, libraryHeaderHtml, libraryIndexRowHtml, libraryStageHtml } from "./library";
@@ -80,12 +83,6 @@ function byId(id: string): HTMLElement | null {
   return document.getElementById(id);
 }
 
-// The in-place patchers' one text write: touch the node only when its
-// content actually changes (#115).
-function setText(node: Element | null | undefined, text: string): void {
-  if (node && node.textContent !== text) node.textContent = text;
-}
-
 // The rate shown in the ledger, hexes, and rate details: live during flow,
 // projected build rate while arranging in upgrade mode. Module panels preview
 // charge separately via displayedRates(state, true). The authoritative
@@ -94,10 +91,6 @@ function setText(node: Element | null | undefined, text: string): void {
 // same model as the production tick.
 function currentSnapshot(state: GameState): RateSnapshot {
   return displayedRates(state, state.mode === "flow");
-}
-
-function stat(label: string, value: string): string {
-  return `<div class="stat-row"><span>${label}</span><span class="mono">${value}</span></div>`;
 }
 
 export function render(app: App): void {
@@ -113,8 +106,8 @@ export function render(app: App): void {
   // from the detail refreshes its relationship breakdown even while the
   // grid stands retired.
   const chordWork = refreshChordOverlay(app, live);
-  renderConsoleSession(app);
-  renderConsoleApps(app, projected);
+  renderConsoleSession(app, projected);
+  renderConsoleApps(app);
   renderBoardLedger(app, live);
   renderTools(app, projected);
   // The Hex detail replaces the grid (issue #295): while it stands the
@@ -148,46 +141,29 @@ export function render(app: App): void {
 
 /* ── Console (ADR-0012) ────────────────────────────── */
 
-// The unplanned shape's two words (§6): the clock slot only ever holds clock
-// text, so an unplanned plan wears a dash placeholder there, while captions
-// and the Time app's compact plan name the mode itself.
-const CLOCK_PLACEHOLDER = "--:--";
-const OPEN_ENDED_WORD = "open-ended";
-
-// The clock is itself the plan affordance (§7): clicking it opens the Time
-// app. Both console shapes wear the same wiring; the clock anchor counts as
-// "inside" for the popover click-away closer (app.ts), so the click that
-// opens the Time popover never closes it in the same gesture.
+// The unplanned shape's two words (§6) live in focus.ts beside the plan
+// patchers they share; the clock is itself the plan affordance (§7):
+// clicking it opens the Focus sheet's PLAN face. Both console shapes wear
+// the same wiring; the clock anchor counts as "inside" for the popover
+// click-away closer (app.ts), so the click that opens the sheet never
+// closes it in the same gesture.
 function wireClockPlan(app: App): void {
   app.listen(byId("clock-plan"), "click", () => {
     app.openApp("time");
   });
 }
 
-// The upgrade-mode console clock's plan texts (#114, #115): the slot only
-// ever holds clock text, so a plan change swaps the two text nodes in place
-// — the clock button itself never leaves the DOM, keeping any interaction
-// with it (and the strip around it) untouched.
-function refreshConsoleClockPlan(app: App): void {
-  if (app.state.mode !== "upgrade") return;
-  const chosen = app.ui.chosenTarget;
-  const time = chosen !== null ? formatClock(chosen) : CLOCK_PLACEHOLDER;
-  const word = chosen !== null ? "planned" : OPEN_ENDED_WORD;
-  const clock = document.querySelector("#console-session .session-clock");
-  setText(clock, time);
-  const caption = document.querySelector("#console-session .clock-caption");
-  setText(caption, word);
-}
-
-// Session controls (issue #148): the clock with its Time disclosure, then
+// Session controls (issue #148): the clock with its disclosure, then
 // the Enter/Exit main switch — the console's visual center of gravity and
 // its sole session gate — with pause beside it during flow. The switch's
 // vermillion is the one colored console element: the switch itself and,
 // while a session runs, the progress strip along the header's bottom edge
 // (issue #63). The console is pure control (§7): the clock is itself the
-// plan affordance — its disclosure opens the Time app — and no production
-// readout lives here.
-function renderConsoleSession(app: App): void {
+// plan affordance — its disclosure opens the Focus control sheet (ADR-0050,
+// the time app's PLAN face) — and no production readout lives here. The
+// sheet itself anchors beneath the clock's own disclosure, whatever face it
+// carries.
+function renderConsoleSession(app: App, projected: RateSnapshot): void {
   const { state, ui } = app;
   const host = byId("console-session");
   if (!host) return;
@@ -215,15 +191,17 @@ function renderConsoleSession(app: App): void {
         </span>
       </button>`;
 
-  // The Time popover anchors beneath the clock's own disclosure (issue #148):
-  // Time wears no tile, so the popover lives in the session cluster, under
-  // the affordance that opened it. Its signature rides the rebuild key; the
-  // body is only string-built when that key changes (every flow tick takes
-  // the patch path below).
-  const popoverKey = ui.app === "time" ? `time|${appPanelKey(app)}` : "shut";
-  const bindPopover = (scrollTop: number): void => {
-    if (ui.app !== "time") return;
-    bindAppPanel(app, host);
+  // The Focus control sheet anchors beneath the clock's own disclosure
+  // (ADR-0050): the habit and goals tiles walk here too — one frame, four
+  // faces. Its signature rides the rebuild key; the body is only
+  // string-built when that key changes (every flow tick takes the patch
+  // path below). Notes keeps its own popover in the apps row (#277 moves it
+  // into this frame).
+  const sheetOpen = ui.app === "time" || ui.app === "habit" || ui.app === "goals";
+  const popoverKey = sheetOpen ? `sheet|${focusSheetKey(app)}` : "shut";
+  const bindSheet = (scrollTop: number): void => {
+    if (!sheetOpen) return;
+    bindFocusSheet(app, host);
     restorePopoverScroll(host, scrollTop);
   };
 
@@ -242,8 +220,8 @@ function renderConsoleSession(app: App): void {
       const scrollTop = popoverScroll(host);
       host.innerHTML = `
         <div class="clock-anchor">
-          ${clockButton("Plan — opens the Time app")}
-          ${appPopoverHtml(app, "time")}
+          ${clockButton("Plan — opens the Focus sheet")}
+          ${sheetOpen ? focusSheetHtml(app, projected) : ""}
         </div>
         <div class="session-actions">
           <button class="main-switch idle" id="flow-switch" title="Enter flow — the board locks and runs itself">
@@ -252,7 +230,9 @@ function renderConsoleSession(app: App): void {
         </div>`;
       wireClockPlan(app);
       app.listen(byId("flow-switch"), "click", () => app.startFlow());
-      bindPopover(scrollTop);
+      bindSheet(scrollTop);
+    } else if (sheetOpen) {
+      updateFocusSheetLive(app, host, projected);
     }
     refreshConsoleClockPlan(app);
     renderSessionStrip(false);
@@ -272,9 +252,9 @@ function renderConsoleSession(app: App): void {
     const scrollTop = popoverScroll(host);
     host.innerHTML = `
       <div class="clock-anchor">
-        ${clockButton("Session time — opens the Time app", ' id="session-clock"', ' id="session-caption"')}
+        ${clockButton("Session time — opens the Focus sheet", ' id="session-clock"', ' id="session-caption"')}
         <span class="clock-provisional" id="session-provisional" role="status"></span>
-        ${appPopoverHtml(app, "time")}
+        ${sheetOpen ? focusSheetHtml(app, projected) : ""}
       </div>
       <div class="session-actions">
         <button id="pause-flow" aria-label="${paused ? "Resume" : "Pause"}" title="${paused ? "Resume the session" : "Pause the session"}">${paused ? resumeSvg : pauseSvg}<span aria-hidden="true">${paused ? "Resume" : "Pause"}</span></button>
@@ -285,7 +265,7 @@ function renderConsoleSession(app: App): void {
     wireClockPlan(app);
     app.listen(byId("pause-flow"), "click", () => (state.mode === "paused" ? app.resume() : app.pause()));
     app.listen(byId("flow-switch"), "click", () => app.endFlow());
-    bindPopover(scrollTop);
+    bindSheet(scrollTop);
   }
 
   // Live values update in place; the controls above are never replaced by ticks.
@@ -312,13 +292,17 @@ function renderConsoleSession(app: App): void {
   );
   renderSessionStrip(true, elapsed, target, paused);
   syncClockDisclosure(app);
+  if (sheetOpen) updateFocusSheetLive(app, host, projected);
 }
 
-// The clock's disclosure state: expanded while its Time popover is open.
+// The clock's disclosure state: expanded while the sheet stands under it —
+// the frame anchors beneath the clock's own disclosure whatever face it
+// carries, so the anchor reports the sheet, not just the PLAN face.
 // Patched in place on the tick path, where the key is unchanged; opening
-// and closing the popover rebuilds the cluster with the popover itself.
+// and closing the sheet rebuilds the cluster with the sheet itself.
 function syncClockDisclosure(app: App): void {
-  byId("clock-plan")?.setAttribute("aria-expanded", String(app.ui.app === "time"));
+  const open = app.ui.app === "time" || app.ui.app === "habit" || app.ui.app === "goals";
+  byId("clock-plan")?.setAttribute("aria-expanded", String(open));
 }
 
 // The header's bottom edge is the progress surface (issue #63): a thin strip
@@ -335,20 +319,6 @@ function renderSessionStrip(running: boolean, elapsed = 0, target: number | null
   if (fill.style.width !== width) fill.style.width = width;
 }
 
-// The running-session caption shared by the console clock block and the Time
-// app's popover (§2.2). Every running state names itself — paused,
-// open-ended, the overrun it counts, or what remains of the plan.
-function sessionCaption(elapsed: number, target: number | null, paused: boolean): string {
-  const reached = target !== null && elapsed >= target;
-  return paused
-    ? "paused"
-    : target === null
-      ? OPEN_ENDED_WORD
-      : reached
-        ? "overrun"
-        : `of ${formatClock(target)}`;
-}
-
 // The clock's figure (§2.2, #193): remaining on a planned session, the
 // elapsed overrun once the target is behind it — never a frozen 0:00 — and
 // plain elapsed on open-ended.
@@ -363,19 +333,19 @@ function plannedFill(elapsed: number, target: number): string {
 }
 
 // Focus-app access (ADR-0012): one icon-only tile per tile app — Habit,
-// Notes, Goals, consistently sized (issue #148) — with its panel opening as
-// a popover anchored directly beneath the tile. Time wears no tile: the
-// console clock's disclosure opens its popover instead. The locked-tile
-// plumbing stays for a future ladder tenant; locked tiles would open
-// nothing, and the board never moves, reflows, or dims while the console
-// is used. (Display names live in meta.ts's APP_LABELS.)
+// Notes, Goals, consistently sized (issue #148). Habit and Goals walk into
+// the Focus control sheet (ADR-0050) — the frame under the clock carries
+// their faces — while Notes keeps its own popover anchored beneath its tile
+// until #277 moves it into the frame. Time wears no tile: the console
+// clock's disclosure opens the sheet's PLAN face. The locked-tile plumbing
+// stays for a future ladder tenant; locked tiles would open nothing, and
+// the board never moves, reflows, or dims while the console is used.
+// (Display names live in meta.ts's APP_LABELS.)
 
 // A popover's scroll rides its host's rebuild (#115): captured before the
-// innerHTML swap, restored once the fresh panel binds. Shared by the clock's
-// Time popover, the tiles' popovers, and the launcher's (issue #148, #149) —
-// one shape, one spelling. One popover stands per host at a time, but which
-// anchor hosts it depends on the width (the tiles above the 600px line, the
-// launcher below), so the query reads the shared class, not either id.
+// innerHTML swap, restored once the fresh panel binds. Shared by the
+// clock's sheet and the notes popover (issue #148, #149) — one shape, one
+// spelling.
 function popoverScroll(host: HTMLElement): number {
   return host.querySelector<HTMLElement>(".app-popover")?.scrollTop ?? 0;
 }
@@ -385,42 +355,15 @@ function restorePopoverScroll(host: HTMLElement, scrollTop: number): void {
   if (popover && scrollTop > 0) popover.scrollTo(0, scrollTop);
 }
 
-// The popover a tile or the clock anchors: present only while its app is
-// open, its body built fresh with the host.
-function appPopoverHtml(app: App, panel: FocusApp): string {
-  return app.ui.app === panel ? `<div class="app-popover" id="app-popover">${appPanelBody(app, panel)}</div>` : "";
+// The notes popover a tile or the launcher anchors (issue #149): present
+// only while notes stands open, its body built fresh with the host.
+function notesPopoverHtml(app: App): string {
+  return app.ui.app === "notes" ? `<div class="app-popover" id="app-popover">${notesPanelBody(app)}</div>` : "";
 }
 
-// The app-panel popover's rebuild signature: everything an app body shows,
-// hashed. The chosen plan is deliberately absent (issue #115): a plan pick
-// patches state in place instead of rebuilding — the open popover, its
-// focus, and its scroll all survive. Shared by the tiles' popovers and the
-// clock's Time popover (issue #148), so both react to the same state.
-function appPanelKey(app: App): string {
-  const { state, ui } = app;
-  return JSON.stringify([
-    ui.app,
-    state.mode,
-    state.sessionsCompleted === 0,
-    state.activatedApps.join("|"),
-    state.goalCapacityBought,
-    // The habit build (ADR-0046) rides the signature: the unlocked-rung
-    // count (never raw seconds — those move every live tick) and the
-    // equipped picks, so an equip or a milestone crossing rebuilds the
-    // popover.
-    state.habits.map((h) => `${h.archived ? "·" : ""}${h.name}:${buildUnlocksFor(h.seconds)}:${h.build.join(",")}`).join("|"),
-    state.activeHabitId,
-    ui.editingHabitId,
-    state.notes.length,
-    state.goals.map((g) => (g.completed ? "1" : "0") + g.condition.minutes + (g.condition.habitId ?? "") + g.schedule.kind).join("|"),
-    // The history surfaces (§9): the list view, its page, the drilled
-    // record, and the expanded habit summary each rebuild the popover.
-    ui.historyOpen,
-    ui.drillSession,
-    ui.historyLimit,
-    ui.summaryHabitId,
-    state.sessionRecords.length,
-  ]);
+// The notes popover's rebuild signature: everything its body shows, hashed.
+function notesPanelKey(app: App): string {
+  return JSON.stringify([app.ui.app === "notes", app.state.notes.length]);
 }
 
 // The one focus-app glyph every access point shares — tiles, launcher
@@ -430,69 +373,47 @@ function appGlyphSvg(appKey: FocusApp): string {
 }
 
 // The facts every access point reads for a tile app: its display label,
-// whether it's active, its lock note, and the launcher entry's inline
-// state (issue #149) — Goals' tracker state, Habit's selected practice,
-// else a lock note. Tiles and launcher entries compose their names from
-// this one shape, so the two spellings can never drift.
+// whether it's active, and its lock note. Tiles and launcher entries
+// compose their names from this one shape, so the two spellings can never
+// drift. No state word rides either surface: the Goals-state read is
+// desktop-only and lives in the Focus sheet's head (ADR-0033 amended), and
+// the phone nav carries bare entries (ADR-0050's phone line).
 interface AppEntryFacts {
   label: string;
   active: boolean;
   note: string | null;
-  // The pip class for the Goals readout; null on the other entries.
-  tracker: GoalTrackerState | null;
-  stateText: string;
 }
 
 function appEntryFacts(state: GameState, appKey: FocusApp): AppEntryFacts {
-  const label = APP_LABELS[appKey];
-  const note = appLockNote(state, appKey);
-  const tracker = appKey === "goals" ? goalTrackerState(state) : null;
-  const stateText =
-    tracker !== null
-      ? GOAL_TRACKER_WORDS[tracker]
-      : appKey === "habit"
-        ? activeHabit(state)?.name ?? "none selected"
-        : note
-          ? `locked: ${note}`
-          : "";
-  return { label, active: appActive(state, appKey), note, tracker, stateText };
+  return { label: APP_LABELS[appKey], active: appActive(state, appKey), note: appLockNote(state, appKey) };
 }
 
-// The qualified name the launcher entry reads: the label with its state
-// word, or the bare label when it has none.
-function appEntryName({ label, stateText }: AppEntryFacts): string {
-  return stateText ? `${label} — ${stateText}` : label;
-}
-
-function renderConsoleApps(app: App, projected: RateSnapshot): void {
+function renderConsoleApps(app: App): void {
   const host = byId("console-apps");
   if (!host) return;
   const { state, ui } = app;
   const phone = isPhoneWidth();
-  const key = `${phone ? "phone" : "wide"}|${ui.launcherOpen ? "launcher" : "docked"}|${appPanelKey(app)}`;
-  if (host.dataset.renderKey === key) {
-    updateAppPanelLive(app, host, projected);
-    return;
-  }
+  // The tiles' pressed states ride the open app; the notes popover rides
+  // its body. Everything else the sheet shows lives under the clock's own
+  // key.
+  const key = `${phone ? "phone" : "wide"}|${ui.launcherOpen ? "launcher" : "docked"}|${ui.app}|${notesPanelKey(app)}`;
+  if (host.dataset.renderKey === key) return;
   host.dataset.renderKey = key;
   // A newly captured note keeps the popover scrolled where the player is.
   const scrollTop = popoverScroll(host);
-  // One panel body, one anchor: below the 600px line the tiles are docked
-  // out, so their popovers would land where no one can see them — the
-  // launcher hosts the panel there (issue #149), the tiles everywhere else.
-  // The gate reads the same container width the stylesheet's phone rules
-  // respond to; the bloom's sheet shape already rides it.
+  // Notes is the one app that still anchors its own popover: beneath its
+  // tile above the 600px line, beneath the launcher below it (issue #149).
+  // Habit and Goals open the Focus sheet under the clock at every width.
   const tiles = TILE_APPS.map((appKey) => {
     const facts = appEntryFacts(state, appKey);
     const open = ui.app === appKey;
-    const title = facts.note ? `${facts.label} — locked: ${facts.note}` : `${facts.label} app`;
-    return `<div class="app-slot">
+    const title = facts.note ? `${facts.label} — locked: ${facts.note}` : `${facts.label} app`;    return `<div class="app-slot">
       <button class="app-tile${facts.active ? "" : " locked"}${open ? " open" : ""}" id="app-tile-${appKey}" aria-pressed="${open}" aria-label="${facts.label}"${facts.active ? "" : ' aria-disabled="true"'} title="${title}">
         <span class="app-tile-glyph">
           ${appGlyphSvg(appKey)}
         </span>
       </button>
-      ${phone ? "" : appPopoverHtml(app, appKey)}
+      ${appKey === "notes" && !phone ? notesPopoverHtml(app) : ""}
     </div>`;
   }).join("");
   host.innerHTML = `<div class="app-tiles">${tiles}</div>${appLauncherHtml(app, phone)}`;
@@ -502,57 +423,39 @@ function renderConsoleApps(app: App, projected: RateSnapshot): void {
     app.listen(byId(`app-launcher-${appKey}`), "click", () => app.openApp(appKey));
   }
   app.listen(byId("app-launcher"), "click", () => app.launcherActivate());
-  bindAppPanel(app, host);
-  updateAppPanelLive(app, host, projected);
+  if (ui.app === "notes") bindAppPanel(app, host);
 }
 
 // The phone launcher (issue #149): one compact control that keeps Habit,
 // Notes, and Goals reachable below the 600px line — the tiles stay docked
-// out there, the clock keeps the Time entry, and the header holds its one
+// out there, the clock keeps the PLAN entry, and the header holds its one
 // row. Closed, a single icon button; open, a compact menu whose Goals entry
 // wears the tracker's rolled-up state (none tracked / in progress / all
 // complete — a state, never an aggregate percentage; the header stays pure
-// control). Picking an entry swaps the menu for that app's panel popover,
-// anchored beneath the launcher itself at the row's far end — the same
-// .app-popover body the tiles open, carrying the launcher's own id so the
-// desktop tile copies never collide. Desktop never sees any of it: CSS
-// docks the slot out above the phone line, where the tiles stand.
+// control). Habit and Goals walk into the Focus sheet under the clock
+// (ADR-0050); Notes is the one entry that still swaps the menu for its own
+// panel popover, anchored beneath the launcher itself at the row's far end.
+// Desktop never sees any of it: CSS docks the slot out above the phone
+// line, where the tiles stand.
 const LAUNCHER_GLYPH = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4" y="4" width="6.4" height="6.4" rx="1.6"/><rect x="13.6" y="4" width="6.4" height="6.4" rx="1.6"/><rect x="4" y="13.6" width="6.4" height="6.4" rx="1.6"/><rect x="13.6" y="13.6" width="6.4" height="6.4" rx="1.6"/></svg>`;
-
-const GOAL_TRACKER_WORDS: Record<GoalTrackerState, string> = {
-  none: "none tracked",
-  open: "in progress",
-  complete: "all complete",
-};
 
 function appLauncherHtml(app: App, phone: boolean): string {
   const { state, ui } = app;
-  // The panel anchors here only on phone (issue #149): above the line the
-  // tiles host their own popovers, so the launcher carries just the button.
-  const panelApp = phone && ui.app !== null && TILE_APPS.includes(ui.app) ? ui.app : null;
+  // Notes is the one panel that anchors here (issue #149): habit and goals
+  // open the Focus sheet under the clock, so the launcher carries just the
+  // button for them.
+  const panelApp = phone && ui.app === "notes" ? ui.app : null;
   const expanded = ui.launcherOpen || panelApp !== null;
   const entries = TILE_APPS.map((appKey) => {
     const facts = appEntryFacts(state, appKey);
-    const { label, active, tracker, stateText } = facts;
-    // Each entry's inline readout rides the launcher's one word style:
-    // Goals wears the tracker's rolled-up state (issue #149), Habit names
-    // the practice a session would start. The accessible name carries the
-    // same words, so the two can never drift.
-    const ariaLabel = appEntryName(facts);
-    let readout = "";
-    if (tracker !== null) {
-      readout = `<span class="launcher-goal-state ${tracker}" aria-hidden="true"><i class="launcher-pip"></i><span class="launcher-state-word">${stateText}</span></span>`;
-    } else if (appKey === "habit") {
-      readout = `<span class="launcher-habit-state" aria-hidden="true"><span class="launcher-state-word">${stateText}</span></span>`;
-    }
-    return `<button class="app-launcher-item"${active ? "" : " disabled"} id="app-launcher-${appKey}" aria-label="${ariaLabel} app">
+    const { label, active } = facts;
+    return `<button class="app-launcher-item"${active ? "" : " disabled"} id="app-launcher-${appKey}" aria-label="${label} app">
       ${appGlyphSvg(appKey)}
       <span class="app-launcher-word">${label}</span>
-      ${readout}
     </button>`;
   }).join("");
   const body = panelApp !== null
-    ? `<div class="app-popover" id="app-launcher-popover">${appPanelBody(app, panelApp)}</div>`
+    ? `<div class="app-popover" id="app-launcher-popover">${notesPanelBody(app)}</div>`
     : ui.launcherOpen
       ? `<div class="app-launcher-menu" id="app-launcher-menu" aria-label="Focus apps">${entries}</div>`
       : "";
@@ -560,12 +463,6 @@ function appLauncherHtml(app: App, phone: boolean): string {
     <button class="app-launcher" id="app-launcher" aria-haspopup="true" aria-expanded="${expanded}" aria-label="Focus apps" title="Habit, Notes, and Goals">${LAUNCHER_GLYPH}</button>
     ${body}
   </div>`;
-}
-
-// The plan mode's caption word, shared by the planner markup and its
-// in-place patcher so the two can never drift.
-function planCaptionWord(open: boolean): string {
-  return open ? "Open-ended" : "Planned practice";
 }
 
 // The feats page (ADR-0015 as amended): the always-visible full list — the
@@ -2275,45 +2172,7 @@ function renderArcCard(app: App): void {
   app.listen(document.getElementById("arc-card-dismiss"), "click", () => app.dismissArcCard());
 }
 
-/* ── Focus-app panels (popover bodies, ADR-0012) ───── */
-
-// One habit row (§9): the pick/rename/archive controls plus the development
-// summary toggle. An archived habit loses the selection controls but keeps
-// its summary — archiving hides a habit from selection only.
-function habitRowHtml(app: App, habit: Habit, selectable: boolean): string {
-  const { state, ui } = app;
-  const editing = selectable && app.ui.editingHabitId === habit.id;
-  const expanded = ui.summaryHabitId === habit.id;
-  const chevron = `<button class="quiet small icon-btn summary-toggle" data-summary="${habit.id}" aria-pressed="${expanded}" title="Development summary">${expanded ? "▾" : "▸"}</button>`;
-  const controls = editing
-    ? `<input type="text" class="habit-rename-input" id="habit-rename-input" value="${escapeHtml(habit.name)}" maxlength="40" />
-       <button class="primary small" id="habit-rename-save">Save</button>${chevron}`
-    : selectable
-      ? `<button class="habit-pick" data-pick="${habit.id}" title="Make this the active habit">
-           <span class="habit-dot" aria-hidden="true"></span>
-           <span class="habit-name">${escapeHtml(habit.name)}</span>
-           <small class="mono" data-habit-seconds="${habit.id}">${formatDuration(habit.seconds)}</small>
-         </button>
-         <button class="quiet small" data-rename="${habit.id}" title="Rename">✎</button>
-         <button class="quiet small icon-btn" data-archive="${habit.id}" title="Archive (keeps its development)">
-           <svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M-7-6h14v3H-7Z"/><path d="M-5-3v8h10v-8"/><path d="M0 0v4"/><path d="m-2 2 2 2 2-2"/></svg>
-         </button>${chevron}`
-      : `<span class="habit-pick archived">
-           <span class="habit-name">${escapeHtml(habit.name)}</span>
-           <small class="mono" data-habit-seconds="${habit.id}">${formatDuration(habit.seconds)}</small>
-         </span>${chevron}`;
-  const selected = selectable && state.activeHabitId === habit.id ? " selected" : "";
-  return `<div class="habit-row${selected}" data-habit="${habit.id}">${controls}</div>${expanded ? habitSummaryHtml(app, habit) : ""}`;
-}
-
-// The note stamp both note surfaces share (§9): the date where known, then
-// the in-session mark — or the between-sessions marker when the note was
-// written outside any session.
-function noteStampHtml(note: NoteEntry): string {
-  return `${note.at > 0 ? `${formatDate(note.at)} · ` : ""}${
-    isInFlowNote(note) ? `S${note.sessionId} · ${formatClock(note.atElapsed)}` : "between sessions"
-  }`;
-}
+/* ── The Notes popover (§9; the sheet's own frame is #277's) ── */
 
 // The habit-keyed chip (§9): a tagged note wears its habit, resolved at
 // render — renames and archiving never rewrite the stream. Untagged notes
@@ -2322,495 +2181,22 @@ function habitChipHtml(state: GameState, note: NoteEntry): string {
   return note.habitId !== null ? `<span class="habit-chip">${escapeHtml(habitRecordName(state, note.habitId))}</span>` : "";
 }
 
-// The habit build (ADR-0046, wave 4): the shared catalog read against the
-// habit's own practice time — equipped nodes first (a click unequips; the
-// respec is free), then the unlocked-unequipped, then the locked rungs
-// with the milestone each still owes. Equipping is upgrade-mode only and
-// counts against the slot ladder; the effects apply only while this habit
-// is the session's active habit.
-function habitBuildHtml(app: App, habit: Habit): string {
+// The notes body (§9): the composer over the full stream — everything kept,
+// newest first, no cap on what is shown, matching the engine's no-pruning
+// rule. #277 resolves it into the Focus frame's tabbed sheet.
+function notesPanelBody(app: App): string {
   const { state } = app;
-  const upgrade = state.mode === "upgrade";
-  const slots = equipSlotsFor(habit.seconds);
-  const equipped = equippedNodes(habit);
-  const rows = BUILD_NODES.map((node) => {
-    const milestoneSeconds = BUILD_MILESTONE_SECONDS[node.milestone]!;
-    const equippedIndex = habit.build.indexOf(node.id);
-    const stackNote = node.stacking ? " · stacks" : "";
-    if (habit.seconds >= milestoneSeconds) {
-      const isEquipped = equippedIndex >= 0;
-      const title = isEquipped
-        ? `Unequip ${node.name} — respec is free`
-        : upgrade
-          ? equipped.length < slots
-            ? `Equip ${node.name} — respec is free`
-            : `No slot free — ${slots} equipped; unequip one first`
-          : "The build is read-only during flow";
-      return `<button class="build-node${isEquipped ? " equipped" : ""}" data-${isEquipped ? "unequip" : "equip"}="${node.id}" data-habit="${habit.id}" title="${title}">
-          <span class="build-node-mark mono" aria-hidden="true">${isEquipped ? equippedIndex + 1 : "+"}</span>
-          <span class="build-node-name">${escapeHtml(node.name)}<small>${escapeHtml(buildNodeEffect(node))}${stackNote}</small></span>
-        </button>`;
-    }
-    return `<div class="build-node locked" title="Unlocks at ${formatDuration(milestoneSeconds)} of practice on this habit">
-        <span class="build-node-mark mono" aria-hidden="true">·</span>
-        <span class="build-node-name">${escapeHtml(node.name)}<small>unlocks at ${formatDuration(milestoneSeconds)} · ${escapeHtml(buildNodeEffect(node))}</small></span>
-      </div>`;
-  }).join("");
-  return `<div class="habit-build">
-    <span class="eyebrow">BUILD</span>
-    <p class="small muted mono">${equipped.length}/${slots} slots · effects only while this habit is active</p>
-    <div class="build-nodes">${rows}</div>
-  </div>`;
-}
-
-// The development summary (§9): lifetime practice (the development total),
-// sessions practiced and last practiced — aggregates off the practice log,
-// live sessions and manual logs together — the habit's build (ADR-0046),
-// and the habit's tagged notes beneath, newest first, each with its date
-// and in-session stamp.
-function habitSummaryHtml(app: App, habit: Habit): string {
-  const { state } = app;
-  const { sessions, lastPracticed } = habitPracticeSummary(state, habit.id);
-  const notes = habitTaggedNotes(state, habit.id);
-  const noteRows = notes
-    .map((note) => `<div class="note-entry"><span class="note-when mono">${noteStampHtml(note)}</span><p>${escapeHtml(note.text)}</p></div>`)
-    .join("");
-  return `<div class="habit-summary" data-summary-for="${habit.id}">
-    ${stat("Lifetime practice", formatDuration(habit.seconds))}
-    ${stat("Sessions practiced", String(sessions))}
-    ${stat("Last practiced", lastPracticed !== null && lastPracticed > 0 ? formatDate(lastPracticed, true) : "—")}
-    ${habit.seconds > 0 ? habitBuildHtml(app, habit) : `<p class="small muted">Build nodes unlock with practice time — 1h for the first.</p>`}
-    ${noteRows ? `<div class="note-list">${noteRows}</div>` : `<p class="small muted">No tagged notes yet.</p>`}
-  </div>`;
-}
-
-// The Time app's history list (§9): flat, newest first, ~20 rows with a
-// show-more tail — date · habit (or "unstructured") · credited minutes · a
-// hit chip or the muted miss marker. No day grouping, charts, or calendars;
-// a row drills into the full record. One chip per row, the miss marker
-// winning when both derive: the "X / Y min" figure already shows the hit.
-function historyListHtml(app: App): string {
-  const records = sessionRecordsNewestFirst(app.state);
-  const shown = records.slice(0, app.ui.historyLimit);
-  const rows = shown
-    .map((record) => {
-      const habit = record.habitId === null ? "unstructured" : escapeHtml(habitRecordName(app.state, record.habitId));
-      return `<button class="history-row" data-drill="${record.sessionNumber}" title="Session ${record.sessionNumber}">
-        <span class="history-when mono">${formatDate(record.startedAt)}</span>
-        <span class="history-habit">${habit}</span>
-      <span class="history-min mono">${formatPracticeMinutes(record.creditedSeconds, record.plannedTarget)}</span>
-      ${recordMissed(record) ? `<span class="history-chip miss">miss</span>` : recordTargetHit(record) ? `<span class="history-chip hit">hit</span>` : ""}
-      </button>`;
-    })
-    .join("");
-  return `<section class="focus-controls history-panel">
-    <button class="quiet small" id="history-back">← Time</button>
-    ${rows || `<p class="empty-copy">No sessions yet.</p>`}
-    ${
-      records.length > shown.length
-        ? `<button class="quiet small show-more" id="history-more">Show ${Math.min(HISTORY_PAGE_ROWS, records.length - shown.length)} more</button>`
-        : ""
-    }
-  </section>`;
-}
-
-// The drill-down (§9): the full record — when, mode and target, credited
-// vs planned, earned nous, each honesty event as a factual line, the
-// reflection if present, goals advanced, achievements unlocked. Notes and
-// the rate breakdown stay out: this is about practice, not economy replay.
-function historyDrillHtml(app: App): string {
-  const { state } = app;
-  const record = state.sessionRecords.find((r) => r.sessionNumber === app.ui.drillSession);
-  if (!record) {
-    return `<section class="focus-controls history-panel">
-      <button class="quiet small" id="history-back">← History</button>
-      <p class="empty-copy">That session record is gone.</p>
-    </section>`;
-  }
-  const habit = record.habitId === null ? "Unstructured practice" : escapeHtml(habitRecordName(state, record.habitId));
-  const plan = record.mode === "planned" ? `Planned · ${formatClock(record.plannedTarget!)}` : "Open-ended";
-  const events = record.honestyEvents.map((event) => `<p class="history-line">${honestyEventLine(event)}</p>`).join("");
-  const reflection = record.reflection;
-  const reflectionLine =
-    reflection === null
-      ? `<p class="history-line muted">No reflection.</p>`
-      : `<p class="history-line">"${escapeHtml(reflection.text)}"${reflectionValence(reflection.slider)}</p>`;
-  const goals =
-    record.goalsAdvanced
-      .map(({ goalId, seconds }) => {
-        const goal = state.goals.find((g) => g.id === goalId);
-        return `<p class="history-line">${secondsToMinutes(seconds)} min · ${goal ? escapeHtml(goalSummary(state, goal)) : "a since-removed goal"}</p>`;
-      })
-      .join("") || `<p class="history-line muted">No goals advanced.</p>`;
-  const achievements =
-    record.achievements.map((id) => `<p class="history-line">${escapeHtml(achievementName(id))}</p>`).join("") ||
-    `<p class="history-line muted">Nothing unlocked.</p>`;
-  return `<section class="focus-controls history-panel">
-    <button class="quiet small" id="history-back">← History</button>
-    <h3 class="history-title">Session ${record.sessionNumber} · ${habit}</h3>
-    <div class="stat-row"><span>When</span><span class="mono">${formatDate(record.startedAt, true)} – ${formatDate(record.endedAt, true)}</span></div>
-    <div class="stat-row"><span>Plan</span><span class="mono">${plan}</span></div>
-    <div class="stat-row"><span>Practice time</span><span class="mono">${formatPracticeMinutes(record.creditedSeconds, record.plannedTarget)}</span></div>
-    <div class="stat-row"><span>Earned</span><span class="mono">${formatNumber(record.earned)} ν</span></div>
-    <div class="history-section">Honesty</div>
-    ${events || `<p class="history-line muted">Nothing to reconcile.</p>`}
-    <div class="history-section">Reflection</div>
-    ${reflectionLine}
-    <div class="history-section">Goals advanced</div>
-    ${goals}
-    <div class="history-section">Unlocked</div>
-    ${achievements}
-  </section>`;
-}
-
-// The reflection's valence tail: the untouched neutral field reads as
-// nothing at all.
-function reflectionValence(slider: number): string {
-  if (slider === REFLECTION_SLIDER_NEUTRAL) return "";
-  return ` · felt ${slider < REFLECTION_SLIDER_NEUTRAL ? "rough" : "great"}`;
-}
-
-// Slot order (issue #150): incomplete goals first, completed occurrences
-// next; stable within each band, so creation order holds.
-function openGoalsFirst(a: Goal, b: Goal): number {
-  return Number(a.completed) - Number(b.completed);
-}
-
-function appPanelBody(app: App, panel: FocusApp): string {
-  const { state } = app;
-  const upgrade = state.mode === "upgrade";
-
-  if (panel === "habit") {
-    const active = activeHabit(state);
-    const live = !upgrade;
-    const habits = state.habits.filter((h) => !h.archived);
-    const rows = habits.map((habit) => habitRowHtml(app, habit, true)).join("");
-    if (live) {
-      return `<section class="focus-controls">
-        <p class="habit-active-name">${active ? escapeHtml(active.name) : "Unstructured practice"}</p>
-        ${active ? `<div class="stat-row"><span>This session</span><span class="mono" data-live="habit-session">${formatClock(state.session?.elapsed ?? 0)} of practice</span></div>` : ""}
-      </section>`;
-    }
-    const archived = state.habits.filter((h) => h.archived);
-    return `<section class="focus-controls">
-      <div class="habit-create">
-        <input type="text" id="habit-name-input" placeholder="New habit (piano, cooking…)" maxlength="40" />
-        <button class="primary small" id="habit-create">Add</button>
-      </div>
-      <div class="habit-list">
-        ${rows || `<p class="empty-copy">No habits yet. Name what you practice.</p>`}
-      </div>
-      ${
-        archived.length > 0
-          ? `<div class="habit-archived"><span class="eyebrow">ARCHIVED</span>${archived.map((habit) => habitRowHtml(app, habit, false)).join("")}</div>`
-          : ""
-      }
-      ${state.activeHabitId
-        ? `<div class="habit-log">
-            <label class="config-label" for="habit-log-minutes">Log practice</label>
-            <div class="habit-create">
-              <input type="number" id="habit-log-minutes" min="1" placeholder="minutes" />
-              <button class="small" id="habit-log-add">Log</button>
-            </div>
-            <p class="small muted">Manual logs never produce nous or charge.</p>
-          </div>`
-        : `<p class="small muted">Selection is locked during flow.</p>`}
-    </section>`;
-  }
-
-  if (panel === "time") {
-    if (app.ui.historyOpen) {
-      return app.ui.drillSession !== null ? historyDrillHtml(app) : historyListHtml(app);
-    }
-    // Planning lives only in the Time app (§7): in upgrade mode the panel
-    // owns the plan affordances the console clock points at; in flow the
-    // console clock keeps the live session and this panel holds the
-    // history — the popover never repeats the console's readout.
-    if (upgrade) {
-      return `<section class="focus-controls">
-        ${planControlsHtml(app)}
-        <button class="quiet small time-history" id="time-history">History</button>
-      </section>`;
-    }
-    return `<section class="focus-controls">
-      <p class="small muted">The console clock keeps session time — the Time app holds the history.</p>
-      <button class="quiet small time-history" id="time-history">History</button>
-    </section>`;
-  }
-
-  if (panel === "notes") {
-    // The full stream (§9): everything kept, newest first — no cap on what
-    // is shown, matching the engine's no-pruning rule.
-    const stream = [...state.notes].reverse();
-    return `<section class="focus-controls">
-      <textarea class="note-composer" id="note-composer" placeholder="What are you noticing?" maxlength="2000" rows="3"></textarea>
-      <div class="session-actions" style="margin:10px 0 0"><button class="primary" id="note-save">Capture note</button></div>
-      ${stream.length > 0 ? `<div class="note-list">${stream.map((n) => `<div class="note-entry"><span class="note-when mono">${noteStampHtml(n)}</span>${habitChipHtml(state, n)}<p>${escapeHtml(n.text)}</p></div>`).join("")}</div>` : ""}
-    </section>`;
-  }
-
-  const capacity = goalCapacity(state);
-  const habitOptions = [`<option value="">Any habit</option>`]
-    .concat(state.habits.filter((h) => !h.archived).map((h) => `<option value="${h.id}">${escapeHtml(h.name)}</option>`))
-    .join("");
-  // The first console long goal (ADR-0012 as amended by ADR-0034, issue
-  // #150): goal capacity sold as one compact row below the slots — one
-  // more slot per purchase, every price far past the last. Read-only in
-  // flow.
-  const longGoalPrice = longGoalCost(state.goalCapacityBought);
-  const longGoalAffordable = wholeNous(state) >= longGoalPrice;
-  const longGoalCountdown = upgrade ? practiceCountdown(longGoalPrice, wholeNous(state), displayedRates(state, true).rate) : null;
-  const longGoalRow = `
-    <div class="long-goal-row">
-      <span class="long-goal-name">One more goal slot</span>
-      ${shopBuyHtml({
-        attrs: `id="long-goal-buy" title="${upgrade ? (longGoalAffordable ? "Buy one more goal slot" : "Not enough nous yet") : "Purchases happen between sessions"}"`,
-        small: true,
-        price: longGoalPrice,
-        affordable: upgrade && longGoalAffordable,
-        countdown: longGoalCountdown,
-        ...(upgrade ? { live: "long-goal-countdown" } : { note: "between sessions" }),
-      })}
-    </div>`;
-  const goalRow = (goal: Goal) => {
-    const required = goalRequiredSeconds(goal);
-    const fraction = Math.min(1, goal.progressSeconds / required);
-    const status = goal.completed
-      ? `<span class="goal-status done">complete${goal.schedule.kind === "once" ? "" : ` · resets ${goal.schedule.kind === "daily" ? "tomorrow" : "Monday"}`}</span>`
-      : `<span class="goal-status">${formatClock(Math.max(0, required - goal.progressSeconds))} to go</span>`;
-    return `<div class="goal-row ${goal.completed ? "done" : ""}" data-goal="${goal.id}">
-      <div class="goal-head">
-        <span class="goal-name">${escapeHtml(goalSummary(state, goal))}</span>
-        ${status}
-        ${upgrade ? `<button class="quiet small icon-btn" data-goal-delete="${goal.id}" title="Remove goal"><svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M-6-6 6 6M6-6-6 6"/></svg></button>` : ""}
-      </div>
-      <div class="goal-track"><span data-goal-progress="${goal.id}" style="width:${fraction * 100}%"></span></div>
-      <small class="mono" data-goal-minutes="${goal.id}">${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · ×${goal.completedCount} completed` : ""}</small>
-    </div>`;
-  };
-  // The panel reads as a run of slots (issue #150): tracked goals first —
-  // open work above finished occurrences — then the empty add-goal slot,
-  // and the capacity purchase trails the slots.
-  const orderedGoals = [...state.goals].sort(openGoalsFirst);
+  const stream = [...state.notes].reverse();
   return `<section class="focus-controls">
-    <p class="goal-slots mono">${state.goals.length}/${capacity} slots${upgrade ? "" : " · locked for this session"}</p>
-    <div class="goal-list">
-      ${orderedGoals.map(goalRow).join("") || `<p class="empty-copy">No goals yet. Goals track practice conditions.</p>`}
-    </div>
-    ${upgrade && state.goals.length < capacity ? `
-      <div class="goal-create">
-        <select id="goal-habit" aria-label="Habit">${habitOptions}</select>
-        <input type="number" id="goal-minutes" min="1" max="1440" placeholder="min" />
-        <select id="goal-schedule" aria-label="Schedule">
-          <option value="daily">daily</option>
-          <option value="weekly">weekly</option>
-          <option value="once">once</option>
-        </select>
-        <button class="primary small" id="goal-add">Add</button>
-      </div>` : ""}
-    ${longGoalRow}
+    <textarea class="note-composer" id="note-composer" placeholder="What are you noticing?" maxlength="2000" rows="3"></textarea>
+    <div class="session-actions" style="margin:10px 0 0"><button class="primary" id="note-save">Capture note</button></div>
+    ${stream.length > 0 ? `<div class="note-list">${stream.map((n) => `<div class="note-entry"><span class="note-when mono">${noteStampHtml(n)}</span>${habitChipHtml(state, n)}<p>${escapeHtml(n.text)}</p></div>`).join("")}</div>` : ""}
   </section>`;
 }
 
-// The planned-target affordances (§6), shared by the Time app's panel and
-// the enter prompt: preset chips as quick picks, free 1–90 minute entry in
-// one-minute steps — and open-ended as its own mode, never a duration
-// choice. They ride the very first start (ADR-0019), visible but unpushed:
-// the resting plan is open-ended, and only a picked plan ever arms the
-// target signals (§4).
-function planControlsHtml(app: App): string {
-  const open = app.ui.chosenTarget === null;
-  const chosen = app.ui.chosenTarget;
-  const minutes = chosen === null ? null : Math.round(chosen / 60);
-  return `<div class="time-plan">
-    <div class="plan-chips" role="group" aria-label="Planned session length in minutes">
-      ${PLAN_PRESET_MINUTES.map(
-        (option) =>
-          `<button class="plan-chip${minutes === option ? " active" : ""}" data-plan="${option}" aria-pressed="${minutes === option}">${option}</button>`,
-      ).join("")}
-    </div>
-    <div class="plan-free">
-      <input type="number" id="plan-minutes" min="${PLAN_MIN_MINUTES}" max="${PLAN_MAX_MINUTES}" step="1" placeholder="1–90"
-        value="${minutes ?? ""}" ${open ? "disabled" : ""} aria-label="Custom session length, 1 to 90 minutes" />
-      <span class="plan-unit">min</span>
-    </div>
-    <button id="plan-open" class="plan-open${open ? " active" : ""}" aria-pressed="${open}">Open-ended</button>
-    <p class="clock-caption">${planCaptionWord(open)}</p>
-  </div>`;
-}
-
-// The plan surfaces a control-driven change must reach without a render
-// (#115): the controls themselves and the console clock. Every patch is an
-// in-place text/class/attribute swap on surviving nodes, so focus, open
-// dropdowns, and scroll all ride through untouched.
-function refreshPlanState(app: App): void {
-  refreshPlanControls(app);
-  refreshConsoleClockPlan(app);
-}
-
-// The plan controls' pressed/disabled/value state, patched in place within
-// whatever scope carries them (the Time popover or the enter prompt).
-function refreshPlanControls(app: App): void {
-  const chosen = app.ui.chosenTarget;
-  const open = chosen === null;
-  const minutes = chosen === null ? null : Math.round(chosen / 60);
-  for (const chip of document.querySelectorAll<HTMLButtonElement>("[data-plan]")) {
-    const active = minutes !== null && minutes === Number(chip.getAttribute("data-plan"));
-    chip.classList.toggle("active", active);
-    chip.setAttribute("aria-pressed", String(active));
-  }
-  const input = byId("plan-minutes") as HTMLInputElement | null;
-  if (input) {
-    const value = minutes !== null ? String(minutes) : "";
-    if (input.value !== value) input.value = value;
-    input.disabled = open;
-  }
-  const openButton = byId("plan-open");
-  openButton?.classList.toggle("active", open);
-  openButton?.setAttribute("aria-pressed", String(open));
-  for (const caption of document.querySelectorAll(".time-plan .clock-caption")) {
-    setText(caption, planCaptionWord(open));
-  }
-}
-
-// The plan affordances' binding within any scope (the Time popover or the
-// enter modal): chips pick a preset, the free entry takes any whole minute
-// from 1 to 90 (clamped, one-minute steps), and open-ended is its own mode
-// toggle. Each acceptance patches the affected surfaces in place (#115) —
-// never a render, so the popover keeps its DOM identity, focus stays on the
-// control, and an open native select is never disrupted mid-gesture.
-function bindPlanControls(app: App, scope: HTMLElement): void {
-  scope.querySelectorAll<HTMLButtonElement>("[data-plan]").forEach((chip) => {
-    app.listen(chip, "click", () => {
-      app.ui.chosenTarget = Number(chip.getAttribute("data-plan")) * 60;
-      refreshPlanState(app);
-    });
-  });
-  const planInput = scope.querySelector("#plan-minutes") as HTMLInputElement | null;
-  app.listen(planInput, "change", () => {
-    if (!planInput) return;
-    const minutes = Math.round(Number(planInput.value));
-    if (Number.isFinite(minutes) && planInput.value !== "") {
-      app.ui.chosenTarget = Math.min(PLAN_MAX_MINUTES, Math.max(PLAN_MIN_MINUTES, minutes)) * 60;
-      refreshPlanState(app);
-    }
-  });
-  app.listen(scope.querySelector("#plan-open"), "click", () => {
-    app.ui.chosenTarget = null;
-    refreshPlanState(app);
-  });
-}
-
+// The notes popover's bindings: capture rides the button and ⌘/Ctrl+Enter,
+// and a successful save refocuses the fresh composer.
 function bindAppPanel(app: App, scope: HTMLElement): void {
-  bindPlanControls(app, scope);
-  app.listen(scope.querySelector("#habit-create"), "click", () => {
-    const input = scope.querySelector("#habit-name-input") as HTMLInputElement | null;
-    if (input) app.createHabitAction(input.value);
-  });
-  const nameInput = scope.querySelector("#habit-name-input");
-  app.listen(nameInput, "keydown", (event) => {
-    if ((event as KeyboardEvent).key === "Enter") {
-      event.preventDefault();
-      const input = event.target as HTMLInputElement;
-      app.createHabitAction(input.value);
-    }
-  });
-  scope.querySelectorAll<HTMLElement>("[data-pick]").forEach((button) => {
-    app.listen(button, "click", () => app.selectHabitAction(button.getAttribute("data-pick")));
-  });
-  scope.querySelectorAll<HTMLElement>("[data-rename]").forEach((button) => {
-    app.listen(button, "click", () => {
-      app.ui.editingHabitId = button.getAttribute("data-rename");
-      app.render();
-      const input = scope.querySelector("#habit-rename-input") as HTMLInputElement | null;
-      input?.focus();
-      input?.select();
-    });
-  });
-  scope.querySelectorAll<HTMLElement>("[data-archive]").forEach((button) => {
-    app.listen(button, "click", () => {
-      const id = button.getAttribute("data-archive");
-      if (id) app.archiveHabitAction(id);
-    });
-  });
-  // The development summary toggle (§9): one habit expanded at a time.
-  scope.querySelectorAll<HTMLElement>("[data-summary]").forEach((button) => {
-    app.listen(button, "click", () => {
-      const id = button.getAttribute("data-summary");
-      if (id) app.toggleHabitSummary(id);
-    });
-  });
-  // The habit build (ADR-0046): equip and unequip are free respecs in
-  // upgrade mode — the engine answers for the slot and unlock rules.
-  scope.querySelectorAll<HTMLElement>("[data-equip]").forEach((button) => {
-    app.listen(button, "click", () => {
-      const nodeId = button.getAttribute("data-equip");
-      const habitId = button.getAttribute("data-habit");
-      if (nodeId && habitId) app.equipBuildNodeAction(habitId, nodeId);
-    });
-  });
-  scope.querySelectorAll<HTMLElement>("[data-unequip]").forEach((button) => {
-    app.listen(button, "click", () => {
-      const nodeId = button.getAttribute("data-unequip");
-      const habitId = button.getAttribute("data-habit");
-      if (nodeId && habitId) app.unequipBuildNodeAction(habitId, nodeId);
-    });
-  });
-  // The history surfaces (§9): the affordance swaps the Time panel body to
-  // the list; rows drill in; the tail pages; back unwinds one level — out of
-  // the drill-down to the list, out of the list to the Time panel itself.
-  app.listen(scope.querySelector("#time-history"), "click", () => app.openHistory());
-  app.listen(scope.querySelector("#history-back"), "click", () => {
-    if (app.ui.drillSession !== null) app.closeDrill();
-    else app.closeHistory();
-  });
-  app.listen(scope.querySelector("#history-more"), "click", () => app.moreHistory());
-  scope.querySelectorAll<HTMLElement>("[data-drill]").forEach((row) => {
-    app.listen(row, "click", () => {
-      const number = Number(row.getAttribute("data-drill"));
-      if (Number.isFinite(number)) app.openDrill(number);
-    });
-  });
-  const renameInput = scope.querySelector("#habit-rename-input");
-  app.listen(renameInput, "keydown", (event) => {
-    if ((event as KeyboardEvent).key === "Enter") {
-      event.preventDefault();
-      const id = app.ui.editingHabitId;
-      if (id) app.renameHabitAction(id, (event.target as HTMLInputElement).value);
-    }
-    if ((event as KeyboardEvent).key === "Escape") {
-      event.stopPropagation();
-      app.ui.editingHabitId = null;
-      app.render();
-    }
-  });
-  app.listen(scope.querySelector("#habit-rename-save"), "click", () => {
-    const id = app.ui.editingHabitId;
-    const input = scope.querySelector("#habit-rename-input") as HTMLInputElement | null;
-    if (id && input) app.renameHabitAction(id, input.value);
-  });
-  app.listen(scope.querySelector("#habit-log-add"), "click", () => {
-    const input = scope.querySelector("#habit-log-minutes") as HTMLInputElement | null;
-    if (input && input.value) app.logPracticeAction(Number(input.value));
-  });
-  app.listen(scope.querySelector("#goal-add"), "click", () => {
-    const habitSelect = scope.querySelector("#goal-habit") as HTMLSelectElement | null;
-    const minutesInput = scope.querySelector("#goal-minutes") as HTMLInputElement | null;
-    const scheduleSelect = scope.querySelector("#goal-schedule") as HTMLSelectElement | null;
-    if (!habitSelect || !minutesInput || !scheduleSelect || !minutesInput.value) return;
-    app.createGoalAction(
-      habitSelect.value === "" ? null : habitSelect.value,
-      Number(minutesInput.value),
-      scheduleSelect.value as "once" | "daily" | "weekly",
-    );
-  });
-  app.listen(scope.querySelector("#long-goal-buy"), "click", () => app.buyGoalCapacityAction());
-  scope.querySelectorAll<HTMLElement>("[data-goal-delete]").forEach((button) => {
-    app.listen(button, "click", () => {
-      const id = button.getAttribute("data-goal-delete");
-      if (id) app.deleteGoalAction(id);
-    });
-  });
   const composer = scope.querySelector("#note-composer") as HTMLTextAreaElement | null;
   const saveNote = () => {
     if (!composer) return;
@@ -2826,42 +2212,6 @@ function bindAppPanel(app: App, scope: HTMLElement): void {
       saveNote();
     }
   });
-}
-
-// Values that move during flow without rebuilding the popover: practice
-// tallies and goal progress. (The Time panel no longer repeats the
-// console's live session, so no clock lives here — §7.)
-function updateAppPanelLive(app: App, scope: ParentNode, projected: RateSnapshot): void {
-  const { state } = app;
-  liveSet(scope, "habit-session", `${formatClock(state.session?.elapsed ?? 0)} of practice`);
-  for (const habit of state.habits) {
-    const node = scope.querySelector(`[data-habit-seconds="${habit.id}"]`);
-    const display = formatDuration(habit.seconds);
-    if (node && node.textContent !== display) node.textContent = display;
-  }
-  for (const goal of state.goals) {
-    const required = goalRequiredSeconds(goal);
-    const bar = scope.querySelector(`[data-goal-progress="${goal.id}"]`) as HTMLElement | null;
-    const barWidth = `${Math.min(100, (goal.progressSeconds / required) * 100)}%`;
-    if (bar && bar.style.width !== barWidth) bar.style.width = barWidth;
-    const minutes = scope.querySelector(`[data-goal-minutes="${goal.id}"]`);
-    const display = `${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · ×${goal.completedCount} completed` : ""}`;
-    if (minutes && minutes.textContent !== display) minutes.textContent = display;
-  }
-  // The long-goal row's affordability moves with the balance between
-  // rebuilds: the buy button and its practice-minute countdown keep
-  // themselves current, like the module upgrade CTA (§7).
-  const longGoalBuy = scope.querySelector("#long-goal-buy") as HTMLButtonElement | null;
-  if (longGoalBuy) {
-    const price = longGoalCost(state.goalCapacityBought);
-    longGoalBuy.disabled = !(state.mode === "upgrade" && wholeNous(state) >= price);
-    const countdown = practiceCountdown(price, wholeNous(state), projected.rate) ?? "";
-    liveSet(scope, "long-goal-countdown", countdown);
-  }
-}
-
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 /* ── Modals ────────────────────────────────────────── */
@@ -3286,30 +2636,6 @@ function renderSettingsModal(app: App, content: HTMLElement): void {
 // current mode); null (hidden) when affordable or rateless.
 function upgradeCountdown(app: App, cost: number): string | null {
   return practiceCountdown(cost, wholeNous(app.state), displayedRates(app.state, true).rate);
-}
-
-// The one purchase affordance every buy row wears (§7, issue #150): the
-// price button — disabled until affordable, its tooltip carrying the why —
-// over its practice-minute countdown in the shop-buy column. `live` keeps
-// an empty countdown slot standing for the control-driven patchers to fill;
-// `note` swaps the countdown for static copy (the flow-side "between
-// sessions").
-function shopBuyHtml(options: {
-  attrs?: string;
-  small?: boolean;
-  price: number;
-  affordable: boolean;
-  countdown?: string | null;
-  live?: string;
-  note?: string;
-}): string {
-  const button = `<button class="primary${options.small ? " small" : ""}" ${options.attrs ?? ""}${options.affordable ? "" : " disabled"}>${formatInt(options.price)} ν</button>`;
-  const small = options.note
-    ? `<small class="shop-countdown">${options.note}</small>`
-    : options.live || options.countdown
-      ? `<small class="shop-countdown mono"${options.live ? ` data-live="${options.live}"` : ""}>${options.countdown ?? ""}</small>`
-      : "";
-  return `<span class="shop-buy">${button}${small}</span>`;
 }
 
 // The harmonic-capacity row (issue #259, the confirmed design beside
@@ -4138,10 +3464,10 @@ function renderEnterModal(app: App, content: HTMLElement): void {
       <div class="mode-pane">${enterPaneHtml(app)}</div>
       ${app.state.sessionsCompleted === 0 ? `<p class="enter-steer small muted">A first try can be short — five minutes or so, then exit and see what the session banked.</p>` : ""}
       ${
-        // Planning lives only in the Time app (§7): the prompt carries a
-        // pointer, not a second copy of the controls — the console clock
-        // opens the Time app where the plan is set.
-        `<p class="enter-plan-hint small muted">Planning lives in the Time app — set it there (or tap the clock), or enter open-ended.</p>`
+        // Planning lives only in the Focus sheet's PLAN face (§7): the
+        // prompt carries a pointer, not a second copy of the controls —
+        // the console clock opens the sheet where the plan is set.
+        `<p class="enter-plan-hint small muted">Planning lives in the Focus sheet — set it there (or tap the clock), or enter open-ended.</p>`
       }
     </div>
     <div class="footer-band">
@@ -4150,7 +3476,6 @@ function renderEnterModal(app: App, content: HTMLElement): void {
       <button id="enter-begin" class="primary"></button>
     </div>`;
   refreshEnterFooter(app, content);
-  bindPlanControls(app, content);
   content.querySelectorAll<HTMLButtonElement>("[data-enter-kind]").forEach((button) => {
     app.listen(button, "click", () => {
       app.ui.enter.kind = button.getAttribute("data-enter-kind") as EnterKind;
@@ -4166,26 +3491,6 @@ function renderEnterModal(app: App, content: HTMLElement): void {
 
 const kindTab = (kind: EnterKind, label: string, app: App): string =>
   `<button class="mode-tab${app.ui.enter.kind === kind ? " active" : ""}" data-enter-kind="${kind}" aria-pressed="${app.ui.enter.kind === kind}">${label}</button>`;
-
-// One voice for both honesty surfaces (§2, §8–9): the report's option
-// labels and the summary's factual event lines phrase each outcome the same
-// way, so the report's promise and the summary's record can never drift.
-const OUTCOME_PHRASES: Record<HonestyOutcome, string> = {
-  missed: "didn't practice",
-  planned: "did what I planned",
-  full: "practiced the whole time away",
-};
-
-const outcomeLabel = (outcome: HonestyOutcome): string => {
-  const phrase = OUTCOME_PHRASES[outcome];
-  return phrase.charAt(0).toUpperCase() + phrase.slice(1);
-};
-
-// The honesty event's neutral factual line (§8–9), the history list's
-// format: accounting, not judgment — "22 min away · didn't practice".
-function honestyEventLine(event: HonestyEvent): string {
-  return `${secondsToMinutes(event.awaySeconds)} min away · ${OUTCOME_PHRASES[event.outcome]}`;
-}
 
 // The loud summary (§5.7, §8): shown once per session end, however the
 // session ended — final numbers only. The ruled folio (#279): the banked
