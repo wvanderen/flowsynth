@@ -563,14 +563,13 @@ describe("the phone launcher (§7, issue #149)", () => {
   const launcher = () => document.getElementById("app-launcher")!;
   const entry = (key: string) => document.getElementById(`app-launcher-${key}`)!;
 
-  it("one compact control opens Habit, Notes, and Goals; each app opens and dismisses without a second header row", () => {
+  it("one compact control opens Habit, Notes, and Goals; every sheet stands under the clock", () => {
     app.render();
     expect(launcher().getAttribute("aria-expanded")).toBe("false");
     // The tiles stay docked out below the line; the launcher hosts the apps
-    // in their place — the menu first, then the entry's own surface.
-    // Habit and Goals walk into the Focus sheet under the clock (ADR-0050);
-    // Notes is the one panel the launcher still hosts itself.
-    for (const key of ["habit", "goals"] as const) {
+    // in their place — the menu first, then the entry's sheet under the
+    // clock (ADR-0050), Notes included (#277).
+    for (const key of ["habit", "goals", "notes"] as const) {
       launcher().click();
       expect(app.ui.launcherOpen).toBe(true);
       expect(launcher().getAttribute("aria-expanded")).toBe("true");
@@ -589,14 +588,16 @@ describe("the phone launcher (§7, issue #149)", () => {
       expect(launcher().getAttribute("aria-expanded")).toBe("false");
       expect(document.getElementById("app-launcher-menu")).toBeNull();
     }
+    // The launcher hosts no panel of its own any more: the Notes entry's
+    // sheet stands under the clock like the others.
     launcher().click();
     entry("notes").click();
     expect(app.ui.app).toBe("notes");
-    const panel = document.getElementById("app-launcher-popover")!;
-    expect(document.getElementById("console-apps")!.contains(panel)).toBe(true);
+    expect(document.getElementById("app-launcher-popover")).toBeNull();
+    expect(document.getElementById("app-popover")).not.toBeNull();
     launcher().click();
     expect(app.ui.app).toBeNull();
-    expect(document.getElementById("app-launcher-popover")).toBeNull();
+    expect(app.ui.launcherOpen).toBe(true);
     launcher().click();
     expect(app.ui.launcherOpen).toBe(false);
   });
@@ -608,13 +609,13 @@ describe("the phone launcher (§7, issue #149)", () => {
     document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.ui.launcherOpen).toBe(false);
     expect(document.querySelector("#app-launcher-menu")).toBeNull();
-    // Escape unwinds the menu, and the panel once an app stands open.
+    // Escape unwinds the menu, and the sheet once an app stands open.
     launcher().click();
     entry("notes").click();
-    expect(document.querySelector("#app-launcher-popover")).not.toBeNull();
+    expect(document.querySelector("#app-popover")).not.toBeNull();
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(app.ui.app).toBeNull();
-    expect(document.querySelector("#app-launcher-popover")).toBeNull();
+    expect(document.querySelector("#app-popover")).toBeNull();
   });
 
   it("the phone nav carries no Goals-state read — the tracker state lives desktop-only, in the sheet's head (ADR-0033 amended)", () => {
@@ -730,18 +731,20 @@ describe("the phone launcher (§7, issue #149)", () => {
     expect(app.ui.detailHabitId).toBeNull();
   });
 
-  it("the launcher works mid-session too; the desktop row keeps its tiles and hosts the panel there", () => {
-    // Mid-session (notes are a flow-surface app): the launcher answers.
+  it("the launcher works mid-session too; the desktop row keeps its tiles and the clock keeps the sheets", () => {
+    // Mid-session (notes are a flow-surface app): the launcher answers, and
+    // the notes sheet stands under the clock with the composer reachable.
     startSession(app.state, null);
     app.render();
     launcher().click();
     entry("notes").click();
     expect(app.ui.app).toBe("notes");
     expect(document.getElementById("note-composer")).not.toBeNull();
+    expect(document.getElementById("console-session")!.contains(document.getElementById("app-popover")!)).toBe(true);
     app.closeApp();
     endSession(app.state);
-    // Above the line the tiles stand and host the panels; the launcher's
-    // slot exists only as the CSS-docked-out phone anchor.
+    // Above the line the tiles stand and the launcher hosts nothing: the
+    // sheets live under the clock at every width.
     setAppWidth(1200);
     app.render();
     expect(document.getElementById("app-launcher")).not.toBeNull();

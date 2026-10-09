@@ -64,7 +64,7 @@ import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
 import { allocatedDevScenarioRates, createDevScenario, type DevBoardResult } from "../engine/dev-scenario";
 import type { StressProgress, StressRow } from "../engine/allocation-stress";
 import type { GameState, Hex, ModuleInstance, MutatorFamily, MutatorInstance, NamedChordTerm, Rarity, ShelfType } from "../engine/types";
-import type { FocusFace } from "./focus";
+import type { FocusFace, NotesFace } from "./focus";
 import { render } from "./render";
 import { FAMILY_WORD, mutatorLayerLive, refreshMutPreview } from "./mutators";
 import { HISTORY_PAGE_ROWS, META } from "./meta";
@@ -246,6 +246,10 @@ export interface UiState {
   // action-button form stands, if any. Light furniture — cleared with the
   // transient modes.
   focusForm: FocusForm | null;
+  // The notes sheet's standing face (issue #277): CAPTURE leads — the sheet
+  // opens on it, and any departure (close, another app) puts the tab back.
+  // Light furniture — never saved.
+  notesFace: NotesFace;
   // Session history (§9): the sheet's HISTORY face, its page size, and the
   // record drilled into. Light furniture — cleared with the sheet.
   historyOpen: boolean;
@@ -435,6 +439,7 @@ export class App {
     catalogFace: "nous",
     editingHabitId: null,
     focusForm: null,
+    notesFace: "capture",
     historyOpen: false,
     historyLimit: HISTORY_PAGE_ROWS,
     drillSession: null,
@@ -1760,6 +1765,9 @@ export class App {
     // guard stays for a future ladder tenant.
     if (!appActive(this.state, app)) return;
     this.ui.app = this.ui.app === app ? null : app;
+    // The notes sheet opens on CAPTURE (#277): any departure from it — a
+    // close or another app's face standing — puts the tab back.
+    if (this.ui.app !== "notes") this.ui.notesFace = "capture";
     // One popover at a time (issue #149): opening an app — from a tile, a
     // launcher entry, or the clock — always dismisses the launcher's menu.
     this.ui.launcherOpen = false;
@@ -1796,15 +1804,24 @@ export class App {
     this.render();
   }
 
+  // The notes sheet's tab landing (issue #277): CAPTURE and LOGGED are
+  // radio-like, like the Focus sheet's facetabs — a re-press of the
+  // standing face does nothing.
+  showNotesFace(face: NotesFace): void {
+    if (this.ui.app !== "notes" || this.ui.notesFace === face) return;
+    this.ui.notesFace = face;
+    this.render();
+  }
+
   // The phone launcher (issue #149): one compact control that keeps Habit,
   // Notes, and Goals reachable below the 600px line. Pressing it always
-  // means "my menu": any open app popover gives way, and a second press
-  // closes. An entry press swaps the menu for that app's panel, anchored
-  // beneath the launcher itself.
+  // means "my menu": any open sheet gives way, and a second press closes.
+  // Every entry opens its sheet under the clock — Notes included (#277) —
+  // the phone composition pinning the frame to the container's own margins.
   launcherActivate(): void {
-    // The panel rides closeApp's full teardown — not just the app nulling —
+    // The sheet rides closeApp's full teardown — not just the app nulling —
     // so a habit edit or drilled history can't survive the swap into the
-    // menu and leak into the panel a later press reopens.
+    // menu and leak into the sheet a later entry reopens.
     this.dismissAppPanel();
     this.ui.launcherOpen = !this.ui.launcherOpen;
     this.render();
@@ -1832,6 +1849,7 @@ export class App {
     this.ui.app = null;
     this.ui.editingHabitId = null;
     this.ui.focusForm = null;
+    this.ui.notesFace = "capture";
     this.resetHistorySurfaces();
   }
 

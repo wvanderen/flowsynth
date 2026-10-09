@@ -13,19 +13,20 @@ import { formatClock, formatDuration } from "../engine/clock";
 import { cellNoteOf, noteNameOf, octaveRowOf, positionInRange } from "../engine/lattice";
 import { appActive, appLockNote, TILE_APPS, type FocusApp } from "../engine/apps";
 import { activeBuildFactors } from "../engine/builds";
-import { habitRecordName } from "../engine/records";
 import { poolOutstanding } from "../engine/trust";
 import { arcCardDue } from "../engine/arc";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
-import type { DeployedModule, GameState, Hex, ModuleInstance, MutatorInstance, NoteEntry, NamedChordTerm, Rarity, RateSnapshot } from "../engine/types";
+import type { DeployedModule, GameState, Hex, ModuleInstance, MutatorInstance, NamedChordTerm, Rarity, RateSnapshot } from "../engine/types";
 import { DEV_BOARD_CAPACITIES, type App, type ChordHover, type EnterKind, type EnterSelection, type ModalKind } from "./app";
 import {
   bindFocusSheet,
+  bindNotesSheet,
   escapeHtml,
   focusSheetHtml,
   focusSheetKey,
   honestyEventLine,
-  noteStampHtml,
+  notesSheetHtml,
+  notesSheetKey,
   outcomeLabel,
   refreshConsoleClockPlan,
   sessionCaption,
@@ -195,13 +196,16 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
   // (ADR-0050): the habit and goals tiles walk here too — one frame, four
   // faces. Its signature rides the rebuild key; the body is only
   // string-built when that key changes (every flow tick takes the patch
-  // path below). Notes keeps its own popover in the apps row (#277 moves it
-  // into this frame).
-  const sheetOpen = ui.app === "time" || ui.app === "habit" || ui.app === "goals";
-  const popoverKey = sheetOpen ? `sheet|${focusSheetKey(app)}` : "shut";
+  // path below). Notes wears the same frame as its own CAPTURE | LOGGED
+  // sheet (#277), with its own key, body, and bindings.
+  const sheetOpen = ui.app !== null;
+  const notesOpen = ui.app === "notes";
+  const popoverKey = sheetOpen ? `sheet|${notesOpen ? notesSheetKey(app) : focusSheetKey(app)}` : "shut";
+  const sheetHtml = () => (notesOpen ? notesSheetHtml(app) : focusSheetHtml(app, projected));
   const bindSheet = (scrollTop: number): void => {
     if (!sheetOpen) return;
-    bindFocusSheet(app, host);
+    if (notesOpen) bindNotesSheet(app, host);
+    else bindFocusSheet(app, host);
     restorePopoverScroll(host, scrollTop);
   };
 
@@ -221,7 +225,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
       host.innerHTML = `
         <div class="clock-anchor">
           ${clockButton("Plan — opens the Focus sheet")}
-          ${sheetOpen ? focusSheetHtml(app, projected) : ""}
+          ${sheetOpen ? sheetHtml() : ""}
         </div>
         <div class="session-actions">
           <button class="main-switch idle" id="flow-switch" title="Enter flow — the board locks and runs itself">
@@ -254,7 +258,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
       <div class="clock-anchor">
         ${clockButton("Session time — opens the Focus sheet", ' id="session-clock"', ' id="session-caption"')}
         <span class="clock-provisional" id="session-provisional" role="status"></span>
-        ${sheetOpen ? focusSheetHtml(app, projected) : ""}
+        ${sheetOpen ? sheetHtml() : ""}
       </div>
       <div class="session-actions">
         <button id="pause-flow" aria-label="${paused ? "Resume" : "Pause"}" title="${paused ? "Resume the session" : "Pause the session"}">${paused ? resumeSvg : pauseSvg}<span aria-hidden="true">${paused ? "Resume" : "Pause"}</span></button>
@@ -301,7 +305,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
 // Patched in place on the tick path, where the key is unchanged; opening
 // and closing the sheet rebuilds the cluster with the sheet itself.
 function syncClockDisclosure(app: App): void {
-  const open = app.ui.app === "time" || app.ui.app === "habit" || app.ui.app === "goals";
+  const open = app.ui.app !== null;
   byId("clock-plan")?.setAttribute("aria-expanded", String(open));
 }
 
@@ -343,9 +347,8 @@ function plannedFill(elapsed: number, target: number): string {
 // (Display names live in meta.ts's APP_LABELS.)
 
 // A popover's scroll rides its host's rebuild (#115): captured before the
-// innerHTML swap, restored once the fresh panel binds. Shared by the
-// clock's sheet and the notes popover (issue #148, #149) — one shape, one
-// spelling.
+// innerHTML swap, restored once the fresh sheet binds — one shape, one
+// spelling, shared by every face the clock's frame carries.
 function popoverScroll(host: HTMLElement): number {
   return host.querySelector<HTMLElement>(".app-popover")?.scrollTop ?? 0;
 }
@@ -353,17 +356,6 @@ function popoverScroll(host: HTMLElement): number {
 function restorePopoverScroll(host: HTMLElement, scrollTop: number): void {
   const popover = host.querySelector<HTMLElement>(".app-popover");
   if (popover && scrollTop > 0) popover.scrollTo(0, scrollTop);
-}
-
-// The notes popover a tile or the launcher anchors (issue #149): present
-// only while notes stands open, its body built fresh with the host.
-function notesPopoverHtml(app: App): string {
-  return app.ui.app === "notes" ? `<div class="app-popover" id="app-popover">${notesPanelBody(app)}</div>` : "";
-}
-
-// The notes popover's rebuild signature: everything its body shows, hashed.
-function notesPanelKey(app: App): string {
-  return JSON.stringify([app.ui.app === "notes", app.state.notes.length]);
 }
 
 // The one focus-app glyph every access point shares — tiles, launcher
@@ -393,59 +385,46 @@ function renderConsoleApps(app: App): void {
   if (!host) return;
   const { state, ui } = app;
   const phone = isPhoneWidth();
-  // The tiles' pressed states ride the open app; the notes popover rides
-  // its body. Everything else the sheet shows lives under the clock's own
-  // key.
-  const key = `${phone ? "phone" : "wide"}|${ui.launcherOpen ? "launcher" : "docked"}|${ui.app}|${notesPanelKey(app)}`;
+  // The tiles' pressed states ride the open app; everything the sheets
+  // show lives under the clock's own key.
+  const key = `${phone ? "phone" : "wide"}|${ui.launcherOpen ? "launcher" : "docked"}|${ui.app}`;
   if (host.dataset.renderKey === key) return;
   host.dataset.renderKey = key;
-  // A newly captured note keeps the popover scrolled where the player is.
-  const scrollTop = popoverScroll(host);
-  // Notes is the one app that still anchors its own popover: beneath its
-  // tile above the 600px line, beneath the launcher below it (issue #149).
-  // Habit and Goals open the Focus sheet under the clock at every width.
+  // Every app sheet anchors beneath the clock at every width (ADR-0050):
+  // Habit and Goals open the Focus sheet, Notes its CAPTURE | LOGGED sheet
+  // (#277) — the tiles and the launcher carry the doors, never a panel.
   const tiles = TILE_APPS.map((appKey) => {
     const facts = appEntryFacts(state, appKey);
     const open = ui.app === appKey;
-    const title = facts.note ? `${facts.label} — locked: ${facts.note}` : `${facts.label} app`;    return `<div class="app-slot">
+    const title = facts.note ? `${facts.label} — locked: ${facts.note}` : `${facts.label} app`;
+    return `<div class="app-slot">
       <button class="app-tile${facts.active ? "" : " locked"}${open ? " open" : ""}" id="app-tile-${appKey}" aria-pressed="${open}" aria-label="${facts.label}"${facts.active ? "" : ' aria-disabled="true"'} title="${title}">
         <span class="app-tile-glyph">
           ${appGlyphSvg(appKey)}
         </span>
       </button>
-      ${appKey === "notes" && !phone ? notesPopoverHtml(app) : ""}
     </div>`;
   }).join("");
-  host.innerHTML = `<div class="app-tiles">${tiles}</div>${appLauncherHtml(app, phone)}`;
-  restorePopoverScroll(host, scrollTop);
+  host.innerHTML = `<div class="app-tiles">${tiles}</div>${appLauncherHtml(app)}`;
   for (const appKey of TILE_APPS) {
     app.listen(byId(`app-tile-${appKey}`), "click", () => app.openApp(appKey));
     app.listen(byId(`app-launcher-${appKey}`), "click", () => app.openApp(appKey));
   }
   app.listen(byId("app-launcher"), "click", () => app.launcherActivate());
-  if (ui.app === "notes") bindAppPanel(app, host);
 }
 
 // The phone launcher (issue #149): one compact control that keeps Habit,
 // Notes, and Goals reachable below the 600px line — the tiles stay docked
 // out there, the clock keeps the PLAN entry, and the header holds its one
-// row. Closed, a single icon button; open, a compact menu whose Goals entry
-// wears the tracker's rolled-up state (none tracked / in progress / all
-// complete — a state, never an aggregate percentage; the header stays pure
-// control). Habit and Goals walk into the Focus sheet under the clock
-// (ADR-0050); Notes is the one entry that still swaps the menu for its own
-// panel popover, anchored beneath the launcher itself at the row's far end.
-// Desktop never sees any of it: CSS docks the slot out above the phone
-// line, where the tiles stand.
+// row. Every entry opens its sheet under the clock (ADR-0050); Notes
+// included (#277), the phone composition pinning the frame to the
+// container's own margins. The launcher itself is the menu — it hosts no
+// panel. Desktop never sees any of it: CSS docks the slot out above the
+// phone line, where the tiles stand.
 const LAUNCHER_GLYPH = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4" y="4" width="6.4" height="6.4" rx="1.6"/><rect x="13.6" y="4" width="6.4" height="6.4" rx="1.6"/><rect x="4" y="13.6" width="6.4" height="6.4" rx="1.6"/><rect x="13.6" y="13.6" width="6.4" height="6.4" rx="1.6"/></svg>`;
 
-function appLauncherHtml(app: App, phone: boolean): string {
+function appLauncherHtml(app: App): string {
   const { state, ui } = app;
-  // Notes is the one panel that anchors here (issue #149): habit and goals
-  // open the Focus sheet under the clock, so the launcher carries just the
-  // button for them.
-  const panelApp = phone && ui.app === "notes" ? ui.app : null;
-  const expanded = ui.launcherOpen || panelApp !== null;
   const entries = TILE_APPS.map((appKey) => {
     const facts = appEntryFacts(state, appKey);
     const { label, active } = facts;
@@ -454,13 +433,9 @@ function appLauncherHtml(app: App, phone: boolean): string {
       <span class="app-launcher-word">${label}</span>
     </button>`;
   }).join("");
-  const body = panelApp !== null
-    ? `<div class="app-popover" id="app-launcher-popover">${notesPanelBody(app)}</div>`
-    : ui.launcherOpen
-      ? `<div class="app-launcher-menu" id="app-launcher-menu" aria-label="Focus apps">${entries}</div>`
-      : "";
+  const body = ui.launcherOpen ? `<div class="app-launcher-menu" id="app-launcher-menu" aria-label="Focus apps">${entries}</div>` : "";
   return `<div class="app-launcher-slot" id="app-launcher-slot">
-    <button class="app-launcher" id="app-launcher" aria-haspopup="true" aria-expanded="${expanded}" aria-label="Focus apps" title="Habit, Notes, and Goals">${LAUNCHER_GLYPH}</button>
+    <button class="app-launcher" id="app-launcher" aria-haspopup="true" aria-expanded="${ui.launcherOpen}" aria-label="Focus apps" title="Habit, Notes, and Goals">${LAUNCHER_GLYPH}</button>
     ${body}
   </div>`;
 }
@@ -2170,48 +2145,6 @@ function renderArcCard(app: App): void {
     The dashed preview shows the chord they'd form; the <span class="mono">×</span> in the chord readout is what the pair earns together.</p>
     <button class="arc-dismiss" id="arc-card-dismiss" aria-label="Dismiss — this card never returns">✕</button>`;
   app.listen(document.getElementById("arc-card-dismiss"), "click", () => app.dismissArcCard());
-}
-
-/* ── The Notes popover (§9; the sheet's own frame is #277's) ── */
-
-// The habit-keyed chip (§9): a tagged note wears its habit, resolved at
-// render — renames and archiving never rewrite the stream. Untagged notes
-// (unstructured, between sessions) wear none.
-function habitChipHtml(state: GameState, note: NoteEntry): string {
-  return note.habitId !== null ? `<span class="habit-chip">${escapeHtml(habitRecordName(state, note.habitId))}</span>` : "";
-}
-
-// The notes body (§9): the composer over the full stream — everything kept,
-// newest first, no cap on what is shown, matching the engine's no-pruning
-// rule. #277 resolves it into the Focus frame's tabbed sheet.
-function notesPanelBody(app: App): string {
-  const { state } = app;
-  const stream = [...state.notes].reverse();
-  return `<section class="focus-controls">
-    <textarea class="note-composer" id="note-composer" placeholder="What are you noticing?" maxlength="2000" rows="3"></textarea>
-    <div class="session-actions" style="margin:10px 0 0"><button class="primary" id="note-save">Capture note</button></div>
-    ${stream.length > 0 ? `<div class="note-list">${stream.map((n) => `<div class="note-entry"><span class="note-when mono">${noteStampHtml(n)}</span>${habitChipHtml(state, n)}<p>${escapeHtml(n.text)}</p></div>`).join("")}</div>` : ""}
-  </section>`;
-}
-
-// The notes popover's bindings: capture rides the button and ⌘/Ctrl+Enter,
-// and a successful save refocuses the fresh composer.
-function bindAppPanel(app: App, scope: HTMLElement): void {
-  const composer = scope.querySelector("#note-composer") as HTMLTextAreaElement | null;
-  const saveNote = () => {
-    if (!composer) return;
-    app.addNote(composer.value);
-    // A successful save rebuilds the panel with a fresh composer; refocus it.
-    const fresh = scope.querySelector("#note-composer") as HTMLTextAreaElement | null;
-    if (fresh) fresh.focus();
-  };
-  app.listen(scope.querySelector("#note-save"), "click", saveNote);
-  app.listen(composer, "keydown", (event) => {
-    if ((event as KeyboardEvent).key === "Enter" && ((event as KeyboardEvent).metaKey || (event as KeyboardEvent).ctrlKey)) {
-      event.preventDefault();
-      saveNote();
-    }
-  });
 }
 
 /* ── Modals ────────────────────────────────────────── */

@@ -13,7 +13,9 @@
 // FocusApp ids keep their meaning (habit / time / notes / goals): the sheet
 // is presentational, and `ui.app` still names which app's face stands —
 // time → PLAN, habit → HABIT, goals → GOALS, and the time app's history
-// surfaces are the HISTORY face.
+// surfaces are the HISTORY face. Notes wears the same frame as its own
+// CAPTURE | LOGGED sheet (#277), sharing the helpers at the bottom of this
+// file.
 
 import type { App } from "./app";
 import { displayedRates, longGoalCost, wholeNous } from "../engine/economy";
@@ -61,7 +63,7 @@ import {
   practiceCountdown,
   secondsToMinutes,
 } from "./format";
-import { REFLECTION_SLIDER_NEUTRAL } from "../engine/constants";
+import { BALANCE, REFLECTION_SLIDER_NEUTRAL } from "../engine/constants";
 import { wireTooltips } from "./instrument";
 
 // The sheet's faces. HISTORY is the time app's history surfaces lifted to a
@@ -666,6 +668,123 @@ function historyDrillHtml(app: App): string {
   </div>`;
 }
 
+/* ── The notes sheet (#277) ────────────────────────── */
+
+// The notes sheet's faces: CAPTURE leads — the sheet opens on it — and
+// LOGGED carries the stream. Radio-like, like the Focus sheet's facetabs.
+export type NotesFace = "capture" | "logged";
+
+const NOTES_TABS: readonly [NotesFace, string][] = [
+  ["capture", "CAPTURE"],
+  ["logged", "LOGGED"],
+];
+
+// The head's state word (the prototype's spelling): the session a flow
+// capture tags to, or the stream itself between sessions.
+function notesStateWord(app: App): string {
+  const { state } = app;
+  return state.session !== null ? `session ${state.sessionsCompleted + 1}` : "stream";
+}
+
+// The sheet's rebuild signature: everything its body shows, hashed. The
+// composer's draft is deliberately absent — a tab switch may drop it, but
+// a tick never rebuilds the sheet out from under the typing.
+export function notesSheetKey(app: App): string {
+  const { state, ui } = app;
+  return JSON.stringify([
+    ui.app === "notes",
+    ui.notesFace,
+    state.session !== null,
+    state.sessionsCompleted,
+    state.activeHabitId,
+    state.notes.length,
+    state.habits.map((h) => `${h.archived ? "·" : ""}${h.name}`).join("|"),
+  ]);
+}
+
+// The habit-keyed chip (§9): a tagged note wears its habit, resolved at
+// render — renames and archiving never rewrite the stream. Untagged notes
+// (unstructured, between sessions) wear none.
+function habitChipHtml(state: GameState, note: NoteEntry): string {
+  return note.habitId !== null ? `<span class="habit-chip">${escapeHtml(habitRecordName(state, note.habitId))}</span>` : "";
+}
+
+// The capture face: the composer over its action row — the live tag chip
+// rides it during flow (the session's habit, where the note will tag;
+// upgrade-mode notes go untagged), the Note Generator's mechanic stays in
+// the tooltip layer, and the capture button takes the note.
+function notesCaptureHtml(app: App): string {
+  const { state } = app;
+  const habit = activeHabit(state);
+  const liveTag = state.session !== null && habit ? `<span class="habit-chip note-live-tag">· ${escapeHtml(habit.name.toUpperCase())}</span>` : "";
+  return `<section class="notes-capture">
+    <textarea class="note-composer" id="note-composer" placeholder="What are you noticing?" maxlength="2000" rows="3"></textarea>
+    <div class="session-actions note-capture-row">${liveTag}${tipHtml(
+      "notes-generator-tip",
+      "Note Generators — the credit",
+      `A written note credits each owned Note Generator by its length — ${formatNumber(BALANCE.noteCreditPerChar)} s per character, ${formatNumber(BALANCE.noteCreditCapSeconds / 60)} min cap per note. Tagging follows the session's habit.`,
+    )}<button class="primary" id="note-save">Capture note</button></div>
+  </section>`;
+}
+
+// The logged face: everything kept, newest first, no cap on what is shown,
+// matching the engine's no-pruning rule. Rows lead with the mono stamp and
+// the habit chip. No empty-state furniture: an empty stream reads as none.
+function notesLoggedHtml(app: App): string {
+  const { state } = app;
+  const stream = [...state.notes].reverse();
+  if (stream.length === 0) return "";
+  const rows = stream
+    .map(
+      (note) =>
+        `<div class="note-entry"><span class="note-when mono">${noteStampHtml(note)}</span>${habitChipHtml(state, note)}<p>${escapeHtml(note.text)}</p></div>`,
+    )
+    .join("");
+  return `<div class="note-list">${rows}</div>`;
+}
+
+// The notes sheet in the Focus frame (ADR-0050, #277): the same clipped
+// plate as the control sheet — head, facetabs, close — wearing its own
+// NOTES name and its two faces.
+export function notesSheetHtml(app: App): string {
+  const face = app.ui.notesFace;
+  const body = face === "capture" ? notesCaptureHtml(app) : notesLoggedHtml(app);
+  const tabs = NOTES_TABS.map(
+    ([key, label]) =>
+      `<button class="ftab${key === face ? " active" : ""}" data-notes-face="${key}" aria-pressed="${key === face}">${label}</button>`,
+  ).join("");
+  return sheetFrameHtml("Notes sheet", "NOTES", notesStateWord(app), tabs, body);
+}
+
+// The notes sheet's wiring: the facetabs, the close, and the composer —
+// capture rides the button and ⌘/Ctrl+Enter, and a successful save
+// refocuses the fresh composer.
+export function bindNotesSheet(app: App, scope: HTMLElement): void {
+  wireTooltips(scope, app.signal);
+  scope.querySelectorAll<HTMLElement>("[data-notes-face]").forEach((button) => {
+    app.listen(button, "click", () => {
+      const face = button.getAttribute("data-notes-face") as NotesFace | null;
+      if (face) app.showNotesFace(face);
+    });
+  });
+  app.listen(scope.querySelector("#focus-close"), "click", () => app.closeApp());
+  const composer = scope.querySelector("#note-composer") as HTMLTextAreaElement | null;
+  const saveNote = () => {
+    if (!composer) return;
+    app.addNote(composer.value);
+    // A successful save rebuilds the sheet with a fresh composer; refocus it.
+    const fresh = scope.querySelector("#note-composer") as HTMLTextAreaElement | null;
+    if (fresh) fresh.focus();
+  };
+  app.listen(scope.querySelector("#note-save"), "click", saveNote);
+  app.listen(composer, "keydown", (event) => {
+    if ((event as KeyboardEvent).key === "Enter" && ((event as KeyboardEvent).metaKey || (event as KeyboardEvent).ctrlKey)) {
+      event.preventDefault();
+      saveNote();
+    }
+  });
+}
+
 /* ── The sheet ─────────────────────────────────────── */
 
 const FACE_TABS: readonly [FocusFace, string][] = [
@@ -698,6 +817,22 @@ function sheetStateWord(app: App): string {
   }
 }
 
+// The one sheet frame both console sheets wear (ADR-0050): the clipped
+// plate anchored beneath the clock — head with the name and state word,
+// the facetab row, the close — over the standing face's body. One spelling,
+// so the Focus and Notes sheets can never drift apart.
+function sheetFrameHtml(label: string, name: string, stateWord: string, tabs: string, body: string): string {
+  return `<div class="app-popover focus-sheet" id="app-popover"><section class="inst-panel" aria-label="${label}"><div class="inst-panel-face focus-sheet-face">
+    <div class="focus-head">
+      <span class="focus-name t-condensed">${name}</span>
+      <span class="eyebrow focus-state">${stateWord}</span>
+      <button class="quiet small icon-btn focus-close" id="focus-close" aria-label="Close the ${label}" title="Close"><svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M-6-6 6 6M6-6-6 6"/></svg></button>
+    </div>
+    <div class="facetabs" role="group" aria-label="${label} faces">${tabs}</div>
+    ${body}
+  </div></section></div>`;
+}
+
 export function focusSheetHtml(app: App, projected: ReturnType<typeof displayedRates>): string {
   const face = focusFaceOf(app);
   let body: string;
@@ -709,15 +844,7 @@ export function focusSheetHtml(app: App, projected: ReturnType<typeof displayedR
     ([key, label]) =>
       `<button class="ftab${key === face ? " active" : ""}" data-face="${key}" aria-pressed="${key === face}">${label}</button>`,
   ).join("");
-  return `<div class="app-popover focus-sheet" id="app-popover"><section class="inst-panel" aria-label="Focus control sheet"><div class="inst-panel-face focus-sheet-face">
-    <div class="focus-head">
-      <span class="focus-name t-condensed">FOCUS</span>
-      <span class="eyebrow focus-state">${sheetStateWord(app)}</span>
-      <button class="quiet small icon-btn focus-close" id="focus-close" aria-label="Close the focus sheet" title="Close"><svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M-6-6 6 6M6-6-6 6"/></svg></button>
-    </div>
-    <div class="facetabs" role="group" aria-label="Focus faces">${tabs}</div>
-    ${body}
-  </div></section></div>`;
+  return sheetFrameHtml("Focus control sheet", "FOCUS", sheetStateWord(app), tabs, body);
 }
 
 /* ── The plan surfaces' in-place patchers ──────────── */
