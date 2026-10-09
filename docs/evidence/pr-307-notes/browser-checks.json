@@ -1,0 +1,40 @@
+{
+  "provenance": {
+    "app": "flowsynth",
+    "worktree": "/Users/eggfam/.t3/worktrees/flowsynth/t3code-34277c8d",
+    "branch": "t3code/fix-pr-307",
+    "commit": "8be90d2cfcc0685ce3db4fcd5f35b1d76fe23b27"
+  },
+  "desktop": {
+    "width": 560,
+    "left": 497.71875,
+    "right": 1057.71875
+  },
+  "phone": {
+    "width": 358,
+    "left": 16,
+    "right": 374,
+    "viewport": 390
+  },
+  "selected": {
+    "pressed": "true",
+    "shadow": "rgb(229, 233, 245) 0px -2px 0px 0px inset"
+  },
+  "motion": {
+    "reduced": true,
+    "animation": "none",
+    "duration": "0s"
+  },
+  "errors": [],
+  "checks": [
+    "draft survives timer target with selection and focus",
+    "draft survives pause/resume clicks",
+    "keyboard opening and Escape dismissal",
+    "Ctrl+Enter capture clears and refocuses composer",
+    "phone touch opening, tabs, capture, close and tap-away",
+    "560px desktop sheet",
+    "390px phone sheet inside viewport",
+    "selected tab inset survives greyscale",
+    "reduced-motion sheet animation disabled"
+  ]
+}

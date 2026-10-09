@@ -2,8 +2,10 @@
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
 import type { App } from "./app";
+import { createHabit, selectHabit } from "../engine/habits";
+import { createGoal, accrueGoalProgress, rollGoalOccurrences } from "../engine/goals";
 import { BALANCE } from "../engine/constants";
-import { startSession } from "../engine/actions";
+import { startSession, endSession } from "../engine/actions";
 import { give } from "../engine/fixtures";
 import { hex } from "../engine/hex";
 import { formatFixed, formatInt } from "./format";
@@ -589,6 +591,35 @@ describe("the phone banner (ADR-0050's amended phone line)", () => {
     expect(consoleBlock!.slice(consoleBlock!.indexOf(".console"))).toMatch(/\.console\s*\{[^}]*height:\s*56px/);
   });
 
+  it("the doors carry no Goals- or Habit-state read — the tracker state lives desktop-only, in the sheet's head (ADR-0033 amended)", () => {
+    app.render();
+    // Phone first: the doors are exactly focus + Notes, so no Goals or
+    // Habit surface stands in the row to wear a state read.
+    expect(document.querySelector(".launcher-goal-state, .launcher-habit-state")).toBeNull();
+    // Above the line the tiles stand — bare labels, no state pip, no state
+    // word, whatever the tracked state beneath them does.
+    createGoal(app.state, { habitId: null, minutes: 20, schedule: "daily", now: 1_000 });
+    accrueGoalProgress(app.state, null, 20 * 60);
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
+    setAppWidth(1200);
+    app.render();
+    expect(door("goals").getAttribute("aria-label")).toBe("Goals");
+    expect(door("habit").getAttribute("aria-label")).toBe("Habit");
+    expect(document.querySelector(".launcher-goal-state, .launcher-habit-state")).toBeNull();
+    // The read's one home is the sheet's head: the GOALS face names the
+    // tracker state, and the console row never reads an aggregate.
+    app.showFocusFace("goals");
+    expect(document.querySelector("#app-popover .focus-state")!.textContent).toBe("all complete");
+    const consoleText = document.querySelector(".console")!.textContent ?? "";
+    expect(consoleText).not.toMatch(/\d+\s*%/);
+    // A recurring reset returns the read to in progress — on the tick, not
+    // the door.
+    rollGoalOccurrences(app.state, Date.now() + 24 * 3600_000);
+    app.render();
+    expect(document.querySelector("#app-popover .focus-state")!.textContent).toBe("in progress");
+  });
+
   it("the focus door opens the Focus sheet, wears the inset marker while a face stands, and toggles shut", () => {
     app.render();
     door("focus").click();
@@ -611,16 +642,22 @@ describe("the phone banner (ADR-0050's amended phone line)", () => {
     expect(door("focus").getAttribute("aria-pressed")).toBe("false");
   });
 
-  it("Notes opens from its own door; the popover anchors in the door's slot", () => {
+  it("Notes opens from its own door; the sheet stands under the clock with the composer reachable, mid-session too", () => {
+    // Mid-session (notes are a flow-surface app): the door answers, and
+    // the notes sheet stands under the clock, never in the door's slot.
+    startSession(app.state, null);
     app.render();
     door("notes").click();
     expect(app.ui.app).toBe("notes");
-    const panel = document.getElementById("app-popover")!;
-    expect(door("notes").closest(".app-slot")!.contains(panel)).toBe(true);
-    expect(document.getElementById("console-apps")!.contains(panel)).toBe(true);
+    expect(document.getElementById("note-composer")).not.toBeNull();
+    const sheet = document.getElementById("app-popover")!;
+    expect(document.getElementById("console-session")!.contains(sheet)).toBe(true);
+    expect(document.getElementById("console-apps")!.contains(sheet)).toBe(false);
+    // The door toggles: a second press closes.
     door("notes").click();
     expect(app.ui.app).toBeNull();
     expect(document.getElementById("app-popover")).toBeNull();
+    endSession(app.state);
   });
 
   it("the banner reads drop for the bare launchers — the row carries no habit name, no goal bars", () => {

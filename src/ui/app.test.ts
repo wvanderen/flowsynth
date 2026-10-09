@@ -45,7 +45,7 @@ describe("the console tiles", () => {
     expect(document.getElementById("app-tile-time")).toBeNull();
   });
 
-  it("every tile opens the Focus sheet from session one; notes keeps its own popover", () => {
+  it("every tile opens the frame under the clock from session one (ADR-0050, #277)", () => {
     for (const key of ["habit", "goals"] as const) {
       app.openApp(key);
       const sheet = document.getElementById("app-popover")!;
@@ -53,27 +53,26 @@ describe("the console tiles", () => {
       expect(document.getElementById("console-session")!.contains(sheet)).toBe(true);
       app.closeApp();
     }
+    // Notes wears the same frame as its own CAPTURE | LOGGED sheet.
     app.openApp("notes");
-    const popover = document.getElementById("app-popover")!;
-    expect(document.getElementById("console-apps")!.contains(popover)).toBe(true);
+    const sheet = document.getElementById("app-popover")!;
+    expect(document.getElementById("console-session")!.contains(sheet)).toBe(true);
+    expect(sheet.classList.contains("focus-sheet")).toBe(true);
     app.closeApp();
   });
 
-  it("habit and goals walk into the one sheet; notes anchors in its own slot (ADR-0050)", () => {
+  it("habit, goals, and notes walk into the one frame; the apps row hosts no panel (ADR-0050, #277)", () => {
     app.render();
-    for (const key of ["habit", "goals"] as const) {
+    for (const key of ["habit", "goals", "notes"] as const) {
       app.openApp(key);
-      // One frame, four faces: the sheet lives under the clock's own
-      // disclosure, whatever face the tile walked in on.
+      // One frame under the clock's own disclosure, whatever the door.
       const sheet = document.getElementById("app-popover")!;
       expect(document.getElementById("console-session")!.contains(sheet)).toBe(true);
-      expect(sheet.querySelector(`[data-face="${key}"]`)!.getAttribute("aria-pressed")).toBe("true");
       app.closeApp();
     }
+    // Nothing anchors in the apps row any more.
     app.openApp("notes");
-    const slot = document.getElementById("app-tile-notes")!.closest(".app-slot")!;
-    expect(slot.querySelector("#app-popover")).not.toBeNull();
-    expect(slot.className).toBe("app-slot");
+    expect(document.getElementById("console-apps")!.querySelector(".app-popover")).toBeNull();
     app.closeApp();
   });
 });
@@ -346,7 +345,7 @@ describe("the feats page's encourager icons (issue #269)", () => {
 });
 
 describe("the app popovers", () => {
-  it("the Focus sheet wears the ruled-folio frame: head, facetabs, close; the notes popover stays bare", () => {
+  it("the Focus sheet wears the ruled-folio frame: head, facetabs, close — and the notes sheet wears its own (#277)", () => {
     app.openApp("habit");
     const sheet = document.getElementById("app-popover")!;
     expect(sheet.querySelector(".focus-head .focus-name")!.textContent).toBe("FOCUS");
@@ -358,10 +357,11 @@ describe("the app popovers", () => {
     expect(sheet.querySelector("details")).toBeNull();
     app.closeApp();
     app.openApp("notes");
-    const popover = document.getElementById("app-popover")!;
-    expect(popover.querySelector(".popover-head")).toBeNull();
-    expect(popover.querySelector("#app-close")).toBeNull();
-    expect(popover.textContent).not.toContain("Focus Controls");
+    const notes = document.getElementById("app-popover")!;
+    expect(notes.querySelector(".focus-head .focus-name")!.textContent).toBe("NOTES");
+    expect(notes.querySelector("#focus-close")).not.toBeNull();
+    expect([...notes.querySelectorAll(".ftab")].map((t) => t.textContent)).toEqual(["CAPTURE", "LOGGED"]);
+    expect(notes.querySelector("details")).toBeNull();
     // Close so the instance's document-level click-away listener never
     // reaches into a later test's DOM.
     app.closeApp();
@@ -779,6 +779,11 @@ describe("the HABIT face's development detail (§9)", () => {
 });
 
 describe("the Notes stream's habit chips (§9)", () => {
+  function openLogged(): void {
+    app.openApp("notes");
+    document.querySelector<HTMLButtonElement>('[data-notes-face="logged"]')!.click();
+  }
+
   it("tagged notes wear their habit; unstructured and between-sessions notes wear none", () => {
     const s = app.state;
     const habit = createHabit(s, "Piano").habit!;
@@ -789,7 +794,7 @@ describe("the Notes stream's habit chips (§9)", () => {
     writeNote(s, "unstructured thought", DAY + 2000);
     endSession(s, DAY + 120_000);
     writeNote(s, "between sessions", DAY + 300_000);
-    app.openApp("notes");
+    openLogged();
     const entries = [...document.querySelectorAll(".note-entry")];
     expect(entries).toHaveLength(3);
     // Newest first: the between-sessions note leads, the tagged one trails.
@@ -802,7 +807,7 @@ describe("the Notes stream's habit chips (§9)", () => {
   it("the stream shows everything it keeps — no recent-window cap", () => {
     const s = app.state;
     for (let i = 0; i < 10; i++) writeNote(s, `note ${i}`, DAY + i * 1000);
-    app.openApp("notes");
+    openLogged();
     const entries = [...document.querySelectorAll(".note-entry")];
     expect(entries).toHaveLength(10);
     // Newest first: the last capture leads.
