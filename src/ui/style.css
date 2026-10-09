@@ -410,13 +410,10 @@ h1, h2, h3, p { margin: 0; }
 .app-tile.locked { cursor: default; }
 .app-tile.locked .app-tile-glyph { color: var(--muted); opacity: 0.6; }
 
-/* App panels open as popovers anchored directly beneath the affordance that
-   discloses them — short mouse travel, and nothing below the console ever
-   moves, reflows, or dims. Every host anchors itself deliberately: the
-   clock sits at the row's left end, the doors at its right, and a 372px
-   panel centered on a far-end anchor hangs past the viewport's right edge —
-   so there is no default centering, and every panel enters without a
-   horizontal shift. */
+/* App sheets open as one plate anchored directly beneath the clock's
+   disclosure (ADR-0050) — the Focus control sheet and the notes sheet are
+   its only tenants (#277): short travel from every door, and nothing below
+   the console ever moves, reflows, or dims. */
 .app-popover {
   position: absolute;
   top: calc(100% + 12px);
@@ -431,10 +428,6 @@ h1, h2, h3, p { margin: 0; }
   z-index: 30;
   animation: popover-in 0.14s ease-out;
 }
-/* Right-anchored hosts: the doors park at the row's right end (before
-   Settings) at every width — centering at the row's far end hangs the
-   372px panel past the viewport's right edge, offscreen. */
-.app-slot .app-popover { left: auto; right: 0; }
 @keyframes popover-in { from { opacity: 0; transform: translateY(-5px); } }
 
 /* ── The Focus control sheet (ADR-0050, issue #275) ── */
@@ -972,12 +965,13 @@ h1, h2, h3, p { margin: 0; }
   background: transparent;
 }
 
-/* ── Inspector ─────────────────────────────────────── */
-/* Rarity reads as text here; on faces it is engraved rings + plate tint
-   (ADR-0016) — the chip stays neutral, never rarity-as-hue. */
-.focus-controls { padding-bottom: 18px; border-bottom: 1px solid var(--line-soft); }
-.focus-controls .eyebrow { display: block; margin-bottom: 12px; }
-.focus-controls .session-actions { margin: 0; }
+/* ── Notes capture and stream (#277) ───────────────── */
+/* The notes sheet's two faces in the Focus frame: the composer over its
+   capture row — the live tag chip riding it during flow, the Note
+   Generator's mechanic in the tooltip layer — and the stream's rows, each
+   led by the mono stamp and the habit chip. */
+.note-capture-row { margin: 10px 0 0; justify-content: flex-end; }
+.note-capture-row .note-live-tag { margin: 0 auto 0 0; font-size: 10px; vertical-align: baseline; }
 
 /* Notes capture during flow: quiet composer and an unobtrusive history. */
 .note-composer {
@@ -993,10 +987,15 @@ h1, h2, h3, p { margin: 0; }
   line-height: 1.5;
 }
 .note-composer:focus { border-color: var(--charge); outline: none; }
-.note-list { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
-.note-entry { border: 1px solid var(--line-soft); border-radius: 8px; padding: 8px 11px; }
-.note-entry .note-when { display: block; font-size: 9px; color: var(--muted); letter-spacing: 0.08em; margin-bottom: 3px; }
-.note-entry p { font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* The stream is ruled rows, not cards (instrument standards): open
+   divisions, hairline separations — the same shape the HABIT detail's
+   tagged notes wear. */
+.note-list { margin-top: 12px; display: flex; flex-direction: column; }
+.note-entry { padding: 8px 0 10px; }
+.note-entry + .note-entry { border-top: 1px solid var(--line-soft); }
+.note-entry .note-when { font-size: 9px; color: var(--muted); letter-spacing: 0.08em; }
+.note-entry .habit-chip { margin: 0 0 0 6px; vertical-align: baseline; }
+.note-entry p { font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; margin: 3px 0 0; }
 
 /* Habit management: the figure-led list drills; rename/archive live in the
    detail head. The shared dot, rename input, and build styles serve the

@@ -64,7 +64,7 @@ import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
 import { allocatedDevScenarioRates, createDevScenario, type DevBoardResult } from "../engine/dev-scenario";
 import type { StressProgress, StressRow } from "../engine/allocation-stress";
 import type { GameState, Hex, ModuleInstance, MutatorFamily, MutatorInstance, NamedChordTerm, Rarity, ShelfType } from "../engine/types";
-import type { FocusFace } from "./focus";
+import type { FocusFace, NotesFace } from "./focus";
 import { render } from "./render";
 import { FAMILY_WORD, mutatorLayerLive, refreshMutPreview } from "./mutators";
 import { HISTORY_PAGE_ROWS, META } from "./meta";
@@ -242,6 +242,10 @@ export interface UiState {
   // action-button form stands, if any. Light furniture — cleared with the
   // transient modes.
   focusForm: FocusForm | null;
+  // The notes sheet's standing face (issue #277): CAPTURE leads — the sheet
+  // opens on it, and any departure (close, another app) puts the tab back.
+  // Light furniture — never saved.
+  notesFace: NotesFace;
   // Session history (§9): the sheet's HISTORY face, its page size, and the
   // record drilled into. Light furniture — cleared with the sheet.
   historyOpen: boolean;
@@ -430,6 +434,7 @@ export class App {
     catalogFace: "nous",
     editingHabitId: null,
     focusForm: null,
+    notesFace: "capture",
     historyOpen: false,
     historyLimit: HISTORY_PAGE_ROWS,
     drillSession: null,
@@ -853,7 +858,10 @@ export class App {
       clickInsideApps = true;
     }, { capture: true, signal: this.signal });
     this.els["console-session"]?.addEventListener("click", (event) => {
-      if ((event.target as Element | null)?.closest(".clock-anchor")) clickInsideApps = true;
+      const target = event.target as Element | null;
+      // Pause/resume belongs to the ongoing capture: keep Notes standing
+      // so the clock transition cannot dismiss an unsaved draft.
+      if (target?.closest(".clock-anchor") || (this.ui.app === "notes" && target?.closest("#pause-flow"))) clickInsideApps = true;
     }, { capture: true, signal: this.signal });
     document.addEventListener("click", () => {
       // A stale instance's closer must never close — or re-render — a newer
@@ -1749,6 +1757,9 @@ export class App {
     // guard stays for a future ladder tenant.
     if (!appActive(this.state, app)) return;
     this.ui.app = this.ui.app === app ? null : app;
+    // The notes sheet opens on CAPTURE (#277): any departure from it — a
+    // close or another app's face standing — puts the tab back.
+    if (this.ui.app !== "notes") this.ui.notesFace = "capture";
     this.ui.placing = null;
     this.resetHistorySurfaces();
     this.render();
@@ -1782,6 +1793,15 @@ export class App {
     this.render();
   }
 
+  // The notes sheet's tab landing (issue #277): CAPTURE and LOGGED are
+  // radio-like, like the Focus sheet's facetabs — a re-press of the
+  // standing face does nothing.
+  showNotesFace(face: NotesFace): void {
+    if (this.ui.app !== "notes" || this.ui.notesFace === face) return;
+    this.ui.notesFace = face;
+    this.render();
+  }
+
   closeApp(): void {
     this.dismissAppPanel();
     this.render();
@@ -1795,6 +1815,7 @@ export class App {
     this.ui.app = null;
     this.ui.editingHabitId = null;
     this.ui.focusForm = null;
+    this.ui.notesFace = "capture";
     this.resetHistorySurfaces();
   }
 
