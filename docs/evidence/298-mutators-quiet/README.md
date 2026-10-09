@@ -1,8 +1,11 @@
 # The quiet Mutators grid — review evidence
 
-Source: issue #298 (this branch's working tree on top of commit
-`81dee00490e41150c4703b95d57a75f0e6acf71d` — the captures include the
-uncommitted quiet-layer work). Launched this checkout with `npm run dev`;
+Source: issue #298 (captures begin on this branch's working tree on top
+of commit `81dee00490e41150c4703b95d57a75f0e6acf71d` and finish on top
+of `afd561167335feab0d69fd679d8f036e46620a2d` — the quiet-layer work
+plus its follow-up fix hiding a covered cell's empty chassis and note
+beneath the slot face, so nothing ghosts through the face's own words).
+Launched this checkout with `npm run dev`;
 the provenance endpoint's `worktree` and `commit` matched `git rev-parse`
 in this checkout before every capture (checked again from the tab itself
 via `fetch("/-/dev/provenance")`). States were staged through the app's
