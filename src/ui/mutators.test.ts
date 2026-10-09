@@ -722,7 +722,7 @@ describe("the mutator entry sequence (issue #274)", () => {
     expect(minted.pos !== null && sameHex(minted.pos, hex(1, 0))).toBe(true);
   });
 
-  it("Esc disarms the slot arm; through Add's normal arm the roll choice still opens on the landing", () => {
+  it("Esc retires the entry automation; Add unlocks the free slot without reopening Forge", () => {
     buyEntry();
     pressEscape();
     expect(app.ui.mutUnlockArmed).toBe(false);
@@ -732,8 +732,38 @@ describe("the mutator entry sequence (issue #274)", () => {
     expect(app.ui.mutUnlockArmed).toBe(true);
     unlockNode(0, 1).dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.state.mutatorSlots).toHaveLength(1);
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.entryRollPending).toBe(false);
+    expect(app.state.bankedMutatorRolls).toHaveLength(1);
+  });
+
+  it("purchase through Hex detail returns to the grid with every free-slot target available", () => {
+    app.state.prestiges = 1;
+    app.state.arete = BALANCE.catalogEntryCost;
+    app.openDetail(hex(0, 0));
+    document.getElementById("detail-mutator-entry")!.click();
+    document.getElementById("buy-arete-entry")!.click();
+    expect(app.ui.detail).toBeNull();
+    expect(app.ui.detailTray).toBeNull();
+    expect(document.body.classList.contains("hex-detail-open")).toBe(false);
+    expect(app.ui.mutLayer).toBe("mutators");
+    expect(app.ui.mutUnlockArmed).toBe(true);
+    expect(document.querySelectorAll("#grid .mut-unlock-target")).toHaveLength(app.state.cells.length);
+  });
+
+  it("a first slot unlocked through Hex detail opens the entry roll and returns placement to the grid", () => {
+    buyEntry();
+    app.openDetail(hex(1, 0), "mutators");
+    document.getElementById("detail-mutator-unlock")!.click();
+    expect(app.state.mutatorSlots).toEqual([hex(1, 0)]);
+    expect(app.ui.mutUnlockArmed).toBe(false);
+    expect(app.ui.detail).toBeNull();
     expect(app.ui.modal).toBe("forge");
-    expect(document.querySelectorAll("#modal-content .mut-candidate")).toHaveLength(2);
+    document.querySelector<HTMLElement>("#modal-content .mut-candidate")!.click();
+    const minted = app.state.mutators[0]!;
+    expect(app.ui.mutArmedTray).toBe(minted.id);
+    clickSlot(1, 0);
+    expect(minted.pos).toEqual(hex(1, 0));
   });
 
   it("closing the Forge modal banks the roll; a later choice keeps the standing landing", () => {

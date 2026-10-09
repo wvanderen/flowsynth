@@ -1205,6 +1205,8 @@ export class App {
     const result = buyCatalogEntry(this.state);
     if (result.ok) {
       this.ui.modal = null;
+      this.ui.detail = null;
+      this.ui.detailTray = null;
       this.ui.mutLayer = "mutators";
       this.mutDisarm();
       this.ui.entryRollPending = true;
@@ -1310,6 +1312,7 @@ export class App {
   }
 
   mutCancelGestures(): void {
+    this.ui.entryRollPending = false;
     this.mutDisarm();
     this.say("Mutator gesture cancelled.");
     this.render();
@@ -1355,22 +1358,7 @@ export class App {
       return;
     }
     if (ui.mutUnlockArmed) {
-      const first = state.mutatorSlots.length === 0;
-      const result = unlockMutatorSlot(state, pos);
-      if (!result.ok) {
-        this.say(result.reason ?? "That cell cannot take a Mutator slot.");
-        this.render();
-        return;
-      }
-      ui.mutUnlockArmed = false;
-      this.say(`Mutator slot unlocked at ${cellNoteOf(pos)}${first ? "" : ` — ${formatInt(state.arete)} Arete left`}.`);
-      // The entry sequence's second step (issue #274): the moment the first
-      // slot lands, the roll choice auto-opens in the existing Forge
-      // modal's mutator block — no bespoke first-roll furniture. Closing
-      // it banks the roll like any banked roll.
-      if (first && ui.entryRollPending && state.bankedMutatorRolls.length > 0) ui.modal = "forge";
-      this.save();
-      this.render();
+      this.mutUnlockAt(pos);
       return;
     }
     if (ui.mutArmedTray !== null) {
@@ -1735,6 +1723,15 @@ export class App {
       this.say(result.reason ?? "That cell cannot take a Mutator slot.");
       this.render();
       return;
+    }
+    this.ui.mutUnlockArmed = false;
+    // Both the grid arm and Hex detail use the entry's first-slot landing.
+    // Return to the grid so the roll choice can arm placement there.
+    if (first && this.ui.entryRollPending && this.state.bankedMutatorRolls.length > 0) {
+      this.ui.detail = null;
+      this.ui.detailTray = null;
+      this.ui.mutLayer = "mutators";
+      this.ui.modal = "forge";
     }
     this.say(`Mutator slot unlocked at ${cellNoteOf(pos)}${first ? "" : ` — ${formatInt(this.state.arete)} Arete left`}.`);
     this.save();
