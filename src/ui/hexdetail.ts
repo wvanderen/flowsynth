@@ -143,7 +143,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   const mutItem = mutatorAt(state, pos);
   const key = JSON.stringify([
     phone,
-    flow,
+    state.mode,
     pos.q,
     pos.r,
     detail.face,
@@ -168,6 +168,12 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
     upgrade ? ui.bulkCount : 0,
     upgrade ? Math.floor(wholeNous(state)) : 0,
     chordRow,
+    module ? snapshot.contributions.get(module.id) : null,
+    snapshot.achievementBoost,
+    snapshot.discoveryBoost,
+    snapshot.ritualAmplification,
+    state.habits.find((habit) => habit.id === state.activeHabitId && !habit.archived)?.build,
+    state.activeHabitId,
   ]);
   if (host.dataset.renderKey === key) {
     host.hidden = false;
@@ -187,10 +193,10 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   host.dataset.renderKey = key;
   host.classList.toggle("sheet", phone);
   host.innerHTML = `
-    <div class="hex-detail-scene${flow ? " readonly" : ""}" data-face="${detail.face}">
+    <div class="hex-detail-scene${flow ? " readonly" : ""}${state.mode === "flow" ? " flow-live" : ""}" data-face="${detail.face}">
       <div class="hex-detail-corner">
         <button class="hex-detail-return" id="hex-detail-return" title="Return to the grid">Return</button>
-        ${flow ? `<span class="hex-detail-readonly">flow live · read-only</span>` : ""}
+        ${flow ? `<span class="hex-detail-readonly">${state.mode === "flow" ? "flow live" : "paused"} · read-only</span>` : ""}
       </div>
       <div class="hex-detail-grid">
         ${mutatorLayerHtml(app, pos, snapshot)}

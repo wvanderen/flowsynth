@@ -5,7 +5,7 @@ import type { App } from "./app";
 import { createAppFixture, clickCell } from "./testing/app-fixture";
 import { give } from "../engine/fixtures";
 import { hex } from "../engine/hex";
-import { endSession, startSession } from "../engine/actions";
+import { endSession, pauseSession, resumeSession, startSession } from "../engine/actions";
 import { displayedRates } from "../engine/economy";
 import type { MutatorFamily, MutatorInstance, Rarity } from "../engine/types";
 import { renderHexDetail } from "./hexdetail";
@@ -324,9 +324,9 @@ describe("wave motion and stillness (issue #297)", () => {
     app.render();
     clickCell(0, 0);
     expect(trigger("chord").querySelector(".flow-pulse")).not.toBeNull();
-    // …motion keys to the readonly scene's active waves…
+    // …motion keys to the live flow scene's active waves…
     expect(css).toMatch(
-      /@media \(prefers-reduced-motion: no-preference\)\s*\{\s*\.hex-detail-scene\.readonly \.flow-active \.flow-pulse\s*\{[^}]*animation:\s*flow-dash/,
+      /@media \(prefers-reduced-motion: no-preference\)\s*\{\s*\.hex-detail-scene\.flow-live \.flow-active \.flow-pulse\s*\{[^}]*animation:\s*flow-dash/,
     );
     // …and stays hidden outside it, so upgrade's projected waves stand still.
     expect(css).toMatch(/\.flow-pulse\s*\{[^}]*opacity:\s*0/);
@@ -365,5 +365,89 @@ describe("live rebuild (issue #297)", () => {
     // The keyboard stayed with the connection through the rebuild.
     expect(document.activeElement).toBe(rebuilt);
     endSession(app.state);
+  });
+});
+
+
+describe("PR #304 review regressions", () => {
+  it("SVG and path taps pin the breakdown, and SVG hover opens it", () => {
+    app.render();
+    clickCell(0, 0);
+    const node = trigger("charge");
+    const body = breakdownOf(node);
+    node.querySelector("svg")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(node.getAttribute("aria-expanded")).toBe("true");
+    expect(body.classList.contains("inst-show")).toBe(true);
+    node.querySelector("path")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(node.getAttribute("aria-expanded")).toBe("false");
+    node.querySelector("path")!.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+    expect(body.classList.contains("inst-show")).toBe(true);
+  });
+
+  it("the left charge arrow points right and the right chord arrow points left", () => {
+    app.render();
+    clickCell(0, 0);
+    expect(trigger("charge").querySelector("g[transform]")).toBeNull();
+    expect(trigger("chord").querySelector("g")!.getAttribute("transform")).toBe("scale(-1 1) translate(-56 0)");
+  });
+
+  it("pausing stops live motion and resuming restores it with unchanged chord output", () => {
+    seedEra();
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, 600);
+    app.render();
+    clickCell(0, 0);
+    expect(detail().querySelector(".flow-live")).not.toBeNull();
+    pauseSession(app.state);
+    app.render();
+    expect(detail().querySelector(".flow-live")).toBeNull();
+    expect(trigger("mutator").classList.contains("flow-active")).toBe(true);
+    resumeSession(app.state);
+    app.render();
+    expect(detail().querySelector(".flow-live")).not.toBeNull();
+    endSession(app.state);
+  });
+
+  it.each(["forge", "mutatorForge", "amplifier"] as const)("%s explains its actual charge formula", (type) => {
+    const module = give(app.state, type, hex(0, 1));
+    module.level = 2;
+    give(app.state, "focusKeyed", hex(1, 1)).reserve = 100;
+    app.render();
+    clickCell(0, 1);
+    const body = breakdownOf(trigger("charge"));
+    const snap = displayedRates(app.state, true);
+    const strength = snap.chargeStrength.get(module.id)!;
+    expect(strength).toBeGreaterThan(0);
+    expect(body.textContent).not.toContain("Charged empowerment");
+    if (type === "amplifier") {
+      expect(body.textContent).toContain("Relay gain×1.4");
+      expect(body.textContent).toContain(`Relay strength⌁${formatNumber(strength * 1.4)}`);
+    } else {
+      expect(body.textContent).toContain("Build forge efficiency");
+      expect(body.textContent).toContain(`+${formatNumber(snap.contributions.get(module.id)!.value)} progress/s`);
+    }
+  });
+
+  it("all oscillator breakdowns include external production terms and update when bonuses change", () => {
+    seedEra();
+    give(app.state, "infusor", hex(0, 1));
+    app.state.habits.push({ id: "review-habit", name: "Practice", seconds: 1000000, archived: false, build: ["weights", "steady-hand"] });
+    app.state.activeHabitId = "review-habit";
+    app.state.achievements["first-light"] = 1000;
+    app.render();
+    clickCell(0, 0);
+    const snap = displayedRates(app.state, true);
+    for (const kind of ["mutator", "charge", "chord"] as const) {
+      const body = breakdownOf(trigger(kind));
+      expect(body.textContent).toContain("Build synth term×1.05");
+      expect(body.textContent).toContain(`Booster uplift×${formatNumber(1 + snap.contributions.get("m1")!.infusorBonus)}`);
+      expect(body.textContent).toContain(`Achievement bonus×${formatNumber(snap.achievementBoost)}`);
+      expect(body.textContent).toContain(`Discovery bonus×${formatNumber(snap.discoveryBoost)}`);
+      expect(body.querySelectorAll(".result")).toHaveLength(1);
+    }
+    const changed = displayedRates(app.state, true);
+    changed.discoveryBoost = 1.3;
+    renderHexDetail(app, changed, changed, "");
+    expect(breakdownOf(trigger("charge")).textContent).toContain("Discovery bonus×1.3");
   });
 });

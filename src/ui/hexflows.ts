@@ -24,11 +24,13 @@
 // face.ts shared reads and the engine's own functions publish — never a
 // second source). Inert relationships draw quiet dashed waves; live ones
 // solid — the state survives greyscale. The shapes are static; motion
-// rides flow only (the scene's readonly class), and reduced motion keeps
+// rides flow only (the scene's flow-live class), and reduced motion keeps
 // the static wave.
-import { CHARGE_RECEIVING_CATEGORIES, CATEGORY_OF } from "../engine/constants";
-import { blasterConversion, chargedFactor, emittedStrength, hostPower, modulePower, mutatorAt, mutatorMagnitude, ritualAmpOf } from "../engine/economy";
+import { BALANCE, CHARGE_RECEIVING_CATEGORIES, CATEGORY_OF } from "../engine/constants";
+import { chargedFactor, emittedStrength, hostPower, modulePower, mutatorAt, mutatorMagnitude, ritualAmpOf } from "../engine/economy";
 import type { GameState, ModuleInstance, RateSnapshot } from "../engine/types";
+import { buildFactorsFor } from "../engine/builds";
+import { activeHabit } from "../engine/habits";
 import { CHORD_HUES } from "./chordlayer";
 import { formatNumber } from "./format";
 import { boosterUpliftOf, relayStrengthOf } from "./face";
@@ -51,7 +53,9 @@ const WAVE_PATHS = (wave: string, arrow: string): string =>
 
 function waveSvg(dir: "down" | "in-left" | "in-right", color: string): string {
   const down = dir === "down";
-  const body = down ? WAVE_PATHS(WAVE_DOWN, ARROW_DOWN) : `<g transform="scale(-1 1) translate(-56 0)">${WAVE_PATHS(ZIGZAG_IN, ARROW_IN)}</g>`;
+  const horizontal = WAVE_PATHS(ZIGZAG_IN, ARROW_IN);
+  const body = down ? WAVE_PATHS(WAVE_DOWN, ARROW_DOWN)
+    : dir === "in-right" ? `<g transform="scale(-1 1) translate(-56 0)">${horizontal}</g>` : horizontal;
   return `<svg viewBox="${down ? "0 0 64 44" : "0 0 56 40"}" aria-hidden="true" style="color:${color}">${body}</svg>`;
 }
 
@@ -80,6 +84,45 @@ function outcomeRow(state: GameState, module: ModuleInstance, snapshot: RateSnap
   if (module.type === "forge") return row("Forge", `+${formatNumber(contribution?.value ?? 0)} progress/s`, "result");
   if (module.type === "mutatorForge") return row("Mutator Forge", `+${formatNumber(contribution?.value ?? 0)} progress/s`, "result");
   return "";
+}
+
+// Use the same build derivation and published contribution terms as the
+// production pass. Each relationship ends with the host's calculation,
+// including external bonuses, followed by exactly one outcome.
+function productionRows(state: GameState, module: ModuleInstance, snapshot: RateSnapshot, relationship: "mutator" | "charge" | "chord"): string[] {
+  const category = CATEGORY_OF[module.type];
+  const contribution = snapshot.contributions.get(module.id);
+  const strength = snapshot.chargeStrength.get(module.id) ?? 0;
+  const factors = buildFactorsFor(activeHabit(state), snapshot.ritualAmplification);
+  const rows: string[] = [];
+  const multiplier = (label: string, value: number) => rows.push(row(label, `×${formatNumber(value)}`));
+  if (category === "oscillator") {
+    rows.push(row("Base output", `${formatNumber(BALANCE.synthRate)} ν/s`));
+    multiplier("Host power", hostPower(state, module));
+    if (relationship !== "chord") multiplier("Chord factor", contribution?.chordFactor ?? 1);
+    multiplier("Build synth term", 1 + factors.synthTerm);
+    multiplier("Booster uplift", 1 + (contribution?.infusorBonus ?? 0));
+    multiplier(module.type === "blaster" ? "Charge conversion" : "Charged empowerment", contribution?.chargeFactor ?? 1);
+    multiplier("Achievement bonus", snapshot.achievementBoost);
+    multiplier("Discovery bonus", snapshot.discoveryBoost);
+  } else if (category === "forge") {
+    if (relationship !== "charge") rows.push(row("Incoming charge", `⌁${formatNumber(strength)}`));
+    multiplier("Host power", hostPower(state, module));
+    multiplier("Build forge efficiency", 1 + factors.forgeEfficiency);
+  } else if (module.type === "amplifier") {
+    if (relationship !== "charge") rows.push(row("Incoming charge", `⌁${formatNumber(strength)}`));
+    multiplier("Relay gain", 1 + BALANCE.amplifierGainPerLevel * module.level);
+  } else if (module.type === "infusor") {
+    rows.push(row("Base uplift", `+${formatNumber(100 * BALANCE.infusorBonus)}%`));
+    multiplier("Host power", hostPower(state, module));
+    multiplier("Charged empowerment", chargedFactor(strength));
+  } else if (module.type === "ritual") {
+    rows.push(row("Base amplification", `+${formatNumber(BALANCE.ritualAmpPerLevel * module.level)}`));
+    multiplier("Charged empowerment", chargedFactor(strength));
+  } else if (category === "generator" && factors.generatorStrength !== 0) {
+    rows.push(row("Build generator strength", `+${formatNumber(factors.generatorStrength)}`));
+  }
+  return rows;
 }
 
 function breakdownHtml(rows: string[], bodyId: string): string {
@@ -125,7 +168,7 @@ export function mutatorFlowHtml(state: GameState, pos: { q: number; r: number },
       rows.push(row("Folded into received charge", `×${formatNumber(1 + magnitude)}`));
     }
   }
-  if (module) rows.push(outcomeRow(state, module, snapshot, flow));
+  if (module) rows.push(...productionRows(state, module, snapshot, "mutator"), outcomeRow(state, module, snapshot, flow));
   return flowTipHtml("mutator", "between", {
     active: !inert,
     label: `${FAMILY_WORD[item.family]} mutator effect${inert ? ` — ${inert}` : ""}`,
@@ -161,12 +204,10 @@ function chargeFlowHtml(state: GameState, module: ModuleInstance, snapshot: Rate
     if (mutator && mutator.family === "charge") {
       rows.push(row("Charge mutator folded in", `×${formatNumber(1 + mutatorMagnitude("charge", mutator.rarity))}`));
     }
-    const factor = module.type === "blaster" ? blasterConversion(strength) : chargedFactor(strength);
-    rows.push(row(module.type === "blaster" ? "Charge conversion" : "Charged empowerment", `×${formatNumber(factor)}`));
   } else {
     rows.push(row("Incoming charge", "⌁0", "inert"));
   }
-  rows.push(outcomeRow(state, module, snapshot, flow));
+  rows.push(...productionRows(state, module, snapshot, "charge"), outcomeRow(state, module, snapshot, flow));
   return flowTipHtml("charge", "left", {
     active,
     label: "Incoming charge",
@@ -199,7 +240,7 @@ function chordFlowHtml(state: GameState, module: ModuleInstance, snapshot: RateS
   }
   // A silent voice produces nothing of its own: its factor is the display
   // read the relationship rows already carry, never a second outcome line.
-  if (!silent) rows.push(outcomeRow(state, module, snapshot, flow));
+  if (!silent) rows.push(...productionRows(state, module, snapshot, "chord"), outcomeRow(state, module, snapshot, flow));
   // The hue is the active named chord's own — the chord row's grammar.
   // Inert, no chord is named: the muted wire, never a specific chord's.
   const chordName = active ? snapshot.namedChords.find((term) => term.moduleIds.includes(module.id))?.name : undefined;

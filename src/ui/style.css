@@ -2076,7 +2076,7 @@ body.hex-detail-open .upgrade-all {
   pointer-events: none;
 }
 @media (prefers-reduced-motion: no-preference) {
-  .hex-detail-scene.readonly .flow-active .flow-pulse { opacity: 0.9; animation: flow-dash 1.4s linear infinite; }
+  .hex-detail-scene.flow-live .flow-active .flow-pulse { opacity: 0.9; animation: flow-dash 1.4s linear infinite; }
 }
 @keyframes flow-dash { to { stroke-dashoffset: -48; } }
 /* The breakdown: the relationship's calculation in authoritative
