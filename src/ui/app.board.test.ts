@@ -1511,6 +1511,102 @@ describe("the dev panel's synth grant (#137)", () => {
   });
 });
 
+// The dev console's drag handle (ADR-0050, issue #276): the ⠿ grip —
+// pointer-captured, clamped to the stage, pointer and touch alike.
+describe("the dev console's drag handle", () => {
+  const pointer = (type: string, target: EventTarget, x: number, y: number): void => {
+    target.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 1 }));
+  };
+
+  // happy-dom lays out nothing — every rect reads zero — so the stage and
+  // the panel wear known boxes: stage 1000×800 at the origin, panel 300×40
+  // resting at (12, 700).
+  const stubBoxes = (): void => {
+    const appEl = document.getElementById("app")!;
+    appEl.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 1000, height: 800 }) as DOMRect;
+    const panel = document.getElementById("dev-panel")!;
+    panel.getBoundingClientRect = () =>
+      ({ left: 12, top: 700, width: 300, height: 40 }) as DOMRect;
+    Object.defineProperty(panel, "offsetWidth", { configurable: true, value: 300 });
+    Object.defineProperty(panel, "offsetHeight", { configurable: true, value: 40 });
+  };
+
+  it("the ⠿ grip leads the panel; a drag moves the panel and clamps it to the stage", () => {
+    app = boot(undefined, true);
+    app.render();
+    const panel = document.getElementById("dev-panel")!;
+    const grip = document.getElementById("dev-grip")!;
+    expect(panel.firstElementChild).toBe(grip);
+    expect(grip.textContent).toBe("⠿");
+    stubBoxes();
+    // The drag: press on the grip, carry the pointer, release.
+    pointer("pointerdown", grip, 100, 500);
+    pointer("pointermove", document, 160, 420);
+    expect(panel.style.left).toBe("72px"); // 12 + 60
+    expect(panel.style.top).toBe("620px"); // 700 − 80
+    expect(panel.style.bottom).toBe("auto");
+    pointer("pointerup", document, 160, 420);
+    // A move with no live gesture is dead.
+    const left = panel.style.left;
+    pointer("pointermove", document, 400, 100);
+    expect(panel.style.left).toBe(left);
+    // Way past the stage: the clamp holds the panel inside — stage minus
+    // the panel's own box, never less than the margin.
+    pointer("pointerdown", grip, 160, 420);
+    pointer("pointermove", document, 9_000, 9_000);
+    expect(panel.style.left).toBe("696px"); // 1000 − 300 − 4
+    expect(panel.style.top).toBe("756px"); // 800 − 40 − 4
+    pointer("pointercancel", document, 9_000, 9_000);
+  });
+
+  it("the gesture survives a render between moves; the position persists", () => {
+    app = boot(undefined, true);
+    app.render();
+    const panel = document.getElementById("dev-panel")!;
+    const grip = document.getElementById("dev-grip")!;
+    stubBoxes();
+    let capturedPointer: number | null = null;
+    panel.setPointerCapture = (id) => { capturedPointer = id; };
+    pointer("pointerdown", grip, 100, 500);
+    expect(capturedPointer).toBe(1);
+    pointer("pointermove", document, 140, 460);
+    // A render (a tick's, any pass) rebuilds the panel's buttons but never
+    // the panel — the drag keeps its origin, the position stays put.
+    app.render();
+    expect(document.getElementById("dev-grip")).not.toBe(grip);
+    expect(panel.isConnected).toBe(true);
+    expect(capturedPointer).toBe(1);
+    pointer("pointermove", document, 180, 420);
+    expect(panel.style.left).toBe("92px"); // 12 + 80
+    pointer("pointerup", document, 180, 420);
+    app.render();
+    expect(panel.style.left).toBe("92px");
+    pointer("pointerdown", document.getElementById("dev-grip")!, 180, 420);
+    panel.dispatchEvent(new PointerEvent("lostpointercapture", { pointerId: 1 }));
+    pointer("pointermove", document, 300, 420);
+    expect(panel.style.left).toBe("92px");
+  });
+
+  it("fits the phone stage and clamps the wrapped console within its bounds", () => {
+    app = boot(undefined, true);
+    const stage = document.getElementById("app")!;
+    stage.getBoundingClientRect = () => ({ left: 0, top: 0, width: 390, height: 844 }) as DOMRect;
+    app.render();
+    const panel = document.getElementById("dev-panel")!;
+    expect(panel.style.maxWidth).toBe("366px");
+    expect(panel.style.maxHeight).toBe("836px");
+    panel.getBoundingClientRect = () => ({ left: 12, top: 700, width: 366, height: 80 }) as DOMRect;
+    Object.defineProperty(panel, "offsetWidth", { configurable: true, value: 366 });
+    Object.defineProperty(panel, "offsetHeight", { configurable: true, value: 80 });
+    pointer("pointerdown", document.getElementById("dev-grip")!, 20, 710);
+    pointer("pointermove", document, 9000, 9000);
+    expect(panel.style.left).toBe("20px");
+    expect(panel.style.top).toBe("760px");
+    pointer("pointerup", document, 9000, 9000);
+  });
+});
+
 // The bulk upgrade controls (issue #195, the #173 contract): the face
 // button, the Upgrade All cluster, and the expanded face's dial — one
 // shared ladder (+1 / +5 / +10 / MAX), partial by design, upgrade-mode-only.

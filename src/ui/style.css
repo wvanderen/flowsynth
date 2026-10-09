@@ -352,10 +352,43 @@ h1, h2, h3, p { margin: 0; }
 .session-actions button { white-space: nowrap; }
 .session-actions button svg { width: 13px; height: 13px; flex-shrink: 0; }
 
-/* Focus-app tiles (ADR-0012): consistently sized icon-only controls
-   (issue #148) — the state text is gone, so the three tiles read as one
-   instrument. Monochrome — panel access reads as ink, never hue. Locked
-   tiles open nothing. */
+/* The focus banner's reads (ADR-0050): beside the switch, the session's
+   focus state — the active habit's name and the goal-progress bars. Reads,
+   never controls: the bars bias in-progress goals (nearest complete
+   leading, completed occurrences closing) and past the three-bar budget a
+   +N count answers; live during flow, mutating nothing. The prototype's
+   register: open bars wear the switch vermillion, completed bars the charge
+   green — state readable without either (the +N chip is text, the done
+   bars hold their full width). The phone banner drops the reads for bare
+   launchers (ADR-0050's phone line). */
+.banner-reads {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  flex-shrink: 0;
+  min-width: 0;
+}
+.bread {
+  font: 600 13px var(--font-condensed);
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 18ch;
+}
+.gbars { display: flex; flex-direction: column; gap: 4px; width: 92px; flex-shrink: 0; }
+.gbar { display: block; height: 3px; background: var(--line-soft); overflow: hidden; }
+.gbar i { display: block; height: 100%; background: var(--switch); }
+.gbar.done i { background: var(--charge); }
+.gbar-overflow { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+
+/* Focus-app doors (ADR-0012): bare uncarded icon controls — the state
+   text is gone, so the tiles read as one instrument. Monochrome — panel
+   access reads as ink, never hue. Locked doors open nothing. The firm
+   inset marker is the open state (the state grammar's selected voice),
+   the sheet-open marker the phone line names (ADR-0050). */
 .console-apps { display: flex; align-items: center; flex-shrink: 0; }
 .app-tiles { display: flex; gap: 3px; }
 .app-slot { position: relative; display: flex; }
@@ -371,67 +404,19 @@ h1, h2, h3, p { margin: 0; }
   background: transparent;
 }
 .app-tile:hover:not(.locked), .app-tile.open { border-color: var(--line); background: var(--panel); }
+.app-tile.open { box-shadow: inset 0 -2px var(--ink); }
 .app-tile-glyph { display: flex; align-items: center; gap: 6px; color: var(--ink); }
 .app-tile-glyph svg { width: 19px; height: 19px; display: block; }
 .app-tile.locked { cursor: default; }
 .app-tile.locked .app-tile-glyph { color: var(--muted); opacity: 0.6; }
 
-/* The phone launcher (issue #149): one compact control that keeps Habit,
-   Notes, and Goals reachable below the 600px line — the tiles stay docked
-   out there, the clock keeps the Time entry, and the header holds its one
-   row. Desktop docks the whole slot out; the tiles stand instead. */
-.app-launcher-slot { position: relative; display: none; }
-.app-launcher {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
-}
-.app-launcher svg { width: 19px; height: 19px; display: block; }
-.app-launcher:hover, .app-launcher[aria-expanded="true"] { border-color: var(--line); background: var(--panel); }
-/* The open menu: a compact column of app entries right-anchored under the
-   launcher — the header's one row is never joined by a second. */
-.app-launcher-menu {
-  position: absolute;
-  top: calc(100% + 12px);
-  right: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 208px;
-  padding: 6px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  box-shadow: 0 18px 50px var(--shadow);
-  z-index: 30;
-  animation: popover-in 0.14s ease-out;
-}
-.app-launcher-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 10px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  text-align: left;
-}
-.app-launcher-item svg { width: 19px; height: 19px; flex-shrink: 0; }
-.app-launcher-word { font-size: 13px; font-weight: 600; }
-.app-launcher-item:hover:not(:disabled) { border-color: var(--line); background: var(--panel-soft); }
-
 /* App panels open as popovers anchored directly beneath the affordance that
    discloses them — short mouse travel, and nothing below the console ever
    moves, reflows, or dims. Every host anchors itself deliberately: the
-   clock sits at the row's left end, the tiles and the launcher at its
-   right, and a 372px panel centered on a far-end anchor hangs past the
-   viewport's right edge — so there is no default centering, and every
-   panel enters without a horizontal shift. */
+   clock sits at the row's left end, the doors at its right, and a 372px
+   panel centered on a far-end anchor hangs past the viewport's right edge —
+   so there is no default centering, and every panel enters without a
+   horizontal shift. */
 .app-popover {
   position: absolute;
   top: calc(100% + 12px);
@@ -446,12 +431,10 @@ h1, h2, h3, p { margin: 0; }
   z-index: 30;
   animation: popover-in 0.14s ease-out;
 }
-/* Right-anchored hosts: the tiles park at the row's right end (before
-   Settings) at every width, and below the phone line the launcher hosts
-   the panels instead (issue #149) — centering at the row's far end hangs
-   the 372px panel past the viewport's right edge, offscreen. */
-.app-slot .app-popover,
-.app-launcher-slot .app-popover { left: auto; right: 0; }
+/* Right-anchored hosts: the doors park at the row's right end (before
+   Settings) at every width — centering at the row's far end hangs the
+   372px panel past the viewport's right edge, offscreen. */
+.app-slot .app-popover { left: auto; right: 0; }
 @keyframes popover-in { from { opacity: 0; transform: translateY(-5px); } }
 
 /* ── The Focus control sheet (ADR-0050, issue #275) ── */
@@ -3012,6 +2995,12 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 /* ── Dev panel ─────────────────────────────────────── */
 
 .dev-panel {
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 8px);
+  overflow: auto;
+  flex-wrap: wrap;
   position: fixed;
   left: 12px;
   bottom: 56px;
@@ -3026,6 +3015,26 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 }
 .dev-panel span { font: 9px var(--mono); letter-spacing: 0.1em; color: var(--forge-glow); margin-right: 4px; }
 .dev-panel button { padding: 4px 8px; font-size: 11px; font-family: var(--mono); }
+/* The drag handle (ADR-0050): the ⠿ grip leading the panel — the move
+   affordance, pointer-captured and clamped to the stage. Chrome reset to
+   the panel's own face; grab/grabbing announce the gesture. */
+.dev-grip {
+  cursor: grab;
+  touch-action: none;
+  display: grid;
+  place-items: center;
+  padding: 0 7px;
+  min-height: 28px;
+  min-width: 22px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+.dev-grip:hover:not(:disabled) { background: none; color: var(--ink); }
+.dev-grip:active { cursor: grabbing; }
 
 /* ── Dev allocation board (#257) ───────────────────── */
 /* A development-only instrument panel: one flat panel, open divisions,
@@ -3158,6 +3167,10 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   .main-switch svg { width: 14px; height: 14px; }
   /* Pause keeps its icon; the word yields to the row's width budget. */
   #pause-flow span { display: none; }
+  /* The banner reads compact in place: narrower bars, a shorter name. */
+  .banner-reads { gap: 8px; }
+  .gbars { width: 64px; }
+  .bread { max-width: 12ch; }
 }
 
 @container app (width < 760px) {
@@ -3175,15 +3188,15 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 }
 
 @container app (width < 600px) {
-  /* Portrait phone (§7): the composition re-docks. Top nav = session
-     controls plus the app launcher (issue #149) — brand glyph, clock,
-     switch, launcher, settings — with the icon-only tiles docked out: the
-     launcher's menu opens Habit, Notes, and Goals from one compact control,
-     its panel popover anchoring beneath the launcher, and the clock's Time
-     popover anchors to the clock itself. Production reads move to the
-     board-surface game-info strip; the icon dock becomes the bottom thumb
-     bar with Inventory and Feats folded in; the Hex detail presents as a
-     bottom sheet (issue #295). */
+  /* Portrait phone (§7): the composition re-docks. The phone banner is
+     launchers only (ADR-0050's amended phone line): brand glyph, clock,
+     switch, then the bare uncarded doors — focus, Notes — with Settings at
+     the row's end. The banner reads (habit name, goal bars) drop entirely,
+     and the compact launcher retires with them: the focus door's sheet
+     carries the Habit and Goals faces, its inset marker the sheet-open
+     state. Production reads move to the board-surface game-info strip; the
+     icon dock becomes the bottom thumb bar with Inventory and Collection
+     folded in; the Hex detail presents as a bottom sheet (issue #295). */
   .console { height: 56px; padding: 0 10px; gap: 8px; }
   /* The Focus sheet pins to the container's own margins on phone: the
      clock anchor sits one brand glyph in, so the absolute anchor would run
@@ -3196,16 +3209,17 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   }
   .brand svg { width: 24px; height: 24px; }
   .console-session { flex: 0 0 auto; gap: 8px; }
-  /* The clock hugs its content here: the 150px desktop reserve plus the
-     launcher would crowd a 320px device, and the row must never wrap. */
+  /* The banner reads drop for the bare launchers (ADR-0050's phone line):
+     the clock, the switch, and the uncarded doors carry the row alone. */
+  .banner-reads { display: none; }
+  /* The clock hugs its content here: the 150px desktop reserve would crowd
+     a 320px device, and the row must never wrap. */
   .console-clock { min-width: 0; min-height: 0; padding: 2px 6px; }
   .clock-provisional { display: none; }
   .main-switch { padding: 9px 11px; }
   .main-switch span { display: none; }
-  .app-tiles { display: none; }
-  .app-launcher-slot { display: flex; }
-  /* The launcher rides with Settings at the row's right end: the session
-     cluster ends at the switch, and the auto margin moves to the launcher. */
+  /* The doors ride with Settings at the row's right end: the session
+     cluster ends at the switch, and the auto margin moves to the doors. */
   .console-apps { margin-left: auto; }
   #console-settings { margin-left: 0; }
   .board-ledger { display: none; }

@@ -2,10 +2,8 @@
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
 import type { App } from "./app";
-import { createHabit, selectHabit } from "../engine/habits";
-import { createGoal, accrueGoalProgress, rollGoalOccurrences } from "../engine/goals";
 import { BALANCE } from "../engine/constants";
-import { startSession, endSession } from "../engine/actions";
+import { startSession } from "../engine/actions";
 import { give } from "../engine/fixtures";
 import { hex } from "../engine/hex";
 import { formatFixed, formatInt } from "./format";
@@ -422,11 +420,11 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     setAppWidth(390);
   });
 
-  it("the top nav holds session controls only; the clock's Time popover anchors to the clock", () => {
+  it("the top nav holds session controls and bare doors; the clock's popover anchors to the clock", () => {
     app.render();
-    // At rest the icon-only tiles hide — session controls only (§7) — and
-    // they stay hidden: the Time popover anchors beneath the clock's own
-    // disclosure (issue #148), not beneath a tile in the apps row.
+    // The Focus sheet anchors beneath the clock's own disclosure (issue
+    // #148) — never beneath a door in the apps row (ADR-0050's phone line
+    // keeps the doors out of the session cluster).
     document.getElementById("clock-plan")!.click();
     expect(app.ui.app).toBe("time");
     const popover = document.getElementById("app-popover")!;
@@ -552,204 +550,92 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
   });
 });
 
-describe("the phone launcher (§7, issue #149)", () => {
+describe("the phone banner (ADR-0050's amended phone line)", () => {
   beforeEach(() => {
     setAppWidth(390);
   });
 
-  // Every open/close rebuilds the console's app section, so the launcher
-  // and its entries are re-queried per interaction — a held node goes stale
-  // the moment the render that answered it replaces the markup.
-  const launcher = () => document.getElementById("app-launcher")!;
-  const entry = (key: string) => document.getElementById(`app-launcher-${key}`)!;
+  // The doors re-render with the console's app section; re-query per
+  // interaction — a held node goes stale the moment the render that
+  // answered it replaces the markup.
+  const door = (key: string) => document.getElementById(`app-tile-${key}`)!;
 
-  it("one compact control opens Habit, Notes, and Goals; each app opens and dismisses without a second header row", () => {
+  it("bare launcher icons only: the focus door and Notes beside the clock, switch, and Settings", () => {
     app.render();
-    expect(launcher().getAttribute("aria-expanded")).toBe("false");
-    // The tiles stay docked out below the line; the launcher hosts the apps
-    // in their place — the menu first, then the entry's own surface.
-    // Habit and Goals walk into the Focus sheet under the clock (ADR-0050);
-    // Notes is the one panel the launcher still hosts itself.
-    for (const key of ["habit", "goals"] as const) {
-      launcher().click();
-      expect(app.ui.launcherOpen).toBe(true);
-      expect(launcher().getAttribute("aria-expanded")).toBe("true");
-      entry(key).click();
-      expect(app.ui.app).toBe(key);
-      const sheet = document.getElementById("app-popover")!;
-      expect(document.getElementById("console-session")!.contains(sheet)).toBe(true);
-      expect(document.getElementById("console-apps")!.contains(sheet)).toBe(false);
-      // The launcher always means its menu: the sheet gives way, and a
-      // second press closes. Click-away and Esc land in the same place.
-      launcher().click();
-      expect(app.ui.app).toBeNull();
-      expect(document.getElementById("app-popover")).toBeNull();
-      launcher().click();
-      expect(app.ui.launcherOpen).toBe(false);
-      expect(launcher().getAttribute("aria-expanded")).toBe("false");
-      expect(document.getElementById("app-launcher-menu")).toBeNull();
+    // The doors: exactly focus + Notes — the compact launcher retired with
+    // ADR-0033, and Habit and Goals live in the sheet's faces behind the
+    // focus door.
+    expect([...document.querySelectorAll("#console-apps .app-tile")].map((t) => t.id)).toEqual([
+      "app-tile-focus",
+      "app-tile-notes",
+    ]);
+    expect(document.getElementById("app-launcher")).toBeNull();
+    expect(document.getElementById("app-launcher-menu")).toBeNull();
+    // The nav row's full roster: brand, clock, switch, doors, Settings —
+    // every launcher surface a native button.
+    const row = () => document.querySelector("header.console")!;
+    for (const id of ["clock-plan", "flow-switch", "app-tile-focus", "app-tile-notes", "console-settings"]) {
+      expect(row().contains(document.getElementById(id)!)).toBe(true);
+      expect(document.getElementById(id)!.tagName).toBe("BUTTON");
     }
-    launcher().click();
-    entry("notes").click();
-    expect(app.ui.app).toBe("notes");
-    const panel = document.getElementById("app-launcher-popover")!;
-    expect(document.getElementById("console-apps")!.contains(panel)).toBe(true);
-    launcher().click();
-    expect(app.ui.app).toBeNull();
-    expect(document.getElementById("app-launcher-popover")).toBeNull();
-    launcher().click();
-    expect(app.ui.launcherOpen).toBe(false);
-  });
-
-  it("the menu dismisses by click-away and Escape; opening it lands focus on the first entry for keyboard callers", () => {
-    app.render();
-    launcher().click();
-    expect(document.activeElement).toBe(document.getElementById("app-launcher-habit"));
-    document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.ui.launcherOpen).toBe(false);
-    expect(document.querySelector("#app-launcher-menu")).toBeNull();
-    // Escape unwinds the menu, and the panel once an app stands open.
-    launcher().click();
-    entry("notes").click();
-    expect(document.querySelector("#app-launcher-popover")).not.toBeNull();
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    expect(app.ui.app).toBeNull();
-    expect(document.querySelector("#app-launcher-popover")).toBeNull();
-  });
-
-  it("the phone nav carries no Goals-state read — the tracker state lives desktop-only, in the sheet's head (ADR-0033 amended)", () => {
-    app.render();
-    const goalsEntry = () => {
-      if (!app.ui.launcherOpen) launcher().click();
-      return document.getElementById("app-launcher-goals")!;
-    };
-    // The entry is bare: icon and label, no state pip, no state word.
-    expect(goalsEntry().getAttribute("aria-label")).toBe("Goals app");
-    expect(document.querySelector(".launcher-goal-state")).toBeNull();
-    // The tracked state cycles beneath it without the entry ever wearing it.
-    createGoal(app.state, { habitId: null, minutes: 20, schedule: "daily", now: 1_000 });
-    accrueGoalProgress(app.state, null, 20 * 60);
-    app.render();
-    expect(goalsEntry().getAttribute("aria-label")).toBe("Goals app");
-    expect(document.querySelector(".launcher-goal-state")).toBeNull();
-    // The read's one home is the sheet's head: the GOALS face names the
-    // tracker state, and the console row never reads an aggregate.
-    setAppWidth(1200);
-    app.render();
-    app.showFocusFace("goals");
-    expect(document.querySelector("#app-popover .focus-state")!.textContent).toBe("all complete");
-    const consoleText = document.querySelector(".console")!.textContent ?? "";
-    expect(consoleText).not.toMatch(/\d+\s*%/);
-    // A recurring reset returns the read to in progress — on the tick, not
-    // the entry.
-    rollGoalOccurrences(app.state, Date.now() + 24 * 3600_000);
-    app.render();
-    expect(document.querySelector("#app-popover .focus-state")!.textContent).toBe("in progress");
-  });
-
-  it("the Habit entry carries no inline read either — the practice a session would start lives in the sheet", () => {
-    app.render();
-    const habit = createHabit(app.state, "Piano").habit!;
-    selectHabit(app.state, habit.id);
-    app.render();
-    if (!app.ui.launcherOpen) launcher().click();
-    const habitEntry = () => document.getElementById("app-launcher-habit")!;
-    expect(habitEntry().getAttribute("aria-label")).toBe("Habit app");
-    expect(document.querySelector(".launcher-habit-state")).toBeNull();
-    selectHabit(app.state, null);
-    app.render();
-    expect(habitEntry().getAttribute("aria-label")).toBe("Habit app");
-  });
-
-  it("every launcher surface is born inside the nav's one fixed row — menu, sheet, and press alike", () => {
-    app.render();
-    // happy-dom lays out nothing, so the one-row claim (issue #149's
-    // acceptance check) is asserted structurally: the phone rule pins the
-    // console's height, and through menu, sheet, and dismissal the header's
-    // own roster never changes — every launcher surface is a descendant of
-    // the row, never a sibling appended beside or beneath it.
+    // And the row stays fixed-height (issue #149's acceptance check, kept):
+    // the phone query pins the console's 56px, each block running to its
+    // column-0 closing brace.
     const css = readFileSync("src/ui/style.css", "utf8");
-    // The phone query now holds more than the console's rule (issue #297's
-    // connections join it), so find the container block that carries the
-    // console's — each block runs to its column-0 closing brace.
     const consoleBlock = [...css.matchAll(/@container app \(width < 600px\) \{[\s\S]*?\n\}/g)]
       .map((match) => match[0])
       .find((block) => block.includes(".console {"));
     expect(consoleBlock).toBeTruthy();
     expect(consoleBlock!.slice(consoleBlock!.indexOf(".console"))).toMatch(/\.console\s*\{[^}]*height:\s*56px/);
-    const row = () => document.querySelector("header.console")!;
-    const roster = () => [...row().children].map((el) => el.id || el.className);
-    const resting = roster();
-    launcher().click();
-    expect(document.querySelector("#app-launcher-menu")!.closest("header.console")).toBe(row());
-    expect(roster()).toEqual(resting);
-    entry("goals").click();
-    // The Goals entry's sheet anchors under the clock — inside the row.
-    expect(document.getElementById("app-popover")!.closest("header.console")).toBe(row());
-    expect(roster()).toEqual(resting);
-    document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.ui.app).toBeNull();
-    expect(roster()).toEqual(resting);
   });
 
-  it("every launcher control is a native button: pointer, keyboard, and touch drive the same click", () => {
+  it("the focus door opens the Focus sheet, wears the inset marker while a face stands, and toggles shut", () => {
     app.render();
-    // Native <button> semantics are the keyboard contract (Enter and Space
-    // activate; happy-dom doesn't synthesize the click), as with the clock's
-    // disclosure — so the structural assertion is the assertion.
-    expect(launcher().tagName).toBe("BUTTON");
-    launcher().click();
-    for (const key of ["habit", "notes", "goals"] as const) {
-      const button = entry(key);
-      expect(button.tagName).toBe("BUTTON");
-      expect((button as HTMLButtonElement).disabled).toBe(false);
-    }
-  });
-
-  it("the launcher's menu swap rides closeApp's full teardown: a habit edit never leaks into the reopened sheet", () => {
-    app.render();
-    const habit = createHabit(app.state, "Piano").habit!;
-    selectHabit(app.state, habit.id);
-    launcher().click();
-    entry("habit").click();
-    // An in-sheet rename is mid-flight when the launcher is pressed.
-    document.querySelector<HTMLButtonElement>('[data-drill-habit]')!.click();
-    document.querySelector<HTMLButtonElement>('[data-rename]')!.click();
-    expect(app.ui.editingHabitId).not.toBeNull();
-    expect(document.querySelector("#habit-rename-input")).not.toBeNull();
-    // The launcher always means its menu — and the menu swap dismisses the
-    // sheet's own surfaces with it, so reopening Habit presents a clean
-    // roster, not the stale rename form.
-    launcher().click();
-    expect(app.ui.app).toBeNull();
-    expect(app.ui.editingHabitId).toBeNull();
-    expect(app.ui.launcherOpen).toBe(true);
-    entry("habit").click();
+    door("focus").click();
+    expect(app.ui.app).toBe("time");
+    const sheet = document.getElementById("app-popover")!;
+    expect(sheet.classList.contains("focus-sheet")).toBe(true);
+    expect(document.getElementById("console-session")!.contains(sheet)).toBe(true);
+    expect(door("focus").getAttribute("aria-pressed")).toBe("true");
+    // Another face keeps the door pressed — the sheet stands, whatever
+    // face it carries.
+    sheet.querySelector<HTMLButtonElement>('[data-face="habit"]')!.click();
     expect(app.ui.app).toBe("habit");
-    expect(document.querySelector("#habit-rename-input")).toBeNull();
-    expect(app.ui.detailHabitId).toBeNull();
+    expect(door("focus").getAttribute("aria-pressed")).toBe("true");
+    // Pressing the door walks to the PLAN face; pressing again closes.
+    door("focus").click();
+    expect(app.ui.app).toBe("time");
+    door("focus").click();
+    expect(app.ui.app).toBeNull();
+    expect(document.getElementById("app-popover")).toBeNull();
+    expect(door("focus").getAttribute("aria-pressed")).toBe("false");
   });
 
-  it("the launcher works mid-session too; the desktop row keeps its tiles and hosts the panel there", () => {
-    // Mid-session (notes are a flow-surface app): the launcher answers.
-    startSession(app.state, null);
+  it("Notes opens from its own door; the popover anchors in the door's slot", () => {
     app.render();
-    launcher().click();
-    entry("notes").click();
+    door("notes").click();
     expect(app.ui.app).toBe("notes");
-    expect(document.getElementById("note-composer")).not.toBeNull();
-    app.closeApp();
-    endSession(app.state);
-    // Above the line the tiles stand and host the panels; the launcher's
-    // slot exists only as the CSS-docked-out phone anchor.
+    const panel = document.getElementById("app-popover")!;
+    expect(door("notes").closest(".app-slot")!.contains(panel)).toBe(true);
+    expect(document.getElementById("console-apps")!.contains(panel)).toBe(true);
+    door("notes").click();
+    expect(app.ui.app).toBeNull();
+    expect(document.getElementById("app-popover")).toBeNull();
+  });
+
+  it("the banner reads drop for the bare launchers — the row carries no habit name, no goal bars", () => {
+    // happy-dom lays out nothing, so the drop is asserted in the phone
+    // query's own rules: the 600px container block carries the reads'
+    // display:none, and each block runs to its column-0 closing brace.
+    app.render();
+    const css = readFileSync("src/ui/style.css", "utf8");
+    const phoneBlocks = [...css.matchAll(/@container app \(width < 600px\) \{[\s\S]*?\n\}/g)].map((match) => match[0]);
+    expect(phoneBlocks.some((block) => /\.banner-reads\s*\{[^}]*display:\s*none/.test(block))).toBe(true);
+    // Desktop wears the reads the phone drops — the derivation's markup
+    // exists above the line and never on the phone composition.
     setAppWidth(1200);
     app.render();
-    expect(document.getElementById("app-launcher")).not.toBeNull();
-    expect(document.querySelector("#app-launcher-popover, #app-launcher-menu")).toBeNull();
-    app.openApp("goals");
-    expect(document.getElementById("app-popover")).not.toBeNull();
-    expect(document.getElementById("app-launcher-popover")).toBeNull();
-    app.closeApp();
+    expect(document.querySelector("#console-session .banner-reads")).not.toBeNull();
   });
 });
 
