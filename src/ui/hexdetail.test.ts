@@ -598,6 +598,62 @@ describe("live detail review regressions (PR #301)", () => {
    cancels, Escape unwinds the tray before the grid, and flow locks it
    all. */
 describe("the detail's direct inventory (issue #296)", () => {
+  it.each(["modules", "mutators"] as const)("%s candidates disclose without placing and Escape keeps the tray", (face) => {
+    seedEra();
+    give(app.state, "additive", null);
+    clickCell(0, 0);
+    app.openDetailTray(face);
+    const before = JSON.stringify(app.state);
+    const info = document.querySelector<HTMLButtonElement>(".hex-detail-tray .inst-tip-trigger")!;
+    const id = info.getAttribute("aria-describedby")!;
+    info.focus();
+    expect(document.getElementById(id)!.classList.contains("inst-show")).toBe(true);
+    info.click();
+    expect(info.getAttribute("aria-expanded")).toBe("true");
+    expect(JSON.stringify(app.state)).toBe(before);
+    expect(app.ui.detailTray).toBe(face);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(document.getElementById(id)!.classList.contains("inst-show")).toBe(false);
+    expect(app.ui.detailTray).toBe(face);
+  });
+
+  it.each(["swap", "retrieve"])("%s orbit disclosure supports focus and tap without editing", (action) => {
+    seedEra();
+    clickCell(0, 0);
+    const control = document.getElementById(`detail-module-${action}`)!;
+    const id = control.getAttribute("aria-describedby")!;
+    control.focus();
+    expect(document.getElementById(id)!.classList.contains("inst-show")).toBe(true);
+    const info = control.parentElement!.querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
+    const before = JSON.stringify(app.state);
+    info.click();
+    expect(info.getAttribute("aria-expanded")).toBe("true");
+    expect(JSON.stringify(app.state)).toBe(before);
+    expect(app.ui.detailTray).toBeNull();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(document.getElementById(id)!.classList.contains("inst-show")).toBe(false);
+    expect(open()).toBe(true);
+  });
+
+  it("slot availability follows affordability and a refused click preserves the slot", () => {
+    seedEra();
+    app.state.arete = 0;
+    clickCell(1, 0);
+    const button = document.getElementById("detail-mutator-unlock")!;
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(button.classList.contains("st-unavailable")).toBe(true);
+    expect(button.textContent).toContain("need Arete");
+    button.focus();
+    expect(document.getElementById(button.getAttribute("aria-describedby")!)!.textContent).toContain("Not enough Arete");
+    button.click();
+    expect(app.state.mutatorSlots).toHaveLength(1);
+    app.state.arete = 100;
+    app.render();
+    expect(document.getElementById("detail-mutator-unlock")!.getAttribute("aria-disabled")).toBe("false");
+    document.getElementById("detail-mutator-unlock")!.click();
+    expect(app.state.mutatorSlots).toHaveLength(2);
+  });
+
   it("the tray hides by default in detail; Add module opens the Modules inventory", () => {
     give(app.state, "additive", null);
     app.render();

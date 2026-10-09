@@ -229,8 +229,13 @@ function orbitHtml(face: DetailFace, resident: string): string {
   const retrieveTitle = face === "modules"
     ? `Retrieve ${resident} to the tray`
     : `Retrieve to the Mutator tray`;
-  return `<button class="hex-orbit-btn orbit-swap" id="detail-${face === "modules" ? "module" : "mutator"}-swap" aria-label="Swap — pick one from the tray" title="Swap — pick a ${face === "modules" ? "module" : "mutator"} from the tray; the resident waits in the tray">${ORBIT_SWAP_SVG}</button>
-    <button class="hex-orbit-btn orbit-retrieve" id="detail-${face === "modules" ? "module" : "mutator"}-retrieve" aria-label="${retrieveTitle}" title="${retrieveTitle}">${ORBIT_RETRIEVE_SVG}</button>`;
+  return ([
+    ["swap", "Swap — pick one from the tray", `Swap — pick a ${face === "modules" ? "module" : "mutator"} from the tray; the resident waits in the tray`, ORBIT_SWAP_SVG],
+    ["retrieve", retrieveTitle, retrieveTitle, ORBIT_RETRIEVE_SVG],
+  ] as const).map(([action, label, explanation, icon]) => {
+    const id = detailTipId();
+    return `<span class="inst-tip hex-orbit-control orbit-${action}"><button class="hex-orbit-btn" id="detail-${face === "modules" ? "module" : "mutator"}-${action}" aria-label="${label}" aria-describedby="${id}">${icon}</button><button class="inst-tip-trigger" aria-label="About ${action}" aria-describedby="${id}" aria-expanded="false">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${explanation}</span></span>`;
+  }).join("");
 }
 
 /* ── The Mutators face ──────────────────────────────── */
@@ -260,7 +265,9 @@ function mutatorLayerHtml(app: App, pos: Hex, snapshot: RateSnapshot): string {
       const eligible = mutatorUnlockTargets(state).some((target) => sameHex(target, pos));
       if (eligible) {
         const price = mutatorSlotPrice(state);
-        rail = `<button class="hex-action" id="detail-mutator-unlock" title="Unlock a Mutator slot at ${note}">${price === 0 ? "Unlock slot · free" : `Unlock slot · <span class="mono">${formatInt(price)} ◇</span>`}</button>`;
+        const affordable = state.arete >= price;
+        const id = detailTipId();
+        rail = `<span class="inst-tip"><button class="hex-action${affordable ? "" : " st-unavailable"}" id="detail-mutator-unlock" aria-disabled="${!affordable}" aria-describedby="${id}">${price === 0 ? "Unlock slot · free" : `Unlock slot · <span class="mono">${formatInt(price)} ◇</span>`}${affordable ? "" : " · need Arete"}</button><button class="inst-tip-trigger" aria-label="About slot unlock" aria-describedby="${id}" aria-expanded="false">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${affordable ? `Unlock a Mutator slot at ${note}` : `Not enough Arete — requires ${formatInt(price)} ◇; available ${formatInt(state.arete)} ◇`}</span></span>`;
       } else {
         rail = `<span class="hex-detail-noslot" title="Slot unlocks attach beside the Mutator patch — each new slot neighbors an unlocked one">beside the patch only</span>`;
       }
@@ -549,14 +556,14 @@ function detailTrayHtml(app: App, face: DetailFace): string {
             rarity: m.rarity,
             readout: "",
             level: faceLevel(m),
-          })}</svg></button><span class="inst-tip-body" id="${id}" role="tooltip">${META[m.type].name} · ${RARITY_LABEL[m.rarity]} — ${destination}</span></span>`;
+          })}</svg></button><button class="inst-tip-trigger" aria-label="About ${META[m.type].name}" aria-describedby="${id}" aria-expanded="false">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${META[m.type].name} · ${RARITY_LABEL[m.rarity]} — ${destination}</span></span>`;
         })
         .join("") || `<span class="tray-empty">no modules wait in the tray</span>`
     : state.mutators
         .filter((m) => m.pos === null)
         .map((item) => {
           const id = detailTipId();
-          return `<span class="inst-tip tray-tile-detail"><button class="inventory-tile mut-tile" data-detail-place-mut="${item.id}" data-rarity="${item.rarity}" aria-label="${FAMILY_WORD[item.family]} · ${RARITY_LABEL[item.rarity]}" aria-describedby="${id}">${mutatorTileSvg(item)}</button><span class="inst-tip-body" id="${id}" role="tooltip">${FAMILY_WORD[item.family]} mutator · ${RARITY_LABEL[item.rarity]} · ${mutatorEffectText(item.family, item.rarity)} — ${destination}</span></span>`;
+          return `<span class="inst-tip tray-tile-detail"><button class="inventory-tile mut-tile" data-detail-place-mut="${item.id}" data-rarity="${item.rarity}" aria-label="${FAMILY_WORD[item.family]} · ${RARITY_LABEL[item.rarity]}" aria-describedby="${id}">${mutatorTileSvg(item)}</button><button class="inst-tip-trigger" aria-label="About ${FAMILY_WORD[item.family]} mutator" aria-describedby="${id}" aria-expanded="false">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${FAMILY_WORD[item.family]} mutator · ${RARITY_LABEL[item.rarity]} · ${mutatorEffectText(item.family, item.rarity)} — ${destination}</span></span>`;
         })
         .join("") || `<span class="tray-empty">no mutators wait in the Mutator tray</span>`;
   return `<aside class="hex-detail-tray" data-detail-tray="${face}" aria-label="${face === "modules" ? "Tray — the inventory beside the stack" : "Mutator tray"}">
