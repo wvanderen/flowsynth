@@ -11,8 +11,12 @@
 // composition adds only what faces cannot say — the action rail beside
 // the stack (upgrade dial, unlock / retrieve / entry), one chord row in
 // the reserved readout's grammar, a compact Return control, and the flow
-// tag. Nothing else: the deeper mechanics ride the tooltip layer (issue
-// #267's inst-tip).
+// tag. Since issue #297 the relationships speak too: directional wave
+// connections (the mutator's cross-layer effect pointing at the layer it
+// lands on, incoming charge and the chord bonus entering the module
+// face's vertices) with the authoritative breakdowns riding their
+// disclosures (hexflows.ts). Nothing else: the deeper mechanics ride the
+// tooltip layer (issue #267's inst-tip).
 //
 // The fixed stack shows both layers, Mutators above Modules, in that
 // order always; a face selection emphasizes one section, focuses its
@@ -33,6 +37,7 @@ import { FAMILY_WORD, rarityTicks, mutatorEffectText, mutatorGlyph, mutatorInert
 import { META, RARITY_LABEL } from "./meta";
 import { isPhoneWidth } from "./container";
 import { wireTooltips } from "./instrument";
+import { moduleFlowsHtml, mutatorFlowHtml } from "./hexflows";
 
 /* ── The upgrade benefit (§5) ─────────────────────────
    One entry per module type — the single place a type's benefit phrasing
@@ -128,8 +133,11 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   const upgrade = state.mode === "upgrade";
   const flow = !upgrade;
   // In flow the readouts run live; arranging previews the charge-projected
-  // basis (§7's one-pass rule — the callers computed both).
+  // basis (§7's one-pass rule — the callers computed both). The wave
+  // connections read the same basis as the faces (issue #297): the
+  // snapshot's own flow flag, charge-projected while arranging.
   const snapshot = upgrade ? projected : live;
+  const snapshotFlow = upgrade || state.mode === "flow";
   const module = deployedAt(state, pos);
   const phone = isPhoneWidth();
   const mutItem = mutatorAt(state, pos);
@@ -143,6 +151,10 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
     module ? forgeBranchOf(state, module.type) : null,
     module ? faceReadoutFor(state, module, pos, snapshot, true) : null,
     module ? snapshot.chargeStrength.get(module.id) ?? 0 : 0,
+    // The chord connection's live read (issue #297): the voice's chord
+    // factor flips the wave between solid and dashed, and a silent
+    // voice's face readout (its pitch) does not move when it does.
+    module ? snapshot.contributions.get(module.id)?.chordFactor ?? null : null,
     mutItem ? mutatorInertVerdict(state, pos, mutItem, snapshot) : null,
     mutItem ? `${mutItem.id}:${mutItem.rarity}:${mutItem.family}` : mutItem,
     state.mutatorSlots.length,
@@ -182,6 +194,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
       </div>
       <div class="hex-detail-grid">
         ${mutatorLayerHtml(app, pos, snapshot)}
+        ${mutatorFlowHtml(state, pos, module, snapshot, snapshotFlow)}
         ${moduleLayerHtml(app, pos, module, snapshot, chordRow)}
       </div>
       ${detailTrayHtml(app, "modules")}
@@ -406,9 +419,15 @@ function moduleLayerHtml(app: App, pos: Hex, module: ModuleInstance | undefined,
     rail = `<button class="hex-action" id="detail-module-add" title="Open the tray — choosing a module places it here">Add module</button>`;
   }
   const orbit = module && upgrade ? orbitHtml("modules", META[module.type].name) : "";
+  // The incoming connections (issue #297): charge and the chord bonus ride
+  // the face's left and right vertices, in flow as well — the breakdowns
+  // stay readable in the read-only cross-section. The flow flag is the
+  // snapshot's own basis (charge-projected while arranging), the one the
+  // wave reads and the outcomes compute against.
+  const flows = module ? moduleFlowsHtml(state, module, snapshot, upgrade || state.mode === "flow") : "";
   const row = chordRow ? `<div class="hex-chord-row">${chordRow}</div>` : "";
   return `<section class="hex-detail-layer modules${selected ? " selected" : ""}" data-detail-section="modules" tabindex="-1" aria-label="Modules — ${module ? `${META[module.type].name} at ${note}` : `empty place at ${note}`}">
-    <span class="hex-orbit"><span class="inst-tip"><button class="hex-stack-chassis inst-tip-trigger" data-detail-face="modules" aria-pressed="${selected}" aria-describedby="${tip.id}" aria-label="Emphasize the Modules face">${chassis}</button>${tip.html}</span>${orbit}</span>
+    <span class="hex-orbit"><span class="inst-tip"><button class="hex-stack-chassis inst-tip-trigger" data-detail-face="modules" aria-pressed="${selected}" aria-describedby="${tip.id}" aria-label="Emphasize the Modules face">${chassis}</button>${tip.html}</span>${orbit}${flows}</span>
     ${row}
   </section>
   <aside class="hex-rail-row modules${selected ? " selected" : ""}">${rail}</aside>`;
