@@ -1852,8 +1852,9 @@ export class App {
   pickCell(pos: Hex): void {
     const { state, ui } = this;
     // The Mutators layer owns the board's clicks while it stands (issue
-    // #199): the module board rests greyed and pointer-dead, and a focused
-    // cell's Enter must not reach past it either.
+    // #199): the module board rests hidden and pointer-dead beneath it
+    // (issue #298), and a focused cell's Enter must not reach past it
+    // either.
     if (state.mode === "upgrade" && ui.mutLayer === "mutators") return;
     if (ui.buyingCell) {
       if (state.mode !== "upgrade") return;

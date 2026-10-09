@@ -1197,8 +1197,12 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
     const module = deployedAt(state, pos);
     const drop = dropRegister(app, pos);
     const label = module ? `${META[module.type].name} at ${cellNoteOf(pos)}` : `Empty cell · ${cellNoteOf(pos)}`;
+    // A cell under a Mutator slot face (issue #298): the stylesheet hides
+    // the empty chassis and its note beneath the live layer's own face,
+    // so nothing ghosts through the slot's words.
+    const covered = state.mutatorSlots.some((slot) => sameHex(slot, pos)) ? " mut-covered" : "";
     if (module) {
-      html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">`;
+      html += `<g class="cell-node${covered}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">`;
       html += moduleNode(app, module, pos, { snapshot, drop });
       html += `</g>`;
       continue;
@@ -1211,7 +1215,7 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
     let classes = "hex empty";
     if (drop) classes += ` ${dropClass(drop)}`;
     if (isTargetCell(app)) classes += " target";
-    html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">
+    html += `<g class="cell-node${covered}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">
       <polygon class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>
       <text y="0" dominant-baseline="central" text-anchor="middle" class="hex-note">${cellNoteOf(pos)}</text></g>`;
   }

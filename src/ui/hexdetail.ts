@@ -341,7 +341,7 @@ function mutatorChassisHtml(state: GameState, pos: Hex, snapshot: RateSnapshot):
       chassis: `<svg class="hex-stack-mut open" viewBox="-70 -70 140 140" aria-hidden="true">
         <polygon class="mut-slot-hex dashed" points="${hexPoints(56)}"/>
         <text class="mut-slot-family" y="-6" text-anchor="middle">OPEN SLOT</text>
-        <text class="mut-slot-host" y="16" text-anchor="middle">inert · no host</text>
+        <text class="mut-slot-verdict" y="16" text-anchor="middle">inert · no host</text>
         <polygon class="hex-stack-marker" points="${hexPoints(53)}"/>
       </svg>`,
       tip: { id, html: `<span class="inst-tip-body" id="${id}" role="tooltip">Open slot at ${note} — a placed mutator modifies whatever module occupies this cell</span>` },

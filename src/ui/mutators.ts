@@ -3,14 +3,15 @@
 // (`prototype/mutator-grid-184`, iteration two at 57fb840). The Modules /
 // Mutators tab pair stands at the board's top edge in upgrade mode; the
 // Mutators tab renders one slot face per unlocked cell in words — family,
-// glyph, rarity ticks, host, effect — while the module board rests greyed
-// beneath, and the Modules tab marks a hosted mutator with a thin arete
-// presence outline alone. Gestures mirror the board's: click-then-slot
-// places (occupied slots swap), drag or right-click retrieves, and matching
-// twins combine through the drop-and-confirm review. Every surface wears
-// the --arete register, and every landing routes through the engine
-// actions from #198, so the UI can never drift from the contracts those
-// tests pin.
+// glyph, rarity ticks, effect — while the module board hides beneath
+// entirely (issue #298: faces, chord marks, and charge leads never draw;
+// the Hex detail supplies the host relationships), and the Modules tab
+// marks a hosted mutator with a thin arete presence outline alone.
+// Gestures mirror the board's: click-then-slot places (occupied slots
+// swap), drag or right-click retrieves, and matching twins combine
+// through the drop-and-confirm review. Every surface wears the --arete
+// register, and every landing routes through the engine actions from
+// #198, so the UI can never drift from the contracts those tests pin.
 import { combineMutatorsPreview } from "../engine/actions";
 import { deployedAt, mutatorAt, mutatorMagnitude, mutatorSlotCost } from "../engine/economy";
 import { adjacent, sameHex } from "../engine/hex";
@@ -186,7 +187,7 @@ export function layerLegendHtml(app: App, tipId = "legend-mutator-entry"): strin
   // One mark per state: the padlock stands for the locked layer, the
   // arete register for the unlocked one — never both at once.
   return `<button class="legend-symbol${active === "modules" ? " active" : ""}" data-legend-layer="modules" aria-pressed="${active === "modules"}" aria-label="Modules layer" title="Modules — the production grid">${LAYER_MODULES_SVG}</button>
-    <span class="legend-entry${locked ? " locked" : ""}"><button class="legend-symbol${mutatorsSelected ? " active" : ""}${locked ? " locked" : ""}" data-legend-layer="mutators" aria-pressed="${mutatorsSelected}" aria-label="Mutators layer — locked; open Catalog entry" title="${locked ? "Mutators — locked; unlocks with the Mutator entry" : "Mutators — the slots over the modules"}">${locked ? LOCK_MARK : LAYER_MUTATORS_SVG}</button>${locked ? `<span class="inst-tip legend-entry-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${tipId}" aria-label="About unlocking Mutators">ⓘ</button><span class="inst-tip-body" id="${tipId}" role="tooltip">Unlocks with the Mutator entry</span></span>` : ""}</span>`;
+    <span class="legend-entry${locked ? " locked" : ""}"><button class="legend-symbol${mutatorsSelected ? " active" : ""}${locked ? " locked" : ""}" data-legend-layer="mutators" aria-pressed="${mutatorsSelected}" aria-label="${locked ? "Mutators layer — locked; open Catalog entry" : "Mutators layer"}" title="${locked ? "Mutators — locked; unlocks with the Mutator entry" : "Mutators — the slots over the modules"}">${locked ? LOCK_MARK : LAYER_MUTATORS_SVG}</button>${locked ? `<span class="inst-tip legend-entry-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${tipId}" aria-label="About unlocking Mutators">ⓘ</button><span class="inst-tip-body" id="${tipId}" role="tooltip">Unlocks with the Mutator entry</span></span>` : ""}</span>`;
 }
 
 const boundLegends = new WeakSet<HTMLElement>();
@@ -274,17 +275,20 @@ function mutSlotFaceHtml(app: App, pos: Hex, snapshot: RateSnapshot): string {
   if (item) {
     const host = hostName(state, pos);
     const inert = mutatorInertVerdict(state, pos, item, snapshot);
-    const verdict = inert ?? host ?? "";
-    // The never-say rule (issue #199): an inert case promises no effect —
-    // the verdict is the face's last word; the declaration lives in the
-    // hover ask, the popover, and the expanded face.
+    // The overview stays quiet (issue #298): the face speaks the mutator —
+    // family, glyph, rarity, effect — and only the slot's own inert
+    // verdicts. The host relationship is the Hex detail's to supply; the
+    // accessible name and the hover ask keep it, so nothing visual is the
+    // only path to the fact. The never-say rule (issue #199) rides the
+    // split: an inert case promises no effect — the verdict is the face's
+    // last word, and the declaration lives in the hover ask and the Hex
+    // detail.
     return `<g data-key="${key}" class="mut-slot-face${inert ? " mut-inert" : ""}" data-mut-slot="${pos.q},${pos.r}" tabindex="0" role="button" transform="translate(${x.toFixed(2)},${y.toFixed(2)})" aria-label="${FAMILY_WORD[item.family]} mutator, ${RARITY_LABEL[item.rarity]}, in the slot at ${cellNoteOf(pos)}${inert ? `, ${inert}` : ""}${host ? `, hosts ${host}` : ""}">
       <polygon class="mut-slot-hex" points="${hexPoints(SLOT_FACE_R)}"/>
       <text class="mut-slot-family" y="-30" text-anchor="middle">${FAMILY_WORD[item.family].toUpperCase()}</text>
       <g class="mut-slot-glyph" transform="translate(0,-8)">${mutatorGlyph(item.family, 1.15)}</g>
       <g class="mut-slot-ticks" transform="translate(0,12)">${rarityTicks(item.rarity)}</g>
-      <text class="mut-slot-host" y="34" text-anchor="middle">${verdict}</text>
-      ${inert ? "" : `<text class="mut-slot-effect mono" y="48" text-anchor="middle">${effectShort(item.family, item.rarity)}</text>`}
+      ${inert ? `<text class="mut-slot-verdict" y="36" text-anchor="middle">${inert}</text>` : `<text class="mut-slot-effect mono" y="42" text-anchor="middle">${effectShort(item.family, item.rarity)}</text>`}
       <polygon class="mut-hit" data-mut-hit="${pos.q},${pos.r}" points="${hexPoints(SLOT_FACE_R)}"/>
     </g>`;
   }
@@ -292,7 +296,7 @@ function mutSlotFaceHtml(app: App, pos: Hex, snapshot: RateSnapshot): string {
   return `<g data-key="${key}" class="mut-slot-open" data-mut-slot="${pos.q},${pos.r}" tabindex="0" role="button" transform="translate(${x.toFixed(2)},${y.toFixed(2)})" aria-label="Open Mutator slot at ${cellNoteOf(pos)} — inert until a host lands">
     <polygon class="mut-slot-hex dashed" points="${hexPoints(SLOT_FACE_R)}"/>
     <text class="mut-slot-family" y="-6" text-anchor="middle">OPEN SLOT</text>
-    <text class="mut-slot-host" y="12" text-anchor="middle">inert · no host</text>
+    <text class="mut-slot-verdict" y="12" text-anchor="middle">inert · no host</text>
     <polygon class="mut-hit" data-mut-hit="${pos.q},${pos.r}" points="${hexPoints(SLOT_FACE_R)}"/>
   </g>`;
 }
@@ -410,9 +414,9 @@ export function refreshMutPreview(app: App): void {
    The layer's own bindings on the board svg: clicks resolve through
    app.mutPickSlot, right-click retrieves, and a held placed mutator (or
    tray tile) starts a live drag whose release lands as place, swap,
-   combine offer, or retrieval. The module board's cells are pointer-dead
-   beneath the layer (the stylesheet greys them), so the two gestures
-   never collide. */
+   combine offer, or retrieval. The module board's cells are hidden and
+   pointer-dead beneath the layer (the stylesheet drops them), so the two
+   gestures never collide. */
 
 const boundMutNodes = new WeakSet<Element>();
 
