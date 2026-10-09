@@ -214,6 +214,21 @@ export function forgeBranchOf(state: GameState, type: ModuleInstance["type"]): {
 // The charge-family predicate: generators are the board's charge sources.
 export const isSource = (m: ModuleInstance) => CATEGORY_OF[m.type] === "generator";
 
+// The conduit's relayed strength — received charge × its level-scaled gain.
+// The one read the face's readout and the Hex detail's breakdown share, so
+// the two surfaces can never drift apart on the relay's output.
+export function relayStrengthOf(module: ModuleInstance, snapshot: RateSnapshot): number {
+  const strength = snapshot.chargeStrength.get(module.id) ?? 0;
+  return strength * (1 + BALANCE.amplifierGainPerLevel * module.level);
+}
+
+// The booster's uplift percentage — the charged curve over the adjacent
+// production it lifts. The one read the face's readout and the Hex
+// detail's breakdown share.
+export function boosterUpliftOf(state: GameState, module: ModuleInstance, snapshot: RateSnapshot): number {
+  return 100 * BALANCE.infusorBonus * hostPower(state, module) * chargedFactor(snapshot.chargeStrength.get(module.id) ?? 0);
+}
+
 // A module face's readout (ADR-0016): the prominent value beneath the
 // signature — the same glanceable line whether compact, in the tray, or
 // the Hex detail's tile. Shared by the board node and the detail; the
@@ -231,7 +246,7 @@ export function faceReadoutFor(state: GameState, module: ModuleInstance, pos: He
   }
   if (isSource(module)) return { readout: `⌁${formatNumber(hostPower(state, module))}` };
   if (module.type === "infusor") {
-    return { readout: `+${formatNumber(100 * BALANCE.infusorBonus * hostPower(state, module) * chargedFactor(snapshot.chargeStrength.get(module.id) ?? 0))}%` };
+    return { readout: `+${formatNumber(boosterUpliftOf(state, module, snapshot))}%` };
   }
   if (module.type === "spacer") {
     // The spacer is silent wire: it never sounds, never joins a pitch set —
@@ -251,11 +266,9 @@ export function faceReadoutFor(state: GameState, module: ModuleInstance, pos: He
   if (category === "conduit") {
     // The Amplifier routes: the face shows the strength it relays — what
     // it received, times its level-scaled gain.
-    const strength = snapshot.chargeStrength.get(module.id) ?? 0;
-    const gain = 1 + BALANCE.amplifierGainPerLevel * module.level;
     return pos
-      ? { readout: `⌁${formatNumber(strength * gain)}`, note: cellNoteOf(pos) }
-      : { readout: `⌁${formatNumber(strength * gain)}` };
+      ? { readout: `⌁${formatNumber(relayStrengthOf(module, snapshot))}`, note: cellNoteOf(pos) }
+      : { readout: `⌁${formatNumber(relayStrengthOf(module, snapshot))}` };
   }
   if (category === "ritual") {
     // RITUAL amplifies: the face shows the factor the module itself is

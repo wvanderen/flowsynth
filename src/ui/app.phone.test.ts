@@ -664,8 +664,14 @@ describe("the phone launcher (§7, issue #149)", () => {
     // own roster never changes — every launcher surface is a descendant of
     // the row, never a sibling appended beside or beneath it.
     const css = readFileSync("src/ui/style.css", "utf8");
-    const phoneBlock = css.slice(css.indexOf("@container app (width < 600px)"));
-    expect(phoneBlock.slice(0, phoneBlock.indexOf("}"))).toMatch(/\.console\s*\{[^}]*height:\s*56px/);
+    // The phone query now holds more than the console's rule (issue #297's
+    // connections join it), so find the container block that carries the
+    // console's — each block runs to its column-0 closing brace.
+    const consoleBlock = [...css.matchAll(/@container app \(width < 600px\) \{[\s\S]*?\n\}/g)]
+      .map((match) => match[0])
+      .find((block) => block.includes(".console {"));
+    expect(consoleBlock).toBeTruthy();
+    expect(consoleBlock!.slice(consoleBlock!.indexOf(".console"))).toMatch(/\.console\s*\{[^}]*height:\s*56px/);
     const row = () => document.querySelector("header.console")!;
     const roster = () => [...row().children].map((el) => el.id || el.className);
     const resting = roster();

@@ -1783,10 +1783,13 @@ body.hex-detail-open .upgrade-all {
   padding: 4px 8px 12px;
 }
 .hex-detail-layer.mutators { grid-column: 1; grid-row: 1; }
-.hex-detail-layer.modules { grid-column: 1; grid-row: 2; }
+/* The modules face sits in row 3: row 2 holds the mutator's wave
+   connection when a mutator occupies the slot, and collapses to nothing
+   when it does not (issue #297). */
+.hex-detail-layer.modules { grid-column: 1; grid-row: 3; }
 .hex-rail-row { grid-column: 2; }
 .hex-rail-row.mutators { grid-row: 1; }
-.hex-rail-row.modules { grid-row: 2; }
+.hex-rail-row.modules { grid-row: 3; }
 .hex-detail-layer {
   display: flex;
   flex-direction: column;
@@ -1999,6 +2002,112 @@ body.hex-detail-open .upgrade-all {
 .hex-orbit-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .hex-orbit .orbit-swap { top: 7%; right: -3%; }
 .hex-orbit .orbit-retrieve { bottom: 7%; right: -3%; }
+
+/* ── The Hex detail's wave connections (issue #297) ── */
+/* The cross-section's relationships as directional waves, each in its
+    relationship's semantic register: the mutator's effect in the arete
+    register bridging the two faces and pointing at the layer it lands on,
+    incoming charge in the charge register entering the module face's left
+    vertex, the chord bonus in the named chord's own hue entering the
+    right. Live relationships draw solid; inert ones quiet and dashed —
+    the state never rides color alone. The disclosures ride the shared
+    instrument layer: hover, keyboard focus, and tap open the same full
+    breakdown; Escape and tap-away dismiss it. */
+.hex-detail-flow {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  justify-content: center;
+}
+.hex-flow-side {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+.hex-flow-side.charge { right: 100%; margin-right: -1.8%; }
+.hex-flow-side.chord { left: 100%; margin-left: -1.8%; }
+/* The trigger IS the hit area: generous in both dimensions so hover,
+   focus, and touch all land (instrument standards). The old ⓘ trigger's
+   fixed round size yields to the wave. */
+.hex-flow-trigger {
+  width: auto;
+  height: auto;
+  min-height: 44px;
+  border: none;
+  border-radius: 12px;
+  padding: 2px 14px;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+.hex-flow-side .hex-flow-trigger { padding: 4px 8px; }
+.hex-flow-trigger svg { display: block; width: 60px; height: 36px; }
+.hex-flow-side .hex-flow-trigger svg { width: 56px; height: 40px; }
+.hex-flow-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hex-flow-trigger:hover .flow-wave { stroke-width: 2.8; }
+/* The wave's state: live solid at full strength, inert dashed and quiet.
+   The arrow always points at the affected layer. */
+.flow-wave {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.95;
+}
+.flow-arrow {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.95;
+}
+.flow-inert .flow-wave { stroke-dasharray: 4 5; opacity: 0.45; }
+.flow-inert .flow-arrow { opacity: 0.45; }
+/* Flow-only motion: the pulse path rides the wave while a live session
+   runs — activity, not state (solid vs dashed already carries that), so
+   reduced motion keeps the static wave and loses nothing. */
+.flow-pulse {
+  stroke-dasharray: 3 9;
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hex-detail-scene.flow-live .flow-active .flow-pulse { opacity: 0.9; animation: flow-dash 1.4s linear infinite; }
+}
+@keyframes flow-dash { to { stroke-dashoffset: -48; } }
+/* The breakdown: the relationship's calculation in authoritative
+   production terms, ruled rows in the panel's open-division grammar, the
+   resulting output stated once in the result row. */
+.hex-breakdown { display: flex; flex-direction: column; }
+.hex-breakdown-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 4px 0;
+  border-top: 1px solid var(--line-soft);
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.hex-breakdown-row:first-child { border-top: 0; padding-top: 1px; }
+.hex-breakdown-row .mono { color: var(--ink); text-align: right; }
+.hex-breakdown-row.inert { color: var(--muted); }
+.hex-breakdown-row.inert .mono { color: var(--muted); }
+.hex-breakdown-row.result { border-top: 1px solid var(--line); margin-top: 2px; padding-top: 6px; color: var(--ink); }
+.hex-breakdown-row.result .mono { color: var(--accent-bright); }
+/* Phone: the side connections pull in so the stack never widens the
+   sheet. */
+@container app (width < 600px) {
+  .hex-flow-side .hex-flow-trigger { padding: 4px 2px; }
+  .hex-flow-side .hex-flow-trigger svg { width: 40px; }
+  .hex-flow-side.charge { margin-right: -3%; }
+  .hex-flow-side.chord { margin-left: -3%; }
+}
 
 /* The upgrade affordances (§5, issue #195): the shared ladder riding the
    button — the same chip rows the retired bloom carried. */

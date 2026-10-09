@@ -133,7 +133,7 @@ export function wireTooltips(host: ParentNode, signal?: AbortSignal): () => void
   bindings.set(host, { ...(signal ? { signal } : {}), release });
   signal?.addEventListener("abort", release, { once: true });
   const tipOf = (target: EventTarget | null): HTMLElement | null =>
-    target instanceof HTMLElement ? target.closest<HTMLElement>(".inst-tip") : null;
+    target instanceof Element ? target.closest<HTMLElement>(".inst-tip") : null;
   host.addEventListener("pointerover", (event) => {
     const tip = tipOf(event.target);
     if (!tip || tip.contains((event as PointerEvent).relatedTarget as Node | null)) return;
@@ -159,7 +159,7 @@ export function wireTooltips(host: ParentNode, signal?: AbortSignal): () => void
     sync(tip);
   }, { signal: lifetime.signal });
   host.addEventListener("click", (event) => {
-    if (event.target instanceof HTMLElement && event.target.closest(".inst-tip-trigger")) {
+    if (event.target instanceof Element && event.target.closest(".inst-tip-trigger")) {
       const tip = event.target.closest<HTMLElement>(".inst-tip")!;
       const pin = !tip.classList.contains("show");
       // One pinned tooltip at a time: pinning elsewhere puts the last one away.
