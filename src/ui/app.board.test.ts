@@ -5,8 +5,8 @@ import type { App } from "./app";
 import { createHabit } from "../engine/habits";
 import { equipBuildNode } from "../engine/builds";
 import { BALANCE } from "../engine/constants";
-import { ARETE_HORIZON } from "../engine/accumulator";
-import { computeRates, cellCost, cellPurchasePrice, affordableLevels, levelCost, levelsCost } from "../engine/economy";
+import { ARETE_HORIZON, ARETE_LOG_FLOOR, accumulatorSpan } from "../engine/accumulator";
+import { displayedRates, allocateRates, cellCost, cellPurchasePrice, affordableLevels, levelCost, levelsCost } from "../engine/economy";
 import { startSession, endSession } from "../engine/actions";
 import { advance } from "../engine/advance";
 import { give } from "../engine/fixtures";
@@ -145,7 +145,9 @@ describe("the board ledger (§7, issue #270)", () => {
     give(s, "additive", hex(1, 0)); // G4 — a Fifth with the launch C4
     give(s, "infusor", hex(0, 1)); // uplift on C4
     app.render();
-    const snapshot = computeRates(s);
+    // The ledger rides the display pass — the authoritative allocation
+    // since the release (#262).
+    const snapshot = displayedRates(s);
     const rows = [...document.querySelectorAll("#board-ledger .rd-synth")];
     expect(rows).toHaveLength(2);
     let sum = 0;
@@ -190,7 +192,9 @@ describe("the board ledger (§7, issue #270)", () => {
     // The synths leg carries the local chords — including the formation's
     // quality — and there is no board-wide chord-multiplier claim to lean
     // on (ADR-0036).
-    const q = 1 + BALANCE.complexityRate;
+    // The quality is the allocation curve's — the display pass is the
+    // authoritative allocation since the release (#262).
+    const q = 1 + BALANCE.allocationComplexityRate;
     expect(modal.textContent).toContain(`synths +${formatNumber(0.26 * q)} ν/s`);
     expect(modal.textContent).toContain(`boosters +${formatNumber(0.052 * q)} ν/s`);
     expect(modal.textContent).not.toContain("chords ×");
@@ -397,11 +401,12 @@ describe("the horizon bar (§7, issue #156)", () => {
     expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBe(0);
     expect(document.querySelector('#horizon-bar [data-live="h-word"]')!.textContent).toBe("0%");
     // The bar reads the era's measure (ADR-0039), not the lifetime total.
-    app.state.eraEarned = 1_000;
+    // Two of the rebased scale's decades through it (floor 1e3, horizon
+    // 7e6), patched in place — no rebuild.
+    app.state.eraEarned = ARETE_LOG_FLOOR * 100;
     app.render();
-    // Two of twenty-two decades through the scale, patched in place — no rebuild.
-    expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBe(54.55);
-    expect(document.querySelector('#horizon-bar [data-live="h-word"]')!.textContent).toBe("9%");
+    expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBeCloseTo(600 * (2 / accumulatorSpan()), 1);
+    expect(document.querySelector('#horizon-bar [data-live="h-word"]')!.textContent).toBe(`${Math.floor((100 * 2) / accumulatorSpan())}%`);
     expect(document.querySelector(".horizon-word")).not.toBeNull();
   });
 
@@ -1013,7 +1018,10 @@ describe("the always-live board (§5)", () => {
     app.render();
     expect(ghosts()).toHaveLength(2);
     const labels = [...document.getElementById("grid")!.querySelectorAll(`[data-key^="ghost-"] .chord-label`)].map((node) => node.textContent);
-    expect(labels).toContain("Octave ×1.15");
+    // The Octave previews recognized but idle: at capacity one the
+    // allocator keeps the Fifth on the budget, and the would-form read
+    // says so honestly (#262).
+    expect(labels).toContain("Octave ×1.15 · idle");
     // Hovering the occupied G4: an identical-synthesizer swap forms nothing new.
     cell(1, 0).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
     app.render();
@@ -1055,12 +1063,18 @@ describe("the always-live board (§5)", () => {
     document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
     expect(ghosts()).toHaveLength(1);
     const labels = [...document.getElementById("grid")!.querySelectorAll(`[data-key^="ghost-"] .chord-label`)].map((node) => node.textContent);
-    expect(labels).toContain("Octave ×1.15");
-    // The drop delivers exactly what the ghost promised; the hull lifts.
+    // The new Octave previews idle — capacity one stays with the already
+    // ringing Fifth (#262).
+    expect(labels).toContain("Octave ×1.15 · idle");
+    // The drop delivers exactly what the ghost promised: the pair is
+    // recognized, and the authoritative allocation keeps the Fifth active
+    // while the Octave waits. The hull lifts.
     document.dispatchEvent(new MouseEvent("pointerup", { clientX: 130, clientY: 110 }));
     expect(app.state.modules[2]!.pos).toEqual(hex(1, 1));
     expect(ghosts()).toHaveLength(0);
-    expect(computeRates(app.state, true).namedChords.map((c) => `${c.name}|${c.root}`).sort()).toEqual(["Fifth|0", "Octave|7"]);
+    const read = allocateRates(app.state, true);
+    expect(read.read.instances.map((c) => `${c.name}|${c.root}`)).toEqual(["Fifth|0"]);
+    expect(read.read.recognizedInstances.map((c) => `${c.name}|${c.root}`)).toContain("Octave|7");
   });
 });
 
@@ -1303,9 +1317,10 @@ describe("always-on chord feedback (§6, #137)", () => {
     expect(document.body.classList.contains("live")).toBe(true);
     expect(document.querySelector('[data-key="chord-marks"].flow')).toBeNull();
     // The expected figure reads off the same live snapshot the render used —
-    // startSession's feats ride the boost.
+    // startSession's feats ride the boost — and the snapshot is the
+    // authoritative allocation's (#262).
     const g4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(1, 0)))!;
-    const liveValue = `+${formatNumber(computeRates(app.state, true).contributions.get(g4.id)!.value)} ν/s`;
+    const liveValue = `+${formatNumber(allocateRates(app.state, true).snapshot.contributions.get(g4.id)!.value)} ν/s`;
     cell(1, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(readout().textContent).toContain(liveValue);
     expect(readout().textContent).toContain("Fifth ×1.3");

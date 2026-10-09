@@ -4,7 +4,7 @@ import { ARETE_HORIZON } from "./accumulator";
 import { buyCatalogEntry, buyCell, buyRowUnlock, buyShelfModule, combine, endSession, joinRollPool, placeModule, prestige, startSession } from "./actions";
 import { advance } from "./advance";
 import { BALANCE } from "./constants";
-import { allocateRates, computeRates, displayedRates, setAllocationEnabled } from "./economy";
+import { allocateRates, computeRates, displayedRates } from "./economy";
 import { addPracticeLog, createHabit, selectHabit } from "./habits";
 import { writeNote } from "./notes";
 import { createGoal } from "./goals";
@@ -329,7 +329,6 @@ describe("the 17-feat launch set", () => {
 
   it("Power chord: one voice carries its earned whole chord past ×2", () => {
     const s = fresh();
-    setAllocationEnabled(s, true);
     completeSession(s);
     // C4 · G4 · E4 · B♭ (q = −2), spacer-bridged into one formation: a dominant
     // seventh. At capacity one the chord is the one instance the voices
@@ -351,10 +350,9 @@ describe("the 17-feat launch set", () => {
     expect(s.achievements["power-chord"]).toBeDefined();
   });
 
-  it.each([false, true])("Power chord includes earned resonance in progress, action and tick checks (allocation %s)", (development) => {
+  it("Power chord includes earned resonance in progress, action and tick checks", () => {
     const setup = () => {
       const s = fresh();
-      setAllocationEnabled(s, development);
       s.sessionsCompleted = 1;
       s.mutatorSlots.push(hex(0, 0));
       s.mutators.push({ id: "resonance", family: "resonance", rarity: "common", pos: hex(0, 0) });
@@ -413,7 +411,9 @@ describe("the 17-feat launch set", () => {
     give(s, "additive", hex(1, 0)); // G4 — a Fifth with the opening C4
     give(s, "focusKeyed", hex(2, 0)); // not a voice — would add another fifth if it sang
     const def = ACHIEVEMENTS.find((a) => a.id === "power-chord")!;
-    expect(def.progress(s, { chargeDelivered: false }).current).toBeCloseTo(1.3 * (1 + BALANCE.complexityRate), 9);
+    // The earned factor is the allocated Fifth's: whole-chord ×1.3 over the
+    // two-class formation's measured quality (1 + one complexity step).
+    expect(def.progress(s, { chargeDelivered: false }).current).toBeCloseTo(1.3 * (1 + BALANCE.allocationComplexityRate), 9);
   });
 
   it("Eyes on the horizon: the lifetime crossing, never the era's measure", () => {

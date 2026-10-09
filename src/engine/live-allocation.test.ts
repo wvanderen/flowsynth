@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { advance } from "./advance";
-import { endSession, placeModule, startSession } from "./actions";
+import { endSession, placeModule, prestige, startSession } from "./actions";
 import { syncAchievements } from "./achievements";
 import { analyzeChords } from "./chords";
-import { allocateRates, computeRates, deployedVoices, displayedRates, setAllocationEnabled, syncAllocation, syncRates } from "./economy";
+import { allocateRates, computeRates, deployedVoices, displayedRates, syncAllocation, syncRates } from "./economy";
 import { fresh, give, sumSynthValues } from "./fixtures";
 import { hex } from "./hex";
 import { discoveryCount, syncChordDiscoveries } from "./library";
@@ -17,8 +17,10 @@ import type { GameState, ModuleInstance } from "./types";
 // board earns from the selected whole chords only — active instances alone
 // populate the bonus terms, recognized-but-inactive chords still count as
 // discoveries, and the authoritative allocation rides the real rate pass.
-// Allocation is explicitly enabled for development; ordinary gameplay
-// remains on the uncapped economy until calibration (ADR-0052).
+// Since the release calibration (#262) the allocation is the only
+// production path: new, loaded, and reset states all ride it with no
+// opt-in anywhere (ADR-0055); the uncapped pass survives as the explicit
+// `computeRates` helper for legacy comparisons.
 
 // The board suites' convention: the fifths axis — +7 semitones per +q,
 // +12 per row, so a recipe's classes land on the columns 7·q ≡ interval
@@ -34,50 +36,50 @@ function activeOf(state: GameState) {
 }
 void activeOf;
 
-describe("one-capacity voices (#258)", () => {
-  it("ordinary ticks, actions, summaries and displays preserve uncapped production", () => {
+describe("the default allocation economy (#262)", () => {
+  it("a fresh engine state allocates with no opt-in — ticks, actions and summaries agree", () => {
     const state = fresh();
     placed(state, "additive", 1, 0);
     const octave = give(state, "additive", null);
     expect(placeModule(state, octave.id, hex(0, 1)).ok).toBe(true);
-    expect(state.activeChords).toEqual([]);
-    expect(displayedRates(state, true)).toEqual(computeRates(state, true));
-    expect(syncRates(state, true).allocation).toBeUndefined();
+    // The display twin is the authoritative pass, never the uncapped one.
+    expect(displayedRates(state, true).allocation).toBeDefined();
+    expect(syncRates(state, true).allocation).toBeDefined();
     startSession(state, null);
-    const expected = computeRates(state, true).rate;
+    const expected = displayedRates(state, true).rate;
     const before = state.nous;
     advance(state, 1);
     expect(state.nous - before).toBeCloseTo(expected, 9);
     endSession(state);
-    expect(state.summary?.synths).toBe(computeRates(state, true).synths);
-    expect(state.summary?.infusors).toBe(computeRates(state, true).infusors);
-    expect(state.summary?.empowerment).toBe(computeRates(state, true).empowerment);
-    expect(state.activeChords).toEqual([]);
+    expect(state.summary?.synths).toBe(displayedRates(state, true).synths);
+    expect(state.summary?.infusors).toBe(displayedRates(state, true).infusors);
+    expect(state.summary?.empowerment).toBe(displayedRates(state, true).empowerment);
+    expect(state.activeChords).toHaveLength(1);
   });
 
-  it("development opt-in governs actions, earnings and displays without entering the save", () => {
+  it("a loaded save allocates with no opt-in and matches the live read", () => {
     const state = fresh();
-    setAllocationEnabled(state, true);
     placed(state, "additive", 1, 0);
     const octave = give(state, "additive", null);
     expect(placeModule(state, octave.id, hex(0, 1)).ok).toBe(true);
-    expect(state.activeChords).toHaveLength(1);
-    startSession(state, null);
-    const snapshot = displayedRates(state, true);
-    expect(snapshot.rate).toBeLessThan(computeRates(state, true).rate);
-    const before = state.nous;
-    advance(state, 1);
-    expect(state.nous - before).toBeCloseTo(snapshot.rate, 9);
+    const live = displayedRates(state, true);
     const loaded = deserialize(serialize(state)).state!;
-    expect(displayedRates(loaded, true).allocation).toBeUndefined();
+    expect(displayedRates(loaded, true)).toEqual(live);
     expect(loaded.activeChords).toEqual(state.activeChords);
-    setAllocationEnabled(loaded, true);
-    expect(displayedRates(loaded, true)).toEqual(displayedRates(state, true));
   });
 
-  it("live development recomputation is independent of wall-clock speed", () => {
+  it("a post-prestige state allocates with no opt-in", () => {
     const state = fresh();
-    setAllocationEnabled(state, true);
+    placed(state, "additive", 1, 0);
+    state.eraEarned = 7e6;
+    expect(prestige(state).ok).toBe(true);
+    expect(state.capacityBought).toBe(0);
+    expect(displayedRates(state, true).allocation).toBeDefined();
+    expect(displayedRates(state, true)).toEqual(allocateRates(state, true).snapshot);
+  });
+
+  it("live recomputation is independent of wall-clock speed", () => {
+    const state = fresh();
     placed(state, "additive", 1, 0);
     placed(state, "additive", 0, 1);
     const expected = syncRates(state, true);
@@ -86,12 +88,23 @@ describe("one-capacity voices (#258)", () => {
     try {
       expect(displayedRates(state, true)).toEqual(expected);
       const loaded = deserialize(serialize(state)).state!;
-      setAllocationEnabled(loaded, true);
       expect(syncRates(loaded, true)).toEqual(expected);
     } finally {
       clock.mockRestore();
     }
   });
+
+  it("the uncapped pass stays available as the explicit helper, never the default", () => {
+    const state = fresh();
+    placed(state, "additive", 1, 0);
+    const octave = give(state, "additive", null);
+    expect(placeModule(state, octave.id, hex(0, 1)).ok).toBe(true);
+    const plain = computeRates(state, true);
+    expect(plain.allocation).toBeUndefined();
+    // Capacity one affords strictly less than the uncapped stack.
+    expect(displayedRates(state, true).rate).toBeLessThan(plain.rate);
+  });
+
   it("every singing module opens at capacity one, rarity never altering it", () => {
     const state = fresh();
     placed(state, "additive", 1, 0);

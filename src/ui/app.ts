@@ -38,7 +38,7 @@ import {
 import { ARETE_HORIZON, claimOf } from "../engine/accumulator";
 import { neighbors, hex, sameHex } from "../engine/hex";
 import { newChordTerms } from "../engine/chords";
-import { displayedRates, setAllocationEnabled, mutatorAt, deployedAt } from "../engine/economy";
+import { displayedRates, mutatorAt, deployedAt } from "../engine/economy";
 import { summaryTermsOf } from "../engine/allocation";
 import { serialize, STORAGE_KEY } from "../engine/save";
 import { SharedSave, browserSaveStorage, type LoadedSave } from "./shared-save";
@@ -391,7 +391,11 @@ export class App {
   private currentState: GameState = createInitialState();
   get state(): GameState { return this.currentState; }
   set state(state: GameState) {
-    setAllocationEnabled(state, this.dev);
+    // The allocation economy is the game's production path since the
+    // harmonic-capacity release (#262): every state — new, loaded, or
+    // reset — rides the whole-chord selector with no opt-in anywhere.
+    // The `dev` flag gates only the development surfaces (the dev panel
+    // and the stress board), never the economy.
     this.currentState = state;
   }
   ui: UiState = {

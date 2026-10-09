@@ -1,7 +1,7 @@
 # 0052 — Live voices earn from selected whole chords at capacity one, gated before calibration
 
 Date: 2026-10-06
-Status: Accepted (development slice — the ordinary economy stays on its existing path pending full calibration)
+Status: Accepted; the development gate (§5, and §1's ordinary/development split) was superseded by the release calibration (ADR-0055, issue #262) — every state rides the allocation economy
 Issue: #258
 
 ## Context

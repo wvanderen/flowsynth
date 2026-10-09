@@ -9,18 +9,27 @@ import { BALANCE } from "./constants";
 import type { GameState } from "./types";
 
 // Lifetime ν where the visible log scale begins.
-export const ARETE_LOG_FLOOR = 10;
+export const ARETE_LOG_FLOOR = 1e3;
 
 // The prestige threshold — the horizon line that caps each era's fill.
-// Provisional ~16 credited-hour expansion-led tuning (#157); evidence lives in
-// docs/arete-tuning.md. Five sessions are an observation window, not a goal.
-export const ARETE_HORIZON = 1e23;
+// The harmonic-capacity calibration (#262): the finite-capacity economy's
+// ordinary first era crosses in roughly twenty credited hours and the
+// second near seventy percent of that (full-fidelity evidence across
+// seeds and policies in docs/capacity-release-tuning.md and
+// capacity-calibration.test.ts). The prior 1e23 expansion-led figure
+// belonged to the uncapped stacking model the capacity design retires.
+export const ARETE_HORIZON = 7e6;
+
+// The visible scale's decade count — the one span read, shared by the
+// fill and the surfaces that quote its geometry.
+export function accumulatorSpan(): number {
+  return Math.log10(ARETE_HORIZON) - Math.log10(ARETE_LOG_FLOOR);
+}
 
 // The fill's log-scale position: 0 at the floor, 1 at the horizon, clamped
 // outside so pre-floor eras and past-horizon overfill both render sanely.
 export function accumulatorFill(eraEarned: number): number {
-  const span = Math.log10(ARETE_HORIZON) - Math.log10(ARETE_LOG_FLOOR);
-  const position = (Math.log10(Math.max(eraEarned, ARETE_LOG_FLOOR)) - Math.log10(ARETE_LOG_FLOOR)) / span;
+  const position = (Math.log10(Math.max(eraEarned, ARETE_LOG_FLOOR)) - Math.log10(ARETE_LOG_FLOOR)) / accumulatorSpan();
   return Math.min(1, Math.max(0, position));
 }
 

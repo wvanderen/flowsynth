@@ -3,7 +3,7 @@ import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import type { App } from "./app";
 import { BALANCE, isVoiceType } from "../engine/constants";
 import { STORAGE_KEY } from "../engine/save";
-import { displayedRates, computeRates, projectPlacement } from "../engine/economy";
+import { displayedRates, allocateRates, projectPlacement } from "../engine/economy";
 import { give } from "../engine/fixtures";
 import * as allocation from "../engine/allocation";
 import { hex, sameHex } from "../engine/hex";
@@ -223,7 +223,7 @@ describe("the one-capacity economy on the board (#258)", () => {
   beforeEach(() => { app = boot(undefined, true); });
   const readout = () => document.getElementById("chord-readout") as HTMLElement;
 
-  it("ordinary reloads keep the uncapped engine and omit capacity UI even after a dev save", () => {
+  it("ordinary reloads ride the allocation engine and show the capacity readout, even after a dev save", () => {
     const fifth = give(app.state, "additive", null);
     app.pickCellThenPlace(fifth.id, hex(1, 0));
     const octave = give(app.state, "additive", null);
@@ -231,12 +231,14 @@ describe("the one-capacity economy on the board (#258)", () => {
     app.save();
     app = boot();
     expect(app.dev).toBe(false);
-    expect(displayedRates(app.state, true)).toEqual(computeRates(app.state, true));
+    // The allocation pass is the production path since the release
+    // calibration (#262): the display twin matches it, not the uncapped
+    // pass.
+    expect(displayedRates(app.state, true)).toEqual(allocateRates(app.state, true).snapshot);
     document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(readout().textContent).not.toContain("Capacity");
-    expect(document.querySelector(".chord-idle")).toBeNull();
+    expect(readout().textContent).toContain("Capacity");
     app.openModal("rate");
-    expect(document.getElementById("modal-content")!.textContent).not.toContain("Capacity");
+    expect(document.getElementById("modal-content")!.textContent).toContain("Capacity");
     app.closeModal();
     app.openModal("library");
     expect(document.querySelector("#modal-content .chord-count")!.textContent).toContain("×1");

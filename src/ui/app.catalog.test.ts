@@ -313,8 +313,10 @@ describe("the catalog door (issue #271)", () => {
     expect(app.state.catalogEntryOwned).toBe(true);
     sheet = document.getElementById("modal-content")!;
     expect(sheet.querySelector(".entry-screen")).toBeNull();
+    // The capacity offerings (issue #259, released to ordinary play by
+    // #262) join the sheet's sections.
     const headings = [...sheet.querySelectorAll(".catalog-sections h2")].map((h) => h.textContent);
-    expect(headings).toEqual(["Upgrades", "Unlocks"]);
+    expect(headings).toEqual(["Upgrades", "Unlocks", "Harmonic capacity"]);
     // The entry's row reads ACQUIRED with its rewards line.
     const entryRow = [...sheet.querySelectorAll(".catalog-row")].find((r) => r.textContent!.includes("Mutator layer"))!;
     expect(entryRow.textContent).toContain("ACQUIRED");
@@ -602,19 +604,19 @@ describe("the harmonic-capacity ladder (#259)", () => {
   beforeEach(() => { app = boot(undefined, true); });
   const readoutText = (): string => (document.getElementById("chord-readout") as HTMLElement).textContent ?? "";
 
-  it("ordinary play shows no capacity surfaces in either catalog", () => {
+  it("ordinary play sees the capacity surfaces in both catalog faces", () => {
     app = boot();
     app.state.arete = 5;
     app.openModal("catalog");
-    expect(document.getElementById("modal-content")!.textContent).not.toContain("Harmonic capacity");
+    expect(document.getElementById("modal-content")!.textContent).toContain("Harmonic capacity");
     app.closeModal();
     app.state.prestiges = 1;
     app.state.catalogEntryOwned = true;
     // Mutator mode directs the door to the arete face (issue #273); the
-    // dev capacity offerings ride both faces, and ordinary play shows none.
+    // released capacity offerings (issue #262) ride both faces.
     app.ui.mutLayer = "mutators";
     app.openModal("catalog");
-    expect(document.getElementById("modal-content")!.textContent).not.toContain("Harmonic capacity");
+    expect(document.getElementById("modal-content")!.textContent).toContain("Harmonic capacity");
   });
 
   it("the catalog row quotes the rung's price and benefit, and the purchase lands", () => {
