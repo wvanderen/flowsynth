@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { readFileSync } from "node:fs";
 import type { App } from "./app";
 import { createAppFixture } from "./testing/app-fixture";
 import { combineMutatorsPreview } from "../engine/actions";
@@ -137,6 +138,9 @@ describe("the vertical layer legend (issue #295)", () => {
   it("stands in upgrade mode once the tree is entered, and flow shows neither legend nor layer", () => {
     seedMutatorEra();
     expect(document.getElementById("layer-legend")!.hidden).toBe(false);
+    // The unlocked symbol's name stops claiming the lock — the accessible
+    // name tracks the state the mark shows (issue #298).
+    expect(document.querySelector('[data-legend-layer="mutators"]')!.getAttribute("aria-label")).toBe("Mutators layer");
     app.mutSetLayer("mutators");
     expect(document.body.classList.contains("mut-layer-live")).toBe(true);
     // Entering flow clears the layer with the rest of the transient modes.
@@ -157,19 +161,31 @@ describe("the vertical layer legend (issue #295)", () => {
 });
 
 describe("the Mutators layer's slot faces", () => {
-  it("one face per slot, in words — family, host, effect — and never a ν/s figure", () => {
+  it("one face per slot, in words — family, glyph, rarity, effect — and never a ν/s figure", () => {
     seedMutatorEra();
     app.mutSetLayer("mutators");
     const face = slotNode(0, 0);
     expect(face).not.toBeNull();
     const words = face.textContent ?? "";
     expect(words).toContain("POWER");
-    expect(words).toContain("Oscillator · C4");
     expect(words).toContain("+50%");
     expect(words).not.toContain("ν/s");
     expect(words).not.toContain("ν");
     // The tray twin waits; the hostless cell's charge mutator says so.
     expect(slotNode(1, 0)!.textContent).toContain("inert · no host");
+  });
+
+  it("the quiet overview never speaks the host (issue #298) — the accessible name keeps it", () => {
+    seedMutatorEra();
+    app.mutSetLayer("mutators");
+    const face = slotNode(0, 0)!;
+    // The visible face says the mutator alone; the host relationship is
+    // the Hex detail's to supply.
+    expect(face.textContent).not.toContain("Oscillator");
+    expect(face.textContent).not.toContain("· C4");
+    // The accessible name keeps the host, so the fact never rides on
+    // sight alone; the hover ask speaks it too (pinned below).
+    expect(face.getAttribute("aria-label")).toContain("hosts Oscillator · C4");
   });
 
   it("a vacant slot speaks: OPEN SLOT, inert · no host", () => {
@@ -196,12 +212,21 @@ describe("the Mutators layer's slot faces", () => {
     expect(face.textContent).not.toContain("RES +");
   });
 
-  it("the board rests greyed beneath: the layer's live class stands", () => {
+  it("the module board hides beneath: the layer's live class stands, and the stylesheet drops faces, marks, and leads", () => {
     seedMutatorEra();
     app.mutSetLayer("mutators");
     expect(document.body.classList.contains("mut-layer-live")).toBe(true);
     app.mutSetLayer("modules");
     expect(document.body.classList.contains("mut-layer-live")).toBe(false);
+    // The quiet layer (issue #298) is a stylesheet contract: module
+    // cell-nodes leave the layer entire (display none also lifts them out
+    // of tab order), and chord marks and charge leads never draw. The
+    // owned lattice itself stays — pointer-dead.
+    const css = readFileSync("src/ui/style.css", "utf8");
+    expect(css).toContain("body.mut-layer-live #grid .cell-node:has(.module-node)");
+    expect(css).toMatch(/body\.mut-layer-live #grid \.cell-node:has\(\.module-node\),[^}]*\.charge-preview-line \{\s*display: none;\s*\}/);
+    expect(css).toMatch(/body\.mut-layer-live #grid \.cell-node \{\s*pointer-events: none;\s*\}/);
+    expect(css).not.toMatch(/body\.mut-layer-live[^{]*grayscale/);
   });
 });
 

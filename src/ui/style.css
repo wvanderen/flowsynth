@@ -1858,7 +1858,7 @@ body.hex-detail-open .upgrade-all {
 .hex-stack-mut .mut-slot-hex.muted { stroke: var(--line); fill: color-mix(in srgb, var(--panel-deep) 55%, transparent); stroke-dasharray: none; }
 .hex-stack-mut .mut-slot-family { font-size: 12px; letter-spacing: 0.14em; }
 .hex-stack-mut .mut-slot-effect { font-size: 10.5px; }
-.hex-stack-mut .mut-slot-host { font-size: 10px; }
+.hex-stack-mut .mut-slot-verdict { font-size: 10px; }
 .hex-stack-mut .mut-slot-ticks circle { fill: var(--arete); }
 .hex-stack-mut .hex-stack-lock {
   fill: none;
@@ -2406,14 +2406,20 @@ body.hex-detail-open .upgrade-all {
   pointer-events: none;
 }
 
-/* The resting board beneath the Mutators tab: greyed, whispering, and
-   pointer-dead — every gesture resolves against the slot faces above. */
-body.mut-layer-live #grid .cell-node {
-  filter: grayscale(0.85);
-  opacity: 0.32;
-  pointer-events: none;
-}
-body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
+/* The Mutators layer owns the board (issue #298): the module faces, chord
+   marks, and charge leads never draw beneath it — the arete register's own
+   faces stand over the quiet lattice of owned cells, and every gesture
+   resolves against the slot faces above. The module cell-nodes leave the
+   layer entire (display none takes them out of tab order too); host
+   relationships and the external bonuses live one click away, in the Hex
+   detail's stack and breakdowns. */
+body.mut-layer-live #grid .cell-node { pointer-events: none; }
+/* Ghost marks hide with the formed ones: no module gesture can stand on
+   this layer, so nothing ever raises one — the group is simply absent. */
+body.mut-layer-live #grid .cell-node:has(.module-node),
+body.mut-layer-live #grid .chord-mark,
+body.mut-layer-live #grid .charge-line,
+body.mut-layer-live #grid .charge-preview-line { display: none; }
 
 /* The Modules tab's presence outline: thin arete, hugging the chassis,
    clear of the rarity rings. Presence only — it never speaks. */
@@ -2448,11 +2454,16 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
   pointer-events: none;
 }
 .mut-slot-effect { font-size: 12.5px; fill: var(--ink); pointer-events: none; }
-.mut-slot-host { font-size: 10px; fill: var(--muted); pointer-events: none; }
+.mut-slot-verdict { font-size: 10px; fill: var(--muted); pointer-events: none; }
 .mut-slot-face.mut-inert .mut-slot-effect { fill: var(--muted); }
 .mut-slot-open .mut-slot-family { opacity: 0.85; }
 .mut-pulse { animation: mut-pulse 1.4s ease-in-out infinite; }
 @keyframes mut-pulse { 50% { stroke-width: 3.6; } }
+/* Reduced motion keeps the static dashed target: the arm reads without
+   animation, and the pill and Esc carry the cancellation. */
+@media (prefers-reduced-motion: reduce) {
+  .mut-pulse { animation: none; }
+}
 
 /* The invisible grab surfaces over the slot faces. Touch drags are drags,
    never scrolls — the same contract the board's own drag surfaces wear. */
