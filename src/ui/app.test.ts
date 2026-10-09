@@ -501,70 +501,9 @@ describe("interaction continuity (#115)", () => {
     expect(popover.scrollTop).toBe(90);
     expect(document.getElementById("focus-plan-word")!.textContent).toBe("Open-ended");
   });
-
-  it("the enter prompt's kind switch swaps the pane without rebuilding the modal; focus survives on the tab", () => {
-    createHabit(app.state, "Jammin");
-    app.startFlow();
-    const modal = document.getElementById("modal-content")!;
-    const tab = modal.querySelector<HTMLButtonElement>('[data-enter-kind="new"]')!;
-    tab.focus();
-    tab.click();
-    expect(app.ui.enter.kind).toBe("new");
-    // The modal shell and the tab kept their nodes; the pane swapped beneath.
-    expect(document.getElementById("modal-content")).toBe(modal);
-    expect(modal.querySelector('[data-enter-kind="new"]')).toBe(tab);
-    expect(document.activeElement).toBe(tab);
-    expect(tab.getAttribute("aria-pressed")).toBe("true");
-    expect(modal.querySelector('.mode-tab[data-enter-kind="habit"]')!.getAttribute("aria-pressed")).toBe("false");
-    // The pane and footer followed at once (#95's contract).
-    expect(document.getElementById("enter-habit-name")).not.toBeNull();
-    const begin = document.getElementById("enter-begin") as HTMLButtonElement;
-    expect(begin.textContent).toBe("Name your new habit");
-    expect(begin.disabled).toBe(true);
-    expect(modal.querySelector(".cta-summary")!.textContent).toBe("name it to arm the start");
-  });
-
-  it("picking a habit in the enter prompt keeps the choice buttons and moves the footer in place", () => {
-    const created = createHabit(app.state, "Jammin");
-    createHabit(app.state, "Etudes");
-    app.startFlow();
-    const modal = document.getElementById("modal-content")!;
-    const choice = modal.querySelector<HTMLButtonElement>(`[data-enter-habit="${created.habit!.id}"]`)!;
-    const list = modal.querySelector(".enter-choices") as HTMLElement;
-    list.scrollTop = 60;
-    choice.focus();
-    choice.click();
-    expect(document.getElementById("modal-content")).toBe(modal);
-    expect(modal.querySelector(`[data-enter-habit="${created.habit!.id}"]`)).toBe(choice);
-    expect(document.activeElement).toBe(choice);
-    // The inner list is the same node, scroll untouched.
-    expect(modal.querySelector(".enter-choices")).toBe(list);
-    expect(list.scrollTop).toBe(60);
-    expect(choice.classList.contains("selected")).toBe(true);
-    expect(choice.getAttribute("aria-pressed")).toBe("true");
-    const begin = document.getElementById("enter-begin") as HTMLButtonElement;
-    expect(begin.textContent).toBe("Begin — Jammin · open-ended");
-    expect(begin.disabled).toBe(false);
-    expect(modal.querySelector(".cta-summary")!.textContent).toBe("Jammin · open-ended");
-  });
-
-  it("typed names keep the modal off the rebuild path: a later render leaves the input node alone", () => {
-    app.startFlow();
-    document.querySelector<HTMLButtonElement>('#modal-content [data-enter-kind="new"]')!.click();
-    const input = document.getElementById("enter-habit-name") as HTMLInputElement;
-    input.focus();
-    input.value = "Sketching";
-    input.dispatchEvent(new Event("input"));
-    const modal = document.getElementById("modal-content")!;
-    app.render();
-    expect(document.getElementById("modal-content")).toBe(modal);
-    expect(document.getElementById("enter-habit-name")).toBe(input);
-    expect(document.activeElement).toBe(input);
-    expect(document.getElementById("enter-begin")!.textContent).toBe("Begin — Sketching · open-ended");
-  });
 });
 
-describe("the settings preferences (§5)", () => {
+describe("the settings readout stack (§5, issue #280)", () => {
   it("carries one global mute toggle that gates and persists", () => {
     app.openModal("settings");
     const toggle = document.getElementById("pref-mute") as HTMLInputElement;
@@ -575,6 +514,72 @@ describe("the settings preferences (§5)", () => {
     expect(app.state.muted).toBe(true);
     const saved = JSON.parse(localStorage.getItem("flowsynth.save.v1")!);
     expect(saved.state.muted).toBe(true);
+  });
+
+  it("reads as a readout stack: the eyebrow is the identity, no title beside it", () => {
+    app.openModal("settings");
+    const content = document.getElementById("modal-content")!;
+    const title = document.getElementById("modal-title")!;
+    expect(title.textContent).toBe("SETTINGS");
+    expect(title.classList.contains("eyebrow")).toBe(true);
+    expect(content.querySelector("h2")).toBeNull();
+    expect(content.textContent).not.toContain("PREFERENCES");
+  });
+
+  it("the session-start preference selects instant flow vs PLAN confirmation", () => {
+    app.openModal("settings");
+    const pref = document.getElementById("pref-confirm") as HTMLInputElement;
+    expect(pref.checked).toBe(true);
+    pref.checked = false;
+    pref.dispatchEvent(new Event("change"));
+    expect(app.ui.confirmEntry).toBe(false);
+    // The main switch obeys at once: instant start, no habit is unstructured.
+    document.getElementById("close-modal")!.click();
+    app.startFlow();
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.activeHabitId).toBeNull();
+  });
+
+  it("the mute row's scope lives in the tooltip layer, reachable by keyboard focus", () => {
+    app.openModal("settings");
+    const content = document.getElementById("modal-content")!;
+    const phrase = "the target chime included";
+    const deepest = [...content.querySelectorAll<HTMLElement>("*")].filter(
+      (el) => el.textContent!.includes(phrase) && ![...el.children].some((child) => child.textContent!.includes(phrase)),
+    );
+    expect(deepest).toHaveLength(1);
+    expect(deepest[0]!.classList.contains("inst-tip-body")).toBe(true);
+    // The tooltip rides the instrument wiring: focus opens it.
+    const trigger = deepest[0]!.closest(".inst-tip")!.querySelector<HTMLElement>(".inst-tip-trigger")!;
+    trigger.focus();
+    expect(deepest[0]!.classList.contains("inst-show")).toBe(true);
+  });
+
+  it("one quiet saves line, and reset wears the switch color", () => {
+    app.openModal("settings");
+    const content = document.getElementById("modal-content")!;
+    expect(content.textContent!.match(/saves automatically on this device/g)).toHaveLength(1);
+    expect(document.getElementById("settings-reset")!.classList.contains("settings-reset")).toBe(true);
+    expect(document.getElementById("settings-export")).not.toBeNull();
+    expect(document.getElementById("settings-import")).not.toBeNull();
+  });
+});
+
+describe("the confirmed prose cuts (issue #280)", () => {
+  it("the enter prompt's furniture is gone with it: no plan pointer, no session-one steer", () => {
+    app.render();
+    expect(document.body.textContent).not.toContain("Planning lives in");
+    expect(document.body.textContent).not.toContain("A first try can be short");
+    expect(document.body.textContent).not.toContain("No habit attached — the session runs");
+  });
+
+  it("no surface explains the goals or empty states in prose", () => {
+    app.openApp("goals");
+    expect(document.body.textContent).not.toContain("Goals track practice conditions");
+    app.closeApp();
+    app.openApp("habit");
+    expect(document.body.textContent).not.toContain("Name what you practice");
+    expect(document.body.textContent).not.toContain("The console clock keeps session time");
   });
 });
 

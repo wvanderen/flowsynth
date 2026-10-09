@@ -213,6 +213,7 @@ describe("App lifetime", () => {
     app.dispose();
     app.startFlow();
     expect(app.ui.modal).toBeNull();
+    expect(app.ui.app).toBeNull();
     app.beginFlow(null);
     app.dispose();
     expect(app.state.mode).toBe("upgrade");

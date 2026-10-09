@@ -294,10 +294,10 @@ function habitChoices(state: GameState): string {
     .join("");
 }
 
-// The PLAN face. Upgrade mode: the ready readout, the session habit, and the
-// plan affordances — the enter confirmation's home once the session-start
-// preference lands. Flow: the running read — live elapsed, End flow
-// mirroring the main switch, targets visibly disabled.
+// The PLAN face. Upgrade mode: the ready readout, the session habit, and
+// the plan affordances — the enter confirmation's home (#280, the main
+// switch's confirmation path). Flow: the running read — live elapsed, End
+// flow mirroring the main switch, targets visibly disabled.
 function planFaceHtml(app: App): string {
   const { state, ui } = app;
   const upgrade = state.mode === "upgrade";
@@ -837,7 +837,9 @@ export function bindFocusSheet(app: App, scope: HTMLElement): void {
     });
   });
   app.listen(scope.querySelector("#focus-close"), "click", () => app.closeApp());
-  app.listen(scope.querySelector("#focus-enter"), "click", () => app.startFlow());
+  // The PLAN face's Enter flow control commits the face's own read — it
+  // never re-enters the confirmation it stands in (#280).
+  app.listen(scope.querySelector("#focus-enter"), "click", () => app.beginFlowFromPlan());
   app.listen(scope.querySelector("#focus-end"), "click", () => app.endFlow());
   // The session habit's select (the confirmation path's shape): one landing.
   app.listen(scope.querySelector("#focus-habit-select"), "change", (event) => {
