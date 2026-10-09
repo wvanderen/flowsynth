@@ -96,7 +96,10 @@ export interface FaceSpec {
   type: ModuleType;
   rarity: Rarity;
   // The prominent readout beneath the signature: the module's contribution —
-  // for the chargeable Forge, charge-vs-threshold.
+  // for the chargeable Forge, charge-vs-threshold. An empty string skips
+  // the line entirely (the detail tray's face previews, issue #296 review:
+  // an undeployed module has no contribution, and a tray readout saying
+  // "+0" would misread the swap).
   readout: string;
   // Extra class on the readout (e.g. the charge register on the Forge).
   readoutClass?: string;
@@ -189,7 +192,7 @@ export function moduleFace(spec: FaceSpec): string {
     ${!openWire && spec.level !== undefined ? `<text data-key="level" y="${layout.level}" text-anchor="middle" class="face-level">LV ${spec.level}</text>` : ""}
     <text data-key="name" y="${openWire ? SPACER_NAME_Y : layout.name}" text-anchor="middle" class="face-name">${META[spec.type].short.toUpperCase()}</text>
     ${openWire ? "" : `<g data-key="signature" class="face-signature" transform="translate(0 ${layout.glyph}) scale(${layout.glyphScale})" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>`}
-    ${openWire ? "" : `<text data-key="readout" x="0" y="${layout.readout}" text-anchor="middle" class="face-readout${readoutFitClass(spec.readout)}${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>`}
+    ${openWire || spec.readout === "" ? "" : `<text data-key="readout" x="0" y="${layout.readout}" text-anchor="middle" class="face-readout${readoutFitClass(spec.readout)}${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>`}
     ${spec.note ? `<text data-key="note" x="0" y="${layout.note}" text-anchor="middle" class="face-note">${spec.note}</text>` : ""}
     ${openWire ? `<polygon data-key="spacer-frame" class="spacer-frame" points="${hexPoints(SPACER_WINDOW_RADIUS)}"/>` : ""}`;
 }

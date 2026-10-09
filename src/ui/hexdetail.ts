@@ -26,7 +26,7 @@ import { sameHex } from "../engine/hex";
 import { cellNoteOf, noteNameOf, pitchOf } from "../engine/lattice";
 import type { GameState, Hex, ModuleInstance, MutatorInstance, RateSnapshot } from "../engine/types";
 import type { App, DetailFace } from "./app";
-import { HEX_RADIUS, hexPoints, moduleFace, forgeBranchOf, faceLevel, faceReadoutFor, waterFill, zeroBuyRead, inventoryTileSvg } from "./face";
+import { HEX_RADIUS, hexPoints, moduleFace, forgeBranchOf, faceLevel, faceReadoutFor, waterFill, zeroBuyRead } from "./face";
 import { chargeGlow } from "./leads";
 import { formatInt, formatNumber } from "./format";
 import { FAMILY_WORD, rarityTicks, mutatorEffectText, mutatorGlyph, mutatorInertVerdict, mutatorSlotPrice, mutatorUnlockTargets, mutatorTileSvg } from "./mutators";
@@ -183,9 +183,9 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
       <div class="hex-detail-grid">
         ${mutatorLayerHtml(app, pos, snapshot)}
         ${moduleLayerHtml(app, pos, module, snapshot, chordRow)}
-        ${detailTrayHtml(app, "modules")}
-        ${detailTrayHtml(app, "mutators")}
       </div>
+      ${detailTrayHtml(app, "modules")}
+      ${detailTrayHtml(app, "mutators")}
     </div>`;
   app.listen(document.getElementById("hex-detail-return"), "click", () => app.closeDetail());
   // The faces are the sections: clicking a face's chassis emphasizes it
@@ -212,6 +212,27 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   }
 }
 
+/* ── The orbital controls (issue #296 review) ─────────
+   Swap and Retrieve are gestures on the cell itself, so they ride as icon
+   controls orbiting the emphasized chassis — top-right and bottom-right of
+   the face's bounding box, in the empty space the hexagon's taper leaves —
+   not as text rows in the rail. The rail keeps the state actions (Add, the
+   unlock ladder, the upgrade band); the orbit keeps the inventory
+   gestures. */
+
+const ORBIT_SWAP_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13m0 0-3.5-3.5M17 8l-3.5 3.5"/><path d="M20 16H7m0 0 3.5-3.5M7 16l3.5 3.5"/></svg>`;
+const ORBIT_RETRIEVE_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9m0 0 3.5-3.5M12 12 8.5 8.5"/><path d="M4 14v3a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-3"/></svg>`;
+
+// The two inventory gestures around one chassis: Swap opens the layer's
+// tray (choosing swaps the resident out), Retrieve returns it outright.
+function orbitHtml(face: DetailFace, resident: string): string {
+  const retrieveTitle = face === "modules"
+    ? `Retrieve ${resident} to the tray`
+    : `Retrieve to the Mutator tray`;
+  return `<button class="hex-orbit-btn orbit-swap" id="detail-${face === "modules" ? "module" : "mutator"}-swap" aria-label="Swap — pick one from the tray" title="Swap — pick a ${face === "modules" ? "module" : "mutator"} from the tray; the resident waits in the tray">${ORBIT_SWAP_SVG}</button>
+    <button class="hex-orbit-btn orbit-retrieve" id="detail-${face === "modules" ? "module" : "mutator"}-retrieve" aria-label="${retrieveTitle}" title="${retrieveTitle}">${ORBIT_RETRIEVE_SVG}</button>`;
+}
+
 /* ── The Mutators face ──────────────────────────────── */
 // The slot's own hex, above the module, in the arete register — the same
 // chassis size, its state spoken in the instrument grammar and the slot
@@ -224,11 +245,12 @@ function mutatorLayerHtml(app: App, pos: Hex, snapshot: RateSnapshot): string {
   const upgrade = state.mode === "upgrade";
   const selected = ui.detail?.face === "mutators";
   const note = cellNoteOf(pos);
+  const item = mutatorAt(state, pos);
   const { chassis, tip } = mutatorChassisHtml(state, pos, snapshot);
   // The rail's one action per state — the Catalog entry walk while the
   // layer stands locked, the priced unlock where a slot can attach, Add
-  // mutator at a vacant slot, Swap and Retrieve where one stands (issue
-  // #296's direct management). Every refusal names its rule; no surface
+  // mutator at a vacant slot. Swap and Retrieve orbit the chassis instead
+  // (issue #296 review). Every refusal names its rule; no surface
   // promises a ν/s figure (issue #199's never-say rule).
   let rail = "";
   if (upgrade) {
@@ -242,15 +264,13 @@ function mutatorLayerHtml(app: App, pos: Hex, snapshot: RateSnapshot): string {
       } else {
         rail = `<span class="hex-detail-noslot" title="Slot unlocks attach beside the Mutator patch — each new slot neighbors an unlocked one">beside the patch only</span>`;
       }
-    } else if (mutatorAt(state, pos)) {
-      rail = `<button class="hex-action" id="detail-mutator-swap" title="Open the Mutator tray — choosing a mutator swaps it in; the resident waits in the Mutator tray">Swap</button>
-        <button class="hex-action" id="detail-mutator-retrieve" title="Retrieve to the Mutator tray">Retrieve</button>`;
-    } else {
+    } else if (!item) {
       rail = `<button class="hex-action" id="detail-mutator-add" title="Open the Mutator tray — choosing a mutator places it in this slot">Add mutator</button>`;
     }
   }
+  const orbit = upgrade && item ? orbitHtml("mutators", FAMILY_WORD[item.family]) : "";
   return `<section class="hex-detail-layer mutators${selected ? " selected" : ""}" data-detail-section="mutators" tabindex="-1" aria-label="Mutators — ${state.catalogEntryOwned ? "slot state" : "locked"} at ${note}">
-    <span class="inst-tip"><button class="hex-stack-chassis inst-tip-trigger" data-detail-face="mutators" aria-pressed="${selected}" aria-describedby="${tip.id}" aria-label="Emphasize the Mutators face">${chassis}</button>${tip.html}</span>
+    <span class="hex-orbit"><span class="inst-tip"><button class="hex-stack-chassis inst-tip-trigger" data-detail-face="mutators" aria-pressed="${selected}" aria-describedby="${tip.id}" aria-label="Emphasize the Mutators face">${chassis}</button>${tip.html}</span>${orbit}</span>
   </section>
   <aside class="hex-rail-row mutators${selected ? " selected" : ""}">${rail}</aside>`;
 }
@@ -369,19 +389,19 @@ function moduleLayerHtml(app: App, pos: Hex, module: ModuleInstance | undefined,
     };
   }
   // The rail's affordances (issue #296): an empty place opens the tray
-  // with Add module; a standing module swaps or retrieves — and the
-  // upgrade band rides beneath. Flow wears none of it.
+  // with Add module; a standing module's Swap and Retrieve orbit the
+  // chassis instead, and the upgrade band rides the rail beneath. Flow
+  // wears none of it.
   let rail = "";
   if (module && upgrade) {
-    rail = `<button class="hex-action" id="detail-module-swap" title="Open the tray — choosing a module swaps it in; the resident waits in the tray">Swap</button>
-      <button class="hex-action" id="detail-module-retrieve" title="Retrieve ${META[module.type].name} to the tray">Retrieve</button>
-      ${detailBuyHtml(app, module)}`;
+    rail = detailBuyHtml(app, module);
   } else if (upgrade) {
     rail = `<button class="hex-action" id="detail-module-add" title="Open the tray — choosing a module places it here">Add module</button>`;
   }
+  const orbit = module && upgrade ? orbitHtml("modules", META[module.type].name) : "";
   const row = chordRow ? `<div class="hex-chord-row">${chordRow}</div>` : "";
   return `<section class="hex-detail-layer modules${selected ? " selected" : ""}" data-detail-section="modules" tabindex="-1" aria-label="Modules — ${module ? `${META[module.type].name} at ${note}` : `empty place at ${note}`}">
-    <span class="inst-tip"><button class="hex-stack-chassis inst-tip-trigger" data-detail-face="modules" aria-pressed="${selected}" aria-describedby="${tip.id}" aria-label="Emphasize the Modules face">${chassis}</button>${tip.html}</span>
+    <span class="hex-orbit"><span class="inst-tip"><button class="hex-stack-chassis inst-tip-trigger" data-detail-face="modules" aria-pressed="${selected}" aria-describedby="${tip.id}" aria-label="Emphasize the Modules face">${chassis}</button>${tip.html}</span>${orbit}</span>
     ${row}
   </section>
   <aside class="hex-rail-row modules${selected ? " selected" : ""}">${rail}</aside>`;
@@ -514,12 +534,22 @@ function detailTrayHtml(app: App, face: DetailFace): string {
   const destination = face === "modules"
     ? `choosing places it here${swap ? ", the resident to the tray" : ""}`
     : `choosing places it in the slot${swap ? ", the resident to the Mutator tray" : ""}`;
+  // The larger cell preview (issue #296 review): the module's own face at
+  // tray scale — nameplate, rarity rings, level — not the board column's
+  // minimal mark. The readout stays off the preview: an undeployed module
+  // has no contribution to show, and a tray figure that says "+0" would
+  // misread the swap; the tooltip carries the rarity words.
   const tiles = face === "modules"
     ? state.modules
         .filter((m) => m.pos === null)
         .map((m) => {
           const id = detailTipId();
-          return `<span class="inst-tip tray-tile-detail"><button class="inventory-tile" data-detail-place="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}" aria-label="${META[m.type].name} · ${RARITY_LABEL[m.rarity]}" aria-describedby="${id}">${inventoryTileSvg(m)}</button><span class="inst-tip-body" id="${id}" role="tooltip">${META[m.type].name} · ${RARITY_LABEL[m.rarity]} — ${destination}</span></span>`;
+          return `<span class="inst-tip tray-tile-detail"><button class="inventory-tile tray-face-tile" data-detail-place="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}" aria-label="${META[m.type].name} · ${RARITY_LABEL[m.rarity]}" aria-describedby="${id}"><svg class="tray-face" viewBox="-70 -70 140 140" data-type="${m.type}" data-rarity="${m.rarity}" aria-hidden="true">${moduleFace({
+            type: m.type,
+            rarity: m.rarity,
+            readout: "",
+            level: faceLevel(m),
+          })}</svg></button><span class="inst-tip-body" id="${id}" role="tooltip">${META[m.type].name} · ${RARITY_LABEL[m.rarity]} — ${destination}</span></span>`;
         })
         .join("") || `<span class="tray-empty">no modules wait in the tray</span>`
     : state.mutators

@@ -617,6 +617,61 @@ describe("the detail's direct inventory (issue #296)", () => {
     expect(document.getElementById("detail-tray-cancel")).not.toBeNull();
   });
 
+  it("the tray overlays — opening it never reflows the composition", () => {
+    // The grid keeps its two columns (stack, rail) whether the tray stands
+    // or not; the tray covers from outside the flow.
+    const css = readFileSync("src/ui/style.css", "utf8");
+    expect(css).toMatch(/\.hex-detail-tray\s*\{[^}]*position:\s*absolute/);
+    expect(css).toMatch(/\.hex-detail-grid\s*\{[^}]*grid-template-columns:\s*auto auto/);
+    expect(css).toMatch(/\.hex-detail\.sheet \.hex-detail-tray\s*\{[^}]*position:\s*static/);
+  });
+
+  it("Swap and Retrieve orbit the cell as icons, not rail rows", () => {
+    give(app.state, "additive", hex(1, 0));
+    app.render();
+    clickCell(1, 0);
+    const modules = section("modules");
+    // The gestures ride the chassis's orbit…
+    const orbit = modules.querySelector(".hex-orbit")!;
+    expect(orbit.querySelector("#detail-module-swap")).not.toBeNull();
+    expect(orbit.querySelector("#detail-module-retrieve")).not.toBeNull();
+    // …as icon buttons, named for the hand that reads without color.
+    const swap = orbit.querySelector<HTMLButtonElement>("#detail-module-swap")!;
+    expect(swap.getAttribute("aria-label")).toContain("Swap");
+    expect(swap.querySelector("svg")).not.toBeNull();
+    expect(swap.textContent!.trim()).toBe("");
+    // The rail keeps the upgrade band only — no duplicated text rows.
+    expect(modules.querySelector(".hex-rail-row ~ * #detail-module-swap, .hex-rail-row #detail-module-swap")).toBeNull();
+    // The Mutators face orbits the same way where a mutator stands.
+    seedEra();
+    app.render();
+    clickCell(0, 0);
+    const mutators = section("mutators");
+    expect(mutators.querySelector(".hex-orbit #detail-mutator-swap")).not.toBeNull();
+    expect(mutators.querySelector(".hex-orbit #detail-mutator-retrieve")).not.toBeNull();
+    // A vacant slot carries no orbit — Add mutator is the rail's action.
+    app.mutRetrieve("mu1");
+    app.render();
+    expect(section("mutators").querySelector(".hex-orbit .orbit-swap")).toBeNull();
+    expect(document.getElementById("detail-mutator-add")).not.toBeNull();
+  });
+
+  it("the tray shows larger cell previews: the module's own face at tray scale", () => {
+    give(app.state, "additive", null);
+    app.render();
+    clickCell(0, 1);
+    document.getElementById("detail-module-add")!.click();
+    const tile = detail().querySelector(".hex-detail-tray [data-detail-place]")!;
+    // The preview is the face — nameplate, rarity rings, level — not the
+    // bare hexagon-and-glyph mark the board column carries, and never a
+    // production figure: an undeployed module has no contribution, and a
+    // tray readout saying "+0" would misread the swap.
+    expect(tile.querySelector("svg.tray-face .face-name")).not.toBeNull();
+    expect(tile.querySelector("svg.tray-face .face-level")).not.toBeNull();
+    expect(tile.querySelector("svg.tray-face")!.getAttribute("data-type")).toBe("additive");
+    expect(tile.querySelector("svg.tray-face .face-readout")).toBeNull();
+  });
+
   it("a tile's click places straight into the detail's place, closing the tray and refreshing the row", () => {
     give(app.state, "additive", null);
     app.render();
