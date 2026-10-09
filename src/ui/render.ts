@@ -165,7 +165,8 @@ function wireClockPlan(app: App): void {
 // #63), and the bars' open fills. The console is pure control (§7): the
 // clock is itself the plan affordance — its disclosure opens the Focus
 // control sheet (ADR-0050, the time app's PLAN face) — and no production
-// readout lives here. The sheet itself anchors beneath the clock's own
+// readout lives here (the banner's focus reads name practice state, never
+// production). The sheet itself anchors beneath the clock's own
 // disclosure, whatever face it carries.
 function renderConsoleSession(app: App, projected: RateSnapshot): void {
   const { state, ui } = app;
@@ -321,6 +322,12 @@ function syncClockDisclosure(app: App): void {
 // patch below only ever touches text and fill widths. The phone banner
 // drops the reads — its nav row is bare launchers (ADR-0050's phone line) —
 // so the CSS docks the group out below the 600px line.
+// The bars' one width spelling: the fill percentage both the markup and
+// the in-place patch read, so the two can never drift.
+function bannerBarWidth(bar: { fraction: number }): string {
+  return `${(bar.fraction * 100).toFixed(1)}%`;
+}
+
 function bannerReadsHtml(app: App): string {
   const { bars, overflow } = goalBarsOf(app.state);
   const done = bars.filter((bar) => bar.done).length;
@@ -330,7 +337,7 @@ function bannerReadsHtml(app: App): string {
     ${
       bars.length > 0
         ? `<span class="gbars" role="img" aria-label="${barsLabel}">${bars
-            .map((bar, i) => `<span class="gbar${bar.done ? " done" : ""}" data-banner-bar="${i}" aria-hidden="true"><i style="width:${(bar.fraction * 100).toFixed(1)}%"></i></span>`)
+            .map((bar, i) => `<span class="gbar${bar.done ? " done" : ""}" data-banner-bar="${i}" aria-hidden="true"><i style="width:${bannerBarWidth(bar)}"></i></span>`)
             .join("")}</span>`
         : ""
     }
@@ -356,9 +363,8 @@ function refreshBannerReads(app: App): void {
   setText(host.querySelector('[data-banner="habit"]'), habit?.name ?? "");
   const { bars } = goalBarsOf(app.state);
   bars.forEach((bar, i) => {
-    const cell = host.querySelector<HTMLElement>(`[data-banner-bar="${i}"]`);
-    const fill = cell?.firstElementChild as HTMLElement | null;
-    const width = `${(bar.fraction * 100).toFixed(1)}%`;
+    const fill = host.querySelector<HTMLElement>(`[data-banner-bar="${i}"]`)?.firstElementChild as HTMLElement | null;
+    const width = bannerBarWidth(bar);
     if (fill && fill.style.width !== width) fill.style.width = width;
   });
 }
@@ -465,7 +471,7 @@ function renderConsoleApps(app: App): void {
   // Settings at the row's far end (ADR-0050's amended phone line). Notes
   // anchors its own popover beneath its door at every width; Habit and
   // Goals open the Focus sheet under the clock.
-  const doorKeys: readonly string[] = phone ? PHONE_DOORS : TILE_APPS;
+  const doorKeys: readonly DoorKey[] = phone ? PHONE_DOORS : TILE_APPS;
   const tiles = doorKeys
     .map((doorKey) => {
       if (doorKey === "focus") {
@@ -499,11 +505,15 @@ function renderConsoleApps(app: App): void {
   for (const doorKey of doorKeys) {
     app.listen(byId(`app-tile-${doorKey}`), "click", () => {
       if (doorKey === "focus") app.openApp("time");
-      else app.openApp(doorKey as FocusApp);
+      else app.openApp(doorKey);
     });
   }
   if (ui.app === "notes") bindAppPanel(app, host);
 }
+
+// The console doors' keys: every focus app plus the Focus sheet's own door
+// — the one entry that is not an app but the frame's front.
+type DoorKey = FocusApp | "focus";
 
 // The Focus sheet's door mark (ADR-0050's phone line, the prototype's ◎):
 // the circled dot — the focus figure, distinct from the clock's face.
@@ -513,7 +523,7 @@ const FOCUS_DOOR_SVG = `<svg viewBox="-12 -12 24 24" aria-hidden="true" fill="no
 // sheet's door and Notes. Habit and Goals walk into the sheet's faces
 // behind the focus door — the compact launcher they answered retires
 // (ADR-0033 amended), and the clock and main switch keep their posts.
-const PHONE_DOORS = ["focus", "notes"] as const;
+const PHONE_DOORS: readonly DoorKey[] = ["focus", "notes"];
 
 // The feats page (ADR-0015 as amended): the always-visible full list — the
 // milestone feats lead as their own group, then the five buckets the ADR
@@ -3689,13 +3699,12 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
 let devDrag: { ox: number; oy: number; sx: number; sy: number } | null = null;
 
 // The stage the grip clamps against: #app's own box — the console panel
-// never leaves the instrument (fallback: the viewport).
-function devStageBox(): DOMRect {
-  const app = byId("app");
-  if (app) return app.getBoundingClientRect();
-  return {
-    left: 0, top: 0, width: window.innerWidth, height: window.innerHeight,
-  } as DOMRect;
+// never leaves the instrument. #app spans the viewport, so its box is the
+// fixed-position coordinate space (fallback: the viewport itself).
+function devStageBox(): { left: number; top: number; width: number; height: number } {
+  const rect = byId("app")?.getBoundingClientRect();
+  if (rect && rect.width > 0 && rect.height > 0) return rect;
+  return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
 }
 
 function renderDev(app: App): void {
