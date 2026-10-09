@@ -864,7 +864,10 @@ export class App {
       clickInsideApps = true;
     }, { capture: true, signal: this.signal });
     this.els["console-session"]?.addEventListener("click", (event) => {
-      if ((event.target as Element | null)?.closest(".clock-anchor")) clickInsideApps = true;
+      const target = event.target as Element | null;
+      // Pause/resume belongs to the ongoing capture: keep Notes standing
+      // so the clock transition cannot dismiss an unsaved draft.
+      if (target?.closest(".clock-anchor") || (this.ui.app === "notes" && target?.closest("#pause-flow"))) clickInsideApps = true;
     }, { capture: true, signal: this.signal });
     document.addEventListener("click", () => {
       // A stale instance's closer must never close — or re-render — a newer

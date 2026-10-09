@@ -201,11 +201,32 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
   const sheetOpen = ui.app !== null;
   const notesOpen = ui.app === "notes";
   const popoverKey = sheetOpen ? `sheet|${notesOpen ? notesSheetKey(app) : focusSheetKey(app)}` : "shut";
+  // Clock transitions rebuild this host without changing the Notes sheet.
+  // Carry its draft and editing position only while the sheet key stays
+  // the same: capturing a note or leaving CAPTURE still clears the draft.
+  const composer = notesOpen && host.dataset.renderKey?.endsWith(`|${popoverKey}`)
+    ? host.querySelector<HTMLTextAreaElement>("#note-composer")
+    : null;
+  const draft = composer ? {
+    text: composer.value,
+    start: composer.selectionStart,
+    end: composer.selectionEnd,
+    direction: composer.selectionDirection,
+    focused: document.activeElement === composer,
+    scrollTop: composer.scrollTop,
+  } : null;
   const sheetHtml = () => (notesOpen ? notesSheetHtml(app) : focusSheetHtml(app, projected));
   const bindSheet = (scrollTop: number): void => {
     if (!sheetOpen) return;
     if (notesOpen) bindNotesSheet(app, host);
     else bindFocusSheet(app, host);
+    const fresh = host.querySelector<HTMLTextAreaElement>("#note-composer");
+    if (draft && fresh) {
+      fresh.value = draft.text;
+      if (draft.focused) fresh.focus({ preventScroll: true });
+      fresh.setSelectionRange(draft.start, draft.end, draft.direction);
+      fresh.scrollTop = draft.scrollTop;
+    }
     restorePopoverScroll(host, scrollTop);
   };
 

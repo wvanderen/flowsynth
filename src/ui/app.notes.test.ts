@@ -80,6 +80,39 @@ describe("the notes sheet's frame and faces", () => {
 });
 
 describe("capturing from the sheet", () => {
+  it("keeps the draft and editing position when the planned timer reaches its target", () => {
+    startSession(app.state, 60, DAY);
+    advance(app.state, 59);
+    openNotes();
+    const composer = document.getElementById("note-composer") as HTMLTextAreaElement;
+    composer.value = "Still writing this thought";
+    composer.focus();
+    composer.setSelectionRange(6, 13, "backward");
+    advance(app.state, 2);
+    app.render();
+    const fresh = document.getElementById("note-composer") as HTMLTextAreaElement;
+    expect(fresh.value).toBe("Still writing this thought");
+    expect([fresh.selectionStart, fresh.selectionEnd, fresh.selectionDirection]).toEqual([6, 13, "backward"]);
+    expect(document.activeElement).toBe(fresh);
+    document.querySelector<HTMLButtonElement>("#note-save")!.click();
+    expect(app.state.notes.map((n) => n.text)).toEqual(["Still writing this thought"]);
+    expect((document.getElementById("note-composer") as HTMLTextAreaElement).value).toBe("");
+  });
+
+  it("keeps an unsaved draft across pause and resume without stealing control focus", () => {
+    startSession(app.state, null, DAY);
+    openNotes();
+    (document.getElementById("note-composer") as HTMLTextAreaElement).value = "Pause this thought";
+    for (const mode of ["paused", "flow"] as const) {
+      const pause = document.getElementById("pause-flow") as HTMLButtonElement;
+      pause.focus();
+      pause.click();
+      expect(app.state.mode).toBe(mode);
+      expect((document.getElementById("note-composer") as HTMLTextAreaElement).value).toBe("Pause this thought");
+      expect(document.activeElement?.id).not.toBe("note-composer");
+    }
+  });
+
   it("the button lands the note, keeps CAPTURE standing, and refocuses the fresh composer", () => {
     openNotes();
     const composer = document.getElementById("note-composer") as HTMLTextAreaElement;
