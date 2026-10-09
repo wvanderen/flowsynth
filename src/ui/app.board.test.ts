@@ -1515,7 +1515,7 @@ describe("the dev panel's synth grant (#137)", () => {
 // pointer-captured, clamped to the stage, pointer and touch alike.
 describe("the dev console's drag handle", () => {
   const pointer = (type: string, target: EventTarget, x: number, y: number): void => {
-    target.dispatchEvent(new MouseEvent(type, { bubbles: true, clientX: x, clientY: y }));
+    target.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 1 }));
   };
 
   // happy-dom lays out nothing — every rect reads zero — so the stage and
@@ -1566,17 +1566,44 @@ describe("the dev console's drag handle", () => {
     const panel = document.getElementById("dev-panel")!;
     const grip = document.getElementById("dev-grip")!;
     stubBoxes();
+    let capturedPointer: number | null = null;
+    panel.setPointerCapture = (id) => { capturedPointer = id; };
     pointer("pointerdown", grip, 100, 500);
+    expect(capturedPointer).toBe(1);
     pointer("pointermove", document, 140, 460);
     // A render (a tick's, any pass) rebuilds the panel's buttons but never
     // the panel — the drag keeps its origin, the position stays put.
     app.render();
     expect(document.getElementById("dev-grip")).not.toBe(grip);
+    expect(panel.isConnected).toBe(true);
+    expect(capturedPointer).toBe(1);
     pointer("pointermove", document, 180, 420);
     expect(panel.style.left).toBe("92px"); // 12 + 80
     pointer("pointerup", document, 180, 420);
     app.render();
     expect(panel.style.left).toBe("92px");
+    pointer("pointerdown", document.getElementById("dev-grip")!, 180, 420);
+    panel.dispatchEvent(new PointerEvent("lostpointercapture", { pointerId: 1 }));
+    pointer("pointermove", document, 300, 420);
+    expect(panel.style.left).toBe("92px");
+  });
+
+  it("fits the phone stage and clamps the wrapped console within its bounds", () => {
+    app = boot(undefined, true);
+    const stage = document.getElementById("app")!;
+    stage.getBoundingClientRect = () => ({ left: 0, top: 0, width: 390, height: 844 }) as DOMRect;
+    app.render();
+    const panel = document.getElementById("dev-panel")!;
+    expect(panel.style.maxWidth).toBe("366px");
+    expect(panel.style.maxHeight).toBe("836px");
+    panel.getBoundingClientRect = () => ({ left: 12, top: 700, width: 366, height: 80 }) as DOMRect;
+    Object.defineProperty(panel, "offsetWidth", { configurable: true, value: 366 });
+    Object.defineProperty(panel, "offsetHeight", { configurable: true, value: 80 });
+    pointer("pointerdown", document.getElementById("dev-grip")!, 20, 710);
+    pointer("pointermove", document, 9000, 9000);
+    expect(panel.style.left).toBe("20px");
+    expect(panel.style.top).toBe("760px");
+    pointer("pointerup", document, 9000, 9000);
   });
 });
 

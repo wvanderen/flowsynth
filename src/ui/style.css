@@ -2995,6 +2995,12 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 /* ── Dev panel ─────────────────────────────────────── */
 
 .dev-panel {
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 8px);
+  overflow: auto;
+  flex-wrap: wrap;
   position: fixed;
   left: 12px;
   bottom: 56px;

@@ -3696,7 +3696,7 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
 // the panel's offset inside the stage and the drag's starting pointer —
 // held across renders, since the tick rebuilds the panel's buttons
 // mid-drag without moving the panel itself.
-let devDrag: { ox: number; oy: number; sx: number; sy: number } | null = null;
+let devDrag: { ox: number; oy: number; sx: number; sy: number; pointerId: number } | null = null;
 
 // The stage the grip clamps against: #app's own box — the console panel
 // never leaves the instrument. #app spans the viewport, so its box is the
@@ -3719,17 +3719,16 @@ function renderDev(app: App): void {
     panel.id = "dev-panel";
     document.body.append(panel);
     // The drag's continuation lives on the document, bound once for the
-    // app's lifetime: the grip the press landed on may be replaced by a
-    // render mid-drag, but the gesture reads the stage and moves the
-    // persistent panel regardless.
+    // app's lifetime. Capture belongs to the persistent panel, so replacing
+    // its buttons during a tick never interrupts the pointer stream.
     app.listen(document, "pointermove", (event) => {
-      if (!devDrag) return;
+      if (!devDrag || event.pointerId !== devDrag.pointerId) return;
       const box = devStageBox();
       const margin = 4;
       const nx = Math.max(margin, Math.min(devDrag.ox + event.clientX - devDrag.sx, box.width - panel!.offsetWidth - margin));
       const ny = Math.max(margin, Math.min(devDrag.oy + event.clientY - devDrag.sy, box.height - panel!.offsetHeight - margin));
-      panel!.style.left = `${nx}px`;
-      panel!.style.top = `${ny}px`;
+      panel!.style.left = `${box.left + nx}px`;
+      panel!.style.top = `${box.top + ny}px`;
       panel!.style.bottom = "auto";
     });
     const release = () => {
@@ -3737,7 +3736,11 @@ function renderDev(app: App): void {
     };
     app.listen(document, "pointerup", release);
     app.listen(document, "pointercancel", release);
+    app.listen(panel, "lostpointercapture", release);
   }
+  const stage = devStageBox();
+  panel.style.maxWidth = `${Math.max(0, stage.width - 24)}px`;
+  panel.style.maxHeight = `${Math.max(0, stage.height - 8)}px`;
   panel.innerHTML = `<button class="dev-grip" id="dev-grip" aria-label="Drag to move the dev console" title="Drag to move">⠿</button>
     <span>DEV</span>
     <button data-dev="60">+1m</button>
@@ -3749,18 +3752,18 @@ function renderDev(app: App): void {
     <button data-dev="board">${app.devBoard ? "close board" : "board"}</button>`;
   // The grip (ADR-0050): a pointer-capture drag — the press records the
   // panel's offset inside the stage, the moves carry it clamped within,
-  // release ends the gesture. Capture keeps the stream on the grip when
-  // the pointer leaves it; touch rides the same events (touch-action:none).
+  // release ends the gesture. The persistent panel holds capture when the
+  // pointer leaves it; touch rides the same events (touch-action:none).
   const grip = byId("dev-grip");
   if (grip) {
     app.listen(grip, "pointerdown", (event) => {
       const rect = panel!.getBoundingClientRect();
       const box = devStageBox();
-      devDrag = { ox: rect.left - box.left, oy: rect.top - box.top, sx: event.clientX, sy: event.clientY };
+      devDrag = { ox: rect.left - box.left, oy: rect.top - box.top, sx: event.clientX, sy: event.clientY, pointerId: event.pointerId };
       try {
-        grip.setPointerCapture(event.pointerId);
+        panel!.setPointerCapture(event.pointerId);
       } catch {
-        // A vanished pointer is no drag; the document listeners still hold.
+        // Synthetic events may lack capture; document listeners still handle them.
       }
       event.preventDefault();
     });
