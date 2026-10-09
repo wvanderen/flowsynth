@@ -201,10 +201,6 @@ export type DetailTray = DetailFace | null;
 export interface UiState {
   // The focus app whose console popover is open, if any (ADR-0012).
   app: FocusApp | null;
-  // The phone launcher's menu (issue #149): the one compact entry point
-  // keeping Habit, Notes, and Goals reachable below the 600px line. Light
-  // furniture — never saved; cleared with the transient modes.
-  launcherOpen: boolean;
   placing: string | null;
   // The live drop preview (§5–§6, #260): the module a drag or armed
   // placement is pointing at, and the cell it hovers — null pos while the
@@ -424,7 +420,6 @@ export class App {
   }
   ui: UiState = {
     app: null,
-    launcherOpen: false,
     placing: null,
     dropHover: null,
     chordHover: null,
@@ -674,7 +669,6 @@ export class App {
   // (import, reset, session start, arming another mode) clears them together.
   private clearTransientUi(): void {
     this.ui.app = null;
-    this.ui.launcherOpen = false;
     this.ui.focusForm = null;
     this.ui.placing = null;
     this.ui.dropHover = null;
@@ -878,7 +872,6 @@ export class App {
       clickInsideApps = false;
       if (inside) return;
       if (this.ui.app !== null) this.closeApp();
-      else if (this.ui.launcherOpen) this.closeLauncher();
     }, { signal: this.signal });
     // The Forge peek passes pointers to the board. Dismiss outside the card
     // in capture, before a board action can replace the clicked DOM node;
@@ -932,10 +925,6 @@ export class App {
       }
       if (this.ui.app) {
         this.closeApp();
-        return;
-      }
-      if (this.ui.launcherOpen) {
-        this.closeLauncher();
       }
     }, { signal: this.signal });
     // The face buttons' shift mode (issue #195): holding shift flips every
@@ -973,7 +962,7 @@ export class App {
     if (this.released) return;
     // Recurring goals roll on every tick, not only across flow boundaries:
     // a tab resting in upgrade mode must read the new day's state too —
-    // the launcher's Goals entry with it (issue #149). Idempotent with the
+    // the Focus sheet's GOALS face with it. Idempotent with the
     // boundary roll below.
     rollGoalOccurrences(this.state, Date.now());
     this.applyBoundary(Date.now());
@@ -1771,9 +1760,6 @@ export class App {
     // The notes sheet opens on CAPTURE (#277): any departure from it — a
     // close or another app's face standing — puts the tab back.
     if (this.ui.app !== "notes") this.ui.notesFace = "capture";
-    // One popover at a time (issue #149): opening an app — from a tile, a
-    // launcher entry, or the clock — always dismisses the launcher's menu.
-    this.ui.launcherOpen = false;
     this.ui.placing = null;
     this.resetHistorySurfaces();
     this.render();
@@ -1816,29 +1802,6 @@ export class App {
     this.render();
   }
 
-  // The phone launcher (issue #149): one compact control that keeps Habit,
-  // Notes, and Goals reachable below the 600px line. Pressing it always
-  // means "my menu": any open sheet gives way, and a second press closes.
-  // Every entry opens its sheet under the clock — Notes included (#277) —
-  // the phone composition pinning the frame to the container's own margins.
-  launcherActivate(): void {
-    // The sheet rides closeApp's full teardown — not just the app nulling —
-    // so a habit edit or drilled history can't survive the swap into the
-    // menu and leak into the sheet a later entry reopens.
-    this.dismissAppPanel();
-    this.ui.launcherOpen = !this.ui.launcherOpen;
-    this.render();
-    // Keyboard callers land inside the menu they asked for; touch callers
-    // are unaffected — the first entry is the next tap's neighbor anyway.
-    if (this.ui.launcherOpen) document.getElementById("app-launcher-habit")?.focus();
-  }
-
-  closeLauncher(): void {
-    if (!this.ui.launcherOpen) return;
-    this.ui.launcherOpen = false;
-    this.render();
-  }
-
   closeApp(): void {
     this.dismissAppPanel();
     this.render();
@@ -1847,7 +1810,7 @@ export class App {
   // The app popover's teardown without the render: the panel itself plus
   // the panel-internal surfaces a habit edit, a drill, or a revealed form
   // leaves behind. Every path that takes the sheet away (closeApp, Escape,
-  // the click-away closer, the launcher's menu swap) reads this one shape.
+  // the click-away closer) reads this one shape.
   private dismissAppPanel(): void {
     this.ui.app = null;
     this.ui.editingHabitId = null;

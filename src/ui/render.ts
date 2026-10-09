@@ -24,6 +24,7 @@ import {
   escapeHtml,
   focusSheetHtml,
   focusSheetKey,
+  goalBarsOf,
   honestyEventLine,
   notesSheetHtml,
   notesSheetKey,
@@ -33,6 +34,7 @@ import {
   setText,
   updateFocusSheetLive,
 } from "./focus";
+import { activeHabit } from "../engine/habits";
 import { startPointerDrag } from "./pointer-drag";
 import { appIcon } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, moduleFace, boardPoint, SPACING, spacerClipPath, forgeBranchOf, faceReadoutFor, faceLevel, waterFill, zeroBuyRead, isSource, inventoryTileSvg } from "./face";
@@ -154,16 +156,19 @@ function wireClockPlan(app: App): void {
   });
 }
 
-// Session controls (issue #148): the clock with its disclosure, then
-// the Enter/Exit main switch — the console's visual center of gravity and
-// its sole session gate — with pause beside it during flow. The switch's
-// vermillion is the one colored console element: the switch itself and,
-// while a session runs, the progress strip along the header's bottom edge
-// (issue #63). The console is pure control (§7): the clock is itself the
-// plan affordance — its disclosure opens the Focus control sheet (ADR-0050,
-// the time app's PLAN face) — and no production readout lives here. The
-// sheet itself anchors beneath the clock's own disclosure, whatever face it
-// carries.
+// Session controls (issue #148) and the focus banner's reads (ADR-0050):
+// the clock with its disclosure, then the Enter/Exit main switch — the
+// console's visual center of gravity and its sole session gate — with
+// pause beside it during flow, and the banner's reads closing the cluster:
+// the active habit's name and the goal-progress bars, live during flow,
+// mutating nothing. The switch's vermillion carries the session state: the
+// switch itself, the progress strip along the header's bottom edge (issue
+// #63), and the bars' open fills. The console is pure control (§7): the
+// clock is itself the plan affordance — its disclosure opens the Focus
+// control sheet (ADR-0050, the time app's PLAN face) — and no production
+// readout lives here (the banner's focus reads name practice state, never
+// production). The sheet itself anchors beneath the clock's own
+// disclosure, whatever face it carries.
 function renderConsoleSession(app: App, projected: RateSnapshot): void {
   const { state, ui } = app;
   const host = byId("console-session");
@@ -204,7 +209,8 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
   // Clock transitions rebuild this host without changing the Notes sheet.
   // Carry its draft and editing position only while the sheet key stays
   // the same: capturing a note or leaving CAPTURE still clears the draft.
-  const composer = notesOpen && host.dataset.renderKey?.endsWith(`|${popoverKey}`)
+  // The sheet key rides mid-key (the banner reads' key closes the line).
+  const composer = notesOpen && host.dataset.renderKey?.includes(`|${popoverKey}|`)
     ? host.querySelector<HTMLTextAreaElement>("#note-composer")
     : null;
   const draft = composer ? {
@@ -239,7 +245,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
     // the mode in the caption slot. The plan's own values patch in place
     // below (#115) — a plan pick never rebuilds the console session. No
     // session runs, so the header's progress strip stays empty.
-    const key = `upgrade|${popoverKey}`;
+    const key = `upgrade|${popoverKey}|${bannerReadsKey(app)}`;
     if (host.dataset.renderKey !== key) {
       host.dataset.renderKey = key;
       const scrollTop = popoverScroll(host);
@@ -252,7 +258,8 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
           <button class="main-switch idle" id="flow-switch" title="Enter flow — the board locks and runs itself">
             ${switchSvg}<span>Enter flow</span><i class="switch-state" aria-hidden="true"></i>
           </button>
-        </div>`;
+        </div>
+        ${bannerReadsHtml(app)}`;
       wireClockPlan(app);
       app.listen(byId("flow-switch"), "click", () => app.startFlow());
       bindSheet(scrollTop);
@@ -260,6 +267,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
       updateFocusSheetLive(app, host, projected);
     }
     refreshConsoleClockPlan(app);
+    refreshBannerReads(app);
     renderSessionStrip(false);
     syncClockDisclosure(app);
     return;
@@ -271,7 +279,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
   const paused = state.mode === "paused";
   const reached = target !== null && elapsed >= target;
 
-  const key = `flow:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}|${popoverKey}`;
+  const key = `flow:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}|${popoverKey}|${bannerReadsKey(app)}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     const scrollTop = popoverScroll(host);
@@ -286,7 +294,8 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
         <button class="main-switch ${paused ? "held" : "live"}" id="flow-switch" title="Exit flow — end the session and bank its production">
           ${switchSvg}<span>Exit flow</span><i class="switch-state" aria-hidden="true"></i>
         </button>
-      </div>`;
+      </div>
+      ${bannerReadsHtml(app)}`;
     wireClockPlan(app);
     app.listen(byId("pause-flow"), "click", () => (state.mode === "paused" ? app.resume() : app.pause()));
     app.listen(byId("flow-switch"), "click", () => app.endFlow());
@@ -316,6 +325,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
       : "",
   );
   renderSessionStrip(true, elapsed, target, paused);
+  refreshBannerReads(app);
   syncClockDisclosure(app);
   if (sheetOpen) updateFocusSheetLive(app, host, projected);
 }
@@ -328,6 +338,61 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
 function syncClockDisclosure(app: App): void {
   const open = app.ui.app !== null;
   byId("clock-plan")?.setAttribute("aria-expanded", String(open));
+}
+
+// The focus banner's reads (ADR-0050): beside the switch, the session's
+// focus state — the active habit's name and the goal-progress bars, biased
+// in-progress first (nearest complete leading, completed occurrences
+// closing), past the bar budget a +N count. Reads live during flow and
+// mutate nothing: the derivation reads existing state alone, and the live
+// patch below only ever touches text and fill widths. The phone banner
+// drops the reads — its nav row is bare launchers (ADR-0050's phone line) —
+// so the CSS docks the group out below the 600px line.
+// The bars' one width spelling: the fill percentage both the markup and
+// the in-place patch read, so the two can never drift.
+function bannerBarWidth(bar: { fraction: number }): string {
+  return `${(bar.fraction * 100).toFixed(1)}%`;
+}
+
+function bannerReadsHtml(app: App): string {
+  const { bars, overflow } = goalBarsOf(app.state);
+  const done = bars.filter((bar) => bar.done).length;
+  const barsLabel = `Goal progress: ${bars.length - done} in progress, ${done} complete`;
+  return `<div class="banner-reads" role="group" aria-label="Focus reads">
+    <span class="bread" data-banner="habit"></span>
+    ${
+      bars.length > 0
+        ? `<span class="gbars" role="img" aria-label="${barsLabel}">${bars
+            .map((bar, i) => `<span class="gbar${bar.done ? " done" : ""}" data-banner-bar="${i}" aria-hidden="true"><i style="width:${bannerBarWidth(bar)}"></i></span>`)
+            .join("")}</span>`
+        : ""
+    }
+    ${overflow > 0 ? `<span class="gbar-overflow mono" data-banner="overflow">+${overflow}</span>` : ""}
+  </div>`;
+}
+
+// The reads' rebuild signature: which bars stand (the bias order's
+// done-marks), the overflow count, the habit — never the fill fractions or
+// the name, which the patcher moves in place on every pass.
+function bannerReadsKey(app: App): string {
+  const { bars, overflow } = goalBarsOf(app.state);
+  return `${activeHabit(app.state)?.id ?? "—"}|${bars.map((bar) => (bar.done ? 1 : 0)).join("")}|${overflow}`;
+}
+
+// The banner reads' in-place patch: the habit name and the bar fills move
+// without a rebuild — the live clock's neighbor stays live during flow
+// (ADR-0050), and a manual log's progress lands between renders too.
+function refreshBannerReads(app: App): void {
+  const host = document.querySelector("#console-session .banner-reads");
+  if (!host) return;
+  const habit = activeHabit(app.state);
+  setText(host.querySelector('[data-banner="habit"]'), habit?.name ?? "");
+  const { bars } = goalBarsOf(app.state);
+  bars.forEach((bar, i) => {
+    const fill = host.querySelector<HTMLElement>(`[data-banner-bar="${i}"]`)?.firstElementChild as HTMLElement | null;
+    const width = bannerBarWidth(bar);
+    if (fill && fill.style.width !== width) fill.style.width = width;
+  });
 }
 
 // The header's bottom edge is the progress surface (issue #63): a thin strip
@@ -357,15 +422,17 @@ function plannedFill(elapsed: number, target: number): string {
   return `${Math.min(100, (elapsed / target) * 100)}%`;
 }
 
-// Focus-app access (ADR-0012): one icon-only tile per tile app — Habit,
-// Notes, Goals, consistently sized (issue #148). Habit and Goals walk into
-// the Focus control sheet (ADR-0050) — the frame under the clock carries
-// their faces — while Notes keeps its own popover anchored beneath its tile
-// until #277 moves it into the frame. Time wears no tile: the console
-// clock's disclosure opens the sheet's PLAN face. The locked-tile plumbing
-// stays for a future ladder tenant; locked tiles would open nothing, and
-// the board never moves, reflows, or dims while the console is used.
-// (Display names live in meta.ts's APP_LABELS.)
+// Focus-app access (ADR-0012, ADR-0050): bare uncarded icon doors. The wide
+// console keeps one door per tile app — Habit, Notes, Goals (issue #148) —
+// Habit and Goals walking into the Focus control sheet under the clock,
+// Notes into its own CAPTURE | LOGGED sheet in the same frame (#277). The
+// phone banner trades the reads for its bare doors: the Focus sheet's door
+// and Notes (ADR-0050's amended phone line). Time wears
+// no door at any width: the console clock's disclosure opens the sheet's
+// PLAN face. The locked-door plumbing stays for a future ladder tenant;
+// locked doors would open nothing, and the board never moves, reflows, or
+// dims while the console is used. (Display names live in meta.ts's
+// APP_LABELS.)
 
 // A popover's scroll rides its host's rebuild (#115): captured before the
 // innerHTML swap, restored once the fresh sheet binds — one shape, one
@@ -379,18 +446,17 @@ function restorePopoverScroll(host: HTMLElement, scrollTop: number): void {
   if (popover && scrollTop > 0) popover.scrollTo(0, scrollTop);
 }
 
-// The one focus-app glyph every access point shares — tiles, launcher
-// entries — so the spelling can never drift between them.
+// The one focus-app glyph every tile wears — so the spelling can never
+// drift between access points.
 function appGlyphSvg(appKey: FocusApp): string {
   return `<svg viewBox="-12 -12 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${appIcon(appKey)}</svg>`;
 }
 
 // The facts every access point reads for a tile app: its display label,
-// whether it's active, and its lock note. Tiles and launcher entries
-// compose their names from this one shape, so the two spellings can never
-// drift. No state word rides either surface: the Goals-state read is
+// whether it's active, and its lock note. Tiles compose their names from
+// this one shape. No state word rides the surface: the Goals-state read is
 // desktop-only and lives in the Focus sheet's head (ADR-0033 amended), and
-// the phone nav carries bare entries (ADR-0050's phone line).
+// the phone nav carries bare doors (ADR-0050's phone line).
 interface AppEntryFacts {
   label: string;
   active: boolean;
@@ -406,60 +472,67 @@ function renderConsoleApps(app: App): void {
   if (!host) return;
   const { state, ui } = app;
   const phone = isPhoneWidth();
-  // The tiles' pressed states ride the open app; everything the sheets
+  // The doors' pressed states ride the open app; everything the sheets
   // show lives under the clock's own key.
-  const key = `${phone ? "phone" : "wide"}|${ui.launcherOpen ? "launcher" : "docked"}|${ui.app}`;
+  const key = `${phone ? "phone" : "wide"}|${ui.app}`;
   if (host.dataset.renderKey === key) return;
   host.dataset.renderKey = key;
   // Every app sheet anchors beneath the clock at every width (ADR-0050):
   // Habit and Goals open the Focus sheet, Notes its CAPTURE | LOGGED sheet
-  // (#277) — the tiles and the launcher carry the doors, never a panel.
-  const tiles = TILE_APPS.map((appKey) => {
-    const facts = appEntryFacts(state, appKey);
-    const open = ui.app === appKey;
-    const title = facts.note ? `${facts.label} — locked: ${facts.note}` : `${facts.label} app`;
-    return `<div class="app-slot">
+  // (#277) — the doors carry the entries, never a panel. The wide console
+  // keeps one door per tile app; the phone banner trades the reads for its
+  // bare doors — the Focus sheet's door and Notes (ADR-0050's amended
+  // phone line).
+  const doorKeys: readonly DoorKey[] = phone ? PHONE_DOORS : TILE_APPS;
+  const tiles = doorKeys
+    .map((doorKey) => {
+      if (doorKey === "focus") {
+        // The Focus sheet's door: pressed while any face of the sheet
+        // stands — the inset marker is the sheet-open state.
+        const open = ui.app === "time" || ui.app === "habit" || ui.app === "goals";
+        return `<div class="app-slot">
+      <button class="app-tile${open ? " open" : ""}" id="app-tile-focus" aria-pressed="${open}" aria-label="Focus" title="Focus — plan, habit, goals, history">
+        <span class="app-tile-glyph">
+          ${FOCUS_DOOR_SVG}
+        </span>
+      </button>
+    </div>`;
+      }
+      const appKey = doorKey as FocusApp;
+      const facts = appEntryFacts(state, appKey);
+      const open = ui.app === appKey;
+      const title = facts.note ? `${facts.label} — locked: ${facts.note}` : `${facts.label} app`;
+      return `<div class="app-slot">
       <button class="app-tile${facts.active ? "" : " locked"}${open ? " open" : ""}" id="app-tile-${appKey}" aria-pressed="${open}" aria-label="${facts.label}"${facts.active ? "" : ' aria-disabled="true"'} title="${title}">
         <span class="app-tile-glyph">
           ${appGlyphSvg(appKey)}
         </span>
       </button>
     </div>`;
-  }).join("");
-  host.innerHTML = `<div class="app-tiles">${tiles}</div>${appLauncherHtml(app)}`;
-  for (const appKey of TILE_APPS) {
-    app.listen(byId(`app-tile-${appKey}`), "click", () => app.openApp(appKey));
-    app.listen(byId(`app-launcher-${appKey}`), "click", () => app.openApp(appKey));
+    })
+    .join("");
+  host.innerHTML = `<div class="app-tiles">${tiles}</div>`;
+  for (const doorKey of doorKeys) {
+    app.listen(byId(`app-tile-${doorKey}`), "click", () => {
+      if (doorKey === "focus") app.openApp("time");
+      else app.openApp(doorKey);
+    });
   }
-  app.listen(byId("app-launcher"), "click", () => app.launcherActivate());
 }
 
-// The phone launcher (issue #149): one compact control that keeps Habit,
-// Notes, and Goals reachable below the 600px line — the tiles stay docked
-// out there, the clock keeps the PLAN entry, and the header holds its one
-// row. Every entry opens its sheet under the clock (ADR-0050); Notes
-// included (#277), the phone composition pinning the frame to the
-// container's own margins. The launcher itself is the menu — it hosts no
-// panel. Desktop never sees any of it: CSS docks the slot out above the
-// phone line, where the tiles stand.
-const LAUNCHER_GLYPH = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4" y="4" width="6.4" height="6.4" rx="1.6"/><rect x="13.6" y="4" width="6.4" height="6.4" rx="1.6"/><rect x="4" y="13.6" width="6.4" height="6.4" rx="1.6"/><rect x="13.6" y="13.6" width="6.4" height="6.4" rx="1.6"/></svg>`;
+// The console doors' keys: every focus app plus the Focus sheet's own door
+// — the one entry that is not an app but the frame's front.
+type DoorKey = FocusApp | "focus";
 
-function appLauncherHtml(app: App): string {
-  const { state, ui } = app;
-  const entries = TILE_APPS.map((appKey) => {
-    const facts = appEntryFacts(state, appKey);
-    const { label, active } = facts;
-    return `<button class="app-launcher-item"${active ? "" : " disabled"} id="app-launcher-${appKey}" aria-label="${label} app">
-      ${appGlyphSvg(appKey)}
-      <span class="app-launcher-word">${label}</span>
-    </button>`;
-  }).join("");
-  const body = ui.launcherOpen ? `<div class="app-launcher-menu" id="app-launcher-menu" aria-label="Focus apps">${entries}</div>` : "";
-  return `<div class="app-launcher-slot" id="app-launcher-slot">
-    <button class="app-launcher" id="app-launcher" aria-haspopup="true" aria-expanded="${ui.launcherOpen}" aria-label="Focus apps" title="Habit, Notes, and Goals">${LAUNCHER_GLYPH}</button>
-    ${body}
-  </div>`;
-}
+// The Focus sheet's door mark (ADR-0050's phone line, the prototype's ◎):
+// the circled dot — the focus figure, distinct from the clock's face.
+const FOCUS_DOOR_SVG = `<svg viewBox="-12 -12 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7"><circle r="8"/><circle r="1.8"/></svg>`;
+
+// The phone banner's door set (ADR-0050's amended phone line): the Focus
+// sheet's door and Notes. Habit and Goals walk into the sheet's faces
+// behind the focus door — the compact launcher they answered retires
+// (ADR-0033 amended), and the clock and main switch keep their posts.
+const PHONE_DOORS: readonly DoorKey[] = ["focus", "notes"];
 
 // The feats page (ADR-0015 as amended): the always-visible full list — the
 // milestone feats lead as their own group, then the five buckets the ADR
@@ -3586,6 +3659,21 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
 
 /* ── Dev panel ─────────────────────────────────────── */
 
+// The dev console's drag state (ADR-0050): the live gesture's origin —
+// the panel's offset inside the stage and the drag's starting pointer —
+// held across renders, since the tick rebuilds the panel's buttons
+// mid-drag without moving the panel itself.
+let devDrag: { ox: number; oy: number; sx: number; sy: number; pointerId: number } | null = null;
+
+// The stage the grip clamps against: #app's own box — the console panel
+// never leaves the instrument. #app spans the viewport, so its box is the
+// fixed-position coordinate space (fallback: the viewport itself).
+function devStageBox(): { left: number; top: number; width: number; height: number } {
+  const rect = byId("app")?.getBoundingClientRect();
+  if (rect && rect.width > 0 && rect.height > 0) return rect;
+  return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+}
+
 function renderDev(app: App): void {
   let panel = byId("dev-panel");
   if (!app.dev) {
@@ -3597,8 +3685,31 @@ function renderDev(app: App): void {
     panel.className = "dev-panel";
     panel.id = "dev-panel";
     document.body.append(panel);
+    // The drag's continuation lives on the document, bound once for the
+    // app's lifetime. Capture belongs to the persistent panel, so replacing
+    // its buttons during a tick never interrupts the pointer stream.
+    app.listen(document, "pointermove", (event) => {
+      if (!devDrag || event.pointerId !== devDrag.pointerId) return;
+      const box = devStageBox();
+      const margin = 4;
+      const nx = Math.max(margin, Math.min(devDrag.ox + event.clientX - devDrag.sx, box.width - panel!.offsetWidth - margin));
+      const ny = Math.max(margin, Math.min(devDrag.oy + event.clientY - devDrag.sy, box.height - panel!.offsetHeight - margin));
+      panel!.style.left = `${box.left + nx}px`;
+      panel!.style.top = `${box.top + ny}px`;
+      panel!.style.bottom = "auto";
+    });
+    const release = () => {
+      devDrag = null;
+    };
+    app.listen(document, "pointerup", release);
+    app.listen(document, "pointercancel", release);
+    app.listen(panel, "lostpointercapture", release);
   }
-  panel.innerHTML = `<span>DEV</span>
+  const stage = devStageBox();
+  panel.style.maxWidth = `${Math.max(0, stage.width - 24)}px`;
+  panel.style.maxHeight = `${Math.max(0, stage.height - 8)}px`;
+  panel.innerHTML = `<button class="dev-grip" id="dev-grip" aria-label="Drag to move the dev console" title="Drag to move">⠿</button>
+    <span>DEV</span>
     <button data-dev="60">+1m</button>
     <button data-dev="600">+10m</button>
     <button data-dev="target">→ target</button>
@@ -3606,6 +3717,24 @@ function renderDev(app: App): void {
     <button data-dev="synth">+synth</button>
     <button data-dev="mutera">mutator era</button>
     <button data-dev="board">${app.devBoard ? "close board" : "board"}</button>`;
+  // The grip (ADR-0050): a pointer-capture drag — the press records the
+  // panel's offset inside the stage, the moves carry it clamped within,
+  // release ends the gesture. The persistent panel holds capture when the
+  // pointer leaves it; touch rides the same events (touch-action:none).
+  const grip = byId("dev-grip");
+  if (grip) {
+    app.listen(grip, "pointerdown", (event) => {
+      const rect = panel!.getBoundingClientRect();
+      const box = devStageBox();
+      devDrag = { ox: rect.left - box.left, oy: rect.top - box.top, sx: event.clientX, sy: event.clientY, pointerId: event.pointerId };
+      try {
+        panel!.setPointerCapture(event.pointerId);
+      } catch {
+        // Synthetic events may lack capture; document listeners still handle them.
+      }
+      event.preventDefault();
+    });
+  }
   panel.querySelectorAll<HTMLButtonElement>("[data-dev]").forEach((button) => {
     app.listen(button, "click", () => {
       const key = button.getAttribute("data-dev")!;
