@@ -341,6 +341,84 @@ describe("the goal bars' derivation (the banner's edge states)", () => {
   });
 });
 
+describe("the focus banner's reads (ADR-0050)", () => {
+  it("the console wears the reads beside the switch: habit name, biased bars, +N overflow", () => {
+    app.state.goalCapacityBought = 3; // five slots for the five tracked goals
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
+    for (let i = 0; i < 5; i++) createGoal(app.state, { habitId: habit.id, minutes: 10 + i, schedule: "once", now: 1000 + i });
+    accrueGoalProgress(app.state, habit.id, 9 * 60);
+    app.render();
+    const reads = document.querySelector("#console-session .banner-reads")!;
+    expect(reads.getAttribute("role")).toBe("group");
+    // The habit read names what a session would credit.
+    expect(reads.querySelector('[data-banner="habit"]')!.textContent).toBe("Piano");
+    // Three bars stand — in-progress leads (nearest complete first) — and
+    // the count chip answers for the two past the budget.
+    const bars = [...reads.querySelectorAll<HTMLElement>(".gbar")];
+    expect(bars).toHaveLength(3);
+    expect(bars[0]!.classList.contains("done")).toBe(false);
+    expect(bars[0]!.querySelector("i")!.style.width).toBe("90.0%");
+    expect(reads.querySelector('[data-banner="overflow"]')!.textContent).toBe("+2");
+    // Reads, never controls: nothing inside the group answers a click.
+    expect(reads.querySelectorAll("button, input, select, a")).toHaveLength(0);
+  });
+
+  it("an empty tracker and no habit leave the reads quiet — no bars, no chip, no name", () => {
+    app.render();
+    const reads = document.querySelector("#console-session .banner-reads")!;
+    expect(reads.querySelectorAll(".gbar")).toHaveLength(0);
+    expect(reads.querySelector('[data-banner="overflow"]')).toBeNull();
+    expect(reads.querySelector('[data-banner="habit"]')!.textContent).toBe("");
+  });
+
+  it("live reads during flow: the fills move on the tick and mutate nothing", () => {
+    setVisibility("visible");
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
+    createGoal(app.state, { habitId: habit.id, minutes: 1, schedule: "once", now: 1000 });
+    startSession(app.state, null);
+    advance(app.state, 30);
+    app.render();
+    const reads = () => document.querySelector("#console-session .banner-reads")!;
+    const host = document.getElementById("console-session")!;
+    const barBefore = reads().querySelector<HTMLElement>(".gbar")!;
+    const keyBefore = host.dataset.renderKey;
+    expect(barBefore.querySelector("i")!.style.width).toBe("50.0%");
+    // One more tick, one more render: the read moved — same node, wider
+    // fill — the tick patched in place rather than rebuilding the cluster.
+    advance(app.state, 15);
+    app.render();
+    const barAfter = reads().querySelector<HTMLElement>(".gbar")!;
+    expect(barAfter).toBe(barBefore);
+    expect(barAfter.querySelector("i")!.style.width).toBe("75.0%");
+    expect(host.dataset.renderKey).toBe(keyBefore);
+    // And the reads mutated nothing: the render's derivation is not on the
+    // engine's path — the goal's progress holds exactly what advance left.
+    const progressAfter = JSON.stringify(app.state.goals);
+    app.render();
+    expect(JSON.stringify(app.state.goals)).toBe(progressAfter);
+    endSession(app.state);
+  });
+
+  it("a goal completing mid-session re-biases the bars — the rebuild carries the done-mark", () => {
+    setVisibility("visible");
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
+    createGoal(app.state, { habitId: habit.id, minutes: 1, schedule: "once", now: 1000 });
+    startSession(app.state, null);
+    advance(app.state, 30);
+    app.render();
+    expect(document.querySelector("#console-session .banner-reads .gbar")!.classList.contains("done")).toBe(false);
+    advance(app.state, 31);
+    app.render();
+    const bar = document.querySelector("#console-session .banner-reads .gbar")!;
+    expect(bar.classList.contains("done")).toBe(true);
+    expect(app.state.goals[0]!.completed).toBe(true);
+    endSession(app.state);
+  });
+});
+
 describe("the restructure stays presentational", () => {
   it("FocusApp ids keep their meaning; activatedApps is untouched", () => {
     createHabit(app.state, "Piano");
