@@ -9,8 +9,8 @@ import { createAppFixture } from "./testing/app-fixture";
 
 // The notes sheet in the Focus frame (ADR-0050, issue #277): CAPTURE |
 // LOGGED tabs opening on CAPTURE, the live tag chip riding the composer in
-// flow, stream rows led by the mono stamp and habit chip, and the Note
-// Generator mechanic confined to the tooltip layer.
+// flow, and stream rows led by the mono stamp and habit chip. The sheet
+// carries no generator documentation — that lives on the module itself.
 const fixture = createAppFixture();
 const boot = fixture.boot;
 let app: App;
@@ -195,22 +195,17 @@ describe("the LOGGED stream's rows (§9)", () => {
   });
 });
 
-describe("the generator mechanic stays in the tooltip layer (#277)", () => {
-  it("the ⓘ body alone carries the credit mechanics; no visible prose explains them", () => {
+describe("the sheet carries no generator documentation", () => {
+  it("the Note Generator's mechanic lives on the module, never as sheet furniture", () => {
     const frame = openNotes();
-    const phrase = "Note Generator";
-    // The deepest nodes carrying the mechanic are all tooltip bodies, never
-    // visible prose.
-    const deepest = [...frame.querySelectorAll<HTMLElement>("*")].filter(
-      (el) => el.textContent!.includes(phrase) && ![...el.children].some((child) => child.textContent!.includes(phrase)),
-    );
-    expect(deepest).toHaveLength(1);
-    expect(deepest[0]!.classList.contains("inst-tip-body")).toBe(true);
-    expect(deepest[0]!.textContent).toContain("per character");
-    // The tooltip layer rides the instrument wiring: focus opens it.
-    const tip = frame.querySelector("#notes-generator-tip")!;
-    frame.querySelector<HTMLElement>('[aria-describedby="notes-generator-tip"]')!.focus();
-    expect(tip.classList.contains("inst-show")).toBe(true);
+    // No tooltip trigger or body, and no prose naming the mechanic — the
+    // capture row is chip and button alone (the forge readout documents
+    // the credit).
+    expect(frame.querySelector(".inst-tip")).toBeNull();
+    expect(frame.textContent).not.toContain("Note Generator");
+    const row = frame.querySelector(".note-capture-row")!;
+    expect(row.querySelectorAll("button")).toHaveLength(1);
+    expect(row.querySelector("#note-save")).not.toBeNull();
     app.closeApp();
   });
 });

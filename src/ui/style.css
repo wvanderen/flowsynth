@@ -985,13 +985,8 @@ h1, h2, h3, p { margin: 0; }
    capture row — the live tag chip riding it during flow, the Note
    Generator's mechanic in the tooltip layer — and the stream's rows, each
    led by the mono stamp and the habit chip. */
-.note-capture-row { margin: 10px 0 0; }
-.note-capture-row .note-live-tag {
-  margin: 0;
-  font-size: 10px;
-  vertical-align: baseline;
-}
-.note-capture-row .inst-tip { margin-left: auto; }
+.note-capture-row { margin: 10px 0 0; justify-content: flex-end; }
+.note-capture-row .note-live-tag { margin: 0 auto 0 0; font-size: 10px; vertical-align: baseline; }
 
 /* Notes capture during flow: quiet composer and an unobtrusive history. */
 .note-composer {

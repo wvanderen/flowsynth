@@ -63,7 +63,7 @@ import {
   practiceCountdown,
   secondsToMinutes,
 } from "./format";
-import { BALANCE, REFLECTION_SLIDER_NEUTRAL } from "../engine/constants";
+import { REFLECTION_SLIDER_NEUTRAL } from "../engine/constants";
 import { wireTooltips } from "./instrument";
 
 // The sheet's faces. HISTORY is the time app's history surfaces lifted to a
@@ -711,19 +711,16 @@ function habitChipHtml(state: GameState, note: NoteEntry): string {
 
 // The capture face: the composer over its action row — the live tag chip
 // rides it during flow (the session's habit, where the note will tag;
-// upgrade-mode notes go untagged), the Note Generator's mechanic stays in
-// the tooltip layer, and the capture button takes the note.
+// upgrade-mode notes go untagged) and the capture button takes the note.
+// The Note Generator's mechanic is documented on the module itself (the
+// forge readout), never as sheet furniture.
 function notesCaptureHtml(app: App): string {
   const { state } = app;
   const habit = activeHabit(state);
   const liveTag = state.session !== null && habit ? `<span class="habit-chip note-live-tag">· ${escapeHtml(habit.name.toUpperCase())}</span>` : "";
   return `<section class="notes-capture">
     <textarea class="note-composer" id="note-composer" placeholder="What are you noticing?" maxlength="2000" rows="3"></textarea>
-    <div class="session-actions note-capture-row">${liveTag}${tipHtml(
-      "notes-generator-tip",
-      "Note Generators — the credit",
-      `A written note credits each owned Note Generator by its length — ${formatNumber(BALANCE.noteCreditPerChar)} s per character, ${formatNumber(BALANCE.noteCreditCapSeconds / 60)} min cap per note. Tagging follows the session's habit.`,
-    )}<button class="primary" id="note-save">Capture note</button></div>
+    <div class="session-actions note-capture-row">${liveTag}<button class="primary" id="note-save">Capture note</button></div>
   </section>`;
 }
 
@@ -758,9 +755,9 @@ export function notesSheetHtml(app: App): string {
 
 // The notes sheet's wiring: the facetabs, the close, and the composer —
 // capture rides the button and ⌘/Ctrl+Enter, and a successful save
-// refocuses the fresh composer.
+// refocuses the fresh composer. No tooltip layer here: the sheet carries
+// no deeper mechanics.
 export function bindNotesSheet(app: App, scope: HTMLElement): void {
-  wireTooltips(scope, app.signal);
   scope.querySelectorAll<HTMLElement>("[data-notes-face]").forEach((button) => {
     app.listen(button, "click", () => {
       const face = button.getAttribute("data-notes-face") as NotesFace | null;
