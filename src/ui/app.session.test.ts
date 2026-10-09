@@ -303,7 +303,7 @@ describe("the session clock", () => {
     expect(slider.step).toBe("any");
     expect(slider.value).toBe("3");
     expect(text.value).toBe("");
-    expect(modal.textContent).toContain("How did it go?");
+    expect(modal.textContent).toContain("Reflect");
     expect(modal.textContent).toContain("rough");
     expect(modal.textContent).toContain("great");
     // The reserved slot rides above dismissal.
@@ -335,7 +335,7 @@ describe("the session clock", () => {
     app.ui.modal = "summary";
     app.render();
     let modal = document.getElementById("modal-content")!;
-    expect(modal.textContent).toContain("Rolls banked");
+    expect(modal.textContent).toContain("Rolls");
     expect(modal.textContent).toContain("1 roll");
     expect(modal.textContent).toContain("from practice");
     expect(modal.textContent).not.toContain("from charge");
@@ -350,7 +350,112 @@ describe("the session clock", () => {
     s.summary.rollsFlow = 0;
     s.summary.rollsForge = 0;
     app.render();
-    expect(document.getElementById("modal-content")!.textContent).not.toContain("Rolls banked");
+    const keys = [...document.querySelectorAll("#modal-content .folio-key")].map((k) => k.textContent);
+    expect(keys).not.toContain("Rolls");
+    app.closeModal();
+  });
+});
+
+describe("the ruled folio surfaces (#279)", () => {
+  it("the summary is a headline figure over ruled rows; unlocks wear NEW; the breakdown rides the RATE tooltip", () => {
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    s.summary = {
+      sessionNumber: 12,
+      earned: 148,
+      seconds: 1200,
+      ratePerMinute: 7.4,
+      synths: 0.26,
+      infusors: 0.052,
+      empowerment: 1,
+      timeUnlocked: false,
+      plannedTarget: 1200,
+      honestyEvents: [{ awaySeconds: 1320, outcome: "missed" }],
+      achievements: ["first-prestige"],
+      rollsFlow: 1,
+      rollsForge: 0,
+      rollsMutator: 0,
+      reflection: null,
+      seen: false,
+    };
+    app.ui.modal = "summary";
+    app.render();
+    const modal = document.getElementById("modal-content")!;
+    // The headline figure is the identity: earned nous with the unit, the
+    // session read beside it — no sentence restates the figure.
+    const head = modal.querySelector(".summary-head")!;
+    expect(head.querySelector(".summary-earned")!.textContent).toBe("148 ν");
+    expect(head.textContent).toContain("Banked · Session 12");
+    // The ruled rows read practice, rate, rolls — figures right-aligned —
+    // and the honesty event as a neutral factual line in its own row.
+    const rows = [...modal.querySelectorAll(".folio-rows")][0]!.querySelectorAll(".folio-row");
+    const keyed = new Map([...rows].map((row) => [row.querySelector(".folio-key")!.textContent, row.textContent]));
+    expect(keyed.get("Practice")).toContain("20 / 20 min");
+    expect(keyed.get("Rolls")).toContain("1 roll");
+    expect(keyed.get("Honesty")).toContain("22 min away · didn't practice");
+    // The rate breakdown lives in the RATE row's tooltip, not the row body.
+    const rateRow = [...rows].find((row) => row.querySelector(".inst-tip-body"))!;
+    expect(rateRow.querySelector(".folio-key")!.textContent).toContain("Rate");
+    const tip = rateRow.querySelector(".inst-tip-body")!;
+    expect(tip.textContent).toContain("synths +0.26 ν/s");
+    expect(tip.textContent).toContain("boosters +0.05 ν/s");
+    // The rate row's figure alone stays critical outside the tooltip.
+    expect(rateRow.querySelector(".folio-fig")!.textContent).toContain("7.4 ν/min");
+    // Unlocks wear the engraved NEW mark.
+    const unlockRow = [...rows].find((row) => row.querySelector(".folio-key")!.textContent === "Unlocked")!;
+    expect(unlockRow.querySelector(".folio-new")!.textContent).toBe("NEW");
+    expect(unlockRow.textContent).toContain("First prestige");
+    // The reflection keeps its reserved slot between the rows and Continue.
+    const reflect = modal.querySelector(".folio-reflect .folio-key")!;
+    expect(reflect.textContent).toBe("Reflect");
+    expect(reflect.closest(".folio-row")!.compareDocumentPosition(document.getElementById("summary-continue")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    app.closeModal();
+  });
+
+  it("the Time unlock joins the folio with its own NEW mark", () => {
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    startSession(s, 600);
+    advance(s, 60);
+    endSession(s);
+    // Launch leaves the row inert (ADR-0019: free from minute 0); the
+    // ladder's first tenant is the presentation case.
+    s.summary!.timeUnlocked = true;
+    app.ui.modal = "summary";
+    app.render();
+    const rows = [...document.querySelectorAll("#modal-content .folio-row")];
+    const timeRow = rows.find((row) => row.textContent!.includes("Time your flow sessions"))!;
+    expect(timeRow).toBeTruthy();
+    expect(timeRow.querySelector(".folio-new")!.textContent).toBe("NEW");
+    app.closeModal();
+  });
+
+  it("the report leads with its readout, keeps the taken-back line, and needs no tooltip", () => {
+    const s = app.state;
+    s.sessionsCompleted = 1;
+    startSession(s, 600);
+    advance(s, 600);
+    advance(s, 1, Math.random, "provisional");
+    s.session!.accounting.poolSeconds = 300;
+    s.session!.accounting.bucketNous = 30;
+    app.tick();
+    const modal = document.getElementById("modal-content")!;
+    // The readout leads: away time against the plan, the held bucket beside.
+    const readout = modal.querySelector(".honesty-readout .folio-row")!;
+    expect(readout.querySelector(".honesty-read")!.textContent).toBe("5 min away · past your plan");
+    expect(readout.querySelector(".honesty-held")!.textContent).toBe("30 ν held");
+    // The reassurance stays visible as a plain line.
+    expect(modal.querySelector(".honesty-readout")!.textContent).toContain("Nothing already banked is taken back.");
+    // Choices are full-width rule-line rows; each consequence is a mono
+    // line beneath its label — and no tooltip layer exists on the surface.
+    const choices = [...modal.querySelectorAll(".honesty-choice")];
+    expect(choices).toHaveLength(3);
+    for (const choice of choices) {
+      expect(choice.querySelector(".honesty-label")).not.toBeNull();
+      expect(choice.querySelector(".honesty-consequence")!.classList.contains("mono")).toBe(true);
+    }
+    expect(choices[0]!.querySelector(".honesty-consequence")!.textContent).toContain("the 30 ν drop");
+    expect(modal.querySelector(".inst-tip")).toBeNull();
     app.closeModal();
   });
 });

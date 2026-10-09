@@ -7,9 +7,14 @@
 // board and the Forge candidate tiles. The inventory wears the minimal mark
 // instead (hue-outlined hexagon and glyph alone, ADR-0027): at tile size the
 // engraving is noise.
-import type { Hex, ModuleType, Rarity } from "../engine/types";
+import type { GameState, Hex, ModuleInstance, ModuleType, Rarity, RateSnapshot } from "../engine/types";
+import { CATEGORY_OF, BALANCE } from "../engine/constants";
+import { chargedFactor, hostPower, ritualAmpOf } from "../engine/economy";
+import { forgeThreshold, mutatorForgeThreshold } from "../engine/rolls";
+import { cellNoteOf, noteNameOf } from "../engine/lattice";
 import { moduleIcon } from "./icons";
 import { META } from "./meta";
+import { formatInt, formatNumber } from "./format";
 
 export const HEX_RADIUS = 61;
 
@@ -91,7 +96,10 @@ export interface FaceSpec {
   type: ModuleType;
   rarity: Rarity;
   // The prominent readout beneath the signature: the module's contribution —
-  // for the chargeable Forge, charge-vs-threshold.
+  // for the chargeable Forge, charge-vs-threshold. An empty string skips
+  // the line entirely (the detail tray's face previews, issue #296 review:
+  // an undeployed module has no contribution, and a tray readout saying
+  // "+0" would misread the swap).
   readout: string;
   // Extra class on the readout (e.g. the charge register on the Forge).
   readoutClass?: string;
@@ -184,7 +192,145 @@ export function moduleFace(spec: FaceSpec): string {
     ${!openWire && spec.level !== undefined ? `<text data-key="level" y="${layout.level}" text-anchor="middle" class="face-level">LV ${spec.level}</text>` : ""}
     <text data-key="name" y="${openWire ? SPACER_NAME_Y : layout.name}" text-anchor="middle" class="face-name">${META[spec.type].short.toUpperCase()}</text>
     ${openWire ? "" : `<g data-key="signature" class="face-signature" transform="translate(0 ${layout.glyph}) scale(${layout.glyphScale})" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>`}
-    ${openWire ? "" : `<text data-key="readout" x="0" y="${layout.readout}" text-anchor="middle" class="face-readout${readoutFitClass(spec.readout)}${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>`}
+    ${openWire || spec.readout === "" ? "" : `<text data-key="readout" x="0" y="${layout.readout}" text-anchor="middle" class="face-readout${readoutFitClass(spec.readout)}${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>`}
     ${spec.note ? `<text data-key="note" x="0" y="${layout.note}" text-anchor="middle" class="face-note">${spec.note}</text>` : ""}
     ${openWire ? `<polygon data-key="spacer-frame" class="spacer-frame" points="${hexPoints(SPACER_WINDOW_RADIUS)}"/>` : ""}`;
+}
+
+/* ── Shared face reads ────────────────────────────────
+   The reads every surface that shows a module face shares — the board
+   node, the Forge tiles, and the Hex detail (issue #295) — so no two
+   surfaces can drift apart on what a face says. */
+
+// The Forge family's two branches (ADR-0043, issue #198) read their own
+// meters — the Module Forge's shared meter, the Mutator Forge's own — the
+// face plumbing is branch-blind beyond this lookup. Null off the family.
+export function forgeBranchOf(state: GameState, type: ModuleInstance["type"]): { progress: number; threshold: number } | null {
+  if (type === "forge") return { progress: state.forge.progress, threshold: forgeThreshold(state.forge.earned) };
+  if (type === "mutatorForge") return { progress: state.mutatorForge.progress, threshold: mutatorForgeThreshold(state.mutatorForge.earned) };
+  return null;
+}
+
+// The charge-family predicate: generators are the board's charge sources.
+export const isSource = (m: ModuleInstance) => CATEGORY_OF[m.type] === "generator";
+
+// A module face's readout (ADR-0016): the prominent value beneath the
+// signature — the same glanceable line whether compact, in the tray, or
+// the Hex detail's tile. Shared by the board node and the detail; the
+// detail takes the contribution with its unit, since the enlarged face is
+// where the ν/s figure is added (no second readout beside it).
+export function faceReadoutFor(state: GameState, module: ModuleInstance, pos: Hex | null, snapshot: RateSnapshot, withUnits = false): { readout: string; readoutClass?: string; note?: string } {
+  const contribution = snapshot.contributions.get(module.id);
+  const branch = forgeBranchOf(state, module.type);
+  if (branch) {
+    // The face's glanceable readout rounds; the inspector keeps exact values.
+    return {
+      readout: `${formatNumber(Math.floor(Math.max(0, branch.progress)))}/${formatNumber(Math.round(branch.threshold))}`,
+      readoutClass: "charge",
+    };
+  }
+  if (isSource(module)) return { readout: `⌁${formatNumber(hostPower(state, module))}` };
+  if (module.type === "infusor") {
+    return { readout: `+${formatNumber(100 * BALANCE.infusorBonus * hostPower(state, module) * chargedFactor(snapshot.chargeStrength.get(module.id) ?? 0))}%` };
+  }
+  if (module.type === "spacer") {
+    // The spacer is silent wire: it never sounds, never joins a pitch set —
+    // its face says so and names the cell it wires.
+    return pos ? { readout: "⌇", note: cellNoteOf(pos) } : { readout: "⌇" };
+  }
+  const category = CATEGORY_OF[module.type];
+  if (category === "silentVoice") {
+    // The silent voices sing nothing of their own: the face names the
+    // derived pitch the module sings (the Echo's neighbor an octave down,
+    // the Bend's altered cell) — or its silence.
+    const pitch = contribution?.pitch ?? null;
+    return pos
+      ? { readout: pitch !== null ? noteNameOf(pitch) : "—", note: cellNoteOf(pos) }
+      : { readout: pitch !== null ? noteNameOf(pitch) : "—" };
+  }
+  if (category === "conduit") {
+    // The Amplifier routes: the face shows the strength it relays — what
+    // it received, times its level-scaled gain.
+    const strength = snapshot.chargeStrength.get(module.id) ?? 0;
+    const gain = 1 + BALANCE.amplifierGainPerLevel * module.level;
+    return pos
+      ? { readout: `⌁${formatNumber(strength * gain)}`, note: cellNoteOf(pos) }
+      : { readout: `⌁${formatNumber(strength * gain)}` };
+  }
+  if (category === "ritual") {
+    // RITUAL amplifies: the face shows the factor the module itself is
+    // delivering onto the active habit's build right now — ×1 while
+    // uncharged, rising with received strength (ADR-0046).
+    const strength = snapshot.chargeStrength.get(module.id) ?? 0;
+    const amp = 1 + ritualAmpOf(module.level, strength);
+    return pos
+      ? { readout: `×${formatNumber(amp)}`, note: cellNoteOf(pos) }
+      : { readout: `×${formatNumber(amp)}` };
+  }
+  // Oscillators wear their contribution with the cell's note beneath it:
+  // pitch lives in the cell (ADR-0021).
+  const unit = withUnits ? " ν/s" : "";
+  return pos
+    ? { readout: `+${formatNumber(contribution?.value ?? 0)}${unit}`, note: cellNoteOf(pos) }
+    : { readout: `+${formatNumber(contribution?.value ?? 0)}${unit}` };
+}
+
+// The engraved level every upgrading module's face carries (#193): the
+// spacer's level buys nothing — it is silent wire, forever unupgraded — so
+// its face never wears the engraving, and "LV 0" is never seen on it.
+export function faceLevel(module: ModuleInstance): number | undefined {
+  return module.type === "spacer" ? undefined : module.level;
+}
+
+// The Forge's threshold fill (ADR-0016): a charge-register waterline
+// clipped to the chassis, risen by the branch's progress share. Shared by
+// the board node and the Hex detail's enlarged face.
+const FILL_INSET = 3;
+
+export function waterFill(moduleId: string, progress: number): string {
+  const clamped = Math.min(1, Math.max(0, progress));
+  const radius = HEX_RADIUS - FILL_INSET;
+  const height = 2 * radius * clamped;
+  const y = radius - height;
+  const clipId = `water-${moduleId}`;
+  return `<clipPath id="${clipId}"><polygon points="${hexPoints(radius)}"/></clipPath>
+    <rect data-key="fill" clip-path="url(#${clipId})" class="water-fill" x="${-radius}" y="${y}" width="${2 * radius}" height="${height}"/>`;
+}
+
+// The zero-affordable reads (#233, ADR-0045): the face button and the
+// detail's dial share the zero-state labels and the shortfall-leading
+// tooltips, so the two surfaces can never drift apart.
+export function zeroBuyRead(bank: number, nextCost: number): { plusLabel: string; maxLabel: string; plusTip: string; maxTip: string } {
+  const short = formatInt(nextCost - bank);
+  return {
+    plusLabel: "+0",
+    maxLabel: "MAX·0",
+    plusTip: `+0 — ${short} ν short of one level`,
+    maxTip: `MAX · buys 0 — ${short} ν short`,
+  };
+}
+
+/* ── The inventory tile's minimal mark (ADR-0027) ───── */
+
+// A hexagon outlined in the category hue with the module's glyph alone.
+// The full readout face belongs to the board and the expanded face — at
+// tile size the engraving is noise — and the tooltip carries the details
+// the mark leaves off. Shared by the tray, the phone inventory sheet, the
+// live drag ghost, and the Hex detail's inventory (issue #296), so what
+// you carry is what waits in the tray. The spacer wears its module's ring
+// instead of the wire (issue #219): an unfilled inner hexagon matching its
+// board face, sized to the other tiles' glyph footprint, not the face's
+// full window.
+const SPACER_TILE_RADIUS = 20;
+
+export function inventoryTileSvg(module: ModuleInstance): string {
+  const hue = `var(--${HUE_TOKEN_OF[module.type]})`;
+  const mark =
+    module.type === "spacer"
+      ? `<polygon fill="none" stroke="${hue}" stroke-width="3.5" points="${hexPoints(SPACER_TILE_RADIUS)}"/>`
+      : `<g class="tile-glyph" fill="none" stroke="${hue}" stroke-width="3.5" transform="scale(1.55)">${moduleIcon(module.type)}</g>`;
+  return `<svg viewBox="-70 -70 140 140" aria-hidden="true">
+    <polygon class="tile-hex" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="${hue}" stroke-width="4.5"/>
+    ${mark}
+  </svg>`;
 }

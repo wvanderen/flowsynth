@@ -235,7 +235,7 @@ describe("the one-capacity economy on the board (#258)", () => {
     // calibration (#262): the display twin matches it, not the uncapped
     // pass.
     expect(displayedRates(app.state, true)).toEqual(allocateRates(app.state, true).snapshot);
-    app.select(app.state.modules[0]!.id);
+    document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(readout().textContent).toContain("Capacity");
     app.openModal("rate");
     expect(document.getElementById("modal-content")!.textContent).toContain("Capacity");
@@ -251,7 +251,8 @@ describe("the one-capacity economy on the board (#258)", () => {
     );
     try {
       give(app.state, "additive", hex(1, 0));
-      app.select(app.state.modules[0]!.id);
+      app.render();
+      document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
       expect(readout().textContent).toContain("Allocation uncertified");
       app.openModal("rate");
       const sheet = document.getElementById("modal-content")!;
@@ -273,24 +274,25 @@ describe("the one-capacity economy on the board (#258)", () => {
     }
   });
 
-  it("selection survives a capacity-driven chord replacement; the readout follows the new set", () => {
+  it("the hover ask survives a capacity-driven chord replacement; the readout follows the new set", () => {
     // C4 · G4 earns the Fifth. Moving the G up an octave breaks it: at
     // capacity one the pair can sing the Fifth or the Octave, never both —
-    // the active set replaces while C4 stays selected, and the readout
-    // follows the new whole chord with no stale claim.
+    // the active set replaces, and a fresh ask reads the new whole chord
+    // with no stale claim.
     give(app.state, "additive", hex(1, 0));
     app.render();
-    const c4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(0, 0)))!;
-    app.select(c4.id);
-    expect(readout().textContent).toContain("Capacity 1/1");
-    expect(readout().textContent).toContain("Fifth ×1.3");
+    const ask = () => {
+      document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+      return readout().textContent;
+    };
+    expect(ask()).toContain("Capacity 1/1");
+    expect(ask()).toContain("Fifth ×1.3");
     const g = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(1, 0)))!;
     app.state.cells.push(hex(0, 1));
     g.pos = hex(0, 1);
     app.render();
-    expect(app.ui.selected).toBe(c4.id);
-    expect(readout().textContent).toContain("Capacity 1/1");
-    expect(readout().textContent).toContain("Octave ×1.15");
+    expect(ask()).toContain("Capacity 1/1");
+    expect(ask()).toContain("Octave ×1.15");
     expect(readout().textContent).not.toContain("Fifth");
     expect(readout().textContent).not.toContain("idle");
   });
@@ -386,7 +388,7 @@ describe("placement previews with capacity-aware production (#260)", () => {
     expect(readout().hidden).toBe(true);
   });
 
-  it("the committed placement agrees with the preview; the selected readout retains the figures", () => {
+  it("the committed placement agrees with the preview; the placed voice's ask retains the figures", () => {
     give(app.state, "additive", hex(1, 0));
     app.state.cells.push(hex(0, 1));
     const traySynth = give(app.state, "additive", null);
@@ -401,8 +403,8 @@ describe("placement previews with capacity-aware production (#260)", () => {
     // The board delivered the projected rate, the commit's discovery beat
     // included — the projection and the landing are one economy.
     expect(displayedRates(app.state, true).rate).toBeGreaterThan(before);
-    // And the placed voice's selected row carries the same chips.
-    app.select(traySynth.id);
+    // And the placed voice's ask carries the same chips.
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(chips()).toEqual(previewed);
     const scale = readout().querySelector<HTMLElement>(".chord-readout-scale")!;
     expect(scale.getAttribute("data-q")).toBe(String(1 + BALANCE.allocationComplexityRate));
@@ -469,8 +471,7 @@ describe("placement previews with capacity-aware production (#260)", () => {
     expect(displayedRates(app.state, true).rate).toBeGreaterThan(before);
     const snapshot = displayedRates(app.state, true);
     expect(snapshot.allocation!.active.map((instance) => instance.name)).toEqual(["Flat seventh"]);
-    const g4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(1, 0)))!;
-    app.select(g4.id);
+    document.querySelector('[data-cell="1,0"]')!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(readout().textContent).toContain("Fifth ×1.3 · idle");
     expect(chips().filter((chip) => chip === "Fifth ×1.3")).toHaveLength(0);
     expect(document.querySelectorAll('[data-key="chord-marks"] .chord-idle')).toHaveLength(1);
@@ -539,28 +540,25 @@ describe("placement previews with capacity-aware production (#260)", () => {
     expect(body.classList.contains("inst-show")).toBe(false);
   });
 
-  it("an unrelated selection survives another module's placement", () => {
+  it("a placement costs no open detail (#260's contract over the Hex detail)", () => {
     give(app.state, "additive", hex(1, 0));
     app.state.cells.push(hex(0, 1), hex(2, 0));
     give(app.state, "additive", hex(2, 0));
     app.render();
-    const c4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(0, 0)))!;
     const d4 = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(2, 0)))!;
-    app.select(c4.id);
-    expect(app.ui.selected).toBe(c4.id);
-    // Drag D4 onto C5: the placement lands, and C4 stays selected with
-    // its readout following the board the landing made — the active
-    // Fifth holds, the Octave the drop recognizes stays an idle candidate.
+    // The C4 detail stands.
+    clickCell(0, 0);
+    expect(app.ui.detail).toEqual({ pos: hex(0, 0), face: "modules" });
+    // Drag D4 onto C5: the placement lands, and the C4 detail is untouched
+    // — a placement must not cost the player their inspection.
     document.elementFromPoint = () => cell(0, 1);
     try {
       cell(2, 0).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
       document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
       document.dispatchEvent(new MouseEvent("pointerup", { clientX: 130, clientY: 110 }));
       expect(d4.pos).toEqual(hex(0, 1));
-      expect(app.ui.selected).toBe(c4.id);
-      expect(readout().hidden).toBe(false);
-      expect(readout().textContent).toContain("Fifth ×1.3");
-      expect(readout().textContent).toContain("Octave ×1.15 · idle");
+      expect(app.ui.detail).toEqual({ pos: hex(0, 0), face: "modules" });
+      expect(!document.getElementById("hex-detail")!.hidden).toBe(true);
     } finally {
       delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
     }
