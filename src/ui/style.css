@@ -424,20 +424,6 @@ h1, h2, h3, p { margin: 0; }
 .app-launcher-item svg { width: 19px; height: 19px; flex-shrink: 0; }
 .app-launcher-word { font-size: 13px; font-weight: 600; }
 .app-launcher-item:hover:not(:disabled) { border-color: var(--line); background: var(--panel-soft); }
-/* The Goals entry's tracker read (issue #149): the habit-dot vocabulary —
-   hollow while work is open, filled when every current occurrence is
-   complete, dashed when nothing is tracked — a state, never an aggregate
-   percentage; the header stays pure control. */
-.launcher-goal-state { margin-left: auto; display: flex; align-items: center; gap: 7px; }
-.launcher-pip { width: 8px; height: 8px; border-radius: 100%; border: 1.5px solid var(--muted); flex-shrink: 0; }
-.launcher-goal-state.none .launcher-pip { border-style: dashed; opacity: 0.75; }
-.launcher-goal-state.complete .launcher-pip { background: var(--accent); border-color: var(--accent); }
-/* The Habit entry's inline readout: the practice a session would start,
-   wearing the same muted word style as the Goals state — truncated, since
-   a habit name is the player's own. */
-.launcher-habit-state { margin-left: auto; display: flex; align-items: center; min-width: 0; }
-.launcher-habit-state .launcher-state-word { max-width: 128px; overflow: hidden; text-overflow: ellipsis; }
-.launcher-state-word { font: 10px var(--mono); letter-spacing: 0.02em; color: var(--muted); white-space: nowrap; }
 
 /* App panels open as popovers anchored directly beneath the affordance that
    discloses them — short mouse travel, and nothing below the console ever
@@ -468,9 +454,167 @@ h1, h2, h3, p { margin: 0; }
 .app-launcher-slot .app-popover { left: auto; right: 0; }
 @keyframes popover-in { from { opacity: 0; transform: translateY(-5px); } }
 
-.time-plan { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+/* ── The Focus control sheet (ADR-0050, issue #275) ── */
+/* One frame behind the console's doors — the clock, the Habit and Goals
+   tiles — carrying the PLAN / HABIT / GOALS / HISTORY faces in the ruled
+   folio: a clipped plate over hairline-rule rows, names lead, figures
+   right-aligned mono, deeper mechanics in the tooltip layer, no expandable
+   detail sections. The popover shell keeps only the anchoring; the plate
+   inside carries the silhouette. */
+.focus-sheet {
+  width: min(560px, calc(100cqw - 32px));
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+  overflow: visible;
+  animation: none;
+}
+.focus-sheet .inst-panel-face {
+  max-height: calc(100dvh - 170px);
+  overflow-y: auto;
+  padding: 14px 18px 16px;
+}
+.focus-sheet select {
+  background: var(--panel-soft);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px 8px;
+  font-size: 12.5px;
+}
+.focus-sheet select:focus { border-color: var(--charge); outline: none; }
+
+.focus-head { display: flex; align-items: baseline; gap: 12px; padding-bottom: 8px; }
+.focus-head .focus-name { font-size: 19px; letter-spacing: 0.06em; }
+.focus-head .focus-state { flex: 1; min-width: 0; text-align: right; }
+.focus-close { flex-shrink: 0; min-width: 32px; min-height: 32px; }
+
+/* The facetabs: the frame's one navigation — radio-like face selectors,
+   the standing face wearing the firm inset marker. */
+.facetabs { display: flex; gap: 6px; padding-bottom: 12px; flex-wrap: wrap; }
+.ftab {
+  min-height: 36px;
+  padding: 5px 12px;
+  font: 600 13px var(--font-condensed);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ftab:hover { color: var(--ink); }
+.ftab.active { color: var(--ink); box-shadow: inset 0 -2px var(--ink); border-color: var(--ink); }
+
+/* The PLAN face's enter row: the ready readout leads, the vermillion
+   switch-in mirrors the main switch; in flow the readout is the running
+   session and the control becomes End flow. */
+.focus-enter { display: flex; align-items: center; gap: 14px; padding: 2px 0 12px; }
+.focus-enter-read { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.focus-ready { font-size: 17px; }
+.focus-enter-sub { font-size: 11px; color: var(--muted); }
+.switch-in { color: var(--switch-ink); border-color: var(--switch); flex-shrink: 0; }
+.switch-in:hover:not(:disabled) { background: var(--switch-faint); }
+
+/* The plan rows inside the folio: the chip run, the custom entry beside the
+   open-ended mode, and the read the target arms. */
+.focus-plan .folio-row { flex-wrap: wrap; }
+.focus-plan .folio-main.focus-plan-free {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* The HABIT face's figure-led list: figures lead — lifetime, sessions —
+   the name grows, the active habit wears its dot, every row drills. */
+.habit-ledger-row { width: 100%; text-align: left; cursor: pointer; }
+.habit-ledger-row:hover { background: var(--hover-bg); }
+.habit-ledger-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.folio-dim { color: var(--muted); opacity: 0.85; }
+.habit-ledger-arrow { color: var(--muted); flex-shrink: 0; }
+.habit-archived > .eyebrow { padding-top: 10px; }
+
+/* Add and log are on-demand action-button forms: an action button until
+   pressed, then the input row — collapsed by a landing, Escape, or a
+   second press. */
+.focus-actions .folio-row { flex-wrap: wrap; }
+.focus-action {
+  border-color: transparent;
+  color: var(--muted);
+  padding: 6px 8px;
+  min-height: 40px;
+  text-align: left;
+  font: 600 13px var(--font-condensed);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.focus-action:hover:not(:disabled) { color: var(--ink); background: transparent; }
+.focus-form-row { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; flex-wrap: wrap; }
+.focus-form-row input {
+  flex: 1;
+  min-width: 0;
+  background: var(--panel-soft);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+.focus-form-row input[type="number"] { flex: 0 0 84px; }
+.focus-form-row input:focus { border-color: var(--charge); outline: none; }
+
+/* The drilled habit's detail: back, the head carrying select / rename /
+  archive, then the development read. */
+.focus-back {
+  border: 0;
+  padding: 4px 0;
+  min-height: 32px;
+  color: var(--muted);
+  font: 600 12px var(--font-condensed);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: left;
+}
+.focus-back:hover:not(:disabled) { color: var(--ink); background: none; }
+.focus-detail-head { display: flex; align-items: center; gap: 8px; padding: 4px 0 10px; flex-wrap: wrap; }
+.focus-detail-name { font-size: 18px; font-weight: 600; margin-right: auto; }
+.focus-detail-head .st-acquired { flex-shrink: 0; }
+.focus-detail-head .habit-rename-input { flex: 1; min-width: 0; }
+.habit-detail-read .stat-row { border-bottom: 1px solid var(--line-soft); }
+.habit-detail-read .habit-build { margin-top: 12px; }
+.habit-detail-read .note-list { margin-top: 10px; }
+
+/* The GOALS face's rows: the folio's hairline replaces the card, the
+   progress track rides beneath the name, delete rides the row's end. */
+.goal-ledger { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.goal-ledger-head { display: flex; align-items: center; gap: 8px; }
+.goal-ledger-name { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.goal-row.done .goal-ledger-name { color: var(--muted); }
+.goal-ledger-head .icon-btn { flex-shrink: 0; }
+.goal-row .goal-track { margin: 8px 0 4px; }
+.long-goal-row { justify-content: space-between; align-items: center; }
+.long-goal-row .long-goal-name { font-size: 13.5px; font-weight: 550; }
+.long-goal-row .shop-buy { align-items: flex-end; }
+
+/* The HISTORY face: the record list and drill as ruled rows. */
+.focus-history { display: flex; flex-direction: column; gap: 4px; }
+.focus-history > p { margin: 6px 0; }
+.focus-history .history-row:not(:last-child) { border-bottom: 1px solid var(--line-soft); }
+
 /* The planned-target affordances (§6): preset chips, free 1–90 entry,
-   and open-ended as its own mode — never a duration choice. */
+   and open-ended as its own mode — never a duration choice. The sheet's
+   PLAN face rules them into folio rows; these keep their compact forms. */
 .plan-chips { display: flex; flex-wrap: wrap; gap: 5px; }
 .plan-chip {
   padding: 5px 9px;
@@ -871,29 +1015,12 @@ h1, h2, h3, p { margin: 0; }
 .note-entry .note-when { display: block; font-size: 9px; color: var(--muted); letter-spacing: 0.08em; margin-bottom: 3px; }
 .note-entry p { font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 
-/* Habit management: pick the session's practice identity in upgrade mode. */
-.habit-create { display: flex; gap: 8px; }
-.habit-create input { flex: 1; min-width: 0; background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font-size: 13px; }
-.habit-create input:focus { border-color: var(--charge); outline: none; }
-.habit-list { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
-.habit-row { display: flex; align-items: center; gap: 4px; border: 1px solid var(--line-soft); border-radius: 8px; padding: 4px 8px 4px 4px; }
-.habit-row.selected { border-color: var(--accent); background: var(--accent-faint); }
-.habit-pick { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; border: 0; background: transparent; text-align: left; padding: 6px 8px; border-radius: 6px; }
-.habit-pick:hover { background: var(--hover-bg); }
+/* Habit management: the figure-led list drills; rename/archive live in the
+   detail head. The shared dot, rename input, and build styles serve the
+   sheet's faces. */
 .habit-dot { width: 8px; height: 8px; border-radius: 100%; border: 1.5px solid var(--muted); flex-shrink: 0; }
-.habit-row.selected .habit-dot { background: var(--accent); border-color: var(--accent); }
-.habit-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.habit-row small { color: var(--muted); flex-shrink: 0; }
-.habit-rename-input { flex: 1; min-width: 0; background: var(--panel-soft); color: var(--ink); border: 1px solid var(--charge); border-radius: 6px; padding: 6px 10px; font-size: 13px; }
-.habit-log { margin-top: 14px; }
-.habit-active-name { font-size: 17px; font-weight: 550; margin: 4px 0 0; }
-
-/* The development summary (§9): per-habit aggregates and tagged notes,
-   expanded beneath their row. Archiving hides a habit from selection only:
-   the archived section keeps every summary and note reachable. */
-.summary-toggle[aria-pressed="true"] { color: var(--ink); }
-.habit-summary { border: 1px solid var(--line-soft); border-top: 0; border-radius: 0 0 8px 8px; margin: -2px 0 6px; padding: 9px 11px; display: grid; gap: 2px; }
-.habit-summary .note-list { margin-top: 8px; }
+.habit-ledger-row .habit-dot.on { background: var(--accent); border-color: var(--accent); }
+.habit-rename-input { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--charge); border-radius: 6px; padding: 6px 10px; font-size: 13px; }
 
 /* The habit build (ADR-0046): the shared catalog read against the habit's
    own practice time — equipped nodes numbered by slot, unlocked nodes one
@@ -925,10 +1052,6 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
 .build-node-name { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.35; }
 .build-node-name small { display: block; color: var(--muted); font-size: 10.5px; }
 .build-node.locked .build-node-name { color: var(--muted); }
-.habit-archived { margin-top: 12px; display: grid; gap: 6px; }
-.habit-archived > .eyebrow { margin-bottom: 2px; }
-.habit-archived .habit-pick.archived { cursor: default; color: var(--muted); }
-.habit-archived .habit-pick.archived:hover { background: transparent; }
 
 /* The habit-keyed chip (§9): a tagged note wears its habit in the stream. */
 .habit-chip {
@@ -944,15 +1067,13 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
   vertical-align: top;
 }
 
-/* Session history (§9): the Time app's list and drill-down. Flat,
+/* Session history (§9): the HISTORY face's list and drill-down. Flat,
    newest first, paged with a show-more tail. Misses render as a muted
    grey marker — accounting, not judgment; never red, no streaks. */
-.history-panel { display: flex; flex-direction: column; gap: 6px; }
-.history-panel .empty-copy { margin-top: 6px; }
 .history-row {
   display: flex; align-items: center; gap: 8px; width: 100%;
-  border: 1px solid var(--line-soft); border-radius: 8px;
-  background: transparent; text-align: left; padding: 7px 10px; cursor: pointer;
+  border: 0;
+  background: transparent; text-align: left; padding: 9px 4px; cursor: pointer;
 }
 .history-row:hover { background: var(--hover-bg); }
 .history-when { font-size: 10px; color: var(--muted); flex-shrink: 0; width: 44px; }
@@ -968,27 +1089,15 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
 .history-line.muted { color: var(--muted); }
 
 /* Goals: tracked practice conditions in limited slots. */
-.goal-create { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.goal-create { display: flex; gap: 6px; flex-wrap: wrap; }
 .goal-create select, .goal-create input { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; font-size: 12.5px; }
 .goal-create input { width: 64px; }
 .goal-create select:focus, .goal-create input:focus { border-color: var(--charge); outline: none; }
-.goal-list { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
-.goal-row { border: 1px solid var(--line-soft); border-radius: 8px; padding: 9px 11px; }
-.goal-row.done { border-color: var(--charge-line); }
-.goal-head { display: flex; align-items: center; gap: 8px; }
-.goal-name { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .goal-status { font: 10px var(--mono); color: var(--muted); flex-shrink: 0; }
 .goal-status.done { color: var(--charge); }
-.goal-row.done .goal-name { color: var(--muted); }
-.goal-track { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; margin: 8px 0 4px; }
+.goal-track { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
 .goal-track > span { display: block; height: 100%; background: var(--charge); transition: width 400ms ease-out; }
-.goal-row.done .goal-track > span { background: var(--charge); }
 .goal-row small { color: var(--muted); font-size: 10px; }
-/* The console long goal (ADR-0012): one compact dashed row trailing the
-   Goals panel's slots — the purchase waits below the work. */
-.long-goal-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px dashed var(--line-strong); border-radius: 8px; padding: 10px 12px; margin-top: 12px; }
-.long-goal-row .long-goal-name { font-size: 13px; font-weight: 550; }
-.long-goal-row .shop-buy { align-items: flex-end; }
 
 .stat-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
 .stat-row:last-child { border-bottom: 0; }
@@ -2937,6 +3046,9 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
   .rate-breakdown { display: none; }
   .candidates { grid-template-columns: 1fr; }
   .app-popover { width: min(372px, calc(100cqw - 32px)); }
+  /* The Focus sheet keeps its wider plate to the 760px line: the folio's
+     four faces stay composed past the phone fold, the width cap below. */
+  .focus-sheet { width: min(560px, calc(100cqw - 32px)); }
 }
 
 @container app (width < 600px) {
@@ -2950,6 +3062,15 @@ body.mut-layer-live #grid .chord-mark:not(.ghost-mark) { opacity: 0.5; }
      bar with Inventory and Feats folded in; the Hex detail presents as a
      bottom sheet (issue #295). */
   .console { height: 56px; padding: 0 10px; gap: 8px; }
+  /* The Focus sheet pins to the container's own margins on phone: the
+     clock anchor sits one brand glyph in, so the absolute anchor would run
+     the plate past the row's end. Fixed under the 56px console (+12px
+     reveal). */
+  .app-popover.focus-sheet {
+    position: fixed;
+    left: 16px;
+    top: 68px;
+  }
   .brand svg { width: 24px; height: 24px; }
   .console-session { flex: 0 0 auto; gap: 8px; }
   /* The clock hugs its content here: the 150px desktop reserve plus the

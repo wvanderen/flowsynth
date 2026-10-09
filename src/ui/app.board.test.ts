@@ -1773,13 +1773,13 @@ describe("the bulk upgrade controls (#195)", () => {
 });
 
 describe("the habit build (ADR-0046, wave 4)", () => {
-  it("reads the shared catalog in the development summary: slots, equipped, unlocked, locked", () => {
+  it("reads the shared catalog in the drilled detail: slots, equipped, unlocked, locked", () => {
     const created = createHabit(app.state, "Piano");
     const habit = created.habit!;
     habit.seconds = 5 * 3600; // one slot; charge-tap and weights unlocked
     equipBuildNode(app.state, habit.id, "weights");
     app.openApp("habit");
-    document.querySelector<HTMLButtonElement>(`[data-summary="${habit.id}"]`)!.click();
+    document.querySelector<HTMLButtonElement>(`[data-drill-habit="${habit.id}"]`)!.click();
     const build = document.querySelector("#app-popover .habit-build")!;
     expect(build.textContent).toContain("1/1 slots");
     expect(build.textContent).toContain("effects only while this habit is active");
@@ -1793,13 +1793,13 @@ describe("the habit build (ADR-0046, wave 4)", () => {
     expect(build.querySelector('[data-equip="forge-hand"]')).toBeNull();
   });
 
-  it("equips and unequips through the panel — free respec, upgrade mode only", () => {
+  it("equips and unequips through the detail — free respec, upgrade mode only", () => {
     const created = createHabit(app.state, "Piano");
     const habit = created.habit!;
     habit.seconds = 3600;
     const nousBefore = app.state.nous;
     app.openApp("habit");
-    document.querySelector<HTMLButtonElement>(`[data-summary="${habit.id}"]`)!.click();
+    document.querySelector<HTMLButtonElement>(`[data-drill-habit="${habit.id}"]`)!.click();
     document.querySelector<HTMLButtonElement>('[data-equip="charge-tap"]')!.click();
     expect(habit.build).toEqual(["charge-tap"]);
     document.querySelector<HTMLButtonElement>('[data-unequip="charge-tap"]')!.click();
@@ -1807,12 +1807,12 @@ describe("the habit build (ADR-0046, wave 4)", () => {
     expect(app.state.nous).toBe(nousBefore);
   });
 
-  it("a fresh habit's summary points at the practice that unlocks the first nodes", () => {
+  it("a fresh habit's detail points at the practice that unlocks the first nodes", () => {
     createHabit(app.state, "Piano");
     const habit = app.state.habits[0]!;
     app.openApp("habit");
-    document.querySelector<HTMLButtonElement>(`[data-summary="${habit.id}"]`)!.click();
+    document.querySelector<HTMLButtonElement>(`[data-drill-habit="${habit.id}"]`)!.click();
     expect(document.querySelector("#app-popover .habit-build")).toBeNull();
-    expect(document.querySelector("#app-popover .habit-summary")!.textContent).toContain("Build nodes unlock with practice time");
+    expect(document.querySelector("#app-popover .habit-detail-read")!.textContent).toContain("Build nodes unlock with practice time");
   });
 });

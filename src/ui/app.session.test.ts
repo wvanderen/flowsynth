@@ -53,13 +53,13 @@ describe("the enter prompt", () => {
     expect(app.state.activeHabitId).toBe(created.habit!.id);
   });
 
-  it("carries a pointer to the Time app, not a second copy of the plan controls (§7)", () => {
+  it("carries a pointer to the Focus sheet's PLAN face, not a second copy of the plan controls (§7)", () => {
     app.startFlow();
     const modal = document.getElementById("modal-content")!;
-    // Planning lives only in the Time app — the prompt points there.
+    // Planning lives only in the Focus sheet — the prompt points there.
     expect(modal.querySelectorAll(".plan-chip")).toHaveLength(0);
     expect(modal.querySelector("#plan-minutes")).toBeNull();
-    expect(modal.querySelector(".enter-plan-hint")!.textContent).toContain("Time app");
+    expect(modal.querySelector(".enter-plan-hint")!.textContent).toContain("Focus sheet");
     // Session one's steer still rides above it (ADR-0019).
     expect(modal.querySelector(".enter-steer")!.textContent).toContain("five minutes");
   });
