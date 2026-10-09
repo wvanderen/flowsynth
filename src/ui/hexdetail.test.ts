@@ -624,15 +624,18 @@ describe("the detail's direct inventory (issue #296)", () => {
     const id = control.getAttribute("aria-describedby")!;
     control.focus();
     expect(document.getElementById(id)!.classList.contains("inst-show")).toBe(true);
-    const info = control.parentElement!.querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
     const before = JSON.stringify(app.state);
-    info.click();
-    expect(info.getAttribute("aria-expanded")).toBe("true");
+    control.dispatchEvent(new PointerEvent("click", { bubbles: true, pointerType: "touch" }));
+    expect(control.getAttribute("aria-expanded")).toBe("true");
     expect(JSON.stringify(app.state)).toBe(before);
     expect(app.ui.detailTray).toBeNull();
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(document.getElementById(id)!.classList.contains("inst-show")).toBe(false);
     expect(open()).toBe(true);
+    control.dispatchEvent(new PointerEvent("click", { bubbles: true, pointerType: "touch" }));
+    control.dispatchEvent(new PointerEvent("click", { bubbles: true, pointerType: "touch" }));
+    if (action === "swap") expect(app.ui.detailTray).toBe("modules");
+    else expect(app.state.modules.find((m) => m.pos && sameHex(m.pos, hex(0, 0)))).toBeUndefined();
   });
 
   it("slot availability follows affordability and a refused click preserves the slot", () => {

@@ -1981,7 +1981,6 @@ body.hex-detail-open .upgrade-all {
    leaves at its top-right and bottom-right, not text rows in the rail. */
 .hex-orbit { position: relative; display: inline-flex; }
 .hex-orbit-control { position: absolute; display: flex; align-items: center; z-index: 2; }
-.hex-orbit-control > .inst-tip-trigger { width: 44px; height: 44px; }
 .hex-orbit-btn {
   width: 44px;
   height: 44px;
@@ -1998,8 +1997,8 @@ body.hex-detail-open .upgrade-all {
 .hex-orbit-btn svg { width: 19px; height: 19px; display: block; }
 .hex-orbit-btn:hover { border-color: var(--accent); color: var(--accent); }
 .hex-orbit-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.hex-orbit .orbit-swap { top: 7%; right: calc(-3% - 44px); }
-.hex-orbit .orbit-retrieve { bottom: 7%; right: calc(-3% - 44px); }
+.hex-orbit .orbit-swap { top: 7%; right: -3%; }
+.hex-orbit .orbit-retrieve { bottom: 7%; right: -3%; }
 
 /* The upgrade affordances (§5, issue #195): the shared ladder riding the
    button — the same chip rows the retired bloom carried. */

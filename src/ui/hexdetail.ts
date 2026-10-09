@@ -234,7 +234,7 @@ function orbitHtml(face: DetailFace, resident: string): string {
     ["retrieve", retrieveTitle, retrieveTitle, ORBIT_RETRIEVE_SVG],
   ] as const).map(([action, label, explanation, icon]) => {
     const id = detailTipId();
-    return `<span class="inst-tip hex-orbit-control orbit-${action}"><button class="hex-orbit-btn" id="detail-${face === "modules" ? "module" : "mutator"}-${action}" aria-label="${label}" aria-describedby="${id}">${icon}</button><button class="inst-tip-trigger" aria-label="About ${action}" aria-describedby="${id}" aria-expanded="false">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${explanation}</span></span>`;
+    return `<span class="inst-tip hex-orbit-control orbit-${action}"><button class="hex-orbit-btn inst-tip-trigger" id="detail-${face === "modules" ? "module" : "mutator"}-${action}" aria-label="${label}" aria-describedby="${id}" aria-expanded="false">${icon}</button><span class="inst-tip-body" id="${id}" role="tooltip">${explanation}</span></span>`;
   }).join("");
 }
 
@@ -494,13 +494,29 @@ function wireDetailBuy(app: App, host: HTMLElement, moduleId: string): void {
   wireModuleRail(app, moduleId);
 }
 
+// Hover and focus disclose on the action itself. A first touch pins the
+// explanation; a second touch activates. Mouse and keyboard activate directly.
+function wireOrbitAction(app: App, id: string, action: () => void): void {
+  const button = document.getElementById(id);
+  let touch = false;
+  app.listen(button, "pointerdown", (event) => {
+    touch = (event as PointerEvent).pointerType === "touch";
+  });
+  app.listen(button, "click", (event) => {
+    const touchClick = touch || (event as PointerEvent).pointerType === "touch";
+    touch = false;
+    if (touchClick && !button?.closest(".inst-tip")?.classList.contains("show")) return;
+    action();
+  });
+}
+
 // The Modules face's rail wiring (issue #296): Add and Swap open the
 // detail's module tray, Retrieve returns the resident straight to the
 // tray — the detail manages its own Hex, no grid trip needed.
 function wireModuleRail(app: App, moduleId: string | null): void {
   app.listen(document.getElementById("detail-module-add"), "click", () => app.openDetailTray("modules"));
-  app.listen(document.getElementById("detail-module-swap"), "click", () => app.openDetailTray("modules"));
-  app.listen(document.getElementById("detail-module-retrieve"), "click", () => {
+  wireOrbitAction(app, "detail-module-swap", () => app.openDetailTray("modules"));
+  wireOrbitAction(app, "detail-module-retrieve", () => {
     if (moduleId) app.returnToInventory(moduleId);
   });
 }
@@ -510,8 +526,8 @@ function wireModuleRail(app: App, moduleId: string | null): void {
 // unlock, and the locked layer's entry walk.
 function wireDetailMutatorActions(app: App, pos: Hex): void {
   app.listen(document.getElementById("detail-mutator-add"), "click", () => app.openDetailTray("mutators"));
-  app.listen(document.getElementById("detail-mutator-swap"), "click", () => app.openDetailTray("mutators"));
-  app.listen(document.getElementById("detail-mutator-retrieve"), "click", () => {
+  wireOrbitAction(app, "detail-mutator-swap", () => app.openDetailTray("mutators"));
+  wireOrbitAction(app, "detail-mutator-retrieve", () => {
     const item = mutatorAt(app.state, pos);
     if (item) app.mutRetrieve(item.id);
   });
