@@ -2414,10 +2414,9 @@ body.hex-detail-open .upgrade-all {
    relationships and the external bonuses live one click away, in the Hex
    detail's stack and breakdowns. */
 body.mut-layer-live #grid .cell-node { pointer-events: none; }
-/* A covered cell's empty chassis and note never ghost through the slot
-   face's own words (issue #298) — the slot face is that cell's face. */
-body.mut-layer-live #grid .cell-node.mut-covered .hex.empty,
-body.mut-layer-live #grid .cell-node.mut-covered .hex-note { display: none; }
+/* The slot face replaces the complete covered cell, including its
+   keyboard control — no invisible, inert tab stop beneath it. */
+body.mut-layer-live #grid .cell-node.mut-covered { display: none; }
 /* Ghost marks hide with the formed ones: no module gesture can stand on
    this layer, so nothing ever raises one — the group is simply absent. */
 body.mut-layer-live #grid .cell-node:has(.module-node),

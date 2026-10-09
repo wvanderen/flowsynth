@@ -227,9 +227,9 @@ describe("the Mutators layer's slot faces", () => {
     expect(css).toMatch(/body\.mut-layer-live #grid \.cell-node:has\(\.module-node\),[^}]*\.charge-preview-line \{\s*display: none;\s*\}/);
     expect(css).toMatch(/body\.mut-layer-live #grid \.cell-node \{\s*pointer-events: none;\s*\}/);
     expect(css).not.toMatch(/body\.mut-layer-live[^{]*grayscale/);
-    // A covered cell's empty chassis and note hide beneath the slot face —
-    // nothing ghosts through the face's own words.
-    expect(css).toMatch(/body\.mut-layer-live #grid \.cell-node\.mut-covered \.hex\.empty,[^}]*\.hex-note \{\s*display: none;\s*\}/);
+    // Hide the complete covered cell so its keyboard control leaves the
+    // tab order together with its empty chassis and note.
+    expect(css).toMatch(/body\.mut-layer-live #grid \.cell-node\.mut-covered \{\s*display: none;\s*\}/);
     expect(document.querySelector('[data-cell="1,0"]')!.classList.contains("mut-covered")).toBe(true);
     expect(document.querySelector('[data-cell="0,1"]')!.classList.contains("mut-covered")).toBe(false);
   });
