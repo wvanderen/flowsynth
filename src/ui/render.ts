@@ -30,8 +30,8 @@ import { ACHIEVEMENTS, achievementName, type AchievementCategory, type Achieveme
 import type { DeployedModule, GameState, Goal, Habit, Hex, HonestyEvent, HonestyOutcome, ModuleInstance, MutatorInstance, NoteEntry, NamedChordTerm, Rarity, RateSnapshot } from "../engine/types";
 import { DEV_BOARD_CAPACITIES, type App, type ChordHover, type EnterKind, type EnterSelection, type ModalKind } from "./app";
 import { startPointerDrag } from "./pointer-drag";
-import { appIcon, moduleIcon } from "./icons";
-import { HEX_RADIUS, hexApothem, hexPoints, HUE_TOKEN_OF, moduleFace, boardPoint, SPACING, spacerClipPath, forgeBranchOf, faceReadoutFor, faceLevel, waterFill, zeroBuyRead, isSource } from "./face";
+import { appIcon } from "./icons";
+import { HEX_RADIUS, hexApothem, hexPoints, moduleFace, boardPoint, SPACING, spacerClipPath, forgeBranchOf, faceReadoutFor, faceLevel, waterFill, zeroBuyRead, isSource, inventoryTileSvg } from "./face";
 import { renderHexDetail } from "./hexdetail";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chordMarkCovers, chipWidth, CHORD_HUES, type ChordMark } from "./chordlayer";
@@ -107,13 +107,19 @@ export function render(app: App): void {
   // Every surface below reads the pass's snapshot; none recomputes.
   const live = currentSnapshot(app.state);
   const projected = displayedRates(app.state, true);
+  // The chord work's one computation per pass (§6, issue #296): the grid's
+  // seams draw it and the reserved readout's grammar — hover chips, the
+  // Hex detail's chord row — reads the same marks, so a placement made
+  // from the detail refreshes its relationship breakdown even while the
+  // grid stands retired.
+  const chordWork = refreshChordOverlay(app, live);
   renderConsoleSession(app);
   renderConsoleApps(app, projected);
   renderBoardLedger(app, live);
   renderTools(app, projected);
   // The Hex detail replaces the grid (issue #295): while it stands the
   // grid renders nothing — another Hex is unreachable until the return.
-  if (!app.ui.detail) renderGrid(app, live, projected);
+  if (!app.ui.detail) renderGrid(app, live, projected, chordWork);
   renderInventoryTray(app);
   renderUpgradeAll(app);
   renderCellArmPill(app);
@@ -1082,7 +1088,38 @@ function renderCellArmPill(app: App): void {
 
 /* ── Hex grid ──────────────────────────────────────── */
 
-function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void {
+// The chord overlay's one computation (§6, ADR-0036), built from the live
+// pass once per render: the grid's seams draw it, and the reserved
+// readout's grammar — the hover chips and the Hex detail's chord row —
+// reads the same marks through the cache, so the two surfaces can never
+// disagree about what the board sings.
+function refreshChordOverlay(app: App, live: RateSnapshot): ReturnType<typeof chordOverlay> {
+  const { state } = app;
+  const deployedById = new Map(state.modules.filter((m) => m.pos !== null).map((m) => [m.id, m]));
+  // The silent voices (ADR-0048): the chords they sing in draw muted.
+  const silentIds = new Set(state.modules.filter((m) => CATEGORY_OF[m.type] === "silentVoice").map((m) => m.id));
+  const overlay = chordOverlay({
+    namedChords: live.namedChords,
+    // The recognized-but-idle candidates (issue #258): the board sings
+    // them, the allocation didn't select them — dimmer, dotted, never
+    // pulsing. The active seams dominate. Absent an allocation read,
+    // nothing is idle — the plain recognizer's every term is already in
+    // namedChords.
+    inactiveChords: live.allocation ? idleTermsOf(live.allocation) : [],
+    posOf: (id) => deployedById.get(id)?.pos ?? null,
+    point,
+    radius: HEX_RADIUS,
+    step: LATTICE_STEP,
+    labelFor: chordTermLabel,
+    focusIds: [],
+    focusPoint: null,
+    silentIds,
+  });
+  chordReadoutCache.set(app, { marks: overlay.marks, snapshot: live });
+  return overlay;
+}
+
+function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overlay: ReturnType<typeof chordOverlay>): void {
   const { state, ui } = app;
   const svg = document.getElementById("grid") as SVGSVGElement | null;
   if (!svg) return;
@@ -1120,35 +1157,11 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot): void
   const flow = state.mode === "flow";
   const snapshot = live;
   // The chord annotation is always on (§6, #137): every formed chord wears
-  // its colored work — no chord view, no toggle. The name chips live in
-  // the reserved readout beside the board (the hovered seam's or voice's,
-  // asked on pointer rest), carrying names and multipliers only — never
-  // a board-wide +ν/s claim (ADR-0036). The selected module's final ν/s
-  // rides the same spot, live during flow and present with no chord at all.
+  // its colored work — no chord view, no toggle. The marks arrive from
+  // refreshChordOverlay (render's one computation, issue #296) — the readout
+  // shares them, so the seams and the asked chips never drift apart.
   // Emphasis rides hover and the Hex detail now (issue #295) — the grid
   // itself whispers its chords in the gaps, never over a face.
-  const deployedById = new Map(state.modules.filter((m) => m.pos !== null).map((m) => [m.id, m]));
-  const focusPoint = null;
-  // The silent voices (ADR-0048): the chords they sing in draw muted.
-  const silentIds = new Set(state.modules.filter((m) => CATEGORY_OF[m.type] === "silentVoice").map((m) => m.id));
-  const overlay = chordOverlay({
-    namedChords: snapshot.namedChords,
-    // The recognized-but-idle candidates (issue #258): the board sings
-    // them, the allocation didn't select them — dimmer, dotted, never
-    // pulsing. The active seams dominate. Absent an allocation read,
-    // nothing is idle — the plain recognizer's every term is already in
-    // namedChords.
-    inactiveChords: snapshot.allocation ? idleTermsOf(snapshot.allocation) : [],
-    posOf: (id) => deployedById.get(id)?.pos ?? null,
-    point,
-    radius: HEX_RADIUS,
-    step: LATTICE_STEP,
-    labelFor: chordTermLabel,
-    focusIds: [],
-    focusPoint,
-    silentIds,
-  });
-  chordReadoutCache.set(app, { marks: overlay.marks, snapshot });
 
   // Charge leads (§8, #41): uniform green patch leads, center-to-center,
   // directional generator → receiver. Leads in live flow animate; everything
@@ -2845,31 +2858,6 @@ function updateAppPanelLive(app: App, scope: ParentNode, projected: RateSnapshot
 
 function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
-/* ── Grid & inventory panel ────────────────────────── */
-
-// The inventory tile's minimal mark: a hexagon outlined in the category hue
-// with the module's glyph alone. The full readout face belongs to the board
-// and the expanded face — at tile size the engraving is noise — and the
-// tooltip carries the details the mark leaves off. Shared by the tray, the
-// phone inventory sheet, and the live drag ghost, so what you carry is
-// what waits in the tray. The spacer wears its module's ring instead of
-// the wire (issue #219): an unfilled inner hexagon matching its board face.
-// The spacer tile's inner hexagon (issue #219, prototype-validated): sized
-// to the other tiles' glyph footprint, not the face's full window.
-const SPACER_TILE_RADIUS = 20;
-
-function inventoryTileSvg(module: ModuleInstance): string {
-  const hue = `var(--${HUE_TOKEN_OF[module.type]})`;
-  const mark =
-    module.type === "spacer"
-      ? `<polygon fill="none" stroke="${hue}" stroke-width="3.5" points="${hexPoints(SPACER_TILE_RADIUS)}"/>`
-      : `<g class="tile-glyph" fill="none" stroke="${hue}" stroke-width="3.5" transform="scale(1.55)">${moduleIcon(module.type)}</g>`;
-  return `<svg viewBox="-70 -70 140 140" aria-hidden="true">
-    <polygon class="tile-hex" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="${hue}" stroke-width="4.5"/>
-    ${mark}
-  </svg>`;
 }
 
 /* ── Modals ────────────────────────────────────────── */

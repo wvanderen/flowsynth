@@ -96,7 +96,10 @@ export interface FaceSpec {
   type: ModuleType;
   rarity: Rarity;
   // The prominent readout beneath the signature: the module's contribution —
-  // for the chargeable Forge, charge-vs-threshold.
+  // for the chargeable Forge, charge-vs-threshold. An empty string skips
+  // the line entirely (the detail tray's face previews, issue #296 review:
+  // an undeployed module has no contribution, and a tray readout saying
+  // "+0" would misread the swap).
   readout: string;
   // Extra class on the readout (e.g. the charge register on the Forge).
   readoutClass?: string;
@@ -189,7 +192,7 @@ export function moduleFace(spec: FaceSpec): string {
     ${!openWire && spec.level !== undefined ? `<text data-key="level" y="${layout.level}" text-anchor="middle" class="face-level">LV ${spec.level}</text>` : ""}
     <text data-key="name" y="${openWire ? SPACER_NAME_Y : layout.name}" text-anchor="middle" class="face-name">${META[spec.type].short.toUpperCase()}</text>
     ${openWire ? "" : `<g data-key="signature" class="face-signature" transform="translate(0 ${layout.glyph}) scale(${layout.glyphScale})" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>`}
-    ${openWire ? "" : `<text data-key="readout" x="0" y="${layout.readout}" text-anchor="middle" class="face-readout${readoutFitClass(spec.readout)}${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>`}
+    ${openWire || spec.readout === "" ? "" : `<text data-key="readout" x="0" y="${layout.readout}" text-anchor="middle" class="face-readout${readoutFitClass(spec.readout)}${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>`}
     ${spec.note ? `<text data-key="note" x="0" y="${layout.note}" text-anchor="middle" class="face-note">${spec.note}</text>` : ""}
     ${openWire ? `<polygon data-key="spacer-frame" class="spacer-frame" points="${hexPoints(SPACER_WINDOW_RADIUS)}"/>` : ""}`;
 }
@@ -305,4 +308,29 @@ export function zeroBuyRead(bank: number, nextCost: number): { plusLabel: string
     plusTip: `+0 — ${short} ν short of one level`,
     maxTip: `MAX · buys 0 — ${short} ν short`,
   };
+}
+
+/* ── The inventory tile's minimal mark (ADR-0027) ───── */
+
+// A hexagon outlined in the category hue with the module's glyph alone.
+// The full readout face belongs to the board and the expanded face — at
+// tile size the engraving is noise — and the tooltip carries the details
+// the mark leaves off. Shared by the tray, the phone inventory sheet, the
+// live drag ghost, and the Hex detail's inventory (issue #296), so what
+// you carry is what waits in the tray. The spacer wears its module's ring
+// instead of the wire (issue #219): an unfilled inner hexagon matching its
+// board face, sized to the other tiles' glyph footprint, not the face's
+// full window.
+const SPACER_TILE_RADIUS = 20;
+
+export function inventoryTileSvg(module: ModuleInstance): string {
+  const hue = `var(--${HUE_TOKEN_OF[module.type]})`;
+  const mark =
+    module.type === "spacer"
+      ? `<polygon fill="none" stroke="${hue}" stroke-width="3.5" points="${hexPoints(SPACER_TILE_RADIUS)}"/>`
+      : `<g class="tile-glyph" fill="none" stroke="${hue}" stroke-width="3.5" transform="scale(1.55)">${moduleIcon(module.type)}</g>`;
+  return `<svg viewBox="-70 -70 140 140" aria-hidden="true">
+    <polygon class="tile-hex" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="${hue}" stroke-width="4.5"/>
+    ${mark}
+  </svg>`;
 }

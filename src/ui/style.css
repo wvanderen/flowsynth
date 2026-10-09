@@ -1733,6 +1733,7 @@ body.hex-detail-open .upgrade-all {
   .hex-detail:not([hidden]) { animation: none; }
 }
 .hex-detail-scene {
+  position: relative;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -1762,9 +1763,11 @@ body.hex-detail-open .upgrade-all {
   color: var(--switch);
 }
 /* The cross-section: two rows (Mutators above Modules, always) by two
-   columns (the stack, then the action rail). Every child states its post —
-   an empty rail row must never let a face slide into the rail's column.
-   The composition centers as a group; a short stage scrolls. */
+   columns (the stack, the action rail) — the inventory overlays instead of
+   joining the grid (issue #296 review), so opening it never reflows the
+   composition. Every child states its post — an empty rail row must never
+   let a face slide into the rail's column. The composition centers as a
+   group; a short stage scrolls. */
 .hex-detail-grid {
   flex: 1;
   min-height: 0;
@@ -1907,6 +1910,95 @@ body.hex-detail-open .upgrade-all {
 }
 .hex-action:hover { border-color: var(--arete); background: var(--arete-faint); }
 .hex-detail-noslot { font-size: 11px; color: var(--muted); }
+
+/* The detail's inventory (issue #296, re-docked by the review): an overlay
+   beside the stack — it covers, it never reflows, so opening the tray
+   never shifts the composition. A quiet instrument panel holding rows of
+   larger cell previews (the module's own face at tray scale), Cancel in
+   its head, tiles placing straight into the detail's place. */
+.hex-detail-tray {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(248px, 30vw);
+  max-height: calc(100% - 16px);
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+}
+.hex-detail-tray-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.hex-detail-tray-cancel {
+  padding: 5px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--panel-soft);
+  font: 600 10px var(--font-condensed);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.hex-detail-tray-cancel:hover { border-color: var(--accent); color: var(--accent); }
+.hex-detail-tray-items {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  justify-items: center;
+  align-content: start;
+  gap: 6px;
+  min-height: 40px;
+  overflow-y: auto;
+  padding: 2px;
+}
+.hex-detail-tray-items .inventory-tile { width: 96px; padding: 3px 2px 5px; }
+.hex-detail-tray-items .inventory-tile svg { width: 100%; }
+.hex-detail-tray-items .tray-face-tile svg.tray-face { color: var(--ink); }
+.hex-detail-tray .tray-empty { grid-column: 1 / -1; max-width: 200px; }
+/* The sheet re-docks the tray under the stack, full width in the flow —
+   the single column never shifts either way. */
+.hex-detail.sheet .hex-detail-tray {
+  position: static;
+  transform: none;
+  width: auto;
+  max-height: none;
+  margin: 2px 8px 0;
+  flex: none;
+}
+
+/* The orbital controls (issue #296 review): Swap and Retrieve ride the
+   cell itself — small round icon buttons in the space the hexagon's taper
+   leaves at its top-right and bottom-right, not text rows in the rail. */
+.hex-orbit { position: relative; display: inline-flex; }
+.hex-orbit-control { position: absolute; display: flex; align-items: center; z-index: 2; }
+.hex-orbit-btn {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--panel-soft);
+  color: var(--ink);
+  cursor: pointer;
+  z-index: 2;
+}
+.hex-orbit-btn svg { width: 19px; height: 19px; display: block; }
+.hex-orbit-btn:hover { border-color: var(--accent); color: var(--accent); }
+.hex-orbit-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hex-orbit .orbit-swap { top: 7%; right: -3%; }
+.hex-orbit .orbit-retrieve { bottom: 7%; right: -3%; }
 
 /* The upgrade affordances (§5, issue #195): the shared ladder riding the
    button — the same chip rows the retired bloom carried. */
