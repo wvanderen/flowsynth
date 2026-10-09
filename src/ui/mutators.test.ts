@@ -3,7 +3,10 @@ import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import type { App } from "./app";
 import { createAppFixture } from "./testing/app-fixture";
 import { combineMutatorsPreview } from "../engine/actions";
+import { BALANCE } from "../engine/constants";
 import { hex, sameHex } from "../engine/hex";
+import { serialize, STORAGE_KEY } from "../engine/save";
+import { createInitialState } from "../engine/state";
 import type { GameState, Hex, MutatorFamily, MutatorInstance, Rarity } from "../engine/types";
 
 // The Mutator Grid's UI (issue #199): the vertical layer legend (issue
@@ -648,5 +651,175 @@ describe("inert declarations", () => {
       // The verdict rides the mutator face alone; no module-face line repeats it.
       expect(document.querySelector(".hex-detail-mutline")).toBeNull();
     }
+  });
+});
+
+describe("the mutator entry sequence (issue #274)", () => {
+  // The purchase staged through the real sheet: first Arete banked, the
+  // door walked to the ◇ entry screen.
+  function stageEntry(): void {
+    app.state.prestiges = 1;
+    app.state.arete = BALANCE.catalogEntryCost;
+    app.render();
+    app.openMutatorEntry();
+    expect(app.ui.modal).toBe("catalog");
+    expect(app.ui.catalogFace).toBe("arete");
+  }
+
+  function buyEntry(): void {
+    stageEntry();
+    document.getElementById("buy-arete-entry")!.click();
+  }
+
+  function pressEscape(): void {
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  }
+
+  it("the purchase closes the sheet, flips to the Mutators layer, and auto-arms the free first slot", () => {
+    buyEntry();
+    const s = app.state;
+    expect(s.catalogEntryOwned).toBe(true);
+    // The entry's contents: Grid activation + the Forge module in the
+    // module tray + the free first slot's arm + one performed roll banked.
+    expect(s.modules.some((m) => m.type === "mutatorForge")).toBe(true);
+    expect(s.bankedMutatorRolls).toHaveLength(1);
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.mutLayer).toBe("mutators");
+    expect(document.body.classList.contains("mut-layer-live")).toBe(true);
+    expect(document.getElementById("mutator-tray")!.hidden).toBe(false);
+    expect(app.ui.mutUnlockArmed).toBe(true);
+    const pill = document.getElementById("mut-unlock-pill")!;
+    expect(pill.hidden).toBe(false);
+    expect(pill.textContent).toContain("free");
+    expect([...document.querySelectorAll("#grid .mut-unlock-target")]).toHaveLength(3);
+  });
+
+  it("the first slot's landing auto-opens the roll choice; choosing mints to the tray and auto-arms placement", () => {
+    buyEntry();
+    unlockNode(1, 0).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.state.mutatorSlots).toHaveLength(1);
+    expect(app.ui.mutUnlockArmed).toBe(false);
+    // The moment the slot lands, the existing Forge modal's mutator block
+    // stands open — no bespoke first-roll furniture.
+    expect(app.ui.modal).toBe("forge");
+    const candidates = [...document.querySelectorAll("#modal-content .mut-candidate")];
+    expect(candidates).toHaveLength(2);
+    candidates[1]!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const minted = app.state.mutators[0]!;
+    expect(minted.pos).toBeNull();
+    expect(app.state.bankedMutatorRolls).toHaveLength(0);
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.mutArmedTray).toBe(minted.id);
+    expect(document.getElementById("status")!.textContent).toContain("pick a slot for it");
+    // Esc falls back to the tray — the mint is not lost with the arm.
+    pressEscape();
+    expect(app.ui.mutArmedTray).toBeNull();
+    expect(app.state.mutators).toHaveLength(1);
+    // The tray re-arms through the normal gesture; the arm resolves on the
+    // fresh slot.
+    app.mutArmTray(minted.id);
+    clickSlot(1, 0);
+    expect(minted.pos !== null && sameHex(minted.pos, hex(1, 0))).toBe(true);
+  });
+
+  it("Esc retires the entry automation; Add unlocks the free slot without reopening Forge", () => {
+    buyEntry();
+    pressEscape();
+    expect(app.ui.mutUnlockArmed).toBe(false);
+    expect(app.state.mutatorSlots).toHaveLength(0);
+    // The free first slot stays reachable through Add's normal arm.
+    document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!.click();
+    expect(app.ui.mutUnlockArmed).toBe(true);
+    unlockNode(0, 1).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.state.mutatorSlots).toHaveLength(1);
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.entryRollPending).toBe(false);
+    expect(app.state.bankedMutatorRolls).toHaveLength(1);
+  });
+
+  it("purchase through Hex detail returns to the grid with every free-slot target available", () => {
+    app.state.prestiges = 1;
+    app.state.arete = BALANCE.catalogEntryCost;
+    app.openDetail(hex(0, 0));
+    document.getElementById("detail-mutator-entry")!.click();
+    document.getElementById("buy-arete-entry")!.click();
+    expect(app.ui.detail).toBeNull();
+    expect(app.ui.detailTray).toBeNull();
+    expect(document.body.classList.contains("hex-detail-open")).toBe(false);
+    expect(app.ui.mutLayer).toBe("mutators");
+    expect(app.ui.mutUnlockArmed).toBe(true);
+    expect(document.querySelectorAll("#grid .mut-unlock-target")).toHaveLength(app.state.cells.length);
+  });
+
+  it("a first slot unlocked through Hex detail opens the entry roll and returns placement to the grid", () => {
+    buyEntry();
+    app.openDetail(hex(1, 0), "mutators");
+    document.getElementById("detail-mutator-unlock")!.click();
+    expect(app.state.mutatorSlots).toEqual([hex(1, 0)]);
+    expect(app.ui.mutUnlockArmed).toBe(false);
+    expect(app.ui.detail).toBeNull();
+    expect(app.ui.modal).toBe("forge");
+    document.querySelector<HTMLElement>("#modal-content .mut-candidate")!.click();
+    const minted = app.state.mutators[0]!;
+    expect(app.ui.mutArmedTray).toBe(minted.id);
+    clickSlot(1, 0);
+    expect(minted.pos).toEqual(hex(1, 0));
+  });
+
+  it("closing the Forge modal banks the roll; a later choice keeps the standing landing", () => {
+    buyEntry();
+    unlockNode(1, 0).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    pressEscape();
+    expect(app.ui.modal).toBeNull();
+    // Nothing is lost: the roll waits banked like any banked roll.
+    expect(app.state.bankedMutatorRolls).toHaveLength(1);
+    app.openModal("forge");
+    const candidate = document.querySelector("#modal-content .mut-candidate")!;
+    candidate.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.state.mutators).toHaveLength(1);
+    expect(app.state.mutators[0]!.pos).toBeNull();
+    // Nothing re-fires: the standing landing — the peek stays, no auto-arm.
+    expect(app.ui.modal).toBe("forge");
+    expect(app.ui.mutArmedTray).toBeNull();
+    app.closeModal();
+    app.mutSetLayer("modules");
+    app.mutSetLayer("mutators");
+    app.mutArmTray(app.state.mutators[0]!.id);
+    clickSlot(1, 0);
+    expect(app.state.mutators[0]!.pos).toEqual(hex(1, 0));
+  });
+
+  it("a reload mid-sequence lands on the standard surfaces; the banked roll waits and nothing replays", () => {
+    buyEntry();
+    expect(app.ui.entryRollPending).toBe(true);
+    app = boot();
+    expect(app.state.bankedMutatorRolls).toHaveLength(1);
+    expect(app.ui.mutLayer).toBe("modules");
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.mutUnlockArmed).toBe(false);
+    expect(app.ui.entryRollPending).toBe(false);
+    // The banked roll waits in the Forge modal...
+    app.openModal("forge");
+    expect(document.querySelectorAll("#modal-content .mut-candidate")).toHaveLength(2);
+    app.closeModal();
+    // ...and the automation never replays: the first slot lands silent.
+    app.mutSetLayer("mutators");
+    app.mutArmUnlock();
+    unlockNode(0, 1).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.state.mutatorSlots).toHaveLength(1);
+    expect(app.ui.modal).toBeNull();
+  });
+
+  it("an existing save that already owns the entry boots to the standard surfaces with no roll performed", () => {
+    const s = createInitialState();
+    s.prestiges = 1;
+    s.catalogEntryOwned = true;
+    localStorage.setItem(STORAGE_KEY, serialize(s, Date.now() - 1_000));
+    app = boot();
+    expect(app.state.bankedMutatorRolls).toHaveLength(0);
+    expect(app.state.mutatorSlots).toHaveLength(0);
+    expect(app.ui.mutLayer).toBe("modules");
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.mutUnlockArmed).toBe(false);
   });
 });

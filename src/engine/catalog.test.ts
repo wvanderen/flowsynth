@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { breakHorizon, buyCatalogEntry, buyCell, buyRowUnlock, joinRollPool, prestige } from "./actions";
+import { breakHorizon, buyCatalogEntry, buyCell, buyRowUnlock, chooseMutatorRoll, joinRollPool, prestige } from "./actions";
 import { ARETE_HORIZON, claimOf } from "./accumulator";
 import { BALANCE } from "./constants";
 import { catalogOpen, rowUnlockCost, unlockableRows } from "./catalog";
 import { cellCost, cellPurchasePrice, rowGateOwed } from "./economy";
-import { fresh } from "./fixtures";
+import { fresh, stubRng } from "./fixtures";
+import { generateMutatorOffer } from "./rolls";
 import { hex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
 
@@ -53,6 +54,33 @@ describe("the Mutator tree's sheet purchases", () => {
     expect(buyCatalogEntry(s).ok).toBe(true);
     expect(s.catalogEntryOwned).toBe(true);
     expect(s.arete).toBe(0);
+  });
+
+  it("the purchase performs one normal, unrigged Mutator roll into the banked queue (issue #274)", () => {
+    const s = banked();
+    // Draws: family 0.9→charge, rarity 0.5→common; family 0.1→power,
+    // rarity 0.5→common. Both candidates keep their draws — a charge- or
+    // resonance-family first mutator is an accepted dud, never re-rolled.
+    expect(buyCatalogEntry(s, stubRng([0.9, 0.5, 0.1, 0.5])).ok).toBe(true);
+    expect(s.bankedMutatorRolls).toHaveLength(1);
+    const offer = s.bankedMutatorRolls[0]!;
+    expect(offer.candidates[0]).toMatchObject({ family: "charge", rarity: "common" });
+    expect(offer.candidates[1]).toMatchObject({ family: "power", rarity: "common" });
+    // The shared generator: the same draws through the Mutator Forge's own
+    // minting path read identically, and the Forge branch's meter — the
+    // charge-funded path — stays untouched.
+    const twin = banked();
+    const expected = generateMutatorOffer(twin, stubRng([0.9, 0.5, 0.1, 0.5]));
+    expect(offer.candidates.map((c) => ({ family: c.family, rarity: c.rarity }))).toEqual(
+      expected.candidates.map((c) => ({ family: c.family, rarity: c.rarity })),
+    );
+    expect(s.mutatorForge).toEqual({ progress: 0, earned: 0 });
+    expect(s.bankedRolls).toHaveLength(0);
+    // And the choice spends the banked roll exactly as any minted one.
+    expect(chooseMutatorRoll(s, offer.id, offer.candidates[1]!.id).ok).toBe(true);
+    expect(s.bankedMutatorRolls).toHaveLength(0);
+    expect(s.mutators).toHaveLength(1);
+    expect(s.mutators[0]!.pos).toBeNull();
   });
 
   it("the entry refuses twice, and refuses short balances", () => {

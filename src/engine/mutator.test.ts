@@ -571,7 +571,9 @@ describe("the mutator layer survives prestige", () => {
     expect(s.mutators[0]).toMatchObject({ id: placed.id, family: "power", rarity: "uncommon", pos: hex(1, 0) });
     expect(s.mutators[1]!.pos).toBeNull();
     expect(s.mutatorForge).toEqual({ progress: 100, earned: 2 });
-    expect(s.bankedMutatorRolls).toHaveLength(1);
+    // The entry's performed roll (issue #274) rides beside the pushed one —
+    // both survive prestige with the queue.
+    expect(s.bankedMutatorRolls).toHaveLength(2);
     expect(s.catalogEntryOwned).toBe(true);
     // The module side still resets — and the placed mutator still
     // multiplies its host at the base-again board.

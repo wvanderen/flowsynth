@@ -191,6 +191,11 @@ describe("persistence", () => {
     const owning = deserialize(JSON.stringify(file));
     expect(owning.state!.modules.filter((m) => m.type === "mutatorForge")).toHaveLength(1);
     expect(owning.state!.modules.at(-1)!.rarity).toBe("uncommon");
+    // No retro-sequence, no retro roll (issue #274): the entry's performed
+    // roll belongs to purchases from now on — the backfill banks nothing
+    // into the Mutator tray's queue.
+    expect(loaded.state!.bankedMutatorRolls).toEqual([]);
+    expect(loaded.state!.mutatorSlots).toEqual([]);
   });
 
   it("resuming from a mid-flow save does not duplicate rewards", () => {
