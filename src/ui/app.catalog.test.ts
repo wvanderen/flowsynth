@@ -291,7 +291,7 @@ describe("the catalog door (issue #271)", () => {
     app.closeModal();
   });
 
-  it("pre-entry the arete face is the single centered lock screen; the purchase reveals Upgrades and Unlocks", () => {
+  it("pre-entry the arete face is the single centered lock screen; the purchase lands the sequence and reveals the shop", () => {
     app.state.prestiges = 1;
     app.state.arete = BALANCE.catalogEntryCost;
     app.openModal("catalog");
@@ -311,6 +311,16 @@ describe("the catalog door (issue #271)", () => {
     app.render();
     document.getElementById("buy-arete-entry")!.click();
     expect(app.state.catalogEntryOwned).toBe(true);
+    // The purchase's landing is the entry sequence (issue #274): the sheet
+    // closes, the board flips to the Mutators layer, and the performed
+    // roll waits banked for the first slot's landing.
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.mutLayer).toBe("mutators");
+    expect(app.state.bankedMutatorRolls).toHaveLength(1);
+    // Reopened — mode wins, so the door lands on the ◇ face — the entry's
+    // row reads ACQUIRED with its rewards line.
+    app.openModal("catalog");
+    expect(app.ui.catalogFace).toBe("arete");
     sheet = document.getElementById("modal-content")!;
     expect(sheet.querySelector(".entry-screen")).toBeNull();
     // The capacity offerings (issue #259, released to ordinary play by
@@ -323,6 +333,7 @@ describe("the catalog door (issue #271)", () => {
     expect(entryRow.textContent).toContain("Mutator Grid");
     expect(entryRow.textContent).toContain("1 Mutator roll");
     expect(entryRow.querySelector(".st-acquired")).not.toBeNull();
+    app.closeModal();
   });
 
   it("the Accelerator stands as an inert placeholder — priced, never buyable", () => {
@@ -467,7 +478,13 @@ describe("the Arete Catalog (issue #197)", () => {
     document.getElementById("buy-arete-entry")!.click();
     expect(app.state.catalogEntryOwned).toBe(true);
     expect(app.state.arete).toBe(BALANCE.rollPoolJoinCost);
+    // The entry's landing closes the sheet (issue #274); the reopened door
+    // lands on the mode's face — mutator mode now — with the join live.
+    expect(app.ui.modal).toBeNull();
+    app.openModal("catalog");
+    expect(app.ui.catalogFace).toBe("arete");
     const join = document.getElementById("buy-arete-pool") as HTMLButtonElement;
+    expect(join).not.toBeNull();
     expect(join.disabled).toBe(false);
     join.click();
     expect(app.state.rollPoolJoined).toBe(true);

@@ -276,6 +276,13 @@ export interface UiState {
   // free on any owned cell, later ones adjacent to the patch, priced. Light
   // furniture — never saved.
   mutUnlockArmed: boolean;
+  // The entry sequence's pending automation (issue #274): set when the
+  // entry purchase lands, spent when the entry roll's choice is taken or
+  // the Forge modal closes. While it stands, the first slot's landing
+  // auto-opens the roll choice and the entry roll's choice auto-arms
+  // placement on the fresh slot. Light furniture — never saved: a reload
+  // mid-sequence lands on the standard surfaces, and nothing replays.
+  entryRollPending: boolean;
   // The mutator combine offer (issue #199): the pair a matching drop put up
   // for review. Cancel clears it and both copies stay untouched. Light
   // furniture — never saved.
@@ -428,6 +435,7 @@ export class App {
     detailTray: null,
     mutArmedTray: null,
     mutUnlockArmed: false,
+    entryRollPending: false,
     mutCombineOffer: null,
     mutCarrying: null,
     mutDropHover: null,
@@ -666,8 +674,13 @@ export class App {
     this.ui.detailTray = null;
     // The Mutator Grid's layer and gestures are upgrade-mode furniture too
     // (issue #199): flow shows neither tab nor layer, and every armed
-    // gesture unwinds with the rest.
+    // gesture unwinds with the rest. The entry sequence's automation is
+    // armed furniture by the same rule (issue #274): a session break, an
+    // import, or an adopted save lands on the standard surfaces — the
+    // banked roll waits in the Forge modal, the free slot via Add — and
+    // nothing replays.
     this.ui.mutLayer = "modules";
+    this.ui.entryRollPending = false;
     this.mutDisarm();
   }
 
@@ -1183,8 +1196,21 @@ export class App {
   // already gates on upgrade mode, so the face's buttons and the banner
   // are inert outside it by the same rule.
 
+  // The entry purchase's landing (issue #274): the sheet closes and the
+  // board flips to the Mutators layer — the tray face follows — with the
+  // free first slot auto-armed from Add (every owned cell pulses, the pill
+  // reads "free"). The purchase's performed roll waits banked; it
+  // auto-opens when the first slot lands.
   buyCatalogEntryAction(): void {
-    this.act(buyCatalogEntry(this.state), "Mutator tree entered.");
+    const result = buyCatalogEntry(this.state);
+    if (result.ok) {
+      this.ui.modal = null;
+      this.ui.mutLayer = "mutators";
+      this.mutDisarm();
+      this.ui.entryRollPending = true;
+      this.ui.mutUnlockArmed = true;
+    }
+    this.act(result, "Mutator tree entered — pick a cell for the free Mutator slot.");
   }
 
   joinRollPoolAction(): void {
@@ -1338,6 +1364,11 @@ export class App {
       }
       ui.mutUnlockArmed = false;
       this.say(`Mutator slot unlocked at ${cellNoteOf(pos)}${first ? "" : ` — ${formatInt(state.arete)} Arete left`}.`);
+      // The entry sequence's second step (issue #274): the moment the first
+      // slot lands, the roll choice auto-opens in the existing Forge
+      // modal's mutator block — no bespoke first-roll furniture. Closing
+      // it banks the roll like any banked roll.
+      if (first && ui.entryRollPending && state.bankedMutatorRolls.length > 0) ui.modal = "forge";
       this.save();
       this.render();
       return;
@@ -1408,7 +1439,11 @@ export class App {
 
   // The mutator roll's choice (issue #199): the chosen candidate mints into
   // the Mutator tray, the unchosen vanishes. The tray lives on the Mutators
-  // layer, so the landing says where to find it.
+  // layer, so the landing says where to find it. On the entry sequence's
+  // roll (issue #274) the landing mirrors the module roll's instead: the
+  // modal closes and placement auto-arms on the fresh slot. Later mintings
+  // keep their standing landing — the peek stays, the tray holds the
+  // mutator.
   chooseMutatorCandidate(offerId: string, candidateId: string): void {
     const offer = this.state.bankedMutatorRolls.find((o) => o.id === offerId);
     const candidate = offer?.candidates.find((c) => c.id === candidateId);
@@ -1419,8 +1454,16 @@ export class App {
       this.render();
       return;
     }
-    const more = this.state.bankedMutatorRolls.length > 0 ? ` ${this.state.bankedMutatorRolls.length} more ${this.state.bankedMutatorRolls.length === 1 ? "choice" : "choices"} wait in the Mutator Forge.` : "";
-    this.say(`${FAMILY_WORD[candidate.family]} mutator minted to the Mutator tray — the Mutators layer holds it.${more}`);
+    if (this.ui.entryRollPending) {
+      const minted = this.state.mutators[this.state.mutators.length - 1]!;
+      this.ui.entryRollPending = false;
+      this.ui.modal = null;
+      this.ui.mutArmedTray = minted.id;
+      this.say(`${FAMILY_WORD[candidate.family]} mutator minted — pick a slot for it.`);
+    } else {
+      const more = this.state.bankedMutatorRolls.length > 0 ? ` ${this.state.bankedMutatorRolls.length} more ${this.state.bankedMutatorRolls.length === 1 ? "choice" : "choices"} wait in the Mutator Forge.` : "";
+      this.say(`${FAMILY_WORD[candidate.family]} mutator minted to the Mutator tray — the Mutators layer holds it.${more}`);
+    }
     this.save();
     this.render();
   }
@@ -2134,6 +2177,12 @@ export class App {
       this.dismissSummary();
       return;
     }
+    // Putting the auto-opened entry roll's choice away banks the roll like
+    // any banked roll and retires the sequence's automation (issue #274):
+    // nothing re-fires — the roll waits in the Forge, the free slot stays
+    // reachable through Add's normal arm, and a later choice keeps the
+    // standing landing.
+    if (this.ui.modal === "forge") this.ui.entryRollPending = false;
     this.ui.modal = null;
     this.ui.combineOffer = null;
     this.ui.mutCombineOffer = null;

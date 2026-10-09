@@ -16,6 +16,7 @@ import { rollGoalOccurrences } from "./goals";
 import { syncAchievements } from "./achievements";
 import { syncChordDiscoveries } from "./library";
 import { freshAccounting } from "./trust";
+import { generateMutatorOffer, type Rng } from "./rolls";
 import type { GameState, Hex, ModuleInstance, MutatorInstance, Rarity, SessionReflection, ShelfType } from "./types";
 
 // The Arete purchases' shared refusal, one wording everywhere: nothing of
@@ -589,14 +590,20 @@ export function chooseRoll(state: GameState, offerId: string, candidateId: strin
 // prestige. The entry's engine effects landed with the mutator contracts
 // (issue #198): the Mutator Forge module joins the Tray, and the first
 // Mutator slot rides the entry — free, on whatever owned cell the player
-// arms it on (unlockMutatorSlot's empty-patch case).
-export function buyCatalogEntry(state: GameState): ActionResult {
+// arms it on (unlockMutatorSlot's empty-patch case). Since the entry
+// sequence (issue #274) the purchase also performs one normal, unrigged
+// Mutator roll: the shared two-candidate generator under the shared
+// rarity table, banked into the Mutator tray's own queue where every
+// Mutator roll waits. A resonance- or charge-family first mutator is an
+// accepted dud (ADR-0043's no-rig stands).
+export function buyCatalogEntry(state: GameState, rng: Rng = Math.random): ActionResult {
   if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
   if (state.catalogEntryOwned) return fail("The Mutator tree is already entered.");
   if (state.arete < BALANCE.catalogEntryCost) return fail("Not enough Arete.");
   state.arete -= BALANCE.catalogEntryCost;
   state.catalogEntryOwned = true;
   state.modules.push(createModule(state, "mutatorForge", "common"));
+  state.bankedMutatorRolls.push(generateMutatorOffer(state, rng));
   return { ok: true, unlocked: checkUnlocks(state) };
 }
 
