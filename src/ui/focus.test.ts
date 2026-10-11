@@ -111,17 +111,18 @@ describe("the four faces in the Focus frame", () => {
     expect(openFace("plan").querySelector("#focus-plan-read")!.textContent).toContain("1 goal tracked");
   });
 
-  it("the session habit select and the HABIT list read the same selection", () => {
+  it("the PLAN face's habit chips and the HABIT list read the same selection", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     createHabit(app.state, "Cooking");
     openFace("plan");
-    const select = document.getElementById("focus-habit-select") as HTMLSelectElement;
-    select.value = habit.id;
-    select.dispatchEvent(new Event("change", { bubbles: true }));
+    document.querySelector<HTMLButtonElement>(`[data-habit-pick="${habit.id}"]`)!.click();
     expect(app.state.activeHabitId).toBe(habit.id);
     // The ready readout followed in place: the practice a session would
-    // start leads the read.
-    expect(document.querySelector(".focus-ready")!.textContent).toBe("Ready · Piano");
+    // start is the row's whole read, the chips wear the pressed state.
+    expect(document.querySelector(".focus-ready")!.textContent).toBe("Piano");
+    const chip = document.querySelector<HTMLButtonElement>(`[data-habit-pick="${habit.id}"]`)!;
+    expect(chip.classList.contains("st-selected")).toBe(true);
+    expect(chip.getAttribute("aria-pressed")).toBe("true");
   });
 });
 
@@ -154,26 +155,28 @@ describe("the flow-mode rule", () => {
     expect(app.state.nous).toBe(nousBefore);
   });
 
-  it("the PLAN face becomes the running read: live elapsed, End flow, targets visibly disabled", () => {
+  it("the PLAN face in flow: the plan read only — no selection, no time UI, no end control", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
     startSession(app.state, 1200);
     advance(app.state, 60);
     const frame = openFace("plan");
-    expect(frame.querySelector('[data-live="focus-elapsed"]')!.textContent).toBe("01:00");
-    expect(frame.querySelector('[data-live="focus-caption"]')!.textContent).toBe("of 20:00");
-    expect(frame.querySelector("#focus-end")).not.toBeNull();
-    // A flow tick moves the live figures without rebuilding the sheet —
-    // node identity, and the open frame with it, ride through.
-    const elapsedNode = frame.querySelector('[data-live="focus-elapsed"]')!;
+    // The plan read stands as in the ready state — habit and goals — and
+    // nothing else: the console header owns the session.
+    expect(frame.querySelector(".focus-ready")!.textContent).toBe("Piano");
+    expect(document.getElementById("focus-plan-read")!.textContent).toBe("0 goals tracked");
+    expect(frame.querySelector(".focus-habit-chips")).toBeNull();
+    expect(frame.querySelector(".focus-plan-controls")).toBeNull();
+    expect(frame.querySelector('[data-live="focus-elapsed"]')).toBeNull();
+    expect(frame.querySelector("#focus-end")).toBeNull();
+    expect(frame.querySelector("#focus-enter")).toBeNull();
+    // The head names the mode: running.
+    expect(frame.querySelector(".focus-state")!.textContent).toBe("running");
+    // A flow tick keeps the sheet standing without rebuilding it.
+    const readNode = frame.querySelector("#focus-plan-read")!;
     advance(app.state, 30);
     app.render();
-    expect(document.querySelector('[data-live="focus-elapsed"]')).toBe(elapsedNode);
-    expect(elapsedNode.textContent).toBe("01:30");
-    // End flow mirrors the main switch.
-    document.querySelector<HTMLButtonElement>("#focus-end")!.click();
-    expect(app.state.mode).toBe("upgrade");
-    expect(app.state.summary).not.toBeNull();
+    expect(document.querySelector("#app-popover #focus-plan-read")).toBe(readNode);
   });
 
   it("the HABIT and GOALS faces read live during flow and mutate nothing", () => {
@@ -192,15 +195,16 @@ describe("the flow-mode rule", () => {
     expect(Object.keys(saved)).toEqual(Object.keys(createInitialState()));
   });
 
-  it("paused reads in the running read; the controls stay disabled", () => {
+  it("paused reads in the head's state word; the controls stay absent", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
     startSession(app.state, 1200);
     advance(app.state, 60);
     app.pause();
     const frame = openFace("plan");
-    expect(frame.querySelector('[data-live="focus-caption"]')!.textContent).toBe("paused");
-    expect(frame.querySelector<HTMLButtonElement>(".plan-chip")!.disabled).toBe(true);
+    expect(frame.querySelector(".focus-state")!.textContent).toBe("paused");
+    expect(frame.querySelector(".focus-habit-chips")).toBeNull();
+    expect(frame.querySelector(".focus-plan-controls")).toBeNull();
   });
 
   it("the sheet closes and its surfaces unwind on every teardown path", () => {
@@ -223,33 +227,40 @@ describe("the edge states derived from existing state", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
     app.ui.chosenTarget = null;
-    const frame = openFace("plan");
-    expect(document.getElementById("focus-plan-read")!.textContent).toBe("open-ended · 0 goals tracked");
-    expect(frame.querySelector("#focus-plan-figure")!.textContent).toBe("—");
-    // Entering with the fallback runs an open-ended session.
-    document.querySelector<HTMLButtonElement>("#focus-enter")!.click();
+    openFace("plan");
+    expect(document.getElementById("focus-plan-read")!.textContent).toBe("0 goals tracked");
+    expect(document.getElementById("plan-open")!.getAttribute("aria-pressed")).toBe("true");
+    // Entering with the fallback runs an open-ended session — the sheet
+    // standing, the main switch's re-click commits the face's read.
+    app.startFlow();
     expect(app.state.mode).toBe("flow");
     expect(app.state.session!.target).toBeNull();
   });
 
-  it("zero habits never blocks entry: the Enter flow control starts unstructured", () => {
+  it("zero habits never blocks entry: the re-click starts unstructured", () => {
     expect(app.state.habits).toHaveLength(0);
-    const frame = openFace("plan");
-    const enter = frame.querySelector<HTMLButtonElement>("#focus-enter")!;
-    expect(enter.disabled).toBe(false);
-    enter.click();
+    openFace("plan");
+    expect(app.ui.app).toBe("time");
+    app.startFlow();
     expect(app.state.mode).toBe("flow");
     expect(app.state.activeHabitId).toBeNull();
   });
 
-  it("no habit selected reads as ready without naming a practice; entry runs unstructured", () => {
+  it("no habit selected leaves the habit row unnamed; entry runs unstructured", () => {
     createHabit(app.state, "Piano"); // exists but not selected
     const frame = openFace("plan");
-    expect(frame.querySelector(".focus-ready")!.textContent).toBe("Ready");
-    expect((document.getElementById("focus-habit-select") as HTMLSelectElement).value).toBe("");
-    document.querySelector<HTMLButtonElement>("#focus-enter")!.click();
+    expect(frame.querySelector(".focus-ready")).toBeNull();
+    expect(document.querySelector<HTMLButtonElement>('.plan-habit-chip-none')!.getAttribute("aria-pressed")).toBe("true");
+    app.startFlow();
     expect(app.state.mode).toBe("flow");
     expect(app.state.activeHabitId).toBeNull();
+  });
+
+  it("the chime fact is narrated nowhere: the tooltip went with the section", () => {
+    const frame = openFace("plan");
+    expect(frame.querySelector(".inst-tip")).toBeNull();
+    expect(frame.textContent).not.toContain("chime");
+    expect(frame.textContent).not.toContain("notification");
   });
 
   it("manual logs carry their boundary in the tooltip layer, not as prose", () => {
@@ -285,6 +296,58 @@ describe("the edge states derived from existing state", () => {
     document.getElementById("habit-log-add")!.click();
     expect(app.state.goals[0]!.completed).toBe(true);
     expect(app.state.nous).toBe(nousBefore);
+  });
+});
+
+describe("the PLAN face rework (#311)", () => {
+  function openPlan(): HTMLElement {
+    app.showFocusFace("plan");
+    return document.getElementById("app-popover")!;
+  }
+
+  it("the console clock is the only planned-duration readout: the sheet never repeats the time", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
+    app.ui.chosenTarget = 1500;
+    const frame = openPlan();
+    // The ready row reads habit and goals tracked — no time anywhere.
+    expect(frame.querySelector(".focus-ready")!.textContent).toBe("Piano");
+    expect(document.getElementById("focus-plan-read")!.textContent).toBe("0 goals tracked");
+    expect(frame.textContent).not.toContain("25:00");
+    expect(frame.textContent).not.toContain("planned");
+    // The figure row is gone; the console clock holds the one read.
+    expect(document.getElementById("focus-plan-figure")).toBeNull();
+    expect(document.getElementById("focus-plan-word")).toBeNull();
+    expect(document.querySelector("#console-session .session-clock")!.textContent).toBe("25:00");
+  });
+
+  it("the plan controls are one compact row: presets, inline custom entry, open-ended", () => {
+    openPlan();
+    const row = document.querySelector(".focus-plan-controls")!;
+    // The custom entry sits inline among the chips — no separate section.
+    expect(row.querySelector("#plan-minutes")).not.toBeNull();
+    expect(row.querySelector("#plan-open")).not.toBeNull();
+    expect(row.querySelectorAll(".plan-chip")).toHaveLength(8);
+    // No "Planned practice" section survives — no keyed figure row.
+    expect(document.querySelector("#app-popover .folio-key")).toBeNull();
+  });
+
+  it("habits switch in one tap; none selected returns unstructured; create/edit lives behind the add chip", () => {
+    const piano = createHabit(app.state, "Piano").habit!;
+    const cooking = createHabit(app.state, "Cooking").habit!;
+    openPlan();
+    document.querySelector<HTMLButtonElement>(`[data-habit-pick="${piano.id}"]`)!.click();
+    expect(app.state.activeHabitId).toBe(piano.id);
+    // One tap over: the pressed state moved with the selection.
+    document.querySelector<HTMLButtonElement>(`[data-habit-pick="${cooking.id}"]`)!.click();
+    expect(app.state.activeHabitId).toBe(cooking.id);
+    expect(document.querySelector<HTMLButtonElement>(`[data-habit-pick="${cooking.id}"]`)!.classList.contains("st-selected")).toBe(true);
+    // The unstructured choice keeps its UI word as its own chip.
+    document.querySelector<HTMLButtonElement>(".plan-habit-chip-none")!.click();
+    expect(app.state.activeHabitId).toBeNull();
+    // The add chip walks to the HABIT face — create and edit live there.
+    document.querySelector<HTMLButtonElement>("#habit-add-chip")!.click();
+    expect(app.ui.app).toBe("habit");
   });
 });
 

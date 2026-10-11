@@ -466,7 +466,18 @@ h1, h2, h3, p { margin: 0; }
 
 .focus-head { display: flex; align-items: baseline; gap: 12px; padding-bottom: 8px; }
 .focus-head .focus-name { font-size: 19px; letter-spacing: 0.06em; }
-.focus-head .focus-state { flex: 1; min-width: 0; text-align: right; }
+/* The head's state read: the panel's one running/ready word, prominent
+   beside its name — answering the console clock and main switch, never
+   repeating their figures. */
+.focus-head .focus-state {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font: 650 12.5px var(--font-condensed);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
 .focus-close { flex-shrink: 0; min-width: 32px; min-height: 32px; }
 
 /* The facetabs: the frame's one navigation — radio-like face selectors,
@@ -483,26 +494,37 @@ h1, h2, h3, p { margin: 0; }
 .ftab:hover { color: var(--ink); }
 .ftab.active { color: var(--ink); box-shadow: inset 0 -2px var(--ink); border-color: var(--ink); }
 
-/* The PLAN face's enter row: the ready readout leads, the vermillion
-   switch-in mirrors the main switch; in flow the readout is the running
-   session and the control becomes End flow. */
+/* The PLAN face's ready readout: what a session would start — habit and
+   goals tracked, no start control (the console header is authoritative for
+   flow, the clock for time). */
 .focus-enter { display: flex; align-items: center; gap: 14px; padding: 2px 0 12px; }
 .focus-enter-read { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .focus-ready { font-size: 17px; }
 .focus-enter-sub { font-size: 11px; color: var(--muted); }
-.switch-in { color: var(--switch-ink); border-color: var(--switch); flex-shrink: 0; }
-.switch-in:hover:not(:disabled) { background: var(--switch-faint); }
 
-/* The plan rows inside the folio: the chip run, the custom entry beside the
-   open-ended mode, and the read the target arms. */
-.focus-plan .folio-row { flex-wrap: wrap; }
-.focus-plan .folio-main.focus-plan-free {
-  flex-direction: row;
-  align-items: center;
-  justify-content: flex-end;
+/* The PLAN face's compact controls (#311): one ruled row — preset chips,
+   the inline custom entry, the open-ended toggle — over the habit chip
+   row. Selected states ride the state grammar: the firm inset marker and
+   ink outline, readable without color. */
+.focus-plan .folio-row.focus-plan-controls {
   flex-wrap: wrap;
-  gap: 10px;
+  align-items: center;
+  gap: 8px 6px;
 }
+.focus-habit-chips { flex-wrap: wrap; gap: 6px; }
+.plan-habit-chip {
+  padding: 5px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font: 600 12px var(--font-condensed);
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: var(--panel-soft);
+}
+.plan-habit-chip.st-selected { border-color: var(--ink); color: var(--ink); box-shadow: inset 0 -2px var(--ink); }
+.plan-habit-chip-none { border-style: dashed; }
+.plan-habit-chip-add { border-style: dashed; color: var(--muted); }
+.plan-habit-chip-add:hover:not(:disabled) { color: var(--ink); }
 
 /* The HABIT face's figure-led list: figures lead — lifetime, sessions —
    the name grows, the active habit wears its dot, every row drills. */
@@ -589,9 +611,10 @@ h1, h2, h3, p { margin: 0; }
 .focus-history > p { margin: 6px 0; }
 .focus-history .history-row:not(:last-child) { border-bottom: 1px solid var(--line-soft); }
 
-/* The planned-target affordances (§6): preset chips, free 1–90 entry,
-   and open-ended as its own mode — never a duration choice. The sheet's
-   PLAN face rules them into folio rows; these keep their compact forms. */
+/* The planned-target affordances (§6) as one compact row (#311): preset
+   chips, the free 1–90 entry inline, open-ended as its own mode — never a
+   duration choice. Active states wear the state grammar's selected voice
+   (the firm inset marker, as the facetabs), not a color-only accent. */
 .plan-chips { display: flex; flex-wrap: wrap; gap: 5px; }
 .plan-chip {
   padding: 5px 9px;
@@ -600,7 +623,7 @@ h1, h2, h3, p { margin: 0; }
   color: var(--muted);
   background: var(--panel-soft);
 }
-.plan-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-faint); }
+.plan-chip.active { border-color: var(--ink); color: var(--ink); box-shadow: inset 0 -2px var(--ink); }
 .plan-free { display: flex; align-items: center; gap: 7px; }
 .plan-free input {
   width: 74px;
@@ -612,8 +635,8 @@ h1, h2, h3, p { margin: 0; }
 }
 .plan-free input:focus { border-color: var(--charge); outline: none; }
 .plan-unit { font: 11.5px var(--mono); color: var(--muted); }
-.plan-open { align-self: flex-start; padding: 5px 11px; border-radius: 999px; font-size: 12px; color: var(--muted); }
-.plan-open.active { border-color: var(--accent); color: var(--accent); background: var(--accent-faint); }
+.plan-open { padding: 5px 11px; border-radius: 999px; font-size: 12px; color: var(--muted); }
+.plan-open.active { border-color: var(--ink); color: var(--ink); box-shadow: inset 0 -2px var(--ink); }
 /* The settings modal's readout stack (§5, issue #280): the ruled folio's
    preference rows — key, control, tooltip. The checkboxes carry the native
    state, so it reads without color; the control phrase sits beside each. */

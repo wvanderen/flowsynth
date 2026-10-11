@@ -31,17 +31,19 @@ function stubChannels() {
 describe("the session start (issue #280)", () => {
   it("confirmation on — the default: the main switch opens the Focus sheet on PLAN", () => {
     expect(app.ui.confirmEntry).toBe(true);
+    const created = createHabit(app.state, "Jammin");
+    selectHabit(app.state, created.habit!.id);
     app.startFlow();
     expect(app.ui.modal).toBeNull();
     expect(app.ui.app).toBe("time");
     const frame = document.getElementById("app-popover")!;
     expect(frame.classList.contains("focus-sheet")).toBe(true);
-    // The confirmation's home: ready readout, habit selection, planned
-    // target, and the Enter flow control — nothing else opens.
+    // The confirmation's home: the habit read, habit chips, planned target —
+    // the header owns starting flow, so no start control here.
     expect(frame.querySelector(".focus-ready")).not.toBeNull();
-    expect(frame.querySelector("#focus-habit-select")).not.toBeNull();
+    expect(frame.querySelector("[data-habit-pick]")).not.toBeNull();
     expect(frame.querySelector(".plan-chip")).not.toBeNull();
-    expect(frame.querySelector("#focus-enter")).not.toBeNull();
+    expect(frame.querySelector("#focus-enter")).toBeNull();
     expect(app.state.mode).toBe("upgrade");
   });
 
@@ -51,37 +53,38 @@ describe("the session start (issue #280)", () => {
     expect(document.getElementById("app-popover")).not.toBeNull();
   });
 
-  it("the PLAN face's Enter flow control commits: the picked habit and target ride in", () => {
+  it("the re-click starts flow with what the PLAN face shows (#311)", () => {
     const created = createHabit(app.state, "Jammin");
-    selectHabit(app.state, created.habit!.id);
     app.startFlow();
+    // The face stands on PLAN: the chip row picks the habit, a preset arms.
+    document.querySelector<HTMLButtonElement>(`[data-habit-pick="${created.habit!.id}"]`)!.click();
     document.querySelector<HTMLButtonElement>('#app-popover [data-plan="25"]')!.click();
-    document.querySelector<HTMLButtonElement>("#focus-enter")!.click();
+    // The second press of the main switch commits the face's own read.
+    document.getElementById("flow-switch")!.click();
     expect(app.state.mode).toBe("flow");
     expect(app.state.activeHabitId).toBe(created.habit!.id);
     expect(app.state.session!.target).toBe(1500);
-    // Entering flow takes the sheet with the rest of the transient modes.
     expect(app.ui.app).toBeNull();
   });
 
-  it("the PLAN face's habit select picks the session habit; none selected is unstructured", () => {
+  it("the PLAN face's habit chips pick the session habit; none selected is unstructured", () => {
     const created = createHabit(app.state, "Jammin");
     app.startFlow();
-    const select = document.querySelector<HTMLSelectElement>("#focus-habit-select")!;
-    select.value = created.habit!.id;
-    select.dispatchEvent(new Event("change", { bubbles: true }));
+    const chip = document.querySelector<HTMLButtonElement>(`[data-habit-pick="${created.habit!.id}"]`)!;
+    chip.click();
     expect(app.state.activeHabitId).toBe(created.habit!.id);
-    document.querySelector<HTMLButtonElement>("#focus-enter")!.click();
+    // The sheet adds no start control: the main switch's re-click commits.
+    app.startFlow();
     expect(app.state.mode).toBe("flow");
     expect(app.state.activeHabitId).toBe(created.habit!.id);
   });
 
-  it("habit names render as text in the ready read, never markup", () => {
+  it("habit names render as text in the chip row, never markup", () => {
     createHabit(app.state, "<b>Logo</b>");
     app.startFlow();
-    const select = document.querySelector<HTMLSelectElement>("#focus-habit-select")!;
-    expect(select.querySelector("option b")).toBeNull();
-    expect(select.options[1]!.textContent).toBe("<b>Logo</b>");
+    const chip = document.querySelector<HTMLButtonElement>("#app-popover [data-habit-pick]")!;
+    expect(chip.querySelector("b")).toBeNull();
+    expect(chip.textContent).toBe("<b>Logo</b>");
   });
 
   it("confirmation off: the main switch starts flow at once with the active habit and last plan", () => {
