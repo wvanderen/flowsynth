@@ -31,12 +31,14 @@ function stubChannels() {
 describe("the session start (issue #280)", () => {
   it("confirmation on — the default: the main switch opens the Focus sheet on PLAN", () => {
     expect(app.ui.confirmEntry).toBe(true);
+    const created = createHabit(app.state, "Jammin");
+    selectHabit(app.state, created.habit!.id);
     app.startFlow();
     expect(app.ui.modal).toBeNull();
     expect(app.ui.app).toBe("time");
     const frame = document.getElementById("app-popover")!;
     expect(frame.classList.contains("focus-sheet")).toBe(true);
-    // The confirmation's home: ready readout, habit chips, planned target —
+    // The confirmation's home: the habit read, habit chips, planned target —
     // the header owns starting flow, so no start control here.
     expect(frame.querySelector(".focus-ready")).not.toBeNull();
     expect(frame.querySelector("[data-habit-pick]")).not.toBeNull();

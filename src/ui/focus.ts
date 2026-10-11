@@ -242,20 +242,22 @@ function goalsTrackedRead(state: GameState): string {
 // selected chip wears the state grammar's firm inset marker, and the
 // unstructured choice keeps its UI word — "none selected" — as its own
 // chip. Create and edit live behind the add chip (the HABIT face), never
-// a detail drill-down from here.
-function habitChipsHtml(app: App): string {
+// a detail drill-down from here. Locked (a running session): the row
+// reads on, visibly disabled — the engine owns the lock besides.
+function habitChipsHtml(app: App, locked: boolean): string {
   const { state } = app;
+  const lock = locked ? " disabled" : "";
   const chips = state.habits
     .filter((h) => !h.archived)
     .map((h) => {
       const selected = state.activeHabitId === h.id;
-      return `<button class="plan-habit-chip${selected ? " st-selected" : ""}" data-habit-pick="${h.id}" aria-pressed="${selected}">${escapeHtml(h.name)}</button>`;
+      return `<button class="plan-habit-chip${selected ? " st-selected" : ""}" data-habit-pick="${h.id}" aria-pressed="${selected}"${lock}>${escapeHtml(h.name)}</button>`;
     })
     .join("");
   const none = state.activeHabitId === null;
   return `<div class="folio-row focus-habit-chips" role="group" aria-label="Session habit">
-    ${chips}<button class="plan-habit-chip plan-habit-chip-none${none ? " st-selected" : ""}" data-habit-pick="" aria-pressed="${none}">none selected</button>
-    <button class="plan-habit-chip plan-habit-chip-add" id="habit-add-chip" title="Create or edit habits">+ Add habit</button>
+    ${chips}<button class="plan-habit-chip plan-habit-chip-none${none ? " st-selected" : ""}" data-habit-pick="" aria-pressed="${none}"${lock}>none selected</button>
+    <button class="plan-habit-chip plan-habit-chip-add" id="habit-add-chip" title="Create or edit habits"${lock}>+ Add habit</button>
   </div>`;
 }
 
@@ -264,8 +266,9 @@ function habitChipsHtml(app: App): string {
 // open-ended as its own mode — never a duration choice. Active states ride
 // the state grammar. They ride the very first start (ADR-0019), visible but
 // unpushed: the resting plan is open-ended, and only a picked plan ever
-// arms the target signals (§4).
-function planRowsHtml(app: App, live: boolean): string {
+// arms the target signals (§4). Upgrade mode only — a running session
+// shows no time selection.
+function planRowsHtml(app: App): string {
   const open = app.ui.chosenTarget === null;
   const chosen = app.ui.chosenTarget;
   const minutes = chosen === null ? null : Math.round(chosen / 60);
@@ -273,14 +276,14 @@ function planRowsHtml(app: App, live: boolean): string {
     <div class="folio-row focus-plan-controls">
       ${PLAN_PRESET_MINUTES.map(
         (option) =>
-          `<button class="plan-chip${minutes === option ? " active" : ""}" data-plan="${option}" aria-pressed="${minutes === option}"${live ? " disabled" : ""}>${option}</button>`,
+          `<button class="plan-chip${minutes === option ? " active" : ""}" data-plan="${option}" aria-pressed="${minutes === option}">${option}</button>`,
       ).join("")}
       <span class="plan-free">
         <input type="number" id="plan-minutes" min="${PLAN_MIN_MINUTES}" max="${PLAN_MAX_MINUTES}" step="1" placeholder="1–90"
-          value="${minutes ?? ""}" ${open || live ? "disabled" : ""} aria-label="Custom session length, 1 to 90 minutes" />
+          value="${minutes ?? ""}" ${open ? "disabled" : ""} aria-label="Custom session length, 1 to 90 minutes" />
         <span class="plan-unit">min</span>
       </span>
-      <button id="plan-open" class="plan-open${open ? " active" : ""}" aria-pressed="${open}"${live ? " disabled" : ""}>Open-ended</button>
+      <button id="plan-open" class="plan-open${open ? " active" : ""}" aria-pressed="${open}">Open-ended</button>
     </div>
   </div>`;
 }
@@ -296,26 +299,22 @@ function habitChoices(state: GameState): string {
 
 // The PLAN face (#311). The console header is authoritative for starting
 // and ending flow and for time — the sheet adds neither a start/end control
-// nor a clock of its own. Upgrade mode: the ready readout — habit and
-// goals tracked — over the habit chip row and the compact plan controls,
-// entry riding the main switch (its re-click commits this face). Flow: the
-// session's own plan affordances stand visibly disabled; the clock and the
-// main switch carry the session.
+// nor a clock of its own. Both modes show the plan read: the session's
+// habit and the goals tracked over the habit chip row (locked — visibly
+// disabled — during flow, where selection cannot change). The time
+// selection UI is upgrade mode alone: a running session shows none.
 function planFaceHtml(app: App): string {
   const { state } = app;
   const upgrade = state.mode === "upgrade";
-  if (upgrade) {
-    const habit = activeHabit(state);
-    return `<div class="focus-enter">
+  const habit = activeHabit(state);
+  return `<div class="focus-enter">
       <span class="focus-enter-read">
-        <span class="focus-ready t-condensed">${habit ? `Ready · ${escapeHtml(habit.name)}` : "Ready"}</span>
+        ${habit ? `<span class="focus-ready t-condensed">${escapeHtml(habit.name)}</span>` : ""}
         <span class="focus-enter-sub mono" id="focus-plan-read">${goalsTrackedRead(state)}</span>
       </span>
     </div>
-    ${habitChipsHtml(app)}
-    ${planRowsHtml(app, false)}`;
-  }
-  return planRowsHtml(app, true);
+    ${habitChipsHtml(app, !upgrade)}
+    ${upgrade ? planRowsHtml(app) : ""}`;
 }
 
 /* ── The HABIT face ────────────────────────────────── */
@@ -854,7 +853,7 @@ function refreshPlanControls(app: App): void {
   if (input) {
     const value = minutes !== null ? String(minutes) : "";
     if (input.value !== value) input.value = value;
-    input.disabled = open || app.state.mode !== "upgrade";
+    input.disabled = open;
   }
   const openButton = document.getElementById("plan-open");
   openButton?.classList.toggle("active", open);

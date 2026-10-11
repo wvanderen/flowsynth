@@ -21,21 +21,23 @@ and Cooking, a 25-minute plan armed, the sheet standing on PLAN.
   `25:00 planned` — the planned duration's one readout; the sheet repeats
   it nowhere. The head's state read (`READY`) stands prominent beside the
   FOCUS name — the panel's own mode word, answering the clock and main
-  switch. The ready row reads `Ready · Piano` over `0 goals tracked`. The
-  habit chip row: Piano pressed in the state grammar (ink outline + firm
-  inset marker), Cooking available, `none selected` (the unstructured
-  choice's UI word) and `+ Add habit` as dashed add-path chips — create
-  and edit live behind it, on the HABIT face. The plan controls are one
-  compact cluster: preset chips with 25 pressed (inset marker), the
-  custom entry inline (`25 min`), and the Open-ended toggle. The sheet
-  adds no start control — the console header's main switch enters flow
-  (its re-click commits the standing face) — and the chime fact is
-  narrated nowhere: the "Planned practice" section and its tooltip are
-  both gone, as are the figure row and any sheet clock.
+  switch. The plan read rows: the selected habit (`PIANO`) over
+  `0 goals tracked`. The habit chip row: Piano pressed in the state
+  grammar (ink outline + firm inset marker), Cooking available,
+  `none selected` (the unstructured choice's UI word) and `+ Add habit`
+  as dashed add-path chips — create and edit live behind it, on the HABIT
+  face. The plan controls are one compact cluster: preset chips with 25
+  pressed (inset marker), the custom entry inline (`25 min`), and the
+  Open-ended toggle. The sheet adds no start control — the console
+  header's main switch enters flow (its re-click commits the standing
+  face) — and the chime fact is narrated nowhere: the "Planned practice"
+  section and its tooltip are both gone, as are the figure row and any
+  sheet clock.
 - [Desktop plan face in flow](desktop-plan-flow.png): the head reads
-  `RUNNING`; the sheet carries no duplicated time and no End flow control
-  — the console header owns the clock, Pause, and Exit flow. The session's
-  plan affordances stand visibly disabled.
+  `RUNNING`, and the face reads the same plan — the selected habit, the
+  goals tracked, the habit chip row locked (visibly disabled; selection
+  cannot change) — with the time selection UI absent. The console header
+  owns the clock, Pause, and Exit flow.
 
 ## Checks
 

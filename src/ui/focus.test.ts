@@ -118,8 +118,8 @@ describe("the four faces in the Focus frame", () => {
     document.querySelector<HTMLButtonElement>(`[data-habit-pick="${habit.id}"]`)!.click();
     expect(app.state.activeHabitId).toBe(habit.id);
     // The ready readout followed in place: the practice a session would
-    // start leads the read, the chips wear the pressed state.
-    expect(document.querySelector(".focus-ready")!.textContent).toBe("Ready · Piano");
+    // start is the row's whole read, the chips wear the pressed state.
+    expect(document.querySelector(".focus-ready")!.textContent).toBe("Piano");
     const chip = document.querySelector<HTMLButtonElement>(`[data-habit-pick="${habit.id}"]`)!;
     expect(chip.classList.contains("st-selected")).toBe(true);
     expect(chip.getAttribute("aria-pressed")).toBe("true");
@@ -193,7 +193,7 @@ describe("the flow-mode rule", () => {
     expect(Object.keys(saved)).toEqual(Object.keys(createInitialState()));
   });
 
-  it("paused reads in the head's state word; the controls stay disabled", () => {
+  it("paused reads in the head's state word; the chips stand locked", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
     startSession(app.state, 1200);
@@ -201,7 +201,8 @@ describe("the flow-mode rule", () => {
     app.pause();
     const frame = openFace("plan");
     expect(frame.querySelector(".focus-state")!.textContent).toBe("paused");
-    expect(frame.querySelector<HTMLButtonElement>(".plan-chip")!.disabled).toBe(true);
+    expect(frame.querySelector<HTMLButtonElement>(".plan-habit-chip")!.disabled).toBe(true);
+    expect(frame.querySelector(".focus-plan-controls")).toBeNull();
   });
 
   it("the sheet closes and its surfaces unwind on every teardown path", () => {
@@ -243,10 +244,10 @@ describe("the edge states derived from existing state", () => {
     expect(app.state.activeHabitId).toBeNull();
   });
 
-  it("no habit selected reads as ready without naming a practice; entry runs unstructured", () => {
+  it("no habit selected leaves the habit row unnamed; entry runs unstructured", () => {
     createHabit(app.state, "Piano"); // exists but not selected
     const frame = openFace("plan");
-    expect(frame.querySelector(".focus-ready")!.textContent).toBe("Ready");
+    expect(frame.querySelector(".focus-ready")).toBeNull();
     expect(document.querySelector<HTMLButtonElement>('.plan-habit-chip-none')!.getAttribute("aria-pressed")).toBe("true");
     app.startFlow();
     expect(app.state.mode).toBe("flow");
@@ -308,7 +309,7 @@ describe("the PLAN face rework (#311)", () => {
     app.ui.chosenTarget = 1500;
     const frame = openPlan();
     // The ready row reads habit and goals tracked — no time anywhere.
-    expect(frame.querySelector(".focus-ready")!.textContent).toBe("Ready · Piano");
+    expect(frame.querySelector(".focus-ready")!.textContent).toBe("Piano");
     expect(document.getElementById("focus-plan-read")!.textContent).toBe("0 goals tracked");
     expect(frame.textContent).not.toContain("25:00");
     expect(frame.textContent).not.toContain("planned");
