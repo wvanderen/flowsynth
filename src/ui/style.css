@@ -3512,11 +3512,11 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 /* Separate disclosure keeps the tray tile itself a placement/drag target. */
 .tray-tile-detail { display: flex; flex-direction: column; align-items: center; min-width: 0; }
 .tray-tile-detail > .inst-tip-trigger { min-width: 44px; min-height: 44px; }
-/* Capacity disclosure remains a touch target beside the open catalog rows. */
+/* Capacity rows keep the touch-sized disclosure off — their only trigger
+   now is the inline term, which sizes to its text. */
 .capacity-catalog .catalog-row > div { min-width: 0; }
 .capacity-catalog .catalog-row h3 { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .capacity-catalog .shop-countdown { display: block; }
-.capacity-catalog .inst-tip-trigger { width: 44px; height: 44px; }
 /* The little module preview (issue #310 steering): the tray tile's own
    simplified mark — category-hued hex outline over the signature glyph —
    beside the row's name block. */

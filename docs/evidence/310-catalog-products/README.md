@@ -17,22 +17,23 @@ entry owned, illustrative balances and ladder positions.
 
 - [Desktop nous](desktop-nous-poly-expander.png) and
   [phone nous](phone-nous-poly-expander.png): the nous face in register —
-  starter-shelf rows carry the simplified module preview (the tray tile's
-  category-hued hex and glyph), the capacity row is headed **Poly
-  Expander** with the mono delta `1/3 → 2/3` on its own line beside the
-  blank-module preview, and the acquisition paragraph is gone — the Show
-  acquired toggle's ⓘ glosses `Roll copies stay as combination material`.
-  Price rides the buy button alone, muted here (`0 ν` in the purse) with
-  its practice countdown.
+  starter-shelf rows carry the simplified module preview and one
+  description line (the Focus Generator's: `Produces charge based on time
+  in flow`); the capacity row is headed **Poly Expander**, its effect
+  line `Raises Harmonic capacity by one for all voices` carrying the
+  hoverable term, with the mono delta `1/3 → 2/3` on its own line. No
+  ⓘ on the face; the acquisition paragraph is gone. Price rides the buy
+  button alone, muted here (`0 ν` in the purse) with its practice
+  countdown.
 - [Desktop upgrades](desktop-arete-upgrades.png) and
   [phone upgrades](phone-arete-upgrades.png): the face holds two sections —
   **Upgrades** (the entry's ACQUIRED rewards line, Expansion Bays, Chord
   Catalysts, Headroom, the inert Accelerator placeholder) and **Module
   Types**. Each product is one entry bought twice: owned figure on the
   heading, one effect line with hoverable terms, and the mono delta on its
-  own line (`ceiling 3 → 4`, `prices −0% → −20%`, Headroom's honest
-  `claim: +1 per prestige → + over-line score, cap 25` — the next era's
-  over-line score is not knowable at purchase).
+  own line (`ceiling 3 → 4`, `prices −0% → −20%`). Headroom's description
+  lives in the body (`Earning past the nous cap scales the Arete claim`)
+  with the concrete claim delta (`claim 2 → up to 25`).
 - [Module types](desktop-arete-module-types.png) and
   [phone module types](phone-arete-module-types.png): the section heading
   carries the ⓘ — `Rolled module types appear here unweighted` holds for
