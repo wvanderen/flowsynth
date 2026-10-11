@@ -2917,7 +2917,7 @@ function catalogNousFaceHtml(app: App): string {
   const shelfRows = openShelf
     .map((type) => {
       const price = BALANCE.shelfPrices[type];
-      const description = SHELF_DESCRIPTIONS[type] ?? META[SHELF_MODULE[type]].role;
+      const description = shelfDescriptionHtml(type);
       const moduleMeta = META[SHELF_MODULE[type]];
       return `<article class="catalog-row">
         <div class="with-preview">${modulePreviewSvg(SHELF_MODULE[type])}<div><h3 class="t-condensed">${moduleMeta.name}</h3><p class="t-note">${description}</p></div></div>
@@ -2948,12 +2948,17 @@ function catalogNousFaceHtml(app: App): string {
       ? `<div class="catalog-rows catalog-owned">${ownedShelf
           .map(
             (type) =>
-              `<article class="catalog-row"><div><h3 class="t-condensed">${META[SHELF_MODULE[type]].name}</h3><p class="t-note">${SHELF_DESCRIPTIONS[type] ?? META[SHELF_MODULE[type]].role}</p></div><span class="activation-owned mono">in inventory</span></article>`,
+              `<article class="catalog-row"><div><h3 class="t-condensed">${META[SHELF_MODULE[type]].name}</h3><p class="t-note">${shelfDescriptionHtml(type)}</p></div><span class="activation-owned mono">in inventory</span></article>`,
           )
           .join("")}</div>`
       : ""
   }
   ${upgrade ? "" : `<p class="modal-note">Purchases happen between sessions — enter upgrade mode to buy.</p>`}`;
+}
+
+function shelfDescriptionHtml(type: keyof typeof SHELF_DESCRIPTIONS): string {
+  return (SHELF_DESCRIPTIONS[type] ?? META[SHELF_MODULE[type]].role)
+    .replace(/\bcharge\b/gi, () => termTipHtml("charge"));
 }
 
 // The simplified module mark (the tray tile's own): the category-hued hex
@@ -2974,12 +2979,15 @@ function catalogOwnedHtml(word: string): string {
 // the glossary meaning — description prose never grows around it. The
 // meanings here are the glossary's own, distilled to the one-line ceiling.
 // The union keeps the map closed: only glossary terms may render hoverable.
-type CatalogTerm = "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander";
+type CatalogTerm = "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Headroom" | "nous" | "charge";
 const CATALOG_TERMS: Record<CatalogTerm, string> = {
   "Harmonic capacity": "Whole-chord budget per voice",
   memorized: "Persists through arete reset",
-  Arete: "The resource banked by prestige",
-  "Poly Expander": "The nous Catalog's capacity product",
+  Arete: "The resource banked when an era ends",
+  "Poly Expander": "Adds one whole-chord unit to every voice",
+  Headroom: "Extra earnings scale the payout logarithmically",
+  nous: "Main progression resource spent on upgrades",
+  charge: "Generator output that powers other modules",
 };
 let catalogTermSeq = 0;
 function termTipHtml(term: CatalogTerm): string {
@@ -3010,14 +3018,6 @@ function catalogAreteFaceHtml(app: App): string {
     </div>
     ${upgrade ? "" : `<p class="modal-note">Arete is spent between sessions — enter upgrade mode to buy.</p>`}`;
   }
-  const areteBuy = (id: string, price: number): string =>
-    catalogPriceHtml({
-      attrs: `id="${id}"`,
-      price,
-      affordable: state.arete >= price,
-      hold: !upgrade,
-      arete: true,
-    });
   const joined = state.rollPoolJoined;
   const broken = state.horizonBroken;
   return `<div class="catalog-sections">
@@ -3031,10 +3031,10 @@ function catalogAreteFaceHtml(app: App): string {
         ${capacityProductRowHtml(app, "extenders")}
         ${capacityProductRowHtml(app, "catalysts")}
         <article class="catalog-row">
-          <div><h3 class="t-condensed">Headroom</h3><p class="t-note">Earning past the nous cap scales the ${termTipHtml("Arete")} claim</p>${
+          <div><h3 class="t-condensed">${termTipHtml("Headroom")}</h3><p class="t-note">Earning past the ${termTipHtml("nous")} cap scales the ${termTipHtml("Arete")} claim · ${termTipHtml("memorized")}</p>${
             broken ? "" : `<p class="t-note mono">claim ${state.prestiges + 1} → up to ${BALANCE.horizonBreakClaimCap}</p>`
           }</div>
-          ${broken ? catalogOwnedHtml("open") : areteBuy("buy-arete-break", BALANCE.horizonBreakCost)}
+          ${broken ? catalogOwnedHtml("open") : areteBuyButtonHtml(app, "buy-arete-break", BALANCE.horizonBreakCost)}
         </article>
         <article class="catalog-row">
           <div><h3 class="t-condensed">Arete Accelerator <span class="kind">(placeholder)</span></h3></div>
@@ -3049,8 +3049,8 @@ function catalogAreteFaceHtml(app: App): string {
           joined
             ? `<p class="empty-copy">Nothing waits — future objects appear in future rolls.</p>`
             : `<article class="catalog-row">
-                <div class="with-preview">${modulePreviewSvg("mutatorForge")}<div><h3 class="t-condensed">Mutator Forge</h3><p class="t-note">Fill with charge → Mutator draft</p></div></div>
-                ${areteBuy("buy-arete-pool", BALANCE.rollPoolJoinCost)}
+                <div class="with-preview">${modulePreviewSvg("mutatorForge")}<div><h3 class="t-condensed">Mutator Forge</h3><p class="t-note">Fill with ${termTipHtml("charge")} → Mutator draft</p></div></div>
+                ${areteBuyButtonHtml(app, "buy-arete-pool", BALANCE.rollPoolJoinCost)}
               </article>`
         }
       </div>

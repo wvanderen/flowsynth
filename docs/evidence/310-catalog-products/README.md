@@ -75,3 +75,20 @@ entry owned, illustrative balances and ladder positions.
 - Grayscale pass: unavailable in this headless capture; the non-color state
   cues (muted disabled, engraved words, inset tab marker) are the state
   grammar's own, reviewed in the code and the unit suite.
+
+## PR #318 review fixes
+
+[Updated desktop composition](desktop-review-fixes.png) captured from
+`/private/tmp/flowsynth-review-318` at `http://localhost:5175/?dev=1`, with
+provenance verified in the preview tab against base commit `6557770` plus
+the review-fix working diff. Headroom now carries hoverable `nous`,
+`Arete`, and `memorized`, with its name disclosing the logarithmic claim
+mechanic. Charge disclosures appear on the generator and pool-join rows.
+The catalog retains the pinned prototype's open rows and engraved states.
+
+Desktop click-to-pin and Escape dismissal of Headroom's persistence gloss
+passed in the T3 preview. Keyboard focus is covered by the catalog test.
+Independent keyboard and touch-device checks, grayscale, and reduced
+motion are unavailable for this pass. Phone capture is unavailable: the
+T3 preview resize request timed out, including its bounded retry. Earlier
+phone captures above precede these review fixes.

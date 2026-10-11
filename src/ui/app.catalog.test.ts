@@ -17,6 +17,13 @@ const fixture = createAppFixture();
 const boot = fixture.boot;
 let app: App;
 
+// Read surface copy without the hidden glossary bodies.
+function surfaceText(element: Element): string {
+  const copy = element.cloneNode(true) as Element;
+  copy.querySelectorAll(".inst-tip-body").forEach((body) => body.remove());
+  return copy.textContent!;
+}
+
 beforeEach(() => {
   localStorage.clear();
   app = boot();
@@ -51,7 +58,8 @@ describe("the catalog", () => {
     for (const row of rows) expect(row.querySelector(".module-preview svg")).not.toBeNull();
     // The Focus Generator's one line names what the purchase does.
     const generator = rows.find((r) => r.textContent!.includes("Focus Generator"))!;
-    expect(generator.textContent).toContain("Produces charge based on time in flow");
+    expect(surfaceText(generator)).toContain("Produces charge based on time in flow");
+    expect(generator.querySelector(".term-trigger")!.textContent).toBe("charge");
     // The trailing acquisition paragraph is gone, and no gloss rides the
     // toggle either — the face carries no furniture copy.
     expect(modal.querySelector(".catalog-note")).toBeNull();
@@ -535,9 +543,14 @@ describe("the Arete Catalog (issue #197)", () => {
     // concrete before → after (issue #310 steering).
     const sheet = document.getElementById("modal-content")!;
     const headroomRow = [...sheet.querySelectorAll(".catalog-row")].find((r) => r.textContent!.includes("Headroom"))!;
-    expect(headroomRow.querySelector(".t-note")!.textContent).toContain("Earning past the nous cap scales the");
+    expect(surfaceText(headroomRow.querySelector(".t-note")!)).toBe("Earning past the nous cap scales the Arete claim · memorized");
+    const persistence = [...headroomRow.querySelectorAll<HTMLButtonElement>(".term-trigger")].find((t) => t.textContent === "memorized")!;
+    persistence.focus();
+    const gloss = document.getElementById(persistence.getAttribute("aria-describedby")!)!;
+    expect(gloss.textContent).toBe("Persists through arete reset");
+    expect(gloss.classList.contains("inst-show")).toBe(true);
     expect(headroomRow.textContent).toContain(`claim ${app.state.prestiges + 1} → up to ${BALANCE.horizonBreakClaimCap}`);
-    expect(headroomRow.querySelector("h3 .inst-tip")).toBeNull();
+    expect(headroomRow.querySelector("h3 .term-trigger")!.textContent).toBe("Headroom");
     button.click();
     expect(app.state.horizonBroken).toBe(true);
     expect(app.state.arete).toBe(0);
@@ -844,20 +857,20 @@ describe("the harmonic-capacity ladder (#259)", () => {
     const read = (): string[] =>
       [...document.querySelectorAll<HTMLElement>("#modal-content .inst-tip-body")].map((b) => b.textContent!.trim());
     // The arete face: the effect lines' term bodies and the Module Types
-    // section's gloss — the row names themselves carry no tooltips.
+    // section's gloss, including Headroom's deeper claim mechanic.
     let texts = read();
-    expect(texts.length).toBe(6);
+    expect(texts.length).toBe(10);
     for (const text of texts) {
       expect(text.length).toBeLessThanOrEqual(60);
       expect(text).not.toMatch(/[—;:]/);
     }
     expect(texts).toContain("Rolled module types appear here unweighted");
-    expect(texts).toContain("The nous Catalog's capacity product");
-    expect(texts).toContain("The resource banked by prestige");
-    // The nous face: only the Poly Expander's term gloss.
+    expect(texts).toContain("Adds one whole-chord unit to every voice");
+    expect(texts).toContain("The resource banked when an era ends");
+    // The nous face: generator charge and Harmonic capacity glosses.
     document.querySelector<HTMLButtonElement>('[data-catalog-face="nous"]')!.click();
     texts = read();
-    expect(texts).toEqual(["Whole-chord budget per voice"]);
+    expect(texts).toEqual(["Generator output that powers other modules", "Whole-chord budget per voice"]);
   });
 
   it("the sheet's capacity offerings stand inert outside upgrade mode", () => {
