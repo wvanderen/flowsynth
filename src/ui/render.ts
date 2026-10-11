@@ -1242,10 +1242,12 @@ const SPACER_WINDOW_DEFS = `<defs data-key="spacer-window"><clipPath id="spacer-
 // over the faces — the one loud pass a selection earns (ADR-0025). At rest
 // the group is empty: the chords whisper in the gaps, never over a face.
 // The wash rides the stylesheet (the loop polygon's translucent fill).
-// ── The Row unlock's shaded rows (issue #197, #174's approved surface) ──
+// ── Rack Extenders' shaded rows (issue #197, #174's approved surface; the
+// product name, 2026-10-10 steering) ──
 // In add-cell mode, each still-locked octave row just past the launch band
-// renders shaded violet behind a single "Unlock this octave row · ⟨Arete⟩"
-// banner — the unlock is one unit per row, cost over the whole thing, one
+// renders shaded violet behind a single
+// "Rack Extenders · unlock this octave row · ⟨Arete⟩" banner — the unlock
+// is one unit per row, cost over the whole thing, one
 // click buying outright in upgrade mode. Only frontier-adjacent rows
 // render at all, and the ladder holds exactly one row per side, so at most
 // one banner above and one below can ever stand; past the ladder the board
@@ -1293,7 +1295,7 @@ function rowBandHtml(state: GameState, bands: RowBand[], point: (pos: Hex) => [n
       const cx = Math.min(maxX, Math.max(minX, pts.reduce((a, [x]) => a + x, 0) / pts.length));
       const cy = pts.reduce((a, [, y]) => a + y, 0) / pts.length;
       const dir = cy < boardCy ? -1 : 1;
-      const label = `Unlock this octave row · ${band.cost} Arete`;
+      const label = `Rack Extenders · unlock this octave row · ${band.cost} Arete`;
       return `<g class="row-band">${hexes}<g class="row-unlock${band.affordable ? "" : " locked"}" data-unlock-row="${band.row}" role="button" tabindex="0" aria-label="${label}"><text class="row-unlock-label mono" x="${cx.toFixed(2)}" y="${(cy + dir * (HEX_RADIUS + 20)).toFixed(2)}">${label}</text></g></g>`;
     })
     .join("");
@@ -2698,9 +2700,9 @@ function upgradeCountdown(app: App, cost: number): string | null {
 // ceiling unlocks remain.
 //
 // The row sells the product, not the mechanic (issue #310): it is headed
-// Poly Expander, the owned/ceiling figure is its one read, and a blank
-// module wearing the next purchase's capacity previews the outcome — the
-// tooltip layer carries the one mechanics line the surface cannot show.
+// Poly Expander, and a blank module wearing the next purchase's capacity
+// previews the outcome. The mono delta reads the before → after the buy
+// lands; the ⓘ carries the one gloss the surface cannot show.
 function capacityShopHtml(app: App): string {
   const { state } = app;
   const capacity = voiceCapacityOf(state);
@@ -2717,14 +2719,16 @@ function capacityShopHtml(app: App): string {
         countdown: upgrade ? upgradeCountdown(app, price) : null,
       });
   const note = price === null && capacityCeilingsLeft(state)
-    ? `<small class="shop-countdown">The ceiling stands — Rack Extenders sell the next rung.</small>`
+    ? `<small class="shop-countdown">The ceiling stands — Expansion Bays sell the next rung.</small>`
     : "";
-  const mechanics = "One more whole chord for every current and future voice; prestige returns capacity to one.";
+  const figure = price === null
+    ? `<span class="mono">${capacity}/${ceiling}</span>`
+    : `<span class="mono">${capacity}/${ceiling} → ${capacity + 1}/${ceiling}</span>`;
   return `
     <section class="capacity-catalog">
       <div class="catalog-rows">
         <article class="catalog-row">
-          <div><h3 class="t-condensed">${catalogTipHtml("capacity-tip", "Poly Expander", mechanics)} <span class="mono">${capacity}/${ceiling}</span></h3>${
+          <div><h3 class="t-condensed">${catalogTipHtml("capacity-tip", "Poly Expander", "One more whole chord per voice")} ${figure}</h3>${
             price === null ? "" : capacityPreviewHtml(state)
           }${note}</div>
           ${buy}
@@ -2755,10 +2759,11 @@ function capacityCeilingsLeft(state: GameState): boolean {
 }
 
 // The capacity products as one entry each, bought twice at a rising price
-// (issue #310): the owned figure is the only purchase-count read, the buy
-// button carries the next price, and the engraved owned-word lands when
-// the ladder is sold out. No tooltip and no lock state — the effect line's
-// hoverable terms carry what the surface cannot show.
+// (issue #310): the owned figure is the only purchase-count read, the mono
+// delta reads what the next buy changes, the buy button carries the next
+// price, and the engraved owned-word lands when the ladder is sold out.
+// No tooltip and no lock state — the effect line's hoverable terms carry
+// what the surface cannot show.
 const CAPACITY_PRODUCTS: Record<"extenders" | "catalysts", {
   name: string;
   id: string;
@@ -2766,15 +2771,17 @@ const CAPACITY_PRODUCTS: Record<"extenders" | "catalysts", {
   ownedOf(state: GameState): number;
   nextPrice(state: GameState): number | null;
   rungs: number;
+  delta(state: GameState): string;
   effect(): string;
 }> = {
   extenders: {
-    name: "Rack Extenders",
+    name: "Expansion Bays",
     id: "buy-capacity-ceiling",
     ownedWord: "raised",
     ownedOf: (state) => state.capacityCeilings,
     nextPrice: nextCeilingPrice,
     rungs: BALANCE.capacityCeilingCosts.length,
+    delta: (state) => `ceiling ${capacityCeiling(state)} → ${capacityCeiling(state) + 1}`,
     effect: () => `Raises the ${termTipHtml("Harmonic capacity")} ceiling one rung each · ${termTipHtml("memorized")}`,
   },
   catalysts: {
@@ -2784,6 +2791,11 @@ const CAPACITY_PRODUCTS: Record<"extenders" | "catalysts", {
     ownedOf: (state) => state.capacityDiscounts,
     nextPrice: nextDiscountPrice,
     rungs: BALANCE.capacityDiscountCosts.length,
+    delta: (state) => {
+      const owned = state.capacityDiscounts;
+      const now = Math.round((BALANCE.capacityDiscountShares[owned - 1] ?? 0) * 100);
+      return `prices −${now}% → −${Math.round(BALANCE.capacityDiscountShares[owned]! * 100)}%`;
+    },
     effect: () => `Each takes 20% off every capacity price · ${termTipHtml("memorized")}`,
   },
 };
@@ -2793,7 +2805,9 @@ function capacityProductRowHtml(app: App, key: "extenders" | "catalysts"): strin
   const owned = product.ownedOf(app.state);
   const price = product.nextPrice(app.state);
   return `<article class="catalog-row">
-    <div><h3 class="t-condensed">${product.name} <span class="mono">${owned}/${product.rungs}</span></h3><p class="t-note">${product.effect()}</p></div>
+    <div><h3 class="t-condensed">${product.name} <span class="mono">${owned}/${product.rungs}</span>${
+      price === null ? "" : ` <span class="mono">${product.delta(app.state)}</span>`
+    }</h3><p class="t-note">${product.effect()}</p></div>
     ${price === null ? catalogOwnedHtml(product.ownedWord) : areteBuyButtonHtml(app, product.id, price)}
   </article>`;
 }
@@ -2812,12 +2826,12 @@ function areteBuyButtonHtml(app: App, id: string, price: number): string {
 // while the body scrolls. The arete face appears at the first banked
 // Arete (the prestige-count lock, never the balance): before the Mutator
 // entry it is the single centered unlock lock screen; the purchase
-// reveals the entries grouped by purchase target (issue #310) — for every
-// voice (Rack Extenders, Chord Catalysts), for the layer (the entry's
-// ACQUIRED rewards line, the inert Accelerator placeholder, Headroom),
-// for the rolls (the roll-pool join, empty once joined). Prices mute when
-// unaffordable or in flow ("spent between sessions"). One feats surface
-// per screen stands elsewhere (ADR-0030 unamended).
+// reveals two sections (issue #310 steering) — Upgrades (the entry's
+// ACQUIRED rewards line, Expansion Bays, Chord Catalysts, Headroom, the
+// inert Accelerator placeholder) and Module Types (the roll-pool join,
+// empty once joined). Prices mute when unaffordable or in flow
+// ("spent between sessions"). One feats surface per screen stands
+// elsewhere (ADR-0030 unamended).
 function renderCatalogModal(app: App, content: HTMLElement): void {
   const { ui } = app;
   const areteFace = ui.catalogFace === "arete";
@@ -2975,8 +2989,8 @@ function catalogTipHtml(id: string, name: string, text: string): string {
 // The union keeps the map closed: only glossary terms may render hoverable.
 type CatalogTerm = "Harmonic capacity" | "memorized";
 const CATALOG_TERMS: Record<CatalogTerm, string> = {
-  "Harmonic capacity": "The whole-chord budget every voice owns — silent voices included, uniform across the board.",
-  memorized: "The rack remembers it across the reset: prestige leaves it untouched; everything bought with nous re-earns.",
+  "Harmonic capacity": "Whole-chord budget per voice",
+  memorized: "Persists through arete reset",
 };
 let catalogTermSeq = 0;
 function termTipHtml(term: CatalogTerm): string {
@@ -2990,11 +3004,12 @@ function termTipHtml(term: CatalogTerm): string {
 const ACCELERATOR_PLACEHOLDER_PRICE = 3;
 
 // The arete face: the single centered lock screen until the Mutator entry
-// is bought, then the sheet's entries grouped by purchase target (issue
-// #310) — for every voice (the capacity products), for the layer (the
-// Mutator layer's entry and its era-side offerings), for the rolls (the
-// pool join, empty once joined). The lock screen is the face's one offer —
-// the entry itself; the sections appear only once it stands acquired.
+// is bought, then two sections (issue #310 steering) — Upgrades (the
+// entry's ACQUIRED rewards line, the capacity products, Headroom, the
+// inert Accelerator placeholder) and Module Types (the Mutator Forge pool
+// join, previewed by the module's own face, empty once joined). The lock
+// screen is the face's one offer — the entry itself; the sections appear
+// only once it stands acquired.
 function catalogAreteFaceHtml(app: App): string {
   const { state } = app;
   const upgrade = state.mode === "upgrade";
@@ -3016,39 +3031,40 @@ function catalogAreteFaceHtml(app: App): string {
     });
   const joined = state.rollPoolJoined;
   const broken = state.horizonBroken;
+  // The honest delta is the rule: the next era's over-line score is not
+  // knowable at purchase, so the read carries the claim rule and the cap.
+  const headroomDelta = `claim: +1 per prestige → + over-line score, cap ${BALANCE.horizonBreakClaimCap}`;
   return `<div class="catalog-sections">
     <section>
-      <h2 class="t-condensed">For every voice</h2>
-      <div class="catalog-rows">
-        ${capacityProductRowHtml(app, "extenders")}
-        ${capacityProductRowHtml(app, "catalysts")}
-      </div>
-    </section>
-    <section>
-      <h2 class="t-condensed">For the layer</h2>
+      <h2 class="t-condensed">Upgrades</h2>
       <div class="catalog-rows">
         <article class="catalog-row">
           <div><h3 class="t-condensed">Mutator layer</h3><p class="t-note">Unlocks: Mutator Grid · 1 Mutator slot · 1 Mutator roll · this catalog</p></div>
           ${catalogOwnedHtml("ACQUIRED")}
         </article>
+        ${capacityProductRowHtml(app, "extenders")}
+        ${capacityProductRowHtml(app, "catalysts")}
+        <article class="catalog-row">
+          <div><h3 class="t-condensed">${catalogTipHtml("cat-break-tip", "Headroom", "Score past the line raises the claim, up to a cap")}</h3>${
+            broken ? "" : `<p class="t-note mono">${headroomDelta}</p>`
+          }</div>
+          ${broken ? catalogOwnedHtml("open") : areteBuy("buy-arete-break", BALANCE.horizonBreakCost)}
+        </article>
         <article class="catalog-row">
           <div><h3 class="t-condensed">Arete Accelerator <span class="kind">(placeholder)</span></h3></div>
           ${catalogPriceHtml({ attrs: 'disabled title="A placeholder — no offer yet"', price: ACCELERATOR_PLACEHOLDER_PRICE, affordable: false, arete: true })}
         </article>
-        <article class="catalog-row">
-          <div><h3 class="t-condensed">${catalogTipHtml("cat-break-tip", "Headroom", "Score past the horizon line raises each prestige's claim, up to a hard cap — still banked only on reset.")}</h3></div>
-          ${broken ? catalogOwnedHtml("open") : areteBuy("buy-arete-break", BALANCE.horizonBreakCost)}
-        </article>
       </div>
     </section>
     <section>
-      <h2 class="t-condensed">For the rolls</h2>
+      <h2 class="t-condensed">Module Types</h2>
       <div class="catalog-rows">
         ${
           joined
             ? `<p class="empty-copy">Nothing waits — future objects appear in future rolls.</p>`
             : `<article class="catalog-row">
-                <div><h3 class="t-condensed">${catalogTipHtml("cat-pool-tip", "Mutator Forge", "Will appear in future rolls — the type joins the module roll pool as one uniform, unweighted entry.")} <span class="kind">(module type)</span></h3><p class="t-note">Fill with charge → Mutator draft</p></div>
+                <div class="with-preview"><svg class="module-preview" viewBox="-70 -70 140 140" aria-hidden="true">${moduleFace({ type: "mutatorForge", rarity: "common", readout: candidateReadout("mutatorForge") })}</svg>
+                <div><h3 class="t-condensed">${catalogTipHtml("cat-pool-tip", "Mutator Forge", "Joins future module rolls unweighted")}</h3><p class="t-note">Fill with charge → Mutator draft</p></div></div>
                 ${areteBuy("buy-arete-pool", BALANCE.rollPoolJoinCost)}
               </article>`
         }

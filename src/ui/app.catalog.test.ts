@@ -323,11 +323,10 @@ describe("the catalog door (issue #271)", () => {
     expect(app.ui.catalogFace).toBe("arete");
     sheet = document.getElementById("modal-content")!;
     expect(sheet.querySelector(".entry-screen")).toBeNull();
-    // The entries group by purchase target (issue #310): the capacity
-    // products (#259, released to ordinary play by #262) lead "for every
-    // voice".
+    // Two sections (issue #310 steering): the upgrades, then the module
+    // types — the entry's ACQUIRED rewards line leads Upgrades.
     const headings = [...sheet.querySelectorAll(".catalog-sections h2")].map((h) => h.textContent);
-    expect(headings).toEqual(["For every voice", "For the layer", "For the rolls"]);
+    expect(headings).toEqual(["Upgrades", "Module Types"]);
     // The entry's row reads ACQUIRED with its rewards line.
     const entryRow = [...sheet.querySelectorAll(".catalog-row")].find((r) => r.textContent!.includes("Mutator layer"))!;
     expect(entryRow.textContent).toContain("ACQUIRED");
@@ -362,7 +361,9 @@ describe("the catalog door (issue #271)", () => {
     app.openModal("catalog");
     switchFace("arete");
     const sheet = document.getElementById("modal-content")!;
-    const tip = [...sheet.querySelectorAll(".inst-tip-body")].find((t) => t.textContent!.includes("future rolls"))!;
+    // The pool join's tooltip holds the gloss standard; joining empties
+    // the section.
+    const tip = [...sheet.querySelectorAll(".inst-tip-body")].find((t) => t.textContent!.includes("unweighted"))!;
     expect(tip).not.toBeNull();
     document.getElementById("buy-arete-pool")!.click();
     expect(app.state.rollPoolJoined).toBe(true);
@@ -513,6 +514,11 @@ describe("the Arete Catalog (issue #197)", () => {
     document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!.click();
     const button = document.getElementById("buy-arete-break") as HTMLButtonElement;
     expect(button.textContent).toContain(`${BALANCE.horizonBreakCost} Arete`);
+    // The honest delta is the rule with its cap figure — the next era's
+    // over-line score is not knowable at purchase (issue #310 steering).
+    const sheet = document.getElementById("modal-content")!;
+    const headroomRow = [...sheet.querySelectorAll(".catalog-row")].find((r) => r.textContent!.includes("Headroom"))!;
+    expect(headroomRow.textContent).toContain(`cap ${BALANCE.horizonBreakClaimCap}`);
     button.click();
     expect(app.state.horizonBroken).toBe(true);
     expect(app.state.arete).toBe(0);
@@ -525,10 +531,11 @@ describe("the Arete Catalog (issue #197)", () => {
     app.render();
     expect(document.getElementById("horizon-bar")!.classList.contains("break-beat")).toBe(true);
     app.render();
-    const sheet = document.getElementById("modal-content")!;
-    expect(sheet.querySelector("#buy-arete-break")).toBeNull();
-    const headroomRow = [...sheet.querySelectorAll(".catalog-row")].find((r) => r.textContent!.includes("Headroom"))!;
-    expect(headroomRow.querySelector(".st-acquired")!.textContent).toBe("open");
+    const after = document.getElementById("modal-content")!;
+    expect(after.querySelector("#buy-arete-break")).toBeNull();
+    const ownedRow = [...after.querySelectorAll(".catalog-row")].find((r) => r.textContent!.includes("Headroom"))!;
+    expect(ownedRow.querySelector(".st-acquired")!.textContent).toBe("open");
+    expect(ownedRow.textContent).not.toContain("+ over-line score");
     // One-time: the button is gone, nothing re-charges it.
     expect(document.getElementById("buy-arete-break")).toBeNull();
   });
@@ -544,7 +551,8 @@ describe("the Arete Catalog (issue #197)", () => {
     expect(banners).toHaveLength(2);
     expect(banners[0]!.getAttribute("data-unlock-row")).toBe(String(UNLOCK_ABOVE));
     const label = banners[0]!.textContent!;
-    expect(label).toContain("Unlock this octave row");
+    expect(label).toContain("Rack Extenders");
+    expect(label).toContain("unlock this octave row");
     expect(label).toContain("1 Arete");
     // One click, outright: the row opens and its gate stands paid.
     (banners[0] as SVGElement).dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -633,7 +641,7 @@ describe("the harmonic-capacity ladder (#259)", () => {
     app.ui.mutLayer = "mutators";
     app.openModal("catalog");
     const sheet = document.getElementById("modal-content")!.textContent!;
-    expect(sheet).toContain("Rack Extenders");
+    expect(sheet).toContain("Expansion Bays");
     expect(sheet).toContain("Chord Catalysts");
   });
 
@@ -642,7 +650,8 @@ describe("the harmonic-capacity ladder (#259)", () => {
     app.openModal("catalog");
     const modal = document.getElementById("modal-content")!;
     expect(modal.textContent).toContain("Poly Expander");
-    expect(modal.textContent).toContain("1/3");
+    // The mono delta reads the before → after the buy lands.
+    expect(modal.textContent).toContain("1/3 → 2/3");
     const button = document.querySelector<HTMLButtonElement>("[data-buy-capacity]")!;
     expect(button.textContent!.trim()).toBe(`${formatInt(BALANCE.capacityPrices[0]!)} ν`);
     expect(button.disabled).toBe(false);
@@ -656,11 +665,11 @@ describe("the harmonic-capacity ladder (#259)", () => {
     expect(modal.textContent).not.toContain("Spend");
     button.click();
     expect(app.state.capacityBought).toBe(1);
-    // The modal re-rendered onto the next rung: figure, price, and the
+    // The modal re-rendered onto the next rung: delta, price, and the
     // preview all moved.
     const next = document.querySelector<HTMLButtonElement>("[data-buy-capacity]")!;
     expect(next.textContent!.trim()).toBe(`${formatInt(BALANCE.capacityPrices[1]!)} ν`);
-    expect(document.getElementById("modal-content")!.textContent).toContain("2/3");
+    expect(document.getElementById("modal-content")!.textContent).toContain("2/3 → 3/3");
     expect(document.querySelector(".capacity-preview text")!.textContent).toBe("0/3");
   });
 
@@ -724,7 +733,7 @@ describe("the harmonic-capacity ladder (#259)", () => {
     let modal = document.getElementById("modal-content")!;
     expect(modal.textContent).toContain("3/3");
     expect(modal.textContent).toContain("capped");
-    expect(modal.textContent).toContain("Rack Extenders");
+    expect(modal.textContent).toContain("Expansion Bays");
     expect(document.querySelector("[data-buy-capacity]")).toBeNull();
     // With both ceiling unlocks owned and every rung sold, the pointer
     // goes too — nothing is left to sell.
@@ -756,36 +765,42 @@ describe("the harmonic-capacity ladder (#259)", () => {
     const sheet = () => document.getElementById("modal-content")!;
     const rowOf = (name: string): HTMLElement =>
       [...sheet().querySelectorAll<HTMLElement>(".catalog-row")].find((r) => r.textContent!.includes(name))!;
-    // One entry per product, owned figure first, next price on the button —
-    // no second rung, no lock state anywhere.
-    for (const [name, firstPrice] of [["Rack Extenders", BALANCE.capacityCeilingCosts[0]], ["Chord Catalysts", BALANCE.capacityDiscountCosts[0]]] as const) {
+    // One entry per product, owned figure and the before → after delta on
+    // the row, next price on the button — no second rung, no lock state.
+    for (const [name, firstPrice] of [["Expansion Bays", BALANCE.capacityCeilingCosts[0]], ["Chord Catalysts", BALANCE.capacityDiscountCosts[0]]] as const) {
       const row = rowOf(name);
       expect(row.querySelector(".mono")!.textContent).toBe("0/2");
       expect(row.querySelector("button.price")!.textContent).toContain(`${firstPrice} Arete`);
       expect(row.textContent).not.toContain("After the first");
       expect(row.textContent).toContain("memorized");
     }
-    // Six entries on the whole face: the two products, the layer's three,
-    // and the pool join — no second rungs.
+    expect(rowOf("Expansion Bays").textContent).toContain("ceiling 3 → 4");
+    expect(rowOf("Chord Catalysts").textContent).toContain("prices −0% → −20%");
+    // Six entries on the whole face: the layer's five upgrades and the
+    // pool join — no second rungs.
     expect(sheet().querySelectorAll(".catalog-row")).toHaveLength(6);
     // The ceiling purchase lands and the same entry walks its ladder:
-    // owned figure, then the rising next price.
-    rowOf("Rack Extenders").querySelector<HTMLButtonElement>("button.price")!.click();
+    // owned figure, delta, then the rising next price.
+    rowOf("Expansion Bays").querySelector<HTMLButtonElement>("button.price")!.click();
     expect(app.state.capacityCeilings).toBe(1);
     app.render();
-    const mid = rowOf("Rack Extenders");
+    const mid = rowOf("Expansion Bays");
     expect(mid.querySelector(".mono")!.textContent).toBe("1/2");
+    expect(mid.textContent).toContain("ceiling 4 → 5");
     expect(mid.querySelector("button.price")!.textContent).toContain(`${BALANCE.capacityCeilingCosts[1]} Arete`);
     mid.querySelector<HTMLButtonElement>("button.price")!.click();
     expect(app.state.capacityCeilings).toBe(2);
     app.render();
-    // Complete: the engraved owned-word replaces the button.
-    const done = rowOf("Rack Extenders");
+    // Complete: the engraved owned-word replaces the button and the delta.
+    const done = rowOf("Expansion Bays");
     expect(done.querySelector(".mono")!.textContent).toBe("2/2");
+    expect(done.textContent).not.toContain("ceiling 4 → 5");
     expect(done.querySelector("button.price")).toBeNull();
     expect(done.querySelector(".st-acquired")!.textContent).toBe("raised");
     // The discounts collapse to the same shape.
     rowOf("Chord Catalysts").querySelector<HTMLButtonElement>("button.price")!.click();
+    app.render();
+    expect(rowOf("Chord Catalysts").textContent).toContain("prices −20% → −40%");
     rowOf("Chord Catalysts").querySelector<HTMLButtonElement>("button.price")!.click();
     expect(app.state.capacityDiscounts).toBe(2);
     app.render();
@@ -799,19 +814,43 @@ describe("the harmonic-capacity ladder (#259)", () => {
     app.state.catalogEntryOwned = true;
     app.ui.mutLayer = "mutators";
     app.openModal("catalog");
-    const row = [...document.querySelectorAll<HTMLElement>(".catalog-row")].find((r) => r.textContent!.includes("Rack Extenders"))!;
+    const row = [...document.querySelectorAll<HTMLElement>(".catalog-row")].find((r) => r.textContent!.includes("Expansion Bays"))!;
     const term = row.querySelector<HTMLButtonElement>(".term-trigger")!;
     expect(term.textContent).toBe("Harmonic capacity");
     term.focus();
     const body = document.getElementById(term.getAttribute("aria-describedby")!)!;
     expect(body.classList.contains("inst-show")).toBe(true);
-    expect(body.textContent).toContain("whole-chord budget");
+    expect(body.textContent).toContain("Whole-chord budget per voice");
     // The one-place rule: persistence is never spelled out — the word
     // rides the effect line, the hover carries the meaning (issue #310).
     expect(row.textContent).not.toContain("Survives prestige");
     const memorized = [...row.querySelectorAll<HTMLButtonElement>(".term-trigger")].find((t) => t.textContent === "memorized")!;
     memorized.focus();
-    expect(document.getElementById(memorized.getAttribute("aria-describedby")!)!.textContent).toContain("remembers it across the reset");
+    expect(document.getElementById(memorized.getAttribute("aria-describedby")!)!.textContent).toContain("Persists through arete reset");
+  });
+
+  it("every rendered tooltip holds the gloss standard — one short line, no clause punctuation (issue #310 steering)", () => {
+    app.state.prestiges = 1;
+    app.state.catalogEntryOwned = true;
+    app.state.arete = 20;
+    app.ui.mutLayer = "mutators";
+    app.openModal("catalog");
+    const read = (): string[] =>
+      [...document.querySelectorAll<HTMLElement>("#modal-content .inst-tip-body")].map((b) => b.textContent!.trim());
+    // The arete face: Headroom's ⓘ, the pool join's ⓘ, and the effect
+    // lines' three term bodies.
+    let texts = read();
+    expect(texts.length).toBe(5);
+    for (const text of texts) {
+      expect(text.length).toBeLessThanOrEqual(60);
+      expect(text).not.toMatch(/[—;:]/);
+    }
+    expect(texts).toContain("Score past the line raises the claim, up to a cap");
+    expect(texts).toContain("Joins future module rolls unweighted");
+    // The nous face: the Poly Expander's ⓘ.
+    document.querySelector<HTMLButtonElement>('[data-catalog-face="nous"]')!.click();
+    texts = read();
+    expect(texts).toEqual(["One more whole chord per voice"]);
   });
 
   it("the sheet's capacity offerings stand inert outside upgrade mode", () => {

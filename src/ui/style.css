@@ -152,8 +152,9 @@ h1, h2, h3, p { margin: 0; }
   width: min(230px, 60vw);
   padding: 8px 10px;
   background: var(--panel-deep);
-  border: 1px solid var(--line);
-  box-shadow: 0 8px 20px var(--shadow);
+  /* Floating text over the panel — no border, no shadow, no card (the
+     sharpened standard; the term triggers' dotted hairline is the one
+     line the layer draws). */
   text-align: left;
   font-family: var(--font-sans);
 }
@@ -3522,6 +3523,12 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
    finish; the readout rides the face's mono figure at preview scale. */
 .capacity-preview { width: 44px; height: 44px; flex-shrink: 0; display: block; margin-top: 6px; }
 .capacity-preview .face-readout { font-size: 34px; }
+/* The Mutator Forge pool join's preview (issue #310 steering): the
+   module's own face — chassis, glyph, nameplate — beside the row's name
+   block, sized so the nameplate stays legible. */
+.with-preview { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.module-preview { width: 110px; height: 110px; flex-shrink: 0; display: block; }
+.module-preview .face-name { font-size: 13px; }
 /* Hoverable domain terms (the disclosure doctrine): the term itself is the
    trigger and its hover opens the glossary meaning — plain inline text
    over a dotted hairline, never a chip or a card. */
