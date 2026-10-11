@@ -3516,6 +3516,22 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .capacity-catalog .catalog-row h3 { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .capacity-catalog .shop-countdown { display: block; }
 .capacity-catalog .inst-tip-trigger { width: 44px; height: 44px; }
+/* The blank-module preview (issue #310): a bare chassis wearing the
+   capacity the purchase grants — the row shows the outcome, the ⓘ beside
+   the name carries the mechanics. The chassis wears the module's own .hex
+   finish; the readout rides the face's mono figure at preview scale. */
+.capacity-preview { width: 44px; height: 44px; flex-shrink: 0; display: block; margin-top: 6px; }
+.capacity-preview .face-readout { font-size: 34px; }
+/* Hoverable domain terms (the disclosure doctrine): the term itself is the
+   trigger and its hover opens the glossary meaning — plain inline text
+   over a dotted hairline, never a chip or a card. */
+.term-trigger {
+  width: auto; height: auto; min-width: 0; min-height: 0; padding: 2px 0;
+  border: 0; border-bottom: 1px dotted var(--muted); border-radius: 0;
+  font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit;
+  vertical-align: baseline;
+}
+.term-trigger:hover, .term-trigger:focus-visible { color: var(--nous); border-color: var(--nous); background: transparent; }
 
 /* Readout figures themselves open the shared disclosure layer. */
 .readout-tip .readout-tip-trigger {

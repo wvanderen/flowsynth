@@ -1214,14 +1214,14 @@ export class App {
     this.act(joinRollPool(this.state), "The Mutator Forge joined the module roll pool.");
   }
 
-  // The Horizon break's purchase (ADR-0042, issue #200): the sheet button's
+  // Headroom's purchase (ADR-0042, issue #200): the sheet button's
   // landing. The beat rides it — the bar flashes as the moment's one visual,
   // the toast carries the words, and the feat's unlock (if session one is
   // past) appends through announceUnlocks.
   breakHorizonAction(): void {
     const result = breakHorizon(this.state);
     if (result.ok) this.breakBeatUntil = Date.now() + 2400;
-    this.act(result, "The horizon breaks — score past the line now raises the claim.");
+    this.act(result, "Headroom opens — score past the line now raises the claim.");
   }
 
   buyRowUnlockAction(row: number): void {

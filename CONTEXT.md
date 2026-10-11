@@ -43,6 +43,18 @@ _Avoid_: Chord chip (the ambient-floating sense), Chord view
 **Harmonic capacity**:
 The whole-chord budget every voice owns — silent voices included, uniform across the board, one through five (the shipped ladder's full reach, ADR-0055). An active chord instance consumes one unit on every participating voice; no partial chord earns anything and no budget is exceeded. Shipped for ordinary play: the Catalog purchases, the Arete ceilings and discounts, and the prestige reset are live (ADR-0053 as released by ADR-0055, issue #262).
 
+**Poly Expander**:
+The nous Catalog's capacity product (product names, 2026-10-10): each purchase adds one whole-chord unit to every voice's Harmonic capacity, walking the ladder its price quotes. The ceiling that ladder may climb to belongs to the Rack Extenders.
+_Avoid_: capacity rung, capacity upgrade, chord slot
+
+**Rack Extenders**:
+The Arete Catalog's ceiling product for every voice (product names, 2026-10-10) — one entry bought twice at a rising price. Each extender raises the Harmonic capacity ceiling one rung; the purchase is memorized.
+_Avoid_: ceiling unlock, first/second ceiling, capacity four/five
+
+**Chord Catalysts**:
+The Arete Catalog's discount product for every voice (product names, 2026-10-10) — one entry bought twice at a rising price. Each catalyst takes 20% off every capacity price; the purchase is memorized.
+_Avoid_: discount rung, first/second discount, price cut
+
 **Allocation**:
 The automatic selection of which recognized chord instances activate: it maximizes the summed final ν/s of the board's oscillators — charge, boosters, resonance, active build factors and silent-voice uplift included — with the empty allocation available whenever activating would reduce production. Equal-output allocations retain the previous active set, then fall back to a stable order. An unallocated voice keeps exactly ×1; the formation's quality multiplies only participants.
 _Avoid_: Manual chord assignment
