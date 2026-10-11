@@ -588,12 +588,6 @@ function goalsFaceHtml(app: App, projected: ReturnType<typeof displayedRates>): 
     </div>`;
   return `<div class="folio-rows">
     <div class="folio-row">
-      ${keyTip(
-        "focus-slots-tip",
-        "Goal slots — the tracking",
-        "Goal slots",
-        "Available slots limit tracked goals. Completion is the tracking — each completion credits a Goal Generator's reserve.",
-      )}
       <span class="folio-main"><span class="folio-fig mono" id="focus-slots-read">${state.goals.length}/${capacity} slots</span>${upgrade ? "" : `<span class="folio-sub">locked for this session</span>`}</span>
     </div>
     ${orderedGoals.map(goalRow).join("")}
