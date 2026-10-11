@@ -420,8 +420,6 @@ describe("the planned-target affordances (§6)", () => {
     const input = document.getElementById("plan-minutes") as HTMLInputElement;
     expect(input.disabled).toBe(true);
     expect([...document.querySelectorAll(".plan-chip.active")]).toHaveLength(0);
-    expect(document.getElementById("focus-plan-word")!.textContent).toBe("Open-ended");
-    expect(document.getElementById("focus-plan-figure")!.textContent).toBe("—");
   });
 });
 
@@ -499,7 +497,6 @@ describe("interaction continuity (#115)", () => {
     expect(toggle.getAttribute("aria-pressed")).toBe("true");
     expect(document.activeElement).toBe(toggle);
     expect(popover.scrollTop).toBe(90);
-    expect(document.getElementById("focus-plan-word")!.textContent).toBe("Open-ended");
   });
 });
 

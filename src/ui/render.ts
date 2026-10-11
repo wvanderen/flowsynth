@@ -2650,7 +2650,7 @@ function renderSettingsModal(app: App, content: HTMLElement): void {
         ${infoTipHtml(
           "settings-session-tip",
           "Session start — the confirmation",
-          `On, the main switch opens the Focus sheet's PLAN face: the ready readout, the habit (none selected is unstructured), the planned target, and Enter flow. Off, the switch starts flow at once — the last plan (open-ended if none) and the active habit (unstructured if none).`,
+          `On, the main switch opens the PLAN face — the ready readout, the habit chips (none selected is unstructured), the planned target, Enter flow; a second press enters flow with what the face shows. Off, it starts flow at once from the last plan and active habit.`,
         )}
       </div>
       <div class="folio-row">
