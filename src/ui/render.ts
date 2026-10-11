@@ -42,7 +42,7 @@ import { renderHexDetail } from "./hexdetail";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chordMarkCovers, chipWidth, CHORD_HUES, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
-import { APP_LABELS, META, RARITY_LABEL, SHELF_HINTS } from "./meta";
+import { APP_LABELS, META, RARITY_LABEL, SHELF_DESCRIPTIONS } from "./meta";
 import { formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown } from "./format";
 import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG } from "./ledger";
 import { closeTooltips, wireTooltips } from "./instrument";
@@ -2700,9 +2700,8 @@ function upgradeCountdown(app: App, cost: number): string | null {
 // ceiling unlocks remain.
 //
 // The row sells the product, not the mechanic (issue #310): it is headed
-// Poly Expander, and a blank module wearing the next purchase's capacity
-// previews the outcome. The mono delta reads the before → after the buy
-// lands; the ⓘ carries the one gloss the surface cannot show.
+// Poly Expander, the effect line carries the hoverable term, and the mono
+// delta reads the before → after the buy lands.
 function capacityShopHtml(app: App): string {
   const { state } = app;
   const capacity = voiceCapacityOf(state);
@@ -2721,29 +2720,19 @@ function capacityShopHtml(app: App): string {
   const note = price === null && capacityCeilingsLeft(state)
     ? `<small class="shop-countdown">The ceiling stands — Expansion Bays sell the next rung.</small>`
     : "";
-  // The delta reads the before → after on its own line beside the preview;
-  // sold out, the lone figure is all that is left to read.
+  // Sold out, the lone figure is all that is left to read.
   const figure = price === null
     ? `<p class="t-note mono">${capacity}/${ceiling}</p>`
-    : `<div class="with-preview">${capacityPreviewHtml(state)}<p class="t-note mono">${capacity}/${ceiling} → ${capacity + 1}/${ceiling}</p></div>`;
+    : `<p class="t-note mono">${capacity}/${ceiling} → ${capacity + 1}/${ceiling}</p>`;
   return `
     <section class="capacity-catalog">
       <div class="catalog-rows">
         <article class="catalog-row">
-          <div><h3 class="t-condensed">${catalogTipHtml("capacity-tip", "Poly Expander", "One more whole chord per voice")}</h3>${figure}${note}</div>
+          <div><h3 class="t-condensed">Poly Expander</h3><p class="t-note">Raises ${termTipHtml("Harmonic capacity")} by one for all voices</p>${figure}${note}</div>
           ${buy}
         </article>
       </div>
     </section>`;
-}
-
-// The blank-module preview (show, don't tell): a bare chassis wearing the
-// capacity the purchase grants — the used/total read the board's own
-// readouts carry, at zero used — so the row shows the outcome instead of
-// describing it. Decoration: the ⓘ beside the name opens the mechanics.
-function capacityPreviewHtml(state: GameState): string {
-  const next = voiceCapacityOf(state) + 1;
-  return `<svg class="capacity-preview" viewBox="-70 -70 140 140" aria-hidden="true"><polygon class="hex" points="${hexPoints(HEX_RADIUS)}"/><text y="14" text-anchor="middle" class="face-readout">0/${next}</text></svg>`;
 }
 
 // Independent disclosure stays reachable when the purchase is unavailable.
@@ -2796,7 +2785,7 @@ const CAPACITY_PRODUCTS: Record<"extenders" | "catalysts", {
       const now = Math.round((BALANCE.capacityDiscountShares[owned - 1] ?? 0) * 100);
       return `prices −${now}% → −${Math.round(BALANCE.capacityDiscountShares[owned]! * 100)}%`;
     },
-    effect: () => `Each takes 20% off every capacity price · ${termTipHtml("memorized")}`,
+    effect: () => `Each takes 20% off every ${termTipHtml("Poly Expander")} price · ${termTipHtml("memorized")}`,
   },
 };
 
@@ -2928,12 +2917,10 @@ function catalogNousFaceHtml(app: App): string {
   const shelfRows = openShelf
     .map((type) => {
       const price = BALANCE.shelfPrices[type];
-      const hint = SHELF_HINTS[type];
+      const description = SHELF_DESCRIPTIONS[type] ?? META[SHELF_MODULE[type]].role;
       const moduleMeta = META[SHELF_MODULE[type]];
       return `<article class="catalog-row">
-        <div class="with-preview">${modulePreviewSvg(SHELF_MODULE[type])}<div><h3 class="t-condensed">${moduleMeta.name}</h3><p class="t-note">${moduleMeta.role}</p>${
-          hint ? `<p class="shop-hint t-note">${hint}</p>` : ""
-        }</div></div>
+        <div class="with-preview">${modulePreviewSvg(SHELF_MODULE[type])}<div><h3 class="t-condensed">${moduleMeta.name}</h3><p class="t-note">${description}</p></div></div>
         ${catalogPriceHtml({
           attrs: `data-buy="${type}"`,
           price,
@@ -2955,17 +2942,13 @@ function catalogNousFaceHtml(app: App): string {
     }
     ${capacityShopHtml(app)}
   </div>
-  <label class="catalog-toggle"><input type="checkbox" id="catalog-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${ownedShelf.length}/${shelfTypes.length})${infoTipHtml(
-    "catalog-acquired-tip",
-    "About acquired shelf offers",
-    "Roll copies stay as combination material",
-  )}</label>
+  <label class="catalog-toggle"><input type="checkbox" id="catalog-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${ownedShelf.length}/${shelfTypes.length})</label>
   ${
     ui.showAcquired && ownedShelf.length > 0
       ? `<div class="catalog-rows catalog-owned">${ownedShelf
           .map(
             (type) =>
-              `<article class="catalog-row"><div><h3 class="t-condensed">${META[SHELF_MODULE[type]].name}</h3><p class="t-note">${META[SHELF_MODULE[type]].role}</p></div><span class="activation-owned mono">in inventory</span></article>`,
+              `<article class="catalog-row"><div><h3 class="t-condensed">${META[SHELF_MODULE[type]].name}</h3><p class="t-note">${SHELF_DESCRIPTIONS[type] ?? META[SHELF_MODULE[type]].role}</p></div><span class="activation-owned mono">in inventory</span></article>`,
           )
           .join("")}</div>`
       : ""
@@ -2986,21 +2969,17 @@ function catalogOwnedHtml(word: string): string {
   return `<span class="shop-buy"><span class="st-acquired">${word}</span></span>`;
 }
 
-// The tooltip layer's one trigger beside a row name — deeper mechanics
-// live here, never in an expandable section (the instrument standards).
-function catalogTipHtml(id: string, name: string, text: string): string {
-  return `${name}<span class="inst-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${id}" aria-label="The mechanics of ${name}">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${text}</span></span>`;
-}
-
 // The hoverable domain terms (the disclosure doctrine): a term defined in
 // CONTEXT.md renders hoverable wherever copy uses it, and its hover opens
 // the glossary meaning — description prose never grows around it. The
 // meanings here are the glossary's own, distilled to the one-line ceiling.
 // The union keeps the map closed: only glossary terms may render hoverable.
-type CatalogTerm = "Harmonic capacity" | "memorized";
+type CatalogTerm = "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander";
 const CATALOG_TERMS: Record<CatalogTerm, string> = {
   "Harmonic capacity": "Whole-chord budget per voice",
   memorized: "Persists through arete reset",
+  Arete: "The resource banked by prestige",
+  "Poly Expander": "The nous Catalog's capacity product",
 };
 let catalogTermSeq = 0;
 function termTipHtml(term: CatalogTerm): string {
@@ -3041,9 +3020,6 @@ function catalogAreteFaceHtml(app: App): string {
     });
   const joined = state.rollPoolJoined;
   const broken = state.horizonBroken;
-  // The honest delta is the rule: the next era's over-line score is not
-  // knowable at purchase, so the read carries the claim rule and the cap.
-  const headroomDelta = `claim: +1 per prestige → + over-line score, cap ${BALANCE.horizonBreakClaimCap}`;
   return `<div class="catalog-sections">
     <section>
       <h2 class="t-condensed">Upgrades</h2>
@@ -3055,8 +3031,8 @@ function catalogAreteFaceHtml(app: App): string {
         ${capacityProductRowHtml(app, "extenders")}
         ${capacityProductRowHtml(app, "catalysts")}
         <article class="catalog-row">
-          <div><h3 class="t-condensed">${catalogTipHtml("cat-break-tip", "Headroom", "Score past the line raises the claim, up to a cap")}</h3>${
-            broken ? "" : `<p class="t-note mono">${headroomDelta}</p>`
+          <div><h3 class="t-condensed">Headroom</h3><p class="t-note">Earning past the nous cap scales the ${termTipHtml("Arete")} claim</p>${
+            broken ? "" : `<p class="t-note mono">claim ${state.prestiges + 1} → up to ${BALANCE.horizonBreakClaimCap}</p>`
           }</div>
           ${broken ? catalogOwnedHtml("open") : areteBuy("buy-arete-break", BALANCE.horizonBreakCost)}
         </article>

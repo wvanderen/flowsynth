@@ -43,17 +43,19 @@ describe("the catalog", () => {
     expect(modal.textContent).not.toContain("Each purchase raises the next price.");
   });
 
-  it("shelf rows carry the simplified module preview, and the trailing paragraph became the toggle's gloss (issue #310 steering)", () => {
+  it("shelf rows carry the simplified module preview and one description line (issue #310 steering)", () => {
     app.openModal("catalog");
     const modal = document.getElementById("modal-content")!;
     const rows = [...modal.querySelectorAll<HTMLElement>(".catalog-row")].filter((r) => r.querySelector("[data-buy]"));
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) expect(row.querySelector(".module-preview svg")).not.toBeNull();
-    // The disclosure doctrine: the acquisition paragraph is gone — the
-    // mechanic a player might query glosses from the toggle.
+    // The Focus Generator's one line names what the purchase does.
+    const generator = rows.find((r) => r.textContent!.includes("Focus Generator"))!;
+    expect(generator.textContent).toContain("Produces charge based on time in flow");
+    // The trailing acquisition paragraph is gone, and no gloss rides the
+    // toggle either — the face carries no furniture copy.
     expect(modal.querySelector(".catalog-note")).toBeNull();
-    const toggleTip = modal.querySelector<HTMLElement>(".catalog-toggle .inst-tip-body")!;
-    expect(toggleTip.textContent).toBe("Roll copies stay as combination material");
+    expect(modal.querySelector(".catalog-toggle .inst-tip")).toBeNull();
   });
 
   it("omits the activation section while the ladder rests empty — no telegraph, no pricing", () => {
@@ -529,11 +531,13 @@ describe("the Arete Catalog (issue #197)", () => {
     document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!.click();
     const button = document.getElementById("buy-arete-break") as HTMLButtonElement;
     expect(button.textContent).toContain(`${BALANCE.horizonBreakCost} Arete`);
-    // The honest delta is the rule with its cap figure — the next era's
-    // over-line score is not knowable at purchase (issue #310 steering).
+    // The description lives in the body and the delta carries the claim's
+    // concrete before → after (issue #310 steering).
     const sheet = document.getElementById("modal-content")!;
     const headroomRow = [...sheet.querySelectorAll(".catalog-row")].find((r) => r.textContent!.includes("Headroom"))!;
-    expect(headroomRow.textContent).toContain(`cap ${BALANCE.horizonBreakClaimCap}`);
+    expect(headroomRow.querySelector(".t-note")!.textContent).toContain("Earning past the nous cap scales the");
+    expect(headroomRow.textContent).toContain(`claim ${app.state.prestiges + 1} → up to ${BALANCE.horizonBreakClaimCap}`);
+    expect(headroomRow.querySelector("h3 .inst-tip")).toBeNull();
     button.click();
     expect(app.state.horizonBroken).toBe(true);
     expect(app.state.arete).toBe(0);
@@ -665,29 +669,26 @@ describe("the harmonic-capacity ladder (#259)", () => {
     app.openModal("catalog");
     const modal = document.getElementById("modal-content")!;
     expect(modal.textContent).toContain("Poly Expander");
-    // The mono delta reads the before → after the buy lands.
-    expect(modal.textContent).toContain("1/3 → 2/3");
+    // The effect line carries the hoverable term; no ⓘ, no preview hex.
+    const section = modal.querySelector<HTMLElement>(".capacity-catalog")!;
+    const description = section.querySelector(".t-note")!.textContent!;
+    expect(description).toContain("Raises");
+    expect(description).toContain("by one for all voices");
+    expect(section.querySelector("h3 .inst-tip")).toBeNull();
+    expect(section.querySelector("svg")).toBeNull();
+    // The mono delta reads the before → after on its own line.
+    expect(section.querySelector(".t-note.mono")!.textContent).toBe("1/3 → 2/3");
     const button = document.querySelector<HTMLButtonElement>("[data-buy-capacity]")!;
     expect(button.textContent!.trim()).toBe(`${formatInt(BALANCE.capacityPrices[0]!)} ν`);
     expect(button.disabled).toBe(false);
-    // The blank-module preview wears the capacity the purchase grants —
-    // the board's own used/total read, nothing used yet (issue #310) —
-    // beside the delta on its own line.
-    const previewLine = modal.querySelector<HTMLElement>(".capacity-catalog .with-preview")!;
-    expect(previewLine.querySelector("text")!.textContent).toBe("0/2");
-    expect(previewLine.querySelector(".mono")!.textContent).toBe("1/3 → 2/3");
-    // The restating small-line died with the rename; the price lives only
-    // on the button.
-    expect(modal.textContent).not.toContain("+1 whole chord per voice");
+    // The price lives only on the button.
     expect(modal.textContent).not.toContain("Spend");
     button.click();
     expect(app.state.capacityBought).toBe(1);
-    // The modal re-rendered onto the next rung: delta, price, and the
-    // preview all moved.
+    // The modal re-rendered onto the next rung: delta and price moved.
     const next = document.querySelector<HTMLButtonElement>("[data-buy-capacity]")!;
     expect(next.textContent!.trim()).toBe(`${formatInt(BALANCE.capacityPrices[1]!)} ν`);
-    expect(document.querySelector(".capacity-catalog .with-preview .mono")!.textContent).toBe("2/3 → 3/3");
-    expect(document.querySelector(".capacity-catalog .with-preview text")!.textContent).toBe("0/3");
+    expect(document.querySelector(".capacity-catalog .t-note.mono")!.textContent).toBe("2/3 → 3/3");
   });
 
   it("the unaffordable rung reads as disabled with its practice-minute estimate", () => {
@@ -699,39 +700,27 @@ describe("the harmonic-capacity ladder (#259)", () => {
     expect(countdown.textContent).toContain("of practice");
   });
 
-  it("capacity disclosure stays reachable with unavailable purchases and dismisses before the sheet", () => {
+  it("the section's gloss stays reachable and dismissible; the rows speak for themselves (issue #310 steering)", () => {
     app.state.nous = 0;
     app.openModal("catalog");
-    const trigger = document.querySelector<HTMLButtonElement>(".capacity-catalog .inst-tip-trigger")!;
-    expect(document.querySelector<HTMLButtonElement>("[data-buy-capacity]")!.disabled).toBe(true);
+    // No ⓘ on the row name — the Poly Expander's description lives in the
+    // body (its term gloss rides the term itself).
+    expect(document.querySelector(".capacity-catalog h3 .inst-tip-trigger")).toBeNull();
+    app.closeModal();
+    app.state.prestiges = 1;
+    app.state.catalogEntryOwned = true;
+    app.ui.mutLayer = "mutators";
+    app.openModal("catalog");
+    // The one disclosure is the Module Types section's own gloss.
+    const trigger = document.querySelector<HTMLButtonElement>(".catalog-sections h2 .inst-tip-trigger")!;
     trigger.focus();
     const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
     expect(body.classList.contains("inst-show")).toBe(true);
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(body.classList.contains("inst-show")).toBe(false);
-    expect(document.querySelector("[data-buy-capacity]")).not.toBeNull();
     trigger.click();
     expect(body.classList.contains("inst-show")).toBe(true);
     expect(trigger.getAttribute("aria-expanded")).toBe("true");
-    document.getElementById("modal-title")!.click();
-    expect(body.classList.contains("inst-show")).toBe(false);
-    app.closeModal();
-    app.state.prestiges = 1;
-    app.state.catalogEntryOwned = true;
-    // The mode directs the face (issue #273): mutator mode is how the door
-    // lands on the arete sheet now. Headroom's price stands out of reach
-    // at zero Arete — its disclosure stays reachable (issue #310).
-    app.ui.mutLayer = "mutators";
-    app.openModal("catalog");
-    const headroomRow = [...document.querySelectorAll(".catalog-row")].find((r) => r.textContent!.includes("Headroom"))!;
-    expect((headroomRow.querySelector("button.price") as HTMLButtonElement).disabled).toBe(true);
-    const lockedTrigger = headroomRow.querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
-    lockedTrigger.focus();
-    const lockedBody = document.getElementById(lockedTrigger.getAttribute("aria-describedby")!)!;
-    expect(lockedBody.classList.contains("inst-show")).toBe(true);
-    lockedTrigger.click();
-    expect(lockedBody.classList.contains("inst-show")).toBe(true);
-    expect(lockedTrigger.getAttribute("aria-expanded")).toBe("true");
   });
 
   it("the rung is inert in flow mode — the purchase is upgrade-mode-only on the surface too", () => {
@@ -854,20 +843,21 @@ describe("the harmonic-capacity ladder (#259)", () => {
     app.openModal("catalog");
     const read = (): string[] =>
       [...document.querySelectorAll<HTMLElement>("#modal-content .inst-tip-body")].map((b) => b.textContent!.trim());
-    // The arete face: Headroom's ⓘ, the pool join's ⓘ, and the effect
-    // lines' three term bodies.
+    // The arete face: the effect lines' term bodies and the Module Types
+    // section's gloss — the row names themselves carry no tooltips.
     let texts = read();
-    expect(texts.length).toBe(5);
+    expect(texts.length).toBe(6);
     for (const text of texts) {
       expect(text.length).toBeLessThanOrEqual(60);
       expect(text).not.toMatch(/[—;:]/);
     }
-    expect(texts).toContain("Score past the line raises the claim, up to a cap");
     expect(texts).toContain("Rolled module types appear here unweighted");
-    // The nous face: the Poly Expander's ⓘ and the acquired-toggle's gloss.
+    expect(texts).toContain("The nous Catalog's capacity product");
+    expect(texts).toContain("The resource banked by prestige");
+    // The nous face: only the Poly Expander's term gloss.
     document.querySelector<HTMLButtonElement>('[data-catalog-face="nous"]')!.click();
     texts = read();
-    expect(texts).toEqual(["One more whole chord per voice", "Roll copies stay as combination material"]);
+    expect(texts).toEqual(["Whole-chord budget per voice"]);
   });
 
   it("the sheet's capacity offerings stand inert outside upgrade mode", () => {
