@@ -2723,12 +2723,12 @@ function capacityShopHtml(app: App): string {
   return `
     <section class="capacity-catalog">
       <div class="catalog-rows">
-        <div class="catalog-row">
+        <article class="catalog-row">
           <div><h3 class="t-condensed">${catalogTipHtml("capacity-tip", "Poly Expander", mechanics)} <span class="mono">${capacity}/${ceiling}</span></h3>${
             price === null ? "" : capacityPreviewHtml(state)
           }${note}</div>
           ${buy}
-        </div>
+        </article>
       </div>
     </section>`;
 }
@@ -2756,23 +2756,45 @@ function capacityCeilingsLeft(state: GameState): boolean {
 
 // The capacity products as one entry each, bought twice at a rising price
 // (issue #310): the owned figure is the only purchase-count read, the buy
-// button carries the next price, and the engraved owned-word lands at 2/2.
-// No tooltip and no lock state — the effect line's hoverable terms carry
-// what the surface cannot show.
-function capacityProductRowHtml(app: App, product: "extenders" | "catalysts"): string {
-  const { state } = app;
-  const owned = product === "extenders" ? state.capacityCeilings : state.capacityDiscounts;
-  const price = product === "extenders" ? nextCeilingPrice(state) : nextDiscountPrice(state);
-  const id = product === "extenders" ? "buy-capacity-ceiling" : "buy-capacity-discount";
-  const name = product === "extenders" ? "Rack Extenders" : "Chord Catalysts";
-  const ownedWord = product === "extenders" ? "raised" : "catalyzed";
-  const effect =
-    product === "extenders"
-      ? `Raises the ${termTipHtml("Harmonic capacity")} ceiling one rung each · ${memorizedTerm()}`
-      : `Each takes 20% off every capacity price · ${memorizedTerm()}`;
+// button carries the next price, and the engraved owned-word lands when
+// the ladder is sold out. No tooltip and no lock state — the effect line's
+// hoverable terms carry what the surface cannot show.
+const CAPACITY_PRODUCTS: Record<"extenders" | "catalysts", {
+  name: string;
+  id: string;
+  ownedWord: string;
+  ownedOf(state: GameState): number;
+  nextPrice(state: GameState): number | null;
+  rungs: number;
+  effect(): string;
+}> = {
+  extenders: {
+    name: "Rack Extenders",
+    id: "buy-capacity-ceiling",
+    ownedWord: "raised",
+    ownedOf: (state) => state.capacityCeilings,
+    nextPrice: nextCeilingPrice,
+    rungs: BALANCE.capacityCeilingCosts.length,
+    effect: () => `Raises the ${termTipHtml("Harmonic capacity")} ceiling one rung each · ${termTipHtml("memorized")}`,
+  },
+  catalysts: {
+    name: "Chord Catalysts",
+    id: "buy-capacity-discount",
+    ownedWord: "catalyzed",
+    ownedOf: (state) => state.capacityDiscounts,
+    nextPrice: nextDiscountPrice,
+    rungs: BALANCE.capacityDiscountCosts.length,
+    effect: () => `Each takes 20% off every capacity price · ${termTipHtml("memorized")}`,
+  },
+};
+
+function capacityProductRowHtml(app: App, key: "extenders" | "catalysts"): string {
+  const product = CAPACITY_PRODUCTS[key];
+  const owned = product.ownedOf(app.state);
+  const price = product.nextPrice(app.state);
   return `<article class="catalog-row">
-    <div><h3 class="t-condensed">${name} <span class="mono">${owned}/2</span></h3><p class="t-note">${effect}</p></div>
-    ${price === null ? catalogOwnedHtml(ownedWord) : areteBuyButtonHtml(app, id, price)}
+    <div><h3 class="t-condensed">${product.name} <span class="mono">${owned}/${product.rungs}</span></h3><p class="t-note">${product.effect()}</p></div>
+    ${price === null ? catalogOwnedHtml(product.ownedWord) : areteBuyButtonHtml(app, product.id, price)}
   </article>`;
 }
 
@@ -2950,20 +2972,17 @@ function catalogTipHtml(id: string, name: string, text: string): string {
 // CONTEXT.md renders hoverable wherever copy uses it, and its hover opens
 // the glossary meaning — description prose never grows around it. The
 // meanings here are the glossary's own, distilled to the one-line ceiling.
-const CATALOG_TERMS: Record<string, string> = {
+// The union keeps the map closed: only glossary terms may render hoverable.
+type CatalogTerm = "Harmonic capacity" | "memorized";
+const CATALOG_TERMS: Record<CatalogTerm, string> = {
   "Harmonic capacity": "The whole-chord budget every voice owns — silent voices included, uniform across the board.",
   memorized: "The rack remembers it across the reset: prestige leaves it untouched; everything bought with nous re-earns.",
 };
 let catalogTermSeq = 0;
-function termTipHtml(term: string): string {
+function termTipHtml(term: CatalogTerm): string {
   const id = `catalog-term-${catalogTermSeq++}`;
   return `<span class="inst-tip term-tip"><button class="inst-tip-trigger term-trigger" type="button" aria-expanded="false" aria-describedby="${id}" aria-label="${term} — what it means">${term}</button><span class="inst-tip-body" id="${id}" role="tooltip">${CATALOG_TERMS[term]}</span></span>`;
 }
-
-// The memorized fragment every Arete Catalog product's effect line rides
-// (issue #310's one-place rule): the word carries the meaning, the hover
-// opens it — the persistence is never spelled out in prose.
-const memorizedTerm = (): string => termTipHtml("memorized");
 
 // The Accelerator row's provisional figure (the prototype's): the row is
 // an inert placeholder — the price never charges, the button never arms —
