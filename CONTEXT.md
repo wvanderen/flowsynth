@@ -41,7 +41,19 @@ The reserved spot beside the board — the heading's right end — where a hover
 _Avoid_: Chord chip (the ambient-floating sense), Chord view
 
 **Harmonic capacity**:
-The whole-chord budget every voice owns — silent voices included, uniform across the board, one through five (the shipped ladder's full reach, ADR-0055). An active chord instance consumes one unit on every participating voice; no partial chord earns anything and no budget is exceeded. Shipped for ordinary play: the Catalog purchases, the Arete ceilings and discounts, and the prestige reset are live (ADR-0053 as released by ADR-0055, issue #262).
+The whole-chord budget every voice owns — silent voices included, uniform across the board, one through five (the shipped ladder's full reach, ADR-0055). An active chord instance consumes one unit on every participating voice; no partial chord earns anything and no budget is exceeded. Shipped for ordinary play: the Poly Expander ladder, the memorized Expansion Bays and Chord Catalysts, and the arete reset are live (ADR-0053 as released by ADR-0055, issue #262; product names, 2026-10-10).
+
+**Poly Expander**:
+The nous Catalog's capacity product: each purchase adds one whole-chord unit to every voice's Harmonic capacity, walking the ladder its price quotes; the rungs re-earn after an arete reset. The ceiling that ladder may climb to is sold by the Expansion Bays.
+_Avoid_: capacity rung, capacity upgrade, chord slot
+
+**Expansion Bays**:
+The Arete Catalog's capacity-ceiling product — one entry bought twice at a rising price. Each bay raises the Harmonic capacity ceiling one rung; the purchase is memorized.
+_Avoid_: ceiling unlock, first/second ceiling, capacity four/five, Rack Extenders (the octave rows' name)
+
+**Chord Catalysts**:
+The Arete Catalog's discount product — one entry bought twice at a rising price. Each catalyst takes 20% off every capacity price; the purchase is memorized.
+_Avoid_: discount rung, first/second discount, price cut
 
 **Allocation**:
 The automatic selection of which recognized chord instances activate: it maximizes the summed final ν/s of the board's oscillators — charge, boosters, resonance, active build factors and silent-voice uplift included — with the empty allocation available whenever activating would reduce production. Equal-output allocations retain the previous active set, then fall back to a stable order. An unallocated voice keeps exactly ×1; the formation's quality multiplies only participants.
@@ -401,16 +413,20 @@ The muted list-row flag on session records carrying a missed honesty event. Mute
 The resource banked by prestige and by nothing else — never granted before the reset. Each prestige banks a claim that grows with the prestiges performed; once the horizon is broken, score beyond the horizon line raises the claim further, up to a hard cap. It spends on the Arete Catalog.
 
 **Arete Catalog**:
-The catalog's `◇ Arete` face. Its tab stands open from the start — the face never locks on the prestige count; before the Mutator tree's entry it is the single centered Unlock Mutator Layer purchase screen, shown from the first session as the preview of the future entry with its price muted (Arete arrives only through prestige, so the purchase cannot land early). The entry purchase reveals the Upgrades section (the entry's ACQUIRED rewards line, the inert Accelerator placeholder, the Horizon break) and the Unlocks section (the roll-pool join, empty once joined). Purchases are permanent, act in upgrade mode only, and survive prestige.
+The catalog's `◇ Arete` face. Its tab stands open from the start — the face never locks on the prestige count; before the Mutator tree's entry it is the single centered Unlock Mutator Layer purchase screen, shown from the first session as the preview of the future entry with its price muted (Arete arrives only through prestige, so the purchase cannot land early). The entry purchase reveals the sheet's two sections: **Upgrades** (the Expansion Bays, the Chord Catalysts, Headroom, the inert Accelerator placeholder) and **Module Types** (the Mutator Forge pool join, empty once joined, previewed by the module's own face). Purchases are memorized and act in upgrade mode only.
 _Avoid_: prestige sheet, prestige tree, skill tree
+
+**Memorized**:
+An upgrade the rack remembers across the arete reset: it persists untouched while everything bought with nous — capacity purchases, module levels — re-earns. Every Arete Catalog purchase is memorized; the word rides the purchase's effect line, its gloss (`Persists through arete reset`) carried by hover.
+_Avoid_: permanent, survives prestige
 
 **Mutator tree**:
 The Arete Catalog's first tree. Its purchases are the entry (activates the Mutator Grid, grants the Mutator Forge module itself, unlocks the first Mutator slot, and performs the first Mutator roll) and the pricier purchase that joins the Mutator Forge type to the roll pool. Slot unlocks past the first are armed from the dock's Add in mutator mode — like a cell purchase, priced on the tree's escalating ladder. The type is otherwise Catalog-exclusive.
 _Avoid_: enhancement tree, gem tree
 
-**Row unlock**:
-The board-side Arete purchase that opens one octave row beyond the launch band — one row above and one below this phase, sold in either order at escalating Arete. It renders in add-cell mode as the shaded next row behind a single unlock banner per side, one click buying outright, and its purchase stands in the row gate for the row it opens — cells inside then buy with nous as usual. The board caps at six octave rows this phase.
-_Avoid_: Octave tree (retired), row expansion, vertical unlock
+**Rack Extenders**:
+The board-side Arete purchase that opens one octave row beyond the launch band — one row above and one below this phase, sold in either order at escalating Arete as one entry bought twice. It renders in add-cell mode as the shaded next row behind a single unlock banner per side, one click buying outright, and its purchase stands in the row gate for the row it opens — cells inside then buy with nous as usual. The board caps at six octave rows this phase.
+_Avoid_: Row unlock, Octave tree (retired), row expansion, vertical unlock
 
 **Arete accumulator**:
 The log-scale fill on the current era's nous earned toward the horizon line, drawn as the ambient horizon bar across the board's lower edge (ADR-0038); it rebases at each prestige while lifetime total nous earned stays the truth beneath. Its one figure is the bar's own log-scale percentage; no decade marks or countdown.
@@ -423,12 +439,12 @@ _Avoid_: Arete pill
 The Arete accumulator's cap — the fixed prestige threshold and the horizon bar's far end, the same every era. Reaching it opens the prestige door; it mints nothing by itself.
 
 **Prestige**:
-The reset action: once the current era's fill reaches the horizon line, prestige banks the era's Arete claim and begins the next era — module levels, nous, and charge state reset while the board's modules, cells, and placement, the mutator layer (Catalog unlocks, Mutator slots, placed mutators, the Mutator tray), and the whole life record persist. Performed in upgrade mode through the horizon bar's door, behind a confirm.
-_Avoid_: reset (as the player-facing verb)
+The arete reset: once the current era's fill reaches the horizon line, prestige banks the era's Arete claim and begins the next era — module levels, nous, and charge state reset while the board's modules, cells, and placement, the mutator layer (Catalog unlocks, Mutator slots, placed mutators, the Mutator tray), and the whole life record persist. Performed in upgrade mode through the horizon bar's door, behind a confirm.
+_Avoid_: reset (bare — the reset's player-facing name is arete reset; Prestige stays the verb)
 
-**Horizon break**:
-The one-time Arete Catalog purchase, standing alone beside the Mutator tree, that lets score beyond the horizon line raise the prestige claim — still banked only on reset. Until it is bought, the claim reads the prestiges performed alone and pushing past the horizon banks nothing extra.
-_Avoid_: break infinity
+**Headroom**:
+The one-time memorized Arete Catalog purchase, standing alone beside the Mutator tree, that lets score beyond the horizon line raise the prestige claim — still banked only on reset. Until it is bought, the claim reads the prestiges performed alone and pushing past the horizon banks nothing extra. The line is the strongest signal the current rig can generate; the purchase opens the range past it.
+_Avoid_: Horizon break, break infinity, limit break
 
 **Achievement**:
 A named feat that accelerates but never gates progress; each adds into the global achievementBoost term of the nous rate. Detection is live, storage is the save's `id → unlockedAt` map, definitions in code. "Feat" is the player-facing word for an achievement on every surface — headers, chips, dock labels, toasts; "achievement" stays the system term.

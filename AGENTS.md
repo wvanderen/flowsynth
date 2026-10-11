@@ -12,6 +12,10 @@ Canonical defaults: role name = label string (`needs-triage`, `needs-info`, `rea
 
 Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
+### Issue briefs
+
+Briefs for implementation agents carry intent, priorities, non-goals, and one-place rules — never bare element lists. See `docs/agents/briefs.md`.
+
 ## UI surfaces
 
 When changing or reviewing a UI surface (panel, sheet, readout, control, or its copy), read `docs/instrument-standards.md` first and judge the changed surface against the pinned prototype there; record checks that cannot run as unavailable.
