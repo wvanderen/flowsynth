@@ -16,25 +16,28 @@ entry owned, illustrative balances and ladder positions.
 ## The renamed surfaces
 
 - [Desktop nous](desktop-nous-poly-expander.png) and
-  [phone nous](phone-nous-poly-expander.png): the capacity row is headed
-  **Poly Expander**, the mono delta `1/3 → 2/3` reading the before → after,
-  and no restating small-line — the blank-module preview (a bare chassis
-  wearing `0/2`, the board's own used/total read) shows the purchase's
-  outcome instead. Price rides the buy button alone, muted here (`0 ν` in
-  the purse) with its practice countdown.
+  [phone nous](phone-nous-poly-expander.png): the nous face in register —
+  starter-shelf rows carry the simplified module preview (the tray tile's
+  category-hued hex and glyph), the capacity row is headed **Poly
+  Expander** with the mono delta `1/3 → 2/3` on its own line beside the
+  blank-module preview, and the acquisition paragraph is gone — the Show
+  acquired toggle's ⓘ glosses `Roll copies stay as combination material`.
+  Price rides the buy button alone, muted here (`0 ν` in the purse) with
+  its practice countdown.
 - [Desktop upgrades](desktop-arete-upgrades.png) and
   [phone upgrades](phone-arete-upgrades.png): the face holds two sections —
   **Upgrades** (the entry's ACQUIRED rewards line, Expansion Bays, Chord
   Catalysts, Headroom, the inert Accelerator placeholder) and **Module
-  Types**. Each product is one entry bought twice: owned figure, the mono
-  delta (`ceiling 3 → 4`, `prices −0% → −20%`), next price on the button,
-  effect line one line with hoverable terms. Headroom carries the honest
-  delta — the claim rule with its cap figure, since the next era's
-  over-line score is not knowable at purchase.
+  Types**. Each product is one entry bought twice: owned figure on the
+  heading, one effect line with hoverable terms, and the mono delta on its
+  own line (`ceiling 3 → 4`, `prices −0% → −20%`, Headroom's honest
+  `claim: +1 per prestige → + over-line score, cap 25` — the next era's
+  over-line score is not knowable at purchase).
 - [Module types](desktop-arete-module-types.png) and
-  [phone module types](phone-arete-module-types.png): the Mutator Forge
-  pool join previews the module's own face — chassis, glyph, nameplate,
-  readout — beside the name and the one-line `Fill with charge → Mutator
+  [phone module types](phone-arete-module-types.png): the section heading
+  carries the ⓘ — `Rolled module types appear here unweighted` holds for
+  everything the section collects — and the Mutator Forge join previews
+  the simplified mark beside the one-line `Fill with charge → Mutator
   draft`; no mechanics prose paragraph.
 - [Complete](desktop-arete-complete.png): sold-out ladders end in the
   engraved owned-words (`raised`, `catalyzed`); Headroom complete reads
