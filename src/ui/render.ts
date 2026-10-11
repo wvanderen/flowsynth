@@ -16,7 +16,7 @@ import { activeBuildFactors } from "../engine/builds";
 import { poolOutstanding } from "../engine/trust";
 import { arcCardDue } from "../engine/arc";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
-import type { DeployedModule, GameState, Hex, ModuleInstance, MutatorInstance, NamedChordTerm, Rarity, RateSnapshot } from "../engine/types";
+import type { DeployedModule, GameState, Hex, ModuleInstance, ModuleType, MutatorInstance, NamedChordTerm, Rarity, RateSnapshot } from "../engine/types";
 import { DEV_BOARD_CAPACITIES, type App, type ChordHover, type ModalKind } from "./app";
 import {
   bindFocusSheet,
@@ -2721,16 +2721,16 @@ function capacityShopHtml(app: App): string {
   const note = price === null && capacityCeilingsLeft(state)
     ? `<small class="shop-countdown">The ceiling stands — Expansion Bays sell the next rung.</small>`
     : "";
+  // The delta reads the before → after on its own line beside the preview;
+  // sold out, the lone figure is all that is left to read.
   const figure = price === null
-    ? `<span class="mono">${capacity}/${ceiling}</span>`
-    : `<span class="mono">${capacity}/${ceiling} → ${capacity + 1}/${ceiling}</span>`;
+    ? `<p class="t-note mono">${capacity}/${ceiling}</p>`
+    : `<div class="with-preview">${capacityPreviewHtml(state)}<p class="t-note mono">${capacity}/${ceiling} → ${capacity + 1}/${ceiling}</p></div>`;
   return `
     <section class="capacity-catalog">
       <div class="catalog-rows">
         <article class="catalog-row">
-          <div><h3 class="t-condensed">${catalogTipHtml("capacity-tip", "Poly Expander", "One more whole chord per voice")} ${figure}</h3>${
-            price === null ? "" : capacityPreviewHtml(state)
-          }${note}</div>
+          <div><h3 class="t-condensed">${catalogTipHtml("capacity-tip", "Poly Expander", "One more whole chord per voice")}</h3>${figure}${note}</div>
           ${buy}
         </article>
       </div>
@@ -2805,9 +2805,9 @@ function capacityProductRowHtml(app: App, key: "extenders" | "catalysts"): strin
   const owned = product.ownedOf(app.state);
   const price = product.nextPrice(app.state);
   return `<article class="catalog-row">
-    <div><h3 class="t-condensed">${product.name} <span class="mono">${owned}/${product.rungs}</span>${
-      price === null ? "" : ` <span class="mono">${product.delta(app.state)}</span>`
-    }</h3><p class="t-note">${product.effect()}</p></div>
+    <div><h3 class="t-condensed">${product.name} <span class="mono">${owned}/${product.rungs}</span></h3><p class="t-note">${product.effect()}</p>${
+      price === null ? "" : `<p class="t-note mono">${product.delta(app.state)}</p>`
+    }</div>
     ${price === null ? catalogOwnedHtml(product.ownedWord) : areteBuyButtonHtml(app, product.id, price)}
   </article>`;
 }
@@ -2931,9 +2931,9 @@ function catalogNousFaceHtml(app: App): string {
       const hint = SHELF_HINTS[type];
       const moduleMeta = META[SHELF_MODULE[type]];
       return `<article class="catalog-row">
-        <div><h3 class="t-condensed">${moduleMeta.name}</h3><p class="t-note">${moduleMeta.role}</p>${
+        <div class="with-preview">${modulePreviewSvg(SHELF_MODULE[type])}<div><h3 class="t-condensed">${moduleMeta.name}</h3><p class="t-note">${moduleMeta.role}</p>${
           hint ? `<p class="shop-hint t-note">${hint}</p>` : ""
-        }</div>
+        }</div></div>
         ${catalogPriceHtml({
           attrs: `data-buy="${type}"`,
           price,
@@ -2955,7 +2955,11 @@ function catalogNousFaceHtml(app: App): string {
     }
     ${capacityShopHtml(app)}
   </div>
-  <label class="catalog-toggle"><input type="checkbox" id="catalog-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${ownedShelf.length}/${shelfTypes.length})</label>
+  <label class="catalog-toggle"><input type="checkbox" id="catalog-show-acquired" ${ui.showAcquired ? "checked" : ""}/> Show acquired (${ownedShelf.length}/${shelfTypes.length})${infoTipHtml(
+    "catalog-acquired-tip",
+    "About acquired shelf offers",
+    "Roll copies stay as combination material",
+  )}</label>
   ${
     ui.showAcquired && ownedShelf.length > 0
       ? `<div class="catalog-rows catalog-owned">${ownedShelf
@@ -2966,8 +2970,14 @@ function catalogNousFaceHtml(app: App): string {
           .join("")}</div>`
       : ""
   }
-  <p class="catalog-note t-note">Shelf offers hide once acquired; roll copies stay, as combination material.</p>
   ${upgrade ? "" : `<p class="modal-note">Purchases happen between sessions — enter upgrade mode to buy.</p>`}`;
+}
+
+// The simplified module mark (the tray tile's own): the category-hued hex
+// outline over the signature glyph — the little preview a catalog row
+// carries where the full face would be noise.
+function modulePreviewSvg(type: ModuleType): string {
+  return `<span class="module-preview">${inventoryTileSvg({ type })}</span>`;
 }
 
 // The arete face's one engraved mark: the acquisition word in the state
@@ -3057,14 +3067,13 @@ function catalogAreteFaceHtml(app: App): string {
       </div>
     </section>
     <section>
-      <h2 class="t-condensed">Module Types</h2>
+      <h2 class="t-condensed">Module Types ${infoTipHtml("module-types-tip", "About module types", "Rolled module types appear here unweighted")}</h2>
       <div class="catalog-rows">
         ${
           joined
             ? `<p class="empty-copy">Nothing waits — future objects appear in future rolls.</p>`
             : `<article class="catalog-row">
-                <div class="with-preview"><svg class="module-preview" viewBox="-70 -70 140 140" aria-hidden="true">${moduleFace({ type: "mutatorForge", rarity: "common", readout: candidateReadout("mutatorForge") })}</svg>
-                <div><h3 class="t-condensed">${catalogTipHtml("cat-pool-tip", "Mutator Forge", "Joins future module rolls unweighted")}</h3><p class="t-note">Fill with charge → Mutator draft</p></div></div>
+                <div class="with-preview">${modulePreviewSvg("mutatorForge")}<div><h3 class="t-condensed">Mutator Forge</h3><p class="t-note">Fill with charge → Mutator draft</p></div></div>
                 ${areteBuy("buy-arete-pool", BALANCE.rollPoolJoinCost)}
               </article>`
         }

@@ -43,6 +43,19 @@ describe("the catalog", () => {
     expect(modal.textContent).not.toContain("Each purchase raises the next price.");
   });
 
+  it("shelf rows carry the simplified module preview, and the trailing paragraph became the toggle's gloss (issue #310 steering)", () => {
+    app.openModal("catalog");
+    const modal = document.getElementById("modal-content")!;
+    const rows = [...modal.querySelectorAll<HTMLElement>(".catalog-row")].filter((r) => r.querySelector("[data-buy]"));
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) expect(row.querySelector(".module-preview svg")).not.toBeNull();
+    // The disclosure doctrine: the acquisition paragraph is gone — the
+    // mechanic a player might query glosses from the toggle.
+    expect(modal.querySelector(".catalog-note")).toBeNull();
+    const toggleTip = modal.querySelector<HTMLElement>(".catalog-toggle .inst-tip-body")!;
+    expect(toggleTip.textContent).toBe("Roll copies stay as combination material");
+  });
+
   it("omits the activation section while the ladder rests empty — no telegraph, no pricing", () => {
     app.openModal("catalog");
     const modal = document.getElementById("modal-content")!;
@@ -324,9 +337,11 @@ describe("the catalog door (issue #271)", () => {
     sheet = document.getElementById("modal-content")!;
     expect(sheet.querySelector(".entry-screen")).toBeNull();
     // Two sections (issue #310 steering): the upgrades, then the module
-    // types — the entry's ACQUIRED rewards line leads Upgrades.
+    // types — the entry's ACQUIRED rewards line leads Upgrades, and the
+    // section's own ⓘ glosses what the section collects.
     const headings = [...sheet.querySelectorAll(".catalog-sections h2")].map((h) => h.textContent);
-    expect(headings).toEqual(["Upgrades", "Module Types"]);
+    expect(headings[0]).toBe("Upgrades");
+    expect(headings[1]).toContain("Module Types");
     // The entry's row reads ACQUIRED with its rewards line.
     const entryRow = [...sheet.querySelectorAll(".catalog-row")].find((r) => r.textContent!.includes("Mutator layer"))!;
     expect(entryRow.textContent).toContain("ACQUIRED");
@@ -656,9 +671,11 @@ describe("the harmonic-capacity ladder (#259)", () => {
     expect(button.textContent!.trim()).toBe(`${formatInt(BALANCE.capacityPrices[0]!)} ν`);
     expect(button.disabled).toBe(false);
     // The blank-module preview wears the capacity the purchase grants —
-    // the board's own used/total read, nothing used yet (issue #310).
-    const preview = modal.querySelector<SVGGeometryElement>(".capacity-preview")!;
-    expect(preview.querySelector("text")!.textContent).toBe("0/2");
+    // the board's own used/total read, nothing used yet (issue #310) —
+    // beside the delta on its own line.
+    const previewLine = modal.querySelector<HTMLElement>(".capacity-catalog .with-preview")!;
+    expect(previewLine.querySelector("text")!.textContent).toBe("0/2");
+    expect(previewLine.querySelector(".mono")!.textContent).toBe("1/3 → 2/3");
     // The restating small-line died with the rename; the price lives only
     // on the button.
     expect(modal.textContent).not.toContain("+1 whole chord per voice");
@@ -669,8 +686,8 @@ describe("the harmonic-capacity ladder (#259)", () => {
     // preview all moved.
     const next = document.querySelector<HTMLButtonElement>("[data-buy-capacity]")!;
     expect(next.textContent!.trim()).toBe(`${formatInt(BALANCE.capacityPrices[1]!)} ν`);
-    expect(document.getElementById("modal-content")!.textContent).toContain("2/3 → 3/3");
-    expect(document.querySelector(".capacity-preview text")!.textContent).toBe("0/3");
+    expect(document.querySelector(".capacity-catalog .with-preview .mono")!.textContent).toBe("2/3 → 3/3");
+    expect(document.querySelector(".capacity-catalog .with-preview text")!.textContent).toBe("0/3");
   });
 
   it("the unaffordable rung reads as disabled with its practice-minute estimate", () => {
@@ -846,11 +863,11 @@ describe("the harmonic-capacity ladder (#259)", () => {
       expect(text).not.toMatch(/[—;:]/);
     }
     expect(texts).toContain("Score past the line raises the claim, up to a cap");
-    expect(texts).toContain("Joins future module rolls unweighted");
-    // The nous face: the Poly Expander's ⓘ.
+    expect(texts).toContain("Rolled module types appear here unweighted");
+    // The nous face: the Poly Expander's ⓘ and the acquired-toggle's gloss.
     document.querySelector<HTMLButtonElement>('[data-catalog-face="nous"]')!.click();
     texts = read();
-    expect(texts).toEqual(["One more whole chord per voice"]);
+    expect(texts).toEqual(["One more whole chord per voice", "Roll copies stay as combination material"]);
   });
 
   it("the sheet's capacity offerings stand inert outside upgrade mode", () => {
