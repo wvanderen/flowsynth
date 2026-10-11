@@ -353,15 +353,16 @@ h1, h2, h3, p { margin: 0; }
 .session-actions button { white-space: nowrap; }
 .session-actions button svg { width: 13px; height: 13px; flex-shrink: 0; }
 
-/* The focus banner's reads (ADR-0050): beside the switch, the session's
-   focus state — the active habit's name and the goal-progress bars. Reads,
-   never controls: the bars bias in-progress goals (nearest complete
-   leading, completed occurrences closing) and past the three-bar budget a
-   +N count answers; live during flow, mutating nothing. The prototype's
-   register: open bars wear the switch vermillion, completed bars the charge
-   green — state readable without either (the +N chip is text, the done
-   bars hold their full width). The phone banner drops the reads for bare
-   launchers (ADR-0050's phone line). */
+/* The focus banner's reads (ADR-0050; the vertical form, #312): beside the
+   switch, the session's focus state — the active habit's name and the
+   goal-progress bars. Reads, never controls: the bars bias in-progress
+   goals (nearest complete leading, completed occurrences closing) and past
+   the five-bar budget a +N count answers; live during flow, mutating
+   nothing. Each bar is a column: fill height carries progress, every fill
+   wears its goal's chosen palette token, and the done bar carries the
+   engraved completion mark — state readable without color (the +N chip is
+   text, the done bars hold their full height). The phone banner drops the
+   reads for bare launchers (ADR-0050's phone line). */
 .banner-reads {
   display: flex;
   align-items: center;
@@ -379,10 +380,19 @@ h1, h2, h3, p { margin: 0; }
   text-overflow: ellipsis;
   max-width: 18ch;
 }
-.gbars { display: flex; flex-direction: column; gap: 4px; width: 92px; flex-shrink: 0; }
-.gbar { display: block; height: 3px; background: var(--line-soft); overflow: hidden; }
-.gbar i { display: block; height: 100%; background: var(--switch); }
-.gbar.done i { background: var(--charge); }
+.gbars { display: flex; align-items: flex-end; gap: 4px; height: 30px; flex-shrink: 0; }
+.gbar { position: relative; display: block; width: 9px; height: 100%; background: var(--line-soft); overflow: hidden; }
+.gbar i { position: absolute; left: 0; right: 0; bottom: 0; display: block; }
+.gbar.done::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font: 700 8px/1 var(--mono);
+  color: var(--bg);
+  text-shadow: 0 0 1px var(--ink);
+}
 .gbar-overflow { font-size: 11px; color: var(--muted); flex-shrink: 0; }
 
 /* Focus-app doors (ADR-0012): bare uncarded icon controls — the state
@@ -1084,10 +1094,25 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
 .goal-create select, .goal-create input { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; font-size: 12.5px; }
 .goal-create input { width: 64px; }
 .goal-create select:focus, .goal-create input:focus { border-color: var(--charge); outline: none; }
+/* The palette picker (issue #312): exactly the six swatches, the standing
+   pick wearing the firm inset ring (the state grammar's selected voice);
+   the row trigger carries the goal's current color as its dot. Colors ride
+   the goal palette tokens — the markup paints them, never this sheet. */
+.goal-swatches { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; flex-basis: 100%; }
+.goal-swatch {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+}
+.goal-swatch.selected { border-color: var(--ink); box-shadow: inset 0 0 0 2px var(--panel-deep); }
+.goal-recolor { display: inline-flex; align-items: center; flex-shrink: 0; }
+.goal-recolor-dot { display: block; width: 10px; height: 10px; border-radius: 999px; }
 .goal-status { font: 10px var(--mono); color: var(--muted); flex-shrink: 0; }
 .goal-status.done { color: var(--charge); }
 .goal-track { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
-.goal-track > span { display: block; height: 100%; background: var(--charge); transition: width 400ms ease-out; }
+.goal-track > span { display: block; height: 100%; transition: width 400ms ease-out; }
 .goal-row small { color: var(--muted); font-size: 10px; }
 
 .stat-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
@@ -3108,9 +3133,9 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   .main-switch svg { width: 14px; height: 14px; }
   /* Pause keeps its icon; the word yields to the row's width budget. */
   #pause-flow span { display: none; }
-  /* The banner reads compact in place: narrower bars, a shorter name. */
+  /* The banner reads compact in place: shorter columns, a shorter name. */
   .banner-reads { gap: 8px; }
-  .gbars { width: 64px; }
+  .gbars { height: 24px; }
   .bread { max-width: 12ch; }
 }
 

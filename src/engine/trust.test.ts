@@ -377,6 +377,7 @@ describe("the honesty report", () => {
       condition: { kind: "habit-minutes", habitId: "h1", minutes: 10 },
       schedule: { kind: "once" },
       occurrenceKey: "once",
+      color: "vermillion",
       progressSeconds: 0,
       liveSeconds: 0,
       completed: false,

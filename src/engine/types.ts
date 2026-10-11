@@ -362,11 +362,19 @@ export interface GoalCondition {
 
 export type GoalSchedule = { kind: "once" } | { kind: "daily" } | { kind: "weekly" };
 
+// The player-picked palette key (issue #312): one of the six swatches the
+// GOALS face offers at creation and re-pick. The key rides goal state; the
+// UI reads its theme token everywhere the goal renders.
+export type GoalColor = "vermillion" | "amber" | "green" | "cyan" | "indigo" | "violet";
+
 export interface Goal {
   id: string;
   condition: GoalCondition;
   schedule: GoalSchedule;
   occurrenceKey: string;
+  // The banner bars' and face tracks' color, chosen once at create/edit and
+  // read from here everywhere (issue #312).
+  color: GoalColor;
   progressSeconds: number;
   // The occurrence's live slice of `progressSeconds` (ADR-0047): credited
   // present, trusted, and honesty-credited seconds — manual logs never

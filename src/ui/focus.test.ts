@@ -6,7 +6,7 @@ import { createGoal, accrueGoalProgress } from "../engine/goals";
 import { endSession, startSession } from "../engine/actions";
 import { advance } from "../engine/advance";
 import { serialize } from "../engine/save";
-import { goalBarsOf } from "./focus";
+import { goalBarsOf, BANNER_BARS } from "./focus";
 import { createInitialState } from "../engine/state";
 import { createAppFixture, setVisibility } from "./testing/app-fixture";
 
@@ -138,17 +138,19 @@ describe("the flow-mode rule", () => {
     expect(habitFrame.querySelector("#habit-add-open")).toBeNull();
     expect(habitFrame.querySelector("#habit-log-open")).toBeNull();
     expect(habitFrame.querySelector("#habit-name-input")).toBeNull();
-    // The GOALS face reads live; create and delete are gone.
+    // The GOALS face reads live; create, delete, and the palette's edit
+    // half are gone.
     const goalsFrame = openFace("goals");
     expect(goalsFrame.querySelector(".long-goal-row")!.textContent).toContain("between sessions");
     expect(goalsFrame.querySelector("#goal-create-open")).toBeNull();
     expect(goalsFrame.querySelector("[data-goal-delete]")).toBeNull();
+    expect(goalsFrame.querySelector("[data-goal-recolor]")).toBeNull();
     expect(goalsFrame.querySelector("#long-goal-buy")!.getAttribute("title")).toBe("Purchases happen between sessions");
     // The engine owns the lock too: nothing these actions accept in flow.
     const nousBefore = app.state.nous;
     app.createHabitAction("Sneaky");
     app.logPracticeAction(30);
-    app.createGoalAction(habit.id, 5, "once");
+    app.createGoalAction(habit.id, 5, "once", "vermillion");
     expect(app.state.habits.map((h) => h.name)).toEqual(["Piano"]);
     expect(app.state.goals).toHaveLength(1);
     expect(app.state.nous).toBe(nousBefore);
@@ -308,14 +310,14 @@ describe("the goal bars' derivation (the banner's edge states)", () => {
 
   it("goals past the bar budget read as the +N overflow count", () => {
     const state = createInitialState();
-    state.goalCapacityBought = 3; // five slots for the five tracked goals
+    state.goalCapacityBought = 5; // seven slots for the seven tracked goals
     const habit = createHabit(state, "Piano").habit!;
-    for (let i = 0; i < 5; i++) createGoal(state, { habitId: habit.id, minutes: 10 + i, schedule: "once", now: 1000 + i });
+    for (let i = 0; i < 7; i++) createGoal(state, { habitId: habit.id, minutes: 10 + i, schedule: "once", now: 1000 + i });
     const read = goalBarsOf(state);
-    expect(read.bars).toHaveLength(3);
+    expect(read.bars).toHaveLength(BANNER_BARS);
     expect(read.overflow).toBe(2);
     // Every goal complete: the full bars hold, done-marked, overflow intact.
-    accrueGoalProgress(state, habit.id, 70 * 60);
+    accrueGoalProgress(state, habit.id, 130 * 60);
     const complete = goalBarsOf(state);
     expect(complete.bars.every((bar) => bar.done)).toBe(true);
     expect(complete.overflow).toBe(2);
@@ -335,27 +337,61 @@ describe("the goal bars' derivation (the banner's edge states)", () => {
   });
 });
 
-describe("the focus banner's reads (ADR-0050)", () => {
+describe("the focus banner's reads (ADR-0050; the vertical form, #312)", () => {
   it("the console wears the reads beside the switch: habit name, biased bars, +N overflow", () => {
-    app.state.goalCapacityBought = 3; // five slots for the five tracked goals
+    app.state.goalCapacityBought = 5; // seven slots for the seven tracked goals
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
-    for (let i = 0; i < 5; i++) createGoal(app.state, { habitId: habit.id, minutes: 10 + i, schedule: "once", now: 1000 + i });
+    for (let i = 0; i < 7; i++) createGoal(app.state, { habitId: habit.id, minutes: 10 + i, schedule: "once", now: 1000 + i });
     accrueGoalProgress(app.state, habit.id, 9 * 60);
     app.render();
     const reads = document.querySelector("#console-session .banner-reads")!;
     expect(reads.getAttribute("role")).toBe("group");
     // The habit read names what a session would credit.
     expect(reads.querySelector('[data-banner="habit"]')!.textContent).toBe("Piano");
-    // Three bars stand — in-progress leads (nearest complete first) — and
+    // Five bars stand — in-progress leads (nearest complete first) — and
     // the count chip answers for the two past the budget.
     const bars = [...reads.querySelectorAll<HTMLElement>(".gbar")];
-    expect(bars).toHaveLength(3);
+    expect(bars).toHaveLength(BANNER_BARS);
     expect(bars[0]!.classList.contains("done")).toBe(false);
-    expect(bars[0]!.querySelector("i")!.style.width).toBe("90.0%");
+    // The vertical form: progress rides the fill height, the goal's own
+    // palette token paints it.
+    expect(bars[0]!.querySelector("i")!.style.height).toBe("90.0%");
+    expect(bars[0]!.querySelector("i")!.style.background).toBe("var(--goal-vermillion)");
     expect(reads.querySelector('[data-banner="overflow"]')!.textContent).toBe("+2");
     // Reads, never controls: nothing inside the group answers a click.
     expect(reads.querySelectorAll("button, input, select, a")).toHaveLength(0);
+  });
+
+  it("in-progress vs complete reads without color: the aria label counts, done bars carry the mark", () => {
+    app.state.goalCapacityBought = 2;
+    const habit = createHabit(app.state, "Piano").habit!;
+    createGoal(app.state, { habitId: habit.id, minutes: 10, schedule: "once", now: 1000 });
+    createGoal(app.state, { habitId: habit.id, minutes: 5, schedule: "once", now: 1001, color: "cyan" });
+    accrueGoalProgress(app.state, habit.id, 5 * 60); // completes the 5-min goal
+    app.render();
+    const reads = document.querySelector("#console-session .banner-reads")!;
+    expect(reads.querySelector(".gbars")!.getAttribute("aria-label")).toBe("Goal progress: 1 in progress, 1 complete");
+    const [open, done] = [...reads.querySelectorAll<HTMLElement>(".gbar")];
+    expect(open!.classList.contains("done")).toBe(false);
+    expect(done!.classList.contains("done")).toBe(true);
+    // The mark is engraved class + CSS, never a color swap: both fills wear
+    // their goals' palette tokens, the done one at full height.
+    expect(done!.querySelector("i")!.style.background).toBe("var(--goal-cyan)");
+    expect(done!.querySelector("i")!.style.height).toBe("100.0%");
+  });
+
+  it("each bar wears its goal's chosen color — the banner fills and the face tracks agree", () => {
+    app.state.goalCapacityBought = 2;
+    const habit = createHabit(app.state, "Piano").habit!;
+    createGoal(app.state, { habitId: habit.id, minutes: 30, schedule: "once", now: 1000, color: "indigo" });
+    createGoal(app.state, { habitId: habit.id, minutes: 30, schedule: "once", now: 1001, color: "amber" });
+    app.render();
+    const bannerFills = [...document.querySelectorAll<HTMLElement>("#console-session .gbar i")].map((fill) => fill.style.background);
+    const face = openFace("goals");
+    const tracks = [...face.querySelectorAll<HTMLElement>("[data-goal-progress]")].map((span) => span.style.background);
+    expect(bannerFills).toEqual(["var(--goal-indigo)", "var(--goal-amber)"]);
+    expect(tracks).toEqual(bannerFills);
   });
 
   it("an empty tracker and no habit leave the reads quiet — no bars, no chip, no name", () => {
@@ -378,14 +414,14 @@ describe("the focus banner's reads (ADR-0050)", () => {
     const host = document.getElementById("console-session")!;
     const barBefore = reads().querySelector<HTMLElement>(".gbar")!;
     const keyBefore = host.dataset.renderKey;
-    expect(barBefore.querySelector("i")!.style.width).toBe("50.0%");
-    // One more tick, one more render: the read moved — same node, wider
+    expect(barBefore.querySelector("i")!.style.height).toBe("50.0%");
+    // One more tick, one more render: the read moved — same node, taller
     // fill — the tick patched in place rather than rebuilding the cluster.
     advance(app.state, 15);
     app.render();
     const barAfter = reads().querySelector<HTMLElement>(".gbar")!;
     expect(barAfter).toBe(barBefore);
-    expect(barAfter.querySelector("i")!.style.width).toBe("75.0%");
+    expect(barAfter.querySelector("i")!.style.height).toBe("75.0%");
     expect(host.dataset.renderKey).toBe(keyBefore);
     // And the reads mutated nothing: the render's derivation is not on the
     // engine's path — the goal's progress holds exactly what advance left.
