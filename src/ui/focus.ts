@@ -264,8 +264,7 @@ function habitChipsHtml(app: App): string {
 // open-ended as its own mode — never a duration choice. Active states ride
 // the state grammar. They ride the very first start (ADR-0019), visible but
 // unpushed: the resting plan is open-ended, and only a picked plan ever
-// arms the target signals (§4) — the one fact the row cannot show, carried
-// by the one-line tooltip on the controls that arm it.
+// arms the target signals (§4).
 function planRowsHtml(app: App, live: boolean): string {
   const open = app.ui.chosenTarget === null;
   const chosen = app.ui.chosenTarget;
@@ -282,7 +281,6 @@ function planRowsHtml(app: App, live: boolean): string {
         <span class="plan-unit">min</span>
       </span>
       <button id="plan-open" class="plan-open${open ? " active" : ""}" aria-pressed="${open}"${live ? " disabled" : ""}>Open-ended</button>
-      ${tipHtml("focus-plan-tip", "Planned practice — what the target arms", "The chime, notification and tab title fire at the target")}
     </div>
   </div>`;
 }
@@ -296,11 +294,13 @@ function habitChoices(state: GameState): string {
     .join("");
 }
 
-// The PLAN face (#311). Upgrade mode: the ready readout — habit and goals
-// tracked, the planned time narrated nowhere here, the console clock is its
-// only readout — over the habit chip row and the compact plan controls.
-// Flow: the running read — live elapsed, End flow mirroring the main
-// switch, targets visibly disabled.
+// The PLAN face (#311). The console header is authoritative for starting
+// and ending flow and for time — the sheet adds neither a start/end control
+// nor a clock of its own. Upgrade mode: the ready readout — habit and
+// goals tracked — over the habit chip row and the compact plan controls,
+// entry riding the main switch (its re-click commits this face). Flow: the
+// session's own plan affordances stand visibly disabled; the clock and the
+// main switch carry the session.
 function planFaceHtml(app: App): string {
   const { state } = app;
   const upgrade = state.mode === "upgrade";
@@ -311,29 +311,11 @@ function planFaceHtml(app: App): string {
         <span class="focus-ready t-condensed">${habit ? `Ready · ${escapeHtml(habit.name)}` : "Ready"}</span>
         <span class="focus-enter-sub mono" id="focus-plan-read">${goalsTrackedRead(state)}</span>
       </span>
-      <button class="switch-in" id="focus-enter">Enter flow</button>
     </div>
     ${habitChipsHtml(app)}
     ${planRowsHtml(app, false)}`;
   }
-  const session = state.session;
-  const elapsed = session?.elapsed ?? 0;
-  const target = session?.target ?? null;
-  const paused = state.mode === "paused";
-  const habit = activeHabit(state);
-  return `<div class="focus-enter">
-    <span class="focus-enter-read">
-      <span class="focus-ready t-condensed">${habit ? escapeHtml(habit.name) : "Unstructured practice"}</span>
-      <span class="focus-enter-sub mono">session ${state.sessionsCompleted + 1}</span>
-    </span>
-    <button class="switch-in" id="focus-end">End flow</button>  </div>
-    <div class="folio-rows">
-      <div class="folio-row">
-        <span class="folio-key">Session</span>
-        <span class="folio-main"><span class="folio-fig mono" data-live="focus-elapsed">${formatClock(elapsed)}</span><span class="folio-sub" data-live="focus-caption">${sessionCaption(elapsed, target, paused)}</span></span>
-      </div>
-    </div>
-  ${planRowsHtml(app, true)}`;
+  return planRowsHtml(app, true);
 }
 
 /* ── The HABIT face ────────────────────────────────── */
@@ -790,11 +772,13 @@ const FACE_TABS: readonly [FocusFace, string][] = [
 // rows below don't already restate. PLAN names the readiness; HABIT names
 // the practice a session would start; GOALS wears the tracker's rolled-up
 // state (the one Goals-state read, desktop-only per ADR-0033 amended);
-// HISTORY counts the records.
+// HISTORY counts the records. During a session the head names the mode —
+// running, or paused — the panel's own read beside its name.
 function sheetStateWord(app: App): string {
   const { state } = app;
   const face = focusFaceOf(app);
-  if (state.mode !== "upgrade") return "in flow";
+  if (state.mode === "paused") return "paused";
+  if (state.mode !== "upgrade") return "running";
   switch (face) {
     case "plan":
       // The figures live in the ready row below — the head names the state,
@@ -810,14 +794,15 @@ function sheetStateWord(app: App): string {
 }
 
 // The one sheet frame both console sheets wear (ADR-0050): the clipped
-// plate anchored beneath the clock — head with the name and state word,
-// the facetab row, the close — over the standing face's body. One spelling,
-// so the Focus and Notes sheets can never drift apart.
+// plate anchored beneath the clock — head with the name and the prominent
+// state read beside it, the facetab row, the close — over the standing
+// face's body. One spelling, so the Focus and Notes sheets can never
+// drift apart.
 function sheetFrameHtml(label: string, name: string, stateWord: string, tabs: string, body: string): string {
   return `<div class="app-popover focus-sheet" id="app-popover"><section class="inst-panel" aria-label="${label}"><div class="inst-panel-face focus-sheet-face">
     <div class="focus-head">
       <span class="focus-name t-condensed">${name}</span>
-      <span class="eyebrow focus-state">${stateWord}</span>
+      <span class="focus-state t-condensed">${stateWord}</span>
       <button class="quiet small icon-btn focus-close" id="focus-close" aria-label="Close the ${label}" title="Close"><svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M-6-6 6 6M6-6-6 6"/></svg></button>
     </div>
     <div class="facetabs" role="group" aria-label="${label} faces">${tabs}</div>
@@ -878,15 +863,13 @@ function refreshPlanControls(app: App): void {
 
 /* ── The live patcher ──────────────────────────────── */
 
-// Values that move during flow without rebuilding the sheet: the session
-// read, practice tallies, and goal progress.
+// Values that move during flow without rebuilding the sheet: the HABIT
+// face's live session read, practice tallies, and goal progress. The PLAN
+// face carries no live figures — the console clock owns time.
 export function updateFocusSheetLive(app: App, scope: ParentNode, projected: ReturnType<typeof displayedRates>): void {
   const { state } = app;
   if (state.mode !== "upgrade") {
-    const session = state.session;
-    const elapsed = session?.elapsed ?? 0;
-    setText(scope.querySelector('[data-live="focus-elapsed"]'), formatClock(elapsed));
-    setText(scope.querySelector('[data-live="focus-caption"]'), sessionCaption(elapsed, session?.target ?? null, state.mode === "paused"));
+    const elapsed = state.session?.elapsed ?? 0;
     setText(scope.querySelector('[data-live="focus-habit-session"]'), `${formatClock(elapsed)} of practice`);
   }
   for (const habit of state.habits) {
@@ -954,10 +937,9 @@ export function bindFocusSheet(app: App, scope: HTMLElement): void {
     });
   });
   app.listen(scope.querySelector("#focus-close"), "click", () => app.closeApp());
-  // The PLAN face's Enter flow control commits the face's own read — it
-  // never re-enters the confirmation it stands in (#280).
-  app.listen(scope.querySelector("#focus-enter"), "click", () => app.beginFlowFromPlan());
-  app.listen(scope.querySelector("#focus-end"), "click", () => app.endFlow());
+  // The console header is authoritative for flow: the sheet adds no
+  // start/end control — the main switch enters from the standing PLAN face
+  // (#280, re-clicked by #311) and ends the session.
   // The PLAN face's habit chips (#311): one tap switches the session
   // habit — "none selected" runs unstructured — and the add chip walks to
   // the HABIT face, where create and edit live.

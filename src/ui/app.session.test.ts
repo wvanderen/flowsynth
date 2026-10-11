@@ -36,12 +36,12 @@ describe("the session start (issue #280)", () => {
     expect(app.ui.app).toBe("time");
     const frame = document.getElementById("app-popover")!;
     expect(frame.classList.contains("focus-sheet")).toBe(true);
-    // The confirmation's home: ready readout, habit chips, planned target,
-    // and the Enter flow control — nothing else opens.
+    // The confirmation's home: ready readout, habit chips, planned target —
+    // the header owns starting flow, so no start control here.
     expect(frame.querySelector(".focus-ready")).not.toBeNull();
     expect(frame.querySelector("[data-habit-pick]")).not.toBeNull();
     expect(frame.querySelector(".plan-chip")).not.toBeNull();
-    expect(frame.querySelector("#focus-enter")).not.toBeNull();
+    expect(frame.querySelector("#focus-enter")).toBeNull();
     expect(app.state.mode).toBe("upgrade");
   });
 
@@ -65,26 +65,14 @@ describe("the session start (issue #280)", () => {
     expect(app.ui.app).toBeNull();
   });
 
-  it("the PLAN face's Enter flow control commits: the picked habit and target ride in", () => {
-    const created = createHabit(app.state, "Jammin");
-    selectHabit(app.state, created.habit!.id);
-    app.startFlow();
-    document.querySelector<HTMLButtonElement>('#app-popover [data-plan="25"]')!.click();
-    document.querySelector<HTMLButtonElement>("#focus-enter")!.click();
-    expect(app.state.mode).toBe("flow");
-    expect(app.state.activeHabitId).toBe(created.habit!.id);
-    expect(app.state.session!.target).toBe(1500);
-    // Entering flow takes the sheet with the rest of the transient modes.
-    expect(app.ui.app).toBeNull();
-  });
-
   it("the PLAN face's habit chips pick the session habit; none selected is unstructured", () => {
     const created = createHabit(app.state, "Jammin");
     app.startFlow();
     const chip = document.querySelector<HTMLButtonElement>(`[data-habit-pick="${created.habit!.id}"]`)!;
     chip.click();
     expect(app.state.activeHabitId).toBe(created.habit!.id);
-    document.querySelector<HTMLButtonElement>("#focus-enter")!.click();
+    // The sheet adds no start control: the main switch's re-click commits.
+    app.startFlow();
     expect(app.state.mode).toBe("flow");
     expect(app.state.activeHabitId).toBe(created.habit!.id);
   });

@@ -155,26 +155,26 @@ describe("the flow-mode rule", () => {
     expect(app.state.nous).toBe(nousBefore);
   });
 
-  it("the PLAN face becomes the running read: live elapsed, End flow, targets visibly disabled", () => {
+  it("the PLAN face in flow: no duplicated time or end control, targets visibly disabled", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
     startSession(app.state, 1200);
     advance(app.state, 60);
     const frame = openFace("plan");
-    expect(frame.querySelector('[data-live="focus-elapsed"]')!.textContent).toBe("01:00");
-    expect(frame.querySelector('[data-live="focus-caption"]')!.textContent).toBe("of 20:00");
-    expect(frame.querySelector("#focus-end")).not.toBeNull();
-    // A flow tick moves the live figures without rebuilding the sheet —
-    // node identity, and the open frame with it, ride through.
-    const elapsedNode = frame.querySelector('[data-live="focus-elapsed"]')!;
+    // The console header is authoritative for flow: the sheet adds no
+    // clock of its own and no End flow control.
+    expect(frame.querySelector('[data-live="focus-elapsed"]')).toBeNull();
+    expect(frame.querySelector("#focus-end")).toBeNull();
+    expect(frame.querySelector("#focus-enter")).toBeNull();
+    // The plan affordances stand visibly disabled.
+    for (const chip of frame.querySelectorAll<HTMLButtonElement>(".plan-chip")) expect(chip.disabled).toBe(true);
+    // The head names the mode: running.
+    expect(frame.querySelector(".focus-state")!.textContent).toBe("running");
+    // A flow tick keeps the sheet standing without rebuilding it.
+    const chipNode = frame.querySelector(".plan-chip")!;
     advance(app.state, 30);
     app.render();
-    expect(document.querySelector('[data-live="focus-elapsed"]')).toBe(elapsedNode);
-    expect(elapsedNode.textContent).toBe("01:30");
-    // End flow mirrors the main switch.
-    document.querySelector<HTMLButtonElement>("#focus-end")!.click();
-    expect(app.state.mode).toBe("upgrade");
-    expect(app.state.summary).not.toBeNull();
+    expect(document.querySelector("#app-popover .plan-chip")).toBe(chipNode);
   });
 
   it("the HABIT and GOALS faces read live during flow and mutate nothing", () => {
@@ -193,14 +193,14 @@ describe("the flow-mode rule", () => {
     expect(Object.keys(saved)).toEqual(Object.keys(createInitialState()));
   });
 
-  it("paused reads in the running read; the controls stay disabled", () => {
+  it("paused reads in the head's state word; the controls stay disabled", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
     startSession(app.state, 1200);
     advance(app.state, 60);
     app.pause();
     const frame = openFace("plan");
-    expect(frame.querySelector('[data-live="focus-caption"]')!.textContent).toBe("paused");
+    expect(frame.querySelector(".focus-state")!.textContent).toBe("paused");
     expect(frame.querySelector<HTMLButtonElement>(".plan-chip")!.disabled).toBe(true);
   });
 
@@ -227,18 +227,18 @@ describe("the edge states derived from existing state", () => {
     openFace("plan");
     expect(document.getElementById("focus-plan-read")!.textContent).toBe("0 goals tracked");
     expect(document.getElementById("plan-open")!.getAttribute("aria-pressed")).toBe("true");
-    // Entering with the fallback runs an open-ended session.
-    document.querySelector<HTMLButtonElement>("#focus-enter")!.click();
+    // Entering with the fallback runs an open-ended session — the sheet
+    // standing, the main switch's re-click commits the face's read.
+    app.startFlow();
     expect(app.state.mode).toBe("flow");
     expect(app.state.session!.target).toBeNull();
   });
 
-  it("zero habits never blocks entry: the Enter flow control starts unstructured", () => {
+  it("zero habits never blocks entry: the re-click starts unstructured", () => {
     expect(app.state.habits).toHaveLength(0);
-    const frame = openFace("plan");
-    const enter = frame.querySelector<HTMLButtonElement>("#focus-enter")!;
-    expect(enter.disabled).toBe(false);
-    enter.click();
+    openFace("plan");
+    expect(app.ui.app).toBe("time");
+    app.startFlow();
     expect(app.state.mode).toBe("flow");
     expect(app.state.activeHabitId).toBeNull();
   });
@@ -248,9 +248,16 @@ describe("the edge states derived from existing state", () => {
     const frame = openFace("plan");
     expect(frame.querySelector(".focus-ready")!.textContent).toBe("Ready");
     expect(document.querySelector<HTMLButtonElement>('.plan-habit-chip-none')!.getAttribute("aria-pressed")).toBe("true");
-    document.querySelector<HTMLButtonElement>("#focus-enter")!.click();
+    app.startFlow();
     expect(app.state.mode).toBe("flow");
     expect(app.state.activeHabitId).toBeNull();
+  });
+
+  it("the chime fact is narrated nowhere: the tooltip went with the section", () => {
+    const frame = openFace("plan");
+    expect(frame.querySelector(".inst-tip")).toBeNull();
+    expect(frame.textContent).not.toContain("chime");
+    expect(frame.textContent).not.toContain("notification");
   });
 
   it("manual logs carry their boundary in the tooltip layer, not as prose", () => {
@@ -320,21 +327,6 @@ describe("the PLAN face rework (#311)", () => {
     expect(row.querySelectorAll(".plan-chip")).toHaveLength(8);
     // No "Planned practice" section survives — no keyed figure row.
     expect(document.querySelector("#app-popover .folio-key")).toBeNull();
-  });
-
-  it("the target-signals fact is a one-line tooltip on the controls that arm it", () => {
-    const frame = openPlan();
-    const phrase = "The chime, notification and tab title fire at the target";
-    const deepest = [...frame.querySelectorAll<HTMLElement>("*")].filter(
-      (el) => el.textContent!.includes(phrase) && ![...el.children].some((child) => child.textContent!.includes(phrase)),
-    );
-    expect(deepest).toHaveLength(1);
-    expect(deepest[0]!.classList.contains("inst-tip-body")).toBe(true);
-    // One line, nothing longer: the body adds no second sentence.
-    expect(deepest[0]!.textContent).toBe(phrase);
-    // The tooltip rides the instrument wiring: focus opens it.
-    frame.querySelector<HTMLElement>('[aria-describedby="focus-plan-tip"]')!.focus();
-    expect(deepest[0]!.classList.contains("inst-show")).toBe(true);
   });
 
   it("habits switch in one tap; none selected returns unstructured; create/edit lives behind the add chip", () => {

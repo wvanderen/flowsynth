@@ -109,7 +109,7 @@ describe("the console", () => {
     expect(document.querySelector("#console-session .clock-caption")!.textContent).toBe("open-ended");
   });
 
-  it("in flow the PLAN face is the running read: live elapsed, End flow, targets disabled (ADR-0050)", () => {
+  it("in flow the PLAN face carries no duplicated time or end control; targets disabled (ADR-0050)", () => {
     const s = app.state;
     s.sessionsCompleted = 1;
     startSession(s, 600);
@@ -117,16 +117,16 @@ describe("the console", () => {
     app.render();
     document.getElementById("clock-plan")!.click();
     const sheet = document.getElementById("app-popover")!;
-    // The running read: the session figures lead, End flow mirrors the main
-    // switch, and the plan targets stand visibly disabled.
-    expect(sheet.querySelector('[data-live="focus-elapsed"]')!.textContent).toBe("00:30");
-    expect(sheet.querySelector("#focus-end")!.textContent).toBe("End flow");
-    expect(sheet.textContent).not.toContain("Enter flow");
+    // The console header is authoritative for flow: no sheet clock, no End
+    // flow control; the head names the mode, targets stand disabled.
+    expect(sheet.querySelector('[data-live="focus-elapsed"]')).toBeNull();
+    expect(sheet.querySelector("#focus-end")).toBeNull();
+    expect(sheet.querySelector(".focus-state")!.textContent).toBe("running");
     for (const chip of sheet.querySelectorAll<HTMLButtonElement>(".plan-chip")) expect(chip.disabled).toBe(true);
     expect((sheet.querySelector("#plan-minutes") as HTMLInputElement).disabled).toBe(true);
     expect((sheet.querySelector("#plan-open") as HTMLButtonElement).disabled).toBe(true);
-    // End flow lands where the main switch does.
-    sheet.querySelector<HTMLButtonElement>("#focus-end")!.click();
+    // Ending stays with the main switch.
+    document.getElementById("flow-switch")!.click();
     expect(app.state.mode).not.toBe("flow");
     app.closeApp();
   });
