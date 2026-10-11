@@ -34,10 +34,9 @@ and Cooking, a 25-minute plan armed, the sheet standing on PLAN.
   section and its tooltip are both gone, as are the figure row and any
   sheet clock.
 - [Desktop plan face in flow](desktop-plan-flow.png): the head reads
-  `RUNNING`, and the face reads the same plan — the selected habit, the
-  goals tracked, the habit chip row locked (visibly disabled; selection
-  cannot change) — with the time selection UI absent. The console header
-  owns the clock, Pause, and Exit flow.
+  `RUNNING`, and the face is the plan read alone — the selected habit and
+  the goals tracked. No selection UI, no time selection, no End flow
+  control: the console header owns the clock, Pause, and Exit flow.
 
 ## Checks
 

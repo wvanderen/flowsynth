@@ -155,26 +155,28 @@ describe("the flow-mode rule", () => {
     expect(app.state.nous).toBe(nousBefore);
   });
 
-  it("the PLAN face in flow: no duplicated time or end control, targets visibly disabled", () => {
+  it("the PLAN face in flow: the plan read only — no selection, no time UI, no end control", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
     startSession(app.state, 1200);
     advance(app.state, 60);
     const frame = openFace("plan");
-    // The console header is authoritative for flow: the sheet adds no
-    // clock of its own and no End flow control.
+    // The plan read stands as in the ready state — habit and goals — and
+    // nothing else: the console header owns the session.
+    expect(frame.querySelector(".focus-ready")!.textContent).toBe("Piano");
+    expect(document.getElementById("focus-plan-read")!.textContent).toBe("0 goals tracked");
+    expect(frame.querySelector(".focus-habit-chips")).toBeNull();
+    expect(frame.querySelector(".focus-plan-controls")).toBeNull();
     expect(frame.querySelector('[data-live="focus-elapsed"]')).toBeNull();
     expect(frame.querySelector("#focus-end")).toBeNull();
     expect(frame.querySelector("#focus-enter")).toBeNull();
-    // The plan affordances stand visibly disabled.
-    for (const chip of frame.querySelectorAll<HTMLButtonElement>(".plan-chip")) expect(chip.disabled).toBe(true);
     // The head names the mode: running.
     expect(frame.querySelector(".focus-state")!.textContent).toBe("running");
     // A flow tick keeps the sheet standing without rebuilding it.
-    const chipNode = frame.querySelector(".plan-chip")!;
+    const readNode = frame.querySelector("#focus-plan-read")!;
     advance(app.state, 30);
     app.render();
-    expect(document.querySelector("#app-popover .plan-chip")).toBe(chipNode);
+    expect(document.querySelector("#app-popover #focus-plan-read")).toBe(readNode);
   });
 
   it("the HABIT and GOALS faces read live during flow and mutate nothing", () => {
@@ -193,7 +195,7 @@ describe("the flow-mode rule", () => {
     expect(Object.keys(saved)).toEqual(Object.keys(createInitialState()));
   });
 
-  it("paused reads in the head's state word; the chips stand locked", () => {
+  it("paused reads in the head's state word; the controls stay absent", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
     startSession(app.state, 1200);
@@ -201,7 +203,7 @@ describe("the flow-mode rule", () => {
     app.pause();
     const frame = openFace("plan");
     expect(frame.querySelector(".focus-state")!.textContent).toBe("paused");
-    expect(frame.querySelector<HTMLButtonElement>(".plan-habit-chip")!.disabled).toBe(true);
+    expect(frame.querySelector(".focus-habit-chips")).toBeNull();
     expect(frame.querySelector(".focus-plan-controls")).toBeNull();
   });
 

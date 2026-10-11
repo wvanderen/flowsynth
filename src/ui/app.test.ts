@@ -109,7 +109,7 @@ describe("the console", () => {
     expect(document.querySelector("#console-session .clock-caption")!.textContent).toBe("open-ended");
   });
 
-  it("in flow the PLAN face reads the plan without time selection or end control", () => {
+  it("in flow the PLAN face reads the plan only — no selection, time UI, or end control", () => {
     const s = app.state;
     s.sessionsCompleted = 1;
     const habit = createHabit(s, "Piano").habit!;
@@ -119,15 +119,15 @@ describe("the console", () => {
     app.render();
     document.getElementById("clock-plan")!.click();
     const sheet = document.getElementById("app-popover")!;
-    // The plan read stands as in the ready state — habit, goals, chips —
-    // but the time selection UI is gone and the chips are locked.
+    // The plan read stands as in the ready state — habit, goals — and
+    // nothing else: the console header owns the session.
     expect(sheet.querySelector(".focus-ready")!.textContent).toBe("Piano");
     expect(sheet.querySelector("#focus-plan-read")!.textContent).toBe("0 goals tracked");
+    expect(sheet.querySelector(".focus-habit-chips")).toBeNull();
     expect(sheet.querySelector(".focus-plan-controls")).toBeNull();
     expect(sheet.querySelector('[data-live="focus-elapsed"]')).toBeNull();
     expect(sheet.querySelector("#focus-end")).toBeNull();
     expect(sheet.querySelector(".focus-state")!.textContent).toBe("running");
-    for (const chip of sheet.querySelectorAll<HTMLButtonElement>(".plan-habit-chip")) expect(chip.disabled).toBe(true);
     // Ending stays with the main switch.
     document.getElementById("flow-switch")!.click();
     expect(app.state.mode).not.toBe("flow");
