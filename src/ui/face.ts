@@ -336,7 +336,7 @@ export function zeroBuyRead(bank: number, nextCost: number): { plusLabel: string
 // full window.
 const SPACER_TILE_RADIUS = 20;
 
-export function inventoryTileSvg(module: ModuleInstance): string {
+export function inventoryTileSvg(module: Pick<ModuleInstance, "type">): string {
   const hue = `var(--${HUE_TOKEN_OF[module.type]})`;
   const mark =
     module.type === "spacer"

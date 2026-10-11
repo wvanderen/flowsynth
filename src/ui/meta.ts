@@ -20,11 +20,11 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
   mutatorForge: { name: "Mutator Forge", short: "Mut. Forge", role: "Mutator rolls at threshold" },
 };
 
-// The shelf's one permanent hint (§5.8): the guaranteed generator row names
-// what charge is for, since nothing else on the board explains it. Every
-// other row speaks for itself.
-export const SHELF_HINTS: Partial<Record<ShelfType, string>> = {
-  generator: "produces charge — feeds the Forge.",
+// The catalog shelf's per-row description (issue #310 steering): the one
+// line the row carries, overriding the roster's short role where the
+// purchase needs the fuller sentence.
+export const SHELF_DESCRIPTIONS: Partial<Record<ShelfType, string>> = {
+  generator: "Produces charge based on time in flow",
 };
 
 export const RARITY_LABEL: Record<Rarity, string> = { common: "common", uncommon: "uncommon", rare: "rare" };

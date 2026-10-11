@@ -152,8 +152,9 @@ h1, h2, h3, p { margin: 0; }
   width: min(230px, 60vw);
   padding: 8px 10px;
   background: var(--panel-deep);
-  border: 1px solid var(--line);
-  box-shadow: 0 8px 20px var(--shadow);
+  /* Floating text over the panel — no border, no shadow, no card (the
+     sharpened standard; the term triggers' dotted hairline is the one
+     line the layer draws). */
   text-align: left;
   font-family: var(--font-sans);
 }
@@ -3511,11 +3512,27 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 /* Separate disclosure keeps the tray tile itself a placement/drag target. */
 .tray-tile-detail { display: flex; flex-direction: column; align-items: center; min-width: 0; }
 .tray-tile-detail > .inst-tip-trigger { min-width: 44px; min-height: 44px; }
-/* Capacity disclosure remains a touch target beside the open catalog rows. */
+/* Capacity rows keep the touch-sized disclosure off — their only trigger
+   now is the inline term, which sizes to its text. */
 .capacity-catalog .catalog-row > div { min-width: 0; }
 .capacity-catalog .catalog-row h3 { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .capacity-catalog .shop-countdown { display: block; }
-.capacity-catalog .inst-tip-trigger { width: 44px; height: 44px; }
+/* The little module preview (issue #310 steering): the tray tile's own
+   simplified mark — category-hued hex outline over the signature glyph —
+   beside the row's name block. */
+.with-preview { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.module-preview { flex-shrink: 0; display: block; }
+.module-preview svg { width: 44px; height: 44px; display: block; }
+/* Hoverable domain terms (the disclosure doctrine): the term itself is the
+   trigger and its hover opens the glossary meaning — plain inline text
+   over a dotted hairline, never a chip or a card. */
+.term-trigger {
+  width: auto; height: auto; min-width: 0; min-height: 0; padding: 2px 0;
+  border: 0; border-bottom: 1px dotted var(--muted); border-radius: 0;
+  font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit;
+  vertical-align: baseline;
+}
+.term-trigger:hover, .term-trigger:focus-visible { color: var(--nous); border-color: var(--nous); background: transparent; }
 
 /* Readout figures themselves open the shared disclosure layer. */
 .readout-tip .readout-tip-trigger {
