@@ -1,6 +1,6 @@
 # Evidence: the approved control geometry applied to production (#316)
 
-All captures from the verified checkout at `2f8907d`, served by `tools/dev-server.mjs` (localhost:5176) with provenance confirmed against `git rev-parse HEAD` immediately before each capture — `worktree` equal to this checkout, `commit` equal to the captured commit. The phone composition was captured through a true 390×844 viewport frame on the same server, so both container and viewport queries apply natively.
+All captures from the verified checkout at `a17b064`, served by `tools/dev-server.mjs` (localhost:5176) with provenance confirmed against `git rev-parse HEAD` immediately before each capture — `worktree` equal to this checkout, `commit` equal to the captured commit (earlier surfaces re-captured at `2f8907d`; only the dock pip changed between those commits). The phone composition was captured through a true 390×844 viewport frame on the same server, so both container and viewport queries apply natively.
 
 ## Captures
 
