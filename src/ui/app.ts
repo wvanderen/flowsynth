@@ -1077,16 +1077,19 @@ export class App {
     );
   }
 
-  // The Enter switch (issue #280): the session-start preference picks the
-  // path. Confirmation off commits the PLAN read at once — the fallback
-  // chain is the read's own, so no plan ever set is open-ended and no habit
-  // selected is unstructured. Confirmation on opens the Focus sheet's PLAN
-  // face, the enter confirmation's home. Zero habits never blocks either
-  // path.
+  // The Enter switch (issue #280, re-clicked by #311): the session-start
+  // preference picks the path. Confirmation off commits the PLAN read at
+  // once — the fallback chain is the read's own, so no plan ever set is
+  // open-ended and no habit selected is unstructured. Confirmation on opens
+  // the Focus sheet's PLAN face, the enter confirmation's home — and while
+  // that face stands, the next press commits it, the same gesture its Enter
+  // flow control makes, never a toggle that only re-opens the sheet. Zero
+  // habits never blocks either path.
   startFlow(): void {
     if (this.released) return;
     if (this.state.mode !== "upgrade") return;
-    if (!this.ui.confirmEntry) {
+    const planStanding = this.ui.app === "time" && !this.ui.historyOpen;
+    if (!this.ui.confirmEntry || planStanding) {
       this.beginFlowFromPlan();
       return;
     }

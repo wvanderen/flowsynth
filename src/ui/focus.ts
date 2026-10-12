@@ -108,12 +108,6 @@ export function refreshConsoleClockPlan(app: App): void {
   setText(caption, word);
 }
 
-// The plan mode's caption word, shared by the planner markup and its
-// in-place patcher so the two can never drift.
-export function planCaptionWord(open: boolean): string {
-  return open ? "Open-ended" : "Planned practice";
-}
-
 // The running-session caption shared by the console clock block and the
 // sheet's running read (§2.2). Every running state names itself — paused,
 // open-ended, the overrun it counts, or what remains of the plan.
@@ -241,53 +235,59 @@ export function honestyEventLine(event: HonestyEvent): string {
 
 /* ── The PLAN face ─────────────────────────────────── */
 
-// The plan read shared by the ready line and its patcher: what the next
-// session would run to — `20:00 planned` or `open-ended` — derived from
-// `chosenTarget` alone, so the open-ended fallback needs no key of its own.
-function planReadWord(chosen: number | null): string {
-  return chosen !== null ? `${formatClock(chosen)} planned` : "open-ended";
-}
+// The planned duration reads in exactly one place — the console clock
+// (#311's one-place rule) — so the sheet's own surfaces never repeat it.
 
 function goalsTrackedRead(state: GameState): string {
   const count = state.goals.length;
   return count === 1 ? "1 goal tracked" : `${count} goals tracked`;
 }
 
-// The planned-target affordances (§6) as ruled folio rows: preset chips,
-// free 1–90 minute entry in one-minute steps — and open-ended as its own
-// mode, never a duration choice. They ride the very first start (ADR-0019),
-// visible but unpushed: the resting plan is open-ended, and only a picked
-// plan ever arms the target signals (§4).
-function planRowsHtml(app: App, live: boolean): string {
+// The habit chip row (#311): one tap switches the session habit, the
+// selected chip wears the state grammar's firm inset marker, and the
+// unstructured choice keeps its UI word — "none selected" — as its own
+// chip. Create and edit live behind the add chip (the HABIT face), never
+// a detail drill-down from here. Upgrade mode only — a running session
+// narrates its habit in the row above and changes nothing.
+function habitChipsHtml(app: App): string {
+  const { state } = app;
+  const chips = state.habits
+    .filter((h) => !h.archived)
+    .map((h) => {
+      const selected = state.activeHabitId === h.id;
+      return `<button class="plan-habit-chip${selected ? " st-selected" : ""}" data-habit-pick="${h.id}" aria-pressed="${selected}">${escapeHtml(h.name)}</button>`;
+    })
+    .join("");
+  const none = state.activeHabitId === null;
+  return `<div class="folio-row focus-habit-chips" role="group" aria-label="Session habit">
+    ${chips}<button class="plan-habit-chip plan-habit-chip-none${none ? " st-selected" : ""}" data-habit-pick="" aria-pressed="${none}">none selected</button>
+    <button class="plan-habit-chip plan-habit-chip-add" id="habit-add-chip" title="Create or edit habits">+ Add habit</button>
+  </div>`;
+}
+
+// The planned-target affordances (§6) as one compact control row (#311):
+// preset chips, the free 1–90 minute entry inline among them, and
+// open-ended as its own mode — never a duration choice. Active states ride
+// the state grammar. They ride the very first start (ADR-0019), visible but
+// unpushed: the resting plan is open-ended, and only a picked plan ever
+// arms the target signals (§4). Upgrade mode only — a running session
+// shows no time selection.
+function planRowsHtml(app: App): string {
   const open = app.ui.chosenTarget === null;
   const chosen = app.ui.chosenTarget;
   const minutes = chosen === null ? null : Math.round(chosen / 60);
   return `<div class="folio-rows focus-plan" role="group" aria-label="Planned session length">
-    <div class="folio-row focus-plan-chips">
+    <div class="folio-row focus-plan-controls">
       ${PLAN_PRESET_MINUTES.map(
         (option) =>
-          `<button class="plan-chip${minutes === option ? " active" : ""}" data-plan="${option}" aria-pressed="${minutes === option}"${live ? " disabled" : ""}>${option}</button>`,
+          `<button class="plan-chip${minutes === option ? " active" : ""}" data-plan="${option}" aria-pressed="${minutes === option}">${option}</button>`,
       ).join("")}
-    </div>
-    <div class="folio-row">
-      <span class="folio-key">Custom</span>
-      <span class="folio-main focus-plan-free">
-        <span class="plan-free">
-          <input type="number" id="plan-minutes" min="${PLAN_MIN_MINUTES}" max="${PLAN_MAX_MINUTES}" step="1" placeholder="1–90"
-            value="${minutes ?? ""}" ${open || live ? "disabled" : ""} aria-label="Custom session length, 1 to 90 minutes" />
-          <span class="plan-unit">min</span>
-        </span>
-        <button id="plan-open" class="plan-open${open ? " active" : ""}" aria-pressed="${open}"${live ? " disabled" : ""}>Open-ended</button>
+      <span class="plan-free">
+        <input type="number" id="plan-minutes" min="${PLAN_MIN_MINUTES}" max="${PLAN_MAX_MINUTES}" step="1" placeholder="1–90"
+          value="${minutes ?? ""}" ${open ? "disabled" : ""} aria-label="Custom session length, 1 to 90 minutes" />
+        <span class="plan-unit">min</span>
       </span>
-    </div>
-    <div class="folio-row">
-      ${keyTip(
-        "focus-plan-tip",
-        "Planned practice — what the target arms",
-        "Planned practice",
-        "The chime, a notification and the tab title fire at the target. Past it, presence keeps banking and away time turns provisional.",
-      )}
-      <span class="folio-main"><span class="folio-fig mono" id="focus-plan-figure">${chosen !== null ? formatClock(chosen) : "—"}</span><span class="folio-sub" id="focus-plan-word">${open ? planCaptionWord(true) : ""}</span></span>
+      <button id="plan-open" class="plan-open${open ? " active" : ""}" aria-pressed="${open}">Open-ended</button>
     </div>
   </div>`;
 }
@@ -301,49 +301,24 @@ function habitChoices(state: GameState): string {
     .join("");
 }
 
-// The PLAN face. Upgrade mode: the ready readout, the session habit, and
-// the plan affordances — the enter confirmation's home (#280, the main
-// switch's confirmation path). Flow: the running read — live elapsed, End
-// flow mirroring the main switch, targets visibly disabled.
+// The PLAN face (#311). The console header is authoritative for starting
+// and ending flow and for time — the sheet adds neither a start/end control
+// nor a clock of its own. Both modes show the plan read: the session's
+// habit and the goals tracked. Upgrade mode alone carries the controls —
+// the habit chip row and the time selection; a running session shows none,
+// narrating its habit in the row above.
 function planFaceHtml(app: App): string {
-  const { state, ui } = app;
+  const { state } = app;
   const upgrade = state.mode === "upgrade";
-  if (upgrade) {
-    const habit = activeHabit(state);
-    const habitOptions = habitChoices(state);
-    return `<div class="focus-enter">
-      <span class="focus-enter-read">
-        <span class="focus-ready t-condensed">${habit ? `Ready · ${escapeHtml(habit.name)}` : "Ready"}</span>
-        <span class="focus-enter-sub mono" id="focus-plan-read">${planReadWord(ui.chosenTarget)} · ${goalsTrackedRead(state)}</span>
-      </span>
-      <button class="switch-in" id="focus-enter">Enter flow</button>
-    </div>
-    <div class="folio-rows">
-      <div class="folio-row">
-        ${keyTip("focus-habit-tip", "Session habit", "Session habit", "The practice this session credits — or none for unstructured practice.")}
-        <span class="folio-main"><select id="focus-habit-select" aria-label="Session habit"><option value="">none selected</option>${habitOptions}</select></span>
-      </div>
-    </div>
-    ${planRowsHtml(app, false)}`;
-  }
-  const session = state.session;
-  const elapsed = session?.elapsed ?? 0;
-  const target = session?.target ?? null;
-  const paused = state.mode === "paused";
   const habit = activeHabit(state);
   return `<div class="focus-enter">
-    <span class="focus-enter-read">
-      <span class="focus-ready t-condensed">${habit ? escapeHtml(habit.name) : "Unstructured practice"}</span>
-      <span class="focus-enter-sub mono">session ${state.sessionsCompleted + 1}</span>
-    </span>
-    <button class="switch-in" id="focus-end">End flow</button>  </div>
-    <div class="folio-rows">
-      <div class="folio-row">
-        <span class="folio-key">Session</span>
-        <span class="folio-main"><span class="folio-fig mono" data-live="focus-elapsed">${formatClock(elapsed)}</span><span class="folio-sub" data-live="focus-caption">${sessionCaption(elapsed, target, paused)}</span></span>
-      </div>
+      <span class="focus-enter-read">
+        ${habit ? `<span class="focus-ready t-condensed">${escapeHtml(habit.name)}</span>` : ""}
+        <span class="focus-enter-sub mono" id="focus-plan-read">${goalsTrackedRead(state)}</span>
+      </span>
     </div>
-  ${planRowsHtml(app, true)}`;
+    ${upgrade ? `${habitChipsHtml(app)}
+    ${planRowsHtml(app)}` : ""}`;
 }
 
 /* ── The HABIT face ────────────────────────────────── */
@@ -816,11 +791,13 @@ const FACE_TABS: readonly [FocusFace, string][] = [
 // rows below don't already restate. PLAN names the readiness; HABIT names
 // the practice a session would start; GOALS wears the tracker's rolled-up
 // state (the one Goals-state read, desktop-only per ADR-0033 amended);
-// HISTORY counts the records.
+// HISTORY counts the records. During a session the head names the mode —
+// running, or paused — the panel's own read beside its name.
 function sheetStateWord(app: App): string {
   const { state } = app;
   const face = focusFaceOf(app);
-  if (state.mode !== "upgrade") return "in flow";
+  if (state.mode === "paused") return "paused";
+  if (state.mode !== "upgrade") return "running";
   switch (face) {
     case "plan":
       // The figures live in the ready row below — the head names the state,
@@ -836,14 +813,15 @@ function sheetStateWord(app: App): string {
 }
 
 // The one sheet frame both console sheets wear (ADR-0050): the clipped
-// plate anchored beneath the clock — head with the name and state word,
-// the facetab row, the close — over the standing face's body. One spelling,
-// so the Focus and Notes sheets can never drift apart.
+// plate anchored beneath the clock — head with the name and the prominent
+// state read beside it, the facetab row, the close — over the standing
+// face's body. One spelling, so the Focus and Notes sheets can never
+// drift apart.
 function sheetFrameHtml(label: string, name: string, stateWord: string, tabs: string, body: string): string {
   return `<div class="app-popover focus-sheet" id="app-popover"><section class="inst-panel" aria-label="${label}"><div class="inst-panel-face focus-sheet-face">
     <div class="focus-head">
       <span class="focus-name t-condensed">${name}</span>
-      <span class="eyebrow focus-state">${stateWord}</span>
+      <span class="focus-state t-condensed">${stateWord}</span>
       <button class="quiet small icon-btn focus-close" id="focus-close" aria-label="Close the ${label}" title="Close"><svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M-6-6 6 6M6-6-6 6"/></svg></button>
     </div>
     <div class="facetabs" role="group" aria-label="${label} faces">${tabs}</div>
@@ -868,16 +846,14 @@ export function focusSheetHtml(app: App, projected: ReturnType<typeof displayedR
 /* ── The plan surfaces' in-place patchers ──────────── */
 
 // The plan surfaces a control-driven change must reach without a render
-// (#115): the sheet's own controls, the ready read, and the console clock.
-// Every patch is an in-place text/class/attribute swap on surviving nodes,
-// so focus, open dropdowns, and scroll all ride through untouched.
+// (#115): the sheet's own controls, the ready read's goals count, and the
+// console clock — the planned duration's one readout. Every patch is an
+// in-place text/class/attribute swap on surviving nodes, so focus, open
+// dropdowns, and scroll all ride through untouched.
 export function refreshPlanState(app: App): void {
   refreshPlanControls(app);
   refreshConsoleClockPlan(app);
-  const chosen = app.ui.chosenTarget;
-  setText(document.getElementById("focus-plan-read"), `${planReadWord(chosen)} · ${goalsTrackedRead(app.state)}`);
-  setText(document.getElementById("focus-plan-figure"), chosen !== null ? formatClock(chosen) : "—");
-  setText(document.getElementById("focus-plan-word"), chosen === null ? planCaptionWord(true) : "");
+  setText(document.getElementById("focus-plan-read"), goalsTrackedRead(app.state));
   const headState = document.querySelector("#app-popover .focus-state");
   if (headState) setText(headState, sheetStateWord(app));
 }
@@ -897,7 +873,7 @@ function refreshPlanControls(app: App): void {
   if (input) {
     const value = minutes !== null ? String(minutes) : "";
     if (input.value !== value) input.value = value;
-    input.disabled = open || app.state.mode !== "upgrade";
+    input.disabled = open;
   }
   const openButton = document.getElementById("plan-open");
   openButton?.classList.toggle("active", open);
@@ -906,8 +882,9 @@ function refreshPlanControls(app: App): void {
 
 /* ── The live patcher ──────────────────────────────── */
 
-// Values that move during flow without rebuilding the sheet: the session
-// read, practice tallies, and goal progress.
+// Values that move during flow without rebuilding the sheet: the HABIT
+// face's live session read, practice tallies, and goal progress. The PLAN
+// face carries no live figures — the console clock owns time.
 export function updateFocusSheetLive(app: App, scope: ParentNode, projected: ReturnType<typeof displayedRates>): void {
   const { state } = app;
   // Palette changes patch the standing pick, keeping form values and focus.
@@ -917,10 +894,7 @@ export function updateFocusSheetLive(app: App, scope: ParentNode, projected: Ret
     swatch.setAttribute("aria-pressed", String(selected));
   }
   if (state.mode !== "upgrade") {
-    const session = state.session;
-    const elapsed = session?.elapsed ?? 0;
-    setText(scope.querySelector('[data-live="focus-elapsed"]'), formatClock(elapsed));
-    setText(scope.querySelector('[data-live="focus-caption"]'), sessionCaption(elapsed, session?.target ?? null, state.mode === "paused"));
+    const elapsed = state.session?.elapsed ?? 0;
     setText(scope.querySelector('[data-live="focus-habit-session"]'), `${formatClock(elapsed)} of practice`);
   }
   for (const habit of state.habits) {
@@ -988,15 +962,19 @@ export function bindFocusSheet(app: App, scope: HTMLElement): void {
     });
   });
   app.listen(scope.querySelector("#focus-close"), "click", () => app.closeApp());
-  // The PLAN face's Enter flow control commits the face's own read — it
-  // never re-enters the confirmation it stands in (#280).
-  app.listen(scope.querySelector("#focus-enter"), "click", () => app.beginFlowFromPlan());
-  app.listen(scope.querySelector("#focus-end"), "click", () => app.endFlow());
-  // The session habit's select (the confirmation path's shape): one landing.
-  app.listen(scope.querySelector("#focus-habit-select"), "change", (event) => {
-    const value = (event.target as HTMLSelectElement).value;
-    app.selectHabitAction(value === "" ? null : value);
+  // The console header is authoritative for flow: the sheet adds no
+  // start/end control — the main switch enters from the standing PLAN face
+  // (#280, re-clicked by #311) and ends the session.
+  // The PLAN face's habit chips (#311): one tap switches the session
+  // habit — "none selected" runs unstructured — and the add chip walks to
+  // the HABIT face, where create and edit live.
+  scope.querySelectorAll<HTMLElement>("[data-habit-pick]").forEach((chip) => {
+    app.listen(chip, "click", () => {
+      const id = chip.getAttribute("data-habit-pick");
+      app.selectHabitAction(id === "" ? null : id);
+    });
   });
+  app.listen(scope.querySelector("#habit-add-chip"), "click", () => app.showFocusFace("habit"));
   // Habits: the list rows drill; the detail head selects, renames, archives;
   // add and log are on-demand forms.
   scope.querySelectorAll<HTMLElement>("[data-drill-habit]").forEach((row) => {
