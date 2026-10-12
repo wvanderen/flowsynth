@@ -2716,7 +2716,7 @@ function capacityShopHtml(app: App): string {
         countdown: upgrade ? upgradeCountdown(app, price) : null,
       });
   const note = price === null && capacityCeilingsLeft(state)
-    ? `<small class="shop-countdown">The ceiling stands — Expansion Bays sell the next rung.</small>`
+    ? `<small class="shop-countdown">The ceiling stands — ${termTipHtml("Expansion Bays")} sell the next rung.</small>`
     : "";
   // Sold out, the lone figure is all that is left to read.
   const figure = price === null
@@ -2726,7 +2726,7 @@ function capacityShopHtml(app: App): string {
     <section class="capacity-catalog">
       <div class="catalog-rows">
         <article class="catalog-row">
-          <div><h3 class="t-condensed">Poly Expander</h3><p class="t-note">Raises ${termTipHtml("Harmonic capacity")} by one for all voices</p>${figure}${note}</div>
+          <div><h3 class="t-condensed">${termTipHtml("Poly Expander")}</h3><p class="t-note">Raises ${termTipHtml("Harmonic capacity")} by one for all voices</p>${figure}${note}</div>
           ${buy}
         </article>
       </div>
@@ -2749,10 +2749,10 @@ function capacityCeilingsLeft(state: GameState): boolean {
 // (issue #310): the owned figure is the only purchase-count read, the mono
 // delta reads what the next buy changes, the buy button carries the next
 // price, and the engraved owned-word lands when the ladder is sold out.
-// No tooltip and no lock state — the effect line's hoverable terms carry
-// what the surface cannot show.
+// No row-info tooltip and no lock state — hoverable product names and
+// effect terms carry what the surface cannot show.
 const CAPACITY_PRODUCTS: Record<"extenders" | "catalysts", {
-  name: string;
+  name: CatalogTerm;
   id: string;
   ownedWord: string;
   ownedOf(state: GameState): number;
@@ -2792,7 +2792,7 @@ function capacityProductRowHtml(app: App, key: "extenders" | "catalysts"): strin
   const owned = product.ownedOf(app.state);
   const price = product.nextPrice(app.state);
   return `<article class="catalog-row">
-    <div><h3 class="t-condensed">${product.name} <span class="mono">${owned}/${product.rungs}</span></h3><p class="t-note">${product.effect()}</p>${
+    <div><h3 class="t-condensed">${termTipHtml(product.name)} <span class="mono">${owned}/${product.rungs}</span></h3><p class="t-note">${product.effect()}</p>${
       price === null ? "" : `<p class="t-note mono">${product.delta(app.state)}</p>`
     }</div>
     ${price === null ? catalogOwnedHtml(product.ownedWord) : areteBuyButtonHtml(app, product.id, price)}
@@ -2970,12 +2970,14 @@ function catalogOwnedHtml(word: string): string {
 // the glossary meaning — description prose never grows around it. The
 // meanings here are the glossary's own, distilled to the one-line ceiling.
 // The union keeps the map closed: only glossary terms may render hoverable.
-type CatalogTerm = "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Headroom" | "nous" | "charge";
+type CatalogTerm = "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Headroom" | "nous" | "charge";
 const CATALOG_TERMS: Record<CatalogTerm, string> = {
   "Harmonic capacity": "Whole-chord budget per voice",
   memorized: "Persists through arete reset",
   Arete: "The resource banked when an era ends",
-  "Poly Expander": "Adds one whole-chord unit to every voice",
+  "Poly Expander": "Re-earned after arete reset",
+  "Expansion Bays": "Ceiling purchases persist through arete reset",
+  "Chord Catalysts": "Discount purchases persist through arete reset",
   Headroom: "Extra earnings scale the payout logarithmically",
   nous: "Main progression resource spent on upgrades",
   charge: "Generator output that powers other modules",

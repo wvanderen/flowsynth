@@ -687,7 +687,7 @@ describe("the harmonic-capacity ladder (#259)", () => {
     const description = section.querySelector(".t-note")!.textContent!;
     expect(description).toContain("Raises");
     expect(description).toContain("by one for all voices");
-    expect(section.querySelector("h3 .inst-tip")).toBeNull();
+    expect(section.querySelector("h3 .term-trigger")!.textContent).toBe("Poly Expander");
     expect(section.querySelector("svg")).toBeNull();
     // The mono delta reads the before → after on its own line.
     expect(section.querySelector(".t-note.mono")!.textContent).toBe("1/3 → 2/3");
@@ -716,9 +716,14 @@ describe("the harmonic-capacity ladder (#259)", () => {
   it("the section's gloss stays reachable and dismissible; the rows speak for themselves (issue #310 steering)", () => {
     app.state.nous = 0;
     app.openModal("catalog");
-    // No ⓘ on the row name — the Poly Expander's description lives in the
-    // body (its term gloss rides the term itself).
-    expect(document.querySelector(".capacity-catalog h3 .inst-tip-trigger")).toBeNull();
+    // The product name carries its reset mechanic through term disclosure.
+    const product = document.querySelector<HTMLButtonElement>(".capacity-catalog h3 .term-trigger")!;
+    product.focus();
+    const productBody = document.getElementById(product.getAttribute("aria-describedby")!)!;
+    expect(productBody.textContent).toBe("Re-earned after arete reset");
+    expect(productBody.classList.contains("inst-show")).toBe(true);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(productBody.classList.contains("inst-show")).toBe(false);
     app.closeModal();
     app.state.prestiges = 1;
     app.state.catalogEntryOwned = true;
@@ -788,6 +793,14 @@ describe("the harmonic-capacity ladder (#259)", () => {
     // the row, next price on the button — no second rung, no lock state.
     for (const [name, firstPrice] of [["Expansion Bays", BALANCE.capacityCeilingCosts[0]], ["Chord Catalysts", BALANCE.capacityDiscountCosts[0]]] as const) {
       const row = rowOf(name);
+      const term = row.querySelector<HTMLButtonElement>("h3 .term-trigger")!;
+      expect(term.textContent).toBe(name);
+      term.click();
+      const gloss = document.getElementById(term.getAttribute("aria-describedby")!)!;
+      expect(gloss.classList.contains("inst-show")).toBe(true);
+      expect(gloss.textContent).toContain("persist through arete reset");
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      expect(gloss.classList.contains("inst-show")).toBe(false);
       expect(row.querySelector(".mono")!.textContent).toBe("0/2");
       expect(row.querySelector("button.price")!.textContent).toContain(`${firstPrice} Arete`);
       expect(row.textContent).not.toContain("After the first");
@@ -834,7 +847,7 @@ describe("the harmonic-capacity ladder (#259)", () => {
     app.ui.mutLayer = "mutators";
     app.openModal("catalog");
     const row = [...document.querySelectorAll<HTMLElement>(".catalog-row")].find((r) => r.textContent!.includes("Expansion Bays"))!;
-    const term = row.querySelector<HTMLButtonElement>(".term-trigger")!;
+    const term = row.querySelector<HTMLButtonElement>(".t-note .term-trigger")!;
     expect(term.textContent).toBe("Harmonic capacity");
     term.focus();
     const body = document.getElementById(term.getAttribute("aria-describedby")!)!;
@@ -859,18 +872,18 @@ describe("the harmonic-capacity ladder (#259)", () => {
     // The arete face: the effect lines' term bodies and the Module Types
     // section's gloss, including Headroom's deeper claim mechanic.
     let texts = read();
-    expect(texts.length).toBe(10);
+    expect(texts.length).toBe(12);
     for (const text of texts) {
       expect(text.length).toBeLessThanOrEqual(60);
       expect(text).not.toMatch(/[—;:]/);
     }
     expect(texts).toContain("Rolled module types appear here unweighted");
-    expect(texts).toContain("Adds one whole-chord unit to every voice");
+    expect(texts).toContain("Re-earned after arete reset");
     expect(texts).toContain("The resource banked when an era ends");
     // The nous face: generator charge and Harmonic capacity glosses.
     document.querySelector<HTMLButtonElement>('[data-catalog-face="nous"]')!.click();
     texts = read();
-    expect(texts).toEqual(["Generator output that powers other modules", "Whole-chord budget per voice"]);
+    expect(texts).toEqual(["Generator output that powers other modules", "Re-earned after arete reset", "Whole-chord budget per voice"]);
   });
 
   it("the sheet's capacity offerings stand inert outside upgrade mode", () => {

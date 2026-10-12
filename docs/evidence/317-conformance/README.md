@@ -107,7 +107,7 @@ Final validation after the review correction: typecheck passed; catalog
 suite 41/41 passed; full suite 61 files passed, 1272 tests passed,
 2 skipped (72.44s). `git diff --check` clean.
 
-## Two-axis code review
+## Original implementation review
 
 Fixed point: task-start HEAD `2a6b4ba770ae13050be7ccaabfa1577aad7547f9`.
 Two independent reviewers checked the committed diff and live #281/#326
@@ -115,6 +115,39 @@ handoff. Both flagged the same remaining flow-title duplication; removed
 it and re-reviewed at `4961ee5` before this results-only amendment.
 
 - **Standards:** 0 remaining findings; no baseline smell findings.
-- **Spec:** 0 remaining findings; handoff and explicit unavailable checks
+- **Spec (original review):** 0 remaining findings; handoff and explicit unavailable checks
   satisfy the issue's requirements. Goal-slot naming remains filed in #326,
   not misreported as fixed.
+
+## PR #327 disclosure correction
+
+The independent PR review found a missed sweep requirement: Poly Expander,
+Expansion Bays and Chord Catalysts are CONTEXT.md terms, but their headings
+were plain text. The earlier catalog conformance rows did not account for
+this drift. All three headings now use the existing term disclosure layer;
+the capped Poly Expander row also discloses its Expansion Bays reference.
+The short glosses explain reset persistence, which the visible effect lines
+do not show. Prices, purchase gates and product effects are unchanged.
+
+Fresh desktop evidence: `desktop-nous-disclosure-fix.png` and
+`desktop-arete-disclosure-fix.png`. Served with `npm run dev` at
+localhost:5178/?dev from
+`/Users/eggfam/.t3/worktrees/flowsynth/t3code-6017c8b1`, branch
+`fix/pr327-disclosure`, HEAD `489a846398d006963976e72fddf33b907b2fdeaf`
+plus the correction diff. The browser provenance endpoint matched before
+capture. Measured viewport 1402×877; screenshot output 1280×800.
+Compared with the pinned prototype's open rows and controls sheet's plain
+term layer; no layout, control geometry or animation change was introduced.
+
+Browser clicks opened the three product glosses and Escape dismissed them.
+Poly Expander's body had zero border and no shadow. Programmatic focus did
+not visibly open its body in the preview, so focus-only browser verification
+remains unavailable; catalog interaction tests verify focus opening and
+Escape dismissal. Physical touch, grayscale and reduced-motion rendering
+remain unavailable. A fresh 390×844 resize timed out, so phone composition
+remains unavailable and these images are desktop evidence only.
+
+Validation after correction: `npm run check` passed; catalog suite 41/41
+passed; full suite 61 files, 1272 tests passed, 2 skipped (48.78s),
+including all UI suites. `git diff --check` clean. The mechanical detector
+reported no findings for `src/ui/render.ts`.
