@@ -184,7 +184,6 @@ export function focusSheetKey(app: App): string {
       .join("|"),
     state.goalCapacityBought,
     state.sessionRecords.length,
-    ui.goalColor,
     ui.goalRecolorId,
   ]);
 }
@@ -504,7 +503,7 @@ function openGoalsFirst(a: Goal, b: Goal): number {
 function goalSwatchesHtml(attr: string, selected: GoalColor): string {
   return `<span class="goal-swatches" role="group" aria-label="Goal color">${GOAL_COLORS.map(
     (key) =>
-      `<button class="goal-swatch${key === selected ? " selected" : ""}" type="button" ${attr}="${key}" aria-pressed="${key === selected}" aria-label="${key}" style="background:var(--goal-${key})"></button>`,
+      `<button class="goal-swatch${key === selected ? " selected" : ""}" type="button" ${attr}="${key}" aria-pressed="${key === selected}" aria-label="${key}"><span aria-hidden="true" style="background:var(--goal-${key})"></span></button>`,
   ).join("")}</span>`;
 }
 
@@ -911,6 +910,12 @@ function refreshPlanControls(app: App): void {
 // read, practice tallies, and goal progress.
 export function updateFocusSheetLive(app: App, scope: ParentNode, projected: ReturnType<typeof displayedRates>): void {
   const { state } = app;
+  // Palette changes patch the standing pick, keeping form values and focus.
+  for (const swatch of scope.querySelectorAll<HTMLElement>("[data-goal-draft-color]")) {
+    const selected = swatch.getAttribute("data-goal-draft-color") === app.ui.goalColor;
+    swatch.classList.toggle("selected", selected);
+    swatch.setAttribute("aria-pressed", String(selected));
+  }
   if (state.mode !== "upgrade") {
     const session = state.session;
     const elapsed = session?.elapsed ?? 0;

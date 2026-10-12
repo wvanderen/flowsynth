@@ -848,6 +848,31 @@ describe("the GOALS face's slots and purchase row (#150)", () => {
     expect(sheet().querySelector<HTMLButtonElement>('.goal-swatch[aria-pressed="true"]')!.getAttribute("data-goal-draft-color")).toBe("vermillion");
   });
 
+  it("keeps goal fields and keyboard focus when picking a color", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    app.openApp("goals");
+    sheet().querySelector<HTMLButtonElement>("#goal-create-open")!.click();
+    const minutes = sheet().querySelector<HTMLInputElement>("#goal-minutes")!;
+    const habitSelect = sheet().querySelector<HTMLSelectElement>("#goal-habit")!;
+    const schedule = sheet().querySelector<HTMLSelectElement>("#goal-schedule")!;
+    minutes.value = "30";
+    habitSelect.value = habit.id;
+    schedule.value = "weekly";
+    const amber = sheet().querySelector<HTMLButtonElement>('[data-goal-draft-color="amber"]')!;
+    amber.focus();
+    amber.click();
+    app.render();
+    expect(document.activeElement).toBe(amber);
+    expect(sheet().querySelector("#goal-minutes")).toBe(minutes);
+    expect(minutes.value).toBe("30");
+    expect(habitSelect.value).toBe(habit.id);
+    expect(schedule.value).toBe("weekly");
+    expect(amber.getAttribute("aria-pressed")).toBe("true");
+    expect(amber.classList.contains("selected")).toBe(true);
+    sheet().querySelector<HTMLButtonElement>("#goal-add")!.click();
+    expect(app.state.goals[0]).toMatchObject({ color: "amber", condition: { habitId: habit.id, minutes: 30 }, schedule: { kind: "weekly" } });
+  });
+
   it("a goal row's re-pick is the palette's edit half — the track and banner follow the goal (#312)", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     const goal = createGoal(app.state, { habitId: habit.id, minutes: 30, schedule: "once", now: DAY, color: "vermillion" }).goal!;
