@@ -548,11 +548,11 @@ describe("the sheet's live reads", () => {
     advance(app.state, 30);
     const frame = openFace("goals");
     const bar = frame.querySelector("[data-goal-progress]") as HTMLElement;
-    const before = bar.style.width;
+    const before = bar.style.height;
     advance(app.state, 15);
     app.tick();
     expect(document.querySelector("[data-goal-progress]")).toBe(bar);
-    expect(bar.style.width).not.toBe(before);
-    expect(bar.style.width).toBe("75%");
+    expect(bar.style.height).not.toBe(before);
+    expect(bar.style.height).toBe("75%");
   });
 });

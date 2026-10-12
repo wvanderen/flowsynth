@@ -591,6 +591,7 @@ function achRowHtml(app: App, def: AchievementDef, ctx: AchievementContext): str
   const readout =
     unlockedAt !== undefined ? ACH_MARK : `<span class="ach-readout mono">${formatNumber(current)} / ${formatNumber(goal)}</span>`;
   return `<div class="ach-row${unlockedAt !== undefined ? " unlocked" : ""}">
+    <span class="gbar" aria-hidden="true"><i style="height:${(fraction * 100).toFixed(1)}%"></i></span>
     <span class="ach-icon" aria-hidden="true">${def.icon}</span>
     <div class="ach-body">
       <div class="ach-head">
@@ -599,7 +600,6 @@ function achRowHtml(app: App, def: AchievementDef, ctx: AchievementContext): str
         ${readout}
       </div>
       <p class="ach-desc">${def.description}</p>
-      <div class="ach-track" aria-hidden="true"><i style="width:${(fraction * 100).toFixed(1)}%"></i></div>
     </div>
   </div>`;
 }
@@ -799,8 +799,9 @@ function meterDetail(app: App, forgeRate: number, mutatorRate: number): string {
 }
 
 // Every meter bar's fill: the clamped progress share, one build for the
-// dock pip and the modal's card-scale bars alike.
-function meterPipWidth(progress: number, cap: number): string {
+// dock pip and the modal's card-scale bars alike — the shared column
+// fills by height.
+function meterPipFill(progress: number, cap: number): string {
   return `${(Math.min(1, Math.max(0, progress / cap)) * 100).toFixed(1)}%`;
 }
 
@@ -985,8 +986,8 @@ function renderTools(app: App, projected: RateSnapshot): void {
   for (const target of [host, thumb]) {
     if (!target) continue;
     const pip = target.querySelector<HTMLElement>('[data-live="forge-pip"]');
-    const pipWidth = meterPipWidth(state.flow.progress, flowCap);
-    if (pip && pip.style.width !== pipWidth) pip.style.width = pipWidth;
+    const pipFill = meterPipFill(state.flow.progress, flowCap);
+    if (pip && pip.style.width !== pipFill) pip.style.width = pipFill;
     const forgeButton = target.querySelector<HTMLButtonElement>('[data-op="forge"]');
     if (forgeButton) {
       const action = actions.find((a) => a.op === "forge")!;
@@ -3111,18 +3112,18 @@ function forgeMeterHtml(state: GameState): string {
   return `<div class="forge-meters">
     <div class="forge-meter">
       <span class="meter-name">Flow meter</span>
-      <span class="forge-pip" aria-hidden="true"><i data-live="modal-flow-pip"></i></span>
+      <span class="gbar" aria-hidden="true"><i data-live="modal-flow-pip"></i></span>
       <span class="meter-figures mono" data-live="modal-flow-line"></span>
     </div>
     <div class="forge-meter">
       <span class="meter-name">Forge progress</span>
-      <span class="forge-pip" aria-hidden="true"><i data-live="modal-forge-pip"></i></span>
+      <span class="gbar" aria-hidden="true"><i data-live="modal-forge-pip"></i></span>
       <span class="meter-figures mono" data-live="modal-forge-line"></span>
     </div>
     ${state.catalogEntryOwned ? `
     <div class="forge-meter">
       <span class="meter-name">Mutator Forge</span>
-      <span class="forge-pip" aria-hidden="true"><i data-live="modal-mutator-pip"></i></span>
+      <span class="gbar" aria-hidden="true"><i data-live="modal-mutator-pip"></i></span>
       <span class="meter-figures mono" data-live="modal-mutator-line"></span>
     </div>` : ""}
   </div>`;
@@ -3132,13 +3133,13 @@ function updateForgeMetersLive(scope: ParentNode, state: GameState, forgeRate: n
   const flowCap = flowThreshold(state.flow.earned);
   const forgeCap = forgeThreshold(state.forge.earned);
   const mutatorCap = mutatorForgeThreshold(state.mutatorForge.earned);
-  liveAttr(scope, "modal-flow-pip", "style", `width:${meterPipWidth(state.flow.progress, flowCap)}`);
-  liveAttr(scope, "modal-forge-pip", "style", `width:${meterPipWidth(state.forge.progress, forgeCap)}`);
+  liveAttr(scope, "modal-flow-pip", "style", `height:${meterPipFill(state.flow.progress, flowCap)}`);
+  liveAttr(scope, "modal-forge-pip", "style", `height:${meterPipFill(state.forge.progress, forgeCap)}`);
   liveSet(scope, "modal-flow-line", flowMeterLine(state));
   liveSet(scope, "modal-forge-line", forgeMeterLine(state, forgeRate));
 // The Mutator Forge branch's row exists only once the tree is entered
 // (issue #199): the live fills are no-ops while its nodes are absent.
-  liveAttr(scope, "modal-mutator-pip", "style", `width:${meterPipWidth(state.mutatorForge.progress, mutatorCap)}`);
+  liveAttr(scope, "modal-mutator-pip", "style", `height:${meterPipFill(state.mutatorForge.progress, mutatorCap)}`);
   liveSet(scope, "modal-mutator-line", mutatorForgeMeterLine(state, mutatorRate));
 }
 
@@ -3270,7 +3271,7 @@ function renderResetModal(app: App, content: HTMLElement): void {
     <p class="lead">Erases everything. Export first for a backup.</p>
     <div class="modal-actions">
       <button id="reset-cancel">Keep playing</button>
-      <button id="reset-confirm" class="primary" style="background:var(--danger);border-color:var(--danger)">Erase everything</button>
+      <button id="reset-confirm" class="primary danger">Erase everything</button>
     </div>`;
   app.listen(byId("reset-cancel"), "click", () => app.closeModal());
   app.listen(byId("reset-confirm"), "click", () => app.hardReset());

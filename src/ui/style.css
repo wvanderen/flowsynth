@@ -30,29 +30,41 @@ body {
 
 button, select, input, textarea { font: inherit; }
 
+/* The one control (the controls sheet, #315): square-cut, hairline border,
+   condensed technical lettering, the 44px touch floor. Hover fills the
+   face; focus rings in ink; the unavailable control mutes per the state
+   grammar. No surface carries a private variant of this shape. */
 button {
   cursor: pointer;
   color: inherit;
   border: 1px solid var(--line);
   background: transparent;
-  border-radius: 5px;
+  border-radius: 0;
   padding: 9px 13px;
+  min-height: 44px;
+  font: 600 15px/1.2 var(--font-condensed);
+  letter-spacing: 0.02em;
   transition: background 0.15s, border-color 0.15s;
 }
 
 button:hover:not(:disabled) { background: var(--hover-bg); border-color: var(--line-strong); }
 button:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
-  outline: 2px solid var(--charge);
+  outline: 2px solid var(--ink);
   outline-offset: 3px;
 }
-button:disabled { opacity: 0.35; cursor: default; }
+button:disabled { color: var(--muted); border-color: var(--line-soft); cursor: default; }
 
-.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 650; }
-.primary:hover:not(:disabled) { background: var(--accent-bright); }
-/* The Arete sheet's buy buttons (issue #197): the register rides the
-   purchase affordance too — violet, not the nous accent. */
-.primary.arete { background: var(--arete); border-color: var(--arete); color: var(--panel-deep); }
-.primary.arete:hover:not(:disabled) { background: var(--arete-bright); border-color: var(--arete-bright); }
+/* The buy register rides the purchase affordance as the sheet's outline
+   voice wearing its resource's hue — nous accent here, violet on the
+   Arete sheet (issue #197). Hover fills the face; unavailable mutes. */
+.primary { border-color: var(--accent); color: var(--accent); }
+.primary:hover:not(:disabled) { background: var(--accent-faint); border-color: var(--accent); }
+.primary:disabled { background: transparent; }
+.primary.arete { border-color: var(--arete); color: var(--arete); }
+.primary.arete:hover:not(:disabled) { background: var(--arete-faint); border-color: var(--arete); }
+/* Destructive confirms wear the danger register the same outline way. */
+.danger { border-color: var(--danger); color: var(--danger); }
+.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 14%, transparent); border-color: var(--danger); }
 .quiet { border: 0; color: var(--muted); padding: 7px; }
 .small { font-size: 12px; }
 .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
@@ -117,6 +129,33 @@ h1, h2, h3, p { margin: 0; }
   box-shadow: inset 0 -1px var(--muted);
 }
 
+/* The bar (the controls sheet's vertical goal-bar column): fill by
+   height, never by width; the fill wears its goal's palette token from
+   the markup; completion engraves the check — state never rides color
+   alone. Surfaces size the column in context; the shape lives only here.
+   The horizontal rounded track is the retired contrast and has no rule
+   left to be reborn from. */
+.gbar { position: relative; display: block; width: 9px; height: 30px; background: var(--line-soft); overflow: hidden; }
+.gbar i {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: block;
+  width: 100%;
+  transition: height 400ms ease-out;
+}
+.gbar.done::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font: 700 8px/1 var(--mono);
+  color: var(--bg);
+  text-shadow: 0 0 1px var(--ink);
+}
+
 /* The tooltip layer: deeper mechanics live only here — never expandable
    detail sections. The body renders beside its trigger and is portal-
    parented and placed at it by instrument.ts's wiring (a clipped or
@@ -132,6 +171,10 @@ h1, h2, h3, p { margin: 0; }
   padding: 0;
   width: 24px;
   height: 24px;
+  /* The ⓘ ring keeps its own compact chrome against the shared control's
+     44px floor — the ring is the approved gate mark, not a text control. */
+  min-width: 0;
+  min-height: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -153,7 +196,7 @@ h1, h2, h3, p { margin: 0; }
   padding: 8px 10px;
   background: var(--panel-deep);
   /* Floating text over the panel — no border, no shadow, no card (the
-     sharpened standard; the term triggers' dotted hairline is the one
+     sharpened standard; the term triggers' engraved hairline is the one
      line the layer draws). */
   text-align: left;
   font-family: var(--font-sans);
@@ -325,7 +368,6 @@ h1, h2, h3, p { margin: 0; }
   font-size: 15px;
   font-weight: 650;
   letter-spacing: 0.02em;
-  border-radius: 8px;
   white-space: nowrap;
 }
 .main-switch svg { width: 16px; height: 16px; }
@@ -381,18 +423,9 @@ h1, h2, h3, p { margin: 0; }
   max-width: 18ch;
 }
 .gbars { display: flex; align-items: flex-end; gap: 4px; height: 30px; flex-shrink: 0; }
-.gbar { position: relative; display: block; width: 9px; height: 100%; background: var(--line-soft); overflow: hidden; }
-.gbar i { position: absolute; left: 0; right: 0; bottom: 0; display: block; }
-.gbar.done::after {
-  content: "✓";
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font: 700 8px/1 var(--mono);
-  color: var(--bg);
-  text-shadow: 0 0 1px var(--ink);
-}
+/* The banner's bars ride the strip's height — the shared column's one
+   console context. */
+.gbars .gbar { height: 100%; }
 .gbar-overflow { font-size: 11px; color: var(--muted); flex-shrink: 0; }
 
 /* Focus-app doors (ADR-0012, #313): bare uncarded icon controls — the
@@ -409,13 +442,13 @@ h1, h2, h3, p { margin: 0; }
   justify-content: center;
   width: 38px;
   height: 38px;
+  min-height: 0;
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 8px;
   background: transparent;
 }
 .app-tile:hover, .app-tile.open { border-color: var(--line); background: var(--panel); }
-.app-tile.open { box-shadow: inset 0 -2px var(--ink); }
+.app-tile.open { box-shadow: inset 0 -3px var(--ink); }
 .app-tile-glyph { display: flex; align-items: center; gap: 6px; color: var(--ink); }
 .app-tile-glyph svg { width: 19px; height: 19px; display: block; }
 
@@ -431,7 +464,6 @@ h1, h2, h3, p { margin: 0; }
   overflow-y: auto;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px;
   padding: 14px 16px 16px;
   box-shadow: 0 18px 50px var(--shadow);
   z-index: 30;
@@ -466,7 +498,7 @@ h1, h2, h3, p { margin: 0; }
   background: var(--panel-soft);
   color: var(--ink);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 0;
   padding: 7px 8px;
   font-size: 12.5px;
 }
@@ -500,7 +532,7 @@ h1, h2, h3, p { margin: 0; }
   color: var(--muted);
 }
 .ftab:hover { color: var(--ink); }
-.ftab.active { color: var(--ink); box-shadow: inset 0 -2px var(--ink); border-color: var(--ink); }
+.ftab.active { color: var(--ink); box-shadow: inset 0 -3px var(--ink); border-color: var(--ink); }
 
 /* The PLAN face's ready readout: what a session would start — habit and
    goals tracked, no start control (the console header is authoritative for
@@ -523,13 +555,12 @@ h1, h2, h3, p { margin: 0; }
 .plan-habit-chip {
   padding: 5px 11px;
   border: 1px solid var(--line);
-  border-radius: 999px;
   font: 600 12px var(--font-condensed);
   letter-spacing: 0.04em;
   color: var(--muted);
   background: var(--panel-soft);
 }
-.plan-habit-chip.st-selected { border-color: var(--ink); color: var(--ink); box-shadow: inset 0 -2px var(--ink); }
+.plan-habit-chip.st-selected { border-color: var(--ink); color: var(--ink); box-shadow: inset 0 -3px var(--ink); }
 .plan-habit-chip-none { border-style: dashed; }
 .plan-habit-chip-add { border-style: dashed; color: var(--muted); }
 .plan-habit-chip-add:hover:not(:disabled) { color: var(--ink); }
@@ -560,7 +591,6 @@ h1, h2, h3, p { margin: 0; }
   border-color: transparent;
   color: var(--muted);
   padding: 6px 8px;
-  min-height: 40px;
   text-align: left;
   font: 600 13px var(--font-condensed);
   letter-spacing: 0.06em;
@@ -574,7 +604,7 @@ h1, h2, h3, p { margin: 0; }
   background: var(--panel-soft);
   color: var(--ink);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 0;
   padding: 7px 10px;
   font-size: 13px;
 }
@@ -586,7 +616,6 @@ h1, h2, h3, p { margin: 0; }
 .focus-back {
   border: 0;
   padding: 4px 0;
-  min-height: 32px;
   color: var(--muted);
   font: 600 12px var(--font-condensed);
   letter-spacing: 0.1em;
@@ -603,13 +632,11 @@ h1, h2, h3, p { margin: 0; }
 .habit-detail-read .note-list { margin-top: 10px; }
 
 /* The GOALS face's rows: the folio's hairline replaces the card, the
-   progress track rides beneath the name, delete rides the row's end. */
-.goal-ledger { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    progress bar rides at the row's lead, delete rides the row's end. */
 .goal-ledger-head { display: flex; align-items: center; gap: 8px; }
 .goal-ledger-name { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .goal-row.done .goal-ledger-name { color: var(--muted); }
 .goal-ledger-head .icon-btn { flex-shrink: 0; }
-.goal-row .goal-track { margin: 8px 0 4px; }
 .long-goal-row { justify-content: space-between; align-items: center; }
 .long-goal-row .long-goal-name { font-size: 13.5px; font-weight: 550; }
 .long-goal-row .shop-buy { align-items: flex-end; }
@@ -626,12 +653,11 @@ h1, h2, h3, p { margin: 0; }
 .plan-chips { display: flex; flex-wrap: wrap; gap: 5px; }
 .plan-chip {
   padding: 5px 9px;
-  border-radius: 999px;
   font: 12px var(--mono);
   color: var(--muted);
   background: var(--panel-soft);
 }
-.plan-chip.active { border-color: var(--ink); color: var(--ink); box-shadow: inset 0 -2px var(--ink); }
+.plan-chip.active { border-color: var(--ink); color: var(--ink); box-shadow: inset 0 -3px var(--ink); }
 .plan-free { display: flex; align-items: center; gap: 7px; }
 .plan-free input {
   width: 74px;
@@ -639,12 +665,12 @@ h1, h2, h3, p { margin: 0; }
   background: var(--panel-soft);
   color: var(--ink);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 0;
 }
 .plan-free input:focus { border-color: var(--charge); outline: none; }
 .plan-unit { font: 11.5px var(--mono); color: var(--muted); }
-.plan-open { padding: 5px 11px; border-radius: 999px; font-size: 12px; color: var(--muted); }
-.plan-open.active { border-color: var(--ink); color: var(--ink); box-shadow: inset 0 -2px var(--ink); }
+.plan-open { padding: 5px 11px; font-size: 12px; color: var(--muted); }
+.plan-open.active { border-color: var(--ink); color: var(--ink); box-shadow: inset 0 -3px var(--ink); }
 /* The settings modal's readout stack (§5, issue #280): the ruled folio's
    preference rows — key, control, tooltip. The checkboxes carry the native
    state, so it reads without color; the control phrase sits beside each. */
@@ -679,9 +705,12 @@ h1, h2, h3, p { margin: 0; }
    headline. Effect and state pack right together; the name wraps first. */
 .ach-row .ach-effect { font-size: 10.5px; color: var(--muted); white-space: nowrap; flex-shrink: 0; margin-left: auto; }
 .ach-desc { margin: 3px 0 8px; font-size: 11.5px; color: var(--muted); }
-.ach-track { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
-.ach-track i { display: block; height: 100%; background: var(--muted); opacity: 0.55; border-radius: 2px; }
-.ach-row.unlocked .ach-track i { background: var(--accent); opacity: 1; }
+/* The progress bar is the shared goal-bar column (the controls sheet):
+   fill by height, the standing fill muted until the feat unlocks — the
+   row's engraved mark carries the acquired state. */
+.ach-row .gbar { flex-shrink: 0; }
+.ach-row .gbar i { background: var(--muted); opacity: 0.55; }
+.ach-row.unlocked .gbar i { background: var(--accent); opacity: 1; }
 
 /* The feats' shared state grammar (issue #269): every row — encourager
    card or milestone line — leads with its unique mark at 22px (the glyphs
@@ -770,6 +799,7 @@ h1, h2, h3, p { margin: 0; }
   border-radius: 0;
   background: transparent;
   padding: 0;
+  min-height: 0;
   font: inherit;
   color: inherit;
 }
@@ -808,7 +838,7 @@ h1, h2, h3, p { margin: 0; }
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  border-radius: 7px;
+  min-height: 0;
   font-size: 12px;
   color: var(--muted);
   flex-shrink: 0;
@@ -1019,7 +1049,7 @@ h1, h2, h3, p { margin: 0; }
   background: var(--panel-soft);
   color: var(--ink);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 0;
   padding: 10px 12px;
   resize: vertical;
   min-height: 66px;
@@ -1042,7 +1072,7 @@ h1, h2, h3, p { margin: 0; }
    sheet's faces. */
 .habit-dot { width: 8px; height: 8px; border-radius: 100%; border: 1.5px solid var(--muted); flex-shrink: 0; }
 .habit-ledger-row .habit-dot.on { background: var(--accent); border-color: var(--accent); }
-.habit-rename-input { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--charge); border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+.habit-rename-input { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--charge); border-radius: 0; padding: 6px 10px; font-size: 13px; }
 
 /* The habit build (ADR-0046): the shared catalog read against the habit's
    own practice time — equipped nodes numbered by slot, unlocked nodes one
@@ -1056,7 +1086,7 @@ h1, h2, h3, p { margin: 0; }
 .build-node {
   display: flex; align-items: center; gap: 9px;
   width: 100%; text-align: left;
-  border: 1px solid var(--line-soft); border-radius: 7px;
+  border: 1px solid var(--line-soft);
   background: transparent; color: var(--ink);
   padding: 5px 9px;
 }
@@ -1067,7 +1097,7 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
 .build-node-mark {
   width: 18px; height: 18px; flex-shrink: 0;
   display: grid; place-items: center;
-  border: 1px solid var(--line); border-radius: 5px;
+  border: 1px solid var(--line);
   font-size: 10px; color: var(--muted);
 }
 .build-node.equipped .build-node-mark { border-color: var(--switch); color: var(--switch); }
@@ -1112,36 +1142,46 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
 
 /* Goals: tracked practice conditions in limited slots. */
 .goal-create { display: flex; gap: 6px; flex-wrap: wrap; }
-.goal-create select, .goal-create input { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; font-size: 12.5px; }
+.goal-create select, .goal-create input { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 0; padding: 7px 8px; font-size: 12.5px; }
 .goal-create input { width: 64px; }
 .goal-create select:focus, .goal-create input:focus { border-color: var(--charge); outline: none; }
-/* The palette picker (issue #312): exactly the six swatches, the standing
-   pick wearing the firm inset ring (the state grammar's selected voice);
-   the row trigger carries the goal's current color as its dot. Colors ride
-   the goal palette tokens — the markup paints them, never this sheet. */
-.goal-swatches { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; flex-basis: 100%; }
+/* The GOALS face's rows: the shared bar column leads the ledger — fill by
+   height, palette token from the markup, the done row's bar holding full
+   height under the engraved check. */
+.goal-ledger {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: center;
+}
+.goal-ledger .gbar { grid-column: 1; grid-row: 1 / span 3; }
+.goal-ledger-head, .goal-ledger small, .goal-ledger .goal-swatches { grid-column: 2; }
+/* The palette picker (issue #312): exactly the six swatches as the sheet
+   renders them — square-cut controls, the standing pick under the firm
+   inset marker. Colors ride the goal palette tokens — the markup paints
+   them, never this sheet. */
+.goal-swatches { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .goal-swatch {
   width: 44px;
   height: 44px;
-  padding: 10px;
-  border: 0;
-  background: transparent;
+  padding: 9px;
+  display: grid;
+  place-items: center;
   flex-shrink: 0;
 }
 .goal-swatch > span {
   display: block;
   width: 24px;
   height: 24px;
-  border-radius: 999px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--line);
 }
-.goal-swatch.selected > span { border-color: var(--ink); box-shadow: inset 0 0 0 2px var(--panel-deep); }
+.goal-swatch.selected { border-color: var(--ink); box-shadow: inset 0 -3px var(--ink); }
 .goal-recolor { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; min-width: 44px; min-height: 44px; }
-.goal-recolor-dot { display: block; width: 10px; height: 10px; border-radius: 999px; }
+.goal-recolor-dot { display: block; width: 10px; height: 10px; }
 .goal-status { font: 10px var(--mono); color: var(--muted); flex-shrink: 0; }
 .goal-status.done { color: var(--charge); }
-.goal-track { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
-.goal-track > span { display: block; height: 100%; transition: width 400ms ease-out; }
 .goal-row small { color: var(--muted); font-size: 10px; }
 
 .stat-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
@@ -1159,7 +1199,6 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
   align-items: center;
   padding: 8px 6px 9px;
   border: 1px solid transparent;
-  border-radius: 10px;
   background: transparent;
   touch-action: none;
   transition: border-color 0.15s, background 0.15s, transform 0.15s;
@@ -1214,11 +1253,11 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   position: relative;
   width: 38px;
   height: 38px;
+  min-height: 0;
   padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
   background: var(--panel-veil);
   backdrop-filter: blur(3px);
 }
@@ -1236,14 +1275,26 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   padding: 2.5px 5px;
   font-style: normal;
 }
-.tool-icon .forge-pip { position: absolute; left: 7px; right: 7px; bottom: 3px; }
-.forge-pip { display: block; height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; }
+/* The dock's charge pip: a square-cut horizontal strip in the clear band
+   beneath the glyph — its reviewed dock reading, kept by direction. The
+   goal/meter bars stay columns; this one indicator fills by width. */
+.forge-pip { display: block; background: var(--line); overflow: hidden; }
 .forge-pip i { display: block; height: 100%; width: 0; background: var(--forge-glow); }
-.board-tools button.active, .thumb-bar button.active { border-color: var(--accent); color: var(--accent); background: var(--accent-faint); }
+.tool-icon .forge-pip { position: absolute; left: 7px; right: 7px; bottom: 3px; height: 3px; }
+/* The armed tool wears the state grammar's selected voice: the firm inset
+   marker with ink, readable without color. */
+.board-tools button.active, .thumb-bar button.active {
+  border-color: var(--ink);
+  color: var(--ink);
+  background: var(--hover-bg);
+  box-shadow: inset 0 -3px var(--ink);
+}
 
 /* The one meter detail (ADR-0041): the Forge modal's block listing every
    meter's progress, threshold, and rate — the pip's own bar at card scale,
-   figures riding live slots the tick fills in place. */
+   figures riding live slots the tick fills in place. It is the tooltip
+   layer's disclosure, so it presents plain: panel surface, no border, no
+   card. */
 .forge-detail {
   position: absolute;
   left: calc(100% + 8px);
@@ -1251,8 +1302,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   z-index: 1;
   width: min(320px, calc(100cqw - 80px));
   padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  border: 0;
   background: var(--panel-deep);
   color: var(--ink);
   font-size: 12px;
@@ -1264,10 +1314,17 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .forge-detail[hidden] { display: none; }
 .thumb-bar .forge-detail { left: -60px; top: auto; bottom: calc(100% + 8px); width: min(300px, calc(100cqw - 24px)); }
 .forge-meters { display: grid; gap: 8px; margin: 2px 0 12px; }
-.forge-meter { display: grid; gap: 4px; }
-.forge-meter .meter-name { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.forge-meter .forge-pip { height: 5px; }
-.forge-meter .meter-figures { font-size: 11px; color: var(--muted); }
+/* Each meter: the shared bar column leading its name and figures. */
+.forge-meter {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: center;
+}
+.forge-meter .meter-name { grid-column: 2; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.forge-meter .gbar { grid-column: 1; grid-row: 1 / span 2; }
+.forge-meter .gbar i { background: var(--forge-glow); }
+.forge-meter .meter-figures { grid-column: 2; font-size: 11px; color: var(--muted); }
 
 /* The bottom thumb bar (§7, issue #270): the console's re-docked form on
    portrait phone — Catalog / Forge / Add / Inventory / Collection.
@@ -1295,7 +1352,6 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   gap: 4px;
   padding: 6px 2px;
   border: none;
-  border-radius: 8px;
   color: var(--muted);
   min-width: 0;
 }
@@ -1338,6 +1394,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   border: 0;
   background: none;
   padding: 0;
+  min-height: 0;
   font: inherit;
   color: inherit;
 }
@@ -1427,7 +1484,6 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   transform: translateX(-50%);
   padding: 5px 16px;
   border: 1px solid var(--line-strong);
-  border-radius: 999px;
   background: color-mix(in srgb, var(--panel-deep) 88%, var(--arete));
   color: var(--ink);
   font: 10px var(--mono);
@@ -1466,7 +1522,6 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   padding: 10px 34px 10px 12px;
   background: color-mix(in srgb, var(--panel-soft) 92%, transparent);
   border: 1px solid var(--line-strong);
-  border-radius: 10px;
   backdrop-filter: blur(3px);
   box-shadow: 0 4px 18px var(--shadow);
 }
@@ -1479,13 +1534,13 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   right: 6px;
   width: 22px;
   height: 22px;
+  min-height: 0;
   padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 11px;
   color: var(--muted);
-  border-radius: 6px;
   background: transparent;
 }
 .arc-dismiss:hover { color: var(--ink); background: var(--hover-bg); }
@@ -1505,6 +1560,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .zoom-cluster button {
   width: 36px;
   height: 34px;
+  min-height: 0;
   padding: 0;
   display: inline-flex;
   align-items: center;
@@ -1729,7 +1785,6 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   padding: 2px 6px;
   background: var(--panel-deep);
   border: 1px solid var(--muted);
-  border-radius: 4px;
 }
 .chord-readout-scale .scale-track {
   stroke: var(--muted);
@@ -1901,7 +1956,6 @@ body.hex-detail-open .upgrade-all {
 .hex-detail-return {
   padding: 5px 14px;
   border: 1px solid var(--line-strong);
-  border-radius: 7px;
   background: var(--panel-soft);
   font: 600 11px var(--font-condensed);
   letter-spacing: 0.08em;
@@ -1955,7 +2009,7 @@ body.hex-detail-open .upgrade-all {
   outline: none;
 }
 .hex-detail-layer.selected { opacity: 1; }
-.hex-detail-layer:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.hex-detail-layer:focus-visible { outline-offset: 4px; }
 /* The faces: each chassis is the section's own control — clicking a face
    emphasizes it, and the firm inset marker marks the selection without
    color. No menu tabs on the content. */
@@ -1973,7 +2027,7 @@ body.hex-detail-open .upgrade-all {
   height: auto;
   border-radius: 14px;
 }
-.hex-stack-chassis:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; border-radius: 14px; }
+.hex-stack-chassis:focus-visible { outline: 2px solid var(--ink); outline-offset: 6px; border-radius: 14px; }
 .hex-stack-chassis svg { display: block; width: var(--detail-hex); height: var(--detail-hex); }
 .hex-stack-marker {
   display: none;
@@ -2056,7 +2110,6 @@ body.hex-detail-open .upgrade-all {
   width: 100%;
   padding: 7px 12px;
   border: 1px solid var(--line-strong);
-  border-radius: 7px;
   background: var(--panel-soft);
   font: 600 11.5px var(--font-condensed);
   letter-spacing: 0.06em;
@@ -2087,7 +2140,6 @@ body.hex-detail-open .upgrade-all {
   padding: 12px;
   background: var(--panel);
   border: 1px solid var(--line-strong);
-  border-radius: 10px;
 }
 .hex-detail-tray-head {
   display: flex;
@@ -2098,7 +2150,6 @@ body.hex-detail-open .upgrade-all {
 .hex-detail-tray-cancel {
   padding: 5px 10px;
   border: 1px solid var(--line-strong);
-  border-radius: 6px;
   background: var(--panel-soft);
   font: 600 10px var(--font-condensed);
   letter-spacing: 0.08em;
@@ -2145,7 +2196,6 @@ body.hex-detail-open .upgrade-all {
   place-items: center;
   padding: 0;
   border: 1px solid var(--line-strong);
-  border-radius: 50%;
   background: var(--panel-soft);
   color: var(--ink);
   cursor: pointer;
@@ -2153,7 +2203,7 @@ body.hex-detail-open .upgrade-all {
 }
 .hex-orbit-btn svg { width: 19px; height: 19px; display: block; }
 .hex-orbit-btn:hover { border-color: var(--accent); color: var(--accent); }
-.hex-orbit-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hex-orbit-btn:focus-visible { outline-offset: 2px; }
 .hex-orbit .orbit-swap { top: 7%; right: -3%; }
 .hex-orbit .orbit-retrieve { bottom: 7%; right: -3%; }
 
@@ -2189,7 +2239,6 @@ body.hex-detail-open .upgrade-all {
   height: auto;
   min-height: 44px;
   border: none;
-  border-radius: 12px;
   padding: 2px 14px;
   background: transparent;
   cursor: pointer;
@@ -2199,7 +2248,7 @@ body.hex-detail-open .upgrade-all {
 .hex-flow-side .hex-flow-trigger { padding: 4px 8px; }
 .hex-flow-trigger svg { display: block; width: 60px; height: 36px; }
 .hex-flow-side .hex-flow-trigger svg { width: 56px; height: 40px; }
-.hex-flow-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hex-flow-trigger:focus-visible { outline-offset: 2px; }
 .hex-flow-trigger:hover .flow-wave { stroke-width: 2.8; }
 /* The wave's state: live solid at full strength, inert dashed and quiet.
    The arrow always points at the affected layer. */
@@ -2274,13 +2323,12 @@ body.hex-detail-open .upgrade-all {
   padding: 7px 10px;
   background: var(--panel-soft);
   border: 1px solid var(--line-strong);
-  border-radius: 8px;
   cursor: pointer;
 }
 .hex-upgrade:hover { border-color: var(--accent); }
 .hex-upgrade-title { font-size: 12px; line-height: 1.3; white-space: nowrap; }
 .hex-upgrade-title strong { font-weight: 600; }
-.hex-upgrade-benefit { font-size: 11px; line-height: 1.3; color: var(--charge); }
+.hex-upgrade-benefit { font: 11px/1.3 var(--font-sans); color: var(--charge); }
 
 /* The detail's dial (§5, issue #195): the shared ladder as a chip row
     riding the button — ×1 / ×5 / ×10 / MAX·k, the picked chip in the
@@ -2292,7 +2340,6 @@ body.hex-detail-open .upgrade-all {
   text-align: center;
   padding: 2px 0;
   border: 1px solid var(--line);
-  border-radius: 6px;
   background: transparent;
   font: 600 10px/1.2 var(--mono);
   color: var(--muted);
@@ -2311,7 +2358,6 @@ body.hex-detail-open .upgrade-all {
   text-align: center;
   padding: 2px 0;
   border: 1px solid var(--line);
-  border-radius: 6px;
   background: transparent;
   font: 600 10px/1.2 var(--mono);
   color: var(--muted);
@@ -2375,16 +2421,22 @@ body.hex-detail-open .upgrade-all {
 .sweep-label {
   padding: 0 6px 0 2px;
   color: var(--ink);
-  font: 700 10px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font: 700 10px/1 var(--font-condensed);
   letter-spacing: 0.08em;
 }
 .sweep-chip {
-  padding: 5px 8px;
-  border-radius: 6px;
+  /* Board chrome beside the dock: the dock's compact scale, width keeping
+     pace with height so the chip reads as a key, not a sliver. */
+  min-height: 38px;
+  min-width: 44px;
+  padding: 4px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--panel-veil);
   border-color: var(--accent);
   color: var(--ink);
-  font: 600 10px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font: 600 10px/1 var(--font-condensed);
   letter-spacing: 0.04em;
 }
 .sweep-chip:hover { background: var(--accent-soft); border-color: var(--accent); }
@@ -2429,7 +2481,6 @@ body.hex-detail-open .upgrade-all {
   padding: 9px 8px 11px;
   background: var(--panel-veil);
   border: 1px dashed var(--line-strong);
-  border-radius: 12px;
   transition: border-color 0.15s, background 0.15s;
   backdrop-filter: blur(3px);
   overflow-y: auto;
@@ -2482,19 +2533,18 @@ body.hex-detail-open .upgrade-all {
   gap: 2px;
   background: var(--panel-veil);
   border: 1px solid var(--line-strong);
-  border-radius: 9px;
   backdrop-filter: blur(3px);
 }
 .layer-legend[hidden] { display: none; }
 .legend-symbol {
   width: 34px;
   height: 34px;
+  min-height: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   border: none;
-  border-radius: 6px;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
@@ -2505,7 +2555,7 @@ body.hex-detail-open .upgrade-all {
   color: var(--ink);
   background: var(--hover-bg);
   /* The state grammar's firm inset marker — readable without color. */
-  box-shadow: inset 0 0 0 2px var(--ink);
+  box-shadow: inset 0 -3px var(--ink);
 }
 .legend-symbol[data-legend-layer="mutators"].active {
   color: var(--arete);
@@ -2521,7 +2571,7 @@ body.hex-detail-open .upgrade-all {
   gap: 1px;
 }
 .legend-symbol.locked:hover { color: var(--muted); background: transparent; }
-.legend-symbol:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.legend-symbol:focus-visible { outline-offset: 1px; }
 .legend-symbol.locked svg { width: 12px; height: 12px; }
 .mut-tab-lock { width: 12px; height: 10px; }
 /* The legend's locked mark speaks alone at the symbols' own weight —
@@ -2634,7 +2684,6 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   padding: 9px 8px 11px;
   background: var(--panel-veil);
   border: 1px dashed var(--arete-line);
-  border-radius: 12px;
   backdrop-filter: blur(3px);
   overflow-y: auto;
 }
@@ -2644,7 +2693,7 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 .mut-tile {
   all: unset;
   cursor: pointer;
-  border-radius: 10px;
+  border-radius: 0;
   width: 54px;
   touch-action: none;
 }
@@ -2667,12 +2716,11 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
-  border-radius: 999px;
   cursor: pointer;
   background: color-mix(in srgb, var(--panel-soft) 94%, transparent);
   border: 1px solid var(--arete);
   color: var(--ink);
-  font: 600 11px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font: 600 11px/1 var(--font-condensed);
   letter-spacing: 0.04em;
 }
 .mut-unlock-pill[hidden] { display: none; }
@@ -2681,8 +2729,7 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 .mut-unlock-pill .mut-esc {
   padding: 2px 6px;
   border: 1px solid var(--line-strong);
-  border-radius: 4px;
-  font: 600 9px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font: 600 9px/1 var(--font-condensed);
   color: var(--muted);
 }
 
@@ -2696,7 +2743,6 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   padding: 12px 14px;
   background: var(--panel);
   border: 1px solid var(--arete);
-  border-radius: 10px;
   box-shadow: 0 10px 30px var(--shadow);
   font: 12px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--ink);
@@ -2717,11 +2763,11 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 .mut-pop-actions { display: flex; gap: 6px; margin-top: 9px; }
 .mut-pop-actions button {
   padding: 4px 10px;
-  border-radius: 7px;
+  min-height: 0;
   border: 1px solid var(--line-strong);
   background: transparent;
   color: var(--ink);
-  font: 600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font: 600 11px var(--font-condensed);
   cursor: pointer;
 }
 .mut-pop-actions button:hover { background: var(--hover-bg); border-color: var(--arete); }
@@ -2736,7 +2782,6 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   flex-wrap: wrap;
   margin: 8px 0 0;
   padding: 7px 10px;
-  border-radius: 9px;
   border: 1px dashed var(--arete);
   color: var(--arete);
   font-size: 12px;
@@ -2791,7 +2836,6 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   overflow-y: auto;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 12px;
   padding: var(--modal-pad);
   box-shadow: 0 24px 80px var(--shadow);
 }
@@ -2848,7 +2892,6 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   min-width: 0;
   padding: 14px 12px 16px;
   border: 1px solid var(--line);
-  border-radius: 12px;
   background: transparent;
   color: inherit;
   transition: border-color 0.15s, background 0.15s, transform 0.15s;
@@ -2859,7 +2902,7 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 .candidate-tile:hover:not(:disabled) .hex { fill: var(--accent-faint); }
 .candidate-tile .rarity { font: 10px var(--mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
 .candidate-tile .candidate-scaling { font: 10.5px var(--mono); color: var(--muted); text-align: center; }
-.candidate-tile .candidate-effect { font-size: 11.5px; color: var(--muted); text-align: center; line-height: 1.7; }
+.candidate-tile .candidate-effect { font: 11.5px/1.7 var(--font-sans); color: var(--muted); text-align: center; }
 
 .shop-buy { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .shop-countdown, .countdown { font: 11px var(--mono); color: var(--muted); white-space: nowrap; }
@@ -2867,7 +2910,7 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 .catalog-toggle { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 12px; color: var(--muted); cursor: pointer; }
 .catalog-toggle input { accent-color: var(--accent); }
 
-.save-textarea { width: 100%; min-height: 130px; background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: 11px var(--mono); resize: vertical; }
+.save-textarea { width: 100%; min-height: 130px; background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 0; padding: 10px; font: 11px var(--mono); resize: vertical; }
 .modal-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 .import-error { color: var(--danger); font-size: 12px; margin-top: 8px; }
 
@@ -2907,7 +2950,7 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 .honesty-choice:last-child { border-bottom: 0; }
 .honesty-choice:hover { background: var(--hover-bg); }
 .honesty-label { font: 600 16px var(--font-condensed); letter-spacing: 0.03em; }
-.honesty-consequence { color: var(--muted); font-size: 11.5px; }
+.honesty-consequence { font-family: var(--font-sans); color: var(--muted); font-size: 11.5px; }
 
 /* The provisional bucket's console flag (§2): the switch's vermillion. It
    rides beside the clock stack inside the clock anchor (issue #148) — never
@@ -2940,7 +2983,7 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   background: var(--panel-soft);
   color: var(--ink);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 0;
   padding: 9px 12px;
   font-size: 13px;
 }
@@ -2989,7 +3032,6 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   z-index: 40;
   background: var(--panel-veil);
   border: 1px solid var(--line-strong);
-  border-radius: 8px;
   padding: 10px;
   display: flex;
   gap: 6px;
@@ -3053,7 +3095,7 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 .dev-board-cap { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .dev-board-cap > span { font: 9px var(--mono); letter-spacing: 0.1em; color: var(--muted); margin-right: 4px; }
 .dev-board-cap button { min-width: 44px; min-height: 44px; padding: 3px 8px; font: 11px var(--mono); }
-.dev-board-cap button.on { box-shadow: inset 0 0 0 2px var(--line-strong); }
+.dev-board-cap button.on { box-shadow: inset 0 -3px var(--ink); }
 .dev-board-cap button[data-devboard="reset"], .dev-board-cap button[data-devboard="stress"] { margin-left: auto; }
 /* Six columns plus the stagger fit a 390px phone without shrinking targets. */
 .dev-board-grid { display: flex; flex-direction: column; gap: 4px; align-items: center; }
@@ -3075,9 +3117,9 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   justify-content: center;
 }
 .dev-cell svg { width: 40px; height: 40px; }
-.dev-cell.free { border-color: var(--line); border-style: dotted; color: var(--muted); }
+.dev-cell.free { border-color: var(--line); border-style: dashed; color: var(--muted); }
 .dev-cell.off { visibility: hidden; }
-.dev-cell.sel { box-shadow: inset 0 0 0 2px var(--line-strong); }
+.dev-cell.sel { box-shadow: inset 0 -3px var(--ink); }
 .dev-board button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .dev-board-instances { display: flex; flex-direction: column; border-top: 1px solid var(--line); padding-top: 6px; }
 .dev-instance {
@@ -3099,10 +3141,10 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   color: var(--ink);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 0;
   text-align: left;
 }
-.dev-voice.picked { box-shadow: inset 0 0 0 2px var(--line-strong); }
+.dev-voice.picked { box-shadow: inset 0 -3px var(--ink); }
 .dev-note { width: 34px; }
 .dev-type { width: 38px; color: var(--muted); }
 .dev-lvl { width: 30px; color: var(--muted); }
@@ -3145,7 +3187,7 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   .session-clock { font-size: 22px; }
   .clock-disclose { width: 10px; height: 10px; }
   .clock-provisional:not(:empty) { font-size: 10px; padding-left: 10px; }
-  .main-switch { padding: 10px 13px; font-size: 14px; border-radius: 7px; }
+  .main-switch { padding: 10px 13px; font-size: 14px; }
   .main-switch svg { width: 14px; height: 14px; }
   /* Pause keeps its icon; the word yields to the row's width budget. */
   #pause-flow span { display: none; }
@@ -3257,7 +3299,7 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
    rising from the bottom edge — reads the viewport. */
 @media (max-width: 600px) {
   .modal-backdrop { padding: 10px; align-items: flex-end; }
-  .modal { width: 100%; max-height: 78vh; border-radius: 14px 14px 0 0; animation: sheet-up 0.18s ease-out; }
+  .modal { width: 100%; max-height: 78vh; animation: sheet-up 0.18s ease-out; }
   /* The chord sheet's phone reflow (#278): the stage becomes the compact
      top row — small glyph left, name and the figure reads beside it — and
      the index a full-width row list below. The sheet itself scrolls. */
@@ -3284,7 +3326,7 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
    body-level, outside the #app container, so the gate's decision arrives
    as a .sheet class on the backdrop rather than a container rule. */
 .modal-backdrop.sheet { padding: 10px; align-items: flex-end; }
-.modal-backdrop.sheet .modal { width: 100%; max-height: 78vh; border-radius: 14px 14px 0 0; animation: sheet-up 0.18s ease-out; }
+.modal-backdrop.sheet .modal { width: 100%; max-height: 78vh; animation: sheet-up 0.18s ease-out; }
 
 /* The cluster rises above the modal sheets too (§7, ADR-0029: the zoom
    cluster alone reacts to open sheets): the modal layer is body-level and
@@ -3311,7 +3353,7 @@ body.modal-sheet-open .zoom-cluster {
   .charge-line { animation: charge-flow 1.6s linear infinite !important; }
 }
 
-.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 4px; }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; min-height: 0; padding: 4px; }
 .icon-btn svg { width: 100%; height: 100%; color: var(--muted); }
 .icon-btn:hover:not(:disabled) svg { color: var(--ink); }
 /* Empty owned cells read as owned space and stay translucent (#201) so the
@@ -3366,12 +3408,11 @@ body.cell-arming #grid .hex.buy-here { stroke-width: 2.5; stroke-dasharray: none
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
-  border-radius: 999px;
   cursor: pointer;
   background: color-mix(in srgb, var(--panel-soft) 94%, transparent);
   border: 1px solid var(--danger);
   color: var(--ink);
-  font: 600 11px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font: 600 11px/1.3 var(--font-condensed);
   letter-spacing: 0.04em;
 }
 .cell-arm-pill[hidden] { display: none; }
@@ -3380,15 +3421,14 @@ body.cell-arming #grid .hex.buy-here { stroke-width: 2.5; stroke-dasharray: none
 .cell-arm-pill .pill-esc {
   padding: 2px 6px;
   border: 1px solid var(--line-strong);
-  border-radius: 4px;
-  font: 600 9px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font: 600 9px/1 var(--font-condensed);
   color: var(--muted);
 }
 .cell-node:hover .hex { stroke-width: 2; }
 .cell-node:focus-visible { outline: none; }
 .cell-node:focus-visible .hex { stroke: var(--ink); stroke-width: 3; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-select { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 5px; padding: 8px; max-width: 100%; }
+select { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 0; padding: 8px; max-width: 100%; }
 ::selection { background: var(--accent); color: var(--accent-ink); }
 
 .activation-owned { color: var(--charge); font-size: 12px; }
@@ -3564,16 +3604,20 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .with-preview { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .module-preview { flex-shrink: 0; display: block; }
 .module-preview svg { width: 44px; height: 44px; display: block; }
-/* Hoverable domain terms (the disclosure doctrine): the term itself is the
-   trigger and its hover opens the glossary meaning — plain inline text
-   over a dotted hairline, never a chip or a card. */
+/* Hoverable domain terms (the disclosure doctrine): the term itself is
+   the trigger and its hover opens the glossary meaning — plain inline
+   text over the engraved hairline the sheet's term wears, never a chip
+   or a card. The approved sheet's padding expands the touch target;
+   negative margins keep the term in its inline layout. */
 .term-trigger {
-  width: auto; height: auto; min-width: 0; min-height: 0; padding: 2px 0;
-  border: 0; border-bottom: 1px dotted var(--muted); border-radius: 0;
+  width: auto; height: auto; min-width: 0; min-height: 0;
+  padding: 12px 8px; margin: -12px -8px;
+  border: 0; border-radius: 0;
+  box-shadow: inset 0 -1px var(--muted);
   font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit;
   vertical-align: baseline;
 }
-.term-trigger:hover, .term-trigger:focus-visible { color: var(--nous); border-color: var(--nous); background: transparent; }
+.term-trigger:hover, .term-trigger:focus-visible { color: var(--nous); box-shadow: inset 0 -1px var(--nous); background: transparent; }
 
 /* Readout figures themselves open the shared disclosure layer. */
 .readout-tip .readout-tip-trigger {

@@ -220,3 +220,73 @@ describe("the instrument primitives' stylesheet contract", () => {
     expect(teardown.slice(0, teardown.indexOf("return;"))).toContain("closeTooltips(content)");
   });
 });
+
+// The controls sheet's contract (#315, applied by #316): the approved
+// geometry lives in the shared control styles, and the legacy rounded
+// shapes have no CSS left to be reborn from. Detector-style greps back
+// the review; they never replace it.
+describe("the controls sheet's stylesheet contract", () => {
+  const css = readFileSync("src/ui/style.css", "utf8");
+
+  it("the button base is the sheet's control: square-cut, hairline, condensed, touch-sized", () => {
+    expect(css).toMatch(/button \{[^}]*border-radius: 0/);
+    expect(css).toMatch(/button \{[^}]*border: 1px solid var\(--line\)/);
+    expect(css).toMatch(/button \{[^}]*var\(--font-condensed\)/);
+    expect(css).toMatch(/button \{[^}]*min-height: 44px/);
+  });
+
+  it("focus rings in ink and the unavailable control mutes per the state grammar", () => {
+    expect(css).toMatch(/button:focus-visible, select:focus-visible[^{]*\{[^}]*outline: 2px solid var\(--ink\)/);
+    expect(css).toMatch(/button:disabled \{ color: var\(--muted\); border-color: var\(--line-soft\); cursor: default; \}/);
+  });
+
+  it("bars fill by height from the one shared column; the horizontal rounded tracks are gone", () => {
+    expect(css).toMatch(/\.gbar \{[^}]*background: var\(--line-soft\)/);
+    expect(css).toMatch(/\.gbar i \{[^}]*bottom: 0/);
+    expect(css).toMatch(/\.gbar\.done::after \{[^}]*content: "✓"/);
+    expect(css).not.toContain(".goal-track");
+    expect(css).not.toContain(".ach-track");
+    // The dock's charge pip keeps its horizontal strip by direction — the
+    // retired shape was the rounded track; the strip returns square-cut.
+    expect(css).toMatch(/\.forge-pip \{[^}]*overflow: hidden/);
+    expect(css).not.toMatch(/\.forge-pip[^{]*\{[^}]*border-radius/);
+  });
+
+  it("the goal rows fill the shared column by height, done bars holding full height", () => {
+    const focus = readFileSync("src/ui/focus.ts", "utf8");
+    expect(focus).toContain('class="gbar${goal.completed ? " done" : ""}"');
+    expect(focus).toContain("height:${goalBarHeight(goal)}");
+    expect(focus).toContain("bar.style.height = barHeight");
+  });
+
+  it("the swatch is the sheet's square-cut control under the firm inset marker", () => {
+    expect(css).toMatch(/\.goal-swatch > span \{[^}]*width: 24px/);
+    expect(css).not.toMatch(/\.goal-swatch > span \{[^}]*border-radius/);
+    expect(css).toContain(".goal-swatch.selected { border-color: var(--ink); box-shadow: inset 0 -3px var(--ink); }");
+  });
+
+  it("the term trigger wears the sheet's engraved hairline, never a dotted underline", () => {
+    expect(css).toMatch(/\.term-trigger \{[^}]*box-shadow: inset 0 -1px var\(--muted\)/);
+    expect(css).not.toContain("border-bottom: 1px dotted");
+  });
+
+  it("sheet, popover, and tray containers are square-cut too — no rounded card survives", () => {
+    for (const selector of [
+      ".modal {",
+      ".app-popover {",
+      ".layer-legend {",
+      ".inventory-tray {",
+      ".mutator-tray {",
+      ".hex-detail-tray {",
+      ".mut-popover {",
+      ".arc-card {",
+      ".forge-detail {",
+      ".sweep-chip {",
+    ]) {
+      const rest = css.slice(css.indexOf(selector));
+      const body = rest.slice(rest.indexOf("{"), rest.indexOf("}"));
+      expect(body).not.toContain("border-radius");
+    }
+    expect(css).not.toContain("14px 14px 0 0");
+  });
+});

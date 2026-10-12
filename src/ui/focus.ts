@@ -490,13 +490,21 @@ function shopBuyHtml(options: {
   live?: string;
   note?: string;
 }): string {
-  const button = `<button class="primary${options.small ? " small" : ""}" ${options.attrs ?? ""}${options.affordable ? "" : " disabled"}>${formatInt(options.price)} ν</button>`;
+  const button = `<button class="primary mono${options.small ? " small" : ""}" ${options.attrs ?? ""}${options.affordable ? "" : " disabled"}>${formatInt(options.price)} ν</button>`;
   const small = options.note
     ? `<small class="shop-countdown">${options.note}</small>`
     : options.live || options.countdown
       ? `<small class="shop-countdown mono"${options.live ? ` data-live="${options.live}"` : ""}>${options.countdown ?? ""}</small>`
       : "";
   return `<span class="shop-buy">${button}${small}</span>`;
+}
+
+// The goal bar's fill height, one build for the row's markup and its live
+// patcher alike: the shared column fills by height, and a completed goal's
+// bar holds full height under the engraved check.
+function goalBarHeight(goal: Goal): string {
+  if (goal.completed) return "100%";
+  return `${Math.min(100, (goal.progressSeconds / goalRequiredSeconds(goal)) * 100)}%`;
 }
 
 // The GOALS face: the slots read over the ruled goal rows — live progress at
@@ -510,7 +518,6 @@ function goalsFaceHtml(app: App, projected: ReturnType<typeof displayedRates>): 
   const capacity = goalCapacity(state);
   const goalRow = (goal: Goal) => {
     const required = goalRequiredSeconds(goal);
-    const fraction = Math.min(1, goal.progressSeconds / required);
     const status = goal.completed
       ? `<span class="goal-status done">complete${goal.schedule.kind === "once" ? "" : ` · resets ${goal.schedule.kind === "daily" ? "tomorrow" : "Monday"}`}</span>`
       : `<span class="goal-status">${formatClock(Math.max(0, required - goal.progressSeconds))} to go</span>`;
@@ -527,7 +534,7 @@ function goalsFaceHtml(app: App, projected: ReturnType<typeof displayedRates>): 
               : ""
           }
         </div>
-        <div class="goal-track"><span data-goal-progress="${goal.id}" style="width:${fraction * 100}%;background:var(--goal-${goal.color})"></span></div>
+        <span class="gbar${goal.completed ? " done" : ""}" aria-hidden="true"><i data-goal-progress="${goal.id}" style="height:${goalBarHeight(goal)};background:var(--goal-${goal.color})"></i></span>
         <small class="mono" data-goal-minutes="${goal.id}">${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · ×${goal.completedCount} completed` : ""}</small>
         ${recoloring ? goalSwatchesHtml("data-goal-set-color", goal.color) : ""}
       </div>
@@ -899,8 +906,8 @@ export function updateFocusSheetLive(app: App, scope: ParentNode, projected: Ret
   for (const goal of state.goals) {
     const required = goalRequiredSeconds(goal);
     const bar = scope.querySelector(`[data-goal-progress="${goal.id}"]`) as HTMLElement | null;
-    const barWidth = `${Math.min(100, (goal.progressSeconds / required) * 100)}%`;
-    if (bar && bar.style.width !== barWidth) bar.style.width = barWidth;
+    const barHeight = goalBarHeight(goal);
+    if (bar && bar.style.height !== barHeight) bar.style.height = barHeight;
     setText(
       scope.querySelector(`[data-goal-minutes="${goal.id}"]`),
       `${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · ×${goal.completedCount} completed` : ""}`,

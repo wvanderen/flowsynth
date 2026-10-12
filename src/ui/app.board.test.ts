@@ -517,7 +517,7 @@ describe("the action row (§7)", () => {
     const add = dock.querySelector<HTMLButtonElement>('[data-op="cell"]')!;
     expect(add.getAttribute("aria-label")).toBe("Add");
     expect(add.title).toContain("Add — ");
-    // The count badge rides the Forge icon; the charge pip rides beneath it.
+    // The count badge rides the Forge icon; the charge pip strip rides beneath it.
     expect(dock.querySelector('[data-op="forge"] .forge-pip')).not.toBeNull();
     expect(document.querySelector(".legend")).toBeNull();
     expect(document.getElementById("tool-manage")).toBeNull();
