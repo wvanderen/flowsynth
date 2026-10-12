@@ -1383,23 +1383,48 @@ function updateChordReadout(app: App): void {
   // conducting spacer's own containment rule rides moduleChips (#201).
   const chosen = chordChipsForHover(app);
   const focus = hovered;
-  const metrics = focus && snapshot ? voiceMetricsHtml(focus, snapshot) : "";
-  if (!metrics && chosen.length === 0) {
-    host.hidden = true;
-    setReadoutHtml(host, "");
-    return;
+  const active = chosen.filter((mark) => !mark.inactive);
+  const idleCount = chosen.length - active.length;
+  const rows: string[] = [];
+  const contribution = focus && snapshot?.contributions.get(focus.id);
+  const headline: string[] = [];
+  if (focus && isOscillatorType(focus.type) && snapshot) {
+    headline.push(compactReadoutRow(`+${formatNumber(contribution?.value ?? 0)} ν/s`, "value"));
   }
-  host.hidden = false;
-  setReadoutHtml(host, metrics +
-    chosen
-      .map((mark) =>
-        // The muted participant's mark (ADR-0048): a chord a silent voice
-        // sings in wears the same dashed treatment its seams carry. The
-        // idle candidate's chip (issue #258) reads its own style and the
-        // "idle" word — recognized, earning nothing.
-        `<span class="chord-readout-chip mono${mark.muted ? " chord-readout-muted" : ""}${mark.inactive ? " chord-readout-idle" : ""}" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.inactive ? `${mark.label} · idle` : mark.label)}</span>`,
-      )
-      .join(""));
+  if (focus && isVoiceType(focus.type) && snapshot?.allocation) {
+    const used = snapshot.allocation.used.get(focus.id) ?? 0;
+    const capacity = snapshot.allocation.capacity;
+    const content = `<span class="chord-readout-chip chord-readout-capacity mono">(${used}/${capacity}) ${LIBRARY_SVG.replace(/>\s+</g, "><")}</span>`;
+    headline.push(readoutDisclosureHtml("hover-capacity", content, "Whole-chord budget per voice", `Harmonic capacity ${used} of ${capacity} used`));
+  }
+  if (headline.length) rows.push(`<div class="chord-readout-headline">${headline.join("")}</div>`);
+  const marks = focus ? active : chosen;
+  rows.push(...marks.map((mark) => compactReadoutRow(
+    mark.inactive ? `${mark.label} · idle` : mark.label,
+    `chord${mark.muted ? " chord-readout-muted" : ""}${mark.inactive ? " chord-readout-idle" : ""}`,
+    mark.colorVar,
+  )));
+  if (contribution && contribution.formationQ !== 1) {
+    rows.push(compactReadoutRow(`Formation ×${formatNumber(contribution.formationQ)}`, "formation", undefined, "Pitch-class quality applied to active participants"));
+  }
+  if (focus && idleCount) rows.push(compactReadoutRow(`${idleCount} idle`, "idle"));
+  if (focus && isVoiceType(focus.type) && snapshot?.allocation && !snapshot.allocation.certified) {
+    rows.push(compactReadoutRow("Allocation uncertified", "uncertified", undefined, "Search budget reached before optimality was proven"));
+  }
+  host.hidden = rows.length === 0;
+  setReadoutHtml(host, rows.length ? `<div class="chord-readout-summary">${rows.join("")}</div>` : "");
+}
+
+// Compact figures retain term glosses; the full breakdown stays in Hex detail.
+function compactReadoutRow(text: string, kind: string, colorVar?: string, mechanics?: string): string {
+  const split = text.indexOf(" ×");
+  const capacity = kind === "capacity" ? text.lastIndexOf(" ") : -1;
+  const at = split >= 0 ? split : capacity;
+  const content = at >= 0
+    ? `<span class="chord-readout-name">${escapeHtml(text.slice(0, at))} </span><span class="chord-readout-number mono">${escapeHtml(text.slice(at + 1))}</span>`
+    : escapeHtml(text);
+  const row = `<span class="chord-readout-chip chord-readout-${kind}${kind === "value" ? " mono" : ""}"${colorVar ? ` style="--cc:var(--${colorVar})"` : ""}>${content}</span>`;
+  return mechanics ? readoutDisclosureHtml(`hover-${kind}`, row, mechanics) : row;
 }
 
 // Preserve focused/pinned disclosures when an unchanged readout refreshes.
@@ -1415,9 +1440,9 @@ function setReadoutHtml(host: HTMLElement, html: string): void {
 // `idKey` scopes the disclosure's id — a surface hosting two rows (the
 // reserved readout and the Hex detail's chord row) must never mint the
 // same id twice (the ledger's portal rule).
-function readoutDisclosureHtml(idKey: string, content: string, mechanics: string): string {
+function readoutDisclosureHtml(idKey: string, content: string, mechanics: string, label?: string): string {
   const id = `${idKey}-tip`;
-  return `<span class="inst-tip readout-tip"><button class="inst-tip-trigger readout-tip-trigger" type="button" aria-expanded="false" aria-describedby="${id}"${idKey.endsWith("quality") ? ` aria-label="${escapeHtml(mechanics)}"` : ""}>${content}</button><span class="inst-tip-body" id="${id}" role="tooltip">${escapeHtml(mechanics)}</span></span>`;
+  return `<span class="inst-tip readout-tip"><button class="inst-tip-trigger readout-tip-trigger" type="button" aria-expanded="false" aria-describedby="${id}"${label || idKey.endsWith("quality") ? ` aria-label="${escapeHtml(label ?? mechanics)}"` : ""}>${content}</button><span class="inst-tip-body" id="${id}" role="tooltip">${escapeHtml(mechanics)}</span></span>`;
 }
 
 function readoutFigureHtml(idKey: string, text: string, mechanics: string): string {
@@ -2065,7 +2090,7 @@ const boundGrids = new WeakSet<SVGSVGElement>();
 function bindSeamHover(app: App, svg: SVGSVGElement): void {
   if (boundGrids.has(svg)) return;
   boundGrids.add(svg);
-  app.listen(svg, "pointerover", (event) => {
+  const ask = (event: Event) => {
     if (app.dragging || app.ui.mutCarrying) return;
     const target = event.target as Element;
     const slotNode = target.closest?.("[data-mut-slot]");
@@ -2086,9 +2111,18 @@ function bindSeamHover(app: App, svg: SVGSVGElement): void {
     const [q, r] = (cellNode?.getAttribute("data-cell") ?? "").split(",").map(Number);
     const id = cellNode && Number.isFinite(q) ? deployedAt(app.state, { q: q!, r: r! })?.id ?? null : null;
     setChordHover(app, id ? { kind: "module", moduleId: id } : null);
+  };
+  app.listen(svg, "pointerover", ask);
+  app.listen(svg, "focusin", ask);
+  app.listen(byId("chord-readout"), "pointerleave", (event) => {
+    const next = (event as PointerEvent).relatedTarget;
+    if (next instanceof Node && svg.contains(next)) return;
+    if (!byId("chord-readout")?.contains(document.activeElement)) setChordHover(app, null);
   });
-  app.listen(svg, "pointerleave", () => {
+  app.listen(svg, "pointerleave", (event) => {
     if (app.dragging) return;
+    const next = (event as PointerEvent).relatedTarget;
+    if (next instanceof Node && byId("chord-readout")?.contains(next)) return;
     setChordHover(app, null);
   });
 }

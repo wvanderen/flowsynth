@@ -1702,7 +1702,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 #chord-lift .chord-seam { opacity: 1; stroke-width: 6; pointer-events: none; }
 #chord-lift .chord-seam.chord-loop { stroke-width: 5; fill: var(--cc); fill-opacity: 0.09; }
 
-/* The reserved readout: the chips, stacked vertically, pinned to the
+/* The reserved readout: open readings, stacked vertically, pinned to the
    board-space's top right as an overlay layer — outside every layout
    pass, so hover and selection can never shift the grid, and above the
    board chrome (the bloom's 20) so the expanded face can never cover it.
@@ -1718,13 +1718,83 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   gap: 4px;
   pointer-events: none;
 }
+/* Compact hover uses one open column; deeper contexts retain their figures. */
+.chord-readout-summary {
+  display: flex;
+  flex-direction: column;
+  width: 220px;
+  max-width: calc(100vw - 32px);
+  gap: 5px;
+  padding: 0;
+}
+.chord-readout-summary .chord-readout-chip {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 0;
+  background: transparent;
+  font-family: var(--font-condensed);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+.chord-readout-summary .readout-tip { display: block; }
+.chord-readout-summary .readout-tip .readout-tip-trigger {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  pointer-events: auto;
+  text-align: left;
+}
+.chord-readout-summary .readout-tip-trigger > .chord-readout-chip { width: 100%; }
+.chord-readout-summary .readout-tip-trigger .chord-readout-name {
+  text-decoration: underline;
+  text-decoration-color: var(--muted);
+  text-underline-offset: 3px;
+}
+.chord-readout-name { min-width: 0; overflow-wrap: anywhere; }
+.chord-readout-number { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.chord-readout-summary .chord-readout-value {
+  display: block;
+  margin-bottom: 0;
+  font-family: var(--mono);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+.chord-readout-headline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 3px;
+}
+.chord-readout-headline > .readout-tip { margin-left: auto; }
+.chord-readout-summary .chord-readout-capacity {
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+.chord-readout-capacity svg { width: 16px; height: 16px; flex-shrink: 0; }
+@media (pointer: coarse) {
+  .chord-readout-summary .readout-tip .readout-tip-trigger { min-height: 44px; }
+}
+.chord-readout-summary .chord-readout-muted .chord-readout-name {
+  text-decoration: underline dashed;
+  text-underline-offset: 4px;
+}
+.chord-readout-summary .chord-readout-idle { color: var(--muted); opacity: 1; }
 .chord-readout[hidden] { display: none; }
 .chord-readout-chip {
   display: inline-block;
   padding: 3px 9px;
   background: var(--panel-deep);
-  border: 1px solid var(--cc);
-  border-radius: 999px;
+  border: 0;
+  border-radius: 0;
   font-size: 10.5px;
   letter-spacing: 0.1em;
   color: var(--cc);
@@ -1744,6 +1814,8 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
    reads dashed — the same convention its seams carry. */
 .chord-readout-chip.chord-readout-muted {
   border-style: dashed;
+  text-decoration: underline dashed;
+  text-underline-offset: 4px;
   opacity: 0.72;
 }
 /* The capacity and earned-factor chips (issue #258): the selected voice's
@@ -1767,7 +1839,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .chord-readout-chip.chord-readout-preview {
   --cc: var(--accent);
 }
-/* The total chord factor is the readout's prominent figure (#260): the
+/* In detailed readouts, the total chord factor remains prominent (#260): the
    one number the named terms multiply into, so it carries weight where
    the capacity and uncertified reads stay quiet. */
 .chord-readout-chip.chord-readout-factor {

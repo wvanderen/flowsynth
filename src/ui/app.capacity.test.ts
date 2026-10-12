@@ -236,7 +236,7 @@ describe("the one-capacity economy on the board (#258)", () => {
     // pass.
     expect(displayedRates(app.state, true)).toEqual(allocateRates(app.state, true).snapshot);
     document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(readout().textContent).toContain("Capacity");
+    expect(readout().textContent).toContain("(1/1)");
     app.openModal("rate");
     expect(document.getElementById("modal-content")!.textContent).toContain("Capacity");
     app.closeModal();
@@ -285,13 +285,13 @@ describe("the one-capacity economy on the board (#258)", () => {
       document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
       return readout().textContent;
     };
-    expect(ask()).toContain("Capacity 1/1");
+    expect(ask()).toContain("(1/1)");
     expect(ask()).toContain("Fifth ×1.3");
     const g = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(1, 0)))!;
     app.state.cells.push(hex(0, 1));
     g.pos = hex(0, 1);
     app.render();
-    expect(ask()).toContain("Capacity 1/1");
+    expect(ask()).toContain("(1/1)");
     expect(ask()).toContain("Octave ×1.15");
     expect(readout().textContent).not.toContain("Fifth");
     expect(readout().textContent).not.toContain("idle");
@@ -388,7 +388,7 @@ describe("placement previews with capacity-aware production (#260)", () => {
     expect(readout().hidden).toBe(true);
   });
 
-  it("the committed placement agrees with the preview; the placed voice's ask retains the figures", () => {
+  it("the committed placement agrees with the preview; hover summarizes and Hex detail retains the figures", () => {
     give(app.state, "additive", hex(1, 0));
     app.state.cells.push(hex(0, 1));
     const traySynth = give(app.state, "additive", null);
@@ -403,11 +403,18 @@ describe("placement previews with capacity-aware production (#260)", () => {
     // The board delivered the projected rate, the commit's discovery beat
     // included — the projection and the landing are one economy.
     expect(displayedRates(app.state, true).rate).toBeGreaterThan(before);
-    // And the placed voice's ask carries the same chips.
+    // Hover carries the compact result; opening Hex detail retains the
+    // complete projected chord facts, including measured quality.
     cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(chips()).toEqual(previewed);
-    const scale = readout().querySelector<HTMLElement>(".chord-readout-scale")!;
-    expect(scale.getAttribute("data-q")).toBe(String(1 + BALANCE.allocationComplexityRate));
+    expect(chips()).toEqual([previewed[0], "(0/1) ", "2 idle"]);
+    expect(readout().querySelector(".chord-readout-scale")).toBeNull();
+    expect(readout().querySelector(".chord-readout-factor")).toBeNull();
+    clickCell(0, 1);
+    const detail = document.getElementById("hex-detail")!;
+    const detailed = [...detail.querySelectorAll(".chord-readout-chip")].map((chip) => chip.textContent);
+    expect(detailed).toEqual(previewed.slice(1));
+    expect(detail.querySelector(".chord-readout-scale")!.getAttribute("data-q"))
+      .toBe(String(1 + BALANCE.allocationComplexityRate));
   });
 
   it("ghost promises classify by the projected allocation — idle says idle", () => {
@@ -472,7 +479,7 @@ describe("placement previews with capacity-aware production (#260)", () => {
     const snapshot = displayedRates(app.state, true);
     expect(snapshot.allocation!.active.map((instance) => instance.name)).toEqual(["Flat seventh"]);
     document.querySelector('[data-cell="1,0"]')!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(readout().textContent).toContain("Fifth ×1.3 · idle");
+    expect(readout().textContent).toContain("1 idle");
     expect(chips().filter((chip) => chip === "Fifth ×1.3")).toHaveLength(0);
     expect(document.querySelectorAll('[data-key="chord-marks"] .chord-idle')).toHaveLength(1);
   });
