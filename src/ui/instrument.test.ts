@@ -266,7 +266,9 @@ describe("the controls sheet's stylesheet contract", () => {
   });
 
   it("the term trigger wears the sheet's engraved hairline, never a dotted underline", () => {
-    expect(css).toMatch(/\.term-trigger \{[^}]*box-shadow: inset 0 -1px var\(--muted\)/);
+    expect(css).toMatch(/\.term-trigger \{[^}]*text-decoration: underline/);
+    expect(css).toMatch(/\.term-trigger \{[^}]*text-decoration-color: var\(--muted\)/);
+    expect(css).toMatch(/\.term-trigger \{[^}]*text-decoration-skip-ink: none/);
     expect(css).not.toContain("border-bottom: 1px dotted");
   });
 
