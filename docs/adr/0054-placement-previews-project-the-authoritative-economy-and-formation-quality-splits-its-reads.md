@@ -4,6 +4,10 @@ Date: 2026-10-07
 Status: Accepted (development slice — the capacity economy stays behind the `?dev` gate pending calibration)
 Issue: #260
 
+## Presentation amendment — 2026-10-12
+
+The confirmed [module hover readout brief](../module-hover-readout-design.md) supersedes decision 4's requirement that ordinary module hover retain the preview's complete metric inventory after landing. Hover becomes a compact open readout: final local output first, named active chords, capacity, nonneutral applied Formation, an idle-instance count, and explicit uncertified status. The aggregate chord factor, measured-quality scale, and individual idle names remain in Hex detail. Seam hover names its own chord and active/idle state. Placement previews retain all required projection figures and distinctions; the authoritative projection, measured/applied split, and ghost classification decisions are unchanged. This amendment records approved design intent, not a claim that the UI has already changed.
+
 ## Context
 
 ADR-0052 made the authoritative allocation the live display and production seam at capacity one, and #259 sold the ladder. Issue #260 asks the placement gesture itself to answer the capacity question: while a module moves, players see whether the proposed placement improves production — resulting final ν/s, total chord factor, formation quality, and used/available capacity — and the selected voice's readout retains the information after the drop. Two seams were missing: a projection that cannot drift from the commit, and an honest split between the quality a formation *measures* and the term an unallocated voice *applies* (#260's first two acceptance criteria).

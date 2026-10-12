@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-12T22:46:14.783352+00:00",
+  "title": "Design System: FlowSynth — Chord readout",
+  "extensions": {
+    "shadows": [],
+    "motion": [],
+    "breakpoints": [
+      {
+        "name": "phone-composition",
+        "value": "600px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Compact Chord readout",
+      "kind": "custom",
+      "refersTo": "hover-summary",
+      "description": "Static module hover; complete mechanics stay in Hex detail.",
+      "html": "<div class=\"ds-summary\"><div class=\"ds-output\">+0.12 ν/s</div><div class=\"ds-row\"><span>Octave</span><span class=\"ds-number\">×1.15</span></div><div class=\"ds-row ds-capacity\"><span>Capacity</span><span class=\"ds-number\">1/1</span></div></div>",
+      "css": ".ds-summary{width:220px;max-width:calc(100vw - 32px);padding:8px 10px;background:var(--panel-deep);display:flex;flex-direction:column;gap:5px;pointer-events:none}.ds-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font:12px/1.4 var(--font-condensed);letter-spacing:.02em;color:var(--chord-octave)}.ds-output{font:600 19px/1.4 var(--mono);font-variant-numeric:tabular-nums;color:var(--accent);margin-bottom:5px}.ds-number{font-family:var(--mono);font-variant-numeric:tabular-nums;flex-shrink:0}.ds-capacity{color:var(--muted);margin-top:5px;padding-top:7px;border-top:1px solid var(--line)}.ds-muted{text-decoration:underline dashed;text-underline-offset:4px;opacity:.72}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Rack",
+    "overview": "This records the built module/seam hover readout and shared detailed-readout styling only. The established instrument is precise, quiet, and machined: open divisions, technical names, and tabular figures. It does not establish a new product-wide visual direction. [Instrument standards](docs/instrument-standards.md) and their pinned prototypes remain authoritative; [the surface brief](docs/module-hover-readout-design.md) owns this readout's content contract.",
+    "keyCharacteristics": [
+      "One reserved reading beside the board.",
+      "Output hierarchy and aligned chord figures.",
+      "Open rows with explicit state text and silent-participation markings."
+    ],
+    "rules": [],
+    "dos": [
+      "Do keep the instrument standards and pinned prototypes authoritative.",
+      "Do align figures, preserve every active instance, and make idle and uncertified states explicit.",
+      "Do preserve complete Hex-detail and placement-preview facts when reusing shared styling."
+    ],
+    "donts": [
+      "Don't introduce enclosing pills, nested row boxes, or decorative glow in this readout.",
+      "Don't repeat the aggregate chord multiplier in ordinary module hover.",
+      "Don't treat unavailable browser checks as verified evidence."
+    ]
+  }
+}

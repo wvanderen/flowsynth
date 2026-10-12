@@ -1383,23 +1383,42 @@ function updateChordReadout(app: App): void {
   // conducting spacer's own containment rule rides moduleChips (#201).
   const chosen = chordChipsForHover(app);
   const focus = hovered;
-  const metrics = focus && snapshot ? voiceMetricsHtml(focus, snapshot) : "";
-  if (!metrics && chosen.length === 0) {
-    host.hidden = true;
-    setReadoutHtml(host, "");
-    return;
+  const active = chosen.filter((mark) => !mark.inactive);
+  const idleCount = chosen.length - active.length;
+  const rows: string[] = [];
+  const contribution = focus && snapshot?.contributions.get(focus.id);
+  if (focus && isOscillatorType(focus.type) && snapshot) {
+    rows.push(compactReadoutRow(`+${formatNumber(contribution?.value ?? 0)} ν/s`, "value"));
   }
-  host.hidden = false;
-  setReadoutHtml(host, metrics +
-    chosen
-      .map((mark) =>
-        // The muted participant's mark (ADR-0048): a chord a silent voice
-        // sings in wears the same dashed treatment its seams carry. The
-        // idle candidate's chip (issue #258) reads its own style and the
-        // "idle" word — recognized, earning nothing.
-        `<span class="chord-readout-chip mono${mark.muted ? " chord-readout-muted" : ""}${mark.inactive ? " chord-readout-idle" : ""}" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.inactive ? `${mark.label} · idle` : mark.label)}</span>`,
-      )
-      .join(""));
+  const marks = focus ? active : chosen;
+  rows.push(...marks.map((mark) => compactReadoutRow(
+    mark.inactive ? `${mark.label} · idle` : mark.label,
+    `chord${mark.muted ? " chord-readout-muted" : ""}${mark.inactive ? " chord-readout-idle" : ""}`,
+    mark.colorVar,
+  )));
+  if (focus && isVoiceType(focus.type) && snapshot?.allocation) {
+    rows.push(compactReadoutRow(`Capacity ${snapshot.allocation.used.get(focus.id) ?? 0}/${snapshot.allocation.capacity}`, "capacity"));
+  }
+  if (contribution && contribution.formationQ !== 1) {
+    rows.push(compactReadoutRow(`Formation ×${formatNumber(contribution.formationQ)}`, "formation"));
+  }
+  if (focus && idleCount) rows.push(compactReadoutRow(`${idleCount} idle`, "idle"));
+  if (focus && isVoiceType(focus.type) && snapshot?.allocation && !snapshot.allocation.certified) {
+    rows.push(compactReadoutRow("Allocation uncertified", "uncertified"));
+  }
+  host.hidden = rows.length === 0;
+  setReadoutHtml(host, rows.length ? `<div class="chord-readout-summary">${rows.join("")}</div>` : "");
+}
+
+// The quick read is plain text; complete mechanics stay in Hex detail.
+function compactReadoutRow(text: string, kind: string, colorVar?: string): string {
+  const split = text.indexOf(" ×");
+  const capacity = kind === "capacity" ? text.lastIndexOf(" ") : -1;
+  const at = split >= 0 ? split : capacity;
+  const content = at >= 0
+    ? `<span class="chord-readout-name">${escapeHtml(text.slice(0, at))} </span><span class="chord-readout-number mono">${escapeHtml(text.slice(at + 1))}</span>`
+    : escapeHtml(text);
+  return `<span class="chord-readout-chip chord-readout-${kind}${kind === "value" ? " mono" : ""}"${colorVar ? ` style="--cc:var(--${colorVar})"` : ""}>${content}</span>`;
 }
 
 // Preserve focused/pinned disclosures when an unchanged readout refreshes.

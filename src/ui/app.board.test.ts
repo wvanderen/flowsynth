@@ -1236,7 +1236,7 @@ describe("always-on chord feedback (§6, #137)", () => {
     expect(mark.querySelectorAll(".chord-seam")).toHaveLength(2);
   });
 
-  it("the readout is a reserved spot: ν/s, capacity, earned factor, then its chords", () => {
+  it("the compact readout leads with output and active chords, then capacity and exceptions", () => {
     app = boot(undefined, true);
     // The power-chord region again: C4 sings in two chords — the Octave
     // (C4·C5) and the Fifth (C4·G4). At capacity one only one instance
@@ -1247,41 +1247,36 @@ describe("always-on chord feedback (§6, #137)", () => {
     give(app.state, "additive", hex(0, 1));
     app.render();
     const chips = () => [...readout().querySelectorAll(".chord-readout-chip")].map((chip) => chip.textContent);
-    // Hovering G4 — its final ν/s leads, then its capacity, then the total
-    // earned factor (instance × formation), then the named terms: the
-    // active chord, then the idle candidate it qualifies for but can't
-    // afford (#258).
+    // Hovering G4 leads with final output and its active chord. Capacity,
+    // applied formation, and the idle-instance count are subordinate.
     cell(1, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(readout().hidden).toBe(false);
     // The formation quality is its own named term (ADR-0049) and rides the
     // factor: classes {0,7}, one class of complexity — scored on the
     // allocation's own magnitudes (#260).
-    const earned = formatNumber(1.3 * (1 + BALANCE.allocationComplexityRate));
     expect(chips()).toEqual([
       `+${formatNumber(0.1 * 1.3 * (1 + BALANCE.allocationComplexityRate))} ν/s`,
-      "Capacity 1/1",
-      `×${earned}`,
-      "Formation ×1.12",
       "Fifth ×1.3",
-      "Fifth ×1.3 · idle",
+      "Capacity 1/1",
+      "Formation ×1.12",
+      "1 idle",
     ]);
     // Hovering C4 asks its own row — the same earned Fifth, and the idle
     // Octave is the candidate it shares.
     cell(0, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(chips()).toEqual([
       `+${formatNumber(0.1 * 1.3 * (1 + BALANCE.allocationComplexityRate))} ν/s`,
-      "Capacity 1/1",
-      `×${earned}`,
-      "Formation ×1.12",
       "Fifth ×1.3",
-      "Octave ×1.15 · idle",
+      "Capacity 1/1",
+      "Formation ×1.12",
+      "1 idle",
     ]);
     // Leaving clears them.
     document.getElementById("grid")!.dispatchEvent(new MouseEvent("pointerleave"));
     expect(readout().hidden).toBe(true);
   });
 
-  it("a chordless module still shows its final ν/s — at zero capacity spent, factor ×1", () => {
+  it("a chordless module shows output and unused capacity without neutral factors", () => {
     app = boot(undefined, true);
     app.render();
     give(app.state, "additive", hex(5, 0)); // its own island
@@ -1291,7 +1286,7 @@ describe("always-on chord feedback (§6, #137)", () => {
     const cellAt = document.querySelector('[data-cell="5,0"]')!;
     cellAt.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(readout().hidden).toBe(false);
-    expect(chips()).toEqual([`+${formatNumber(BALANCE.synthRate)} ν/s`, "Capacity 0/1", "×1"]);
+    expect(chips()).toEqual([`+${formatNumber(BALANCE.synthRate)} ν/s`, "Capacity 0/1"]);
   });
 
   it("clicking a module during flow answers the lock — a read-only cross-section, no bloom", () => {
