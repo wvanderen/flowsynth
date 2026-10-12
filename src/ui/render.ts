@@ -146,11 +146,12 @@ export function render(app: App): void {
 
 // The unplanned shape's two words (§6) live in focus.ts beside the plan
 // patchers they share; the clock is itself the plan affordance (§7):
-// clicking it opens the Focus sheet's PLAN face. Both console shapes wear
-// the same wiring; the clock anchor counts as "inside" for the popover
+// clicking it opens the Focus sheet's PLAN face. Wide surfaces wear
+// wide-only wiring; the phone clock is a readout (#313). The anchor counts as "inside" for the popover
 // click-away closer (app.ts), so the click that opens the sheet never
 // closes it in the same gesture.
 function wireClockPlan(app: App): void {
+  if (isPhoneWidth()) return;
   app.listen(byId("clock-plan"), "click", () => {
     app.openApp("time");
   });
@@ -172,6 +173,7 @@ function wireClockPlan(app: App): void {
 // disclosure, whatever face it carries.
 function renderConsoleSession(app: App, projected: RateSnapshot): void {
   const { state, ui } = app;
+  const phone = isPhoneWidth();
   const host = byId("console-session");
   if (!host) return;
 
@@ -188,18 +190,18 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
   // id attributes ride in only on the flow side, where the tick patcher
   // addresses the nodes directly.
   const clockButton = (title: string, clockAttrs = "", captionAttrs = ""): string => `
-      <button class="console-clock clock-opens-time" id="clock-plan" title="${title}">
+      <${phone ? "div" : "button"} class="console-clock${phone ? "" : " clock-opens-time"}" id="clock-plan"${phone ? "" : ` title="${title}"`}>
         <span class="clock-stack">
           <span class="clock-row">
             <span class="session-clock mono"${clockAttrs}></span>
-            ${discloseSvg}
+            ${phone ? "" : discloseSvg}
           </span>
           <span class="clock-caption"${captionAttrs}></span>
         </span>
-      </button>`;
+      </${phone ? "div" : "button"}>`;
 
   // The Focus control sheet anchors beneath the clock's own disclosure
-  // (ADR-0050): the habit and goals tiles walk here too — one frame, four
+  // (ADR-0050): the phone Focus door walks here too — one frame, four
   // faces. Its signature rides the rebuild key; the body is only
   // string-built when that key changes (every flow tick takes the patch
   // path below). Notes wears the same frame as its own CAPTURE | LOGGED
@@ -246,7 +248,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
     // the mode in the caption slot. The plan's own values patch in place
     // below (#115) — a plan pick never rebuilds the console session. No
     // session runs, so the header's progress strip stays empty.
-    const key = `upgrade|${popoverKey}|${bannerReadsKey(app)}`;
+    const key = `upgrade|${phone ? "phone" : "wide"}|${popoverKey}|${bannerReadsKey(app)}`;
     if (host.dataset.renderKey !== key) {
       host.dataset.renderKey = key;
       const scrollTop = popoverScroll(host);
@@ -280,7 +282,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
   const paused = state.mode === "paused";
   const reached = target !== null && elapsed >= target;
 
-  const key = `flow:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}|${popoverKey}|${bannerReadsKey(app)}`;
+  const key = `flow:${phone ? "phone" : "wide"}:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}|${popoverKey}|${bannerReadsKey(app)}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     const scrollTop = popoverScroll(host);
@@ -338,7 +340,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
 // and closing the sheet rebuilds the cluster with the sheet itself.
 function syncClockDisclosure(app: App): void {
   const open = app.ui.app !== null;
-  byId("clock-plan")?.setAttribute("aria-expanded", String(open));
+  if (!isPhoneWidth()) byId("clock-plan")?.setAttribute("aria-expanded", String(open));
 }
 
 // The focus banner's reads (ADR-0050; vertical bars per #312): beside the

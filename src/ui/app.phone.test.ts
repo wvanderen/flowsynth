@@ -427,7 +427,12 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     // The Focus sheet anchors beneath the clock's own disclosure (issue
     // #148) — never beneath a door in the apps row (ADR-0050's phone line
     // keeps the doors out of the session cluster).
-    document.getElementById("clock-plan")!.click();
+    const clock = document.getElementById("clock-plan")!;
+    expect(clock.tagName).toBe("DIV");
+    expect(clock.querySelector(".clock-disclose")).toBeNull();
+    clock.click();
+    expect(app.ui.app).toBeNull();
+    document.getElementById("app-tile-focus")!.click();
     expect(app.ui.app).toBe("time");
     const popover = document.getElementById("app-popover")!;
     expect(document.getElementById("console-session")!.contains(popover)).toBe(true);
@@ -435,6 +440,15 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     app.closeApp();
     app.render();
     expect(document.getElementById("app-popover")).toBeNull();
+    setAppWidth(1200);
+    app.render();
+    expect(document.getElementById("clock-plan")!.tagName).toBe("BUTTON");
+    document.getElementById("clock-plan")!.click();
+    expect(app.ui.app).toBe("time");
+    setAppWidth(390);
+    app.render();
+    expect(document.getElementById("clock-plan")!.tagName).toBe("DIV");
+    expect(document.getElementById("clock-plan")!.hasAttribute("aria-expanded")).toBe(false);
   });
 
   it("the Hex detail presents as a bottom sheet replacing the grid", () => {
@@ -576,7 +590,7 @@ describe("the phone banner (ADR-0050's amended phone line)", () => {
     // The nav row's full roster: brand, clock, switch, doors, Settings —
     // every launcher surface a native button.
     const row = () => document.querySelector("header.console")!;
-    for (const id of ["clock-plan", "flow-switch", "app-tile-focus", "app-tile-notes", "console-settings"]) {
+    for (const id of ["flow-switch", "app-tile-focus", "app-tile-notes", "console-settings"]) {
       expect(row().contains(document.getElementById(id)!)).toBe(true);
       expect(document.getElementById(id)!.tagName).toBe("BUTTON");
     }
