@@ -464,7 +464,6 @@ h1, h2, h3, p { margin: 0; }
   overflow-y: auto;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px;
   padding: 14px 16px 16px;
   box-shadow: 0 18px 50px var(--shadow);
   z-index: 30;
@@ -1527,7 +1526,6 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   padding: 10px 34px 10px 12px;
   background: color-mix(in srgb, var(--panel-soft) 92%, transparent);
   border: 1px solid var(--line-strong);
-  border-radius: 10px;
   backdrop-filter: blur(3px);
   box-shadow: 0 4px 18px var(--shadow);
 }
@@ -1791,7 +1789,6 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   padding: 2px 6px;
   background: var(--panel-deep);
   border: 1px solid var(--muted);
-  border-radius: 4px;
 }
 .chord-readout-scale .scale-track {
   stroke: var(--muted);
@@ -2147,7 +2144,6 @@ body.hex-detail-open .upgrade-all {
   padding: 12px;
   background: var(--panel);
   border: 1px solid var(--line-strong);
-  border-radius: 10px;
 }
 .hex-detail-tray-head {
   display: flex;
@@ -2433,7 +2429,14 @@ body.hex-detail-open .upgrade-all {
   letter-spacing: 0.08em;
 }
 .sweep-chip {
-  padding: 5px 8px;
+  /* Board chrome beside the dock: the dock's compact scale, width keeping
+     pace with height so the chip reads as a key, not a sliver. */
+  min-height: 38px;
+  min-width: 44px;
+  padding: 4px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--panel-veil);
   border-color: var(--accent);
   color: var(--ink);
@@ -2482,7 +2485,6 @@ body.hex-detail-open .upgrade-all {
   padding: 9px 8px 11px;
   background: var(--panel-veil);
   border: 1px dashed var(--line-strong);
-  border-radius: 12px;
   transition: border-color 0.15s, background 0.15s;
   backdrop-filter: blur(3px);
   overflow-y: auto;
@@ -2535,7 +2537,6 @@ body.hex-detail-open .upgrade-all {
   gap: 2px;
   background: var(--panel-veil);
   border: 1px solid var(--line-strong);
-  border-radius: 9px;
   backdrop-filter: blur(3px);
 }
 .layer-legend[hidden] { display: none; }
@@ -2687,7 +2688,6 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   padding: 9px 8px 11px;
   background: var(--panel-veil);
   border: 1px dashed var(--arete-line);
-  border-radius: 12px;
   backdrop-filter: blur(3px);
   overflow-y: auto;
 }
@@ -2747,7 +2747,6 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   padding: 12px 14px;
   background: var(--panel);
   border: 1px solid var(--arete);
-  border-radius: 10px;
   box-shadow: 0 10px 30px var(--shadow);
   font: 12px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--ink);
@@ -2787,7 +2786,6 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   flex-wrap: wrap;
   margin: 8px 0 0;
   padding: 7px 10px;
-  border-radius: 9px;
   border: 1px dashed var(--arete);
   color: var(--arete);
   font-size: 12px;
@@ -2842,7 +2840,6 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   overflow-y: auto;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 12px;
   padding: var(--modal-pad);
   box-shadow: 0 24px 80px var(--shadow);
 }
@@ -3039,7 +3036,6 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   z-index: 40;
   background: var(--panel-veil);
   border: 1px solid var(--line-strong);
-  border-radius: 8px;
   padding: 10px;
   display: flex;
   gap: 6px;
@@ -3307,7 +3303,7 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
    rising from the bottom edge — reads the viewport. */
 @media (max-width: 600px) {
   .modal-backdrop { padding: 10px; align-items: flex-end; }
-  .modal { width: 100%; max-height: 78vh; border-radius: 14px 14px 0 0; animation: sheet-up 0.18s ease-out; }
+  .modal { width: 100%; max-height: 78vh; animation: sheet-up 0.18s ease-out; }
   /* The chord sheet's phone reflow (#278): the stage becomes the compact
      top row — small glyph left, name and the figure reads beside it — and
      the index a full-width row list below. The sheet itself scrolls. */
@@ -3334,7 +3330,7 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
    body-level, outside the #app container, so the gate's decision arrives
    as a .sheet class on the backdrop rather than a container rule. */
 .modal-backdrop.sheet { padding: 10px; align-items: flex-end; }
-.modal-backdrop.sheet .modal { width: 100%; max-height: 78vh; border-radius: 14px 14px 0 0; animation: sheet-up 0.18s ease-out; }
+.modal-backdrop.sheet .modal { width: 100%; max-height: 78vh; animation: sheet-up 0.18s ease-out; }
 
 /* The cluster rises above the modal sheets too (§7, ADR-0029: the zoom
    cluster alone reacts to open sheets): the modal layer is body-level and

@@ -266,4 +266,24 @@ describe("the controls sheet's stylesheet contract", () => {
     expect(css).toMatch(/\.term-trigger \{[^}]*box-shadow: inset 0 -1px var\(--muted\)/);
     expect(css).not.toContain("border-bottom: 1px dotted");
   });
+
+  it("sheet, popover, and tray containers are square-cut too — no rounded card survives", () => {
+    for (const selector of [
+      ".modal {",
+      ".app-popover {",
+      ".layer-legend {",
+      ".inventory-tray {",
+      ".mutator-tray {",
+      ".hex-detail-tray {",
+      ".mut-popover {",
+      ".arc-card {",
+      ".forge-detail {",
+      ".sweep-chip {",
+    ]) {
+      const rest = css.slice(css.indexOf(selector));
+      const body = rest.slice(rest.indexOf("{"), rest.indexOf("}"));
+      expect(body).not.toContain("border-radius");
+    }
+    expect(css).not.toContain("14px 14px 0 0");
+  });
 });
