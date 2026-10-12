@@ -1275,16 +1275,12 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   padding: 2.5px 5px;
   font-style: normal;
 }
-/* The dock's meter wears the shared bar column at pip scale. */
-.tool-icon .gbar {
-  position: absolute;
-  left: 50%;
-  bottom: 3px;
-  width: 4px;
-  height: 11px;
-  transform: translateX(-50%);
-}
-.tool-icon .gbar i { background: var(--forge-glow); }
+/* The dock's charge pip: a square-cut horizontal strip in the clear band
+   beneath the glyph — its reviewed dock reading, kept by direction. The
+   goal/meter bars stay columns; this one indicator fills by width. */
+.forge-pip { display: block; background: var(--line); overflow: hidden; }
+.forge-pip i { display: block; height: 100%; width: 0; background: var(--forge-glow); }
+.tool-icon .forge-pip { position: absolute; left: 7px; right: 7px; bottom: 3px; height: 3px; }
 /* The armed tool wears the state grammar's selected voice: the firm inset
    marker with ink, readable without color. */
 .board-tools button.active, .thumb-bar button.active {
@@ -1360,7 +1356,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   min-width: 0;
 }
 .thumb-bar button svg { width: 19px; height: 19px; flex-shrink: 0; }
-.thumb-bar .gbar { display: none; }
+.thumb-bar .forge-pip { display: none; }
 .thumb-bar button .tool-word { display: block; font-size: 9px; line-height: 1.5; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .thumb-bar button:hover, .thumb-bar button.active { color: var(--ink); background: var(--hover-bg); }
 .thumb-bar .tool-badge { top: -2px; right: 50%; transform: translateX(20px); }

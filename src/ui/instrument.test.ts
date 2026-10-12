@@ -246,7 +246,10 @@ describe("the controls sheet's stylesheet contract", () => {
     expect(css).toMatch(/\.gbar\.done::after \{[^}]*content: "✓"/);
     expect(css).not.toContain(".goal-track");
     expect(css).not.toContain(".ach-track");
-    expect(css).not.toContain(".forge-pip");
+    // The dock's charge pip keeps its horizontal strip by direction — the
+    // retired shape was the rounded track; the strip returns square-cut.
+    expect(css).toMatch(/\.forge-pip \{[^}]*overflow: hidden/);
+    expect(css).not.toMatch(/\.forge-pip[^{]*\{[^}]*border-radius/);
   });
 
   it("the goal rows fill the shared column by height, done bars holding full height", () => {

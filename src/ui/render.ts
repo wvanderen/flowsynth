@@ -822,7 +822,7 @@ function toolActions(): ToolAction[] {
       run: (app) => app.openModal("forge"),
       badge: (app) =>
         app.state.bankedRolls.length > 0 ? `<b class="tool-badge mono">${app.state.bankedRolls.length}</b>` : "",
-      media: `<i class="gbar" aria-hidden="true"><i data-live="forge-pip"></i></i>`,
+      media: `<i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i>`,
       // The pip shows the flow meter (ADR-0041); hover, focus, or tap opens
       // the one detail — the live meter read, in flow suffixed with the lock
       // reason (#233): the sheet never expands during a session, and the
@@ -987,7 +987,7 @@ function renderTools(app: App, projected: RateSnapshot): void {
     if (!target) continue;
     const pip = target.querySelector<HTMLElement>('[data-live="forge-pip"]');
     const pipFill = meterPipFill(state.flow.progress, flowCap);
-    if (pip && pip.style.height !== pipFill) pip.style.height = pipFill;
+    if (pip && pip.style.width !== pipFill) pip.style.width = pipFill;
     const forgeButton = target.querySelector<HTMLButtonElement>('[data-op="forge"]');
     if (forgeButton) {
       const action = actions.find((a) => a.op === "forge")!;

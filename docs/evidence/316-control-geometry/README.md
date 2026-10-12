@@ -30,4 +30,4 @@ All captures from the verified checkout at `2f8907d`, served by `tools/dev-serve
 
 - **Icon furniture keeps its reviewed sizes** (dock 38, zoom 34, legend 34, inline ✕ 28): the sheet's 44px floor governs its text controls; these glyph controls take the sheet's square-cut, hairline, and state grammar while retaining the geometry their own review rounds pinned. Explicit `min-height` preserves each against the shared floor.
 - **Achievement bars carry no second ✓**: the row's engraved `ACH_MARK` is the one acquired mark; the bar states completion by holding full fill in the accent register — two engraved checks per row would be furniture.
-- **The dock's meter reads the shared column at pip scale** (4×11 inside a 38px door): one shape implementation, sized in context — the sheet itself sizes columns per context.
+- **The dock's charge pip keeps its horizontal strip** — a direction taken in review: the retired shape was the rounded track, and the pip returns as a square-cut strip filling by width beneath the forge glyph, clear of it. Goal, achievement, and forge-modal meters stay vertical columns.
