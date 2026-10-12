@@ -167,7 +167,12 @@ export function mutatorSlotPrice(state: GameState): number {
    State grammar (instrument standards): the selected face wears the firm
    inset marker — readable without color; locked wears the muted outline.
    Every symbol carries an accessible name and a native tooltip; the
-   locked face's mechanics ride the ⓘ disclosure beside it. */
+   locked face's mechanics ride its own tooltip — no ⓘ disclosure beside
+   it (issue #314 review: the doctrine cuts a disclosure that would
+   restate the tooltip). Order (issue #314): wherever modules and
+   mutators co-list, mutators lead — the one builder keeps every switch
+   in that order, and native buttons tab in DOM order, so sight and
+   keyboard agree. */
 
 export function layerLegendActiveFace(app: App): "modules" | "mutators" {
   return app.ui.detail ? app.ui.detail.face : app.ui.mutLayer;
@@ -179,15 +184,16 @@ export function layerLegendActiveFace(app: App): "modules" | "mutators" {
 export const LAYER_MODULES_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2.6 20.2 7.3v9.4L12 21.4 3.8 16.7V7.3Z"/><path d="M12 8.2v7.6M8.4 10.1l7.2 3.8M15.6 10.1l-7.2 3.8"/></svg>`;
 export const LAYER_MUTATORS_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2.5 20 8l-3.2 13H7.2L4 8l8-5.5Z"/><path d="M12 2.5 9.4 21M12 2.5l2.6 18.5M4.6 8.4h14.8"/></svg>`;
 
-export function layerLegendHtml(app: App, tipId = "legend-mutator-entry"): string {
+export function layerLegendHtml(app: App): string {
   const { state } = app;
   const active = layerLegendActiveFace(app);
   const locked = !state.catalogEntryOwned;
   const mutatorsSelected = active === "mutators";
   // One mark per state: the padlock stands for the locked layer, the
-  // arete register for the unlocked one — never both at once.
-  return `<button class="legend-symbol${active === "modules" ? " active" : ""}" data-legend-layer="modules" aria-pressed="${active === "modules"}" aria-label="Modules layer" title="Modules — the production grid">${LAYER_MODULES_SVG}</button>
-    <span class="legend-entry${locked ? " locked" : ""}"><button class="legend-symbol${mutatorsSelected ? " active" : ""}${locked ? " locked" : ""}" data-legend-layer="mutators" aria-pressed="${mutatorsSelected}" aria-label="${locked ? "Mutators layer — locked; open Catalog entry" : "Mutators layer"}" title="${locked ? "Mutators — locked; unlocks with the Mutator entry" : "Mutators — the slots over the modules"}">${locked ? LOCK_MARK : LAYER_MUTATORS_SVG}</button>${locked ? `<span class="inst-tip legend-entry-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${tipId}" aria-label="About unlocking Mutators">ⓘ</button><span class="inst-tip-body" id="${tipId}" role="tooltip">Unlocks with the Mutator entry</span></span>` : ""}</span>`;
+  // arete register for the unlocked one — never both at once. Mutators
+  // lead the pair (instrument standards, issue #314).
+  return `<button class="legend-symbol${mutatorsSelected ? " active" : ""}${locked ? " locked" : ""}" data-legend-layer="mutators" aria-pressed="${mutatorsSelected}" aria-label="${locked ? "Mutators layer — locked; open Catalog entry" : "Mutators layer"}" title="${locked ? "Mutators — locked; unlocks with the Mutator entry" : "Mutators — the slots over the modules"}">${locked ? LOCK_MARK : LAYER_MUTATORS_SVG}</button>
+    <button class="legend-symbol${active === "modules" ? " active" : ""}" data-legend-layer="modules" aria-pressed="${active === "modules"}" aria-label="Modules layer" title="Modules — the production grid">${LAYER_MODULES_SVG}</button>`;
 }
 
 const boundLegends = new WeakSet<HTMLElement>();

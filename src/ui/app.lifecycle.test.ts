@@ -42,14 +42,9 @@ describe("App lifetime", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("release cancels mode feedback and removes locked-symbol disclosure", () => {
+  it("release cancels mode feedback", () => {
     const app = fixture.boot();
-    const tip = document.querySelector<HTMLButtonElement>("#layer-legend .inst-tip-trigger")!;
-    tip.click();
-    const body = document.getElementById(tip.getAttribute("aria-describedby")!)!;
-    expect(body.parentElement).toBe(document.body);
     app.dispose();
-    expect(body.isConnected).toBe(false);
     const current = fixture.boot();
     current.state.catalogEntryOwned = true;
     current.ui.buyingCell = true;

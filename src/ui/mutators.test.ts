@@ -71,31 +71,19 @@ beforeEach(() => {
 afterEach(() => fixture.release());
 
 describe("the vertical layer legend (issue #295)", () => {
-  it("the locked symbol's mechanics open by focus and tap on strip and sheet; Escape and tap-away dismiss without entering", () => {
-    const checkDisclosure = (host: HTMLElement) => {
-      const trigger = host.querySelector<HTMLButtonElement>(".legend-entry-tip .inst-tip-trigger")!;
-      const body = () => document.getElementById(trigger.getAttribute("aria-describedby")!)!;
-      trigger.focus();
-      expect(body().classList.contains("inst-show")).toBe(true);
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-      expect(body().classList.contains("inst-show")).toBe(false);
-      trigger.click();
-      expect(trigger.getAttribute("aria-expanded")).toBe("true");
-      expect(body().classList.contains("inst-show")).toBe(true);
-      document.body.click();
-      expect(body().classList.contains("inst-show")).toBe(false);
-      expect(trigger.getAttribute("aria-expanded")).toBe("false");
-      expect(app.ui.mutLayer).toBe("modules");
-      // The locked symbol carries its own tooltip too (issue #295: every
-      // symbol has one); the ⓘ carries the mechanics beside it.
-      expect(host.querySelector("[data-legend-layer=mutators]")!.getAttribute("title")).toContain("locked");
+  it("the locked symbol carries its mechanics on its own tooltip — no ⓘ disclosure rides strip or sheet (issue #314 review)", () => {
+    const checkLegend = (host: HTMLElement) => {
+      // The tooltip doctrine cuts: the padlock's native title says the
+      // lock mechanic; a second disclosure would restate it.
+      expect(host.querySelector(".inst-tip-trigger")).toBeNull();
+      expect(host.querySelector("[data-legend-layer=mutators]")!.getAttribute("title")).toContain("locked; unlocks with the Mutator entry");
     };
-    checkDisclosure(document.getElementById("layer-legend")!);
+    checkLegend(document.getElementById("layer-legend")!);
     expect(app.ui.modal).toBeNull();
     app.openModal("inventory");
-    checkDisclosure(document.querySelector<HTMLElement>(".tray-switch")!);
+    checkLegend(document.querySelector<HTMLElement>(".tray-switch")!);
     expect(app.ui.modal).toBe("inventory");
-    // The action still opens the entry immediately, independently of disclosure.
+    // The click still walks to the entry screen.
     document.querySelector<HTMLButtonElement>(".tray-switch [data-legend-layer=mutators]")!.click();
     expect(app.ui.modal).toBe("catalog");
     expect(app.ui.catalogFace).toBe("arete");
@@ -149,6 +137,23 @@ describe("the vertical layer legend (issue #295)", () => {
     expect(app.ui.mutUnlockArmed).toBe(false);
     expect(document.getElementById("layer-legend")!.hidden).toBe(true);
     expect(document.body.classList.contains("mut-layer-live")).toBe(false);
+  });
+
+  it("mutators lead every co-list: strip and sheet switch order Mutators before Modules, in sight and tab order (issue #314)", () => {
+    const checkOrder = (host: HTMLElement) => {
+      const symbols = [...host.querySelectorAll<HTMLButtonElement>("[data-legend-layer]")];
+      expect(symbols.map((b) => b.getAttribute("data-legend-layer"))).toEqual(["mutators", "modules"]);
+      // Native buttons tab in DOM order and the symbols carry no tabindex,
+      // so the visual lead is the keyboard lead.
+      expect(symbols.every((b) => !b.hasAttribute("tabindex"))).toBe(true);
+    };
+    // Pre-entry, locked: the strip still leads with the Mutators symbol.
+    app.render();
+    checkOrder(document.getElementById("layer-legend")!);
+    seedMutatorEra();
+    checkOrder(document.getElementById("layer-legend")!);
+    app.openModal("inventory");
+    checkOrder(document.querySelector<HTMLElement>(".tray-switch")!);
   });
 
   it("switching layers drops the armed gestures with the walk-away", () => {
