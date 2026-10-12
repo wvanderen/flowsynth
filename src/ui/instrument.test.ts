@@ -252,8 +252,8 @@ describe("the controls sheet's stylesheet contract", () => {
   it("the goal rows fill the shared column by height, done bars holding full height", () => {
     const focus = readFileSync("src/ui/focus.ts", "utf8");
     expect(focus).toContain('class="gbar${goal.completed ? " done" : ""}"');
-    expect(focus).toContain("height:${goal.completed ? 100 : fraction * 100}%");
-    expect(focus).toContain('bar.style.height = barHeight');
+    expect(focus).toContain("height:${goalBarHeight(goal)}");
+    expect(focus).toContain("bar.style.height = barHeight");
   });
 
   it("the swatch is the sheet's square-cut control under the firm inset marker", () => {
