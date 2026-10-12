@@ -940,13 +940,14 @@ describe("the GOALS face's slots and purchase row (#150)", () => {
     expect(lastBlock.querySelector(".long-goal-row")).not.toBeNull();
   });
 
-  it("the purchase row is compact: one more slot at the next price, label and help text dropped", () => {
+  it("the purchase row sells the product — Channel Strips, one +1 slot effect line, next price on the button", () => {
     app.openApp("goals");
     const row = sheet().querySelector(".long-goal-row")!;
     expect(row.textContent).not.toContain("CONSOLE LONG GOAL");
     expect(row.textContent).not.toContain("→");
     expect(row.textContent).not.toContain("2 → 4");
-    expect(row.querySelector(".long-goal-name")!.textContent).toBe("One more goal slot");
+    expect(row.querySelector(".long-goal-name")!.textContent).toBe("Channel Strips");
+    expect(row.querySelector(".long-goal-effect")!.textContent).toBe("+1 goal slot");
     expect(row.querySelector("#long-goal-buy")!.textContent).toBe(`${formatInt(longGoalCost(0))} ν`);
   });
 

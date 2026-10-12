@@ -638,7 +638,9 @@ h1, h2, h3, p { margin: 0; }
 .goal-row.done .goal-ledger-name { color: var(--muted); }
 .goal-ledger-head .icon-btn { flex-shrink: 0; }
 .long-goal-row { justify-content: space-between; align-items: center; }
+.long-goal-row .long-goal-head { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex-wrap: wrap; }
 .long-goal-row .long-goal-name { font-size: 13.5px; font-weight: 550; }
+.long-goal-row .long-goal-effect { font: 12px var(--mono); color: var(--muted); white-space: nowrap; }
 .long-goal-row .shop-buy { align-items: flex-end; }
 
 /* The HISTORY face: the record list and drill as ruled rows. */

@@ -1256,7 +1256,7 @@ export class App {
   // The first console long goal (ADR-0012 as amended by ADR-0034): goal
   // capacity, one slot per purchase from the Goals panel's compact row.
   buyGoalCapacityAction(): void {
-    this.act(buyGoalCapacity(this.state), "One more goal slot.");
+    this.act(buyGoalCapacity(this.state), "Channel Strip added — one more goal slot.");
   }
 
   // ── The Mutator layer's gestures (issue #199) ───────────────────────────
