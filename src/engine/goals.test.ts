@@ -7,10 +7,14 @@ import { hex } from "./hex";
 import {
   accrueGoalProgress,
   createGoal,
+  DEFAULT_GOAL_COLOR,
   deleteGoal,
+  GOAL_COLORS,
   goalCapacity,
   goalTrackerState,
+  normalizeGoals,
   rollGoalOccurrences,
+  setGoalColor,
 } from "./goals";
 import { longGoalCost } from "./economy";
 import { deserialize, serialize } from "./save";
@@ -82,6 +86,43 @@ describe("goal slots and creation", () => {
     expect(deleteGoal(s, s.goals[0]!.id).ok).toBe(false);
     endSession(s);
     expect(deleteGoal(s, s.goals[0]!.id).ok).toBe(true);
+  });
+
+  it("colors a goal at creation — vermillion default, chosen key kept (#312)", () => {
+    const s = fresh();
+    s.goalCapacityBought = 1;
+    const plain = createGoal(s, { habitId: null, minutes: 10, schedule: "once", now: 1 }).goal!;
+    expect(plain.color).toBe(DEFAULT_GOAL_COLOR);
+    expect(GOAL_COLORS).toEqual(["vermillion", "amber", "green", "cyan", "indigo", "violet"]);
+    const picked = createGoal(s, { habitId: null, minutes: 10, schedule: "once", now: 1, color: "cyan" }).goal!;
+    expect(picked.color).toBe("cyan");
+    // An unknown key falls back to the default, never a made-up token.
+    const stray = createGoal(s, { habitId: null, minutes: 10, schedule: "once", now: 1, color: "chartreuse" as never }).goal!;
+    expect(stray.color).toBe(DEFAULT_GOAL_COLOR);
+  });
+
+  it("re-colors a goal in upgrade mode only, on real goals with real keys (#312)", () => {
+    const s = fresh();
+    const goal = createGoal(s, { habitId: null, minutes: 10, schedule: "once", now: 1 }).goal!;
+    expect(setGoalColor(s, goal.id, "indigo").ok).toBe(true);
+    expect(goal.color).toBe("indigo");
+    expect(setGoalColor(s, "nope", "cyan").ok).toBe(false);
+    expect(setGoalColor(s, goal.id, "chartreuse" as never).ok).toBe(false);
+    expect(goal.color).toBe("indigo");
+    startSession(s, 600);
+    expect(setGoalColor(s, goal.id, "cyan").ok).toBe(false);
+    endSession(s);
+    expect(goal.color).toBe("indigo");
+  });
+
+  it("lenient-defaults a pre-palette save's color and drops corrupt keys (#312)", () => {
+    const s = fresh();
+    const goal = createGoal(s, { habitId: null, minutes: 10, schedule: "once", now: 1, color: "violet" }).goal!;
+    const legacy = { ...goal, color: undefined } as unknown as typeof goal;
+    const corrupt = { ...goal, id: `${goal.id}x`, color: 7 } as unknown as typeof goal;
+    normalizeGoals([legacy, corrupt]);
+    expect(legacy.color).toBe(DEFAULT_GOAL_COLOR);
+    expect(corrupt.color).toBe(DEFAULT_GOAL_COLOR);
   });
 });
 
@@ -225,11 +266,12 @@ describe("persistence", () => {
   it("round-trips goals with their progress", () => {
     const s = fresh();
     const habit = withHabit(s);
-    createGoal(s, { habitId: habit.id, minutes: 20, schedule: "daily", now: 7_000 });
+    createGoal(s, { habitId: habit.id, minutes: 20, schedule: "daily", now: 7_000, color: "amber" });
     accrueGoalProgress(s, habit.id, 240);
     const loaded = deserialize(serialize(s))!;
     expect(loaded.state!.goals).toHaveLength(1);
     expect(loaded.state!.goals[0]!.progressSeconds).toBeCloseTo(240, 6);
+    expect(loaded.state!.goals[0]!.color).toBe("amber");
   });
 });
 

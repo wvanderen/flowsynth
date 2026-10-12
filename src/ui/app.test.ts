@@ -819,6 +819,80 @@ describe("the Notes stream's habit chips (§9)", () => {
 describe("the GOALS face's slots and purchase row (#150)", () => {
   const sheet = () => document.getElementById("app-popover")!;
 
+  it("the create form offers exactly the six swatches, vermillion pressed by default (#312)", () => {
+    app.openApp("goals");
+    sheet().querySelector<HTMLButtonElement>("#goal-create-open")!.click();
+    const swatches = [...sheet().querySelectorAll<HTMLButtonElement>(".goal-swatch")];
+    expect(swatches.map((s) => s.getAttribute("data-goal-draft-color"))).toEqual([
+      "vermillion",
+      "amber",
+      "green",
+      "cyan",
+      "indigo",
+      "violet",
+    ]);
+    expect(swatches.filter((s) => s.getAttribute("aria-pressed") === "true")).toHaveLength(1);
+    expect(swatches.find((s) => s.getAttribute("aria-pressed") === "true")!.getAttribute("data-goal-draft-color")).toBe("vermillion");
+    // A pick stands on the form; Add lands it on the goal and the draft
+    // resets — the next create defaults to vermillion again.
+    swatches[1]!.click();
+    const repicked = [...sheet().querySelectorAll<HTMLButtonElement>(".goal-swatch")];
+    expect(repicked[1]!.getAttribute("aria-pressed")).toBe("true");
+    (document.getElementById("goal-minutes") as HTMLInputElement).value = "15";
+    sheet().querySelector<HTMLButtonElement>("#goal-add")!.click();
+    expect(app.state.goals[0]!.color).toBe("amber");
+    expect(app.ui.focusForm).toBeNull();
+    // The sheet stayed open; the create action stands again with the draft
+    // back at vermillion.
+    sheet().querySelector<HTMLButtonElement>("#goal-create-open")!.click();
+    expect(sheet().querySelector<HTMLButtonElement>('.goal-swatch[aria-pressed="true"]')!.getAttribute("data-goal-draft-color")).toBe("vermillion");
+  });
+
+  it("keeps goal fields and keyboard focus when picking a color", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    app.openApp("goals");
+    sheet().querySelector<HTMLButtonElement>("#goal-create-open")!.click();
+    const minutes = sheet().querySelector<HTMLInputElement>("#goal-minutes")!;
+    const habitSelect = sheet().querySelector<HTMLSelectElement>("#goal-habit")!;
+    const schedule = sheet().querySelector<HTMLSelectElement>("#goal-schedule")!;
+    minutes.value = "30";
+    habitSelect.value = habit.id;
+    schedule.value = "weekly";
+    const amber = sheet().querySelector<HTMLButtonElement>('[data-goal-draft-color="amber"]')!;
+    amber.focus();
+    amber.click();
+    app.render();
+    expect(document.activeElement).toBe(amber);
+    expect(sheet().querySelector("#goal-minutes")).toBe(minutes);
+    expect(minutes.value).toBe("30");
+    expect(habitSelect.value).toBe(habit.id);
+    expect(schedule.value).toBe("weekly");
+    expect(amber.getAttribute("aria-pressed")).toBe("true");
+    expect(amber.classList.contains("selected")).toBe(true);
+    sheet().querySelector<HTMLButtonElement>("#goal-add")!.click();
+    expect(app.state.goals[0]).toMatchObject({ color: "amber", condition: { habitId: habit.id, minutes: 30 }, schedule: { kind: "weekly" } });
+  });
+
+  it("a goal row's re-pick is the palette's edit half — the track and banner follow the goal (#312)", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    const goal = createGoal(app.state, { habitId: habit.id, minutes: 30, schedule: "once", now: DAY, color: "vermillion" }).goal!;
+    app.openApp("goals");
+    const row = () => sheet().querySelector(`[data-goal="${goal.id}"]`)!;
+    // The row carries its color as the re-pick trigger; the picker is the
+    // same six swatches.
+    row().querySelector<HTMLButtonElement>('[data-goal-recolor]')!.click();
+    const swatches = [...row().querySelectorAll<HTMLButtonElement>(".goal-swatch")];
+    expect(swatches).toHaveLength(6);
+    swatches.find((s) => s.getAttribute("data-goal-set-color") === "green")!.click();
+    expect(app.state.goals[0]!.color).toBe("green");
+    expect(app.ui.goalRecolorId).toBeNull();
+    // Read from goal state everywhere: the face track and the banner bars
+    // both wear the picked token after the render.
+    expect(row().querySelector<HTMLElement>("[data-goal-progress]")!.style.background).toBe("var(--goal-green)");
+    const bannerFill = document.querySelector<HTMLElement>("#console-session .gbar i")!;
+    expect(bannerFill.style.background).toBe("var(--goal-green)");
+  });
+
   it("reads tracked goals first — open work above completed — then the on-demand create action", () => {
     const s = app.state;
     const habit = createHabit(s, "Piano").habit!;

@@ -60,10 +60,10 @@ import {
   selectHabit,
 } from "../engine/habits";
 import { equipBuildNode, unequipBuildNode } from "../engine/builds";
-import { createGoal, deleteGoal, rollGoalOccurrences } from "../engine/goals";
+import { createGoal, deleteGoal, rollGoalOccurrences, setGoalColor, DEFAULT_GOAL_COLOR } from "../engine/goals";
 import { allocatedDevScenarioRates, createDevScenario, type DevBoardResult } from "../engine/dev-scenario";
 import type { StressProgress, StressRow } from "../engine/allocation-stress";
-import type { GameState, Hex, ModuleInstance, MutatorFamily, MutatorInstance, NamedChordTerm, Rarity, ShelfType } from "../engine/types";
+import type { GameState, GoalColor, Hex, ModuleInstance, MutatorFamily, MutatorInstance, NamedChordTerm, Rarity, ShelfType } from "../engine/types";
 import type { FocusFace, NotesFace } from "./focus";
 import { render } from "./render";
 import { FAMILY_WORD, mutatorLayerLive, refreshMutPreview } from "./mutators";
@@ -230,6 +230,11 @@ export interface UiState {
   // action-button form stands, if any. Light furniture — cleared with the
   // transient modes.
   focusForm: FocusForm | null;
+  // The goal palette's standing draft (issue #312): the swatch the create
+  // form will land — vermillion until picked — and the goal id whose row
+  // shows the six swatches for a re-pick. Light furniture — never saved.
+  goalColor: GoalColor;
+  goalRecolorId: string | null;
   // The notes sheet's standing face (issue #277): CAPTURE leads — the sheet
   // opens on it, and any departure (close, another app) puts the tab back.
   // Light furniture — never saved.
@@ -422,6 +427,8 @@ export class App {
     catalogFace: "nous",
     editingHabitId: null,
     focusForm: null,
+    goalColor: DEFAULT_GOAL_COLOR,
+    goalRecolorId: null,
     notesFace: "capture",
     historyOpen: false,
     historyLimit: HISTORY_PAGE_ROWS,
@@ -658,6 +665,7 @@ export class App {
   private clearTransientUi(): void {
     this.ui.app = null;
     this.ui.focusForm = null;
+    this.ui.goalRecolorId = null;
     this.ui.placing = null;
     this.ui.dropHover = null;
     this.ui.chordHover = null;
@@ -1801,6 +1809,7 @@ export class App {
     this.ui.app = null;
     this.ui.editingHabitId = null;
     this.ui.focusForm = null;
+    this.ui.goalRecolorId = null;
     this.ui.notesFace = "capture";
     this.resetHistorySurfaces();
   }
@@ -2033,10 +2042,13 @@ export class App {
 
   // ── Goals (#6) ──────────────────────────────────────────────────────────
 
-  createGoalAction(habitId: string | null, minutes: number, schedule: "once" | "daily" | "weekly"): void {
-    const result = createGoal(this.state, { habitId, minutes, schedule, now: Date.now() });
+  createGoalAction(habitId: string | null, minutes: number, schedule: "once" | "daily" | "weekly", color: GoalColor): void {
+    const result = createGoal(this.state, { habitId, minutes, schedule, now: Date.now(), color });
     if (result.ok) {
       this.ui.focusForm = null;
+      // The next create defaults to vermillion again — the pick belongs to
+      // the goal that landed, not to the form (#312).
+      this.ui.goalColor = DEFAULT_GOAL_COLOR;
       this.save();
       this.say("Goal added.");
     } else {
@@ -2045,10 +2057,39 @@ export class App {
     this.render();
   }
 
+  // The palette's standing draft (issue #312): a swatch press re-renders
+  // the picker with the pick standing — nothing lands until Add.
+  pickGoalColor(color: GoalColor): void {
+    if (this.ui.focusForm !== "goal-create") return;
+    this.ui.goalColor = color;
+    this.render();
+  }
+
+  // A goal row's re-pick (issue #312): the row shows the six swatches, a
+  // second press puts them away.
+  toggleGoalRecolor(id: string): void {
+    this.ui.goalRecolorId = this.ui.goalRecolorId === id ? null : id;
+    this.render();
+  }
+
+  setGoalColorAction(id: string, color: GoalColor): void {
+    const result = setGoalColor(this.state, id, color);
+    if (result.ok) {
+      this.ui.goalRecolorId = null;
+      this.save();
+    } else {
+      this.say(result.reason ?? "Could not set the color.");
+    }
+    this.render();
+  }
+
   deleteGoalAction(id: string): void {
     const result = deleteGoal(this.state, id);
     this.say(result.ok ? "Goal removed." : result.reason ?? "Could not remove the goal.");
-    if (result.ok) this.save();
+    if (result.ok) {
+      if (this.ui.goalRecolorId === id) this.ui.goalRecolorId = null;
+      this.save();
+    }
     this.render();
   }
 

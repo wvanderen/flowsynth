@@ -39,8 +39,8 @@ import {
 import { activeHabit } from "../engine/habits";
 import { isInFlowNote } from "../engine/notes";
 import { achievementName } from "../engine/achievements";
-import { goalCapacity, goalRequiredSeconds, goalSummary, goalTrackerState, type GoalTrackerState } from "../engine/goals";
-import type { GameState, Goal, Habit, HonestyEvent, HonestyOutcome, NoteEntry } from "../engine/types";
+import { goalCapacity, goalRequiredSeconds, goalSummary, goalTrackerState, GOAL_COLORS, type GoalTrackerState } from "../engine/goals";
+import type { GameState, Goal, GoalColor, Habit, HonestyEvent, HonestyOutcome, NoteEntry } from "../engine/types";
 
 // The tracker word set (issue #149): the Goals-state read's one vocabulary —
 // the sheet head wears it, and nothing phone-side does (ADR-0033 amended).
@@ -116,19 +116,22 @@ export function sessionCaption(elapsed: number, target: number | null, paused: b
   return paused ? "paused" : target === null ? OPEN_ENDED_WORD : reached ? "overrun" : `of ${formatClock(target)}`;
 }
 
-/* ── The banner bars' derivation (edge states, ADR-0050) ── */
+/* ── The banner bars' derivation (edge states, ADR-0050; #312) ── */
 
 // The goal-progress bars the focus banner shows, derived entirely from
 // existing state: in-progress goals first, nearest complete first, completed
 // occurrences filling the remaining slots, with a +N count for the goals
-// past the bar budget. Nothing here reads or writes a new persisted key —
-// the derivation is the whole edge state.
+// past the bar budget. Each bar wears its goal's chosen palette color; the
+// fill height carries progress and the done bar's engraved mark carries
+// completion — never color alone. Nothing here reads or writes a new
+// persisted key — the derivation is the whole edge state.
 export interface GoalBarRead {
   fraction: number;
   done: boolean;
+  color: GoalColor;
 }
 
-export const BANNER_BARS = 3;
+export const BANNER_BARS = 5;
 
 export function goalBarsOf(state: GameState, max: number = BANNER_BARS): { bars: GoalBarRead[]; overflow: number } {
   const reads = state.goals.map((goal) => {
@@ -136,6 +139,7 @@ export function goalBarsOf(state: GameState, max: number = BANNER_BARS): { bars:
     return {
       fraction: required > 0 ? Math.min(1, goal.progressSeconds / required) : 1,
       done: goal.completed,
+      color: goal.color,
     };
   });
   // In-progress goals lead, nearest completion first; completed occurrences
@@ -144,7 +148,7 @@ export function goalBarsOf(state: GameState, max: number = BANNER_BARS): { bars:
   const done = reads.filter((read) => read.done);
   const ordered = [...open, ...done];
   return {
-    bars: ordered.slice(0, max).map(({ fraction, done: isDone }) => ({ fraction, done: isDone })),
+    bars: ordered.slice(0, max).map(({ fraction, done: isDone, color }) => ({ fraction, done: isDone, color })),
     overflow: Math.max(0, ordered.length - max),
   };
 }
@@ -170,10 +174,11 @@ export function focusSheetKey(app: App): string {
     state.activeHabitId,
     state.habits.map((h) => `${h.archived ? "·" : ""}${h.name}:${buildUnlocksFor(h.seconds)}:${h.build.join(",")}`).join("|"),
     state.goals
-      .map((g) => `${g.completed ? 1 : 0}${g.condition.minutes}${g.condition.habitId ?? ""}${g.schedule.kind}${g.completedCount}`)
+      .map((g) => `${g.completed ? 1 : 0}${g.condition.minutes}${g.condition.habitId ?? ""}${g.schedule.kind}${g.completedCount}${g.color}`)
       .join("|"),
     state.goalCapacityBought,
     state.sessionRecords.length,
+    ui.goalRecolorId,
   ]);
 }
 
@@ -191,12 +196,6 @@ function stat(label: string, value: string): string {
 // hover / focus / touch each open it, Escape or a tap-away dismisses.
 function tipHtml(id: string, label: string, body: string): string {
   return `<span class="inst-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${id}" aria-label="${escapeHtml(label)}">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${body}</span></span>`;
-}
-
-// The folio key as its own tooltip trigger (the RATE row's shape): the
-// condensed key opens the mechanics, chrome reset.
-function keyTip(id: string, label: string, key: string, body: string): string {
-  return `<span class="folio-key inst-tip"><button class="folio-key-tip inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${id}" aria-label="${escapeHtml(label)}">${escapeHtml(key)}&nbsp;<span aria-hidden="true">ⓘ</span></button><span class="inst-tip-body" id="${id}" role="tooltip">${body}</span></span>`;
 }
 
 // The note stamp both note surfaces share (§9): the date where known, then
@@ -464,6 +463,19 @@ function openGoalsFirst(a: Goal, b: Goal): number {
   return Number(a.completed) - Number(b.completed);
 }
 
+// The six-swatch picker's one spelling (issue #312): exactly the palette's
+// six, the standing pick wearing the selected state — the same row serves
+// the create form and a goal row's re-pick, so there is no second picker
+// shape to drift. `attr` names the binding (`data-goal-draft-color` on the
+// create form, `data-goal-set-color` on a row), the background rides the
+// palette token, and the key names the swatch for every access path.
+function goalSwatchesHtml(attr: string, selected: GoalColor): string {
+  return `<span class="goal-swatches" role="group" aria-label="Goal color">${GOAL_COLORS.map(
+    (key) =>
+      `<button class="goal-swatch${key === selected ? " selected" : ""}" type="button" ${attr}="${key}" aria-pressed="${key === selected}" aria-label="${key}"><span aria-hidden="true" style="background:var(--goal-${key})"></span></button>`,
+  ).join("")}</span>`;
+}
+
 // The one purchase affordance every buy row wears (§7, issue #150): the
 // price button — disabled until affordable — over its practice-minute
 // countdown. `live` keeps an empty countdown slot standing for the
@@ -488,8 +500,10 @@ function shopBuyHtml(options: {
 }
 
 // The GOALS face: the slots read over the ruled goal rows — live progress at
-// every width — with create and delete as upgrade-mode controls and the
-// capacity purchase trailing. Flow reads live and mutates nothing.
+// every width, each track wearing its goal's chosen color — with create and
+// delete as upgrade-mode controls, the palette picked at creation and
+// re-pickable on the row, and the capacity purchase trailing. Flow reads
+// live and mutates nothing.
 function goalsFaceHtml(app: App, projected: ReturnType<typeof displayedRates>): string {
   const { state, ui } = app;
   const upgrade = state.mode === "upgrade";
@@ -500,15 +514,22 @@ function goalsFaceHtml(app: App, projected: ReturnType<typeof displayedRates>): 
     const status = goal.completed
       ? `<span class="goal-status done">complete${goal.schedule.kind === "once" ? "" : ` · resets ${goal.schedule.kind === "daily" ? "tomorrow" : "Monday"}`}</span>`
       : `<span class="goal-status">${formatClock(Math.max(0, required - goal.progressSeconds))} to go</span>`;
+    const recoloring = upgrade && ui.goalRecolorId === goal.id;
     return `<div class="folio-row goal-row ${goal.completed ? "done" : ""}" data-goal="${goal.id}">
       <div class="goal-ledger">
         <div class="goal-ledger-head">
           <span class="goal-ledger-name">${escapeHtml(goalSummary(state, goal))}</span>
           ${status}
-          ${upgrade ? `<button class="quiet small icon-btn" data-goal-delete="${goal.id}" title="Remove goal"><svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M-6-6 6 6M6-6-6 6"/></svg></button>` : ""}
+          ${
+            upgrade
+              ? `<button class="quiet small goal-recolor" data-goal-recolor="${goal.id}" aria-pressed="${recoloring}" title="Change color" aria-label="Change color"><span class="goal-recolor-dot" style="background:var(--goal-${goal.color})"></span></button>
+          <button class="quiet small icon-btn" data-goal-delete="${goal.id}" title="Remove goal"><svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M-6-6 6 6M6-6-6 6"/></svg></button>`
+              : ""
+          }
         </div>
-        <div class="goal-track"><span data-goal-progress="${goal.id}" style="width:${fraction * 100}%"></span></div>
+        <div class="goal-track"><span data-goal-progress="${goal.id}" style="width:${fraction * 100}%;background:var(--goal-${goal.color})"></span></div>
         <small class="mono" data-goal-minutes="${goal.id}">${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · ×${goal.completedCount} completed` : ""}</small>
+        ${recoloring ? goalSwatchesHtml("data-goal-set-color", goal.color) : ""}
       </div>
     </div>`;
   };
@@ -535,12 +556,6 @@ function goalsFaceHtml(app: App, projected: ReturnType<typeof displayedRates>): 
     </div>`;
   return `<div class="folio-rows">
     <div class="folio-row">
-      ${keyTip(
-        "focus-slots-tip",
-        "Goal slots — the tracking",
-        "Goal slots",
-        "Available slots limit tracked goals. Completion is the tracking — each completion credits a Goal Generator's reserve.",
-      )}
       <span class="folio-main"><span class="folio-fig mono" id="focus-slots-read">${state.goals.length}/${capacity} slots</span>${upgrade ? "" : `<span class="folio-sub">locked for this session</span>`}</span>
     </div>
     ${orderedGoals.map(goalRow).join("")}
@@ -549,7 +564,7 @@ function goalsFaceHtml(app: App, projected: ReturnType<typeof displayedRates>): 
     upgrade && state.goals.length < capacity
       ? `<div class="folio-rows focus-actions"><div class="folio-row">${
           createForm
-            ? `<span class="focus-form-row goal-create"><select id="goal-habit" aria-label="Habit"><option value="">Any habit</option>${habitOptions}</select><input type="number" id="goal-minutes" min="1" max="1440" placeholder="min" aria-label="Minutes" /><select id="goal-schedule" aria-label="Schedule"><option value="daily">daily</option><option value="weekly">weekly</option><option value="once">once</option></select><button class="primary small" id="goal-add">Add</button></span>`
+            ? `<span class="focus-form-row goal-create"><select id="goal-habit" aria-label="Habit"><option value="">Any habit</option>${habitOptions}</select><input type="number" id="goal-minutes" min="1" max="1440" placeholder="min" aria-label="Minutes" /><select id="goal-schedule" aria-label="Schedule"><option value="daily">daily</option><option value="weekly">weekly</option><option value="once">once</option></select><button class="primary small" id="goal-add">Add</button></span>${goalSwatchesHtml("data-goal-draft-color", ui.goalColor)}`
             : `<button class="focus-action" id="goal-create-open">+ New goal</button>`
         }</div></div>`
       : ""
@@ -866,6 +881,12 @@ function refreshPlanControls(app: App): void {
 // face carries no live figures — the console clock owns time.
 export function updateFocusSheetLive(app: App, scope: ParentNode, projected: ReturnType<typeof displayedRates>): void {
   const { state } = app;
+  // Palette changes patch the standing pick, keeping form values and focus.
+  for (const swatch of scope.querySelectorAll<HTMLElement>("[data-goal-draft-color]")) {
+    const selected = swatch.getAttribute("data-goal-draft-color") === app.ui.goalColor;
+    swatch.classList.toggle("selected", selected);
+    swatch.setAttribute("aria-pressed", String(selected));
+  }
   if (state.mode !== "upgrade") {
     const elapsed = state.session?.elapsed ?? 0;
     setText(scope.querySelector('[data-live="focus-habit-session"]'), `${formatClock(elapsed)} of practice`);
@@ -1043,8 +1064,8 @@ export function bindFocusSheet(app: App, scope: HTMLElement): void {
       if (nodeId && habitId) app.unequipBuildNodeAction(habitId, nodeId);
     });
   });
-  // Goals: delete rides the rows, create is an on-demand form, the capacity
-  // purchase trails.
+  // Goals: delete rides the rows, create is an on-demand form with the
+  // palette picked on it, the capacity purchase trails.
   scope.querySelectorAll<HTMLElement>("[data-goal-delete]").forEach((button) => {
     app.listen(button, "click", () => {
       const id = button.getAttribute("data-goal-delete");
@@ -1061,7 +1082,30 @@ export function bindFocusSheet(app: App, scope: HTMLElement): void {
       habitSelect.value === "" ? null : habitSelect.value,
       Number(minutesInput.value),
       scheduleSelect.value as "once" | "daily" | "weekly",
+      app.ui.goalColor,
     );
+  });
+  // The palette (issue #312): the create form's draft pick stands until a
+  // goal lands; a row's re-pick opens the same six and lands through the
+  // engine's gate.
+  scope.querySelectorAll<HTMLElement>("[data-goal-draft-color]").forEach((button) => {
+    app.listen(button, "click", () => {
+      const key = button.getAttribute("data-goal-draft-color") as GoalColor | null;
+      if (key) app.pickGoalColor(key);
+    });
+  });
+  scope.querySelectorAll<HTMLElement>("[data-goal-recolor]").forEach((button) => {
+    app.listen(button, "click", () => {
+      const id = button.getAttribute("data-goal-recolor");
+      if (id) app.toggleGoalRecolor(id);
+    });
+  });
+  scope.querySelectorAll<HTMLElement>("[data-goal-set-color]").forEach((button) => {
+    app.listen(button, "click", () => {
+      const id = button.closest("[data-goal]")?.getAttribute("data-goal") ?? null;
+      const key = button.getAttribute("data-goal-set-color") as GoalColor | null;
+      if (id && key) app.setGoalColorAction(id, key);
+    });
   });
   app.listen(scope.querySelector("#long-goal-buy"), "click", () => app.buyGoalCapacityAction());
   // The history surfaces (§9): rows drill in; the tail pages; back unwinds

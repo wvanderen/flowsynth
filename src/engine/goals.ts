@@ -1,7 +1,21 @@
 import { BALANCE, EPS } from "./constants";
 import { creditOwnedGenerators } from "./reserves";
-import type { Goal, GoalCondition, GoalSchedule, GameState } from "./types";
-export type { Goal, GoalCondition, GoalSchedule };
+import type { Goal, GoalColor, GoalCondition, GoalSchedule, GameState } from "./types";
+export type { Goal, GoalColor, GoalCondition, GoalSchedule };
+
+// The six-token palette (issue #312), vermillion default. The choice is
+// made once — at creation or the row's re-pick on the GOALS face — and
+// read from goal state everywhere after; there is no legend and no second
+// place to set it.
+export const GOAL_COLORS: readonly GoalColor[] = ["vermillion", "amber", "green", "cyan", "indigo", "violet"];
+export const DEFAULT_GOAL_COLOR: GoalColor = "vermillion";
+
+// The one lenient spelling: an absent or unknown key reads as the default,
+// never a made-up token — the same answer at creation, at a re-pick, and
+// at load.
+export function normalizeGoalColor(color: unknown): GoalColor {
+  return typeof color === "string" && (GOAL_COLORS as readonly string[]).includes(color) ? (color as GoalColor) : DEFAULT_GOAL_COLOR;
+}
 
 // Goals (issue #6). A goal tracks a practice condition ("Piano, 20 minutes
 // a day") in a limited slot. Progress accrues only while the goal is active
@@ -70,6 +84,7 @@ export interface GoalCreateInput {
   minutes: number;
   schedule: GoalSchedule["kind"];
   now: number;
+  color?: GoalColor;
 }
 
 export function createGoal(state: GameState, input: GoalCreateInput): { ok: boolean; reason?: string; goal?: Goal } {
@@ -86,6 +101,7 @@ export function createGoal(state: GameState, input: GoalCreateInput): { ok: bool
     condition: { kind: "habit-minutes", habitId: input.habitId, minutes: Math.round(input.minutes) },
     schedule,
     occurrenceKey: occurrenceKeyFor(schedule, input.now),
+    color: normalizeGoalColor(input.color),
     progressSeconds: 0,
     liveSeconds: 0,
     completed: false,
@@ -104,6 +120,18 @@ export function deleteGoal(state: GameState, id: string): { ok: boolean; reason?
   return { ok: true };
 }
 
+// The palette's edit half (issue #312): the row's re-pick on the GOALS
+// face. Same upgrade-mode gate as every other goal mutation; the color key
+// must be one of the six.
+export function setGoalColor(state: GameState, id: string, color: GoalColor): { ok: boolean; reason?: string } {
+  if (state.mode !== "upgrade") return { ok: false, reason: "Goals are managed between sessions." };
+  const goal = state.goals.find((g) => g.id === id);
+  if (!goal) return { ok: false, reason: "Goal not found." };
+  if (normalizeGoalColor(color) !== color) return { ok: false, reason: "Pick one of the six colors." };
+  goal.color = color;
+  return { ok: true };
+}
+
 const SCHEDULE_LABEL: Record<GoalSchedule["kind"], string> = { once: "once", daily: "a day", weekly: "a week" };
 
 export function goalSummary(state: GameState, goal: Goal): string {
@@ -115,11 +143,14 @@ export function goalSummary(state: GameState, goal: Goal): string {
 // goal saved before the generators wave carries no live slice —
 // lenient-defaulted to 0, the honest reading (the completion's live share
 // would read 0, banking nothing) and exactly what a fresh shape writes.
-// Mutates in place over the merged state's goal list.
+// The palette key (issue #312) lenient-defaults the same way: a goal saved
+// before the palette wave carries no color, and vermillion is what it
+// wore. Mutates in place over the merged state's goal list.
 export function normalizeGoals(goals: Goal[]): void {
   for (const goal of goals) {
     if (!goal || typeof goal !== "object") continue;
     if (typeof goal.liveSeconds !== "number" || !Number.isFinite(goal.liveSeconds)) goal.liveSeconds = 0;
+    goal.color = normalizeGoalColor(goal.color);
   }
 }
 

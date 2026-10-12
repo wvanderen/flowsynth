@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { defaultTheme, themeCss } from "./theme";
+import { GOAL_COLORS } from "../engine/goals";
 
 // Vitest stubs CSS imports empty (even via ?raw), so assertions that must
 // see real source read it off disk — one canonical load per file.
@@ -47,6 +48,23 @@ describe("theme token table", () => {
     expect(tokens["arete-faint"]).toMatch(/^color-mix\(in srgb, var\(--arete\) 13%/);
     expect(tokens["arete-tint"]).toMatch(/^color-mix\(in srgb, var\(--arete\) 9%/);
     expect(tokens["arete-line"]).toMatch(/^color-mix\(in srgb, var\(--arete\) 38%/);
+  });
+
+  it("carries the goal palette: the six swatches vermillion-first (issue #312)", () => {
+    expect(tokens["goal-vermillion"]).toBe("#cc603d");
+    expect(tokens["goal-amber"]).toBe("#bc9239");
+    expect(tokens["goal-green"]).toBe("#9affa8");
+    expect(tokens["goal-cyan"]).toBe("#1f95b5");
+    expect(tokens["goal-indigo"]).toBe("#6360d4");
+    expect(tokens["goal-violet"]).toBe("#b994f5");
+    // The stylesheet paints goals only through these tokens — never a
+    // literal, never a foreign register.
+    expect(stylesheet.match(/var\(--goal-(?!vermillion|amber|green|cyan|indigo|violet)[a-z0-9-]+\)/g)).toBeNull();
+    // Every color key the engine puts on goal state resolves to its token —
+    // the palette's one seam between state and theme.
+    for (const color of GOAL_COLORS) {
+      expect(tokens[`goal-${color}`], color).toBeDefined();
+    }
   });
 
   it("derives the rarity plate tints from the finish tokens", () => {

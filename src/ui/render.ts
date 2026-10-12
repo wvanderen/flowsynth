@@ -162,8 +162,9 @@ function wireClockPlan(app: App): void {
 // pause beside it during flow, and the banner's reads closing the cluster:
 // the active habit's name and the goal-progress bars, live during flow,
 // mutating nothing. The switch's vermillion carries the session state: the
-// switch itself, the progress strip along the header's bottom edge (issue
-// #63), and the bars' open fills. The console is pure control (§7): the
+// switch itself and the progress strip along the header's bottom edge
+// (issue #63); the bars wear their goals' own palette colors (#312). The
+// console is pure control (§7): the
 // clock is itself the plan affordance — its disclosure opens the Focus
 // control sheet (ADR-0050, the time app's PLAN face) — and no production
 // readout lives here (the banner's focus reads name practice state, never
@@ -340,30 +341,38 @@ function syncClockDisclosure(app: App): void {
   byId("clock-plan")?.setAttribute("aria-expanded", String(open));
 }
 
-// The focus banner's reads (ADR-0050): beside the switch, the session's
-// focus state — the active habit's name and the goal-progress bars, biased
-// in-progress first (nearest complete leading, completed occurrences
-// closing), past the bar budget a +N count. Reads live during flow and
-// mutate nothing: the derivation reads existing state alone, and the live
-// patch below only ever touches text and fill widths. The phone banner
-// drops the reads — its nav row is bare launchers (ADR-0050's phone line) —
-// so the CSS docks the group out below the 600px line.
-// The bars' one width spelling: the fill percentage both the markup and
-// the in-place patch read, so the two can never drift.
-function bannerBarWidth(bar: { fraction: number }): string {
+// The focus banner's reads (ADR-0050; vertical bars per #312): beside the
+// switch, the session's focus state — the active habit's name and the
+// goal-progress bars, biased in-progress first (nearest complete leading,
+// completed occurrences closing), past the five-bar budget a +N count.
+// Each bar is a column: the fill height carries progress, each fill wears
+// its goal's chosen palette token, and completion is the bar's engraved
+// mark — never color alone. Reads live during flow and mutate nothing: the
+// derivation reads existing state alone, and the live patch below only
+// ever touches text and fill heights. The phone banner drops the reads —
+// its nav row is bare launchers (ADR-0050's phone line) — so the CSS docks
+// the group out below the 600px line.
+// The bars' one fill spelling: the fill height percentage both the markup
+// and the in-place patch read, so the two can never drift.
+function bannerBarFill(bar: { fraction: number }): string {
   return `${(bar.fraction * 100).toFixed(1)}%`;
 }
 
 function bannerReadsHtml(app: App): string {
   const { bars, overflow } = goalBarsOf(app.state);
   const done = bars.filter((bar) => bar.done).length;
-  const barsLabel = `Goal progress: ${bars.length - done} in progress, ${done} complete`;
+  // The label counts the whole tracker — the +N chip's goals included, so
+  // the aria read never under-counts what the columns can't fit.
+  const barsLabel = `Goal progress: ${bars.length - done} in progress, ${done} complete${overflow > 0 ? `, ${overflow} more` : ""}`;
   return `<div class="banner-reads" role="group" aria-label="Focus reads">
     <span class="bread" data-banner="habit"></span>
     ${
       bars.length > 0
         ? `<span class="gbars" role="img" aria-label="${barsLabel}">${bars
-            .map((bar, i) => `<span class="gbar${bar.done ? " done" : ""}" data-banner-bar="${i}" aria-hidden="true"><i style="width:${bannerBarWidth(bar)}"></i></span>`)
+            .map(
+              (bar, i) =>
+                `<span class="gbar${bar.done ? " done" : ""}" data-banner-bar="${i}" aria-hidden="true"><i style="height:${bannerBarFill(bar)};background:var(--goal-${bar.color})"></i></span>`,
+            )
             .join("")}</span>`
         : ""
     }
@@ -372,11 +381,12 @@ function bannerReadsHtml(app: App): string {
 }
 
 // The reads' rebuild signature: which bars stand (the bias order's
-// done-marks), the overflow count, the habit — never the fill fractions or
-// the name, which the patcher moves in place on every pass.
+// done-marks and palette keys — a re-pick must rebuild the bar), the
+// overflow count, the habit — never the fill fractions or the name, which
+// the patcher moves in place on every pass.
 function bannerReadsKey(app: App): string {
   const { bars, overflow } = goalBarsOf(app.state);
-  return `${activeHabit(app.state)?.id ?? "—"}|${bars.map((bar) => (bar.done ? 1 : 0)).join("")}|${overflow}`;
+  return `${activeHabit(app.state)?.id ?? "—"}|${bars.map((bar) => `${bar.done ? 1 : 0}${bar.color}`).join("")}|${overflow}`;
 }
 
 // The banner reads' in-place patch: the habit name and the bar fills move
@@ -390,8 +400,8 @@ function refreshBannerReads(app: App): void {
   const { bars } = goalBarsOf(app.state);
   bars.forEach((bar, i) => {
     const fill = host.querySelector<HTMLElement>(`[data-banner-bar="${i}"]`)?.firstElementChild as HTMLElement | null;
-    const width = bannerBarWidth(bar);
-    if (fill && fill.style.width !== width) fill.style.width = width;
+    const height = bannerBarFill(bar);
+    if (fill && fill.style.height !== height) fill.style.height = height;
   });
 }
 
