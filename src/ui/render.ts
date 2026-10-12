@@ -2826,9 +2826,7 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
   // the first prestige its face is the entry purchase screen — the preview
   // of the future entry, price muted — never a locked tab.
   const faceTab = (face: "nous" | "arete", mark: string, word: string): string =>
-    `<button class="catalog-face-tab" data-catalog-face="${face}" aria-pressed="${ui.catalogFace === face}" title="${
-      face === "nous" ? "The nous shop" : "The Arete catalog"
-    }">${mark}<span>${word}</span></button>`;
+    `<button class="catalog-face-tab" data-catalog-face="${face}" aria-pressed="${ui.catalogFace === face}">${mark}<span>${word}</span></button>`;
   const identity = areteFace
     ? `<span class="catalog-identity" aria-hidden="true">${ARETE_SVG}</span>`
     : `<span class="catalog-identity catalog-identity-nous" aria-hidden="true"><b class="mono">ν</b></span>`;
@@ -2870,10 +2868,8 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
 // The catalog's price affordance (issue #271): the outline price button in
 // the register the row sells in — muted by the disabled state whenever the
 // price is out of reach or flow holds the purse ("spent between sessions")
-// — over its practice-minute countdown while arranging. The title reads the
-// one state the button is in (spend / not enough / between sessions); a
-// caller that needs its own words (the cell row's arm instruction) puts a
-// title in attrs and the built one stands down.
+// — over its practice-minute countdown while arranging. The visible price,
+// state and between-session note need no native tooltip.
 function catalogPriceHtml(options: {
   attrs?: string;
   price: number;
@@ -2884,10 +2880,7 @@ function catalogPriceHtml(options: {
 }): string {
   const unit = options.arete ? "Arete" : "ν";
   const disabled = options.hold || !options.affordable;
-  const title = options.attrs?.includes("title=")
-    ? ""
-    : ` title="${options.hold ? "Purchases happen between sessions" : options.affordable ? `Spend ${formatInt(options.price)} ${unit}` : `Not enough ${unit === "ν" ? "nous" : "Arete"}`}"`;
-  return `<span class="shop-buy"><button class="price${options.arete ? " arete" : ""}" ${options.attrs ?? ""}${title}${
+  return `<span class="shop-buy"><button class="price${options.arete ? " arete" : ""}" ${options.attrs ?? ""}${
     disabled ? " disabled" : ""
   }>${formatInt(options.price)} ${unit}</button>${
     options.countdown ? `<small class="shop-countdown mono">${options.countdown}</small>` : ""
@@ -3010,9 +3003,8 @@ function catalogAreteFaceHtml(app: App): string {
   const upgrade = state.mode === "upgrade";
   if (!state.catalogEntryOwned) {
     const affordable = state.arete >= BALANCE.catalogEntryCost;
-    const entryTitle = upgrade ? (affordable ? `Spend ${BALANCE.catalogEntryCost} Arete` : "Not enough Arete") : "Arete is spent between sessions";
     return `<div class="entry-screen">
-      <button class="entry-buy" id="buy-arete-entry"${upgrade && affordable ? "" : " disabled"} title="${entryTitle}"><span>Unlock Mutator Layer</span><span class="mono">${BALANCE.catalogEntryCost} Arete</span></button>
+      <button class="entry-buy" id="buy-arete-entry"${upgrade && affordable ? "" : " disabled"}><span>Unlock Mutator Layer</span><span class="mono">${BALANCE.catalogEntryCost} Arete</span></button>
     </div>
     ${upgrade ? "" : `<p class="modal-note">Arete is spent between sessions — enter upgrade mode to buy.</p>`}`;
   }
@@ -3036,7 +3028,7 @@ function catalogAreteFaceHtml(app: App): string {
         </article>
         <article class="catalog-row">
           <div><h3 class="t-condensed">Arete Accelerator <span class="kind">(placeholder)</span></h3></div>
-          ${catalogPriceHtml({ attrs: 'disabled title="A placeholder — no offer yet"', price: ACCELERATOR_PLACEHOLDER_PRICE, affordable: false, arete: true })}
+          ${catalogPriceHtml({ attrs: 'disabled', price: ACCELERATOR_PLACEHOLDER_PRICE, affordable: false, arete: true })}
         </article>
       </div>
     </section>
