@@ -41,10 +41,12 @@ body[data-variant=B] button[aria-pressed=true]{box-shadow:inset 0 0 0 2px var(--
 .legacy-track i{display:block;width:58%;height:100%;background:var(--muted);opacity:.55}
 .legacy-swatch{width:24px;height:24px;border-radius:999px;border:1px solid var(--line);background:var(--goal-vermillion);pointer-events:none;flex-shrink:0}
 /* Bars: the context row mirrors the console banner reads; the drawing is the anatomy. */
-.reads{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.console-strip{display:flex;align-items:center;gap:20px;border-bottom:1px solid var(--soft);padding:14px 0;margin-bottom:6px}
+.console-strip .mono{font-size:21px}
+.reads{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-left:auto}
 .bread{font:600 13px 'Barlow Condensed',sans-serif;letter-spacing:.04em}
-.gbars{display:flex;align-items:flex-end;gap:5px;height:30px}
-.gbar{position:relative;display:block;background:var(--soft)}
+.gbars{display:flex;align-items:flex-end;gap:5px;height:30px;border-bottom:1px solid var(--soft);padding-bottom:1px}
+.gbar{position:relative;display:block;height:100%;background:var(--soft)}
 .gbar i{position:absolute;left:0;right:0;bottom:0;display:block}
 .gbar.done::after{content:"✓";position:absolute;inset:0;display:grid;place-items:center;font:700 8px/1 'IBM Plex Mono',monospace;color:var(--bg);text-shadow:0 0 1px var(--ink)}
 body[data-variant=A] .gbar{width:9px}
@@ -52,8 +54,8 @@ body[data-variant=B] .gbars{height:44px;gap:6px}
 body[data-variant=B] .gbar{width:14px;border:1px solid var(--soft)}
 body[data-variant=B] .gbar.done::after{font-size:9px}
 .gbar-overflow{font-size:12px;color:var(--muted)}
-.drawing{margin-top:24px;overflow-x:auto}
-.drawing svg{display:block;min-width:520px;max-width:100%;height:auto}
+.drawing{margin-top:24px}
+.drawing svg{display:block;width:auto;max-width:100%;height:auto}
 /* Tooltip layer: plain — hairline and panel surface, never a card. */
 .tooltip-host{position:relative;display:inline-block}
 .tip{font:inherit;font-weight:500;border:0;padding:0 0 1px;min-height:0;box-shadow:inset 0 -1px var(--muted)}
@@ -86,6 +88,10 @@ header{padding:12px 18px;height:auto}
 .sheet-inner{padding:2px 20px 22px}
 .row{gap:10px}
 .quiet{margin-left:0}
+.console-strip{flex-wrap:wrap;gap:12px}
+.reads{margin-left:0}
+.swatch-name{display:none}
+.swatches{gap:8px}
 .rejected{flex-wrap:wrap;gap:10px}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -113,6 +119,9 @@ header{padding:12px 18px;height:auto}
 <section class="family" aria-label="Vertical goal bars">
 <h2>Goal bars</h2>
 <p class="lede">Vertical columns, <b>fill by height</b>, each fill wearing its goal's palette token; <b>completion is engraved</b> — state never rides color alone.</p>
+<div class="console-strip">
+<span class="mono">20:00</span>
+<button class="flow">Enter flow</button>
 <div class="reads">
 <span class="bread">Piano</span>
 <span class="gbars" role="img" aria-label="Goal progress: 3 in progress, 2 complete, 1 more">
@@ -124,21 +133,21 @@ header{padding:12px 18px;height:auto}
 </span>
 <span class="gbar-overflow mono">+1</span>
 </div>
+</div>
 <div class="drawing" aria-hidden="true">
-<svg viewBox="0 0 560 132" font-family="IBM Plex Mono,monospace">
+<svg viewBox="0 0 372 132" font-family="IBM Plex Mono,monospace">
 <rect x="46" y="14" width="20" height="100" fill="#2a3150"/>
 <rect x="46" y="52" width="20" height="62" fill="#cc603d"/>
 <rect x="132" y="14" width="20" height="100" fill="#bc9239"/>
 <path d="M137 62l4 4 7-9" fill="none" stroke="#0d1122" stroke-width="2"/>
-<line x1="66" y1="83" x2="216" y2="83" stroke="#414a75" stroke-width="1"/>
-<text x="222" y="86" font-size="11" fill="#99a1c2">FILL · HEIGHT CARRIES PROGRESS</text>
-<line x1="56" y1="24" x2="56" y2="6" stroke="#414a75" stroke-width="1"/>
-<line x1="56" y1="6" x2="216" y2="6" stroke="#414a75" stroke-width="1"/>
-<text x="222" y="9" font-size="11" fill="#99a1c2">TRACK</text>
-<line x1="142" y1="48" x2="142" y2="118" stroke="#414a75" stroke-width="1"/>
-<line x1="142" y1="118" x2="216" y2="118" stroke="#414a75" stroke-width="1"/>
-<text x="222" y="121" font-size="11" fill="#99a1c2">ENGRAVED COMPLETION MARK</text>
-<text x="46" y="128" font-size="10" fill="#99a1c2" opacity="0">.</text>
+<line x1="66" y1="83" x2="196" y2="83" stroke="#414a75" stroke-width="1"/>
+<text x="202" y="86" font-size="11" fill="#99a1c2">FILL = PROGRESS</text>
+<line x1="56" y1="14" x2="56" y2="6" stroke="#414a75" stroke-width="1"/>
+<line x1="56" y1="6" x2="196" y2="6" stroke="#414a75" stroke-width="1"/>
+<text x="202" y="9" font-size="11" fill="#99a1c2">TRACK</text>
+<line x1="142" y1="66" x2="142" y2="118" stroke="#414a75" stroke-width="1"/>
+<line x1="142" y1="118" x2="196" y2="118" stroke="#414a75" stroke-width="1"/>
+<text x="202" y="121" font-size="11" fill="#99a1c2">ENGRAVED COMPLETION MARK</text>
 </svg>
 </div>
 <div class="rejected"><span class="reject-mark">Retired · legacy contrast</span><span class="legacy-track"><i></i></span><span class="dim">horizontal rounded track, fill by width — replaced by the column</span></div>
@@ -187,5 +196,5 @@ function closeTips(except){document.querySelectorAll('.tooltip-host').forEach(h=
 document.querySelectorAll('.tip').forEach(b=>b.onclick=()=>{const host=b.closest('.tooltip-host');const show=!host.classList.contains('show');closeTips(b);host.classList.toggle('show',show);b.setAttribute('aria-expanded',String(show))});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeTips();document.querySelectorAll('.tip').forEach(t=>t.blur())}});
 document.addEventListener('click',e=>{if(!e.target.closest('.tooltip-host'))closeTips()});
-document.querySelectorAll('button[aria-pressed]').forEach(b=>b.onclick=()=>{const group=b.closest('.row,.swatches');if(!group)return;const exclusive=b.classList.contains('swatch')||b.closest('.swatches');group.querySelectorAll('button[aria-pressed]').forEach(x=>{if(x===b)x.setAttribute('aria-pressed','true');else if(exclusive||x.getAttribute('aria-pressed')!=='true')x.setAttribute('aria-pressed','false')})});
+document.querySelectorAll('button[aria-pressed]').forEach(b=>b.onclick=()=>{const group=b.closest('.row,.swatches');if(!group)return;group.querySelectorAll('button[aria-pressed]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))});
 </script></body></html>
