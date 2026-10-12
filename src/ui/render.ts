@@ -1387,18 +1387,23 @@ function updateChordReadout(app: App): void {
   const idleCount = chosen.length - active.length;
   const rows: string[] = [];
   const contribution = focus && snapshot?.contributions.get(focus.id);
+  const headline: string[] = [];
   if (focus && isOscillatorType(focus.type) && snapshot) {
-    rows.push(compactReadoutRow(`+${formatNumber(contribution?.value ?? 0)} ν/s`, "value"));
+    headline.push(compactReadoutRow(`+${formatNumber(contribution?.value ?? 0)} ν/s`, "value"));
   }
+  if (focus && isVoiceType(focus.type) && snapshot?.allocation) {
+    const used = snapshot.allocation.used.get(focus.id) ?? 0;
+    const capacity = snapshot.allocation.capacity;
+    const content = `<span class="chord-readout-chip chord-readout-capacity mono">(${used}/${capacity}) ${LIBRARY_SVG.replace(/>\s+</g, "><")}</span>`;
+    headline.push(readoutDisclosureHtml("hover-capacity", content, "Whole-chord budget per voice", `Harmonic capacity ${used} of ${capacity} used`));
+  }
+  if (headline.length) rows.push(`<div class="chord-readout-headline">${headline.join("")}</div>`);
   const marks = focus ? active : chosen;
   rows.push(...marks.map((mark) => compactReadoutRow(
     mark.inactive ? `${mark.label} · idle` : mark.label,
     `chord${mark.muted ? " chord-readout-muted" : ""}${mark.inactive ? " chord-readout-idle" : ""}`,
     mark.colorVar,
   )));
-  if (focus && isVoiceType(focus.type) && snapshot?.allocation) {
-    rows.push(compactReadoutRow(`Capacity ${snapshot.allocation.used.get(focus.id) ?? 0}/${snapshot.allocation.capacity}`, "capacity", undefined, "Whole-chord budget per voice"));
-  }
   if (contribution && contribution.formationQ !== 1) {
     rows.push(compactReadoutRow(`Formation ×${formatNumber(contribution.formationQ)}`, "formation", undefined, "Pitch-class quality applied to active participants"));
   }
@@ -1435,9 +1440,9 @@ function setReadoutHtml(host: HTMLElement, html: string): void {
 // `idKey` scopes the disclosure's id — a surface hosting two rows (the
 // reserved readout and the Hex detail's chord row) must never mint the
 // same id twice (the ledger's portal rule).
-function readoutDisclosureHtml(idKey: string, content: string, mechanics: string): string {
+function readoutDisclosureHtml(idKey: string, content: string, mechanics: string, label?: string): string {
   const id = `${idKey}-tip`;
-  return `<span class="inst-tip readout-tip"><button class="inst-tip-trigger readout-tip-trigger" type="button" aria-expanded="false" aria-describedby="${id}"${idKey.endsWith("quality") ? ` aria-label="${escapeHtml(mechanics)}"` : ""}>${content}</button><span class="inst-tip-body" id="${id}" role="tooltip">${escapeHtml(mechanics)}</span></span>`;
+  return `<span class="inst-tip readout-tip"><button class="inst-tip-trigger readout-tip-trigger" type="button" aria-expanded="false" aria-describedby="${id}"${label || idKey.endsWith("quality") ? ` aria-label="${escapeHtml(label ?? mechanics)}"` : ""}>${content}</button><span class="inst-tip-body" id="${id}" role="tooltip">${escapeHtml(mechanics)}</span></span>`;
 }
 
 function readoutFigureHtml(idKey: string, text: string, mechanics: string): string {

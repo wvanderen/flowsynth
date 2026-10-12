@@ -1256,8 +1256,8 @@ describe("always-on chord feedback (§6, #137)", () => {
     // allocation's own magnitudes (#260).
     expect(chips()).toEqual([
       `+${formatNumber(0.1 * 1.3 * (1 + BALANCE.allocationComplexityRate))} ν/s`,
+      "(1/1) ",
       "Fifth ×1.3",
-      "Capacity 1/1",
       "Formation ×1.12",
       "1 idle",
     ]);
@@ -1266,8 +1266,8 @@ describe("always-on chord feedback (§6, #137)", () => {
     cell(0, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(chips()).toEqual([
       `+${formatNumber(0.1 * 1.3 * (1 + BALANCE.allocationComplexityRate))} ν/s`,
+      "(1/1) ",
       "Fifth ×1.3",
-      "Capacity 1/1",
       "Formation ×1.12",
       "1 idle",
     ]);
@@ -1282,8 +1282,10 @@ describe("always-on chord feedback (§6, #137)", () => {
     app.render();
     cell(0, 0).dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
     const triggers = [...readout().querySelectorAll<HTMLButtonElement>(".readout-tip-trigger")];
-    expect(triggers.map((trigger) => trigger.textContent)).toEqual(["Capacity 1/1", "Formation ×1.12"]);
+    expect(triggers.map((trigger) => trigger.textContent)).toEqual(["(1/1) ", "Formation ×1.12"]);
     const capacity = triggers[0]!;
+    expect(capacity.getAttribute("aria-label")).toBe("Harmonic capacity 1 of 1 used");
+    expect(capacity.querySelector("svg")).not.toBeNull();
     const tip = document.getElementById(capacity.getAttribute("aria-describedby")!)!;
     capacity.focus();
     expect(tip.classList.contains("inst-show")).toBe(true);
@@ -1310,7 +1312,7 @@ describe("always-on chord feedback (§6, #137)", () => {
     const cellAt = document.querySelector('[data-cell="5,0"]')!;
     cellAt.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(readout().hidden).toBe(false);
-    expect(chips()).toEqual([`+${formatNumber(BALANCE.synthRate)} ν/s`, "Capacity 0/1"]);
+    expect(chips()).toEqual([`+${formatNumber(BALANCE.synthRate)} ν/s`, "(0/1) "]);
   });
 
   it("clicking a module during flow answers the lock — a read-only cross-section, no bloom", () => {

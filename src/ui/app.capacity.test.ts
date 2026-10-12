@@ -236,7 +236,7 @@ describe("the one-capacity economy on the board (#258)", () => {
     // pass.
     expect(displayedRates(app.state, true)).toEqual(allocateRates(app.state, true).snapshot);
     document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(readout().textContent).toContain("Capacity");
+    expect(readout().textContent).toContain("(1/1)");
     app.openModal("rate");
     expect(document.getElementById("modal-content")!.textContent).toContain("Capacity");
     app.closeModal();
@@ -285,13 +285,13 @@ describe("the one-capacity economy on the board (#258)", () => {
       document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
       return readout().textContent;
     };
-    expect(ask()).toContain("Capacity 1/1");
+    expect(ask()).toContain("(1/1)");
     expect(ask()).toContain("Fifth ×1.3");
     const g = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(1, 0)))!;
     app.state.cells.push(hex(0, 1));
     g.pos = hex(0, 1);
     app.render();
-    expect(ask()).toContain("Capacity 1/1");
+    expect(ask()).toContain("(1/1)");
     expect(ask()).toContain("Octave ×1.15");
     expect(readout().textContent).not.toContain("Fifth");
     expect(readout().textContent).not.toContain("idle");
@@ -406,7 +406,7 @@ describe("placement previews with capacity-aware production (#260)", () => {
     // Hover carries the compact result; opening Hex detail retains the
     // complete projected chord facts, including measured quality.
     cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(chips()).toEqual([previewed[0], "Capacity 0/1", "2 idle"]);
+    expect(chips()).toEqual([previewed[0], "(0/1) ", "2 idle"]);
     expect(readout().querySelector(".chord-readout-scale")).toBeNull();
     expect(readout().querySelector(".chord-readout-factor")).toBeNull();
     clickCell(0, 1);

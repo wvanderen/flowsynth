@@ -27,7 +27,7 @@ components:
   hover-summary:
     backgroundColor: "transparent"
     rounded: "{rounded.readout}"
-    padding: "8px 10px"
+    padding: "0"
     width: "220px"
 ---
 
@@ -53,7 +53,7 @@ The luminous nous accent identifies the module's final production and placement 
 
 ### Neutral
 
-The board remains visible behind the open readout, the line token separates capacity, and muted ink carries capacity, formation, idle status, and certification. Silent participation also carries a dashed underline; state must remain understandable without hue.
+The board remains visible behind the open readout, muted ink carries capacity, formation, idle status, and certification. Silent participation also carries a dashed underline; state must remain understandable without hue.
 
 ## Typography
 
@@ -61,7 +61,7 @@ Condensed technical lettering names the compact rows; monospace tabular figures 
 
 ## Layout
 
-The summary is one fixed-width open column constrained to the viewport. Names may wrap within their column; numbers cannot shrink. A quiet rule separates capacity from the active chord rows. Its host stays absolutely positioned beside the board and pointer-transparent; only the existing term-disclosure controls receive pointer input. The readout cannot move the grid.
+The summary is one fixed-width open column constrained to the viewport. Names may wrap within their column; numbers cannot shrink. Capacity shares the production headline as `(used/available)` plus the existing chord glyph. Chord and formation rows share a compact rhythm; desktop gloss triggers add no extra height, while coarse-pointer layouts retain 44px targets. Its host stays absolutely positioned beside the board and pointer-transparent; only the existing term-disclosure controls receive pointer input. The readout cannot move the grid.
 
 The existing phone rule places the host below the information strip. Phone composition is unavailable for this round; the CSS constraint is implementation evidence, not a verified phone capture.
 

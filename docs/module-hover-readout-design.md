@@ -37,7 +37,7 @@ Use the canonical [domain vocabulary](../CONTEXT.md): Chord readout, Harmonic ca
 ## Composition and disclosure
 
 - One open vertical readout occupies the existing reserved spot beside the board. No enclosing pill, panel box, or repeated row boxes. Hover must not shift the grid.
-- Final oscillator output is the strongest figure. Named active chord instances follow as aligned name/multiplier rows, retaining their chord hues. Capacity and status sit beneath in quieter typography.
+- Final oscillator output is the strongest figure. Named active chord instances follow as aligned name/multiplier rows, retaining their chord hues. Capacity shares the output row as `(used/available)` followed by the canonical chord glyph; status sits beneath in quieter typography.
 - Every active chord instance remains represented, including repeated instances. Shipped voices can participate in up to five active chords. A spacer's conducting read is not bounded by voice capacity; it must not silently truncate its active chords.
 - Show the applied `Formation ×…` term whenever it differs from ×1. The measured-quality scale belongs in Hex detail, where its distinction from the applied term remains explicit.
 - Summarize inactive chord instances as `1 idle` or `2 idle`, omitting the row when there are none. Count instances, not unique names; the individual idle names remain in Hex detail.
@@ -74,3 +74,5 @@ Desktop evidence was captured from the verified worktree at `http://localhost:51
 Phone browser composition is unavailable: both preview resize attempts timed out and disconnected the automation host. Browser keyboard/touch disclosure, grayscale capture, and reduced-motion emulation are also unavailable. The summary adds neither interactive controls nor animation, and the existing disclosure tests pass. The detector reported four pre-existing layout-transition warnings outside the changed styles.
 
 PR #330 review corrections restore the compact capacity, formation, and certification glosses through the existing disclosure layer and remove the enclosing tonal background. Module keyboard focus asks the readout; disclosure controls alone receive pointer input. Updated verification is recorded in [review evidence](evidence/pr-330-review-fixes/README.md).
+
+Spacing refinement requested after review: capacity shares the production headline as `(used/available)` plus the chord symbol. Remove the capacity divider and the desktop disclosure controls’ excess height; formation follows the active chords with the same row spacing. Touch layouts retain their target-height floor.

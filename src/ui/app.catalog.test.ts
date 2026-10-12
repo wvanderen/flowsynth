@@ -773,10 +773,10 @@ describe("the harmonic-capacity ladder (#259)", () => {
     give(app.state, "additive", hex(1, 0));
     app.render();
     document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(readoutText()).toContain("Capacity 1/1");
+    expect(readoutText()).toContain("(1/1)");
     app.state.nous = 1_000;
     app.buyCapacityAction();
-    expect(readoutText()).toContain("Capacity 1/2");
+    expect(readoutText()).toContain("(1/2)");
   });
 
   it("each two-rung ladder is one product bought twice at a rising price (issue #310)", () => {

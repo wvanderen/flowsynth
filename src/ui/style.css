@@ -1725,7 +1725,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   width: 220px;
   max-width: calc(100vw - 32px);
   gap: 5px;
-  padding: 8px 10px;
+  padding: 0;
 }
 .chord-readout-summary .chord-readout-chip {
   display: flex;
@@ -1743,6 +1743,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .chord-readout-summary .readout-tip .readout-tip-trigger {
   display: block;
   width: 100%;
+  min-height: 0;
   pointer-events: auto;
   text-align: left;
 }
@@ -1756,17 +1757,31 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .chord-readout-number { flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .chord-readout-summary .chord-readout-value {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 0;
   font-family: var(--mono);
   font-size: 19px;
   font-weight: 600;
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
 }
+.chord-readout-headline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 3px;
+}
+.chord-readout-headline > .readout-tip { margin-left: auto; }
 .chord-readout-summary .chord-readout-capacity {
-  margin-top: 5px;
-  padding-top: 7px;
-  border-top: 1px solid var(--line);
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+.chord-readout-capacity svg { width: 16px; height: 16px; flex-shrink: 0; }
+@media (pointer: coarse) {
+  .chord-readout-summary .readout-tip .readout-tip-trigger { min-height: 44px; }
 }
 .chord-readout-summary .chord-readout-muted .chord-readout-name {
   text-decoration: underline dashed;
