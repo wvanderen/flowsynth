@@ -151,6 +151,23 @@ describe("the vertical layer legend (issue #295)", () => {
     expect(document.body.classList.contains("mut-layer-live")).toBe(false);
   });
 
+  it("mutators lead every co-list: strip and sheet switch order Mutators before Modules, in sight and tab order (issue #314)", () => {
+    const checkOrder = (host: HTMLElement) => {
+      const symbols = [...host.querySelectorAll<HTMLButtonElement>("[data-legend-layer]")];
+      expect(symbols.map((b) => b.getAttribute("data-legend-layer"))).toEqual(["mutators", "modules"]);
+      // Native buttons tab in DOM order and the symbols carry no tabindex,
+      // so the visual lead is the keyboard lead.
+      expect(symbols.every((b) => !b.hasAttribute("tabindex"))).toBe(true);
+    };
+    // Pre-entry, locked: the strip still leads with the Mutators symbol.
+    app.render();
+    checkOrder(document.getElementById("layer-legend")!);
+    seedMutatorEra();
+    checkOrder(document.getElementById("layer-legend")!);
+    app.openModal("inventory");
+    checkOrder(document.querySelector<HTMLElement>(".tray-switch")!);
+  });
+
   it("switching layers drops the armed gestures with the walk-away", () => {
     seedMutatorEra();
     app.mutSetLayer("mutators");
