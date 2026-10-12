@@ -1397,28 +1397,29 @@ function updateChordReadout(app: App): void {
     mark.colorVar,
   )));
   if (focus && isVoiceType(focus.type) && snapshot?.allocation) {
-    rows.push(compactReadoutRow(`Capacity ${snapshot.allocation.used.get(focus.id) ?? 0}/${snapshot.allocation.capacity}`, "capacity"));
+    rows.push(compactReadoutRow(`Capacity ${snapshot.allocation.used.get(focus.id) ?? 0}/${snapshot.allocation.capacity}`, "capacity", undefined, "Whole-chord budget per voice"));
   }
   if (contribution && contribution.formationQ !== 1) {
-    rows.push(compactReadoutRow(`Formation ×${formatNumber(contribution.formationQ)}`, "formation"));
+    rows.push(compactReadoutRow(`Formation ×${formatNumber(contribution.formationQ)}`, "formation", undefined, "Pitch-class quality applied to active participants"));
   }
   if (focus && idleCount) rows.push(compactReadoutRow(`${idleCount} idle`, "idle"));
   if (focus && isVoiceType(focus.type) && snapshot?.allocation && !snapshot.allocation.certified) {
-    rows.push(compactReadoutRow("Allocation uncertified", "uncertified"));
+    rows.push(compactReadoutRow("Allocation uncertified", "uncertified", undefined, "Search budget reached before optimality was proven"));
   }
   host.hidden = rows.length === 0;
   setReadoutHtml(host, rows.length ? `<div class="chord-readout-summary">${rows.join("")}</div>` : "");
 }
 
-// The quick read is plain text; complete mechanics stay in Hex detail.
-function compactReadoutRow(text: string, kind: string, colorVar?: string): string {
+// Compact figures retain term glosses; the full breakdown stays in Hex detail.
+function compactReadoutRow(text: string, kind: string, colorVar?: string, mechanics?: string): string {
   const split = text.indexOf(" ×");
   const capacity = kind === "capacity" ? text.lastIndexOf(" ") : -1;
   const at = split >= 0 ? split : capacity;
   const content = at >= 0
     ? `<span class="chord-readout-name">${escapeHtml(text.slice(0, at))} </span><span class="chord-readout-number mono">${escapeHtml(text.slice(at + 1))}</span>`
     : escapeHtml(text);
-  return `<span class="chord-readout-chip chord-readout-${kind}${kind === "value" ? " mono" : ""}"${colorVar ? ` style="--cc:var(--${colorVar})"` : ""}>${content}</span>`;
+  const row = `<span class="chord-readout-chip chord-readout-${kind}${kind === "value" ? " mono" : ""}"${colorVar ? ` style="--cc:var(--${colorVar})"` : ""}>${content}</span>`;
+  return mechanics ? readoutDisclosureHtml(`hover-${kind}`, row, mechanics) : row;
 }
 
 // Preserve focused/pinned disclosures when an unchanged readout refreshes.
@@ -2084,7 +2085,7 @@ const boundGrids = new WeakSet<SVGSVGElement>();
 function bindSeamHover(app: App, svg: SVGSVGElement): void {
   if (boundGrids.has(svg)) return;
   boundGrids.add(svg);
-  app.listen(svg, "pointerover", (event) => {
+  const ask = (event: Event) => {
     if (app.dragging || app.ui.mutCarrying) return;
     const target = event.target as Element;
     const slotNode = target.closest?.("[data-mut-slot]");
@@ -2105,9 +2106,18 @@ function bindSeamHover(app: App, svg: SVGSVGElement): void {
     const [q, r] = (cellNode?.getAttribute("data-cell") ?? "").split(",").map(Number);
     const id = cellNode && Number.isFinite(q) ? deployedAt(app.state, { q: q!, r: r! })?.id ?? null : null;
     setChordHover(app, id ? { kind: "module", moduleId: id } : null);
+  };
+  app.listen(svg, "pointerover", ask);
+  app.listen(svg, "focusin", ask);
+  app.listen(byId("chord-readout"), "pointerleave", (event) => {
+    const next = (event as PointerEvent).relatedTarget;
+    if (next instanceof Node && svg.contains(next)) return;
+    if (!byId("chord-readout")?.contains(document.activeElement)) setChordHover(app, null);
   });
-  app.listen(svg, "pointerleave", () => {
+  app.listen(svg, "pointerleave", (event) => {
     if (app.dragging) return;
+    const next = (event as PointerEvent).relatedTarget;
+    if (next instanceof Node && byId("chord-readout")?.contains(next)) return;
     setChordHover(app, null);
   });
 }

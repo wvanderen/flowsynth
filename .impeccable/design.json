@@ -17,9 +17,9 @@
       "name": "Compact Chord readout",
       "kind": "custom",
       "refersTo": "hover-summary",
-      "description": "Static module hover; complete mechanics stay in Hex detail.",
+      "description": "Compact module hover with term glosses; complete breakdown stays in Hex detail.",
       "html": "<div class=\"ds-summary\"><div class=\"ds-output\">+0.12 ν/s</div><div class=\"ds-row\"><span>Octave</span><span class=\"ds-number\">×1.15</span></div><div class=\"ds-row ds-capacity\"><span>Capacity</span><span class=\"ds-number\">1/1</span></div></div>",
-      "css": ".ds-summary{width:220px;max-width:calc(100vw - 32px);padding:8px 10px;background:var(--panel-deep);display:flex;flex-direction:column;gap:5px;pointer-events:none}.ds-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font:12px/1.4 var(--font-condensed);letter-spacing:.02em;color:var(--chord-octave)}.ds-output{font:600 19px/1.4 var(--mono);font-variant-numeric:tabular-nums;color:var(--accent);margin-bottom:5px}.ds-number{font-family:var(--mono);font-variant-numeric:tabular-nums;flex-shrink:0}.ds-capacity{color:var(--muted);margin-top:5px;padding-top:7px;border-top:1px solid var(--line)}.ds-muted{text-decoration:underline dashed;text-underline-offset:4px;opacity:.72}"
+      "css": ".ds-summary{width:220px;max-width:calc(100vw - 32px);padding:8px 10px;background:transparent;display:flex;flex-direction:column;gap:5px;pointer-events:none}.ds-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font:12px/1.4 var(--font-condensed);letter-spacing:.02em;color:var(--chord-octave)}.ds-output{font:600 19px/1.4 var(--mono);font-variant-numeric:tabular-nums;color:var(--accent);margin-bottom:5px}.ds-number{font-family:var(--mono);font-variant-numeric:tabular-nums;flex-shrink:0}.ds-capacity{color:var(--muted);margin-top:5px;padding-top:7px;border-top:1px solid var(--line)}.ds-muted{text-decoration:underline dashed;text-underline-offset:4px;opacity:.72}"
     }
   ],
   "narrative": {

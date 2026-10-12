@@ -1276,6 +1276,30 @@ describe("always-on chord feedback (§6, #137)", () => {
     expect(readout().hidden).toBe(true);
   });
 
+  it("compact capacity and formation retain dismissible keyboard and touch disclosures", () => {
+    app = boot(undefined, true);
+    give(app.state, "additive", hex(1, 0));
+    app.render();
+    cell(0, 0).dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    const triggers = [...readout().querySelectorAll<HTMLButtonElement>(".readout-tip-trigger")];
+    expect(triggers.map((trigger) => trigger.textContent)).toEqual(["Capacity 1/1", "Formation ×1.12"]);
+    const capacity = triggers[0]!;
+    const tip = document.getElementById(capacity.getAttribute("aria-describedby")!)!;
+    capacity.focus();
+    expect(tip.classList.contains("inst-show")).toBe(true);
+    expect(tip.textContent).toBe("Whole-chord budget per voice");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(tip.classList.contains("inst-show")).toBe(false);
+    capacity.blur();
+    // A touch-generated click pins the same disclosure; a tap away closes it.
+    capacity.click();
+    expect(capacity.getAttribute("aria-expanded")).toBe("true");
+    expect(tip.classList.contains("inst-show")).toBe(true);
+    document.body.click();
+    expect(capacity.getAttribute("aria-expanded")).toBe("false");
+    expect(tip.classList.contains("inst-show")).toBe(false);
+  });
+
   it("a chordless module shows output and unused capacity without neutral factors", () => {
     app = boot(undefined, true);
     app.render();

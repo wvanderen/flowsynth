@@ -1726,7 +1726,6 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   max-width: calc(100vw - 32px);
   gap: 5px;
   padding: 8px 10px;
-  background: var(--panel-deep);
 }
 .chord-readout-summary .chord-readout-chip {
   display: flex;
@@ -1734,10 +1733,24 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   align-items: baseline;
   gap: 12px;
   padding: 0;
+  background: transparent;
   font-family: var(--font-condensed);
   font-size: 12px;
   letter-spacing: 0.02em;
   line-height: 1.4;
+}
+.chord-readout-summary .readout-tip { display: block; }
+.chord-readout-summary .readout-tip .readout-tip-trigger {
+  display: block;
+  width: 100%;
+  pointer-events: auto;
+  text-align: left;
+}
+.chord-readout-summary .readout-tip-trigger > .chord-readout-chip { width: 100%; }
+.chord-readout-summary .readout-tip-trigger .chord-readout-name {
+  text-decoration: underline;
+  text-decoration-color: var(--muted);
+  text-underline-offset: 3px;
 }
 .chord-readout-name { min-width: 0; overflow-wrap: anywhere; }
 .chord-readout-number { flex-shrink: 0; font-variant-numeric: tabular-nums; }

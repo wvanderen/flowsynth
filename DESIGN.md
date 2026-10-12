@@ -25,7 +25,7 @@ spacing:
   column-gap: "12px"
 components:
   hover-summary:
-    backgroundColor: "{colors.panel-deep}"
+    backgroundColor: "transparent"
     rounded: "{rounded.readout}"
     padding: "8px 10px"
     width: "220px"
@@ -53,7 +53,7 @@ The luminous nous accent identifies the module's final production and placement 
 
 ### Neutral
 
-Deep indigo provides the readout substrate, the line token separates capacity, and muted ink carries capacity, formation, idle status, and certification. Silent participation also carries a dashed underline; state must remain understandable without hue.
+The board remains visible behind the open readout, the line token separates capacity, and muted ink carries capacity, formation, idle status, and certification. Silent participation also carries a dashed underline; state must remain understandable without hue.
 
 ## Typography
 
@@ -61,13 +61,13 @@ Condensed technical lettering names the compact rows; monospace tabular figures 
 
 ## Layout
 
-The summary is one fixed-width open column constrained to the viewport. Names may wrap within their column; numbers cannot shrink. A quiet rule separates capacity from the active chord rows. Its host stays absolutely positioned beside the board and pointer-transparent, so it cannot move the grid or intercept its gestures.
+The summary is one fixed-width open column constrained to the viewport. Names may wrap within their column; numbers cannot shrink. A quiet rule separates capacity from the active chord rows. Its host stays absolutely positioned beside the board and pointer-transparent; only the existing term-disclosure controls receive pointer input. The readout cannot move the grid.
 
 The existing phone rule places the host below the information strip. Phone composition is unavailable for this round; the CSS constraint is implementation evidence, not a verified phone capture.
 
 ## Elevation & Depth
 
-The readout uses a deep tonal substrate without enclosing borders, shadows, or glow. It adds no motion. Glow and motion remain reserved for charge and live activity under the instrument standards.
+The readout and its rows are transparent, without enclosing borders, shadows, or glow. It adds no motion. Glow and motion remain reserved for charge and live activity under the instrument standards.
 
 ## Shapes
 
@@ -89,7 +89,7 @@ The flatter shared row styling also reaches Hex detail and placement preview, bu
 
 ### Disclosure and precedence
 
-Hover lifetime and the existing Hex-detail entry remain unchanged. Placement preview takes precedence in the reserved host; opening Hex detail hides that host. The compact summary adds no interactive controls. Existing detailed mechanic disclosures retain their keyboard-focus and touch contract.
+Hover lifetime and the existing Hex-detail entry remain unchanged. Placement preview takes precedence in the reserved host; opening Hex detail hides that host. Capacity, Formation, and uncertified allocation retain compact glosses through the shared disclosure layer. Module focus also asks the readout; the disclosure controls support keyboard focus, touch pinning, Escape, and tap-away. Existing detailed mechanic disclosures retain their keyboard-focus and touch contract.
 
 Desktop evidence: [.impeccable/review/module-hover-readout/desktop.png](.impeccable/review/module-hover-readout/desktop.png). Independent finish verdict: ship after the shared silent-participation marker was restored; targeted regressions passed (176 tests). Phone composition, browser keyboard/touch disclosure, grayscale capture, and reduced-motion emulation were unavailable and are not claimed verified.
 
