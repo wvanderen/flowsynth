@@ -146,7 +146,7 @@ describe("the flow-mode rule", () => {
     expect(goalsFrame.querySelector("#goal-create-open")).toBeNull();
     expect(goalsFrame.querySelector("[data-goal-delete]")).toBeNull();
     expect(goalsFrame.querySelector("[data-goal-recolor]")).toBeNull();
-    expect(goalsFrame.querySelector("#long-goal-buy")!.getAttribute("title")).toBe("Purchases happen between sessions");
+    expect(goalsFrame.querySelector("#long-goal-buy")!.hasAttribute("disabled")).toBe(true);
     // The engine owns the lock too: nothing these actions accept in flow.
     const nousBefore = app.state.nous;
     app.createHabitAction("Sneaky");

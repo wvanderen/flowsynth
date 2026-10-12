@@ -233,7 +233,7 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
       const tipId = `rd-tip-${ns}-${seq}-${id}`;
       synths.push(
         `<div class="rd-row rd-synth" data-module-id="${id}">` +
-          `<button class="rd-pick" type="button" title="${name} — show it on the board">` +
+          `<button class="rd-pick" type="button" title="Show it on the board">` +
           `<span class="rd-name t-condensed">${name}</span>` +
           `<span class="rd-note mono">${cellNote}</span>` +
           `</button>` +
@@ -594,7 +594,7 @@ export function renderHorizonBar(app: App): void {
     host.innerHTML = `${horizonSvg()}${
       reached
         ? state.mode === "upgrade"
-          ? `<button class="prestige-door" id="prestige-door" title="Prestige — bank the era's Arete and begin the next era">Prestige and Claim <b class="mono">${claimOf(state)}</b> Arete</button>`
+          ? `<button class="prestige-door" id="prestige-door" title="Begins the next era">Prestige and Claim <b class="mono">${claimOf(state)}</b> Arete</button>`
           : `<span class="horizon-state locked">prestige available — enter upgrade mode</span>`
         : `<span class="horizon-word">Arete <b data-live="h-word"></b></span>`
     }`;

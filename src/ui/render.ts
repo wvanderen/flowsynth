@@ -254,11 +254,11 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
       const scrollTop = popoverScroll(host);
       host.innerHTML = `
         <div class="clock-anchor">
-          ${clockButton("Plan — opens the Focus sheet")}
+          ${clockButton("Opens the Focus sheet")}
           ${sheetOpen ? sheetHtml() : ""}
         </div>
         <div class="session-actions">
-          <button class="main-switch idle" id="flow-switch" title="Enter flow — the board locks and runs itself">
+          <button class="main-switch idle" id="flow-switch" title="The board locks and runs itself">
             ${switchSvg}<span>Enter flow</span><i class="switch-state" aria-hidden="true"></i>
           </button>
         </div>
@@ -288,13 +288,13 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
     const scrollTop = popoverScroll(host);
     host.innerHTML = `
       <div class="clock-anchor">
-        ${clockButton("Session time — opens the Focus sheet", ' id="session-clock"', ' id="session-caption"')}
+        ${clockButton("Opens the Focus sheet", ' id="session-clock"', ' id="session-caption"')}
         <span class="clock-provisional" id="session-provisional" role="status"></span>
         ${sheetOpen ? sheetHtml() : ""}
       </div>
       <div class="session-actions">
         <button id="pause-flow" aria-label="${paused ? "Resume" : "Pause"}" title="${paused ? "Resume the session" : "Pause the session"}">${paused ? resumeSvg : pauseSvg}<span aria-hidden="true">${paused ? "Resume" : "Pause"}</span></button>
-        <button class="main-switch ${paused ? "held" : "live"}" id="flow-switch" title="Exit flow — end the session and bank its production">
+        <button class="main-switch ${paused ? "held" : "live"}" id="flow-switch" title="Ends the session and banks its production">
           ${switchSvg}<span>Exit flow</span><i class="switch-state" aria-hidden="true"></i>
         </button>
       </div>
@@ -717,8 +717,8 @@ function renderCollectionModal(app: App, content: HTMLElement): void {
   content.innerHTML = `
     ${modalTop("COLLECTION", "modal-title")}
     <div class="collection-rows">
-      <button class="collection-row" id="collection-feats" title="Feats — the full list, and how close the next one is">${FEATS_SVG}<span class="t-condensed">Feats</span><span class="mono">${feats}/${ACHIEVEMENTS.length}</span></button>
-      <button class="collection-row" id="collection-chords" title="Chord library — the field guide of chord classes">${LIBRARY_SVG}<span class="t-condensed">Chords</span><span class="mono">${chords}/${NAMED_CHORDS.length}</span></button>
+      <button class="collection-row" id="collection-feats">${FEATS_SVG}<span class="t-condensed">Feats</span><span class="mono">${feats}/${ACHIEVEMENTS.length}</span></button>
+      <button class="collection-row" id="collection-chords">${LIBRARY_SVG}<span class="t-condensed">Chords</span><span class="mono">${chords}/${NAMED_CHORDS.length}</span></button>
     </div>`;
   app.listen(byId("collection-feats"), "click", () => app.openModal("achievements"));
   app.listen(byId("collection-chords"), "click", () => app.openModal("library"));

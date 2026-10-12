@@ -241,10 +241,10 @@ describe("the Mutators face in detail", () => {
     expect(faceSvg("mutators")!.querySelector(".mut-slot-hex.muted")).not.toBeNull();
     expect(document.getElementById("detail-mutator-unlock")).toBeNull();
     // The refusal names its rule in the mutator rail's own row: the
-    // disclosure explains adjacency — slots attach beside the patch.
+    // disclosure explains adjacency — each new slot neighbors the patch.
     const noslot = detail().querySelector(".hex-rail-row.mutators .hex-detail-noslot")!;
     expect(noslot.textContent).toBe("beside the patch only");
-    expect(noslot.getAttribute("title")).toContain("beside the Mutator patch");
+    expect(noslot.getAttribute("title")).toBe("Each new slot neighbors an unlocked one");
     // An eligible owned cell right beside the patch buys directly — the
     // same empty-cell rule the unlock ladder enforces.
     app.state.cells.push(hex(1, 0)); // owned, adjacent to the slot at (0,0)
