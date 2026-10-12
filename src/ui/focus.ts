@@ -544,16 +544,25 @@ function goalsFaceHtml(app: App, projected: ReturnType<typeof displayedRates>): 
   const createForm = ui.focusForm === "goal-create";
   const habitOptions = habitChoices(state);
   // The first console long goal (ADR-0012 as amended by ADR-0034, issue
-  // #150): goal capacity sold as one compact row — one more slot per
-  // purchase, every price far past the last. Read-only in flow.
+  // #150): goal capacity sold as one compact product row — the Channel
+  // Strips, +1 goal slot per purchase, every price far past the last.
+  // Read-only in flow.
   const longGoalPrice = longGoalCost(state.goalCapacityBought);
   const longGoalAffordable = wholeNous(state) >= longGoalPrice;
   const longGoalCountdown = upgrade ? practiceCountdown(longGoalPrice, wholeNous(state), projected.rate) : null;
+  const longGoalTitle = upgrade
+    ? longGoalAffordable
+      ? null
+      : "Not enough nous yet"
+    : "Purchases happen between sessions";
   const longGoalRow = `
     <div class="folio-row long-goal-row">
-      <span class="long-goal-name">One more goal slot</span>
+      <span class="long-goal-head">
+        <span class="long-goal-name inst-tip term-tip"><button class="inst-tip-trigger term-trigger" type="button" aria-expanded="false" aria-describedby="channel-strips-tip" aria-label="Channel Strips — what it means">Channel Strips</button><span class="inst-tip-body" id="channel-strips-tip" role="tooltip">Successive purchases reveal steeper prices</span></span>
+        <span class="long-goal-effect mono">+1 goal slot</span>
+      </span>
       ${shopBuyHtml({
-        attrs: `id="long-goal-buy" title="${upgrade ? (longGoalAffordable ? "Buy one more goal slot" : "Not enough nous yet") : "Purchases happen between sessions"}"`,
+        attrs: `id="long-goal-buy"${longGoalTitle ? ` title="${longGoalTitle}"` : ""}`,
         small: true,
         price: longGoalPrice,
         affordable: upgrade && longGoalAffordable,

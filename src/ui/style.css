@@ -638,7 +638,9 @@ h1, h2, h3, p { margin: 0; }
 .goal-row.done .goal-ledger-name { color: var(--muted); }
 .goal-ledger-head .icon-btn { flex-shrink: 0; }
 .long-goal-row { justify-content: space-between; align-items: center; }
+.long-goal-row .long-goal-head { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex-wrap: wrap; }
 .long-goal-row .long-goal-name { font-size: 13.5px; font-weight: 550; }
+.long-goal-row .long-goal-effect { font: 12px var(--mono); color: var(--muted); white-space: nowrap; }
 .long-goal-row .shop-buy { align-items: flex-end; }
 
 /* The HISTORY face: the record list and drill as ruled rows. */
@@ -3608,16 +3610,25 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
    the trigger and its hover opens the glossary meaning — plain inline
    text over the engraved hairline the sheet's term wears, never a chip
    or a card. The approved sheet's padding expands the touch target;
-   negative margins keep the term in its inline layout. */
+   negative margins keep the term in its inline layout. The hairline is
+   the term's own solid underline — an inset shadow would ride the
+   padding box's bottom edge, twelve pixels under the word, colliding
+   with the row beneath. display drops the shared trigger's inline-flex,
+   which blocks text-decoration. */
 .term-trigger {
+  display: inline-block;
   width: auto; height: auto; min-width: 0; min-height: 0;
   padding: 12px 8px; margin: -12px -8px;
   border: 0; border-radius: 0;
-  box-shadow: inset 0 -1px var(--muted);
   font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit;
   vertical-align: baseline;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--muted);
+  text-underline-offset: 3px;
+  text-decoration-skip-ink: none;
 }
-.term-trigger:hover, .term-trigger:focus-visible { color: var(--nous); box-shadow: inset 0 -1px var(--nous); background: transparent; }
+.term-trigger:hover, .term-trigger:focus-visible { color: var(--nous); text-decoration-color: var(--nous); background: transparent; }
 
 /* Readout figures themselves open the shared disclosure layer. */
 .readout-tip .readout-tip-trigger {

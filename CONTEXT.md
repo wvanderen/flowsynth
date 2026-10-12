@@ -282,6 +282,10 @@ The shared, scaling price sequence for app activations with free order — each 
 A purchase beat for a console upgrade such as goal capacity: each purchase adds one increment — one goal slot — and reveals the next price, much steeper. The price is the pacing: players may purchase successive increments whenever they can afford them, with no occupancy gate. Rendered as one compact dashed row in the owning app's panel, trailing the slots it extends.
 _Avoid_: CONSOLE LONG GOAL label (the visible panel drops it)
 
+**Channel Strips**:
+The Goals app's capacity product — the console long goal's first tenant: each purchase adds one Channel Strip — one goal slot — and reveals the next, steeper price, with no occupancy gate. The next price appears only on the purchase button; the row is one compact line trailing the slots it extends. Product name (issue #326).
+_Avoid_: One more goal slot, goal slot purchase, extra slot, slot expander
+
 **Habit**:
 A repeatable real-life practice, such as piano or cooking, that develops through credited practice time and manually logged practice time and can be selected for a flow session. Its development unlocks build nodes as practice time crosses milestones and is separate from nous.
 
@@ -317,7 +321,7 @@ The focus app for recording notes — during a flow session or between sessions.
 A note tagged with the session's selected habit at capture, surfaced in that habit's development summary and chipped in the Notes stream. Unstructured and upgrade-mode notes go untagged.
 
 **Goals app**:
-The focus app for tracking goals; completion is the tracking itself, surfaced in the session summary. A completion is the fact each owned Goal Generator reads, crediting its reserve a multiple of the focus equivalent prorated by the goal's live share (ADR-0047). Its capacity grows through console long goals.
+The focus app for tracking goals; completion is the tracking itself, surfaced in the session summary. A completion is the fact each owned Goal Generator reads, crediting its reserve a multiple of the focus equivalent prorated by the goal's live share (ADR-0047). Its capacity grows through the Channel Strips purchase (the console long goal).
 
 **Goal**:
 A practice condition to fulfill, such as practicing piano for twenty minutes or practicing four specified habits in a day, accruing progress only while active. Goals may qualify practice by habit or other criteria, and a session may advance several goals.
