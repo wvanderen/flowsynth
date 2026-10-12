@@ -22,5 +22,18 @@ Held 2026-10-12 over the live sheet. Outcome: **variant A approved** — slim ba
 
 ## Unavailable
 
-- **Live `:focus-visible` ring matching**: the automation browser never matches `:focus-visible`, even on real Tab presses, so the ring could not be observed rendering. The rule is present (`button:focus-visible`, 2px ink outline, 3px offset — same pattern as both shipped prototypes). Recorded unavailable per [visual evidence](../agents/visual-evidence.md), never claimed as verified.
+- **Live `:focus-visible` ring matching**: the automation browser never matches `:focus-visible`, even on real Tab presses, so the ring could not be observed rendering. The rule is present (`button:focus-visible`, 2px ink outline, 3px offset — same pattern as both shipped prototypes). Recorded unavailable per [visual evidence](../../agents/visual-evidence.md), never claimed as verified.
 - **Touch-device tap checks**: no touch device in this environment; tap paths verified by synthesized clicks only.
+
+## PR #324 review corrections
+
+The original captures above remain historical evidence at `7adb388`. The user requested both review findings be addressed and pushed. The corrected reference is `d405ce2`; variant A geometry is unchanged, with Mutators now before Modules.
+
+Verification in this worktree (served at localhost:5176 with provenance confirmed):
+
+- T3 preview DOM checks: hover opens with `aria-expanded=true`; Escape hides while hovered; leaving and re-entering opens again; click opens; click-away hides. Visibility and accessibility state agree.
+- Happy DOM checks of the actual prototype script: hover, keyboard focus, click toggle, Escape, fresh hover/focus, click-away, retained focus after Escape, and Mutators-first ordering passed.
+- `npm run check` passed; full suite: 1265 passed, 2 skipped.
+- Mechanical design detector reported incumbent padding, small contrast labels, rejected-card shadow, and prose warnings; approved geometry and rejected contrast were preserved.
+
+Unavailable: the T3 preview host disconnected during phone resize. Updated phone capture, native focus-event/focus-ring confirmation, real touch-device checks, greyscale and reduced-motion browser checks could not be completed. The preview's programmatic focus check did not deliver focus events; Happy DOM covers the event handlers, not native browser focus rendering.
