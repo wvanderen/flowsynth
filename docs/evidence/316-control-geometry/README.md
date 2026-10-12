@@ -1,22 +1,23 @@
 # Evidence: the approved control geometry applied to production (#316)
 
-All captures from the verified checkout at `aa115e0`, served by `tools/dev-server.mjs` (localhost:5176) with provenance confirmed against `git rev-parse HEAD` immediately before each capture — `worktree` equal to this checkout, `commit` equal to `aa115e0`. The phone composition was captured through a true 390×844 viewport frame on the same server, so both container and viewport queries apply natively.
+All captures from the verified checkout at `2f8907d`, served by `tools/dev-server.mjs` (localhost:5176) with provenance confirmed against `git rev-parse HEAD` immediately before each capture — `worktree` equal to this checkout, `commit` equal to the captured commit. The phone composition was captured through a true 390×844 viewport frame on the same server, so both container and viewport queries apply natively.
 
 ## Captures
 
-- `desktop-board.png` — the console (square-cut switch, doors, ledger), the left dock with the meter as a shared bar column, square-cut sweep chips, the prestige horizon.
+- `desktop-board.png` — the console (square-cut switch, doors, ledger), the left dock with the meter as a shared bar column, square-cut sweep chips at the dock's compact scale, the square layer-legend strip, the square dashed inventory tray, the prestige horizon.
 - `desktop-goals-swatches.png` — the GOALS face: the shared bar column at each row's lead filling by height, the done bar at full height under the engraved ✓, the six swatches as square-cut controls with the standing pick under the firm inset marker, the unaffordable slot purchase in the muted unavailable voice.
 - `desktop-catalog.png` — the clipped catalog plate: outline-voice price buttons, term triggers on their engraved hairlines, the NOUS face tab in the selected voice.
 - `desktop-tooltip-open.png` — the `charge` term's tooltip opened by keyboard Tab: floating text over a hairline rule, no border, no card.
+- `desktop-feats-sheet.png` — the Feats sheet: the square-cut modal plate, the shared bar columns leading the capstone rows, engraved ✓ acquired marks.
 - `phone-board.png` — 390px composition: bare console doors, square-cut switch, the game-info strip's clipped plate, the thumb bar's doors, zoom cluster, sweep chips.
-- `phone-goals.png` — the focus sheet at 390px: bars, swatches, facetab marker as on desktop.
+- `phone-goals.png` — the focus sheet at 390px: bars, swatches, facetab marker as on desktop, the popover shell square-cut.
 
 ## Checks
 
 - **Disclosure**: the tooltip opens by keyboard Tab (captured) and by the click/pin path (sheet doors, swatch picker, and recolor rows exercised by click in the served page); Escape dismisses the disclosure while keyboard focus stays on the term — DOM-verified on the served page.
 - **State distinctions without color**: selected = the firm inset underline (facetabs, swatch pick, catalog face tab — visible in greyscale in the captures); unavailable = muted lettering on the soft hairline (the goals slot's 62,500 ν buy); acquired = the engraved ✓ on the done goal bar.
 - **Shared shapes**: the bar column, swatch, and button geometry render identically across console, sheet, catalog, and phone — one implementation each, asserted by the stylesheet-contract suite (`instrument.test.ts`, "the controls sheet's stylesheet contract").
-- **Checks + types**: `npm run check` and `npm test` green at `aa115e0` (61 files, 1271 passed, 2 skipped).
+- **Checks + types**: `npm run check` and `npm test` green at `2f8907d` (61 files, 1271 passed, 2 skipped); the stylesheet contract now pins the container surfaces square-cut too.
 
 ## Unavailable
 
