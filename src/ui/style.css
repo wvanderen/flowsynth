@@ -395,11 +395,11 @@ h1, h2, h3, p { margin: 0; }
 }
 .gbar-overflow { font-size: 11px; color: var(--muted); flex-shrink: 0; }
 
-/* Focus-app doors (ADR-0012): bare uncarded icon controls — the state
-   text is gone, so the tiles read as one instrument. Monochrome — panel
-   access reads as ink, never hue. Locked doors open nothing. The firm
-   inset marker is the open state (the state grammar's selected voice),
-   the sheet-open marker the phone line names (ADR-0050). */
+/* Focus-app doors (ADR-0012, #313): bare uncarded icon controls — the
+   state text is gone, so the tiles read as one instrument. Monochrome —
+   panel access reads as ink, never hue. The firm inset marker is the open
+   state (the state grammar's selected voice), the sheet-open marker the
+   phone line names (ADR-0050). */
 .console-apps { display: flex; align-items: center; flex-shrink: 0; }
 .app-tiles { display: flex; gap: 3px; }
 .app-slot { position: relative; display: flex; }
@@ -414,12 +414,10 @@ h1, h2, h3, p { margin: 0; }
   border-radius: 8px;
   background: transparent;
 }
-.app-tile:hover:not(.locked), .app-tile.open { border-color: var(--line); background: var(--panel); }
+.app-tile:hover, .app-tile.open { border-color: var(--line); background: var(--panel); }
 .app-tile.open { box-shadow: inset 0 -2px var(--ink); }
 .app-tile-glyph { display: flex; align-items: center; gap: 6px; color: var(--ink); }
 .app-tile-glyph svg { width: 19px; height: 19px; display: block; }
-.app-tile.locked { cursor: default; }
-.app-tile.locked .app-tile-glyph { color: var(--muted); opacity: 0.6; }
 
 /* App sheets open as one plate anchored directly beneath the clock's
    disclosure (ADR-0050) — the Focus control sheet and the notes sheet are

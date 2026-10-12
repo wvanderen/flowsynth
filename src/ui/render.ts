@@ -11,7 +11,7 @@ import { catalogOpen, rowUnlockCost, unlockableRows } from "../engine/catalog";
 import { capacityCeiling, nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "../engine/capacity";
 import { formatClock, formatDuration } from "../engine/clock";
 import { cellNoteOf, noteNameOf, octaveRowOf, positionInRange } from "../engine/lattice";
-import { appActive, appLockNote, TILE_APPS, type FocusApp } from "../engine/apps";
+import { TILE_APPS, type FocusApp } from "../engine/apps";
 import { activeBuildFactors } from "../engine/builds";
 import { poolOutstanding } from "../engine/trust";
 import { arcCardDue } from "../engine/arc";
@@ -146,11 +146,12 @@ export function render(app: App): void {
 
 // The unplanned shape's two words (§6) live in focus.ts beside the plan
 // patchers they share; the clock is itself the plan affordance (§7):
-// clicking it opens the Focus sheet's PLAN face. Both console shapes wear
-// the same wiring; the clock anchor counts as "inside" for the popover
+// clicking it opens the Focus sheet's PLAN face. Wide surfaces wear
+// wide-only wiring; the phone clock is a readout (#313). The anchor counts as "inside" for the popover
 // click-away closer (app.ts), so the click that opens the sheet never
 // closes it in the same gesture.
 function wireClockPlan(app: App): void {
+  if (isPhoneWidth()) return;
   app.listen(byId("clock-plan"), "click", () => {
     app.openApp("time");
   });
@@ -172,6 +173,7 @@ function wireClockPlan(app: App): void {
 // disclosure, whatever face it carries.
 function renderConsoleSession(app: App, projected: RateSnapshot): void {
   const { state, ui } = app;
+  const phone = isPhoneWidth();
   const host = byId("console-session");
   if (!host) return;
 
@@ -188,18 +190,18 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
   // id attributes ride in only on the flow side, where the tick patcher
   // addresses the nodes directly.
   const clockButton = (title: string, clockAttrs = "", captionAttrs = ""): string => `
-      <button class="console-clock clock-opens-time" id="clock-plan" title="${title}">
+      <${phone ? "div" : "button"} class="console-clock${phone ? "" : " clock-opens-time"}" id="clock-plan"${phone ? "" : ` title="${title}"`}>
         <span class="clock-stack">
           <span class="clock-row">
             <span class="session-clock mono"${clockAttrs}></span>
-            ${discloseSvg}
+            ${phone ? "" : discloseSvg}
           </span>
           <span class="clock-caption"${captionAttrs}></span>
         </span>
-      </button>`;
+      </${phone ? "div" : "button"}>`;
 
   // The Focus control sheet anchors beneath the clock's own disclosure
-  // (ADR-0050): the habit and goals tiles walk here too — one frame, four
+  // (ADR-0050): the phone Focus door walks here too — one frame, four
   // faces. Its signature rides the rebuild key; the body is only
   // string-built when that key changes (every flow tick takes the patch
   // path below). Notes wears the same frame as its own CAPTURE | LOGGED
@@ -246,7 +248,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
     // the mode in the caption slot. The plan's own values patch in place
     // below (#115) — a plan pick never rebuilds the console session. No
     // session runs, so the header's progress strip stays empty.
-    const key = `upgrade|${popoverKey}|${bannerReadsKey(app)}`;
+    const key = `upgrade|${phone ? "phone" : "wide"}|${popoverKey}|${bannerReadsKey(app)}`;
     if (host.dataset.renderKey !== key) {
       host.dataset.renderKey = key;
       const scrollTop = popoverScroll(host);
@@ -280,7 +282,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
   const paused = state.mode === "paused";
   const reached = target !== null && elapsed >= target;
 
-  const key = `flow:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}|${popoverKey}|${bannerReadsKey(app)}`;
+  const key = `flow:${phone ? "phone" : "wide"}:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}|${popoverKey}|${bannerReadsKey(app)}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     const scrollTop = popoverScroll(host);
@@ -338,7 +340,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
 // and closing the sheet rebuilds the cluster with the sheet itself.
 function syncClockDisclosure(app: App): void {
   const open = app.ui.app !== null;
-  byId("clock-plan")?.setAttribute("aria-expanded", String(open));
+  if (!isPhoneWidth()) byId("clock-plan")?.setAttribute("aria-expanded", String(open));
 }
 
 // The focus banner's reads (ADR-0050; vertical bars per #312): beside the
@@ -432,17 +434,13 @@ function plannedFill(elapsed: number, target: number): string {
   return `${Math.min(100, (elapsed / target) * 100)}%`;
 }
 
-// Focus-app access (ADR-0012, ADR-0050): bare uncarded icon doors. The wide
-// console keeps one door per tile app — Habit, Notes, Goals (issue #148) —
-// Habit and Goals walking into the Focus control sheet under the clock,
-// Notes into its own CAPTURE | LOGGED sheet in the same frame (#277). The
-// phone banner trades the reads for its bare doors: the Focus sheet's door
-// and Notes (ADR-0050's amended phone line). Time wears
-// no door at any width: the console clock's disclosure opens the sheet's
-// PLAN face. The locked-door plumbing stays for a future ladder tenant;
-// locked doors would open nothing, and the board never moves, reflows, or
-// dims while the console is used. (Display names live in meta.ts's
-// APP_LABELS.)
+// Focus-app access (ADR-0012, ADR-0050; #313): bare uncarded icon doors.
+// The clock block is the Focus sheet's one wide entry — its faces switch
+// inside the sheet — and Notes keeps its own door, capture being a distinct
+// action. The phone banner carries the same pair it always did: the Focus
+// sheet's door and Notes (ADR-0050's amended phone line). Time wears no
+// door at any width: the console clock's disclosure opens the sheet's PLAN
+// face. (Display names live in meta.ts's APP_LABELS.)
 
 // A popover's scroll rides its host's rebuild (#115): captured before the
 // innerHTML swap, restored once the fresh sheet binds — one shape, one
@@ -456,31 +454,22 @@ function restorePopoverScroll(host: HTMLElement, scrollTop: number): void {
   if (popover && scrollTop > 0) popover.scrollTo(0, scrollTop);
 }
 
-// The one focus-app glyph every tile wears — so the spelling can never
-// drift between access points.
-function appGlyphSvg(appKey: FocusApp): string {
+// The one focus-app glyph every door-wearing tile wears — so the spelling
+// can never drift between access points.
+function appGlyphSvg(appKey: Exclude<FocusApp, "time">): string {
   return `<svg viewBox="-12 -12 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${appIcon(appKey)}</svg>`;
 }
 
-// The facts every access point reads for a tile app: its display label,
-// whether it's active, and its lock note. Tiles compose their names from
-// this one shape. No state word rides the surface: the Goals-state read is
-// desktop-only and lives in the Focus sheet's head (ADR-0033 amended), and
-// the phone nav carries bare doors (ADR-0050's phone line).
-interface AppEntryFacts {
-  label: string;
-  active: boolean;
-  note: string | null;
-}
-
-function appEntryFacts(state: GameState, appKey: FocusApp): AppEntryFacts {
-  return { label: APP_LABELS[appKey], active: appActive(state, appKey), note: appLockNote(state, appKey) };
-}
+// The Focus sheet's door and Notes are the only app doors; each reads its
+// display label from the one APP_LABELS shape. No state word rides the
+// surface: the Goals-state read is desktop-only and lives in the Focus
+// sheet's head (ADR-0033 amended), and the phone nav carries bare doors
+// (ADR-0050's phone line).
 
 function renderConsoleApps(app: App): void {
   const host = byId("console-apps");
   if (!host) return;
-  const { state, ui } = app;
+  const { ui } = app;
   const phone = isPhoneWidth();
   // The doors' pressed states ride the open app; everything the sheets
   // show lives under the clock's own key.
@@ -488,11 +477,9 @@ function renderConsoleApps(app: App): void {
   if (host.dataset.renderKey === key) return;
   host.dataset.renderKey = key;
   // Every app sheet anchors beneath the clock at every width (ADR-0050):
-  // Habit and Goals open the Focus sheet, Notes its CAPTURE | LOGGED sheet
-  // (#277) — the doors carry the entries, never a panel. The wide console
-  // keeps one door per tile app; the phone banner trades the reads for its
-  // bare doors — the Focus sheet's door and Notes (ADR-0050's amended
-  // phone line).
+  // the Focus sheet behind the clock block (wide) or the focus door
+  // (phone), Notes its CAPTURE | LOGGED sheet (#277) — the doors carry the
+  // entries, never a panel.
   const doorKeys: readonly DoorKey[] = phone ? PHONE_DOORS : TILE_APPS;
   const tiles = doorKeys
     .map((doorKey) => {
@@ -508,12 +495,11 @@ function renderConsoleApps(app: App): void {
       </button>
     </div>`;
       }
-      const appKey = doorKey as FocusApp;
-      const facts = appEntryFacts(state, appKey);
+      const appKey = doorKey as Exclude<FocusApp, "time">;
+      const label = APP_LABELS[appKey];
       const open = ui.app === appKey;
-      const title = facts.note ? `${facts.label} — locked: ${facts.note}` : `${facts.label} app`;
       return `<div class="app-slot">
-      <button class="app-tile${facts.active ? "" : " locked"}${open ? " open" : ""}" id="app-tile-${appKey}" aria-pressed="${open}" aria-label="${facts.label}"${facts.active ? "" : ' aria-disabled="true"'} title="${title}">
+      <button class="app-tile${open ? " open" : ""}" id="app-tile-${appKey}" aria-pressed="${open}" aria-label="${label}" title="${label} app">
         <span class="app-tile-glyph">
           ${appGlyphSvg(appKey)}
         </span>
@@ -530,8 +516,10 @@ function renderConsoleApps(app: App): void {
   }
 }
 
-// The console doors' keys: every focus app plus the Focus sheet's own door
-// — the one entry that is not an app but the frame's front.
+// The console doors' keys (issue #313): the Focus sheet's own door — the
+// one entry that is not an app but the frame's front — plus whatever tile
+// apps remain. The clock block is the sheet's wide entry, so only phone
+// carries the focus door; Notes is the one tile app at every width.
 type DoorKey = FocusApp | "focus";
 
 // The Focus sheet's door mark (ADR-0050's phone line, the prototype's ◎):
@@ -2329,7 +2317,6 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                   wholeNous(app.state),
                   JSON.stringify(app.state.purchased),
                   app.state.cellsBought,
-                  app.state.activatedApps.join("|"),
                   // The capacity ladder's owned state (issue #259): the row's
                   // figure, price, and capped word re-read with the ladder.
                   app.state.capacityBought,

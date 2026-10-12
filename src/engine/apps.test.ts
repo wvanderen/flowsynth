@@ -1,52 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { buyActivation, endSession, startSession } from "./actions";
-import { appActive, appLockNote, FOCUS_APPS, LADDER_APPS, nextRung, nextRungCost, TILE_APPS } from "./apps";
-import { rungCost } from "./economy";
-import { fresh } from "./fixtures";
+import { FOCUS_APPS, TILE_APPS } from "./apps";
 
 describe("the free opening (ADR-0019, issue #83)", () => {
-  it("all four launch apps are active from minute 0 — before any session", () => {
-    const s = fresh();
-    for (const app of FOCUS_APPS) {
-      expect(appActive(s, app)).toBe(true);
-      expect(appLockNote(s, app)).toBeNull();
-    }
-    expect(s.sessionsCompleted).toBe(0);
-    expect(s.activatedApps).toHaveLength(0);
-  });
-
-  it("stays free after sessions come and go; activation records stay empty", () => {
-    const s = fresh();
-    startSession(s, null);
-    endSession(s, Date.now());
-    for (const app of FOCUS_APPS) expect(appActive(s, app)).toBe(true);
-    expect(s.activatedApps).toHaveLength(0);
-  });
-
-  it("exposes the launch app inventory in tile order, with the ladder resting empty", () => {
+  it("exposes the launch app inventory in FOCUS_APPS order", () => {
     expect(FOCUS_APPS).toEqual(["habit", "time", "notes", "goals"]);
-    // Time wears no tile (issue #148): the console clock is its affordance.
-    expect(TILE_APPS).toEqual(["habit", "notes", "goals"]);
-    expect(LADDER_APPS).toEqual([]);
-  });
-});
-
-describe("the activation ladder rests empty at launch (ADR-0019)", () => {
-  it("sells nothing: every launch app is refused whatever the pockets", () => {
-    const s = fresh();
-    s.nous = 1e9;
-    for (const app of FOCUS_APPS) {
-      expect(buyActivation(s, app).ok).toBe(false);
-    }
-    expect(s.activatedApps).toHaveLength(0);
-    expect(s.nous).toBe(1e9);
   });
 
-  it("keeps the shared, scaling rung shape for its first tenant", () => {
-    expect(rungCost(2)).toBeGreaterThan(rungCost(1));
-    const s = fresh();
-    expect(nextRung(s)).toBe(1);
-    expect(nextRungCost(s)).toBe(rungCost(1));
-    // Nothing ever moves the rung at launch: the ladder sells nothing.
+  it("Notes alone wears a door tile (#313); Time never wore one (#148)", () => {
+    // Capture is a distinct action, so Notes keeps its door. The clock block
+    // is the Focus sheet's one wide entry and the focus door its phone
+    // entry, so Habit and Goals wear no tile — their faces live inside the
+    // sheet. Time's affordance is the console clock itself.
+    expect(TILE_APPS).toEqual(["notes"]);
   });
 });

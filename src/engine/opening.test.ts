@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  buyActivation,
   buyCell,
   buyGoalCapacity,
   buyShelfModule,
@@ -13,8 +12,7 @@ import {
   upgradeModule,
 } from "./actions";
 import { BALANCE, MODULE_TYPES, SAVE_VERSION, SHELF_TYPES } from "./constants";
-import { nextRungCost } from "./apps";
-import { cellCost, computeRates, levelCost, longGoalCost, rowGateCost, rungCost } from "./economy";
+import { cellCost, computeRates, levelCost, longGoalCost, rowGateCost } from "./economy";
 import { fresh } from "./fixtures";
 import { adjacent, hex } from "./hex";
 import { cellNoteOf } from "./lattice";
@@ -122,22 +120,18 @@ describe("purchase windows — all nous spending is upgrade-mode-only (§3)", ()
       expect(buyShelfModule(s, type).ok).toBe(false);
     }
     expect(buyCell(s, hex(2, 0)).ok).toBe(false);
-    expect(buyActivation(s, "notes").ok).toBe(false);
     expect(buyGoalCapacity(s).ok).toBe(false);
     const opening = s.modules[0]!;
     expect(upgradeModule(s, opening.id).ok).toBe(false);
     expect(s.purchased.forge).toBe(false);
     expect(s.cellsBought).toBe(0);
-    expect(s.activatedApps).toHaveLength(0);
     expect(s.goalCapacityBought).toBe(0);
     expect(opening.level).toBe(0);
     endSession(s);
-    // Back in upgrade mode the same purchases go through — except the
-    // ladder, which sells nothing at launch (ADR-0019): the apps were
-    // already free.
+    // Back in upgrade mode the same purchases go through (ADR-0019: the
+    // apps were always free — there is no ladder to buy from).
     expect(buyShelfModule(s, "forge").ok).toBe(true);
     expect(buyCell(s, hex(2, 0)).ok).toBe(true);
-    expect(buyActivation(s, "notes").ok).toBe(false);
     expect(upgradeModule(s, opening.id).ok).toBe(true);
   });
 
@@ -160,9 +154,8 @@ describe("the opening economy", () => {
       expect(grant, type).toBeLessThan(BALANCE.shelfPrices[type]);
       expect(buyShelfModule(s, type).ok).toBe(false);
     }
-    // The ladder sells nothing, whatever the balance (ADR-0019).
-    expect(buyActivation(s, "notes").ok).toBe(false);
-    expect(buyActivation(s, "goals").ok).toBe(false);
+    // The grant reaches nothing past the first upgrade, whatever the
+    // balance (ADR-0019: the apps were always free).
     expect(cellCost(0)).toBeGreaterThan(grant);
     expect(buyCell(s, hex(2, 0)).ok).toBe(false);
     expect(longGoalCost(0)).toBeGreaterThan(grant);
@@ -195,8 +188,6 @@ describe("the opening economy", () => {
     buyShelfModule(s, "generator");
     // Cells ride the cell scaler…
     expect(cellCost(s.cellsBought)).toBe(cellCost(2));
-    // …the ladder's rung never moves while it rests empty…
-    expect(nextRungCost(s)).toBe(rungCost(1));
     // …and the shelf hides exactly what was acquired.
     expect(SHELF_TYPES.filter((type) => !s.purchased[type])).toEqual(["infusor", "forge"]);
   });

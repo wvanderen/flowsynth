@@ -29,23 +29,35 @@ afterEach(() => fixture.release());
 const DAY = new Date(2026, 8, 18, 12).getTime();
 
 describe("the console tiles", () => {
-  it("three icon-only tiles — Habit, Notes, Goals; Time wears none (issue #148)", () => {
+  it("Notes alone wears a door tile; no habit, goals, or time tiles stand (#313)", () => {
     app.render();
-    for (const key of ["habit", "notes", "goals"]) {
-      const tile = document.getElementById(`app-tile-${key}`)!;
-      expect(tile.classList.contains("locked")).toBe(false);
-      expect(tile.title).not.toContain("locked");
-      // Icon-only: a glyph and an accessible name, no state text.
-      expect(tile.querySelector(".app-tile-glyph svg")).not.toBeNull();
-      expect(tile.getAttribute("aria-label")).toBeTruthy();
-    }
-    // Consistently sized: no tile carries state text, so all three are the
-    // same icon square.
+    // One tile, icon-only: the clock block is the Focus sheet's wide entry,
+    // so Habit and Goals ride the sheet's faces; Time never wore a tile
+    // (issue #148).
+    expect([...document.querySelectorAll("#console-apps .app-tile")].map((t) => t.id)).toEqual(["app-tile-notes"]);
+    const tile = document.getElementById("app-tile-notes")!;
+    expect(tile.querySelector(".app-tile-glyph svg")).not.toBeNull();
+    expect(tile.getAttribute("aria-label")).toBeTruthy();
     expect(document.querySelectorAll(".app-tile-state")).toHaveLength(0);
-    expect(document.getElementById("app-tile-time")).toBeNull();
+    for (const key of ["habit", "goals", "time", "focus"]) {
+      expect(document.getElementById(`app-tile-${key}`)).toBeNull();
+    }
   });
 
-  it("every tile opens the frame under the clock from session one (ADR-0050, #277)", () => {
+  it("Notes' door still opens the notes sheet (#313)", () => {
+    app.render();
+    document.getElementById("app-tile-notes")!.click();
+    expect(app.ui.app).toBe("notes");
+    const sheet = document.getElementById("app-popover")!;
+    expect(sheet.classList.contains("focus-sheet")).toBe(true);
+    expect(document.getElementById("console-session")!.contains(sheet)).toBe(true);
+    // A second press toggles it shut.
+    document.getElementById("app-tile-notes")!.click();
+    expect(app.ui.app).toBeNull();
+    expect(document.getElementById("app-popover")).toBeNull();
+  });
+
+  it("the HABIT and GOALS faces stay reachable inside the Focus sheet (ADR-0050, #313)", () => {
     for (const key of ["habit", "goals"] as const) {
       app.openApp(key);
       const sheet = document.getElementById("app-popover")!;
@@ -53,12 +65,6 @@ describe("the console tiles", () => {
       expect(document.getElementById("console-session")!.contains(sheet)).toBe(true);
       app.closeApp();
     }
-    // Notes wears the same frame as its own CAPTURE | LOGGED sheet.
-    app.openApp("notes");
-    const sheet = document.getElementById("app-popover")!;
-    expect(document.getElementById("console-session")!.contains(sheet)).toBe(true);
-    expect(sheet.classList.contains("focus-sheet")).toBe(true);
-    app.closeApp();
   });
 
   it("habit, goals, and notes walk into the one frame; the apps row hosts no panel (ADR-0050, #277)", () => {

@@ -58,13 +58,15 @@ const PATHS: Record<ModuleType, string> = {
 
 // Focus-app glyphs (ADR-0016: geometric synthesis glyphs, every hue paired
 // with a glyph — the console stays monochrome, so these ride ink/muted).
-const APP_PATHS: Record<FocusApp, string> = {
+// One glyph per door-wearing app: Time wears none — the console clock is
+// itself the PLAN face's affordance, so the door glyph the app once had is
+// retired unused (issue #313).
+const APP_PATHS: Record<Exclude<FocusApp, "time">, string> = {
   // Habit: a cycle that carries a mark — a ~300° ring (from twelve, clockwise
   // to ten o'clock) closing into a connected chevron arrowhead that points
   // along the travel, plus a stroked center dot for the practice inside the
   // cycle. The old open arc's hairline nubs read as a spinner at tile size.
   habit: '<path d="M0-8A8 8 0 1 1-6.9-4"/><path d="M-11.1-2.5-6.9-4-6.1 .4"/><circle r="1.8"/>',
-  time: '<circle r="8"/><path d="M0-4.5V0l3.4 2.2"/>',
   goals: '<path d="M-6-8V8M-6-7H6L3-3l3 4H-6"/>',
   notes: '<path d="M-7-8H7M-7-2H7M-7 4h3M6.5 3.5 8 5l-4 4-2 .5.5-2Z"/>',
 };
@@ -73,6 +75,6 @@ export function moduleIcon(type: ModuleType): string {
   return PATHS[type];
 }
 
-export function appIcon(app: FocusApp): string {
+export function appIcon(app: Exclude<FocusApp, "time">): string {
   return APP_PATHS[app];
 }
