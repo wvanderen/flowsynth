@@ -2716,7 +2716,7 @@ function capacityShopHtml(app: App): string {
         countdown: upgrade ? upgradeCountdown(app, price) : null,
       });
   const note = price === null && capacityCeilingsLeft(state)
-    ? `<small class="shop-countdown">The ceiling stands — Expansion Bays sell the next rung.</small>`
+    ? `<small class="shop-countdown">The ceiling stands — ${termTipHtml("Expansion Bays")} sell the next rung.</small>`
     : "";
   // Sold out, the lone figure is all that is left to read.
   const figure = price === null
@@ -2726,7 +2726,7 @@ function capacityShopHtml(app: App): string {
     <section class="capacity-catalog">
       <div class="catalog-rows">
         <article class="catalog-row">
-          <div><h3 class="t-condensed">Poly Expander</h3><p class="t-note">Raises ${termTipHtml("Harmonic capacity")} by one for all voices</p>${figure}${note}</div>
+          <div><h3 class="t-condensed">${termTipHtml("Poly Expander")}</h3><p class="t-note">Raises ${termTipHtml("Harmonic capacity")} by one for all voices</p>${figure}${note}</div>
           ${buy}
         </article>
       </div>
@@ -2749,10 +2749,10 @@ function capacityCeilingsLeft(state: GameState): boolean {
 // (issue #310): the owned figure is the only purchase-count read, the mono
 // delta reads what the next buy changes, the buy button carries the next
 // price, and the engraved owned-word lands when the ladder is sold out.
-// No tooltip and no lock state — the effect line's hoverable terms carry
-// what the surface cannot show.
+// No row-info tooltip and no lock state — hoverable product names and
+// effect terms carry what the surface cannot show.
 const CAPACITY_PRODUCTS: Record<"extenders" | "catalysts", {
-  name: string;
+  name: CatalogTerm;
   id: string;
   ownedWord: string;
   ownedOf(state: GameState): number;
@@ -2792,7 +2792,7 @@ function capacityProductRowHtml(app: App, key: "extenders" | "catalysts"): strin
   const owned = product.ownedOf(app.state);
   const price = product.nextPrice(app.state);
   return `<article class="catalog-row">
-    <div><h3 class="t-condensed">${product.name} <span class="mono">${owned}/${product.rungs}</span></h3><p class="t-note">${product.effect()}</p>${
+    <div><h3 class="t-condensed">${termTipHtml(product.name)} <span class="mono">${owned}/${product.rungs}</span></h3><p class="t-note">${product.effect()}</p>${
       price === null ? "" : `<p class="t-note mono">${product.delta(app.state)}</p>`
     }</div>
     ${price === null ? catalogOwnedHtml(product.ownedWord) : areteBuyButtonHtml(app, product.id, price)}
@@ -2826,9 +2826,7 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
   // the first prestige its face is the entry purchase screen — the preview
   // of the future entry, price muted — never a locked tab.
   const faceTab = (face: "nous" | "arete", mark: string, word: string): string =>
-    `<button class="catalog-face-tab" data-catalog-face="${face}" aria-pressed="${ui.catalogFace === face}" title="${
-      face === "nous" ? "The nous shop" : "The Arete catalog"
-    }">${mark}<span>${word}</span></button>`;
+    `<button class="catalog-face-tab" data-catalog-face="${face}" aria-pressed="${ui.catalogFace === face}">${mark}<span>${word}</span></button>`;
   const identity = areteFace
     ? `<span class="catalog-identity" aria-hidden="true">${ARETE_SVG}</span>`
     : `<span class="catalog-identity catalog-identity-nous" aria-hidden="true"><b class="mono">ν</b></span>`;
@@ -2870,10 +2868,8 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
 // The catalog's price affordance (issue #271): the outline price button in
 // the register the row sells in — muted by the disabled state whenever the
 // price is out of reach or flow holds the purse ("spent between sessions")
-// — over its practice-minute countdown while arranging. The title reads the
-// one state the button is in (spend / not enough / between sessions); a
-// caller that needs its own words (the cell row's arm instruction) puts a
-// title in attrs and the built one stands down.
+// — over its practice-minute countdown while arranging. The visible price,
+// state and between-session note need no native tooltip.
 function catalogPriceHtml(options: {
   attrs?: string;
   price: number;
@@ -2884,10 +2880,7 @@ function catalogPriceHtml(options: {
 }): string {
   const unit = options.arete ? "Arete" : "ν";
   const disabled = options.hold || !options.affordable;
-  const title = options.attrs?.includes("title=")
-    ? ""
-    : ` title="${options.hold ? "Purchases happen between sessions" : options.affordable ? `Spend ${formatInt(options.price)} ${unit}` : `Not enough ${unit === "ν" ? "nous" : "Arete"}`}"`;
-  return `<span class="shop-buy"><button class="price${options.arete ? " arete" : ""}" ${options.attrs ?? ""}${title}${
+  return `<span class="shop-buy"><button class="price${options.arete ? " arete" : ""}" ${options.attrs ?? ""}${
     disabled ? " disabled" : ""
   }>${formatInt(options.price)} ${unit}</button>${
     options.countdown ? `<small class="shop-countdown mono">${options.countdown}</small>` : ""
@@ -2977,12 +2970,14 @@ function catalogOwnedHtml(word: string): string {
 // the glossary meaning — description prose never grows around it. The
 // meanings here are the glossary's own, distilled to the one-line ceiling.
 // The union keeps the map closed: only glossary terms may render hoverable.
-type CatalogTerm = "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Headroom" | "nous" | "charge";
+type CatalogTerm = "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Headroom" | "nous" | "charge";
 const CATALOG_TERMS: Record<CatalogTerm, string> = {
   "Harmonic capacity": "Whole-chord budget per voice",
   memorized: "Persists through arete reset",
   Arete: "The resource banked when an era ends",
-  "Poly Expander": "Adds one whole-chord unit to every voice",
+  "Poly Expander": "Re-earned after arete reset",
+  "Expansion Bays": "Ceiling purchases persist through arete reset",
+  "Chord Catalysts": "Discount purchases persist through arete reset",
   Headroom: "Extra earnings scale the payout logarithmically",
   nous: "Main progression resource spent on upgrades",
   charge: "Generator output that powers other modules",
@@ -3010,9 +3005,8 @@ function catalogAreteFaceHtml(app: App): string {
   const upgrade = state.mode === "upgrade";
   if (!state.catalogEntryOwned) {
     const affordable = state.arete >= BALANCE.catalogEntryCost;
-    const entryTitle = upgrade ? (affordable ? `Spend ${BALANCE.catalogEntryCost} Arete` : "Not enough Arete") : "Arete is spent between sessions";
     return `<div class="entry-screen">
-      <button class="entry-buy" id="buy-arete-entry"${upgrade && affordable ? "" : " disabled"} title="${entryTitle}"><span>Unlock Mutator Layer</span><span class="mono">${BALANCE.catalogEntryCost} Arete</span></button>
+      <button class="entry-buy" id="buy-arete-entry"${upgrade && affordable ? "" : " disabled"}><span>Unlock Mutator Layer</span><span class="mono">${BALANCE.catalogEntryCost} Arete</span></button>
     </div>
     ${upgrade ? "" : `<p class="modal-note">Arete is spent between sessions — enter upgrade mode to buy.</p>`}`;
   }
@@ -3036,7 +3030,7 @@ function catalogAreteFaceHtml(app: App): string {
         </article>
         <article class="catalog-row">
           <div><h3 class="t-condensed">Arete Accelerator <span class="kind">(placeholder)</span></h3></div>
-          ${catalogPriceHtml({ attrs: 'disabled title="A placeholder — no offer yet"', price: ACCELERATOR_PLACEHOLDER_PRICE, affordable: false, arete: true })}
+          ${catalogPriceHtml({ attrs: 'disabled', price: ACCELERATOR_PLACEHOLDER_PRICE, affordable: false, arete: true })}
         </article>
       </div>
     </section>
