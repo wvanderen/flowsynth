@@ -255,7 +255,7 @@ function habitChipsHtml(app: App): string {
   const none = state.activeHabitId === null;
   return `<div class="folio-row focus-habit-chips" role="group" aria-label="Session habit">
     ${chips}<button class="plan-habit-chip plan-habit-chip-none${none ? " st-selected" : ""}" data-habit-pick="" aria-pressed="${none}">none selected</button>
-    <button class="plan-habit-chip plan-habit-chip-add" id="habit-add-chip" title="Create or edit habits">+ Add habit</button>
+    <button class="plan-habit-chip plan-habit-chip-add" id="habit-add-chip">+ Add habit</button>
   </div>`;
 }
 
@@ -325,7 +325,7 @@ function habitLedgerRowHtml(app: App, habit: Habit): string {
   const { state } = app;
   const { sessions } = habitPracticeSummary(state, habit.id);
   const active = state.activeHabitId === habit.id;
-  return `<button class="folio-row habit-ledger-row" data-drill-habit="${habit.id}" title="Open ${escapeHtml(habit.name)}">
+  return `<button class="folio-row habit-ledger-row" data-drill-habit="${habit.id}">
     <span class="folio-fig mono" data-habit-seconds="${habit.id}">${formatDuration(habit.seconds)}</span>
     <span class="folio-fig mono folio-dim">${sessions}×</span>
     <span class="habit-ledger-name">${escapeHtml(habit.name)}</span>
@@ -352,18 +352,18 @@ function habitBuildHtml(app: App, habit: Habit): string {
     if (habit.seconds >= milestoneSeconds) {
       const isEquipped = equippedIndex >= 0;
       const title = isEquipped
-        ? `Unequip ${node.name} — respec is free`
+        ? "Build changes are free"
         : upgrade
           ? equipped.length < slots
-            ? `Equip ${node.name} — respec is free`
-            : `No slot free — ${slots} equipped; unequip one first`
+            ? "Build changes are free"
+            : "Unequip one to free a slot"
           : "The build is read-only during flow";
       return `<button class="build-node${isEquipped ? " equipped" : ""}" data-${isEquipped ? "unequip" : "equip"}="${node.id}" data-habit="${habit.id}" title="${title}">
           <span class="build-node-mark mono" aria-hidden="true">${isEquipped ? equippedIndex + 1 : "+"}</span>
           <span class="build-node-name">${escapeHtml(node.name)}<small>${escapeHtml(buildNodeEffect(node))}${stackNote}</small></span>
         </button>`;
     }
-    return `<div class="build-node locked" title="Unlocks at ${formatDuration(milestoneSeconds)} of practice on this habit">
+    return `<div class="build-node locked">
         <span class="build-node-mark mono" aria-hidden="true">·</span>
         <span class="build-node-name">${escapeHtml(node.name)}<small>unlocks at ${formatDuration(milestoneSeconds)} · ${escapeHtml(buildNodeEffect(node))}</small></span>
       </div>`;
@@ -550,11 +550,6 @@ function goalsFaceHtml(app: App, projected: ReturnType<typeof displayedRates>): 
   const longGoalPrice = longGoalCost(state.goalCapacityBought);
   const longGoalAffordable = wholeNous(state) >= longGoalPrice;
   const longGoalCountdown = upgrade ? practiceCountdown(longGoalPrice, wholeNous(state), projected.rate) : null;
-  const longGoalTitle = upgrade
-    ? longGoalAffordable
-      ? null
-      : "Not enough nous yet"
-    : "Purchases happen between sessions";
   const longGoalRow = `
     <div class="folio-row long-goal-row">
       <span class="long-goal-head">
@@ -562,7 +557,7 @@ function goalsFaceHtml(app: App, projected: ReturnType<typeof displayedRates>): 
         <span class="long-goal-effect mono">+1 goal slot</span>
       </span>
       ${shopBuyHtml({
-        attrs: `id="long-goal-buy"${longGoalTitle ? ` title="${longGoalTitle}"` : ""}`,
+        attrs: `id="long-goal-buy"`,
         small: true,
         price: longGoalPrice,
         affordable: upgrade && longGoalAffordable,

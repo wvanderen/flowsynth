@@ -195,7 +195,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   host.innerHTML = `
     <div class="hex-detail-scene${flow ? " readonly" : ""}${state.mode === "flow" ? " flow-live" : ""}" data-face="${detail.face}">
       <div class="hex-detail-corner">
-        <button class="hex-detail-return" id="hex-detail-return" title="Return to the grid">Return</button>
+        <button class="hex-detail-return" id="hex-detail-return">Return</button>
         ${flow ? `<span class="hex-detail-readonly">${state.mode === "flow" ? "flow live" : "paused"} · read-only</span>` : ""}
       </div>
       <div class="hex-detail-grid">
@@ -279,19 +279,19 @@ function mutatorLayerHtml(app: App, pos: Hex, snapshot: RateSnapshot): string {
   let rail = "";
   if (upgrade) {
     if (!state.catalogEntryOwned) {
-      rail = `<button class="hex-action" id="detail-mutator-entry" title="Open the Catalog's Mutator entry screen">Catalog entry</button>`;
+      rail = `<button class="hex-action" id="detail-mutator-entry">Catalog entry</button>`;
     } else if (!state.mutatorSlots.some((slot) => sameHex(slot, pos))) {
       const eligible = mutatorUnlockTargets(state).some((target) => sameHex(target, pos));
       if (eligible) {
         const price = mutatorSlotPrice(state);
         const affordable = state.arete >= price;
         const id = detailTipId();
-        rail = `<span class="inst-tip"><button class="hex-action${affordable ? "" : " st-unavailable"}" id="detail-mutator-unlock" aria-disabled="${!affordable}" aria-describedby="${id}">${price === 0 ? "Unlock slot · free" : `Unlock slot · <span class="mono">${formatInt(price)} ◇</span>`}${affordable ? "" : " · need Arete"}</button><button class="inst-tip-trigger" aria-label="About slot unlock" aria-describedby="${id}" aria-expanded="false">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${affordable ? `Unlock a Mutator slot at ${note}` : `Not enough Arete — requires ${formatInt(price)} ◇; available ${formatInt(state.arete)} ◇`}</span></span>`;
+        rail = `<span class="inst-tip"><button class="hex-action${affordable ? "" : " st-unavailable"}" id="detail-mutator-unlock" aria-disabled="${!affordable}" aria-describedby="${id}">${price === 0 ? "Unlock slot · free" : `Unlock slot · <span class="mono">${formatInt(price)} ◇</span>`}${affordable ? "" : " · need Arete"}</button><button class="inst-tip-trigger" aria-label="About slot unlock" aria-describedby="${id}" aria-expanded="false">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${affordable ? `Unlock a Mutator slot at ${note}` : `Not enough Arete · needs ${formatInt(price)} ◇, have ${formatInt(state.arete)} ◇`}</span></span>`;
       } else {
-        rail = `<span class="hex-detail-noslot" title="Slot unlocks attach beside the Mutator patch — each new slot neighbors an unlocked one">beside the patch only</span>`;
+        rail = `<span class="hex-detail-noslot" title="Each new slot neighbors an unlocked one">beside the patch only</span>`;
       }
     } else if (!item) {
-      rail = `<button class="hex-action" id="detail-mutator-add" title="Open the Mutator tray — choosing a mutator places it in this slot">Add mutator</button>`;
+      rail = `<button class="hex-action" id="detail-mutator-add" title="Choosing a mutator places it in this slot">Add mutator</button>`;
     }
   }
   const orbit = upgrade && item ? orbitHtml("mutators", FAMILY_WORD[item.family]) : "";
@@ -422,7 +422,7 @@ function moduleLayerHtml(app: App, pos: Hex, module: ModuleInstance | undefined,
   if (module && upgrade) {
     rail = detailBuyHtml(app, module);
   } else if (upgrade) {
-    rail = `<button class="hex-action" id="detail-module-add" title="Open the tray — choosing a module places it here">Add module</button>`;
+    rail = `<button class="hex-action" id="detail-module-add" title="Choosing a module places it here">Add module</button>`;
   }
   const orbit = module && upgrade ? orbitHtml("modules", META[module.type].name) : "";
   // The incoming connections (issue #297): charge and the chord bonus ride
@@ -610,7 +610,7 @@ function detailTrayHtml(app: App, face: DetailFace): string {
   return `<aside class="hex-detail-tray" data-detail-tray="${face}" aria-label="${face === "modules" ? "Tray — the inventory beside the stack" : "Mutator tray"}">
     <div class="hex-detail-tray-head">
       <span class="eyebrow">${face === "modules" ? "TRAY" : "MUTATOR TRAY"}</span>
-      <button class="hex-detail-tray-cancel" id="detail-tray-cancel" title="Close the tray — nothing changes">Cancel</button>
+      <button class="hex-detail-tray-cancel" id="detail-tray-cancel">Cancel</button>
     </div>
     <div class="hex-detail-tray-items">${tiles}</div>
   </aside>`;
