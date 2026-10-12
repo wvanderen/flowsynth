@@ -1,0 +1,220 @@
+<!doctype html>
+<!-- THROWAWAY: the controls sheet for the approval round (#315) — button geometry, vertical goal bars, tooltip styling, the six goal-palette swatches. Legacy rounded shapes appear only as rejected contrast. Illustrative figures, no saves or game mutations. Run: python3 -m http.server 5174 -->
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FlowSynth · controls sheet prototype</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap');
+:root{color-scheme:dark;--bg:#0d1122;--panel:#141a30;--line:#414a75;--soft:#2a3150;--ink:#e5e9f5;--muted:#99a1c2;--nous:#cbcaff;--arete:#b994f5;--charge:#9affa8;--switch:#cc603d;--goal-vermillion:#cc603d;--goal-amber:#bc9239;--goal-green:#9affa8;--goal-cyan:#1f95b5;--goal-indigo:#6360d4;--goal-violet:#b994f5;--clip:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px))}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 'IBM Plex Sans',sans-serif;padding-bottom:96px}
+button{font:600 17px 'Barlow Condensed',sans-serif;letter-spacing:.02em;color:inherit;background:none;border:1px solid var(--line);padding:10px 15px;min-height:44px;cursor:pointer;border-radius:0}
+button:hover:not(:disabled){background:#252d48;border-color:var(--line)}
+button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+button:disabled{color:var(--muted);border-color:var(--soft);cursor:default}
+h1,h2,h3{font-family:'Barlow Condensed',sans-serif;font-weight:600;margin:0}h1{font-size:23px}h2{font-size:27px}
+.mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+.dim{color:var(--muted)}
+header{height:76px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--soft);padding:0 32px;gap:20px}
+header .brand{display:flex;align-items:baseline;gap:14px}
+header .mono{font-size:13px}
+.notice{padding:8px 32px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--soft)}
+.stage{max-width:920px;margin:0 auto;padding:30px 32px 40px}
+.sheet{background:var(--line);clip-path:var(--clip);padding:1px}
+.sheet-inner{background:var(--panel);clip-path:var(--clip);padding:6px 34px 30px}
+.family{padding:26px 0 30px;border-top:1px solid var(--soft)}
+.family:first-child{border-top:0}
+.family h2{margin-bottom:4px}
+.lede{margin:0 0 20px;font-size:14px;color:var(--muted)}
+.lede b{color:var(--ink);font-weight:500}
+.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.flow{color:var(--switch);border-color:var(--switch)}
+.flow:hover:not(:disabled){background:var(--bg);color:#e28a69}
+button[aria-pressed]{padding-left:13px;padding-right:13px}
+body[data-variant=A] button[aria-pressed=true]{box-shadow:inset 0 -3px var(--ink);border-color:var(--ink)}
+body[data-variant=B] button[aria-pressed=true]{box-shadow:inset 0 0 0 2px var(--bg);border-color:var(--ink)}
+.completion{font:12px 'IBM Plex Mono',monospace;box-shadow:inset 0 -1px var(--muted);padding:7px 0;flex-shrink:0}
+.quiet{display:flex;gap:8px;margin-left:auto}
+.quiet button{border:0}
+.price{font:500 16px 'IBM Plex Mono',monospace;letter-spacing:0}
+.rejected{display:flex;align-items:center;gap:16px;margin-top:22px;padding-top:16px;border-top:1px dashed var(--soft);color:var(--muted)}
+.reject-mark{font:10px 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;flex-shrink:0}
+.legacy-btn{font:400 14px 'IBM Plex Sans',sans-serif;border:1px solid var(--soft);border-radius:5px;padding:9px 13px;pointer-events:none}
+.legacy-track{width:130px;height:3px;border-radius:2px;background:var(--soft);overflow:hidden;pointer-events:none}
+.legacy-track i{display:block;width:58%;height:100%;background:var(--muted);opacity:.55}
+.legacy-swatch{width:24px;height:24px;border-radius:999px;border:1px solid var(--line);background:var(--goal-vermillion);pointer-events:none;flex-shrink:0}
+/* Bars: the context row mirrors the console banner reads; the drawing is the anatomy. */
+.console-strip{display:flex;align-items:center;gap:20px;border-bottom:1px solid var(--soft);padding:14px 0;margin-bottom:6px}
+.console-strip .mono{font-size:21px}
+.reads{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-left:auto}
+.bread{font:600 13px 'Barlow Condensed',sans-serif;letter-spacing:.04em}
+.gbars{display:flex;align-items:flex-end;gap:5px;height:30px;border-bottom:1px solid var(--soft);padding-bottom:1px}
+.gbar{position:relative;display:block;height:100%;background:var(--soft)}
+.gbar i{position:absolute;left:0;right:0;bottom:0;display:block}
+.gbar.done::after{content:"✓";position:absolute;inset:0;display:grid;place-items:center;font:700 8px/1 'IBM Plex Mono',monospace;color:var(--bg);text-shadow:0 0 1px var(--ink)}
+body[data-variant=A] .gbar{width:9px}
+body[data-variant=B] .gbars{height:44px;gap:6px}
+body[data-variant=B] .gbar{width:14px;border:1px solid var(--soft)}
+body[data-variant=B] .gbar.done::after{font-size:9px}
+.gbar-overflow{font-size:12px;color:var(--muted)}
+.drawing{margin-top:24px}
+.drawing svg{display:block;width:auto;max-width:100%;height:auto}
+/* Tooltip layer: plain — hairline and panel surface, never a card. */
+.tooltip-host{position:relative;display:inline-block}
+.tip{font:inherit;font-weight:500;border:0;padding:12px 8px;margin:-12px -8px;min-height:0;box-shadow:inset 0 -1px var(--muted)}
+.tip:hover:not(:disabled){background:none;color:var(--nous)}
+.tooltip{display:none;position:absolute;left:0;top:100%;width:max-content;max-width:min(300px,72vw);padding:9px 0 0;margin-top:3px;font:14px/1.5 'IBM Plex Sans',sans-serif;font-weight:400;color:var(--ink);text-align:left;z-index:6}
+.tooltip::before{content:"";display:block;height:1px;background:var(--line);margin-bottom:8px}
+.tooltip-host.show .tooltip{display:block}
+.demo-line{font-size:15px}
+.demo-line h3{font-size:23px;margin-bottom:2px}
+.demo-line .effect{margin:6px 0 0;font-size:14px}
+.demo-line .price{margin-left:auto}
+.boxed{display:inline-block;border:1px solid var(--line);background:#0a0e1b;box-shadow:0 8px 20px #0005;padding:12px 14px;font-size:13px;color:var(--ink);pointer-events:none}
+/* Palette: the six goal tokens as controls, one standing pick. */
+.swatches{display:flex;gap:10px;flex-wrap:wrap}
+.swatch{width:44px;height:44px;padding:9px;display:grid;place-items:center}
+.swatch span{display:block;width:24px;height:24px;border:1px solid var(--line)}
+body[data-variant=A] .swatch[aria-pressed=true]{box-shadow:inset 0 -3px var(--ink);border-color:var(--ink)}
+body[data-variant=B] .swatch[aria-pressed=true]{border-color:var(--ink)}
+body[data-variant=B] .swatch[aria-pressed=true] span{box-shadow:inset 0 0 0 2px var(--bg);border-color:var(--ink)}
+.swatch-name{display:block;margin-top:6px;text-align:center;font:11px 'IBM Plex Mono',monospace;color:var(--muted)}
+.swatch-item{display:flex;flex-direction:column}
+/* Variant switcher */
+.switcher{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--soft);padding:8px 12px;z-index:10;max-width:calc(100vw - 20px)}
+.switcher button{min-height:44px;min-width:44px;padding:6px 12px}
+.switcher span{font:600 14px 'Barlow Condensed',sans-serif;letter-spacing:.04em;white-space:nowrap}
+@media(max-width:800px){
+header{padding:12px 18px;height:auto}
+.notice{padding:8px 18px}
+.stage{padding:20px 18px 30px}
+.sheet-inner{padding:2px 20px 22px}
+.row{gap:10px}
+.quiet{margin-left:0}
+.console-strip{flex-wrap:wrap;gap:12px}
+.reads{margin-left:0}
+.swatch-name{display:none}
+.swatches{gap:8px}
+.rejected{flex-wrap:wrap;gap:10px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<body>
+<header><div class="brand"><h1>FlowSynth</h1><span class="dim">Controls sheet</span></div><span class="mono dim">approval round · #315</span></header>
+<div class="notice">Approved controls sheet — variant A, 2026-10-12 (#315) · legacy rounded styles stand as rejected contrast only · no game saves</div>
+<main class="stage"><div class="sheet"><div class="sheet-inner">
+
+<section class="family" aria-label="Button geometry">
+<h2>Buttons</h2>
+<p class="lede">The instrument's control: <b>square-cut, hairline border, condensed caps</b>. Hover fills the face; the selected control wears the firm inset marker; the unavailable control mutes; completion engraves. The rounded legacy style is retired.</p>
+<div class="row">
+<button class="flow">Enter flow</button>
+<button aria-pressed="false">Mutators</button>
+<button aria-pressed="true">Modules</button>
+<button>Upgrade +1</button>
+<button disabled>Headroom · 12 Arete</button>
+<span class="completion">ACQUIRED</span>
+<span class="quiet"><button>Habit</button><button>Notes</button><button>Goals</button></span>
+</div>
+<div class="rejected"><span class="reject-mark">Retired · legacy contrast</span><span class="legacy-btn">Cancel</span><span class="dim">border-radius, sans-serif lettering — the drift this sheet closes</span></div>
+</section>
+
+<section class="family" aria-label="Vertical goal bars">
+<h2>Goal bars</h2>
+<p class="lede">Vertical columns, <b>fill by height</b>, each fill wearing its goal's palette token; <b>completion is engraved</b> — state never rides color alone.</p>
+<div class="console-strip">
+<span class="mono">20:00</span>
+<button class="flow">Enter flow</button>
+<div class="reads">
+<span class="bread">Piano</span>
+<span class="gbars" role="img" aria-label="Goal progress: 3 in progress, 2 complete, 1 more">
+<span class="gbar"><i style="height:65%;background:var(--goal-vermillion)"></i></span>
+<span class="gbar"><i style="height:40%;background:var(--goal-cyan)"></i></span>
+<span class="gbar"><i style="height:82%;background:var(--goal-green)"></i></span>
+<span class="gbar done"><i style="height:100%;background:var(--goal-amber)"></i></span>
+<span class="gbar done"><i style="height:100%;background:var(--goal-indigo)"></i></span>
+</span>
+<span class="gbar-overflow mono">+1</span>
+</div>
+</div>
+<div class="drawing" aria-hidden="true">
+<svg viewBox="0 0 372 132" font-family="IBM Plex Mono,monospace">
+<rect x="46" y="14" width="20" height="100" fill="#2a3150"/>
+<rect x="46" y="52" width="20" height="62" fill="#cc603d"/>
+<rect x="132" y="14" width="20" height="100" fill="#bc9239"/>
+<path d="M137 62l4 4 7-9" fill="none" stroke="#0d1122" stroke-width="2"/>
+<line x1="66" y1="83" x2="196" y2="83" stroke="#414a75" stroke-width="1"/>
+<text x="202" y="86" font-size="11" fill="#99a1c2">FILL = PROGRESS</text>
+<line x1="56" y1="14" x2="56" y2="6" stroke="#414a75" stroke-width="1"/>
+<line x1="56" y1="6" x2="196" y2="6" stroke="#414a75" stroke-width="1"/>
+<text x="202" y="9" font-size="11" fill="#99a1c2">TRACK</text>
+<line x1="142" y1="66" x2="142" y2="118" stroke="#414a75" stroke-width="1"/>
+<line x1="142" y1="118" x2="196" y2="118" stroke="#414a75" stroke-width="1"/>
+<text x="202" y="121" font-size="11" fill="#99a1c2">ENGRAVED COMPLETION MARK</text>
+</svg>
+</div>
+<div class="rejected"><span class="reject-mark">Retired · legacy contrast</span><span class="legacy-track"><i></i></span><span class="dim">horizontal rounded track, fill by width — replaced by the column</span></div>
+</section>
+
+<section class="family" aria-label="Tooltip styling">
+<h2>Tooltip layer</h2>
+<p class="lede">Plain: <b>hairline and panel surface</b> — floating text, no border, no shadow, no card. The term carries the hairline; hover, focus, or tap opens; Escape or tap-away dismisses.</p>
+<div class="row demo-line">
+<article>
+<h3>Poly Expander</h3>
+<p class="effect">+1 <span class="tooltip-host"><button class="tip" aria-describedby="cap-tip" aria-expanded="false">Harmonic capacity</button><span class="tooltip" id="cap-tip" role="tooltip">The whole-chord budget every voice owns</span></span>, every voice · <span class="tooltip-host"><button class="tip" aria-describedby="mem-tip" aria-expanded="false">memorized</button><span class="tooltip" id="mem-tip" role="tooltip">Persists through arete reset</span></span></p>
+</article>
+<button class="price">12 ν</button>
+</div>
+<div class="rejected"><span class="reject-mark">Rejected · boxed card</span><span class="boxed">Harmonic capacity — the whole-chord budget every voice owns</span><span class="dim">border, shadow, card — violates the open-divisions rule</span></div>
+</section>
+
+<section class="family" aria-label="Goal palette swatches">
+<h2>Goal palette</h2>
+<p class="lede">The six goal tokens rendered as controls — <b>square-cut in the state grammar</b>, the standing pick under the firm inset marker. Chosen at goal creation, re-picked on the row.</p>
+<div class="swatches" role="group" aria-label="Goal color">
+<span class="swatch-item"><button class="swatch" aria-pressed="true" aria-label="Vermillion"><span style="background:var(--goal-vermillion)"></span></button><span class="swatch-name">vermillion</span></span>
+<span class="swatch-item"><button class="swatch" aria-pressed="false" aria-label="Amber"><span style="background:var(--goal-amber)"></span></button><span class="swatch-name">amber</span></span>
+<span class="swatch-item"><button class="swatch" aria-pressed="false" aria-label="Green"><span style="background:var(--goal-green)"></span></button><span class="swatch-name">green</span></span>
+<span class="swatch-item"><button class="swatch" aria-pressed="false" aria-label="Cyan"><span style="background:var(--goal-cyan)"></span></button><span class="swatch-name">cyan</span></span>
+<span class="swatch-item"><button class="swatch" aria-pressed="false" aria-label="Indigo"><span style="background:var(--goal-indigo)"></span></button><span class="swatch-name">indigo</span></span>
+<span class="swatch-item"><button class="swatch" aria-pressed="false" aria-label="Violet"><span style="background:var(--goal-violet)"></span></button><span class="swatch-name">violet</span></span>
+</div>
+<div class="rejected"><span class="reject-mark">Retired · legacy contrast</span><span class="legacy-swatch"></span><span class="dim">circular swatch — the rounded voice the control shape retires</span></div>
+</section>
+
+</div></div></main>
+<div class="switcher"><button id="prev" aria-label="Previous variant">←</button><span id="variant-label"></span><button id="next" aria-label="Next variant">→</button></div>
+<script>
+const variants=['A','B'],names={A:'A · Slim columns · underline marker',B:'B · Framed columns · inset ring'};
+let variant=new URLSearchParams(location.search).get('variant')||'A';
+if(!variants.includes(variant))variant='A';
+function renderVariant(){document.body.dataset.variant=variant;document.querySelector('#variant-label').textContent=names[variant];const u=new URL(location);u.searchParams.set('variant',variant);history.replaceState(null,'',u)}
+function cycle(n){variant=variants[(variants.indexOf(variant)+n+variants.length)%variants.length];renderVariant()}
+document.querySelector('#prev').onclick=()=>cycle(-1);
+document.querySelector('#next').onclick=()=>cycle(1);
+document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea,[contenteditable]'))return;if(e.key==='ArrowLeft')cycle(-1);if(e.key==='ArrowRight')cycle(1)});
+renderVariant();
+const tips=[...document.querySelectorAll('.tooltip-host')].map(host=>({host,button:host.querySelector('.tip'),hovered:false,focused:false,pinned:false,dismissed:false}));
+function renderTip(tip){
+  const visible=!tip.dismissed&&(tip.hovered||tip.focused||tip.pinned);
+  tip.host.classList.toggle('show',visible);
+  tip.button.setAttribute('aria-expanded',String(visible));
+}
+function closeTips(except){
+  tips.forEach(tip=>{if(tip===except)return;tip.pinned=false;tip.dismissed=true;renderTip(tip)});
+}
+tips.forEach(tip=>{
+  tip.host.addEventListener('mouseenter',()=>{tip.hovered=true;tip.dismissed=false;renderTip(tip)});
+  tip.host.addEventListener('mouseleave',()=>{tip.hovered=false;renderTip(tip)});
+  tip.button.addEventListener('focusin',()=>{tip.focused=true;tip.dismissed=false;renderTip(tip)});
+  tip.button.addEventListener('focusout',()=>{tip.focused=false;renderTip(tip)});
+  tip.button.addEventListener('click',()=>{
+    const pinned=!tip.pinned;
+    closeTips(tip);
+    tip.pinned=pinned;
+    tip.dismissed=!pinned;
+    renderTip(tip);
+  });
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTips()});
+document.addEventListener('click',e=>{if(!e.target.closest('.tooltip-host'))closeTips()});
+document.querySelectorAll('button[aria-pressed]').forEach(b=>b.onclick=()=>{const group=b.closest('.row,.swatches');if(!group)return;group.querySelectorAll('button[aria-pressed]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))});
+</script></body></html>
