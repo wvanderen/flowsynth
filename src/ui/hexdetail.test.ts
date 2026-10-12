@@ -448,7 +448,7 @@ describe("the vertical layer legend (issue #295)", () => {
     expect(css).toMatch(/\.legend-symbol:focus-visible[^{]*\{[^}]*outline/);
   });
 
-  it("pre-entry the Mutators symbol stands locked-but-visible; its ⓘ discloses by focus and tap", () => {
+  it("pre-entry the Mutators symbol stands locked-but-visible; its own tooltip carries the lock", () => {
     app.render();
     const legend = document.getElementById("layer-legend")!;
     const mutators = legend.querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!;
@@ -458,14 +458,11 @@ describe("the vertical layer legend (issue #295)", () => {
     expect(mutators.querySelector(".mut-tab-lock")).not.toBeNull();
     expect(mutators.querySelectorAll("svg")).toHaveLength(1);
     expect(mutators.getAttribute("aria-pressed")).toBe("false");
-    // The ⓘ trigger opens by focus…
-    const trigger = legend.querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
-    trigger.focus();
-    expect(document.getElementById(trigger.getAttribute("aria-describedby")!)!.classList.contains("inst-show")).toBe(true);
-    // …dismisses by Escape without entering…
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    expect(document.getElementById(trigger.getAttribute("aria-describedby")!)!.classList.contains("inst-show")).toBe(false);
-    // …and the click walks to the Catalog's ◇ entry, never flipping the mode.
+    // No ⓘ rides the legend (issue #314 review): the symbol's native
+    // tooltip says the lock mechanic, and the click walks to the
+    // Catalog's ◇ entry, never flipping the mode.
+    expect(legend.querySelector(".inst-tip-trigger")).toBeNull();
+    expect(mutators.getAttribute("title")).toContain("locked; unlocks with the Mutator entry");
     mutators.click();
     expect(app.ui.mutLayer).toBe("modules");
     expect(app.ui.modal).toBe("catalog");

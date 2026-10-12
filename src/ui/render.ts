@@ -2479,7 +2479,7 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
       }</div>`;
   content.innerHTML = `
     ${modalTop("INVENTORY", "modal-title")}
-    ${state.mode === "upgrade" ? `<div class="layer-legend tray-switch" role="group" aria-label="Tray face">${layerLegendHtml(app, "sheet-mutator-entry")}</div>` : ""}
+    ${state.mode === "upgrade" ? `<div class="layer-legend tray-switch" role="group" aria-label="Tray face">${layerLegendHtml(app)}</div>` : ""}
     ${face}`;
   content.querySelectorAll<HTMLButtonElement>("[data-inv]").forEach((button) => {
     const id = button.getAttribute("data-inv")!;

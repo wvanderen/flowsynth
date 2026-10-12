@@ -1,9 +1,11 @@
 # Mutators lead every co-list — review evidence
 
 Source: issue #314. Captured on this branch's working tree on top of
-commit `b65e95c9519bc3be0a27f261feba016d77bc3c7b`. Launched this
-checkout with `npm run dev`; the provenance endpoint's `worktree` and
-`commit` matched `git rev-parse` in this checkout before every capture.
+commit `36dec6c66d00fb64c3e21c3b34926674613cc111` plus the follow-up
+ⓘ removal (issue #314 review decision, same working tree). Launched
+this checkout with `npm run dev`; the provenance endpoint's `worktree`
+and `commit` matched `git rev-parse` in this checkout before every
+capture.
 
 ## The change
 
@@ -18,19 +20,25 @@ aria strings ride their own symbols and are unchanged. The catalog
 keeps `ν nous` first (the recorded resource-order exception), the
 default layer stays modules, and no tray content reordered.
 
+Follow-up (same issue, review decision): the locked symbol's ⓘ
+disclosure is cut — the padlock's own native tooltip ("Mutators —
+locked; unlocks with the Mutator entry") carries the mechanic, per the
+tooltip doctrine (a disclosure that restates the tooltip goes). The
+legend is two symbols, nothing else; the strip and sheet carry no
+`.inst-tip` at all.
+
 ## Desktop (1402×877 viewport, screenshot pipeline crops to 1280)
 
 - [Board legend](desktop-legend.png): the strip at the board's left
-  edge — the locked Mutators symbol (padlock) on top, the ⓘ beneath it,
-  the Modules symbol last. Verified live: `#layer-legend`'s
-  `[data-legend-layer]` buttons read `["mutators", "modules"]`.
-- [Disclosure by keyboard focus](desktop-legend-focus-tooltip.png):
-  focusing the ⓘ opens "Unlocks with the Mutator entry"; Escape
-  dismissed it (verified live in the same session).
+  edge — the locked Mutators symbol (padlock) on top, the Modules
+  symbol beneath, no ⓘ between or beside. Verified live:
+  `#layer-legend`'s `[data-legend-layer]` buttons read
+  `["mutators", "modules"]`, zero `.inst-tip-trigger`s.
 - **Tab walk** (no screenshot — order is the evidence): Tab from the
-  Mutators symbol landed on "About unlocking Mutators" ⓘ, then on
-  "Modules layer" — keyboard order equals visual order, read from
-  `document.activeElement` after real Tab presses.
+  Mutators symbol landed directly on "Modules layer" — keyboard order
+  equals visual order, read from `document.activeElement` after a real
+  Tab press. The locked symbol's title was read live:
+  "Mutators — locked; unlocks with the Mutator entry".
 
 ## Phone (~390px)
 
@@ -42,33 +50,33 @@ modal layer, which stays on `@media` by design and therefore keeps the
 desktop frame in the sheet capture (recorded under unavailable checks).
 
 - [Board legend](phone-legend.png): the strip re-pinned above the thumb
-  bar, still Mutators (padlock) → ⓘ → Modules.
+  bar — padlock (Mutators) then Modules, no ⓘ.
 - [Sheet switch](phone-sheet-switch.png): the inventory sheet's
-  `.tray-switch` — locked Mutators symbol leftmost, ⓘ beneath, Modules
-  to its right; the same two symbols the board strip hosts, read
-  `["mutators", "modules"]` live.
-- **Touch disclosure**: tapping the sheet switch's ⓘ opened the
-  "Unlocks with the Mutator entry" body (`aria-expanded` true), a tap
-  away dismissed it (`aria-expanded` false) — verified live with
-  synthesized pointer events, not a physical touch pass.
+  `.tray-switch` — locked Mutators symbol leftmost, Modules to its
+  right; the same two symbols the board strip hosts, read
+  `["mutators", "modules"]` live, zero `.inst-tip-trigger`s.
 
 ## Non-color state distinctions
 
 Unchanged by the reorder and visible in the captures: selected layer =
-firm inset marker; locked layer = muted outline + padlock mark; the ⓘ
-disclosure is present in both states. The strip carries no animation or
-glow — nothing to guard under reduced motion (source-verified: no
-`animation`/`transition` on `.layer-legend`, `.legend-symbol`,
-`.legend-entry`); motion on this surface remains the hover background
-swap only.
+firm inset marker; locked layer = muted outline + padlock mark. The
+strip carries no animation or glow — nothing to guard under reduced
+motion (source-verified: no `animation`/`transition` on
+`.layer-legend`, `.legend-symbol`); motion on this surface remains the
+hover background swap only. The locked mechanic reads from the title
+tooltip on hover/focus of the symbol itself; the ⓘ's former
+focus-open/tap-open paths are gone with it (pinned by tests).
 
 ## Automated checks
 
 At capture time: `npm run check` clean; full suite 61 files / 1265
 tests green (2 skipped). mutators.test.ts pins the new order ("mutators
-lead every co-list"): `["mutators", "modules"]` on the strip pre-entry
-and in the mutator era, plus the sheet's `.tray-switch`, with the
-no-`tabindex` assertion keeping tab order pinned to DOM order.
+lead every co-list") and the ⓘ-less contract ("the locked symbol
+carries its mechanics on its own tooltip — no ⓘ disclosure rides strip
+or sheet"): `["mutators", "modules"]` on the strip pre-entry and in the
+mutator era, plus the sheet's `.tray-switch`, the no-`tabindex`
+assertion keeping tab order pinned to DOM order, and the title
+assertion keeping the lock mechanic on the symbol.
 
 ## Unavailable checks
 
@@ -77,8 +85,13 @@ no-`tabindex` assertion keeping tab order pinned to DOM order.
   frame in [phone-sheet-switch.png] by design (viewport media query).
   The switch and its order are the same objects the phone frame hosts
   (pinned by app.phone.test.ts).
-- Physical touch input — the tap paths were exercised with synthesized
-  pointer events and verified live; not claimed as a physical pass.
+- Native-title rendering pass — the browser's hover tooltip for the
+  `title` attribute is OS chrome, not page content; the attribute's
+  presence and copy were verified live and pinned by tests instead.
+- Physical touch input — the sheet paths were exercised with
+  synthesized pointer events in earlier passes; this pass changes no
+  touch behavior (the removed ⓘ was its only touch target besides the
+  two symbols).
 - Greyscale rendering pass (no filter emulation) — non-color state is
   structural (inset marker, padlock, words) and pinned in the
   stylesheet.

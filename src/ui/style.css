@@ -2486,19 +2486,6 @@ body.hex-detail-open .upgrade-all {
   backdrop-filter: blur(3px);
 }
 .layer-legend[hidden] { display: none; }
-.layer-legend .legend-entry { display: inline-flex; }
-.legend-entry.locked { flex-direction: column; align-items: center; gap: 1px; }
-.legend-entry .legend-entry-tip .inst-tip-trigger {
-  width: auto;
-  height: auto;
-  padding: 1px 3px;
-  border: none;
-  background: transparent;
-  font-size: 10px;
-  line-height: 1;
-  color: var(--muted);
-  cursor: pointer;
-}
 .legend-symbol {
   width: 34px;
   height: 34px;
