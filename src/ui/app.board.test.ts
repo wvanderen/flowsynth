@@ -501,7 +501,7 @@ describe("the horizon bar (§7, issue #156)", () => {
     app.state.flow.progress = 90;
     app.render();
     const forge = document.querySelector('#board-tools [data-op="forge"]') as HTMLElement;
-    expect(forge.querySelector(".forge-pip")).not.toBeNull();
+    expect(forge.querySelector(".gbar")).not.toBeNull();
     expect(forge.querySelector('[data-live="forge-pip"]')!.getAttribute("style")).toContain("50");
     expect(forge.querySelector(".forge-detail")!.textContent).toContain("Flow meter 1:30 / 3:00");
   });
@@ -517,8 +517,8 @@ describe("the action row (§7)", () => {
     const add = dock.querySelector<HTMLButtonElement>('[data-op="cell"]')!;
     expect(add.getAttribute("aria-label")).toBe("Add");
     expect(add.title).toContain("Add — ");
-    // The count badge rides the Forge icon; the charge pip rides beneath it.
-    expect(dock.querySelector('[data-op="forge"] .forge-pip')).not.toBeNull();
+    // The count badge rides the Forge icon; the charge pip column rides beneath it.
+    expect(dock.querySelector('[data-op="forge"] .gbar')).not.toBeNull();
     expect(document.querySelector(".legend")).toBeNull();
     expect(document.getElementById("tool-manage")).toBeNull();
     expect(document.getElementById("manage-banner")).toBeNull();

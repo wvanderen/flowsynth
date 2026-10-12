@@ -490,7 +490,7 @@ function shopBuyHtml(options: {
   live?: string;
   note?: string;
 }): string {
-  const button = `<button class="primary${options.small ? " small" : ""}" ${options.attrs ?? ""}${options.affordable ? "" : " disabled"}>${formatInt(options.price)} ν</button>`;
+  const button = `<button class="primary mono${options.small ? " small" : ""}" ${options.attrs ?? ""}${options.affordable ? "" : " disabled"}>${formatInt(options.price)} ν</button>`;
   const small = options.note
     ? `<small class="shop-countdown">${options.note}</small>`
     : options.live || options.countdown
@@ -527,7 +527,7 @@ function goalsFaceHtml(app: App, projected: ReturnType<typeof displayedRates>): 
               : ""
           }
         </div>
-        <div class="goal-track"><span data-goal-progress="${goal.id}" style="width:${fraction * 100}%;background:var(--goal-${goal.color})"></span></div>
+        <span class="gbar${goal.completed ? " done" : ""}" aria-hidden="true"><i data-goal-progress="${goal.id}" style="height:${goal.completed ? 100 : fraction * 100}%;background:var(--goal-${goal.color})"></i></span>
         <small class="mono" data-goal-minutes="${goal.id}">${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · ×${goal.completedCount} completed` : ""}</small>
         ${recoloring ? goalSwatchesHtml("data-goal-set-color", goal.color) : ""}
       </div>
@@ -899,8 +899,8 @@ export function updateFocusSheetLive(app: App, scope: ParentNode, projected: Ret
   for (const goal of state.goals) {
     const required = goalRequiredSeconds(goal);
     const bar = scope.querySelector(`[data-goal-progress="${goal.id}"]`) as HTMLElement | null;
-    const barWidth = `${Math.min(100, (goal.progressSeconds / required) * 100)}%`;
-    if (bar && bar.style.width !== barWidth) bar.style.width = barWidth;
+    const barHeight = goal.completed ? "100%" : `${Math.min(100, (goal.progressSeconds / required) * 100)}%`;
+    if (bar && bar.style.height !== barHeight) bar.style.height = barHeight;
     setText(
       scope.querySelector(`[data-goal-minutes="${goal.id}"]`),
       `${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · ×${goal.completedCount} completed` : ""}`,
