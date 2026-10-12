@@ -4,13 +4,14 @@ The authoritative reference for how FlowSynth's surfaces look, read, and disclos
 
 Where a review disagrees with this file, this file wins; where this file is silent, consult the #243 resolution and the pinned prototype before inventing a new pattern.
 
-Amended 2026-10-10 through the intent-drift [retro](retro-2026-10-10.md): the disclosure doctrine, hoverable terms, the naming register, the co-listing order, and matching review criteria.
+Amended 2026-10-10 through the intent-drift [retro](retro-2026-10-10.md): the disclosure doctrine, hoverable terms, the naming register, the co-listing order, and matching review criteria. Controls pinned 2026-10-12 through the controls round ([#315](https://github.com/wvanderen/flowsynth/issues/315)): the sheet below is the one reference for control shape.
 
 Scope note: [validated prototype UX](validated-prototype-ux.md) records the first playable's accepted interaction layout ([issue #1](https://github.com/wvanderen/flowsynth/issues/1)) and stands for behavior, not presentation; this file is the single source for how surfaces present.
 
 ## Primary source: the pinned prototype
 
 - **Prototype**: [`src/ui/instrument-standards.prototype.html` at `eb232c4`](https://github.com/wvanderen/flowsynth/blob/eb232c498a54fd7defd23be1a82720c1fb229cf4/src/ui/instrument-standards.prototype.html) on branch `prototype/instrument-standards`. The pin is the baseline: later edits on the prototype branch do not move it, and moving the pin requires a new explicit approval round.
+- **Controls sheet**: [`src/ui/controls-sheet.prototype.html` at `6e08478`](https://github.com/wvanderen/flowsynth/blob/6e08478de5cb8c2ae1dd1f079ea49406ed4133db/src/ui/controls-sheet.prototype.html) on branch `prototype/controls-sheet` — approved 2026-10-12 through the controls round ([#315](https://github.com/wvanderen/flowsynth/issues/315)) and the one reference for control shape: button geometry, the vertical goal-bar column, the tooltip layer's plain styling, and the six goal-palette swatches rendered as controls. Variant A won the round: slim banner-density columns, the firm inset underline marker for selection. Its rejected contrasts — the rounded legacy button, the horizontal legacy track, the boxed tooltip, the circular swatch — are the shapes reviews flag; variant B (framed columns, inset ring) survives in branch history as the runner-up.
 - **What is approved**: the presentation decisions below — panel geometry, open divisions, type hierarchy, state grammar, disclosure behavior, and the compact readout shape. Run the pinned checkout with `python3 -m http.server` and step the variants; the catalog (entry gate and open catalog) embodies the decisions.
 - **What is not approved**: the prototype's placeholders. The Arete mark, the Arete Accelerator offering, and every figure in it are provisional; existing claim behavior is unchanged. The `Chords (4/11) +8% ν` example illustrates presentation shape, not economy balance.
 - The first review round's three compositions survive in branch history at `89ee2e1` — catalog entries as expandable `<details>` boxes — kept as the contrast case the resolution rejected.
@@ -21,6 +22,7 @@ Scope note: [validated prototype UX](validated-prototype-ux.md) records the firs
 - **Hexes stay the module voice** (Rack identity, [ADR-0016](adr/0016-adopt-the-rack-identity.md)): the hex chassis, signature glyphs, category hues, rarity finish, and charge light are existing approved identity; hexes describe modules and their relationships.
 - **Surrounding surfaces are flat instrument panels.** Occasional clipped outer corners define the panel silhouette; clipping is geometry, not decoration — never applied to every control.
 - **Inside a panel, open divisions and rules** — hairline separations, aligned rows — never repeated rounded cards or nested boxes.
+- **Controls are square-cut** — hairline border, condensed technical lettering, no radii; the rounded legacy style is retired. The controls sheet pins the geometry: buttons, the vertical goal-bar column (fill by height, engraved completion, never color alone), the plain tooltip layer (hairline and panel surface, never a card), and the goal-palette swatches in the state grammar.
 - **Identity rides context.** A surface whose context already says what it is takes its resource color and canonical icon, and no header: do not add a title or repeat a resource balance to fill a header.
 - **Wherever modules and mutators co-list, mutators lead** — board tabs, tray switch, inventory switch, every shared list. Resource faces order by resource instead: the catalog stays `ν nous` first.
 - **Type hierarchy**: condensed technical lettering for names and controls, monospace tabular figures for readouts, readable sans for notes and longer mechanics. Exact fonts are implementation tuning; the pinned prototype demonstrates the hierarchy.
@@ -58,7 +60,7 @@ Compare the changed surface with the pinned prototype. A surface passes when:
 - domain terms in copy hover to their CONTEXT.md meanings;
 - wherever modules and mutators co-list, mutators lead.
 
-Judged specifically on: clipped outer panels where the silhouette calls for them, open internal divisions instead of nested cards, purposeful visible content, compact name/state/effect/cost readouts, tooltip economy, product naming, and usable disclosure. Critical prompts stay (dismissal affordances, destructive-action warnings), as does accessibility: readable text, visible keyboard focus, touch targets, non-color state distinctions, reduced motion.
+Judged specifically on: clipped outer panels where the silhouette calls for them, open internal divisions instead of nested cards, control shape against the controls sheet (square-cut controls, the vertical goal bars, the plain tooltip layer, the swatch grammar), purposeful visible content, compact name/state/effect/cost readouts, tooltip economy, product naming, and usable disclosure. Critical prompts stay (dismissal affordances, destructive-action warnings), as does accessibility: readable text, visible keyboard focus, touch targets, non-color state distinctions, reduced motion.
 
 Automated detector output supplements this judgment; it is never the validation.
 
