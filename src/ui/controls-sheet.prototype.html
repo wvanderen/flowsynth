@@ -58,7 +58,7 @@ body[data-variant=B] .gbar.done::after{font-size:9px}
 .drawing svg{display:block;width:auto;max-width:100%;height:auto}
 /* Tooltip layer: plain — hairline and panel surface, never a card. */
 .tooltip-host{position:relative;display:inline-block}
-.tip{font:inherit;font-weight:500;border:0;padding:0 0 1px;min-height:0;box-shadow:inset 0 -1px var(--muted)}
+.tip{font:inherit;font-weight:500;border:0;padding:12px 8px;margin:-12px -8px;min-height:0;box-shadow:inset 0 -1px var(--muted)}
 .tip:hover:not(:disabled){background:none;color:var(--nous)}
 .tooltip{display:none;position:absolute;left:0;top:100%;width:max-content;max-width:min(300px,72vw);padding:9px 0 0;margin-top:3px;font:14px/1.5 'IBM Plex Sans',sans-serif;font-weight:400;color:var(--ink);text-align:left;z-index:6}
 .tooltip::before{content:"";display:block;height:1px;background:var(--line);margin-bottom:8px}
@@ -79,7 +79,7 @@ body[data-variant=B] .swatch[aria-pressed=true] span{box-shadow:inset 0 0 0 2px 
 .swatch-item{display:flex;flex-direction:column}
 /* Variant switcher */
 .switcher{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--soft);padding:8px 12px;z-index:10;max-width:calc(100vw - 20px)}
-.switcher button{min-height:40px;min-width:44px;padding:6px 12px}
+.switcher button{min-height:44px;min-width:44px;padding:6px 12px}
 .switcher span{font:600 14px 'Barlow Condensed',sans-serif;letter-spacing:.04em;white-space:nowrap}
 @media(max-width:800px){
 header{padding:12px 18px;height:auto}
@@ -98,7 +98,7 @@ header{padding:12px 18px;height:auto}
 </style>
 <body>
 <header><div class="brand"><h1>FlowSynth</h1><span class="dim">Controls sheet</span></div><span class="mono dim">approval round · #315</span></header>
-<div class="notice">Throwaway visual study · control shapes are proposals until the round closes · legacy rounded styles stand as rejected contrast only · no game saves</div>
+<div class="notice">Approved controls sheet — variant A, 2026-10-12 (#315) · legacy rounded styles stand as rejected contrast only · no game saves</div>
 <main class="stage"><div class="sheet"><div class="sheet-inner">
 
 <section class="family" aria-label="Button geometry">
@@ -194,6 +194,7 @@ document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea,[con
 renderVariant();
 function closeTips(except){document.querySelectorAll('.tooltip-host').forEach(h=>h.classList.remove('show'));document.querySelectorAll('.tip').forEach(t=>{if(t!==except)t.setAttribute('aria-expanded','false')})}
 document.querySelectorAll('.tip').forEach(b=>b.onclick=()=>{const host=b.closest('.tooltip-host');const show=!host.classList.contains('show');closeTips(b);host.classList.toggle('show',show);b.setAttribute('aria-expanded',String(show))});
+document.querySelectorAll('.tip').forEach(b=>{b.addEventListener('focusin',()=>b.setAttribute('aria-expanded','true'));b.addEventListener('focusout',()=>b.setAttribute('aria-expanded',String(b.closest('.tooltip-host').classList.contains('show'))))});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeTips();document.querySelectorAll('.tip').forEach(t=>t.blur())}});
 document.addEventListener('click',e=>{if(!e.target.closest('.tooltip-host'))closeTips()});
 document.querySelectorAll('button[aria-pressed]').forEach(b=>b.onclick=()=>{const group=b.closest('.row,.swatches');if(!group)return;group.querySelectorAll('button[aria-pressed]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))});
