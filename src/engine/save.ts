@@ -75,8 +75,7 @@ export function deserialize(text: string): LoadResult {
     !Array.isArray(merged.habits) ||
     !Array.isArray(merged.practiceLog) ||
     !Array.isArray(merged.sessionRecords) ||
-    !Array.isArray(merged.goals) ||
-    !Array.isArray(merged.activatedApps)
+    !Array.isArray(merged.goals)
   ) {
     return { error: "The save data is incomplete." };
   }
@@ -154,6 +153,11 @@ export function deserialize(text: string): LoadResult {
   // a save may still carry one; drop it rather than resuming a state shape
   // this build no longer reads.
   delete (merged as unknown as Record<string, unknown>).pendingGap;
+  // The activation ladder's record (ADR-0013, retired by issue #313): every
+  // app is free, so a save can only ever carry the empty launch default —
+  // drop the field rather than resume a state shape this build no longer
+  // reads.
+  delete (merged as unknown as Record<string, unknown>).activatedApps;
   // The session's per-source rolls ledger (ADR-0041) lenient-defaults the
   // same way: a save written mid-flow before it exists resumes with zeroed
   // counts, never a crash.

@@ -61,7 +61,6 @@ export function createInitialState(): GameState {
     bankedRolls: [],
     bankedMutatorRolls: [],
     purchased: { generator: false, infusor: false, forge: false },
-    activatedApps: [],
     goalCapacityBought: 0,
     notes: [],
     habits: [],

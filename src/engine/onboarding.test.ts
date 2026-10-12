@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  buyActivation,
   buyCell,
   buyGoalCapacity,
   buyShelfModule,
@@ -12,7 +11,6 @@ import {
   upgradeModule,
 } from "./actions";
 import { advance } from "./advance";
-import { appActive } from "./apps";
 import { SHELF_TYPES } from "./constants";
 import { fresh, give, stubRng } from "./fixtures";
 import { hex } from "./hex";
@@ -26,7 +24,6 @@ import { deserialize, serialize } from "./save";
 describe("the enter prompt's open-ended shape (§5.5, §7)", () => {
   it("session one can be planned — Time is free from minute 0", () => {
     const s = fresh();
-    expect(appActive(s, "time")).toBe(true);
     expect(startSession(s, 600).ok).toBe(true);
     expect(s.session?.target).toBe(600);
   });
@@ -201,17 +198,6 @@ describe("the loud summary (§5.7) — every exit path, identical beats", () => 
 });
 
 describe("the four apps are live from the first session (ADR-0019)", () => {
-  it("Time never waits on a milestone: active before session one, never via endSession", () => {
-    const s = fresh();
-    expect(appActive(s, "time")).toBe(true);
-    startSession(s, null);
-    advance(s, 600);
-    expect(appActive(s, "time")).toBe(true);
-    endSession(s);
-    expect(appActive(s, "time")).toBe(true);
-    expect(s.activatedApps).toHaveLength(0);
-  });
-
   it("the planned target is a real choice from the very first session", () => {
     const s = fresh();
     expect(startSession(s, 300).ok).toBe(true);
@@ -228,17 +214,12 @@ describe("nothing unlocks or purchases mid-session-one (§5.6)", () => {
       expect(buyShelfModule(s, type).ok).toBe(false);
     }
     expect(buyCell(s, hex(2, 0)).ok).toBe(false);
-    expect(buyActivation(s, "notes").ok).toBe(false);
     expect(buyGoalCapacity(s).ok).toBe(false);
     expect(upgradeModule(s, s.modules[0]!.id).ok).toBe(false);
     expect(s.purchased.generator).toBe(false);
     expect(s.cellsBought).toBe(0);
-    expect(s.activatedApps).toHaveLength(0);
     expect(s.goalCapacityBought).toBe(0);
     endSession(s);
-    // The same surfaces reopen between sessions — but the ladder still
-    // sells nothing: the apps were already free.
-    expect(buyActivation(s, "notes").ok).toBe(false);
   });
 });
 
@@ -249,8 +230,6 @@ describe("post-session: the generator pull is the only spend path (§7)", () => 
     advance(s, 60);
     endSession(s);
     s.nous = 1e6;
-    expect(buyActivation(s, "notes").ok).toBe(false);
-    expect(buyActivation(s, "goals").ok).toBe(false);
     // The shelf remains the one place early nous goes.
     expect(buyShelfModule(s, "generator").ok).toBe(true);
   });

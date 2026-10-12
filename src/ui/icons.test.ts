@@ -24,7 +24,9 @@ const MODULE_TYPES: readonly ModuleType[] = [
   "mutatorForge",
 ];
 
-const APPS: readonly FocusApp[] = ["habit", "time", "goals", "notes"];
+// The door-wearing apps (issue #313): Time wears no glyph — the console
+// clock is the PLAN face's affordance.
+const APPS: readonly Exclude<FocusApp, "time">[] = ["habit", "goals", "notes"];
 
 describe("the feat marks' place in the glyph language", () => {
   it("no feat mark reuses a module's or a focus app's glyph (issue #269)", () => {

@@ -591,21 +591,21 @@ describe("the phone banner (ADR-0050's amended phone line)", () => {
     expect(consoleBlock!.slice(consoleBlock!.indexOf(".console"))).toMatch(/\.console\s*\{[^}]*height:\s*56px/);
   });
 
-  it("the doors carry no Goals- or Habit-state read — the tracker state lives desktop-only, in the sheet's head (ADR-0033 amended)", () => {
+  it("the doors carry no Goals- or Habit-state read — the tracker state lives in the sheet's head (ADR-0033 amended)", () => {
     app.render();
-    // Phone first: the doors are exactly focus + Notes, so no Goals or
-    // Habit surface stands in the row to wear a state read.
+    // No Goals or Habit door stands at any width (#313): the Focus sheet's
+    // faces carry them, so the console row wears no tracker aggregate.
+    expect(document.getElementById("app-tile-goals")).toBeNull();
+    expect(document.getElementById("app-tile-habit")).toBeNull();
     expect(document.querySelector(".launcher-goal-state, .launcher-habit-state")).toBeNull();
-    // Above the line the tiles stand — bare labels, no state pip, no state
-    // word, whatever the tracked state beneath them does.
     createGoal(app.state, { habitId: null, minutes: 20, schedule: "daily", now: 1_000 });
     accrueGoalProgress(app.state, null, 20 * 60);
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
     setAppWidth(1200);
     app.render();
-    expect(door("goals").getAttribute("aria-label")).toBe("Goals");
-    expect(door("habit").getAttribute("aria-label")).toBe("Habit");
+    expect(document.getElementById("app-tile-goals")).toBeNull();
+    expect(document.getElementById("app-tile-habit")).toBeNull();
     expect(document.querySelector(".launcher-goal-state, .launcher-habit-state")).toBeNull();
     // The read's one home is the sheet's head: the GOALS face names the
     // tracker state, and the console row never reads an aggregate.

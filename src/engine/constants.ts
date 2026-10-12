@@ -113,12 +113,6 @@ export interface Balance {
   // The opening grant (ADR-0022): affords — but no longer exactly equals —
   // the first upgrade of the pre-placed synthesizer. Provisional tuning.
   openingGrant: number;
-  // The activation ladder (ADR-0013): rung one below the shelf floor, each
-  // later rung costs more — counted globally regardless of which app it
-  // opens. Provisional tuning.
-  ladderFirstCost: number;
-  ladderGrowthNumerator: bigint;
-  ladderGrowthDenominator: bigint;
   // Console long goals (ADR-0012 as amended by ADR-0034, issue #150): each
   // purchase adds one goal slot and reveals the next price, much steeper —
   // the price is the pacing, so successive purchases are fine when
@@ -230,9 +224,6 @@ export const BALANCE: Balance = {
   rowUnlockCosts: [1, 2],
   fifthsColumns: 12,
   openingGrant: 12,
-  ladderFirstCost: 25,
-  ladderGrowthNumerator: 5n,
-  ladderGrowthDenominator: 2n,
   longGoalFirstCost: 500,
   longGoalGrowthNumerator: 5n,
   longGoalGrowthDenominator: 1n,

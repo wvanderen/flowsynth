@@ -46,7 +46,7 @@ import { formatClock } from "../engine/clock";
 import { formatInt, formatNumber } from "./format";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
 import { createInitialState, createModule } from "../engine/state";
-import { appActive, type FocusApp } from "../engine/apps";
+import type { FocusApp } from "../engine/apps";
 import { writeNote } from "../engine/notes";
 import { achievementName, syncAchievements } from "../engine/achievements";
 import { CATEGORY_OF, SHELF_MODULE, CHIME } from "../engine/constants";
@@ -1745,11 +1745,6 @@ export class App {
   }
 
   openApp(app: FocusApp): void {
-    // Locked tiles open nothing (ADR-0012): the tile is inert, greyed, and
-    // carries its locknote; no panel, no message. The launch four never
-    // lock (ADR-0019), so every launch tile opens from session one — the
-    // guard stays for a future ladder tenant.
-    if (!appActive(this.state, app)) return;
     this.ui.app = this.ui.app === app ? null : app;
     // The notes sheet opens on CAPTURE (#277): any departure from it — a
     // close or another app's face standing — puts the tab back.

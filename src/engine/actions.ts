@@ -5,7 +5,6 @@ import { nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "./capaci
 import { affordableLevels, cellPurchasePrice, chargeDelivered, maxChordFactorOf, deployedAt, findModule, levelCost, levelsCost, longGoalCost, mutatorSlotCost, rowGateOwed, syncRates, wholeNous } from "./economy";
 import { summaryTermsOf } from "./allocation";
 import { arcCardDue } from "./arc";
-import { nextRungCost, appActive, LADDER_APPS, type FocusApp } from "./apps";
 import { adjacent, hex, hexKey, isConnected, neighbors, sameHex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
 import { createModule, createMutator, openingGrant } from "./state";
@@ -308,29 +307,12 @@ export function buyCell(state: GameState, pos: Hex): ActionResult {
   return { ok: true, unlocked: checkUnlocks(state) };
 }
 
-// The activation ladder's purchase (ADR-0013): the rung price is shared —
-// buying one tenant first prices the next rung — so order stays free while
-// the ladder always rises. The ladder rests empty at launch (ADR-0019):
-// every launch app is free, so this refuses everything until a tenant
-// (Tasks, post-launch) joins LADDER_APPS.
-export function buyActivation(state: GameState, app: FocusApp): ActionResult {
-  if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
-  if (!LADDER_APPS.includes(app)) return fail("That app is not sold on the activation ladder.");
-  if (appActive(state, app)) return fail("That app is already active.");
-  const price = nextRungCost(state);
-  if (wholeNous(state) < price) return fail("Not enough whole nous.");
-  state.nous -= price;
-  state.activatedApps.push(app);
-  return ok;
-}
-
 // The first console long goal (ADR-0012 as amended by ADR-0034, issue
 // #42): goal capacity. Each purchase adds exactly one slot — no occupancy
-// gate, so successive slots ride back-to-back whenever affordable — and
-// gates behind the Goals app's activation, every price far past the last.
+// gate, so successive slots ride back-to-back whenever affordable — at
+// prices far past the last.
 export function buyGoalCapacity(state: GameState): ActionResult {
   if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
-  if (!appActive(state, "goals")) return fail("Goals must be active before its upgrades appear.");
   const price = longGoalCost(state.goalCapacityBought);
   if (wholeNous(state) < price) return fail("Not enough whole nous.");
   state.nous -= price;

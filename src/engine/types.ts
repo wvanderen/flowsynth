@@ -511,12 +511,6 @@ export interface GameState {
   // to [].
   bankedMutatorRolls: MutatorRollOffer[];
   purchased: Record<ShelfType, boolean>;
-  // The activation ladder's permanent record (ADR-0013): apps unlocked by
-  // rung purchases, in purchase order — free order, globally rising rungs.
-  // The ladder rests empty at launch (ADR-0019): all four launch apps are
-  // free from the first session, so nothing is stored here until a tenant
-  // joins.
-  activatedApps: FocusApp[];
   // Console long goals (ADR-0012): goal capacity is the first named beat —
   // each purchase grows the Goals app's slot capacity.
   goalCapacityBought: number;

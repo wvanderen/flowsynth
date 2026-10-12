@@ -513,7 +513,7 @@ describe("the focus banner's reads (ADR-0050; the vertical form, #312)", () => {
 });
 
 describe("the restructure stays presentational", () => {
-  it("FocusApp ids keep their meaning; activatedApps is untouched", () => {
+  it("FocusApp ids keep their meaning", () => {
     createHabit(app.state, "Piano");
     openFace("habit");
     expect(app.ui.app).toBe("habit");
@@ -524,10 +524,8 @@ describe("the restructure stays presentational", () => {
     openFace("history");
     expect(app.ui.app).toBe("time");
     expect(app.ui.historyOpen).toBe(true);
-    const before = [...app.state.activatedApps];
     startSession(app.state, null);
     endSession(app.state);
-    expect(app.state.activatedApps).toEqual(before);
   });
 
   it("the sheet's flow lock rides the engine's own gates — no new persistence anywhere", () => {
