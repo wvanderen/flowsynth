@@ -3607,9 +3607,11 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 /* Hoverable domain terms (the disclosure doctrine): the term itself is
    the trigger and its hover opens the glossary meaning — plain inline
    text over the engraved hairline the sheet's term wears, never a chip
-   or a card. */
+   or a card. The approved sheet's padding expands the touch target;
+   negative margins keep the term in its inline layout. */
 .term-trigger {
-  width: auto; height: auto; min-width: 0; min-height: 0; padding: 2px 0;
+  width: auto; height: auto; min-width: 0; min-height: 0;
+  padding: 12px 8px; margin: -12px -8px;
   border: 0; border-radius: 0;
   box-shadow: inset 0 -1px var(--muted);
   font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit;

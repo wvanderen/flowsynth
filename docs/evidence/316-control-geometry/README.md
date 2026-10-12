@@ -1,5 +1,22 @@
 # Evidence: the approved control geometry applied to production (#316)
 
+## PR #325 term-target review fix
+
+The shared `.term-trigger` now matches the approved `d405ce2` sheet's
+`padding: 12px 8px; margin: -12px -8px`, enlarging the inline disclosure
+hit area while preserving its layout footprint. `desktop-term-target-fix.png`
+shows the catalog with this fix applied on top of `7901028`, served from
+`/private/tmp/flowsynth-pr325-review` at localhost:5178; the page's provenance
+matched the worktree and HEAD before capture. Browser measurements confirmed
+42px-high targets for `charge` and `Harmonic capacity`, with the approved
+padding and margins. Desktop composition was inspected against the pinned
+sheet's source. Typechecking and all UI suites passed after the fix.
+
+Phone evidence is unavailable for this follow-up: the preview resize timed out,
+then the automation host disconnected. Touch and keyboard disclosure checks
+and reduced-motion rendering were also unavailable in this follow-up; the
+earlier evidence below does not verify this change.
+
 All captures from the verified checkout at `a17b064`, served by `tools/dev-server.mjs` (localhost:5176) with provenance confirmed against `git rev-parse HEAD` immediately before each capture — `worktree` equal to this checkout, `commit` equal to the captured commit (earlier surfaces re-captured at `2f8907d`; only the dock pip changed between those commits). The phone composition was captured through a true 390×844 viewport frame on the same server, so both container and viewport queries apply natively.
 
 ## Captures
