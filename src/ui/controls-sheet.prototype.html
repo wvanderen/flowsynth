@@ -62,7 +62,7 @@ body[data-variant=B] .gbar.done::after{font-size:9px}
 .tip:hover:not(:disabled){background:none;color:var(--nous)}
 .tooltip{display:none;position:absolute;left:0;top:100%;width:max-content;max-width:min(300px,72vw);padding:9px 0 0;margin-top:3px;font:14px/1.5 'IBM Plex Sans',sans-serif;font-weight:400;color:var(--ink);text-align:left;z-index:6}
 .tooltip::before{content:"";display:block;height:1px;background:var(--line);margin-bottom:8px}
-.tooltip-host:hover .tooltip,.tooltip-host:focus-within .tooltip,.tooltip-host.show .tooltip{display:block}
+.tooltip-host.show .tooltip{display:block}
 .demo-line{font-size:15px}
 .demo-line h3{font-size:23px;margin-bottom:2px}
 .demo-line .effect{margin:6px 0 0;font-size:14px}
@@ -106,8 +106,8 @@ header{padding:12px 18px;height:auto}
 <p class="lede">The instrument's control: <b>square-cut, hairline border, condensed caps</b>. Hover fills the face; the selected control wears the firm inset marker; the unavailable control mutes; completion engraves. The rounded legacy style is retired.</p>
 <div class="row">
 <button class="flow">Enter flow</button>
-<button aria-pressed="true">Modules</button>
 <button aria-pressed="false">Mutators</button>
+<button aria-pressed="true">Modules</button>
 <button>Upgrade +1</button>
 <button disabled>Headroom · 12 Arete</button>
 <span class="completion">ACQUIRED</span>
@@ -192,10 +192,29 @@ document.querySelector('#prev').onclick=()=>cycle(-1);
 document.querySelector('#next').onclick=()=>cycle(1);
 document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea,[contenteditable]'))return;if(e.key==='ArrowLeft')cycle(-1);if(e.key==='ArrowRight')cycle(1)});
 renderVariant();
-function closeTips(except){document.querySelectorAll('.tooltip-host').forEach(h=>h.classList.remove('show'));document.querySelectorAll('.tip').forEach(t=>{if(t!==except)t.setAttribute('aria-expanded','false')})}
-document.querySelectorAll('.tip').forEach(b=>b.onclick=()=>{const host=b.closest('.tooltip-host');const show=!host.classList.contains('show');closeTips(b);host.classList.toggle('show',show);b.setAttribute('aria-expanded',String(show))});
-document.querySelectorAll('.tip').forEach(b=>{b.addEventListener('focusin',()=>b.setAttribute('aria-expanded','true'));b.addEventListener('focusout',()=>b.setAttribute('aria-expanded',String(b.closest('.tooltip-host').classList.contains('show'))))});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeTips();document.querySelectorAll('.tip').forEach(t=>t.blur())}});
+const tips=[...document.querySelectorAll('.tooltip-host')].map(host=>({host,button:host.querySelector('.tip'),hovered:false,focused:false,pinned:false,dismissed:false}));
+function renderTip(tip){
+  const visible=!tip.dismissed&&(tip.hovered||tip.focused||tip.pinned);
+  tip.host.classList.toggle('show',visible);
+  tip.button.setAttribute('aria-expanded',String(visible));
+}
+function closeTips(except){
+  tips.forEach(tip=>{if(tip===except)return;tip.pinned=false;tip.dismissed=true;renderTip(tip)});
+}
+tips.forEach(tip=>{
+  tip.host.addEventListener('mouseenter',()=>{tip.hovered=true;tip.dismissed=false;renderTip(tip)});
+  tip.host.addEventListener('mouseleave',()=>{tip.hovered=false;renderTip(tip)});
+  tip.button.addEventListener('focusin',()=>{tip.focused=true;tip.dismissed=false;renderTip(tip)});
+  tip.button.addEventListener('focusout',()=>{tip.focused=false;renderTip(tip)});
+  tip.button.addEventListener('click',()=>{
+    const pinned=!tip.pinned;
+    closeTips(tip);
+    tip.pinned=pinned;
+    tip.dismissed=!pinned;
+    renderTip(tip);
+  });
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTips()});
 document.addEventListener('click',e=>{if(!e.target.closest('.tooltip-host'))closeTips()});
 document.querySelectorAll('button[aria-pressed]').forEach(b=>b.onclick=()=>{const group=b.closest('.row,.swatches');if(!group)return;group.querySelectorAll('button[aria-pressed]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))});
 </script></body></html>
