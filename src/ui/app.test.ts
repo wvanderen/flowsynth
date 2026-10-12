@@ -946,9 +946,28 @@ describe("the GOALS face's slots and purchase row (#150)", () => {
     expect(row.textContent).not.toContain("CONSOLE LONG GOAL");
     expect(row.textContent).not.toContain("→");
     expect(row.textContent).not.toContain("2 → 4");
-    expect(row.querySelector(".long-goal-name")!.textContent).toBe("Channel Strips");
+    expect(row.querySelector(".long-goal-name .term-trigger")!.textContent).toBe("Channel Strips");
     expect(row.querySelector(".long-goal-effect")!.textContent).toBe("+1 goal slot");
     expect(row.querySelector("#long-goal-buy")!.textContent).toBe(`${formatInt(longGoalCost(0))} ν`);
+  });
+
+  it("Channel Strips discloses its price ladder by focus and tap without buying", () => {
+    app.openApp("goals");
+    const trigger = sheet().querySelector<HTMLButtonElement>(".long-goal-name .term-trigger")!;
+    const tip = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+    const bought = app.state.goalCapacityBought;
+    expect(tip.textContent).toBe("Successive purchases reveal steeper prices");
+    expect(tip.textContent).not.toContain("+1 goal slot");
+    trigger.focus();
+    expect(tip.classList.contains("inst-show")).toBe(true);
+    trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(tip.classList.contains("inst-show")).toBe(false);
+    expect(sheet().querySelector(".long-goal-row")).not.toBeNull();
+    trigger.click();
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    document.body.click();
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(app.state.goalCapacityBought).toBe(bought);
   });
 
   it("each purchase adds exactly one slot and reveals the next, steeper price — back-to-back when affordable", () => {

@@ -58,7 +58,7 @@ unavailable.
 - [Grayscale](desktop-goals-grayscale.png): the face converted to
   8-bit grey — the enabled outline, the name, the effect line, and the
   price all read; no state rides hue alone.
-- Disclosure — recorded not applicable: the changed row carries no
+- Disclosure at the initial implementation — recorded not applicable: the changed row carries no
   tooltip layer, so there is nothing to open or dismiss by keyboard or
   touch; the name, the +1 effect, and the price are all visible at rest.
   The only hover prompts left are the disabled/flow state explanations
@@ -68,3 +68,7 @@ unavailable.
   unavailable. The buy is a native button at the sheet's standing touch
   size; its tap path is the same click handler the keyboard and pointer
   paths exercised.
+
+The PR #328 review supersedes the initial disclosure assessment above:
+Channel Strips is a glossary term and now opens its price-ladder gloss.
+See [the correction evidence](../pr-328-disclosure/README.md).

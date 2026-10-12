@@ -558,7 +558,7 @@ function goalsFaceHtml(app: App, projected: ReturnType<typeof displayedRates>): 
   const longGoalRow = `
     <div class="folio-row long-goal-row">
       <span class="long-goal-head">
-        <span class="long-goal-name">Channel Strips</span>
+        <span class="long-goal-name inst-tip term-tip"><button class="inst-tip-trigger term-trigger" type="button" aria-expanded="false" aria-describedby="channel-strips-tip" aria-label="Channel Strips — what it means">Channel Strips</button><span class="inst-tip-body" id="channel-strips-tip" role="tooltip">Successive purchases reveal steeper prices</span></span>
         <span class="long-goal-effect mono">+1 goal slot</span>
       </span>
       ${shopBuyHtml({
