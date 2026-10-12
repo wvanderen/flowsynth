@@ -198,12 +198,6 @@ function tipHtml(id: string, label: string, body: string): string {
   return `<span class="inst-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${id}" aria-label="${escapeHtml(label)}">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${body}</span></span>`;
 }
 
-// The folio key as its own tooltip trigger (the RATE row's shape): the
-// condensed key opens the mechanics, chrome reset.
-function keyTip(id: string, label: string, key: string, body: string): string {
-  return `<span class="folio-key inst-tip"><button class="folio-key-tip inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${id}" aria-label="${escapeHtml(label)}">${escapeHtml(key)}&nbsp;<span aria-hidden="true">ⓘ</span></button><span class="inst-tip-body" id="${id}" role="tooltip">${body}</span></span>`;
-}
-
 // The note stamp both note surfaces share (§9): the date where known, then
 // the in-session mark — or the between-sessions marker when the note was
 // written outside any session.
