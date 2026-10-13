@@ -130,6 +130,124 @@ describe("the session start (issue #280)", () => {
   });
 });
 
+// Issue #331: the session group — habit, duration, Start — reads where the
+// player starts, and both locks set means one activation runs it.
+describe("the session group's one-click start (issue #331)", () => {
+  function lockedHabitId(): string {
+    const created = createHabit(app.state, "Jammin");
+    selectHabit(app.state, created.habit!.id);
+    app.ui.chosenTarget = 600;
+    return created.habit!.id;
+  }
+
+  it("both locks set: Start begins the selected session in one activation, the confirmation preference notwithstanding", () => {
+    const id = lockedHabitId();
+    expect(app.ui.confirmEntry).toBe(true);
+    app.startFlow();
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.activeHabitId).toBe(id);
+    expect(app.state.session!.target).toBe(600);
+    expect(app.ui.app).toBeNull();
+    expect(document.getElementById("app-popover")).toBeNull();
+  });
+
+  it("both locks set with the preference off: the same single activation, the session the group reads", () => {
+    const id = lockedHabitId();
+    app.ui.confirmEntry = false;
+    app.startFlow();
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.activeHabitId).toBe(id);
+    expect(app.state.session!.target).toBe(600);
+  });
+
+  it("the main switch's own click runs the locked session — no sheet stands in between", () => {
+    lockedHabitId();
+    document.getElementById("flow-switch")!.click();
+    expect(app.state.mode).toBe("flow");
+    expect(document.getElementById("app-popover")).toBeNull();
+  });
+
+  it("only the habit locked: the confirmation preference holds — the PLAN face stays the confirmation's home", () => {
+    const created = createHabit(app.state, "Jammin");
+    selectHabit(app.state, created.habit!.id);
+    expect(app.ui.chosenTarget).toBeNull();
+    app.startFlow();
+    expect(app.state.mode).toBe("upgrade");
+    expect(app.ui.app).toBe("time");
+    // The standing face's established entry behavior: the re-click commits.
+    document.getElementById("flow-switch")!.click();
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.session!.target).toBeNull();
+  });
+
+  it("only the time locked: confirmation still stands, and the group reads none selected", () => {
+    app.ui.chosenTarget = 600;
+    app.startFlow();
+    expect(app.state.mode).toBe("upgrade");
+    expect(app.ui.app).toBe("time");
+    expect(document.querySelector('[data-session="habit"]')!.textContent).toBe("none selected");
+    app.closeApp();
+    // Confirmation off keeps its own path: instant, open-ended, unstructured.
+    app.ui.confirmEntry = false;
+    app.startFlow();
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.activeHabitId).toBeNull();
+  });
+});
+
+// Issue #331: the habit name leads the session group — the direct change
+// door in upgrade mode, a plain read once a session runs.
+describe("the session group's habit door (issue #331)", () => {
+  it("upgrade mode: the habit name is a door; activating it opens the HABIT face and the opening click never closes it", () => {
+    const created = createHabit(app.state, "Jammin");
+    selectHabit(app.state, created.habit!.id);
+    app.render();
+    const door = document.querySelector<HTMLButtonElement>("#session-habit")!;
+    expect(door).not.toBeNull();
+    expect(door.querySelector('[data-session="habit"]')!.textContent).toBe("Jammin");
+    door.click();
+    expect(app.ui.app).toBe("habit");
+    const frame = document.getElementById("app-popover")!;
+    expect(frame.classList.contains("focus-sheet")).toBe(true);
+    expect(document.getElementById("console-session")!.contains(frame)).toBe(true);
+    expect(document.querySelector("#app-popover .habit-ledger")).not.toBeNull();
+    // The door never toggles its sheet shut — a re-press unwinds the face's
+    // inner surfaces, the facetab's own radio-like behavior.
+    document.querySelector<HTMLButtonElement>("#session-habit")!.click();
+    expect(app.ui.app).toBe("habit");
+    expect(document.getElementById("app-popover")).not.toBeNull();
+  });
+
+  it("the door opens habit editing from any standing face, keeping the sheet alive across the walk", () => {
+    app.render();
+    app.showFocusFace("goals");
+    expect(app.ui.app).toBe("goals");
+    document.querySelector<HTMLButtonElement>("#session-habit")!.click();
+    expect(app.ui.app).toBe("habit");
+    expect(document.getElementById("app-popover")).not.toBeNull();
+  });
+
+  it("a running session narrates its habit and keeps the door shut: a read, never an edit", () => {
+    const created = createHabit(app.state, "Jammin");
+    selectHabit(app.state, created.habit!.id);
+    startSession(app.state, 600);
+    app.render();
+    const read = document.getElementById("session-habit")!;
+    expect(read.tagName).toBe("SPAN");
+    expect(read.querySelector("button")).toBeNull();
+    expect(read.querySelector('[data-session="habit"]')!.textContent).toBe("Jammin");
+    // Flow-time editing restrictions stand: the read mutates nothing.
+    read.click();
+    expect(app.ui.app).toBeNull();
+    expect(app.state.mode).toBe("flow");
+    // Paused holds the same rule.
+    app.pause();
+    app.render();
+    expect(document.getElementById("session-habit")!.tagName).toBe("SPAN");
+    expect(document.querySelector('[data-session="habit"]')!.textContent).toBe("Jammin");
+  });
+});
+
 describe("the PLAN face's plan affordances", () => {
   it("a picked chip plans the next session and lights the console clock", () => {
     const created = createHabit(app.state, "Jammin");

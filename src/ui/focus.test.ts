@@ -401,17 +401,21 @@ describe("the goal bars' derivation (the banner's edge states)", () => {
 });
 
 describe("the focus banner's reads (ADR-0050; the vertical form, #312)", () => {
-  it("the console wears the reads beside the switch: habit name, biased bars, +N overflow", () => {
+  it("the session group reads the chosen habit where it starts; the bars ride beside it (+N overflow)", () => {
     app.state.goalCapacityBought = 5; // seven slots for the seven tracked goals
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
     for (let i = 0; i < 7; i++) createGoal(app.state, { habitId: habit.id, minutes: 10 + i, schedule: "once", now: 1000 + i });
     accrueGoalProgress(app.state, habit.id, 9 * 60);
     app.render();
+    // The habit read lives in the session group now (#331): the name leads
+    // the clock and the switch, one contiguous group — no second readout
+    // riding the bars.
+    const group = document.querySelector("#console-session .session-habit")!;
+    expect(group.querySelector('[data-session="habit"]')!.textContent).toBe("Piano");
+    expect(document.querySelectorAll('#console-session [data-session="habit"]')).toHaveLength(1);
     const reads = document.querySelector("#console-session .banner-reads")!;
     expect(reads.getAttribute("role")).toBe("group");
-    // The habit read names what a session would credit.
-    expect(reads.querySelector('[data-banner="habit"]')!.textContent).toBe("Piano");
     // Five bars stand — in-progress leads (nearest complete first) — and
     // the count chip answers for the two past the budget.
     const bars = [...reads.querySelectorAll<HTMLElement>(".gbar")];
@@ -422,7 +426,7 @@ describe("the focus banner's reads (ADR-0050; the vertical form, #312)", () => {
     expect(bars[0]!.querySelector("i")!.style.height).toBe("90.0%");
     expect(bars[0]!.querySelector("i")!.style.background).toBe("var(--goal-vermillion)");
     expect(reads.querySelector('[data-banner="overflow"]')!.textContent).toBe("+2");
-    // Reads, never controls: nothing inside the group answers a click.
+    // Reads, never controls: nothing inside the bars group answers a click.
     expect(reads.querySelectorAll("button, input, select, a")).toHaveLength(0);
   });
 
@@ -457,12 +461,16 @@ describe("the focus banner's reads (ADR-0050; the vertical form, #312)", () => {
     expect(tracks).toEqual(bannerFills);
   });
 
-  it("an empty tracker and no habit leave the reads quiet — no bars, no chip, no name", () => {
+  it("an empty tracker and no habit leave the bars quiet; the session group names the unstructured choice", () => {
     app.render();
     const reads = document.querySelector("#console-session .banner-reads")!;
     expect(reads.querySelectorAll(".gbar")).toHaveLength(0);
     expect(reads.querySelector('[data-banner="overflow"]')).toBeNull();
-    expect(reads.querySelector('[data-banner="habit"]')!.textContent).toBe("");
+    // No habit selected wears the roster's one edge-state word, muted.
+    const group = document.querySelector("#console-session .session-habit")!;
+    const name = group.querySelector('[data-session="habit"]')!;
+    expect(name.textContent).toBe("none selected");
+    expect(name.classList.contains("unselected")).toBe(true);
   });
 
   it("live reads during flow: the fills move on the tick and mutate nothing", () => {

@@ -157,11 +157,11 @@ function wireClockPlan(app: App): void {
   });
 }
 
-// Session controls (issue #148) and the focus banner's reads (ADR-0050):
-// the clock with its disclosure, then the Enter/Exit main switch — the
-// console's visual center of gravity and its sole session gate — with
-// pause beside it during flow, and the banner's reads closing the cluster:
-// the active habit's name and the goal-progress bars, live during flow,
+// Session controls (issue #148, grouped by #331) and the focus banner's
+// reads (ADR-0050): the habit name leading the clock with its disclosure,
+// then the Enter/Exit main switch — the console's visual center of gravity
+// and its sole session gate — with pause beside it during flow, and the
+// banner's goal-progress bars closing the cluster, live during flow,
 // mutating nothing. The switch's vermillion carries the session state: the
 // switch itself and the progress strip along the header's bottom edge
 // (issue #63); the bars wear their goals' own palette colors (#312). The
@@ -171,6 +171,33 @@ function wireClockPlan(app: App): void {
 // readout lives here (the banner's focus reads name practice state, never
 // production). The sheet itself anchors beneath the clock's own
 // disclosure, whatever face it carries.
+// The session group's habit read (issue #331): the chosen session readable
+// where it starts — habit name, clock, and main switch as one contiguous
+// group at every width, the phone row included (ADR-0050's phone line
+// amended). In upgrade mode the name is the direct change door: activating
+// it opens the Focus sheet's HABIT face, where selection and editing live —
+// editing stays separate from starting. During a session it is a plain
+// read: the running session narrates its habit and changes nothing. No
+// habit selected wears the roster's one edge-state word — the same spelling
+// the sheet head and the PLAN chip row hold.
+const UNSTRUCTURED_WORD = "none selected";
+
+// The group's one habit-read source: the chosen habit's name, or null for
+// the unstructured choice — the builder escapes it, the patcher writes it
+// as text, and both fall back to the one word.
+function chosenHabitName(state: GameState): string | null {
+  return activeHabit(state)?.name ?? null;
+}
+
+function sessionHabitHtml(app: App): string {
+  const upgrade = app.state.mode === "upgrade";
+  const name = chosenHabitName(app.state);
+  const read = `<span class="bread${name ? "" : " unselected"}" data-session="habit">${name ? escapeHtml(name) : UNSTRUCTURED_WORD}</span>`;
+  return upgrade
+    ? `<button class="session-habit" id="session-habit" title="Change the session habit">${read}</button>`
+    : `<span class="session-habit" id="session-habit">${read}</span>`;
+}
+
 function renderConsoleSession(app: App, projected: RateSnapshot): void {
   const { state, ui } = app;
   const phone = isPhoneWidth();
@@ -253,18 +280,24 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
       host.dataset.renderKey = key;
       const scrollTop = popoverScroll(host);
       host.innerHTML = `
-        <div class="clock-anchor">
-          ${clockButton("Opens the Focus sheet")}
-          ${sheetOpen ? sheetHtml() : ""}
-        </div>
-        <div class="session-actions">
-          <button class="main-switch idle" id="flow-switch" title="The board locks and runs itself">
-            ${switchSvg}<span>Enter flow</span><i class="switch-state" aria-hidden="true"></i>
-          </button>
+        <div class="session-group" role="group" aria-label="Session">
+          ${sessionHabitHtml(app)}
+          <div class="clock-anchor">
+            ${clockButton("Opens the Focus sheet")}
+            ${sheetOpen ? sheetHtml() : ""}
+          </div>
+          <div class="session-actions">
+            <button class="main-switch idle" id="flow-switch" title="The board locks and runs itself">
+              ${switchSvg}<span>Enter flow</span><i class="switch-state" aria-hidden="true"></i>
+            </button>
+          </div>
         </div>
         ${bannerReadsHtml(app)}`;
       wireClockPlan(app);
       app.listen(byId("flow-switch"), "click", () => app.startFlow());
+      // The habit name is the direct change door (issue #331): it walks to
+      // the HABIT face — selection and editing live there, never here.
+      app.listen(byId("session-habit"), "click", () => app.showFocusFace("habit"));
       bindSheet(scrollTop);
     } else if (sheetOpen) {
       updateFocusSheetLive(app, host, projected);
@@ -287,16 +320,19 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
     host.dataset.renderKey = key;
     const scrollTop = popoverScroll(host);
     host.innerHTML = `
-      <div class="clock-anchor">
-        ${clockButton("Opens the Focus sheet", ' id="session-clock"', ' id="session-caption"')}
-        <span class="clock-provisional" id="session-provisional" role="status"></span>
-        ${sheetOpen ? sheetHtml() : ""}
-      </div>
-      <div class="session-actions">
-        <button id="pause-flow" aria-label="${paused ? "Resume" : "Pause"}" title="${paused ? "Resume the session" : "Pause the session"}">${paused ? resumeSvg : pauseSvg}<span aria-hidden="true">${paused ? "Resume" : "Pause"}</span></button>
-        <button class="main-switch ${paused ? "held" : "live"}" id="flow-switch" title="Ends the session and banks its production">
-          ${switchSvg}<span>Exit flow</span><i class="switch-state" aria-hidden="true"></i>
-        </button>
+      <div class="session-group" role="group" aria-label="Session">
+        ${sessionHabitHtml(app)}
+        <div class="clock-anchor">
+          ${clockButton("Opens the Focus sheet", ' id="session-clock"', ' id="session-caption"')}
+          <span class="clock-provisional" id="session-provisional" role="status"></span>
+          ${sheetOpen ? sheetHtml() : ""}
+        </div>
+        <div class="session-actions">
+          <button id="pause-flow" aria-label="${paused ? "Resume" : "Pause"}" title="${paused ? "Resume the session" : "Pause the session"}">${paused ? resumeSvg : pauseSvg}<span aria-hidden="true">${paused ? "Resume" : "Pause"}</span></button>
+          <button class="main-switch ${paused ? "held" : "live"}" id="flow-switch" title="Ends the session and banks its production">
+            ${switchSvg}<span>Exit flow</span><i class="switch-state" aria-hidden="true"></i>
+          </button>
+        </div>
       </div>
       ${bannerReadsHtml(app)}`;
     wireClockPlan(app);
@@ -343,17 +379,19 @@ function syncClockDisclosure(app: App): void {
   if (!isPhoneWidth()) byId("clock-plan")?.setAttribute("aria-expanded", String(open));
 }
 
-// The focus banner's reads (ADR-0050; vertical bars per #312): beside the
-// switch, the session's focus state — the active habit's name and the
-// goal-progress bars, biased in-progress first (nearest complete leading,
-// completed occurrences closing), past the five-bar budget a +N count.
-// Each bar is a column: the fill height carries progress, each fill wears
-// its goal's chosen palette token, and completion is the bar's engraved
-// mark — never color alone. Reads live during flow and mutate nothing: the
-// derivation reads existing state alone, and the live patch below only
-// ever touches text and fill heights. The phone banner drops the reads —
-// its nav row is bare launchers (ADR-0050's phone line) — so the CSS docks
-// the group out below the 600px line.
+// The focus banner's reads (ADR-0050; vertical bars per #312): past the
+// session group, the tracker's goal-progress bars — biased in-progress
+// first (nearest complete leading, completed occurrences closing), past the
+// five-bar budget a +N count. The habit name left the group for the session
+// cluster itself (issue #331) — chosen session readable where it starts, no
+// second habit readout riding the bars. Each bar is a column: the fill
+// height carries progress, each fill wears its goal's chosen palette token,
+// and completion is the bar's engraved mark — never color alone. Reads live
+// during flow and mutate nothing: the derivation reads existing state
+// alone, and the live patch below only ever touches text and fill heights.
+// The phone banner drops the bars — the session group carries the row's
+// one session read (ADR-0050's phone line as amended by #331) — so the CSS
+// docks the group out below the 600px line.
 // The bars' one fill spelling: the fill height percentage both the markup
 // and the in-place patch read, so the two can never drift.
 function bannerBarFill(bar: { fraction: number }): string {
@@ -367,7 +405,6 @@ function bannerReadsHtml(app: App): string {
   // the aria read never under-counts what the columns can't fit.
   const barsLabel = `Goal progress: ${bars.length - done} in progress, ${done} complete${overflow > 0 ? `, ${overflow} more` : ""}`;
   return `<div class="banner-reads" role="group" aria-label="Focus reads">
-    <span class="bread" data-banner="habit"></span>
     ${
       bars.length > 0
         ? `<span class="gbars" role="img" aria-label="${barsLabel}">${bars
@@ -384,21 +421,21 @@ function bannerReadsHtml(app: App): string {
 
 // The reads' rebuild signature: which bars stand (the bias order's
 // done-marks and palette keys — a re-pick must rebuild the bar), the
-// overflow count, the habit — never the fill fractions or the name, which
-// the patcher moves in place on every pass.
+// overflow count, and the habit — the session group's own read rides the
+// same cluster key, so a selection change lands in one rebuild.
 function bannerReadsKey(app: App): string {
   const { bars, overflow } = goalBarsOf(app.state);
   return `${activeHabit(app.state)?.id ?? "—"}|${bars.map((bar) => `${bar.done ? 1 : 0}${bar.color}`).join("")}|${overflow}`;
 }
 
-// The banner reads' in-place patch: the habit name and the bar fills move
-// without a rebuild — the live clock's neighbor stays live during flow
-// (ADR-0050), and a manual log's progress lands between renders too.
+// The reads' in-place patch: the habit name (in the session group now) and
+// the bar fills move without a rebuild — the live clock's neighbor stays
+// live during flow (ADR-0050), and a manual log's progress lands between
+// renders too.
 function refreshBannerReads(app: App): void {
+  setText(document.querySelector('#console-session [data-session="habit"]'), chosenHabitName(app.state) ?? UNSTRUCTURED_WORD);
   const host = document.querySelector("#console-session .banner-reads");
   if (!host) return;
-  const habit = activeHabit(app.state);
-  setText(host.querySelector('[data-banner="habit"]'), habit?.name ?? "");
   const { bars } = goalBarsOf(app.state);
   bars.forEach((bar, i) => {
     const fill = host.querySelector<HTMLElement>(`[data-banner-bar="${i}"]`)?.firstElementChild as HTMLElement | null;

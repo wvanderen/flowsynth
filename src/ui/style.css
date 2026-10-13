@@ -405,6 +405,37 @@ h1, h2, h3, p { margin: 0; }
    engraved completion mark — state readable without color (the +N chip is
    text, the done bars hold their full height). The phone banner drops the
    reads for bare launchers (ADR-0050's phone line). */
+/* The session group (issue #331): the chosen session's read and its
+   actions as one contiguous group — habit name, clock, switch — at every
+   width, the phone row included (ADR-0050's phone line amended). The gap
+   rides the cluster's own, so the group's seams match the row's. */
+.session-group {
+  display: flex;
+  align-items: center;
+  gap: inherit;
+  min-width: 0;
+}
+/* The group's habit read: the chosen session's name leading the clock and
+   the main switch. In upgrade mode the name is the direct change door into
+   the Focus sheet's HABIT face: bare until hover, like the clock's plan
+   affordance beside it. A running session wears the same shape as a plain
+   read — the session's habit narrates, it never edits. */
+.session-habit {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 44px;
+  padding: 4px 8px;
+}
+button.session-habit {
+  border-color: transparent;
+  background: transparent;
+  text-align: left;
+}
+button.session-habit:hover {
+  border-color: var(--line);
+  background: var(--panel);
+}
 .banner-reads {
   display: flex;
   align-items: center;
@@ -421,6 +452,11 @@ h1, h2, h3, p { margin: 0; }
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 18ch;
+}
+/* The unstructured edge state (ADR-0050): "none selected" reads muted —
+   the one state word the session group borrows from the roster's chip. */
+.bread.unselected {
+  color: var(--muted);
 }
 .gbars { display: flex; align-items: flex-end; gap: 4px; height: 30px; flex-shrink: 0; }
 /* The banner's bars ride the strip's height — the shared column's one
@@ -3287,14 +3323,16 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 
 @container app (width < 600px) {
   /* Portrait phone (§7): the composition re-docks. The phone banner is
-     launchers only (ADR-0050's amended phone line): brand glyph, clock,
-     switch, then the bare uncarded doors — focus, Notes — with Settings at
-     the row's end. The banner reads (habit name, goal bars) drop entirely,
-     and the compact launcher retires with them: the focus door's sheet
-     carries the Habit and Goals faces, its inset marker the sheet-open
-     state. Production reads move to the board-surface game-info strip; the
-     icon dock becomes the bottom thumb bar with Inventory and Collection
-     folded in; the Hex detail presents as a bottom sheet (issue #295). */
+      launchers and the session group (ADR-0050's phone line as amended by
+      #331): brand glyph, then habit, clock, switch, then the bare uncarded
+      doors — focus, Notes — with Settings at the row's end. The banner's
+      goal bars drop (the session group carries the row's one session
+      read), and the compact launcher retires with them: the focus door's
+      sheet carries the Habit and Goals faces, its inset marker the
+      sheet-open state. Production reads move to the board-surface
+      game-info strip; the icon dock becomes the bottom thumb bar with
+      Inventory and Collection folded in; the Hex detail presents as a
+      bottom sheet (issue #295). */
   .console { height: 56px; padding: 0 10px; gap: 8px; }
   /* The Focus sheet pins to the container's own margins on phone: the
      clock anchor sits one brand glyph in, so the absolute anchor would run
@@ -3307,9 +3345,14 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   }
   .brand svg { width: 24px; height: 24px; }
   .console-session { flex: 0 0 auto; gap: 8px; }
-  /* The banner reads drop for the bare launchers (ADR-0050's phone line):
-     the clock, the switch, and the uncarded doors carry the row alone. */
+  /* The goal bars drop for the bare launchers (ADR-0050's phone line as
+     amended by #331): the session group — habit, clock, switch — carries
+     the row's one session read; only the tracker's bars stay docked out. */
   .banner-reads { display: none; }
+  /* The session group hugs the phone row: a shorter name, a slimmer door
+     that keeps the 44px touch floor. */
+  .session-habit { padding: 2px 4px; }
+  .bread { max-width: 10ch; }
   /* The clock hugs its content here: the 150px desktop reserve would crowd
      a 320px device, and the row must never wrap. */
   .console-clock { min-width: 0; min-height: 0; padding: 2px 6px; }

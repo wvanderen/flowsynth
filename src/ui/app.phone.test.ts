@@ -674,19 +674,26 @@ describe("the phone banner (ADR-0050's amended phone line)", () => {
     endSession(app.state);
   });
 
-  it("the banner reads drop for the bare launchers — the row carries no habit name, no goal bars", () => {
-    // happy-dom lays out nothing, so the drop is asserted in the phone
-    // query's own rules: the 600px container block carries the reads'
-    // display:none, and each block runs to its column-0 closing brace.
+  it("the goal bars drop on phone; the session group carries the habit name at every width (ADR-0050 amended, #331)", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
     app.render();
+    // The phone row's session group — habit name, clock, switch — reads
+    // where the player starts: the name is no longer dropped (ADR-0050's
+    // omission amended by #331), and it is the change door here too.
+    const group = document.querySelector("#console-session .session-habit")!;
+    expect(group.querySelector('[data-session="habit"]')!.textContent).toBe("Piano");
+    expect((group as HTMLElement).tagName).toBe("BUTTON");
+    // The bars stay docked out below the line — the drop lives in the phone
+    // query's own rules, and each block runs to its column-0 closing brace.
     const css = readFileSync("src/ui/style.css", "utf8");
     const phoneBlocks = [...css.matchAll(/@container app \(width < 600px\) \{[\s\S]*?\n\}/g)].map((match) => match[0]);
     expect(phoneBlocks.some((block) => /\.banner-reads\s*\{[^}]*display:\s*none/.test(block))).toBe(true);
-    // Desktop wears the reads the phone drops — the derivation's markup
-    // exists above the line and never on the phone composition.
+    // Desktop wears the bars the phone drops, and the same session group.
     setAppWidth(1200);
     app.render();
     expect(document.querySelector("#console-session .banner-reads")).not.toBeNull();
+    expect(document.querySelector("#console-session .session-habit")!.querySelector('[data-session="habit"]')!.textContent).toBe("Piano");
   });
 });
 
