@@ -483,9 +483,9 @@ h1, h2, h3, p { margin: 0; }
 .app-tile-glyph svg { width: 19px; height: 19px; display: block; }
 
 /* App sheets open as one plate anchored directly beneath the clock's
-   disclosure (ADR-0050) — the Focus control sheet and the notes sheet are
-   its only tenants (#277): short travel from every door, and nothing below
-   the console ever moves, reflows, or dims. */
+   disclosure (ADR-0050) — the Focus control sheet is its only tenant
+   (Notes left for its own modal, #332): short travel from the clock's
+   door, and nothing below the console ever moves, reflows, or dims. */
 .app-popover {
   position: absolute;
   top: calc(100% + 12px);
@@ -1068,10 +1068,16 @@ h1, h2, h3, p { margin: 0; }
 }
 
 /* ── Notes capture and stream (#277) ───────────────── */
-/* The notes sheet's two faces in the Focus frame: the composer over its
-   capture row — the live tag chip riding it during flow, the Note
-   Generator's mechanic in the tooltip layer — and the stream's rows, each
-   led by the mono stamp and the habit chip. */
+/* The notes modal's two faces (issue #332): the composer over its capture
+   row — the live tag chip riding it during flow — and the stream's rows,
+   each led by the mono stamp and the habit chip. */
+.notes-modal-tabs { align-items: baseline; }
+.notes-modal-state {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
 .note-capture-row { margin: 10px 0 0; justify-content: flex-end; }
 .note-capture-row .note-live-tag { margin: 0 auto 0 0; font-size: 10px; vertical-align: baseline; }
 
@@ -3445,6 +3451,10 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   .chord-row .chord-glyph { width: 40px; height: 40px; }
   .chord-row-name { font-size: 19px; }
 }
+
+/* Notes stays centered at every width and keeps board controls under its scrim. */
+.modal-backdrop.notes-modal { align-items: center; }
+.modal-backdrop.notes-modal .modal { animation: none; }
 
 /* The rate sheet (§7) presents below the 760px *container* breakpoint —
    the gate render.ts's Rate-cell tap reads — but the modal layer is

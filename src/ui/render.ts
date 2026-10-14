@@ -20,14 +20,15 @@ import type { DeployedModule, GameState, Hex, ModuleInstance, ModuleType, Mutato
 import { DEV_BOARD_CAPACITIES, type App, type ChordHover, type ModalKind } from "./app";
 import {
   bindFocusSheet,
-  bindNotesSheet,
+  bindNotesModal,
   escapeHtml,
   focusSheetHtml,
   focusSheetKey,
   goalBarsOf,
   honestyEventLine,
-  notesSheetHtml,
-  notesSheetKey,
+  notesModalBodyHtml,
+  notesModalKey,
+  notesModalTabsHtml,
   outcomeLabel,
   refreshConsoleClockPlan,
   sessionCaption,
@@ -223,38 +224,14 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
   // (ADR-0050): the phone Focus door walks here too — one frame, four
   // faces. Its signature rides the rebuild key; the body is only
   // string-built when that key changes (every flow tick takes the patch
-  // path below). Notes wears the same frame as its own CAPTURE | LOGGED
-  // sheet (#277), with its own key, body, and bindings.
+  // path below). Notes left the frame for its own centered modal
+  // (issue #332) — the modal layer owns it.
   const sheetOpen = ui.app !== null;
-  const notesOpen = ui.app === "notes";
-  const popoverKey = sheetOpen ? `sheet|${notesOpen ? notesSheetKey(app) : focusSheetKey(app)}` : "shut";
-  // Clock transitions rebuild this host without changing the Notes sheet.
-  // Carry its draft and editing position only while the sheet key stays
-  // the same: capturing a note or leaving CAPTURE still clears the draft.
-  // The sheet key rides mid-key (the banner reads' key closes the line).
-  const composer = notesOpen && host.dataset.renderKey?.includes(`|${popoverKey}|`)
-    ? host.querySelector<HTMLTextAreaElement>("#note-composer")
-    : null;
-  const draft = composer ? {
-    text: composer.value,
-    start: composer.selectionStart,
-    end: composer.selectionEnd,
-    direction: composer.selectionDirection,
-    focused: document.activeElement === composer,
-    scrollTop: composer.scrollTop,
-  } : null;
-  const sheetHtml = () => (notesOpen ? notesSheetHtml(app) : focusSheetHtml(app, projected));
+  const popoverKey = sheetOpen ? `sheet|${focusSheetKey(app)}` : "shut";
+  const sheetHtml = () => focusSheetHtml(app, projected);
   const bindSheet = (scrollTop: number): void => {
     if (!sheetOpen) return;
-    if (notesOpen) bindNotesSheet(app, host);
-    else bindFocusSheet(app, host);
-    const fresh = host.querySelector<HTMLTextAreaElement>("#note-composer");
-    if (draft && fresh) {
-      fresh.value = draft.text;
-      if (draft.focused) fresh.focus({ preventScroll: true });
-      fresh.setSelectionRange(draft.start, draft.end, draft.direction);
-      fresh.scrollTop = draft.scrollTop;
-    }
+    bindFocusSheet(app, host);
     restorePopoverScroll(host, scrollTop);
   };
 
@@ -463,7 +440,8 @@ function plannedFill(elapsed: number, target: number): string {
 // Focus-app access (ADR-0012, ADR-0050; #313): bare uncarded icon doors.
 // The clock block is the Focus sheet's one wide entry — its faces switch
 // inside the sheet — and Notes keeps its own door, capture being a distinct
-// action. The phone banner carries the same pair it always did: the Focus
+// action; the door opens the Notes modal (issue #332), not a frame here.
+// The phone banner carries the same pair it always did: the Focus
 // sheet's door and Notes (ADR-0050's amended phone line). Time wears no
 // door at any width: the console clock's disclosure opens the sheet's PLAN
 // face. (Display names live in meta.ts's APP_LABELS.)
@@ -499,7 +477,9 @@ function renderConsoleApps(app: App): void {
   const key = `${phone ? "phone" : "wide"}|${ui.app}`;
   if (host.dataset.renderKey === key) return;
   host.dataset.renderKey = key;
-  // Every sheet anchors beneath the session clock, including Notes.
+  // The Focus sheet anchors beneath the session clock; the Notes door
+  // opens its centered modal instead (issue #332), so no tile wears an
+  // open marker for it.
   const doorKeys = TILE_APPS;
   const tiles = doorKeys
     .map((doorKey) => {
@@ -518,7 +498,11 @@ function renderConsoleApps(app: App): void {
   host.innerHTML = `<div class="app-tiles">${tiles}</div>`;
   for (const doorKey of doorKeys) {
     app.listen(byId(`app-tile-${doorKey}`), "click", () => {
-      app.openApp(doorKey);
+      // The Notes door toggles (issue #332): a press on the standing
+      // modal's own door puts it away; the Focus door keeps openApp's
+      // toggle.
+      if (doorKey === "notes" && app.ui.modal === "notes") app.closeModal();
+      else app.openApp(doorKey);
     });
   }
 }
@@ -2298,6 +2282,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
     backdrop.hidden = true;
     backdrop.classList.remove("sheet");
     backdrop.classList.remove("peek");
+    backdrop.classList.remove("notes-modal");
     document.body.classList.remove("modal-sheet-open");
     delete content.dataset.renderKey;
     // A pinned tooltip's body lives at document body level (instrument.ts's
@@ -2310,10 +2295,11 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   // it presents as a sheet over the scrim. The modal layer is body-level —
   // outside the #app container — so the gate's decision arrives as a class
   // the stylesheet can act on, not a container rule. On portrait phone the
-  // viewport media query sheets every modal, so the cluster's rise reads
+  // viewport media query sheets other modals, so the cluster's rise reads
   // the wider of the two (§7, ADR-0029: the cluster alone reacts to open
   // sheets, and inspection never buries it).
-  const sheet = (kind === "rate" && containerWidth() < RATE_DETAILS_BREAKPOINT_PX) || window.innerWidth < PHONE_MAX_PX;
+  const sheet = kind !== "notes" && ((kind === "rate" && containerWidth() < RATE_DETAILS_BREAKPOINT_PX) || window.innerWidth < PHONE_MAX_PX);
+  backdrop.classList.toggle("notes-modal", kind === "notes");
   backdrop.classList.toggle("sheet", kind === "rate" && containerWidth() < RATE_DETAILS_BREAKPOINT_PX);
   // The scrimless peek (#193, decided in #174): a pending module roll never
   // blocks board inspection — the backdrop drops entirely and the pointer
@@ -2393,7 +2379,11 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                     : kind === "mutcombine"
                       ? [app.ui.mutCombineOffer?.dragId ?? null, app.ui.mutCombineOffer?.targetId ?? null]
                       : null;
-  const renderKey = modalKey(app, kind, extra);
+  // The Notes modal's key (issue #332) is its own shape: face, session
+  // presence, and the stream — never the mode or the pool. A pause or
+  // resume, a boundary, an overrun must never rebuild the dialog out from
+  // under a standing draft; only a capture or a tab switch does.
+  const renderKey = kind === "notes" ? `notes|${notesModalKey(app)}` : modalKey(app, kind, extra);
   // Clock ticks must not replace a save textarea or steal dialog focus.
   if (!backdrop.hidden && content.dataset.renderKey === renderKey) {
     // The rate sheet's figures ride the same live slots the popover fills:
@@ -2427,11 +2417,34 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   else if (kind === "honesty") renderHonestyModal(app, content);
   else if (kind === "summary") renderSummaryModal(app, content);
   else if (kind === "rate") renderRateModal(app, content, live);
+  else if (kind === "notes") renderNotesModal(app, content);
   else if (kind === "inventory") renderInventorySheetModal(app, content);
   else if (kind === "combine") renderCombineModal(app, content);
   else if (kind === "mutcombine") renderMutCombineModal(app, content);
-  const firstButton = content.querySelector("button:not([disabled])");
-  (firstButton as HTMLElement | null)?.focus();
+  // The Notes modal lands focus itself (issue #332): the composer on
+  // CAPTURE, the standing tab on LOGGED — never the generic first button.
+  if (kind !== "notes") {
+    const firstButton = content.querySelector("button:not([disabled])");
+    (firstButton as HTMLElement | null)?.focus();
+  }
+}
+
+// The Notes modal (issue #332, amending ADR-0050's shared anchored frame):
+// the composer sheet as a centered modal composition at every width,
+// independent of the clock or launcher location. The eyebrow names it, the
+// state word rides the tab row, and the faces are the same builders the
+// anchored sheet wore — CAPTURE leads, LOGGED carries the stream.
+function renderNotesModal(app: App, content: HTMLElement): void {
+  content.innerHTML = `
+    ${modalTop("NOTES", "modal-title")}
+    ${notesModalTabsHtml(app)}
+    ${notesModalBodyHtml(app)}`;
+  bindNotesModal(app, content);
+  wireClose(app);
+  const landing = app.ui.notesFace === "capture"
+    ? content.querySelector<HTMLElement>("#note-composer")
+    : content.querySelector<HTMLElement>('[data-notes-face="logged"]');
+  landing?.focus({ preventScroll: true });
 }
 
 // The rate sheet (§7): the module-linked rate details — the total plus one

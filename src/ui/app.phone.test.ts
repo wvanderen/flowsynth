@@ -650,21 +650,20 @@ describe("the phone banner (ADR-0050's amended phone line)", () => {
     expect(group().classList.contains("open")).toBe(false);
   });
 
-  it("Notes opens from its own door; the sheet stands under the clock with the composer reachable, mid-session too", () => {
-    // Mid-session (notes are a flow-surface app): the door answers, and
-    // the notes sheet stands under the clock, never in the door's slot.
+  it("Notes opens from its own door as a modal; the composer is reachable mid-session, and the clock anchor stays clear", () => {
+    // Mid-session (notes are a flow-surface app): the door answers with
+    // the centered modal (issue #332) — never a frame under the clock.
     startSession(app.state, null);
     app.render();
     door("notes").click();
-    expect(app.ui.app).toBe("notes");
+    expect(app.ui.modal).toBe("notes");
     expect(document.getElementById("note-composer")).not.toBeNull();
-    const sheet = document.getElementById("app-popover")!;
-    expect(document.getElementById("console-session")!.contains(sheet)).toBe(true);
-    expect(document.getElementById("console-apps")!.contains(sheet)).toBe(false);
+    expect(document.getElementById("modal")!.hidden).toBe(false);
+    expect(document.getElementById("console-session")!.querySelector(".app-popover")).toBeNull();
     // The door toggles: a second press closes.
     door("notes").click();
-    expect(app.ui.app).toBeNull();
-    expect(document.getElementById("app-popover")).toBeNull();
+    expect(app.ui.modal).toBeNull();
+    expect(document.getElementById("modal")!.hidden).toBe(true);
     endSession(app.state);
   });
 

@@ -13,9 +13,9 @@
 // FocusApp ids keep their meaning (habit / time / notes / goals): the sheet
 // is presentational, and `ui.app` still names which app's face stands —
 // time → PLAN, habit → HABIT, goals → GOALS, and the time app's history
-// surfaces are the HISTORY face. Notes wears the same frame as its own
-// CAPTURE | LOGGED sheet (#277), sharing the helpers at the bottom of this
-// file.
+// surfaces are the HISTORY face. Notes left the frame for its own centered
+// modal composition (issue #332, amending ADR-0050's shared anchored
+// frame); its helpers live at the bottom of this file.
 
 import type { App } from "./app";
 import { displayedRates, longGoalCost, wholeNous } from "../engine/economy";
@@ -669,9 +669,9 @@ function historyDrillHtml(app: App): string {
   </div>`;
 }
 
-/* ── The notes sheet (#277) ────────────────────────── */
+/* ── The notes modal (#277, #332) ──────────────────── */
 
-// The notes sheet's faces: CAPTURE leads — the sheet opens on it — and
+// The notes modal's faces: CAPTURE leads — the modal opens on it — and
 // LOGGED carries the stream. Radio-like, like the Focus sheet's facetabs.
 export type NotesFace = "capture" | "logged";
 
@@ -687,13 +687,14 @@ function notesStateWord(app: App): string {
   return state.session !== null ? `session ${state.sessionsCompleted + 1}` : "stream";
 }
 
-// The sheet's rebuild signature: everything its body shows, hashed. The
+// The modal's rebuild signature: everything its body shows, hashed. The
 // composer's draft is deliberately absent — a tab switch may drop it, but
-// a tick never rebuilds the sheet out from under the typing.
-export function notesSheetKey(app: App): string {
+// a tick never rebuilds the dialog out from under the typing. The mode is
+// absent by the modal key's own shape (render.ts): pause and resume must
+// never touch a standing draft.
+export function notesModalKey(app: App): string {
   const { state, ui } = app;
   return JSON.stringify([
-    ui.app === "notes",
     ui.notesFace,
     state.session !== null,
     state.sessionsCompleted,
@@ -714,7 +715,7 @@ function habitChipHtml(state: GameState, note: NoteEntry): string {
 // rides it during flow (the session's habit, where the note will tag;
 // upgrade-mode notes go untagged) and the capture button takes the note.
 // The Note Generator's mechanic is documented on the module itself (the
-// forge readout), never as sheet furniture.
+// forge readout), never as modal furniture.
 function notesCaptureHtml(app: App): string {
   const { state } = app;
   const habit = activeHabit(state);
@@ -741,36 +742,44 @@ function notesLoggedHtml(app: App): string {
   return `<div class="note-list">${rows}</div>`;
 }
 
-// The notes sheet in the Focus frame (ADR-0050, #277): the same clipped
-// plate as the control sheet — head, facetabs, close — wearing its own
-// NOTES name and its two faces.
-export function notesSheetHtml(app: App): string {
+// The modal's facetab row (#332): the two radio tabs, the state word
+// closing the line — what a capture here would tag to.
+export function notesModalTabsHtml(app: App): string {
   const face = app.ui.notesFace;
-  const body = face === "capture" ? notesCaptureHtml(app) : notesLoggedHtml(app);
   const tabs = NOTES_TABS.map(
     ([key, label]) =>
       `<button class="ftab${key === face ? " active" : ""}" data-notes-face="${key}" aria-pressed="${key === face}">${label}</button>`,
   ).join("");
-  return sheetFrameHtml("Notes sheet", "NOTES", notesStateWord(app), tabs, body);
+  return `<div class="facetabs notes-modal-tabs" role="group" aria-label="Notes faces">${tabs}<span class="notes-modal-state mono">${notesStateWord(app)}</span></div>`;
 }
 
-// The notes sheet's wiring: the facetabs, the close, and the composer —
-// capture rides the button and ⌘/Ctrl+Enter, and a successful save
-// refocuses the fresh composer. No tooltip layer here: the sheet carries
-// no deeper mechanics.
-export function bindNotesSheet(app: App, scope: HTMLElement): void {
+// The standing face's body: the composer on CAPTURE, the stream on LOGGED.
+export function notesModalBodyHtml(app: App): string {
+  return app.ui.notesFace === "capture" ? notesCaptureHtml(app) : notesLoggedHtml(app);
+}
+
+// The notes modal's wiring (issue #332): the facetabs, and the composer —
+// capture rides the button and ⌘/Ctrl+Enter, a successful save refocuses
+// the fresh composer, and Escape dismisses the dialog even from the
+// composer (modality demands a keyboard exit; a dismissal drops the draft
+// as every departure always has). The close rides the modal layer's own
+// ✕ (render.ts's wireClose), and the focus ring rides app.ts's dialog
+// binding. No tooltip layer here: the modal carries no deeper mechanics.
+export function bindNotesModal(app: App, scope: HTMLElement): void {
   scope.querySelectorAll<HTMLElement>("[data-notes-face]").forEach((button) => {
     app.listen(button, "click", () => {
       const face = button.getAttribute("data-notes-face") as NotesFace | null;
-      if (face) app.showNotesFace(face);
+      if (!face) return;
+      app.showNotesFace(face);
+      // The rebuild replaces the tab row; keep the press on the fresh tab.
+      scope.querySelector<HTMLElement>(`[data-notes-face="${face}"]`)?.focus();
     });
   });
-  app.listen(scope.querySelector("#focus-close"), "click", () => app.closeApp());
   const composer = scope.querySelector("#note-composer") as HTMLTextAreaElement | null;
   const saveNote = () => {
     if (!composer) return;
     app.addNote(composer.value);
-    // A successful save rebuilds the sheet with a fresh composer; refocus it.
+    // A successful save rebuilds the dialog with a fresh composer; refocus it.
     const fresh = scope.querySelector("#note-composer") as HTMLTextAreaElement | null;
     if (fresh) fresh.focus();
   };
@@ -779,6 +788,11 @@ export function bindNotesSheet(app: App, scope: HTMLElement): void {
     if ((event as KeyboardEvent).key === "Enter" && ((event as KeyboardEvent).metaKey || (event as KeyboardEvent).ctrlKey)) {
       event.preventDefault();
       saveNote();
+    }
+    if ((event as KeyboardEvent).key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      app.closeModal();
     }
   });
 }
@@ -817,11 +831,10 @@ function sheetStateWord(app: App): string {
   }
 }
 
-// The one sheet frame both console sheets wear (ADR-0050): the clipped
-// plate anchored beneath the clock — head with the name and the prominent
-// state read beside it, the facetab row, the close — over the standing
-// face's body. One spelling, so the Focus and Notes sheets can never
-// drift apart.
+// The one sheet frame the Focus control sheet wears (ADR-0050; Notes left
+// for its own modal, #332): the clipped plate anchored beneath the clock —
+// head with the name and the prominent state read beside it, the facetab
+// row, the close — over the standing face's body.
 function sheetFrameHtml(label: string, name: string, stateWord: string, tabs: string, body: string): string {
   return `<div class="app-popover focus-sheet" id="app-popover"><section class="inst-panel" aria-label="${label}"><div class="inst-panel-face focus-sheet-face">
     <div class="focus-head">

@@ -94,6 +94,7 @@ export type ModalKind =
   | "inventory"
   | "combine"
   | "mutcombine"
+  | "notes"
   | null;
 
 // The detail's keyboard landing (issue #296): the emphasized face's own
@@ -235,9 +236,9 @@ export interface UiState {
   // shows the six swatches for a re-pick. Light furniture — never saved.
   goalColor: GoalColor;
   goalRecolorId: string | null;
-  // The notes sheet's standing face (issue #277): CAPTURE leads — the sheet
-  // opens on it, and any departure (close, another app) puts the tab back.
-  // Light furniture — never saved.
+  // The notes modal's standing face (issue #277): CAPTURE leads — the
+  // modal opens on it, and any departure (close, another surface) puts the
+  // tab back. Light furniture — never saved.
   notesFace: NotesFace;
   // Session history (§9): the sheet's HISTORY face, its page size, and the
   // record drilled into. Light furniture — cleared with the sheet.
@@ -326,6 +327,9 @@ function dualDriftMs(): number {
 export class App {
   private readonly lifetime = new AbortController();
   private readonly cleanups = new Set<() => void>();
+  // The control the Notes modal opened from (issue #332): focus returns
+  // there on dismissal. Ephemeral — one open/close round trip.
+  private notesInvoker: HTMLElement | null = null;
   // Weak references let replaced render descendants be collected while
   // still allowing release to remove handlers from any surviving node.
   private readonly listeners = new Set<{
@@ -857,12 +861,10 @@ export class App {
     }, { capture: true, signal: this.signal });
     this.els["console-session"]?.addEventListener("click", (event) => {
       const target = event.target as Element | null;
-      // Pause/resume belongs to the ongoing capture: keep Notes standing
-      // so the clock transition cannot dismiss an unsaved draft. The
-      // session habit's door (#331) joins the set: its click opens the
+      // The session habit's door (#331) joins the set: its click opens the
       // Focus sheet on the HABIT face — and the opening click, like the
       // switch's, must never close it in the same gesture.
-      if (target?.closest(".session-group") || (this.ui.app === "notes" && target?.closest("#pause-flow"))) clickInsideApps = true;
+      if (target?.closest(".session-group")) clickInsideApps = true;
     }, { capture: true, signal: this.signal });
     document.addEventListener("click", () => {
       // A stale instance's closer must never close — or re-render — a newer
@@ -874,14 +876,44 @@ export class App {
       if (inside) return;
       if (this.ui.app !== null) this.closeApp();
     }, { signal: this.signal });
-    // The Forge peek passes pointers to the board. Dismiss outside the card
-    // in capture, before a board action can replace the clicked DOM node;
-    // the same click still reaches the board for selection or other actions.
+    // The Forge peek passes pointers to the board, so its dismissal is
+    // captured outside the card before a board action can replace the
+    // clicked DOM node. The Notes modal (issue #332) joins the outside-
+    // click dismissal as a plain blocking dialog: any click off the dialog
+    // — the backdrop — puts it away, except the door's own press, whose
+    // toggle must not be closed-and-reopened in one gesture.
     document.addEventListener("click", (event) => {
-      if (!this.ownsBoard() || this.ui.modal !== "forge") return;
+      if (!this.ownsBoard()) return;
+      if (this.ui.modal !== "forge" && this.ui.modal !== "notes") return;
       if (event.composedPath().includes(this.els["modal-content"]!)) return;
+      if (this.ui.modal === "notes" && (event.target as Element | null)?.closest?.("#app-tile-notes")) return;
       this.closeModal();
     }, { capture: true, signal: this.signal });
+    // The Notes modal's focus ring (issue #332): Tab and Shift+Tab cycle
+    // within the dialog, so keyboard focus stays managed inside the modal
+    // however the tab order reaches its edges. One binding — the dialog
+    // container is the layer's permanent node.
+    const modalContent = this.els["modal-content"];
+    this.listen(modalContent, "keydown", (event) => {
+      if (event.key !== "Tab" || this.ui.modal !== "notes" || !modalContent) return;
+      const focusables = [...modalContent.querySelectorAll<HTMLElement>(
+        "button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])",
+      )].filter((el) => !el.closest("[hidden]"));
+      if (focusables.length === 0) return;
+      const first = focusables[0]!;
+      const last = focusables[focusables.length - 1]!;
+      const active = document.activeElement;
+      const inside = active instanceof HTMLElement && modalContent.contains(active);
+      if (event.shiftKey) {
+        if (!inside || active === first) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (!inside || active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
     // The Esc chain (§5, issue #295): the modal eats it first; then the
     // armed transient modes unwind — an armed placement cancels before the
     // Hex detail closes; then the detail itself returns the grid with its
@@ -1752,13 +1784,27 @@ export class App {
   }
 
   openApp(app: FocusApp): void {
+    // The Notes door's opener (issue #332): Notes presents as a centered
+    // modal — never the clock-anchored frame — whatever surface stood
+    // before. The door itself carries the toggle (render.ts).
+    if (app === "notes") {
+      this.openNotes();
+      return;
+    }
     this.ui.app = this.ui.app === app ? null : app;
-    // The notes sheet opens on CAPTURE (#277): any departure from it — a
-    // close or another app's face standing — puts the tab back.
-    if (this.ui.app !== "notes") this.ui.notesFace = "capture";
     this.ui.placing = null;
     this.resetHistorySurfaces();
     this.render();
+  }
+
+  // The Notes modal's one opener (issue #332): any departure from CAPTURE
+  // puts the tab back, the invoking control is remembered for the return,
+  // and the Focus sheet stands down — one console surface at a time.
+  private openNotes(): void {
+    this.notesInvoker = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    this.dismissAppPanel();
+    this.ui.notesFace = "capture";
+    this.openModalDirect("notes");
   }
 
   // The Focus sheet's facetab landing (ADR-0050, issue #275): tabs select a
@@ -1789,11 +1835,11 @@ export class App {
     this.render();
   }
 
-  // The notes sheet's tab landing (issue #277): CAPTURE and LOGGED are
+  // The notes modal's tab landing (issue #277): CAPTURE and LOGGED are
   // radio-like, like the Focus sheet's facetabs — a re-press of the
   // standing face does nothing.
   showNotesFace(face: NotesFace): void {
-    if (this.ui.app !== "notes" || this.ui.notesFace === face) return;
+    if (this.ui.modal !== "notes" || this.ui.notesFace === face) return;
     this.ui.notesFace = face;
     this.render();
   }
@@ -1812,7 +1858,6 @@ export class App {
     this.ui.editingHabitId = null;
     this.ui.focusForm = null;
     this.ui.goalRecolorId = null;
-    this.ui.notesFace = "capture";
     this.resetHistorySurfaces();
   }
 
@@ -2271,11 +2316,27 @@ export class App {
     // reachable through Add's normal arm, and a later choice keeps the
     // standing landing.
     if (this.ui.modal === "forge") this.ui.entryRollPending = false;
+    const closing = this.ui.modal;
     this.ui.modal = null;
     this.ui.combineOffer = null;
     this.ui.mutCombineOffer = null;
     this.ui.importError = null;
     this.render();
+    // The Notes modal hands focus back to the control that opened it
+    // (issue #332), after the render has settled the layer.
+    if (closing === "notes") this.restoreNotesInvoker();
+  }
+
+  // The Notes modal's focus return (issue #332): the invoking control —
+  // the Notes door, whatever opened it — takes focus again; a control the
+  // render replaced falls back to the fresh door. The face reset rides the
+  // opener: every path back in lands on CAPTURE.
+  private restoreNotesInvoker(): void {
+    const stored = this.notesInvoker;
+    this.notesInvoker = null;
+    const invoker =
+      stored && stored.isConnected && stored !== document.body ? stored : document.getElementById("app-tile-notes");
+    invoker?.focus({ preventScroll: true });
   }
 
   // Dev helpers (?dev=1): time-warp and fixtures for hands-on verification only.

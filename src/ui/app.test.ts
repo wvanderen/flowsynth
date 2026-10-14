@@ -44,17 +44,18 @@ describe("the console tiles", () => {
     }
   });
 
-  it("Notes' door still opens the notes sheet (#313)", () => {
+  it("Notes' door still opens the notes modal (#313, #332)", () => {
     app.render();
     document.getElementById("app-tile-notes")!.click();
-    expect(app.ui.app).toBe("notes");
-    const sheet = document.getElementById("app-popover")!;
-    expect(sheet.classList.contains("focus-sheet")).toBe(true);
-    expect(document.getElementById("console-session")!.contains(sheet)).toBe(true);
+    expect(app.ui.modal).toBe("notes");
+    const sheet = document.getElementById("modal-content")!;
+    expect(sheet.querySelector("#modal-title")!.textContent).toBe("NOTES");
+    expect(document.getElementById("modal")!.hidden).toBe(false);
+    expect(document.getElementById("console-session")!.querySelector(".app-popover")).toBeNull();
     // A second press toggles it shut.
     document.getElementById("app-tile-notes")!.click();
-    expect(app.ui.app).toBeNull();
-    expect(document.getElementById("app-popover")).toBeNull();
+    expect(app.ui.modal).toBeNull();
+    expect(document.getElementById("modal")!.hidden).toBe(true);
   });
 
   it("the HABIT and GOALS faces stay reachable inside the Focus sheet (ADR-0050, #313)", () => {
@@ -67,19 +68,20 @@ describe("the console tiles", () => {
     }
   });
 
-  it("habit, goals, and notes walk into the one frame; the apps row hosts no panel (ADR-0050, #277)", () => {
+  it("habit and goals walk into the one frame and Notes into its own modal; the apps row hosts no panel (ADR-0050, #277, #332)", () => {
     app.render();
-    for (const key of ["habit", "goals", "notes"] as const) {
+    for (const key of ["habit", "goals"] as const) {
       app.openApp(key);
       // One frame under the clock's own disclosure, whatever the door.
       const sheet = document.getElementById("app-popover")!;
       expect(document.getElementById("console-session")!.contains(sheet)).toBe(true);
       app.closeApp();
     }
-    // Nothing anchors in the apps row any more.
+    // Notes stands in the modal layer, never in the apps row.
     app.openApp("notes");
     expect(document.getElementById("console-apps")!.querySelector(".app-popover")).toBeNull();
-    app.closeApp();
+    expect(app.ui.modal).toBe("notes");
+    app.closeModal();
   });
 });
 
@@ -355,7 +357,7 @@ describe("the feats page's encourager icons (issue #269)", () => {
 });
 
 describe("the app popovers", () => {
-  it("the Focus sheet wears the ruled-folio frame: head, facetabs, close — and the notes sheet wears its own (#277)", () => {
+  it("the Focus sheet wears the ruled-folio frame: head, facetabs, close — and the notes modal wears the dialog frame (#277, #332)", () => {
     app.openApp("habit");
     const sheet = document.getElementById("app-popover")!;
     expect(sheet.querySelector(".focus-head .focus-name")!.textContent).toBe("FOCUS");
@@ -367,14 +369,14 @@ describe("the app popovers", () => {
     expect(sheet.querySelector("details")).toBeNull();
     app.closeApp();
     app.openApp("notes");
-    const notes = document.getElementById("app-popover")!;
-    expect(notes.querySelector(".focus-head .focus-name")!.textContent).toBe("NOTES");
-    expect(notes.querySelector("#focus-close")).not.toBeNull();
+    const notes = document.getElementById("modal-content")!;
+    expect(notes.querySelector("#modal-title")!.textContent).toBe("NOTES");
+    expect(notes.querySelector("#close-modal")).not.toBeNull();
     expect([...notes.querySelectorAll(".ftab")].map((t) => t.textContent)).toEqual(["CAPTURE", "LOGGED"]);
     expect(notes.querySelector("details")).toBeNull();
     // Close so the instance's document-level click-away listener never
     // reaches into a later test's DOM.
-    app.closeApp();
+    app.closeModal();
   });
 });
 
@@ -808,7 +810,7 @@ describe("the Notes stream's habit chips (§9)", () => {
     expect(entries[0]!.querySelector(".habit-chip")).toBeNull();
     expect(entries[1]!.querySelector(".habit-chip")).toBeNull();
     expect(entries[2]!.querySelector(".habit-chip")!.textContent).toBe("Piano");
-    app.closeApp();
+    app.closeModal();
   });
 
   it("the stream shows everything it keeps — no recent-window cap", () => {
@@ -819,7 +821,7 @@ describe("the Notes stream's habit chips (§9)", () => {
     expect(entries).toHaveLength(10);
     // Newest first: the last capture leads.
     expect(entries[0]!.querySelector("p")!.textContent).toBe("note 9");
-    app.closeApp();
+    app.closeModal();
   });
 });
 
