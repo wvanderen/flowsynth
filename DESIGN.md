@@ -37,6 +37,12 @@ typography:
     fontWeight: 600
     lineHeight: 1.2
     letterSpacing: "0.06em"
+  control:
+    fontFamily: '"Arial Narrow", "Helvetica Neue Condensed", "Liberation Sans Narrow", Arial, sans-serif'
+    fontSize: "15px"
+    fontWeight: 600
+    lineHeight: 1.2
+    letterSpacing: "0.02em"
   title:
     fontFamily: '"Arial Narrow", "Helvetica Neue Condensed", "Liberation Sans Narrow", Arial, sans-serif'
     fontSize: "13px"
@@ -62,22 +68,22 @@ components:
   button-square:
     backgroundColor: "{colors.panel}"
     textColor: "{colors.ink}"
-    typography: "{typography.title}"
+    typography: "{typography.control}"
     rounded: "{rounded.control}"
-    padding: "7px 14px"
+    padding: "9px 13px"
   button-square-hover:
     backgroundColor: "{colors.panel-deep}"
     textColor: "{colors.ink}"
   button-primary:
     backgroundColor: "{colors.accent}"
     textColor: "{colors.bg}"
-    typography: "{typography.title}"
+    typography: "{typography.control}"
     rounded: "{rounded.control}"
-    padding: "7px 14px"
+    padding: "9px 13px"
   main-switch:
     backgroundColor: "{colors.switch}"
     textColor: "{colors.switch-ink}"
-    typography: "{typography.headline}"
+    typography: "{typography.control}"
     rounded: "{rounded.control}"
     size: "76px"
   goal-bar:
@@ -163,17 +169,27 @@ The palette is a functional instrument table, not a decorative ramp: every color
 
 ### Hierarchy
 
-- **Display** (600, 40px/1.05, +0.03em): the chord sheet's stage name — the one large moment, reserved.
-- **Headline** (600, 19px/1.2, +0.06em, uppercase): the focus name and sheet titles.
-- **Title** (600, 13px/1.2, +0.05em, uppercase): control labels, buttons, nameplates, section heads.
-- **Body** (400, 14px/1.5): notes, longer mechanics, tooltip glosses when a sentence is unavoidable.
-- **Label** (400, 11px mono, +0.02em, tabular): every figure, readout, and unit — rates, prices, clocks, chips. Micro-labels run 8–10px mono caps at +0.08–0.16em.
+The ramp is decided once (issue #353): sizes are steps on it, and steps are **whole pixels — a half-pixel size is drift**. The named stops, large to small:
+
+- **Display** (600, 40px/1.05, +0.03em condensed): the chord sheet's stage name — the one large moment, reserved (24px on the phone's compact stage row).
+- **Headline** (600, 19px/1.2, +0.06em, uppercase): the focus name, sheet titles, and modal titles.
+- **Control** (600, 15px condensed, +0.02em): the shared control's voice — the base button, face tabs. Prominent ledger figures run 15px mono beside their 15px marks.
+- **Readout** (17): the prominent figure voice — board face readouts, ledger row leads, sheet section heads.
+- **Title** (600, 13px/1.2, +0.05em, uppercase): control labels, compact buttons, nameplates, section heads.
+- **Body** (400, 14px/1.5 sans): notes, longer mechanics, tooltip glosses when a sentence is unavoidable.
+- **Label** (400, 11px mono, +0.02em, tabular): every figure, readout, and unit — rates, prices, clocks, chips.
+- **Compact** (12, any of the three faces): the dense register — small chips and controls, secondary figures, quiet notes, compact form fields. Recorded here as the ramp's step (issue #353): the stylesheet's most-used size sits on the ramp rather than folding into its neighbors — its uses are genuine compact-register content across all three faces, and folding them would churn dense readouts for no visual gain.
+- **Micro band** (8 / 9 / 10 mono caps, +0.08–0.16em): engraved marks, micro-labels, and board chrome words.
+
+**Reserved moments.** A few large reads are the surfaces they headline and keep their own sizes: the session clock (28px mono; 22px narrow, 20px phone) and the summary's banked-nous figure (34px; 28px phone). Named here so they stay theirs — with them, the list above is the whole ramp; nothing else renders.
 
 ### Named Rules
 
 **The Tabular Rule.** Every figure that can change renders in monospace with `font-variant-numeric: tabular-nums`. Readouts hold their size — layout never shifts as numbers tick.
 
 **The Three-Jobs Rule.** Condensed caps for names and controls, mono for numbers, sans for prose. A face used outside its job is a review flag.
+
+**The Whole-Step Rule.** Every font-size in the stylesheet is a step on this ramp, in whole pixels. A half-pixel size is drift; a size off the ramp is a review flag.
 
 ## Elevation
 
@@ -190,7 +206,7 @@ Controls are square-cut — hairline border, condensed technical lettering, no r
 ### Buttons
 
 - **Shape:** square-cut, zero radius, 1px hairline border.
-- **Secondary/default:** panel surface, ink text, condensed caps 13px/600 (+0.05em), ~7×14px padding; hover drops to panel-deep; transitions 0.15s.
+- **Secondary/default:** panel surface, ink text, condensed 15px/600 (+0.02em), ~9×13px padding; hover drops to panel-deep; transitions 0.15s.
 - **Primary:** the nous-indigo accent fill (`#cbcaff`) with substrate-ink text; reserved for the leading action of its group.
 - **Danger:** the danger hue in text/border; destructive actions keep visible confirmation affordances.
 - **Focus:** visible keyboard focus everywhere; 44px touch targets on coarse pointers.

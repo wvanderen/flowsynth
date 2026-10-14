@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-14T00:00:00+00:00",
+  "generatedAt": "2026-10-14T18:00:00+00:00",
   "title": "Design System: FlowSynth — The Rack",
   "extensions": {
     "colorMeta": {
@@ -342,7 +342,11 @@
       },
       "headline": {
         "displayName": "Sheet Title / Focus Name",
-        "purpose": "Sheet identities and the console focus name; condensed caps."
+        "purpose": "Sheet identities, modal titles, and the console focus name; condensed caps."
+      },
+      "control": {
+        "displayName": "Shared Control",
+        "purpose": "The button voice at 15px — the base control and face tabs; prominent ledger figures beside their marks."
       },
       "title": {
         "displayName": "Control Label",
@@ -355,7 +359,21 @@
       "label": {
         "displayName": "Tabular Figure",
         "purpose": "Every number, readout, unit, and chip; mono, tabular-nums."
+      },
+      "compact": {
+        "displayName": "Compact",
+        "purpose": "The dense register at 12px — small chips and controls, secondary figures, quiet notes, compact form fields."
       }
+    },
+    "typeRamp": {
+      "unit": "px",
+      "steps": [8, 9, 10, 11, 12, 13, 14, 15, 17, 19, 40],
+      "reservedMoments": {
+        "session-clock": [28, 22, 20],
+        "summary-figure": [34, 28],
+        "stage-name-phone": [24]
+      },
+      "rule": "Whole pixels only — a half-pixel size is drift (issue #353)."
     },
     "shadows": [
       {
@@ -499,6 +517,11 @@
       {
         "name": "The Three-Jobs Rule",
         "body": "Condensed caps for names and controls, mono for numbers, sans for prose. A face used outside its job is a review flag.",
+        "section": "typography"
+      },
+      {
+        "name": "The Whole-Step Rule",
+        "body": "Every font-size in the stylesheet is a step on the type ramp, in whole pixels. A half-pixel size is drift; a size off the ramp is a review flag.",
         "section": "typography"
       },
       {
