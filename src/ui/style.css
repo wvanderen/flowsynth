@@ -377,7 +377,7 @@ h1, h2, h3, p { margin: 0; }
 }
 .main-switch svg { width: 16px; height: 16px; }
 /* The switch's own state light: the mode indicator lives here now. */
-.switch-state { width: 8px; height: 8px; border-radius: 50%; border: 1px solid currentColor; opacity: 0.65; }
+.switch-state { width: 8px; height: 8px; border-radius: 0; border: 1px solid currentColor; opacity: 0.65; }
 .main-switch.live .switch-state { background: var(--switch-ink); border-color: var(--switch-ink); opacity: 1; box-shadow: 0 0 8px var(--switch-glow); }
 .main-switch.held .switch-state { background: var(--switch-ink); border-color: var(--switch-ink); opacity: 1; }
 .main-switch.idle {
@@ -856,7 +856,7 @@ h1, h2, h3, p { margin: 0; }
   font-size: 10px;
   color: var(--muted);
   border: 1px solid var(--line);
-  border-radius: 99px;
+  border-radius: 0;
   width: 15px;
   height: 15px;
   display: inline-flex;
@@ -1029,7 +1029,7 @@ h1, h2, h3, p { margin: 0; }
 .chord-pip {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: 0;
   background: var(--pip, var(--accent));
   flex-shrink: 0;
 }
@@ -1117,7 +1117,7 @@ h1, h2, h3, p { margin: 0; }
 /* Habit management: the figure-led list drills; rename/archive live in the
    detail head. The shared dot, rename input, and build styles serve the
    sheet's faces. */
-.habit-dot { width: 8px; height: 8px; border-radius: 100%; border: 1.5px solid var(--muted); flex-shrink: 0; }
+.habit-dot { width: 8px; height: 8px; border-radius: 0; border: 1.5px solid var(--muted); flex-shrink: 0; }
 .habit-ledger-row .habit-dot.on { background: var(--accent); border-color: var(--accent); }
 .habit-rename-input { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--charge); border-radius: 0; padding: 6px 10px; font-size: 13px; }
 
@@ -1152,13 +1152,14 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
 .build-node-name small { display: block; color: var(--muted); font-size: 10.5px; }
 .build-node.locked .build-node-name { color: var(--muted); }
 
-/* The habit-keyed chip (§9): a tagged note wears its habit in the stream. */
+/* The habit-keyed chip (§9): a tagged note wears its habit in the stream.
+   Square-cut like every mark on the rack — the pill is the retired voice. */
 .habit-chip {
   display: inline-block;
   font: 9px var(--mono);
   letter-spacing: 0.06em;
   padding: 1px 7px;
-  border-radius: 99px;
+  border-radius: 0;
   border: 1px solid var(--accent-faint);
   background: var(--accent-faint);
   color: var(--accent);
@@ -1178,7 +1179,7 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
 .history-when { font-size: 10px; color: var(--muted); flex-shrink: 0; width: 44px; }
 .history-habit { flex: 1; min-width: 0; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .history-min { font-size: 10.5px; color: var(--muted); flex-shrink: 0; }
-.history-chip { font: 9px var(--mono); letter-spacing: 0.05em; padding: 1px 7px; border-radius: 99px; border: 1px solid var(--line-soft); flex-shrink: 0; }
+.history-chip { font: 9px var(--mono); letter-spacing: 0.05em; padding: 1px 7px; border-radius: 0; border: 1px solid var(--line-soft); flex-shrink: 0; }
 .history-chip.hit { color: var(--charge); }
 .history-chip.miss { color: var(--muted); }
 .show-more { align-self: center; }
@@ -1316,7 +1317,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   right: -5px;
   background: var(--accent);
   color: var(--accent-ink);
-  border-radius: 999px;
+  border-radius: 0;
   font-size: 9.5px;
   line-height: 1;
   padding: 2.5px 5px;
