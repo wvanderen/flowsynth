@@ -511,7 +511,7 @@ describe("the mutator rolls (issue #199)", () => {
     app.render();
     app.openModal("forge");
     const content = document.getElementById("modal-content")!;
-    expect(content.textContent).toContain("MUTATOR FORGE · 1 banked");
+    expect(content.querySelector('[data-forge-face="mutators"]')?.getAttribute("aria-label")).toBe("Mutators, 1 banked roll");
     expect(content.textContent).toContain("+50% to this module's power");
     expect(content.textContent).toContain("+100% to the strength this module receives");
     expect(content.textContent).not.toContain("ν/s");

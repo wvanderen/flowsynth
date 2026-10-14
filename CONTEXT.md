@@ -226,7 +226,7 @@ A branch's player-wide meter to which that branch's deployed Forges contribute a
 A chargeable board module that amplifies the active habit's build effects while receiving charge; charge never crosses to the console, and the habit keys the module's behavior. Named and designed by issue #219 — the habit-cycle ring glyph in the switch vermillion; it arrives through the module-roll pool only.
 
 **Module roll**:
-A charge- or flow-earned choice of one module from three generated candidates; unchosen candidates disappear without consolation resources. The Forge branches and the flow meter bank into one shared queue of interchangeable rolls.
+A charge- or flow-earned choice of one module from three generated candidates; unchosen candidates disappear without consolation resources. The Forge branches and the flow meter bank into one shared queue of interchangeable rolls. Forge presents one draft branch at a time, with Mutators before Modules and banked-roll counts on the switch. Opening follows the board layer, falling back to the other branch when only it has pending rolls. Switching never consumes a roll. Module choices still arm placement; ordinary mutator choices still mint to the tray. Horizontal progress tracks sit beneath the active draft; the compact docked panel remains nonblocking.
 _Avoid_: forge roll (the pre-split name)
 
 **Flow meter**:

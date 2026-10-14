@@ -204,6 +204,7 @@ export interface UiState {
   // and both copies stay untouched. Light furniture — never saved.
   combineOffer: CombineOffer | null;
   modal: ModalKind;
+  forgeFace: "modules" | "mutators";
   importText: string;
   importError: string | null;
   // The plan the next session starts with (§6): null is open-ended — the
@@ -423,6 +424,7 @@ export class App {
     buyingCell: false,
     combineOffer: null,
     modal: null,
+    forgeFace: "modules",
     importText: "",
     importError: null,
     chosenTarget: null,
@@ -1776,6 +1778,7 @@ export class App {
       this.ui.detail = null;
       this.ui.detailTray = null;
       this.ui.mutLayer = "mutators";
+      this.ui.forgeFace = "mutators";
       this.ui.modal = "forge";
     }
     this.say(`Mutator slot unlocked at ${cellNoteOf(pos)}${first ? "" : ` — ${formatInt(this.state.arete)} Arete left`}.`);
@@ -2295,6 +2298,13 @@ export class App {
   }
 
   private openModalDirect(kind: ModalKind): void {
+    if (kind === "forge") {
+      const preferred = this.state.catalogEntryOwned ? this.ui.mutLayer : "modules";
+      const pending = preferred === "modules" ? this.state.bankedRolls.length : this.state.bankedMutatorRolls.length;
+      const otherPending = preferred === "modules" ? this.state.bankedMutatorRolls.length : this.state.bankedRolls.length;
+      this.ui.forgeFace = !pending && otherPending && this.state.catalogEntryOwned
+        ? (preferred === "modules" ? "mutators" : "modules") : preferred;
+    }
     this.ui.modal = kind;
     if (kind === "import") this.ui.importText = "";
     this.render();
