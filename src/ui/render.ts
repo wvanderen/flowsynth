@@ -926,7 +926,7 @@ function renderTools(app: App, projected: RateSnapshot): void {
             ? `<span id="${detailId}" class="forge-detail" role="tooltip" hidden>${action.title(app, projected)}</span>`
             : "";
           const extra = (action.badge?.(app) ?? "") + (action.media ?? "") + detail;
-          return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" data-op="${action.op}" aria-label="${action.label}" ${action.op === "forge" ? `aria-describedby="${detailId}"` : `title="${action.title(app, projected)}"`}${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${action.label}</small></button>`;
+          return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" id="${target.id}-tool-${action.op}" data-op="${action.op}" aria-label="${action.label}" ${action.op === "forge" ? `aria-describedby="${detailId}"` : `title="${action.title(app, projected)}"`}${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${action.label}</small></button>`;
         })
         .join("");
       target.querySelectorAll<HTMLButtonElement>("[data-op]").forEach((button) => {
@@ -2279,13 +2279,15 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   // flipped, a twin gone) — drops before the dispatch, so the dialog always
   // has terms to present and no render pass ever nests a closeModal render
   // inside itself. The mutator review obeys the same rule (issue #199).
+  // The drop is the round trip's end (issue #346): the return address is
+  // honored before the pass continues.
   if (app.ui.modal === "combine" && combineOfferTerms(app) === null) {
-    app.ui.modal = null;
     app.ui.combineOffer = null;
+    app.abandonModal();
   }
   if (app.ui.modal === "mutcombine" && mutCombineOfferTerms(app) === null) {
-    app.ui.modal = null;
     app.ui.mutCombineOffer = null;
+    app.abandonModal();
   }
   const kind = app.ui.modal;
   if (!kind) {
@@ -2294,6 +2296,10 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
     backdrop.classList.remove("peek");
     backdrop.classList.remove("notes-modal");
     document.body.classList.remove("modal-sheet-open");
+    // The dismissal leaves nothing standing in the layer: a wiped sheet
+    // holds no ghost of the dialog it served, and nothing inside it can
+    // keep hold of focus (issue #346).
+    content.replaceChildren();
     delete content.dataset.renderKey;
     // A pinned tooltip's body lives at document body level (instrument.ts's
     // portal), so hiding the sheet would otherwise leave it floating over
@@ -2433,9 +2439,11 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   else if (kind === "mutcombine") renderMutCombineModal(app, content);
   // The Notes modal lands focus itself (issue #332): the composer on
   // CAPTURE, the standing tab on LOGGED — never the generic first button.
+  // Every other dialog lands on its first control (issue #346), the open
+  // never scrolling the page out from under the reader.
   if (kind !== "notes") {
     const firstButton = content.querySelector("button:not([disabled])");
-    (firstButton as HTMLElement | null)?.focus();
+    (firstButton as HTMLElement | null)?.focus({ preventScroll: true });
   }
 }
 
@@ -3276,6 +3284,15 @@ function renderExportModal(app: App, content: HTMLElement): void {
     anchor.remove();
     URL.revokeObjectURL(url);
   });
+  // Escape dismisses from the read-only box as from any control (issue
+  // #346): the global chain steps over text fields, readonly included.
+  app.listen(byId("export-text"), "keydown", (event) => {
+    if ((event as KeyboardEvent).key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      app.closeModal();
+    }
+  });
   wireClose(app);
 }
 
@@ -3302,6 +3319,15 @@ function renderImportModal(app: App, content: HTMLElement): void {
   });
   app.listen(byId("import-apply"), "click", () => {
     if (textarea) app.importText(textarea.value);
+  });
+  // Escape dismisses from the paste box too (the composer's rule, issue
+  // #346): the dialog's primary field answers the keyboard exit.
+  app.listen(textarea, "keydown", (event) => {
+    if ((event as KeyboardEvent).key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      app.closeModal();
+    }
   });
   wireClose(app);
 }
