@@ -182,6 +182,20 @@ export function bindBoardNavigation(app: App, svg: SVGSVGElement): void {
   if (panBoundBoards.has(svg)) return;
   panBoundBoards.add(svg);
 
+  // Wheel zoom coalesces to at most one render per animation frame
+  // (#349): a gesture's events accumulate their factor — the frame applies
+  // the product in one step — and keep the latest pointer as the anchor,
+  // so a fast scroll costs one solve-and-render per frame, not one per
+  // event. preventDefault stays synchronous: the page must not scroll.
+  let pendingWheel: { factor: number; clientX: number; clientY: number } | null = null;
+  let wheelFrame: number | null = null;
+  const flushWheel = () => {
+    wheelFrame = null;
+    const pending = pendingWheel;
+    pendingWheel = null;
+    if (!pending || app.released) return;
+    zoomAtPointer(app, pending.factor, pending.clientX, pending.clientY);
+  };
   // Container changes also change the visible letterbox bands, even when
   // the viewBox and game state remain unchanged.
   const glowResize = new ResizeObserver(() => {
@@ -193,8 +207,19 @@ export function bindBoardNavigation(app: App, svg: SVGSVGElement): void {
   app.listen(svg, "wheel", (event) => {
     event.preventDefault();
     // Scroll up zooms in; scroll down eases back out.
-    zoomAtPointer(app, event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP, event.clientX, event.clientY);
+    const step = event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP;
+    pendingWheel = pendingWheel
+      ? { factor: pendingWheel.factor * step, clientX: event.clientX, clientY: event.clientY }
+      : { factor: step, clientX: event.clientX, clientY: event.clientY };
+    if (wheelFrame !== null) return;
+    if (typeof requestAnimationFrame === "function") wheelFrame = requestAnimationFrame(flushWheel);
+    else flushWheel();
   }, { passive: false });
+  app.ownCleanup(() => {
+    if (wheelFrame !== null) cancelAnimationFrame(wheelFrame);
+    wheelFrame = null;
+    pendingWheel = null;
+  });
 
   const startPan = (event: PointerEvent): void => {
     if (event.button !== 0) return;
