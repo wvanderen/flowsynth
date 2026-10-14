@@ -13,9 +13,11 @@
 //
 // Access: hover, keyboard focus, and touch. The wiring mirrors each onto
 // the body as one visibility class (`inst-show`): pointerover/focusin for
-// the first two, a tap or Enter on the trigger for the touch pin (`.show`
-// on the tip, reported through aria-expanded). Escape or a tap anywhere
-// else dismisses; the pin never survives its surface moving on.
+// the first two, a tap or Enter on the trigger for the touch pin. The one
+// visibility resolves in sync(), which reports the trigger's aria-expanded
+// — hover, focus, and pin all speak the same open/closed state, per the
+// controls-sheet correction (#324). Escape or a tap anywhere else
+// dismisses; the pin never survives its surface moving on.
 //
 // Placement: the body is positioned fixed and this wiring places it at its
 // trigger. The reference surface shows its tooltips inside scroll
@@ -73,11 +75,15 @@ function place(tip: HTMLElement, body: HTMLElement): void {
 }
 
 // Resolve one tip's three access states onto its body: portal on first
-// show, place at the trigger, and carry the visibility class.
+// show, place at the trigger, carry the visibility class, and report the
+// one open/closed state through aria-expanded — every access path's
+// disclosure rides this single write, so the trigger never announces
+// "collapsed" while its tip stands open.
 function sync(tip: HTMLElement): void {
   const body = bodyOf(tip);
   if (!body) return;
   const show = tip.classList.contains("over") || tip.classList.contains("focused") || tip.classList.contains("show");
+  tip.querySelector(".inst-tip-trigger")?.setAttribute("aria-expanded", String(show));
   if (show && body.parentElement !== document.body) {
     document.body.appendChild(body);
     portaled.set(body, tip);
@@ -95,14 +101,14 @@ export function tooltipBodies(host: ParentNode): HTMLElement[] {
     .filter((body): body is HTMLElement => body !== null && portaled.has(body));
 }
 
-// Dismiss every access state in the scope, restoring each trigger's
-// expanded state — the one teardown every dismissal path shares.
+// Dismiss every access state in the scope — the one teardown every
+// dismissal path shares.
 export function closeTooltips(host: ParentNode): void {
   for (const tip of host.querySelectorAll<HTMLElement>(".inst-tip.over, .inst-tip.focused, .inst-tip.show")) {
     // Keep focus on its control. Clearing the access states hides the body
-    // until a fresh pointer entry, focus entry, or explicit tap opens it.
+    // until a fresh pointer entry, focus entry, or explicit tap opens it,
+    // and sync reports the closure through aria-expanded.
     tip.classList.remove("show", "over", "focused");
-    tip.querySelector(".inst-tip-trigger")?.setAttribute("aria-expanded", "false");
     sync(tip);
   }
 }
@@ -165,7 +171,6 @@ export function wireTooltips(host: ParentNode, signal?: AbortSignal): () => void
       // One pinned tooltip at a time: pinning elsewhere puts the last one away.
       closeTooltips(host);
       tip.classList.toggle("show", pin);
-      tip.querySelector(".inst-tip-trigger")?.setAttribute("aria-expanded", String(pin));
       sync(tip);
       // The trigger's tap is the tooltip's, never the row's or the
       // surface's beneath it.

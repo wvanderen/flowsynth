@@ -758,10 +758,16 @@ interface ToolAction {
 // flow meter's fill is credited practice time, so its figures are
 // durations and its rate reads as practice remaining; the charge branch's
 // are Forge progress points and its rate the projected contribution.
-function flowMeterLine(state: GameState): string {
+// The flow meter's read, unprefixed — the dock pip's aria-valuetext wears
+// it, and the tooltip line prefixes the name.
+function flowMeterRead(state: GameState): string {
   const threshold = flowThreshold(state.flow.earned);
   const remaining = Math.max(0, threshold - state.flow.progress);
-  return `Flow meter ${formatCountdown(state.flow.progress)} / ${formatCountdown(threshold)} — next roll in ~${formatCountdown(remaining)} of practice`;
+  return `${formatCountdown(state.flow.progress)} / ${formatCountdown(threshold)} — next roll in ~${formatCountdown(remaining)} of practice`;
+}
+
+function flowMeterLine(state: GameState): string {
+  return `Flow meter ${flowMeterRead(state)}`;
 }
 
 function forgeMeterLine(state: GameState, forgeRate: number): string {
@@ -812,11 +818,14 @@ function toolActions(): ToolAction[] {
       run: (app) => app.openModal("forge"),
       badge: (app) =>
         app.state.bankedRolls.length + app.state.bankedMutatorRolls.length > 0 ? `<b class="tool-badge mono">${app.state.bankedRolls.length + app.state.bankedMutatorRolls.length}</b>` : "",
-      media: `<i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i>`,
-      // The pip shows the flow meter (ADR-0041); hover, focus, or tap opens
-      // the one detail — the live meter read, in flow suffixed with the lock
-      // reason (#233): the sheet never expands during a session, and the
-      // badge and pip stay as the visual indicator.
+      media: `<i class="forge-pip" data-live="forge-meter" role="progressbar" aria-label="Flow meter" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"><i data-live="forge-pip"></i></i>`,
+      // The pip is the flow meter's progressbar (ADR-0041, #351): the fill
+      // is the visible state and the valuenow/value text mirror it, so AT
+      // queries the same figure the eye reads. The zero placeholder stands
+      // only until the live pass patches it — same task, never painted.
+      // Hover, focus, or tap opens the one detail — the live meter read, in
+      // flow suffixed with the lock reason (#233): the sheet never expands
+      // during a session, and the badge and pip stay as the visual indicator.
       disabled: (app) => app.state.mode !== "upgrade",
       title: (app, projected) => {
         const read = meterDetail(app, projected.forgeRate, projected.mutatorForgeRate);
@@ -953,23 +962,30 @@ function renderTools(app: App, projected: RateSnapshot): void {
           // disabled still refuses pointer, keyboard, and touch.
           const lock = state.mode !== "upgrade" && action.disabled?.(app) ? `<span class="tool-lock" aria-hidden="true">${lockMarkSvg()}</span>` : "";
           const extra = (action.badge?.(app) ?? "") + (action.media ?? "") + detail + lock;
-          return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" id="${target.id}-tool-${action.op}" data-op="${action.op}" aria-label="${action.label}" ${action.op === "forge" ? `aria-describedby="${detailId}"` : `title="${action.title(app, projected)}"`}${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${action.label}</small></button>`;
+          return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" id="${target.id}-tool-${action.op}" data-op="${action.op}" aria-label="${action.label}" ${action.op === "forge" ? `aria-describedby="${detailId}" aria-expanded="false"` : `title="${action.title(app, projected)}"`}${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${action.label}</small></button>`;
         })
         .join("");
       target.querySelectorAll<HTMLButtonElement>("[data-op]").forEach((button) => {
         if (button.dataset.op === "forge") {
           const detail = button.querySelector<HTMLElement>(".forge-detail")!;
           let hovered = false;
-          app.listen(button, "mouseenter", () => { hovered = true; detail.hidden = false; });
+          // The detail's hidden flag is the one state; aria-expanded mirrors
+          // it on every access path — hover, keyboard focus, Escape — so the
+          // trigger never announces "collapsed" while the read stands open.
+          const report = () => button.setAttribute("aria-expanded", String(!detail.hidden));
+          app.listen(button, "mouseenter", () => { hovered = true; detail.hidden = false; report(); });
           app.listen(button, "mouseleave", () => {
             hovered = false;
             detail.hidden = document.activeElement !== button;
+            report();
           });
-          app.listen(button, "focus", () => { detail.hidden = false; });
-          app.listen(button, "blur", () => { detail.hidden = !hovered; });
+          app.listen(button, "focus", () => { detail.hidden = false; report(); });
+          app.listen(button, "blur", () => { detail.hidden = !hovered; report(); });
           app.listen(button, "keydown", (event) => {
             if (event.key === "Escape" && !detail.hidden) {
+              // The tip goes alone; focus stays on the trigger.
               detail.hidden = true;
+              report();
               event.stopPropagation();
             }
           });
@@ -990,6 +1006,11 @@ function renderTools(app: App, projected: RateSnapshot): void {
     const pip = target.querySelector<HTMLElement>('[data-live="forge-pip"]');
     const pipFill = meterPipFill(state.flow.progress, flowCap);
     if (pip && pip.style.width !== pipFill) pip.style.width = pipFill;
+    // The pip's meter semantics ride its visible fill (#351): the same
+    // progress and cap the bar draws, the same read the detail speaks.
+    liveAttr(target, "forge-meter", "aria-valuenow", String(Math.max(0, state.flow.progress)));
+    liveAttr(target, "forge-meter", "aria-valuemax", String(flowCap));
+    liveAttr(target, "forge-meter", "aria-valuetext", flowMeterRead(state));
     const forgeButton = target.querySelector<HTMLButtonElement>('[data-op="forge"]');
     if (forgeButton) {
       const action = actions.find((a) => a.op === "forge")!;
@@ -3266,10 +3287,14 @@ function candidateReadout(type: ModuleInstance["type"]): string {
 // The meter detail's live slots (ADR-0041): the figures move every tick a
 // session runs, so the open modal fills them in place — the rebuild only
 // fires when the pending offer changes, and the detail never flickers.
+// Each track carries the same progressbar semantics its fill and figures
+// show (#351): valuenow and valuetext mirror the visible read, so AT
+// queries exactly what the eye reads beside it. The zero placeholders
+// stand only until the same-pass live patch fills them — never painted.
 function forgeMeterHtml(face: App["ui"]["forgeFace"]): string {
   const meter = (name: string, key: string) => `<div class="forge-meter">
     <span class="meter-name">${name}</span><span class="meter-figures mono" data-live="modal-${key}-line"></span>
-    <span class="forge-track" aria-hidden="true"><i data-live="modal-${key}-pip"></i></span>
+    <span class="forge-track" data-live="modal-${key}-track" role="progressbar" aria-label="${name}" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"><i data-live="modal-${key}-pip"></i></span>
   </div>`;
   return `<div class="forge-meters">${face === "mutators"
     ? meter("Mutator Forge", "mutator")
@@ -3282,10 +3307,18 @@ function updateForgeMetersLive(scope: ParentNode, state: GameState, forgeRate: n
   const mutatorCap = mutatorForgeThreshold(state.mutatorForge.earned);
   for (const [key, progress, cap] of [["flow", state.flow.progress, flowCap], ["forge", state.forge.progress, forgeCap], ["mutator", state.mutatorForge.progress, mutatorCap]] as const) {
     liveAttr(scope, `modal-${key}-pip`, "style", `width:${meterPipFill(progress, cap)}`);
+    liveAttr(scope, `modal-${key}-track`, "aria-valuenow", String(Math.max(0, progress)));
+    liveAttr(scope, `modal-${key}-track`, "aria-valuemax", String(cap));
   }
-  liveSet(scope, "modal-flow-line", `${formatCountdown(state.flow.progress)} / ${formatCountdown(flowCap)}`);
-  liveSet(scope, "modal-forge-line", `${formatNumber(Math.max(0, state.forge.progress))} / ${formatNumber(forgeCap)}${forgeRate > 0 ? ` · ${formatNumber(forgeRate)}/s` : ""}`);
-  liveSet(scope, "modal-mutator-line", `${formatNumber(Math.max(0, state.mutatorForge.progress))} / ${formatNumber(mutatorCap)}${mutatorRate > 0 ? ` · ${formatNumber(mutatorRate)}/s` : ""}`);
+  const flowLine = `${formatCountdown(state.flow.progress)} / ${formatCountdown(flowCap)}`;
+  liveSet(scope, "modal-flow-line", flowLine);
+  liveAttr(scope, "modal-flow-track", "aria-valuetext", flowLine);
+  const forgeLine = `${formatNumber(Math.max(0, state.forge.progress))} / ${formatNumber(forgeCap)}${forgeRate > 0 ? ` · ${formatNumber(forgeRate)}/s` : ""}`;
+  liveSet(scope, "modal-forge-line", forgeLine);
+  liveAttr(scope, "modal-forge-track", "aria-valuetext", forgeLine);
+  const mutatorLine = `${formatNumber(Math.max(0, state.mutatorForge.progress))} / ${formatNumber(mutatorCap)}${mutatorRate > 0 ? ` · ${formatNumber(mutatorRate)}/s` : ""}`;
+  liveSet(scope, "modal-mutator-line", mutatorLine);
+  liveAttr(scope, "modal-mutator-track", "aria-valuetext", mutatorLine);
 }
 
 function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapshot): void {
