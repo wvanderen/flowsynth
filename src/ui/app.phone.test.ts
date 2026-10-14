@@ -739,6 +739,35 @@ describe("prototype retirement (§7)", () => {
 });
 
 describe("render-pass layout reads (#349)", () => {
+  it("captures scroll positions before console writes and preserves them on rebuild", () => {
+    clickCell(0, 0);
+    app.dev = true;
+    app.devToggleBoard();
+    const consoleHost = document.getElementById("console-session")!;
+    const detailHost = document.getElementById("hex-detail")!;
+    const grid = detailHost.querySelector<HTMLElement>(".hex-detail-grid")!;
+    const panel = document.getElementById("dev-board")!;
+    const reads: string[] = [];
+    const restored: number[] = [];
+    for (const [element, name, value] of [[grid, "detail", 57], [panel, "dev", 83]] as const) {
+      Object.defineProperty(element, "scrollTop", {
+        configurable: true,
+        get() {
+          expect(consoleHost.dataset.renderKey).toBe("force-rebuild");
+          reads.push(name);
+          return value;
+        },
+        set(value: number) { restored.push(value); },
+      });
+    }
+    consoleHost.dataset.renderKey = "force-rebuild";
+    detailHost.dataset.renderKey = "force-rebuild";
+    app.render();
+    expect(reads).toEqual(["detail", "dev"]);
+    expect(detailHost.querySelector<HTMLElement>(".hex-detail-grid")!.scrollTop).toBe(57);
+    expect(restored).toEqual([83]);
+  });
+
   it("a render pass reads the container's layout once, and a resized pass reads again", () => {
     app.render();
     const appEl = document.getElementById("app")!;

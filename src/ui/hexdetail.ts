@@ -35,7 +35,7 @@ import { chargeGlow } from "./leads";
 import { formatInt, formatNumber } from "./format";
 import { FAMILY_WORD, rarityTicks, mutatorEffectText, mutatorGlyph, mutatorInertVerdict, mutatorSlotPrice, mutatorUnlockTargets, mutatorTileSvg } from "./mutators";
 import { META, RARITY_LABEL } from "./meta";
-import { isPhoneWidth } from "./container";
+import { isPhoneWidth, scrollTopOf } from "./container";
 import { wireTooltips } from "./instrument";
 import { moduleFlowsHtml, mutatorFlowHtml } from "./hexflows";
 import type { DetailChordRow } from "./render";
@@ -203,10 +203,8 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   }
   // A changed read rebuilds the stack. Preserve the focused control and
   // scroll, and retire portaled tooltips before reusing chord disclosure IDs.
-  // (The guard above is the per-tick path: an unchanged read performs no
-  // layout read at all. The scroll preserve below is rebuild-only — an
-  // action, not a tick — and reads the old stack before its own write,
-  // since the rebuild replaces the node the scroll belongs to.)
+  // Scroll comes from the initial layout batch, before other surfaces
+  // write; the new stack restores that captured position.
   const focused = document.activeElement;
   const focusAttribute = focused instanceof HTMLElement && host.contains(focused)
     ? ["id", "data-detail-face", "data-bulk", "data-shift", "aria-describedby"]
@@ -215,7 +213,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   const focusValue = focusAttribute ? focused!.getAttribute(focusAttribute) : null;
   releaseTooltips();
   const grid = host.querySelector<HTMLElement>(".hex-detail-grid");
-  const scrollTop = grid?.scrollTop ?? 0;
+  const scrollTop = scrollTopOf(grid);
   host.dataset.renderKey = key;
   host.classList.toggle("sheet", phone);
   host.innerHTML = `

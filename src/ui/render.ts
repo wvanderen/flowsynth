@@ -50,7 +50,7 @@ import { closeTooltips, wireTooltips } from "./instrument";
 import { instancesByClass, instancesKeyOf, libraryHeaderHtml, libraryIndexRowHtml, libraryStageHtml } from "./library";
 import { discoveryCount, discoveryBoostOf, rootsHeardOf } from "../engine/library";
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
-import { beginLayoutPass, containerWidth, endLayoutPass, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX, viewportWidth } from "./container";
+import { beginLayoutPass, containerWidth, endLayoutPass, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX, viewportWidth, scrollTopOf } from "./container";
 import { liveAttr, liveSet } from "./live";
 import {
   bindMutatorDrag,
@@ -102,6 +102,7 @@ export function render(app: App): void {
   // inline size and the viewport read once here, before any board write —
   // every gate below reads the batch, so the pass never interleaves a
   // layout read between writes.
+  const devStage = app.dev ? devStageBox() : null;
   beginLayoutPass();
   try {
     // One rate computation per pass, both bases (§7): the display basis —
@@ -146,7 +147,7 @@ export function render(app: App): void {
     renderMutatorTray(app);
     renderMutatorPill(app);
     renderModal(app, live, projected);
-    renderDev(app);
+    renderDev(app, devStage);
     renderDevBoard(app);
   } finally {
     endLayoutPass();
@@ -464,7 +465,7 @@ function plannedFill(elapsed: number, target: number): string {
 // innerHTML swap, restored once the fresh sheet binds — one shape, one
 // spelling, shared by every face the clock's frame carries.
 function popoverScroll(host: HTMLElement): number {
-  return host.querySelector<HTMLElement>(".app-popover")?.scrollTop ?? 0;
+  return scrollTopOf(host.querySelector<HTMLElement>(".app-popover"));
 }
 
 function restorePopoverScroll(host: HTMLElement, scrollTop: number): void {
@@ -3656,7 +3657,7 @@ function devStageBox(): { left: number; top: number; width: number; height: numb
   return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
 }
 
-function renderDev(app: App): void {
+function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void {
   let panel = byId("dev-panel");
   if (!app.dev) {
     panel?.remove();
@@ -3687,7 +3688,7 @@ function renderDev(app: App): void {
     app.listen(document, "pointercancel", release);
     app.listen(panel, "lostpointercapture", release);
   }
-  const stage = devStageBox();
+  if (!stage) return;
   panel.style.maxWidth = `${Math.max(0, stage.width - 24)}px`;
   panel.style.maxHeight = `${Math.max(0, stage.height - 8)}px`;
   panel.innerHTML = `<button class="dev-grip" id="dev-grip" aria-label="Drag to move the dev console" title="Drag to move">⠿</button>
@@ -3832,7 +3833,7 @@ function renderDevBoard(app: App): void {
     ? ["data-devcap", "data-devvoice", "data-devcell", "data-devboard"].find((attr) => focused.hasAttribute(attr))
     : undefined;
   const focusValue = focusKey ? focused!.getAttribute(focusKey) : null;
-  const scrollTop = panel.scrollTop;
+  const scrollTop = scrollTopOf(panel);
   panel.innerHTML = `
     <div class="dev-board-head">
       <span>ALLOCATION BOARD</span>
