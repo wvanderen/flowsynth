@@ -80,6 +80,40 @@ describe("Forge drafts (#335)", () => {
     expect(app.ui.placing).toBeTruthy();
   });
 
+  it("opens effect definitions without choosing and dismisses them before the draft", () => {
+    app.openModal("forge");
+    const trigger = panel().querySelector<HTMLButtonElement>('.candidate-effect .term-trigger')!;
+    expect(trigger.closest("[data-choice], [data-mut-choice]")).toBeNull();
+    trigger.focus();
+    const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+    expect(body.classList.contains("inst-show")).toBe(true);
+    expect(body.textContent).toBe("Generator output that powers other modules");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(body.classList.contains("inst-show")).toBe(false);
+    expect(app.ui.modal).toBe("forge");
+    trigger.click();
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(app.state.bankedRolls).toHaveLength(1);
+    expect(app.state.bankedMutatorRolls).toHaveLength(1);
+    panel().querySelector<HTMLElement>(".forge-choice-cue")!.click();
+    expect(body.classList.contains("inst-show")).toBe(false);
+    panel().querySelector<HTMLButtonElement>('[data-choice="m1"]')!.click();
+    expect(app.state.bankedRolls).toHaveLength(0);
+    expect(app.ui.placing).toBeTruthy();
+  });
+
+  it("discloses pitch, chords, and both roll types in their effects", () => {
+    app.state.bankedRolls[0].candidates = [
+      { id: "pitch", type: "harmonizer", rarity: "common" },
+      { id: "module", type: "forge", rarity: "common" },
+      { id: "mutator", type: "mutatorForge", rarity: "common" },
+    ];
+    app.openModal("forge");
+    const terms = [...panel().querySelectorAll(".candidate-effect .term-trigger")].map(t => t.textContent);
+    expect(terms).toEqual(["pitch", "chords", "charge", "module rolls", "charge", "mutator rolls"]);
+    expect(panel().querySelectorAll("button button")).toHaveLength(0);
+  });
+
   it("Close and Escape keep both rolls banked", () => {
     app.openModal("forge");
     panel().querySelector<HTMLButtonElement>("#close-modal")!.click();

@@ -3020,7 +3020,7 @@ function catalogOwnedHtml(word: string): string {
 // the glossary meaning — description prose never grows around it. The
 // meanings here are the glossary's own, distilled to the one-line ceiling.
 // The union keeps the map closed: only glossary terms may render hoverable.
-type CatalogTerm = "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Headroom" | "nous" | "charge";
+type CatalogTerm = "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Headroom" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "habit build" | "goals";
 const CATALOG_TERMS: Record<CatalogTerm, string> = {
   "Harmonic capacity": "Whole-chord budget per voice",
   memorized: "Persists through arete reset",
@@ -3031,11 +3031,17 @@ const CATALOG_TERMS: Record<CatalogTerm, string> = {
   Headroom: "Extra earnings scale the payout logarithmically",
   nous: "Main progression resource spent on upgrades",
   charge: "Generator output that powers other modules",
+  pitch: "The absolute note sounded by a board cell",
+  chords: "Connected pitch sets multiply their member oscillators",
+  "module rolls": "Choose one module from three candidates",
+  "mutator rolls": "Choose one mutator from two candidates",
+  "habit build": "Equipped build nodes apply during that habit’s sessions",
+  goals: "Practice targets credited by flow sessions",
 };
 let catalogTermSeq = 0;
-function termTipHtml(term: CatalogTerm): string {
+function termTipHtml(term: CatalogTerm, label: string = term): string {
   const id = `catalog-term-${catalogTermSeq++}`;
-  return `<span class="inst-tip term-tip"><button class="inst-tip-trigger term-trigger" type="button" aria-expanded="false" aria-describedby="${id}" aria-label="${term} — what it means">${term}</button><span class="inst-tip-body" id="${id}" role="tooltip">${CATALOG_TERMS[term]}</span></span>`;
+  return `<span class="inst-tip term-tip"><button class="inst-tip-trigger term-trigger" type="button" aria-expanded="false" aria-describedby="${id}" aria-label="${term} — what it means">${label}</button><span class="inst-tip-body" id="${id}" role="tooltip">${CATALOG_TERMS[term]}</span></span>`;
 }
 
 // The Accelerator row's provisional figure (the prototype's): the row is
@@ -3121,6 +3127,12 @@ function forgeEffect(type: ModuleInstance["type"]): string {
   }
 }
 
+// Match the visible copy once so generated tooltip markup is never reprocessed.
+function forgeEffectHtml(effect: string): string {
+  return effect.replace(/\b(module rolls|mutator rolls|habit build|chords|pitch|charge|goals)\b/gi,
+    label => termTipHtml(label.toLowerCase() as CatalogTerm, label));
+}
+
 function candidateReadout(type: ModuleInstance["type"]): string {
   switch (type) {
     case "additive":
@@ -3191,21 +3203,22 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
     ${hasOffer ? `<p class="forge-choice-cue">Choose 1 of ${face === "modules" ? 3 : 2}</p>
     <div class="candidates ${face === "mutators" ? "mut-candidates" : ""}">
       ${face === "modules" && offer ? offer.candidates.map(candidate => `
-        <button class="candidate-tile" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${candidate.rarity}" data-type="${candidate.type}" aria-label="Take ${RARITY_LABEL[candidate.rarity]} ${META[candidate.type].name}" aria-describedby="forge-effect-${candidate.id}">
+        <div class="candidate-tile" data-rarity="${candidate.rarity}" data-type="${candidate.type}"><button class="candidate-pick" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${candidate.rarity}" data-type="${candidate.type}" aria-label="Take ${RARITY_LABEL[candidate.rarity]} ${META[candidate.type].name}" aria-describedby="forge-effect-${candidate.id}"></button>
           <svg viewBox="-70 -70 140 140" aria-hidden="true">${moduleFace({ type: candidate.type, rarity: candidate.rarity, readout: candidateReadout(candidate.type) })}</svg>
           <span class="candidate-readout"><span class="candidate-name">${META[candidate.type].name}</span>
           <span class="rarity">${RARITY_LABEL[candidate.rarity]}</span>
-          <span id="forge-effect-${candidate.id}" class="candidate-effect">${forgeEffect(candidate.type)}</span>
+          <span id="forge-effect-${candidate.id}" class="candidate-effect">${forgeEffectHtml(forgeEffect(candidate.type))}</span>
           ${candidate.type !== "spacer" ? `<span class="candidate-scaling">+${formatNumber((BALANCE.rarityPower[candidate.rarity] - 1) * 100)}% / level · upgrades from 10 ν</span>` : ""}</span>
-        </button>`).join("") : mutOffer ? mutOffer.candidates.map(candidate => `
-        <button class="candidate-tile mut-candidate" data-mut-choice="${candidate.id}" data-mut-offer="${mutOffer.id}" data-rarity="${candidate.rarity}" aria-label="Take ${RARITY_LABEL[candidate.rarity]} ${FAMILY_WORD[candidate.family]} mutator" aria-describedby="forge-effect-${candidate.id}">
+        </div>`).join("") : mutOffer ? mutOffer.candidates.map(candidate => `
+        <div class="candidate-tile mut-candidate" data-rarity="${candidate.rarity}"><button class="candidate-pick" data-mut-choice="${candidate.id}" data-mut-offer="${mutOffer.id}" data-rarity="${candidate.rarity}" aria-label="Take ${RARITY_LABEL[candidate.rarity]} ${FAMILY_WORD[candidate.family]} mutator" aria-describedby="forge-effect-${candidate.id}"></button>
           <svg viewBox="-70 -70 140 140" aria-hidden="true" style="color:var(--arete)">${mutatorTileInner(candidate)}</svg>
           <span class="candidate-readout"><span class="candidate-name">${FAMILY_WORD[candidate.family]}</span>
           <span class="rarity">${RARITY_LABEL[candidate.rarity]}</span>
-          <span id="forge-effect-${candidate.id}" class="candidate-effect">${mutatorEffectText(candidate.family, candidate.rarity)}</span></span>
-        </button>`).join("") : ""}
+          <span id="forge-effect-${candidate.id}" class="candidate-effect">${forgeEffectHtml(mutatorEffectText(candidate.family, candidate.rarity))}</span></span>
+        </div>`).join("") : ""}
     </div>` : `<p class="empty-copy">No ${face === "mutators" ? "mutator" : "module"} rolls banked.</p>`}
     ${forgeMeterHtml(face)}`;
+  wireTooltips(content, app.signal);
   updateForgeMetersLive(content, state, projected.forgeRate, projected.mutatorForgeRate);
   content.querySelectorAll<HTMLButtonElement>("[data-forge-face]").forEach(button => {
     app.listen(button, "click", () => {
@@ -3215,10 +3228,16 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
     });
   });
   content.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach(button => {
-    app.listen(button, "click", () => app.chooseCandidate(button.dataset.offer!, button.dataset.choice!));
+    app.listen(button.parentElement!, "click", (event) => {
+      if (event.target instanceof Element && event.target.closest(".inst-tip")) return;
+      app.chooseCandidate(button.dataset.offer!, button.dataset.choice!);
+    });
   });
   content.querySelectorAll<HTMLButtonElement>("[data-mut-choice]").forEach(button => {
-    app.listen(button, "click", () => app.chooseMutatorCandidate(button.dataset.mutOffer!, button.dataset.mutChoice!));
+    app.listen(button.parentElement!, "click", (event) => {
+      if (event.target instanceof Element && event.target.closest(".inst-tip")) return;
+      app.chooseMutatorCandidate(button.dataset.mutOffer!, button.dataset.mutChoice!);
+    });
   });
   wireClose(app);
 }

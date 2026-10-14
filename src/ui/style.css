@@ -3818,3 +3818,11 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   .peek .candidates { min-height: 0; }
   .peek .forge-meters { min-height: 0; }
 }
+
+/* The choice covers its open readout; glossary controls sit above it as siblings. */
+.peek .candidate-tile { position: relative; }
+.candidate-pick { position: absolute; inset: 0; width: 100%; border: 0; background: transparent; }
+.candidate-pick:hover { background: transparent; }
+.candidate-pick:focus-visible { outline-offset: 4px; }
+.peek .candidate-tile > svg, .candidate-readout { pointer-events: none; }
+.candidate-readout .term-tip { position: relative; pointer-events: auto; }
