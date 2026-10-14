@@ -724,6 +724,15 @@ describe("the action row (§7)", () => {
       // Progress stays readable: the pip rides the locked Forge button.
       expect(document.querySelector(`#${host} [data-op="forge"] [data-live="forge-pip"]`)).not.toBeNull();
     }
+    // The mode never closes Collection: it wears no lock and stays
+    // clickable — the one live door beside the locked row.
+    expect(document.querySelector('#board-tools [data-op="collection"]')).toBeNull();
+    const collection = document.querySelector<HTMLButtonElement>('#thumb-bar [data-op="collection"]')!;
+    expect(collection.disabled).toBe(false);
+    expect(collection.querySelector(".tool-lock")).toBeNull();
+    collection.click();
+    expect(app.ui.modal).toBe("collection");
+    app.closeModal();
   });
 
   it("locked board actions refuse activation, and upgrade mode restores them (#336)", () => {

@@ -929,12 +929,14 @@ function renderTools(app: App, projected: RateSnapshot): void {
           const detail = action.op === "forge"
             ? `<span id="${detailId}" class="forge-detail" role="tooltip" hidden>${action.title(app, projected)}</span>`
             : "";
-          // The flow lock (#336): in flow the action wears the shared
-          // padlock chip — the non-color unavailability mark, on top of the
-          // dimmed content. The chip keys to the mode, never the disabled
-          // predicates: an affordability mute stays a mute, never a lock.
-          // Native disabled still refuses pointer, keyboard, and touch.
-          const lock = state.mode !== "upgrade" ? `<span class="tool-lock" aria-hidden="true">${lockMarkSvg()}</span>` : "";
+          // The flow lock (#336): in flow the actions the mode gates wear
+          // the shared padlock chip — the non-color unavailability mark, on
+          // top of the dimmed content. The chip keys to the gate the action
+          // itself declares, so a control the mode never closes (Collection)
+          // stands bare beside the locked row; in upgrade mode nothing wears
+          // it and an affordability mute stays a mute, never a lock. Native
+          // disabled still refuses pointer, keyboard, and touch.
+          const lock = state.mode !== "upgrade" && action.disabled?.(app) ? `<span class="tool-lock" aria-hidden="true">${lockMarkSvg()}</span>` : "";
           const extra = (action.badge?.(app) ?? "") + (action.media ?? "") + detail + lock;
           return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" data-op="${action.op}" aria-label="${action.label}" ${action.op === "forge" ? `aria-describedby="${detailId}"` : `title="${action.title(app, projected)}"`}${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${action.label}</small></button>`;
         })
