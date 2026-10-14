@@ -49,3 +49,14 @@ Live DOM guards recorded at capture time (desktop session): sheet open with `tot
 ## Superseded captures
 
 The first implementation's calculation captures (inline calculation open, accordion, keyboard-open) were removed with the feature they evidenced; this README's captures back the amended scope only.
+
+## PR #340 accessibility review corrections (2026-10-14)
+
+- The oscillator picks retain the 44px minimum whenever **any** coarse pointer is available, including secondary touch input alongside a primary mouse/trackpad. Mouse-only layouts retain their compact rows.
+- The plain placement-preview quality scale now has `role="img"` and an accessible label carrying measured quality, floor, cap, and neutral. Its SVG remains decorative; it adds no interactive term or disclosure.
+- Regression checks cover the any-pointer rule and the placement preview's accessible measurement even when its applied Formation chip is absent. Typecheck, full suite (1,293 passed, 2 skipped), and UI regression suite (677 passed) passed.
+- Fresh browser provenance at `http://localhost:5175/-/dev/provenance` matched `/Users/eggfam/.t3/worktrees/flowsynth/t3code-786765a1`, HEAD `f003936`, with these review corrections in the working tree. The collaborative desktop viewport reported 1,402 × 877 CSS pixels; exported PNGs are 1,280 × 800.
+- [review-desktop-rate-sheet.png](review-desktop-rate-sheet.png): click-open roster preserves open rule rows and compact mouse-only picks. DOM measurements were 15.09px high with `min-height: 0px`; primary fine pointer true, any coarse pointer false.
+- [review-desktop-placement-preview.png](review-desktop-placement-preview.png): preview of the tray oscillator at C5, set through the dev app's transient UI state. DOM inspection confirmed the scale's `img` role and label `Formation quality — ×0.5 chromatic to ×1.5 organized, ×1 neutral; this formation measures ×1.24`, with zero interactive elements in the transient readout.
+- Compared the fixes with the pinned presentation and controls prototypes: flat divisions and plain readout remain intact; coarse input retains the controls sheet's 44px floor.
+- Unavailable in this correction pass: phone capture (both 390 × 844 freeform and iPhone 12 Pro preset resize timed out), hybrid-pointer media emulation, physical touch and screen-reader verification, greyscale and reduced-motion emulation. The corrections add no animation; automated assertions and DOM inspection are not claimed as physical-device verification.

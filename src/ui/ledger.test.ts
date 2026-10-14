@@ -48,8 +48,8 @@ describe("what the board earns in the rate details (issue #334)", () => {
     const css = readFileSync("src/ui/style.css", "utf8");
     const pick = css.slice(css.indexOf(".rd-pick {"), css.indexOf(".rd-pick:hover"));
     expect(pick).toContain("min-height: 0");
-    // Coarse pointers keep the 44px floor: the height reads as tap spacing.
-    const coarse = css.slice(css.indexOf("@media (pointer: coarse)"), css.indexOf("@media (pointer: coarse)") + 120);
+    // Any coarse pointer keeps the floor, including secondary touch input.
+    const coarse = css.slice(css.indexOf("@media (any-pointer: coarse)"), css.indexOf("@media (any-pointer: coarse)") + 120);
     expect(coarse).toContain(".rd-pick { min-height: 44px");
   });
 

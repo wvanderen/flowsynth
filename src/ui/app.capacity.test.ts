@@ -378,6 +378,12 @@ describe("placement previews with capacity-aware production (#260)", () => {
     expect(scale).not.toBeNull();
     expect(scale.getAttribute("data-q")).toBe(String(1 + BALANCE.allocationComplexityRate));
     expect(readout().querySelector(".scale-marker")).not.toBeNull();
+    // The plain scale keeps its measured quality accessible even when
+    // there is no applied formation chip and no disclosure button.
+    expect(scale.getAttribute("role")).toBe("img");
+    expect(scale.getAttribute("aria-label")).toContain(`this formation measures ×${formatNumber(1 + BALANCE.allocationComplexityRate)}`);
+    expect(scale.getAttribute("aria-label")).toContain("×1 neutral");
+    expect(readout().querySelector("button, .inst-tip")).toBeNull();
     // The preview is transient: leaving the cell restores the readout and
     // the board never moved.
     cell(0, 1).dispatchEvent(new MouseEvent("pointerleave", { bubbles: true }));

@@ -924,8 +924,8 @@ h1, h2, h3, p { margin: 0; }
    without opening anything. No expansion: the amendment drops the per-row
    details and their arrow for now (issue #334). The pick rides the row's
    own line — the base button's 44px floor would pad every row with dead
-   space below the baseline — and coarse pointers keep the floor, where
-   the height reads as tap spacing rather than dead air. */
+   space below the baseline — and any coarse pointer keeps the floor,
+   including secondary touch input on a laptop with a trackpad. */
 .rd-pick {
   display: flex;
   align-items: baseline;
@@ -941,7 +941,7 @@ h1, h2, h3, p { margin: 0; }
   cursor: pointer;
   transition: color 0.15s;
 }
-@media (pointer: coarse) {
+@media (any-pointer: coarse) {
   .rd-pick { min-height: 44px; align-items: center; }
 }
 .rd-pick:hover:not(:disabled) { background: transparent; border-color: transparent; color: var(--nous); }
