@@ -3,8 +3,12 @@
 Source: issue #336, working tree on `t3code/implement-issue-336`. Launched
 this checkout with `npm run dev`; the provenance endpoint
 (`/-/dev/provenance`) returned this worktree, branch, and commit
-(`8fb5ff228c325e9b4059c890cb58fce2023cfc44`) before any capture, matching
-`git rev-parse` in the checkout.
+(`ec7731909b6fe5be3a514f863a69667b747d50eb`) before every capture, matching
+`git rev-parse` in the checkout. This is a recapture at the head after the
+chip-keying fix (`ec77319`): the lock chip now rides the gate each action
+declares, so the thumb bar's Collection — never flow-gated — wears no chip;
+the first capture pass (at `8fb5ff2`) predated that fix and its DOM ledger
+was wrong about Collection.
 
 The T3 preview viewport resize timed out on all three attempts (the bounded
 budget in [visual evidence](../../agents/visual-evidence.md)), so the phone
