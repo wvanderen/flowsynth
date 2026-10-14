@@ -429,8 +429,14 @@ export const CAPACITY_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="n
   <path d="M8 13.8h8"/>
 </svg>`;
 
+function capacityReadHtml(state: GameState, phone: boolean): string {
+  const live = phone ? "i-capacity" : "capacity";
+  const classes = phone ? "info-read info-capacity" : "ledger-fig ledger-capacity";
+  return `<span class="inst-tip capacity-tip"><button type="button" class="inst-tip-trigger capacity-trigger ${classes}" aria-labelledby="${live}-name ${live}-value" aria-expanded="false" aria-describedby="${live}-tip"><span class="sr-only" id="${live}-name">Harmonic capacity</span><b class="mono" id="${live}-value" data-live="${live}">${voiceCapacityOf(state)}</b><small class="capacity-mark" aria-hidden="true">${CAPACITY_SVG}</small></button><span class="inst-tip-body" id="${live}-tip" role="tooltip">Whole-chord budget per voice</span></span>`;
+}
+
 export function capacityLedgerHtml(state: GameState): string {
-  return `<span class="ledger-fig ledger-capacity" title="Whole-chord budget per voice"><b class="mono" data-live="capacity">${voiceCapacityOf(state)}</b><small class="capacity-mark" aria-hidden="true">${CAPACITY_SVG}</small></span>`;
+  return capacityReadHtml(state, false);
 }
 
 // ── The board ledger (§7, issue #270) ───────────────────────────────────
@@ -486,7 +492,7 @@ export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
     // tap opens the module's Hex detail — the row names the place, the
     // cross-section shows it. The tooltip layer pins and dismisses beside it.
     wireSynthPicks(host.querySelector(".rate-breakdown")!, (id) => app.openModuleDetail(id), app);
-    wireTooltips(host.querySelector(".rate-breakdown")!, app.signal);
+    wireTooltips(host, app.signal);
   }
   const detailModule = app.ui.detail ? deployedAt(state, app.ui.detail.pos) : undefined;
   updateLedgerLive(host, state, snapshot, detailModule?.id ?? null);
@@ -547,8 +553,9 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
           ? `<span class="info-read info-arete" title="Arete — banked by prestige; spent in the catalog"><b class="mono" data-live="i-arete"></b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small></span>`
           : `<span class="info-read info-arete arete-dim" title="Unlocks at first Arete Reset">${areteTelegraphHtml()}</span>`
       }
-      <span class="info-read info-capacity" title="Whole-chord budget per voice"><b class="mono" data-live="i-capacity">${voiceCapacityOf(state)}</b><small class="capacity-mark" aria-hidden="true">${CAPACITY_SVG}</small></span></div>`;
+      ${capacityReadHtml(state, true)}</div>`;
     app.listen(document.getElementById("info-rate"), "click", () => app.openModal("rate"));
+    wireTooltips(host, app.signal);
   }
   const set = (live: string, text: string) => liveSet(host, live, text);
   // Same compression as the ledger's read, same exact tooltip (issue #187).

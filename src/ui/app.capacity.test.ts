@@ -592,6 +592,29 @@ describe("the canvas-edge capacity read (#333)", () => {
     expect(stripRead()).toBe("1");
   });
 
+  it.each([".ledger-capacity", ".info-capacity"])("%s discloses by focus and tap, dismisses, and survives live updates", (selector) => {
+    const trigger = document.querySelector<HTMLButtonElement>(selector)!;
+    const tip = () => document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+    expect(trigger.tagName).toBe("BUTTON");
+    const name = () => trigger.getAttribute("aria-labelledby")!.split(" ").map((id) => document.getElementById(id)!.textContent).join(" ");
+    expect(name()).toBe("Harmonic capacity 1");
+    trigger.focus();
+    expect(tip().classList.contains("inst-show")).toBe(true);
+    expect(tip().textContent).toBe("Whole-chord budget per voice");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(tip().classList.contains("inst-show")).toBe(false);
+    trigger.click();
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    app.state.nous = 1_000_000;
+    app.buyCapacityAction();
+    expect(trigger.querySelector("b")!.textContent).toBe("2");
+    expect(name()).toBe("Harmonic capacity 2");
+    expect(tip().classList.contains("inst-show")).toBe(true);
+    document.body.click();
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(tip().classList.contains("inst-show")).toBe(false);
+  });
+
   it("buying Poly Expander advances the ambient allowance and the selected-voice denominator; new voices inherit it", () => {
     give(app.state, "additive", hex(1, 0));
     app.state.nous = 1_000_000;

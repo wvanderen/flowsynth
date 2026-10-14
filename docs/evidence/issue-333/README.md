@@ -37,7 +37,7 @@ Live DOM guards recorded at capture time (desktop session): ambient `1` → `2` 
 
 ## Instrument-standards notes
 
-- The ambient read rides the ledger's grouped-resource grammar — figure + canonical mark, native-title gloss ("Whole-chord budget per voice", the term's canonical CONTEXT.md gloss), no header, no explanatory paragraph — mirroring the arete read's shape; the mark is the board's own hex-chassis-with-chord-seal language. The canonical mark also replaces the library glyph on the reserved readout's capacity chip, so one glyph names one concept everywhere it appears.
+- The ambient read rides the ledger's grouped-resource grammar — figure + canonical mark, shared focus/hover/tap disclosure ("Whole-chord budget per voice", the term's canonical CONTEXT.md gloss), no header, no explanatory paragraph — mirroring the arete read's shape; the mark is the board's own hex-chassis-with-chord-seal language. The canonical mark also replaces the library glyph on the reserved readout's capacity chip, so one glyph names one concept everywhere it appears.
 - The allowance appears exactly once per screen at every width (ledger ≥600px, game-info strip below); the selected voice's used/available stays in the reserved readout and Hex detail — no board-wide fill meter was added.
 - State distinctions hold without color: active solid vs idle dotted/dim is a stroke pattern, and the greyscale capture demonstrates it. Purchase state figures (`1/3 → 2/3`) live in the Catalog row as shipped.
 - The surfaces are static reads; no new animation joins them (glow and motion stay with charge and live activity). Reduced-motion behavior is unchanged from the standing seam pulse rules — idle marks never pulse, and the read never animates.
@@ -46,4 +46,10 @@ Live DOM guards recorded at capture time (desktop session): ambient `1` → `2` 
 
 - Physical touch gesture verification on a real device: unavailable; phone captures are real 390 px viewport renders, and touch disclosure of the reserved readout's capacity chip is pinned by the suite (`readout disclosures open by focus and tap` — focus-open, Escape-dismiss, tap-open, tap-away-dismiss).
 - Live `prefers-reduced-motion` media emulation during capture: unavailable; the source-level notes above (no new motion; idle never pulses; the pulse rules unchanged) are not a claimed emulation pass.
-- The keyboard path to the ledger's capacity read: it is a read, not a control (like the arete read), so there is no focusable door to exercise; its gloss rides the native title like every grouped read on the strip.
+- The original title-only capacity reads were corrected during PR #339 review: both now use named buttons and the shared tooltip layer, with focus/hover/tap opening and Escape/tap-away dismissal. They disclose the mechanic without opening the Catalog.
+
+## PR #339 disclosure correction
+
+The regression suite exercises both ambient reads through focus-open, Escape-dismiss, click/tap-open, and outside-click-dismiss, including a capacity purchase while the disclosure is open. Browser provenance confirmed the review checkout `/Users/eggfam/.t3/worktrees/flowsynth/t3code-381e08cc` at base commit `af28b7f` with the correction in the working tree. Live browser inspection confirmed the named button and portaled tooltip opening on click. Phone viewport resizing timed out twice across this review and correction; current phone layout capture and physical-touch verification remain unavailable. Live reduced-motion emulation remains unavailable; no animation was added.
+
+Correction validation: `npm run check` passed; full suite 1,297 passed and 2 skipped; UI suite 681 passed. After including the live figure in the accessible name, typecheck and all 33 capacity UI tests passed again. Focus disclosure is verified by the regression tests; the live browser had an existing honesty report open, so its focus path was not claimed as verified.

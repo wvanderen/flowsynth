@@ -3765,3 +3765,23 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   transition: none;
 }
 .readout-tip-trigger:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* Ambient capacity keeps the grouped read's geometry while its meaning
+   opens through the shared focus, hover, and tap disclosure. */
+.capacity-tip .capacity-trigger {
+  width: auto;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  align-items: baseline;
+  background: transparent;
+  color: var(--ink);
+}
+.capacity-tip .capacity-trigger:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+@media (pointer: coarse) {
+  .capacity-tip .capacity-trigger { min-width: 44px; min-height: 44px; align-items: center; }
+}
