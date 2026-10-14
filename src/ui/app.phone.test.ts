@@ -565,6 +565,46 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
   });
 });
 
+describe("the coarse-pointer touch floor (issue #350)", () => {
+  const css = readFileSync("src/ui/style.css", "utf8");
+  const blocks = (query: string) =>
+    [...css.matchAll(new RegExp(`${query} \\{[\\s\\S]*?\\n\\}`, "g"))].map((match) => match[0]);
+
+  // The floor lifts only where the primary pointer is a finger — the
+  // desktop's compact densities stand (instrument standards: touch
+  // targets are accessibility, not decoration).
+  it("the compact controls reach the 44px floor on coarse pointers", () => {
+    const floor = blocks("@media \\(pointer: coarse\\)").find((block) => block.includes(".zoom-cluster button"));
+    expect(floor).toBeTruthy();
+    expect(floor).toMatch(/\.zoom-cluster button\s*\{[^}]*width:\s*44px[^}]*height:\s*44px/);
+    expect(floor).toMatch(/\.arc-dismiss\s*\{[^}]*width:\s*44px[^}]*height:\s*44px/);
+    expect(floor).toMatch(/\.app-tile\s*\{[^}]*width:\s*44px[^}]*height:\s*44px/);
+    expect(floor).toMatch(/\.focus-close\s*\{[^}]*min-width:\s*44px[^}]*min-height:\s*44px/);
+    expect(floor).toMatch(/\.history-row\s*\{[^}]*min-height:\s*44px/);
+    // The dismiss's grown target rides inside the card: the copy's right
+    // padding clears it (44px target + its 6px inset + breathing room).
+    expect(floor).toMatch(/\.arc-card\s*\{[^}]*padding-right:\s*56px/);
+  });
+
+  it("the arc card docks above the zoom cluster's coarse lane, clear of the Arete read", () => {
+    const phone = blocks("@container app \\(width < 600px\\)").find((block) => block.includes(".arc-card"));
+    expect(phone).toBeTruthy();
+    const floor = blocks("@media \\(pointer: coarse\\)").find((block) => block.includes(".zoom-cluster button"))!;
+    const px = (block: string, selector: string, prop: string) =>
+      Number(block.match(new RegExp(`${selector}\\s*\\{[^}]*${prop}:\\s*(\\d+)px`))![1]);
+    // The cluster's lane on phone: bottom 64 carrying three coarse-floor
+    // buttons and two gaps; the card docks over its top with air to
+    // spare — it never runs beneath the cluster's edge.
+    const laneTop = px(phone!, "\\.zoom-cluster", "bottom") + 3 * px(floor, "\\.zoom-cluster button", "height") + 2 * 6;
+    const cardBottom = px(phone!, "\\.arc-card", "bottom");
+    expect(cardBottom).toBeGreaterThanOrEqual(laneTop + 4);
+    // And the horizon bar's whole lane sits below that dock, so the
+    // Arete word stays readable under the card.
+    const barTop = px(phone!, "\\.horizon-bar", "bottom") + px(phone!, "\\.horizon-bar", "height");
+    expect(cardBottom).toBeGreaterThan(barTop);
+  });
+});
+
 describe("the phone banner (ADR-0050's amended phone line)", () => {
   beforeEach(() => {
     setAppWidth(390);
