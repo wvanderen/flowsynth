@@ -240,7 +240,9 @@ describe("the one-capacity economy on the board (#258)", () => {
     document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(readout().textContent).toContain("(1/1)");
     app.openModal("rate");
-    expect(document.getElementById("modal-content")!.textContent).toContain("Capacity");
+    // The sheet carries no capacity leg — the used/available read stays
+    // local to the reserved readout and Hex detail (issue #334's roster).
+    expect(document.getElementById("modal-content")!.textContent).not.toContain("Capacity");
     app.closeModal();
     app.openModal("library");
     expect(document.querySelector("#modal-content .chord-count")!.textContent).toContain("×1");

@@ -127,26 +127,21 @@ describe("the board ledger (§7, issue #270)", () => {
     expect(document.querySelector('#board-ledger [data-live="arete"]')).toBeNull();
   });
 
-  it("the supporting modules take no roster row — their effects speak in the local calculations (#334)", () => {
+  it("the supporting modules take no roster row (issue #334)", () => {
     app.render();
     // The launch roster is one synthesizer: only its own row exists.
     expect(document.querySelector("#board-ledger .rd-other-row")).toBeNull();
     give(app.state, "infusor", hex(0, 1));
     app.render();
-    // No supporting roster at all: the infusor's uplift discloses in the
-    // synth's own calculation, never as a second producer row.
+    // No supporting roster at all, and no expansion: the infusor's uplift
+    // discloses through its own surfaces, never as a second producer row.
     const breakdown = document.querySelector("#board-ledger .rate-breakdown")!;
     expect(breakdown.querySelector(".rd-other-row")).toBeNull();
     expect(breakdown.querySelectorAll(".rd-synth")).toHaveLength(1);
-    const toggle = breakdown.querySelector<HTMLButtonElement>(".rd-calc-toggle")!;
-    toggle.click();
-    const calc = breakdown.querySelector(".rd-calc")!;
-    expect(calc.textContent).toContain("Booster");
-    expect(calc.textContent).toContain("+20%");
-    expect(calc.textContent).not.toContain("to adjacent");
+    expect(breakdown.querySelector(".rd-calc, .rd-calc-toggle")).toBeNull();
   });
 
-  it("every synthesizer row carries its final ν/s and opens its calculation inline; the rows sum to the board's rate", () => {
+  it("every synthesizer row carries its final ν/s; the rows sum to the board's rate", () => {
     const s = app.state;
     give(s, "additive", hex(1, 0)); // G4 — a Fifth with the launch C4
     give(s, "infusor", hex(0, 1)); // uplift on C4
@@ -168,19 +163,6 @@ describe("the board ledger (§7, issue #270)", () => {
     expect(document.querySelector('#board-ledger [data-live="b-rate"]')!.textContent).toBe(
       `${formatNumber(snapshot.rate)} ν/s`,
     );
-    // The opened calculation: base, chords (named), infusor, charge — and
-    // the global factors once as the closing leg, so the chain multiplies
-    // back to the row's own figure.
-    const fifth = snapshot.namedChords[0]!;
-    for (const row of rows) row.querySelector<HTMLButtonElement>(".rd-calc-toggle")!.click();
-    const legs = rows[0]!.parentElement!.querySelector(".rd-calc")!.textContent!;
-    expect(legs).toContain("Base");
-    expect(legs).toContain(fifth.name);
-    expect(legs).toContain("Chords");
-    expect(legs).toContain("Booster");
-    expect(legs).toContain("Charge");
-    expect(legs).toContain("Feats · Discoveries");
-    expect(legs).toContain("already included");
   });
 
   it("the session summary's legs use the new names", () => {
@@ -296,18 +278,10 @@ describe("the rate details disclosure (§7, issue #154)", () => {
     expect(app.state.modules.find((m) => m.id === id)!.pos).toEqual(app.ui.detail!.pos);
     expect((document.getElementById("hex-detail") as HTMLElement).hidden).toBe(false);
     expect(row.classList.contains("st-selected")).toBe(true);
-    // A click inside the opened calculation is reading, never picking:
-    // copying a leg figure or scrolling the roster must not open another
-    // detail.
-    const toggle = row.querySelector<HTMLButtonElement>(".rd-calc-toggle")!;
-    toggle.click();
-    expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    row.parentElement!.querySelector(".rd-calc")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.state.modules.find((m) => m.id === id)!.pos).toEqual(app.ui.detail!.pos);
-    // And the calculation control is its own: toggling it never picks.
-    toggle.click();
-    expect(app.state.modules.find((m) => m.id === id)!.pos).toEqual(app.ui.detail!.pos);
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    // The roster carries no expansion arrow: the row's one control is the
+    // pick (issue #334's amendment).
+    expect(row.querySelector(".rd-calc-toggle")).toBeNull();
+    expect(row.querySelectorAll("button")).toHaveLength(1);
   });
 
   it("the boundary width itself stays on the desktop side of the 760px line", () => {
@@ -328,15 +302,12 @@ describe("the rate details disclosure (§7, issue #154)", () => {
     app.closeModal();
   });
 
-  it("a calculation's click never closes the sheet mid-read; only a row's tap does", () => {
+  it("the sheet keeps its rows honest: a pick closes it and lands on the module", () => {
     setAppWidth(720);
     app.render();
     document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     const modal = document.getElementById("modal-content")!;
     const row = modal.querySelector(".rd-synth")!;
-    const toggle = row.querySelector<HTMLButtonElement>(".rd-calc-toggle")!;
-    toggle.click();
-    row.parentElement!.querySelector(".rd-calc")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.ui.modal).toBe("rate");
     // The row's own tap closes the sheet and opens the module's Hex detail.
     row.querySelector(".rd-pick")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));

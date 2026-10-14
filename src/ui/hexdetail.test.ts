@@ -165,11 +165,6 @@ describe("opening the cross-section (issue #295)", () => {
     expect(app.ui.detail).not.toBeNull();
     expect(app.state.modules.find((m) => m.id === id)!.pos).toEqual(app.ui.detail!.pos);
     expect(row.classList.contains("st-selected")).toBe(true);
-    // A click inside the row's opened calculation is reading, never
-    // picking (issue #334).
-    row.querySelector<HTMLButtonElement>(".rd-calc-toggle")!.click();
-    row.parentElement!.querySelector(".rd-calc")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.ui.detail).toEqual({ pos: hex(0, 0), face: "modules" });
   });
 });
 

@@ -45,7 +45,7 @@ import { chordOverlay, chordMarkCovers, chipWidth, CHORD_HUES, type ChordMark } 
 import { updateSvg } from "./svg";
 import { APP_LABELS, META, RARITY_LABEL, SHELF_DESCRIPTIONS } from "./meta";
 import { formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown } from "./format";
-import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, wireRateCalcs, FEATS_SVG, LIBRARY_SVG, ARETE_SVG, CAPACITY_SVG } from "./ledger";
+import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG, CAPACITY_SVG } from "./ledger";
 import { closeTooltips, wireTooltips } from "./instrument";
 import { instancesByClass, instancesKeyOf, libraryHeaderHtml, libraryIndexRowHtml, libraryStageHtml } from "./library";
 import { discoveryCount, discoveryBoostOf, rootsHeardOf } from "../engine/library";
@@ -2463,14 +2463,12 @@ function renderNotesModal(app: App, content: HTMLElement): void {
 // below the 760px breakpoint, opened by tapping the Rate cell or the
 // strip's rate read at every width. The same roster the Rate cell's hover
 // popover owns above the breakpoint, built the same way: live slots the
-// tick fills, so an open calculation survives the clock. The row's own
-// calculation control opens its leg decomposition inline, one oscillator
-// at a time — keyboard and touch take the same explicit door the mouse
-// does, and a calculation's click never picks a module. The surface
-// carries no header of its own — the eyebrow names it and the roster
-// speaks (the instrument standards' identity rule) — and a synthesizer
-// row's tap closes the sheet and selects the module, so the answer lands
-// on the board it names.
+// tick fills. No expansion and no per-row details — the 2026-10-14
+// amendment drops the inline calculation and its arrow for now. The
+// surface carries no header of its own — the eyebrow names it and the
+// roster speaks (the instrument standards' identity rule) — and a
+// synthesizer row's tap closes the sheet and selects the module, so the
+// answer lands on the board it names.
 function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): void {
   // The same basis every rate figure wears — live during flow, projected
   // while arranging — so the sheet can never disagree with the ledger it
@@ -2486,7 +2484,6 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
       app.closeModal();
       app.openModuleDetail(id);
     }, app);
-    wireRateCalcs(sheet, app);
     wireTooltips(sheet, app.signal);
   }
   wireClose(app);

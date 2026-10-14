@@ -911,12 +911,6 @@ h1, h2, h3, p { margin: 0; }
   font-size: 12px;
 }
 .rd-row:last-child { border-bottom: 0; }
-/* One oscillator's block: its row and the calculation that block opens —
-   the hairline falls between oscillators, never between a row and its own
-   opened arithmetic. */
-.rd-osc { border-bottom: 1px solid var(--line); }
-.rd-osc:last-child { border-bottom: 0; }
-.rd-osc .rd-row { border-bottom: 0; }
 .rd-allocation-state[hidden] { display: none; }
 .rd-name { color: var(--ink); font-size: 12.5px; }
 .rd-note { font-size: 10.5px; color: var(--muted); }
@@ -926,9 +920,9 @@ h1, h2, h3, p { margin: 0; }
    per-row payout — the muted register keeps it from reading as a leg. */
 .rd-global .rd-name, .rd-global .rd-val { color: var(--muted); font-weight: 400; font-size: 11.5px; }
 /* The synth row: the name is the pick (a real button, so Enter and Space
-   work), the row's own calculation control opens its leg chain inline, and
-   the final figure stays critical at the right edge — visible without
-   opening anything. */
+   work) and the final figure stays critical at the right edge — visible
+   without opening anything. No expansion: the amendment drops the per-row
+   details and their arrow for now (issue #334). */
 .rd-pick {
   display: flex;
   align-items: baseline;
@@ -949,50 +943,6 @@ h1, h2, h3, p { margin: 0; }
 /* The selected row wears the state grammar's firm inset marker — readable
    without color — with the nous name as reinforcement only. */
 .rd-synth.st-selected .rd-name { color: var(--nous); }
-/* The calculation control (issue #334): a square-cut, hairline-ringed
-   button — the instrument grammar's own shape — carrying the disclosure's
-   direction with its state (⌄ closed, ⌄ rotated open), never color alone.
-   A real button: keyboard and touch take the same door the mouse does. The
-   compact glyph rides an invisible 44px hit field, so the touch floor
-   PRODUCT.md pins holds without swelling the roster's rhythm. */
-.rd-calc-toggle {
-  position: relative;
-  flex-shrink: 0;
-  align-self: center;
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 0;
-  background: transparent;
-  color: var(--muted);
-  font: 10px var(--mono);
-  line-height: 1;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, transform 0.15s;
-}
-.rd-calc-toggle::after { content: ""; position: absolute; inset: -13px; }
-.rd-calc-toggle:hover { color: var(--ink); border-color: var(--muted); }
-.rd-calc-toggle:focus-visible { outline-offset: 2px; }
-.rd-calc-toggle[aria-expanded="true"] { color: var(--ink); border-color: var(--ink); transform: rotate(180deg); }
-/* A synth row's inline calculation: the leg chain one control opens, rule-
-   separated like every open division — label, figure, note — reading as
-   the multiplication it is, ending at the row's own final figure. The
-   product line carries the weight; the global leg's note says included. */
-.rd-calc { display: grid; gap: 2px; padding: 2px 0 6px; cursor: default; }
-.rd-calc[hidden] { display: none; }
-.rd-leg {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  font-size: 11.5px;
-}
-.rd-leg-name { color: var(--muted); flex-shrink: 0; }
-.rd-leg .rd-val { font-size: 11.5px; }
-.rd-leg .rd-note { margin-left: 0; }
-.rd-leg .rd-note:empty { display: none; }
-.rd-leg-product { border-top: 1px solid var(--line); margin-top: 3px; padding-top: 4px; }
-.rd-leg-product .rd-val { color: var(--ink); font-weight: 600; }
 /* The whole ledger is the door (#233, the #220 verdict): above the 760px
    breakpoint a hover or focus anywhere on the strip opens the roster, and
    the popover drops ledger-wide from beneath the panel. The ⓘ ring sits
