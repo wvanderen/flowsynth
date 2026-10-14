@@ -5,7 +5,7 @@ import { BALANCE, isVoiceType } from "../engine/constants";
 import { STORAGE_KEY } from "../engine/save";
 import { ARETE_HORIZON } from "../engine/accumulator";
 import { startSession } from "../engine/actions";
-import { displayedRates, allocateRates, projectPlacement } from "../engine/economy";
+import { displayedRates, allocateRates, projectPlacement, resetAllocationMemo } from "../engine/economy";
 import { give } from "../engine/fixtures";
 import * as allocation from "../engine/allocation";
 import { hex, sameHex } from "../engine/hex";
@@ -270,6 +270,10 @@ describe("the one-capacity economy on the board (#258)", () => {
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
       expect(tip.classList.contains("inst-show")).toBe(false);
       spy.mockRestore();
+      // The solver's identity changed back under the memo (issue #349):
+      // clear it so the production solve re-runs instead of serving the
+      // mocked solve's cached result.
+      resetAllocationMemo();
       app.render();
       expect(readout().textContent).not.toContain("Allocation uncertified");
       expect(status.hidden).toBe(true);

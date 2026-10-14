@@ -38,6 +38,7 @@ import { META, RARITY_LABEL } from "./meta";
 import { isPhoneWidth } from "./container";
 import { wireTooltips } from "./instrument";
 import { moduleFlowsHtml, mutatorFlowHtml } from "./hexflows";
+import type { DetailChordRow } from "./render";
 
 /* ── The upgrade benefit (§5) ─────────────────────────
    One entry per module type — the single place a type's benefit phrasing
@@ -111,9 +112,10 @@ function benefitOf(app: App, module: ModuleInstance, snapshot: RateSnapshot, lev
 // exactly as they left; the open itself is the display transition, so its
 // one-time lift needs no markup (a rebuild never re-triggers it).
 // `chordRow` arrives from the readout's own module (render.ts owns the
-// reserved grammar); the row mounts beside the module face and rides the
-// rebuild key so a live read never shows stale chips.
-export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSnapshot, chordRow: string): void {
+// reserved grammar) — html plus `key`, its inputs rather than its
+// formatted string (#349). The row mounts beside the module face and the
+// key rides the rebuild guard so a live read never shows stale chips.
+export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSnapshot, chordRow: DetailChordRow): void {
   const host = document.getElementById("hex-detail");
   if (!host) return;
   const { state, ui } = app;
@@ -141,6 +143,18 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   const module = deployedAt(state, pos);
   const phone = isPhoneWidth();
   const mutItem = mutatorAt(state, pos);
+  // The rebuild key's inputs (#349): every entry below is a raw input the
+  // rendered stack derives its readouts from — module shape, the face's
+  // power and the contribution's own figures, the charge register, the
+  // mutator's identity, the tray's stock, the chord row's marks — never a
+  // formatted string. The old key stringified computed prose (the face
+  // readout, the chord row, the whole contribution object) every tick, so
+  // the guard itself cost a large fraction of the rebuild it guarded.
+  // Derivation notes: the face readout's relay, booster, and ritual
+  // figures derive from hostPower, chargeStrength, and the level below;
+  // the mutator slot's inert verdict derives from the module's presence,
+  // the mutator's family, and the contribution's chord factor.
+  const contribution = module ? snapshot.contributions.get(module.id) ?? null : null;
   const key = JSON.stringify([
     phone,
     state.mode,
@@ -149,13 +163,22 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
     detail.face,
     module ? `${module.id}:${module.type}:${module.level}:${module.rarity}:${module.shift}` : "empty",
     module ? forgeBranchOf(state, module.type) : null,
-    module ? faceReadoutFor(state, module, pos, snapshot, true) : null,
+    module ? hostPower(state, module) : 0,
+    contribution
+      ? [
+          contribution.value,
+          contribution.pitch,
+          contribution.amplitude,
+          contribution.chordTerms,
+          contribution.chordFactor,
+          contribution.formationQ,
+          contribution.formationMeasuredQ,
+          contribution.infusorBonus,
+          contribution.chargeFactor,
+          contribution.chargeStrength,
+        ]
+      : null,
     module ? snapshot.chargeStrength.get(module.id) ?? 0 : 0,
-    // The chord connection's live read (issue #297): the voice's chord
-    // factor flips the wave between solid and dashed, and a silent
-    // voice's face readout (its pitch) does not move when it does.
-    module ? snapshot.contributions.get(module.id)?.chordFactor ?? null : null,
-    mutItem ? mutatorInertVerdict(state, pos, mutItem, snapshot) : null,
     mutItem ? `${mutItem.id}:${mutItem.rarity}:${mutItem.family}` : mutItem,
     state.mutatorSlots.length,
     state.catalogEntryOwned,
@@ -167,8 +190,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
     upgrade ? Math.floor(state.arete) : 0,
     upgrade ? ui.bulkCount : 0,
     upgrade ? Math.floor(wholeNous(state)) : 0,
-    chordRow,
-    module ? snapshot.contributions.get(module.id) : null,
+    chordRow.key,
     snapshot.achievementBoost,
     snapshot.discoveryBoost,
     snapshot.ritualAmplification,
@@ -181,6 +203,10 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   }
   // A changed read rebuilds the stack. Preserve the focused control and
   // scroll, and retire portaled tooltips before reusing chord disclosure IDs.
+  // (The guard above is the per-tick path: an unchanged read performs no
+  // layout read at all. The scroll preserve below is rebuild-only — an
+  // action, not a tick — and reads the old stack before its own write,
+  // since the rebuild replaces the node the scroll belongs to.)
   const focused = document.activeElement;
   const focusAttribute = focused instanceof HTMLElement && host.contains(focused)
     ? ["id", "data-detail-face", "data-bulk", "data-shift", "aria-describedby"]
@@ -201,7 +227,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
       <div class="hex-detail-grid">
         ${mutatorLayerHtml(app, pos, snapshot)}
         ${mutatorFlowHtml(state, pos, module, snapshot, snapshotFlow)}
-        ${moduleLayerHtml(app, pos, module, snapshot, chordRow)}
+        ${moduleLayerHtml(app, pos, module, snapshot, chordRow.html)}
       </div>
       ${detailTrayHtml(app, "modules")}
       ${detailTrayHtml(app, "mutators")}

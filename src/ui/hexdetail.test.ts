@@ -529,7 +529,7 @@ describe("live detail review regressions (PR #301)", () => {
     app.openDetail(hex(1, 0));
     const snapshot = displayedRates(app.state, true);
     snapshot.chargeStrength.set(module.id, 10);
-    renderHexDetail(app, snapshot, snapshot, "");
+    renderHexDetail(app, snapshot, snapshot, { html: "", key: "" });
     expect(faceSvg("modules").textContent).toContain("⌁10");
     expect(faceSvg("modules").querySelector(".charged")).not.toBeNull();
     const face = section("modules").querySelector<HTMLElement>("[data-detail-face]")!;
@@ -538,7 +538,7 @@ describe("live detail review regressions (PR #301)", () => {
     expect(description.textContent).toContain("⌁10");
     face.focus();
     snapshot.chargeStrength.set(module.id, 0);
-    renderHexDetail(app, snapshot, snapshot, "");
+    renderHexDetail(app, snapshot, snapshot, { html: "", key: "" });
     expect(faceSvg("modules").textContent).toContain("⌁0");
     expect(faceSvg("modules").querySelector(".charged")).toBeNull();
     expect(document.activeElement?.getAttribute("data-detail-face")).toBe("modules");
@@ -576,7 +576,7 @@ describe("live detail review regressions (PR #301)", () => {
     const snapshot = displayedRates(app.state, true);
     const module = app.state.modules.find((m) => m.pos && sameHex(m.pos, hex(0, 0)))!;
     snapshot.contributions.get(module.id)!.value += 1;
-    renderHexDetail(app, snapshot, snapshot, chordRow);
+    renderHexDetail(app, snapshot, snapshot, { html: chordRow, key: "" });
     expect(document.activeElement?.getAttribute("aria-describedby")).toBe(id);
     expect(oldBody.isConnected).toBe(false);
     expect(document.querySelectorAll(`[id="${id}"]`)).toHaveLength(1);

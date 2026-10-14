@@ -5,7 +5,7 @@ import { capacityOf } from "./capacity";
 import { achievementBoostOf, syncAchievements } from "./achievements";
 import { activeHabit } from "./habits";
 import { baseBuildFactors, amplifyFactors } from "./builds";
-import { discoveryBoostOf, syncChordDiscoveries } from "./library";
+import { discoveryBoostOf, discoveryCount, syncChordDiscoveries } from "./library";
 import { summaryTermsOf } from "./allocation";
 import { adjacent, sameHex } from "./hex";
 import { octaveRowOf } from "./lattice";
@@ -644,6 +644,68 @@ export interface AllocateRatesOptions {
   budget?: AllocationBudget;
 }
 
+// The solve memo (issue #349): one authoritative solve per changed inputs.
+// The tick path reads rates through three seams — advance's boundary sync,
+// the display basis, the charge-projected twin — and between boundaries in
+// flow none of the pass's inputs move: the board is locked, reserves drain
+// but only their charged/empty step feeds the pass, and the boosts move
+// only when a boundary fires. The memo keys a solved AllocatedRates on
+// exactly the inputs the pass reads (the fingerprint below), so
+// consecutive ticks and a render's twin passes serve one solve.
+// `allocationMemoStats` counts real solves and memo hits — the
+// verification read for the skip.
+export interface AllocationMemoStats {
+  solves: number;
+  hits: number;
+}
+
+export const allocationMemoStats: AllocationMemoStats = { solves: 0, hits: 0 };
+
+interface AllocationMemoEntry {
+  fingerprint: string;
+  result: AllocatedRates;
+}
+
+let allocationMemo = new WeakMap<GameState, Map<string, AllocationMemoEntry>>();
+
+function memoKeyOf(flow: boolean, capacity: number, budget: AllocationBudget, keep: ReadonlySet<string>): string {
+  return `${flow ? "flow" : "build"}:${capacity}:${budget.maxNodes}:${budget.maxMs}:${keepKeyOf(keep)}`;
+}
+
+// Tests clear the memo when the solver's identity changes under it — a
+// mocked allocateChords must not serve its results as the production
+// solve's. Production never calls this: the solver is static.
+export function resetAllocationMemo(): void {
+  allocationMemo = new WeakMap();
+}
+
+// The pass's input fingerprint: everything computeRates and the allocator
+// read from state. It lives beside the pass on purpose — a new rate input
+// joins here or the memo serves a stale read. Reserve rides as its
+// charged/empty step (the only form the pass reads), never its raw value:
+// reserves drain every flow tick while the rate holds still.
+function allocationFingerprint(state: GameState): string {
+  const parts: string[] = [];
+  for (const module of state.modules) {
+    if (module.pos === null) continue;
+    parts.push(`${module.id}:${module.type}:${module.pos.q},${module.pos.r}:${module.level}:${module.rarity}:${module.shift}:${module.reserve > EPS ? 1 : 0}`);
+  }
+  for (const mutator of state.mutators) {
+    if (mutator.pos === null) continue;
+    parts.push(`${mutator.id}:${mutator.family}:${mutator.rarity}:${mutator.pos.q},${mutator.pos.r}`);
+  }
+  const habit = activeHabit(state);
+  parts.push(`b:${state.activeHabitId}:${habit ? habit.build.join(",") : ""}`);
+  parts.push(`f:${Object.keys(state.achievements).length}`);
+  parts.push(`d:${discoveryCount(state)}`);
+  parts.push(`c:${state.capacityBought}:${state.capacityCeilings}`);
+  return parts.join("|");
+}
+
+function keepKeyOf(keep: ReadonlySet<string>): string {
+  return [...keep].sort().join(";");
+}
+
 // The authoritative allocation pass (issue #258): the real rate pass run
 // twice — chordless, for per-voice weights that carry every non-chord
 // leg, then whole-chord allocation riding the same pass — so the rate,
@@ -657,6 +719,23 @@ export function allocateRates(
   options: AllocateRatesOptions = {},
 ): AllocatedRates {
   const capacity = options.capacity ?? voiceCapacityOf(state);
+  const keep = options.keep ?? activeChordKeysOf(state);
+  const budget = options.budget ?? DEFAULT_ALLOCATION_BUDGET;
+  // The memo read: same board inputs, same basis, same retention hint —
+  // the solved pair stands; nothing below needs to run again. The served
+  // snapshot is shared, read-only by contract: callers read figures, they
+  // never write into a returned snapshot — the memo serves one object per
+  // changed inputs.
+  const fingerprint = allocationFingerprint(state);
+  const key = memoKeyOf(flow, capacity, budget, keep);
+  let entries = allocationMemo.get(state);
+  if (!entries) allocationMemo.set(state, (entries = new Map()));
+  const hit = entries.get(key);
+  if (hit && hit.fingerprint === fingerprint) {
+    allocationMemoStats.hits++;
+    return hit.result;
+  }
+  allocationMemoStats.solves++;
   const bare = computeRates(state, flow, emptyChordPass);
   const params = new Map<string, AllocationVoiceParams>();
   for (const module of deployed(state)) {
@@ -673,7 +752,7 @@ export function allocateRates(
       params,
       bonusScale,
       ...(options.keep ? { keep: options.keep } : {}),
-      ...(options.budget ? { budget: options.budget } : {}),
+      budget,
     });
     return read.analysis;
   });
@@ -686,7 +765,15 @@ export function allocateRates(
     recognized: allocated.recognizedInstances,
     certified: allocated.certified,
   };
-  return { snapshot, read: allocated };
+  const result = { snapshot, read: allocated };
+  entries.set(key, { fingerprint, result });
+  // The sync writes the solve's own active keys back as the state's
+  // retention hint, so the read right after a solve asks with the hint
+  // the solve produced — store the result under that key too, and the
+  // write-back cannot cost a second solve.
+  const resultKey = memoKeyOf(flow, capacity, budget, new Set(allocated.instances.map((instance) => instance.key)));
+  if (resultKey !== key) entries.set(resultKey, { fingerprint, result });
+  return result;
 }
 
 // The retention hint's one read (issue #258): the state's stored active
@@ -696,10 +783,14 @@ export function activeChordKeysOf(state: GameState): ReadonlySet<string> {
   return new Set(state.activeChords ?? []);
 }
 
-// Live allocation reads must agree across ticks, display and reload.
-// Keep the deterministic node cap; the separate stress/scenario board
-// retains its wall-clock safety valve and reports its own results.
-const LIVE_ALLOCATION_BUDGET: AllocationBudget = { ...DEFAULT_ALLOCATION_BUDGET, maxMs: Infinity };
+// Live allocation reads honor the solver's finite wall-clock valve again
+// (issue #349): a pathological board degrades to the greedy incumbent with
+// the honest uncertified flag instead of stalling the tick — the node cap
+// alone let a solve run past any deadline. The solve memo above keeps the
+// steady-state tick from paying the solve at all, so the valve costs
+// nothing when the board is calm. The stress ladder and the dev scenario
+// board keep their own budgets (STRESS_BUDGET, and the default here).
+export const LIVE_ALLOCATION_BUDGET: AllocationBudget = DEFAULT_ALLOCATION_BUDGET;
 
 // The game's one allocation sync: the authoritative two-pass with the
 // state's stored keys as the retention hint, the new active keys written

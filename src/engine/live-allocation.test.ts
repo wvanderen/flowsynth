@@ -78,19 +78,30 @@ describe("the default allocation economy (#262)", () => {
     expect(displayedRates(state, true)).toEqual(allocateRates(state, true).snapshot);
   });
 
-  it("live recomputation is independent of wall-clock speed", () => {
+  it("live reads hold one solve per changed inputs; a sane clock never trips the valve", () => {
     const state = fresh();
     placed(state, "additive", 1, 0);
     placed(state, "additive", 0, 1);
     const expected = syncRates(state, true);
+    // The unchanged board re-read through the display seam serves the
+    // solve memo (#349): the same result object, whatever the clock does
+    // between the calls.
     let time = 0;
-    const clock = vi.spyOn(performance, "now").mockImplementation(() => time += 10_000);
+    const mad = vi.spyOn(performance, "now").mockImplementation(() => (time += 10_000));
     try {
-      expect(displayedRates(state, true)).toEqual(expected);
-      const loaded = deserialize(serialize(state)).state!;
+      expect(displayedRates(state, true)).toBe(expected);
+    } finally {
+      mad.mockRestore();
+    }
+    // A skewed-but-sane clock stays far from the live valve (issue #349
+    // restored the finite wall-clock budget): a reload re-solves to the
+    // same allocation.
+    const loaded = deserialize(serialize(state)).state!;
+    const skewed = vi.spyOn(performance, "now").mockImplementation(() => (time += 1));
+    try {
       expect(syncRates(loaded, true)).toEqual(expected);
     } finally {
-      clock.mockRestore();
+      skewed.mockRestore();
     }
   });
 

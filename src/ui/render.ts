@@ -50,7 +50,7 @@ import { closeTooltips, wireTooltips } from "./instrument";
 import { instancesByClass, instancesKeyOf, libraryHeaderHtml, libraryIndexRowHtml, libraryStageHtml } from "./library";
 import { discoveryCount, discoveryBoostOf, rootsHeardOf } from "../engine/library";
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
-import { containerWidth, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX } from "./container";
+import { beginLayoutPass, containerWidth, endLayoutPass, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX, viewportWidth } from "./container";
 import { liveAttr, liveSet } from "./live";
 import {
   bindMutatorDrag,
@@ -98,49 +98,59 @@ function currentSnapshot(state: GameState): RateSnapshot {
 }
 
 export function render(app: App): void {
-  // One rate computation per pass, both bases (§7): the display basis —
-  // live during flow, projected build rate while arranging — and the
-  // charge-projected basis the panels, bloom, and countdowns preview.
-  // Every surface below reads the pass's snapshot; none recomputes.
-  const live = currentSnapshot(app.state);
-  const projected = displayedRates(app.state, true);
-  // The chord work's one computation per pass (§6, issue #296): the grid's
-  // seams draw it and the reserved readout's grammar — hover chips, the
-  // Hex detail's chord row — reads the same marks, so a placement made
-  // from the detail refreshes its relationship breakdown even while the
-  // grid stands retired.
-  const chordWork = refreshChordOverlay(app, live);
-  renderConsoleSession(app, projected);
-  renderConsoleApps(app);
-  renderBoardLedger(app, live);
-  renderTools(app, projected);
-  // The Hex detail replaces the grid (issue #295): while it stands the
-  // grid renders nothing — another Hex is unreachable until the return.
-  if (!app.ui.detail) renderGrid(app, live, projected, chordWork);
-  renderInventoryTray(app);
-  renderUpgradeAll(app);
-  renderCellArmPill(app);
-  renderArcCard(app);
-  // The Hex detail (issue #295): the bloom's successor — an owned cell's
-  // cross-section standing where the grid stood, at every width. The
-  // chord row is the readout's own grammar, computed here so the reserved
-  // vocabulary never forks (render owns it, the detail mounts it).
-  const detailChordRow = app.ui.detail
-    ? detailChordRowHtml(app, app.state.mode === "upgrade" ? projected : live)
-    : "";
-  renderHexDetail(app, live, projected, detailChordRow);
-  renderZoomCluster(app);
-  renderHorizonBar(app);
-  renderGameInfoStrip(app, live);
-  // The Mutator Grid's furniture (issue #199): the vertical layer legend,
-  // the pinned tray strip, the armed unlock's pill — each a no-op wherever
-  // its moment isn't now.
-  renderLayerLegend(app);
-  renderMutatorTray(app);
-  renderMutatorPill(app);
-  renderModal(app, live, projected);
-  renderDev(app);
-  renderDevBoard(app);
+  // The pass's layout reads land first, in one batch (#349): the #app
+  // inline size and the viewport read once here, before any board write —
+  // every gate below reads the batch, so the pass never interleaves a
+  // layout read between writes.
+  beginLayoutPass();
+  try {
+    // One rate computation per pass, both bases (§7): the display basis —
+    // live during flow, projected build rate while arranging — and the
+    // charge-projected basis the panels, bloom, and countdowns preview.
+    // Every surface below reads the pass's snapshot; none recomputes.
+    const live = currentSnapshot(app.state);
+    const projected = displayedRates(app.state, true);
+    // The chord work's one computation per pass (§6, issue #296): the grid's
+    // seams draw it and the reserved readout's grammar — hover chips, the
+    // Hex detail's chord row — reads the same marks, so a placement made
+    // from the detail refreshes its relationship breakdown even while the
+    // grid stands retired.
+    const chordWork = refreshChordOverlay(app, live);
+    renderConsoleSession(app, projected);
+    renderConsoleApps(app);
+    renderBoardLedger(app, live);
+    renderTools(app, projected);
+    // The Hex detail replaces the grid (issue #295): while it stands the
+    // grid renders nothing — another Hex is unreachable until the return.
+    if (!app.ui.detail) renderGrid(app, live, projected, chordWork);
+    renderInventoryTray(app);
+    renderUpgradeAll(app);
+    renderCellArmPill(app);
+    renderArcCard(app);
+    // The Hex detail (issue #295): the bloom's successor — an owned cell's
+    // cross-section standing where the grid stood, at every width. The chord
+    // row is the readout's own grammar, computed here so the reserved
+    // vocabulary never forks (render owns it, the detail mounts it). The
+    // row's rebuild key rides beside it (#349).
+    const detailChord = app.ui.detail
+      ? detailChordRow(app, app.state.mode === "upgrade" ? projected : live)
+      : { html: "", key: "" };
+    renderHexDetail(app, live, projected, detailChord);
+    renderZoomCluster(app);
+    renderHorizonBar(app);
+    renderGameInfoStrip(app, live);
+    // The Mutator Grid's furniture (issue #199): the vertical layer legend,
+    // the pinned tray strip, the armed unlock's pill — each a no-op wherever
+    // its moment isn't now.
+    renderLayerLegend(app);
+    renderMutatorTray(app);
+    renderMutatorPill(app);
+    renderModal(app, live, projected);
+    renderDev(app);
+    renderDevBoard(app);
+  } finally {
+    endLayoutPass();
+  }
 }
 
 /* ── Console (ADR-0012) ────────────────────────────── */
@@ -1483,21 +1493,38 @@ function voiceMetricsHtml(module: ModuleInstance, snapshot: RateSnapshot, curren
 // in the reserved readout's own grammar — capacity, total chord factor,
 // formation and its scale, every chord instance it sings in — with the
 // ν/s figure left off (the enlarged face carries it). The conducting
-// spacer asks by containment, the same rule its hover reads (#201).
-function detailChordRowHtml(app: App, snapshot: RateSnapshot): string {
+// spacer asks by containment, the same rule its hover reads (#201). The
+// rebuild key rides beside the html (#349): the guard decides on the
+// marks' identities and the snapshot's raw figures — inputs, never the
+// formatted row — so a tick's guard costs a comparison, not a re-format.
+export interface DetailChordRow {
+  html: string;
+  key: string;
+}
+
+export function detailChordRow(app: App, snapshot: RateSnapshot): DetailChordRow {
   const detail = app.ui.detail;
-  if (!detail) return "";
+  if (!detail) return { html: "", key: "" };
   const module = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, detail.pos));
-  if (!module) return "";
+  if (!module) return { html: "", key: "" };
   const idScope = `detail-${module.id}`;
-  const marks = chordReadoutCache.get(app)?.marks ?? [];
+  const chips = moduleChips(module, chordReadoutCache.get(app)?.marks ?? []);
   const metrics = voiceMetricsHtml(module, snapshot, undefined, idScope, false);
-  const chips = moduleChips(module, marks)
+  const html = metrics + chips
     .map((mark) =>
       `<span class="chord-readout-chip mono${mark.inactive ? " chord-readout-idle" : ""}" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.inactive ? `${mark.label} · idle` : mark.label)}</span>`,
     )
     .join("");
-  return metrics + chips;
+  const contribution = snapshot.contributions.get(module.id);
+  const allocation = snapshot.allocation;
+  return {
+    html,
+    key: JSON.stringify([
+      chips.map((mark) => [mark.key, mark.inactive, mark.label, mark.colorVar]),
+      allocation ? [allocation.used.get(module.id) ?? 0, allocation.capacity, allocation.certified] : null,
+      contribution ? [contribution.chordFactor, contribution.formationQ, contribution.formationMeasuredQ] : null,
+    ]),
+  };
 }
 
 // The low-to-high quality scale (issue #260): where the formation's
@@ -2371,7 +2398,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   // viewport media query sheets other modals, so the cluster's rise reads
   // the wider of the two (§7, ADR-0029: the cluster alone reacts to open
   // sheets, and inspection never buries it).
-  const sheet = kind !== "notes" && ((kind === "rate" && containerWidth() < RATE_DETAILS_BREAKPOINT_PX) || window.innerWidth < PHONE_MAX_PX);
+  const sheet = kind !== "notes" && ((kind === "rate" && containerWidth() < RATE_DETAILS_BREAKPOINT_PX) || viewportWidth() < PHONE_MAX_PX);
   backdrop.classList.toggle("notes-modal", kind === "notes");
   backdrop.classList.toggle("sheet", kind === "rate" && containerWidth() < RATE_DETAILS_BREAKPOINT_PX);
   // The scrimless peek (#193, decided in #174): a pending module roll never

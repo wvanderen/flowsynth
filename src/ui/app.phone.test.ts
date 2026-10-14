@@ -359,7 +359,7 @@ describe("board navigation (§7)", () => {
     expect(viewBox()).toBe(before);
   });
 
-  it("wheel zoom anchors the cursor's world point", () => {
+  it("wheel zoom anchors the cursor's world point", async () => {
     app.render();
     mockWrap(800, 600);
     const bounds = app.boardBounds;
@@ -372,12 +372,49 @@ describe("board navigation (§7)", () => {
     Object.defineProperty(wheel, "clientX", { value: u * 800 });
     Object.defineProperty(wheel, "clientY", { value: v * 600 });
     svgEl().dispatchEvent(wheel);
+    // The wheel coalesces to the animation frame (#349): the zoom lands
+    // when the frame flushes.
+    await new Promise((resolve) => requestAnimationFrame(resolve));
     expect(app.ui.zoom).toBeGreaterThan(1);
     const after = lensFrame(app.ui.zoom, app.ui.pan, bounds);
     const keptX = after.view.x + u * after.view.width;
     const keptY = after.view.y + v * after.view.height;
     expect(Math.abs(keptX - anchor.x)).toBeLessThan(1);
     expect(Math.abs(keptY - anchor.y)).toBeLessThan(1);
+  });
+
+  it("a wheel gesture renders at most once per animation frame (#349)", async () => {
+    app.render();
+    mockWrap(800, 600);
+    let renders = 0;
+    const render = app.render.bind(app);
+    (app as unknown as { render: () => void }).render = () => {
+      renders++;
+      render();
+    };
+    const dispatch = (deltaY: number) => {
+      const wheel = new WheelEvent("wheel", { deltaY, cancelable: true });
+      Object.defineProperty(wheel, "clientX", { value: 400 });
+      Object.defineProperty(wheel, "clientY", { value: 300 });
+      svgEl().dispatchEvent(wheel);
+    };
+    // A burst of events inside one frame — the gesture's factors
+    // accumulate into that frame's single render.
+    dispatch(-100);
+    dispatch(-100);
+    dispatch(-100);
+    dispatch(100);
+    expect(renders).toBe(0);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(renders).toBe(1);
+    // The accumulated product applied: 1.25 × 1.25 × 1.25 / 1.25.
+    expect(app.ui.zoom).toBeCloseTo(1.25 * 1.25, 10);
+    // The next frame after a fresh event renders again — one per frame,
+    // never one per event.
+    dispatch(-100);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(renders).toBe(2);
+    expect(app.ui.zoom).toBeCloseTo(1.25 * 1.25 * 1.25, 10);
   });
 
   it("the board pans by dragging outside the grid at any zoom, clamped to the board", () => {
@@ -698,5 +735,43 @@ describe("prototype retirement (§7)", () => {
     expect(document.body.dataset.variant).toBeUndefined();
     expect(document.getElementById("status-monitor")).toBeNull();
     expect(document.querySelector(".legend")).toBeNull();
+  });
+});
+
+describe("render-pass layout reads (#349)", () => {
+  it("a render pass reads the container's layout once, and a resized pass reads again", () => {
+    app.render();
+    const appEl = document.getElementById("app")!;
+    let reads = 0;
+    Object.defineProperty(appEl, "clientWidth", {
+      configurable: true,
+      get() {
+        reads++;
+        return 390;
+      },
+    });
+    try {
+      // One pass, one read: the batch lands before the pass's writes and
+      // every phone gate inside the pass reads it.
+      app.render();
+      expect(reads).toBe(1);
+      // The phone gates agree with the batched read (the thumb bar's dock
+      // stands on phone width).
+      expect(document.querySelector("#thumb-bar")).not.toBeNull();
+      // The next pass reads fresh: a resize between passes re-batches
+      // (setAppWidth swaps in a plain value; re-arm the counting getter).
+      setAppWidth(1200);
+      Object.defineProperty(appEl, "clientWidth", {
+        configurable: true,
+        get() {
+          reads++;
+          return 1200;
+        },
+      });
+      app.render();
+      expect(reads).toBe(2);
+    } finally {
+      setAppWidth(390);
+    }
   });
 });
