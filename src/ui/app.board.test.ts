@@ -684,6 +684,75 @@ describe("the action row (§7)", () => {
     expect(dockOps()[2]!.title).toBe("Add — purchases happen between sessions");
     expect(document.getElementById("inventory-zone")!.classList.contains("off")).toBe(true);
   });
+
+  it("the Catalog door wears the rack-and-arrow glyph, distinct from the layer controls, name intact (#336)", () => {
+    app.state.mode = "upgrade";
+    app.render();
+    for (const host of ["board-tools", "thumb-bar"]) {
+      const door = document.querySelector<HTMLButtonElement>(`#${host} [data-op="catalog"]`)!;
+      // The accessible label stays Catalog.
+      expect(door.getAttribute("aria-label")).toBe("Catalog");
+      // The square-cut rack chassis with the rising arrow — never the
+      // retired stacked-layer glyph.
+      expect(door.querySelector("svg rect")).not.toBeNull();
+      expect(door.innerHTML).not.toContain("M12 2 2 7");
+    }
+    // Neither door glyph matches a layer legend symbol.
+    const doorSvg = document.querySelector<SVGElement>('#board-tools [data-op="catalog"] svg')!;
+    for (const symbol of document.querySelectorAll<SVGElement>("[data-legend-layer] svg")) {
+      expect(doorSvg.innerHTML).not.toBe(symbol.innerHTML);
+    }
+  });
+
+  it("flow locks wear the shared padlock chip while the Forge pip keeps its read (#336)", () => {
+    app.render();
+    // The chip's drawing is the locked layer legend's own mark, captured
+    // before flow clears the legend.
+    const legendLock = document.querySelector<SVGElement>('[data-legend-layer="mutators"] svg')!.innerHTML;
+    app.state.sessionsCompleted = 1;
+    app.state.flow.progress = 90;
+    startSession(app.state, null);
+    app.render();
+    for (const host of ["board-tools", "thumb-bar"]) {
+      for (const op of ["catalog", "forge", "cell"]) {
+        const button = document.querySelector<HTMLButtonElement>(`#${host} [data-op="${op}"]`)!;
+        expect(button.disabled).toBe(true);
+        // The one lock mark — the drawing the locked layer legend wears.
+        const lock = button.querySelector<SVGElement>(".tool-lock svg")!;
+        expect(lock.innerHTML).toBe(legendLock);
+      }
+      // Progress stays readable: the pip rides the locked Forge button.
+      expect(document.querySelector(`#${host} [data-op="forge"] [data-live="forge-pip"]`)).not.toBeNull();
+    }
+  });
+
+  it("locked board actions refuse activation, and upgrade mode restores them (#336)", () => {
+    // Affordable Add: the lock must not blur into the price gate.
+    app.state.nous = BALANCE.cellFirstCost;
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, null);
+    app.render();
+    const flowCatalog = document.querySelector<HTMLButtonElement>('#board-tools [data-op="catalog"]')!;
+    const flowCell = document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!;
+    // Pointer and touch: the disabled door opens nothing and arms nothing.
+    flowCatalog.click();
+    flowCell.click();
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.buyingCell).toBe(false);
+    // Keyboard: a disabled control takes no focus and no activation.
+    flowCatalog.focus();
+    expect(document.activeElement).not.toBe(flowCatalog);
+    // Returning to upgrade mode restores the actionable states.
+    endSession(app.state);
+    app.render();
+    for (const op of ["catalog", "forge", "cell"]) {
+      const button = document.querySelector<HTMLButtonElement>(`#board-tools [data-op="${op}"]`)!;
+      expect(button.disabled).toBe(false);
+      expect(button.querySelector(".tool-lock")).toBeNull();
+    }
+    document.querySelector<HTMLButtonElement>('#board-tools [data-op="catalog"]')!.click();
+    expect(app.ui.modal).toBe("catalog");
+  });
 });
 
 describe("a module roll's scrimless peek (#193)", () => {

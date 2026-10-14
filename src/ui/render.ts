@@ -37,7 +37,7 @@ import {
 } from "./focus";
 import { activeHabit } from "../engine/habits";
 import { startPointerDrag } from "./pointer-drag";
-import { appIcon } from "./icons";
+import { appIcon, lockMarkSvg } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, moduleFace, boardPoint, SPACING, spacerClipPath, forgeBranchOf, faceReadoutFor, faceLevel, waterFill, zeroBuyRead, isSource, inventoryTileSvg } from "./face";
 import { renderHexDetail } from "./hexdetail";
 import { chargeGlow, chargeLeads } from "./leads";
@@ -890,7 +890,11 @@ function toolActions(): ToolAction[] {
 // the board's things, gathered.
 const COLLECTION_TOOL_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M9 2.5 14.2 5.5v6L9 14.5 3.8 11.5v-6Z"/><path d="M15 9.5 20.2 12.5v6L15 21.5 9.8 18.5v-6Z"/></svg>`;
 
-const TOOL_CATALOG_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/></svg>`;
+// The Catalog door's mark (issue #336): the square-cut rack carrying the
+// upward arrow — board upgrades and unlocks rising out of the rack. One
+// glyph family away from the layer legend's symbols, and a replacement for
+// the retired stacked-layer glyph those symbols read against.
+const TOOL_CATALOG_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="11" width="15" height="9.5"/><path d="M4.5 15.75h15"/><path d="M12 11V4M8.5 7.5 12 4l3.5 3.5"/></svg>`;
 const TOOL_FORGE_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1.8 3.2-3.2 4.6-3.2 8.4a3.2 3.2 0 0 0 6.4 0c0-1.4-.6-2.3-1.1-2.9 1.9.5 3.4 2 3.4 4.3a5.5 5.5 0 0 1-11 0C6.5 7.6 10.8 6.4 12 3Z"/></svg>`;
 
 // The left-edge icon dock (§7): Catalog / Forge (count badge + charge pip)
@@ -925,7 +929,13 @@ function renderTools(app: App, projected: RateSnapshot): void {
           const detail = action.op === "forge"
             ? `<span id="${detailId}" class="forge-detail" role="tooltip" hidden>${action.title(app, projected)}</span>`
             : "";
-          const extra = (action.badge?.(app) ?? "") + (action.media ?? "") + detail;
+          // The flow lock (#336): in flow the action wears the shared
+          // padlock chip — the non-color unavailability mark, on top of the
+          // dimmed content. The chip keys to the mode, never the disabled
+          // predicates: an affordability mute stays a mute, never a lock.
+          // Native disabled still refuses pointer, keyboard, and touch.
+          const lock = state.mode !== "upgrade" ? `<span class="tool-lock" aria-hidden="true">${lockMarkSvg()}</span>` : "";
+          const extra = (action.badge?.(app) ?? "") + (action.media ?? "") + detail + lock;
           return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" data-op="${action.op}" aria-label="${action.label}" ${action.op === "forge" ? `aria-describedby="${detailId}"` : `title="${action.title(app, projected)}"`}${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${action.label}</small></button>`;
         })
         .join("");

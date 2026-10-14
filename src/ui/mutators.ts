@@ -22,6 +22,7 @@ import { startPointerDrag } from "./pointer-drag";
 import { boardPoint, HEX_RADIUS, hexPoints } from "./face";
 import { META, RARITY_LABEL } from "./meta";
 import { wireTooltips } from "./instrument";
+import { lockMarkSvg } from "./icons";
 
 // The families' words, one spelling everywhere — slot faces, the tray, the
 // readout ask, the popover, the Forge modal, the toasts.
@@ -236,7 +237,9 @@ export function renderLayerLegend(app: App): void {
 
 // The locked face's one mark (issue #273 review): a padlock in the
 // instrument's stroke language — the layer is locked, not merely elsewhere.
-const LOCK_MARK = `<svg class="mut-tab-lock" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.7" y="5.4" width="6.6" height="4.9" rx="1.1"/><path d="M4.2 5.4V3.9a1.8 1.8 0 0 1 3.6 0v1.5"/></svg>`;
+// The drawing is the shared lock mark (issue #336); the chassis class is
+// this legend's sizing hook.
+const LOCK_MARK = lockMarkSvg("mut-tab-lock");
 
 /* ── The grid decorations ─────────────────────────────
    The layer's own drawing inside the board svg: on the Mutators tab, one
