@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { allocateRates, computeRates } from "../engine/economy";
 import { syncChordDiscoveries } from "../engine/library";
 import { fresh, give, sumSynthValues } from "../engine/fixtures";
@@ -38,8 +39,14 @@ describe("what the board earns in the rate details (issue #334)", () => {
     expect(sumSynthValues(snapshot)).toBeCloseTo(snapshot.rate, 6);
   });
 
-  it("a zero-output oscillator reads like any other row", () => {
-    const state = fresh();
+  it("the calculation control keeps the 44px touch floor over its compact glyph", () => {
+    const css = readFileSync("src/ui/style.css", "utf8");
+    const at = css.indexOf(".rd-calc-toggle::after");
+    expect(at).toBeGreaterThan(-1);
+    expect(css.slice(at, at + 80)).toContain("inset: -13px");
+  });
+
+  it("a zero-output oscillator reads like any other row", () => {    const state = fresh();
     // An uncharged Blaster converts no charge: zero output, same grammar —
     // no special casing, no omission.
     const blaster = give(state, "blaster", hex(1, 0));

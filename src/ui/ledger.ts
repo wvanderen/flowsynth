@@ -102,6 +102,12 @@ function synthLegsOf(state: GameState, snapshot: RateSnapshot, contribution: Con
   };
 }
 
+// The global factors' one wording (issue #334), shared by the roster
+// builder's prefill and the tick's fill alike — one spelling, never two.
+function globalFactorsText(snapshot: RateSnapshot): string {
+  return `+${Math.round((snapshot.achievementBoost - 1) * 100)}% · +${Math.round((snapshot.discoveryBoost - 1) * 100)}% — already included`;
+}
+
 // The idle candidates' note (issue #258), one wording for the calc's
 // builder and the tick's fill alike: recognized, not selected — never a
 // production claim.
@@ -125,9 +131,10 @@ function rowSlotTexts(state: GameState, snapshot: RateSnapshot, contribution: Co
   const legs = synthLegsOf(state, snapshot, contribution, module);
   return {
     v: `+${formatNumber(contribution.value)} ν/s`,
-    // The calculation's product line carries the same figure under its own
-    // slot key: liveSet fills the first match of a key, and the row figure
-    // must never fight the product for the fill.
+    // The calculation's product line prints the same figure under its own
+    // slot key: liveSet fills only the first match of a key, so a shared
+    // key would leave the product stale whenever the row figure wins the
+    // race.
     sum: `+${formatNumber(contribution.value)} ν/s`,
     base: `${formatNumber(legs.base)} ν/s`,
     fmt: `×${formatNumber(legs.formationQ)}`,
@@ -252,9 +259,6 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
 
   // The global factors, shown once (issue #334): a property of the whole
   // board, never a per-row payout — the wording says included outright.
-  const globalText =
-    `+${Math.round((snapshot.achievementBoost - 1) * 100)}% · +${Math.round((snapshot.discoveryBoost - 1) * 100)}% — already included`;
-
   return (
     `<div class="rd-row rd-total"><span class="rd-name t-condensed">Rate</span>` +
     val(RATE_TOTAL_SLOT, `${formatNumber(snapshot.rate)} ν/s`) +
@@ -265,7 +269,7 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
       `<span class="inst-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-label="Why allocation is uncertified" aria-describedby="allocation-tip-${ns}-${seq}">ⓘ</button>` +
       `<span class="inst-tip-body" id="allocation-tip-${ns}-${seq}" role="tooltip">Search budget reached. This development allocation is the best result found; maximum production is unproven.</span></span></div>` : "") +
     `<div class="rd-row rd-global"><span class="rd-name t-condensed">Feats · Discoveries</span>` +
-    `<span class="rd-val mono" data-live="${RATE_GLOBAL_SLOT}">${globalText}</span></div>` +
+    `<span class="rd-val mono" data-live="${RATE_GLOBAL_SLOT}">${globalFactorsText(snapshot)}</span></div>` +
     rows.join("")
   );
 }
@@ -285,8 +289,7 @@ export function updateRateDetailsLive(scope: ParentNode, state: GameState, snaps
     for (const root of roots) liveSet(root, live, content);
   };
   set(RATE_TOTAL_SLOT, `${formatNumber(snapshot.rate)} ν/s`);
-  set(RATE_GLOBAL_SLOT,
-    `+${Math.round((snapshot.achievementBoost - 1) * 100)}% · +${Math.round((snapshot.discoveryBoost - 1) * 100)}% — already included`);
+  set(RATE_GLOBAL_SLOT, globalFactorsText(snapshot));
   for (const status of scope.querySelectorAll<HTMLElement>(".rd-allocation-state")) {
     status.hidden = snapshot.allocation?.certified !== false;
   }
@@ -336,13 +339,14 @@ export function wireRateCalcs(host: ParentNode, owner?: App): void {
   const listener = (event: Event) => {
     const toggle = (event.target as HTMLElement).closest<HTMLElement>(".rd-calc-toggle");
     if (!toggle || !host.contains(toggle)) return;
-    const calc = document.getElementById(toggle.getAttribute("aria-controls") ?? "");
+    const calcId = toggle.getAttribute("aria-controls") ?? "";
+    const calc = host.querySelector<HTMLElement>(`[id="${calcId}"]`);
     if (!calc) return;
     const opening = calc.hidden;
     for (const other of host.querySelectorAll<HTMLElement>(".rd-calc-toggle")) {
       if (other === toggle) continue;
       other.setAttribute("aria-expanded", "false");
-      const otherCalc = document.getElementById(other.getAttribute("aria-controls") ?? "");
+      const otherCalc = host.querySelector<HTMLElement>(`[id="${other.getAttribute("aria-controls") ?? ""}"]`);
       if (otherCalc) otherCalc.hidden = true;
     }
     calc.hidden = !opening;

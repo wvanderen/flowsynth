@@ -5,8 +5,8 @@ Implemented on branch `t3code/issue-334-implementation` in this worktree, from t
 ## Automated checks
 
 - `npm run check` (tsc): passed.
-- Full suite: 61 files, 1,296 tests passed, 2 skipped.
-- UI regression suite (`npx vitest run --project ui`): 680 passed — including the reworked `ledger.test.ts` (totals + once-only global factors + inline calculation + accordion + pick guard + zero-output row), the re-anchored #154/#258/#260/#295 suites, and the new plain-readout pins.
+- Full suite: 61 files, 1,297 tests passed, 2 skipped.
+- UI regression suite (`npx vitest run --project ui`): 681 passed — including the reworked `ledger.test.ts` (totals + once-only global factors + inline calculation + accordion + pick guard + zero-output row + the 44px touch-floor pin), the re-anchored #154/#258/#260/#295 suites, and the new plain-readout pins.
 - New pins of note:
   - the roster lists the total, the `Feats · Discoveries` line exactly once (`already included`), and one final-ν/s row per oscillator; `.rd-other-row` never exists again and no row carries an Achievements/Discoveries leg;
   - an uncharged Blaster (a zero-output oscillator) renders the same `+0 ν/s` row grammar as any other;
@@ -38,8 +38,8 @@ Live DOM guards recorded at capture time (desktop session): sheet open with `oth
 
 ## Instrument-standards notes
 
-- Open divisions only: the calculation is a rule-separated leg list inside the roster's flat rows — no nested cards, no `<details>` defaults; the toggle is a square-cut hairline control whose state rides the chevron's direction, border, and ink (never color alone), plus `aria-expanded`.
-- Honest arithmetic: the global leg closes each calculation's chain, so every opened decomposition multiplies exactly to its row's figure, and the rows sum to the board's rate (pinned by the suite and `sumSynthValues`).
+- Open divisions only: the calculation is a rule-separated leg list inside the roster's flat rows — no nested cards, no `<details>` defaults; the toggle is a square-cut hairline control whose state rides the chevron's direction, border, and ink (never color alone), plus `aria-expanded`. Its compact glyph rides an invisible 44px hit field (`::after` inset −13px), pinned by the suite, so PRODUCT.md's touch floor holds without swelling the roster's rhythm.
+- Honest arithmetic: the global leg closes each calculation's chain, so every opened decomposition multiplies exactly to its row's figure, and the rows sum to the board's rate (pinned by the suite and `sumSynthValues`; the displayed-figure sum is additionally pinned by the #154-era ledger test that parses the rendered row strings).
 - Misleading hover cues removed: the readout's disclosure buttons, dotted underlines, and coarse-pointer min-height rules are deleted from markup and stylesheet; nothing that cannot open promises it can.
 - Reduced motion: the toggle's only motion is a 0.15 s transform/color transition on state change; the stylesheet's global `prefers-reduced-motion: reduce` rule (`* { animation: none !important; transition: none !important; }`) removes it, and the state still reads from the rotated chevron's end-state, border, ink, and `aria-expanded` — state survives without motion. The readout surfaces have no motion at all.
 
@@ -48,3 +48,7 @@ Live DOM guards recorded at capture time (desktop session): sheet open with `oth
 - Collaborative-tab viewport resize to phone dimensions timed out repeatedly (the same limitation #333's evidence recorded); the phone captures above come from a real 390 × 844 CSS px headless context (`hasTouch`, deviceScaleFactor 2) against the verified server instead.
 - Physical touch-gesture verification on a real device: unavailable; phone interactions were real touch-context taps (`page.tap` with `hasTouch`), and keyboard/touch disclosure of the calculation is additionally pinned by the unit suite.
 - Live `prefers-reduced-motion` media emulation during capture: unavailable; the source-level note above (one short state transition, killed by the global reduce rule, state intact without it) is not a claimed emulation pass.
+
+## Review corrections (same branch)
+
+The two-axis review flagged two findings, both fixed on this branch: the calculation toggle's 18px glyph now rides the invisible 44px hit field (PRODUCT.md's touch floor), and the global factors' wording moved into one `globalFactorsText` helper shared by the roster builder and the tick's fill (the house one-wording rule). Known edge, noted not fixed: a roster rebuild (a module move or upgrade landing) rebuilds the popover and rebuilds the sheet only when reopened, so a calculation standing through such a change closes with the rebuild — ordinary ticks never do (the live slots fill in place), which is the criterion's bar.

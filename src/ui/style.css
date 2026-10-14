@@ -952,8 +952,11 @@ h1, h2, h3, p { margin: 0; }
 /* The calculation control (issue #334): a square-cut, hairline-ringed
    button — the instrument grammar's own shape — carrying the disclosure's
    direction with its state (⌄ closed, ⌄ rotated open), never color alone.
-   A real button: keyboard and touch take the same door the mouse does. */
+   A real button: keyboard and touch take the same door the mouse does. The
+   compact glyph rides an invisible 44px hit field, so the touch floor
+   PRODUCT.md pins holds without swelling the roster's rhythm. */
 .rd-calc-toggle {
+  position: relative;
   flex-shrink: 0;
   align-self: center;
   width: 18px;
@@ -968,6 +971,7 @@ h1, h2, h3, p { margin: 0; }
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s, transform 0.15s;
 }
+.rd-calc-toggle::after { content: ""; position: absolute; inset: -13px; }
 .rd-calc-toggle:hover { color: var(--ink); border-color: var(--muted); }
 .rd-calc-toggle:focus-visible { outline-offset: 2px; }
 .rd-calc-toggle[aria-expanded="true"] { color: var(--ink); border-color: var(--ink); transform: rotate(180deg); }
