@@ -71,6 +71,17 @@ const APP_PATHS: Record<Exclude<FocusApp, "time">, string> = {
   notes: '<path d="M-7-8H7M-7-2H7M-7 4h3M6.5 3.5 8 5l-4 4-2 .5.5-2Z"/>',
 };
 
+// The one lock mark (issue #336): the padlock drawing every locked control
+// wears — the layer legend's locked symbol (issue #273) shared with the
+// board actions' flow locks, so unavailability reads as one mark everywhere.
+// Consumers wrap it in their own svg chassis; the drawing never drifts.
+export const LOCK_MARK_PATHS =
+  '<rect x="2.7" y="5.4" width="6.6" height="4.9" rx="1.1"/><path d="M4.2 5.4V3.9a1.8 1.8 0 0 1 3.6 0v1.5"/>';
+
+export function lockMarkSvg(chassisClass?: string): string {
+  return `<svg${chassisClass ? ` class="${chassisClass}"` : ""} viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${LOCK_MARK_PATHS}</svg>`;
+}
+
 export function moduleIcon(type: ModuleType): string {
   return PATHS[type];
 }
