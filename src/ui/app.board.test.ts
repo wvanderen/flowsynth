@@ -371,6 +371,13 @@ describe("the horizon bar (§7, issue #156)", () => {
     expect(document.querySelector(".board-footer")).toBeNull();
     const bar = document.getElementById("horizon-bar")!;
     expect(bar.querySelector(".horizon-track")).not.toBeNull();
+    // The bar answers as a progressbar (issue #351): AT queries the same
+    // percentage the word reads.
+    expect(bar.getAttribute("role")).toBe("progressbar");
+    expect(bar.getAttribute("aria-label")).toBe("The Arete horizon: this era's progress toward prestige");
+    expect(bar.getAttribute("aria-valuemin")).toBe("0");
+    expect(bar.getAttribute("aria-valuemax")).toBe("100");
+    expect(bar.getAttribute("aria-valuenow")).toBe("0");
     // The label rides centered with its one figure: the bar's log percentage.
     const word = bar.querySelector(".horizon-word")!;
     expect(word.textContent).toContain("Arete");
@@ -397,6 +404,9 @@ describe("the horizon bar (§7, issue #156)", () => {
     app.render();
     expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBeCloseTo(600 * (2 / accumulatorSpan()), 1);
     expect(document.querySelector('#horizon-bar [data-live="h-word"]')!.textContent).toBe(`${Math.floor((100 * 2) / accumulatorSpan())}%`);
+    // The valuenow tracks the visible word in place (#351).
+    expect(document.getElementById("horizon-bar")!.getAttribute("aria-valuenow"))
+      .toBe(`${Math.floor((100 * 2) / accumulatorSpan())}`);
     expect(document.querySelector(".horizon-word")).not.toBeNull();
   });
 
@@ -405,7 +415,10 @@ describe("the horizon bar (§7, issue #156)", () => {
     app.render();
     const bar = document.getElementById("horizon-bar")!;
     expect(bar.classList.contains("reached")).toBe(true);
-    // The percentage readout gives way to the door, its claim live.
+    // The percentage readout gives way to the door, its claim live — and
+    // the figure role stands down with it (#351).
+    expect(bar.getAttribute("role")).toBeNull();
+    expect(bar.getAttribute("aria-valuenow")).toBeNull();
     expect(bar.querySelector(".horizon-word")).toBeNull();
     const door = bar.querySelector<HTMLButtonElement>("#prestige-door")!;
     expect(door.textContent).toContain("Prestige and Claim 1 Arete");
@@ -491,8 +504,16 @@ describe("the horizon bar (§7, issue #156)", () => {
     app.state.flow.progress = 90;
     app.render();
     const forge = document.querySelector('#board-tools [data-op="forge"]') as HTMLElement;
-    expect(forge.querySelector(".forge-pip")).not.toBeNull();
+    const pip = forge.querySelector(".forge-pip")!;
+    expect(pip).not.toBeNull();
     expect(forge.querySelector('[data-live="forge-pip"]')!.getAttribute("style")).toContain("50");
+    // The pip answers as the flow meter's progressbar (#351): valuenow and
+    // valuetext carry the same read the detail speaks — no aria-hidden.
+    expect(pip.getAttribute("role")).toBe("progressbar");
+    expect(pip.getAttribute("aria-label")).toBe("Flow meter");
+    expect(pip.getAttribute("aria-valuenow")).toBe("90");
+    expect(pip.getAttribute("aria-valuemax")).toBe("180");
+    expect(pip.getAttribute("aria-valuetext")).toContain("1:30 / 3:00 — next roll in ~1:30 of practice");
     expect(forge.querySelector(".forge-detail")!.textContent).toContain("Flow meter 1:30 / 3:00");
   });
 
@@ -739,10 +760,14 @@ describe("the action row (§7)", () => {
       const detail = forge.querySelector<HTMLElement>(".forge-detail")!;
       forge.dispatchEvent(new MouseEvent("mouseenter"));
       expect(detail.hidden).toBe(false);
+      // Hover openness is announced (#351) — the trigger never reads
+      // "collapsed" while the meter read stands open.
+      expect(forge.getAttribute("aria-expanded")).toBe("true");
       expect(detail.textContent).toContain("Flow meter");
       expect(detail.textContent).toContain("choices settle between sessions.");
       forge.dispatchEvent(new MouseEvent("mouseleave"));
       expect(detail.hidden).toBe(true);
+      expect(forge.getAttribute("aria-expanded")).toBe("false");
       forge.click();
       expect(app.ui.modal).toBeNull();
     }
@@ -758,6 +783,7 @@ describe("the action row (§7)", () => {
       expect(forge.getAttribute("aria-describedby")).toBe(detail.id);
       forge.focus();
       expect(detail.hidden).toBe(false);
+      expect(forge.getAttribute("aria-expanded")).toBe("true");
       expect(document.activeElement).toBe(forge);
       expect(app.ui.modal).toBeNull();
       app.state.flow.progress = 90;
@@ -767,15 +793,21 @@ describe("the action row (§7)", () => {
       expect(detail.textContent).toContain("Forge progress");
       forge.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
       expect(detail.hidden).toBe(true);
+      // Escape suppresses the tip alone: the trigger says collapsed and
+      // keeps the keyboard focus (#351).
+      expect(forge.getAttribute("aria-expanded")).toBe("false");
+      expect(document.activeElement).toBe(forge);
       forge.blur();
       forge.focus();
       expect(detail.hidden).toBe(false);
       forge.blur();
       expect(detail.hidden).toBe(true);
+      expect(forge.getAttribute("aria-expanded")).toBe("false");
       forge.dispatchEvent(new MouseEvent("mouseenter"));
       expect(detail.hidden).toBe(false);
       forge.dispatchEvent(new MouseEvent("mouseleave"));
       expect(detail.hidden).toBe(true);
+      expect(forge.getAttribute("aria-expanded")).toBe("false");
     }
   });
 
@@ -794,10 +826,24 @@ describe("the action row (§7)", () => {
     expect(modal.querySelector(".forge-meters")).not.toBeNull();
     expect(modal.querySelector('[data-live="modal-flow-line"]')!.textContent).toContain("0:00 / 3:00");
     expect(modal.querySelector('[data-live="modal-forge-line"]')!.textContent).toContain("30 / 60");
+    // Each track answers as its meter's progressbar (#351): the valuenow
+    // and value text mirror the figures beside the bar.
+    const flowTrack = modal.querySelector('[data-live="modal-flow-track"]')!;
+    expect(flowTrack.getAttribute("role")).toBe("progressbar");
+    expect(flowTrack.getAttribute("aria-label")).toBe("Flow");
+    expect(flowTrack.getAttribute("aria-valuenow")).toBe("0");
+    expect(flowTrack.getAttribute("aria-valuemax")).toBe("180");
+    expect(flowTrack.getAttribute("aria-valuetext")).toContain("0:00 / 3:00");
+    const forgeTrack = modal.querySelector('[data-live="modal-forge-track"]')!;
+    expect(forgeTrack.getAttribute("role")).toBe("progressbar");
+    expect(forgeTrack.getAttribute("aria-valuenow")).toBe("30");
+    expect(forgeTrack.getAttribute("aria-valuemax")).toBe("60");
     // Live slots fill in place as the meters move.
     app.state.flow.progress = 90;
     app.render();
     expect(modal.querySelector('[data-live="modal-flow-line"]')!.textContent).toContain("1:30 / 3:00");
+    expect(flowTrack.getAttribute("aria-valuenow")).toBe("90");
+    expect(flowTrack.getAttribute("aria-valuetext")).toContain("1:30 / 3:00");
     app.closeModal();
     // The sheet locks in flow (#233): the dock refuses, the modal never
     // opens, and the banked roll waits for the session's end — the engine's

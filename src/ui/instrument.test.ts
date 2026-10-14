@@ -54,6 +54,20 @@ describe("the tooltip layer's pinning and dismissal", () => {
     expect(document.getElementById("body-a")!.classList.contains("inst-show")).toBe(false);
   });
 
+  it("the trigger's aria-expanded matches the visible state on every access path (#351)", () => {
+    const { first } = tipHost();
+    // Hover opens — the trigger announces open, not "collapsed".
+    first.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+    expect(first.getAttribute("aria-expanded")).toBe("true");
+    first.dispatchEvent(new PointerEvent("pointerout", { bubbles: true }));
+    expect(first.getAttribute("aria-expanded")).toBe("false");
+    // Keyboard focus opens — same honesty.
+    first.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    expect(first.getAttribute("aria-expanded")).toBe("true");
+    first.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    expect(first.getAttribute("aria-expanded")).toBe("false");
+  });
+
   it("pinning elsewhere puts the last pinned tooltip away — one at a time", () => {
     const { host, first, second } = tipHost();
     first.click();
@@ -99,6 +113,8 @@ describe("the tooltip layer's pinning and dismissal", () => {
     first.dispatchEvent(escape);
     expect(body.classList.contains("inst-show")).toBe(false);
     expect(document.activeElement).toBe(first);
+    // The suppressed tip's trigger says so: collapsed again, focus kept (#351).
+    expect(first.getAttribute("aria-expanded")).toBe("false");
     let passed = false;
     const listener = () => { passed = true; };
     document.addEventListener("keydown", listener);
@@ -236,14 +252,37 @@ describe("the controls sheet's stylesheet contract", () => {
   });
 
   it("focus rings in ink and the unavailable control mutes per the state grammar", () => {
-    expect(css).toMatch(/button:focus-visible, select:focus-visible[^{]*\{[^}]*outline: 2px solid var\(--ink\)/);
+    expect(css).toMatch(/button:focus-visible, input:focus-visible[^{]*\{[^}]*outline: 2px solid var\(--ink\)/);
     expect(css).toMatch(/button:disabled \{ color: var\(--muted\); border-color: var\(--line-soft\); cursor: default; \}/);
+  });
+
+  it("every field's focus indicator is the ink outline — no color-only border swap survives (#351)", () => {
+    // The stylesheet may restyle a field's focus border, but never takes
+    // the global outline away: `:focus` rules on inputs/fields carry no
+    // `outline: none`, and the reinforcement gates on :focus-visible.
+    for (const rule of css.match(/[^{}]*:focus[^{]*\{[^}]*\}/g) ?? []) {
+      if (/input|select|textarea|composer/.test(rule)) {
+        expect(rule).not.toContain("outline: none");
+        expect(rule).toContain(":focus-visible");
+      }
+    }
+    expect(css).toContain(".focus-form-row input:focus-visible { border-color: var(--charge); }");
+    expect(css).toContain(".note-composer:focus-visible { border-color: var(--charge); }");
+    expect(css).toContain(".folio-reflect input[type=\"text\"]:focus-visible { border-color: var(--charge); }");
   });
 
   it("bars fill by height from the one shared column; the horizontal rounded tracks are gone", () => {
     expect(css).toMatch(/\.gbar \{[^}]*background: var\(--line-soft\)/);
     expect(css).toMatch(/\.gbar i \{[^}]*bottom: 0/);
     expect(css).toMatch(/\.gbar\.done::after \{[^}]*content: "✓"/);
+    // The done-mark reads on every palette swatch (#351): the engraved
+    // check rides a keyed band — ink glyph on the key — never a bare
+    // glyph whose contrast drops with the fill's color.
+    const doneMark = css.slice(css.indexOf(".gbar.done::after"));
+    const mark = doneMark.slice(doneMark.indexOf("{"), doneMark.indexOf("}"));
+    expect(mark).toContain("color: var(--ink)");
+    expect(mark).toContain("background: var(--bg)");
+    expect(mark).not.toContain("text-shadow");
     expect(css).not.toContain(".goal-track");
     expect(css).not.toContain(".ach-track");
     // The dock's charge pip keeps its horizontal strip by direction — the

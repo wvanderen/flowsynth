@@ -7,6 +7,7 @@
 // carries no readouts.
 import { accumulatorFill, claimOf, horizonReached } from "../engine/accumulator";
 import { ACHIEVEMENTS } from "../engine/achievements";
+import { capacityCeiling } from "../engine/capacity";
 import { catalogOpen } from "../engine/catalog";
 import { isOscillatorType, NAMED_CHORDS } from "../engine/constants";
 import { deployedAt, voiceCapacityOf } from "../engine/economy";
@@ -227,6 +228,14 @@ function areteTelegraphHtml(): string {
   return `<b class="mono">—</b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small>`;
 }
 
+// The read's meter semantics (issue #351): the visible figure is the
+// value — role="meter" names it queryable within the ladder's ceiling, so
+// AT reads the same scalar the button announces, under its own name. The
+// live patchers keep valuenow and valuemax honest as the ladder moves.
+function capacityMeterAttrs(state: GameState): string {
+  return ` role="meter" aria-label="Harmonic capacity" aria-valuemin="0" aria-valuemax="${capacityCeiling(state)}" aria-valuenow="${voiceCapacityOf(state)}"`;
+}
+
 export function areteLedgerHtml(state: GameState): string {
   if (!catalogOpen(state)) {
     return `<span class="ledger-fig ledger-arete arete-dim" title="Unlocks at first Arete Reset">${areteTelegraphHtml()}</span>`;
@@ -251,7 +260,7 @@ export const CAPACITY_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="n
 function capacityReadHtml(state: GameState, phone: boolean): string {
   const live = phone ? "i-capacity" : "capacity";
   const classes = phone ? "info-read info-capacity" : "ledger-fig ledger-capacity";
-  return `<span class="inst-tip capacity-tip"><button type="button" class="inst-tip-trigger capacity-trigger ${classes}" aria-labelledby="${live}-name ${live}-value" aria-expanded="false" aria-describedby="${live}-tip"><span class="sr-only" id="${live}-name">Harmonic capacity</span><b class="mono" id="${live}-value" data-live="${live}">${voiceCapacityOf(state)}</b><small class="capacity-mark" aria-hidden="true">${CAPACITY_SVG}</small></button><span class="inst-tip-body" id="${live}-tip" role="tooltip">Whole-chord budget per voice</span></span>`;
+  return `<span class="inst-tip capacity-tip"><button type="button" class="inst-tip-trigger capacity-trigger ${classes}" aria-labelledby="${live}-name ${live}-value" aria-expanded="false" aria-describedby="${live}-tip"><span class="sr-only" id="${live}-name">Harmonic capacity</span><b class="mono" id="${live}-value" data-live="${live}"${capacityMeterAttrs(state)}>${voiceCapacityOf(state)}</b><small class="capacity-mark" aria-hidden="true">${CAPACITY_SVG}</small></button><span class="inst-tip-body" id="${live}-tip" role="tooltip">Whole-chord budget per voice</span></span>`;
 }
 
 export function capacityLedgerHtml(state: GameState): string {
@@ -333,8 +342,11 @@ export function updateLedgerLive(
   set("rate", formatNumber(snapshot.rate));
   if (catalogOpen(state)) set("arete", formatInt(state.arete));
   // The ambient allowance (#333): one figure, the economy's own — every
-  // voice's whole-chord budget. A purchase moves it on the next render.
+  // voice's whole-chord budget. A purchase moves it on the next render,
+  // and the meter's values ride the same patch (#351).
   set("capacity", String(voiceCapacityOf(state)));
+  liveAttr(scope, "capacity", "aria-valuenow", String(voiceCapacityOf(state)));
+  liveAttr(scope, "capacity", "aria-valuemax", String(capacityCeiling(state)));
   updateRateDetailsLive(scope, state, snapshot);
   // A row answers for the module it names: the selected module's row wears
   // the state grammar's firm inset marker (`.st-selected`) — readable
@@ -384,8 +396,11 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
   // the centered pill never breathes with the rate's trailing digits.
   set("i-rate", formatFixed(snapshot.rate));
   if (catalogOpen(state)) set("i-arete", formatInt(state.arete));
-  // The ambient allowance (#333): the phone face of the ledger's read.
+  // The ambient allowance (#333): the phone face of the ledger's read,
+  // meter values riding the same patch (#351).
   set("i-capacity", String(voiceCapacityOf(state)));
+  liveAttr(host, "i-capacity", "aria-valuenow", String(voiceCapacityOf(state)));
+  liveAttr(host, "i-capacity", "aria-valuemax", String(capacityCeiling(state)));
 }
 
 // ── The ambient horizon bar (§7, issue #156, ADR-0038, ADR-0039) ───────
@@ -439,9 +454,17 @@ export function renderHorizonBar(app: App): void {
       // flatten them for assistive tech, so only the ambient bar wears it.
       host.removeAttribute("role");
       host.removeAttribute("aria-label");
+      host.removeAttribute("aria-valuemin");
+      host.removeAttribute("aria-valuemax");
+      host.removeAttribute("aria-valuenow");
     } else {
-      host.setAttribute("role", "img");
+      // The ambient bar answers as a progressbar (issue #351): the
+      // percentage the word reads is the valuenow AT queries.
+      host.setAttribute("role", "progressbar");
       host.setAttribute("aria-label", "The Arete horizon: this era's progress toward prestige");
+      host.setAttribute("aria-valuemin", "0");
+      host.setAttribute("aria-valuemax", "100");
+      host.setAttribute("aria-valuenow", "0");
     }
     host.innerHTML = `${horizonSvg()}${
       reached
@@ -468,5 +491,11 @@ export function renderHorizonBar(app: App): void {
       clip.style.setProperty("width", `${width.toFixed(2)}px`);
     }
   }
-  if (!reached) liveSet(host, "h-word", `${Math.round(fill * 100)}%`);
+  if (!reached) {
+    const pct = Math.round(fill * 100);
+    liveSet(host, "h-word", `${pct}%`);
+    if (host.getAttribute("aria-valuenow") !== String(pct)) {
+      host.setAttribute("aria-valuenow", String(pct));
+    }
+  }
 }

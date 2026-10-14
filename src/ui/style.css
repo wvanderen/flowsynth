@@ -48,7 +48,10 @@ button {
 }
 
 button:hover:not(:disabled) { background: var(--hover-bg); border-color: var(--line-strong); }
-button:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+/* Every control and field answers the keyboard in ink — an outline, not a
+   color-only border swap (issue #351): inputs sat outside this list once,
+   and no field's focus rule may strip the ring away again. */
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 3px;
 }
@@ -132,9 +135,12 @@ h1, h2, h3, p { margin: 0; }
 /* The bar (the controls sheet's vertical goal-bar column): fill by
    height, never by width; the fill wears its goal's palette token from
    the markup; completion engraves the check — state never rides color
-   alone. Surfaces size the column in context; the shape lives only here.
-   The horizontal rounded track is the retired contrast and has no rule
-   left to be reborn from. */
+   alone. The check rides its own keyed band rather than sitting bare on
+   the swatch (#351): ink on the key reads on every palette entry — the
+   indigo fill dropped a bare glyph to 3.71:1 — and the band's edges hold
+   3:1 against all six. Surfaces size the column in context; the shape
+   lives only here. The horizontal rounded track is the retired contrast
+   and has no rule left to be reborn from. */
 .gbar { position: relative; display: block; width: 9px; height: 30px; background: var(--line-soft); overflow: hidden; }
 .gbar i {
   position: absolute;
@@ -148,12 +154,16 @@ h1, h2, h3, p { margin: 0; }
 .gbar.done::after {
   content: "✓";
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 10px;
+  transform: translateY(-50%);
   display: grid;
   place-items: center;
   font: 700 8px/1 var(--mono);
-  color: var(--bg);
-  text-shadow: 0 0 1px var(--ink);
+  color: var(--ink);
+  background: var(--bg);
 }
 
 /* The tooltip layer: deeper mechanics live only here — never expandable
@@ -534,7 +544,7 @@ h1, h2, h3, p { margin: 0; }
   padding: 7px 8px;
   font-size: 12.5px;
 }
-.focus-sheet select:focus { border-color: var(--charge); outline: none; }
+.focus-sheet select:focus-visible { border-color: var(--charge); }
 
 .focus-head { display: flex; align-items: baseline; gap: 12px; padding-bottom: 8px; }
 .focus-head .focus-name { font-size: 19px; letter-spacing: 0.06em; }
@@ -641,7 +651,7 @@ h1, h2, h3, p { margin: 0; }
   font-size: 13px;
 }
 .focus-form-row input[type="number"] { flex: 0 0 84px; }
-.focus-form-row input:focus { border-color: var(--charge); outline: none; }
+.focus-form-row input:focus-visible { border-color: var(--charge); }
 
 /* The drilled habit's detail: back, the head carrying select / rename /
   archive, then the development read. */
@@ -701,7 +711,7 @@ h1, h2, h3, p { margin: 0; }
   border: 1px solid var(--line);
   border-radius: 0;
 }
-.plan-free input:focus { border-color: var(--charge); outline: none; }
+.plan-free input:focus-visible { border-color: var(--charge); }
 .plan-unit { font: 11.5px var(--mono); color: var(--muted); }
 .plan-open { padding: 5px 11px; font-size: 12px; color: var(--muted); }
 .plan-open.active { border-color: var(--ink); color: var(--ink); box-shadow: inset 0 -3px var(--ink); }
@@ -1093,7 +1103,7 @@ h1, h2, h3, p { margin: 0; }
   font-size: 13.5px;
   line-height: 1.5;
 }
-.note-composer:focus { border-color: var(--charge); outline: none; }
+.note-composer:focus-visible { border-color: var(--charge); }
 /* The stream is ruled rows, not cards (instrument standards): open
    divisions, hairline separations — the same shape the HABIT detail's
    tagged notes wear. */
@@ -1181,7 +1191,7 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
 .goal-create { display: flex; gap: 6px; flex-wrap: wrap; }
 .goal-create select, .goal-create input { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 0; padding: 7px 8px; font-size: 12.5px; }
 .goal-create input { width: 64px; }
-.goal-create select:focus, .goal-create input:focus { border-color: var(--charge); outline: none; }
+.goal-create select:focus-visible, .goal-create input:focus-visible { border-color: var(--charge); }
 /* The GOALS face's rows: the shared bar column leads the ledger — fill by
    height, palette token from the markup, the done row's bar holding full
    height under the engraved check. */
@@ -3143,7 +3153,7 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   padding: 9px 12px;
   font-size: 13px;
 }
-.folio-reflect input[type="text"]:focus { border-color: var(--charge); outline: none; }
+.folio-reflect input[type="text"]:focus-visible { border-color: var(--charge); }
 .folio-reflect .reflection-slider { padding: 0 2px; }
 /* The phone folio (#279): the key column narrows and the headline scales
    down; rows stay one rule each, figures right-aligned. */

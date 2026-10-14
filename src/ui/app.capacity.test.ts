@@ -2,6 +2,7 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import type { App } from "./app";
 import { BALANCE, isVoiceType } from "../engine/constants";
+import { capacityCeiling } from "../engine/capacity";
 import { STORAGE_KEY } from "../engine/save";
 import { ARETE_HORIZON } from "../engine/accumulator";
 import { startSession } from "../engine/actions";
@@ -599,6 +600,24 @@ describe("the canvas-edge capacity read (#333)", () => {
     // authoritative economy itself spends — live on both faces.
     expect(ledgerRead()).toBe("1");
     expect(stripRead()).toBe("1");
+  });
+
+  it("the allowance answers as a meter within the ladder's ceiling (#351)", () => {
+    const value = document.querySelector<HTMLElement>("#board-ledger .ledger-capacity [data-live='capacity']")!;
+    expect(value.getAttribute("role")).toBe("meter");
+    expect(value.getAttribute("aria-label")).toBe("Harmonic capacity");
+    expect(value.getAttribute("aria-valuenow")).toBe("1");
+    expect(value.getAttribute("aria-valuemax")).toBe(String(capacityCeiling(app.state)));
+    // A purchase moves the figure and the meter's value together.
+    app.state.nous = 1_000_000;
+    app.buyCapacityAction();
+    expect(value.textContent).toBe("2");
+    expect(value.getAttribute("aria-valuenow")).toBe("2");
+    // The phone face carries the same semantics.
+    const strip = document.querySelector<HTMLElement>("#game-info-strip .info-capacity [data-live='i-capacity']")!;
+    expect(strip.getAttribute("role")).toBe("meter");
+    expect(strip.getAttribute("aria-valuenow")).toBe("2");
+    expect(strip.getAttribute("aria-valuemax")).toBe(String(capacityCeiling(app.state)));
   });
 
   it.each([".ledger-capacity", ".info-capacity"])("%s discloses by focus and tap, dismisses, and survives live updates", (selector) => {
