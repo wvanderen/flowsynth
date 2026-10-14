@@ -172,7 +172,7 @@ The palette is a functional instrument table, not a decorative ramp: every color
 The ramp is decided once (issue #353): sizes are steps on it, and steps are **whole pixels — a half-pixel size is drift**. The named stops, large to small:
 
 - **Display** (600, 40px/1.05, +0.03em condensed): the chord sheet's stage name — the one large moment, reserved (24px on the phone's compact stage row).
-- **Headline** (600, 19px/1.2, +0.06em, uppercase): the focus name, sheet titles, and modal titles.
+- **Headline** (600, 19px/1.2, +0.06em, uppercase): the focus name and sheet titles. Modal titles and the drilled detail name take the stop's 19px size; their quieter voices (the modal's sentence case, the detail's sans lead) are those surfaces' own — the ramp fixes the size, not every surface's voice.
 - **Control** (600, 15px condensed, +0.02em): the shared control's voice — the base button, face tabs. Prominent ledger figures run 15px mono beside their 15px marks.
 - **Readout** (17): the prominent figure voice — board face readouts, ledger row leads, sheet section heads.
 - **Title** (600, 13px/1.2, +0.05em, uppercase): control labels, compact buttons, nameplates, section heads.

@@ -50,3 +50,11 @@ equals `git rev-parse HEAD` here.
 - The new detector sweep resolves the stylesheet's font sizes to exactly
   the documented set: 8 / 9 / 10 / 11 / 12 / 13 / 14 / 15 / 17 / 19 plus
   the reserved moments 20 / 22 / 24 / 28 / 34 / 40 — no half-pixel steps.
+  The sweep reads its set from the sidecar's `typeRamp` extension, so the
+  two mechanical copies cannot drift apart.
+- The impeccable detector (`detect.mjs src/ui/style.css`, DESIGN.md and
+  sidecar loaded) reports **no type or font advisories**. Its six
+  remaining findings are the pre-existing sanctioned set: the two #352
+  radii (the ⓘ ring's 999px, the hex-stack chassis 14px) and the four
+  deliberate fill transitions (goal-bar height, horizon width, water
+  level).

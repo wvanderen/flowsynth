@@ -342,7 +342,7 @@
       },
       "headline": {
         "displayName": "Sheet Title / Focus Name",
-        "purpose": "Sheet identities, modal titles, and the console focus name; condensed caps."
+        "purpose": "Sheet identities and the console focus name; condensed caps. Modal titles ride the stop's 19px size in their own quieter voice."
       },
       "control": {
         "displayName": "Shared Control",

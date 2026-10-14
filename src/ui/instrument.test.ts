@@ -372,8 +372,14 @@ describe("the controls sheet's stylesheet contract", () => {
     // Body 14, Control 15, Readout 17, Headline 19, Display 40 — plus the
     // reserved moments (the session clock 28/22/20, the summary figure
     // 34/28, the phone stage name 24). A half-pixel size is drift; a size
-    // off the ramp is a review flag.
-    const documented = new Set([8, 9, 10, 11, 12, 13, 14, 15, 17, 19, 20, 22, 24, 28, 34, 40]);
+    // off the ramp is a review flag. The sidecar (.impeccable/design.json)
+    // carries the same ramp mechanically; this sweep and it may not drift
+    // apart.
+    const sidecar = JSON.parse(readFileSync(".impeccable/design.json", "utf8"));
+    const ramp = sidecar.extensions.typeRamp;
+    const reserved = Object.values(ramp.reservedMoments).flat();
+    const documented = new Set([...ramp.steps, ...reserved]);
+    expect(documented).toEqual(new Set([8, 9, 10, 11, 12, 13, 14, 15, 17, 19, 20, 22, 24, 28, 34, 40]));
     const offRamp = [...css.matchAll(/font(?:-size)?:\s*(?:[^;]*?\s)?(\d+(?:\.\d+)?)px/g)]
       .map((m) => Number.parseFloat(m[1]!))
       .filter((n) => !documented.has(n));
