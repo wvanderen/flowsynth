@@ -518,6 +518,9 @@ describe("the mutator rolls (issue #199)", () => {
     expect(content.querySelectorAll(".mut-candidate")).toHaveLength(2);
     // The branch's meter row rides with the entry.
     expect(content.textContent).toContain("Mutator Forge");
+    // The consequence note stays terse (#335): the take-one stake and the
+    // landing spot, no layer directions the tray name already carries.
+    expect(content.textContent).toContain("Take one — the other vanishes. It waits in the Mutator tray.");
   });
 
   it("taking a candidate mints it into the Mutator tray; the other vanishes", () => {

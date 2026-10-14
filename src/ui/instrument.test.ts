@@ -252,6 +252,32 @@ describe("the controls sheet's stylesheet contract", () => {
     expect(css).not.toMatch(/\.forge-pip[^{]*\{[^}]*border-radius/);
   });
 
+  it("the Forge sheet's meters fill horizontal strips and its choices stand as open divisions (#335)", () => {
+    // The modal's meter rows restore the horizontal strip: a short
+    // square-cut pip spanning the row beneath its line.
+    const meters = css.slice(css.indexOf(".forge-meter .forge-pip {"), css.indexOf("/* The bottom thumb bar"));
+    expect(meters).toContain("height: 5px");
+    expect(meters).not.toContain("width: 9px");
+    // The strip's fill runs by width (the dock's shape), never height.
+    expect(css).toMatch(/\.forge-pip i \{[^}]*width: 0/);
+    // Choices are hexes with details beneath — no enclosing card: the tile
+    // drops the control border and neighbors divide by hairline. The
+    // divider out-specifies the button base's hover border-color, so the
+    // hairline never brightens with the hover.
+    const tile = css.slice(css.indexOf(".candidate-tile {"), css.indexOf(".candidate-tile:hover"));
+    expect(tile).toContain("border: none");
+    expect(css).toContain(".candidates > .candidate-tile + .candidate-tile { border-left: 1px solid var(--line-soft); }");
+    // Phone stacks the divisions into rows — the modal layer is body-level
+    // (outside #app), so its phone presentation reads the viewport query —
+    // and the mutator pair stacks with them.
+    const phone = css.slice(css.indexOf("/* The modal layer lives outside #app"));
+    expect(phone).toContain(".candidates { grid-template-columns: 1fr; }");
+    expect(phone).toContain(".candidates > .candidate-tile + .candidate-tile { border-left: 0; border-top: 1px solid var(--line-soft); }");
+    expect(phone).toContain(".mut-candidates { flex-direction: column; }");
+    // The goal column is untouched: the shared gbar keeps its vertical fill.
+    expect(css).toMatch(/\.gbar \{ position: relative; display: block; width: 9px; height: 30px;/);
+  });
+
   it("the goal rows fill the shared column by height, done bars holding full height", () => {
     const focus = readFileSync("src/ui/focus.ts", "utf8");
     expect(focus).toContain('class="gbar${goal.completed ? " done" : ""}"');

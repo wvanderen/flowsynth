@@ -767,6 +767,70 @@ describe("a module roll's scrimless peek (#193)", () => {
   });
 });
 
+describe("the forge sheet's lightened choices (#335)", () => {
+  // One banked roll whose three candidates cover three rarities.
+  const bankRoll = (): void => {
+    app.state.bankedRolls.push({
+      id: "roll1",
+      candidates: [
+        { id: "rc1", type: "additive", rarity: "common" },
+        { id: "rc2", type: "harmonizer", rarity: "uncommon" },
+        { id: "rc3", type: "infusor", rarity: "rare" },
+      ],
+    });
+  };
+
+  it("the meters fill horizontal pips beneath their line", () => {
+    bankRoll();
+    app.openModal("forge");
+    const content = document.getElementById("modal-content")!;
+    for (const [key, name] of [["modal-flow-pip", "Flow meter"], ["modal-forge-pip", "Forge progress"]] as const) {
+      const pip = content.querySelector(`[data-live="${key}"]`)!;
+      expect(pip.parentElement!.classList.contains("forge-pip")).toBe(true);
+      expect(pip.getAttribute("style")!).toContain("width:");
+      expect(pip.getAttribute("style")!).not.toContain("height:");
+      // The meter keeps its exact read above the bar — the line carries the
+      // meter's name itself, so state survives without color and no second
+      // label repeats it.
+      const meter = pip.closest(".forge-meter")!;
+      expect(meter.querySelector(".meter-name")).toBeNull();
+      expect(meter.querySelector(".meter-figures")!.textContent).toContain(name);
+    }
+  });
+
+  it("each choice is the hex with state, essential effect, and cost beneath", () => {
+    bankRoll();
+    app.openModal("forge");
+    const tiles = [...document.querySelectorAll<HTMLElement>("#modal-content .candidate-tile")];
+    expect(tiles).toHaveLength(3);
+    for (const tile of tiles) {
+      // The hex leads; the terse details follow it.
+      expect(tile.firstElementChild!.tagName).toBe("svg");
+      expect(tile.querySelector(".rarity")!.textContent).toMatch(/^(common|uncommon|rare)$/);
+      // The essential effect is one line — no second-line prose.
+      expect(tile.querySelector(".candidate-effect")!.innerHTML).not.toContain("<br");
+      // The cost line rides with the details.
+      expect(tile.querySelector(".candidate-scaling")!.textContent).toMatch(/\/LV · upgrades from/);
+    }
+    // Each hex still engraves its module's nameplate.
+    expect(tiles[0]!.querySelector(".face-name")!.textContent).toBe("OSC");
+  });
+
+  it("the prose leaves and the dismissal prompt stays", () => {
+    bankRoll();
+    app.openModal("forge");
+    const notes = [...document.querySelectorAll("#modal-content .modal-note")].map((n) => n.textContent!);
+    // The critical prompt survives (instrument standards): dismissal is
+    // discoverable nowhere else.
+    expect(notes.some((t) => t.includes("The board stays live behind this sheet"))).toBe(true);
+    // The empty read no longer narrates what the meters already show.
+    app.state.bankedRolls = [];
+    app.render();
+    expect(document.getElementById("modal-content")!.textContent).toContain("No choices banked yet.");
+    expect(document.getElementById("modal-content")!.textContent).not.toContain("meters above");
+  });
+});
+
 describe("the always-live board (§5)", () => {
   const cell = (q: number, r: number) => document.querySelector(`[data-cell="${q},${r}"]`)!;
   const ghosts = () => document.getElementById("grid")!.querySelectorAll(".ghost-mark");

@@ -1,4 +1,4 @@
-import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, levelCost, levelsCost, projectPlacement, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
+import { cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, levelCost, levelsCost, projectPlacement, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
 import { ALLOCATION_QUALITY_BOUNDS, idleTermsOf, summaryTermsOf } from "../engine/allocation";
 import { claimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
@@ -774,8 +774,8 @@ function meterDetail(app: App, forgeRate: number, mutatorRate: number): string {
 }
 
 // Every meter bar's fill: the clamped progress share, one build for the
-// dock pip and the modal's card-scale bars alike — the shared column
-// fills by height.
+// dock pip and the modal's meters alike — the strips fill by width
+// (issue #335); only the goal column keeps its height fill.
 function meterPipFill(progress: number, cap: number): string {
   return `${(Math.min(1, Math.max(0, progress / cap)) * 100).toFixed(1)}%`;
 }
@@ -3101,23 +3101,27 @@ function catalogAreteFaceHtml(app: App): string {
   ${upgrade ? "" : `<p class="modal-note">Arete is spent between sessions — enter upgrade mode to buy.</p>`}`;
 }
 
-function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
-  const charged = chargedFactor(1);
+// The candidate's essential effect line (#335, the instrument standard's
+// one-line rule): the concrete read the choice turns on, riding beneath
+// the hex. The deeper formula lines — charge-strength variants, caps,
+// next-roll figures — stay with the Hex detail and the catalog; nothing
+// here repeats what the face already engraves.
+function forgeEffect(type: ModuleInstance["type"]): string {
   switch (type) {
-    case "additive": return `+${formatNumber(BALANCE.synthRate)} ν/s unified synth term<br>+${formatNumber(BALANCE.synthRate * charged)} ν/s at charge strength 1`;
-    case "blaster": return `converts received charge into its synth term — ×${formatNumber(charged - 1)} at charge strength 1<br>sings and completes chords even uncharged, at zero output`;
-    case "harmonizer": return `silent voice — sings its cell's pitch, produces nothing<br>+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/LV to every chord instance it sings in`;
-    case "echo": return `silent voice — sings an adjacent voice's pitch one octave down<br>+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/LV to every chord instance it sings in`;
-    case "bend": return `silent voice — sings its cell's pitch altered by its picked shift<br>+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/LV to every chord instance it sings in`;
-    case "amplifier": return `re-broadcasts received charge at +${formatNumber(100 * BALANCE.amplifierGainPerLevel)}%/LV<br>relayed charge counts fully at receivers; ${BALANCE.amplifierHopCap} hops deep at most`;
-    case "ritual": return `amplifies the active habit's equipped build +${formatNumber(BALANCE.ritualAmpPerLevel * 100)}%/LV while receiving charge<br>charge never crosses to the console — the habit keys the module`;
-    case "spacer": return `Silent wire — never sounds, never joins a pitch set<br>conducts chord adjacency through chains of wired cells`;
-    case "focusKeyed": return `The generator — keyed to your focus<br>each session end banks a reserve (a tenth of its live practice time), spent as its output next session`;
-    case "noteKeyed": return `The generator — keyed to your notes<br>every note written banks its reserve (${formatNumber(BALANCE.noteCreditPerChar)} s per character, ${formatNumber(BALANCE.noteCreditCapSeconds / 60)} min cap per note), spent as its output in flow`;
-    case "goalKeyed": return `The generator — keyed to your goals<br>each completion banks its reserve (${formatNumber(BALANCE.goalReserveMultiple)}× the focus equivalent, by the goal's live share), spent as its output in flow`;
-    case "infusor": return `+${formatNumber(BALANCE.infusorBonus * 100)}% to adjacent production contributions<br>+${formatNumber(BALANCE.infusorBonus * charged * 100)}% at charge strength 1`;
-    case "forge": return `1 Forge progress per received charge strength<br>Next roll: ${formatNumber(forgeThreshold(state.forge.earned))} progress`;
-    case "mutatorForge": return `1 Mutator Forge progress per received charge strength<br>Next roll: ${formatNumber(mutatorForgeThreshold(state.mutatorForge.earned))} progress`;
+    case "additive": return `+${formatNumber(BALANCE.synthRate)} ν/s unified synth term`;
+    case "blaster": return "converts received charge into its synth term";
+    case "harmonizer": return `+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/LV to every chord instance it sings in`;
+    case "echo": return "sings an adjacent voice's pitch one octave down";
+    case "bend": return "sings its cell's pitch altered by its picked shift";
+    case "amplifier": return `re-broadcasts received charge at +${formatNumber(100 * BALANCE.amplifierGainPerLevel)}%/LV`;
+    case "ritual": return `amplifies the active habit's equipped build +${formatNumber(BALANCE.ritualAmpPerLevel * 100)}%/LV while receiving charge`;
+    case "spacer": return "conducts chord adjacency through chains of wired cells";
+    case "focusKeyed": return "each session end banks a reserve, spent as its output next session";
+    case "noteKeyed": return "every note written banks its reserve, spent as its output in flow";
+    case "goalKeyed": return "each completion banks its reserve, spent as its output in flow";
+    case "infusor": return `+${formatNumber(BALANCE.infusorBonus * 100)}% to adjacent production contributions`;
+    case "forge": return "1 Forge progress per received charge strength";
+    case "mutatorForge": return "1 Mutator Forge progress per received charge strength";
     default: return "Not yet active";
   }
 }
@@ -3152,23 +3156,22 @@ function candidateReadout(type: ModuleInstance["type"]): string {
 // The meter detail's live slots (ADR-0041): the figures move every tick a
 // session runs, so the open modal fills them in place — the rebuild only
 // fires when the pending offer changes, and the detail never flickers.
+// Each meter is the meter line itself over a horizontal strip (issue
+// #335) — the line already names its meter, so no second label rides.
 function forgeMeterHtml(state: GameState): string {
   return `<div class="forge-meters">
     <div class="forge-meter">
-      <span class="meter-name">Flow meter</span>
-      <span class="gbar" aria-hidden="true"><i data-live="modal-flow-pip"></i></span>
       <span class="meter-figures mono" data-live="modal-flow-line"></span>
+      <span class="forge-pip" aria-hidden="true"><i data-live="modal-flow-pip"></i></span>
     </div>
     <div class="forge-meter">
-      <span class="meter-name">Forge progress</span>
-      <span class="gbar" aria-hidden="true"><i data-live="modal-forge-pip"></i></span>
       <span class="meter-figures mono" data-live="modal-forge-line"></span>
+      <span class="forge-pip" aria-hidden="true"><i data-live="modal-forge-pip"></i></span>
     </div>
     ${state.catalogEntryOwned ? `
     <div class="forge-meter">
-      <span class="meter-name">Mutator Forge</span>
-      <span class="gbar" aria-hidden="true"><i data-live="modal-mutator-pip"></i></span>
       <span class="meter-figures mono" data-live="modal-mutator-line"></span>
+      <span class="forge-pip" aria-hidden="true"><i data-live="modal-mutator-pip"></i></span>
     </div>` : ""}
   </div>`;
 }
@@ -3177,13 +3180,13 @@ function updateForgeMetersLive(scope: ParentNode, state: GameState, forgeRate: n
   const flowCap = flowThreshold(state.flow.earned);
   const forgeCap = forgeThreshold(state.forge.earned);
   const mutatorCap = mutatorForgeThreshold(state.mutatorForge.earned);
-  liveAttr(scope, "modal-flow-pip", "style", `height:${meterPipFill(state.flow.progress, flowCap)}`);
-  liveAttr(scope, "modal-forge-pip", "style", `height:${meterPipFill(state.forge.progress, forgeCap)}`);
+  liveAttr(scope, "modal-flow-pip", "style", `width:${meterPipFill(state.flow.progress, flowCap)}`);
+  liveAttr(scope, "modal-forge-pip", "style", `width:${meterPipFill(state.forge.progress, forgeCap)}`);
   liveSet(scope, "modal-flow-line", flowMeterLine(state));
   liveSet(scope, "modal-forge-line", forgeMeterLine(state, forgeRate));
 // The Mutator Forge branch's row exists only once the tree is entered
 // (issue #199): the live fills are no-ops while its nodes are absent.
-  liveAttr(scope, "modal-mutator-pip", "style", `height:${meterPipFill(state.mutatorForge.progress, mutatorCap)}`);
+  liveAttr(scope, "modal-mutator-pip", "style", `width:${meterPipFill(state.mutatorForge.progress, mutatorCap)}`);
   liveSet(scope, "modal-mutator-line", mutatorForgeMeterLine(state, mutatorRate));
 }
 
@@ -3211,7 +3214,7 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
             )
             .join("")}
         </div>
-        <p class="modal-note">Take one mutator — the other vanishes. It waits in the Mutator tray, on the Mutators layer.</p>
+        <p class="modal-note">Take one — the other vanishes. It waits in the Mutator tray.</p>
       </div>`;
   content.innerHTML = `
     ${modalTop(`FORGE · ${banked} banked`)}
@@ -3224,12 +3227,12 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
             ${moduleFace({ type: candidate.type, rarity: candidate.rarity, readout: candidateReadout(candidate.type) })}
           </svg>
           <span class="rarity">${RARITY_LABEL[candidate.rarity]}</span>
-          <span class="candidate-scaling">+${formatNumber((BALANCE.rarityPower[candidate.rarity] - 1) * 100)}% / level · upgrades from 10 ν</span>
-          <span class="candidate-effect">${forgeEffect(candidate.type, state)}</span>
+          <span class="candidate-effect">${forgeEffect(candidate.type)}</span>
+          <span class="candidate-scaling">+${formatNumber((BALANCE.rarityPower[candidate.rarity] - 1) * 100)}%/LV · upgrades from 10 ν</span>
         </button>`).join("")}
-    </div>` : `<p class="empty-copy">No choices banked yet — the meters above say how far.</p>`}
+    </div>` : `<p class="empty-copy">No choices banked yet.</p>`}
     ${mutatorSection}
-    <p class="modal-note">The board stays live behind this card — inspect freely; click outside, ✕ or Esc puts the choice away.</p>`;
+    <p class="modal-note">The board stays live behind this sheet — inspect freely; click outside, ✕ or Esc puts the choice away.</p>`;
   updateForgeMetersLive(content, state, projected.forgeRate, projected.mutatorForgeRate);
   content.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach((button) => {
     app.listen(button, "click", () => {

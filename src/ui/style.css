@@ -1348,18 +1348,13 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 }
 .forge-detail[hidden] { display: none; }
 .thumb-bar .forge-detail { left: -60px; top: auto; bottom: calc(100% + 8px); width: min(300px, calc(100cqw - 24px)); }
-.forge-meters { display: grid; gap: 8px; margin: 2px 0 12px; }
-/* Each meter: the shared bar column leading its name and figures. */
-.forge-meter {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  column-gap: 10px;
-  align-items: center;
-}
-.forge-meter .meter-name { grid-column: 2; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.forge-meter .gbar { grid-column: 1; grid-row: 1 / span 2; }
-.forge-meter .gbar i { background: var(--forge-glow); }
-.forge-meter .meter-figures { grid-column: 2; font-size: 11px; color: var(--muted); }
+.forge-meters { display: grid; gap: 10px; margin: 2px 0 12px; }
+/* Each meter (issue #335): its line — the name rides the figures — over
+   a horizontal strip, the dock pip's width fill, never the goal column. */
+.forge-meter { display: grid; row-gap: 4px; }
+.forge-meter .forge-pip { height: 5px; background: var(--line-soft); }
+.forge-meter .forge-pip i { background: var(--forge-glow); }
+.forge-meter .meter-figures { font-size: 11px; color: var(--muted); }
 
 /* The bottom thumb bar (§7, issue #270): the console's re-docked form on
    portrait phone — Catalog / Forge / Add / Inventory / Collection.
@@ -2870,7 +2865,7 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 /* The Forge modal's mutator block and the combine review's pair. */
 .mut-eyebrow { color: var(--arete); }
 .mutator-forge-block { margin-top: 14px; }
-.mut-candidates { display: flex; gap: 14px; justify-content: center; }
+.mut-candidates { display: flex; justify-content: center; }
 .mut-candidate .candidate-effect { color: var(--muted); }
 .mut-combine-pair { display: flex; align-items: center; gap: 12px; }
 .mut-combine-tile { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
@@ -2956,22 +2951,26 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 .modal-note { font-size: 11.5px; color: var(--muted); margin-top: 16px; }
 
 .modal:has(.candidates) { width: min(820px, 100%); }
-.candidates { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; padding: 12px 8px 8px; }
+.candidates { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 12px 0 8px; }
 
-/* Forge candidates are readout-panel faces; clicking the hex takes it. */
+/* Forge candidates (issue #335): the hex leads and the terse details sit
+   beneath it — rule-separated open divisions, never enclosing cards. The
+   hex fill's hover answers alone; the whole tile stays the touch target.
+   The dividers out-specify the button base's hover border-color, so the
+   hairline never brightens with the hover. */
 .candidate-tile {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
-  padding: 14px 12px 16px;
-  border: 1px solid var(--line);
+  padding: 6px 16px;
+  border: none;
   background: transparent;
   color: inherit;
-  transition: border-color 0.15s, background 0.15s, transform 0.15s;
 }
-.candidate-tile:hover:not(:disabled) { border-color: var(--line-strong); background: var(--hover-bg); transform: translateY(-2px); }
+.candidates > .candidate-tile + .candidate-tile { border-left: 1px solid var(--line-soft); }
+.candidate-tile:hover:not(:disabled) { background: none; }
 .candidate-tile:focus-visible { outline-offset: 4px; }
 .candidate-tile svg { width: 150px; height: 150px; }
 .candidate-tile:hover:not(:disabled) .hex { fill: var(--accent-faint); }
@@ -3279,7 +3278,6 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
      the bare total. */
   .rate-hint { display: none; }
   .rate-breakdown { display: none; }
-  .candidates { grid-template-columns: 1fr; }
   .app-popover { width: min(372px, calc(100cqw - 32px)); }
   /* The Focus sheet keeps its wider plate to the 760px line: the folio's
      four faces stay composed past the phone fold, the width cap below. */
@@ -3396,6 +3394,12 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 @media (max-width: 600px) {
   .modal-backdrop { padding: 10px; align-items: flex-end; }
   .modal { width: 100%; max-height: 78vh; animation: sheet-up 0.18s ease-out; }
+  /* The Forge choices stack to one ruled column: the desktop column
+     hairline flips to a row rule, and the mutator pair stacks with them
+     (issue #335). */
+  .candidates { grid-template-columns: 1fr; }
+  .candidates > .candidate-tile + .candidate-tile { border-left: 0; border-top: 1px solid var(--line-soft); }
+  .mut-candidates { flex-direction: column; }
   /* The chord sheet's phone reflow (#278): the stage becomes the compact
      top row — small glyph left, name and the figure reads beside it — and
      the index a full-width row list below. The sheet itself scrolls. */
