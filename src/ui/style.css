@@ -3452,6 +3452,10 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   .chord-row-name { font-size: 19px; }
 }
 
+/* Notes stays centered at every width and keeps board controls under its scrim. */
+.modal-backdrop.notes-modal { align-items: center; }
+.modal-backdrop.notes-modal .modal { animation: none; }
+
 /* The rate sheet (§7) presents below the 760px *container* breakpoint —
    the gate render.ts's Rate-cell tap reads — but the modal layer is
    body-level, outside the #app container, so the gate's decision arrives

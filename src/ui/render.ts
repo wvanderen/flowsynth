@@ -2282,6 +2282,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
     backdrop.hidden = true;
     backdrop.classList.remove("sheet");
     backdrop.classList.remove("peek");
+    backdrop.classList.remove("notes-modal");
     document.body.classList.remove("modal-sheet-open");
     delete content.dataset.renderKey;
     // A pinned tooltip's body lives at document body level (instrument.ts's
@@ -2294,10 +2295,11 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   // it presents as a sheet over the scrim. The modal layer is body-level —
   // outside the #app container — so the gate's decision arrives as a class
   // the stylesheet can act on, not a container rule. On portrait phone the
-  // viewport media query sheets every modal, so the cluster's rise reads
+  // viewport media query sheets other modals, so the cluster's rise reads
   // the wider of the two (§7, ADR-0029: the cluster alone reacts to open
   // sheets, and inspection never buries it).
-  const sheet = (kind === "rate" && containerWidth() < RATE_DETAILS_BREAKPOINT_PX) || window.innerWidth < PHONE_MAX_PX;
+  const sheet = kind !== "notes" && ((kind === "rate" && containerWidth() < RATE_DETAILS_BREAKPOINT_PX) || window.innerWidth < PHONE_MAX_PX);
+  backdrop.classList.toggle("notes-modal", kind === "notes");
   backdrop.classList.toggle("sheet", kind === "rate" && containerWidth() < RATE_DETAILS_BREAKPOINT_PX);
   // The scrimless peek (#193, decided in #174): a pending module roll never
   // blocks board inspection — the backdrop drops entirely and the pointer
