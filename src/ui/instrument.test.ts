@@ -365,4 +365,22 @@ describe("the controls sheet's stylesheet contract", () => {
       expect(body).toContain("border-radius: 0");
     }
   });
+
+  it("the stylesheet's type ramp resolves to the documented set only (#353)", () => {
+    // DESIGN.md §Typography records the ramp (issue #353): whole-pixel
+    // steps only — the micro band 8–10, Label 11, Compact 12, Title 13,
+    // Body 14, Control 15, Readout 17, Headline 19, Display 40 — plus the
+    // reserved moments (the session clock 28/22/20, the summary figure
+    // 34/28, the phone stage name 24). A half-pixel size is drift; a size
+    // off the ramp is a review flag.
+    const documented = new Set([8, 9, 10, 11, 12, 13, 14, 15, 17, 19, 20, 22, 24, 28, 34, 40]);
+    const offRamp = [...css.matchAll(/font(?:-size)?:\s*(?:[^;]*?\s)?(\d+(?:\.\d+)?)px/g)]
+      .map((m) => Number.parseFloat(m[1]!))
+      .filter((n) => !documented.has(n));
+    expect(offRamp).toEqual([]);
+    // The reserved moments stay theirs: the clock and the summary figure
+    // ride no other size, and nothing else borrows theirs.
+    expect(css.match(/font: 28px\/1\.1 var\(--mono\)/)).toBeTruthy();
+    expect(css).toContain(".summary-earned { font-size: 34px;");
+  });
 });
