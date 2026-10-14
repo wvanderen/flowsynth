@@ -3850,10 +3850,13 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   .peek .forge-meters { min-height: 0; }
 }
 
-/* The choice covers its open readout; glossary controls sit above it as siblings. */
+/* The choice covers its open readout; glossary controls sit above it as siblings.
+   The hover guard mirrors button:hover:not(:disabled) — the shared control's
+   opaque hover coat must never outrank this transparent one, or the pick
+   paints its coat over the face and only the glossary terms survive. */
 .peek .candidate-tile { position: relative; }
 .candidate-pick { position: absolute; inset: 0; width: 100%; border: 0; background: transparent; }
-.candidate-pick:hover { background: transparent; }
+.candidate-pick:hover:not(:disabled) { background: transparent; border-color: transparent; }
 .candidate-pick:focus-visible { outline-offset: 4px; }
 .peek .candidate-tile > svg, .candidate-readout { pointer-events: none; }
 .candidate-readout .term-tip { position: relative; pointer-events: auto; }
