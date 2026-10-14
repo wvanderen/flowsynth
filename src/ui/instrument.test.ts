@@ -335,11 +335,12 @@ describe("the controls sheet's stylesheet contract", () => {
     // The round remnant sweep ends here: every border-radius the
     // stylesheet carries is zero or rides one of the two sanctioned
     // marks — the ⓘ gate ring's compact chrome and the hex-stack
-    // chassis plate. Chips, badges, pips, and lights are square-cut.
-    const advisories = [...css.matchAll(/border-radius:\s*([^;]+);/g)]
+    // chassis plate, the exceptions #352 names. Chips, badges, pips,
+    // and lights are square-cut.
+    const nonZeroRadii = [...css.matchAll(/border-radius:\s*([^;]+);/g)]
       .map((m) => m[1].trim())
       .filter((v) => !v.split(/\s+/).every((n) => Number.parseFloat(n) === 0));
-    expect(advisories).toEqual(["999px", "14px", "14px"]);
+    expect(nonZeroRadii).toEqual(["999px", "14px", "14px"]);
     // And each advisory rides its sanctioned mark, not a chip or badge.
     const ring = css.slice(css.indexOf(".inst-tip-trigger {"));
     expect(ring.slice(ring.indexOf("{"), ring.indexOf("}"))).toContain("border-radius: 999px");
