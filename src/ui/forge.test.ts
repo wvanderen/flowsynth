@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { App } from "./app";
 import { createAppFixture } from "./testing/app-fixture";
@@ -123,5 +124,16 @@ describe("Forge drafts (#335)", () => {
     expect(app.ui.modal).toBeNull();
     expect(app.state.bankedRolls).toHaveLength(1);
     expect(app.state.bankedMutatorRolls).toHaveLength(1);
+  });
+});
+
+describe("the draft choice's hit target", () => {
+  it("the pick's hover guard mirrors the shared control's, so its coat never paints the face", () => {
+    // The pick is a positioned overlay above the static face. The generic
+    // button:hover:not(:disabled) coat is (0,2,1); a bare .candidate-pick:hover
+    // override is (0,2,0) and loses — an opaque background then covers the hex
+    // and the readout, leaving only the positioned glossary terms visible.
+    const css = readFileSync("src/ui/style.css", "utf8");
+    expect(css).toContain(".candidate-pick:hover:not(:disabled) { background: transparent; border-color: transparent; }");
   });
 });
