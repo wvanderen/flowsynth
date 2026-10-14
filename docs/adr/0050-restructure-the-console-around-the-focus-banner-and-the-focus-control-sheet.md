@@ -20,3 +20,7 @@ The instrument map's focus-surfaces review ([#242](https://github.com/wvanderen/
 ## Session surface amendment — PR #337 review
 
 The logo, habit, and timer share one native Focus button at desktop and phone widths. One hover boundary, keyboard outline, and sheet-open marker cover the entire read area and stop before the session action controls. Activation opens PLAN; HABIT selection and editing live inside the sheet. During flow the button opens the read-only controls. Start/Exit and Pause/Resume keep their own gestures, and the sheet is a sibling of the button so its interactions never trigger the door. The separate phone Focus icon retires. The habit name yields width to the timer and actions; inner gaps tighten on phone and redundant child padding retires.
+
+## Notes modal amendment — issue #332 (2026-10-13 play-feedback interview)
+
+Notes leaves the shared anchored frame this ADR gave it: its launcher opens a centered modal composition in the dialog layer at every width, independent of the clock or launcher location, so its placement is predictable from the door. The composition opens on CAPTURE and retains LOGGED; capture and live habit tagging are unchanged. Notes stays usable during flow while the modal blocks the board. The dialog manages keyboard focus within itself and returns it to the invoking control on dismissal; ✕, Escape (from the composer included), and backdrop dismissal serve keyboard and touch. Everything else here stands — the Focus control sheet keeps the anchored frame.
