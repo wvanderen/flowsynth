@@ -16,3 +16,7 @@ The instrument map's focus-surfaces review ([#242](https://github.com/wvanderen/
 - ADR-0033's compact launcher and its phone-side habit/goal reads retire; ADR-0028's session-controls-only phone nav keeps the clock and switch it named.
 - The console tiles and their popovers, as furniture, retire without save impact — the banner's edge states derive from existing session state, and no new persisted key is introduced.
 - The instrument standards (#243) govern the banner's and sheet's presentation; the resolved prose cuts (flow-mode paragraph, goals explainer, manual-log line as tooltip) land with implementation.
+
+## Session surface amendment — PR #337 review
+
+The logo, habit, and timer share one native Focus button at desktop and phone widths. One hover boundary, keyboard outline, and sheet-open marker cover the entire read area and stop before the session action controls. Activation opens PLAN; HABIT selection and editing live inside the sheet. During flow the button opens the read-only controls. Start/Exit and Pause/Resume keep their own gestures, and the sheet is a sibling of the button so its interactions never trigger the door. The separate phone Focus icon retires. The habit name yields width to the timer and actions; inner gaps tighten on phone and redundant child padding retires.

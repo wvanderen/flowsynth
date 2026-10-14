@@ -195,56 +195,40 @@ describe("the session group's one-click start (issue #331)", () => {
   });
 });
 
-// Issue #331: the habit name leads the session group — the direct change
-// door in upgrade mode, a plain read once a session runs.
-describe("the session group's habit door (issue #331)", () => {
-  it("upgrade mode: the habit name is a door; activating it opens the HABIT face and the opening click never closes it", () => {
+describe("the unified Focus surface", () => {
+  it("logo, habit, and timer share one native door and one focus stop", () => {
     const created = createHabit(app.state, "Jammin");
     selectHabit(app.state, created.habit!.id);
     app.render();
-    const door = document.querySelector<HTMLButtonElement>("#session-habit")!;
-    expect(door).not.toBeNull();
-    expect(door.querySelector('[data-session="habit"]')!.textContent).toBe("Jammin");
-    door.click();
-    expect(app.ui.app).toBe("habit");
-    const frame = document.getElementById("app-popover")!;
-    expect(frame.classList.contains("focus-sheet")).toBe(true);
-    expect(document.getElementById("console-session")!.contains(frame)).toBe(true);
-    expect(document.querySelector("#app-popover .habit-ledger")).not.toBeNull();
-    // The door never toggles its sheet shut — a re-press unwinds the face's
-    // inner surfaces, the facetab's own radio-like behavior.
-    document.querySelector<HTMLButtonElement>("#session-habit")!.click();
-    expect(app.ui.app).toBe("habit");
-    expect(document.getElementById("app-popover")).not.toBeNull();
-  });
-
-  it("the door opens habit editing from any standing face, keeping the sheet alive across the walk", () => {
-    app.render();
+    const door = () => document.querySelector<HTMLButtonElement>(".session-focus")!;
+    expect(door().tagName).toBe("BUTTON");
+    expect(door().querySelectorAll("button, [tabindex]")).toHaveLength(0);
+    expect(door().contains(document.querySelector(".brand"))).toBe(true);
+    expect(door().contains(document.getElementById("session-habit"))).toBe(true);
+    expect(door().contains(document.querySelector(".console-clock"))).toBe(true);
+    document.querySelector<HTMLElement>(".brand")!.click();
+    expect(app.ui.app).toBe("time");
+    expect(door().getAttribute("aria-expanded")).toBe("true");
+    expect(door().contains(document.getElementById("app-popover"))).toBe(false);
     app.showFocusFace("goals");
-    expect(app.ui.app).toBe("goals");
-    document.querySelector<HTMLButtonElement>("#session-habit")!.click();
-    expect(app.ui.app).toBe("habit");
-    expect(document.getElementById("app-popover")).not.toBeNull();
+    document.getElementById("session-habit")!.click();
+    expect(app.ui.app).toBe("time");
+    expect(door().classList.contains("open")).toBe(true);
   });
 
-  it("a running session narrates its habit and keeps the door shut: a read, never an edit", () => {
+  it("the unified door opens read-only Focus while running and paused", () => {
     const created = createHabit(app.state, "Jammin");
     selectHabit(app.state, created.habit!.id);
     startSession(app.state, 600);
     app.render();
-    const read = document.getElementById("session-habit")!;
-    expect(read.tagName).toBe("SPAN");
-    expect(read.querySelector("button")).toBeNull();
-    expect(read.querySelector('[data-session="habit"]')!.textContent).toBe("Jammin");
-    // Flow-time editing restrictions stand: the read mutates nothing.
-    read.click();
-    expect(app.ui.app).toBeNull();
+    document.getElementById("session-habit")!.click();
+    expect(app.ui.app).toBe("time");
     expect(app.state.mode).toBe("flow");
-    // Paused holds the same rule.
-    app.pause();
-    app.render();
-    expect(document.getElementById("session-habit")!.tagName).toBe("SPAN");
-    expect(document.querySelector('[data-session="habit"]')!.textContent).toBe("Jammin");
+    expect(app.state.activeHabitId).toBe(created.habit!.id);
+    document.getElementById("pause-flow")!.click();
+    expect(app.state.mode).toBe("paused");
+    expect(app.ui.app).toBe("time");
+    expect(document.querySelectorAll(".session-focus")).toHaveLength(1);
   });
 });
 

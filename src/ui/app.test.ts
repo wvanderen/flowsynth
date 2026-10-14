@@ -167,7 +167,7 @@ describe("the console header around Enter/Exit Flow (#148)", () => {
     const header = document.querySelector(".console")!;
     const children = [...header.children];
     const order = (el: Element) => children.indexOf(el);
-    expect(order(header.querySelector(".brand")!)).toBeLessThan(order(document.getElementById("console-session")!));
+    expect(document.getElementById("clock-plan")!.contains(header.querySelector(".brand"))).toBe(true);
     expect(order(document.getElementById("console-session")!)).toBeLessThan(order(document.getElementById("console-apps")!));
     expect(order(document.getElementById("console-apps")!)).toBeLessThan(order(document.getElementById("console-settings")!));
     // The session cluster is the switch's home — the header's dominant
@@ -186,7 +186,7 @@ describe("the console header around Enter/Exit Flow (#148)", () => {
     // drive the same click.
     expect(clock().getAttribute("aria-expanded")).toBe("true");
     expect(document.getElementById("app-popover")).not.toBeNull();
-    clock().click();
+    app.closeApp();
     expect(app.ui.app).toBeNull();
     expect(clock().getAttribute("aria-expanded")).toBe("false");
     expect(document.getElementById("app-popover")).toBeNull();
@@ -227,6 +227,7 @@ describe("the console header around Enter/Exit Flow (#148)", () => {
     const flag = document.getElementById("session-provisional")!;
     const anchor = document.querySelector("#console-session .clock-anchor")!;
     expect(anchor.contains(flag)).toBe(true);
+    expect(document.querySelector(".session-focus")!.contains(flag)).toBe(true);
     expect(anchor.querySelector(".clock-stack")!.contains(flag)).toBe(false);
     expect(flag.textContent).toContain("provisional");
     expect(flag.textContent).toContain("30 ν");

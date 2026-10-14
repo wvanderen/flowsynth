@@ -144,17 +144,9 @@ export function render(app: App): void {
 
 /* ── Console (ADR-0012) ────────────────────────────── */
 
-// The unplanned shape's two words (§6) live in focus.ts beside the plan
-// patchers they share; the clock is itself the plan affordance (§7):
-// clicking it opens the Focus sheet's PLAN face. Wide surfaces wear
-// wide-only wiring; the phone clock is a readout (#313). The anchor counts as "inside" for the popover
-// click-away closer (app.ts), so the click that opens the sheet never
-// closes it in the same gesture.
+// One native Focus door owns logo, habit, clock, and the gaps between them.
 function wireClockPlan(app: App): void {
-  if (isPhoneWidth()) return;
-  app.listen(byId("clock-plan"), "click", () => {
-    app.openApp("time");
-  });
+  app.listen(byId("clock-plan"), "click", () => app.showFocusFace("plan"));
 }
 
 // Session controls (issue #148, grouped by #331) and the focus banner's
@@ -171,15 +163,8 @@ function wireClockPlan(app: App): void {
 // readout lives here (the banner's focus reads name practice state, never
 // production). The sheet itself anchors beneath the clock's own
 // disclosure, whatever face it carries.
-// The session group's habit read (issue #331): the chosen session readable
-// where it starts — habit name, clock, and main switch as one contiguous
-// group at every width, the phone row included (ADR-0050's phone line
-// amended). In upgrade mode the name is the direct change door: activating
-// it opens the Focus sheet's HABIT face, where selection and editing live —
-// editing stays separate from starting. During a session it is a plain
-// read: the running session narrates its habit and changes nothing. No
-// habit selected wears the roster's one edge-state word — the same spelling
-// the sheet head and the PLAN chip row hold.
+// The unified Focus door includes the logo, selected habit, and clock.
+// All three are reads inside one button; the sheet owns editing.
 const UNSTRUCTURED_WORD = "none selected";
 
 // The group's one habit-read source: the chosen habit's name, or null for
@@ -190,12 +175,8 @@ function chosenHabitName(state: GameState): string | null {
 }
 
 function sessionHabitHtml(app: App): string {
-  const upgrade = app.state.mode === "upgrade";
   const name = chosenHabitName(app.state);
-  const read = `<span class="bread${name ? "" : " unselected"}" data-session="habit">${name ? escapeHtml(name) : UNSTRUCTURED_WORD}</span>`;
-  return upgrade
-    ? `<button class="session-habit" id="session-habit" title="Change the session habit">${read}</button>`
-    : `<span class="session-habit" id="session-habit">${read}</span>`;
+  return `<span class="session-habit" id="session-habit"><span class="bread${name ? "" : " unselected"}" data-session="habit">${name ? escapeHtml(name) : UNSTRUCTURED_WORD}</span></span>`;
 }
 
 function renderConsoleSession(app: App, projected: RateSnapshot): void {
@@ -216,8 +197,17 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
   // below): the header stays one row and nothing below it ever moves. The
   // id attributes ride in only on the flow side, where the tick patcher
   // addresses the nodes directly.
-  const clockButton = (title: string, clockAttrs = "", captionAttrs = ""): string => `
-      <${phone ? "div" : "button"} class="console-clock${phone ? "" : " clock-opens-time"}" id="clock-plan"${phone ? "" : ` title="${title}"`}>
+  const focusButton = (title: string, clockAttrs = "", captionAttrs = ""): string => `
+      <button class="session-focus" id="clock-plan" aria-label="Focus controls" title="${title}">
+        <span class="brand" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <path d="M16 2 28 9v14l-12 7L4 23V9Z" />
+            <path d="m10 20 5-10v12l7-10" />
+          </svg>
+          <span class="brand-name">FlowSynth</span>
+        </span>
+        ${sessionHabitHtml(app)}
+        <span class="console-clock">
         <span class="clock-stack">
           <span class="clock-row">
             <span class="session-clock mono"${clockAttrs}></span>
@@ -225,7 +215,9 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
           </span>
           <span class="clock-caption"${captionAttrs}></span>
         </span>
-      </${phone ? "div" : "button"}>`;
+        </span>
+        ${state.mode !== "upgrade" ? '<span class="clock-provisional" id="session-provisional" role="status"></span>' : ""}
+      </button>`;
 
   // The Focus control sheet anchors beneath the clock's own disclosure
   // (ADR-0050): the phone Focus door walks here too — one frame, four
@@ -281,9 +273,8 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
       const scrollTop = popoverScroll(host);
       host.innerHTML = `
         <div class="session-group" role="group" aria-label="Session">
-          ${sessionHabitHtml(app)}
           <div class="clock-anchor">
-            ${clockButton("Opens the Focus sheet")}
+            ${focusButton("Opens the Focus sheet")}
             ${sheetOpen ? sheetHtml() : ""}
           </div>
           <div class="session-actions">
@@ -295,9 +286,6 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
         ${bannerReadsHtml(app)}`;
       wireClockPlan(app);
       app.listen(byId("flow-switch"), "click", () => app.startFlow());
-      // The habit name is the direct change door (issue #331): it walks to
-      // the HABIT face — selection and editing live there, never here.
-      app.listen(byId("session-habit"), "click", () => app.showFocusFace("habit"));
       bindSheet(scrollTop);
     } else if (sheetOpen) {
       updateFocusSheetLive(app, host, projected);
@@ -321,10 +309,8 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
     const scrollTop = popoverScroll(host);
     host.innerHTML = `
       <div class="session-group" role="group" aria-label="Session">
-        ${sessionHabitHtml(app)}
         <div class="clock-anchor">
-          ${clockButton("Opens the Focus sheet", ' id="session-clock"', ' id="session-caption"')}
-          <span class="clock-provisional" id="session-provisional" role="status"></span>
+          ${focusButton("Opens the Focus sheet", ' id="session-clock"', ' id="session-caption"')}
           ${sheetOpen ? sheetHtml() : ""}
         </div>
         <div class="session-actions">
@@ -376,7 +362,10 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
 // and closing the sheet rebuilds the cluster with the sheet itself.
 function syncClockDisclosure(app: App): void {
   const open = app.ui.app !== null;
-  if (!isPhoneWidth()) byId("clock-plan")?.setAttribute("aria-expanded", String(open));
+  byId("clock-plan")?.setAttribute("aria-expanded", String(open));
+  byId("clock-plan")?.classList.toggle("open", open);
+  const door = byId("clock-plan");
+  if (door) door.setAttribute("aria-label", `Focus controls, ${chosenHabitName(app.state) ?? UNSTRUCTURED_WORD}, ${door.querySelector(".session-clock")?.textContent ?? ""} ${door.querySelector(".clock-caption")?.textContent ?? ""}`);
 }
 
 // The focus banner's reads (ADR-0050; vertical bars per #312): past the
@@ -497,11 +486,8 @@ function appGlyphSvg(appKey: Exclude<FocusApp, "time">): string {
   return `<svg viewBox="-12 -12 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${appIcon(appKey)}</svg>`;
 }
 
-// The Focus sheet's door and Notes are the only app doors; each reads its
-// display label from the one APP_LABELS shape. No state word rides the
-// surface: the Goals-state read is desktop-only and lives in the Focus
-// sheet's head (ADR-0033 amended), and the phone nav carries bare doors
-// (ADR-0050's phone line).
+// Notes keeps its separate capture door; Focus opens from the session
+// surface itself at every width. Tracker state stays inside the sheet.
 
 function renderConsoleApps(app: App): void {
   const host = byId("console-apps");
@@ -513,25 +499,10 @@ function renderConsoleApps(app: App): void {
   const key = `${phone ? "phone" : "wide"}|${ui.app}`;
   if (host.dataset.renderKey === key) return;
   host.dataset.renderKey = key;
-  // Every app sheet anchors beneath the clock at every width (ADR-0050):
-  // the Focus sheet behind the clock block (wide) or the focus door
-  // (phone), Notes its CAPTURE | LOGGED sheet (#277) — the doors carry the
-  // entries, never a panel.
-  const doorKeys: readonly DoorKey[] = phone ? PHONE_DOORS : TILE_APPS;
+  // Every sheet anchors beneath the session clock, including Notes.
+  const doorKeys = TILE_APPS;
   const tiles = doorKeys
     .map((doorKey) => {
-      if (doorKey === "focus") {
-        // The Focus sheet's door: pressed while any face of the sheet
-        // stands — the inset marker is the sheet-open state.
-        const open = ui.app === "time" || ui.app === "habit" || ui.app === "goals";
-        return `<div class="app-slot">
-      <button class="app-tile${open ? " open" : ""}" id="app-tile-focus" aria-pressed="${open}" aria-label="Focus" title="Focus — plan, habit, goals, history">
-        <span class="app-tile-glyph">
-          ${FOCUS_DOOR_SVG}
-        </span>
-      </button>
-    </div>`;
-      }
       const appKey = doorKey as Exclude<FocusApp, "time">;
       const label = APP_LABELS[appKey];
       const open = ui.app === appKey;
@@ -547,27 +518,10 @@ function renderConsoleApps(app: App): void {
   host.innerHTML = `<div class="app-tiles">${tiles}</div>`;
   for (const doorKey of doorKeys) {
     app.listen(byId(`app-tile-${doorKey}`), "click", () => {
-      if (doorKey === "focus") app.openApp("time");
-      else app.openApp(doorKey);
+      app.openApp(doorKey);
     });
   }
 }
-
-// The console doors' keys (issue #313): the Focus sheet's own door — the
-// one entry that is not an app but the frame's front — plus whatever tile
-// apps remain. The clock block is the sheet's wide entry, so only phone
-// carries the focus door; Notes is the one tile app at every width.
-type DoorKey = FocusApp | "focus";
-
-// The Focus sheet's door mark (ADR-0050's phone line, the prototype's ◎):
-// the circled dot — the focus figure, distinct from the clock's face.
-const FOCUS_DOOR_SVG = `<svg viewBox="-12 -12 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7"><circle r="8"/><circle r="1.8"/></svg>`;
-
-// The phone banner's door set (ADR-0050's amended phone line): the Focus
-// sheet's door and Notes. Habit and Goals walk into the sheet's faces
-// behind the focus door — the compact launcher they answered retires
-// (ADR-0033 amended), and the clock and main switch keep their posts.
-const PHONE_DOORS: readonly DoorKey[] = ["focus", "notes"];
 
 // The feats page (ADR-0015 as amended): the always-visible full list — the
 // milestone feats lead as their own group, then the five buckets the ADR

@@ -428,11 +428,10 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     // #148) — never beneath a door in the apps row (ADR-0050's phone line
     // keeps the doors out of the session cluster).
     const clock = document.getElementById("clock-plan")!;
-    expect(clock.tagName).toBe("DIV");
+    expect(clock.tagName).toBe("BUTTON");
     expect(clock.querySelector(".clock-disclose")).toBeNull();
     clock.click();
-    expect(app.ui.app).toBeNull();
-    document.getElementById("app-tile-focus")!.click();
+    expect(document.getElementById("app-tile-focus")).toBeNull();
     expect(app.ui.app).toBe("time");
     const popover = document.getElementById("app-popover")!;
     expect(document.getElementById("console-session")!.contains(popover)).toBe(true);
@@ -447,8 +446,8 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     expect(app.ui.app).toBe("time");
     setAppWidth(390);
     app.render();
-    expect(document.getElementById("clock-plan")!.tagName).toBe("DIV");
-    expect(document.getElementById("clock-plan")!.hasAttribute("aria-expanded")).toBe(false);
+    expect(document.getElementById("clock-plan")!.tagName).toBe("BUTTON");
+    expect(document.getElementById("clock-plan")!.getAttribute("aria-expanded")).toBe("true");
   });
 
   it("the Hex detail presents as a bottom sheet replacing the grid", () => {
@@ -576,13 +575,12 @@ describe("the phone banner (ADR-0050's amended phone line)", () => {
   // answered it replaces the markup.
   const door = (key: string) => document.getElementById(`app-tile-${key}`)!;
 
-  it("bare launcher icons only: the focus door and Notes beside the clock, switch, and Settings", () => {
+  it("Notes is the only separate launcher beside the session surface and Settings", () => {
     app.render();
     // The doors: exactly focus + Notes — the compact launcher retired with
     // ADR-0033, and Habit and Goals live in the sheet's faces behind the
     // focus door.
     expect([...document.querySelectorAll("#console-apps .app-tile")].map((t) => t.id)).toEqual([
-      "app-tile-focus",
       "app-tile-notes",
     ]);
     expect(document.getElementById("app-launcher")).toBeNull();
@@ -590,7 +588,7 @@ describe("the phone banner (ADR-0050's amended phone line)", () => {
     // The nav row's full roster: brand, clock, switch, doors, Settings —
     // every launcher surface a native button.
     const row = () => document.querySelector("header.console")!;
-    for (const id of ["flow-switch", "app-tile-focus", "app-tile-notes", "console-settings"]) {
+    for (const id of ["flow-switch", "clock-plan", "app-tile-notes", "console-settings"]) {
       expect(row().contains(document.getElementById(id)!)).toBe(true);
       expect(document.getElementById(id)!.tagName).toBe("BUTTON");
     }
@@ -634,26 +632,22 @@ describe("the phone banner (ADR-0050's amended phone line)", () => {
     expect(document.querySelector("#app-popover .focus-state")!.textContent).toBe("in progress");
   });
 
-  it("the focus door opens the Focus sheet, wears the inset marker while a face stands, and toggles shut", () => {
+  it("the session surface opens Focus and marks every standing face without a separate icon", () => {
     app.render();
-    door("focus").click();
+    const group = () => document.querySelector<HTMLButtonElement>(".session-focus")!;
+    group().click();
     expect(app.ui.app).toBe("time");
-    const sheet = document.getElementById("app-popover")!;
-    expect(sheet.classList.contains("focus-sheet")).toBe(true);
-    expect(document.getElementById("console-session")!.contains(sheet)).toBe(true);
-    expect(door("focus").getAttribute("aria-pressed")).toBe("true");
-    // Another face keeps the door pressed — the sheet stands, whatever
-    // face it carries.
-    sheet.querySelector<HTMLButtonElement>('[data-face="habit"]')!.click();
+    expect(group().classList.contains("open")).toBe(true);
+    expect(document.getElementById("app-tile-focus")).toBeNull();
+    document.querySelector<HTMLButtonElement>('[data-face="habit"]')!.click();
     expect(app.ui.app).toBe("habit");
-    expect(door("focus").getAttribute("aria-pressed")).toBe("true");
-    // Pressing the door walks to the PLAN face; pressing again closes.
-    door("focus").click();
+    expect(group().classList.contains("open")).toBe(true);
+    group().click();
     expect(app.ui.app).toBe("time");
-    door("focus").click();
-    expect(app.ui.app).toBeNull();
-    expect(document.getElementById("app-popover")).toBeNull();
-    expect(door("focus").getAttribute("aria-pressed")).toBe("false");
+    group().click();
+    expect(app.ui.app).toBe("time");
+    app.closeApp();
+    expect(group().classList.contains("open")).toBe(false);
   });
 
   it("Notes opens from its own door; the sheet stands under the clock with the composer reachable, mid-session too", () => {
@@ -683,7 +677,8 @@ describe("the phone banner (ADR-0050's amended phone line)", () => {
     // omission amended by #331), and it is the change door here too.
     const group = document.querySelector("#console-session .session-habit")!;
     expect(group.querySelector('[data-session="habit"]')!.textContent).toBe("Piano");
-    expect((group as HTMLElement).tagName).toBe("BUTTON");
+    expect((group as HTMLElement).tagName).toBe("SPAN");
+    expect(group.closest("button")).toBe(document.querySelector(".session-focus"));
     // The bars stay docked out below the line — the drop lives in the phone
     // query's own rules, and each block runs to its column-0 closing brace.
     const css = readFileSync("src/ui/style.css", "utf8");

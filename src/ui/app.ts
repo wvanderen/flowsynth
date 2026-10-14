@@ -862,7 +862,7 @@ export class App {
       // session habit's door (#331) joins the set: its click opens the
       // Focus sheet on the HABIT face — and the opening click, like the
       // switch's, must never close it in the same gesture.
-      if (target?.closest(".clock-anchor, #flow-switch, #session-habit") || (this.ui.app === "notes" && target?.closest("#pause-flow"))) clickInsideApps = true;
+      if (target?.closest(".session-group") || (this.ui.app === "notes" && target?.closest("#pause-flow"))) clickInsideApps = true;
     }, { capture: true, signal: this.signal });
     document.addEventListener("click", () => {
       // A stale instance's closer must never close — or re-render — a newer
