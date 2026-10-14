@@ -3,6 +3,8 @@ import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import type { App } from "./app";
 import { BALANCE, isVoiceType } from "../engine/constants";
 import { STORAGE_KEY } from "../engine/save";
+import { ARETE_HORIZON } from "../engine/accumulator";
+import { startSession } from "../engine/actions";
 import { displayedRates, allocateRates, projectPlacement } from "../engine/economy";
 import { give } from "../engine/fixtures";
 import * as allocation from "../engine/allocation";
@@ -569,5 +571,173 @@ describe("placement previews with capacity-aware production (#260)", () => {
     } finally {
       delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
     }
+  });
+});
+
+describe("the canvas-edge capacity read (#333)", () => {
+  beforeEach(() => { app = boot(undefined, true); });
+  const ledgerRead = (): string =>
+    (document.querySelector("#board-ledger .ledger-capacity [data-live='capacity']") as HTMLElement).textContent!;
+  const stripRead = (): string =>
+    (document.querySelector("#game-info-strip .info-capacity [data-live='i-capacity']") as HTMLElement).textContent!;
+  const askVoice = (q: number, r: number): string => {
+    document.querySelector(`[data-cell="${q},${r}"]`)!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    return (document.getElementById("chord-readout") as HTMLElement).textContent ?? "";
+  };
+
+  it("the allowance reads at the canvas edge on the ledger and the phone strip", () => {
+    // One ambient figure — the per-voice whole-chord allowance the
+    // authoritative economy itself spends — live on both faces.
+    expect(ledgerRead()).toBe("1");
+    expect(stripRead()).toBe("1");
+  });
+
+  it.each([".ledger-capacity", ".info-capacity"])("%s discloses by focus and tap, dismisses, and survives live updates", (selector) => {
+    const trigger = document.querySelector<HTMLButtonElement>(selector)!;
+    const tip = () => document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+    expect(trigger.tagName).toBe("BUTTON");
+    const name = () => trigger.getAttribute("aria-labelledby")!.split(" ").map((id) => document.getElementById(id)!.textContent).join(" ");
+    expect(name()).toBe("Harmonic capacity 1");
+    trigger.focus();
+    expect(tip().classList.contains("inst-show")).toBe(true);
+    expect(tip().textContent).toBe("Whole-chord budget per voice");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(tip().classList.contains("inst-show")).toBe(false);
+    trigger.click();
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    app.state.nous = 1_000_000;
+    app.buyCapacityAction();
+    expect(trigger.querySelector("b")!.textContent).toBe("2");
+    expect(name()).toBe("Harmonic capacity 2");
+    expect(tip().classList.contains("inst-show")).toBe(true);
+    document.body.click();
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(tip().classList.contains("inst-show")).toBe(false);
+  });
+
+  it("buying Poly Expander advances the ambient allowance and the selected-voice denominator; new voices inherit it", () => {
+    give(app.state, "additive", hex(1, 0));
+    app.state.nous = 1_000_000;
+    app.buyCapacityAction();
+    expect(app.state.capacityBought).toBe(1);
+    expect(ledgerRead()).toBe("2");
+    expect(stripRead()).toBe("2");
+    // The C4·G4 Fifth spends one of G4's two units — the denominator moved
+    // with the purchase, the used count stays the allocation's own.
+    expect(askVoice(1, 0)).toContain("(1/2)");
+    // A newly acquired voice receives the same allowance — the ladder is
+    // board-wide by construction, never per-module. Placed alone, it has
+    // sung nothing: 0 of the new 2.
+    app.state.cells.push(hex(3, 1));
+    give(app.state, "additive", hex(3, 1));
+    app.render();
+    expect(askVoice(3, 1)).toContain("(0/2)");
+  });
+
+  it("a purchase that cannot pay changes nothing; flow forbids the purchase", () => {
+    app.state.nous = 1;
+    app.buyCapacityAction();
+    expect(app.state.capacityBought).toBe(0);
+    expect(document.getElementById("status")!.textContent).toContain("Not enough");
+    expect(ledgerRead()).toBe("1");
+    startSession(app.state, null);
+    app.state.nous = 1_000_000;
+    app.buyCapacityAction();
+    expect(app.state.capacityBought).toBe(0);
+    expect(document.getElementById("status")!.textContent).toContain("between sessions");
+    app.render();
+    expect(ledgerRead()).toBe("1");
+  });
+
+  it("the ceiling holds the ambient allowance; an Expansion Bay opens the next rung", () => {
+    app.state.capacityBought = 2;
+    app.render();
+    expect(ledgerRead()).toBe("3");
+    app.state.nous = 1_000_000;
+    app.buyCapacityAction();
+    expect(app.state.capacityBought).toBe(2);
+    expect(document.getElementById("status")!.textContent).toContain("capped");
+    app.state.arete = 100;
+    app.state.prestiges = 1;
+    app.state.catalogEntryOwned = true;
+    app.buyCapacityCeilingAction();
+    expect(app.state.capacityCeilings).toBe(1);
+    app.buyCapacityAction();
+    expect(app.state.capacityBought).toBe(3);
+    expect(ledgerRead()).toBe("4");
+    expect(stripRead()).toBe("4");
+  });
+
+  it("the allowance rides the real save/reload path", () => {
+    app.state.nous = 1_000_000;
+    app.buyCapacityAction();
+    expect(app.state.capacityBought).toBe(1);
+    app = boot();
+    expect(app.state.capacityBought).toBe(1);
+    expect(ledgerRead()).toBe("2");
+  });
+
+  it("the arete reset returns the voices to one — the ambient read follows", () => {
+    app.state.nous = 1_000_000;
+    app.buyCapacityAction();
+    expect(app.state.capacityBought).toBe(1);
+    expect(ledgerRead()).toBe("2");
+    app.state.eraEarned = ARETE_HORIZON;
+    app.openPrestigeConfirm();
+    document.querySelector<HTMLButtonElement>("#prestige-confirm")!.click();
+    expect(app.state.capacityBought).toBe(0);
+    app.render();
+    expect(ledgerRead()).toBe("1");
+    expect(stripRead()).toBe("1");
+  });
+
+  it("selected-voice usage stays accurate when allocation leaves capacity unused", () => {
+    // One Fifth sung, capacity two: the voice shows 1/2 — used counts
+    // instances, never the allowance's slack.
+    give(app.state, "additive", hex(1, 0));
+    app.state.nous = 1_000_000;
+    app.buyCapacityAction();
+    app.render();
+    expect(askVoice(1, 0)).toContain("(1/2)");
+  });
+});
+
+describe("solid chord paths (#333)", () => {
+  beforeEach(() => { app = boot(undefined, true); });
+  const marks = (): HTMLElement => document.querySelector('[data-key="chord-marks"]')!;
+
+  it("an active chord involving a silent voice draws solid — the mute styling is retired", () => {
+    // Capacity two lets both fifths sing: C4·G4 and G4·D5, the second
+    // carrying the Harmonizer — a silent voice — as a full earning chord.
+    app.state.cells.push(hex(2, 0));
+    app.state.nous = 1_000_000;
+    app.buyCapacityAction();
+    expect(app.state.capacityBought).toBe(1);
+    give(app.state, "additive", hex(1, 0));
+    give(app.state, "harmonizer", hex(2, 0));
+    app.render();
+    const silent = app.state.modules.find((m) => m.type === "harmonizer")!.id;
+    const withSilent = [...marks().querySelectorAll<HTMLElement>(".chord-mark")].filter((mark) =>
+      (mark.getAttribute("data-voices") ?? "").split(" ").includes(silent),
+    );
+    expect(withSilent.length).toBeGreaterThan(0);
+    for (const mark of withSilent) {
+      expect(mark.classList.contains("chord-muted")).toBe(false);
+      expect(mark.querySelectorAll(".chord-seam").length).toBeGreaterThan(0);
+    }
+    expect(document.querySelectorAll(".chord-muted")).toHaveLength(0);
+  });
+
+  it("idle candidates stay the board's only quiet paths — dotted and dim, never dashed by a silent voice", () => {
+    // C4·G4 active; the C5 newcomer's Octave and doubled Fifth idle at
+    // capacity one. Idle marks keep their class; nothing else is dimmed
+    // by a silent voice, and the dashed mute rule is gone from the sheet.
+    give(app.state, "additive", hex(1, 0));
+    app.state.cells.push(hex(0, 1));
+    give(app.state, "additive", hex(0, 1));
+    app.render();
+    expect(marks().querySelectorAll(".chord-idle").length).toBeGreaterThan(0);
+    const active = [...marks().querySelectorAll<HTMLElement>(".chord-mark:not(.chord-idle)")];
+    for (const mark of active) expect(mark.classList.contains("chord-muted")).toBe(false);
   });
 });

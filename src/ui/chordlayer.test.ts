@@ -318,4 +318,16 @@ describe("the idle candidates (issue #258)", () => {
     expect(overlay.marks).toHaveLength(1);
     expect(overlay.marks[0]!.inactive).toBe(false);
   });
+
+  it("a silent voice asks no styling of its own — every active mark is solid (#333)", () => {
+    // The mute distinction retired (issue #333): the path language
+    // distinguishes earning from idle, never voicing. A chord carrying a
+    // silent-voice id reads exactly like any other active mark.
+    const overlay = overlayWith([chord("Fifth", ["m1", "m4"]), chord("Octave", ["m2", "m3"])]);
+    expect(overlay.marks).toHaveLength(2);
+    for (const mark of overlay.marks) {
+      expect(mark.inactive).toBe(false);
+      expect("muted" in mark).toBe(false);
+    }
+  });
 });

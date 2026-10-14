@@ -50,14 +50,13 @@ export interface ChordMark {
   readonly chipY: number;
   // The chord's voice ids — the hover reveal's lookup on the mark node.
   readonly voices: readonly string[];
-  // Whether a silent voice sings in this chord (ADR-0048's honest
-  // convention): the mark draws dashed — the game's standing language for
-  // silent and promised work — and its readout chip wears the muted style.
-  readonly muted: boolean;
   // Whether this chord is a recognized candidate the allocation left idle
   // (issue #258): drawn in the same geometry, dimmer and dotted, and
   // never pulsing — it earns nothing, so it isn't live activity. The
-  // active seams dominate; the idle candidates whisper beneath them.
+  // active seams dominate; the idle candidates whisper beneath them. The
+  // one path distinction on the board (#333): every active chord draws
+  // solid — a silent voice's chord included (its identity lives on the
+  // module glyphs, not the path) — and idle alone is dotted and dim.
   readonly inactive: boolean;
   // Whether this chord carries one of the caller's focus ids (§6): the
   // selected module's chords emphasize, the rest fade. Always true when no
@@ -316,12 +315,13 @@ export function chordMarkCovers(mark: Pick<ChordMark, "seams" | "outline">, at: 
 // those ids come back focused, every other mark fades; unset, nothing
 // fades. `focusPoint` extends the same emphasis to a selection that sings
 // in no chord — the conducting spacer: chords whose drawn work covers the
-// point lift with it. `silentIds` names the silent voices (ADR-0048): a
-// chord any of them sings in draws muted — dashed seams, dashed chip.
-// `step` is the lattice's adjacent-center distance. `inactiveChords`
-// (issue #258) carries the recognized-but-idle candidates: each draws its
-// own mark, flagged inactive, after the active ones — the board shows
-// every chord it sings, and the active bonuses dominate it.
+// point lift with it. `step` is the lattice's adjacent-center distance.
+// `inactiveChords` (issue #258) carries the recognized-but-idle
+// candidates: each draws its own mark, flagged inactive, after the active
+// ones — the board shows every chord it sings, and the active bonuses
+// dominate it. Silent voices ask no styling of their own (#333): an
+// active chord is solid whoever sings it; the path language distinguishes
+// earning from idle, never voicing.
 export function chordOverlay(opts: {
   namedChords: readonly NamedChordTerm[];
   inactiveChords?: readonly NamedChordTerm[];
@@ -332,11 +332,9 @@ export function chordOverlay(opts: {
   labelFor: (chord: NamedChordTerm) => string;
   focusIds?: readonly string[];
   focusPoint?: Point | null;
-  silentIds?: ReadonlySet<string>;
 }): ChordOverlay {
   const { namedChords, posOf, point, radius, labelFor } = opts;
   const focus = new Set(opts.focusIds ?? []);
-  const silent = opts.silentIds ?? new Set<string>();
   const emphasize = focus.size > 0 || opts.focusPoint != null;
   const marks: ChordMark[] = [];
   const markFor = (chord: NamedChordTerm, index: number, inactive: boolean): void => {
@@ -356,7 +354,6 @@ export function chordOverlay(opts: {
       // The chip anchor floats above the topmost voice, a half-hex clear.
       chipY: Number((top[1] - radius * 1.18).toFixed(2)),
       voices: chord.moduleIds,
-      muted: chord.moduleIds.some((id) => silent.has(id)),
       inactive,
       focused:
         !emphasize ||

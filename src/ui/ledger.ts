@@ -10,7 +10,7 @@ import { ACHIEVEMENTS } from "../engine/achievements";
 import { catalogOpen } from "../engine/catalog";
 import { BALANCE, CATEGORY_OF, isOscillatorType, NAMED_CHORDS } from "../engine/constants";
 import { idleTermsOf } from "../engine/allocation";
-import { activeBuildGeneratorStrength, chargedFactor, deployedAt, hostPower } from "../engine/economy";
+import { activeBuildGeneratorStrength, chargedFactor, deployedAt, hostPower, voiceCapacityOf } from "../engine/economy";
 import { discoveryCount } from "../engine/library";
 import { noteNameOf } from "../engine/lattice";
 import type { Contribution, GameState, ModuleInstance, RateSnapshot } from "../engine/types";
@@ -415,6 +415,30 @@ export function areteLedgerHtml(state: GameState): string {
   return `<span class="ledger-fig ledger-arete" title="Arete — banked by prestige; spent in the catalog"><b class="mono" data-live="arete"></b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small></span>`;
 }
 
+// ── The harmonic-capacity read (§7, issue #333) ─────────────────────────
+// The board ledger's fourth grouped resource: the per-voice whole-chord
+// allowance — the one uniform figure every voice owns and every rate pass
+// spends (`voiceCapacityOf`). One ambient read at the canvas edge, never
+// a board-wide pool meter: the selected voice's used/available stays
+// local (the reserved readout, the Hex detail, the rate details' Capacity
+// leg). The canonical mark speaks the board's own chord language — the
+// hex chassis sealed by a chord's twin lines.
+export const CAPACITY_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 2.5 20.2 7.25v9.5L12 21.5 3.8 16.75v-9.5Z"/>
+  <path d="M8 10.2h8"/>
+  <path d="M8 13.8h8"/>
+</svg>`;
+
+function capacityReadHtml(state: GameState, phone: boolean): string {
+  const live = phone ? "i-capacity" : "capacity";
+  const classes = phone ? "info-read info-capacity" : "ledger-fig ledger-capacity";
+  return `<span class="inst-tip capacity-tip"><button type="button" class="inst-tip-trigger capacity-trigger ${classes}" aria-labelledby="${live}-name ${live}-value" aria-expanded="false" aria-describedby="${live}-tip"><span class="sr-only" id="${live}-name">Harmonic capacity</span><b class="mono" id="${live}-value" data-live="${live}">${voiceCapacityOf(state)}</b><small class="capacity-mark" aria-hidden="true">${CAPACITY_SVG}</small></button><span class="inst-tip-body" id="${live}-tip" role="tooltip">Whole-chord budget per voice</span></span>`;
+}
+
+export function capacityLedgerHtml(state: GameState): string {
+  return capacityReadHtml(state, false);
+}
+
 // ── The board ledger (§7, issue #270) ───────────────────────────────────
 // One clipped instrument panel docked above the board: the resources group
 // left — `1.24k ν · 18.6 ν/s · 6 ◇`, the arete read in its color with the
@@ -453,6 +477,7 @@ export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
           ${rateCellHtml()}
         </span>
         ${areteLedgerHtml(state)}
+        ${capacityLedgerHtml(state)}
         <span class="ledger-rule" aria-hidden="true"></span>
         <span class="ledger-chips">
           ${featsChipHtml(feats)}
@@ -467,7 +492,7 @@ export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
     // tap opens the module's Hex detail — the row names the place, the
     // cross-section shows it. The tooltip layer pins and dismisses beside it.
     wireSynthPicks(host.querySelector(".rate-breakdown")!, (id) => app.openModuleDetail(id), app);
-    wireTooltips(host.querySelector(".rate-breakdown")!, app.signal);
+    wireTooltips(host, app.signal);
   }
   const detailModule = app.ui.detail ? deployedAt(state, app.ui.detail.pos) : undefined;
   updateLedgerLive(host, state, snapshot, detailModule?.id ?? null);
@@ -488,6 +513,9 @@ export function updateLedgerLive(
   liveAttr(scope, "nous", "title", formatInt(state.nous));
   set("rate", formatNumber(snapshot.rate));
   if (catalogOpen(state)) set("arete", formatInt(state.arete));
+  // The ambient allowance (#333): one figure, the economy's own — every
+  // voice's whole-chord budget. A purchase moves it on the next render.
+  set("capacity", String(voiceCapacityOf(state)));
   updateRateDetailsLive(scope, state, snapshot);
   // A row answers for the module it names: the selected module's row wears
   // the state grammar's firm inset marker (`.st-selected`) — readable
@@ -524,8 +552,10 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
         catalogOpen(state)
           ? `<span class="info-read info-arete" title="Arete — banked by prestige; spent in the catalog"><b class="mono" data-live="i-arete"></b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small></span>`
           : `<span class="info-read info-arete arete-dim" title="Unlocks at first Arete Reset">${areteTelegraphHtml()}</span>`
-      }</div>`;
+      }
+      ${capacityReadHtml(state, true)}</div>`;
     app.listen(document.getElementById("info-rate"), "click", () => app.openModal("rate"));
+    wireTooltips(host, app.signal);
   }
   const set = (live: string, text: string) => liveSet(host, live, text);
   // Same compression as the ledger's read, same exact tooltip (issue #187).
@@ -535,6 +565,8 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
   // the centered pill never breathes with the rate's trailing digits.
   set("i-rate", formatFixed(snapshot.rate));
   if (catalogOpen(state)) set("i-arete", formatInt(state.arete));
+  // The ambient allowance (#333): the phone face of the ledger's read.
+  set("i-capacity", String(voiceCapacityOf(state)));
 }
 
 // ── The ambient horizon bar (§7, issue #156, ADR-0038, ADR-0039) ───────

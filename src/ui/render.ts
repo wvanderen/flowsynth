@@ -45,7 +45,7 @@ import { chordOverlay, chordMarkCovers, chipWidth, CHORD_HUES, type ChordMark } 
 import { updateSvg } from "./svg";
 import { APP_LABELS, META, RARITY_LABEL, SHELF_DESCRIPTIONS } from "./meta";
 import { formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown } from "./format";
-import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG } from "./ledger";
+import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG, CAPACITY_SVG } from "./ledger";
 import { closeTooltips, wireTooltips } from "./instrument";
 import { instancesByClass, instancesKeyOf, libraryHeaderHtml, libraryIndexRowHtml, libraryStageHtml } from "./library";
 import { discoveryCount, discoveryBoostOf, rootsHeardOf } from "../engine/library";
@@ -1036,8 +1036,6 @@ function renderCellArmPill(app: App): void {
 function refreshChordOverlay(app: App, live: RateSnapshot): ReturnType<typeof chordOverlay> {
   const { state } = app;
   const deployedById = new Map(state.modules.filter((m) => m.pos !== null).map((m) => [m.id, m]));
-  // The silent voices (ADR-0048): the chords they sing in draw muted.
-  const silentIds = new Set(state.modules.filter((m) => CATEGORY_OF[m.type] === "silentVoice").map((m) => m.id));
   const overlay = chordOverlay({
     namedChords: live.namedChords,
     // The recognized-but-idle candidates (issue #258): the board sings
@@ -1053,7 +1051,6 @@ function refreshChordOverlay(app: App, live: RateSnapshot): ReturnType<typeof ch
     labelFor: chordTermLabel,
     focusIds: [],
     focusPoint: null,
-    silentIds,
   });
   chordReadoutCache.set(app, { marks: overlay.marks, snapshot: live });
   return overlay;
@@ -1288,17 +1285,18 @@ function chordMarkHtml(mark: ChordMark, keyPrefix: "formed" | "ghost"): string {
   const ghost = keyPrefix === "ghost";
   const emphasis = ghost ? " ghost-mark" : mark.focused ? " chord-focus" : " chord-fade";
   // The idle candidate's mark (issue #258): dimmed and dotted, never
-  // pulsing — it earns nothing, so it isn't live activity.
+  // pulsing — it earns nothing, so it isn't live activity. Every active
+  // chord draws solid (#333): the path language distinguishes earning
+  // from idle, never voicing — a silent voice's chord is a full earning
+  // chord, its identity on the module glyphs.
   const idle = mark.inactive ? " chord-idle" : "";
-  // The muted participant's mark (ADR-0048): a chord a silent voice sings
-  // in draws dashed — the standing language for silent and promised work.
   const style = `--cc:var(--${mark.colorVar});--seam-dur:${mark.duration}s`;
   const lines = mark.outline
-    ? `<polygon class="chord-seam chord-loop${mark.muted ? " chord-muted" : ""}" points="${mark.outline.map((p) => p.join(",")).join(" ")}"/>`
+    ? `<polygon class="chord-seam chord-loop" points="${mark.outline.map((p) => p.join(",")).join(" ")}"/>`
     : mark.seams
         .map(
           (s) =>
-            `<line class="chord-seam${ghost ? " ghost-seam" : ""}${mark.muted ? " chord-muted" : ""}" x1="${s.x1}" y1="${s.y1}" x2="${s.x2}" y2="${s.y2}"/>`,
+            `<line class="chord-seam${ghost ? " ghost-seam" : ""}" x1="${s.x1}" y1="${s.y1}" x2="${s.x2}" y2="${s.y2}"/>`,
         )
         .join("");
   const chip = ghost
@@ -1369,14 +1367,14 @@ function updateChordReadout(app: App): void {
   if (focus && isVoiceType(focus.type) && snapshot?.allocation) {
     const used = snapshot.allocation.used.get(focus.id) ?? 0;
     const capacity = snapshot.allocation.capacity;
-    const content = `<span class="chord-readout-chip chord-readout-capacity mono">(${used}/${capacity}) ${LIBRARY_SVG.replace(/>\s+</g, "><")}</span>`;
+    const content = `<span class="chord-readout-chip chord-readout-capacity mono">(${used}/${capacity}) ${CAPACITY_SVG.replace(/>\s+</g, "><")}</span>`;
     headline.push(readoutDisclosureHtml("hover-capacity", content, "Whole-chord budget per voice", `Harmonic capacity ${used} of ${capacity} used`));
   }
   if (headline.length) rows.push(`<div class="chord-readout-headline">${headline.join("")}</div>`);
   const marks = focus ? active : chosen;
   rows.push(...marks.map((mark) => compactReadoutRow(
     mark.inactive ? `${mark.label} · idle` : mark.label,
-    `chord${mark.muted ? " chord-readout-muted" : ""}${mark.inactive ? " chord-readout-idle" : ""}`,
+    `chord${mark.inactive ? " chord-readout-idle" : ""}`,
     mark.colorVar,
   )));
   if (contribution && contribution.formationQ !== 1) {
@@ -1461,7 +1459,7 @@ function detailChordRowHtml(app: App, snapshot: RateSnapshot): string {
   const metrics = voiceMetricsHtml(module, snapshot, undefined, idScope, false);
   const chips = moduleChips(module, marks)
     .map((mark) =>
-      `<span class="chord-readout-chip mono${mark.muted ? " chord-readout-muted" : ""}${mark.inactive ? " chord-readout-idle" : ""}" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.inactive ? `${mark.label} · idle` : mark.label)}</span>`,
+      `<span class="chord-readout-chip mono${mark.inactive ? " chord-readout-idle" : ""}" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.inactive ? `${mark.label} · idle` : mark.label)}</span>`,
     )
     .join("");
   return metrics + chips;
@@ -1514,9 +1512,8 @@ function placementPreviewHtml(app: App, projection: PlacementProjection): string
       [idle, true],
     ] as const) {
       for (const term of terms) {
-        const muted = term.moduleIds.some((id) => app.state.modules.find((m) => m.id === id && CATEGORY_OF[m.type] === "silentVoice"));
         rows.push(
-          `<span class="chord-readout-chip mono${muted ? " chord-readout-muted" : ""}${idleTerm ? " chord-readout-idle" : ""}" style="--cc:var(--${CHORD_HUES[term.name] ?? "chord-octave"})">${escapeHtml(chordTermLabel(term))}${idleTerm ? " · idle" : ""}</span>`,
+          `<span class="chord-readout-chip mono${idleTerm ? " chord-readout-idle" : ""}" style="--cc:var(--${CHORD_HUES[term.name] ?? "chord-octave"})">${escapeHtml(chordTermLabel(term))}${idleTerm ? " · idle" : ""}</span>`,
         );
       }
     }
@@ -1939,12 +1936,6 @@ function ghostMarksHtml(app: App, projected?: RateSnapshot): string {
   if (promised.length === 0 && idleNewcomers.length === 0) return "";
   const deployedById = new Map(app.state.modules.filter((m) => m.pos !== null).map((m) => [m.id, m]));
   const posOf = (id: string): Hex | null => (id === hover.moduleId ? hover.pos : preview.positions.get(id) ?? deployedById.get(id)?.pos ?? null);
-  // The ghost's silent set: the deployed silent voices plus the dragged
-  // module when it is one — the promise must read muted before it lands.
-  const silentIds = new Set(
-    app.state.modules.filter((m) => CATEGORY_OF[m.type] === "silentVoice").map((m) => m.id),
-  );
-  if (CATEGORY_OF[module.type] === "silentVoice") silentIds.add(module.id);
   const idleIdentities = new Set(idleNewcomers.map((chord) => `${chord.name}|${chord.root}`));
   const overlay = chordOverlay({
     namedChords: promised,
@@ -1954,7 +1945,6 @@ function ghostMarksHtml(app: App, projected?: RateSnapshot): string {
     radius: HEX_RADIUS,
     step: LATTICE_STEP,
     labelFor: (chord) => chordTermLabel(chord) + (idleIdentities.has(`${chord.name}|${chord.root}`) ? " · idle" : ""),
-    silentIds,
   });
   return overlay.marks.map((mark) => chordMarkHtml(mark, "ghost")).join("");
 }
