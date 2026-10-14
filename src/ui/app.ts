@@ -328,9 +328,11 @@ function dualDriftMs(): number {
 export class App {
   private readonly lifetime = new AbortController();
   private readonly cleanups = new Set<() => void>();
-  // The control the Notes modal opened from (issue #332): focus returns
-  // there on dismissal. Ephemeral — one open/close round trip.
-  private notesInvoker: HTMLElement | null = null;
+  // The control the standing dialog opened from (issue #346): focus
+  // returns there on dismissal, whatever closed it. Ephemeral — one
+  // open/close round trip; a dialog opened over another dialog keeps the
+  // first round trip's address.
+  private modalInvoker: HTMLElement | null = null;
   // Weak references let replaced render descendants be collected while
   // still allowing release to remove handlers from any surviving node.
   private readonly listeners = new Set<{
@@ -719,6 +721,10 @@ export class App {
     );
     this.save(Date.now(), true);
     this.render();
+    // The import's dismissal returns focus to the walk's opener — unless
+    // the imported save arrived with a report or summary standing; those
+    // own the screen the moment they present (§1, §5.7).
+    if (this.ui.modal === null) this.restoreModalInvoker();
     return true;
   }
 
@@ -733,6 +739,7 @@ export class App {
     this.say("A fresh instrument. One synth is yours.");
     this.save(Date.now(), true);
     this.render();
+    this.restoreModalInvoker();
   }
 
   // The prestige door (ADR-0039): the completed era bar's press opens the
@@ -746,6 +753,7 @@ export class App {
     }
     if (this.state.eraEarned < ARETE_HORIZON) return;
     this.clearTransientUi();
+    this.captureModalInvoker();
     this.ui.modal = "prestige";
     this.render();
   }
@@ -765,6 +773,7 @@ export class App {
     this.announceUnlocks(result.unlocked, `Banked ${claim} Arete — the next era begins.`);
     this.save();
     this.render();
+    this.restoreModalInvoker();
   }
 
   say(text: string): void {
@@ -891,13 +900,19 @@ export class App {
       if (this.ui.modal === "notes" && (event.target as Element | null)?.closest?.("#app-tile-notes")) return;
       this.closeModal();
     }, { capture: true, signal: this.signal });
-    // The Notes modal's focus ring (issue #332): Tab and Shift+Tab cycle
-    // within the dialog, so keyboard focus stays managed inside the modal
-    // however the tab order reaches its edges. One binding — the dialog
-    // container is the layer's permanent node.
+    // Every blocking dialog's focus ring (issue #346, generalizing #332's
+    // Notes ring): Tab and Shift+Tab cycle within the dialog, so keyboard
+    // focus stays managed inside whatever claims the screen — however the
+    // tab order reaches its edges. One binding — the dialog container is
+    // the layer's permanent node. The scrimless surfaces stand outside
+    // the ring: the Forge peek and the tray sheet declare the background
+    // interactive (aria-modal="false") and their Tab walks the board the
+    // way the pointer does.
     const modalContent = this.els["modal-content"];
+    const modalLayer = this.els["modal"];
     this.listen(modalContent, "keydown", (event) => {
-      if (event.key !== "Tab" || this.ui.modal !== "notes" || !modalContent) return;
+      if (event.key !== "Tab" || !this.ui.modal || !modalContent || !modalLayer) return;
+      if (modalLayer.getAttribute("aria-modal") !== "true") return;
       const focusables = [...modalContent.querySelectorAll<HTMLElement>(
         "button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])",
       )].filter((el) => !el.closest("[hidden]"));
@@ -920,15 +935,16 @@ export class App {
     // armed transient modes unwind — an armed placement cancels before the
     // Hex detail closes; then the detail itself returns the grid with its
     // layer, position, and zoom intact; then the Mutators layer; then the
-    // console furniture. Never while typing.
+    // console furniture. Outside a dialog, typing keeps its own Escape.
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape" || !this.ownsBoard()) return;
-      const target = event.target;
-      if (target instanceof HTMLElement && (target.isContentEditable || target.matches("input, textarea, select"))) return;
       if (this.ui.modal) {
+        event.preventDefault();
         this.closeModal();
         return;
       }
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.isContentEditable || target.matches("input, textarea, select"))) return;
       if (this.ui.placing) {
         this.cancelPlacing();
         return;
@@ -1157,6 +1173,7 @@ export class App {
       this.ui.modal = null;
       this.say(started.reason ?? "Cannot enter flow right now.");
       this.render();
+      this.restoreModalInvoker();
       return;
     }
     this.ui.modal = null;
@@ -1175,6 +1192,7 @@ export class App {
     );
     this.save();
     this.render();
+    this.restoreModalInvoker();
   }
 
   // The one notification permission ask ever (§4): it rides the first
@@ -1196,6 +1214,7 @@ export class App {
     // honesty report's answer is mandatory and final — the bucket must
     // bank or drop before the summary shows.
     if (this.state.mode !== "upgrade" && poolOutstanding(this.state)) {
+      this.captureModalInvoker();
       this.exitPending = true;
       this.ui.modal = "honesty";
       this.render();
@@ -1209,6 +1228,8 @@ export class App {
     }
     this.lastWall = null;
     this.say("Session banked.");
+    // Preserve the exit switch through an honesty → summary sequence.
+    this.captureModalInvoker();
     // The loud summary (§5.7) opens however the session ended.
     this.ui.modal = "summary";
     this.save();
@@ -1260,6 +1281,9 @@ export class App {
       this.ui.mutUnlockArmed = true;
     }
     this.act(result, "Mutator tree entered — pick a cell for the free Mutator slot.");
+    // The purchase's dismissal (issue #346): the sheet closed, focus
+    // returns to the walk's opener. A refusal leaves the sheet standing.
+    if (result.ok) this.restoreModalInvoker();
   }
 
   joinRollPoolAction(): void {
@@ -1446,6 +1470,7 @@ export class App {
   // combine; every cancel path lands in closeModal, which drops the offer
   // and leaves both copies untouched.
   mutOfferCombine(dragId: string, targetId: string): void {
+    this.captureModalInvoker();
     this.ui.mutCombineOffer = { dragId, targetId };
     this.ui.modal = "mutcombine";
     this.render();
@@ -1457,6 +1482,7 @@ export class App {
     this.ui.modal = null;
     if (!offer) {
       this.render();
+      this.restoreModalInvoker();
       return;
     }
     const preview = combineMutatorsPreview(this.state, offer.dragId, offer.targetId);
@@ -1464,12 +1490,14 @@ export class App {
     if (!result.ok) {
       this.say(result.reason ?? "Those mutators cannot be combined.");
       this.render();
+      this.restoreModalInvoker();
       return;
     }
     const family = this.state.mutators.find((m) => m.id === preview?.keepId)?.family;
     this.say(`${family ? FAMILY_WORD[family] : "Mutator"} mutator raised to ${preview?.nextRarity ?? "the next rarity"}.`);
     this.save();
     this.render();
+    this.restoreModalInvoker();
   }
 
   // The mutator roll's choice (issue #199): the chosen candidate mints into
@@ -1501,6 +1529,9 @@ export class App {
     }
     this.save();
     this.render();
+    // The entry sequence's landing is a dismissal (issue #346); the
+    // standing landing keeps the peek — no return.
+    if (this.ui.modal === null) this.restoreModalInvoker();
   }
 
   // The live drop preview over the second layer (issue #199): hover state
@@ -1524,6 +1555,7 @@ export class App {
     this.ui.modal = null;
     this.ui.buyingCell = true;
     this.render();
+    this.restoreModalInvoker();
   }
 
   cancelCellPurchase(): void {
@@ -1582,6 +1614,7 @@ export class App {
   // combine; every cancel path (button, ✕, backdrop, Esc) lands in
   // closeModal, which drops the offer and leaves both copies untouched.
   offerCombine(dragId: string, targetId: string): void {
+    this.captureModalInvoker();
     this.ui.combineOffer = { dragId, targetId };
     this.ui.modal = "combine";
     this.render();
@@ -1593,9 +1626,11 @@ export class App {
     this.ui.modal = null;
     if (!offer) {
       this.render();
+      this.restoreModalInvoker();
       return;
     }
     this.reportCombine(combine(this.state, offer.dragId, offer.targetId));
+    this.restoreModalInvoker();
   }
 
   private reportCombine(result: ActionResult): void {
@@ -1804,10 +1839,13 @@ export class App {
   // puts the tab back, the invoking control is remembered for the return,
   // and the Focus sheet stands down — one console surface at a time.
   private openNotes(): void {
-    this.notesInvoker = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     this.dismissAppPanel();
     this.ui.notesFace = "capture";
     this.openModalDirect("notes");
+    // The door is Notes' canonical return address (issue #332): an open
+    // that began with no focused control — a pointer press on browsers
+    // that focus nothing — still returns to the door.
+    if (!this.modalInvoker) this.modalInvoker = document.getElementById("app-tile-notes");
   }
 
   // The Focus sheet's facetab landing (ADR-0050, issue #275): tabs select a
@@ -2163,6 +2201,7 @@ export class App {
     );
     this.save();
     this.render();
+    this.restoreModalInvoker();
   }
   cancelPlacing(): void {
     const id = this.ui.placing;
@@ -2226,6 +2265,7 @@ export class App {
     }
     this.save();
     this.render();
+    this.restoreModalInvoker();
   }
 
   // The summary's reflection fields (§8): each touch records immediately —
@@ -2253,6 +2293,7 @@ export class App {
     this.say("Session banked.");
     this.save();
     this.render();
+    this.restoreModalInvoker();
   }
 
   // The opening arc's one pop-up (§8): dismissal is once, ever — the flag
@@ -2298,6 +2339,7 @@ export class App {
   }
 
   private openModalDirect(kind: ModalKind): void {
+    this.captureModalInvoker();
     if (kind === "forge") {
       const preferred = this.state.catalogEntryOwned ? this.ui.mutLayer : "modules";
       const pending = preferred === "modules" ? this.state.bankedRolls.length : this.state.bankedMutatorRolls.length;
@@ -2326,27 +2368,49 @@ export class App {
     // reachable through Add's normal arm, and a later choice keeps the
     // standing landing.
     if (this.ui.modal === "forge") this.ui.entryRollPending = false;
-    const closing = this.ui.modal;
     this.ui.modal = null;
     this.ui.combineOffer = null;
     this.ui.mutCombineOffer = null;
     this.ui.importError = null;
     this.render();
-    // The Notes modal hands focus back to the control that opened it
-    // (issue #332), after the render has settled the layer.
-    if (closing === "notes") this.restoreNotesInvoker();
+    // Every dialog hands focus back to the control that opened it
+    // (issue #346, generalizing #332's Notes return), after the render
+    // has settled the layer.
+    this.restoreModalInvoker();
   }
 
-  // The Notes modal's focus return (issue #332): the invoking control —
-  // the Notes door, whatever opened it — takes focus again; a control the
-  // render replaced falls back to the fresh door. The face reset rides the
-  // opener: every path back in lands on CAPTURE.
-  private restoreNotesInvoker(): void {
-    const stored = this.notesInvoker;
-    this.notesInvoker = null;
-    const invoker =
-      stored && stored.isConnected && stored !== document.body ? stored : document.getElementById("app-tile-notes");
+  // The dialog focus round trip (issue #346, generalizing #332's Notes
+  // return). The opener records the focused control; the dismissal —
+  // Escape, the close control, a completed action — records it back onto
+  // the board. A standing dialog's own controls never take the address:
+  // stepping from Settings to Import must return to the walk's opener,
+  // not to a control the step replaced.
+  private captureModalInvoker(): void {
+    if (this.ui.modal || this.modalInvoker) return;
+    const active = document.activeElement;
+    this.modalInvoker = active instanceof HTMLElement && active !== document.body ? active : null;
+  }
+
+  // The focus return (issue #346): the invoking control takes focus again
+  // once the render has settled the layer; a control the render replaced
+  // falls back to the fresh control with the same id. A programmatic open
+  // — the honesty report, the summary, the entry roll's Forge — has no
+  // return address and restores nothing.
+  private restoreModalInvoker(): void {
+    const stored = this.modalInvoker;
+    this.modalInvoker = null;
+    if (!stored || stored === document.body) return;
+    const invoker = stored.isConnected ? stored : stored.id ? document.getElementById(stored.id) : null;
     invoker?.focus({ preventScroll: true });
+  }
+
+  // A review whose terms dissolved under it (render.ts's dead-offer drop):
+  // the dialog never presents, so the round trip ends where it began — the
+  // layer drops and the return address is honored at once; the render pass
+  // that dropped it carries on.
+  abandonModal(): void {
+    this.ui.modal = null;
+    this.restoreModalInvoker();
   }
 
   // Dev helpers (?dev=1): time-warp and fixtures for hands-on verification only.

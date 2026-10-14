@@ -938,7 +938,7 @@ function renderTools(app: App, projected: RateSnapshot): void {
           // disabled still refuses pointer, keyboard, and touch.
           const lock = state.mode !== "upgrade" && action.disabled?.(app) ? `<span class="tool-lock" aria-hidden="true">${lockMarkSvg()}</span>` : "";
           const extra = (action.badge?.(app) ?? "") + (action.media ?? "") + detail + lock;
-          return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" data-op="${action.op}" aria-label="${action.label}" ${action.op === "forge" ? `aria-describedby="${detailId}"` : `title="${action.title(app, projected)}"`}${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${action.label}</small></button>`;
+          return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" id="${target.id}-tool-${action.op}" data-op="${action.op}" aria-label="${action.label}" ${action.op === "forge" ? `aria-describedby="${detailId}"` : `title="${action.title(app, projected)}"`}${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${action.label}</small></button>`;
         })
         .join("");
       target.querySelectorAll<HTMLButtonElement>("[data-op]").forEach((button) => {
@@ -2291,13 +2291,15 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   // flipped, a twin gone) — drops before the dispatch, so the dialog always
   // has terms to present and no render pass ever nests a closeModal render
   // inside itself. The mutator review obeys the same rule (issue #199).
+  // The drop is the round trip's end (issue #346): the return address is
+  // honored before the pass continues.
   if (app.ui.modal === "combine" && combineOfferTerms(app) === null) {
-    app.ui.modal = null;
     app.ui.combineOffer = null;
+    app.abandonModal();
   }
   if (app.ui.modal === "mutcombine" && mutCombineOfferTerms(app) === null) {
-    app.ui.modal = null;
     app.ui.mutCombineOffer = null;
+    app.abandonModal();
   }
   const kind = app.ui.modal;
   if (!kind) {
@@ -2306,11 +2308,15 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
     backdrop.classList.remove("peek");
     backdrop.classList.remove("notes-modal");
     document.body.classList.remove("modal-sheet-open");
+    // The dismissal leaves nothing standing in the layer: a wiped sheet
+    // holds no ghost of the dialog it served, and nothing inside it can
+    // keep hold of focus (issue #346).
     delete content.dataset.renderKey;
     // A pinned tooltip's body lives at document body level (instrument.ts's
     // portal), so hiding the sheet would otherwise leave it floating over
     // the board — the close puts every tooltip of the sheet away with it.
     closeTooltips(content);
+    content.replaceChildren();
     return;
   }
   // The rate sheet's own gate (§7): below the 760px container breakpoint
@@ -2445,9 +2451,11 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   else if (kind === "mutcombine") renderMutCombineModal(app, content);
   // The Notes modal lands focus itself (issue #332): the composer on
   // CAPTURE, the standing tab on LOGGED — never the generic first button.
+  // Every other dialog lands on its first control (issue #346), the open
+  // never scrolling the page out from under the reader.
   if (kind !== "notes") {
     const firstButton = content.querySelector("button:not([disabled])");
-    (firstButton as HTMLElement | null)?.focus();
+    (firstButton as HTMLElement | null)?.focus({ preventScroll: true });
   }
 }
 
