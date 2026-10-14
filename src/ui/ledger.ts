@@ -8,9 +8,9 @@
 import { accumulatorFill, claimOf, horizonReached } from "../engine/accumulator";
 import { ACHIEVEMENTS } from "../engine/achievements";
 import { catalogOpen } from "../engine/catalog";
-import { BALANCE, CATEGORY_OF, isOscillatorType, NAMED_CHORDS } from "../engine/constants";
+import { BALANCE, isOscillatorType, NAMED_CHORDS } from "../engine/constants";
 import { idleTermsOf } from "../engine/allocation";
-import { activeBuildGeneratorStrength, chargedFactor, deployedAt, hostPower, voiceCapacityOf } from "../engine/economy";
+import { deployedAt, hostPower, voiceCapacityOf } from "../engine/economy";
 import { discoveryCount } from "../engine/library";
 import { noteNameOf } from "../engine/lattice";
 import type { Contribution, GameState, ModuleInstance, RateSnapshot } from "../engine/types";
@@ -24,18 +24,21 @@ export function unlockedCount(state: GameState): number {
   return Object.keys(state.achievements).length;
 }
 
-// ── The module-linked rate details (§7) ────────────────────────────────
+// ── The module-linked rate details (§7, amended by issue #334) ─────────
 // The rate is a place, not a formula: one roster every disclosure channel
 // shares — the Rate cell's hover/focus popover above the 760px breakpoint,
 // and the sheet a tap opens at every width (the phone strip's read opens
-// the same sheet). One row per oscillator carries its final ν/s; its leg
-// decomposition — base term, local booster, formation quality, chord,
-// charge, achievement and discovery effects — lives in the row's tooltip
-// (the instrument standards' disclosure rule: deeper mechanics in the
-// tooltip layer, never an expandable section). Nonproducing modules
-// disclose what they do to others with no ν/s of their own to
-// double-count. Both channels mount live slots the tick fills, so a clock
-// tick never rebuilds (and never collapses) an open roster.
+// the same sheet). The roster answers what the board earns and nothing
+// else: the final total, the global Feats and Discoveries factors once —
+// already included in every figure — and one row per oscillator leading
+// with its final ν/s. The supporting modules' roster is gone entirely:
+// their effects speak in the local calculations and their own surfaces
+// (ADR-0037 as amended). An explicit calculation control opens one
+// oscillator's leg decomposition inline — the confirmed exception to the
+// tooltip-only doctrine (ADR-0056's interview): honest arithmetic a
+// keyboard, a touch, or a mouse can all reach, one at a time. Both
+// channels mount live slots the tick fills, so a clock tick never rebuilds
+// (and never collapses) an open reading.
 interface SynthLegs {
   base: number;
   formationQ: number;
@@ -99,77 +102,43 @@ function synthLegsOf(state: GameState, snapshot: RateSnapshot, contribution: Con
   };
 }
 
-// A nonproducing module's effect on the board, in the bloom's own
-// vocabulary — never ν/s, so nothing here reads as a second producer.
-function effectText(state: GameState, contribution: Contribution, module: ModuleInstance, snapshot: RateSnapshot): string {
-  const category = CATEGORY_OF[contribution.type];
-  if (category === "generator") {
-    // The steady-conduit node (ADR-0046) rides the emitted strength — the
-    // +1 is part of the charge the module delivers.
-    return `⌁${formatNumber(hostPower(state, module) + activeBuildGeneratorStrength(state))} charge`;
-  }
-  if (category === "booster") {
-    const strength = snapshot.chargeStrength.get(contribution.moduleId) ?? 0;
-    return `+${formatNumber(100 * BALANCE.infusorBonus * hostPower(state, module) * chargedFactor(strength))}% to adjacent`;
-  }
-  if (category === "silentVoice") {
-    const uplift = BALANCE.silentVoiceUpliftPerLevel * module.level;
-    const pitch = contribution.pitch !== null ? noteNameOf(contribution.pitch) : "mute";
-    // The capacity read (issue #258): silent voices spend a unit on every
-    // chord they sing in — the count rides their effect line.
-    const allocation = snapshot.allocation;
-    const capacity = allocation ? ` · capacity ${allocation.used.get(contribution.moduleId) ?? 0}/${allocation.capacity}` : "";
-    return `sings ${pitch} · Formation ×${formatNumber(contribution.formationQ)} · +${Math.round(uplift * 100)}% per level to chord instances${capacity}`;
-  }
-  if (category === "conduit") {
-    const strength = snapshot.chargeStrength.get(contribution.moduleId) ?? 0;
-    return `relays ⌁${formatNumber(strength)} × +${Math.round(BALANCE.amplifierGainPerLevel * module.level * 100)}%`;
-  }
-  if (category === "ritual") {
-    const amp = snapshot.ritualAmplification;
-    const strength = snapshot.chargeStrength.get(contribution.moduleId) ?? 0;
-    return `amplifies the active habit's build ×${formatNumber(1 + amp)} while charged · ⌁${formatNumber(strength)} received`;
-  }
-  if (category === "forge") return `${formatNumber(contribution.value)} progress/s`;
-  return "silent — conducts chords";
-}
-
-// The idle candidates' note (issue #258), one wording for the roster
-// builder's prefill and the tick's fill alike: recognized, not selected —
-// never a production claim.
+// The idle candidates' note (issue #258), one wording for the calc's
+// builder and the tick's fill alike: recognized, not selected — never a
+// production claim.
 function idleNote(idleLabel: string): string {
   return idleLabel ? `idle — earns nothing: ${idleLabel}` : "";
 }
 
 // The live-slot key scheme, one place: the roster builder and the tick's
 // filler read the same spellings, so a rename can never land in one and
-// not the other. Synth rows key per leg (`s-<id>-<leg>`), nonproducer rows
-// carry their one effect (`n-<id>`), and `b-rate` is the total.
+// not the other. Synth rows key per leg (`s-<id>-<leg>`), and `b-rate` is
+// the total, `b-global` the one Feats · Discoveries line.
 const RATE_TOTAL_SLOT = "b-rate";
+const RATE_GLOBAL_SLOT = "b-global";
 const synthSlot = (id: string, leg: string): string => `s-${id}-${leg}`;
-const otherSlot = (id: string): string => `n-${id}`;
 
 // One record per row: the slot texts both the roster builder and the tick
-// fill read, so a leg's wording lands in one place (the house pattern the
-// old AMP_LEGS held). Keyed by slot suffix — `v` the final figure, the
-// base/fmt/chd/inf/chg legs, `chgn` the charge note, `n` a nonproducer's
-// effect.
+// fill read, so a leg's wording lands in one place. Keyed by slot suffix —
+// `v` the final figure, the base/fmt/chd/cap/inf/chg/glob legs, `chgn` the
+// charge note, `idl` the idle note.
 function rowSlotTexts(state: GameState, snapshot: RateSnapshot, contribution: Contribution, module: ModuleInstance): Record<string, string> {
-  if (isOscillatorType(contribution.type)) {
-    const legs = synthLegsOf(state, snapshot, contribution, module);
-    return {
-      v: `+${formatNumber(contribution.value)} ν/s`,
-      base: `${formatNumber(legs.base)} ν/s`,
-      fmt: `×${formatNumber(legs.formationQ)}`,
-      chd: `×${formatNumber(legs.chordMult)}`,
-      cap: `${legs.used}/${legs.capacity}`,
-      inf: `+${Math.round(legs.infusorBonus * 100)}%`,
-      chg: `×${formatNumber(legs.chargeFactor)}`,
-      chgn: legs.chargeStrength > 0 ? `⌁${formatNumber(legs.chargeStrength)} charge` : "",
-      idl: legs.idleLabel,
-    };
-  }
-  return { n: effectText(state, contribution, module, snapshot) };
+  const legs = synthLegsOf(state, snapshot, contribution, module);
+  return {
+    v: `+${formatNumber(contribution.value)} ν/s`,
+    // The calculation's product line carries the same figure under its own
+    // slot key: liveSet fills the first match of a key, and the row figure
+    // must never fight the product for the fill.
+    sum: `+${formatNumber(contribution.value)} ν/s`,
+    base: `${formatNumber(legs.base)} ν/s`,
+    fmt: `×${formatNumber(legs.formationQ)}`,
+    chd: `×${formatNumber(legs.chordMult)}`,
+    cap: `${legs.used}/${legs.capacity}`,
+    inf: `+${Math.round(legs.infusorBonus * 100)}%`,
+    chg: `×${formatNumber(legs.chargeFactor)}`,
+    chgn: legs.chargeStrength > 0 ? `⌁${formatNumber(legs.chargeStrength)} charge` : "",
+    idl: legs.idleLabel,
+    glob: `×${formatNumber(legs.boost * legs.discovery)}`,
+  };
 }
 
 // The deployed roster's identity — id, kind, level, rarity, cell — the
@@ -207,12 +176,15 @@ let rosterSeq = 0;
 
 // The roster both channels render, through the instrument primitives
 // (issue #267): every row is a flat rule-line readout — condensed name,
-// mono figure — and a synthesizer's deeper mechanics (its leg
-// decomposition) live only in the tooltip layer, never an expandable
-// <details>. `live` mounts data-live slots the tick fills
-// (updateRateDetailsLive); the sheet passes false and prints the snapshot
-// outright. `ns` namespaces the tooltip ids: the popover and the sheet can
-// stand in the DOM at the same time, and an id may repeat for no one.
+// mono figure — and the supporting modules have no rows at all (issue
+// #334): what the board earns is the whole story. A synthesizer's deeper
+// mechanics (its leg decomposition) open inline through the row's own
+// calculation control — the ADR-0056 interview's confirmed exception to
+// tooltip-only disclosure — one oscillator at a time. `live` mounts
+// data-live slots the tick fills (updateRateDetailsLive); the sheet passes
+// false and prints the snapshot outright. `ns` namespaces the calc ids:
+// the popover and the sheet can stand in the DOM at the same time, and an
+// id may repeat for no one.
 export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: boolean, ns = "pop"): string {
   const seq = ++rosterSeq;
   const val = (slot: string, content: string): string =>
@@ -220,64 +192,68 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
   const note = (slot: string, content: string): string =>
     live ? `<span class="rd-note" data-live="${slot}">${content}</span>` : `<span class="rd-note">${content}</span>`;
 
-  const synths: string[] = [];
-  const others: string[] = [];
+  const rows: string[] = [];
   for (const contribution of snapshot.contributions.values()) {
+    if (!isOscillatorType(contribution.type)) continue;
     const module = state.modules.find((m) => m.id === contribution.moduleId);
     if (!module) continue;
     const slots = rowSlotTexts(state, snapshot, contribution, module);
     const id = contribution.moduleId;
-    if (isOscillatorType(contribution.type)) {
-      const cellNote = contribution.pitch !== null ? noteNameOf(contribution.pitch) : "";
-      const name = META[contribution.type].name;
-      const tipId = `rd-tip-${ns}-${seq}-${id}`;
-      synths.push(
-        `<div class="rd-row rd-synth" data-module-id="${id}">` +
-          `<button class="rd-pick" type="button" title="Show it on the board">` +
-          `<span class="rd-name t-condensed">${name}</span>` +
-          `<span class="rd-note mono">${cellNote}</span>` +
-          `</button>` +
-          `<span class="inst-tip">` +
-          `<button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${tipId}" aria-label="The legs of the ${name}'s rate">ⓘ</button>` +
-          `<span class="inst-tip-body" id="${tipId}" role="tooltip">` +
-          `<div class="rd-legs">` +
-          `<div class="rd-leg"><span class="rd-leg-name">Base</span>` +
-          val(synthSlot(id, "base"), slots.base!) +
-          `</div>` +
-          `<div class="rd-leg"><span class="rd-leg-name">Formation</span>` +
-          val(synthSlot(id, "fmt"), slots.fmt!) +
-          `<span class="rd-note">${synthChordNote(state, snapshot, contribution, module)}</span>` +
-          `</div>` +
-          `<div class="rd-leg"><span class="rd-leg-name">Chords</span>` +
-          val(synthSlot(id, "chd"), slots.chd!) +
-          `</div>` +
-          (snapshot.allocation ? `<div class="rd-leg"><span class="rd-leg-name">Capacity</span>` +
-          val(synthSlot(id, "cap"), slots.cap!) +
-          note(synthSlot(id, "idl"), idleNote(slots.idl!)) +
-          `</div>` : "") +
-          `<div class="rd-leg"><span class="rd-leg-name">Booster</span>` +
-          val(synthSlot(id, "inf"), slots.inf!) +
-          `</div>` +
-          `<div class="rd-leg"><span class="rd-leg-name">Charge</span>` +
-          val(synthSlot(id, "chg"), slots.chg!) +
-          note(synthSlot(id, "chgn"), slots.chgn!) +
-          `</div>` +
-          `<div class="rd-leg"><span class="rd-leg-name">Achievements</span>` +
-          `<span class="rd-val mono">+${Math.round((snapshot.achievementBoost - 1) * 100)}%</span></div>` +
-          `<div class="rd-leg"><span class="rd-leg-name">Discoveries</span>` +
-          `<span class="rd-val mono">+${Math.round((snapshot.discoveryBoost - 1) * 100)}%</span></div>` +
-          `</div></span></span>` +
-          val(synthSlot(id, "v"), slots.v!) +
-          `</div>`,
-      );
-    } else {
-      others.push(
-        `<div class="rd-row rd-other-row"><span class="rd-name t-condensed">${META[contribution.type].name}</span>` +
-          val(otherSlot(id), slots.n!) +
-          `</div>`,
-      );
-    }
+    const cellNote = contribution.pitch !== null ? noteNameOf(contribution.pitch) : "";
+    const name = META[contribution.type].name;
+    const calcId = `rd-calc-${ns}-${seq}-${id}`;
+    rows.push(
+      `<div class="rd-osc">` +
+      `<div class="rd-row rd-synth" data-module-id="${id}">` +
+        `<button class="rd-pick" type="button" title="Show it on the board">` +
+        `<span class="rd-name t-condensed">${name}</span>` +
+        `<span class="rd-note mono">${cellNote}</span>` +
+        `</button>` +
+        `<button class="rd-calc-toggle" type="button" aria-expanded="false" aria-controls="${calcId}" aria-label="The calculation behind the ${name}'s rate">⌄</button>` +
+        val(synthSlot(id, "v"), slots.v!) +
+        `</div>` +
+        // The inline calculation (issue #334): the legs multiply back to
+        // the row's figure exactly — the global Feats · Discoveries leg
+        // closes the chain, so nothing is left implicit. Explicitly
+        // opened, one oscillator at a time (wireRateCalcs).
+        `<div class="rd-calc" id="${calcId}" hidden>` +
+        `<div class="rd-leg"><span class="rd-leg-name">Base</span>` +
+        val(synthSlot(id, "base"), slots.base!) +
+        `</div>` +
+        `<div class="rd-leg"><span class="rd-leg-name">Formation</span>` +
+        val(synthSlot(id, "fmt"), slots.fmt!) +
+        `<span class="rd-note">${synthChordNote(state, snapshot, contribution, module)}</span>` +
+        `</div>` +
+        `<div class="rd-leg"><span class="rd-leg-name">Chords</span>` +
+        val(synthSlot(id, "chd"), slots.chd!) +
+        `</div>` +
+        (snapshot.allocation ? `<div class="rd-leg"><span class="rd-leg-name">Capacity</span>` +
+        val(synthSlot(id, "cap"), slots.cap!) +
+        note(synthSlot(id, "idl"), idleNote(slots.idl!)) +
+        `</div>` : "") +
+        `<div class="rd-leg"><span class="rd-leg-name">Booster</span>` +
+        val(synthSlot(id, "inf"), slots.inf!) +
+        `</div>` +
+        `<div class="rd-leg"><span class="rd-leg-name">Charge</span>` +
+        val(synthSlot(id, "chg"), slots.chg!) +
+        note(synthSlot(id, "chgn"), slots.chgn!) +
+        `</div>` +
+        `<div class="rd-leg"><span class="rd-leg-name">Feats · Discoveries</span>` +
+        val(synthSlot(id, "glob"), slots.glob!) +
+        `<span class="rd-note">already included</span>` +
+        `</div>` +
+        `<div class="rd-leg rd-leg-product"><span class="rd-leg-name" aria-hidden="true">=</span>` +
+        val(synthSlot(id, "sum"), slots.sum!) +
+        `</div>` +
+        `</div>` +
+        `</div>`,
+    );
   }
+
+  // The global factors, shown once (issue #334): a property of the whole
+  // board, never a per-row payout — the wording says included outright.
+  const globalText =
+    `+${Math.round((snapshot.achievementBoost - 1) * 100)}% · +${Math.round((snapshot.discoveryBoost - 1) * 100)}% — already included`;
 
   return (
     `<div class="rd-row rd-total"><span class="rd-name t-condensed">Rate</span>` +
@@ -288,10 +264,9 @@ export function rateDetailsHtml(state: GameState, snapshot: RateSnapshot, live: 
       `<span class="rd-name t-condensed">Allocation uncertified</span>` +
       `<span class="inst-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-label="Why allocation is uncertified" aria-describedby="allocation-tip-${ns}-${seq}">ⓘ</button>` +
       `<span class="inst-tip-body" id="allocation-tip-${ns}-${seq}" role="tooltip">Search budget reached. This development allocation is the best result found; maximum production is unproven.</span></span></div>` : "") +
-    synths.join("") +
-    (others.length > 0
-      ? `<div class="rd-heading">Other modules — effects, no ν/s</div>${others.join("")}`
-      : "")
+    `<div class="rd-row rd-global"><span class="rd-name t-condensed">Feats · Discoveries</span>` +
+    `<span class="rd-val mono" data-live="${RATE_GLOBAL_SLOT}">${globalText}</span></div>` +
+    rows.join("")
   );
 }
 
@@ -310,40 +285,68 @@ export function updateRateDetailsLive(scope: ParentNode, state: GameState, snaps
     for (const root of roots) liveSet(root, live, content);
   };
   set(RATE_TOTAL_SLOT, `${formatNumber(snapshot.rate)} ν/s`);
+  set(RATE_GLOBAL_SLOT,
+    `+${Math.round((snapshot.achievementBoost - 1) * 100)}% · +${Math.round((snapshot.discoveryBoost - 1) * 100)}% — already included`);
   for (const status of scope.querySelectorAll<HTMLElement>(".rd-allocation-state")) {
     status.hidden = snapshot.allocation?.certified !== false;
   }
   for (const contribution of snapshot.contributions.values()) {
     const module = state.modules.find((m) => m.id === contribution.moduleId);
-    if (!module) continue;
+    if (!module || !isOscillatorType(contribution.type)) continue;
     const id = contribution.moduleId;
     const slots = rowSlotTexts(state, snapshot, contribution, module);
-    if (isOscillatorType(contribution.type)) {
-      set(synthSlot(id, "v"), slots.v!);
-      set(synthSlot(id, "base"), slots.base!);
-      set(synthSlot(id, "fmt"), slots.fmt!);
-      set(synthSlot(id, "chd"), slots.chd!);
-      set(synthSlot(id, "cap"), slots.cap!);
-      set(synthSlot(id, "idl"), idleNote(slots.idl!));
-      set(synthSlot(id, "inf"), slots.inf!);
-      set(synthSlot(id, "chg"), slots.chg!);
-      set(synthSlot(id, "chgn"), slots.chgn!);
-    } else {
-      set(otherSlot(id), slots.n!);
-    }
+    set(synthSlot(id, "v"), slots.v!);
+    set(synthSlot(id, "sum"), slots.sum!);
+    set(synthSlot(id, "base"), slots.base!);
+    set(synthSlot(id, "fmt"), slots.fmt!);
+    set(synthSlot(id, "chd"), slots.chd!);
+    set(synthSlot(id, "cap"), slots.cap!);
+    set(synthSlot(id, "idl"), idleNote(slots.idl!));
+    set(synthSlot(id, "inf"), slots.inf!);
+    set(synthSlot(id, "chg"), slots.chg!);
+    set(synthSlot(id, "chgn"), slots.chgn!);
+    set(synthSlot(id, "glob"), slots.glob!);
   }
 }
 
 // A synthesizer row's tap identifies its module on the board; each channel
 // decides what a pick means (the popover selects in place, the sheet closes
 // first so the answer lands on the board it names). A click inside the
-// tooltip layer reads as reading, never as a pick — pinning a tooltip or
-// copying a leg figure must not select a module or close the sheet.
+// calculation or on its control reads as reading, never as a pick —
+// opening a leg chain or copying a figure must not select a module or
+// close the sheet.
 export function wireSynthPicks(host: ParentNode, pick: (id: string) => void, owner?: App): void {
   const listener = (event: Event) => {
-    if ((event.target as HTMLElement).closest(".inst-tip")) return;
-    const row = (event.target as HTMLElement).closest("[data-module-id]");
+    const target = event.target as HTMLElement;
+    if (target.closest(".inst-tip, .rd-calc, .rd-calc-toggle")) return;
+    const row = target.closest("[data-module-id]");
     if (row) pick(row.getAttribute("data-module-id")!);
+  };
+  if (owner) owner.listen(host, "click", listener);
+  else host.addEventListener("click", listener);
+}
+
+// The calculation control's wiring (issue #334): an explicit toggle opens
+// or closes one oscillator's inline calculation — and opening another
+// closes the one standing, so the sheet holds one arithmetic at a time.
+// A real button, so keyboard and touch take the same door as the mouse;
+// the accordion keeps its state in the DOM, which the tick never rebuilds
+// (the live slots fill it in place), so an open reading survives the clock.
+export function wireRateCalcs(host: ParentNode, owner?: App): void {
+  const listener = (event: Event) => {
+    const toggle = (event.target as HTMLElement).closest<HTMLElement>(".rd-calc-toggle");
+    if (!toggle || !host.contains(toggle)) return;
+    const calc = document.getElementById(toggle.getAttribute("aria-controls") ?? "");
+    if (!calc) return;
+    const opening = calc.hidden;
+    for (const other of host.querySelectorAll<HTMLElement>(".rd-calc-toggle")) {
+      if (other === toggle) continue;
+      other.setAttribute("aria-expanded", "false");
+      const otherCalc = document.getElementById(other.getAttribute("aria-controls") ?? "");
+      if (otherCalc) otherCalc.hidden = true;
+    }
+    calc.hidden = !opening;
+    toggle.setAttribute("aria-expanded", String(opening));
   };
   if (owner) owner.listen(host, "click", listener);
   else host.addEventListener("click", listener);
@@ -490,8 +493,10 @@ export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
     app.listen(document.getElementById("library-chip"), "click", () => app.openModal("library"));
     // A synth row's tap names its module's place (§7, issue #295): the
     // tap opens the module's Hex detail — the row names the place, the
-    // cross-section shows it. The tooltip layer pins and dismisses beside it.
+    // cross-section shows it. The calculation toggle opens the row's own
+    // inline arithmetic, one oscillator at a time (issue #334).
     wireSynthPicks(host.querySelector(".rate-breakdown")!, (id) => app.openModuleDetail(id), app);
+    wireRateCalcs(host.querySelector(".rate-breakdown")!, app);
     wireTooltips(host, app.signal);
   }
   const detailModule = app.ui.detail ? deployedAt(state, app.ui.detail.pos) : undefined;
