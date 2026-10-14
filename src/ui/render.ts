@@ -1051,10 +1051,12 @@ function refreshChordOverlay(app: App, live: RateSnapshot): ReturnType<typeof ch
   const overlay = chordOverlay({
     namedChords: live.namedChords,
     // The recognized-but-idle candidates (issue #258): the board sings
-    // them, the allocation didn't select them — dimmer, dotted, never
-    // pulsing. The active seams dominate. Absent an allocation read,
-    // nothing is idle — the plain recognizer's every term is already in
-    // namedChords.
+    // them, the allocation didn't select them. They stay in the mark list
+    // — the readout's "N idle" count and the Hex detail's chord row read
+    // them here — but the grid draws them only under the ask (ADR-0057):
+    // dotted, never pulsing, at the ask weight, and gone at rest. Absent
+    // an allocation read, nothing is idle — the plain recognizer's every
+    // term is already in namedChords.
     inactiveChords: live.allocation ? idleTermsOf(live.allocation) : [],
     posOf: (id) => deployedById.get(id)?.pos ?? null,
     point,
@@ -1133,11 +1135,12 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
 
   // Named-chord marks (§6, #201): the chord work draws UNDER the modules —
   // visible in the gaps between the faces and past the poking corners,
-  // whispering in the gaps; no chord ever crosses a face. In live sessions
-  // the stylesheet pulses the marks quietly while the board stays locked.
-  // The readout refreshes with the same marks: a hovered voice's chips ask
-  // into the reserved spot.
+  // whispering in the gaps; no chord ever crosses a face. The idle
+  // candidates draw only under the ask (ADR-0057) — `askedIdleMarks` owns
+  // the rule; the readout refreshes from the same marks.
+  const revealedIdle = new Set(askedIdleMarks(app).map((mark) => mark.key));
   html += `<g data-key="chord-marks">${overlay.marks
+    .filter((mark) => !mark.inactive || revealedIdle.has(mark.key))
     .map((mark) => chordMarkHtml(mark, "formed"))
     .join("")}</g>`;
 
@@ -1296,11 +1299,12 @@ function rowBandHtml(state: GameState, bands: RowBand[], point: (pos: Hex) => [n
 function chordMarkHtml(mark: ChordMark, keyPrefix: "formed" | "ghost"): string {
   const ghost = keyPrefix === "ghost";
   const emphasis = ghost ? " ghost-mark" : mark.focused ? " chord-focus" : " chord-fade";
-  // The idle candidate's mark (issue #258): dimmed and dotted, never
-  // pulsing — it earns nothing, so it isn't live activity. Every active
-  // chord draws solid (#333): the path language distinguishes earning
-  // from idle, never voicing — a silent voice's chord is a full earning
-  // chord, its identity on the module glyphs.
+  // The idle candidate's mark (issue #258): dotted, never pulsing — it
+  // earns nothing, so it isn't live activity — at the ask weight, since it
+  // draws only while a voice that sings it is asked (ADR-0057). Every
+  // active chord draws solid (#333): the path language distinguishes
+  // earning from idle, never voicing — a silent voice's chord is a full
+  // earning chord, its identity on the module glyphs.
   const idle = mark.inactive ? " chord-idle" : "";
   const style = `--cc:var(--${mark.colorVar});--seam-dur:${mark.duration}s`;
   const lines = mark.outline
@@ -1366,7 +1370,7 @@ function updateChordReadout(app: App): void {
     hover?.kind === "module" ? (app.state.modules.find((m) => m.id === hover.moduleId) ?? null) : null;
   // Every chord the module earns its bonus from — not just the first; the
   // conducting spacer's own containment rule rides moduleChips (#201).
-  const chosen = chordChipsForHover(app);
+  const chosen = marksForAsk(app);
   const focus = hovered;
   const active = chosen.filter((mark) => !mark.inactive);
   const idleCount = chosen.length - active.length;
@@ -1561,26 +1565,63 @@ const moduleChips = (module: ModuleInstance, marks: ChordMark[]): ChordMark[] =>
     ? marks.filter((m) => chordMarkCovers(m, point(module.pos as Hex)))
     : marks.filter((m) => m.voices.includes(module.id));
 
-// The chips a hover asks for: a seam names its one chord, a module names
-// every chord it sings in. A mutator slot's ask never lands here — it
-// takes the readout's whole row for itself.
-function chordChipsForHover(app: App): ChordMark[] {
+// The marks the current ask names (§6): a seam names its one chord, a
+// module names every chord it sings in — the conducting spacer by
+// containment, the same rule its readout reads (#201). A mutator slot's
+// ask names no marks — it takes the readout's whole row for itself. One
+// resolution serves every ask consumer: the reserved readout's chips, the
+// Hex detail's chord row, and the idle reveal.
+function marksForAsk(app: App): ChordMark[] {
   const hover = app.ui.chordHover;
   if (!hover || hover.kind === "mutator") return [];
   const marks = chordReadoutCache.get(app)?.marks ?? [];
-  if (hover.kind === "chord") return marks.filter((m) => m.key === hover.key);
+  if (hover.kind === "chord") return marks.filter((m) => m.key === hover.key && !m.inactive);
   const module = app.state.modules.find((m) => m.id === hover.moduleId);
   return module ? moduleChips(module, marks) : [];
 }
 
+// The idle reveal's one rule (ADR-0057): which idle candidates the current
+// ask draws onto the board. A voice's ask — hover, keyboard focus, touch —
+// reveals the candidates its module sings; the conducting spacer's ask
+// reaches them by containment. A seam cannot ask for idle candidates;
+// every other ask reveals none: at rest the group carries the earning seams alone.
+function askedIdleMarks(app: App): ChordMark[] {
+  if (app.ui.chordHover?.kind !== "module") return [];
+  return marksForAsk(app).filter((mark) => mark.inactive);
+}
+
+// The reveal rides the ask live (ADR-0057): a hover never re-renders, so
+// the asked idle marks enter and leave the group in place — the active
+// seams' nodes and their pulse never restart. The mark list stays the
+// cache's complete overlay (the readout's "N idle" count and the Hex
+// detail's chord row keep their consumers); this patches the draw only.
+function updateIdleReveal(app: App): void {
+  const group = document.querySelector('#grid [data-key="chord-marks"]');
+  if (!group || app.ui.detail) return;
+  const marks = chordReadoutCache.get(app)?.marks ?? [];
+  const asked = new Set(askedIdleMarks(app).map((mark) => mark.key));
+  for (const node of [...group.querySelectorAll(".chord-mark.chord-idle")]) {
+    const key = node.getAttribute("data-chord") ?? "";
+    if (asked.has(key)) asked.delete(key);
+    else node.remove();
+  }
+  for (const mark of marks) {
+    if (!mark.inactive || !asked.has(mark.key)) continue;
+    group.insertAdjacentHTML("beforeend", chordMarkHtml(mark, "formed"));
+    asked.delete(mark.key);
+  }
+}
+
 // The hover question (§6): what the pointer rests on. Null clears. Never a
-// re-render — the readout updates in place.
+// re-render — the readout updates in place, and the idle reveal enters and
+// leaves the group with it (ADR-0057).
 function setChordHover(app: App, hover: ChordHover | null): void {
   if (app.released) return;
   const next = hover ?? null;
   if (sameChordHover(app.ui.chordHover, next)) return;
   app.ui.chordHover = next;
   updateChordReadout(app);
+  updateIdleReveal(app);
 }
 
 function sameChordHover(a: ChordHover | null, b: ChordHover | null): boolean {
@@ -2101,7 +2142,7 @@ function bindSeamHover(app: App, svg: SVGSVGElement): void {
     const mark = target.closest?.(".chord-mark:not(.ghost-mark)");
     const key = mark?.getAttribute("data-chord");
     if (mark && key) {
-      setChordHover(app, { kind: "chord", key });
+      setChordHover(app, mark.classList.contains("chord-idle") ? null : { kind: "chord", key });
       return;
     }
     const cellNode = target.closest?.("[data-cell]");

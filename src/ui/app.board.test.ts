@@ -1415,33 +1415,6 @@ describe("always-on chord feedback (§6, #137)", () => {
     expect(readout().textContent).toContain("Fifth ×1.3");
   });
 
-  it("overlapping chords draw their own work, chord-colored (#201); idles draw dimmer (#258)", () => {
-    app = boot(undefined, true);
-    // A power-chord region: C4 (the opening synth), G4 and C5 — the active
-    // Fifth draws full-voice, and the recognized idles (the doubled fifth,
-    // the Octave) draw their own dotted marks beneath it.
-    give(app.state, "additive", hex(1, 0));
-    app.state.cells.push(hex(0, 1));
-    give(app.state, "additive", hex(0, 1));
-    app.render();
-    const grid = document.getElementById("grid")!;
-    const marks = [...grid.querySelectorAll('[data-key="chord-marks"] .chord-mark')];
-    expect(marks).toHaveLength(3);
-    // The active seam dominates: the first mark is the earning Fifth; the
-    // idles carry the chord-idle class (issue #258).
-    expect(marks[0]!.classList.contains("chord-idle")).toBe(false);
-    expect(marks[0]!.querySelectorAll("line.chord-seam").length).toBeGreaterThan(0);
-    expect(marks.slice(1).every((mark) => mark.classList.contains("chord-idle"))).toBe(true);
-    // The idle hues: the engine names the Octave and the doubled Fifth.
-    const hues = marks.map((mark) => (mark as HTMLElement).style.getPropertyValue("--cc"));
-    expect(hues).toContain("var(--chord-fifth)");
-    expect(hues).toContain("var(--chord-octave)");
-    // The chord work renders behind the modules: the marks group precedes
-    // the cell nodes (which carry data-cell, no data-key) in paint order.
-    const children = [...grid.children].map((child) => child.getAttribute("data-key"));
-    expect(children.indexOf("chord-marks")).toBeLessThan(children.findIndex((key) => key === null));
-  });
-
   // The selection lift and its focus/fade registers (#201) retired with
   // the bloom (issue #295): the grid's chords whisper in the gaps, the
   // hover asks name them in the reserved readout, and the Hex detail
@@ -1542,6 +1515,198 @@ describe("always-on chord feedback (§6, #137)", () => {
     expect(fired.chimes).toBe(1);
     app.endFlow();
     app.dismissSummary();
+  });
+});
+
+// The idle ask (ADR-0057): the chord layer reads calm at rest and answers
+// precisely when a voice is asked — hover, keyboard focus, touch tap, the
+// conducting spacer's containment — never as ambient furniture. The reveal
+// is a board-draw question only: the reserved readout's "N idle" count and
+// the Hex detail's chord row keep their own jobs off the complete mark
+// list, and the projected-idle ghosts stay gesture-scoped as they were.
+describe("the idle ask (ADR-0057)", () => {
+  const cell = (q: number, r: number) => document.querySelector(`[data-cell="${q},${r}"]`)!;
+  const readout = () => document.getElementById("chord-readout") as HTMLElement;
+  const marks = (): HTMLElement[] =>
+    [...document.querySelectorAll<HTMLElement>('[data-key="chord-marks"] .chord-mark')];
+  const idleMarks = (): HTMLElement[] => marks().filter((mark) => mark.classList.contains("chord-idle"));
+  const voicesOf = (mark: Element): string[] => (mark.getAttribute("data-voices") ?? "").split(" ");
+  const standDown = () => document.getElementById("grid")!.dispatchEvent(new MouseEvent("pointerleave"));
+
+  // The power-chord region: C4 (the opening synth), G4 and C5. Exactly one
+  // Fifth instance earns; the Octave C4·C5 and the other Fifth wait as
+  // recognized idles.
+  function bootPowerChord(): { c4: string; g4: string; c5: string } {
+    app = boot(undefined, true);
+    give(app.state, "additive", hex(1, 0));
+    app.state.cells.push(hex(0, 1));
+    give(app.state, "additive", hex(0, 1));
+    app.render();
+    const idAt = (q: number, r: number) =>
+      app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(q, r)))!.id;
+    return { c4: idAt(0, 0), g4: idAt(1, 0), c5: idAt(0, 1) };
+  }
+
+  it("at rest the group carries the earning seam alone; the ask reveals the idles whole (#258, ADR-0057)", () => {
+    bootPowerChord();
+    const grid = document.getElementById("grid")!;
+    // At rest the group carries the earning Fifth alone — no idle marks.
+    expect(marks()).toHaveLength(1);
+    expect(marks()[0]!.classList.contains("chord-idle")).toBe(false);
+    expect(marks()[0]!.querySelectorAll("line.chord-seam").length).toBeGreaterThan(0);
+    // The chord work renders behind the modules: the marks group precedes
+    // the cell nodes (which carry data-cell, no data-key) in paint order.
+    const children = [...grid.children].map((child) => child.getAttribute("data-key"));
+    expect(children.indexOf("chord-marks")).toBeLessThan(children.findIndex((key) => key === null));
+    // The C5 voice's ask reveals its own candidates whole — the chord-idle
+    // class, in the chord hues — beside the untouched earning seam.
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    expect(marks()).toHaveLength(3);
+    expect(marks()[0]!.classList.contains("chord-idle")).toBe(false);
+    expect(idleMarks().every((mark) => mark.classList.contains("chord-idle"))).toBe(true);
+    const hues = marks().map((mark) => mark.style.getPropertyValue("--cc"));
+    expect(hues).toContain("var(--chord-fifth)");
+    expect(hues).toContain("var(--chord-octave)");
+    // Leaving stands the candidates back down: the whisper is never
+    // ambient furniture.
+    standDown();
+    expect(marks()).toHaveLength(1);
+  });
+
+  it("moving from a voice onto its idle seam dismisses the reveal without naming the idle", () => {
+    bootPowerChord();
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    expect(idleMarks()).toHaveLength(2);
+    expect(readout().textContent).toContain("2 idle");
+    idleMarks()[0]!.querySelector(".chord-seam")!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    expect(app.ui.chordHover).toBeNull();
+    expect(idleMarks()).toHaveLength(0);
+    expect(readout().textContent).not.toContain("· idle");
+    expect(readout().hidden).toBe(true);
+    app.render();
+    expect(idleMarks()).toHaveLength(0);
+    // Earning seams retain their direct ask.
+    marks()[0]!.querySelector(".chord-seam")!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    expect(app.ui.chordHover?.kind).toBe("chord");
+    expect(readout().hidden).toBe(false);
+  });
+
+  it("the ask weight never touches the projected-idle ghosts (#260's register)", () => {
+    bootPowerChord();
+    // The lift is scoped to the formed layer; the ghost promise keeps the
+    // base seam weight, dashed register aside.
+    const css = readFileSync("src/ui/style.css", "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(css).toMatch(/\.chord-mark:not\(\.ghost-mark\)\.chord-idle \.chord-seam \{[^}]*stroke-width: 4/);
+    const ghostRule = css.match(/\.chord-mark\.ghost-mark\.chord-idle \.chord-seam \{[^}]*\}/)![0];
+    expect(ghostRule).not.toContain("stroke-width");
+  });
+
+  it("pointer hover, keyboard focus, and touch tap ask the same reveal", () => {
+    bootPowerChord();
+    const asks = (): Event[] => [
+      new MouseEvent("pointerover", { bubbles: true }),
+      new FocusEvent("focusin", { bubbles: true }),
+      new PointerEvent("pointerover", { bubbles: true, pointerType: "touch" }),
+    ];
+    for (const ask of asks()) {
+      expect(idleMarks()).toHaveLength(0);
+      cell(0, 1).dispatchEvent(ask);
+      expect(idleMarks()).toHaveLength(2);
+      expect(marks()[0]!.classList.contains("chord-idle")).toBe(false);
+      standDown();
+    }
+    expect(idleMarks()).toHaveLength(0);
+  });
+
+  it("the reveal is whole and never ambient: it persists across a render, then stands down", () => {
+    bootPowerChord();
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    expect(idleMarks()).toHaveLength(2);
+    // A state change rides a render: the draw filter agrees with the live
+    // patch, so the asked candidates survive it untouched.
+    app.render();
+    expect(idleMarks()).toHaveLength(2);
+    standDown();
+    expect(idleMarks()).toHaveLength(0);
+    expect(marks()).toHaveLength(1);
+  });
+
+  it("a voice's ask reveals only the candidates it sings", () => {
+    const { c4, g4, c5 } = bootPowerChord();
+    // C5 sings in both idles — its ask reveals both, whole.
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    const both = idleMarks().map(voicesOf);
+    expect(both).toHaveLength(2);
+    for (const voices of both) expect(voices).toContain(c5);
+    // C4's ask names its own Octave — the doubled fifth's region, whose
+    // voices C4 is absent from, stays hidden.
+    standDown();
+    cell(0, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    expect(idleMarks()).toHaveLength(1);
+    const voices = voicesOf(idleMarks()[0]!);
+    expect(voices).toContain(c4);
+    expect(voices).toContain(c5);
+    expect(voices).not.toContain(g4);
+    standDown();
+    expect(idleMarks()).toHaveLength(0);
+  });
+
+  it("a conducting spacer's containment ask reveals the idle candidates its wire conducts", () => {
+    // C4·G4 spends C4's unit; the wired Octave C4··C5 stays idle beneath
+    // the wire, its run passing straight through the spacer's cell. The
+    // other idle — the doubled fifth, whose work crosses no wire — stays
+    // hidden from the spacer's ask.
+    app = boot(undefined, true);
+    give(app.state, "additive", hex(1, 0));
+    app.state.cells.push(hex(0, 1), hex(0, 2));
+    give(app.state, "spacer", hex(0, 1));
+    give(app.state, "additive", hex(0, 2));
+    app.render();
+    expect(idleMarks()).toHaveLength(0);
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    const conducted = idleMarks();
+    expect(conducted).toHaveLength(1);
+    expect(conducted[0]!.querySelectorAll(".chord-seam").length).toBeGreaterThan(0);
+    // The wire carries no ν/s; the readout keeps the count (#334).
+    expect(readout().textContent).toContain("1 idle");
+    // The C5 voice's ask still sees its full set: the wire asked only its
+    // own candidate.
+    cell(0, 2).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    expect(idleMarks().length).toBeGreaterThan(conducted.length);
+    standDown();
+  });
+
+  it("the reveal is a board-draw question only: the count stands, the detail keeps its chips", () => {
+    bootPowerChord();
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    // The reserved readout keeps its "N idle" count under the same ask.
+    expect(readout().textContent).toContain("2 idle");
+    expect(idleMarks()).toHaveLength(2);
+    standDown();
+    expect(readout().hidden).toBe(true);
+    // The Hex detail's chord row keeps its per-instance "· idle" chips
+    // with no hover live — the complete mark list, never the reveal's.
+    clickCell(0, 1);
+    const detail = document.getElementById("hex-detail")!;
+    const idleChips = [...detail.querySelectorAll<HTMLElement>(".chord-readout-idle")];
+    expect(idleChips.length).toBeGreaterThanOrEqual(2);
+    for (const chip of idleChips) expect(chip.textContent).toContain("· idle");
+  });
+
+  it("one rule in every mode: flow asks like upgrade", () => {
+    bootPowerChord();
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, 600);
+    app.render();
+    expect(idleMarks()).toHaveLength(0);
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    expect(idleMarks()).toHaveLength(2);
+    // The flow tick re-renders the board; the ask holds through it.
+    app.tick();
+    expect(idleMarks()).toHaveLength(2);
+    standDown();
+    expect(idleMarks()).toHaveLength(0);
+    endSession(app.state);
   });
 });
 
