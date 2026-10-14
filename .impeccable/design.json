@@ -1,45 +1,527 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-12T22:46:14.783352+00:00",
-  "title": "Design System: FlowSynth \u2014 Chord readout",
+  "generatedAt": "2026-10-14T00:00:00+00:00",
+  "title": "Design System: FlowSynth — The Rack",
   "extensions": {
-    "shadows": [],
-    "motion": [],
+    "colorMeta": {
+      "bg": {
+        "role": "neutral",
+        "displayName": "Substrate",
+        "canonical": "#0d1122",
+        "tonalRamp": [
+          "#070a1a",
+          "#1c2033",
+          "#3c4156",
+          "#5c6278",
+          "#7f859c",
+          "#a3aac2",
+          "#c9d0e9",
+          "#e6eeff"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Panel",
+        "canonical": "#141a30",
+        "tonalRamp": [
+          "#06091d",
+          "#1a2037",
+          "#3a415a",
+          "#5a627d",
+          "#7c85a1",
+          "#a0aac7",
+          "#c6d0ef",
+          "#e3eeff"
+        ]
+      },
+      "panel-soft": {
+        "role": "neutral",
+        "displayName": "Panel Soft",
+        "canonical": "#111627",
+        "tonalRamp": [
+          "#060a19",
+          "#1b2133",
+          "#3b4255",
+          "#5c6378",
+          "#7e869c",
+          "#a2aac2",
+          "#c8d0e9",
+          "#e5eeff"
+        ]
+      },
+      "panel-deep": {
+        "role": "neutral",
+        "displayName": "Panel Deep",
+        "canonical": "#0a0e1b",
+        "tonalRamp": [
+          "#070a17",
+          "#1c212f",
+          "#3c4252",
+          "#5d6374",
+          "#7f8698",
+          "#a4aabd",
+          "#cad1e4",
+          "#e7eeff"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#2a3150",
+        "tonalRamp": [
+          "#050821",
+          "#191f3c",
+          "#394060",
+          "#596184",
+          "#7b84a9",
+          "#9fa9cf",
+          "#c5cff7",
+          "#e2edff"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#e5e9f5",
+        "tonalRamp": [
+          "#090b10",
+          "#1f2128",
+          "#40424a",
+          "#60636c",
+          "#83868f",
+          "#a7aab5",
+          "#cdd1dc",
+          "#eaeefa"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "canonical": "#99a1c2",
+        "tonalRamp": [
+          "#07091b",
+          "#1c2035",
+          "#3b415a",
+          "#5b627e",
+          "#7d84a3",
+          "#a1a9ca",
+          "#c7cff2",
+          "#e4edff"
+        ]
+      },
+      "hue-generator": {
+        "role": "secondary",
+        "displayName": "Generator LED Green",
+        "canonical": "#238858",
+        "tonalRamp": [
+          "#001500",
+          "#002f0a",
+          "#00532a",
+          "#077648",
+          "#3b9b6a",
+          "#63c18e",
+          "#8be9b3",
+          "#a8ffd0"
+        ]
+      },
+      "hue-oscillator": {
+        "role": "secondary",
+        "displayName": "Oscillator LED Indigo",
+        "canonical": "#6360d4",
+        "tonalRamp": [
+          "#0f0047",
+          "#1d0068",
+          "#382c95",
+          "#5550c0",
+          "#7575eb",
+          "#989bff",
+          "#bcc2ff",
+          "#d9e0ff"
+        ]
+      },
+      "hue-spacer": {
+        "role": "secondary",
+        "displayName": "Spacer Wire Grey",
+        "canonical": "#8a93a8",
+        "tonalRamp": [
+          "#060b17",
+          "#1c212f",
+          "#3b4253",
+          "#5b6375",
+          "#7d869a",
+          "#a1abc0",
+          "#c7d1e7",
+          "#e5eeff"
+        ]
+      },
+      "hue-booster": {
+        "role": "secondary",
+        "displayName": "Booster LED Cyan",
+        "canonical": "#1f95b5",
+        "tonalRamp": [
+          "#000f25",
+          "#002941",
+          "#004c67",
+          "#006f8d",
+          "#1e94b4",
+          "#4fbadb",
+          "#79e1ff",
+          "#97ffff"
+        ]
+      },
+      "hue-forge": {
+        "role": "secondary",
+        "displayName": "Forge Amber",
+        "canonical": "#bc9239",
+        "tonalRamp": [
+          "#1d0300",
+          "#381900",
+          "#5d3b00",
+          "#815c00",
+          "#a77f25",
+          "#cea44c",
+          "#f6ca74",
+          "#ffe891"
+        ]
+      },
+      "hue-voice": {
+        "role": "secondary",
+        "displayName": "Silent Voice Violet",
+        "canonical": "#9d7bea",
+        "tonalRamp": [
+          "#15003b",
+          "#2b005a",
+          "#4c2985",
+          "#6d4baf",
+          "#906eda",
+          "#b493ff",
+          "#dbb9ff",
+          "#f8d7ff"
+        ]
+      },
+      "hue-conduit": {
+        "role": "secondary",
+        "displayName": "Conduit Yellow",
+        "canonical": "#d9b84a",
+        "tonalRamp": [
+          "#1a0500",
+          "#341c00",
+          "#583e00",
+          "#7b6000",
+          "#a1830b",
+          "#c8a83a",
+          "#f0ce62",
+          "#ffec80"
+        ]
+      },
+      "hue-ritual": {
+        "role": "secondary",
+        "displayName": "Ritual Vermillion",
+        "canonical": "#cc603d",
+        "tonalRamp": [
+          "#2d0000",
+          "#4e0000",
+          "#791c00",
+          "#a33f1d",
+          "#ce623f",
+          "#f78763",
+          "#ffad88",
+          "#ffcba5"
+        ]
+      },
+      "charge": {
+        "role": "primary",
+        "displayName": "Charge Green (luminous)",
+        "canonical": "#9affa8",
+        "tonalRamp": [
+          "#001400",
+          "#002e00",
+          "#005314",
+          "#1f7634",
+          "#449c54",
+          "#66c375",
+          "#89eb97",
+          "#a5ffb3"
+        ]
+      },
+      "nous": {
+        "role": "primary",
+        "displayName": "Nous Indigo (luminous)",
+        "canonical": "#cbcaff",
+        "tonalRamp": [
+          "#0a0621",
+          "#1f1d3c",
+          "#3f3d62",
+          "#605e87",
+          "#8281ad",
+          "#a6a5d6",
+          "#cccbff",
+          "#e9e8ff"
+        ]
+      },
+      "forge-glow": {
+        "role": "primary",
+        "displayName": "Forge Glow",
+        "canonical": "#eecb82",
+        "tonalRamp": [
+          "#190600",
+          "#331d00",
+          "#573e00",
+          "#7a5f1f",
+          "#a08241",
+          "#c7a661",
+          "#efcc83",
+          "#ffeaa0"
+        ]
+      },
+      "arete": {
+        "role": "tertiary",
+        "displayName": "Arete Violet",
+        "canonical": "#b994f5",
+        "tonalRamp": [
+          "#150031",
+          "#2c094f",
+          "#4e2e79",
+          "#704fa1",
+          "#9471ca",
+          "#ba95f6",
+          "#e0bbff",
+          "#fed8ff"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Interactive Accent (nous register)",
+        "canonical": "#cbcaff",
+        "tonalRamp": [
+          "#0a0621",
+          "#1f1d3c",
+          "#3f3d62",
+          "#605e87",
+          "#8281ad",
+          "#a6a5d6",
+          "#cccbff",
+          "#e9e8ff"
+        ]
+      },
+      "switch": {
+        "role": "tertiary",
+        "displayName": "Switch Vermillion",
+        "canonical": "#cc603d",
+        "tonalRamp": [
+          "#2d0000",
+          "#4e0000",
+          "#791c00",
+          "#a33f1d",
+          "#ce623f",
+          "#f78763",
+          "#ffad88",
+          "#ffcba5"
+        ]
+      },
+      "danger": {
+        "role": "tertiary",
+        "displayName": "Danger Rose",
+        "canonical": "#e08a8a",
+        "tonalRamp": [
+          "#250000",
+          "#42070f",
+          "#6b2a2d",
+          "#934a4c",
+          "#bc6c6d",
+          "#e68f8f",
+          "#ffb5b4",
+          "#ffd2d1"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Stage Name",
+        "purpose": "The chord sheet stage — the one large moment, reserved."
+      },
+      "headline": {
+        "displayName": "Sheet Title / Focus Name",
+        "purpose": "Sheet identities and the console focus name; condensed caps."
+      },
+      "title": {
+        "displayName": "Control Label",
+        "purpose": "Buttons, nameplates, section heads; condensed caps."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Notes and longer mechanics; the only prose face."
+      },
+      "label": {
+        "displayName": "Tabular Figure",
+        "purpose": "Every number, readout, unit, and chip; mono, tabular-nums."
+      }
+    },
+    "shadows": [
+      {
+        "name": "sheet",
+        "value": "0 12px 40px rgba(2, 4, 12, 0.6)",
+        "purpose": "Sheets over the board only — the one sanctioned shadow."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state",
+        "value": "0.15s ease-out",
+        "purpose": "Hover, color, and border state transitions."
+      },
+      {
+        "name": "fill",
+        "value": "400ms ease-out",
+        "purpose": "Goal-bar and meter height fills."
+      },
+      {
+        "name": "live-breath",
+        "value": "2.2s ease-in-out infinite",
+        "purpose": "The live main switch glow; charge light only."
+      },
+      {
+        "name": "pip-pulse",
+        "value": "2.6s ease-in-out infinite",
+        "purpose": "Active chord pip; static under reduced motion."
+      }
+    ],
     "breakpoints": [
       {
-        "name": "phone-composition",
+        "name": "phone",
         "value": "600px"
+      },
+      {
+        "name": "coarse-pointer",
+        "value": "(pointer: coarse)"
+      },
+      {
+        "name": "reduced-motion",
+        "value": "(prefers-reduced-motion: reduce)"
       }
     ]
   },
   "components": [
     {
-      "name": "Compact Chord readout",
+      "name": "Square-cut Button",
+      "kind": "button",
+      "refersTo": "button-square",
+      "description": "Default instrument control: hairline border, condensed caps, zero radius.",
+      "html": "<button class=\"ds-btn\">Purchase</button>",
+      "css": ".ds-btn{font:600 13px/1.2 var(--font-condensed,\"Arial Narrow\",Arial,sans-serif);letter-spacing:.05em;text-transform:uppercase;color:var(--ink,#e5e9f5);background:var(--panel,#141a30);border:1px solid var(--line,#2a3150);border-radius:0;padding:7px 14px;cursor:pointer;transition:background .15s,border-color .15s}.ds-btn:hover{background:var(--panel-deep,#0a0e1b)}.ds-btn:focus-visible{outline:1px solid var(--accent,#cbcaff);outline-offset:1px}"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The leading action: nous-indigo accent fill, substrate-ink text.",
+      "html": "<button class=\"ds-btn-primary\">Start Session</button>",
+      "css": ".ds-btn-primary{font:600 13px/1.2 var(--font-condensed,\"Arial Narrow\",Arial,sans-serif);letter-spacing:.05em;text-transform:uppercase;color:var(--bg,#0d1122);background:var(--accent,#cbcaff);border:1px solid var(--accent,#cbcaff);border-radius:0;padding:7px 14px;cursor:pointer;transition:filter .15s}.ds-btn-primary:hover{filter:brightness(1.08)}.ds-btn-primary:focus-visible{outline:1px solid var(--ink,#e5e9f5);outline-offset:1px}"
+    },
+    {
+      "name": "Main Switch",
       "kind": "custom",
-      "refersTo": "hover-summary",
-      "description": "Compact module hover with term glosses; complete breakdown stays in Hex detail.",
-      "html": "<div class=\"ds-summary\"><div class=\"ds-headline\"><div class=\"ds-output\">+0.12 \u03bd/s</div><span class=\"ds-capacity\">(1/1) Chord glyph</span></div><div class=\"ds-row\"><span>Octave</span><span class=\"ds-number\">\u00d71.15</span></div></div>",
-      "css": ".ds-summary{width:220px;max-width:calc(100vw - 32px);padding:0;background:transparent;display:flex;flex-direction:column;gap:5px;pointer-events:none}.ds-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font:12px/1.4 var(--font-condensed);letter-spacing:.02em;color:var(--chord-octave)}.ds-output{font:600 19px/1.4 var(--mono);font-variant-numeric:tabular-nums;color:var(--accent);margin-bottom:0}.ds-number{font-family:var(--mono);font-variant-numeric:tabular-nums;flex-shrink:0}.ds-headline{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:3px}.ds-capacity{color:var(--muted);font:12px var(--mono)}.ds-muted{text-decoration:underline dashed;text-underline-offset:4px;opacity:.72}"
+      "refersTo": "main-switch",
+      "description": "The console session gate — the mode indicator; vermillion is its sole hue.",
+      "html": "<div class=\"ds-switch ds-switch-live\"><span class=\"ds-switch-state\"></span><span class=\"ds-switch-label\">Live</span></div>",
+      "css": ".ds-switch{width:76px;height:76px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:1px solid var(--switch,#cc603d);border-radius:0;background:var(--switch-faint,rgba(204,96,61,.07));color:var(--switch-ink,#fff3ec)}.ds-switch-label{font:600 12px var(--font-condensed,\"Arial Narrow\",Arial,sans-serif);letter-spacing:.08em;text-transform:uppercase}.ds-switch-state{width:8px;height:8px;border-radius:50%;border:1px solid currentColor}.ds-switch-live{background:var(--switch,#cc603d);color:var(--switch-ink,#fff3ec);box-shadow:0 0 18px var(--switch-glow,rgba(204,96,61,.48))}.ds-switch-dim{border-color:var(--switch-dim,#96562f);color:var(--switch-dim,#96562f);background:transparent}"
+    },
+    {
+      "name": "Vertical Goal Bar",
+      "kind": "custom",
+      "refersTo": "goal-bar",
+      "description": "Goal progress: fill by height in the goal palette token, engraved completion mark.",
+      "html": "<div class=\"ds-goalbar\" title=\"45 of 60 min\"><div class=\"ds-goalbar-fill\" style=\"height:75%\"></div><span class=\"ds-goalbar-mark\">✓</span></div>",
+      "css": ".ds-goalbar{position:relative;width:10px;height:64px;background:var(--panel-deep,#0a0e1b);border:1px solid var(--line,#2a3150);border-radius:0;display:flex;align-items:flex-end}.ds-goalbar-fill{width:100%;background:var(--goal-vermillion,#cc603d)}.ds-goalbar-mark{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 8px/1 var(--mono,monospace);color:var(--ink,#e5e9f5);opacity:0}.ds-goalbar.ds-done .ds-goalbar-mark{opacity:1}"
+    },
+    {
+      "name": "Plain Tooltip",
+      "kind": "custom",
+      "refersTo": "tooltip-plain",
+      "description": "The disclosure layer: floating gloss text, no card, no shadow, no radius.",
+      "html": "<div class=\"ds-tooltip\">Persists through arete reset</div>",
+      "css": ".ds-tooltip{display:inline-block;font:11px/1.4 var(--mono,monospace);letter-spacing:.02em;color:var(--ink,#e5e9f5);background:var(--panel-deep,#0a0e1b);padding:4px 8px;border-radius:0;max-width:260px}"
+    },
+    {
+      "name": "Ledger Chip",
+      "kind": "chip",
+      "refersTo": "button-square",
+      "description": "Paired icon + count chip from the board ledger right group.",
+      "html": "<button class=\"ds-chip\"><span class=\"ds-chip-icon\">◆</span><span class=\"ds-chip-count\">4</span></button>",
+      "css": ".ds-chip{display:inline-flex;align-items:center;gap:6px;font:11px var(--mono,monospace);font-variant-numeric:tabular-nums;color:var(--ink,#e5e9f5);background:transparent;border:1px solid var(--line,#2a3150);border-radius:0;padding:4px 10px;cursor:pointer}.ds-chip:hover{background:var(--hover-bg,rgba(229,233,245,.06))}.ds-chip-icon{color:var(--arete,#b994f5);font-size:10px}"
+    },
+    {
+      "name": "Tabular Readout",
+      "kind": "custom",
+      "refersTo": "typography.label",
+      "description": "The signature readout row: condensed name left, tabular mono figure right.",
+      "html": "<div class=\"ds-readout\"><span class=\"ds-readout-name\">Rate</span><span class=\"ds-readout-fig\">1.24 ν/s</span></div>",
+      "css": ".ds-readout{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:3px 0}.ds-readout-name{font:600 12px var(--font-condensed,\"Arial Narrow\",Arial,sans-serif);letter-spacing:.05em;text-transform:uppercase;color:var(--muted,#99a1c2)}.ds-readout-fig{font:400 13px var(--mono,monospace);font-variant-numeric:tabular-nums;color:var(--ink,#e5e9f5)}"
     }
   ],
   "narrative": {
     "northStar": "The Rack",
-    "overview": "This records the built module/seam hover readout and shared detailed-readout styling only. The established instrument is precise, quiet, and machined: open divisions, technical names, and tabular figures. It does not establish a new product-wide visual direction. [Instrument standards](docs/instrument-standards.md) and their pinned prototypes remain authoritative; [the surface brief](docs/module-hover-readout-design.md) owns this readout's content contract.",
+    "overview": "FlowSynth renders as a synthesizer instrument: a hex-grid board of panel-standard modules where color is functional — hue names the category, finish names the rarity, light names the charge — surrounded by flat, quiet instrument panels in condensed technical lettering with monospace tabular readouts. The player glances at it mid-practice; every surface is built to be read in a flick of attention, never studied. The system explicitly rejects the consumer-app voice: rounded controls, nested cards, details expandables, boxed tooltips, explanatory paragraphs, and mechanics words as product names. Depth is carried by panel tiers and hairlines, never shadows or texture; glow and motion are earned only by charge and live activity.",
     "keyCharacteristics": [
-      "One reserved reading beside the board.",
-      "Output hierarchy and aligned chord figures.",
-      "Open rows with explicit state text and silent-participation markings."
+      "Hexes are the module voice; panels are flat, open, and divided by hairlines",
+      "Color is the board language; console surfaces stay monochrome but for the vermillion switch",
+      "One four-state grammar everywhere, recognizable without color",
+      "Square-cut controls at zero radius, hairline borders, condensed caps",
+      "Tabular monospace figures for every readout",
+      "Compact name + state + effect readouts; deeper mechanics in a plain tooltip layer"
     ],
-    "rules": [],
+    "rules": [
+      {
+        "name": "The Register Rule",
+        "body": "A reserved resource hue anchors its producing category: modules wear the saturated LED register; the resource wears the luminous glow register of the same hue — generator to charge green, oscillator to nous indigo.",
+        "section": "colors"
+      },
+      {
+        "name": "The Monochrome Console Rule",
+        "body": "The console is graphite and ink; color is the board language. The vermillion switch — and its session-strip expression — is the sole exception.",
+        "section": "colors"
+      },
+      {
+        "name": "The Finish Rule",
+        "body": "Rarity is a finish, not a color: engraved rings plus a faint plate tint, never glowing, never taking a hue.",
+        "section": "colors"
+      },
+      {
+        "name": "Glow is Charge",
+        "body": "Glow and motion are for charge and live activity only. Idle panels stay quiet; an animated element means something is live.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "Every figure that can change renders in monospace with tabular-nums. Readouts hold their size — layout never shifts as numbers tick.",
+        "section": "typography"
+      },
+      {
+        "name": "The Three-Jobs Rule",
+        "body": "Condensed caps for names and controls, mono for numbers, sans for prose. A face used outside its job is a review flag.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Panel Rule",
+        "body": "If a resting surface needs a shadow to read as a surface, the tier is wrong. Shadows belong to sheets over the board, nothing else.",
+        "section": "elevation"
+      }
+    ],
     "dos": [
-      "Do keep the instrument standards and pinned prototypes authoritative.",
-      "Do align figures, preserve every active instance, and make idle and uncertified states explicit.",
-      "Do preserve complete Hex-detail and placement-preview facts when reusing shared styling."
+      "Do keep the instrument standards and pinned prototypes authoritative; this file captures, that file decides.",
+      "Do square-cut every control (0 radius, hairline border, condensed caps); use the four-state grammar with its non-color marks.",
+      "Do set every readout in tabular mono figures with units; keep the name + state + effect readout compact (Chords (4/11) +8% ν).",
+      "Do pair every category hue with a glyph, and mutators lead wherever modules and mutators co-list.",
+      "Do earn every glow and animation with charge or live activity, and honor prefers-reduced-motion with state surviving intact."
     ],
     "donts": [
-      "Don't introduce enclosing pills, nested row boxes, or decorative glow in this readout.",
-      "Don't repeat the aggregate chord multiplier in ordinary module hover.",
-      "Don't treat unavailable browser checks as verified evidence."
+      "Don't round anything — border-radius on buttons, pills, chips is the retired consumer voice.",
+      "Don't nest cards or ship details expandables inside panels — open divisions and hairline rules only.",
+      "Don't box a tooltip or give it shadow; the layer is floating plain text, and a tooltip that restates visible content is deleted, not moved.",
+      "Don't name a purchase with a mechanics word (First ceiling) — products carry proper names with one effect line.",
+      "Don't use SaaS landing grammar: hero metrics, gradient text, eyebrow kickers, identical card grids — none of it belongs on the rack.",
+      "Don't texture or bevel — flat-light discipline; the rack is a design language, not a texture budget.",
+      "Don't let color alone carry state, and don't spend the console monochrome on anything but the switch."
     ]
   }
 }
