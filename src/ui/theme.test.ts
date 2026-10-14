@@ -50,6 +50,57 @@ describe("theme token table", () => {
     expect(tokens["arete-line"]).toMatch(/^color-mix\(in srgb, var\(--arete\) 38%/);
   });
 
+  describe("the main switch's AA pairing (issue #347)", () => {
+    // WCAG relative luminance and contrast over sRGB hex.
+    const channel = (c: number) => {
+      const v = c / 255;
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    };
+    const luminance = (hex: string) => {
+      const n = parseInt(hex.slice(1), 16);
+      return 0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255);
+    };
+    const contrast = (fg: string, bg: string) => {
+      const [a, b] = [luminance(fg), luminance(bg)].sort((x, y) => y - x);
+      return (a + 0.05) / (b + 0.05);
+    };
+    // What color-mix(in srgb, fg P%, transparent) composites to over bg —
+    // the switch's faint wash over the console rail's panel-soft.
+    const over = (fg: string, bg: string, percent: number) => {
+      const f = parseInt(fg.slice(1), 16);
+      const b = parseInt(bg.slice(1), 16);
+      const channelAt = (shift: number) =>
+        Math.round((percent / 100) * ((f >> shift) & 255) + (1 - percent / 100) * ((b >> shift) & 255));
+      return `#${[16, 8, 0].map(channelAt).map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+    };
+
+    const idleBackdrop = over(tokens.switch, tokens["panel-soft"], 7);
+    const hoverBackdrop = over(tokens.switch, tokens["panel-soft"], 14);
+
+    it("carries the deep and bright stops beside the untouched session vermillion", () => {
+      expect(tokens.switch).toBe("#cc603d");
+      expect(tokens["switch-bright"]).toBe("#dd6f49");
+      expect(tokens["switch-deep"]).toBe("#a94c2b");
+    });
+
+    it("reads AA in every state: switch text ≥ 4.5:1 (idle, hover, live, held)", () => {
+      expect(contrast(tokens["switch-bright"], idleBackdrop)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(tokens["switch-bright"], hoverBackdrop)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(tokens["switch-ink"], tokens["switch-deep"])).toBeGreaterThanOrEqual(4.5);
+    });
+
+    it("keeps the unchanged grammar above the non-text floor: border and state dot ≥ 3:1", () => {
+      expect(contrast(tokens.switch, tokens["panel-soft"])).toBeGreaterThanOrEqual(3);
+      expect(contrast(tokens["switch-dim"], tokens["panel-soft"])).toBeGreaterThanOrEqual(3);
+      expect(contrast(tokens["switch-ink"], tokens["switch-deep"])).toBeGreaterThanOrEqual(3);
+    });
+
+    it("wires the stops to the switch's states in the stylesheet", () => {
+      expect(stylesheet).toMatch(/\.main-switch\.idle \{[^}]*color:\s*var\(--switch-bright\)/);
+      expect(stylesheet).toMatch(/\.main-switch\.live,[\s\S]*?\.main-switch\.held \{[^}]*background:\s*var\(--switch-deep\)/);
+    });
+  });
+
   it("carries the goal palette: the six swatches vermillion-first (issue #312)", () => {
     expect(tokens["goal-vermillion"]).toBe("#cc603d");
     expect(tokens["goal-amber"]).toBe("#bc9239");

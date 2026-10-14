@@ -69,6 +69,11 @@ const interactive = {
   switch: "#cc603d",
   "switch-dim": "#96562f",
   "switch-ink": "#fff3ec",
+  // Issue #347's AA pairing: the deep stop carries the switch's live/held
+  // fill (ink ≥ 4.5:1), the bright stop its idle text on the faint wash
+  // (≥ 4.5:1). `switch` stays the session color — borders, glow, strips.
+  "switch-bright": "#dd6f49",
+  "switch-deep": "#a94c2b",
   danger: "#e08a8a",
 } as const;
 
