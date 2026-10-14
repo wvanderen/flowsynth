@@ -26,4 +26,14 @@ The response's `worktree` must equal `git rev-parse --show-toplevel` in the chec
 
 Verify and screenshot both a desktop and a ~390px phone viewport from the verified URL. A viewport pass that fails or cannot run is recorded as unavailable — never claimed as verified. The evidence backs a review against the [instrument standards](../instrument-standards.md), which also requires keyboard/touch disclosure checks, non-color state distinctions, and reduced-motion behavior where applicable.
 
+### Resize flakiness
+
+`preview_resize` fails most attempts at any viewport size — "Preview automation resize timed out after 15000ms" — while click/evaluate/snapshot on the same tab usually keep working. Get resizing done before captures, not during:
+
+- Resize to each viewport **before** capturing at that size, and batch that viewport's whole capture pass before resizing again.
+- After a timeout, call `preview_status` once (it often revives the viewport), then retry resize at most once more.
+- Three failed attempts is the whole budget; beyond that, record the viewport pass as unavailable per the rule above.
+
+A resize that lands after retries is still a good viewport — capture everything before touching the size again.
+
 The launcher, its log, and the provenance endpoint are development-only: `vite build` ships neither the endpoint nor any absolute local path (asserted by `tools/build-purity.test.ts`).
