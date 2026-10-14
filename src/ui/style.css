@@ -1652,6 +1652,21 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 }
 .zoom-cluster button svg { width: 15px; height: 15px; }
 
+/* The coarse-pointer touch floor (issue #350): the phone console is
+   operated by a thumb beside an ongoing practice — precision taps are
+   the one thing it must never demand. The compact densities above opt
+   out of the button base's 44px floor; wherever the primary pointer is
+   a finger they reach it again. Desktop pointer density stays compact. */
+@media (pointer: coarse) {
+  .zoom-cluster button { width: 44px; height: 44px; }
+  .arc-dismiss { width: 44px; height: 44px; }
+  /* The card's copy keeps its column clear of the grown ✕. */
+  .arc-card { padding-right: 56px; }
+  .app-tile { width: 44px; height: 44px; }
+  .focus-close { min-width: 44px; min-height: 44px; }
+  .history-row { min-height: 44px; }
+}
+
 /* ── Hex grid ──────────────────────────────────────── */
 
 /* ── Module faces: readout panels (ADR-0016, #39) ──── */
@@ -3407,7 +3422,8 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
      the Mutators face re-pins as the strip in the lane above the thumb
      bar. display:contents dissolves the column's box so the strip
      anchors against the board space again, edge to edge — left 12, right
-     58 clears the zoom cluster's lane (10 + 36) — like the horizon bar. */
+     58 clears the zoom cluster's lane (10 + 36 compact, 10 + 44 on the
+     coarse floor) — like the horizon bar. */
   .tray-column { display: contents; }
   .inventory-tray { display: none !important; }
   .horizon-bar {
@@ -3442,9 +3458,12 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   .mutator-tray { display: none !important; }
   .mut-unlock-pill { top: 46px; }
   .cell-arm-pill { top: 46px; }
-  /* The arc card clears the game-info strip up top by riding above the
-     horizon bar's lane at the board's lower edge. */
-  .arc-card { top: auto; bottom: 124px; left: 12px; right: 12px; max-width: none; }
+  /* The arc card rides above the board's lower lanes (issue #350): the
+     horizon bar's (64 + 46) and, above it, the zoom cluster's — three
+     44px coarse-floor targets over bottom 64 reach 208, so the card
+     docks at 216 and never runs beneath the cluster's edge or covers
+     the Arete read. */
+  .arc-card { top: auto; bottom: 216px; left: 12px; right: 12px; max-width: none; }
 }
 
 /* Narrow phones keep every action visible while the habit yields width. */
