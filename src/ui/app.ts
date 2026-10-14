@@ -2329,9 +2329,9 @@ export class App {
 
   // The Notes modal's focus return (issue #332): the invoking control —
   // the Notes door, whatever opened it — takes focus again; a control the
-  // render replaced falls back to the fresh door.
+  // render replaced falls back to the fresh door. The face reset rides the
+  // opener: every path back in lands on CAPTURE.
   private restoreNotesInvoker(): void {
-    this.ui.notesFace = "capture";
     const stored = this.notesInvoker;
     this.notesInvoker = null;
     const invoker =

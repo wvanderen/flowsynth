@@ -176,19 +176,28 @@ describe("capturing from the modal", () => {
     app.closeModal();
   });
 
-  it("keeps an unsaved draft across pause and resume without stealing control focus", () => {
+  it("the standing draft survives a pause and resume — the mode flip never rebuilds the dialog", () => {
     startSession(app.state, null, DAY);
     openNotes();
-    (document.getElementById("note-composer") as HTMLTextAreaElement).value = "Pause this thought";
+    const composer = document.getElementById("note-composer") as HTMLTextAreaElement;
+    composer.value = "Pause this thought";
+    composer.focus();
+    composer.setSelectionRange(5, 5, "forward");
     for (const mode of ["paused", "flow"] as const) {
-      const pause = document.getElementById("pause-flow") as HTMLButtonElement;
-      pause.focus();
-      pause.click();
+      // The console sits behind the scrim while the dialog stands, so the
+      // mode flip arrives through the app, not a console click — a click
+      // out there is backdrop dismissal, pinned separately above.
+      if (mode === "paused") app.pause();
+      else app.resume();
       expect(app.state.mode).toBe(mode);
-      // The dialog never rebuilds on the mode flip: the draft survives
-      // untouched behind the scrim, and focus is not stolen back to it.
-      expect((document.getElementById("note-composer") as HTMLTextAreaElement).value).toBe("Pause this thought");
-      expect(document.activeElement?.id).not.toBe("note-composer");
+      // The dialog is untouched: still standing, same composer node, draft
+      // and caret intact, focus undisturbed.
+      expect(app.ui.modal).toBe("notes");
+      expect(document.getElementById("modal")!.hidden).toBe(false);
+      expect(document.getElementById("note-composer")).toBe(composer);
+      expect(composer.value).toBe("Pause this thought");
+      expect([composer.selectionStart, composer.selectionEnd]).toEqual([5, 5]);
+      expect(document.activeElement).toBe(composer);
     }
     app.closeModal();
   });

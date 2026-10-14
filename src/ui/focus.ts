@@ -831,11 +831,10 @@ function sheetStateWord(app: App): string {
   }
 }
 
-// The one sheet frame both console sheets wear (ADR-0050): the clipped
-// plate anchored beneath the clock — head with the name and the prominent
-// state read beside it, the facetab row, the close — over the standing
-// face's body. One spelling, so the Focus and Notes sheets can never
-// drift apart.
+// The one sheet frame the Focus control sheet wears (ADR-0050; Notes left
+// for its own modal, #332): the clipped plate anchored beneath the clock —
+// head with the name and the prominent state read beside it, the facetab
+// row, the close — over the standing face's body.
 function sheetFrameHtml(label: string, name: string, stateWord: string, tabs: string, body: string): string {
   return `<div class="app-popover focus-sheet" id="app-popover"><section class="inst-panel" aria-label="${label}"><div class="inst-panel-face focus-sheet-face">
     <div class="focus-head">

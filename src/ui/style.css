@@ -483,9 +483,9 @@ h1, h2, h3, p { margin: 0; }
 .app-tile-glyph svg { width: 19px; height: 19px; display: block; }
 
 /* App sheets open as one plate anchored directly beneath the clock's
-   disclosure (ADR-0050) — the Focus control sheet and the notes sheet are
-   its only tenants (#277): short travel from every door, and nothing below
-   the console ever moves, reflows, or dims. */
+   disclosure (ADR-0050) — the Focus control sheet is its only tenant
+   (Notes left for its own modal, #332): short travel from the clock's
+   door, and nothing below the console ever moves, reflows, or dims. */
 .app-popover {
   position: absolute;
   top: calc(100% + 12px);
