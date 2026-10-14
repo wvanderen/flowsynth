@@ -1370,7 +1370,7 @@ function updateChordReadout(app: App): void {
     hover?.kind === "module" ? (app.state.modules.find((m) => m.id === hover.moduleId) ?? null) : null;
   // Every chord the module earns its bonus from — not just the first; the
   // conducting spacer's own containment rule rides moduleChips (#201).
-  const chosen = chordChipsForHover(app);
+  const chosen = marksForAsk(app);
   const focus = hovered;
   const active = chosen.filter((mark) => !mark.inactive);
   const idleCount = chosen.length - active.length;
@@ -1575,23 +1575,18 @@ function marksForAsk(app: App): ChordMark[] {
   const hover = app.ui.chordHover;
   if (!hover || hover.kind === "mutator") return [];
   const marks = chordReadoutCache.get(app)?.marks ?? [];
-  if (hover.kind === "chord") return marks.filter((m) => m.key === hover.key);
+  if (hover.kind === "chord") return marks.filter((m) => m.key === hover.key && !m.inactive);
   const module = app.state.modules.find((m) => m.id === hover.moduleId);
   return module ? moduleChips(module, marks) : [];
-}
-
-// The chips a hover asks for.
-function chordChipsForHover(app: App): ChordMark[] {
-  return marksForAsk(app);
 }
 
 // The idle reveal's one rule (ADR-0057): which idle candidates the current
 // ask draws onto the board. A voice's ask — hover, keyboard focus, touch —
 // reveals the candidates its module sings; the conducting spacer's ask
-// reaches them by containment, and a chord ask keeps an already-revealed
-// candidate standing while the pointer rests on it. Every other ask
-// reveals none: at rest the group carries the earning seams alone.
+// reaches them by containment. A seam cannot ask for idle candidates;
+// every other ask reveals none: at rest the group carries the earning seams alone.
 function askedIdleMarks(app: App): ChordMark[] {
+  if (app.ui.chordHover?.kind !== "module") return [];
   return marksForAsk(app).filter((mark) => mark.inactive);
 }
 
@@ -2147,7 +2142,7 @@ function bindSeamHover(app: App, svg: SVGSVGElement): void {
     const mark = target.closest?.(".chord-mark:not(.ghost-mark)");
     const key = mark?.getAttribute("data-chord");
     if (mark && key) {
-      setChordHover(app, { kind: "chord", key });
+      setChordHover(app, mark.classList.contains("chord-idle") ? null : { kind: "chord", key });
       return;
     }
     const cellNode = target.closest?.("[data-cell]");

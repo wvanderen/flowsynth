@@ -1573,6 +1573,24 @@ describe("the idle ask (ADR-0057)", () => {
     expect(marks()).toHaveLength(1);
   });
 
+  it("moving from a voice onto its idle seam dismisses the reveal without naming the idle", () => {
+    bootPowerChord();
+    cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    expect(idleMarks()).toHaveLength(2);
+    expect(readout().textContent).toContain("2 idle");
+    idleMarks()[0]!.querySelector(".chord-seam")!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    expect(app.ui.chordHover).toBeNull();
+    expect(idleMarks()).toHaveLength(0);
+    expect(readout().textContent).not.toContain("· idle");
+    expect(readout().hidden).toBe(true);
+    app.render();
+    expect(idleMarks()).toHaveLength(0);
+    // Earning seams retain their direct ask.
+    marks()[0]!.querySelector(".chord-seam")!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    expect(app.ui.chordHover?.kind).toBe("chord");
+    expect(readout().hidden).toBe(false);
+  });
+
   it("the ask weight never touches the projected-idle ghosts (#260's register)", () => {
     bootPowerChord();
     // The lift is scoped to the formed layer; the ghost promise keeps the

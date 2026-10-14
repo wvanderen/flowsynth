@@ -45,3 +45,20 @@ Live DOM guards recorded at capture time (both viewports): `.chord-idle` count `
 - Physical touch gesture on a real device: unavailable; the touch path is pinned by the suite's `pointerType: "touch"` ask and the browser's tap-synthesized pointerover is the same delegation.
 - Keyboard dismissal capture: the ask follows focus — a null ask is reached by focusing an empty cell or the pointer's leave (suite-pinned via `standDown`); this board's three owned cells all carry modules, so no empty-cell focus capture exists. Recorded unavailable rather than claimed.
 - Live `prefers-reduced-motion` media emulation during capture: unavailable; no new animation was added and the idle register never pulses (source-level notes above, not a claimed emulation pass).
+
+## PR #357 review correction
+
+The voice-to-idle-seam transition now clears the ask and removes the idle
+marks, rather than keeping a seam standing and naming it in the transient
+readout. The board regression suite covers that transition, the subsequent
+render, and the unchanged direct ask on an earning seam. The forwarding
+`chordChipsForHover` alias was removed; ADR-0057 now matches the issue's
+voice-only reveal rule.
+
+Fresh desktop/phone browser captures, physical touch, keyboard dismissal,
+and reduced-motion emulation for this correction were unavailable. This
+correction changes ask resolution only; the existing dotted styling and
+pinned prototype presentation remain unchanged.
+
+Validation after the correction: `npm run check` passed; `npm test` passed
+all 62 files, with 1,311 tests passed and 2 skipped.
