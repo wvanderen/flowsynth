@@ -130,6 +130,108 @@ describe("the session start (issue #280)", () => {
   });
 });
 
+// Issue #331: the session group — habit, duration, Start — reads where the
+// player starts, and both locks set means one activation runs it.
+describe("the session group's one-click start (issue #331)", () => {
+  function lockedHabitId(): string {
+    const created = createHabit(app.state, "Jammin");
+    selectHabit(app.state, created.habit!.id);
+    app.ui.chosenTarget = 600;
+    return created.habit!.id;
+  }
+
+  it("both locks set: Start begins the selected session in one activation, the confirmation preference notwithstanding", () => {
+    const id = lockedHabitId();
+    expect(app.ui.confirmEntry).toBe(true);
+    app.startFlow();
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.activeHabitId).toBe(id);
+    expect(app.state.session!.target).toBe(600);
+    expect(app.ui.app).toBeNull();
+    expect(document.getElementById("app-popover")).toBeNull();
+  });
+
+  it("both locks set with the preference off: the same single activation, the session the group reads", () => {
+    const id = lockedHabitId();
+    app.ui.confirmEntry = false;
+    app.startFlow();
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.activeHabitId).toBe(id);
+    expect(app.state.session!.target).toBe(600);
+  });
+
+  it("the main switch's own click runs the locked session — no sheet stands in between", () => {
+    lockedHabitId();
+    document.getElementById("flow-switch")!.click();
+    expect(app.state.mode).toBe("flow");
+    expect(document.getElementById("app-popover")).toBeNull();
+  });
+
+  it("only the habit locked: the confirmation preference holds — the PLAN face stays the confirmation's home", () => {
+    const created = createHabit(app.state, "Jammin");
+    selectHabit(app.state, created.habit!.id);
+    expect(app.ui.chosenTarget).toBeNull();
+    app.startFlow();
+    expect(app.state.mode).toBe("upgrade");
+    expect(app.ui.app).toBe("time");
+    // The standing face's established entry behavior: the re-click commits.
+    document.getElementById("flow-switch")!.click();
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.session!.target).toBeNull();
+  });
+
+  it("only the time locked: confirmation still stands, and the group reads none selected", () => {
+    app.ui.chosenTarget = 600;
+    app.startFlow();
+    expect(app.state.mode).toBe("upgrade");
+    expect(app.ui.app).toBe("time");
+    expect(document.querySelector('[data-session="habit"]')!.textContent).toBe("none selected");
+    app.closeApp();
+    // Confirmation off keeps its own path: instant, open-ended, unstructured.
+    app.ui.confirmEntry = false;
+    app.startFlow();
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.activeHabitId).toBeNull();
+  });
+});
+
+describe("the unified Focus surface", () => {
+  it("logo, habit, and timer share one native door and one focus stop", () => {
+    const created = createHabit(app.state, "Jammin");
+    selectHabit(app.state, created.habit!.id);
+    app.render();
+    const door = () => document.querySelector<HTMLButtonElement>(".session-focus")!;
+    expect(door().tagName).toBe("BUTTON");
+    expect(door().querySelectorAll("button, [tabindex]")).toHaveLength(0);
+    expect(door().contains(document.querySelector(".brand"))).toBe(true);
+    expect(door().contains(document.getElementById("session-habit"))).toBe(true);
+    expect(door().contains(document.querySelector(".console-clock"))).toBe(true);
+    document.querySelector<HTMLElement>(".brand")!.click();
+    expect(app.ui.app).toBe("time");
+    expect(door().getAttribute("aria-expanded")).toBe("true");
+    expect(door().contains(document.getElementById("app-popover"))).toBe(false);
+    app.showFocusFace("goals");
+    document.getElementById("session-habit")!.click();
+    expect(app.ui.app).toBe("time");
+    expect(door().classList.contains("open")).toBe(true);
+  });
+
+  it("the unified door opens read-only Focus while running and paused", () => {
+    const created = createHabit(app.state, "Jammin");
+    selectHabit(app.state, created.habit!.id);
+    startSession(app.state, 600);
+    app.render();
+    document.getElementById("session-habit")!.click();
+    expect(app.ui.app).toBe("time");
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.activeHabitId).toBe(created.habit!.id);
+    document.getElementById("pause-flow")!.click();
+    expect(app.state.mode).toBe("paused");
+    expect(app.ui.app).toBe("time");
+    expect(document.querySelectorAll(".session-focus")).toHaveLength(1);
+  });
+});
+
 describe("the PLAN face's plan affordances", () => {
   it("a picked chip plans the next session and lights the console clock", () => {
     const created = createHabit(app.state, "Jammin");

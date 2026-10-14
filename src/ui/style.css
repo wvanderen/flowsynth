@@ -303,15 +303,15 @@ h1, h2, h3, p { margin: 0; }
    reserves its dimensions across modes so entering or exiting flow shifts
    nothing below — the reserve is a minimum, so longer content grows the
    block instead of clipping. */
-.console-session { flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 14px; }
+.console-session { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 16px; }
 /* The popover anchor: the clock and its Time popover live here (issue #148)
    — Time wears no tile, so the panel opens directly beneath the affordance
    that discloses it. */
-.clock-anchor { position: relative; display: flex; align-items: center; flex-shrink: 0; }
+.clock-anchor { position: relative; display: flex; align-items: center; flex: 1 1 0; min-width: 0; }
 .clock-anchor .app-popover { left: 0; }
 .console-clock {
-  min-width: 150px;
-  min-height: 52px;
+  min-width: 0;
+  min-height: 44px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -319,13 +319,6 @@ h1, h2, h3, p { margin: 0; }
 }
 /* The clock is itself the plan affordance (§7): its small chevron discloses
    the Time app. As a button it stays visually bare until hover. */
-.console-clock.clock-opens-time {
-  border-color: transparent;
-  background: transparent;
-  text-align: left;
-  padding: 4px 8px;
-}
-.console-clock.clock-opens-time:hover { border-color: var(--line); background: var(--panel); }
 /* The next session's shape, displayed read-only; planning lives in the Time
    app's popover (§7), which the clock button itself opens. Digits and
    disclosure ride one row inside a two-line stack with the caption — the
@@ -336,7 +329,7 @@ h1, h2, h3, p { margin: 0; }
 .clock-row { display: flex; align-items: center; gap: 6px; }
 .session-clock { display: block; font: 28px/1.1 var(--mono); margin: 0; }
 .clock-disclose { width: 11px; height: 11px; flex-shrink: 0; color: var(--muted); margin-top: 6px; }
-.console-clock.clock-opens-time:hover .clock-disclose { color: var(--ink); }
+.session-focus:hover .clock-disclose { color: var(--ink); }
 .clock-caption { display: block; font-size: 10px; color: var(--muted); margin-top: 3px; white-space: nowrap; }
 /* The session progress strip (issue #63): the header itself is the progress
    surface — a thin highlight pinned along its bottom border, above the
@@ -405,6 +398,38 @@ h1, h2, h3, p { margin: 0; }
    engraved completion mark — state readable without color (the +N chip is
    text, the done bars hold their full height). The phone banner drops the
    reads for bare launchers (ADR-0050's phone line). */
+/* The session group (issue #331): the chosen session's read and its
+   actions as one contiguous group — habit name, clock, switch — at every
+   width, the phone row included (ADR-0050's phone line amended). The gap
+   rides the cluster's own, so the group's seams match the row's. */
+.session-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+/* One square-cut door, one interaction boundary. The logo leads, the
+   habit yields space, and the timer remains a stable tabular read. */
+.session-focus {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: 52px;
+  padding: 4px 8px;
+  border-color: transparent;
+  background: transparent;
+  text-align: left;
+}
+.session-focus:hover { border-color: var(--line); background: var(--panel); }
+.session-focus.open { box-shadow: inset 0 -2px var(--ink); }
+.session-focus:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.session-focus .brand { gap: 8px; }
+.session-habit { display: flex; flex: 0 1 auto; min-width: 0; overflow: hidden; }
+.session-habit .bread { max-width: 18ch; }
+.session-actions { flex-shrink: 0; }
 .banner-reads {
   display: flex;
   align-items: center;
@@ -421,6 +446,11 @@ h1, h2, h3, p { margin: 0; }
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 18ch;
+}
+/* The unstructured edge state (ADR-0050): "none selected" reads muted —
+   the one state word the session group borrows from the roster's chip. */
+.bread.unselected {
+  color: var(--muted);
 }
 .gbars { display: flex; align-items: flex-end; gap: 4px; height: 30px; flex-shrink: 0; }
 /* The banner's bars ride the strip's height — the shared column's one
@@ -3287,14 +3317,16 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 
 @container app (width < 600px) {
   /* Portrait phone (§7): the composition re-docks. The phone banner is
-     launchers only (ADR-0050's amended phone line): brand glyph, clock,
-     switch, then the bare uncarded doors — focus, Notes — with Settings at
-     the row's end. The banner reads (habit name, goal bars) drop entirely,
-     and the compact launcher retires with them: the focus door's sheet
-     carries the Habit and Goals faces, its inset marker the sheet-open
-     state. Production reads move to the board-surface game-info strip; the
-     icon dock becomes the bottom thumb bar with Inventory and Collection
-     folded in; the Hex detail presents as a bottom sheet (issue #295). */
+      launchers and the session group (ADR-0050's phone line as amended by
+      #331): brand glyph, then habit, clock, switch, then the bare uncarded
+      doors — focus, Notes — with Settings at the row's end. The banner's
+      goal bars drop (the session group carries the row's one session
+      read), and the compact launcher retires with them: the focus door's
+      sheet carries the Habit and Goals faces, its inset marker the
+      sheet-open state. Production reads move to the board-surface
+      game-info strip; the icon dock becomes the bottom thumb bar with
+      Inventory and Collection folded in; the Hex detail presents as a
+      bottom sheet (issue #295). */
   .console { height: 56px; padding: 0 10px; gap: 8px; }
   /* The Focus sheet pins to the container's own margins on phone: the
      clock anchor sits one brand glyph in, so the absolute anchor would run
@@ -3306,13 +3338,22 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
     top: 68px;
   }
   .brand svg { width: 24px; height: 24px; }
-  .console-session { flex: 0 0 auto; gap: 8px; }
-  /* The banner reads drop for the bare launchers (ADR-0050's phone line):
-     the clock, the switch, and the uncarded doors carry the row alone. */
+  .console-session { flex: 1 1 0; gap: 8px; }
+  .session-group { flex: 1 1 0; gap: 8px; }
+  .session-focus { flex: 1 1 0; min-height: 44px; padding: 2px 4px; gap: 8px; }
+  .session-habit { flex: 1 1 0; overflow: hidden; }
+  .session-habit .bread { max-width: 100%; }
+  /* The goal bars drop for the bare launchers (ADR-0050's phone line as
+     amended by #331): the session group — habit, clock, switch — carries
+     the row's one session read; only the tracker's bars stay docked out. */
   .banner-reads { display: none; }
+  /* The session group hugs the phone row: a shorter name, a slimmer door
+     that keeps the 44px touch floor. */
+
+  .bread { max-width: 10ch; }
   /* The clock hugs its content here: the 150px desktop reserve would crowd
      a 320px device, and the row must never wrap. */
-  .console-clock { min-width: 0; min-height: 0; padding: 2px 6px; }
+  .console-clock { min-width: 0; min-height: 0; padding: 0; }
   .clock-provisional { display: none; }
   .main-switch { padding: 9px 11px; }
   .main-switch span { display: none; }
@@ -3367,6 +3408,16 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   /* The arc card clears the game-info strip up top by riding above the
      horizon bar's lane at the board's lower edge. */
   .arc-card { top: auto; bottom: 124px; left: 12px; right: 12px; max-width: none; }
+}
+
+/* Narrow phones keep every action visible while the habit yields width. */
+@container app (width < 360px) {
+  .console { padding: 0 6px; gap: 4px; }
+  .session-group { gap: 2px; }
+  .session-focus { gap: 4px; padding: 2px; }
+
+  .session-clock { font-size: 20px; }
+  .session-actions { gap: 4px; }
 }
 
 /* The modal layer lives outside #app, so its phone presentation — sheets

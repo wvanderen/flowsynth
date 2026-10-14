@@ -858,8 +858,11 @@ export class App {
     this.els["console-session"]?.addEventListener("click", (event) => {
       const target = event.target as Element | null;
       // Pause/resume belongs to the ongoing capture: keep Notes standing
-      // so the clock transition cannot dismiss an unsaved draft.
-      if (target?.closest(".clock-anchor, #flow-switch") || (this.ui.app === "notes" && target?.closest("#pause-flow"))) clickInsideApps = true;
+      // so the clock transition cannot dismiss an unsaved draft. The
+      // session habit's door (#331) joins the set: its click opens the
+      // Focus sheet on the HABIT face — and the opening click, like the
+      // switch's, must never close it in the same gesture.
+      if (target?.closest(".session-group") || (this.ui.app === "notes" && target?.closest("#pause-flow"))) clickInsideApps = true;
     }, { capture: true, signal: this.signal });
     document.addEventListener("click", () => {
       // A stale instance's closer must never close — or re-render — a newer
@@ -1084,12 +1087,16 @@ export class App {
   // the Focus sheet's PLAN face, the enter confirmation's home — and while
   // that face stands, the next press commits it, the same gesture its Enter
   // flow control makes, never a toggle that only re-opens the sheet. Zero
-  // habits never blocks either path.
+  // habits never blocks either path. The session group's own read (issue
+  // #331) overrules the preference: with the habit chosen and a plan armed
+  // — both locks set, the group reads exactly what would run — one
+  // activation starts it; every other shape keeps the preference's path.
   startFlow(): void {
     if (this.released) return;
     if (this.state.mode !== "upgrade") return;
     const planStanding = this.ui.app === "time" && !this.ui.historyOpen;
-    if (!this.ui.confirmEntry || planStanding) {
+    const sessionLocked = this.state.activeHabitId !== null && this.ui.chosenTarget !== null;
+    if (!this.ui.confirmEntry || planStanding || sessionLocked) {
       this.beginFlowFromPlan();
       return;
     }
