@@ -235,6 +235,30 @@ describe("the console header around Enter/Exit Flow (#148)", () => {
     expect(flag.textContent).toContain("30 ν");
   });
 
+  it("the main switch's accessible name tracks its state and never falls back to the title (#347)", () => {
+    app.render();
+    const sw = () => document.getElementById("flow-switch")!;
+    // Idle: Enter flow — the name is the switch's own words, not the hover
+    // title, and it matches the visible label's vocabulary (the phone row
+    // hides the span, so the aria-label is the only name there).
+    expect(sw().getAttribute("aria-label")).toBe("Enter flow");
+    expect(sw().getAttribute("title")).not.toBe(sw().getAttribute("aria-label"));
+    expect(sw().querySelector("span")!.textContent).toBe(sw().getAttribute("aria-label"));
+    // Live: End flow.
+    startSession(app.state, 600);
+    app.render();
+    expect(app.state.mode).toBe("flow");
+    expect(sw().classList.contains("live")).toBe(true);
+    expect(sw().getAttribute("aria-label")).toBe("End flow");
+    expect(sw().querySelector("span")!.textContent).toBe("End flow");
+    // Held: the switch still ends the session; the sibling names the hold.
+    app.pause();
+    app.render();
+    expect(sw().classList.contains("held")).toBe(true);
+    expect(sw().getAttribute("aria-label")).toBe("End flow");
+    expect(document.getElementById("pause-flow")!.getAttribute("aria-label")).toBe("Resume");
+  });
+
   it("pause stays reachable during flow and toggles from the header", () => {
     const s = app.state;
     s.sessionsCompleted = 1;

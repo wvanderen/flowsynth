@@ -187,6 +187,10 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
   if (!host) return;
 
   const switchSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.2 6.6a8 8 0 1 0 11.6 0"/></svg>`;
+  // The switch's one name per state (#347): the aria-label and the visible
+  // span share it, so the announced name can never drift from the read one.
+  const enterFlowWord = "Enter flow";
+  const endFlowWord = "End flow";
   const pauseSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5v14M15 5v14"/></svg>`;
   const resumeSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5.5v13l10.5-6.5Z"/></svg>`;
   const discloseSvg = `<svg class="clock-disclose" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m2.5 4.5 3.5 3.5 3.5-3.5"/></svg>`;
@@ -255,8 +259,8 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
             ${sheetOpen ? sheetHtml() : ""}
           </div>
           <div class="session-actions">
-            <button class="main-switch idle" id="flow-switch" title="The board locks and runs itself">
-              ${switchSvg}<span>Enter flow</span><i class="switch-state" aria-hidden="true"></i>
+            <button class="main-switch idle" id="flow-switch" aria-label="${enterFlowWord}" title="The board locks and runs itself">
+              ${switchSvg}<span>${enterFlowWord}</span><i class="switch-state" aria-hidden="true"></i>
             </button>
           </div>
         </div>
@@ -292,8 +296,8 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
         </div>
         <div class="session-actions">
           <button id="pause-flow" aria-label="${paused ? "Resume" : "Pause"}" title="${paused ? "Resume the session" : "Pause the session"}">${paused ? resumeSvg : pauseSvg}<span aria-hidden="true">${paused ? "Resume" : "Pause"}</span></button>
-          <button class="main-switch ${paused ? "held" : "live"}" id="flow-switch" title="Ends the session and banks its production">
-            ${switchSvg}<span>Exit flow</span><i class="switch-state" aria-hidden="true"></i>
+          <button class="main-switch ${paused ? "held" : "live"}" id="flow-switch" aria-label="${endFlowWord}" title="Ends the session and banks its production">
+            ${switchSvg}<span>${endFlowWord}</span><i class="switch-state" aria-hidden="true"></i>
           </button>
         </div>
       </div>

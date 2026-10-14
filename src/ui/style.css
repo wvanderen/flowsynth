@@ -352,7 +352,9 @@ h1, h2, h3, p { margin: 0; }
 /* The Enter/Exit main switch: vermillion, and the header's dominant element
    (issue #148) — the largest control in the row, centered in the session
    cluster. Bright and animated = flow live; dim = idle; paused holds bright
-   but still. */
+   but still. Text holds AA in every state (#347): live/held fill on the
+   deep stop, idle text on the bright stop; borders, glow, and state dot
+   ride the session vermillion unchanged. */
 .main-switch {
   display: inline-flex;
   align-items: center;
@@ -369,7 +371,7 @@ h1, h2, h3, p { margin: 0; }
 .main-switch.live .switch-state { background: var(--switch-ink); border-color: var(--switch-ink); opacity: 1; box-shadow: 0 0 8px var(--switch-glow); }
 .main-switch.held .switch-state { background: var(--switch-ink); border-color: var(--switch-ink); opacity: 1; }
 .main-switch.idle {
-  color: var(--switch);
+  color: var(--switch-bright);
   border-color: var(--switch-dim);
   background: var(--switch-faint);
 }
@@ -377,7 +379,7 @@ h1, h2, h3, p { margin: 0; }
 .main-switch.live,
 .main-switch.held {
   color: var(--switch-ink);
-  background: var(--switch);
+  background: var(--switch-deep);
   border-color: var(--switch);
   text-shadow: 0 1px 2px var(--shadow);
 }
