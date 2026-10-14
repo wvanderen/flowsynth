@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { computeRates } from "../engine/economy";
 import { syncChordDiscoveries } from "../engine/library";
 import { fresh, give, sumSynthValues } from "../engine/fixtures";
@@ -41,6 +42,15 @@ describe("what the board earns in the rate details (issue #334)", () => {
     // The displayed oscillator totals sum to the board's rate within
     // rounding — the details can never disagree with the total above them.
     expect(sumSynthValues(snapshot)).toBeCloseTo(snapshot.rate, 6);
+  });
+
+  it("rows ride the roster's line — the pick carries no dead height on fine pointers", () => {
+    const css = readFileSync("src/ui/style.css", "utf8");
+    const pick = css.slice(css.indexOf(".rd-pick {"), css.indexOf(".rd-pick:hover"));
+    expect(pick).toContain("min-height: 0");
+    // Coarse pointers keep the 44px floor: the height reads as tap spacing.
+    const coarse = css.slice(css.indexOf("@media (pointer: coarse)"), css.indexOf("@media (pointer: coarse)") + 120);
+    expect(coarse).toContain(".rd-pick { min-height: 44px");
   });
 
   it("a zero-output oscillator reads like any other row", () => {

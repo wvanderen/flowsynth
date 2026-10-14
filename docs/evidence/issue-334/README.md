@@ -35,7 +35,7 @@ Live DOM guards recorded at capture time (desktop session): sheet open with `tot
 
 ## Instrument-standards notes
 
-- Open divisions only: flat rule-line rows — no nested cards, no `<details>`, no expansion controls; the row is its name and its final figure, the pick its one control.
+- Open divisions only: flat rule-line rows — no nested cards, no `<details>`, no expansion controls; the row is its name and its final figure, the pick its one control. The pick rides the row's own line (the base button's 44px floor overrode to `min-height: 0` on fine pointers — it was padding every row with dead space below the baseline), while coarse pointers keep the floor, where the height reads as tap spacing; both pinned by the suite.
 - Honest arithmetic: the global factors appear once, worded `already included`, and the rows sum to the board's rate (pinned by the suite and `sumSynthValues`; the displayed-figure sum is additionally pinned by the #154-era ledger test that parses the rendered row strings).
 - Misleading hover cues removed: the readout's disclosure buttons, dotted underlines, and coarse-pointer min-height rules are deleted from markup and stylesheet; the roster's rows carry no arrow promising an expansion that isn't there.
 - Reduced motion: the roster surfaces have no motion at all (the tick fills text in place); the readout lost its only transitions with the disclosure markup.
