@@ -916,14 +916,22 @@ h1, h2, h3, p { margin: 0; }
 .rd-note { font-size: 10.5px; color: var(--muted); }
 .rd-val { margin-left: auto; text-align: right; color: var(--nous); font-size: 12px; white-space: nowrap; }
 .rd-total .rd-name, .rd-total .rd-val { color: var(--ink); font-weight: 600; }
+/* The global factors' one line (issue #334): a board-level property, not a
+   per-row payout — the muted register keeps it from reading as a leg. */
+.rd-global .rd-name, .rd-global .rd-val { color: var(--muted); font-weight: 400; font-size: 11.5px; }
 /* The synth row: the name is the pick (a real button, so Enter and Space
-   work), the ⓘ pins the legs tooltip, the final figure stays critical at
-   the right edge — visible without opening anything. */
+   work) and the final figure stays critical at the right edge — visible
+   without opening anything. No expansion: the amendment drops the per-row
+   details and their arrow for now (issue #334). The pick rides the row's
+   own line — the base button's 44px floor would pad every row with dead
+   space below the baseline — and any coarse pointer keeps the floor,
+   including secondary touch input on a laptop with a trackpad. */
 .rd-pick {
   display: flex;
   align-items: baseline;
   gap: 8px;
   min-width: 0;
+  min-height: 0;
   border: 0;
   border-radius: 0;
   padding: 0;
@@ -933,33 +941,15 @@ h1, h2, h3, p { margin: 0; }
   cursor: pointer;
   transition: color 0.15s;
 }
+@media (any-pointer: coarse) {
+  .rd-pick { min-height: 44px; align-items: center; }
+}
 .rd-pick:hover:not(:disabled) { background: transparent; border-color: transparent; color: var(--nous); }
 .rd-pick:focus-visible { outline-offset: 2px; }
 .rd-synth .rd-name { flex-shrink: 0; }
 /* The selected row wears the state grammar's firm inset marker — readable
    without color — with the nous name as reinforcement only. */
 .rd-synth.st-selected .rd-name { color: var(--nous); }
-/* A synth row's legs: the tooltip layer's body content. Each leg is one
-   rule-free line — label, figure, note — the whole decomposition readable
-   as the multiplication it is. */
-.rd-legs { display: grid; gap: 2px; padding: 2px 0; cursor: default; }
-.rd-leg {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  font-size: 11.5px;
-}
-.rd-leg-name { color: var(--muted); flex-shrink: 0; }
-.rd-leg .rd-val { font-size: 11.5px; }
-.rd-leg .rd-note { margin-left: 0; }
-.rd-leg .rd-note:empty { display: none; }
-.rd-heading {
-  padding: 8px 0 2px;
-  font: 9px var(--mono);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
 /* The whole ledger is the door (#233, the #220 verdict): above the 760px
    breakpoint a hover or focus anywhere on the strip opens the roster, and
    the popover drops ledger-wide from beneath the panel. The ⓘ ring sits
@@ -1770,6 +1760,9 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   gap: 5px;
   padding: 0;
 }
+/* The readout is a read (issue #334): every chip plain — no interactive
+   terms, no dotted disclosure underlines. Deeper chord facts live in the
+   click-open Hex detail. */
 .chord-readout-summary .chord-readout-chip {
   display: flex;
   justify-content: space-between;
@@ -1781,20 +1774,6 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   font-size: 12px;
   letter-spacing: 0.02em;
   line-height: 1.4;
-}
-.chord-readout-summary .readout-tip { display: block; }
-.chord-readout-summary .readout-tip .readout-tip-trigger {
-  display: block;
-  width: 100%;
-  min-height: 0;
-  pointer-events: auto;
-  text-align: left;
-}
-.chord-readout-summary .readout-tip-trigger > .chord-readout-chip { width: 100%; }
-.chord-readout-summary .readout-tip-trigger .chord-readout-name {
-  text-decoration: underline;
-  text-decoration-color: var(--muted);
-  text-underline-offset: 3px;
 }
 .chord-readout-name { min-width: 0; overflow-wrap: anywhere; }
 .chord-readout-number { flex-shrink: 0; font-variant-numeric: tabular-nums; }
@@ -1814,7 +1793,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   gap: 12px;
   margin-bottom: 3px;
 }
-.chord-readout-headline > .readout-tip { margin-left: auto; }
+.chord-readout-headline > .chord-readout-chip { margin-left: auto; }
 .chord-readout-summary .chord-readout-capacity {
   justify-content: flex-end;
   align-items: center;
@@ -1823,9 +1802,6 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   white-space: nowrap;
 }
 .chord-readout-capacity svg { width: 16px; height: 16px; flex-shrink: 0; }
-@media (pointer: coarse) {
-  .chord-readout-summary .readout-tip .readout-tip-trigger { min-height: 44px; }
-}
 .chord-readout-summary .chord-readout-idle { color: var(--muted); opacity: 1; }
 .chord-readout[hidden] { display: none; }
 .chord-readout-chip {

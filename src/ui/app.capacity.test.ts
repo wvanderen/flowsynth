@@ -240,7 +240,9 @@ describe("the one-capacity economy on the board (#258)", () => {
     document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(readout().textContent).toContain("(1/1)");
     app.openModal("rate");
-    expect(document.getElementById("modal-content")!.textContent).toContain("Capacity");
+    // The sheet carries no capacity leg — the used/available read stays
+    // local to the reserved readout and Hex detail (issue #334's roster).
+    expect(document.getElementById("modal-content")!.textContent).not.toContain("Capacity");
     app.closeModal();
     app.openModal("library");
     expect(document.querySelector("#modal-content .chord-count")!.textContent).toContain("×1");
@@ -376,6 +378,12 @@ describe("placement previews with capacity-aware production (#260)", () => {
     expect(scale).not.toBeNull();
     expect(scale.getAttribute("data-q")).toBe(String(1 + BALANCE.allocationComplexityRate));
     expect(readout().querySelector(".scale-marker")).not.toBeNull();
+    // The plain scale keeps its measured quality accessible even when
+    // there is no applied formation chip and no disclosure button.
+    expect(scale.getAttribute("role")).toBe("img");
+    expect(scale.getAttribute("aria-label")).toContain(`this formation measures ×${formatNumber(1 + BALANCE.allocationComplexityRate)}`);
+    expect(scale.getAttribute("aria-label")).toContain("×1 neutral");
+    expect(readout().querySelector("button, .inst-tip")).toBeNull();
     // The preview is transient: leaving the cell restores the readout and
     // the board never moved.
     cell(0, 1).dispatchEvent(new MouseEvent("pointerleave", { bubbles: true }));
@@ -530,23 +538,20 @@ describe("placement previews with capacity-aware production (#260)", () => {
     }
   });
 
-  it("readout disclosures open by focus and tap, and dismiss before placement cancellation", () => {
+  it("the placement preview reads plain: figures without disclosures, cancellation untouched (#334)", () => {
     give(app.state, "additive", hex(1, 0));
     const mover = give(app.state, "additive", null);
     app.render();
     document.querySelector<HTMLButtonElement>(`[data-inv="${mover.id}"]`)!.click();
     cell(0, 1).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
-    const trigger = readout().querySelector<HTMLButtonElement>(".readout-tip-trigger")!;
-    trigger.focus();
-    const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
-    expect(body.classList.contains("inst-show")).toBe(true);
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    expect(body.classList.contains("inst-show")).toBe(false);
+    // The transient readout carries no interactive terms at all — every
+    // figure is a plain chip, and no hover cue promises a disclosure that
+    // isn't there. Escape still cancels the arm beneath the plain reads.
+    expect(readout().querySelector("button, .inst-tip, .readout-tip-trigger")).toBeNull();
     expect(app.ui.placing).toBe(mover.id);
-    trigger.click();
-    expect(body.classList.contains("inst-show")).toBe(true);
-    document.body.click();
-    expect(body.classList.contains("inst-show")).toBe(false);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(app.ui.placing).toBeNull();
+    expect(readout().hidden).toBe(true);
   });
 
   it("a placement costs no open detail (#260's contract over the Hex detail)", () => {

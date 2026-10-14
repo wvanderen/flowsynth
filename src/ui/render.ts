@@ -620,7 +620,7 @@ function renderAchievementsModal(app: App, content: HTMLElement, projected: Rate
   content.innerHTML = `
     ${modalTop("FEATS", undefined, isPhoneWidth() ? "Collection" : undefined)}
     <h2 id="modal-title">${count} of ${ACHIEVEMENTS.length} feats.</h2>
-    <p class="lead">Every feat speeds the rate a little — they accelerate, never gate. Each one adds into the Achievements leg of every synth row in the rate details.</p>
+    <p class="lead">Every feat speeds the rate a little — they accelerate, never gate. Each one adds into the Feats factor of the rate details, already included in the board's rate.</p>
     ${milestoneSection}${sections}`;
   const list = content.querySelector(".ach-milestones");
   if (list) wireTooltips(list, app.signal);
@@ -1367,8 +1367,10 @@ function updateChordReadout(app: App): void {
   if (focus && isVoiceType(focus.type) && snapshot?.allocation) {
     const used = snapshot.allocation.used.get(focus.id) ?? 0;
     const capacity = snapshot.allocation.capacity;
-    const content = `<span class="chord-readout-chip chord-readout-capacity mono">(${used}/${capacity}) ${CAPACITY_SVG.replace(/>\s+</g, "><")}</span>`;
-    headline.push(readoutDisclosureHtml("hover-capacity", content, "Whole-chord budget per voice", `Harmonic capacity ${used} of ${capacity} used`));
+    // A plain chip (issue #334): the transient readout carries no
+    // interactive terms — the budget's deeper facts stay with the
+    // click-open Hex detail.
+    headline.push(`<span class="chord-readout-chip chord-readout-capacity mono">(${used}/${capacity}) ${CAPACITY_SVG.replace(/>\s+</g, "><")}</span>`);
   }
   if (headline.length) rows.push(`<div class="chord-readout-headline">${headline.join("")}</div>`);
   const marks = focus ? active : chosen;
@@ -1378,26 +1380,27 @@ function updateChordReadout(app: App): void {
     mark.colorVar,
   )));
   if (contribution && contribution.formationQ !== 1) {
-    rows.push(compactReadoutRow(`Formation ×${formatNumber(contribution.formationQ)}`, "formation", undefined, "Pitch-class quality applied to active participants"));
+    rows.push(compactReadoutRow(`Formation ×${formatNumber(contribution.formationQ)}`, "formation"));
   }
   if (focus && idleCount) rows.push(compactReadoutRow(`${idleCount} idle`, "idle"));
   if (focus && isVoiceType(focus.type) && snapshot?.allocation && !snapshot.allocation.certified) {
-    rows.push(compactReadoutRow("Allocation uncertified", "uncertified", undefined, "Search budget reached before optimality was proven"));
+    rows.push(compactReadoutRow("Allocation uncertified", "uncertified"));
   }
   host.hidden = rows.length === 0;
   setReadoutHtml(host, rows.length ? `<div class="chord-readout-summary">${rows.join("")}</div>` : "");
 }
 
-// Compact figures retain term glosses; the full breakdown stays in Hex detail.
-function compactReadoutRow(text: string, kind: string, colorVar?: string, mechanics?: string): string {
+// Compact figures, plain (issue #334): names and multipliers only — no
+// disclosure buttons, no dotted underlines. The full breakdown stays in
+// Hex detail.
+function compactReadoutRow(text: string, kind: string, colorVar?: string): string {
   const split = text.indexOf(" ×");
   const capacity = kind === "capacity" ? text.lastIndexOf(" ") : -1;
   const at = split >= 0 ? split : capacity;
   const content = at >= 0
     ? `<span class="chord-readout-name">${escapeHtml(text.slice(0, at))} </span><span class="chord-readout-number mono">${escapeHtml(text.slice(at + 1))}</span>`
     : escapeHtml(text);
-  const row = `<span class="chord-readout-chip chord-readout-${kind}${kind === "value" ? " mono" : ""}"${colorVar ? ` style="--cc:var(--${colorVar})"` : ""}>${content}</span>`;
-  return mechanics ? readoutDisclosureHtml(`hover-${kind}`, row, mechanics) : row;
+  return `<span class="chord-readout-chip chord-readout-${kind}${kind === "value" ? " mono" : ""}"${colorVar ? ` style="--cc:var(--${colorVar})"` : ""}>${content}</span>`;
 }
 
 // Preserve focused/pinned disclosures when an unchanged readout refreshes.
@@ -1412,7 +1415,9 @@ function setReadoutHtml(host: HTMLElement, html: string): void {
 // Selected and projected voices share one figure grammar and disclosure layer.
 // `idKey` scopes the disclosure's id — a surface hosting two rows (the
 // reserved readout and the Hex detail's chord row) must never mint the
-// same id twice (the ledger's portal rule).
+// same id twice (the ledger's portal rule). The transient readout itself
+// carries no disclosures (issue #334): its chips are plain, and the
+// deeper facts live in the click-open Hex detail.
 function readoutDisclosureHtml(idKey: string, content: string, mechanics: string, label?: string): string {
   const id = `${idKey}-tip`;
   return `<span class="inst-tip readout-tip"><button class="inst-tip-trigger readout-tip-trigger" type="button" aria-expanded="false" aria-describedby="${id}"${label || idKey.endsWith("quality") ? ` aria-label="${escapeHtml(label ?? mechanics)}"` : ""}>${content}</button><span class="inst-tip-body" id="${id}" role="tooltip">${escapeHtml(mechanics)}</span></span>`;
@@ -1422,24 +1427,34 @@ function readoutFigureHtml(idKey: string, text: string, mechanics: string): stri
   return readoutDisclosureHtml(idKey, `<span class="chord-readout-chip chord-readout-${idKey.replace(/^.*-/, "")} mono">${escapeHtml(text)}</span>`, mechanics);
 }
 
-function voiceMetricsHtml(module: ModuleInstance, snapshot: RateSnapshot, current?: RateSnapshot, idScope = "readout", withValue = true): string {
+function plainFigureHtml(kind: string, text: string): string {
+  return `<span class="chord-readout-chip chord-readout-${kind} mono">${escapeHtml(text)}</span>`;
+}
+
+// `disclose` splits the two hosts: the click-open Hex detail keeps the
+// disclosure layer (the instrument standards' tooltip doctrine), while
+// the transient placement preview renders the same figures plain (issue
+// #334 — no interactive terms in the reserved readout).
+function voiceMetricsHtml(module: ModuleInstance, snapshot: RateSnapshot, current?: RateSnapshot, idScope = "readout", withValue = true, disclose = true): string {
   if (!isVoiceType(module.type)) return "";
   const after = snapshot.contributions.get(module.id);
   const before = current?.contributions.get(module.id);
   const allocation = snapshot.allocation;
   const was = (value: number | null | undefined, unit: string): string =>
     value == null ? "" : ` — was ${unit}${formatNumber(value)}`;
+  const figure = (kind: string, text: string, mechanics: string): string =>
+    disclose ? readoutFigureHtml(`${idScope}-${kind}`, text, mechanics) : plainFigureHtml(kind, text);
   const rows: string[] = [];
-  if (withValue && isOscillatorType(module.type)) rows.push(readoutFigureHtml(`${idScope}-value`, `+${formatNumber(after?.value ?? 0)} ν/s`, `Final ν/s${was(before?.value, "+")}`));
+  if (withValue && isOscillatorType(module.type)) rows.push(figure("value", `+${formatNumber(after?.value ?? 0)} ν/s`, `Final ν/s${was(before?.value, "+")}`));
   if (allocation) {
     const prior = current?.allocation;
-    rows.push(readoutFigureHtml(`${idScope}-capacity`, `Capacity ${allocation.used.get(module.id) ?? 0}/${allocation.capacity}`, `Whole-chord budget${prior ? ` — was ${prior.used.get(module.id) ?? 0}/${prior.capacity}` : ""}`));
+    rows.push(figure("capacity", `Capacity ${allocation.used.get(module.id) ?? 0}/${allocation.capacity}`, `Whole-chord budget${prior ? ` — was ${prior.used.get(module.id) ?? 0}/${prior.capacity}` : ""}`));
     if (!allocation.certified) rows.push(`<span class="chord-readout-chip chord-readout-uncertified mono">Allocation uncertified</span>`);
   }
   if (after) {
-    if (isOscillatorType(module.type) && after.chordFactor !== null) rows.push(readoutFigureHtml(`${idScope}-factor`, `×${formatNumber(after.chordFactor)}`, `Total chord factor${was(before?.chordFactor, "×")}`));
-    if (after.formationQ !== 1) rows.push(readoutFigureHtml(`${idScope}-formation`, `Formation ×${formatNumber(after.formationQ)}`, `Applied formation term${was(before?.formationQ, "×")}`));
-    if (after.formationMeasuredQ !== 1 || after.formationQ !== 1) rows.push(qualityScaleHtml(after.formationMeasuredQ, allocation ? ALLOCATION_QUALITY_BOUNDS : { floor: BALANCE.qualityFloor, cap: BALANCE.qualityCap }, `${idScope}-quality`));
+    if (isOscillatorType(module.type) && after.chordFactor !== null) rows.push(figure("factor", `×${formatNumber(after.chordFactor)}`, `Total chord factor${was(before?.chordFactor, "×")}`));
+    if (after.formationQ !== 1) rows.push(figure("formation", `Formation ×${formatNumber(after.formationQ)}`, `Applied formation term${was(before?.formationQ, "×")}`));
+    if (after.formationMeasuredQ !== 1 || after.formationQ !== 1) rows.push(qualityScaleHtml(after.formationMeasuredQ, allocation ? ALLOCATION_QUALITY_BOUNDS : { floor: BALANCE.qualityFloor, cap: BALANCE.qualityCap }, `${idScope}-quality`, disclose));
   }
   return rows.join("");
 }
@@ -1469,14 +1484,16 @@ function detailChordRowHtml(app: App, snapshot: RateSnapshot): string {
 // measured Q sits between the floor and the cap — the chromatic end and
 // the organized end, a taller tick at neutral. The marker is a firm inset
 // bar (the instrument grammar's selected register), so the read survives
-// greyscale; the figures ride the Formation chip and the tooltip.
-function qualityScaleHtml(measured: number, bounds: { floor: number; cap: number }, idKey = "readout-quality"): string {
+// greyscale; the figures ride the Formation chip and the tooltip. Plain
+// in the transient readout (issue #334), disclosed in the Hex detail.
+function qualityScaleHtml(measured: number, bounds: { floor: number; cap: number }, idKey = "readout-quality", disclose = true): string {
   const span = bounds.cap - bounds.floor;
   const at = (q: number): number => 14 + Math.min(1, Math.max(0, (q - bounds.floor) / span)) * 72;
   const x = at(measured);
   const neutral = at(1);
   const label = `Formation quality — ×${formatNumber(bounds.floor)} chromatic to ×${formatNumber(bounds.cap)} organized, ×1 neutral; this formation measures ×${formatNumber(measured)}`;
-  return readoutDisclosureHtml(idKey, `<span class="chord-readout-scale" data-q="${measured}"><svg viewBox="0 0 100 20" width="100" height="20" aria-hidden="true"><line class="scale-track" x1="14" y1="6" x2="86" y2="6"/><line class="scale-tick" x1="14" y1="3" x2="14" y2="9"/><line class="scale-tick scale-tick-neutral" x1="${neutral.toFixed(1)}" y1="1" x2="${neutral.toFixed(1)}" y2="11"/><line class="scale-tick" x1="86" y1="3" x2="86" y2="9"/><rect class="scale-marker" x="${(x - 1.5).toFixed(1)}" y="2.5" width="3" height="7"/><text class="scale-end mono" x="14" y="18" text-anchor="middle">${formatNumber(bounds.floor)}</text><text class="scale-end mono" x="86" y="18" text-anchor="middle">${formatNumber(bounds.cap)}</text></svg></span>`, label);
+  const scale = `<span class="chord-readout-scale" data-q="${measured}"${disclose ? "" : ` role="img" aria-label="${escapeHtml(label)}"`}><svg viewBox="0 0 100 20" width="100" height="20" aria-hidden="true"><line class="scale-track" x1="14" y1="6" x2="86" y2="6"/><line class="scale-tick" x1="14" y1="3" x2="14" y2="9"/><line class="scale-tick scale-tick-neutral" x1="${neutral.toFixed(1)}" y1="1" x2="${neutral.toFixed(1)}" y2="11"/><line class="scale-tick" x1="86" y1="3" x2="86" y2="9"/><rect class="scale-marker" x="${(x - 1.5).toFixed(1)}" y="2.5" width="3" height="7"/><text class="scale-end mono" x="14" y="18" text-anchor="middle">${formatNumber(bounds.floor)}</text><text class="scale-end mono" x="86" y="18" text-anchor="middle">${formatNumber(bounds.cap)}</text></svg></span>`;
+  return disclose ? readoutDisclosureHtml(idKey, scale, label) : scale;
 }
 
 // A delta figure for the preview rows (#260): explicit sign, monospace,
@@ -1491,17 +1508,20 @@ function formatDelta(delta: number): string {
 // The placement projection's row (issue #260): the moved voice's resulting
 // figures — final ν/s, total chord factor, applied formation term and its
 // scale, used/available capacity, the chord terms it would earn — each
-// from the projected board, with the change against the current board in
-// the tooltip and the board's own rate delta said outright. The retrieval
-// reads the departure the same way. Every figure commits with the drop:
-// the projection is the same authoritative pass placeModule lands in.
+// from the projected board, with the board's own rate delta said outright
+// and every chip plain (issue #334). The retrieval reads the departure the
+// same way. Every figure commits with the drop: the projection is the
+// same authoritative pass placeModule lands in.
 function placementPreviewHtml(app: App, projection: PlacementProjection): string {
   const hover = app.ui.dropHover!;
   const module = app.state.modules.find((m) => m.id === hover.moduleId)!;
-  const retrieving = hover.pos === null;
   const allocation = projection.projected.allocation;
   const rateDelta = projection.projected.rate - projection.current.rate;
-  const rows = [readoutFigureHtml("preview", `Placement ${formatDelta(rateDelta)} ν/s`, `${retrieving ? "Retrieved" : "Placed"}: the board reads ${formatNumber(projection.projected.rate)} ν/s after, ${formatNumber(projection.current.rate)} ν/s now`), voiceMetricsHtml(module, projection.projected, projection.current)];
+  // Plain chips throughout (issue #334): the transient readout carries no
+  // interactive terms — the delta and the resulting figures say what a
+  // hand needs mid-gesture, and the click-open Hex detail keeps the deep
+  // facts.
+  const rows = [plainFigureHtml("preview", `Placement ${formatDelta(rateDelta)} ν/s`), voiceMetricsHtml(module, projection.projected, projection.current, "readout", true, false)];
   if (isVoiceType(module.type)) {
     // The chord terms the projected voice would earn — the same per-entry
     // chips the live row carries, active first, idle candidates labeled.
@@ -2437,16 +2457,18 @@ function renderNotesModal(app: App, content: HTMLElement): void {
   landing?.focus({ preventScroll: true });
 }
 
-// The rate sheet (§7): the module-linked rate details — the total plus one
-// row per synthesizer and the other modules' effects — as a modal sheet
-// over a scrim below the 760px breakpoint, opened by tapping the Rate cell
-// or the strip's rate read at every width. The same roster the Rate cell's
-// hover popover owns above the breakpoint, built the same way: live slots
-// the tick fills, so an expanded row survives the clock. The surface
-// carries no header of its own — the eyebrow names it and the roster
-// speaks (the instrument standards' identity rule) — and a synthesizer
-// row's tap closes the sheet and selects the module, so the answer lands
-// on the board it names.
+// The rate sheet (§7, amended by issue #334): the rate details — the
+// total, the global Feats · Discoveries factors once as already included,
+// and one final-ν/s row per oscillator — as a modal sheet over a scrim
+// below the 760px breakpoint, opened by tapping the Rate cell or the
+// strip's rate read at every width. The same roster the Rate cell's hover
+// popover owns above the breakpoint, built the same way: live slots the
+// tick fills. No expansion and no per-row details — the 2026-10-14
+// amendment drops the inline calculation and its arrow for now. The
+// surface carries no header of its own — the eyebrow names it and the
+// roster speaks (the instrument standards' identity rule) — and a
+// synthesizer row's tap closes the sheet and selects the module, so the
+// answer lands on the board it names.
 function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): void {
   // The same basis every rate figure wears — live during flow, projected
   // while arranging — so the sheet can never disagree with the ledger it

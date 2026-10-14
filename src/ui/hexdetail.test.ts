@@ -165,9 +165,6 @@ describe("opening the cross-section (issue #295)", () => {
     expect(app.ui.detail).not.toBeNull();
     expect(app.state.modules.find((m) => m.id === id)!.pos).toEqual(app.ui.detail!.pos);
     expect(row.classList.contains("st-selected")).toBe(true);
-    // A click inside the tooltip's legs is reading, never picking.
-    row.querySelector(".rd-legs")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.ui.detail).toEqual({ pos: hex(0, 0), face: "modules" });
   });
 });
 

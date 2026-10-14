@@ -66,7 +66,7 @@ describe("the board ledger (§7, issue #270)", () => {
     app.closeModal();
   });
 
-  it("bonuses never ride the ledger face — they live in the sheets and the rate details' legs", () => {
+  it("bonuses never ride the ledger face — the global factors show once, already included", () => {
     app.state.achievements["first-light"] = Date.now();
     app.render();
     // The panel's own reads carry no bonus figure anywhere.
@@ -80,11 +80,13 @@ describe("the board ledger (§7, issue #270)", () => {
     app.openModal("library");
     expect(document.getElementById("modal-content")!.textContent).toContain("+1%");
     app.closeModal();
-    // …and the rate details carry both as legs (ADR-0037's one roster).
+    // …and the rate details carry both exactly once, as already included
+    // (issue #334) — never as a per-row payout.
     app.render();
-    const breakdown = document.querySelector("#board-ledger .rate-breakdown")!.textContent!;
-    expect(breakdown).toContain("Achievements");
-    expect(breakdown).toContain("Discoveries");
+    const breakdown = document.querySelector("#board-ledger .rate-breakdown")!;
+    expect(breakdown.querySelectorAll(".rd-global")).toHaveLength(1);
+    expect(breakdown.querySelector(".rd-global")!.textContent).toContain("+2%");
+    expect(breakdown.querySelector(".rd-global")!.textContent).toContain("already included");
   });
 
   it("the nous read compresses instead of overflowing, with the exact value on its tooltip (issue #187)", () => {
@@ -125,22 +127,21 @@ describe("the board ledger (§7, issue #270)", () => {
     expect(document.querySelector('#board-ledger [data-live="arete"]')).toBeNull();
   });
 
-  it("the details disclose nonproducing modules' effects — never a second ν/s", () => {
+  it("the supporting modules take no roster row (issue #334)", () => {
     app.render();
-    // The launch roster is one synthesizer: no other-modules section yet.
+    // The launch roster is one synthesizer: only its own row exists.
     expect(document.querySelector("#board-ledger .rd-other-row")).toBeNull();
     give(app.state, "infusor", hex(0, 1));
     app.render();
-    const row = document.querySelector("#board-ledger .rd-other-row")!;
-    expect(row.textContent).toContain("Booster");
-    expect(row.querySelector('[data-live^="n-"]')!.textContent).toBe("+20% to adjacent");
-    // The uplifted synth's own leg carries the same uplift...
-    expect(document.querySelector("#board-ledger .rd-synth .rd-legs")!.textContent).toContain("+20%");
-    // ...and the nonproducer's row never wears a ν/s figure.
-    expect(row.textContent).not.toContain("ν/s");
+    // No supporting roster at all, and no expansion: the infusor's uplift
+    // discloses through its own surfaces, never as a second producer row.
+    const breakdown = document.querySelector("#board-ledger .rate-breakdown")!;
+    expect(breakdown.querySelector(".rd-other-row")).toBeNull();
+    expect(breakdown.querySelectorAll(".rd-synth")).toHaveLength(1);
+    expect(breakdown.querySelector(".rd-calc, .rd-calc-toggle")).toBeNull();
   });
 
-  it("every synthesizer row carries its final ν/s and expands into its legs; the rows sum to the board's rate", () => {
+  it("every synthesizer row carries its final ν/s; the rows sum to the board's rate", () => {
     const s = app.state;
     give(s, "additive", hex(1, 0)); // G4 — a Fifth with the launch C4
     give(s, "infusor", hex(0, 1)); // uplift on C4
@@ -162,15 +163,6 @@ describe("the board ledger (§7, issue #270)", () => {
     expect(document.querySelector('#board-ledger [data-live="b-rate"]')!.textContent).toBe(
       `${formatNumber(snapshot.rate)} ν/s`,
     );
-    // The expanded legs: base, chords (named), infusor, charge, achievements.
-    const fifth = snapshot.namedChords[0]!;
-    const legs = rows[0]!.querySelector(".rd-legs")!.textContent!;
-    expect(legs).toContain("Base");
-    expect(legs).toContain(fifth.name);
-    expect(legs).toContain("Chords");
-    expect(legs).toContain("Booster");
-    expect(legs).toContain("Charge");
-    expect(legs).toContain("Achievements");
   });
 
   it("the session summary's legs use the new names", () => {
@@ -243,7 +235,9 @@ describe("the rate details disclosure (§7, issue #154)", () => {
     expect(modal.querySelector(".rd-total")).not.toBeNull();
     expect(modal.querySelectorAll(".rd-synth")).toHaveLength(1);
     expect(modal.querySelector(".rd-synth")!.getAttribute("data-module-id")).toBeTruthy();
-    expect(modal.querySelector(".rd-synth .rd-legs")!.textContent).toContain("Achievements");
+    // The global factors read once, already included (issue #334).
+    expect(modal.querySelectorAll(".rd-global")).toHaveLength(1);
+    expect(modal.querySelector(".rd-global")!.textContent).toContain("already included");
     // Closing drops the sheet presentation with the modal.
     app.closeModal();
     expect(document.getElementById("modal")!.classList.contains("sheet")).toBe(false);
@@ -284,14 +278,10 @@ describe("the rate details disclosure (§7, issue #154)", () => {
     expect(app.state.modules.find((m) => m.id === id)!.pos).toEqual(app.ui.detail!.pos);
     expect((document.getElementById("hex-detail") as HTMLElement).hidden).toBe(false);
     expect(row.classList.contains("st-selected")).toBe(true);
-    // A click inside the tooltip's legs is reading, never picking: copying
-    // a figure or scrolling the roster must not open another detail.
-    row.querySelector(".rd-legs")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.state.modules.find((m) => m.id === id)!.pos).toEqual(app.ui.detail!.pos);
-    // And the ⓘ trigger is the tooltip's own: pinning it never picks.
-    row.querySelector(".inst-tip-trigger")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.state.modules.find((m) => m.id === id)!.pos).toEqual(app.ui.detail!.pos);
-    expect(row.querySelector(".inst-tip")!.classList.contains("show")).toBe(true);
+    // The roster carries no expansion arrow: the row's one control is the
+    // pick (issue #334's amendment).
+    expect(row.querySelector(".rd-calc-toggle")).toBeNull();
+    expect(row.querySelectorAll("button")).toHaveLength(1);
   });
 
   it("the boundary width itself stays on the desktop side of the 760px line", () => {
@@ -312,13 +302,12 @@ describe("the rate details disclosure (§7, issue #154)", () => {
     app.closeModal();
   });
 
-  it("a leg's click never closes the sheet mid-read; only a row's tap does", () => {
+  it("the sheet keeps its rows honest: a pick closes it and lands on the module", () => {
     setAppWidth(720);
     app.render();
     document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     const modal = document.getElementById("modal-content")!;
     const row = modal.querySelector(".rd-synth")!;
-    row.querySelector(".rd-legs")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.ui.modal).toBe("rate");
     // The row's own tap closes the sheet and opens the module's Hex detail.
     row.querySelector(".rd-pick")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -1276,30 +1265,24 @@ describe("always-on chord feedback (§6, #137)", () => {
     expect(readout().hidden).toBe(true);
   });
 
-  it("compact capacity and formation retain dismissible keyboard and touch disclosures", () => {
+  it("the transient readout is plain: no interactive terms, deeper facts stay in the Hex detail (#334)", () => {
     app = boot(undefined, true);
     give(app.state, "additive", hex(1, 0));
     app.render();
     cell(0, 0).dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
-    const triggers = [...readout().querySelectorAll<HTMLButtonElement>(".readout-tip-trigger")];
-    expect(triggers.map((trigger) => trigger.textContent)).toEqual(["(1/1) ", "Formation ×1.12"]);
-    const capacity = triggers[0]!;
-    expect(capacity.getAttribute("aria-label")).toBe("Harmonic capacity 1 of 1 used");
-    expect(capacity.querySelector("svg")).not.toBeNull();
-    const tip = document.getElementById(capacity.getAttribute("aria-describedby")!)!;
-    capacity.focus();
-    expect(tip.classList.contains("inst-show")).toBe(true);
-    expect(tip.textContent).toBe("Whole-chord budget per voice");
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    expect(tip.classList.contains("inst-show")).toBe(false);
-    capacity.blur();
-    // A touch-generated click pins the same disclosure; a tap away closes it.
-    capacity.click();
-    expect(capacity.getAttribute("aria-expanded")).toBe("true");
-    expect(tip.classList.contains("inst-show")).toBe(true);
-    document.body.click();
-    expect(capacity.getAttribute("aria-expanded")).toBe("false");
-    expect(tip.classList.contains("inst-show")).toBe(false);
+    const readoutEl = readout();
+    expect(readoutEl.hidden).toBe(false);
+    // The capacity chip and the formation chip carry their figures…
+    expect(readoutEl.textContent).toContain("(1/1)");
+    expect(readoutEl.textContent).toContain("Formation ×1.12");
+    // …with nothing interactive: no buttons, no disclosure triggers, no
+    // tooltip bodies — reads that cannot be opened wear no hover cues.
+    expect(readoutEl.querySelector("button, .inst-tip, .readout-tip-trigger")).toBeNull();
+    // The same hover's deeper facts remain one click away: the Hex detail
+    // keeps the full chord row, disclosures included.
+    clickCell(0, 0);
+    const detail = document.getElementById("hex-detail")!;
+    expect(detail.querySelector(".hex-chord-row .readout-tip-trigger")).not.toBeNull();
   });
 
   it("a chordless module shows output and unused capacity without neutral factors", () => {

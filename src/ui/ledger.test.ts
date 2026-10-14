@@ -1,46 +1,76 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
-import { allocateRates, computeRates } from "../engine/economy";
+import { readFileSync } from "node:fs";
+import { computeRates } from "../engine/economy";
 import { syncChordDiscoveries } from "../engine/library";
 import { fresh, give, sumSynthValues } from "../engine/fixtures";
 import { hex } from "../engine/hex";
-import { wireTooltips } from "./instrument";
 import { formatNumber } from "./format";
-import { libraryChipHtml, rateDetailsHtml, updateRateDetailsLive } from "./ledger";
+import { libraryChipHtml, rateDetailsHtml, updateRateDetailsLive, wireSynthPicks } from "./ledger";
 
-describe("silent voices' formation quality in rate details", () => {
-  it.each(["harmonizer", "echo", "bend"] as const)("shows %s quality in both sheet and live rows", (type) => {
+describe("what the board earns in the rate details (issue #334)", () => {
+  it("lists the total, the global factors once, and one final row per oscillator — nothing else", () => {
     const state = fresh();
-    const voice = give(state, type, type === "bend" ? hex(-1, 0) : hex(1, 0));
-    if (type === "bend") {
-      voice.shift = -1;
-      give(state, "additive", hex(1, 0));
-    }
-    if (type === "echo") give(state, "additive", hex(-1, 0));
+    give(state, "additive", hex(1, 0));
+    give(state, "infusor", hex(0, 1));
+    give(state, "focusKeyed", hex(0, -1));
+    give(state, "harmonizer", hex(1, 1));
     const snapshot = computeRates(state, false);
-    const quality = snapshot.contributions.get(voice.id)!.formationQ;
-    expect(quality).toBeGreaterThan(1);
-    const formation = `Formation ×${formatNumber(quality)}`;
     const sheet = document.createElement("div");
     sheet.innerHTML = rateDetailsHtml(state, snapshot, false);
-    expect(sheet.querySelector(".rd-other-row")!.textContent).toContain(formation);
+    // The total leads.
+    expect(sheet.querySelector(".rd-total .rd-val")!.textContent).toBe(`${formatNumber(snapshot.rate)} ν/s`);
+    // The global factors appear exactly once, already included — never as
+    // a per-row leg.
+    const global = sheet.querySelectorAll(".rd-global .rd-val");
+    expect(global).toHaveLength(1);
+    expect(global[0]!.textContent).toContain("already included");
+    expect(sheet.textContent).not.toContain("Achievements");
+    // One row per oscillator only: the infusor, the generator, and the
+    // silent voice disclose nowhere in the roster.
+    const oscs = [...snapshot.contributions.values()].filter((c) => c.type === "additive");
+    expect(sheet.querySelectorAll(".rd-synth")).toHaveLength(oscs.length);
+    expect(sheet.textContent).not.toContain("to adjacent");
+    expect(sheet.textContent).not.toContain("charge");
+    expect(sheet.querySelector(".rd-other-row")).toBeNull();
+    // No expansion, no arrow: the amendment drops the per-row details —
+    // the row is its name and its final figure, the pick the one control.
+    expect(sheet.querySelector(".rd-calc, .rd-calc-toggle, [aria-controls]")).toBeNull();
+    for (const button of sheet.querySelectorAll("button")) {
+      expect(button.classList.contains("rd-pick")).toBe(true);
+    }
+    // The displayed oscillator totals sum to the board's rate within
+    // rounding — the details can never disagree with the total above them.
+    expect(sumSynthValues(snapshot)).toBeCloseTo(snapshot.rate, 6);
+  });
 
-    const live = document.createElement("div");
-    live.innerHTML = rateDetailsHtml(state, snapshot, true);
-    updateRateDetailsLive(live, state, snapshot);
-    const row = live.querySelector(`[data-live="n-${voice.id}"]`)!;
-    expect(row.textContent).toContain(formation);
+  it("rows ride the roster's line — the pick carries no dead height on fine pointers", () => {
+    const css = readFileSync("src/ui/style.css", "utf8");
+    const pick = css.slice(css.indexOf(".rd-pick {"), css.indexOf(".rd-pick:hover"));
+    expect(pick).toContain("min-height: 0");
+    // Any coarse pointer keeps the floor, including secondary touch input.
+    const coarse = css.slice(css.indexOf("@media (any-pointer: coarse)"), css.indexOf("@media (any-pointer: coarse)") + 120);
+    expect(coarse).toContain(".rd-pick { min-height: 44px");
+  });
 
-    // An isolated voice is chordless: the existing live row follows the
-    // new snapshot rather than keeping its previous formation quality.
-    voice.pos = hex(10, 0);
-    updateRateDetailsLive(live, state, computeRates(state, false));
-    expect(row.textContent).toContain(`Formation ×${formatNumber(1)}`);
+  it("a zero-output oscillator reads like any other row", () => {
+    const state = fresh();
+    // An uncharged Blaster converts no charge: zero output, same grammar —
+    // no special casing, no omission.
+    const blaster = give(state, "blaster", hex(1, 0));
+    const snapshot = computeRates(state, false);
+    const value = snapshot.contributions.get(blaster.id)!.value;
+    expect(value).toBe(0);
+    const sheet = document.createElement("div");
+    sheet.innerHTML = rateDetailsHtml(state, snapshot, false);
+    const row = sheet.querySelector(`[data-module-id="${blaster.id}"]`)!;
+    expect(row).not.toBeNull();
+    expect(row.querySelector(".rd-val")!.textContent).toBe("+0 ν/s");
   });
 });
 
 describe("the discovery bonus in the rate details (issue #230)", () => {
-  it("every synth row carries the Discoveries leg the rate multiplies out with", () => {
+  it("the global line carries the Discoveries factor the rate multiplies out with", () => {
     const state = fresh();
     give(state, "additive", hex(1, 0));
     syncChordDiscoveries(state, { now: 100 });
@@ -48,13 +78,8 @@ describe("the discovery bonus in the rate details (issue #230)", () => {
     expect(snapshot.discoveryBoost).toBeCloseTo(1.01, 10);
     const sheet = document.createElement("div");
     sheet.innerHTML = rateDetailsHtml(state, snapshot, false);
-    const legs = [...sheet.querySelectorAll(".rd-leg")].map((leg) => leg.textContent);
-    expect(legs.filter((text) => text!.includes("Discoveries"))).toHaveLength(2);
-    for (const synth of sheet.querySelectorAll(".rd-synth")) {
-      const leg = [...synth.querySelectorAll(".rd-leg")].find((row) => row.textContent!.includes("Discoveries"));
-      expect(leg!.textContent).toContain("+1%");
-    }
-    // The legs multiply back to the final figure exactly, discovery leg
+    expect(sheet.querySelector(".rd-global .rd-val")!.textContent).toContain("+1%");
+    // The figures still multiply back to the final rate, global legs
     // included.
     expect(sumSynthValues(snapshot)).toBeCloseTo(snapshot.rate, 6);
   });
@@ -69,148 +94,49 @@ describe("the discovery bonus in the rate details (issue #230)", () => {
   });
 });
 
-describe("the roster through the instrument primitives (issue #267)", () => {
-  it("no expandable detail sections: the legs live in the tooltip layer, the figure stays visible", () => {
+describe("the roster's rows and live slots", () => {
+  function build(live = false) {
     const state = fresh();
-    give(state, "additive", hex(1, 0));
-    const snapshot = computeRates(state, false);
-    const sheet = document.createElement("div");
-    sheet.innerHTML = rateDetailsHtml(state, snapshot, false);
-    // The standards' disclosure rule: deeper mechanics never ride an
-    // expandable section.
-    expect(sheet.querySelector("details")).toBeNull();
-    expect(sheet.querySelector("summary")).toBeNull();
-    const row = sheet.querySelector(".rd-synth")!;
-    // The tooltip trigger discloses the legs…
-    expect(row.querySelector(".inst-tip-trigger")!.getAttribute("aria-describedby")).toBeTruthy();
-    expect(row.querySelector(".inst-tip-body .rd-legs")!.textContent).toContain("Base");
-    expect(row.querySelector(".inst-tip-body .rd-legs")!.textContent).toContain("Discoveries");
-    // …while the final figure renders outside it: critical state stays
-    // visible without opening anything.
-    const figure = row.children[row.children.length - 1]!;
-    expect(figure.classList.contains("rd-val")).toBe(true);
-    expect(figure.textContent).toMatch(/^\+/);
-    // The name is the pick affordance — a real button, so keyboard callers
-    // reach it.
-    expect(row.querySelector(".rd-pick")!.tagName).toBe("BUTTON");
-    expect(row.querySelector(".rd-pick .rd-name")!.classList.contains("t-condensed")).toBe(true);
-  });
-});
-
-describe("the RITUAL row (ADR-0046, wave 4)", () => {
-  it("names its amplification of the active build, charged or not", () => {
-    const state = fresh();
-    const ritual = give(state, "ritual", hex(1, 0));
-    const generator = give(state, "focusKeyed", hex(2, 0));
-    ritual.level = 1;
-    generator.reserve = 600;
-    const snapshot = computeRates(state, true);
-    const sheet = document.createElement("div");
-    sheet.innerHTML = rateDetailsHtml(state, snapshot, false);
-    const row = [...sheet.querySelectorAll(".rd-other-row")].find((el) => el.textContent!.includes("RITUAL"))!;
-    expect(row.textContent).toContain(`amplifies the active habit's build ×${formatNumber(1 + snapshot.ritualAmplification)} while charged`);
-    // Uncharged, the factor sits at its floor.
-    generator.reserve = 0;
-    const cold = computeRates(state, true);
-    expect(cold.ritualAmplification).toBe(0);
-    const coldSheet = document.createElement("div");
-    coldSheet.innerHTML = rateDetailsHtml(state, cold, false);
-    const coldRow = [...coldSheet.querySelectorAll(".rd-other-row")].find((el) => el.textContent!.includes("RITUAL"))!;
-    expect(coldRow.textContent).toContain(`×${formatNumber(1)} while charged`);
-  });
-});
-
-
-describe("portaled rate legs", () => {
-  it("keeps both disclosure channels live without updating the other roster", () => {
-    document.body.innerHTML = "";
-    const state = fresh();
-    const snapshot = computeRates(state, false);
-    const hosts = ["pop", "sheet"].map((ns) => {
-      const host = document.createElement("div");
-      host.innerHTML = rateDetailsHtml(state, snapshot, true, ns);
-      document.body.appendChild(host);
-      updateRateDetailsLive(host, state, snapshot);
-      wireTooltips(host);
-      host.querySelector<HTMLButtonElement>(".inst-tip-trigger")!.click();
-      return host;
-    });
-    const bodies = hosts.map((host) => document.getElementById(host.querySelector(".inst-tip-trigger")!.getAttribute("aria-describedby")!)!);
-    const before = bodies[0]!.textContent;
-    const synth = state.modules.find((module) => module.type === "additive")!;
-    synth.level += 2;
-    const changed = computeRates(state, false);
-    updateRateDetailsLive(hosts[0]!, state, changed);
-    expect(bodies[0]!.textContent).not.toBe(before);
-    expect(bodies[1]!.textContent).toBe(before);
-    updateRateDetailsLive(hosts[1]!, state, changed);
-    expect(bodies[1]!.textContent).toBe(bodies[0]!.textContent);
-    for (const body of bodies) expect(body.parentElement).toBe(document.body);
-  });
-});
-
-describe("the capacity read in the rate details (issue #258)", () => {
-  function allocated(state: Parameters<typeof allocateRates>[0]) {
-    return allocateRates(state, false).snapshot;
-  }
-
-  it("every synth row carries the Capacity leg and names its idle candidates", () => {
-    const state = fresh();
-    // C4 with a doubled G: one Fifth earns, the other stays a recognized
-    // idle — the row reads 1/1 and names the idle candidate without
-    // implying a production gain.
     give(state, "additive", hex(1, 0));
     give(state, "additive", hex(1, 1));
-    const snapshot = allocated(state);
-    expect(snapshot.allocation).toBeDefined();
-    const sheet = document.createElement("div");
-    sheet.innerHTML = rateDetailsHtml(state, snapshot, false);
-    for (const synth of sheet.querySelectorAll(".rd-synth")) {
-      const cap = [...synth.querySelectorAll(".rd-leg")].find((row) => row.textContent!.includes("Capacity"));
-      expect(cap!.querySelector(".rd-val")!.textContent).toMatch(/^\d\/1$/);
-    }
-    const busy = snapshot.allocation!.active.flatMap((instance) => instance.memberIds);
-    for (const id of busy) {
-      const row = sheet.querySelector(`[data-module-id="${id}"]`)!;
-      expect(row.textContent).toContain("idle — earns nothing:");
-      expect(row.textContent).toContain("Fifth ×1.3");
-    }
-    // The live slots fill with the same wording.
-    const live = document.createElement("div");
-    live.innerHTML = rateDetailsHtml(state, snapshot, true);
-    updateRateDetailsLive(live, state, snapshot);
-    for (const id of busy) {
-      expect(live.querySelector(`[data-live="s-${id}-cap"]`)!.textContent).toBe("1/1");
-      expect(live.querySelector(`[data-live="s-${id}-idl"]`)!.textContent).toContain("idle — earns nothing");
-    }
+    const snapshot = computeRates(state, false);
+    const host = document.createElement("div");
+    host.innerHTML = rateDetailsHtml(state, snapshot, live);
+    document.body.appendChild(host);
+    return { state, snapshot, host };
+  }
+
+  it("a row's tap picks its module; the figure renders outside any disclosure", () => {
+    const { host } = build();
+    const picked: string[] = [];
+    wireSynthPicks(host, (id) => picked.push(id));
+    const row = host.querySelector(".rd-synth")!;
+    row.querySelector(".rd-pick")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(picked).toEqual([row.getAttribute("data-module-id")]);
   });
 
-  it("a chordless row reads 0/1 with no idle note", () => {
-    const state = fresh();
-    const island = give(state, "additive", hex(5, 0));
-    const snapshot = allocated(state);
-    const sheet = document.createElement("div");
-    sheet.innerHTML = rateDetailsHtml(state, snapshot, false);
-    const row = sheet.querySelector(`[data-module-id="${island.id}"]`)!;
-    const cap = [...row.querySelectorAll(".rd-leg")].find((leg) => leg.textContent!.includes("Capacity"));
-    expect(cap!.querySelector(".rd-val")!.textContent).toBe("0/1");
-    expect(row.textContent).not.toContain("idle — earns nothing");
-  });
-
-  it("the silent voice's effect line carries its capacity spend", () => {
-    const state = fresh();
-    // A G with a Harmonizer on G, alone on their island: the G-Octave is
-    // the only candidate, and the silent voice spends its unit in it.
-    state.modules[0]!.pos = hex(9, 0); // the opening C4, out of earshot
-    state.cells.push(hex(9, 0));
-    state.cells.push(hex(1, 0), hex(1, 1));
-    const harmonizer = give(state, "harmonizer", hex(1, 1));
-    give(state, "additive", hex(1, 0));
-    const snapshot = allocated(state);
-    expect(snapshot.allocation!.used.get(harmonizer.id)).toBe(1);
-    const sheet = document.createElement("div");
-    sheet.innerHTML = rateDetailsHtml(state, snapshot, false);
-    const row = [...sheet.querySelectorAll(".rd-other-row")].find((other) => other.textContent!.includes("sings"))!;
-    expect(row.textContent).toContain("capacity 1/1");
+  it("the live slots fill both channels without crossing", () => {
+    const { state, host } = build(true);
+    const snapshot = computeRates(state, false);
+    const pop = document.createElement("div");
+    pop.innerHTML = rateDetailsHtml(state, snapshot, true, "pop");
+    document.body.appendChild(pop);
+    updateRateDetailsLive(host, state, snapshot);
+    updateRateDetailsLive(pop, state, snapshot);
+    const id = host.querySelector(".rd-synth")!.getAttribute("data-module-id")!;
+    // An upgrade lands: each roster's own slots move with its own fill.
+    state.modules.find((m) => m.id === id)!.level += 2;
+    const changed = computeRates(state, false);
+    updateRateDetailsLive(host, state, changed);
+    expect(host.querySelector(`[data-live="s-${id}-v"]`)!.textContent).toBe(
+      `+${formatNumber(changed.contributions.get(id)!.value)} ν/s`,
+    );
+    expect(pop.querySelector(`[data-live="s-${id}-v"]`)!.textContent).toBe(
+      `+${formatNumber(snapshot.contributions.get(id)!.value)} ν/s`,
+    );
+    updateRateDetailsLive(pop, state, changed);
+    expect(pop.querySelector(`[data-live="s-${id}-v"]`)!.textContent).toBe(
+      host.querySelector(`[data-live="s-${id}-v"]`)!.textContent,
+    );
   });
 });
