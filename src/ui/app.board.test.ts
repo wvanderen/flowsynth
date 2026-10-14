@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import type { App } from "./app";
 import { createHabit } from "../engine/habits";
@@ -13,7 +13,7 @@ import { give } from "../engine/fixtures";
 import { hex, sameHex } from "../engine/hex";
 import { formatInt, formatNumber } from "./format";
 import { createAppFixture, clickCell, setAppWidth } from "./testing/app-fixture";
-import { fitBoard, GLOW_REACH, lensFrame } from "./zoom";
+import { fitBoard, GLOW_REACH, lensFrame, syncGlowLens } from "./zoom";
 import { makeRecorder } from "./testing/signal-recorder";
 
 // board rendering and interaction on the production HTML skeleton.
@@ -568,6 +568,55 @@ describe("the charge breathe's glow layer (issue #348)", () => {
     expect(svgEl().getAttribute("viewBox")).not.toBe(before);
     expect(glowOf(0, 0)!.classList.contains("off-view")).toBe(false);
     document.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, clientX: 400 + deltaX, clientY: 300 }));
+  });
+
+  it.each([[800, 400, 280, 100], [400, 800, 100, 280]])(
+    "keeps visible glow in letterbox bands (%i × %i)",
+    (width, height, x, y) => {
+      const svg = svgEl();
+      Object.defineProperty(svg, "clientWidth", { configurable: true, value: width });
+      Object.defineProperty(svg, "clientHeight", { configurable: true, value: height });
+      svg.innerHTML = `<g class="cell-node" transform="translate(${x} ${y})"><g class="module-node"><polygon class="hex-glow"/></g></g>`;
+      const glow = svg.querySelector(".hex-glow")!;
+      const view = { x: 0, y: 0, width: 200, height: 200 };
+      syncGlowLens(svg, view);
+      expect(glow.classList.contains("off-view")).toBe(false);
+      // A square viewport removes the letterbox band: the same hex rests.
+      Object.defineProperty(svg, "clientWidth", { configurable: true, value: 400 });
+      Object.defineProperty(svg, "clientHeight", { configurable: true, value: 400 });
+      syncGlowLens(svg, view);
+      expect(glow.classList.contains("off-view")).toBe(true);
+    },
+  );
+
+  it("refreshes glow when the SVG resizes and disconnects on release", () => {
+    fixture.release();
+    let resized!: ResizeObserverCallback;
+    const disconnect = vi.fn();
+    vi.stubGlobal("ResizeObserver", class {
+      constructor(callback: ResizeObserverCallback) { resized = callback; }
+      observe() {}
+      disconnect = disconnect;
+    });
+    try {
+      app = boot();
+      const svg = svgEl();
+      svg.innerHTML = '<g class="cell-node" transform="translate(280 100)"><g class="module-node"><polygon class="hex-glow"/></g></g>';
+      app.boardBounds = { x: 0, y: 0, width: 200, height: 200 };
+      app.ui.zoom = 1;
+      app.ui.pan = null;
+      Object.defineProperty(svg, "clientWidth", { configurable: true, value: 400 });
+      Object.defineProperty(svg, "clientHeight", { configurable: true, value: 400 });
+      resized([], {} as ResizeObserver);
+      expect(svg.querySelector(".hex-glow")!.classList.contains("off-view")).toBe(true);
+      Object.defineProperty(svg, "clientWidth", { configurable: true, value: 800 });
+      resized([], {} as ResizeObserver);
+      expect(svg.querySelector(".hex-glow")!.classList.contains("off-view")).toBe(false);
+      fixture.release();
+      expect(disconnect).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("the stylesheet's board carries no animated filter; the breathe animates opacity alone", () => {

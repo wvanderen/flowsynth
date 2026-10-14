@@ -133,10 +133,19 @@ const GLOW_SPILL = 8;
 export const GLOW_REACH = HEX_RADIUS + GLOW_SPILL;
 
 export function syncGlowLens(svg: SVGSVGElement, view: ViewRect): void {
-  const left = view.x - GLOW_REACH;
-  const right = view.x + view.width + GLOW_REACH;
-  const top = view.y - GLOW_REACH;
-  const bottom = view.y + view.height + GLOW_REACH;
+  // The grid uses SVG's default xMidYMid meet. Letterbox bands expose
+  // world content beyond the viewBox, so include that content before culling.
+  const width = svg.clientWidth;
+  const height = svg.clientHeight;
+  const scale = width > 0 && height > 0
+    ? Math.min(width / view.width, height / view.height)
+    : 0;
+  const extraX = scale > 0 ? (width / scale - view.width) / 2 : 0;
+  const extraY = scale > 0 ? (height / scale - view.height) / 2 : 0;
+  const left = view.x - extraX - GLOW_REACH;
+  const right = view.x + view.width + extraX + GLOW_REACH;
+  const top = view.y - extraY - GLOW_REACH;
+  const bottom = view.y + view.height + extraY + GLOW_REACH;
   for (const glow of svg.querySelectorAll<SVGElement>(".module-node > .hex-glow")) {
     const at = glow.closest(".cell-node")?.getAttribute("transform")?.match(/-?[\d.]+/g);
     const x = at ? Number(at[0]) : NaN;
@@ -172,6 +181,14 @@ const panBoundBoards = new WeakSet<SVGSVGElement>();
 export function bindBoardNavigation(app: App, svg: SVGSVGElement): void {
   if (panBoundBoards.has(svg)) return;
   panBoundBoards.add(svg);
+
+  // Container changes also change the visible letterbox bands, even when
+  // the viewBox and game state remain unchanged.
+  const glowResize = new ResizeObserver(() => {
+    if (!app.released) syncGlowLens(svg, lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds).view);
+  });
+  glowResize.observe(svg);
+  app.ownCleanup(() => glowResize.disconnect());
 
   app.listen(svg, "wheel", (event) => {
     event.preventDefault();

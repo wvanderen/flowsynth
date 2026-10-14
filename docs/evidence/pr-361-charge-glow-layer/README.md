@@ -38,6 +38,27 @@ reduced-motion capture (no `prefers-reduced-motion` emulation in the
 preview tooling; pinned by the stylesheet contract test), and before/after
 devtools performance profiles (not runnable with this tooling — a
 reviewer with devtools open on a fully charged board is the check for
-that criterion; the mechanism is structural: per-frame work per lit hex
-drops from a filter re-rasterization to an opacity composite, and
-off-lens hexes drop to zero).
+that criterion. The structural change removes animated filter values and
+stops offscreen glow animations; whether the browser composites these SVG
+layers, and how much paint/compositor time is saved, remains unmeasured).
+
+## Review correction: viewport culling
+
+The SVG uses default `xMidYMid meet`, so its visible world rectangle includes
+letterbox bands beyond its viewBox. Culling now includes those bands using
+the rendered viewport size and refreshes on SVG resize, including container
+changes that do not render game state. The observer disconnects on release.
+
+Regression checks cover wide and tall letterboxing, viewport changes, and
+observer cleanup. In the provenance-verified PR checkout, a 200×200 viewBox
+in an 800×400 SVG with a hex at (280, 100) reproduced the bug: the hex was
+fully visible but `off-view`. With the correction it remains visible and
+is no longer `off-view`.
+
+The before/after performance acceptance criterion is still unverified:
+the collaborative preview exposes page evaluation and video capture, but
+no DevTools tracing/profiling API. Video and frame timing alone would not
+establish paint/compositor cost. Capture comparable fully charged boards
+at the same viewport, zoom, live state, and duration on the parent and PR
+commits, and report Paint/Composite time per frame from those traces before
+claiming a measurable reduction.
