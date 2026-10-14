@@ -330,4 +330,39 @@ describe("the controls sheet's stylesheet contract", () => {
     }
     expect(css).not.toContain("14px 14px 0 0");
   });
+
+  it("the stylesheet's radius advisories resolve to the sanctioned set only (#352)", () => {
+    // The round remnant sweep ends here: every border-radius the
+    // stylesheet carries is zero or rides one of the two sanctioned
+    // marks — the ⓘ gate ring's compact chrome and the hex-stack
+    // chassis plate, the exceptions #352 names. Chips, badges, pips,
+    // and lights are square-cut.
+    const nonZeroRadii = [...css.matchAll(/border-radius:\s*([^;]+);/g)]
+      .map((m) => m[1].trim())
+      .filter((v) => !v.split(/\s+/).every((n) => Number.parseFloat(n) === 0));
+    expect(nonZeroRadii).toEqual(["999px", "14px", "14px"]);
+    // And each advisory rides its sanctioned mark, not a chip or badge.
+    const ring = css.slice(css.indexOf(".inst-tip-trigger {"));
+    expect(ring.slice(ring.indexOf("{"), ring.indexOf("}"))).toContain("border-radius: 999px");
+    const chassis = css.slice(css.indexOf(".hex-stack-chassis.inst-tip-trigger {"));
+    expect(chassis.slice(chassis.indexOf("{"), chassis.indexOf("}"))).toContain("border-radius: 14px");
+    const chassisFocus = css.slice(css.indexOf(".hex-stack-chassis:focus-visible {"));
+    expect(chassisFocus.slice(chassisFocus.indexOf("{"), chassisFocus.indexOf("}"))).toContain("border-radius: 14px");
+    // The named remnants keep their square-cut chrome where a border is kept.
+    for (const selector of [
+      ".habit-chip {",
+      ".history-chip {",
+      ".tool-badge {",
+      ".switch-state {",
+      ".rate-hint {",
+      ".chord-pip {",
+      ".habit-dot {",
+    ]) {
+      // Anchored at a line start: a compound rule ending in the same
+      // selector (`.note-entry .habit-chip`) must not shadow the block.
+      const rest = css.slice(css.indexOf(`\n${selector}`));
+      const body = rest.slice(rest.indexOf("{"), rest.indexOf("}"));
+      expect(body).toContain("border-radius: 0");
+    }
+  });
 });
