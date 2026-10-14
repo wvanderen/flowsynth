@@ -733,15 +733,19 @@ describe("solid chord paths (#333)", () => {
     expect(document.querySelectorAll(".chord-muted")).toHaveLength(0);
   });
 
-  it("idle candidates stay the board's only quiet paths — dotted and dim, never dashed by a silent voice", () => {
+  it("idle candidates draw only under the ask — dotted and quiet, never dashed by a silent voice (#355)", () => {
     // C4·G4 active; the C5 newcomer's Octave and doubled Fifth idle at
-    // capacity one. Idle marks keep their class; nothing else is dimmed
-    // by a silent voice, and the dashed mute rule is gone from the sheet.
+    // capacity one. At rest the group carries the earning seam alone
+    // (ADR-0057); the C5 voice's ask reveals its candidates in the dotted
+    // idle register, and nothing else is dimmed by a silent voice — the
+    // dashed mute rule is gone from the sheet.
     give(app.state, "additive", hex(1, 0));
     app.state.cells.push(hex(0, 1));
     give(app.state, "additive", hex(0, 1));
     app.render();
-    expect(marks().querySelectorAll(".chord-idle").length).toBeGreaterThan(0);
+    expect(marks().querySelectorAll(".chord-idle")).toHaveLength(0);
+    document.querySelector('[data-cell="0,1"]')!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    expect(marks().querySelectorAll(".chord-mark.chord-idle").length).toBeGreaterThan(0);
     const active = [...marks().querySelectorAll<HTMLElement>(".chord-mark:not(.chord-idle)")];
     for (const mark of active) expect(mark.classList.contains("chord-muted")).toBe(false);
   });

@@ -33,7 +33,7 @@ A named pitch set — octave, fifth, major triad, and kin — recognized by pitc
 _Avoid_: Named chord (the just-intonation-run sense), Chord pair
 
 **Seam**:
-The chord-colored line the board draws for a formed chord: center-to-center between a two-voice chord's adjacent voices; a chord the seams can't carry — three or more voices, or a spacer-bridged pair — draws its offset outline instead — a closed polygon behind the modules, edges riding the gaps between faces, corners just poking past. Active seams draw solid whoever sings the chord — a silent voice's chord included (ADR-0056); the one quiet path is the idle candidate's, dotted and dim (ADR-0052). Always on, in every mode.
+The chord-colored line the board draws for a formed chord: center-to-center between a two-voice chord's adjacent voices; a chord the seams can't carry — three or more voices, or a spacer-bridged pair — draws its offset outline instead — a closed polygon behind the modules, edges riding the gaps between faces, corners just poking past. Active seams draw solid whoever sings the chord — a silent voice's chord included (ADR-0056) — always on, in every mode; the one quiet path is the idle candidate's, dotted at the ask weight and drawn only while a voice that sings it is asked (ADR-0052, ADR-0057).
 _Avoid_: Chord link, Pair link, Hull
 
 **Chord readout**:
@@ -62,6 +62,10 @@ _Avoid_: Manual chord assignment
 **Certified allocation**:
 The allocator's honesty flag: the exact search completed within its budget, so the chosen allocation is proven optimal — never presumed. A budget that trips reports an incumbent and says so; candidates are never truncated and a heuristic is never silently substituted (ADR-0051).
 _Avoid_: Heuristic allocation (as a silent substitute)
+
+**Idle candidate**:
+A recognized chord instance the allocation left unselected — it earns nothing, so its board path is dotted, never pulsing, and draws only while a voice that sings it is asked (hover, keyboard focus, touch, or the conducting spacer's containment) at the ask weight (ADR-0052, ADR-0057). The reserved readout keeps the voice's "N idle" count under the same ask; the Hex detail's chord row names each instance "· idle" (issue #258).
+_Avoid_: idle seam (standing unasked), unearned chord
 
 **Spacer**:
 A silent wire module occupying one cell: it never sounds and never joins a pitch set, but conducts chord adjacency through chains of wired cells. Reaches the board only through module rolls.

@@ -1919,19 +1919,17 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   font: 9px var(--mono);
   fill: var(--muted);
 }
-/* The idle candidate's seams (issue #258, the board's one quiet path,
-   #333): a recognized chord the allocation didn't select draws dotted and
-   dim — present, nameable, and unmistakably not earning. It never joins
-   the live pulse: idle panels stay quiet, and the active seams dominate
-   the board. Every active chord — a silent voice's included — draws solid
-   and full-strength: the path language distinguishes earning from idle,
-   never voicing (the mute styling is retired). */
-.chord-mark.chord-idle .chord-seam {
-  stroke-dasharray: 1.5 4;
-  opacity: 0.14;
-}
-.chord-mark.chord-fade.chord-idle .chord-seam { opacity: 0.08; }
-#chord-lift .chord-mark.chord-idle .chord-seam {
+/* The idle candidate's seams (issue #258, the ask register, ADR-0057): a
+   recognized chord the allocation didn't select draws dotted and never
+   pulsing, at the ask weight — the retired selection lift's idle register.
+   The marks draw only while a voice that sings them is asked (hover,
+   focus, touch, the spacer by containment), so the board reads calm at
+   rest; the group carries none of them otherwise. The lift stays off the
+   ghost layer: the projected-idle promise keeps its own quieter register.
+   Every active chord — a silent voice's included — draws solid and
+   full-strength: the path language distinguishes earning from idle, never
+   voicing (the mute styling is retired). */
+.chord-mark:not(.ghost-mark).chord-idle .chord-seam {
   stroke-dasharray: 1.5 4;
   opacity: 0.45;
   stroke-width: 4;

@@ -51,12 +51,14 @@ export interface ChordMark {
   // The chord's voice ids — the hover reveal's lookup on the mark node.
   readonly voices: readonly string[];
   // Whether this chord is a recognized candidate the allocation left idle
-  // (issue #258): drawn in the same geometry, dimmer and dotted, and
-  // never pulsing — it earns nothing, so it isn't live activity. The
-  // active seams dominate; the idle candidates whisper beneath them. The
-  // one path distinction on the board (#333): every active chord draws
-  // solid — a silent voice's chord included (its identity lives on the
-  // module glyphs, not the path) — and idle alone is dotted and dim.
+  // (issue #258): drawn in the same geometry, dotted and never pulsing.
+  // The overlay always carries them — the reserved readout's "N idle"
+  // count and the Hex detail's chord row read them here — but the board
+  // draws them only while a voice that sings them is asked (ADR-0057), at
+  // the ask weight. The one path distinction on the board (#333): every
+  // active chord draws solid — a silent voice's chord included (its
+  // identity lives on the module glyphs, not the path) — and idle alone is
+  // dotted.
   readonly inactive: boolean;
   // Whether this chord carries one of the caller's focus ids (§6): the
   // selected module's chords emphasize, the rest fade. Always true when no
