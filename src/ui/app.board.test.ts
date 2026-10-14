@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import type { App } from "./app";
 import { createHabit } from "../engine/habits";
@@ -13,6 +13,7 @@ import { give } from "../engine/fixtures";
 import { hex, sameHex } from "../engine/hex";
 import { formatInt, formatNumber } from "./format";
 import { createAppFixture, clickCell, setAppWidth } from "./testing/app-fixture";
+import { fitBoard, GLOW_REACH, lensFrame, syncGlowLens } from "./zoom";
 import { makeRecorder } from "./testing/signal-recorder";
 
 // board rendering and interaction on the production HTML skeleton.
@@ -494,7 +495,167 @@ describe("the horizon bar (§7, issue #156)", () => {
     expect(forge.querySelector('[data-live="forge-pip"]')!.getAttribute("style")).toContain("50");
     expect(forge.querySelector(".forge-detail")!.textContent).toContain("Flow meter 1:30 / 3:00");
   });
+
+  it("the break beat's flare is a dedicated layer behind the track, not an animated filter on the bar", () => {
+    app.render();
+    const flare = document.querySelector("#horizon-bar .horizon-flare")!;
+    expect(flare).not.toBeNull();
+    // The light sits under the bar it flares, where the old drop-shadow drew.
+    expect(flare.nextElementSibling!.classList.contains("horizon-track")).toBe(true);
+  });
 });
+
+describe("the charge breathe's glow layer (issue #348)", () => {
+  const svgEl = () => document.getElementById("grid") as unknown as SVGSVGElement;
+  const glowOf = (q: number, r: number) => document.querySelector(`[data-cell="${q},${r}"] .module-node > .hex-glow`);
+
+  // The opening receiver charged by a generator one cell east, live.
+  function chargeBoard(): void {
+    give(app.state, "focusKeyed", hex(1, 0)).reserve = 100;
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, 600);
+    app.render();
+  }
+
+  it("a charged receiver carries the glow layer beneath its chassis; an uncharged face carries none", () => {
+    app.render();
+    expect(document.querySelector(".hex-glow")).toBeNull();
+    chargeBoard();
+    const glow = glowOf(0, 0)!;
+    expect(glow).not.toBeNull();
+    // The layer is the face's first child: the light draws under the chassis.
+    expect(glow.previousElementSibling).toBeNull();
+    expect(glow.nextElementSibling!.classList.contains("hex")).toBe(true);
+  });
+
+  it("a dispensing generator lights its layer too", () => {
+    chargeBoard();
+    expect(glowOf(1, 0)).not.toBeNull();
+  });
+
+  it("a hex outside the lens rests its glow; fit brings the breathe back", () => {
+    chargeBoard();
+    expect(glowOf(0, 0)!.classList.contains("off-view")).toBe(false);
+    // Zoomed in and panned to the board's right edge, the charged face at
+    // the origin leaves the view.
+    app.ui.zoom = 3;
+    app.ui.pan = { x: app.boardBounds.x + app.boardBounds.width, y: app.boardBounds.y + app.boardBounds.height / 2 };
+    app.render();
+    expect(glowOf(0, 0)!.classList.contains("off-view")).toBe(true);
+    fitBoard(app);
+    expect(glowOf(0, 0)!.classList.contains("off-view")).toBe(false);
+  });
+
+  it("panning repaints the lens and re-lenses the glow mid-gesture, without a render", () => {
+    chargeBoard();
+    app.ui.zoom = 3;
+    app.ui.pan = { x: app.boardBounds.x + app.boardBounds.width, y: app.boardBounds.y + app.boardBounds.height / 2 };
+    app.render();
+    expect(glowOf(0, 0)!.classList.contains("off-view")).toBe(true);
+    Object.defineProperty(svgEl(), "clientWidth", { configurable: true, value: 800 });
+    Object.defineProperty(svgEl(), "clientHeight", { configurable: true, value: 600 });
+    const frame = lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds);
+    const worldPerPx = frame.view.width / 800;
+    // Drag until the charged face sits (reach - 20) inside the lens's own
+    // margin: new view.x = pan.x - width/2 ≤ reach - 20 puts world x=0 in
+    // view. Mid-gesture — before the release's render — the glow is already
+    // breathing again: the pan path sweeps the lens itself.
+    const targetPanX = GLOW_REACH - 20 + frame.view.width / 2;
+    const deltaX = Math.round((app.ui.pan.x - targetPanX) / worldPerPx);
+    const before = svgEl().getAttribute("viewBox")!;
+    svgEl().dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 400, clientY: 300 }));
+    document.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 400 + deltaX, clientY: 300 }));
+    expect(svgEl().getAttribute("viewBox")).not.toBe(before);
+    expect(glowOf(0, 0)!.classList.contains("off-view")).toBe(false);
+    document.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, clientX: 400 + deltaX, clientY: 300 }));
+  });
+
+  it.each([[800, 400, 280, 100], [400, 800, 100, 280]])(
+    "keeps visible glow in letterbox bands (%i × %i)",
+    (width, height, x, y) => {
+      const svg = svgEl();
+      Object.defineProperty(svg, "clientWidth", { configurable: true, value: width });
+      Object.defineProperty(svg, "clientHeight", { configurable: true, value: height });
+      svg.innerHTML = `<g class="cell-node" transform="translate(${x} ${y})"><g class="module-node"><polygon class="hex-glow"/></g></g>`;
+      const glow = svg.querySelector(".hex-glow")!;
+      const view = { x: 0, y: 0, width: 200, height: 200 };
+      syncGlowLens(svg, view);
+      expect(glow.classList.contains("off-view")).toBe(false);
+      // A square viewport removes the letterbox band: the same hex rests.
+      Object.defineProperty(svg, "clientWidth", { configurable: true, value: 400 });
+      Object.defineProperty(svg, "clientHeight", { configurable: true, value: 400 });
+      syncGlowLens(svg, view);
+      expect(glow.classList.contains("off-view")).toBe(true);
+    },
+  );
+
+  it("refreshes glow when the SVG resizes and disconnects on release", () => {
+    fixture.release();
+    let resized!: ResizeObserverCallback;
+    const disconnect = vi.fn();
+    vi.stubGlobal("ResizeObserver", class {
+      constructor(callback: ResizeObserverCallback) { resized = callback; }
+      observe() {}
+      disconnect = disconnect;
+    });
+    try {
+      app = boot();
+      const svg = svgEl();
+      svg.innerHTML = '<g class="cell-node" transform="translate(280 100)"><g class="module-node"><polygon class="hex-glow"/></g></g>';
+      app.boardBounds = { x: 0, y: 0, width: 200, height: 200 };
+      app.ui.zoom = 1;
+      app.ui.pan = null;
+      Object.defineProperty(svg, "clientWidth", { configurable: true, value: 400 });
+      Object.defineProperty(svg, "clientHeight", { configurable: true, value: 400 });
+      resized([], {} as ResizeObserver);
+      expect(svg.querySelector(".hex-glow")!.classList.contains("off-view")).toBe(true);
+      Object.defineProperty(svg, "clientWidth", { configurable: true, value: 800 });
+      resized([], {} as ResizeObserver);
+      expect(svg.querySelector(".hex-glow")!.classList.contains("off-view")).toBe(false);
+      fixture.release();
+      expect(disconnect).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("the stylesheet's board carries no animated filter; the breathe animates opacity alone", () => {
+    const css = readFileSync("src/ui/style.css", "utf8");
+    for (const body of keyframesBodies(css)) expect(body).not.toContain("filter:");
+    const breathe = css.match(/@keyframes charge-breathe\s*\{[^}]*\}/)![0];
+    expect(breathe).toContain("opacity");
+    // The lit layer's selectors stay flat: no relational :has() over the
+    // faces re-validating on every tick's attribute writes.
+    expect(css).toContain(".hex-glow {");
+    expect(css).not.toContain(":has(.hex.charged) .hex");
+    expect(css).not.toContain(":has(.hex.dispensing)");
+  });
+
+  it("reduced motion rests the glow lit — a static lit state, charge readable without animation", () => {
+    const css = readFileSync("src/ui/style.css", "utf8");
+    const reduce = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
+    expect(reduce).toMatch(/\.hex-glow\s*\{[^}]*opacity: 0\.6/);
+    // Off the lens stays dark even at rest.
+    expect(css).toMatch(/\.hex-glow\.off-view\s*\{[^}]*opacity: 0/);
+  });
+});
+
+// Every @keyframes block body in the stylesheet, brace-matched.
+function keyframesBodies(css: string): string[] {
+  const bodies: string[] = [];
+  for (const match of css.matchAll(/@keyframes\s+[\w-]+\s*\{/g)) {
+    let depth = 1;
+    let i = match.index + match[0].length;
+    const start = i;
+    while (depth > 0 && i < css.length) {
+      if (css[i] === "{") depth++;
+      else if (css[i] === "}") depth--;
+      i++;
+    }
+    bodies.push(css.slice(start, i - 1));
+  }
+  return bodies;
+}
 
 describe("the action row (§7)", () => {
   it("is a left-edge icon dock: Catalog / Forge / Add — Inventory left with the tray's collapse toggle (#272)", () => {

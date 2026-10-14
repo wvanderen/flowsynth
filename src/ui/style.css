@@ -1571,12 +1571,24 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 /* The horizon break's one-time beat (ADR-0042, issue #200): the purchase
    flares the bar once in the Arete register — the moment's visual, no new
    furniture (the class lingers inert after the animation ends until the
-   next render drops it). */
-.horizon-bar.break-beat .horizon-svg { animation: break-beat-flare 2.4s ease-out; }
+   next render drops it). The flare is a dedicated blurred stroke whose
+   opacity the beat animates (issue #348): the blur rasterizes once, and
+   the board panel carries no animated filter. */
+.horizon-flare {
+  fill: none;
+  stroke: var(--arete);
+  stroke-width: 7px;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  filter: blur(4.5px);
+  opacity: 0;
+  pointer-events: none;
+}
+.horizon-bar.break-beat .horizon-flare { animation: break-beat-flare 2.4s ease-out; }
 @keyframes break-beat-flare {
-  0% { filter: drop-shadow(0 0 0 transparent); }
-  12% { filter: drop-shadow(0 0 9px color-mix(in srgb, var(--arete) 65%, transparent)); }
-  100% { filter: drop-shadow(0 0 0 transparent); }
+  0% { opacity: 0; }
+  12% { opacity: 0.65; }
+  100% { opacity: 0; }
 }
 
 /* The opening arc's one pop-up (§8): the second synth's card, floating
@@ -1684,9 +1696,12 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 
 /* The narrow category rail: the face's one category-hue element, paired with
    the signature glyph. A charged receiver's rail swaps to the charge token;
-   the face's inline stroke-opacity brightens it with received strength. */
+   the face's inline stroke-opacity brightens it with received strength.
+   The charged hex and the rail are siblings in the face markup, so the
+   selector stays flat — a relational :has() here would re-validate on
+   every tick's attribute writes (issue #348). */
 .face-rail { fill: none; stroke-width: 5; stroke-linecap: round; pointer-events: none; }
-.module-node:has(.hex.charged) .face-rail { stroke: var(--charge); }
+.module-node .hex.charged ~ .face-rail { stroke: var(--charge); }
 
 .face-name { font: 700 8.5px var(--mono); letter-spacing: 0.13em; }
 .face-level { font: 8px var(--mono); letter-spacing: 0.1em; fill: var(--muted); }
@@ -1987,11 +2002,29 @@ body.live .chord-mark:not(.chord-fade):not(.chord-idle) .chord-seam {
 .chord-mark.ghost-mark.chord-idle .chord-chip { opacity: 0.6; }
 .chord-mark.ghost-mark.chord-idle .chord-label { opacity: 0.6; }
 
-/* The lit receiver breathes: charge state is feedback, not decoration, so
-   the pulse rides the same 0..1 glow the face already carries inline. */
-.module-node:has(.hex.charged) .hex,
-.module-node:has(.hex.dispensing) .hex { animation: charge-breathe 2.4s ease-in-out infinite; }
-@keyframes charge-breathe { 50% { filter: drop-shadow(0 0 7px color-mix(in srgb, var(--charge) 60%, transparent)); } }
+/* The lit receiver breathes (issue #348): charge state is feedback, not
+   decoration, and the light must read at a glance — but a calm instrument
+   idles cheap. The glow lives on a dedicated layer under the chassis, a
+   static blur rasterized once per lit face; the breathe animates that
+   layer's opacity alone, so a frame costs a composite, never a per-hex
+   drop-shadow re-rasterization. The layer exists only on charged and
+   dispensing faces (render.ts emits it), so the animation's selector stays
+   flat — no relational :has() re-validating on every tick's attribute
+   writes. The 2.4s rhythm and the 60% charge-hued peak are the old light's;
+   blur(3.5px) is the drop-shadow's 7px radius. */
+.hex-glow {
+  fill: var(--charge);
+  filter: blur(3.5px);
+  opacity: 0;
+  pointer-events: none;
+  animation: charge-breathe 2.4s ease-in-out infinite;
+}
+@keyframes charge-breathe { 50% { opacity: 0.6; } }
+/* Off the lens (issue #348): a lit hex the current view can't see rests —
+   animation stopped, light dark, no continuous paint — until the lens
+   brings it home. The sweep rides both lens paths (renderGrid and the
+   pan repaint in zoom.ts). */
+.hex-glow.off-view { animation: none; opacity: 0; }
 
 /* Threshold fill: the chargeable's progress rises inside the chassis like
    liquid; the face flashes when it crosses. */
@@ -3484,6 +3517,11 @@ body.modal-sheet-open .zoom-cluster {
      every state rides static outlines, inset markers, and engraved marks,
      so the state grammar survives this switch intact. */
   .charge-line { animation: charge-flow 1.6s linear infinite !important; }
+  /* The breathe rests lit (issue #348): the glow layer holds its peak
+     light as a static state — no motion, and charge reads at a glance from
+     the lit chassis, rail, and halo together. Off-lens layers stay dark:
+     the off-view rule out-specifies this rest. */
+  .hex-glow { animation: none !important; opacity: 0.6; }
 }
 
 .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; min-height: 0; padding: 4px; }
