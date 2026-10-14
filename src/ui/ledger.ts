@@ -415,6 +415,7 @@ function horizonSvg(): string {
           <rect class="horizon-clip" data-live="h-clip" x="0" y="0" width="0" height="52"></rect>
         </clipPath>
       </defs>
+      <path class="horizon-flare" d="${path}"></path>
       <path class="horizon-track" d="${path}" pathLength="100"></path>
       <path class="horizon-fill" d="${path}" clip-path="url(#horizon-fill-clip)"></path>
     </svg>`;

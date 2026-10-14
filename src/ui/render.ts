@@ -49,7 +49,7 @@ import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHt
 import { closeTooltips, wireTooltips } from "./instrument";
 import { instancesByClass, instancesKeyOf, libraryHeaderHtml, libraryIndexRowHtml, libraryStageHtml } from "./library";
 import { discoveryCount, discoveryBoostOf, rootsHeardOf } from "../engine/library";
-import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster } from "./zoom";
+import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster, syncGlowLens } from "./zoom";
 import { containerWidth, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX } from "./container";
 import { liveAttr, liveSet } from "./live";
 import {
@@ -1215,6 +1215,9 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
   html += mutGridDecorations(app, projected);
 
   updateSvg(svg, html);
+  // The breathe rides the lens (issue #348): hexes the current view can't
+  // see rest their glow, here and on every pan the lens takes.
+  syncGlowLens(svg, lens.view);
   bindGridEvents(app, svg);
   bindFaceBuys(app, svg);
   bindMutatorLayer(app, svg);
@@ -1688,7 +1691,14 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
   // upgrade mode only — in flow it vanishes with the purchase furniture.
   const faceBuy = state.mode === "upgrade" && !app.ui.buyingCell && levelable(module) ? faceBuyHtml(app, module) : "";
 
+  // The breathe's layer (issue #348): lit faces carry a dedicated glow
+  // polygon under the chassis — a static blur the stylesheet animates by
+  // opacity alone, never a per-hex drop-shadow re-rasterized each frame.
+  // Exactly the charged and dispensing faces light, as the breathe always
+  // has; uncharged faces carry no layer at all.
+  const lit = charged || emittingNow;
   return `<g class="module-node${crossed ? " forge-crossed" : ""}" data-type="${module.type}" data-rarity="${module.rarity}">
+    ${lit ? `<polygon data-key="hex-glow" class="hex-glow" points="${hexPoints(HEX_RADIUS)}"/>` : ""}
     ${moduleFace({
       type: module.type,
       rarity: module.rarity,

@@ -4,6 +4,7 @@
 // larger-than-screen board always stays reachable. World coordinates never
 // move — seams, chips, and bloom frames are zoom-agnostic by construction.
 import type { App } from "./app";
+import { HEX_RADIUS } from "./face";
 
 // The zoom range (prototype tuning, #121): fitted is 1; a hair below 1 lets
 // a wide board letterbox more tightly, 3× is comfortably inside a face.
@@ -47,7 +48,15 @@ export function resolvePan(pan: { x: number; y: number } | null, bounds: BoardBo
 // the ViewFrame the bloom math consumes, cut from the same numbers.
 export interface LensFrame {
   viewBox: string;
-  view: { x: number; y: number; width: number; height: number };
+  view: ViewRect;
+}
+
+// The lens's world-space rectangle: what the board can currently see.
+export interface ViewRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 export function lensFrame(zoom: number, pan: { x: number; y: number } | null, bounds: BoardBounds): LensFrame {
@@ -109,6 +118,34 @@ export function fitBoard(app: App): void {
   app.render();
 }
 
+// The breathe's lens (issue #348): a lit module the current view can't see
+// rests its glow — no animation, no light, no per-frame work — and picks
+// the breathe back up when the lens brings it home. The sweep reads each
+// lit face's world position off its cell's transform — the translate the
+// render path writes from the same projection that drew it — and compares
+// it with the view rect plus a margin of the chassis radius and the glow's
+// blur spill, so only safely unseen hexes ever rest. Both lens paths call
+// it: the render path (renderGrid) and the pan path below, where the
+// viewBox moves without a render.
+const GLOW_SPILL = 8;
+
+// The lens margin a lit hex must clear before its glow rests.
+export const GLOW_REACH = HEX_RADIUS + GLOW_SPILL;
+
+export function syncGlowLens(svg: SVGSVGElement, view: ViewRect): void {
+  const left = view.x - GLOW_REACH;
+  const right = view.x + view.width + GLOW_REACH;
+  const top = view.y - GLOW_REACH;
+  const bottom = view.y + view.height + GLOW_REACH;
+  for (const glow of svg.querySelectorAll<SVGElement>(".module-node > .hex-glow")) {
+    const at = glow.closest(".cell-node")?.getAttribute("transform")?.match(/-?[\d.]+/g);
+    const x = at ? Number(at[0]) : NaN;
+    const y = at ? Number(at[1]) : NaN;
+    const off = Number.isNaN(x) || Number.isNaN(y) || x < left || x > right || y < top || y > bottom;
+    glow.classList.toggle("off-view", off);
+  }
+}
+
 // Wheel zoom keeps the cursor's world point anchored.
 export function zoomAtPointer(app: App, factor: number, clientX: number, clientY: number): void {
   const svg = document.getElementById("grid") as SVGSVGElement | null;
@@ -160,8 +197,10 @@ export function bindBoardNavigation(app: App, svg: SVGSVGElement): void {
         app.boardBounds,
       );
       // Pan repaints the lens without a full render: the viewBox is the
-      // only thing that moves.
-      svg.setAttribute("viewBox", lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds).viewBox);
+      // only thing that moves — and the breathe re-lenses with it.
+      const lens = lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds);
+      svg.setAttribute("viewBox", lens.viewBox);
+      syncGlowLens(svg, lens.view);
     };
     let finished = false;
     let forget = () => {};
