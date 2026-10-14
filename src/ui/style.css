@@ -861,6 +861,13 @@ h1, h2, h3, p { margin: 0; }
 .arete-mark svg { width: 15px; height: 15px; display: block; }
 .arete-dim { color: var(--muted); }
 .arete-dim .arete-mark { color: var(--muted); }
+/* The capacity read (issue #333): the per-voice whole-chord allowance in
+   the neutral register — a property of the voices, not a spent resource —
+   the canonical mark at 15px. One ambient figure; the selected voice's
+   used/available stays local to the reserved readout and Hex detail. */
+.ledger-capacity { color: var(--ink); }
+.capacity-mark svg { width: 15px; height: 15px; display: block; }
+.ledger-capacity .capacity-mark, .info-read .capacity-mark { color: var(--muted); }
 /* The hairline division, then the chips right-aligned: paired icon +
    count, opening their sheets. */
 .ledger-rule { width: 1px; align-self: stretch; margin: 1px 0; background: var(--line); }
@@ -1819,10 +1826,6 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 @media (pointer: coarse) {
   .chord-readout-summary .readout-tip .readout-tip-trigger { min-height: 44px; }
 }
-.chord-readout-summary .chord-readout-muted .chord-readout-name {
-  text-decoration: underline dashed;
-  text-underline-offset: 4px;
-}
 .chord-readout-summary .chord-readout-idle { color: var(--muted); opacity: 1; }
 .chord-readout[hidden] { display: none; }
 .chord-readout-chip {
@@ -1846,14 +1849,6 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .chord-readout-chip.chord-readout-formation {
   --cc: var(--muted);
 }
-/* The muted participant's chip (ADR-0048): a chord a silent voice sings in
-   reads dashed — the same convention its seams carry. */
-.chord-readout-chip.chord-readout-muted {
-  border-style: dashed;
-  text-decoration: underline dashed;
-  text-underline-offset: 4px;
-  opacity: 0.72;
-}
 /* The capacity and earned-factor chips (issue #258): the selected voice's
    own state — budget spent and chord term earned — in the neutral
    registers, never a chord hue. */
@@ -1862,6 +1857,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .chord-readout-chip.chord-readout-uncertified {
   --cc: var(--muted);
 }
+.chord-readout-chip.chord-readout-capacity svg { color: var(--muted); }
 .chord-readout-chip.chord-readout-uncertified { border-style: dashed; }
 /* The idle candidate's chip (issue #258): recognized, earning nothing —
    dashed and quiet, the readout's side of the board's dotted seams. */
@@ -1914,20 +1910,13 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   font: 9px var(--mono);
   fill: var(--muted);
 }
-/* The muted participant's seams (ADR-0048): a chord a silent voice sings
-   in draws dashed — the game's standing language for silent and promised
-   work — a hair quieter than its sounding kin. */
-.chord-seam.chord-muted {
-  stroke-dasharray: 5 4;
-  opacity: 0.24;
-}
-.chord-mark.chord-fade .chord-seam.chord-muted { opacity: 0.12; }
-#chord-lift .chord-seam.chord-muted { opacity: 0.8; }
-
-/* The idle candidate's seams (issue #258): a recognized chord the
-   allocation didn't select draws dotted and dim — present, nameable, and
-   unmistakably not earning. It never joins the live pulse: idle panels
-   stay quiet, and the active seams dominate the board. */
+/* The idle candidate's seams (issue #258, the board's one quiet path,
+   #333): a recognized chord the allocation didn't select draws dotted and
+   dim — present, nameable, and unmistakably not earning. It never joins
+   the live pulse: idle panels stay quiet, and the active seams dominate
+   the board. Every active chord — a silent voice's included — draws solid
+   and full-strength: the path language distinguishes earning from idle,
+   never voicing (the mute styling is retired). */
 .chord-mark.chord-idle .chord-seam {
   stroke-dasharray: 1.5 4;
   opacity: 0.14;
