@@ -244,3 +244,85 @@ describe("the programmatic dialogs and the dissolved review", () => {
     expect(document.activeElement).toBe(gear());
   });
 });
+
+describe("dialog dismissal regressions", () => {
+  it.each(["pref-confirm", "pref-mute"])("Escape from settings %s returns to the gear", (id) => {
+    gear().focus();
+    app.openModal("settings");
+    const control = document.getElementById(id)!;
+    control.focus();
+    control.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    expect(app.ui.modal).toBeNull();
+    expect(document.activeElement).toBe(gear());
+  });
+
+  it("Escape from the export text returns to the gear", () => {
+    gear().focus();
+    app.openModal("settings");
+    document.getElementById("settings-export")!.click();
+    const control = document.getElementById("export-text")!;
+    control.focus();
+    control.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    expect(app.ui.modal).toBeNull();
+    expect(document.activeElement).toBe(gear());
+  });
+
+  it("Escape from the catalog checkbox returns to the dock", () => {
+    dockTool("catalog").focus();
+    app.openModal("catalog");
+    const control = document.getElementById("catalog-show-acquired")!;
+    control.focus();
+    control.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    expect(app.ui.modal).toBeNull();
+    expect(document.activeElement).toBe(dockTool("catalog"));
+  });
+
+  it.each(["summary-continue", "summary-reflection-text", "summary-reflection-slider"])(
+    "a keyboard session exit returns to its switch after dismissal from %s", (id) => {
+      startSession(app.state, 600);
+      advance(app.state, 60);
+      app.render();
+      const exit = document.getElementById("flow-switch")!;
+      exit.focus();
+      exit.click();
+      expect(app.ui.modal).toBe("summary");
+      const control = document.getElementById(id)!;
+      control.focus();
+      if (id === "summary-continue") control.click();
+      else control.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+      expect(app.ui.modal).toBeNull();
+      expect(document.activeElement).toBe(document.getElementById("flow-switch"));
+    },
+  );
+
+  it("honesty → summary retains the exit switch as its return address", () => {
+    startSession(app.state, 600);
+    advance(app.state, 60);
+    app.state.session!.accounting.poolSeconds = 30;
+    app.render();
+    const exit = document.getElementById("flow-switch")!;
+    exit.focus();
+    exit.click();
+    expect(app.ui.modal).toBe("honesty");
+    const answer = document.querySelector<HTMLButtonElement>('[data-honesty="missed"]')!;
+    answer.focus();
+    answer.click();
+    expect(app.ui.modal).toBe("summary");
+    document.getElementById("summary-continue")!.click();
+    expect(document.activeElement).toBe(document.getElementById("flow-switch"));
+  });
+
+  it("closing a dialog hides its portaled tooltip before removing its trigger", () => {
+    gear().focus();
+    app.openModal("settings");
+    const trigger = sheet().querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
+    trigger.focus();
+    trigger.click();
+    const tooltip = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+    expect(tooltip.parentElement).toBe(document.body);
+    expect(tooltip.classList.contains("inst-show")).toBe(true);
+    document.getElementById("close-modal")!.click();
+    expect(tooltip.classList.contains("inst-show")).toBe(false);
+    expect(document.activeElement).toBe(gear());
+  });
+});

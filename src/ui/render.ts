@@ -2299,12 +2299,12 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
     // The dismissal leaves nothing standing in the layer: a wiped sheet
     // holds no ghost of the dialog it served, and nothing inside it can
     // keep hold of focus (issue #346).
-    content.replaceChildren();
     delete content.dataset.renderKey;
     // A pinned tooltip's body lives at document body level (instrument.ts's
     // portal), so hiding the sheet would otherwise leave it floating over
     // the board — the close puts every tooltip of the sheet away with it.
     closeTooltips(content);
+    content.replaceChildren();
     return;
   }
   // The rate sheet's own gate (§7): below the 760px container breakpoint
@@ -3284,15 +3284,6 @@ function renderExportModal(app: App, content: HTMLElement): void {
     anchor.remove();
     URL.revokeObjectURL(url);
   });
-  // Escape dismisses from the read-only box as from any control (issue
-  // #346): the global chain steps over text fields, readonly included.
-  app.listen(byId("export-text"), "keydown", (event) => {
-    if ((event as KeyboardEvent).key === "Escape") {
-      event.preventDefault();
-      event.stopPropagation();
-      app.closeModal();
-    }
-  });
   wireClose(app);
 }
 
@@ -3319,15 +3310,6 @@ function renderImportModal(app: App, content: HTMLElement): void {
   });
   app.listen(byId("import-apply"), "click", () => {
     if (textarea) app.importText(textarea.value);
-  });
-  // Escape dismisses from the paste box too (the composer's rule, issue
-  // #346): the dialog's primary field answers the keyboard exit.
-  app.listen(textarea, "keydown", (event) => {
-    if ((event as KeyboardEvent).key === "Escape") {
-      event.preventDefault();
-      event.stopPropagation();
-      app.closeModal();
-    }
   });
   wireClose(app);
 }

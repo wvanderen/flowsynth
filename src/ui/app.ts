@@ -935,15 +935,16 @@ export class App {
     // armed transient modes unwind — an armed placement cancels before the
     // Hex detail closes; then the detail itself returns the grid with its
     // layer, position, and zoom intact; then the Mutators layer; then the
-    // console furniture. Never while typing.
+    // console furniture. Outside a dialog, typing keeps its own Escape.
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape" || !this.ownsBoard()) return;
-      const target = event.target;
-      if (target instanceof HTMLElement && (target.isContentEditable || target.matches("input, textarea, select"))) return;
       if (this.ui.modal) {
+        event.preventDefault();
         this.closeModal();
         return;
       }
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.isContentEditable || target.matches("input, textarea, select"))) return;
       if (this.ui.placing) {
         this.cancelPlacing();
         return;
@@ -1213,6 +1214,7 @@ export class App {
     // honesty report's answer is mandatory and final — the bucket must
     // bank or drop before the summary shows.
     if (this.state.mode !== "upgrade" && poolOutstanding(this.state)) {
+      this.captureModalInvoker();
       this.exitPending = true;
       this.ui.modal = "honesty";
       this.render();
@@ -1226,6 +1228,8 @@ export class App {
     }
     this.lastWall = null;
     this.say("Session banked.");
+    // Preserve the exit switch through an honesty → summary sequence.
+    this.captureModalInvoker();
     // The loud summary (§5.7) opens however the session ended.
     this.ui.modal = "summary";
     this.save();
@@ -2382,7 +2386,7 @@ export class App {
   // stepping from Settings to Import must return to the walk's opener,
   // not to a control the step replaced.
   private captureModalInvoker(): void {
-    if (this.ui.modal) return;
+    if (this.ui.modal || this.modalInvoker) return;
     const active = document.activeElement;
     this.modalInvoker = active instanceof HTMLElement && active !== document.body ? active : null;
   }
