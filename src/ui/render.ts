@@ -1,4 +1,4 @@
-import { chargedFactor, cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, levelCost, levelsCost, projectPlacement, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
+import { cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, levelCost, levelsCost, projectPlacement, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
 import { ALLOCATION_QUALITY_BOUNDS, idleTermsOf, summaryTermsOf } from "../engine/allocation";
 import { claimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
@@ -766,9 +766,9 @@ function mutatorForgeMeterLine(state: GameState, mutatorRate: number): string {
 function meterDetail(app: App, forgeRate: number, mutatorRate: number): string {
   const { state } = app;
   const banked = state.bankedRolls.length;
-  const bankedNote = banked > 0 ? ` · ${banked} banked choice${banked === 1 ? "" : "s"}` : "";
+  const bankedNote = banked > 0 ? ` · ${banked} banked module roll${banked === 1 ? "" : "s"}` : "";
   const mutBanked = state.bankedMutatorRolls.length;
-  const mutNote = mutBanked > 0 ? ` · ${mutBanked} banked mutator choice${mutBanked === 1 ? "" : "s"}` : "";
+  const mutNote = mutBanked > 0 ? ` · ${mutBanked} banked mutator roll${mutBanked === 1 ? "" : "s"}` : "";
   const mutLine = state.catalogEntryOwned ? ` · ${mutatorForgeMeterLine(state, mutatorRate)}${mutNote}` : "";
   return `${flowMeterLine(state)} · ${forgeMeterLine(state, forgeRate)}${bankedNote}${mutLine}`;
 }
@@ -796,7 +796,7 @@ function toolActions(): ToolAction[] {
       label: "Forge",
       run: (app) => app.openModal("forge"),
       badge: (app) =>
-        app.state.bankedRolls.length > 0 ? `<b class="tool-badge mono">${app.state.bankedRolls.length}</b>` : "",
+        app.state.bankedRolls.length + app.state.bankedMutatorRolls.length > 0 ? `<b class="tool-badge mono">${app.state.bankedRolls.length + app.state.bankedMutatorRolls.length}</b>` : "",
       media: `<i class="forge-pip" aria-hidden="true"><i data-live="forge-pip"></i></i>`,
       // The pip shows the flow meter (ADR-0041); hover, focus, or tap opens
       // the one detail — the live meter read, in flow suffixed with the lock
@@ -908,7 +908,7 @@ function renderTools(app: App, projected: RateSnapshot): void {
   // never collapses, so the dock needs no toggle), and Collection is the
   // feats/chords launcher where the ledger dissolves (issue #270).
   const dockActions = actions.filter((action) => action.op !== "collection" && action.op !== "inventory");
-  const forgeCount = state.bankedRolls.length;
+  const forgeCount = state.bankedRolls.length + state.bankedMutatorRolls.length;
   const trayCount = state.modules.filter((m) => m.pos === null).length;
   const key = JSON.stringify(["dock", state.mode, ui.mutLayer, ui.mutUnlockArmed, forgeCount, ui.buyingCell, trayCount]);
 
@@ -2320,7 +2320,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   document.body.classList.toggle("modal-sheet-open", sheet);
   const extra =
     kind === "forge"
-      ? [app.state.bankedRolls.at(-1)?.id ?? null, app.state.bankedMutatorRolls.at(-1)?.id ?? null]
+      ? [app.ui.forgeFace, app.state.catalogEntryOwned, app.state.bankedRolls.length, app.state.bankedMutatorRolls.length, app.state.bankedRolls.at(-1)?.id ?? null, app.state.bankedMutatorRolls.at(-1)?.id ?? null]
       : kind === "honesty"
         ? [app.exitPending, app.state.session?.accounting.poolSeconds ?? 0, app.state.session?.accounting.bucketNous ?? 0]
         : kind === "summary"
@@ -3101,23 +3101,22 @@ function catalogAreteFaceHtml(app: App): string {
   ${upgrade ? "" : `<p class="modal-note">Arete is spent between sessions — enter upgrade mode to buy.</p>`}`;
 }
 
-function forgeEffect(type: ModuleInstance["type"], state: GameState): string {
-  const charged = chargedFactor(1);
+function forgeEffect(type: ModuleInstance["type"]): string {
   switch (type) {
-    case "additive": return `+${formatNumber(BALANCE.synthRate)} ν/s unified synth term<br>+${formatNumber(BALANCE.synthRate * charged)} ν/s at charge strength 1`;
-    case "blaster": return `converts received charge into its synth term — ×${formatNumber(charged - 1)} at charge strength 1<br>sings and completes chords even uncharged, at zero output`;
-    case "harmonizer": return `silent voice — sings its cell's pitch, produces nothing<br>+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/LV to every chord instance it sings in`;
-    case "echo": return `silent voice — sings an adjacent voice's pitch one octave down<br>+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/LV to every chord instance it sings in`;
-    case "bend": return `silent voice — sings its cell's pitch altered by its picked shift<br>+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/LV to every chord instance it sings in`;
-    case "amplifier": return `re-broadcasts received charge at +${formatNumber(100 * BALANCE.amplifierGainPerLevel)}%/LV<br>relayed charge counts fully at receivers; ${BALANCE.amplifierHopCap} hops deep at most`;
-    case "ritual": return `amplifies the active habit's equipped build +${formatNumber(BALANCE.ritualAmpPerLevel * 100)}%/LV while receiving charge<br>charge never crosses to the console — the habit keys the module`;
-    case "spacer": return `Silent wire — never sounds, never joins a pitch set<br>conducts chord adjacency through chains of wired cells`;
-    case "focusKeyed": return `The generator — keyed to your focus<br>each session end banks a reserve (a tenth of its live practice time), spent as its output next session`;
-    case "noteKeyed": return `The generator — keyed to your notes<br>every note written banks its reserve (${formatNumber(BALANCE.noteCreditPerChar)} s per character, ${formatNumber(BALANCE.noteCreditCapSeconds / 60)} min cap per note), spent as its output in flow`;
-    case "goalKeyed": return `The generator — keyed to your goals<br>each completion banks its reserve (${formatNumber(BALANCE.goalReserveMultiple)}× the focus equivalent, by the goal's live share), spent as its output in flow`;
-    case "infusor": return `+${formatNumber(BALANCE.infusorBonus * 100)}% to adjacent production contributions<br>+${formatNumber(BALANCE.infusorBonus * charged * 100)}% at charge strength 1`;
-    case "forge": return `1 Forge progress per received charge strength<br>Next roll: ${formatNumber(forgeThreshold(state.forge.earned))} progress`;
-    case "mutatorForge": return `1 Mutator Forge progress per received charge strength<br>Next roll: ${formatNumber(mutatorForgeThreshold(state.mutatorForge.earned))} progress`;
+    case "additive": return `+${formatNumber(BALANCE.synthRate)} ν/s · charge boosts output`;
+    case "blaster": return "Received charge → ν/s · sings even uncharged";
+    case "harmonizer": return `Cell pitch · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/level to its chords`;
+    case "echo": return `Adjacent pitch, octave down · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/level to its chords`;
+    case "bend": return `Shifted cell pitch · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/level to its chords`;
+    case "amplifier": return `Relay charge · +${formatNumber(100 * BALANCE.amplifierGainPerLevel)}%/level · ${BALANCE.amplifierHopCap} hops`;
+    case "ritual": return `Charged → habit build +${formatNumber(BALANCE.ritualAmpPerLevel * 100)}%/level`;
+    case "spacer": return "Silent wire · connects chord adjacency";
+    case "focusKeyed": return "Practice → charge reserve for next session";
+    case "noteKeyed": return "Notes → charge reserve";
+    case "goalKeyed": return "Completed goals → charge reserve";
+    case "infusor": return `Adjacent production +${formatNumber(BALANCE.infusorBonus * 100)}% · charge boosts uplift`;
+    case "forge": return "Received charge → module rolls";
+    case "mutatorForge": return "Received charge → mutator rolls";
     default: return "Not yet active";
   }
 }
@@ -3152,94 +3151,74 @@ function candidateReadout(type: ModuleInstance["type"]): string {
 // The meter detail's live slots (ADR-0041): the figures move every tick a
 // session runs, so the open modal fills them in place — the rebuild only
 // fires when the pending offer changes, and the detail never flickers.
-function forgeMeterHtml(state: GameState): string {
-  return `<div class="forge-meters">
-    <div class="forge-meter">
-      <span class="meter-name">Flow meter</span>
-      <span class="gbar" aria-hidden="true"><i data-live="modal-flow-pip"></i></span>
-      <span class="meter-figures mono" data-live="modal-flow-line"></span>
-    </div>
-    <div class="forge-meter">
-      <span class="meter-name">Forge progress</span>
-      <span class="gbar" aria-hidden="true"><i data-live="modal-forge-pip"></i></span>
-      <span class="meter-figures mono" data-live="modal-forge-line"></span>
-    </div>
-    ${state.catalogEntryOwned ? `
-    <div class="forge-meter">
-      <span class="meter-name">Mutator Forge</span>
-      <span class="gbar" aria-hidden="true"><i data-live="modal-mutator-pip"></i></span>
-      <span class="meter-figures mono" data-live="modal-mutator-line"></span>
-    </div>` : ""}
+function forgeMeterHtml(face: App["ui"]["forgeFace"]): string {
+  const meter = (name: string, key: string) => `<div class="forge-meter">
+    <span class="meter-name">${name}</span><span class="meter-figures mono" data-live="modal-${key}-line"></span>
+    <span class="forge-track" aria-hidden="true"><i data-live="modal-${key}-pip"></i></span>
   </div>`;
+  return `<div class="forge-meters">${face === "mutators"
+    ? meter("Mutator Forge", "mutator")
+    : meter("Flow", "flow") + meter("Module Forge", "forge")}</div>`;
 }
 
 function updateForgeMetersLive(scope: ParentNode, state: GameState, forgeRate: number, mutatorRate: number): void {
   const flowCap = flowThreshold(state.flow.earned);
   const forgeCap = forgeThreshold(state.forge.earned);
   const mutatorCap = mutatorForgeThreshold(state.mutatorForge.earned);
-  liveAttr(scope, "modal-flow-pip", "style", `height:${meterPipFill(state.flow.progress, flowCap)}`);
-  liveAttr(scope, "modal-forge-pip", "style", `height:${meterPipFill(state.forge.progress, forgeCap)}`);
-  liveSet(scope, "modal-flow-line", flowMeterLine(state));
-  liveSet(scope, "modal-forge-line", forgeMeterLine(state, forgeRate));
-// The Mutator Forge branch's row exists only once the tree is entered
-// (issue #199): the live fills are no-ops while its nodes are absent.
-  liveAttr(scope, "modal-mutator-pip", "style", `height:${meterPipFill(state.mutatorForge.progress, mutatorCap)}`);
-  liveSet(scope, "modal-mutator-line", mutatorForgeMeterLine(state, mutatorRate));
+  for (const [key, progress, cap] of [["flow", state.flow.progress, flowCap], ["forge", state.forge.progress, forgeCap], ["mutator", state.mutatorForge.progress, mutatorCap]] as const) {
+    liveAttr(scope, `modal-${key}-pip`, "style", `width:${meterPipFill(progress, cap)}`);
+  }
+  liveSet(scope, "modal-flow-line", `${formatCountdown(state.flow.progress)} / ${formatCountdown(flowCap)}`);
+  liveSet(scope, "modal-forge-line", `${formatNumber(Math.max(0, state.forge.progress))} / ${formatNumber(forgeCap)}${forgeRate > 0 ? ` · ${formatNumber(forgeRate)}/s` : ""}`);
+  liveSet(scope, "modal-mutator-line", `${formatNumber(Math.max(0, state.mutatorForge.progress))} / ${formatNumber(mutatorCap)}${mutatorRate > 0 ? ` · ${formatNumber(mutatorRate)}/s` : ""}`);
 }
 
 function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapshot): void {
-  const { state } = app;
-  const offer = state.bankedRolls[state.bankedRolls.length - 1];
-  const banked = state.bankedRolls.length;
-  const mutOffer = state.bankedMutatorRolls[state.bankedMutatorRolls.length - 1];
-  const mutBanked = state.bankedMutatorRolls.length;
-  const mutatorSection = !mutOffer
-    ? ""
-    : `<div class="mutator-forge-block">
-        <span class="eyebrow mut-eyebrow">MUTATOR FORGE · ${mutBanked} banked</span>
-        <div class="candidates mut-candidates">
-          ${mutOffer.candidates
-            .map(
-              (candidate) => `
-            <button class="candidate-tile mut-candidate" data-mut-choice="${candidate.id}" data-mut-offer="${mutOffer.id}" data-rarity="${candidate.rarity}" title="Take the ${RARITY_LABEL[candidate.rarity]} ${FAMILY_WORD[candidate.family]} mutator">
-              <svg viewBox="-70 -70 140 140" aria-hidden="true" style="color: var(--arete)">
-                ${mutatorTileInner(candidate)}
-              </svg>
-              <span class="rarity">${RARITY_LABEL[candidate.rarity]}</span>
-              <span class="candidate-effect">${mutatorEffectText(candidate.family, candidate.rarity)}</span>
-            </button>`,
-            )
-            .join("")}
-        </div>
-        <p class="modal-note">Take one mutator — the other vanishes. It waits in the Mutator tray, on the Mutators layer.</p>
-      </div>`;
+  const { state, ui } = app;
+  const face = ui.forgeFace;
+  const offer = state.bankedRolls.at(-1);
+  const mutOffer = state.bankedMutatorRolls.at(-1);
+  const hasOffer = face === "modules" ? !!offer : !!mutOffer;
   content.innerHTML = `
-    ${modalTop(`FORGE · ${banked} banked`)}
     <h2 id="modal-title" class="sr-only">Forge choice</h2>
-    ${forgeMeterHtml(state)}
-    ${offer ? `<div class="candidates">
-      ${offer.candidates.map((candidate) => `
-        <button class="candidate-tile" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${candidate.rarity}" data-type="${candidate.type}" title="Take the ${RARITY_LABEL[candidate.rarity]} ${META[candidate.type].name}">
-          <svg viewBox="-70 -70 140 140" aria-hidden="true">
-            ${moduleFace({ type: candidate.type, rarity: candidate.rarity, readout: candidateReadout(candidate.type) })}
-          </svg>
+    <div class="forge-top">
+      <div class="forge-switch" role="group" aria-label="Forge drafts">
+        ${state.catalogEntryOwned ? `<button data-forge-face="mutators" aria-pressed="${face === "mutators"}" aria-label="Mutators, ${state.bankedMutatorRolls.length} banked ${state.bankedMutatorRolls.length === 1 ? "roll" : "rolls"}">Mutators <span class="mono">${state.bankedMutatorRolls.length}</span></button>` : ""}
+        <button data-forge-face="modules" aria-pressed="${face === "modules"}" aria-label="Modules, ${state.bankedRolls.length} banked ${state.bankedRolls.length === 1 ? "roll" : "rolls"}">Modules <span class="mono">${state.bankedRolls.length}</span></button>
+      </div>
+      <button id="close-modal" aria-label="Close Forge">Close <kbd>Esc</kbd></button>
+    </div>
+    ${hasOffer ? `<p class="forge-choice-cue">Choose 1 of ${face === "modules" ? 3 : 2}</p>
+    <div class="candidates ${face === "mutators" ? "mut-candidates" : ""}">
+      ${face === "modules" && offer ? offer.candidates.map(candidate => `
+        <button class="candidate-tile" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${candidate.rarity}" data-type="${candidate.type}" aria-label="Take ${RARITY_LABEL[candidate.rarity]} ${META[candidate.type].name}" aria-describedby="forge-effect-${candidate.id}">
+          <svg viewBox="-70 -70 140 140" aria-hidden="true">${moduleFace({ type: candidate.type, rarity: candidate.rarity, readout: candidateReadout(candidate.type) })}</svg>
+          <span class="candidate-readout"><span class="candidate-name">${META[candidate.type].name}</span>
           <span class="rarity">${RARITY_LABEL[candidate.rarity]}</span>
-          <span class="candidate-scaling">+${formatNumber((BALANCE.rarityPower[candidate.rarity] - 1) * 100)}% / level · upgrades from 10 ν</span>
-          <span class="candidate-effect">${forgeEffect(candidate.type, state)}</span>
-        </button>`).join("")}
-    </div>` : `<p class="empty-copy">No choices banked yet — the meters above say how far.</p>`}
-    ${mutatorSection}
-    <p class="modal-note">The board stays live behind this card — inspect freely; click outside, ✕ or Esc puts the choice away.</p>`;
+          <span id="forge-effect-${candidate.id}" class="candidate-effect">${forgeEffect(candidate.type)}</span>
+          ${candidate.type !== "spacer" ? `<span class="candidate-scaling">+${formatNumber((BALANCE.rarityPower[candidate.rarity] - 1) * 100)}% / level · upgrades from 10 ν</span>` : ""}</span>
+        </button>`).join("") : mutOffer ? mutOffer.candidates.map(candidate => `
+        <button class="candidate-tile mut-candidate" data-mut-choice="${candidate.id}" data-mut-offer="${mutOffer.id}" data-rarity="${candidate.rarity}" aria-label="Take ${RARITY_LABEL[candidate.rarity]} ${FAMILY_WORD[candidate.family]} mutator" aria-describedby="forge-effect-${candidate.id}">
+          <svg viewBox="-70 -70 140 140" aria-hidden="true" style="color:var(--arete)">${mutatorTileInner(candidate)}</svg>
+          <span class="candidate-readout"><span class="candidate-name">${FAMILY_WORD[candidate.family]}</span>
+          <span class="rarity">${RARITY_LABEL[candidate.rarity]}</span>
+          <span id="forge-effect-${candidate.id}" class="candidate-effect">${mutatorEffectText(candidate.family, candidate.rarity)}</span></span>
+        </button>`).join("") : ""}
+    </div>` : `<p class="empty-copy">No ${face === "mutators" ? "mutator" : "module"} rolls banked.</p>`}
+    ${forgeMeterHtml(face)}`;
   updateForgeMetersLive(content, state, projected.forgeRate, projected.mutatorForgeRate);
-  content.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach((button) => {
+  content.querySelectorAll<HTMLButtonElement>("[data-forge-face]").forEach(button => {
     app.listen(button, "click", () => {
-      app.chooseCandidate(button.getAttribute("data-offer")!, button.getAttribute("data-choice")!);
+      ui.forgeFace = button.dataset.forgeFace as typeof face;
+      app.render();
+      content.querySelector<HTMLButtonElement>(`[data-forge-face="${ui.forgeFace}"]`)?.focus();
     });
   });
-  content.querySelectorAll<HTMLButtonElement>("[data-mut-choice]").forEach((button) => {
-    app.listen(button, "click", () => {
-      app.chooseMutatorCandidate(button.getAttribute("data-mut-offer")!, button.getAttribute("data-mut-choice")!);
-    });
+  content.querySelectorAll<HTMLButtonElement>("[data-choice]").forEach(button => {
+    app.listen(button, "click", () => app.chooseCandidate(button.dataset.offer!, button.dataset.choice!));
+  });
+  content.querySelectorAll<HTMLButtonElement>("[data-mut-choice]").forEach(button => {
+    app.listen(button, "click", () => app.chooseMutatorCandidate(button.dataset.mutOffer!, button.dataset.mutChoice!));
   });
   wireClose(app);
 }

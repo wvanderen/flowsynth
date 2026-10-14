@@ -631,7 +631,7 @@ describe("the action row (§7)", () => {
     app.openModal("forge");
     const modal = document.getElementById("modal-content")!;
     expect(modal.querySelector(".forge-meters")).not.toBeNull();
-    expect(modal.querySelector('[data-live="modal-flow-line"]')!.textContent).toContain("Flow meter 0:00 / 3:00");
+    expect(modal.querySelector('[data-live="modal-flow-line"]')!.textContent).toContain("0:00 / 3:00");
     expect(modal.querySelector('[data-live="modal-forge-line"]')!.textContent).toContain("30 / 60");
     // Live slots fill in place as the meters move.
     app.state.flow.progress = 90;
@@ -731,7 +731,7 @@ describe("a module roll's scrimless peek (#193)", () => {
     app.render();
     document.querySelector<HTMLButtonElement>('#board-tools [data-op="forge"]')!.click();
     expect(app.ui.modal).toBe("forge");
-    document.querySelector("#modal-content .modal-note")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    document.querySelector("#modal-content .forge-choice-cue")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.ui.modal).toBe("forge");
     document.body.click();
     expect(app.ui.modal).toBeNull();
