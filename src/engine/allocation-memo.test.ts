@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allocateRates, allocationMemoStats, displayedRates, LIVE_ALLOCATION_BUDGET, syncRates } from "./economy";
+import { allocateRates, allocationMemoStats, displayedRates, LIVE_ALLOCATION_BUDGET, syncRates, voiceCapacityOf } from "./economy";
 import { advance } from "./advance";
 import { startSession } from "./actions";
 import { createHabit, selectHabit } from "./habits";
@@ -199,7 +199,12 @@ describe("the allocation solve memo (#349)", () => {
     allocationMemoStats.solves = 0;
     syncRates(state, true);
     const devBoard = allocateRates(state, true, { capacity: 3, keep: new Set(state.activeChords) });
-    expect(devBoard.snapshot.allocation?.capacity).toBe(3);
+    // The override replaces every voice's budget (issue #373): the
+    // per-voice read carries it, while the summary's scalar stays the
+    // standard voice's figure the ambient meter quotes.
+    const allocation = devBoard.snapshot.allocation!;
+    expect([...allocation.capacities.values()]).toEqual([3, 3, 3]);
+    expect(allocation.capacity).toBe(voiceCapacityOf(state));
     expect(allocationMemoStats.solves).toBe(2);
   });
 });

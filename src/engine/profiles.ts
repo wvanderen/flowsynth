@@ -25,7 +25,9 @@ import type { GeneratorType, ModuleType, OscillatorType } from "./types";
 //   Blaster  — the category's standing alternative charge behavior
 //              (ADR-0048): the conversion curve replaces the charge factor
 //              entirely, so its charge axis has no comparable multiplier —
-//              the absent mark, with the replacement stated in disclosure.
+//              the absent mark, with the replacement stated in disclosure —
+//              and two intrinsic voices (issue #373): the chord scaffold's
+//              second seat, paid for with the ×0 uncharged term.
 //   Afterglow (issue #372) — the session-clocked producer: no authored
 //              tradeoff on the comparable axes (the standard base and
 //              responses), and the warmup curve on the shared session
@@ -42,23 +44,32 @@ export interface OscillatorProfile {
   chord: number;
   // The multiplier on the charged-empowerment curve's delta above ×1.
   charge: number;
+  // The type's intrinsic voice capacity (issue #373): the whole-chord
+  // seats the voice owns at zero purchases, before the Poly Expander's
+  // shared purchased increments add on. A comparable figure, never a
+  // grade — one seat at the standard, two for the Blaster.
+  capacity: number;
   // The Blaster's structural alternative: received charge converts into
   // the term (×0 uncharged, ×1 at the asymptote) instead of empowering.
   chargeConversion?: boolean;
 }
 
 export const OSCILLATOR_PROFILES: Record<OscillatorType, OscillatorProfile> = {
-  additive: { base: 1.0, booster: 0.5, chord: 1.0, charge: 1.0 },
-  triangle: { base: 0.75, booster: 1.0, chord: 2.5, charge: 1.0 },
-  square: { base: 0.9, booster: 2.0, chord: 0.6, charge: 1.0 },
-  saw: { base: 0.7, booster: 1.0, chord: 1.0, charge: 3.0 },
-  blaster: { base: 1.0, booster: 1.0, chord: 1.0, charge: 1.0, chargeConversion: true },
+  additive: { base: 1.0, booster: 0.5, chord: 1.0, charge: 1.0, capacity: 1 },
+  triangle: { base: 0.75, booster: 1.0, chord: 2.5, charge: 1.0, capacity: 1 },
+  square: { base: 0.9, booster: 2.0, chord: 0.6, charge: 1.0, capacity: 1 },
+  saw: { base: 0.7, booster: 1.0, chord: 1.0, charge: 3.0, capacity: 1 },
+  // Two intrinsic seats (issue #373, representative): the conversion
+  // producer holds a second chord seat — it sings and completes two
+  // voice-sets while every standard voice holds one — and its ×0
+  // uncharged term pays for the extra chair. Provisional tuning.
+  blaster: { base: 1.0, booster: 1.0, chord: 1.0, charge: 1.0, capacity: 2, chargeConversion: true },
   // No authored tradeoff on the comparable axes — the category's standard
   // base (×1.0, grading A beside the Sine's identical figure) and standard
   // responses: the warmup condition below is the identity and the
   // tradeoff, and progression scales the strengths it rides without ever
   // touching the curve's timing.
-  afterglow: { base: 1.0, booster: 1.0, chord: 1.0, charge: 1.0 },
+  afterglow: { base: 1.0, booster: 1.0, chord: 1.0, charge: 1.0, capacity: 1 },
 };
 
 // The one profile read. Non-oscillators have no profile — callers guard by
@@ -91,6 +102,14 @@ export function chargeResponseOf(type: ModuleType): number {
 
 export function usesChargeConversion(type: ModuleType): boolean {
   return oscillatorProfileOf(type)?.chargeConversion === true;
+}
+
+// The type's intrinsic voice capacity (issue #373): the authored seats at
+// zero purchases. Every non-oscillator — the silent voices included, all
+// of them voices — reads the standard one, so the purchased ladder alone
+// moves their budgets.
+export function intrinsicCapacityOf(type: ModuleType): number {
+  return oscillatorProfileOf(type)?.capacity ?? 1;
 }
 
 // The base term's magnitude for one type at a given tier power — the one

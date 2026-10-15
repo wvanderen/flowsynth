@@ -245,12 +245,15 @@ export function areteLedgerHtml(state: GameState): string {
 
 // ── The harmonic-capacity read (§7, issue #333) ─────────────────────────
 // The board ledger's fourth grouped resource: the per-voice whole-chord
-// allowance — the one uniform figure every voice owns and every rate pass
-// spends (`voiceCapacityOf`). One ambient read at the canvas edge, never
-// a board-wide pool meter: the selected voice's used/available stays
-// local (the reserved readout, the Hex detail, the rate details' Capacity
-// leg). The canonical mark speaks the board's own chord language — the
-// hex chassis sealed by a chord's twin lines.
+// allowance — the standard figure every voice's budget is built on (the
+// shared purchased rungs plus intrinsic one; issue #373), which the rate
+// pass spends (`voiceCapacityOf`) and which is also every board's floor,
+// since no profile authors fewer seats. One ambient read at the canvas
+// edge, never a board-wide pool meter: a profile's higher intrinsic seats
+// and the selected voice's used/available stay local (the reserved
+// readout, the Hex detail, the rate details' Capacity leg). The canonical
+// mark speaks the board's own chord language — the hex chassis sealed by
+// a chord's twin lines.
 export const CAPACITY_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
   <path d="M12 2.5 20.2 7.25v9.5L12 21.5 3.8 16.75v-9.5Z"/>
   <path d="M8 10.2h8"/>
@@ -260,7 +263,7 @@ export const CAPACITY_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="n
 function capacityReadHtml(state: GameState, phone: boolean): string {
   const live = phone ? "i-capacity" : "capacity";
   const classes = phone ? "info-read info-capacity" : "ledger-fig ledger-capacity";
-  return `<span class="inst-tip capacity-tip"><button type="button" class="inst-tip-trigger capacity-trigger ${classes}" aria-labelledby="${live}-name ${live}-value" aria-expanded="false" aria-describedby="${live}-tip"><span class="sr-only" id="${live}-name">Harmonic capacity</span><b class="mono" id="${live}-value" data-live="${live}"${capacityMeterAttrs(state)}>${voiceCapacityOf(state)}</b><small class="capacity-mark" aria-hidden="true">${CAPACITY_SVG}</small></button><span class="inst-tip-body" id="${live}-tip" role="tooltip">Whole-chord budget per voice</span></span>`;
+  return `<span class="inst-tip capacity-tip"><button type="button" class="inst-tip-trigger capacity-trigger ${classes}" aria-labelledby="${live}-name ${live}-value" aria-expanded="false" aria-describedby="${live}-tip"><span class="sr-only" id="${live}-name">Harmonic capacity</span><b class="mono" id="${live}-value" data-live="${live}"${capacityMeterAttrs(state)}>${voiceCapacityOf(state)}</b><small class="capacity-mark" aria-hidden="true">${CAPACITY_SVG}</small></button><span class="inst-tip-body" id="${live}-tip" role="tooltip">Whole-chord budget per standard voice</span></span>`;
 }
 
 export function capacityLedgerHtml(state: GameState): string {
@@ -341,9 +344,10 @@ export function updateLedgerLive(
   liveAttr(scope, "nous", "title", formatInt(state.nous));
   set("rate", formatNumber(snapshot.rate));
   if (catalogOpen(state)) set("arete", formatInt(state.arete));
-  // The ambient allowance (#333): one figure, the economy's own — every
-  // voice's whole-chord budget. A purchase moves it on the next render,
-  // and the meter's values ride the same patch (#351).
+  // The ambient allowance (#333): one figure, the economy's own — the
+  // standard voice's whole-chord budget, every board's floor (#373). A
+  // purchase moves it on the next render, and the meter's values ride the
+  // same patch (#351).
   set("capacity", String(voiceCapacityOf(state)));
   liveAttr(scope, "capacity", "aria-valuenow", String(voiceCapacityOf(state)));
   liveAttr(scope, "capacity", "aria-valuemax", String(capacityCeiling(state)));

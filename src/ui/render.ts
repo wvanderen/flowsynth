@@ -1465,7 +1465,7 @@ function updateChordReadout(app: App): void {
   }
   if (focus && isVoiceType(focus.type) && snapshot?.allocation) {
     const used = snapshot.allocation.used.get(focus.id) ?? 0;
-    const capacity = snapshot.allocation.capacity;
+    const capacity = voiceBudgetOf(snapshot.allocation, focus.id);
     // A plain chip (issue #334): the transient readout carries no
     // interactive terms — the budget's deeper facts stay with the
     // click-open Hex detail.
@@ -1487,6 +1487,14 @@ function updateChordReadout(app: App): void {
   }
   host.hidden = rows.length === 0;
   setReadoutHtml(host, rows.length ? `<div class="chord-readout-summary">${rows.join("")}</div>` : "");
+}
+
+// One voice's own whole-chord budget from an allocation read (issue
+// #373): the per-voice figure the pass spent against — a profile's
+// intrinsic seats ride above the board's standard scalar, which stands
+// only when the read carries no entry for the voice.
+function voiceBudgetOf(allocation: NonNullable<RateSnapshot["allocation"]>, moduleId: string): number {
+  return allocation.capacities.get(moduleId) ?? allocation.capacity;
 }
 
 // Compact figures, plain (issue #334): names and multipliers only — no
@@ -1547,7 +1555,9 @@ function voiceMetricsHtml(module: ModuleInstance, snapshot: RateSnapshot, curren
   if (withValue && isOscillatorType(module.type)) rows.push(figure("value", `+${formatNumber(after?.value ?? 0)} ν/s`, `Final ν/s${was(before?.value, "+")}`));
   if (allocation) {
     const prior = current?.allocation;
-    rows.push(figure("capacity", `Capacity ${allocation.used.get(module.id) ?? 0}/${allocation.capacity}`, `Whole-chord budget${prior ? ` — was ${prior.used.get(module.id) ?? 0}/${prior.capacity}` : ""}`));
+    const capacity = voiceBudgetOf(allocation, module.id);
+    const priorCapacity = prior ? voiceBudgetOf(prior, module.id) : null;
+    rows.push(figure("capacity", `Capacity ${allocation.used.get(module.id) ?? 0}/${capacity}`, `Whole-chord budget${prior ? ` — was ${prior.used.get(module.id) ?? 0}/${priorCapacity}` : ""}`));
     if (!allocation.certified) rows.push(`<span class="chord-readout-chip chord-readout-uncertified mono">Allocation uncertified</span>`);
   }
   if (after) {
@@ -1586,11 +1596,14 @@ export function detailChordRow(app: App, snapshot: RateSnapshot): DetailChordRow
     .join("");
   const contribution = snapshot.contributions.get(module.id);
   const allocation = snapshot.allocation;
+  // The rebuild key carries the voice's own budget (issue #373), not the
+  // board scalar — a heterogeneous board must not serve a stale row.
+  const voiceCapacity = allocation ? voiceBudgetOf(allocation, module.id) : null;
   return {
     html,
     key: JSON.stringify([
       chips.map((mark) => [mark.key, mark.inactive, mark.label, mark.colorVar]),
-      allocation ? [allocation.used.get(module.id) ?? 0, allocation.capacity, allocation.certified] : null,
+      allocation ? [allocation.used.get(module.id) ?? 0, voiceCapacity, allocation.certified] : null,
       contribution ? [contribution.chordFactor, contribution.formationQ, contribution.formationMeasuredQ] : null,
     ]),
   };

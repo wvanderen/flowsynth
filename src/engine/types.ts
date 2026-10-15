@@ -612,9 +612,17 @@ export interface RecognizedInstance {
 // bonuses. Present only when the snapshot came through the authoritative
 // allocation pass; the plain recognizer's snapshots leave it unset.
 export interface AllocationSummary {
-  // The economy-wide per-voice budget — one at this stage — and the
-  // units each singing voice's active instances consume.
+  // The standard voice's whole-chord budget — intrinsic one plus the
+  // shared purchased rungs (issue #373) — the board-level read the ladder
+  // and the ambient meter quote. One voice's own budget sits beside it:
+  // profiles author higher intrinsic seats, and `capacities` carries each
+  // singing voice's own figure.
   capacity: number;
+  // Each singing voice's own whole-chord budget (issue #373): the
+  // heterogeneous figure the allocation spent against, keyed by module
+  // id — a profile's intrinsic seats included, so a Blaster's
+  // used/available read quotes its two seats and not this scalar.
+  capacities: ReadonlyMap<string, number>;
   used: Map<string, number>;
   // The selected instances. Active seams and bonus terms read these
   // alone.
