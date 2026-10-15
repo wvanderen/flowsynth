@@ -1,13 +1,12 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
-import { readFileSync } from "node:fs";
 import type { App } from "./app";
 import { createAppFixture } from "./testing/app-fixture";
 import { combineMutatorsPreview } from "../engine/actions";
 import { BALANCE } from "../engine/constants";
 import { hex, sameHex } from "../engine/hex";
 import { serialize, STORAGE_KEY } from "../engine/save";
-import { createInitialState } from "../engine/state";
+import { createInitialState, createModule } from "../engine/state";
 import type { GameState, Hex, MutatorFamily, MutatorInstance, Rarity } from "../engine/types";
 
 // The Mutator Grid's UI (issue #199): the vertical layer legend (issue
@@ -45,6 +44,24 @@ function seedMutatorEra(): void {
 
 function slotNode(q: number, r: number): SVGGElement {
   return document.querySelector(`[data-mut-slot="${q},${r}"]`)!;
+}
+
+// The seed plus the board facts the layer-ownership test needs: a second
+// voice an octave up (a formed chord's seam), a keyed generator and its
+// adjacent amplifier (a charge lead), and two further owned cells — one
+// hosting the generator, one left empty.
+function seedBoardFacts(): void {
+  seedMutatorEra();
+  const s = app.state;
+  s.cells.push(hex(2, 0), hex(3, 0));
+  const voice = createModule(s, "additive");
+  voice.pos = hex(0, 1);
+  const receiver = createModule(s, "amplifier");
+  receiver.pos = hex(1, 0);
+  const generator = createModule(s, "focusKeyed");
+  generator.pos = hex(2, 0);
+  s.modules.push(voice, receiver, generator);
+  app.render();
 }
 
 function unlockNode(q: number, r: number): SVGGElement {
@@ -217,26 +234,125 @@ describe("the Mutators layer's slot faces", () => {
     expect(face.textContent).not.toContain("RES +");
   });
 
-  it("the module board hides beneath: the layer's live class stands, and the stylesheet drops faces, marks, and leads", () => {
-    seedMutatorEra();
+  it("the layer renders alone: module faces, empty artwork, chord marks, and charge leads never enter the svg (issues #298, #386)", () => {
+    seedBoardFacts();
+    // Modules first: the board's facts stand — the chord seam, the charge
+    // lead, and the empty owned cell's own artwork.
+    expect(document.querySelector("#grid .chord-mark")).not.toBeNull();
+    expect(document.querySelector("#grid .charge-line, #grid .charge-preview-line")).not.toBeNull();
+    expect(document.querySelector('[data-cell="3,0"] .hex.empty')).not.toBeNull();
     app.mutSetLayer("mutators");
     expect(document.body.classList.contains("mut-layer-live")).toBe(true);
+    // The renderer omits the module board entire: no cell-node of either
+    // kind, no marks, no leads, no ghost group — nothing can leak beneath.
+    expect(document.querySelector("#grid .cell-node")).toBeNull();
+    expect(document.querySelector("#grid .hex.empty")).toBeNull();
+    expect(document.querySelector("#grid .hex-note")).toBeNull();
+    expect(document.querySelector("#grid .chord-mark")).toBeNull();
+    expect(document.querySelector("#grid .charge-line")).toBeNull();
+    expect(document.querySelector("#grid .charge-preview-line")).toBeNull();
+    expect(document.querySelector('#grid [data-key="ghost-chords"]')).toBeNull();
+    // The layer's own faces stand — one per owned coordinate.
+    expect(document.querySelector('#grid [data-key="mut-grid"]')!.children).toHaveLength(app.state.cells.length);
+    // Switching back restores the Modules rendering whole.
     app.mutSetLayer("modules");
+    expect(document.querySelector('[data-cell="3,0"] .hex.empty')).not.toBeNull();
+    expect(document.querySelector("#grid .chord-mark")).not.toBeNull();
+    expect(document.querySelector("#grid .charge-preview-line")).not.toBeNull();
+    expect(document.querySelector("#grid .mut-presence")).not.toBeNull();
+  });
+
+  it("switching layers alters no board or slot state", () => {
+    seedMutatorEra();
+    const snapshot = (): string =>
+      JSON.stringify([app.state.cells, app.state.modules, app.state.mutatorSlots, app.state.mutators, app.state.arete, app.state.nous]);
+    const before = snapshot();
+    app.mutSetLayer("mutators");
+    app.mutSetLayer("modules");
+    app.mutSetLayer("mutators");
+    expect(snapshot()).toBe(before);
+  });
+});
+
+describe("the layer's owned faces (issue #386)", () => {
+  // The seed's patch plus a cell two steps past it: the board's four
+  // owned coordinates then cover all four faces — occupied with a host
+  // (0,0), occupied hostless (1,0), eligible (0,1), locked (3,0).
+  function seedPatchAndBeyond(): void {
+    seedMutatorEra();
+    app.state.cells.push(hex(3, 0));
+    app.render();
+  }
+
+  it("every owned coordinate wears its applicable face — occupied, open, eligible, locked — hostless included", () => {
+    seedPatchAndBeyond();
+    app.mutSetLayer("mutators");
+    const faces = document.querySelector('#grid [data-key="mut-grid"]')!;
+    expect(faces.children).toHaveLength(app.state.cells.length);
+    // The hosted slot speaks its mutator; the hostless cell's slot keeps
+    // its own face and verdict.
+    expect(slotNode(0, 0)!.textContent).toContain("POWER");
+    expect(slotNode(1, 0)!.textContent).toContain("inert · no host");
+    // Eligible: adjacent to the patch — the clear outline, the vocabulary
+    // word, no unlock affordance while the arm is down.
+    const eligible = faces.querySelector('[data-key="mut-noslot-0,1"]')!;
+    expect(eligible.textContent).toContain("NO SLOT");
+    expect(eligible.querySelector(".mut-slot-hex")!.classList.contains("clear")).toBe(true);
+    expect(eligible.hasAttribute("data-mut-unlock")).toBe(false);
+    expect(eligible.getAttribute("tabindex")).toBeNull();
+    // Locked: beyond the patch — the muted face and the parent rule's help.
+    const locked = faces.querySelector('[data-key="mut-locked-3,0"]')!;
+    expect(locked.textContent).toContain("LOCKED");
+    expect(locked.getAttribute("aria-label")).toContain("unlock an adjacent Mutator slot first");
+    expect(locked.getAttribute("tabindex")).toBeNull();
+  });
+
+  it("a vacant slot wears the open face; the locked face holds beyond the grown patch", () => {
+    seedPatchAndBeyond();
+    app.state.mutatorSlots.push(hex(0, 1));
+    app.render();
+    app.mutSetLayer("mutators");
+    expect(slotNode(0, 1)!.textContent).toContain("OPEN SLOT");
+    // (3,0) stays three steps from the grown patch: still locked.
+    expect(document.querySelector('[data-key="mut-locked-3,0"]')).not.toBeNull();
+    expect(document.querySelector('[data-key="mut-noslot-0,1"]')).toBeNull();
+  });
+
+  it("the idle eligible face is inert; armed, it becomes the unlock pick", () => {
+    seedPatchAndBeyond();
+    app.mutSetLayer("mutators");
+    expect(document.querySelector('[data-mut-unlock="0,1"]')).toBeNull();
+    app.mutArmUnlock();
+    const target = unlockNode(0, 1)!;
+    expect(target.classList.contains("mut-unlock-target")).toBe(true);
+    expect(target.getAttribute("aria-label")).toBe("Unlock a Mutator slot at C5");
+    target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.state.mutatorSlots.some((slot) => sameHex(slot, hex(0, 1)))).toBe(true);
+    expect(app.state.arete).toBe(17); // 20 − the ladder's 3
+  });
+
+  it("with an empty patch every owned cell reads eligible — the first-slot exception keeps one vocabulary", () => {
+    const s = app.state;
+    s.mode = "upgrade";
+    s.catalogEntryOwned = true;
+    app.render();
+    app.mutSetLayer("mutators");
+    const faces = document.querySelector('#grid [data-key="mut-grid"]')!;
+    expect(faces.querySelectorAll(".mut-slot-locked")).toHaveLength(0);
+    expect(faces.querySelectorAll(".mut-slot-noslot")).toHaveLength(s.cells.length);
+    const idle = faces.querySelector('[data-key="mut-noslot-0,0"]')!;
+    expect(idle.getAttribute("aria-label")).toContain("the first is free");
+  });
+
+  it("pre-entry no Mutator faces exist and the Modules board stands untouched", () => {
+    app.render();
+    expect(document.querySelector('#grid [data-key="mut-grid"]')).toBeNull();
+    expect(document.querySelector("#grid .hex.empty")).not.toBeNull();
     expect(document.body.classList.contains("mut-layer-live")).toBe(false);
-    // The quiet layer (issue #298) is a stylesheet contract: module
-    // cell-nodes leave the layer entire (display none also lifts them out
-    // of tab order), and chord marks and charge leads never draw. The
-    // owned lattice itself stays — pointer-dead.
-    const css = readFileSync("src/ui/style.css", "utf8");
-    expect(css).toContain("body.mut-layer-live #grid .cell-node:has(.module-node)");
-    expect(css).toMatch(/body\.mut-layer-live #grid \.cell-node:has\(\.module-node\),[^}]*\.charge-preview-line \{\s*display: none;\s*\}/);
-    expect(css).toMatch(/body\.mut-layer-live #grid \.cell-node \{\s*pointer-events: none;\s*\}/);
-    expect(css).not.toMatch(/body\.mut-layer-live[^{]*grayscale/);
-    // Hide the complete covered cell so its keyboard control leaves the
-    // tab order together with its empty chassis and note.
-    expect(css).toMatch(/body\.mut-layer-live #grid \.cell-node\.mut-covered \{\s*display: none;\s*\}/);
-    expect(document.querySelector('[data-cell="1,0"]')!.classList.contains("mut-covered")).toBe(true);
-    expect(document.querySelector('[data-cell="0,1"]')!.classList.contains("mut-covered")).toBe(false);
+    // The locked legend's walk never flips the layer (issue #273, kept).
+    document.querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
+    expect(app.ui.mutLayer).toBe("modules");
+    expect(document.querySelector('#grid [data-key="mut-grid"]')).toBeNull();
   });
 });
 

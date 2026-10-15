@@ -2,11 +2,14 @@
 // board, built to the maintainer-approved prototype design
 // (`prototype/mutator-grid-184`, iteration two at 57fb840). The Modules /
 // Mutators tab pair stands at the board's top edge in upgrade mode; the
-// Mutators tab renders one slot face per unlocked cell in words — family,
-// glyph, rarity ticks, effect — while the module board hides beneath
-// entirely (issue #298: faces, chord marks, and charge leads never draw;
-// the Hex detail supplies the host relationships), and the Modules tab
-// marks a hosted mutator with a thin arete presence outline alone.
+// Mutators tab renders one mutator face per owned coordinate in words —
+// the occupied slot's family, glyph, rarity ticks, effect; the open
+// slot's promise; the clear outline where a slot can attach; the muted
+// one where it cannot yet (issue #386) — while the module board never
+// enters the drawing at all (issue #298: faces, chord marks, and charge
+// leads are never rendered; the Hex detail supplies the host
+// relationships), and the Modules tab marks a hosted mutator with a thin
+// arete presence outline alone.
 // Gestures mirror the board's: click-then-slot places (occupied slots
 // swap), drag or right-click retrieves, and matching twins combine
 // through the drop-and-confirm review. Every surface wears the --arete
@@ -243,8 +246,10 @@ const LOCK_MARK = lockMarkSvg("mut-tab-lock");
 
 /* ── The grid decorations ─────────────────────────────
    The layer's own drawing inside the board svg: on the Mutators tab, one
-   slot face per unlocked cell with the unlock pulse over eligible cells;
-   on the Modules tab, the presence outlines alone. */
+   mutator face per owned coordinate (issue #386) — the slot faces over
+   slots, the clear outline where a slot can attach, the muted one where
+   it cannot yet — with the unlock pulse riding the eligible face while
+   the arm stands; on the Modules tab, the presence outlines alone. */
 
 export function mutGridDecorations(app: App, snapshot: RateSnapshot): string {
   const { state, ui } = app;
@@ -262,17 +267,16 @@ export function mutGridDecorations(app: App, snapshot: RateSnapshot): string {
       .join("");
     return parts ? `<g data-key="mut-grid">${parts}</g>` : "";
   }
-  const parts: string[] = state.mutatorSlots.map((pos) => mutSlotFaceHtml(app, pos, snapshot));
-  if (ui.mutUnlockArmed) {
-    for (const pos of mutatorUnlockTargets(state)) {
-      const [x, y] = boardPoint(pos);
-      parts.push(
-        `<g data-key="mut-unlock-${pos.q},${pos.r}" class="mut-unlock-target" data-mut-unlock="${pos.q},${pos.r}" transform="translate(${x.toFixed(2)},${y.toFixed(2)})" tabindex="0" role="button" aria-label="Unlock a Mutator slot at ${cellNoteOf(pos)}">
-          <polygon class="mut-slot-hex dashed mut-pulse" points="${hexPoints(SLOT_FACE_R)}"/>
-        </g>`,
-      );
-    }
-  }
+  // The layer owns every owned coordinate's face (issue #386): slots wear
+  // the occupied/open faces, and every other owned cell — hostless or not
+  // — wears the eligible or locked face. One face per coordinate, in the
+  // layer's own vocabulary alone.
+  const targets = mutatorUnlockTargets(state);
+  const parts = state.cells.map((pos) => {
+    if (state.mutatorSlots.some((slot) => sameHex(slot, pos))) return mutSlotFaceHtml(app, pos, snapshot);
+    const eligible = targets.some((target) => sameHex(target, pos));
+    return eligible ? mutUnslottedFaceHtml(state, pos, ui.mutUnlockArmed) : mutLockedFaceHtml(pos);
+  });
   return `<g data-key="mut-grid">${parts.join("")}</g>`;
 }
 
@@ -307,6 +311,41 @@ function mutSlotFaceHtml(app: App, pos: Hex, snapshot: RateSnapshot): string {
     <text class="mut-slot-family" y="-6" text-anchor="middle">OPEN SLOT</text>
     <text class="mut-slot-verdict" y="12" text-anchor="middle">inert · no host</text>
     <polygon class="mut-hit" data-mut-hit="${pos.q},${pos.r}" points="${hexPoints(SLOT_FACE_R)}"/>
+  </g>`;
+}
+
+// The unsplotted faces (issue #386): the layer's state grammar over the
+// owned cells without slots, at the slot face's own scale. A cell the
+// growth rule can reach — adjacent to the patch, or any owned cell while
+// the patch is empty (the first-slot exception) — wears the clear
+// outline; one it cannot reach yet wears the muted one, and its
+// accessible name carries the parent rule's own help: unlock an adjacent
+// Mutator slot first. Neither face speaks a host or promises an effect;
+// the Hex detail supplies the rail's action. While the unlock arm stands,
+// the eligible face is the arm's pick target — the pulse, the tab stop,
+// and the click the old target group owned (issue #199).
+function mutUnslottedFaceHtml(state: GameState, pos: Hex, armed: boolean): string {
+  const [x, y] = boardPoint(pos);
+  const note = cellNoteOf(pos);
+  const key = `mut-noslot-${pos.q},${pos.r}`;
+  if (armed) {
+    return `<g data-key="${key}" class="mut-slot-noslot mut-unlock-target" data-mut-unlock="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Unlock a Mutator slot at ${note}" transform="translate(${x.toFixed(2)},${y.toFixed(2)})">
+      <polygon class="mut-slot-hex dashed mut-pulse" points="${hexPoints(SLOT_FACE_R)}"/>
+      <text class="mut-slot-family" y="-4" text-anchor="middle">NO SLOT</text>
+    </g>`;
+  }
+  return `<g data-key="${key}" class="mut-slot-noslot" role="img" aria-label="No Mutator slot at ${note} — a Mutator slot can attach here${state.mutatorSlots.length === 0 ? " — the first is free" : ""}" transform="translate(${x.toFixed(2)},${y.toFixed(2)})">
+    <polygon class="mut-slot-hex clear" points="${hexPoints(SLOT_FACE_R)}"/>
+    <text class="mut-slot-family" y="-4" text-anchor="middle">NO SLOT</text>
+  </g>`;
+}
+
+function mutLockedFaceHtml(pos: Hex): string {
+  const [x, y] = boardPoint(pos);
+  const key = `mut-locked-${pos.q},${pos.r}`;
+  return `<g data-key="${key}" class="mut-slot-locked" role="img" aria-label="No Mutator slot at ${cellNoteOf(pos)} — unlock an adjacent Mutator slot first" transform="translate(${x.toFixed(2)},${y.toFixed(2)})">
+    <polygon class="mut-slot-hex muted" points="${hexPoints(SLOT_FACE_R)}"/>
+    <text class="mut-slot-family" y="-4" text-anchor="middle">LOCKED</text>
   </g>`;
 }
 
@@ -423,9 +462,9 @@ export function refreshMutPreview(app: App): void {
    The layer's own bindings on the board svg: clicks resolve through
    app.mutPickSlot, right-click retrieves, and a held placed mutator (or
    tray tile) starts a live drag whose release lands as place, swap,
-   combine offer, or retrieval. The module board's cells are hidden and
-   pointer-dead beneath the layer (the stylesheet drops them), so the two
-   gestures never collide. */
+   combine offer, or retrieval. The module board's cells never enter the
+   svg while the layer stands (issue #386 — the renderer omits them), so
+   the two gestures never collide. */
 
 const boundMutNodes = new WeakSet<Element>();
 

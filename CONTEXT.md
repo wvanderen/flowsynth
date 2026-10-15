@@ -119,7 +119,7 @@ The board-surface inventory as an always-open pinned column docked at the board'
 _Avoid_: inventory panel, management view, collapsible tray, second switch
 
 **Mutator Grid**:
-The board lattice's second layer, mirroring its position for position, present only while activated by the Mutator tree's entry purchase. Each cell owns one Mutator slot; modules move freely across the board while slots stay put. While the Mutators layer stands, the grid shows the arete register's own faces alone — the modules' faces, chord marks, and charge leads never draw beneath it (issue #298) — and the Hex detail supplies the host relationships and external bonuses its disclosures name.
+The board lattice's second layer, mirroring its position for position, present only while activated by the Mutator tree's entry purchase. Each cell owns one Mutator slot; modules move freely across the board while slots stay put. While the Mutators layer stands, the renderer draws the arete register's own faces alone — one per owned coordinate, hostless cells included: the occupied or open slot's face, the clear outline where a slot can attach, the muted one where it cannot yet (issue #386) — and the modules' faces, the empty-cell artwork, chord marks, and charge leads never enter the drawing beneath it (issue #298). The Hex detail supplies the host relationships and external bonuses its disclosures name.
 _Avoid_: enhancement grid, second board
 
 **Mutator slot**:
