@@ -38,9 +38,9 @@ import {
 } from "../engine/actions";
 import { ARETE_HORIZON, claimOf } from "../engine/accumulator";
 import { neighbors, hex, sameHex } from "../engine/hex";
-import { newChordTerms, preferredChordCue } from "../engine/chords";
+import { preferredChordCue } from "../engine/chords";
 import { displayedRates, mutatorAt, deployedAt } from "../engine/economy";
-import { activeTermsOf } from "../engine/allocation";
+import { newlyActiveTermsOf, type AllocatedInstance } from "../engine/allocation";
 import { serialize, STORAGE_KEY } from "../engine/save";
 import { SharedSave, browserSaveStorage, type LoadedSave } from "./shared-save";
 import { formatClock } from "../engine/clock";
@@ -64,7 +64,7 @@ import { equipBuildNode, unequipBuildNode } from "../engine/builds";
 import { createGoal, deleteGoal, rollGoalOccurrences, setGoalColor, DEFAULT_GOAL_COLOR } from "../engine/goals";
 import { allocatedDevScenarioRates, createDevScenario, type DevBoardResult } from "../engine/dev-scenario";
 import type { StressProgress, StressRow } from "../engine/allocation-stress";
-import type { GameState, GoalColor, Hex, ModuleInstance, MutatorFamily, MutatorInstance, NamedChordTerm, Rarity, ShelfType } from "../engine/types";
+import type { GameState, GoalColor, Hex, ModuleInstance, MutatorFamily, MutatorInstance, Rarity, ShelfType } from "../engine/types";
 import type { FocusFace, NotesFace } from "./focus";
 import { render } from "./render";
 import { FAMILY_WORD, mutatorBoardLive, refreshMutPreview } from "./mutators";
@@ -1080,12 +1080,10 @@ export class App {
     this.channels.playChime(this.audio);
   }
 
-  // The cue's diff basis (issue #390): the allocation's active terms
-  // where the snapshot rode the authoritative pass, the plain
-  // recognizer's otherwise — one read, never a re-derivation at each
-  // call site.
-  private basisTermsOf(snapshot: ReturnType<typeof displayedRates>): readonly NamedChordTerm[] {
-    return snapshot.allocation ? activeTermsOf(snapshot.allocation) : snapshot.namedChords;
+  // Cue eligibility reads authoritative instance keys, including voice
+  // membership. Recognition totals cannot distinguish a replaced voice.
+  private activeInstancesOf(snapshot: ReturnType<typeof displayedRates>): readonly AllocatedInstance[] {
+    return snapshot.allocation?.active ?? [];
   }
 
   // The formation cue (§6, issue #390): an action whose authoritative
@@ -1097,12 +1095,12 @@ export class App {
   // already said it; this is garnish, not information. The read rides
   // the state's stored hint, writing nothing — the action boundary
   // already synced it.
-  private strumFormedChords(before: readonly NamedChordTerm[], changedVoiceId?: string): void {
+  private strumFormedChords(before: readonly AllocatedInstance[], changedVoiceId?: string): void {
     if (this.state.muted) return;
     // Same snapshot basis as the caller's `before`, so the diff can't lie
     // if the two calls ever drift apart.
     const after = displayedRates(this.state, this.state.mode === "flow");
-    const cue = preferredChordCue(newChordTerms(before, this.basisTermsOf(after)), changedVoiceId);
+    const cue = preferredChordCue(newlyActiveTermsOf(before, this.activeInstancesOf(after)), changedVoiceId);
     if (!cue) return;
     this.unlockAudio();
     this.channels.playStrum(this.audio, cue);
@@ -1608,7 +1606,10 @@ export class App {
   // step on the expanded face. The pick re-pitches the module's voice —
   // the chords move the moment it lands.
   setBendShift(id: string, shift: number): void {
-    this.act(setBendShift(this.state, id, shift), `Bend re-pitched ${shift > 0 ? "sharp" : "flat"} ${Math.abs(shift)}.`);
+    const before = this.activeInstancesOf(displayedRates(this.state, this.state.mode === "flow"));
+    if (this.act(setBendShift(this.state, id, shift), `Bend re-pitched ${shift > 0 ? "sharp" : "flat"} ${Math.abs(shift)}.`)) {
+      this.strumFormedChords(before, id);
+    }
   }
 
   // The Upgrade All cluster (issue #195): the board-wide sweep — every
@@ -1804,7 +1805,7 @@ export class App {
     if (!detail || this.state.mode !== "upgrade" || this.ui.detailTray !== "modules") return;
     const module = this.state.modules.find((m) => m.id === id);
     if (!module) return;
-    const before = this.basisTermsOf(displayedRates(this.state, true));
+    const before = this.activeInstancesOf(displayedRates(this.state, true));
     const swap = deployedAt(this.state, detail.pos) !== undefined;
     if (
       this.act(
@@ -2081,7 +2082,7 @@ export class App {
   // its gesture. A chord the drop newly activates cues (issue #390),
   // preferring one carrying the placed voice.
   private placeAndStrum(module: ModuleInstance, pos: Hex): void {
-    const before = this.basisTermsOf(displayedRates(this.state, this.state.mode === "flow"));
+    const before = this.activeInstancesOf(displayedRates(this.state, this.state.mode === "flow"));
     if (this.act(placeModule(this.state, module.id, pos), `${META[module.type].name} placed.`)) {
       this.ui.placing = null;
       this.strumFormedChords(before, module.id);

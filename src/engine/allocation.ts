@@ -753,11 +753,11 @@ export function summaryTermsOf(summary: AllocationSummary): NamedChordTerm[] {
   return summary.recognized.map(termOfInstance);
 }
 
-// The summary's selected instances as the same terms — the formation
-// cue's eligible newcomers read this one mapping, never a private
-// re-derivation (issue #390): only newly active chords sound.
-export function activeTermsOf(summary: AllocationSummary): NamedChordTerm[] {
-  return summary.active.map(termOfInstance);
+// Formation newcomers use authoritative instance identity, preserving
+// allocation order and excluding retained instances even when totals grow.
+export function newlyActiveTermsOf(before: readonly AllocatedInstance[], after: readonly AllocatedInstance[]): NamedChordTerm[] {
+  const priorKeys = new Set(before.map((instance) => instance.key));
+  return after.filter((instance) => !priorKeys.has(instance.key)).map(termOfInstance);
 }
 
 // The summary's recognized-but-idle candidates as the same terms — the

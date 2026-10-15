@@ -18,7 +18,7 @@ claim about the largest production bonus.
 ## Decision
 
 1. **Only newly active chords are eligible.** The cue's diff runs on the
-   authoritative allocation's selected instances (`activeTermsOf`),
+   authoritative allocation's selected instances (`newlyActiveTermsOf`, comparing authoritative instance keys),
    never the recognized summary: an idle candidate never sounds, and an
    action whose allocation activates nothing — an idle-only change
    included — stays silent. Recognition, discovery, and the economy
@@ -43,7 +43,9 @@ claim about the largest production bonus.
 - `signals.ts`'s `playStrum` takes one chord, keeps its per-context cue
   record weakly, and owns the bound and the replacement; `app.ts`'s
   cue seam (`strumFormedChords`) owns the active-only diff and the
-  selection, passing the placed voice.
+  selection, passing the placed or re-pitched voice. Instance keys include
+  membership: an unchanged name/root total does not hide a new voice-set,
+  and a growing total does not make retained instances eligible.
 - ADR-0052 §4's closing sentence ("celebrates newly *recognized*
   chords — the discovery moment") is amended accordingly; the reserved
   readout's idle chips and the library's "heard — not singing" carry

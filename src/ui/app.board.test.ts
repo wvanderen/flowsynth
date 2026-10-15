@@ -1863,6 +1863,64 @@ describe("always-on chord feedback (§6, #137)", () => {
     expect(fired.strumChords[0]!.moduleIds).not.toContain(wire.id);
   });
 
+  it("swapping an active voice cues its new instance despite unchanged chord totals", () => {
+    const { fired, app } = stubChannels();
+    give(app.state, "additive", hex(1, 0));
+    const before = displayedRates(app.state, true).allocation!.active;
+    const replacement = give(app.state, "additive", null);
+    app.openDetail(hex(1, 0));
+    app.openDetailTray("modules");
+    app.detailPlaceModule(replacement.id);
+    const after = displayedRates(app.state, true).allocation!.active;
+    expect(after.map((chord) => chord.name)).toEqual(before.map((chord) => chord.name));
+    expect(fired.strumChords).toHaveLength(1);
+    expect(fired.strumChords[0]!.moduleIds).toContain(replacement.id);
+  });
+
+  it("a Bend re-pitch cues a newly active chord and respects mute", () => {
+    const { fired, app } = stubChannels();
+    // D4 sharpened to E♭ completes C–E♭–G; flattened, it does not.
+    const bend = give(app.state, "bend", hex(2, -1));
+    app.state.cells.push(hex(2, -1));
+    give(app.state, "additive", hex(1, 0));
+    bend.shift = -1;
+    app.setBendShift(bend.id, 1);
+    expect(fired.strumChords).toHaveLength(1);
+    expect(fired.strumChords[0]!.moduleIds).toContain(bend.id);
+    app.setMuted(true);
+    app.setBendShift(bend.id, -1);
+    app.setBendShift(bend.id, 1);
+    expect(fired.strumChords).toHaveLength(1);
+  });
+
+  it.each(["additive", "spacer"] as const)("%s bridge selects among competing newly active instances", (type) => {
+    const { fired, app } = stubChannels();
+    app.state.capacityBought = 10;
+    app.state.cells.push(hex(0, 1), hex(0, 2), hex(1, 2));
+    give(app.state, "additive", hex(0, 2));
+    give(app.state, "additive", hex(1, 2));
+    const before = displayedRates(app.state, true).allocation!.active;
+    const priorKeys = new Set(before.map((instance) => instance.key));
+    const bridge = give(app.state, type, null);
+    app.beginPlacing(bridge.id);
+    clickCell(0, 1);
+    const newcomers = displayedRates(app.state, true).allocation!.active.filter((instance) => !priorKeys.has(instance.key));
+    expect(newcomers.length).toBeGreaterThan(1);
+    const preferred = newcomers.filter((instance) => instance.memberIds.includes(bridge.id));
+    if (type === "additive") {
+      expect(preferred.length).toBeGreaterThan(1);
+      expect(newcomers[0]!.memberIds).not.toContain(bridge.id);
+      expect(newcomers.some((instance) => !instance.memberIds.includes(bridge.id))).toBe(true);
+    } else {
+      expect(preferred).toHaveLength(0);
+    }
+    const expected = preferred[0] ?? newcomers[0]!;
+    expect(fired.strumChords).toHaveLength(1);
+    expect(fired.strumChords[0]!.moduleIds).toEqual(expected.memberIds);
+    expect(fired.strumChords[0]!.name).toBe(expected.name);
+    expect(fired.strumChords[0]!.root).toBe(expected.root);
+  });
+
   it("flow adds no sound of its own — no ambient, only the seams pulse", () => {
     const { fired, app } = stubChannels();
     give(app.state, "additive", hex(1, 0));
