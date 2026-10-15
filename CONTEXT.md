@@ -64,7 +64,7 @@ The allocator's honesty flag: the exact search completed within its budget, so t
 _Avoid_: Heuristic allocation (as a silent substitute)
 
 **Idle candidate**:
-A recognized chord instance the allocation left unselected — it earns nothing, so its board path is dotted, never pulsing, and draws only while a voice that sings it is asked (hover, keyboard focus, touch, or the conducting spacer's containment) at the ask weight (ADR-0052, ADR-0057). The reserved readout keeps the voice's "N idle" count under the same ask; the Hex detail's chord row names each instance "· idle" (issue #258).
+A recognized chord instance the allocation left unselected — it earns nothing, so its board path is dotted, never pulsing, and draws only while a voice that sings it is asked (hover, keyboard focus, touch, or the conducting spacer's containment) at the ask weight (ADR-0052, ADR-0057). The reserved readout keeps the voice's "N idle" count under the same ask; the Hex detail's chord row keeps one "N idle" disclosure whose body lists the names and factors through the tooltip layer (issue #258, re-docked by #388).
 _Avoid_: idle seam (standing unasked), unearned chord
 
 **Spacer**:
@@ -107,7 +107,7 @@ Retired vocabulary — the module bloom's face, superseded by the **Hex detail**
 _Avoid_: bloom, pop-up
 
 **Hex detail**:
-An owned board coordinate's full-stack cross-section, opened by any owned cell's idle click (issue #295, presented as the frameless stack of ADR-0055) — the module bloom's successor. It stands where the grid stood, at every width, showing the fixed layer stack at that one cell: the Mutators face above the Modules face, both visible, never reordered. The faces themselves carry the information — the module face at full engraving, the slot face in the state grammar — and the composition adds only what the faces cannot say: the action rail beside the stack, the chord row in the reserved readout's grammar, and the tooltip layer beneath. Editing belongs to upgrade mode, and during flow the same cross-section opens read-only with live readouts. An explicit Return control and Escape give the grid back with its layer, position, and zoom intact; another Hex requires returning first.
+An owned board coordinate's full-stack cross-section, opened by any owned cell's idle click (issue #295, presented as the frameless stack of ADR-0055) — the module bloom's successor. It stands where the grid stood, at every width, showing the fixed layer stack at that one cell: the Mutators face above the Modules face, both visible, never reordered. The faces themselves carry the information — the module face at full engraving, the slot face in the state grammar — and the composition adds only what the faces cannot say: the action rail beside the stack, the chord facts in the reserved readout's grammar standing in their own column to the module's right where width permits (one "N idle" disclosure for the candidates; issue #388), and the tooltip layer beneath. Only cell-specific actions belong to the rails — global destinations (Catalog, Forge) stay in the surrounding navigation, never repeated buttons inside the detail — and Return floats over the stage, a compact control without a dedicated band. Editing belongs to upgrade mode, and during flow the same cross-section opens read-only with live readouts. An explicit Return control and Escape give the grid back with its layer, position, and zoom intact; another Hex requires returning first.
 _Avoid_: pop-up, modal, inspector, bloom, detail panel, hosts line
 
 **Layer legend**:

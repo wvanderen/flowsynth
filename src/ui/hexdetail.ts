@@ -10,14 +10,17 @@ import { tierPowerOf } from "../engine/module-strength";
 // ineligible, clear outline = eligible, dashed = open slot, occupied =
 // the family's own declaration). The faces carry the information; the
 // composition adds only what faces cannot say — the action rail beside
-// the stack (upgrade dial, unlock / retrieve / entry), one chord row in
-// the reserved readout's grammar, a compact Return control, and the flow
-// tag. Since issue #297 the relationships speak too: directional wave
-// connections (the mutator's cross-layer effect pointing at the layer it
-// lands on, incoming charge and the chord bonus entering the module
-// face's vertices) with the authoritative breakdowns riding their
-// disclosures (hexflows.ts). Nothing else: the deeper mechanics ride the
-// tooltip layer (issue #267's inst-tip).
+// the stack (upgrade dial, unlock, add), one chord-facts column to the
+// module's right in the reserved readout's grammar (issue #388: active
+// chips inline, idle candidates behind one N idle disclosure), a compact
+// floating Return control, and the flow tag. Global destinations (Catalog,
+// Forge) belong to the surrounding navigation — the dock doors and the
+// legend — never repeated buttons here. Since issue #297 the relationships
+// speak too: directional wave connections (the mutator's cross-layer
+// effect pointing at the layer it lands on, incoming charge and the chord
+// bonus entering the module face's vertices) with the authoritative
+// breakdowns riding their disclosures (hexflows.ts). Nothing else: the
+// deeper mechanics ride the tooltip layer (issue #267's inst-tip).
 //
 // The fixed stack shows both layers, Mutators above Modules, in that
 // order always; a face selection emphasizes one section, focuses its
@@ -122,8 +125,9 @@ function benefitOf(app: App, module: ModuleInstance, snapshot: RateSnapshot, lev
 // one-time lift needs no markup (a rebuild never re-triggers it).
 // `chordRow` arrives from the readout's own module (render.ts owns the
 // reserved grammar) — html plus `key`, its inputs rather than its
-// formatted string (#349). The row mounts beside the module face and the
-// key rides the rebuild guard so a live read never shows stale chips.
+// formatted string (#349). The row mounts in its own column beside the
+// module face (issue #388) and the key rides the rebuild guard so a live
+// read never shows stale chips.
 export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSnapshot, chordRow: DetailChordRow): void {
   const host = document.getElementById("hex-detail");
   if (!host) return;
@@ -234,7 +238,8 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
       <div class="hex-detail-grid">
         ${mutatorLayerHtml(app, pos, snapshot)}
         ${mutatorFlowHtml(state, pos, module, snapshot, snapshotFlow)}
-        ${moduleLayerHtml(app, pos, module, snapshot, chordRow.html)}
+        ${moduleLayerHtml(app, pos, module, snapshot)}
+        ${detailChordColHtml(pos, chordRow.html)}
       </div>
       ${detailTrayHtml(app, "modules")}
       ${detailTrayHtml(app, "mutators")}
@@ -247,7 +252,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
     app.listen(chassis, "click", () => app.detailFace(face));
   });
   // The mutator actions and the buy column wire together — an empty
-  // place's stack still carries the unlock and entry controls.
+  // place's stack still carries the unlock control.
   if (module) wireDetailBuy(app, host, module.id);
   else wireModuleRail(app, null);
   wireDetailMutatorActions(app, pos);
@@ -304,24 +309,23 @@ function mutatorLayerHtml(app: App, pos: Hex, snapshot: RateSnapshot): string {
   const note = cellNoteOf(pos);
   const item = mutatorAt(state, pos);
   const { chassis, tip } = mutatorChassisHtml(state, pos, snapshot);
-  // The rail's one action per state — the Catalog entry walk while the
-  // layer stands locked, the priced unlock where a slot can attach, Add
-  // mutator at a vacant slot. Swap and Retrieve orbit the chassis instead
-  // (issue #296 review). Every refusal names its rule; no surface
-  // promises a ν/s figure (issue #199's never-say rule).
+  // The rail's one action per state — the priced unlock where a slot can
+  // attach, Add mutator at a vacant slot. The Catalog entry walk belongs
+  // to the surrounding navigation (the legend's locked symbol, the dock's
+  // Catalog door), never a destination button in the detail (issue #388);
+  // a position the growth rule cannot reach wears the locked face and no
+  // rail at all. Swap and Retrieve orbit the chassis instead (issue #296
+  // review). Every refusal names its rule; no surface promises a ν/s
+  // figure (issue #199's never-say rule).
   let rail = "";
-  if (upgrade) {
-    if (!state.catalogEntryOwned) {
-      rail = `<button class="hex-action" id="detail-mutator-entry">Catalog entry</button>`;
-    } else if (!state.mutatorSlots.some((slot) => sameHex(slot, pos))) {
+  if (upgrade && state.catalogEntryOwned) {
+    if (!state.mutatorSlots.some((slot) => sameHex(slot, pos))) {
       const eligible = mutatorUnlockTargets(state).some((target) => sameHex(target, pos));
       if (eligible) {
         const price = mutatorSlotPrice(state);
         const affordable = state.arete >= price;
         const id = detailTipId();
         rail = `<span class="inst-tip"><button class="hex-action${affordable ? "" : " st-unavailable"}" id="detail-mutator-unlock" aria-disabled="${!affordable}" aria-describedby="${id}">${price === 0 ? "Unlock slot · free" : `Unlock slot · <span class="mono">${formatInt(price)} ◇</span>`}${affordable ? "" : " · need Arete"}</button><button class="inst-tip-trigger" aria-label="About slot unlock" aria-describedby="${id}" aria-expanded="false">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${affordable ? `Unlock a Mutator slot at ${note}` : `Not enough Arete · needs ${formatInt(price)} ◇, have ${formatInt(state.arete)} ◇`}</span></span>`;
-      } else {
-        rail = `<span class="hex-detail-noslot" title="Each new slot neighbors an unlocked one">beside the patch only</span>`;
       }
     } else if (!item) {
       rail = `<button class="hex-action" id="detail-mutator-add" title="Choosing a mutator places it in this slot">Add mutator</button>`;
@@ -336,20 +340,17 @@ function mutatorLayerHtml(app: App, pos: Hex, snapshot: RateSnapshot): string {
 
 // The mutator chassis per state (viewBox −70..70; the chassis polygon is
 // the slot face's own radius). Locked wears the muted outline and the
-// lock mark; an eligible empty cell wears the clear outline; the open
-// slot wears the dashed chassis and its inert promise; the occupied slot
-// wears the family's declaration.
+// lock mark — pre-entry (the layer itself) and post-entry ineligible
+// (the position the growth rule cannot reach yet) alike, the tooltip
+// naming which rule holds; an eligible empty cell wears the clear
+// outline; the open slot wears the dashed chassis and its inert promise;
+// the occupied slot wears the family's declaration.
 function mutatorChassisHtml(state: GameState, pos: Hex, snapshot: RateSnapshot): { chassis: string; tip: { id: string; html: string } } {
   const note = cellNoteOf(pos);
   if (!state.catalogEntryOwned) {
     const id = detailTipId();
     return {
-      chassis: `<svg class="hex-stack-mut locked" viewBox="-70 -70 140 140" aria-hidden="true">
-        <polygon class="mut-slot-hex muted" points="${hexPoints(56)}"/>
-        <g class="hex-stack-lock" transform="translate(-13 -24) scale(2.2)"><rect x="2.7" y="5.4" width="6.6" height="4.9" rx="1.1"/><path d="M4.2 5.4V3.9a1.8 1.8 0 0 1 3.6 0v1.5"/></g>
-        <text class="mut-slot-family" y="34" text-anchor="middle">LOCKED</text>
-        <polygon class="hex-stack-marker" points="${hexPoints(53)}"/>
-      </svg>`,
+      chassis: lockedChassisHtml(),
       tip: { id, html: `<span class="inst-tip-body" id="${id}" role="tooltip">Unlocks with the Mutator entry</span>` },
     };
   }
@@ -359,13 +360,23 @@ function mutatorChassisHtml(state: GameState, pos: Hex, snapshot: RateSnapshot):
     if (!slotted) {
       const eligible = mutatorUnlockTargets(state).some((target) => sameHex(target, pos));
       const id = detailTipId();
+      if (!eligible) {
+        // The locked state (issue #388): the position cannot host a slot
+        // until the patch reaches an adjacent unlock — the same muted
+        // face the board's Mutators layer draws (issue #386), its
+        // accessible help naming the prerequisite concretely.
+        return {
+          chassis: lockedChassisHtml(),
+          tip: { id, html: `<span class="inst-tip-body" id="${id}" role="tooltip">Unlock an adjacent Mutator slot first</span>` },
+        };
+      }
       return {
         chassis: `<svg class="hex-stack-mut" viewBox="-70 -70 140 140" aria-hidden="true">
-          <polygon class="mut-slot-hex${eligible ? "" : " muted"}" points="${hexPoints(56)}"/>
+          <polygon class="mut-slot-hex" points="${hexPoints(56)}"/>
           <text class="mut-slot-family" y="-4" text-anchor="middle">NO SLOT</text>
           <polygon class="hex-stack-marker" points="${hexPoints(53)}"/>
         </svg>`,
-        tip: { id, html: `<span class="inst-tip-body" id="${id}" role="tooltip">${eligible ? `A Mutator slot can attach here${state.mutatorSlots.length === 0 ? " — the first is free" : ""}` : "Unlocks attach beside the Mutator patch"}</span>` },
+        tip: { id, html: `<span class="inst-tip-body" id="${id}" role="tooltip">A Mutator slot can attach here${state.mutatorSlots.length === 0 ? " — the first is free" : ""}</span>` },
       };
     }
     // The vacant slot: legal, and it speaks — inert until a host lands.
@@ -401,9 +412,35 @@ function mutatorChassisHtml(state: GameState, pos: Hex, snapshot: RateSnapshot):
   };
 }
 
+// The locked face's drawing, shared by the layer lock (pre-entry) and the
+// ineligible position (post-entry): the muted outline, the lock mark, the
+// state in words — the tooltip names which rule holds.
+function lockedChassisHtml(): string {
+  return `<svg class="hex-stack-mut locked" viewBox="-70 -70 140 140" aria-hidden="true">
+    <polygon class="mut-slot-hex muted" points="${hexPoints(56)}"/>
+    <g class="hex-stack-lock" transform="translate(-13 -24) scale(2.2)"><rect x="2.7" y="5.4" width="6.6" height="4.9" rx="1.1"/><path d="M4.2 5.4V3.9a1.8 1.8 0 0 1 3.6 0v1.5"/></g>
+    <text class="mut-slot-family" y="34" text-anchor="middle">LOCKED</text>
+    <polygon class="hex-stack-marker" points="${hexPoints(53)}"/>
+  </svg>`;
+}
+
+/* ── The chord-facts column (issue #388) ──────────────
+   The opened voice's chord facts in the reserved readout's grammar, in
+   their own column to the module's right where width permits — never
+   pushing the faces downward. Narrow compositions reflow the column
+   beneath the stack (the stylesheet owns the breakpoints); the faces and
+   the rail keep their posts either way. Empty when the place holds no
+   module: chord facts are a voice's facts. */
+
+function detailChordColHtml(pos: Hex, html: string): string {
+  if (!html) return "";
+  const note = cellNoteOf(pos);
+  return `<aside class="hex-chord-col" aria-label="Chord facts at ${note}"><div class="hex-chord-row">${html}</div></aside>`;
+}
+
 /* ── The Modules face ───────────────────────────────── */
 
-function moduleLayerHtml(app: App, pos: Hex, module: ModuleInstance | undefined, snapshot: RateSnapshot, chordRow: string): string {
+function moduleLayerHtml(app: App, pos: Hex, module: ModuleInstance | undefined, snapshot: RateSnapshot): string {
   const { state, ui } = app;
   const upgrade = state.mode === "upgrade";
   const selected = ui.detail?.face === "modules";
@@ -464,14 +501,12 @@ function moduleLayerHtml(app: App, pos: Hex, module: ModuleInstance | undefined,
   // snapshot's own basis (charge-projected while arranging), the one the
   // wave reads and the outcomes compute against.
   const flows = module ? moduleFlowsHtml(state, module, snapshot, upgrade || state.mode === "flow") : "";
-  const row = chordRow ? `<div class="hex-chord-row">${chordRow}</div>` : "";
   // The profile's fixed aptitude grades (issue #370): the owned module's
   // authored identity beside its face — the disclosure bodies carry the
   // exact coefficients; the live output stays in the readouts above.
   const grades = module ? profileGradesHtml(module.type) : "";
   return `<section class="hex-detail-layer modules${selected ? " selected" : ""}" data-detail-section="modules" tabindex="-1" aria-label="Modules — ${module ? `${META[module.type].name} at ${note}` : `empty place at ${note}`}">
     <span class="hex-orbit"><span class="inst-tip"><button class="hex-stack-chassis inst-tip-trigger" data-detail-face="modules" aria-pressed="${selected}" aria-describedby="${tip.id}" aria-label="Emphasize the Modules face">${chassis}</button>${tip.html}</span>${orbit}${flows}</span>
-    ${row}
     ${grades}
   </section>
   <aside class="hex-rail-row modules${selected ? " selected" : ""}">${rail}</aside>`;
@@ -585,8 +620,9 @@ function wireModuleRail(app: App, moduleId: string | null): void {
 }
 
 // The Mutators face's action wiring — present on every stack, module or
-// empty: Add and Swap open the detail's Mutator tray, retrieve, the priced
-// unlock, and the locked layer's entry walk.
+// empty: Add and Swap open the detail's Mutator tray, retrieve, and the
+// priced unlock. The locked layer's Catalog entry has no button here —
+// the destination belongs to the legend and the dock doors (issue #388).
 function wireDetailMutatorActions(app: App, pos: Hex): void {
   app.listen(document.getElementById("detail-mutator-add"), "click", () => app.openDetailTray("mutators"));
   wireOrbitAction(app, "detail-mutator-swap", () => app.openDetailTray("mutators"));
@@ -596,9 +632,6 @@ function wireDetailMutatorActions(app: App, pos: Hex): void {
   });
   app.listen(document.getElementById("detail-mutator-unlock"), "click", () => {
     app.mutUnlockAt(pos);
-  });
-  app.listen(document.getElementById("detail-mutator-entry"), "click", () => {
-    app.openMutatorEntry();
   });
 }
 

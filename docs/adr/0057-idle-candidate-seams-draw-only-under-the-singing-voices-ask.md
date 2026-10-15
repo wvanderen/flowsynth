@@ -1,7 +1,7 @@
 # 0057 — Idle candidate seams draw only under the singing voice's ask
 
 Date: 2026-10-14
-Status: Accepted; amends ADR-0052 §4's always-on idle marks
+Status: Accepted; amends ADR-0052 §4's always-on idle marks. §3's per-instance Hex-detail idle chips were re-docked behind one count disclosure by ADR-0061 (issue #388) — the facts remain, one opening away
 Issue: #355
 
 ## Context

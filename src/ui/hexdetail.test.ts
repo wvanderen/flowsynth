@@ -80,15 +80,23 @@ describe("opening the cross-section (issue #295)", () => {
     expect(document.getElementById("hex-detail-return")).not.toBeNull();
   });
 
-  it("the chord row mounts beside the module face in the readout's grammar", () => {
+  it("the chord facts stand in their own column beside the module face", () => {
     app.render();
     clickCell(0, 0);
-    const row = section("modules").querySelector(".hex-chord-row")!;
-    expect(row).not.toBeNull();
+    const col = detail().querySelector(".hex-chord-col")!;
+    expect(col).not.toBeNull();
+    const row = col.querySelector(".hex-chord-row")!;
     // The ν/s figure stays off the row — the enlarged face carries it.
     expect(row.textContent).not.toContain("ν/s");
     // The voice's chord facts ride the reserved grammar's own chips.
     expect(row.textContent).toContain("chord factor");
+    // The column is its own grid post — to the module's right, never
+    // beneath the faces (issue #388), and the faces' section no longer
+    // embeds it.
+    expect(section("modules").querySelector(".hex-chord-row")).toBeNull();
+    const css = readFileSync("src/ui/style.css", "utf8");
+    expect(css).toMatch(/\.hex-chord-col\s*\{[^}]*grid-column:\s*3/);
+    expect(css).toMatch(/\.hex-chord-col\s*\{[^}]*grid-row:\s*3/);
   });
 
   it("an empty owned cell opens too: the empty Module place shows its state", () => {
@@ -169,7 +177,7 @@ describe("opening the cross-section (issue #295)", () => {
 });
 
 describe("the Mutators face in detail", () => {
-  it("pre-entry the locked place wears the muted outline and offers the Catalog entry", () => {
+  it("pre-entry the locked place wears the muted outline; the entry walk stays with the surrounding navigation", () => {
     app.render();
     clickCell(0, 1);
     const mutators = section("mutators");
@@ -189,14 +197,32 @@ describe("the Mutators face in detail", () => {
     expect(document.getElementById(trigger.getAttribute("aria-describedby")!)!.textContent).toContain("Mutator entry");
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(document.getElementById(trigger.getAttribute("aria-describedby")!)!.classList.contains("inst-show")).toBe(false);
-    // The entry action walks to the ◇ face; Escape returns to the detail,
-    // the entry not bought.
-    document.getElementById("detail-mutator-entry")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    // No destination button stands in the detail (issue #388): the Catalog
+    // entry belongs to the surrounding navigation — the legend's locked
+    // walk and the dock's Catalog door, both reachable with the detail open.
+    expect(document.getElementById("detail-mutator-entry")).toBeNull();
+    expect(detail().querySelector("[data-op]")).toBeNull();
+    expect(document.querySelector('#board-tools [data-op="catalog"]')).not.toBeNull();
+  });
+
+  it("the detail carries cell-specific actions only; global destinations stay in the navigation", () => {
+    seedEra();
+    app.render();
+    clickCell(0, 0);
+    // Only cell-specific actions ride the surfaces: the swap/retrieve
+    // orbit, the upgrade band, the occupied slot's declaration.
+    expect(detail().querySelectorAll("[data-op]").length).toBe(0);
+    expect(document.getElementById("detail-module-retrieve")).not.toBeNull();
+    expect(document.getElementById("detail-upgrade")).not.toBeNull();
+    // The dock's doors still work over the detail — the destinations were
+    // never lost, only un-duplicated.
+    document.querySelector<HTMLButtonElement>('#board-tools [data-op="catalog"]')!.click();
     expect(app.ui.modal).toBe("catalog");
-    expect(app.ui.catalogFace).toBe("arete");
-    expect(document.querySelector(".entry-screen")).not.toBeNull();
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    expect(app.ui.modal).toBeNull();
+    app.closeModal();
+    expect(open()).toBe(true);
+    document.querySelector<HTMLButtonElement>('#board-tools [data-op="forge"]')!.click();
+    expect(app.ui.modal).toBe("forge");
+    app.closeModal();
     expect(open()).toBe(true);
   });
 
@@ -229,23 +255,35 @@ describe("the Mutators face in detail", () => {
     expect(app.state.arete).toBe(5);
   });
 
-  it("an ineligible cell wears the muted outline and names the adjacency rule", () => {
+  it("an ineligible cell wears the locked state and names the adjacency prerequisite", () => {
     seedEra();
-    app.state.cells.push(hex(2, 0)); // owned, but not beside the patch
+    // Owned beside an occupied module, yet not beside the unlocked slot:
+    // adjacency means the Mutator patch, never a mere module cell.
+    // ((1,0) is a starter cell; (2,0) is the far candidate.)
+    app.state.cells.push(hex(2, 0));
+    give(app.state, "additive", hex(1, 0));
     app.render();
     clickCell(2, 0);
-    expect(faceSvg("mutators").textContent).toContain("NO SLOT");
+    // The locked state (issue #388): muted outline, the lock mark, LOCKED
+    // in words — the board layer's own face (issue #386), readable
+    // without color.
+    expect(faceSvg("mutators").textContent).toContain("LOCKED");
     expect(faceSvg("mutators")!.querySelector(".mut-slot-hex.muted")).not.toBeNull();
+    expect(faceSvg("mutators")!.querySelector(".hex-stack-lock")).not.toBeNull();
     expect(document.getElementById("detail-mutator-unlock")).toBeNull();
-    // The refusal names its rule in the mutator rail's own row: the
-    // disclosure explains adjacency — each new slot neighbors the patch.
-    const noslot = detail().querySelector(".hex-rail-row.mutators .hex-detail-noslot")!;
-    expect(noslot.textContent).toBe("beside the patch only");
-    expect(noslot.getAttribute("title")).toBe("Each new slot neighbors an unlocked one");
-    // An eligible owned cell right beside the patch buys directly — the
-    // same empty-cell rule the unlock ladder enforces.
-    app.state.cells.push(hex(1, 0)); // owned, adjacent to the slot at (0,0)
-    app.render();
+    // The accessible help names the prerequisite concretely, riding the
+    // chassis's own description and disclosed by focus.
+    const trigger = section("mutators").querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
+    trigger.focus();
+    const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+    expect(body.classList.contains("inst-show")).toBe(true);
+    expect(body.textContent).toBe("Unlock an adjacent Mutator slot first");
+    // No rail stands for a locked position — the refusal is the face's.
+    expect(detail().querySelector(".hex-detail-noslot")).toBeNull();
+    expect(section("mutators").textContent).not.toContain("beside the patch");
+    // An eligible owned cell right beside the patch keeps the priced
+    // unlock — eligibility and price stay distinct states, and both stay
+    // distinct from an open slot.
     clickCell(1, 0);
     const unlock = document.getElementById("detail-mutator-unlock")! as HTMLButtonElement;
     expect(unlock.textContent).toContain("Unlock slot");
@@ -395,6 +433,17 @@ describe("read-only during flow (issue #295)", () => {
 });
 
 describe("the return contract (issue #295)", () => {
+  it("Return floats over the stage — visible and compact, no dedicated band (issue #388)", () => {
+    app.render();
+    clickCell(0, 0);
+    expect(document.getElementById("hex-detail-return")).not.toBeNull();
+    const css = readFileSync("src/ui/style.css", "utf8");
+    // The corner is an overlay on the scene, not a flex band above the
+    // grid: the cross-section keeps the full stage height.
+    expect(css).toMatch(/\.hex-detail-corner\s*\{[^}]*position:\s*absolute/);
+    expect(css).toMatch(/\.hex-detail-corner\s*\{[^}]*z-index:\s*6/);
+  });
+
   it("the return control restores the grid with the layer, position, and zoom intact", () => {
     seedEra();
     app.ui.zoom = 2;
@@ -440,6 +489,70 @@ describe("the return contract (issue #295)", () => {
     // Clicking the legend's Modules symbol on the grid does not open a detail.
     document.querySelector<HTMLButtonElement>('[data-legend-layer="modules"]')!.click();
     expect(app.ui.detail).toBeNull();
+  });
+});
+
+describe("the idle disclosure (issue #388)", () => {
+  // C4 · G4 sing the Fifth; the second Fifth (G4 · C5) and C4 · C5's
+  // Octave sit idle — the capacity spends each voice's one unit once.
+  // C5 sings two idle candidates and no active chord; C4 sings the
+  // active Fifth beside its idle Octave.
+  function seedIdleVoices(): void {
+    give(app.state, "additive", hex(1, 0));
+    give(app.state, "additive", hex(0, 1));
+    app.render();
+  }
+
+  it("idle candidates hide behind one N idle disclosure in the shared tooltip layer", () => {
+    seedIdleVoices();
+    clickCell(0, 1);
+    const row = detail().querySelector(".hex-chord-row")!;
+    // No inline idle list: the candidates' names ride only the body, and
+    // no transient-readout disclosure is duplicated here.
+    expect(row.querySelectorAll(".chord-readout-chip.chord-readout-idle")).toHaveLength(0);
+    const trigger = row.querySelector<HTMLButtonElement>(".detail-idle-trigger")!;
+    expect(trigger.textContent).toBe("2 idle");
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    // Keyboard focus opens it; the body lists the names and factors.
+    trigger.focus();
+    const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+    expect(body.classList.contains("inst-show")).toBe(true);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(body.textContent).toContain("Fifth ×1.3");
+    expect(body.textContent).toContain("Octave ×1.15");
+    // Escape dismisses the disclosure first; the detail stands.
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(body.classList.contains("inst-show")).toBe(false);
+    expect(open()).toBe(true);
+    // Touch pins it: a first tap opens, a tap elsewhere dismisses.
+    trigger.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(body.classList.contains("inst-show")).toBe(true);
+    document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(body.classList.contains("inst-show")).toBe(false);
+    // Opening shifts nothing: the body floats fixed over the stage.
+    const css = readFileSync("src/ui/style.css", "utf8");
+    expect(css).toMatch(/\.inst-tip-body\s*\{[^}]*position:\s*fixed/);
+  });
+
+  it("dense facts: active chips stand inline beside the single idle disclosure", () => {
+    seedIdleVoices();
+    clickCell(0, 0);
+    const row = detail().querySelector(".hex-chord-row")!;
+    const chips = [...row.querySelectorAll(".chord-readout-chip")].map((node) => node.textContent);
+    // The earning chord reads as itself — no idle suffix any more.
+    expect(chips).toContain("Fifth ×1.3");
+    expect(chips).not.toContain("Fifth ×1.3 · idle");
+    // The idle Octave waits behind its one count.
+    expect(row.querySelector(".detail-idle-trigger")!.textContent).toBe("1 idle");
+    const trigger = row.querySelector<HTMLButtonElement>(".detail-idle-trigger")!;
+    trigger.focus();
+    expect(document.getElementById(trigger.getAttribute("aria-describedby")!)!.textContent).toContain("Octave ×1.15");
+  });
+
+  it("no idle candidates, no disclosure", () => {
+    app.render();
+    clickCell(0, 0);
+    expect(detail().querySelector(".detail-idle-trigger")).toBeNull();
   });
 });
 
@@ -573,9 +686,32 @@ describe("the phone face (issue #295)", () => {
     expect(detail().classList.contains("sheet")).toBe(true);
     // The same content: upgrade column and all.
     expect(document.getElementById("detail-upgrade")).not.toBeNull();
+    // The chord facts reflow into the single column (issue #388): the
+    // detailed content scrolls beneath the faces and actions, and the
+    // sheet drops the column's fixed width.
+    expect(detail().querySelector(".hex-chord-col .hex-chord-row")).not.toBeNull();
+    const css = readFileSync("src/ui/style.css", "utf8");
+    expect(css).toMatch(/\.hex-detail\.sheet \.hex-chord-col\s*\{[^}]*width:\s*auto/);
+    expect(css).toMatch(/\.hex-detail\.sheet \.hex-detail-grid\s*\{[^}]*overflow-y:\s*auto|\.hex-detail-grid\s*\{[^}]*overflow-y:\s*auto/);
     // Return restores the grid.
     document.getElementById("hex-detail-return")!.click();
     expect(app.ui.detail).toBeNull();
+    setAppWidth(1200);
+  });
+
+  it("narrow compositions reflow the chord column beneath the stack before the sheet", () => {
+    setAppWidth(900);
+    app.render();
+    clickCell(0, 0);
+    expect(open()).toBe(true);
+    expect(detail().classList.contains("sheet")).toBe(false);
+    // The container query drops the column to its own row: the faces and
+    // the rail keep their posts, the facts scroll below (issue #388).
+    const css = readFileSync("src/ui/style.css", "utf8");
+    const reflow = css.match(/@container app \(width < 1000px\) \{[\s\S]*?\n\}/g)!.find((block) => block.includes(".hex-chord-col"));
+    expect(reflow).toBeTruthy();
+    expect(reflow).toMatch(/\.hex-detail-scene\.readonly \.hex-chord-col\s*[,{][^}]*grid-column:\s*1/);
+    expect(reflow).toMatch(/grid-row:\s*4/);
     setAppWidth(1200);
   });
 });
@@ -731,11 +867,11 @@ describe("the detail's direct inventory (issue #296)", () => {
   });
 
   it("the tray overlays — opening it never reflows the composition", () => {
-    // The grid keeps its two columns (stack, rail) whether the tray stands
-    // or not; the tray covers from outside the flow.
+    // The grid keeps its three posts (stack, rail, chord column) whether
+    // the tray stands or not; the tray covers from outside the flow.
     const css = readFileSync("src/ui/style.css", "utf8");
     expect(css).toMatch(/\.hex-detail-tray\s*\{[^}]*position:\s*absolute/);
-    expect(css).toMatch(/\.hex-detail-grid\s*\{[^}]*grid-template-columns:\s*auto auto/);
+    expect(css).toMatch(/\.hex-detail-grid\s*\{[^}]*grid-template-columns:\s*auto auto auto/);
     expect(css).toMatch(/\.hex-detail\.sheet \.hex-detail-tray\s*\{[^}]*position:\s*static/);
   });
 
@@ -798,9 +934,10 @@ describe("the detail's direct inventory (issue #296)", () => {
     expect(document.querySelector(".hex-detail-tray")).toBeNull();
     expect(app.ui.detail).toEqual({ pos: hex(0, 1), face: "modules" });
     // The readouts and the relationship breakdown refresh immediately:
-    // the new voice's face stands, and the octave names itself in the row.
+    // the new voice's face stands, and the octave names itself in the
+    // chord column.
     expect(faceSvg("modules").textContent).toContain("SINE");
-    expect(section("modules").querySelector(".hex-chord-row")!.textContent).toContain("Octave");
+    expect(detail().querySelector(".hex-chord-row")!.textContent).toContain("Octave");
   });
 
   it("Swap always swaps — identical items included — and never combines implicitly", () => {

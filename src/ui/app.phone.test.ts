@@ -496,6 +496,15 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     expect(detailEl.querySelector(".hex-detail-layer.modules .hex-stack-face")!.textContent).toContain("SINE");
     expect(detailEl.querySelector("#detail-upgrade")).not.toBeNull();
     expect(document.body.classList.contains("hex-detail-open")).toBe(true);
+    // The chord facts reflow into the single column's last post (issue
+    // #388): the faces and the action rows stand before them, so the
+    // detailed content scrolls without ever making them unreachable.
+    const grid = detailEl.querySelector(".hex-detail-grid")!;
+    const chordCol = grid.querySelector(".hex-chord-col");
+    expect(chordCol).not.toBeNull();
+    expect(grid.lastElementChild).toBe(chordCol);
+    expect(grid.querySelector(".hex-detail-layer.modules")).not.toBeNull();
+    expect(grid.querySelector(".hex-rail-row.modules #detail-upgrade")).not.toBeNull();
     // The horizon bar floats at every width (§7): an open sheet covers the
     // board's lower edge but never dismisses the bar itself.
     const bar = document.getElementById("horizon-bar")!;

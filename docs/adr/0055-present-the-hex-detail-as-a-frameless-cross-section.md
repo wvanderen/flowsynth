@@ -1,5 +1,10 @@
 # The Hex detail presents as a frameless cross-section, its faces as the voice
 
+Status: Accepted; the chord row's beneath-the-face placement and the rail's
+destination scope were amended by ADR-0061 (issue #388): chord facts stand
+in their own column to the module's right behind one idle disclosure, Return
+floats, and the rails carry cell-specific actions only.
+
 Issue #295's first implementation (PR #301) realized the Hex detail as a
 clipped instrument panel holding two rounded cards — one per layer — each a
 small module tile beside a text column. Review against the instrument
