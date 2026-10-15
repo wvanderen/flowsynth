@@ -3347,7 +3347,7 @@ function forgeEffect(type: ModuleInstance["type"], tier: number): string {
       if (type === "noteKeyed") return `+${formatNumber(profile.noteCreate * power)} charge/new note ≥${BALANCE.noteCreationMinChars} chars · +${formatNumber(profile.noteChar * power)}/char (${formatNumber(BALANCE.noteCharCreditCap * power)} max/note) · modest practice credit`;
       return `+${formatNumber(profile.goal * goalCompletionBase(60, 1) * power)} charge/live goal minute at completion · modest practice and note credit`;
     }
-    case "pulsewell": return `Mixed-fed reserve · ×2.5 delivery bursts, 30 s every 2 min`;
+    case "pulsewell": return "Mixed-fed reserve · timed delivery bursts";
     case "infusor": return `Adjacent production +${formatNumber(BALANCE.infusorBonus * 100 * power)}% · charge boosts uplift`;
     case "forge": return "Received charge → module rolls";
     case "mutatorForge": return "Received charge → mutator rolls";

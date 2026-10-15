@@ -162,15 +162,17 @@ is structural: it sings and completes chords even uncharged at zero
 output, and never starves cellmates (generators never divide output).
 
 ### Afterglow (`afterglow`)
-The session-clocked producer (issue #372, ADR-0061): every comparable
-axis neutral, and the warmup curve on the shared session clock is the
-whole identity — ×0.30 for the first two minutes, ×0.80 through minute
-five, then ×1.25 sustained for as long as the session keeps running.
-Weak opening, strong sustained: below the Sine until the board has
-practiced five minutes, above it after. The clock is the session's own —
-pauses never move it, a restart resets it, and the module holds no
-private timer, so moving or re-placing it cannot preserve a phase. All
-figures are provisional tuning.
+The session-clocked producer (issue #372, ADR-0061): no authored tradeoff
+on the comparable axes — the category's standard base (×1.0, grading A
+beside the Sine's identical figure) and standard responses — and the
+warmup curve on the shared session clock is the whole identity — ×0.30
+for the first two minutes, ×0.80 through minute five, then ×1.25
+sustained for as long as the session keeps running. Weak opening, strong
+sustained: below the Sine until the board has practiced five minutes,
+above it after. The clock is the session's own — pauses never move it, a
+restart resets it, and the module holds no private timer, so moving or
+re-placing it cannot preserve a phase. All figures are provisional
+tuning.
 
 ### Harmonizer (`harmonizer`)
 The plain silent voice (ADR-0048): sings its own cell's pitch, produces

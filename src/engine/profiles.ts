@@ -26,9 +26,10 @@ import type { GeneratorType, ModuleType, OscillatorType } from "./types";
 //              (ADR-0048): the conversion curve replaces the charge factor
 //              entirely, so its charge axis has no comparable multiplier —
 //              the absent mark, with the replacement stated in disclosure.
-//   Afterglow (issue #372) — the session-clocked producer: every
-//              comparable axis neutral, and the warmup curve on the shared
-//              session clock is the whole identity — weak opening, strong
+//   Afterglow (issue #372) — the session-clocked producer: no authored
+//              tradeoff on the comparable axes (the standard base and
+//              responses), and the warmup curve on the shared session
+//              clock is the whole identity — weak opening, strong
 //              sustained production.
 export interface OscillatorProfile {
   // The base-term multiplier over the category's unified synthRate.
@@ -52,9 +53,11 @@ export const OSCILLATOR_PROFILES: Record<OscillatorType, OscillatorProfile> = {
   square: { base: 0.9, booster: 2.0, chord: 0.6, charge: 1.0 },
   saw: { base: 0.7, booster: 1.0, chord: 1.0, charge: 3.0 },
   blaster: { base: 1.0, booster: 1.0, chord: 1.0, charge: 1.0, chargeConversion: true },
-  // The comparable axes stay neutral: the warmup condition below is the
-  // identity and the tradeoff, and progression scales the strengths it
-  // rides without ever touching the curve's timing.
+  // No authored tradeoff on the comparable axes — the category's standard
+  // base (×1.0, grading A beside the Sine's identical figure) and standard
+  // responses: the warmup condition below is the identity and the
+  // tradeoff, and progression scales the strengths it rides without ever
+  // touching the curve's timing.
   afterglow: { base: 1.0, booster: 1.0, chord: 1.0, charge: 1.0 },
 };
 
@@ -313,74 +316,86 @@ export const PULSEWELL_CYCLE = {
   burstFactor: 2.5,
 } as const;
 
-// The clock's step for one temporal type — the factor the pass applies at
-// this point of the session. Non-temporal types read ×1 forever.
-function stepFactorOf(type: ModuleType, elapsedSeconds: number): number {
-  if (type === "afterglow") {
-    const clock = Math.max(0, elapsedSeconds);
-    let factor = AFTERGLOW_WARMUP[0]!.factor;
-    for (const step of AFTERGLOW_WARMUP) {
-      if (clock >= step.fromSeconds) factor = step.factor;
-      else break;
-    }
-    return factor;
-  }
-  if (type === "pulsewell") {
-    const clock = Math.max(0, elapsedSeconds);
-    const inBurst = clock % PULSEWELL_CYCLE.periodSeconds >= PULSEWELL_CYCLE.periodSeconds - PULSEWELL_CYCLE.burstSeconds;
-    return inBurst ? PULSEWELL_CYCLE.burstFactor : PULSEWELL_CYCLE.steadyFactor;
-  }
-  return 1;
-}
-
-// The next clock mark where one temporal type's factor changes — Infinity
-// when the type has none left (a warmed Afterglow) or none at all. The
-// advance walk splits production spans here.
-export function nextTemporalBoundaryOf(type: ModuleType, elapsedSeconds: number): number {
+// The warmup ladder's two reads — the factor at a clock mark and the next
+// mark where it changes. The clock clamps at zero: no profile reads
+// before its session began.
+function warmupRead(steps: readonly TemporalStep[], elapsedSeconds: number): { factor: number; nextBoundary: number } {
   const clock = Math.max(0, elapsedSeconds);
-  if (type === "afterglow") {
-    for (const step of AFTERGLOW_WARMUP) {
-      if (step.fromSeconds > clock) return step.fromSeconds;
-    }
-    return Infinity;
+  let factor = steps[0]!.factor;
+  let nextBoundary = Infinity;
+  for (const step of steps) {
+    if (clock >= step.fromSeconds) factor = step.factor;
+    else nextBoundary = Math.min(nextBoundary, step.fromSeconds);
   }
-  if (type === "pulsewell") {
-    const { periodSeconds, burstSeconds } = PULSEWELL_CYCLE;
-    const intoCycle = clock % periodSeconds;
-    const burstStart = periodSeconds - burstSeconds;
-    return intoCycle < burstStart ? clock - intoCycle + burstStart : clock - intoCycle + periodSeconds;
-  }
-  return Infinity;
+  return { factor, nextBoundary };
 }
 
-// One temporal profile's presentation read: the row label the Hex detail's
-// breakdown uses for the current factor, and the direct timing description
-// every profile surface quotes — prose figures, never an aptitude grade.
-export interface TemporalTimingRead {
+// The cycle's two reads — the factor inside the current cycle and the next
+// steady↔burst mark.
+function cycleRead(cycle: typeof PULSEWELL_CYCLE, elapsedSeconds: number): { factor: number; nextBoundary: number } {
+  const clock = Math.max(0, elapsedSeconds);
+  const burstStart = cycle.periodSeconds - cycle.burstSeconds;
+  const intoCycle = clock % cycle.periodSeconds;
+  const inBurst = intoCycle >= burstStart;
+  return {
+    factor: inBurst ? cycle.burstFactor : cycle.steadyFactor,
+    nextBoundary: clock - intoCycle + (inBurst ? cycle.periodSeconds : burstStart),
+  };
+}
+
+// One temporal profile's whole authored shape: the timing rule's three
+// reads, plus the presentation words — the row label the Hex detail's
+// breakdown uses for the current factor and the direct timing description
+// every profile surface quotes. A timing rule is not a comparable
+// coefficient: it takes no aptitude grade. `phaseMark` is the quantized
+// phase — the identity the rate memo keys on; it changes exactly when the
+// factor does, never between boundaries.
+export interface TemporalProfile {
+  factorAt(elapsedSeconds: number): number;
+  nextBoundary(elapsedSeconds: number): number;
+  phaseMark(elapsedSeconds: number): string;
   label: string;
   timing: string;
 }
 
-const TEMPORAL_TIMING: Partial<Record<ModuleType, TemporalTimingRead>> = {
+// The one temporal table — the wave's designs, keyed like every profile
+// table in this file. Non-temporal types read nowhere: every accessor
+// below answers ×1, Infinity, or null for them.
+const TEMPORAL_PROFILES: Partial<Record<ModuleType, TemporalProfile>> = {
   afterglow: {
+    factorAt: (elapsed) => warmupRead(AFTERGLOW_WARMUP, elapsed).factor,
+    nextBoundary: (elapsed) => warmupRead(AFTERGLOW_WARMUP, elapsed).nextBoundary,
+    phaseMark: (elapsed) => `a${AFTERGLOW_WARMUP.filter((step) => step.fromSeconds <= Math.max(0, elapsed)).length}`,
     label: "Warm-up",
     timing: "×0.3 open · ×0.8 from 2 min · ×1.25 sustained from 5 min",
   },
   pulsewell: {
+    factorAt: (elapsed) => cycleRead(PULSEWELL_CYCLE, elapsed).factor,
+    nextBoundary: (elapsed) => cycleRead(PULSEWELL_CYCLE, elapsed).nextBoundary,
+    phaseMark: (elapsed) => `p${elapsed % PULSEWELL_CYCLE.periodSeconds >= PULSEWELL_CYCLE.periodSeconds - PULSEWELL_CYCLE.burstSeconds ? 1 : 0}`,
     label: "Burst cycle",
     timing: "×0.5 steady · ×2.5 burst, 30 s every 2 min",
   },
 };
 
-export function temporalTimingOf(type: ModuleType): TemporalTimingRead | null {
-  return TEMPORAL_TIMING[type] ?? null;
+// The presentation read (label and direct timing description), null for
+// every non-temporal type.
+export function temporalTimingOf(type: ModuleType): TemporalProfile | null {
+  return TEMPORAL_PROFILES[type] ?? null;
 }
 
 // The factor one type's production carries at this point of the shared
 // session clock — the single read the rate pass, the emission strength,
 // and the breakdowns share, so no surface can disagree with the walk.
 export function productionClockFactorOf(type: ModuleType, elapsedSeconds: number): number {
-  return temporalTimingOf(type) ? stepFactorOf(type, elapsedSeconds) : 1;
+  return TEMPORAL_PROFILES[type]?.factorAt(elapsedSeconds) ?? 1;
+}
+
+// The next clock mark where one temporal type's factor changes — Infinity
+// when the type has none left (a warmed Afterglow) or none at all. The
+// advance walk splits production spans here.
+export function nextTemporalBoundaryOf(type: ModuleType, elapsedSeconds: number): number {
+  return TEMPORAL_PROFILES[type]?.nextBoundary(elapsedSeconds) ?? Infinity;
 }
 
 // The clock's phase key — the only form the rate memo may key the temporal
@@ -388,11 +403,6 @@ export function productionClockFactorOf(type: ModuleType, elapsedSeconds: number
 // key stays warm between boundaries and never serves a stale phase.
 export function temporalPhaseKeyOf(elapsedSeconds: number): string {
   const clock = Math.max(0, elapsedSeconds);
-  let afterglowStep = 0;
-  for (let i = 0; i < AFTERGLOW_WARMUP.length; i++) {
-    if (clock >= AFTERGLOW_WARMUP[i]!.fromSeconds) afterglowStep = i;
-  }
-  const { periodSeconds, burstSeconds } = PULSEWELL_CYCLE;
-  const inBurst = clock % periodSeconds >= periodSeconds - burstSeconds;
-  return `t:a${afterglowStep}p${inBurst ? 1 : 0}`;
+  const marks = Object.entries(TEMPORAL_PROFILES).map(([type, profile]) => `${type[0]}${profile.phaseMark(clock)}`);
+  return `t:${marks.sort().join("")}`;
 }

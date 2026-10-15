@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import { forgeThreshold } from "./rolls";
 import { endSession, pauseSession, placeModule, resumeSession, returnModule, startSession } from "./actions";
-import { computeRates, emittedStrength, projectPlacement } from "./economy";
+import { computeRates, emittedStrength, projectPlacement, syncRates } from "./economy";
 import { AFTERGLOW_WARMUP, PULSEWELL_CYCLE, OSCILLATOR_PROFILES, GENERATOR_PROFILES, temporalTimingOf, profileAxesOf } from "./profiles";
 import { deserialize, serialize } from "./save";
 import { fresh, give, stubRng } from "./fixtures";
@@ -87,6 +87,11 @@ describe("the Afterglow's warmup curve (#372)", () => {
     startSession(s, null);
     advance(s, 100);
     pauseSession(s);
+    // While paused the board is frozen: the span runs nothing, moves no
+    // clock, spends nothing.
+    const frozen = advance(s, 500);
+    expect(frozen.nousEarned).toBe(0);
+    expect(s.session!.elapsed).toBeCloseTo(100, 9);
     resumeSession(s);
     advance(s, 20, stubRng(new Array(12).fill(0.5)));
     // 120 flowed seconds: exactly onto the second step's mark.
@@ -207,7 +212,7 @@ describe("the Pulsewell's burst cycle (#372)", () => {
     startSession(s, null);
     advance(s, 120, rng);
     const well = s.modules.find((m) => m.type === "pulsewell")!;
-    // 40 charge at the steady ×0.5: sixty charged seconds, then dry —
+    // 40 charge at the steady ×0.5: eighty charged seconds, then dry —
     // still short of the first burst's mark.
     expect(well.reserve).toBe(0);
     expect(deliveredOf(s)).toBeCloseTo(40, 6);
@@ -336,6 +341,26 @@ describe("progression and mutators preserve the temporal conditions (#372)", () 
 });
 
 describe("the temporal profiles on the authoritative seams (#372)", () => {
+  it("the allocation weighs the factor: the warm Afterglow takes the chord seat the cold one yields", () => {
+    // One doubled D class and one A: the Fifth can ring through either
+    // D voice, and capacity one forces the choice. Both seats convert the
+    // bonus equally (two Sines' responses), so the seat belongs to the
+    // heavier weight — and the session clock alone decides which one that
+    // is: cold, the doubled Sine's seat; sustained, the Afterglow's.
+    const s = fresh();
+    const afterglow = give(s, "afterglow", hex(2, 0));
+    const rival = give(s, "additive", hex(2, 1));
+    give(s, "additive", hex(3, 0));
+    const activeMembers = (): string[] => syncRates(s, true).allocation!.active.flatMap((inst) => inst.memberIds);
+    startSession(s, null);
+    advance(s, 30);
+    expect(activeMembers()).toContain(rival.id);
+    expect(activeMembers()).not.toContain(afterglow.id);
+    advance(s, 370); // past the sustained mark
+    expect(activeMembers()).toContain(afterglow.id);
+    expect(activeMembers()).not.toContain(rival.id);
+  });
+
   it("the upgrade-mode preview shows the fresh-session phase the commit opens at", () => {
     const s = fresh();
     s.cells.push(hex(2, 0));
@@ -354,14 +379,10 @@ describe("the temporal profiles on the authoritative seams (#372)", () => {
     // profile; the warmup is not among them.
     expect(profileAxesOf("afterglow").map((axis) => axis.grade).join("")).toBe("ABBB");
     expect(profileAxesOf("pulsewell")).toEqual([]);
-    expect(temporalTimingOf("afterglow")).toEqual({
-      label: "Warm-up",
-      timing: "×0.3 open · ×0.8 from 2 min · ×1.25 sustained from 5 min",
-    });
-    expect(temporalTimingOf("pulsewell")).toEqual({
-      label: "Burst cycle",
-      timing: "×0.5 steady · ×2.5 burst, 30 s every 2 min",
-    });
+    expect(temporalTimingOf("afterglow")?.label).toBe("Warm-up");
+    expect(temporalTimingOf("afterglow")?.timing).toBe("×0.3 open · ×0.8 from 2 min · ×1.25 sustained from 5 min");
+    expect(temporalTimingOf("pulsewell")?.label).toBe("Burst cycle");
+    expect(temporalTimingOf("pulsewell")?.timing).toBe("×0.5 steady · ×2.5 burst, 30 s every 2 min");
     expect(temporalTimingOf("additive")).toBeNull();
   });
 

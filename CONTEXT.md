@@ -168,7 +168,7 @@ An oscillator-category voice converting received charge into its synth term — 
 _Avoid_: converter
 
 **Afterglow**:
-The session-clocked oscillator (issue #372): every comparable axis neutral, and its authored warmup curve over the session clock is the identity — weak opening, strong sustained production. Its timing is described directly, never graded; the clock is the session's own, so no restart buys sustained output and no movement preserves a phase.
+The session-clocked oscillator (issue #372): no authored tradeoff on the comparable axes — the category's standard base and responses — and its authored warmup curve over the session clock is the whole identity: weak opening, strong sustained production. Its timing is described directly, never graded; the clock is the session's own, so no restart buys sustained output and no movement preserves a phase.
 _Avoid_: warm-up bonus, ramp
 
 **Charge**:
