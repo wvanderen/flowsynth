@@ -60,3 +60,25 @@ modules granted into the tray/board, the draft rigged to carry both types.
   live charge-lead capture. The charge leads read the same
   `emittedStrength` seam the engine walk spends, so no separate display
   path exists to capture.
+
+## PR #395 review corrections
+
+`review-timing-mono-desktop.png` was captured from this worktree
+(`/Users/eggfam/.t3/worktrees/flowsynth/t3code-86090cbe`) at commit
+`9347cc003e59586adb6d24a1dc35554f4a8d9e04`, served at
+`http://localhost:5174/?dev=1`; the provenance endpoint matched before
+capture. Both temporal candidates were seeded through the existing dev
+app fixture. Their timing lines now use the pinned prototype's numerical
+readout register: computed `ui-monospace` with `tabular-nums`. The desktop
+capture shows both lines wrapping within their candidates.
+
+Fresh phone verification is unavailable: both 390×844 preview resize
+attempts timed out, including the retry after `preview_status`. Fresh
+keyboard/touch disclosure and reduced-motion checks were not rerun for
+this static typography correction; the earlier evidence above records
+those checks. No fresh phone or interaction pass is claimed.
+
+The catch-up regression uses the public away-time path for a week-long
+open-ended session with an empty Pulsewell. It failed with a stack
+overflow before the iterative boundary walk and now checks that the full
+week is retained and agrees with hourly catch-up intervals.
