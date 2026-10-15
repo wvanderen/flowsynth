@@ -1,3 +1,4 @@
+import { tierPowerOf } from "../engine/module-strength";
 // The Hex detail (issue #295): the module bloom's successor — an owned
 // board coordinate's full-stack cross-section, standing where the grid
 // stood, at every width. The presentation is the instrument metaphor, not
@@ -54,6 +55,7 @@ export interface DetailEffectInput {
   level: number;
   // The level count the benefit previews (1, or the dial's k).
   levels: number;
+  tierPower: number;
 }
 
 // The synth benefit is exact at every local effect: value/power is the
@@ -65,8 +67,8 @@ const synthBenefit = ({ gain, power, value }: DetailEffectInput): string | null 
 
 // The silent voices' benefit: the level buys the chord-instance uplift
 // (ADR-0048), never production.
-const silentBenefit = ({ levels }: DetailEffectInput): string | null =>
-  `+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * levels)}% chord-instance uplift`;
+const silentBenefit = ({ levels, tierPower }: DetailEffectInput): string | null =>
+  `+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * levels * tierPower)}% chord-instance uplift`;
 
 // The generators' benefit (ADR-0047): level scales output strength only,
 // never the banked duration.
@@ -80,8 +82,8 @@ const DETAIL_BENEFITS: Record<ModuleInstance["type"], (input: DetailEffectInput)
   harmonizer: silentBenefit,
   echo: silentBenefit,
   bend: silentBenefit,
-  amplifier: ({ levels }) => `+${formatNumber(100 * BALANCE.amplifierGainPerLevel * levels)}% relay gain`,
-  ritual: ({ levels }) => `+${formatNumber(100 * BALANCE.ritualAmpPerLevel * levels)}% build amplification`,
+  amplifier: ({ levels, tierPower }) => `+${formatNumber(100 * BALANCE.amplifierGainPerLevel * levels * tierPower)}% relay gain`,
+  ritual: ({ levels, tierPower }) => `+${formatNumber(100 * BALANCE.ritualAmpPerLevel * levels * tierPower)}% build amplification`,
   // The silent wire buys nothing with a level, so it wears no button at all.
   spacer: () => null,
   focusKeyed: generatorBenefit,
@@ -101,6 +103,7 @@ function benefitOf(app: App, module: ModuleInstance, snapshot: RateSnapshot, lev
     level: module.level,
     gain: power * (rarityPower - 1),
     levels,
+    tierPower: tierPowerOf(module.tier),
   });
 }
 

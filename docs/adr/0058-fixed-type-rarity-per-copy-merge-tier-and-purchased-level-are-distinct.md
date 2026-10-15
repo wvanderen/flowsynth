@@ -49,6 +49,10 @@ duplicate-earned improvement and purchased levels become separate axes.
    (`TIER_POWER` = [1, 1.5, 2.25], ×1.5 per tier, provisional). Tier never
    changes input proportions, conditions, or relative weaknesses — and never
    the type's rarity, the ring count of which now reads the tier (below).
+   Silent-voice uplift and RITUAL amplification multiply their level-scaled
+   effect by tier power; Amplifier relay gain multiplies its whole authored
+   gain, including its level-zero pass-through, by tier power. Allocation,
+   face readouts, and upgrade previews share these strength reads.
    Mutator rarity and mutator combination are untouched.
 
 5. **Presentation keeps one home per fact.** The engraved rings — the

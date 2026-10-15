@@ -24,6 +24,17 @@ const panel = () => document.getElementById("modal-content")!;
 const switchTo = (face: string) => panel().querySelector<HTMLButtonElement>(`[data-forge-face="${face}"]`)!.click();
 
 describe("Forge drafts (#335)", () => {
+  it("describes carried tiers and shows their acquired effects", () => {
+    app.openModal("forge");
+    const pick = panel().querySelector('[data-choice="m3"]')!;
+    expect(pick.getAttribute("aria-label")).toBe("Take common Booster · Tier 3");
+    const tile = pick.closest(".candidate-tile")!;
+    expect(tile.querySelector(".candidate-effect")?.textContent).toContain("+45%");
+    expect(tile.querySelector(".face-readout")?.textContent ?? tile.querySelector("svg")?.textContent).toContain("+45%");
+    (pick as HTMLButtonElement).click();
+    expect(app.state.modules.find(m => m.type === "infusor")?.tier).toBe(2);
+  });
+
   it("opens on the board layer and switches without consuming either offer", () => {
     app.ui.mutLayer = "modules";
     app.openModal("forge");

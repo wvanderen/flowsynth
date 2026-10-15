@@ -1,3 +1,4 @@
+import { amplifierGainOf, tierPowerOf } from "./module-strength";
 import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isVoiceType, typeRarityOf } from "./constants";
 import { analyzeChords, hypotheticalBoardFor, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
 import { allocateChords, DEFAULT_ALLOCATION_BUDGET, type AllocationBudget, type AllocationRead, type AllocationVoiceParams } from "./allocation";
@@ -176,13 +177,6 @@ export function modulePower(module: ModuleInstance): number {
   return BALANCE.rarityPower[typeRarityOf(module.type)] ** module.level * tierPowerOf(module.tier);
 }
 
-// The tier ladder's multiplier (ADR-0058): past the authored ladder's end —
-// a lenient guard, the combine gate keeps copies inside it — the last entry
-// holds.
-export function tierPowerOf(tier: number): number {
-  return BALANCE.tierPower[Math.min(Math.max(tier, 0), BALANCE.tierPower.length - 1)]!;
-}
-
 export function deployed(state: GameState): ModuleInstance[] {
   return state.modules.filter((m) => m.pos !== null);
 }
@@ -277,7 +271,7 @@ function relayNet(state: GameState, flow: boolean, steadyBonus: number): RelayNe
       }
       strength *= 1 + chargeMagnitudeAt(state, amp.pos);
       received.set(amp.id, strength);
-      relay.set(amp.id, strength * (1 + BALANCE.amplifierGainPerLevel * amp.level));
+      relay.set(amp.id, strength * amplifierGainOf(amp));
     }
     for (const amp of amplifiers) {
       if (depth.has(amp.id)) continue;
@@ -293,8 +287,8 @@ function relayNet(state: GameState, flow: boolean, steadyBonus: number): RelayNe
 // level-scaled base through the charged-empowerment curve of the strength
 // it receives — the face readout and the bloom's contribution line share
 // this one read with the rate pass. Zero while uncharged.
-export function ritualAmpOf(level: number, strength: number): number {
-  return BALANCE.ritualAmpPerLevel * level * chargedFactor(strength);
+export function ritualAmpOf(level: number, strength: number, tier = 0): number {
+  return BALANCE.ritualAmpPerLevel * level * tierPowerOf(tier) * chargedFactor(strength);
 }
 
 // Read RITUAL against the base charge network once, then amplify delivery.
@@ -307,7 +301,7 @@ function ritualAmplificationFor(state: GameState, flow: boolean): number {
   for (const module of placed) {
     if (module.type === "ritual") {
       const strength = receivedOn(state, module, flow, placed, net, build.generatorStrength);
-      if (strength > 0) amplification += ritualAmpOf(module.level, strength);
+      if (strength > 0) amplification += ritualAmpOf(module.level, strength, module.tier);
     }
   }
   return amplification * (1 + build.ritualAttunement);

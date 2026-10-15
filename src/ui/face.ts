@@ -1,3 +1,4 @@
+import { amplifierGainOf } from "../engine/module-strength";
 // The module face (ADR-0016, issue #39): every module renders as a Readout
 // panel in the Rack identity — a shared chassis, a narrow category rail in
 // the category hue, a condensed technical-caps nameplate, the module's
@@ -225,7 +226,7 @@ export const isSource = (m: ModuleInstance) => CATEGORY_OF[m.type] === "generato
 // the two surfaces can never drift apart on the relay's output.
 export function relayStrengthOf(module: ModuleInstance, snapshot: RateSnapshot): number {
   const strength = snapshot.chargeStrength.get(module.id) ?? 0;
-  return strength * (1 + BALANCE.amplifierGainPerLevel * module.level);
+  return strength * amplifierGainOf(module);
 }
 
 // The booster's uplift percentage — the charged curve over the adjacent
@@ -281,7 +282,7 @@ export function faceReadoutFor(state: GameState, module: ModuleInstance, pos: He
     // delivering onto the active habit's build right now — ×1 while
     // uncharged, rising with received strength (ADR-0046).
     const strength = snapshot.chargeStrength.get(module.id) ?? 0;
-    const amp = 1 + ritualAmpOf(module.level, strength);
+    const amp = 1 + ritualAmpOf(module.level, strength, module.tier);
     return pos
       ? { readout: `×${formatNumber(amp)}`, note: cellNoteOf(pos) }
       : { readout: `×${formatNumber(amp)}` };

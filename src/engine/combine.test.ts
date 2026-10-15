@@ -80,6 +80,45 @@ describe("combination", () => {
     );
   });
 
+  it("a merged silent voice increases production through its allocated chord", () => {
+    const s = fresh();
+    const voice = give(s, "harmonizer", hex(1, 0), 2);
+    const twin = give(s, "harmonizer", null, 2);
+    const before = computeRates(s, true).synths;
+    expect(combine(s, twin.id, voice.id).ok).toBe(true);
+    expect(computeRates(s, true).synths).toBeGreaterThan(before);
+    const survivor = s.modules.find(m => m.type === "harmonizer")!;
+    expect(computeRates(s, true).contributions.get(survivor.id)?.value).toBe(0);
+  });
+
+  it("a merged Amplifier increases relayed charge even at level zero", () => {
+    const s = fresh();
+    const generator = give(s, "focusKeyed", hex(2, -2));
+    generator.reserve = 60;
+    const amp = give(s, "amplifier", hex(1, -1));
+    const twin = give(s, "amplifier", null);
+    const before = computeRates(s, true);
+    expect(combine(s, twin.id, amp.id).ok).toBe(true);
+    const after = computeRates(s, true);
+    expect(after.chargeStrength.get("m1")!).toBeGreaterThan(before.chargeStrength.get("m1")!);
+    generator.reserve = 0;
+    expect(computeRates(s, true).chargeStrength.get("m1")).toBe(0);
+  });
+
+  it("a merged RITUAL increases amplification only while charged", () => {
+    const s = fresh();
+    const generator = give(s, "focusKeyed", hex(2, 0));
+    generator.reserve = 60;
+    const ritual = give(s, "ritual", hex(1, 0), 2);
+    const twin = give(s, "ritual", null, 2);
+    const before = computeRates(s, true).ritualAmplification;
+    expect(before).toBeGreaterThan(0);
+    expect(combine(s, twin.id, ritual.id).ok).toBe(true);
+    expect(computeRates(s, true).ritualAmplification).toBeGreaterThan(before);
+    generator.reserve = 0;
+    expect(computeRates(s, true).ritualAmplification).toBe(0);
+  });
+
   it("does not treat a previous refund as new expenditure", () => {
     const s = fresh();
     const a = leveled(s, "additive", 2, hex(1, 0));

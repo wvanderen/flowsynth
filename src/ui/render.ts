@@ -1,3 +1,4 @@
+import { tierPowerOf } from "../engine/module-strength";
 import { cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, levelCost, levelsCost, projectPlacement, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
 import { ALLOCATION_QUALITY_BOUNDS, idleTermsOf, summaryTermsOf } from "../engine/allocation";
 import { claimOf } from "../engine/accumulator";
@@ -3234,20 +3235,21 @@ function catalogAreteFaceHtml(app: App): string {
   ${upgrade ? "" : `<p class="modal-note">Arete is spent between sessions — enter upgrade mode to buy.</p>`}`;
 }
 
-function forgeEffect(type: ModuleInstance["type"]): string {
+function forgeEffect(type: ModuleInstance["type"], tier: number): string {
+  const power = tierPowerOf(tier);
   switch (type) {
-    case "additive": return `+${formatNumber(BALANCE.synthRate)} ν/s · charge boosts output`;
+    case "additive": return `+${formatNumber(BALANCE.synthRate * power)} ν/s · charge boosts output`;
     case "blaster": return "Received charge → ν/s · sings even uncharged";
-    case "harmonizer": return `Cell pitch · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/level to its chords`;
-    case "echo": return `Adjacent pitch, octave down · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/level to its chords`;
-    case "bend": return `Shifted cell pitch · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel)}%/level to its chords`;
-    case "amplifier": return `Relay charge · +${formatNumber(100 * BALANCE.amplifierGainPerLevel)}%/level · ${BALANCE.amplifierHopCap} hops`;
-    case "ritual": return `Charged → habit build +${formatNumber(BALANCE.ritualAmpPerLevel * 100)}%/level`;
+    case "harmonizer": return `Cell pitch · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * power)}%/level to its chords`;
+    case "echo": return `Adjacent pitch, octave down · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * power)}%/level to its chords`;
+    case "bend": return `Shifted cell pitch · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * power)}%/level to its chords`;
+    case "amplifier": return `Relay charge ×${formatNumber(power)} · +${formatNumber(100 * BALANCE.amplifierGainPerLevel * power)}%/level · ${BALANCE.amplifierHopCap} hops`;
+    case "ritual": return `Charged → habit build +${formatNumber(BALANCE.ritualAmpPerLevel * 100 * power)}%/level`;
     case "spacer": return "Silent wire · connects chord adjacency";
     case "focusKeyed": return "Practice → charge reserve for next session";
     case "noteKeyed": return "Notes → charge reserve";
     case "goalKeyed": return "Completed goals → charge reserve";
-    case "infusor": return `Adjacent production +${formatNumber(BALANCE.infusorBonus * 100)}% · charge boosts uplift`;
+    case "infusor": return `Adjacent production +${formatNumber(BALANCE.infusorBonus * 100 * power)}% · charge boosts uplift`;
     case "forge": return "Received charge → module rolls";
     case "mutatorForge": return "Received charge → mutator rolls";
     default: return "Not yet active";
@@ -3260,11 +3262,12 @@ function forgeEffectHtml(effect: string): string {
     label => termTipHtml(label.toLowerCase() as CatalogTerm, label));
 }
 
-function candidateReadout(type: ModuleInstance["type"]): string {
+function candidateReadout(type: ModuleInstance["type"], tier: number): string {
+  const power = tierPowerOf(tier);
   switch (type) {
     case "additive":
     case "blaster":
-      return `+${formatNumber(BALANCE.synthRate)}`;
+      return `+${formatNumber(BALANCE.synthRate * power)}`;
     case "harmonizer":
     case "echo":
     case "bend":
@@ -3278,12 +3281,12 @@ function candidateReadout(type: ModuleInstance["type"]): string {
     case "focusKeyed":
     case "noteKeyed":
     case "goalKeyed":
-      return "⌁1";
+      return `⌁${formatNumber(power)}`;
     case "infusor":
-      return `+${formatNumber(BALANCE.infusorBonus * 100)}%`;
+      return `+${formatNumber(BALANCE.infusorBonus * 100 * power)}%`;
     case "forge":
     case "mutatorForge":
-      return "1/s";
+      return `${formatNumber(power)}/s`;
   }
 }
 
@@ -3342,12 +3345,12 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
     ${hasOffer ? `<p class="forge-choice-cue">Choose 1 of ${face === "modules" ? 3 : 2}</p>
     <div class="candidates ${face === "mutators" ? "mut-candidates" : ""}">
       ${face === "modules" && offer ? offer.candidates.map(candidate => `
-        <div class="candidate-tile" data-rarity="${typeRarityOf(candidate.type)}" data-type="${candidate.type}"><button class="candidate-pick" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${typeRarityOf(candidate.type)}" data-type="${candidate.type}" aria-label="Take ${RARITY_LABEL[typeRarityOf(candidate.type)]} ${META[candidate.type].name}" aria-describedby="forge-effect-${candidate.id}"></button>
-          <svg viewBox="-70 -70 140 140" aria-hidden="true">${moduleFace({ type: candidate.type, tier: candidate.tier, readout: candidateReadout(candidate.type) })}</svg>
+        <div class="candidate-tile" data-rarity="${typeRarityOf(candidate.type)}" data-type="${candidate.type}"><button class="candidate-pick" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${typeRarityOf(candidate.type)}" data-type="${candidate.type}" aria-label="Take ${RARITY_LABEL[typeRarityOf(candidate.type)]} ${META[candidate.type].name} · ${tierWord(candidate.tier)}" aria-describedby="forge-effect-${candidate.id}"></button>
+          <svg viewBox="-70 -70 140 140" aria-hidden="true">${moduleFace({ type: candidate.type, tier: candidate.tier, readout: candidateReadout(candidate.type, candidate.tier) })}</svg>
           <span class="candidate-readout"><span class="candidate-name">${META[candidate.type].name}</span>
           <span class="rarity">${RARITY_LABEL[typeRarityOf(candidate.type)]}</span>
-          <span id="forge-effect-${candidate.id}" class="candidate-effect">${forgeEffectHtml(forgeEffect(candidate.type))}</span>
-          ${candidate.type !== "spacer" ? `<span class="candidate-scaling">+${formatNumber((BALANCE.rarityPower[typeRarityOf(candidate.type)] - 1) * 100)}% / level · upgrades from 10 ν</span>` : ""}</span>
+          <span id="forge-effect-${candidate.id}" class="candidate-effect">${forgeEffectHtml(forgeEffect(candidate.type, candidate.tier))}</span>
+          ${candidate.type !== "spacer" ? `<span class="candidate-scaling">${["harmonizer", "echo", "bend", "amplifier", "ritual"].includes(candidate.type) ? "" : `+${formatNumber((BALANCE.rarityPower[typeRarityOf(candidate.type)] - 1) * 100)}% / level · `}upgrades from 10 ν</span>` : ""}</span>
         </div>`).join("") : mutOffer ? mutOffer.candidates.map(candidate => `
         <div class="candidate-tile mut-candidate" data-rarity="${candidate.rarity}"><button class="candidate-pick" data-mut-choice="${candidate.id}" data-mut-offer="${mutOffer.id}" data-rarity="${candidate.rarity}" aria-label="Take ${RARITY_LABEL[candidate.rarity]} ${FAMILY_WORD[candidate.family]} mutator" aria-describedby="forge-effect-${candidate.id}"></button>
           <svg viewBox="-70 -70 140 140" aria-hidden="true" style="color:var(--arete)">${mutatorTileInner(candidate)}</svg>
