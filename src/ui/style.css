@@ -1934,6 +1934,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   font-weight: 600;
   letter-spacing: 0.06em;
 }
+.inst-tip-scroll { box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; }
 .detail-idle-row { display: block; font: 11px/1.7 var(--mono); letter-spacing: 0.05em; }
 /* The quality scale (issue #260): the formation's measured Q on the
    low-to-high read — floor and cap end ticks, a taller neutral tick, and

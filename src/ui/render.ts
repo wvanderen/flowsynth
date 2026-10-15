@@ -1616,7 +1616,7 @@ function detailIdleDisclosureHtml(idScope: string, idle: ChordMark[]): string {
   const listing = idle
     .map((mark) => `<span class="detail-idle-row mono">${escapeHtml(mark.label)}</span>`)
     .join("");
-  return `<span class="inst-tip readout-tip"><button class="inst-tip-trigger readout-tip-trigger detail-idle-trigger mono" type="button" aria-expanded="false" aria-describedby="${id}">${idle.length} idle</button><span class="inst-tip-body" id="${id}" role="tooltip">${listing}</span></span>`;
+  return `<span class="inst-tip readout-tip"><button class="inst-tip-trigger readout-tip-trigger detail-idle-trigger mono" type="button" aria-expanded="false" aria-describedby="${id}">${idle.length} idle</button><span class="inst-tip-body inst-tip-scroll" id="${id}" role="tooltip">${listing}</span></span>`;
 }
 
 // The low-to-high quality scale (issue #260): where the formation's
