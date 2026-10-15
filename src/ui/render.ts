@@ -3,7 +3,7 @@ import { cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRa
 import { ALLOCATION_QUALITY_BOUNDS, idleTermsOf, summaryTermsOf } from "../engine/allocation";
 import { claimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
-import { combinePreview, combineMutatorsPreview, levelable, type CombinePreview, upgradeAllPreview } from "../engine/actions";
+import { combinePreview, combineMutatorsPreview, hasMergeTwin, levelable, mergeAllPreview, type CombinePreview, type MergeSweep, upgradeAllPreview } from "../engine/actions";
 import { deployedAt } from "../engine/economy";
 import { sameHex } from "../engine/hex";
 import { forgeThreshold, flowThreshold, mutatorForgeThreshold } from "../engine/rolls";
@@ -2367,6 +2367,26 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
 
 /* ── Board tray (§5, ADR-0027 as amended) ──────────── */
 
+// The whole roster's merge-relevant shape, hashed: a copy's eligible mark
+// and the control's count change with any twin's tier, level, investment,
+// or placement, wherever it sits — one builder serves both library
+// surfaces' rebuild guards (issue #368).
+function rosterMergeKey(state: GameState): string {
+  return JSON.stringify(state.modules.map((m) => `${m.id}:${m.type}:${m.tier}:${m.level}:${m.invested}:${m.pos === null ? "i" : "d"}`));
+}
+
+// Keep the action's count in its accessible name. The refund has its own
+// instrument disclosure so inspecting it never consumes copies.
+function mergeAllControlHtml(preview: MergeSweep, locked: boolean, surface: string): string {
+  const label = `<span class="merge-all-label">MERGE ALL</span><span class="merge-all-count mono"> · ${preview.combines}</span>`;
+  const name = `Merge all · ${preview.combines} combine${preview.combines === 1 ? "" : "s"}${locked ? " · Locked during flow" : ""}`;
+  const action = `<button class="merge-all" data-merge-all${locked ? " disabled" : ""} aria-label="${name}">${label}</button>`;
+  const refund = !locked && preview.refund > 0
+    ? `<span class="inst-tip merge-refund-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="merge-refund-${surface}" aria-label="Merge refund">ⓘ</button><span class="inst-tip-body" id="merge-refund-${surface}" role="tooltip">${formatInt(preview.refund)} ν refunded</span></span>`
+    : "";
+  return `<div class="merge-all-controls">${action}${refund}</div>`;
+}
+
 // The tray column's Modules face (§5, ADR-0027 as amended, issue #272):
 // the inventory as an always-open pinned column at the board's right edge —
 // no collapse toggle, no gesture-reopen, no second switch (the board tabs
@@ -2382,22 +2402,28 @@ function renderInventoryTray(app: App): void {
   const open = state.mode === "upgrade" && ui.mutLayer === "modules";
   tray.classList.toggle("off", !open);
   const inventory = state.modules.filter((m) => m.pos === null);
-  const key = JSON.stringify(inventory.map((m) => `${m.id}:${m.type}:${m.level}:${m.tier}`));
+  const preview = mergeAllPreview(state);
+  const key = rosterMergeKey(state);
   if (tray.dataset.renderKey === key) return;
   tray.dataset.renderKey = key;
+  const control = inventory.length > 0 || preview.combines > 0 ? mergeAllControlHtml(preview, state.mode !== "upgrade", "tray") : "";
   tray.innerHTML = `<div class="tray-items">${
     inventory
-      .map(
-        (m) =>
-          `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${typeRarityOf(m.type)}" data-type="${m.type}" title="${META[m.type].name} · ${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)} — click, then a cell">${inventoryTileSvg(m)}</button>`,
-      )
+      .map((m) => {
+        const mergeable = hasMergeTwin(state, m.id);
+        return `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${typeRarityOf(m.type)}" data-type="${m.type}" aria-label="${META[m.type].name} · ${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)}${mergeable ? " · Eligible to merge" : ""}"${mergeable ? " data-mergeable" : ""} title="${META[m.type].name} · ${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)} — click, then a cell">${inventoryTileSvg(m)}</button>`;
+      })
       .join("") || `<span class="tray-empty">drag a module here to store it</span>`
-  }</div>`;
+  }</div>${control}`;
   tray.querySelectorAll<HTMLButtonElement>("[data-inv]").forEach((button) => {
     const id = button.getAttribute("data-inv")!;
     app.listen(button, "click", () => app.beginPlacing(id));
     bindPointerDrag(app, button, id);
   });
+  tray.querySelectorAll<HTMLButtonElement>("[data-merge-all]").forEach((button) => {
+    app.listen(button, "click", () => app.mergeAllAction());
+  });
+  wireTooltips(tray, app.signal);
 }
 
 // The opening arc's one pop-up (§8, issue #138): after the second
@@ -2539,7 +2565,11 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                   ? [deployedRosterKey(app.state), unlockedCount(app.state), discoveryCount(app.state)]
                 : kind === "inventory"
                   ? [
-                      app.state.modules.filter((m) => m.pos === null).map((m) => `${m.id}:${m.type}:${m.level}:${m.tier}`),
+                      // The whole roster's merge-relevant shape (issue #368):
+                      // the control's count and the tiles' eligible marks
+                      // change with any twin's tier or investment, wherever
+                      // it sits, so a sweep from the sheet re-renders it.
+                      rosterMergeKey(app.state),
                       // The tray sheet's face rides the global switch, and
                       // the Mutators face re-reads the tray (issue #272).
                       // The entry's ownership rides too: the purchase
@@ -2678,6 +2708,7 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
   const wanted = mutatorLayerWanted(app);
   const mutators = wanted && ui.mutLayer === "mutators";
   const inventory = state.modules.filter((m) => m.pos === null);
+  const mergePreview = mergeAllPreview(state);
   const mutTray = wanted ? state.mutators.filter((m) => m.pos === null) : [];
   const face = mutators
     ? `<div class="inventory-sheet-grid tray-sheet-tiles">${
@@ -2690,12 +2721,12 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
       }</div>`
     : `<div class="inventory-sheet-grid">${
         inventory
-          .map(
-            (m) =>
-              `<span class="inst-tip tray-tile-detail"><button class="inventory-tile" data-inv="${m.id}" data-rarity="${typeRarityOf(m.type)}" data-type="${m.type}"${locked ? " disabled" : ""} aria-label="${META[m.type].name} · ${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)}" aria-describedby="tray-module-${m.id}">${inventoryTileSvg(m)}</button>${trayTileDisclosure(`tray-module-${m.id}`, META[m.type].name, `${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)} — ${locked ? "locked during flow" : "tap, then a cell"}`)}</span>`,
-          )
+          .map((m) => {
+            const mergeable = !locked && hasMergeTwin(state, m.id);
+            return `<span class="inst-tip tray-tile-detail"><button class="inventory-tile" data-inv="${m.id}" data-rarity="${typeRarityOf(m.type)}" data-type="${m.type}"${locked ? " disabled" : ""}${mergeable ? " data-mergeable" : ""} aria-label="${META[m.type].name} · ${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)}${mergeable ? " · Eligible to merge" : ""}" aria-describedby="tray-module-${m.id}">${inventoryTileSvg(m)}</button>${trayTileDisclosure(`tray-module-${m.id}`, META[m.type].name, `${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)} — ${locked ? "locked during flow" : "tap, then a cell"}`)}</span>`;
+          })
           .join("") || `<span class="tray-empty">drag a module here to store it</span>`
-      }</div>`;
+      }</div>${inventory.length > 0 || mergePreview.combines > 0 ? `<div class="tray-sheet-actions">${mergeAllControlHtml(mergePreview, locked, "sheet")}</div>` : ""}`;
   content.innerHTML = `
     ${modalTop("INVENTORY", "modal-title")}
     ${state.mode === "upgrade" ? `<div class="layer-legend tray-switch" role="group" aria-label="Tray face">${layerLegendHtml(app)}</div>` : ""}
@@ -2708,6 +2739,9 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
       app.beginPlacing(id);
     });
     bindPointerDrag(app, button, id);
+  });
+  content.querySelectorAll<HTMLButtonElement>("[data-merge-all]").forEach((button) => {
+    app.listen(button, "click", () => app.mergeAllAction());
   });
   content.querySelectorAll<HTMLButtonElement>("[data-mut-tray]").forEach((button) => {
     const id = button.getAttribute("data-mut-tray")!;
@@ -2729,6 +2763,8 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
   });
   const grid = content.querySelector(".inventory-sheet-grid");
   if (grid) wireTooltips(grid, app.signal);
+  const actions = content.querySelector<HTMLElement>(".tray-sheet-actions");
+  if (actions) wireTooltips(actions, app.signal);
   const switchHost = content.querySelector(".tray-switch");
   if (switchHost) wireTooltips(switchHost, app.signal);
   wireClose(app);

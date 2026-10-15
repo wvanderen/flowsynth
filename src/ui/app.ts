@@ -19,6 +19,7 @@ import {
   dismissSummary as dismissSessionSummary,
   endSession,
   joinRollPool,
+  mergeAll,
   pauseSession,
   placeModule,
   placeMutator,
@@ -1660,6 +1661,28 @@ export class App {
     } else {
       this.say(result.reason ?? "Cannot combine.");
     }
+    this.render();
+  }
+
+  // The library's batch combine (issue #368): the tray's MERGE ALL control
+  // — every eligible exact-copy pair, chained until no legal pair remains
+  // or the unlocked cap ends the ladder. The refusal says why (no eligible
+  // pairs, the flow lock); a landing reports the sweep like the bulk
+  // purchases report their buy.
+  mergeAllAction(): void {
+    const result = mergeAll(this.state);
+    if (!result.ok) {
+      this.say(result.reason ?? "Nothing to combine.");
+      this.render();
+      return;
+    }
+    const sweep = result.merge!;
+    const refund = sweep.refund > 0 ? ` · ${formatInt(sweep.refund)} ν refunded` : "";
+    this.announceUnlocks(
+      result.unlocked,
+      `MERGE ALL: ${sweep.combines} combine${sweep.combines === 1 ? "" : "s"}${refund}.`,
+    );
+    this.save();
     this.render();
   }
 
