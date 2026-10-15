@@ -8,6 +8,7 @@ import { deployedAt } from "../engine/economy";
 import { sameHex } from "../engine/hex";
 import { forgeThreshold, flowThreshold, mutatorForgeThreshold } from "../engine/rolls";
 import { BALANCE, CATEGORY_OF, isOscillatorType, isVoiceType, NAMED_CHORDS, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
+import { goalCompletionBase } from "../engine/reserves";
 import { baseTermOf, generatorProfileOf } from "../engine/profiles";
 import { catalogOpen, rowUnlockCost, unlockableRows } from "../engine/catalog";
 import { capacityCeiling, nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "../engine/capacity";
@@ -3294,8 +3295,8 @@ function forgeEffect(type: ModuleInstance["type"], tier: number): string {
     case "goalKeyed": {
       const profile = generatorProfileOf(type)!;
       if (type === "focusKeyed") return `+${formatNumber(profile.focus * power)} charge/s of practice · modest note and goal credit`;
-      if (type === "noteKeyed") return `+${formatNumber(profile.noteCreate * power)} charge per new note · +${formatNumber(profile.noteChar * power)}/char · modest practice credit`;
-      return `×${formatNumber(profile.goal * power)} completion base · modest practice and note credit`;
+      if (type === "noteKeyed") return `+${formatNumber(profile.noteCreate * power)} charge/new note ≥${BALANCE.noteCreationMinChars} chars · +${formatNumber(profile.noteChar * power)}/char (${formatNumber(BALANCE.noteCharCreditCap * power)} max/note) · modest practice credit`;
+      return `+${formatNumber(profile.goal * goalCompletionBase(60, 1) * power)} charge/live goal minute at completion · modest practice and note credit`;
     }
     case "infusor": return `Adjacent production +${formatNumber(BALANCE.infusorBonus * 100 * power)}% · charge boosts uplift`;
     case "forge": return "Received charge → module rolls";

@@ -48,8 +48,11 @@ describe("Forge drafts (#335)", () => {
     expect(line("g1")).toContain("+0.1");
     expect(line("g1")).toContain("modest note and goal credit");
     expect(line("g2")).toContain("+30");
-    expect(line("g2")).toContain("+1/char");
-    expect(line("g3")).toContain("×5");
+    expect(line("g2")).toContain("≥20 chars");
+    expect(line("g2")).toContain("+1/char (300 max/note)");
+    expect(line("g3")).toContain("+30");
+    expect(line("g3")).toContain("charge");
+    expect(line("g3")).toContain("/live goal minute at completion");
     expect(line("g3")).toContain("modest practice and note credit");
     // The named designs' labels ride the tiles' accessible names.
     expect(panel().querySelector('[data-choice="g1"]')!.getAttribute("aria-label")).toBe("Take common Flywheel · Tier 1");

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
+import { forgeThreshold } from "./rolls";
 import { combine, endSession, pauseSession, prestige, startSession } from "./actions";
 import { computeRates, emittedStrength } from "./economy";
 import { fresh, give, stubRng } from "./fixtures";
@@ -126,6 +127,30 @@ describe("delivery spends the quantity", () => {
     advance(s, 60, rng);
     expect(s.forge.progress).toBeCloseTo(30, 6);
     expect(s.forge.earned).toBe(0);
+  });
+
+  it("drains sub-tolerance delivery spans without losing charge or recursing forever", () => {
+    function run(split: boolean) {
+      const s = fresh();
+      const gen = give(s, "focusKeyed", hex(2, 0), 40);
+      startSession(s, null);
+      advance(s, 600);
+      endSession(s);
+      const banked = gen.reserve;
+      receiver(s);
+      startSession(s, null);
+      if (split) advance(s, 59.9999999995);
+      advance(s, split ? 1 : 60.9999999995);
+      const spent = Array.from({ length: s.forge.earned }, (_, i) => forgeThreshold(i)).reduce((a, b) => a + b, 0);
+      return { reserve: gen.reserve, delivered: s.forge.progress + spent, banked, elapsed: s.session!.elapsed };
+    }
+    const one = run(false);
+    const split = run(true);
+    for (const result of [one, split]) {
+      expect(result.reserve).toBe(0);
+      expect(result.delivered).toBeCloseTo(result.banked, 6);
+      expect(result.elapsed).toBeCloseTo(60.9999999995, 9);
+    }
   });
 
   it("equivalent time intervals deliver equivalently — one step or many", () => {

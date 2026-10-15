@@ -50,7 +50,10 @@ export function advance(
     rollsMutator: 0,
     goalsCompleted: 0,
   };
-  if (state.mode !== "flow" || seconds <= EPS) return result;
+  // A depletion split can be shorter than EPS seconds while still owning
+  // significant charge at high strength. Process every positive span so
+  // the first recursive leg drains its boundary before the next begins.
+  if (state.mode !== "flow" || seconds <= 0) return result;
   const session = state.session;
   if (!session) return result;
 
