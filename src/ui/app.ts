@@ -2493,6 +2493,11 @@ export class App {
     if (!s.modules.some((m) => m.type === "mutatorForge")) {
       s.modules.push(createModule(s, "mutatorForge"));
     }
+    // The era's vacant slot rides an owned cell: slots only ever unlock on
+    // owned coordinates (ADR-0043), and the layer's renderer draws at
+    // owned coordinates alone (issue #386) — the grant buys the cell its
+    // fourth slot sits on.
+    if (!s.cells.some((cell) => sameHex(cell, hex(1, 1)))) s.cells.push(hex(1, 1));
     s.mutatorSlots = [hex(0, 0), hex(1, 0), hex(0, 1), hex(1, 1)];
     const item = (family: MutatorFamily, rarity: Rarity, pos: Hex | null): MutatorInstance => ({
       id: `mu-dev-${s.nextId++}`,

@@ -62,6 +62,7 @@ import {
   hexFromAttr,
   mutatorAskHtml,
   mutatorEffectText,
+  mutatorLayerLive,
   mutGridDecorations,
   mutatorSlotPrice,
   mutatorTileInner,
@@ -1176,6 +1177,14 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
 
   const flow = state.mode === "flow";
   const snapshot = live;
+  // The Mutators layer owns the board's drawing (issues #298 and #386):
+  // while it stands the renderer emits the layer's faces alone — module
+  // faces, the empty-cell artwork, chord marks, charge leads, and the
+  // would-form ghosts never enter the svg, so nothing can leak beneath
+  // and no module gesture surface survives to collide with the layer's.
+  // The lens still reads the owned lattice, so zoom and pan hold still
+  // across the switch.
+  const mutLive = mutatorLayerLive(app);
   // The chord annotation is always on (§6, #137): every formed chord wears
   // its colored work — no chord view, no toggle. The marks arrive from
   // refreshChordOverlay (render's one computation, issue #296) — the readout
@@ -1189,79 +1198,79 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
   // or a generator whose charge window is spent — sits dim and static as
   // wiring previews (ADR-0002).
   let html = `${CHARGE_LEAD_DEFS}${SPACER_WINDOW_DEFS}`;
-  for (const { generator, receiver, emitting } of chargeLeads(state, flow)) {
-    if (generator.pos === null || receiver.pos === null) continue;
-    const [x1, y1] = point(generator.pos);
-    const [x2, y2] = point(receiver.pos);
-    const cls = emitting ? "charge-line" : "charge-preview-line";
-    html += `<line data-key="charge-${generator.id}-${receiver.id}" class="${cls}" ${leadSegment(x1, y1, x2, y2)}/>`;
-  }
-
-  // The Row unlock's shaded rows (issue #197): background work, behind the
-  // chord marks and the faces — the promise the banner carries is board
-  // geometry, not chord content.
-  html += `<g data-key="row-bands">${rowBandHtml(state, bands, point)}</g>`;
-
-  // Named-chord marks (§6, #201): the chord work draws UNDER the modules —
-  // visible in the gaps between the faces and past the poking corners,
-  // whispering in the gaps; no chord ever crosses a face. The idle
-  // candidates draw only under the ask (ADR-0057) — `askedIdleMarks` owns
-  // the rule; the readout refreshes from the same marks.
-  const revealedIdle = new Set(askedIdleMarks(app).map((mark) => mark.key));
-  html += `<g data-key="chord-marks">${overlay.marks
-    .filter((mark) => !mark.inactive || revealedIdle.has(mark.key))
-    .map((mark) => chordMarkHtml(mark, "formed"))
-    .join("")}</g>`;
-
-  for (const pos of state.cells) {
-    const [x, y] = point(pos);
-    const module = deployedAt(state, pos);
-    const drop = dropRegister(app, pos);
-    const label = module ? `${META[module.type].name} at ${cellNoteOf(pos)}` : `Empty cell · ${cellNoteOf(pos)}`;
-    // A cell under a Mutator slot face (issue #298): the stylesheet hides
-    // the empty chassis and its note beneath the live layer's own face,
-    // so nothing ghosts through the slot's words.
-    const covered = state.mutatorSlots.some((slot) => sameHex(slot, pos)) ? " mut-covered" : "";
-    if (module) {
-      html += `<g class="cell-node${covered}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">`;
-      html += moduleNode(app, module, pos, { snapshot, drop });
-      html += `</g>`;
-      continue;
+  if (!mutLive) {
+    for (const { generator, receiver, emitting } of chargeLeads(state, flow)) {
+      if (generator.pos === null || receiver.pos === null) continue;
+      const [x1, y1] = point(generator.pos);
+      const [x2, y2] = point(receiver.pos);
+      const cls = emitting ? "charge-line" : "charge-preview-line";
+      html += `<line data-key="charge-${generator.id}-${receiver.id}" class="${cls}" ${leadSegment(x1, y1, x2, y2)}/>`;
     }
-    // An empty owned cell reads as owned space — the dashed outline and
-    // its note, no add-button plus or EMPTY CELL prompt. Only armed-mode
-    // hints remain (board-redesign spec §7, #151); New cells stay the
-    // purchase entry point. The chassis is translucent (#201) so the chord
-    // work shows through, and the note centers on the cell (#172).
-    let classes = "hex empty";
-    if (drop) classes += ` ${dropClass(drop)}`;
-    if (isTargetCell(app)) classes += " target";
-    html += `<g class="cell-node${covered}" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">
-      <polygon class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>
-      <text y="0" dominant-baseline="central" text-anchor="middle" class="hex-note">${cellNoteOf(pos)}</text></g>`;
+
+    // The Row unlock's shaded rows (issue #197): background work, behind the
+    // chord marks and the faces — the promise the banner carries is board
+    // geometry, not chord content.
+    html += `<g data-key="row-bands">${rowBandHtml(state, bands, point)}</g>`;
+
+    // Named-chord marks (§6, #201): the chord work draws UNDER the modules —
+    // visible in the gaps between the faces and past the poking corners,
+    // whispering in the gaps; no chord ever crosses a face. The idle
+    // candidates draw only under the ask (ADR-0057) — `askedIdleMarks` owns
+    // the rule; the readout refreshes from the same marks.
+    const revealedIdle = new Set(askedIdleMarks(app).map((mark) => mark.key));
+    html += `<g data-key="chord-marks">${overlay.marks
+      .filter((mark) => !mark.inactive || revealedIdle.has(mark.key))
+      .map((mark) => chordMarkHtml(mark, "formed"))
+      .join("")}</g>`;
   }
 
-  if (frontier.length > 0) {
-    // The octave-row gate rides the quoted price (ADR-0022): a frontier hex
-    // in a row whose one-time gate is unpaid carries the premium — the
-    // same cellPurchasePrice seam the buy action charges.
-    for (const pos of frontier) {
+  if (!mutLive) {
+    for (const pos of state.cells) {
       const [x, y] = point(pos);
-      const total = cellPurchasePrice(state, pos);
-      const affordable = wholeNous(state) >= total;
-      if (ui.buyingCell) {
-        // The purchase arm (#201): one cost spot — the pill over the
-        // board's top edge carries the single price, so the hexes drop
-        // their stamped figures and keep a firm accent outline. The buy
-        // lands only where clicked (ADR-0013); the accessible name keeps
-        // the hex's own figure.
-        html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Buy cell here for ${formatInt(total)} nous">
-          <polygon class="hex ${affordable ? "buy-here" : "future"}" points="${hexPoints(HEX_RADIUS)}"/>
-        </g>`;
-      } else {
-        html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Expand here">
-          <polygon class="hex future" points="${hexPoints(HEX_RADIUS)}"/>
-        </g>`;
+      const module = deployedAt(state, pos);
+      const drop = dropRegister(app, pos);
+      const label = module ? `${META[module.type].name} at ${cellNoteOf(pos)}` : `Empty cell · ${cellNoteOf(pos)}`;
+      if (module) {
+        html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">`;
+        html += moduleNode(app, module, pos, { snapshot, drop });
+        html += `</g>`;
+        continue;
+      }
+      // An empty owned cell reads as owned space — the dashed outline and
+      // its note, no add-button plus or EMPTY CELL prompt. Only armed-mode
+      // hints remain (board-redesign spec §7, #151); New cells stay the
+      // purchase entry point. The chassis is translucent (#201) so the chord
+      // work shows through, and the note centers on the cell (#172).
+      let classes = "hex empty";
+      if (drop) classes += ` ${dropClass(drop)}`;
+      if (isTargetCell(app)) classes += " target";
+      html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="${label}">
+        <polygon class="${classes}" points="${hexPoints(HEX_RADIUS)}"/>
+        <text y="0" dominant-baseline="central" text-anchor="middle" class="hex-note">${cellNoteOf(pos)}</text></g>`;
+    }
+
+    if (frontier.length > 0) {
+      // The octave-row gate rides the quoted price (ADR-0022): a frontier hex
+      // in a row whose one-time gate is unpaid carries the premium — the
+      // same cellPurchasePrice seam the buy action charges.
+      for (const pos of frontier) {
+        const [x, y] = point(pos);
+        const total = cellPurchasePrice(state, pos);
+        const affordable = wholeNous(state) >= total;
+        if (ui.buyingCell) {
+          // The purchase arm (#201): one cost spot — the pill over the
+          // board's top edge carries the single price, so the hexes drop
+          // their stamped figures and keep a firm accent outline. The buy
+          // lands only where clicked (ADR-0013); the accessible name keeps
+          // the hex's own figure.
+          html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Buy cell here for ${formatInt(total)} nous">
+            <polygon class="hex ${affordable ? "buy-here" : "future"}" points="${hexPoints(HEX_RADIUS)}"/>
+          </g>`;
+        } else {
+          html += `<g class="cell-node" transform="translate(${x},${y})" data-cell="${pos.q},${pos.r}" tabindex="0" role="button" aria-label="Expand here">
+            <polygon class="hex future" points="${hexPoints(HEX_RADIUS)}"/>
+          </g>`;
+        }
       }
     }
   }
@@ -1271,12 +1280,13 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
   // chord — these stay OVER the modules (the promise reads on top). They
   // wear the same seam language as the formed chords (brackets, runs,
   // note-corner polygons — #201), promising in the vocabulary the chord
-  // will land in.
-  html += `<g data-key="ghost-chords">${ghostMarksHtml(app, projected)}</g>`;
+  // will land in. No module gesture can stand on the Mutators layer, so
+  // the group never draws there (issue #386).
+  if (!mutLive) html += `<g data-key="ghost-chords">${ghostMarksHtml(app, projected)}</g>`;
 
-  // The Mutator Grid's drawing (issue #199): the second layer's slot faces
-  // while the Mutators tab stands, the presence outlines while Modules
-  // does — drawn over the faces, beneath the ghosts' register.
+  // The Mutator Grid's drawing (issue #199): the second layer's faces — one
+  // per owned coordinate while the Mutators tab stands (issue #386), the
+  // presence outlines while Modules does.
   html += mutGridDecorations(app, projected);
 
   updateSvg(svg, html);
