@@ -18,10 +18,10 @@ describe("forge roll generation", () => {
     for (const type of types) {
       expect(ROLL_POOL).toContain(type);
     }
-    // Draws without replacement over the thirteen-type pool: additive,
-    // then bend (index 3 of the twelve remaining), then echo (index 2 of
-    // the eleven left).
-    expect(types).toEqual(["additive", "bend", "echo"]);
+    // Draws without replacement over the sixteen-type pool: additive,
+    // then harmonizer (index 7 of the fifteen remaining), then square
+    // (index 2 of the fourteen left).
+    expect(types).toEqual(["additive", "harmonizer", "square"]);
   });
 
   it("candidates carry the type's fixed rarity and the base tier — nothing is rolled per copy", () => {
@@ -68,6 +68,9 @@ describe("forge roll generation", () => {
   it("the pool is every launch module type — the roster rolls, the spacer ships through rolls only", () => {
     expect(ROLL_POOL).toContain("additive");
     expect(ROLL_POOL).toContain("blaster");
+    expect(ROLL_POOL).toContain("triangle");
+    expect(ROLL_POOL).toContain("square");
+    expect(ROLL_POOL).toContain("saw");
     expect(ROLL_POOL).toContain("harmonizer");
     expect(ROLL_POOL).toContain("echo");
     expect(ROLL_POOL).toContain("bend");
@@ -79,7 +82,7 @@ describe("forge roll generation", () => {
     expect(ROLL_POOL).toContain("goalKeyed");
     expect(ROLL_POOL).toContain("infusor");
     expect(ROLL_POOL).toContain("forge");
-    expect(ROLL_POOL).toHaveLength(13);
+    expect(ROLL_POOL).toHaveLength(16);
   });
 
   it("persists outcomes when the roll is earned, not when it is revealed", () => {

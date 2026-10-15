@@ -69,7 +69,7 @@ describe("opening the cross-section (issue #295)", () => {
     // The face itself is the plate: the enlarged engraving carries name,
     // level, pitch, and the live contribution with its unit.
     const engraving = faceSvg("modules").textContent ?? "";
-    expect(engraving).toContain("OSC");
+    expect(engraving).toContain("SINE");
     expect(engraving).toContain("LV 0");
     expect(engraving).toContain("C4");
     expect(engraving).toContain(`+${formatNumber(0.1)} ν/s`);
@@ -739,7 +739,7 @@ describe("the detail's direct inventory (issue #296)", () => {
     expect(app.ui.detail).toEqual({ pos: hex(0, 1), face: "modules" });
     // The readouts and the relationship breakdown refresh immediately:
     // the new voice's face stands, and the octave names itself in the row.
-    expect(faceSvg("modules").textContent).toContain("OSC");
+    expect(faceSvg("modules").textContent).toContain("SINE");
     expect(section("modules").querySelector(".hex-chord-row")!.textContent).toContain("Octave");
   });
 

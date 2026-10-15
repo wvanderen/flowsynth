@@ -19,7 +19,7 @@ A unit occupying one cell on the board, with gameplay effects derived from its c
 The function level of a board module — oscillator, spacer, generator, booster, or forge at launch; the silent-voice and charge-conduit categories (working names, confirmed) joined with the roster iteration, and the habit-keyed ritual category — RITUAL, its one member — joins with the builds iteration. Categories take their display words from their modules (issue #219): the former synthesizer category is the oscillator category, the former infusor the booster category. Category carries the module's hue.
 
 **Module type**:
-A specific module design within a category, such as the Oscillator or the Focus Generator, carrying its own glyph and nameplate. Forge choices contain distinct module types; different types may share the same category.
+A specific module design within a category, such as the Sine or the Focus Generator, carrying its own glyph and nameplate. Forge choices contain distinct module types; different types may share the same category.
 
 **Chargeable module**:
 A supertype family above the category level whose members accumulate received charge toward thresholds that produce effects; the threshold fill is the family's shared rendering trait. The Module Forge is the launch instance. Continuous-charge categories (oscillator, booster) use received charge as continuous empowerment instead.
@@ -157,7 +157,7 @@ The transient projection a placement gesture paints while a valid target hovers 
 _Avoid_: placement tooltip, what-if mode
 
 **Synth term**:
-An oscillator's base contribution to the composite — level and rarity power, with the oscillator's own chord factor in (ADR-0036); one unified leg shared by every oscillator. The booster uplift rides in its own leg beside it. The leg keeps the historical "synth" name (ADR-0014).
+An oscillator's base contribution to the composite — level and rarity power, with the oscillator's own chord factor in (ADR-0036); one unified leg shared by every oscillator, each named type's authored profile scaling the leg's pieces (issue #369, ADR-0059). The booster uplift rides in its own leg beside it. The leg keeps the historical "synth" name (ADR-0014).
 
 **Oscillator**:
 An oscillator-category board module contributing a synth term to the composite; no oscillator is spatially privileged. It is empowered while receiving charge and never produces charge. Renamed from Synthesizer with issue #219; the category follows the module.
@@ -215,6 +215,14 @@ _Avoid_: rolled rarity (the per-candidate sense), tier (the merge sense)
 **Merge tier**:
 A copy's own duplicate-earned improvement step, shown as the engraved ring count. Two copies of the same named type and tier combine into one at the next tier; unequal tiers and different named types never combine, and a finite unlocked cap ends the ladder until Arete raises it (ADR-0058, #380). Tier scaling multiplies the module's authored strengths — never its conditions, proportions, or type rarity. Tiers survive the arete reset with the module (ADR-0039).
 _Avoid_: rarity (the merge sense), stars, plus
+
+**Profile**:
+A named module type's fixed authored identity — coefficients over the category's comparable axes (the oscillators': base production, booster response, chord response, charge response), one defining behavior and at most two supporting tradeoffs, never rolled per copy (issue #369, ADR-0059). Levels, tiers, and mutators scale the profile's strengths; they never change its proportions, conditions, or relative weaknesses.
+_Avoid_: stat roll (the per-instance sense), build (the habit sense)
+
+**Aptitude grade**:
+A profile axis's fixed letter from the category's absolute coefficient bands — S exceptional, A strong, B standard, C reduced, D weak, and the absent mark — shown beside the exact coefficient in the disclosure layer (issue #370). Grades belong to the named type and never re-rank: level, tier, mutators, and live conditions move output, not grades; rare does not imply a higher grade on every axis. Actual output belongs to the production readouts, never to the grade line.
+_Avoid_: rating (the trust sense), current-output letter
 
 **Combination**:
 The consumption of two modules of the same type and merge tier to produce one of the next tier, retaining the higher input level and refunding the lower-level input's nous upgrade expenditure. It is initiated by dropping one copy onto the other (board or tray, either direction) and confirming the reviewed outcome; the result lands where the drop target was. The survivor keeps its own secondary effects; the consumed copy's are forfeited with it (ADR-0058). Mutators combine by the same gesture: two of the same family and rarity yield one mutator of the next rarity — mutators carry no levels, so nothing is retained or refunded.

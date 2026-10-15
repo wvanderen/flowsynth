@@ -165,7 +165,7 @@ describe("the dev allocation board (#257)", () => {
   it("exposes module identity and keeps selection and keyboard focus across recomputation", () => {
     openBoard();
     const cell = document.querySelector<HTMLButtonElement>('[data-devcell="0,0"]')!;
-    expect(cell.getAttribute("aria-label")).toBe("Oscillator at C4");
+    expect(cell.getAttribute("aria-label")).toBe("Sine at C4");
     expect(cell.querySelector("svg .tile-glyph")).not.toBeNull();
     cell.focus();
     cell.click();

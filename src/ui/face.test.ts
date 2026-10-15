@@ -147,8 +147,11 @@ describe("module face", () => {
     // META carries the final names, and the faceplate is the short
     // uppercased.
     const names: Record<string, [string, string]> = {
-      additive: ["Oscillator", "OSC"],
+      additive: ["Sine", "SINE"],
       blaster: ["Blaster", "BLST"],
+      triangle: ["Triangle", "TRI"],
+      square: ["Square", "SQR"],
+      saw: ["Saw", "SAW"],
       harmonizer: ["Harmonizer", "HARM"],
       echo: ["Echo", "ECHO"],
       bend: ["Bend", "BEND"],
@@ -172,6 +175,9 @@ describe("module face", () => {
     // seeded-hexagon Mutator Forge on the bare chassis — plus the roster's
     // own marks.
     expect(moduleIcon("additive")).toBe('<path d="M-12 0C-8-10-4-10 0 0C4 10 8 10 12 0"/>');
+    expect(moduleIcon("triangle")).toBe('<path d="M-12 8-4-8 4 8 12-8"/>');
+    expect(moduleIcon("square")).toBe('<path d="M-12 8V-8h9v16h9V-8h6"/>');
+    expect(moduleIcon("saw")).toBe('<path d="M-12 8-1-8v16L10-8v16"/>');
     expect(moduleIcon("harmonizer")).toBe('<path d="M0-10 8 0 0 10-8 0Z"/>');
     expect(moduleIcon("focusKeyed")).toBe('<path d="M2-13-6 1H0L-2 13 6-1H0Z"/>');
     // The keyed siblings: the bolt with the corner mark each fact wears —

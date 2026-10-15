@@ -10,6 +10,15 @@ The chosen tuning and the evidence behind it. The decision is ADR-0055; this fil
 > re-recorded: the median seed is still 2026, its ordinary era-1 lengthened
 > to 1,500 minutes at 120 s steps (eight-seed spread 1,050–1,920), era
 > ratio 0.68. The full-battery tables have not been rerun since.
+>
+> **2026-10-15, issue #369:** the authored oscillator profiles reshuffled
+> the walks again, in two ways: the waveform wave doubled the common
+> band's oscillator share (five of sixteen pool types, until the
+> draft-composition control, #378), and the authored responses lifted
+> boosted and charged boards. The always-on gate re-recorded: the median
+> ordinary seeds are 42 and 23 at 750 minutes era-1 (eight-seed spread
+> 540–870), era ratio ~0.42. The full-battery tables still predate the
+> profile wave.
 
 ## Adopted tuning
 

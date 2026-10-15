@@ -16,10 +16,13 @@ export type Category =
   | "ritual";
 
 // Oscillators contribute synth terms to the nous composite — one unified
-// leg shared by every oscillator (ADR-0022, ADR-0048). The Blaster is the
-// category's second producer role: it converts received charge into its
-// synth term, singing and completing chords even uncharged at zero output.
-export type OscillatorType = "additive" | "blaster";
+// leg shared by every oscillator (ADR-0022, ADR-0048), with each named
+// type's authored profile (issue #369, ADR-0059) scaling the leg's pieces:
+// base production, booster response, chord response, and charge response.
+// The Blaster is the category's second producer role: it converts received
+// charge into its synth term, singing and completing chords even uncharged
+// at zero output — the profile wave's first alternative charge behavior.
+export type OscillatorType = "additive" | "blaster" | "triangle" | "square" | "saw";
 
 // The silent-voice category (ADR-0048): silent pitched modules that produce
 // no nous but count in chord clusters — they form and complete chords and

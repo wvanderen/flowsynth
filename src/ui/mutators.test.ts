@@ -190,7 +190,7 @@ describe("the Mutators layer's slot faces", () => {
     expect(face.textContent).not.toContain("· C4");
     // The accessible name keeps the host, so the fact never rides on
     // sight alone; the hover ask speaks it too (pinned below).
-    expect(face.getAttribute("aria-label")).toContain("hosts Oscillator · C4");
+    expect(face.getAttribute("aria-label")).toContain("hosts Sine · C4");
   });
 
   it("a vacant slot speaks: OPEN SLOT, inert · no host", () => {
@@ -556,7 +556,7 @@ describe("the readouts (issue #199)", () => {
     slotNode(0, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     const readout = document.getElementById("chord-readout")!;
     expect(readout.hidden).toBe(false);
-    expect(readout.textContent).toContain("Power · +50% to this module's power — hosts Oscillator · C4");
+    expect(readout.textContent).toContain("Power · +50% to this module's power — hosts Sine · C4");
     expect(readout.textContent).not.toContain("ν/s");
   });
 

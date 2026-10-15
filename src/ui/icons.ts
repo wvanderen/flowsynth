@@ -31,6 +31,13 @@ const PATHS: Record<ModuleType, string> = {
   // generator's bolt at its core (the oscillator category's second
   // producer, converting received charge into its term).
   blaster: '<path d="M-12 0C-8-10-4-10 0 0C4 10 8 10 12 0"/><path d="M1.5-9-4-1H0L-1.5 9 4 1H0Z"/>',
+  // The waveform profiles (issue #369): the four common designs wear their
+  // own scope traces — the Sine keeps the bare wave above, the Triangle,
+  // Square, and Saw draw the shapes their names say. Identity marks, not
+  // waveform physics.
+  triangle: '<path d="M-12 8-4-8 4 8 12-8"/>',
+  square: '<path d="M-12 8V-8h9v16h9V-8h6"/>',
+  saw: '<path d="M-12 8-1-8v16L10-8v16"/>',
   // The spacer's wire glyph (ADR-0021): a silent conductor stepping through
   // one cell — a running wire with solder points, never a voice. The board
   // face and tray tile render the ring window instead (issue #219); the

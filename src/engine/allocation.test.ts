@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BALANCE, CATEGORY_OF, NAMED_CHORDS } from "./constants";
 import { chordClusters, formationQuality, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
 import { computeRates } from "./economy";
+import { chordResponseOf } from "./profiles";
 import { ALLOCATION_QUALITY_BOUNDS, allocateChords, type AllocatedInstance, type AllocationVoiceParams } from "./allocation";
 import { fresh, give, sumSynthValues } from "./fixtures";
 import { hex } from "./hex";
@@ -44,6 +45,9 @@ interface OracleVoice {
   weight: number;
   uplift: number;
   resonance: number;
+  // The voice's authored chord response (issue #369): each instance's
+  // factor for this voice is 1 + response·instance bonus.
+  response: number;
 }
 
 function oracleBestValue(voices: OracleVoice[], capacity: number): number {
@@ -66,7 +70,7 @@ function oracleBestValue(voices: OracleVoice[], capacity: number): number {
     return res;
   };
   // Every complete voice-set the cluster recognizes.
-  const flat: { members: OracleVoice[]; factor: number }[] = [];
+  const flat: { members: OracleVoice[]; factors: number[] }[] = [];
   for (const def of NAMED_CHORDS) {
     const intervals = [...new Set(def.intervals)].sort((a, b) => a - b);
     const multiplicity = intervals.map((iv) => def.intervals.filter((i) => i === iv).length);
@@ -76,7 +80,8 @@ function oracleBestValue(voices: OracleVoice[], capacity: number): number {
       const choices = groups.map((group, i) => combos(group, multiplicity[i]!));
       const walk = (i: number, members: OracleVoice[]): void => {
         if (i === choices.length) {
-          flat.push({ members: [...members], factor: 1 + def.bonus + members.reduce((t, v) => t + v.uplift, 0) });
+          const bonus = def.bonus + members.reduce((t, v) => t + v.uplift, 0);
+          flat.push({ members: [...members], factors: members.map((v) => 1 + v.response * bonus) });
           return;
         }
         for (const seats of choices[i]!) walk(i + 1, [...members, ...seats]);
@@ -97,15 +102,15 @@ function oracleBestValue(voices: OracleVoice[], capacity: number): number {
     for (let bit = 0; bit < flat.length && feasible; bit++) {
       if (!(mask & (1 << bit))) continue;
       const instance = flat[bit]!;
-      for (const member of instance.members) {
+      instance.members.forEach((member, j) => {
         const count = counts.get(member.id)!;
         if (count >= capacity) {
           feasible = false;
-          break;
+          return;
         }
         counts.set(member.id, count + 1);
-        prods.set(member.id, prods.get(member.id)! * instance.factor);
-      }
+        prods.set(member.id, prods.get(member.id)! * instance.factors[j]!);
+      });
       active = true;
     }
     if (!feasible) continue;
@@ -131,7 +136,7 @@ function valueOfInstances(voices: readonly OracleVoice[], instances: readonly Al
       const count = counts.get(id)!;
       expect(count).toBeLessThan(capacity); // no budget ever exceeded
       counts.set(id, count + 1);
-      prods.set(id, prods.get(id)! * (1 + inst.bonus));
+      prods.set(id, prods.get(id)! * (1 + (voices.find((v) => v.id === id)!.response) * inst.bonus));
     }
   }
   if (instances.length === 0) return voices.reduce((total, v) => total + v.weight, 0);
@@ -211,6 +216,7 @@ function oracleVoicesOf(s: Scenario): Map<string, OracleVoice[]> {
         weight: silent ? 0 : p.weight,
         uplift: silent ? BALANCE.silentVoiceUpliftPerLevel * module.level : 0,
         resonance: p.resonance,
+        response: chordResponseOf(module.type),
       });
     }
     if (list.length > 0) out.set(list.map((v) => v.id).sort().join(","), list);
@@ -347,12 +353,15 @@ describe("whole-chord capacity allocation (#257)", () => {
   it("matches the oracle across a randomized battery of small boards", () => {
     // Deterministic LCG battery: random pitch classes (duplicates and
     // silent voices included), random weights and resonance, capacities
-    // one through three — every solve certified and oracle-exact.
+    // one through three — every solve certified and oracle-exact. The
+    // voices draw from the whole waveform roster, so the heterogeneous
+    // chord responses (issue #369) sit inside the certified objective.
     let seed = 20261006;
     const rng = (): number => {
       seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
       return seed / 4294967296;
     };
+    const waveforms: ModuleType[] = ["additive", "triangle", "square", "saw"];
     for (let trial = 0; trial < 60; trial++) {
       const s = scenario();
       const columns = [0, 1, 2, 4, 6, 7, 9, 11];
@@ -365,7 +374,7 @@ describe("whole-chord capacity allocation (#257)", () => {
         const silent = rng() < 0.25;
         const level = Math.floor(rng() * 3);
         if (silent) addVoice(s, "harmonizer", { q, r }, level);
-        else addVoice(s, "additive", { q, r }, level, 0.05 + rng() * 0.4, rng() < 0.2 ? 0.5 : 0);
+        else addVoice(s, waveforms[Math.floor(rng() * waveforms.length)]!, { q, r }, level, 0.05 + rng() * 0.4, rng() < 0.2 ? 0.5 : 0);
       }
       // Spacers bridge the rectangle — one connected formation.
       const minQ = Math.min(...s.state.cells.map((c) => c.q));
@@ -402,6 +411,26 @@ describe("whole-chord capacity allocation (#257)", () => {
     expect(read.instances[0]!.memberIds).toContain(resonant);
     expect(read.instances[0]!.memberIds).not.toContain(plain);
     expect(read.instances[0]!.memberIds).toContain(shared);
+    expect(oracleValue(s, 1)).toBeCloseTo(solverValue(s, read, 1), 9);
+  });
+
+  it("prices the authored chord response inside the certified objective", () => {
+    // One Fifth seat over two same-class voices at equal weights: the
+    // Triangle's authored chord response (×2.5, issue #369) makes the
+    // instance worth more to it than to the Square (×0.6), so the
+    // Triangle takes the seat — and the oracle's per-voice-factor math
+    // reads the same value.
+    const s = scenario();
+    const triangle = addVoice(s, "triangle", { q: 0, r: 0 }, 0, 0.1);
+    const square = addVoice(s, "square", { q: 0, r: 1 }, 0, 0.1);
+    const partner = addVoice(s, "additive", { q: 1, r: 0 }, 0, 0.1);
+    const read = allocate(s, 1);
+    expect(read.certified).toBe(true);
+    expect(read.instances).toHaveLength(1);
+    expect(read.instances[0]!.name).toBe("Fifth");
+    expect(read.instances[0]!.memberIds).toContain(triangle);
+    expect(read.instances[0]!.memberIds).not.toContain(square);
+    expect(read.instances[0]!.memberIds).toContain(partner);
     expect(oracleValue(s, 1)).toBeCloseTo(solverValue(s, read, 1), 9);
   });
 

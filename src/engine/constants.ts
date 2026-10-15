@@ -318,6 +318,12 @@ export const CHIME = {
 export const CATEGORY_OF: Record<ModuleType, Category> = {
   additive: "oscillator",
   blaster: "oscillator",
+  // The profile wave's three additions (issue #369, ADR-0059): the same
+  // oscillator category — pitch in the cell, continuous charge empowerment
+  // — with each type's authored profile scaling the shared leg.
+  triangle: "oscillator",
+  square: "oscillator",
+  saw: "oscillator",
   harmonizer: "silentVoice",
   echo: "silentVoice",
   bend: "silentVoice",
@@ -349,10 +355,14 @@ export function isOscillatorType(type: ModuleType): boolean {
 // The launch roster is all-common as explicit, provisional tuning: the
 // band-then-type roll then samples the pool uniformly, matching the
 // pre-split distribution, and the profile waves (#369 onward) retune per
-// design.
+// design. The four waveform oscillators (#369) launch common — their
+// niches come from the authored profiles, not from scarcity.
 export const TYPE_RARITY: Record<ModuleType, Rarity> = {
   additive: "common",
   blaster: "common",
+  triangle: "common",
+  square: "common",
+  saw: "common",
   harmonizer: "common",
   echo: "common",
   bend: "common",
@@ -406,6 +416,9 @@ export const CHARGE_RECEIVING_CATEGORIES: readonly Category[] = [
 export const MODULE_TYPES: readonly ModuleType[] = [
   "additive",
   "blaster",
+  "triangle",
+  "square",
+  "saw",
   "harmonizer",
   "echo",
   "bend",

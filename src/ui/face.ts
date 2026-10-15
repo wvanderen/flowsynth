@@ -54,6 +54,9 @@ export function hexApothem(radius: number): number {
 export const HUE_TOKEN_OF: Record<ModuleType, string> = {
   additive: "hue-oscillator",
   blaster: "hue-oscillator",
+  triangle: "hue-oscillator",
+  square: "hue-oscillator",
+  saw: "hue-oscillator",
   harmonizer: "hue-voice",
   echo: "hue-voice",
   bend: "hue-voice",

@@ -87,23 +87,23 @@ describe("the first roll yields a synthesizer candidate (§8)", () => {
   it("later rolls draw the pool plain — the rig fires once", () => {
     const s = fresh();
     // Each slot draws the band, then its index (ADR-0058): 0.9 → common,
-    // 0.5 over 13/12/11 → ritual, focusKeyed, amplifier — no synthesizer.
+    // 0.5 over 16/15/14 → amplifier, bend, ritual — no synthesizer.
     addForgeProgress(s, forgeThreshold(0), stubRng([0.9, 0.5, 0.9, 0.5, 0.9, 0.5]));
     expect(s.bankedRolls[0]!.candidates.some((c) => c.type === "additive")).toBe(true);
     // The same seed on the second roll: the same synthless draw stands,
     // unrigged — the rig fired once, on the first roll only.
     addForgeProgress(s, forgeThreshold(1), stubRng([0.9, 0.5, 0.9, 0.5, 0.9, 0.5]));
     const second = s.bankedRolls[1]!.candidates.map((c) => c.type);
-    expect(second).toEqual(["ritual", "spacer", "amplifier"]);
+    expect(second).toEqual(["amplifier", "bend", "ritual"]);
   });
 
   it("a draw that already sings is left alone", () => {
     const s = fresh();
-    // Bands 0.05/0.6/0.7 → common; indices 0.0/0.5/0.5 over 13/12/11:
-    // additive, spacer, ritual — a synthesizer is already here, so the
+    // Bands 0.05/0.6/0.7 → common; indices 0.0/0.5/0.5 over 16/15/14:
+    // additive, amplifier, ritual — a synthesizer is already here, so the
     // rig never touches the draw.
     addForgeProgress(s, forgeThreshold(0), stubRng([0.05, 0.0, 0.6, 0.5, 0.7, 0.5]));
-    expect(s.bankedRolls[0]!.candidates.map((c) => c.type)).toEqual(["additive", "spacer", "ritual"]);
+    expect(s.bankedRolls[0]!.candidates.map((c) => c.type)).toEqual(["additive", "amplifier", "ritual"]);
   });
 });
 

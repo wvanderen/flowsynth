@@ -3933,3 +3933,37 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .candidate-pick:focus-visible { outline-offset: 4px; }
 .peek .candidate-tile > svg, .candidate-readout { pointer-events: none; }
 .candidate-readout .term-tip { position: relative; pointer-events: auto; }
+
+/* The profile-grades line (issue #370): one square-cut chip per authored
+    axis — the axis's short name with its fixed aptitude grade. The letter
+    is the state (never color alone); the exact coefficient rides the
+    chip's tooltip disclosure. */
+.profile-grades { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+.inst-tip.profile-axis { display: inline-flex; position: relative; pointer-events: auto; }
+.profile-grades .profile-grade {
+  width: auto;
+  height: auto;
+  min-width: 0;
+  min-height: 24px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 3px 7px;
+  background: transparent;
+  font: 600 10px/1.2 var(--font-condensed);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: help;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.profile-grades .profile-grade:hover { background: var(--hover-bg); border-color: var(--line-strong); }
+.profile-grades .profile-grade:focus-visible { outline-offset: 2px; }
+.profile-grades .profile-grade b { font: 600 11px/1 var(--mono); color: var(--ink); }
+@media (pointer: coarse) {
+  .profile-grades .profile-grade { min-width: 44px; min-height: 44px; }
+}
+/* The hex detail's grade line under the module face: left-aligned with the
+    stack's axis of attention, same chips. */
+.hex-detail-layer .profile-grades { justify-content: center; margin-top: 8px; }

@@ -38,6 +38,7 @@ import { FAMILY_WORD, rarityTicks, mutatorEffectText, mutatorGlyph, mutatorInert
 import { META, RARITY_LABEL, tierWord } from "./meta";
 import { isPhoneWidth, scrollTopOf } from "./container";
 import { wireTooltips } from "./instrument";
+import { profileGradesHtml } from "./profile";
 import { moduleFlowsHtml, mutatorFlowHtml } from "./hexflows";
 import type { DetailChordRow } from "./render";
 
@@ -79,6 +80,11 @@ const DETAIL_BENEFITS: Record<ModuleInstance["type"], (input: DetailEffectInput)
   // The Blaster's charge conversion replaces the charge factor: one level
   // scales its whole charge-sourced term (ADR-0048).
   blaster: synthBenefit,
+  // The waveform profiles (issue #369) scale the same shared leg — a
+  // level buys the type's whole term at once, profile included.
+  triangle: synthBenefit,
+  square: synthBenefit,
+  saw: synthBenefit,
   harmonizer: silentBenefit,
   echo: silentBenefit,
   bend: silentBenefit,
@@ -459,9 +465,14 @@ function moduleLayerHtml(app: App, pos: Hex, module: ModuleInstance | undefined,
   // wave reads and the outcomes compute against.
   const flows = module ? moduleFlowsHtml(state, module, snapshot, upgrade || state.mode === "flow") : "";
   const row = chordRow ? `<div class="hex-chord-row">${chordRow}</div>` : "";
+  // The profile's fixed aptitude grades (issue #370): the owned module's
+  // authored identity beside its face — the disclosure bodies carry the
+  // exact coefficients; the live output stays in the readouts above.
+  const grades = module ? profileGradesHtml(module.type) : "";
   return `<section class="hex-detail-layer modules${selected ? " selected" : ""}" data-detail-section="modules" tabindex="-1" aria-label="Modules — ${module ? `${META[module.type].name} at ${note}` : `empty place at ${note}`}">
     <span class="hex-orbit"><span class="inst-tip"><button class="hex-stack-chassis inst-tip-trigger" data-detail-face="modules" aria-pressed="${selected}" aria-describedby="${tip.id}" aria-label="Emphasize the Modules face">${chassis}</button>${tip.html}</span>${orbit}${flows}</span>
     ${row}
+    ${grades}
   </section>
   <aside class="hex-rail-row modules${selected ? " selected" : ""}">${rail}</aside>`;
 }
