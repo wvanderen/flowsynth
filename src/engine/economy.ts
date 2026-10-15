@@ -653,19 +653,24 @@ export function computeRates(
 }
 
 // Every voice's whole-chord budget (issues #258/#259, the confirmed
-// harmonic-capacity design): one at a fresh save, raised by the global nous
-// Catalog ladder, capped by the ceiling the Arete offerings raise, and
-// reset to one by prestige. Every current and newly acquired singing
-// module opens at one unit, rarity never alters it, and spacers —
-// conducting wire, never singers — consume none by construction (the
-// allocator budgets singing members only). The ladder's math lives in
-// capacity.ts; this accessor stays the one read every rate pass and
-// readout shares, so the purchase ladder landed in exactly the one place
-// ADR-0052 reserved. The allocation model stays development-gated;
-// ordinary play keeps its uncapped production until calibration validates
-// release.
-export function voiceCapacityOf(state: GameState): number {
-  return capacityOf(state);
+// harmonic-capacity design; intrinsic seats per issue #373): the ladder's
+// shared purchased increments on top of the type's intrinsic capacity —
+// one at a fresh save for every type, raised by the global nous Catalog
+// ladder, its rungs bounded by the ceiling the Arete offerings raise, and
+// reset to zero purchases by prestige (a profile's intrinsic seats ride
+// the reset out with the module). The ceiling clamps the purchased rungs
+// only, so a profile's final budget can end above the ceiling the ladder
+// itself reaches. Newly acquired singing modules open at the same figure;
+// rarity never alters it, and spacers — conducting wire, never singers —
+// consume none by construction (the allocator budgets singing members
+// only). Omitting the type reads the standard voice — the board's floor.
+// The ladder's math lives in capacity.ts; this accessor stays the one
+// read every rate pass and readout shares, so the purchase ladder landed
+// in exactly the one place ADR-0052 reserved. The allocation model stays
+// development-gated; ordinary play keeps its uncapped production until
+// calibration validates release.
+export function voiceCapacityOf(state: GameState, type?: ModuleType): number {
+  return capacityOf(state, type);
 }
 
 // The chordless pass — the weights' source for the authoritative
@@ -688,8 +693,10 @@ export interface AllocatedRates {
 }
 
 export interface AllocateRatesOptions {
-  // Override the economy's per-voice capacity (the development board's
-  // configurable ladder). Default: voiceCapacityOf.
+  // Override every voice's whole-chord budget with one uniform figure
+  // (the development board's configurable ladder and the stress read).
+  // Default: per-voice budgets — each voice's intrinsic capacity plus the
+  // shared purchased rungs (issue #373).
   capacity?: number;
   // The previous allocation's active keys — the retention hint. Default:
   // none (the solver's stable fallback decides ties).
@@ -721,7 +728,7 @@ interface AllocationMemoEntry {
 
 let allocationMemo = new WeakMap<GameState, Map<string, AllocationMemoEntry>>();
 
-function memoKeyOf(flow: boolean, capacity: number, budget: AllocationBudget, keep: ReadonlySet<string>): string {
+function memoKeyOf(flow: boolean, capacity: string, budget: AllocationBudget, keep: ReadonlySet<string>): string {
   return `${flow ? "flow" : "build"}:${capacity}:${budget.maxNodes}:${budget.maxMs}:${keepKeyOf(keep)}`;
 }
 
@@ -776,7 +783,11 @@ export function allocateRates(
   flow: boolean = flowLive(state),
   options: AllocateRatesOptions = {},
 ): AllocatedRates {
-  const capacity = options.capacity ?? voiceCapacityOf(state);
+  // The memo key's capacity leg (issue #373): the override figure when one
+  // is set, `auto` otherwise — the per-voice budgets ride the fingerprint
+  // (types plus the ladder's own state), so the token alone separates the
+  // two bases and no override can serve a per-voice solve's result.
+  const capacity = options.capacity === undefined ? "auto" : `fix${options.capacity}`;
   const keep = options.keep ?? activeChordKeysOf(state);
   const budget = options.budget ?? DEFAULT_ALLOCATION_BUDGET;
   // The memo read: same board inputs, same basis, same retention hint —
@@ -801,12 +812,21 @@ export function allocateRates(
     if (category !== "oscillator" && category !== "silentVoice") continue;
     const mutator = mutatorAt(state, module.pos);
     const resonance = mutator && mutator.family === "resonance" ? mutatorMagnitude(mutator.family, mutator.rarity) : 0;
-    params.set(module.id, { weight: bare.contributions.get(module.id)?.value ?? 0, resonance });
+    // The per-voice budget (issue #373): the type's intrinsic seats plus
+    // the shared purchased rungs, threaded through the params the solver
+    // prices feasibility from — heterogeneous capacities inside the
+    // certified objective. The dev board's uniform override replaces
+    // them all with one figure.
+    params.set(module.id, {
+      weight: bare.contributions.get(module.id)?.value ?? 0,
+      resonance,
+      ...(options.capacity === undefined ? { capacity: voiceCapacityOf(state, module.type) } : {}),
+    });
   }
   let read: AllocationRead | null = null;
   const snapshot = computeRates(state, flow, (singers, spacers, bonusScale) => {
     read = allocateChords(singers, spacers, {
-      capacity,
+      ...(options.capacity !== undefined ? { capacity: options.capacity } : {}),
       params,
       bonusScale,
       ...(options.keep ? { keep: options.keep } : {}),
@@ -816,7 +836,8 @@ export function allocateRates(
   });
   const allocated = read!;
   snapshot.allocation = {
-    capacity,
+    capacity: voiceCapacityOf(state),
+    capacities: allocated.capacities,
     used: allocated.used,
     active: allocated.instances,
     activeKeys: new Set(allocated.instances.map((instance) => instance.key)),

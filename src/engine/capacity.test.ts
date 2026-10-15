@@ -6,6 +6,7 @@ import {
   nextCapacityPrice,
   nextCeilingPrice,
   nextDiscountPrice,
+  purchasedCapacityOf,
 } from "./capacity";
 import { BALANCE } from "./constants";
 import {
@@ -19,11 +20,12 @@ import {
   prestige,
   startSession,
 } from "./actions";
-import { allocateRates, voiceCapacityOf } from "./economy";
+import { allocateRates, displayedRates, projectPlacement, voiceCapacityOf } from "./economy";
 import { fresh, give } from "./fixtures";
 import { hex } from "./hex";
+import { intrinsicCapacityOf, OSCILLATOR_PROFILES } from "./profiles";
 import { deserialize, serialize } from "./save";
-import type { GameState } from "./types";
+import type { GameState, ModuleInstance } from "./types";
 
 // The harmonic-capacity ladder (issue #259, the confirmed design beside
 // ADR-0050): global nous Catalog purchases raise every voice's whole-chord
@@ -404,5 +406,148 @@ describe("the ladder on the save surface (#259)", () => {
     expect(reloaded.capacityDiscounts).toBe(BALANCE.capacityDiscountCosts.length);
     expect(capacityDiscountShare(reloaded)).toBeCloseTo(0.4, 9);
     expect(nextCeilingPrice(reloaded)).toBeNull();
+  });
+});
+
+// ── Intrinsic voice capacity (issue #373) ───────────────────────────────
+// A profile's authored seats add to the ladder's shared purchased rungs;
+// the ceiling clamps the purchases only, so a profile's final budget can
+// end above the ceiling the ladder itself reaches. The suite reads the
+// public state and actions only — the authored table, the accessors, and
+// the allocation's own reads.
+
+// The board suites' convention: the fifths axis (+7 semitones per +q).
+function placed(state: GameState, type: ModuleInstance["type"], q: number, r = 0, level = 0): ModuleInstance {
+  const pos = hex(q, r);
+  if (!state.cells.some((c) => c.q === pos.q && c.r === pos.r)) state.cells.push(pos);
+  return give(state, type, pos, level);
+}
+
+// C·C·G in one formation: a Fifth through the C seat and an Octave across
+// the two C voices are both recognized, and activating both runs two
+// instances through one C voice — feasible only when that voice owns two
+// seats. A charged generator feeds the Blaster alone, so its conversion
+// term outbids routing the Fifth through the other C voice, and the
+// two-instance optimum wins on the objective — the second seat pays its
+// way, never rides a tie.
+function heterogeneousBoard(): { state: GameState; blaster: ModuleInstance; secondC: ModuleInstance } {
+  const state = fresh();
+  state.cells = [];
+  state.modules = [];
+  const blaster = placed(state, "blaster", 0);
+  const secondC = placed(state, "additive", 0, 1);
+  placed(state, "additive", 1);
+  // The charging generator sits beside the Blaster and no other receiver.
+  state.cells.push(hex(-1, 0));
+  const generator = give(state, "focusKeyed", hex(-1, 0), 1);
+  generator.reserve = 3600;
+  return { state, blaster, secondC };
+}
+
+describe("intrinsic voice capacity (#373)", () => {
+  it("final capacity equals intrinsic plus purchased increments; the ceiling limits the purchases only", () => {
+    const state = fresh();
+    state.cells = [];
+    state.modules = [];
+    const blaster = placed(state, "blaster", 0);
+    affordable(state);
+    enterCatalog(state);
+    // One Expansion Bay lifts the ceiling to four — three purchasable rungs.
+    state.arete = BALANCE.capacityCeilingCosts[0]!;
+    expect(buyCapacityCeiling(state).ok).toBe(true);
+    expect(capacityCeiling(state)).toBe(4);
+    expect(buyCapacity(state).ok).toBe(true);
+    expect(buyCapacity(state).ok).toBe(true);
+    expect(buyCapacity(state).ok).toBe(true);
+    // The ladder is exhausted at three purchases, and the standard voice
+    // reads exactly intrinsic 1 plus 3.
+    expect(nextCapacityPrice(state)).toBeNull();
+    expect(buyCapacity(state).ok).toBe(false);
+    expect(state.capacityBought).toBe(3);
+    expect(purchasedCapacityOf(state)).toBe(3);
+    expect(voiceCapacityOf(state)).toBe(4);
+    // The Blaster's two authored seats ride on top, outside the clamp:
+    // intrinsic 2 plus the same 3 — above the ceiling the ladder reached.
+    expect(intrinsicCapacityOf("blaster")).toBe(2);
+    expect(voiceCapacityOf(state, "blaster")).toBe(5);
+    expect(voiceCapacityOf(state, "blaster")).toBeGreaterThan(capacityCeiling(state));
+    // The allocation spends each voice's own budget.
+    const allocation = allocateRates(state, true).snapshot.allocation!;
+    expect(allocation.capacity).toBe(4);
+    expect(allocation.capacities.get(blaster.id)).toBe(5);
+  });
+
+  it("every profile's budget is its authored seats plus the shared purchased rungs", () => {
+    const state = fresh();
+    state.capacityBought = 1;
+    for (const type of Object.keys(OSCILLATOR_PROFILES) as (keyof typeof OSCILLATOR_PROFILES)[]) {
+      expect(voiceCapacityOf(state, type)).toBe(OSCILLATOR_PROFILES[type].capacity + 1);
+    }
+    // No profile authors fewer seats than the standard voice, so the
+    // typeless read stays every board's floor.
+    for (const type of Object.keys(OSCILLATOR_PROFILES) as (keyof typeof OSCILLATOR_PROFILES)[]) {
+      expect(voiceCapacityOf(state, type)).toBeGreaterThanOrEqual(voiceCapacityOf(state));
+    }
+  });
+
+  it("the second seat participates in the authoritative allocation", () => {
+    const { state, blaster } = heterogeneousBoard();
+    const snapshot = displayedRates(state, true);
+    const allocated = snapshot.allocation!;
+    // The optimum runs two instances through the Blaster's two seats — a
+    // Fifth and an Octave — while every standard voice sings one.
+    expect(allocated.active.length).toBe(2);
+    expect(allocated.used.get(blaster.id)).toBe(2);
+    expect(allocated.active.map((instance) => instance.name).sort()).toEqual(["Fifth", "Octave"]);
+    for (const instance of allocated.active) {
+      expect(instance.memberIds).toContain(blaster.id);
+    }
+    // The same board under a uniform one-seat override loses the instance
+    // the second seat bought — and routes the Fifth through the standard
+    // voice, leaving the Blaster's seat spent nowhere: the heterogeneity,
+    // not the roster, pays.
+    const uniform = allocateRates(state, true, { capacity: 1 }).snapshot;
+    expect(uniform.allocation!.active.length).toBe(1);
+    expect(uniform.allocation!.used.get(blaster.id)).toBe(0);
+    expect(uniform.rate).toBeLessThan(snapshot.rate);
+  });
+
+  it("preview and committed placement agree on a heterogeneous board", () => {
+    const { state, blaster, secondC } = heterogeneousBoard();
+    state.capacityBought = 1;
+    // Move the second C voice one register down — the same cluster
+    // reforms around the Blaster, and the projection reads the same
+    // per-voice budgets the commit lands, its two seats included.
+    state.cells.push(hex(0, -1));
+    const preview = projectPlacement(state, secondC.id, hex(0, -1), true);
+    expect(preview.projected.allocation!.capacities.get(blaster.id)).toBe(3);
+    expect(placeModule(state, secondC.id, hex(0, -1)).ok).toBe(true);
+    const committed = displayedRates(state, true);
+    expect(committed).toEqual(preview.projected);
+    expect(committed.allocation!.used.get(blaster.id)).toBe(2);
+  });
+
+  it("save and reset preserve purchase progress; intrinsic seats ride with the module", () => {
+    const { state } = heterogeneousBoard();
+    affordable(state);
+    enterCatalog(state);
+    expect(buyCapacity(state).ok).toBe(true);
+    expect(buyCapacity(state).ok).toBe(true);
+    // A reload carries the purchased rungs and re-derives the same final
+    // budgets — no per-module capacity is persisted, so there is nothing
+    // to convert.
+    const loaded = deserialize(serialize(state)).state!;
+    expect(loaded.capacityBought).toBe(2);
+    expect(voiceCapacityOf(loaded)).toBe(3);
+    expect(voiceCapacityOf(loaded, "blaster")).toBe(4);
+    const loadedBlaster = loaded.modules.find((m) => m.type === "blaster")!;
+    expect(allocateRates(loaded, true).snapshot.allocation!.capacities.get(loadedBlaster.id)).toBe(4);
+    // Prestige zeroes the purchases: every voice falls back to its
+    // intrinsic seats — the Blaster keeps the two it owns.
+    state.eraEarned = ARETE_HORIZON;
+    expect(prestige(state).ok).toBe(true);
+    expect(state.capacityBought).toBe(0);
+    expect(voiceCapacityOf(state)).toBe(1);
+    expect(voiceCapacityOf(state, "blaster")).toBe(2);
   });
 });

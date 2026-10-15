@@ -4,20 +4,34 @@
 // offerings' two permanent ladders (ceiling unlocks and discounts). The
 // ladder is strictly finite: four nous rungs, two ceiling unlocks, two
 // discounts. Prices are centralized provisional tuning for calibration.
+// Since issue #373 the ceiling bounds the purchased increments alone: a
+// voice's final budget is its type's intrinsic capacity (profiles.ts)
+// plus the shared purchased rungs, so a profile can end above the ceiling
+// the ladder itself can reach.
 import { BALANCE } from "./constants";
-import type { GameState } from "./types";
+import { intrinsicCapacityOf } from "./profiles";
+import type { GameState, ModuleType } from "./types";
 
 // The first-era ladder's base reach (issue #259): two nous purchases on
 // top of the opening one — the prototype ceiling of three — before any
 // Arete unlock raises it.
 const BASE_RUNGS = 2;
 
-// The per-voice whole-chord budget — the figure every rate pass and
-// readout shares (through economy's voiceCapacityOf, the one accessor
-// ADR-0052 reserved for this ladder). Clamped into the ceiling, so a
-// corrupt save or a re-tuned ladder degrades honestly, never over-sings.
-export function capacityOf(state: GameState): number {
-  return Math.min(1 + state.capacityBought, capacityCeiling(state));
+// The ladder's purchased increments, shared by every voice: this era's
+// Poly Expander rungs, clamped into the ceiling (so a corrupt save or a
+// re-tuned ladder degrades honestly, never over-sings). The ceiling
+// limits these purchases only (issue #373) — a profile's intrinsic seats
+// ride on top, outside the clamp.
+export function purchasedCapacityOf(state: GameState): number {
+  return Math.min(state.capacityBought, capacityCeiling(state) - 1);
+}
+
+// One voice's whole-chord budget (issue #373): the type's intrinsic
+// capacity plus the ladder's shared purchased increments. Omitting the
+// type reads the standard voice — intrinsic one — which is also every
+// board's floor, since no profile authors fewer.
+export function capacityOf(state: GameState, type?: ModuleType): number {
+  return (type ? intrinsicCapacityOf(type) : 1) + purchasedCapacityOf(state);
 }
 
 // The capacity the ladder can currently reach: the first-era prototype

@@ -41,7 +41,11 @@ The reserved spot beside the board — the heading's right end — where a hover
 _Avoid_: Chord chip (the ambient-floating sense), Chord view
 
 **Harmonic capacity**:
-The whole-chord budget every voice owns — silent voices included, uniform across the board, one through five (the shipped ladder's full reach, ADR-0055). An active chord instance consumes one unit on every participating voice; no partial chord earns anything and no budget is exceeded. Shipped for ordinary play: the Poly Expander ladder, the memorized Expansion Bays and Chord Catalysts, and the arete reset are live (ADR-0053 as released by ADR-0055, issue #262; product names, 2026-10-10).
+One voice's whole-chord budget — silent voices included: its type's **intrinsic capacity** plus the Poly Expander's purchased increments (issue #373, ADR-0062). An active chord instance consumes one unit on every participating voice; no partial chord earns anything and no budget is exceeded. The purchased increments are uniform across the board and the ceiling limits them only, so a profile's final budget can end above the ceiling the ladder itself reaches. Shipped for ordinary play: the Poly Expander ladder, the memorized Expansion Bays and Chord Catalysts, and the arete reset are live (ADR-0053 as released by ADR-0055, issue #262; product names, 2026-10-10).
+
+**Intrinsic capacity**:
+A named oscillator type's authored seat count at zero purchases (issue #373, ADR-0062) — a figure in the profile table like the coefficients, never stored per copy and never re-derived per instance. Every launch design authors one; the Blaster authors two, its second chord seat paid for by the ×0 uncharged term. Intrinsic seats survive the arete reset with the module and ride above the purchased ladder's ceiling; every non-oscillator voice reads the standard one. The readouts show it as a discrete figure — the voice's own used/available — never an aptitude grade.
+_Avoid_: voice count, capacity grade
 
 **Poly Expander**:
 The nous Catalog's capacity product: each purchase adds one whole-chord unit to every voice's Harmonic capacity, walking the ladder its price quotes; the rungs re-earn after an arete reset. The ceiling that ladder may climb to is sold by the Expansion Bays.
@@ -244,7 +248,7 @@ A copy's own duplicate-earned improvement step, shown as the engraved ring count
 _Avoid_: rarity (the merge sense), stars, plus
 
 **Profile**:
-A named module type's fixed authored identity — coefficients over the category's comparable axes (the oscillators': base production, booster response, chord response, charge response), one defining behavior and at most two supporting tradeoffs, never rolled per copy (issue #369, ADR-0059). Levels, tiers, and mutators scale the profile's strengths; they never change its proportions, conditions, or relative weaknesses.
+A named module type's fixed authored identity — coefficients over the category's comparable axes (the oscillators': base production, booster response, chord response, charge response), one defining behavior and at most two supporting tradeoffs, never rolled per copy (issue #369, ADR-0059). Levels, tiers, and mutators scale the profile's strengths; they never change its proportions, conditions, or relative weaknesses. The profile table also authors the non-graded figures — the oscillators' intrinsic capacity (issue #373, ADR-0062) and the temporal timing rules (issue #372, ADR-0061) — which present directly, never as grades.
 _Avoid_: stat roll (the per-instance sense), build (the habit sense)
 
 **Aptitude grade**:

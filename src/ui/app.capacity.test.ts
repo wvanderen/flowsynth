@@ -639,7 +639,7 @@ describe("the canvas-edge capacity read (#333)", () => {
     expect(name()).toBe("Harmonic capacity 1");
     trigger.focus();
     expect(tip().classList.contains("inst-show")).toBe(true);
-    expect(tip().textContent).toBe("Whole-chord budget per voice");
+    expect(tip().textContent).toBe("Whole-chord budget per standard voice");
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(tip().classList.contains("inst-show")).toBe(false);
     trigger.click();
@@ -671,6 +671,25 @@ describe("the canvas-edge capacity read (#333)", () => {
     give(app.state, "additive", hex(3, 1));
     app.render();
     expect(askVoice(3, 1)).toContain("(0/2)");
+  });
+
+  it("a profile's intrinsic seats read on the voice; the ambient allowance stays the standard figure (#373)", () => {
+    // A Blaster holds two authored seats: alone it reads 0/2 while the
+    // board's ambient figure stays the standard voice's 1 — the ledger
+    // quotes the floor, the voice's own readout quotes its budget.
+    app.state.cells.push(hex(3, 1));
+    give(app.state, "blaster", hex(3, 1));
+    app.render();
+    expect(ledgerRead()).toBe("1");
+    expect(stripRead()).toBe("1");
+    expect(askVoice(3, 1)).toContain("(0/2)");
+    // A Poly Expander purchase adds the shared rung to every voice: the
+    // ambient figure moves to 2 and the Blaster reads 0/3 — its intrinsic
+    // seat rides above the purchase, not inside it.
+    app.state.nous = 1_000_000;
+    app.buyCapacityAction();
+    expect(ledgerRead()).toBe("2");
+    expect(askVoice(3, 1)).toContain("(0/3)");
   });
 
   it("a purchase that cannot pay changes nothing; flow forbids the purchase", () => {

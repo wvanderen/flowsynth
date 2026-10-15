@@ -6,31 +6,31 @@ new types and game-design concepts — the engine keys and records live in code
 design thinking lives. The roster table reflects the code as of the last
 update; when a type lands, update the table in the same change.
 
-Last updated: 2026-10-15 (the temporal profiles — Afterglow and Pulsewell, issue #372)
+Last updated: 2026-10-15 (intrinsic voice capacity — the Blaster's two seats, issue #373)
 
 ## Roster
 
-| Key | Name | Nameplate | Category | Rarity | Profile axes (base · boost · chord · charge) | Timing | Hue | Glyph | Origin | Face readout |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `additive` | Sine | SINE | oscillator | common | A · C · B · B | — | `hue-oscillator` | bare sine | Opening grant and roll pool | `+value`, note `P«pitch»` |
-| `blaster` | Blaster | BLST | oscillator | common | A · B · B · — (conversion) | — | `hue-oscillator` | bolt-cored sine | Roll pool only | `+value` (0 uncharged), note `P«pitch»` |
-| `triangle` | Triangle | TRI | oscillator | common | C · B · S · B | — | `hue-oscillator` | triangle trace | Roll pool only | `+value`, note `P«pitch»` |
-| `square` | Square | SQR | oscillator | common | B · S · C · B | — | `hue-oscillator` | square trace | Roll pool only | `+value`, note `P«pitch»` |
-| `saw` | Saw | SAW | oscillator | common | C · B · B · S | — | `hue-oscillator` | saw trace | Roll pool only | `+value`, note `P«pitch»` |
-| `afterglow` | Afterglow | GLOW | oscillator | uncommon | A · B · B · B | ×0.3 open · ×0.8 from 2 min · ×1.25 sustained from 5 min | `hue-oscillator` | swelling wave | Roll pool only | `+value` (× the current warmup step), note `P«pitch»` |
-| `harmonizer` | Harmonizer | HARM | silent voice | common | — | — | `hue-voice` | diamond (muted tonehead) | Roll pool only | the pitch it sings, note `P«cell»` |
-| `echo` | Echo | ECHO | silent voice | common | — | — | `hue-voice` | doubled waves | Roll pool only | the pitch it sings, note `P«cell»` |
-| `bend` | Bend | BEND | silent voice | common | — | — | `hue-voice` | kinked line | Roll pool only | the pitch it sings, note `P«cell»` |
-| `amplifier` | Amplifier | AMP | conduit | common | — | — | `hue-conduit` | through-flowing chevrons | Roll pool only | `⌁relayed` |
-| `ritual` | RITUAL | RITUAL | ritual | common | — | — | `hue-ritual` | habit-cycle ring | Roll pool only | `×amp` while charged |
-| `spacer` | Spacer | Spacer | spacer | common | — | — | `hue-spacer` | ring window (board) / wire | Roll pool only | `⌇` |
-| `focusKeyed` | Flywheel | FLYW | generator | common | — | — | `hue-generator` | bolt, bare | Starter shelf ("generator", 40) and roll pool | `⌁power` |
-| `noteKeyed` | Scribe | SCRB | generator | common | — | — | `hue-generator` | bolt, double-line corner mark | Roll pool only | `⌁power` |
-| `goalKeyed` | Milestone | MILE | generator | common | — | — | `hue-generator` | bolt, check corner mark | Roll pool only | `⌁power` |
-| `pulsewell` | Pulsewell | PLSW | generator | uncommon | — | ×0.5 steady · ×2.5 burst, 30 s every 2 min | `hue-generator` | bolt, burst corner mark | Roll pool only | `⌁power` (× the current cycle factor when emitting) |
-| `infusor` | Booster | BOOST | booster | common | — | — | `hue-booster` | outward chevrons around a center dot | Starter shelf (40) and roll pool | `+«%»` |
-| `forge` | Forge | FORGE | forge | common | — | — | `hue-forge` | hex prism | Starter shelf (80) and roll pool | `«charge»/«threshold»` (charge register) |
-| `mutatorForge` | Mutator Forge | MUT. FORGE | forge | common | — | — | `hue-forge` | seeded-hexagon core on the chassis | Mutator tree entry | `«charge»/«threshold»` (charge register) |
+| Key | Name | Nameplate | Category | Rarity | Profile axes (base · boost · chord · charge) | Voices | Timing | Hue | Glyph | Origin | Face readout |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `additive` | Sine | SINE | oscillator | common | A · C · B · B | 1 | — | `hue-oscillator` | bare sine | Opening grant and roll pool | `+value`, note `P«pitch»` |
+| `blaster` | Blaster | BLST | oscillator | common | A · B · B · — (conversion) | 2 | — | `hue-oscillator` | bolt-cored sine | Roll pool only | `+value` (0 uncharged), note `P«pitch»` |
+| `triangle` | Triangle | TRI | oscillator | common | C · B · S · B | 1 | — | `hue-oscillator` | triangle trace | Roll pool only | `+value`, note `P«pitch»` |
+| `square` | Square | SQR | oscillator | common | B · S · C · B | 1 | — | `hue-oscillator` | square trace | Roll pool only | `+value`, note `P«pitch»` |
+| `saw` | Saw | SAW | oscillator | common | C · B · B · S | 1 | — | `hue-oscillator` | saw trace | Roll pool only | `+value`, note `P«pitch»` |
+| `afterglow` | Afterglow | GLOW | oscillator | uncommon | A · B · B · B | 1 | ×0.3 open · ×0.8 from 2 min · ×1.25 sustained from 5 min | `hue-oscillator` | swelling wave | Roll pool only | `+value` (× the current warmup step), note `P«pitch»` |
+| `harmonizer` | Harmonizer | HARM | silent voice | common | — | 1 | — | `hue-voice` | diamond (muted tonehead) | Roll pool only | the pitch it sings, note `P«cell»` |
+| `echo` | Echo | ECHO | silent voice | common | — | 1 | — | `hue-voice` | doubled waves | Roll pool only | the pitch it sings, note `P«cell»` |
+| `bend` | Bend | BEND | silent voice | common | — | 1 | — | `hue-voice` | kinked line | Roll pool only | the pitch it sings, note `P«cell»` |
+| `amplifier` | Amplifier | AMP | conduit | common | — | — | — | `hue-conduit` | through-flowing chevrons | Roll pool only | `⌁relayed` |
+| `ritual` | RITUAL | RITUAL | ritual | common | — | — | — | `hue-ritual` | habit-cycle ring | Roll pool only | `×amp` while charged |
+| `spacer` | Spacer | Spacer | spacer | common | — | — | — | `hue-spacer` | ring window (board) / wire | Roll pool only | `⌇` |
+| `focusKeyed` | Flywheel | FLYW | generator | common | — | — | — | `hue-generator` | bolt, bare | Starter shelf ("generator", 40) and roll pool | `⌁power` |
+| `noteKeyed` | Scribe | SCRB | generator | common | — | — | — | `hue-generator` | bolt, double-line corner mark | Roll pool only | `⌁power` |
+| `goalKeyed` | Milestone | MILE | generator | common | — | — | — | `hue-generator` | bolt, check corner mark | Roll pool only | `⌁power` |
+| `pulsewell` | Pulsewell | PLSW | generator | uncommon | — | — | ×0.5 steady · ×2.5 burst, 30 s every 2 min | `hue-generator` | bolt, burst corner mark | Roll pool only | `⌁power` (× the current cycle factor when emitting) |
+| `infusor` | Booster | BOOST | booster | common | — | — | — | `hue-booster` | outward chevrons around a center dot | Starter shelf (40) and roll pool | `+«%»` |
+| `forge` | Forge | FORGE | forge | common | — | — | — | `hue-forge` | hex prism | Starter shelf (80) and roll pool | `«charge»/«threshold»` (charge register) |
+| `mutatorForge` | Mutator Forge | MUT. FORGE | forge | common | — | — | — | `hue-forge` | seeded-hexagon core on the chassis | Mutator tree entry | `«charge»/«threshold»` (charge register) |
 
 Rarity is each type's fixed acquisition rarity (`TYPE_RARITY`, ADR-0058) —
 authored in code, never rolled per copy. A roll draws the rarity band
@@ -52,6 +52,17 @@ B standard, C reduced, D weak, — absent). Grades never re-rank: levels,
 tiers, mutators, and live conditions move output, not grades. Types
 without authored profiles (every non-oscillator, until their waves land)
 show no axes and carry no grade line.
+
+The Voices column (issue #373, ADR-0062) is each type's intrinsic
+capacity — the whole-chord seats it owns at zero purchases, authored in
+the profile table like the coefficients but never graded. One for every
+standard design; the Blaster authors two. A voice's final Harmonic
+capacity is its intrinsic seats plus the Poly Expander's shared purchased
+rungs, and the Expansion Bays' ceiling clamps the purchases only — so a
+two-seat Blaster at a fully purchased standard ladder reads 5 against the
+ladder's own reach of 4. Intrinsic seats survive the arete reset with the
+module; the readouts show each voice's own used/available figure, a
+discrete number, never a letter.
 
 The timing column (issue #372, ADR-0061) is the temporal profiles'
 authored curves over the shared session clock — the session's elapsed
@@ -77,7 +88,9 @@ same at level 0 tier 0 as at level 6 tier 2.
   rate, how much of each adjacent booster's bonus the term receives, how
   much of every chord instance's bonus it converts (the formation's Q
   rides outside the response — the chordless ×1.00 contract holds per
-  profile), and the multiplier on the charge curve's delta above ×1.
+  profile), and the multiplier on the charge curve's delta above ×1 —
+  plus the type's intrinsic voice capacity (issue #373, ADR-0062)
+  authoring its whole-chord seats beside the purchased ladder.
   Producer roles: the four waveform designs (Sine, Triangle, Square, Saw)
   share the base term, the Blaster's conversion curve replaces the
   charge factor entirely — the conversion is the charge, its charge axis
@@ -160,6 +173,10 @@ received charge into its synth term with the conversion curve
 the charge factor entirely (no second empowerment pass). Chord membership
 is structural: it sings and completes chords even uncharged at zero
 output, and never starves cellmates (generators never divide output).
+Two intrinsic voices (issue #373, ADR-0062): the category's
+representative capacity distinction — the Blaster sings and completes two
+voice-sets while every standard voice holds one, paid for by the ×0
+uncharged term. Provisional tuning, like every coefficient here.
 
 ### Afterglow (`afterglow`)
 The session-clocked producer (issue #372, ADR-0061): no authored tradeoff

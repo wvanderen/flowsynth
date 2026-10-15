@@ -46,10 +46,15 @@ import type { AllocationSummary, DeployedModule, NamedChordTerm, RecognizedInsta
 // resonance mutator's magnitude on its cell, and the voice's authored
 // chord response (issue #369): the factor each active instance carries
 // for this voice is 1 + response·instance bonus, so a profile's chord
-// niche is inside the certified objective, not beside it.
+// niche is inside the certified objective, not beside it. `capacity` is
+// the voice's own whole-chord budget (issue #373): intrinsic seats plus
+// the shared purchased rungs, supplied by the economy per voice; absent,
+// the options' uniform capacity stands in (the stress ladder's and dev
+// board's lever), then the standard one.
 export interface AllocationVoiceParams {
   weight: number;
   resonance: number;
+  capacity?: number;
 }
 
 // The search budget: a deterministic node cap plus a wall-clock safety
@@ -101,6 +106,10 @@ export interface AllocationRead {
   // Capacity consumed on every singing voice — one unit per active
   // instance the voice participates in, silent voices included.
   used: Map<string, number>;
+  // Each singing voice's own whole-chord budget (issue #373): the
+  // heterogeneous figure the `used` read spends against — a profile's
+  // intrinsic seats included, the uniform override absent here.
+  capacities: Map<string, number>;
   instances: AllocatedInstance[];
   // Every complete voice-set the board recognized, active or not —
   // recognized-but-inactive chords still count as discoveries. The
@@ -114,7 +123,11 @@ export interface AllocationRead {
 }
 
 export interface AllocateOptions {
-  capacity: number;
+  // The uniform whole-chord budget (the dev board's configurable ladder
+  // and the stress ladder's lever): every voice whose params carry no
+  // `capacity` of their own reads it. The economy's own pass omits it and
+  // supplies per-voice budgets instead (issue #373).
+  capacity?: number;
   params: Map<string, AllocationVoiceParams>;
   // The active build's named-chord bonus scale (ADR-0046), as the rate
   // pass threads it — the displayed bonus rides the term.
@@ -143,6 +156,9 @@ interface ClusterVoice {
   // it reads is 1 + response·bonus. Silent voices carry 1 — their weight
   // is zero, so the value never reads.
   response: number;
+  // The voice's own whole-chord budget (issue #373): the feasible count
+  // for this seat alone — intrinsic seats plus the shared purchased rungs.
+  capacity: number;
 }
 
 interface Candidate {
@@ -175,7 +191,6 @@ interface VoiceSuffix {
 
 interface Solve {
   voices: ClusterVoice[];
-  capacity: number;
   q: number;
   keep: ReadonlySet<string>;
   candidates: Candidate[];
@@ -254,7 +269,7 @@ function undoCandidate(solve: Solve, candidate: Candidate): void {
 }
 
 function feasible(solve: Solve, candidate: Candidate): boolean {
-  return candidate.members.every((voice) => solve.counts[voice.index]! < solve.capacity);
+  return candidate.members.every((voice) => solve.counts[voice.index]! < voice.capacity);
 }
 
 function lexKeyOf(instances: readonly AllocatedInstance[]): string {
@@ -323,7 +338,7 @@ function boundOf(solve: Solve): number {
     // (the candidates already walked past) carries the products for the
     // m − ptr candidates still undecided.
     const products = suffix.suffixProducts[suffix.ptr]!;
-    const slots = Math.min(solve.capacity - count, products.length - 1);
+    const slots = Math.min(voice.capacity - count, products.length - 1);
     const best = products[slots]!;
     const optimistic =
       count > 0
@@ -419,9 +434,8 @@ function qualityOf(voices: ClusterVoice[]): number {
 
 // Each voice's bound material: which ordered candidates contain it, and
 // the top-factor prefix products over every suffix of that list — built in
-// one reverse walk carrying a running top-`capacity` list.
+// one reverse walk carrying a running top list at the voice's own budget.
 function buildSuffixes(solve: Solve): void {
-  const capacity = solve.capacity;
   for (const voice of solve.voices) {
     const indices: number[] = [];
     solve.candidates.forEach((candidate, i) => {
@@ -434,7 +448,7 @@ function buildSuffixes(solve: Solve): void {
     const top: number[] = [];
     for (let t = indices.length - 1; t >= 0; t--) {
       const factor = factorFor(solve.candidates[indices[t]]!, voice);
-      insert(top, factor, capacity);
+      insert(top, factor, voice.capacity);
       // Ascending by count: products[t] is the product of the t largest
       // factors among the remaining candidates.
       const products = [1];
@@ -577,10 +591,10 @@ function exactSearch(solve: Solve, start: number): void {
   }
 }
 
-// Solve one connected formation exactly, budget permitting.
+// Solve one connected formation exactly, budget permitting. Each voice
+// brings its own whole-chord budget (issue #373).
 function solveCluster(
   voices: ClusterVoice[],
-  capacity: number,
   bonusScale: number,
   keep: ReadonlySet<string>,
   budget: AllocationBudget,
@@ -593,7 +607,6 @@ function solveCluster(
   const candidates = survey.solvable;
   const solve: Solve = {
     voices,
-    capacity,
     q,
     keep,
     candidates,
@@ -662,21 +675,24 @@ export function allocateChords(singers: Singer[], spacers: DeployedModule[] = []
   let certified = true;
   let nodes = 0;
   const pitchById = new Map(singers.map(({ module, pitch }) => [module.id, pitch]));
+  const capacities = new Map<string, number>();
   for (const cluster of chordClusters([...singers.map(({ module }) => module), ...spacers])) {
     const memberIds = cluster.filter((m) => pitchById.has(m.id)).map((m) => m.id);
     if (memberIds.length === 0) continue;
     const voices: ClusterVoice[] = memberIds
       .map((id) => {
         const module = singers.find((s) => s.module.id === id)!.module;
-        const params = opts.params.get(id) ?? { weight: 0, resonance: 0 };
+        const params = opts.params.get(id);
         const silent = CATEGORY_OF[module.type] === "silentVoice";
         const uplift = silent ? silentVoiceUpliftOf(module) : 0;
-        const weight = silent ? 0 : params.weight;
-        return { id, index: 0, klass: mod12(pitchById.get(id)!), weight, uplift, resonance: params.resonance, response: chordResponseOf(module.type) };
+        const weight = silent ? 0 : (params?.weight ?? 0);
+        const capacity = params?.capacity ?? opts.capacity ?? 1;
+        capacities.set(id, capacity);
+        return { id, index: 0, klass: mod12(pitchById.get(id)!), weight, uplift, resonance: params?.resonance ?? 0, response: chordResponseOf(module.type), capacity };
       })
       .sort((a, b) => a.id.localeCompare(b.id));
     voices.forEach((voice, i) => (voice.index = i));
-    const solved = solveCluster(voices, opts.capacity, bonusScale, keep, budget);
+    const solved = solveCluster(voices, bonusScale, keep, budget);
     recognized += solved.candidates;
     recognizedInstances.push(...solved.recognizedInstances);
     nodes += solved.nodes;
@@ -714,6 +730,7 @@ export function allocateChords(singers: Singer[], spacers: DeployedModule[] = []
   return {
     analysis: { namedChords, voiceMultiplier, formationQ, formationMeasuredQ, namedFormation, participation },
     used,
+    capacities,
     instances,
     recognized,
     recognizedInstances,
