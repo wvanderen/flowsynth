@@ -2685,11 +2685,11 @@ body.hex-detail-open .upgrade-all {
 /* ── The vertical layer legend (issue #295) ────────── */
 /* The one Modules / Mutators switch as symbol buttons, shared by the grid
    and the Hex detail: the grid reads the layer, the detail reads the
-   emphasized face, and the strip synchronizes with both. Upgrade-mode
-   furniture beside the entry purchase; flow shows neither legend nor
-   layer. The selected face wears the state grammar's firm inset marker —
-   readable without color — and every symbol carries its accessible name
-   and native tooltip. */
+   emphasized face, and the strip synchronizes with both. Every mode's
+   furniture (issue #387): the strip stands through flow and pause, the
+   session switching read-only. The selected face wears the state grammar's
+   firm inset marker — readable without color — and every symbol carries
+   its accessible name and native tooltip. */
 .layer-legend {
   position: absolute;
   /* Beneath the action dock on the board's left edge: the two vertical
@@ -3471,11 +3471,9 @@ body.hex-detail-open .upgrade-all {
      the full width beneath the identity column. */
   .hex-detail { inset: 8px; }
   .hex-detail.sheet { inset: 56px 8px 60px; }
-  /* The layer legend on phone (issue #295): the strip hugs the board's
-     left edge below the game-info strip, clear of the thumb bar — and
-     yields to the detail sheet, whose faces carry the selection. */
+  /* The shared layer switch stays reachable on phone, including in Hex
+     detail during flow (issue #387), clear of the thumb bar. */
   .layer-legend { left: 8px; top: auto; bottom: 76px; transform: none; }
-  body.hex-detail-open .layer-legend { opacity: 0; visibility: hidden; pointer-events: none; }
   .mutator-tray { display: none !important; }
   .mut-unlock-pill { top: 46px; }
   .cell-arm-pill { top: 46px; }

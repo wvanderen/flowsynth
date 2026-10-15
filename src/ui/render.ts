@@ -63,7 +63,7 @@ import {
   hexFromAttr,
   mutatorAskHtml,
   mutatorEffectText,
-  mutatorLayerLive,
+  mutatorBoardLive,
   mutGridDecorations,
   mutatorSlotPrice,
   mutatorTileInner,
@@ -1179,13 +1179,13 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
   const flow = state.mode === "flow";
   const snapshot = live;
   // The Mutators layer owns the board's drawing (issues #298 and #386):
-  // while it stands the renderer emits the layer's faces alone — module
-  // faces, the empty-cell artwork, chord marks, charge leads, and the
-  // would-form ghosts never enter the svg, so nothing can leak beneath
-  // and no module gesture surface survives to collide with the layer's.
-  // The lens still reads the owned lattice, so zoom and pan hold still
-  // across the switch.
-  const mutLive = mutatorLayerLive(app);
+  // while it stands — flow reading it now too (issue #387) — the renderer
+  // emits the layer's faces alone: module faces, the empty-cell artwork,
+  // chord marks, charge leads, and the would-form ghosts never enter the
+  // svg, so nothing can leak beneath and no module gesture surface
+  // survives to collide with the layer's. The lens still reads the owned
+  // lattice, so zoom and pan hold still across the switch.
+  const mutLive = mutatorBoardLive(app);
   // The chord annotation is always on (§6, #137): every formed chord wears
   // its colored work — no chord view, no toggle. The marks arrive from
   // refreshChordOverlay (render's one computation, issue #296) — the readout

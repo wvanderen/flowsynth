@@ -101,11 +101,20 @@ export function hexFromAttr(raw: string | null | undefined): Hex | null {
   return Number.isFinite(q) && Number.isFinite(r) ? { q: q!, r: r! } : null;
 }
 
-// The layer's full liveness (issue #199): upgrade mode, the entry owned,
-// and the Mutators tab standing — one predicate for the body class, the
-// tray strip, the pill, the popover, and the grid decorations.
+// The layer standing on the board (issue #387): the entry owned and the
+// Mutators layer selected — whatever the session mode. Flow and pause read
+// it read-only; upgrade alone edits it. One predicate for the body class
+// and the grid's ownership: while it stands the renderer draws the layer's
+// faces alone.
+export function mutatorBoardLive(app: App): boolean {
+  return app.state.catalogEntryOwned && app.ui.mutLayer === "mutators";
+}
+
+// The editing liveness (issue #199): upgrade mode on the standing layer —
+// the tray strip, the pill, the popover. The board may show the layer
+// during a session; the edit furniture never rides along.
 export function mutatorLayerLive(app: App): boolean {
-  return app.state.mode === "upgrade" && app.state.catalogEntryOwned && app.ui.mutLayer === "mutators";
+  return app.state.mode === "upgrade" && mutatorBoardLive(app);
 }
 
 // Whether the layer can stand at all: upgrade mode with the entry owned —
@@ -162,11 +171,13 @@ export function mutatorSlotPrice(state: GameState): number {
    The one Modules / Mutators switch (issue #295), replacing the tab pair:
    a vertical strip of layer symbols shared by the grid and the Hex detail
    — the grid reads ui.mutLayer, the detail reads ui.detail.face, and one
-   builder renders both so the vocabulary can never drift. Upgrade-mode
-   furniture; flow shows neither legend nor layer. Pre-entry the Mutator
-   symbol stands locked-but-visible (issue #273): muted outline, the lock
-   mark, and the click walks to the Catalog's entry screen instead of
-   flipping the mode.
+   builder renders both so the vocabulary can never drift. Every mode's
+   furniture (issue #387): the legend stands through flow and pause, the
+   session switching grid layers and emphasizing detail faces read-only —
+   no edit rides the switch. Pre-entry the Mutator symbol stands
+   locked-but-visible (issue #273): muted outline, the lock mark, and the
+   click walks to the Catalog's entry screen instead of flipping the mode
+   — in flow the walk stands down with the rest of the spending.
 
    State grammar (instrument standards): the selected face wears the firm
    inset marker — readable without color; locked wears the muted outline.
@@ -192,11 +203,20 @@ export function layerLegendHtml(app: App): string {
   const { state } = app;
   const active = layerLegendActiveFace(app);
   const locked = !state.catalogEntryOwned;
+  const session = state.mode !== "upgrade";
   const mutatorsSelected = active === "mutators";
   // One mark per state: the padlock stands for the locked layer, the
   // arete register for the unlocked one — never both at once. Mutators
-  // lead the pair (instrument standards, issue #314).
-  return `<button class="legend-symbol${mutatorsSelected ? " active" : ""}${locked ? " locked" : ""}" data-legend-layer="mutators" aria-pressed="${mutatorsSelected}" aria-label="${locked ? "Mutators layer — locked; open Catalog entry" : "Mutators layer"}" title="${locked ? "Mutators — locked; unlocks with the Mutator entry" : "Mutators — the slots over the modules"}">${locked ? LOCK_MARK : LAYER_MUTATORS_SVG}</button>
+  // lead the pair (instrument standards, issue #314). The locked copy
+  // tracks what the click answers (issue #387): upgrade walks to the
+  // Catalog's entry; a session refuses — the gloss says which.
+  const lockLabel = session
+    ? "Mutators layer — locked"
+    : "Mutators layer — locked; open Catalog entry";
+  const lockTitle = session
+    ? "Mutators — locked; Arete is spent between sessions"
+    : "Mutators — locked; unlocks with the Mutator entry";
+  return `<button class="legend-symbol${mutatorsSelected ? " active" : ""}${locked ? " locked" : ""}" data-legend-layer="mutators" aria-pressed="${mutatorsSelected}" aria-label="${locked ? lockLabel : "Mutators layer"}" title="${locked ? lockTitle : "Mutators — the slots over the modules"}">${locked ? LOCK_MARK : LAYER_MUTATORS_SVG}</button>
     <button class="legend-symbol${active === "modules" ? " active" : ""}" data-legend-layer="modules" aria-pressed="${active === "modules"}" aria-label="Modules layer" title="Modules — the production grid">${LAYER_MODULES_SVG}</button>`;
 }
 
@@ -206,15 +226,12 @@ export function renderLayerLegend(app: App): void {
   const host = document.getElementById("layer-legend");
   if (!host) return;
   wireTooltips(host, app.signal);
-  // Upgrade-mode furniture beside the entry purchase; flow shows neither
-  // legend nor layer (the Hex detail presents read-only there instead).
-  if (app.state.mode !== "upgrade") {
-    host.hidden = true;
-    host.innerHTML = "";
-    delete host.dataset.renderKey;
-    return;
-  }
-  const key = `${layerLegendActiveFace(app)}:${app.state.catalogEntryOwned}`;
+  // Every mode's furniture (issue #387): the strip stands through flow and
+  // pause, switching grid layers and emphasizing detail faces read-only.
+  // The key's inputs are the markup's inputs — the emphasized face, the
+  // lock, and which copy the lock speaks (the session's refusal, not the
+  // Catalog walk).
+  const key = `${layerLegendActiveFace(app)}:${app.state.catalogEntryOwned}:${app.state.mode === "upgrade"}`;
   if (host.dataset.renderKey === key) {
     host.hidden = false;
     return;
@@ -253,7 +270,10 @@ const LOCK_MARK = lockMarkSvg("mut-tab-lock");
 
 export function mutGridDecorations(app: App, snapshot: RateSnapshot): string {
   const { state, ui } = app;
-  if (state.mode !== "upgrade" || !state.catalogEntryOwned) return "";
+  // The faces render whatever the mode (issue #387): a session reads the
+  // same vocabulary upgrade drew — no pulse can stand there, the unlock
+  // arm being upgrade-only. Pre-entry the layer does not exist.
+  if (!state.catalogEntryOwned) return "";
   if (ui.mutLayer !== "mutators") {
     // Presence is all the module layer says — family, effect, and words
     // live one tab away. The outline takes no pointers and never speaks.
@@ -499,16 +519,20 @@ export function bindMutatorLayer(app: App, svg: SVGSVGElement): void {
 }
 
 // Tray-tile drag binding: press a tile, drag it to a slot (or onto a
-// matching twin waiting in the tray).
+// matching twin waiting in the tray). The mode guard lives in startMutDrag,
+// where both drag entries land.
 export function bindMutatorDrag(app: App, element: Element, id: string, origin: Hex | "tray"): void {
   app.listen(element, "pointerdown", (baseEvent: Event) => {
     const event = baseEvent as PointerEvent;
-    if (event.button !== 0 || app.state.mode !== "upgrade") return;
+    if (event.button !== 0) return;
     startMutDrag(app, event, id, origin);
   });
 }
 
 function startMutDrag(app: App, event: PointerEvent, id: string, origin: Hex | "tray"): void {
+  // The drag is an edit's first half (issue #387): a session's board reads,
+  // it never carries — the guard sits here where both drag entries land.
+  if (app.state.mode !== "upgrade") return;
   if (app.ui.mutUnlockArmed || app.ui.mutArmedTray !== null || app.ui.mutCarrying) return;
   const item = app.state.mutators.find((m) => m.id === id);
   if (!item) return;

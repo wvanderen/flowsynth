@@ -377,6 +377,21 @@ describe("read-only during flow (issue #295)", () => {
     expect(document.getElementById("detail-mutator-entry")).toBeNull();
     endSession(app.state);
   });
+
+  it("the Mutators face reads live too: the hosted resonance wears the live chord register's verdict", () => {
+    seedEra();
+    // The lone opening synth hosts the resonance and sings no chord — the
+    // verdict is the snapshot's own, so flow's live pass must speak it.
+    app.state.mutators[0].family = "resonance";
+    startSession(app.state, 600);
+    app.render();
+    app.openDetail(hex(0, 0), "mutators");
+    expect(open()).toBe(true);
+    expect(detail().querySelector(".hex-detail-readonly")).not.toBeNull();
+    expect(section("mutators").textContent).toContain("inert · no chord");
+    expect(section("mutators").textContent).toContain("RESONANCE");
+    endSession(app.state);
+  });
 });
 
 describe("the return contract (issue #295)", () => {
@@ -489,16 +504,61 @@ describe("the vertical layer legend (issue #295)", () => {
     expect(section("mutators").classList.contains("selected")).toBe(true);
   });
 
-  it("flow shows neither legend nor layer; the detail stands read-only without the switch", () => {
+  it("flow keeps the legend as the one switch: emphasis follows, the stack stays read-only (issue #387)", () => {
     seedEra();
     app.beginFlow(null);
     app.render();
-    expect(document.getElementById("layer-legend")!.hidden).toBe(true);
+    expect(document.getElementById("layer-legend")!.hidden).toBe(false);
     clickCell(0, 0);
     expect(open()).toBe(true);
-    // The stack still shows both faces; no legend stands beside it.
+    // The stack still shows both faces in the fixed order, read-only, and
+    // the legend stands beside it — the session's shared switch.
     expect(sections()).toHaveLength(2);
-    expect(document.getElementById("layer-legend")!.hidden).toBe(true);
+    expect(sections()[0].classList.contains("mutators")).toBe(true);
+    expect(detail().querySelector(".hex-detail-readonly")).not.toBeNull();
+    const legend = document.getElementById("layer-legend")!;
+    expect(legend.querySelector('[data-legend-layer="modules"]')!.classList.contains("active")).toBe(true);
+    // The legend emphasizes the face without reordering the stack.
+    legend.querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
+    expect(app.ui.detail!.face).toBe("mutators");
+    expect(section("mutators").classList.contains("selected")).toBe(true);
+    expect(legend.querySelector('[data-legend-layer="mutators"]')!.classList.contains("active")).toBe(true);
+    expect(sections()).toHaveLength(2);
+    expect(sections()[0].classList.contains("mutators")).toBe(true);
+    // The grid's layer followed the emphasis: the return lands where the
+    // player read, the Mutators layer standing read-only.
+    expect(app.ui.mutLayer).toBe("mutators");
+    document.getElementById("hex-detail-return")!.click();
+    expect(app.ui.detail).toBeNull();
+    expect(document.body.classList.contains("mut-layer-live")).toBe(true);
+    expect(document.querySelector("#grid [data-mut-slot]")).not.toBeNull();
+    endSession(app.state);
+  });
+
+  it("flow's return and Escape restore the grid with the layer, position, and zoom intact (issue #387)", () => {
+    seedEra();
+    app.beginFlow(null);
+    app.ui.zoom = 2;
+    app.ui.pan = { x: 10, y: -20 };
+    app.render();
+    // The session reads the Mutators layer, then inspects a slot.
+    app.mutSetLayer("mutators");
+    document.querySelector<SVGGElement>('[data-mut-slot="0,0"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(open()).toBe(true);
+    // Escape returns the grid: no additional layer switch, the read layer
+    // stands, and position and zoom never moved.
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(app.ui.detail).toBeNull();
+    expect(app.ui.mutLayer).toBe("mutators");
+    expect(document.body.classList.contains("mut-layer-live")).toBe(true);
+    expect(app.ui.zoom).toBe(2);
+    expect(app.ui.pan).toEqual({ x: 10, y: -20 });
+    // The explicit Return answers the same contract from a fresh inspection.
+    document.querySelector<SVGGElement>('[data-mut-slot="0,0"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    document.getElementById("hex-detail-return")!.click();
+    expect(app.ui.mutLayer).toBe("mutators");
+    expect(app.ui.zoom).toBe(2);
+    expect(app.ui.pan).toEqual({ x: 10, y: -20 });
     endSession(app.state);
   });
 });
