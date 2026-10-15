@@ -17,7 +17,7 @@ export type NotificationPermissionState = "default" | "denied" | "granted" | "un
 export interface SignalChannels {
   unlockAudio(existing: AudioContext | null): AudioContext | null;
   playChime(ctx: AudioContext | null): void;
-  playStrum(ctx: AudioContext | null, chords: readonly NamedChordTerm[]): void;
+  playStrum(ctx: AudioContext | null, chord: NamedChordTerm): void;
   notificationPermission(): NotificationPermissionState;
   requestNotificationPermission(): void;
   showTargetNotification(onFocus: () => void): void;
@@ -82,7 +82,8 @@ const JUST_RATIOS: Record<number, number> = { 0: 1, 3: 6 / 5, 4: 5 / 4, 7: 3 / 2
 const TEMPERED_FIFTH_FALLBACK = 1.4983;
 const FALLBACK_INTERVALS = [0, 7];
 
-// The strum's tuning (§6: garnish — no further sound-design work).
+// The strum's tuning (§6, bounded and replacing per issue #390: garnish —
+// no further sound-design work).
 export const STRUM = {
   // The strum's root sits an octave below the chime's, so the two never
   // crowd each other.
@@ -92,6 +93,11 @@ export const STRUM = {
   noteSeconds: 0.9,
   // The pluck spacing that reads as a strum, not a chord.
   onsetGapSeconds: 0.09,
+  // The gap between a note's decay and its oscillator's stop.
+  stopMarginSeconds: 0.05,
+  // The whole cue's ceiling, tail included: onsets clamp so every note
+  // still ends inside the bound, whatever the chord vocabulary sings.
+  boundSeconds: 1.5,
 };
 
 // The intervals a named chord sings, straight from the launch vocabulary.
@@ -99,27 +105,46 @@ function intervalsOf(name: string): number[] {
   return NAMED_CHORDS.find((def) => def.name === name)?.intervals ?? FALLBACK_INTERVALS;
 }
 
-// A formation strum (§6): the chord's just ratios plucked low to high, one
-// quiet sine each. Multiple newcomers strum in sequence.
-export function playStrum(ctx: AudioContext | null, chords: readonly NamedChordTerm[]): void {
+// One context's unfinished cue: the oscillators a replacement must stop.
+// Keyed weakly, so a discarded context takes its record with it.
+const liveCues = new WeakMap<AudioContext, readonly OscillatorNode[]>();
+
+// The formation cue (§6, issue #390): one chord's just ratios plucked low
+// to high, one quiet sine each. One chord per action is the App's
+// selection; this adapter bounds the whole cue — tail included — to
+// STRUM.boundSeconds, and a new cue stops the unfinished one instead of
+// queuing or overlapping it.
+export function playStrum(ctx: AudioContext | null, chord: NamedChordTerm): void {
   if (!ctx || ctx.state !== "running") return;
-  let now = ctx.currentTime;
-  for (const chord of chords) {
-    for (const interval of intervalsOf(chord.name)) {
-      const hz = STRUM.rootHz * (JUST_RATIOS[interval % 12] ?? TEMPERED_FIFTH_FALLBACK);
-      const osc = ctx.createOscillator();
-      osc.type = "sine";
-      osc.frequency.value = hz;
-      const env = ctx.createGain();
-      env.gain.setValueAtTime(0, now);
-      env.gain.linearRampToValueAtTime(STRUM.gain, now + STRUM.attackSeconds);
-      env.gain.exponentialRampToValueAtTime(0.0001, now + STRUM.noteSeconds);
-      osc.connect(env).connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + STRUM.noteSeconds + 0.05);
-      now += STRUM.onsetGapSeconds;
+  const now = ctx.currentTime;
+  for (const osc of liveCues.get(ctx) ?? []) {
+    try {
+      osc.stop(now);
+    } catch {
+      // An already-stopped oscillator refuses a second stop; the cue it
+      // sang is over either way.
     }
   }
+  const live: OscillatorNode[] = [];
+  // The last onset that still lets a note's full tail stop inside the
+  // bound; later notes of an oversized vocabulary pile onto it.
+  const lastOnset = Math.max(0, STRUM.boundSeconds - STRUM.noteSeconds - STRUM.stopMarginSeconds);
+  intervalsOf(chord.name).forEach((interval, index) => {
+    const onset = now + Math.min(index * STRUM.onsetGapSeconds, lastOnset);
+    const hz = STRUM.rootHz * (JUST_RATIOS[interval % 12] ?? TEMPERED_FIFTH_FALLBACK);
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = hz;
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, onset);
+    env.gain.linearRampToValueAtTime(STRUM.gain, onset + STRUM.attackSeconds);
+    env.gain.exponentialRampToValueAtTime(0.0001, onset + STRUM.noteSeconds);
+    osc.connect(env).connect(ctx.destination);
+    osc.start(onset);
+    osc.stop(onset + STRUM.noteSeconds + STRUM.stopMarginSeconds);
+    live.push(osc);
+  });
+  liveCues.set(ctx, live);
 }
 
 // Fire-and-forget: the answer lands whenever the player gives it, and

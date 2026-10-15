@@ -1802,6 +1802,67 @@ describe("always-on chord feedback (§6, #137)", () => {
     expect(fired.strums).toBe(0);
   });
 
+  it("an idle-only formation change stays silent (#390)", () => {
+    const { fired, app } = stubChannels();
+    // The opening C4's fifth: at capacity one the placed G4 seats the
+    // whole chord, and the cue sounds.
+    const fifth = give(app.state, "additive", null);
+    app.beginPlacing(fifth.id);
+    clickCell(1, 0);
+    expect(fired.strums).toBe(1);
+    // The next placement forms an Octave with the opening voice, but the
+    // capacity-one C4 cannot seat a second chord: the candidate joins the
+    // recognized set — the discovery moment — without activating. The cue
+    // stays silent.
+    fired.strums = 0;
+    fired.strumChords.length = 0;
+    const octave = give(app.state, "additive", null);
+    app.beginPlacing(octave.id);
+    clickCell(0, 1);
+    expect(fired.strums).toBe(0);
+    // The board did hear the new candidate — the silence is the cue's
+    // active-only basis, not a missed chord.
+    const snapshot = displayedRates(app.state, true);
+    expect(snapshot.allocation?.recognized.map((instance) => instance.name)).toContain("Octave");
+    expect(snapshot.allocation?.active.map((instance) => instance.name)).toEqual(["Fifth"]);
+  });
+
+  it("one placement activating two chords cues exactly one, carrying the placed voice (#390)", () => {
+    const { fired, app } = stubChannels();
+    // Capacity two seats two whole chords at once.
+    app.state.capacityBought = 1;
+    // The opening C4 and a C5 beside it. Placing G4 between them
+    // activates two new Fifths in one action — C4–G4 and G4–C5 (the
+    // register-free pair shares the C root class) — and no triad reads
+    // the C·G·C voice set.
+    give(app.state, "additive", hex(0, 1));
+    const bridge = give(app.state, "additive", null);
+    app.beginPlacing(bridge.id);
+    clickCell(1, 0);
+    expect(fired.strums).toBe(1);
+    expect(fired.strumChords).toHaveLength(1);
+    expect(fired.strumChords[0]!.name).toBe("Fifth");
+    // The changed voice rides the cued chord, and the untouched action
+    // never queues a second one.
+    expect(fired.strumChords[0]!.moduleIds).toContain(bridge.id);
+  });
+
+  it("a spacer's bridge cues the chord it conducts — none of its members is the wire (#390)", () => {
+    const { fired, app } = stubChannels();
+    // C6 sits one wire cell out of the opening C4's reach.
+    app.state.cells.push(hex(0, 1), hex(0, 2));
+    give(app.state, "additive", hex(0, 2));
+    // Placing the wire bridges the Octave: the cue falls back to the only
+    // newly active chord even though the changed voice — the conductor —
+    // sings in none of its members.
+    const wire = give(app.state, "spacer", null);
+    app.beginPlacing(wire.id);
+    clickCell(0, 1);
+    expect(fired.strums).toBe(1);
+    expect(fired.strumChords[0]!.name).toBe("Octave");
+    expect(fired.strumChords[0]!.moduleIds).not.toContain(wire.id);
+  });
+
   it("flow adds no sound of its own — no ambient, only the seams pulse", () => {
     const { fired, app } = stubChannels();
     give(app.state, "additive", hex(1, 0));

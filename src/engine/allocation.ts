@@ -753,6 +753,13 @@ export function summaryTermsOf(summary: AllocationSummary): NamedChordTerm[] {
   return summary.recognized.map(termOfInstance);
 }
 
+// The summary's selected instances as the same terms — the formation
+// cue's eligible newcomers read this one mapping, never a private
+// re-derivation (issue #390): only newly active chords sound.
+export function activeTermsOf(summary: AllocationSummary): NamedChordTerm[] {
+  return summary.active.map(termOfInstance);
+}
+
 // The summary's recognized-but-idle candidates as the same terms — the
 // board's dotted seams, the readout's idle chips, and the rate details'
 // idle notes all read this one mapping, never a private re-derivation.

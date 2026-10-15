@@ -1,7 +1,7 @@
 # 0052 — Live voices earn from selected whole chords at capacity one, gated before calibration
 
 Date: 2026-10-06
-Status: Accepted; the development gate (§5, and §1's ordinary/development split) was superseded by the release calibration (ADR-0055, issue #262) — every state rides the allocation economy. §4's dashed silent-voice path styling was retired by ADR-0056 (issue #333): every active chord draws solid, idle alone is dotted and dim. §4's always-on idle marks were retired by ADR-0057 (issue #355): idle candidates draw only under the singing voice's ask.
+Status: Accepted; the development gate (§5, and §1's ordinary/development split) was superseded by the release calibration (ADR-0055, issue #262) — every state rides the allocation economy. §4's dashed silent-voice path styling was retired by ADR-0056 (issue #333): every active chord draws solid, idle alone is dotted and dim. §4's always-on idle marks were retired by ADR-0057 (issue #355): idle candidates draw only under the singing voice's ask. §4's recognized-basis strum was amended by ADR-0063 (issue #390): the formation cue sings one newly active chord, bounded, replacing — recognition and discovery keep the recognized basis.
 Issue: #258
 
 ## Context
