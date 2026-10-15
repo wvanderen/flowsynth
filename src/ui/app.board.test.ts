@@ -1978,7 +1978,7 @@ describe("the idle ask (ADR-0057)", () => {
     standDown();
   });
 
-  it("the reveal is a board-draw question only: the count stands, the detail keeps its chips", () => {
+  it("the reveal is a board-draw question only: the count stands, the detail keeps its disclosure", () => {
     bootPowerChord();
     cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     // The reserved readout keeps its "N idle" count under the same ask.
@@ -1986,13 +1986,18 @@ describe("the idle ask (ADR-0057)", () => {
     expect(idleMarks()).toHaveLength(2);
     standDown();
     expect(readout().hidden).toBe(true);
-    // The Hex detail's chord row keeps its per-instance "· idle" chips
-    // with no hover live — the complete mark list, never the reveal's.
+    // The Hex detail's chord row keeps its idle facts with no hover live —
+    // behind one count disclosure since #388, listing the same instances'
+    // names and factors; the plain transient readout is untouched.
     clickCell(0, 1);
     const detail = document.getElementById("hex-detail")!;
-    const idleChips = [...detail.querySelectorAll<HTMLElement>(".chord-readout-idle")];
-    expect(idleChips.length).toBeGreaterThanOrEqual(2);
-    for (const chip of idleChips) expect(chip.textContent).toContain("· idle");
+    const trigger = detail.querySelector<HTMLButtonElement>(".detail-idle-trigger")!;
+    expect(trigger.textContent).toBe("2 idle");
+    trigger.focus();
+    const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+    expect(body.classList.contains("inst-show")).toBe(true);
+    expect(body.textContent).toContain("Fifth ×1.3");
+    expect(body.textContent).toContain("Octave ×1.15");
   });
 
   it("one rule in every mode: flow asks like upgrade", () => {

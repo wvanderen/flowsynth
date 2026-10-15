@@ -945,11 +945,15 @@ describe("the mutator entry sequence (issue #274)", () => {
     expect(app.state.bankedMutatorRolls).toHaveLength(1);
   });
 
-  it("purchase through Hex detail returns to the grid with every free-slot target available", () => {
+  it("purchase through the surrounding navigation returns to the grid with every free-slot target available", () => {
     app.state.prestiges = 1;
     app.state.arete = BALANCE.catalogEntryCost;
     app.openDetail(hex(0, 0));
-    document.getElementById("detail-mutator-entry")!.click();
+    // The detail carries no destination button (issue #388): the entry
+    // walk lives in the surrounding navigation — the legend's locked
+    // symbol and the dock's Catalog door — which the walk here uses.
+    expect(document.getElementById("detail-mutator-entry")).toBeNull();
+    app.openMutatorEntry();
     document.getElementById("buy-arete-entry")!.click();
     expect(app.ui.detail).toBeNull();
     expect(app.ui.detailTray).toBeNull();

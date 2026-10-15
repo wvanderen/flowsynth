@@ -1558,13 +1558,17 @@ function voiceMetricsHtml(module: ModuleInstance, snapshot: RateSnapshot, curren
   return rows.join("");
 }
 
-// The Hex detail's chord row (issue #295): the opened voice's chord facts
-// in the reserved readout's own grammar — capacity, total chord factor,
-// formation and its scale, every chord instance it sings in — with the
-// ν/s figure left off (the enlarged face carries it). The conducting
-// spacer asks by containment, the same rule its hover reads (#201). The
-// rebuild key rides beside the html (#349): the guard decides on the
-// marks' identities and the snapshot's raw figures — inputs, never the
+// The Hex detail's chord row (issue #295, beside the module since #388):
+// the opened voice's chord facts in the reserved readout's own grammar —
+// capacity, total chord factor, formation and its scale, every chord
+// instance it sings in — with the ν/s figure left off (the enlarged face
+// carries it). Active instances stand as chips; the idle candidates hide
+// behind one "N idle" disclosure through the shared tooltip layer
+// (issue #388) — the list never expands inline, and the plain transient
+// readout keeps its own count untouched. The conducting spacer asks by
+// containment, the same rule its hover reads (#201). The rebuild key
+// rides beside the html (#349): the guard decides on the marks'
+// identities and the snapshot's raw figures — inputs, never the
 // formatted row — so a tick's guard costs a comparison, not a re-format.
 export interface DetailChordRow {
   html: string;
@@ -1579,11 +1583,17 @@ export function detailChordRow(app: App, snapshot: RateSnapshot): DetailChordRow
   const idScope = `detail-${module.id}`;
   const chips = moduleChips(module, chordReadoutCache.get(app)?.marks ?? []);
   const metrics = voiceMetricsHtml(module, snapshot, undefined, idScope, false);
-  const html = metrics + chips
-    .map((mark) =>
-      `<span class="chord-readout-chip mono${mark.inactive ? " chord-readout-idle" : ""}" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.inactive ? `${mark.label} · idle` : mark.label)}</span>`,
-    )
-    .join("");
+  const active = chips.filter((mark) => !mark.inactive);
+  const idle = chips.filter((mark) => mark.inactive);
+  const html =
+    metrics +
+    active
+      .map(
+        (mark) =>
+          `<span class="chord-readout-chip mono" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.label)}</span>`,
+      )
+      .join("") +
+    (idle.length > 0 ? detailIdleDisclosureHtml(idScope, idle) : "");
   const contribution = snapshot.contributions.get(module.id);
   const allocation = snapshot.allocation;
   return {
@@ -1594,6 +1604,19 @@ export function detailChordRow(app: App, snapshot: RateSnapshot): DetailChordRow
       contribution ? [contribution.chordFactor, contribution.formationQ, contribution.formationMeasuredQ] : null,
     ]),
   };
+}
+
+// The one idle disclosure (issue #388): a dashed quiet trigger carrying
+// the count, its body in the shared tooltip layer listing every
+// candidate's name and factor — the per-instance facts the old inline
+// idle chips carried, one opening away. Hover, focus, and tap open it;
+// Escape and tap-away dismiss it; the portaled body shifts no layout.
+function detailIdleDisclosureHtml(idScope: string, idle: ChordMark[]): string {
+  const id = `${idScope}-idle-tip`;
+  const listing = idle
+    .map((mark) => `<span class="detail-idle-row mono">${escapeHtml(mark.label)}</span>`)
+    .join("");
+  return `<span class="inst-tip readout-tip"><button class="inst-tip-trigger readout-tip-trigger detail-idle-trigger mono" type="button" aria-expanded="false" aria-describedby="${id}">${idle.length} idle</button><span class="inst-tip-body inst-tip-scroll" id="${id}" role="tooltip">${listing}</span></span>`;
 }
 
 // The low-to-high quality scale (issue #260): where the formation's

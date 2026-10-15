@@ -63,6 +63,17 @@ function place(tip: HTMLElement, body: HTMLElement): void {
   const at = trigger.getBoundingClientRect();
   const width = Math.min(230, window.innerWidth * 0.6);
   body.style.left = `${Math.max(8, Math.min(at.left, window.innerWidth - width - 8))}px`;
+  if (body.classList.contains("inst-tip-scroll")) {
+    // Dense disclosures use the larger side of the trigger and scroll
+    // within that space rather than extending beyond the viewport.
+    const below = Math.max(0, window.innerHeight - at.bottom - 14);
+    const above = Math.max(0, at.top - 14);
+    const useAbove = above > below;
+    body.style.maxHeight = `${Math.max(1, useAbove ? above : below)}px`;
+    const height = body.offsetHeight;
+    body.style.top = `${useAbove ? Math.max(8, at.top - height - 6) : at.bottom + 6}px`;
+    return;
+  }
   const height = body.offsetHeight || 150;
   const below = at.bottom + 6;
   // Flip above the trigger when the body would run past the viewport's
@@ -164,6 +175,21 @@ export function wireTooltips(host: ParentNode, signal?: AbortSignal): () => void
     tip.classList.remove("focused");
     sync(tip);
   }, { signal: lifetime.signal });
+  // Keep keyboard focus on the disclosure trigger while scrolling its
+  // portaled list; Escape continues to dismiss through the shared layer.
+  host.addEventListener("keydown", (event) => {
+    const key = (event as KeyboardEvent).key;
+    const tip = tipOf(event.target);
+    const body = tip && bodyOf(tip);
+    if (!body?.classList.contains("inst-tip-scroll") || !body.classList.contains("inst-show")) return;
+    if (!["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End"].includes(key)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const distance = key.startsWith("Page") ? body.clientHeight : 32;
+    if (key === "Home") body.scrollTop = 0;
+    else if (key === "End") body.scrollTop = body.scrollHeight;
+    else body.scrollTop += key === "ArrowUp" || key === "PageUp" ? -distance : distance;
+  }, { signal: lifetime.signal });
   host.addEventListener("click", (event) => {
     if (event.target instanceof Element && event.target.closest(".inst-tip-trigger")) {
       const tip = event.target.closest<HTMLElement>(".inst-tip")!;
@@ -189,6 +215,7 @@ export function wireTooltips(host: ParentNode, signal?: AbortSignal): () => void
     (event) => {
       if (host instanceof Node && !host.isConnected) return;
       if (event.target instanceof Node && host.contains(event.target)) return;
+      if ([...portaled].some(([body, tip]) => host.contains(tip) && body.classList.contains("inst-tip-scroll") && body.contains(event.target as Node))) return;
       closeTooltips(host);
       sweep();
     }, { capture: true, signal: lifetime.signal },

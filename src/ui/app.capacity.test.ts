@@ -419,17 +419,28 @@ describe("placement previews with capacity-aware production (#260)", () => {
     // included — the projection and the landing are one economy.
     expect(displayedRates(app.state, true).rate).toBeGreaterThan(before);
     // Hover carries the compact result; opening Hex detail retains the
-    // complete projected chord facts, including measured quality.
+    // complete projected chord facts, including measured quality — the
+    // idle pair behind its one count disclosure now (issue #388).
     cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(chips()).toEqual([previewed[0], "(0/1) ", "2 idle"]);
     expect(readout().querySelector(".chord-readout-scale")).toBeNull();
     expect(readout().querySelector(".chord-readout-factor")).toBeNull();
     clickCell(0, 1);
     const detail = document.getElementById("hex-detail")!;
-    const detailed = [...detail.querySelectorAll(".chord-readout-chip")].map((chip) => chip.textContent);
-    expect(detailed).toEqual(previewed.slice(1));
+    const row = detail.querySelector(".hex-chord-row")!;
+    const detailed = [...row.querySelectorAll(".chord-readout-chip")].map((chip) => chip.textContent);
+    expect(detailed).toEqual(["Capacity 0/1", "×1"]);
     expect(detail.querySelector(".chord-readout-scale")!.getAttribute("data-q"))
       .toBe(String(1 + BALANCE.allocationComplexityRate));
+    // The idle candidates wait behind the count; opening lists their
+    // names and factors through the shared tooltip layer.
+    const trigger = row.querySelector<HTMLButtonElement>(".detail-idle-trigger")!;
+    expect(trigger.textContent).toBe("2 idle");
+    trigger.focus();
+    const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+    expect(body.classList.contains("inst-show")).toBe(true);
+    expect(body.textContent).toContain("Fifth ×1.3");
+    expect(body.textContent).toContain("Octave ×1.15");
   });
 
   it("ghost promises classify by the projected allocation — idle says idle", () => {

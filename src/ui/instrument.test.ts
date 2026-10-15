@@ -20,6 +20,28 @@ describe("the tooltip layer's pinning and dismissal", () => {
     return { host, first, second };
   }
 
+  it("bounds a dense disclosure and scrolls from its focused trigger", () => {
+    const { first } = tipHost();
+    const body = document.getElementById("body-a")!;
+    body.classList.add("inst-tip-scroll");
+    const height = window.innerHeight;
+    first.getBoundingClientRect = () => ({ top: height - 100, bottom: height - 70, left: 10 } as DOMRect);
+    Object.defineProperty(body, "offsetHeight", { get: () => Number.parseFloat(body.style.maxHeight) });
+    Object.defineProperty(body, "scrollHeight", { value: 2000 });
+    first.click();
+    expect(Number.parseFloat(body.style.top)).toBeGreaterThanOrEqual(8);
+    expect(Number.parseFloat(body.style.top) + body.offsetHeight).toBeLessThan(height);
+    expect(body.style.maxHeight).toBe(`${height - 114}px`);
+    first.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    expect(body.scrollTop).toBe(32);
+    first.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
+    expect(body.scrollTop).toBe(2000);
+    body.click();
+    expect(first.getAttribute("aria-expanded")).toBe("true");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(first.getAttribute("aria-expanded")).toBe("false");
+  });
+
   it("a trigger's tap pins its tooltip and reports the state", () => {
     const { host, first } = tipHost();
     first.click();

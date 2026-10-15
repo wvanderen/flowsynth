@@ -1934,6 +1934,8 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   font-weight: 600;
   letter-spacing: 0.06em;
 }
+.inst-tip-scroll { box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; }
+.detail-idle-row { display: block; font: 11px/1.7 var(--mono); letter-spacing: 0.05em; }
 /* The quality scale (issue #260): the formation's measured Q on the
    low-to-high read — floor and cap end ticks, a taller neutral tick, and
    the firm inset marker where the formation sits. Position and weight
@@ -2119,14 +2121,24 @@ body.hex-detail-open .upgrade-all {
   gap: 6px;
   pointer-events: auto;
 }
-/* The corner: Return and the flow tag, quiet furniture at the stage's
-   top-left, clear of the legend strip. No header band — the pitch is
-   engraved on the face, and identity rides context. */
-.hex-detail-corner { display: flex; align-items: center; gap: 12px; padding: 2px 4px; }
+/* The corner: Return and the flow tag, quiet furniture floating at the
+   stage's top-left, clear of the legend strip — an overlay, not a band
+   (issue #388): the cross-section keeps the full stage height and the
+   control stays visible while the stack scrolls beneath it. No header
+   band — the pitch is engraved on the face, and identity rides context. */
+.hex-detail-corner {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 .hex-detail-return {
   padding: 5px 14px;
   border: 1px solid var(--line-strong);
-  background: var(--panel-soft);
+  background: var(--panel);
   font: 600 11px var(--font-condensed);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -2140,25 +2152,28 @@ body.hex-detail-open .upgrade-all {
   text-transform: uppercase;
   color: var(--switch);
 }
-/* The cross-section: two rows (Mutators above Modules, always) by two
-   columns (the stack, the action rail) — the inventory overlays instead of
-   joining the grid (issue #296 review), so opening it never reflows the
-   composition. Every child states its post — an empty rail row must never
-   let a face slide into the rail's column. The composition centers as a
-   group; a short stage scrolls. */
+/* The cross-section: two rows (Mutators above Modules, always) by three
+   columns (the stack, the action rail, the chord-facts column — issue
+   #388) — the inventory overlays instead of joining the grid (issue #296
+   review), so opening it never reflows the composition. Every child
+   states its post — an empty rail row must never let a face slide into
+   the rail's column, and an empty chord column must never let the rail
+   slide right. The composition centers as a group; a short stage
+   scrolls, its content passing beneath the floating corner. */
 .hex-detail-grid {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   display: grid;
-  grid-template-columns: auto auto;
+  grid-template-columns: auto auto auto;
   align-items: center;
   justify-content: center;
   /* Safe centering: an overflowing stage falls back to start so the top
-     rows stay reachable and the chord row never clips under the rail. */
+     rows stay reachable and the chord column never clips under the rail.
+     The top padding clears the floating corner. */
   align-content: safe center;
   column-gap: 44px;
-  padding: 4px 8px 12px;
+  padding: 38px 8px 12px;
 }
 .hex-detail-layer.mutators { grid-column: 1; grid-row: 1; }
 /* The modules face sits in row 3: row 2 holds the mutator's wave
@@ -2168,6 +2183,24 @@ body.hex-detail-open .upgrade-all {
 .hex-rail-row { grid-column: 2; }
 .hex-rail-row.mutators { grid-row: 1; }
 .hex-rail-row.modules { grid-row: 3; }
+/* The chord-facts column (issue #388): the opened voice's chord facts to
+   the module's right, its own post in row 3 — never beneath the faces.
+   It belongs to the Modules face's emphasis: dimmed while the Mutators
+   face stands forward, exactly as the faces dim. */
+.hex-chord-col {
+  grid-column: 3;
+  grid-row: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  width: min(300px, 26vw);
+  min-width: 0;
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+.hex-detail-scene[data-face="modules"] .hex-chord-col { opacity: 1; }
+.hex-chord-col .hex-chord-row { max-width: none; }
 .hex-detail-layer {
   display: flex;
   flex-direction: column;
@@ -2246,9 +2279,11 @@ body.hex-detail-open .upgrade-all {
   stroke-linejoin: round;
 }
 .hex-stack-mut .mut-slot-effect { pointer-events: none; }
-/* The chord row: the reserved readout's grammar, docked beneath the
-   module face — capacity, chord factor, formation, the named instances.
-   The ν/s figure stays off it; the face itself carries that. */
+/* The chord row: the reserved readout's grammar — capacity, chord factor,
+   formation, the named instances, the idle count behind its one
+   disclosure (issue #388). The ν/s figure stays off it; the face itself
+   carries that. Beside the module it fills its column; in the reflow it
+   keeps the stack's wrap width. */
 .hex-chord-row {
   display: flex;
   flex-wrap: wrap;
@@ -2273,9 +2308,11 @@ body.hex-detail-open .upgrade-all {
 }
 .hex-rail-row:empty { display: none; }
 .hex-rail-row.modules:not(:empty) { border-top: 1px solid var(--line); }
-/* Read-only flow: no rail stands, so the stack takes the one column. */
-.hex-detail-scene.readonly .hex-detail-grid { grid-template-columns: auto; }
-/* The detail's one-line actions (unlock, retrieve, catalog entry). */
+/* Read-only flow: no rail stands, so the stack and the chord column take
+   the two tracks. */
+.hex-detail-scene.readonly .hex-detail-grid { grid-template-columns: auto auto; }
+.hex-detail-scene.readonly .hex-chord-col { grid-column: 2; }
+/* The detail's one-line actions (unlock, add, retrieve). */
 .hex-action {
   width: 100%;
   padding: 7px 12px;
@@ -2289,7 +2326,22 @@ body.hex-detail-open .upgrade-all {
   white-space: nowrap;
 }
 .hex-action:hover { border-color: var(--arete); background: var(--arete-faint); }
-.hex-detail-noslot { font-size: 11px; color: var(--muted); }
+/* Narrow stages reflow the chord column beneath the stack (issue #388):
+   the faces and the rail keep their posts, the detailed facts scroll
+   below, nothing is unreachable. The readonly selector rides along so
+   the reflow out-ranks the wide readonly placement above. */
+@container app (width < 1000px) {
+  .hex-detail-scene .hex-chord-col,
+  .hex-detail-scene.readonly .hex-chord-col {
+    grid-column: 1;
+    grid-row: 4;
+  }
+  .hex-chord-col {
+    width: auto;
+    align-items: center;
+  }
+  .hex-chord-col .hex-chord-row { max-width: calc(var(--detail-hex) * 1.7); }
+}
 
 /* The detail's inventory (issue #296, re-docked by the review): an overlay
    beside the stack — it covers, it never reflows, so opening the tray
@@ -2551,6 +2603,7 @@ body.hex-detail-open .upgrade-all {
 }
 .hex-detail.sheet .hex-detail-grid > * { grid-column: auto; grid-row: auto; }
 .hex-detail.sheet .hex-detail-layer { padding: 8px 0 4px; }
+.hex-detail.sheet .hex-chord-col { width: auto; }
 .hex-detail.sheet .hex-chord-row { max-width: none; }
 .hex-detail.sheet .hex-rail-row { padding: 10px 2px; width: auto; }
 
@@ -3892,6 +3945,23 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   transition: none;
 }
 .readout-tip-trigger:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+/* The Hex detail's one idle disclosure (issue #388): the count in the
+   idle register — dashed and quiet, the row's side of the board's dotted
+   seams — opening the shared tooltip layer, which lists the candidates'
+   names and factors as plain lines. The body floats; the composition
+   never shifts. Sits after the figure-trigger reset above, which it
+   intentionally restores a box against. */
+.readout-tip .detail-idle-trigger {
+  padding: 3px 9px;
+  border: 1px dashed var(--muted);
+  background: var(--panel-deep);
+  color: var(--muted);
+  font: 10px var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.1em;
+}
+.readout-tip .detail-idle-trigger:hover,
+.readout-tip .detail-idle-trigger:focus-visible { color: var(--ink); border-color: var(--ink); background: var(--panel-deep); }
 
 /* Ambient capacity keeps the grouped read's geometry while its meaning
    opens through the shared focus, hover, and tap disclosure. */
