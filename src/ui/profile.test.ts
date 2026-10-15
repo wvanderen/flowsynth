@@ -123,3 +123,37 @@ describe("the reusable presentation contract", () => {
     expect(profileGradesHtml("harmonizer")).toBe("");
   });
 });
+
+describe("the temporal profiles' timing line (issue #372)", () => {
+  it("the Afterglow's grade chips ride beside the warmup said directly", () => {
+    const html = profileGradesHtml("afterglow");
+    const host = document.createElement("div");
+    host.innerHTML = html;
+    const timing = host.querySelector(".profile-timing")!;
+    expect(timing.textContent).toBe("×0.3 open · ×0.8 from 2 min · ×1.25 sustained from 5 min");
+    // The curve takes no letter: its words live outside the chips.
+    expect(timing.querySelectorAll(".profile-grade")).toHaveLength(0);
+    expect(host.querySelectorAll(".profile-grade")).toHaveLength(4);
+  });
+
+  it("the Pulsewell carries the timing line alone — generators have no grade chips yet", () => {
+    const html = profileGradesHtml("pulsewell");
+    const host = document.createElement("div");
+    host.innerHTML = html;
+    expect(host.querySelector(".profile-timing")!.textContent).toBe("×0.5 steady · ×2.5 burst, 30 s every 2 min");
+    expect(host.querySelector(".profile-grades")).toBeNull();
+  });
+
+  it("a temporal candidate tile wears the timing line on the draft", () => {
+    app.state.bankedRolls = [{ id: "temporal-roll", candidates: [
+      { id: "c-glow", type: "afterglow", tier: 0 },
+      { id: "c-well", type: "pulsewell", tier: 0 },
+      { id: "c-spacer", type: "spacer", tier: 0 },
+    ] }];
+    app.openModal("forge");
+    const glow = panel().querySelector('[data-choice="c-glow"]')!.closest(".candidate-tile")!;
+    expect(glow.querySelector(".profile-timing")!.textContent).toContain("×1.25 sustained");
+    const well = panel().querySelector('[data-choice="c-well"]')!.closest(".candidate-tile")!;
+    expect(well.querySelector(".profile-timing")!.textContent).toContain("×2.5 burst");
+  });
+});

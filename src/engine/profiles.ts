@@ -26,6 +26,10 @@ import type { GeneratorType, ModuleType, OscillatorType } from "./types";
 //              (ADR-0048): the conversion curve replaces the charge factor
 //              entirely, so its charge axis has no comparable multiplier —
 //              the absent mark, with the replacement stated in disclosure.
+//   Afterglow (issue #372) — the session-clocked producer: every
+//              comparable axis neutral, and the warmup curve on the shared
+//              session clock is the whole identity — weak opening, strong
+//              sustained production.
 export interface OscillatorProfile {
   // The base-term multiplier over the category's unified synthRate.
   base: number;
@@ -48,6 +52,10 @@ export const OSCILLATOR_PROFILES: Record<OscillatorType, OscillatorProfile> = {
   square: { base: 0.9, booster: 2.0, chord: 0.6, charge: 1.0 },
   saw: { base: 0.7, booster: 1.0, chord: 1.0, charge: 3.0 },
   blaster: { base: 1.0, booster: 1.0, chord: 1.0, charge: 1.0, chargeConversion: true },
+  // The comparable axes stay neutral: the warmup condition below is the
+  // identity and the tradeoff, and progression scales the strengths it
+  // rides without ever touching the curve's timing.
+  afterglow: { base: 1.0, booster: 1.0, chord: 1.0, charge: 1.0 },
 };
 
 // The one profile read. Non-oscillators have no profile — callers guard by
@@ -200,24 +208,30 @@ export function profileAxesOf(type: ModuleType): readonly ProfileAxisRead[] {
      charge lands at the practice fact itself — the written note, the
      completion tick — in flow, while paused, or between sessions.
    
-   Delivery is the family's shared steady shape: a deployed generator
+   Delivery is the family's shared shape: a deployed generator
    emits at its power-scaled strength and consumes reserve quantity at
    that same rate — every adjacent eligible receiver gets full strength,
    expenditure never depends on the neighbor count, and the reserve is a
    store of charge quantity, so banked charge is exactly the charge the
-   generator can still emit.
+   generator can still emit. The launch trio delivers steadily; the
+   Pulsewell (issue #372) rides the same reserve on the burst cycle in the
+   temporal section below — faster emission spends the earned reserve
+   faster, never more of it.
    
    All figures are provisional tuning (the parent issue's accepted sample
    niches, not balanced tables):
    - Flywheel  (focusKeyed) — focus-heavy: the full 0.1/s focus window,
-     modest note and goal credit. Specialized focus practice is viable
-     without owning the other tools.
-   - Scribe    (noteKeyed)  — note-heavy: the distinct character
-     coefficient (1/char, capped per note) and creation bonus (a flat
-     30 once per newly created note meeting the minimum length), plus
-     modest focus credit.
-   - Milestone (goalKeyed)  — goal-heavy: ×5 the completion base, modest
-     focus and note credit. */
+      modest note and goal credit. Specialized focus practice is viable
+      without owning the other tools.
+    - Scribe    (noteKeyed)  — note-heavy: the distinct character
+      coefficient (1/char, capped per note) and creation bonus (a flat
+      30 once per newly created note meeting the minimum length), plus
+      modest focus credit.
+    - Milestone (goalKeyed)  — goal-heavy: ×5 the completion base, modest
+      focus and note credit.
+    - Pulsewell (issue #372) — mixed: half of every specialist on every
+      axis, so mixed practice earns steadily — and delivery rides the
+      burst cycle below, so the reserve spends in predictable waves. */
 export interface GeneratorProfile {
   // Charge per credited practice second, banked at session end.
   focus: number;
@@ -235,6 +249,9 @@ export const GENERATOR_PROFILES: Record<GeneratorType, GeneratorProfile> = {
   focusKeyed: { focus: 0.1, noteChar: 0.2, noteCreate: 5, goal: 1 },
   noteKeyed: { focus: 0.02, noteChar: 1, noteCreate: 30, goal: 1 },
   goalKeyed: { focus: 0.02, noteChar: 0.2, noteCreate: 5, goal: 5 },
+  // Mixed practice earning (issue #372): half of every specialist on its
+  // own axis — no tool is required, none is wasted.
+  pulsewell: { focus: 0.05, noteChar: 0.5, noteCreate: 15, goal: 2.5 },
 };
 
 // The one profile read for generators. Non-generators have none — callers
@@ -244,4 +261,138 @@ export function generatorProfileOf(type: ModuleType): GeneratorProfile | null {
   const category = CATEGORY_OF[type];
   if (category !== "generator") return null;
   return GENERATOR_PROFILES[type as GeneratorType];
+}
+
+/* ── Temporal profiles (issue #372, parent #366) ──────────────
+   Some authored profiles carry a timing rule instead of — never beside —
+   a comparable aptitude: the production factor is authored over the
+   session's shared elapsed active focus time, and presentation describes
+   the timing directly rather than grading it. The clock is the session
+   itself: it advances with every flow second, pauses never move it, a
+   restart resets it, and no module owns a private timer — moving,
+   retrieving, or re-placing a temporal module cannot preserve or
+   manipulate its phase. Open-ended sessions work by construction: no
+   curve reads a planned duration.
+
+   Both curves are piecewise-constant steps, so a production span is exact
+   wherever it starts and ends: the advance walk splits at every step
+   boundary, and between boundaries the rate holds still. All figures are
+   provisional tuning.
+
+   - Afterglow  — warmup steps: ×0.30 for the first two minutes (weak
+                  opening), ×0.80 through minute five, then ×1.25 sustained
+                  — stronger than a neutral producer for as long as the
+                  session keeps running.
+   - Pulsewell  — burst cycle: each two-minute cycle runs ninety seconds at
+                  ×0.5 and closes with a thirty-second ×2.5 burst. The
+                  average is exactly ×1.00 — the cycle shapes delivery, it
+                  does not add charge — and a fresh session always opens
+                  mid-steady, so a restart can never land a free opening
+                  burst. Faster emission spends the earned reserve
+                  proportionally faster. */
+export interface TemporalStep {
+  // The step runs from this many session seconds to the next step's.
+  fromSeconds: number;
+  factor: number;
+}
+
+// The Afterglow's warmup ladder, ascending by `fromSeconds` and ending
+// with the sustained step (no step after it).
+export const AFTERGLOW_WARMUP: readonly TemporalStep[] = [
+  { fromSeconds: 0, factor: 0.3 },
+  { fromSeconds: 120, factor: 0.8 },
+  { fromSeconds: 300, factor: 1.25 },
+];
+
+// The Pulsewell's cycle: the period splits into the steady stretch and the
+// closing burst window; the factors average exactly ×1 over one period.
+export const PULSEWELL_CYCLE = {
+  periodSeconds: 120,
+  burstSeconds: 30,
+  steadyFactor: 0.5,
+  burstFactor: 2.5,
+} as const;
+
+// The clock's step for one temporal type — the factor the pass applies at
+// this point of the session. Non-temporal types read ×1 forever.
+function stepFactorOf(type: ModuleType, elapsedSeconds: number): number {
+  if (type === "afterglow") {
+    const clock = Math.max(0, elapsedSeconds);
+    let factor = AFTERGLOW_WARMUP[0]!.factor;
+    for (const step of AFTERGLOW_WARMUP) {
+      if (clock >= step.fromSeconds) factor = step.factor;
+      else break;
+    }
+    return factor;
+  }
+  if (type === "pulsewell") {
+    const clock = Math.max(0, elapsedSeconds);
+    const inBurst = clock % PULSEWELL_CYCLE.periodSeconds >= PULSEWELL_CYCLE.periodSeconds - PULSEWELL_CYCLE.burstSeconds;
+    return inBurst ? PULSEWELL_CYCLE.burstFactor : PULSEWELL_CYCLE.steadyFactor;
+  }
+  return 1;
+}
+
+// The next clock mark where one temporal type's factor changes — Infinity
+// when the type has none left (a warmed Afterglow) or none at all. The
+// advance walk splits production spans here.
+export function nextTemporalBoundaryOf(type: ModuleType, elapsedSeconds: number): number {
+  const clock = Math.max(0, elapsedSeconds);
+  if (type === "afterglow") {
+    for (const step of AFTERGLOW_WARMUP) {
+      if (step.fromSeconds > clock) return step.fromSeconds;
+    }
+    return Infinity;
+  }
+  if (type === "pulsewell") {
+    const { periodSeconds, burstSeconds } = PULSEWELL_CYCLE;
+    const intoCycle = clock % periodSeconds;
+    const burstStart = periodSeconds - burstSeconds;
+    return intoCycle < burstStart ? clock - intoCycle + burstStart : clock - intoCycle + periodSeconds;
+  }
+  return Infinity;
+}
+
+// One temporal profile's presentation read: the row label the Hex detail's
+// breakdown uses for the current factor, and the direct timing description
+// every profile surface quotes — prose figures, never an aptitude grade.
+export interface TemporalTimingRead {
+  label: string;
+  timing: string;
+}
+
+const TEMPORAL_TIMING: Partial<Record<ModuleType, TemporalTimingRead>> = {
+  afterglow: {
+    label: "Warm-up",
+    timing: "×0.3 open · ×0.8 from 2 min · ×1.25 sustained from 5 min",
+  },
+  pulsewell: {
+    label: "Burst cycle",
+    timing: "×0.5 steady · ×2.5 burst, 30 s every 2 min",
+  },
+};
+
+export function temporalTimingOf(type: ModuleType): TemporalTimingRead | null {
+  return TEMPORAL_TIMING[type] ?? null;
+}
+
+// The factor one type's production carries at this point of the shared
+// session clock — the single read the rate pass, the emission strength,
+// and the breakdowns share, so no surface can disagree with the walk.
+export function productionClockFactorOf(type: ModuleType, elapsedSeconds: number): number {
+  return temporalTimingOf(type) ? stepFactorOf(type, elapsedSeconds) : 1;
+}
+
+// The clock's phase key — the only form the rate memo may key the temporal
+// basis on: the factor moves exactly when a step boundary crosses, so the
+// key stays warm between boundaries and never serves a stale phase.
+export function temporalPhaseKeyOf(elapsedSeconds: number): string {
+  const clock = Math.max(0, elapsedSeconds);
+  let afterglowStep = 0;
+  for (let i = 0; i < AFTERGLOW_WARMUP.length; i++) {
+    if (clock >= AFTERGLOW_WARMUP[i]!.fromSeconds) afterglowStep = i;
+  }
+  const { periodSeconds, burstSeconds } = PULSEWELL_CYCLE;
+  const inBurst = clock % periodSeconds >= periodSeconds - burstSeconds;
+  return `t:a${afterglowStep}p${inBurst ? 1 : 0}`;
 }

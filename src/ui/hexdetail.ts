@@ -85,6 +85,9 @@ const DETAIL_BENEFITS: Record<ModuleInstance["type"], (input: DetailEffectInput)
   triangle: synthBenefit,
   square: synthBenefit,
   saw: synthBenefit,
+  // The Afterglow's level scales the whole warm term — the warmup curve's
+  // timing is untouched by it (issue #372).
+  afterglow: synthBenefit,
   harmonizer: silentBenefit,
   echo: silentBenefit,
   bend: silentBenefit,
@@ -95,6 +98,9 @@ const DETAIL_BENEFITS: Record<ModuleInstance["type"], (input: DetailEffectInput)
   focusKeyed: generatorBenefit,
   noteKeyed: generatorBenefit,
   goalKeyed: generatorBenefit,
+  // The Pulsewell's level scales earning and delivery together — bursts
+  // included, their cycle timing untouched (issue #372).
+  pulsewell: generatorBenefit,
   infusor: ({ gain }) => `+${formatNumber(100 * BALANCE.infusorBonus * gain)}% uplift`,
   forge: ({ gain }) => `+${formatNumber(gain)} progress/s`,
   mutatorForge: ({ gain }) => `+${formatNumber(gain)} progress/s`,

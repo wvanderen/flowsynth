@@ -255,7 +255,7 @@ describe("the nous branch", () => {
 describe("RITUAL", () => {
   it("reaches players through the module-roll pool only", () => {
     expect(ROLL_POOL).toContain("ritual");
-    expect(ROLL_POOL).toHaveLength(16);
+    expect(ROLL_POOL).toHaveLength(18);
   });
 
   it("produces nothing and receives charge as a continuous member", () => {

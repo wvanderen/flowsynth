@@ -1,6 +1,6 @@
 import { amplifierGainOf, tierPowerOf } from "./module-strength";
 import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isVoiceType, typeRarityOf } from "./constants";
-import { baseProductionOf, boosterResponseOf, chargeResponseOf, usesChargeConversion } from "./profiles";
+import { baseProductionOf, boosterResponseOf, chargeResponseOf, usesChargeConversion, productionClockFactorOf, temporalPhaseKeyOf } from "./profiles";
 import { analyzeChords, hypotheticalBoardFor, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
 import { allocateChords, DEFAULT_ALLOCATION_BUDGET, type AllocationBudget, type AllocationRead, type AllocationVoiceParams } from "./allocation";
 import { capacityOf } from "./capacity";
@@ -15,6 +15,15 @@ import type { Contribution, DeployedModule, GameState, Hex, ModuleInstance, Modu
 
 export function chargedFactor(strength: number): number {
   return 1 + strength / (1 + strength);
+}
+
+// The shared session clock (issue #372): the running session's elapsed
+// active focus time — every flow second, pauses excluded — the one clock
+// every temporal profile reads. Null session (upgrade mode, the preview
+// basis): 0, which is also where every session starts, so previews and
+// commits agree on the phase a fresh session opens at.
+export function sessionClockOf(state: GameState): number {
+  return state.session?.elapsed ?? 0;
 }
 
 // The Blaster's conversion curve (ADR-0048): the charged-empowerment
@@ -328,14 +337,19 @@ export function activeBuildGeneratorStrength(state: GameState, flow = flowLive(s
 // and rarity), plus the steady-conduit build node's flat +1 when the
 // active habit equips it (ADR-0046 — output strength is the node's whole
 // effect). Only generators produce charge (§2.3 boundary rule), and the
-// family is the three named designs (issue #371): the Flywheel, Scribe,
-// and Milestone each spend their own banked reserve, emitting at full
-// strength to every adjacent eligible receiver while reserve quantity
-// remains. Delivery consumes reserve at this strength — banked charge is
-// exactly the charge the generator can still emit, whatever the receiver
-// count. Undeployed, it produces no output and the reserve holds. Level,
-// tier, rarity, and mutators scale this strength only — and the earning
-// profiles scale by the same power, so the rhythm never moves.
+// family is the four named designs (issues #371/#372): the Flywheel,
+// Scribe, and Milestone spend their banked reserve steadily, and the
+// Pulsewell rides the same reserve on its authored burst cycle — the
+// session clock's factor multiplies this strength, so the burst delivers
+// faster and spends the earned quantity proportionally faster (never more
+// of it). Emitting at full strength reaches every adjacent eligible
+// receiver whatever the neighbor count; delivery consumes reserve at this
+// strength — banked charge is exactly the charge the generator can still
+// emit. Undeployed, it produces no output and the reserve holds. Level,
+// tier, rarity, and mutators scale the power figure only — and the earning
+// profiles scale by the same power, so the delivery rhythm never moves;
+// the clock factor rides outside power, so progression cannot move the
+// timing either.
 // The `steadyBonus` default is the ambient active-build read — by
 // construction the same amplified figure the rate pass threads through
 // the relay net, so a UI caller
@@ -343,7 +357,7 @@ export function activeBuildGeneratorStrength(state: GameState, flow = flowLive(s
 export function emittedStrength(state: GameState, module: ModuleInstance, flow: boolean, steadyBonus: number = activeBuildGeneratorStrength(state, flow)): number {
   if (!flow || CATEGORY_OF[module.type] !== "generator" || module.pos === null) return 0;
   if (module.reserve <= EPS) return 0;
-  return hostPower(state, module) + steadyBonus;
+  return (hostPower(state, module) + steadyBonus) * productionClockFactorOf(module.type, sessionClockOf(state));
 }
 
 // The charge a module receives, read off a relay net — the one shared read
@@ -415,7 +429,7 @@ export type ChordPass = (singers: Singer[], spacers: DeployedModule[], bonusScal
 // ADR-0049; leg naming per ADR-0020): every effect lands on the producer
 // it touches, and the board's rate is the sum of the modules' final
 // figures:
-//   value(s)  = synthRate·profileBase·power·chordFactor·(1+infusor)·charge·achievementBoost·discoveryBoost
+//   value(s)  = synthRate·profileBase·clockFactor·power·chordFactor·(1+infusor)·charge·achievementBoost·discoveryBoost
 //   rate      = Σ value(s) = (synths + boosters) × empowerment × achievementBoost × discoveryBoost
 // Every oscillator shares one base rate scaled by rarityPower^level — one
 // unified leg, no carrier/harmonics split — with the named type's authored
@@ -448,6 +462,11 @@ export function computeRates(
 
   const achievementBoost = achievementBoostOf(state) * (1 + factors.achievementBoost);
   const discoveryBoost = discoveryBoostOf(state);
+  // The temporal profiles' shared basis (issue #372): the phase this pass
+  // speaks for. The advance walk re-syncs at every step boundary, so each
+  // production span reads one constant factor — and the memo's fingerprint
+  // below keys the same phase, so a boundary always re-solves.
+  const clock = sessionClockOf(state);
 
   // The formation's partition — one derivation of every derived pitch,
   // shared by the contributions and the chord pass below.
@@ -575,8 +594,13 @@ export function computeRates(
     // The Weights nodes (ADR-0046) scale the synth term — the unified leg
     // every oscillator contributes, the type's authored base multiplier
     // (issue #369) over the category's unified rate, Blaster's conversion
-    // included.
-    const base = BALANCE.synthRate * baseProductionOf(module.type) * power * (silent ? 0 : chordFactor) * (1 + factors.synthTerm);
+    // included. The temporal profiles (issue #372) ride the same term:
+    // the session clock's authored factor multiplies the voice's base, so
+    // an Afterglow's warmup moves its every leg — allocation weights,
+    // previews, and readouts included — and power, tiers, and mutators
+    // scale around the condition without moving the timing.
+    const base =
+      BALANCE.synthRate * baseProductionOf(module.type) * productionClockFactorOf(module.type, clock) * power * (silent ? 0 : chordFactor) * (1 + factors.synthTerm);
     // The silent voice sings nothing of its own: its factor is display
     // only — the muted participant's read. The producers' value carries
     // the whole chain.
@@ -728,6 +752,11 @@ function allocationFingerprint(state: GameState): string {
   parts.push(`f:${Object.keys(state.achievements).length}`);
   parts.push(`d:${discoveryCount(state)}`);
   parts.push(`c:${state.capacityBought}:${state.capacityCeilings}`);
+  // The temporal profiles' phase (issue #372): the pass's clock factor
+  // moves at step boundaries, not every second, so the quantized phase —
+  // never the raw clock — keeps consecutive ticks on one solve while a
+  // boundary always re-solves.
+  parts.push(temporalPhaseKeyOf(sessionClockOf(state)));
   return parts.join("|");
 }
 

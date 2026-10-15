@@ -4014,3 +4014,15 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 /* The hex detail's grade line under the module face: left-aligned with the
     stack's axis of attention, same chips. */
 .hex-detail-layer .profile-grades { justify-content: center; margin-top: 8px; }
+
+/* The temporal profiles' timing line (issue #372): the authored curve said
+    directly — one plain figure line beside the grade chips, never a grade,
+    since a timing rule is not a comparable coefficient. */
+.profile-timing {
+  display: block;
+  margin-top: 8px;
+  font: 400 11px/1.4 var(--font-sans, sans-serif);
+  color: var(--muted);
+  text-align: center;
+}
+.hex-detail-layer .profile-timing { margin-top: 6px; }

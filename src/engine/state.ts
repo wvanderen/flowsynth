@@ -114,6 +114,11 @@ export function normalizeModules(modules: ModuleInstance[]): void {
     if (typeof module.reserve !== "number" || !Number.isFinite(module.reserve)) module.reserve = 0;
     if (typeof module.shift !== "number") module.shift = module.type === "bend" ? BALANCE.bendDefaultShift : null;
     if (typeof module.tier !== "number" || !Number.isInteger(module.tier) || module.tier < 0) module.tier = 0;
+    // A position that is not a full hex reads as the tray (issue #372's
+    // hardening): every pass guards `pos === null`, never an undefined —
+    // a corrupt figure must degrade to "undeployed", not poison the boot.
+    const pos = module.pos as { q?: unknown; r?: unknown } | null | undefined;
+    if (!pos || typeof pos.q !== "number" || typeof pos.r !== "number") module.pos = null;
   }
 }
 

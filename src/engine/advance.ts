@@ -1,7 +1,8 @@
 import { CATEGORY_OF, EPS } from "./constants";
 import { syncAchievements } from "./achievements";
 import { syncChordDiscoveries } from "./library";
-import { activeBuildGeneratorStrength, chargeDelivered, emittedStrength, maxChordFactorOf, deployed, syncRates } from "./economy";
+import { activeBuildGeneratorStrength, chargeDelivered, emittedStrength, maxChordFactorOf, deployed, sessionClockOf, syncRates } from "./economy";
+import { nextTemporalBoundaryOf } from "./profiles";
 import { summaryTermsOf } from "./allocation";
 import { addFlowProgress, addForgeProgress, addMutatorForgeProgress, type Rng } from "./rolls";
 import { accrueLivePractice } from "./habits";
@@ -58,14 +59,16 @@ export function advance(
   if (!session) return result;
 
   // The board is locked during flow, so the rate is constant across the
-  // step — except at reserve depletion or live goal completion. A generator whose
+  // step — except at reserve depletion, live goal completion, or a
+  // temporal profile's step boundary. A generator whose
   // remaining duration runs out mid-step splits there, so the drained
   // generator stops crediting the remainder (the rate really does change
   // mid-step, once — one boundary per step, the recursion walks them all).
   // The reserves are charge quantity per module (issue #371): delivery
   // consumes quantity at the generator's emission rate, so the earliest
   // emptying one — remaining quantity ÷ strength — is one split boundary.
-  // Every generator drains by the same rule.
+  // Every generator drains by the same rule, and the temporal walk
+  // (issue #372) splits at its authored marks beside them.
   const steadyBonus = activeBuildGeneratorStrength(state, true);
   const liveGenerators: { module: ModuleInstance; strength: number }[] = [];
   let earliest = Infinity;
@@ -80,6 +83,16 @@ export function advance(
   // A live goal completion banks reserve mid-span, so it is another rate
   // boundary even when every generator starts empty.
   if (sink === "live") earliest = Math.min(earliest, secondsUntilGoalCompletion(state, state.activeHabitId));
+  // The temporal profiles' step boundaries (issue #372): a warmed
+  // Afterglow or a cycling Pulsewell changes the rate exactly at its
+  // authored marks on the shared session clock, so the walk splits there
+  // too — each span then holds one constant factor, and equivalent
+  // advancement intervals deliver equivalently whatever the step shape.
+  const clock = sessionClockOf(state);
+  for (const module of deployed(state)) {
+    const boundary = nextTemporalBoundaryOf(module.type, clock) - clock;
+    if (boundary < earliest) earliest = boundary;
+  }
   if (earliest !== Infinity && earliest + EPS < seconds) {
     // Capture the boundary before advancing: the first leg can drain a
     // reserve or complete a goal, changing the second leg's output.

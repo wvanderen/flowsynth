@@ -38,6 +38,10 @@ const PATHS: Record<ModuleType, string> = {
   triangle: '<path d="M-12 8-4-8 4 8 12-8"/>',
   square: '<path d="M-12 8V-8h9v16h9V-8h6"/>',
   saw: '<path d="M-12 8-1-8v16L10-8v16"/>',
+  // The Afterglow (issue #372): the swelling wave — the trace opens low
+  // and warms to full amplitude, the warmup curve it rides drawn as its
+  // own envelope.
+  afterglow: '<path d="M-12 0C-10.5-4-7.5-4-6 0C-4.5-8-1.5-8 0 0C1.5 16 4.5 16 6 0C7.5-16 10.5-16 12 0"/>',
   // The spacer's wire glyph (ADR-0021): a silent conductor stepping through
   // one cell — a running wire with solder points, never a voice. The board
   // face and tray tile render the ring window instead (issue #219); the
@@ -52,6 +56,9 @@ const PATHS: Record<ModuleType, string> = {
   // The Milestone: the bolt with a check corner mark (issue #232) —
   // the completion tick it earns from.
   goalKeyed: '<path d="M2-13-6 1H0L-2 13 6-1H0Z"/><path d="M4.5-11.5 7-9 11.5-14.5"/>',
+  // The Pulsewell (issue #372): the bolt with a burst corner mark — the
+  // radiating fan of the periodic delivery burst it spends its reserve on.
+  pulsewell: '<path d="M2-13-6 1H0L-2 13 6-1H0Z"/><path d="M6-13l2.2-2.2M8.5-9.5l3-.6M9-6.5l2.8 1"/>',
   // The Booster: outward chevrons around a center dot — it affects its
   // neighbors (replaces the rayed sun).
   infusor: '<circle r="2.2"/><path d="M-5-7-13 0-5 7M5-7 13 0 5 7"/>',

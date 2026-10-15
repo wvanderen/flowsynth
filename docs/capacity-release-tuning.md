@@ -19,6 +19,13 @@ The chosen tuning and the evidence behind it. The decision is ADR-0055; this fil
 > ordinary seeds are 42 and 23 at 750 minutes era-1 (eight-seed spread
 > 540–870), era ratio ~0.42. The full-battery tables still predate the
 > profile wave.
+>
+> **2026-10-15, issue #372:** the temporal wave added the roster's first
+> uncommon types (Afterglow, Pulsewell — the band draw now matches them
+> at 0.9% per slot instead of falling back), and their authored profiles
+> reshuffled the walks again. The always-on gate re-recorded: seed 42
+> reads 660 minutes era-1 at 120 s steps (era ratio 0.455), inside the
+> gate's bands. The full-battery tables still predate the temporal wave.
 
 ## Adopted tuning
 

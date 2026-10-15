@@ -72,6 +72,21 @@ describe("persistence", () => {
     expect(corrupt.state!.gatedRows).toEqual([]);
   });
 
+  it("saves lenient-default a module's corrupt position to the tray", () => {
+    // A module whose saved position is not a full hex reads as
+    // undeployed — every pass guards `pos === null`, so a corrupt figure
+    // must degrade to the tray, never poison the boot.
+    const file = JSON.parse(serialize(fresh()));
+    delete file.state.modules[0]!.pos;
+    const absent = deserialize(JSON.stringify(file));
+    expect(absent.error).toBeUndefined();
+    expect(absent.state!.modules[0]!.pos).toBeNull();
+    file.state.modules[0]!.pos = { q: 0 };
+    const half = deserialize(JSON.stringify(file));
+    expect(half.error).toBeUndefined();
+    expect(half.state!.modules[0]!.pos).toBeNull();
+  });
+
   it("saves lenient-default the Catalog unlocks (issue #197)", () => {
     // A save written before the Arete Catalog existed owes no unlocks it
     // can't know about: absent fields read as never unlocked, never bought.

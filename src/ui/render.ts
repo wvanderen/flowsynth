@@ -3327,6 +3327,9 @@ function forgeEffect(type: ModuleInstance["type"], tier: number): string {
     case "square": return "Booster-fed term · reduced chord response";
     case "saw": return "Charge-fed term · reduced base";
     case "blaster": return "Received charge → ν/s · sings even uncharged";
+    // The temporal profiles (issue #372): the effect line names the niche;
+    // the timing line beside it spells the curve out — never a grade.
+    case "afterglow": return "Session-clocked term · weak open, strong sustained";
     case "harmonizer": return `Cell pitch · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * power)}%/level to its chords`;
     case "echo": return `Adjacent pitch, octave down · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * power)}%/level to its chords`;
     case "bend": return `Shifted cell pitch · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * power)}%/level to its chords`;
@@ -3344,6 +3347,7 @@ function forgeEffect(type: ModuleInstance["type"], tier: number): string {
       if (type === "noteKeyed") return `+${formatNumber(profile.noteCreate * power)} charge/new note ≥${BALANCE.noteCreationMinChars} chars · +${formatNumber(profile.noteChar * power)}/char (${formatNumber(BALANCE.noteCharCreditCap * power)} max/note) · modest practice credit`;
       return `+${formatNumber(profile.goal * goalCompletionBase(60, 1) * power)} charge/live goal minute at completion · modest practice and note credit`;
     }
+    case "pulsewell": return `Mixed-fed reserve · ×2.5 delivery bursts, 30 s every 2 min`;
     case "infusor": return `Adjacent production +${formatNumber(BALANCE.infusorBonus * 100 * power)}% · charge boosts uplift`;
     case "forge": return "Received charge → module rolls";
     case "mutatorForge": return "Received charge → mutator rolls";
@@ -3365,6 +3369,7 @@ function candidateReadout(type: ModuleInstance["type"], tier: number): string {
     case "triangle":
     case "square":
     case "saw":
+    case "afterglow":
       return `+${formatNumber(baseTermOf(type, power))}`;
     case "harmonizer":
     case "echo":
@@ -3379,6 +3384,7 @@ function candidateReadout(type: ModuleInstance["type"], tier: number): string {
     case "focusKeyed":
     case "noteKeyed":
     case "goalKeyed":
+    case "pulsewell":
       return `⌁${formatNumber(power)}`;
     case "infusor":
       return `+${formatNumber(BALANCE.infusorBonus * 100 * power)}%`;
