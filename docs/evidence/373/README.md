@@ -4,6 +4,9 @@ Captured from the verified checkout at `http://localhost:5175` (provenance
 checked via the dev endpoint before every capture: worktree
 `t3code-9469175e`, branch `t3code/add-issue-373-feature`, commit
 `38da5536` — matching `git rev-parse HEAD` in the edited checkout). The
+captures show that checkout's working tree with this issue's changes
+applied — exactly the source the commit below records; no other
+difference stood in the tree at capture time. The
 thread's inline preview harness dropped its browser host mid-pass, so the
 captures come from scripted headless Chrome (Playwright) against the same
 provenance-verified server. The state was seeded through the dev harness
