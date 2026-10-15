@@ -2,8 +2,10 @@
 
 Captured from the verified checkout at `http://localhost:5173` (provenance
 checked via the dev endpoint before every capture: worktree
-`t3code-eb03e114`, branch `t3code/flowsynth-issue-372`, commit `6f876769` —
-matching `git rev-parse` in the edited checkout). The browser pass ran in a
+`t3code-eb03e114`, branch `t3code/flowsynth-issue-372`, commit `5cb3531d`
+— matching `git rev-parse HEAD` in the edited checkout, with a clean tree
+at capture time; the commit below it adds only these evidence files).
+The browser pass ran in a
 Playwright-driven Chrome; the thread's inline preview screenshot transport
 was unavailable (its snapshot client failed on every attempt), so the
 captures below come from scripted Chrome against the same verified server.
