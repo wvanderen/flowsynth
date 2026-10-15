@@ -6,7 +6,7 @@ new types and game-design concepts — the engine keys and records live in code
 design thinking lives. The roster table reflects the code as of the last
 update; when a type lands, update the table in the same change.
 
-Last updated: 2026-10-15 (the four waveform profiles and fixed aptitude grades, issues #369/#370)
+Last updated: 2026-10-15 (the generator profiles and charge-quantity reserves, issue #371)
 
 ## Roster
 
@@ -23,9 +23,9 @@ Last updated: 2026-10-15 (the four waveform profiles and fixed aptitude grades, 
 | `amplifier` | Amplifier | AMP | conduit | common | — | `hue-conduit` | through-flowing chevrons | Roll pool only | `⌁relayed` |
 | `ritual` | RITUAL | RITUAL | ritual | common | — | `hue-ritual` | habit-cycle ring | Roll pool only | `×amp` while charged |
 | `spacer` | Spacer | Spacer | spacer | common | — | `hue-spacer` | ring window (board) / wire | Roll pool only | `⌇` |
-| `focusKeyed` | Focus Generator | FOCUS | generator | common | — | `hue-generator` | bolt, bare | Starter shelf ("generator", 40) and roll pool | `⌁power` |
-| `noteKeyed` | Note Generator | NOTE | generator | common | — | `hue-generator` | bolt, double-line corner mark | Roll pool only | `⌁power` |
-| `goalKeyed` | Goal Generator | GOAL | generator | common | — | `hue-generator` | bolt, check corner mark | Roll pool only | `⌁power` |
+| `focusKeyed` | Flywheel | FLYW | generator | common | — | `hue-generator` | bolt, bare | Starter shelf ("generator", 40) and roll pool | `⌁power` |
+| `noteKeyed` | Scribe | SCRB | generator | common | — | `hue-generator` | bolt, double-line corner mark | Roll pool only | `⌁power` |
+| `goalKeyed` | Milestone | MILE | generator | common | — | `hue-generator` | bolt, check corner mark | Roll pool only | `⌁power` |
 | `infusor` | Booster | BOOST | booster | common | — | `hue-booster` | outward chevrons around a center dot | Starter shelf (40) and roll pool | `+«%»` |
 | `forge` | Forge | FORGE | forge | common | — | `hue-forge` | hex prism | Starter shelf (80) and roll pool | `«charge»/«threshold»` (charge register) |
 | `mutatorForge` | Mutator Forge | MUT. FORGE | forge | common | — | `hue-forge` | seeded-hexagon core on the chassis | Mutator tree entry | `«charge»/«threshold»` (charge register) |
@@ -81,14 +81,21 @@ same at level 0 tier 0 as at level 6 tier 2.
 - **spacer** — silent wire: never sounds, never joins a pitch set,
   conducts chord adjacency through chains of wired cells (ADR-0021).
 - **generator** — produces charge (the only producer). Each generator owns
-  its reserve (ADR-0047) and spends 1 s/s of it while deployed. The
-  focus-keyed rule (ADR-0018): banks at session end
-  (`chargeWindowFraction` = 0.1 of live seconds). The Note Generator
-  (issue #232) credits at the written-note fact — the stored text's
-  character count × 1 s, 5-minute cap per note. The Goal Generator
-  (issue #232) credits at the completion tick — k = 5 × the focus
-  equivalent, prorated by the goal's live share. Every console fact
-  credits each owned generator of its type, board or tray alike.
+  its reserve (ADR-0047) — a store of charge quantity (issue #371,
+  ADR-0060) — and spends it at its emission rate while deployed, reaching
+  every adjacent eligible receiver at full strength whatever the neighbor
+  count. Each named design reads every practice fact through its authored
+  earning profile (`GENERATOR_PROFILES`, issue #371): focus charge per
+  credited practice second, banked at session end (reconciliation seconds
+  included); note-character and note-creation credit at the written-note
+  fact; and a multiple on the goal-completion base at the completion
+  tick — the last three immediate. The creation bonus fires once per
+  newly created note of at least `noteCreationMinChars` (20, tuning);
+  character earning caps per note (`noteCharCreditCap`, 300 charge). The
+  Flywheel is focus-heavy (0.1/s), the Scribe note-heavy (1/char + 30
+  creation), the Milestone goal-heavy (×5) — modest cross-axes on the
+  others. Every console fact credits each owned generator, board or tray
+  alike, at the module's power — the same multiplier delivery scales.
 - **booster** — no synth term; empowers adjacent modules' amplitude
   (`infusorBonus` = 0.2 × power × charge factor per adjacent booster).
   Receives charge as continuous empowerment.
@@ -165,29 +172,31 @@ generators and strictly-lower-hop amplifiers, re-broadcasts at received ×
 receiving charge everywhere — empowerment, Forge thresholds. The hop cap
 (4) bounds chains; equal-depth amplifiers never feed each other.
 
-### Focus Generator (`focusKeyed`)
-Emits charge at power while flow is live and its reserve holds; adjacent
-receivers only (never charges generators, never itself). Session end
-banks 0.1 × credited practice into every owned focus generator — board or
-tray alike; prestige resets reserves.
+### Flywheel (`focusKeyed`)
+The focus specialist (issue #371, ADR-0060): banks 0.1 charge per
+credited practice second at session end — the family's full window —
+with modest note (0.2/char + 5 creation) and goal (×1) credit, so
+specialized focus practice stays viable without owning the other tools.
+Emits at power while flow is live and its reserve holds; adjacent
+receivers only (never charges generators, never itself). The
+`focusKeyed` key predates the profiles and stays the save's key, like
+`additive` for the Sine.
 
-### Note Generator (`noteKeyed`)
-The written-note fact's generator (ADR-0047, issue #232): every note
-written — in flow or between sessions, tagged or not — credits each owned
-Note Generator's reserve the moment it lands, sized by the stored text's
-character count (`noteCreditPerChar` = 1 s/char) under the per-note cap
-(`noteCreditCapSeconds` = 300). No minimum, no per-day cap, no similarity
-detection; notes are append-only, so a future delete never refunds.
-Delivery is the family's shared shape — emission, burn, prestige, and
-combination behave exactly as the Focus Generator's.
+### Scribe (`noteKeyed`)
+The note specialist (issue #371): the distinct character coefficient
+(1 charge/char, capped at 300 charge per note) and creation bonus (30
+charge once per newly created note of at least 20 stored characters —
+never on re-saves; notes are append-only), plus modest focus credit
+(0.02/s, banked at session end) and a ×1 goal axis. Delivery is the
+family's shared shape — quantity emission, prestige, and combination
+behave exactly as the Flywheel's.
 
-### Goal Generator (`goalKeyed`)
-The completion tick's generator (ADR-0047, issue #232): completing a goal
-of M minutes banks `goalReserveMultiple` (= 5) × the focus equivalent
-(`chargeWindowFraction` × M) into each owned Goal Generator, prorated by
-the live share of the goal's progress — manual-only completions bank
-nothing, mixed practice banks its live share. Recurring goals credit once
-per occurrence; overlapping completions each credit. Delivery is the
+### Milestone (`goalKeyed`)
+The goal specialist (issue #371): ×5 the completion base (the focus
+equivalent, prorated by the goal's live share — manual-only completions
+bank nothing) at the completion tick, plus modest focus (0.02/s) and
+note (0.2/char + 5 creation) credit. Recurring goals credit once per
+occurrence; overlapping completions each credit. Delivery is the
 family's shared shape.
 
 ### Booster (`infusor`)
@@ -213,8 +222,9 @@ below.
 The D-set glyph family (issue #219, lifted from
 `prototype/module-identity-glyphs`) settled the launch marks: the
 Oscillator's bare sine, the Harmonizer's diamond, the generators' bolt —
-the Focus Generator bare, the Note Generator with a double-line corner
-mark, the Goal Generator with a check corner mark (issue #232) — the
+the Flywheel bare, the Scribe with a double-line corner
+mark, the Milestone with a check corner mark (issue #232; named in
+issue #371) — the
 Booster's outward chevrons around a center dot, and the Mutator Forge's
 seeded-hexagon core on the Forge chassis. The roster wave added the
 silent voices and the conduit (issue #229): the Echo's doubled waves (the

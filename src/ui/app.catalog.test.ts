@@ -56,9 +56,9 @@ describe("the catalog", () => {
     const rows = [...modal.querySelectorAll<HTMLElement>(".catalog-row")].filter((r) => r.querySelector("[data-buy]"));
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) expect(row.querySelector(".module-preview svg")).not.toBeNull();
-    // The Focus Generator's one line names what the purchase does.
-    const generator = rows.find((r) => r.textContent!.includes("Focus Generator"))!;
-    expect(surfaceText(generator)).toContain("Produces charge based on time in flow");
+    // The Flywheel's one line names what the purchase does.
+    const generator = rows.find((r) => r.textContent!.includes("Flywheel"))!;
+    expect(surfaceText(generator)).toContain("Banks focus into a charge reserve — modest note and goal credit");
     expect(generator.querySelector(".term-trigger")!.textContent).toBe("charge");
     // The trailing acquisition paragraph is gone, and no gloss rides the
     // toggle either — the face carries no furniture copy.

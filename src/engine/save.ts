@@ -1,6 +1,7 @@
 import { createInitialState, createModule, normalizeChordDiscovery, normalizeModules } from "./state";
 import { normalizeHabitBuilds } from "./builds";
 import { normalizeGoals } from "./goals";
+import { modulePower } from "./economy";
 import { BALANCE, SAVE_VERSION } from "./constants";
 import type { GameState } from "./types";
 
@@ -25,22 +26,25 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-// ADR-0017's pattern at the v9 boundary (issue #367, ADR-0058's split):
-// the rarity/tier cut is the iteration's one migration. Every version
-// older than v8 rejects with the start-fresh message — no chain, no
-// archive, no import path for rejected versions — while a v8 save
-// migrates in place:
-//   1. Each owned module's saved rarity maps by index onto the merge tier
-//      (common → 0, uncommon → 1, rare → 2), the stored rarity field dies,
-//      and the type's fixed rarity derives from the code table.
-//   2. Banked module-roll candidates convert the same way — the rolled
-//      band survives as the tier the choice mints at, so queued value is
-//      never silently lost.
-//   3. Mutator rarity is untouched (ADR-0058's boundary).
+// ADR-0017's pattern at the v10 boundary (issue #371): the charge-quantity
+// cut is the iteration's one migration. Every version older than v9
+// rejects with the start-fresh message — no chain, no archive, no import
+// path for rejected versions — while a v9 save migrates in place:
+//   1. Each owned module's stored reserve converts from output seconds to
+//      charge quantity: legacySeconds × the module's authored power
+//      (modulePower). Under the seconds model the reserve delivered
+//      legacySeconds × authored power of module-owned charge; the
+//      conversion preserves that total and, with it, the authored-power
+//      delivery duration (quantity ÷ strength = the stored seconds).
+//      Board-side strength — power mutators, the steady-conduit node's
+//      flat bonus — was never the reserve's: it amplified delivery
+//      without adding to the banked budget, and delivery re-applies it at
+//      the live strength.
+//   2. Everything else stands exactly where it was — levels, tiers,
+//      placement, notes, goals, the life record. Earning coefficients are
+//      code, never save state.
 // The conversion is repeatable: it runs only on version === SAVE_VERSION
 // - 1, writes only the new shape, and a save/load round-trip is stable.
-// The life record is never wiped: nothing outside the modules' rarity
-// keys and the banked candidates moves.
 export function deserialize(text: string): LoadResult {
   let parsed: unknown;
   try {
@@ -193,10 +197,10 @@ export function deserialize(text: string): LoadResult {
   // slice, which reads — honestly — as a manual-only history that banks
   // nothing at its next completion.
   normalizeGoals(merged.goals);
-  // The v8 → v9 migration (issue #367, ADR-0058): transform in place,
-  // before the per-module normalization below reads the new shape.
+  // The v9 → v10 migration (issue #371): transform in place, before the
+  // per-module normalization below reads the new shape.
   if (migrating) {
-    migrateV8ToV9(merged);
+    migrateV9ToV10(merged);
   }
   // The per-module reserve/shift surface (ADR-0047, ADR-0048) lenient-
   // defaults per module: a module saved before the roster wave carries
@@ -209,32 +213,18 @@ export function deserialize(text: string): LoadResult {
   return { state: merged };
 }
 
-// The one migration step (ADR-0017's pattern, issue #367): a v8 save's
-// per-copy rarity becomes the merge tier by index, and the banked module
-// rolls convert the same way — nothing else moves.
-// The shared conversion (ADR-0058): a legacy rarity's index is the tier the
-// copy has earned; a corrupt or absent key reads as the base tier — a copy
-// the old system never explained earns nothing it cannot show.
-function legacyTier(legacy: unknown): number {
-  return legacy === "uncommon" ? 1 : legacy === "rare" ? 2 : 0;
-}
-
-function migrateV8ToV9(merged: GameState): void {
-  // 1. Owned modules: the stored rarity field dies — the type's fixed
-  // rarity now derives from the code table.
+// The one migration step (ADR-0017's pattern, issue #371): a v9 save's
+// per-module reserve converts from output seconds to charge quantity at
+// the module's authored power — the delivered total and the delivery
+// duration both stand, whatever the module's level, tier, or rarity. A
+// corrupt or absent figure reads as an empty reserve — charge the old
+// system never explained banks nothing it cannot show. The tier keys and
+// the banked candidates need no conversion: the v9 shape is the current
+// shape everywhere but the reserve's unit.
+function migrateV9ToV10(merged: GameState): void {
   for (const module of merged.modules) {
-    module.tier = legacyTier((module as { rarity?: unknown }).rarity);
-    delete (module as { rarity?: unknown }).rarity;
-  }
-  // 2. Banked module-roll candidates (the batch retention, ADR-0058): the
-  // rolled band survives as the tier the choice mints at — a queued rare
-  // stays worth a rare. Mutator rolls are untouched; their rarity is the
-  // live surface (ADR-0043).
-  for (const offer of merged.bankedRolls) {
-    for (const candidate of offer.candidates) {
-      candidate.tier = legacyTier((candidate as { rarity?: unknown }).rarity);
-      delete (candidate as { rarity?: unknown }).rarity;
-    }
+    const legacySeconds = typeof module.reserve === "number" && Number.isFinite(module.reserve) ? module.reserve : 0;
+    module.reserve = legacySeconds > 0 ? legacySeconds * modulePower(module) : 0;
   }
 }
 

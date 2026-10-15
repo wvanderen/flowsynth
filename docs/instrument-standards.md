@@ -42,7 +42,7 @@ Scope note: [validated prototype UX](validated-prototype-ux.md) records the firs
 
 ## Naming and voice
 
-- **Purchases are products, not mechanics.** Every purchasable thing carries a terse proper name from the studio-hardware register — equipment or process in the synth world, building on the module voice (Focus Generator, Harmonizer, Bend). Canonical examples: Poly Expander, Expansion Bays, Rack Extenders, Chord Catalysts, Headroom.
+- **Purchases are products, not mechanics.** Every purchasable thing carries a terse proper name from the studio-hardware register — equipment or process in the synth world, building on the module voice (Flywheel, Harmonizer, Bend). Canonical examples: Poly Expander, Expansion Bays, Rack Extenders, Chord Catalysts, Headroom.
 - **Mechanics words never lead a name.** Ceiling, rung, discount, capacity, unlock may appear in the effect line and the hoverable term layer — never as the player-facing name. "First ceiling" is the failure shape.
 - **One concrete effect line rides the name**; longer descriptions do not exist — the terms in the line hover to their CONTEXT.md meanings.
 - **Ownership**: implementers coin freely within the register; a name that sets taste — new metaphor territory — returns to a design session for confirmation. Named purchases get `_Avoid:` entries in CONTEXT.md like every named thing.

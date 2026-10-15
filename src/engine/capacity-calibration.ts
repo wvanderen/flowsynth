@@ -171,7 +171,7 @@ function manage(state: GameState, policy: CalibrationPolicy, minute: number): Ca
   }
   // One small goal tracked at all times, re-minted each break (the sim
   // compresses days; a completed daily never rolls over). Completing it
-  // is the Goal Generator's console fact (ADR-0047) — the pool's keyed
+  // is the completion tick's console fact (ADR-0047, issue #371) — the
   // generators earn their reserves through play, never for free.
   for (const goal of [...state.goals]) deleteGoal(state, goal.id);
   createGoal(state, { habitId: null, minutes: 25, schedule: "once", now: 0 });

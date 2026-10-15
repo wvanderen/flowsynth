@@ -38,14 +38,14 @@ export type SilentVoiceType = "harmonizer" | "echo" | "bend";
 // rolls only.
 export type SpacerType = "spacer";
 
-// Generators produce charge. The launch generator is the focus-keyed one
-// (ADR-0018): it reads focus state, and its charge-window rule is the §2.3
-// launch exception. The note- and goal-keyed generators join the roll pool
-// with ADR-0047's wave: each reads its console fact as an effect input
-// (ADR-0012) and credits its own reserve at the fact — notes at the
-// moment they are written, goals at their completion tick. The plain
-// "generator" type was retired pre-release — every generator banks its
-// window and releases it next session.
+// Generators produce charge (issue #371's named designs): the Flywheel
+// (focusKeyed), the Scribe (noteKeyed), and the Milestone (goalKeyed) each
+// read every practice fact — credited focus time, written notes, completed
+// goals — through its authored earning profile (profiles.GENERATOR_
+// PROFILES), banking charge quantity into its own reserve. The keys
+// predate the profiles and stay the save's identity, like `additive` for
+// the Sine. The plain "generator" type was retired pre-release — every
+// generator banks its window and releases it next session.
 export type GeneratorType = "focusKeyed" | "noteKeyed" | "goalKeyed";
 
 export type InfusorType = "infusor";
@@ -97,12 +97,12 @@ export interface ModuleInstance {
   level: number;
   invested: number;
   pos: Hex | null;
-  // The module's own reserve (ADR-0047, the v8 surface): the player-wide
-  // charge-window scalar generalized per module. The Focus Generator banks
-  // output seconds here at session end and spends 1 s/s while deployed;
-  // the Note and Goal generators join the same surface with their
-  // reserves. Charge state — reset at prestige. Lenient-defaulted to 0 at
-  // load.
+  // The module's own reserve (ADR-0047, generalized by issue #371): a
+  // store of charge quantity. A generator's profile banks charge into it
+  // at the practice facts — focus windows at session end, note and goal
+  // credit at their facts — and a deployed generator spends it at its
+  // emission rate while flow is live. Charge state — reset at prestige.
+  // Lenient-defaulted to 0 at load.
   reserve: number;
   // The Bend's player-picked shift (ADR-0048): semitones added to its
   // cell's pitch. The selectable set grows with rarity only (±1 at launch,
@@ -389,7 +389,7 @@ export interface Goal {
   progressSeconds: number;
   // The occurrence's live slice of `progressSeconds` (ADR-0047): credited
   // present, trusted, and honesty-credited seconds — manual logs never
-  // join it. The Goal Generator's completion credit prorates by this
+  // join it. The completion credit prorates by this
   // share, so a manual-only completion banks nothing; the reset at a
   // recurring occurrence's boundary clears it. Lenient-defaulted to 0 at
   // load.

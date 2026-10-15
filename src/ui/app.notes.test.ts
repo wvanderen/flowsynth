@@ -338,7 +338,7 @@ describe("the LOGGED stream's rows (§9)", () => {
 });
 
 describe("the modal carries no generator documentation", () => {
-  it("the Note Generator's mechanic lives on the module, never as modal furniture", () => {
+  it("the Scribe's mechanic lives on the module, never as modal furniture", () => {
     const frame = openNotes();
     // No tooltip trigger or body, and no prose naming the mechanic — the
     // capture row is chip and button alone (the forge readout documents

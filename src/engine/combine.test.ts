@@ -280,7 +280,7 @@ describe("combinePreview", () => {
   // ADR-0047 (wave 5): reserves are charge state owned per module — the
   // consumed copy's unspent reserve is forfeited with it, the survivor's
   // carries on under the next tier. Never summed, never refunded.
-  it("combining two Note Generators forfeits the consumed one's unspent reserve and keeps the survivor's", () => {
+  it("combining two Scribes forfeits the consumed one's unspent reserve and keeps the survivor's", () => {
     const s = fresh();
     const survivor = give(s, "noteKeyed", hex(2, 0));
     const consumed = give(s, "noteKeyed", null);

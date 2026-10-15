@@ -43,14 +43,14 @@ const PATHS: Record<ModuleType, string> = {
   // face and tray tile render the ring window instead (issue #219); the
   // glyph remains for the expanded face and candidate tiles.
   spacer: '<path d="M-13 0h7l4-6 5 12 5-12 4 6h4"/><circle r="1.6" cx="-13" cy="0"/><circle r="1.6" cx="12" cy="0"/>',
-  // The Focus Generator: the bolt, bare — the corner marks distinguish its
-  // two keyed siblings (issue #232).
+  // The Flywheel: the bolt, bare — the corner marks distinguish its two
+  // generator siblings (issue #232, named in issue #371).
   focusKeyed: '<path d="M2-13-6 1H0L-2 13 6-1H0Z"/>',
-  // The Note Generator: the bolt with a double-line corner mark (issue
-  // #232) — the ruled lines of the written fact it keys off.
+  // The Scribe: the bolt with a double-line corner mark (issue
+  // #232) — the ruled lines of the written fact it earns from.
   noteKeyed: '<path d="M2-13-6 1H0L-2 13 6-1H0Z"/><path d="M5-14.5l3.5 3.5M7.5-15.5 11-12"/>',
-  // The Goal Generator: the bolt with a check corner mark (issue #232) —
-  // the completion tick it keys off.
+  // The Milestone: the bolt with a check corner mark (issue #232) —
+  // the completion tick it earns from.
   goalKeyed: '<path d="M2-13-6 1H0L-2 13 6-1H0Z"/><path d="M4.5-11.5 7-9 11.5-14.5"/>',
   // The Booster: outward chevrons around a center dot — it affects its
   // neighbors (replaces the rayed sun).

@@ -19,7 +19,7 @@ A unit occupying one cell on the board, with gameplay effects derived from its c
 The function level of a board module — oscillator, spacer, generator, booster, or forge at launch; the silent-voice and charge-conduit categories (working names, confirmed) joined with the roster iteration, and the habit-keyed ritual category — RITUAL, its one member — joins with the builds iteration. Categories take their display words from their modules (issue #219): the former synthesizer category is the oscillator category, the former infusor the booster category. Category carries the module's hue.
 
 **Module type**:
-A specific module design within a category, such as the Sine or the Focus Generator, carrying its own glyph and nameplate. Forge choices contain distinct module types; different types may share the same category.
+A specific module design within a category, such as the Sine or the Flywheel, carrying its own glyph and nameplate. Forge choices contain distinct module types; different types may share the same category.
 
 **Chargeable module**:
 A supertype family above the category level whose members accumulate received charge toward thresholds that produce effects; the threshold fill is the family's shared rendering trait. The Module Forge is the launch instance. Continuous-charge categories (oscillator, booster) use received charge as continuous empowerment instead.
@@ -171,22 +171,35 @@ _Avoid_: converter
 A habit-independent resource produced by generators that empowers or charges other modules; its state is preserved between flow sessions.
 
 **Generator**:
-A board module that produces charge. Remaining output belongs to the generator and follows it when moved; a console fact credits every owned generator of the matching type, board or tray. The Focus Generator is the launch generator (ADR-0018 retired the plain generator pre-release); the Note Generator and Goal Generator joined with the reserve iteration, reading the console's notes and goals through the board seam (ADR-0047).
+A board module that produces charge. Remaining output belongs to the generator and follows it when moved; a practice fact credits every owned generator, board or tray alike, at that generator's own authored profile (issue #371, ADR-0060) — the focus bank at session end, note and goal credit at their facts. The three named designs below share the one reserve surface; their keys predate the profiles and stay the save's identity (ADR-0018 retired the plain generator pre-release; ADR-0047 joined the reserve seam).
+_Avoid_: Focus Generator, Note Generator, Goal Generator (the pre-profile type names)
 
-**Charge window**:
-A Focus Generator's charge budget, banked at session end into each owned Focus Generator, sized as a fraction of that session's credited practice time and spent as output during the next session's first minutes. Manual practice logs never create one.
+**Flywheel**:
+The focus-heavy generator (issue #371): its profile banks the family's full focus coefficient per credited practice second at session end, with modest note and goal credit — specialized focus practice stays viable without the other tools. The save's key is `focusKeyed`.
+_Avoid_: Focus Generator, battery
 
-**Note pool**:
-A Note Generator's reserve, credited the moment a note is written — in flow or between sessions, tagged or not — sized linearly by the note's character count up to a per-note cap. Notes are append-only; a deleted note, if one ever can be, refunds nothing.
+**Scribe**:
+The note-heavy generator (issue #371): its profile carries the distinct character coefficient (charge per stored character, capped per note) and creation bonus (once per newly created note meeting the creation minimum), plus modest focus credit. The save's key is `noteKeyed`.
+_Avoid_: Note Generator, writer
 
-**Goal reserve**:
-A Goal Generator's reserve, credited at a goal's completion: a multiple of the charge window the goal's practice duration would have banked, prorated by the live share of the goal's progress. Recurring goals credit once per occurrence; overlapping completions each credit.
+**Milestone**:
+The goal-heavy generator (issue #371): its profile multiplies the completion base — the focus equivalent of the goal's credited seconds, prorated by the live share — and reads modest focus and note credit. The save's key is `goalKeyed`.
+_Avoid_: Goal Generator, achievement
+
+**Focus earning**:
+The banked-earning axis every generator's profile carries (issue #371): charge per credited practice second, accrued with the session and landed at session end — honesty-credited reconciliation seconds included. The Flywheel's coefficient leads the family's. Manual practice logs never create one.
+
+**Note credit**:
+The immediate earning a written note lands (issue #371): every owned generator banks its profile's character coefficient per stored character under the per-note cap, plus its creation bonus once when the newly created note meets the creation minimum (20 stored characters, provisional). Notes are append-only; a deleted note, if one ever can be, refunds nothing, and no edit or re-save path exists to re-award the bonus.
+
+**Goal credit**:
+The immediate earning at a goal's completion tick (issue #371): the focus equivalent of the goal's credited seconds, prorated by the live share of its progress, times each generator's profile coefficient. Recurring goals credit once per occurrence; overlapping completions each credit.
 
 **Output strength**:
-The rate at which a generator delivers charge to each eligible adjacent module, without dividing output among neighbors. Strengths from simultaneously active generators add at each receiver.
+The rate at which a generator delivers charge to each eligible adjacent module, without dividing output among neighbors. Strengths from simultaneously active generators add at each receiver. Delivery consumes the generator's reserve at this rate (issue #371).
 
 **Remaining duration**:
-The amount of live flow time for which a generator's output remains available; simultaneously active generators each use their own duration.
+How long a generator's reserve still delivers: its stored charge quantity divided by its output strength (issue #371) — progression scales quantity and strength by the same power, so the rhythm never moves.
 
 **Charged empowerment**:
 An increase to a module's specified effect while receiving charge, increasing with received strength with diminishing returns. Its numerical curve remains to be balanced.
@@ -257,7 +270,7 @@ A choice of one mutator from two generated candidates, delivered to the Mutator 
 The tabbed shop behind the labeled Catalog door on the dock (desktop) and thumb bar (phone) — the door's mark is the square-cut rack carrying the upward arrow (issue #336), distinct from the layer symbols: the `ν nous` face carries the starter shelf and — once the ladder has a tenant — app activations; the `◇ Arete` face is the Arete Catalog. Cells are no sheet row — the purchase arms from the dock's Add and commits on the board's frontier. The door opens on the mode's face — module mode on ν, mutator mode on ◇ — the mode wins over any last-face memory. The ◇ tab stands open from the start; before the first prestige it shows the entry purchase screen as the preview of the future entry, its price muted while no banked Arete can pay. The frame is fixed — a 620×600 clipped panel on desktop, a 74%-height bottom sheet on phone — and a face switch never resizes it: the switch and identity stay pinned while the body scrolls. Purchases act in upgrade mode only; prices mute when unaffordable or in flow. Module upgrades live on module panels, not the catalog (ADR-0018).
 
 **Starter shelf**:
-The catalog's one-time guaranteed offers — the Focus Generator, one Booster, and a Module Forge — hidden once acquired. It completes the non-oscillator landscape; oscillators come only from the opening grant and module rolls (ADR-0022).
+The catalog's one-time guaranteed offers — the Flywheel, one Booster, and a Module Forge — hidden once acquired. It completes the non-oscillator landscape; oscillators come only from the opening grant and module rolls (ADR-0022).
 
 ### The console and focus apps
 
@@ -332,13 +345,13 @@ The focus app providing planned targets and timing tools, and the home of sessio
 A practice duration or milestone set within the Time app — a preset quick pick or free entry from 1 to 90 minutes in 1-minute steps — that a session can aim at and hit; hits are recorded in the session summary.
 
 **Notes app**:
-The focus app for recording notes — during a flow session or between sessions. Notes produce nothing themselves; a written note is the fact each owned Note Generator reads, crediting its reserve by the note's character count (ADR-0047). Tagged notes wear their habit as a chip.
+The focus app for recording notes — during a flow session or between sessions. Notes produce nothing themselves; a written note is the fact every owned generator reads, crediting its reserve at its profile's character and creation coefficients (issue #371). Tagged notes wear their habit as a chip.
 
 **Habit-keyed note**:
 A note tagged with the session's selected habit at capture, surfaced in that habit's development summary and chipped in the Notes stream. Unstructured and upgrade-mode notes go untagged.
 
 **Goals app**:
-The focus app for tracking goals; completion is the tracking itself, surfaced in the session summary. A completion is the fact each owned Goal Generator reads, crediting its reserve a multiple of the focus equivalent prorated by the goal's live share (ADR-0047). Its capacity grows through the Channel Strips purchase (the console long goal).
+The focus app for tracking goals; completion is the tracking itself, surfaced in the session summary. A completion is the fact every owned generator reads, crediting its reserve its profile's multiple of the focus equivalent prorated by the goal's live share (issue #371). Its capacity grows through the Channel Strips purchase (the console long goal).
 
 **Goal**:
 A practice condition to fulfill, such as practicing piano for twenty minutes or practicing four specified habits in a day, accruing progress only while active. Goals may qualify practice by habit or other criteria, and a session may advance several goals.
@@ -393,7 +406,7 @@ The minutes owed honesty behind the provisional bucket: away time past a planned
 The mandatory adjudication presented when a session returns with provisional time outstanding, repeated until resolved. One answer banks or drops the bucket and sets how much of the provisional time credits: didn't practice, did what I planned, or practiced the whole time away — the middle option only where a plan exists.
 
 **Credited practice time**:
-A session's post-reconciliation practice total: live present and trusted time, plus provisional time as the honesty report credits it. Habit accrual, goal progress, the charge window, the flow meter, and session achievements all key off it.
+A session's post-reconciliation practice total: live present and trusted time, plus provisional time as the honesty report credits it. Habit accrual, goal progress, the generators' focus earning, the flow meter, and session achievements all key off it.
 
 **Honesty outcome**:
 The per-reconciliation record — missed, planned, or full — from which a session's honesty summary and its miss row derive.

@@ -73,7 +73,7 @@ export interface BuildNodeDef {
 // table): six rungs, one node per branch per rung.
 export const BUILD_NODES: readonly BuildNodeDef[] = [
   // ── Charge / Forge-progress branch ──
-  { id: "charge-tap", branch: "charge", name: "Charge tap", milestone: 0, effect: "Focus Generator window bank", magnitude: 0.1 },
+  { id: "charge-tap", branch: "charge", name: "Charge tap", milestone: 0, effect: "every generator's focus bank", magnitude: 0.1 },
   { id: "steady-conduit", branch: "charge", name: "Steady conduit", milestone: 1, effect: "output strength, owned generators", unit: "flat", magnitude: 1 },
   { id: "forge-hand", branch: "charge", name: "Forge hand", milestone: 2, effect: "Forge progress efficiency", magnitude: 0.1 },
   { id: "charge-tap-ii", branch: "charge", name: "Charge tap II", milestone: 3, effect: "window bank", magnitude: 0.15, stacking: true },

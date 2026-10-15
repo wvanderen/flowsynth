@@ -716,7 +716,7 @@ function habitChipHtml(state: GameState, note: NoteEntry): string {
 // The capture face: the composer over its action row — the live tag chip
 // rides it during flow (the session's habit, where the note will tag;
 // upgrade-mode notes go untagged) and the capture button takes the note.
-// The Note Generator's mechanic is documented on the module itself (the
+// The Scribe's mechanic is documented on the module itself (the
 // forge readout), never as modal furniture.
 function notesCaptureHtml(app: App): string {
   const { state } = app;

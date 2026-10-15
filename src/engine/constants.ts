@@ -174,22 +174,16 @@ export interface Balance {
   // — one module roll per ≈ 30 credited minutes, forever, never scaling.
   flowOpeningSeconds: number;
   flowCadenceSeconds: number;
-  // The focus-keyed generator's bank ratio (§2.3): each session end banks a
-  // charge window of fraction × live practice seconds. Provisional tuning.
-  chargeWindowFraction: number;
-  // The Note Generator's credit (ADR-0047): every note written credits each
-  // owned Note Generator output seconds sized linearly by the note's
-  // character count at this rate, under a per-note cap. No minimum, no
-  // per-day cap, no similarity detection. Provisional tuning
-  // (1 s/char, 5-minute cap).
-  noteCreditPerChar: number;
-  noteCreditCapSeconds: number;
-  // The Goal Generator's multiple k (ADR-0047): completing a goal of M
-  // minutes banks k × the focus equivalent (chargeWindowFraction × M),
-  // prorated by the live share of the goal's progress — substantially
-  // stronger than practicing the same duration, which is the point.
-  // Provisional tuning (k = 5).
-  goalReserveMultiple: number;
+  // The note character axis's per-note cap (issue #371): character earning
+  // flattens here per note — charge, before the module's power scaling.
+  // The creation bonus rides on top, capped separately by the minimum
+  // below. Provisional tuning.
+  noteCharCreditCap: number;
+  // The note-creation minimum (issue #371): a newly created note must
+  // carry at least this many stored characters for its profile's creation
+  // bonus to fire — once per note, never on re-saves (notes are
+  // append-only). Character earning has no minimum. Provisional tuning.
+  noteCreationMinChars: number;
 }
 
 // Provisional tuning throughout; the redesign spec's numbers are not final
@@ -253,10 +247,8 @@ export const BALANCE: Balance = {
   mutatorSlotFirstCost: 2,
   flowOpeningSeconds: 180,
   flowCadenceSeconds: 1800,
-  chargeWindowFraction: 0.1,
-  noteCreditPerChar: 1,
-  noteCreditCapSeconds: 300,
-  goalReserveMultiple: 5,
+  noteCharCreditCap: 300,
+  noteCreationMinChars: 20,
 };
 
 // The chord vocabulary (#218's eleven classes, ADR-0021/0022 as extended by
@@ -331,9 +323,11 @@ export const CATEGORY_OF: Record<ModuleType, Category> = {
   ritual: "ritual",
   spacer: "spacer",
   focusKeyed: "generator",
-  // The two roll-pool generators of ADR-0047's wave: the Note Generator
-  // credits at the written-note fact, the Goal Generator at the completion
-  // tick — same category, same reserve surface, different fact.
+  // The generator profile wave (issue #371, parent #366): three named
+  // designs — the Flywheel (focus-heavy), the Scribe (note-heavy), and the
+  // Milestone (goal-heavy) — each reading every practice fact through its
+  // authored profile (profiles.GENERATOR_PROFILES). Same category, same
+  // reserve surface, different earning shapes.
   noteKeyed: "generator",
   goalKeyed: "generator",
   infusor: "booster",
@@ -487,11 +481,10 @@ export const REFLECTION_SLIDER_MIN = 1;
 export const REFLECTION_SLIDER_POSITIONS = 5;
 export const REFLECTION_SLIDER_NEUTRAL = 3;
 
-// ADR-0017's pattern at the v9 boundary (issue #367, ADR-0058's split):
-// SAVE_VERSION 9 — the rarity/tier cut. V8 saves migrate in place (each
-// owned module's saved rarity maps by index onto the merge tier and the
-// stored rarity field dies — type rarity derives from TYPE_RARITY; banked
-// module-roll candidates convert the same way so queued value survives);
-// anything older rejects with the start-fresh message, and the chain past
-// one step stays empty.
-export const SAVE_VERSION = 9;
+// ADR-0017's pattern at the v10 boundary (issue #371): SAVE_VERSION 10 —
+// the charge-quantity cut. V9 saves migrate in place (each owned module's
+// stored reserve seconds convert to the charge quantity that delivers the
+// same total at the module's authored power — duration and delivered charge
+// both stand); anything older rejects with the start-fresh message, and
+// the chain past one step stays empty.
+export const SAVE_VERSION = 10;

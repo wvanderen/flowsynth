@@ -18,9 +18,12 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
   amplifier: { name: "Amplifier", short: "AMP", role: "Relays charge onward" },
   ritual: { name: "RITUAL", short: "RITUAL", role: "Amplifies the active habit's build while charged" },
   spacer: { name: "Spacer", short: "Spacer", role: "Silent wire" },
-  focusKeyed: { name: "Focus Generator", short: "FOCUS", role: "Charge from focus" },
-  noteKeyed: { name: "Note Generator", short: "NOTE", role: "Charge from notes" },
-  goalKeyed: { name: "Goal Generator", short: "GOAL", role: "Charge from goals" },
+  // The generator profile wave (issue #371): three named designs over the
+  // one reserve surface — the keys predate the profiles and stay the
+  // save's identity, like `additive` for the Sine.
+  focusKeyed: { name: "Flywheel", short: "FLYW", role: "Focus-fed reserve · steady" },
+  noteKeyed: { name: "Scribe", short: "SCRB", role: "Note-fed reserve · per character" },
+  goalKeyed: { name: "Milestone", short: "MILE", role: "Goal-fed reserve · per completion" },
   infusor: { name: "Booster", short: "BOOST", role: "Neighbor bonuses" },
   forge: { name: "Forge", short: "Forge", role: "Rolls at threshold" },
   mutatorForge: { name: "Mutator Forge", short: "Mut. Forge", role: "Mutator rolls at threshold" },
@@ -30,7 +33,7 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
 // line the row carries, overriding the roster's short role where the
 // purchase needs the fuller sentence.
 export const SHELF_DESCRIPTIONS: Partial<Record<ShelfType, string>> = {
-  generator: "Produces charge based on time in flow",
+  generator: "Banks focus into a charge reserve — modest note and goal credit",
 };
 
 export const RARITY_LABEL: Record<Rarity, string> = { common: "common", uncommon: "uncommon", rare: "rare" };

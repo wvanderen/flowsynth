@@ -1,5 +1,5 @@
 import { BALANCE, EPS } from "./constants";
-import { creditOwnedGenerators } from "./reserves";
+import { creditGoalEarning } from "./reserves";
 import type { Goal, GoalColor, GoalCondition, GoalSchedule, GameState } from "./types";
 export type { Goal, GoalColor, GoalCondition, GoalSchedule };
 
@@ -21,8 +21,8 @@ export function normalizeGoalColor(color: unknown): GoalColor {
 // a day") in a limited slot. Progress accrues only while the goal is active
 // — earlier practice never counts retroactively. Completions grant nothing
 // themselves — goal templates are conditions only (ADR-0012) — but the
-// completion tick is the fact each owned Goal Generator reads, banking its
-// reserve a multiple of the focus equivalent (ADR-0047). Daily and weekly
+// completion tick is the fact every owned generator reads, banking its
+// profile's goal credit on the focus equivalent (issue #371). Daily and weekly
 // goals reset at the local calendar boundary; one-time goals keep their
 // slot until replaced in upgrade mode. Slot capacity grows only through the
 // console long goal (issue #42): one more slot per purchase, bought in the
@@ -154,22 +154,19 @@ export function normalizeGoals(goals: Goal[]): void {
   }
 }
 
-// The Goal Generator's completion credit (ADR-0047): completing a goal of
-// M minutes banks k × the focus equivalent (chargeWindowFraction × M)
-// into every owned Goal Generator, board or tray alike — prorated by the
-// live share of the goal's progress, so manual-only completions bank
-// nothing (the honesty boundary) and mixed practice banks its live share.
-// Recurring goals credit once per occurrence — this fires at the
-// completion tick, and the occurrence reset re-opens the goal — and
-// overlapping completions each credit. No size floor: goal slots and the
-// practice itself keep farming self-limiting.
+// The completion tick's credit (ADR-0047, generalized by issue #371):
+// completing a goal of M minutes banks the focus equivalent
+// (the Flywheel's focus rate × M) × the live share of the goal's progress
+// into every owned generator at its profile's goal coefficient —
+// manual-only completions bank nothing (the honesty boundary) and mixed
+// practice banks its live share. Recurring goals credit once per
+// occurrence — this fires at the completion tick, and the occurrence
+// reset re-opens the goal — and overlapping completions each credit. No
+// size floor: goal slots and the practice itself keep farming
+// self-limiting.
 function creditGoalGenerators(state: GameState, goal: Goal): void {
   if (goal.progressSeconds <= EPS || goal.liveSeconds <= EPS) return;
-  creditOwnedGenerators(
-    state,
-    "goalKeyed",
-    BALANCE.goalReserveMultiple * BALANCE.chargeWindowFraction * goal.condition.minutes * 60 * (goal.liveSeconds / goal.progressSeconds),
-  );
+  creditGoalEarning(state, goal.progressSeconds, goal.liveSeconds / goal.progressSeconds);
 }
 
 function acceptsPractice(goal: Goal, habitId: string | null): boolean {

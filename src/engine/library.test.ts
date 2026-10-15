@@ -173,7 +173,7 @@ describe("chord discovery sync", () => {
   it("a pre-roots entry lenient-defaults its root set, keeping the count", () => {
     const raw = {
       app: "flowsynth",
-      version: 8,
+      version: 9,
       state: {
         mode: "upgrade",
         chordDiscovery: { "Major triad": { formed: true, firstFormedAt: 1000, rootsHeard: 2 } },
