@@ -1,9 +1,10 @@
 # Evidence — issues #369/#370 (waveform profiles, aptitude grades)
 
 Captured from the verified checkout at `http://localhost:5173` (provenance
-checked in-tab: worktree `t3code-c3c3688a`, branch
-`t3code/issue-366-implementation`, commit `eff1d4d` — the served worktree
-matched `git rev-parse` before every capture).
+checked via the dev endpoint before every capture: worktree
+`t3code-c3c3688a`, branch `t3code/issue-366-implementation`, commit
+`f56ed66` — the served worktree and commit matched `git rev-parse` in the
+edited checkout, and the tree was clean at capture time).
 
 | Capture | What it shows |
 | --- | --- |
