@@ -21,18 +21,15 @@ describe("the harmonic-capacity release calibration (#262)", () => {
   it("paces the first era near twenty credited hours and the second provisionally near seventy percent", () => {
     // Seed 42 is the recorded median ordinary seed at the current tuning
     // (full distributions in the calibration tier and in
-    // docs/capacity-release-tuning.md). The #369 profile wave reshuffled
-    // the roll walks again — three waveform oscillators joined the common
-    // band, doubling the pool's oscillator share until the draft-
-    // composition control (#378) lands, and the authored profiles lifted
-    // charged and boosted boards: the re-recorded ordinary median is
-    // 750 minutes at these 120 s steps (eight-seed spread 540–870,
-    // recorded 2026-10-15).
+    // docs/capacity-release-tuning.md). The #372 temporal wave reshuffled
+    // the walks again — the roster's first uncommon types joined the band
+    // — and seed 42 now reads 660 minutes era-1 at these 120 s steps
+    // (recorded 2026-10-15; full-battery tables not rerun since).
     const rec = runProgression(42, ORDINARY, { eras: 2, maxSessions: 80, stepSeconds: 120 });
     const [era1, era2] = rec.eras;
     expect(era2).toBeDefined();
-    // The first era: the horizon stands near twelve-and-a-half credited
-    // hours for ordinary play at the re-recorded median.
+    // The first era: the horizon stands near eleven credited hours for
+    // ordinary play at the re-recorded seed.
     expect(era1.minutes).toBeGreaterThan(600);
     expect(era1.minutes).toBeLessThan(900);
     expect(rec.eras[0]!.earned.at(-1)!.value).toBeGreaterThanOrEqual(ARETE_HORIZON);

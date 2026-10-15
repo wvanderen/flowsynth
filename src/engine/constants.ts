@@ -316,6 +316,10 @@ export const CATEGORY_OF: Record<ModuleType, Category> = {
   triangle: "oscillator",
   square: "oscillator",
   saw: "oscillator",
+  // The temporal profile wave's oscillator (issue #372): same category,
+  // same leg — its authored profile is neutral on every comparable axis
+  // and the warmup curve on the shared session clock is the identity.
+  afterglow: "oscillator",
   harmonizer: "silentVoice",
   echo: "silentVoice",
   bend: "silentVoice",
@@ -330,6 +334,10 @@ export const CATEGORY_OF: Record<ModuleType, Category> = {
   // reserve surface, different earning shapes.
   noteKeyed: "generator",
   goalKeyed: "generator",
+  // The temporal profile wave's generator (issue #372): a mixed earning
+  // profile over the family's one reserve surface, delivered in a
+  // predictable burst cycle on the shared session clock.
+  pulsewell: "generator",
   infusor: "booster",
   forge: "forge",
   // The Mutator Forge is the Forge family's second branch (ADR-0043): the
@@ -346,17 +354,18 @@ export function isOscillatorType(type: ModuleType): boolean {
 
 // Fixed type rarity (ADR-0058): each named type's acquisition rarity,
 // authored here in code — never rolled per copy, never stored in the save.
-// The launch roster is all-common as explicit, provisional tuning: the
-// band-then-type roll then samples the pool uniformly, matching the
-// pre-split distribution, and the profile waves (#369 onward) retune per
-// design. The four waveform oscillators (#369) launch common — their
-// niches come from the authored profiles, not from scarcity.
+// The launch roster was all-common as explicit, provisional tuning: the
+// band-then-type roll samples the pool uniformly inside a band, and the
+// profile waves (#369 onward) retune per design — the temporal wave
+// (#372) authors its two designs uncommon, the roster's first entries in
+// the uncommon band.
 export const TYPE_RARITY: Record<ModuleType, Rarity> = {
   additive: "common",
   blaster: "common",
   triangle: "common",
   square: "common",
   saw: "common",
+  afterglow: "uncommon",
   harmonizer: "common",
   echo: "common",
   bend: "common",
@@ -366,6 +375,7 @@ export const TYPE_RARITY: Record<ModuleType, Rarity> = {
   focusKeyed: "common",
   noteKeyed: "common",
   goalKeyed: "common",
+  pulsewell: "uncommon",
   infusor: "common",
   forge: "common",
   mutatorForge: "common",
@@ -413,6 +423,7 @@ export const MODULE_TYPES: readonly ModuleType[] = [
   "triangle",
   "square",
   "saw",
+  "afterglow",
   "harmonizer",
   "echo",
   "bend",
@@ -422,6 +433,7 @@ export const MODULE_TYPES: readonly ModuleType[] = [
   "focusKeyed",
   "noteKeyed",
   "goalKeyed",
+  "pulsewell",
   "infusor",
   "forge",
 ];

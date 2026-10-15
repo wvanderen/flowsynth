@@ -18,8 +18,8 @@ describe("forge roll generation", () => {
     for (const type of types) {
       expect(ROLL_POOL).toContain(type);
     }
-    // Draws without replacement over the sixteen-type pool: additive,
-    // then harmonizer (index 7 of the fifteen remaining), then square
+    // Draws without replacement over the eighteen-type pool: additive,
+    // then harmonizer (index 4 of the fifteen common matches), then square
     // (index 2 of the fourteen left).
     expect(types).toEqual(["additive", "harmonizer", "square"]);
   });
@@ -31,23 +31,25 @@ describe("forge roll generation", () => {
       expect(candidate.tier).toBe(0);
       expect(TYPE_RARITY[candidate.type]).toBe("common");
     }
-    // An out-of-band draw still lands on a real type: with the launch
-    // roster all-common, an uncommon band falls back to the whole pool.
+    // An out-of-band draw still lands on a real type: with no rare types
+    // authored yet, a rare band falls back to the whole pool.
     const fallback = generateOffer(fresh(), stubRng([0.9995, 0.4, 0.5, 0.5, 0.5, 0.5]));
     expect(ROLL_POOL).toContain(fallback.candidates[0]!.type);
   });
 
   it("the band filters the type draw, and the fallback never corrupts the pool", () => {
-    // Author one uncommon design for the probe (ADR-0058's seam), restore
-    // the table after — the launch roster stays all-common.
+    // Author one more uncommon design for the probe (ADR-0058's seam),
+    // restore the table after — the roster's standing uncommon band is the
+    // temporal wave's two designs (#372).
     const authored = TYPE_RARITY.echo;
     TYPE_RARITY.echo = "uncommon";
     try {
       const s = fresh();
-      // Slot one draws the uncommon band (0.995): echo is the only match,
-      // so it lands whatever the index draw says; slots two and three draw
-      // common bands (0.5) over the remaining pool.
-      const offer = generateOffer(s, stubRng([0.995, 0.7, 0.5, 0.5, 0.5, 0.5]));
+      // Slot one draws the uncommon band (0.995): afterglow, echo, and
+      // pulsewell match, and the 0.5 index draw lands the middle one —
+      // echo; slots two and three draw common bands (0.5) over the
+      // remaining pool.
+      const offer = generateOffer(s, stubRng([0.995, 0.5, 0.5, 0.5, 0.5, 0.5]));
       expect(offer.candidates[0]!.type).toBe("echo");
       // The uncommon type cannot be drawn twice: three distinct types, the
       // other two drawn from the common remainder, pool intact.
@@ -55,8 +57,8 @@ describe("forge roll generation", () => {
       expect(new Set(types).size).toBe(3);
       expect(TYPE_RARITY[types[1]!]).toBe("common");
       expect(TYPE_RARITY[types[2]!]).toBe("common");
-      // The fallback path spends the shared pool exactly once per slot: an
-      // uncommon band with no remaining matches draws three distinct types
+      // The fallback path spends the shared pool exactly once per slot: a
+      // rare band with no remaining matches draws three distinct types
       // and nothing vanishes beyond the draws themselves.
       const fallback = generateOffer(fresh(), stubRng([0.0, 0.0, 0.9995, 0.5, 0.9995, 0.5]));
       expect(new Set(fallback.candidates.map((c) => c.type)).size).toBe(3);
@@ -71,6 +73,7 @@ describe("forge roll generation", () => {
     expect(ROLL_POOL).toContain("triangle");
     expect(ROLL_POOL).toContain("square");
     expect(ROLL_POOL).toContain("saw");
+    expect(ROLL_POOL).toContain("afterglow");
     expect(ROLL_POOL).toContain("harmonizer");
     expect(ROLL_POOL).toContain("echo");
     expect(ROLL_POOL).toContain("bend");
@@ -80,9 +83,10 @@ describe("forge roll generation", () => {
     expect(ROLL_POOL).toContain("focusKeyed");
     expect(ROLL_POOL).toContain("noteKeyed");
     expect(ROLL_POOL).toContain("goalKeyed");
+    expect(ROLL_POOL).toContain("pulsewell");
     expect(ROLL_POOL).toContain("infusor");
     expect(ROLL_POOL).toContain("forge");
-    expect(ROLL_POOL).toHaveLength(16);
+    expect(ROLL_POOL).toHaveLength(18);
   });
 
   it("persists outcomes when the roll is earned, not when it is revealed", () => {

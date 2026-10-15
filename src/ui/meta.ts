@@ -12,6 +12,9 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
   triangle: { name: "Triangle", short: "TRI", role: "Chord-heavy term" },
   square: { name: "Square", short: "SQR", role: "Booster-fed term" },
   saw: { name: "Saw", short: "SAW", role: "Charge-fed term" },
+  // The temporal profile wave (issue #372): the timing is the identity,
+  // so the role names the condition and the profile line spells it out.
+  afterglow: { name: "Afterglow", short: "GLOW", role: "Session-clocked term · warms up" },
   harmonizer: { name: "Harmonizer", short: "HARM", role: "Silent voice — its cell's pitch" },
   echo: { name: "Echo", short: "ECHO", role: "Silent voice — neighbor, one octave down" },
   bend: { name: "Bend", short: "BEND", role: "Silent voice — its pitch, shifted" },
@@ -24,6 +27,7 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
   focusKeyed: { name: "Flywheel", short: "FLYW", role: "Focus-fed reserve · steady" },
   noteKeyed: { name: "Scribe", short: "SCRB", role: "Note-fed reserve · per character" },
   goalKeyed: { name: "Milestone", short: "MILE", role: "Goal-fed reserve · per completion" },
+  pulsewell: { name: "Pulsewell", short: "PLSW", role: "Mixed-fed reserve · bursts" },
   infusor: { name: "Booster", short: "BOOST", role: "Neighbor bonuses" },
   forge: { name: "Forge", short: "Forge", role: "Rolls at threshold" },
   mutatorForge: { name: "Mutator Forge", short: "Mut. Forge", role: "Mutator rolls at threshold" },

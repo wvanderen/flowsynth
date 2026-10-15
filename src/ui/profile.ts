@@ -1,4 +1,4 @@
-import { GRADE_WORDS, profileAxesOf, type ProfileAxisRead } from "../engine/profiles";
+import { GRADE_WORDS, profileAxesOf, temporalTimingOf, type ProfileAxisRead } from "../engine/profiles";
 import type { ModuleType } from "../engine/types";
 import { formatNumber } from "./format";
 
@@ -9,7 +9,11 @@ import { formatNumber } from "./format";
    letter is the state: no color carries it, and the line renders nowhere
    a live output belongs — the board readouts own actual production, this
    line owns authored aptitude. Types without authored profiles render
-   nothing. */
+   nothing.
+   Temporal profiles (issue #372) join the line with their timing said
+   directly — one plain figure line beside the chips, never an aptitude
+   grade, because grades summarize comparable coefficients and a timing
+   rule is not one. */
 
 // The chips' short axis names — the full labels live in the disclosure
 // bodies and aria-labels.
@@ -29,9 +33,13 @@ function axisHtml(axis: ProfileAxisRead): string {
 }
 
 // The type's grade line — empty for every type without authored profile
-// axes (non-oscillators until their waves land).
+// axes (non-oscillators until their waves land). A temporal profile's
+// timing rides beside the chips as its own plain line.
 export function profileGradesHtml(type: ModuleType): string {
   const axes = profileAxesOf(type);
-  if (axes.length === 0) return "";
-  return `<span class="profile-grades">${axes.map(axisHtml).join("")}</span>`;
+  const timing = temporalTimingOf(type);
+  if (axes.length === 0 && !timing) return "";
+  const chips = axes.length > 0 ? `<span class="profile-grades">${axes.map(axisHtml).join("")}</span>` : "";
+  const timingLine = timing ? `<span class="profile-timing">${timing.timing}</span>` : "";
+  return `${chips}${timingLine}`;
 }

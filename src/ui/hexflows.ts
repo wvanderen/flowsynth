@@ -28,8 +28,8 @@ import { amplifierGainOf, tierPowerOf } from "../engine/module-strength";
 // rides flow only (the scene's flow-live class), and reduced motion keeps
 // the static wave.
 import { BALANCE, CHARGE_RECEIVING_CATEGORIES, CATEGORY_OF } from "../engine/constants";
-import { baseTermOf } from "../engine/profiles";
-import { chargedFactor, emittedStrength, hostPower, modulePower, mutatorAt, mutatorMagnitude, ritualAmpOf } from "../engine/economy";
+import { baseTermOf, productionClockFactorOf, temporalTimingOf } from "../engine/profiles";
+import { chargedFactor, emittedStrength, hostPower, modulePower, mutatorAt, mutatorMagnitude, ritualAmpOf, sessionClockOf } from "../engine/economy";
 import type { GameState, ModuleInstance, RateSnapshot } from "../engine/types";
 import { buildFactorsFor } from "../engine/builds";
 import { activeHabit } from "../engine/habits";
@@ -88,6 +88,15 @@ function outcomeRow(state: GameState, module: ModuleInstance, snapshot: RateSnap
   return "";
 }
 
+// The temporal profile's current factor, as its own row — named only
+// while it moves (issue #372), so the rows always multiply out to the
+// pass's own figures. Null when the factor is ×1.
+function temporalRow(state: GameState, module: ModuleInstance, figure: (factor: number) => string): string | null {
+  const clockFactor = productionClockFactorOf(module.type, sessionClockOf(state));
+  if (clockFactor === 1) return null;
+  return row(temporalTimingOf(module.type)?.label ?? "Session clock", figure(clockFactor));
+}
+
 // Use the same build derivation and published contribution terms as the
 // production pass. Each relationship ends with the host's calculation,
 // including external bonuses, followed by exactly one outcome.
@@ -98,10 +107,15 @@ function productionRows(state: GameState, module: ModuleInstance, snapshot: Rate
   const factors = buildFactorsFor(activeHabit(state), snapshot.ritualAmplification);
   const rows: string[] = [];
   const multiplier = (label: string, value: number) => rows.push(row(label, `×${formatNumber(value)}`));
+  const pushTemporal = () => {
+    const temporal = temporalRow(state, module, (factor) => `×${formatNumber(factor)}`);
+    if (temporal) rows.push(temporal);
+  };
   if (category === "oscillator") {
     // The base output carries the type's authored profile multiplier
     // (issue #369) — the row multiplies out to the module's final figure.
     rows.push(row("Base output", `${formatNumber(baseTermOf(module.type))} ν/s`));
+    pushTemporal();
     multiplier("Host power", hostPower(state, module));
     if (relationship !== "chord") multiplier("Chord factor", contribution?.chordFactor ?? 1);
     multiplier("Build synth term", 1 + factors.synthTerm);
@@ -124,8 +138,11 @@ function productionRows(state: GameState, module: ModuleInstance, snapshot: Rate
     rows.push(row("Base amplification", `+${formatNumber(BALANCE.ritualAmpPerLevel * module.level)}`));
     multiplier("Merge tier", tierPowerOf(module.tier));
     multiplier("Charged empowerment", chargedFactor(strength));
-  } else if (category === "generator" && factors.generatorStrength !== 0) {
-    rows.push(row("Build generator strength", `+${formatNumber(factors.generatorStrength)}`));
+  } else if (category === "generator") {
+    // The temporal generator's current cycle factor (issue #372), named
+    // while it moves — the reserve spends at this same factor.
+    pushTemporal();
+    if (factors.generatorStrength !== 0) rows.push(row("Build generator strength", `+${formatNumber(factors.generatorStrength)}`));
   }
   return rows;
 }

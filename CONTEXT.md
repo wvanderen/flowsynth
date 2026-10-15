@@ -167,6 +167,10 @@ _Avoid_: Synthesizer, Additive Synthesizer
 An oscillator-category voice converting received charge into its synth term — the category's second producer role. It sings and forms chords even uncharged at zero output, takes chord factors and booster uplift, and takes no second charged-empowerment pass: the conversion curve replaces the charge factor.
 _Avoid_: converter
 
+**Afterglow**:
+The session-clocked oscillator (issue #372): no authored tradeoff on the comparable axes — the category's standard base and responses — and its authored warmup curve over the session clock is the whole identity: weak opening, strong sustained production. Its timing is described directly, never graded; the clock is the session's own, so no restart buys sustained output and no movement preserves a phase.
+_Avoid_: warm-up bonus, ramp
+
 **Charge**:
 A habit-independent resource produced by generators that empowers or charges other modules; its state is preserved between flow sessions.
 
@@ -185,6 +189,16 @@ _Avoid_: Note Generator, writer
 **Milestone**:
 The goal-heavy generator (issue #371): its profile multiplies the completion base — the focus equivalent of the goal's credited seconds, prorated by the live share — and reads modest focus and note credit. The save's key is `goalKeyed`.
 _Avoid_: Goal Generator, achievement
+
+**Pulsewell**:
+The burst-delivery generator (issue #372): a mixed earning profile — half of every specialist on every axis — delivered on an authored two-minute cycle over the session clock, ninety seconds at half strength and a thirty-second burst at two-and-a-half. The cycle's average is exactly ×1.00: it shapes delivery from the earned reserve without adding charge, every session opens mid-steady, and faster emission spends the reserve proportionally faster. The save's key is `pulsewell`.
+_Avoid_: burst battery, pulse generator
+
+**Session clock**:
+The running session's elapsed active focus time — every flow second since the session started, pauses excluded — and the one clock temporal profiles read. Away stretches run it (the session was live); a restart resets it; no module holds a private timer, so moving or re-placing a module can never preserve or manipulate a phase.
+
+**Temporal profile**:
+An authored profile whose defining rule is a timing curve over the session clock instead of a comparable coefficient — the Afterglow's warmup steps, the Pulsewell's burst cycle (issue #372). A timing rule takes no aptitude grade: presentation says the figures directly, and the advance walk splits at the curve's marks so production stays exact.
 
 **Focus earning**:
 The banked-earning axis every generator's profile carries (issue #371): charge per credited practice second, accrued with the session and landed at session end — honesty-credited reconciliation seconds included. The Flywheel's coefficient leads the family's. Manual practice logs never create one.

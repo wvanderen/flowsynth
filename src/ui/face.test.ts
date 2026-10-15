@@ -152,6 +152,7 @@ describe("module face", () => {
       triangle: ["Triangle", "TRI"],
       square: ["Square", "SQR"],
       saw: ["Saw", "SAW"],
+      afterglow: ["Afterglow", "GLOW"],
       harmonizer: ["Harmonizer", "HARM"],
       echo: ["Echo", "ECHO"],
       bend: ["Bend", "BEND"],
@@ -160,6 +161,7 @@ describe("module face", () => {
       focusKeyed: ["Flywheel", "FLYW"],
       noteKeyed: ["Scribe", "SCRB"],
       goalKeyed: ["Milestone", "MILE"],
+      pulsewell: ["Pulsewell", "PLSW"],
       infusor: ["Booster", "BOOST"],
       spacer: ["Spacer", "SPACER"],
       forge: ["Forge", "FORGE"],
@@ -184,6 +186,10 @@ describe("module face", () => {
     // the Note's ruled double line, the Goal's completion check (#232).
     expect(moduleIcon("noteKeyed")).toBe('<path d="M2-13-6 1H0L-2 13 6-1H0Z"/><path d="M5-14.5l3.5 3.5M7.5-15.5 11-12"/>');
     expect(moduleIcon("goalKeyed")).toBe('<path d="M2-13-6 1H0L-2 13 6-1H0Z"/><path d="M4.5-11.5 7-9 11.5-14.5"/>');
+    // The temporal wave (issue #372): the Afterglow's swelling trace, the
+    // Pulsewell's bolt with the burst fan at its corner.
+    expect(moduleIcon("afterglow")).toBe('<path d="M-12 0C-10.5-4-7.5-4-6 0C-4.5-8-1.5-8 0 0C1.5 16 4.5 16 6 0C7.5-16 10.5-16 12 0"/>');
+    expect(moduleIcon("pulsewell")).toBe('<path d="M2-13-6 1H0L-2 13 6-1H0Z"/><path d="M6-13l2.2-2.2M8.5-9.5l3-.6M9-6.5l2.8 1"/>');
     expect(moduleIcon("infusor")).toBe('<circle r="2.2"/><path d="M-5-7-13 0-5 7M5-7 13 0 5 7"/>');
     expect(moduleIcon("mutatorForge")).toContain('<path d="M0-5.5 4.8-2.7V2.7L0 5.5-4.8 2.7V-2.7Z"/><circle r="1.5"/>');
     // The Mutator Forge's chassis drops the lattice — distinct from the

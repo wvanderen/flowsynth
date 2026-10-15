@@ -22,7 +22,9 @@ export type Category =
 // The Blaster is the category's second producer role: it converts received
 // charge into its synth term, singing and completing chords even uncharged
 // at zero output — the profile wave's first alternative charge behavior.
-export type OscillatorType = "additive" | "blaster" | "triangle" | "square" | "saw";
+// The Afterglow (issue #372) carries the category's first temporal profile:
+// its production warms up on the shared session clock.
+export type OscillatorType = "additive" | "blaster" | "triangle" | "square" | "saw" | "afterglow";
 
 // The silent-voice category (ADR-0048): silent pitched modules that produce
 // no nous but count in chord clusters — they form and complete chords and
@@ -45,8 +47,10 @@ export type SpacerType = "spacer";
 // PROFILES), banking charge quantity into its own reserve. The keys
 // predate the profiles and stay the save's identity, like `additive` for
 // the Sine. The plain "generator" type was retired pre-release — every
-// generator banks its window and releases it next session.
-export type GeneratorType = "focusKeyed" | "noteKeyed" | "goalKeyed";
+// generator banks its window and releases it next session. The Pulsewell
+// (issue #372) joins the family with a mixed earning profile and a
+// periodic burst cycle on the shared session clock.
+export type GeneratorType = "focusKeyed" | "noteKeyed" | "goalKeyed" | "pulsewell";
 
 export type InfusorType = "infusor";
 
