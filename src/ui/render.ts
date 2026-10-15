@@ -1962,7 +1962,7 @@ function renderUpgradeAll(app: App): void {
   }).join("");
   const max = upgradeAllPreview(state, "max");
   host.innerHTML = `
-    <span class="sweep-label">UPGRADE ALL</span>
+    <span class="sweep-label"><span class="sweep-label-full">UPGRADE </span>ALL</span>
     ${chips}
     <button class="sweep-chip" data-sweep="max" title="Sweep the whole bank into the cheapest next levels: ~${max.levels} levels across ${max.modules} modules · ${formatNumber(max.spent)} ν${zeroSuffix}">MAX</button>`;
   host.querySelectorAll<HTMLButtonElement>("[data-sweep]").forEach((button) => {

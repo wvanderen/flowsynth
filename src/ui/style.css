@@ -3548,12 +3548,16 @@ body.hex-detail-open .upgrade-all {
     right: 58px;
     height: 46px;
   }
-  /* The Upgrade All cluster re-docks above the thumb bar (issue #195),
-     centered across the board's lower edge. */
+  /* The Upgrade All cluster re-docks above the board's lower lanes
+     (issue #195, re-docked by #389): one row clear of the horizon bar's
+     lane — the bar's Arete word, state readout, and prestige door keep
+     their edge — and its right edge clears the zoom cluster's lane
+     (10 + 44 coarse floor + air), so the row and the cluster share the
+     band without sharing pixels. */
   .upgrade-all {
     left: 8px;
-    right: 8px;
-    bottom: 76px;
+    right: 64px;
+    bottom: 120px;
     justify-content: center;
   }
   .horizon-word { font-size: 8px; }
@@ -3563,12 +3567,16 @@ body.hex-detail-open .upgrade-all {
   .chord-readout { top: 46px; right: 10px; }
   /* The Hex detail on phone (issue #295): the panel re-docks as a bottom
      sheet over the thumb bar; the module row wraps so the buy column takes
-     the full width beneath the identity column. */
+     the full width beneath the identity column. The left inset clears the
+     layer legend's gutter (issue #389) — the sheet never runs beneath the
+     shared switch, exactly as the desktop stage hugs its left chrome. */
   .hex-detail { inset: 8px; }
-  .hex-detail.sheet { inset: 56px 8px 60px; }
+  .hex-detail.sheet { inset: 56px 8px 60px 56px; }
   /* The shared layer switch stays reachable on phone, including in Hex
-     detail during flow (issue #387), clear of the thumb bar. */
-  .layer-legend { left: 8px; top: auto; bottom: 76px; transform: none; }
+     detail during flow (issue #387): the board's left edge carries it at
+     mid-height — the dock's old post — clear of the thumb bar, the lower
+     lanes, and the sheet's gutter (issue #389). */
+  .layer-legend { left: 8px; top: 50%; bottom: auto; transform: translateY(-50%); }
   .mutator-tray { display: none !important; }
   .mut-unlock-pill { top: 46px; }
   .cell-arm-pill { top: 46px; }
@@ -3576,12 +3584,23 @@ body.hex-detail-open .upgrade-all {
      horizon bar's (64 + 46) and, above it, the zoom cluster's — three
      44px coarse-floor targets over bottom 64 reach 208, so the card
      docks at 216 and never runs beneath the cluster's edge or covers
-     the Arete read. */
-  .arc-card { top: auto; bottom: 216px; left: 12px; right: 12px; max-width: none; }
+     the Arete read. Its left edge clears the layer legend's gutter
+     (issue #389), whose strip stands mid-height on the same edge. */
+  .arc-card { top: auto; bottom: 216px; left: 56px; right: 12px; max-width: none; }
 }
 
 /* Narrow phones keep every action visible while the habit yields width. */
 @container app (width < 360px) {
+  /* Keep all four full-size buy targets in their lane; the shared ALL
+     label and each button’s title retain the board-wide scope. */
+  .sweep-label-full {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
   .console { padding: 0 6px; gap: 4px; }
   .session-group { gap: 2px; }
   .session-focus { gap: 4px; padding: 2px; }
