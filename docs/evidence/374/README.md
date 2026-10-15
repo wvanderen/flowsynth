@@ -61,3 +61,27 @@ ticket's surfaces need: one Spotlight deployed beside two oscillators.
 - **Reduced motion**: not applicable — the change adds no animation or
   glow. The verdict and chips are static; the existing surfaces' motion
   behavior is untouched.
+
+## PR #400 review corrections
+
+Verified the served checkout `/private/tmp/flowsynth-pr400-review` at
+`cf496628c4b417588e4ebfca2dc45722d7f48592` using `/-/dev/provenance`.
+`spotlight-selection-review-desktop.png` captures the corrected picker.
+Compared with controls sheet `d405ce2`, variant A: square controls, cyan
+booster border, and a visible inset underline for the selected recipient.
+Computed styles confirm the 3px inset marker and booster border; the
+recipient button has no native title tooltip. The underline distinguishes
+selection without color. No animation was added; reduced motion remains
+not applicable to these static corrections.
+
+The app fixture now retrieves the recipient through its detail control,
+replaces it through the app placement handler, verifies remembered-target
+restoration, and checks the displayed production before and after stacking
+a Field with the Spotlight.
+
+- **Phone review capture unavailable:** both resize attempts timed out;
+  status inspection after the first failure still reported a desktop viewport.
+- **Touch disclosure unavailable:** this preview has no touch input
+  (`navigator.maxTouchPoints` is zero); no physical touch open/tap-away check
+  was performed. Desktop keyboard disclosure remains the recorded check;
+  phone capture failure must not be read as touch verification.
