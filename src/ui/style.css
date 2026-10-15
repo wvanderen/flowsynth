@@ -1357,14 +1357,14 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   border: 1px solid var(--line-soft);
 }
 .tool-lock svg { width: 9px; height: 8px; }
-.board-tools button:disabled > svg,
-.thumb-bar button:disabled > svg,
-.board-tools button:disabled .tool-word,
-.thumb-bar button:disabled .tool-word { opacity: 0.4; }
-.board-tools button:disabled .forge-pip,
-.thumb-bar button:disabled .forge-pip { opacity: 0.55; }
-.board-tools button:disabled .tool-badge,
-.thumb-bar button:disabled .tool-badge {
+.board-tools button[aria-disabled="true"] > svg,
+.thumb-bar button[aria-disabled="true"] > svg,
+.board-tools button[aria-disabled="true"] .tool-word,
+.thumb-bar button[aria-disabled="true"] .tool-word { opacity: 0.4; }
+.board-tools button[aria-disabled="true"] .forge-pip,
+.thumb-bar button[aria-disabled="true"] .forge-pip { opacity: 0.55; }
+.board-tools button[aria-disabled="true"] .tool-badge,
+.thumb-bar button[aria-disabled="true"] .tool-badge {
   background: transparent;
   color: var(--muted);
   border: 1px solid var(--line);
@@ -1391,7 +1391,8 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   cursor: default;
 }
 .tool-detail[hidden] { display: none; }
-.thumb-bar .tool-detail { left: -60px; top: auto; bottom: calc(100% + 8px); width: min(300px, calc(100cqw - 24px)); }
+/* Fixed to the blurred bar rather than each icon, so edge tools stay onscreen. */
+.thumb-bar .tool-detail { position: fixed; left: 12px; top: auto; bottom: calc(100% + 8px); width: min(300px, calc(100cqw - 24px)); }
 .forge-meters { display: grid; gap: 8px; margin: 2px 0 12px; }
 /* Each meter: the shared bar column leading its name and figures. */
 .forge-meter {
@@ -1413,7 +1414,8 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 22;
+  /* Disclosures clear the board controls while sheets remain above. */
+  z-index: 26;
   display: none;
   gap: 4px;
   padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
@@ -1422,6 +1424,8 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   backdrop-filter: blur(4px);
 }
 .thumb-bar button {
+  /* The bar owns the blur and the fixed tooltip containing block. */
+  backdrop-filter: none;
   position: relative;
   flex: 1;
   height: auto;

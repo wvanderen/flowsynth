@@ -745,7 +745,7 @@ describe("the action row (§7)", () => {
     startSession(app.state, null);
     app.render();
     const flowForge = document.querySelector<HTMLButtonElement>('#board-tools [data-op="forge"]')!;
-    expect(flowForge.disabled).toBe(true);
+    expect(flowForge.getAttribute("aria-disabled")).toBe("true");
     expect(flowForge.querySelector('[data-live="forge-pip"]')).not.toBeNull();
     expect(flowForge.querySelector(".tool-detail")!.textContent).toContain("choices settle between sessions.");
     flowForge.click();
@@ -758,7 +758,7 @@ describe("the action row (§7)", () => {
     app.render();
     for (const host of ["board-tools", "thumb-bar"]) {
       const forge = document.querySelector<HTMLButtonElement>(`#${host} [data-op="forge"]`)!;
-      expect(forge.disabled).toBe(true);
+      expect(forge.getAttribute("aria-disabled")).toBe("true");
       const detail = forge.querySelector<HTMLElement>(".tool-detail")!;
       forge.dispatchEvent(new MouseEvent("mouseenter"));
       expect(detail.hidden).toBe(false);
@@ -854,7 +854,7 @@ describe("the action row (§7)", () => {
     startSession(app.state, null);
     app.render();
     const forgeButton = document.querySelector<HTMLButtonElement>('#board-tools [data-op="forge"]')!;
-    expect(forgeButton.disabled).toBe(true);
+    expect(forgeButton.getAttribute("aria-disabled")).toBe("true");
     forgeButton.click();
     expect(app.ui.modal).toBeNull();
     expect(app.state.bankedRolls).toHaveLength(1);
@@ -879,8 +879,8 @@ describe("the action row (§7)", () => {
     app.render();
     const dockOps = () => [...document.querySelectorAll<HTMLButtonElement>('#board-tools [data-op]')];
     // Catalog and Forge stand open in upgrade mode; Add is price-gated.
-    expect(dockOps()[0]!.disabled).toBe(false);
-    expect(dockOps()[1]!.disabled).toBe(false);
+    expect(dockOps()[0]!.getAttribute("aria-disabled")).toBe("false");
+    expect(dockOps()[1]!.getAttribute("aria-disabled")).toBe("false");
     expect(document.getElementById("inventory-zone")!.classList.contains("off")).toBe(false);
     app.state.sessionsCompleted = 1;
     startSession(app.state, 600);
@@ -888,10 +888,43 @@ describe("the action row (§7)", () => {
     // No Inventory button exists to lock — the dock reads Catalog/Forge/Add,
     // every tool disabled, and the column gone with the locked board.
     expect(dockOps().map((b) => b.getAttribute("data-op"))).toEqual(["catalog", "forge", "cell"]);
-    for (const button of dockOps()) expect(button.disabled).toBe(true);
+    for (const button of dockOps()) expect(button.getAttribute("aria-disabled")).toBe("true");
     expect(dockOps()[0]!.querySelector(".tool-detail")!.textContent).toContain("purchases happen between sessions");
     expect(dockOps()[2]!.querySelector(".tool-detail")!.textContent).toBe("Add — purchases happen between sessions");
     expect(document.getElementById("inventory-zone")!.classList.contains("off")).toBe(true);
+  });
+
+  it("touch inspects before activation and tap-away dismisses tool descriptions", () => {
+    app.render();
+    const catalog = document.querySelector<HTMLButtonElement>('#thumb-bar [data-op="catalog"]')!;
+    const detail = catalog.querySelector<HTMLElement>(".tool-detail")!;
+    const touch = () => {
+      const event = new Event("pointerdown", { bubbles: true });
+      Object.defineProperty(event, "pointerType", { value: "touch" });
+      catalog.dispatchEvent(event);
+      catalog.click();
+    };
+    touch();
+    expect(detail.hidden).toBe(false);
+    expect(app.ui.modal).toBeNull();
+    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    expect(detail.hidden).toBe(true);
+    touch();
+    expect(app.ui.modal).toBeNull();
+    touch();
+    expect(app.ui.modal).toBe("catalog");
+  });
+
+  it("unaffordable Add stays focusable but refuses activation", () => {
+    app.state.nous = 0;
+    app.render();
+    const add = document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!;
+    expect(add.getAttribute("aria-disabled")).toBe("true");
+    add.focus();
+    expect(document.activeElement).toBe(add);
+    expect(add.querySelector<HTMLElement>(".tool-detail")!.hidden).toBe(false);
+    add.click();
+    expect(app.ui.buyingCell).toBe(false);
   });
 
   it("every tool icon's extended description rides the tooltip layer, never title= (issue #354)", () => {
@@ -978,7 +1011,7 @@ describe("the action row (§7)", () => {
     for (const host of ["board-tools", "thumb-bar"]) {
       for (const op of ["catalog", "forge", "cell"]) {
         const button = document.querySelector<HTMLButtonElement>(`#${host} [data-op="${op}"]`)!;
-        expect(button.disabled).toBe(true);
+        expect(button.getAttribute("aria-disabled")).toBe("true");
         // The one lock mark — the drawing the locked layer legend wears.
         const lock = button.querySelector<SVGElement>(".tool-lock svg")!;
         expect(lock.innerHTML).toBe(legendLock);
@@ -990,7 +1023,7 @@ describe("the action row (§7)", () => {
     // clickable — the one live door beside the locked row.
     expect(document.querySelector('#board-tools [data-op="collection"]')).toBeNull();
     const collection = document.querySelector<HTMLButtonElement>('#thumb-bar [data-op="collection"]')!;
-    expect(collection.disabled).toBe(false);
+    expect(collection.getAttribute("aria-disabled")).toBe("false");
     expect(collection.querySelector(".tool-lock")).toBeNull();
     collection.click();
     expect(app.ui.modal).toBe("collection");
@@ -1010,15 +1043,16 @@ describe("the action row (§7)", () => {
     flowCell.click();
     expect(app.ui.modal).toBeNull();
     expect(app.ui.buyingCell).toBe(false);
-    // Keyboard: a disabled control takes no focus and no activation.
+    // Keyboard: the locked action stays focusable for its description.
     flowCatalog.focus();
-    expect(document.activeElement).not.toBe(flowCatalog);
+    expect(document.activeElement).toBe(flowCatalog);
+    expect(flowCatalog.querySelector<HTMLElement>(".tool-detail")!.hidden).toBe(false);
     // Returning to upgrade mode restores the actionable states.
     endSession(app.state);
     app.render();
     for (const op of ["catalog", "forge", "cell"]) {
       const button = document.querySelector<HTMLButtonElement>(`#board-tools [data-op="${op}"]`)!;
-      expect(button.disabled).toBe(false);
+      expect(button.getAttribute("aria-disabled")).toBe("false");
       expect(button.querySelector(".tool-lock")).toBeNull();
     }
     document.querySelector<HTMLButtonElement>('#board-tools [data-op="catalog"]')!.click();

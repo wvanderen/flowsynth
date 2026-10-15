@@ -932,7 +932,21 @@ const TOOL_FORGE_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" 
 // where the same actions plus Inventory and Collection ride the bottom
 // thumb bar. Every icon's extended description lives in the tooltip layer
 // (issue #354) — hover, focus, and touch open it, Escape dismisses it.
+const toolDisclosureApps = new WeakSet<App>();
+
 function renderTools(app: App, projected: RateSnapshot): void {
+  if (!toolDisclosureApps.has(app)) {
+    toolDisclosureApps.add(app);
+    app.listen(document, "pointerdown", (event) => {
+      const trigger = event.target instanceof Element ? event.target.closest(".tool-icon") : null;
+      document.querySelectorAll<HTMLElement>(".tool-detail").forEach((detail) => {
+        if (detail.parentElement !== trigger) {
+          detail.hidden = true;
+          detail.parentElement?.setAttribute("aria-expanded", "false");
+        }
+      });
+    });
+  }
   const { state, ui } = app;
   const host = byId("board-tools");
   const thumb = byId("thumb-bar");
@@ -966,21 +980,33 @@ function renderTools(app: App, projected: RateSnapshot): void {
           // top of the dimmed content. The chip keys to the gate the action
           // itself declares, so a control the mode never closes (Collection)
           // stands bare beside the locked row; in upgrade mode nothing wears
-          // it and an affordability mute stays a mute, never a lock. Native
-          // disabled still refuses pointer, keyboard, and touch.
+          // it and an affordability mute stays a mute, never a lock.
+          // aria-disabled keeps disclosure focusable; the click guard blocks actions.
           const lock = state.mode !== "upgrade" && action.disabled?.(app) ? `<span class="tool-lock" aria-hidden="true">${lockMarkSvg()}</span>` : "";
           const extra = (action.badge?.(app) ?? "") + (action.media ?? "") + detail + lock;
-          return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" id="${target.id}-tool-${action.op}" data-op="${action.op}" aria-label="${action.label}" aria-describedby="${detailId}" aria-expanded="false"${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${action.label}</small></button>`;
+          return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" id="${target.id}-tool-${action.op}" data-op="${action.op}" aria-label="${action.label}" aria-describedby="${detailId}" aria-expanded="false" aria-disabled="${action.disabled?.(app) ?? false}" aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${action.label}</small></button>`;
         })
         .join("");
       target.querySelectorAll<HTMLButtonElement>("[data-op]").forEach((button) => {
         const detail = button.querySelector<HTMLElement>(".tool-detail")!;
         let hovered = false;
+        // First tap inspects; a second tap on the open read activates.
+        let inspectTouch = false;
+        let touching = false;
+        app.listen(button, "pointerdown", (event) => {
+          touching = event.pointerType === "touch";
+          inspectTouch = touching && detail.hidden;
+          if (touching) hovered = false;
+          if (event.pointerType === "touch") {
+            detail.hidden = false;
+            button.setAttribute("aria-expanded", "true");
+          }
+        });
         // The detail's hidden flag is the one state; aria-expanded mirrors
         // it on every access path — hover, keyboard focus, Escape — so the
         // trigger never announces "collapsed" while the read stands open.
         const report = () => button.setAttribute("aria-expanded", String(!detail.hidden));
-        app.listen(button, "mouseenter", () => { hovered = true; detail.hidden = false; report(); });
+        app.listen(button, "mouseenter", () => { if (touching) return; hovered = true; detail.hidden = false; report(); });
         app.listen(button, "mouseleave", () => {
           hovered = false;
           detail.hidden = document.activeElement !== button;
@@ -997,6 +1023,8 @@ function renderTools(app: App, projected: RateSnapshot): void {
           }
         });
         app.listen(button, "click", () => {
+          if (inspectTouch) { inspectTouch = false; return; }
+          if (button.getAttribute("aria-disabled") === "true") return;
           actions.find((action) => action.op === button.getAttribute("data-op"))!.run(app);
         });
       });
@@ -1023,7 +1051,7 @@ function renderTools(app: App, projected: RateSnapshot): void {
       if (detail) detail.textContent = action.title(app, projected);
     }
     const forgeButton = target.querySelector<HTMLButtonElement>('[data-op="forge"]');
-    if (forgeButton) forgeButton.disabled = actions.find((a) => a.op === "forge")!.disabled?.(app) ?? false;
+    if (forgeButton) forgeButton.setAttribute("aria-disabled", String(actions.find((a) => a.op === "forge")!.disabled?.(app) ?? false));
     const cellButton = target.querySelector<HTMLButtonElement>('[data-op="cell"]');
     if (cellButton && state.mode === "upgrade") {
       // The Add icon carries the mode's arm: the cell price in module
@@ -1034,9 +1062,9 @@ function renderTools(app: App, projected: RateSnapshot): void {
       cellButton.classList.toggle("active", mutatorArm ? ui.mutUnlockArmed : ui.buyingCell);
       cellButton.setAttribute("aria-pressed", String(mutatorArm ? ui.mutUnlockArmed : ui.buyingCell));
       if (mutatorArm || ui.buyingCell) {
-        cellButton.disabled = false;
+        cellButton.setAttribute("aria-disabled", "false");
       } else {
-        cellButton.disabled = wholeNous(state) < cellCost(state.cellsBought);
+        cellButton.setAttribute("aria-disabled", String(wholeNous(state) < cellCost(state.cellsBought)));
       }
     }
   }
@@ -2901,7 +2929,7 @@ function capacityShopHtml(app: App): string {
     : `<p class="t-note mono">${capacity}/${ceiling} → ${capacity + 1}/${ceiling}</p>`;
   return `
     <section class="capacity-catalog">
-      <h2 class="t-condensed">Harmonic capacity</h2>
+      <h2 class="t-condensed">${termTipHtml("Harmonic capacity")}</h2>
       <div class="catalog-rows">
         <article class="catalog-row">
           <div><h3 class="t-condensed">${termTipHtml("Poly Expander")}</h3><p class="t-note">Raises ${termTipHtml("Harmonic capacity")} by one for all voices</p>${figure}${note}</div>
