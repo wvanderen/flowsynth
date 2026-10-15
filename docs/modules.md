@@ -21,16 +21,16 @@ Last updated: 2026-10-15 (intrinsic voice capacity — the Blaster's two seats, 
 | `harmonizer` | Harmonizer | HARM | silent voice | common | — | 1 | — | `hue-voice` | diamond (muted tonehead) | Roll pool only | the pitch it sings, note `P«cell»` |
 | `echo` | Echo | ECHO | silent voice | common | — | 1 | — | `hue-voice` | doubled waves | Roll pool only | the pitch it sings, note `P«cell»` |
 | `bend` | Bend | BEND | silent voice | common | — | 1 | — | `hue-voice` | kinked line | Roll pool only | the pitch it sings, note `P«cell»` |
-| `amplifier` | Amplifier | AMP | conduit | common | — | — | `hue-conduit` | through-flowing chevrons | Roll pool only | `⌁relayed` |
-| `ritual` | RITUAL | RITUAL | ritual | common | — | — | `hue-ritual` | habit-cycle ring | Roll pool only | `×amp` while charged |
-| `spacer` | Spacer | Spacer | spacer | common | — | — | `hue-spacer` | ring window (board) / wire | Roll pool only | `⌇` |
-| `focusKeyed` | Flywheel | FLYW | generator | common | — | — | `hue-generator` | bolt, bare | Starter shelf ("generator", 40) and roll pool | `⌁power` |
-| `noteKeyed` | Scribe | SCRB | generator | common | — | — | `hue-generator` | bolt, double-line corner mark | Roll pool only | `⌁power` |
-| `goalKeyed` | Milestone | MILE | generator | common | — | — | `hue-generator` | bolt, check corner mark | Roll pool only | `⌁power` |
-| `pulsewell` | Pulsewell | PLSW | generator | uncommon | — | ×0.5 steady · ×2.5 burst, 30 s every 2 min | `hue-generator` | bolt, burst corner mark | Roll pool only | `⌁power` (× the current cycle factor when emitting) |
-| `infusor` | Booster | BOOST | booster | common | — | — | `hue-booster` | outward chevrons around a center dot | Starter shelf (40) and roll pool | `+«%»` |
-| `forge` | Forge | FORGE | forge | common | — | — | `hue-forge` | hex prism | Starter shelf (80) and roll pool | `«charge»/«threshold»` (charge register) |
-| `mutatorForge` | Mutator Forge | MUT. FORGE | forge | common | — | — | `hue-forge` | seeded-hexagon core on the chassis | Mutator tree entry | `«charge»/«threshold»` (charge register) |
+| `amplifier` | Amplifier | AMP | conduit | common | — | — | — | `hue-conduit` | through-flowing chevrons | Roll pool only | `⌁relayed` |
+| `ritual` | RITUAL | RITUAL | ritual | common | — | — | — | `hue-ritual` | habit-cycle ring | Roll pool only | `×amp` while charged |
+| `spacer` | Spacer | Spacer | spacer | common | — | — | — | `hue-spacer` | ring window (board) / wire | Roll pool only | `⌇` |
+| `focusKeyed` | Flywheel | FLYW | generator | common | — | — | — | `hue-generator` | bolt, bare | Starter shelf ("generator", 40) and roll pool | `⌁power` |
+| `noteKeyed` | Scribe | SCRB | generator | common | — | — | — | `hue-generator` | bolt, double-line corner mark | Roll pool only | `⌁power` |
+| `goalKeyed` | Milestone | MILE | generator | common | — | — | — | `hue-generator` | bolt, check corner mark | Roll pool only | `⌁power` |
+| `pulsewell` | Pulsewell | PLSW | generator | uncommon | — | — | ×0.5 steady · ×2.5 burst, 30 s every 2 min | `hue-generator` | bolt, burst corner mark | Roll pool only | `⌁power` (× the current cycle factor when emitting) |
+| `infusor` | Booster | BOOST | booster | common | — | — | — | `hue-booster` | outward chevrons around a center dot | Starter shelf (40) and roll pool | `+«%»` |
+| `forge` | Forge | FORGE | forge | common | — | — | — | `hue-forge` | hex prism | Starter shelf (80) and roll pool | `«charge»/«threshold»` (charge register) |
+| `mutatorForge` | Mutator Forge | MUT. FORGE | forge | common | — | — | — | `hue-forge` | seeded-hexagon core on the chassis | Mutator tree entry | `«charge»/«threshold»` (charge register) |
 
 Rarity is each type's fixed acquisition rarity (`TYPE_RARITY`, ADR-0058) —
 authored in code, never rolled per copy. A roll draws the rarity band
