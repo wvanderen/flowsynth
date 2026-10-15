@@ -9,6 +9,10 @@
   </head>
   <body>
     <div id="app">
+      <!-- The document's one h1 (issue #354): the instrument's name anchors
+           the heading outline for AT navigation; identity rides the console
+           brand visually, so the heading itself stays out of sight. -->
+      <h1 class="sr-only">FlowSynth</h1>
       <!-- The console (ADR-0012): structurally above the game UI, pure
            control (board-redesign spec §7), organized around the session
            group and the session gate (issue #148, grouped by #331): brand,

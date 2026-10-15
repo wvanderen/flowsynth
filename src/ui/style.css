@@ -1370,12 +1370,11 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   border: 1px solid var(--line);
 }
 
-/* The one meter detail (ADR-0041): the Forge modal's block listing every
-   meter's progress, threshold, and rate — the pip's own bar at card scale,
-   figures riding live slots the tick fills in place. It is the tooltip
-   layer's disclosure, so it presents plain: panel surface, no border, no
-   card. */
-.forge-detail {
+/* The tool icons' one detail (ADR-0041, #354): each dock/thumb icon's
+   extended description rides the tooltip layer — the Forge modal's meter
+   read generalized to every icon. It presents plain: panel surface, no
+   border, no card. */
+.tool-detail {
   position: absolute;
   left: calc(100% + 8px);
   top: 0;
@@ -1391,8 +1390,8 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   white-space: normal;
   cursor: default;
 }
-.forge-detail[hidden] { display: none; }
-.thumb-bar .forge-detail { left: -60px; top: auto; bottom: calc(100% + 8px); width: min(300px, calc(100cqw - 24px)); }
+.tool-detail[hidden] { display: none; }
+.thumb-bar .tool-detail { left: -60px; top: auto; bottom: calc(100% + 8px); width: min(300px, calc(100cqw - 24px)); }
 .forge-meters { display: grid; gap: 8px; margin: 2px 0 12px; }
 /* Each meter: the shared bar column leading its name and figures. */
 .forge-meter {

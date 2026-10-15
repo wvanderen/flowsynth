@@ -420,7 +420,7 @@ describe("the slot unlock (issue #199, re-docked by the #272 review)", () => {
     expect(document.getElementById("mut-unlock")).toBeNull();
     const add = document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!;
     expect(add.getAttribute("aria-label")).toBe("Add");
-    expect(add.title).toContain("Unlock a Mutator slot — 3 Arete");
+    expect(add.querySelector(".tool-detail")!.textContent).toContain("Unlock a Mutator slot — 3 Arete");
     add.click();
     expect(app.ui.mutUnlockArmed).toBe(true);
     const pill = document.getElementById("mut-unlock-pill")!;
@@ -430,9 +430,9 @@ describe("the slot unlock (issue #199, re-docked by the #272 review)", () => {
     // The armed Add wears the arm: active, cancel-worded.
     const armed = document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!;
     expect(armed.classList.contains("active")).toBe(true);
-    expect(armed.title).toContain("Pick an eligible cell · Esc cancels");
+    expect(armed.querySelector(".tool-detail")!.textContent).toContain("Pick an eligible cell · Esc cancels");
     app.mutCancelGestures();
-    expect(document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!.title).toContain("Unlock a Mutator slot");
+    expect(document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!.querySelector(".tool-detail")!.textContent).toContain("Unlock a Mutator slot");
   });
 
   it("Add in module mode still arms the cell purchase — the mode directs the arm", () => {
@@ -440,7 +440,7 @@ describe("the slot unlock (issue #199, re-docked by the #272 review)", () => {
     app.state.nous = 500;
     app.render();
     const add = document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!;
-    expect(add.title).toContain("Add — ");
+    expect(add.querySelector(".tool-detail")!.textContent).toContain("Add — ");
     add.click();
     expect(app.ui.buyingCell).toBe(true);
     expect(app.ui.mutUnlockArmed).toBe(false);

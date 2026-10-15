@@ -861,16 +861,21 @@ function toolActions(): ToolAction[] {
         if (app.ui.buyingCell) app.cancelCellPurchase();
         else app.armCellPurchase();
       },
-      title: (app) =>
-        app.state.mode !== "upgrade"
-          ? "Add — purchases happen between sessions"
-          : app.state.catalogEntryOwned && app.ui.mutLayer === "mutators"
-            ? app.ui.mutUnlockArmed
-              ? "Pick an eligible cell · Esc cancels"
-              : `Unlock a Mutator slot — ${mutatorSlotPrice(app.state) === 0 ? "the first is free" : `${formatInt(mutatorSlotPrice(app.state))} Arete`}`
-            : app.ui.buyingCell
-              ? "Pick a frontier hex · Esc cancels"
-              : "Add a cell",
+      // The resting read quotes the next cell's price against the board's
+      // pace — the figure a player weighs before arming (#272 review, one
+      // detail writer under #354's live pass).
+      title: (app, projected) => {
+        if (app.state.mode !== "upgrade") return "Add — purchases happen between sessions";
+        if (app.state.catalogEntryOwned && app.ui.mutLayer === "mutators") {
+          return app.ui.mutUnlockArmed
+            ? "Pick an eligible cell · Esc cancels"
+            : `Unlock a Mutator slot — ${mutatorSlotPrice(app.state) === 0 ? "the first is free" : `${formatInt(mutatorSlotPrice(app.state))} Arete`}`;
+        }
+        if (app.ui.buyingCell) return "Pick a frontier hex · Esc cancels";
+        const price = cellCost(app.state.cellsBought);
+        const countdown = practiceCountdown(price, wholeNous(app.state), projected.rate);
+        return `Add — ${formatInt(price)} ν${countdown ? ` · ${countdown}` : ""}`;
+      },
       disabled: (app) => app.state.mode !== "upgrade",
       active: (app) => app.ui.buyingCell || app.ui.mutUnlockArmed,
     },
@@ -925,7 +930,8 @@ const TOOL_FORGE_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" 
 // / Add, floating over the board's left edge (issue #272 — the Inventory
 // icon left with the tray's collapse toggle). Hidden on portrait phone,
 // where the same actions plus Inventory and Collection ride the bottom
-// thumb bar.
+// thumb bar. Every icon's extended description lives in the tooltip layer
+// (issue #354) — hover, focus, and touch open it, Escape dismisses it.
 function renderTools(app: App, projected: RateSnapshot): void {
   const { state, ui } = app;
   const host = byId("board-tools");
@@ -949,10 +955,12 @@ function renderTools(app: App, projected: RateSnapshot): void {
       target.dataset.renderKey = key;
       target.innerHTML = list
         .map((action) => {
-          const detailId = `${target.id}-forge-detail`;
-          const detail = action.op === "forge"
-            ? `<span id="${detailId}" class="forge-detail" role="tooltip" hidden>${action.title(app, projected)}</span>`
-            : "";
+          // Every icon's extended description rides the tooltip layer
+          // (issue #354, the forge pattern generalized): a role=tooltip
+          // span described-by the trigger, opened by hover, focus, and
+          // touch, dismissed by Escape — title= is no channel at all.
+          const detailId = `${target.id}-${action.op}-detail`;
+          const detail = `<span id="${detailId}" class="tool-detail" role="tooltip" hidden>${action.title(app, projected)}</span>`;
           // The flow lock (#336): in flow the actions the mode gates wear
           // the shared padlock chip — the non-color unavailability mark, on
           // top of the dimmed content. The chip keys to the gate the action
@@ -962,34 +970,32 @@ function renderTools(app: App, projected: RateSnapshot): void {
           // disabled still refuses pointer, keyboard, and touch.
           const lock = state.mode !== "upgrade" && action.disabled?.(app) ? `<span class="tool-lock" aria-hidden="true">${lockMarkSvg()}</span>` : "";
           const extra = (action.badge?.(app) ?? "") + (action.media ?? "") + detail + lock;
-          return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" id="${target.id}-tool-${action.op}" data-op="${action.op}" aria-label="${action.label}" ${action.op === "forge" ? `aria-describedby="${detailId}" aria-expanded="false"` : `title="${action.title(app, projected)}"`}${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${action.label}</small></button>`;
+          return `<button class="tool-icon${action.active?.(app) ? " active" : ""}" id="${target.id}-tool-${action.op}" data-op="${action.op}" aria-label="${action.label}" aria-describedby="${detailId}" aria-expanded="false"${action.disabled?.(app) ? " disabled" : ""} aria-pressed="${action.active?.(app) ?? false}">${action.svg}${extra}<small class="tool-word">${action.label}</small></button>`;
         })
         .join("");
       target.querySelectorAll<HTMLButtonElement>("[data-op]").forEach((button) => {
-        if (button.dataset.op === "forge") {
-          const detail = button.querySelector<HTMLElement>(".forge-detail")!;
-          let hovered = false;
-          // The detail's hidden flag is the one state; aria-expanded mirrors
-          // it on every access path — hover, keyboard focus, Escape — so the
-          // trigger never announces "collapsed" while the read stands open.
-          const report = () => button.setAttribute("aria-expanded", String(!detail.hidden));
-          app.listen(button, "mouseenter", () => { hovered = true; detail.hidden = false; report(); });
-          app.listen(button, "mouseleave", () => {
-            hovered = false;
-            detail.hidden = document.activeElement !== button;
+        const detail = button.querySelector<HTMLElement>(".tool-detail")!;
+        let hovered = false;
+        // The detail's hidden flag is the one state; aria-expanded mirrors
+        // it on every access path — hover, keyboard focus, Escape — so the
+        // trigger never announces "collapsed" while the read stands open.
+        const report = () => button.setAttribute("aria-expanded", String(!detail.hidden));
+        app.listen(button, "mouseenter", () => { hovered = true; detail.hidden = false; report(); });
+        app.listen(button, "mouseleave", () => {
+          hovered = false;
+          detail.hidden = document.activeElement !== button;
+          report();
+        });
+        app.listen(button, "focus", () => { detail.hidden = false; report(); });
+        app.listen(button, "blur", () => { detail.hidden = !hovered; report(); });
+        app.listen(button, "keydown", (event) => {
+          if (event.key === "Escape" && !detail.hidden) {
+            // The tip goes alone; focus stays on the trigger.
+            detail.hidden = true;
             report();
-          });
-          app.listen(button, "focus", () => { detail.hidden = false; report(); });
-          app.listen(button, "blur", () => { detail.hidden = !hovered; report(); });
-          app.listen(button, "keydown", (event) => {
-            if (event.key === "Escape" && !detail.hidden) {
-              // The tip goes alone; focus stays on the trigger.
-              detail.hidden = true;
-              report();
-              event.stopPropagation();
-            }
-          });
-        }
+            event.stopPropagation();
+          }
+        });
         app.listen(button, "click", () => {
           actions.find((action) => action.op === button.getAttribute("data-op"))!.run(app);
         });
@@ -997,9 +1003,9 @@ function renderTools(app: App, projected: RateSnapshot): void {
     }
   }
 
-  // Live under the structural rebuild: the Forge pip tracks the flow meter
-  // (ADR-0041) and its read stays the one meter detail, live during flow;
-  // the cell icon wears the current price and affordability.
+  // Live under the structural rebuild: every icon's detail read patches in
+  // place (#354), the Forge pip tracks the flow meter (ADR-0041), and the
+  // cell icon wears the current price and affordability.
   const flowCap = flowThreshold(state.flow.earned);
   for (const target of [host, thumb]) {
     if (!target) continue;
@@ -1011,31 +1017,26 @@ function renderTools(app: App, projected: RateSnapshot): void {
     liveAttr(target, "forge-meter", "aria-valuenow", String(Math.max(0, state.flow.progress)));
     liveAttr(target, "forge-meter", "aria-valuemax", String(flowCap));
     liveAttr(target, "forge-meter", "aria-valuetext", flowMeterRead(state));
-    const forgeButton = target.querySelector<HTMLButtonElement>('[data-op="forge"]');
-    if (forgeButton) {
-      const action = actions.find((a) => a.op === "forge")!;
-      const detail = forgeButton.querySelector<HTMLElement>(".forge-detail");
+    for (const action of actions) {
+      const button = target.querySelector<HTMLButtonElement>(`[data-op="${action.op}"]`);
+      const detail = button?.querySelector<HTMLElement>(".tool-detail");
       if (detail) detail.textContent = action.title(app, projected);
-      forgeButton.disabled = action.disabled?.(app) ?? false;
     }
+    const forgeButton = target.querySelector<HTMLButtonElement>('[data-op="forge"]');
+    if (forgeButton) forgeButton.disabled = actions.find((a) => a.op === "forge")!.disabled?.(app) ?? false;
     const cellButton = target.querySelector<HTMLButtonElement>('[data-op="cell"]');
     if (cellButton && state.mode === "upgrade") {
-      const action = actions.find((a) => a.op === "cell")!;
-      cellButton.title = action.title(app, projected);
       // The Add icon carries the mode's arm: the cell price in module
       // mode, the slot-unlock arm in mutator mode (issue #272 review).
+      // The detail text is the generic pass's write — the title closure
+      // owns every arm's read.
       const mutatorArm = state.catalogEntryOwned && ui.mutLayer === "mutators";
       cellButton.classList.toggle("active", mutatorArm ? ui.mutUnlockArmed : ui.buyingCell);
       cellButton.setAttribute("aria-pressed", String(mutatorArm ? ui.mutUnlockArmed : ui.buyingCell));
-      if (mutatorArm) {
-        cellButton.disabled = false;
-      } else if (ui.buyingCell) {
+      if (mutatorArm || ui.buyingCell) {
         cellButton.disabled = false;
       } else {
-        const price = cellCost(state.cellsBought);
-        const countdown = practiceCountdown(price, wholeNous(state), projected.rate);
-        cellButton.title = `Add — ${formatInt(price)} ν${countdown ? ` · ${countdown}` : ""}`;
-        cellButton.disabled = wholeNous(state) < price;
+        cellButton.disabled = wholeNous(state) < cellCost(state.cellsBought);
       }
     }
   }
@@ -2873,7 +2874,9 @@ function upgradeCountdown(app: App, cost: number): string | null {
 //
 // The row sells the product, not the mechanic (issue #310): it is headed
 // Poly Expander, the effect line carries the hoverable term, and the mono
-// delta reads the before → after the buy lands.
+// delta reads the before → after the buy lands. The section's own h2 keeps
+// the heading outline whole (#354): the shelf section above it can retire,
+// and the row's h3 must never stand beneath nothing.
 function capacityShopHtml(app: App): string {
   const { state } = app;
   const capacity = voiceCapacityOf(state);
@@ -2898,6 +2901,7 @@ function capacityShopHtml(app: App): string {
     : `<p class="t-note mono">${capacity}/${ceiling} → ${capacity + 1}/${ceiling}</p>`;
   return `
     <section class="capacity-catalog">
+      <h2 class="t-condensed">Harmonic capacity</h2>
       <div class="catalog-rows">
         <article class="catalog-row">
           <div><h3 class="t-condensed">${termTipHtml("Poly Expander")}</h3><p class="t-note">Raises ${termTipHtml("Harmonic capacity")} by one for all voices</p>${figure}${note}</div>
