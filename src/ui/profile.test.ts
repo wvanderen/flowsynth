@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { App } from "./app";
 import { clickCell, createAppFixture } from "./testing/app-fixture";
 import { profileGradesHtml } from "./profile";
+import { OSCILLATOR_PROFILES } from "../engine/profiles";
 
 const fixture = createAppFixture();
 let app: App;
@@ -54,6 +55,33 @@ describe("grade chips on the Forge candidate tiles", () => {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(body.classList.contains("inst-show")).toBe(false);
     expect(app.ui.modal).toBe("forge");
+  });
+
+  it("distinguishes a weak response from an absent effect through disclosure", () => {
+    // Exercise a future authored weak coefficient without changing the roster's tuning.
+    const original = OSCILLATOR_PROFILES.square.booster;
+    try {
+      OSCILLATOR_PROFILES.square.booster = 0.25;
+      app.openModal("forge");
+      const weak = panel().querySelector<HTMLButtonElement>('[data-choice="c-square"]')!
+        .closest(".candidate-tile")!.querySelector<HTMLButtonElement>('[data-grade="D"]')!;
+      const absent = panel().querySelector<HTMLButtonElement>('[data-choice="c-blaster"]')!
+        .closest(".candidate-tile")!.querySelector<HTMLButtonElement>('[data-grade="—"]')!;
+      expect(weak.textContent).toBe("boost D");
+      expect(absent.textContent).toBe("charge —");
+      weak.focus();
+      const weakTip = document.getElementById(weak.getAttribute("aria-describedby")!)!;
+      expect(weakTip.classList.contains("inst-show")).toBe(true);
+      expect(weakTip.textContent).toBe("Booster response ×0.25 · weak");
+      absent.click();
+      const absentTip = document.getElementById(absent.getAttribute("aria-describedby")!)!;
+      expect(absentTip.classList.contains("inst-show")).toBe(true);
+      expect(absentTip.textContent).toBe("Charge response · absent effect");
+      expect(app.state.bankedRolls[0]!.candidates).toHaveLength(3);
+      expect(app.ui.modal).toBe("forge");
+    } finally {
+      OSCILLATOR_PROFILES.square.booster = original;
+    }
   });
 
   it("a tap pins the disclosure and tapping elsewhere dismisses it", () => {
