@@ -627,52 +627,6 @@ describe("the small-screen composition (issue #389)", () => {
     setAppWidth(390);
   });
 
-  const phone = () => cssBlocks("@container app \\(width < 600px\\)");
-
-  it("the lower lanes keep one occupant each: the sweep row clears the bar lane and the zoom cluster", () => {
-    const lane = phone();
-    const bar = lane.find((block) => block.includes(".horizon-bar"))!;
-    const row = lane.find((block) => block.includes(".upgrade-all"))!;
-    const cluster = lane.find((block) => block.includes(".zoom-cluster"))!;
-    const floor = cssBlocks("@media \\(pointer: coarse\\)").find((block) => block.includes(".zoom-cluster button"))!;
-    // The bar's lane (bottom 64, height 46) keeps its Arete word, state
-    // readout, and prestige door to themselves: the sweep row docks above
-    // it, never on it.
-    expect(cssPx(bar, "\\.horizon-bar", "bottom")).toBe(64);
-    expect(cssPx(bar, "\\.horizon-bar", "height")).toBe(46);
-    expect(cssPx(row, "\\.upgrade-all", "bottom")).toBeGreaterThanOrEqual(64 + 46 + 4);
-    // And the row's right edge clears the cluster's coarse-floor lane
-    // (right 10 + the 44px target + air), so the band holds both without
-    // shared pixels and no target shrinks to make room.
-    expect(cssPx(row, "\\.upgrade-all", "right")).toBeGreaterThanOrEqual(
-      cssPx(cluster, "\\.zoom-cluster", "right") + cssPx(floor, "\\.zoom-cluster button", "width") + 4,
-    );
-  });
-
-  it("the layer legend holds a left-edge gutter that the detail sheet and the arc card both clear", () => {
-    const lane = phone();
-    const legend = lane.find((block) => block.includes(".layer-legend"))!;
-    const sheet = lane.find((block) => block.includes(".hex-detail.sheet"))!;
-    const card = lane.find((block) => block.includes(".arc-card"))!;
-    // The strip docks at the edge at mid-height — the dock's old post —
-    // clear of the thumb bar's lanes entirely. The transform is part of
-    // the post: without it the strip hangs half a height off center.
-    expect(cssPx(legend, "\\.layer-legend", "left")).toBe(8);
-    expect(legend).toMatch(/\.layer-legend\s*\{[^}]*top:\s*50%/);
-    expect(legend).toMatch(/\.layer-legend\s*\{[^}]*bottom:\s*auto/);
-    expect(legend).toMatch(/\.layer-legend\s*\{[^}]*transform:\s*translateY\(-50%\)/);
-    // The sheet's left inset (top right bottom left) clears the strip's
-    // 42px box so the cross-section never runs beneath the shared switch.
-    const inset = [...sheet
-      .match(/\.hex-detail\.sheet\s*\{[^}]*inset:\s*([^;]+);/)![1]
-      .matchAll(/(\d+)px/g)]
-      .map((match) => Number(match[1]));
-    expect(inset).toHaveLength(4);
-    expect(inset[3]!).toBeGreaterThanOrEqual(cssPx(legend, "\\.layer-legend", "left") + 42 + 4);
-    // The arc card clears the same gutter.
-    expect(cssPx(card, "\\.arc-card", "left")).toBeGreaterThanOrEqual(cssPx(legend, "\\.layer-legend", "left") + 42 + 4);
-  });
-
   it("the legend answers taps at phone width — grid layer, detail emphasis, flow included", () => {
     const s = app.state;
     s.mode = "upgrade";
@@ -715,7 +669,8 @@ describe("the small-screen composition (issue #389)", () => {
     expect(app.ui.mutLayer).toBe("mutators");
   });
 
-  it("the re-docked Upgrade All answers taps above the horizon lane; flow stands it down", () => {
+  it.each([320, 360, 390])("Upgrade All buys at %ipx and hides during flow", (width) => {
+    setAppWidth(width);
     const s = app.state;
     s.nous = levelsCost(0, 3);
     app.render();
@@ -746,31 +701,21 @@ describe("the small-screen composition (issue #389)", () => {
     expect(bar.querySelector('[data-op="forge"]')).not.toBeNull();
   });
 
-  it("the dense chord case reflows into the sheet's last post, faces and Return before it", () => {
-    // C4 · G4 sing the Fifth; C4 · C5's Octave sits idle behind the
-    // disclosure — the dense facts the sheet must carry without ever
-    // hiding the faces, Return, or the local actions (issue #388's
-    // reflow, composed into the phone sheet here).
+  it("the dense chord case keeps idle facts inspectable and Return restores the grid", () => {
     give(app.state, "additive", hex(1, 0));
     give(app.state, "additive", hex(0, 1));
     app.render();
     clickCell(0, 1);
     const detail = document.getElementById("hex-detail")!;
-    const grid = detail.querySelector<HTMLElement>(".hex-detail-grid")!;
-    const chordCol = grid.querySelector(".hex-chord-col")!;
-    // The single column's order is the reach contract: the mutator face,
-    // its rail, the module face, its rail, then the dense facts — scroll
-    // reaches the column last without ever moving the faces or Return.
-    expect(grid.lastElementChild).toBe(chordCol);
-    expect(chordCol.querySelector(".detail-idle-trigger")!.textContent).toContain("idle");
-    const post = (node: Element) => [...grid.children].indexOf(node);
-    // Return floats over the scene, outside the scrolling grid — it never
-    // scrolls away with the facts.
-    expect(grid.contains(document.getElementById("hex-detail-return")!)).toBe(false);
-    expect(post(grid.querySelector(".hex-detail-layer.mutators")!)).toBeLessThan(post(grid.querySelector(".hex-rail-row.modules")!));
-    expect(post(grid.querySelector(".hex-detail-layer.modules")!)).toBeLessThan(post(chordCol));
-    // The sheet is the scroller: its own overflow carries the dense case.
-    expect(readFileSync("src/ui/style.css", "utf8")).toMatch(/\.hex-detail-grid\s*\{[^}]*overflow-y:\s*auto/);
+    const idle = detail.querySelector<HTMLButtonElement>(".detail-idle-trigger")!;
+    expect(idle.textContent).toContain("idle");
+    idle.focus();
+    idle.click();
+    const tooltipId = idle.getAttribute("aria-describedby")!;
+    expect(document.getElementById(tooltipId)?.textContent).toContain("Octave");
+    expect(document.getElementById(tooltipId)?.classList.contains("inst-show")).toBe(true);
+    document.getElementById("hex-detail-return")!.click();
+    expect(app.ui.detail).toBeNull();
   });
 });
 

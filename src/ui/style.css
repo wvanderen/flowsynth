@@ -3591,6 +3591,16 @@ body.hex-detail-open .upgrade-all {
 
 /* Narrow phones keep every action visible while the habit yields width. */
 @container app (width < 360px) {
+  /* Keep all four full-size buy targets in their lane; the shared ALL
+     label and each button’s title retain the board-wide scope. */
+  .sweep-label-full {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
   .console { padding: 0 6px; gap: 4px; }
   .session-group { gap: 2px; }
   .session-focus { gap: 4px; padding: 2px; }
