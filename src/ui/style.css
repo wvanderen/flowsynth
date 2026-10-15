@@ -247,7 +247,7 @@ h1, h2, h3, p { margin: 0; }
 .folio-sub { font-size: 11px; color: var(--muted); text-align: right; }
 /* A neutral factual line — the honesty events, the reassurance — muted
    sans in the row's body, never a figure voice. */
-.folio-line { flex: 1; min-width: 0; font-size: 12.5px; color: var(--muted); }
+.folio-line { flex: 1; min-width: 0; font-size: 12px; color: var(--muted); }
 /* The engraved NEW mark: the state grammar's acquired voice in the charge
    hue — readable without color (the engraving carries it). */
 .folio-new {
@@ -542,7 +542,7 @@ h1, h2, h3, p { margin: 0; }
   border: 1px solid var(--line);
   border-radius: 0;
   padding: 7px 8px;
-  font-size: 12.5px;
+  font-size: 12px;
 }
 .focus-sheet select:focus-visible { border-color: var(--charge); }
 
@@ -555,7 +555,7 @@ h1, h2, h3, p { margin: 0; }
   flex: 1;
   min-width: 0;
   text-align: left;
-  font: 650 12.5px var(--font-condensed);
+  font: 650 12px var(--font-condensed);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--ink);
@@ -666,7 +666,7 @@ h1, h2, h3, p { margin: 0; }
 }
 .focus-back:hover:not(:disabled) { color: var(--ink); background: none; }
 .focus-detail-head { display: flex; align-items: center; gap: 8px; padding: 4px 0 10px; flex-wrap: wrap; }
-.focus-detail-name { font-size: 18px; font-weight: 600; margin-right: auto; }
+.focus-detail-name { font-size: 19px; font-weight: 600; margin-right: auto; }
 .focus-detail-head .st-acquired { flex-shrink: 0; }
 .focus-detail-head .habit-rename-input { flex: 1; min-width: 0; }
 .habit-detail-read .stat-row { border-bottom: 1px solid var(--line-soft); }
@@ -676,12 +676,12 @@ h1, h2, h3, p { margin: 0; }
 /* The GOALS face's rows: the folio's hairline replaces the card, the
     progress bar rides at the row's lead, delete rides the row's end. */
 .goal-ledger-head { display: flex; align-items: center; gap: 8px; }
-.goal-ledger-name { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.goal-ledger-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .goal-row.done .goal-ledger-name { color: var(--muted); }
 .goal-ledger-head .icon-btn { flex-shrink: 0; }
 .long-goal-row { justify-content: space-between; align-items: center; }
 .long-goal-row .long-goal-head { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex-wrap: wrap; }
-.long-goal-row .long-goal-name { font-size: 13.5px; font-weight: 550; }
+.long-goal-row .long-goal-name { font-size: 13px; font-weight: 550; }
 .long-goal-row .long-goal-effect { font: 12px var(--mono); color: var(--muted); white-space: nowrap; }
 .long-goal-row .shop-buy { align-items: flex-end; }
 
@@ -712,7 +712,7 @@ h1, h2, h3, p { margin: 0; }
   border-radius: 0;
 }
 .plan-free input:focus-visible { border-color: var(--charge); }
-.plan-unit { font: 11.5px var(--mono); color: var(--muted); }
+.plan-unit { font: 11px var(--mono); color: var(--muted); }
 .plan-open { padding: 5px 11px; font-size: 12px; color: var(--muted); }
 .plan-open.active { border-color: var(--ink); color: var(--ink); box-shadow: inset 0 -3px var(--ink); }
 /* The settings modal's readout stack (§5, issue #280): the ruled folio's
@@ -721,7 +721,7 @@ h1, h2, h3, p { margin: 0; }
 .settings-rows { margin: 14px 0 4px; }
 .settings-rows .folio-key { width: 108px; }
 .pref-control { display: flex; align-items: center; gap: 9px; justify-content: flex-end; }
-.pref-control label { cursor: pointer; font-size: 12.5px; color: var(--ink); }
+.pref-control label { cursor: pointer; font-size: 12px; color: var(--ink); }
 .pref-control input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
 /* Reset wears the switch color (§5, #249's resolution): the destructive
    action reads in the main switch's vermillion, state clear without it
@@ -747,8 +747,8 @@ h1, h2, h3, p { margin: 0; }
    figure every feat adds, quiet at the row's right edge — the milestone
    rows wear theirs in the accent voice, theirs being the beat's
    headline. Effect and state pack right together; the name wraps first. */
-.ach-row .ach-effect { font-size: 10.5px; color: var(--muted); white-space: nowrap; flex-shrink: 0; margin-left: auto; }
-.ach-desc { margin: 3px 0 8px; font-size: 11.5px; color: var(--muted); }
+.ach-row .ach-effect { font-size: 10px; color: var(--muted); white-space: nowrap; flex-shrink: 0; margin-left: auto; }
+.ach-desc { margin: 3px 0 8px; font-size: 12px; color: var(--muted); }
 /* The progress bar is the shared goal-bar column (the controls sheet):
    fill by height, the standing fill muted until the feat unlocks — the
    row's engraved mark carries the acquired state. */
@@ -778,7 +778,7 @@ h1, h2, h3, p { margin: 0; }
 .ach-milestones { display: flex; flex-direction: column; }
 .ach-milestone { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--line); }
 .ach-milestone:last-child { border-bottom: 0; }
-.ach-read { flex: 1; min-width: 0; font-size: 12.5px; color: var(--ink); }
+.ach-read { flex: 1; min-width: 0; font-size: 12px; color: var(--ink); }
 .ach-milestone .ach-name { color: var(--ink); }
 .ach-milestone .ach-unlock { color: var(--muted); }
 .ach-milestone .ach-effect { color: var(--accent); }
@@ -823,11 +823,11 @@ h1, h2, h3, p { margin: 0; }
   gap: 5px;
   white-space: nowrap;
 }
-.ledger-fig b { font: 15.5px var(--mono); font-weight: 400; }
+.ledger-fig b { font: 15px var(--mono); font-weight: 400; }
 /* The unit stays lowercase — the ν is the resource's own glyph, and the
    uppercase transform would rewrite it. */
 .ledger-fig small {
-  font: 600 10.5px var(--font-condensed);
+  font: 600 10px var(--font-condensed);
   letter-spacing: 0.04em;
   color: var(--muted);
 }
@@ -924,13 +924,13 @@ h1, h2, h3, p { margin: 0; }
 }
 .rd-row:last-child { border-bottom: 0; }
 .rd-allocation-state[hidden] { display: none; }
-.rd-name { color: var(--ink); font-size: 12.5px; }
-.rd-note { font-size: 10.5px; color: var(--muted); }
+.rd-name { color: var(--ink); font-size: 12px; }
+.rd-note { font-size: 10px; color: var(--muted); }
 .rd-val { margin-left: auto; text-align: right; color: var(--nous); font-size: 12px; white-space: nowrap; }
 .rd-total .rd-name, .rd-total .rd-val { color: var(--ink); font-weight: 600; }
 /* The global factors' one line (issue #334): a board-level property, not a
    per-row payout — the muted register keeps it from reading as a leg. */
-.rd-global .rd-name, .rd-global .rd-val { color: var(--muted); font-weight: 400; font-size: 11.5px; }
+.rd-global .rd-name, .rd-global .rd-val { color: var(--muted); font-weight: 400; font-size: 11px; }
 /* The synth row: the name is the pick (a real button, so Enter and Space
    work) and the final figure stays critical at the right edge — visible
    without opening anything. No expansion: the amendment drops the per-row
@@ -1020,7 +1020,7 @@ h1, h2, h3, p { margin: 0; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--muted);
 }
 /* The active pip: the live-activity mark in the class's hue — the pulse
@@ -1056,7 +1056,7 @@ h1, h2, h3, p { margin: 0; }
   justify-content: center;
   flex-wrap: wrap;
   gap: 6px 16px;
-  font: 500 16px var(--mono);
+  font: 500 17px var(--mono);
   font-variant-numeric: tabular-nums;
 }
 .chord-stage-hint { color: var(--muted); font-size: 13px; }
@@ -1100,7 +1100,7 @@ h1, h2, h3, p { margin: 0; }
   padding: 10px 12px;
   resize: vertical;
   min-height: 66px;
-  font-size: 13.5px;
+  font-size: 13px;
   line-height: 1.5;
 }
 .note-composer:focus-visible { border-color: var(--charge); }
@@ -1112,7 +1112,7 @@ h1, h2, h3, p { margin: 0; }
 .note-entry + .note-entry { border-top: 1px solid var(--line-soft); }
 .note-entry .note-when { font-size: 9px; color: var(--muted); letter-spacing: 0.08em; }
 .note-entry .habit-chip { margin: 0 0 0 6px; vertical-align: baseline; }
-.note-entry p { font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; margin: 3px 0 0; }
+.note-entry p { font-size: 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; margin: 3px 0 0; }
 
 /* Habit management: the figure-led list drills; rename/archive live in the
    detail head. The shared dot, rename input, and build styles serve the
@@ -1128,7 +1128,7 @@ h1, h2, h3, p { margin: 0; }
    color, and RITUAL amplifies it board-side. */
 .habit-build { margin-top: 8px; display: grid; gap: 6px; }
 .habit-build .eyebrow { margin-bottom: 0; }
-.habit-build > p { margin: 0; font-size: 10.5px; }
+.habit-build > p { margin: 0; font-size: 10px; }
 .build-nodes { display: grid; gap: 4px; }
 .build-node {
   display: flex; align-items: center; gap: 9px;
@@ -1148,8 +1148,8 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
   font-size: 10px; color: var(--muted);
 }
 .build-node.equipped .build-node-mark { border-color: var(--switch); color: var(--switch); }
-.build-node-name { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.35; }
-.build-node-name small { display: block; color: var(--muted); font-size: 10.5px; }
+.build-node-name { flex: 1; min-width: 0; font-size: 12px; line-height: 1.35; }
+.build-node-name small { display: block; color: var(--muted); font-size: 10px; }
 .build-node.locked .build-node-name { color: var(--muted); }
 
 /* The habit-keyed chip (§9): a tagged note wears its habit in the stream.
@@ -1177,20 +1177,20 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
 }
 .history-row:hover { background: var(--hover-bg); }
 .history-when { font-size: 10px; color: var(--muted); flex-shrink: 0; width: 44px; }
-.history-habit { flex: 1; min-width: 0; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.history-min { font-size: 10.5px; color: var(--muted); flex-shrink: 0; }
+.history-habit { flex: 1; min-width: 0; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-min { font-size: 10px; color: var(--muted); flex-shrink: 0; }
 .history-chip { font: 9px var(--mono); letter-spacing: 0.05em; padding: 1px 7px; border-radius: 0; border: 1px solid var(--line-soft); flex-shrink: 0; }
 .history-chip.hit { color: var(--charge); }
 .history-chip.miss { color: var(--muted); }
 .show-more { align-self: center; }
 .history-title { font-size: 14px; font-weight: 550; margin: 2px 0 0; }
 .history-section { font: 10px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-top: 8px; }
-.history-line { font-size: 12.5px; line-height: 1.5; overflow-wrap: anywhere; }
+.history-line { font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .history-line.muted { color: var(--muted); }
 
 /* Goals: tracked practice conditions in limited slots. */
 .goal-create { display: flex; gap: 6px; flex-wrap: wrap; }
-.goal-create select, .goal-create input { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 0; padding: 7px 8px; font-size: 12.5px; }
+.goal-create select, .goal-create input { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 0; padding: 7px 8px; font-size: 12px; }
 .goal-create input { width: 64px; }
 .goal-create select:focus-visible, .goal-create input:focus-visible { border-color: var(--charge); }
 /* The GOALS face's rows: the shared bar column leads the ledger — fill by
@@ -1310,7 +1310,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   backdrop-filter: blur(3px);
 }
 .tool-icon svg { width: 16px; height: 16px; }
-.tool-word { display: none; font-size: 8.5px; letter-spacing: 0.04em; }
+.tool-word { display: none; font-size: 9px; letter-spacing: 0.04em; }
 .tool-badge {
   position: absolute;
   top: -5px;
@@ -1318,7 +1318,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   background: var(--accent);
   color: var(--accent-ink);
   border-radius: 0;
-  font-size: 9.5px;
+  font-size: 10px;
   line-height: 1;
   padding: 2.5px 5px;
   font-style: normal;
@@ -1729,7 +1729,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .face-rail { fill: none; stroke-width: 5; stroke-linecap: round; pointer-events: none; }
 .module-node .hex.charged ~ .face-rail { stroke: var(--charge); }
 
-.face-name { font: 700 8.5px var(--mono); letter-spacing: 0.13em; }
+.face-name { font: 700 8px var(--mono); letter-spacing: 0.13em; }
 .face-level { font: 8px var(--mono); letter-spacing: 0.1em; fill: var(--muted); }
 .face-readout { font: 500 17px var(--mono); font-variant-numeric: tabular-nums; }
 .module-node[data-type="forge"] .face-readout,
@@ -1739,7 +1739,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .drag-ghost .face-readout, .candidate-tile .face-readout { font-size: 14px; }
 /* The Forge's charge-vs-threshold readout sits in the charge register. */
 .face-readout.charge { fill: var(--charge); }
-.face-note, .hex-note { font: 8.5px var(--mono); letter-spacing: 0.12em; fill: var(--muted); }
+.face-note, .hex-note { font: 8px var(--mono); letter-spacing: 0.12em; fill: var(--muted); }
 .face-signature { stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 
 /* Charge leads (§8, #41): uniform green patch leads, center-to-center,
@@ -1886,7 +1886,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   background: var(--panel-deep);
   border: 0;
   border-radius: 0;
-  font-size: 10.5px;
+  font-size: 10px;
   letter-spacing: 0.1em;
   color: var(--cc);
 }
@@ -2010,7 +2010,7 @@ body.live .chord-mark:not(.chord-fade):not(.chord-idle) .chord-seam {
   pointer-events: none;
 }
 .chord-mark.ghost-mark .chord-label {
-  font: 10.5px var(--mono);
+  font: 10px var(--mono);
   letter-spacing: 0.1em;
   fill: var(--ink);
   text-anchor: middle;
@@ -2218,8 +2218,8 @@ body.hex-detail-open .upgrade-all {
 .hex-stack-face .face-level { font-size: 8px; }
 .hex-stack-face .face-name { font-size: 9px; letter-spacing: 0.16em; }
 .hex-stack-face .face-readout { font-size: 11px; }
-.hex-stack-face .face-readout-sm { font-size: 9.5px; }
-.hex-stack-face .face-readout-xs { font-size: 8.5px; }
+.hex-stack-face .face-readout-sm { font-size: 10px; }
+.hex-stack-face .face-readout-xs { font-size: 8px; }
 .hex-stack-face .face-note { font-size: 8px; letter-spacing: 0.14em; }
 .hex-stack-face .face-rail { stroke-width: 4; }
 .hex-stack-face .face-rings { stroke-width: 0.8; }
@@ -2232,7 +2232,7 @@ body.hex-detail-open .upgrade-all {
 .hex-stack-mut .mut-slot-hex { stroke-width: 1.6; }
 .hex-stack-mut .mut-slot-hex.muted { stroke: var(--line); fill: color-mix(in srgb, var(--panel-deep) 55%, transparent); stroke-dasharray: none; }
 .hex-stack-mut .mut-slot-family { font-size: 12px; letter-spacing: 0.14em; }
-.hex-stack-mut .mut-slot-effect { font-size: 10.5px; }
+.hex-stack-mut .mut-slot-effect { font-size: 10px; }
 .hex-stack-mut .mut-slot-verdict { font-size: 10px; }
 .hex-stack-mut .mut-slot-ticks circle { fill: var(--arete); }
 .hex-stack-mut .hex-stack-lock {
@@ -2278,7 +2278,7 @@ body.hex-detail-open .upgrade-all {
   padding: 7px 12px;
   border: 1px solid var(--line-strong);
   background: var(--panel-soft);
-  font: 600 11.5px var(--font-condensed);
+  font: 600 12px var(--font-condensed);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--arete);
@@ -2460,7 +2460,7 @@ body.hex-detail-open .upgrade-all {
   gap: 14px;
   padding: 4px 0;
   border-top: 1px solid var(--line-soft);
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.35;
   color: var(--muted);
 }
@@ -2655,7 +2655,7 @@ body.hex-detail-open .upgrade-all {
 .inventory-tray.off { display: none; }
 .inventory-tray.drag-over { border-color: var(--charge); background: var(--charge-tint); }
 .tray-items { display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 40px; width: 100%; }
-.tray-empty { font-size: 10.5px; color: var(--muted); font-style: italic; text-align: center; padding: 4px 2px; }
+.tray-empty { font-size: 10px; color: var(--muted); font-style: italic; text-align: center; padding: 4px 2px; }
 .tray-items .inventory-tile { width: 62px; padding: 3px 2px 5px; }
 .tray-items .inventory-tile svg { width: 100%; }
 
@@ -2814,7 +2814,7 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   letter-spacing: 0.12em;
   pointer-events: none;
 }
-.mut-slot-effect { font-size: 12.5px; fill: var(--ink); pointer-events: none; }
+.mut-slot-effect { font-size: 12px; fill: var(--ink); pointer-events: none; }
 .mut-slot-verdict { font-size: 10px; fill: var(--muted); pointer-events: none; }
 .mut-slot-face.mut-inert .mut-slot-effect { fill: var(--muted); }
 .mut-slot-open .mut-slot-family { opacity: 0.85; }
@@ -2869,7 +2869,7 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 .mut-tile .mut-tile-hex { fill: none; stroke: currentColor; stroke-width: 4.5; }
 .mut-tile .mut-tile-glyph { color: currentColor; }
 .mut-tile .mut-tile-ticks { fill: currentColor; }
-.mut-tile .mut-tile-effect { font-size: 11.5px; fill: var(--muted); }
+.mut-tile .mut-tile-effect { font-size: 11px; fill: var(--muted); }
 
 /* The armed unlock's pill: one cost spot over the board's top edge, the
    armed-purchase pattern's second-layer voice. */
@@ -2922,11 +2922,11 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   color: var(--arete);
   text-transform: uppercase;
 }
-.mut-pop-rarity { font-size: 10.5px; color: var(--muted); }
+.mut-pop-rarity { font-size: 10px; color: var(--muted); }
 .mut-pop-effect { margin: 6px 0 2px; color: var(--ink); }
-.mut-pop-host { margin: 2px 0; color: var(--muted); font-size: 11.5px; }
+.mut-pop-host { margin: 2px 0; color: var(--muted); font-size: 12px; }
 .mut-pop-host b { color: var(--ink); font-weight: 600; }
-.mut-pop-inert { margin: 4px 0 0; color: var(--muted); font-style: italic; font-size: 11.5px; }
+.mut-pop-inert { margin: 4px 0 0; color: var(--muted); font-style: italic; font-size: 12px; }
 .mut-pop-actions { display: flex; gap: 6px; margin-top: 9px; }
 .mut-pop-actions button {
   padding: 4px 10px;
@@ -2954,7 +2954,7 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
   font-size: 12px;
 }
 .mut-bloom-line b { font-weight: 650; }
-.mut-bloom-line .mono { color: var(--ink); font-size: 11.5px; }
+.mut-bloom-line .mono { color: var(--ink); font-size: 11px; }
 .mut-bloom-line i { color: var(--muted); font-size: 11px; font-style: italic; }
 .mut-bloom-glyph { display: inline-flex; }
 .mut-bloom-glyph svg { width: 18px; height: 18px; color: var(--arete); }
@@ -2967,7 +2967,7 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 .mut-combine-pair { display: flex; align-items: center; gap: 12px; }
 .mut-combine-tile { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
 .mut-combine-tile svg { width: 76px; color: var(--arete); }
-.mut-combine-tile small { font-size: 10.5px; color: var(--muted); }
+.mut-combine-tile small { font-size: 10px; color: var(--muted); }
 
 .config-label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 
@@ -3043,9 +3043,9 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 .collection-row svg { width: 18px; height: 18px; flex-shrink: 0; }
 .collection-row .t-condensed { font-size: 15px; }
 .collection-row .mono { margin-left: auto; color: var(--muted); }
-.modal h2 { font-size: 21px; font-weight: 500; letter-spacing: -0.02em; }
+.modal h2 { font-size: 19px; font-weight: 500; letter-spacing: -0.02em; }
 .modal .lead { color: var(--muted); margin: 8px 0 18px; }
-.modal-note { font-size: 11.5px; color: var(--muted); margin-top: 16px; }
+.modal-note { font-size: 12px; color: var(--muted); margin-top: 16px; }
 
 .modal:has(.candidates) { width: min(820px, 100%); }
 .candidates { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; padding: 12px 8px 8px; }
@@ -3068,12 +3068,12 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 .candidate-tile svg { width: 150px; height: 150px; }
 .candidate-tile:hover:not(:disabled) .hex { fill: var(--accent-faint); }
 .candidate-tile .rarity { font: 10px var(--mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
-.candidate-tile .candidate-scaling { font: 10.5px var(--mono); color: var(--muted); text-align: center; }
-.candidate-tile .candidate-effect { font: 11.5px/1.7 var(--font-sans); color: var(--muted); text-align: center; }
+.candidate-tile .candidate-scaling { font: 10px var(--mono); color: var(--muted); text-align: center; }
+.candidate-tile .candidate-effect { font: 12px/1.7 var(--font-sans); color: var(--muted); text-align: center; }
 
 .shop-buy { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .shop-countdown, .countdown { font: 11px var(--mono); color: var(--muted); white-space: nowrap; }
-.countdown { font-size: 11.5px; margin: 0 0 8px; white-space: normal; }
+.countdown { font-size: 11px; margin: 0 0 8px; white-space: normal; }
 .catalog-toggle { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 12px; color: var(--muted); cursor: pointer; }
 .catalog-toggle input { accent-color: var(--accent); }
 
@@ -3116,15 +3116,15 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
 }
 .honesty-choice:last-child { border-bottom: 0; }
 .honesty-choice:hover { background: var(--hover-bg); }
-.honesty-label { font: 600 16px var(--font-condensed); letter-spacing: 0.03em; }
-.honesty-consequence { font-family: var(--font-sans); color: var(--muted); font-size: 11.5px; }
+.honesty-label { font: 600 15px var(--font-condensed); letter-spacing: 0.03em; }
+.honesty-consequence { font-family: var(--font-sans); color: var(--muted); font-size: 12px; }
 
 /* The provisional bucket's console flag (§2): the switch's vermillion. It
    rides beside the clock stack inside the clock anchor (issue #148) — never
    stacked below, so the live clock keeps its vertical alignment and the
    header keeps its one row and its contents inside the viewport. Empty (no
    pool), it vanishes — separator included. */
-.clock-provisional { font: 11.5px var(--mono); color: var(--accent); min-height: 14px; white-space: nowrap; flex-shrink: 0; }
+.clock-provisional { font: 11px var(--mono); color: var(--accent); min-height: 14px; white-space: nowrap; flex-shrink: 0; }
 .clock-provisional:not(:empty) { border-left: 1px solid var(--line); padding-left: 12px; }
 
 /* The summary's ruled folio (#279): the banked-nous headline figure — the
@@ -3452,8 +3452,8 @@ body.mut-layer-live #grid .charge-preview-line { display: none; }
     justify-content: center;
   }
   .horizon-word { font-size: 8px; }
-  .horizon-state { font-size: 8.5px; }
-  .prestige-door { font-size: 8.5px; padding: 4px 12px; }
+  .horizon-state { font-size: 9px; }
+  .prestige-door { font-size: 9px; padding: 4px 12px; }
   .zoom-cluster { right: 10px; bottom: 64px; }
   .chord-readout { top: 46px; right: 10px; }
   /* The Hex detail on phone (issue #295): the panel re-docks as a bottom
@@ -3637,7 +3637,7 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 
 /* The shelf's one permanent hint (§5.8): the generator row says what charge
    is for; nothing else in the catalog explains itself twice. */
-.shop-hint { display: block; margin-top: 3px; font-size: 11.5px; font-style: normal; color: var(--charge); }
+.shop-hint { display: block; margin-top: 3px; font-size: 12px; font-style: normal; color: var(--charge); }
 .goal-slots { font: 10px var(--mono); letter-spacing: 0.06em; color: var(--muted); margin: 0 0 10px; }
 
 /* ── The rate sheet and the inventory sheet (§7) ── */
@@ -3729,7 +3729,7 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .catalog-face-tab[data-catalog-face="arete"][aria-pressed="true"] { color: var(--arete); }
 .catalog-identity { display: flex; align-items: center; color: var(--arete); }
 .catalog-identity svg { width: 22px; height: 22px; }
-.catalog-identity .mono { font-size: 20px; }
+.catalog-identity .mono { font-size: 19px; }
 .catalog-identity-nous { color: var(--nous); }
 /* The scrollable body: the pinned head never moves; the content does. */
 .catalog-body { flex: 1; min-height: 0; overflow-y: auto; margin-top: 8px; }
@@ -3748,11 +3748,11 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 }
 .catalog-row h3 { font-size: 15px; }
 .catalog-row p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
-.catalog-row .kind { font: 400 11.5px var(--font-sans); text-transform: none; letter-spacing: 0; color: var(--muted); }
+.catalog-row .kind { font: 400 12px var(--font-sans); text-transform: none; letter-spacing: 0; color: var(--muted); }
 .catalog-row .price { flex-shrink: 0; white-space: nowrap; font-family: var(--mono); font-size: 13px; }
 .catalog-row .price.arete { color: var(--arete); border-color: var(--arete-line); }
 .catalog-row .price.arete:hover:not(:disabled) { background: var(--arete-faint); border-color: var(--arete); }
-.catalog-note { font-size: 11.5px; color: var(--muted); margin: 8px 0 0; }
+.catalog-note { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
 .catalog-owned .catalog-row { opacity: 0.7; }
 /* The arete face's lock screen: the face's single centered offer, pre-entry. */
 .entry-screen { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
@@ -3764,7 +3764,7 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   padding: 24px 30px;
   border-color: var(--arete-line);
   color: var(--arete);
-  font: 600 20px var(--font-condensed);
+  font: 600 19px var(--font-condensed);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -3914,7 +3914,7 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .peek .forge-meters { min-height: 80px; align-content: start; }
 .mut-candidate .mut-tile-hex { fill: none; stroke: currentColor; stroke-width: 4.5; }
 .mut-candidate .mut-tile-ticks { fill: currentColor; }
-.mut-candidate .mut-tile-effect { font-size: 11.5px; fill: var(--muted); }
+.mut-candidate .mut-tile-effect { font-size: 11px; fill: var(--muted); }
 @media (max-width: 600px) {
   .peek .candidates { min-height: 0; }
   .peek .forge-meters { min-height: 0; }
