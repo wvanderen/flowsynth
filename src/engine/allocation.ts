@@ -753,6 +753,13 @@ export function summaryTermsOf(summary: AllocationSummary): NamedChordTerm[] {
   return summary.recognized.map(termOfInstance);
 }
 
+// Formation newcomers use authoritative instance identity, preserving
+// allocation order and excluding retained instances even when totals grow.
+export function newlyActiveTermsOf(before: readonly AllocatedInstance[], after: readonly AllocatedInstance[]): NamedChordTerm[] {
+  const priorKeys = new Set(before.map((instance) => instance.key));
+  return after.filter((instance) => !priorKeys.has(instance.key)).map(termOfInstance);
+}
+
 // The summary's recognized-but-idle candidates as the same terms — the
 // board's dotted seams, the readout's idle chips, and the rate details'
 // idle notes all read this one mapping, never a private re-derivation.

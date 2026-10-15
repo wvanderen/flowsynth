@@ -475,3 +475,14 @@ export function newChordTerms(current: readonly NamedChordTerm[], next: readonly
     return (would.get(key) ?? 0) > (live.get(key) ?? 0);
   });
 }
+
+// The one chord a formation cue sings (issue #390) — feedback about the
+// action, never a claim about the largest production bonus. A newly
+// active instance containing the placed or changed voice is preferred;
+// among equals and when no candidate contains that voice, the first in
+// the candidates' own order stands — the allocation's stable instance
+// order, so the same board change always cues the same chord.
+export function preferredChordCue(candidates: readonly NamedChordTerm[], changedVoiceId?: string): NamedChordTerm | undefined {
+  if (!changedVoiceId) return candidates[0];
+  return candidates.find((chord) => chord.moduleIds.includes(changedVoiceId)) ?? candidates[0];
+}

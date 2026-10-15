@@ -38,9 +38,9 @@ import {
 } from "../engine/actions";
 import { ARETE_HORIZON, claimOf } from "../engine/accumulator";
 import { neighbors, hex, sameHex } from "../engine/hex";
-import { newChordTerms } from "../engine/chords";
+import { preferredChordCue } from "../engine/chords";
 import { displayedRates, mutatorAt, deployedAt } from "../engine/economy";
-import { summaryTermsOf } from "../engine/allocation";
+import { newlyActiveTermsOf, type AllocatedInstance } from "../engine/allocation";
 import { serialize, STORAGE_KEY } from "../engine/save";
 import { SharedSave, browserSaveStorage, type LoadedSave } from "./shared-save";
 import { formatClock } from "../engine/clock";
@@ -64,7 +64,7 @@ import { equipBuildNode, unequipBuildNode } from "../engine/builds";
 import { createGoal, deleteGoal, rollGoalOccurrences, setGoalColor, DEFAULT_GOAL_COLOR } from "../engine/goals";
 import { allocatedDevScenarioRates, createDevScenario, type DevBoardResult } from "../engine/dev-scenario";
 import type { StressProgress, StressRow } from "../engine/allocation-stress";
-import type { GameState, GoalColor, Hex, ModuleInstance, MutatorFamily, MutatorInstance, NamedChordTerm, Rarity, ShelfType } from "../engine/types";
+import type { GameState, GoalColor, Hex, ModuleInstance, MutatorFamily, MutatorInstance, Rarity, ShelfType } from "../engine/types";
 import type { FocusFace, NotesFace } from "./focus";
 import { render } from "./render";
 import { FAMILY_WORD, mutatorBoardLive, refreshMutPreview } from "./mutators";
@@ -1080,21 +1080,30 @@ export class App {
     this.channels.playChime(this.audio);
   }
 
-  // The formation strum (§6): a placement that forms a chord strums it —
-  // the drop gesture is the audio unlock, and the global mute silences it.
-  // The seams already said it; this is garnish, not information. The diff
-  // runs on recognition (issue #258): a chord the board newly sings is the
-  // discovery moment, active or idle. The read rides the state's stored
-  // hint, writing nothing — the action boundary already synced it.
-  private strumFormedChords(before: readonly NamedChordTerm[]): void {
+  // Cue eligibility reads authoritative instance keys, including voice
+  // membership. Recognition totals cannot distinguish a replaced voice.
+  private activeInstancesOf(snapshot: ReturnType<typeof displayedRates>): readonly AllocatedInstance[] {
+    return snapshot.allocation?.active ?? [];
+  }
+
+  // The formation cue (§6, issue #390): an action whose authoritative
+  // allocation newly activates a chord sings one of them — at most one
+  // chord, preferring one that contains the placed or changed voice.
+  // Idle candidates never sound, and an idle-only change is silent: the
+  // discovery moment stays on the recognized basis (the action
+  // boundary's sync), while the cue is feedback about earning. The seams
+  // already said it; this is garnish, not information. The read rides
+  // the state's stored hint, writing nothing — the action boundary
+  // already synced it.
+  private strumFormedChords(before: readonly AllocatedInstance[], changedVoiceId?: string): void {
     if (this.state.muted) return;
     // Same snapshot basis as the caller's `before`, so the diff can't lie
     // if the two calls ever drift apart.
     const after = displayedRates(this.state, this.state.mode === "flow");
-    const newcomers = newChordTerms(before, after.allocation ? summaryTermsOf(after.allocation) : after.namedChords);
-    if (newcomers.length === 0) return;
+    const cue = preferredChordCue(newlyActiveTermsOf(before, this.activeInstancesOf(after)), changedVoiceId);
+    if (!cue) return;
     this.unlockAudio();
-    this.channels.playStrum(this.audio, newcomers);
+    this.channels.playStrum(this.audio, cue);
   }
 
   private reportAdvance(result: AdvanceResult): void {
@@ -1597,7 +1606,10 @@ export class App {
   // step on the expanded face. The pick re-pitches the module's voice —
   // the chords move the moment it lands.
   setBendShift(id: string, shift: number): void {
-    this.act(setBendShift(this.state, id, shift), `Bend re-pitched ${shift > 0 ? "sharp" : "flat"} ${Math.abs(shift)}.`);
+    const before = this.activeInstancesOf(displayedRates(this.state, this.state.mode === "flow"));
+    if (this.act(setBendShift(this.state, id, shift), `Bend re-pitched ${shift > 0 ? "sharp" : "flat"} ${Math.abs(shift)}.`)) {
+      this.strumFormedChords(before, id);
+    }
   }
 
   // The Upgrade All cluster (issue #195): the board-wide sweep — every
@@ -1786,14 +1798,14 @@ export class App {
   // displaced module to the tray, never an implicit combine (that stays
   // the drop gesture's explicit review). Success closes the tray, keeps
   // the selected Hex and layer standing, and the rebuild refreshes the
-  // readouts and the chord row; a chord the placement newly forms strums.
+  // readouts and the chord row; a chord the placement newly activates
+  // cues (issue #390), preferring one carrying the placed voice.
   detailPlaceModule(id: string): void {
     const detail = this.ui.detail;
     if (!detail || this.state.mode !== "upgrade" || this.ui.detailTray !== "modules") return;
     const module = this.state.modules.find((m) => m.id === id);
     if (!module) return;
-    const snapshot = displayedRates(this.state, true);
-    const before = snapshot.allocation ? summaryTermsOf(snapshot.allocation) : snapshot.namedChords;
+    const before = this.activeInstancesOf(displayedRates(this.state, true));
     const swap = deployedAt(this.state, detail.pos) !== undefined;
     if (
       this.act(
@@ -1806,7 +1818,7 @@ export class App {
       // act's render and this one — only the final state shows.
       this.ui.detailTray = null;
       this.render();
-      this.strumFormedChords(before);
+      this.strumFormedChords(before, module.id);
       focusDetailRail(this.ui.detail!.face);
     }
   }
@@ -2067,13 +2079,13 @@ export class App {
 
   // The one placement landing (§5–§6), shared by the click path and the
   // drag/touch release. A drop never opens the detail — a placement keeps
-  // its gesture. A chord the drop newly forms strums (§6).
+  // its gesture. A chord the drop newly activates cues (issue #390),
+  // preferring one carrying the placed voice.
   private placeAndStrum(module: ModuleInstance, pos: Hex): void {
-    const snapshot = displayedRates(this.state, this.state.mode === "flow");
-    const before = snapshot.allocation ? summaryTermsOf(snapshot.allocation) : snapshot.namedChords;
+    const before = this.activeInstancesOf(displayedRates(this.state, this.state.mode === "flow"));
     if (this.act(placeModule(this.state, module.id, pos), `${META[module.type].name} placed.`)) {
       this.ui.placing = null;
-      this.strumFormedChords(before);
+      this.strumFormedChords(before, module.id);
     }
   }
 

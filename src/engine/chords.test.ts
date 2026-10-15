@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import { BALANCE, NAMED_CHORDS } from "./constants";
 import { OSCILLATOR_PROFILES } from "./profiles";
 import { chargedFactor, computeRates } from "./economy";
-import { analyzeChords, newChordTerms, wouldFormPreview } from "./chords";
+import { analyzeChords, newChordTerms, preferredChordCue, wouldFormPreview } from "./chords";
 import { deserialize, serialize } from "./save";
 import { fresh, give, sumSynthValues } from "./fixtures";
 import { hex } from "./hex";
 import { pitchOf } from "./lattice";
+import type { NamedChordTerm } from "./types";
 
 // The chord model (ADR-0021/0022, extended by ADR-0048/0049): register-free
 // pitch sets over connected formations of oscillators and silent voices —
@@ -561,5 +562,38 @@ describe("the would-form preview (spec §5–§6)", () => {
   it("an unknown module previews nothing", () => {
     const s = fresh();
     expect(wouldFormPreview(s, "m99", hex(0, 1)).chords).toHaveLength(0);
+  });
+});
+
+describe("the formation cue's one chord (issue #390)", () => {
+  const term = (name: string, root: number, members: string[]): NamedChordTerm => ({
+    name,
+    bonus: 0.3,
+    instances: 1,
+    moduleIds: members,
+    root,
+  });
+
+  it("prefers a newly active chord containing the changed voice", () => {
+    const candidates = [term("Octave", 0, ["m1", "m3"]), term("Fifth", 7, ["m2", "m4"])];
+    expect(preferredChordCue(candidates, "m4")?.name).toBe("Fifth");
+  });
+
+  it("breaks ties by the candidates' own order — the allocation's stable order", () => {
+    const candidates = [term("Fifth", 0, ["m1", "m3"]), term("Fifth", 7, ["m3", "m2"])];
+    expect(preferredChordCue(candidates, "m3")).toBe(candidates[0]);
+    expect(preferredChordCue([...candidates].reverse(), "m3")).toBe(candidates[1]);
+  });
+
+  it("falls back to the first candidate when none contains the changed voice", () => {
+    const candidates = [term("Octave", 0, ["m1", "m2"]), term("Fifth", 7, ["m2", "m3"])];
+    expect(preferredChordCue(candidates, "m9")).toBe(candidates[0]);
+  });
+
+  it("without a changed voice the first candidate stands, and an empty board is silent", () => {
+    const candidates = [term("Octave", 0, ["m1", "m2"]), term("Fifth", 7, ["m2", "m3"])];
+    expect(preferredChordCue(candidates)).toBe(candidates[0]);
+    expect(preferredChordCue([])).toBeUndefined();
+    expect(preferredChordCue([], "m1")).toBeUndefined();
   });
 });
