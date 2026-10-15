@@ -624,6 +624,8 @@ function historyListHtml(app: App): string {
 // vs planned, earned nous, each honesty event as a factual line, the
 // reflection if present, goals advanced, achievements unlocked. Notes and
 // the rate breakdown stay out: this is about practice, not economy replay.
+// Its title is the sheet's one heading, an h2 beneath the document's h1
+// (issue #354) — outline traversal lands on the record by level.
 function historyDrillHtml(app: App): string {
   const { state } = app;
   const record = state.sessionRecords.find((r) => r.sessionNumber === app.ui.drillSession);
@@ -653,7 +655,7 @@ function historyDrillHtml(app: App): string {
     `<p class="history-line muted">Nothing unlocked.</p>`;
   return `<div class="focus-history">
     <button class="quiet small" id="history-back">← History</button>
-    <h3 class="history-title">Session ${record.sessionNumber} · ${habit}</h3>
+    <h2 class="history-title">Session ${record.sessionNumber} · ${habit}</h2>
     <div class="stat-row"><span>When</span><span class="mono">${formatDate(record.startedAt, true)} – ${formatDate(record.endedAt, true)}</span></div>
     <div class="stat-row"><span>Plan</span><span class="mono">${plan}</span></div>
     <div class="stat-row"><span>Practice time</span><span class="mono">${formatPracticeMinutes(record.creditedSeconds, record.plannedTarget)}</span></div>

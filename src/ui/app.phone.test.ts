@@ -228,7 +228,7 @@ describe("the thumb bar (§7, portrait phone)", () => {
     app.mutSetLayer("mutators");
     app.render();
     const add = document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!;
-    expect(add.title).toContain("Unlock a Mutator slot — 2 Arete");
+    expect(add.querySelector(".tool-detail")!.textContent).toContain("Unlock a Mutator slot — 2 Arete");
     add.click();
     expect(app.ui.mutUnlockArmed).toBe(true);
     expect(app.ui.buyingCell).toBe(false);

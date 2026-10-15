@@ -514,7 +514,7 @@ describe("the horizon bar (§7, issue #156)", () => {
     expect(pip.getAttribute("aria-valuenow")).toBe("90");
     expect(pip.getAttribute("aria-valuemax")).toBe("180");
     expect(pip.getAttribute("aria-valuetext")).toContain("1:30 / 3:00 — next roll in ~1:30 of practice");
-    expect(forge.querySelector(".forge-detail")!.textContent).toContain("Flow meter 1:30 / 3:00");
+    expect(forge.querySelector(".tool-detail")!.textContent).toContain("Flow meter 1:30 / 3:00");
   });
 
   it("the break beat's flare is a dedicated layer behind the track, not an animated filter on the bar", () => {
@@ -684,10 +684,12 @@ describe("the action row (§7)", () => {
     const dock = document.getElementById("board-tools")!;
     const ops = [...dock.querySelectorAll("[data-op]")].map((b) => b.getAttribute("data-op"));
     expect(ops).toEqual(["catalog", "forge", "cell"]);
-    // The dock reads Add: the cell tool's accessible name and its title.
+    // The dock reads Add: the accessible name and the tooltip layer's read
+    // (issue #354) — no title= channel survives.
     const add = dock.querySelector<HTMLButtonElement>('[data-op="cell"]')!;
     expect(add.getAttribute("aria-label")).toBe("Add");
-    expect(add.title).toContain("Add — ");
+    expect(add.getAttribute("title")).toBeNull();
+    expect(add.querySelector(".tool-detail")!.textContent).toContain("Add — ");
     // The count badge rides the Forge icon; the charge pip strip rides beneath it.
     expect(dock.querySelector('[data-op="forge"] .forge-pip')).not.toBeNull();
     expect(document.querySelector(".legend")).toBeNull();
@@ -734,8 +736,8 @@ describe("the action row (§7)", () => {
     // The pip shows the flow meter: half of the 3-minute opening fill.
     expect(forge.querySelector('[data-live="forge-pip"]')!.getAttribute("style")).toContain("50");
     // The detail lists every meter's progress, threshold, and rate.
-    expect(forge.querySelector(".forge-detail")!.textContent).toContain("Flow meter 1:30 / 3:00 — next roll in ~1:30 of practice");
-    expect(forge.querySelector(".forge-detail")!.textContent).toContain("Forge progress 30 / 60");
+    expect(forge.querySelector(".tool-detail")!.textContent).toContain("Flow meter 1:30 / 3:00 — next roll in ~1:30 of practice");
+    expect(forge.querySelector(".tool-detail")!.textContent).toContain("Forge progress 30 / 60");
     // The sheet locks in flow (#233): the dock button disables, the pip
     // stays as the indicator, and the tooltip carries the meter read plus
     // the lock reason. The click never expands the sheet mid-session.
@@ -743,9 +745,9 @@ describe("the action row (§7)", () => {
     startSession(app.state, null);
     app.render();
     const flowForge = document.querySelector<HTMLButtonElement>('#board-tools [data-op="forge"]')!;
-    expect(flowForge.disabled).toBe(true);
+    expect(flowForge.getAttribute("aria-disabled")).toBe("true");
     expect(flowForge.querySelector('[data-live="forge-pip"]')).not.toBeNull();
-    expect(flowForge.querySelector(".forge-detail")!.textContent).toContain("choices settle between sessions.");
+    expect(flowForge.querySelector(".tool-detail")!.textContent).toContain("choices settle between sessions.");
     flowForge.click();
     expect(app.ui.modal).toBeNull();
   });
@@ -756,8 +758,8 @@ describe("the action row (§7)", () => {
     app.render();
     for (const host of ["board-tools", "thumb-bar"]) {
       const forge = document.querySelector<HTMLButtonElement>(`#${host} [data-op="forge"]`)!;
-      expect(forge.disabled).toBe(true);
-      const detail = forge.querySelector<HTMLElement>(".forge-detail")!;
+      expect(forge.getAttribute("aria-disabled")).toBe("true");
+      const detail = forge.querySelector<HTMLElement>(".tool-detail")!;
       forge.dispatchEvent(new MouseEvent("mouseenter"));
       expect(detail.hidden).toBe(false);
       // Hover openness is announced (#351) — the trigger never reads
@@ -778,7 +780,7 @@ describe("the action row (§7)", () => {
     app.render();
     for (const host of ["board-tools", "thumb-bar"]) {
       const forge = document.querySelector<HTMLButtonElement>(`#${host} [data-op="forge"]`)!;
-      const detail = forge.querySelector<HTMLElement>(".forge-detail")!;
+      const detail = forge.querySelector<HTMLElement>(".tool-detail")!;
       expect(detail.hidden).toBe(true);
       expect(forge.getAttribute("aria-describedby")).toBe(detail.id);
       forge.focus();
@@ -788,7 +790,7 @@ describe("the action row (§7)", () => {
       expect(app.ui.modal).toBeNull();
       app.state.flow.progress = 90;
       app.render();
-      expect(forge.querySelector(".forge-detail")).toBe(detail);
+      expect(forge.querySelector(".tool-detail")).toBe(detail);
       expect(detail.textContent).toContain("Flow meter 1:30 / 3:00");
       expect(detail.textContent).toContain("Forge progress");
       forge.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
@@ -852,7 +854,7 @@ describe("the action row (§7)", () => {
     startSession(app.state, null);
     app.render();
     const forgeButton = document.querySelector<HTMLButtonElement>('#board-tools [data-op="forge"]')!;
-    expect(forgeButton.disabled).toBe(true);
+    expect(forgeButton.getAttribute("aria-disabled")).toBe("true");
     forgeButton.click();
     expect(app.ui.modal).toBeNull();
     expect(app.state.bankedRolls).toHaveLength(1);
@@ -866,7 +868,7 @@ describe("the action row (§7)", () => {
     // Arming re-renders the dock; the re-queried icon is active.
     const armed = document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!;
     expect(armed.classList.contains("active")).toBe(true);
-    expect(armed.title).toContain("Esc cancels");
+    expect(armed.querySelector(".tool-detail")!.textContent).toContain("Esc cancels");
     // Armed again toggles off; no banner element exists anywhere.
     armed.click();
     expect(app.ui.buyingCell).toBe(false);
@@ -877,8 +879,8 @@ describe("the action row (§7)", () => {
     app.render();
     const dockOps = () => [...document.querySelectorAll<HTMLButtonElement>('#board-tools [data-op]')];
     // Catalog and Forge stand open in upgrade mode; Add is price-gated.
-    expect(dockOps()[0]!.disabled).toBe(false);
-    expect(dockOps()[1]!.disabled).toBe(false);
+    expect(dockOps()[0]!.getAttribute("aria-disabled")).toBe("false");
+    expect(dockOps()[1]!.getAttribute("aria-disabled")).toBe("false");
     expect(document.getElementById("inventory-zone")!.classList.contains("off")).toBe(false);
     app.state.sessionsCompleted = 1;
     startSession(app.state, 600);
@@ -886,10 +888,96 @@ describe("the action row (§7)", () => {
     // No Inventory button exists to lock — the dock reads Catalog/Forge/Add,
     // every tool disabled, and the column gone with the locked board.
     expect(dockOps().map((b) => b.getAttribute("data-op"))).toEqual(["catalog", "forge", "cell"]);
-    for (const button of dockOps()) expect(button.disabled).toBe(true);
-    expect(dockOps()[0]!.title).toContain("purchases happen between sessions");
-    expect(dockOps()[2]!.title).toBe("Add — purchases happen between sessions");
+    for (const button of dockOps()) expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(dockOps()[0]!.querySelector(".tool-detail")!.textContent).toContain("purchases happen between sessions");
+    expect(dockOps()[2]!.querySelector(".tool-detail")!.textContent).toBe("Add — purchases happen between sessions");
     expect(document.getElementById("inventory-zone")!.classList.contains("off")).toBe(true);
+  });
+
+  it("touch inspects before activation and tap-away dismisses tool descriptions", () => {
+    app.render();
+    const catalog = document.querySelector<HTMLButtonElement>('#thumb-bar [data-op="catalog"]')!;
+    const detail = catalog.querySelector<HTMLElement>(".tool-detail")!;
+    const touch = () => {
+      const event = new Event("pointerdown", { bubbles: true });
+      Object.defineProperty(event, "pointerType", { value: "touch" });
+      catalog.dispatchEvent(event);
+      catalog.click();
+    };
+    touch();
+    expect(detail.hidden).toBe(false);
+    expect(app.ui.modal).toBeNull();
+    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    expect(detail.hidden).toBe(true);
+    touch();
+    expect(app.ui.modal).toBeNull();
+    touch();
+    expect(app.ui.modal).toBe("catalog");
+  });
+
+  it("unaffordable Add stays focusable but refuses activation", () => {
+    app.state.nous = 0;
+    app.render();
+    const add = document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!;
+    expect(add.getAttribute("aria-disabled")).toBe("true");
+    add.focus();
+    expect(document.activeElement).toBe(add);
+    expect(add.querySelector<HTMLElement>(".tool-detail")!.hidden).toBe(false);
+    add.click();
+    expect(app.ui.buyingCell).toBe(false);
+  });
+
+  it("every tool icon's extended description rides the tooltip layer, never title= (issue #354)", () => {
+    // The forge pattern generalized (issue #354): each icon stands
+    // described-by its collapsed detail span; the native title is gone.
+    app.state.nous = BALANCE.cellFirstCost;
+    app.render();
+    for (const host of ["board-tools", "thumb-bar"]) {
+      for (const button of document.querySelectorAll<HTMLButtonElement>(`#${host} [data-op]`)) {
+        expect(button.getAttribute("title")).toBeNull();
+        const detail = button.querySelector<HTMLElement>(".tool-detail")!;
+        expect(detail.getAttribute("role")).toBe("tooltip");
+        expect(button.getAttribute("aria-describedby")).toBe(detail.id);
+        expect(button.getAttribute("aria-expanded")).toBe("false");
+        expect(detail.hidden).toBe(true);
+        // The description is never empty — the layer carries the same read
+        // the retired title quoted.
+        expect(detail.textContent!.length).toBeGreaterThan(0);
+      }
+    }
+    // The forge keeps its live meter read; Collection's is the static gloss.
+    expect(document.querySelector('#board-tools [data-op="forge"] .tool-detail')!.textContent).toContain("Flow meter");
+    expect(document.querySelector('#thumb-bar [data-op="collection"] .tool-detail')!.textContent).toBe("Collection — feats and the chord library");
+  });
+
+  it("focus, hover, and Escape open and dismiss every tool icon's detail (issue #354)", () => {
+    app.state.nous = BALANCE.cellFirstCost;
+    app.render();
+    for (const [host, ops] of [
+      ["board-tools", ["catalog", "forge", "cell"]],
+      ["thumb-bar", ["catalog", "forge", "cell", "inventory", "collection"]],
+    ] as const) {
+      for (const op of ops) {
+        const button = document.querySelector<HTMLButtonElement>(`#${host} [data-op="${op}"]`)!;
+        const detail = button.querySelector<HTMLElement>(".tool-detail")!;
+        // Focus opens; the trigger keeps focus and announces expanded.
+        button.focus();
+        expect(document.activeElement).toBe(button);
+        expect(detail.hidden).toBe(false);
+        expect(button.getAttribute("aria-expanded")).toBe("true");
+        // Escape dismisses the tip alone.
+        button.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        expect(detail.hidden).toBe(true);
+        expect(button.getAttribute("aria-expanded")).toBe("false");
+        // Hover opens and leaving closes — focus released first, since a
+        // focused trigger holds the tip open by design.
+        button.blur();
+        button.dispatchEvent(new MouseEvent("mouseenter"));
+        expect(detail.hidden).toBe(false);
+        button.dispatchEvent(new MouseEvent("mouseleave"));
+        expect(detail.hidden).toBe(true);
+      }
+    }
   });
 
   it("the Catalog door wears the rack-and-arrow glyph, distinct from the layer controls, name intact (#336)", () => {
@@ -923,7 +1011,7 @@ describe("the action row (§7)", () => {
     for (const host of ["board-tools", "thumb-bar"]) {
       for (const op of ["catalog", "forge", "cell"]) {
         const button = document.querySelector<HTMLButtonElement>(`#${host} [data-op="${op}"]`)!;
-        expect(button.disabled).toBe(true);
+        expect(button.getAttribute("aria-disabled")).toBe("true");
         // The one lock mark — the drawing the locked layer legend wears.
         const lock = button.querySelector<SVGElement>(".tool-lock svg")!;
         expect(lock.innerHTML).toBe(legendLock);
@@ -935,7 +1023,7 @@ describe("the action row (§7)", () => {
     // clickable — the one live door beside the locked row.
     expect(document.querySelector('#board-tools [data-op="collection"]')).toBeNull();
     const collection = document.querySelector<HTMLButtonElement>('#thumb-bar [data-op="collection"]')!;
-    expect(collection.disabled).toBe(false);
+    expect(collection.getAttribute("aria-disabled")).toBe("false");
     expect(collection.querySelector(".tool-lock")).toBeNull();
     collection.click();
     expect(app.ui.modal).toBe("collection");
@@ -955,15 +1043,16 @@ describe("the action row (§7)", () => {
     flowCell.click();
     expect(app.ui.modal).toBeNull();
     expect(app.ui.buyingCell).toBe(false);
-    // Keyboard: a disabled control takes no focus and no activation.
+    // Keyboard: the locked action stays focusable for its description.
     flowCatalog.focus();
-    expect(document.activeElement).not.toBe(flowCatalog);
+    expect(document.activeElement).toBe(flowCatalog);
+    expect(flowCatalog.querySelector<HTMLElement>(".tool-detail")!.hidden).toBe(false);
     // Returning to upgrade mode restores the actionable states.
     endSession(app.state);
     app.render();
     for (const op of ["catalog", "forge", "cell"]) {
       const button = document.querySelector<HTMLButtonElement>(`#board-tools [data-op="${op}"]`)!;
-      expect(button.disabled).toBe(false);
+      expect(button.getAttribute("aria-disabled")).toBe("false");
       expect(button.querySelector(".tool-lock")).toBeNull();
     }
     document.querySelector<HTMLButtonElement>('#board-tools [data-op="catalog"]')!.click();

@@ -883,7 +883,7 @@ describe("the harmonic-capacity ladder (#259)", () => {
     // The nous face: generator charge and Harmonic capacity glosses.
     document.querySelector<HTMLButtonElement>('[data-catalog-face="nous"]')!.click();
     texts = read();
-    expect(texts).toEqual(["Generator output that powers other modules", "Re-earned after arete reset", "Whole-chord budget per voice"]);
+    expect(texts).toEqual(["Generator output that powers other modules", "Whole-chord budget per voice", "Re-earned after arete reset", "Whole-chord budget per voice"]);
   });
 
   it("the sheet's capacity offerings stand inert outside upgrade mode", () => {

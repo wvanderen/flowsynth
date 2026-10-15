@@ -321,7 +321,7 @@ describe("the controls sheet's stylesheet contract", () => {
       ".hex-detail-tray {",
       ".mut-popover {",
       ".arc-card {",
-      ".forge-detail {",
+      ".tool-detail {",
       ".sweep-chip {",
     ]) {
       const rest = css.slice(css.indexOf(selector));

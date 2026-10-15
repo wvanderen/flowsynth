@@ -12,6 +12,7 @@ import { advance } from "../engine/advance";
 import { applyGap, flushPendingAway, resolveHonestyReport } from "../engine/trust";
 import { recordMissed, recordTargetHit } from "../engine/records";
 import { createInitialState } from "../engine/state";
+import { BALANCE } from "../engine/constants";
 import { formatInt } from "./format";
 import { createAppFixture } from "./testing/app-fixture";
 
@@ -1012,5 +1013,67 @@ describe("the GOALS face's slots and purchase row (#150)", () => {
     buy().click();
     expect(slots()).toContain("0/4");
     expect(s.goalCapacityBought).toBe(2);
+  });
+});
+
+describe("the heading outline (issue #354)", () => {
+  // A usable outline: exactly one h1 leading, and no heading ever jumps
+  // more than one level deeper than its predecessor — every h3 sits
+  // beneath an h2 by construction.
+  function expectUsableOutline(): void {
+    const levels = [...document.querySelectorAll("h1, h2, h3, h4, h5, h6")].map((h) => Number(h.tagName[1]));
+    expect(levels.filter((level) => level === 1)).toHaveLength(1);
+    expect(levels[0]).toBe(1);
+    for (let i = 1; i < levels.length; i++) {
+      expect(levels[i]).toBeLessThanOrEqual(levels[i - 1]! + 1);
+    }
+  }
+
+  it("the document opens on one h1 and the base instrument outlines cleanly", () => {
+    app.render();
+    expect(document.querySelector("h1")!.textContent).toBe("FlowSynth");
+    expectUsableOutline();
+  });
+
+  it("every catalog face outlines cleanly — the empty shelf included", () => {
+    const s = app.state;
+    app.openModal("catalog");
+    expectUsableOutline();
+    // The arete face, entry owned: Upgrades and Module Types lead their rows.
+    s.catalogEntryOwned = true;
+    app.render();
+    document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!.click();
+    expectUsableOutline();
+    // The nous face with the starter shelf retired: the capacity section's
+    // own h2 keeps the Poly Expander row from standing beneath nothing.
+    for (const type of Object.keys(BALANCE.shelfPrices) as (keyof typeof BALANCE.shelfPrices)[]) s.purchased[type] = true;
+    app.ui.catalogFace = "nous";
+    app.render();
+    expectUsableOutline();
+    app.closeModal();
+  });
+
+  it("the feats, chords, and settings surfaces outline cleanly", () => {
+    app.render();
+    for (const kind of ["collection", "library", "achievements", "settings"] as const) {
+      app.openModal(kind);
+      expectUsableOutline();
+      app.closeModal();
+    }
+  });
+
+  it("the history drill-down's record title is an h2 beneath the document's h1", () => {
+    const s = app.state;
+    startSession(s, null, DAY);
+    advance(s, 120);
+    endSession(s, DAY + 600_000);
+    app.openApp("time");
+    document.querySelector<HTMLButtonElement>('[data-face="history"]')!.click();
+    document.querySelector<HTMLButtonElement>('[data-drill="1"]')!.click();
+    const sheet = document.getElementById("app-popover")!;
+    expect(sheet.querySelector(".history-title")!.tagName).toBe("H2");
+    expect(sheet.querySelector(".history-title")!.textContent).toContain("Session 1");
+    expectUsableOutline();
+    app.closeApp();
   });
 });
