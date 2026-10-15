@@ -1,0 +1,317 @@
+[
+  {
+    "width": 1280,
+    "height": 800,
+    "provenance": {
+      "app": "flowsynth",
+      "worktree": "/private/tmp/flowsynth-review-397",
+      "branch": null,
+      "commit": "6aef7d5e1b058f68df02d4063ba67d5bbfc9229a"
+    },
+    "geometry": {
+      "row": {
+        "left": 32,
+        "right": 297.15625,
+        "top": 678,
+        "bottom": 716,
+        "width": 265.15625,
+        "height": 38
+      },
+      "zoom": {
+        "left": 1212,
+        "right": 1248,
+        "top": 674,
+        "bottom": 788,
+        "width": 36,
+        "height": 114
+      },
+      "buttons": [
+        {
+          "left": 110.734375,
+          "right": 154.734375,
+          "top": 678,
+          "bottom": 716,
+          "width": 44,
+          "height": 38
+        },
+        {
+          "left": 157.734375,
+          "right": 201.734375,
+          "top": 678,
+          "bottom": 716,
+          "width": 44,
+          "height": 38
+        },
+        {
+          "left": 204.734375,
+          "right": 248.734375,
+          "top": 678,
+          "bottom": 716,
+          "width": 44,
+          "height": 38
+        },
+        {
+          "left": 251.734375,
+          "right": 297.15625,
+          "top": 678,
+          "bottom": 716,
+          "width": 45.421875,
+          "height": 38
+        }
+      ]
+    },
+    "purchase": true
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "provenance": {
+      "app": "flowsynth",
+      "worktree": "/private/tmp/flowsynth-review-397",
+      "branch": null,
+      "commit": "6aef7d5e1b058f68df02d4063ba67d5bbfc9229a"
+    },
+    "geometry": {
+      "row": {
+        "left": 22,
+        "right": 312,
+        "top": 686,
+        "bottom": 724,
+        "width": 290,
+        "height": 38
+      },
+      "zoom": {
+        "left": 322,
+        "right": 366,
+        "top": 636,
+        "bottom": 780,
+        "width": 44,
+        "height": 144
+      },
+      "buttons": [
+        {
+          "left": 113.15625,
+          "right": 157.15625,
+          "top": 686,
+          "bottom": 724,
+          "width": 44,
+          "height": 38
+        },
+        {
+          "left": 160.15625,
+          "right": 204.15625,
+          "top": 686,
+          "bottom": 724,
+          "width": 44,
+          "height": 38
+        },
+        {
+          "left": 207.15625,
+          "right": 251.15625,
+          "top": 686,
+          "bottom": 724,
+          "width": 44,
+          "height": 38
+        },
+        {
+          "left": 254.15625,
+          "right": 299.578125,
+          "top": 686,
+          "bottom": 724,
+          "width": 45.421875,
+          "height": 38
+        }
+      ]
+    },
+    "purchase": true
+  },
+  {
+    "width": 390,
+    "height": 560,
+    "provenance": {
+      "app": "flowsynth",
+      "worktree": "/private/tmp/flowsynth-review-397",
+      "branch": null,
+      "commit": "6aef7d5e1b058f68df02d4063ba67d5bbfc9229a"
+    },
+    "geometry": {
+      "row": {
+        "left": 22,
+        "right": 312,
+        "top": 402,
+        "bottom": 440,
+        "width": 290,
+        "height": 38
+      },
+      "zoom": {
+        "left": 322,
+        "right": 366,
+        "top": 352,
+        "bottom": 496,
+        "width": 44,
+        "height": 144
+      },
+      "buttons": [
+        {
+          "left": 113.15625,
+          "right": 157.15625,
+          "top": 402,
+          "bottom": 440,
+          "width": 44,
+          "height": 38
+        },
+        {
+          "left": 160.15625,
+          "right": 204.15625,
+          "top": 402,
+          "bottom": 440,
+          "width": 44,
+          "height": 38
+        },
+        {
+          "left": 207.15625,
+          "right": 251.15625,
+          "top": 402,
+          "bottom": 440,
+          "width": 44,
+          "height": 38
+        },
+        {
+          "left": 254.15625,
+          "right": 299.578125,
+          "top": 402,
+          "bottom": 440,
+          "width": 45.421875,
+          "height": 38
+        }
+      ]
+    },
+    "purchase": true
+  },
+  {
+    "width": 360,
+    "height": 560,
+    "provenance": {
+      "app": "flowsynth",
+      "worktree": "/private/tmp/flowsynth-review-397",
+      "branch": null,
+      "commit": "6aef7d5e1b058f68df02d4063ba67d5bbfc9229a"
+    },
+    "geometry": {
+      "row": {
+        "left": 22,
+        "right": 282,
+        "top": 402,
+        "bottom": 440,
+        "width": 260,
+        "height": 38
+      },
+      "zoom": {
+        "left": 292,
+        "right": 336,
+        "top": 352,
+        "bottom": 496,
+        "width": 44,
+        "height": 144
+      },
+      "buttons": [
+        {
+          "left": 96.734375,
+          "right": 140.734375,
+          "top": 402,
+          "bottom": 440,
+          "width": 44,
+          "height": 38
+        },
+        {
+          "left": 143.734375,
+          "right": 187.734375,
+          "top": 402,
+          "bottom": 440,
+          "width": 44,
+          "height": 38
+        },
+        {
+          "left": 190.734375,
+          "right": 234.734375,
+          "top": 402,
+          "bottom": 440,
+          "width": 44,
+          "height": 38
+        },
+        {
+          "left": 237.734375,
+          "right": 282,
+          "top": 402,
+          "bottom": 440,
+          "width": 44.265625,
+          "height": 38
+        }
+      ]
+    },
+    "purchase": true
+  },
+  {
+    "width": 320,
+    "height": 560,
+    "provenance": {
+      "app": "flowsynth",
+      "worktree": "/private/tmp/flowsynth-review-397",
+      "branch": null,
+      "commit": "6aef7d5e1b058f68df02d4063ba67d5bbfc9229a"
+    },
+    "geometry": {
+      "row": {
+        "left": 22,
+        "right": 242,
+        "top": 402,
+        "bottom": 440,
+        "width": 220,
+        "height": 38
+      },
+      "zoom": {
+        "left": 252,
+        "right": 296,
+        "top": 352,
+        "bottom": 496,
+        "width": 44,
+        "height": 144
+      },
+      "buttons": [
+        {
+          "left": 53.453125,
+          "right": 97.453125,
+          "top": 402,
+          "bottom": 440,
+          "width": 44,
+          "height": 38
+        },
+        {
+          "left": 100.453125,
+          "right": 144.453125,
+          "top": 402,
+          "bottom": 440,
+          "width": 44,
+          "height": 38
+        },
+        {
+          "left": 147.453125,
+          "right": 191.453125,
+          "top": 402,
+          "bottom": 440,
+          "width": 44,
+          "height": 38
+        },
+        {
+          "left": 194.453125,
+          "right": 239.875,
+          "top": 402,
+          "bottom": 440,
+          "width": 45.421875,
+          "height": 38
+        }
+      ]
+    },
+    "purchase": true
+  }
+]
