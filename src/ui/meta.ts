@@ -29,6 +29,12 @@ export const SHELF_DESCRIPTIONS: Partial<Record<ShelfType, string>> = {
 
 export const RARITY_LABEL: Record<Rarity, string> = { common: "common", uncommon: "uncommon", rare: "rare" };
 
+// The merge tier's player-facing word (ADR-0058), 1-based — the verbal
+// home of the engraved rings for labels, tooltips, and screen readers.
+export function tierWord(tier: number): string {
+  return `Tier ${tier + 1}`;
+}
+
 // Focus-app display names, shared by the console tiles and purchase surfaces.
 export const APP_LABELS: Record<FocusApp, string> = { habit: "Habit", time: "Time", notes: "Notes", goals: "Goals" };
 

@@ -118,9 +118,9 @@ describe("the achievement registry", () => {
       second.bankedRolls.push({
         id,
         candidates: [
-          { id: `${id}-c1`, type: "additive", rarity: "common" },
-          { id: `${id}-c2`, type: "spacer", rarity: "common" },
-          { id: `${id}-c3`, type: "infusor", rarity: "common" },
+          { id: `${id}-c1`, type: "additive", tier: 0 },
+          { id: `${id}-c2`, type: "spacer", tier: 0 },
+          { id: `${id}-c3`, type: "infusor", tier: 0 },
         ],
       });
     }
@@ -312,19 +312,21 @@ describe("the 17-feat launch set", () => {
     expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual(["roll-credit"]);
   });
 
-  it("Two of a kind and Fine china: combining pairs up the rarity ladder", () => {
+  it("Two of a kind and Fine china: combining pairs up the merge ladder", () => {
     const s = fresh();
     completeSession(s);
     const a = give(s, "additive", null);
     const b = give(s, "additive", null);
     expect(combine(s, a.id, b.id).unlocked).toEqual(["two-of-a-kind"]);
     expect(s.combinations).toBe(1);
+    // The pair at tier 1 climbs again, and a copy at the unlocked cap is
+    // the feat's gem (ADR-0058).
     const c = give(s, "additive", null);
     const d = give(s, "additive", null);
-    c.rarity = "uncommon";
-    d.rarity = "uncommon";
+    c.tier = 1;
+    d.tier = 1;
     expect(combine(s, c.id, d.id).unlocked).toEqual(["fine-china"]);
-    expect(s.modules.some((m) => m.rarity === "rare")).toBe(true);
+    expect(s.modules.some((m) => m.tier >= 2)).toBe(true);
   });
 
   it("Power chord: one voice carries its earned whole chord past ×2", () => {

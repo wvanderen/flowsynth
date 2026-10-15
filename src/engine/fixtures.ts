@@ -8,7 +8,7 @@ export function fresh(): GameState {
 }
 
 export function give(state: GameState, type: ModuleType, pos: Hex | null, level = 0): ModuleInstance {
-  const module: ModuleInstance = { ...createModule(state, type, "common"), pos };
+  const module: ModuleInstance = { ...createModule(state, type), pos };
   if (level > 0) {
     module.level = level;
     module.invested = investment(level);

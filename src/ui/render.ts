@@ -43,7 +43,8 @@ import { renderHexDetail } from "./hexdetail";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chordMarkCovers, chipWidth, CHORD_HUES, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
-import { APP_LABELS, META, RARITY_LABEL, SHELF_DESCRIPTIONS } from "./meta";
+import { APP_LABELS, META, RARITY_LABEL, SHELF_DESCRIPTIONS, tierWord } from "./meta";
+import { typeRarityOf } from "../engine/constants";
 import { formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown } from "./format";
 import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG, CAPACITY_SVG } from "./ledger";
 import { closeTooltips, wireTooltips } from "./instrument";
@@ -1746,11 +1747,11 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
   // Exactly the charged and dispensing faces light, as the breathe always
   // has; uncharged faces carry no layer at all.
   const lit = charged || emittingNow;
-  return `<g class="module-node${crossed ? " forge-crossed" : ""}" data-type="${module.type}" data-rarity="${module.rarity}">
+  return `<g class="module-node${crossed ? " forge-crossed" : ""}" data-type="${module.type}" data-rarity="${typeRarityOf(module.type)}">
     ${lit ? `<polygon data-key="hex-glow" class="hex-glow" points="${hexPoints(HEX_RADIUS)}"/>` : ""}
     ${moduleFace({
       type: module.type,
-      rarity: module.rarity,
+      tier: module.tier,
       readout,
       ...(readoutClass ? { readoutClass } : {}),
       ...(note ? { note } : {}),
@@ -2276,7 +2277,7 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
         const module = app.state.modules.find((m) => m.id === id);
         const ghost = document.createElement("div");
         ghost.className = "drag-ghost";
-        if (module) ghost.dataset.rarity = module.rarity;
+        if (module) ghost.dataset.rarity = typeRarityOf(module.type);
         ghost.innerHTML = module
           ? inventoryTileSvg(module)
           : `<svg viewBox="-75 -75 150 150" aria-hidden="true"><polygon class="hex" points="${hexPoints(HEX_RADIUS)}"/></svg>`;
@@ -2338,14 +2339,14 @@ function renderInventoryTray(app: App): void {
   const open = state.mode === "upgrade" && ui.mutLayer === "modules";
   tray.classList.toggle("off", !open);
   const inventory = state.modules.filter((m) => m.pos === null);
-  const key = JSON.stringify(inventory.map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`));
+  const key = JSON.stringify(inventory.map((m) => `${m.id}:${m.type}:${m.level}:${m.tier}`));
   if (tray.dataset.renderKey === key) return;
   tray.dataset.renderKey = key;
   tray.innerHTML = `<div class="tray-items">${
     inventory
       .map(
         (m) =>
-          `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}" title="${META[m.type].name} · ${RARITY_LABEL[m.rarity]} — click, then a cell">${inventoryTileSvg(m)}</button>`,
+          `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${typeRarityOf(m.type)}" data-type="${m.type}" title="${META[m.type].name} · ${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)} — click, then a cell">${inventoryTileSvg(m)}</button>`,
       )
       .join("") || `<span class="tray-empty">drag a module here to store it</span>`
   }</div>`;
@@ -2467,7 +2468,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                   app.state.capacityCeilings,
                   app.state.capacityDiscounts,
                   // Module-upgrade rows reprice with levels, moves, and the roster.
-                  app.state.modules.map((m) => `${m.id}:${m.level}:${m.rarity}:${m.pos ? "d" : "i"}`).join("|"),
+                  app.state.modules.map((m) => `${m.id}:${m.level}:${m.tier}:${m.pos ? "d" : "i"}`).join("|"),
                   app.state.arete,
                   app.state.catalogEntryOwned,
                   app.state.rollPoolJoined,
@@ -2495,7 +2496,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                   ? [deployedRosterKey(app.state), unlockedCount(app.state), discoveryCount(app.state)]
                 : kind === "inventory"
                   ? [
-                      app.state.modules.filter((m) => m.pos === null).map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`),
+                      app.state.modules.filter((m) => m.pos === null).map((m) => `${m.id}:${m.type}:${m.level}:${m.tier}`),
                       // The tray sheet's face rides the global switch, and
                       // the Mutators face re-reads the tray (issue #272).
                       // The entry's ownership rides too: the purchase
@@ -2648,7 +2649,7 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
         inventory
           .map(
             (m) =>
-              `<span class="inst-tip tray-tile-detail"><button class="inventory-tile" data-inv="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}"${locked ? " disabled" : ""} aria-label="${META[m.type].name} · ${RARITY_LABEL[m.rarity]}" aria-describedby="tray-module-${m.id}">${inventoryTileSvg(m)}</button>${trayTileDisclosure(`tray-module-${m.id}`, META[m.type].name, `${RARITY_LABEL[m.rarity]} — ${locked ? "locked during flow" : "tap, then a cell"}`)}</span>`,
+              `<span class="inst-tip tray-tile-detail"><button class="inventory-tile" data-inv="${m.id}" data-rarity="${typeRarityOf(m.type)}" data-type="${m.type}"${locked ? " disabled" : ""} aria-label="${META[m.type].name} · ${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)}" aria-describedby="tray-module-${m.id}">${inventoryTileSvg(m)}</button>${trayTileDisclosure(`tray-module-${m.id}`, META[m.type].name, `${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)} — ${locked ? "locked during flow" : "tap, then a cell"}`)}</span>`,
           )
           .join("") || `<span class="tray-empty">drag a module here to store it</span>`
       }</div>`;
@@ -2721,24 +2722,26 @@ function combineOfferTerms(
   return offer && drag && target && preview ? { drag, target, preview } : null;
 }
 
-// The combine review (issue #152): the drop's terms — resulting rarity,
-// the retained higher level, the refund — laid out before either copy is
-// consumed. Cancel (button, ✕, backdrop, Esc) lands in closeModal and
-// leaves both modules exactly as they were; confirm performs the combine
-// and the result lands where the drop target was.
+// The combine review (issue #152, reworded by ADR-0058): the drop's terms —
+// the resulting merge tier, the retained higher level, the refund — laid
+// out before either copy is consumed. The named type and its fixed rarity
+// never change here, so they identify the pair and nothing more. Cancel
+// (button, ✕, backdrop, Esc) lands in closeModal and leaves both modules
+// exactly as they were; confirm performs the combine and the result lands
+// where the drop target was.
 function renderCombineModal(app: App, content: HTMLElement): void {
   // renderModal drops a dead offer before the dispatch, so the terms are
   // always readable here — the render pass stays free of a nested
   // closeModal render.
   const { drag, target, preview } = combineOfferTerms(app)!;
-  const pairLine = (module: ModuleInstance) => `${META[module.type].name} · ${RARITY_LABEL[module.rarity]} · LV ${module.level}`;
+  const pairLine = (module: ModuleInstance) => `${META[module.type].name} · ${RARITY_LABEL[typeRarityOf(module.type)]} · ${tierWord(module.tier)} · LV ${module.level}`;
   const destination = target.pos === null ? "The combined copy waits in the tray." : `The combined copy holds ${cellNoteOf(target.pos)}.`;
   content.innerHTML = `
     ${modalTop("COMBINE")}
     <h2 id="modal-title">Combine these two?</h2>
     <p class="lead">${pairLine(drag)}<br />+ ${pairLine(target)}</p>
     <div class="combine-terms">
-      <div class="stat-row"><span>Resulting rarity</span><span class="mono">${RARITY_LABEL[preview.nextRarity]}</span></div>
+      <div class="stat-row"><span>Resulting tier</span><span class="mono">${tierWord(preview.nextTier)}</span></div>
       <div class="stat-row"><span>Retained level</span><span class="mono">LV ${preview.level}</span></div>
       <div class="stat-row"><span>Upgrade refund</span><span class="mono">${formatInt(preview.refund)} ν</span></div>
     </div>
@@ -3339,12 +3342,12 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
     ${hasOffer ? `<p class="forge-choice-cue">Choose 1 of ${face === "modules" ? 3 : 2}</p>
     <div class="candidates ${face === "mutators" ? "mut-candidates" : ""}">
       ${face === "modules" && offer ? offer.candidates.map(candidate => `
-        <div class="candidate-tile" data-rarity="${candidate.rarity}" data-type="${candidate.type}"><button class="candidate-pick" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${candidate.rarity}" data-type="${candidate.type}" aria-label="Take ${RARITY_LABEL[candidate.rarity]} ${META[candidate.type].name}" aria-describedby="forge-effect-${candidate.id}"></button>
-          <svg viewBox="-70 -70 140 140" aria-hidden="true">${moduleFace({ type: candidate.type, rarity: candidate.rarity, readout: candidateReadout(candidate.type) })}</svg>
+        <div class="candidate-tile" data-rarity="${typeRarityOf(candidate.type)}" data-type="${candidate.type}"><button class="candidate-pick" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${typeRarityOf(candidate.type)}" data-type="${candidate.type}" aria-label="Take ${RARITY_LABEL[typeRarityOf(candidate.type)]} ${META[candidate.type].name}" aria-describedby="forge-effect-${candidate.id}"></button>
+          <svg viewBox="-70 -70 140 140" aria-hidden="true">${moduleFace({ type: candidate.type, tier: candidate.tier, readout: candidateReadout(candidate.type) })}</svg>
           <span class="candidate-readout"><span class="candidate-name">${META[candidate.type].name}</span>
-          <span class="rarity">${RARITY_LABEL[candidate.rarity]}</span>
+          <span class="rarity">${RARITY_LABEL[typeRarityOf(candidate.type)]}</span>
           <span id="forge-effect-${candidate.id}" class="candidate-effect">${forgeEffectHtml(forgeEffect(candidate.type))}</span>
-          ${candidate.type !== "spacer" ? `<span class="candidate-scaling">+${formatNumber((BALANCE.rarityPower[candidate.rarity] - 1) * 100)}% / level · upgrades from 10 ν</span>` : ""}</span>
+          ${candidate.type !== "spacer" ? `<span class="candidate-scaling">+${formatNumber((BALANCE.rarityPower[typeRarityOf(candidate.type)] - 1) * 100)}% / level · upgrades from 10 ν</span>` : ""}</span>
         </div>`).join("") : mutOffer ? mutOffer.candidates.map(candidate => `
         <div class="candidate-tile mut-candidate" data-rarity="${candidate.rarity}"><button class="candidate-pick" data-mut-choice="${candidate.id}" data-mut-offer="${mutOffer.id}" data-rarity="${candidate.rarity}" aria-label="Take ${RARITY_LABEL[candidate.rarity]} ${FAMILY_WORD[candidate.family]} mutator" aria-describedby="forge-effect-${candidate.id}"></button>
           <svg viewBox="-70 -70 140 140" aria-hidden="true" style="color:var(--arete)">${mutatorTileInner(candidate)}</svg>

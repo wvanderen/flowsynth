@@ -52,7 +52,7 @@ const RATE_TOTAL_SLOT = "b-rate";
 const RATE_GLOBAL_SLOT = "b-global";
 const synthSlot = (id: string): string => `s-${id}-v`;
 
-// The deployed roster's identity — id, kind, level, rarity, cell — the
+// The deployed roster's identity — id, kind, level, tier, cell — the
 // structural key both the ledger strip and the rate sheet rebuild on (a
 // move changes a note name, an upgrade a base figure). The placed
 // mutators ride in the key too (issue #198): a mutator placed onto or
@@ -61,7 +61,7 @@ const synthSlot = (id: string): string => `s-${id}-v`;
 export function deployedRosterKey(state: GameState): string {
   const modules = state.modules
     .filter((m) => m.pos !== null)
-    .map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}:${m.pos!.q},${m.pos!.r}`)
+    .map((m) => `${m.id}:${m.type}:${m.level}:${m.tier}:${m.pos!.q},${m.pos!.r}`)
     .join("|");
   const mutators = state.mutators
     .filter((m) => m.pos !== null)

@@ -42,7 +42,9 @@ export interface FixtureModule {
   level: number;
   q: number;
   r: number;
-  rarity?: Rarity;
+  // The copy's merge tier (ADR-0058) — the dev boards' only rarity axis,
+  // since fixed type rarity rides the type alone.
+  tier?: number;
   // Keyed generators bank their reserve here (a charged fixture emits).
   reserve?: number;
 }
@@ -185,7 +187,7 @@ export function stateOf(board: ComparisonBoard, capacity: number): GameState {
   state.cellsBought = Math.max(0, board.cells.length - BALANCE.openingGrant);
   state.capacityBought = capacity - 1;
   for (const spec of board.modules) {
-    const module = createModule(state, spec.type, spec.rarity ?? "common");
+    const module = createModule(state, spec.type, spec.tier ?? 0);
     module.level = spec.level;
     module.pos = hex(spec.q, spec.r);
     module.reserve = spec.reserve ?? 0;
@@ -247,7 +249,7 @@ const F_NATURAL = 11;
 
 // One doubled-triad cluster: columns C·E·G across rows 0 and 1, spacers
 // bridging columns 1·2 and 2·3 on both rows.
-export function doubledTriad(level: number, q0 = 0, r0 = 0, rarity: Rarity = "common", silentLevel = -1): ComparisonBoard {
+export function doubledTriad(level: number, q0 = 0, r0 = 0, tier = 0, silentLevel = -1): ComparisonBoard {
   const columns = [C, E, G];
   const board = new BoardBuilder();
   for (let i = 0; i < columns.length; i++) {
@@ -258,7 +260,7 @@ export function doubledTriad(level: number, q0 = 0, r0 = 0, rarity: Rarity = "co
         level: silentLevel >= 0 && row === 1 ? silentLevel : level,
         q: q0 + columns[i]!,
         r: r0 + row,
-        rarity,
+        tier,
       });
     }
   }

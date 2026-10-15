@@ -209,10 +209,15 @@ The shared +1 / +5 / +10 / MAX ladder over a module's level prices, purchasable 
 _Avoid_: buy max, upgrade all button (as the only surface)
 
 **Rarity**:
-A module quality shown as an engraved ring count and plate tint; it improves how purchased levels scale and strengthens secondary effects, rather than granting free levels.
+A named module type's fixed acquisition rarity — the authored table in code, never rolled per copy and never stored. It prices the type's power budget (how purchased levels scale), sets the Bend's selectable shift set, and weights the roll's band draw. Shown as the plate tint and the rarity word; the engraved rings belong to the merge tier. Mutator rarity is its own surface (ADR-0043) and is untouched by this.
+_Avoid_: rolled rarity (the per-candidate sense), tier (the merge sense)
+
+**Merge tier**:
+A copy's own duplicate-earned improvement step, shown as the engraved ring count. Two copies of the same named type and tier combine into one at the next tier; unequal tiers and different named types never combine, and a finite unlocked cap ends the ladder until Arete raises it (ADR-0058, #380). Tier scaling multiplies the module's authored strengths — never its conditions, proportions, or type rarity. Tiers survive the arete reset with the module (ADR-0039).
+_Avoid_: rarity (the merge sense), stars, plus
 
 **Combination**:
-The consumption of two modules of the same type and rarity to produce one of the next rarity, retaining the higher input level and refunding the lower-level input's nous upgrade expenditure. It is initiated by dropping one copy onto the other (board or tray, either direction) and confirming the reviewed outcome; the result lands where the drop target was. The player chooses one input's secondary effects to retain with the new rarity's improvements. Mutators combine by the same gesture: two of the same family and rarity yield one mutator of the next rarity — mutators carry no levels, so nothing is retained or refunded.
+The consumption of two modules of the same type and merge tier to produce one of the next tier, retaining the higher input level and refunding the lower-level input's nous upgrade expenditure. It is initiated by dropping one copy onto the other (board or tray, either direction) and confirming the reviewed outcome; the result lands where the drop target was. The survivor keeps its own secondary effects; the consumed copy's are forfeited with it (ADR-0058). Mutators combine by the same gesture: two of the same family and rarity yield one mutator of the next rarity — mutators carry no levels, so nothing is retained or refunded.
 
 **Forge**:
 A chargeable module that accumulates received charge toward thresholds that mint rolls. The family splits in two — the Module Forge mints module rolls, the Mutator Forge mints mutator rolls.

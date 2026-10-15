@@ -120,7 +120,7 @@ describe("the default allocation economy (#262)", () => {
     const state = fresh();
     placed(state, "additive", 1, 0);
     const rare = placed(state, "additive", -2, 0);
-    rare.rarity = "rare";
+    rare.tier = 2;
     placed(state, "spacer", -1, 0);
     const { snapshot, read } = allocateRates(state, true);
     expect(snapshot.allocation?.capacity).toBe(1);

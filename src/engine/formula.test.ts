@@ -36,11 +36,11 @@ describe("board production model", () => {
     expect(snapshot.rate).toBeCloseTo(SYNTH + 2 * SYNTH * 1.15, 9);
   });
 
-  it("amplitude scales with level and rarity", () => {
+  it("amplitude scales with level and tier", () => {
     const s = fresh();
     const island = give(s, "additive", hex(3, 0), 2); // A5 — chordless island
-    island.rarity = "uncommon";
-    expect(computeRates(s, true).rate).toBeCloseTo(SYNTH + SYNTH * 1.25 ** 2, 9);
+    island.tier = 1;
+    expect(computeRates(s, true).rate).toBeCloseTo(SYNTH + SYNTH * 1.2 ** 2 * BALANCE.tierPower[1], 9);
   });
 
   it("infusors add local bonuses to neighbors as their own leg", () => {
@@ -150,9 +150,9 @@ describe("upgrade costs and rarity power", () => {
     expect(investment(4)).toBe(93);
   });
 
-  it("level zero power is one for every rarity", () => {
+  it("level zero power is one whatever the fixed rarity", () => {
     for (const rarity of ["common", "uncommon", "rare"] as const) {
-      expect(modulePower({ id: "x", type: "forge", rarity, level: 0, invested: 0, pos: null, reserve: 0, shift: null })).toBe(1);
+      expect(modulePower({ id: `x-${rarity}`, type: "forge", tier: 0, level: 0, invested: 0, pos: null, reserve: 0, shift: null })).toBe(1);
     }
   });
 

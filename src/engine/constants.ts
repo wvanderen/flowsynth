@@ -67,7 +67,17 @@ export interface Balance {
   upgradeFirstCost: number;
   upgradeCostGrowthNumerator: bigint;
   upgradeCostGrowthDenominator: bigint;
+  // The per-rarity level-scaling base (ADR-0058's split): read against the
+  // type's FIXED rarity — never a stored per-copy value.
   rarityPower: Record<Rarity, number>;
+  // The merge tier's power scaling (ADR-0058): each tier multiplies the
+  // module's authored strengths by its entry — ×1.5 per tier, provisional
+  // tuning. Conditions, proportions, and relative weaknesses never scale.
+  tierPower: readonly number[];
+  // The finite unlocked merge cap (ADR-0058): the highest tier a combine
+  // can mint. A pair at the cap refuses; a future Arete purchase raises it
+  // (#380). Provisional tuning (three tiers).
+  mergeCap: number;
   rarityProbability: Record<Rarity, number>;
   shelfPrices: Record<ShelfType, number>;
   // Cells (ADR-0013): direct nous purchases on a geometric scaler over
@@ -207,6 +217,8 @@ export const BALANCE: Balance = {
   upgradeCostGrowthNumerator: 8n,
   upgradeCostGrowthDenominator: 5n,
   rarityPower: { common: 1.2, uncommon: 1.25, rare: 1.3 },
+  tierPower: [1, 1.5, 2.25],
+  mergeCap: 2,
   rarityProbability: { common: 0.99, uncommon: 0.009, rare: 0.001 },
   shelfPrices: { generator: 40, infusor: 40, forge: 80 },
   cellFirstCost: 30,
@@ -332,6 +344,35 @@ export function isOscillatorType(type: ModuleType): boolean {
   return CATEGORY_OF[type] === "oscillator";
 }
 
+// Fixed type rarity (ADR-0058): each named type's acquisition rarity,
+// authored here in code — never rolled per copy, never stored in the save.
+// The launch roster is all-common as explicit, provisional tuning: the
+// band-then-type roll then samples the pool uniformly, matching the
+// pre-split distribution, and the profile waves (#369 onward) retune per
+// design.
+export const TYPE_RARITY: Record<ModuleType, Rarity> = {
+  additive: "common",
+  blaster: "common",
+  harmonizer: "common",
+  echo: "common",
+  bend: "common",
+  amplifier: "common",
+  ritual: "common",
+  spacer: "common",
+  focusKeyed: "common",
+  noteKeyed: "common",
+  goalKeyed: "common",
+  infusor: "common",
+  forge: "common",
+  mutatorForge: "common",
+};
+
+// The one type-rarity read (ADR-0058): every consumer derives a module's or
+// candidate's rarity through it, so the table stays the single source.
+export function typeRarityOf(type: ModuleType): Rarity {
+  return TYPE_RARITY[type];
+}
+
 // The one singer test (ADR-0048): oscillators and silent voices sing into
 // formations — every other category never joins a pitch set. One predicate
 // for the rate pass, the partition, and the UI's conductor checks.
@@ -433,11 +474,11 @@ export const REFLECTION_SLIDER_MIN = 1;
 export const REFLECTION_SLIDER_POSITIONS = 5;
 export const REFLECTION_SLIDER_NEUTRAL = 3;
 
-// ADR-0017's pattern at the v8 boundary (issue #229, the iteration's one
-// migration): SAVE_VERSION 8 — the roster cut. V7 saves migrate in place
-// (the Conditional becomes its Harmonizer, the charge window generalizes to
-// per-module reserves, the chord discovery ledger defaults empty, and the
-// build-node unlocks derive from habit.seconds — waves 3–5 build on these
-// surfaces with no further bump); anything older rejects with the
-// start-fresh message, and there is no migration chain past one step.
-export const SAVE_VERSION = 8;
+// ADR-0017's pattern at the v9 boundary (issue #367, ADR-0058's split):
+// SAVE_VERSION 9 — the rarity/tier cut. V8 saves migrate in place (each
+// owned module's saved rarity maps by index onto the merge tier and the
+// stored rarity field dies — type rarity derives from TYPE_RARITY; banked
+// module-roll candidates convert the same way so queued value survives);
+// anything older rejects with the start-fresh message, and the chain past
+// one step stays empty.
+export const SAVE_VERSION = 9;

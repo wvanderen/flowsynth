@@ -46,7 +46,7 @@ function stressModule(type: ModuleType, pos: { q: number; r: number }, level: nu
   return {
     id: `s${nextId++}`,
     type,
-    rarity: "common",
+    tier: 0,
     level,
     invested: 0,
     pos: hex(pos.q, pos.r),

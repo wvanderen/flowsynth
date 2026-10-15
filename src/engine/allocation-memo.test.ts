@@ -119,12 +119,12 @@ describe("the allocation solve memo (#349)", () => {
       const lifted = state.modules.find((m) => m.pos?.q === 1 && m.pos.r === 0)!;
       lifted.pos = null;
     })).toBe(1);
-    // Level and rarity re-weight the pass.
+    // Level and tier re-weight the pass.
     expect(solvesAfter((state) => {
       state.modules[0]!.level += 1;
     })).toBe(1);
     expect(solvesAfter((state) => {
-      state.modules[0]!.rarity = "rare";
+      state.modules[0]!.tier = 2;
     })).toBe(1);
     // The Bend's pitch shift moves the formation's pitch classes.
     expect(solvesAfter((state) => {

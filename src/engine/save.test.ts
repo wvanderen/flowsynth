@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
-import { endSession, startSession } from "./actions";
+import { chooseRoll, endSession, startSession } from "./actions";
 import { fresh, give, stubRng } from "./fixtures";
 import { SAVE_VERSION } from "./constants";
 import { deserialize, serialize } from "./save";
@@ -10,36 +10,38 @@ import { writeNote } from "./notes";
 import { hex } from "./hex";
 import type { GameState } from "./types";
 
-// The v8 boundary (issue #229): the roster cut. A v7 save migrates in
-// place — the Conditional becomes its Harmonizer, the charge window maps
-// onto the focus generators' reserves, the discovery ledger defaults
-// empty — and the life record is never wiped. Every version older than v7
-// still rejects with the start-fresh message; there is no chain past one
-// step.
+// The v9 boundary (issue #367, ADR-0058): the rarity/tier cut. A v8 save
+// migrates in place — each module's saved rarity maps by index onto the
+// merge tier, the stored rarity field dies, and banked module-roll
+// candidates convert the same way — and the life record is never wiped.
+// Every version older than v8 still rejects with the start-fresh message;
+// there is no chain past one step.
 
-// Fabricate a v6 save from a live state: force the version and salt it
-// with the field only a v6 build would write (the legacy acknowledgment
-// flag the removed prestige button once set).
-function asV6(state: GameState, savedAt = 1_000): string {
-  const file = JSON.parse(serialize(state, savedAt));
-  file.version = 6;
-  file.state.horizonAcknowledged = true;
-  return JSON.stringify(file);
-}
-
-// Fabricate a v7 save from a live v8 state: force the version, revert the
-// migrated shape (the Conditional key, the scalar window), and strip the
-// fields the v8 build writes.
+// Fabricate a v7 save from a live state: force the version. Rejected —
+// the v8 step was its one migration, and the chain does not grow.
 function asV7(state: GameState, savedAt = 1_000): string {
   const file = JSON.parse(serialize(state, savedAt));
   file.version = 7;
+  return JSON.stringify(file);
+}
+
+// Fabricate a v8 save from a live v9 state: force the version, restore
+// the pre-cut shape (the per-copy rarity field, no tier), and strip the
+// fields the v9 build writes.
+function asV8(state: GameState, savedAt = 1_000): string {
+  const file = JSON.parse(serialize(state, savedAt));
+  file.version = 8;
+  const RARITY = ["common", "uncommon", "rare"];
   for (const module of file.state.modules) {
-    if (module.type === "harmonizer") module.type = "conditional";
-    delete module.reserve;
-    delete module.shift;
+    module.rarity = RARITY[module.tier] ?? "common";
+    delete module.tier;
   }
-  (file.state as Record<string, unknown>).chargeWindow = 120;
-  delete file.state.chordDiscovery;
+  for (const offer of file.state.bankedRolls) {
+    for (const candidate of offer.candidates) {
+      candidate.rarity = RARITY[candidate.tier] ?? "common";
+      delete candidate.tier;
+    }
+  }
   return JSON.stringify(file);
 }
 
@@ -63,7 +65,7 @@ describe("persistence", () => {
   it("saves carry the current version", () => {
     const parsed = JSON.parse(serialize(fresh()));
     expect(parsed.version).toBe(SAVE_VERSION);
-    expect(parsed.version).toBe(8);
+    expect(parsed.version).toBe(9);
   });
 
   it("saves lenient-default the gate ledger", () => {
@@ -179,7 +181,7 @@ describe("persistence", () => {
     expect(loaded.error).toBeUndefined();
     const forge = loaded.state!.modules.filter((m) => m.type === "mutatorForge");
     expect(forge).toHaveLength(1);
-    expect(forge[0]!.rarity).toBe("common");
+    expect(forge[0]!.tier).toBe(0);
     expect(forge[0]!.pos).toBeNull();
     // Idempotent: reloading the backfilled save grants nothing further.
     const reloaded = deserialize(serialize(loaded.state!, 6_000));
@@ -187,10 +189,10 @@ describe("persistence", () => {
     // An entry owner who already rolled a second Mutator Forge from the
     // joined pool (a lost module forge to combination is impossible, so
     // any mutatorForge at all means the grant landed) is left alone.
-    file.state.modules.push({ id: "m9", type: "mutatorForge", rarity: "uncommon", level: 0, invested: 0, pos: null });
+    file.state.modules.push({ id: "m9", type: "mutatorForge", tier: 1, level: 0, invested: 0, pos: null });
     const owning = deserialize(JSON.stringify(file));
     expect(owning.state!.modules.filter((m) => m.type === "mutatorForge")).toHaveLength(1);
-    expect(owning.state!.modules.at(-1)!.rarity).toBe("uncommon");
+    expect(owning.state!.modules.at(-1)!.tier).toBe(1);
     // No retro-sequence, no retro roll (issue #274): the entry's performed
     // roll belongs to purchases from now on — the backfill banks nothing
     // into the Mutator tray's queue.
@@ -267,8 +269,8 @@ describe("persistence", () => {
 });
 
 describe("the version gate (ADR-0017's pattern)", () => {
-  it("rejects v6 and every older version; there is no chain past one step", () => {
-    for (const version of [1, 4, 5, 6]) {
+  it("rejects v7 and every older version; there is no chain past one step", () => {
+    for (const version of [1, 4, 5, 6, 7]) {
       const text = serialize(fresh()).replace(`"version": ${SAVE_VERSION}`, `"version": ${version}`);
       const result = deserialize(text);
       expect(result.error, `v${version}`).toMatch(/older version/i);
@@ -276,11 +278,11 @@ describe("the version gate (ADR-0017's pattern)", () => {
     }
   });
 
-  it("a v6 save starts fresh with the standard version error, never a crash", () => {
+  it("a v7 save starts fresh with the standard version error, never a crash", () => {
     const s = fresh();
     s.arete = 1;
     s.totalEarned = ARETE_HORIZON;
-    const result = deserialize(asV6(s));
+    const result = deserialize(asV7(s));
     expect(result.error).toMatch(/older version/i);
     expect(result.state).toBeUndefined();
     // The fresh state the boot builds instead carries none of it.
@@ -291,9 +293,9 @@ describe("the version gate (ADR-0017's pattern)", () => {
     expect(deserialize("{nope").error).toBeDefined();
     expect(deserialize('{"app":"other","version":7}').error).toBeDefined();
     expect(deserialize('{"app":"flowsynth","version":99,"state":{}}').error).toBeDefined();
-    expect(deserialize('{"app":"flowsynth","version":7,"state":{"mode":"weird"}}').error).toBeDefined();
-    expect(deserialize('{"app":"flowsynth","version":7}').error).toBeDefined();
-    expect(deserialize('{"app":"flowsynth","version":9,"state":{}}').error).toMatch(/newer than this build/i);
+    expect(deserialize('{"app":"flowsynth","version":8,"state":{"mode":"weird"}}').error).toBeDefined();
+    expect(deserialize('{"app":"flowsynth","version":8}').error).toBeDefined();
+    expect(deserialize('{"app":"flowsynth","version":10,"state":{}}').error).toMatch(/newer than this build/i);
   });
 
   it("exported saves load unchanged", () => {
@@ -305,41 +307,94 @@ describe("the version gate (ADR-0017's pattern)", () => {
   });
 });
 
-describe("the v7 → v8 migration (issue #229)", () => {
-  it("a v7 save loads: the Conditional is now its Harmonizer, singing its cell's pitch", () => {
+describe("the v8 → v9 migration (issue #367, ADR-0058)", () => {
+  it("a v8 save loads: each copy's rarity becomes its merge tier by index", () => {
     const s = fresh();
-    const conditional = give(s, "harmonizer", hex(1, 0)); // built as the migrated shape
-    (conditional as { type: string }).type = "conditional"; // the pre-migration key
-    const loaded = deserialize(asV7(s));
+    const base = give(s, "harmonizer", hex(1, 0));
+    const merged = give(s, "harmonizer", hex(0, 1));
+    merged.tier = 1;
+    const capped = give(s, "harmonizer", hex(1, 1));
+    capped.tier = 2;
+    const loaded = deserialize(asV8(s));
     expect(loaded.error).toBeUndefined();
-    const migrated = loaded.state!.modules.find((m) => m.id === conditional.id)!;
-    expect(migrated.type).toBe("harmonizer");
-    // Same cell, same level — nothing about the board moved.
-    expect(migrated.pos).toEqual(hex(1, 0));
-    expect(migrated.level).toBe(conditional.level);
-  });
-
-  it("the charge window maps onto the focus generators' reserves", () => {
-    const s = fresh();
-    const gen = give(s, "focusKeyed", hex(2, 0));
-    const loaded = deserialize(asV7(s));
-    expect(loaded.error).toBeUndefined();
-    expect(loaded.state!.modules.find((m) => m.id === gen.id)!.reserve).toBeCloseTo(120, 9);
-    // The scalar is gone from the loaded shape.
-    expect((loaded.state as unknown as Record<string, unknown>).chargeWindow).toBeUndefined();
-  });
-
-  it("modules saved before the roster lenient-default their reserve and shift", () => {
-    const s = fresh();
-    const bend = give(s, "bend", hex(-1, 0));
-    const loaded = deserialize(asV7(s));
     const modules = loaded.state!.modules;
-    expect(modules.find((m) => m.id === bend.id)!.shift).toBe(1); // the ♯ default
-    expect(modules.every((m) => typeof m.reserve === "number")).toBe(true);
+    // common → 0, uncommon → 1, rare → 2 — the collection's earned steps.
+    expect(modules.find((m) => m.id === base.id)!.tier).toBe(0);
+    expect(modules.find((m) => m.id === merged.id)!.tier).toBe(1);
+    expect(modules.find((m) => m.id === capped.id)!.tier).toBe(2);
+    // The stored rarity field is gone from the loaded shape.
+    expect(modules.every((m) => !("rarity" in m))).toBe(true);
+    // Nothing else moved: cells, levels, placement.
+    expect(modules.find((m) => m.id === base.id)!.pos).toEqual(hex(1, 0));
   });
 
-  it("the chord discovery ledger defaults empty and the life record is intact", () => {
+  it("a corrupt legacy rarity reads as the base tier, never a crash", () => {
     const s = fresh();
+    const file = JSON.parse(asV8(s));
+    file.state.modules[0]!.rarity = "legendary";
+    const loaded = deserialize(JSON.stringify(file));
+    expect(loaded.error).toBeUndefined();
+    expect(loaded.state!.modules.every((m) => m.tier === 0)).toBe(true);
+  });
+
+  it("banked module-roll candidates keep their rolled band as the mint tier", () => {
+    const s = fresh();
+    s.bankedRolls.push({
+      id: "offer",
+      candidates: [
+        { id: "c1", type: "additive", tier: 0 },
+        { id: "c2", type: "spacer", tier: 2 },
+        { id: "c3", type: "infusor", tier: 0 },
+      ],
+    });
+    const loaded = deserialize(asV8(s));
+    expect(loaded.error).toBeUndefined();
+    const candidates = loaded.state!.bankedRolls[0]!.candidates;
+    expect(candidates[0]!.tier).toBe(0);
+    expect(candidates[1]!.tier).toBe(2);
+    expect(candidates.every((c) => !("rarity" in c))).toBe(true);
+    // The queued value survives the choice: taking the converted candidate
+    // mints at its tier, not the base.
+    const rarity = loaded.state!;
+    const taken = candidates[1]!;
+    expect(chooseRoll(rarity, "offer", taken.id).ok).toBe(true);
+    expect(rarity.modules.some((m) => m.type === "spacer" && m.tier === 2)).toBe(true);
+  });
+
+  it("mutator rarity is untouched by the migration", () => {
+    const s = fresh();
+    s.mutators.push({ id: "mu1", family: "power", rarity: "uncommon", pos: null });
+    s.bankedMutatorRolls.push({
+      id: "mo1",
+      candidates: [
+        { id: "mc1", family: "charge", rarity: "rare" },
+        { id: "mc2", family: "resonance", rarity: "common" },
+      ],
+    });
+    const loaded = deserialize(asV8(s));
+    expect(loaded.error).toBeUndefined();
+    expect(loaded.state!.mutators[0]).toMatchObject({ family: "power", rarity: "uncommon" });
+    expect(loaded.state!.bankedMutatorRolls[0]!.candidates[0]).toMatchObject({ family: "charge", rarity: "rare" });
+  });
+
+  it("the migration is repeatable: a migrated save reloads byte-identical", () => {
+    const s = fresh();
+    const merged = give(s, "additive", hex(1, 0));
+    merged.tier = 1;
+    const first = deserialize(asV8(s)).state!;
+    const text = serialize(first, 1_000);
+    const second = deserialize(text);
+    expect(second.error).toBeUndefined();
+    expect(serialize(second.state!, 1_000)).toBe(text);
+  });
+
+  it("the migration loses no collection value: types, tiers, levels, reserves, and the life record stand", () => {
+    const s = fresh();
+    const gen = give(s, "focusKeyed", hex(1, 0));
+    gen.reserve = 42;
+    const merged = give(s, "additive", hex(0, 1), 3);
+    merged.tier = 2;
+    merged.invested = 999;
     s.sessionRecords.push({
       sessionNumber: 1,
       startedAt: 1,
@@ -354,22 +409,12 @@ describe("the v7 → v8 migration (issue #229)", () => {
       goalsAdvanced: [],
       achievements: [],
     });
-    s.notes.push({ id: "n1", sessionId: 1, atElapsed: 10, text: "kept", habitId: null, at: 3 });
-    const before = { records: s.sessionRecords.length, notes: s.notes.length, habits: s.habits.length };
-    const loaded = deserialize(asV7(s));
-    expect(loaded.state!.chordDiscovery).toEqual({});
-    expect(loaded.state!.sessionRecords.length).toBe(before.records);
-    expect(loaded.state!.notes.length).toBe(before.notes);
-    expect(loaded.state!.habits.length).toBe(before.habits);
-    expect(loaded.state!.notes[0]!.text).toBe("kept");
-  });
-
-  it("the migration is one-time: a migrated v8 save reloads unchanged", () => {
-    const s = fresh();
-    give(s, "harmonizer", hex(1, 0));
-    const first = deserialize(asV7(s)).state!;
-    const second = deserialize(serialize(first, 1_000));
-    expect(second.error).toBeUndefined();
-    expect(serialize(second.state!, 1_000)).toBe(serialize(first, 1_000));
+    const before = { records: s.sessionRecords.length, modules: s.modules.length };
+    const loaded = deserialize(asV8(s));
+    expect(loaded.state!.modules).toHaveLength(before.modules);
+    expect(loaded.state!.modules.find((m) => m.id === gen.id)!.reserve).toBeCloseTo(42, 9);
+    expect(loaded.state!.modules.find((m) => m.id === merged.id)!.level).toBe(3);
+    expect(loaded.state!.modules.find((m) => m.id === merged.id)!.invested).toBe(999);
+    expect(loaded.state!.sessionRecords).toHaveLength(before.records);
   });
 });

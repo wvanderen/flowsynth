@@ -63,15 +63,17 @@ describe("the prestige action", () => {
     const s = atHorizon();
     const synth = give(s, "additive", hex(1, 0), 4);
     const traySpacer = give(s, "spacer", null, 2);
-    const rare = give(s, "harmonizer", hex(0, 1), 6);
-    rare.rarity = "rare";
+    const merged = give(s, "harmonizer", hex(0, 1), 6);
+    merged.tier = 2;
     prestige(s);
     expect(s.modules.map((m) => m.id)).toContain(synth.id);
-    for (const module of [synth, traySpacer, rare]) {
+    for (const module of [synth, traySpacer, merged]) {
       expect(module.level).toBe(0);
       expect(module.invested).toBe(0);
     }
-    expect(rare.rarity).toBe("rare");
+    // The merge tier rides the copy through the reset (ADR-0058): collection
+    // progress survives the era, the purchased levels do not.
+    expect(merged.tier).toBe(2);
     // Placement persists through the reset.
     expect(synth.pos).toEqual(hex(1, 0));
     expect(traySpacer.pos).toBeNull();
@@ -112,9 +114,9 @@ describe("the prestige action", () => {
     s.bankedRolls.push({
       id: "offer",
       candidates: [
-        { id: "c1", type: "additive", rarity: "common" },
-        { id: "c2", type: "spacer", rarity: "common" },
-        { id: "c3", type: "infusor", rarity: "common" },
+        { id: "c1", type: "additive", tier: 0 },
+        { id: "c2", type: "spacer", tier: 1 },
+        { id: "c3", type: "infusor", tier: 0 },
       ],
     });
     s.purchased = { generator: true, infusor: true, forge: true };

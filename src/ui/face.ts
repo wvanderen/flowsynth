@@ -7,7 +7,7 @@
 // board and the Forge candidate tiles. The inventory wears the minimal mark
 // instead (hue-outlined hexagon and glyph alone, ADR-0027): at tile size the
 // engraving is noise.
-import type { GameState, Hex, ModuleInstance, ModuleType, Rarity, RateSnapshot } from "../engine/types";
+import type { GameState, Hex, ModuleInstance, ModuleType, RateSnapshot } from "../engine/types";
 import { CATEGORY_OF, BALANCE } from "../engine/constants";
 import { chargedFactor, hostPower, ritualAmpOf } from "../engine/economy";
 import { forgeThreshold, mutatorForgeThreshold } from "../engine/rolls";
@@ -67,9 +67,13 @@ export const HUE_TOKEN_OF: Record<ModuleType, string> = {
   mutatorForge: "hue-forge",
 };
 
-// Rarity = finish: engraved ring count, one to three.
+// The face's two quality axes (ADR-0058): the plate tint keys the type's
+// fixed rarity, the engraved rings read the copy's merge tier — one ring
+// per tier, one to three. A future cap raise (#380) extends the radii.
 const RING_RADII = [55, 50, 45];
-export const RING_COUNT: Record<Rarity, number> = { common: 1, uncommon: 2, rare: 3 };
+export function ringCount(tier: number): number {
+  return Math.min(Math.max(tier, 0), RING_RADII.length - 1) + 1;
+}
 
 // The charged face sits in the charge register, scaled by the glow. The
 // stylesheet paints the colors; the received strength only sets how much:
@@ -94,7 +98,9 @@ const FACE_NOTE_Y = 43;
 
 export interface FaceSpec {
   type: ModuleType;
-  rarity: Rarity;
+  // The copy's merge tier — the engraved ring count. The plate tint's
+  // rarity derives from the type alone (ADR-0058): one fact, one source.
+  tier: number;
   // The prominent readout beneath the signature: the module's contribution —
   // for the chargeable Forge, charge-vs-threshold. An empty string skips
   // the line entirely (the detail tray's face previews, issue #296 review:
@@ -177,7 +183,7 @@ export function readoutFitClass(readout: string): string {
 export function moduleFace(spec: FaceSpec): string {
   const hue = `var(--${HUE_TOKEN_OF[spec.type]})`;
   const openWire = spec.openWire === true;
-  const rings = Array.from({ length: RING_COUNT[spec.rarity] }, (_, i) => `<polygon points="${hexPoints(RING_RADII[i]!)}"/>`).join("");
+  const rings = Array.from({ length: ringCount(spec.tier) }, (_, i) => `<polygon points="${hexPoints(RING_RADII[i]!)}"/>`).join("");
   // The charge light (§8, #41): the chassis fill takes the charge hue at an
   // inline fill-opacity, and the rail takes an inline stroke-opacity — both
   // scaling continuously with the glow the module's received strength maps

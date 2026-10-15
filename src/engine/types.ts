@@ -85,7 +85,12 @@ export interface Hex {
 export interface ModuleInstance {
   id: string;
   type: ModuleType;
-  rarity: Rarity;
+  // The copy's merge tier (ADR-0058): duplicate-earned improvement, advanced
+  // by combining two copies of the same named type and tier, capped by the
+  // finite unlocked cap. Fixed type rarity is never stored — it derives from
+  // the type (constants.TYPE_RARITY); levels are the nous-purchased axis.
+  // Lenient-defaulted to 0 at load.
+  tier: number;
   level: number;
   invested: number;
   pos: Hex | null;
@@ -107,10 +112,13 @@ export interface ModuleInstance {
 // work in once deployment has been filtered.
 export type DeployedModule = ModuleInstance & { pos: Hex };
 
+// A module-roll candidate (ADR-0058): the named type carries the fixed
+// rarity; `tier` is the tier the choice mints at — 0 from every fresh draw,
+// carried over from the legacy rolled band only by the v8 → v9 conversion.
 export interface Candidate {
   id: string;
   type: ModuleType;
-  rarity: Rarity;
+  tier: number;
 }
 
 export interface RollOffer {

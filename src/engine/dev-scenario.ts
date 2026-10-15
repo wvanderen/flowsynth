@@ -17,7 +17,7 @@ export function createDevScenario(): GameState {
   state.modules = [];
   state.cells = [];
   const add = (type: ModuleType, q: number, r: number, level = 0): string => {
-    const module = createModule(state, type, "common");
+    const module = createModule(state, type);
     module.level = level;
     module.pos = { q, r };
     state.modules.push(module);
@@ -34,7 +34,7 @@ export function createDevScenario(): GameState {
   add("additive", 4, 1, 0); // E5 — the doubled class
   add("harmonizer", 1, 1, 2); // sings G4
   add("infusor", 0, 1, 1);
-  const generator = createModule(state, "focusKeyed", "common");
+  const generator = createModule(state, "focusKeyed");
   generator.level = 1;
   generator.pos = { q: -1, r: 0 };
   generator.reserve = 3600;

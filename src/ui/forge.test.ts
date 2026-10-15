@@ -10,9 +10,9 @@ beforeEach(() => {
   app = fixture.boot();
   app.state.catalogEntryOwned = true;
   app.state.bankedRolls = [{ id: "module-roll", candidates: [
-    { id: "m1", type: "additive", rarity: "common" },
-    { id: "m2", type: "spacer", rarity: "common" },
-    { id: "m3", type: "infusor", rarity: "rare" },
+    { id: "m1", type: "additive", tier: 0 },
+    { id: "m2", type: "spacer", tier: 0 },
+    { id: "m3", type: "infusor", tier: 2 },
   ] }];
   app.state.bankedMutatorRolls = [{ id: "mutator-roll", candidates: [
     { id: "u1", family: "power", rarity: "common" },
@@ -105,9 +105,9 @@ describe("Forge drafts (#335)", () => {
 
   it("discloses pitch, chords, and both roll types in their effects", () => {
     app.state.bankedRolls[0].candidates = [
-      { id: "pitch", type: "harmonizer", rarity: "common" },
-      { id: "module", type: "forge", rarity: "common" },
-      { id: "mutator", type: "mutatorForge", rarity: "common" },
+      { id: "pitch", type: "harmonizer", tier: 0 },
+      { id: "module", type: "forge", tier: 0 },
+      { id: "mutator", type: "mutatorForge", tier: 0 },
     ];
     app.openModal("forge");
     const terms = [...panel().querySelectorAll(".candidate-effect .term-trigger")].map(t => t.textContent);

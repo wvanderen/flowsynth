@@ -168,9 +168,9 @@ describe("the scrimless surfaces manage focus without claiming the screen", () =
     app.state.bankedRolls.push({
       id: "roll1",
       candidates: [
-        { id: "rc1", type: "additive", rarity: "common" },
-        { id: "rc2", type: "spacer", rarity: "common" },
-        { id: "rc3", type: "infusor", rarity: "uncommon" },
+        { id: "rc1", type: "additive", tier: 0 },
+        { id: "rc2", type: "spacer", tier: 0 },
+        { id: "rc3", type: "infusor", tier: 1 },
       ],
     });
   };

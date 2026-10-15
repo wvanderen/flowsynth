@@ -1,4 +1,4 @@
-import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isVoiceType } from "./constants";
+import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isVoiceType, typeRarityOf } from "./constants";
 import { analyzeChords, hypotheticalBoardFor, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
 import { allocateChords, DEFAULT_ALLOCATION_BUDGET, type AllocationBudget, type AllocationRead, type AllocationVoiceParams } from "./allocation";
 import { capacityOf } from "./capacity";
@@ -168,8 +168,19 @@ export function investment(level: number): number {
   return total;
 }
 
+// A module's authored power (ADR-0058): the fixed type rarity's per-level
+// base over the nous-purchased levels, times the merge tier's strength
+// multiplier. Tier scales the strengths; it never touches proportions,
+// conditions, or the type's rarity.
 export function modulePower(module: ModuleInstance): number {
-  return BALANCE.rarityPower[module.rarity] ** module.level;
+  return BALANCE.rarityPower[typeRarityOf(module.type)] ** module.level * tierPowerOf(module.tier);
+}
+
+// The tier ladder's multiplier (ADR-0058): past the authored ladder's end —
+// a lenient guard, the combine gate keeps copies inside it — the last entry
+// holds.
+export function tierPowerOf(tier: number): number {
+  return BALANCE.tierPower[Math.min(Math.max(tier, 0), BALANCE.tierPower.length - 1)]!;
 }
 
 export function deployed(state: GameState): ModuleInstance[] {
@@ -688,7 +699,7 @@ function allocationFingerprint(state: GameState): string {
   const parts: string[] = [];
   for (const module of state.modules) {
     if (module.pos === null) continue;
-    parts.push(`${module.id}:${module.type}:${module.pos.q},${module.pos.r}:${module.level}:${module.rarity}:${module.shift}:${module.reserve > EPS ? 1 : 0}`);
+    parts.push(`${module.id}:${module.type}:${module.pos.q},${module.pos.r}:${module.level}:${module.tier}:${module.shift}:${module.reserve > EPS ? 1 : 0}`);
   }
   for (const mutator of state.mutators) {
     if (mutator.pos === null) continue;

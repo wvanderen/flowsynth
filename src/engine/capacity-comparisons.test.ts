@@ -13,7 +13,6 @@ import {
   type ComparisonRow,
 } from "./capacity-comparisons";
 import { investment, levelCost } from "./economy";
-import type { Rarity } from "./types";
 
 // The complete-board comparison record (issue #262): the strategy axes the
 // release calibration must satisfy — concentrated/distributed power,
@@ -147,7 +146,7 @@ describe("the complete-board comparisons (#262)", () => {
     const concentratedLevel = levelForBudget(BUDGET);
     const share = levelForBoardBudget((level) => doubledTriad(level), BUDGET);
     const boards = [
-      named(doubledTriad(concentratedLevel, 0, 0, "common", -1), "concentrated"),
+      named(doubledTriad(concentratedLevel, 0, 0, 0, -1), "concentrated"),
       named(doubledTriad(share), "distributed"),
     ];
     // The concentrated board parks the whole budget on one voice; the
@@ -283,7 +282,7 @@ describe("the complete-board comparisons (#262)", () => {
 
   it("keeps silent voices sweetening, never dominating", () => {
     const level = levelForBoardBudget((l) => doubledTriad(l), BUDGET);
-    const sweetened = named(doubledTriad(level, 0, 0, "common", level), "silent support");
+    const sweetened = named(doubledTriad(level, 0, 0, 0, level), "silent support");
     const full = named(doubledTriad(level), "all oscillators");
     const rows = rowsFor("silent", BUDGET, [sweetened, full]);
     console.log("\nsilent voices (budget %d):", BUDGET);
@@ -390,24 +389,24 @@ describe("the complete-board comparisons (#262)", () => {
     }
   });
 
-  it("scales rarity without touching capacity", () => {
+  it("scales the merge tier without touching capacity", () => {
     const level = levelForBoardBudget((l) => doubledTriad(l), BUDGET);
-    const boards = (["common", "uncommon", "rare"] as const).map((rarity: Rarity) =>
-      named(doubledTriad(level, 0, 0, rarity), `rarity-${rarity}`),
+    const boards = ([0, 1, 2] as const).map((tier: number) =>
+      named(doubledTriad(level, 0, 0, tier), `tier-${tier}`),
     );
-    const rows = rowsFor("rarity", BUDGET, boards);
-    console.log("\nrarity (budget %d):", BUDGET);
+    const rows = rowsFor("tier", BUDGET, boards);
+    console.log("\ntier (budget %d):", BUDGET);
     for (const row of rows) {
       console.log(`  ${row.board.padEnd(16)} cap=${row.capacity} rate=${row.rate.toFixed(2)} maxFactor=${row.maxChordFactor.toFixed(3)} rolls=${row.rolls}`);
     }
-    // Rarity never alters the chord math: the factors match exactly; only
+    // The tier never alters the chord math: the factors match exactly; only
     // the power leg scales. The roll-lottery side is held constant by
-    // construction — identical rosters, only the rarity face differs.
+    // construction — identical rosters, only the tier face differs.
     for (const capacity of CAPACITIES) {
       const factors = boards.map((board) => rows.find((row) => row.board === board.name && row.capacity === capacity)!.maxChordFactor);
       expect(factors[1]).toBeCloseTo(factors[0]!, 9);
       expect(factors[2]).toBeCloseTo(factors[0]!, 9);
-      expect(rate(rows, "rarity-rare", capacity)).toBeGreaterThan(rate(rows, "rarity-common", capacity));
+      expect(rate(rows, "tier-2", capacity)).toBeGreaterThan(rate(rows, "tier-0", capacity));
     }
   });
 });
