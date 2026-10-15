@@ -1,5 +1,5 @@
 import { BALANCE, CATEGORY_OF } from "./constants";
-import type { ModuleType, OscillatorType } from "./types";
+import type { GeneratorType, ModuleType, OscillatorType } from "./types";
 
 // The authored oscillator profiles (issue #369, parent #366; ADR-0059):
 // each named type carries one fixed profile — a stable authored identity,
@@ -182,4 +182,66 @@ export function profileAxesOf(type: ModuleType): readonly ProfileAxisRead[] {
   push("chord", profile.chord);
   push("charge", profile.charge, profile.chargeConversion === true);
   return axes;
+}
+
+/* ── Generator profiles (issue #371, parent #366) ─────────────
+   Each named generator carries one fixed earning profile: authored
+   coefficients over the practice inputs, balanced as a whole and never
+   percentages summing to 100%. The module's power (level × tier, mutators)
+   scales every axis by the same figure — earning and delivery scale
+   together, so the proportions between the axes and the delivery rhythm
+   survive progression intact.
+   
+   Earning kind is explicit per axis:
+   - `focus` is BANKED earning: credited practice seconds accrue the
+     charge during the session and the whole window lands at session end
+     (honesty-credited reconciliation seconds included).
+   - `noteChar`, `noteCreate`, and `goal` are IMMEDIATE earning: the
+     charge lands at the practice fact itself — the written note, the
+     completion tick — in flow, while paused, or between sessions.
+   
+   Delivery is the family's shared steady shape: a deployed generator
+   emits at its power-scaled strength and consumes reserve quantity at
+   that same rate — every adjacent eligible receiver gets full strength,
+   expenditure never depends on the neighbor count, and the reserve is a
+   store of charge quantity, so banked charge is exactly the charge the
+   generator can still emit.
+   
+   All figures are provisional tuning (the parent issue's accepted sample
+   niches, not balanced tables):
+   - Flywheel  (focusKeyed) — focus-heavy: the full 0.1/s focus window,
+     modest note and goal credit. Specialized focus practice is viable
+     without owning the other tools.
+   - Scribe    (noteKeyed)  — note-heavy: the distinct character
+     coefficient (1/char, capped per note) and creation bonus (a flat
+     30 once per newly created note meeting the minimum length), plus
+     modest focus credit.
+   - Milestone (goalKeyed)  — goal-heavy: ×5 the completion base, modest
+     focus and note credit. */
+export interface GeneratorProfile {
+  // Charge per credited practice second, banked at session end.
+  focus: number;
+  // Charge per stored note character, immediate, under the per-note cap.
+  noteChar: number;
+  // Charge once per newly created note meeting the creation minimum —
+  // never on re-saves (notes are append-only, one credit per written note).
+  noteCreate: number;
+  // Multiple on the goal-completion base (the focus equivalent, prorated
+  // by the goal's live share), immediate at the completion tick.
+  goal: number;
+}
+
+export const GENERATOR_PROFILES: Record<GeneratorType, GeneratorProfile> = {
+  focusKeyed: { focus: 0.1, noteChar: 0.2, noteCreate: 5, goal: 1 },
+  noteKeyed: { focus: 0.02, noteChar: 1, noteCreate: 30, goal: 1 },
+  goalKeyed: { focus: 0.02, noteChar: 0.2, noteCreate: 5, goal: 5 },
+};
+
+// The one profile read for generators. Non-generators have none — callers
+// guard by category; null rather than a neutral shape so a stray read
+// cannot masquerade as authored data.
+export function generatorProfileOf(type: ModuleType): GeneratorProfile | null {
+  const category = CATEGORY_OF[type];
+  if (category !== "generator") return null;
+  return GENERATOR_PROFILES[type as GeneratorType];
 }

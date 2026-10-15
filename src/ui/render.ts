@@ -8,7 +8,8 @@ import { deployedAt } from "../engine/economy";
 import { sameHex } from "../engine/hex";
 import { forgeThreshold, flowThreshold, mutatorForgeThreshold } from "../engine/rolls";
 import { BALANCE, CATEGORY_OF, isOscillatorType, isVoiceType, NAMED_CHORDS, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
-import { baseTermOf } from "../engine/profiles";
+import { goalCompletionBase } from "../engine/reserves";
+import { baseTermOf, generatorProfileOf } from "../engine/profiles";
 import { catalogOpen, rowUnlockCost, unlockableRows } from "../engine/catalog";
 import { capacityCeiling, nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "../engine/capacity";
 import { formatClock, formatDuration } from "../engine/clock";
@@ -3296,9 +3297,17 @@ function forgeEffect(type: ModuleInstance["type"], tier: number): string {
     case "amplifier": return `Relay charge ×${formatNumber(power)} · +${formatNumber(100 * BALANCE.amplifierGainPerLevel * power)}%/level · ${BALANCE.amplifierHopCap} hops`;
     case "ritual": return `Charged → habit build +${formatNumber(BALANCE.ritualAmpPerLevel * 100 * power)}%/level`;
     case "spacer": return "Silent wire · connects chord adjacency";
-    case "focusKeyed": return "Practice → charge reserve for next session";
-    case "noteKeyed": return "Notes → charge reserve";
-    case "goalKeyed": return "Completed goals → charge reserve";
+    // The generator profiles (issue #371): the effect line names the niche
+    // in words with its leading exact figure — the profile table is the
+    // one source, so the quote cannot drift from the credit seam's own.
+    case "focusKeyed":
+    case "noteKeyed":
+    case "goalKeyed": {
+      const profile = generatorProfileOf(type)!;
+      if (type === "focusKeyed") return `+${formatNumber(profile.focus * power)} charge/s of practice · modest note and goal credit`;
+      if (type === "noteKeyed") return `+${formatNumber(profile.noteCreate * power)} charge/new note ≥${BALANCE.noteCreationMinChars} chars · +${formatNumber(profile.noteChar * power)}/char (${formatNumber(BALANCE.noteCharCreditCap * power)} max/note) · modest practice credit`;
+      return `+${formatNumber(profile.goal * goalCompletionBase(60, 1) * power)} charge/live goal minute at completion · modest practice and note credit`;
+    }
     case "infusor": return `Adjacent production +${formatNumber(BALANCE.infusorBonus * 100 * power)}% · charge boosts uplift`;
     case "forge": return "Received charge → module rolls";
     case "mutatorForge": return "Received charge → mutator rolls";

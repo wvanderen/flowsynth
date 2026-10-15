@@ -71,7 +71,7 @@ export function addPracticeLog(
   if (!(minutes > 0)) return { ok: false, reason: "Log a positive number of minutes." };
   rollGoalOccurrences(state, now);
   // The manual side of the honesty boundary (ADR-0047): the log advances
-  // goal conditions but never joins the live slice the Goal Generator's
+  // goal conditions but never joins the live slice the completion
   // credit prorates by.
   const completions = accrueGoalProgress(state, habitId, minutes * 60, "manual");
   habit.seconds += minutes * 60;

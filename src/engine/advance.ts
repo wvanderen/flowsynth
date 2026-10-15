@@ -1,7 +1,7 @@
 import { CATEGORY_OF, EPS } from "./constants";
 import { syncAchievements } from "./achievements";
 import { syncChordDiscoveries } from "./library";
-import { chargeDelivered, maxChordFactorOf, deployed, syncRates } from "./economy";
+import { activeBuildGeneratorStrength, chargeDelivered, emittedStrength, maxChordFactorOf, deployed, syncRates } from "./economy";
 import { summaryTermsOf } from "./allocation";
 import { addFlowProgress, addForgeProgress, addMutatorForgeProgress, type Rng } from "./rolls";
 import { accrueLivePractice } from "./habits";
@@ -50,7 +50,10 @@ export function advance(
     rollsMutator: 0,
     goalsCompleted: 0,
   };
-  if (state.mode !== "flow" || seconds <= EPS) return result;
+  // A depletion split can be shorter than EPS seconds while still owning
+  // significant charge at high strength. Process every positive span so
+  // the first recursive leg drains its boundary before the next begins.
+  if (state.mode !== "flow" || seconds <= 0) return result;
   const session = state.session;
   if (!session) return result;
 
@@ -59,16 +62,19 @@ export function advance(
   // remaining duration runs out mid-step splits there, so the drained
   // generator stops crediting the remainder (the rate really does change
   // mid-step, once — one boundary per step, the recursion walks them all).
-  // The reserves are per module now (ADR-0047): the earliest emptying one
-  // is one split boundary. Every generator type drains — the focus, note, and goal
-  // generators share the one surface.
-  const liveGenerators: ModuleInstance[] = [];
+  // The reserves are charge quantity per module (issue #371): delivery
+  // consumes quantity at the generator's emission rate, so the earliest
+  // emptying one — remaining quantity ÷ strength — is one split boundary.
+  // Every generator drains by the same rule.
+  const steadyBonus = activeBuildGeneratorStrength(state, true);
+  const liveGenerators: { module: ModuleInstance; strength: number }[] = [];
   let earliest = Infinity;
   for (const module of deployed(state)) {
     if (CATEGORY_OF[module.type] !== "generator") continue;
     if (module.reserve > EPS) {
-      liveGenerators.push(module);
-      earliest = Math.min(earliest, module.reserve);
+      const strength = emittedStrength(state, module, true, steadyBonus);
+      liveGenerators.push({ module, strength });
+      earliest = Math.min(earliest, module.reserve / strength);
     }
   }
   // A live goal completion banks reserve mid-span, so it is another rate
@@ -122,13 +128,14 @@ export function advance(
   // so pauses never count into either; provisional production stays out
   // until its bucket banks.
   if (sink === "live") session.earned += gained;
-  // Each generator's reserve is a time budget of its own (ADR-0047): a
-  // deployed generator — any of the three keyed types — spends one reserve
-  // second per flow second, elapsing even with no eligible neighbors (the
-  // remaining-duration vocabulary). Undeployed, it produces no output and
-  // its reserve holds.
-  for (const module of liveGenerators) {
-    module.reserve = Math.max(0, module.reserve - seconds);
+  // Each generator's reserve is a store of charge quantity of its own
+  // (issue #371): a deployed generator — any of the three named designs —
+  // spends reserve at its emission rate per flow second, elapsing even
+  // with no eligible neighbors (delivery reaches whoever is adjacent at
+  // full strength; expenditure never depends on the neighbor count).
+  // Undeployed, it produces no output and its reserve holds.
+  for (const { module, strength } of liveGenerators) {
+    module.reserve = Math.max(0, module.reserve - strength * seconds);
   }
   if (sink === "live") {
     // Practice credits only from present and trusted time — nothing ever

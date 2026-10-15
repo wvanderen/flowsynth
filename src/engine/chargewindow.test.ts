@@ -5,16 +5,18 @@ import { createHabit, addPracticeLog } from "./habits";
 import { computeRates } from "./economy";
 import { fresh, give, stubRng } from "./fixtures";
 import { serialize, deserialize } from "./save";
+import { writeNote } from "./notes";
 import { hex } from "./hex";
 
-// The focus generator's reserve (§2.3, ADR-0012; ADR-0018 made the
+// The Flywheel's focus earning (§2.3, ADR-0012; ADR-0018 made the
 // focus-keyed generator the launch generator; ADR-0047 made the reserve the
-// module's own): ending any session banks into every owned focus generator
-// a window of fraction × live practice time — the tuning fraction is 0.1,
-// so a 600 s session banks 60 s — spent as that generator's output during
-// the next session's first minutes. Charge is an across-session reserve,
-// never a live drip, and it lives on the module now: board or tray alike,
-// reset at prestige.
+// module's own; issue #371 authored the profiles and made the reserve a
+// store of charge quantity): ending any session banks into every owned
+// generator its profile's focus coefficient per credited practice second —
+// the Flywheel's 0.1 leads, so a 600 s session banks 60 charge — spent at
+// the generator's emission rate during the next session's first minutes.
+// Charge is an across-session reserve, never a live drip, and it lives on
+// the module: board or tray alike, reset at prestige.
 
 // A board with the receiving forge and the focus generator placed, so the
 // banked window has a receiver and an emitter.
@@ -27,7 +29,7 @@ function receiving(s: ReturnType<typeof fresh>): void {
 const theGenerator = (s: ReturnType<typeof fresh>) => s.modules.find((m) => m.type === "focusKeyed")!;
 
 describe("the focus generator's reserve", () => {
-  it("every session end banks fraction × live practice time into each owned generator", () => {
+  it("every session end banks the focus coefficient × live practice time into each owned generator", () => {
     const planned = fresh();
     receiving(planned);
     startSession(planned, 600);
@@ -256,13 +258,12 @@ describe("the focus generator's reserve", () => {
   });
 });
 
-// The keyed family's shared surface (ADR-0047, wave 5): the note and goal
-// generators join the focus generator's reserve semantics unchanged — one
-// burn rule, one standing vocabulary, one prestige reset. Delivery is the
-// focus generator's too: level, rarity, and mutators scale output strength
-// only, never the banked duration.
+// The named family's shared surface (issue #371): the Scribe and Milestone
+// join the Flywheel's reserve semantics — one quantity store, one
+// emission-rate burn rule, one prestige reset. Level and tier scale
+// earning and delivery by the same power: the banked rhythm never moves.
 describe("the note and goal reserves share the focus generator's surface", () => {
-  it("note and goal reserves burn 1 s/s in flow even without eligible neighbors", () => {
+  it("note and goal reserves burn at emission strength in flow even without eligible neighbors", () => {
     const s = fresh();
     const note = give(s, "noteKeyed", hex(2, 0));
     const goal = give(s, "goalKeyed", null); // tray copies hold until placed
@@ -285,22 +286,24 @@ describe("the note and goal reserves share the focus generator's surface", () =>
     give(s, "forge", hex(1, 0));
     note.reserve = 60;
     startSession(s, null);
-    // Strength 1 × 60 s of reserve charge: the 60 threshold crosses.
+    // Strength 1 × 60 charge of reserve: the 60 threshold crosses.
     advance(s, 60, stubRng(new Array(12).fill(0.5)));
     expect(s.forge.earned).toBe(1);
     expect(note.reserve).toBeCloseTo(0, 6);
   });
 
-  it("level scales the note reserve's delivery strength only — never the banked duration", () => {
+  it("level scales earning and delivery together — the banked rhythm never moves", () => {
     const s = fresh();
-    const note = give(s, "noteKeyed", hex(2, 0), 2); // power 1.2²
+    const note = give(s, "noteKeyed", hex(2, 0), 2); // power 1.2² = 1.44
     give(s, "forge", hex(1, 0));
-    note.reserve = 17; // the credit a 17-character note banked — flat, sizing never reads level
     startSession(s, null);
+    writeNote(s, "persisted thought"); // 17 characters — the Scribe's axis
+    // The credit rode the module's power: 17 chars × 1/char × 1.44 = 24.48
+    // charge — and delivery runs at the same 1.44 strength, so the 17
+    // character-seconds of duration stand exactly as they would at level 0.
+    expect(note.reserve).toBeCloseTo(17 * 1.44, 6);
     advance(s, 10, stubRng(new Array(12).fill(0.5)));
-    // The same 17 s budget delivers at strength 1.44 — the rate reads it,
-    // the duration never grew.
-    expect(note.reserve).toBeCloseTo(7, 6);
+    expect(note.reserve).toBeCloseTo(17 * 1.44 - 14.4, 6);
     expect(computeRates(s, true).forgeRate).toBeCloseTo(1.44, 6);
   });
 

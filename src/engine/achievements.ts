@@ -179,7 +179,7 @@ const MILESTONES: readonly AchievementDef[] = [
     name: "Shelf completion",
     description: "Buy all three starter-shelf offers.",
     unlock: "Generator, Booster, and Forge owned",
-    gate: "The starter shelf sells the Focus Generator, a Booster, and the Forge — one purchase each.",
+    gate: "The starter shelf sells the Flywheel, a Booster, and the Forge — one purchase each.",
     icon: glyph('<path d="M3.5 20.5h17"/><path d="M7.5 20.5v-7H11v7M13 20.5V9h3.5v11.5"/>'),
     evaluate: (s) => SHELF_TYPES.every((type) => s.purchased[type]),
     progress: (s) => fraction(SHELF_TYPES.filter((type) => s.purchased[type]).length, SHELF_TYPES.length),

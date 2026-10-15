@@ -275,13 +275,13 @@ describe("persistence", () => {
   });
 });
 
-// The Goal Generator's reserve (ADR-0047, wave 5): completing a goal of M
-// minutes banks k × the focus equivalent (chargeWindowFraction × M) into
-// every owned Goal Generator, board or tray alike, prorated by the live
-// share of the goal's progress — manual-only completions bank nothing,
-// mixed practice banks its live share. Recurring goals credit once per
-// occurrence; overlapping completions each credit.
-describe("the Goal Generator's reserve", () => {
+// The completion tick's credit (ADR-0047, generalized by issue #371):
+// completing a goal banks the focus equivalent (the Flywheel's focus rate × the
+// goal's credited seconds) × its live share into every owned generator at
+// its profile's goal coefficient — the Milestone's ×5 leads, the others'
+// modest ×1 trails. Manual-only completions bank nothing; recurring goals
+// credit once per occurrence; overlapping completions each credit.
+describe("the completion tick's credit", () => {
   it.each(["live", "manual"] as const)("caps an oversized %s completion at the remaining goal duration", (source) => {
     const s = fresh();
     const habit = withHabit(s);
@@ -303,7 +303,9 @@ describe("the Goal Generator's reserve", () => {
     advance(s, 300);
     endSession(s);
     addPracticeLog(s, habit.id, 60, 2_000);
-    expect(gen.reserve).toBeCloseTo(150, 6);
+    // The session's banked focus earning (Milestone's modest 0.02 × 300)
+    // rides beside the completion's live share: 6 + 150.
+    expect(gen.reserve).toBeCloseTo(156, 6);
   });
 
   it("trusted batches deliver and drain completion credits like one-second ticks", () => {
@@ -329,7 +331,7 @@ describe("the Goal Generator's reserve", () => {
     expect(batch.s.session!.goalSeconds).toEqual(ticks.s.session!.goalSeconds);
   });
 
-  it("a live completion banks k × the focus equivalent into every owned Goal Generator", () => {
+  it("a live completion banks the Milestone's ×5 on the focus equivalent into every owned Milestone", () => {
     const s = fresh();
     const habit = withHabit(s);
     const board = give(s, "goalKeyed", hex(2, 0));
@@ -338,7 +340,7 @@ describe("the Goal Generator's reserve", () => {
     startSession(s, 600);
     advance(s, 600);
     advance(s, 600); // 1200 s live — completes the 20-minute goal
-    // 5 × 0.1 × 1200 s = 600 s of reserve, per generator.
+    // 5 × 0.1 × 1200 = 600 charge, per generator.
     expect(board.reserve).toBeCloseTo(600, 6);
     expect(tray.reserve).toBeCloseTo(600, 6);
   });
@@ -352,8 +354,9 @@ describe("the Goal Generator's reserve", () => {
     advance(s, 600); // half the goal live
     endSession(s);
     addPracticeLog(s, habit.id, 10, 5_000); // the other half manual — completes it
-    // liveShare 0.5 × (5 × 0.1 × 1200) = 300 s.
-    expect(gen.reserve).toBeCloseTo(300, 6);
+    // liveShare 0.5 × (5 × 0.1 × 1200) = 300, beside the session's banked
+    // focus earning (0.02 × 600 = 12).
+    expect(gen.reserve).toBeCloseTo(312, 6);
   });
 
   it("a manual-only completion banks nothing", () => {
