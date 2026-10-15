@@ -1,4 +1,4 @@
-import { CATEGORY_OF } from "./constants";
+import { BALANCE, CATEGORY_OF } from "./constants";
 import type { ModuleType, OscillatorType } from "./types";
 
 // The authored oscillator profiles (issue #369, parent #366; ADR-0059):
@@ -80,6 +80,14 @@ export function chargeResponseOf(type: ModuleType): number {
 
 export function usesChargeConversion(type: ModuleType): boolean {
   return oscillatorProfileOf(type)?.chargeConversion === true;
+}
+
+// The base term's magnitude for one type at a given tier power — the one
+// read every surface that quotes the figure shares (the Forge effect
+// line, the candidate readout, the breakdown's Base output row), so the
+// quoted number cannot drift from the pass's own.
+export function baseTermOf(type: ModuleType, tierPower = 1): number {
+  return BALANCE.synthRate * baseProductionOf(type) * tierPower;
 }
 
 /* ── Fixed aptitude grades (issue #370) ───────────────

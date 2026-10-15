@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { computeRates, projectPlacement, chargeTermOf, chargedFactor, blasterConversion } from "./economy";
-import { BALANCE } from "./constants";
+import { BALANCE, TYPE_RARITY } from "./constants";
 import { gradeOfCoefficient, OSCILLATOR_PROFILES, profileAxesOf, type AptitudeGrade } from "./profiles";
-import { placeModule } from "./actions";
+import { combine, placeModule } from "./actions";
 import { deserialize, serialize } from "./save";
 import { fresh, give } from "./fixtures";
 import { createMutator } from "./state";
@@ -131,6 +131,32 @@ describe("progression and mutators preserve the profile shape", () => {
     }
   });
 
+  it("merging scales the profile: two Squares at one tier become one stronger Square", () => {
+    const s = fresh();
+    const a = give(s, "square", hex(2, 0));
+    const b = give(s, "square", null);
+    a.level = 3;
+    // The tray copy drops onto the deployed one: the higher-level survivor
+    // stands where it stood, one tier up, the melt consumed.
+    const result = combine(s, b.id, a.id);
+    expect(result.ok).toBe(true);
+    expect(a.tier).toBe(1);
+    expect(a.level).toBe(3);
+    expect(s.modules.includes(b)).toBe(false);
+    // The survivor keeps its profile: chordless, unboosted, and worth
+    // exactly the same square proportion as any copy of its shape — the
+    // merge stepped the strength ×1.5 and nothing else moved.
+    expect(contributionOf(s, a.id).infusorBonus).toBe(0);
+    const shape = (m: ReturnType<typeof give>): void => {
+      m.level = 3;
+      m.tier = 1;
+    };
+    expect(contributionOf(s, a.id).value / islandValue("additive", shape)).toBeCloseTo(OSCILLATOR_PROFILES.square.base, 9);
+    expect(contributionOf(s, a.id).value / islandValue("square", (m) => void (m.level = 3))).toBeCloseTo(BALANCE.tierPower[1], 9);
+    // One copy cannot merge again without a second at its new tier.
+    expect(combine(s, a.id).ok).toBe(false);
+  });
+
   it("a resonance mutator amplifies the profile-scaled chord factor, tradeoffs intact", () => {
     const chorded = (type: OscillatorType): number => {
       const s = fresh();
@@ -195,14 +221,33 @@ describe("fixed aptitude grades (#370)", () => {
     expect(axes.find((axis) => axis.id === "base")!.grade).toBe("A");
   });
 
-  it("grades are fixed: level, tier, and live conditions never re-rank them", () => {
+  it("grades are fixed: level, tier, mutators, and live conditions never re-rank them", () => {
     const before = profileAxesOf("square");
     const s = fresh();
     const square = give(s, "square", hex(2, 0));
+    give(s, "additive", hex(3, 0)); // a Fifth — the mutator has a chord to ride
     square.level = 6;
     square.tier = 2;
-    computeRates(s, true); // live conditions move output
+    const leveledValue = contributionOf(s, square.id).value;
+    s.mutators.push({ ...createMutator(s, "resonance", "rare"), pos: hex(2, 0) });
+    const mutatedValue = contributionOf(s, square.id).value;
+    // Output moved; the grades did not.
+    expect(mutatedValue).toBeGreaterThan(leveledValue);
     expect(profileAxesOf("square")).toEqual(before);
+  });
+
+  it("rarity never implies a grade: re-authoring a type's rarity moves no axis", () => {
+    // The bands are absolute within the category, so a rarer tag on the
+    // same coefficients reranks nothing — the launch roster is all-common
+    // (ADR-0058), so the probe authors and restores the table entry.
+    const before = profileAxesOf("saw");
+    const authored = TYPE_RARITY.saw;
+    TYPE_RARITY.saw = "rare";
+    try {
+      expect(profileAxesOf("saw")).toEqual(before);
+    } finally {
+      TYPE_RARITY.saw = authored;
+    }
   });
 
   it("the bands are absolute: D weak, — absent, and no roster addition moves an edge", () => {

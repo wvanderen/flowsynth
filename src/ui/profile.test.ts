@@ -50,7 +50,7 @@ describe("grade chips on the Forge candidate tiles", () => {
     const body = document.getElementById(chip.getAttribute("aria-describedby")!)!;
     expect(body.classList.contains("inst-show")).toBe(true);
     // The exact coefficient, in the established disclosure language.
-    expect(body.textContent).toBe("Base production ×0.9 — standard");
+    expect(body.textContent).toBe("Base production ×0.9 · standard");
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(body.classList.contains("inst-show")).toBe(false);
     expect(app.ui.modal).toBe("forge");

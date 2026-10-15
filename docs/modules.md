@@ -49,6 +49,12 @@ tiers, mutators, and live conditions move output, not grades. Types
 without authored profiles (every non-oscillator, until their waves land)
 show no axes and carry no grade line.
 
+Progression scales a profile whole: purchased levels multiply the type's
+whole term by its rarity power (`rarityPower` per level, ADR-0058) and
+each merge tier by `tierPower` (×1.5) — every axis together, so the
+coefficients' proportions, conditions, and relative weaknesses are the
+same at level 0 tier 0 as at level 6 tier 2.
+
 ## Category laws
 
 - **oscillator** — contributes a synth term to the composite; pitch is the

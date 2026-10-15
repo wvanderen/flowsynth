@@ -8,7 +8,7 @@ import { deployedAt } from "../engine/economy";
 import { sameHex } from "../engine/hex";
 import { forgeThreshold, flowThreshold, mutatorForgeThreshold } from "../engine/rolls";
 import { BALANCE, CATEGORY_OF, isOscillatorType, isVoiceType, NAMED_CHORDS, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
-import { baseProductionOf, OSCILLATOR_PROFILES } from "../engine/profiles";
+import { baseTermOf } from "../engine/profiles";
 import { catalogOpen, rowUnlockCost, unlockableRows } from "../engine/catalog";
 import { capacityCeiling, nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "../engine/capacity";
 import { formatClock, formatDuration } from "../engine/clock";
@@ -3273,11 +3273,12 @@ function forgeEffect(type: ModuleInstance["type"], tier: number): string {
   const power = tierPowerOf(tier);
   switch (type) {
     // The waveform profiles (issue #369, ADR-0059): the effect line names
-    // the niche; the grade chips beside it carry the fixed shorthand.
-    case "additive": return `+${formatNumber(BALANCE.synthRate * baseProductionOf(type) * power)} ν/s base · converts half of booster bonuses`;
-    case "triangle": return `Chord bonuses count ×${formatNumber(OSCILLATOR_PROFILES.triangle.chord)} · reduced base term`;
-    case "square": return `Booster bonuses count ×${formatNumber(OSCILLATOR_PROFILES.square.booster)} · reduced chord response`;
-    case "saw": return `Charged uplift ×${formatNumber(OSCILLATOR_PROFILES.saw.charge)} · reduced base term`;
+    // the niche in words; the grade chips beside it carry the fixed
+    // shorthand, their disclosures the exact coefficients.
+    case "additive": return `+${formatNumber(baseTermOf(type, power))} ν/s base · reduced booster response`;
+    case "triangle": return "Chord-fed term · reduced base";
+    case "square": return "Booster-fed term · reduced chord response";
+    case "saw": return "Charge-fed term · reduced base";
     case "blaster": return "Received charge → ν/s · sings even uncharged";
     case "harmonizer": return `Cell pitch · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * power)}%/level to its chords`;
     case "echo": return `Adjacent pitch, octave down · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * power)}%/level to its chords`;
@@ -3309,7 +3310,7 @@ function candidateReadout(type: ModuleInstance["type"], tier: number): string {
     case "triangle":
     case "square":
     case "saw":
-      return `+${formatNumber(BALANCE.synthRate * baseProductionOf(type) * power)}`;
+      return `+${formatNumber(baseTermOf(type, power))}`;
     case "harmonizer":
     case "echo":
     case "bend":

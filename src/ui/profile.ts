@@ -25,7 +25,7 @@ let gradeTipSeq = 0;
 function axisHtml(axis: ProfileAxisRead): string {
   const id = `profile-axis-tip-${gradeTipSeq++}`;
   const exact = axis.coefficient === null ? "" : ` ×${formatNumber(axis.coefficient)}`;
-  return `<span class="inst-tip profile-axis"><button type="button" class="inst-tip-trigger profile-grade" data-grade="${axis.grade}" aria-describedby="${id}" aria-label="${axis.label}: ${axis.grade}, ${GRADE_WORDS[axis.grade]}">${SHORT_AXIS[axis.id]} <b class="mono">${axis.grade}</b></button><span class="inst-tip-body" role="tooltip" id="${id}">${axis.label}${exact} — ${GRADE_WORDS[axis.grade]}</span></span>`;
+  return `<span class="inst-tip profile-axis"><button type="button" class="inst-tip-trigger profile-grade" data-grade="${axis.grade}" aria-describedby="${id}" aria-label="${axis.label}: ${axis.grade}, ${GRADE_WORDS[axis.grade]}">${SHORT_AXIS[axis.id]} <b class="mono">${axis.grade}</b></button><span class="inst-tip-body" role="tooltip" id="${id}">${axis.label}${exact} · ${GRADE_WORDS[axis.grade]}</span></span>`;
 }
 
 // The type's grade line — empty for every type without authored profile
