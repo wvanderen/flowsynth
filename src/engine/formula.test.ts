@@ -3,6 +3,7 @@ import { advance } from "./advance";
 import { startSession } from "./actions";
 import { chargedFactor, computeRates, investment, levelCost, modulePower } from "./economy";
 import { BALANCE } from "./constants";
+import { OSCILLATOR_PROFILES } from "./profiles";
 import { fresh, give } from "./fixtures";
 import { hex } from "./hex";
 
@@ -48,11 +49,13 @@ describe("board production model", () => {
     give(s, "additive", hex(2, 0)); // D5 island
     give(s, "infusor", hex(2, -1)); // adjacent to D5 only
     // The infusor touches the island synth but not the opening synth: the
-    // synths leg stays base and the uplift rides in the infusor leg.
+    // synths leg stays base and the uplift rides in the infusor leg — the
+    // Sine's authored response (issue #369) converts half the bonus.
+    const response = OSCILLATOR_PROFILES.additive.booster;
     const snapshot = computeRates(s, true);
-    expect(snapshot.rate).toBeCloseTo(SYNTH + SYNTH * (1 + 0.2), 9);
+    expect(snapshot.rate).toBeCloseTo(SYNTH + SYNTH * (1 + 0.2 * response), 9);
     expect(snapshot.synths).toBeCloseTo(2 * SYNTH, 9);
-    expect(snapshot.infusors).toBeCloseTo(SYNTH * 0.2, 9);
+    expect(snapshot.infusors).toBeCloseTo(SYNTH * 0.2 * response, 9);
     expect(snapshot.amplitude).toBeCloseTo(snapshot.synths + snapshot.infusors, 9);
   });
 

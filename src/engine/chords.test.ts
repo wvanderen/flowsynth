@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BALANCE, NAMED_CHORDS } from "./constants";
+import { OSCILLATOR_PROFILES } from "./profiles";
 import { chargedFactor, computeRates } from "./economy";
 import { analyzeChords, newChordTerms, wouldFormPreview } from "./chords";
 import { deserialize, serialize } from "./save";
@@ -346,8 +347,10 @@ describe("the local rate breakdown", () => {
     give(s, "infusor", hex(0, 1)); // C5 — adjacent to both C4 and G4
     const snapshot = computeRates(s, true);
     // The booster touches both synths: uplift is its own leg, chord-weighted
-    // so the amplitude splits exactly across legs.
-    expect(snapshot.infusors).toBeCloseTo(2 * BALANCE.synthRate * fifth * q2 * BALANCE.infusorBonus, 9);
+    // so the amplitude splits exactly across legs — each synth reading its
+    // authored booster response (the Sine's, issue #369).
+    const response = OSCILLATOR_PROFILES.additive.booster;
+    expect(snapshot.infusors).toBeCloseTo(2 * BALANCE.synthRate * fifth * q2 * BALANCE.infusorBonus * response, 9);
     expect(snapshot.synths).toBeCloseTo(2 * BALANCE.synthRate * fifth * q2, 9);
     expect(snapshot.amplitude).toBeCloseTo(snapshot.synths + snapshot.infusors, 9);
     expect(snapshot.empowerment).toBeCloseTo(1, 9);

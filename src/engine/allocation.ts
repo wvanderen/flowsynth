@@ -1,5 +1,6 @@
 import { silentVoiceUpliftOf } from "./module-strength";
 import { BALANCE, CATEGORY_OF, NAMED_CHORDS } from "./constants";
+import { chordResponseOf } from "./profiles";
 import { chordClusters, formationQuality, formationTension, type ChordAnalysis, type Singer } from "./chords";
 import type { AllocationSummary, DeployedModule, NamedChordTerm, RecognizedInstance } from "./types";
 
@@ -13,8 +14,9 @@ import type { AllocationSummary, DeployedModule, NamedChordTerm, RecognizedInsta
 // allocator maximizes the summed final ν/s of the board's oscillators, the
 // per-voice weights standing in for every non-chord leg of the real rate
 // pass (power, local boosters, charge, active build factors, achievements,
-// discoveries), with resonance and silent-voice uplift folded inside. The
-// empty allocation stays available — activating chords can reduce
+// discoveries), with resonance, silent-voice uplift, and each voice's
+// authored chord response (issue #369) folded inside. The empty
+// allocation stays available — activating chords can reduce
 // production, and then nothing activates.
 //
 // Formation quality (ADR-0049) evaluates every voice in the connected
@@ -40,8 +42,11 @@ import type { AllocationSummary, DeployedModule, NamedChordTerm, RecognizedInsta
 
 // The per-voice inputs the objective needs beyond the singer itself: the
 // voice's full chordless final ν/s (every non-chord leg of the rate pass
-// multiplied out — the caller reads it off the real engine pass) and the
-// resonance mutator's magnitude on its cell.
+// multiplied out — the caller reads it off the real engine pass), the
+// resonance mutator's magnitude on its cell, and the voice's authored
+// chord response (issue #369): the factor each active instance carries
+// for this voice is 1 + response·instance bonus, so a profile's chord
+// niche is inside the certified objective, not beside it.
 export interface AllocationVoiceParams {
   weight: number;
   resonance: number;
@@ -134,12 +139,25 @@ interface ClusterVoice {
   weight: number;
   uplift: number;
   resonance: number;
+  // The voice's authored chord response (issue #369): the instance factor
+  // it reads is 1 + response·bonus. Silent voices carry 1 — their weight
+  // is zero, so the value never reads.
+  response: number;
 }
 
 interface Candidate {
   inst: AllocatedInstance;
-  factor: number;
+  // The per-member instance factors, aligned with `members`: member j
+  // reads 1 + its response × the instance's bonus. Heterogeneous boards
+  // (a Triangle next to a Square) make one instance worth different
+  // factors per seat — the objective prices each seat honestly.
+  factors: number[];
   members: ClusterVoice[];
+}
+
+// The factor a candidate carries for one of its member voices.
+function factorFor(candidate: Candidate, voice: ClusterVoice): number {
+  return candidate.factors[candidate.members.indexOf(voice)]!;
 }
 
 // One voice's remaining-candidate material: the indices (into the ordered
@@ -189,29 +207,31 @@ function valueOf(solve: Solve): number {
 
 // The exact marginal gain of activating one more instance: the first names
 // the cluster and pays Q on all its members; later ones multiply into the
-// products Q already rides.
+// products Q already rides. Each member reads its own instance factor.
 function deltaOf(solve: Solve, candidate: Candidate): number {
   let delta = 0;
-  for (const voice of candidate.members) {
+  candidate.members.forEach((voice, j) => {
+    const factor = candidate.factors[j]!;
     const term = voice.weight * (1 + voice.resonance);
-    if (solve.counts[voice.index] === 0) delta += solve.q * term * candidate.factor - voice.weight;
-    else delta += solve.q * term * solve.prods[voice.index]! * (candidate.factor - 1);
-  }
+    if (solve.counts[voice.index] === 0) delta += solve.q * term * factor - voice.weight;
+    else delta += solve.q * term * solve.prods[voice.index]! * (factor - 1);
+  });
   return delta;
 }
 
 function applyCandidate(solve: Solve, candidate: Candidate): void {
-  for (const voice of candidate.members) {
+  candidate.members.forEach((voice, j) => {
+    const factor = candidate.factors[j]!;
     const term = voice.weight * (1 + voice.resonance);
     if (solve.counts[voice.index] === 0) {
       solve.sumIdle -= voice.weight;
-      solve.sumActive += term * candidate.factor;
+      solve.sumActive += term * factor;
     } else {
-      solve.sumActive += term * solve.prods[voice.index]! * (candidate.factor - 1);
+      solve.sumActive += term * solve.prods[voice.index]! * (factor - 1);
     }
-    solve.prods[voice.index]! *= candidate.factor;
+    solve.prods[voice.index]! *= factor;
     solve.counts[voice.index]!++;
-  }
+  });
   solve.chosen.push(candidate.inst);
   solve.chosenKeys.add(candidate.inst.key);
 }
@@ -219,17 +239,18 @@ function applyCandidate(solve: Solve, candidate: Candidate): void {
 function undoCandidate(solve: Solve, candidate: Candidate): void {
   solve.chosen.pop();
   solve.chosenKeys.delete(candidate.inst.key);
-  for (const voice of candidate.members) {
+  candidate.members.forEach((voice, j) => {
+    const factor = candidate.factors[j]!;
     const term = voice.weight * (1 + voice.resonance);
     solve.counts[voice.index]!--;
-    solve.prods[voice.index]! /= candidate.factor;
+    solve.prods[voice.index]! /= factor;
     if (solve.counts[voice.index] === 0) {
       solve.sumIdle += voice.weight;
-      solve.sumActive -= term * candidate.factor;
+      solve.sumActive -= term * factor;
     } else {
-      solve.sumActive -= term * solve.prods[voice.index]! * (candidate.factor - 1);
+      solve.sumActive -= term * solve.prods[voice.index]! * (factor - 1);
     }
-  }
+  });
 }
 
 function feasible(solve: Solve, candidate: Candidate): boolean {
@@ -370,7 +391,9 @@ function surveyCandidates(
             silentOnly.push(inst);
             return;
           }
-          out.push({ inst, factor: 1 + bonus, members: sorted });
+          // Each seat's factor prices the instance through its own
+          // authored chord response (issue #369).
+          out.push({ inst, factors: sorted.map((voice) => 1 + voice.response * bonus), members: sorted });
           return;
         }
         for (const seats of combos[i]!) walk(i + 1, [...members, ...seats]);
@@ -382,7 +405,7 @@ function surveyCandidates(
   // lands deep before any branching — with the key breaking ties.
   const emptyDelta = (candidate: Candidate): number =>
     candidate.members.reduce(
-      (total, voice) => total + (q * (1 + voice.resonance) * candidate.factor - 1) * voice.weight,
+      (total, voice, j) => total + (q * (1 + voice.resonance) * candidate.factors[j]! - 1) * voice.weight,
       0,
     );
   out.sort((a, b) => emptyDelta(b) - emptyDelta(a) || a.inst.key.localeCompare(b.inst.key));
@@ -405,10 +428,12 @@ function buildSuffixes(solve: Solve): void {
       if (candidate.members.includes(voice)) indices.push(i);
     });
     // top: the current largest factors, ascending; products[t] as built.
+    // The factor is the candidate's own for this voice — seats read
+    // their authored response, not a uniform instance factor.
     const suffixProducts: number[][] = [[1]];
     const top: number[] = [];
     for (let t = indices.length - 1; t >= 0; t--) {
-      const factor = solve.candidates[indices[t]!]!.factor;
+      const factor = factorFor(solve.candidates[indices[t]]!, voice);
       insert(top, factor, capacity);
       // Ascending by count: products[t] is the product of the t largest
       // factors among the remaining candidates.
@@ -432,13 +457,15 @@ function insert(top: number[], factor: number, capacity: number): void {
 
 // The value of an arbitrary instance list over the cluster — the
 // independent evaluator the greedy's trim pass uses (it recomputes every
-// product from the members, never trusting incremental state).
+// product from the members, never trusting incremental state). Each
+// member reads its own authored response over the instance's bonus.
 function evaluateList(solve: Solve, instances: readonly AllocatedInstance[]): number {
   const prods = new Map(solve.voices.map((voice) => [voice.id, 1]));
   const counts = new Map(solve.voices.map((voice) => [voice.id, 0]));
+  const responseOf = new Map(solve.voices.map((voice) => [voice.id, voice.response]));
   for (const inst of instances) {
     for (const id of inst.memberIds) {
-      prods.set(id, prods.get(id)! * (1 + inst.bonus));
+      prods.set(id, prods.get(id)! * (1 + (responseOf.get(id) ?? 1) * inst.bonus));
       counts.set(id, counts.get(id)! + 1);
     }
   }
@@ -645,7 +672,7 @@ export function allocateChords(singers: Singer[], spacers: DeployedModule[] = []
         const silent = CATEGORY_OF[module.type] === "silentVoice";
         const uplift = silent ? silentVoiceUpliftOf(module) : 0;
         const weight = silent ? 0 : params.weight;
-        return { id, index: 0, klass: mod12(pitchById.get(id)!), weight, uplift, resonance: params.resonance };
+        return { id, index: 0, klass: mod12(pitchById.get(id)!), weight, uplift, resonance: params.resonance, response: chordResponseOf(module.type) };
       })
       .sort((a, b) => a.id.localeCompare(b.id));
     voices.forEach((voice, i) => (voice.index = i));
@@ -656,11 +683,12 @@ export function allocateChords(singers: Singer[], spacers: DeployedModule[] = []
     certified = certified && solved.certified;
     const product = new Map<string, number>();
     const counts = new Map<string, number>();
+    const responseOf = new Map(voices.map((voice) => [voice.id, voice.response]));
     for (const inst of solved.instances) {
       instances.push(inst);
       namedChords.push({ name: inst.name, bonus: inst.bonus, instances: 1, moduleIds: [...inst.memberIds], root: inst.root });
       for (const id of inst.memberIds) {
-        product.set(id, (product.get(id) ?? 1) * (1 + inst.bonus));
+        product.set(id, (product.get(id) ?? 1) * (1 + (responseOf.get(id) ?? 1) * inst.bonus));
         counts.set(id, (counts.get(id) ?? 0) + 1);
       }
     }

@@ -16,6 +16,7 @@ import {
   unlockedNodes,
 } from "./builds";
 import { BALANCE, ROLL_POOL } from "./constants";
+import { boosterResponseOf } from "./profiles";
 import { computeRates, emittedStrength, receivedStrength, ritualAmpOf } from "./economy";
 import { addPracticeLog, createHabit, selectHabit } from "./habits";
 import { fresh, give } from "./fixtures";
@@ -236,7 +237,9 @@ describe("the nous branch", () => {
     selectHabit(s, habit.id);
     const withBuild = computeRates(s, true);
     const contribution = withBuild.contributions.get(s.modules[0]!.id)!;
-    expect(contribution.infusorBonus).toBeCloseTo(BALANCE.infusorBonus * 1.1, 6);
+    // The Sine's authored booster response (issue #369) scales the read
+    // bonus the same as the build's uplift — one leg, both multipliers.
+    expect(contribution.infusorBonus).toBeCloseTo(BALANCE.infusorBonus * 1.1 * boosterResponseOf("additive"), 6);
   });
 
   it("Feat resonance scales the achievement boost", () => {
@@ -252,7 +255,7 @@ describe("the nous branch", () => {
 describe("RITUAL", () => {
   it("reaches players through the module-roll pool only", () => {
     expect(ROLL_POOL).toContain("ritual");
-    expect(ROLL_POOL).toHaveLength(13);
+    expect(ROLL_POOL).toHaveLength(16);
   });
 
   it("produces nothing and receives charge as a continuous member", () => {

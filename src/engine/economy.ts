@@ -1,5 +1,6 @@
 import { amplifierGainOf, tierPowerOf } from "./module-strength";
 import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isVoiceType, typeRarityOf } from "./constants";
+import { baseProductionOf, boosterResponseOf, chargeResponseOf, usesChargeConversion } from "./profiles";
 import { analyzeChords, hypotheticalBoardFor, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
 import { allocateChords, DEFAULT_ALLOCATION_BUDGET, type AllocationBudget, type AllocationRead, type AllocationVoiceParams } from "./allocation";
 import { capacityOf } from "./capacity";
@@ -10,7 +11,7 @@ import { discoveryBoostOf, discoveryCount, syncChordDiscoveries } from "./librar
 import { summaryTermsOf } from "./allocation";
 import { adjacent, sameHex } from "./hex";
 import { octaveRowOf } from "./lattice";
-import type { Contribution, DeployedModule, GameState, Hex, ModuleInstance, MutatorFamily, MutatorInstance, Rarity, RateSnapshot } from "./types";
+import type { Contribution, DeployedModule, GameState, Hex, ModuleInstance, ModuleType, MutatorFamily, MutatorInstance, Rarity, RateSnapshot } from "./types";
 
 export function chargedFactor(strength: number): number {
   return 1 + strength / (1 + strength);
@@ -22,6 +23,17 @@ export function chargedFactor(strength: number): number {
 // replaces the charge factor entirely: no second empowerment pass.
 export function blasterConversion(strength: number): number {
   return strength / (1 + strength);
+}
+
+// A producer's charge term (issue #369, ADR-0059): the conversion curve
+// for the types whose profile replaces the charge factor (the Blaster,
+// ADR-0048), otherwise the charged-empowerment curve with the type's
+// authored response scaling the delta above ×1 — a Saw's ×3 delta flips
+// past stronger bases on a steadily charged board, while every uncharged
+// producer sits at exactly ×1.
+export function chargeTermOf(type: ModuleType, strength: number): number {
+  if (usesChargeConversion(type)) return blasterConversion(strength);
+  return 1 + chargeResponseOf(type) * (strength / (1 + strength));
 }
 
 // A mutator's magnitude (ADR-0043, issue #198): the family's base scaled
@@ -402,14 +414,17 @@ export type ChordPass = (singers: Singer[], spacers: DeployedModule[], bonusScal
 // ADR-0049; leg naming per ADR-0020): every effect lands on the producer
 // it touches, and the board's rate is the sum of the modules' final
 // figures:
-//   value(s)  = synthRate·power·chordFactor·(1+infusor)·charge·achievementBoost·discoveryBoost
+//   value(s)  = synthRate·profileBase·power·chordFactor·(1+infusor)·charge·achievementBoost·discoveryBoost
 //   rate      = Σ value(s) = (synths + boosters) × empowerment × achievementBoost × discoveryBoost
 // Every oscillator shares one base rate scaled by rarityPower^level — one
-// unified leg, no carrier/harmonics split. Chords are local (ADR-0036):
-// the formation's named instance product × its quality Q (ADR-0049) rides
-// each member's own term, and the Blaster's charge conversion replaces its
-// charge factor (no second empowerment pass — the conversion is the
-// charge). Both legs stay uncharged so additive charge aggregates into the
+// unified leg, no carrier/harmonics split — with the named type's authored
+// profile (issue #369, ADR-0059) scaling the pieces: base production over
+// the unified rate, the booster bonus the term receives, the chord bonus
+// it converts (Q rides outside it), and the charge curve's delta. Chords
+// are local (ADR-0036): the formation's named instance product × its
+// quality Q (ADR-0049) rides each member's own term, and the conversion
+// types' charge curve replaces their charge factor (no second empowerment
+// pass — the conversion is the charge). Both legs stay uncharged so additive charge aggregates into the
 // snapshot's empowerment leg and the breakdown multiplies out exactly; the
 // Blaster's converted term rides the synths leg by construction. Silent
 // voices, spacers, and conduits contribute nothing — the conduit routes
@@ -465,12 +480,18 @@ export function computeRates(
     if (isVoiceType(deployedModule.type)) {
       // The steady-hand node (ADR-0046) scales the booster uplift the
       // oscillator reads — the active build's touch on the booster leg.
-      const localBonus = category === "silentVoice" ? 0 : infusorBonusAt(state, deployedModule, flow, placed, net, factors.generatorStrength) * (1 + factors.boosterUplift);
-      // The charge term each producer applies: the additive's charged
-      // empowerment, or the Blaster's conversion — the curve that replaces
-      // the charge factor (ADR-0048). The silent voice sings nothing of
-      // its own, so it takes neither.
-      const chargeTerm = category === "silentVoice" ? 1 : deployedModule.type === "blaster" ? blasterConversion(strength) : chargedFactor(strength);
+      // The type's authored booster response (issue #369) scales how much
+      // of the granted bonus the term receives — a Sine converts half.
+      const localBonus =
+        (category === "silentVoice" ? 0 : infusorBonusAt(state, deployedModule, flow, placed, net, factors.generatorStrength)) *
+        (1 + factors.boosterUplift) *
+        boosterResponseOf(deployedModule.type);
+      // The charge term each producer applies: its profile's authored
+      // response over the charged-empowerment curve, or the conversion
+      // curve for the types whose profile replaces the charge factor
+      // (the Blaster, ADR-0048). The silent voice sings nothing of its
+      // own, so it takes neither.
+      const chargeTerm = category === "silentVoice" ? 1 : chargeTermOf(deployedModule.type, strength);
       voices.push({
         module: { ...deployedModule, pos },
         power,
@@ -551,8 +572,10 @@ export function computeRates(
     // inert on a chordless host: no named formation, nothing to amplify.
     const chordFactor = named ? rawChordFactor * (1 + resonanceMagnitudeAt(state, module.pos)) : rawChordFactor;
     // The Weights nodes (ADR-0046) scale the synth term — the unified leg
-    // every oscillator contributes, Blaster's conversion included.
-    const base = BALANCE.synthRate * power * (silent ? 0 : chordFactor) * (1 + factors.synthTerm);
+    // every oscillator contributes, the type's authored base multiplier
+    // (issue #369) over the category's unified rate, Blaster's conversion
+    // included.
+    const base = BALANCE.synthRate * baseProductionOf(module.type) * power * (silent ? 0 : chordFactor) * (1 + factors.synthTerm);
     // The silent voice sings nothing of its own: its factor is display
     // only — the muted participant's read. The producers' value carries
     // the whole chain.

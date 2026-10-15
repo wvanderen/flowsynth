@@ -8,6 +8,7 @@ import { deployedAt } from "../engine/economy";
 import { sameHex } from "../engine/hex";
 import { forgeThreshold, flowThreshold, mutatorForgeThreshold } from "../engine/rolls";
 import { BALANCE, CATEGORY_OF, isOscillatorType, isVoiceType, NAMED_CHORDS, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
+import { baseProductionOf, OSCILLATOR_PROFILES } from "../engine/profiles";
 import { catalogOpen, rowUnlockCost, unlockableRows } from "../engine/catalog";
 import { capacityCeiling, nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "../engine/capacity";
 import { formatClock, formatDuration } from "../engine/clock";
@@ -50,6 +51,7 @@ import { formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordT
 import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG, CAPACITY_SVG } from "./ledger";
 import { closeTooltips, wireTooltips } from "./instrument";
 import { instancesByClass, instancesKeyOf, libraryHeaderHtml, libraryIndexRowHtml, libraryStageHtml } from "./library";
+import { profileGradesHtml } from "./profile";
 import { discoveryCount, discoveryBoostOf, rootsHeardOf } from "../engine/library";
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster, syncGlowLens } from "./zoom";
 import { beginLayoutPass, containerWidth, endLayoutPass, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX, viewportWidth, scrollTopOf } from "./container";
@@ -3270,7 +3272,12 @@ function catalogAreteFaceHtml(app: App): string {
 function forgeEffect(type: ModuleInstance["type"], tier: number): string {
   const power = tierPowerOf(tier);
   switch (type) {
-    case "additive": return `+${formatNumber(BALANCE.synthRate * power)} ν/s · charge boosts output`;
+    // The waveform profiles (issue #369, ADR-0059): the effect line names
+    // the niche; the grade chips beside it carry the fixed shorthand.
+    case "additive": return `+${formatNumber(BALANCE.synthRate * baseProductionOf(type) * power)} ν/s base · converts half of booster bonuses`;
+    case "triangle": return `Chord bonuses count ×${formatNumber(OSCILLATOR_PROFILES.triangle.chord)} · reduced base term`;
+    case "square": return `Booster bonuses count ×${formatNumber(OSCILLATOR_PROFILES.square.booster)} · reduced chord response`;
+    case "saw": return `Charged uplift ×${formatNumber(OSCILLATOR_PROFILES.saw.charge)} · reduced base term`;
     case "blaster": return "Received charge → ν/s · sings even uncharged";
     case "harmonizer": return `Cell pitch · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * power)}%/level to its chords`;
     case "echo": return `Adjacent pitch, octave down · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * power)}%/level to its chords`;
@@ -3299,7 +3306,10 @@ function candidateReadout(type: ModuleInstance["type"], tier: number): string {
   switch (type) {
     case "additive":
     case "blaster":
-      return `+${formatNumber(BALANCE.synthRate * power)}`;
+    case "triangle":
+    case "square":
+    case "saw":
+      return `+${formatNumber(BALANCE.synthRate * baseProductionOf(type) * power)}`;
     case "harmonizer":
     case "echo":
     case "bend":
@@ -3382,6 +3392,7 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
           <span class="candidate-readout"><span class="candidate-name">${META[candidate.type].name}</span>
           <span class="rarity">${RARITY_LABEL[typeRarityOf(candidate.type)]}</span>
           <span id="forge-effect-${candidate.id}" class="candidate-effect">${forgeEffectHtml(forgeEffect(candidate.type, candidate.tier))}</span>
+          ${profileGradesHtml(candidate.type)}
           ${candidate.type !== "spacer" ? `<span class="candidate-scaling">${["harmonizer", "echo", "bend", "amplifier", "ritual"].includes(candidate.type) ? "" : `+${formatNumber((BALANCE.rarityPower[typeRarityOf(candidate.type)] - 1) * 100)}% / level · `}upgrades from 10 ν</span>` : ""}</span>
         </div>`).join("") : mutOffer ? mutOffer.candidates.map(candidate => `
         <div class="candidate-tile mut-candidate" data-rarity="${candidate.rarity}"><button class="candidate-pick" data-mut-choice="${candidate.id}" data-mut-offer="${mutOffer.id}" data-rarity="${candidate.rarity}" aria-label="Take ${RARITY_LABEL[candidate.rarity]} ${FAMILY_WORD[candidate.family]} mutator" aria-describedby="forge-effect-${candidate.id}"></button>

@@ -1,0 +1,177 @@
+import { CATEGORY_OF } from "./constants";
+import type { ModuleType, OscillatorType } from "./types";
+
+// The authored oscillator profiles (issue #369, parent #366; ADR-0059):
+// each named type carries one fixed profile — a stable authored identity,
+// never rolled per copy. One defining behavior and at most two supporting
+// tradeoffs per design; the four waveform names identify individual common
+// designs, not mechanically prescribed waveform families. Tier, level, and
+// mutators scale the strengths these coefficients author — they never
+// change the proportions between the axes, so a profile's shape survives
+// progression intact.
+//
+// All figures are provisional tuning (the parent issue's accepted sample
+// niches with representative boards, not balanced tables):
+//   Sine     — the strong independent producer: full base term, but it
+//              converts only half of every booster bonus (reduced booster
+//              response).
+//   Triangle — the chord specialist: every chord instance's bonus counts
+//              2.5× toward its term, paid for with a reduced base.
+//   Square   — the booster-fed producer: double booster response, paid for
+//              with a reduced chord response and a slightly reduced base.
+//   Saw      — the charge specialist: 3× the charged-empowerment delta, so
+//              a steadily charged board flips it past the Sine, paid for
+//              with the lowest uncharged production.
+//   Blaster  — the category's standing alternative charge behavior
+//              (ADR-0048): the conversion curve replaces the charge factor
+//              entirely, so its charge axis has no comparable multiplier —
+//              the absent mark, with the replacement stated in disclosure.
+export interface OscillatorProfile {
+  // The base-term multiplier over the category's unified synthRate.
+  base: number;
+  // How much of each adjacent booster's bonus the term receives.
+  booster: number;
+  // How much of every chord instance's bonus the term receives (the
+  // formation's quality Q rides outside it, untouched — ADR-0049's
+  // chordless ×1.00 contract holds per profile).
+  chord: number;
+  // The multiplier on the charged-empowerment curve's delta above ×1.
+  charge: number;
+  // The Blaster's structural alternative: received charge converts into
+  // the term (×0 uncharged, ×1 at the asymptote) instead of empowering.
+  chargeConversion?: boolean;
+}
+
+export const OSCILLATOR_PROFILES: Record<OscillatorType, OscillatorProfile> = {
+  additive: { base: 1.0, booster: 0.5, chord: 1.0, charge: 1.0 },
+  triangle: { base: 0.75, booster: 1.0, chord: 2.5, charge: 1.0 },
+  square: { base: 0.9, booster: 2.0, chord: 0.6, charge: 1.0 },
+  saw: { base: 0.7, booster: 1.0, chord: 1.0, charge: 3.0 },
+  blaster: { base: 1.0, booster: 1.0, chord: 1.0, charge: 1.0, chargeConversion: true },
+};
+
+// The one profile read. Non-oscillators have no profile — callers guard by
+// category; this accessor returns null rather than a neutral shape so a
+// stray read cannot masquerade as authored data.
+export function oscillatorProfileOf(type: ModuleType): OscillatorProfile | null {
+  const category = CATEGORY_OF[type];
+  if (category !== "oscillator") return null;
+  return OSCILLATOR_PROFILES[type as OscillatorType];
+}
+
+// The response accessors the passes read. Every non-oscillator module —
+// the silent voices singing into formations, future categories — reads
+// neutral: the profiles so far author oscillators only.
+export function baseProductionOf(type: ModuleType): number {
+  return oscillatorProfileOf(type)?.base ?? 1;
+}
+
+export function boosterResponseOf(type: ModuleType): number {
+  return oscillatorProfileOf(type)?.booster ?? 1;
+}
+
+export function chordResponseOf(type: ModuleType): number {
+  return oscillatorProfileOf(type)?.chord ?? 1;
+}
+
+export function chargeResponseOf(type: ModuleType): number {
+  return oscillatorProfileOf(type)?.charge ?? 1;
+}
+
+export function usesChargeConversion(type: ModuleType): boolean {
+  return oscillatorProfileOf(type)?.chargeConversion === true;
+}
+
+/* ── Fixed aptitude grades (issue #370) ───────────────
+   Every profile axis carries one grade from fixed coefficient bands —
+   the quick-comparison shorthand beside the exact coefficients the
+   disclosure layer already carries. Grades are absolute within the
+   category: adding roster entries never reranks an existing grade, and
+   level, tier, mutators, and live conditions change output without
+   touching them. Grades summarize comparable numerical aptitudes only —
+   temporal rules and structural alternatives (the Blaster's conversion)
+   take the absent mark and are described directly. */
+
+export type AptitudeGrade = "S" | "A" | "B" | "C" | "D" | "—";
+
+// Anything at or below reads as absent rather than weak — zero is no
+// effect, not a small one.
+const EPS_FLOOR = 1e-9;
+
+// The two band ladders, provisional tuning. Base production bands against
+// the category's unified synthRate (the pre-profile standard = A strong);
+// the response axes band around neutral ×1 (neutral = B standard). D weak
+// and — absent complete the ladder for the later profile waves; the launch
+// roster's lowest coefficient is C reduced.
+const BASE_BANDS: readonly { min: number; grade: AptitudeGrade }[] = [
+  { min: 1.2, grade: "S" },
+  { min: 1.0, grade: "A" },
+  { min: 0.85, grade: "B" },
+  { min: 0.6, grade: "C" },
+  { min: EPS_FLOOR, grade: "D" },
+];
+
+const RESPONSE_BANDS: readonly { min: number; grade: AptitudeGrade }[] = [
+  { min: 1.4, grade: "S" },
+  { min: 1.1, grade: "A" },
+  { min: 0.8, grade: "B" },
+  { min: 0.5, grade: "C" },
+  { min: EPS_FLOOR, grade: "D" },
+];
+
+export function gradeOfCoefficient(value: number, axis: "base" | "booster" | "chord" | "charge"): AptitudeGrade {
+  if (value <= EPS_FLOOR) return "—";
+  for (const band of axis === "base" ? BASE_BANDS : RESPONSE_BANDS) {
+    if (value >= band.min) return band.grade;
+  }
+  return "D";
+}
+
+// The grade's word for disclosure bodies — the one phrasing table, so no
+// two surfaces drift apart on what a letter says.
+export const GRADE_WORDS: Record<AptitudeGrade, string> = {
+  S: "exceptional",
+  A: "strong",
+  B: "standard",
+  C: "reduced",
+  D: "weak",
+  "—": "absent effect",
+};
+
+// One comparable numerical axis of a type's profile, with its fixed grade
+// and exact coefficient. Axes a type lacks entirely read absent — the
+// launch case is the Blaster's charge axis, whose conversion replaces the
+// ordinary charge factor instead of scaling it.
+export interface ProfileAxisRead {
+  id: "base" | "booster" | "chord" | "charge";
+  label: string;
+  grade: AptitudeGrade;
+  // The exact authored multiplier, or null when the axis has no
+  // comparable multiplier (the absent mark).
+  coefficient: number | null;
+}
+
+export const PROFILE_AXIS_LABELS: Record<ProfileAxisRead["id"], string> = {
+  base: "Base production",
+  booster: "Booster response",
+  chord: "Chord response",
+  charge: "Charge response",
+};
+
+// The type's fixed profile axes, grades included — the one read the Forge
+// tiles and the Hex detail share. Types without authored profiles (every
+// non-oscillator, until their waves land) read empty: no axes, no grades,
+// nothing to compare yet.
+export function profileAxesOf(type: ModuleType): readonly ProfileAxisRead[] {
+  const profile = oscillatorProfileOf(type);
+  if (!profile) return [];
+  const axes: ProfileAxisRead[] = [];
+  const push = (id: ProfileAxisRead["id"], coefficient: number, absent = false): void => {
+    axes.push({ id, label: PROFILE_AXIS_LABELS[id], grade: absent ? "—" : gradeOfCoefficient(coefficient, id), coefficient: absent ? null : coefficient });
+  };
+  push("base", profile.base);
+  push("booster", profile.booster);
+  push("chord", profile.chord);
+  push("charge", profile.charge, profile.chargeConversion === true);
+  return axes;
+}

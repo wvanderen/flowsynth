@@ -4,8 +4,14 @@ import type { FocusApp, ModuleType, Rarity, ShelfType } from "../engine/types";
 // display-layer only — `name` is the full name every tooltip, roster row,
 // and toast reads; `short` is the face's compact nameplate.
 export const META: Record<ModuleType, { name: string; short: string; role: string }> = {
-  additive: { name: "Oscillator", short: "OSC", role: "Synth term" },
+  // The waveform oscillators (issue #369, ADR-0059): four named designs
+  // over one shared leg — the `additive` key predates the profiles and
+  // stays the save's key for the Sine, like `focusKeyed` before it.
+  additive: { name: "Sine", short: "SINE", role: "Strong base term" },
   blaster: { name: "Blaster", short: "BLST", role: "Charge into synth term" },
+  triangle: { name: "Triangle", short: "TRI", role: "Chord-heavy term" },
+  square: { name: "Square", short: "SQR", role: "Booster-fed term" },
+  saw: { name: "Saw", short: "SAW", role: "Charge-fed term" },
   harmonizer: { name: "Harmonizer", short: "HARM", role: "Silent voice — its cell's pitch" },
   echo: { name: "Echo", short: "ECHO", role: "Silent voice — neighbor, one octave down" },
   bend: { name: "Bend", short: "BEND", role: "Silent voice — its pitch, shifted" },

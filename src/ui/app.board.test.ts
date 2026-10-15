@@ -189,7 +189,9 @@ describe("the board ledger (§7, issue #270)", () => {
     // authoritative allocation since the release (#262).
     const q = 1 + BALANCE.allocationComplexityRate;
     expect(modal.textContent).toContain(`synths +${formatNumber(0.26 * q)} ν/s`);
-    expect(modal.textContent).toContain(`boosters +${formatNumber(0.052 * q)} ν/s`);
+    // The booster leg rides the voices' authored booster responses — the
+    // Sine's half (issue #369): 2 × 0.26q × 0.2 × 0.5.
+    expect(modal.textContent).toContain(`boosters +${formatNumber(0.026 * q)} ν/s`);
     expect(modal.textContent).not.toContain("chords ×");
     expect(modal.textContent).not.toContain("carrier");
     expect(modal.textContent).not.toContain("harmonics");

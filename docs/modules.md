@@ -6,45 +6,63 @@ new types and game-design concepts — the engine keys and records live in code
 design thinking lives. The roster table reflects the code as of the last
 update; when a type lands, update the table in the same change.
 
-Last updated: 2026-10-14 (fixed type rarity and the merge tier, issue #367)
+Last updated: 2026-10-15 (the four waveform profiles and fixed aptitude grades, issues #369/#370)
 
 ## Roster
 
-| Key | Name | Nameplate | Category | Rarity | Hue | Glyph | Origin | Face readout |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `additive` | Oscillator | OSC | oscillator | common | `hue-oscillator` | bare sine | Opening grant and roll pool | `+value`, note `P«pitch»` |
-| `blaster` | Blaster | BLST | oscillator | common | `hue-oscillator` | bolt-cored sine | Roll pool only | `+value` (0 uncharged), note `P«pitch»` |
-| `harmonizer` | Harmonizer | HARM | silent voice | common | `hue-voice` | diamond (muted tonehead) | Roll pool only | the pitch it sings, note `P«cell»` |
-| `echo` | Echo | ECHO | silent voice | common | `hue-voice` | doubled waves | Roll pool only | the pitch it sings, note `P«cell»` |
-| `bend` | Bend | BEND | silent voice | common | `hue-voice` | kinked line | Roll pool only | the pitch it sings, note `P«cell»` |
-| `amplifier` | Amplifier | AMP | conduit | common | `hue-conduit` | through-flowing chevrons | Roll pool only | `⌁relayed` |
-| `ritual` | RITUAL | RITUAL | ritual | common | `hue-ritual` | habit-cycle ring | Roll pool only | `×amp` while charged |
-| `spacer` | Spacer | Spacer | spacer | common | `hue-spacer` | ring window (board) / wire | Roll pool only | `⌇` |
-| `focusKeyed` | Focus Generator | FOCUS | generator | common | `hue-generator` | bolt, bare | Starter shelf ("generator", 40) and roll pool | `⌁power` |
-| `noteKeyed` | Note Generator | NOTE | generator | common | `hue-generator` | bolt, double-line corner mark | Roll pool only | `⌁power` |
-| `goalKeyed` | Goal Generator | GOAL | generator | common | `hue-generator` | bolt, check corner mark | Roll pool only | `⌁power` |
-| `infusor` | Booster | BOOST | booster | common | `hue-booster` | outward chevrons around a center dot | Starter shelf (40) and roll pool | `+«%»` |
-| `forge` | Forge | FORGE | forge | common | `hue-forge` | hex prism | Starter shelf (80) and roll pool | `«charge»/«threshold»` (charge register) |
-| `mutatorForge` | Mutator Forge | MUT. FORGE | forge | common | `hue-forge` | seeded-hexagon core on the chassis | Mutator tree entry | `«charge»/«threshold»` (charge register) |
+| Key | Name | Nameplate | Category | Rarity | Profile axes (base · boost · chord · charge) | Hue | Glyph | Origin | Face readout |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `additive` | Sine | SINE | oscillator | common | A · C · B · B | `hue-oscillator` | bare sine | Opening grant and roll pool | `+value`, note `P«pitch»` |
+| `blaster` | Blaster | BLST | oscillator | common | A · B · B · — (conversion) | `hue-oscillator` | bolt-cored sine | Roll pool only | `+value` (0 uncharged), note `P«pitch»` |
+| `triangle` | Triangle | TRI | oscillator | common | C · B · S · B | `hue-oscillator` | triangle trace | Roll pool only | `+value`, note `P«pitch»` |
+| `square` | Square | SQR | oscillator | common | B · S · C · B | `hue-oscillator` | square trace | Roll pool only | `+value`, note `P«pitch»` |
+| `saw` | Saw | SAW | oscillator | common | C · B · B · S | `hue-oscillator` | saw trace | Roll pool only | `+value`, note `P«pitch»` |
+| `harmonizer` | Harmonizer | HARM | silent voice | common | — | `hue-voice` | diamond (muted tonehead) | Roll pool only | the pitch it sings, note `P«cell»` |
+| `echo` | Echo | ECHO | silent voice | common | — | `hue-voice` | doubled waves | Roll pool only | the pitch it sings, note `P«cell»` |
+| `bend` | Bend | BEND | silent voice | common | — | `hue-voice` | kinked line | Roll pool only | the pitch it sings, note `P«cell»` |
+| `amplifier` | Amplifier | AMP | conduit | common | — | `hue-conduit` | through-flowing chevrons | Roll pool only | `⌁relayed` |
+| `ritual` | RITUAL | RITUAL | ritual | common | — | `hue-ritual` | habit-cycle ring | Roll pool only | `×amp` while charged |
+| `spacer` | Spacer | Spacer | spacer | common | — | `hue-spacer` | ring window (board) / wire | Roll pool only | `⌇` |
+| `focusKeyed` | Focus Generator | FOCUS | generator | common | — | `hue-generator` | bolt, bare | Starter shelf ("generator", 40) and roll pool | `⌁power` |
+| `noteKeyed` | Note Generator | NOTE | generator | common | — | `hue-generator` | bolt, double-line corner mark | Roll pool only | `⌁power` |
+| `goalKeyed` | Goal Generator | GOAL | generator | common | — | `hue-generator` | bolt, check corner mark | Roll pool only | `⌁power` |
+| `infusor` | Booster | BOOST | booster | common | — | `hue-booster` | outward chevrons around a center dot | Starter shelf (40) and roll pool | `+«%»` |
+| `forge` | Forge | FORGE | forge | common | — | `hue-forge` | hex prism | Starter shelf (80) and roll pool | `«charge»/«threshold»` (charge register) |
+| `mutatorForge` | Mutator Forge | MUT. FORGE | forge | common | — | `hue-forge` | seeded-hexagon core on the chassis | Mutator tree entry | `«charge»/«threshold»` (charge register) |
 
 Rarity is each type's fixed acquisition rarity (`TYPE_RARITY`, ADR-0058) —
 authored in code, never rolled per copy. A roll draws the rarity band
-(shared `rarityProbability` table), then a type inside the band; with the
-launch roster all-common the thirteen types sample uniformly. Duplicate
-progress lives on the per-copy merge tier: two copies of the same type and
-tier combine into one at the next tier, up to the finite unlocked cap
-(`mergeCap`, 2 — three tiers, Arete raises it later, #380). The plate tint
-and rarity word read the type; the engraved rings read the tier. Mutator
-rarity is separate and unchanged (ADR-0043).
+(shared `rarityProbability` table), then a type inside the band; the
+sixteen common types sample uniformly. Duplicate progress lives on the
+per-copy merge tier: two copies of the same type and tier combine into one
+at the next tier, up to the finite unlocked cap (`mergeCap`, 2 — three
+tiers, Arete raises it later, #380). The plate tint and rarity word read
+the type; the engraved rings read the tier. Mutator rarity is separate and
+unchanged (ADR-0043).
+
+The profile axes column (issues #369/#370, ADR-0059) is each oscillator's
+fixed aptitude grades over the four comparable axes — base production,
+booster response, chord response, charge response — from the absolute
+coefficient bands in `src/engine/profiles.ts` (S exceptional, A strong,
+B standard, C reduced, D weak, — absent). Grades never re-rank: levels,
+tiers, mutators, and live conditions move output, not grades. Types
+without authored profiles (every non-oscillator, until their waves land)
+show no axes and carry no grade line.
 
 ## Category laws
 
 - **oscillator** — contributes a synth term to the composite; pitch is the
   cell's own (ADR-0021: cell-owned, never persisted). Receives charge as
-  continuous empowerment. Two producer roles (ADR-0048): the Oscillator's
-  base term, and the Blaster's charge-sourced term — the conversion curve
-  replaces the charge factor, and the Blaster sings and completes chords
-  even uncharged at zero output.
+  continuous empowerment, each named type's authored profile (issue #369,
+  ADR-0059) scaling the leg's pieces: base production over the unified
+  rate, how much of each adjacent booster's bonus the term receives, how
+  much of every chord instance's bonus it converts (the formation's Q
+  rides outside the response — the chordless ×1.00 contract holds per
+  profile), and the multiplier on the charge curve's delta above ×1.
+  Producer roles: the four waveform designs (Sine, Triangle, Square, Saw)
+  share the base term, and the Blaster's conversion curve replaces the
+  charge factor entirely — the conversion is the charge, its charge axis
+  takes the absent grade.
 - **silent voice** — produces no nous; its derived pitch counts in
   formations (forms and completes chords, conducts as a voice). Category
   trait (ADR-0048): a level-scaled uplift (+5%/LV, tuning) to every chord
@@ -81,9 +99,30 @@ sit at exactly ×1.00 (ADR-0049).
 
 ## Per-module notes
 
-### Oscillator (`additive`)
-The plain synth term: `synthRate` = 0.1/s × rarity power. From the opening
-grant and rolls, so the first chord is teachable in session one.
+### Sine (`additive`)
+The strong independent producer: full base term (`synthRate` = 0.1/s × the
+×1.0 base profile), converting only half of every adjacent booster's bonus.
+From the opening grant and rolls, so the first chord is teachable in
+session one. The `additive` key predates the profiles and stays the save's
+key for the Sine, like `focusKeyed` before it.
+
+### Triangle (`triangle`)
+The chord specialist (issue #369): every chord instance's bonus counts
+×2.5 toward its term — the formation's Q rides outside the response —
+paid for with a reduced base (×0.75). Overtakes the Sine once a rich chord
+actually rings; chordless boards are not its home.
+
+### Square (`square`)
+The booster-fed producer (issue #369): adjacent boosters' bonuses count
+×2.0 toward its term, paid for with a reduced chord response (×0.6) and a
+slightly reduced base (×0.9). One charged booster flips it past the Sine;
+chord-heavy builds leave it behind.
+
+### Saw (`saw`)
+The charge specialist (issue #369): the charged-empowerment delta counts
+×3.0 — uncharged it sits at exactly ×1 like everyone, and a steadily
+charged board (one adjacent generator's worth of strength or more) flips
+it past the Sine — paid for with the lowest uncharged base (×0.7).
 
 ### Blaster (`blaster`)
 The oscillator category's second producer role (ADR-0048): converts
@@ -176,7 +215,10 @@ silent voices and the conduit (issue #229): the Echo's doubled waves (the
 octave down it sings), the Bend's kinked line (the ♯/♭ shift), the
 Blaster's bolt-cored sine (the charge inside the term), and the
 Amplifier's through-flowing chevrons (charge in one side, out the other).
-Two spacers' specials: the board face clips as a hexagonal ring window
+The profile wave (issue #369) added the waveform traces: the Triangle's
+zigzag, the Square's steps, the Saw's ramps — identity marks for the four
+named designs, not mechanically prescribed waveform families. Two
+spacers' specials: the board face clips as a hexagonal ring window
 (chassis minus inner hexagon, nameplate at y −40), and the tray tile
 wears an unfilled inner hexagon (`inventoryTileSvg` special case) instead
 of the wire glyph.

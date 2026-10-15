@@ -28,6 +28,7 @@ import { amplifierGainOf, tierPowerOf } from "../engine/module-strength";
 // rides flow only (the scene's flow-live class), and reduced motion keeps
 // the static wave.
 import { BALANCE, CHARGE_RECEIVING_CATEGORIES, CATEGORY_OF } from "../engine/constants";
+import { baseProductionOf } from "../engine/profiles";
 import { chargedFactor, emittedStrength, hostPower, modulePower, mutatorAt, mutatorMagnitude, ritualAmpOf } from "../engine/economy";
 import type { GameState, ModuleInstance, RateSnapshot } from "../engine/types";
 import { buildFactorsFor } from "../engine/builds";
@@ -98,7 +99,9 @@ function productionRows(state: GameState, module: ModuleInstance, snapshot: Rate
   const rows: string[] = [];
   const multiplier = (label: string, value: number) => rows.push(row(label, `×${formatNumber(value)}`));
   if (category === "oscillator") {
-    rows.push(row("Base output", `${formatNumber(BALANCE.synthRate)} ν/s`));
+    // The base output carries the type's authored profile multiplier
+    // (issue #369) — the row multiplies out to the module's final figure.
+    rows.push(row("Base output", `${formatNumber(BALANCE.synthRate * baseProductionOf(module.type))} ν/s`));
     multiplier("Host power", hostPower(state, module));
     if (relationship !== "chord") multiplier("Chord factor", contribution?.chordFactor ?? 1);
     multiplier("Build synth term", 1 + factors.synthTerm);

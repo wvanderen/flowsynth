@@ -1,5 +1,6 @@
 import { silentVoiceUpliftOf } from "./module-strength";
 import { BALANCE, CATEGORY_OF, isVoiceType, NAMED_CHORDS } from "./constants";
+import { chordResponseOf } from "./profiles";
 import { adjacent, neighbors } from "./hex";
 import { pitchOf } from "./lattice";
 import type { DeployedModule, GameState, Hex, ModuleInstance, NamedChordTerm } from "./types";
@@ -190,11 +191,13 @@ function classChoices(group: Singer[], multiplicity: number, reserved: Singer | 
 export interface ChordAnalysis {
   namedChords: NamedChordTerm[];
   // Each module's local chord multiplier (ADR-0036 as extended by
-  // ADR-0049): the product of every sung instance's (1 + bonus) — bonuses
-  // uplifted by the silent voices singing in each instance, additive
-  // across them (ADR-0048) — times the formation's quality Q. A module in
-  // no chord but a named formation carries Q alone; a module in a
-  // chordless formation is absent (read it as 1).
+  // ADR-0049): the product of every sung instance's (1 + response·bonus) —
+  // bonuses uplifted by the silent voices singing in each instance,
+  // additive across them (ADR-0048), with the module's authored chord
+  // response (issue #369, ADR-0059) scaling what its term receives —
+  // times the formation's quality Q. A module in no chord but a named
+  // formation carries Q alone; a module in a chordless formation is
+  // absent (read it as 1).
   voiceMultiplier: Map<string, number>;
   // The formation quality each module's cluster scored (ADR-0049): its own
   // named term per member — read aloud as "Formation ×1.12". Exactly 1 on
@@ -265,6 +268,11 @@ export function analyzeChords(singers: Singer[], spacers: DeployedModule[] = [],
         for (const singer of group) memberSingers.push({ singer, own: i });
       });
       for (const { singer, own } of memberSingers) {
+        // The voice's authored chord response (issue #369, ADR-0059): how
+        // much of every containing instance's bonus its term receives.
+        // The formation's Q multiplies outside the response, once, after
+        // the walk — the chordless ×1.00 contract holds per profile.
+        const response = chordResponseOf(singer.module.type);
         let factor: number;
         let containing: number;
         if (!anySilent) {
@@ -273,7 +281,7 @@ export function analyzeChords(singers: Singer[], spacers: DeployedModule[] = [],
           containing =
             choose(match.groups[own]!.length - 1, match.multiplicity[own]! - 1) *
             match.groups.reduce((total, group, i) => (i === own ? total : total * choose(group.length, match.multiplicity[i]!)), 1);
-          factor = (1 + bonus) ** containing;
+          factor = (1 + response * bonus) ** containing;
         } else {
           // The compositions per class from this voice's seat: its own
           // class reserves its slot; the seat's own uplift rides every
@@ -287,12 +295,13 @@ export function analyzeChords(singers: Singer[], spacers: DeployedModule[] = [],
               : 0;
           // The cross product walks every distinct instance bonus exactly:
           // each path multiplies one instance factor per combination,
-          // raised to the combination's loud-completion count.
+          // raised to the combination's loud-completion count — the
+          // voice's response scaling the whole bonus, uplifts included.
           factor = 1;
           containing = 1;
           const walk = (i: number, uplift: number, weight: number): void => {
             if (i === lists.length) {
-              factor *= (1 + bonus + uplift + ownUplift) ** weight;
+              factor *= (1 + response * (bonus + uplift + ownUplift)) ** weight;
               return;
             }
             for (const choice of lists[i]!) walk(i + 1, uplift + choice.uplift, weight * choice.completions);

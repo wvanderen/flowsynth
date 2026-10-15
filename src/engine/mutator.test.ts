@@ -16,6 +16,7 @@ import {
 import { ARETE_HORIZON } from "./accumulator";
 import { advance } from "./advance";
 import { BALANCE, MUTATOR_FAMILIES } from "./constants";
+import { OSCILLATOR_PROFILES } from "./profiles";
 import { computeRates, mutatorMagnitude, mutatorSlotCost } from "./economy";
 import { createMutator } from "./state";
 import { fresh, give, stubRng } from "./fixtures";
@@ -151,11 +152,12 @@ describe("the power family", () => {
     give(s, "infusor", hex(1, 0));
     give(s, "focusKeyed", hex(2, 0));
     s.modules.find((m) => m.type === "focusKeyed")!.reserve = 100;
-    // 0.2 × power 1 × chargedFactor(strength 1): the plain uplift.
-    expect(computeRates(s, true).contributions.get(synth.id)!.infusorBonus).toBeCloseTo(BALANCE.infusorBonus * 1.5);
+    // 0.2 × power 1 × chargedFactor(strength 1) × the Sine's authored
+    // booster response (issue #369): the plain uplift the synth reads.
+    expect(computeRates(s, true).contributions.get(synth.id)!.infusorBonus).toBeCloseTo(BALANCE.infusorBonus * 1.5 * OSCILLATOR_PROFILES.additive.booster);
     mint(s, "power", "common", hex(1, 0));
     // The power mutator rides the uplift: ×(1 + m) on the infusor's power.
-    expect(computeRates(s, true).contributions.get(synth.id)!.infusorBonus).toBeCloseTo(BALANCE.infusorBonus * 1.5 * 1.5);
+    expect(computeRates(s, true).contributions.get(synth.id)!.infusorBonus).toBeCloseTo(BALANCE.infusorBonus * 1.5 * 1.5 * OSCILLATOR_PROFILES.additive.booster);
   });
 });
 
@@ -246,10 +248,10 @@ describe("the charge family", () => {
     give(s, "focusKeyed", hex(2, 0));
     s.modules.find((m) => m.type === "focusKeyed")!.reserve = 100;
     const plain = computeRates(s, true).contributions.get(synth.id)!.infusorBonus;
-    expect(plain).toBeCloseTo(BALANCE.infusorBonus * (1 + 1 / 2));
+    expect(plain).toBeCloseTo(BALANCE.infusorBonus * (1 + 1 / 2) * OSCILLATOR_PROFILES.additive.booster);
     mint(s, "charge", "common", hex(1, 0));
     const fed = computeRates(s, true).contributions.get(synth.id)!.infusorBonus;
-    expect(fed).toBeCloseTo(BALANCE.infusorBonus * (1 + 1.5 / 2.5));
+    expect(fed).toBeCloseTo(BALANCE.infusorBonus * (1 + 1.5 / 2.5) * OSCILLATOR_PROFILES.additive.booster);
   });
 
   it("scales what a Mutator Forge receives", () => {
