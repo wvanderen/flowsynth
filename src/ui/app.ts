@@ -66,7 +66,7 @@ import type { StressProgress, StressRow } from "../engine/allocation-stress";
 import type { GameState, GoalColor, Hex, ModuleInstance, MutatorFamily, MutatorInstance, NamedChordTerm, Rarity, ShelfType } from "../engine/types";
 import type { FocusFace, NotesFace } from "./focus";
 import { render } from "./render";
-import { FAMILY_WORD, mutatorLayerLive, refreshMutPreview } from "./mutators";
+import { FAMILY_WORD, mutatorBoardLive, refreshMutPreview } from "./mutators";
 import { HISTORY_PAGE_ROWS, META } from "./meta";
 import { browserChannels, type SignalChannels } from "./signals";
 import { suppressNextClick } from "./click";
@@ -263,9 +263,10 @@ export interface UiState {
   bulkModuleId: string | null;
   faceMax: boolean;
   // The Mutator Grid's layer tab (issue #199): which grid the board shows —
-  // the modules (production) or the Mutators (the second layer). Upgrade-mode
-  // furniture beside the entry purchase; flow shows neither tab nor layer.
-  // Light furniture — never saved.
+  // the modules (production) or the Mutators (the second layer). Every mode
+  // reads it (issue #387): the legend switches it through flow too, the
+  // session's board read-only. Flow entry still lands the board at rest on
+  // Modules. Light furniture — never saved.
   mutLayer: "modules" | "mutators";
   // The Hex detail (issue #295): the owned cell whose cross-section stands
   // in the grid's place, and the face emphasized inside it. Null rests the
@@ -690,9 +691,10 @@ export class App {
     // inventory closed with it (issue #296).
     this.ui.detail = null;
     this.ui.detailTray = null;
-    // The Mutator Grid's layer and gestures are upgrade-mode furniture too
-    // (issue #199): flow shows neither tab nor layer, and every armed
-    // gesture unwinds with the rest. The entry sequence's automation is
+    // The Mutator Grid's armed gestures unwind with the rest (issue #199),
+    // and the board re-enters flow at rest on Modules — the legend stands
+    // by to switch again (issue #387), but a session never inherits
+    // upgrade's arrangement. The entry sequence's automation is
     // armed furniture by the same rule (issue #274): a session break, an
     // import, or an adopted save lands on the standard surfaces — the
     // banked roll waits in the Forge modal, the free slot via Add — and
@@ -1341,6 +1343,13 @@ export class App {
   mutSetLayer(layer: "modules" | "mutators"): void {
     if (this.ui.mutLayer === layer) return;
     if (layer === "mutators" && !this.state.catalogEntryOwned) {
+      // The locked walk is a spending surface (issue #387): flow's legend
+      // stays navigable, but the Catalog never opens mid-session — the
+      // refusal is the click's whole answer.
+      if (this.state.mode !== "upgrade") {
+        this.say("Arete is spent between sessions.");
+        return;
+      }
       this.openMutatorEntry();
       return;
     }
@@ -1419,10 +1428,16 @@ export class App {
   // The slot click's one resolution (issue #199, detail by #295): the
   // armed unlock buys, the armed tray item places (an occupied slot swaps,
   // occupant to the tray) — and an idle click opens the cell's Hex detail
-  // on the Mutators face, the declaration having moved there.
+  // on the Mutators face, the declaration having moved there. In flow the
+  // idle click is the only resolution (issue #387): the detail opens
+  // read-only, and no arm can stand to buy or place through it.
   mutPickSlot(pos: Hex): void {
     const { state, ui } = this;
-    if (state.mode !== "upgrade" || !state.catalogEntryOwned) return;
+    if (!state.catalogEntryOwned) return;
+    if (state.mode !== "upgrade") {
+      this.openDetail(pos, "mutators");
+      return;
+    }
     const slotted = this.state.mutatorSlots.some((s) => sameHex(s, pos));
     if (!slotted && !ui.mutUnlockArmed) {
       this.say("No Mutator slot there.");
@@ -1692,8 +1707,9 @@ export class App {
   // section's controls take focus, and the vertical legend synchronizes —
   // the stack order never changes. A layer that has not been unlocked is
   // never selectable: pre-entry the detail stays on Modules, whatever
-  // clicks the locked face or its legend symbol. Post-entry the grid's
-  // layer follows the selection, so the return lands on the face the
+  // clicks the locked face or its legend symbol. The grid's layer follows
+  // the selection in every mode (issue #387 — flow included, its sync as
+  // read-only as the switch itself), so the return lands on the face the
   // player last read. Switching layers closes the open inventory (issue
   // #296): the tray belongs to one layer, and a pending placement would
   // otherwise lose its destination.
@@ -1702,7 +1718,7 @@ export class App {
     if (face === "mutators" && !this.state.catalogEntryOwned) return;
     this.ui.detail = { ...this.ui.detail, face };
     this.ui.detailTray = null;
-    if (this.state.mode === "upgrade" && this.state.catalogEntryOwned) this.ui.mutLayer = face;
+    if (this.state.catalogEntryOwned) this.ui.mutLayer = face;
     this.render();
     // The emphasis lands with the rebuild; the face's chassis takes focus
     // so the keyboard follows the selection.
@@ -1989,10 +2005,12 @@ export class App {
   pickCell(pos: Hex): void {
     const { state, ui } = this;
     // The Mutators layer owns the board's clicks while it stands (issue
-    // #199): the module board rests hidden and pointer-dead beneath it
-    // (issue #298), and a focused cell's Enter must not reach past it
-    // either.
-    if (state.mode === "upgrade" && ui.mutLayer === "mutators") return;
+    // #199, flow included by #387): the module board rests hidden and
+    // pointer-dead beneath it (issue #298), and a focused cell's Enter must
+    // not reach past it either. The layer only stands past the entry
+    // (mutSetLayer and flow entry keep the invariant), so the selection
+    // alone is the test.
+    if (ui.mutLayer === "mutators") return;
     if (ui.buyingCell) {
       if (state.mode !== "upgrade") return;
       // The arm persists across buys: sweep several cells, then back out
@@ -2699,10 +2717,11 @@ export class App {
     this.sweepListeners();
     this.syncTitle();
     document.body.classList.toggle("live", this.state.mode === "flow");
-    // The second layer's grey (issue #199): while the Mutators tab stands,
-    // the stylesheet greys the module board and silences its pointers —
-    // the grid renders as the foreground.
-    document.body.classList.toggle("mut-layer-live", mutatorLayerLive(this));
+    // The second layer's grey (issue #199): while the Mutators layer
+    // stands — flow reading it now too (issue #387) — the stylesheet greys
+    // the module board and silences its pointers, the grid rendering as
+    // the foreground.
+    document.body.classList.toggle("mut-layer-live", mutatorBoardLive(this));
     // Add-cell mode's rest (#201): the one mode that dims the board — the
     // owned modules rest greyed and pointer-dead behind the pill.
     document.body.classList.toggle("cell-arming", this.state.mode === "upgrade" && this.ui.buyingCell);

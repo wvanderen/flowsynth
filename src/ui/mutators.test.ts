@@ -140,7 +140,7 @@ describe("the vertical layer legend (issue #295)", () => {
     expect(document.querySelector(".entry-screen")).not.toBeNull();
   });
 
-  it("stands in upgrade mode once the tree is entered, and flow shows neither legend nor layer", () => {
+  it("stands in every mode: flow keeps the legend, the layer switchable and read-only (issue #387)", () => {
     seedMutatorEra();
     expect(document.getElementById("layer-legend")!.hidden).toBe(false);
     // The unlocked symbol's name stops claiming the lock — the accessible
@@ -148,12 +148,27 @@ describe("the vertical layer legend (issue #295)", () => {
     expect(document.querySelector('[data-legend-layer="mutators"]')!.getAttribute("aria-label")).toBe("Mutators layer");
     app.mutSetLayer("mutators");
     expect(document.body.classList.contains("mut-layer-live")).toBe(true);
-    // Entering flow clears the layer with the rest of the transient modes.
+    // Entering flow lands the board at rest on Modules; the legend stands by.
     app.beginFlow(null);
     expect(app.ui.mutLayer).toBe("modules");
     expect(app.ui.mutUnlockArmed).toBe(false);
-    expect(document.getElementById("layer-legend")!.hidden).toBe(true);
+    expect(document.getElementById("layer-legend")!.hidden).toBe(false);
+    // The switch navigates the session's grid: the layer stands read-only,
+    // its faces drawn, the edit furniture never riding along.
+    document.querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
+    expect(app.ui.mutLayer).toBe("mutators");
+    expect(document.body.classList.contains("mut-layer-live")).toBe(true);
+    expect(document.querySelector("#grid [data-mut-slot]")).not.toBeNull();
+    expect(document.getElementById("mutator-tray")!.hidden).toBe(true);
+    // Pause reads the same way (issue #387): the legend stands, the switch
+    // navigates read-only, and resume hands the layer back.
+    app.pause();
+    expect(document.getElementById("layer-legend")!.hidden).toBe(false);
+    document.querySelector<HTMLButtonElement>('[data-legend-layer="modules"]')!.click();
+    expect(app.ui.mutLayer).toBe("modules");
     expect(document.body.classList.contains("mut-layer-live")).toBe(false);
+    app.resume();
+    expect(app.ui.mutLayer).toBe("modules");
   });
 
   it("mutators lead every co-list: strip and sheet switch order Mutators before Modules, in sight and tab order (issue #314)", () => {
@@ -743,18 +758,60 @@ describe("the tray column (issue #272)", () => {
   });
 });
 
-describe("flow locks the layer away", () => {
-  it("the board locks during flow: no tabs, no tray, no gestures", () => {
+describe("flow reads the layer (issue #387)", () => {
+  it("the legend navigates the session's grid; the tray column stands down", () => {
     seedMutatorEra();
-    app.mutSetLayer("mutators");
     app.beginFlow(null);
     app.render();
-    expect(document.getElementById("layer-legend")!.hidden).toBe(true);
+    expect(document.getElementById("layer-legend")!.hidden).toBe(false);
     expect(document.getElementById("mutator-tray")!.hidden).toBe(true);
+    expect(document.getElementById("inventory-zone")!.classList.contains("off")).toBe(true);
+    document.querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
+    expect(app.ui.mutLayer).toBe("mutators");
+    expect(document.querySelector("#grid [data-mut-slot]")).not.toBeNull();
+    expect(document.getElementById("mutator-tray")!.hidden).toBe(true);
+  });
+
+  it("the session's clicks read: a slot opens the detail read-only, nothing edits", () => {
+    seedMutatorEra();
+    app.beginFlow(null);
+    app.render();
+    app.mutSetLayer("mutators");
+    // The unlock cannot arm mid-session: Arete is spent between sessions.
+    app.mutArmUnlock();
+    expect(app.ui.mutUnlockArmed).toBe(false);
+    // An idle slot click answers the lock with the read-only detail —
+    // never an unlock, a placement, or a swap.
+    clickSlot(0, 0);
+    expect(app.ui.detail).toEqual({ pos: hex(0, 0), face: "mutators" });
+    expect(document.querySelector(".hex-detail-readonly")!.textContent).toContain("read-only");
+    app.closeDetail();
+    // Right-click retrieves nothing during flow.
+    rightClickSlot(0, 0);
+    expect(mutatorOf(app.state, "mu1").pos).toEqual(hex(0, 0));
+    // A held placed mutator starts no drag — the carry is an edit's first half.
+    document.elementFromPoint = () => document.getElementById("grid")!;
+    slotNode(0, 0).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 130, clientY: 100 }));
+    expect(document.querySelector(".mut-ghost")).toBeNull();
+    expect(app.ui.mutCarrying).toBeNull();
+  });
+
+  it("pre-entry the locked legend stays navigable but inert in flow — the Catalog never opens mid-session", () => {
+    app.beginFlow(null);
+    app.render();
+    const locked = document.querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!;
+    expect(locked.classList.contains("locked")).toBe(true);
+    // The lock's own copy answers what the click answers now (issue #387):
+    // the session's refusal, not the Catalog walk upgrade speaks.
+    expect(locked.getAttribute("title")).toContain("Arete is spent between sessions");
+    expect(locked.getAttribute("aria-label")).toBe("Mutators layer — locked");
+    locked.click();
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.mutLayer).toBe("modules");
+    expect(document.getElementById("status")!.textContent).toContain("Arete is spent between sessions");
+    // The grid shows no Mutator faces pre-entry, whatever the click asked.
     expect(document.querySelector("#grid [data-mut-slot]")).toBeNull();
-    // And the engine still refuses behind the UI's gates.
-    app.mutPickSlot(hex(0, 0));
-    expect(app.ui.detail).toBeNull();
   });
 });
 

@@ -111,7 +111,7 @@ An owned board coordinate's full-stack cross-section, opened by any owned cell's
 _Avoid_: pop-up, modal, inspector, bloom, detail panel, hosts line
 
 **Layer legend**:
-The vertical strip of layer symbols at the board's left edge (issue #295) — the one Modules / Mutators switch, shared by the grid and the Hex detail: on the grid it flips the layer, in the detail it emphasizes the face, and it synchronizes with both. The selected face wears the firm inset marker; pre-entry the Mutators symbol stands locked-but-visible, its click walking to the Catalog's entry screen. Upgrade-mode furniture: flow shows neither legend nor layer.
+The vertical strip of layer symbols at the board's left edge (issue #295) — the one Modules / Mutators switch, shared by the grid and the Hex detail: on the grid it flips the layer, in the detail it emphasizes the face, and it synchronizes with both. The selected face wears the firm inset marker; pre-entry the Mutator symbol stands locked-but-visible, its click walking to the Catalog's entry screen. Every mode's furniture (ADR-0060): the legend stands through flow and pause, the session switching grid layers and emphasizing detail faces read-only — inspection never enables an edit, and mid-session the locked click stays inert (Arete is spent between sessions). Flow entry still lands the board at rest on Modules.
 _Avoid_: tabs, second switch
 
 **Tray**:
