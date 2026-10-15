@@ -1,3 +1,4 @@
+import { amplifierGainOf, tierPowerOf } from "../engine/module-strength";
 // The Hex detail's wave connections (issue #297): the cross-section's
 // relationships drawn as directional waves with accessible authoritative
 // breakdowns. Three relationships exist at one cell, each with its own
@@ -79,7 +80,7 @@ function outcomeRow(state: GameState, module: ModuleInstance, snapshot: RateSnap
   if (category === "silentVoice") return row("Chord voice", `×${formatNumber(contribution?.chordFactor ?? 1)}`, "result");
   if (category === "generator") return row("Charge strength", `⌁${formatNumber(emittedStrength(state, module, flow))}`, "result");
   if (module.type === "amplifier") return row("Relay strength", `⌁${formatNumber(relayStrengthOf(module, snapshot))}`, "result");
-  if (module.type === "ritual") return row("Build amplification", `×${formatNumber(1 + ritualAmpOf(module.level, strength))}`, "result");
+  if (module.type === "ritual") return row("Build amplification", `×${formatNumber(1 + ritualAmpOf(module.level, strength, module.tier))}`, "result");
   if (module.type === "infusor") return row("Booster uplift", `+${formatNumber(boosterUpliftOf(state, module, snapshot))}%`, "result");
   if (module.type === "forge") return row("Forge", `+${formatNumber(contribution?.value ?? 0)} progress/s`, "result");
   if (module.type === "mutatorForge") return row("Mutator Forge", `+${formatNumber(contribution?.value ?? 0)} progress/s`, "result");
@@ -111,13 +112,14 @@ function productionRows(state: GameState, module: ModuleInstance, snapshot: Rate
     multiplier("Build forge efficiency", 1 + factors.forgeEfficiency);
   } else if (module.type === "amplifier") {
     if (relationship !== "charge") rows.push(row("Incoming charge", `⌁${formatNumber(strength)}`));
-    multiplier("Relay gain", 1 + BALANCE.amplifierGainPerLevel * module.level);
+    multiplier("Relay gain", amplifierGainOf(module));
   } else if (module.type === "infusor") {
     rows.push(row("Base uplift", `+${formatNumber(100 * BALANCE.infusorBonus)}%`));
     multiplier("Host power", hostPower(state, module));
     multiplier("Charged empowerment", chargedFactor(strength));
   } else if (module.type === "ritual") {
     rows.push(row("Base amplification", `+${formatNumber(BALANCE.ritualAmpPerLevel * module.level)}`));
+    multiplier("Merge tier", tierPowerOf(module.tier));
     multiplier("Charged empowerment", chargedFactor(strength));
   } else if (category === "generator" && factors.generatorStrength !== 0) {
     rows.push(row("Build generator strength", `+${formatNumber(factors.generatorStrength)}`));

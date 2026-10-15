@@ -86,23 +86,24 @@ describe("the first roll yields a synthesizer candidate (§8)", () => {
 
   it("later rolls draw the pool plain — the rig fires once", () => {
     const s = fresh();
+    // Each slot draws the band, then its index (ADR-0058): 0.9 → common,
+    // 0.5 over 13/12/11 → ritual, focusKeyed, amplifier — no synthesizer.
     addForgeProgress(s, forgeThreshold(0), stubRng([0.9, 0.5, 0.9, 0.5, 0.9, 0.5]));
     expect(s.bankedRolls[0]!.candidates.some((c) => c.type === "additive")).toBe(true);
-    // The same seed on the second roll: the same synthless draw stands
-    // (the note and goal generators join the pool beside RITUAL, shifting
-    // the draw's picks).
+    // The same seed on the second roll: the same synthless draw stands,
+    // unrigged — the rig fired once, on the first roll only.
     addForgeProgress(s, forgeThreshold(1), stubRng([0.9, 0.5, 0.9, 0.5, 0.9, 0.5]));
     const second = s.bankedRolls[1]!.candidates.map((c) => c.type);
-    expect(second).toEqual(["infusor", "goalKeyed", "noteKeyed"]);
+    expect(second).toEqual(["ritual", "spacer", "amplifier"]);
   });
 
   it("a draw that already sings is left alone", () => {
     const s = fresh();
-    // 0.05/0.6/0.7 draws over the roster pool: additive, focusKeyed,
-    // noteKeyed — a synthesizer is already here, so the rig never touches
-    // the draw.
-    addForgeProgress(s, forgeThreshold(0), stubRng([0.05, 0.5, 0.6, 0.5, 0.7, 0.5]));
-    expect(s.bankedRolls[0]!.candidates.map((c) => c.type)).toEqual(["additive", "focusKeyed", "noteKeyed"]);
+    // Bands 0.05/0.6/0.7 → common; indices 0.0/0.5/0.5 over 13/12/11:
+    // additive, spacer, ritual — a synthesizer is already here, so the
+    // rig never touches the draw.
+    addForgeProgress(s, forgeThreshold(0), stubRng([0.05, 0.0, 0.6, 0.5, 0.7, 0.5]));
+    expect(s.bankedRolls[0]!.candidates.map((c) => c.type)).toEqual(["additive", "spacer", "ritual"]);
   });
 });
 
@@ -115,31 +116,31 @@ describe("the one pop-up card, once, ever (§8)", () => {
 
   it("fires when the second synthesizer is acquired — tray or board", () => {
     const s = fresh();
-    s.modules.push({ id: "m99", type: "additive", rarity: "common", level: 0, invested: 0, pos: null, reserve: 0, shift: null });
+    s.modules.push({ id: "m99", type: "additive", tier: 0, level: 0, invested: 0, pos: null, reserve: 0, shift: null });
     expect(synthsAcquired(s)).toBe(2);
     expect(arcCardDue(s)).toBe(true);
   });
 
   it("non-synthesizer acquisitions never fire it", () => {
     const s = fresh();
-    s.modules.push({ id: "m99", type: "infusor", rarity: "common", level: 0, invested: 0, pos: null, reserve: 0, shift: null });
-    s.modules.push({ id: "m100", type: "forge", rarity: "common", level: 0, invested: 0, pos: null, reserve: 0, shift: null });
+    s.modules.push({ id: "m99", type: "infusor", tier: 0, level: 0, invested: 0, pos: null, reserve: 0, shift: null });
+    s.modules.push({ id: "m100", type: "forge", tier: 0, level: 0, invested: 0, pos: null, reserve: 0, shift: null });
     expect(arcCardDue(s)).toBe(false);
   });
 
   it("one dismissal, ever — more synths never re-arm it", () => {
     const s = fresh();
-    s.modules.push({ id: "m99", type: "additive", rarity: "common", level: 0, invested: 0, pos: null, reserve: 0, shift: null });
+    s.modules.push({ id: "m99", type: "additive", tier: 0, level: 0, invested: 0, pos: null, reserve: 0, shift: null });
     expect(dismissArcCard(s).ok).toBe(true);
     expect(dismissArcCard(s).ok).toBe(false); // idempotent
-    s.modules.push({ id: "m100", type: "additive", rarity: "common", level: 0, invested: 0, pos: null, reserve: 0, shift: null });
-    s.modules.push({ id: "m101", type: "harmonizer", rarity: "common", level: 0, invested: 0, pos: null, reserve: 0, shift: null });
+    s.modules.push({ id: "m100", type: "additive", tier: 0, level: 0, invested: 0, pos: null, reserve: 0, shift: null });
+    s.modules.push({ id: "m101", type: "harmonizer", tier: 0, level: 0, invested: 0, pos: null, reserve: 0, shift: null });
     expect(arcCardDue(s)).toBe(false);
   });
 
   it("the seen flag survives a save round-trip, and corrupt saves stay dismissed-once", () => {
     const s = fresh();
-    s.modules.push({ id: "m99", type: "additive", rarity: "common", level: 0, invested: 0, pos: null, reserve: 0, shift: null });
+    s.modules.push({ id: "m99", type: "additive", tier: 0, level: 0, invested: 0, pos: null, reserve: 0, shift: null });
     dismissArcCard(s);
     const restored = deserialize(serialize(s, 1_000)).state!;
     expect(restored.arcCardSeen).toBe(true);
@@ -192,9 +193,10 @@ describe("the opening walk, end to end", () => {
     // Beat five: rearranging never breaks what pitch keeps — a swap of
     // identical synths re-voices, never breaks (pitch lives in the cell).
     startSession(s, null);
-    // One flat cadence block later, the second roll mints (the seed draws
-    // additive first — the rig is long past, later rolls draw plain).
-    advance(s, 1800, stubRng([0.0, 0.5, 0.99, 0.5, 0.99, 0.5]));
+    // One flat cadence block later, the second roll mints (band 0.0 then
+    // index 0.0 draws the additive first — the rig is long past, later
+    // rolls draw plain).
+    advance(s, 1800, stubRng([0.0, 0.0, 0.5, 0.5, 0.5, 0.5]));
     endSession(s);
     const offer2 = s.bankedRolls[0]!;
     const third = offer2.candidates.find((c) => c.type === "additive")!;

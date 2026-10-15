@@ -2450,7 +2450,7 @@ export class App {
   // flow the board stays locked per the standing constraints, so there it
   // lands in the tray to drag into place between sessions.
   devSynth(): void {
-    const module = createModule(this.state, "additive", "common");
+    const module = createModule(this.state, "additive");
     this.state.modules.push(module);
     if (this.state.mode !== "upgrade") {
       module.pos = null;
@@ -2491,7 +2491,7 @@ export class App {
     s.catalogEntryOwned = true;
     s.arete = Math.max(s.arete, 20);
     if (!s.modules.some((m) => m.type === "mutatorForge")) {
-      s.modules.push(createModule(s, "mutatorForge", "common"));
+      s.modules.push(createModule(s, "mutatorForge"));
     }
     s.mutatorSlots = [hex(0, 0), hex(1, 0), hex(0, 1), hex(1, 1)];
     const item = (family: MutatorFamily, rarity: Rarity, pos: Hex | null): MutatorInstance => ({

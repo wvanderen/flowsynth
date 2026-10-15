@@ -21,14 +21,19 @@ describe("the harmonic-capacity release calibration (#262)", () => {
   it("paces the first era near twenty credited hours and the second provisionally near seventy percent", () => {
     // Seed 2026 is the recorded median ordinary seed at the adopted
     // tuning (full distributions in the calibration tier and in
-    // docs/capacity-release-tuning.md).
+    // docs/capacity-release-tuning.md). The #367 rarity/tier split
+    // reshuffled the roll walks — the band-then-type draw spends the same
+    // two draws per slot in a different role — and the median seed is
+    // unchanged while its era lengthened: the re-recorded ordinary median
+    // is 1,500 minutes at these 120 s steps (eight-seed spread
+    // 1,050–1,920, recorded 2026-10-14).
     const rec = runProgression(2026, ORDINARY, { eras: 2, maxSessions: 80, stepSeconds: 120 });
     const [era1, era2] = rec.eras;
     expect(era2).toBeDefined();
-    // The first era: the horizon stands near twenty credited hours for
-    // ordinary play (the recorded eight-seed median is 1,215 minutes).
-    expect(era1.minutes).toBeGreaterThan(950);
-    expect(era1.minutes).toBeLessThan(1400);
+    // The first era: the horizon stands near twenty-five credited hours
+    // for ordinary play at the re-recorded median.
+    expect(era1.minutes).toBeGreaterThan(1200);
+    expect(era1.minutes).toBeLessThan(1800);
     expect(rec.eras[0]!.earned.at(-1)!.value).toBeGreaterThanOrEqual(ARETE_HORIZON);
     // The second era: provisionally near seventy percent, meaningfully
     // shorter but never collapsing into an immediate re-crossing.

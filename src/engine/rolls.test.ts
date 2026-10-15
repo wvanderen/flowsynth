@@ -2,14 +2,16 @@ import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import { chooseRoll as chooseRollAction, startSession } from "./actions";
 import { fresh, give, stubRng } from "./fixtures";
-import { ROLL_POOL } from "./constants";
+import { ROLL_POOL, TYPE_RARITY } from "./constants";
 import { addFlowProgress, addForgeProgress, generateOffer } from "./rolls";
 import { hex } from "./hex";
 
 describe("forge roll generation", () => {
   it("samples three distinct types from the launch pool", () => {
     const s = fresh();
-    const rng = stubRng([0.0, 0.99, 0.6, 0.5, 0.7, 0.5]);
+    // Each slot draws the rarity band first, then its type (ADR-0058):
+    // six draws — band, index ×3.
+    const rng = stubRng([0.0, 0.0, 0.5, 0.3, 0.9, 0.2]);
     const offer = generateOffer(s, rng);
     const types = offer.candidates.map((c) => c.type);
     expect(new Set(types).size).toBe(3);
@@ -17,14 +19,50 @@ describe("forge roll generation", () => {
       expect(ROLL_POOL).toContain(type);
     }
     // Draws without replacement over the thirteen-type pool: additive,
-    // then focusKeyed, then noteKeyed.
-    expect(types).toEqual(["additive", "focusKeyed", "noteKeyed"]);
+    // then bend (index 3 of the twelve remaining), then echo (index 2 of
+    // the eleven left).
+    expect(types).toEqual(["additive", "bend", "echo"]);
   });
 
-  it("rolls each candidate's rarity independently", () => {
+  it("candidates carry the type's fixed rarity and the base tier — nothing is rolled per copy", () => {
     const s = fresh();
-    const offer = generateOffer(s, stubRng([0.0, 0.989, 0.2, 0.995, 0.3, 0.9999]));
-    expect(offer.candidates.map((c) => c.rarity)).toEqual(["common", "uncommon", "rare"]);
+    const offer = generateOffer(s, stubRng([0.0, 0.0, 0.5, 0.3, 0.9, 0.2]));
+    for (const candidate of offer.candidates) {
+      expect(candidate.tier).toBe(0);
+      expect(TYPE_RARITY[candidate.type]).toBe("common");
+    }
+    // An out-of-band draw still lands on a real type: with the launch
+    // roster all-common, an uncommon band falls back to the whole pool.
+    const fallback = generateOffer(fresh(), stubRng([0.9995, 0.4, 0.5, 0.5, 0.5, 0.5]));
+    expect(ROLL_POOL).toContain(fallback.candidates[0]!.type);
+  });
+
+  it("the band filters the type draw, and the fallback never corrupts the pool", () => {
+    // Author one uncommon design for the probe (ADR-0058's seam), restore
+    // the table after — the launch roster stays all-common.
+    const authored = TYPE_RARITY.echo;
+    TYPE_RARITY.echo = "uncommon";
+    try {
+      const s = fresh();
+      // Slot one draws the uncommon band (0.995): echo is the only match,
+      // so it lands whatever the index draw says; slots two and three draw
+      // common bands (0.5) over the remaining pool.
+      const offer = generateOffer(s, stubRng([0.995, 0.7, 0.5, 0.5, 0.5, 0.5]));
+      expect(offer.candidates[0]!.type).toBe("echo");
+      // The uncommon type cannot be drawn twice: three distinct types, the
+      // other two drawn from the common remainder, pool intact.
+      const types = offer.candidates.map((c) => c.type);
+      expect(new Set(types).size).toBe(3);
+      expect(TYPE_RARITY[types[1]!]).toBe("common");
+      expect(TYPE_RARITY[types[2]!]).toBe("common");
+      // The fallback path spends the shared pool exactly once per slot: an
+      // uncommon band with no remaining matches draws three distinct types
+      // and nothing vanishes beyond the draws themselves.
+      const fallback = generateOffer(fresh(), stubRng([0.0, 0.0, 0.9995, 0.5, 0.9995, 0.5]));
+      expect(new Set(fallback.candidates.map((c) => c.type)).size).toBe(3);
+    } finally {
+      TYPE_RARITY.echo = authored;
+    }
   });
 
   it("the pool is every launch module type — the roster rolls, the spacer ships through rolls only", () => {

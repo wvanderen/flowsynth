@@ -6,28 +6,36 @@ new types and game-design concepts — the engine keys and records live in code
 design thinking lives. The roster table reflects the code as of the last
 update; when a type lands, update the table in the same change.
 
-Last updated: 2026-10-04 (wave 5 Note/Goal generators, issue #232)
+Last updated: 2026-10-14 (fixed type rarity and the merge tier, issue #367)
 
 ## Roster
 
-| Key | Name | Nameplate | Category | Hue | Glyph | Origin | Face readout |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `additive` | Oscillator | OSC | oscillator | `hue-oscillator` | bare sine | Opening grant and roll pool | `+value`, note `P«pitch»` |
-| `blaster` | Blaster | BLST | oscillator | `hue-oscillator` | bolt-cored sine | Roll pool only | `+value` (0 uncharged), note `P«pitch»` |
-| `harmonizer` | Harmonizer | HARM | silent voice | `hue-voice` | diamond (muted tonehead) | Roll pool only | the pitch it sings, note `P«cell»` |
-| `echo` | Echo | ECHO | silent voice | `hue-voice` | doubled waves | Roll pool only | the pitch it sings, note `P«cell»` |
-| `bend` | Bend | BEND | silent voice | `hue-voice` | kinked line | Roll pool only | the pitch it sings, note `P«cell»` |
-| `amplifier` | Amplifier | AMP | conduit | `hue-conduit` | through-flowing chevrons | Roll pool only | `⌁relayed` |
-| `spacer` | Spacer | Spacer | spacer | `hue-spacer` | ring window (board) / wire | Roll pool only | `⌇` |
-| `focusKeyed` | Focus Generator | FOCUS | generator | `hue-generator` | bolt, bare | Starter shelf ("generator", 40) and roll pool | `⌁power` |
-| `noteKeyed` | Note Generator | NOTE | generator | `hue-generator` | bolt, double-line corner mark | Roll pool only | `⌁power` |
-| `goalKeyed` | Goal Generator | GOAL | generator | `hue-generator` | bolt, check corner mark | Roll pool only | `⌁power` |
-| `infusor` | Booster | BOOST | booster | `hue-booster` | outward chevrons around a center dot | Starter shelf (40) and roll pool | `+«%»` |
-| `forge` | Forge | FORGE | forge | `hue-forge` | hex prism | Starter shelf (80) and roll pool | `«charge»/«threshold»` (charge register) |
-| `mutatorForge` | Mutator Forge | MUT. FORGE | forge | `hue-forge` | seeded-hexagon core on the chassis | Mutator tree entry | `«charge»/«threshold»` (charge register) |
+| Key | Name | Nameplate | Category | Rarity | Hue | Glyph | Origin | Face readout |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `additive` | Oscillator | OSC | oscillator | common | `hue-oscillator` | bare sine | Opening grant and roll pool | `+value`, note `P«pitch»` |
+| `blaster` | Blaster | BLST | oscillator | common | `hue-oscillator` | bolt-cored sine | Roll pool only | `+value` (0 uncharged), note `P«pitch»` |
+| `harmonizer` | Harmonizer | HARM | silent voice | common | `hue-voice` | diamond (muted tonehead) | Roll pool only | the pitch it sings, note `P«cell»` |
+| `echo` | Echo | ECHO | silent voice | common | `hue-voice` | doubled waves | Roll pool only | the pitch it sings, note `P«cell»` |
+| `bend` | Bend | BEND | silent voice | common | `hue-voice` | kinked line | Roll pool only | the pitch it sings, note `P«cell»` |
+| `amplifier` | Amplifier | AMP | conduit | common | `hue-conduit` | through-flowing chevrons | Roll pool only | `⌁relayed` |
+| `ritual` | RITUAL | RITUAL | ritual | common | `hue-ritual` | habit-cycle ring | Roll pool only | `×amp` while charged |
+| `spacer` | Spacer | Spacer | spacer | common | `hue-spacer` | ring window (board) / wire | Roll pool only | `⌇` |
+| `focusKeyed` | Focus Generator | FOCUS | generator | common | `hue-generator` | bolt, bare | Starter shelf ("generator", 40) and roll pool | `⌁power` |
+| `noteKeyed` | Note Generator | NOTE | generator | common | `hue-generator` | bolt, double-line corner mark | Roll pool only | `⌁power` |
+| `goalKeyed` | Goal Generator | GOAL | generator | common | `hue-generator` | bolt, check corner mark | Roll pool only | `⌁power` |
+| `infusor` | Booster | BOOST | booster | common | `hue-booster` | outward chevrons around a center dot | Starter shelf (40) and roll pool | `+«%»` |
+| `forge` | Forge | FORGE | forge | common | `hue-forge` | hex prism | Starter shelf (80) and roll pool | `«charge»/«threshold»` (charge register) |
+| `mutatorForge` | Mutator Forge | MUT. FORGE | forge | common | `hue-forge` | seeded-hexagon core on the chassis | Mutator tree entry | `«charge»/«threshold»` (charge register) |
 
-All rollable types roll at 99% common / 0.9% uncommon / 0.1% rare
-(`BALANCE.rarityProbability`); rarities combine upward at the Forge.
+Rarity is each type's fixed acquisition rarity (`TYPE_RARITY`, ADR-0058) —
+authored in code, never rolled per copy. A roll draws the rarity band
+(shared `rarityProbability` table), then a type inside the band; with the
+launch roster all-common the thirteen types sample uniformly. Duplicate
+progress lives on the per-copy merge tier: two copies of the same type and
+tier combine into one at the next tier, up to the finite unlocked cap
+(`mergeCap`, 2 — three tiers, Arete raises it later, #380). The plate tint
+and rarity word read the type; the engraved rings read the tier. Mutator
+rarity is separate and unchanged (ADR-0043).
 
 ## Category laws
 
@@ -195,7 +203,8 @@ touchpoints — add the key and follow the compile errors:
 1. `src/engine/types.ts` — add to the category union (`OscillatorType`,
    `SilentVoiceType`, …) or mint a new category `Category` there.
 2. `src/engine/constants.ts` — `CATEGORY_OF`, `MODULE_TYPES` (order is the
-   roll pool), `CHARGEABLE_CATEGORIES` / `CONTINUOUS_CHARGE_CATEGORIES` /
+   roll pool), `TYPE_RARITY` (its acquisition rarity, ADR-0058),
+   `CHARGEABLE_CATEGORIES` / `CONTINUOUS_CHARGE_CATEGORIES` /
    `CHARGE_RECEIVING_CATEGORIES` for the charge law, `BALANCE` for its
    magnitudes, shelf plumbing (`SHELF_TYPES` / `SHELF_MODULE` /
    `shelfPrices`) if it sells.

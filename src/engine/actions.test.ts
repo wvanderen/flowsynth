@@ -295,7 +295,7 @@ describe("chooseRoll", () => {
     expect(s.bankedRolls).toHaveLength(0);
     const added = s.modules[s.modules.length - 1]!;
     expect(added.type).toBe(candidate.type);
-    expect(added.rarity).toBe(candidate.rarity);
+    expect(added.tier).toBe(candidate.tier);
     expect(added.pos).toBeNull();
     expect(chooseRoll(s, offer.id, candidate.id).ok).toBe(false);
   });

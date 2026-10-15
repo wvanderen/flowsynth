@@ -1,3 +1,4 @@
+import { silentVoiceUpliftOf } from "./module-strength";
 import { BALANCE, CATEGORY_OF, isVoiceType, NAMED_CHORDS } from "./constants";
 import { adjacent, neighbors } from "./hex";
 import { pitchOf } from "./lattice";
@@ -179,7 +180,7 @@ function classChoices(group: Singer[], multiplicity: number, reserved: Singer | 
     if (singers.length > seats) continue;
     out.push({
       singers,
-      uplift: singers.reduce((total, m) => total + BALANCE.silentVoiceUpliftPerLevel * m.level, 0),
+      uplift: singers.reduce((total, m) => total + silentVoiceUpliftOf(m), 0),
       completions: choose(loudAvailable, seats - singers.length),
     });
   }
@@ -282,7 +283,7 @@ export function analyzeChords(singers: Singer[], spacers: DeployedModule[] = [],
           lists[own] = classChoices(match.groups[own]!, match.multiplicity[own]!, singer);
           const ownUplift =
             CATEGORY_OF[singer.module.type] === "silentVoice"
-              ? BALANCE.silentVoiceUpliftPerLevel * singer.module.level
+              ? silentVoiceUpliftOf(singer.module)
               : 0;
           // The cross product walks every distinct instance bonus exactly:
           // each path multiplies one instance factor per combination,

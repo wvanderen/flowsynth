@@ -82,7 +82,9 @@ const manualLogCount = (state: GameState): number =>
 const goalCompletions = (state: GameState): number =>
   state.goals.reduce((total, goal) => total + goal.completedCount, 0);
 
-const ownsRare = (state: GameState): boolean => state.modules.some((m) => m.rarity === "rare");
+// "Fine china" reads the merge ladder's top (ADR-0058): a copy at the
+// unlocked cap — the tier the shelf and every ordinary draw can never mint.
+const ownsCapTier = (state: GameState): boolean => state.modules.some((m) => m.tier >= BALANCE.mergeCap);
 
 // Rolls taken: every mint pushes exactly one offer into the one shared
 // queue (ADR-0041), so the un-taken count is the two meters' earned total
@@ -308,11 +310,11 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     id: "fine-china",
     category: "board",
     name: "Fine china",
-    description: "Own a rare module.",
-    // The gem: faceted, girdled — the rarity the shelf never sells.
+    description: "Own a module at the unlocked tier cap.",
+    // The gem: faceted, girdled — the tier the shelf never sells.
     icon: glyph('<path d="M7.5 4h9l4 5.5L12 20 3.5 9.5 7.5 4Z"/><path d="M3.5 9.5h17M9.5 9.5 12 20l2.5-10.5"/>'),
-    evaluate: (s) => ownsRare(s),
-    progress: (s) => fraction(ownsRare(s) ? 1 : 0, 1),
+    evaluate: (s) => ownsCapTier(s),
+    progress: (s) => fraction(ownsCapTier(s) ? 1 : 0, 1),
   },
   {
     id: "eyes-on-the-horizon",

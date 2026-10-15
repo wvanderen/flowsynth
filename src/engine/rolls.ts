@@ -1,10 +1,13 @@
-import { BALANCE, isOscillatorType, MUTATOR_FAMILIES, POOL_JOIN_TYPE, ROLL_POOL } from "./constants";
+import { BALANCE, isOscillatorType, MUTATOR_FAMILIES, POOL_JOIN_TYPE, ROLL_POOL, TYPE_RARITY } from "./constants";
 import { newModuleId } from "./state";
-import type { Candidate, GameState, Meter, ModuleType, MutatorRollOffer, RollOffer, RollSources } from "./types";
+import type { Candidate, GameState, Meter, ModuleType, MutatorRollOffer, Rarity, RollOffer, RollSources } from "./types";
 
 export type Rng = () => number;
 
-function rollRarity(rng: Rng): Candidate["rarity"] {
+// The shared rarity-band draw: the one table both roll families read —
+// module slots draw the band before their type (ADR-0058), mutator
+// candidates keep it per candidate (ADR-0043).
+function rollRarity(rng: Rng): Rarity {
   const roll = rng();
   if (roll < BALANCE.rarityProbability.common) return "common";
   if (roll < BALANCE.rarityProbability.common + BALANCE.rarityProbability.uncommon) return "uncommon";
@@ -29,13 +32,22 @@ export function generateOffer(state: GameState, rng: Rng): RollOffer {
   const pool: ModuleType[] = state.rollPoolJoined ? [...ROLL_POOL, POOL_JOIN_TYPE] : [...ROLL_POOL];
   const candidates: Candidate[] = [];
   for (let i = 0; i < 3; i++) {
-    const index = Math.floor(rng() * pool.length);
-    const [type] = pool.splice(index, 1);
-    candidates.push({ id: newModuleId(state), type, rarity: rollRarity(rng) });
+    // Fixed type rarity drives the draw (ADR-0058): the slot draws its
+    // rarity band first, then a type among the not-yet-drawn ones whose
+    // authored rarity matches — commons duplicate more readily, rarer
+    // designs are scarcer. A band with no remaining types falls back to
+    // the whole remaining pool, spending no extra draw. The pick leaves
+    // the shared pool exactly once, by identity.
+    const band = rollRarity(rng);
+    const matched = pool.filter((type) => TYPE_RARITY[type] === band);
+    const bandPool = matched.length > 0 ? matched : pool;
+    const type = bandPool[Math.floor(rng() * bandPool.length)]!;
+    pool.splice(pool.indexOf(type), 1);
+    candidates.push({ id: newModuleId(state), type, tier: 0 });
   }
   // The rig can only ever land on the last slot: the guard means neither
   // earlier candidate sings, so the replacement can't duplicate a type. It
-  // changes what the slot is, not how good — the slot keeps its rolled rarity.
+  // changes what the slot is, not how good — the slot keeps its draw.
   if (firstRollRigged(state) && !candidates.some((c) => isOscillatorType(c.type))) {
     candidates[candidates.length - 1]!.type = "additive";
   }

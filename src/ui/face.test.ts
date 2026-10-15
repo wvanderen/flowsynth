@@ -1,18 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { CATEGORY_OF, MODULE_TYPES } from "../engine/constants";
-import type { ModuleType, Rarity } from "../engine/types";
-import { CHARGED_FILL_MIN, CHARGED_FILL_SPAN, HUE_TOKEN_OF, RAIL_CHARGED_FLOOR, RAIL_CHARGED_SPAN, RING_COUNT, moduleFace, readoutFitClass, spacerClipPath, SPACER_WINDOW_RADIUS, hexPoints } from "./face";
+import type { ModuleType } from "../engine/types";
+import { CHARGED_FILL_MIN, CHARGED_FILL_SPAN, HUE_TOKEN_OF, RAIL_CHARGED_FLOOR, RAIL_CHARGED_SPAN, moduleFace, readoutFitClass, ringCount, spacerClipPath, SPACER_WINDOW_RADIUS, hexPoints } from "./face";
 import { chargeGlow } from "./leads";
 import { META } from "./meta";
 import { moduleIcon } from "./icons";
 import { defaultTheme } from "./theme";
 
-const RARITIES: Rarity[] = ["common", "uncommon", "rare"];
-
 describe("module face", () => {
   it("wears the category hue on rail and signature — the spacer wears its own wire hue", () => {
     for (const type of MODULE_TYPES) {
-      const face = moduleFace({ type, rarity: "common", readout: "+1" });
+      const face = moduleFace({ type, tier: 0, readout: "+1" });
       const token = `var(--${HUE_TOKEN_OF[type]})`;
       expect(face.split(token).length - 1, type).toBe(2);
     }
@@ -38,21 +36,25 @@ describe("module face", () => {
     expect(defaultTheme.tokens["hue-conduit"]).toBeDefined();
   });
 
-  it("engraves rarity as ring count — 1, 2, 3 — never a hue", () => {
-    expect(RING_COUNT).toEqual({ common: 1, uncommon: 2, rare: 3 });
-    for (const rarity of RARITIES) {
-      const face = moduleFace({ type: "additive", rarity, readout: "+1" });
+  it("engraves the merge tier as ring count — 1, 2, 3 — never a hue", () => {
+    // The rings read the copy's merge tier (ADR-0058); the plate tint's
+    // rarity never touches them.
+    for (const tier of [0, 1, 2]) {
+      expect(ringCount(tier)).toBe(tier + 1);
+      const face = moduleFace({ type: "additive", tier, readout: "+1" });
       const rings = face.split('<g data-key="rings" class="face-rings">')[1]!.split("</g>")[0]!;
-      expect(rings.match(/<polygon/g), rarity).toHaveLength(RING_COUNT[rarity]);
+      expect(rings.match(/<polygon/g), String(tier)).toHaveLength(tier + 1);
       // No finish token may color the chassis or its engraving.
       expect(face).not.toContain("finish-");
     }
+    // A lenient guard past the authored radii: the top count holds.
+    expect(ringCount(9)).toBe(3);
   });
 
   it("renders the readout-panel anatomy", () => {
     const face = moduleFace({
       type: "forge",
-      rarity: "rare",
+      tier: 2,
       readout: "42/60",
       readoutClass: "charge",
       note: "C4",
@@ -80,7 +82,7 @@ describe("module face", () => {
 
   it("scales the charged chassis fill and rail with the received-charge glow", () => {
     const face = (chargeGlow?: number) =>
-      moduleFace({ type: "additive", rarity: "common", readout: "+1", ...(chargeGlow ? { hexClass: "charged", chargeGlow } : {}) });
+      moduleFace({ type: "additive", tier: 0, readout: "+1", ...(chargeGlow ? { hexClass: "charged", chargeGlow } : {}) });
     // The glow rides the chassis fill-opacity and the rail stroke-opacity;
     // the colors themselves never leave the stylesheet/token table.
     const inline = (markup: string, prop: string) => Number(markup.match(new RegExp(`${prop}:([\\d.]+)`))![1]);
@@ -97,7 +99,7 @@ describe("module face", () => {
   });
 
   it("the open-wire spacer keeps cap and base, opening the window between (#201, ring window #219)", () => {
-    const face = moduleFace({ type: "spacer", rarity: "rare", readout: "⌇", note: "G4", openWire: true });
+    const face = moduleFace({ type: "spacer", tier: 2, readout: "⌇", note: "G4", openWire: true });
     // The chassis wears the shared window clip; the hairline rides the
     // plate. Both are polygons now: the clip is the evenodd ring (chassis
     // minus inner hexagon), the hairline traces the inner hexagon.
@@ -111,7 +113,7 @@ describe("module face", () => {
     // The cap carries the name; the base keeps the note.
     expect(face).toContain('data-key="name" y="-40"');
     expect(face).toContain(">G4</text>");
-    // The rarity rings go quiet even at rare — the finish reads nowhere.
+    // The tier rings go quiet even at the cap — the finish reads nowhere.
     expect(face).not.toContain("face-rings");
     // The ring window's two halves agree: the clip carries chassis and
     // inner hexagon as two subpaths (the evenodd pair), and the hairline
@@ -122,10 +124,10 @@ describe("module face", () => {
   });
 
   it("the expanded face and candidates never wear the window — board faces only", () => {
-    const bloom = moduleFace({ type: "spacer", rarity: "common", readout: "⌇", variant: "bloom" });
+    const bloom = moduleFace({ type: "spacer", tier: 0, readout: "⌇", variant: "bloom" });
     expect(bloom).not.toContain("spacer-window");
     expect(bloom).toContain('data-key="signature"');
-    const plain = moduleFace({ type: "spacer", rarity: "common", readout: "⌇" });
+    const plain = moduleFace({ type: "spacer", tier: 0, readout: "⌇" });
     expect(plain).not.toContain("spacer-window");
     expect(plain).toContain('data-key="signature"');
   });
@@ -133,10 +135,10 @@ describe("module face", () => {
   it("the bloom re-proportions with the prototype's opened spacing (#219)", () => {
     // The −7/11 pair overlapped at bloom scale; the prototype validated
     // glyph −12 / readout 16 and that is what ships.
-    const bloom = moduleFace({ type: "additive", rarity: "common", readout: "+1", variant: "bloom" });
+    const bloom = moduleFace({ type: "additive", tier: 0, readout: "+1", variant: "bloom" });
     expect(bloom).toContain('data-key="signature" class="face-signature" transform="translate(0 -12) scale(0.7)"');
     expect(bloom).toContain('data-key="readout" x="0" y="16"');
-    const compact = moduleFace({ type: "additive", rarity: "common", readout: "+1" });
+    const compact = moduleFace({ type: "additive", tier: 0, readout: "+1" });
     expect(compact).toContain('data-key="signature" class="face-signature" transform="translate(0 0) scale(0.8)"');
     expect(compact).toContain('data-key="readout" x="0" y="30"');
   });
@@ -162,7 +164,7 @@ describe("module face", () => {
     };
     for (const type of MODULE_TYPES as ModuleType[]) {
       expect(META[type].name, type).toBe(names[type]![0]);
-      expect(moduleFace({ type, rarity: "common", readout: "+1" })).toContain(
+      expect(moduleFace({ type, tier: 0, readout: "+1" })).toContain(
         `>${META[type].short.toUpperCase()}</text>`,
       );
     }

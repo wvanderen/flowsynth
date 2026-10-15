@@ -25,20 +25,22 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-// ADR-0017's pattern at the v8 boundary (issue #229): the roster cut is
-// the iteration's one migration. Every version older than v7 rejects with
-// the start-fresh message — no chain, no archive, no import path for
-// rejected versions — while a v7 save migrates in place:
-//   1. The Conditional transforms into its Harmonizer (ADR-0048): same
-//      module, same cell, the per-instance chord-bonus mechanic dead.
-//   2. The player-wide charge-window scalar maps onto the per-module
-//      reserve surface (ADR-0047), credited to each owned Focus
-//      Generator's reserve.
-//   3. The chord discovery ledger defaults empty (#218) and the
-//      per-module reserve/shift fields lenient-default — waves 3–5 build
-//      on these surfaces with no further bump.
-// The life record is never wiped: nothing outside the modules' type keys
-// and the reserves moves.
+// ADR-0017's pattern at the v9 boundary (issue #367, ADR-0058's split):
+// the rarity/tier cut is the iteration's one migration. Every version
+// older than v8 rejects with the start-fresh message — no chain, no
+// archive, no import path for rejected versions — while a v8 save
+// migrates in place:
+//   1. Each owned module's saved rarity maps by index onto the merge tier
+//      (common → 0, uncommon → 1, rare → 2), the stored rarity field dies,
+//      and the type's fixed rarity derives from the code table.
+//   2. Banked module-roll candidates convert the same way — the rolled
+//      band survives as the tier the choice mints at, so queued value is
+//      never silently lost.
+//   3. Mutator rarity is untouched (ADR-0058's boundary).
+// The conversion is repeatable: it runs only on version === SAVE_VERSION
+// - 1, writes only the new shape, and a save/load round-trip is stable.
+// The life record is never wiped: nothing outside the modules' rarity
+// keys and the banked candidates moves.
 export function deserialize(text: string): LoadResult {
   let parsed: unknown;
   try {
@@ -142,7 +144,7 @@ export function deserialize(text: string): LoadResult {
   // as owned, so loading grants what the entry owed. The first slot needs
   // no backfill: its free placement rides unlockMutatorSlot's empty patch.
   if (merged.catalogEntryOwned && !merged.modules.some((module) => module.type === "mutatorForge")) {
-    merged.modules.push(createModule(merged, "mutatorForge", "common"));
+    merged.modules.push(createModule(merged, "mutatorForge"));
   }
   // The arc card's seen flag (§8) lenient-defaults the same way: absent or
   // corrupt means never dismissed — the save is still owed its one hint.
@@ -191,10 +193,10 @@ export function deserialize(text: string): LoadResult {
   // slice, which reads — honestly — as a manual-only history that banks
   // nothing at its next completion.
   normalizeGoals(merged.goals);
-  // The v7 → v8 migration (issue #229): transform in place, before the
-  // per-module normalization below reads the new shape.
+  // The v8 → v9 migration (issue #367, ADR-0058): transform in place,
+  // before the per-module normalization below reads the new shape.
   if (migrating) {
-    migrateV7ToV8(raw, merged);
+    migrateV8ToV9(merged);
   }
   // The per-module reserve/shift surface (ADR-0047, ADR-0048) lenient-
   // defaults per module: a module saved before the roster wave carries
@@ -207,25 +209,32 @@ export function deserialize(text: string): LoadResult {
   return { state: merged };
 }
 
-// The one migration step (ADR-0017's pattern, issue #229): a v7 save's
-// board becomes the v8 board with nothing but the Conditional's identity
-// and the reserves' home moved.
-function migrateV7ToV8(raw: Record<string, unknown>, merged: GameState): void {
-  // 1. Conditional → Harmonizer, transformed in place (ADR-0048): same
-  // module, same cell, same level and rarity; the per-instance chord-bonus
-  // mechanic dies with the type key.
+// The one migration step (ADR-0017's pattern, issue #367): a v8 save's
+// per-copy rarity becomes the merge tier by index, and the banked module
+// rolls convert the same way — nothing else moves.
+// The shared conversion (ADR-0058): a legacy rarity's index is the tier the
+// copy has earned; a corrupt or absent key reads as the base tier — a copy
+// the old system never explained earns nothing it cannot show.
+function legacyTier(legacy: unknown): number {
+  return legacy === "uncommon" ? 1 : legacy === "rare" ? 2 : 0;
+}
+
+function migrateV8ToV9(merged: GameState): void {
+  // 1. Owned modules: the stored rarity field dies — the type's fixed
+  // rarity now derives from the code table.
   for (const module of merged.modules) {
-    if ((module as { type?: unknown }).type === "conditional") {
-      module.type = "harmonizer";
-    }
+    module.tier = legacyTier((module as { rarity?: unknown }).rarity);
+    delete (module as { rarity?: unknown }).rarity;
   }
-  // 2. The charge-window scalar maps onto the per-module reserve surface
-  // (ADR-0047): each owned Focus Generator receives the banked window as
-  // its own reserve. Nothing else about the board moves; the life record
-  // is untouched.
-  const window = typeof raw.chargeWindow === "number" && Number.isFinite(raw.chargeWindow) ? raw.chargeWindow : 0;
-  for (const module of merged.modules) {
-    if (module.type === "focusKeyed") module.reserve = window;
+  // 2. Banked module-roll candidates (the batch retention, ADR-0058): the
+  // rolled band survives as the tier the choice mints at — a queued rare
+  // stays worth a rare. Mutator rolls are untouched; their rarity is the
+  // live surface (ADR-0043).
+  for (const offer of merged.bankedRolls) {
+    for (const candidate of offer.candidates) {
+      candidate.tier = legacyTier((candidate as { rarity?: unknown }).rarity);
+      delete (candidate as { rarity?: unknown }).rarity;
+    }
   }
 }
 

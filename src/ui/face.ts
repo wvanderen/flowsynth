@@ -1,3 +1,4 @@
+import { amplifierGainOf } from "../engine/module-strength";
 // The module face (ADR-0016, issue #39): every module renders as a Readout
 // panel in the Rack identity — a shared chassis, a narrow category rail in
 // the category hue, a condensed technical-caps nameplate, the module's
@@ -7,7 +8,7 @@
 // board and the Forge candidate tiles. The inventory wears the minimal mark
 // instead (hue-outlined hexagon and glyph alone, ADR-0027): at tile size the
 // engraving is noise.
-import type { GameState, Hex, ModuleInstance, ModuleType, Rarity, RateSnapshot } from "../engine/types";
+import type { GameState, Hex, ModuleInstance, ModuleType, RateSnapshot } from "../engine/types";
 import { CATEGORY_OF, BALANCE } from "../engine/constants";
 import { chargedFactor, hostPower, ritualAmpOf } from "../engine/economy";
 import { forgeThreshold, mutatorForgeThreshold } from "../engine/rolls";
@@ -67,9 +68,13 @@ export const HUE_TOKEN_OF: Record<ModuleType, string> = {
   mutatorForge: "hue-forge",
 };
 
-// Rarity = finish: engraved ring count, one to three.
+// The face's two quality axes (ADR-0058): the plate tint keys the type's
+// fixed rarity, the engraved rings read the copy's merge tier — one ring
+// per tier, one to three. A future cap raise (#380) extends the radii.
 const RING_RADII = [55, 50, 45];
-export const RING_COUNT: Record<Rarity, number> = { common: 1, uncommon: 2, rare: 3 };
+export function ringCount(tier: number): number {
+  return Math.min(Math.max(tier, 0), RING_RADII.length - 1) + 1;
+}
 
 // The charged face sits in the charge register, scaled by the glow. The
 // stylesheet paints the colors; the received strength only sets how much:
@@ -94,7 +99,9 @@ const FACE_NOTE_Y = 43;
 
 export interface FaceSpec {
   type: ModuleType;
-  rarity: Rarity;
+  // The copy's merge tier — the engraved ring count. The plate tint's
+  // rarity derives from the type alone (ADR-0058): one fact, one source.
+  tier: number;
   // The prominent readout beneath the signature: the module's contribution —
   // for the chargeable Forge, charge-vs-threshold. An empty string skips
   // the line entirely (the detail tray's face previews, issue #296 review:
@@ -177,7 +184,7 @@ export function readoutFitClass(readout: string): string {
 export function moduleFace(spec: FaceSpec): string {
   const hue = `var(--${HUE_TOKEN_OF[spec.type]})`;
   const openWire = spec.openWire === true;
-  const rings = Array.from({ length: RING_COUNT[spec.rarity] }, (_, i) => `<polygon points="${hexPoints(RING_RADII[i]!)}"/>`).join("");
+  const rings = Array.from({ length: ringCount(spec.tier) }, (_, i) => `<polygon points="${hexPoints(RING_RADII[i]!)}"/>`).join("");
   // The charge light (§8, #41): the chassis fill takes the charge hue at an
   // inline fill-opacity, and the rail takes an inline stroke-opacity — both
   // scaling continuously with the glow the module's received strength maps
@@ -219,7 +226,7 @@ export const isSource = (m: ModuleInstance) => CATEGORY_OF[m.type] === "generato
 // the two surfaces can never drift apart on the relay's output.
 export function relayStrengthOf(module: ModuleInstance, snapshot: RateSnapshot): number {
   const strength = snapshot.chargeStrength.get(module.id) ?? 0;
-  return strength * (1 + BALANCE.amplifierGainPerLevel * module.level);
+  return strength * amplifierGainOf(module);
 }
 
 // The booster's uplift percentage — the charged curve over the adjacent
@@ -275,7 +282,7 @@ export function faceReadoutFor(state: GameState, module: ModuleInstance, pos: He
     // delivering onto the active habit's build right now — ×1 while
     // uncharged, rising with received strength (ADR-0046).
     const strength = snapshot.chargeStrength.get(module.id) ?? 0;
-    const amp = 1 + ritualAmpOf(module.level, strength);
+    const amp = 1 + ritualAmpOf(module.level, strength, module.tier);
     return pos
       ? { readout: `×${formatNumber(amp)}`, note: cellNoteOf(pos) }
       : { readout: `×${formatNumber(amp)}` };

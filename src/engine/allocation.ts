@@ -1,3 +1,4 @@
+import { silentVoiceUpliftOf } from "./module-strength";
 import { BALANCE, CATEGORY_OF, NAMED_CHORDS } from "./constants";
 import { chordClusters, formationQuality, formationTension, type ChordAnalysis, type Singer } from "./chords";
 import type { AllocationSummary, DeployedModule, NamedChordTerm, RecognizedInstance } from "./types";
@@ -642,7 +643,7 @@ export function allocateChords(singers: Singer[], spacers: DeployedModule[] = []
         const module = singers.find((s) => s.module.id === id)!.module;
         const params = opts.params.get(id) ?? { weight: 0, resonance: 0 };
         const silent = CATEGORY_OF[module.type] === "silentVoice";
-        const uplift = silent ? BALANCE.silentVoiceUpliftPerLevel * module.level : 0;
+        const uplift = silent ? silentVoiceUpliftOf(module) : 0;
         const weight = silent ? 0 : params.weight;
         return { id, index: 0, klass: mod12(pitchById.get(id)!), weight, uplift, resonance: params.resonance };
       })

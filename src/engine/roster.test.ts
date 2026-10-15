@@ -239,16 +239,18 @@ describe("the silent voices (ADR-0048)", () => {
     expect(snapshot.contributions.get(bend.id)?.pitch).toBe(pitchOf(hex(-1, 0)) - 1);
   });
 
-  it("the Bend's selectable set grows with rarity only", () => {
+  it("the Bend's selectable set grows with the type's fixed rarity only", () => {
     expect(BALANCE.bendShifts.common).toEqual([-1, 1]);
     expect(BALANCE.bendShifts.uncommon).toEqual([-1, 1]);
     expect(BALANCE.bendShifts.rare).toEqual([-2, -1, 1, 2]);
-    // The action refuses out-of-set shifts.
+    // The action reads the authored table (ADR-0058): the Bend is common,
+    // so the copy refuses the rare-only ±2 whatever its tier climbs to.
     const s = fresh();
     const bend = give(s, "bend", hex(1, 0));
     expect(setBendShift(s, bend.id, 2).ok).toBe(false);
-    bend.rarity = "rare";
-    expect(setBendShift(s, bend.id, 2).ok).toBe(true);
+    bend.tier = 2;
+    expect(setBendShift(s, bend.id, 2).ok).toBe(false);
+    expect(setBendShift(s, bend.id, -1).ok).toBe(true);
   });
 
   it("silent voices count in the pitch set; spacers still conduct only", () => {
@@ -427,14 +429,13 @@ describe("the v8 save surface", () => {
   it("the roster round-trips through the save", () => {
     const s = fresh();
     const bend = give(s, "bend", hex(-1, 0));
-    bend.rarity = "rare";
-    bend.shift = -2;
+    bend.shift = -1;
     give(s, "echo", hex(1, -1), 3);
     give(s, "amplifier", hex(2, 1), 1);
     const loaded = deserialize(serialize(s, 99));
     expect(loaded.error).toBeUndefined();
     const modules = loaded.state!.modules;
-    expect(modules.find((m) => m.type === "bend")?.shift).toBe(-2);
+    expect(modules.find((m) => m.type === "bend")?.shift).toBe(-1);
     expect(modules.find((m) => m.type === "echo")?.level).toBe(3);
     expect(modules.find((m) => m.type === "amplifier")?.reserve).toBe(0);
   });

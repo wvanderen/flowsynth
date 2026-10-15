@@ -1,4 +1,5 @@
-import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isVoiceType } from "./constants";
+import { amplifierGainOf, tierPowerOf } from "./module-strength";
+import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isVoiceType, typeRarityOf } from "./constants";
 import { analyzeChords, hypotheticalBoardFor, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
 import { allocateChords, DEFAULT_ALLOCATION_BUDGET, type AllocationBudget, type AllocationRead, type AllocationVoiceParams } from "./allocation";
 import { capacityOf } from "./capacity";
@@ -168,8 +169,12 @@ export function investment(level: number): number {
   return total;
 }
 
+// A module's authored power (ADR-0058): the fixed type rarity's per-level
+// base over the nous-purchased levels, times the merge tier's strength
+// multiplier. Tier scales the strengths; it never touches proportions,
+// conditions, or the type's rarity.
 export function modulePower(module: ModuleInstance): number {
-  return BALANCE.rarityPower[module.rarity] ** module.level;
+  return BALANCE.rarityPower[typeRarityOf(module.type)] ** module.level * tierPowerOf(module.tier);
 }
 
 export function deployed(state: GameState): ModuleInstance[] {
@@ -266,7 +271,7 @@ function relayNet(state: GameState, flow: boolean, steadyBonus: number): RelayNe
       }
       strength *= 1 + chargeMagnitudeAt(state, amp.pos);
       received.set(amp.id, strength);
-      relay.set(amp.id, strength * (1 + BALANCE.amplifierGainPerLevel * amp.level));
+      relay.set(amp.id, strength * amplifierGainOf(amp));
     }
     for (const amp of amplifiers) {
       if (depth.has(amp.id)) continue;
@@ -282,8 +287,8 @@ function relayNet(state: GameState, flow: boolean, steadyBonus: number): RelayNe
 // level-scaled base through the charged-empowerment curve of the strength
 // it receives — the face readout and the bloom's contribution line share
 // this one read with the rate pass. Zero while uncharged.
-export function ritualAmpOf(level: number, strength: number): number {
-  return BALANCE.ritualAmpPerLevel * level * chargedFactor(strength);
+export function ritualAmpOf(level: number, strength: number, tier = 0): number {
+  return BALANCE.ritualAmpPerLevel * level * tierPowerOf(tier) * chargedFactor(strength);
 }
 
 // Read RITUAL against the base charge network once, then amplify delivery.
@@ -296,7 +301,7 @@ function ritualAmplificationFor(state: GameState, flow: boolean): number {
   for (const module of placed) {
     if (module.type === "ritual") {
       const strength = receivedOn(state, module, flow, placed, net, build.generatorStrength);
-      if (strength > 0) amplification += ritualAmpOf(module.level, strength);
+      if (strength > 0) amplification += ritualAmpOf(module.level, strength, module.tier);
     }
   }
   return amplification * (1 + build.ritualAttunement);
@@ -688,7 +693,7 @@ function allocationFingerprint(state: GameState): string {
   const parts: string[] = [];
   for (const module of state.modules) {
     if (module.pos === null) continue;
-    parts.push(`${module.id}:${module.type}:${module.pos.q},${module.pos.r}:${module.level}:${module.rarity}:${module.shift}:${module.reserve > EPS ? 1 : 0}`);
+    parts.push(`${module.id}:${module.type}:${module.pos.q},${module.pos.r}:${module.level}:${module.tier}:${module.shift}:${module.reserve > EPS ? 1 : 0}`);
   }
   for (const mutator of state.mutators) {
     if (mutator.pos === null) continue;

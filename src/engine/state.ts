@@ -75,7 +75,7 @@ export function createInitialState(): GameState {
     summary: null,
     nextId: 1,
   };
-  const opening = createModule(state, "additive", "common");
+  const opening = createModule(state, "additive");
   opening.pos = hex(0, 0);
   state.modules.push(opening);
   return state;
@@ -85,11 +85,14 @@ export function newModuleId(state: GameState): string {
   return `m${state.nextId++}`;
 }
 
-export function createModule(state: GameState, type: ModuleType, rarity: Rarity): ModuleInstance {
+// The tier argument (ADR-0058) is the merge tier the copy mints at — 0 from
+// every fresh grant, roll, and shelf purchase; the legacy conversion is the
+// only source of higher tiers.
+export function createModule(state: GameState, type: ModuleType, tier: number = 0): ModuleInstance {
   return {
     id: newModuleId(state),
     type,
-    rarity,
+    tier,
     level: 0,
     invested: 0,
     pos: null,
@@ -102,14 +105,15 @@ export function createModule(state: GameState, type: ModuleType, rarity: Rarity)
   };
 }
 
-// Load-time normalization for the v8 per-module surface (issue #229): a
-// module saved before the roster wave carries no reserve or shift —
-// lenient-defaulted exactly as the fresh shape would write them. Mutates in
-// place over the merged state's module list.
+// Load-time normalization for the v9 per-module surface (issue #367): a
+// module saved before the tier cut carries no tier — lenient-defaulted to
+// the base tier exactly as a fresh shape would write it. Mutates in place
+// over the merged state's module list.
 export function normalizeModules(modules: ModuleInstance[]): void {
   for (const module of modules) {
     if (typeof module.reserve !== "number" || !Number.isFinite(module.reserve)) module.reserve = 0;
     if (typeof module.shift !== "number") module.shift = module.type === "bend" ? BALANCE.bendDefaultShift : null;
+    if (typeof module.tier !== "number" || !Number.isInteger(module.tier) || module.tier < 0) module.tier = 0;
   }
 }
 

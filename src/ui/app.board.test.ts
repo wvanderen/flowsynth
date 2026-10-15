@@ -816,9 +816,9 @@ describe("the action row (§7)", () => {
     app.state.bankedRolls.push({
       id: "offer",
       candidates: [
-        { id: "c1", type: "additive", rarity: "common" },
-        { id: "c2", type: "spacer", rarity: "common" },
-        { id: "c3", type: "infusor", rarity: "common" },
+        { id: "c1", type: "additive", tier: 0 },
+        { id: "c2", type: "spacer", tier: 0 },
+        { id: "c3", type: "infusor", tier: 0 },
       ],
     });
     app.openModal("forge");
@@ -978,9 +978,9 @@ describe("a module roll's scrimless peek (#193)", () => {
     app.state.bankedRolls.push({
       id: "roll1",
       candidates: [
-        { id: "rc1", type: "additive", rarity: "common" },
-        { id: "rc2", type: "spacer", rarity: "common" },
-        { id: "rc3", type: "infusor", rarity: "uncommon" },
+        { id: "rc1", type: "additive", tier: 0 },
+        { id: "rc2", type: "spacer", tier: 0 },
+        { id: "rc3", type: "infusor", tier: 1 },
       ],
     });
   };
@@ -1383,7 +1383,11 @@ describe("combining by drop (issue #152)", () => {
     expect(app.ui.modal).toBe("combine");
     expect(app.ui.combineOffer).toEqual({ dragId: "m1", targetId: twin.id });
     const review = document.getElementById("modal-content")!;
-    expect(review.textContent).toContain("uncommon");
+    // The review promises the resulting merge tier (ADR-0058); the pair
+    // line names each copy's fixed type rarity beside it.
+    expect(review.textContent).toContain("Resulting tier");
+    expect(review.textContent).toContain("Tier 2");
+    expect(review.textContent).toContain("common");
     expect(review.textContent).toContain("LV 1");
     expect(review.textContent).toContain("10");
     // Cancel: neither copy is consumed, nothing moves, nothing refunds.
@@ -1392,7 +1396,7 @@ describe("combining by drop (issue #152)", () => {
     expect(app.ui.combineOffer).toBeNull();
     expect(app.state.modules).toHaveLength(2);
     expect(m1.pos).toEqual(hex(0, 0));
-    expect(m1.rarity).toBe("common");
+    expect(m1.tier).toBe(0);
     expect(m1.level).toBe(1);
     expect(m1.invested).toBe(10);
     expect(twin.pos).toEqual(hex(1, 0));
@@ -1401,7 +1405,7 @@ describe("combining by drop (issue #152)", () => {
     expect(app.state.nous).toBe(nous);
   });
 
-  it("board to board: confirming consumes both — next rarity, retained level, refund, result on the target cell", () => {
+  it("board to board: confirming consumes both — next tier, retained level, refund, result on the target cell", () => {
     const m1 = app.state.modules[0]!;
     m1.level = 1;
     m1.invested = 10;
@@ -1413,7 +1417,7 @@ describe("combining by drop (issue #152)", () => {
     expect(app.state.modules).toHaveLength(1);
     const merged = app.state.modules[0]!;
     expect(merged.id).toBe(m1.id);
-    expect(merged.rarity).toBe("uncommon");
+    expect(merged.tier).toBe(1);
     expect(merged.level).toBe(1);
     expect(merged.pos).toEqual(hex(1, 0));
     expect(app.state.nous).toBe(10);
@@ -1429,7 +1433,7 @@ describe("combining by drop (issue #152)", () => {
     expect(app.ui.combineOffer).toEqual({ dragId: "m1", targetId: twin.id });
     document.getElementById("combine-confirm")!.click();
     expect(app.state.modules).toHaveLength(1);
-    expect(app.state.modules[0]!.rarity).toBe("uncommon");
+    expect(app.state.modules[0]!.tier).toBe(1);
     expect(app.state.modules[0]!.pos).toBeNull();
   });
 
@@ -1455,7 +1459,7 @@ describe("combining by drop (issue #152)", () => {
     document.getElementById("combine-confirm")!.click();
     expect(app.state.modules).toHaveLength(1);
     expect(app.state.modules[0]!.id).toBe(twin.id);
-    expect(app.state.modules[0]!.rarity).toBe("uncommon");
+    expect(app.state.modules[0]!.tier).toBe(1);
     expect(app.state.modules[0]!.level).toBe(2);
     expect(app.state.modules[0]!.pos).toEqual(hex(1, 0));
   });
@@ -1469,14 +1473,14 @@ describe("combining by drop (issue #152)", () => {
     expect(app.ui.combineOffer).toEqual({ dragId: "m1", targetId: twin.id });
     document.getElementById("combine-confirm")!.click();
     expect(app.state.modules).toHaveLength(1);
-    expect(app.state.modules[0]!.rarity).toBe("uncommon");
+    expect(app.state.modules[0]!.tier).toBe(1);
     expect(app.state.modules[0]!.pos).toBeNull();
   });
 
-  it("rare twins still swap — the highest rarity does not combine", () => {
+  it("capped twins still swap — the unlocked tier cap does not combine", () => {
     const twin = give(app.state, "additive", hex(1, 0));
-    app.state.modules[0]!.rarity = "rare";
-    twin.rarity = "rare";
+    app.state.modules[0]!.tier = 2;
+    twin.tier = 2;
     app.render();
     dragFrom(cell(0, 0), cell(1, 0));
     expect(app.ui.modal).toBeNull();

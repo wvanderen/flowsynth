@@ -1,3 +1,4 @@
+import { tierPowerOf } from "../engine/module-strength";
 // The Hex detail (issue #295): the module bloom's successor — an owned
 // board coordinate's full-stack cross-section, standing where the grid
 // stood, at every width. The presentation is the instrument metaphor, not
@@ -25,7 +26,7 @@
 // cross-section opens read-only, its readouts live, its controls gone —
 // the click still answers the lock.
 import { affordableLevels, deployedAt, displayedRates, hostPower, levelCost, levelsCost, mutatorAt, mutatorMagnitude, wholeNous } from "../engine/economy";
-import { BALANCE } from "../engine/constants";
+import { BALANCE, typeRarityOf } from "../engine/constants";
 import { sameHex } from "../engine/hex";
 import { cellNoteOf, noteNameOf, pitchOf } from "../engine/lattice";
 import type { GameState, Hex, ModuleInstance, MutatorInstance, RateSnapshot } from "../engine/types";
@@ -34,7 +35,7 @@ import { HEX_RADIUS, hexPoints, moduleFace, forgeBranchOf, faceLevel, faceReadou
 import { chargeGlow } from "./leads";
 import { formatInt, formatNumber } from "./format";
 import { FAMILY_WORD, rarityTicks, mutatorEffectText, mutatorGlyph, mutatorInertVerdict, mutatorSlotPrice, mutatorUnlockTargets, mutatorTileSvg } from "./mutators";
-import { META, RARITY_LABEL } from "./meta";
+import { META, RARITY_LABEL, tierWord } from "./meta";
 import { isPhoneWidth, scrollTopOf } from "./container";
 import { wireTooltips } from "./instrument";
 import { moduleFlowsHtml, mutatorFlowHtml } from "./hexflows";
@@ -54,6 +55,7 @@ export interface DetailEffectInput {
   level: number;
   // The level count the benefit previews (1, or the dial's k).
   levels: number;
+  tierPower: number;
 }
 
 // The synth benefit is exact at every local effect: value/power is the
@@ -65,8 +67,8 @@ const synthBenefit = ({ gain, power, value }: DetailEffectInput): string | null 
 
 // The silent voices' benefit: the level buys the chord-instance uplift
 // (ADR-0048), never production.
-const silentBenefit = ({ levels }: DetailEffectInput): string | null =>
-  `+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * levels)}% chord-instance uplift`;
+const silentBenefit = ({ levels, tierPower }: DetailEffectInput): string | null =>
+  `+${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * levels * tierPower)}% chord-instance uplift`;
 
 // The generators' benefit (ADR-0047): level scales output strength only,
 // never the banked duration.
@@ -80,8 +82,8 @@ const DETAIL_BENEFITS: Record<ModuleInstance["type"], (input: DetailEffectInput)
   harmonizer: silentBenefit,
   echo: silentBenefit,
   bend: silentBenefit,
-  amplifier: ({ levels }) => `+${formatNumber(100 * BALANCE.amplifierGainPerLevel * levels)}% relay gain`,
-  ritual: ({ levels }) => `+${formatNumber(100 * BALANCE.ritualAmpPerLevel * levels)}% build amplification`,
+  amplifier: ({ levels, tierPower }) => `+${formatNumber(100 * BALANCE.amplifierGainPerLevel * levels * tierPower)}% relay gain`,
+  ritual: ({ levels, tierPower }) => `+${formatNumber(100 * BALANCE.ritualAmpPerLevel * levels * tierPower)}% build amplification`,
   // The silent wire buys nothing with a level, so it wears no button at all.
   spacer: () => null,
   focusKeyed: generatorBenefit,
@@ -101,6 +103,7 @@ function benefitOf(app: App, module: ModuleInstance, snapshot: RateSnapshot, lev
     level: module.level,
     gain: power * (rarityPower - 1),
     levels,
+    tierPower: tierPowerOf(module.tier),
   });
 }
 
@@ -161,7 +164,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
     pos.q,
     pos.r,
     detail.face,
-    module ? `${module.id}:${module.type}:${module.level}:${module.rarity}:${module.shift}` : "empty",
+    module ? `${module.id}:${module.type}:${module.level}:${module.tier}:${module.shift}` : "empty",
     module ? forgeBranchOf(state, module.type) : null,
     module ? hostPower(state, module) : 0,
     contribution
@@ -185,7 +188,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
     // The open inventory (issue #296) and what waits in it: a placement
     // changes both, so the tray and its tiles can never show stale stock.
     ui.detailTray,
-    state.modules.filter((m) => m.pos === null).map((m) => `${m.id}:${m.type}:${m.level}:${m.rarity}`),
+    state.modules.filter((m) => m.pos === null).map((m) => `${m.id}:${m.type}:${m.level}:${m.tier}`),
     state.mutators.filter((m) => m.pos === null).map((m) => `${m.id}:${m.family}:${m.rarity}`),
     upgrade ? Math.floor(state.arete) : 0,
     upgrade ? ui.bulkCount : 0,
@@ -423,9 +426,9 @@ function moduleLayerHtml(app: App, pos: Hex, module: ModuleInstance | undefined,
     const branch = forgeBranchOf(state, module.type);
     const read = faceReadoutFor(state, module, pos, snapshot, true);
     const id = detailTipId();
-    chassis = `<svg class="hex-stack-face" viewBox="-70 -70 140 140" data-type="${module.type}" data-rarity="${module.rarity}" aria-hidden="true">${moduleFace({
+    chassis = `<svg class="hex-stack-face" viewBox="-70 -70 140 140" data-type="${module.type}" data-rarity="${typeRarityOf(module.type)}" aria-hidden="true">${moduleFace({
       type: module.type,
-      rarity: module.rarity,
+      tier: module.tier,
       readout: read.readout,
       ...(read.readoutClass ? { readoutClass: read.readoutClass } : {}),
       ...(read.note ? { note: read.note } : {}),
@@ -435,7 +438,7 @@ function moduleLayerHtml(app: App, pos: Hex, module: ModuleInstance | undefined,
     })}<polygon class="hex-stack-marker" points="${hexPoints(58)}"/></svg>`;
     tip = {
       id,
-      html: `<span class="inst-tip-body" id="${id}" role="tooltip">${META[module.type].name} · ${RARITY_LABEL[module.rarity]}${faceLevel(module) !== undefined ? ` · level ${module.level}` : ""} · ${read.readout}${read.note ? ` · sings ${read.note}` : ""}${charged ? " · charged" : ""}</span>`,
+      html: `<span class="inst-tip-body" id="${id}" role="tooltip">${META[module.type].name} · ${RARITY_LABEL[typeRarityOf(module.type)]} · ${tierWord(module.tier)}${faceLevel(module) !== undefined ? ` · level ${module.level}` : ""} · ${read.readout}${read.note ? ` · sings ${read.note}` : ""}${charged ? " · charged" : ""}</span>`,
     };
   }
   // The rail's affordances (issue #296): an empty place opens the tray
@@ -477,11 +480,11 @@ function detailBuyHtml(app: App, module: ModuleInstance): string {
   // The dial's basis (§7): the charge-projected pass, whatever the clock
   // is doing — purchases preview what the module makes while charged.
   const snapshot = displayedRates(state, true);
-  const benefit = benefitOf(app, module, snapshot, 1, BALANCE.rarityPower[module.rarity]);
+  const benefit = benefitOf(app, module, snapshot, 1, BALANCE.rarityPower[typeRarityOf(module.type)]);
   const maxLevels = affordableLevels(wholeNous(state), module.level);
   const want = ui.bulkCount === "max" ? maxLevels : ui.bulkCount;
   const bulkCost = levelsCost(module.level, want);
-  const bulkBenefit = benefitOf(app, module, snapshot, want, BALANCE.rarityPower[module.rarity] ** want);
+  const bulkBenefit = benefitOf(app, module, snapshot, want, BALANCE.rarityPower[typeRarityOf(module.type)] ** want);
   // Partial by design: the button stays enabled whatever the bank says —
   // a short purchase buys what it covers and says so.
   const bank = wholeNous(state);
@@ -508,7 +511,7 @@ function detailBuyHtml(app: App, module: ModuleInstance): string {
   // ♯/♭ steps, one chip each.
   const shiftPicker =
     module.type === "bend" && module.pos
-      ? `<div class="hex-shift" role="group" aria-label="Pitch shift">${BALANCE.bendShifts[module.rarity]
+      ? `<div class="hex-shift" role="group" aria-label="Pitch shift">${BALANCE.bendShifts[typeRarityOf(module.type)]
           .map((shift) => {
             const active = (module.shift ?? 1) === shift;
             const label = `${shift > 0 ? "♯" : "♭"}${Math.abs(shift)}`;
@@ -616,12 +619,12 @@ function detailTrayHtml(app: App, face: DetailFace): string {
         .filter((m) => m.pos === null)
         .map((m) => {
           const id = detailTipId();
-          return `<span class="inst-tip tray-tile-detail"><button class="inventory-tile tray-face-tile" data-detail-place="${m.id}" data-rarity="${m.rarity}" data-type="${m.type}" aria-label="${META[m.type].name} · ${RARITY_LABEL[m.rarity]}" aria-describedby="${id}"><svg class="tray-face" viewBox="-70 -70 140 140" data-type="${m.type}" data-rarity="${m.rarity}" aria-hidden="true">${moduleFace({
+          return `<span class="inst-tip tray-tile-detail"><button class="inventory-tile tray-face-tile" data-detail-place="${m.id}" data-rarity="${typeRarityOf(m.type)}" data-type="${m.type}" aria-label="${META[m.type].name} · ${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)}" aria-describedby="${id}"><svg class="tray-face" viewBox="-70 -70 140 140" data-type="${m.type}" data-rarity="${typeRarityOf(m.type)}" aria-hidden="true">${moduleFace({
             type: m.type,
-            rarity: m.rarity,
+            tier: m.tier,
             readout: "",
             level: faceLevel(m),
-          })}</svg></button><button class="inst-tip-trigger" aria-label="About ${META[m.type].name}" aria-describedby="${id}" aria-expanded="false">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${META[m.type].name} · ${RARITY_LABEL[m.rarity]} — ${destination}</span></span>`;
+          })}</svg></button><button class="inst-tip-trigger" aria-label="About ${META[m.type].name}" aria-describedby="${id}" aria-expanded="false">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${META[m.type].name} · ${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)} — ${destination}</span></span>`;
         })
         .join("") || `<span class="tray-empty">no modules wait in the tray</span>`
     : state.mutators

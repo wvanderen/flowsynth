@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { BALANCE } from "./constants";
 import { combine, combinePreview, endSession, findCombinePartner, startSession, upgradeModule } from "./actions";
 import { computeRates, levelCost } from "./economy";
 import { fresh, give } from "./fixtures";
@@ -16,7 +17,7 @@ function leveled(state: GameState, type: ModuleType, level: number, pos: { q: nu
 }
 
 describe("combination", () => {
-  it("consumes both inputs and produces the next rarity keeping the higher level", () => {
+  it("consumes both inputs and produces the next tier keeping the higher level", () => {
     const s = fresh();
     const a = leveled(s, "harmonizer", 2, hex(1, 0));
     const b = leveled(s, "harmonizer", 1, hex(0, -1));
@@ -24,7 +25,7 @@ describe("combination", () => {
     const result = combine(s, b.id);
     expect(result.ok).toBe(true);
     expect(result.refund).toBe(10);
-    expect(a.rarity).toBe("uncommon");
+    expect(a.tier).toBe(1);
     expect(a.level).toBe(2);
     expect(a.invested).toBe(26);
     expect(s.nous).toBeCloseTo(10, 6);
@@ -43,19 +44,79 @@ describe("combination", () => {
     expect(s.modules.filter((m) => m.type === "forge")).toHaveLength(1);
   });
 
-  it("refunds nothing at level zero and cannot combine at the highest rarity", () => {
+  it("refunds nothing at level zero and stops at the unlocked cap", () => {
     const s = fresh();
     const a = give(s, "infusor", null);
     const b = give(s, "infusor", null);
     const result = combine(s, a.id, b.id);
     expect(result.ok).toBe(true);
     expect(result.refund).toBe(0);
-    expect(a.rarity).toBe("uncommon");
+    expect(a.tier).toBe(1);
 
-    a.rarity = "rare";
+    // A pair at the unlocked cap refuses — and the cap is finite, not the
+    // ladder's end by coincidence: raising it would let them combine.
+    a.tier = BALANCE.mergeCap;
     const c = give(s, "infusor", null);
-    c.rarity = "rare";
+    c.tier = BALANCE.mergeCap;
     expect(combine(s, a.id).ok).toBe(false);
+  });
+
+  it("tier scaling multiplies the authored strength, conditions unchanged", () => {
+    // Twin boards, identical placement: the only difference is the copy's
+    // tier, so the value ratio is exactly the tier ladder's step.
+    const plainState = fresh();
+    const plain = give(plainState, "additive", hex(3, 0)); // chordless island
+    const mergedState = fresh();
+    const merged = give(mergedState, "additive", hex(3, 0));
+    merged.tier = 1;
+    const plainValue = computeRates(plainState, true).contributions.get(plain.id)!.value;
+    const mergedValue = computeRates(mergedState, true).contributions.get(merged.id)!.value;
+    expect(mergedValue / plainValue).toBeCloseTo(BALANCE.tierPower[1] / BALANCE.tierPower[0], 9);
+    // The tier never changed the conditions: the copy still sings its cell
+    // uncharged, receiving nothing.
+    expect(computeRates(mergedState, true).chargeStrength.get(merged.id)).toBe(0);
+    expect(computeRates(mergedState, true).contributions.get(merged.id)!.pitch).toBe(
+      computeRates(plainState, true).contributions.get(plain.id)!.pitch,
+    );
+  });
+
+  it("a merged silent voice increases production through its allocated chord", () => {
+    const s = fresh();
+    const voice = give(s, "harmonizer", hex(1, 0), 2);
+    const twin = give(s, "harmonizer", null, 2);
+    const before = computeRates(s, true).synths;
+    expect(combine(s, twin.id, voice.id).ok).toBe(true);
+    expect(computeRates(s, true).synths).toBeGreaterThan(before);
+    const survivor = s.modules.find(m => m.type === "harmonizer")!;
+    expect(computeRates(s, true).contributions.get(survivor.id)?.value).toBe(0);
+  });
+
+  it("a merged Amplifier increases relayed charge even at level zero", () => {
+    const s = fresh();
+    const generator = give(s, "focusKeyed", hex(2, -2));
+    generator.reserve = 60;
+    const amp = give(s, "amplifier", hex(1, -1));
+    const twin = give(s, "amplifier", null);
+    const before = computeRates(s, true);
+    expect(combine(s, twin.id, amp.id).ok).toBe(true);
+    const after = computeRates(s, true);
+    expect(after.chargeStrength.get("m1")!).toBeGreaterThan(before.chargeStrength.get("m1")!);
+    generator.reserve = 0;
+    expect(computeRates(s, true).chargeStrength.get("m1")).toBe(0);
+  });
+
+  it("a merged RITUAL increases amplification only while charged", () => {
+    const s = fresh();
+    const generator = give(s, "focusKeyed", hex(2, 0));
+    generator.reserve = 60;
+    const ritual = give(s, "ritual", hex(1, 0), 2);
+    const twin = give(s, "ritual", null, 2);
+    const before = computeRates(s, true).ritualAmplification;
+    expect(before).toBeGreaterThan(0);
+    expect(combine(s, twin.id, ritual.id).ok).toBe(true);
+    expect(computeRates(s, true).ritualAmplification).toBeGreaterThan(before);
+    generator.reserve = 0;
+    expect(computeRates(s, true).ritualAmplification).toBe(0);
   });
 
   it("does not treat a previous refund as new expenditure", () => {
@@ -65,7 +126,7 @@ describe("combination", () => {
     const first = combine(s, a.id, b.id);
     expect(first.refund).toBe(26);
     expect(a.invested).toBe(26);
-    expect(a.rarity).toBe("uncommon");
+    expect(a.tier).toBe(1);
 
     s.nous += 100;
     upgradeModule(s, a.id);
@@ -73,7 +134,7 @@ describe("combination", () => {
     expect(a.invested).toBe(26 + 26);
 
     const c = leveled(s, "additive", 3, null);
-    c.rarity = "uncommon";
+    c.tier = 1;
     c.invested = 77;
     const second = combine(s, a.id, c.id);
     expect(second.ok).toBe(true);
@@ -113,10 +174,26 @@ describe("combination", () => {
     const result = combine(s, drag.id, target.id);
     expect(result.ok).toBe(true);
     // The higher-level tray copy survives, and the result stays in the tray.
-    expect(target.rarity).toBe("uncommon");
+    expect(target.tier).toBe(1);
     expect(target.level).toBe(2);
     expect(target.pos).toBeNull();
     expect([drag, target].filter((m) => s.modules.includes(m))).toHaveLength(1);
+  });
+
+  it("unequal tiers and different named types cannot combine (ADR-0058)", () => {
+    const s = fresh();
+    const low = leveled(s, "harmonizer", 1, hex(1, 0));
+    const high = leveled(s, "harmonizer", 2, null);
+    high.tier = 1;
+    expect(combine(s, low.id, high.id).ok).toBe(false);
+    expect(findCombinePartner(s, low.id)).toBeUndefined();
+
+    const other = leveled(s, "forge", 1, null);
+    expect(combine(s, low.id, other.id).ok).toBe(false);
+    // The pair is untouched by every refusal.
+    expect(low.tier).toBe(0);
+    expect(high.tier).toBe(1);
+    expect(s.modules).toHaveLength(4);
   });
 
   it("a tie-melt relocates the dropped copy and the vacated cell's chord dies (#152)", () => {
@@ -160,7 +237,7 @@ describe("combination", () => {
 });
 
 describe("combinePreview", () => {
-  it("reports the next rarity, the retained level, and the melt's refund without touching state", () => {
+  it("reports the next tier, the retained level, and the melt's refund without touching state", () => {
     const s = fresh();
     const drag = leveled(s, "additive", 1, hex(1, 0));
     const target = leveled(s, "additive", 2, null);
@@ -169,7 +246,7 @@ describe("combinePreview", () => {
     expect(preview).not.toBeNull();
     expect(preview!.keepId).toBe(target.id);
     expect(preview!.meltId).toBe(drag.id);
-    expect(preview!.nextRarity).toBe("uncommon");
+    expect(preview!.nextTier).toBe(1);
     expect(preview!.level).toBe(2);
     // The dragged level-1 copy melts; its 10 ν of upgrades come back.
     expect(preview!.refund).toBe(10);
@@ -180,17 +257,17 @@ describe("combinePreview", () => {
     expect(target.pos).toBeNull();
   });
 
-  it("is null for mismatched pairs, the highest rarity, and flow mode", () => {
+  it("is null for mismatched pairs, the unlocked cap, and flow mode", () => {
     const s = fresh();
     const additive = give(s, "additive", hex(1, 0));
     const conditional = give(s, "harmonizer", null);
     expect(combinePreview(s, additive.id, conditional.id)).toBeNull();
 
-    const rareA = give(s, "infusor", null);
-    const rareB = give(s, "infusor", null);
-    rareA.rarity = "rare";
-    rareB.rarity = "rare";
-    expect(combinePreview(s, rareA.id, rareB.id)).toBeNull();
+    const cappedA = give(s, "infusor", null);
+    const cappedB = give(s, "infusor", null);
+    cappedA.tier = BALANCE.mergeCap;
+    cappedB.tier = BALANCE.mergeCap;
+    expect(combinePreview(s, cappedA.id, cappedB.id)).toBeNull();
 
     startSession(s, 600);
     const pairA = give(s, "forge", hex(0, 1));
@@ -202,7 +279,7 @@ describe("combinePreview", () => {
 
   // ADR-0047 (wave 5): reserves are charge state owned per module — the
   // consumed copy's unspent reserve is forfeited with it, the survivor's
-  // carries on under the next rarity. Never summed, never refunded.
+  // carries on under the next tier. Never summed, never refunded.
   it("combining two Note Generators forfeits the consumed one's unspent reserve and keeps the survivor's", () => {
     const s = fresh();
     const survivor = give(s, "noteKeyed", hex(2, 0));
@@ -212,7 +289,22 @@ describe("combinePreview", () => {
     const result = combine(s, survivor.id, consumed.id);
     expect(result.ok).toBe(true);
     expect(s.modules.find((m) => m.type === "noteKeyed")).toBe(survivor);
-    expect(survivor.rarity).toBe("uncommon");
+    expect(survivor.tier).toBe(1);
     expect(survivor.reserve).toBeCloseTo(100, 6);
+  });
+
+  // The secondary-effect retention contract (ADR-0058 §7), pinned: the
+  // survivor keeps its own shift; the consumed copy's is forfeited with it
+  // — never summed, never copied over.
+  it("combining two Bends keeps the survivor's shift and forfeits the melt's", () => {
+    const s = fresh();
+    const survivor = give(s, "bend", hex(2, 0));
+    const consumed = give(s, "bend", null);
+    survivor.shift = -1;
+    consumed.shift = 1;
+    const result = combine(s, survivor.id, consumed.id);
+    expect(result.ok).toBe(true);
+    expect(survivor.tier).toBe(1);
+    expect(survivor.shift).toBe(-1);
   });
 });

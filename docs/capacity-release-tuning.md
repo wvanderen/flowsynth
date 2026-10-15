@@ -2,6 +2,15 @@
 
 The chosen tuning and the evidence behind it. The decision is ADR-0055; this file records the numbers. Every progression figure below comes from the authoritative harness (`capacity-calibration.ts` + `capacity-calibration.test.ts`): real purchases, rolls, charge, practice advancement and prestige through the engine's own actions — the Arete ladder riding the playable purchase path (Catalog entry first, then the offerings, issue #262's rerun gate) — on the allocation economy every state rides by default, no free resources. Browser observations are recorded separately from numerical ones. Rerun the full tier with `FLOWSYNTH_CALIBRATION=1 npx vitest run src/engine/capacity-calibration.test.ts`.
 
+> **2026-10-14, issue #367:** the rarity/tier split reshuffled the roll
+> walks — a slot now spends its two draws as band-then-type instead of
+> type-then-rarity, re-rolling which types each seed meets without any
+> economy change (the harness never combines, and the launch roster is
+> all-common). The tables below predate the reshuffle. The always-on gate
+> re-recorded: the median seed is still 2026, its ordinary era-1 lengthened
+> to 1,500 minutes at 120 s steps (eight-seed spread 1,050–1,920), era
+> ratio 0.68. The full-battery tables have not been rerun since.
+
 ## Adopted tuning
 
 | Knob | Value | Was |

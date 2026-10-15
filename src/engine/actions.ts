@@ -1,4 +1,4 @@
-import { BALANCE, EPS, NEXT_RARITY, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE, SHELF_TYPES } from "./constants";
+import { BALANCE, EPS, NEXT_RARITY, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE, SHELF_TYPES, typeRarityOf } from "./constants";
 import { claimOf, horizonReached } from "./accumulator";
 import { rowUnlockCost, unlockableRows } from "./catalog";
 import { nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "./capacity";
@@ -277,7 +277,7 @@ export function buyShelfModule(state: GameState, type: ShelfType): ActionResult 
   if (wholeNous(state) < price) return fail("Not enough whole nous.");
   state.nous -= price;
   state.purchased[type] = true;
-  state.modules.push(createModule(state, SHELF_MODULE[type], "common"));
+  state.modules.push(createModule(state, SHELF_MODULE[type]));
   return { ok: true, unlocked: checkUnlocks(state) };
 }
 
@@ -437,7 +437,9 @@ function planTotal(state: GameState, plan: Map<string, number>): BulkPurchase {
 export function findCombinePartner(state: GameState, id: string): ModuleInstance | undefined {
   const module = findModule(state, id);
   if (!module) return undefined;
-  return state.modules.find((other) => other.id !== id && other.type === module.type && other.rarity === module.rarity);
+  // Exact copies only (ADR-0058): the same named type at the same merge
+  // tier — unequal tiers and different types stay separate.
+  return state.modules.find((other) => other.id !== id && other.type === module.type && other.tier === module.tier);
 }
 
 // Who melts: the lower level; a level tie leaves the dropped copy (the
@@ -449,12 +451,12 @@ function meltOf(selected: ModuleInstance, partner: ModuleInstance): ModuleInstan
 
 // The confirmation's terms (issue #152): what combining these two would
 // produce, read without touching state. Null whenever the pair cannot
-// combine — wrong mode, mismatched type or rarity, or the highest tier —
-// so the caller has nothing to offer.
+// combine — wrong mode, mismatched type or tier, or a copy already at the
+// unlocked cap — so the caller has nothing to offer.
 export interface CombinePreview {
   keepId: string;
   meltId: string;
-  nextRarity: Rarity;
+  nextTier: number;
   level: number;
   refund: number;
 }
@@ -464,12 +466,12 @@ export function combinePreview(state: GameState, id: string, partnerId: string):
   const selected = findModule(state, id);
   const partner = findModule(state, partnerId);
   if (!selected || !partner || selected.id === partner.id) return null;
-  if (selected.type !== partner.type || selected.rarity !== partner.rarity) return null;
-  const nextRarity = NEXT_RARITY[selected.rarity];
-  if (nextRarity === null) return null;
+  if (selected.type !== partner.type || selected.tier !== partner.tier) return null;
+  const nextTier = selected.tier + 1;
+  if (nextTier > BALANCE.mergeCap) return null;
   const melt = meltOf(selected, partner);
   const keep = melt === selected ? partner : selected;
-  return { keepId: keep.id, meltId: melt.id, nextRarity, level: keep.level, refund: melt.invested };
+  return { keepId: keep.id, meltId: melt.id, nextTier, level: keep.level, refund: melt.invested };
 }
 
 export function combine(state: GameState, id: string, partnerId?: string): ActionResult {
@@ -477,26 +479,26 @@ export function combine(state: GameState, id: string, partnerId?: string): Actio
   const selected = findModule(state, id);
   if (!selected) return fail("Module not found.");
   // The checks above and the pairing below only route the failure message;
-  // every term of the act — melt, keep, level, refund, next rarity — reads
+  // every term of the act — melt, keep, level, refund, next tier — reads
   // from the one pure preview (ADR-0035), so confirm can never disagree
   // with what the review offered.
   let partner: ModuleInstance | undefined;
   if (partnerId !== undefined) {
     partner = findModule(state, partnerId);
-    if (!partner || partner.id === selected.id || partner.type !== selected.type || partner.rarity !== selected.rarity) {
+    if (!partner || partner.id === selected.id || partner.type !== selected.type || partner.tier !== selected.tier) {
       return fail("Those modules cannot be combined.");
     }
   } else {
     partner = findCombinePartner(state, id);
   }
-  if (!partner) return fail("No second copy of this type and rarity.");
+  if (!partner) return fail("No second copy of this type and tier.");
   const preview = combinePreview(state, id, partner.id);
-  if (!preview) return fail("The highest rarity does not combine further.");
+  if (!preview) return fail("This copy stands at the unlocked tier cap.");
 
   const melt = findModule(state, preview.meltId)!;
   const keep = findModule(state, preview.keepId)!;
   state.nous += preview.refund;
-  keep.rarity = preview.nextRarity;
+  keep.tier = preview.nextTier;
   keep.level = preview.level;
   // The result lands where the drop target was (issue #152): the target
   // cell when a deployed copy received the drop, the tray when the target
@@ -562,8 +564,9 @@ export function chooseRoll(state: GameState, offerId: string, candidateId: strin
   const candidate = offer.candidates.find((c) => c.id === candidateId);
   if (!candidate) return fail("That candidate is not part of this roll.");
   state.bankedRolls.splice(index, 1);
-  state.modules.push(createModule(state, candidate.type, candidate.rarity));
-  // A taken candidate can be the first rare (Fine china) or Forge roll.
+  // The candidate's carried tier mints (ADR-0058): 0 from every fresh
+  // draw, the converted legacy band from an old save.
+  state.modules.push(createModule(state, candidate.type, candidate.tier));
   return { ok: true, unlocked: checkUnlocks(state) };
 }
 
@@ -584,7 +587,7 @@ export function buyCatalogEntry(state: GameState, rng: Rng = Math.random): Actio
   if (state.arete < BALANCE.catalogEntryCost) return fail("Not enough Arete.");
   state.arete -= BALANCE.catalogEntryCost;
   state.catalogEntryOwned = true;
-  state.modules.push(createModule(state, "mutatorForge", "common"));
+  state.modules.push(createModule(state, "mutatorForge"));
   state.bankedMutatorRolls.push(generateMutatorOffer(state, rng));
   return { ok: true, unlocked: checkUnlocks(state) };
 }
@@ -854,7 +857,8 @@ export function setBendShift(state: GameState, id: string, shift: number): Actio
   const module = findModule(state, id);
   if (!module) return fail("Module not found.");
   if (module.type !== "bend") return fail("Only the Bend picks a shift.");
-  if (!BALANCE.bendShifts[module.rarity].includes(shift)) {
+  // The selectable set grows with the type's FIXED rarity only (ADR-0058).
+  if (!BALANCE.bendShifts[typeRarityOf(module.type)].includes(shift)) {
     return fail("That shift is outside this rarity's set.");
   }
   module.shift = shift;
