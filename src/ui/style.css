@@ -2664,10 +2664,13 @@ body.hex-detail-open .upgrade-all {
 
 /* The library's MERGE ALL control (issue #368): the tray's one batch
    combine — square-cut, board chrome like the sweep chips. The visible
-   count is the eligibility read, so the state needs no disclosure. */
+   count is the eligibility read; the separate disclosure previews refunds. */
+.merge-all-controls { display: flex; align-items: center; gap: 4px; }
+.inventory-tray .merge-all-controls { flex-direction: column; }
+.merge-refund-tip > .inst-tip-trigger { min-width: 44px; min-height: 44px; }
 .merge-all {
   width: 100%;
-  min-height: 30px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;

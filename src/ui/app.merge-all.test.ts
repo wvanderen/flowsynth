@@ -31,11 +31,39 @@ describe("the tray's merge-all control (issue #368)", () => {
     give(app.state, "harmonizer", null); // a singleton stays unmarked
     app.render();
     expect(control().textContent).toBe("MERGE ALL · 1");
-    // The gloss carries the verb, never the count the label already shows.
-    expect(control().title).toBe("Combines every eligible twin pair");
+    expect(control().getAttribute("aria-label")).toBe("Merge all · 1 combine");
     const marked = document.querySelectorAll("#inventory-zone [data-mergeable]");
     expect(marked).toHaveLength(1);
     expect(marked[0]!.getAttribute("data-inv")).toBe(twin.id);
+    expect(marked[0]!.getAttribute("aria-label")).toContain("Eligible to merge");
+  });
+
+  it.each(["tray", "sheet"])("discloses the refund without merging from the %s", (surface) => {
+    give(app.state, "harmonizer", null, 1);
+    give(app.state, "harmonizer", hex(1, 0), 2);
+    app.render();
+    if (surface === "sheet") {
+      setAppWidth(390);
+      app.openModal("inventory");
+    }
+    const host = document.querySelector(surface === "tray" ? "#inventory-zone" : "#modal-content")!;
+    const action = host.querySelector<HTMLButtonElement>("[data-merge-all]")!;
+    expect(action.getAttribute("aria-label")).toBe("Merge all · 1 combine");
+    expect(host.querySelector("[data-mergeable]")!.getAttribute("aria-label")).toContain("Eligible to merge");
+    const trigger = host.querySelector<HTMLButtonElement>(".merge-refund-tip .inst-tip-trigger")!;
+    const before = JSON.stringify(app.state);
+    trigger.focus();
+    const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+    expect(body.textContent).toBe("10 ν refunded");
+    expect(body.classList.contains("inst-show")).toBe(true);
+    trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(body.classList.contains("inst-show")).toBe(false);
+    trigger.click(); // touch uses this same disclosure activation
+    expect(body.classList.contains("inst-show")).toBe(true);
+    document.body.click();
+    expect(body.classList.contains("inst-show")).toBe(false);
+    expect(JSON.stringify(app.state)).toBe(before);
+    expect(action.textContent).toBe("MERGE ALL · 1");
   });
 
   it("merges every eligible pair on one activation and reports the sweep", () => {
@@ -107,7 +135,7 @@ describe("the tray's merge-all control (issue #368)", () => {
     app.openModal("inventory");
     const sheetControl = document.querySelector<HTMLButtonElement>("#modal-content [data-merge-all]")!;
     expect(sheetControl.disabled).toBe(true);
-    expect(sheetControl.title).toBe("Locked during flow");
+    expect(sheetControl.getAttribute("aria-label")).toContain("Locked during flow");
     endSession(app.state);
     app.render();
     expect(document.querySelector<HTMLButtonElement>("#modal-content [data-merge-all]")!.disabled).toBe(false);
