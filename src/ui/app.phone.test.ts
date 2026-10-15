@@ -6,6 +6,7 @@ import { createHabit, selectHabit } from "../engine/habits";
 import { createGoal, accrueGoalProgress, rollGoalOccurrences } from "../engine/goals";
 import { BALANCE } from "../engine/constants";
 import { startSession, endSession } from "../engine/actions";
+import { levelsCost } from "../engine/economy";
 import { give } from "../engine/fixtures";
 import { hex } from "../engine/hex";
 import { formatFixed, formatInt } from "./format";
@@ -611,16 +612,174 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
   });
 });
 
-describe("the coarse-pointer touch floor (issue #350)", () => {
-  const css = readFileSync("src/ui/style.css", "utf8");
-  const blocks = (query: string) =>
-    [...css.matchAll(new RegExp(`${query} \\{[\\s\\S]*?\\n\\}`, "g"))].map((match) => match[0]);
+// The phone tests read the stylesheet's container blocks as lane
+// contracts (happy-dom has no layout engine): each block runs to its
+// column-0 closing brace, and cssPx() lifts one declaration out of one
+// block. The physical no-overlap proof is browser evidence; these pins
+// hold the contract between runs.
+const cssBlocks = (query: string) =>
+  [...readFileSync("src/ui/style.css", "utf8").matchAll(new RegExp(`${query} \\{[\\s\\S]*?\\n\\}`, "g"))].map((match) => match[0]);
+const cssPx = (block: string, selector: string, prop: string) =>
+  Number(block.match(new RegExp(`${selector}\\s*\\{[^}]*${prop}:\\s*(\\d+)px`))![1]);
 
+describe("the small-screen composition (issue #389)", () => {
+  beforeEach(() => {
+    setAppWidth(390);
+  });
+
+  const phone = () => cssBlocks("@container app \\(width < 600px\\)");
+
+  it("the lower lanes keep one occupant each: the sweep row clears the bar lane and the zoom cluster", () => {
+    const lane = phone();
+    const bar = lane.find((block) => block.includes(".horizon-bar"))!;
+    const row = lane.find((block) => block.includes(".upgrade-all"))!;
+    const cluster = lane.find((block) => block.includes(".zoom-cluster"))!;
+    const floor = cssBlocks("@media \\(pointer: coarse\\)").find((block) => block.includes(".zoom-cluster button"))!;
+    // The bar's lane (bottom 64, height 46) keeps its Arete word, state
+    // readout, and prestige door to themselves: the sweep row docks above
+    // it, never on it.
+    expect(cssPx(bar, "\\.horizon-bar", "bottom")).toBe(64);
+    expect(cssPx(bar, "\\.horizon-bar", "height")).toBe(46);
+    expect(cssPx(row, "\\.upgrade-all", "bottom")).toBeGreaterThanOrEqual(64 + 46 + 4);
+    // And the row's right edge clears the cluster's coarse-floor lane
+    // (right 10 + the 44px target + air), so the band holds both without
+    // shared pixels and no target shrinks to make room.
+    expect(cssPx(row, "\\.upgrade-all", "right")).toBeGreaterThanOrEqual(
+      cssPx(cluster, "\\.zoom-cluster", "right") + cssPx(floor, "\\.zoom-cluster button", "width") + 4,
+    );
+  });
+
+  it("the layer legend holds a left-edge gutter that the detail sheet and the arc card both clear", () => {
+    const lane = phone();
+    const legend = lane.find((block) => block.includes(".layer-legend"))!;
+    const sheet = lane.find((block) => block.includes(".hex-detail.sheet"))!;
+    const card = lane.find((block) => block.includes(".arc-card"))!;
+    // The strip docks at the edge at mid-height — the dock's old post —
+    // clear of the thumb bar's lanes entirely. The transform is part of
+    // the post: without it the strip hangs half a height off center.
+    expect(cssPx(legend, "\\.layer-legend", "left")).toBe(8);
+    expect(legend).toMatch(/\.layer-legend\s*\{[^}]*top:\s*50%/);
+    expect(legend).toMatch(/\.layer-legend\s*\{[^}]*bottom:\s*auto/);
+    expect(legend).toMatch(/\.layer-legend\s*\{[^}]*transform:\s*translateY\(-50%\)/);
+    // The sheet's left inset (top right bottom left) clears the strip's
+    // 42px box so the cross-section never runs beneath the shared switch.
+    const inset = [...sheet
+      .match(/\.hex-detail\.sheet\s*\{[^}]*inset:\s*([^;]+);/)![1]
+      .matchAll(/(\d+)px/g)]
+      .map((match) => Number(match[1]));
+    expect(inset).toHaveLength(4);
+    expect(inset[3]!).toBeGreaterThanOrEqual(cssPx(legend, "\\.layer-legend", "left") + 42 + 4);
+    // The arc card clears the same gutter.
+    expect(cssPx(card, "\\.arc-card", "left")).toBeGreaterThanOrEqual(cssPx(legend, "\\.layer-legend", "left") + 42 + 4);
+  });
+
+  it("the legend answers taps at phone width — grid layer, detail emphasis, flow included", () => {
+    const s = app.state;
+    s.mode = "upgrade";
+    s.catalogEntryOwned = true;
+    s.mutatorSlots = [hex(0, 0)];
+    s.mutators = [{ id: "mu1", family: "power", rarity: "common", pos: hex(0, 0) }];
+    app.render();
+    const legend = () => document.getElementById("layer-legend")!;
+    // The grid: the strip is the one layer switch.
+    expect(legend().hidden).toBe(false);
+    legend().querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
+    expect(app.ui.mutLayer).toBe("mutators");
+    expect(legend().querySelector('[data-legend-layer="mutators"]')!.classList.contains("active")).toBe(true);
+    // The detail: the same strip emphasizes the faces, in upgrade mode…
+    app.mutSetLayer("modules");
+    clickCell(0, 0);
+    expect(app.ui.detail).not.toBeNull();
+    legend().querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
+    expect(app.ui.detail!.face).toBe("mutators");
+    expect(legend().querySelector('[data-legend-layer="mutators"]')!.classList.contains("active")).toBe(true);
+    // …and in flow, where the detail stands read-only and the entry drops
+    // it, so the read-only cross-section re-opens on the locked board.
+    app.beginFlow(null);
+    expect(app.ui.detail).toBeNull();
+    // The strip still switches the locked grid's layer read-only — both
+    // ways, so the modules cells return for the detail's click.
+    legend().querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
+    expect(app.ui.mutLayer).toBe("mutators");
+    expect(legend().querySelector('[data-legend-layer="mutators"]')!.classList.contains("active")).toBe(true);
+    legend().querySelector<HTMLButtonElement>('[data-legend-layer="modules"]')!.click();
+    expect(app.ui.mutLayer).toBe("modules");
+    clickCell(0, 0);
+    expect(app.ui.detail).not.toBeNull();
+    expect(document.querySelector(".hex-detail-readonly")).not.toBeNull();
+    legend().querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
+    expect(app.ui.detail!.face).toBe("mutators");
+    // Return restores the grid with the layer intact.
+    document.getElementById("hex-detail-return")!.click();
+    expect(app.ui.detail).toBeNull();
+    expect(app.ui.mutLayer).toBe("mutators");
+  });
+
+  it("the re-docked Upgrade All answers taps above the horizon lane; flow stands it down", () => {
+    const s = app.state;
+    s.nous = levelsCost(0, 3);
+    app.render();
+    const cluster = document.getElementById("upgrade-all")!;
+    expect(cluster.hidden).toBe(false);
+    cluster.querySelector<HTMLButtonElement>('[data-sweep="5"]')!.click();
+    expect(s.modules[0]!.level).toBe(3);
+    expect(s.nous).toBe(0);
+    // Flow stands the row down — the lower lanes stay the bar's.
+    startSession(app.state, 600);
+    app.render();
+    expect(cluster.hidden).toBe(true);
+    endSession(app.state);
+  });
+
+  it("the phone sheet carries no Catalog or Forge duplicates — the thumb bar stays the destination", () => {
+    app.render();
+    clickCell(0, 0);
+    const detail = document.getElementById("hex-detail")!;
+    expect(detail.querySelector('[data-op="catalog"], [data-op="forge"]')).toBeNull();
+    for (const button of detail.querySelectorAll("button")) {
+      expect((button.textContent ?? "").toLowerCase()).not.toContain("catalog");
+      expect((button.textContent ?? "").toLowerCase()).not.toContain("forge");
+    }
+    // The surrounding navigation holds both doors exactly once.
+    const bar = document.getElementById("thumb-bar")!;
+    expect(bar.querySelector('[data-op="catalog"]')).not.toBeNull();
+    expect(bar.querySelector('[data-op="forge"]')).not.toBeNull();
+  });
+
+  it("the dense chord case reflows into the sheet's last post, faces and Return before it", () => {
+    // C4 · G4 sing the Fifth; C4 · C5's Octave sits idle behind the
+    // disclosure — the dense facts the sheet must carry without ever
+    // hiding the faces, Return, or the local actions (issue #388's
+    // reflow, composed into the phone sheet here).
+    give(app.state, "additive", hex(1, 0));
+    give(app.state, "additive", hex(0, 1));
+    app.render();
+    clickCell(0, 1);
+    const detail = document.getElementById("hex-detail")!;
+    const grid = detail.querySelector<HTMLElement>(".hex-detail-grid")!;
+    const chordCol = grid.querySelector(".hex-chord-col")!;
+    // The single column's order is the reach contract: the mutator face,
+    // its rail, the module face, its rail, then the dense facts — scroll
+    // reaches the column last without ever moving the faces or Return.
+    expect(grid.lastElementChild).toBe(chordCol);
+    expect(chordCol.querySelector(".detail-idle-trigger")!.textContent).toContain("idle");
+    const post = (node: Element) => [...grid.children].indexOf(node);
+    // Return floats over the scene, outside the scrolling grid — it never
+    // scrolls away with the facts.
+    expect(grid.contains(document.getElementById("hex-detail-return")!)).toBe(false);
+    expect(post(grid.querySelector(".hex-detail-layer.mutators")!)).toBeLessThan(post(grid.querySelector(".hex-rail-row.modules")!));
+    expect(post(grid.querySelector(".hex-detail-layer.modules")!)).toBeLessThan(post(chordCol));
+    // The sheet is the scroller: its own overflow carries the dense case.
+    expect(readFileSync("src/ui/style.css", "utf8")).toMatch(/\.hex-detail-grid\s*\{[^}]*overflow-y:\s*auto/);
+  });
+});
+
+describe("the coarse-pointer touch floor (issue #350)", () => {
   // The floor lifts only where the primary pointer is a finger — the
   // desktop's compact densities stand (instrument standards: touch
   // targets are accessibility, not decoration).
   it("the compact controls reach the 44px floor on coarse pointers", () => {
-    const floor = blocks("@media \\(pointer: coarse\\)").find((block) => block.includes(".zoom-cluster button"));
+    const floor = cssBlocks("@media \\(pointer: coarse\\)").find((block) => block.includes(".zoom-cluster button"));
     expect(floor).toBeTruthy();
     expect(floor).toMatch(/\.zoom-cluster button\s*\{[^}]*width:\s*44px[^}]*height:\s*44px/);
     expect(floor).toMatch(/\.arc-dismiss\s*\{[^}]*width:\s*44px[^}]*height:\s*44px/);
@@ -633,20 +792,18 @@ describe("the coarse-pointer touch floor (issue #350)", () => {
   });
 
   it("the arc card docks above the zoom cluster's coarse lane, clear of the Arete read", () => {
-    const phone = blocks("@container app \\(width < 600px\\)").find((block) => block.includes(".arc-card"));
+    const phone = cssBlocks("@container app \\(width < 600px\\)").find((block) => block.includes(".arc-card"));
     expect(phone).toBeTruthy();
-    const floor = blocks("@media \\(pointer: coarse\\)").find((block) => block.includes(".zoom-cluster button"))!;
-    const px = (block: string, selector: string, prop: string) =>
-      Number(block.match(new RegExp(`${selector}\\s*\\{[^}]*${prop}:\\s*(\\d+)px`))![1]);
+    const floor = cssBlocks("@media \\(pointer: coarse\\)").find((block) => block.includes(".zoom-cluster button"))!;
     // The cluster's lane on phone: bottom 64 carrying three coarse-floor
     // buttons and two gaps; the card docks over its top with air to
     // spare — it never runs beneath the cluster's edge.
-    const laneTop = px(phone!, "\\.zoom-cluster", "bottom") + 3 * px(floor, "\\.zoom-cluster button", "height") + 2 * 6;
-    const cardBottom = px(phone!, "\\.arc-card", "bottom");
+    const laneTop = cssPx(phone!, "\\.zoom-cluster", "bottom") + 3 * cssPx(floor, "\\.zoom-cluster button", "height") + 2 * 6;
+    const cardBottom = cssPx(phone!, "\\.arc-card", "bottom");
     expect(cardBottom).toBeGreaterThanOrEqual(laneTop + 4);
     // And the horizon bar's whole lane sits below that dock, so the
     // Arete word stays readable under the card.
-    const barTop = px(phone!, "\\.horizon-bar", "bottom") + px(phone!, "\\.horizon-bar", "height");
+    const barTop = cssPx(phone!, "\\.horizon-bar", "bottom") + cssPx(phone!, "\\.horizon-bar", "height");
     expect(cardBottom).toBeGreaterThan(barTop);
   });
 });
