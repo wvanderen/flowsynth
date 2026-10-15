@@ -1,5 +1,5 @@
 import { amplifierGainOf, tierPowerOf } from "./module-strength";
-import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isVoiceType, typeRarityOf } from "./constants";
+import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isOscillatorType, isVoiceType, typeRarityOf } from "./constants";
 import { baseProductionOf, boosterResponseOf, chargeResponseOf, usesChargeConversion, productionClockFactorOf, temporalPhaseKeyOf } from "./profiles";
 import { analyzeChords, hypotheticalBoardFor, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
 import { allocateChords, DEFAULT_ALLOCATION_BUDGET, type AllocationBudget, type AllocationRead, type AllocationVoiceParams } from "./allocation";
@@ -411,9 +411,54 @@ function infusorBonusAt(
   for (const other of placed) {
     if (CATEGORY_OF[other.type] !== "booster" || other.pos === null) continue;
     if (!adjacent(module.pos, other.pos)) continue;
-    total += BALANCE.infusorBonus * hostPower(state, other) * chargedFactor(receivedOn(state, other, flow, placed, net, steadyBonus));
+    total += boosterGrantAt(state, other, module, flow, placed, net, steadyBonus);
   }
   return total;
+}
+
+// The authored share each booster design grants (issue #374): the Booster's
+// launch baseline, the Field's moderate breadth, the Spotlight's narrow
+// strength. One table — the rate pass and every readout quote the same
+// figure.
+export function boosterBonusOf(type: ModuleType): number {
+  if (type === "field") return BALANCE.fieldBonus;
+  if (type === "spotlight") return BALANCE.spotlightBonus;
+  return BALANCE.infusorBonus;
+}
+
+// The Spotlight's resolved recipient (issue #374): the selected module
+// while it stands adjacent to the booster and sings — an oscillator. Null
+// whenever the support is inactive: nothing selected, the recipient
+// undeployed or melted, or adjacency lost. The one validity read the rate
+// pass, the face readouts, and the detail's picker share, so no surface
+// can disagree about whether a Spotlight is active.
+export function spotlightRecipientOf(state: GameState, booster: ModuleInstance): ModuleInstance | null {
+  if (booster.type !== "spotlight" || booster.target === null || booster.pos === null) return null;
+  const target = findModule(state, booster.target);
+  if (!target || target.pos === null || !isOscillatorType(target.type)) return null;
+  if (!adjacent(target.pos, booster.pos)) return null;
+  return target;
+}
+
+// One booster's grant to one adjacent module: its authored share over the
+// host power, sharpened by the charge it receives (the continuous family's
+// own empowerment — received charge strengthens the primary effect).
+// Coverage is per design (issue #374): the Booster and the Field spread to
+// every adjacent oscillator — the initial support is oscillator-only — and
+// the Spotlight lands on its selected recipient alone, never the strongest
+// output, never a silent retarget.
+function boosterGrantAt(
+  state: GameState,
+  booster: ModuleInstance,
+  module: ModuleInstance,
+  flow: boolean,
+  placed: ModuleInstance[],
+  net: RelayNet,
+  steadyBonus: number,
+): number {
+  if (!isOscillatorType(module.type)) return 0;
+  if (booster.type === "spotlight" && spotlightRecipientOf(state, booster)?.id !== module.id) return 0;
+  return boosterBonusOf(booster.type) * hostPower(state, booster) * chargedFactor(receivedOn(state, booster, flow, placed, net, steadyBonus));
 }
 
 // The chord pass the rate snapshot runs over its deployed voices — the
@@ -748,7 +793,7 @@ function allocationFingerprint(state: GameState): string {
   const parts: string[] = [];
   for (const module of state.modules) {
     if (module.pos === null) continue;
-    parts.push(`${module.id}:${module.type}:${module.pos.q},${module.pos.r}:${module.level}:${module.tier}:${module.shift}:${module.reserve > EPS ? 1 : 0}`);
+    parts.push(`${module.id}:${module.type}:${module.pos.q},${module.pos.r}:${module.level}:${module.tier}:${module.shift}:${module.target}:${module.reserve > EPS ? 1 : 0}`);
   }
   for (const mutator of state.mutators) {
     if (mutator.pos === null) continue;

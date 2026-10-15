@@ -18,10 +18,10 @@ describe("forge roll generation", () => {
     for (const type of types) {
       expect(ROLL_POOL).toContain(type);
     }
-    // Draws without replacement over the eighteen-type pool: additive,
-    // then harmonizer (index 4 of the fifteen common matches), then square
-    // (index 2 of the fourteen left).
-    expect(types).toEqual(["additive", "harmonizer", "square"]);
+    // Draws without replacement over the twenty-type pool: additive,
+    // then echo (index 5 of the seventeen remaining commons), then saw
+    // (index 3 of the sixteen left).
+    expect(types).toEqual(["additive", "echo", "saw"]);
   });
 
   it("candidates carry the type's fixed rarity and the base tier — nothing is rolled per copy", () => {
@@ -85,8 +85,10 @@ describe("forge roll generation", () => {
     expect(ROLL_POOL).toContain("goalKeyed");
     expect(ROLL_POOL).toContain("pulsewell");
     expect(ROLL_POOL).toContain("infusor");
+    expect(ROLL_POOL).toContain("field");
+    expect(ROLL_POOL).toContain("spotlight");
     expect(ROLL_POOL).toContain("forge");
-    expect(ROLL_POOL).toHaveLength(18);
+    expect(ROLL_POOL).toHaveLength(20);
   });
 
   it("persists outcomes when the roll is earned, not when it is revealed", () => {

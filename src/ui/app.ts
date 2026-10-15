@@ -29,6 +29,7 @@ import {
   returnModule,
   returnMutator,
   setBendShift,
+  setBoosterTarget,
   startSession,
   unlockMutatorSlot,
   upgradeAll,
@@ -1598,6 +1599,17 @@ export class App {
   // the chords move the moment it lands.
   setBendShift(id: string, shift: number): void {
     this.act(setBendShift(this.state, id, shift), `Bend re-pitched ${shift > 0 ? "sharp" : "flat"} ${Math.abs(shift)}.`);
+  }
+
+  // The Spotlight's player-selected recipient (issue #374): one chip per
+  // adjacent oscillator on the expanded face. The pick re-aims the
+  // booster's support the moment it lands.
+  setBoosterTarget(id: string, targetId: string | null): void {
+    const recipient = targetId === null ? null : this.state.modules.find((m) => m.id === targetId);
+    this.act(
+      setBoosterTarget(this.state, id, targetId),
+      recipient && recipient.pos ? `Spotlight focused on ${cellNoteOf(recipient.pos)}.` : "Spotlight support cleared.",
+    );
   }
 
   // The Upgrade All cluster (issue #195): the board-wide sweep — every

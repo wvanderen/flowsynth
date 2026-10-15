@@ -52,7 +52,13 @@ export type SpacerType = "spacer";
 // periodic burst cycle on the shared session clock.
 export type GeneratorType = "focusKeyed" | "noteKeyed" | "goalKeyed" | "pulsewell";
 
-export type InfusorType = "infusor";
+// The booster category's named amplitude designs (issue #374, parent
+// #366): the Booster is the launch broad design, the Field the second —
+// moderate support to every adjacent oscillator — and the Spotlight the
+// narrow one, stronger support to the one player-selected adjacent
+// oscillator. The Spotlight's selection lives on the module's own
+// `target` field.
+export type BoosterType = "infusor" | "field" | "spotlight";
 
 export type ForgeType = "forge";
 // The Mutator Forge (ADR-0043, issue #198): the Forge family's second
@@ -78,7 +84,7 @@ export type ModuleType =
   | SilentVoiceType
   | SpacerType
   | GeneratorType
-  | InfusorType
+  | BoosterType
   | ForgeType
   | MutatorForgeType
   | ConduitType
@@ -113,6 +119,15 @@ export interface ModuleInstance {
   // ±2 joining at rare); null on every other type. Lenient-defaulted at
   // load — a Bend loads with the ♯ pick.
   shift: number | null;
+  // The Spotlight's player-selected recipient (issue #374): the module id
+  // of the one oscillator whose term its stronger uplift lands on. The
+  // selection is remembered through invalidity — a recipient that leaves
+  // the board or loses adjacency leaves the booster inactive, never
+  // silently retargeted — and resumes when adjacency returns; a recipient
+  // melted in a combination drops the pick. Null on every other type and
+  // until the player picks; lenient-defaulted to null at load, with ids
+  // that resolve to nothing dropped.
+  target: string | null;
 }
 
 // A module known to sit on the board — the shape chord math and rate passes
@@ -670,6 +685,9 @@ export interface Contribution {
   // what the breakdown multiplies. Equals formationQ on the plain
   // recognizer's pass.
   formationMeasuredQ: number;
+  // The booster uplift the voice's term receives — every booster design's
+  // grant rides this one term (the launch Booster, the Field, the
+  // Spotlight), already scaled by the voice's authored booster response.
   infusorBonus: number;
   chargeFactor: number;
   chargeStrength: number;

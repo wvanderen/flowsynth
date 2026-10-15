@@ -1,4 +1,4 @@
-import { BALANCE } from "./constants";
+import { BALANCE, isOscillatorType } from "./constants";
 import { hex } from "./hex";
 import type { ChordDiscovery, GameState, ModuleInstance, ModuleType, MutatorFamily, MutatorInstance, Rarity } from "./types";
 
@@ -102,6 +102,9 @@ export function createModule(state: GameState, type: ModuleType, tier: number = 
     // The Bend's player-picked shift defaults to the ♯ (ADR-0048); null on
     // every other type.
     shift: type === "bend" ? BALANCE.bendDefaultShift : null,
+    // The Spotlight's recipient starts unselected (issue #374): the booster
+    // is inactive until the player picks — never an output-ranked guess.
+    target: null,
   };
 }
 
@@ -119,6 +122,18 @@ export function normalizeModules(modules: ModuleInstance[]): void {
     // a corrupt figure must degrade to "undeployed", not poison the boot.
     const pos = module.pos as { q?: unknown; r?: unknown } | null | undefined;
     if (!pos || typeof pos.q !== "number" || typeof pos.r !== "number") module.pos = null;
+    // The Spotlight's selection (issue #374) lenient-defaults the same way:
+    // absent means unselected, and an id that resolves to nothing — or to
+    // something that could never receive the focus — drops. A real id for
+    // a melted recipient cannot occur (the combine clears it), so the id
+    // set is the whole check; validity and adjacency are live reads,
+    // never stored.
+    if (
+      typeof module.target !== "string" ||
+      !modules.some((other) => other.id === module.target && isOscillatorType(other.type))
+    ) {
+      module.target = null;
+    }
   }
 }
 

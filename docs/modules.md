@@ -6,7 +6,7 @@ new types and game-design concepts — the engine keys and records live in code
 design thinking lives. The roster table reflects the code as of the last
 update; when a type lands, update the table in the same change.
 
-Last updated: 2026-10-15 (intrinsic voice capacity — the Blaster's two seats, issue #373)
+Last updated: 2026-10-15 (broad and player-targeted amplitude boosters — the Field and Spotlight, issue #374)
 
 ## Roster
 
@@ -29,13 +29,15 @@ Last updated: 2026-10-15 (intrinsic voice capacity — the Blaster's two seats, 
 | `goalKeyed` | Milestone | MILE | generator | common | — | — | — | `hue-generator` | bolt, check corner mark | Roll pool only | `⌁power` |
 | `pulsewell` | Pulsewell | PLSW | generator | uncommon | — | — | ×0.5 steady · ×2.5 burst, 30 s every 2 min | `hue-generator` | bolt, burst corner mark | Roll pool only | `⌁power` (× the current cycle factor when emitting) |
 | `infusor` | Booster | BOOST | booster | common | — | — | — | `hue-booster` | outward chevrons around a center dot | Starter shelf (40) and roll pool | `+«%»` |
+| `field` | Field | FIELD | booster | common | — | — | — | `hue-booster` | doubled outward chevrons around a center dot | Roll pool only | `+«%»` |
+| `spotlight` | Spotlight | SPOT | booster | common | — | — | — | `hue-booster` | dot with one focused beam | Roll pool only | `+«%»`, or the inactive verdict |
 | `forge` | Forge | FORGE | forge | common | — | — | — | `hue-forge` | hex prism | Starter shelf (80) and roll pool | `«charge»/«threshold»` (charge register) |
 | `mutatorForge` | Mutator Forge | MUT. FORGE | forge | common | — | — | — | `hue-forge` | seeded-hexagon core on the chassis | Mutator tree entry | `«charge»/«threshold»` (charge register) |
 
 Rarity is each type's fixed acquisition rarity (`TYPE_RARITY`, ADR-0058) —
 authored in code, never rolled per copy. A roll draws the rarity band
 (shared `rarityProbability` table), then a type inside the band; the
-sixteen common types sample uniformly, and the two temporal designs
+eighteen common types sample uniformly, and the two temporal designs
 (#372) stand alone in the uncommon band — 0.9% of slot draws before any
 draft-composition control (#378). Duplicate progress lives on the
 per-copy merge tier: two copies of the same type and tier combine into
@@ -125,9 +127,15 @@ same at level 0 tier 0 as at level 6 tier 2.
   specialist on every axis), delivered on its burst cycle. Every console
   fact credits each owned generator, board or tray alike, at the module's
   power — the same multiplier delivery scales.
-- **booster** — no synth term; empowers adjacent modules' amplitude
-  (`infusorBonus` = 0.2 × power × charge factor per adjacent booster).
-  Receives charge as continuous empowerment.
+- **booster** — no synth term; empowers adjacent oscillators' amplitude,
+  each named design's authored share (`infusorBonus` = 0.2, `fieldBonus`
+  = 0.3, `spotlightBonus` = 0.5 — all × power × charge factor per
+  booster, tuning). Support is oscillator-only: generators, the Forge
+  family, and silent voices read none of it. Grants to the same term
+  add. Receives charge as continuous empowerment — the charge strengthens
+  the booster's own grant (issue #374, ADR-0063). The Spotlight's grant
+  follows the player's selected recipient (see its per-module note); the
+  Booster and the Field spread to every adjacent oscillator.
 - **forge** — chargeable (ADR-0012): accumulates received charge toward a
   rolling threshold (initial 60, ×1.5 growth); crossing mints a roll
   offer. The Mutator Forge is the second branch (ADR-0043), its own meter.
@@ -261,6 +269,27 @@ timer, no movement leverage. All figures are provisional tuning.
 Empowers neighbors' amplitude, not the composite directly. Charge it to
 sharpen its bonus (diminishing-returns curve).
 
+### Field (`field`)
+The broad booster (issue #374, ADR-0063): its moderate share (0.3 ×
+power × charge factor, tuning) lands on every adjacent oscillator at
+once. Coverage traded against strength — a cluster of producers wants
+the Field; a single elite producer does not. The launch Booster shares
+this shape at its 0.2 baseline — the shelf's starter, sold before any
+roll; separating the pair's niches is explicit balance work under the
+parent (#366), not silently decided here.
+
+### Spotlight (`spotlight`)
+The narrow booster (issue #374, ADR-0063): a stronger share (0.5 ×
+power × charge factor, tuning) lands on the one adjacent oscillator the
+player picked — by identity, never by output ranking. The pick lives on
+the expanded face (one chip per adjacent oscillator, named by note) and
+re-aims the moment it lands. An invalid pick — nothing chosen, the
+recipient gone, or adjacency lost — leaves the booster inactive with a
+verdict in words on its own surfaces; the pick is remembered and support
+resumes when adjacency returns. A melted recipient drops the pick; a
+Spotlight merge keeps the surviving copy's own pick. One Spotlight beats
+one Field leg; two Field neighbors beat one Spotlight.
+
 ### Forge (`forge`) / Mutator Forge (`mutatorForge`)
 Accumulate received charge (`strength × power`) into their branch's
 shared meter; a threshold crossing banks a roll offer — module rolls into
@@ -294,7 +323,9 @@ zigzag, the Square's steps, the Saw's ramps — identity marks for the four
 named designs, not mechanically prescribed waveform families. The
 temporal wave (issue #372) added the Afterglow's swelling trace (the
 warmup curve drawn as its own envelope) and the Pulsewell's burst corner
-mark on the generator bolt. Two
+mark on the generator bolt. The booster wave (issue #374) spoke over the
+Booster's dot: the Field's doubled chevrons (the breadth it covers) and
+the Spotlight's single beam (the one chosen recipient). Two
 spacers' specials: the board face clips as a hexagonal ring window
 (chassis minus inner hexagon, nameplate at y −40), and the tray tile
 wears an unfilled inner hexagon (`inventoryTileSvg` special case) instead

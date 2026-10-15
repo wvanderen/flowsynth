@@ -1,4 +1,4 @@
-import { BALANCE, EPS, NEXT_RARITY, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE, SHELF_TYPES, typeRarityOf } from "./constants";
+import { BALANCE, EPS, isOscillatorType, NEXT_RARITY, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE, SHELF_TYPES, typeRarityOf } from "./constants";
 import { claimOf, horizonReached } from "./accumulator";
 import { rowUnlockCost, unlockableRows } from "./catalog";
 import { nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "./capacity";
@@ -515,6 +515,14 @@ export function combine(state: GameState, id: string, partnerId?: string): Actio
   keep.pos = partner.pos;
   melt.pos = null;
   state.modules = state.modules.filter((m) => m.id !== melt.id);
+  // The merge transition's targeting rule (issue #374): a melted
+  // recipient's id resolves to nothing, so every Spotlight pointing at it
+  // drops its pick — the booster returns to its unselected state and its
+  // own recovery control, never a stale dead reference. The kept copy
+  // keeps its own selection; the melted copy's pick dies with it.
+  for (const module of state.modules) {
+    if (module.target === melt.id) module.target = null;
+  }
   state.combinations++;
   return { ok: true, refund: preview.refund, unlocked: checkUnlocks(state) };
 }
@@ -930,5 +938,28 @@ export function setBendShift(state: GameState, id: string, shift: number): Actio
     return fail("That shift is outside this rarity's set.");
   }
   module.shift = shift;
+  return { ok: true, unlocked: checkUnlocks(state) };
+}
+
+// The Spotlight's player-selected recipient (issue #374, the targeting
+// contract): the one oscillator whose term its stronger uplift lands on.
+// The pick is by identity — never by output ranking — and upgrade-mode-only
+// like every reconfiguration (the board is locked during flow). Any owned
+// oscillator may be picked, adjacent or not: the support is live only while
+// adjacency holds, so a pick that waits for a later reshuffle is the same
+// remembered selection the restoration rule keeps. `null` clears the pick.
+export function setBoosterTarget(state: GameState, id: string, targetId: string | null): ActionResult {
+  if (state.mode !== "upgrade") return fail("The grid is locked during flow.");
+  const module = findModule(state, id);
+  if (!module) return fail("Module not found.");
+  if (module.type !== "spotlight") return fail("Only the Spotlight picks a recipient.");
+  if (targetId === null) {
+    module.target = null;
+    return { ok: true, unlocked: checkUnlocks(state) };
+  }
+  const target = findModule(state, targetId);
+  if (!target) return fail("Recipient not found.");
+  if (!isOscillatorType(target.type)) return fail("Only an oscillator can receive the focus.");
+  module.target = targetId;
   return { ok: true, unlocked: checkUnlocks(state) };
 }

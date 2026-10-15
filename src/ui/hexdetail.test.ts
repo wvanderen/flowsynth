@@ -382,6 +382,63 @@ describe("the upgrade column in detail", () => {
     chip.click();
     expect(app.state.modules.find((m) => m.type === "bend")!.shift).toBe(-1);
   });
+
+  it("the Spotlight's recipient picker focuses from the detail (issue #374)", () => {
+    const spot = give(app.state, "spotlight", hex(1, 0));
+    give(app.state, "additive", hex(0, 1));
+    app.render();
+    clickCell(1, 0);
+    // One chip per adjacent oscillator, named by its note.
+    const group = detail().querySelector('.hex-rail-row [role="group"][aria-label="Recipient"]')!;
+    const chips = [...group.querySelectorAll<HTMLButtonElement>("[data-target]")];
+    expect(chips.map((chip) => chip.textContent)).toEqual(["C4", "C5"]);
+    // Nothing picked yet: the inactive verdict stands with the chips, the
+    // face reads the state in words — never a zero that reads as a weak
+    // grant.
+    expect(group.textContent).toContain("inactive · pick a recipient");
+    expect(faceSvg("modules").textContent).toContain("—");
+    expect(faceSvg("modules").textContent).toContain("inactive");
+    // The pick lands in the engine by identity and re-renders active.
+    chips[1]!.click();
+    expect(spot.target).toBe(app.state.modules.find((m) => m.pos && sameHex(m.pos, hex(0, 1)))!.id);
+    const refreshedGroup = detail().querySelector('[role="group"][aria-label="Recipient"]')!;
+    const refreshed = detail().querySelector<HTMLButtonElement>('[data-target][aria-pressed="true"]')!;
+    expect(refreshed.textContent).toBe("C5");
+    expect(refreshedGroup.classList.contains("st-inactive")).toBe(false);
+    // The picker remains the recovery control after the recipient leaves:
+    // the verdict names the broken adjacency beside the remaining pick.
+    const recipient = app.state.modules.find((m) => m.id === spot.target)!;
+    recipient.pos = null;
+    app.render();
+    expect(detail().querySelector('[role="group"][aria-label="Recipient"]')!.textContent).toContain("inactive");
+    expect(detail().querySelectorAll("[data-target]")).toHaveLength(1); // the starter, still adjacent
+  });
+
+  it("the Spotlight with no adjacent recipient pick carries the verdict beside the live candidates", () => {
+    const spot = give(app.state, "spotlight", hex(1, 0));
+    const recipient = give(app.state, "additive", hex(0, 1));
+    app.setBoosterTarget(spot.id, recipient.id);
+    recipient.pos = hex(2, 2); // out of range, no cell moved — the identity stands
+    app.render();
+    clickCell(1, 0);
+    const group = detail().querySelector('[role="group"][aria-label="Recipient"]')!;
+    expect(group.textContent).toContain("inactive · recipient not adjacent");
+    // The starter synth remains an adjacent candidate — the recovery is
+    // one click away from the verdict that explains the silence.
+    expect(group.querySelectorAll("[data-target]")).toHaveLength(1);
+    expect(group.classList.contains("st-inactive")).toBe(true);
+  });
+
+  it("flow locks the picker with the rest of the editing furniture", () => {
+    give(app.state, "spotlight", hex(1, 0));
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, 600);
+    app.render();
+    clickCell(1, 0);
+    expect(open()).toBe(true);
+    expect(detail().querySelector('[role="group"][aria-label="Recipient"]')).toBeNull();
+    endSession(app.state);
+  });
 });
 
 describe("read-only during flow (issue #295)", () => {

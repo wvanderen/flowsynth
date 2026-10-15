@@ -62,6 +62,12 @@ const PATHS: Record<ModuleType, string> = {
   // The Booster: outward chevrons around a center dot — it affects its
   // neighbors (replaces the rayed sun).
   infusor: '<circle r="2.2"/><path d="M-5-7-13 0-5 7M5-7 13 0 5 7"/>',
+  // The Field (issue #374): the Booster's chevrons doubled inward and
+  // outward — breadth, the moderate support it spreads to every neighbor.
+  field: '<circle r="2.2"/><path d="M-5-7-13 0-5 7M5-7 13 0 5 7"/><path d="M-2.5-3.5-7 0-2.5 3.5M2.5-3.5 7 0 2.5 3.5"/>',
+  // The Spotlight (issue #374): the Booster's dot with one focused beam —
+  // the single chosen neighbor its stronger share lands on.
+  spotlight: '<circle r="2.2"/><path d="M4-4.5 12.5-9M4 4.5 12.5 9M12.5-9v18"/>',
   forge: '<path d="m0-14 12 7v14L0 14-12 7V-7Zm0 0v28m-12-21 24 14m0-14L-12 7"/>',
   // The Mutator Forge wears the Forge chassis with a seeded hexagon at its
   // core replacing the lattice (issue #219) — the second branch, minting

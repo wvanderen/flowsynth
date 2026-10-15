@@ -163,6 +163,8 @@ describe("module face", () => {
       goalKeyed: ["Milestone", "MILE"],
       pulsewell: ["Pulsewell", "PLSW"],
       infusor: ["Booster", "BOOST"],
+      field: ["Field", "FIELD"],
+      spotlight: ["Spotlight", "SPOT"],
       spacer: ["Spacer", "SPACER"],
       forge: ["Forge", "FORGE"],
       mutatorForge: ["Mutator Forge", "MUT. FORGE"],
@@ -191,6 +193,12 @@ describe("module face", () => {
     expect(moduleIcon("afterglow")).toBe('<path d="M-12 0C-10.5-4-7.5-4-6 0C-4.5-8-1.5-8 0 0C1.5 16 4.5 16 6 0C7.5-16 10.5-16 12 0"/>');
     expect(moduleIcon("pulsewell")).toBe('<path d="M2-13-6 1H0L-2 13 6-1H0Z"/><path d="M6-13l2.2-2.2M8.5-9.5l3-.6M9-6.5l2.8 1"/>');
     expect(moduleIcon("infusor")).toBe('<circle r="2.2"/><path d="M-5-7-13 0-5 7M5-7 13 0 5 7"/>');
+    // The booster wave (issue #374): the Field's doubled chevrons, the
+    // Spotlight's single beam — identity marks over the shared dot.
+    expect(moduleIcon("field")).toContain('<circle r="2.2"/>');
+    expect(moduleIcon("field")).toContain('M-5-7-13 0-5 7M5-7 13 0 5 7');
+    expect(moduleIcon("spotlight")).toContain('<circle r="2.2"/>');
+    expect(moduleIcon("spotlight")).toContain('M12.5-9v18');
     expect(moduleIcon("mutatorForge")).toContain('<path d="M0-5.5 4.8-2.7V2.7L0 5.5-4.8 2.7V-2.7Z"/><circle r="1.5"/>');
     // The Mutator Forge's chassis drops the lattice — distinct from the
     // Module Forge's.
