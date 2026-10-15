@@ -30,6 +30,10 @@ export interface ActionResult {
   // levels bought, modules touched, and the exact spend. Partial by design —
   // the caller reports these instead of a flat success line.
   bulk?: BulkPurchase;
+  // What the merge-all sweep actually landed (issue #368): the pairs
+  // combined and the total refund, reported by the caller like the bulk
+  // sweeps'.
+  merge?: MergeSweep;
   // Feats unlocked by this action (ADR-0015): in-session unlocks queue into
   // the session's summary row instead, so callers don't toast these twice.
   unlocked?: string[];
@@ -437,6 +441,16 @@ export function findCombinePartner(state: GameState, id: string): ModuleInstance
   return state.modules.find((other) => other.id !== id && other.type === module.type && other.tier === module.tier);
 }
 
+// Whether a copy has a legal twin anywhere in the roster — board or tray —
+// under the one-combine eligibility rule (ADR-0058): the same named type at
+// the same merge tier, short of the unlocked cap. The one predicate both
+// the library's eligibility marks and the merge-all count read, so a tile's
+// pip and the control's number can never disagree.
+export function hasMergeTwin(state: GameState, id: string): boolean {
+  const partner = findCombinePartner(state, id);
+  return partner !== undefined && combinePreview(state, id, partner.id) !== null;
+}
+
 // Who melts: the lower level; a level tie leaves the dropped copy (the
 // first argument) standing. The one rule both the preview and the combine
 // read — the review can never promise a different melt.
@@ -503,6 +517,65 @@ export function combine(state: GameState, id: string, partnerId?: string): Actio
   state.modules = state.modules.filter((m) => m.id !== melt.id);
   state.combinations++;
   return { ok: true, refund: preview.refund, unlocked: checkUnlocks(state) };
+}
+
+// What a merge-all sweep lands (issue #368): the exact-copy pairs combined
+// and the total nous refunded from the melted copies' upgrades.
+export interface MergeSweep {
+  combines: number;
+  refund: number;
+}
+
+// The library's batch combine (issue #368): repeatedly pairs every eligible
+// exact copy — the same named type at the same merge tier, short of the
+// unlocked cap (ADR-0058) — until no legal pair remains. Each pair merges
+// through the one-combine action itself, so a sweep can never promise terms
+// the drop gesture wouldn't honor: the retention policy (ADR-0058 §7), the
+// refund, the feat counter, and the landing all ride the existing path.
+// Capped copies and unequal tiers never melt. Partial by design like the
+// other bulk actions: with no eligible pair the sweep refuses, touching
+// nothing, so repeated activation is harmless.
+export function mergeAll(state: GameState): ActionResult {
+  if (state.mode !== "upgrade") return fail("Combining happens between sessions.");
+  const sweep = runMergeSweep(state);
+  if (sweep.combines === 0) return fail("No eligible copies to combine.");
+  return { ok: true, merge: { combines: sweep.combines, refund: sweep.refund }, unlocked: sweep.unlocked };
+}
+
+// The sweep's shape without touching state (issue #368): the control's
+// tooltip previews the same plan the activation runs, so the promise and
+// the charge can never disagree. The simulation runs on a JSON clone —
+// the save's own shape — with the identical loop.
+export function mergeAllPreview(state: GameState): MergeSweep {
+  if (state.mode !== "upgrade") return { combines: 0, refund: 0 };
+  const clone = JSON.parse(JSON.stringify(state)) as GameState;
+  const sweep = runMergeSweep(clone);
+  return { combines: sweep.combines, refund: sweep.refund };
+}
+
+// The shared loop: roster order, one pass per scan, until a full pass
+// lands nothing. The single-combine action re-reads its partner and terms
+// from the live roster every call, so mid-pass survivors (a chain: two
+// tier pairs producing two copies that then pair) merge in the same sweep.
+function runMergeSweep(state: GameState): MergeSweep & { unlocked: string[] } {
+  const unlocked: string[] = [];
+  let combines = 0;
+  let refund = 0;
+  let progress = true;
+  while (progress) {
+    progress = false;
+    for (const module of [...state.modules]) {
+      // A copy melted earlier in this pass is gone; skip the stale entry.
+      if (findModule(state, module.id) !== module) continue;
+      const result = combine(state, module.id);
+      if (!result.ok) continue;
+      combines++;
+      refund += result.refund ?? 0;
+      unlocked.push(...(result.unlocked ?? []));
+      progress = true;
+    }
+  }
+  return { combines, refund, unlocked };
 }
 
 export function placeModule(state: GameState, id: string, pos: Hex): ActionResult {
