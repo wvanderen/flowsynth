@@ -584,13 +584,13 @@ function detailBuyHtml(app: App, module: ModuleInstance): string {
       ? (() => {
           const verdict = spotlightInactiveVerdict(state, module);
           const recipients = deployed(state).filter((other) => isOscillatorType(other.type) && adjacent(other.pos!, module.pos!));
-          return `<div class="hex-shift${verdict ? " st-inactive" : ""}" role="group" aria-label="Recipient">${
+          return `<div class="hex-shift hex-target${verdict ? " st-inactive" : ""}" role="group" aria-label="Recipient">${
             verdict ? `<span class="hex-target-verdict">${verdict}</span>` : ""
           }${recipients
             .map((other) => {
               const active = module.target === other.id;
               const note = cellNoteOf(other.pos!);
-              return `<button class="hex-shift-chip${active ? " active" : ""}" data-target="${other.id}" aria-pressed="${active}" title="Focus ${note}">${note}</button>`;
+              return `<button class="hex-shift-chip${active ? " active" : ""}" data-target="${other.id}" aria-pressed="${active}">${note}</button>`;
             })
             .join("")}</div>`;
         })()

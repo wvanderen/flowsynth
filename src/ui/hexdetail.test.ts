@@ -414,6 +414,40 @@ describe("the upgrade column in detail", () => {
     expect(detail().querySelectorAll("[data-target]")).toHaveLength(1); // the starter, still adjacent
   });
 
+  it("restores remembered support after retrieval and replacement, with stacked output", () => {
+    const spot = give(app.state, "spotlight", hex(1, 0));
+    const recipient = app.state.modules.find((m) => m.pos && sameHex(m.pos, hex(0, 0)))!;
+    app.render();
+    clickCell(0, 0);
+    const base = displayedRates(app.state, false).contributions.get(recipient.id)!.value;
+    const readout = () => faceSvg("modules").textContent;
+    expect(readout()).toContain(`+${formatNumber(base)} ν/s`);
+    document.getElementById("hex-detail-return")!.click();
+    clickCell(1, 0);
+    document.querySelector<HTMLButtonElement>(`[data-target="${recipient.id}"]`)!.click();
+    document.getElementById("hex-detail-return")!.click();
+    clickCell(0, 0);
+    const focused = displayedRates(app.state, false).contributions.get(recipient.id)!.value;
+    expect(focused).toBeGreaterThan(base);
+    expect(readout()).toContain(`+${formatNumber(focused)} ν/s`);
+    document.getElementById("detail-module-retrieve")!.click();
+    expect(recipient.pos).toBeNull();
+    expect(spot.target).toBe(recipient.id);
+    app.openDetail(hex(1, 0), "modules");
+    expect(faceSvg("modules").textContent).toContain("inactive");
+    app.pickCellThenPlace(recipient.id, hex(0, 0));
+    expect(spot.target).toBe(recipient.id);
+    expect(faceSvg("modules").textContent).not.toContain("inactive");
+    app.openDetail(hex(0, 0), "modules");
+    expect(displayedRates(app.state, false).contributions.get(recipient.id)!.value).toBeCloseTo(focused);
+    expect(readout()).toContain(`+${formatNumber(focused)} ν/s`);
+    const field = give(app.state, "field", null);
+    app.pickCellThenPlace(field.id, hex(0, 1));
+    const stacked = displayedRates(app.state, false).contributions.get(recipient.id)!.value;
+    expect(stacked).toBeGreaterThan(focused);
+    expect(readout()).toContain(`+${formatNumber(stacked)} ν/s`);
+  });
+
   it("the Spotlight with no adjacent recipient pick carries the verdict beside the live candidates", () => {
     const spot = give(app.state, "spotlight", hex(1, 0));
     const recipient = give(app.state, "additive", hex(0, 1));
