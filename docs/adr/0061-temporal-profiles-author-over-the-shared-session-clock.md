@@ -38,9 +38,11 @@ sessions or moving modules.
    starts and ends.
 
 3. **The advance walk splits at temporal boundaries.** The reserve- and
-   goal-boundary recursion gains one more earliest-boundary source per
+   goal-boundary walk gains one more earliest-boundary source per
    deployed temporal module, so each span between splits holds one
-   constant factor. Equivalent advancement intervals deliver
+   constant factor. The walk uses an iterative loop so recurring cycle
+   boundaries cannot overflow the stack during long away catch-up.
+   Equivalent advancement intervals deliver
    equivalently — one 300-second span, four 75-second spans, or 300
    one-second steps price identically.
 

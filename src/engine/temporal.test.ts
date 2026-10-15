@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
+import { applyGap, flushPendingAway } from "./trust";
 import { forgeThreshold } from "./rolls";
 import { endSession, pauseSession, placeModule, resumeSession, returnModule, startSession } from "./actions";
 import { computeRates, emittedStrength, projectPlacement, syncRates } from "./economy";
@@ -242,6 +243,25 @@ describe("the Pulsewell's burst cycle (#372)", () => {
 });
 
 describe("the shared session clock (#372)", () => {
+  it("catches up a week away with an empty Pulsewell without losing time", () => {
+    const whole = pulsewellBoard(0);
+    const chunked = pulsewellBoard(0);
+    const week = 7 * 24 * 60 * 60;
+    for (const state of [whole, chunked]) startSession(state, null);
+    applyGap(whole, week, "away", 0, () => 0.5);
+    const result = flushPendingAway(whole, () => 0.5);
+    for (let elapsed = 0; elapsed < week; elapsed += 3600) {
+      applyGap(chunked, 3600, "away", 0, () => 0.5);
+      flushPendingAway(chunked, () => 0.5);
+    }
+    expect(whole.session!.elapsed).toBe(week);
+    expect(whole.session!.accounting.pendingAwaySeconds).toBe(0);
+    expect(whole.session!.accounting.poolSeconds).toBe(week);
+    expect(whole.session!.accounting.bucketNous).toBeCloseTo(chunked.session!.accounting.bucketNous, 6);
+    expect(result.nousEarned).toBeCloseTo(whole.session!.accounting.bucketNous, 6);
+    expect(deliveredOf(whole)).toBe(0);
+  });
+
   it("equivalent advancement intervals deliver equivalently — one span or many", () => {
     function run(step: number): { earned: number; reserve: number; delivered: number } {
       const s = fresh();
