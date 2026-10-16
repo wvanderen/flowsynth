@@ -242,6 +242,10 @@ _Avoid_: target lock, auto-target, strongest neighbor
 The chord-response booster (issue #375, ADR-0064): its authored share adds to every adjacent oscillator's chord-response term and never to the amplitude leg, so it is inert without an active chord — a chordless board reads the same rate with or without one. Same-term grants add; received charge strengthens the grant itself.
 _Avoid_: chord booster (the amplitude sense), harmony module
 
+**Exciter**:
+The charge-response booster (issue #376, ADR-0065): its authored share adds to every adjacent oscillator's authored charge response — the coefficient scaling the charged curve above ×1, the conversion types' alternatives included — and never to the amplitude leg, so it adds neither base production nor a second charge behavior. An uncharged recipient reads exactly its uncharged value: the Exciter needs charged recipients, and the requirement is structural — mutators and progression scale the grant without erasing it. Same-term grants add; received charge strengthens the grant itself.
+_Avoid_: charge booster (the amplitude sense), empower module
+
 ### Quality and acquisition
 
 **Module upgrade**:

@@ -76,6 +76,10 @@ const PATHS: Record<ModuleType, string> = {
   // of differing reach — the choir it conducts, the chord responses it
   // lifts instead of any amplitude.
   chorus: '<circle r="2.2"/><path d="M-7.5-5v10M0-8v16M7.5-5v10"/>',
+  // The Exciter (issue #376): the Booster's dot between two inward charge
+  // zigzags — the charge responses it deepens, fed by the charged
+  // recipients it needs instead of any amplitude.
+  exciter: '<circle r="2.2"/><path d="M-13 5.5-8.5-4.5-4 5.5M13 5.5 8.5-4.5 4 5.5"/>',
   forge: '<path d="m0-14 12 7v14L0 14-12 7V-7Zm0 0v28m-12-21 24 14m0-14L-12 7"/>',
   // The Mutator Forge wears the Forge chassis with a seeded hexagon at its
   // core replacing the lattice (issue #219) — the second branch, minting

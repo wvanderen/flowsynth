@@ -169,6 +169,7 @@ describe("module face", () => {
       field: ["Field", "FIELD"],
       spotlight: ["Spotlight", "SPOT"],
       chorus: ["Chorus", "CHOR"],
+      exciter: ["Exciter", "EXCT"],
       spacer: ["Spacer", "SPACER"],
       forge: ["Forge", "FORGE"],
       mutatorForge: ["Mutator Forge", "MUT. FORGE"],
@@ -208,6 +209,10 @@ describe("module face", () => {
     expect(moduleIcon("sideband")).toContain('M-14-5.5v11M14-5.5v11');
     expect(moduleIcon("chorus")).toContain('<circle r="2.2"/>');
     expect(moduleIcon("chorus")).toContain('M0-8v16');
+    // The charge-response booster (issue #376): the Exciter's inward
+    // charge zigzags flanking the shared dot.
+    expect(moduleIcon("exciter")).toContain('<circle r="2.2"/>');
+    expect(moduleIcon("exciter")).toContain('M-13 5.5-8.5-4.5-4 5.5');
     expect(moduleIcon("mutatorForge")).toContain('<path d="M0-5.5 4.8-2.7V2.7L0 5.5-4.8 2.7V-2.7Z"/><circle r="1.5"/>');
     // The Mutator Forge's chassis drops the lattice — distinct from the
     // Module Forge's.
@@ -241,5 +246,13 @@ describe("face readouts", () => {
     const read = faceReadoutFor(s, chorus, null, computeRates(s, false));
     expect(read.readout).toBe("+50%");
     expect(read.note).toBe("chord response");
+  });
+
+  it("the Exciter's share names its term — charge response, never amplitude (issue #376)", () => {
+    const s = fresh();
+    const exciter = give(s, "exciter", null);
+    const read = faceReadoutFor(s, exciter, null, computeRates(s, false));
+    expect(read.readout).toBe("+50%");
+    expect(read.note).toBe("charge response");
   });
 });

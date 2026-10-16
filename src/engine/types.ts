@@ -63,8 +63,13 @@ export type GeneratorType = "focusKeyed" | "noteKeyed" | "goalKeyed" | "pulsewel
 // `target` field. The Chorus (issue #375) is the category's first
 // non-amplitude design: its primary effect is the chord response — it
 // adds its share to adjacent oscillators' chord-response term and grants
-// no amplitude bonus, so it is inert without an active chord.
-export type BoosterType = "infusor" | "field" | "spotlight" | "chorus";
+// no amplitude bonus, so it is inert without an active chord. The Exciter
+// (issue #376) is the second: its primary effect is the charge response —
+// its share adds to the recipients' authored charge response, the
+// conversion types' alternatives included — and never to the amplitude
+// leg, so it grants no base production and no second charge behavior: an
+// uncharged recipient reads exactly its uncharged value.
+export type BoosterType = "infusor" | "field" | "spotlight" | "chorus" | "exciter";
 
 export type ForgeType = "forge";
 // The Mutator Forge (ADR-0043, issue #198): the Forge family's second

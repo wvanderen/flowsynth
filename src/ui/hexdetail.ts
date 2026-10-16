@@ -114,6 +114,7 @@ const DETAIL_BENEFITS: Record<ModuleInstance["type"], (input: DetailEffectInput)
   field: ({ gain }) => `+${formatNumber(100 * boosterBonusOf("field") * gain)}% uplift`,
   spotlight: ({ gain }) => `+${formatNumber(100 * boosterBonusOf("spotlight") * gain)}% uplift`,
   chorus: ({ gain }) => `+${formatNumber(100 * boosterBonusOf("chorus") * gain)}% ${boosterTermOf("chorus")}`,
+  exciter: ({ gain }) => `+${formatNumber(100 * boosterBonusOf("exciter") * gain)}% ${boosterTermOf("exciter")}`,
   forge: ({ gain }) => `+${formatNumber(gain)} progress/s`,
   mutatorForge: ({ gain }) => `+${formatNumber(gain)} progress/s`,
 };

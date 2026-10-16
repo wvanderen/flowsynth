@@ -20,6 +20,15 @@ export interface Balance {
   // beside one charged Chorus, past the Triangle's authored ×2.5 only
   // with two.
   chorusBonus: number;
+  // The charge-response booster's authored share (issue #376, parent
+  // #366): the Exciter adds this to every adjacent oscillator's authored
+  // charge response — the coefficient that scales the charged curve above
+  // ×1, the conversion types' alternatives included — never the amplitude
+  // leg. Inert toward an uncharged recipient: the coefficient multiplies
+  // the charge curve's delta, and an uncharged voice's delta is zero.
+  // Provisional tuning: a standard voice's charged curve deepens from
+  // ×1.5 to ×1.75 at one generator's strength beside one charged Exciter.
+  exciterBonus: number;
   // ── Harmony quality (ADR-0049): Q = clamp(1 + complexity − max(0,
   // tension − A), Qmin, cap) over the formation's deduplicated pitch
   // classes. All magnitudes provisional tuning per the map's standing note.
@@ -208,6 +217,7 @@ export const BALANCE: Balance = {
   fieldBonus: 0.3,
   spotlightBonus: 0.5,
   chorusBonus: 0.5,
+  exciterBonus: 0.5,
   tensionWeights: { 1: 1.0, 2: 0.2, 3: 0, 4: 0, 5: 0, 6: 0.5 },
   complexityRate: 0.06,
   tensionAllowance: 0.7,
@@ -371,6 +381,11 @@ export const CATEGORY_OF: Record<ModuleType, Category> = {
   // whose primary effect is not amplitude — its share lands on the
   // recipients' chord-response term, never the amplitude leg.
   chorus: "booster",
+  // The charge-response booster (issue #376): the category's second
+  // non-amplitude design — its share lands on the recipients' authored
+  // charge response (the conversion types' alternatives included), never
+  // the amplitude leg, and reads nothing on an uncharged recipient.
+  exciter: "booster",
   forge: "forge",
   // The Mutator Forge is the Forge family's second branch (ADR-0043): the
   // same chargeable category, its own meter. Membership is decided per
@@ -421,6 +436,11 @@ export const TYPE_RARITY: Record<ModuleType, Rarity> = {
   // The chord-response booster (issue #375): uncommon per the parent's
   // accepted sample table — the roster's third uncommon entry.
   chorus: "uncommon",
+  // The charge-response booster (issue #376): rare per the parent's
+  // accepted sample table — its demanding condition (charged recipients)
+  // and the deeper charged curves it authors price it into the rare band
+  // beside the Sideband.
+  exciter: "rare",
   forge: "common",
   mutatorForge: "common",
 };
@@ -483,6 +503,7 @@ export const MODULE_TYPES: readonly ModuleType[] = [
   "field",
   "spotlight",
   "chorus",
+  "exciter",
   "forge",
 ];
 
