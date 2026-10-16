@@ -6,7 +6,7 @@ new types and game-design concepts — the engine keys and records live in code
 design thinking lives. The roster table reflects the code as of the last
 update; when a type lands, update the table in the same change.
 
-Last updated: 2026-10-16 (charge-response support — the Exciter, issue #376)
+Last updated: 2026-10-16 (draft composition weights and the Draft Loom — issue #378)
 
 ## Roster
 
@@ -39,18 +39,28 @@ Last updated: 2026-10-16 (charge-response support — the Exciter, issue #376)
 
 Rarity is each type's fixed acquisition rarity (`TYPE_RARITY`, ADR-0058) —
 authored in code, never rolled per copy. A roll draws the rarity band
-(shared `rarityProbability` table), then a type inside the band: the
-roll pool's eighteen common types sample uniformly, the uncommon band
-holds three designs — the two temporal designs (#372) and the
-chord-response booster (#375) — and the rare band holds two — the
-Sideband (#375) and the charge-response booster (#376); the Mutator
-Forge's common entry joins the pool only with
-the roll-pool purchase (ADR-0043). Duplicate
+(shared `rarityProbability` table), then a category among the band's
+not-yet-drawn types by the authored `draftCategoryWeights` (issue #378) —
+a category's share is its weight, never its type count, so the oscillator
+roster grows without crowding support designs out of drafts — then a type
+uniformly inside that category (ADR-0067). The common band's standing
+weights: oscillators 4 of 13.5 total mass, generators and boosters 2
+each, silent voices 1.5, spacer/forge/conduit/ritual 1 each; the Mutator
+Forge's common entry joins the pool only with the roll-pool purchase
+(ADR-0043), riding the forge category's weight. Duplicate
 progress lives on the per-copy merge tier: two copies of the same type
 and tier combine into one at the next tier, up to the finite unlocked cap
 (`mergeCap`, 2 — three tiers, Arete raises it later, #380). The plate
 tint and rarity word read the type; the engraved rings read the tier.
 Mutator rarity is separate and unchanged (ADR-0043).
+
+The **Draft Loom** (issue #378, ADR-0067) is the scrap economy's first
+consumer: each owned rung gives every fresh candidate a 15%/30%/50%
+chance (three rungs, `tierBonusChance`) to mint one merge tier higher,
+clamped to the unlocked cap, bought for 50/150/450 scrap
+(`tierBonusCosts`) on the Forge's Modules face. The rungs are memorized
+— they survive the arete reset beside the scrap that pays for them. All
+figures provisional tuning.
 
 The profile axes column (issues #369/#370, ADR-0059) is each oscillator's
 fixed aptitude grades over the four comparable axes — base production,

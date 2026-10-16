@@ -1,6 +1,6 @@
-import { BALANCE, isOscillatorType, MUTATOR_FAMILIES, POOL_JOIN_TYPE, ROLL_POOL, TYPE_RARITY } from "./constants";
+import { BALANCE, CATEGORY_OF, isOscillatorType, MUTATOR_FAMILIES, POOL_JOIN_TYPE, ROLL_POOL, TYPE_RARITY } from "./constants";
 import { newModuleId } from "./state";
-import type { Candidate, GameState, Meter, ModuleType, MutatorRollOffer, Rarity, RollOffer, RollSources } from "./types";
+import type { Candidate, Category, GameState, Meter, ModuleType, MutatorRollOffer, Rarity, RollOffer, RollSources } from "./types";
 
 export type Rng = () => number;
 
@@ -12,6 +12,51 @@ function rollRarity(rng: Rng): Rarity {
   if (roll < BALANCE.rarityProbability.common) return "common";
   if (roll < BALANCE.rarityProbability.common + BALANCE.rarityProbability.uncommon) return "uncommon";
   return "rare";
+}
+
+// The category draw (issue #378, parent #366): one weighted pick over the
+// categories still present in the slot's pool. A present category's mass
+// is its authored weight alone — never its type count — so the oscillator
+// roster can grow without crowding the support categories out of drafts
+// (user story 15). The walk reads the weights in their authored order and
+// skips absent categories, whose mass redistributes; a draw at 1−ε still
+// lands on the last present category.
+function drawDraftCategory(bandPool: ModuleType[], rng: Rng): Category {
+  const present = new Set(bandPool.map((type) => CATEGORY_OF[type]));
+  const entries = (Object.entries(BALANCE.draftCategoryWeights) as [Category, number][]).filter(
+    ([category]) => present.has(category),
+  );
+  const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
+  let roll = rng() * total;
+  for (const [category, weight] of entries) {
+    if (roll < weight) return category;
+    roll -= weight;
+  }
+  return entries[entries.length - 1]![0]!;
+}
+
+// The Draft Loom's reads (issue #378, parent #366): the owned rungs'
+// tier-bonus chance and the next rung's scrap price — one read each for
+// the draw, the purchase action, and the Forge row. Past the ladder's end
+// the price reads null and the chance sits at its ceiling.
+export function draftTierChanceOf(owned: number): number {
+  if (owned < 1) return 0;
+  return BALANCE.tierBonusChance[Math.min(owned, BALANCE.tierBonusChance.length) - 1]!;
+}
+
+export function nextDraftUpgradePrice(owned: number): number | null {
+  return owned < BALANCE.tierBonusCosts.length ? BALANCE.tierBonusCosts[owned]! : null;
+}
+
+// The tier draw (issue #378): a fresh candidate mints one merge tier
+// higher with its owned rung's chance, clamped to the unlocked cap —
+// offered tiers never exceed it. The draw spends an rng value only while
+// rungs are owned: with none, the stream stays the bare three draws per
+// slot.
+function drawCandidateTier(state: GameState, rng: Rng): number {
+  const chance = draftTierChanceOf(state.draftTierBonus);
+  if (chance <= 0) return 0;
+  return rng() < chance ? Math.min(1, BALANCE.mergeCap) : 0;
 }
 
 // The opening's first roll (board-redesign spec §8) yields a synthesizer
@@ -28,22 +73,28 @@ function firstRollRigged(state: GameState): boolean {
 export function generateOffer(state: GameState, rng: Rng): RollOffer {
   // The Mutator Forge type joins as one uniform, unweighted entry once the
   // roll-pool purchase owns membership (ADR-0043) — the purchase buys
-  // membership, nothing else.
+  // membership, nothing else. Its draws ride its category's authored
+  // weight like every type's.
   const pool: ModuleType[] = state.rollPoolJoined ? [...ROLL_POOL, POOL_JOIN_TYPE] : [...ROLL_POOL];
   const candidates: Candidate[] = [];
   for (let i = 0; i < 3; i++) {
-    // Fixed type rarity drives the draw (ADR-0058): the slot draws its
-    // rarity band first, then a type among the not-yet-drawn ones whose
-    // authored rarity matches — commons duplicate more readily, rarer
-    // designs are scarcer. A band with no remaining types falls back to
-    // the whole remaining pool, spending no extra draw. The pick leaves
-    // the shared pool exactly once, by identity.
+    // Fixed type rarity drives the band draw (ADR-0058): the slot draws
+    // its rarity band first, then — issue #378's composition — a category
+    // among the not-yet-drawn types whose authored rarity matches, by the
+    // authored category weights alone, and then a type uniformly inside
+    // that category. Commons duplicate more readily, rarer designs are
+    // scarcer, and the support categories hold their share whatever the
+    // roster does. A band with no remaining types falls back to the whole
+    // remaining pool, spending no extra draw. Each pick leaves the shared
+    // pool exactly once, by identity — the distinct-candidate offer stands.
     const band = rollRarity(rng);
     const matched = pool.filter((type) => TYPE_RARITY[type] === band);
     const bandPool = matched.length > 0 ? matched : pool;
-    const type = bandPool[Math.floor(rng() * bandPool.length)]!;
+    const category = drawDraftCategory(bandPool, rng);
+    const inCategory = bandPool.filter((type) => CATEGORY_OF[type] === category);
+    const type = inCategory[Math.floor(rng() * inCategory.length)]!;
     pool.splice(pool.indexOf(type), 1);
-    candidates.push({ id: newModuleId(state), type, tier: 0 });
+    candidates.push({ id: newModuleId(state), type, tier: drawCandidateTier(state, rng) });
   }
   // The rig can only ever land on the last slot: the guard means neither
   // earlier candidate sings, so the replacement can't duplicate a type. It

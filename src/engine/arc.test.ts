@@ -26,9 +26,9 @@ describe("practice fills the flow meter (§8, ADR-0041)", () => {
     const s = fresh();
     expect(s.modules.map((m) => m.type)).toEqual(["additive"]); // no Forge, no generator
     startSession(s, null);
-    advance(s, 179, stubRng(new Array(6).fill(0.3)));
+    advance(s, 179, stubRng(new Array(9).fill(0.3)));
     expect(s.flow.earned).toBe(0);
-    advance(s, 1, stubRng(new Array(6).fill(0.3)));
+    advance(s, 1, stubRng(new Array(9).fill(0.3)));
     expect(s.flow.earned).toBe(1);
     expect(s.bankedRolls).toHaveLength(1);
   });
@@ -44,11 +44,11 @@ describe("practice fills the flow meter (§8, ADR-0041)", () => {
   it("after the opening fill the cadence runs flat, never scaling", () => {
     const s = fresh();
     startSession(s, null);
-    advance(s, 180, stubRng(new Array(6).fill(0.3)));
+    advance(s, 180, stubRng(new Array(9).fill(0.3)));
     expect(s.flow.earned).toBe(1);
-    advance(s, 1799, stubRng(new Array(6).fill(0.3)));
+    advance(s, 1799, stubRng(new Array(9).fill(0.3)));
     expect(s.flow.earned).toBe(1);
-    advance(s, 1, stubRng(new Array(6).fill(0.3)));
+    advance(s, 1, stubRng(new Array(9).fill(0.3)));
     expect(s.flow.earned).toBe(2);
     expect(s.flow.progress).toBeCloseTo(0, 6);
   });
@@ -72,11 +72,16 @@ describe("practice fills the flow meter (§8, ADR-0041)", () => {
   });
 });
 
+// A synthless common-band draw: the category draws land ritual, conduit,
+// spacer — no oscillator anywhere in the offer. A spent category's mass
+// leaves the walk's total only when its last type goes, so each slot's
+// draw reads over the categories still present.
+const SYNTHLESS = [0.9, 0.95, 0.5, 0.9, 0.96, 0.5, 0.9, 0.85, 0.5];
+
 describe("the first roll yields a synthesizer candidate (§8)", () => {
   it("re-rigs a synthless first draw to carry a synthesizer", () => {
     const s = fresh();
-    // 0.9 draws: ritual, amplifier, spacer — no synthesizer.
-    addForgeProgress(s, forgeThreshold(0), stubRng([0.9, 0.5, 0.9, 0.5, 0.9, 0.5]));
+    addForgeProgress(s, forgeThreshold(0), stubRng(SYNTHLESS));
     const offer = s.bankedRolls[0]!;
     expect(offer.candidates.some((c) => CATEGORY_OF[c.type] === "oscillator")).toBe(true);
     expect(offer.candidates.some((c) => c.type === "additive")).toBe(true);
@@ -86,23 +91,24 @@ describe("the first roll yields a synthesizer candidate (§8)", () => {
 
   it("later rolls draw the pool plain — the rig fires once", () => {
     const s = fresh();
-    // Each slot draws the band, then its index (ADR-0058): 0.9 → common,
-    // 0.5 over 18/17/16 → ritual, amplifier, spacer — no synthesizer.
-    addForgeProgress(s, forgeThreshold(0), stubRng([0.9, 0.5, 0.9, 0.5, 0.9, 0.5]));
+    // Each slot draws the band, its category (issue #378), then its index:
+    // 0.9 → common; the category draws land ritual, conduit, spacer — no
+    // synthesizer.
+    addForgeProgress(s, forgeThreshold(0), stubRng(SYNTHLESS));
     expect(s.bankedRolls[0]!.candidates.some((c) => c.type === "additive")).toBe(true);
     // The same seed on the second roll: the same synthless draw stands,
     // unrigged — the rig fired once, on the first roll only.
-    addForgeProgress(s, forgeThreshold(1), stubRng([0.9, 0.5, 0.9, 0.5, 0.9, 0.5]));
+    addForgeProgress(s, forgeThreshold(1), stubRng(SYNTHLESS));
     const second = s.bankedRolls[1]!.candidates.map((c) => c.type);
     expect(second).toEqual(["ritual", "amplifier", "spacer"]);
   });
 
   it("a draw that already sings is left alone", () => {
     const s = fresh();
-    // Bands 0.05/0.6/0.7 → common; indices 0.0/0.5/0.5 over 18/17/16:
-    // additive, ritual, spacer — a synthesizer is already here, so the
-    // rig never touches the draw.
-    addForgeProgress(s, forgeThreshold(0), stubRng([0.05, 0.0, 0.6, 0.5, 0.7, 0.5]));
+    // Bands 0.05/0.6/0.7 → common; the category draws land oscillator,
+    // ritual, spacer with index draws picking additive, ritual, spacer —
+    // a synthesizer is already here, so the rig never touches the draw.
+    addForgeProgress(s, forgeThreshold(0), stubRng([0.05, 0.0, 0.0, 0.6, 0.95, 0.5, 0.7, 0.78, 0.5]));
     expect(s.bankedRolls[0]!.candidates.map((c) => c.type)).toEqual(["additive", "ritual", "spacer"]);
   });
 });
@@ -170,7 +176,7 @@ describe("the opening walk, end to end", () => {
     // Beat two: the 3-minute opening fill mints the first roll (the 0.9
     // seed draws no synthesizer, so the first-roll rig supplies the additive).
     startSession(s, null);
-    advance(s, 180, stubRng([0.9, 0.5, 0.9, 0.5, 0.9, 0.5]));
+    advance(s, 180, stubRng(SYNTHLESS));
     endSession(s);
     expect(s.bankedRolls).toHaveLength(1);
     // Beat three: the forge offers the synth it made — take it into the tray.
@@ -194,9 +200,9 @@ describe("the opening walk, end to end", () => {
     // identical synths re-voices, never breaks (pitch lives in the cell).
     startSession(s, null);
     // One flat cadence block later, the second roll mints (band 0.0 then
-    // index 0.0 draws the additive first — the rig is long past, later
+    // category 0.0 draw the additive first — the rig is long past, later
     // rolls draw plain).
-    advance(s, 1800, stubRng([0.0, 0.0, 0.5, 0.5, 0.5, 0.5]));
+    advance(s, 1800, stubRng([0.0, 0.0, 0.0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]));
     endSession(s);
     const offer2 = s.bankedRolls[0]!;
     const third = offer2.candidates.find((c) => c.type === "additive")!;

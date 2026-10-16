@@ -2819,6 +2819,49 @@ body.hex-detail-open .upgrade-all {
 .forge-skip:hover:not(:disabled) { border-color: var(--scrap); }
 .forge-skip .scrap-mark svg { width: 11px; height: 11px; display: block; }
 
+/* The Draft Loom row (issue #378): the Modules face's one scrap purchase —
+   name, current tier-bonus chance, and the next rung's price in one open
+   row, a hairline above it separating the purchase from the drafts. */
+.forge-loom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 2px 11px;
+  margin: 2px 0 4px;
+  border-top: 1px solid var(--line);
+}
+.forge-loom .loom-name {
+  font: 600 12px/1 var(--font-condensed);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.forge-loom .loom-state { font-size: 11px; color: var(--scrap); }
+.forge-loom .loom-tip { margin-left: auto; }
+.forge-loom .loom-buy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 5px 10px;
+  border-color: var(--line-strong);
+  background: var(--panel-veil);
+  color: var(--scrap);
+  font: 600 12px/1 var(--font-condensed);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.forge-loom .loom-buy:hover:not(:disabled) { border-color: var(--scrap); }
+.forge-loom .loom-buy:disabled { color: var(--muted); }
+.forge-loom .loom-buy .scrap-mark svg { width: 11px; height: 11px; display: block; }
+.forge-loom .loom-tuned {
+  font: 600 11px/1 var(--font-condensed);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+}
+
 /* The live drag ghost: the module's own face tile, carried under the cursor. */
 .drag-ghost {
   position: fixed;

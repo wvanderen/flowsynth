@@ -218,6 +218,29 @@ export interface Balance {
   // not the upgrade spend. Provisional tuning throughout.
   scrapValue: Record<Rarity, number>;
   scrapTierFactor: number;
+  // ── Draft composition (issue #378, parent #366) ─────────────────────
+  // The draft's category frequencies, authored separately from named-type
+  // sampling: each slot first draws its fixed rarity band
+  // (rarityProbability, ADR-0058), then one category among the band's
+  // not-yet-drawn types by these weights, then a type uniformly inside
+  // that category. A category's share of the slot is its weight over the
+  // total, never its roster size — more oscillator designs do not crowd
+  // the support categories out of drafts, and no roster entry is equally
+  // likely by default. Categories absent from the band redistribute their
+  // mass; weights for the roll-pool join's category cover both Forge
+  // branches. Provisional tuning; exact shares are balance work.
+  draftCategoryWeights: Record<Category, number>;
+  // ── The Draft Loom (issue #378, parent #366) ────────────────────────
+  // The scrap-purchased permanent draft improvement: the nth owned rung
+  // gives every fresh candidate this much chance to mint one merge tier
+  // higher, clamped to the unlocked cap — offered tiers never exceed it.
+  // Finite rungs at scrap prices. Income accounting: a tiered candidate
+  // doubles its scrap value (scrapTierFactor) beside its tierPower, so
+  // every rung pays back through power and recovery value alike; the
+  // first rung prices at a handful of early skips, the later ones
+  // steeper. Provisional prices, limits, and probabilities throughout.
+  tierBonusChance: readonly number[];
+  tierBonusCosts: readonly number[];
 }
 
 // Provisional tuning throughout; the redesign spec's numbers are not final
@@ -289,6 +312,23 @@ export const BALANCE: Balance = {
   noteCreationMinChars: 20,
   scrapValue: { common: 5, uncommon: 15, rare: 40 },
   scrapTierFactor: 2,
+  // Oscillators lead as the board's producers; the support categories hold
+  // fixed shares whatever the roster does. The share sits near the
+  // uniform-by-type figure it replaced, keeping the composition cut near
+  // the pacing the capacity calibration records (seed 42's era-1 figure
+  // was re-read for the new draw). Provisional tuning.
+  draftCategoryWeights: {
+    oscillator: 4,
+    generator: 2,
+    booster: 2,
+    silentVoice: 1.5,
+    spacer: 1,
+    forge: 1,
+    conduit: 1,
+    ritual: 1,
+  },
+  tierBonusChance: [0.15, 0.3, 0.5],
+  tierBonusCosts: [50, 150, 450],
 };
 
 // The chord vocabulary (#218's eleven classes, ADR-0021/0022 as extended by

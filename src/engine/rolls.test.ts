@@ -9,31 +9,34 @@ import { hex } from "./hex";
 describe("forge roll generation", () => {
   it("samples three distinct types from the launch pool", () => {
     const s = fresh();
-    // Each slot draws the rarity band first, then its type (ADR-0058):
-    // six draws — band, index ×3.
-    const rng = stubRng([0.0, 0.0, 0.5, 0.3, 0.9, 0.2]);
+    // Each slot draws the rarity band, its category (issue #378), then its
+    // type (ADR-0058): nine draws — band, category, index ×3.
+    const rng = stubRng([0.0, 0.0, 0.0, 0.5, 0.5, 0.0, 0.9, 0.95, 0.2]);
     const offer = generateOffer(s, rng);
     const types = offer.candidates.map((c) => c.type);
     expect(new Set(types).size).toBe(3);
     for (const type of types) {
       expect(ROLL_POOL).toContain(type);
     }
-    // Draws without replacement over the twenty-three-type pool: additive,
-    // then echo (index 5 of the seventeen remaining commons), then saw
-    // (index 3 of the sixteen left).
-    expect(types).toEqual(["additive", "echo", "saw"]);
+    // Slot one: the common band, the oscillator category (first in the
+    // weights' authored order), its first matching type. Slot two: the
+    // common band, the booster category (the oscillator mass spends at
+    // 4/13.5 ≈ 0.296, the booster's rides [6, 8)/13.5), its first undrawn
+    // type. Slot three: the common band, the ritual category, the RITUAL.
+    expect(types).toEqual(["additive", "infusor", "ritual"]);
   });
 
   it("candidates carry the type's fixed rarity and the base tier — nothing is rolled per copy", () => {
     const s = fresh();
-    const offer = generateOffer(s, stubRng([0.0, 0.0, 0.5, 0.3, 0.9, 0.2]));
+    const offer = generateOffer(s, stubRng([0.0, 0.0, 0.0, 0.5, 0.5, 0.0, 0.9, 0.95, 0.2]));
     for (const candidate of offer.candidates) {
       expect(candidate.tier).toBe(0);
       expect(TYPE_RARITY[candidate.type]).toBe("common");
     }
-    // An out-of-band draw still lands on a real type: with no rare types
-    // authored yet, a rare band falls back to the whole pool.
-    const fallback = generateOffer(fresh(), stubRng([0.9995, 0.4, 0.5, 0.5, 0.5, 0.5]));
+    // An out-of-band draw still lands on a real type: the rare band draws
+    // over its matched pool — here the oscillator category's rare entry,
+    // the Sideband.
+    const fallback = generateOffer(fresh(), stubRng([0.9995, 0.4, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]));
     expect(ROLL_POOL).toContain(fallback.candidates[0]!.type);
   });
 
@@ -47,10 +50,11 @@ describe("forge roll generation", () => {
     try {
       const s = fresh();
       // Slot one draws the uncommon band (0.995): afterglow, echo,
-      // pulsewell, and chorus match, and the 0.5 index draw lands the
-      // third — pulsewell; slots two and three draw common bands (0.5)
-      // over the remaining pool.
-      const offer = generateOffer(s, stubRng([0.995, 0.5, 0.5, 0.5, 0.5, 0.5]));
+      // pulsewell, and chorus match — the category draw 0.55 rides the
+      // generator mass ([4, 6) of 9.5), and the index picks the band's one
+      // generator, the Pulsewell. Slots two and three draw common bands
+      // (0.5) over the remaining pool.
+      const offer = generateOffer(s, stubRng([0.995, 0.55, 0.5, 0.5, 0.25, 0.5, 0.5, 0.95, 0.5]));
       expect(offer.candidates[0]!.type).toBe("pulsewell");
       // The uncommon type cannot be drawn twice: three distinct types, the
       // other two drawn from the common remainder, pool intact.
@@ -61,7 +65,7 @@ describe("forge roll generation", () => {
       // The fallback path spends the shared pool exactly once per slot: a
       // rare band with no remaining matches draws three distinct types
       // and nothing vanishes beyond the draws themselves.
-      const fallback = generateOffer(fresh(), stubRng([0.0, 0.0, 0.9995, 0.5, 0.9995, 0.5]));
+      const fallback = generateOffer(fresh(), stubRng([0.0, 0.0, 0.9995, 0.5, 0.9995, 0.5, 0.9995, 0.5, 0.5]));
       expect(new Set(fallback.candidates.map((c) => c.type)).size).toBe(3);
     } finally {
       TYPE_RARITY.echo = authored;

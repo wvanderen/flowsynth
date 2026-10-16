@@ -471,6 +471,12 @@ export interface GameState {
   // canonical store; payouts land nowhere else. Survives the arete reset
   // with the collection it values. Lenient-defaulted to 0 at load.
   scrap: number;
+  // The Draft Loom's owned rungs (issue #378, parent #366): the
+  // scrap-purchased permanent draft improvement — each rung raises every
+  // fresh candidate's chance to mint one merge tier higher (clamped to
+  // the unlocked cap). Memorized with the scrap that pays for it: it
+  // survives the arete reset. Lenient-defaulted to 0 at load.
+  draftTierBonus: number;
   // The era/prestige count (ADR-0039): economy-bearing state (the claim
   // reads it), still awaiting a surface (ADR-0038's one-figure discipline).
   prestiges: number;

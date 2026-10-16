@@ -7,7 +7,7 @@ import { combinePreview, combineMutatorsPreview, hasMergeTwin, levelable, mergeA
 import { moduleScrapValue, skipPayoutOf } from "../engine/scrap";
 import { deployedAt } from "../engine/economy";
 import { sameHex } from "../engine/hex";
-import { forgeThreshold, flowThreshold, mutatorForgeThreshold } from "../engine/rolls";
+import { draftTierChanceOf, forgeThreshold, flowThreshold, mutatorForgeThreshold, nextDraftUpgradePrice } from "../engine/rolls";
 import { BALANCE, CATEGORY_OF, isOscillatorType, isVoiceType, NAMED_CHORDS, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { goalCompletionBase } from "../engine/reserves";
 import { baseTermOf, generatorProfileOf } from "../engine/profiles";
@@ -2562,7 +2562,11 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   document.body.classList.toggle("modal-sheet-open", sheet);
   const extra =
     kind === "forge"
-      ? [app.ui.forgeFace, app.state.catalogEntryOwned, app.state.bankedRolls.length, app.state.bankedMutatorRolls.length, app.state.bankedRolls.at(-1)?.id ?? null, app.state.bankedMutatorRolls.at(-1)?.id ?? null]
+      ? [app.ui.forgeFace, app.state.catalogEntryOwned, app.state.bankedRolls.length, app.state.bankedMutatorRolls.length, app.state.bankedRolls.at(-1)?.id ?? null, app.state.bankedMutatorRolls.at(-1)?.id ?? null,
+        // The Draft Loom row (issue #378): the owned rungs and the balance
+        // re-read with every purchase, so the row's chance, price, and
+        // muted state never stand stale in an open modal.
+        app.state.draftTierBonus, app.state.scrap]
       : kind === "honesty"
         ? [app.exitPending, app.state.session?.accounting.poolSeconds ?? 0, app.state.session?.accounting.bucketNous ?? 0]
         : kind === "summary"
@@ -3282,8 +3286,9 @@ function catalogOwnedHtml(word: string): string {
 // the glossary meaning — description prose never grows around it. The
 // meanings here are the glossary's own, distilled to the one-line ceiling.
 // The union keeps the map closed: only glossary terms may render hoverable.
-type CatalogTerm = "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Headroom" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "habit build" | "goals";
+type CatalogTerm = "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Headroom" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "habit build" | "goals";
 const CATALOG_TERMS: Record<CatalogTerm, string> = {
+  "merge tier": "Matching copies combine to raise authored strengths",
   "Harmonic capacity": "Whole-chord budget per voice",
   memorized: "Persists through arete reset",
   Arete: "The resource banked when an era ends",
@@ -3505,6 +3510,32 @@ function updateForgeMetersLive(scope: ParentNode, state: GameState, forgeRate: n
   liveAttr(scope, "modal-mutator-track", "aria-valuetext", mutatorLine);
 }
 
+// The Draft Loom row (issue #378, parent #366): the Modules face's one
+// purchase — scrap buys permanent rungs, each raising the chance every
+// fresh candidate mints one merge tier higher (offered tiers never pass
+// the unlocked cap). Name, current chance, and the next rung's price stand
+// visible; the deeper mechanic rides the tooltip layer. The flow lock and
+// an empty scrap balance mute the buy; the tuned ladder retires it.
+function draftLoomHtml(state: GameState): string {
+  const chance = draftTierChanceOf(state.draftTierBonus);
+  const price = nextDraftUpgradePrice(state.draftTierBonus);
+  const nextChance = Math.round(draftTierChanceOf(state.draftTierBonus + 1) * 100);
+  const chanceReadout = `${Math.round(chance * 100)}%${price === null ? "" : ` → ${nextChance}%`}`;
+  const locked = state.mode !== "upgrade";
+  const buy = price === null
+    ? `<span class="loom-tuned">Tuned</span>`
+    : `<button class="loom-buy" data-buy-draft-upgrade aria-label="Improve the Draft Loom to ${nextChance}% tier bonus · ${formatInt(price)} scrap"${
+        locked || state.scrap < price ? " disabled" : ""
+      }>Improve · ${formatInt(price)} <small class="scrap-mark" aria-hidden="true">${SCRAP_SVG}</small></button>`;
+  return `<div class="forge-loom">
+    <span class="loom-name">Draft Loom</span>
+    <span class="loom-state mono">${termTipHtml("merge tier")} bonus ${chanceReadout}</span>
+    ${termTipHtml("memorized")}
+    <span class="inst-tip loom-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="loom-mechanics" aria-label="Draft Loom — what it does">ⓘ</button><span class="inst-tip-body" id="loom-mechanics" role="tooltip">Each candidate may mint one step higher</span></span>
+    ${buy}
+  </div>`;
+}
+
 function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapshot): void {
   const { state, ui } = app;
   const face = ui.forgeFace;
@@ -3542,6 +3573,7 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
           <span id="forge-effect-${candidate.id}" class="candidate-effect">${forgeEffectHtml(mutatorEffectText(candidate.family, candidate.rarity))}</span></span>
         </div>`).join("") : ""}
     </div>` : `<p class="empty-copy">No ${face === "mutators" ? "mutator" : "module"} rolls banked.</p>`}
+    ${face === "modules" ? draftLoomHtml(state) : ""}
     ${forgeMeterHtml(face)}`;
   wireTooltips(content, app.signal);
   updateForgeMetersLive(content, state, projected.forgeRate, projected.mutatorForgeRate);
@@ -3560,6 +3592,9 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
   });
   content.querySelectorAll<HTMLButtonElement>("[data-skip-offer]").forEach(button => {
     app.listen(button, "click", () => app.skipDraftAction(button.dataset.skipOffer!));
+  });
+  content.querySelectorAll<HTMLButtonElement>("[data-buy-draft-upgrade]").forEach(button => {
+    app.listen(button, "click", () => app.buyDraftUpgradeAction());
   });
   content.querySelectorAll<HTMLButtonElement>("[data-mut-choice]").forEach(button => {
     app.listen(button.parentElement!, "click", (event) => {
