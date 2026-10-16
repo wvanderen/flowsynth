@@ -80,7 +80,7 @@ describe("the loud summary (§5.7) — every exit path, identical beats", () => 
     // 180 s: the flow meter's opening fill banks one practice roll; the
     // window's 60 s of charge banks exactly one charge roll (60 threshold),
     // and the drained 120 s move this branch no further.
-    advance(s, 180, stubRng(new Array(12).fill(0.3)));
+    advance(s, 180, stubRng(new Array(18).fill(0.3)));
     endSession(s, 1_000);
     expect(s.summary!.rollsFlow).toBe(1);
     expect(s.summary!.rollsForge).toBe(1);
@@ -89,7 +89,7 @@ describe("the loud summary (§5.7) — every exit path, identical beats", () => 
   it("a practice-only session attributes the roll to the flow meter alone", () => {
     const s = fresh();
     startSession(s, null);
-    advance(s, 180, stubRng(new Array(6).fill(0.3)));
+    advance(s, 180, stubRng(new Array(9).fill(0.3)));
     endSession(s, 1_000);
     expect(s.summary!.rollsFlow).toBe(1);
     expect(s.summary!.rollsForge).toBe(0);

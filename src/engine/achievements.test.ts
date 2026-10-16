@@ -306,7 +306,7 @@ describe("the 17-feat launch set", () => {
     completeSession(s);
     // A minted roll waits in the Forge; taking it is the feat.
     s.forge.earned = 1;
-    s.bankedRolls.push(generateOffer(s, stubRng([0.5, 0.5, 0.5, 0.5, 0.5, 0.5])));
+    s.bankedRolls.push(generateOffer(s, stubRng(new Array(9).fill(0.5))));
     expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual([]);
     s.bankedRolls.length = 0;
     expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual(["roll-credit"]);

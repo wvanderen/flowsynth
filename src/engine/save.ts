@@ -115,6 +115,15 @@ export function deserialize(text: string): LoadResult {
   if (typeof raw.scrap !== "number" || !Number.isFinite(raw.scrap) || raw.scrap < 0) {
     merged.scrap = 0;
   }
+  // The Draft Loom's owned rungs (issue #378) lenient-default the same
+  // way: absent or corrupt reads as none owned — exactly what a pre-loom
+  // save owes. An implausibly large count clamps at the ladder's end, so
+  // "fully tuned" can never disagree with the prices the purchase quotes
+  // (the capacity offerings' clamp pattern).
+  merged.draftTierBonus =
+    typeof raw.draftTierBonus === "number" && Number.isFinite(raw.draftTierBonus) && raw.draftTierBonus > 0
+      ? Math.min(Math.floor(raw.draftTierBonus), BALANCE.tierBonusCosts.length)
+      : 0;
   // The harmonic-capacity ladder (issue #259) lenient-defaults the same
   // way: absent or corrupt counts read as zero — no purchases this era, no
   // Arete offerings owned — exactly what a pre-ladder save owes, and

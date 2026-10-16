@@ -285,7 +285,7 @@ describe("conservation", () => {
 describe("chooseRoll", () => {
   it("adds the chosen candidate and consumes the offer", () => {
     const s = fresh();
-    const offer = generateOffer(s, stubRng([0.1, 0.5, 0.2, 0.5, 0.3, 0.5]));
+    const offer = generateOffer(s, stubRng([0.1, 0.5, 0.2, 0.5, 0.3, 0.5, 0.1, 0.5, 0.2]));
     s.bankedRolls.push(offer);
     startSession(s, 600);
     advance(s, 10);

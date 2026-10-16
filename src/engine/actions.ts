@@ -16,7 +16,7 @@ import { moduleScrapValue, skipPayoutOf } from "./scrap";
 import { syncAchievements } from "./achievements";
 import { syncChordDiscoveries } from "./library";
 import { freshAccounting } from "./trust";
-import { generateMutatorOffer, type Rng } from "./rolls";
+import { generateMutatorOffer, nextDraftUpgradePrice, type Rng } from "./rolls";
 import type { GameState, Hex, ModuleInstance, MutatorInstance, Rarity, SessionReflection, ShelfType } from "./types";
 
 // The Arete purchases' shared refusal, one wording everywhere: nothing of
@@ -694,6 +694,26 @@ export function skipRoll(state: GameState, offerId: string): ActionResult {
   return { ok: true, scrap: payout, unlocked: checkUnlocks(state) };
 }
 
+// The Draft Loom's purchase (issue #378, parent #366): scrap buys a
+// permanent rung — each raises every fresh candidate's chance to mint one
+// merge tier higher, offered tiers clamped to the unlocked cap. The scrap
+// balance is the one currency; nothing else spends or banks it. A past-
+// the-ladder-end purchase is unavailable and refuses before any charge,
+// as does one the unlocked cap cannot improve (a cap below the first tier
+// gives every rung nothing to lift); an unaffordable price never consumes
+// scrap. The rungs are memorized: they survive the arete reset beside the
+// scrap that pays for them.
+export function buyDraftUpgrade(state: GameState): ActionResult {
+  if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
+  if (BALANCE.mergeCap < 1) return fail("No draft can mint above the base tier.");
+  const price = nextDraftUpgradePrice(state.draftTierBonus);
+  if (price === null) return fail("The Draft Loom is fully tuned.");
+  if (state.scrap < price) return fail("Not enough scrap.");
+  state.scrap -= price;
+  state.draftTierBonus++;
+  return { ok: true, unlocked: checkUnlocks(state) };
+}
+
 // The Arete Catalog's sheet purchases (ADR-0040 as amended by ADR-0044,
 // issue #197): upgrade-mode-only, Arete-paid, one-time, and surviving
 // prestige. The entry's engine effects landed with the mutator contracts
@@ -944,7 +964,8 @@ export function buyCapacityDiscount(state: GameState): ActionResult {
 // rides claimOf forever after, and the Arete offerings beside the harmonic-
 // capacity ladder (issue #259): the owned ceiling unlocks and discounts —
 // and the scrap balance (issue #377), which persists with the collection
-// it values.
+// it values, and the Draft Loom's owned rungs (issue #378), which persist
+// with the scrap that pays for them.
 // Module levels return to base, nous to
 // a fresh opening grant, and the charge window resets — as does the
 // ladder's purchased capacity (issue #259): the voices return to one. The era measure

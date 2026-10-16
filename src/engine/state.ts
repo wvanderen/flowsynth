@@ -39,6 +39,7 @@ export function createInitialState(): GameState {
     eraEarned: 0,
     arete: 0,
     scrap: 0,
+    draftTierBonus: 0,
     prestiges: 0,
     muted: false,
     notificationAsked: false,

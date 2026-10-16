@@ -6,6 +6,7 @@ import {
   buyCapacityDiscount,
   buyCatalogEntry,
   buyCell,
+  buyDraftUpgrade,
   buyGoalCapacity,
   buyRowUnlock,
   buyShelfModule,
@@ -47,6 +48,7 @@ import { newlyActiveTermsOf, type AllocatedInstance } from "../engine/allocation
 import { serialize, STORAGE_KEY } from "../engine/save";
 import { SharedSave, browserSaveStorage, type LoadedSave } from "./shared-save";
 import { formatClock } from "../engine/clock";
+import { draftTierChanceOf } from "../engine/rolls";
 import { formatInt, formatNumber } from "./format";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
 import { createInitialState, createModule } from "../engine/state";
@@ -1745,6 +1747,22 @@ export class App {
       return;
     }
     this.say(`Roll skipped · +${formatInt(result.scrap ?? 0)} scrap.`);
+    this.save();
+    this.render();
+  }
+
+  // The Forge row's loom purchase (issue #378): scrap buys the next
+  // permanent rung and the toast names the new chance. A refusal — flow
+  // lock, empty bank, tuned ladder — says so and touches nothing.
+  buyDraftUpgradeAction(): void {
+    const result = buyDraftUpgrade(this.state);
+    if (!result.ok) {
+      this.say(result.reason ?? "The Draft Loom cannot be improved.");
+      this.render();
+      return;
+    }
+    const chance = Math.round(draftTierChanceOf(this.state.draftTierBonus) * 100);
+    this.say(`Draft Loom improved · tier bonus ${chance}%.`);
     this.save();
     this.render();
   }

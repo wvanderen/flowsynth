@@ -119,13 +119,14 @@ describe("the skip action", () => {
   });
 
   it("pays identically to taking the best candidate and scrapping it", () => {
-    // A controlled draw: two common-band picks, then the rare band's
-    // second type — the Exciter. The rig stays off (total earned ≠ 1).
+    // A controlled draw: two common-band oscillator picks, then the rare
+    // band's booster category — the Exciter. The rig stays off (total
+    // earned ≠ 1). Nine draws: band, category, type ×3.
     const common = 1 - BALANCE.rarityProbability.uncommon - BALANCE.rarityProbability.rare - 1e-6;
     const s = fresh();
     s.forge.earned = 5;
     s.flow.earned = 5;
-    const offer = generateOffer(s, stubRng([common, 0, common, 0, 1 - 1e-6, 0.999]));
+    const offer = generateOffer(s, stubRng([common, 0.0, 0.0, common, 0.0, 0.0, 1 - 1e-6, 0.9, 0.999]));
     s.bankedRolls.push(offer);
     const payout = skipPayoutOf(offer);
     expect(payout).toBe(BALANCE.scrapValue.rare);

@@ -348,8 +348,10 @@ describe("the Mutator Forge branch", () => {
 });
 
 describe("the roll-pool join", () => {
-  // Band 0.5 → common; index 0.99 lands on the pool's appended tail.
-  const draws = [0.5, 0.99, 0.5, 0.5, 0.5, 0.5];
+  // Band 0.5 → common; the category draw 0.8 rides the Forge mass
+  // ([10.5, 11.5) of 13.5), and the 0.99 index lands on the pool's
+  // appended tail.
+  const draws = [0.5, 0.8, 0.99, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5];
 
   it("appends the Mutator Forge type as one uniform entry, and only then", () => {
     const s = fresh();
@@ -365,9 +367,11 @@ describe("the roll-pool join", () => {
   it("joined candidates still draw distinctly, and land as Mutator Forges", () => {
     const s = fresh();
     s.rollPoolJoined = true;
-    // Three draws at the pool's tail: indices 13, 12, 11 — three
-    // distinct types, the first the appended Mutator Forge.
-    const offer = generateOffer(s, stubRng([0.5, 0.99, 0.5, 0.99, 0.5, 0.99]));
+    // Three draws at the Forge category: the 0.99 indices take the
+    // appended Mutator Forge, then the Forge, then the spent category
+    // redistributes its mass and the spacer lands — three distinct types,
+    // the first the appended Mutator Forge.
+    const offer = generateOffer(s, stubRng([0.5, 0.8, 0.99, 0.5, 0.8, 0.99, 0.5, 0.8, 0.5]));
     const types = offer.candidates.map((c) => c.type);
     expect(new Set(types).size).toBe(3);
     expect(types[0]).toBe("mutatorForge");
