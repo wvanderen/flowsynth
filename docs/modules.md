@@ -6,7 +6,7 @@ new types and game-design concepts — the engine keys and records live in code
 design thinking lives. The roster table reflects the code as of the last
 update; when a type lands, update the table in the same change.
 
-Last updated: 2026-10-15 (broad and player-targeted amplitude boosters — the Field and Spotlight, issue #374)
+Last updated: 2026-10-15 (chord-response support and alternative charge — the Chorus and Sideband, issue #375)
 
 ## Roster
 
@@ -18,6 +18,7 @@ Last updated: 2026-10-15 (broad and player-targeted amplitude boosters — the F
 | `square` | Square | SQR | oscillator | common | B · S · C · B | 1 | — | `hue-oscillator` | square trace | Roll pool only | `+value`, note `P«pitch»` |
 | `saw` | Saw | SAW | oscillator | common | C · B · B · S | 1 | — | `hue-oscillator` | saw trace | Roll pool only | `+value`, note `P«pitch»` |
 | `afterglow` | Afterglow | GLOW | oscillator | uncommon | A · B · B · B | 1 | ×0.3 open · ×0.8 from 2 min · ×1.25 sustained from 5 min | `hue-oscillator` | swelling wave | Roll pool only | `+value` (× the current warmup step), note `P«pitch»` |
+| `sideband` | Sideband | SIDE | oscillator | rare | D · B · S · — (conversion) | 1 | — | `hue-oscillator` | side-flanked sine | Roll pool only | `+value`, note `P«pitch»` |
 | `harmonizer` | Harmonizer | HARM | silent voice | common | — | 1 | — | `hue-voice` | diamond (muted tonehead) | Roll pool only | the pitch it sings, note `P«cell»` |
 | `echo` | Echo | ECHO | silent voice | common | — | 1 | — | `hue-voice` | doubled waves | Roll pool only | the pitch it sings, note `P«cell»` |
 | `bend` | Bend | BEND | silent voice | common | — | 1 | — | `hue-voice` | kinked line | Roll pool only | the pitch it sings, note `P«cell»` |
@@ -31,20 +32,23 @@ Last updated: 2026-10-15 (broad and player-targeted amplitude boosters — the F
 | `infusor` | Booster | BOOST | booster | common | — | — | — | `hue-booster` | outward chevrons around a center dot | Starter shelf (40) and roll pool | `+«%»` |
 | `field` | Field | FIELD | booster | common | — | — | — | `hue-booster` | doubled outward chevrons around a center dot | Roll pool only | `+«%»` |
 | `spotlight` | Spotlight | SPOT | booster | common | — | — | — | `hue-booster` | dot with one focused beam | Roll pool only | `+«%»`, or the inactive verdict |
+| `chorus` | Chorus | CHOR | booster | uncommon | — | — | — | `hue-booster` | dot fronting three voice lines | Roll pool only | `+«%»`, note `chord response` |
 | `forge` | Forge | FORGE | forge | common | — | — | — | `hue-forge` | hex prism | Starter shelf (80) and roll pool | `«charge»/«threshold»` (charge register) |
 | `mutatorForge` | Mutator Forge | MUT. FORGE | forge | common | — | — | — | `hue-forge` | seeded-hexagon core on the chassis | Mutator tree entry | `«charge»/«threshold»` (charge register) |
 
 Rarity is each type's fixed acquisition rarity (`TYPE_RARITY`, ADR-0058) —
 authored in code, never rolled per copy. A roll draws the rarity band
-(shared `rarityProbability` table), then a type inside the band; the
-eighteen common types sample uniformly, and the two temporal designs
-(#372) stand alone in the uncommon band — 0.9% of slot draws before any
-draft-composition control (#378). Duplicate progress lives on the
-per-copy merge tier: two copies of the same type and tier combine into
-one at the next tier, up to the finite unlocked cap (`mergeCap`, 2 —
-three tiers, Arete raises it later, #380). The plate tint and rarity
-word read the type; the engraved rings read the tier. Mutator rarity is
-separate and unchanged (ADR-0043).
+(shared `rarityProbability` table), then a type inside the band: the
+roll pool's eighteen common types sample uniformly, the uncommon band
+holds three designs — the two temporal designs (#372) and the
+chord-response booster (#375) — and the rare band holds the Sideband
+(#375) alone; the Mutator Forge's common entry joins the pool only with
+the roll-pool purchase (ADR-0043). Duplicate
+progress lives on the per-copy merge tier: two copies of the same type
+and tier combine into one at the next tier, up to the finite unlocked cap
+(`mergeCap`, 2 — three tiers, Arete raises it later, #380). The plate
+tint and rarity word read the type; the engraved rings read the tier.
+Mutator rarity is separate and unchanged (ADR-0043).
 
 The profile axes column (issues #369/#370, ADR-0059) is each oscillator's
 fixed aptitude grades over the four comparable axes — base production,
@@ -96,8 +100,11 @@ same at level 0 tier 0 as at level 6 tier 2.
   Producer roles: the four waveform designs (Sine, Triangle, Square, Saw)
   share the base term, the Blaster's conversion curve replaces the
   charge factor entirely — the conversion is the charge, its charge axis
-  takes the absent grade — and the Afterglow (issue #372, ADR-0061)
-  multiplies the whole term by its session-clock warmup step.
+  takes the absent grade — the Sideband (issue #375, ADR-0064) converts
+  received charge into its chord response instead (the same replacement
+  rule on the chord axis, its charge factor reading exactly ×1), and the
+  Afterglow (issue #372, ADR-0061) multiplies the whole term by its
+  session-clock warmup step.
 - **silent voice** — produces no nous; its derived pitch counts in
   formations (forms and completes chords, conducts as a voice). Category
   trait (ADR-0048): a level-scaled uplift (+5%/LV, tuning) to every chord
@@ -127,15 +134,18 @@ same at level 0 tier 0 as at level 6 tier 2.
   specialist on every axis), delivered on its burst cycle. Every console
   fact credits each owned generator, board or tray alike, at the module's
   power — the same multiplier delivery scales.
-- **booster** — no synth term; empowers adjacent oscillators' amplitude,
-  each named design's authored share (`infusorBonus` = 0.2, `fieldBonus`
-  = 0.3, `spotlightBonus` = 0.5 — all × power × charge factor per
-  booster, tuning). Support is oscillator-only: generators, the Forge
-  family, and silent voices read none of it. Grants to the same term
-  add. Receives charge as continuous empowerment — the charge strengthens
-  the booster's own grant (issue #374, ADR-0063). The Spotlight's grant
-  follows the player's selected recipient (see its per-module note); the
-  Booster and the Field spread to every adjacent oscillator.
+- **booster** — no synth term; empowers adjacent oscillators through one
+  primary effect per design: amplitude (the Booster 0.2, the Field 0.3,
+  the Spotlight 0.5) or the chord response (the Chorus 0.5, issue #375,
+  ADR-0064 — added to the recipients' chord-response term, never the
+  amplitude leg, so it is inert without an active chord) — all × power ×
+  charge factor per booster, tuning. Support is oscillator-only:
+  generators, the Forge family, and silent voices read none of it.
+  Grants to the same term add. Receives charge as continuous
+  empowerment — the charge strengthens the booster's own grant (issue
+  #374, ADR-0063). The Spotlight's grant follows the player's selected
+  recipient (see its per-module note); every other design spreads to
+  all adjacent oscillators.
 - **forge** — chargeable (ADR-0012): accumulates received charge toward a
   rolling threshold (initial 60, ×1.5 growth); crossing mints a roll
   offer. The Mutator Forge is the second branch (ADR-0043), its own meter.
@@ -198,6 +208,22 @@ above it after. The clock is the session's own — pauses never move it, a
 restart resets it, and the module holds no private timer, so moving or
 re-placing it cannot preserve a phase. All figures are provisional
 tuning.
+
+### Sideband (`sideband`)
+The chord-centered alternative charge (issue #375, ADR-0064): received
+charge scales its authored chord response — ×2.0 uncharged (S strong,
+second only to the Triangle), toward ×4.0 at the conversion curve's
+asymptote — instead of applying any empowerment: its charge factor reads
+exactly ×1, always, and its charge axis takes the absent mark. The
+D-weak base (×0.5) is the whole price: chordless boards leave it behind
+whatever the charge reads, and a charged chordless Sideband earns
+exactly its uncharged value — the conversion has nothing to strengthen.
+Its niche is the charged chord board: the response compounds per chord
+instance, so the richer and the more charged the board, the further it
+climbs — past the generalists from one generator's strength, past the
+Saw's flat empowerment on rich boards from two generators' strength,
+while the charged Triangle keeps the chord crown. Provisional tuning,
+like every coefficient here.
 
 ### Harmonizer (`harmonizer`)
 The plain silent voice (ADR-0048): sings its own cell's pitch, produces
@@ -290,10 +316,52 @@ resumes when adjacency returns. A melted recipient drops the pick; a
 Spotlight merge keeps the surviving copy's own pick. One Spotlight beats
 one Field leg; two Field neighbors beat one Spotlight.
 
+### Chorus (`chorus`)
+The chord-response booster (issue #375, ADR-0064) — the category's first
+design whose primary effect is not amplitude: its share (0.5 × power ×
+charge factor, tuning) adds to every adjacent oscillator's chord-response
+term and never to the amplitude leg. Inert without an active chord, by
+construction: the response scales only named-instance bonuses, so a
+chordless board reads the same rate with or without one. Same-term grants
+add — two Choruses beside one voice contribute ×1.0 of response between
+them — and received charge strengthens the grant itself (the charged
+curve over the Chorus's own received strength). A standard voice reads
+×1.5 response beside one charged Chorus; the Triangle pairs with it
+toward ×3.0. Provisional tuning.
+
 ### Forge (`forge`) / Mutator Forge (`mutatorForge`)
 Accumulate received charge (`strength × power`) into their branch's
 shared meter; a threshold crossing banks a roll offer — module rolls into
 the one shared queue, mutator rolls into the Mutator tray.
+
+## Demonstration boards
+
+Two reference boards demonstrating the chord-centered wave's niches
+(issue #375). The figures below are the engine suite's own reads on the
+provisional coefficients — balance work may retune every number without
+touching the shapes.
+
+**The charged chord board (Sideband).** Six voices — C·G across three
+octave rows (three stacked Fifth instances per voice, one Octave beside)
+— with two generators charging the G column. Uncharged, the Triangle
+leads every G seat and the Sideband's D-weak base trails. Charge the
+seats and the order flips beneath the specialist: the Sideband's
+response compounds per instance (past the Sine from one generator's
+strength, past the Saw's flat empowerment once a seat rides two
+generators), while the charged Triangle keeps the crown and a charged
+chordless Sideband earns exactly its uncharged value. The lesson: charge
+is the fuel, chord richness is the multiplier, and neither pays without
+the other.
+
+**The chord-response support board (Chorus).** A single Fifth (C4 + G4)
+with a Chorus at the shared seat: both voices read the standard ×1.0
+response lifted to ×1.5, the Fifth's bonus landing larger on each term —
+and the board's composite leg never moves, because the Chorus grants no
+amplitude. Remove the chord (either voice to the tray) and the same
+Chorus reads exactly the bare rate: inert without an active chord. Swap
+it for a Field at the same seat and the amplitude leg moves instead —
++30% to the one adjacent voice's term, no chord term. The lesson: the
+Chorus is the piece a chord build buys, and only then.
 
 ## Glyph authoring notes
 
@@ -325,7 +393,11 @@ temporal wave (issue #372) added the Afterglow's swelling trace (the
 warmup curve drawn as its own envelope) and the Pulsewell's burst corner
 mark on the generator bolt. The booster wave (issue #374) spoke over the
 Booster's dot: the Field's doubled chevrons (the breadth it covers) and
-the Spotlight's single beam (the one chosen recipient). Two
+the Spotlight's single beam (the one chosen recipient). The
+chord-centered wave (issue #375) added the Sideband's side-flanked trace
+(the converted charge riding beside the note, never in it) and the
+Chorus's three voice lines fronting the Booster's dot (the choir it
+conducts). Two
 spacers' specials: the board face clips as a hexagonal ring window
 (chassis minus inner hexagon, nameplate at y −40), and the tray tile
 wears an unfilled inner hexagon (`inventoryTileSvg` special case) instead

@@ -229,7 +229,11 @@ export interface ChordAnalysis {
 // every named instance's bonus — the active build's pitch-ear nodes
 // (ADR-0046) pass their factor, the displayed bonus riding the term so the
 // chips and the rate never disagree; the formation quality is untouched.
-export function analyzeChords(singers: Singer[], spacers: DeployedModule[] = [], bonusScale = 1): ChordAnalysis {
+// `responses` (issue #375) carries the effective chord response per voice
+// id when the rate pass has authored live additions to it — the Sideband's
+// charge conversion scaling its authored coefficient, the Chorus's grants
+// adding beside it; absent, every voice reads its authored coefficient.
+export function analyzeChords(singers: Singer[], spacers: DeployedModule[] = [], bonusScale = 1, responses?: ReadonlyMap<string, number>): ChordAnalysis {
   const namedChords: NamedChordTerm[] = [];
   const participation = new Map<string, number>();
   const voiceMultiplier = new Map<string, number>();
@@ -268,11 +272,13 @@ export function analyzeChords(singers: Singer[], spacers: DeployedModule[] = [],
         for (const singer of group) memberSingers.push({ singer, own: i });
       });
       for (const { singer, own } of memberSingers) {
-        // The voice's authored chord response (issue #369, ADR-0059): how
-        // much of every containing instance's bonus its term receives.
-        // The formation's Q multiplies outside the response, once, after
-        // the walk — the chordless ×1.00 contract holds per profile.
-        const response = chordResponseOf(singer.module.type);
+        // The voice's effective chord response: the authored coefficient
+        // (issue #369, ADR-0059), or the rate pass's live read over it
+        // (issue #375) — the Sideband's charged conversion and the
+        // Chorus's grants live here. The formation's Q multiplies
+        // outside the response, once, after the walk — the chordless
+        // ×1.00 contract holds per profile.
+        const response = responses?.get(singer.module.id) ?? chordResponseOf(singer.module.type);
         let factor: number;
         let containing: number;
         if (!anySilent) {

@@ -40,17 +40,18 @@ describe("forge roll generation", () => {
   it("the band filters the type draw, and the fallback never corrupts the pool", () => {
     // Author one more uncommon design for the probe (ADR-0058's seam),
     // restore the table after — the roster's standing uncommon band is the
-    // temporal wave's two designs (#372).
+    // temporal wave's two designs (#372) and the chord-response booster
+    // (#375).
     const authored = TYPE_RARITY.echo;
     TYPE_RARITY.echo = "uncommon";
     try {
       const s = fresh();
-      // Slot one draws the uncommon band (0.995): afterglow, echo, and
-      // pulsewell match, and the 0.5 index draw lands the middle one —
-      // echo; slots two and three draw common bands (0.5) over the
-      // remaining pool.
+      // Slot one draws the uncommon band (0.995): afterglow, echo,
+      // pulsewell, and chorus match, and the 0.5 index draw lands the
+      // third — pulsewell; slots two and three draw common bands (0.5)
+      // over the remaining pool.
       const offer = generateOffer(s, stubRng([0.995, 0.5, 0.5, 0.5, 0.5, 0.5]));
-      expect(offer.candidates[0]!.type).toBe("echo");
+      expect(offer.candidates[0]!.type).toBe("pulsewell");
       // The uncommon type cannot be drawn twice: three distinct types, the
       // other two drawn from the common remainder, pool intact.
       const types = offer.candidates.map((c) => c.type);
@@ -74,6 +75,7 @@ describe("forge roll generation", () => {
     expect(ROLL_POOL).toContain("square");
     expect(ROLL_POOL).toContain("saw");
     expect(ROLL_POOL).toContain("afterglow");
+    expect(ROLL_POOL).toContain("sideband");
     expect(ROLL_POOL).toContain("harmonizer");
     expect(ROLL_POOL).toContain("echo");
     expect(ROLL_POOL).toContain("bend");
@@ -87,8 +89,9 @@ describe("forge roll generation", () => {
     expect(ROLL_POOL).toContain("infusor");
     expect(ROLL_POOL).toContain("field");
     expect(ROLL_POOL).toContain("spotlight");
+    expect(ROLL_POOL).toContain("chorus");
     expect(ROLL_POOL).toContain("forge");
-    expect(ROLL_POOL).toHaveLength(20);
+    expect(ROLL_POOL).toHaveLength(22);
   });
 
   it("persists outcomes when the roll is earned, not when it is revealed", () => {

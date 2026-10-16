@@ -10,7 +10,7 @@ import { amplifierGainOf } from "../engine/module-strength";
 // engraving is noise.
 import type { GameState, Hex, ModuleInstance, ModuleType, RateSnapshot } from "../engine/types";
 import { CATEGORY_OF } from "../engine/constants";
-import { boosterBonusOf, chargedFactor, hostPower, ritualAmpOf, spotlightRecipientOf } from "../engine/economy";
+import { boosterBonusOf, boosterTermOf, chargedFactor, hostPower, ritualAmpOf, spotlightRecipientOf } from "../engine/economy";
 import { forgeThreshold, mutatorForgeThreshold } from "../engine/rolls";
 import { cellNoteOf, noteNameOf } from "../engine/lattice";
 import { moduleIcon } from "./icons";
@@ -58,6 +58,7 @@ export const HUE_TOKEN_OF: Record<ModuleType, string> = {
   square: "hue-oscillator",
   saw: "hue-oscillator",
   afterglow: "hue-oscillator",
+  sideband: "hue-oscillator",
   harmonizer: "hue-voice",
   echo: "hue-voice",
   bend: "hue-voice",
@@ -71,6 +72,7 @@ export const HUE_TOKEN_OF: Record<ModuleType, string> = {
   infusor: "hue-booster",
   field: "hue-booster",
   spotlight: "hue-booster",
+  chorus: "hue-booster",
   forge: "hue-forge",
   mutatorForge: "hue-forge",
 };
@@ -279,9 +281,13 @@ export function faceReadoutFor(state: GameState, module: ModuleInstance, pos: He
   if (CATEGORY_OF[module.type] === "booster") {
     // The boosters read their live uplift; an inactive Spotlight wears the
     // verdict instead of a figure (issue #374) — the state in words, never
-    // a zero that could read as a weak grant.
+    // a zero that could read as a weak grant. A design whose term is the
+    // chord response (issue #375) names it beneath the same live shape —
+    // never read as amplitude uplift.
     const verdict = spotlightInactiveVerdict(state, module);
     if (verdict) return { readout: "—", readoutClass: "st-inactive", note: verdict };
+    const term = boosterTermOf(module.type);
+    if (term === "chord response") return { readout: `+${formatNumber(boosterUpliftOf(state, module, snapshot))}%`, note: term };
     return { readout: `+${formatNumber(boosterUpliftOf(state, module, snapshot))}%` };
   }
   if (module.type === "spacer") {

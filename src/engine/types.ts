@@ -23,8 +23,11 @@ export type Category =
 // charge into its synth term, singing and completing chords even uncharged
 // at zero output — the profile wave's first alternative charge behavior.
 // The Afterglow (issue #372) carries the category's first temporal profile:
-// its production warms up on the shared session clock.
-export type OscillatorType = "additive" | "blaster" | "triangle" | "square" | "saw" | "afterglow";
+// its production warms up on the shared session clock. The Sideband
+// (issue #375) is the third alternative-charge behavior: received charge
+// converts into its chord response instead of empowering it, over weak
+// standalone production.
+export type OscillatorType = "additive" | "blaster" | "triangle" | "square" | "saw" | "afterglow" | "sideband";
 
 // The silent-voice category (ADR-0048): silent pitched modules that produce
 // no nous but count in chord clusters — they form and complete chords and
@@ -57,8 +60,11 @@ export type GeneratorType = "focusKeyed" | "noteKeyed" | "goalKeyed" | "pulsewel
 // moderate support to every adjacent oscillator — and the Spotlight the
 // narrow one, stronger support to the one player-selected adjacent
 // oscillator. The Spotlight's selection lives on the module's own
-// `target` field.
-export type BoosterType = "infusor" | "field" | "spotlight";
+// `target` field. The Chorus (issue #375) is the category's first
+// non-amplitude design: its primary effect is the chord response — it
+// adds its share to adjacent oscillators' chord-response term and grants
+// no amplitude bonus, so it is inert without an active chord.
+export type BoosterType = "infusor" | "field" | "spotlight" | "chorus";
 
 export type ForgeType = "forge";
 // The Mutator Forge (ADR-0043, issue #198): the Forge family's second

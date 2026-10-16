@@ -175,6 +175,10 @@ _Avoid_: converter
 The session-clocked oscillator (issue #372): no authored tradeoff on the comparable axes — the category's standard base and responses — and its authored warmup curve over the session clock is the whole identity: weak opening, strong sustained production. Its timing is described directly, never graded; the clock is the session's own, so no restart buys sustained output and no movement preserves a phase.
 _Avoid_: warm-up bonus, ramp
 
+**Sideband**:
+The chord-centered oscillator (issue #375, ADR-0064): received charge converts into its chord response — the authored coefficient scaled by the conversion curve, ×1 uncharged toward ×2 at the asymptote — instead of applying any empowerment; its charge axis takes the absent mark and the replacement is stated in the disclosure words. Weak standalone production (D-weak base) is the defining tradeoff: chordless boards leave it behind, and a charged chordless Sideband earns exactly its uncharged value.
+_Avoid_: chord converter, chord battery
+
 **Charge**:
 A habit-independent resource produced by generators that empowers or charges other modules; its state is preserved between flow sessions.
 
@@ -233,6 +237,10 @@ _Avoid_: Infusor term
 **Recipient (Spotlight)**:
 The one adjacent oscillator a Spotlight's stronger uplift lands on — the player's pick, stored as the module's identity, never an output ranking (issue #374, ADR-0063). An invalid pick leaves the booster inactive in words on its own surfaces; the pick is remembered and support resumes when adjacency returns. A melted recipient drops the pick.
 _Avoid_: target lock, auto-target, strongest neighbor
+
+**Chorus**:
+The chord-response booster (issue #375, ADR-0064): its authored share adds to every adjacent oscillator's chord-response term and never to the amplitude leg, so it is inert without an active chord — a chordless board reads the same rate with or without one. Same-term grants add; received charge strengthens the grant itself.
+_Avoid_: chord booster (the amplitude sense), harmony module
 
 ### Quality and acquisition
 

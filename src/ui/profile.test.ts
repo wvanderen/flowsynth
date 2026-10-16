@@ -44,6 +44,32 @@ describe("grade chips on the Forge candidate tiles", () => {
     expect(chips[3]!.getAttribute("aria-label")).toBe("Charge response: —, absent effect");
   });
 
+  it("the Sideband's absent charge mark rides the replacement stated in words (issue #375)", () => {
+    app.state.bankedRolls = [{ id: "chord-roll", candidates: [
+      { id: "c-side", type: "sideband", tier: 0 },
+      { id: "c-chorus", type: "chorus", tier: 0 },
+      { id: "c-spacer", type: "spacer", tier: 0 },
+    ] }];
+    app.openModal("forge");
+    const side = panel().querySelector('[data-choice="c-side"]')!.closest(".candidate-tile")!;
+    const chips = [...side.querySelectorAll<HTMLButtonElement>(".profile-grade")];
+    expect(chips.map((chip) => chip.textContent)).toEqual(["base D", "boost B", "chord S", "charge —"]);
+    // The exact coefficients stay in the disclosure bodies; the effect
+    // line states where the charge goes instead (the term-tip markup
+    // rides inside it).
+    const charge = chips[3]!;
+    charge.focus();
+    const body = document.getElementById(charge.getAttribute("aria-describedby")!)!;
+    expect(body.textContent).toBe("Charge response · absent effect");
+    const effect = side.querySelector(".candidate-effect")!.textContent!;
+    expect(effect).toContain("→ chord response");
+    expect(effect).toContain("weak standalone term");
+    // The Chorus is a booster: no grade chips, its own term named.
+    const chorus = panel().querySelector('[data-choice="c-chorus"]')!.closest(".candidate-tile")!;
+    expect(chorus.querySelector(".profile-grades")).toBeNull();
+    expect(chorus.querySelector(".candidate-effect")!.textContent).toContain("chord response");
+  });
+
   it("keyboard focus opens the exact coefficient; Escape dismisses the disclosure alone", () => {
     app.openModal("forge");
     const chip = panel().querySelector<HTMLButtonElement>('[data-choice="c-square"] ~ * .profile-grade, .candidate-tile .profile-grade')!;
