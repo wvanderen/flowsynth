@@ -1,4 +1,4 @@
-import type { FocusApp, ModuleType, Rarity, ShelfType } from "../engine/types";
+import type { Category, FocusApp, ModuleType, Rarity, ShelfType, SpecialDraftKind } from "../engine/types";
 
 // The final names and faceplates (issue #219, wave 1; roster types wave 2):
 // display-layer only — `name` is the full name every tooltip, roster row,
@@ -55,6 +55,31 @@ export const SHELF_DESCRIPTIONS: Partial<Record<ShelfType, string>> = {
 };
 
 export const RARITY_LABEL: Record<Rarity, string> = { common: "common", uncommon: "uncommon", rare: "rare" };
+
+// The categories' display words (issue #379): the Jacquard Card's weave
+// picks read the category by its player-facing word. RITUAL wears its
+// switch vermillion in caps everywhere else; the word keeps that voice.
+export const CATEGORY_WORD: Record<Category, string> = {
+  oscillator: "Oscillator",
+  generator: "Generator",
+  booster: "Booster",
+  silentVoice: "Silent voice",
+  spacer: "Spacer",
+  forge: "Forge",
+  conduit: "Conduit",
+  ritual: "Ritual",
+};
+
+// The special drafts' display names (issue #379, parent #366): the Draft
+// Loom register's one-time products, one guarantee each — the Jacquard
+// Card weaves one chosen category, the Silk Warp drafts the rare band,
+// the Plied Weft lifts every candidate one merge tier. Provisional
+// naming.
+export const SPECIAL_DRAFT_NAME: Record<SpecialDraftKind, string> = {
+  category: "Jacquard Card",
+  rare: "Silk Warp",
+  tier: "Plied Weft",
+};
 
 // The merge tier's player-facing word (ADR-0058), 1-based — the verbal
 // home of the engraved rings for labels, tooltips, and screen readers.

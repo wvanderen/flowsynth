@@ -187,6 +187,14 @@ export interface MutatorRollOffer {
   candidates: [MutatorCandidate, MutatorCandidate];
 }
 
+// The special drafts' product kinds (issue #379, parent #366): the
+// scrap-purchased one-time drafts, each carrying one explicit guarantee
+// every candidate satisfies — `category` draws its whole offer from the
+// category picked when the entitlement is woven, `rare` draws the rare
+// band, `tier` mints every candidate at least one merge tier above base
+// (clamped to the unlocked cap, the Draft Loom's rungs riding on top).
+export type SpecialDraftKind = "category" | "rare" | "tier";
+
 export interface Meter {
   progress: number;
   earned: number;
@@ -477,6 +485,13 @@ export interface GameState {
   // the unlocked cap). Memorized with the scrap that pays for it: it
   // survives the arete reset. Lenient-defaulted to 0 at load.
   draftTierBonus: number;
+  // The special drafts' held entitlements (issue #379, parent #366):
+  // unused one-time purchases, keyed by product kind. A purchase
+  // increments its kind's count; weaving the entitlement consumes it
+  // exactly once and banks a guaranteed offer into the ordinary queue.
+  // Memorized with the scrap that pays for them: they survive the arete
+  // reset. Lenient-defaulted to all-zero at load.
+  specialDrafts: Record<SpecialDraftKind, number>;
   // The era/prestige count (ADR-0039): economy-bearing state (the claim
   // reads it), still awaiting a surface (ADR-0038's one-figure discipline).
   prestiges: number;

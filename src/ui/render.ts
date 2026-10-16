@@ -20,7 +20,7 @@ import { activeBuildFactors } from "../engine/builds";
 import { poolOutstanding } from "../engine/trust";
 import { arcCardDue } from "../engine/arc";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
-import type { DeployedModule, GameState, Hex, ModuleInstance, ModuleType, MutatorInstance, NamedChordTerm, Rarity, RateSnapshot } from "../engine/types";
+import type { Category, DeployedModule, GameState, Hex, ModuleInstance, ModuleType, MutatorInstance, NamedChordTerm, Rarity, RateSnapshot, SpecialDraftKind } from "../engine/types";
 import { DEV_BOARD_CAPACITIES, type App, type ChordHover, type ModalKind } from "./app";
 import {
   bindFocusSheet,
@@ -47,7 +47,7 @@ import { renderHexDetail } from "./hexdetail";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chordMarkCovers, chipWidth, CHORD_HUES, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
-import { APP_LABELS, META, RARITY_LABEL, SHELF_DESCRIPTIONS, tierWord } from "./meta";
+import { APP_LABELS, CATEGORY_WORD, META, RARITY_LABEL, SHELF_DESCRIPTIONS, SPECIAL_DRAFT_NAME, tierWord } from "./meta";
 import { typeRarityOf } from "../engine/constants";
 import { formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown } from "./format";
 import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG, CAPACITY_SVG, SCRAP_SVG } from "./ledger";
@@ -2565,8 +2565,10 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
       ? [app.ui.forgeFace, app.state.catalogEntryOwned, app.state.bankedRolls.length, app.state.bankedMutatorRolls.length, app.state.bankedRolls.at(-1)?.id ?? null, app.state.bankedMutatorRolls.at(-1)?.id ?? null,
         // The Draft Loom row (issue #378): the owned rungs and the balance
         // re-read with every purchase, so the row's chance, price, and
-        // muted state never stand stale in an open modal.
-        app.state.draftTierBonus, app.state.scrap]
+        // muted state never stand stale in an open modal. The special
+        // drafts' held entitlements ride beside them (issue #379): a
+        // purchase or a weave re-renders the rows and the chip strip.
+        app.state.draftTierBonus, app.state.scrap, JSON.stringify(app.state.specialDrafts)]
       : kind === "honesty"
         ? [app.exitPending, app.state.session?.accounting.poolSeconds ?? 0, app.state.session?.accounting.bucketNous ?? 0]
         : kind === "summary"
@@ -3286,8 +3288,16 @@ function catalogOwnedHtml(word: string): string {
 // the glossary meaning — description prose never grows around it. The
 // meanings here are the glossary's own, distilled to the one-line ceiling.
 // The union keeps the map closed: only glossary terms may render hoverable.
-type CatalogTerm = "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Headroom" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "habit build" | "goals";
+type CatalogTerm = "Oscillator" | "Generator" | "Booster" | "Silent voice" | "Spacer" | "Forge" | "Charge conduit" | "RITUAL" | "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Headroom" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "habit build" | "goals";
 const CATALOG_TERMS: Record<CatalogTerm, string> = {
+  Oscillator: "Pitched module contributing production",
+  Generator: "Produces charge from practice",
+  Booster: "Improves eligible adjacent modules",
+  "Silent voice": "Silent pitch that forms and strengthens chords",
+  Spacer: "Silent wire conducting chord adjacency",
+  Forge: "Received charge accumulates toward draft thresholds",
+  "Charge conduit": "Routes received charge onward without producing it",
+  RITUAL: "Received charge amplifies the active habit’s build effects",
   "merge tier": "Matching copies combine to raise authored strengths",
   "Harmonic capacity": "Whole-chord budget per voice",
   memorized: "Persists through arete reset",
@@ -3536,6 +3546,74 @@ function draftLoomHtml(state: GameState): string {
   </div>`;
 }
 
+// The special drafts' rows (issue #379, parent #366): the Modules face's
+// one-time products under the loom row, one row per product in the same
+// grammar — proper name, one effect line, the deeper mechanic in the
+// tooltip layer, and the scrap price on the buy. A held entitlement shows
+// its count and its Weave control; the Jacquard Card pairs each
+// category disclosure with its own weave, one pair per pool category. Weaving banks an
+// ordinary guaranteed offer — the candidates above resolve it with the
+// same choose and skip. The flow lock mutes everything; an unaffordable
+// price mutes the buy; a Plied Weft the unlocked cap cannot honor stands
+// muted with its siblings — the one unavailable state the grammar has.
+function specialDraftsHtml(state: GameState): string {
+  const locked = state.mode !== "upgrade";
+  const held = (kind: SpecialDraftKind) => state.specialDrafts[kind] ?? 0;
+  const buyButton = (kind: SpecialDraftKind, available: boolean) => {
+    const price = BALANCE.specialDraftCosts[kind];
+    const name = SPECIAL_DRAFT_NAME[kind];
+    return `<button class="loom-buy special-buy" data-buy-special="${kind}" aria-label="Buy a ${name} · ${formatInt(price)} scrap"${
+      locked || !available || state.scrap < price ? " disabled" : ""
+    }>Buy · ${formatInt(price)} <small class="scrap-mark" aria-hidden="true">${SCRAP_SVG}</small></button>`;
+  };
+  const weaveButton = (kind: SpecialDraftKind, guaranteeWord: string) =>
+    held(kind) > 0
+      ? `<button class="loom-buy special-weave" data-weave-special="${kind}" aria-label="Weave the held ${SPECIAL_DRAFT_NAME[kind]} · ${guaranteeWord}"${
+          locked ? " disabled" : ""
+        }>Weave</button>`
+      : "";
+  const jacquardChips =
+    held("category") > 0
+      ? `<div class="special-weaves" role="group" aria-label="Weave the held Jacquard Card — pick the category">${
+          (Object.keys(CATEGORY_WORD) as Category[])
+            .map(
+              (category) =>
+                `<span class="special-category-pick">${termTipHtml(category === "conduit" ? "Charge conduit" : category === "ritual" ? "RITUAL" : CATEGORY_WORD[category] as CatalogTerm, CATEGORY_WORD[category])}<button class="special-weave-pick" data-weave-special="category" data-special-category="${category}" aria-label="Weave the held Jacquard Card · ${CATEGORY_WORD[category]} draft"${
+                  locked ? " disabled" : ""
+                }>Weave</button></span>`,
+            )
+            .join("")
+        }</div>`
+      : "";
+  const tierAvailable = BALANCE.mergeCap >= 1;
+  return `<div class="forge-specials">
+    <div class="forge-special">
+      <span class="special-name">Jacquard Card</span>
+      <span class="special-effect">One draft, your chosen category · ${termTipHtml("memorized")}</span>
+      <span class="inst-tip loom-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="special-jacquard-mechanics" aria-label="Jacquard Card — what it does">ⓘ</button><span class="inst-tip-body" id="special-jacquard-mechanics" role="tooltip">Rarity still rides the ordinary bands</span></span>
+      ${held("category") > 0 ? `<span class="loom-state mono">${held("category")} held</span>` : ""}
+      ${buyButton("category", true)}
+    </div>
+    ${jacquardChips}
+    <div class="forge-special">
+      <span class="special-name">Silk Warp</span>
+      <span class="special-effect">One draft, every candidate rare · ${termTipHtml("memorized")}</span>
+      <span class="inst-tip loom-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="special-silk-mechanics" aria-label="Silk Warp — what it does">ⓘ</button><span class="inst-tip-body" id="special-silk-mechanics" role="tooltip">Category weights apply within the rare band</span></span>
+      ${held("rare") > 0 ? `<span class="loom-state mono">${held("rare")} held</span>` : ""}
+      ${buyButton("rare", true)}
+      ${weaveButton("rare", "a rare-band draft")}
+    </div>
+    <div class="forge-special">
+      <span class="special-name">Plied Weft</span>
+      <span class="special-effect">One draft, every candidate one ${termTipHtml("merge tier")} up · ${termTipHtml("memorized")}</span>
+      <span class="inst-tip loom-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="special-plied-mechanics" aria-label="Plied Weft — what it does">ⓘ</button><span class="inst-tip-body" id="special-plied-mechanics" role="tooltip">Offered tiers stop at the unlocked cap</span></span>
+      ${held("tier") > 0 ? `<span class="loom-state mono">${held("tier")} held</span>` : ""}
+      ${buyButton("tier", tierAvailable)}
+      ${weaveButton("tier", "a tiered draft")}
+    </div>
+  </div>`;
+}
+
 function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapshot): void {
   const { state, ui } = app;
   const face = ui.forgeFace;
@@ -3574,6 +3652,7 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
         </div>`).join("") : ""}
     </div>` : `<p class="empty-copy">No ${face === "mutators" ? "mutator" : "module"} rolls banked.</p>`}
     ${face === "modules" ? draftLoomHtml(state) : ""}
+    ${face === "modules" ? specialDraftsHtml(state) : ""}
     ${forgeMeterHtml(face)}`;
   wireTooltips(content, app.signal);
   updateForgeMetersLive(content, state, projected.forgeRate, projected.mutatorForgeRate);
@@ -3595,6 +3674,14 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
   });
   content.querySelectorAll<HTMLButtonElement>("[data-buy-draft-upgrade]").forEach(button => {
     app.listen(button, "click", () => app.buyDraftUpgradeAction());
+  });
+  content.querySelectorAll<HTMLButtonElement>("[data-buy-special]").forEach(button => {
+    app.listen(button, "click", () => app.buySpecialDraftAction(button.dataset.buySpecial as SpecialDraftKind));
+  });
+  content.querySelectorAll<HTMLButtonElement>("[data-weave-special]").forEach(button => {
+    app.listen(button, "click", () =>
+      app.weaveSpecialDraftAction(button.dataset.weaveSpecial as SpecialDraftKind, (button.dataset.specialCategory ?? "oscillator") as Category),
+    );
   });
   content.querySelectorAll<HTMLButtonElement>("[data-mut-choice]").forEach(button => {
     app.listen(button.parentElement!, "click", (event) => {

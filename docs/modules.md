@@ -6,7 +6,7 @@ new types and game-design concepts — the engine keys and records live in code
 design thinking lives. The roster table reflects the code as of the last
 update; when a type lands, update the table in the same change.
 
-Last updated: 2026-10-16 (draft composition weights and the Draft Loom — issue #378)
+Last updated: 2026-10-16 (guaranteed special drafts — issue #379)
 
 ## Roster
 
@@ -61,6 +61,20 @@ clamped to the unlocked cap, bought for 50/150/450 scrap
 (`tierBonusCosts`) on the Forge's Modules face. The rungs are memorized
 — they survive the arete reset beside the scrap that pays for them. All
 figures provisional tuning.
+
+The **special drafts** (issue #379, ADR-0068) are the scrap economy's
+deliberate one-time consumers, sold beside the loom row on the Modules
+face: the **Jacquard Card** (60 scrap) drafts the category picked when
+woven — rarity still rides the ordinary bands — the **Silk Warp**
+(150 scrap, above the 120 a three-rare offer scraps for) drafts the rare
+band, and the **Plied Weft** (100 scrap) mints every candidate at least
+one merge tier up, clamped to the unlocked cap with the loom's rungs
+riding on top. A purchase banks a held entitlement — memorized,
+stacking, consumed exactly once when woven — and weaving pushes an
+ordinary offer into the shared queue: choice, skip payout, and later
+scrap read the one schedule. Candidates draw independently, so a
+guarantee's duplicate feeds the merge path; the first-roll rig never
+applies. All names, prices, and packaging provisional.
 
 The profile axes column (issues #369/#370, ADR-0059) is each oscillator's
 fixed aptitude grades over the four comparable axes — base production,

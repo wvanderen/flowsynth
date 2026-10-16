@@ -10,6 +10,7 @@ import {
   buyGoalCapacity,
   buyRowUnlock,
   buyShelfModule,
+  buySpecialDraft,
   chooseMutatorRoll,
   chooseRoll,
   combine,
@@ -37,6 +38,7 @@ import {
   unlockMutatorSlot,
   upgradeAll,
   upgradeModuleLevels,
+  useSpecialDraft,
   type ActionResult,
   type BulkPurchase,
 } from "../engine/actions";
@@ -69,11 +71,11 @@ import { equipBuildNode, unequipBuildNode } from "../engine/builds";
 import { createGoal, deleteGoal, rollGoalOccurrences, setGoalColor, DEFAULT_GOAL_COLOR } from "../engine/goals";
 import { allocatedDevScenarioRates, createDevScenario, type DevBoardResult } from "../engine/dev-scenario";
 import type { StressProgress, StressRow } from "../engine/allocation-stress";
-import type { GameState, GoalColor, Hex, ModuleInstance, MutatorFamily, MutatorInstance, Rarity, ShelfType } from "../engine/types";
+import type { Category, GameState, GoalColor, Hex, ModuleInstance, MutatorFamily, MutatorInstance, Rarity, ShelfType, SpecialDraftKind } from "../engine/types";
 import type { FocusFace, NotesFace } from "./focus";
 import { render } from "./render";
 import { FAMILY_WORD, mutatorBoardLive, refreshMutPreview } from "./mutators";
-import { HISTORY_PAGE_ROWS, META } from "./meta";
+import { HISTORY_PAGE_ROWS, META, CATEGORY_WORD, SPECIAL_DRAFT_NAME } from "./meta";
 import { browserChannels, type SignalChannels } from "./signals";
 import { suppressNextClick } from "./click";
 
@@ -1763,6 +1765,39 @@ export class App {
     }
     const chance = Math.round(draftTierChanceOf(this.state.draftTierBonus) * 100);
     this.say(`Draft Loom improved · tier bonus ${chance}%.`);
+    this.save();
+    this.render();
+  }
+
+  // The special drafts' purchase (issue #379): scrap buys one unused
+  // entitlement and the toast names the held count. A refusal — flow
+  // lock, empty bank, or a tier product the unlocked cap cannot honor —
+  // says so and touches nothing.
+  buySpecialDraftAction(kind: SpecialDraftKind): void {
+    const result = buySpecialDraft(this.state, kind);
+    if (!result.ok) {
+      this.say(result.reason ?? "That special draft cannot be bought.");
+      this.render();
+      return;
+    }
+    this.say(`${SPECIAL_DRAFT_NAME[kind]} bought · ${this.state.specialDrafts[kind]} held.`);
+    this.save();
+    this.render();
+  }
+
+  // The special drafts' weave (issue #379): one held entitlement becomes
+  // one guaranteed offer in the ordinary queue — the Forge's candidates
+  // above resolve it with the same choose and skip. The toast names the
+  // guarantee so the banked draft reads in the ledger line.
+  weaveSpecialDraftAction(kind: SpecialDraftKind, category: Category): void {
+    const result = useSpecialDraft(this.state, kind, category);
+    if (!result.ok) {
+      this.say(result.reason ?? "That special draft cannot be woven.");
+      this.render();
+      return;
+    }
+    const guarantee = kind === "category" ? `${CATEGORY_WORD[category]} draft` : kind === "rare" ? "rare draft" : "tiered draft";
+    this.say(`${SPECIAL_DRAFT_NAME[kind]} woven · ${guarantee} banked.`);
     this.save();
     this.render();
   }

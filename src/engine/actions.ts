@@ -1,4 +1,4 @@
-import { BALANCE, EPS, isOscillatorType, NEXT_RARITY, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE, SHELF_TYPES, typeRarityOf } from "./constants";
+import { BALANCE, CATEGORY_OF, EPS, isOscillatorType, NEXT_RARITY, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, ROLL_POOL, POOL_JOIN_TYPE, SHELF_MODULE, SHELF_TYPES, typeRarityOf } from "./constants";
 import { claimOf, horizonReached } from "./accumulator";
 import { rowUnlockCost, unlockableRows } from "./catalog";
 import { nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "./capacity";
@@ -16,8 +16,8 @@ import { moduleScrapValue, skipPayoutOf } from "./scrap";
 import { syncAchievements } from "./achievements";
 import { syncChordDiscoveries } from "./library";
 import { freshAccounting } from "./trust";
-import { generateMutatorOffer, nextDraftUpgradePrice, type Rng } from "./rolls";
-import type { GameState, Hex, ModuleInstance, MutatorInstance, Rarity, SessionReflection, ShelfType } from "./types";
+import { generateMutatorOffer, generateSpecialOffer, nextDraftUpgradePrice, type Rng } from "./rolls";
+import type { Category, GameState, Hex, ModuleInstance, MutatorInstance, Rarity, SessionReflection, ShelfType, SpecialDraftKind } from "./types";
 
 // The Arete purchases' shared refusal, one wording everywhere: nothing of
 // Arete acts outside upgrade mode (ADR-0044).
@@ -714,6 +714,43 @@ export function buyDraftUpgrade(state: GameState): ActionResult {
   return { ok: true, unlocked: checkUnlocks(state) };
 }
 
+// The special drafts' purchase (issue #379, parent #366): scrap buys one
+// unused entitlement of the product's kind — the Jacquard Card (category),
+// the Silk Warp (rare), the Plied Weft (+1 merge tier). Every candidate of
+// the draft it later weaves will satisfy the bought guarantee; nothing is
+// promised beyond it. Refusals land before any charge: the flow lock, an
+// unaffordable price, and a Plied Weft the unlocked cap cannot honor (no
+// candidate could mint above base) all refuse without consuming scrap.
+// Entitlements are memorized: they survive the arete reset beside the
+// scrap that pays for them, and counts stack — each weave consumes
+// exactly one.
+export function buySpecialDraft(state: GameState, kind: SpecialDraftKind): ActionResult {
+  if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
+  if (kind === "tier" && BALANCE.mergeCap < 1) return fail("No draft can mint above the base tier.");
+  const price = BALANCE.specialDraftCosts[kind];
+  if (state.scrap < price) return fail("Not enough scrap.");
+  state.scrap -= price;
+  state.specialDrafts[kind] = (state.specialDrafts[kind] ?? 0) + 1;
+  return { ok: true, unlocked: checkUnlocks(state) };
+}
+
+// The special drafts' weave (issue #379, parent #366): one held
+// entitlement is consumed exactly once and the guarantee'd offer banks
+// into the ordinary queue — choice, skip payout, and later scrap all read
+// the same authoritative rules as any banked roll, because from here on it
+// is one. The Jacquard Card names its category in the weave, which must
+// be one the current pool drafts (the roll-pool join included). Repeated
+// weaves with nothing held refuse without minting an offer.
+export function useSpecialDraft(state: GameState, kind: SpecialDraftKind, category: Category, rng: Rng = Math.random): ActionResult {
+  if (state.mode !== "upgrade") return fail("Forge choices belong to upgrade mode.");
+  if ((state.specialDrafts[kind] ?? 0) < 1) return fail("That special draft is not held.");
+  const pool = state.rollPoolJoined ? [...ROLL_POOL, POOL_JOIN_TYPE] : [...ROLL_POOL];
+  if (!pool.some((type) => CATEGORY_OF[type] === category)) return fail("That category is not in the draft pool.");
+  state.specialDrafts[kind]--;
+  state.bankedRolls.push(generateSpecialOffer(state, kind, category, rng));
+  return ok;
+}
+
 // The Arete Catalog's sheet purchases (ADR-0040 as amended by ADR-0044,
 // issue #197): upgrade-mode-only, Arete-paid, one-time, and surviving
 // prestige. The entry's engine effects landed with the mutator contracts
@@ -964,8 +1001,9 @@ export function buyCapacityDiscount(state: GameState): ActionResult {
 // rides claimOf forever after, and the Arete offerings beside the harmonic-
 // capacity ladder (issue #259): the owned ceiling unlocks and discounts —
 // and the scrap balance (issue #377), which persists with the collection
-// it values, and the Draft Loom's owned rungs (issue #378), which persist
-// with the scrap that pays for them.
+// it values, the Draft Loom's owned rungs (issue #378), which persist
+// with the scrap that pays for them, and the special drafts' held
+// entitlements (issue #379), which persist unused beside them.
 // Module levels return to base, nous to
 // a fresh opening grant, and the charge window resets — as does the
 // ladder's purchased capacity (issue #259): the voices return to one. The era measure

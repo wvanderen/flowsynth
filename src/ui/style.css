@@ -2862,6 +2862,71 @@ body.hex-detail-open .upgrade-all {
   border: 1px solid var(--line);
 }
 
+/* The special drafts' rows (issue #379): the loom row's one-time products,
+   the same row grammar repeated down the group — hairline separations,
+   name/effect/tip/cost per row — with the Jacquard Card's weave picks in
+   their own wrapping strip beneath its row. */
+.forge-specials {
+  display: flex;
+  flex-direction: column;
+  margin: 0 0 4px;
+  border-top: 1px solid var(--line);
+}
+.forge-special {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 9px 2px;
+}
+.forge-special + .forge-special,
+.forge-special + .special-weaves {
+  border-top: 1px solid var(--line);
+}
+.forge-special .special-name {
+  font: 600 12px/1 var(--font-condensed);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.forge-special .special-effect {
+  font: 400 11px/1.4 var(--font-sans);
+  color: var(--muted);
+}
+.forge-special .loom-tip { margin-left: auto; }
+.forge-special .loom-buy.special-buy { min-height: 44px; }
+.forge-special .loom-buy.special-weave {
+  min-height: 44px;
+  color: var(--ink);
+}
+.forge-special .loom-buy.special-weave:hover:not(:disabled) { border-color: var(--ink); }
+.forge-special .loom-state { font-size: 11px; color: var(--scrap); }
+
+/* The Jacquard Card pairs each category disclosure with a square-cut
+   weave control; the pairs wrap together at the row's width. */
+.special-weaves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 9px 2px;
+}
+.special-category-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.special-category-pick .term-trigger { min-height: 44px; }
+.special-weaves .special-weave-pick {
+  min-height: 44px;
+  padding: 5px 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel-veil);
+  color: var(--ink);
+  font: 600 11px/1 var(--font-condensed);
+  letter-spacing: 0.04em;
+}
+.special-weaves .special-weave-pick:hover:not(:disabled) { border-color: var(--scrap); }
+.special-weaves .special-weave-pick:disabled { color: var(--muted); }
+
 /* The live drag ghost: the module's own face tile, carried under the cursor. */
 .drag-ghost {
   position: fixed;

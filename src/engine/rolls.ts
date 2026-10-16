@@ -1,6 +1,6 @@
 import { BALANCE, CATEGORY_OF, isOscillatorType, MUTATOR_FAMILIES, POOL_JOIN_TYPE, ROLL_POOL, TYPE_RARITY } from "./constants";
 import { newModuleId } from "./state";
-import type { Candidate, Category, GameState, Meter, ModuleType, MutatorRollOffer, Rarity, RollOffer, RollSources } from "./types";
+import type { Candidate, Category, GameState, Meter, ModuleType, MutatorRollOffer, Rarity, RollOffer, RollSources, SpecialDraftKind } from "./types";
 
 export type Rng = () => number;
 
@@ -12,6 +12,14 @@ function rollRarity(rng: Rng): Rarity {
   if (roll < BALANCE.rarityProbability.common) return "common";
   if (roll < BALANCE.rarityProbability.common + BALANCE.rarityProbability.uncommon) return "uncommon";
   return "rare";
+}
+
+// One band draw and its empty-band fallback, shared by ordinary and
+// guaranteed drafts without spending an additional random value.
+function drawBandPool(pool: ModuleType[], rng: Rng): ModuleType[] {
+  const band = rollRarity(rng);
+  const matched = pool.filter((type) => TYPE_RARITY[type] === band);
+  return matched.length > 0 ? matched : pool;
 }
 
 // The category draw (issue #378, parent #366): one weighted pick over the
@@ -59,6 +67,61 @@ function drawCandidateTier(state: GameState, rng: Rng): number {
   return rng() < chance ? Math.min(1, BALANCE.mergeCap) : 0;
 }
 
+// The special drafts' tier read (issue #379, parent #366): the same loom
+// chance the ordinary draw reads, applied over the product's guaranteed
+// base tier — a Plied Weft candidate mints at least one tier up, the owned
+// rungs can add one more, and the unlocked cap clamps every offered tier.
+// With no rungs the read spends no rng value, whatever the base.
+function drawSpecialTier(state: GameState, rng: Rng, base: number): number {
+  const chance = draftTierChanceOf(state.draftTierBonus);
+  if (chance <= 0) return Math.min(base, BALANCE.mergeCap);
+  return Math.min(base + (rng() < chance ? 1 : 0), BALANCE.mergeCap);
+}
+
+// The special drafts' generation (issue #379, parent #366): the one
+// product each purchase banks — an ordinary-shaped offer whose every
+// candidate satisfies the bought guarantee. The pool reads exactly like
+// the ordinary draw's (the roll-pool join included); the guarantees bind
+// the composition, never the economy. Candidates draw independently, so
+// repeats are legal — the offer's distinct-candidate rule stays an
+// ordinary-draft invariant, and a special draft's duplicate feeds the
+// merge path. Per slot, streamable:
+//   · category — band, then a type inside band ∩ category (a band with
+//     none falls back to the whole category, spending no extra draw),
+//     plus the tier lift while rungs are owned: 6 draws per offer at no
+//     rungs, 9 with.
+//   · rare — a category among the rare band's present categories by the
+//     authored weights, then a type inside it, plus the lift: 6 / 9.
+//   · tier — the ordinary band → category → type walk, then the lift over
+//     the guaranteed base: 9 / 12.
+// The first-roll rig never applies (it reads the module meters, and a
+// special draft needs scrap no opening state can carry).
+export function generateSpecialOffer(state: GameState, kind: SpecialDraftKind, category: Category, rng: Rng): RollOffer {
+  const pool: ModuleType[] = state.rollPoolJoined ? [...ROLL_POOL, POOL_JOIN_TYPE] : [...ROLL_POOL];
+  const rarePool = pool.filter((type) => TYPE_RARITY[type] === "rare");
+  const candidates: Candidate[] = [];
+  for (let i = 0; i < 3; i++) {
+    let type: ModuleType;
+    if (kind === "rare") {
+      const rareCategory = drawDraftCategory(rarePool, rng);
+      const inCategory = rarePool.filter((t) => CATEGORY_OF[t] === rareCategory);
+      type = inCategory[Math.floor(rng() * inCategory.length)]!;
+    } else if (kind === "category") {
+      const bandPool = drawBandPool(pool, rng);
+      const inCategory = bandPool.filter((t) => CATEGORY_OF[t] === category);
+      const categoryPool = inCategory.length > 0 ? inCategory : pool.filter((t) => CATEGORY_OF[t] === category);
+      type = categoryPool[Math.floor(rng() * categoryPool.length)]!;
+    } else {
+      const bandPool = drawBandPool(pool, rng);
+      const walkCategory = drawDraftCategory(bandPool, rng);
+      const inCategory = bandPool.filter((t) => CATEGORY_OF[t] === walkCategory);
+      type = inCategory[Math.floor(rng() * inCategory.length)]!;
+    }
+    candidates.push({ id: newModuleId(state), type, tier: drawSpecialTier(state, rng, kind === "tier" ? 1 : 0) });
+  }
+  return { id: newModuleId(state), candidates: [candidates[0]!, candidates[1]!, candidates[2]!] };
+}
+
 // The opening's first roll (board-redesign spec §8) yields a synthesizer
 // candidate — the arc's beat is "the forge offers the synth it made", so a
 // pool draw without a synthesizer is re-rigged to carry one. Whether the
@@ -87,9 +150,7 @@ export function generateOffer(state: GameState, rng: Rng): RollOffer {
     // roster does. A band with no remaining types falls back to the whole
     // remaining pool, spending no extra draw. Each pick leaves the shared
     // pool exactly once, by identity — the distinct-candidate offer stands.
-    const band = rollRarity(rng);
-    const matched = pool.filter((type) => TYPE_RARITY[type] === band);
-    const bandPool = matched.length > 0 ? matched : pool;
+    const bandPool = drawBandPool(pool, rng);
     const category = drawDraftCategory(bandPool, rng);
     const inCategory = bandPool.filter((type) => CATEGORY_OF[type] === category);
     const type = inCategory[Math.floor(rng() * inCategory.length)]!;
