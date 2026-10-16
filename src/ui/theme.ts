@@ -60,6 +60,11 @@ const resources = {
   nous: "#cbcaff",
   "forge-glow": "#eecb82",
   arete: "#b994f5",
+  // Scrap (issue #377): the recovered collection value — its own token,
+  // wearing the forge register's amber family: the value feeds the Forge's
+  // draft products. Reuses the forge-glow figure, free to diverge in a
+  // table swap.
+  scrap: "#eecb82",
 } as const;
 
 const interactive = {

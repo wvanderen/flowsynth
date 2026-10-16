@@ -4,6 +4,7 @@ import { ALLOCATION_QUALITY_BOUNDS, idleTermsOf, summaryTermsOf } from "../engin
 import { claimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
 import { combinePreview, combineMutatorsPreview, hasMergeTwin, levelable, mergeAllPreview, type CombinePreview, type MergeSweep, upgradeAllPreview } from "../engine/actions";
+import { moduleScrapValue, skipPayoutOf } from "../engine/scrap";
 import { deployedAt } from "../engine/economy";
 import { sameHex } from "../engine/hex";
 import { forgeThreshold, flowThreshold, mutatorForgeThreshold } from "../engine/rolls";
@@ -49,7 +50,7 @@ import { updateSvg } from "./svg";
 import { APP_LABELS, META, RARITY_LABEL, SHELF_DESCRIPTIONS, tierWord } from "./meta";
 import { typeRarityOf } from "../engine/constants";
 import { formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown } from "./format";
-import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG, CAPACITY_SVG } from "./ledger";
+import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG, CAPACITY_SVG, SCRAP_SVG } from "./ledger";
 import { closeTooltips, wireTooltips } from "./instrument";
 import { instancesByClass, instancesKeyOf, libraryHeaderHtml, libraryIndexRowHtml, libraryStageHtml } from "./library";
 import { profileGradesHtml } from "./profile";
@@ -2423,6 +2424,16 @@ function mergeAllControlHtml(preview: MergeSweep, locked: boolean, surface: stri
   return `<div class="merge-all-controls">${action}${refund}</div>`;
 }
 
+// The tray tile's scrap control (issue #377): the copy's recovery value
+// beside the tile it scraps — the payout reads before the action, and the
+// ledger's scrap balance answers it. One builder serves both library
+// surfaces, with a separate labeled action below the placement tile.
+// Flow locks it with the tiles.
+function tileScrapControlHtml(module: ModuleInstance, locked: boolean): string {
+  const value = moduleScrapValue(module);
+  return `<button class="tile-scrap" data-scrap="${module.id}"${locked ? " disabled" : ""} aria-label="Scrap ${META[module.type].name} · +${formatInt(value)} scrap">Scrap <span class="scrap-payout"><small class="scrap-mark" aria-hidden="true">${SCRAP_SVG}</small><span class="mono">+${formatInt(value)}</span></span></button>`;
+}
+
 // The tray column's Modules face (§5, ADR-0027 as amended, issue #272):
 // the inventory as an always-open pinned column at the board's right edge —
 // no collapse toggle, no gesture-reopen, no second switch (the board tabs
@@ -2447,7 +2458,7 @@ function renderInventoryTray(app: App): void {
     inventory
       .map((m) => {
         const mergeable = hasMergeTwin(state, m.id);
-        return `<button class="inventory-tile" data-inv="${m.id}" data-rarity="${typeRarityOf(m.type)}" data-type="${m.type}" aria-label="${META[m.type].name} · ${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)}${mergeable ? " · Eligible to merge" : ""}"${mergeable ? " data-mergeable" : ""} title="${META[m.type].name} · ${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)} — click, then a cell">${inventoryTileSvg(m)}</button>`;
+        return `<span class="tray-tile"><button class="inventory-tile" data-inv="${m.id}" data-rarity="${typeRarityOf(m.type)}" data-type="${m.type}" aria-label="${META[m.type].name} · ${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)}${mergeable ? " · Eligible to merge" : ""}"${mergeable ? " data-mergeable" : ""} title="${META[m.type].name} · ${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)} — click, then a cell">${inventoryTileSvg(m)}</button>${tileScrapControlHtml(m, state.mode !== "upgrade")}</span>`;
       })
       .join("") || `<span class="tray-empty">drag a module here to store it</span>`
   }</div>${control}`;
@@ -2458,6 +2469,9 @@ function renderInventoryTray(app: App): void {
   });
   tray.querySelectorAll<HTMLButtonElement>("[data-merge-all]").forEach((button) => {
     app.listen(button, "click", () => app.mergeAllAction());
+  });
+  tray.querySelectorAll<HTMLButtonElement>("[data-scrap]").forEach((button) => {
+    app.listen(button, "click", () => app.scrapModuleAction(button.dataset.scrap!));
   });
   wireTooltips(tray, app.signal);
 }
@@ -2759,7 +2773,7 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
         inventory
           .map((m) => {
             const mergeable = !locked && hasMergeTwin(state, m.id);
-            return `<span class="inst-tip tray-tile-detail"><button class="inventory-tile" data-inv="${m.id}" data-rarity="${typeRarityOf(m.type)}" data-type="${m.type}"${locked ? " disabled" : ""}${mergeable ? " data-mergeable" : ""} aria-label="${META[m.type].name} · ${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)}${mergeable ? " · Eligible to merge" : ""}" aria-describedby="tray-module-${m.id}">${inventoryTileSvg(m)}</button>${trayTileDisclosure(`tray-module-${m.id}`, META[m.type].name, `${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)} — ${locked ? "locked during flow" : "tap, then a cell"}`)}</span>`;
+            return `<span class="inst-tip tray-tile-detail"><button class="inventory-tile" data-inv="${m.id}" data-rarity="${typeRarityOf(m.type)}" data-type="${m.type}"${locked ? " disabled" : ""}${mergeable ? " data-mergeable" : ""} aria-label="${META[m.type].name} · ${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)}${mergeable ? " · Eligible to merge" : ""}" aria-describedby="tray-module-${m.id}">${inventoryTileSvg(m)}</button>${tileScrapControlHtml(m, locked)}${trayTileDisclosure(`tray-module-${m.id}`, META[m.type].name, `${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)} — ${locked ? "locked during flow" : "tap, then a cell"}`)}</span>`;
           })
           .join("") || `<span class="tray-empty">drag a module here to store it</span>`
       }</div>${inventory.length > 0 || mergePreview.combines > 0 ? `<div class="tray-sheet-actions">${mergeAllControlHtml(mergePreview, locked, "sheet")}</div>` : ""}`;
@@ -2778,6 +2792,9 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
   });
   content.querySelectorAll<HTMLButtonElement>("[data-merge-all]").forEach((button) => {
     app.listen(button, "click", () => app.mergeAllAction());
+  });
+  content.querySelectorAll<HTMLButtonElement>("[data-scrap]").forEach((button) => {
+    app.listen(button, "click", () => app.scrapModuleAction(button.dataset.scrap!));
   });
   content.querySelectorAll<HTMLButtonElement>("[data-mut-tray]").forEach((button) => {
     const id = button.getAttribute("data-mut-tray")!;
@@ -3503,7 +3520,11 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
       </div>
       <button id="close-modal" aria-label="Close Forge">Close <kbd>Esc</kbd></button>
     </div>
-    ${hasOffer ? `<p class="forge-choice-cue">Choose 1 of ${face === "modules" ? 3 : 2}</p>
+    ${hasOffer ? `<div class="forge-cue-row"><p class="forge-choice-cue">Choose 1 of ${face === "modules" ? 3 : 2}</p>${
+      face === "modules" && offer
+        ? `<button class="forge-skip" data-skip-offer="${offer.id}" aria-label="Skip draft · +${formatInt(skipPayoutOf(offer))} scrap">Skip <span class="mono">+${formatInt(skipPayoutOf(offer))}</span><small class="scrap-mark" aria-hidden="true">${SCRAP_SVG}</small></button>`
+        : ""
+    }</div>
     <div class="candidates ${face === "mutators" ? "mut-candidates" : ""}">
       ${face === "modules" && offer ? offer.candidates.map(candidate => `
         <div class="candidate-tile" data-rarity="${typeRarityOf(candidate.type)}" data-type="${candidate.type}"><button class="candidate-pick" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${typeRarityOf(candidate.type)}" data-type="${candidate.type}" aria-label="Take ${RARITY_LABEL[typeRarityOf(candidate.type)]} ${META[candidate.type].name} · ${tierWord(candidate.tier)}" aria-describedby="forge-effect-${candidate.id}"></button>
@@ -3536,6 +3557,9 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
       if (event.target instanceof Element && event.target.closest(".inst-tip")) return;
       app.chooseCandidate(button.dataset.offer!, button.dataset.choice!);
     });
+  });
+  content.querySelectorAll<HTMLButtonElement>("[data-skip-offer]").forEach(button => {
+    app.listen(button, "click", () => app.skipDraftAction(button.dataset.skipOffer!));
   });
   content.querySelectorAll<HTMLButtonElement>("[data-mut-choice]").forEach(button => {
     app.listen(button.parentElement!, "click", (event) => {
@@ -3638,7 +3662,7 @@ function renderPrestigeModal(app: App, content: HTMLElement): void {
     ${modalTop("PRESTIGE")}
     <h2 id="modal-title">Begin the next era?</h2>
     <p class="lead">Prestige banks <strong class="mono">${claim} Arete</strong> and starts the era over: module levels return to base${capacityClause}, and your nous and charge return to the opening.</p>
-    <p class="lead muted">Your board and its placement, the tray, banked Forge rolls and progress, feats, your whole life record, your Arete, and lifetime nous all stay.</p>
+    <p class="lead muted">Your board and its placement, the tray, banked Forge rolls and progress, feats, your whole life record, your Arete, your scrap, and lifetime nous all stay.</p>
     <div class="modal-actions">
       <button id="prestige-cancel">Not yet</button>
       <button id="prestige-confirm" class="primary">Prestige and claim ${claim} Arete</button>

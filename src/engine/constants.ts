@@ -207,6 +207,17 @@ export interface Balance {
   // bonus to fire — once per note, never on re-saves (notes are
   // append-only). Character earning has no minimum. Provisional tuning.
   noteCreationMinChars: number;
+  // ── The scrap valuation (issue #377, ADR-0066) ──────────────────────
+  // A copy's recovery value is scrapValue[fixed type rarity] scaled by
+  // scrapTierFactor per merge tier. The factor is exactly 2 so the
+  // schedule conserves collection value through merging: two copies at
+  // tier t carry the same combined scrap value as the one copy at tier
+  // t + 1 they combine into, and a directly drafted (legacy-carried)
+  // higher tier is worth the same as its merged equivalent. Levels and
+  // invested nous price no scrap — the schedule values the collection,
+  // not the upgrade spend. Provisional tuning throughout.
+  scrapValue: Record<Rarity, number>;
+  scrapTierFactor: number;
 }
 
 // Provisional tuning throughout; the redesign spec's numbers are not final
@@ -276,6 +287,8 @@ export const BALANCE: Balance = {
   flowCadenceSeconds: 1800,
   noteCharCreditCap: 300,
   noteCreationMinChars: 20,
+  scrapValue: { common: 5, uncommon: 15, rare: 40 },
+  scrapTierFactor: 2,
 };
 
 // The chord vocabulary (#218's eleven classes, ADR-0021/0022 as extended by

@@ -270,6 +270,23 @@ export function capacityLedgerHtml(state: GameState): string {
   return capacityReadHtml(state, false);
 }
 
+// ── The scrap read (§7, issue #377) ─────────────────────────────────────
+// The board ledger's scrap balance — the collection value recovered from
+// scrapped modules and skipped drafts (ADR-0066), sitting with the
+// currencies between the arete read and the capacity read. One ambient
+// figure in the resource group, its own register; payouts and spends
+// never read anywhere else. The canonical mark speaks the board's own
+// language: the hex chassis, chipped by the scrap it came from.
+export const SCRAP_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 2.5 20.2 7.25v9.5L12 21.5 3.8 16.75v-9.5Z"/>
+  <path d="M12 2.5 9.6 9.4l3.1 2.1-2.4 4.2 2.9 5.8"/>
+  <path d="M9.6 9.4 3.8 7.25M12.7 11.5l7.5-1.3"/>
+</svg>`;
+
+export function scrapLedgerHtml(): string {
+  return `<span class="ledger-fig ledger-scrap" title="Recovered from unwanted modules and skipped drafts"><b class="mono" data-live="scrap"></b><small class="scrap-mark" aria-hidden="true">${SCRAP_SVG}</small></span>`;
+}
+
 // ── The board ledger (§7, issue #270) ───────────────────────────────────
 // One clipped instrument panel docked above the board: the resources group
 // left — `1.24k ν · 18.6 ν/s · 6 ◇`, the arete read in its color with the
@@ -308,6 +325,7 @@ export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
           ${rateCellHtml()}
         </span>
         ${areteLedgerHtml(state)}
+        ${scrapLedgerHtml()}
         ${capacityLedgerHtml(state)}
         <span class="ledger-rule" aria-hidden="true"></span>
         <span class="ledger-chips">
@@ -344,6 +362,9 @@ export function updateLedgerLive(
   liveAttr(scope, "nous", "title", formatInt(state.nous));
   set("rate", formatNumber(snapshot.rate));
   if (catalogOpen(state)) set("arete", formatInt(state.arete));
+  // The scrap balance (issue #377): one figure, patched in place like the
+  // other resources — a scrap or skip on any surface moves this read.
+  set("scrap", formatInt(state.scrap));
   // The ambient allowance (#333): one figure, the economy's own — the
   // standard voice's whole-chord budget, every board's floor (#373). A
   // purchase moves it on the next render, and the meter's values ride the
@@ -388,6 +409,7 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
           ? `<span class="info-read info-arete" title="Arete — banked by prestige; spent in the catalog"><b class="mono" data-live="i-arete"></b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small></span>`
           : `<span class="info-read info-arete arete-dim" title="Unlocks at first Arete Reset">${areteTelegraphHtml()}</span>`
       }
+      <span class="info-read info-scrap" title="Recovered from unwanted modules and skipped drafts"><b class="mono" data-live="i-scrap"></b><small class="scrap-mark" aria-hidden="true">${SCRAP_SVG}</small></span>
       ${capacityReadHtml(state, true)}</div>`;
     app.listen(document.getElementById("info-rate"), "click", () => app.openModal("rate"));
     wireTooltips(host, app.signal);
@@ -400,6 +422,8 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
   // the centered pill never breathes with the rate's trailing digits.
   set("i-rate", formatFixed(snapshot.rate));
   if (catalogOpen(state)) set("i-arete", formatInt(state.arete));
+  // The scrap balance's phone face (issue #377), patched like the rest.
+  set("i-scrap", formatInt(state.scrap));
   // The ambient allowance (#333): the phone face of the ledger's read,
   // meter values riding the same patch (#351).
   set("i-capacity", String(voiceCapacityOf(state)));

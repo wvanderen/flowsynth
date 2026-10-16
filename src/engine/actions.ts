@@ -12,6 +12,7 @@ import { logSessionPractice } from "./habits";
 import { plannedTargetHit } from "./records";
 import { rollGoalOccurrences } from "./goals";
 import { creditFocusEarning } from "./reserves";
+import { moduleScrapValue, skipPayoutOf } from "./scrap";
 import { syncAchievements } from "./achievements";
 import { syncChordDiscoveries } from "./library";
 import { freshAccounting } from "./trust";
@@ -37,6 +38,10 @@ export interface ActionResult {
   // Feats unlocked by this action (ADR-0015): in-session unlocks queue into
   // the session's summary row instead, so callers don't toast these twice.
   unlocked?: string[];
+  // The scrap a scrapping or skipping action banked (issue #377): the
+  // caller reports the payout — the recovery value with the scrap action,
+  // the offer's payout with the skip.
+  scrap?: number;
 }
 
 // The bulk result shared by the per-module ladder and the board sweeps.
@@ -586,6 +591,29 @@ function runMergeSweep(state: GameState): MergeSweep & { unlocked: string[] } {
   return { combines, refund, unlocked };
 }
 
+// The scrap action (issue #377, ADR-0066): an owned module leaves the
+// roster once and its recovery value — the one valuation schedule, the
+// named type's fixed rarity scaled per merge tier — banks into the scrap
+// balance. Upgrade-mode-only like every reconfiguration; levels and
+// invested nous are not refunded (the schedule values the collection, not
+// the upgrade spend — ADR-0066). The melted-targeting rule (issue #374)
+// applies to removal the same way combining treats it: a scrapped
+// recipient's id resolves to nothing forever, so every Spotlight
+// pointing at it drops its pick — the remembered-selection rule keeps
+// temporary invalidation, never a dead reference.
+export function scrapModule(state: GameState, id: string): ActionResult {
+  if (state.mode !== "upgrade") return fail("Scrapping happens between sessions.");
+  const module = findModule(state, id);
+  if (!module) return fail("Module not found.");
+  const value = moduleScrapValue(module);
+  state.modules = state.modules.filter((m) => m.id !== id);
+  for (const other of state.modules) {
+    if (other.target === id) other.target = null;
+  }
+  state.scrap += value;
+  return { ok: true, scrap: value, unlocked: checkUnlocks(state) };
+}
+
 export function placeModule(state: GameState, id: string, pos: Hex): ActionResult {
   if (state.mode !== "upgrade") return fail("The grid is locked during flow.");
   const module = findModule(state, id);
@@ -644,6 +672,26 @@ export function chooseRoll(state: GameState, offerId: string, candidateId: strin
   // draw, the converted legacy band from an old save.
   state.modules.push(createModule(state, candidate.type, candidate.tier));
   return { ok: true, unlocked: checkUnlocks(state) };
+}
+
+// The skip action (issue #377, ADR-0066): the module roll's second path —
+// take none of the three candidates and bank the offer's payout, the
+// greatest scrap value among them. The payout equals taking the best
+// candidate and immediately scrapping it (the same mint, the same
+// schedule), so skipping can never beat the take-and-scrap round trip.
+// The offer is consumed once — a repeated id is simply not banked — and
+// the payout lands in the one scrap balance, nowhere else. Mutator rolls
+// are untouched: unchosen candidates still vanish without consolation
+// (ADR-0043).
+export function skipRoll(state: GameState, offerId: string): ActionResult {
+  if (state.mode !== "upgrade") return fail("Forge choices belong to upgrade mode.");
+  const index = state.bankedRolls.findIndex((o) => o.id === offerId);
+  if (index === -1) return fail("That roll is not banked.");
+  const offer = state.bankedRolls[index]!;
+  const payout = skipPayoutOf(offer);
+  state.bankedRolls.splice(index, 1);
+  state.scrap += payout;
+  return { ok: true, scrap: payout, unlocked: checkUnlocks(state) };
 }
 
 // The Arete Catalog's sheet purchases (ADR-0040 as amended by ADR-0044,
@@ -894,7 +942,9 @@ export function buyCapacityDiscount(state: GameState): ActionResult {
 // the Mutator tray with its pending rolls and its Forge branch's fill and
 // earned count — and the Horizon break (issue #200), whose overfill scaling
 // rides claimOf forever after, and the Arete offerings beside the harmonic-
-// capacity ladder (issue #259): the owned ceiling unlocks and discounts.
+// capacity ladder (issue #259): the owned ceiling unlocks and discounts —
+// and the scrap balance (issue #377), which persists with the collection
+// it values.
 // Module levels return to base, nous to
 // a fresh opening grant, and the charge window resets — as does the
 // ladder's purchased capacity (issue #259): the voices return to one. The era measure

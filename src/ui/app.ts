@@ -28,8 +28,10 @@ import {
   resumeSession,
   returnModule,
   returnMutator,
+  scrapModule,
   setBendShift,
   setBoosterTarget,
+  skipRoll,
   startSession,
   unlockMutatorSlot,
   upgradeAll,
@@ -1706,6 +1708,43 @@ export class App {
       result.unlocked,
       `MERGE ALL: ${sweep.combines} combine${sweep.combines === 1 ? "" : "s"}${refund}.`,
     );
+    this.save();
+    this.render();
+  }
+
+  // The tray tile's scrap action (issue #377): the module leaves the
+  // roster once, its recovery value banks once, and the toast names both.
+  // A copy mid-placement is put down first — the gesture never chases a
+  // ghost id.
+  scrapModuleAction(id: string): void {
+    if (this.ui.placing === id) this.ui.placing = null;
+    const module = this.state.modules.find((m) => m.id === id);
+    const result = scrapModule(this.state, id);
+    if (!result.ok) {
+      this.say(result.reason ?? "This module cannot be scrapped.");
+      this.render();
+      return;
+    }
+    this.announceUnlocks(
+      result.unlocked,
+      `${module ? META[module.type].name : "Module"} scrapped · +${formatInt(result.scrap ?? 0)} scrap.`,
+    );
+    this.save();
+    this.render();
+  }
+
+  // The draft's skip action (issue #377): the offer is consumed once and
+  // its payout — the best candidate's scrap value — banks to the balance.
+  // The Forge modal stays open on the next banked roll, so a sweep of
+  // skips is one panel visit.
+  skipDraftAction(offerId: string): void {
+    const result = skipRoll(this.state, offerId);
+    if (!result.ok) {
+      this.say(result.reason ?? "That roll cannot be skipped.");
+      this.render();
+      return;
+    }
+    this.say(`Roll skipped · +${formatInt(result.scrap ?? 0)} scrap.`);
     this.save();
     this.render();
   }
