@@ -3068,13 +3068,13 @@ function capacityCeilingsLeft(state: GameState): boolean {
   return nextCeilingPrice(state) !== null;
 }
 
-// The capacity products as one entry each, bought twice at a rising price
+// The Arete ladder products as one entry each, bought at a rising price
 // (issue #310): the owned figure is the only purchase-count read, the mono
 // delta reads what the next buy changes, the buy button carries the next
 // price, and the engraved owned-word lands when the ladder is sold out.
 // No row-info tooltip and no lock state — hoverable product names and
 // effect terms carry what the surface cannot show.
-const CAPACITY_PRODUCTS: Record<"extenders" | "catalysts", {
+const ARETE_LADDER_PRODUCTS: Record<"extenders" | "catalysts" | "beam", {
   name: CatalogTerm;
   id: string;
   ownedWord: string;
@@ -3108,10 +3108,20 @@ const CAPACITY_PRODUCTS: Record<"extenders" | "catalysts", {
     },
     effect: () => `Each takes 20% off every ${termTipHtml("Poly Expander")} price · ${termTipHtml("memorized")}`,
   },
+  beam: {
+    name: "Warp Beam",
+    id: "buy-arete-beam",
+    ownedWord: "extended",
+    ownedOf: (state) => state.mergeCapPurchases,
+    nextPrice: mergeCapIncreaseCost,
+    rungs: BALANCE.mergeCapCosts.length,
+    delta: (state) => `${tierWord(unlockedMergeCap(state))} → ${tierWord(unlockedMergeCap(state) + 1)}`,
+    effect: () => `Raises the ${termTipHtml("merge tier")} cap one tier each · ${termTipHtml("memorized")}`,
+  },
 };
 
-function capacityProductRowHtml(app: App, key: "extenders" | "catalysts"): string {
-  const product = CAPACITY_PRODUCTS[key];
+function areteLadderRowHtml(app: App, key: "extenders" | "catalysts" | "beam"): string {
+  const product = ARETE_LADDER_PRODUCTS[key];
   const owned = product.ownedOf(app.state);
   const price = product.nextPrice(app.state);
   return `<article class="catalog-row">
@@ -3119,22 +3129,6 @@ function capacityProductRowHtml(app: App, key: "extenders" | "catalysts"): strin
       price === null ? "" : `<p class="t-note mono">${product.delta(app.state)}</p>`
     }</div>
     ${price === null ? catalogOwnedHtml(product.ownedWord) : areteBuyButtonHtml(app, product.id, price)}
-  </article>`;
-}
-
-// The merge cap's row (issue #380, parent #366): the Catalog's third
-// module-economy product, in the capacity rows' own grammar — the owned
-// figure against the ladder, the before → after cap, and the Arete price
-// on the buy; the engraved owned-word lands when the ladder is sold out.
-function mergeCapRowHtml(app: App): string {
-  const owned = app.state.mergeCapPurchases;
-  const price = mergeCapIncreaseCost(app.state);
-  const cap = unlockedMergeCap(app.state);
-  return `<article class="catalog-row">
-    <div><h3 class="t-condensed">${termTipHtml("Warp Beam")} <span class="mono">${owned}/${BALANCE.mergeCapCosts.length}</span></h3><p class="t-note">Raises the ${termTipHtml("merge tier")} cap one tier each · ${termTipHtml("memorized")}</p>${
-      price === null ? "" : `<p class="t-note mono">cap ${cap} → ${cap + 1}</p>`
-    }</div>
-    ${price === null ? catalogOwnedHtml("extended") : areteBuyButtonHtml(app, "buy-arete-beam", price)}
   </article>`;
 }
 
@@ -3376,9 +3370,9 @@ function catalogAreteFaceHtml(app: App): string {
           <div><h3 class="t-condensed">Mutator layer</h3><p class="t-note">Unlocks: Mutator Grid · 1 Mutator slot · 1 Mutator roll · this catalog</p></div>
           ${catalogOwnedHtml("ACQUIRED")}
         </article>
-        ${capacityProductRowHtml(app, "extenders")}
-        ${capacityProductRowHtml(app, "catalysts")}
-        ${mergeCapRowHtml(app)}
+        ${areteLadderRowHtml(app, "extenders")}
+        ${areteLadderRowHtml(app, "catalysts")}
+        ${areteLadderRowHtml(app, "beam")}
         <article class="catalog-row">
           <div><h3 class="t-condensed">${termTipHtml("Headroom")}</h3><p class="t-note">Earning past the ${termTipHtml("nous")} cap scales the ${termTipHtml("Arete")} claim · ${termTipHtml("memorized")}</p>${
             broken ? "" : `<p class="t-note mono">claim ${state.prestiges + 1} → up to ${BALANCE.horizonBreakClaimCap}</p>`

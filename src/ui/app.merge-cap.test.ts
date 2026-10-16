@@ -37,7 +37,7 @@ describe("the Warp Beam's row (issue #380)", () => {
     openArete();
     expect(beamRow()).toBeTruthy();
     expect(beamRow().querySelector(".mono")!.textContent).toBe(`0/${BALANCE.mergeCapCosts.length}`);
-    expect(beamRow().textContent).toContain(`cap ${BALANCE.mergeCap} → ${BALANCE.mergeCap + 1}`);
+    expect(beamRow().textContent).toContain(`Tier ${BALANCE.mergeCap + 1} → Tier ${BALANCE.mergeCap + 2}`);
     expect(beamBuy().textContent).toBe(`5 Arete`);
     expect(beamBuy().disabled).toBe(true); // the fresh state banks no Arete
     app.state.arete = BALANCE.mergeCapCosts[0];
@@ -53,10 +53,10 @@ describe("the Warp Beam's row (issue #380)", () => {
     expect(app.state.mergeCapPurchases).toBe(1);
     expect(app.state.arete).toBe(BALANCE.mergeCapCosts[1]);
     expect(unlockedMergeCap(app.state)).toBe(BALANCE.mergeCap + 1);
-    expect(status()).toContain(`Merge cap raised — copies now combine to tier ${BALANCE.mergeCap + 1}.`);
+    expect(status()).toContain(`Merge cap raised — copies now combine to Tier ${BALANCE.mergeCap + 2}.`);
     // The rebuilt row quotes the next rung against the raised cap.
     expect(beamRow().querySelector(".mono")!.textContent).toBe(`1/${BALANCE.mergeCapCosts.length}`);
-    expect(beamRow().textContent).toContain(`cap ${BALANCE.mergeCap + 1} → ${BALANCE.mergeCap + 2}`);
+    expect(beamRow().textContent).toContain(`Tier ${BALANCE.mergeCap + 2} → Tier ${BALANCE.mergeCap + 3}`);
     app.closeModal();
   });
 

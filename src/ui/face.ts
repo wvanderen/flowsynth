@@ -80,8 +80,9 @@ export const HUE_TOKEN_OF: Record<ModuleType, string> = {
 
 // The face's two quality axes (ADR-0058): the plate tint keys the type's
 // fixed rarity, the engraved rings read the copy's merge tier — one ring
-// per tier, one to three. A future cap raise (#380) extends the radii.
-const RING_RADII = [55, 50, 45];
+// per tier, through every Warp Beam purchase. Keep the innermost ring
+// outside the face content while fitting the extended ladder (#380).
+const RING_RADII = [55, 53, 51, 49, 47, 45];
 export function ringCount(tier: number): number {
   return Math.min(Math.max(tier, 0), RING_RADII.length - 1) + 1;
 }
