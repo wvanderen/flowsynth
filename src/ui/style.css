@@ -878,6 +878,12 @@ h1, h2, h3, p { margin: 0; }
    the canonical mark at 15px. One ambient figure; the selected voice's
    used/available stays local to the reserved readout and Hex detail. */
 .ledger-capacity { color: var(--ink); }
+/* The scrap read (issue #377): the recovered collection value in its
+   register, the canonical mark at 15px — the balance's one home, patched
+   in place like the other resources. A read, never a door. */
+.ledger-scrap, .game-info-strip .info-scrap { color: var(--scrap); }
+.scrap-mark svg { width: 15px; height: 15px; display: block; }
+.ledger-fig .scrap-mark, .info-read .scrap-mark { color: inherit; }
 .capacity-mark svg { width: 15px; height: 15px; display: block; }
 .ledger-capacity .capacity-mark, .info-read .capacity-mark { color: var(--muted); }
 /* The hairline division, then the chips right-aligned: paired icon +
@@ -2765,6 +2771,55 @@ body.hex-detail-open .upgrade-all {
   height: 5px;
   background: var(--ink);
 }
+
+/* The scrap control (issue #377): the copy's recovery value on a
+   square-cut chip in the scrap register — mark + figure, the payout read
+   before the action. The narrow column corners it over the tile's top
+   edge; the sheet stacks it into the row between tile and disclosure. */
+.tray-tile { position: relative; }
+.tile-scrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 0;
+  padding: 3px 6px;
+  border-color: var(--line-strong);
+  background: var(--panel-veil);
+  color: var(--scrap);
+  font: 600 10px/1 var(--mono);
+}
+.tile-scrap:hover:not(:disabled) { border-color: var(--scrap); }
+.tile-scrap:disabled { color: var(--muted); }
+.tile-scrap .scrap-mark svg { width: 9px; height: 9px; display: block; }
+.tray-tile .tile-scrap {
+  position: absolute;
+  bottom: -2px;
+  right: -4px;
+  z-index: 1;
+}
+/* The Forge draft's skip control (issue #377): the offer's payout beside
+   the choose cue — same register, same chip. */
+.forge-cue-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.forge-cue-row .forge-choice-cue { margin: 0; }
+.forge-skip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 0;
+  padding: 5px 10px;
+  border-color: var(--line-strong);
+  background: var(--panel-veil);
+  color: var(--scrap);
+  font: 600 12px/1 var(--font-condensed);
+  letter-spacing: 0.04em;
+}
+.forge-skip:hover:not(:disabled) { border-color: var(--scrap); }
+.forge-skip .scrap-mark svg { width: 11px; height: 11px; display: block; }
 
 /* The live drag ghost: the module's own face tile, carried under the cursor. */
 .drag-ghost {

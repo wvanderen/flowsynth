@@ -466,6 +466,11 @@ export interface GameState {
   // action — the nth prestige banks n (ADR-0042's linear base), and no
   // code path grants it otherwise, permanently.
   arete: number;
+  // The scrap balance (issue #377, ADR-0066): the collection value
+  // recovered from scrapped modules and skipped module rolls — the one
+  // canonical store; payouts land nowhere else. Survives the arete reset
+  // with the collection it values. Lenient-defaulted to 0 at load.
+  scrap: number;
   // The era/prestige count (ADR-0039): economy-bearing state (the claim
   // reads it), still awaiting a surface (ADR-0038's one-figure discipline).
   prestiges: number;

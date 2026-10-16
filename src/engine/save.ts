@@ -109,6 +109,12 @@ export function deserialize(text: string): LoadResult {
   if (typeof raw.horizonBroken !== "boolean") {
     merged.horizonBroken = false;
   }
+  // The scrap balance (issue #377) lenient-defaults the same way: absent
+  // or corrupt reads as nothing banked — exactly what a pre-scrap save
+  // owes. A negative figure is corrupt, not a debt.
+  if (typeof raw.scrap !== "number" || !Number.isFinite(raw.scrap) || raw.scrap < 0) {
+    merged.scrap = 0;
+  }
   // The harmonic-capacity ladder (issue #259) lenient-defaults the same
   // way: absent or corrupt counts read as zero — no purchases this era, no
   // Arete offerings owned — exactly what a pre-ladder save owes, and
