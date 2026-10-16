@@ -3288,8 +3288,16 @@ function catalogOwnedHtml(word: string): string {
 // the glossary meaning — description prose never grows around it. The
 // meanings here are the glossary's own, distilled to the one-line ceiling.
 // The union keeps the map closed: only glossary terms may render hoverable.
-type CatalogTerm = "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Headroom" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "habit build" | "goals";
+type CatalogTerm = "Oscillator" | "Generator" | "Booster" | "Silent voice" | "Spacer" | "Forge" | "Charge conduit" | "RITUAL" | "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Headroom" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "habit build" | "goals";
 const CATALOG_TERMS: Record<CatalogTerm, string> = {
+  Oscillator: "Pitched module contributing production",
+  Generator: "Produces charge from practice",
+  Booster: "Improves eligible adjacent modules",
+  "Silent voice": "Silent pitch that forms and strengthens chords",
+  Spacer: "Silent wire conducting chord adjacency",
+  Forge: "Received charge accumulates toward draft thresholds",
+  "Charge conduit": "Routes received charge onward without producing it",
+  RITUAL: "Received charge amplifies the active habit’s build effects",
   "merge tier": "Matching copies combine to raise authored strengths",
   "Harmonic capacity": "Whole-chord budget per voice",
   memorized: "Persists through arete reset",
@@ -3542,8 +3550,8 @@ function draftLoomHtml(state: GameState): string {
 // one-time products under the loom row, one row per product in the same
 // grammar — proper name, one effect line, the deeper mechanic in the
 // tooltip layer, and the scrap price on the buy. A held entitlement shows
-// its count and its Weave control; the Jacquard Card's weave names its
-// category in the pick, one chip per pool category. Weaving banks an
+// its count and its Weave control; the Jacquard Card pairs each
+// category disclosure with its own weave, one pair per pool category. Weaving banks an
 // ordinary guaranteed offer — the candidates above resolve it with the
 // same choose and skip. The flow lock mutes everything; an unaffordable
 // price mutes the buy; a Plied Weft the unlocked cap cannot honor stands
@@ -3570,9 +3578,9 @@ function specialDraftsHtml(state: GameState): string {
           (Object.keys(CATEGORY_WORD) as Category[])
             .map(
               (category) =>
-                `<button class="special-weave-pick" data-weave-special="category" data-special-category="${category}" aria-label="Weave the held Jacquard Card · ${CATEGORY_WORD[category]} draft"${
+                `<span class="special-category-pick">${termTipHtml(category === "conduit" ? "Charge conduit" : category === "ritual" ? "RITUAL" : CATEGORY_WORD[category] as CatalogTerm, CATEGORY_WORD[category])}<button class="special-weave-pick" data-weave-special="category" data-special-category="${category}" aria-label="Weave the held Jacquard Card · ${CATEGORY_WORD[category]} draft"${
                   locked ? " disabled" : ""
-                }>${CATEGORY_WORD[category]}</button>`,
+                }>Weave</button></span>`,
             )
             .join("")
         }</div>`
@@ -3590,7 +3598,7 @@ function specialDraftsHtml(state: GameState): string {
     <div class="forge-special">
       <span class="special-name">Silk Warp</span>
       <span class="special-effect">One draft, every candidate rare · ${termTipHtml("memorized")}</span>
-      <span class="inst-tip loom-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="special-silk-mechanics" aria-label="Silk Warp — what it does">ⓘ</button><span class="inst-tip-body" id="special-silk-mechanics" role="tooltip">The rare band holds Sideband and Exciter</span></span>
+      <span class="inst-tip loom-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="special-silk-mechanics" aria-label="Silk Warp — what it does">ⓘ</button><span class="inst-tip-body" id="special-silk-mechanics" role="tooltip">Category weights apply within the rare band</span></span>
       ${held("rare") > 0 ? `<span class="loom-state mono">${held("rare")} held</span>` : ""}
       ${buyButton("rare", true)}
       ${weaveButton("rare", "a rare-band draft")}

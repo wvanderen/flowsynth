@@ -14,6 +14,14 @@ function rollRarity(rng: Rng): Rarity {
   return "rare";
 }
 
+// One band draw and its empty-band fallback, shared by ordinary and
+// guaranteed drafts without spending an additional random value.
+function drawBandPool(pool: ModuleType[], rng: Rng): ModuleType[] {
+  const band = rollRarity(rng);
+  const matched = pool.filter((type) => TYPE_RARITY[type] === band);
+  return matched.length > 0 ? matched : pool;
+}
+
 // The category draw (issue #378, parent #366): one weighted pick over the
 // categories still present in the slot's pool. A present category's mass
 // is its authored weight alone — never its type count — so the oscillator
@@ -99,16 +107,12 @@ export function generateSpecialOffer(state: GameState, kind: SpecialDraftKind, c
       const inCategory = rarePool.filter((t) => CATEGORY_OF[t] === rareCategory);
       type = inCategory[Math.floor(rng() * inCategory.length)]!;
     } else if (kind === "category") {
-      const band = rollRarity(rng);
-      const matched = pool.filter((t) => TYPE_RARITY[t] === band);
-      const bandPool = matched.length > 0 ? matched : pool;
+      const bandPool = drawBandPool(pool, rng);
       const inCategory = bandPool.filter((t) => CATEGORY_OF[t] === category);
       const categoryPool = inCategory.length > 0 ? inCategory : pool.filter((t) => CATEGORY_OF[t] === category);
       type = categoryPool[Math.floor(rng() * categoryPool.length)]!;
     } else {
-      const band = rollRarity(rng);
-      const matched = pool.filter((t) => TYPE_RARITY[t] === band);
-      const bandPool = matched.length > 0 ? matched : pool;
+      const bandPool = drawBandPool(pool, rng);
       const walkCategory = drawDraftCategory(bandPool, rng);
       const inCategory = bandPool.filter((t) => CATEGORY_OF[t] === walkCategory);
       type = inCategory[Math.floor(rng() * inCategory.length)]!;
@@ -146,9 +150,7 @@ export function generateOffer(state: GameState, rng: Rng): RollOffer {
     // roster does. A band with no remaining types falls back to the whole
     // remaining pool, spending no extra draw. Each pick leaves the shared
     // pool exactly once, by identity — the distinct-candidate offer stands.
-    const band = rollRarity(rng);
-    const matched = pool.filter((type) => TYPE_RARITY[type] === band);
-    const bandPool = matched.length > 0 ? matched : pool;
+    const bandPool = drawBandPool(pool, rng);
     const category = drawDraftCategory(bandPool, rng);
     const inCategory = bandPool.filter((type) => CATEGORY_OF[type] === category);
     const type = inCategory[Math.floor(rng() * inCategory.length)]!;

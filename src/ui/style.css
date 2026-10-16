@@ -2901,14 +2901,20 @@ body.hex-detail-open .upgrade-all {
 .forge-special .loom-buy.special-weave:hover:not(:disabled) { border-color: var(--ink); }
 .forge-special .loom-state { font-size: 11px; color: var(--scrap); }
 
-/* The Jacquard Card's weave picks: one square-cut chip per pool category,
-   wrapping to the row's width — the pick is the weave. */
+/* The Jacquard Card pairs each category disclosure with a square-cut
+   weave control; the pairs wrap together at the row's width. */
 .special-weaves {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   padding: 9px 2px;
 }
+.special-category-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.special-category-pick .term-trigger { min-height: 44px; }
 .special-weaves .special-weave-pick {
   min-height: 44px;
   padding: 5px 10px;

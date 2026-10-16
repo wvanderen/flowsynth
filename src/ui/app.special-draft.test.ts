@@ -74,6 +74,30 @@ describe("the special drafts' rows (issue #379)", () => {
     app.closeModal();
   });
 
+  it("discloses categories without spending the held draft", () => {
+    app.state.specialDrafts.category = 1;
+    app.render();
+    app.openModal("forge");
+    const group = document.querySelector(".special-category-pick")!;
+    const term = group.querySelector<HTMLButtonElement>(".term-trigger")!;
+    const weave = group.querySelector<HTMLButtonElement>(".special-weave-pick")!;
+    expect(term.textContent).toBe("Oscillator");
+    expect(weave.textContent).toBe("Weave");
+    term.focus();
+    expect(term.getAttribute("aria-expanded")).toBe("true");
+    term.click(); // the same activation used by touch and Enter
+    expect(document.getElementById(term.getAttribute("aria-describedby")!)!.classList.contains("inst-show")).toBe(true);
+    expect(app.state.specialDrafts.category).toBe(1);
+    expect(app.state.bankedRolls).toHaveLength(0);
+    term.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(term.getAttribute("aria-expanded")).toBe("false");
+    expect(document.querySelector("#modal-content .special-weaves")).not.toBeNull();
+    weave.click();
+    expect(app.state.specialDrafts.category).toBe(0);
+    expect(app.state.bankedRolls[0]!.candidates.every((c) => CATEGORY_OF[c.type] === "oscillator")).toBe(true);
+    app.closeModal();
+  });
+
   it("weaves the Jacquard Card into a category-guaranteed offer the Forge resolves", () => {
     app.state.scrap = BALANCE.specialDraftCosts.category;
     app.render();
