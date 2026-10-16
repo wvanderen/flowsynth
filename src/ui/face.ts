@@ -73,6 +73,7 @@ export const HUE_TOKEN_OF: Record<ModuleType, string> = {
   field: "hue-booster",
   spotlight: "hue-booster",
   chorus: "hue-booster",
+  exciter: "hue-booster",
   forge: "hue-forge",
   mutatorForge: "hue-forge",
 };
@@ -281,14 +282,14 @@ export function faceReadoutFor(state: GameState, module: ModuleInstance, pos: He
   if (CATEGORY_OF[module.type] === "booster") {
     // The boosters read their live uplift; an inactive Spotlight wears the
     // verdict instead of a figure (issue #374) — the state in words, never
-    // a zero that could read as a weak grant. A design whose term is the
-    // chord response (issue #375) names it beneath the same live shape —
-    // never read as amplitude uplift.
+    // a zero that could read as a weak grant. A design whose term is not
+    // the amplitude (issues #375/#376) names it beneath the same live
+    // shape — never read as amplitude uplift.
     const verdict = spotlightInactiveVerdict(state, module);
     if (verdict) return { readout: "—", readoutClass: "st-inactive", note: verdict };
     const term = boosterTermOf(module.type);
-    if (term === "chord response") return { readout: `+${formatNumber(boosterUpliftOf(state, module, snapshot))}%`, note: term };
-    return { readout: `+${formatNumber(boosterUpliftOf(state, module, snapshot))}%` };
+    if (term === "amplitude") return { readout: `+${formatNumber(boosterUpliftOf(state, module, snapshot))}%` };
+    return { readout: `+${formatNumber(boosterUpliftOf(state, module, snapshot))}%`, note: term };
   }
   if (module.type === "spacer") {
     // The spacer is silent wire: it never sounds, never joins a pitch set —

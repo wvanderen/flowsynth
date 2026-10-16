@@ -18,7 +18,7 @@ describe("forge roll generation", () => {
     for (const type of types) {
       expect(ROLL_POOL).toContain(type);
     }
-    // Draws without replacement over the twenty-type pool: additive,
+    // Draws without replacement over the twenty-three-type pool: additive,
     // then echo (index 5 of the seventeen remaining commons), then saw
     // (index 3 of the sixteen left).
     expect(types).toEqual(["additive", "echo", "saw"]);
@@ -90,8 +90,9 @@ describe("forge roll generation", () => {
     expect(ROLL_POOL).toContain("field");
     expect(ROLL_POOL).toContain("spotlight");
     expect(ROLL_POOL).toContain("chorus");
+    expect(ROLL_POOL).toContain("exciter");
     expect(ROLL_POOL).toContain("forge");
-    expect(ROLL_POOL).toHaveLength(22);
+    expect(ROLL_POOL).toHaveLength(23);
   });
 
   it("persists outcomes when the roll is earned, not when it is revealed", () => {

@@ -40,6 +40,9 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
   // The chord-response booster (issue #375): the category's first
   // non-amplitude design — the role names its term.
   chorus: { name: "Chorus", short: "CHOR", role: "Chord response · every neighbor" },
+  // The charge-response booster (issue #376): the role names its term and
+  // its condition — the grant reads only on charged recipients.
+  exciter: { name: "Exciter", short: "EXCT", role: "Charge response · charged recipients" },
   forge: { name: "Forge", short: "Forge", role: "Rolls at threshold" },
   mutatorForge: { name: "Mutator Forge", short: "Mut. Forge", role: "Mutator rolls at threshold" },
 };

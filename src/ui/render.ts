@@ -3394,6 +3394,9 @@ function forgeEffect(type: ModuleInstance["type"], tier: number): string {
     // The chord-response booster (issue #375): the term it lifts named in
     // the line — never read as amplitude.
     case "chorus": return `Neighbors' chord response +${formatNumber(BALANCE.chorusBonus * 100 * power)}% · charge boosts share · needs a chord`;
+    // The charge-response booster (issue #376): the term named and the
+    // condition stated — the grant reads only on charged recipients.
+    case "exciter": return `Neighbors' charge response +${formatNumber(BALANCE.exciterBonus * 100 * power)}% · charge boosts share · needs charged recipients`;
     case "forge": return "Received charge → module rolls";
     case "mutatorForge": return "Received charge → mutator rolls";
     default: return "Not yet active";
@@ -3440,6 +3443,8 @@ function candidateReadout(type: ModuleInstance["type"], tier: number): string {
       return `+${formatNumber(BALANCE.spotlightBonus * 100 * power)}%`;
     case "chorus":
       return `+${formatNumber(BALANCE.chorusBonus * 100 * power)}%`;
+    case "exciter":
+      return `+${formatNumber(BALANCE.exciterBonus * 100 * power)}%`;
     case "forge":
     case "mutatorForge":
       return `${formatNumber(power)}/s`;

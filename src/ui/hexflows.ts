@@ -29,7 +29,7 @@ import { amplifierGainOf, tierPowerOf } from "../engine/module-strength";
 // the static wave.
 import { BALANCE, CHARGE_RECEIVING_CATEGORIES, CATEGORY_OF } from "../engine/constants";
 import { baseTermOf, productionClockFactorOf, temporalTimingOf, usesChordConversion } from "../engine/profiles";
-import { blasterConversion, boosterBonusOf, boosterTermOf, chargedFactor, emittedStrength, hostPower, modulePower, mutatorAt, mutatorMagnitude, ritualAmpOf, sessionClockOf } from "../engine/economy";
+import { boosterBonusOf, boosterTermOf, chargedFactor, chordConversionScaleOf, emittedStrength, exciterGrantsAt, hostPower, modulePower, mutatorAt, mutatorMagnitude, ritualAmpOf, sessionClockOf } from "../engine/economy";
 import type { GameState, ModuleInstance, RateSnapshot } from "../engine/types";
 import { buildFactorsFor } from "../engine/builds";
 import { activeHabit } from "../engine/habits";
@@ -86,10 +86,12 @@ function outcomeRow(state: GameState, module: ModuleInstance, snapshot: RateSnap
     // The boosters read their live uplift; an inactive Spotlight has no
     // outcome figure to state (issue #374) — its verdict row in the
     // production rows IS the outcome, stated once. A design whose term is
-    // the chord response names it (issue #375), never read as amplitude.
+    // not the amplitude names it (issues #375/#376), never read as
+    // amplitude.
     if (spotlightInactiveVerdict(state, module)) return "";
+    const term = boosterTermOf(module.type);
     const uplift = `+${formatNumber(boosterUpliftOf(state, module, snapshot))}%`;
-    return row(boosterTermOf(module.type) === "chord response" ? "Chord response" : "Booster uplift", uplift, "result");
+    return row(term === "amplitude" ? "Booster uplift" : term.replace(/^./, (c) => c.toUpperCase()), uplift, "result");
   }
   if (module.type === "forge") return row("Forge", `+${formatNumber(contribution?.value ?? 0)} progress/s`, "result");
   if (module.type === "mutatorForge") return row("Mutator Forge", `+${formatNumber(contribution?.value ?? 0)} progress/s`, "result");
@@ -146,14 +148,15 @@ function productionRows(state: GameState, module: ModuleInstance, snapshot: Rate
     if (relationship !== "charge") rows.push(row("Incoming charge", `⌁${formatNumber(strength)}`));
     multiplier("Relay gain", amplifierGainOf(module));
   } else if (CATEGORY_OF[module.type] === "booster") {
-    // The authored share is per design (issues #374/#375); an inactive
-    // Spotlight's rows are its verdict alone — the product rows would
-    // quote a grant nothing receives. The row label names the design's
-    // authored term.
+    // The authored share is per design (issues #374/#375/#376); an
+    // inactive Spotlight's rows are its verdict alone — the product rows
+    // would quote a grant nothing receives. The row label names the
+    // design's authored term.
     const verdict = spotlightInactiveVerdict(state, module);
     if (verdict) rows.push(row(verdict, "", "inert"));
     else {
-      rows.push(row(boosterTermOf(module.type) === "chord response" ? "Base chord response" : "Base uplift", `+${formatNumber(100 * boosterBonusOf(module.type))}%`));
+      const term = boosterTermOf(module.type);
+      rows.push(row(term === "amplitude" ? "Base uplift" : `Base ${term}`, `+${formatNumber(100 * boosterBonusOf(module.type))}%`));
       multiplier("Host power", hostPower(state, module));
       multiplier("Charged empowerment", chargedFactor(strength));
     }
@@ -283,10 +286,12 @@ function chordFlowHtml(state: GameState, module: ModuleInstance, snapshot: RateS
     // The Sideband's charged read (issue #375): the factor its
     // received charge lends the response the factor above already
     // carries — a decomposition row beside the terms, never a second
-    // empowerment leg.
+    // empowerment leg. The Exciter's grants deepen the same scaling
+    // (issue #376), read off the one engine helper.
     const strength = snapshot.chargeStrength.get(module.id) ?? 0;
     if (usesChordConversion(module.type) && strength > 0) {
-      rows.push(row("Charge → response", `×${formatNumber(1 + blasterConversion(strength))}`));
+      const scale = chordConversionScaleOf(module.type, strength, exciterGrantsAt(state, module, snapshot.chargeStrength));
+      rows.push(row("Charge → response", `×${formatNumber(scale)}`));
     }
   } else {
     rows.push(row("inert · no chord", "", "inert"));

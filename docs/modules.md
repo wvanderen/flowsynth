@@ -6,7 +6,7 @@ new types and game-design concepts — the engine keys and records live in code
 design thinking lives. The roster table reflects the code as of the last
 update; when a type lands, update the table in the same change.
 
-Last updated: 2026-10-15 (chord-response support and alternative charge — the Chorus and Sideband, issue #375)
+Last updated: 2026-10-16 (charge-response support — the Exciter, issue #376)
 
 ## Roster
 
@@ -33,6 +33,7 @@ Last updated: 2026-10-15 (chord-response support and alternative charge — the 
 | `field` | Field | FIELD | booster | common | — | — | — | `hue-booster` | doubled outward chevrons around a center dot | Roll pool only | `+«%»` |
 | `spotlight` | Spotlight | SPOT | booster | common | — | — | — | `hue-booster` | dot with one focused beam | Roll pool only | `+«%»`, or the inactive verdict |
 | `chorus` | Chorus | CHOR | booster | uncommon | — | — | — | `hue-booster` | dot fronting three voice lines | Roll pool only | `+«%»`, note `chord response` |
+| `exciter` | Exciter | EXCT | booster | rare | — | — | — | `hue-booster` | dot between two inward charge zigzags | Roll pool only | `+«%»`, note `charge response` |
 | `forge` | Forge | FORGE | forge | common | — | — | — | `hue-forge` | hex prism | Starter shelf (80) and roll pool | `«charge»/«threshold»` (charge register) |
 | `mutatorForge` | Mutator Forge | MUT. FORGE | forge | common | — | — | — | `hue-forge` | seeded-hexagon core on the chassis | Mutator tree entry | `«charge»/«threshold»` (charge register) |
 
@@ -41,8 +42,9 @@ authored in code, never rolled per copy. A roll draws the rarity band
 (shared `rarityProbability` table), then a type inside the band: the
 roll pool's eighteen common types sample uniformly, the uncommon band
 holds three designs — the two temporal designs (#372) and the
-chord-response booster (#375) — and the rare band holds the Sideband
-(#375) alone; the Mutator Forge's common entry joins the pool only with
+chord-response booster (#375) — and the rare band holds two — the
+Sideband (#375) and the charge-response booster (#376); the Mutator
+Forge's common entry joins the pool only with
 the roll-pool purchase (ADR-0043). Duplicate
 progress lives on the per-copy merge tier: two copies of the same type
 and tier combine into one at the next tier, up to the finite unlocked cap
@@ -136,10 +138,14 @@ same at level 0 tier 0 as at level 6 tier 2.
   power — the same multiplier delivery scales.
 - **booster** — no synth term; empowers adjacent oscillators through one
   primary effect per design: amplitude (the Booster 0.2, the Field 0.3,
-  the Spotlight 0.5) or the chord response (the Chorus 0.5, issue #375,
+  the Spotlight 0.5), the chord response (the Chorus 0.5, issue #375,
   ADR-0064 — added to the recipients' chord-response term, never the
-  amplitude leg, so it is inert without an active chord) — all × power ×
-  charge factor per booster, tuning. Support is oscillator-only:
+  amplitude leg, so it is inert without an active chord), or the charge
+  response (the Exciter 0.5, issue #376, ADR-0065 — added to the
+  recipients' authored charge response, the conversion types'
+  alternatives included, reading nothing on an uncharged recipient) —
+  all × power × charge factor per booster, tuning. Support is
+  oscillator-only:
   generators, the Forge family, and silent voices read none of it.
   Grants to the same term add. Receives charge as continuous
   empowerment — the charge strengthens the booster's own grant (issue
@@ -329,6 +335,24 @@ curve over the Chorus's own received strength). A standard voice reads
 ×1.5 response beside one charged Chorus; the Triangle pairs with it
 toward ×3.0. Provisional tuning.
 
+### Exciter (`exciter`)
+The charge-response booster (issue #376, ADR-0065) — the category's
+second non-amplitude design: its share (0.5 × power × charge factor,
+tuning) adds to every adjacent oscillator's authored charge response —
+the coefficient that scales the charged curve above ×1 — and never to
+the amplitude leg, so it adds neither base production nor a second
+charge behavior. It needs charged recipients, structurally: the grant
+rides a coefficient the charge curve's delta multiplies, and an
+uncharged voice's delta is zero, so no mutator or progression can make
+a charge-starved board read differently with one placed. The grant
+strengthens whatever behavior the recipient authors — the Saw's ×3
+delta deepens toward ×3.5 at one generator's strength beside one
+charged Exciter, the Blaster's conversion rides the effective response
+on its promoted delta (×0 uncharged preserved), and the Sideband's
+charge-to-chord scaling deepens while its charge leg stays exactly ×1.
+Same-term grants add, and received charge strengthens the grant itself.
+Provisional tuning.
+
 ### Forge (`forge`) / Mutator Forge (`mutatorForge`)
 Accumulate received charge (`strength × power`) into their branch's
 shared meter; a threshold crossing banks a roll offer — module rolls into
@@ -362,6 +386,18 @@ Chorus reads exactly the bare rate: inert without an active chord. Swap
 it for a Field at the same seat and the amplitude leg moves instead —
 +30% to the one adjacent voice's term, no chord term. The lesson: the
 Chorus is the piece a chord build buys, and only then.
+
+**The charge-response support board (Exciter).** A single Saw beside one
+generator with an Exciter over the pair: the Saw's authored ×3 delta
+reads ×3.5 at one generator's strength, the whole gain landing on the
+charge leg — the chord and amplitude legs never move. Drain the
+generator's reserve and the same board reads the same rate with or
+without the Exciter: the grant multiplies a zero delta, so a
+charge-starved board gains nothing. Swap the Saw for a Sideband at the
+same seat and the deepening lands in its charge-to-chord scaling while
+its charge leg holds exactly ×1 — the ordinary and the alternative
+behaviors share the one support. The lesson: the Exciter is the piece a
+charge-fed build buys, and only while the charge flows.
 
 ## Glyph authoring notes
 
@@ -397,7 +433,9 @@ the Spotlight's single beam (the one chosen recipient). The
 chord-centered wave (issue #375) added the Sideband's side-flanked trace
 (the converted charge riding beside the note, never in it) and the
 Chorus's three voice lines fronting the Booster's dot (the choir it
-conducts). Two
+conducts). The charge-response wave (issue #376) added the Exciter's
+inward charge zigzags flanking the Booster's dot (the charge responses
+it deepens, fed by the charged recipients it needs). Two
 spacers' specials: the board face clips as a hexagonal ring window
 (chassis minus inner hexagon, nameplate at y −40), and the tray tile
 wears an unfilled inner hexagon (`inventoryTileSvg` special case) instead

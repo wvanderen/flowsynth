@@ -70,6 +70,22 @@ describe("grade chips on the Forge candidate tiles", () => {
     expect(chorus.querySelector(".candidate-effect")!.textContent).toContain("chord response");
   });
 
+  it("the Exciter's tile names its single term and its condition — no grade line (issue #376)", () => {
+    app.state.bankedRolls = [{ id: "charge-roll", candidates: [
+      { id: "c-exciter", type: "exciter", tier: 0 },
+      { id: "c-chorus", type: "chorus", tier: 0 },
+      { id: "c-spacer", type: "spacer", tier: 0 },
+    ] }];
+    app.openModal("forge");
+    const tile = panel().querySelector('[data-choice="c-exciter"]')!.closest(".candidate-tile")!;
+    expect(tile.querySelector(".profile-grades")).toBeNull();
+    // The "charge" term rides the hoverable word layer, so the rendered
+    // text reads around it.
+    const effect = tile.querySelector(".candidate-effect")!.textContent!;
+    expect(effect).toContain("response +50%");
+    expect(effect).toContain("needs charged recipients");
+  });
+
   it("keyboard focus opens the exact coefficient; Escape dismisses the disclosure alone", () => {
     app.openModal("forge");
     const chip = panel().querySelector<HTMLButtonElement>('[data-choice="c-square"] ~ * .profile-grade, .candidate-tile .profile-grade')!;
