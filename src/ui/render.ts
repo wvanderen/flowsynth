@@ -2427,11 +2427,11 @@ function mergeAllControlHtml(preview: MergeSweep, locked: boolean, surface: stri
 // The tray tile's scrap control (issue #377): the copy's recovery value
 // beside the tile it scraps — the payout reads before the action, and the
 // ledger's scrap balance answers it. One builder serves both library
-// surfaces; the stylesheet corners it over the narrow column's tile and
-// stacks it into the sheet's row. Flow locks it with the tiles.
+// surfaces, with a separate labeled action below the placement tile.
+// Flow locks it with the tiles.
 function tileScrapControlHtml(module: ModuleInstance, locked: boolean): string {
   const value = moduleScrapValue(module);
-  return `<button class="tile-scrap" data-scrap="${module.id}"${locked ? " disabled" : ""} aria-label="Scrap ${META[module.type].name} · +${formatInt(value)} scrap" title="Scrap for +${formatInt(value)} scrap"><small class="scrap-mark" aria-hidden="true">${SCRAP_SVG}</small><span class="mono">+${formatInt(value)}</span></button>`;
+  return `<button class="tile-scrap" data-scrap="${module.id}"${locked ? " disabled" : ""} aria-label="Scrap ${META[module.type].name} · +${formatInt(value)} scrap">Scrap <span class="scrap-payout"><small class="scrap-mark" aria-hidden="true">${SCRAP_SVG}</small><span class="mono">+${formatInt(value)}</span></span></button>`;
 }
 
 // The tray column's Modules face (§5, ADR-0027 as amended, issue #272):

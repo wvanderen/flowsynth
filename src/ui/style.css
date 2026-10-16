@@ -2773,30 +2773,28 @@ body.hex-detail-open .upgrade-all {
 }
 
 /* The scrap control (issue #377): the copy's recovery value on a
-   square-cut chip in the scrap register — mark + figure, the payout read
-   before the action. The narrow column corners it over the tile's top
-   edge; the sheet stacks it into the row between tile and disclosure. */
-.tray-tile { position: relative; }
+   square-cut control in the scrap register. The visible action name and
+   payout stack below the placement tile, keeping both touch targets
+   separate in the narrow column and the sheet. */
+.tray-tile { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .tile-scrap {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  gap: 3px;
-  min-height: 0;
-  padding: 3px 6px;
+  justify-content: center;
+  gap: 4px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 4px 6px;
   border-color: var(--line-strong);
   background: var(--panel-veil);
   color: var(--scrap);
-  font: 600 10px/1 var(--mono);
+  font: 600 12px/1 var(--font-condensed);
 }
+.scrap-payout { display: inline-flex; align-items: center; gap: 3px; }
 .tile-scrap:hover:not(:disabled) { border-color: var(--scrap); }
 .tile-scrap:disabled { color: var(--muted); }
 .tile-scrap .scrap-mark svg { width: 9px; height: 9px; display: block; }
-.tray-tile .tile-scrap {
-  position: absolute;
-  bottom: -2px;
-  right: -4px;
-  z-index: 1;
-}
 /* The Forge draft's skip control (issue #377): the offer's payout beside
    the choose cue — same register, same chip. */
 .forge-cue-row {
@@ -2810,7 +2808,7 @@ body.hex-detail-open .upgrade-all {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 0;
+  min-height: 44px;
   padding: 5px 10px;
   border-color: var(--line-strong);
   background: var(--panel-veil);

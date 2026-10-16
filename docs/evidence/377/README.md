@@ -1,5 +1,32 @@
 # Evidence: scrap recovery and draft skipping (#377)
 
+## PR #403 review corrections
+
+The review pass adds a visible `Scrap` action name and separates its
+control from the placement tile rather than overlapping the tile. Both
+Scrap and Skip now have a 44px minimum height, matching the pinned
+controls sheet (`d405ce2`); Scrap also has a 44px minimum width.
+
+Captured with the review changes applied over `87f3b1e`, from
+`/Users/eggfam/.t3/worktrees/flowsynth/t3code-15c4e3e8` at
+`http://localhost:5173/?dev`. The provenance endpoint confirmed that
+worktree and base commit before capture. The development fixture holds a
+tray Chorus and a module roll whose best candidate pays 15 scrap.
+
+- `review-board-desktop.png`: visible Scrap label, payout, and separate
+  placement target. DOM bounds measured the Scrap control at 48.4 × 44px.
+- `review-forge-desktop.png`: Skip retains its visible payout and measured
+  90.8 × 44px. Programmatic focus succeeded; keyboard focus-ring and
+  activation checks were not repeated in this pass.
+- Phone layout and touch input: unavailable. Both 390 × 844 resize
+  attempts timed out, including the retry after `preview_status`.
+- Non-color identity: action names and numeric payouts remain visible.
+  Flow locking retains native disabled state; no motion was added.
+- Validation: typecheck, full suite, and UI regressions run for the review
+  corrections. No engine behavior changed.
+
+The original implementation evidence below predates these corrections.
+
 Captured from the verified checkout (`t3code/issue-377`, worktree
 `/Users/eggfam/.t3/worktrees/flowsynth/t3code-cb8e9048`), served by the
 worktree's own dev server; provenance confirmed via `/-/dev/provenance`
