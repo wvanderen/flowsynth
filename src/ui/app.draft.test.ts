@@ -24,14 +24,19 @@ describe("the Draft Loom row (issue #378)", () => {
 
   const status = () => document.getElementById("status")!.textContent ?? "";
   const row = () => document.querySelector("#modal-content .forge-loom")!;
+  const chanceText = () => {
+    const readout = row().querySelector(".loom-state")!.cloneNode(true) as HTMLElement;
+    readout.querySelectorAll(".inst-tip-body").forEach((tip) => tip.remove());
+    return readout.textContent;
+  };
   const buy = () => document.querySelector<HTMLButtonElement>("#modal-content [data-buy-draft-upgrade]")!;
 
   it("renders name, current chance, and the first rung's price — muted at an empty balance", () => {
     app.openModal("forge");
     expect(row()).not.toBeNull();
     expect(row().querySelector(".loom-name")!.textContent).toBe("Draft Loom");
-    expect(row().querySelector(".loom-state")!.textContent).toBe("tier bonus 0%");
-    expect(buy().getAttribute("aria-label")).toBe(`Improve the Draft Loom · ${BALANCE.tierBonusCosts[0]} scrap`);
+    expect(chanceText()).toBe("merge tier bonus 0% → 15%");
+    expect(buy().getAttribute("aria-label")).toBe(`Improve the Draft Loom to 15% tier bonus · ${BALANCE.tierBonusCosts[0]} scrap`);
     expect(buy().textContent).toContain(String(BALANCE.tierBonusCosts[0]));
     expect(buy().disabled).toBe(true); // the opening balance carries no scrap
     app.closeModal();
@@ -47,8 +52,8 @@ describe("the Draft Loom row (issue #378)", () => {
     expect(app.state.draftTierBonus).toBe(1);
     expect(status()).toContain("Draft Loom improved · tier bonus 15%.");
     // The rebuilt row quotes the next rung and the raised chance.
-    expect(row().querySelector(".loom-state")!.textContent).toBe("tier bonus 15%");
-    expect(buy().getAttribute("aria-label")).toBe(`Improve the Draft Loom · ${BALANCE.tierBonusCosts[1]} scrap`);
+    expect(chanceText()).toBe("merge tier bonus 15% → 30%");
+    expect(buy().getAttribute("aria-label")).toBe(`Improve the Draft Loom to 30% tier bonus · ${BALANCE.tierBonusCosts[1]} scrap`);
     app.closeModal();
   });
 
@@ -70,7 +75,7 @@ describe("the Draft Loom row (issue #378)", () => {
     app.openModal("forge");
     expect(document.querySelector("#modal-content [data-buy-draft-upgrade]")).toBeNull();
     expect(row().querySelector(".loom-tuned")!.textContent).toBe("Tuned");
-    expect(row().querySelector(".loom-state")!.textContent).toBe("tier bonus 50%");
+    expect(chanceText()).toBe("merge tier bonus 50%");
     app.closeModal();
   });
 

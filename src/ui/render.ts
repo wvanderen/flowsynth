@@ -3286,8 +3286,9 @@ function catalogOwnedHtml(word: string): string {
 // the glossary meaning — description prose never grows around it. The
 // meanings here are the glossary's own, distilled to the one-line ceiling.
 // The union keeps the map closed: only glossary terms may render hoverable.
-type CatalogTerm = "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Headroom" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "habit build" | "goals";
+type CatalogTerm = "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Headroom" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "habit build" | "goals";
 const CATALOG_TERMS: Record<CatalogTerm, string> = {
+  "merge tier": "Matching copies combine to raise authored strengths",
   "Harmonic capacity": "Whole-chord budget per voice",
   memorized: "Persists through arete reset",
   Arete: "The resource banked when an era ends",
@@ -3518,17 +3519,19 @@ function updateForgeMetersLive(scope: ParentNode, state: GameState, forgeRate: n
 function draftLoomHtml(state: GameState): string {
   const chance = draftTierChanceOf(state.draftTierBonus);
   const price = nextDraftUpgradePrice(state.draftTierBonus);
+  const nextChance = Math.round(draftTierChanceOf(state.draftTierBonus + 1) * 100);
+  const chanceReadout = `${Math.round(chance * 100)}%${price === null ? "" : ` → ${nextChance}%`}`;
   const locked = state.mode !== "upgrade";
   const buy = price === null
     ? `<span class="loom-tuned">Tuned</span>`
-    : `<button class="loom-buy" data-buy-draft-upgrade aria-label="Improve the Draft Loom · ${formatInt(price)} scrap"${
+    : `<button class="loom-buy" data-buy-draft-upgrade aria-label="Improve the Draft Loom to ${nextChance}% tier bonus · ${formatInt(price)} scrap"${
         locked || state.scrap < price ? " disabled" : ""
       }>Improve · ${formatInt(price)} <small class="scrap-mark" aria-hidden="true">${SCRAP_SVG}</small></button>`;
   return `<div class="forge-loom">
     <span class="loom-name">Draft Loom</span>
-    <span class="loom-state mono">tier bonus ${Math.round(chance * 100)}%</span>
+    <span class="loom-state mono">${termTipHtml("merge tier")} bonus ${chanceReadout}</span>
     ${termTipHtml("memorized")}
-    <span class="inst-tip loom-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="loom-mechanics" aria-label="Draft Loom — what it does">ⓘ</button><span class="inst-tip-body" id="loom-mechanics" role="tooltip">Each candidate may mint one merge tier higher</span></span>
+    <span class="inst-tip loom-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="loom-mechanics" aria-label="Draft Loom — what it does">ⓘ</button><span class="inst-tip-body" id="loom-mechanics" role="tooltip">Each candidate may mint one step higher</span></span>
     ${buy}
   </div>`;
 }
