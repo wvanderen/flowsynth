@@ -6,6 +6,13 @@ export interface Balance {
   // the distinction it served. Provisional tuning.
   synthRate: number;
   infusorBonus: number;
+  // The booster wave's authored strengths (issue #374, parent #366): the
+  // Field grants the moderate share to every adjacent oscillator, the
+  // Spotlight the stronger share to its one selected recipient — coverage
+  // traded against strength. Provisional tuning: one Spotlight beats one
+  // Field leg, two Field neighbors beat one Spotlight.
+  fieldBonus: number;
+  spotlightBonus: number;
   // ── Harmony quality (ADR-0049): Q = clamp(1 + complexity − max(0,
   // tension − A), Qmin, cap) over the formation's deduplicated pitch
   // classes. All magnitudes provisional tuning per the map's standing note.
@@ -191,6 +198,8 @@ export interface Balance {
 export const BALANCE: Balance = {
   synthRate: 0.1,
   infusorBonus: 0.2,
+  fieldBonus: 0.3,
+  spotlightBonus: 0.5,
   tensionWeights: { 1: 1.0, 2: 0.2, 3: 0, 4: 0, 5: 0, 6: 0.5 },
   complexityRate: 0.06,
   tensionAllowance: 0.7,
@@ -339,6 +348,12 @@ export const CATEGORY_OF: Record<ModuleType, Category> = {
   // predictable burst cycle on the shared session clock.
   pulsewell: "generator",
   infusor: "booster",
+  // The booster wave's two named designs (issue #374, parent #366): the
+  // Field broadens the category's amplitude support, the Spotlight focuses
+  // it on the player's selected recipient. Same category, same charge law,
+  // different coverage.
+  field: "booster",
+  spotlight: "booster",
   forge: "forge",
   // The Mutator Forge is the Forge family's second branch (ADR-0043): the
   // same chargeable category, its own meter. Membership is decided per
@@ -377,6 +392,10 @@ export const TYPE_RARITY: Record<ModuleType, Rarity> = {
   goalKeyed: "common",
   pulsewell: "uncommon",
   infusor: "common",
+  // The booster wave's two commons (issue #374): both ride the common band
+  // per the parent's accepted sample table.
+  field: "common",
+  spotlight: "common",
   forge: "common",
   mutatorForge: "common",
 };
@@ -435,6 +454,8 @@ export const MODULE_TYPES: readonly ModuleType[] = [
   "goalKeyed",
   "pulsewell",
   "infusor",
+  "field",
+  "spotlight",
   "forge",
 ];
 

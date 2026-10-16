@@ -29,13 +29,13 @@ import { amplifierGainOf, tierPowerOf } from "../engine/module-strength";
 // the static wave.
 import { BALANCE, CHARGE_RECEIVING_CATEGORIES, CATEGORY_OF } from "../engine/constants";
 import { baseTermOf, productionClockFactorOf, temporalTimingOf } from "../engine/profiles";
-import { chargedFactor, emittedStrength, hostPower, modulePower, mutatorAt, mutatorMagnitude, ritualAmpOf, sessionClockOf } from "../engine/economy";
+import { boosterBonusOf, chargedFactor, emittedStrength, hostPower, modulePower, mutatorAt, mutatorMagnitude, ritualAmpOf, sessionClockOf } from "../engine/economy";
 import type { GameState, ModuleInstance, RateSnapshot } from "../engine/types";
 import { buildFactorsFor } from "../engine/builds";
 import { activeHabit } from "../engine/habits";
 import { CHORD_HUES } from "./chordlayer";
 import { formatNumber } from "./format";
-import { boosterUpliftOf, relayStrengthOf } from "./face";
+import { boosterUpliftOf, relayStrengthOf, spotlightInactiveVerdict } from "./face";
 import { FAMILY_WORD, mutatorEffectText, mutatorInertVerdict } from "./mutators";
 import { RARITY_LABEL } from "./meta";
 
@@ -82,7 +82,13 @@ function outcomeRow(state: GameState, module: ModuleInstance, snapshot: RateSnap
   if (category === "generator") return row("Charge strength", `⌁${formatNumber(emittedStrength(state, module, flow))}`, "result");
   if (module.type === "amplifier") return row("Relay strength", `⌁${formatNumber(relayStrengthOf(module, snapshot))}`, "result");
   if (module.type === "ritual") return row("Build amplification", `×${formatNumber(1 + ritualAmpOf(module.level, strength, module.tier))}`, "result");
-  if (module.type === "infusor") return row("Booster uplift", `+${formatNumber(boosterUpliftOf(state, module, snapshot))}%`, "result");
+  if (category === "booster") {
+    // The boosters read their live uplift; an inactive Spotlight has no
+    // outcome figure to state (issue #374) — its verdict row in the
+    // production rows IS the outcome, stated once.
+    if (spotlightInactiveVerdict(state, module)) return "";
+    return row("Booster uplift", `+${formatNumber(boosterUpliftOf(state, module, snapshot))}%`, "result");
+  }
   if (module.type === "forge") return row("Forge", `+${formatNumber(contribution?.value ?? 0)} progress/s`, "result");
   if (module.type === "mutatorForge") return row("Mutator Forge", `+${formatNumber(contribution?.value ?? 0)} progress/s`, "result");
   return "";
@@ -130,10 +136,17 @@ function productionRows(state: GameState, module: ModuleInstance, snapshot: Rate
   } else if (module.type === "amplifier") {
     if (relationship !== "charge") rows.push(row("Incoming charge", `⌁${formatNumber(strength)}`));
     multiplier("Relay gain", amplifierGainOf(module));
-  } else if (module.type === "infusor") {
-    rows.push(row("Base uplift", `+${formatNumber(100 * BALANCE.infusorBonus)}%`));
-    multiplier("Host power", hostPower(state, module));
-    multiplier("Charged empowerment", chargedFactor(strength));
+  } else if (CATEGORY_OF[module.type] === "booster") {
+    // The authored share is per design (issue #374); an inactive
+    // Spotlight's rows are its verdict alone — the product rows would
+    // quote a grant nothing receives.
+    const verdict = spotlightInactiveVerdict(state, module);
+    if (verdict) rows.push(row(verdict, "", "inert"));
+    else {
+      rows.push(row("Base uplift", `+${formatNumber(100 * boosterBonusOf(module.type))}%`));
+      multiplier("Host power", hostPower(state, module));
+      multiplier("Charged empowerment", chargedFactor(strength));
+    }
   } else if (module.type === "ritual") {
     rows.push(row("Base amplification", `+${formatNumber(BALANCE.ritualAmpPerLevel * module.level)}`));
     multiplier("Merge tier", tierPowerOf(module.tier));

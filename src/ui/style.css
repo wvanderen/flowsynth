@@ -1742,6 +1742,8 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
 .drag-ghost .face-readout, .candidate-tile .face-readout { font-size: 14px; }
 /* The Forge's charge-vs-threshold readout sits in the charge register. */
 .face-readout.charge { fill: var(--charge); }
+/* An inactive booster's readout (issue #374): the verdict state, muted. */
+.face-readout.st-inactive { fill: var(--muted); }
 .face-note, .hex-note { font: 8px var(--mono); letter-spacing: 0.12em; fill: var(--muted); }
 .face-signature { stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 
@@ -2588,6 +2590,13 @@ body.hex-detail-open .upgrade-all {
 }
 .hex-shift-chip:hover { background: var(--hover-bg); border-color: var(--line-strong); }
 .hex-shift-chip.active { background: var(--hue-voice); border-color: var(--hue-voice); color: var(--accent-ink); }
+
+/* The Spotlight's recipient picker (issue #374): the Bend picker's chip
+    row carrying note names, the inactive verdict a muted line above the
+    same recovery chips — the state readable without color. */
+.hex-shift.st-inactive { flex-wrap: wrap; }
+.hex-target .hex-shift-chip.active { background: transparent; border-color: var(--hue-booster); color: var(--ink); box-shadow: inset 0 -3px var(--ink); }
+.hex-target-verdict { flex-basis: 100%; font: 500 10px/1.4 var(--mono); letter-spacing: 0.08em; color: var(--muted); text-align: left; }
 
 /* The detail as a bottom sheet (§7, portrait phone): the same
    cross-section re-docked over the board's lower edge — the full stage,

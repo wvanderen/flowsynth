@@ -9,8 +9,8 @@ import { amplifierGainOf } from "../engine/module-strength";
 // instead (hue-outlined hexagon and glyph alone, ADR-0027): at tile size the
 // engraving is noise.
 import type { GameState, Hex, ModuleInstance, ModuleType, RateSnapshot } from "../engine/types";
-import { CATEGORY_OF, BALANCE } from "../engine/constants";
-import { chargedFactor, hostPower, ritualAmpOf } from "../engine/economy";
+import { CATEGORY_OF } from "../engine/constants";
+import { boosterBonusOf, chargedFactor, hostPower, ritualAmpOf, spotlightRecipientOf } from "../engine/economy";
 import { forgeThreshold, mutatorForgeThreshold } from "../engine/rolls";
 import { cellNoteOf, noteNameOf } from "../engine/lattice";
 import { moduleIcon } from "./icons";
@@ -69,6 +69,8 @@ export const HUE_TOKEN_OF: Record<ModuleType, string> = {
   goalKeyed: "hue-generator",
   pulsewell: "hue-generator",
   infusor: "hue-booster",
+  field: "hue-booster",
+  spotlight: "hue-booster",
   forge: "hue-forge",
   mutatorForge: "hue-forge",
 };
@@ -234,11 +236,28 @@ export function relayStrengthOf(module: ModuleInstance, snapshot: RateSnapshot):
   return strength * amplifierGainOf(module);
 }
 
-// The booster's uplift percentage — the charged curve over the adjacent
-// production it lifts. The one read the face's readout and the Hex
-// detail's breakdown share.
+// The booster's uplift percentage — the authored share (issue #374: per
+// design, the Booster's baseline, the Field's moderate breadth, the
+// Spotlight's narrow strength) over the charged curve and its host power.
+// The one read the face's readout and the Hex detail's breakdown share.
 export function boosterUpliftOf(state: GameState, module: ModuleInstance, snapshot: RateSnapshot): number {
-  return 100 * BALANCE.infusorBonus * hostPower(state, module) * chargedFactor(snapshot.chargeStrength.get(module.id) ?? 0);
+  return 100 * boosterBonusOf(module.type) * hostPower(state, module) * chargedFactor(snapshot.chargeStrength.get(module.id) ?? 0);
+}
+
+// The Spotlight's inactive verdict (issue #374): the actionable words for
+// a booster whose selected recipient earns nothing right now — nothing
+// picked, the recipient gone, or adjacency lost. Null while the support
+// is live — the engine's one validity read decides that boundary, this
+// word layer only classifies why it went null. The one wording source for
+// the face readout, the wave breakdown, and the detail's picker.
+export function spotlightInactiveVerdict(state: GameState, module: ModuleInstance): string | null {
+  if (module.type !== "spotlight") return null;
+  if (spotlightRecipientOf(state, module)) return null;
+  if (module.pos === null) return "inactive · place the booster";
+  if (module.target === null) return "inactive · pick a recipient";
+  const target = state.modules.find((m) => m.id === module.target);
+  if (!target) return "inactive · recipient gone";
+  return "inactive · recipient not adjacent";
 }
 
 // A module face's readout (ADR-0016): the prominent value beneath the
@@ -257,7 +276,12 @@ export function faceReadoutFor(state: GameState, module: ModuleInstance, pos: He
     };
   }
   if (isSource(module)) return { readout: `⌁${formatNumber(hostPower(state, module))}` };
-  if (module.type === "infusor") {
+  if (CATEGORY_OF[module.type] === "booster") {
+    // The boosters read their live uplift; an inactive Spotlight wears the
+    // verdict instead of a figure (issue #374) — the state in words, never
+    // a zero that could read as a weak grant.
+    const verdict = spotlightInactiveVerdict(state, module);
+    if (verdict) return { readout: "—", readoutClass: "st-inactive", note: verdict };
     return { readout: `+${formatNumber(boosterUpliftOf(state, module, snapshot))}%` };
   }
   if (module.type === "spacer") {

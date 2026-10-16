@@ -3385,6 +3385,9 @@ function forgeEffect(type: ModuleInstance["type"], tier: number): string {
     }
     case "pulsewell": return "Mixed-fed reserve · timed delivery bursts";
     case "infusor": return `Adjacent production +${formatNumber(BALANCE.infusorBonus * 100 * power)}% · charge boosts uplift`;
+    // The booster wave's niches (issue #374): coverage against strength.
+    case "field": return `Every adjacent oscillator +${formatNumber(BALANCE.fieldBonus * 100 * power)}% · charge boosts uplift`;
+    case "spotlight": return `One recipient +${formatNumber(BALANCE.spotlightBonus * 100 * power)}% · charge boosts uplift`;
     case "forge": return "Received charge → module rolls";
     case "mutatorForge": return "Received charge → mutator rolls";
     default: return "Not yet active";
@@ -3424,6 +3427,10 @@ function candidateReadout(type: ModuleInstance["type"], tier: number): string {
       return `⌁${formatNumber(power)}`;
     case "infusor":
       return `+${formatNumber(BALANCE.infusorBonus * 100 * power)}%`;
+    case "field":
+      return `+${formatNumber(BALANCE.fieldBonus * 100 * power)}%`;
+    case "spotlight":
+      return `+${formatNumber(BALANCE.spotlightBonus * 100 * power)}%`;
     case "forge":
     case "mutatorForge":
       return `${formatNumber(power)}/s`;

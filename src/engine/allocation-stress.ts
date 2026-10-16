@@ -52,6 +52,7 @@ function stressModule(type: ModuleType, pos: { q: number; r: number }, level: nu
     pos: hex(pos.q, pos.r),
     reserve: 0,
     shift: null,
+    target: null,
   };
 }
 

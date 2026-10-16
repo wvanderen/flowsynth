@@ -28,13 +28,13 @@ import { tierPowerOf } from "../engine/module-strength";
 // reordering. Editing lives in upgrade mode only: during flow the same
 // cross-section opens read-only, its readouts live, its controls gone —
 // the click still answers the lock.
-import { affordableLevels, deployedAt, displayedRates, hostPower, levelCost, levelsCost, mutatorAt, mutatorMagnitude, wholeNous } from "../engine/economy";
-import { BALANCE, typeRarityOf } from "../engine/constants";
-import { sameHex } from "../engine/hex";
+import { affordableLevels, boosterBonusOf, deployed, deployedAt, displayedRates, hostPower, levelCost, levelsCost, mutatorAt, mutatorMagnitude, wholeNous } from "../engine/economy";
+import { BALANCE, isOscillatorType, typeRarityOf } from "../engine/constants";
+import { adjacent, sameHex } from "../engine/hex";
 import { cellNoteOf, noteNameOf, pitchOf } from "../engine/lattice";
 import type { GameState, Hex, ModuleInstance, MutatorInstance, RateSnapshot } from "../engine/types";
 import type { App, DetailFace } from "./app";
-import { HEX_RADIUS, hexPoints, moduleFace, forgeBranchOf, faceLevel, faceReadoutFor, waterFill, zeroBuyRead } from "./face";
+import { HEX_RADIUS, hexPoints, moduleFace, forgeBranchOf, faceLevel, faceReadoutFor, waterFill, zeroBuyRead, spotlightInactiveVerdict } from "./face";
 import { chargeGlow } from "./leads";
 import { formatInt, formatNumber } from "./format";
 import { FAMILY_WORD, rarityTicks, mutatorEffectText, mutatorGlyph, mutatorInertVerdict, mutatorSlotPrice, mutatorUnlockTargets, mutatorTileSvg } from "./mutators";
@@ -104,7 +104,11 @@ const DETAIL_BENEFITS: Record<ModuleInstance["type"], (input: DetailEffectInput)
   // The Pulsewell's level scales earning and delivery together — bursts
   // included, their cycle timing untouched (issue #372).
   pulsewell: generatorBenefit,
-  infusor: ({ gain }) => `+${formatNumber(100 * BALANCE.infusorBonus * gain)}% uplift`,
+  infusor: ({ gain }) => `+${formatNumber(100 * boosterBonusOf("infusor") * gain)}% uplift`,
+  // The booster wave's authored shares (issue #374): the pass's one table
+  // quoted, never a second coefficient home.
+  field: ({ gain }) => `+${formatNumber(100 * boosterBonusOf("field") * gain)}% uplift`,
+  spotlight: ({ gain }) => `+${formatNumber(100 * boosterBonusOf("spotlight") * gain)}% uplift`,
   forge: ({ gain }) => `+${formatNumber(gain)} progress/s`,
   mutatorForge: ({ gain }) => `+${formatNumber(gain)} progress/s`,
 };
@@ -180,7 +184,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
     pos.q,
     pos.r,
     detail.face,
-    module ? `${module.id}:${module.type}:${module.level}:${module.tier}:${module.shift}` : "empty",
+    module ? `${module.id}:${module.type}:${module.level}:${module.tier}:${module.shift}:${module.target}` : "empty",
     module ? forgeBranchOf(state, module.type) : null,
     module ? hostPower(state, module) : 0,
     contribution
@@ -226,7 +230,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   // write; the new stack restores that captured position.
   const focused = document.activeElement;
   const focusAttribute = focused instanceof HTMLElement && host.contains(focused)
-    ? ["id", "data-detail-face", "data-bulk", "data-shift", "aria-describedby"]
+    ? ["id", "data-detail-face", "data-bulk", "data-shift", "data-target", "aria-describedby"]
         .find((attribute) => focused.hasAttribute(attribute))
     : undefined;
   const focusValue = focusAttribute ? focused!.getAttribute(focusAttribute) : null;
@@ -571,7 +575,27 @@ function detailBuyHtml(app: App, module: ModuleInstance): string {
           })
           .join("")}</div>`
       : "";
-  return `${shiftPicker}${dial}${upgradeButton}`;
+  // The Spotlight's player-selected recipient (issue #374): one chip per
+  // adjacent oscillator — the targeting follows the player's pick, never
+  // an output ranking. An inactive booster names why beside the same chips
+  // (the recovery control), the verdict shared with the face readout.
+  const targetPicker =
+    module.type === "spotlight" && module.pos
+      ? (() => {
+          const verdict = spotlightInactiveVerdict(state, module);
+          const recipients = deployed(state).filter((other) => isOscillatorType(other.type) && adjacent(other.pos!, module.pos!));
+          return `<div class="hex-shift hex-target${verdict ? " st-inactive" : ""}" role="group" aria-label="Recipient">${
+            verdict ? `<span class="hex-target-verdict">${verdict}</span>` : ""
+          }${recipients
+            .map((other) => {
+              const active = module.target === other.id;
+              const note = cellNoteOf(other.pos!);
+              return `<button class="hex-shift-chip${active ? " active" : ""}" data-target="${other.id}" aria-pressed="${active}">${note}</button>`;
+            })
+            .join("")}</div>`;
+        })()
+      : "";
+  return `${shiftPicker}${targetPicker}${dial}${upgradeButton}`;
 }
 
 // The buy column's wiring (issue #195 shape, #295 surface): the button
@@ -593,6 +617,11 @@ function wireDetailBuy(app: App, host: HTMLElement, moduleId: string): void {
   host.querySelectorAll<HTMLButtonElement>("[data-shift]").forEach((chip) => {
     app.listen(chip, "click", () => {
       app.setBendShift(moduleId, Number(chip.getAttribute("data-shift")));
+    });
+  });
+  host.querySelectorAll<HTMLButtonElement>("[data-target]").forEach((chip) => {
+    app.listen(chip, "click", () => {
+      app.setBoosterTarget(moduleId, chip.getAttribute("data-target"));
     });
   });
   wireModuleRail(app, moduleId);

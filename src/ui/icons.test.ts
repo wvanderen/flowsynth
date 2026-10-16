@@ -20,6 +20,8 @@ const MODULE_TYPES: readonly ModuleType[] = [
   "noteKeyed",
   "goalKeyed",
   "infusor",
+  "field",
+  "spotlight",
   "forge",
   "mutatorForge",
 ];

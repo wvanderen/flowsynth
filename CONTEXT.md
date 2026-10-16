@@ -230,6 +230,10 @@ _Avoid_: Infusor, Infuser
 A Booster's contribution to the composite: the local uplift it grants adjacent oscillators' amplitudes, named as its own additive leg in the live rate breakdown (ADR-0020).
 _Avoid_: Infusor term
 
+**Recipient (Spotlight)**:
+The one adjacent oscillator a Spotlight's stronger uplift lands on — the player's pick, stored as the module's identity, never an output ranking (issue #374, ADR-0063). An invalid pick leaves the booster inactive in words on its own surfaces; the pick is remembered and support resumes when adjacency returns. A melted recipient drops the pick.
+_Avoid_: target lock, auto-target, strongest neighbor
+
 ### Quality and acquisition
 
 **Module upgrade**:

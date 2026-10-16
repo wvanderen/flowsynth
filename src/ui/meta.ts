@@ -29,6 +29,11 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
   goalKeyed: { name: "Milestone", short: "MILE", role: "Goal-fed reserve · per completion" },
   pulsewell: { name: "Pulsewell", short: "PLSW", role: "Mixed-fed reserve · bursts" },
   infusor: { name: "Booster", short: "BOOST", role: "Neighbor bonuses" },
+  // The booster wave (issue #374): coverage traded against strength — the
+  // Field spreads moderate support, the Spotlight focuses a stronger share
+  // on the player's chosen recipient.
+  field: { name: "Field", short: "FIELD", role: "Broad uplift · every neighbor" },
+  spotlight: { name: "Spotlight", short: "SPOT", role: "Focused uplift · one recipient" },
   forge: { name: "Forge", short: "Forge", role: "Rolls at threshold" },
   mutatorForge: { name: "Mutator Forge", short: "Mut. Forge", role: "Mutator rolls at threshold" },
 };
