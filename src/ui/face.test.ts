@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CATEGORY_OF, MODULE_TYPES } from "../engine/constants";
+import { BALANCE, CATEGORY_OF, MODULE_TYPES } from "../engine/constants";
 import { computeRates } from "../engine/economy";
 import { fresh, give } from "../engine/fixtures";
 import type { ModuleType } from "../engine/types";
@@ -38,10 +38,11 @@ describe("module face", () => {
     expect(defaultTheme.tokens["hue-conduit"]).toBeDefined();
   });
 
-  it("engraves the merge tier as ring count — 1, 2, 3 — never a hue", () => {
+  it("engraves the merge tier as ring count through the purchased cap — never a hue", () => {
     // The rings read the copy's merge tier (ADR-0058); the plate tint's
     // rarity never touches them.
-    for (const tier of [0, 1, 2]) {
+    const maxTier = BALANCE.mergeCap + BALANCE.mergeCapCosts.length;
+    for (let tier = 0; tier <= maxTier; tier++) {
       expect(ringCount(tier)).toBe(tier + 1);
       const face = moduleFace({ type: "additive", tier, readout: "+1" });
       const rings = face.split('<g data-key="rings" class="face-rings">')[1]!.split("</g>")[0]!;
@@ -50,7 +51,7 @@ describe("module face", () => {
       expect(face).not.toContain("finish-");
     }
     // A lenient guard past the authored radii: the top count holds.
-    expect(ringCount(9)).toBe(3);
+    expect(ringCount(9)).toBe(maxTier + 1);
   });
 
   it("renders the readout-panel anatomy", () => {

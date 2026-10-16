@@ -8,6 +8,7 @@ import {
   buyCell,
   buyDraftUpgrade,
   buyGoalCapacity,
+  buyMergeCapIncrease,
   buyRowUnlock,
   buyShelfModule,
   buySpecialDraft,
@@ -51,6 +52,7 @@ import { serialize, STORAGE_KEY } from "../engine/save";
 import { SharedSave, browserSaveStorage, type LoadedSave } from "./shared-save";
 import { formatClock } from "../engine/clock";
 import { draftTierChanceOf } from "../engine/rolls";
+import { unlockedMergeCap } from "../engine/catalog";
 import { formatInt, formatNumber } from "./format";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
 import { createInitialState, createModule } from "../engine/state";
@@ -75,7 +77,7 @@ import type { Category, GameState, GoalColor, Hex, ModuleInstance, MutatorFamily
 import type { FocusFace, NotesFace } from "./focus";
 import { render } from "./render";
 import { FAMILY_WORD, mutatorBoardLive, refreshMutPreview } from "./mutators";
-import { HISTORY_PAGE_ROWS, META, CATEGORY_WORD, SPECIAL_DRAFT_NAME } from "./meta";
+import { HISTORY_PAGE_ROWS, META, CATEGORY_WORD, SPECIAL_DRAFT_NAME, tierWord } from "./meta";
 import { browserChannels, type SignalChannels } from "./signals";
 import { suppressNextClick } from "./click";
 
@@ -1335,6 +1337,12 @@ export class App {
 
   buyCapacityDiscountAction(): void {
     this.act(buyCapacityDiscount(this.state), "Capacity rungs cost less nous.");
+  }
+
+  // The merge cap's landing (issue #380): the toast names the beat —
+  // pairs now combine one tier past where they stopped.
+  buyMergeCapAction(): void {
+    this.act(buyMergeCapIncrease(this.state), `Merge cap raised — copies now combine to ${tierWord(unlockedMergeCap(this.state))}.`);
   }
 
   // The first console long goal (ADR-0012 as amended by ADR-0034): goal

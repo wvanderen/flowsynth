@@ -1,6 +1,6 @@
 import { BALANCE, CATEGORY_OF, EPS, isOscillatorType, NEXT_RARITY, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, ROLL_POOL, POOL_JOIN_TYPE, SHELF_MODULE, SHELF_TYPES, typeRarityOf } from "./constants";
 import { claimOf, horizonReached } from "./accumulator";
-import { rowUnlockCost, unlockableRows } from "./catalog";
+import { rowUnlockCost, unlockableRows, unlockedMergeCap, mergeCapIncreaseCost } from "./catalog";
 import { nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "./capacity";
 import { affordableLevels, cellPurchasePrice, chargeDelivered, maxChordFactorOf, deployedAt, findModule, levelCost, levelsCost, longGoalCost, mutatorSlotCost, rowGateOwed, syncRates, wholeNous } from "./economy";
 import { summaryTermsOf } from "./allocation";
@@ -466,7 +466,8 @@ function meltOf(selected: ModuleInstance, partner: ModuleInstance): ModuleInstan
 // The confirmation's terms (issue #152): what combining these two would
 // produce, read without touching state. Null whenever the pair cannot
 // combine — wrong mode, mismatched type or tier, or a copy already at the
-// unlocked cap — so the caller has nothing to offer.
+// unlocked cap (#380: the cap the Warp Beam raises) — so the caller has
+// nothing to offer.
 export interface CombinePreview {
   keepId: string;
   meltId: string;
@@ -482,7 +483,7 @@ export function combinePreview(state: GameState, id: string, partnerId: string):
   if (!selected || !partner || selected.id === partner.id) return null;
   if (selected.type !== partner.type || selected.tier !== partner.tier) return null;
   const nextTier = selected.tier + 1;
-  if (nextTier > BALANCE.mergeCap) return null;
+  if (nextTier > unlockedMergeCap(state)) return null;
   const melt = meltOf(selected, partner);
   const keep = melt === selected ? partner : selected;
   return { keepId: keep.id, meltId: melt.id, nextTier, level: keep.level, refund: melt.invested };
@@ -705,7 +706,7 @@ export function skipRoll(state: GameState, offerId: string): ActionResult {
 // scrap that pays for them.
 export function buyDraftUpgrade(state: GameState): ActionResult {
   if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
-  if (BALANCE.mergeCap < 1) return fail("No draft can mint above the base tier.");
+  if (unlockedMergeCap(state) < 1) return fail("No draft can mint above the base tier.");
   const price = nextDraftUpgradePrice(state.draftTierBonus);
   if (price === null) return fail("The Draft Loom is fully tuned.");
   if (state.scrap < price) return fail("Not enough scrap.");
@@ -726,7 +727,7 @@ export function buyDraftUpgrade(state: GameState): ActionResult {
 // exactly one.
 export function buySpecialDraft(state: GameState, kind: SpecialDraftKind): ActionResult {
   if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
-  if (kind === "tier" && BALANCE.mergeCap < 1) return fail("No draft can mint above the base tier.");
+  if (kind === "tier" && unlockedMergeCap(state) < 1) return fail("No draft can mint above the base tier.");
   const price = BALANCE.specialDraftCosts[kind];
   if (state.scrap < price) return fail("Not enough scrap.");
   state.scrap -= price;
@@ -984,6 +985,25 @@ export function buyCapacityDiscount(state: GameState): ActionResult {
   return { ok: true, unlocked: checkUnlocks(state) };
 }
 
+// The merge cap's Arete purchase (issue #380, parent #366, ADR-0058's
+// finite cap): the Catalog's Warp Beam — each owned rung raises the
+// unlocked merge cap one tier, so exact-copy progression keeps a reachable
+// milestone past the base ceiling. One-time, Arete-paid, escalating
+// ladder, strictly finite; the rungs are memorized and survive prestige
+// like the Catalog's other sheet purchases. Refusals land before any
+// charge: the Arete mode lock, the Catalog entry the surface stands
+// behind, the exhausted ladder, and the unaffordable price.
+export function buyMergeCapIncrease(state: GameState): ActionResult {
+  if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
+  if (!state.catalogEntryOwned) return fail("Enter the Arete Catalog first.");
+  const price = mergeCapIncreaseCost(state);
+  if (price === null) return fail("The merge ladder is at its cap.");
+  if (state.arete < price) return fail("Not enough Arete.");
+  state.arete -= price;
+  state.mergeCapPurchases++;
+  return { ok: true, unlocked: checkUnlocks(state) };
+}
+
 // Prestige (ADR-0039, issue #170): the door at the horizon banks the era's
 // claim and begins the next era. The only Arete source in the game — claim
 // on reset, never before — and the nth reset banks n (ADR-0042's linear
@@ -1003,7 +1023,9 @@ export function buyCapacityDiscount(state: GameState): ActionResult {
 // and the scrap balance (issue #377), which persists with the collection
 // it values, the Draft Loom's owned rungs (issue #378), which persist
 // with the scrap that pays for them, and the special drafts' held
-// entitlements (issue #379), which persist unused beside them.
+// entitlements (issue #379), which persist unused beside them — and the
+// Warp Beam's owned rungs (issue #380), which persist with the raised
+// cap they bought.
 // Module levels return to base, nous to
 // a fresh opening grant, and the charge window resets — as does the
 // ladder's purchased capacity (issue #259): the voices return to one. The era measure

@@ -492,6 +492,12 @@ export interface GameState {
   // Memorized with the scrap that pays for them: they survive the arete
   // reset. Lenient-defaulted to all-zero at load.
   specialDrafts: Record<SpecialDraftKind, number>;
+  // The Warp Beam's owned rungs (issue #380, parent #366): the Arete
+  // Catalog's merge-cap purchases — each rung raises the unlocked merge
+  // cap one tier above BALANCE.mergeCap, up to the authored ladder's
+  // end. Memorized Arete purchases: they survive the arete reset.
+  // Lenient-defaulted to 0 at load.
+  mergeCapPurchases: number;
   // The era/prestige count (ADR-0039): economy-bearing state (the claim
   // reads it), still awaiting a surface (ADR-0038's one-figure discipline).
   prestiges: number;

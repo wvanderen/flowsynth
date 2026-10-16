@@ -153,6 +153,11 @@ export function deserialize(text: string): LoadResult {
       : 0;
   merged.capacityCeilings = clampOffering(raw.capacityCeilings, BALANCE.capacityCeilingCosts);
   merged.capacityDiscounts = clampOffering(raw.capacityDiscounts, BALANCE.capacityDiscountCosts);
+  // The Warp Beam's owned rungs (issue #380) lenient-default the same way:
+  // absent or corrupt reads as none owned — exactly what a pre-beam save
+  // owes. An implausibly large count clamps at the ladder's end, so the
+  // unlocked cap can never promise a tier the prices have stopped selling.
+  merged.mergeCapPurchases = clampOffering(raw.mergeCapPurchases, BALANCE.mergeCapCosts);
   // The Mutator layer (ADR-0043, issue #198) lenient-defaults the same
   // way: absent means the entry was never bought — no slots, no mutators,
   // no Mutator Forge fill, no pending mutator rolls — which is exactly

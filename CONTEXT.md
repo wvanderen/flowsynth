@@ -260,7 +260,7 @@ A named module type's fixed acquisition rarity — the authored table in code, n
 _Avoid_: rolled rarity (the per-candidate sense), tier (the merge sense)
 
 **Merge tier**:
-A copy's own duplicate-earned improvement step, shown as the engraved ring count. Two copies of the same named type and tier combine into one at the next tier; unequal tiers and different named types never combine, and a finite unlocked cap ends the ladder until Arete raises it (ADR-0058, #380). Tier scaling multiplies the module's authored strengths — never its conditions, proportions, or type rarity. Tiers survive the arete reset with the module (ADR-0039).
+A copy's own duplicate-earned improvement step, shown as the engraved ring count. Two copies of the same named type and tier combine into one at the next tier; unequal tiers and different named types never combine, and a finite unlocked cap ends the ladder — raised one tier per owned Warp Beam rung (ADR-0058, #380). Tier scaling multiplies the module's authored strengths — never its conditions, proportions, or type rarity. Tiers survive the arete reset with the module (ADR-0039).
 _Avoid_: rarity (the merge sense), stars, plus
 
 **Draft composition**:
@@ -274,6 +274,10 @@ _Avoid_: tier upgrade, tier chance, loom rung (as the player-facing name), draft
 **Special draft**:
 A scrap-purchased one-time draft with an explicit guarantee every candidate satisfies (issue #379): the **Jacquard Card** drafts the category picked when it is woven, the **Silk Warp** drafts the rare band, and the **Plied Weft** mints every candidate at least one merge tier up, clamped to the unlocked cap with the Draft Loom's rungs riding on top. The purchase banks a held entitlement — memorized, stacking, consumed exactly once when woven — and weaving banks an ordinary offer into the shared queue, so choice, skip payout, and later scrap read the same rules as any roll. Rarity in a Jacquard draft still rides the ordinary bands; a category smaller than the offer may repeat a type, and the duplicate feeds the merge path.
 _Avoid_: guaranteed roll (the generic sense), special roll, buying a draft (say weaving)
+
+**Warp Beam**:
+The Arete Catalog's merge-cap product (issue #380): each purchase raises the unlocked merge cap one tier — the rung past where pairs stopped combining — walking a finite escalating ladder, one entry bought at a rising price. The purchase is memorized. Merge eligibility, the drafts' offered tiers, and the cap purchases' own availability all read the one unlocked cap it raises.
+_Avoid_: cap unlock, tier cap purchase, merge ceiling
 
 **Profile**:
 A named module type's fixed authored identity — coefficients over the category's comparable axes (the oscillators': base production, booster response, chord response, charge response), one defining behavior and at most two supporting tradeoffs, never rolled per copy (issue #369, ADR-0059). Levels, tiers, and mutators scale the profile's strengths; they never change its proportions, conditions, or relative weaknesses. The profile table also authors the non-graded figures — the oscillators' intrinsic capacity (issue #373, ADR-0062) and the temporal timing rules (issue #372, ADR-0061) — which present directly, never as grades.

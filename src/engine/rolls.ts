@@ -1,4 +1,5 @@
 import { BALANCE, CATEGORY_OF, isOscillatorType, MUTATOR_FAMILIES, POOL_JOIN_TYPE, ROLL_POOL, TYPE_RARITY } from "./constants";
+import { unlockedMergeCap } from "./catalog";
 import { newModuleId } from "./state";
 import type { Candidate, Category, GameState, Meter, ModuleType, MutatorRollOffer, Rarity, RollOffer, RollSources, SpecialDraftKind } from "./types";
 
@@ -64,7 +65,7 @@ export function nextDraftUpgradePrice(owned: number): number | null {
 function drawCandidateTier(state: GameState, rng: Rng): number {
   const chance = draftTierChanceOf(state.draftTierBonus);
   if (chance <= 0) return 0;
-  return rng() < chance ? Math.min(1, BALANCE.mergeCap) : 0;
+  return rng() < chance ? Math.min(1, unlockedMergeCap(state)) : 0;
 }
 
 // The special drafts' tier read (issue #379, parent #366): the same loom
@@ -74,8 +75,8 @@ function drawCandidateTier(state: GameState, rng: Rng): number {
 // With no rungs the read spends no rng value, whatever the base.
 function drawSpecialTier(state: GameState, rng: Rng, base: number): number {
   const chance = draftTierChanceOf(state.draftTierBonus);
-  if (chance <= 0) return Math.min(base, BALANCE.mergeCap);
-  return Math.min(base + (rng() < chance ? 1 : 0), BALANCE.mergeCap);
+  if (chance <= 0) return Math.min(base, unlockedMergeCap(state));
+  return Math.min(base + (rng() < chance ? 1 : 0), unlockedMergeCap(state));
 }
 
 // The special drafts' generation (issue #379, parent #366): the one
