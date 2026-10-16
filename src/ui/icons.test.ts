@@ -22,6 +22,8 @@ const MODULE_TYPES: readonly ModuleType[] = [
   "infusor",
   "field",
   "spotlight",
+  "sideband",
+  "chorus",
   "forge",
   "mutatorForge",
 ];

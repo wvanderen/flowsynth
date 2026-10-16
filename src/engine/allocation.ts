@@ -43,17 +43,20 @@ import type { AllocationSummary, DeployedModule, NamedChordTerm, RecognizedInsta
 // The per-voice inputs the objective needs beyond the singer itself: the
 // voice's full chordless final ν/s (every non-chord leg of the rate pass
 // multiplied out — the caller reads it off the real engine pass), the
-// resonance mutator's magnitude on its cell, and the voice's authored
-// chord response (issue #369): the factor each active instance carries
-// for this voice is 1 + response·instance bonus, so a profile's chord
-// niche is inside the certified objective, not beside it. `capacity` is
-// the voice's own whole-chord budget (issue #373): intrinsic seats plus
-// the shared purchased rungs, supplied by the economy per voice; absent,
-// the options' uniform capacity stands in (the stress ladder's and dev
+// resonance mutator's magnitude on its cell, and the voice's effective
+// chord response (issue #369 authored, issue #375 live): the factor each
+// active instance carries for this voice is 1 + response·instance bonus,
+// so a profile's chord niche — and the live additions to it, the
+// Sideband's charged conversion and the Chorus grants — is inside the
+// certified objective, not beside it. `capacity` is the voice's own
+// whole-chord budget (issue #373): intrinsic seats plus the shared
+// purchased rungs, supplied by the economy per voice; absent, the
+// options' uniform capacity stands in (the stress ladder's and dev
 // board's lever), then the standard one.
 export interface AllocationVoiceParams {
   weight: number;
   resonance: number;
+  response?: number;
   capacity?: number;
 }
 
@@ -152,9 +155,9 @@ interface ClusterVoice {
   weight: number;
   uplift: number;
   resonance: number;
-  // The voice's authored chord response (issue #369): the instance factor
-  // it reads is 1 + response·bonus. Silent voices carry 1 — their weight
-  // is zero, so the value never reads.
+  // The voice's effective chord response (issue #369 authored, issue #375
+  // live): the instance factor it reads is 1 + response·bonus. Silent
+  // voices carry 1 — their weight is zero, so the value never reads.
   response: number;
   // The voice's own whole-chord budget (issue #373): the feasible count
   // for this seat alone — intrinsic seats plus the shared purchased rungs.
@@ -688,7 +691,7 @@ export function allocateChords(singers: Singer[], spacers: DeployedModule[] = []
         const weight = silent ? 0 : (params?.weight ?? 0);
         const capacity = params?.capacity ?? opts.capacity ?? 1;
         capacities.set(id, capacity);
-        return { id, index: 0, klass: mod12(pitchById.get(id)!), weight, uplift, resonance: params?.resonance ?? 0, response: chordResponseOf(module.type), capacity };
+        return { id, index: 0, klass: mod12(pitchById.get(id)!), weight, uplift, resonance: params?.resonance ?? 0, response: params?.response ?? chordResponseOf(module.type), capacity };
       })
       .sort((a, b) => a.id.localeCompare(b.id));
     voices.forEach((voice, i) => (voice.index = i));

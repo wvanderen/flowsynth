@@ -15,6 +15,9 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
   // The temporal profile wave (issue #372): the timing is the identity,
   // so the role names the condition and the profile line spells it out.
   afterglow: { name: "Afterglow", short: "GLOW", role: "Session-clocked term · warms up" },
+  // The alternative-charge wave's oscillator (issue #375): the role names
+  // the replacement — charge lands in the chord response, never the term.
+  sideband: { name: "Sideband", short: "SIDE", role: "Charge into chord response · weak alone" },
   harmonizer: { name: "Harmonizer", short: "HARM", role: "Silent voice — its cell's pitch" },
   echo: { name: "Echo", short: "ECHO", role: "Silent voice — neighbor, one octave down" },
   bend: { name: "Bend", short: "BEND", role: "Silent voice — its pitch, shifted" },
@@ -34,6 +37,9 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
   // on the player's chosen recipient.
   field: { name: "Field", short: "FIELD", role: "Broad uplift · every neighbor" },
   spotlight: { name: "Spotlight", short: "SPOT", role: "Focused uplift · one recipient" },
+  // The chord-response booster (issue #375): the category's first
+  // non-amplitude design — the role names its term.
+  chorus: { name: "Chorus", short: "CHOR", role: "Chord response · every neighbor" },
   forge: { name: "Forge", short: "Forge", role: "Rolls at threshold" },
   mutatorForge: { name: "Mutator Forge", short: "Mut. Forge", role: "Mutator rolls at threshold" },
 };

@@ -33,6 +33,12 @@ import type { GeneratorType, ModuleType, OscillatorType } from "./types";
 //              responses), and the warmup curve on the shared session
 //              clock is the whole identity — weak opening, strong
 //              sustained production.
+  //   Sideband (issue #375) — the chord-centered alternative-charge
+  //              producer: the conversion curve scales its chord response
+  //              (×1 uncharged, ×2 at the asymptote) instead of empowering
+  //              it — the charge axis takes the absent mark, the
+  //              replacement stated in disclosure — paid for with the
+  //              weakest standalone base in the roster (D weak).
 export interface OscillatorProfile {
   // The base-term multiplier over the category's unified synthRate.
   base: number;
@@ -52,6 +58,11 @@ export interface OscillatorProfile {
   // The Blaster's structural alternative: received charge converts into
   // the term (×0 uncharged, ×1 at the asymptote) instead of empowering.
   chargeConversion?: boolean;
+  // The Sideband's structural alternative (issue #375): received charge
+  // converts into the chord response — the authored coefficient scales by
+  // 1 + the conversion curve (×1 uncharged, ×2 at the asymptote) — and
+  // the charge factor stays exactly ×1: no empowerment pass, ever.
+  chordConversion?: boolean;
 }
 
 export const OSCILLATOR_PROFILES: Record<OscillatorType, OscillatorProfile> = {
@@ -70,6 +81,16 @@ export const OSCILLATOR_PROFILES: Record<OscillatorType, OscillatorProfile> = {
   // tradeoff, and progression scales the strengths it rides without ever
   // touching the curve's timing.
   afterglow: { base: 1.0, booster: 1.0, chord: 1.0, charge: 1.0, capacity: 1 },
+  // The chord-centered alternative (issue #375, representative): received
+  // charge scales the authored chord response — ×2.0 uncharged (S strong,
+  // second only to the Triangle's ×2.5), toward ×4.0 at the conversion's
+  // asymptote — so a steadily charged rich board hands it the chord lead
+  // the Triangle holds uncharged, exactly the Saw's charged-board flip
+  // one axis over. The charge axis takes the absent mark (the conversion
+  // replaces direct empowerment — the charge figure above never reads),
+  // and the D-weak base ×0.5 pays for the whole mechanic: chordless
+  // boards leave it behind whatever the charge reads. Provisional tuning.
+  sideband: { base: 0.5, booster: 1.0, chord: 2.0, charge: 1.0, capacity: 1, chordConversion: true },
 };
 
 // The one profile read. Non-oscillators have no profile — callers guard by
@@ -102,6 +123,13 @@ export function chargeResponseOf(type: ModuleType): number {
 
 export function usesChargeConversion(type: ModuleType): boolean {
   return oscillatorProfileOf(type)?.chargeConversion === true;
+}
+
+// The chord-centered alternative's test (issue #375): the types whose
+// received charge converts into their chord response instead of applying
+// direct empowerment.
+export function usesChordConversion(type: ModuleType): boolean {
+  return oscillatorProfileOf(type)?.chordConversion === true;
 }
 
 // The type's intrinsic voice capacity (issue #373): the authored seats at
@@ -199,7 +227,10 @@ export const PROFILE_AXIS_LABELS: Record<ProfileAxisRead["id"], string> = {
 // The type's fixed profile axes, grades included — the one read the Forge
 // tiles and the Hex detail share. Types without authored profiles (every
 // non-oscillator, until their waves land) read empty: no axes, no grades,
-// nothing to compare yet.
+// nothing to compare yet. A structural charge behavior — the Blaster's
+// conversion into its term, the Sideband's into its chord response
+// (issue #375) — takes the absent mark: the coefficient beside it grades
+// the authored axis the conversion never touches.
 export function profileAxesOf(type: ModuleType): readonly ProfileAxisRead[] {
   const profile = oscillatorProfileOf(type);
   if (!profile) return [];
@@ -210,7 +241,8 @@ export function profileAxesOf(type: ModuleType): readonly ProfileAxisRead[] {
   push("base", profile.base);
   push("booster", profile.booster);
   push("chord", profile.chord);
-  push("charge", profile.charge, profile.chargeConversion === true);
+  const chargeAbsent = profile.chargeConversion === true || profile.chordConversion === true;
+  push("charge", profile.charge, chargeAbsent);
   return axes;
 }
 

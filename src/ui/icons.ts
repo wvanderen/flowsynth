@@ -42,6 +42,10 @@ const PATHS: Record<ModuleType, string> = {
   // and warms to full amplitude, the warmup curve it rides drawn as its
   // own envelope.
   afterglow: '<path d="M-12 0C-10.5-4-7.5-4-6 0C-4.5-8-1.5-8 0 0C1.5 16 4.5 16 6 0C7.5-16 10.5-16 12 0"/>',
+  // The Sideband (issue #375): the sine flanked by two side bands — the
+  // charge it receives converted into the chord content around its trace,
+  // never into the trace itself.
+  sideband: '<path d="M-11 0C-7.5-9-3.5-9 0 0C3.5 9 7.5 9 11 0"/><path d="M-14-5.5v11M14-5.5v11"/>',
   // The spacer's wire glyph (ADR-0021): a silent conductor stepping through
   // one cell — a running wire with solder points, never a voice. The board
   // face and tray tile render the ring window instead (issue #219); the
@@ -68,6 +72,10 @@ const PATHS: Record<ModuleType, string> = {
   // The Spotlight (issue #374): the Booster's dot with one focused beam —
   // the single chosen neighbor its stronger share lands on.
   spotlight: '<circle r="2.2"/><path d="M4-4.5 12.5-9M4 4.5 12.5 9M12.5-9v18"/>',
+  // The Chorus (issue #375): the Booster's dot fronting three voice lines
+  // of differing reach — the choir it conducts, the chord responses it
+  // lifts instead of any amplitude.
+  chorus: '<circle r="2.2"/><path d="M-7.5-5v10M0-8v16M7.5-5v10"/>',
   forge: '<path d="m0-14 12 7v14L0 14-12 7V-7Zm0 0v28m-12-21 24 14m0-14L-12 7"/>',
   // The Mutator Forge wears the Forge chassis with a seeded hexagon at its
   // core replacing the lattice (issue #219) — the second branch, minting

@@ -1,6 +1,6 @@
 import { amplifierGainOf, tierPowerOf } from "./module-strength";
 import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isOscillatorType, isVoiceType, typeRarityOf } from "./constants";
-import { baseProductionOf, boosterResponseOf, chargeResponseOf, usesChargeConversion, productionClockFactorOf, temporalPhaseKeyOf } from "./profiles";
+import { baseProductionOf, boosterResponseOf, chargeResponseOf, chordResponseOf, usesChargeConversion, usesChordConversion, productionClockFactorOf, temporalPhaseKeyOf } from "./profiles";
 import { analyzeChords, hypotheticalBoardFor, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
 import { allocateChords, DEFAULT_ALLOCATION_BUDGET, type AllocationBudget, type AllocationRead, type AllocationVoiceParams } from "./allocation";
 import { capacityOf } from "./capacity";
@@ -36,12 +36,15 @@ export function blasterConversion(strength: number): number {
 
 // A producer's charge term (issue #369, ADR-0059): the conversion curve
 // for the types whose profile replaces the charge factor (the Blaster,
-// ADR-0048), otherwise the charged-empowerment curve with the type's
-// authored response scaling the delta above ×1 — a Saw's ×3 delta flips
-// past stronger bases on a steadily charged board, while every uncharged
+// ADR-0048), the Sideband's exact ×1 (issue #375 — its received charge
+// lands in its chord response, never on this leg), and
+// otherwise the charged-empowerment curve with the type's authored
+// response scaling the delta above ×1 — a Saw's ×3 delta flips past
+// stronger bases on a steadily charged board, while every uncharged
 // producer sits at exactly ×1.
 export function chargeTermOf(type: ModuleType, strength: number): number {
   if (usesChargeConversion(type)) return blasterConversion(strength);
+  if (usesChordConversion(type)) return 1;
   return 1 + chargeResponseOf(type) * (strength / (1 + strength));
 }
 
@@ -409,21 +412,59 @@ function infusorBonusAt(
   if (module.pos === null) return 0;
   let total = 0;
   for (const other of placed) {
-    if (CATEGORY_OF[other.type] !== "booster" || other.pos === null) continue;
+    // The Chorus grants no amplitude (issue #375): its share lands on the
+    // recipients' chord-response term, read by chorusGrantsAt instead.
+    if (CATEGORY_OF[other.type] !== "booster" || other.type === "chorus" || other.pos === null) continue;
     if (!adjacent(module.pos, other.pos)) continue;
     total += boosterGrantAt(state, other, module, flow, placed, net, steadyBonus);
   }
   return total;
 }
 
-// The authored share each booster design grants (issue #374): the Booster's
-// launch baseline, the Field's moderate breadth, the Spotlight's narrow
-// strength. One table — the rate pass and every readout quote the same
-// figure.
+// The Chorus's grant to one adjacent oscillator (issue #375): its authored
+// share adds to the recipient's chord-response term — never the amplitude
+// leg — sharpened by the charge the Chorus itself receives (its own
+// primary effect strengthening), read off the snapshot's charge strengths
+// the same figure the rate pass and the allocator share.
+export function chorusGrantsAt(state: GameState, module: ModuleInstance, chargeStrength: ReadonlyMap<string, number>): number {
+  if (module.pos === null || !isOscillatorType(module.type)) return 0;
+  let total = 0;
+  for (const other of deployed(state)) {
+    if (other.type !== "chorus" || other.pos === null) continue;
+    if (!adjacent(module.pos, other.pos)) continue;
+    total += BALANCE.chorusBonus * hostPower(state, other) * chargedFactor(chargeStrength.get(other.id) ?? 0);
+  }
+  return total;
+}
+
+// The voice's effective chord response (issue #375): the authored
+// coefficient scaled by the Sideband's charged conversion (×1 uncharged,
+// ×2 at the asymptote), plus the Chorus grants
+// adding beside it — the one read the rate pass, the allocator, and the
+// chord pass share, so no surface can quote a different response.
+export function effectiveChordResponseOf(type: ModuleType, strength: number, chorusGrants: number): number {
+  let response = chordResponseOf(type);
+  if (usesChordConversion(type)) response *= 1 + blasterConversion(strength);
+  return response + chorusGrants;
+}
+
+// The authored share each booster design grants (issues #374/#375): the
+// Booster's launch baseline, the Field's moderate breadth, the Spotlight's
+// narrow strength — all on the amplitude leg — and the Chorus's share on
+// the chord-response term instead. One table — the rate pass and every
+// readout quote the same figure.
 export function boosterBonusOf(type: ModuleType): number {
   if (type === "field") return BALANCE.fieldBonus;
   if (type === "spotlight") return BALANCE.spotlightBonus;
+  if (type === "chorus") return BALANCE.chorusBonus;
   return BALANCE.infusorBonus;
+}
+
+// The term each booster design's share lands on (issues #374/#375): the
+// amplitude leg, or the recipients' chord response — the one authored
+// fact, so no surface can rename a design's term.
+export function boosterTermOf(type: ModuleType): "amplitude" | "chord response" {
+  return type === "chorus" ? "chord response" : "amplitude";
 }
 
 // The Spotlight's resolved recipient (issue #374): the selected module
@@ -440,9 +481,11 @@ export function spotlightRecipientOf(state: GameState, booster: ModuleInstance):
   return target;
 }
 
-// One booster's grant to one adjacent module: its authored share over the
-// host power, sharpened by the charge it receives (the continuous family's
-// own empowerment — received charge strengthens the primary effect).
+// One booster's amplitude grant to one adjacent module: its authored share
+// over the host power, sharpened by the charge it receives (the continuous
+// family's own empowerment — received charge strengthens the primary
+// effect). The Chorus never rides this leg (issue #375): its share lands
+// on the recipients' chord-response term, read by chorusGrantsAt.
 // Coverage is per design (issue #374): the Booster and the Field spread to
 // every adjacent oscillator — the initial support is oscillator-only — and
 // the Spotlight lands on its selected recipient alone, never the strongest
@@ -467,8 +510,11 @@ function boosterGrantAt(
 // capacity allocator's drop-in analysis so allocation quality and
 // performance ride the one real rate path instead of a parallel read. The
 // bonusScale is the active build's named-chord factor, threaded exactly as
-// the default pass threads it.
-export type ChordPass = (singers: Singer[], spacers: DeployedModule[], bonusScale: number) => ChordAnalysis;
+// the default pass threads it. `responses` (issue #375) carries the
+// effective chord response per voice — the Sideband's charged conversion
+// and the Chorus's grants — computed by the same pass that reads the
+// charge strengths.
+export type ChordPass = (singers: Singer[], spacers: DeployedModule[], bonusScale: number, responses?: ReadonlyMap<string, number>) => ChordAnalysis;
 
 // The unified rate (ADR-0021/0022 as amended by ADR-0036, ADR-0048, and
 // ADR-0049; leg naming per ADR-0020): every effect lands on the producer
@@ -480,7 +526,11 @@ export type ChordPass = (singers: Singer[], spacers: DeployedModule[], bonusScal
 // unified leg, no carrier/harmonics split — with the named type's authored
 // profile (issue #369, ADR-0059) scaling the pieces: base production over
 // the unified rate, the booster bonus the term receives, the chord bonus
-// it converts (Q rides outside it), and the charge curve's delta. Chords
+// it converts (Q rides outside it), and the charge curve's delta. The
+// chord response the chord factors carry is the voice's effective one
+// (issue #375): the authored coefficient scaled by the Sideband's charged
+// conversion, plus the Chorus grants — same-term contributions add, and
+// the conversion types' charge curve never also empowers them. Chords
 // are local (ADR-0036): the formation's named instance product × its
 // quality Q (ADR-0049) rides each member's own term, and the conversion
 // types' charge curve replaces their charge factor (no second empowerment
@@ -601,13 +651,24 @@ export function computeRates(
     });
   }
 
+  // Pass one and a half: the voices' effective chord responses (issue
+  // #375) — the authored coefficient scaled by the Sideband's charged
+  // conversion, plus the Chorus grants adding beside it. The charge
+  // strengths it reads are pass one's own; the map feeds the chord pass
+  // below, and the allocator's params read the same helper off its own
+  // chordless pass, so the two seams cannot disagree.
+  const responses = new Map<string, number>();
+  for (const { module, strength } of voices) {
+    responses.set(module.id, effectiveChordResponseOf(module.type, strength, chorusGrantsAt(state, module, chargeStrength)));
+  }
+
   // Pass two: pitch-set chords over the connected formations — the spacer
   // conducts adjacency, never joins a pitch set; the silent voices sing
   // their derived pitches and count in the quality's read. The pitch-ear
   // and deep-practice nodes (ADR-0046) scale every named instance's bonus;
   // the formation quality and the silent-voice uplift are untouched — the
   // chord-touching levers stayed with the harmony contracts.
-  const analysis = chordPass(singers, spacers, 1 + factors.namedChordBonus);
+  const analysis = chordPass(singers, spacers, 1 + factors.namedChordBonus, responses);
 
   // Pass three: the unified synths leg. Chords are local (ADR-0036): each
   // oscillator carries its own chordFactor — the formation's named product
@@ -861,10 +922,15 @@ export function allocateRates(
     // the shared purchased rungs, threaded through the params the solver
     // prices feasibility from — heterogeneous capacities inside the
     // certified objective. The dev board's uniform override replaces
-    // them all with one figure.
+    // them all with one figure. The effective chord response (issue
+    // #375) rides the params the same way: the Sideband's charged
+    // conversion and the Chorus grants, read off the chordless pass's
+    // own charge strengths — the certified objective prices the same
+    // response the production pass applies.
     params.set(module.id, {
       weight: bare.contributions.get(module.id)?.value ?? 0,
       resonance,
+      response: effectiveChordResponseOf(module.type, bare.chargeStrength.get(module.id) ?? 0, chorusGrantsAt(state, module, bare.chargeStrength)),
       ...(options.capacity === undefined ? { capacity: voiceCapacityOf(state, module.type) } : {}),
     });
   }

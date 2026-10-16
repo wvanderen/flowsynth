@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { CATEGORY_OF, MODULE_TYPES } from "../engine/constants";
+import { computeRates } from "../engine/economy";
+import { fresh, give } from "../engine/fixtures";
 import type { ModuleType } from "../engine/types";
-import { CHARGED_FILL_MIN, CHARGED_FILL_SPAN, HUE_TOKEN_OF, RAIL_CHARGED_FLOOR, RAIL_CHARGED_SPAN, moduleFace, readoutFitClass, ringCount, spacerClipPath, SPACER_WINDOW_RADIUS, hexPoints } from "./face";
+import { CHARGED_FILL_MIN, CHARGED_FILL_SPAN, HUE_TOKEN_OF, RAIL_CHARGED_FLOOR, RAIL_CHARGED_SPAN, faceReadoutFor, moduleFace, readoutFitClass, ringCount, spacerClipPath, SPACER_WINDOW_RADIUS, hexPoints } from "./face";
 import { chargeGlow } from "./leads";
 import { META } from "./meta";
 import { moduleIcon } from "./icons";
@@ -153,6 +155,7 @@ describe("module face", () => {
       square: ["Square", "SQR"],
       saw: ["Saw", "SAW"],
       afterglow: ["Afterglow", "GLOW"],
+      sideband: ["Sideband", "SIDE"],
       harmonizer: ["Harmonizer", "HARM"],
       echo: ["Echo", "ECHO"],
       bend: ["Bend", "BEND"],
@@ -165,6 +168,7 @@ describe("module face", () => {
       infusor: ["Booster", "BOOST"],
       field: ["Field", "FIELD"],
       spotlight: ["Spotlight", "SPOT"],
+      chorus: ["Chorus", "CHOR"],
       spacer: ["Spacer", "SPACER"],
       forge: ["Forge", "FORGE"],
       mutatorForge: ["Mutator Forge", "MUT. FORGE"],
@@ -199,6 +203,11 @@ describe("module face", () => {
     expect(moduleIcon("field")).toContain('M-5-7-13 0-5 7M5-7 13 0 5 7');
     expect(moduleIcon("spotlight")).toContain('<circle r="2.2"/>');
     expect(moduleIcon("spotlight")).toContain('M12.5-9v18');
+    // The chord-centered wave (issue #375): the Sideband's flanked trace,
+    // the Chorus's voice lines fronting the shared dot.
+    expect(moduleIcon("sideband")).toContain('M-14-5.5v11M14-5.5v11');
+    expect(moduleIcon("chorus")).toContain('<circle r="2.2"/>');
+    expect(moduleIcon("chorus")).toContain('M0-8v16');
     expect(moduleIcon("mutatorForge")).toContain('<path d="M0-5.5 4.8-2.7V2.7L0 5.5-4.8 2.7V-2.7Z"/><circle r="1.5"/>');
     // The Mutator Forge's chassis drops the lattice — distinct from the
     // Module Forge's.
@@ -222,5 +231,15 @@ describe("module face", () => {
     expect(readoutFitClass("+1,234 ν")).toBe(" face-readout-sm");
     expect(readoutFitClass("+123,456 ν")).toBe(" face-readout-xs");
     expect(readoutFitClass("1,234/5,678")).toBe(" face-readout-xs");
+  });
+});
+
+describe("face readouts", () => {
+  it("the Chorus's share names its term — chord response, never amplitude (issue #375)", () => {
+    const s = fresh();
+    const chorus = give(s, "chorus", null);
+    const read = faceReadoutFor(s, chorus, null, computeRates(s, false));
+    expect(read.readout).toBe("+50%");
+    expect(read.note).toBe("chord response");
   });
 });

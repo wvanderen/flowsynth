@@ -13,6 +13,13 @@ export interface Balance {
   // Field leg, two Field neighbors beat one Spotlight.
   fieldBonus: number;
   spotlightBonus: number;
+  // The chord-response booster's authored share (issue #375, parent #366):
+  // the Chorus adds this to every adjacent oscillator's chord-response
+  // term — never the amplitude leg — so it is inert without an active
+  // chord. Provisional tuning: a standard voice reads ×1.5 response
+  // beside one charged Chorus, past the Triangle's authored ×2.5 only
+  // with two.
+  chorusBonus: number;
   // ── Harmony quality (ADR-0049): Q = clamp(1 + complexity − max(0,
   // tension − A), Qmin, cap) over the formation's deduplicated pitch
   // classes. All magnitudes provisional tuning per the map's standing note.
@@ -200,6 +207,7 @@ export const BALANCE: Balance = {
   infusorBonus: 0.2,
   fieldBonus: 0.3,
   spotlightBonus: 0.5,
+  chorusBonus: 0.5,
   tensionWeights: { 1: 1.0, 2: 0.2, 3: 0, 4: 0, 5: 0, 6: 0.5 },
   complexityRate: 0.06,
   tensionAllowance: 0.7,
@@ -329,6 +337,11 @@ export const CATEGORY_OF: Record<ModuleType, Category> = {
   // same leg — its authored profile is neutral on every comparable axis
   // and the warmup curve on the shared session clock is the identity.
   afterglow: "oscillator",
+  // The alternative-charge wave's oscillator (issue #375): the same
+  // category and leg, its received charge converting into its chord
+  // response instead of empowering it (the Blaster's contract on a
+  // different axis — ADR-0048's replacement rule, issue #375).
+  sideband: "oscillator",
   harmonizer: "silentVoice",
   echo: "silentVoice",
   bend: "silentVoice",
@@ -354,6 +367,10 @@ export const CATEGORY_OF: Record<ModuleType, Category> = {
   // different coverage.
   field: "booster",
   spotlight: "booster",
+  // The chord-response booster (issue #375): the category's first design
+  // whose primary effect is not amplitude — its share lands on the
+  // recipients' chord-response term, never the amplitude leg.
+  chorus: "booster",
   forge: "forge",
   // The Mutator Forge is the Forge family's second branch (ADR-0043): the
   // same chargeable category, its own meter. Membership is decided per
@@ -381,6 +398,11 @@ export const TYPE_RARITY: Record<ModuleType, Rarity> = {
   square: "common",
   saw: "common",
   afterglow: "uncommon",
+  // The alternative-charge wave's oscillator (issue #375): the roster's
+  // first rare — the parent's accepted sample table places the Sideband
+  // in the rare band, its charge-into-chord conversion the unusual
+  // mechanic the band's power budget prices.
+  sideband: "rare",
   harmonizer: "common",
   echo: "common",
   bend: "common",
@@ -396,6 +418,9 @@ export const TYPE_RARITY: Record<ModuleType, Rarity> = {
   // per the parent's accepted sample table.
   field: "common",
   spotlight: "common",
+  // The chord-response booster (issue #375): uncommon per the parent's
+  // accepted sample table — the roster's third uncommon entry.
+  chorus: "uncommon",
   forge: "common",
   mutatorForge: "common",
 };
@@ -443,6 +468,7 @@ export const MODULE_TYPES: readonly ModuleType[] = [
   "square",
   "saw",
   "afterglow",
+  "sideband",
   "harmonizer",
   "echo",
   "bend",
@@ -456,6 +482,7 @@ export const MODULE_TYPES: readonly ModuleType[] = [
   "infusor",
   "field",
   "spotlight",
+  "chorus",
   "forge",
 ];
 

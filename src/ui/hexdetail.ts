@@ -28,7 +28,7 @@ import { tierPowerOf } from "../engine/module-strength";
 // reordering. Editing lives in upgrade mode only: during flow the same
 // cross-section opens read-only, its readouts live, its controls gone —
 // the click still answers the lock.
-import { affordableLevels, boosterBonusOf, deployed, deployedAt, displayedRates, hostPower, levelCost, levelsCost, mutatorAt, mutatorMagnitude, wholeNous } from "../engine/economy";
+import { affordableLevels, boosterBonusOf, boosterTermOf, deployed, deployedAt, displayedRates, hostPower, levelCost, levelsCost, mutatorAt, mutatorMagnitude, wholeNous } from "../engine/economy";
 import { BALANCE, isOscillatorType, typeRarityOf } from "../engine/constants";
 import { adjacent, sameHex } from "../engine/hex";
 import { cellNoteOf, noteNameOf, pitchOf } from "../engine/lattice";
@@ -91,6 +91,9 @@ const DETAIL_BENEFITS: Record<ModuleInstance["type"], (input: DetailEffectInput)
   // The Afterglow's level scales the whole warm term — the warmup curve's
   // timing is untouched by it (issue #372).
   afterglow: synthBenefit,
+  // The Sideband's level scales the whole term — the charge conversion's
+  // curve and condition are untouched by it (issue #375).
+  sideband: synthBenefit,
   harmonizer: silentBenefit,
   echo: silentBenefit,
   bend: silentBenefit,
@@ -106,9 +109,11 @@ const DETAIL_BENEFITS: Record<ModuleInstance["type"], (input: DetailEffectInput)
   pulsewell: generatorBenefit,
   infusor: ({ gain }) => `+${formatNumber(100 * boosterBonusOf("infusor") * gain)}% uplift`,
   // The booster wave's authored shares (issue #374): the pass's one table
-  // quoted, never a second coefficient home.
+  // quoted, never a second coefficient home. The line names the design's
+  // authored term (issue #375).
   field: ({ gain }) => `+${formatNumber(100 * boosterBonusOf("field") * gain)}% uplift`,
   spotlight: ({ gain }) => `+${formatNumber(100 * boosterBonusOf("spotlight") * gain)}% uplift`,
+  chorus: ({ gain }) => `+${formatNumber(100 * boosterBonusOf("chorus") * gain)}% ${boosterTermOf("chorus")}`,
   forge: ({ gain }) => `+${formatNumber(gain)} progress/s`,
   mutatorForge: ({ gain }) => `+${formatNumber(gain)} progress/s`,
 };

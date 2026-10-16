@@ -3366,6 +3366,9 @@ function forgeEffect(type: ModuleInstance["type"], tier: number): string {
     // The temporal profiles (issue #372): the effect line names the niche;
     // the timing line beside it spells the curve out — never a grade.
     case "afterglow": return "Session-clocked term · weak open, strong sustained";
+    // The alternative-charge wave's oscillator (issue #375): the effect
+    // line states the replacement — charge lands in the chord response.
+    case "sideband": return "Received charge → chord response · weak standalone term";
     case "harmonizer": return `Cell pitch · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * power)}%/level to its chords`;
     case "echo": return `Adjacent pitch, octave down · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * power)}%/level to its chords`;
     case "bend": return `Shifted cell pitch · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * power)}%/level to its chords`;
@@ -3388,6 +3391,9 @@ function forgeEffect(type: ModuleInstance["type"], tier: number): string {
     // The booster wave's niches (issue #374): coverage against strength.
     case "field": return `Every adjacent oscillator +${formatNumber(BALANCE.fieldBonus * 100 * power)}% · charge boosts uplift`;
     case "spotlight": return `One recipient +${formatNumber(BALANCE.spotlightBonus * 100 * power)}% · charge boosts uplift`;
+    // The chord-response booster (issue #375): the term it lifts named in
+    // the line — never read as amplitude.
+    case "chorus": return `Neighbors' chord response +${formatNumber(BALANCE.chorusBonus * 100 * power)}% · charge boosts share · needs a chord`;
     case "forge": return "Received charge → module rolls";
     case "mutatorForge": return "Received charge → mutator rolls";
     default: return "Not yet active";
@@ -3409,6 +3415,7 @@ function candidateReadout(type: ModuleInstance["type"], tier: number): string {
     case "square":
     case "saw":
     case "afterglow":
+    case "sideband":
       return `+${formatNumber(baseTermOf(type, power))}`;
     case "harmonizer":
     case "echo":
@@ -3431,6 +3438,8 @@ function candidateReadout(type: ModuleInstance["type"], tier: number): string {
       return `+${formatNumber(BALANCE.fieldBonus * 100 * power)}%`;
     case "spotlight":
       return `+${formatNumber(BALANCE.spotlightBonus * 100 * power)}%`;
+    case "chorus":
+      return `+${formatNumber(BALANCE.chorusBonus * 100 * power)}%`;
     case "forge":
     case "mutatorForge":
       return `${formatNumber(power)}/s`;
