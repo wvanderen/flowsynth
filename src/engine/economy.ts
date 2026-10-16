@@ -437,14 +437,7 @@ function infusorBonusAt(
 // primary effect strengthening), read off the snapshot's charge strengths
 // the same figure the rate pass and the allocator share.
 export function chorusGrantsAt(state: GameState, module: ModuleInstance, chargeStrength: ReadonlyMap<string, number>): number {
-  if (module.pos === null || !isOscillatorType(module.type)) return 0;
-  let total = 0;
-  for (const other of deployed(state)) {
-    if (other.type !== "chorus" || other.pos === null) continue;
-    if (!adjacent(module.pos, other.pos)) continue;
-    total += BALANCE.chorusBonus * hostPower(state, other) * chargedFactor(chargeStrength.get(other.id) ?? 0);
-  }
-  return total;
+  return responseGrantsAt(state, module, chargeStrength, "chorus");
 }
 
 // The Exciter's grant to one adjacent oscillator (issue #376): its authored
@@ -456,12 +449,21 @@ export function chorusGrantsAt(state: GameState, module: ModuleInstance, chargeS
 // becomes a second one — and lands on a coefficient the charge curve's
 // delta multiplies, so an uncharged recipient reads exactly nothing.
 export function exciterGrantsAt(state: GameState, module: ModuleInstance, chargeStrength: ReadonlyMap<string, number>): number {
+  return responseGrantsAt(state, module, chargeStrength, "exciter");
+}
+
+function responseGrantsAt(
+  state: GameState,
+  module: ModuleInstance,
+  chargeStrength: ReadonlyMap<string, number>,
+  boosterType: "chorus" | "exciter",
+): number {
   if (module.pos === null || !isOscillatorType(module.type)) return 0;
   let total = 0;
   for (const other of deployed(state)) {
-    if (other.type !== "exciter" || other.pos === null) continue;
+    if (other.type !== boosterType || other.pos === null) continue;
     if (!adjacent(module.pos, other.pos)) continue;
-    total += BALANCE.exciterBonus * hostPower(state, other) * chargedFactor(chargeStrength.get(other.id) ?? 0);
+    total += boosterBonusOf(other.type) * hostPower(state, other) * chargedFactor(chargeStrength.get(other.id) ?? 0);
   }
   return total;
 }
