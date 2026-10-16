@@ -6,7 +6,7 @@ new types and game-design concepts — the engine keys and records live in code
 design thinking lives. The roster table reflects the code as of the last
 update; when a type lands, update the table in the same change.
 
-Last updated: 2026-10-16 (guaranteed special drafts — issue #379)
+Last updated: 2026-10-16 (the Arete merge cap — issue #380)
 
 ## Roster
 
@@ -50,7 +50,12 @@ Forge's common entry joins the pool only with the roll-pool purchase
 (ADR-0043), riding the forge category's weight. Duplicate
 progress lives on the per-copy merge tier: two copies of the same type
 and tier combine into one at the next tier, up to the finite unlocked cap
-(`mergeCap`, 2 — three tiers, Arete raises it later, #380). The plate
+(`mergeCap`, 2 — three tiers). The **Warp Beam** (issue #380, ADR-0069),
+the Arete Catalog's merge-cap product, raises the cap one tier per owned
+rung — a strictly finite escalating Arete ladder (`mergeCapCosts`,
+5/12/30, provisional) — and every consumer reads the one unlocked cap it
+raises: merge eligibility, merge-all, the drafts' offered tiers, the loom's
+and the tier product's availability. The rungs are memorized. The plate
 tint and rarity word read the type; the engraved rings read the tier.
 Mutator rarity is separate and unchanged (ADR-0043).
 

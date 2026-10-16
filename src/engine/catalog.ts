@@ -35,3 +35,27 @@ export function unlockableRows(state: GameState): number[] {
 export function rowUnlockCost(state: GameState): number | null {
   return BALANCE.rowUnlockCosts[state.unlockedRows.length] ?? null;
 }
+
+// The owned rungs, clamped into the ladder's range: the one bound both
+// reads below share, so a corrupt count can never price a rung the cap
+// read does not count (and vice versa).
+function ownedMergeCapRungs(state: GameState): number {
+  return Math.min(Math.max(state.mergeCapPurchases, 0), BALANCE.mergeCapCosts.length);
+}
+
+// The unlocked merge cap (issue #380, ADR-0058's finite cap): the base cap
+// plus one tier per owned Warp Beam rung, clamped at the ladder's end so a
+// corrupt count can never promise a tier the power ladder cannot price.
+// The one read every consumer uses — merge eligibility, the drafts' tier
+// draws, the loom's and the tier product's availability, the cap feat — so
+// no surface can disagree about where the ladder ends.
+export function unlockedMergeCap(state: GameState): number {
+  return BALANCE.mergeCap + ownedMergeCapRungs(state);
+}
+
+// The next Warp Beam rung's Arete price (issue #380); null at the ladder's
+// end — the cap is at its ceiling and nothing more is sold.
+export function mergeCapIncreaseCost(state: GameState): number | null {
+  const owned = ownedMergeCapRungs(state);
+  return owned < BALANCE.mergeCapCosts.length ? BALANCE.mergeCapCosts[owned]! : null;
+}

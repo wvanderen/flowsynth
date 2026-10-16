@@ -96,11 +96,19 @@ export interface Balance {
   // The merge tier's power scaling (ADR-0058): each tier multiplies the
   // module's authored strengths by its entry — ×1.5 per tier, provisional
   // tuning. Conditions, proportions, and relative weaknesses never scale.
+  // The ladder covers the base cap and every rung the Arete purchases
+  // below can add — the tier never outgrows its multiplier.
   tierPower: readonly number[];
   // The finite unlocked merge cap (ADR-0058): the highest tier a combine
-  // can mint. A pair at the cap refuses; a future Arete purchase raises it
-  // (#380). Provisional tuning (three tiers).
+  // can mint at zero purchases. The Arete Catalog's Warp Beam (#380)
+  // raises it one tier per owned rung, up to the ladder below; the one
+  // read is catalog.unlockedMergeCap. Provisional tuning (three tiers).
   mergeCap: number;
+  // The Warp Beam's escalating Arete ladder (#380, parent #366): the nth
+  // owned rung costs mergeCapCosts[n] and raises the unlocked cap one
+  // tier. Strictly finite — past the ladder's end the cap is at its
+  // ceiling and nothing more is sold. Provisional prices.
+  mergeCapCosts: readonly number[];
   rarityProbability: Record<Rarity, number>;
   shelfPrices: Record<ShelfType, number>;
   // Cells (ADR-0013): direct nous purchases on a geometric scaler over
@@ -286,8 +294,9 @@ export const BALANCE: Balance = {
   upgradeCostGrowthNumerator: 8n,
   upgradeCostGrowthDenominator: 5n,
   rarityPower: { common: 1.2, uncommon: 1.25, rare: 1.3 },
-  tierPower: [1, 1.5, 2.25],
+  tierPower: [1, 1.5, 2.25, 3.375, 5.0625, 7.59375],
   mergeCap: 2,
+  mergeCapCosts: [5, 12, 30],
   rarityProbability: { common: 0.99, uncommon: 0.009, rare: 0.001 },
   shelfPrices: { generator: 40, infusor: 40, forge: 80 },
   cellFirstCost: 30,

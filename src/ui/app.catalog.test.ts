@@ -808,9 +808,10 @@ describe("the harmonic-capacity ladder (#259)", () => {
     }
     expect(rowOf("Expansion Bays").textContent).toContain("ceiling 3 → 4");
     expect(rowOf("Chord Catalysts").textContent).toContain("prices −0% → −20%");
-    // Six entries on the whole face: the layer's five upgrades and the
-    // pool join — no second rungs.
-    expect(sheet().querySelectorAll(".catalog-row")).toHaveLength(6);
+    // Seven entries on the whole face: the layer's six upgrades (the
+    // Warp Beam's cap row included, issue #380) and the pool join — no
+    // second rungs.
+    expect(sheet().querySelectorAll(".catalog-row")).toHaveLength(7);
     // The ceiling purchase lands and the same entry walks its ladder:
     // owned figure, delta, then the rising next price.
     rowOf("Expansion Bays").querySelector<HTMLButtonElement>("button.price")!.click();
@@ -869,10 +870,11 @@ describe("the harmonic-capacity ladder (#259)", () => {
     app.openModal("catalog");
     const read = (): string[] =>
       [...document.querySelectorAll<HTMLElement>("#modal-content .inst-tip-body")].map((b) => b.textContent!.trim());
-    // The arete face: the effect lines' term bodies and the Module Types
-    // section's gloss, including Headroom's deeper claim mechanic.
+    // The arete face: the effect lines' term bodies (the Warp Beam's row
+    // included, issue #380) and the Module Types section's gloss,
+    // including Headroom's deeper claim mechanic.
     let texts = read();
-    expect(texts.length).toBe(12);
+    expect(texts.length).toBe(15);
     for (const text of texts) {
       expect(text.length).toBeLessThanOrEqual(60);
       expect(text).not.toMatch(/[—;:]/);

@@ -10,6 +10,7 @@
 // session" row); upgrade-mode unlocks return to the caller for toasting;
 // the eager resume sync stamps silently (SyncOptions.silent).
 import { ARETE_HORIZON } from "./accumulator";
+import { unlockedMergeCap } from "./catalog";
 import { BALANCE, SHELF_TYPES } from "./constants";
 import { displayedRates, maxChordFactorOf } from "./economy";
 import { isInFlowNote } from "./notes";
@@ -83,8 +84,9 @@ const goalCompletions = (state: GameState): number =>
   state.goals.reduce((total, goal) => total + goal.completedCount, 0);
 
 // "Fine china" reads the merge ladder's top (ADR-0058): a copy at the
-// unlocked cap — the tier the shelf and every ordinary draw can never mint.
-const ownsCapTier = (state: GameState): boolean => state.modules.some((m) => m.tier >= BALANCE.mergeCap);
+// unlocked cap — the tier the shelf and every ordinary draw can never
+// mint. The cap the Warp Beam raises (#380) moves the top with it.
+const ownsCapTier = (state: GameState): boolean => state.modules.some((m) => m.tier >= unlockedMergeCap(state));
 
 // Rolls taken: every mint pushes exactly one offer into the one shared
 // queue (ADR-0041), so the un-taken count is the two meters' earned total

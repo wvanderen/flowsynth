@@ -11,7 +11,7 @@ import { draftTierChanceOf, forgeThreshold, flowThreshold, mutatorForgeThreshold
 import { BALANCE, CATEGORY_OF, isOscillatorType, isVoiceType, NAMED_CHORDS, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { goalCompletionBase } from "../engine/reserves";
 import { baseTermOf, generatorProfileOf } from "../engine/profiles";
-import { catalogOpen, rowUnlockCost, unlockableRows } from "../engine/catalog";
+import { catalogOpen, mergeCapIncreaseCost, rowUnlockCost, unlockedMergeCap, unlockableRows } from "../engine/catalog";
 import { capacityCeiling, nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "../engine/capacity";
 import { formatClock, formatDuration } from "../engine/clock";
 import { cellNoteOf, noteNameOf, octaveRowOf, positionInRange } from "../engine/lattice";
@@ -2567,8 +2567,10 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
         // re-read with every purchase, so the row's chance, price, and
         // muted state never stand stale in an open modal. The special
         // drafts' held entitlements ride beside them (issue #379): a
-        // purchase or a weave re-renders the rows and the chip strip.
-        app.state.draftTierBonus, app.state.scrap, JSON.stringify(app.state.specialDrafts)]
+        // purchase or a weave re-renders the rows and the chip strip. The
+        // unlocked cap rides too (issue #380): the Plied Weft's
+        // availability and the offered tiers read it.
+        app.state.draftTierBonus, app.state.scrap, JSON.stringify(app.state.specialDrafts), unlockedMergeCap(app.state)]
       : kind === "honesty"
         ? [app.exitPending, app.state.session?.accounting.poolSeconds ?? 0, app.state.session?.accounting.bucketNous ?? 0]
         : kind === "summary"
@@ -2592,6 +2594,9 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                   app.state.capacityBought,
                   app.state.capacityCeilings,
                   app.state.capacityDiscounts,
+                  // The Warp Beam's owned rungs (issue #380): the row's
+                  // figure, price, and cap delta re-read with the ladder.
+                  app.state.mergeCapPurchases,
                   // Module-upgrade rows reprice with levels, moves, and the roster.
                   app.state.modules.map((m) => `${m.id}:${m.level}:${m.tier}:${m.pos ? "d" : "i"}`).join("|"),
                   app.state.arete,
@@ -3117,6 +3122,22 @@ function capacityProductRowHtml(app: App, key: "extenders" | "catalysts"): strin
   </article>`;
 }
 
+// The merge cap's row (issue #380, parent #366): the Catalog's third
+// module-economy product, in the capacity rows' own grammar — the owned
+// figure against the ladder, the before → after cap, and the Arete price
+// on the buy; the engraved owned-word lands when the ladder is sold out.
+function mergeCapRowHtml(app: App): string {
+  const owned = app.state.mergeCapPurchases;
+  const price = mergeCapIncreaseCost(app.state);
+  const cap = unlockedMergeCap(app.state);
+  return `<article class="catalog-row">
+    <div><h3 class="t-condensed">${termTipHtml("Warp Beam")} <span class="mono">${owned}/${BALANCE.mergeCapCosts.length}</span></h3><p class="t-note">Raises the ${termTipHtml("merge tier")} cap one tier each · ${termTipHtml("memorized")}</p>${
+      price === null ? "" : `<p class="t-note mono">cap ${cap} → ${cap + 1}</p>`
+    }</div>
+    ${price === null ? catalogOwnedHtml("extended") : areteBuyButtonHtml(app, "buy-arete-beam", price)}
+  </article>`;
+}
+
 function areteBuyButtonHtml(app: App, id: string, price: number): string {
   return catalogPriceHtml({ attrs: `id="${id}"`, price, affordable: app.state.arete >= price, hold: app.state.mode !== "upgrade", arete: true });
 }
@@ -3170,6 +3191,7 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
   app.listen(content.querySelector<HTMLButtonElement>("[data-buy-capacity]"), "click", () => app.buyCapacityAction());
   app.listen(byId("buy-capacity-ceiling"), "click", () => app.buyCapacityCeilingAction());
   app.listen(byId("buy-capacity-discount"), "click", () => app.buyCapacityDiscountAction());
+  app.listen(byId("buy-arete-beam"), "click", () => app.buyMergeCapAction());
   app.listen(byId("buy-arete-entry"), "click", () => app.buyCatalogEntryAction());
   app.listen(byId("buy-arete-pool"), "click", () => app.joinRollPoolAction());
   app.listen(byId("buy-arete-break"), "click", () => app.breakHorizonAction());
@@ -3288,7 +3310,7 @@ function catalogOwnedHtml(word: string): string {
 // the glossary meaning — description prose never grows around it. The
 // meanings here are the glossary's own, distilled to the one-line ceiling.
 // The union keeps the map closed: only glossary terms may render hoverable.
-type CatalogTerm = "Oscillator" | "Generator" | "Booster" | "Silent voice" | "Spacer" | "Forge" | "Charge conduit" | "RITUAL" | "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Headroom" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "habit build" | "goals";
+type CatalogTerm = "Oscillator" | "Generator" | "Booster" | "Silent voice" | "Spacer" | "Forge" | "Charge conduit" | "RITUAL" | "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Warp Beam" | "Headroom" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "habit build" | "goals";
 const CATALOG_TERMS: Record<CatalogTerm, string> = {
   Oscillator: "Pitched module contributing production",
   Generator: "Produces charge from practice",
@@ -3305,6 +3327,7 @@ const CATALOG_TERMS: Record<CatalogTerm, string> = {
   "Poly Expander": "Re-earned after arete reset",
   "Expansion Bays": "Ceiling purchases persist through arete reset",
   "Chord Catalysts": "Discount purchases persist through arete reset",
+  "Warp Beam": "Cap purchases persist through arete reset",
   Headroom: "Extra earnings scale the payout logarithmically",
   nous: "Main progression resource spent on upgrades",
   charge: "Generator output that powers other modules",
@@ -3355,6 +3378,7 @@ function catalogAreteFaceHtml(app: App): string {
         </article>
         ${capacityProductRowHtml(app, "extenders")}
         ${capacityProductRowHtml(app, "catalysts")}
+        ${mergeCapRowHtml(app)}
         <article class="catalog-row">
           <div><h3 class="t-condensed">${termTipHtml("Headroom")}</h3><p class="t-note">Earning past the ${termTipHtml("nous")} cap scales the ${termTipHtml("Arete")} claim · ${termTipHtml("memorized")}</p>${
             broken ? "" : `<p class="t-note mono">claim ${state.prestiges + 1} → up to ${BALANCE.horizonBreakClaimCap}</p>`
@@ -3585,7 +3609,7 @@ function specialDraftsHtml(state: GameState): string {
             .join("")
         }</div>`
       : "";
-  const tierAvailable = BALANCE.mergeCap >= 1;
+  const tierAvailable = unlockedMergeCap(state) >= 1;
   return `<div class="forge-specials">
     <div class="forge-special">
       <span class="special-name">Jacquard Card</span>

@@ -41,6 +41,7 @@ export function createInitialState(): GameState {
     scrap: 0,
     draftTierBonus: 0,
     specialDrafts: { category: 0, rare: 0, tier: 0 },
+    mergeCapPurchases: 0,
     prestiges: 0,
     muted: false,
     notificationAsked: false,
