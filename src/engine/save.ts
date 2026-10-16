@@ -3,7 +3,7 @@ import { normalizeHabitBuilds } from "./builds";
 import { normalizeGoals } from "./goals";
 import { modulePower } from "./economy";
 import { BALANCE, SAVE_VERSION } from "./constants";
-import type { GameState } from "./types";
+import type { GameState, SpecialDraftKind } from "./types";
 
 export interface SaveFile {
   app: "flowsynth";
@@ -124,6 +124,18 @@ export function deserialize(text: string): LoadResult {
     typeof raw.draftTierBonus === "number" && Number.isFinite(raw.draftTierBonus) && raw.draftTierBonus > 0
       ? Math.min(Math.floor(raw.draftTierBonus), BALANCE.tierBonusCosts.length)
       : 0;
+  // The special drafts' held entitlements (issue #379) lenient-default the
+  // same way: absent or corrupt reads as none held — exactly what a
+  // pre-specials save owes. Per-kind counts floor at zero; a corrupt
+  // record can never read as a free draft.
+  const heldCount = (value: unknown): number =>
+    typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+  const rawSpecials: Partial<Record<SpecialDraftKind, unknown>> = isRecord(raw.specialDrafts) ? raw.specialDrafts : {};
+  merged.specialDrafts = {
+    category: heldCount(rawSpecials.category),
+    rare: heldCount(rawSpecials.rare),
+    tier: heldCount(rawSpecials.tier),
+  };
   // The harmonic-capacity ladder (issue #259) lenient-defaults the same
   // way: absent or corrupt counts read as zero — no purchases this era, no
   // Arete offerings owned — exactly what a pre-ladder save owes, and

@@ -1,4 +1,4 @@
-import type { Category, ModuleType, MutatorFamily, Rarity, ShelfType } from "./types";
+import type { Category, ModuleType, MutatorFamily, Rarity, ShelfType, SpecialDraftKind } from "./types";
 
 export interface Balance {
   // One unified oscillator base rate (ADR-0022): every oscillator shares
@@ -241,6 +241,20 @@ export interface Balance {
   // steeper. Provisional prices, limits, and probabilities throughout.
   tierBonusChance: readonly number[];
   tierBonusCosts: readonly number[];
+  // ── The special drafts (issue #379, parent #366) ─────────────────────
+  // Scrap-purchased one-time drafts, each carrying one explicit guarantee
+  // every candidate satisfies: the Jacquard Card (`category`) draws its
+  // whole offer from the category picked when woven — rarity still rides
+  // the ordinary band draw; the Silk Warp (`rare`) draws every candidate
+  // from the rare band; the Plied Weft (`tier`) mints every candidate at
+  // least one merge tier above base, clamped to the unlocked cap, with
+  // the Draft Loom's rungs riding on top. Weaving banks an ordinary offer
+  // into the shared queue, so choice, skip payout, and later scrap all
+  // read the one schedule. Income accounting: a price sits above every
+  // realistic take-and-scrap round trip (the Silk Warp's 150 clears the
+  // 120 a three-rare offer scraps for), so no product prints scrap.
+  // Provisional prices and packaging throughout.
+  specialDraftCosts: Record<SpecialDraftKind, number>;
 }
 
 // Provisional tuning throughout; the redesign spec's numbers are not final
@@ -329,6 +343,7 @@ export const BALANCE: Balance = {
   },
   tierBonusChance: [0.15, 0.3, 0.5],
   tierBonusCosts: [50, 150, 450],
+  specialDraftCosts: { category: 60, rare: 150, tier: 100 },
 };
 
 // The chord vocabulary (#218's eleven classes, ADR-0021/0022 as extended by

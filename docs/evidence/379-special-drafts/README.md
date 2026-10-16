@@ -1,0 +1,12 @@
+# Guaranteed special drafts (issue #379)
+
+Captured from `npm run dev` in `/Users/eggfam/.t3/worktrees/flowsynth/t3code-0ab06205`, served at `http://localhost:5173/`. The provenance endpoint confirmed that worktree and commit `f9744a950a458093d4ec745b6afa89318a48d571`. The Forge's Modules face shows the seeded state (scrap 400; one entitlement of each kind held).
+
+- `desktop-rows.png`: the Draft Loom row with the three product rows beneath it — Jacquard Card, Silk Warp, Plied Weft — in the loom row's grammar: condensed-caps name, one effect line with the hoverable `memorized` and `merge tier` terms, the ⓘ disclosure, the held count, and the scrap-priced Buy. The Jacquard Card's weave picks render as their own chip strip (one chip per pool category); Silk Warp and Plied Weft show one Weave control each while held.
+- `desktop-disclosure.png`: the `memorized` tooltip opened by keyboard focus + Enter on the Jacquard row's term trigger (`aria-expanded` flips; the plain floating gloss reads "Persists through arete reset" — no card, no border). Escape dismissed it in the same pass. Touch opens the same layer through the existing tooltip wiring, which the app fixtures exercise; a real-device touch capture is unavailable in this environment.
+- `desktop-woven.png`: after weaving the Silk Warp — the guaranteed offer stands in the ordinary candidates row (Exciter + Sideband + Sideband, all rare-band) with the ordinary Skip control (+40, the best candidate's schedule value). The entitlement is consumed: the row no longer shows "1 held" or a Weave control, while Jacquard and Plied Weft keep theirs.
+- Phone composition: unavailable. Both freeform 390×844 and the Pixel preset resize attempts timed out after the prescribed status/retry sequence (three failures). The app-fixture suite verifies the rows at width 390: names, prices, held states, the chip strip, the 44px pinned touch targets in the stylesheet, and a working chip weave.
+- Grayscale / non-color state: the rows distinguish states by structure, not hue — disabled controls wear the muted outline, held counts read as text ("1 held") in the scrap register, and prices carry the scrap mark. No distinction on the new surface relies on color alone.
+- Reduced motion: no animation or glow added — plain rows, square-cut buttons, static chips; the existing tooltip layer is reused as-is. Dedicated reduced-motion emulation unavailable.
+
+Validation: `npm run check`, full `npm test`, and `npx vitest run --project ui`, all passing at this commit.
