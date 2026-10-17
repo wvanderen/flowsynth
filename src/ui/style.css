@@ -4249,3 +4249,6 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 @media (max-width: 600px) {
   .inventory-sheet-frame { padding: 16px; max-height: calc(74dvh - 2px); }
 }
+
+/* The hex owns placement drags; the rest of the row scrolls the list. */
+.inventory-copy[data-inv] .inventory-mark { touch-action: none; }

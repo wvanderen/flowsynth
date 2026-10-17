@@ -4,6 +4,9 @@ import type { App } from "./app";
 import { give } from "../engine/fixtures";
 import { hex } from "../engine/hex";
 import { createAppFixture } from "./testing/app-fixture";
+import { boosterBonusOf, modulePower } from "../engine/economy";
+import { generatorProfileOf } from "../engine/profiles";
+import { formatNumber } from "./format";
 import { inventoryModules } from "./inventory";
 
 const fixture = createAppFixture();
@@ -30,6 +33,29 @@ describe("inventory browsing", () => {
     expect(app.ui.placing).toBe(m.id);
     app.pickCell(hex(0, 1));
     expect(m.pos).toEqual(hex(0, 1));
+  });
+  it("shows intrinsic generator and booster strengths without board contributions", () => {
+    const gen = give(app.state, "noteKeyed", null);
+    const boost = give(app.state, "chorus", null);
+    gen.level = 3; gen.tier = 1; boost.level = 2;
+    app.render(); click(`[data-inv="${gen.id}"]`);
+    expect(host().textContent).toContain(`${formatNumber(generatorProfileOf(gen.type)!.noteChar * modulePower(gen))} / note character`);
+    expect(host().textContent).toContain("/ new note");
+    expect(host().textContent).toContain("goal-completion base");
+    expect(host().textContent).toContain("delivery strength");
+    expect(host().textContent).not.toContain("incoming");
+    click("[data-inventory-back]"); click(`[data-inv="${boost.id}"]`);
+    expect(host().textContent).toContain(`+${formatNumber(100 * boosterBonusOf(boost.type) * modulePower(boost))}% chord response`);
+  });
+  it("discloses the canonical Harmonic capacity term in inspection", () => {
+    const m = give(app.state, "triangle", null);
+    app.render(); click(`[data-inv="${m.id}"]`);
+    const term = [...host().querySelectorAll<HTMLButtonElement>(".term-trigger")].find((el) => el.textContent === "Harmonic capacity")!;
+    expect(term).toBeDefined();
+    term.focus();
+    expect(term.getAttribute("aria-expanded")).toBe("true");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(term.getAttribute("aria-expanded")).toBe("false");
   });
   it("filters modules by category and preserves filtering and scroll through detail", () => {
     give(app.state, "additive", null);

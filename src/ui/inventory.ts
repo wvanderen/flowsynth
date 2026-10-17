@@ -1,7 +1,9 @@
+import { termTipHtml } from "./terms";
+import { generatorProfileOf } from "../engine/profiles";
 import type { App } from "./app";
 import { combineMutatorsPreview, inventoryCombinePreview } from "../engine/actions";
 import { CATEGORY_OF, isVoiceType, typeRarityOf } from "../engine/constants";
-import { voiceCapacityOf } from "../engine/economy";
+import { boosterBonusOf, boosterTermOf, modulePower, voiceCapacityOf } from "../engine/economy";
 import { moduleScrapValue } from "../engine/scrap";
 import type { ModuleInstance, MutatorInstance } from "../engine/types";
 import { faceLevel, inventoryTileSvg, moduleFace, spacerClipPath } from "./face";
@@ -85,6 +87,18 @@ function mutatorRow(app: App, m: MutatorInstance, partner = false): string {
   return `<div class="inventory-row"><button class="inventory-copy mut-tile" ${partner ? `data-partner="${m.id}"` : `data-mut-tray="${m.id}"`} aria-label="${partner ? "Merge with" : "Inspect"} ${FAMILY_WORD[m.family]} · ${m.rarity}"><span class="inventory-mark">${mutatorTileSvg(m)}</span><span class="inventory-copy-read"><strong>${FAMILY_WORD[m.family]}</strong><small>${m.rarity}</small></span></button>${partner ? "" : `<button class="inventory-merge" data-inventory-merge="${m.id}"${eligible ? "" : " disabled"}>Merge</button>`}</div>`;
 }
 function back(): string { return `<button data-inventory-back>Back to inventory</button>`; }
+// Owned-copy strengths exclude neighbors, mutators, and habit build effects.
+function intrinsicEffectsHtml(m: ModuleInstance): string {
+  const power = modulePower(m);
+  const profile = generatorProfileOf(m.type);
+  if (profile) return `<div class="inventory-intrinsics">
+    <p class="mono">${formatNumber(profile.focus * power)} ${termTipHtml("charge")} / focus s</p>
+    <p class="mono">${formatNumber(profile.noteChar * power)} / note character · +${formatNumber(profile.noteCreate * power)} / new note</p>
+    <p class="mono">×${formatNumber(profile.goal * power)} goal-completion base</p>
+    <p class="mono">${formatNumber(power)} base delivery strength</p></div>`;
+  if (CATEGORY_OF[m.type] === "booster") return `<p class="mono">+${formatNumber(100 * boosterBonusOf(m.type) * power)}% ${boosterTermOf(m.type)}</p>`;
+  return "";
+}
 function inspectHtml(app: App): string {
   const read = app.ui.inventory.inspect!;
   if (read.layer === "mutators") {
@@ -95,8 +109,8 @@ function inspectHtml(app: App): string {
   const m = app.state.modules.find((m) => m.id === read.id && m.pos === null);
   if (!m) return `${back()}<p class="inventory-empty">This copy is no longer in inventory.</p>`;
   return `${back()}<div class="inventory-inspection"><svg class="inventory-detail-face hex-stack-face" viewBox="-70 -70 140 140" data-type="${m.type}" data-rarity="${typeRarityOf(m.type)}" aria-label="${META[m.type].name}" role="img">${spacerClipPath()}${moduleFace({ type: m.type, tier: m.tier, ...(faceLevel(m) !== undefined ? { level: faceLevel(m)! } : {}), readout: "" })}</svg>
-    <h3>${META[m.type].name}</h3><p class="mono">${moduleRead(m)}</p><p>${META[m.type].role}</p>${profileGradesHtml(m.type)}
-    ${isVoiceType(m.type) ? `<p class="mono">${voiceCapacityOf(app.state, m.type)} chord capacity</p>` : ""}
+    <h3>${META[m.type].name}</h3><p class="mono">${moduleRead(m)}</p><p>${META[m.type].role}</p>${profileGradesHtml(m.type)}${intrinsicEffectsHtml(m)}
+    ${isVoiceType(m.type) ? `<p class="mono">${voiceCapacityOf(app.state, m.type)} ${termTipHtml("Harmonic capacity")}</p>` : ""}
     ${m.reserve > 0 ? `<p class="mono">${formatNumber(m.reserve)} charge reserve</p>` : ""}${m.shift !== null ? `<p class="mono">Pitch shift ${m.shift > 0 ? "+" : ""}${m.shift}</p>` : ""}
     <button class="primary" data-inventory-place="${m.id}">Place</button></div>`;
 }

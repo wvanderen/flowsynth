@@ -53,3 +53,11 @@ A fresh bounded browser pass verified the same checkout/provenance at 1440×960 
 ## PR preparation verification
 
 On branch `codex/inventory-ux`, after the outlined-corner fix, `npm run build` and a complete `npm test` run with localhost socket access passed: **83 files, 1,676 tests passed, 2 skipped**. The skipped tests are the suite's existing capacity-calibration skips. This supersedes the earlier sandbox-limited full-run result; the final UI subset remains **849 passed**.
+
+## PR #409 review corrections
+
+Inventory inspection now uses the shared glossary term renderer for Harmonic capacity. Generator earning coefficients and base delivery strength, and booster effect magnitudes, read the authoritative engine values with the owned copy's level and merge tier; neighbor, mutator, and habit effects are excluded. Module hex marks reserve touch gestures for placement, while row text remains available for native list scrolling. Mouse dragging remains available across the row.
+
+Typecheck and production build passed. Regression checks cover scaled generator and booster values, capacity disclosure opening on focus and dismissal with Escape, and existing board/inventory drag interactions. The complete suite passed except the two sandbox-blocked provenance socket tests; those passed separately with socket access. The existing two capacity-calibration skips remain.
+
+Browser verification was attempted from this checkout on port 5174, but the browser call stalled and the fixture failed to initialize. Fresh desktop/phone screenshots, native touch drag/scroll, touch disclosure, grayscale, and reduced-motion checks are unavailable for these corrections. Presentation was assessed in source against the pinned instrument contract: existing open rows, square controls, and clipped panel frame are retained; intrinsic values use compact readouts.
