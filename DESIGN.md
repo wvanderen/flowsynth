@@ -2,13 +2,13 @@
 name: FlowSynth — The Rack
 description: Studio-hardware instrument panels for a practice-driven incremental game; hex modules speak in color, panels stay quiet
 colors:
-  bg: "#0d1122"
-  panel: "#141a30"
-  panel-soft: "#111627"
-  panel-deep: "#0a0e1b"
-  line: "#2a3150"
-  ink: "#e5e9f5"
-  muted: "#99a1c2"
+  bg: "#111213"
+  panel: "#1b1d1f"
+  panel-soft: "#17191b"
+  panel-deep: "#0d0f10"
+  line: "#34383b"
+  ink: "#e9eae8"
+  muted: "#a4aaa9"
   hue-generator: "#238858"
   hue-oscillator: "#6360d4"
   hue-spacer: "#8a93a8"
@@ -142,11 +142,11 @@ The palette is a functional instrument table, not a decorative ramp: every color
 
 ### Neutral
 
-- **Background** (`#0d1122`): the dark indigo-blue substrate beneath everything.
-- **Panel** (`#141a30`) and **Panel Soft** (`#111627`): the two resting instrument-panel surfaces; **Panel Deep** (`#0a0e1b`) for wells, sheets, and pressed states.
-- **Ink** (`#e5e9f5`): cool near-white text and glyphs.
-- **Muted** (`#99a1c2`): secondary text, idle marks, unavailable-state labeling.
-- **Line** (`#2a3150`, soft `#222841`, strong `#414a75`): the hairline rule family that divides every panel.
+- **Background** (`#111213`): the neutral graphite substrate beneath everything.
+- **Panel** (`#1b1d1f`) and **Panel Soft** (`#17191b`): the two resting instrument-panel surfaces; **Panel Deep** (`#0d0f10`) for wells, sheets, and pressed states.
+- **Ink** (`#e9eae8`): cool near-white text and glyphs.
+- **Muted** (`#a4aaa9`): secondary text, idle marks, unavailable-state labeling.
+- **Line** (`#34383b`, soft `#292d30`, strong `#555c61`): the hairline rule family that divides every panel.
 - **Danger** (`#e08a8a`): destructive actions and warnings, faint-mixed for washes.
 
 ### Named Rules
@@ -193,7 +193,7 @@ The ramp is decided once (issue #353): sizes are steps on it, and steps are **wh
 
 ## Elevation
 
-Flat by doctrine. Surfaces are flat instrument panels at rest; depth is carried by the panel tiers (bg → panel-soft → panel → panel-deep) and hairline rules, occasionally by clipped outer corners defining a panel's silhouette. The one shadow token (`rgba(2, 4, 12, 0.6)`) serves the sheet/scrim layer (`rgba(5, 8, 19, 0.82)`) — modal sheets detach from the flat panels; ordinary furniture never casts. Charge light is glow, not elevation.
+Flat by doctrine. Surfaces are flat instrument panels at rest; depth is carried by the panel tiers (bg → panel-soft → panel → panel-deep) and hairline rules, by consistent top-right/bottom-left cuts on floating outer panels. The one shadow token (`rgba(0, 0, 0, 0.6)`) serves the sheet/scrim layer (`rgba(8, 9, 10, 0.82)`) — modal sheets detach from the flat panels; ordinary furniture never casts. Charge light is glow, not elevation.
 
 ### Named Rules
 
@@ -214,7 +214,7 @@ Controls are square-cut — hairline border, condensed technical lettering, no r
 ### Main Switch
 
 - **Shape:** the console's dominant centered control, square-cut.
-- **Live:** switch-vermillion fill, glowing (`switch-glow`), 2.2s breathing animation; **paused:** held, not glowing; **idle:** dim `#96562f`.
+- **Live:** switch-vermillion fill, steady illumination and an inset marker; **paused:** held, not glowing; **idle:** dim `#96562f`.
 - The mode indicator — its state says what the session is doing; the thin session strip along the console's bottom edge is its expression, never a second colored element.
 
 ### Goal Bars
@@ -231,12 +231,12 @@ Controls are square-cut — hairline border, condensed technical lettering, no r
 ### Hex Module Face
 
 - **Shape:** hexagonal chassis; engraved level and condensed nameplate above, the signature glyph as centered centerpiece, contribution readout beneath, narrow category-colored rail on the face edge.
-- **Chargeable exception:** the prominent readout is charge-vs-threshold as a face fill, flashing at threshold crossing.
+- **Chargeable exception:** the prominent readout is charge-vs-threshold as a face fill, a brief rail accent at threshold crossing.
 - **State:** rarity as ring count + plate tint; receiving charge brightens the rail toward the luminous register.
 
 ### Panels and Sheets
 
-- **Panels:** flat tier surfaces, hairline internal divisions, aligned rows — never nested cards, never `<details>` boxes. Occasional clipped outer corners on the outer silhouette only.
+- **Panels:** flat tier surfaces, hairline internal divisions, aligned rows — never nested cards, never `<details>` boxes. Floating outer panels use top-right/bottom-left cuts at every width; docked readouts and controls stay square.
 - **Sheets (catalog, chords, focus):** fixed frames that never resize on face switch; body scrolls under a pinned identity. On phone, 74%-height bottom sheets over the scrim.
 
 ## Do's and Don'ts
@@ -247,7 +247,7 @@ Controls are square-cut — hairline border, condensed technical lettering, no r
 - **Do** square-cut every control (0 radius, hairline border, condensed caps); use the four-state grammar with its non-color marks.
 - **Do** set every readout in tabular mono figures with units; keep the name + state + effect readout compact (`Chords (4/11) +8% ν`).
 - **Do** pair every category hue with a glyph, and mutators lead wherever modules and mutators co-list.
-- **Do** earn every glow and animation with charge or live activity, and honor `prefers-reduced-motion` with state surviving intact.
+- **Do** earn every glow and animation with charge or live activity, and honor `prefers-reduced-motion` with fully static charge leads, marks, and illumination.
 
 ### Don't:
 
@@ -258,3 +258,7 @@ Controls are square-cut — hairline border, condensed technical lettering, no r
 - **Don't** use SaaS landing grammar: hero metrics, gradient text, eyebrow kickers, identical card grids — none of it belongs on the rack.
 - **Don't** texture or bevel — flat-light discipline; the rack is a design language, not a texture budget.
 - **Don't** let color alone carry state, and don't spend the console's monochrome on anything but the switch.
+
+## Cohesion amendment (2026-10-17)
+
+[ADR-0070](docs/adr/0070-refine-the-rack-around-quiet-practice-and-shared-surfaces.md) amends the historical palette and threshold cue: neutral graphite throughout the shell; a top-right/bottom-left clipped pair on floating outer panels at every width; shared open tabs; steady charge light with a narrow six-second modulation; no broad background or standing chord pulse. Reduced motion is fully static. Meaningful events may receive brief local accents. Existing choices and behavior remain; Focus simplification is parked in [#407](https://github.com/wvanderen/flowsynth/issues/407). The [design workbench](docs/design-workbench.md) compares production surfaces and component states.

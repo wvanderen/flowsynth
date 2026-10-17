@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { App } from "../app";
 import type { SignalChannels } from "../signals";
+import type { SharedSave } from "../shared-save";
 
 const html = readFileSync("index.html", "utf8");
 // The test constructs App directly: keep the production skeleton, but do
@@ -11,14 +12,14 @@ const body = html.slice(html.indexOf("<body>") + 6, html.lastIndexOf("</body>"))
 export function createAppFixture() {
   const apps = new Set<App>();
   return {
-    boot(channels?: SignalChannels, dev = false): App {
+    boot(channels?: SignalChannels, dev = false, save?: SharedSave): App {
       document.body.innerHTML = body;
       const els: Record<string, HTMLElement> = {};
       for (const id of ["console-session", "console-apps", "board-tools", "thumb-bar", "grid", "status", "modal", "modal-content"]) {
         const element = document.getElementById(id);
         if (element) els[id] = element;
       }
-      const app = new App(els, dev, channels);
+      const app = new App(els, dev, channels, save);
       apps.add(app);
       return app;
     },

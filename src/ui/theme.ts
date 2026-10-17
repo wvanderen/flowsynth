@@ -11,23 +11,21 @@ export interface Theme {
   readonly tokens: Readonly<Record<string, string>>;
 }
 
-// Substrate — the dark indigo-blue default. The five ADR-0016 hexes are the
-// record; the rest of the group extends them for surfaces the UI needs.
+// Neutral graphite substrate (ADR-0070). Semantic category/resource hues
+// remain independent; the surrounding instrument never supplies a hue.
 const substrate = {
-  bg: "#0d1122",
-  panel: "#141a30",
-  "panel-soft": "#111627",
-  "panel-deep": "#0a0e1b",
+  bg: "#111213",
+  panel: "#1b1d1f",
+  "panel-soft": "#17191b",
+  "panel-deep": "#0d0f10",
   "panel-veil": "color-mix(in srgb, var(--panel-soft) 95%, transparent)",
-  line: "#2a3150",
-  "line-soft": "#222841",
-  "line-strong": "#414a75",
-  ink: "#e5e9f5",
-  muted: "#99a1c2",
-  scrim: "rgba(5, 8, 19, 0.82)",
-  shadow: "rgba(2, 4, 12, 0.6)",
-  // The board's ambient breath: the synthesizer hue in its glow register.
-  "board-glow": "rgba(99, 96, 212, 0.14)",
+  line: "#34383b",
+  "line-soft": "#292d30",
+  "line-strong": "#555c61",
+  ink: "#e9eae8",
+  muted: "#a4aaa9",
+  scrim: "rgba(8, 9, 10, 0.82)",
+  shadow: "rgba(0, 0, 0, 0.6)",
 } as const;
 
 // The category hue table (ADR-0016, amended by ADR-0021; the reserved hues
@@ -70,7 +68,7 @@ const resources = {
 const interactive = {
   accent: "#cbcaff",
   "accent-bright": "#e8e6ff",
-  "accent-ink": "#10142b",
+  "accent-ink": "#141516",
   switch: "#cc603d",
   "switch-dim": "#96562f",
   "switch-ink": "#fff3ec",
@@ -154,7 +152,7 @@ const semantics = {
 } as const;
 
 export const defaultTheme: Theme = {
-  name: "indigo",
+  name: "graphite",
   tokens: {
     ...substrate,
     ...hues,

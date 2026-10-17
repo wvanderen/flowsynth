@@ -19,15 +19,17 @@ Scope note: [validated prototype UX](validated-prototype-ux.md) records the firs
 
 ## Visual language
 
+**2026-10-17 cohesion amendment:** [ADR-0070](adr/0070-refine-the-rack-around-quiet-practice-and-shared-surfaces.md) preserves the Rack identity and main layout, adopts a neutral graphite substrate family, and narrows clipping to floating outer panels with top-right/bottom-left cuts at every width. Controls and internal divisions stay square; the phone Catalog's sloping top edge is retired by this decision. Flow activity should read on deliberate inspection through steady low light and subtle local modulation. These approved changes amend the historical pins only on those points; the current refinement is verified against this amendment as recorded in [the review evidence](evidence/cohesion-2026-10-17/README.md), with unavailable checks called out there.
+
 - **Hexes stay the module voice** (Rack identity, [ADR-0016](adr/0016-adopt-the-rack-identity.md)): the hex chassis, signature glyphs, category hues, rarity finish, and charge light are existing approved identity; hexes describe modules and their relationships.
-- **Surrounding surfaces are flat instrument panels.** Occasional clipped outer corners define the panel silhouette; clipping is geometry, not decoration — never applied to every control.
+- **Surrounding surfaces are flat instrument panels.** Floating outer panels carry top-right/bottom-left clipped corners consistently at every width; controls and internal divisions stay square. Clipping identifies that surface family, never decoration applied to every control.
 - **Inside a panel, open divisions and rules** — hairline separations, aligned rows — never repeated rounded cards or nested boxes.
 - **Controls are square-cut** — hairline border, condensed technical lettering, no radii; the rounded legacy style is retired. The controls sheet pins the geometry: buttons, the vertical goal-bar column (fill by height, engraved completion, never color alone), the plain tooltip layer (hairline and panel surface, never a card), and the goal-palette swatches in the state grammar.
 - **Identity rides context.** A surface whose context already says what it is takes its resource color and canonical icon, and no header: do not add a title or repeat a resource balance to fill a header.
 - **Wherever modules and mutators co-list, mutators lead** — board tabs, tray switch, inventory switch, every shared list. Resource faces order by resource instead: the catalog stays `ν nous` first.
 - **Type hierarchy**: condensed technical lettering for names and controls, monospace tabular figures for readouts, readable sans for notes and longer mechanics. Exact fonts are implementation tuning; the pinned prototype demonstrates the hierarchy.
 - **One state grammar everywhere**: muted outline = unavailable, clear outline = available, firm inset marker = selected, engraved completion mark = acquired. State stays recognizable without color alone.
-- **Glow and motion are for charge and live activity only.** Idle surrounding panels stay quiet. Reduced-motion preferences are respected, and state information survives without animation.
+- **Glow and motion are for charge and live activity only.** Flow activity reads on deliberate inspection: steady low illumination and subtle local modulation, without broad background breathing or strong repeated flashes. Meaningful events may receive a brief local accent; continuous charging stays subdued. Idle surrounding panels stay quiet. Reduced-motion presentation is fully static, including charge leads; persistent marks and illumination preserve charge and direction information.
 
 ## Writing and disclosure
 

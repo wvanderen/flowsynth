@@ -486,7 +486,7 @@ export class App {
   // and greet() passes the observation on.
   private resumedFromDiscard = false;
   lastSaveWall = 0;
-  private readonly sharedSave = new SharedSave(browserSaveStorage);
+  private readonly sharedSave: SharedSave;
   dev: boolean;
   // The session's AudioContext (§4): created or resumed inside the start
   // gesture, kept for the target chime. Null where Web Audio is
@@ -518,7 +518,8 @@ export class App {
   private els: Record<string, HTMLElement>;
   private modeToastTimer: number | undefined;
 
-  constructor(els: Record<string, HTMLElement>, dev: boolean, channels: SignalChannels = browserChannels) {
+  constructor(els: Record<string, HTMLElement>, dev: boolean, channels: SignalChannels = browserChannels, save = new SharedSave(browserSaveStorage)) {
+    this.sharedSave = save;
     this.els = els;
     this.dev = dev;
     this.channels = channels;
