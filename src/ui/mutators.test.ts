@@ -393,6 +393,7 @@ describe("the gestures (issue #199)", () => {
     app.state.mutatorSlots.push(hex(0, 1));
     app.render();
     document.querySelector<HTMLButtonElement>('[data-mut-tray="mu2"]')!.click();
+    document.querySelector<HTMLButtonElement>("[data-inventory-place]")!.click();
     expect(app.ui.mutArmedTray).toBe("mu2");
     clickSlot(0, 1);
     expect(mutatorOf(app.state, "mu2").pos).toEqual(hex(0, 1));
@@ -403,6 +404,7 @@ describe("the gestures (issue #199)", () => {
     seedMutatorEra();
     app.mutSetLayer("mutators");
     document.querySelector<HTMLButtonElement>('[data-mut-tray="mu2"]')!.click();
+    document.querySelector<HTMLButtonElement>("[data-inventory-place]")!.click();
     clickSlot(0, 0);
     expect(mutatorOf(app.state, "mu2").pos).toEqual(hex(0, 0));
     expect(mutatorOf(app.state, "mu1").pos).toBeNull();

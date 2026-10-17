@@ -1,0 +1,5 @@
+# Inventory row merges preserve the chosen copy
+
+The 2026-10-17 inventory interview makes inspection and deliberate copy choice the primary workflow. Row Merge therefore preserves the clicked copy's identity and secondary effects, even when the chosen partner has the higher purchased level. It inherits the higher input's level and investment, refunds the lower-level input's investment, and consumes the partner with its reserve and other secondary effects. Ties favor the clicked copy. Both inputs must remain in inventory at confirmation; deployed modules are excluded.
+
+This deliberately differs from the existing drag-combination identity rule in ADR-0058: drag combinations keep their current higher-level-survivor and drop-target landing behavior. Reusing that identity rule for a row action would discard the copy the player deliberately selected. The partner picker and final review show both inputs, the resulting tier and level, the refund, and lost secondary effects; one confirmation combines one pair, never a chain. Mutator row merges similarly preserve the clicked inventory copy and consume the chosen matching inventory partner.

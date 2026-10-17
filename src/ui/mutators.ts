@@ -1,3 +1,4 @@
+import { openInventoryForDrag } from "./inventory";
 // The Mutator Grid's UI (issue #199): the tabbed second layer over the
 // board, built to the maintainer-approved prototype design
 // (`prototype/mutator-grid-184`, iteration two at 57fb840). The Modules /
@@ -369,44 +370,6 @@ function mutLockedFaceHtml(pos: Hex): string {
   </g>`;
 }
 
-/* ── The Mutator tray ─────────────────────────────────
-   The second layer's inventory (issue #272): the tray column's Mutators
-   face at every wide width — minted mutators wait here, and the
-   placement, combine, and retrieval gestures live here. The slot unlock
-   is Add's arm, not a tray card (the #272 review); on portrait phone the
-   face hides with the column — the tray sheet's Mutators face carries
-   the same tiles there. */
-
-export function renderMutatorTray(app: App): void {
-  const host = document.getElementById("mutator-tray");
-  if (!host) return;
-  const { state, ui } = app;
-  if (!mutatorLayerLive(app)) {
-    host.hidden = true;
-    host.innerHTML = "";
-    delete host.dataset.renderKey;
-    return;
-  }
-  const tray = state.mutators.filter((m) => m.pos === null);
-  const key = JSON.stringify([tray.map((m) => `${m.id}:${m.rarity}:${m.family}`), ui.mutArmedTray]);
-  if (host.dataset.renderKey === key) return;
-  host.dataset.renderKey = key;
-  host.hidden = false;
-  host.innerHTML = `<div class="tray-items mut-strip-items">${
-      tray
-        .map(
-          (item) =>
-            `<button class="inventory-tile mut-tile${ui.mutArmedTray === item.id ? " armed" : ""}" data-mut-tray="${item.id}" data-rarity="${item.rarity}" title="${FAMILY_WORD[item.family]} · ${RARITY_LABEL[item.rarity]} · ${mutatorEffectText(item.family, item.rarity)} — tap, then a slot">${mutatorTileSvg(item)}</button>`,
-        )
-        .join("") || `<span class="tray-empty">minted mutators wait here</span>`
-    }</div>`;
-  host.querySelectorAll<HTMLButtonElement>("[data-mut-tray]").forEach((button) => {
-    const id = button.getAttribute("data-mut-tray")!;
-    app.listen(button, "click", () => app.mutArmTray(id));
-    bindMutatorDrag(app, button, id, "tray");
-  });
-}
-
 /* ── The unlock pill ──────────────────────────────────
    The armed unlock's one cost spot (issue #199), mirroring the board's
    armed-purchase pattern: the pill carries the price, the eligible cells
@@ -552,7 +515,7 @@ function startMutDrag(app: App, event: PointerEvent, id: string, origin: Hex | "
     // The phone tray sheet counts as the tray while it stands (issue #272
     // review): dropping a placed mutator onto the open sheet retrieves.
     const hit = document.elementFromPoint(ev.clientX, ev.clientY);
-    return hit?.closest("#mutator-tray") ?? (app.ui.modal === "inventory" ? hit?.closest("#modal-content") ?? null : null);
+    return hit?.closest("#inventory-zone, #mutator-tray") ?? (app.ui.modal === "inventory" ? hit?.closest("#modal-content") ?? null : null);
   };
   const overTray = (ev: PointerEvent): boolean => trayHitAt(ev) !== null;
   const tray = document.getElementById("mutator-tray");
@@ -566,6 +529,7 @@ function startMutDrag(app: App, event: PointerEvent, id: string, origin: Hex | "
       return ghost;
     },
     move: (ev) => {
+      openInventoryForDrag(app, document.elementFromPoint(ev.clientX, ev.clientY));
       const pos = slotAt(ev);
       const twin = pos ? null : trayTwinAt(ev);
       app.setMutDropHover(id, pos);
@@ -580,6 +544,10 @@ function startMutDrag(app: App, event: PointerEvent, id: string, origin: Hex | "
     },
     cleanup: () => {
       app.cancelMutDrag = null;
+      if (app.ui.inventory.dragOpen) {
+        app.ui.inventory.dragOpen = false;
+        queueMicrotask(() => { if (!app.released) app.render(); });
+      }
       tray?.classList.remove("drag-over");
       sheet()?.classList.remove("drag-over");
       for (const scope of [tray, sheet()]) {

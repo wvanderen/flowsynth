@@ -1,10 +1,11 @@
+import { termTipHtml, type CatalogTerm } from "./terms";
 import { tierPowerOf } from "../engine/module-strength";
 import { cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, levelCost, levelsCost, projectPlacement, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
 import { ALLOCATION_QUALITY_BOUNDS, idleTermsOf, summaryTermsOf } from "../engine/allocation";
 import { claimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
-import { combinePreview, combineMutatorsPreview, hasMergeTwin, levelable, mergeAllPreview, type CombinePreview, type MergeSweep, upgradeAllPreview } from "../engine/actions";
-import { moduleScrapValue, skipPayoutOf } from "../engine/scrap";
+import { combinePreview, combineMutatorsPreview, levelable, type CombinePreview, upgradeAllPreview } from "../engine/actions";
+import { skipPayoutOf } from "../engine/scrap";
 import { deployedAt } from "../engine/economy";
 import { sameHex } from "../engine/hex";
 import { draftTierChanceOf, forgeThreshold, flowThreshold, mutatorForgeThreshold, nextDraftUpgradePrice } from "../engine/rolls";
@@ -44,6 +45,7 @@ import { startPointerDrag } from "./pointer-drag";
 import { appIcon, lockMarkSvg } from "./icons";
 import { HEX_RADIUS, hexApothem, hexPoints, moduleFace, boardPoint, SPACING, spacerClipPath, forgeBranchOf, faceReadoutFor, faceLevel, waterFill, zeroBuyRead, isSource, inventoryTileSvg } from "./face";
 import { renderHexDetail } from "./hexdetail";
+import { renderInventoryContent, openInventoryForDrag } from "./inventory";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chordMarkCovers, chipWidth, CHORD_HUES, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
@@ -59,7 +61,6 @@ import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster, syncGlo
 import { beginLayoutPass, containerWidth, endLayoutPass, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX, viewportWidth, scrollTopOf } from "./container";
 import { liveAttr, liveSet } from "./live";
 import {
-  bindMutatorDrag,
   bindMutatorLayer,
   hexFromAttr,
   mutatorAskHtml,
@@ -70,10 +71,8 @@ import {
   mutatorTileInner,
   mutatorTileSvg,
   layerLegendHtml,
-  mutatorLayerWanted,
   FAMILY_WORD,
   renderMutatorPill,
-  renderMutatorTray,
   renderLayerLegend,
 } from "./mutators";
 
@@ -151,7 +150,7 @@ export function render(app: App): void {
     // the pinned tray strip, the armed unlock's pill — each a no-op wherever
     // its moment isn't now.
     renderLayerLegend(app);
-    renderMutatorTray(app);
+
     renderMutatorPill(app);
     renderModal(app, live, projected);
     renderDev(app, devStage);
@@ -2335,6 +2334,7 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
 
     const setHoverTarget = (ev: PointerEvent) => {
       const hit = document.elementFromPoint(ev.clientX, ev.clientY);
+      openInventoryForDrag(app, hit);
       const cellNode = hit?.closest("[data-cell]") ?? null;
       const overZone = !!hit?.closest("#inventory-zone");
       const sheet = overSheet(ev);
@@ -2367,6 +2367,10 @@ function bindPointerDrag(app: App, element: Element, moduleId: string | (() => s
       move: setHoverTarget,
       cleanup: () => {
         app.dragging = null;
+        if (app.ui.inventory.dragOpen) {
+          app.ui.inventory.dragOpen = false;
+          queueMicrotask(() => { if (!app.released) app.render(); });
+        }
         element.classList.remove("dragging");
         hoverTarget = null;
         setDropHover(app, null, null);
@@ -2412,68 +2416,17 @@ function rosterMergeKey(state: GameState): string {
   return JSON.stringify(state.modules.map((m) => `${m.id}:${m.type}:${m.tier}:${m.level}:${m.invested}:${m.pos === null ? "i" : "d"}`));
 }
 
-// Keep the action's count in its accessible name. The refund has its own
-// instrument disclosure so inspecting it never consumes copies.
-function mergeAllControlHtml(preview: MergeSweep, locked: boolean, surface: string): string {
-  const label = `<span class="merge-all-label">MERGE ALL</span><span class="merge-all-count mono"> · ${preview.combines}</span>`;
-  const name = `Merge all · ${preview.combines} combine${preview.combines === 1 ? "" : "s"}${locked ? " · Locked during flow" : ""}`;
-  const action = `<button class="merge-all" data-merge-all${locked ? " disabled" : ""} aria-label="${name}">${label}</button>`;
-  const refund = !locked && preview.refund > 0
-    ? `<span class="inst-tip merge-refund-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="merge-refund-${surface}" aria-label="Merge refund">ⓘ</button><span class="inst-tip-body" id="merge-refund-${surface}" role="tooltip">${formatInt(preview.refund)} ν refunded</span></span>`
-    : "";
-  return `<div class="merge-all-controls">${action}${refund}</div>`;
-}
-
-// The tray tile's scrap control (issue #377): the copy's recovery value
-// beside the tile it scraps — the payout reads before the action, and the
-// ledger's scrap balance answers it. One builder serves both library
-// surfaces, with a separate labeled action below the placement tile.
-// Flow locks it with the tiles.
-function tileScrapControlHtml(module: ModuleInstance, locked: boolean): string {
-  const value = moduleScrapValue(module);
-  return `<button class="tile-scrap" data-scrap="${module.id}"${locked ? " disabled" : ""} aria-label="Scrap ${META[module.type].name} · +${formatInt(value)} scrap">Scrap <span class="scrap-payout"><small class="scrap-mark" aria-hidden="true">${SCRAP_SVG}</small><span class="mono">+${formatInt(value)}</span></span></button>`;
-}
-
-// The tray column's Modules face (§5, ADR-0027 as amended, issue #272):
-// the inventory as an always-open pinned column at the board's right edge —
-// no collapse toggle, no gesture-reopen, no second switch (the board tabs
-// drive the face), and the Mutators face swaps in while that layer stands.
-// Flow hides the column with the locked board, and portrait phone replaces
-// it with the tray sheet (the stylesheet unfolds the column there).
-// Retrieve by dropping a module into the face, place by clicking an item
-// then a cell (occupied placement swaps).
+// One visit-local browser serves both layers and the phone sheet.
 function renderInventoryTray(app: App): void {
-  const tray = byId("inventory-zone");
-  if (!tray) return;
-  const { state, ui } = app;
-  const open = state.mode === "upgrade" && ui.mutLayer === "modules";
-  tray.classList.toggle("off", !open);
-  const inventory = state.modules.filter((m) => m.pos === null);
-  const preview = mergeAllPreview(state);
-  const key = rosterMergeKey(state);
-  if (tray.dataset.renderKey === key) return;
-  tray.dataset.renderKey = key;
-  const control = inventory.length > 0 || preview.combines > 0 ? mergeAllControlHtml(preview, state.mode !== "upgrade", "tray") : "";
-  tray.innerHTML = `<div class="tray-items">${
-    inventory
-      .map((m) => {
-        const mergeable = hasMergeTwin(state, m.id);
-        return `<span class="tray-tile"><button class="inventory-tile" data-inv="${m.id}" data-rarity="${typeRarityOf(m.type)}" data-type="${m.type}" aria-label="${META[m.type].name} · ${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)}${mergeable ? " · Eligible to merge" : ""}"${mergeable ? " data-mergeable" : ""} title="${META[m.type].name} · ${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)} — click, then a cell">${inventoryTileSvg(m)}</button>${tileScrapControlHtml(m, state.mode !== "upgrade")}</span>`;
-      })
-      .join("") || `<span class="tray-empty">drag a module here to store it</span>`
-  }</div>${control}`;
-  tray.querySelectorAll<HTMLButtonElement>("[data-inv]").forEach((button) => {
-    const id = button.getAttribute("data-inv")!;
-    app.listen(button, "click", () => app.beginPlacing(id));
-    bindPointerDrag(app, button, id);
-  });
-  tray.querySelectorAll<HTMLButtonElement>("[data-merge-all]").forEach((button) => {
-    app.listen(button, "click", () => app.mergeAllAction());
-  });
-  tray.querySelectorAll<HTMLButtonElement>("[data-scrap]").forEach((button) => {
-    app.listen(button, "click", () => app.scrapModuleAction(button.dataset.scrap!));
-  });
-  wireTooltips(tray, app.signal);
+  const moduleTray = byId("inventory-zone");
+  const mutatorTray = byId("mutator-tray");
+  if (!moduleTray || !mutatorTray) return;
+  const modules = app.ui.mutLayer === "modules";
+  moduleTray.classList.toggle("off", app.state.mode !== "upgrade" || !modules);
+  mutatorTray.hidden = app.state.mode !== "upgrade" || modules;
+  const tray = modules ? moduleTray : mutatorTray;
+  tray.closest<HTMLElement>(".tray-column")?.classList.toggle("collapsed", app.ui.inventory.collapsed && !app.ui.inventory.dragOpen);
+  renderInventoryContent(app, tray, false, (element, id) => bindPointerDrag(app, element, id));
 }
 
 // The opening arc's one pop-up (§8, issue #138): after the second
@@ -2630,7 +2583,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                       // the control's count and the tiles' eligible marks
                       // change with any twin's tier or investment, wherever
                       // it sits, so a sweep from the sheet re-renders it.
-                      rosterMergeKey(app.state),
+                      rosterMergeKey(app.state), app.ui.inventory,
                       // The tray sheet's face rides the global switch, and
                       // the Mutators face re-reads the tray (issue #272).
                       // The entry's ownership rides too: the purchase
@@ -2692,7 +2645,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   // CAPTURE, the standing tab on LOGGED — never the generic first button.
   // Every other dialog lands on its first control (issue #346), the open
   // never scrolling the page out from under the reader.
-  if (kind !== "notes") {
+  if (kind !== "notes" && (kind !== "inventory" || !content.contains(document.activeElement))) {
     const firstButton = content.querySelector("button:not([disabled])");
     (firstButton as HTMLElement | null)?.focus({ preventScroll: true });
   }
@@ -2758,80 +2711,26 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
 // swap. No how-to prose: the tiles and the gestures are the
 // instructions. Gated with the dock (#193): in flow the board is locked,
 // so the sheet reads but never arms.
-// Disclosure has its own touch target so inspecting a tile never arms placement.
-function trayTileDisclosure(id: string, name: string, mechanics: string): string {
-  return `<button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="${id}" aria-label="About ${escapeHtml(name)}">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${escapeHtml(name)} · ${escapeHtml(mechanics)}</span>`;
-}
-
 function renderInventorySheetModal(app: App, content: HTMLElement): void {
-  const { state, ui } = app;
-  const locked = state.mode !== "upgrade";
-  const wanted = mutatorLayerWanted(app);
-  const mutators = wanted && ui.mutLayer === "mutators";
-  const inventory = state.modules.filter((m) => m.pos === null);
-  const mergePreview = mergeAllPreview(state);
-  const mutTray = wanted ? state.mutators.filter((m) => m.pos === null) : [];
-  const face = mutators
-    ? `<div class="inventory-sheet-grid tray-sheet-tiles">${
-        mutTray
-          .map(
-            (item) =>
-              `<span class="inst-tip tray-tile-detail"><button class="inventory-tile mut-tile" data-mut-tray="${item.id}" data-rarity="${item.rarity}"${locked ? " disabled" : ""} aria-label="${FAMILY_WORD[item.family]} · ${RARITY_LABEL[item.rarity]}" aria-describedby="tray-mut-${item.id}">${mutatorTileSvg(item)}</button>${trayTileDisclosure(`tray-mut-${item.id}`, FAMILY_WORD[item.family], `${RARITY_LABEL[item.rarity]} · ${mutatorEffectText(item.family, item.rarity)} — ${locked ? "locked during flow" : "tap, then a slot"}`)}</span>`,
-          )
-          .join("") || `<span class="tray-empty">minted mutators wait here</span>`
-      }</div>`
-    : `<div class="inventory-sheet-grid">${
-        inventory
-          .map((m) => {
-            const mergeable = !locked && hasMergeTwin(state, m.id);
-            return `<span class="inst-tip tray-tile-detail"><button class="inventory-tile" data-inv="${m.id}" data-rarity="${typeRarityOf(m.type)}" data-type="${m.type}"${locked ? " disabled" : ""}${mergeable ? " data-mergeable" : ""} aria-label="${META[m.type].name} · ${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)}${mergeable ? " · Eligible to merge" : ""}" aria-describedby="tray-module-${m.id}">${inventoryTileSvg(m)}</button>${tileScrapControlHtml(m, locked)}${trayTileDisclosure(`tray-module-${m.id}`, META[m.type].name, `${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)} — ${locked ? "locked during flow" : "tap, then a cell"}`)}</span>`;
-          })
-          .join("") || `<span class="tray-empty">drag a module here to store it</span>`
-      }</div>${inventory.length > 0 || mergePreview.combines > 0 ? `<div class="tray-sheet-actions">${mergeAllControlHtml(mergePreview, locked, "sheet")}</div>` : ""}`;
-  content.innerHTML = `
-    ${modalTop("INVENTORY", "modal-title")}
-    ${state.mode === "upgrade" ? `<div class="layer-legend tray-switch" role="group" aria-label="Tray face">${layerLegendHtml(app)}</div>` : ""}
-    ${face}`;
-  content.querySelectorAll<HTMLButtonElement>("[data-inv]").forEach((button) => {
-    const id = button.getAttribute("data-inv")!;
-    app.listen(button, "click", () => {
-      if (app.state.mode !== "upgrade") return;
-      app.closeModal();
-      app.beginPlacing(id);
-    });
-    bindPointerDrag(app, button, id);
-  });
-  content.querySelectorAll<HTMLButtonElement>("[data-merge-all]").forEach((button) => {
-    app.listen(button, "click", () => app.mergeAllAction());
-  });
-  content.querySelectorAll<HTMLButtonElement>("[data-scrap]").forEach((button) => {
-    app.listen(button, "click", () => app.scrapModuleAction(button.dataset.scrap!));
-  });
-  content.querySelectorAll<HTMLButtonElement>("[data-mut-tray]").forEach((button) => {
-    const id = button.getAttribute("data-mut-tray")!;
-    app.listen(button, "click", () => {
-      if (app.state.mode !== "upgrade") return;
-      app.closeModal();
-      app.mutArmTray(id);
-    });
-    bindMutatorDrag(app, button, id, "tray");
-  });
+  if (!content.querySelector(".inventory-sheet-browser")) content.innerHTML = `<div class="inventory-sheet-frame inst-panel-face">${modalTop("INVENTORY", "modal-title")}
+    ${app.state.mode === "upgrade" ? `<div class="layer-legend tray-switch" role="group" aria-label="Tray face">${layerLegendHtml(app)}</div>` : ""}
+    <div class="inventory-sheet-browser"></div></div>`;
+  const host = content.querySelector<HTMLElement>(".inventory-sheet-browser")!;
+  renderInventoryContent(app, host, true, (element, id) => bindPointerDrag(app, element, id));
   content.querySelectorAll<HTMLButtonElement>("[data-legend-layer]").forEach((button) => {
+    const selected = button.dataset.legendLayer === app.ui.mutLayer;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-pressed", String(selected));
+    if (button.dataset.inventoryBound) return;
+    button.dataset.inventoryBound = "true";
     app.listen(button, "click", () => {
-      const layer = button.getAttribute("data-legend-layer") as "modules" | "mutators";
-      // The sheet can stand over the Hex detail; the switch reads which
-      // surface it serves, exactly like the legend strip does.
-      if (app.ui.detail) app.detailFace(layer);
-      else app.mutSetLayer(layer);
+      const layer = button.dataset.legendLayer as "modules" | "mutators";
+      app.ui.inventory.inspect = null; app.ui.inventory.merge = null;
+      if (app.ui.detail) app.detailFace(layer); else app.mutSetLayer(layer);
     });
   });
-  const grid = content.querySelector(".inventory-sheet-grid");
-  if (grid) wireTooltips(grid, app.signal);
-  const actions = content.querySelector<HTMLElement>(".tray-sheet-actions");
-  if (actions) wireTooltips(actions, app.signal);
-  const switchHost = content.querySelector(".tray-switch");
-  if (switchHost) wireTooltips(switchHost, app.signal);
-  wireClose(app);
+  const close = content.querySelector<HTMLElement>("#close-modal");
+  if (close && !close.dataset.inventoryBound) { close.dataset.inventoryBound = "true"; wireClose(app); }
 }
 
 // The modal head's one row: the eyebrow that names the surface and the ✕
@@ -3297,45 +3196,6 @@ function modulePreviewSvg(type: ModuleType): string {
 // grammar's own class (the prototype's completion read).
 function catalogOwnedHtml(word: string): string {
   return `<span class="shop-buy"><span class="st-acquired">${word}</span></span>`;
-}
-
-// The hoverable domain terms (the disclosure doctrine): a term defined in
-// CONTEXT.md renders hoverable wherever copy uses it, and its hover opens
-// the glossary meaning — description prose never grows around it. The
-// meanings here are the glossary's own, distilled to the one-line ceiling.
-// The union keeps the map closed: only glossary terms may render hoverable.
-type CatalogTerm = "Oscillator" | "Generator" | "Booster" | "Silent voice" | "Spacer" | "Forge" | "Charge conduit" | "RITUAL" | "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Warp Beam" | "Headroom" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "habit build" | "goals";
-const CATALOG_TERMS: Record<CatalogTerm, string> = {
-  Oscillator: "Pitched module contributing production",
-  Generator: "Produces charge from practice",
-  Booster: "Improves eligible adjacent modules",
-  "Silent voice": "Silent pitch that forms and strengthens chords",
-  Spacer: "Silent wire conducting chord adjacency",
-  Forge: "Received charge accumulates toward draft thresholds",
-  "Charge conduit": "Routes received charge onward without producing it",
-  RITUAL: "Received charge amplifies the active habit’s build effects",
-  "merge tier": "Matching copies combine to raise authored strengths",
-  "Harmonic capacity": "Whole-chord budget per voice",
-  memorized: "Persists through arete reset",
-  Arete: "The resource banked when an era ends",
-  "Poly Expander": "Re-earned after arete reset",
-  "Expansion Bays": "Ceiling purchases persist through arete reset",
-  "Chord Catalysts": "Discount purchases persist through arete reset",
-  "Warp Beam": "Cap purchases persist through arete reset",
-  Headroom: "Extra earnings scale the payout logarithmically",
-  nous: "Main progression resource spent on upgrades",
-  charge: "Generator output that powers other modules",
-  pitch: "The absolute note sounded by a board cell",
-  chords: "Connected pitch sets multiply their member oscillators",
-  "module rolls": "Choose one module from three candidates",
-  "mutator rolls": "Choose one mutator from two candidates",
-  "habit build": "Equipped build nodes apply during that habit’s sessions",
-  goals: "Practice targets credited by flow sessions",
-};
-let catalogTermSeq = 0;
-function termTipHtml(term: CatalogTerm, label: string = term): string {
-  const id = `catalog-term-${catalogTermSeq++}`;
-  return `<span class="inst-tip term-tip"><button class="inst-tip-trigger term-trigger" type="button" aria-expanded="false" aria-describedby="${id}" aria-label="${term} — what it means">${label}</button><span class="inst-tip-body" id="${id}" role="tooltip">${CATALOG_TERMS[term]}</span></span>`;
 }
 
 // The Accelerator row's provisional figure (the prototype's): the row is

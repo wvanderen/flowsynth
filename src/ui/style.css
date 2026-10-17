@@ -2664,26 +2664,20 @@ body.hex-detail-open .upgrade-all {
 .sweep-chip:hover { background: var(--accent-soft); border-color: var(--accent); }
 
 /* ── The tray column (§5, ADR-0027 as amended) ─────── */
-/* The inventory as an always-open pinned column docked at the board's
-   right edge in upgrade mode: the Modules / Mutators head over two
-   swapping faces — category-hue module tiles, arete-register mutator
-   tiles. No collapse, no gesture-reopen; flow hides the column with the
-   locked board, and portrait phone unfolds it (the head and the modules
-   face hide there; the Mutators face re-pins as the strip above the
-   thumb bar). Drag a module into the Modules face to retrieve it — the
-   chord-breaking gesture — click an item then a cell to place. */
+/* A compact inventory browser, collapsible for a clear board. */
 .tray-column {
   position: absolute;
   right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 48px;
+  bottom: 144px;
+  justify-content: center;
   z-index: 15;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 8px;
-  width: 96px;
-  max-height: calc(100% - 104px);
+  width: clamp(248px, 25vw, 296px);
+
   /* The column is a frame, not a surface: with both faces away (flow, the
      Mutators layer) its box must never catch a board gesture. */
   pointer-events: none;
@@ -2694,91 +2688,26 @@ body.hex-detail-open .upgrade-all {
 /* The board tabs carry the column's one switch (issue #272 review) — the
    column wears no second one; the faces read ui.mutLayer alone. */
 .inventory-tray {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
+  max-height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 8px 11px;
-  background: var(--panel-veil);
-  border: 1px dashed var(--line-strong);
-  transition: border-color 0.15s, background 0.15s;
-  backdrop-filter: blur(3px);
-  overflow-y: auto;
+  align-items: stretch;
+  background: var(--line-strong);
+  border: 0;
+  padding: 1px;
+  clip-path: var(--inst-clip);
+  overflow: hidden;
 }
 .inventory-tray.off { display: none; }
-.inventory-tray.drag-over { border-color: var(--charge); background: var(--charge-tint); }
+.inventory-tray.drag-over { background: var(--charge); }
 .tray-items { display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 40px; width: 100%; }
 .tray-empty { font-size: 10px; color: var(--muted); font-style: italic; text-align: center; padding: 4px 2px; }
 .tray-items .inventory-tile { width: 62px; padding: 3px 2px 5px; }
 .tray-items .inventory-tile svg { width: 100%; }
 
-/* The library's MERGE ALL control (issue #368): the tray's one batch
-   combine — square-cut, board chrome like the sweep chips. The visible
-   count is the eligibility read; the separate disclosure previews refunds. */
-.merge-all-controls { display: flex; align-items: center; gap: 4px; }
-.inventory-tray .merge-all-controls { flex-direction: column; }
-.merge-refund-tip > .inst-tip-trigger { min-width: 44px; min-height: 44px; }
-.merge-all {
-  width: 100%;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--panel-veil);
-  border-color: var(--accent);
-  color: var(--ink);
-  font: 600 10px/1 var(--font-condensed);
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-.merge-all:hover:not([disabled]) { background: var(--accent-soft); border-color: var(--accent); }
-/* The column's narrow chip stacks the lockup deliberately: the name over
-   the eligibility count. */
-.inventory-tray .merge-all {
-  flex-direction: column;
-  gap: 2px;
-  line-height: 1;
-}
-.inventory-tray .merge-all .merge-all-count { font-size: 9px; color: var(--muted); }
-.tray-sheet-actions { margin-top: 12px; }
-/* The eligible-duplicate mark (issue #368): a solid pip at the tile's
-   corner — a shape, not a hue — on every copy with a legal twin. */
-.inventory-tile[data-mergeable] { position: relative; }
-.inventory-tile[data-mergeable]::after {
-  content: "";
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 5px;
-  height: 5px;
-  background: var(--ink);
-}
-
-/* The scrap control (issue #377): the copy's recovery value on a
-   square-cut control in the scrap register. The visible action name and
-   payout stack below the placement tile, keeping both touch targets
-   separate in the narrow column and the sheet. */
-.tray-tile { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.tile-scrap {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 4px 6px;
-  border-color: var(--line-strong);
-  background: var(--panel-veil);
-  color: var(--scrap);
-  font: 600 12px/1 var(--font-condensed);
-}
 .scrap-payout { display: inline-flex; align-items: center; gap: 3px; }
-.tile-scrap:hover:not(:disabled) { border-color: var(--scrap); }
-.tile-scrap:disabled { color: var(--muted); }
-.tile-scrap .scrap-mark svg { width: 9px; height: 9px; display: block; }
 /* The Forge draft's skip control (issue #377): the offer's payout beside
    the choose cue — same register, same chip. */
 .forge-cue-row {
@@ -4240,3 +4169,86 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   text-align: center;
 }
 .hex-detail-layer .profile-timing { margin-top: 6px; }
+
+/* Inventory browser: shared open rows on the column and phone sheet. */
+.tray-column.collapsed { width: 150px; }
+.inventory-browser { min-height: 0; color: var(--ink); }
+.inventory-head { display: flex; align-items: center; flex: 0 0 auto; border-bottom: 1px solid var(--line); }
+.inventory-head button { min-height: 44px; border: 0; background: transparent; padding: 8px 10px; font: 600 13px/1.2 var(--font-condensed); }
+.inventory-head [data-inventory-collapse] { display: flex; align-items: center; gap: 8px; flex: 1; text-align: left; }
+.inventory-head [data-inventory-collapse] > :last-child { margin-left: auto; }
+.inventory-head .mono { color: var(--muted); }
+.inventory-collapsed .inventory-head { border-bottom: 0; }
+.inventory-body { display: flex; flex-direction: column; min-height: 0; overflow: hidden; padding: 0 10px 12px; }
+.inventory-tools { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; padding: 10px 0; flex: 0 0 auto; }
+.inventory-tools label { min-width: 0; }
+.inventory-tools select { width: 100%; min-width: 0; min-height: 44px; padding: 5px; border: 1px solid var(--line); border-radius: 0; background: var(--panel); color: var(--ink); font: 500 12px/1.2 var(--font-condensed); color-scheme: dark; }
+.inventory-menu { display: flex; justify-content: flex-end; padding-top: 8px; }
+.inventory-menu button, .inventory-selection button, .inventory-body > button, .inventory-inspection > button { min-height: 44px; font: 600 13px/1.2 var(--font-condensed); }
+.inventory-list { overflow-y: auto; min-height: 0; overscroll-behavior: contain; scrollbar-color: var(--line-strong) var(--panel); }
+.inventory-row { display: flex; align-items: center; gap: 4px; border-top: 1px solid var(--line); min-height: 64px; }
+.inventory-row:first-child { border-top: 0; }
+.inventory-copy { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; min-height: 60px; padding: 3px 0; border: 0; background: transparent; text-align: left; }
+.inventory-copy:hover:not(:disabled) { background: var(--panel-soft); }
+.inventory-mark { flex: 0 0 48px; width: 48px; }
+.inventory-mark svg { display: block; width: 100%; height: 48px; }
+.inventory-copy-read { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.inventory-copy-read strong { font: 600 14px/1.15 var(--font-condensed); }
+.inventory-copy-read small { color: var(--muted); font: 10px/1.4 var(--mono); overflow-wrap: anywhere; }
+.inventory-merge { flex: 0 0 auto; min-height: 44px; min-width: 44px; padding: 5px; font: 600 12px/1 var(--font-condensed); }
+.inventory-row.selected { box-shadow: inset 3px 0 var(--ink); }
+.inventory-check { flex: 0 0 16px; width: 16px; height: 16px; border: 1px solid var(--line-strong); font: 12px/14px sans-serif; text-align: center; margin-left: auto; }
+.inventory-row-payout { color: var(--scrap); font-size: 12px; padding: 0 4px; }
+.inventory-selection { display: flex; flex-direction: column; gap: 8px; padding-bottom: 10px; }
+.inventory-selection > span { font: 12px/1.4 var(--mono); }
+.inventory-selection-actions { display: flex; gap: 6px; }
+.inventory-selection-actions button { flex: 1; }
+.inventory-empty { padding: 16px 0; color: var(--muted); font: 13px/1.5 var(--font-sans); }
+.inventory-body h3 { margin: 16px 0 10px; font: 600 17px/1.2 var(--font-condensed); }
+.inventory-inspection { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
+.inventory-inspection h3, .inventory-inspection p { margin: 0; }
+.inventory-inspection p { font-size: 13px; line-height: 1.5; }
+.inventory-detail-face { display: block; width: 180px; max-width: 100%; align-self: center; }
+.inventory-detail-face svg { width: 100%; display: block; }
+.inventory-inspection .profile-grades { flex-wrap: wrap; justify-content: flex-start; }
+.inventory-loss { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.inventory-review-pair .inventory-copy:disabled { opacity: 1; color: var(--ink); }
+.inventory-scrap-review { max-height: 220px; overflow-y: auto; }
+.inventory-scrap-review .stat-row { gap: 10px; font-size: 12px; }
+.inventory-sheet-browser { display: flex; flex-direction: column; max-height: 60vh; }
+.inventory-sheet-browser .inventory-body { padding-left: 0; padding-right: 0; }
+.inventory-sheet-browser .inventory-head { justify-content: flex-end; }
+.inventory-sheet-browser [data-inventory-collapse] { display: none; }
+@media (max-width: 600px) {
+  .modal-backdrop.peek-tray .modal { max-height: 74dvh; padding: 16px; }
+  .inventory-sheet-browser { max-height: calc(74dvh - 130px); }
+  .inventory-copy-read small { font-size: 11px; }
+  .inventory-merge { padding-inline: 12px; }
+}
+
+.mutator-tray.inventory-browser { align-items: stretch; padding: 1px; background: var(--line-strong); border: 0; clip-path: var(--inst-clip); overflow: hidden; }
+
+.inventory-subview .inventory-body { overflow-y: auto; }
+.inventory-list { flex: 1 1 auto; }
+.mutator-tray.inventory-browser { flex: 0 1 auto; max-height: 100%; }
+
+/* A clipped rim needs a second clipped face; a rectangular CSS border
+   disappears along the diagonal cuts. Use the shared instrument build. */
+.inventory-frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0;
+  background: var(--panel);
+  overflow: hidden;
+}
+.mutator-tray.inventory-browser.drag-over { background: var(--charge); }
+.modal-backdrop.peek-tray .modal { padding: 1px; border: 0; background: var(--line-strong); overflow: hidden; }
+.inventory-sheet-frame { padding: var(--modal-pad); background: var(--panel); max-height: min(82vh, 718px); overflow-y: auto; }
+.modal-backdrop.peek-tray .modal.drag-over { background: var(--charge); }
+@media (max-width: 600px) {
+  .inventory-sheet-frame { padding: 16px; max-height: calc(74dvh - 2px); }
+}
+
+/* The hex owns placement drags; the rest of the row scrolls the list. */
+.inventory-copy[data-inv] .inventory-mark { touch-action: none; }

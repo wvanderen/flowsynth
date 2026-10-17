@@ -15,6 +15,8 @@ import {
   chooseMutatorRoll,
   chooseRoll,
   combine,
+  combineInventory,
+  scrapInventoryBatch,
   combineMutators,
   combineMutatorsPreview,
   breakHorizon,
@@ -80,6 +82,7 @@ import { FAMILY_WORD, mutatorBoardLive, refreshMutPreview } from "./mutators";
 import { HISTORY_PAGE_ROWS, META, CATEGORY_WORD, SPECIAL_DRAFT_NAME, tierWord } from "./meta";
 import { browserChannels, type SignalChannels } from "./signals";
 import { suppressNextClick } from "./click";
+import { createInventoryState, type InventoryState } from "./inventory";
 
 // The session modal surfaces (§5.5, §5.7): the session starts through the
 // Focus sheet's PLAN face (or instantly, per the session-start preference);
@@ -194,6 +197,7 @@ export interface HexDetail {
 export type DetailTray = DetailFace | null;
 
 export interface UiState {
+  inventory: InventoryState;
   // The focus app whose console popover is open, if any (ADR-0012).
   app: FocusApp | null;
   placing: string | null;
@@ -459,6 +463,7 @@ export class App {
     bulkModuleId: null,
     faceMax: false,
     mutLayer: "modules",
+    inventory: createInventoryState(),
     detail: null,
     detailTray: null,
     mutArmedTray: null,
@@ -683,6 +688,9 @@ export class App {
   // The transient interaction modes are mutually exclusive: every exit path
   // (import, reset, session start, arming another mode) clears them together.
   private clearTransientUi(): void {
+    const inv = this.ui.inventory;
+    inv.inspect = null; inv.merge = null; inv.menu = false;
+    inv.scrapMode = false; inv.scrapReview = false; inv.selected = []; inv.dragOpen = false;
     this.ui.app = null;
     this.ui.focusForm = null;
     this.ui.goalRecolorId = null;
@@ -951,6 +959,16 @@ export class App {
     // console furniture. Outside a dialog, typing keeps its own Escape.
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape" || !this.ownsBoard()) return;
+      const inv = this.ui.inventory;
+      const inventoryActive = this.state.mode === "upgrade" && (this.ui.modal === "inventory" || (!this.ui.modal && (!inv.collapsed || inv.dragOpen)));
+      if (inventoryActive && (inv.inspect || inv.merge || inv.scrapReview || inv.scrapMode || inv.menu)) {
+        event.preventDefault();
+        if (inv.scrapReview) inv.scrapReview = false;
+        else if (inv.inspect || inv.merge) { inv.inspect = null; inv.merge = null; }
+        else if (inv.menu) inv.menu = false;
+        else { inv.scrapMode = false; inv.selected = []; }
+        this.render(); return;
+      }
       if (this.ui.modal) {
         event.preventDefault();
         this.closeModal();
@@ -1746,6 +1764,31 @@ export class App {
     this.render();
   }
 
+  confirmInventoryMerge(): void {
+    const offer = this.ui.inventory.merge;
+    if (!offer?.partner || this.ui.inventory.scrapMode) return;
+    let result: ActionResult;
+    if (offer.layer === "modules") result = combineInventory(this.state, offer.id, offer.partner);
+    else {
+      const bothStored = [offer.id, offer.partner].every((id) => this.state.mutators.some((m) => m.id === id && m.pos === null));
+      result = bothStored ? combineMutators(this.state, offer.partner, offer.id) : { ok: false, reason: "Choose two matching inventory copies." };
+    }
+    if (result.ok) this.ui.inventory.merge = null;
+    this.reportCombine(result);
+  }
+
+  confirmInventoryScrap(): void {
+    const inv = this.ui.inventory;
+    if (!inv.scrapMode || !inv.scrapReview) return;
+    const count = inv.selected.length;
+    const result = scrapInventoryBatch(this.state, inv.selected);
+    if (!result.ok) { this.say(result.reason ?? "Selection changed."); this.render(); return; }
+    inv.selected = []; inv.scrapMode = false; inv.scrapReview = false;
+    this.ui.placing = null;
+    this.announceUnlocks(result.unlocked, `${count} module${count === 1 ? "" : "s"} scrapped · +${formatInt(result.scrap ?? 0)} scrap.`);
+    this.save(); this.render();
+  }
+
   // The draft's skip action (issue #377): the offer is consumed once and
   // its payout — the best candidate's scrap value — banks to the balance.
   // The Forge modal stays open on the next banked roll, so a sweep of
@@ -2534,6 +2577,11 @@ export class App {
     // reachable through Add's normal arm, and a later choice keeps the
     // standing landing.
     if (this.ui.modal === "forge") this.ui.entryRollPending = false;
+    if (this.ui.modal === "inventory") {
+      const inv = this.ui.inventory;
+      inv.inspect = null; inv.merge = null; inv.menu = false;
+      inv.scrapMode = false; inv.scrapReview = false; inv.selected = [];
+    }
     this.ui.modal = null;
     this.ui.combineOffer = null;
     this.ui.mutCombineOffer = null;
