@@ -16,7 +16,7 @@ An incremental game in which real-life practice drives a configurable hex board 
 
 ## Brand Personality
 
-The Rack (ADR-0016): a synthesizer instrument, not a game HUD. Studio-hardware register — flat instrument panels, condensed technical lettering, monospace tabular readouts, engraved markings. Three words: precise, quiet, machined. Color is the board's language (hue = category, rarity = finish, charge = light); console surfaces stay monochrome. The instrument reads as alien-but-legible hardware; system-speak is banned from its voice — purchases are products, not mechanics.
+The Rack (ADR-0016): a synthesizer instrument, not a game HUD. Studio-hardware register — neutral graphite instrument panels, condensed technical lettering, monospace tabular readouts, engraved markings. Three words: precise, quiet, machined. Color is the board's language (hue = category, rarity = finish, charge = light); console surfaces stay monochrome. The instrument reads as alien-but-legible hardware; system-speak is banned from its voice — purchases are products, not mechanics.
 
 ## Anti-references
 
@@ -34,8 +34,8 @@ The Rack (ADR-0016): a synthesizer instrument, not a game HUD. Studio-hardware r
 - **One state grammar everywhere.** Muted outline = unavailable, clear outline = available, firm inset marker = selected, engraved mark = acquired — recognizable without color alone, and every hue is paired with a glyph.
 - **Purchases are products, not mechanics.** Every purchasable thing carries a terse proper name from the studio-hardware register with one concrete effect line; mechanics words never lead a name.
 - **Mutators lead.** Wherever modules and mutators co-list — board tabs, tray switch, inventory, every shared list — the mutator face stands first.
-- **Identity rides context.** Hexes speak for modules; surrounding surfaces are flat instrument panels with occasional clipped outer corners as silhouette, never decoration on inner controls.
-- **Calm by default.** Glow and motion are for charge and live activity only; reduced motion is respected and state survives without animation.
+- **Identity rides context.** Hexes speak for modules; surrounding surfaces are flat instrument panels with consistent top-right/bottom-left clipped corners on floating outer panels, never decoration on inner controls.
+- **Calm by default.** Glow and motion are for charge and live activity only; continuous activity remains subtle, reduced motion is fully static, and state survives without animation.
 
 ## Accessibility & Inclusion
 

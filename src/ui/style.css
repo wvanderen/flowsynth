@@ -12,12 +12,13 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-condensed: "Arial Narrow", "Helvetica Neue Condensed", "Liberation Sans Narrow", Arial, sans-serif;
   /* The panel silhouette (issue #267): one clipped pair of outer corners —
-     top-right and bottom-left — that an instrument panel may wear. Clipping
+     top-right and bottom-left — reserved for floating outer panels. Clipping
      defines the panel's silhouette, never decoration on inner controls. */
   --inst-clip: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
 }
 
-* { box-sizing: border-box; }
+* { box-sizing: border-box; scrollbar-color: var(--line-strong) var(--panel-deep); scrollbar-width: thin; }
+input, textarea { caret-color: var(--ink); }
 
 html, body { height: 100%; overflow: hidden; }
 
@@ -88,7 +89,7 @@ h1, h2, h3, p { margin: 0; }
    The rate-details roster renders through them as the reference surface;
    the remaining surfaces adopt them on their own tickets. */
 
-/* Panels: flat plates whose occasional clipped outer corners are the
+/* Panels: floating flat plates whose consistent clipped outer corners are the
    silhouette, never decoration. The two-layer build (a rim-colored plate
    under a face that carries the same clip) draws a hairline that follows
    the diagonal corners — a plain border cannot. Inside a panel: open
@@ -344,8 +345,8 @@ h1, h2, h3, p { margin: 0; }
 /* The session progress strip (issue #63): the header itself is the progress
    surface — a thin highlight pinned along its bottom border, above the
    resting border line. Planned sessions fill it left-to-right; an open-ended
-   session has nothing to fill toward, so it pulses calmly across the full
-   width — alive, not progress; paused holds it bright but still. Empty when
+   session has nothing to fill toward, so it extends across the full
+   width as a steady activity line, not progress; paused holds it still. Empty when
    no session runs. */
 .session-strip {
   position: absolute;
@@ -355,13 +356,11 @@ h1, h2, h3, p { margin: 0; }
   height: 3px;
   pointer-events: none;
 }
-.session-strip > span { display: block; height: 100%; width: 0; background: var(--switch); box-shadow: 0 0 8px var(--switch-glow); }
-.session-strip.pulse > span { animation: strip-pulse 3.2s ease-in-out infinite; }
-@keyframes strip-pulse { 50% { opacity: 0.35; } }
+.session-strip > span { display: block; height: 100%; width: 0; background: var(--switch); opacity: 0.7; }
 
 /* The Enter/Exit main switch: vermillion, and the header's dominant element
    (issue #148) — the largest control in the row, centered in the session
-   cluster. Bright and animated = flow live; dim = idle; paused holds bright
+   cluster. Bright = flow live; dim = idle; paused holds bright
    but still. Text holds AA in every state (#347): live/held fill on the
    deep stop, idle text on the bright stop; borders, glow, and state dot
    ride the session vermillion unchanged. */
@@ -393,8 +392,7 @@ h1, h2, h3, p { margin: 0; }
   border-color: var(--switch);
   text-shadow: 0 1px 2px var(--shadow);
 }
-.main-switch.live { animation: switch-live 2.2s ease-in-out infinite; }
-@keyframes switch-live { 50% { box-shadow: 0 0 14px 1px var(--switch-glow); } }
+.main-switch.live { box-shadow: inset 0 -2px var(--switch); }
 
 .session-actions { display: flex; gap: 8px; flex-wrap: nowrap; align-items: center; }
 .session-actions button { white-space: nowrap; }
@@ -564,17 +562,24 @@ h1, h2, h3, p { margin: 0; }
 
 /* The facetabs: the frame's one navigation — radio-like face selectors,
    the standing face wearing the firm inset marker. */
-.facetabs { display: flex; gap: 6px; padding-bottom: 12px; flex-wrap: wrap; }
-.ftab {
-  min-height: 36px;
-  padding: 5px 12px;
+/* One content-switching family in Focus, Notes, and Catalog. The inset
+   marker supplies selection independently of color; no boxed tab variant. */
+.facetabs { display: flex; gap: 2px; margin-bottom: 16px; border-bottom: 1px solid var(--line-soft); flex-wrap: wrap; }
+.ftab, .catalog-face-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 0;
+  background: transparent;
   font: 600 13px var(--font-condensed);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
 }
-.ftab:hover { color: var(--ink); }
-.ftab.active { color: var(--ink); box-shadow: inset 0 -3px var(--ink); border-color: var(--ink); }
+.ftab:hover:not(:disabled), .catalog-face-tab:hover:not(:disabled) { color: var(--ink); background: transparent; }
+.ftab.active, .catalog-face-tab[aria-pressed="true"] { color: var(--ink); box-shadow: inset 0 -3px var(--ink); }
 
 /* The PLAN face's ready readout: what a session would start — habit and
    goals tracked, no start control (the console header is authoritative for
@@ -815,6 +820,10 @@ h1, h2, h3, p { margin: 0; }
   gap: 8px 20px;
   padding: 9px 16px;
 }
+/* Docked readouts meet their rail square; clipping identifies floating panels. */
+.board-ledger .inst-panel, .board-ledger .inst-panel-face,
+.game-info-strip, .game-info-strip .inst-panel-face { clip-path: none; }
+
 /* The grouped resource read: mono figures, the unit small beside them —
    units identify the figures, no labels. */
 .ledger-fig {
@@ -1266,16 +1275,6 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
 /* ── The board space and its overlays ──────────────── */
 
 .board-space { flex: 1; min-height: 0; position: relative; }
-.board-space::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at center, var(--board-glow) 0%, transparent 65%);
-  pointer-events: none;
-}
-body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite; }
-@keyframes grid-breath { 50% { opacity: 0.35; } }
-
 /* Board gestures are gestures, not text edits (#151): every drag surface —
    the grid, the popped module face, and the tray column — denies selection,
    so holding or dragging never highlights labels in Chrome. */
@@ -1301,7 +1300,10 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  background: var(--panel);
 }
 .tool-icon {
   position: relative;
@@ -1312,8 +1314,8 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--panel-veil);
-  backdrop-filter: blur(3px);
+  background: transparent;
+  border-color: transparent;
 }
 .tool-icon svg { width: 16px; height: 16px; }
 .tool-word { display: none; font-size: 9px; letter-spacing: 0.04em; }
@@ -1657,7 +1659,10 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   z-index: 24;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  background: var(--panel);
 }
 .zoom-cluster button {
   width: 36px;
@@ -1667,8 +1672,8 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--panel-veil);
-  backdrop-filter: blur(3px);
+  background: transparent;
+  border-color: transparent;
 }
 .zoom-cluster button svg { width: 15px; height: 15px; }
 
@@ -1759,7 +1764,7 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
    charge window is spent — sits dim and static as wiring previews
    (ADR-0002). Motion lives on the leads plus a soft pulse on the lit
    receiver, so a charged module reads as alive at a glance. */
-.charge-line { stroke: var(--charge); stroke-width: 2; stroke-dasharray: 4 5; opacity: 0.85; marker-end: url(#fs-lead-tip); animation: charge-flow 1.6s linear infinite; }
+.charge-line { stroke: var(--charge); stroke-width: 2; stroke-dasharray: 4 5; opacity: 0.45; marker-end: url(#fs-lead-tip); animation: charge-flow 5s linear infinite; }
 @keyframes charge-flow { to { stroke-dashoffset: -18; } }
 .charge-preview-line { stroke: var(--charge); stroke-width: 1.5; stroke-dasharray: 3 6; opacity: 0.32; marker-end: url(#fs-lead-tip-dim); }
 .lead-tip { fill: var(--charge); }
@@ -1991,19 +1996,8 @@ body.live .board-space::before { animation: grid-breath 6s ease-in-out infinite;
   stroke-width: 4;
 }
 
-/* Sounding (§6): in a live session the seams pulse on their chord's own
-   period while the board stays locked — the session breathes through its
-   chords, and the breath stays inside the whisper (#201): quiet at rest,
-   loud only when asked. A faded chord keeps its fade and never joins the
-   pulse (the animation would otherwise override the fade's opacity); the
-   idle candidates stay quiet with it (issue #258). */
-body.live .chord-mark:not(.chord-fade):not(.chord-idle) .chord-seam {
-  animation: seam-pulse var(--seam-dur, 2.7s) ease-in-out infinite;
-}
-@keyframes seam-pulse {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.55; }
-}
+/* Sustained chords keep their static earned/asked register. Continuous
+   motion belongs to the quiet charge channel, not another chord rhythm. */
 
 /* The would-form ghosts (§6): dashed marks in the chord's hue, one per
    chord the hovered drop or placement would form — promising rather than
@@ -2041,37 +2035,27 @@ body.live .chord-mark:not(.chord-fade):not(.chord-idle) .chord-seam {
 .chord-mark.ghost-mark.chord-idle .chord-chip { opacity: 0.6; }
 .chord-mark.ghost-mark.chord-idle .chord-label { opacity: 0.6; }
 
-/* The lit receiver breathes (issue #348): charge state is feedback, not
-   decoration, and the light must read at a glance — but a calm instrument
-   idles cheap. The glow lives on a dedicated layer under the chassis, a
-   static blur rasterized once per lit face; the breathe animates that
-   layer's opacity alone, so a frame costs a composite, never a per-hex
-   drop-shadow re-rasterization. The layer exists only on charged and
-   dispensing faces (render.ts emits it), so the animation's selector stays
-   flat — no relational :has() re-validating on every tick's attribute
-   writes. The 2.4s rhythm and the 60% charge-hued peak are the old light's;
-   blur(3.5px) is the drop-shadow's 7px radius. */
+/* Sustained charge is a low steady light with narrow, slow modulation
+   (ADR-0070). Blur is static; only opacity animates on the cached layer. */
 .hex-glow {
   fill: var(--charge);
   filter: blur(3.5px);
-  opacity: 0;
+  opacity: 0.16;
   pointer-events: none;
-  animation: charge-breathe 2.4s ease-in-out infinite;
+  animation: charge-breathe 6s ease-in-out infinite;
 }
-@keyframes charge-breathe { 50% { opacity: 0.6; } }
+@keyframes charge-breathe { 50% { opacity: 0.22; } }
 /* Off the lens (issue #348): a lit hex the current view can't see rests —
    animation stopped, light dark, no continuous paint — until the lens
    brings it home. The sweep rides both lens paths (renderGrid and the
    pan repaint in zoom.ts). */
 .hex-glow.off-view { animation: none; opacity: 0; }
 
-/* Threshold fill: the chargeable's progress rises inside the chassis like
-   liquid; the face flashes when it crosses. */
+/* Threshold fill stays steady. A crossing briefly accents the local rail
+   rather than flashing the full face or changing the readout color. */
 .water-fill { fill: var(--charge); opacity: 0.22; transition: y 400ms ease-out, height 400ms ease-out; }
-.module-node.forge-crossed .water-fill { animation: forge-cross-fill 0.9s ease-out; }
-.module-node.forge-crossed .face-readout { animation: forge-cross-ink 0.9s ease-out; }
-@keyframes forge-cross-fill { 0% { opacity: 0.85; } 100% { opacity: 0.22; } }
-@keyframes forge-cross-ink { 0%, 55% { fill: var(--ink); } }
+.module-node.forge-crossed .face-rail { animation: forge-cross-rail 0.7s ease-out; }
+@keyframes forge-cross-rail { 0% { stroke-width: 6; } 100% { stroke-width: 5; } }
 
 .hex.drop-open { stroke: var(--charge); stroke-width: 2.5; fill: var(--charge-tint); }
 /* The drop register (§5): amber over an occupied cell — a swap is coming,
@@ -2966,9 +2950,8 @@ body.hex-detail-open .upgrade-all {
   flex-direction: column;
   padding: 3px;
   gap: 2px;
-  background: var(--panel-veil);
-  border: 1px solid var(--line-strong);
-  backdrop-filter: blur(3px);
+  background: var(--panel);
+  border: 1px solid var(--line);
 }
 .layer-legend[hidden] { display: none; }
 .legend-symbol {
@@ -3279,6 +3262,7 @@ body.hex-detail-open .upgrade-all {
   background: var(--panel);
   border: 1px solid var(--line);
   padding: var(--modal-pad);
+  clip-path: var(--inst-clip);
   box-shadow: 0 24px 80px var(--shadow);
 }
 .modal-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -3832,18 +3816,9 @@ body.modal-sheet-open .zoom-cluster {
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
-  /* The charge lead's flow is state communication, not ornament: it is the
-     only motion that survives the reduce-motion switch (small, slow, and
-     directional), so a charged board still reads as charged. The instrument
-     primitives add no motion of their own — tooltips open instantly and
-     every state rides static outlines, inset markers, and engraved marks,
-     so the state grammar survives this switch intact. */
-  .charge-line { animation: charge-flow 1.6s linear infinite !important; }
-  /* The breathe rests lit (issue #348): the glow layer holds its peak
-     light as a static state — no motion, and charge reads at a glance from
-     the lit chassis, rail, and halo together. Off-lens layers stay dark:
-     the off-view rule out-specifies this rest. */
-  .hex-glow { animation: none !important; opacity: 0.6; }
+  /* Fully static, including charge leads. Arrowheads retain direction,
+     charged rails and steady illumination retain activity (ADR-0070). */
+  .hex-glow { animation: none !important; opacity: 0.18; }
 }
 
 .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; min-height: 0; padding: 4px; }
@@ -3998,25 +3973,9 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   padding: 14px 22px 18px;
 }
 .catalog-top { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-.catalog-face-switch { display: flex; gap: 2px; margin-right: auto; }
-.catalog-face-tab {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  border: 0;
-  border-radius: 0;
-  background: none;
-  min-height: 44px;
-  padding: 6px 10px;
-  font: 600 15px var(--font-condensed);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-}
+.catalog-face-switch { display: flex; gap: 2px; margin-right: auto; border-bottom: 1px solid var(--line-soft); }
 .catalog-face-tab svg { width: 14px; height: 14px; }
 .catalog-face-tab .mono { font-size: 14px; }
-.catalog-face-tab:hover:not(:disabled) { background: none; border-color: transparent; color: var(--ink); }
-.catalog-face-tab[aria-pressed="true"] { color: var(--ink); box-shadow: inset 0 -3px var(--ink); }
 .catalog-face-tab[data-catalog-face="nous"][aria-pressed="true"] { color: var(--nous); }
 .catalog-face-tab[data-catalog-face="arete"][aria-pressed="true"] { color: var(--arete); }
 .catalog-identity { display: flex; align-items: center; color: var(--arete); }
@@ -4062,17 +4021,12 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 }
 .entry-buy .mono { font-size: 14px; text-transform: none; letter-spacing: 0.02em; }
 .entry-buy:hover:not(:disabled) { background: var(--arete-faint); border-color: var(--arete); }
-/* Phone: the frame becomes the 74%-height bottom sheet whose top edge
-   rises to the right (the prototype's sheet silhouette; the bottom edge
-   meets the screen square). Rim and face wear the SAME polygon — a
-   mismatched inner clip would show the plate through the face in corner
-   triangles. The viewport media query alone carries it — every modal
-   sheets on phone (the .sheet class is the rate gate's, below the 760px
-   container line). */
+/* Phone sheets retain the same top-right/bottom-left clipped pair.
+   The frame still docks at the bottom without a separate sloping edge. */
 @media (max-width: 600px) {
   .modal.catalog-modal,
   .catalog-frame {
-    clip-path: polygon(0 14px, 100% 0, 100% 100%, 0 100%);
+    clip-path: var(--inst-clip);
   }
   .modal.catalog-modal {
     height: 74vh;

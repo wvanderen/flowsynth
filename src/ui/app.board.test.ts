@@ -657,7 +657,7 @@ describe("the charge breathe's glow layer (issue #348)", () => {
   it("reduced motion rests the glow lit — a static lit state, charge readable without animation", () => {
     const css = readFileSync("src/ui/style.css", "utf8");
     const reduce = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
-    expect(reduce).toMatch(/\.hex-glow\s*\{[^}]*opacity: 0\.6/);
+    expect(reduce).toMatch(/\.hex-glow\s*\{[^}]*opacity: 0\.18/);
     // Off the lens stays dark even at rest.
     expect(css).toMatch(/\.hex-glow\.off-view\s*\{[^}]*opacity: 0/);
   });

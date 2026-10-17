@@ -16,12 +16,12 @@ const renderSource = readSource("./render.ts");
 const tokens = defaultTheme.tokens;
 
 describe("theme token table", () => {
-  it("carries the ADR-0016 dark indigo-blue substrate", () => {
-    expect(tokens.bg).toBe("#0d1122");
-    expect(tokens.panel).toBe("#141a30");
-    expect(tokens["panel-soft"]).toBe("#111627");
-    expect(tokens.line).toBe("#2a3150");
-    expect(tokens.ink).toBe("#e5e9f5");
+  it("carries the ADR-0070 neutral graphite substrate", () => {
+    expect(tokens.bg).toBe("#111213");
+    expect(tokens.panel).toBe("#1b1d1f");
+    expect(tokens["panel-soft"]).toBe("#17191b");
+    expect(tokens.line).toBe("#34383b");
+    expect(tokens.ink).toBe("#e9eae8");
   });
 
   it("carries the ADR-0016 category hue table", () => {
