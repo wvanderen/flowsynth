@@ -552,23 +552,15 @@ describe("the return contract (issue #295)", () => {
     expect(app.ui.pan).toEqual({ x: 10, y: -20 });
   });
 
-  it("Escape closes the detail after any armed placement cancels first", () => {
-    app.render();
-    clickCell(0, 0);
-    // Arm a placement from the tray sheet while the detail stands.
-    app.returnToInventory("m1");
-    app.openModal("inventory");
+  it("placing from inventory inspection returns the grid before arming placement", () => {
+    app.render(); clickCell(0, 0);
+    app.returnToInventory("m1"); app.openModal("inventory");
     document.querySelector<HTMLButtonElement>('#modal-content [data-inv="m1"]')!.click();
-    expect(app.ui.modal).toBeNull();
-    expect(app.ui.placing).toBe("m1");
-    expect(open()).toBe(true);
-    // Escape cancels the armed placement first; the detail stands.
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     expect(app.ui.placing).toBeNull();
-    expect(open()).toBe(true);
-    // The next Escape returns the grid.
+    document.querySelector<HTMLButtonElement>("#modal-content [data-inventory-place]")!.click();
+    expect(app.ui.modal).toBeNull(); expect(app.ui.placing).toBe("m1"); expect(open()).toBe(false);
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    expect(app.ui.detail).toBeNull();
+    expect(app.ui.placing).toBeNull(); expect(app.ui.detail).toBeNull();
   });
 
   it("Escape never opens a second Hex from the detail — the grid is the only navigator", () => {

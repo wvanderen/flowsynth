@@ -476,7 +476,7 @@ export interface CombinePreview {
   refund: number;
 }
 
-export function combinePreview(state: GameState, id: string, partnerId: string): CombinePreview | null {
+export function combinePreview(state: GameState, id: string, partnerId: string, keepSelected = false): CombinePreview | null {
   if (state.mode !== "upgrade") return null;
   const selected = findModule(state, id);
   const partner = findModule(state, partnerId);
@@ -486,10 +486,10 @@ export function combinePreview(state: GameState, id: string, partnerId: string):
   if (nextTier > unlockedMergeCap(state)) return null;
   const melt = meltOf(selected, partner);
   const keep = melt === selected ? partner : selected;
-  return { keepId: keep.id, meltId: melt.id, nextTier, level: keep.level, refund: melt.invested };
+  return { keepId: keepSelected ? selected.id : keep.id, meltId: keepSelected ? partner.id : melt.id, nextTier, level: keep.level, refund: melt.invested };
 }
 
-export function combine(state: GameState, id: string, partnerId?: string): ActionResult {
+export function combine(state: GameState, id: string, partnerId?: string, keepSelected = false): ActionResult {
   if (state.mode !== "upgrade") return fail("Combining happens between sessions.");
   const selected = findModule(state, id);
   if (!selected) return fail("Module not found.");
@@ -507,12 +507,14 @@ export function combine(state: GameState, id: string, partnerId?: string): Actio
     partner = findCombinePartner(state, id);
   }
   if (!partner) return fail("No second copy of this type and tier.");
-  const preview = combinePreview(state, id, partner.id);
+  const preview = combinePreview(state, id, partner.id, keepSelected);
   if (!preview) return fail("This copy stands at the unlocked tier cap.");
 
   const melt = findModule(state, preview.meltId)!;
   const keep = findModule(state, preview.keepId)!;
+  const retainedInvestment = selected.level >= partner.level ? selected.invested : partner.invested;
   state.nous += preview.refund;
+  keep.invested = retainedInvestment;
   keep.tier = preview.nextTier;
   keep.level = preview.level;
   // The result lands where the drop target was (issue #152): the target
@@ -531,6 +533,40 @@ export function combine(state: GameState, id: string, partnerId?: string): Actio
   }
   state.combinations++;
   return { ok: true, refund: preview.refund, unlocked: checkUnlocks(state) };
+}
+
+// Row merging preserves the chosen copy's secondary effects while inheriting
+// the higher input's purchased level and investment. Board/drop semantics stay
+// on combine's default path. Recheck inventory membership at commit time.
+export function inventoryCombinePreview(state: GameState, id: string, partnerId: string): CombinePreview | null {
+  if (!state.modules.some((m) => m.id === id && m.pos === null) ||
+      !state.modules.some((m) => m.id === partnerId && m.pos === null)) return null;
+  return combinePreview(state, id, partnerId, true);
+}
+
+export function combineInventory(state: GameState, id: string, partnerId: string): ActionResult {
+  if (!inventoryCombinePreview(state, id, partnerId)) return fail("Choose two matching inventory copies.");
+  return combine(state, id, partnerId, true);
+}
+
+// Validate the complete batch before removing anything. Hidden selections are
+// included, stale/deployed selections refuse the entire action, and duplicates
+// cannot pay twice.
+export function scrapInventoryBatch(state: GameState, ids: readonly string[]): ActionResult {
+  if (state.mode !== "upgrade") return fail("Scrapping happens between sessions.");
+  const unique = [...new Set(ids)];
+  if (!unique.length) return fail("Select modules to scrap.");
+  if (unique.some((id) => !state.modules.some((m) => m.id === id && m.pos === null))) {
+    return fail("Selection changed. Review your inventory again.");
+  }
+  let scrap = 0;
+  const unlocked: string[] = [];
+  for (const id of unique) {
+    const result = scrapModule(state, id);
+    scrap += result.scrap ?? 0;
+    unlocked.push(...(result.unlocked ?? []));
+  }
+  return { ok: true, scrap, unlocked };
 }
 
 // What a merge-all sweep lands (issue #368): the exact-copy pairs combined

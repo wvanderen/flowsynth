@@ -1,0 +1,44 @@
+{
+  "provenance": {
+    "app": "flowsynth",
+    "worktree": "/Users/eggfam/.codex/worktrees/3aab/flowsynth",
+    "branch": null,
+    "commit": "5b55bba1a2f0bba1c1df08aec6c6281ed6290be8"
+  },
+  "geometry": {
+    "rect": {
+      "x": 1112,
+      "y": 184.390625,
+      "width": 296,
+      "height": 631.609375,
+      "top": 184.390625,
+      "right": 1408,
+      "bottom": 816,
+      "left": 1112
+    },
+    "scrollHeight": 630,
+    "clientHeight": 630,
+    "list": [
+      {
+        "scroll": 1152,
+        "client": 509,
+        "rect": {
+          "x": 1123,
+          "y": 294.390625,
+          "width": 274,
+          "height": 508.609375,
+          "top": 294.390625,
+          "right": 1397,
+          "bottom": 803,
+          "left": 1123
+        }
+      }
+    ]
+  },
+  "focusDisclosure": {
+    "shown": true,
+    "text": "Base production ×0.75 · reduced"
+  },
+  "escapeDismiss": true,
+  "errors": []
+}

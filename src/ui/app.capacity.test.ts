@@ -363,6 +363,7 @@ describe("placement previews with capacity-aware production (#260)", () => {
     app.render();
     const projection = projectPlacement(app.state, traySynth.id, hex(0, 1), false);
     document.querySelector<HTMLButtonElement>(`[data-inv="${traySynth.id}"]`)!.click();
+    document.querySelector<HTMLButtonElement>("[data-inventory-place]")!.click();
     expect(app.ui.placing).toBe(traySynth.id);
     cell(0, 1).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
     expect(app.ui.dropHover).toEqual({ moduleId: traySynth.id, pos: hex(0, 1) });
@@ -409,6 +410,7 @@ describe("placement previews with capacity-aware production (#260)", () => {
     const traySynth = give(app.state, "additive", null);
     app.render();
     document.querySelector<HTMLButtonElement>(`[data-inv="${traySynth.id}"]`)!.click();
+    document.querySelector<HTMLButtonElement>("[data-inventory-place]")!.click();
     cell(0, 1).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
     const previewed = chips().slice(1); // the projected voice row, past the delta chip
     expect(previewed.length).toBeGreaterThan(0);
@@ -452,6 +454,7 @@ describe("placement previews with capacity-aware production (#260)", () => {
     const traySynth = give(app.state, "additive", null);
     app.render();
     document.querySelector<HTMLButtonElement>(`[data-inv="${traySynth.id}"]`)!.click();
+    document.querySelector<HTMLButtonElement>("[data-inventory-place]")!.click();
     cell(0, 1).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
     expect(ghostLabels().sort()).toEqual(["Fifth ×1.3 ×2 · idle", "Octave ×1.15 · idle"]);
     expect(document.querySelectorAll(".ghost-mark.chord-idle")).toHaveLength(2);
@@ -461,6 +464,7 @@ describe("placement previews with capacity-aware production (#260)", () => {
     const tray = give(app.state, "additive", null);
     app.render();
     document.querySelector<HTMLButtonElement>(`[data-inv="${tray.id}"]`)!.click();
+    document.querySelector<HTMLButtonElement>("[data-inventory-place]")!.click();
     cell(1, 0).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
     expect(ghostLabels()).toEqual(["Fifth ×1.3"]);
     expect(document.querySelectorAll(".ghost-mark.chord-idle")).toHaveLength(0);
@@ -478,6 +482,7 @@ describe("placement previews with capacity-aware production (#260)", () => {
     app.render();
     const before = displayedRates(app.state, true).rate;
     document.querySelector<HTMLButtonElement>(`[data-inv="${traySynth.id}"]`)!.click();
+    document.querySelector<HTMLButtonElement>("[data-inventory-place]")!.click();
     cell(-2, 0).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
     // The newcomer earns: its ghost promises without the idle word.
     expect(ghostLabels()).toEqual(["Flat seventh ×1.45"]);
@@ -559,6 +564,7 @@ describe("placement previews with capacity-aware production (#260)", () => {
     const mover = give(app.state, "additive", null);
     app.render();
     document.querySelector<HTMLButtonElement>(`[data-inv="${mover.id}"]`)!.click();
+    document.querySelector<HTMLButtonElement>("[data-inventory-place]")!.click();
     cell(0, 1).dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
     // The transient readout carries no interactive terms at all — every
     // figure is a plain chip, and no hover cue promises a disclosure that

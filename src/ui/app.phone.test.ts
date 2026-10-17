@@ -122,6 +122,8 @@ describe("the thumb bar (§7, portrait phone)", () => {
     expect(modal.querySelector("h2")).toBeNull();
     expect(modal.querySelector(".lead")).toBeNull();
     (modal.querySelector('[data-inv="m1"]') as HTMLButtonElement).click();
+    expect(app.ui.placing).toBeNull();
+    modal.querySelector<HTMLButtonElement>("[data-inventory-place]")!.click();
     expect(app.ui.modal).toBeNull();
     expect(app.ui.placing).toBe("m1");
     app.cancelPlacing();
@@ -155,19 +157,13 @@ describe("the thumb bar (§7, portrait phone)", () => {
     const tile = modalAfter.querySelector<HTMLButtonElement>('[data-mut-tray="mu2"]')!;
     expect(tile).not.toBeNull();
     expect(tile.querySelector(".mut-tile-hex")).not.toBeNull();
-    const detail = tile.closest(".inst-tip")!;
-    const trigger = detail.querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
-    const tooltip = () => document.getElementById(trigger.getAttribute("aria-describedby")!)!;
-    tile.focus();
-    expect(tooltip().classList.contains("inst-show")).toBe(true);
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    expect(tooltip().classList.contains("inst-show")).toBe(false);
-    expect(app.ui.modal).toBe("inventory");
-    trigger.click();
-    expect(tooltip().classList.contains("inst-show")).toBe(true);
+    tile.click();
     expect(app.ui.mutArmedTray).toBeNull();
-    document.body.click();
-    expect(tooltip().classList.contains("inst-show")).toBe(false);
+    expect(app.ui.modal).toBe("inventory");
+    expect(modalAfter.textContent).toContain("Place");
+    modalAfter.querySelector<HTMLButtonElement>("[data-inventory-place]")!.click();
+    expect(app.ui.mutArmedTray).toBe("mu2");
+    expect(app.ui.modal).toBeNull();
     // Tapping a mutator tile arms it and puts the sheet away, so the slot
     // taps land on a visible board.
     tile.click();
@@ -313,10 +309,9 @@ describe("the thumb bar (§7, portrait phone)", () => {
     app.openModal("inventory");
     const modal = document.getElementById("modal-content")!;
     const tile = modal.querySelector<HTMLButtonElement>(`[data-inv="${trayModule.id}"]`)!;
-    expect(tile.disabled).toBe(true);
-    // The lock reason rides the tooltip layer — no explanatory paragraph.
-    expect(document.getElementById(tile.getAttribute("aria-describedby")!)!.textContent).toContain("locked during flow");
     tile.click();
+    expect(modal.querySelector<HTMLButtonElement>("[data-inventory-place]")!.disabled).toBe(true);
+    modal.querySelector<HTMLButtonElement>("[data-inventory-place]")!.click();
     expect(app.ui.placing).toBeNull();
     expect(app.ui.modal).toBe("inventory");
   });

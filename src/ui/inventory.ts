@@ -1,0 +1,236 @@
+import type { App } from "./app";
+import { combineMutatorsPreview, inventoryCombinePreview } from "../engine/actions";
+import { CATEGORY_OF, isVoiceType, typeRarityOf } from "../engine/constants";
+import { voiceCapacityOf } from "../engine/economy";
+import { moduleScrapValue } from "../engine/scrap";
+import type { ModuleInstance, MutatorInstance } from "../engine/types";
+import { faceLevel, inventoryTileSvg, moduleFace, spacerClipPath } from "./face";
+import { formatInt, formatNumber } from "./format";
+import { closeTooltips, wireTooltips } from "./instrument";
+import { CATEGORY_WORD, META, RARITY_LABEL, tierWord } from "./meta";
+import { bindMutatorDrag, FAMILY_WORD, mutatorEffectText, mutatorTileSvg } from "./mutators";
+import { profileGradesHtml } from "./profile";
+
+export type InventorySort = "type" | "rarity" | "level" | "newest";
+type Layer = "modules" | "mutators";
+export interface InventoryState {
+  collapsed: boolean;
+  dragOpen: boolean;
+  filters: Record<Layer, string>;
+  sorts: Record<Layer, InventorySort>;
+  scroll: Record<Layer, number>;
+  inspect: { layer: Layer; id: string } | null;
+  merge: { layer: Layer; id: string; partner: string | null } | null;
+  menu: boolean;
+  scrapMode: boolean;
+  selected: string[];
+  scrapReview: boolean;
+  returnId: string | null;
+}
+export const createInventoryState = (): InventoryState => ({
+  collapsed: false, dragOpen: false,
+  filters: { modules: "all", mutators: "all" },
+  sorts: { modules: "type", mutators: "type" }, scroll: { modules: 0, mutators: 0 },
+  inspect: null, merge: null, menu: false, scrapMode: false, selected: [], scrapReview: false, returnId: null,
+});
+const rarityRank = { common: 0, uncommon: 1, rare: 2 };
+
+export function inventoryModules(app: App): ModuleInstance[] {
+  const inv = app.ui.inventory;
+  const acquired = new Map(app.state.modules.map((m, i) => [m.id, i]));
+  const sort = inv.sorts.modules;
+  return app.state.modules.filter((m) => m.pos === null && (inv.filters.modules === "all" || CATEGORY_OF[m.type] === inv.filters.modules))
+    .sort((a, b) => {
+      if (sort === "newest") return acquired.get(b.id)! - acquired.get(a.id)!;
+      const primary = sort === "level" ? b.level - a.level : sort === "rarity" ? rarityRank[typeRarityOf(b.type)] - rarityRank[typeRarityOf(a.type)] : 0;
+      return primary || CATEGORY_WORD[CATEGORY_OF[a.type]].localeCompare(CATEGORY_WORD[CATEGORY_OF[b.type]]) || META[a.type].name.localeCompare(META[b.type].name) || b.tier - a.tier || b.level - a.level || acquired.get(a.id)! - acquired.get(b.id)!;
+    });
+}
+function inventoryMutators(app: App): MutatorInstance[] {
+  const inv = app.ui.inventory;
+  const acquired = new Map(app.state.mutators.map((m, i) => [m.id, i]));
+  return app.state.mutators.filter((m) => m.pos === null && (inv.filters.mutators === "all" || m.family === inv.filters.mutators))
+    .sort((a, b) => inv.sorts.mutators === "newest" ? acquired.get(b.id)! - acquired.get(a.id)! :
+      (inv.sorts.mutators === "rarity" ? rarityRank[b.rarity] - rarityRank[a.rarity] : 0) || FAMILY_WORD[a.family].localeCompare(FAMILY_WORD[b.family]) || rarityRank[b.rarity] - rarityRank[a.rarity] || acquired.get(a.id)! - acquired.get(b.id)!);
+}
+export function inventoryPartners(app: App, layer: Layer, id: string): string[] {
+  if (layer === "modules") {
+    const chosen = app.state.modules.find((m) => m.id === id && m.pos === null);
+    if (!chosen) return [];
+    const matches = app.state.modules.filter((m) => m.pos === null && m.id !== id && m.type === chosen.type && m.tier === chosen.tier);
+    // Matching copies share eligibility. Ask the authoritative preview once,
+    // rather than repeatedly searching the roster for every potential twin.
+    return matches[0] && inventoryCombinePreview(app.state, id, matches[0].id) ? matches.map((m) => m.id) : [];
+  }
+  const chosen = app.state.mutators.find((m) => m.id === id && m.pos === null);
+  if (!chosen) return [];
+  const matches = app.state.mutators.filter((m) => m.pos === null && m.id !== id && m.family === chosen.family && m.rarity === chosen.rarity);
+  return matches[0] && combineMutatorsPreview(app.state, matches[0].id, id) ? matches.map((m) => m.id) : [];
+}
+function moduleRead(m: ModuleInstance): string {
+  return `${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)}${faceLevel(m) === undefined ? "" : ` · LV ${m.level}`}`;
+}
+function moduleRow(app: App, m: ModuleInstance, partner = false): string {
+  const inv = app.ui.inventory;
+  const selected = inv.selected.includes(m.id);
+  const eligible = inventoryPartners(app, "modules", m.id).length > 0;
+  const select = inv.scrapMode && !partner;
+  return `<div class="inventory-row${selected && select ? " selected" : ""}">
+    <button class="inventory-copy" ${partner ? `data-partner="${m.id}"` : `data-inv="${m.id}"`} data-type="${m.type}" data-rarity="${typeRarityOf(m.type)}"${select ? ` aria-pressed="${selected}"` : ""} aria-label="${select ? (selected ? "Deselect" : "Select for scrap") : partner ? "Merge with" : "Inspect"} ${META[m.type].name} · ${moduleRead(m)}${m.reserve > 0 ? ` · ${formatNumber(m.reserve)} charge reserve` : ""}">
+      <span class="inventory-mark">${inventoryTileSvg(m)}</span><span class="inventory-copy-read"><strong>${META[m.type].name}</strong><small>${moduleRead(m)}</small>${m.reserve > 0 ? `<small>${formatNumber(m.reserve)} charge reserve</small>` : ""}</span>${select ? `<span class="inventory-check" aria-hidden="true">${selected ? "✓" : ""}</span>` : ""}</button>
+    ${select ? `<span class="inventory-row-payout mono">+${formatInt(moduleScrapValue(m))}</span>` : partner ? "" : `<button class="inventory-merge" data-inventory-merge="${m.id}"${eligible ? "" : " disabled"} aria-label="Merge ${META[m.type].name}" title="${eligible ? `Review ${tierWord(m.tier + 1)}` : "No eligible inventory partner"}">Merge</button>`}</div>`;
+}
+function mutatorRow(app: App, m: MutatorInstance, partner = false): string {
+  const eligible = inventoryPartners(app, "mutators", m.id).length > 0;
+  return `<div class="inventory-row"><button class="inventory-copy mut-tile" ${partner ? `data-partner="${m.id}"` : `data-mut-tray="${m.id}"`} aria-label="${partner ? "Merge with" : "Inspect"} ${FAMILY_WORD[m.family]} · ${m.rarity}"><span class="inventory-mark">${mutatorTileSvg(m)}</span><span class="inventory-copy-read"><strong>${FAMILY_WORD[m.family]}</strong><small>${m.rarity}</small></span></button>${partner ? "" : `<button class="inventory-merge" data-inventory-merge="${m.id}"${eligible ? "" : " disabled"}>Merge</button>`}</div>`;
+}
+function back(): string { return `<button data-inventory-back>Back to inventory</button>`; }
+function inspectHtml(app: App): string {
+  const read = app.ui.inventory.inspect!;
+  if (read.layer === "mutators") {
+    const m = app.state.mutators.find((m) => m.id === read.id && m.pos === null);
+    if (!m) return `${back()}<p class="inventory-empty">This copy is no longer in inventory.</p>`;
+    return `${back()}<div class="inventory-inspection"><div class="inventory-detail-face">${mutatorTileSvg(m)}</div><h3>${FAMILY_WORD[m.family]} · ${m.rarity}</h3><p>${mutatorEffectText(m.family, m.rarity)}</p><button class="primary" data-inventory-place="${m.id}">Place</button></div>`;
+  }
+  const m = app.state.modules.find((m) => m.id === read.id && m.pos === null);
+  if (!m) return `${back()}<p class="inventory-empty">This copy is no longer in inventory.</p>`;
+  return `${back()}<div class="inventory-inspection"><svg class="inventory-detail-face hex-stack-face" viewBox="-70 -70 140 140" data-type="${m.type}" data-rarity="${typeRarityOf(m.type)}" aria-label="${META[m.type].name}" role="img">${spacerClipPath()}${moduleFace({ type: m.type, tier: m.tier, ...(faceLevel(m) !== undefined ? { level: faceLevel(m)! } : {}), readout: "" })}</svg>
+    <h3>${META[m.type].name}</h3><p class="mono">${moduleRead(m)}</p><p>${META[m.type].role}</p>${profileGradesHtml(m.type)}
+    ${isVoiceType(m.type) ? `<p class="mono">${voiceCapacityOf(app.state, m.type)} chord capacity</p>` : ""}
+    ${m.reserve > 0 ? `<p class="mono">${formatNumber(m.reserve)} charge reserve</p>` : ""}${m.shift !== null ? `<p class="mono">Pitch shift ${m.shift > 0 ? "+" : ""}${m.shift}</p>` : ""}
+    <button class="primary" data-inventory-place="${m.id}">Place</button></div>`;
+}
+function mergeHtml(app: App): string {
+  const offer = app.ui.inventory.merge!;
+  const partners = inventoryPartners(app, offer.layer, offer.id);
+  if (!offer.partner) return `${back()}<h3>Choose merge partner</h3><div class="inventory-list">${partners.map((id) => offer.layer === "modules" ? moduleRow(app, app.state.modules.find((m) => m.id === id)!, true) : mutatorRow(app, app.state.mutators.find((m) => m.id === id)!, true)).join("") || `<p class="inventory-empty">No eligible inventory partner.</p>`}</div>`;
+  if (!partners.includes(offer.partner)) return `${back()}<p class="inventory-empty">These copies can no longer merge.</p>`;
+  if (offer.layer === "modules") {
+    const a = app.state.modules.find((m) => m.id === offer.id)!;
+    const b = app.state.modules.find((m) => m.id === offer.partner)!;
+    const preview = inventoryCombinePreview(app.state, a.id, b.id)!;
+    return `${back()}<h3>Review merge</h3><div class="inventory-review-pair">${moduleRow(app, a, true)}${moduleRow(app, b, true)}</div><div class="stat-row"><span>Result</span><span class="mono">${tierWord(preview.nextTier)} · LV ${preview.level}</span></div><div class="stat-row"><span>Upgrade refund</span><span class="mono">${formatInt(preview.refund)} ν</span></div><p class="inventory-loss">Partner consumed${b.reserve > 0 ? ` · ${formatNumber(b.reserve)} charge reserve lost` : ""}${b.shift !== null ? ` · pitch shift ${b.shift} lost` : ""}${b.target !== null ? " · recipient selection lost" : ""}. Chosen copy's secondary effects retained.</p><button class="primary" data-inventory-merge-confirm>Merge pair</button>`;
+  }
+  const a = app.state.mutators.find((m) => m.id === offer.id)!;
+  const b = app.state.mutators.find((m) => m.id === offer.partner)!;
+  const preview = combineMutatorsPreview(app.state, b.id, a.id)!;
+  return `${back()}<h3>Review merge</h3><div class="inventory-review-pair">${mutatorRow(app, a, true)}${mutatorRow(app, b, true)}</div><p>${FAMILY_WORD[a.family]} · ${preview.nextRarity}</p><button class="primary" data-inventory-merge-confirm>Merge pair</button>`;
+}
+function scrapReviewHtml(app: App): string {
+  const selected = app.ui.inventory.selected;
+  const copies = selected.map((id) => app.state.modules.find((m) => m.id === id && m.pos === null));
+  const stale = copies.some((m) => !m);
+  const modules = copies.filter((m): m is ModuleInstance => !!m);
+  const payout = modules.reduce((sum, m) => sum + moduleScrapValue(m), 0);
+  const invested = modules.reduce((sum, m) => sum + m.invested, 0);
+  const reserve = modules.reduce((sum, m) => sum + m.reserve, 0);
+  return `<button data-inventory-back>Back to selection</button><h3>Scrap ${selected.length} module${selected.length === 1 ? "" : "s"}?</h3><div class="inventory-scrap-review">${modules.map((m) => `<div class="stat-row"><span>${META[m.type].name} · ${tierWord(m.tier)} · LV ${m.level}</span><span class="mono">+${formatInt(moduleScrapValue(m))}</span></div>`).join("")}</div><div class="stat-row"><span>Scrap payout</span><span class="mono">+${formatInt(payout)}</span></div><p class="inventory-loss">Copies and purchased levels lost · ${formatInt(invested)} ν invested${reserve > 0 ? ` · ${formatNumber(reserve)} charge reserve` : ""}. Cannot undo.</p>${stale ? `<p role="alert">Selection changed. Go back and select again.</p>` : ""}<button class="danger" data-inventory-scrap-confirm${stale || !selected.length ? " disabled" : ""}>Confirm scrap</button>`;
+}
+
+// The column and phone sheet share every content/action builder. UI state is
+// visit-local; roster ordering is the collection's durable acquisition order.
+export function renderInventoryContent(app: App, host: HTMLElement, sheet: boolean, bindDrag: (element: Element, id: string) => void): void {
+  const inv = app.ui.inventory;
+  const layer = app.ui.mutLayer;
+  const modules = layer === "modules";
+  const copies = modules ? inventoryModules(app) : inventoryMutators(app);
+  const count = (modules ? app.state.modules : app.state.mutators).filter((m) => m.pos === null).length;
+  const locked = app.state.mode !== "upgrade";
+  const collapsed = !sheet && inv.collapsed && !inv.dragOpen;
+  const { scroll: _scroll, ...viewState } = inv;
+  const key = JSON.stringify([layer, locked, sheet, collapsed, viewState, app.state.capacityBought,
+    app.state.modules.map((m) => [m.id, m.type, m.pos, m.level, m.tier, m.invested, m.reserve, m.shift, m.target]), app.state.mutators, app.state.mergeCapPurchases]);
+  if (host.dataset.inventoryKey === key) return;
+  const active = document.activeElement;
+  const focusKey = active instanceof HTMLElement && host.contains(active) ? active.dataset.inventoryFocus : undefined;
+  closeTooltips(host);
+  host.dataset.inventoryKey = key;
+  host.classList.toggle("inventory-collapsed", collapsed);
+  host.classList.add("inventory-browser", ...(sheet ? [] : ["inst-panel"]));
+  host.classList.toggle("inventory-subview", inv.inspect?.layer === layer || inv.merge?.layer === layer || (modules && inv.scrapReview));
+  const options = modules ? CATEGORY_WORD : FAMILY_WORD;
+  const filters = Object.entries(options).map(([value, name]) => `<option value="${value}"${inv.filters[layer] === value ? " selected" : ""}>${name}</option>`).join("");
+  const selected = app.state.modules.filter((m) => m.pos === null && inv.selected.includes(m.id));
+  const total = selected.reduce((sum, m) => sum + moduleScrapValue(m), 0);
+  const browse = `<div class="inventory-tools"><label><span class="sr-only">${modules ? "Category" : "Family"}</span><select data-inventory-filter aria-label="${modules ? "Category" : "Family"}"><option value="all">All ${modules ? "categories" : "families"}</option>${filters}</select></label><label><span class="sr-only">Sort inventory</span><select data-inventory-sort aria-label="Sort inventory">${(["type", "rarity", ...(modules ? ["level"] : []), "newest"] as InventorySort[]).map((value) => `<option value="${value}"${inv.sorts[layer] === value ? " selected" : ""}>${value === "type" ? (modules ? "Category / type" : "Family") : value === "rarity" ? "Rarity" : value === "level" ? "Level" : "Newest"}</option>`).join("")}</select></label></div>
+    ${inv.scrapMode && modules ? `<div class="inventory-selection"><span role="status">${inv.selected.length} selected · +${formatInt(total)} scrap</span><button data-inventory-select-all>Select all matching</button><div class="inventory-selection-actions"><button data-inventory-cancel>Cancel</button><button data-inventory-review${inv.selected.length ? "" : " disabled"}>Scrap selected</button></div></div>` : ""}
+    <div class="inventory-list" data-inventory-scroll>${copies.map((m) => modules ? moduleRow(app, m as ModuleInstance) : mutatorRow(app, m as MutatorInstance)).join("") || `<p class="inventory-empty">${count ? "No matching copies." : modules ? "No stored modules." : "No stored mutators."}</p>`}</div>`;
+  const subview = inv.inspect?.layer === layer ? inspectHtml(app) : inv.merge?.layer === layer ? mergeHtml(app) : inv.scrapReview && modules ? scrapReviewHtml(app) : browse;
+  host.innerHTML = `${sheet ? "" : '<div class="inventory-frame inst-panel-face">'}<div class="inventory-head"><button data-inventory-collapse aria-expanded="${!collapsed}" aria-label="${sheet ? "Close inventory" : collapsed ? "Expand inventory" : "Collapse inventory"}">Inventory <span class="mono">${count}</span><span aria-hidden="true">${sheet ? "×" : collapsed ? "+" : "−"}</span></button>${!collapsed && modules && !inv.scrapMode ? `<button data-inventory-menu aria-expanded="${inv.menu}" aria-label="Inventory actions">Actions</button>` : ""}</div>${collapsed ? "" : `<div class="inventory-body">${inv.menu && modules ? `<div class="inventory-menu"><button data-inventory-scrap-mode${locked ? " disabled" : ""}>Select for scrap</button></div>` : ""}${subview}</div>`}${sheet ? "" : "</div>"}`;
+  host.querySelectorAll<HTMLElement>("button, select").forEach((node) => {
+    const attr = node.getAttributeNames().find((name) => name.startsWith("data-"));
+    node.dataset.inventoryFocus = attr ? `${attr}:${node.getAttribute(attr)}` : node.getAttribute("aria-label") ?? "";
+  });
+  const filterSelect = host.querySelector<HTMLSelectElement>("[data-inventory-filter]");
+  const sortSelect = host.querySelector<HTMLSelectElement>("[data-inventory-sort]");
+  if (filterSelect) filterSelect.value = inv.filters[layer];
+  if (sortSelect) sortSelect.value = inv.sorts[layer];
+  const update = () => app.render();
+  const on = (selector: string, fn: (el: HTMLElement) => void) => host.querySelectorAll<HTMLElement>(selector).forEach((el) => app.listen(el, "click", () => fn(el)));
+  on("[data-inventory-collapse]", () => { if (sheet) app.closeModal(); else { inv.collapsed = !inv.collapsed; inv.menu = false; update(); } });
+  on("[data-inventory-menu]", () => { inv.menu = !inv.menu; update(); });
+  on("[data-inventory-scrap-mode]", () => {
+    if (locked) return;
+    inv.menu = false; inv.inspect = null; inv.merge = null; inv.scrapMode = true; inv.scrapReview = false; inv.selected = [];
+    app.ui.placing = null; app.mutCancelGestures(); update();
+  });
+  on("[data-inventory-cancel]", () => { inv.scrapMode = false; inv.scrapReview = false; inv.selected = []; update(); });
+  on("[data-inventory-select-all]", () => { inv.selected = [...new Set([...inv.selected, ...inventoryModules(app).map((m) => m.id)])]; update(); });
+  on("[data-inventory-review]", () => { inv.scrapReview = true; update(); });
+  on("[data-inventory-scrap-confirm]", () => app.confirmInventoryScrap());
+  on("[data-inventory-back]", () => { inv.inspect = null; inv.merge = null; inv.scrapReview = false; update(); });
+  host.querySelectorAll<HTMLSelectElement>("[data-inventory-filter], [data-inventory-sort]").forEach((el) => app.listen(el, "change", () => {
+    if (el.hasAttribute("data-inventory-filter")) inv.filters[layer] = el.value;
+    else inv.sorts[layer] = el.value as InventorySort;
+    inv.scroll[layer] = 0; update();
+  }));
+  on("[data-inv], [data-mut-tray]", (el) => {
+    const id = (el.dataset.inv ?? el.dataset.mutTray)!;
+    if (inv.scrapMode && modules) inv.selected = inv.selected.includes(id) ? inv.selected.filter((s) => s !== id) : [...inv.selected, id];
+    else { inv.inspect = { layer, id }; inv.menu = false; inv.returnId = id; }
+    update();
+  });
+  if (!locked && !(inv.scrapMode && modules)) {
+    host.querySelectorAll<HTMLElement>("[data-inv]").forEach((el) => bindDrag(el, el.dataset.inv!));
+    host.querySelectorAll<HTMLElement>("[data-mut-tray]").forEach((el) => bindMutatorDrag(app, el, el.dataset.mutTray!, "tray"));
+  }
+  on("[data-inventory-place]", (el) => {
+    if (locked) return;
+    const id = el.dataset.inventoryPlace!;
+    inv.inspect = null;
+    if (app.ui.detail) app.closeDetail();
+    if (sheet) app.closeModal();
+    if (modules) app.beginPlacing(id); else app.mutArmTray(id);
+  });
+  on("[data-inventory-merge]", (el) => {
+    if (locked || inv.scrapMode) return;
+    const id = el.dataset.inventoryMerge!;
+    const partners = inventoryPartners(app, layer, id);
+    inv.returnId = id;
+    inv.merge = { layer, id, partner: partners.length === 1 ? partners[0]! : null }; update();
+  });
+  on("[data-partner]", (el) => { if (inv.merge) { inv.merge.partner = el.dataset.partner!; update(); } });
+  // Inputs in the final review are read-only, not another partner picker.
+  if (inv.merge?.partner) host.querySelectorAll<HTMLButtonElement>("[data-partner]").forEach((el) => { el.disabled = true; });
+  on("[data-inventory-merge-confirm]", () => app.confirmInventoryMerge());
+  const scroller = host.querySelector<HTMLElement>("[data-inventory-scroll]");
+  if (scroller) {
+    scroller.scrollTop = inv.scroll[layer];
+    app.listen(scroller, "scroll", () => { inv.scroll[layer] = scroller.scrollTop; });
+  }
+  if (locked) host.querySelectorAll<HTMLButtonElement>("[data-inventory-place], [data-inventory-merge-confirm], [data-inventory-scrap-confirm]").forEach((el) => { el.disabled = true; });
+  wireTooltips(host, app.signal);
+  if (focusKey !== undefined) {
+    const target = [...host.querySelectorAll<HTMLElement>("[data-inventory-focus]")].find((el) => el.dataset.inventoryFocus === focusKey);
+    (target ?? (inv.inspect || inv.merge || inv.scrapReview ? host.querySelector<HTMLElement>("[data-inventory-back]") : [...host.querySelectorAll<HTMLElement>("[data-inv], [data-mut-tray]")].find((el) => (el.dataset.inv ?? el.dataset.mutTray) === inv.returnId)) ?? host.querySelector<HTMLElement>("button"))?.focus({ preventScroll: true });
+  }
+}
+
+// Temporary opening does not rebuild drag targets: cleanup runs before drop
+// hit testing, so leave the expanded DOM until the next render after the drop.
+export function openInventoryForDrag(app: App, hit: Element | null): void {
+  const inv = app.ui.inventory;
+  if (!inv.collapsed || inv.dragOpen || !hit?.closest("#inventory-zone, #mutator-tray")) return;
+  inv.dragOpen = true;
+  app.render();
+}

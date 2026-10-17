@@ -1360,6 +1360,7 @@ describe("the always-live board (§5)", () => {
     const tray = document.getElementById("inventory-zone")!;
     expect(tray.querySelector('[data-inv="m1"]')).not.toBeNull();
     tray.querySelector<HTMLButtonElement>('[data-inv="m1"]')!.click();
+    document.querySelector<HTMLButtonElement>("[data-inventory-place]")!.click();
     expect(app.ui.placing).toBe("m1");
     clickCell(0, 1);
     expect(app.state.modules[0]!.pos).toEqual(hex(0, 1));
@@ -1376,6 +1377,7 @@ describe("the always-live board (§5)", () => {
     const traySynth = give(app.state, "additive", null);
     app.render();
     document.querySelector<HTMLButtonElement>(`[data-inv="${traySynth.id}"]`)!.click();
+    document.querySelector<HTMLButtonElement>("[data-inventory-place]")!.click();
     // Hovering C5 (0,1): the drop rings an Octave with C4 — and doubles the
     // Fifth's root, a second instance forming (§6). Two ghosts, one per
     // forming chord.
@@ -1401,6 +1403,7 @@ describe("the always-live board (§5)", () => {
     const traySynth = give(app.state, "additive", null);
     app.render();
     document.querySelector<HTMLButtonElement>(`[data-inv="${traySynth.id}"]`)!.click();
+    document.querySelector<HTMLButtonElement>("[data-inventory-place]")!.click();
     expect(app.ui.placing).toBe(traySynth.id);
     document.elementFromPoint = () => cell(0, 1);
     cell(0, 1).dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));

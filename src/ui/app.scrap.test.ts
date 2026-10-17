@@ -21,6 +21,12 @@ describe("the scrap controls (issue #377)", () => {
   });
   afterEach(() => fixture.release());
 
+  const batchScrap = (ids: string[], scope = "#inventory-zone") => {
+    const click = (selector: string) => document.querySelector<HTMLButtonElement>(`${scope} ${selector}`)!.click();
+    click("[data-inventory-menu]"); click("[data-inventory-scrap-mode]");
+    for (const id of ids) click(`[data-inv="${id}"]`);
+    click("[data-inventory-review]"); click("[data-inventory-scrap-confirm]");
+  };
   const status = () => document.getElementById("status")!.textContent ?? "";
 
   describe("the Forge draft's skip control", () => {
@@ -61,7 +67,7 @@ describe("the scrap controls (issue #377)", () => {
       const minted = app.state.modules.find((m) => m.type === "chorus")!;
       expect(minted).toBeDefined();
       app.render();
-      document.querySelector<HTMLButtonElement>(`#inventory-zone [data-scrap='${minted.id}']`)!.click();
+      batchScrap([minted.id]);
       const roundTrip = app.state.scrap;
       expect(roundTrip).toBe(BALANCE.scrapValue.uncommon);
       // The same offer, skipped instead: the payout matches the round trip.
@@ -114,64 +120,46 @@ describe("the scrap controls (issue #377)", () => {
     });
   });
 
-  describe("the tray's scrap chips", () => {
-    it("scrap a tray copy once, pay its recovery value, and move the ledger read", () => {
-      const module = give(app.state, "chorus", null);
+  describe("batch scrap selection", () => {
+    it.each(["#inventory-zone", "#modal-content"])("reviews once, pays once, and updates the ledger from %s", (scope) => {
+      const m = give(app.state, "chorus", null); m.tier = 1;
       app.render();
-      const chip = document.querySelector<HTMLButtonElement>("#inventory-zone [data-scrap]")!;
-      expect(chip.getAttribute("aria-label")).toBe(`Scrap Chorus · +${BALANCE.scrapValue.uncommon} scrap`);
-      expect(chip.textContent).toContain(`+${BALANCE.scrapValue.uncommon}`);
-      const ledger = document.querySelector("#board-ledger [data-live='scrap']")!;
-      expect(ledger.textContent).toBe("0");
-      chip.click();
-      expect(app.state.modules.includes(module)).toBe(false);
-      expect(app.state.scrap).toBe(BALANCE.scrapValue.uncommon);
-      expect(status()).toContain(`Chorus scrapped · +${BALANCE.scrapValue.uncommon} scrap.`);
-      // The column rebuilt without the chip; the ledger's balance moved.
-      expect(document.querySelector("#inventory-zone [data-scrap]")).toBeNull();
-      expect(document.querySelector("#board-ledger [data-live='scrap']")!.textContent).toBe(String(BALANCE.scrapValue.uncommon));
+      if (scope === "#modal-content") { setAppWidth(390); app.openModal("inventory"); }
+      batchScrap([m.id], scope);
+      expect(app.state.modules).not.toContain(m);
+      expect(app.state.scrap).toBe(BALANCE.scrapValue.uncommon * 2);
+      expect(status()).toContain("1 module scrapped");
+      expect(document.querySelector("#board-ledger [data-live='scrap']")!.textContent).toBe(String(BALANCE.scrapValue.uncommon * 2));
+      app.confirmInventoryScrap();
+      expect(app.state.scrap).toBe(BALANCE.scrapValue.uncommon * 2);
     });
-
-    it("scrap from the tray sheet and price carried tiers double", () => {
-      const tiered = give(app.state, "harmonizer", null);
-      tiered.tier = 1;
-      give(app.state, "infusor", null);
-      setAppWidth(390);
+    it("selects all matching, retains hidden selections, and cancels without loss", () => {
+      const a = give(app.state, "additive", null); const b = give(app.state, "focusKeyed", null);
       app.render();
-      app.openModal("inventory");
-      const sheet = document.getElementById("modal-content")!;
-      const chips = [...sheet.querySelectorAll<HTMLButtonElement>("[data-scrap]")];
-      expect(chips).toHaveLength(2);
-      const tieredChip = chips.find((c) => c.dataset.scrap === tiered.id)!;
-      expect(tieredChip.getAttribute("aria-label")).toBe(`Scrap Harmonizer · +${BALANCE.scrapValue.common * 2} scrap`);
-      tieredChip.click();
-      expect(app.state.modules.includes(tiered)).toBe(false);
-      expect(app.state.scrap).toBe(BALANCE.scrapValue.common * 2);
-      app.closeModal();
+      const click = (sel: string) => document.querySelector<HTMLButtonElement>(`#inventory-zone ${sel}`)!.click();
+      const filter = (value: string) => {
+        const el = document.querySelector<HTMLSelectElement>("#inventory-zone [data-inventory-filter]")!;
+        el.value = value; el.dispatchEvent(new Event("change"));
+      };
+      click("[data-inventory-menu]"); click("[data-inventory-scrap-mode]");
+      filter("oscillator"); click("[data-inventory-select-all]");
+      expect(app.ui.inventory.selected).toEqual([a.id]);
+      expect(app.ui.placing).toBeNull();
+      filter("generator"); click("[data-inventory-select-all]");
+      expect(app.ui.inventory.selected).toEqual([a.id, b.id]);
+      expect(document.querySelector(".inventory-selection")!.textContent).toContain("2 selected");
+      click("[data-inventory-review]");
+      expect(document.querySelector(".inventory-scrap-review")!.textContent).toContain("Sine");
+      expect(document.querySelector(".inventory-scrap-review")!.textContent).toContain("Flywheel");
+      click("[data-inventory-back]"); click("[data-inventory-cancel]");
+      expect(app.state.modules).toContain(a); expect(app.state.modules).toContain(b); expect(app.state.scrap).toBe(0);
     });
-
-    it("keep the flow lock: the column hides and the sheet's chips stand muted", () => {
-      give(app.state, "chorus", null);
-      startSession(app.state, 600);
-      app.render();
-      expect(document.getElementById("inventory-zone")!.classList.contains("off")).toBe(true);
-      app.openModal("inventory");
-      const chip = document.querySelector<HTMLButtonElement>("#modal-content [data-scrap]")!;
-      expect(chip.disabled).toBe(true);
-      endSession(app.state);
-      app.render();
-      expect(document.querySelector<HTMLButtonElement>("#modal-content [data-scrap]")!.disabled).toBe(false);
-      app.closeModal();
-    });
-
-    it("never double-pay: the scrapped id is gone, a second press refuses", () => {
-      const module = give(app.state, "harmonizer", null);
-      app.render();
-      document.querySelector<HTMLButtonElement>("#inventory-zone [data-scrap]")!.click();
-      const before = app.state.scrap;
-      document.querySelector<HTMLButtonElement>("#inventory-zone [data-scrap]")?.click();
-      expect(app.state.scrap).toBe(before);
-      expect(app.state.modules.includes(module)).toBe(false);
+    it("keeps scrap locked in flow and unlocks again between sessions", () => {
+      give(app.state, "chorus", null); startSession(app.state, 600); app.render(); app.openModal("inventory");
+      document.querySelector<HTMLButtonElement>("#modal-content [data-inventory-menu]")!.click();
+      expect(document.querySelector<HTMLButtonElement>("#modal-content [data-inventory-scrap-mode]")!.disabled).toBe(true);
+      endSession(app.state); app.render();
+      expect(document.querySelector<HTMLButtonElement>("#modal-content [data-inventory-scrap-mode]")!.disabled).toBe(false);
     });
   });
 });
