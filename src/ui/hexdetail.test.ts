@@ -104,8 +104,9 @@ describe("opening the cross-section (issue #295)", () => {
     expect(facts.textContent).not.toContain("ν/s");
     // The instances keep the readout's chips row, and the faces' section
     // never embeds the facts.
-    expect(side.querySelector(".hex-chord-row")).not.toBeNull();
-    expect(side.querySelector(".hex-chord-row")!.textContent).toContain("Fifth ×1.3");
+    expect(side.querySelector(".hex-chord-list")).not.toBeNull();
+    expect(side.querySelector(".hex-chord-list")!.textContent).toContain("Fifth");
+    expect(side.querySelector(".hex-chord-list")!.textContent).toContain("×1.3");
     expect(section("modules").querySelector(".hex-chord-facts")).toBeNull();
   });
 
@@ -654,7 +655,7 @@ describe("the idle disclosure (issue #388)", () => {
   it("idle candidates hide behind one N idle disclosure in the shared tooltip layer", () => {
     seedIdleVoices();
     clickCell(0, 1);
-    const row = detail().querySelector(".hex-chord-row")!;
+    const row = detail().querySelector(".hex-chord-list")!;
     // No inline idle list: the candidates' names ride only the body, and
     // no transient-readout disclosure is duplicated here.
     expect(row.querySelectorAll(".chord-readout-chip.chord-readout-idle")).toHaveLength(0);
@@ -682,17 +683,22 @@ describe("the idle disclosure (issue #388)", () => {
     expect(css).toMatch(/\.inst-tip-body\s*\{[^}]*position:\s*fixed/);
   });
 
-  it("dense facts: active chips stand inline beside the single idle disclosure", () => {
+  it("dense facts: the active chord lists above the single idle row", () => {
     seedIdleVoices();
     clickCell(0, 0);
-    const row = detail().querySelector(".hex-chord-row")!;
-    const chips = [...row.querySelectorAll(".chord-readout-chip")].map((node) => node.textContent);
-    // The earning chord reads as itself — no idle suffix any more.
-    expect(chips).toContain("Fifth ×1.3");
-    expect(chips).not.toContain("Fifth ×1.3 · idle");
-    // The idle Octave waits behind its one count.
-    expect(row.querySelector(".detail-idle-trigger")!.textContent).toBe("1 idle");
-    const trigger = row.querySelector<HTMLButtonElement>(".detail-idle-trigger")!;
+    const list = detail().querySelector(".hex-chord-list")!;
+    const names = [...list.querySelectorAll(".hex-chord-instance-name")].map((node) => node.textContent);
+    // The earning chord reads as itself — one row, hue-ticked, no idle
+    // suffix and no idle styling on it.
+    expect(names).toContain("Fifth");
+    expect(names).not.toContain("Fifth · idle");
+    const fifthRow = list.querySelectorAll(".hex-chord-instance:not(.hex-chord-instance-idle)")[0]!;
+    expect(fifthRow.querySelector("b")!.textContent).toBe("×1.3");
+    expect(fifthRow.querySelector(".chord-tick")).not.toBeNull();
+    // The idle Octave waits behind its one count — the list's dashed row.
+    const trigger = list.querySelector<HTMLButtonElement>(".detail-idle-trigger")!;
+    expect(trigger.textContent).toContain("1 idle");
+    expect(trigger.classList.contains("hex-chord-instance-idle")).toBe(true);
     trigger.focus();
     expect(document.getElementById(trigger.getAttribute("aria-describedby")!)!.textContent).toContain("Octave ×1.15");
   });
@@ -903,7 +909,7 @@ describe("live detail review regressions (PR #301)", () => {
     back.focus();
     app.render();
     expect(document.activeElement).toBe(back);
-    const trigger = detail().querySelector<HTMLElement>(".hex-chord-row .inst-tip-trigger")!;
+    const trigger = detail().querySelector<HTMLElement>(".hex-chord-list .inst-tip-trigger")!;
     trigger.focus();
     const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
     expect(body.classList.contains("inst-show")).toBe(true);
@@ -920,9 +926,9 @@ describe("live detail review regressions (PR #301)", () => {
     app.state.sessionsCompleted = 1;
     startSession(app.state, 600);
     app.openDetail(hex(0, 0));
-    const trigger = detail().querySelector<HTMLElement>(".hex-chord-row .inst-tip-trigger")!;
+    const trigger = detail().querySelector<HTMLElement>(".hex-chord-list .inst-tip-trigger")!;
     const id = trigger.getAttribute("aria-describedby")!;
-    const chordRow = detail().querySelector(".hex-chord-row")!.innerHTML;
+    const chordRow = detail().querySelector(".hex-chord-list")!.innerHTML;
     trigger.focus();
     const oldBody = document.getElementById(id)!;
     const snapshot = displayedRates(app.state, true);
@@ -975,7 +981,7 @@ describe("the shared inventory in Hex detail", () => {
     expect(document.activeElement?.getAttribute("data-detail-face")).toBe("modules");
     expect(app.ui.placing).toBeNull();
     expect(app.ui.detail).toEqual({ pos: hex(0, 1), face: "modules" });
-    expect(detail().querySelector(".hex-chord-row")!.textContent).toContain("Octave");
+    expect(detail().querySelector(".hex-chord-list")!.textContent).toContain("Octave");
   });
 
   it("click placement swaps matching copies without silently merging", () => {

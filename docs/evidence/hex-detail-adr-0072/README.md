@@ -19,6 +19,7 @@ The four PNGs below are the **first-round** captures, taken before the same-day 
 - Chord facts speak in the breakdown's ruled-row grammar: capacity led by its canonical mark, the total factor, the formation term with its quality scale drawn at column width; instances remain chips with the one idle disclosure.
 - The composition hangs from the stage's top (grid `align-content: start`, 14px top pad) — no dead band between the ledger and the cross-section.
 - Exact prices wrap rather than clip: the upgrade title and unlock action drop `white-space: nowrap`; dial chips ellipsize with the full figure in the tooltip.
+- Chord instances list one per line (a second same-day review round): the reserved chip's panel backing showed as background rectangles in the column, so the details column draws each chord as a plain list row — hue tick beside the name, multiplier in the mono face, the idle count as the list's dashed last row opening the same floating disclosure. Verified live: zero instance rows carry a background.
 
 ## Verified against the instrument standards
 

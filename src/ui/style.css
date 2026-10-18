@@ -2266,13 +2266,43 @@ body.hex-detail-open .upgrade-all {
 .chord-scale-wide .scale-tick { stroke: var(--line-strong); stroke-width: 1.2; }
 .chord-scale-wide .scale-tick-neutral { stroke: var(--ink); stroke-width: 1.4; }
 .chord-scale-wide .scale-marker { fill: var(--ink); }
-/* The instances row: the readout's chips, left-aligned with the ruled
-   facts. */
-.hex-chord-row {
+/* The instances list (ADR-0072 review): one chord per line under the
+   ruled facts — the reserved chip's panel backing belongs to the
+   readout's density, not to this column. Hue rides a tick beside the
+   name; the multiplier sits right in the mono face. */
+.hex-chord-list {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding-top: 8px;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 7px;
+  border-top: 1px solid var(--line-soft);
+}
+.hex-chord-list > .inst-tip { display: flex; }
+.hex-chord-instance {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 1px 0;
+  border: 0;
+  background: none;
+  font: 500 11px/1.5 var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  text-align: left;
+  white-space: nowrap;
+}
+.hex-chord-instance .chord-tick { width: 10px; height: 2px; background: var(--cc); flex-shrink: 0; }
+.hex-chord-instance .hex-chord-instance-name { letter-spacing: 0.06em; }
+.hex-chord-instance b { font-weight: 600; color: var(--muted); }
+.hex-chord-instance-idle { color: var(--muted); cursor: pointer; min-height: 24px; }
+.hex-chord-instance-idle .chord-tick {
+  background: none;
+  border-top: 2px dashed var(--line-strong);
+  height: 0;
+}
+.hex-chord-instance-idle:hover, .hex-chord-instance-idle:focus-visible { color: var(--ink); }
+@media (pointer: coarse) {
+  .hex-chord-instance-idle { min-height: 44px; }
 }
 /* The action rail (ADR-0072): one row below the stack following the
    focused face — the upgrade column under Modules, the slot unlock under

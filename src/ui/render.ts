@@ -1602,6 +1602,17 @@ function detailQualityScale(measured: number, bounds: { floor: number; cap: numb
   return `<span class="chord-scale-wide" data-q="${measured}" role="img" aria-label="${escapeHtml(label)}"><svg viewBox="0 0 ${W} 34" aria-hidden="true"><line class="scale-track" x1="${x0}" y1="12" x2="${x1}" y2="12"/><line class="scale-tick" x1="${x0}" y1="8" x2="${x0}" y2="16"/><line class="scale-tick scale-tick-neutral" x1="${neutral.toFixed(1)}" y1="5" x2="${neutral.toFixed(1)}" y2="19"/><line class="scale-tick" x1="${x1}" y1="8" x2="${x1}" y2="16"/><rect class="scale-marker" x="${(x - 2).toFixed(1)}" y="7" width="4" height="10"/><text class="scale-end mono" x="${x0}" y="31" text-anchor="start">${formatNumber(bounds.floor)}</text><text class="scale-end mono" x="${((x0 + x1) / 2).toFixed(1)}" y="31" text-anchor="middle">×1</text><text class="scale-end mono" x="${x1}" y="31" text-anchor="end">${formatNumber(bounds.cap)}</text></svg></span>`;
 }
 
+// One instance row of the details column's list: a hue tick naming the
+// seam, the chord's name in ink, its multiplier beside it — the reserved
+// chip's panel backing belongs to the readout's density, not to the
+// ruled column.
+function detailChordInstance(mark: ChordMark): string {
+  const at = mark.label.lastIndexOf(" ×");
+  const name = at > 0 ? mark.label.slice(0, at) : mark.label;
+  const figure = at > 0 ? mark.label.slice(at + 1) : "";
+  return `<span class="hex-chord-instance" style="--cc:var(--${mark.colorVar})"><span class="chord-tick" aria-hidden="true"></span><span class="hex-chord-instance-name">${escapeHtml(name)}</span>${figure ? `<b class="mono">${escapeHtml(figure)}</b>` : ""}</span>`;
+}
+
 export function detailChordRow(app: App, snapshot: RateSnapshot): DetailChordRow {
   const detail = app.ui.detail;
   if (!detail) return { html: "", key: "", marks: [] };
@@ -1629,12 +1640,7 @@ export function detailChordRow(app: App, snapshot: RateSnapshot): DetailChordRow
     ? detailQualityScale(contribution.formationMeasuredQ, allocation ? ALLOCATION_QUALITY_BOUNDS : { floor: BALANCE.qualityFloor, cap: BALANCE.qualityCap })
     : "";
   const instances = active.length + idle.length > 0
-    ? `<div class="hex-chord-row">${active
-        .map(
-          (mark) =>
-            `<span class="chord-readout-chip mono" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.label)}</span>`,
-        )
-        .join("")}${idle.length > 0 ? detailIdleDisclosureHtml(`detail-${module.id}`, idle) : ""}</div>`
+    ? `<div class="hex-chord-list">${active.map((mark) => detailChordInstance(mark)).join("")}${idle.length > 0 ? detailIdleDisclosureHtml(`detail-${module.id}`, idle) : ""}</div>`
     : "";
   const html = `${facts.length + (scale ? 1 : 0) > 0 ? `<div class="hex-chord-facts">${facts.join("")}${scale}</div>` : ""}${instances}`;
   return {
@@ -1658,7 +1664,10 @@ function detailIdleDisclosureHtml(idScope: string, idle: ChordMark[]): string {
   const listing = idle
     .map((mark) => `<span class="detail-idle-row mono">${escapeHtml(mark.label)}</span>`)
     .join("");
-  return `<span class="inst-tip readout-tip"><button class="inst-tip-trigger readout-tip-trigger detail-idle-trigger mono" type="button" aria-expanded="false" aria-describedby="${id}">${idle.length} idle</button><span class="inst-tip-body inst-tip-scroll" id="${id}" role="tooltip">${listing}</span></span>`;
+  // The idle row is the list's last line: the same row grammar, its tick
+  // dashed — recognized, earning nothing (the readout's side of the
+  // board's dotted seams).
+  return `<span class="inst-tip"><button class="inst-tip-trigger detail-idle-trigger hex-chord-instance hex-chord-instance-idle mono" type="button" aria-expanded="false" aria-describedby="${id}"><span class="chord-tick chord-tick-idle" aria-hidden="true"></span>${idle.length} idle</button><span class="inst-tip-body inst-tip-scroll" id="${id}" role="tooltip">${listing}</span></span>`;
 }
 
 // The low-to-high quality scale (issue #260): where the formation's
