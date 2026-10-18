@@ -1124,8 +1124,7 @@ function refreshChordOverlay(app: App, live: RateSnapshot): ReturnType<typeof ch
     // The recognized-but-idle candidates (issue #258): the board sings
     // them, the allocation didn't select them. They stay in the mark list
     // — the readout's "N idle" count and the Hex detail's chord row read
-    // them here — but the grid draws them only under the ask (ADR-0057):
-    // dotted, never pulsing, at the ask weight, and gone at rest. Absent
+    // them here — but the grid never draws their geometry. Absent
     // an allocation read, nothing is idle — the plain recognizer's every
     // term is already in namedChords.
     inactiveChords: live.allocation ? idleTermsOf(live.allocation) : [],
@@ -1216,11 +1215,9 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
     // Named-chord marks (§6, #201): the chord work draws UNDER the modules —
     // visible in the gaps between the faces and past the poking corners,
     // whispering in the gaps; no chord ever crosses a face. The idle
-    // candidates draw only under the ask (ADR-0057) — `askedIdleMarks` owns
-    // the rule; the readout refreshes from the same marks.
-    const revealedIdle = new Set(askedIdleMarks(app).map((mark) => mark.key));
+    // candidates remain readout facts only; inspection emphasizes active marks.
     html += `<g data-key="chord-marks">${overlay.marks
-      .filter((mark) => !mark.inactive || revealedIdle.has(mark.key))
+      .filter((mark) => !mark.inactive)
       .map((mark) => chordMarkHtml(mark, "formed"))
       .join("")}</g>`;
   }
@@ -1298,6 +1295,7 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
   bindFaceBuys(app, svg);
   bindMutatorLayer(app, svg);
   updateChordReadout(app);
+  updateChordEmphasis(app);
 }
 
 // The spacer's open-wire window def (#201): the clip is the hex minus the
@@ -1381,13 +1379,8 @@ function rowBandHtml(state: GameState, bands: RowBand[], point: (pos: Hex) => [n
 // `keyPrefix` keeps the two layers' DOM keys apart.
 function chordMarkHtml(mark: ChordMark, keyPrefix: "formed" | "ghost"): string {
   const ghost = keyPrefix === "ghost";
-  const emphasis = ghost ? " ghost-mark" : mark.focused ? " chord-focus" : " chord-fade";
-  // The idle candidate's mark (issue #258): dotted, never pulsing — it
-  // earns nothing, so it isn't live activity — at the ask weight, since it
-  // draws only while a voice that sings it is asked (ADR-0057). Every
-  // active chord draws solid (#333): the path language distinguishes
-  // earning from idle, never voicing — a silent voice's chord is a full
-  // earning chord, its identity on the module glyphs.
+  const emphasis = ghost ? " ghost-mark" : "";
+  // Idle geometry is reserved for placement ghosts, never the formed layer.
   const idle = mark.inactive ? " chord-idle" : "";
   const style = `--cc:var(--${mark.colorVar});--seam-dur:${mark.duration}s`;
   const lines = mark.outline
@@ -1706,7 +1699,7 @@ const moduleChips = (module: ModuleInstance, marks: ChordMark[]): ChordMark[] =>
 // containment, the same rule its readout reads (#201). A mutator slot's
 // ask names no marks — it takes the readout's whole row for itself. One
 // resolution serves every ask consumer: the reserved readout's chips, the
-// Hex detail's chord row, and the idle reveal.
+// Hex detail's chord row, and active-chord inspection.
 function marksForAsk(app: App): ChordMark[] {
   const hover = app.ui.chordHover;
   if (!hover || hover.kind === "mutator") return [];
@@ -1716,48 +1709,28 @@ function marksForAsk(app: App): ChordMark[] {
   return module ? moduleChips(module, marks) : [];
 }
 
-// The idle reveal's one rule (ADR-0057): which idle candidates the current
-// ask draws onto the board. A voice's ask — hover, keyboard focus, touch —
-// reveals the candidates its module sings; the conducting spacer's ask
-// reaches them by containment. A seam cannot ask for idle candidates;
-// every other ask reveals none: at rest the group carries the earning seams alone.
-function askedIdleMarks(app: App): ChordMark[] {
-  if (app.ui.chordHover?.kind !== "module") return [];
-  return marksForAsk(app).filter((mark) => mark.inactive);
-}
-
-// The reveal rides the ask live (ADR-0057): a hover never re-renders, so
-// the asked idle marks enter and leave the group in place — the active
-// seams' nodes and their pulse never restart. The mark list stays the
-// cache's complete overlay (the readout's "N idle" count and the Hex
-// detail's chord row keep their consumers); this patches the draw only.
-function updateIdleReveal(app: App): void {
+// Inspection changes only active geometry; idle facts remain in the cache.
+function updateChordEmphasis(app: App): void {
   const group = document.querySelector('#grid [data-key="chord-marks"]');
-  if (!group || app.ui.detail) return;
-  const marks = chordReadoutCache.get(app)?.marks ?? [];
-  const asked = new Set(askedIdleMarks(app).map((mark) => mark.key));
-  for (const node of [...group.querySelectorAll(".chord-mark.chord-idle")]) {
-    const key = node.getAttribute("data-chord") ?? "";
-    if (asked.has(key)) asked.delete(key);
-    else node.remove();
-  }
-  for (const mark of marks) {
-    if (!mark.inactive || !asked.has(mark.key)) continue;
-    group.insertAdjacentHTML("beforeend", chordMarkHtml(mark, "formed"));
-    asked.delete(mark.key);
+  if (!group) return;
+  const inspecting = app.ui.chordHover !== null && app.ui.chordHover?.kind !== "mutator";
+  const related = new Set(marksForAsk(app).filter((mark) => !mark.inactive).map((mark) => mark.key));
+  for (const node of group.querySelectorAll(".chord-mark")) {
+    const focused = inspecting && related.has(node.getAttribute("data-chord") ?? "");
+    node.classList.toggle("chord-focused", focused);
+    node.classList.toggle("chord-fade", inspecting && !focused);
   }
 }
 
 // The hover question (§6): what the pointer rests on. Null clears. Never a
-// re-render — the readout updates in place, and the idle reveal enters and
-// leaves the group with it (ADR-0057).
+// re-render — the readout and active-chord emphasis update in place.
 function setChordHover(app: App, hover: ChordHover | null): void {
   if (app.released) return;
   const next = hover ?? null;
   if (sameChordHover(app.ui.chordHover, next)) return;
   app.ui.chordHover = next;
   updateChordReadout(app);
-  updateIdleReveal(app);
+  updateChordEmphasis(app);
 }
 
 function sameChordHover(a: ChordHover | null, b: ChordHover | null): boolean {
@@ -1820,14 +1793,8 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
   // upgrade mode only — in flow it vanishes with the purchase furniture.
   const faceBuy = state.mode === "upgrade" && !app.ui.buyingCell && levelable(module) ? faceBuyHtml(app, module) : "";
 
-  // The breathe's layer (issue #348): lit faces carry a dedicated glow
-  // polygon under the chassis — a static blur the stylesheet animates by
-  // opacity alone, never a per-hex drop-shadow re-rasterized each frame.
-  // Exactly the charged and dispensing faces light, as the breathe always
-  // has; uncharged faces carry no layer at all.
-  const lit = charged || emittingNow;
   return `<g class="module-node${crossed ? " forge-crossed" : ""}" data-type="${module.type}" data-rarity="${typeRarityOf(module.type)}">
-    ${lit ? `<polygon data-key="hex-glow" class="hex-glow" points="${hexPoints(HEX_RADIUS)}"/>` : ""}
+
     ${moduleFace({
       type: module.type,
       tier: module.tier,
@@ -2063,6 +2030,7 @@ function refreshDropPreview(app: App): void {
   // The reserved readout carries the projection while the gesture lives;
   // cancel restores whatever row was standing (#260).
   updateChordReadout(app);
+  updateChordEmphasis(app);
 }
 
 // ── The placement projection (issue #260) ──────────────────────────────

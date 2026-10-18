@@ -39,7 +39,8 @@ it("live and paused fixtures render charge through the real production state", (
   app.state = previewState("flow");
   app.render();
   expect(document.querySelectorAll(".charge-line").length).toBeGreaterThan(0);
-  expect(document.querySelectorAll(".hex-glow").length).toBeGreaterThan(0);
+  expect(document.querySelectorAll(".hex.charged").length).toBeGreaterThan(0);
+  expect(document.querySelector(".hex-glow")).toBeNull();
   app.state = previewState("paused");
   app.render();
   expect(app.state.mode).toBe("paused");

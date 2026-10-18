@@ -512,7 +512,7 @@ describe("placement previews with capacity-aware production (#260)", () => {
     document.querySelector('[data-cell="1,0"]')!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     expect(readout().textContent).toContain("1 idle");
     expect(chips().filter((chip) => chip === "Fifth ×1.3")).toHaveLength(0);
-    expect(document.querySelectorAll('[data-key="chord-marks"] .chord-idle')).toHaveLength(1);
+    expect(document.querySelectorAll('[data-key="chord-marks"] .chord-idle')).toHaveLength(0);
   });
 
   it("a drag over the tray previews the retrieval, and the drop delivers it", () => {
@@ -792,19 +792,15 @@ describe("solid chord paths (#333)", () => {
     expect(document.querySelectorAll(".chord-muted")).toHaveLength(0);
   });
 
-  it("idle candidates draw only under the ask — dotted and quiet, never dashed by a silent voice (#355)", () => {
-    // C4·G4 active; the C5 newcomer's Octave and doubled Fifth idle at
-    // capacity one. At rest the group carries the earning seam alone
-    // (ADR-0057); the C5 voice's ask reveals its candidates in the dotted
-    // idle register, and nothing else is dimmed by a silent voice — the
-    // dashed mute rule is gone from the sheet.
+  it("idle candidates stay hidden even under inspection", () => {
+    // Idle facts remain available, but inspection never draws idle geometry.
     give(app.state, "additive", hex(1, 0));
     app.state.cells.push(hex(0, 1));
     give(app.state, "additive", hex(0, 1));
     app.render();
     expect(marks().querySelectorAll(".chord-idle")).toHaveLength(0);
     document.querySelector('[data-cell="0,1"]')!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(marks().querySelectorAll(".chord-mark.chord-idle").length).toBeGreaterThan(0);
+    expect(marks().querySelectorAll(".chord-mark.chord-idle")).toHaveLength(0);
     const active = [...marks().querySelectorAll<HTMLElement>(".chord-mark:not(.chord-idle)")];
     for (const mark of active) expect(mark.classList.contains("chord-muted")).toBe(false);
   });

@@ -87,16 +87,9 @@ export function ringCount(tier: number): number {
   return Math.min(Math.max(tier, 0), RING_RADII.length - 1) + 1;
 }
 
-// The charged face sits in the charge register, scaled by the glow. The
-// stylesheet paints the colors; the received strength only sets how much:
-// the chassis fill rises from a floor that keeps a just-charged receiver
-// visible, and the rail — which the stylesheet swaps to the charge token
-// for charged receivers (ADR-0016) — brightens toward full luminous
-// strength.
-export const CHARGED_FILL_MIN = 0.08;
-export const CHARGED_FILL_SPAN = 0.34;
-export const RAIL_CHARGED_FLOOR = 0.6;
-export const RAIL_CHARGED_SPAN = 0.4;
+// Charge strength controls only the receiving outline; category rails keep identity.
+export const CHARGED_OUTLINE_MIN = 0.55;
+export const CHARGED_OUTLINE_SPAN = 0.35;
 
 // The face's vertical rhythm (ADR-0016): the engraved level and nameplate sit
 // above, the signature glyph holds the center at its scale, and the readout
@@ -196,17 +189,12 @@ export function moduleFace(spec: FaceSpec): string {
   const hue = `var(--${HUE_TOKEN_OF[spec.type]})`;
   const openWire = spec.openWire === true;
   const rings = Array.from({ length: ringCount(spec.tier) }, (_, i) => `<polygon points="${hexPoints(RING_RADII[i]!)}"/>`).join("");
-  // The charge light (§8, #41): the chassis fill takes the charge hue at an
-  // inline fill-opacity, and the rail takes an inline stroke-opacity — both
-  // scaling continuously with the glow the module's received strength maps
-  // onto. Absent or zero glow leaves the plate finish and the category hue.
   const glow = spec.chargeGlow ?? 0;
-  const hexStyle = glow > 0 ? ` style="fill-opacity:${(CHARGED_FILL_MIN + CHARGED_FILL_SPAN * glow).toFixed(3)}"` : "";
-  const railStyle = glow > 0 ? ` style="stroke-opacity:${(RAIL_CHARGED_FLOOR + RAIL_CHARGED_SPAN * glow).toFixed(3)}"` : "";
+  const hexStyle = glow > 0 ? ` style="stroke-opacity:${(CHARGED_OUTLINE_MIN + CHARGED_OUTLINE_SPAN * glow).toFixed(3)}"` : "";
   const layout = FACE_LAYOUT[spec.variant ?? "compact"];
   return `<polygon data-key="hex" class="hex${spec.hexClass ? ` ${spec.hexClass}` : ""}" points="${hexPoints(HEX_RADIUS)}"${openWire ? ' clip-path="url(#spacer-window)"' : ""}${hexStyle}/>${spec.under ?? ""}
     ${openWire ? "" : `<g data-key="rings" class="face-rings">${rings}</g>`}
-    ${openWire ? "" : `<path data-key="rail" class="face-rail" d="M-39 -19V19" stroke="${hue}"${railStyle}/>`}
+    ${openWire ? "" : `<path data-key="rail" class="face-rail" d="M-39 -19V19" stroke="${hue}"/>`}
     ${!openWire && spec.level !== undefined ? `<text data-key="level" y="${layout.level}" text-anchor="middle" class="face-level">LV ${spec.level}</text>` : ""}
     <text data-key="name" y="${openWire ? SPACER_NAME_Y : layout.name}" text-anchor="middle" class="face-name">${META[spec.type].short.toUpperCase()}</text>
     ${openWire ? "" : `<g data-key="signature" class="face-signature" transform="translate(0 ${layout.glyph}) scale(${layout.glyphScale})" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>`}

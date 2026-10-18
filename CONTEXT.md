@@ -33,7 +33,7 @@ A named pitch set — octave, fifth, major triad, and kin — recognized by pitc
 _Avoid_: Named chord (the just-intonation-run sense), Chord pair
 
 **Seam**:
-The chord-colored line the board draws for a formed chord: center-to-center between a two-voice chord's adjacent voices; a chord the seams can't carry — three or more voices, or a spacer-bridged pair — draws its offset outline instead — a closed polygon behind the modules, edges riding the gaps between faces, corners just poking past. Active seams draw solid whoever sings the chord — a silent voice's chord included (ADR-0056) — always on, in every mode; the one quiet path is the idle candidate's, dotted at the ask weight and drawn only while a voice that sings it is asked (ADR-0052, ADR-0057).
+The chord-colored line the board draws for a formed chord: center-to-center between a two-voice chord's adjacent voices; a chord the seams can't carry — three or more voices, or a spacer-bridged pair — draws its offset outline instead — a closed polygon behind the modules, edges riding the gaps between faces, corners just poking past. Active seams draw solid whoever sings the chord — a silent voice's chord included (ADR-0056) — always on, in every mode; idle candidates draw no path. Active seams become clearer during inspection of a participating module, while unrelated active seams dim (2026-10-18 amendment).
 _Avoid_: Chord link, Pair link, Hull
 
 **Chord readout**:
@@ -68,7 +68,7 @@ The allocator's honesty flag: the exact search completed within its budget, so t
 _Avoid_: Heuristic allocation (as a silent substitute)
 
 **Idle candidate**:
-A recognized chord instance the allocation left unselected — it earns nothing, so its board path is dotted, never pulsing, and draws only while a voice that sings it is asked (hover, keyboard focus, touch, or the conducting spacer's containment) at the ask weight (ADR-0052, ADR-0057). The reserved readout keeps the voice's "N idle" count under the same ask; the Hex detail's chord row keeps one "N idle" disclosure whose body lists the names and factors through the tooltip layer (issue #258, re-docked by #388).
+A recognized chord instance the allocation left unselected — it earns nothing and has no board geometry, including during inspection. The reserved readout keeps the voice's "N idle" count under inspection; the Hex detail keeps its idle disclosure listing names and factors. This supersedes ADR-0057's hover-revealed idle paths (2026-10-18).
 _Avoid_: idle seam (standing unasked), unearned chord
 
 **Spacer**:

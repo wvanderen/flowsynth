@@ -3,7 +3,7 @@ import { BALANCE, CATEGORY_OF, MODULE_TYPES } from "../engine/constants";
 import { computeRates } from "../engine/economy";
 import { fresh, give } from "../engine/fixtures";
 import type { ModuleType } from "../engine/types";
-import { CHARGED_FILL_MIN, CHARGED_FILL_SPAN, HUE_TOKEN_OF, RAIL_CHARGED_FLOOR, RAIL_CHARGED_SPAN, faceReadoutFor, moduleFace, readoutFitClass, ringCount, spacerClipPath, SPACER_WINDOW_RADIUS, hexPoints } from "./face";
+import { CHARGED_OUTLINE_MIN, CHARGED_OUTLINE_SPAN, HUE_TOKEN_OF, faceReadoutFor, moduleFace, readoutFitClass, ringCount, spacerClipPath, SPACER_WINDOW_RADIUS, hexPoints } from "./face";
 import { chargeGlow } from "./leads";
 import { META } from "./meta";
 import { moduleIcon } from "./icons";
@@ -83,22 +83,16 @@ describe("module face", () => {
     }
   });
 
-  it("scales the charged chassis fill and rail with the received-charge glow", () => {
-    const face = (chargeGlow?: number) =>
-      moduleFace({ type: "additive", tier: 0, readout: "+1", ...(chargeGlow ? { hexClass: "charged", chargeGlow } : {}) });
-    // The glow rides the chassis fill-opacity and the rail stroke-opacity;
-    // the colors themselves never leave the stylesheet/token table.
-    const inline = (markup: string, prop: string) => Number(markup.match(new RegExp(`${prop}:([\\d.]+)`))![1]);
+  it("scales only the charging outline and preserves the category rail", () => {
+    const face = (glow: number) => moduleFace({ type: "additive", tier: 0, readout: "+1", hexClass: "charged", chargeGlow: glow });
     const weak = face(chargeGlow(1));
     const strong = face(chargeGlow(4));
-    expect(inline(weak, "fill-opacity")).toBeCloseTo(CHARGED_FILL_MIN + CHARGED_FILL_SPAN * 0.5, 3);
-    expect(inline(weak, "stroke-opacity")).toBeCloseTo(RAIL_CHARGED_FLOOR + RAIL_CHARGED_SPAN * 0.5, 3);
-    expect(inline(strong, "fill-opacity")).toBeGreaterThan(inline(weak, "fill-opacity"));
-    expect(inline(strong, "stroke-opacity")).toBeGreaterThan(inline(weak, "stroke-opacity"));
-    expect(inline(strong, "fill-opacity")).toBeLessThan(CHARGED_FILL_MIN + CHARGED_FILL_SPAN + 0.001);
-    // Uncharged faces carry no inline overrides.
-    expect(face()).not.toContain("fill-opacity");
-    expect(face()).not.toContain("stroke-opacity");
+    const opacity = (markup: string) => Number(markup.match(/stroke-opacity:([\d.]+)/)![1]);
+    expect(opacity(weak)).toBeCloseTo(CHARGED_OUTLINE_MIN + CHARGED_OUTLINE_SPAN * 0.5, 3);
+    expect(opacity(strong)).toBeGreaterThan(opacity(weak));
+    expect(strong).not.toContain("fill-opacity");
+    expect(strong).toContain('stroke="var(--hue-oscillator)"');
+    expect(strong.match(/stroke-opacity/g)).toHaveLength(1);
   });
 
   it("the open-wire spacer keeps cap and base, opening the window between (#201, ring window #219)", () => {

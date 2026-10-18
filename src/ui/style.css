@@ -1701,9 +1701,7 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
    the spacer wears its own muted wire hue; rarity is rings + plate tint,
    never hue. */
 
-/* Chassis states: structure in line colors; light and motion carry charge.
-   A charged receiver's fill comes from the charge token at an inline
-   fill-opacity that scales with its received strength (the face's glow). */
+/* Charge uses the outline; the plate finish stays visible. */
 .hex { fill: var(--hex-face); stroke: var(--line-strong); stroke-width: 1; transition: stroke 0.2s, fill 0.2s, fill-opacity 0.2s; }
 .hex.future { fill: transparent; stroke: var(--line); stroke-dasharray: 5 4; }
 .hex.target { stroke: var(--accent); stroke-width: 2; fill: var(--accent-faint); }
@@ -1711,7 +1709,7 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
 .hex.buy-here { fill: var(--accent-faint); stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 5 4; }
 .hex.buy-here:hover { fill: var(--accent-soft); }
 .hex.selected { stroke: var(--accent); stroke-width: 2.5; }
-.hex.charged { stroke: var(--charge); fill: var(--charge); }
+.hex.charged { stroke: var(--charge); stroke-width: 1.75; }
 .hex.dispensing { stroke: var(--forge-glow); fill: var(--forge-faint); stroke-width: 2; }
 .hex.locked { fill: var(--panel-deep); }
 
@@ -1726,22 +1724,17 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
 /* Rarity = finish: a faint plate tint over the chassis. The light channels
    (selection, charge, dispensing) win over the tint wherever they apply. */
 .module-node .hex, .candidate-tile .hex { fill: var(--plate-common); }
-.module-node[data-rarity="uncommon"] .hex:not(.selected):not(.charged):not(.dispensing):not(.locked),
+.module-node[data-rarity="uncommon"] .hex:not(.selected):not(.dispensing):not(.locked),
 .candidate-tile[data-rarity="uncommon"] .hex { fill: var(--plate-uncommon); }
-.module-node[data-rarity="rare"] .hex:not(.selected):not(.charged):not(.dispensing):not(.locked),
+.module-node[data-rarity="rare"] .hex:not(.selected):not(.dispensing):not(.locked),
 .candidate-tile[data-rarity="rare"] .hex { fill: var(--plate-rare); }
 
 /* Engraved rarity rings: hairline circles under the panel's engraving. */
 .face-rings { fill: none; stroke: var(--muted); stroke-opacity: 0.3; stroke-width: 1; pointer-events: none; }
 
-/* The narrow category rail: the face's one category-hue element, paired with
-   the signature glyph. A charged receiver's rail swaps to the charge token;
-   the face's inline stroke-opacity brightens it with received strength.
-   The charged hex and the rail are siblings in the face markup, so the
-   selector stays flat — a relational :has() here would re-validate on
-   every tick's attribute writes (issue #348). */
+/* Category rails retain their identity hue in every charge state. */
 .face-rail { fill: none; stroke-width: 5; stroke-linecap: round; pointer-events: none; }
-.module-node .hex.charged ~ .face-rail { stroke: var(--charge); }
+
 
 .face-name { font: 700 8px var(--mono); letter-spacing: 0.13em; }
 .face-level { font: 8px var(--mono); letter-spacing: 0.1em; fill: var(--muted); }
@@ -1800,7 +1793,7 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
    pairs — draw one continuous twin line; anything else wraps in a
    note-corner polygon. The work renders UNDER the modules — it lives in
    the gaps between the faces and past the poking corners, and it
-   whispers at rest (ADR-0025: selection is the only emphasis). The hue
+   stays clear at rest and emphasizes related active chords on inspection. The hue
    rides --cc, the pulse period --seam-dur. The name chip is not ambient
    and never floats: it lives in the reserved readout by the board — every
    chord the selected module earns its bonus from, or the hovered
@@ -1809,14 +1802,15 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
 .chord-seam {
   fill: none;
   stroke: var(--cc);
-  stroke-width: 2.5;
+  stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.3;
+  opacity: 0.5;
   pointer-events: stroke;
   transition: opacity 0.2s, stroke-width 0.2s;
 }
-.chord-mark.chord-fade .chord-seam { opacity: 0.15; }
+.chord-mark.chord-fade .chord-seam { opacity: 0.16; }
+.chord-mark.chord-focused .chord-seam { opacity: 0.95; stroke-width: 4.5; }
 
 /* The selection lift (#201): the focused chords' marks draw a second time
    over the faces, at full voice — a selected chord reads straight through
@@ -1980,22 +1974,6 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
   font: 9px var(--mono);
   fill: var(--muted);
 }
-/* The idle candidate's seams (issue #258, the ask register, ADR-0057): a
-   recognized chord the allocation didn't select draws dotted and never
-   pulsing, at the ask weight — the retired selection lift's idle register.
-   The marks draw only while a voice that sings them is asked (hover,
-   focus, touch, the spacer by containment), so the board reads calm at
-   rest; the group carries none of them otherwise. The lift stays off the
-   ghost layer: the projected-idle promise keeps its own quieter register.
-   Every active chord — a silent voice's included — draws solid and
-   full-strength: the path language distinguishes earning from idle, never
-   voicing (the mute styling is retired). */
-.chord-mark:not(.ghost-mark).chord-idle .chord-seam {
-  stroke-dasharray: 1.5 4;
-  opacity: 0.45;
-  stroke-width: 4;
-}
-
 /* Sustained chords keep their static earned/asked register. Continuous
    motion belongs to the quiet charge channel, not another chord rhythm. */
 
@@ -2037,20 +2015,6 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
 
 /* Sustained charge is a low steady light with narrow, slow modulation
    (ADR-0070). Blur is static; only opacity animates on the cached layer. */
-.hex-glow {
-  fill: var(--charge);
-  filter: blur(3.5px);
-  opacity: 0.16;
-  pointer-events: none;
-  animation: charge-breathe 6s ease-in-out infinite;
-}
-@keyframes charge-breathe { 50% { opacity: 0.22; } }
-/* Off the lens (issue #348): a lit hex the current view can't see rests —
-   animation stopped, light dark, no continuous paint — until the lens
-   brings it home. The sweep rides both lens paths (renderGrid and the
-   pan repaint in zoom.ts). */
-.hex-glow.off-view { animation: none; opacity: 0; }
-
 /* Threshold fill stays steady. A crossing briefly accents the local rail
    rather than flashing the full face or changing the readout color. */
 .water-fill { fill: var(--charge); opacity: 0.22; transition: y 400ms ease-out, height 400ms ease-out; }
@@ -2251,7 +2215,7 @@ body.hex-detail-open .upgrade-all {
 .hex-stack-face .face-note { font-size: 8px; letter-spacing: 0.14em; }
 .hex-stack-face .face-rail { stroke-width: 4; }
 .hex-stack-face .face-rings { stroke-width: 0.8; }
-.hex-stack-face:has(.hex.charged) .face-rail { stroke: var(--charge); }
+
 .hex-stack-face.empty .hex { fill: var(--panel-deep); fill-opacity: 0.45; stroke: var(--line-strong); stroke-dasharray: 3 5; }
 .hex-stack-face.empty .face-note { font-size: 13px; }
 /* The mutator chassis: the arete register, the slot face's own voice at
@@ -3747,7 +3711,6 @@ body.modal-sheet-open .zoom-cluster {
   * { animation: none !important; transition: none !important; }
   /* Fully static, including charge leads. Arrowheads retain direction,
      charged rails and steady illumination retain activity (ADR-0070). */
-  .hex-glow { animation: none !important; opacity: 0.18; }
 }
 
 .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; min-height: 0; padding: 4px; }
