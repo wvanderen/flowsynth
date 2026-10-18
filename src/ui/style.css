@@ -2620,6 +2620,9 @@ body.hex-detail-open .upgrade-all {
   gap: 4px;
   padding: 9px 2px;
 }
+.special-category-choice { position: relative; }
+.special-category-choice .special-roll-pick { width: 100%; }
+.special-category-choice .special-roll-word { position: absolute; left: 42px; top: 50%; transform: translateY(-50%); }
 .special-roll-pick {
   display: flex;
   align-items: center;

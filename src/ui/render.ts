@@ -3125,7 +3125,7 @@ function draftLoomRowHtml(state: GameState): string {
         locked || state.scrap < price ? " disabled" : ""
       }>${formatInt(price)} <small class="scrap-mark" aria-hidden="true">${SCRAP_SVG}</small></button></span>`;
   return `<article class="catalog-row">
-    <div><h3 class="t-condensed">Draft Loom</h3><p class="t-note">Lv. ${state.draftTierBonus} · ${termTipHtml("merge tier")} bonus ${chanceReadout} · ${termTipHtml("memorized")}</p></div>
+    <div><h3 class="t-condensed">Draft Loom</h3><p class="t-note"><span class="mono">Lv. ${state.draftTierBonus}</span> · ${termTipHtml("merge tier")} bonus <span class="mono">${chanceReadout}</span> · ${termTipHtml("memorized")}</p></div>
     ${buy}
   </article>`;
 }
@@ -3134,10 +3134,14 @@ function draftLoomRowHtml(state: GameState): string {
 // the Forge's rolled-offer note read this one builder.
 function specialDraftEffect(kind: SpecialDraftKind, category?: Category): string {
   return kind === "category"
-    ? `${CATEGORY_WORD[category ?? "oscillator"]} draft`
+    ? `${categoryTermHtml(category ?? "oscillator")} draft`
     : kind === "rare"
       ? "Every candidate rare"
-      : "Every candidate one merge tier up";
+      : `Every candidate one ${termTipHtml("merge tier")} up`;
+}
+
+function categoryTermHtml(category: Category): string {
+  return termTipHtml(category === "conduit" ? "Charge conduit" : category === "ritual" ? "RITUAL" : CATEGORY_WORD[category] as CatalogTerm, CATEGORY_WORD[category]);
 }
 
 // Each pool category's symbol rides the representative launch design's
@@ -3188,9 +3192,9 @@ function specialDraftRowsHtml(state: GameState): string {
         (Object.keys(CATEGORY_WORD) as Category[])
           .map(
             (category) =>
-              `<button class="special-roll-pick" data-roll-special="category" data-special-category="${category}" style="--category-hue: var(--${HUE_TOKEN_OF[CATEGORY_SYMBOL_TYPE[category]]})" aria-label="Roll the held Jacquard Card · ${CATEGORY_WORD[category]} draft"${
+              `<div class="special-category-choice"><button class="special-roll-pick" data-roll-special="category" data-special-category="${category}" style="--category-hue: var(--${HUE_TOKEN_OF[CATEGORY_SYMBOL_TYPE[category]]})" aria-label="Roll the held Jacquard Card · ${CATEGORY_WORD[category]} draft"${
                 locked ? " disabled" : ""
-              }><span class="special-roll-symbol">${inventoryTileSvg({ type: CATEGORY_SYMBOL_TYPE[category] })}</span><span class="special-roll-word mono">${CATEGORY_WORD[category]}</span></button>`,
+              }><span class="special-roll-symbol">${inventoryTileSvg({ type: CATEGORY_SYMBOL_TYPE[category] })}</span></button><span class="special-roll-word mono">${categoryTermHtml(category)}</span></div>`,
           )
           .join("")
       }</div>`

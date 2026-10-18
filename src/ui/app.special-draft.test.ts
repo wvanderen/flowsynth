@@ -96,6 +96,22 @@ describe("the special drafts' rows (issue #379)", () => {
     app.closeModal();
   });
 
+  it("discloses category meanings without spending the held Card", () => {
+    app.state.specialDrafts.category = 1;
+    openScrap();
+    const term = document.querySelector<HTMLButtonElement>('.special-category-choice [aria-label="Spacer — what it means"]')!;
+    term.focus();
+    expect(term.getAttribute("aria-expanded")).toBe("true");
+    term.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(term.getAttribute("aria-expanded")).toBe("false");
+    term.click();
+    expect(term.getAttribute("aria-expanded")).toBe("true");
+    expect(app.state.specialDrafts.category).toBe(1);
+    expect(app.state.bankedRolls).toHaveLength(0);
+    expect(document.querySelector(".special-category-choice button button")).toBeNull();
+    app.closeModal();
+  });
+
   it("rolls the chosen category from its symbol without touching the others", () => {
     app.state.specialDrafts.category = 1;
     app.render();
@@ -126,7 +142,9 @@ describe("the special drafts' rows (issue #379)", () => {
     app.openModal("forge");
     const note = document.querySelector("#modal-content .forge-offer-note")!;
     expect(note.querySelector(".t-condensed")!.textContent).toBe("Jacquard Card");
-    expect(note.textContent).toContain("Spacer draft");
+    const visibleNote = note.cloneNode(true) as HTMLElement;
+    visibleNote.querySelectorAll(".inst-tip-body").forEach((tip) => tip.remove());
+    expect(visibleNote.textContent).toContain("Spacer draft");
     expect(document.querySelectorAll("#modal-content .candidate-tile")).toHaveLength(3);
     expect(document.querySelector("#modal-content .forge-skip")).not.toBeNull();
     app.closeModal();
