@@ -141,7 +141,7 @@ export function render(app: App): void {
     // row's rebuild key rides beside it (#349).
     const detailChord = app.ui.detail
       ? detailChordRow(app, app.state.mode === "upgrade" ? projected : live)
-      : { html: "", key: "" };
+      : { html: "", key: "", marks: [] };
     renderHexDetail(app, live, projected, detailChord);
     renderZoomCluster(app);
     renderHorizonBar(app);
@@ -1561,49 +1561,85 @@ function voiceMetricsHtml(module: ModuleInstance, snapshot: RateSnapshot, curren
   return rows.join("");
 }
 
-// The Hex detail's chord row (issue #295, beside the module since #388):
-// the opened voice's chord facts in the reserved readout's own grammar —
-// capacity, total chord factor, formation and its scale, every chord
-// instance it sings in — with the ν/s figure left off (the enlarged face
-// carries it). Active instances stand as chips; the idle candidates hide
-// behind one "N idle" disclosure through the shared tooltip layer
-// (issue #388) — the list never expands inline, and the plain transient
-// readout keeps its own count untouched. The conducting spacer asks by
-// containment, the same rule its hover reads (#201). The rebuild key
-// rides beside the html (#349): the guard decides on the marks'
-// identities and the snapshot's raw figures — inputs, never the
-// formatted row — so a tick's guard costs a comparison, not a re-format.
+// The Hex detail's chord facts (issue #295, in the details column since
+// #388; re-spoken as ruled rows by the 2026-10-18 review): the opened
+// voice's standing facts in the breakdown's own grammar — the capacity
+// with its canonical mark, the total chord factor, the applied formation
+// term with its quality scale drawn at column width — then the named
+// instances as the readout's chips, with the idle candidates behind one
+// "N idle" disclosure. The ν/s figure stays off it (the enlarged face
+// carries it); the row labels make tooltips redundant, so the facts
+// carry none. The rebuild key rides beside the html (#349): the guard
+// decides on the marks' identities and the snapshot's raw figures —
+// inputs, never the formatted row.
 export interface DetailChordRow {
   html: string;
   key: string;
+  // The voice's active marks, shared with the details column's context map
+  // (ADR-0072) — the same geometry the board draws, so the miniature can
+  // never disagree with the seams.
+  marks: ChordMark[];
+}
+
+// One ruled fact row: the label carrying the meaning, the tabular figure
+// carrying the value — the breakdown row's grammar at section scale.
+function detailChordFact(name: string, figure: string): string {
+  return `<span class="hex-chord-fact"><span class="hex-chord-fact-name">${name}</span><b class="mono">${figure}</b></span>`;
+}
+
+// The formation's quality scale, drawn for the details column's width:
+// the full track with its chromatic and organized ends, the neutral
+// taller tick, and the firm inset marker at the measured value — the
+// state readable without color, the exact read in the accessible name.
+function detailQualityScale(measured: number, bounds: { floor: number; cap: number }): string {
+  const W = 264;
+  const x0 = 6;
+  const x1 = W - 6;
+  const at = (q: number): number => x0 + Math.min(1, Math.max(0, (q - bounds.floor) / (bounds.cap - bounds.floor))) * (x1 - x0);
+  const x = at(measured);
+  const neutral = at(1);
+  const label = `Formation quality — ×${formatNumber(bounds.floor)} chromatic to ×${formatNumber(bounds.cap)} organized, ×1 neutral; this formation measures ×${formatNumber(measured)}`;
+  return `<span class="chord-scale-wide" data-q="${measured}" role="img" aria-label="${escapeHtml(label)}"><svg viewBox="0 0 ${W} 34" aria-hidden="true"><line class="scale-track" x1="${x0}" y1="12" x2="${x1}" y2="12"/><line class="scale-tick" x1="${x0}" y1="8" x2="${x0}" y2="16"/><line class="scale-tick scale-tick-neutral" x1="${neutral.toFixed(1)}" y1="5" x2="${neutral.toFixed(1)}" y2="19"/><line class="scale-tick" x1="${x1}" y1="8" x2="${x1}" y2="16"/><rect class="scale-marker" x="${(x - 2).toFixed(1)}" y="7" width="4" height="10"/><text class="scale-end mono" x="${x0}" y="31" text-anchor="start">${formatNumber(bounds.floor)}</text><text class="scale-end mono" x="${((x0 + x1) / 2).toFixed(1)}" y="31" text-anchor="middle">×1</text><text class="scale-end mono" x="${x1}" y="31" text-anchor="end">${formatNumber(bounds.cap)}</text></svg></span>`;
 }
 
 export function detailChordRow(app: App, snapshot: RateSnapshot): DetailChordRow {
   const detail = app.ui.detail;
-  if (!detail) return { html: "", key: "" };
+  if (!detail) return { html: "", key: "", marks: [] };
   const module = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, detail.pos));
-  if (!module) return { html: "", key: "" };
-  const idScope = `detail-${module.id}`;
+  if (!module) return { html: "", key: "", marks: [] };
   const chips = moduleChips(module, chordReadoutCache.get(app)?.marks ?? []);
-  const metrics = voiceMetricsHtml(module, snapshot, undefined, idScope, false);
   const active = chips.filter((mark) => !mark.inactive);
   const idle = chips.filter((mark) => mark.inactive);
-  const html =
-    metrics +
-    active
-      .map(
-        (mark) =>
-          `<span class="chord-readout-chip mono" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.label)}</span>`,
-      )
-      .join("") +
-    (idle.length > 0 ? detailIdleDisclosureHtml(idScope, idle) : "");
   const contribution = snapshot.contributions.get(module.id);
   const allocation = snapshot.allocation;
-  // The rebuild key carries the voice's own budget (issue #373), not the
-  // board scalar — a heterogeneous board must not serve a stale row.
+  // The voice's own budget (issue #373), not the board scalar.
   const voiceCapacity = allocation ? voiceBudgetOf(allocation, module.id) : null;
+  const facts: string[] = [];
+  if (isVoiceType(module.type) && allocation) {
+    facts.push(detailChordFact(`<small class="capacity-mark" aria-hidden="true">${CAPACITY_SVG}</small><span class="sr-only">Harmonic capacity</span>`, `${allocation.used.get(module.id) ?? 0}/${voiceCapacity}`));
+    if (!allocation.certified) facts.push(`<span class="hex-chord-fact st-inactive"><span class="hex-chord-fact-name">Allocation</span><b class="mono">uncertified</b></span>`);
+    if (isOscillatorType(module.type) && contribution && contribution.chordFactor !== null) {
+      facts.push(detailChordFact("Factor", `×${formatNumber(contribution.chordFactor)}`));
+    }
+    if (contribution && contribution.formationQ !== 1) {
+      facts.push(detailChordFact("Formation", `×${formatNumber(contribution.formationQ)}`));
+    }
+  }
+  const scale = isVoiceType(module.type) && contribution && (contribution.formationMeasuredQ !== 1 || contribution.formationQ !== 1)
+    ? detailQualityScale(contribution.formationMeasuredQ, allocation ? ALLOCATION_QUALITY_BOUNDS : { floor: BALANCE.qualityFloor, cap: BALANCE.qualityCap })
+    : "";
+  const instances = active.length + idle.length > 0
+    ? `<div class="hex-chord-row">${active
+        .map(
+          (mark) =>
+            `<span class="chord-readout-chip mono" style="--cc:var(--${mark.colorVar})">${escapeHtml(mark.label)}</span>`,
+        )
+        .join("")}${idle.length > 0 ? detailIdleDisclosureHtml(`detail-${module.id}`, idle) : ""}</div>`
+    : "";
+  const html = `${facts.length + (scale ? 1 : 0) > 0 ? `<div class="hex-chord-facts">${facts.join("")}${scale}</div>` : ""}${instances}`;
   return {
     html,
+    marks: active,
     key: JSON.stringify([
       chips.map((mark) => [mark.key, mark.inactive, mark.label, mark.colorVar]),
       allocation ? [allocation.used.get(module.id) ?? 0, voiceCapacity, allocation.certified] : null,

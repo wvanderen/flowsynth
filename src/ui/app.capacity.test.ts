@@ -429,14 +429,21 @@ describe("placement previews with capacity-aware production (#260)", () => {
     expect(readout().querySelector(".chord-readout-factor")).toBeNull();
     clickCell(0, 1);
     const detail = document.getElementById("hex-detail")!;
-    const row = detail.querySelector(".hex-chord-row")!;
-    const detailed = [...row.querySelectorAll(".chord-readout-chip")].map((chip) => chip.textContent);
-    expect(detailed).toEqual(["Capacity 0/1", "×1"]);
-    expect(detail.querySelector(".chord-readout-scale")!.getAttribute("data-q"))
+    // The standing facts as ruled rows (ADR-0072 review): the capacity
+    // with its mark and the total factor; the applied formation reads
+    // exactly ×1 here, so no formation row stands.
+    const facts = detail.querySelector(".hex-chord-facts")!;
+    const factRows = [...facts.querySelectorAll(".hex-chord-fact")].map((row) => row.textContent);
+    expect(factRows).toHaveLength(2);
+    expect(factRows[0]).toContain("0/1");
+    expect(factRows[1]).toContain("×1");
+    expect(facts.querySelector(".chord-scale-wide")!.getAttribute("data-q"))
       .toBe(String(1 + BALANCE.allocationComplexityRate));
     // The idle candidates wait behind the count; opening lists their
     // names and factors through the shared tooltip layer.
-    const trigger = row.querySelector<HTMLButtonElement>(".detail-idle-trigger")!;
+    // The idle candidates wait behind the count; opening lists their
+    // names and factors through the shared tooltip layer.
+    const trigger = detail.querySelector<HTMLButtonElement>(".detail-idle-trigger")!;
     expect(trigger.textContent).toBe("2 idle");
     trigger.focus();
     const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;

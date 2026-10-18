@@ -1605,10 +1605,11 @@ describe("always-on chord feedback (§6, #137)", () => {
     // tooltip bodies — reads that cannot be opened wear no hover cues.
     expect(readoutEl.querySelector("button, .inst-tip, .readout-tip-trigger")).toBeNull();
     // The same hover's deeper facts remain one click away: the Hex detail
-    // keeps the full chord row, disclosures included.
+    // keeps the ruled facts section (ADR-0072 review), the idle list
+    // riding the shared tooltip layer when candidates wait.
     clickCell(0, 0);
     const detail = document.getElementById("hex-detail")!;
-    expect(detail.querySelector(".hex-chord-row .readout-tip-trigger")).not.toBeNull();
+    expect(detail.querySelector(".hex-detail-side .hex-chord-facts")).not.toBeNull();
   });
 
   it("a chordless module shows output and unused capacity without neutral factors", () => {
@@ -2337,10 +2338,11 @@ describe("the bulk upgrade controls (#195)", () => {
     app.state.nous = levelsCost(0, 3);
     app.render();
     clickCell(0, 0);
-    // The sheet carries the same ladder: the chip row rides the buy column.
+    // The sheet carries the same ladder: the chip row rides the action
+    // rail below the stack (ADR-0072).
     document.querySelector<HTMLButtonElement>('.hex-detail.sheet [data-bulk="5"]')!.click();
     const button = document.querySelector<HTMLButtonElement>("#detail-upgrade")!;
-    expect(button.closest(".hex-rail-row.modules")).not.toBeNull();
+    expect(button.closest(".hex-detail-actions")).not.toBeNull();
     expect(button.querySelector(".hex-upgrade-title")!.textContent).toContain("Upgrade ×5");
     button.click();
     expect(app.state.modules[0]!.level).toBe(3);

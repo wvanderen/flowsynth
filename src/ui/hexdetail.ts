@@ -3,31 +3,33 @@ import { tierPowerOf } from "../engine/module-strength";
 // board coordinate's full-stack cross-section, standing where the grid
 // stood, at every width. The presentation is the instrument metaphor, not
 // a panel of cards: the cell's column lifted toward the camera, frameless
-// at stage center — the module face below at bloom scale (the face itself
-// is the plate: level, nameplate, signature, merge rings, live readout,
-// pitch), the Mutators face above it in the arete register, same chassis,
-// its state spoken in the four-state grammar (muted outline = locked or
-// ineligible, clear outline = eligible, dashed = open slot, occupied =
-// the family's own declaration). The faces carry the information; the
-// composition adds only what faces cannot say — the action rail beside
-// the stack (upgrade dial, unlock, add), one chord-facts column to the
-// module's right in the reserved readout's grammar (issue #388: active
-// chips inline, idle candidates behind one N idle disclosure), a compact
-// floating Return control, and the flow tag. Global destinations (Catalog,
-// Forge) belong to the surrounding navigation — the dock doors and the
-// legend — never repeated buttons here. Since issue #297 the relationships
-// speak too: directional wave connections (the mutator's cross-layer
-// effect pointing at the layer it lands on, incoming charge and the chord
-// bonus entering the module face's vertices) with the authoritative
-// breakdowns riding their disclosures (hexflows.ts). Nothing else: the
-// deeper mechanics ride the tooltip layer (issue #267's inst-tip).
+// at stage center. The composition (ADR-0072) has three posts. The stack:
+// the Mutators face above the Modules face, both visible always, one
+// layer in focus — the focused face full-size at full engraving, the
+// other an identity thumbnail (chassis, rail, glyph, state marks; its
+// text engraving yields, the words and figures riding tooltip and
+// details column). The action rail: one row below the stack, its contents
+// following the focused face — the upgrade dial and button under Modules,
+// the slot unlock under Mutators. The details column: the standing facts
+// in open sections — the context map heading it (the whole in-range board
+// in miniature, the opened hex in the firm selected marker, its active
+// chords in their hues), then profile grades, chord facts (issue #388:
+// active chips inline, idle candidates behind one N idle disclosure), and
+// the mutator line. The wave connections keep their posts (issue #297):
+// the mutator's cross-layer effect between the faces, incoming charge and
+// the chord bonus at the module face's vertices, their breakdowns riding
+// their disclosures (hexflows.ts) — the column holds standing facts, not
+// opened math. Global destinations (Catalog, Forge) belong to the
+// surrounding navigation — the dock doors and the legend — never repeated
+// buttons here; a compact floating Return control and the flow tag ride
+// the corner. Nothing else: the deeper mechanics ride the tooltip layer
+// (issue #267's inst-tip).
 //
-// The fixed stack shows both layers, Mutators above Modules, in that
-// order always; a face selection emphasizes one section, focuses its
-// control, and synchronizes the vertical layer legend without ever
-// reordering. Editing lives in upgrade mode only: during flow the same
-// cross-section opens read-only, its readouts live, its controls gone —
-// the click still answers the lock.
+// The face selection emphasizes one section, focuses its control, and
+// synchronizes the vertical layer legend without ever reordering.
+// Editing lives in upgrade mode only: during flow the same cross-section
+// opens read-only, its readouts live, its controls gone — the click still
+// answers the lock.
 import { affordableLevels, boosterBonusOf, boosterTermOf, deployed, deployedAt, displayedRates, hostPower, levelCost, levelsCost, mutatorAt, mutatorMagnitude, wholeNous } from "../engine/economy";
 import { BALANCE, isOscillatorType, typeRarityOf } from "../engine/constants";
 import { adjacent, sameHex } from "../engine/hex";
@@ -43,6 +45,7 @@ import { isPhoneWidth, scrollTopOf } from "./container";
 import { wireTooltips } from "./instrument";
 import { profileGradesHtml } from "./profile";
 import { moduleFlowsHtml, mutatorFlowHtml } from "./hexflows";
+import { contextMapSvg } from "./contextmap";
 import { bindPointerDrag, type DetailChordRow } from "./render";
 
 /* ── The upgrade benefit (§5) ─────────────────────────
@@ -211,6 +214,10 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
     mutItem ? `${mutItem.id}:${mutItem.rarity}:${mutItem.family}` : mutItem,
     state.mutatorSlots.length,
     state.catalogEntryOwned,
+    // The context map's board (ADR-0072): a purchase or Row unlock moves
+    // the in-range patch the miniature draws.
+    state.cells.length,
+    state.unlockedRows.join(","),
     // The open inventory (issue #296) and what waits in it: a placement
     // changes both, so the tray and its tiles can never show stale stock.
     state.modules.filter((m) => m.pos === null).map((m) => `${m.id}:${m.type}:${m.level}:${m.tier}`),
@@ -251,10 +258,13 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
         ${flow ? `<span class="hex-detail-readonly">${state.mode === "flow" ? "flow live" : "paused"} · read-only</span>` : ""}
       </div>
       <div class="hex-detail-grid">
-        ${mutatorLayerHtml(app, pos, snapshot)}
-        ${mutatorFlowHtml(state, pos, module, snapshot, snapshotFlow)}
-        ${moduleLayerHtml(app, pos, module, snapshot)}
-        ${detailChordColHtml(pos, chordRow.html)}
+        <div class="hex-detail-stack">
+          ${mutatorLayerHtml(app, pos, snapshot)}
+          ${mutatorFlowHtml(state, pos, module, snapshot, snapshotFlow)}
+          ${moduleLayerHtml(app, pos, module, snapshot)}
+          ${actionRailHtml(app, pos, module)}
+        </div>
+        ${detailColumnHtml(app, pos, module, chordRow)}
       </div>
 
     </div>`;
@@ -264,6 +274,22 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   host.querySelectorAll<HTMLElement>("[data-detail-face]").forEach((chassis) => {
     const face = chassis.getAttribute("data-detail-face") as DetailFace;
     app.listen(chassis, "click", () => app.detailFace(face));
+  });
+  // The context map's navigation (ADR-0072): an owned cell — by click,
+  // Enter, or Space — opens that coordinate's cross-section at the
+  // current face. The opened cell renders as the marker, never a control.
+  host.querySelectorAll<HTMLElement>("[data-ctx-cell]").forEach((node) => {
+    const [q, r] = node.getAttribute("data-ctx-cell")!.split(",").map(Number);
+    const open = (): void => {
+      if (ui.detail && (ui.detail.pos.q !== q || ui.detail.pos.r !== r)) app.openDetail({ q, r }, ui.detail.face);
+    };
+    app.listen(node, "click", open);
+    app.listen(node, "keydown", (event) => {
+      if ((event as KeyboardEvent).key === "Enter" || (event as KeyboardEvent).key === " ") {
+        event.preventDefault();
+        open();
+      }
+    });
   });
   // The mutator actions and the buy column wire together — an empty
   // place's stack still carries the unlock control.
@@ -302,33 +328,19 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
 
 function mutatorLayerHtml(app: App, pos: Hex, snapshot: RateSnapshot): string {
   const { state, ui } = app;
-  const upgrade = state.mode === "upgrade";
   const selected = ui.detail?.face === "mutators";
   const note = cellNoteOf(pos);
   const { chassis, tip } = mutatorChassisHtml(state, pos, snapshot);
-  // The rail's one action per state — the priced unlock where a slot can
-  // attach; inventory supplies placement at a vacant slot. The Catalog entry walk belongs
-  // to the surrounding navigation (the legend's locked symbol, the dock's
-  // Catalog door), never a destination button in the detail (issue #388);
-  // a position the growth rule cannot reach wears the locked face and no
-  // rail at all. Retrieval uses the shared inventory. Every refusal names its rule; no surface promises a ν/s
-  // figure (issue #199's never-say rule).
-  let rail = "";
-  if (upgrade && state.catalogEntryOwned) {
-    if (!state.mutatorSlots.some((slot) => sameHex(slot, pos))) {
-      const eligible = mutatorUnlockTargets(state).some((target) => sameHex(target, pos));
-      if (eligible) {
-        const price = mutatorSlotPrice(state);
-        const affordable = state.arete >= price;
-        const id = detailTipId();
-        rail = `<span class="inst-tip"><button class="hex-action${affordable ? "" : " st-unavailable"}" id="detail-mutator-unlock" aria-disabled="${!affordable}" aria-describedby="${id}">${price === 0 ? "Unlock slot · free" : `Unlock slot · <span class="mono">${formatInt(price)} ◇</span>`}${affordable ? "" : " · need Arete"}</button><button class="inst-tip-trigger" aria-label="About slot unlock" aria-describedby="${id}" aria-expanded="false">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${affordable ? `Unlock a Mutator slot at ${note}` : `Not enough Arete · needs ${formatInt(price)} ◇, have ${formatInt(state.arete)} ◇`}</span></span>`;
-      }
-    }
-  }
+  // The face's own post only — its one action (the priced unlock) rides
+  // the action rail below the stack when the Mutators face holds focus
+  // (ADR-0072). The Catalog entry walk belongs to the surrounding
+  // navigation (the legend's locked symbol, the dock's Catalog door),
+  // never a destination button in the detail (issue #388); retrieval uses
+  // the shared inventory. Every refusal names its rule; no surface
+  // promises a ν/s figure (issue #199's never-say rule).
   return `<section class="hex-detail-layer mutators${selected ? " selected" : ""}" data-detail-section="mutators" tabindex="-1" aria-label="Mutators — ${state.catalogEntryOwned ? "slot state" : "locked"} at ${note}">
     <span class="hex-orbit"><span class="inst-tip"><button class="hex-stack-chassis inst-tip-trigger" data-detail-face="mutators" aria-pressed="${selected}" aria-describedby="${tip.id}" aria-label="Emphasize the Mutators face">${chassis}</button>${tip.html}</span></span>
-  </section>
-  <aside class="hex-rail-row mutators${selected ? " selected" : ""}">${rail}</aside>`;
+  </section>`;
 }
 
 // The mutator chassis per state (viewBox −70..70; the chassis polygon is
@@ -417,20 +429,6 @@ function lockedChassisHtml(): string {
   </svg>`;
 }
 
-/* ── The chord-facts column (issue #388) ──────────────
-   The opened voice's chord facts in the reserved readout's grammar, in
-   their own column to the module's right where width permits — never
-   pushing the faces downward. Narrow compositions reflow the column
-   beneath the stack (the stylesheet owns the breakpoints); the faces and
-   the rail keep their posts either way. Empty when the place holds no
-   module: chord facts are a voice's facts. */
-
-function detailChordColHtml(pos: Hex, html: string): string {
-  if (!html) return "";
-  const note = cellNoteOf(pos);
-  return `<aside class="hex-chord-col" aria-label="Chord facts at ${note}"><div class="hex-chord-row">${html}</div></aside>`;
-}
-
 /* ── The Modules face ───────────────────────────────── */
 
 function moduleLayerHtml(app: App, pos: Hex, module: ModuleInstance | undefined, snapshot: RateSnapshot): string {
@@ -477,26 +475,63 @@ function moduleLayerHtml(app: App, pos: Hex, module: ModuleInstance | undefined,
       html: `<span class="inst-tip-body" id="${id}" role="tooltip">${META[module.type].name} · ${RARITY_LABEL[typeRarityOf(module.type)]} · ${tierWord(module.tier)}${faceLevel(module) !== undefined ? ` · level ${module.level}` : ""} · ${read.readout}${read.note ? ` · sings ${read.note}` : ""}${charged ? " · charged" : ""}</span>`,
     };
   }
-  // Placement and retrieval use the shared inventory; the rail carries upgrades.
-  let rail = "";
-  if (module && upgrade) {
-    rail = detailBuyHtml(app, module);
-  }
-  // The incoming connections (issue #297): charge and the chord bonus ride
-  // the face's left and right vertices, in flow as well — the breakdowns
-  // stay readable in the read-only cross-section. The flow flag is the
-  // snapshot's own basis (charge-projected while arranging), the one the
-  // wave reads and the outcomes compute against.
+  // Upgrade actions ride the action rail below the stack (ADR-0072);
+  // placement and retrieval use the shared inventory.
   const flows = module ? moduleFlowsHtml(state, module, snapshot, upgrade || state.mode === "flow") : "";
-  // The profile's fixed aptitude grades (issue #370): the owned module's
-  // authored identity beside its face — the disclosure bodies carry the
-  // exact coefficients; the live output stays in the readouts above.
-  const grades = module ? profileGradesHtml(module.type) : "";
   return `<section class="hex-detail-layer modules${selected ? " selected" : ""}" data-detail-section="modules" tabindex="-1" aria-label="Modules — ${module ? `${META[module.type].name} at ${note}` : `empty place at ${note}`}">
     <span class="hex-orbit"><span class="inst-tip"><button class="hex-stack-chassis inst-tip-trigger" data-detail-face="modules" aria-pressed="${selected}" aria-describedby="${tip.id}" aria-label="Emphasize the Modules face">${chassis}</button>${tip.html}</span>${flows}</span>
-    ${grades}
-  </section>
-  <aside class="hex-rail-row modules${selected ? " selected" : ""}">${rail}</aside>`;
+  </section>`;
+}
+
+/* ── The action rail (ADR-0072) ───────────────────────
+   One row below the stack, its contents following the focused face —
+   the eye lands here after the face. Modules focus carries the upgrade
+   column (pickers, dial, button); Mutators focus carries the priced
+   slot unlock where a slot can attach. Flow leaves no rail at all. */
+
+function actionRailHtml(app: App, pos: Hex, module: ModuleInstance | undefined): string {
+  const { state, ui } = app;
+  if (state.mode !== "upgrade") return "";
+  if (ui.detail?.face === "mutators") {
+    if (!state.catalogEntryOwned) return "";
+    if (state.mutatorSlots.some((slot) => sameHex(slot, pos))) return "";
+    const eligible = mutatorUnlockTargets(state).some((target) => sameHex(target, pos));
+    if (!eligible) return "";
+    const price = mutatorSlotPrice(state);
+    const affordable = state.arete >= price;
+    const note = cellNoteOf(pos);
+    const id = detailTipId();
+    return `<div class="hex-detail-actions"><span class="inst-tip"><button class="hex-action${affordable ? "" : " st-unavailable"}" id="detail-mutator-unlock" aria-disabled="${!affordable}" aria-describedby="${id}">${price === 0 ? "Unlock slot · free" : `Unlock slot · <span class="mono">${formatInt(price)} ◇</span>`}${affordable ? "" : " · need Arete"}</button><button class="inst-tip-trigger" aria-label="About slot unlock" aria-describedby="${id}" aria-expanded="false">ⓘ</button><span class="inst-tip-body" id="${id}" role="tooltip">${affordable ? `Unlock a Mutator slot at ${note}` : `Not enough Arete · needs ${formatInt(price)} ◇, have ${formatInt(state.arete)} ◇`}</span></span></div>`;
+  }
+  return module ? `<div class="hex-detail-actions">${detailBuyHtml(app, module)}</div>` : "";
+}
+
+/* ── The details column (ADR-0072) ────────────────────
+   The standing facts in open sections, headed by the context map: the
+   whole in-range board in miniature — the opened hex in the firm
+   selected marker, its active chords in their hues — then the profile
+   grades, the chord facts in the reserved readout's grammar (issue
+   #388), and the occupied mutator's line. Sections render only with
+   content; the waves keep their breakdown disclosures. */
+
+function detailColumnHtml(app: App, pos: Hex, module: ModuleInstance | undefined, chordRow: DetailChordRow): string {
+  const { state } = app;
+  const note = cellNoteOf(pos);
+  const sections: string[] = [];
+  const map = contextMapSvg(state, pos, module, chordRow.marks);
+  if (map) sections.push(`<section class="hex-detail-section hex-detail-ctx">${map}</section>`);
+  if (module) {
+    const grades = profileGradesHtml(module.type);
+    if (grades) sections.push(`<section class="hex-detail-section"><span class="hex-detail-section-head">Profile</span>${grades}</section>`);
+    if (chordRow.html) sections.push(`<section class="hex-detail-section"><span class="hex-detail-section-head">Chord facts</span>${chordRow.html}</section>`);
+  }
+  const mutItem = mutatorAt(state, pos);
+  if (mutItem) {
+    const inert = mutatorInertVerdict(state, pos, mutItem, displayedRates(state, true));
+    sections.push(`<section class="hex-detail-section"><span class="hex-detail-section-head">Mutator</span><p class="hex-detail-mutator-line">${FAMILY_WORD[mutItem.family]} · ${inert ?? mutatorEffectText(mutItem.family, mutItem.rarity)}</p></section>`);
+  }
+  if (sections.length === 0) return "";
+  return `<aside class="hex-detail-side" aria-label="Details at ${note}">${sections.join("")}</aside>`;
 }
 
 /* ── The upgrade column ─────────────────────────────── */

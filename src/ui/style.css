@@ -2104,55 +2104,38 @@ body.hex-detail-open .upgrade-all {
   text-transform: uppercase;
   color: var(--switch);
 }
-/* The cross-section: two rows (Mutators above Modules, always) by three
-   columns (the stack, the action rail, the chord-facts column — issue
-   #388) — the inventory overlays instead of joining the grid (issue #296
-   review), so opening it never reflows the composition. Every child
-   states its post — an empty rail row must never let a face slide into
-   the rail's column, and an empty chord column must never let the rail
-   slide right. The composition centers as a group; a short stage
-   scrolls, its content passing beneath the floating corner. */
+/* The cross-section (ADR-0072): two posts — the focus-scaled stack and
+   the details column. The inventory overlays instead of joining the grid
+   (issue #296 review), so opening it never reflows the composition. The
+   composition centers as a group; a short stage scrolls, its content
+   passing beneath the floating corner. */
 .hex-detail-grid {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   display: grid;
-  grid-template-columns: auto auto auto;
+  grid-template-columns: auto minmax(240px, 320px);
   align-items: center;
   justify-content: center;
   /* Safe centering: an overflowing stage falls back to start so the top
-     rows stay reachable and the chord column never clips under the rail.
-     The top padding clears the floating corner. */
-  align-content: safe center;
-  column-gap: 44px;
-  padding: 38px 8px 12px;
+     rows stay reachable. The composition hangs from the stage's top —
+     just under the ledger, not floating mid-stage — with the column gap
+     clearing the wave triggers riding the face's vertices (~68px past
+     the edge), so the details column never wears them. */
+  align-content: start;
+  align-items: start;
+  column-gap: 72px;
+  padding: 14px 8px 12px;
 }
-.hex-detail-layer.mutators { grid-column: 1; grid-row: 1; }
-/* The modules face sits in row 3: row 2 holds the mutator's wave
-   connection when a mutator occupies the slot, and collapses to nothing
-   when it does not (issue #297). */
-.hex-detail-layer.modules { grid-column: 1; grid-row: 3; }
-.hex-rail-row { grid-column: 2; }
-.hex-rail-row.mutators { grid-row: 1; }
-.hex-rail-row.modules { grid-row: 3; }
-/* The chord-facts column (issue #388): the opened voice's chord facts to
-   the module's right, its own post in row 3 — never beneath the faces.
-   It belongs to the Modules face's emphasis: dimmed while the Mutators
-   face stands forward, exactly as the faces dim. */
-.hex-chord-col {
-  grid-column: 3;
-  grid-row: 3;
+/* The stack: both layers always — Mutators above Modules — the wave
+   connections between, and the action rail below following focus. */
+.hex-detail-stack {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  width: min(300px, 26vw);
+  align-items: center;
+  gap: 10px;
   min-width: 0;
-  opacity: 0.55;
-  transition: opacity 0.15s;
 }
-.hex-detail-scene[data-face="modules"] .hex-chord-col { opacity: 1; }
-.hex-chord-col .hex-chord-row { max-width: none; }
 .hex-detail-layer {
   display: flex;
   flex-direction: column;
@@ -2165,6 +2148,17 @@ body.hex-detail-open .upgrade-all {
 }
 .hex-detail-layer.selected { opacity: 1; }
 .hex-detail-layer:focus-visible { outline-offset: 4px; }
+/* The focus scale (ADR-0072): the focused face at full scale and full
+   engraving; the other layer the identity thumbnail — its text engraving
+   yields (the words and figures ride the tooltip and the details
+   column), while the chassis, rail, glyph, and state marks stay. The
+   swap is instantaneous: state survives without animation. */
+.hex-stack-chassis svg { width: var(--detail-hex); height: var(--detail-hex); }
+.hex-detail-layer:not(.selected) .hex-stack-chassis svg {
+  width: calc(var(--detail-hex) * 0.55);
+  height: calc(var(--detail-hex) * 0.55);
+}
+.hex-detail-layer:not(.selected) svg text { display: none; }
 /* The faces: each chassis is the section's own control — clicking a face
    emphasizes it, and the firm inset marker marks the selection without
    color. No menu tabs on the content. */
@@ -2183,7 +2177,7 @@ body.hex-detail-open .upgrade-all {
   border-radius: 14px;
 }
 .hex-stack-chassis:focus-visible { outline: 2px solid var(--ink); outline-offset: 6px; border-radius: 14px; }
-.hex-stack-chassis svg { display: block; width: var(--detail-hex); height: var(--detail-hex); }
+.hex-stack-chassis svg { display: block; }
 .hex-stack-marker {
   display: none;
   fill: none;
@@ -2231,40 +2225,123 @@ body.hex-detail-open .upgrade-all {
   stroke-linejoin: round;
 }
 .hex-stack-mut .mut-slot-effect { pointer-events: none; }
-/* The chord row: the reserved readout's grammar — capacity, chord factor,
-   formation, the named instances, the idle count behind its one
-   disclosure (issue #388). The ν/s figure stays off it; the face itself
-   carries that. Beside the module it fills its column; in the reflow it
-   keeps the stack's wrap width. */
+/* The chord facts (ADR-0072 review): the voice's standing facts in the
+   breakdown's ruled-row grammar — label left, tabular figure right, one
+   hairline between rows — then the named instances as the readout's
+   chips. The capacity row leads with the read's canonical mark. */
+.hex-chord-facts {
+  display: flex;
+  flex-direction: column;
+}
+.hex-chord-fact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 5px 0;
+  border-top: 1px solid var(--line-soft);
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.hex-chord-fact:first-child { border-top: 0; padding-top: 2px; }
+.hex-chord-fact .mono { color: var(--ink); font-size: 12px; }
+.hex-chord-fact.st-inactive .mono { color: var(--muted); }
+.hex-chord-fact-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 10px/1.2 var(--font-condensed);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.hex-chord-fact .capacity-mark { display: inline-flex; }
+.hex-chord-fact .capacity-mark svg { width: 13px; height: 13px; color: var(--accent); }
+/* The formation's quality scale at column width: full track, readable
+   end labels, the neutral tick taller, the firm inset marker. */
+.chord-scale-wide { display: block; padding: 4px 0 2px; }
+.chord-scale-wide svg { display: block; width: 100%; height: auto; }
+.chord-scale-wide .scale-end { font-size: 10px; fill: var(--muted); }
+.chord-scale-wide .scale-track { stroke: var(--line-strong); stroke-width: 1.4; }
+.chord-scale-wide .scale-tick { stroke: var(--line-strong); stroke-width: 1.2; }
+.chord-scale-wide .scale-tick-neutral { stroke: var(--ink); stroke-width: 1.4; }
+.chord-scale-wide .scale-marker { fill: var(--ink); }
+/* The instances row: the readout's chips, left-aligned with the ruled
+   facts. */
 .hex-chord-row {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
   gap: 6px;
-  max-width: calc(var(--detail-hex) * 1.7);
+  padding-top: 8px;
 }
-/* The action rail: aligned rows beside their layers' faces, one open
-   hairline division between them. An empty row never stands — flow
-   leaves no controls, and an idle layer leaves no furniture. */
-.hex-rail-row {
+/* The action rail (ADR-0072): one row below the stack following the
+   focused face — the upgrade column under Modules, the slot unlock under
+   Mutators. One open hairline division above; no rail renders in flow or
+   when the focused face has no action. */
+.hex-detail-actions {
+  width: var(--detail-hex);
+  max-width: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   gap: 8px;
-  align-self: stretch;
-  padding: 18px 2px;
-  /* The rail's own width: the column is auto so it collapses when both
-     rows yield (an open slot under a spacer, say) and the stack centers. */
-  width: min(300px, 36vw);
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+/* The details column (ADR-0072): the standing facts in open sections —
+   the context map, then profile, chord facts, and the mutator line. It
+   belongs to the Modules face's emphasis: dimmed while the Mutators face
+   stands forward, exactly as the unfocused faces dim. */
+.hex-detail-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 16px;
+  min-width: 0;
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+.hex-detail-scene[data-face="modules"] .hex-detail-side { opacity: 1; }
+.hex-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   min-width: 0;
 }
-.hex-rail-row:empty { display: none; }
-.hex-rail-row.modules:not(:empty) { border-top: 1px solid var(--line); }
-/* Read-only flow: no rail stands, so the stack and the chord column take
-   the two tracks. */
-.hex-detail-scene.readonly .hex-detail-grid { grid-template-columns: auto auto; }
-.hex-detail-scene.readonly .hex-chord-col { grid-column: 2; }
-/* The detail's one-line actions (unlock, add, retrieve). */
+.hex-detail-section-head {
+  font: 600 10px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.hex-detail-mutator-line {
+  margin: 0;
+  font: 12px/1.5 var(--font-sans);
+  color: var(--ink);
+}
+.hex-detail-section .profile-grades { flex-wrap: wrap; justify-content: flex-start; }
+/* The context map (ADR-0072): the miniature heading the column — the
+   opened hex in the firm selected marker, its active chords as hue links
+   between their voices, owned cells navigating on click / Enter / Space. */
+.ctx-map { display: block; width: 100%; height: auto; }
+.ctx-cell { fill: transparent; stroke: var(--line-soft); stroke-width: 1; }
+.ctx-cell.owned { fill: var(--panel); stroke: var(--line); }
+.ctx-cell-node { cursor: pointer; outline: none; }
+.ctx-cell-node:hover .ctx-cell,
+.ctx-cell-node:focus-visible .ctx-cell { stroke: var(--ink); fill: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
+.ctx-cell-node:focus-visible .ctx-cell { stroke-width: 1.6; }
+.ctx-dot { stroke: none; opacity: 0.95; pointer-events: none; }
+.ctx-link { stroke-width: 1.6; stroke-linecap: round; pointer-events: none; }
+.ctx-seam { fill: none; stroke-width: 1.4; stroke-linecap: round; pointer-events: none; }
+.ctx-opened {
+  fill: color-mix(in srgb, var(--accent) 10%, var(--panel-deep));
+  stroke: var(--ink);
+  stroke-width: 1.6;
+  pointer-events: none;
+}
+/* Read-only flow: the same two posts, no rail standing. */
+/* The detail's one-line actions (unlock). */
 .hex-action {
   width: 100%;
   padding: 7px 12px;
@@ -2275,24 +2352,19 @@ body.hex-detail-open .upgrade-all {
   text-transform: uppercase;
   color: var(--arete);
   cursor: pointer;
-  white-space: nowrap;
 }
 .hex-action:hover { border-color: var(--arete); background: var(--arete-faint); }
-/* Narrow stages reflow the chord column beneath the stack (issue #388):
-   the faces and the rail keep their posts, the detailed facts scroll
-   below, nothing is unreachable. The readonly selector rides along so
-   the reflow out-ranks the wide readonly placement above. */
+/* Narrow stages reflow the details column beneath the stack (ADR-0072):
+   the faces and the action rail keep their posts, the facts scroll below,
+   nothing is unreachable. */
 @container app (width < 1000px) {
-  .hex-detail-scene .hex-chord-col,
-  .hex-detail-scene.readonly .hex-chord-col {
-    grid-column: 1;
-    grid-row: 4;
+  .hex-detail-scene .hex-detail-grid {
+    grid-template-columns: minmax(0, var(--detail-hex));
+    justify-content: center;
+    column-gap: 0;
   }
-  .hex-chord-col {
-    width: auto;
-    align-items: center;
-  }
-  .hex-chord-col .hex-chord-row { max-width: calc(var(--detail-hex) * 1.7); }
+  .hex-detail-side { width: 100%; }
+  .hex-detail-actions { width: 100%; }
 }
 
 /* The face anchors its relationship connections. Inventory overlays it. */
@@ -2310,8 +2382,6 @@ body.hex-detail-open .upgrade-all {
     instrument layer: hover, keyboard focus, and tap open the same full
     breakdown; Escape and tap-away dismiss it. */
 .hex-detail-flow {
-  grid-column: 1;
-  grid-row: 2;
   display: flex;
   justify-content: center;
 }
@@ -2418,7 +2488,10 @@ body.hex-detail-open .upgrade-all {
   cursor: pointer;
 }
 .hex-upgrade:hover { border-color: var(--accent); }
-.hex-upgrade-title { font-size: 12px; line-height: 1.3; white-space: nowrap; }
+/* The title wraps instead of clipping: exact comma-grouped prices are
+   the contract, so a geometric cost ladder's seven-figure level buys a
+   second line, never a truncated figure. */
+.hex-upgrade-title { font-size: 12px; line-height: 1.3; }
 .hex-upgrade-title strong { font-weight: 600; }
 .hex-upgrade-benefit { font: 11px/1.3 var(--font-sans); color: var(--charge); }
 
@@ -2427,6 +2500,9 @@ body.hex-detail-open .upgrade-all {
     accent register. Partial by design: no chip or button ever disables. */
 .hex-dial { display: flex; gap: 3px; width: 100%; }
 .hex-dial-chip {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 2px 4px;
   min-height: 44px;
   flex: 1;
   text-align: center;
@@ -2468,21 +2544,20 @@ body.hex-detail-open .upgrade-all {
 
 /* The detail as a bottom sheet (§7, portrait phone): the same
    cross-section re-docked over the board's lower edge — the full stage,
-   top-anchored below the game-info strip, one column, the stack on top,
-   each action row under its own face, scrolling within the sheet. */
+   top-anchored below the game-info strip, one column: the stack with its
+   action rail, then the details, the context map last (ADR-0072) —
+   scrolling within the sheet. */
 .hex-detail.sheet { inset: 56px 8px 64px; --detail-hex: clamp(170px, 42vw, 230px); }
 .hex-detail.sheet .hex-detail-grid {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   justify-content: stretch;
   column-gap: 0;
   padding-bottom: 8px;
 }
-.hex-detail.sheet .hex-detail-grid > * { grid-column: auto; grid-row: auto; }
-.hex-detail.sheet .hex-detail-layer { padding: 8px 0 4px; }
-.hex-detail.sheet .hex-chord-col { width: auto; }
-.hex-detail.sheet .hex-chord-row { max-width: none; }
-.hex-detail.sheet .hex-rail-row { padding: 10px 2px; width: auto; }
+.hex-detail.sheet .hex-detail-actions { width: 100%; padding: 10px 2px 0; }
+.hex-detail.sheet .hex-detail-side { width: 100%; padding-top: 6px; }
+.hex-detail.sheet .hex-detail-ctx { order: 9; }
 
 /* The face button (issue #195): one per closed face, covering the bottom
    corner as face furniture — a chassis-veil trapezoid in the accent
@@ -3957,17 +4032,14 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .peek .candidate-tile > svg, .candidate-readout { pointer-events: none; }
 .candidate-readout .term-tip { position: relative; pointer-events: auto; }
 
-/* The profile-grades line (issue #370): one square-cut chip per authored
-    axis — the axis's short name with its fixed aptitude grade. The letter
-    is the state (never color alone); the exact coefficient rides the
-    chip's tooltip disclosure. */
+/* The profile-grades line (issue #370, ADR-0072): one square-cut chip per
+    authored axis — the axis's short name with its authored multiplier and
+    the grade band in parentheses. Plain text: the figure is the fact, the
+    letter the state (never color alone); nothing hides in a disclosure. */
 .profile-grades { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
-.inst-tip.profile-axis { display: inline-flex; position: relative; pointer-events: auto; }
+.profile-axis { display: inline-flex; }
 .profile-grades .profile-grade {
-  width: auto;
-  height: auto;
-  min-width: 0;
-  min-height: 24px;
+  min-height: 20px;
   border: 1px solid var(--line);
   border-radius: 0;
   padding: 3px 7px;
@@ -3976,20 +4048,13 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
-  cursor: help;
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
-.profile-grades .profile-grade:hover { background: var(--hover-bg); border-color: var(--line-strong); }
-.profile-grades .profile-grade:focus-visible { outline-offset: 2px; }
 .profile-grades .profile-grade b { font: 600 11px/1 var(--mono); color: var(--ink); }
-@media (pointer: coarse) {
-  .profile-grades .profile-grade { min-width: 44px; min-height: 44px; }
-}
-/* The hex detail's grade line under the module face: left-aligned with the
-    stack's axis of attention, same chips. */
-.hex-detail-layer .profile-grades { justify-content: center; margin-top: 8px; }
+/* The details column's grade section (ADR-0072): the same chips, ruled
+   under their section head beside the stack. */
 
 /* The temporal profiles' timing line (issue #372): the authored curve said
     directly — one plain figure line beside the grade chips, never a grade,
@@ -4002,7 +4067,7 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   color: var(--muted);
   text-align: center;
 }
-.hex-detail-layer .profile-timing { margin-top: 6px; }
+.hex-detail-section .profile-timing { margin-top: 2px; text-align: left; }
 
 /* Inventory browser: shared open rows on the column and phone sheet. */
 .tray-column.collapsed { width: 68px; }
