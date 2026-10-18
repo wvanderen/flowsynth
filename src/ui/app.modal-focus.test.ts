@@ -193,15 +193,16 @@ describe("the scrimless surfaces manage focus without claiming the screen", () =
     expect(document.activeElement).toBe(dockTool("forge"));
   });
 
-  it("forge: taking a roll is a dismissal — focus returns to the tool", () => {
+  it("forge: taking the last roll is a dismissal — focus returns to the tool", () => {
     bankRoll();
     dockTool("forge").focus();
     app.openModal("forge");
     sheet().querySelector<HTMLButtonElement>("[data-choice]")!.click();
+    // One banked roll, both queues dry after the pick: the batch visit
+    // ends and the Forge dismisses itself, unplaced mint included.
     expect(app.ui.modal).toBeNull();
-    expect(app.ui.placing).not.toBeNull();
+    expect(app.ui.placing).toBeNull();
     expect(document.activeElement).toBe(dockTool("forge"));
-    app.cancelPlacing();
   });
 });
 

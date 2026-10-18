@@ -33,6 +33,10 @@ describe("the Warp Beam's row (issue #380)", () => {
   const beamRow = () => [...document.querySelectorAll("#modal-content .catalog-row")].find((r) => r.textContent!.includes("Warp Beam"))!;
   const beamBuy = () => beamRow().querySelector<HTMLButtonElement>("#buy-arete-beam")!;
   const pliedBuy = () => [...document.querySelectorAll<HTMLButtonElement>("#modal-content [data-buy-special]")].find((b) => b.getAttribute("data-buy-special") === "tier")!;
+  const openScrap = () => {
+    app.openModal("catalog");
+    document.querySelector<HTMLButtonElement>('[data-catalog-face="scrap"]')!.click();
+  };
 
   it("renders the product with its owned figure, cap delta, and Arete price — muted until affordable", () => {
     openArete();
@@ -85,15 +89,14 @@ describe("the Warp Beam's row (issue #380)", () => {
     BALANCE.mergeCap = 0; // a degenerate cap: no draft can mint above base
     try {
       app.state.scrap = BALANCE.specialDraftCosts.tier;
-      app.openModal("forge");
+      openScrap();
       expect(pliedBuy().disabled).toBe(true);
       app.closeModal();
       // The rung raises the cap from 0 to 1: the tier product arms.
       app.state.arete = BALANCE.mergeCapCosts[0];
       openArete();
       beamBuy().click();
-      app.closeModal();
-      app.openModal("forge");
+      openScrap();
       expect(pliedBuy().disabled).toBe(false);
       expect(unlockedMergeCap(app.state)).toBe(1);
     } finally {

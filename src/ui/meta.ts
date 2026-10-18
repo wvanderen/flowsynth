@@ -56,7 +56,7 @@ export const SHELF_DESCRIPTIONS: Partial<Record<ShelfType, string>> = {
 
 export const RARITY_LABEL: Record<Rarity, string> = { common: "common", uncommon: "uncommon", rare: "rare" };
 
-// The categories' display words (issue #379): the Jacquard Card's weave
+// The categories' display words (issue #379): the Jacquard Card's category
 // picks read the category by its player-facing word. RITUAL wears its
 // switch vermillion in caps everywhere else; the word keeps that voice.
 export const CATEGORY_WORD: Record<Category, string> = {
@@ -72,7 +72,7 @@ export const CATEGORY_WORD: Record<Category, string> = {
 
 // The special drafts' display names (issue #379, parent #366): the Draft
 // Loom register's one-time products, one guarantee each — the Jacquard
-// Card weaves one chosen category, the Silk Warp drafts the rare band,
+// Card rolls one chosen category, the Silk Warp drafts the rare band,
 // the Plied Weft lifts every candidate one merge tier. Provisional
 // naming.
 export const SPECIAL_DRAFT_NAME: Record<SpecialDraftKind, string> = {

@@ -775,9 +775,9 @@ export function buySpecialDraft(state: GameState, kind: SpecialDraftKind): Actio
 // entitlement is consumed exactly once and the guarantee'd offer banks
 // into the ordinary queue — choice, skip payout, and later scrap all read
 // the same authoritative rules as any banked roll, because from here on it
-// is one. The Jacquard Card names its category in the weave, which must
+// is one. The Jacquard Card names its category in the roll, which must
 // be one the current pool drafts (the roll-pool join included). Repeated
-// weaves with nothing held refuse without minting an offer.
+// rolls with nothing held refuse without minting an offer.
 export function useSpecialDraft(state: GameState, kind: SpecialDraftKind, category: Category, rng: Rng = Math.random): ActionResult {
   if (state.mode !== "upgrade") return fail("Forge choices belong to upgrade mode.");
   if ((state.specialDrafts[kind] ?? 0) < 1) return fail("That special draft is not held.");

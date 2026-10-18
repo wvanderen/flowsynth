@@ -100,19 +100,46 @@ describe("the catalog door (issue #271)", () => {
     expect(app.state.arete).toBe(1);
   }
 
-  it("the face switch reads ν nous / ◇ Arete, and names the dialog without a duplicated title", () => {
+  it("the face switch reads ν nous / ◇ Arete / scrap mark, and names the dialog without a duplicated title", () => {
     app.openModal("catalog");
     const sheet = document.getElementById("modal-content")!;
     const tabs = [...sheet.querySelectorAll<HTMLButtonElement>(".catalog-face-tab")];
-    expect(tabs).toHaveLength(2);
+    expect(tabs).toHaveLength(3);
     expect(tabs[0]!.getAttribute("data-catalog-face")).toBe("nous");
     expect(tabs[0]!.textContent).toContain("nous");
     expect(tabs[0]!.querySelector(".mono")!.textContent).toBe("ν");
     expect(tabs[1]!.getAttribute("data-catalog-face")).toBe("arete");
     expect(tabs[1]!.textContent).toContain("Arete");
     expect(tabs[1]!.querySelector("svg")).not.toBeNull();
+    expect(tabs[2]!.getAttribute("data-catalog-face")).toBe("scrap");
+    expect(tabs[2]!.textContent).toContain("scrap");
+    expect(tabs[2]!.querySelector("svg")).not.toBeNull();
     // The switch carries the dialog's accessible name — the door's word.
     expect(document.getElementById("modal-title")!.getAttribute("aria-label")).toBe("Catalog");
+  });
+
+  it("the scrap face sells the Draft Loom and the special drafts; the door never lands on it", () => {
+    // The mode-wins door names nous or arete only — the scrap face is a
+    // switch-reachable stop (2026-10-18 feedback).
+    app.state.mode = "upgrade";
+    app.openModal("catalog");
+    expect(app.ui.catalogFace).toBe("nous");
+    document.querySelector<HTMLButtonElement>('[data-catalog-face="scrap"]')!.click();
+    expect(app.ui.catalogFace).toBe("scrap");
+    const sheet = document.getElementById("modal-content")!;
+    const heads = [...sheet.querySelectorAll(".catalog-sections h2")].map((n) => n.textContent);
+    expect(heads).toEqual(["Forge Upgrades", "Special Drafts"]);
+    const names = [...sheet.querySelectorAll(".catalog-row h3")].map((n) => n.textContent);
+    expect(names).toEqual(["Draft Loom", "Jacquard Card", "Silk Warp", "Plied Weft"]);
+    // The rows sell in the shared grammar: note text left, price right.
+    expect(sheet.querySelector(".catalog-row .price.scrap")).not.toBeNull();
+    // No info icons: the rows carry name, note, and price alone.
+    expect(sheet.querySelectorAll(".loom-tip")).toHaveLength(0);
+    for (const trigger of sheet.querySelectorAll(".inst-tip-trigger")) {
+      expect(trigger.classList.contains("term-trigger")).toBe(true);
+    }
+    // The scrap identity wears the scrap register, like ν and Arete wear theirs.
+    expect(sheet.querySelector(".catalog-identity-scrap")).not.toBeNull();
   });
 
   it("the frame is fixed: a 620×600 clipped panel on desktop, a 74%-height bottom sheet on phone, body scrolls", () => {

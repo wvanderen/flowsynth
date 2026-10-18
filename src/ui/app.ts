@@ -222,10 +222,10 @@ export interface UiState {
   // The catalog's standing face — which tab shows and what the in-sheet
   // switch flips. The door itself no longer reads a memory here: mode wins
   // at open (issue #273), and the locked MUTATORS controls name the entry
-  // face themselves. The arete face exists only from the first banked
-  // Arete, so a face the shop cannot show falls back to nous at open.
-  // Light furniture — never saved.
-  catalogFace: "nous" | "arete";
+  // face themselves. The door only ever names nous or arete; the scrap
+  // face is a switch-reachable stop, never a landing. Light furniture —
+  // never saved.
+  catalogFace: "nous" | "arete" | "scrap";
   editingHabitId: string | null;
   // The Focus sheet's revealed form (ADR-0050, issue #275): which on-demand
   // action-button form stands, if any. Light furniture — cleared with the
@@ -282,9 +282,10 @@ export interface UiState {
   // The entry sequence's pending automation (issue #274): set when the
   // entry purchase lands, spent when the entry roll's choice is taken or
   // the Forge modal closes. While it stands, the first slot's landing
-  // auto-opens the roll choice and the entry roll's choice auto-arms
-  // placement on the fresh slot. Light furniture — never saved: a reload
-  // mid-sequence lands on the standard surfaces, and nothing replays.
+  // auto-opens the roll choice. The choice itself mints to the tray like
+  // any pick — the placement auto-arm is retired (2026-10-18 feedback).
+  // Light furniture — never saved: a reload mid-sequence lands on the
+  // standard surfaces, and nothing replays.
   entryRollPending: boolean;
   // The mutator combine offer (issue #199): the pair a matching drop put up
   // for review. Cancel clears it and both copies stay untouched. Light
@@ -1530,11 +1531,12 @@ export class App {
 
   // The mutator roll's choice (issue #199): the chosen candidate mints into
   // the Mutator tray, the unchosen vanishes. The tray lives on the Mutators
-  // layer, so the landing says where to find it. On the entry sequence's
-  // roll (issue #274) the landing mirrors the module roll's instead: the
-  // modal closes and placement auto-arms on the fresh slot. Later mintings
-  // keep their standing landing — the peek stays, the tray holds the
-  // mutator.
+  // layer, so the landing says where to find it. Every pick keeps the
+  // standing landing — the peek stays, the next banked offer presents
+  // (2026-10-18 feedback; the entry sequence's auto-arm is retired with
+  // the rest of pick-and-place), and the entry flag is spent either way:
+  // its remaining work, the first slot's landing auto-opening the roll
+  // choice, is done once a choice stands.
   chooseMutatorCandidate(offerId: string, candidateId: string): void {
     const offer = this.state.bankedMutatorRolls.find((o) => o.id === offerId);
     const candidate = offer?.candidates.find((c) => c.id === candidateId);
@@ -1545,20 +1547,14 @@ export class App {
       this.render();
       return;
     }
-    if (this.ui.entryRollPending) {
-      const minted = this.state.mutators[this.state.mutators.length - 1]!;
-      this.ui.entryRollPending = false;
-      this.ui.modal = null;
-      this.ui.mutArmedTray = minted.id;
-      this.say(`${FAMILY_WORD[candidate.family]} mutator minted — pick a slot for it.`);
-    } else {
-      const more = this.state.bankedMutatorRolls.length > 0 ? ` ${this.state.bankedMutatorRolls.length} more ${this.state.bankedMutatorRolls.length === 1 ? "choice" : "choices"} wait in the Mutator Forge.` : "";
-      this.say(`${FAMILY_WORD[candidate.family]} mutator minted to the Mutator tray — the Mutators layer holds it.${more}`);
-    }
+    this.ui.entryRollPending = false;
+    const more = this.state.bankedMutatorRolls.length > 0 ? ` ${this.state.bankedMutatorRolls.length} more ${this.state.bankedMutatorRolls.length === 1 ? "choice" : "choices"} wait in the Mutator Forge.` : "";
+    this.say(`${FAMILY_WORD[candidate.family]} mutator minted to the Mutator tray — the Mutators layer holds it.${more}`);
+    this.forgeAfterConsume();
     this.save();
     this.render();
-    // The entry sequence's landing is a dismissal (issue #346); the
-    // standing landing keeps the peek — no return.
+    // The batch's final landing is a dismissal (issue #346); a standing
+    // Forge keeps its peek — no return.
     if (this.ui.modal === null) this.restoreModalInvoker();
   }
 
@@ -1760,8 +1756,9 @@ export class App {
 
   // The draft's skip action (issue #377): the offer is consumed once and
   // its payout — the best candidate's scrap value — banks to the balance.
-  // The Forge modal stays open on the next banked roll, so a sweep of
-  // skips is one panel visit.
+  // The Forge modal stays open on the next banked roll — switching faces
+  // when the branch empties, closing when both run dry — so a sweep of
+  // skips and picks is one panel visit (2026-10-18 feedback).
   skipDraftAction(offerId: string): void {
     const result = skipRoll(this.state, offerId);
     if (!result.ok) {
@@ -1770,11 +1767,13 @@ export class App {
       return;
     }
     this.say(`Roll skipped · +${formatInt(result.scrap ?? 0)} scrap.`);
+    this.forgeAfterConsume();
     this.save();
     this.render();
+    if (this.ui.modal === null) this.restoreModalInvoker();
   }
 
-  // The Forge row's loom purchase (issue #378): scrap buys the next
+  // The scrap face's loom purchase (issue #378): scrap buys the next
   // permanent rung and the toast names the new chance. A refusal — flow
   // lock, empty bank, tuned ladder — says so and touches nothing.
   buyDraftUpgradeAction(): void {
@@ -1806,19 +1805,19 @@ export class App {
     this.render();
   }
 
-  // The special drafts' weave (issue #379): one held entitlement becomes
+  // The special drafts' roll (issue #379): one held entitlement becomes
   // one guaranteed offer in the ordinary queue — the Forge's candidates
-  // above resolve it with the same choose and skip. The toast names the
+  // resolve it with the same choose and skip. The toast names the
   // guarantee so the banked draft reads in the ledger line.
-  weaveSpecialDraftAction(kind: SpecialDraftKind, category: Category): void {
+  rollSpecialDraftAction(kind: SpecialDraftKind, category: Category): void {
     const result = useSpecialDraft(this.state, kind, category);
     if (!result.ok) {
-      this.say(result.reason ?? "That special draft cannot be woven.");
+      this.say(result.reason ?? "That special draft cannot be rolled.");
       this.render();
       return;
     }
     const guarantee = kind === "category" ? `${CATEGORY_WORD[category]} draft` : kind === "rare" ? "rare draft" : "tiered draft";
-    this.say(`${SPECIAL_DRAFT_NAME[kind]} woven · ${guarantee} banked.`);
+    this.say(`${SPECIAL_DRAFT_NAME[kind]} rolled · ${guarantee} banked.`);
     this.save();
     this.render();
   }
@@ -2315,6 +2314,28 @@ export class App {
     this.render();
   }
 
+  // The batch Forge (2026-10-18 feedback): every choice — module or
+  // mutator — mints unplaced and the sheet stays open while any queue
+  // holds rolls. After a pick or a skip consumes an offer, the next one
+  // presents; when the consumed face empties, the standing face switches
+  // to the branch that still has rolls (entry owned — pre-entry the
+  // Mutators face does not exist); when both queues run dry the visit is
+  // done and the Forge closes itself, a dismissal like any completed
+  // dialog. A manual open on empty queues still shows the standing empty
+  // state — only a consuming action can close the sheet.
+  private forgeAfterConsume(): void {
+    const face = this.ui.forgeFace;
+    const faceEmpty = face === "modules" ? this.state.bankedRolls.length === 0 : this.state.bankedMutatorRolls.length === 0;
+    if (!faceEmpty) return;
+    const other = face === "modules" ? "mutators" : "modules";
+    const otherPending = other === "modules" ? this.state.bankedRolls.length : this.state.bankedMutatorRolls.length;
+    if (this.state.catalogEntryOwned && otherPending > 0) {
+      this.ui.forgeFace = other;
+      return;
+    }
+    this.ui.modal = null;
+  }
+
   chooseCandidate(offerId: string, candidateId: string): void {
     const offer = this.state.bankedRolls.find((o) => o.id === offerId);
     const candidate = offer?.candidates.find((c) => c.id === candidateId);
@@ -2325,17 +2346,14 @@ export class App {
       this.render();
       return;
     }
-    const added = this.state.modules[this.state.modules.length - 1]!;
-    this.ui.modal = null;
-    this.ui.placing = added.id;
     const more = this.state.bankedRolls.length > 0 ? ` ${this.state.bankedRolls.length} more choice${this.state.bankedRolls.length === 1 ? "" : "s"} wait in the Forge.` : "";
-    this.announceUnlocks(
-      result.unlocked,
-      `${META[candidate.type].name} added — pick a cell.${more}`,
-    );
+    this.announceUnlocks(result.unlocked, `${META[candidate.type].name} added to inventory.${more}`);
+    this.forgeAfterConsume();
     this.save();
     this.render();
-    this.restoreModalInvoker();
+    // The batch's final landing is a dismissal (issue #346); a standing
+    // Forge keeps its peek — no return.
+    if (this.ui.modal === null) this.restoreModalInvoker();
   }
   cancelPlacing(): void {
     const id = this.ui.placing;

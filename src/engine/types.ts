@@ -157,6 +157,10 @@ export interface Candidate {
 export interface RollOffer {
   id: string;
   candidates: [Candidate, Candidate, Candidate];
+  // The special draft a rolled offer came from (issue #379): the Forge
+  // names the product and its guarantee above the candidates that resolve
+  // it. Ordinary offers carry no marker.
+  special?: { kind: SpecialDraftKind; category?: Category };
 }
 
 // The mutator families (ADR-0043): power rides the host's power term,

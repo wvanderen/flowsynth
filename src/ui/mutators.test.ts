@@ -904,7 +904,7 @@ describe("the mutator entry sequence (issue #274)", () => {
     expect([...document.querySelectorAll("#grid .mut-unlock-target")]).toHaveLength(3);
   });
 
-  it("the first slot's landing auto-opens the roll choice; choosing mints to the tray and auto-arms placement", () => {
+  it("the first slot's landing auto-opens the roll choice; choosing mints to the tray with no placement arm", () => {
     buyEntry();
     unlockNode(1, 0).dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.state.mutatorSlots).toHaveLength(1);
@@ -918,15 +918,15 @@ describe("the mutator entry sequence (issue #274)", () => {
     const minted = app.state.mutators[0]!;
     expect(minted.pos).toBeNull();
     expect(app.state.bankedMutatorRolls).toHaveLength(0);
+    // The entry arm is retired with pick-and-place: the choice mints to
+    // the tray, nothing arms, and with both queues dry the batch visit
+    // closes the Forge.
     expect(app.ui.modal).toBeNull();
-    expect(app.ui.mutArmedTray).toBe(minted.id);
-    expect(document.getElementById("status")!.textContent).toContain("pick a slot for it");
-    // Esc falls back to the tray — the mint is not lost with the arm.
-    pressEscape();
     expect(app.ui.mutArmedTray).toBeNull();
-    expect(app.state.mutators).toHaveLength(1);
-    // The tray re-arms through the normal gesture; the arm resolves on the
-    // fresh slot.
+    expect(app.ui.placing).toBeNull();
+    expect(document.getElementById("status")!.textContent).toContain("the Mutators layer holds it");
+    // The tray arm stays available through the normal gesture; the arm
+    // resolves on the fresh slot.
     app.mutArmTray(minted.id);
     clickSlot(1, 0);
     expect(minted.pos !== null && sameHex(minted.pos, hex(1, 0))).toBe(true);
@@ -964,7 +964,7 @@ describe("the mutator entry sequence (issue #274)", () => {
     expect(document.querySelectorAll("#grid .mut-unlock-target")).toHaveLength(app.state.cells.length);
   });
 
-  it("a first slot unlocked through Hex detail opens the entry roll and returns placement to the grid", () => {
+  it("a first slot unlocked through Hex detail opens the entry roll; the choice mints to the tray unplaced", () => {
     buyEntry();
     app.openDetail(hex(1, 0), "mutators");
     document.getElementById("detail-mutator-unlock")!.click();
@@ -974,12 +974,15 @@ describe("the mutator entry sequence (issue #274)", () => {
     expect(app.ui.modal).toBe("forge");
     document.querySelector<HTMLElement>("#modal-content .mut-candidate")!.click();
     const minted = app.state.mutators[0]!;
-    expect(app.ui.mutArmedTray).toBe(minted.id);
+    expect(minted.pos).toBeNull();
+    expect(app.ui.mutArmedTray).toBeNull();
+    expect(app.ui.modal).toBeNull();
+    app.mutArmTray(minted.id);
     clickSlot(1, 0);
     expect(minted.pos).toEqual(hex(1, 0));
   });
 
-  it("closing the Forge modal banks the roll; a later choice keeps the standing landing", () => {
+  it("closing the Forge modal banks the roll; a later choice mints to the tray and closes the dry visit", () => {
     buyEntry();
     unlockNode(1, 0).dispatchEvent(new MouseEvent("click", { bubbles: true }));
     pressEscape();
@@ -991,10 +994,10 @@ describe("the mutator entry sequence (issue #274)", () => {
     candidate.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.state.mutators).toHaveLength(1);
     expect(app.state.mutators[0]!.pos).toBeNull();
-    // Nothing re-fires: the standing landing — the peek stays, no auto-arm.
-    expect(app.ui.modal).toBe("forge");
+    // The choice mints to the tray; nothing auto-arms, and with both
+    // queues dry the batch visit closes the Forge.
+    expect(app.ui.modal).toBeNull();
     expect(app.ui.mutArmedTray).toBeNull();
-    app.closeModal();
     app.mutSetLayer("modules");
     app.mutSetLayer("mutators");
     app.mutArmTray(app.state.mutators[0]!.id);
