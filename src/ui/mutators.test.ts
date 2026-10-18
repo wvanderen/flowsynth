@@ -417,7 +417,7 @@ describe("the gestures (issue #199)", () => {
     expect(mutatorOf(app.state, "mu1").pos).toBeNull();
   });
 
-  it("an idle click opens the cell's Hex detail on the Mutators face; Retrieve lands it in the tray", () => {
+  it("an idle click opens the Mutators detail; retrieval refreshes it to an open slot", () => {
     seedMutatorEra();
     app.mutSetLayer("mutators");
     clickSlot(0, 0);
@@ -427,7 +427,7 @@ describe("the gestures (issue #199)", () => {
     expect(mutators.textContent).toContain("+50%");
     // The hosting relation is the stack itself — the face never says "hosts".
     expect(mutators.textContent).not.toContain("Oscillator · C4");
-    document.getElementById("detail-mutator-retrieve")!.click();
+    app.mutRetrieve("mu1");
     expect(mutatorOf(app.state, "mu1").pos).toBeNull();
     expect(app.ui.detail).toEqual({ pos: hex(0, 0), face: "mutators" });
     expect(document.querySelector(".hex-detail-layer.mutators")!.textContent).toContain("OPEN SLOT");
@@ -958,7 +958,6 @@ describe("the mutator entry sequence (issue #274)", () => {
     app.openMutatorEntry();
     document.getElementById("buy-arete-entry")!.click();
     expect(app.ui.detail).toBeNull();
-    expect(app.ui.detailTray).toBeNull();
     expect(document.body.classList.contains("hex-detail-open")).toBe(false);
     expect(app.ui.mutLayer).toBe("mutators");
     expect(app.ui.mutUnlockArmed).toBe(true);

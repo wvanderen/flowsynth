@@ -136,7 +136,7 @@ The palette is a functional instrument table, not a decorative ramp: every color
 ### Tertiary
 
 - **Category hues** — generator `#238858`, oscillator `#6360d4`, spacer `#8a93a8`, booster `#1f95b5`, forge `#bc9239`, silent voice `#9d7bea`, charge conduit `#d9b84a`, ritual `#cc603d`. Mid-lightness, full-chroma LED registers; hue = category, per-type identity rides the glyph and nameplate. Every hue is paired with a glyph — colorblind safety is structural.
-- **Rarity finishes** — common `#b4bdd8`, uncommon `#7fd0a8`, rare `#b39cf2`: engraved ring count plus a faint plate tint (4–14% mixed over the hex face). Never glowing, never a category hue.
+- **Rarity finishes** — common `#b4bdd8`, uncommon `#7fd0a8`, rare `#b39cf2`: a faint plate tint (4–14% mixed over the hex face), supplemented by the shared rarity shape marks below. Engraved rings belong to merge tier. Never glowing.
 - **Chord annotations** (eleven hues in `src/ui/theme.ts`) name the seams — annotation, never category; they never ride a module face.
 - **Goal palette** (six tokens, vermillion default): the GOALS face's swatches, worn by goal banner bars and tracks wherever a goal renders.
 
@@ -155,7 +155,7 @@ The palette is a functional instrument table, not a decorative ramp: every color
 
 **The Monochrome Console Rule.** The console is graphite and ink; color is the board's language. The vermillion switch — and its session-strip expression — is the sole exception.
 
-**The Finish Rule.** Rarity is a finish, not a color: engraved rings plus a faint plate tint, never glowing, never taking a hue.
+**The Finish Rule (amended 2026-10-18).** Rarity uses a faint plate tint plus a grey circle, green triangle, or blue diamond for common, uncommon, or rare. Category hue stays on category glyphs and rails; merge tier uses rings and Roman numerals. Rarity never glows.
 
 **Glow is Charge.** Glow and motion are for charge and live activity only. Idle panels stay quiet; an animated element means something is live.
 
@@ -232,7 +232,7 @@ Controls are square-cut — hairline border, condensed technical lettering, no r
 
 - **Shape:** hexagonal chassis; engraved level and condensed nameplate above, the signature glyph as centered centerpiece, contribution readout beneath, narrow category-colored rail on the face edge.
 - **Chargeable exception:** the prominent readout is charge-vs-threshold as a face fill, a brief rail accent at threshold crossing.
-- **State:** rarity as ring count + plate tint; received charge uses a restrained green outline; the rail retains its category hue.
+- **State:** merge tier as ring count + Roman numeral, rarity as plate tint + shape mark; received charge uses a restrained green outline; the rail retains its category hue.
 
 ### Panels and Sheets
 
@@ -266,3 +266,7 @@ Controls are square-cut — hairline border, condensed technical lettering, no r
 ## Module-grid amendment (2026-10-18)
 
 Idle chords keep their readout and detail facts but draw no board geometry, including during inspection. Active chords read more clearly at rest; hover, keyboard focus, and touch inspection emphasize related active chords and dim the others. Charging uses a restrained green outline with the category rail and rarity plate preserved; no general face wash or glow. Chargeable threshold fill remains. See the instrument standards for the approved rule.
+
+## Inventory amendment (2026-10-18)
+
+The [confirmed inventory brief](docs/inventory-ux-brief.md) standardizes grey-circle common, green-triangle uncommon, and blue-diamond rare markers across module and mutator surfaces, with accessible rarity words. `Lv.` plus Arabic digits identifies module level; Roman numerals starting at I identify merge tier. Compact rows carry category hex, rarity mark, name, tier, aligned level, and a converging-branches Merge icon. Inventory inspection uses a centered identity glyph with finish and merge rings, and shows name and numeric state once below. The shared inventory stays available in Hex detail, whose enlarged faces support placement and retrieval; Place directly targets the opened cell; retrieval uses dragging into inventory, with no redundant Store/Retrieve button. Inventory overlays Hex detail without shifting its composition. The collapsed browser is a hypercube and stored count. The main logo is unchanged.

@@ -34,6 +34,46 @@ describe("inventory browsing", () => {
     app.pickCell(hex(0, 1));
     expect(m.pos).toEqual(hex(0, 1));
   });
+  it("uses rarity shapes and Roman tiers, with one numeric level in inspection", () => {
+    const common = give(app.state, "focusKeyed", null);
+    const uncommon = give(app.state, "pulsewell", null);
+    const rare = give(app.state, "sideband", null);
+    common.tier = 3; common.level = 12;
+    app.render();
+    for (const [m, rarity, shape] of [[common, "common", "circle"], [uncommon, "uncommon", "path"], [rare, "rare", "path"]] as const) {
+      expect(host().querySelector(`[data-inv="${m.id}"] .rarity-${rarity} ${shape}`)).not.toBeNull();
+    }
+    expect(host().querySelector(`[data-inv="${common.id}"] .inventory-tier`)!.textContent).toBe("IV");
+    click(`[data-inv="${common.id}"]`);
+    expect(host().querySelector(".inventory-detail-face .face-level, .inventory-detail-face .face-name, .inventory-detail-face .face-tier")).toBeNull();
+    expect(host().querySelector(".inventory-detail-name .inventory-level")!.textContent).toBe("Lv. 12");
+  });
+  it("labels the merge glyph on focus and prevents unavailable actions", () => {
+    const m = give(app.state, "additive", null); app.render();
+    const button = host().querySelector<HTMLButtonElement>(`[data-inventory-merge="${m.id}"]`)!;
+    expect(button.querySelector("svg")).not.toBeNull();
+    button.focus();
+    expect(document.getElementById(button.getAttribute("aria-describedby")!)!.textContent).toBe("Merge");
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    button.click(); expect(app.ui.inventory.merge).toBeNull();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+  });
+  it("names the merge glyph on first touch and opens review on second touch", () => {
+    const m = give(app.state, "focusKeyed", null); give(app.state, "focusKeyed", null); app.render();
+    const button = host().querySelector<HTMLButtonElement>(`[data-inventory-merge="${m.id}"]`)!;
+    button.dispatchEvent(new PointerEvent("click", { pointerType: "touch", bubbles: true }));
+    expect(app.ui.inventory.merge).toBeNull();
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    button.dispatchEvent(new PointerEvent("click", { pointerType: "touch", bubbles: true }));
+    expect(app.ui.inventory.merge?.id).toBe(m.id);
+  });
+  it("keeps merge disclosure IDs unique with both column and sheet mounted", () => {
+    give(app.state, "focusKeyed", null); app.render(); app.openModal("inventory");
+    const ids = [...document.querySelectorAll("[data-inventory-merge]")].map(el => el.getAttribute("aria-describedby"));
+    expect(ids.length).toBeGreaterThan(1);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
   it("shows intrinsic generator and booster strengths without board contributions", () => {
     const gen = give(app.state, "noteKeyed", null);
     const boost = give(app.state, "chorus", null);
@@ -115,7 +155,7 @@ describe("inventory browsing", () => {
 describe("inventory row merges", () => {
   it("excludes deployed twins and removes collection-wide and info controls", () => {
     const a = give(app.state, "additive", null); app.render();
-    expect(host().querySelector<HTMLButtonElement>(`[data-inventory-merge="${a.id}"]`)!.disabled).toBe(true);
+    expect(host().querySelector<HTMLButtonElement>(`[data-inventory-merge="${a.id}"]`)!.getAttribute("aria-disabled")).toBe("true");
     expect(host().querySelector("[data-merge-all]")).toBeNull();
     expect(host().textContent).not.toContain("ⓘ");
   });

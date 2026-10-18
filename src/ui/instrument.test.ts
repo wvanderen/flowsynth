@@ -340,7 +340,6 @@ describe("the controls sheet's stylesheet contract", () => {
       ".layer-legend {",
       ".inventory-tray {",
       ".mutator-tray {",
-      ".hex-detail-tray {",
       ".mut-popover {",
       ".arc-card {",
       ".tool-detail {",

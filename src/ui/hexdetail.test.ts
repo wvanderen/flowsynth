@@ -70,7 +70,7 @@ describe("opening the cross-section (issue #295)", () => {
     // level, pitch, and the live contribution with its unit.
     const engraving = faceSvg("modules").textContent ?? "";
     expect(engraving).toContain("SINE");
-    expect(engraving).toContain("LV 0");
+    expect(faceSvg("modules").querySelector(".face-level")!.textContent).toBe("Lv. 0");
     expect(engraving).toContain("C4");
     expect(engraving).toContain(`+${formatNumber(0.1)} ν/s`);
     // No text column re-speaks the face, and no header band repeats the
@@ -209,10 +209,10 @@ describe("the Mutators face in detail", () => {
     seedEra();
     app.render();
     clickCell(0, 0);
-    // Only cell-specific actions ride the surfaces: the swap/retrieve
-    // orbit, the upgrade band, the occupied slot's declaration.
+    // Only cell-specific actions ride the surfaces: the upgrade band
+    // and the occupied slot's declaration. Inventory owns retrieval.
     expect(detail().querySelectorAll("[data-op]").length).toBe(0);
-    expect(document.getElementById("detail-module-retrieve")).not.toBeNull();
+    expect(document.getElementById("detail-module-retrieve")).toBeNull();
     expect(document.getElementById("detail-upgrade")).not.toBeNull();
     // The dock's doors still work over the detail — the destinations were
     // never lost, only un-duplicated.
@@ -308,7 +308,7 @@ describe("the Mutators face in detail", () => {
     // column repeats the mutator beside its module.
     expect(mutators.textContent).not.toContain("hosts");
     expect(section("modules").querySelector(".hex-detail-mutline")).toBeNull();
-    document.getElementById("detail-mutator-retrieve")!.click();
+    app.mutRetrieve("mu1");
     expect(app.state.mutators.find((m) => m.id === "mu1")!.pos).toBeNull();
     expect(section("mutators").textContent).toContain("OPEN SLOT");
   });
@@ -430,7 +430,7 @@ describe("the upgrade column in detail", () => {
     const focused = displayedRates(app.state, false).contributions.get(recipient.id)!.value;
     expect(focused).toBeGreaterThan(base);
     expect(readout()).toContain(`+${formatNumber(focused)} ν/s`);
-    document.getElementById("detail-module-retrieve")!.click();
+    app.returnToInventory(recipient.id);
     expect(recipient.pos).toBeNull();
     expect(spot.target).toBe(recipient.id);
     app.openDetail(hex(1, 0), "modules");
@@ -552,15 +552,18 @@ describe("the return contract (issue #295)", () => {
     expect(app.ui.pan).toEqual({ x: 10, y: -20 });
   });
 
-  it("placing from inventory inspection returns the grid before arming placement", () => {
+  it("placing from inventory inspection keeps the opened Hex as its destination", () => {
     app.render(); clickCell(0, 0);
     app.returnToInventory("m1"); app.openModal("inventory");
     document.querySelector<HTMLButtonElement>('#modal-content [data-inv="m1"]')!.click();
     expect(app.ui.placing).toBeNull();
     document.querySelector<HTMLButtonElement>("#modal-content [data-inventory-place]")!.click();
-    expect(app.ui.modal).toBeNull(); expect(app.ui.placing).toBe("m1"); expect(open()).toBe(false);
+    expect(app.ui.modal).toBeNull(); expect(app.ui.placing).toBeNull(); expect(open()).toBe(true);
+    expect(deployedAt(app.state, hex(0, 0))!.id).toBe("m1");
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    expect(app.ui.placing).toBeNull(); expect(app.ui.detail).toBeNull();
+    expect(app.ui.placing).toBeNull(); expect(app.ui.detail).not.toBeNull();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(app.ui.detail).toBeNull();
   });
 
   it("Escape never opens a second Hex from the detail — the grid is the only navigator", () => {
@@ -863,54 +866,132 @@ describe("live detail review regressions (PR #301)", () => {
   });
 });
 
-/* ── The detail's direct inventory (issue #296) ───────
-   The tray hides in the detail; a layer's Add or Swap opens that layer's
-   inventory beside the stack, and a tile's click places straight into the
-   detail's place — no second destination click. Swap always swaps (never
-   an implicit combine), Cancel closes without changes, a layer switch
-   cancels, Escape unwinds the tray before the grid, and flow locks it
-   all. */
-describe("the detail's direct inventory (issue #296)", () => {
-  it.each(["modules", "mutators"] as const)("%s candidates disclose without placing and Escape keeps the tray", (face) => {
-    seedEra();
-    give(app.state, "additive", null);
-    clickCell(0, 0);
-    app.openDetailTray(face);
-    const before = JSON.stringify(app.state);
-    const info = document.querySelector<HTMLButtonElement>(".hex-detail-tray .inst-tip-trigger")!;
-    const id = info.getAttribute("aria-describedby")!;
-    info.focus();
-    expect(document.getElementById(id)!.classList.contains("inst-show")).toBe(true);
-    info.click();
-    expect(info.getAttribute("aria-expanded")).toBe("true");
-    expect(JSON.stringify(app.state)).toBe(before);
-    expect(app.ui.detailTray).toBe(face);
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    expect(document.getElementById(id)!.classList.contains("inst-show")).toBe(false);
-    expect(app.ui.detailTray).toBe(face);
+// One browser serves the grid and the opened coordinate.
+describe("the shared inventory in Hex detail", () => {
+  const inventory = () => document.getElementById(app.ui.mutLayer === "modules" ? "inventory-zone" : "mutator-tray")!;
+  const inspectAndPlace = (id: string, mutator = false) => {
+    inventory().querySelector<HTMLButtonElement>(`[${mutator ? "data-mut-tray" : "data-inv"}="${id}"]`)!.click();
+    inventory().querySelector<HTMLButtonElement>("[data-inventory-place]")!.click();
+  };
+  const dragTo = (source: Element, target: Element) => {
+    document.elementFromPoint = () => target;
+    source.dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 100, clientY: 100 }));
+    document.dispatchEvent(new MouseEvent("pointermove", { clientX: 140, clientY: 100 }));
+    document.dispatchEvent(new MouseEvent("pointerup", { clientX: 140, clientY: 100 }));
+  };
+
+  it("shares browsing and preserves filters, sort and scroll through entry and return", () => {
+    const item = give(app.state, "triangle", null);
+    app.ui.inventory.filters.modules = "oscillator";
+    app.ui.inventory.sorts.modules = "newest";
+    app.ui.inventory.scroll.modules = 90;
+    app.render(); clickCell(0, 1);
+    expect(inventory().querySelector(`[data-inv="${item.id}"]`)).not.toBeNull();
+    expect(inventory().querySelector<HTMLSelectElement>("[data-inventory-filter]")!.value).toBe("oscillator");
+    expect(inventory().querySelector<HTMLElement>("[data-inventory-scroll]")!.scrollTop).toBe(90);
+    expect(detail().querySelector(".hex-detail-tray")).toBeNull();
+    expect(document.getElementById("detail-module-add")).toBeNull();
+    expect(document.getElementById("detail-module-swap")).toBeNull();
+    app.closeDetail();
+    expect(app.ui.inventory.sorts.modules).toBe("newest");
+    expect(app.ui.inventory.scroll.modules).toBe(90);
   });
 
-  it.each(["swap", "retrieve"])("%s orbit disclosure supports focus and tap without editing", (action) => {
-    seedEra();
-    clickCell(0, 0);
-    const control = document.getElementById(`detail-module-${action}`)!;
-    const id = control.getAttribute("aria-describedby")!;
-    control.focus();
-    expect(document.getElementById(id)!.classList.contains("inst-show")).toBe(true);
-    const before = JSON.stringify(app.state);
-    control.dispatchEvent(new PointerEvent("click", { bubbles: true, pointerType: "touch" }));
-    expect(control.getAttribute("aria-expanded")).toBe("true");
-    expect(JSON.stringify(app.state)).toBe(before);
-    expect(app.ui.detailTray).toBeNull();
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    expect(document.getElementById(id)!.classList.contains("inst-show")).toBe(false);
+  it("inspects before placing directly, keeping the opened cell and refreshed chord facts", () => {
+    const item = give(app.state, "additive", null);
+    app.render(); clickCell(0, 1);
+    inspectAndPlace(item.id);
+    expect(item.pos).toEqual(hex(0, 1));
+    expect(document.activeElement?.getAttribute("data-detail-face")).toBe("modules");
+    expect(app.ui.placing).toBeNull();
+    expect(app.ui.detail).toEqual({ pos: hex(0, 1), face: "modules" });
+    expect(detail().querySelector(".hex-chord-row")!.textContent).toContain("Octave");
+  });
+
+  it("click placement swaps matching copies without silently merging", () => {
+    const twin = give(app.state, "additive", null);
+    app.render(); clickCell(0, 0); inspectAndPlace(twin.id);
+    expect(deployedAt(app.state, hex(0, 0))!.id).toBe(twin.id);
+    expect(app.state.modules.find(m => m.id === "m1")!.pos).toBeNull();
+    expect(app.ui.combineOffer).toBeNull();
+    expect(app.state.modules).toHaveLength(2);
+  });
+
+  it("drags inventory onto the enlarged face and retrieves it back", () => {
+    const item = give(app.state, "triangle", null);
+    app.render(); clickCell(0, 1);
+    dragTo(inventory().querySelector(`[data-inv="${item.id}"]`)!, detail().querySelector('[data-detail-face="modules"]')!);
+    expect(item.pos).toEqual(hex(0, 1));
+    dragTo(detail().querySelector('[data-detail-face="modules"]')!, inventory());
+    expect(item.pos).toBeNull();
     expect(open()).toBe(true);
-    control.dispatchEvent(new PointerEvent("click", { bubbles: true, pointerType: "touch" }));
-    control.dispatchEvent(new PointerEvent("click", { bubbles: true, pointerType: "touch" }));
-    if (action === "swap") expect(app.ui.detailTray).toBe("modules");
-    else expect(app.state.modules.find((m) => m.pos && sameHex(m.pos, hex(0, 0)))).toBeUndefined();
   });
 
+  it("reviews a matching drag onto the enlarged face before consuming copies", () => {
+    const item = give(app.state, "additive", null);
+    app.render(); clickCell(0, 0);
+    dragTo(inventory().querySelector(`[data-inv="${item.id}"]`)!, detail().querySelector('[data-detail-face="modules"]')!);
+    expect(app.ui.combineOffer).not.toBeNull();
+    expect(item.pos).toBeNull();
+    expect(app.state.modules).toHaveLength(2);
+    app.closeModal();
+    expect(app.state.modules).toHaveLength(2);
+  });
+
+  it("omits redundant store controls on both detail faces", () => {
+    seedEra(); clickCell(0, 0);
+    expect(detail().querySelector("#detail-module-retrieve, #detail-mutator-retrieve")).toBeNull();
+    expect(app.state.modules.find(m => m.id === "m1")!.pos).toEqual(hex(0, 0));
+    expect(app.state.mutators.find(m => m.id === "mu1")!.pos).toEqual(hex(0, 0));
+  });
+
+  it("places and swaps mutators through the same inspection path", () => {
+    seedEra(); clickCell(0, 0); app.detailFace("mutators");
+    inspectAndPlace("mu2", true);
+    expect(app.state.mutators.find(m => m.id === "mu2")!.pos).toEqual(hex(0, 0));
+    expect(app.state.mutators.find(m => m.id === "mu1")!.pos).toBeNull();
+    expect(app.ui.mutCombineOffer).toBeNull();
+    expect(app.ui.detail!.face).toBe("mutators");
+  });
+
+  it("drags a mutator onto an open enlarged slot and retrieves it back", () => {
+    seedEra(); app.mutRetrieve("mu1"); clickCell(0, 0); app.detailFace("mutators");
+    dragTo(inventory().querySelector('[data-mut-tray="mu2"]')!, detail().querySelector('[data-detail-face="mutators"]')!);
+    expect(app.state.mutators.find(m => m.id === "mu2")!.pos).toEqual(hex(0, 0));
+    dragTo(detail().querySelector('[data-detail-face="mutators"]')!, inventory());
+    expect(app.state.mutators.find(m => m.id === "mu2")!.pos).toBeNull();
+  });
+
+  it("Escape returns from inspection before returning to the grid", () => {
+    const item = give(app.state, "triangle", null);
+    app.render(); clickCell(0, 1);
+    inventory().querySelector<HTMLButtonElement>(`[data-inv="${item.id}"]`)!.click();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(app.ui.inventory.inspect).toBeNull(); expect(open()).toBe(true);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(app.ui.detail).toBeNull(); expect(item.pos).toBeNull();
+  });
+
+  it("phone inspection Place closes the inventory sheet while keeping Hex detail", () => {
+    setAppWidth(390);
+    const item = give(app.state, "triangle", null);
+    app.render(); clickCell(0, 1); app.openModal("inventory");
+    document.querySelector<HTMLButtonElement>(`#modal-content [data-inv="${item.id}"]`)!.click();
+    document.querySelector<HTMLButtonElement>("#modal-content [data-inventory-place]")!.click();
+    expect(item.pos).toEqual(hex(0, 1));
+    expect(app.ui.modal).toBeNull(); expect(open()).toBe(true);
+  });
+
+  it("flow exposes no placement or retrieval targets", () => {
+    app.state.sessionsCompleted = 1; startSession(app.state, 600);
+    app.render(); clickCell(0, 0);
+    expect(detail().querySelector('[data-cell], [data-mut-slot]')).toBeNull();
+    expect(document.getElementById("detail-module-retrieve")).toBeNull();
+    const before = JSON.stringify(app.state);
+    app.detailPlaceModule("m1");
+    expect(JSON.stringify(app.state)).toBe(before);
+    endSession(app.state);
+  });
   it("slot availability follows affordability and a refused click preserves the slot", () => {
     seedEra();
     app.state.arete = 0;
@@ -930,249 +1011,4 @@ describe("the detail's direct inventory (issue #296)", () => {
     expect(app.state.mutatorSlots).toHaveLength(2);
   });
 
-  it("the tray hides by default in detail; Add module opens the Modules inventory", () => {
-    give(app.state, "additive", null);
-    app.render();
-    clickCell(0, 1);
-    expect(open()).toBe(true);
-    expect(document.querySelector(".hex-detail-tray")).toBeNull();
-    document.getElementById("detail-module-add")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.ui.detailTray).toBe("modules");
-    const tray = detail().querySelector(".hex-detail-tray")!;
-    expect(tray.getAttribute("data-detail-tray")).toBe("modules");
-    // Opening the tray emphasizes its face — the inventory belongs to one
-    // layer and never stands under a dimmed one.
-    expect(app.ui.detail!.face).toBe("modules");
-    expect(section("modules").classList.contains("selected")).toBe(true);
-    // The inventory's tile waits, and Cancel stands beside it.
-    expect(tray.querySelector("[data-detail-place]")).not.toBeNull();
-    expect(document.getElementById("detail-tray-cancel")).not.toBeNull();
-  });
-
-  it("the tray overlays — opening it never reflows the composition", () => {
-    // The grid keeps its three posts (stack, rail, chord column) whether
-    // the tray stands or not; the tray covers from outside the flow.
-    const css = readFileSync("src/ui/style.css", "utf8");
-    expect(css).toMatch(/\.hex-detail-tray\s*\{[^}]*position:\s*absolute/);
-    expect(css).toMatch(/\.hex-detail-grid\s*\{[^}]*grid-template-columns:\s*auto auto auto/);
-    expect(css).toMatch(/\.hex-detail\.sheet \.hex-detail-tray\s*\{[^}]*position:\s*static/);
-  });
-
-  it("Swap and Retrieve orbit the cell as icons, not rail rows", () => {
-    give(app.state, "additive", hex(1, 0));
-    app.render();
-    clickCell(1, 0);
-    const modules = section("modules");
-    // The gestures ride the chassis's orbit…
-    const orbit = modules.querySelector(".hex-orbit")!;
-    expect(orbit.querySelector("#detail-module-swap")).not.toBeNull();
-    expect(orbit.querySelector("#detail-module-retrieve")).not.toBeNull();
-    // …as icon buttons, named for the hand that reads without color.
-    const swap = orbit.querySelector<HTMLButtonElement>("#detail-module-swap")!;
-    expect(swap.getAttribute("aria-label")).toContain("Swap");
-    expect(swap.querySelector("svg")).not.toBeNull();
-    expect(swap.textContent!.trim()).toBe("");
-    // The rail keeps the upgrade band only — no duplicated text rows.
-    expect(modules.querySelector(".hex-rail-row ~ * #detail-module-swap, .hex-rail-row #detail-module-swap")).toBeNull();
-    // The Mutators face orbits the same way where a mutator stands.
-    seedEra();
-    app.render();
-    clickCell(0, 0);
-    const mutators = section("mutators");
-    expect(mutators.querySelector(".hex-orbit #detail-mutator-swap")).not.toBeNull();
-    expect(mutators.querySelector(".hex-orbit #detail-mutator-retrieve")).not.toBeNull();
-    // A vacant slot carries no orbit — Add mutator is the rail's action.
-    app.mutRetrieve("mu1");
-    app.render();
-    expect(section("mutators").querySelector(".hex-orbit .orbit-swap")).toBeNull();
-    expect(document.getElementById("detail-mutator-add")).not.toBeNull();
-  });
-
-  it("the tray shows larger cell previews: the module's own face at tray scale", () => {
-    give(app.state, "additive", null);
-    app.render();
-    clickCell(0, 1);
-    document.getElementById("detail-module-add")!.click();
-    const tile = detail().querySelector(".hex-detail-tray [data-detail-place]")!;
-    // The preview is the face — nameplate, rarity rings, level — not the
-    // bare hexagon-and-glyph mark the board column carries, and never a
-    // production figure: an undeployed module has no contribution, and a
-    // tray readout saying "+0" would misread the swap.
-    expect(tile.querySelector("svg.tray-face .face-name")).not.toBeNull();
-    expect(tile.querySelector("svg.tray-face .face-level")).not.toBeNull();
-    expect(tile.querySelector("svg.tray-face")!.getAttribute("data-type")).toBe("additive");
-    expect(tile.querySelector("svg.tray-face .face-readout")).toBeNull();
-  });
-
-  it("a tile's click places straight into the detail's place, closing the tray and refreshing the row", () => {
-    give(app.state, "additive", null);
-    app.render();
-    clickCell(0, 1);
-    document.getElementById("detail-module-add")!.click();
-    document.querySelector<HTMLButtonElement>(".hex-detail-tray [data-detail-place]")!.click();
-    const placed = app.state.modules.find((m) => m.pos !== null && sameHex(m.pos, hex(0, 1)))!;
-    expect(placed).toBeDefined();
-    // Success closes the tray and preserves the selected Hex and layer.
-    expect(app.ui.detailTray).toBeNull();
-    expect(document.querySelector(".hex-detail-tray")).toBeNull();
-    expect(app.ui.detail).toEqual({ pos: hex(0, 1), face: "modules" });
-    // The readouts and the relationship breakdown refresh immediately:
-    // the new voice's face stands, and the octave names itself in the
-    // chord column.
-    expect(faceSvg("modules").textContent).toContain("SINE");
-    expect(detail().querySelector(".hex-chord-row")!.textContent).toContain("Octave");
-  });
-
-  it("Swap always swaps — identical items included — and never combines implicitly", () => {
-    const twin = give(app.state, "additive", hex(1, 0));
-    app.returnToInventory(twin.id);
-    app.render();
-    clickCell(0, 0); // the opening synth's place — same type, same rarity
-    document.getElementById("detail-module-swap")!.click();
-    expect(app.ui.detailTray).toBe("modules");
-    document.querySelector<HTMLButtonElement>(`[data-detail-place="${twin.id}"]`)!.click();
-    expect(deployedAt(app.state, hex(0, 0))!.id).toBe(twin.id);
-    expect(app.state.modules.find((m) => m.id === "m1")!.pos).toBeNull();
-    // The combine stays the drop gesture's explicit review: no offer, no
-    // modal, both copies alive.
-    expect(app.ui.combineOffer).toBeNull();
-    expect(app.ui.mutCombineOffer).toBeNull();
-    expect(app.ui.modal).toBeNull();
-    expect(app.state.modules).toHaveLength(2);
-    expect(app.ui.detail).toEqual({ pos: hex(0, 0), face: "modules" });
-    expect(app.ui.detailTray).toBeNull();
-  });
-
-  it("Retrieve works directly in detail", () => {
-    app.render();
-    clickCell(0, 0);
-    document.getElementById("detail-module-retrieve")!.click();
-    expect(app.state.modules.find((m) => m.id === "m1")!.pos).toBeNull();
-    expect(open()).toBe(true);
-    // The stack refreshes into the empty place, its Add module waiting.
-    expect(section("modules").getAttribute("aria-label")).toContain("empty place");
-    expect(document.getElementById("detail-module-add")).not.toBeNull();
-  });
-
-  it("Add mutator places straight into the selected layer's slot", () => {
-    seedEra();
-    app.mutRetrieve("mu1"); // the slot stands vacant, the twin in the tray
-    app.render();
-    clickCell(0, 0);
-    document.querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
-    expect(app.ui.detail!.face).toBe("mutators");
-    document.getElementById("detail-mutator-add")!.click();
-    expect(app.ui.detailTray).toBe("mutators");
-    document.querySelector<HTMLButtonElement>('[data-detail-place-mut="mu2"]')!.click();
-    expect(app.state.mutators.find((m) => m.id === "mu2")!.pos).toEqual(hex(0, 0));
-    expect(app.ui.detailTray).toBeNull();
-    expect(document.querySelector(".hex-detail-tray")).toBeNull();
-    expect(app.ui.detail).toEqual({ pos: hex(0, 0), face: "mutators" });
-    // The stack refreshes: the slot now declares the placed mutator.
-    expect(faceSvg("mutators").textContent).toContain("POWER");
-  });
-
-  it("the Mutators face's Swap returns the resident to the Mutator tray, never combining", () => {
-    seedEra(); // mu1 power·common in the slot, mu2 power·common in the tray
-    app.render();
-    clickCell(0, 0);
-    document.getElementById("detail-mutator-swap")!.click();
-    expect(app.ui.detailTray).toBe("mutators");
-    document.querySelector<HTMLButtonElement>('[data-detail-place-mut="mu2"]')!.click();
-    expect(app.state.mutators.find((m) => m.id === "mu2")!.pos).toEqual(hex(0, 0));
-    expect(app.state.mutators.find((m) => m.id === "mu1")!.pos).toBeNull();
-    expect(app.ui.detailTray).toBeNull();
-    expect(document.querySelector(".hex-detail-tray")).toBeNull();
-    // Matching twins never combine through Swap — the review stays the
-    // drop gesture's own.
-    expect(app.ui.mutCombineOffer).toBeNull();
-    expect(app.ui.modal).toBeNull();
-    expect(app.state.mutators).toHaveLength(2);
-  });
-
-  it("Cancel closes the tray without changes", () => {
-    give(app.state, "additive", null);
-    app.render();
-    clickCell(0, 1);
-    document.getElementById("detail-module-add")!.click();
-    expect(app.ui.detailTray).toBe("modules");
-    document.getElementById("detail-tray-cancel")!.click();
-    expect(app.ui.detailTray).toBeNull();
-    expect(app.state.modules.find((m) => m.id !== "m1")!.pos).toBeNull();
-    expect(deployedAt(app.state, hex(0, 1))).toBeUndefined();
-    expect(open()).toBe(true);
-  });
-
-  it("opening the tray cancels any armed placement; switching layers closes it", () => {
-    seedEra();
-    give(app.state, "additive", null);
-    app.render();
-    clickCell(0, 0);
-    app.beginPlacing(app.state.modules.find((m) => m.pos === null)!.id);
-    expect(app.ui.placing).not.toBeNull();
-    document.getElementById("detail-module-swap")!.click();
-    // The two-step arm has no destination left: the tray places directly.
-    expect(app.ui.placing).toBeNull();
-    expect(app.ui.detailTray).toBe("modules");
-    // A layer switch closes the tray — its placement would lose the place.
-    document.querySelector<HTMLButtonElement>('[data-detail-face="mutators"]')!.click();
-    expect(app.ui.detailTray).toBeNull();
-    expect(app.ui.detail!.face).toBe("mutators");
-  });
-
-  it("Escape unwinds the tray first, then returns the grid; the keyboard lands back on the face's rail", () => {
-    give(app.state, "additive", null);
-    app.render();
-    clickCell(0, 1);
-    document.getElementById("detail-module-add")!.click();
-    expect(app.ui.detailTray).toBe("modules");
-    // The tray's keyboard landing is its first tile — not the Cancel head.
-    expect(document.activeElement?.getAttribute("data-detail-place")).not.toBeNull();
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    expect(app.ui.detailTray).toBeNull();
-    expect(app.ui.detail).not.toBeNull();
-    // The keyboard returns to the control the tray stood under — the
-    // face's own Add, plain furniture with no disclosure of its own.
-    expect(document.activeElement?.id).toBe("detail-module-add");
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    expect(app.ui.detail).toBeNull();
-  });
-
-  it("Cancel returns the keyboard to the face's rail too", () => {
-    give(app.state, "additive", null);
-    app.render();
-    clickCell(0, 1);
-    document.getElementById("detail-module-add")!.click();
-    document.getElementById("detail-tray-cancel")!.click();
-    expect(document.activeElement?.id).toBe("detail-module-add");
-  });
-
-  it("Add cell remains the grid-expansion action: it returns the grid and arms the purchase", () => {
-    app.state.nous = 500; // the Add arm needs the bank to afford a cell
-    app.render();
-    clickCell(0, 1);
-    document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!.click();
-    expect(app.ui.detail).toBeNull();
-    expect(app.ui.detailTray).toBeNull();
-    expect(app.ui.buyingCell).toBe(true);
-  });
-
-  it("all editing stays locked during flow: no rail actions, no tray", () => {
-    give(app.state, "additive", null);
-    app.state.sessionsCompleted = 1;
-    startSession(app.state, 600);
-    app.render();
-    clickCell(0, 1);
-    expect(open()).toBe(true);
-    expect(document.getElementById("detail-module-add")).toBeNull();
-    expect(document.getElementById("detail-module-swap")).toBeNull();
-    expect(document.getElementById("detail-module-retrieve")).toBeNull();
-    expect(document.getElementById("detail-mutator-add")).toBeNull();
-    expect(document.getElementById("detail-mutator-swap")).toBeNull();
-    app.openDetailTray("modules");
-    app.openDetailTray("mutators");
-    expect(app.ui.detailTray).toBeNull();
-    expect(document.querySelector(".hex-detail-tray")).toBeNull();
-    endSession(app.state);
-  });
 });

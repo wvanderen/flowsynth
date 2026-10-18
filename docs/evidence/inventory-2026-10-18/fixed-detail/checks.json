@@ -1,0 +1,47 @@
+{
+  "desktop": {
+    "before": {
+      "bottom": 835.1953125,
+      "height": 288,
+      "left": 258,
+      "right": 546,
+      "top": 547.1953125,
+      "width": 288,
+      "x": 258,
+      "y": 547.1953125
+    },
+    "after": {
+      "bottom": 835.1953125,
+      "height": 288,
+      "left": 258,
+      "right": 546,
+      "top": 547.1953125,
+      "width": 288,
+      "x": 258,
+      "y": 547.1953125
+    }
+  },
+  "phone": {
+    "before": {
+      "bottom": 522,
+      "height": 170,
+      "left": 134,
+      "right": 304,
+      "top": 352,
+      "width": 170,
+      "x": 134,
+      "y": 352
+    },
+    "after": {
+      "bottom": 522,
+      "height": 170,
+      "left": 134,
+      "right": 304,
+      "top": 352,
+      "width": 170,
+      "x": 134,
+      "y": 352
+    }
+  },
+  "storeButtons": 0
+}

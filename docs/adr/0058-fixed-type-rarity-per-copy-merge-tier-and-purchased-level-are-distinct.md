@@ -100,3 +100,7 @@ duplicate-earned improvement and purchased levels become separate axes.
 - Roster rarity authoring is now a table entry, not a roll-path change; the
   category/type weighting work (#366's draft-composition decision) lands
   beside this seam in later tickets.
+
+## Presentation amendment (2026-10-18)
+
+The confirmed inventory feedback standard supplements the plate finish with one shared rarity mark: grey circle common, green triangle uncommon, blue diamond rare. The shape keeps rarity readable without color and accessible names retain its word. Category hues and glyphs continue to identify categories. Merge tier retains engraved rings and uses Roman numerals starting at I wherever written; purchased level uses Arabic digits. Mutators share the rarity marks under their existing per-copy rarity rules and gain neither level nor merge tier. This amends section 5's rarity-word presentation only; acquisition, combination, strength, and save semantics stand.

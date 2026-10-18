@@ -24,7 +24,7 @@ import type { GameState, Hex, MutatorFamily, MutatorInstance, Rarity, RateSnapsh
 import type { App } from "./app";
 import { startPointerDrag } from "./pointer-drag";
 import { boardPoint, HEX_RADIUS, hexPoints } from "./face";
-import { META, RARITY_LABEL } from "./meta";
+import { META, RARITY_LABEL, rarityShape } from "./meta";
 import { wireTooltips } from "./instrument";
 import { lockMarkSvg } from "./icons";
 
@@ -71,11 +71,10 @@ export function mutatorGlyph(family: MutatorFamily, scale = 1): string {
   return `<g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" transform="scale(${scale})">${FAMILY_GLYPH[family]}</g>`;
 }
 
-// Rarity = engraved ticks here, the module face's ring count in miniature.
+// Shared shape-and-color rarity marks; merge rings belong only to modules.
 // Shared with the Hex detail's mutator chassis (issue #295).
 export function rarityTicks(rarity: Rarity): string {
-  const n = { common: 1, uncommon: 2, rare: 3 }[rarity];
-  return Array.from({ length: n }, (_, i) => `<circle r="1.6" cx="${((i - (n - 1) / 2) * 7).toFixed(1)}" cy="0"/>`).join("");
+  return rarityShape(rarity);
 }
 
 // The minimal mark (ADR-0027's shape, in the arete register): an arete
@@ -439,6 +438,8 @@ function refreshMutPreviewIn(scope: ParentNode, app: App): void {
 export function refreshMutPreview(app: App): void {
   const grid = document.querySelector('[data-key="mut-grid"]');
   if (grid) refreshMutPreviewIn(grid, app);
+  const detail = document.getElementById("hex-detail");
+  if (detail) refreshMutPreviewIn(detail, app);
 }
 
 /* ── Gestures ─────────────────────────────────────────

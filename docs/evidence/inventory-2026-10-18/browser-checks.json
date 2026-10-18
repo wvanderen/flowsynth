@@ -1,0 +1,39 @@
+{
+  "provenance": {
+    "worktree": "/Users/eggfam/.codex/worktrees/a478/flowsynth",
+    "commit": "305e669f6e72b0b5b55fae1bcd4e792596e1a636",
+    "url": "http://localhost:5174/"
+  },
+  "desktop": {
+    "viewport": [
+      1440,
+      960
+    ],
+    "dragRetrieval": true,
+    "dragPlacement": true,
+    "emptyTargetRegister": "drop-open",
+    "mergeKeyboardLabel": "Merge",
+    "escapeDismissal": true,
+    "keyboardMergeReview": true
+  },
+  "phone": {
+    "viewport": [
+      390,
+      844
+    ],
+    "horizontalOverflow": false,
+    "copyTargetHeight": 44,
+    "mergeTargetSize": [
+      44,
+      44
+    ],
+    "directPlaceIntoOpenedHex": true
+  },
+  "reducedMotion": {
+    "emulated": true,
+    "inventoryAnimations": "none"
+  },
+  "unavailable": [
+    "Native touch injection: in-app browser does not support Input.dispatchTouchEvent; first/second-touch behavior covered by UI regression test."
+  ]
+}

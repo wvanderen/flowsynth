@@ -3,18 +3,18 @@ import { amplifierGainOf } from "../engine/module-strength";
 // panel in the Rack identity — a shared chassis, a narrow category rail in
 // the category hue, a condensed technical-caps nameplate, the module's
 // signature glyph as the centered centerpiece, and the contribution readout
-// beneath it. Rarity is engraved ring count plus a subtle plate tint (styled
-// from data-rarity in the stylesheet) — never hue, never glow. Shared by the
+// beneath it. Merge tier uses rings and Roman numerals; fixed rarity uses
+// a shape marker and subtle plate tint (styled from data-rarity). Shared by the
 // board and the Forge candidate tiles. The inventory wears the minimal mark
 // instead (hue-outlined hexagon and glyph alone, ADR-0027): at tile size the
 // engraving is noise.
 import type { GameState, Hex, ModuleInstance, ModuleType, RateSnapshot } from "../engine/types";
-import { CATEGORY_OF } from "../engine/constants";
+import { CATEGORY_OF, typeRarityOf } from "../engine/constants";
 import { boosterBonusOf, boosterTermOf, chargedFactor, hostPower, ritualAmpOf, spotlightRecipientOf } from "../engine/economy";
 import { forgeThreshold, mutatorForgeThreshold } from "../engine/rolls";
 import { cellNoteOf, noteNameOf } from "../engine/lattice";
 import { moduleIcon } from "./icons";
-import { META } from "./meta";
+import { META, rarityShape, tierNumeral } from "./meta";
 import { formatInt, formatNumber } from "./format";
 
 export const HEX_RADIUS = 61;
@@ -134,7 +134,7 @@ export interface FaceSpec {
   // bloom hexagon. The engraving recenters over the full-width band and the
   // cell note drops to the lower taper as a footnote, making room for the
   // Upgrade button between readout and taper.
-  variant?: "bloom";
+  variant?: "bloom" | "identity";
   // The spacer's open-wire board face (#201, ring window per issue #219):
   // the plate keeps only its cap (the nameplate, centered) and base (the
   // cell note) — a hexagonal ring window framed inside the module lets the
@@ -160,6 +160,7 @@ const FACE_LAYOUT = {
   // overlaps at bloom scale. The note yields a little deeper into the
   // taper (the #195 principle): the #195 button band follows the readout
   // down, and the footnote keeps its clearance beneath it.
+  identity: { level: -31, name: -18, glyph: 0, glyphScale: 1.55, readout: 30, note: 43 },
   bloom: { level: -39, name: -26, glyph: -12, glyphScale: 0.7, readout: 16, note: 55 },
 } as const;
 
@@ -188,15 +189,23 @@ export function readoutFitClass(readout: string): string {
 export function moduleFace(spec: FaceSpec): string {
   const hue = `var(--${HUE_TOKEN_OF[spec.type]})`;
   const openWire = spec.openWire === true;
+  const identity = spec.variant === "identity";
   const rings = Array.from({ length: ringCount(spec.tier) }, (_, i) => `<polygon points="${hexPoints(RING_RADII[i]!)}"/>`).join("");
   const glow = spec.chargeGlow ?? 0;
   const hexStyle = glow > 0 ? ` style="stroke-opacity:${(CHARGED_OUTLINE_MIN + CHARGED_OUTLINE_SPAN * glow).toFixed(3)}"` : "";
   const layout = FACE_LAYOUT[spec.variant ?? "compact"];
+  const nameY = openWire ? SPACER_NAME_Y : layout.name;
+  const name = META[spec.type].short.toUpperCase();
+  const tier = tierNumeral(spec.tier);
+  // Reserve a stable name-line width so rarity, name and tier read as one unit.
+  const nameWidth = Math.min(74, (name.length + tier.length + 1) * 5.8);
+
   return `<polygon data-key="hex" class="hex${spec.hexClass ? ` ${spec.hexClass}` : ""}" points="${hexPoints(HEX_RADIUS)}"${openWire ? ' clip-path="url(#spacer-window)"' : ""}${hexStyle}/>${spec.under ?? ""}
     ${openWire ? "" : `<g data-key="rings" class="face-rings">${rings}</g>`}
     ${openWire ? "" : `<path data-key="rail" class="face-rail" d="M-39 -19V19" stroke="${hue}"/>`}
-    ${!openWire && spec.level !== undefined ? `<text data-key="level" y="${layout.level}" text-anchor="middle" class="face-level">LV ${spec.level}</text>` : ""}
-    <text data-key="name" y="${openWire ? SPACER_NAME_Y : layout.name}" text-anchor="middle" class="face-name">${META[spec.type].short.toUpperCase()}</text>
+    ${!identity && !openWire && spec.level !== undefined ? `<text data-key="level" y="${layout.level}" text-anchor="middle" class="face-level">Lv. ${spec.level}</text>` : ""}
+    ${identity ? "" : `<g data-key="rarity" transform="translate(${5 - nameWidth / 2 - 7} ${nameY - 3})">${rarityShape(typeRarityOf(spec.type))}</g>`}
+    ${identity ? "" : `<text data-key="name" y="${nameY}" x="5" text-anchor="middle" textLength="${nameWidth}" lengthAdjust="spacingAndGlyphs" class="face-name">${name}<tspan class="face-tier"> ${tier}</tspan></text>`}
     ${openWire ? "" : `<g data-key="signature" class="face-signature" transform="translate(0 ${layout.glyph}) scale(${layout.glyphScale})" fill="none" stroke="${hue}" stroke-width="2">${moduleIcon(spec.type)}</g>`}
     ${openWire || spec.readout === "" ? "" : `<text data-key="readout" x="0" y="${layout.readout}" text-anchor="middle" class="face-readout${readoutFitClass(spec.readout)}${spec.readoutClass ? ` ${spec.readoutClass}` : ""}">${spec.readout}</text>`}
     ${spec.note ? `<text data-key="note" x="0" y="${layout.note}" text-anchor="middle" class="face-note">${spec.note}</text>` : ""}
@@ -322,7 +331,7 @@ export function faceReadoutFor(state: GameState, module: ModuleInstance, pos: He
 
 // The engraved level every upgrading module's face carries (#193): the
 // spacer's level buys nothing — it is silent wire, forever unupgraded — so
-// its face never wears the engraving, and "LV 0" is never seen on it.
+// its face never wears the engraving, and "Lv. 0" is never seen on it.
 export function faceLevel(module: ModuleInstance): number | undefined {
   return module.type === "spacer" ? undefined : module.level;
 }

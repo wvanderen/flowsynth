@@ -6,10 +6,10 @@ import { CATEGORY_OF, isVoiceType, typeRarityOf } from "../engine/constants";
 import { boosterBonusOf, boosterTermOf, modulePower, voiceCapacityOf } from "../engine/economy";
 import { moduleScrapValue } from "../engine/scrap";
 import type { ModuleInstance, MutatorInstance } from "../engine/types";
-import { faceLevel, inventoryTileSvg, moduleFace, spacerClipPath } from "./face";
+import { faceLevel, inventoryTileSvg, moduleFace } from "./face";
 import { formatInt, formatNumber } from "./format";
 import { closeTooltips, wireTooltips } from "./instrument";
-import { CATEGORY_WORD, META, RARITY_LABEL, tierWord } from "./meta";
+import { CATEGORY_WORD, META, RARITY_LABEL, rarityMark, tierNumeral, tierWord } from "./meta";
 import { bindMutatorDrag, FAMILY_WORD, mutatorEffectText, mutatorTileSvg } from "./mutators";
 import { profileGradesHtml } from "./profile";
 
@@ -35,6 +35,13 @@ export const createInventoryState = (): InventoryState => ({
   sorts: { modules: "type", mutators: "type" }, scroll: { modules: 0, mutators: 0 },
   inspect: null, merge: null, menu: false, scrapMode: false, selected: [], scrapReview: false, returnId: null,
 });
+const INVENTORY_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="m12 2 9 5v10l-9 5-9-5V7Z"/><path d="m12 7 4.5 2.5v5L12 17l-4.5-2.5v-5ZM3 7l4.5 2.5M21 7l-4.5 2.5M3 17l4.5-2.5M21 17l-4.5-2.5M12 2v5m0 10v5"/><path class="inventory-core" d="m12 9.8 1.9 1.1v2.2L12 14.2l-1.9-1.1v-2.2Z" fill="currentColor" stroke="none"/></svg>';
+const MERGE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter"><path d="M5 4v4l7 6 7-6V4M12 14v6m-3-3 3 3 3-3"/></svg>';
+let mergeTipSequence = 0;
+function mergeButton(id: string, name: string, eligible: boolean): string {
+  const tip = `inventory-merge-tip-${++mergeTipSequence}`;
+  return `<span class="inst-tip inventory-merge-control"><button class="inventory-merge inst-tip-trigger" data-inventory-merge="${id}" aria-disabled="${!eligible}" aria-label="Merge ${name}" aria-describedby="${tip}" aria-expanded="false">${MERGE_ICON}</button><span class="inst-tip-body" id="${tip}" role="tooltip">Merge</span></span>`;
+}
 const rarityRank = { common: 0, uncommon: 1, rare: 2 };
 
 export function inventoryModules(app: App): ModuleInstance[] {
@@ -70,7 +77,7 @@ export function inventoryPartners(app: App, layer: Layer, id: string): string[] 
   return matches[0] && combineMutatorsPreview(app.state, matches[0].id, id) ? matches.map((m) => m.id) : [];
 }
 function moduleRead(m: ModuleInstance): string {
-  return `${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)}${faceLevel(m) === undefined ? "" : ` · LV ${m.level}`}`;
+  return `${RARITY_LABEL[typeRarityOf(m.type)]} · ${tierWord(m.tier)}${faceLevel(m) === undefined ? "" : ` · Lv. ${m.level}`}`;
 }
 function moduleRow(app: App, m: ModuleInstance, partner = false): string {
   const inv = app.ui.inventory;
@@ -79,12 +86,12 @@ function moduleRow(app: App, m: ModuleInstance, partner = false): string {
   const select = inv.scrapMode && !partner;
   return `<div class="inventory-row${selected && select ? " selected" : ""}">
     <button class="inventory-copy" ${partner ? `data-partner="${m.id}"` : `data-inv="${m.id}"`} data-type="${m.type}" data-rarity="${typeRarityOf(m.type)}"${select ? ` aria-pressed="${selected}"` : ""} aria-label="${select ? (selected ? "Deselect" : "Select for scrap") : partner ? "Merge with" : "Inspect"} ${META[m.type].name} · ${moduleRead(m)}${m.reserve > 0 ? ` · ${formatNumber(m.reserve)} charge reserve` : ""}">
-      <span class="inventory-mark">${inventoryTileSvg(m)}</span><span class="inventory-copy-read"><strong>${META[m.type].name}</strong><small>${moduleRead(m)}</small>${m.reserve > 0 ? `<small>${formatNumber(m.reserve)} charge reserve</small>` : ""}</span>${select ? `<span class="inventory-check" aria-hidden="true">${selected ? "✓" : ""}</span>` : ""}</button>
-    ${select ? `<span class="inventory-row-payout mono">+${formatInt(moduleScrapValue(m))}</span>` : partner ? "" : `<button class="inventory-merge" data-inventory-merge="${m.id}"${eligible ? "" : " disabled"} aria-label="Merge ${META[m.type].name}" title="${eligible ? `Review ${tierWord(m.tier + 1)}` : "No eligible inventory partner"}">Merge</button>`}</div>`;
+      <span class="inventory-mark">${inventoryTileSvg(m)}</span><span class="inventory-copy-read">${rarityMark(typeRarityOf(m.type))}<strong>${META[m.type].name}</strong><span class="inventory-tier mono" aria-hidden="true">${tierNumeral(m.tier)}</span>${faceLevel(m) === undefined ? "" : `<span class="inventory-level mono" aria-hidden="true">Lv. ${m.level}</span>`}</span>${select ? `<span class="inventory-check" aria-hidden="true">${selected ? "✓" : ""}</span>` : ""}</button>
+    ${select ? `<span class="inventory-row-payout mono">+${formatInt(moduleScrapValue(m))}</span>` : partner ? "" : mergeButton(m.id, META[m.type].name, eligible)}</div>`;
 }
 function mutatorRow(app: App, m: MutatorInstance, partner = false): string {
   const eligible = inventoryPartners(app, "mutators", m.id).length > 0;
-  return `<div class="inventory-row"><button class="inventory-copy mut-tile" ${partner ? `data-partner="${m.id}"` : `data-mut-tray="${m.id}"`} aria-label="${partner ? "Merge with" : "Inspect"} ${FAMILY_WORD[m.family]} · ${m.rarity}"><span class="inventory-mark">${mutatorTileSvg(m)}</span><span class="inventory-copy-read"><strong>${FAMILY_WORD[m.family]}</strong><small>${m.rarity}</small></span></button>${partner ? "" : `<button class="inventory-merge" data-inventory-merge="${m.id}"${eligible ? "" : " disabled"}>Merge</button>`}</div>`;
+  return `<div class="inventory-row"><button class="inventory-copy mut-tile" ${partner ? `data-partner="${m.id}"` : `data-mut-tray="${m.id}"`} aria-label="${partner ? "Merge with" : "Inspect"} ${FAMILY_WORD[m.family]} · ${m.rarity}"><span class="inventory-mark">${mutatorTileSvg(m)}</span><span class="inventory-copy-read">${rarityMark(m.rarity)}<strong>${FAMILY_WORD[m.family]}</strong></span></button>${partner ? "" : mergeButton(m.id, FAMILY_WORD[m.family], eligible)}</div>`;
 }
 function back(): string { return `<button data-inventory-back>Back to inventory</button>`; }
 // Owned-copy strengths exclude neighbors, mutators, and habit build effects.
@@ -104,12 +111,12 @@ function inspectHtml(app: App): string {
   if (read.layer === "mutators") {
     const m = app.state.mutators.find((m) => m.id === read.id && m.pos === null);
     if (!m) return `${back()}<p class="inventory-empty">This copy is no longer in inventory.</p>`;
-    return `${back()}<div class="inventory-inspection"><div class="inventory-detail-face">${mutatorTileSvg(m)}</div><h3>${FAMILY_WORD[m.family]} · ${m.rarity}</h3><p>${mutatorEffectText(m.family, m.rarity)}</p><button class="primary" data-inventory-place="${m.id}">Place</button></div>`;
+    return `${back()}<div class="inventory-inspection"><div class="inventory-detail-face">${mutatorTileSvg(m)}</div><h3 class="inventory-detail-name">${rarityMark(m.rarity)}${FAMILY_WORD[m.family]}</h3><p>${mutatorEffectText(m.family, m.rarity)}</p><button class="primary" data-inventory-place="${m.id}">Place</button></div>`;
   }
   const m = app.state.modules.find((m) => m.id === read.id && m.pos === null);
   if (!m) return `${back()}<p class="inventory-empty">This copy is no longer in inventory.</p>`;
-  return `${back()}<div class="inventory-inspection"><svg class="inventory-detail-face hex-stack-face" viewBox="-70 -70 140 140" data-type="${m.type}" data-rarity="${typeRarityOf(m.type)}" aria-label="${META[m.type].name}" role="img">${spacerClipPath()}${moduleFace({ type: m.type, tier: m.tier, ...(faceLevel(m) !== undefined ? { level: faceLevel(m)! } : {}), readout: "" })}</svg>
-    <h3>${META[m.type].name}</h3><p class="mono">${moduleRead(m)}</p><p>${META[m.type].role}</p>${profileGradesHtml(m.type)}${intrinsicEffectsHtml(m)}
+  return `${back()}<div class="inventory-inspection"><svg class="inventory-detail-face hex-stack-face" viewBox="-70 -70 140 140" data-type="${m.type}" data-rarity="${typeRarityOf(m.type)}" aria-label="${META[m.type].name}" role="img">${moduleFace({ type: m.type, tier: m.tier, variant: "identity", readout: "" })}</svg>
+    <h3 class="inventory-detail-name" aria-label="${META[m.type].name} · ${moduleRead(m)}">${rarityMark(typeRarityOf(m.type))}${META[m.type].name}<span class="mono">${tierNumeral(m.tier)}</span>${faceLevel(m) === undefined ? "" : `<span class="inventory-level mono">Lv. ${m.level}</span>`}</h3><p>${META[m.type].role}</p>${profileGradesHtml(m.type)}${intrinsicEffectsHtml(m)}
     ${isVoiceType(m.type) ? `<p class="mono">${voiceCapacityOf(app.state, m.type)} ${termTipHtml("Harmonic capacity")}</p>` : ""}
     ${m.reserve > 0 ? `<p class="mono">${formatNumber(m.reserve)} charge reserve</p>` : ""}${m.shift !== null ? `<p class="mono">Pitch shift ${m.shift > 0 ? "+" : ""}${m.shift}</p>` : ""}
     <button class="primary" data-inventory-place="${m.id}">Place</button></div>`;
@@ -123,12 +130,12 @@ function mergeHtml(app: App): string {
     const a = app.state.modules.find((m) => m.id === offer.id)!;
     const b = app.state.modules.find((m) => m.id === offer.partner)!;
     const preview = inventoryCombinePreview(app.state, a.id, b.id)!;
-    return `${back()}<h3>Review merge</h3><div class="inventory-review-pair">${moduleRow(app, a, true)}${moduleRow(app, b, true)}</div><div class="stat-row"><span>Result</span><span class="mono">${tierWord(preview.nextTier)} · LV ${preview.level}</span></div><div class="stat-row"><span>Upgrade refund</span><span class="mono">${formatInt(preview.refund)} ν</span></div><p class="inventory-loss">Partner consumed${b.reserve > 0 ? ` · ${formatNumber(b.reserve)} charge reserve lost` : ""}${b.shift !== null ? ` · pitch shift ${b.shift} lost` : ""}${b.target !== null ? " · recipient selection lost" : ""}. Chosen copy's secondary effects retained.</p><button class="primary" data-inventory-merge-confirm>Merge pair</button>`;
+    return `${back()}<h3>Review merge</h3><div class="inventory-review-pair">${moduleRow(app, a, true)}${moduleRow(app, b, true)}</div><div class="stat-row"><span>Result</span><span class="mono">${tierWord(preview.nextTier)}${faceLevel(a) === undefined ? "" : ` · Lv. ${preview.level}`}</span></div><div class="stat-row"><span>Upgrade refund</span><span class="mono">${formatInt(preview.refund)} ν</span></div><p class="inventory-loss">Partner consumed${b.reserve > 0 ? ` · ${formatNumber(b.reserve)} charge reserve lost` : ""}${b.shift !== null ? ` · pitch shift ${b.shift} lost` : ""}${b.target !== null ? " · recipient selection lost" : ""}. Chosen copy's secondary effects retained.</p><button class="primary" data-inventory-merge-confirm>Merge pair</button>`;
   }
   const a = app.state.mutators.find((m) => m.id === offer.id)!;
   const b = app.state.mutators.find((m) => m.id === offer.partner)!;
   const preview = combineMutatorsPreview(app.state, b.id, a.id)!;
-  return `${back()}<h3>Review merge</h3><div class="inventory-review-pair">${mutatorRow(app, a, true)}${mutatorRow(app, b, true)}</div><p>${FAMILY_WORD[a.family]} · ${preview.nextRarity}</p><button class="primary" data-inventory-merge-confirm>Merge pair</button>`;
+  return `${back()}<h3>Review merge</h3><div class="inventory-review-pair">${mutatorRow(app, a, true)}${mutatorRow(app, b, true)}</div><p>${rarityMark(preview.nextRarity)} ${FAMILY_WORD[a.family]}</p><button class="primary" data-inventory-merge-confirm>Merge pair</button>`;
 }
 function scrapReviewHtml(app: App): string {
   const selected = app.ui.inventory.selected;
@@ -138,7 +145,7 @@ function scrapReviewHtml(app: App): string {
   const payout = modules.reduce((sum, m) => sum + moduleScrapValue(m), 0);
   const invested = modules.reduce((sum, m) => sum + m.invested, 0);
   const reserve = modules.reduce((sum, m) => sum + m.reserve, 0);
-  return `<button data-inventory-back>Back to selection</button><h3>Scrap ${selected.length} module${selected.length === 1 ? "" : "s"}?</h3><div class="inventory-scrap-review">${modules.map((m) => `<div class="stat-row"><span>${META[m.type].name} · ${tierWord(m.tier)} · LV ${m.level}</span><span class="mono">+${formatInt(moduleScrapValue(m))}</span></div>`).join("")}</div><div class="stat-row"><span>Scrap payout</span><span class="mono">+${formatInt(payout)}</span></div><p class="inventory-loss">Copies and purchased levels lost · ${formatInt(invested)} ν invested${reserve > 0 ? ` · ${formatNumber(reserve)} charge reserve` : ""}. Cannot undo.</p>${stale ? `<p role="alert">Selection changed. Go back and select again.</p>` : ""}<button class="danger" data-inventory-scrap-confirm${stale || !selected.length ? " disabled" : ""}>Confirm scrap</button>`;
+  return `<button data-inventory-back>Back to selection</button><h3>Scrap ${selected.length} module${selected.length === 1 ? "" : "s"}?</h3><div class="inventory-scrap-review">${modules.map((m) => `<div class="stat-row"><span>${META[m.type].name} · ${tierWord(m.tier)}${faceLevel(m) === undefined ? "" : ` · Lv. ${m.level}`}</span><span class="mono">+${formatInt(moduleScrapValue(m))}</span></div>`).join("")}</div><div class="stat-row"><span>Scrap payout</span><span class="mono">+${formatInt(payout)}</span></div><p class="inventory-loss">Copies and purchased levels lost · ${formatInt(invested)} ν invested${reserve > 0 ? ` · ${formatNumber(reserve)} charge reserve` : ""}. Cannot undo.</p>${stale ? `<p role="alert">Selection changed. Go back and select again.</p>` : ""}<button class="danger" data-inventory-scrap-confirm${stale || !selected.length ? " disabled" : ""}>Confirm scrap</button>`;
 }
 
 // The column and phone sheet share every content/action builder. UI state is
@@ -152,7 +159,7 @@ export function renderInventoryContent(app: App, host: HTMLElement, sheet: boole
   const locked = app.state.mode !== "upgrade";
   const collapsed = !sheet && inv.collapsed && !inv.dragOpen;
   const { scroll: _scroll, ...viewState } = inv;
-  const key = JSON.stringify([layer, locked, sheet, collapsed, viewState, app.state.capacityBought,
+  const key = JSON.stringify([layer, locked, sheet, collapsed, app.ui.detail?.pos, viewState, app.state.capacityBought,
     app.state.modules.map((m) => [m.id, m.type, m.pos, m.level, m.tier, m.invested, m.reserve, m.shift, m.target]), app.state.mutators, app.state.mergeCapPurchases]);
   if (host.dataset.inventoryKey === key) return;
   const active = document.activeElement;
@@ -170,7 +177,7 @@ export function renderInventoryContent(app: App, host: HTMLElement, sheet: boole
     ${inv.scrapMode && modules ? `<div class="inventory-selection"><span role="status">${inv.selected.length} selected · +${formatInt(total)} scrap</span><button data-inventory-select-all>Select all matching</button><div class="inventory-selection-actions"><button data-inventory-cancel>Cancel</button><button data-inventory-review${inv.selected.length ? "" : " disabled"}>Scrap selected</button></div></div>` : ""}
     <div class="inventory-list" data-inventory-scroll>${copies.map((m) => modules ? moduleRow(app, m as ModuleInstance) : mutatorRow(app, m as MutatorInstance)).join("") || `<p class="inventory-empty">${count ? "No matching copies." : modules ? "No stored modules." : "No stored mutators."}</p>`}</div>`;
   const subview = inv.inspect?.layer === layer ? inspectHtml(app) : inv.merge?.layer === layer ? mergeHtml(app) : inv.scrapReview && modules ? scrapReviewHtml(app) : browse;
-  host.innerHTML = `${sheet ? "" : '<div class="inventory-frame inst-panel-face">'}<div class="inventory-head"><button data-inventory-collapse aria-expanded="${!collapsed}" aria-label="${sheet ? "Close inventory" : collapsed ? "Expand inventory" : "Collapse inventory"}">Inventory <span class="mono">${count}</span><span aria-hidden="true">${sheet ? "×" : collapsed ? "+" : "−"}</span></button>${!collapsed && modules && !inv.scrapMode ? `<button data-inventory-menu aria-expanded="${inv.menu}" aria-label="Inventory actions">Actions</button>` : ""}</div>${collapsed ? "" : `<div class="inventory-body">${inv.menu && modules ? `<div class="inventory-menu"><button data-inventory-scrap-mode${locked ? " disabled" : ""}>Select for scrap</button></div>` : ""}${subview}</div>`}${sheet ? "" : "</div>"}`;
+  host.innerHTML = `${sheet ? "" : '<div class="inventory-frame inst-panel-face">'}<div class="inventory-head"><button data-inventory-collapse aria-expanded="${!collapsed}" aria-label="${sheet ? "Close inventory" : collapsed ? "Expand inventory" : "Collapse inventory"}, ${count} stored">${collapsed ? INVENTORY_ICON : "Inventory"}<span class="mono">${count}</span>${collapsed ? "" : `<span aria-hidden="true">${sheet ? "×" : "−"}</span>`}</button>${!collapsed && modules && !inv.scrapMode ? `<button data-inventory-menu aria-expanded="${inv.menu}" aria-label="Inventory actions">Actions</button>` : ""}</div>${collapsed ? "" : `<div class="inventory-body">${inv.menu && modules ? `<div class="inventory-menu"><button data-inventory-scrap-mode${locked ? " disabled" : ""}>Select for scrap</button></div>` : ""}${subview}</div>`}${sheet ? "" : "</div>"}`;
   host.querySelectorAll<HTMLElement>("button, select").forEach((node) => {
     const attr = node.getAttributeNames().find((name) => name.startsWith("data-"));
     node.dataset.inventoryFocus = attr ? `${attr}:${node.getAttribute(attr)}` : node.getAttribute("aria-label") ?? "";
@@ -212,16 +219,29 @@ export function renderInventoryContent(app: App, host: HTMLElement, sheet: boole
     if (locked) return;
     const id = el.dataset.inventoryPlace!;
     inv.inspect = null;
-    if (app.ui.detail) app.closeDetail();
+    if (app.ui.detail) {
+      if (sheet) app.closeModal();
+      if (modules) app.detailPlaceModule(id); else app.detailPlaceMutator(id);
+      return;
+    }
     if (sheet) app.closeModal();
     if (modules) app.beginPlacing(id); else app.mutArmTray(id);
   });
-  on("[data-inventory-merge]", (el) => {
-    if (locked || inv.scrapMode) return;
-    const id = el.dataset.inventoryMerge!;
-    const partners = inventoryPartners(app, layer, id);
-    inv.returnId = id;
-    inv.merge = { layer, id, partner: partners.length === 1 ? partners[0]! : null }; update();
+  host.querySelectorAll<HTMLElement>("[data-inventory-merge]").forEach((el) => {
+    let touch = false;
+    app.listen(el, "pointerdown", (event) => { touch = (event as PointerEvent).pointerType === "touch"; });
+    app.listen(el, "click", (event) => {
+      const touchClick = touch || (event as PointerEvent).pointerType === "touch";
+      touch = false;
+      // A first touch names the unfamiliar glyph; a second opens review.
+      if (touchClick && !el.closest(".inst-tip")?.classList.contains("show")) return;
+      if (locked || inv.scrapMode) return;
+      const id = el.dataset.inventoryMerge!;
+      const partners = inventoryPartners(app, layer, id);
+      if (!partners.length) return;
+      inv.returnId = id;
+      inv.merge = { layer, id, partner: partners.length === 1 ? partners[0]! : null }; update();
+    });
   });
   on("[data-partner]", (el) => { if (inv.merge) { inv.merge.partner = el.dataset.partner!; update(); } });
   // Inputs in the final review are read-only, not another partner picker.
