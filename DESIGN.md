@@ -232,7 +232,7 @@ Controls are square-cut — hairline border, condensed technical lettering, no r
 
 - **Shape:** hexagonal chassis; engraved level and condensed nameplate above, the signature glyph as centered centerpiece, contribution readout beneath, narrow category-colored rail on the face edge.
 - **Chargeable exception:** the prominent readout is charge-vs-threshold as a face fill, a brief rail accent at threshold crossing.
-- **State:** rarity as ring count + plate tint; receiving charge brightens the rail toward the luminous register.
+- **State:** rarity as ring count + plate tint; received charge uses a restrained green outline; the rail retains its category hue.
 
 ### Panels and Sheets
 
@@ -262,3 +262,7 @@ Controls are square-cut — hairline border, condensed technical lettering, no r
 ## Cohesion amendment (2026-10-17)
 
 [ADR-0070](docs/adr/0070-refine-the-rack-around-quiet-practice-and-shared-surfaces.md) amends the historical palette and threshold cue: neutral graphite throughout the shell; a top-right/bottom-left clipped pair on floating outer panels at every width; shared open tabs; steady charge light with a narrow six-second modulation; no broad background or standing chord pulse. Reduced motion is fully static. Meaningful events may receive brief local accents. Existing choices and behavior remain; Focus simplification is parked in [#407](https://github.com/wvanderen/flowsynth/issues/407). The [design workbench](docs/design-workbench.md) compares production surfaces and component states.
+
+## Module-grid amendment (2026-10-18)
+
+Idle chords keep their readout and detail facts but draw no board geometry, including during inspection. Active chords read more clearly at rest; hover, keyboard focus, and touch inspection emphasize related active chords and dim the others. Charging uses a restrained green outline with the category rail and rarity plate preserved; no general face wash or glow. Chargeable threshold fill remains. See the instrument standards for the approved rule.

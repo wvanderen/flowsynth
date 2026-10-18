@@ -13,7 +13,7 @@ import { give } from "../engine/fixtures";
 import { hex, sameHex } from "../engine/hex";
 import { formatInt, formatNumber } from "./format";
 import { createAppFixture, clickCell, setAppWidth } from "./testing/app-fixture";
-import { fitBoard, GLOW_REACH, lensFrame, syncGlowLens } from "./zoom";
+import { syncGlowLens } from "./zoom";
 import { makeRecorder } from "./testing/signal-recorder";
 
 // board rendering and interaction on the production HTML skeleton.
@@ -530,7 +530,6 @@ describe("the horizon bar (§7, issue #156)", () => {
 
 describe("the charge breathe's glow layer (issue #348)", () => {
   const svgEl = () => document.getElementById("grid") as unknown as SVGSVGElement;
-  const glowOf = (q: number, r: number) => document.querySelector(`[data-cell="${q},${r}"] .module-node > .hex-glow`);
 
   // The opening receiver charged by a generator one cell east, live.
   function chargeBoard(): void {
@@ -540,57 +539,14 @@ describe("the charge breathe's glow layer (issue #348)", () => {
     app.render();
   }
 
-  it("a charged receiver carries the glow layer beneath its chassis; an uncharged face carries none", () => {
-    app.render();
+  it("charging retains an outline without a face glow or wash", () => {
+    chargeBoard();
     expect(document.querySelector(".hex-glow")).toBeNull();
-    chargeBoard();
-    const glow = glowOf(0, 0)!;
-    expect(glow).not.toBeNull();
-    // The layer is the face's first child: the light draws under the chassis.
-    expect(glow.previousElementSibling).toBeNull();
-    expect(glow.nextElementSibling!.classList.contains("hex")).toBe(true);
-  });
-
-  it("a dispensing generator lights its layer too", () => {
-    chargeBoard();
-    expect(glowOf(1, 0)).not.toBeNull();
-  });
-
-  it("a hex outside the lens rests its glow; fit brings the breathe back", () => {
-    chargeBoard();
-    expect(glowOf(0, 0)!.classList.contains("off-view")).toBe(false);
-    // Zoomed in and panned to the board's right edge, the charged face at
-    // the origin leaves the view.
-    app.ui.zoom = 3;
-    app.ui.pan = { x: app.boardBounds.x + app.boardBounds.width, y: app.boardBounds.y + app.boardBounds.height / 2 };
-    app.render();
-    expect(glowOf(0, 0)!.classList.contains("off-view")).toBe(true);
-    fitBoard(app);
-    expect(glowOf(0, 0)!.classList.contains("off-view")).toBe(false);
-  });
-
-  it("panning repaints the lens and re-lenses the glow mid-gesture, without a render", () => {
-    chargeBoard();
-    app.ui.zoom = 3;
-    app.ui.pan = { x: app.boardBounds.x + app.boardBounds.width, y: app.boardBounds.y + app.boardBounds.height / 2 };
-    app.render();
-    expect(glowOf(0, 0)!.classList.contains("off-view")).toBe(true);
-    Object.defineProperty(svgEl(), "clientWidth", { configurable: true, value: 800 });
-    Object.defineProperty(svgEl(), "clientHeight", { configurable: true, value: 600 });
-    const frame = lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds);
-    const worldPerPx = frame.view.width / 800;
-    // Drag until the charged face sits (reach - 20) inside the lens's own
-    // margin: new view.x = pan.x - width/2 ≤ reach - 20 puts world x=0 in
-    // view. Mid-gesture — before the release's render — the glow is already
-    // breathing again: the pan path sweeps the lens itself.
-    const targetPanX = GLOW_REACH - 20 + frame.view.width / 2;
-    const deltaX = Math.round((app.ui.pan.x - targetPanX) / worldPerPx);
-    const before = svgEl().getAttribute("viewBox")!;
-    svgEl().dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 400, clientY: 300 }));
-    document.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 400 + deltaX, clientY: 300 }));
-    expect(svgEl().getAttribute("viewBox")).not.toBe(before);
-    expect(glowOf(0, 0)!.classList.contains("off-view")).toBe(false);
-    document.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, clientX: 400 + deltaX, clientY: 300 }));
+    const chassis = document.querySelector('[data-cell="0,0"] .hex')!;
+    expect(chassis.classList.contains("charged")).toBe(true);
+    expect(chassis.getAttribute("style")).not.toContain("fill-opacity");
+    expect(chassis.getAttribute("style")).toContain("stroke-opacity");
+    expect(document.querySelector('[data-cell="0,0"] .face-rail')!.getAttribute("style")).toBeNull();
   });
 
   it.each([[800, 400, 280, 100], [400, 800, 100, 280]])(
@@ -642,24 +598,11 @@ describe("the charge breathe's glow layer (issue #348)", () => {
     }
   });
 
-  it("the stylesheet's board carries no animated filter; the breathe animates opacity alone", () => {
+  it("keeps charging static and preserves category hues", () => {
     const css = readFileSync("src/ui/style.css", "utf8");
     for (const body of keyframesBodies(css)) expect(body).not.toContain("filter:");
-    const breathe = css.match(/@keyframes charge-breathe\s*\{[^}]*\}/)![0];
-    expect(breathe).toContain("opacity");
-    // The lit layer's selectors stay flat: no relational :has() over the
-    // faces re-validating on every tick's attribute writes.
-    expect(css).toContain(".hex-glow {");
-    expect(css).not.toContain(":has(.hex.charged) .hex");
-    expect(css).not.toContain(":has(.hex.dispensing)");
-  });
-
-  it("reduced motion rests the glow lit — a static lit state, charge readable without animation", () => {
-    const css = readFileSync("src/ui/style.css", "utf8");
-    const reduce = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
-    expect(reduce).toMatch(/\.hex-glow\s*\{[^}]*opacity: 0\.18/);
-    // Off the lens stays dark even at rest.
-    expect(css).toMatch(/\.hex-glow\.off-view\s*\{[^}]*opacity: 0/);
+    expect(css).not.toContain("@keyframes charge-breathe");
+    expect(css).not.toContain(".hex.charged ~ .face-rail");
   });
 });
 
@@ -1942,19 +1885,12 @@ describe("always-on chord feedback (§6, #137)", () => {
   });
 });
 
-// The idle ask (ADR-0057): the chord layer reads calm at rest and answers
-// precisely when a voice is asked — hover, keyboard focus, touch tap, the
-// conducting spacer's containment — never as ambient furniture. The reveal
-// is a board-draw question only: the reserved readout's "N idle" count and
-// the Hex detail's chord row keep their own jobs off the complete mark
-// list, and the projected-idle ghosts stay gesture-scoped as they were.
-describe("the idle ask (ADR-0057)", () => {
+describe("active chord inspection", () => {
   const cell = (q: number, r: number) => document.querySelector(`[data-cell="${q},${r}"]`)!;
   const readout = () => document.getElementById("chord-readout") as HTMLElement;
   const marks = (): HTMLElement[] =>
     [...document.querySelectorAll<HTMLElement>('[data-key="chord-marks"] .chord-mark')];
   const idleMarks = (): HTMLElement[] => marks().filter((mark) => mark.classList.contains("chord-idle"));
-  const voicesOf = (mark: Element): string[] => (mark.getAttribute("data-voices") ?? "").split(" ");
   const standDown = () => document.getElementById("grid")!.dispatchEvent(new MouseEvent("pointerleave"));
 
   // The power-chord region: C4 (the opening synth), G4 and C5. Exactly one
@@ -1971,171 +1907,40 @@ describe("the idle ask (ADR-0057)", () => {
     return { c4: idAt(0, 0), g4: idAt(1, 0), c5: idAt(0, 1) };
   }
 
-  it("at rest the group carries the earning seam alone; the ask reveals the idles whole (#258, ADR-0057)", () => {
+  it("keeps idle geometry hidden across hover, focus, touch and render while preserving facts", () => {
     bootPowerChord();
-    const grid = document.getElementById("grid")!;
-    // At rest the group carries the earning Fifth alone — no idle marks.
     expect(marks()).toHaveLength(1);
-    expect(marks()[0]!.classList.contains("chord-idle")).toBe(false);
-    expect(marks()[0]!.querySelectorAll("line.chord-seam").length).toBeGreaterThan(0);
-    // The chord work renders behind the modules: the marks group precedes
-    // the cell nodes (which carry data-cell, no data-key) in paint order.
-    const children = [...grid.children].map((child) => child.getAttribute("data-key"));
-    expect(children.indexOf("chord-marks")).toBeLessThan(children.findIndex((key) => key === null));
-    // The C5 voice's ask reveals its own candidates whole — the chord-idle
-    // class, in the chord hues — beside the untouched earning seam.
-    cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(marks()).toHaveLength(3);
-    expect(marks()[0]!.classList.contains("chord-idle")).toBe(false);
-    expect(idleMarks().every((mark) => mark.classList.contains("chord-idle"))).toBe(true);
-    const hues = marks().map((mark) => mark.style.getPropertyValue("--cc"));
-    expect(hues).toContain("var(--chord-fifth)");
-    expect(hues).toContain("var(--chord-octave)");
-    // Leaving stands the candidates back down: the whisper is never
-    // ambient furniture.
-    standDown();
-    expect(marks()).toHaveLength(1);
-  });
-
-  it("moving from a voice onto its idle seam dismisses the reveal without naming the idle", () => {
-    bootPowerChord();
-    cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(idleMarks()).toHaveLength(2);
-    expect(readout().textContent).toContain("2 idle");
-    idleMarks()[0]!.querySelector(".chord-seam")!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(app.ui.chordHover).toBeNull();
-    expect(idleMarks()).toHaveLength(0);
-    expect(readout().textContent).not.toContain("· idle");
-    expect(readout().hidden).toBe(true);
-    app.render();
-    expect(idleMarks()).toHaveLength(0);
-    // Earning seams retain their direct ask.
-    marks()[0]!.querySelector(".chord-seam")!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(app.ui.chordHover?.kind).toBe("chord");
-    expect(readout().hidden).toBe(false);
-  });
-
-  it("the ask weight never touches the projected-idle ghosts (#260's register)", () => {
-    bootPowerChord();
-    // The lift is scoped to the formed layer; the ghost promise keeps the
-    // base seam weight, dashed register aside.
-    const css = readFileSync("src/ui/style.css", "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-    expect(css).toMatch(/\.chord-mark:not\(\.ghost-mark\)\.chord-idle \.chord-seam \{[^}]*stroke-width: 4/);
-    const ghostRule = css.match(/\.chord-mark\.ghost-mark\.chord-idle \.chord-seam \{[^}]*\}/)![0];
-    expect(ghostRule).not.toContain("stroke-width");
-  });
-
-  it("pointer hover, keyboard focus, and touch tap ask the same reveal", () => {
-    bootPowerChord();
-    const asks = (): Event[] => [
-      new MouseEvent("pointerover", { bubbles: true }),
-      new FocusEvent("focusin", { bubbles: true }),
-      new PointerEvent("pointerover", { bubbles: true, pointerType: "touch" }),
-    ];
-    for (const ask of asks()) {
+    for (const event of [new MouseEvent("pointerover", { bubbles: true }), new FocusEvent("focusin", { bubbles: true }), new PointerEvent("pointerover", { bubbles: true, pointerType: "touch" })]) {
+      cell(0, 1).dispatchEvent(event);
       expect(idleMarks()).toHaveLength(0);
-      cell(0, 1).dispatchEvent(ask);
-      expect(idleMarks()).toHaveLength(2);
-      expect(marks()[0]!.classList.contains("chord-idle")).toBe(false);
+      expect(readout().textContent).toContain("2 idle");
+      expect(marks()[0]!.classList.contains("chord-fade")).toBe(true);
+      app.render();
+      expect(idleMarks()).toHaveLength(0);
+      expect(marks()[0]!.classList.contains("chord-fade")).toBe(true);
       standDown();
+      expect(marks()[0]!.classList.contains("chord-fade")).toBe(false);
     }
-    expect(idleMarks()).toHaveLength(0);
-  });
-
-  it("the reveal is whole and never ambient: it persists across a render, then stands down", () => {
-    bootPowerChord();
-    cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(idleMarks()).toHaveLength(2);
-    // A state change rides a render: the draw filter agrees with the live
-    // patch, so the asked candidates survive it untouched.
-    app.render();
-    expect(idleMarks()).toHaveLength(2);
-    standDown();
-    expect(idleMarks()).toHaveLength(0);
-    expect(marks()).toHaveLength(1);
-  });
-
-  it("a voice's ask reveals only the candidates it sings", () => {
-    const { c4, g4, c5 } = bootPowerChord();
-    // C5 sings in both idles — its ask reveals both, whole.
-    cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    const both = idleMarks().map(voicesOf);
-    expect(both).toHaveLength(2);
-    for (const voices of both) expect(voices).toContain(c5);
-    // C4's ask names its own Octave — the doubled fifth's region, whose
-    // voices C4 is absent from, stays hidden.
-    standDown();
-    cell(0, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(idleMarks()).toHaveLength(1);
-    const voices = voicesOf(idleMarks()[0]!);
-    expect(voices).toContain(c4);
-    expect(voices).toContain(c5);
-    expect(voices).not.toContain(g4);
-    standDown();
-    expect(idleMarks()).toHaveLength(0);
-  });
-
-  it("a conducting spacer's containment ask reveals the idle candidates its wire conducts", () => {
-    // C4·G4 spends C4's unit; the wired Octave C4··C5 stays idle beneath
-    // the wire, its run passing straight through the spacer's cell. The
-    // other idle — the doubled fifth, whose work crosses no wire — stays
-    // hidden from the spacer's ask.
-    app = boot(undefined, true);
-    give(app.state, "additive", hex(1, 0));
-    app.state.cells.push(hex(0, 1), hex(0, 2));
-    give(app.state, "spacer", hex(0, 1));
-    give(app.state, "additive", hex(0, 2));
-    app.render();
-    expect(idleMarks()).toHaveLength(0);
-    cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    const conducted = idleMarks();
-    expect(conducted).toHaveLength(1);
-    expect(conducted[0]!.querySelectorAll(".chord-seam").length).toBeGreaterThan(0);
-    // The wire carries no ν/s; the readout keeps the count (#334).
-    expect(readout().textContent).toContain("1 idle");
-    // The C5 voice's ask still sees its full set: the wire asked only its
-    // own candidate.
-    cell(0, 2).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(idleMarks().length).toBeGreaterThan(conducted.length);
-    standDown();
-  });
-
-  it("the reveal is a board-draw question only: the count stands, the detail keeps its disclosure", () => {
-    bootPowerChord();
-    cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    // The reserved readout keeps its "N idle" count under the same ask.
-    expect(readout().textContent).toContain("2 idle");
-    expect(idleMarks()).toHaveLength(2);
-    standDown();
-    expect(readout().hidden).toBe(true);
-    // The Hex detail's chord row keeps its idle facts with no hover live —
-    // behind one count disclosure since #388, listing the same instances'
-    // names and factors; the plain transient readout is untouched.
     clickCell(0, 1);
-    const detail = document.getElementById("hex-detail")!;
-    const trigger = detail.querySelector<HTMLButtonElement>(".detail-idle-trigger")!;
+    const trigger = document.querySelector<HTMLButtonElement>(".detail-idle-trigger")!;
     expect(trigger.textContent).toBe("2 idle");
     trigger.focus();
     const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
     expect(body.classList.contains("inst-show")).toBe(true);
-    expect(body.textContent).toContain("Fifth ×1.3");
     expect(body.textContent).toContain("Octave ×1.15");
   });
 
-  it("one rule in every mode: flow asks like upgrade", () => {
+  it("emphasizes related active chords and restores their resting state", () => {
     bootPowerChord();
-    app.state.sessionsCompleted = 1;
-    startSession(app.state, 600);
+    const original = marks()[0]!;
+    cell(0, 0).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+    expect(original.classList.contains("chord-focused")).toBe(true);
+    expect(original.classList.contains("chord-fade")).toBe(false);
     app.render();
-    expect(idleMarks()).toHaveLength(0);
-    cell(0, 1).dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
-    expect(idleMarks()).toHaveLength(2);
-    // The flow tick re-renders the board; the ask holds through it.
-    app.tick();
-    expect(idleMarks()).toHaveLength(2);
+    expect(marks()[0]!.classList.contains("chord-focused")).toBe(true);
     standDown();
+    expect(marks()[0]!.classList.contains("chord-focused")).toBe(false);
     expect(idleMarks()).toHaveLength(0);
-    endSession(app.state);
   });
 });
 
