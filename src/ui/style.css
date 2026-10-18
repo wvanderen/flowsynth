@@ -4141,7 +4141,7 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .rarity-uncommon { color: var(--rarity-uncommon); }
 .rarity-rare { color: var(--rarity-rare); }
 .face-tier { fill: var(--muted); font: inherit; }
-.inventory-tier { color: var(--muted); font: 600 14px/1.15 var(--font-condensed); }
+.inventory-tier { color: var(--muted); font: 600 14px/1.15 var(--mono); }
 .inventory-level { margin-left: auto; font-size: 12px; font-variant-numeric: tabular-nums; }
 .inventory-merge-control { flex: 0 0 44px; }
 .inventory-merge { display: grid; place-items: center; width: 44px; height: 44px; border-color: transparent; background: transparent; }

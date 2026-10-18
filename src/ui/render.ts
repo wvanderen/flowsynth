@@ -2744,7 +2744,7 @@ function renderCombineModal(app: App, content: HTMLElement): void {
   // always readable here — the render pass stays free of a nested
   // closeModal render.
   const { drag, target, preview } = combineOfferTerms(app)!;
-  const pairLine = (module: ModuleInstance) => `${rarityMark(typeRarityOf(module.type))} ${META[module.type].name} · ${tierWord(module.tier)} · Lv. ${module.level}`;
+  const pairLine = (module: ModuleInstance) => `${rarityMark(typeRarityOf(module.type))} ${META[module.type].name} · ${tierWord(module.tier)}${faceLevel(module) === undefined ? "" : ` · Lv. ${module.level}`}`;
   const destination = target.pos === null ? "The combined copy waits in the tray." : `The combined copy holds ${cellNoteOf(target.pos)}.`;
   content.innerHTML = `
     ${modalTop("COMBINE")}
@@ -2752,7 +2752,7 @@ function renderCombineModal(app: App, content: HTMLElement): void {
     <p class="lead">${pairLine(drag)}<br />+ ${pairLine(target)}</p>
     <div class="combine-terms">
       <div class="stat-row"><span>Resulting tier</span><span class="mono">${tierWord(preview.nextTier)}</span></div>
-      <div class="stat-row"><span>Retained level</span><span class="mono">Lv. ${preview.level}</span></div>
+      ${faceLevel(target) === undefined ? "" : `<div class="stat-row"><span>Retained level</span><span class="mono">Lv. ${preview.level}</span></div>`}
       <div class="stat-row"><span>Upgrade refund</span><span class="mono">${formatInt(preview.refund)} ν</span></div>
     </div>
     <p class="lead muted">${destination}</p>
