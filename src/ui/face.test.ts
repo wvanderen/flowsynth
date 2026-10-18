@@ -69,7 +69,7 @@ describe("module face", () => {
     }
     expect(face).toContain('class="hex selected"');
     expect(face).toContain("face-readout charge");
-    expect(face).toContain(">FORGE</text>");
+    expect(face).toContain('>FORGE<tspan class="face-tier"> III</tspan></text>');
     // The nameplate names the type; no duplicate category label. No pin
     // hardware exists anymore — nothing is pinned (ADR-0021).
     expect(face).not.toContain('data-key="category"');
@@ -172,7 +172,7 @@ describe("module face", () => {
     for (const type of MODULE_TYPES as ModuleType[]) {
       expect(META[type].name, type).toBe(names[type]![0]);
       expect(moduleFace({ type, tier: 0, readout: "+1" })).toContain(
-        `>${META[type].short.toUpperCase()}</text>`,
+        `>${META[type].short.toUpperCase()}<tspan`,
       );
     }
     // The D-set glyphs: sine, diamond, bolt, chevrons around a dot, the

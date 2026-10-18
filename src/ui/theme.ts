@@ -24,6 +24,9 @@ const substrate = {
   "line-strong": "#555c61",
   ink: "#e9eae8",
   muted: "#a4aaa9",
+  "rarity-common": "#a4aaa9",
+  "rarity-uncommon": "#70c58c",
+  "rarity-rare": "#7db4ef",
   scrim: "rgba(8, 9, 10, 0.82)",
   shadow: "rgba(0, 0, 0, 0.6)",
 } as const;

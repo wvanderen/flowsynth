@@ -46,6 +46,33 @@ In upgrade mode, help players find and inspect a useful inventory hex for placem
 
 The user agreed to each interaction decision and confirmed the complete brief before implementation. The engine preserves these outcomes while retaining the existing board drag-combination rules. ADR-0071 records the deliberate distinction in merge survivor identity.
 
-## Documentation and verification
+## Inventory feedback amendment — 2026-10-18
+
+Status: consolidated scope confirmed 2026-10-18 and implemented in this checkout. This amendment supersedes conflicting presentation clauses above. Verification is recorded in [the amendment evidence](evidence/inventory-2026-10-18/README.md).
+
+- Collapse to a small hypercube inventory symbol with the stored-item count. Treat the symbol as inventory identity; adopting it as the main logo is a separate decision.
+- Standardize rarity marks wherever rarity appears: grey circle for common, green triangle for uncommon, blue diamond for rare. Shapes carry the distinction without color; accessible names retain the rarity word. Keep category glyphs and category hues distinct from these marks. Apply the same rarity vocabulary to mutators without changing their per-copy rarity rules.
+- Display module level with Arabic digits and merge tier with Roman numerals across inventory, details, draft choices, and merge reviews. Preserve the existing one-based display: the first merge tier is I. Mutators have neither module level nor merge tier; non-levelable modules do not acquire a level readout.
+- Inventory detail uses a compact identity face carrying the category glyph, rarity finish, and merge rings. Show level and tier once alongside the name below, rather than repeating them inside the face. Board faces and Hex detail retain their full information-bearing faces.
+- Use the main inventory browser inside Hex detail, preserving filter, sort, and scroll through entry and return. Replace the separate Add/Swap tray experience with shared inventory interaction.
+- Drag an inventory copy onto the corresponding enlarged Hex detail face to place or swap it; drag a deployed face into inventory to retrieve it. Preserve existing eligible-pair merge review behavior. Keep click, touch, and keyboard placement available so dragging is optional.
+- This is an Operate surface within the existing Rack identity. Colored rarity markers deliberately amend the prior rarity-word-only presentation; category color continues to identify category, not rarity. Engraved rings continue to identify merge tier.
+- Expanded rows use one compact identity/state line: rarity mark, name, Roman merge tier, and consistently aligned Arabic level, with the category hex beside it. Keep Merge at the right and preserve accessible touch target sizes.
+- In Hex detail, Place from inventory inspection directly targets the currently opened cell under existing placement/swap rules and merge reviews. Keep Retrieve as the accessible button alternative to dragging the deployed face into inventory; remove the separate Add/Swap tray controls.
+- Merge uses a custom two-branches-converging-into-one glyph in a quiet square icon button. Keep the accessible name Merge and a plain Merge tooltip; mute the action when no eligible partner exists. Activating it opens the existing pair review. This action-label tooltip is a deliberate exception to the mechanic-only tooltip rule so the unfamiliar icon has an accessible, discoverable meaning.
+
+All seven decisions and the consolidated implementation scope were explicitly confirmed.
+
+Verification covers desktop and phone, shared browsing state, placement/swap/merge/retrieval, and accessible non-drag interaction; see the amendment evidence for results and limitations.
 
 The always-open/no-collapse clauses in [ADR-0027](adr/0027-dock-the-tray-beside-the-action-row.md) and CONTEXT.md are amended. Inventory detail is an inspection context distinct from a board coordinate's Hex detail. See [the evidence review](evidence/inventory-2026-10-17/README.md) for checks and limitations.
+
+### Follow-up refinement — 2026-10-18
+
+User-directed correction after reviewing the implementation: full module faces put `Lv. 0` on the upper line and rarity mark + name + Roman merge tier together on the next baseline. Restore `Lv.` on all compact level readouts, including inventory and merge reviews. Align inventory name/tier text on a shared baseline; inset the native-select replacement chevrons 12px from the right border with reserved text padding. Add a small filled hexagon at the hypercube symbol's center for this visual trial. Inventory inspection keeps its identity face and its single level readout below.
+
+Refinement evidence: [desktop](evidence/inventory-2026-10-18/refinement/desktop.jpg), [phone](evidence/inventory-2026-10-18/refinement/phone.jpg), [collapsed symbol](evidence/inventory-2026-10-18/refinement/collapsed.jpg).
+
+### Hex detail cleanup — 2026-10-18
+
+The user's subsequent review supersedes the earlier decision to retain Retrieve: remove the redundant Store/Retrieve button from both detail faces. Keep existing drag retrieval into inventory. Opening or collapsing inventory must not resize or shift the main Hex detail composition; the browser overlays the unchanged stage.

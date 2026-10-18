@@ -120,15 +120,6 @@ function focusDetailFace(face: DetailFace): void {
   )?.focus({ preventScroll: true });
 }
 
-// The rail's keyboard landing (issue #296): the face's own Add or Swap —
-// the control the tray stands open under, plain buttons carrying no
-// disclosure, so Escape after the landing walks the detail's own chain.
-function focusDetailRail(face: DetailFace): void {
-  const add = document.getElementById(face === "modules" ? "detail-module-add" : "detail-mutator-add");
-  const swap = document.getElementById(face === "modules" ? "detail-module-swap" : "detail-mutator-swap");
-  (add ?? swap)?.focus({ preventScroll: true });
-}
-
 // The chord-hover ask (§6): a seam hovered names its one chord; a module
 // hovered names every chord it sings in; a Mutator slot hovered names its
 // mutator's full declaration (issue #199). The reserved readout answers.
@@ -189,12 +180,6 @@ export interface HexDetail {
   pos: Hex;
   face: DetailFace;
 }
-
-// Which layer's inventory stands open inside the Hex detail (issue #296):
-// opened by the layer's Add or Swap action, its tiles placing straight into
-// the detail's place — no second destination click. The tray belongs to one
-// face, so switching layers closes it. Light furniture — never saved.
-export type DetailTray = DetailFace | null;
 
 export interface UiState {
   inventory: InventoryState;
@@ -286,11 +271,6 @@ export interface UiState {
   // in the grid's place, and the face emphasized inside it. Null rests the
   // grid. Light furniture — never saved; cleared with the transient modes.
   detail: HexDetail | null;
-  // The detail's open inventory (issue #296): the face whose tray stands,
-  // its tiles placing straight into the detail's place. Null hides it —
-  // the tray is opened by a layer's Add or Swap, closed by Cancel, a layer
-  // switch, Escape, or the placement itself. Light furniture — never saved.
-  detailTray: DetailTray;
   // The Mutator tray item armed for click-then-slot placement (issue #199,
   // mirroring ui.placing). Light furniture — never saved.
   mutArmedTray: string | null;
@@ -465,7 +445,6 @@ export class App {
     mutLayer: "modules",
     inventory: createInventoryState(),
     detail: null,
-    detailTray: null,
     mutArmedTray: null,
     mutUnlockArmed: false,
     entryRollPending: false,
@@ -709,7 +688,6 @@ export class App {
     // under it re-enters at rest — grid showing, layer reset, the detail's
     // inventory closed with it (issue #296).
     this.ui.detail = null;
-    this.ui.detailTray = null;
     // The Mutator Grid's armed gestures unwind with the rest (issue #199),
     // and the board re-enters flow at rest on Modules — the legend stands
     // by to switch again (issue #387), but a session never inherits
@@ -987,14 +965,6 @@ export class App {
       // The Mutator layer's Esc walk (issue #199): gesture first.
       if (this.cancelMutDrag || this.ui.mutUnlockArmed || this.ui.mutArmedTray !== null) {
         this.mutCancelGestures();
-        return;
-      }
-      // The Hex detail's Esc walk (issues #295, #296): the open inventory
-      // dismisses first — the active editing interaction — then the detail
-      // itself returns the grid with its layer, position, and zoom exactly
-      // as the detail found them.
-      if (this.ui.detail && this.ui.detailTray) {
-        this.closeDetailTray();
         return;
       }
       if (this.ui.detail) {
@@ -1314,7 +1284,6 @@ export class App {
     if (result.ok) {
       this.ui.modal = null;
       this.ui.detail = null;
-      this.ui.detailTray = null;
       this.ui.mutLayer = "mutators";
       this.mutDisarm();
       this.ui.entryRollPending = true;
@@ -1886,11 +1855,10 @@ export class App {
 
   // The explicit return (issue #295): the grid comes back showing the
   // layer it keeps — position and zoom never moved, so they restore by
-  // standing still. The detail's inventory closes with the detail.
+  // standing still. Shared inventory browsing state survives the return.
   closeDetail(): void {
     if (!this.ui.detail) return;
     this.ui.detail = null;
-    this.ui.detailTray = null;
     this.render();
   }
 
@@ -1901,14 +1869,12 @@ export class App {
   // clicks the locked face or its legend symbol. The grid's layer follows
   // the selection in every mode (issue #387 — flow included, its sync as
   // read-only as the switch itself), so the return lands on the face the
-  // player last read. Switching layers closes the open inventory (issue
-  // #296): the tray belongs to one layer, and a pending placement would
-  // otherwise lose its destination.
+  // player last read. The shared inventory follows the selected layer,
+  // retaining each layer's browsing choices.
   detailFace(face: DetailFace): void {
     if (!this.ui.detail || this.ui.detail.face === face) return;
     if (face === "mutators" && !this.state.catalogEntryOwned) return;
     this.ui.detail = { ...this.ui.detail, face };
-    this.ui.detailTray = null;
     if (this.state.catalogEntryOwned) this.ui.mutLayer = face;
     this.render();
     // The emphasis lands with the rebuild; the face's chassis takes focus
@@ -1916,51 +1882,18 @@ export class App {
     focusDetailFace(face);
   }
 
-  // The detail's inventory opener (issue #296): a layer's Add or Swap
-  // shows that layer's tray beside the stack, emphasizing its face — the
-  // tray belongs to one layer and never stands under a dimmed one. Any
-  // armed gesture unwinds first: the tray's tiles place straight into the
-  // detail's place, so an armed two-step placement has no destination
-  // click left to wait for.
-  openDetailTray(face: DetailFace): void {
-    const detail = this.ui.detail;
-    if (!detail || this.state.mode !== "upgrade") return;
-    if (face === "mutators" && !this.state.catalogEntryOwned) return;
-    this.ui.detail = { ...detail, face };
-    if (this.state.catalogEntryOwned) this.ui.mutLayer = face;
-    this.ui.placing = null;
-    this.mutDisarm();
-    this.ui.detailTray = face;
-    this.render();
-    // The keyboard lands on the tray's first control — a tile to choose,
-    // or the Cancel when nothing waits (the head stands first in document
-    // order, so the tray's items are asked for explicitly).
-    const firstTile = document.querySelector<HTMLElement>(".hex-detail-tray-items button");
-    (firstTile ?? document.getElementById("detail-tray-cancel"))?.focus();
-  }
-
-  // Cancel (issue #296): the tray closes and nothing changes — no item
-  // moved, no placement armed. The keyboard returns to the face the tray
-  // served, where its Add or Swap still stands.
-  closeDetailTray(): void {
-    if (!this.ui.detailTray) return;
-    this.ui.detailTray = null;
-    this.render();
-    focusDetailRail(this.ui.detail!.face);
-  }
-
   // The tray tile's one landing (issue #296): the chosen module places
   // straight into the detail's place — an occupied place swaps, the
   // displaced module to the tray, never an implicit combine (that stays
-  // the drop gesture's explicit review). Success closes the tray, keeps
+  // the drop gesture's explicit review). Success keeps
   // the selected Hex and layer standing, and the rebuild refreshes the
   // readouts and the chord row; a chord the placement newly activates
   // cues (issue #390), preferring one carrying the placed voice.
   detailPlaceModule(id: string): void {
     const detail = this.ui.detail;
-    if (!detail || this.state.mode !== "upgrade" || this.ui.detailTray !== "modules") return;
+    if (!detail || this.state.mode !== "upgrade") return;
     const module = this.state.modules.find((m) => m.id === id);
-    if (!module) return;
+    if (!module || module.pos !== null) return;
     const before = this.activeInstancesOf(displayedRates(this.state, true));
     const swap = deployedAt(this.state, detail.pos) !== undefined;
     if (
@@ -1969,13 +1902,8 @@ export class App {
         swap ? `${META[module.type].name} swapped in — the displaced module waits in the tray.` : `${META[module.type].name} placed at ${cellNoteOf(detail.pos)}.`,
       )
     ) {
-      // Success closes the tray (issue #296): a refusal keeps it standing,
-      // its stock unchanged by the failed landing. No paint falls between
-      // act's render and this one — only the final state shows.
-      this.ui.detailTray = null;
-      this.render();
       this.strumFormedChords(before, module.id);
-      focusDetailRail(this.ui.detail!.face);
+      focusDetailFace(this.ui.detail!.face);
     }
   }
 
@@ -1984,8 +1912,8 @@ export class App {
   // to the Mutator tray, and matching twins never combine implicitly.
   detailPlaceMutator(id: string): void {
     const detail = this.ui.detail;
-    if (!detail || this.state.mode !== "upgrade" || this.ui.detailTray !== "mutators") return;
-    if (!this.state.mutators.some((m) => m.id === id)) return;
+    if (!detail || this.state.mode !== "upgrade") return;
+    if (!this.state.mutators.some((m) => m.id === id && m.pos === null)) return;
     const swap = mutatorAt(this.state, detail.pos) !== undefined;
     if (
       this.act(
@@ -1993,9 +1921,7 @@ export class App {
         swap ? `Mutator placed at ${cellNoteOf(detail.pos)} — the previous one waits in the Mutator tray.` : `Mutator placed at ${cellNoteOf(detail.pos)}.`,
       )
     ) {
-      this.ui.detailTray = null;
-      this.render();
-      focusDetailRail(this.ui.detail!.face);
+      focusDetailFace(this.ui.detail!.face);
     }
   }
 
@@ -2018,7 +1944,6 @@ export class App {
     // Return to the grid so the roll choice can arm placement there.
     if (first && this.ui.entryRollPending && this.state.bankedMutatorRolls.length > 0) {
       this.ui.detail = null;
-      this.ui.detailTray = null;
       this.ui.mutLayer = "mutators";
       this.ui.forgeFace = "mutators";
       this.ui.modal = "forge";

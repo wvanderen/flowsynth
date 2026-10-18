@@ -1139,7 +1139,7 @@ describe("the always-live board (§5)", () => {
     app.render();
     const grid = document.getElementById("grid")!;
     expect(grid.querySelector('[data-type="spacer"] .face-level')).toBeNull();
-    expect(grid.querySelector('.module-node:not([data-type="spacer"]) .face-level')!.textContent).toBe("LV 0");
+    expect(grid.querySelector('.module-node:not([data-type="spacer"]) .face-level')!.textContent).toBe("Lv. 0");
   });
 
   it("the armed frontier wears one cost spot: the pill carries the price, the hexes rest bare (#201)", () => {
@@ -1423,9 +1423,9 @@ describe("combining by drop (issue #152)", () => {
     // The review promises the resulting merge tier (ADR-0058); the pair
     // line names each copy's fixed type rarity beside it.
     expect(review.textContent).toContain("Resulting tier");
-    expect(review.textContent).toContain("Tier 2");
+    expect(review.textContent).toContain("Tier II");
     expect(review.textContent).toContain("common");
-    expect(review.textContent).toContain("LV 1");
+    expect(review.textContent).toContain("Lv. 1");
     expect(review.textContent).toContain("10");
     // Cancel: neither copy is consumed, nothing moves, nothing refunds.
     document.getElementById("combine-cancel")!.click();
@@ -1815,7 +1815,6 @@ describe("always-on chord feedback (§6, #137)", () => {
     const before = displayedRates(app.state, true).allocation!.active;
     const replacement = give(app.state, "additive", null);
     app.openDetail(hex(1, 0));
-    app.openDetailTray("modules");
     app.detailPlaceModule(replacement.id);
     const after = displayedRates(app.state, true).allocation!.active;
     expect(after.map((chord) => chord.name)).toEqual(before.map((chord) => chord.name));

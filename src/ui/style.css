@@ -2041,7 +2041,6 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
    emphasized face wears the state grammar's firm inset marker and full
    strength while the other stays present, dimmed. */
 body.hex-detail-open #grid,
-body.hex-detail-open .tray-column,
 body.hex-detail-open .zoom-cluster,
 body.hex-detail-open .chord-readout,
 body.hex-detail-open .arc-card,
@@ -2299,91 +2298,9 @@ body.hex-detail-open .upgrade-all {
   .hex-chord-col .hex-chord-row { max-width: calc(var(--detail-hex) * 1.7); }
 }
 
-/* The detail's inventory (issue #296, re-docked by the review): an overlay
-   beside the stack — it covers, it never reflows, so opening the tray
-   never shifts the composition. A quiet instrument panel holding rows of
-   larger cell previews (the module's own face at tray scale), Cancel in
-   its head, tiles placing straight into the detail's place. */
-.hex-detail-tray {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 5;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: min(248px, 30vw);
-  max-height: calc(100% - 16px);
-  padding: 12px;
-  background: var(--panel);
-  border: 1px solid var(--line-strong);
-}
-.hex-detail-tray-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.hex-detail-tray-cancel {
-  padding: 5px 10px;
-  border: 1px solid var(--line-strong);
-  background: var(--panel-soft);
-  font: 600 10px var(--font-condensed);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink);
-  cursor: pointer;
-  white-space: nowrap;
-}
-.hex-detail-tray-cancel:hover { border-color: var(--accent); color: var(--accent); }
-.hex-detail-tray-items {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  justify-items: center;
-  align-content: start;
-  gap: 6px;
-  min-height: 40px;
-  overflow-y: auto;
-  padding: 2px;
-}
-.hex-detail-tray-items .inventory-tile { width: 96px; padding: 3px 2px 5px; }
-.hex-detail-tray-items .inventory-tile svg { width: 100%; }
-.hex-detail-tray-items .tray-face-tile svg.tray-face { color: var(--ink); }
-.hex-detail-tray .tray-empty { grid-column: 1 / -1; max-width: 200px; }
-/* The sheet re-docks the tray under the stack, full width in the flow —
-   the single column never shifts either way. */
-.hex-detail.sheet .hex-detail-tray {
-  position: static;
-  transform: none;
-  width: auto;
-  max-height: none;
-  margin: 2px 8px 0;
-  flex: none;
-}
-
-/* The orbital controls (issue #296 review): Swap and Retrieve ride the
-   cell itself — small round icon buttons in the space the hexagon's taper
-   leaves at its top-right and bottom-right, not text rows in the rail. */
+/* The face anchors its relationship connections. Inventory overlays it. */
 .hex-orbit { position: relative; display: inline-flex; }
-.hex-orbit-control { position: absolute; display: flex; align-items: center; z-index: 2; }
-.hex-orbit-btn {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 1px solid var(--line-strong);
-  background: var(--panel-soft);
-  color: var(--ink);
-  cursor: pointer;
-  z-index: 2;
-}
-.hex-orbit-btn svg { width: 19px; height: 19px; display: block; }
-.hex-orbit-btn:hover { border-color: var(--accent); color: var(--accent); }
-.hex-orbit-btn:focus-visible { outline-offset: 2px; }
-.hex-orbit .orbit-swap { top: 7%; right: -3%; }
-.hex-orbit .orbit-retrieve { bottom: 7%; right: -3%; }
+
 
 /* ── The Hex detail's wave connections (issue #297) ── */
 /* The cross-section's relationships as directional waves, each in its
@@ -4134,7 +4051,7 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .hex-detail-layer .profile-timing { margin-top: 6px; }
 
 /* Inventory browser: shared open rows on the column and phone sheet. */
-.tray-column.collapsed { width: 150px; }
+.tray-column.collapsed { width: 68px; }
 .inventory-browser { min-height: 0; color: var(--ink); }
 .inventory-head { display: flex; align-items: center; flex: 0 0 auto; border-bottom: 1px solid var(--line); }
 .inventory-head button { min-height: 44px; border: 0; background: transparent; padding: 8px 10px; font: 600 13px/1.2 var(--font-condensed); }
@@ -4144,19 +4061,20 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .inventory-collapsed .inventory-head { border-bottom: 0; }
 .inventory-body { display: flex; flex-direction: column; min-height: 0; overflow: hidden; padding: 0 10px 12px; }
 .inventory-tools { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; padding: 10px 0; flex: 0 0 auto; }
-.inventory-tools label { min-width: 0; }
-.inventory-tools select { width: 100%; min-width: 0; min-height: 44px; padding: 5px; border: 1px solid var(--line); border-radius: 0; background: var(--panel); color: var(--ink); font: 500 12px/1.2 var(--font-condensed); color-scheme: dark; }
+.inventory-tools label { position: relative; min-width: 0; }
+.inventory-tools label::after { content: ""; position: absolute; right: 12px; top: calc(50% - 4px); width: 5px; height: 5px; border-right: 1px solid var(--muted); border-bottom: 1px solid var(--muted); transform: rotate(45deg); pointer-events: none; }
+.inventory-tools select { width: 100%; min-width: 0; min-height: 44px; appearance: none; padding: 5px 28px 5px 8px; border: 1px solid var(--line); border-radius: 0; background: var(--panel); color: var(--ink); font: 500 12px/1.2 var(--font-condensed); color-scheme: dark; }
 .inventory-menu { display: flex; justify-content: flex-end; padding-top: 8px; }
 .inventory-menu button, .inventory-selection button, .inventory-body > button, .inventory-inspection > button { min-height: 44px; font: 600 13px/1.2 var(--font-condensed); }
 .inventory-list { overflow-y: auto; min-height: 0; overscroll-behavior: contain; scrollbar-color: var(--line-strong) var(--panel); }
-.inventory-row { display: flex; align-items: center; gap: 4px; border-top: 1px solid var(--line); min-height: 64px; }
+.inventory-row { display: flex; align-items: center; gap: 4px; border-top: 1px solid var(--line); min-height: 46px; }
 .inventory-row:first-child { border-top: 0; }
-.inventory-copy { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; min-height: 60px; padding: 3px 0; border: 0; background: transparent; text-align: left; }
+.inventory-copy { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; min-height: 44px; padding: 1px 0; border: 0; background: transparent; text-align: left; }
 .inventory-copy:hover:not(:disabled) { background: var(--panel-soft); }
-.inventory-mark { flex: 0 0 48px; width: 48px; }
-.inventory-mark svg { display: block; width: 100%; height: 48px; }
-.inventory-copy-read { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.inventory-copy-read strong { font: 600 14px/1.15 var(--font-condensed); }
+.inventory-mark { flex: 0 0 34px; width: 34px; }
+.inventory-mark svg { display: block; width: 100%; height: 34px; }
+.inventory-copy-read { display: flex; flex: 1; align-items: baseline; gap: 5px; min-width: 0; }
+.inventory-copy-read strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 14px/1.15 var(--font-condensed); }
 .inventory-copy-read small { color: var(--muted); font: 10px/1.4 var(--mono); overflow-wrap: anywhere; }
 .inventory-merge { flex: 0 0 auto; min-height: 44px; min-width: 44px; padding: 5px; font: 600 12px/1 var(--font-condensed); }
 .inventory-row.selected { box-shadow: inset 3px 0 var(--ink); }
@@ -4171,7 +4089,7 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .inventory-inspection { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
 .inventory-inspection h3, .inventory-inspection p { margin: 0; }
 .inventory-inspection p { font-size: 13px; line-height: 1.5; }
-.inventory-detail-face { display: block; width: 180px; max-width: 100%; align-self: center; }
+.inventory-detail-face { display: block; width: 128px; max-width: 100%; align-self: center; }
 .inventory-detail-face svg { width: 100%; display: block; }
 .inventory-inspection .profile-grades { flex-wrap: wrap; justify-content: flex-start; }
 .inventory-loss { color: var(--muted); font-size: 12px; line-height: 1.5; }
@@ -4215,3 +4133,30 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 
 /* The hex owns placement drags; the rest of the row scrolls the list. */
 .inventory-copy[data-inv] .inventory-mark { touch-action: none; }
+
+/* Inventory identity and compact quality notation (confirmed 2026-10-18). */
+.rarity-symbol { display: inline-flex; align-items: center; flex: 0 0 12px; vertical-align: middle; }
+.rarity-symbol svg { width: 12px; height: 12px; }
+.rarity-common { color: var(--rarity-common); }
+.rarity-uncommon { color: var(--rarity-uncommon); }
+.rarity-rare { color: var(--rarity-rare); }
+.face-tier { fill: var(--muted); font: inherit; }
+.inventory-tier { color: var(--muted); font: 600 14px/1.15 var(--font-condensed); }
+.inventory-level { margin-left: auto; font-size: 12px; font-variant-numeric: tabular-nums; }
+.inventory-merge-control { flex: 0 0 44px; }
+.inventory-merge { display: grid; place-items: center; width: 44px; height: 44px; border-color: transparent; background: transparent; }
+.inventory-merge svg { width: 20px; height: 20px; }
+.inventory-merge[aria-disabled="true"] { color: var(--muted); opacity: 0.4; }
+.inventory-detail-name { display: flex; align-items: baseline; gap: 7px; }
+.inventory-collapsed [data-inventory-collapse] { justify-content: center; gap: 5px; padding: 8px 5px; }
+.inventory-collapsed [data-inventory-collapse] > svg { width: 24px; height: 24px; flex: 0 0 24px; }
+.inventory-collapsed .inventory-head [data-inventory-collapse] > :last-child { margin-left: 0; font-size: 11px; }
+body.hex-detail-open .tray-column { z-index: 24; }
+.hex-stack-chassis[data-cell], .hex-stack-chassis[data-mut-slot] { touch-action: none; }
+
+.hex-stack-chassis.mut-land-open .hex { stroke: var(--charge); }
+.hex-stack-chassis.mut-land-swap .hex { stroke: var(--forge-glow); }
+.hex-stack-chassis.mut-land-combine .hex { stroke: var(--nous); }
+
+.inventory-copy-read > .rarity-symbol, .inventory-detail-name > .rarity-symbol { align-self: center; }
+.inventory-level { white-space: nowrap; }

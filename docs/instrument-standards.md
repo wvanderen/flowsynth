@@ -33,6 +33,14 @@ Scope note: [validated prototype UX](validated-prototype-ux.md) records the firs
 - **One state grammar everywhere**: muted outline = unavailable, clear outline = available, firm inset marker = selected, engraved completion mark = acquired. State stays recognizable without color alone.
 - **Glow and motion are for charge and live activity only.** Flow activity reads on deliberate inspection: steady low illumination and subtle local modulation, without broad background breathing or strong repeated flashes. Meaningful events may receive a brief local accent; continuous charging stays subdued. Idle surrounding panels stay quiet. Reduced-motion presentation is fully static, including charge leads; persistent marks and illumination preserve charge and direction information.
 
+### Inventory notation amendment — 2026-10-18
+
+Follow-up layout correction: full faces show `Lv. 0` above a single rarity mark + name + Roman-tier line. Compact inventory name/tier text shares a baseline; level readouts retain the `Lv.` prefix. The hypercube center carries a small filled hexagon for the requested visual trial.
+
+The confirmed [inventory feedback brief](inventory-ux-brief.md#inventory-feedback-amendment--2026-10-18) standardizes rarity as a grey circle (common), green triangle (uncommon), or blue diamond (rare), retaining plate finish and category hue/glyph identity. Shapes carry rarity without color; accessible names retain the rarity word. Merge tier retains engraved rings and uses Roman numerals starting at I; module level uses Arabic digits prefixed by `Lv.`. Mutators share rarity marks but have neither module level nor merge tier. This amends older descriptions that assign rings to rarity or reserve rarity entirely for finish/words.
+
+Inventory rows are compact open lines; collapse leaves a hypercube symbol and stored count. Inventory inspection uses an identity face with name and numeric state shown once below. The same browser works in Hex detail; its enlarged faces accept the normal placement/retrieval gestures, with direct Place retained. The redundant Store/Retrieve button is removed; opening inventory overlays the stage without shifting the detail composition. The unfamiliar Merge glyph has a plain action-name tooltip as an explicit exception to the mechanic-only rule below; first touch names it, second touch opens review.
+
 ## Writing and disclosure
 
 - **The readout is name + state + concrete effect**, compact: `Chords (4/11) +8% ν`. An effect may be a concise symbol or relation when it communicates the concrete outcome: `Fill with charge → Mutator draft`.

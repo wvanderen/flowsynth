@@ -49,7 +49,7 @@ import { renderInventoryContent, openInventoryForDrag } from "./inventory";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chordMarkCovers, chipWidth, CHORD_HUES, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
-import { APP_LABELS, CATEGORY_WORD, META, RARITY_LABEL, SHELF_DESCRIPTIONS, SPECIAL_DRAFT_NAME, tierWord } from "./meta";
+import { APP_LABELS, CATEGORY_WORD, META, RARITY_LABEL, SHELF_DESCRIPTIONS, SPECIAL_DRAFT_NAME, rarityMark, tierNumeral, tierWord } from "./meta";
 import { typeRarityOf } from "../engine/constants";
 import { formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown } from "./format";
 import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG, CAPACITY_SVG, SCRAP_SVG } from "./ledger";
@@ -2015,14 +2015,14 @@ function setDropHover(app: App, moduleId: string | null, pos: Hex | null, retrie
 function refreshDropPreview(app: App): void {
   const svg = document.getElementById("grid");
   if (!svg) return;
-  svg.querySelectorAll(".hex.drop-open, .hex.drop-occupied, .hex.drop-combine").forEach((node) =>
+  document.querySelectorAll("#grid .hex.drop-open, #grid .hex.drop-occupied, #grid .hex.drop-combine, #hex-detail .hex.drop-open, #hex-detail .hex.drop-occupied, #hex-detail .hex.drop-combine").forEach((node) =>
     node.classList.remove("drop-open", "drop-occupied", "drop-combine"),
   );
   const hover = app.ui.dropHover;
   if (hover && hover.pos !== null) {
     const register = dropRegister(app, hover.pos);
     if (register) {
-      svg.querySelector(`[data-cell="${hover.pos.q},${hover.pos.r}"] .hex`)?.classList.add(dropClass(register));
+      document.querySelectorAll(`[data-cell="${hover.pos.q},${hover.pos.r}"] .hex`).forEach(node => node.classList.add(dropClass(register)));
     }
   }
   const layer = svg.querySelector('[data-key="ghost-chords"]');
@@ -2284,7 +2284,7 @@ function bindSeamHover(app: App, svg: SVGSVGElement): void {
 // retrieval into the tray. Click-placement stays available without
 // dragging. No module refuses the drag — nothing is pinned on the
 // carrierless board (ADR-0021).
-function bindPointerDrag(app: App, element: Element, moduleId: string | (() => string | null)): void {
+export function bindPointerDrag(app: App, element: Element, moduleId: string | (() => string | null)): void {
   app.listen(element, "pointerdown", (baseEvent: Event) => {
     const event = baseEvent as PointerEvent;
     if (event.button !== 0 || app.state.mode !== "upgrade" || app.ui.buyingCell) return;
@@ -2744,7 +2744,7 @@ function renderCombineModal(app: App, content: HTMLElement): void {
   // always readable here — the render pass stays free of a nested
   // closeModal render.
   const { drag, target, preview } = combineOfferTerms(app)!;
-  const pairLine = (module: ModuleInstance) => `${META[module.type].name} · ${RARITY_LABEL[typeRarityOf(module.type)]} · ${tierWord(module.tier)} · LV ${module.level}`;
+  const pairLine = (module: ModuleInstance) => `${rarityMark(typeRarityOf(module.type))} ${META[module.type].name} · ${tierWord(module.tier)} · Lv. ${module.level}`;
   const destination = target.pos === null ? "The combined copy waits in the tray." : `The combined copy holds ${cellNoteOf(target.pos)}.`;
   content.innerHTML = `
     ${modalTop("COMBINE")}
@@ -2752,7 +2752,7 @@ function renderCombineModal(app: App, content: HTMLElement): void {
     <p class="lead">${pairLine(drag)}<br />+ ${pairLine(target)}</p>
     <div class="combine-terms">
       <div class="stat-row"><span>Resulting tier</span><span class="mono">${tierWord(preview.nextTier)}</span></div>
-      <div class="stat-row"><span>Retained level</span><span class="mono">LV ${preview.level}</span></div>
+      <div class="stat-row"><span>Retained level</span><span class="mono">Lv. ${preview.level}</span></div>
       <div class="stat-row"><span>Upgrade refund</span><span class="mono">${formatInt(preview.refund)} ν</span></div>
     </div>
     <p class="lead muted">${destination}</p>
@@ -2792,7 +2792,7 @@ function mutCombineOfferTerms(
 function renderMutCombineModal(app: App, content: HTMLElement): void {
   const { drag, target, nextRarity } = mutCombineOfferTerms(app)!;
   const tile = (item: MutatorInstance): string =>
-    `<span class="mut-combine-tile">${mutatorTileSvg(item)}<small>${FAMILY_WORD[item.family]} · ${RARITY_LABEL[item.rarity]}</small></span>`;
+    `<span class="mut-combine-tile">${mutatorTileSvg(item)}<small>${rarityMark(item.rarity)} ${FAMILY_WORD[item.family]}</small></span>`;
   const destination =
     target.pos === null ? "The combined mutator waits in the Mutator tray." : `The combined mutator holds the ${cellNoteOf(target.pos)} slot.`;
   content.innerHTML = `
@@ -2800,7 +2800,7 @@ function renderMutCombineModal(app: App, content: HTMLElement): void {
     <h2 id="modal-title">Combine these two?</h2>
     <p class="lead mut-combine-pair">${tile(drag)} <b>+</b> ${tile(target)}</p>
     <div class="combine-terms">
-      <div class="stat-row"><span>Resulting rarity</span><span class="mono">${RARITY_LABEL[nextRarity]}</span></div>
+      <div class="stat-row"><span>Resulting rarity</span><span>${rarityMark(nextRarity)}</span></div>
       <div class="stat-row"><span>Family</span><span class="mono">${FAMILY_WORD[drag.family]}</span></div>
     </div>
     <p class="lead muted">Mutators carry no levels — nothing is retained or refunded.</p>
@@ -3484,16 +3484,14 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
       ${face === "modules" && offer ? offer.candidates.map(candidate => `
         <div class="candidate-tile" data-rarity="${typeRarityOf(candidate.type)}" data-type="${candidate.type}"><button class="candidate-pick" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${typeRarityOf(candidate.type)}" data-type="${candidate.type}" aria-label="Take ${RARITY_LABEL[typeRarityOf(candidate.type)]} ${META[candidate.type].name} · ${tierWord(candidate.tier)}" aria-describedby="forge-effect-${candidate.id}"></button>
           <svg viewBox="-70 -70 140 140" aria-hidden="true">${moduleFace({ type: candidate.type, tier: candidate.tier, readout: candidateReadout(candidate.type, candidate.tier) })}</svg>
-          <span class="candidate-readout"><span class="candidate-name">${META[candidate.type].name}</span>
-          <span class="rarity">${RARITY_LABEL[typeRarityOf(candidate.type)]}</span>
+          <span class="candidate-readout"><span class="candidate-name">${rarityMark(typeRarityOf(candidate.type))} ${META[candidate.type].name} <span class="mono">${tierNumeral(candidate.tier)}</span></span>
           <span id="forge-effect-${candidate.id}" class="candidate-effect">${forgeEffectHtml(forgeEffect(candidate.type, candidate.tier))}</span>
           ${profileGradesHtml(candidate.type)}
           ${candidate.type !== "spacer" ? `<span class="candidate-scaling">${["harmonizer", "echo", "bend", "amplifier", "ritual"].includes(candidate.type) ? "" : `+${formatNumber((BALANCE.rarityPower[typeRarityOf(candidate.type)] - 1) * 100)}% / level · `}upgrades from 10 ν</span>` : ""}</span>
         </div>`).join("") : mutOffer ? mutOffer.candidates.map(candidate => `
         <div class="candidate-tile mut-candidate" data-rarity="${candidate.rarity}"><button class="candidate-pick" data-mut-choice="${candidate.id}" data-mut-offer="${mutOffer.id}" data-rarity="${candidate.rarity}" aria-label="Take ${RARITY_LABEL[candidate.rarity]} ${FAMILY_WORD[candidate.family]} mutator" aria-describedby="forge-effect-${candidate.id}"></button>
           <svg viewBox="-70 -70 140 140" aria-hidden="true" style="color:var(--arete)">${mutatorTileInner(candidate)}</svg>
-          <span class="candidate-readout"><span class="candidate-name">${FAMILY_WORD[candidate.family]}</span>
-          <span class="rarity">${RARITY_LABEL[candidate.rarity]}</span>
+          <span class="candidate-readout"><span class="candidate-name">${rarityMark(candidate.rarity)} ${FAMILY_WORD[candidate.family]}</span>
           <span id="forge-effect-${candidate.id}" class="candidate-effect">${forgeEffectHtml(mutatorEffectText(candidate.family, candidate.rarity))}</span></span>
         </div>`).join("") : ""}
     </div>` : `<p class="empty-copy">No ${face === "mutators" ? "mutator" : "module"} rolls banked.</p>`}
@@ -3980,7 +3978,7 @@ function renderDevBoard(app: App): void {
       return `<button class="dev-voice${selected}" data-devvoice="${module.id}" aria-pressed="${board.selected === module.id}">
           <span class="dev-note">${module.pos ? cellNoteOf(module.pos) : "—"}</span>
           <span class="dev-type">${META[module.type].short}</span>
-          <span class="dev-lvl">L${module.level}</span>
+          <span class="dev-lvl">Lv. ${module.level}</span>
           <span class="dev-cap">${used}/${board.capacity}</span>
           <span class="dev-factor mono">×${factor.toFixed(2)}</span>
           <span class="dev-value mono">${silent ? "—" : `${formatNumber(contribution?.value ?? 0)} ν/s`}</span>

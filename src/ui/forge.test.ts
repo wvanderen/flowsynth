@@ -27,7 +27,7 @@ describe("Forge drafts (#335)", () => {
   it("describes carried tiers and shows their acquired effects", () => {
     app.openModal("forge");
     const pick = panel().querySelector('[data-choice="m3"]')!;
-    expect(pick.getAttribute("aria-label")).toBe("Take common Booster · Tier 3");
+    expect(pick.getAttribute("aria-label")).toBe("Take common Booster · Tier III");
     const tile = pick.closest(".candidate-tile")!;
     expect(tile.querySelector(".candidate-effect")?.textContent).toContain("+45%");
     expect(tile.querySelector(".face-readout")?.textContent ?? tile.querySelector("svg")?.textContent).toContain("+45%");
@@ -55,9 +55,9 @@ describe("Forge drafts (#335)", () => {
     expect(line("g3")).toContain("/live goal minute at completion");
     expect(line("g3")).toContain("modest practice and note credit");
     // The named designs' labels ride the tiles' accessible names.
-    expect(panel().querySelector('[data-choice="g1"]')!.getAttribute("aria-label")).toBe("Take common Flywheel · Tier 1");
-    expect(panel().querySelector('[data-choice="g2"]')!.getAttribute("aria-label")).toBe("Take common Scribe · Tier 1");
-    expect(panel().querySelector('[data-choice="g3"]')!.getAttribute("aria-label")).toBe("Take common Milestone · Tier 1");
+    expect(panel().querySelector('[data-choice="g1"]')!.getAttribute("aria-label")).toBe("Take common Flywheel · Tier I");
+    expect(panel().querySelector('[data-choice="g2"]')!.getAttribute("aria-label")).toBe("Take common Scribe · Tier I");
+    expect(panel().querySelector('[data-choice="g3"]')!.getAttribute("aria-label")).toBe("Take common Milestone · Tier I");
   });
 
   it("opens on the board layer and switches without consuming either offer", () => {

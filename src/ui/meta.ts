@@ -84,7 +84,7 @@ export const SPECIAL_DRAFT_NAME: Record<SpecialDraftKind, string> = {
 // The merge tier's player-facing word (ADR-0058), 1-based — the verbal
 // home of the engraved rings for labels, tooltips, and screen readers.
 export function tierWord(tier: number): string {
-  return `Tier ${tier + 1}`;
+  return `Tier ${tierNumeral(tier)}`;
 }
 
 // Focus-app display names, shared by the console tiles and purchase surfaces.
@@ -111,3 +111,20 @@ export const PLAN_PRESET_MINUTES: readonly number[] = [10, 15, 20, 25, 30, 45, 6
 // The history list's page size (§9): ~20 rows with a show-more tail, no
 // grouping, no caps on what is kept — only on what is drawn at once.
 export const HISTORY_PAGE_ROWS = 20;
+
+// Stored tiers are zero-based; every visible numeral starts at I.
+export function tierNumeral(tier: number): string {
+  let value = Math.max(1, Math.floor(tier) + 1);
+  let numeral = "";
+  for (const [amount, glyph] of [[1000, "M"], [900, "CM"], [500, "D"], [400, "CD"], [100, "C"], [90, "XC"], [50, "L"], [40, "XL"], [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]] as const) {
+    while (value >= amount) { numeral += glyph; value -= amount; }
+  }
+  return numeral;
+}
+
+export function rarityShape(rarity: Rarity): string {
+  return `<g class="rarity-mark rarity-${rarity}" fill="currentColor">${rarity === "common" ? '<circle r="3.5"/>' : rarity === "uncommon" ? '<path d="M0-4.5 4.5 3.5H-4.5Z"/>' : '<path d="M0-5 5 0 0 5-5 0Z"/>'}</g>`;
+}
+export function rarityMark(rarity: Rarity): string {
+  return `<span class="rarity-symbol"><svg viewBox="-6 -6 12 12" aria-hidden="true">${rarityShape(rarity)}</svg><span class="sr-only">${RARITY_LABEL[rarity]}</span></span>`;
+}
