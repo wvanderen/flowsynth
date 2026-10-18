@@ -1723,11 +1723,9 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
 
 /* Rarity = finish: a faint plate tint over the chassis. The light channels
    (selection, charge, dispensing) win over the tint wherever they apply. */
-.module-node .hex, .candidate-tile .hex { fill: var(--plate-common); }
-.module-node[data-rarity="uncommon"] .hex:not(.selected):not(.dispensing):not(.locked),
-.candidate-tile[data-rarity="uncommon"] .hex { fill: var(--plate-uncommon); }
-.module-node[data-rarity="rare"] .hex:not(.selected):not(.dispensing):not(.locked),
-.candidate-tile[data-rarity="rare"] .hex { fill: var(--plate-rare); }
+.module-node .hex { fill: var(--plate-common); }
+.module-node[data-rarity="uncommon"] .hex:not(.selected):not(.dispensing):not(.locked) { fill: var(--plate-uncommon); }
+.module-node[data-rarity="rare"] .hex:not(.selected):not(.dispensing):not(.locked) { fill: var(--plate-rare); }
 
 /* Engraved rarity rings: hairline circles under the panel's engraving. */
 .face-rings { fill: none; stroke: var(--muted); stroke-opacity: 0.3; stroke-width: 1; pointer-events: none; }
@@ -1741,9 +1739,8 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
 .face-readout { font: 500 17px var(--mono); font-variant-numeric: tabular-nums; }
 .module-node[data-type="forge"] .face-readout,
 .inventory-tile[data-type="forge"] .face-readout,
-.drag-ghost[data-type="forge"] .face-readout,
-.candidate-tile[data-type="forge"] .face-readout { font-size: 12px; }
-.drag-ghost .face-readout, .candidate-tile .face-readout { font-size: 14px; }
+.drag-ghost[data-type="forge"] .face-readout { font-size: 12px; }
+.drag-ghost .face-readout { font-size: 14px; }
 /* The Forge's charge-vs-threshold readout sits in the charge register. */
 .face-readout.charge { fill: var(--charge); }
 /* An inactive booster's readout (issue #374): the verdict state, muted. */
@@ -2589,15 +2586,8 @@ body.hex-detail-open .upgrade-all {
 .tray-items .inventory-tile svg { width: 100%; }
 
 .scrap-payout { display: inline-flex; align-items: center; gap: 3px; }
-/* The Forge draft's skip control (issue #377): the offer's payout beside
-   the choose cue — same register, same chip. */
-.forge-cue-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.forge-cue-row .forge-choice-cue { margin: 0; }
+/* The Forge draft's skip control (issue #377): the offer's payout in the
+   scrap register, centered beneath the draft it resolves. */
 .forge-skip {
   display: inline-flex;
   align-items: center;
@@ -2613,113 +2603,45 @@ body.hex-detail-open .upgrade-all {
 .forge-skip:hover:not(:disabled) { border-color: var(--scrap); }
 .forge-skip .scrap-mark svg { width: 11px; height: 11px; display: block; }
 
-/* The Draft Loom row (issue #378): the Modules face's one scrap purchase —
-   name, current tier-bonus chance, and the next rung's price in one open
-   row, a hairline above it separating the purchase from the drafts. */
-.forge-loom {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 2px 11px;
-  margin: 2px 0 4px;
-  border-top: 1px solid var(--line);
-}
-.forge-loom .loom-name {
-  font: 600 12px/1 var(--font-condensed);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.forge-loom .loom-state { font-size: 11px; color: var(--scrap); }
-.forge-loom .loom-tip { margin-left: auto; }
-.forge-loom .loom-buy {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 44px;
-  padding: 5px 10px;
-  border-color: var(--line-strong);
-  background: var(--panel-veil);
-  color: var(--scrap);
-  font: 600 12px/1 var(--font-condensed);
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-.forge-loom .loom-buy:hover:not(:disabled) { border-color: var(--scrap); }
-.forge-loom .loom-buy:disabled { color: var(--muted); }
-.forge-loom .loom-buy .scrap-mark svg { width: 11px; height: 11px; display: block; }
-.forge-loom .loom-tuned {
-  font: 600 11px/1 var(--font-condensed);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-  padding: 5px 10px;
-  border: 1px solid var(--line);
-}
-
-/* The special drafts' rows (issue #379): the loom row's one-time products,
-   the same row grammar repeated down the group — hairline separations,
-   name/effect/tip/cost per row — with the Jacquard Card's weave picks in
-   their own wrapping strip beneath its row. */
-.forge-specials {
+/* The scrap face's rows (issues #378, #379): the catalog-row grammar the
+   other faces sell through. Each special row pairs its Roll control with
+   the price on one line, the held count always beneath (a row never
+   changes height as entitlements come and go). The Roll's unavailable
+   state must actually land — the scrap register's color would otherwise
+   out-specific the shared disabled mute. */
+.catalog-row .price.scrap:disabled { color: var(--muted); border-color: var(--line-soft); }
+.special-controls { display: flex; align-items: center; gap: 6px; }
+/* The Jacquard Card's category picks: one per line, the category hue
+   framing its own symbol — muted border and dimmed mark while no Card is
+   held, the full hue on the live picks' frame and hover. */
+.special-rolls {
   display: flex;
   flex-direction: column;
-  margin: 0 0 4px;
-  border-top: 1px solid var(--line);
-}
-.forge-special {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 10px;
+  gap: 4px;
   padding: 9px 2px;
 }
-.forge-special + .forge-special,
-.forge-special + .special-weaves {
-  border-top: 1px solid var(--line);
-}
-.forge-special .special-name {
-  font: 600 12px/1 var(--font-condensed);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.forge-special .special-effect {
-  font: 400 11px/1.4 var(--font-sans);
-  color: var(--muted);
-}
-.forge-special .loom-tip { margin-left: auto; }
-.forge-special .loom-buy.special-buy { min-height: 44px; }
-.forge-special .loom-buy.special-weave {
-  min-height: 44px;
-  color: var(--ink);
-}
-.forge-special .loom-buy.special-weave:hover:not(:disabled) { border-color: var(--ink); }
-.forge-special .loom-state { font-size: 11px; color: var(--scrap); }
-
-/* The Jacquard Card pairs each category disclosure with a square-cut
-   weave control; the pairs wrap together at the row's width. */
-.special-weaves {
+.special-category-choice { position: relative; }
+.special-category-choice .special-roll-pick { width: 100%; }
+.special-category-choice .special-roll-word { position: absolute; left: 42px; top: 50%; transform: translateY(-50%); }
+.special-roll-pick {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 9px 2px;
-}
-.special-category-pick {
-  display: inline-flex;
   align-items: center;
-  gap: 6px;
-}
-.special-category-pick .term-trigger { min-height: 44px; }
-.special-weaves .special-weave-pick {
+  gap: 8px;
   min-height: 44px;
-  padding: 5px 10px;
-  border: 1px solid var(--line-strong);
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--category-hue) 40%, var(--line));
   background: var(--panel-veil);
   color: var(--ink);
-  font: 600 11px/1 var(--font-condensed);
-  letter-spacing: 0.04em;
 }
-.special-weaves .special-weave-pick:hover:not(:disabled) { border-color: var(--scrap); }
-.special-weaves .special-weave-pick:disabled { color: var(--muted); }
+.special-roll-pick:hover:not(:disabled) {
+  border-color: var(--category-hue);
+  background: color-mix(in srgb, var(--category-hue) 10%, var(--panel-veil));
+}
+.special-roll-pick:disabled { color: var(--muted); border-color: var(--line-soft); }
+.special-roll-pick:disabled .special-roll-symbol { opacity: 0.4; }
+.special-roll-symbol { display: inline-flex; }
+.special-roll-symbol svg { width: 22px; height: 22px; display: block; }
+.special-roll-word { font-size: 11px; color: inherit; }
 
 /* The live drag ghost: the module's own face tile, carried under the cursor. */
 .drag-ghost {
@@ -3134,9 +3056,6 @@ body.hex-detail-open .upgrade-all {
 }
 .candidate-tile:hover:not(:disabled) { border-color: var(--line-strong); background: var(--hover-bg); transform: translateY(-2px); }
 .candidate-tile:focus-visible { outline-offset: 4px; }
-.candidate-tile svg { width: 150px; height: 150px; }
-.candidate-tile:hover:not(:disabled) .hex { fill: var(--accent-faint); }
-.candidate-tile .rarity { font: 10px var(--mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
 .candidate-tile .candidate-scaling { font: 10px var(--mono); color: var(--muted); text-align: center; }
 .candidate-tile .candidate-effect { font: 12px/1.7 var(--font-sans); color: var(--muted); text-align: center; }
 
@@ -3787,10 +3706,12 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .catalog-face-tab .mono { font-size: 14px; }
 .catalog-face-tab[data-catalog-face="nous"][aria-pressed="true"] { color: var(--nous); }
 .catalog-face-tab[data-catalog-face="arete"][aria-pressed="true"] { color: var(--arete); }
+.catalog-face-tab[data-catalog-face="scrap"][aria-pressed="true"] { color: var(--scrap); }
 .catalog-identity { display: flex; align-items: center; color: var(--arete); }
 .catalog-identity svg { width: 22px; height: 22px; }
 .catalog-identity .mono { font-size: 19px; }
 .catalog-identity-nous { color: var(--nous); }
+.catalog-identity-scrap { color: var(--scrap); }
 /* The scrollable body: the pinned head never moves; the content does. */
 .catalog-body { flex: 1; min-height: 0; overflow-y: auto; margin-top: 8px; }
 .catalog-sections { display: grid; gap: 24px; }
@@ -3812,6 +3733,11 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .catalog-row .price { flex-shrink: 0; white-space: nowrap; font-family: var(--mono); font-size: 13px; }
 .catalog-row .price.arete { color: var(--arete); border-color: var(--arete-line); }
 .catalog-row .price.arete:hover:not(:disabled) { background: var(--arete-faint); border-color: var(--arete); }
+/* The scrap face's price affordance: the same button in the scrap
+   register — figure and mark, muted by the shared disabled state. */
+.catalog-row .price.scrap { color: var(--scrap); }
+.catalog-row .price.scrap:hover:not(:disabled) { border-color: var(--scrap); }
+.catalog-row .price .scrap-mark svg { display: inline-block; width: 11px; height: 11px; vertical-align: middle; }
 .catalog-note { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
 .catalog-owned .catalog-row { opacity: 0.7; }
 /* The arete face's lock screen: the face's single centered offer, pre-entry. */
@@ -3937,11 +3863,28 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 
 /* Forge (#335): one open draft, docked clear of the board's center. */
 .modal-backdrop.peek { align-items: flex-end; padding: 16px 24px 84px; }
+/* The peek's rim: the same two-layer clip the catalog frame wears — a
+   rim-colored plate under a face with the same clip — so the hairline
+   follows the diagonal corners a plain border cannot reach. */
 .modal-backdrop.peek .modal {
   width: min(820px, 100%);
   max-height: calc(100dvh - 180px);
-  padding: 16px 22px;
+  padding: 1px;
+  background: var(--line-strong);
+  border: 0;
+  border-radius: 0;
   box-shadow: none;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.peek .forge-frame {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--panel);
+  clip-path: var(--inst-clip);
+  padding: 15px 21px 16px;
 }
 .forge-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .forge-switch { display: flex; gap: 16px; }
@@ -3950,15 +3893,23 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .forge-switch .mono { margin-left: 8px; }
 .forge-top #close-modal { border: 0; background: none; min-height: 44px; white-space: nowrap; }
 .forge-top kbd { font: 11px var(--mono); margin-left: 6px; color: var(--muted); }
+/* The draft's one-line cue above the candidates; the skip resolves
+   beneath them, centered (2026-10-18 feedback). A rolled special draft
+   names its product and guarantee under the cue (the offer carries its
+   tag). */
 .forge-choice-cue { font: 12px var(--font-condensed); color: var(--muted); margin: 14px 0 0; }
+.forge-offer-note { font: 400 12px/1.4 var(--font-sans); color: var(--muted); margin: 4px 0 0; }
+.forge-offer-note .t-condensed { font-size: 12px; color: var(--ink); }
+.forge-skip-row { display: flex; justify-content: center; padding: 2px 0 12px; }
 .peek .candidates { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; padding: 8px 0 18px; }
 .peek .mut-candidates { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .peek .candidate-tile { border: 0; padding: 0 8px 8px; gap: 4px; transition: none; }
 .peek .candidate-tile:hover:not(:disabled) { background: none; transform: none; }
-.peek .candidate-tile svg { width: 112px; height: 112px; }
+/* The tile's simple mark rides the shared .module-preview sizing — the
+   identity reads in the name and readout beneath it (2026-10-18). */
+.peek .candidate-tile .module-preview { margin-top: 2px; flex-shrink: 0; }
 .candidate-readout { display: flex; flex-direction: column; align-items: center; gap: 5px; }
 .candidate-name { font: 600 15px var(--font-condensed); }
-.peek .candidate-tile .rarity { font-size: 11px; }
 .peek .candidate-tile .candidate-effect { font-size: 13px; line-height: 1.4; }
 .peek .candidate-tile .candidate-scaling { font-size: 11px; line-height: 1.4; }
 .peek .forge-meters { border-top: 1px solid var(--line); padding-top: 12px; margin: 0; gap: 12px; }
@@ -3969,20 +3920,23 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
 .forge-track i { display: block; height: 100%; background: var(--forge-glow); }
 @media (max-width: 600px) {
   .modal-backdrop.peek { padding: 0 8px 76px; }
-  .modal-backdrop.peek .modal { padding: 12px 16px; max-height: min(65dvh, 560px); }
+  .modal-backdrop.peek .modal { padding: 1px; max-height: min(65dvh, 560px); }
+  .peek .forge-frame { padding: 11px 15px 12px; }
   .forge-switch { gap: 12px; }
   .forge-top { gap: 4px; }
   .forge-top kbd { display: none; }
   .peek .candidates, .peek .mut-candidates { grid-template-columns: 1fr; gap: 0; padding-bottom: 12px; }
   .peek .candidate-tile { flex-direction: row; gap: 10px; padding: 8px 0; text-align: left; }
   .peek .candidate-tile + .candidate-tile { border-top: 1px solid var(--line); }
-  .peek .candidate-tile svg { width: 72px; height: 72px; flex-shrink: 0; }
   .candidate-readout { align-items: flex-start; gap: 3px; }
   .peek .candidate-tile .candidate-effect, .peek .candidate-tile .candidate-scaling { text-align: left; }
 }
 /* Keep the switch stationary between equally important draft branches. */
 .forge-top { position: sticky; top: 0; z-index: 1; background: var(--panel); }
-.peek .candidates { min-height: 250px; }
+/* The reserve holds the peek's height steady across faces and tiers — the
+   simple marks keep the tiles compact, so the reserve rides just above
+   their natural height instead of the retired 112px faces'. */
+.peek .candidates { min-height: 220px; }
 .peek .forge-meters { min-height: 80px; align-content: start; }
 .mut-candidate .mut-tile-hex { fill: none; stroke: currentColor; stroke-width: 4.5; }
 .mut-candidate .mut-tile-ticks { fill: currentColor; }

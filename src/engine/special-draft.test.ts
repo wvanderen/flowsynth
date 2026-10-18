@@ -67,13 +67,16 @@ describe("the special drafts' purchase", () => {
   });
 });
 
-describe("the woven guarantee", () => {
+describe("the rolled guarantee", () => {
   it("the Jacquard Card drafts its category alone", () => {
     // Oscillator card over mixed bands: common → the Sine, uncommon → the
     // Afterglow, rare → the Sideband. Every candidate still wears the
     // bought category.
     const offer = generateSpecialOffer(fresh(), "category", "oscillator", stubRng([0.5, 0.0, 0.998, 0.0, 0.9995, 0.0]));
     expect(offer.candidates.map((c) => c.type)).toEqual(["additive", "afterglow", "sideband"]);
+    // The offer wears its product's name: the Forge reads the special tag
+    // and the category it named.
+    expect(offer.special).toEqual({ kind: "category", category: "oscillator" });
   });
 
   it("a band with none of the card's category falls back inside it, spending no extra draw", () => {
@@ -92,6 +95,7 @@ describe("the woven guarantee", () => {
     const offer = generateSpecialOffer(fresh(), "rare", "oscillator", stubRng([0.5, 0.0, 0.9, 0.0, 0.5, 0.99]));
     expect(offer.candidates.map((c) => c.type)).toEqual(["sideband", "exciter", "sideband"]);
     expect(offer.candidates.every((c) => TYPE_RARITY[c.type] === "rare")).toBe(true);
+    expect(offer.special).toEqual({ kind: "rare" });
   });
 
   it("the Plied Weft mints every candidate a tier up", () => {

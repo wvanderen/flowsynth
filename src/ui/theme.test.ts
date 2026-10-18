@@ -180,14 +180,16 @@ describe("theme token table", () => {
       expect(args!.replace(/\s+/g, " ").trim(), `color-mix(${args})`).toMatch(derived);
     }
     // --mono is the one non-color token the stylesheet owns. --cc,
-    // --seam-dur, and --pip are the chord surfaces' runtime properties —
+    // --seam-dur, --pip, and --category-hue are runtime properties —
     // the markup injects them (render.ts, library.ts), each resolving
-    // through a token key itself. Anything the stylesheet defines itself
-    // (e.g. the --modal-pad spacing var) resolves by definition.
+    // through a token key itself (--category-hue is the Jacquard picks'
+    // per-category frame hue, inline from HUE_TOKEN_OF). Anything the
+    // stylesheet defines itself (e.g. the --modal-pad spacing var)
+    // resolves by definition.
     const defined = new Set([...stylesheet.matchAll(/(^|[\s;{])--([a-z0-9-]+)\s*:/g)].map((m) => m[2]!));
     const referenced = new Set([...stylesheet.matchAll(/var\(--([a-z0-9-]+)[),]/g)].map((m) => m[1]!));
     for (const name of referenced) {
-      expect(name === "mono" || name === "cc" || name === "seam-dur" || name === "pip" || name in tokens || defined.has(name), `--${name} resolves`).toBe(true);
+      expect(name === "mono" || name === "cc" || name === "seam-dur" || name === "pip" || name === "category-hue" || name in tokens || defined.has(name), `--${name} resolves`).toBe(true);
     }
   });
 

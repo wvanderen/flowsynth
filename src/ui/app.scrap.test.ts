@@ -51,9 +51,9 @@ describe("the scrap controls (issue #377)", () => {
       expect(app.state.bankedRolls).toHaveLength(0);
       expect(app.state.scrap).toBe(BALANCE.scrapValue.uncommon);
       expect(status()).toContain(`Roll skipped · +${BALANCE.scrapValue.uncommon} scrap.`);
-      // The panel rebuilds on the emptied queue; the consumed offer is gone.
-      expect(document.querySelector("#modal-content [data-skip-offer]")).toBeNull();
-      app.closeModal();
+      // The last offer's skip empties both queues: the batch visit closes
+      // the Forge itself.
+      expect(app.ui.modal).toBeNull();
     });
 
     it("pays the same figure as taking the best candidate and scrapping it", () => {
@@ -61,11 +61,12 @@ describe("the scrap controls (issue #377)", () => {
       // candidate, scrap the fresh mint from the tray, and read the balance.
       app.openModal("forge");
       document.querySelector<HTMLButtonElement>('[data-choice="m3"]')!.click();
-      app.closeModal();
-      // chooseCandidate arms placement; put the mint down.
-      app.cancelPlacing();
+      // The pick mints to inventory and — both queues dry — closes the
+      // visit; the mint waits unplaced for the batch scrap.
+      expect(app.ui.modal).toBeNull();
       const minted = app.state.modules.find((m) => m.type === "chorus")!;
       expect(minted).toBeDefined();
+      expect(minted.pos).toBeNull();
       app.render();
       batchScrap([minted.id]);
       const roundTrip = app.state.scrap;
@@ -101,11 +102,12 @@ describe("the scrap controls (issue #377)", () => {
       // The panel presents the newest banked roll first.
       expect(skip().dataset.skipOffer).toBe("module-roll-2");
       skip().click();
+      expect(app.ui.modal).toBe("forge");
       expect(skip().dataset.skipOffer).toBe("module-roll");
       skip().click();
       expect(app.state.scrap).toBe(BALANCE.scrapValue.common + BALANCE.scrapValue.uncommon);
-      expect(document.querySelector("#modal-content [data-skip-offer]")).toBeNull();
-      app.closeModal();
+      // Both queues dry: the batch visit ends.
+      expect(app.ui.modal).toBeNull();
     });
 
     it("stands on the Modules face only: mutator drafts keep the no-consolation contract", () => {

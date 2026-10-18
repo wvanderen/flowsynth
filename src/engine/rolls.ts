@@ -120,7 +120,11 @@ export function generateSpecialOffer(state: GameState, kind: SpecialDraftKind, c
     }
     candidates.push({ id: newModuleId(state), type, tier: drawSpecialTier(state, rng, kind === "tier" ? 1 : 0) });
   }
-  return { id: newModuleId(state), candidates: [candidates[0]!, candidates[1]!, candidates[2]!] };
+  return {
+    id: newModuleId(state),
+    candidates: [candidates[0]!, candidates[1]!, candidates[2]!],
+    special: kind === "category" ? { kind, category } : { kind },
+  };
 }
 
 // The opening's first roll (board-redesign spec §8) yields a synthesizer

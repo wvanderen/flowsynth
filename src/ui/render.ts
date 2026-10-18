@@ -43,7 +43,7 @@ import {
 import { activeHabit } from "../engine/habits";
 import { startPointerDrag } from "./pointer-drag";
 import { appIcon, lockMarkSvg } from "./icons";
-import { HEX_RADIUS, hexApothem, hexPoints, moduleFace, boardPoint, SPACING, spacerClipPath, forgeBranchOf, faceReadoutFor, faceLevel, waterFill, zeroBuyRead, isSource, inventoryTileSvg } from "./face";
+import { HEX_RADIUS, hexApothem, hexPoints, moduleFace, boardPoint, SPACING, spacerClipPath, forgeBranchOf, faceReadoutFor, faceLevel, waterFill, zeroBuyRead, isSource, inventoryTileSvg, HUE_TOKEN_OF } from "./face";
 import { renderHexDetail } from "./hexdetail";
 import { renderInventoryContent, openInventoryForDrag } from "./inventory";
 import { chargeGlow, chargeLeads } from "./leads";
@@ -2483,15 +2483,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   document.body.classList.toggle("modal-sheet-open", sheet);
   const extra =
     kind === "forge"
-      ? [app.ui.forgeFace, app.state.catalogEntryOwned, app.state.bankedRolls.length, app.state.bankedMutatorRolls.length, app.state.bankedRolls.at(-1)?.id ?? null, app.state.bankedMutatorRolls.at(-1)?.id ?? null,
-        // The Draft Loom row (issue #378): the owned rungs and the balance
-        // re-read with every purchase, so the row's chance, price, and
-        // muted state never stand stale in an open modal. The special
-        // drafts' held entitlements ride beside them (issue #379): a
-        // purchase or a weave re-renders the rows and the chip strip. The
-        // unlocked cap rides too (issue #380): the Plied Weft's
-        // availability and the offered tiers read it.
-        app.state.draftTierBonus, app.state.scrap, JSON.stringify(app.state.specialDrafts), unlockedMergeCap(app.state)]
+      ? [app.ui.forgeFace, app.state.catalogEntryOwned, app.state.bankedRolls.length, app.state.bankedMutatorRolls.length, app.state.bankedRolls.at(-1)?.id ?? null, app.state.bankedMutatorRolls.at(-1)?.id ?? null]
       : kind === "honesty"
         ? [app.exitPending, app.state.session?.accounting.poolSeconds ?? 0, app.state.session?.accounting.bucketNous ?? 0]
         : kind === "summary"
@@ -2524,6 +2516,16 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                   app.state.catalogEntryOwned,
                   app.state.rollPoolJoined,
                   app.state.horizonBroken,
+                  // The scrap face's rows (issues #378, #379, #380): the
+                  // owned rungs and the balance re-read with every purchase,
+                  // so the loom's chance, price, and muted state never stand
+                  // stale in an open sheet; the special drafts' held
+                  // entitlements ride beside them, and the unlocked cap
+                  // carries the Plied Weft's availability.
+                  app.state.draftTierBonus,
+                  app.state.scrap,
+                  JSON.stringify(app.state.specialDrafts),
+                  unlockedMergeCap(app.state),
                 ]
               : kind === "achievements"
                 // Quantized progress: an open page refreshes when a bar visibly
@@ -3021,26 +3023,31 @@ function areteBuyButtonHtml(app: App, id: string, price: number): string {
 // elsewhere (ADR-0030 unamended).
 function renderCatalogModal(app: App, content: HTMLElement): void {
   const { ui } = app;
-  const areteFace = ui.catalogFace === "arete";
+  const face = ui.catalogFace;
   // The arete tab stands open from the start (issue #292 review): before
   // the first prestige its face is the entry purchase screen — the preview
-  // of the future entry, price muted — never a locked tab.
-  const faceTab = (face: "nous" | "arete", mark: string, word: string): string =>
-    `<button class="catalog-face-tab" data-catalog-face="${face}" aria-pressed="${ui.catalogFace === face}">${mark}<span>${word}</span></button>`;
-  const identity = areteFace
+  // of the future entry, price muted — never a locked tab. The scrap face
+  // (2026-10-18 feedback) is a switch-reachable stop: the mode-wins door
+  // never lands on it, and it carries the shop's scrap-priced rows.
+  const faceTab = (f: "nous" | "arete" | "scrap", mark: string, word: string): string =>
+    `<button class="catalog-face-tab" data-catalog-face="${f}" aria-pressed="${face === f}">${mark}<span>${word}</span></button>`;
+  const identity = face === "arete"
     ? `<span class="catalog-identity" aria-hidden="true">${ARETE_SVG}</span>`
-    : `<span class="catalog-identity catalog-identity-nous" aria-hidden="true"><b class="mono">ν</b></span>`;
+    : face === "scrap"
+      ? `<span class="catalog-identity catalog-identity-scrap" aria-hidden="true">${SCRAP_SVG}</span>`
+      : `<span class="catalog-identity catalog-identity-nous" aria-hidden="true"><b class="mono">ν</b></span>`;
+  const body = face === "arete" ? catalogAreteFaceHtml(app) : face === "scrap" ? catalogScrapFaceHtml(app) : catalogNousFaceHtml(app);
   content.innerHTML = `<div class="catalog-frame">
     <div class="catalog-top">
-      <span class="catalog-face-switch" role="group" id="modal-title" aria-label="Catalog">${faceTab("nous", '<b class="mono">ν</b>', "nous")}${faceTab("arete", ARETE_SVG, "Arete")}</span>
+      <span class="catalog-face-switch" role="group" id="modal-title" aria-label="Catalog">${faceTab("nous", '<b class="mono">ν</b>', "nous")}${faceTab("arete", ARETE_SVG, "Arete")}${faceTab("scrap", SCRAP_SVG, "scrap")}</span>
       ${identity}
       <button id="close-modal" aria-label="Close dialog">✕</button>
     </div>
-    <div class="catalog-body">${areteFace ? catalogAreteFaceHtml(app) : catalogNousFaceHtml(app)}</div>
+    <div class="catalog-body">${body}</div>
   </div>`;
   content.querySelectorAll<HTMLButtonElement>("[data-catalog-face]").forEach((button) => {
     app.listen(button, "click", () => {
-      app.ui.catalogFace = button.getAttribute("data-catalog-face") as "nous" | "arete";
+      app.ui.catalogFace = button.getAttribute("data-catalog-face") as typeof face;
       app.render();
     });
   });
@@ -3056,6 +3063,17 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
   app.listen(byId("buy-arete-entry"), "click", () => app.buyCatalogEntryAction());
   app.listen(byId("buy-arete-pool"), "click", () => app.joinRollPoolAction());
   app.listen(byId("buy-arete-break"), "click", () => app.breakHorizonAction());
+  // The scrap face's purchases and rolls (issues #378, #379): the same
+  // handlers the rows carried on the Forge, one sheet home now.
+  app.listen(content.querySelector<HTMLButtonElement>("[data-buy-draft-upgrade]"), "click", () => app.buyDraftUpgradeAction());
+  content.querySelectorAll<HTMLButtonElement>("[data-buy-special]").forEach((button) => {
+    app.listen(button, "click", () => app.buySpecialDraftAction(button.dataset.buySpecial as SpecialDraftKind));
+  });
+  content.querySelectorAll<HTMLButtonElement>("[data-roll-special]").forEach((button) => {
+    app.listen(button, "click", () =>
+      app.rollSpecialDraftAction(button.dataset.rollSpecial as SpecialDraftKind, (button.dataset.specialCategory ?? "oscillator") as Category),
+    );
+  });
   app.listen(byId("catalog-show-acquired"), "change", (event) => {
     app.ui.showAcquired = (event.target as HTMLInputElement).checked;
     app.render();
@@ -3064,6 +3082,137 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
   // accumulate on the stable modal content and toggle a tap twice.
   wireTooltips(content.querySelector(".catalog-frame")!, app.signal);
   wireClose(app);
+}
+
+// The scrap face (2026-10-18 feedback): the shop's scrap-priced drafts in
+// the catalog-row grammar the other faces sell through — name and note
+// left, the price affordance right, rule-separated rows. Two sections:
+// the Forge Upgrades' permanent rungs, then the Special Drafts' one-time
+// products (the section name carries "one draft", so the notes don't). No
+// info icons (the effect lines and the muted states say enough).
+// Purchases act in upgrade mode only, like every catalog face.
+function catalogScrapFaceHtml(app: App): string {
+  const upgrade = app.state.mode === "upgrade";
+  return `<div class="catalog-sections">
+    <section>
+      <h2 class="t-condensed">Forge Upgrades</h2>
+      <div class="catalog-rows">${draftLoomRowHtml(app.state)}</div>
+    </section>
+    <section>
+      <h2 class="t-condensed">Special Drafts</h2>
+      <div class="catalog-rows">${specialDraftRowsHtml(app.state)}</div>
+    </section>
+  </div>
+  ${upgrade ? "" : `<p class="modal-note">Purchases happen between sessions — enter upgrade mode to buy.</p>`}`;
+}
+
+// The Draft Loom row (issue #378, parent #366): the Forge Upgrades
+// section's permanent purchase — scrap buys rungs, each raising the
+// chance every fresh candidate mints one merge tier higher (offered tiers
+// never pass the unlocked cap). The row reads its owned level like the
+// inventory's notation, then the chance and next price. The flow lock and
+// an empty scrap balance mute the buy; the tuned ladder retires it for
+// the engraved word.
+function draftLoomRowHtml(state: GameState): string {
+  const chance = draftTierChanceOf(state.draftTierBonus);
+  const price = nextDraftUpgradePrice(state.draftTierBonus);
+  const nextChance = Math.round(draftTierChanceOf(state.draftTierBonus + 1) * 100);
+  const chanceReadout = `${Math.round(chance * 100)}%${price === null ? "" : ` → ${nextChance}%`}`;
+  const locked = state.mode !== "upgrade";
+  const buy = price === null
+    ? `<span class="shop-buy"><span class="st-acquired">Tuned</span></span>`
+    : `<span class="shop-buy"><button class="price scrap" data-buy-draft-upgrade aria-label="Improve the Draft Loom to ${nextChance}% tier bonus · ${formatInt(price)} scrap"${
+        locked || state.scrap < price ? " disabled" : ""
+      }>${formatInt(price)} <small class="scrap-mark" aria-hidden="true">${SCRAP_SVG}</small></button></span>`;
+  return `<article class="catalog-row">
+    <div><h3 class="t-condensed">Draft Loom</h3><p class="t-note"><span class="mono">Lv. ${state.draftTierBonus}</span> · ${termTipHtml("merge tier")} bonus <span class="mono">${chanceReadout}</span> · ${termTipHtml("memorized")}</p></div>
+    ${buy}
+  </article>`;
+}
+
+// A special draft's guarantee in words: the scrap rows' trimmed notes and
+// the Forge's rolled-offer note read this one builder.
+function specialDraftEffect(kind: SpecialDraftKind, category?: Category): string {
+  return kind === "category"
+    ? `${categoryTermHtml(category ?? "oscillator")} draft`
+    : kind === "rare"
+      ? "Every candidate rare"
+      : `Every candidate one ${termTipHtml("merge tier")} up`;
+}
+
+function categoryTermHtml(category: Category): string {
+  return termTipHtml(category === "conduit" ? "Charge conduit" : category === "ritual" ? "RITUAL" : CATEGORY_WORD[category] as CatalogTerm, CATEGORY_WORD[category]);
+}
+
+// Each pool category's symbol rides the representative launch design's
+// glyph in the category hue — the same hex the inventory carries for that
+// category's flagship, so the Jacquard previews read as the categories
+// they roll.
+const CATEGORY_SYMBOL_TYPE: Record<Category, ModuleType> = {
+  oscillator: "additive",
+  generator: "focusKeyed",
+  booster: "blaster",
+  silentVoice: "harmonizer",
+  spacer: "spacer",
+  forge: "forge",
+  conduit: "amplifier",
+  ritual: "ritual",
+};
+
+// The special drafts' rows (issue #379, parent #366): the Special Drafts
+// section's one-time products, the same row grammar — proper name, one
+// trimmed effect line, the scrap price on the buy beside its Roll control.
+// The Roll button stands on every row in the unavailable state until an
+// entitlement is held (2026-10-18 feedback); rolling banks an ordinary
+// guaranteed offer — the Forge's candidates resolve it with the same
+// choose and skip, under the product's own name (the offer carries its
+// special tag). The Jacquard Card rolls from the category symbols beneath
+// its row — shown once a Card is held (they read too bulky otherwise),
+// live only then. The flow lock mutes everything; an unaffordable price
+// mutes the buy; a Plied Weft the unlocked cap cannot honor stands muted
+// with its siblings — the one unavailable state the grammar has.
+function specialDraftRowsHtml(state: GameState): string {
+  const locked = state.mode !== "upgrade";
+  const held = (kind: SpecialDraftKind) => state.specialDrafts[kind] ?? 0;
+  const buyButton = (kind: SpecialDraftKind, available: boolean) => {
+    const price = BALANCE.specialDraftCosts[kind];
+    const name = SPECIAL_DRAFT_NAME[kind];
+    return `<button class="price scrap" data-buy-special="${kind}" aria-label="Buy a ${name} · ${formatInt(price)} scrap"${
+      locked || !available || state.scrap < price ? " disabled" : ""
+    }>${formatInt(price)} <small class="scrap-mark" aria-hidden="true">${SCRAP_SVG}</small></button>`;
+  };
+  const rollButton = (kind: SpecialDraftKind) =>
+    `<button class="price scrap" data-roll-special="${kind}" aria-label="Roll the held ${SPECIAL_DRAFT_NAME[kind]}"${
+      locked || held(kind) < 1 ? " disabled" : ""
+    }>Roll</button>`;
+  const priceCell = (kind: SpecialDraftKind, available: boolean, withRoll: boolean) =>
+    `<span class="shop-buy"><span class="special-controls">${withRoll ? rollButton(kind) : ""}${buyButton(kind, available)}</span><small class="shop-countdown mono">${held(kind)} held</small></span>`;
+  const jacquardSymbols = held("category") > 0
+    ? `<div class="special-rolls" role="group" aria-label="Roll the held Jacquard Card — pick the category">${
+        (Object.keys(CATEGORY_WORD) as Category[])
+          .map(
+            (category) =>
+              `<div class="special-category-choice"><button class="special-roll-pick" data-roll-special="category" data-special-category="${category}" style="--category-hue: var(--${HUE_TOKEN_OF[CATEGORY_SYMBOL_TYPE[category]]})" aria-label="Roll the held Jacquard Card · ${CATEGORY_WORD[category]} draft"${
+                locked ? " disabled" : ""
+              }><span class="special-roll-symbol">${inventoryTileSvg({ type: CATEGORY_SYMBOL_TYPE[category] })}</span></button><span class="special-roll-word mono">${categoryTermHtml(category)}</span></div>`,
+          )
+          .join("")
+      }</div>`
+    : "";
+  const tierAvailable = unlockedMergeCap(state) >= 1;
+  return `<article class="catalog-row">
+      <div><h3 class="t-condensed">Jacquard Card</h3><p class="t-note">Your chosen category · ${termTipHtml("memorized")}</p></div>
+      ${priceCell("category", true, false)}
+    </article>
+    ${jacquardSymbols}
+    <article class="catalog-row">
+      <div><h3 class="t-condensed">Silk Warp</h3><p class="t-note">Every candidate rare · ${termTipHtml("memorized")}</p></div>
+      ${priceCell("rare", true, true)}
+    </article>
+    <article class="catalog-row">
+      <div><h3 class="t-condensed">Plied Weft</h3><p class="t-note">Every candidate one ${termTipHtml("merge tier")} up · ${termTipHtml("memorized")}</p></div>
+      ${priceCell("tier", tierAvailable, true)}
+    </article>`;
 }
 
 // The catalog's price affordance (issue #271): the outline price button in
@@ -3287,48 +3436,6 @@ function forgeEffectHtml(effect: string): string {
     label => termTipHtml(label.toLowerCase() as CatalogTerm, label));
 }
 
-function candidateReadout(type: ModuleInstance["type"], tier: number): string {
-  const power = tierPowerOf(tier);
-  switch (type) {
-    case "additive":
-    case "blaster":
-    case "triangle":
-    case "square":
-    case "saw":
-    case "afterglow":
-    case "sideband":
-      return `+${formatNumber(baseTermOf(type, power))}`;
-    case "harmonizer":
-    case "echo":
-    case "bend":
-      return "silent";
-    case "amplifier":
-      return "relay";
-    case "ritual":
-      return "amp";
-    case "spacer":
-      return "⌇";
-    case "focusKeyed":
-    case "noteKeyed":
-    case "goalKeyed":
-    case "pulsewell":
-      return `⌁${formatNumber(power)}`;
-    case "infusor":
-      return `+${formatNumber(BALANCE.infusorBonus * 100 * power)}%`;
-    case "field":
-      return `+${formatNumber(BALANCE.fieldBonus * 100 * power)}%`;
-    case "spotlight":
-      return `+${formatNumber(BALANCE.spotlightBonus * 100 * power)}%`;
-    case "chorus":
-      return `+${formatNumber(BALANCE.chorusBonus * 100 * power)}%`;
-    case "exciter":
-      return `+${formatNumber(BALANCE.exciterBonus * 100 * power)}%`;
-    case "forge":
-    case "mutatorForge":
-      return `${formatNumber(power)}/s`;
-  }
-}
-
 // The meter detail's live slots (ADR-0041): the figures move every tick a
 // session runs, so the open modal fills them in place — the rebuild only
 // fires when the pending offer changes, and the detail never flickers.
@@ -3366,107 +3473,18 @@ function updateForgeMetersLive(scope: ParentNode, state: GameState, forgeRate: n
   liveAttr(scope, "modal-mutator-track", "aria-valuetext", mutatorLine);
 }
 
-// The Draft Loom row (issue #378, parent #366): the Modules face's one
-// purchase — scrap buys permanent rungs, each raising the chance every
-// fresh candidate mints one merge tier higher (offered tiers never pass
-// the unlocked cap). Name, current chance, and the next rung's price stand
-// visible; the deeper mechanic rides the tooltip layer. The flow lock and
-// an empty scrap balance mute the buy; the tuned ladder retires it.
-function draftLoomHtml(state: GameState): string {
-  const chance = draftTierChanceOf(state.draftTierBonus);
-  const price = nextDraftUpgradePrice(state.draftTierBonus);
-  const nextChance = Math.round(draftTierChanceOf(state.draftTierBonus + 1) * 100);
-  const chanceReadout = `${Math.round(chance * 100)}%${price === null ? "" : ` → ${nextChance}%`}`;
-  const locked = state.mode !== "upgrade";
-  const buy = price === null
-    ? `<span class="loom-tuned">Tuned</span>`
-    : `<button class="loom-buy" data-buy-draft-upgrade aria-label="Improve the Draft Loom to ${nextChance}% tier bonus · ${formatInt(price)} scrap"${
-        locked || state.scrap < price ? " disabled" : ""
-      }>Improve · ${formatInt(price)} <small class="scrap-mark" aria-hidden="true">${SCRAP_SVG}</small></button>`;
-  return `<div class="forge-loom">
-    <span class="loom-name">Draft Loom</span>
-    <span class="loom-state mono">${termTipHtml("merge tier")} bonus ${chanceReadout}</span>
-    ${termTipHtml("memorized")}
-    <span class="inst-tip loom-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="loom-mechanics" aria-label="Draft Loom — what it does">ⓘ</button><span class="inst-tip-body" id="loom-mechanics" role="tooltip">Each candidate may mint one step higher</span></span>
-    ${buy}
-  </div>`;
-}
-
-// The special drafts' rows (issue #379, parent #366): the Modules face's
-// one-time products under the loom row, one row per product in the same
-// grammar — proper name, one effect line, the deeper mechanic in the
-// tooltip layer, and the scrap price on the buy. A held entitlement shows
-// its count and its Weave control; the Jacquard Card pairs each
-// category disclosure with its own weave, one pair per pool category. Weaving banks an
-// ordinary guaranteed offer — the candidates above resolve it with the
-// same choose and skip. The flow lock mutes everything; an unaffordable
-// price mutes the buy; a Plied Weft the unlocked cap cannot honor stands
-// muted with its siblings — the one unavailable state the grammar has.
-function specialDraftsHtml(state: GameState): string {
-  const locked = state.mode !== "upgrade";
-  const held = (kind: SpecialDraftKind) => state.specialDrafts[kind] ?? 0;
-  const buyButton = (kind: SpecialDraftKind, available: boolean) => {
-    const price = BALANCE.specialDraftCosts[kind];
-    const name = SPECIAL_DRAFT_NAME[kind];
-    return `<button class="loom-buy special-buy" data-buy-special="${kind}" aria-label="Buy a ${name} · ${formatInt(price)} scrap"${
-      locked || !available || state.scrap < price ? " disabled" : ""
-    }>Buy · ${formatInt(price)} <small class="scrap-mark" aria-hidden="true">${SCRAP_SVG}</small></button>`;
-  };
-  const weaveButton = (kind: SpecialDraftKind, guaranteeWord: string) =>
-    held(kind) > 0
-      ? `<button class="loom-buy special-weave" data-weave-special="${kind}" aria-label="Weave the held ${SPECIAL_DRAFT_NAME[kind]} · ${guaranteeWord}"${
-          locked ? " disabled" : ""
-        }>Weave</button>`
-      : "";
-  const jacquardChips =
-    held("category") > 0
-      ? `<div class="special-weaves" role="group" aria-label="Weave the held Jacquard Card — pick the category">${
-          (Object.keys(CATEGORY_WORD) as Category[])
-            .map(
-              (category) =>
-                `<span class="special-category-pick">${termTipHtml(category === "conduit" ? "Charge conduit" : category === "ritual" ? "RITUAL" : CATEGORY_WORD[category] as CatalogTerm, CATEGORY_WORD[category])}<button class="special-weave-pick" data-weave-special="category" data-special-category="${category}" aria-label="Weave the held Jacquard Card · ${CATEGORY_WORD[category]} draft"${
-                  locked ? " disabled" : ""
-                }>Weave</button></span>`,
-            )
-            .join("")
-        }</div>`
-      : "";
-  const tierAvailable = unlockedMergeCap(state) >= 1;
-  return `<div class="forge-specials">
-    <div class="forge-special">
-      <span class="special-name">Jacquard Card</span>
-      <span class="special-effect">One draft, your chosen category · ${termTipHtml("memorized")}</span>
-      <span class="inst-tip loom-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="special-jacquard-mechanics" aria-label="Jacquard Card — what it does">ⓘ</button><span class="inst-tip-body" id="special-jacquard-mechanics" role="tooltip">Rarity still rides the ordinary bands</span></span>
-      ${held("category") > 0 ? `<span class="loom-state mono">${held("category")} held</span>` : ""}
-      ${buyButton("category", true)}
-    </div>
-    ${jacquardChips}
-    <div class="forge-special">
-      <span class="special-name">Silk Warp</span>
-      <span class="special-effect">One draft, every candidate rare · ${termTipHtml("memorized")}</span>
-      <span class="inst-tip loom-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="special-silk-mechanics" aria-label="Silk Warp — what it does">ⓘ</button><span class="inst-tip-body" id="special-silk-mechanics" role="tooltip">Category weights apply within the rare band</span></span>
-      ${held("rare") > 0 ? `<span class="loom-state mono">${held("rare")} held</span>` : ""}
-      ${buyButton("rare", true)}
-      ${weaveButton("rare", "a rare-band draft")}
-    </div>
-    <div class="forge-special">
-      <span class="special-name">Plied Weft</span>
-      <span class="special-effect">One draft, every candidate one ${termTipHtml("merge tier")} up · ${termTipHtml("memorized")}</span>
-      <span class="inst-tip loom-tip"><button class="inst-tip-trigger" type="button" aria-expanded="false" aria-describedby="special-plied-mechanics" aria-label="Plied Weft — what it does">ⓘ</button><span class="inst-tip-body" id="special-plied-mechanics" role="tooltip">Offered tiers stop at the unlocked cap</span></span>
-      ${held("tier") > 0 ? `<span class="loom-state mono">${held("tier")} held</span>` : ""}
-      ${buyButton("tier", tierAvailable)}
-      ${weaveButton("tier", "a tiered draft")}
-    </div>
-  </div>`;
-}
-
 function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapshot): void {
   const { state, ui } = app;
   const face = ui.forgeFace;
   const offer = state.bankedRolls.at(-1);
   const mutOffer = state.bankedMutatorRolls.at(-1);
   const hasOffer = face === "modules" ? !!offer : !!mutOffer;
-  content.innerHTML = `
+  // The skip stands centered beneath the draft (2026-10-18 feedback) —
+  // the whole offer resolves before the payout question asks itself.
+  const skip = face === "modules" && offer
+    ? `<div class="forge-skip-row"><button class="forge-skip" data-skip-offer="${offer.id}" aria-label="Skip draft · +${formatInt(skipPayoutOf(offer))} scrap">Skip <span class="mono">+${formatInt(skipPayoutOf(offer))}</span><small class="scrap-mark" aria-hidden="true">${SCRAP_SVG}</small></button></div>`
+    : "";
+  content.innerHTML = `<div class="forge-frame">
     <h2 id="modal-title" class="sr-only">Forge choice</h2>
     <div class="forge-top">
       <div class="forge-switch" role="group" aria-label="Forge drafts">
@@ -3475,29 +3493,27 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
       </div>
       <button id="close-modal" aria-label="Close Forge">Close <kbd>Esc</kbd></button>
     </div>
-    ${hasOffer ? `<div class="forge-cue-row"><p class="forge-choice-cue">Choose 1 of ${face === "modules" ? 3 : 2}</p>${
-      face === "modules" && offer
-        ? `<button class="forge-skip" data-skip-offer="${offer.id}" aria-label="Skip draft · +${formatInt(skipPayoutOf(offer))} scrap">Skip <span class="mono">+${formatInt(skipPayoutOf(offer))}</span><small class="scrap-mark" aria-hidden="true">${SCRAP_SVG}</small></button>`
+    ${hasOffer ? `<p class="forge-choice-cue">Choose a new ${face === "modules" ? "module" : "mutator"}</p>${
+      face === "modules" && offer?.special
+        ? `<p class="forge-offer-note"><span class="t-condensed">${SPECIAL_DRAFT_NAME[offer.special.kind]}</span> · ${specialDraftEffect(offer.special.kind, offer.special.category)}</p>`
         : ""
-    }</div>
+    }
     <div class="candidates ${face === "mutators" ? "mut-candidates" : ""}">
       ${face === "modules" && offer ? offer.candidates.map(candidate => `
         <div class="candidate-tile" data-rarity="${typeRarityOf(candidate.type)}" data-type="${candidate.type}"><button class="candidate-pick" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${typeRarityOf(candidate.type)}" data-type="${candidate.type}" aria-label="Take ${RARITY_LABEL[typeRarityOf(candidate.type)]} ${META[candidate.type].name} · ${tierWord(candidate.tier)}" aria-describedby="forge-effect-${candidate.id}"></button>
-          <svg viewBox="-70 -70 140 140" aria-hidden="true">${moduleFace({ type: candidate.type, tier: candidate.tier, readout: candidateReadout(candidate.type, candidate.tier) })}</svg>
+          <span class="module-preview">${inventoryTileSvg(candidate)}</span>
           <span class="candidate-readout"><span class="candidate-name">${rarityMark(typeRarityOf(candidate.type))} ${META[candidate.type].name} <span class="mono">${tierNumeral(candidate.tier)}</span></span>
           <span id="forge-effect-${candidate.id}" class="candidate-effect">${forgeEffectHtml(forgeEffect(candidate.type, candidate.tier))}</span>
           ${profileGradesHtml(candidate.type)}
-          ${candidate.type !== "spacer" ? `<span class="candidate-scaling">${["harmonizer", "echo", "bend", "amplifier", "ritual"].includes(candidate.type) ? "" : `+${formatNumber((BALANCE.rarityPower[typeRarityOf(candidate.type)] - 1) * 100)}% / level · `}upgrades from 10 ν</span>` : ""}</span>
+          ${candidate.type !== "spacer" && !["harmonizer", "echo", "bend", "amplifier", "ritual"].includes(candidate.type) ? `<span class="candidate-scaling">+${formatNumber((BALANCE.rarityPower[typeRarityOf(candidate.type)] - 1) * 100)}% / level</span>` : ""}</span>
         </div>`).join("") : mutOffer ? mutOffer.candidates.map(candidate => `
         <div class="candidate-tile mut-candidate" data-rarity="${candidate.rarity}"><button class="candidate-pick" data-mut-choice="${candidate.id}" data-mut-offer="${mutOffer.id}" data-rarity="${candidate.rarity}" aria-label="Take ${RARITY_LABEL[candidate.rarity]} ${FAMILY_WORD[candidate.family]} mutator" aria-describedby="forge-effect-${candidate.id}"></button>
-          <svg viewBox="-70 -70 140 140" aria-hidden="true" style="color:var(--arete)">${mutatorTileInner(candidate)}</svg>
+          <span class="module-preview"><svg viewBox="-70 -70 140 140" aria-hidden="true" style="color:var(--arete)">${mutatorTileInner(candidate)}</svg></span>
           <span class="candidate-readout"><span class="candidate-name">${rarityMark(candidate.rarity)} ${FAMILY_WORD[candidate.family]}</span>
           <span id="forge-effect-${candidate.id}" class="candidate-effect">${forgeEffectHtml(mutatorEffectText(candidate.family, candidate.rarity))}</span></span>
         </div>`).join("") : ""}
-    </div>` : `<p class="empty-copy">No ${face === "mutators" ? "mutator" : "module"} rolls banked.</p>`}
-    ${face === "modules" ? draftLoomHtml(state) : ""}
-    ${face === "modules" ? specialDraftsHtml(state) : ""}
-    ${forgeMeterHtml(face)}`;
+    </div>${skip}` : `<p class="empty-copy">No ${face === "mutators" ? "mutator" : "module"} rolls banked.</p>`}
+    ${forgeMeterHtml(face)}</div>`;
   wireTooltips(content, app.signal);
   updateForgeMetersLive(content, state, projected.forgeRate, projected.mutatorForgeRate);
   content.querySelectorAll<HTMLButtonElement>("[data-forge-face]").forEach(button => {
@@ -3515,17 +3531,6 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
   });
   content.querySelectorAll<HTMLButtonElement>("[data-skip-offer]").forEach(button => {
     app.listen(button, "click", () => app.skipDraftAction(button.dataset.skipOffer!));
-  });
-  content.querySelectorAll<HTMLButtonElement>("[data-buy-draft-upgrade]").forEach(button => {
-    app.listen(button, "click", () => app.buyDraftUpgradeAction());
-  });
-  content.querySelectorAll<HTMLButtonElement>("[data-buy-special]").forEach(button => {
-    app.listen(button, "click", () => app.buySpecialDraftAction(button.dataset.buySpecial as SpecialDraftKind));
-  });
-  content.querySelectorAll<HTMLButtonElement>("[data-weave-special]").forEach(button => {
-    app.listen(button, "click", () =>
-      app.weaveSpecialDraftAction(button.dataset.weaveSpecial as SpecialDraftKind, (button.dataset.specialCategory ?? "oscillator") as Category),
-    );
   });
   content.querySelectorAll<HTMLButtonElement>("[data-mut-choice]").forEach(button => {
     app.listen(button.parentElement!, "click", (event) => {

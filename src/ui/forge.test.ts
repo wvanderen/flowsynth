@@ -29,8 +29,10 @@ describe("Forge drafts (#335)", () => {
     const pick = panel().querySelector('[data-choice="m3"]')!;
     expect(pick.getAttribute("aria-label")).toBe("Take common Booster · Tier III");
     const tile = pick.closest(".candidate-tile")!;
+    // The tile shows the inventory's simple mark; the tier reads in the
+    // name and the acquired effect in the readout beneath.
+    expect(tile.querySelector(".module-preview svg")).not.toBeNull();
     expect(tile.querySelector(".candidate-effect")?.textContent).toContain("+45%");
-    expect(tile.querySelector(".face-readout")?.textContent ?? tile.querySelector("svg")?.textContent).toContain("+45%");
     (pick as HTMLButtonElement).click();
     expect(app.state.modules.find(m => m.type === "infusor")?.tier).toBe(2);
   });
@@ -101,20 +103,25 @@ describe("Forge drafts (#335)", () => {
     expect(panel().querySelector(".gbar")).toBeNull();
   });
 
-  it("mints only the active draft and retains the existing landing behavior", () => {
+  it("mints only the active draft; the batch walks both queues and closes when dry", () => {
     app.openModal("forge");
     switchTo("mutators");
     panel().querySelector<HTMLButtonElement>('[data-mut-choice="u2"]')!.click();
     expect(app.state.bankedMutatorRolls).toHaveLength(0);
     expect(app.state.bankedRolls).toHaveLength(1);
     expect(app.state.mutators.at(-1)?.family).toBe("charge");
+    // The mint lands unplaced — pick-and-place is retired — and the
+    // emptied branch hands the visit to the one with rolls left.
+    expect(app.state.mutators.at(-1)?.pos ?? null).toBeNull();
     expect(app.ui.modal).toBe("forge");
-    expect(app.ui.forgeFace).toBe("mutators");
-    switchTo("modules");
+    expect(app.ui.forgeFace).toBe("modules");
+    expect(app.ui.placing).toBeNull();
     panel().querySelector<HTMLButtonElement>('[data-choice="m1"]')!.click();
     expect(app.state.bankedRolls).toHaveLength(0);
+    expect(app.state.modules.at(-1)?.pos ?? null).toBeNull();
+    // Both queues dry: the batch visit ends and the Forge dismisses itself.
     expect(app.ui.modal).toBeNull();
-    expect(app.ui.placing).toBeTruthy();
+    expect(app.ui.placing).toBeNull();
   });
 
   it("opens effect definitions without choosing and dismisses them before the draft", () => {
@@ -136,7 +143,11 @@ describe("Forge drafts (#335)", () => {
     expect(body.classList.contains("inst-show")).toBe(false);
     panel().querySelector<HTMLButtonElement>('[data-choice="m1"]')!.click();
     expect(app.state.bankedRolls).toHaveLength(0);
-    expect(app.ui.placing).toBeTruthy();
+    // The standing landing: the mutator roll still waits, so the visit
+    // walks to its face and keeps the peek.
+    expect(app.state.bankedMutatorRolls).toHaveLength(1);
+    expect(app.ui.modal).toBe("forge");
+    expect(app.ui.forgeFace).toBe("mutators");
   });
 
   it("discloses pitch, chords, and both roll types in their effects", () => {
