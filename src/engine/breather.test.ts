@@ -113,6 +113,9 @@ describe("the breather's start and end (spec §1, §4)", () => {
     applyBreatherGap(s, 300);
     endBreather(s);
     expect(endBreather(s).ok).toBe(false);
+    expect(startBreather(s).ok).toBe(false);
+    const loaded = deserialize(serialize(s, 1000)).state!;
+    expect(startBreather(loaded).ok).toBe(false);
   });
 });
 

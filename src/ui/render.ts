@@ -333,7 +333,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
             ${sheetOpen ? sheetHtml() : ""}
           </div>
           <div class="session-actions">
-            <button class="main-switch live" id="flow-switch" aria-label="End breather" title="Ends the breather — the bonus was the rate while it ran">
+            <button class="main-switch live" id="flow-switch" aria-label="End breather">
               ${switchSvg}<span>End breather</span><i class="switch-state" aria-hidden="true"></i>
             </button>
           </div>

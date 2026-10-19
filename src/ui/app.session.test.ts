@@ -1152,6 +1152,64 @@ describe("the breather (docs/breather-spec.md)", () => {
     expect(record.breather!.completed).toBe(false);
   });
 
+  it("early exit reconciles the wall gap since the last tick", () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+    try {
+      runMintingSession(app, 1500);
+      app.takeBreather();
+      const balance = app.state.nous;
+      clock.mockReturnValue(1_037_500);
+      app.endBreather();
+      expect(app.state.breatherSeconds).toBeCloseTo(37.5);
+      expect(app.state.nous).toBeGreaterThan(balance);
+      expect(app.state.breathersCompleted).toBe(0);
+      const revived = boot();
+      expect(revived.ui.modal).toBeNull();
+      expect(document.getElementById("summary-breather")).toBeNull();
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("an exit after a delayed deadline completes and signals exactly once", () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+    try {
+      const { app, fired } = stubChannels();
+      runMintingSession(app, 1500);
+      app.takeBreather();
+      clock.mockReturnValue(1_400_000);
+      app.endBreather();
+      expect(app.state.breatherSeconds).toBe(300);
+      expect(app.state.breathersCompleted).toBe(1);
+      expect(fired.chimes).toBe(1);
+      expect(fired.notifications).toBe(1);
+      app.endBreather();
+      expect(fired.chimes).toBe(1);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("a reload past the deadline preserves the completion notice and consumes the offer", () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+    try {
+      runMintingSession(app, 1500);
+      app.takeBreather();
+      clock.mockReturnValue(1_400_000);
+      const { fired, channels } = makeRecorder();
+      const revived = boot(channels);
+      expect(revived.state.mode).toBe("upgrade");
+      expect(revived.state.breathersCompleted).toBe(1);
+      expect(revived.ui.modal).toBeNull();
+      expect(document.getElementById("status")!.textContent).toBe("Breather complete — welcome back.");
+      expect(fired.notifications).toBe(1);
+      boot(channels);
+      expect(fired.notifications).toBe(1);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
   it("declining expires the offer: the dismissal is the decline", () => {
     runMintingSession(app, 1500);
     document.getElementById("summary-continue")!.click();

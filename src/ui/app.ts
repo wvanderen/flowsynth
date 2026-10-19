@@ -512,6 +512,7 @@ export class App {
     this.dev = dev;
     this.channels = channels;
     const loaded = this.load();
+    const resumingBreather = loaded?.state.mode === "breather";
     if (loaded) {
       this.resumeFromSave(loaded);
     } else {
@@ -526,7 +527,7 @@ export class App {
     // session host, sheet open or not. bindFocusSheet's later attach on the
     // same host and signal is idempotent.
     wireTooltips(document.getElementById("console-session") ?? document.body, this.signal);
-    this.greet();
+    if (!resumingBreather || this.state.mode === "breather") this.greet();
     this.render();
     this.save();
   }
@@ -1340,6 +1341,11 @@ export class App {
   // nothing prorated.
   endBreather(): void {
     if (this.released) return;
+    this.applyBoundary(Date.now());
+    if (this.state.mode === "breather") this.finishBreather();
+  }
+
+  private finishBreather(): void {
     const breather = this.state.breather;
     const completed = !!breather && breather.elapsed >= breather.allowanceSeconds - 1e-9;
     const result = endBreatherAction(this.state);
@@ -1362,7 +1368,7 @@ export class App {
   private completeBreather(): void {
     this.playChime();
     this.channels.showTargetNotification(() => window.focus(), "Breather complete — welcome back.");
-    this.endBreather();
+    this.finishBreather();
   }
 
   buyShelf(type: ShelfType): void {

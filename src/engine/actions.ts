@@ -239,6 +239,7 @@ export function startBreather(state: GameState, now: number = 0): ActionResult {
   if (!summary) return fail("No session summary to breathe from.");
   if (summary.seen) return fail("The summary is closed — the breather offer expired.");
   if (!(summary.breatherAllowance > 0)) return fail("This session minted no breather.");
+  summary.seen = true;
   state.mode = "breather";
   state.breather = { startedAt: now, allowanceSeconds: summary.breatherAllowance, elapsed: 0 };
   return ok;

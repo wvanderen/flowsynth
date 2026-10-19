@@ -7,7 +7,7 @@ import { summaryTermsOf } from "./allocation";
 import { addFlowProgress, addForgeProgress, addMutatorForgeProgress, type Rng } from "./rolls";
 import { accrueLivePractice } from "./habits";
 import { accrueGoalProgress, secondsUntilGoalCompletion } from "./goals";
-import type { AdvanceResult, GameState, ModuleInstance } from "./types";
+import type { AdvanceResult, GameState, ModuleInstance, RateSnapshot } from "./types";
 
 // Where a span's produced nous lands and whether it credits practice
 // (focus-tool spec §1–3). "live" is present or trusted time: banks, credits,
@@ -35,6 +35,58 @@ export function sumResults(a: AdvanceResult, b: AdvanceResult): AdvanceResult {
     rollsMutator: a.rollsMutator + b.rollsMutator,
     goalsCompleted: a.goalsCompleted + b.goalsCompleted,
   };
+}
+
+// Shared board boundaries; only flow adds practice-driven goal boundaries.
+function boardBoundaries(state: GameState) {
+  const steadyBonus = activeBuildGeneratorStrength(state, true);
+  const liveGenerators: { module: ModuleInstance; strength: number }[] = [];
+  let earliest = Infinity;
+  for (const module of deployed(state)) {
+    if (CATEGORY_OF[module.type] !== "generator") continue;
+    if (module.reserve > EPS) {
+      const strength = emittedStrength(state, module, true, steadyBonus);
+      liveGenerators.push({ module, strength });
+      earliest = Math.min(earliest, module.reserve / strength);
+    }
+  }
+  const clock = sessionClockOf(state);
+  for (const module of deployed(state)) {
+    const boundary = nextTemporalBoundaryOf(module.type, clock) - clock;
+    if (boundary < earliest) earliest = boundary;
+  }
+  return { liveGenerators, earliest };
+}
+
+function advanceForge(state: GameState, snapshot: RateSnapshot, spanSeconds: number, rng: Rng, spanResult: AdvanceResult): void {
+  if (snapshot.forgeRate > 0) {
+    const forgeRolls = addForgeProgress(state, snapshot.forgeRate * spanSeconds, rng);
+    spanResult.rollsForge += forgeRolls;
+    spanResult.rollsBanked += forgeRolls;
+  }
+  // The Mutator Forge branch (ADR-0043): its own meter, its own queue —
+  // charge-only, so the practice leg below never feeds it.
+  if (snapshot.mutatorForgeRate > 0) {
+    const mutatorRolls = addMutatorForgeProgress(state, snapshot.mutatorForgeRate * spanSeconds, rng);
+    spanResult.rollsMutator += mutatorRolls;
+  }
+}
+
+function drainReserves(liveGenerators: { module: ModuleInstance; strength: number }[], spanSeconds: number): void {
+  for (const { module, strength } of liveGenerators) {
+    module.reserve = Math.max(0, module.reserve - strength * spanSeconds);
+  }
+}
+
+function discoverBoard(state: GameState, snapshot: RateSnapshot): void {
+  syncAchievements(state, {
+    chargeDelivered: chargeDelivered(snapshot),
+    maxChordFactor: maxChordFactorOf(snapshot),
+  });
+  // The chord library rides the same tick (issue #230): every recognized
+  // voice-set — active or idle — is available to discovery; only the
+  // active ones populate the bonus terms (issue #258).
+  syncChordDiscoveries(state, { chords: snapshot.allocation ? summaryTermsOf(snapshot.allocation) : snapshot.namedChords });
 }
 
 export function advance(
@@ -76,17 +128,7 @@ export function advance(
     // emptying one — remaining quantity ÷ strength — is one split boundary.
     // Every generator drains by the same rule, and the temporal walk
     // (issue #372) splits at its authored marks beside them.
-    const steadyBonus = activeBuildGeneratorStrength(state, true);
-    const liveGenerators: { module: ModuleInstance; strength: number }[] = [];
-    let earliest = Infinity;
-    for (const module of deployed(state)) {
-      if (CATEGORY_OF[module.type] !== "generator") continue;
-      if (module.reserve > EPS) {
-        const strength = emittedStrength(state, module, true, steadyBonus);
-        liveGenerators.push({ module, strength });
-        earliest = Math.min(earliest, module.reserve / strength);
-      }
-    }
+    let { liveGenerators, earliest } = boardBoundaries(state);
     // A live goal completion banks reserve mid-span, so it is another rate
     // boundary even when every generator starts empty.
     if (sink === "live") earliest = Math.min(earliest, secondsUntilGoalCompletion(state, state.activeHabitId));
@@ -95,11 +137,6 @@ export function advance(
     // authored marks on the shared session clock, so the walk splits there
     // too — each span then holds one constant factor, and equivalent
     // advancement intervals deliver equivalently whatever the step shape.
-    const clock = sessionClockOf(state);
-    for (const module of deployed(state)) {
-      const boundary = nextTemporalBoundaryOf(module.type, clock) - clock;
-      if (boundary < earliest) earliest = boundary;
-    }
     const spanSeconds = earliest !== Infinity && earliest + EPS < seconds ? earliest : seconds;
 
     // The board is locked during flow, so the rate is constant across the
@@ -125,17 +162,7 @@ export function advance(
       earnNous(state, gained);
     }
     spanResult.nousEarned += gained;
-    if (snapshot.forgeRate > 0) {
-      const forgeRolls = addForgeProgress(state, snapshot.forgeRate * spanSeconds, rng);
-      spanResult.rollsForge += forgeRolls;
-      spanResult.rollsBanked += forgeRolls;
-    }
-    // The Mutator Forge branch (ADR-0043): its own meter, its own queue —
-    // charge-only, so the practice leg below never feeds it.
-    if (snapshot.mutatorForgeRate > 0) {
-      const mutatorRolls = addMutatorForgeProgress(state, snapshot.mutatorForgeRate * spanSeconds, rng);
-      spanResult.rollsMutator += mutatorRolls;
-    }
+    advanceForge(state, snapshot, spanSeconds, rng, spanResult);
     session.elapsed += spanSeconds;
     // The summary's headline and rate (§5.7) accrue with the session itself,
     // so pauses never count into either; provisional production stays out
@@ -147,9 +174,7 @@ export function advance(
     // with no eligible neighbors (delivery reaches whoever is adjacent at
     // full strength; expenditure never depends on the neighbor count).
     // Undeployed, it produces no output and its reserve holds.
-    for (const { module, strength } of liveGenerators) {
-      module.reserve = Math.max(0, module.reserve - strength * spanSeconds);
-    }
+    drainReserves(liveGenerators, spanSeconds);
     if (sink === "live") {
       // Practice credits only from present and trusted time — nothing ever
       // accrues from away before its reconciliation (§3), so the provisional
@@ -169,14 +194,7 @@ export function advance(
     // it (Spark). Unlocks queue into the session's summary row. The feats
     // that read production factors read the factor actually earned — the
     // allocated pass's own maximum (issue #258).
-    syncAchievements(state, {
-      chargeDelivered: chargeDelivered(snapshot),
-      maxChordFactor: maxChordFactorOf(snapshot),
-    });
-    // The chord library rides the same tick (issue #230): every recognized
-    // voice-set — active or idle — is available to discovery; only the
-    // active ones populate the bonus terms (issue #258).
-    syncChordDiscoveries(state, { chords: snapshot.allocation ? summaryTermsOf(snapshot.allocation) : snapshot.namedChords });
+    discoverBoard(state, snapshot);
     result = sumResults(result, spanResult);
     seconds -= spanSeconds;
   }
@@ -204,7 +222,7 @@ export function advanceBreather(state: GameState, seconds: number, rng: Rng = Ma
   const breather = state.breather;
   if (state.mode !== "breather" || !breather || seconds <= 0) return result;
   seconds = Math.min(seconds, Math.max(0, breather.allowanceSeconds - breather.elapsed));
-  while (seconds > EPS) {
+  while (seconds > 0) {
     const spanResult: AdvanceResult = {
       nousEarned: 0, rollsBanked: 0, rollsFlow: 0,
       rollsForge: 0, rollsMutator: 0, goalsCompleted: 0,
@@ -212,22 +230,7 @@ export function advanceBreather(state: GameState, seconds: number, rng: Rng = Ma
     // The same boundary walk as flow, goals aside — a breather advances no
     // goal: reserve depletion and the temporal marks are the only mid-step
     // rate changes the phase can meet.
-    const steadyBonus = activeBuildGeneratorStrength(state, true);
-    const liveGenerators: { module: ModuleInstance; strength: number }[] = [];
-    let earliest = Infinity;
-    for (const module of deployed(state)) {
-      if (CATEGORY_OF[module.type] !== "generator") continue;
-      if (module.reserve > EPS) {
-        const strength = emittedStrength(state, module, true, steadyBonus);
-        liveGenerators.push({ module, strength });
-        earliest = Math.min(earliest, module.reserve / strength);
-      }
-    }
-    const clock = sessionClockOf(state);
-    for (const module of deployed(state)) {
-      const boundary = nextTemporalBoundaryOf(module.type, clock) - clock;
-      if (boundary < earliest) earliest = boundary;
-    }
+    const { liveGenerators, earliest } = boardBoundaries(state);
     const spanSeconds = earliest !== Infinity && earliest + EPS < seconds ? earliest : seconds;
     const snapshot = syncRates(state, true);
     const gained = snapshot.rate * spanSeconds;
@@ -235,27 +238,13 @@ export function advanceBreather(state: GameState, seconds: number, rng: Rng = Ma
     // of the provisional sink (docs/breather-spec.md §4).
     earnNous(state, gained);
     spanResult.nousEarned += gained;
-    if (snapshot.forgeRate > 0) {
-      const forgeRolls = addForgeProgress(state, snapshot.forgeRate * spanSeconds, rng);
-      spanResult.rollsForge += forgeRolls;
-      spanResult.rollsBanked += forgeRolls;
-    }
-    if (snapshot.mutatorForgeRate > 0) {
-      const mutatorRolls = addMutatorForgeProgress(state, snapshot.mutatorForgeRate * spanSeconds, rng);
-      spanResult.rollsMutator += mutatorRolls;
-    }
+    advanceForge(state, snapshot, spanSeconds, rng, spanResult);
     breather.elapsed += spanSeconds;
-    for (const { module, strength } of liveGenerators) {
-      module.reserve = Math.max(0, module.reserve - strength * spanSeconds);
-    }
+    drainReserves(liveGenerators, spanSeconds);
     // No creditedSeconds, no habit, no goal, no flow meter: a breather
     // credits nothing (spec §6 — the honesty system governs practice
     // claims, and a breather claims nothing).
-    syncAchievements(state, {
-      chargeDelivered: chargeDelivered(snapshot),
-      maxChordFactor: maxChordFactorOf(snapshot),
-    });
-    syncChordDiscoveries(state, { chords: snapshot.allocation ? summaryTermsOf(snapshot.allocation) : snapshot.namedChords });
+    discoverBoard(state, snapshot);
     result = sumResults(result, spanResult);
     seconds -= spanSeconds;
   }
