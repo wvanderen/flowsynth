@@ -2,7 +2,7 @@ import { CATEGORY_OF, EPS } from "./constants";
 import { syncAchievements } from "./achievements";
 import { syncChordDiscoveries } from "./library";
 import { activeBuildGeneratorStrength, chargeDelivered, emittedStrength, maxChordFactorOf, deployed, sessionClockOf, syncRates } from "./economy";
-import { nextTemporalBoundaryOf } from "./profiles";
+import { lifetimeBreatherSecondsOf, nextRestBoundaryOf, nextTemporalBoundaryOf } from "./profiles";
 import { summaryTermsOf } from "./allocation";
 import { addFlowProgress, addForgeProgress, addMutatorForgeProgress, type Rng } from "./rolls";
 import { accrueLivePractice } from "./habits";
@@ -54,6 +54,10 @@ function boardBoundaries(state: GameState) {
   for (const module of deployed(state)) {
     const boundary = nextTemporalBoundaryOf(module.type, clock) - clock;
     if (boundary < earliest) earliest = boundary;
+    if (state.mode === "breather") {
+      const rest = lifetimeBreatherSecondsOf(state);
+      earliest = Math.min(earliest, nextRestBoundaryOf(module.type, rest) - rest);
+    }
   }
   return { liveGenerators, earliest };
 }
@@ -228,7 +232,7 @@ export function advanceBreather(state: GameState, seconds: number, rng: Rng = Ma
       rollsForge: 0, rollsMutator: 0, goalsCompleted: 0,
     };
     // The same boundary walk as flow, goals aside — a breather advances no
-    // goal: reserve depletion and the temporal marks are the only mid-step
+    // goal: reserve depletion, temporal marks, and lifetime rest marks are the mid-step
     // rate changes the phase can meet.
     const { liveGenerators, earliest } = boardBoundaries(state);
     const spanSeconds = earliest !== Infinity && earliest + EPS < seconds ? earliest : seconds;

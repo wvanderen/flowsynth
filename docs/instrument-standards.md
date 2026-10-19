@@ -52,6 +52,16 @@ Inventory rows are compact open lines; collapse leaves a hypercube symbol and st
 - **Italics are not part of the standard.** The italics in the #243 discussion marked which text belonged in tooltips; italic type is not a styling requirement and not an affordance convention. (Correction recorded in the final resolution.)
 - **Tooltip access**: hover, keyboard focus, and touch all open it, and it stays dismissible (Escape, tap-away). Critical names, effects, prices, and purchase state remain visible without opening anything.
 
+### Profile ability and disclosure amendment — 2026-10-19
+
+Fact-keyed specialist abilities carry an outlined star bullet and their direct
+calculation beneath the normal profile chips. The star marks a special ability;
+the calculation stays ungraded. Within one module description (effect line plus
+profile), disclose a repeated domain term once, at its first occurrence, and
+leave later mentions plain. Standalone profile sections retain their own single
+disclosure. This narrows the earlier “wherever it appears” rule to avoid repeated
+tooltip controls for the same term in one description.
+
 ## Naming and voice
 
 - **Purchases are products, not mechanics.** Every purchasable thing carries a terse proper name from the studio-hardware register — equipment or process in the synth world, building on the module voice (Flywheel, Harmonizer, Bend). Canonical examples: Poly Expander, Expansion Bays, Rack Extenders, Chord Catalysts, Headroom.

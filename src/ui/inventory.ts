@@ -1,4 +1,4 @@
-import { termTipHtml } from "./terms";
+import { breatherTermsHtml, termTipHtml } from "./terms";
 import { generatorProfileOf } from "../engine/profiles";
 import type { App } from "./app";
 import { combineMutatorsPreview, inventoryCombinePreview } from "../engine/actions";
@@ -116,7 +116,7 @@ function inspectHtml(app: App): string {
   const m = app.state.modules.find((m) => m.id === read.id && m.pos === null);
   if (!m) return `${back()}<p class="inventory-empty">This copy is no longer in inventory.</p>`;
   return `${back()}<div class="inventory-inspection"><svg class="inventory-detail-face hex-stack-face" viewBox="-70 -70 140 140" data-type="${m.type}" data-rarity="${typeRarityOf(m.type)}" aria-label="${META[m.type].name}" role="img">${moduleFace({ type: m.type, tier: m.tier, variant: "identity", readout: "" })}</svg>
-    <h3 class="inventory-detail-name" aria-label="${META[m.type].name} · ${moduleRead(m)}">${rarityMark(typeRarityOf(m.type))}${META[m.type].name}<span class="mono">${tierNumeral(m.tier)}</span>${faceLevel(m) === undefined ? "" : `<span class="inventory-level mono">Lv. ${m.level}</span>`}</h3><p>${META[m.type].role}</p>${profileGradesHtml(m.type)}${intrinsicEffectsHtml(m)}
+    <h3 class="inventory-detail-name" aria-label="${META[m.type].name} · ${moduleRead(m)}">${rarityMark(typeRarityOf(m.type))}${META[m.type].name}<span class="mono">${tierNumeral(m.tier)}</span>${faceLevel(m) === undefined ? "" : `<span class="inventory-level mono">Lv. ${m.level}</span>`}</h3><p>${breatherTermsHtml(META[m.type].role)}</p>${profileGradesHtml(m.type, { breatherDisclosed: true })}${intrinsicEffectsHtml(m)}
     ${isVoiceType(m.type) ? `<p class="mono">${voiceCapacityOf(app.state, m.type)} ${termTipHtml("Harmonic capacity")}</p>` : ""}
     ${m.reserve > 0 ? `<p class="mono">${formatNumber(m.reserve)} charge reserve</p>` : ""}${m.shift !== null ? `<p class="mono">Pitch shift ${m.shift > 0 ? "+" : ""}${m.shift}</p>` : ""}
     <button class="primary" data-inventory-place="${m.id}">Place</button></div>`;

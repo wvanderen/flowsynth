@@ -18,6 +18,12 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
   // The alternative-charge wave's oscillator (issue #375): the role names
   // the replacement — charge lands in the chord response, never the term.
   sideband: { name: "Sideband", short: "SIDE", role: "Charge into chord response · weak alone" },
+  // The breather-specialist wave (issue #416): rest is the identity — the
+  // roles name the rest keying, the profile chips and rule lines carry
+  // the figures.
+  release: { name: "Release", short: "RELS", role: "Breather-fed term · reduced base" },
+  standby: { name: "Standby", short: "STBY", role: "Breather-fed term · deepens per completed breather" },
+  tail: { name: "Tail", short: "TAIL", role: "Breather-fed term · lifetime rest warms it" },
   harmonizer: { name: "Harmonizer", short: "HARM", role: "Silent voice — its cell's pitch" },
   echo: { name: "Echo", short: "ECHO", role: "Silent voice — neighbor, one octave down" },
   bend: { name: "Bend", short: "BEND", role: "Silent voice — its pitch, shifted" },

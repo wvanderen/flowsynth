@@ -1,6 +1,6 @@
 import { amplifierGainOf, tierPowerOf } from "./module-strength";
 import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isOscillatorType, isVoiceType, typeRarityOf } from "./constants";
-import { baseProductionOf, boosterResponseOf, breatherResponseOf, chargeResponseOf, chordResponseOf, usesChargeConversion, usesChordConversion, productionClockFactorOf, temporalPhaseKeyOf } from "./profiles";
+import { lifetimeBreatherSecondsOf, baseProductionOf, boosterResponseOf, breatherResponseOf, chargeResponseOf, chordResponseOf, restPhaseKeyOf, restWarmthFactorOf, usesChargeConversion, usesChordConversion, productionClockFactorOf, temporalPhaseKeyOf } from "./profiles";
 import { analyzeChords, hypotheticalBoardFor, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
 import { allocateChords, DEFAULT_ALLOCATION_BUDGET, type AllocationBudget, type AllocationRead, type AllocationVoiceParams } from "./allocation";
 import { capacityOf } from "./capacity";
@@ -770,9 +770,19 @@ export function computeRates(
     // the session clock's authored factor multiplies the voice's base, so
     // an Afterglow's warmup moves its every leg — allocation weights,
     // previews, and readouts included — and power, tiers, and mutators
-    // scale around the condition without moving the timing.
+    // scale around the condition without moving the timing. The Tail's
+    // rest warmth (issue #416) rides the same slot over a different
+    // clock: lifetime breather seconds — early exits included — warm the
+    // whole term in authored steps, the persisted fact a read-only input
+    // outside power.
     const base =
-      BALANCE.synthRate * baseProductionOf(module.type) * productionClockFactorOf(module.type, clock) * power * (silent ? 0 : chordFactor) * (1 + factors.synthTerm);
+      BALANCE.synthRate *
+      baseProductionOf(module.type) *
+      productionClockFactorOf(module.type, clock) *
+      restWarmthFactorOf(module.type, lifetimeBreatherSecondsOf(state)) *
+      power *
+      (silent ? 0 : chordFactor) *
+      (1 + factors.synthTerm);
     // The silent voice sings nothing of its own: its factor is display
     // only — the muted participant's read. The producers' value carries
     // the whole chain. The breather response (docs/breather-spec.md §3)
@@ -780,8 +790,9 @@ export function computeRates(
     // a breather runs, every leg included, exactly ×1 the rest of the
     // time — so the legs stay whole and the breakdown multiplies out (the
     // conversion types' precedent): the response reads as empowerment on
-    // its own terms.
-    const breatherResponse = state.mode === "breather" ? breatherResponseOf(module.type) : 1;
+    // its own terms. The Standby's deepening (issue #416) rides the same
+    // read: the lifetime completed count is the one input it adds.
+    const breatherResponse = state.mode === "breather" ? breatherResponseOf(module.type, state.breathersCompleted) : 1;
     const value = silent ? 0 : base * (1 + localBonus) * chargeTerm * achievementBoost * discoveryBoost * breatherResponse;
     if (!silent) {
       synthsLeg += base;
@@ -942,10 +953,17 @@ function allocationFingerprint(state: GameState): string {
   // never the raw clock — keeps consecutive ticks on one solve while a
   // boundary always re-solves.
   parts.push(temporalPhaseKeyOf(sessionClockOf(state)));
+  // The Tail's rest warmth (issue #416) keys its phase the same way: the
+  // lifetime breather seconds move during a breather's live walk, and a
+  // step boundary crossing mid-breather must re-solve the memo.
+  parts.push(restPhaseKeyOf(lifetimeBreatherSecondsOf(state)));
   // The mode (docs/breather-spec.md §3): the breather response changes the
   // pass's output with the mode alone — the board can stand still across a
   // flow → breather boundary, and a stale solve must never survive it.
-  // The board-live basis itself rides the memo key's flow leg.
+  // The board-live basis itself rides the memo key's flow leg. The
+  // Standby's deepening (issue #416) adds the completed count to the
+  // response, and a completion ends the breather — the mode change here
+  // is the boundary, so the mode alone keys it exactly.
   parts.push(`m:${state.mode}`);
   return parts.join("|");
 }

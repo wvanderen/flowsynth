@@ -3,8 +3,9 @@
 // the glossary meaning — description prose never grows around it. The
 // meanings here are the glossary's own, distilled to the one-line ceiling.
 // The union keeps the map closed: only glossary terms may render hoverable.
-export type CatalogTerm = "Oscillator" | "Generator" | "Booster" | "Silent voice" | "Spacer" | "Forge" | "Charge conduit" | "RITUAL" | "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Warp Beam" | "Headroom" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "habit build" | "goals";
+export type CatalogTerm = "Breather" | "Oscillator" | "Generator" | "Booster" | "Silent voice" | "Spacer" | "Forge" | "Charge conduit" | "RITUAL" | "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Warp Beam" | "Headroom" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "habit build" | "goals";
 const CATALOG_TERMS: Record<CatalogTerm, string> = {
+  Breather: "Timed post-flow break with profile-scaled production",
   Oscillator: "Pitched module contributing production",
   Generator: "Produces charge from practice",
   Booster: "Improves eligible adjacent modules",
@@ -37,3 +38,7 @@ export function termTipHtml(term: CatalogTerm, label: string = term): string {
   return `<span class="inst-tip term-tip"><button class="inst-tip-trigger term-trigger" type="button" aria-expanded="false" aria-describedby="${id}" aria-label="${term} — what it means">${label}</button><span class="inst-tip-body" id="${id}" role="tooltip">${CATALOG_TERMS[term]}</span></span>`;
 }
 
+// Disclose the first occurrence in a description; repeated mentions stay plain.
+export function breatherTermsHtml(text: string): string {
+  return text.replace(/\bbreathers?\b/i, label => termTipHtml("Breather", label));
+}

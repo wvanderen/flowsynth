@@ -46,6 +46,18 @@ const PATHS: Record<ModuleType, string> = {
   // charge it receives converted into the chord content around its trace,
   // never into the trace itself.
   sideband: '<path d="M-11 0C-7.5-9-3.5-9 0 0C3.5 9 7.5 9 11 0"/><path d="M-14-5.5v11M14-5.5v11"/>',
+  // The Release (issue #416): the envelope's own silhouette — attack,
+  // decay, the sustained stretch, and the release ramp that outlives the
+  // key. The ADSR stage the breather specialist is named for.
+  release: '<path d="M-13 8-9.5-8-7.5-3H1.5L5.5 8"/><path d="M-13 8H13"/>',
+  // The Standby (issue #416): the powered-down circuit's mark — the broken
+  // ring with the standing stroke, the hardware state of resting while
+  // production compounds.
+  standby: '<path d="M-3.5-9.4A10 10 0 1 0 3.5-9.4"/><path d="M0-12V0"/>',
+  // The Tail (issue #416): the struck note's reverb — one wave arc and the
+  // decaying ripples that settle toward the axis, the sound that outlives
+  // the session it followed.
+  tail: '<path d="M-12 0C-9.5-8-7-8-4.5 0"/><path d="M-4.5 0c1.5-4.5 3-4.5 4.5 0c1-3 2-3 3 0c.7-2 1.4-2 2 0"/>',
   // The spacer's wire glyph (ADR-0021): a silent conductor stepping through
   // one cell — a running wire with solder points, never a voice. The board
   // face and tray tile render the ring window instead (issue #219); the

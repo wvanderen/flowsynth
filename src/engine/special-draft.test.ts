@@ -91,9 +91,11 @@ describe("the rolled guarantee", () => {
 
   it("the Silk Warp drafts the rare band alone", () => {
     // Six draws: each slot walks the rare band's categories (the
-    // oscillator's 4/6 share ends at ≈0.667) then a type inside it.
+    // oscillator's share over the band's present categories) then a type
+    // inside it — the breather specialists' Tail rides the band beside
+    // the Sideband (issue #416).
     const offer = generateSpecialOffer(fresh(), "rare", "oscillator", stubRng([0.5, 0.0, 0.9, 0.0, 0.5, 0.99]));
-    expect(offer.candidates.map((c) => c.type)).toEqual(["sideband", "exciter", "sideband"]);
+    expect(offer.candidates.map((c) => c.type)).toEqual(["sideband", "exciter", "tail"]);
     expect(offer.candidates.every((c) => TYPE_RARITY[c.type] === "rare")).toBe(true);
     expect(offer.special).toEqual({ kind: "rare" });
   });

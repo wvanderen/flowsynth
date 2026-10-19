@@ -1,5 +1,5 @@
 import { BALANCE, CATEGORY_OF } from "./constants";
-import type { GeneratorType, ModuleType, OscillatorType } from "./types";
+import type { GameState, GeneratorType, ModuleType, OscillatorType } from "./types";
 
 // The authored oscillator profiles (issue #369, parent #366; ADR-0059):
 // each named type carries one fixed profile — a stable authored identity,
@@ -39,6 +39,22 @@ import type { GeneratorType, ModuleType, OscillatorType } from "./types";
   //              it — the charge axis takes the absent mark, the
   //              replacement stated in disclosure — paid for with the
   //              weakest standalone base in the roster (D weak).
+  //   Release (issue #416) — the plain breather specialist: the S band's
+  //              signature fixed response, paid for
+  //              with a reduced base — in flow it trails every standard
+  //              producer, ending a session onto it is the build decision.
+  //   Standby (issue #416) — the rest-practicing specialist: its response
+  //              deepens with lifetime completed breathers (the fact
+  //              #415's count mints), described directly beside the chips
+  //              like a temporal timing — never graded — paid for with a
+  //              slightly reduced base.
+  //   Tail (issue #416) — the reverb tail: the sound that outlives the
+  //              note. Lifetime breather seconds (the fact #415's sum
+  //              mints, early exits included) warm its whole term in
+  //              steps — the temporal precedent, outside power, described
+  //              directly — paid for with the D-weak authored base until
+  //              the rest accrues. Its breather response rides strong
+  //              beside the warmth: rest pays live and forever.
 export interface OscillatorProfile {
   // The base-term multiplier over the category's unified synthRate.
   base: number;
@@ -69,6 +85,18 @@ export interface OscillatorProfile {
   // the absent mark, so a type without the axis reads nothing from a
   // breather. Provisional tuning.
   breather?: number;
+  // The Standby's authored deepening (issue #416): the authored response
+  // grows this much per lifetime completed breather, capped at this many
+  // steps. A fact-keyed rule, not a comparable coefficient: the chip
+  // grades the authored floor alone, the growth described directly
+  // beside it (ADR-0061's discipline). Provisional tuning.
+  breatherDeepening?: { perCompletedBreather: number; capSteps: number };
+  // The Tail's authored warmth (issue #416): piecewise-constant steps over
+  // lifetime breather seconds — early exits included — multiplying the
+  // voice's whole term, the temporal profiles' precedent (ADR-0061):
+  // outside power, exact between boundaries, described directly and
+  // never graded. Provisional tuning.
+  restWarmth?: readonly TemporalStep[];
 }
 
 export const OSCILLATOR_PROFILES: Record<OscillatorType, OscillatorProfile> = {
@@ -99,14 +127,52 @@ export const OSCILLATOR_PROFILES: Record<OscillatorType, OscillatorProfile> = {
   // and the D-weak base ×0.5 pays for the whole mechanic: chordless
   // boards leave it behind whatever the charge reads. Provisional tuning.
   sideband: { base: 0.5, booster: 1.0, chord: 2.0, charge: 1.0, capacity: 1, chordConversion: true, breather: 1.2 },
+  // The breather-specialist wave (issue #416): the axis's strong band, the
+  // Sine's absent mark standing as the roster's contrast. Provisional
+  // tuning.
+  // The plain specialist: the S-band ×1.6 fixed response,
+  // the chip that reads unmistakably as rest —
+  // paid for with a reduced base (C reduced): in flow it trails every
+  // standard producer. One defining behavior, one supporting tradeoff.
+  release: { base: 0.7, booster: 1.0, chord: 1.0, charge: 1.0, capacity: 1, breather: 1.6 },
+  // The rest-practicing specialist: the authored floor grades S already,
+  // and each lifetime completed breather deepens it ×0.1, capped at four
+  // steps (×1.8) — the fact the completed count mints, read as the
+  // rule beside the chips states it, never as a grade. The slightly
+  // reduced base (B) is the supporting tradeoff.
+  standby: {
+    base: 0.85,
+    booster: 1.0,
+    chord: 1.0,
+    charge: 1.0,
+    capacity: 1,
+    breather: 1.4,
+    breatherDeepening: { perCompletedBreather: 0.1, capSteps: 4 },
+  },
+  // The reverb tail: the D-weak authored base — the Sideband's price, the
+  // board leaves it behind until rest accrues — warmed to a standard
+  // producer by lifetime breather seconds: ×1.6 the whole term from 30
+  // lifetime breather minutes, ×2.0 from 120 (early exits included), the
+  // temporal steps' shape over the persisted fact. Its breather response
+  // rides strong beside the warmth.
+  tail: {
+    base: 0.5,
+    booster: 1.0,
+    chord: 1.0,
+    charge: 1.0,
+    capacity: 1,
+    breather: 1.5,
+    restWarmth: [
+      { fromSeconds: 0, factor: 1 },
+      { fromSeconds: 1800, factor: 1.6 },
+      { fromSeconds: 7200, factor: 2.0 },
+    ],
+  },
 };
 
-// The roster's breather-response wave (docs/breather-spec.md §3, the launch
-// authoring): modest responses across the roster so the mechanic is live
-// from day one, with the Sine's absent mark as the contrast. The dedicated
-// breather-specialist types — the ones that make the axis their identity —
-// join with the later roster iteration and author stronger figures.
-// Provisional tuning.
+// The launch wave's modest responses (docs/breather-spec.md §3) stand
+// untouched: ×1.1–×1.25 with the Sine's absent mark as the contrast. The
+// specialists above widen the spread; the rebalance ticket owns figures.
 
 // The one profile read. Non-oscillators have no profile — callers guard by
 // category; this accessor returns null rather than a neutral shape so a
@@ -138,9 +204,79 @@ export function chargeResponseOf(type: ModuleType): number {
 
 // The breather response (docs/breather-spec.md §3): the authored multiplier
 // while a breather runs, exactly ×1 wherever no axis is authored — every
-// non-oscillator included.
-export function breatherResponseOf(type: ModuleType): number {
-  return oscillatorProfileOf(type)?.breather ?? 1;
+// non-oscillator included. The Standby's deepening (issue #416) rides the
+// authored floor here: one read, so no surface can quote a figure the rate
+// pass does not apply. The completed count is a read-only input and moves
+// the multiplier only inside a breather — a completion ends the breather,
+// so the figure is constant within any single one.
+export function breatherResponseOf(type: ModuleType, completedBreathers = 0): number {
+  const profile = oscillatorProfileOf(type);
+  const authored = profile?.breather ?? 1;
+  const deepening = profile?.breatherDeepening;
+  if (!deepening || completedBreathers <= 0) return authored;
+  return authored + Math.min(completedBreathers, deepening.capSteps) * deepening.perCompletedBreather;
+}
+
+// Lifetime rest includes the current break; only endBreather banks it.
+export function lifetimeBreatherSecondsOf(state: GameState): number {
+  return state.breatherSeconds + (state.mode === "breather" ? state.breather?.elapsed ?? 0 : 0);
+}
+
+export function nextRestBoundaryOf(type: ModuleType, seconds: number): number {
+  return oscillatorProfileOf(type)?.restWarmth?.find(step => step.fromSeconds > seconds)?.fromSeconds ?? Infinity;
+}
+
+// The Tail's rest warmth (issue #416): the authored steps' factor at this
+// point of the lifetime breather seconds — early exits included — exactly
+// ×1 wherever no warmth is authored. The same read every rate seam and
+// readout shares, the temporal factor's contract (ADR-0061).
+export function restWarmthFactorOf(type: ModuleType, breatherSeconds: number): number {
+  const warmth = oscillatorProfileOf(type)?.restWarmth;
+  return warmth ? stepRead(warmth, breatherSeconds).factor : 1;
+}
+
+// The authored warmth ladders, gathered once — the phase key walks a
+// static shape, never the table, per fingerprint read.
+const REST_WARMTHS: readonly (readonly TemporalStep[])[] = Object.values(OSCILLATOR_PROFILES)
+  .map((profile) => profile.restWarmth)
+  .filter((steps): steps is readonly TemporalStep[] => steps !== undefined);
+
+// The warmth's phase key — the only form the rate memo may key the rest
+// basis on: the factor moves exactly when a lifetime step boundary
+// crosses, so the key stays warm between boundaries and never serves a
+// stale phase.
+export function restPhaseKeyOf(breatherSeconds: number): string {
+  const clock = Math.max(0, breatherSeconds);
+  const marks = REST_WARMTHS.map((steps, i) => `w${i}:${steps.filter((step) => step.fromSeconds <= clock).length}`);
+  return `w:${marks.sort().join("")}`;
+}
+
+// One authored figure as disclosure prose — two decimals, trailing zeros
+// gone — so the rule lines derive from the tables above and a retune
+// cannot ship a stale string beside the data it describes.
+const figure = (value: number): string => String(Math.round(value * 100) / 100);
+
+// The breather-fact rules' direct descriptions (issue #416) — derived from
+// the authored tables, rendered beside the grade chips like a temporal
+// timing line. A fact-keyed rule is not a comparable coefficient: it
+// takes no aptitude grade, and the lifetime facts surface nowhere else.
+const BREATHER_RULES: Partial<Record<ModuleType, string>> = (() => {
+  const rules: Partial<Record<ModuleType, string>> = {};
+  const standby = OSCILLATOR_PROFILES.standby;
+  const deepening = standby.breatherDeepening;
+  if (standby.breather !== undefined && deepening) {
+    rules.standby = `Breather response +${figure(deepening.perCompletedBreather)} per completion · ×${figure(standby.breather + deepening.capSteps * deepening.perCompletedBreather)} after ${deepening.capSteps}`;
+  }
+  const warmth = OSCILLATOR_PROFILES.tail.restWarmth;
+  if (warmth) {
+    const marks = warmth.slice(1).map((step, index) => `×${figure(step.factor)} from ${figure(step.fromSeconds / 60)}${index === 0 ? " lifetime breather" : ""} min`);
+    rules.tail = `Rest warmth ${marks.join(" · ")}`;
+  }
+  return rules;
+})();
+
+export function breatherRuleOf(type: ModuleType): string | null {
+  return BREATHER_RULES[type] ?? null;
 }
 
 export function usesChargeConversion(type: ModuleType): boolean {
@@ -394,10 +530,11 @@ export const PULSEWELL_CYCLE = {
   burstFactor: 2.5,
 } as const;
 
-// The warmup ladder's two reads — the factor at a clock mark and the next
-// mark where it changes. The clock clamps at zero: no profile reads
-// before its session began.
-function warmupRead(steps: readonly TemporalStep[], elapsedSeconds: number): { factor: number; nextBoundary: number } {
+// An ascending step ladder's two reads — the factor at a clock mark and
+// the next mark where it changes. The clock clamps at zero: no profile
+// reads before its basis began. Shared by the session-clock warmup and
+// the lifetime rest warmth alike.
+function stepRead(steps: readonly TemporalStep[], elapsedSeconds: number): { factor: number; nextBoundary: number } {
   const clock = Math.max(0, elapsedSeconds);
   let factor = steps[0]!.factor;
   let nextBoundary = Infinity;
@@ -441,8 +578,8 @@ export interface TemporalProfile {
 // below answers ×1, Infinity, or null for them.
 const TEMPORAL_PROFILES: Partial<Record<ModuleType, TemporalProfile>> = {
   afterglow: {
-    factorAt: (elapsed) => warmupRead(AFTERGLOW_WARMUP, elapsed).factor,
-    nextBoundary: (elapsed) => warmupRead(AFTERGLOW_WARMUP, elapsed).nextBoundary,
+    factorAt: (elapsed) => stepRead(AFTERGLOW_WARMUP, elapsed).factor,
+    nextBoundary: (elapsed) => stepRead(AFTERGLOW_WARMUP, elapsed).nextBoundary,
     phaseMark: (elapsed) => `a${AFTERGLOW_WARMUP.filter((step) => step.fromSeconds <= Math.max(0, elapsed)).length}`,
     label: "Warm-up",
     timing: "×0.3 open · ×0.8 from 2 min · ×1.25 sustained from 5 min",
