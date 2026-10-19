@@ -156,6 +156,7 @@ describe("the prestige action", () => {
       reflection: null,
       goalsAdvanced: [],
       achievements: [],
+      breather: null,
     });
     s.sessionsCompleted = 4;
     s.combinations = 2;

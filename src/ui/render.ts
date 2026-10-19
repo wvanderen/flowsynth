@@ -1,6 +1,6 @@
 import { termTipHtml, type CatalogTerm } from "./terms";
 import { tierPowerOf } from "../engine/module-strength";
-import { cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, levelCost, levelsCost, projectPlacement, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
+import { cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, flowLive, levelCost, levelsCost, projectPlacement, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
 import { ALLOCATION_QUALITY_BOUNDS, idleTermsOf, summaryTermsOf } from "../engine/allocation";
 import { claimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
@@ -101,7 +101,7 @@ function byId(id: string): HTMLElement | null {
 // selected whole chords in development play. Every readout uses the
 // same model as the production tick.
 function currentSnapshot(state: GameState): RateSnapshot {
-  return displayedRates(state, state.mode === "flow");
+  return displayedRates(state, flowLive(state));
 }
 
 export function render(app: App): void {
@@ -314,6 +314,48 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
   const target = session?.target ?? null;
   const paused = state.mode === "paused";
   const reached = target !== null && elapsed >= target;
+
+  // The breather's console (docs/breather-spec.md §5): the board reads
+  // exactly as in flow, no pause exists, and the main switch — the one
+  // session gate — is the early exit. The clock reads the remaining
+  // allowance; the strip fills toward it; the provisional line never
+  // stands (breather time is pre-trusted).
+  if (state.mode === "breather" && state.breather) {
+    const breather = state.breather;
+    const key = `breather:${phone ? "phone" : "wide"}`;
+    if (host.dataset.renderKey !== key) {
+      host.dataset.renderKey = key;
+      const scrollTop = popoverScroll(host);
+      host.innerHTML = `
+        <div class="session-group" role="group" aria-label="Session">
+          <div class="clock-anchor">
+            ${focusButton("Opens the Focus sheet", ' id="session-clock"', ' id="session-caption"')}
+            ${sheetOpen ? sheetHtml() : ""}
+          </div>
+          <div class="session-actions">
+            <button class="main-switch live" id="flow-switch" aria-label="End breather" title="Ends the breather — the bonus was the rate while it ran">
+              ${switchSvg}<span>End breather</span><i class="switch-state" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+      `;
+      wireClockPlan(app);
+      app.listen(byId("flow-switch"), "click", () => app.endBreather());
+      bindSheet(scrollTop);
+    }
+    const setBreather = (id: string, text: string) => {
+      const node = byId(id);
+      if (node && node.textContent !== text) node.textContent = text;
+    };
+    setBreather("session-clock", formatClock(Math.max(0, breather.allowanceSeconds - breather.elapsed)));
+    setBreather("session-caption", "Breather — the board runs while you rest");
+    setBreather("session-provisional", "");
+    renderSessionStrip(true, breather.elapsed, breather.allowanceSeconds, false);
+    refreshSessionReads(app);
+    syncClockDisclosure(app);
+    if (sheetOpen) updateFocusSheetLive(app, host, projected);
+    return;
+  }
 
   const key = `flow:${phone ? "phone" : "wide"}:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}|${popoverKey}|${sessionReadsKey(app)}`;
   if (host.dataset.renderKey !== key) {
@@ -566,7 +608,7 @@ const ACH_MARK = `<span class="ach-mark" role="img" aria-label="acquired">✓</s
 const crossedOf = (app: App, id: string): boolean => app.state.achievements[id] !== undefined;
 
 function achievementContextOf(app: App, projected: RateSnapshot): AchievementContext {
-  return { chargeDelivered: app.state.mode === "flow" && chargeDelivered(projected) };
+  return { chargeDelivered: flowLive(app.state) && chargeDelivered(projected) };
 }
 
 // The open page's refresh signature: each feat's crossed bit plus its
@@ -912,7 +954,7 @@ function toolActions(): ToolAction[] {
         return trayCount > 0 ? `<b class="tool-badge mono">${trayCount}</b>` : "";
       },
       title: (app) =>
-        app.state.mode !== "upgrade" ? "Inventory — the board is locked during flow" : "Inventory — the board-surface tray, tapped open",
+        app.state.mode !== "upgrade" ? "Inventory — the board is locked between sessions" : "Inventory — the board-surface tray, tapped open",
       // Gated in flow like Catalog/Forge/Add (#193): the tray hides with
       // the board locked, so the button arms nothing a placement could
       // never land.
@@ -1186,7 +1228,7 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
   svg.setAttribute("viewBox", lens.viewBox);
   bindBoardNavigation(app, svg);
 
-  const flow = state.mode === "flow";
+  const flow = flowLive(state);
   const snapshot = live;
   // The Mutators layer owns the board's drawing (issues #298 and #386):
   // while it stands — flow reading it now too (issue #387) — the renderer
@@ -1831,7 +1873,7 @@ function moduleNode(app: App, module: ModuleInstance, pos: Hex, ctx: RenderConte
   // emits nothing).
   const strength = ctx.snapshot.chargeStrength.get(module.id) ?? 0;
   const charged = strength > 0;
-  const emittingNow = state.mode === "flow" && isSource(module) && emittedStrength(state, module, true) > 0;
+  const emittingNow = flowLive(state) && isSource(module) && emittedStrength(state, module, true) > 0;
 
   let hexClass = "";
   if (charged) hexClass += " charged";
@@ -3849,6 +3891,14 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
   const events = (summary.honestyEvents ?? [])
     .map((event) => `<div class="folio-row"><span class="folio-key">Honesty</span><span class="folio-line">${honestyEventLine(event)}</span></div>`)
     .join("");
+  // The breather offer (docs/breather-spec.md §2, §5): one control beside
+  // dismissal whenever the session minted an allowance — name + state +
+  // effect, the concrete minutes; declining (Continue, ✕, backdrop, Esc)
+  // expires it.
+  const allowance = summary.breatherAllowance ?? 0;
+  const breatherOffer = allowance > 0
+    ? `<button id="summary-breather" class="primary">Take a ${formatDuration(allowance)} breather</button>`
+    : "";
   const reflection = summary.reflection;
   content.innerHTML = `
     ${modalTop(null)}
@@ -3882,8 +3932,9 @@ function renderSummaryModal(app: App, content: HTMLElement): void {
         </div>
       </div>
     </div>
-    <div class="modal-actions"><button id="summary-continue" class="primary">Continue</button></div>`;
+    <div class="modal-actions">${breatherOffer}<button id="summary-continue" class="${allowance > 0 ? "" : "primary"}">Continue</button></div>`;
   wireTooltips(content, app.signal);
+  if (allowance > 0) app.listen(byId("summary-breather"), "click", () => app.takeBreather());
   app.listen(byId("summary-reflection-text"), "input", (event) => {
     app.recordReflectionText((event.target as HTMLInputElement).value);
   });

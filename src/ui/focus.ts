@@ -682,6 +682,8 @@ function historyDrillHtml(app: App): string {
     <div class="stat-row"><span>Plan</span><span class="mono">${plan}</span></div>
     <div class="stat-row"><span>Practice time</span><span class="mono">${formatPracticeMinutes(record.creditedSeconds, record.plannedTarget)}</span></div>
     <div class="stat-row"><span>Earned</span><span class="mono">${formatNumber(record.earned)} ν</span></div>
+    ${record.breather ? `<div class="history-section">Breather</div>
+    <p class="history-line">${formatClock(record.breather.seconds)} · ${record.breather.completed ? "completed" : "ended early"}</p>` : ""}
     <div class="history-section">Honesty</div>
     ${events || `<p class="history-line muted">Nothing to reconcile.</p>`}
     <div class="history-section">Reflection</div>
@@ -840,6 +842,7 @@ function sheetStateWord(app: App): string {
   const { state } = app;
   const face = focusFaceOf(app);
   if (state.mode === "paused") return "paused";
+  if (state.mode === "breather") return "breathing";
   if (state.mode !== "upgrade") return "running";
   switch (face) {
     case "plan":

@@ -30,7 +30,7 @@ describe("grade chips on the Forge candidate tiles", () => {
     const tile = panel().querySelector('[data-choice="c-square"]')!.closest(".candidate-tile")!;
     const grades = tile.querySelector(".profile-grades")!;
     const chips = [...grades.querySelectorAll<HTMLElement>(".profile-grade")];
-    expect(chips.map((chip) => chip.textContent)).toEqual(["base ×0.9 (B)", "boost ×2 (S)", "chord ×0.6 (C)", "charge ×1 (B)"]);
+    expect(chips.map((chip) => chip.textContent)).toEqual(["base ×0.9 (B)", "boost ×2 (S)", "chord ×0.6 (C)", "charge ×1 (B)", "breath ×1.1 (A)"]);
     // Plain text: no disclosure wrapper, nothing hidden behind a trigger.
     expect(chips.every((chip) => chip.tagName === "SPAN")).toBe(true);
     expect(grades.querySelectorAll(".inst-tip-body")).toHaveLength(0);
@@ -40,7 +40,7 @@ describe("grade chips on the Forge candidate tiles", () => {
     app.openModal("forge");
     const tile = panel().querySelector('[data-choice="c-blaster"]')!.closest(".candidate-tile")!;
     const chips = [...tile.querySelectorAll<HTMLElement>(".profile-grade")];
-    expect(chips.map((chip) => chip.textContent)).toEqual(["base ×1 (A)", "boost ×1 (B)", "chord ×1 (B)", "charge —"]);
+    expect(chips.map((chip) => chip.textContent)).toEqual(["base ×1 (A)", "boost ×1 (B)", "chord ×1 (B)", "charge —", "breath —"]);
     expect(chips[3]!.dataset.grade).toBe("—");
   });
 
@@ -53,7 +53,7 @@ describe("grade chips on the Forge candidate tiles", () => {
     app.openModal("forge");
     const side = panel().querySelector('[data-choice="c-side"]')!.closest(".candidate-tile")!;
     const chips = [...side.querySelectorAll<HTMLElement>(".profile-grade")];
-    expect(chips.map((chip) => chip.textContent)).toEqual(["base ×0.5 (D)", "boost ×1 (B)", "chord ×2 (S)", "charge —"]);
+    expect(chips.map((chip) => chip.textContent)).toEqual(["base ×0.5 (D)", "boost ×1 (B)", "chord ×2 (S)", "charge —", "breath ×1.2 (A)"]);
     // The effect line states where the charge goes instead (the term-tip
     // markup rides inside it).
     const effect = side.querySelector(".candidate-effect")!.textContent!;
@@ -115,13 +115,13 @@ describe("grade chips on the Hex detail's module face", () => {
     clickCell(0, 0);
     const side = document.querySelector(".hex-detail-side")!;
     const letters = () => [...side.querySelectorAll(".profile-grade")].map((chip) => chip.textContent);
-    expect(letters()).toEqual(["base ×1 (A)", "boost ×0.5 (C)", "chord ×1 (B)", "charge ×1 (B)"]);
+    expect(letters()).toEqual(["base ×1 (A)", "boost ×0.5 (C)", "chord ×1 (B)", "charge ×1 (B)", "breath —"]);
     // Level and tier change output — never the grades.
     app.state.modules[0]!.level = 5;
     app.state.modules[0]!.tier = 2;
     app.render();
     clickCell(0, 0);
-    expect(letters()).toEqual(["base ×1 (A)", "boost ×0.5 (C)", "chord ×1 (B)", "charge ×1 (B)"]);
+    expect(letters()).toEqual(["base ×1 (A)", "boost ×0.5 (C)", "chord ×1 (B)", "charge ×1 (B)", "breath —"]);
   });
 });
 
@@ -142,7 +142,7 @@ describe("the temporal profiles' timing line (issue #372)", () => {
     expect(timing.textContent).toBe("×0.3 open · ×0.8 from 2 min · ×1.25 sustained from 5 min");
     // The curve takes no letter: its words live outside the chips.
     expect(timing.querySelectorAll(".profile-grade")).toHaveLength(0);
-    expect(host.querySelectorAll(".profile-grade")).toHaveLength(4);
+    expect(host.querySelectorAll(".profile-grade")).toHaveLength(5);
   });
 
   it("the Pulsewell carries the timing line alone — generators have no grade chips yet", () => {

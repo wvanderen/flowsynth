@@ -203,13 +203,13 @@ describe("the profile rides the authoritative seams", () => {
 });
 
 describe("fixed aptitude grades (#370)", () => {
-  it("each waveform reads a distinct grade signature on the four axes", () => {
+  it("each waveform reads a distinct grade signature on the five axes", () => {
     const letters = (type: OscillatorType): string => profileAxesOf(type).map((axis) => axis.grade).join("");
-    // base · boost · chord · charge
-    expect(letters("additive")).toBe("ACBB");
-    expect(letters("triangle")).toBe("CBSB");
-    expect(letters("square")).toBe("BSCB");
-    expect(letters("saw")).toBe("CBBS");
+    // base · boost · chord · charge · breath
+    expect(letters("additive")).toBe("ACBB—");
+    expect(letters("triangle")).toBe("CBSBA");
+    expect(letters("square")).toBe("BSCBA");
+    expect(letters("saw")).toBe("CBBSA");
   });
 
   it("the Blaster's charge axis takes the absent mark — the conversion replaces, not scales", () => {

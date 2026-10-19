@@ -77,6 +77,10 @@ export function createInitialState(): GameState {
     activeChords: [],
     session: null,
     summary: null,
+    breather: null,
+    lastSessionClock: 0,
+    breathersCompleted: 0,
+    breatherSeconds: 0,
     nextId: 1,
   };
   const opening = createModule(state, "additive");

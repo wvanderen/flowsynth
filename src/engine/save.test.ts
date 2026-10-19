@@ -425,6 +425,7 @@ describe("the v9 → v10 migration (issue #371)", () => {
       reflection: null,
       goalsAdvanced: [],
       achievements: [],
+      breather: null,
     });
     const before = { records: s.sessionRecords.length, modules: s.modules.length };
     const loaded = deserialize(asV9(s));

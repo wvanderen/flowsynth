@@ -384,6 +384,7 @@ describe("the session clock", () => {
       rollsForge: 0,
       rollsMutator: 0,
       reflection: null,
+      breatherAllowance: 0,
       seen: false,
     };
     app.ui.modal = "summary";
@@ -430,6 +431,7 @@ describe("the ruled folio surfaces (#279)", () => {
       rollsForge: 0,
       rollsMutator: 0,
       reflection: null,
+      breatherAllowance: 0,
       seen: false,
     };
     app.ui.modal = "summary";
@@ -1117,5 +1119,49 @@ describe("cross-tab save conflicts (#128)", () => {
     const fresh = boot();
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).version).toBe(SAVE_VERSION);
     expect(fresh.state.mode).toBe("upgrade");
+  });
+});
+
+describe("the breather (docs/breather-spec.md)", () => {
+  function runMintingSession(app: App, seconds: number): void {
+    startSession(app.state, null);
+    advance(app.state, seconds);
+    app.endFlow();
+  }
+
+  it("the summary offers the minted breather; taking it moves the console into the breather", () => {
+    runMintingSession(app, 1500);
+    expect(app.ui.modal).toBe("summary");
+    const offer = document.getElementById("summary-breather")!;
+    expect(offer.textContent).toBe("Take a 5 min breather");
+    offer.click();
+    expect(app.state.mode).toBe("breather");
+    expect(app.state.breather!.allowanceSeconds).toBe(300);
+    expect(app.ui.modal).toBeNull();
+    // The console reads the breather: the main switch is the early exit,
+    // no pause stands beside it, the caption names the phase.
+    expect(document.getElementById("pause-flow")).toBeNull();
+    const mainSwitch = document.getElementById("flow-switch")!;
+    expect(mainSwitch.getAttribute("aria-label")).toBe("End breather");
+    expect(document.getElementById("session-caption")!.textContent).toContain("Breather");
+    // The early exit lands in upgrade mode — the completed count untouched.
+    mainSwitch.click();
+    expect(app.state.mode).toBe("upgrade");
+    expect(app.state.breathersCompleted).toBe(0);
+    const record = app.state.sessionRecords[app.state.sessionRecords.length - 1]!;
+    expect(record.breather!.completed).toBe(false);
+  });
+
+  it("declining expires the offer: the dismissal is the decline", () => {
+    runMintingSession(app, 1500);
+    document.getElementById("summary-continue")!.click();
+    expect(app.state.summary!.seen).toBe(true);
+    expect(app.state.mode).toBe("upgrade");
+  });
+
+  it("no offer rides a session below the credited gate", () => {
+    runMintingSession(app, 300);
+    expect(app.ui.modal).toBe("summary");
+    expect(document.getElementById("summary-breather")).toBeNull();
   });
 });

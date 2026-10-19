@@ -30,7 +30,7 @@ import { tierPowerOf } from "../engine/module-strength";
 // Editing lives in upgrade mode only: during flow the same cross-section
 // opens read-only, its readouts live, its controls gone — the click still
 // answers the lock.
-import { affordableLevels, boosterBonusOf, boosterTermOf, deployed, deployedAt, displayedRates, hostPower, levelCost, levelsCost, mutatorAt, mutatorMagnitude, wholeNous } from "../engine/economy";
+import { affordableLevels, boosterBonusOf, boosterTermOf, deployed, deployedAt, displayedRates, flowLive, hostPower, levelCost, levelsCost, mutatorAt, mutatorMagnitude, wholeNous } from "../engine/economy";
 import { BALANCE, isOscillatorType, typeRarityOf } from "../engine/constants";
 import { adjacent, sameHex } from "../engine/hex";
 import { cellNoteOf, noteNameOf, pitchOf } from "../engine/lattice";
@@ -171,7 +171,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   // connections read the same basis as the faces (issue #297): the
   // snapshot's own flow flag, charge-projected while arranging.
   const snapshot = upgrade ? projected : live;
-  const snapshotFlow = upgrade || state.mode === "flow";
+  const snapshotFlow = upgrade || flowLive(state);
   const module = deployedAt(state, pos);
   const phone = isPhoneWidth();
   const mutItem = mutatorAt(state, pos);
@@ -252,10 +252,10 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   host.dataset.renderKey = key;
   host.classList.toggle("sheet", phone);
   host.innerHTML = `
-    <div class="hex-detail-scene${flow ? " readonly" : ""}${state.mode === "flow" ? " flow-live" : ""}" data-face="${detail.face}">
+    <div class="hex-detail-scene${flow ? " readonly" : ""}${state.mode === "flow" || state.mode === "breather" ? " flow-live" : ""}" data-face="${detail.face}">
       <div class="hex-detail-corner">
         <button class="hex-detail-return" id="hex-detail-return">Return</button>
-        ${flow ? `<span class="hex-detail-readonly">${state.mode === "flow" ? "flow live" : "paused"} · read-only</span>` : ""}
+        ${flow ? `<span class="hex-detail-readonly">${state.mode === "flow" ? "flow live" : state.mode === "breather" ? "breathing" : "paused"} · read-only</span>` : ""}
       </div>
       <div class="hex-detail-grid">
         <div class="hex-detail-stack">
@@ -483,7 +483,7 @@ function moduleLayerHtml(app: App, pos: Hex, module: ModuleInstance | undefined,
   }
   // Upgrade actions ride the action rail below the stack (ADR-0072);
   // placement and retrieval use the shared inventory.
-  const flows = module ? moduleFlowsHtml(state, module, snapshot, upgrade || state.mode === "flow") : "";
+  const flows = module ? moduleFlowsHtml(state, module, snapshot, upgrade || flowLive(state)) : "";
   return `<section class="hex-detail-layer modules${selected ? " selected" : ""}" data-detail-section="modules" tabindex="-1" aria-label="Modules — ${module ? `${META[module.type].name} at ${note}` : `empty place at ${note}`}">
     <span class="hex-orbit"><span class="inst-tip"><button class="hex-stack-chassis inst-tip-trigger" data-detail-face="modules" aria-pressed="${selected}" aria-describedby="${tip.id}" aria-label="Emphasize the Modules face">${chassis}</button>${tip.html}</span>${flows}</span>
   </section>`;

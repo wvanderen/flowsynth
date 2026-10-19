@@ -182,3 +182,82 @@ export function advance(
   }
   return result;
 }
+
+// The breather's production walk (docs/breather-spec.md §1, §4, ADR-0073):
+// the flow walk's board legs with every practice accrual absent and no
+// provisional sink — the phase is pre-trusted, so its nous banks live
+// through the one seam, and a breather claims nothing. Forge meters turn,
+// received charge empowers, generator reserves drain, and the temporal
+// boundaries split on the clock the breather advances (the departed
+// session's, kept warm). The wall gap clamps at the remaining allowance —
+// the phase cannot overshoot its mint — and the caller ends it when the
+// clamp bites (trust.applyBreatherGap flags the completion).
+export function advanceBreather(state: GameState, seconds: number, rng: Rng = Math.random): AdvanceResult {
+  let result: AdvanceResult = {
+    nousEarned: 0,
+    rollsBanked: 0,
+    rollsFlow: 0,
+    rollsForge: 0,
+    rollsMutator: 0,
+    goalsCompleted: 0,
+  };
+  const breather = state.breather;
+  if (state.mode !== "breather" || !breather || seconds <= 0) return result;
+  seconds = Math.min(seconds, Math.max(0, breather.allowanceSeconds - breather.elapsed));
+  while (seconds > EPS) {
+    const spanResult: AdvanceResult = {
+      nousEarned: 0, rollsBanked: 0, rollsFlow: 0,
+      rollsForge: 0, rollsMutator: 0, goalsCompleted: 0,
+    };
+    // The same boundary walk as flow, goals aside — a breather advances no
+    // goal: reserve depletion and the temporal marks are the only mid-step
+    // rate changes the phase can meet.
+    const steadyBonus = activeBuildGeneratorStrength(state, true);
+    const liveGenerators: { module: ModuleInstance; strength: number }[] = [];
+    let earliest = Infinity;
+    for (const module of deployed(state)) {
+      if (CATEGORY_OF[module.type] !== "generator") continue;
+      if (module.reserve > EPS) {
+        const strength = emittedStrength(state, module, true, steadyBonus);
+        liveGenerators.push({ module, strength });
+        earliest = Math.min(earliest, module.reserve / strength);
+      }
+    }
+    const clock = sessionClockOf(state);
+    for (const module of deployed(state)) {
+      const boundary = nextTemporalBoundaryOf(module.type, clock) - clock;
+      if (boundary < earliest) earliest = boundary;
+    }
+    const spanSeconds = earliest !== Infinity && earliest + EPS < seconds ? earliest : seconds;
+    const snapshot = syncRates(state, true);
+    const gained = snapshot.rate * spanSeconds;
+    // Pre-trusted time banks straight onto the balance — the counter-image
+    // of the provisional sink (docs/breather-spec.md §4).
+    earnNous(state, gained);
+    spanResult.nousEarned += gained;
+    if (snapshot.forgeRate > 0) {
+      const forgeRolls = addForgeProgress(state, snapshot.forgeRate * spanSeconds, rng);
+      spanResult.rollsForge += forgeRolls;
+      spanResult.rollsBanked += forgeRolls;
+    }
+    if (snapshot.mutatorForgeRate > 0) {
+      const mutatorRolls = addMutatorForgeProgress(state, snapshot.mutatorForgeRate * spanSeconds, rng);
+      spanResult.rollsMutator += mutatorRolls;
+    }
+    breather.elapsed += spanSeconds;
+    for (const { module, strength } of liveGenerators) {
+      module.reserve = Math.max(0, module.reserve - strength * spanSeconds);
+    }
+    // No creditedSeconds, no habit, no goal, no flow meter: a breather
+    // credits nothing (spec §6 — the honesty system governs practice
+    // claims, and a breather claims nothing).
+    syncAchievements(state, {
+      chargeDelivered: chargeDelivered(snapshot),
+      maxChordFactor: maxChordFactorOf(snapshot),
+    });
+    syncChordDiscoveries(state, { chords: snapshot.allocation ? summaryTermsOf(snapshot.allocation) : snapshot.namedChords });
+    result = sumResults(result, spanResult);
+    seconds -= spanSeconds;
+  }
+  return result;
+}
