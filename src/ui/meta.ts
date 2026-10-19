@@ -21,7 +21,7 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
   // The breather-specialist wave (issue #416): rest is the identity — the
   // roles name the rest keying, the profile chips and rule lines carry
   // the figures.
-  release: { name: "Release", short: "RELS", role: "Breather-fed term · strongest in the break" },
+  release: { name: "Release", short: "RELS", role: "Breather-fed term · reduced base" },
   standby: { name: "Standby", short: "STBY", role: "Breather-fed term · deepens per completed breather" },
   tail: { name: "Tail", short: "TAIL", role: "Breather-fed term · lifetime rest warms it" },
   harmonizer: { name: "Harmonizer", short: "HARM", role: "Silent voice — its cell's pitch" },

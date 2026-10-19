@@ -145,15 +145,31 @@ describe("the breather specialists' fact rules (issue #416)", () => {
     expect(standbyRule.textContent).toContain("×0.1 per completed breather");
     expect(standbyRule.querySelectorAll(".profile-grade")).toHaveLength(0);
     const tail = panel().querySelector('[data-choice="c-tail"]')!.closest(".candidate-tile")!;
-    expect(tail.querySelector(".profile-timing")!.textContent).toContain("30 lifetime breather min");
+    const tailRule = tail.querySelector(".profile-timing")!.cloneNode(true) as HTMLElement;
+    tailRule.querySelectorAll('[role="tooltip"]').forEach(tip => tip.remove());
+    expect(tailRule.textContent).toContain("30 lifetime breather min");
+    for (const selector of [".candidate-effect", ".profile-timing"]) {
+      const trigger = standby.querySelector<HTMLButtonElement>(`${selector} .term-trigger`)!;
+      expect(trigger).not.toBeNull();
+      trigger.focus();
+      const tip = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
+      expect(tip.classList.contains("inst-show")).toBe(true);
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      expect(tip.classList.contains("inst-show")).toBe(false);
+      trigger.click(); // touch activation uses the same disclosure button
+      expect(trigger.getAttribute("aria-expanded")).toBe("true");
+      expect(app.state.bankedRolls[0]!.candidates).toHaveLength(3);
+    }
     // The Release authors no fact rule: its chip is the whole story.
     const release = panel().querySelector('[data-choice="c-release"]')!.closest(".candidate-tile")!;
     expect(release.querySelector(".profile-timing")).toBeNull();
     // Every effect line names the rest keying — the specialists read as
     // rest-keyed before any chip is parsed.
     for (const id of ["c-release", "c-standby", "c-tail"]) {
-      expect(panel().querySelector(`[data-choice="${id}"]`)!.closest(".candidate-tile")!
-        .querySelector(".candidate-effect")!.textContent).toContain("Breather-fed term");
+      const effect = panel().querySelector(`[data-choice="${id}"]`)!.closest(".candidate-tile")!
+        .querySelector(".candidate-effect")!.cloneNode(true) as HTMLElement;
+      effect.querySelectorAll('[role="tooltip"]').forEach(tip => tip.remove());
+      expect(effect.textContent).toContain("Breather-fed term");
     }
   });
 });

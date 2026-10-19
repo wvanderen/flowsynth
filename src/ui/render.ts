@@ -3497,7 +3497,7 @@ function forgeEffect(type: ModuleInstance["type"], tier: number): string {
     // The breather specialists (issue #416): the lines name the rest
     // keying; the chip carries the authored figure and the rule line
     // beside it spells the fact-keyed growth out — never a grade.
-    case "release": return "Breather-fed term · strongest in the break · reduced base";
+    case "release": return "Breather-fed term · reduced base";
     case "standby": return "Breather-fed term · deepens with completed breathers · reduced base";
     case "tail": return "Breather-fed term · lifetime rest warms the weak base";
     case "harmonizer": return `Cell pitch · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * power)}%/level to its chords`;
@@ -3536,8 +3536,8 @@ function forgeEffect(type: ModuleInstance["type"], tier: number): string {
 
 // Match the visible copy once so generated tooltip markup is never reprocessed.
 function forgeEffectHtml(effect: string): string {
-  return effect.replace(/\b(module rolls|mutator rolls|habit build|chords|pitch|charge|goals)\b/gi,
-    label => termTipHtml(label.toLowerCase() as CatalogTerm, label));
+  return effect.replace(/\b(module rolls|mutator rolls|habit build|chords|pitch|charge|goals|breathers?)\b/gi,
+    label => termTipHtml(/^breathers?$/i.test(label) ? "Breather" : label.toLowerCase() as CatalogTerm, label));
 }
 
 // The meter detail's live slots (ADR-0041): the figures move every tick a

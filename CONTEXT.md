@@ -198,7 +198,7 @@ The chord-centered oscillator (issue #375, ADR-0064): received charge converts i
 _Avoid_: chord converter, chord battery
 
 **Release**:
-The plain breather specialist (issue #416, ADR-0073): the breather axis's S band — the roster's strongest response — paid for with a reduced base, so in flow it trails every standard producer and ending a session onto it is the build decision. One authored coefficient, no fact keying: the chip is the whole story.
+The plain breather specialist (issue #416, ADR-0073): the breather axis's S band — a strong fixed response — paid for with a reduced base, so in flow it trails every standard producer and ending a session onto it is the build decision. One authored coefficient, no fact keying: the chip is the whole story.
 _Avoid_: break bonus, rest module
 
 **Standby**:
@@ -206,7 +206,7 @@ The rest-practicing oscillator (issue #416, ADR-0073): its breather response dee
 _Avoid_: rest credit, streak (the count is lifetime, never a streak)
 
 **Tail**:
-The reverb-tail oscillator (issue #416, ADR-0073): the sound that outlives the note. Its whole term warms in authored steps over lifetime breather seconds — early exits included — from a D-weak authored base to a standard producer, the temporal profiles' shape (outside power, exact between boundaries) over the persisted fact; the steps are described directly, never graded. Its breather response rides strong beside the warmth: rest pays live and forever.
+The reverb-tail oscillator (issue #416, ADR-0073): the sound that outlives the note. Its whole term warms in authored steps over lifetime breather seconds — early exits included — from a D-weak authored base to a standard producer, the temporal profiles' shape (outside power, exact between boundaries) over banked seconds plus current breather elapsed time; the steps are described directly, never graded. Its breather response rides strong beside the warmth: rest pays live and forever.
 _Avoid_: warm-up (the session-clock sense — the warmth never resets), ramp
 
 **Charge**:

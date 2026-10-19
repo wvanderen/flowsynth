@@ -132,7 +132,7 @@ describe("authorship and the axis's strong band", () => {
 });
 
 describe("the Release's defining behavior", () => {
-  it("the breather multiplies its voice by exactly ×1.6 — the strongest response on the roster", () => {
+  it("the breather multiplies its voice by exactly ×1.6 — its fixed response", () => {
     const s = fresh();
     pairBoard(s, "release");
     runSession(s, 1500);
@@ -242,12 +242,20 @@ describe("the Tail's rest warmth", () => {
     enterBreather(s, 0, 1700);
     const before = displayedRates(s).contributions.get(tail.id)!.value;
     const solves = allocationMemoStats.solves;
-    s.breatherSeconds = 1900; // across the 30-minute boundary
+    const earned = applyBreatherGap(s, 200).result.nousEarned; // crosses 30 minutes live
     const after = displayedRates(s).contributions.get(tail.id)!.value;
     expect(allocationMemoStats.solves).toBe(solves + 1);
     expect(after).toBeCloseTo(before * 1.6, 9);
-    s.breatherSeconds = 2500; // deeper into the same step
+    const sine = displayedRates(s).contributions.get(s.modules[0]!.id)!.value;
+    expect(earned).toBeCloseTo(sine * 200 + before * 100 + after * 100, 9);
+    expect(s.breatherSeconds).toBe(1700); // banking remains the end action’s job
+    applyBreatherGap(s, 50); // deeper into the same step
     displayedRates(s);
     expect(allocationMemoStats.solves).toBe(solves + 1);
+    const restored = deserialize(serialize(s, 1)).state!;
+    expect(displayedRates(restored).contributions.get(tail.id)!.value).toBeCloseTo(after, 9);
+    endBreather(s); // early exit banks the live seconds once and keeps the warmth
+    expect(s.breatherSeconds).toBe(1950);
+    expect(displayedRates(s).contributions.get(tail.id)!.value).toBeCloseTo(after / 1.5, 9);
   });
 });

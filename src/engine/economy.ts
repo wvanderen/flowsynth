@@ -1,6 +1,6 @@
 import { amplifierGainOf, tierPowerOf } from "./module-strength";
 import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isOscillatorType, isVoiceType, typeRarityOf } from "./constants";
-import { baseProductionOf, boosterResponseOf, breatherResponseOf, chargeResponseOf, chordResponseOf, restPhaseKeyOf, restWarmthFactorOf, usesChargeConversion, usesChordConversion, productionClockFactorOf, temporalPhaseKeyOf } from "./profiles";
+import { lifetimeBreatherSecondsOf, baseProductionOf, boosterResponseOf, breatherResponseOf, chargeResponseOf, chordResponseOf, restPhaseKeyOf, restWarmthFactorOf, usesChargeConversion, usesChordConversion, productionClockFactorOf, temporalPhaseKeyOf } from "./profiles";
 import { analyzeChords, hypotheticalBoardFor, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
 import { allocateChords, DEFAULT_ALLOCATION_BUDGET, type AllocationBudget, type AllocationRead, type AllocationVoiceParams } from "./allocation";
 import { capacityOf } from "./capacity";
@@ -779,7 +779,7 @@ export function computeRates(
       BALANCE.synthRate *
       baseProductionOf(module.type) *
       productionClockFactorOf(module.type, clock) *
-      restWarmthFactorOf(module.type, state.breatherSeconds) *
+      restWarmthFactorOf(module.type, lifetimeBreatherSecondsOf(state)) *
       power *
       (silent ? 0 : chordFactor) *
       (1 + factors.synthTerm);
@@ -956,7 +956,7 @@ function allocationFingerprint(state: GameState): string {
   // The Tail's rest warmth (issue #416) keys its phase the same way: the
   // lifetime breather seconds move during a breather's live walk, and a
   // step boundary crossing mid-breather must re-solve the memo.
-  parts.push(restPhaseKeyOf(state.breatherSeconds));
+  parts.push(restPhaseKeyOf(lifetimeBreatherSecondsOf(state)));
   // The mode (docs/breather-spec.md §3): the breather response changes the
   // pass's output with the mode alone — the board can stand still across a
   // flow → breather boundary, and a stale solve must never survive it.

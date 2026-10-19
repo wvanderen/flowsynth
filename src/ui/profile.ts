@@ -1,3 +1,4 @@
+import { breatherTermsHtml } from "./terms";
 import { breatherRuleOf, profileAxesOf, temporalTimingOf, type ProfileAxisRead } from "../engine/profiles";
 import type { ModuleType } from "../engine/types";
 import { formatNumber } from "./format";
@@ -48,6 +49,6 @@ export function profileGradesHtml(type: ModuleType): string {
   const timing = temporalTimingOf(type)?.timing ?? breatherRuleOf(type);
   if (axes.length === 0 && !timing) return "";
   const chips = axes.length > 0 ? `<span class="profile-grades">${axes.map(axisHtml).join("")}</span>` : "";
-  const timingLine = timing ? `<span class="profile-timing">${timing}</span>` : "";
+  const timingLine = timing ? `<span class="profile-timing">${breatherTermsHtml(timing)}</span>` : "";
   return `${chips}${timingLine}`;
 }

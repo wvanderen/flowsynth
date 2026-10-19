@@ -1,5 +1,5 @@
 import { BALANCE, CATEGORY_OF } from "./constants";
-import type { GeneratorType, ModuleType, OscillatorType } from "./types";
+import type { GameState, GeneratorType, ModuleType, OscillatorType } from "./types";
 
 // The authored oscillator profiles (issue #369, parent #366; ADR-0059):
 // each named type carries one fixed profile — a stable authored identity,
@@ -40,7 +40,7 @@ import type { GeneratorType, ModuleType, OscillatorType } from "./types";
   //              replacement stated in disclosure — paid for with the
   //              weakest standalone base in the roster (D weak).
   //   Release (issue #416) — the plain breather specialist: the S band's
-  //              signature response, the strongest on the roster, paid for
+  //              signature fixed response, paid for
   //              with a reduced base — in flow it trails every standard
   //              producer, ending a session onto it is the build decision.
   //   Standby (issue #416) — the rest-practicing specialist: its response
@@ -130,8 +130,8 @@ export const OSCILLATOR_PROFILES: Record<OscillatorType, OscillatorProfile> = {
   // The breather-specialist wave (issue #416): the axis's strong band, the
   // Sine's absent mark standing as the roster's contrast. Provisional
   // tuning.
-  // The plain specialist: the S-band ×1.6 — the strongest breather
-  // producer on the roster, the chip that reads unmistakably as rest —
+  // The plain specialist: the S-band ×1.6 fixed response,
+  // the chip that reads unmistakably as rest —
   // paid for with a reduced base (C reduced): in flow it trails every
   // standard producer. One defining behavior, one supporting tradeoff.
   release: { base: 0.7, booster: 1.0, chord: 1.0, charge: 1.0, capacity: 1, breather: 1.6 },
@@ -215,6 +215,15 @@ export function breatherResponseOf(type: ModuleType, completedBreathers = 0): nu
   const deepening = profile?.breatherDeepening;
   if (!deepening || completedBreathers <= 0) return authored;
   return authored + Math.min(completedBreathers, deepening.capSteps) * deepening.perCompletedBreather;
+}
+
+// Lifetime rest includes the current break; only endBreather banks it.
+export function lifetimeBreatherSecondsOf(state: GameState): number {
+  return state.breatherSeconds + (state.mode === "breather" ? state.breather?.elapsed ?? 0 : 0);
+}
+
+export function nextRestBoundaryOf(type: ModuleType, seconds: number): number {
+  return oscillatorProfileOf(type)?.restWarmth?.find(step => step.fromSeconds > seconds)?.fromSeconds ?? Infinity;
 }
 
 // The Tail's rest warmth (issue #416): the authored steps' factor at this
