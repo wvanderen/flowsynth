@@ -221,7 +221,7 @@ Controls are square-cut — hairline border, condensed technical lettering, no r
 
 - **Shape:** the Focus door's recessed display (the header-status brief) — panel-deep, 1px hairline border, square-cut; the hypercube badge and wordmark sit on the chassis beside it.
 - **Composition:** the full-height display clock leads; the program block follows (habit name in condensed caps — completion's engraved check rides it when the displayed goal is done — caption, the vermillion provisional line while the honesty pool holds); the goal meter closes the well at its right edge.
-- **Goal meter:** a vertical LED column, seven square segments lighting bottom-up in the shown goal's palette token; unlit segments engraved, a `·N` mono count for further goals in play, absent when nothing qualifies. The column stays flush at the edge in every state. A display-only tooltip trigger — hover, its own tab stop, and touch open the gloss; the meter opens nothing.
+- **Goal meter:** a vertical LED column, seven square segments lighting bottom-up in the shown goal's palette token; unlit segments engraved, a `·N` mono count for further goals in play, absent when nothing qualifies. The column stays flush at the edge in every state. A display-only tooltip trigger — hover and its own tab stop open the gloss; activation, including touch, opens PLAN with the rest of the door. Coarse pointers get a 44px hit area without widening the visible column.
 
 ### Goal Bars
 

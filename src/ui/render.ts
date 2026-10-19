@@ -396,9 +396,8 @@ function meterLitCount(fraction: number): number {
 }
 
 // A display-only tooltip trigger: the meter speaks its gloss on hover,
-// keyboard focus (its own tab stop inside the door), and touch — the
-// instrument layer's one access grammar, minus the ⓘ trigger a read never
-// wears. The whole door still opens PLAN; the meter opens nothing.
+// keyboard focus (its own tab stop inside the door). Activation, including
+// touch, opens PLAN with the rest of the door.
 let meterTipSequence = 0;
 
 function goalMeterHtml(app: App): string {
@@ -438,7 +437,8 @@ function refreshSessionReads(app: App): void {
   const lit = meterLitCount(read.fraction);
   meter.querySelectorAll<HTMLElement>(".gm-seg").forEach((seg, i) => seg.classList.toggle("lit", i < lit));
   meter.setAttribute("aria-label", read.aria);
-  const tip = meter.querySelector(".inst-tip-body");
+  const tipId = meter.getAttribute("aria-describedby");
+  const tip = tipId ? document.getElementById(tipId) : null;
   if (tip) setText(tip, read.label);
 }
 

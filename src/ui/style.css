@@ -423,7 +423,20 @@ h1, h2, h3, p { margin: 0; }
    controls: the column is a display tooltip trigger only — the door around
    it opens PLAN. The column stays flush at the edge; completion's mark
    lives beside the practice name, never inside the row. */
-.goal-meter { flex-shrink: 0; cursor: default; --gm-color: var(--muted); }
+.goal-meter { position: relative; flex-shrink: 0; cursor: default; --gm-color: var(--muted); }
+/* Extend the hit area inward over the same PLAN door without widening
+   the LED column or taking space from the phone's session controls. */
+@media (pointer: coarse) {
+  .goal-meter::before {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+  }
+}
 .goal-meter:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .gm-row { display: flex; align-items: flex-start; gap: 4px; }
 .gm-track { display: flex; flex-direction: column-reverse; gap: 2px; }

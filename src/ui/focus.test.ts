@@ -425,6 +425,28 @@ describe("the goal meter's derivation (the display well's edge states)", () => {
 });
 
 describe("the display well's goal meter (the header-status brief)", () => {
+  it("keeps the gloss live after disclosure portals it outside the meter", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
+    const goal = createGoal(app.state, { habitId: habit.id, minutes: 20, schedule: "daily", now: Date.now() }).goal!;
+    app.render();
+    const meter = document.getElementById("goal-meter")!;
+    meter.focus();
+    const body = document.getElementById(meter.getAttribute("aria-describedby")!)!;
+    expect(body.parentElement).toBe(document.body);
+    expect(body.textContent).toBe("Daily 20 min · 20 min to go");
+    goal.progressSeconds = 600;
+    app.render();
+    expect(document.getElementById("goal-meter")).toBe(meter);
+    expect(body.textContent).toBe("Daily 20 min · 10 min to go");
+    meter.blur();
+    meter.focus();
+    expect(body.classList.contains("inst-show")).toBe(true);
+    expect(body.textContent).toBe("Daily 20 min · 10 min to go");
+    meter.click();
+    expect(app.ui.app).toBe("time");
+  });
+
   it("the meter stands at the well's right edge: seven segments, the goal's palette, the count mark", () => {
     app.state.goalCapacityBought = 5; // seven slots for the seven tracked goals
     const habit = createHabit(app.state, "Piano").habit!;
@@ -442,7 +464,7 @@ describe("the display well's goal meter (the header-status brief)", () => {
     // The gloss rides the tooltip layer, the aria read carries the count.
     expect(meter.querySelector(".inst-tip-body")!.textContent).toBe("10 min · 1 min to go");
     expect(meter.getAttribute("aria-label")).toBe("Goal progress: 10 min, 1 minute to go, 6 more goals in play");
-    // Reads, never controls: the meter opens nothing — the door around it
+    // No nested controls: activating the meter opens PLAN with the door that
     // stays the one action.
     expect(meter.querySelectorAll("button, input, select, a")).toHaveLength(0);
   });
