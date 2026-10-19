@@ -126,7 +126,7 @@ describe("grade chips on the Hex detail's module face", () => {
 });
 
 describe("the breather specialists' fact rules (issue #416)", () => {
-  it("the specialists' chips lead with the S-band breather figure; the fact rules ride beside as plain lines", () => {
+  it("the specialists' chips lead with the S-band breather figure; special abilities have star markers and one disclosure per description", () => {
     app.state.bankedRolls = [{ id: "breather-roll", candidates: [
       { id: "c-release", type: "release", tier: 0 },
       { id: "c-standby", type: "standby", tier: 0 },
@@ -141,15 +141,19 @@ describe("the breather specialists' fact rules (issue #416)", () => {
     // The rule line sits beside the chips, letter-free: a fact-keyed
     // growth is described directly, never graded.
     const standby = panel().querySelector('[data-choice="c-standby"]')!.closest(".candidate-tile")!;
-    const standbyRule = standby.querySelector(".profile-timing")!;
-    expect(standbyRule.textContent).toContain("×0.1 per completed breather");
+    const standbyRule = standby.querySelector(".profile-ability")!;
+    expect(standbyRule.textContent).toContain("+0.1 per completion");
+    expect(standbyRule.querySelector(".profile-ability-mark")).not.toBeNull();
+    expect(standbyRule.textContent).toContain("Special ability:");
+    expect(standby.querySelectorAll(".term-trigger")).toHaveLength(1);
     expect(standbyRule.querySelectorAll(".profile-grade")).toHaveLength(0);
     const tail = panel().querySelector('[data-choice="c-tail"]')!.closest(".candidate-tile")!;
-    const tailRule = tail.querySelector(".profile-timing")!.cloneNode(true) as HTMLElement;
+    expect(tail.querySelectorAll(".term-trigger")).toHaveLength(1);
+    const tailRule = tail.querySelector(".profile-ability")!.cloneNode(true) as HTMLElement;
     tailRule.querySelectorAll('[role="tooltip"]').forEach(tip => tip.remove());
     expect(tailRule.textContent).toContain("30 lifetime breather min");
-    for (const selector of [".candidate-effect", ".profile-timing"]) {
-      const trigger = standby.querySelector<HTMLButtonElement>(`${selector} .term-trigger`)!;
+    {
+      const trigger = standby.querySelector<HTMLButtonElement>(".candidate-effect .term-trigger")!;
       expect(trigger).not.toBeNull();
       trigger.focus();
       const tip = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
@@ -162,7 +166,8 @@ describe("the breather specialists' fact rules (issue #416)", () => {
     }
     // The Release authors no fact rule: its chip is the whole story.
     const release = panel().querySelector('[data-choice="c-release"]')!.closest(".candidate-tile")!;
-    expect(release.querySelector(".profile-timing")).toBeNull();
+    expect(release.querySelector(".profile-ability")).toBeNull();
+    expect(release.querySelectorAll(".term-trigger")).toHaveLength(1);
     // Every effect line names the rest keying — the specialists read as
     // rest-keyed before any chip is parsed.
     for (const id of ["c-release", "c-standby", "c-tail"]) {
@@ -175,6 +180,16 @@ describe("the breather specialists' fact rules (issue #416)", () => {
 });
 
 describe("the reusable presentation contract", () => {
+  it("a standalone special ability has one glossary link and stays outside the grade chips", () => {
+    for (const type of ["standby", "tail"] as const) {
+      const host = document.createElement("div");
+      host.innerHTML = profileGradesHtml(type);
+      expect(host.querySelectorAll(".term-trigger")).toHaveLength(1);
+      expect(host.querySelector(".profile-ability-mark")).not.toBeNull();
+      expect(host.querySelector(".profile-grades .profile-ability")).toBeNull();
+    }
+  });
+
   it("renders nothing for types without authored profile axes", () => {
     expect(profileGradesHtml("infusor")).toBe("");
     expect(profileGradesHtml("focusKeyed")).toBe("");

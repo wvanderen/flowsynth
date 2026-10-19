@@ -58,7 +58,7 @@ describe("authorship and the axis's strong band", () => {
       expect(profileAxesOf(type).map((axis) => axis.id)).toEqual(["base", "booster", "chord", "charge", "breather"]);
     }
     // The fact-keyed growth lives in the direct descriptions only.
-    expect(breatherRuleOf("standby")).toContain("completed breather");
+    expect(breatherRuleOf("standby")).toContain("per completion");
     expect(breatherRuleOf("tail")).toContain("lifetime breather");
     expect(breatherRuleOf("release")).toBeNull();
     expect(breatherRuleOf("additive")).toBeNull();

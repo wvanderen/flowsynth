@@ -38,7 +38,7 @@ export function termTipHtml(term: CatalogTerm, label: string = term): string {
   return `<span class="inst-tip term-tip"><button class="inst-tip-trigger term-trigger" type="button" aria-expanded="false" aria-describedby="${id}" aria-label="${term} — what it means">${label}</button><span class="inst-tip-body" id="${id}" role="tooltip">${CATALOG_TERMS[term]}</span></span>`;
 }
 
-// Inflected copies keep their visible wording and share the glossary entry.
+// Disclose the first occurrence in a description; repeated mentions stay plain.
 export function breatherTermsHtml(text: string): string {
-  return text.replace(/\bbreathers?\b/gi, label => termTipHtml("Breather", label));
+  return text.replace(/\bbreathers?\b/i, label => termTipHtml("Breather", label));
 }

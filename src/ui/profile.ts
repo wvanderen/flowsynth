@@ -42,13 +42,16 @@ function axisHtml(axis: ProfileAxisRead): string {
 // The type's grade line — empty for every type without authored profile
 // axes (non-oscillators until their waves land). A temporal profile's
 // timing rides beside the chips as its own plain line, and the breather
-// specialists' fact rules (issue #416) ride the same shape: the growth
-// described directly, never given an aptitude grade.
-export function profileGradesHtml(type: ModuleType): string {
+// specialists' fact rules (issue #416) carry a star-marked ability row:
+// the growth is described directly, never given an aptitude grade.
+export function profileGradesHtml(type: ModuleType, options: { breatherDisclosed?: boolean } = {}): string {
   const axes = profileAxesOf(type);
-  const timing = temporalTimingOf(type)?.timing ?? breatherRuleOf(type);
-  if (axes.length === 0 && !timing) return "";
+  const ability = breatherRuleOf(type);
+  const timing = temporalTimingOf(type)?.timing;
+  if (axes.length === 0 && !timing && !ability) return "";
   const chips = axes.length > 0 ? `<span class="profile-grades">${axes.map(axisHtml).join("")}</span>` : "";
-  const timingLine = timing ? `<span class="profile-timing">${breatherTermsHtml(timing)}</span>` : "";
-  return `${chips}${timingLine}`;
+  const timingLine = timing ? `<span class="profile-timing">${timing}</span>` : "";
+  const abilityText = ability && !options.breatherDisclosed ? breatherTermsHtml(ability) : ability;
+  const abilityLine = ability ? `<span class="profile-ability"><svg class="profile-ability-mark" viewBox="0 0 16 16" aria-hidden="true"><path d="m8 1.5 1.8 4.2 4.5.4-3.4 3 1 4.4L8 11.2l-3.9 2.3 1-4.4-3.4-3 4.5-.4Z"/></svg><span><span class="sr-only">Special ability: </span>${abilityText}</span></span>` : "";
+  return `${chips}${timingLine}${abilityLine}`;
 }

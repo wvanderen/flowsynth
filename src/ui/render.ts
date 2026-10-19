@@ -3536,8 +3536,15 @@ function forgeEffect(type: ModuleInstance["type"], tier: number): string {
 
 // Match the visible copy once so generated tooltip markup is never reprocessed.
 function forgeEffectHtml(effect: string): string {
-  return effect.replace(/\b(module rolls|mutator rolls|habit build|chords|pitch|charge|goals|breathers?)\b/gi,
-    label => termTipHtml(/^breathers?$/i.test(label) ? "Breather" : label.toLowerCase() as CatalogTerm, label));
+  let breatherDisclosed = false;
+  return effect.replace(/\b(module rolls|mutator rolls|habit build|chords|pitch|charge|goals|breathers?)\b/gi, label => {
+    if (/^breathers?$/i.test(label)) {
+      if (breatherDisclosed) return label;
+      breatherDisclosed = true;
+      return termTipHtml("Breather", label);
+    }
+    return termTipHtml(label.toLowerCase() as CatalogTerm, label);
+  });
 }
 
 // The meter detail's live slots (ADR-0041): the figures move every tick a
@@ -3608,7 +3615,7 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
           <span class="module-preview">${inventoryTileSvg(candidate)}</span>
           <span class="candidate-readout"><span class="candidate-name">${rarityMark(typeRarityOf(candidate.type))} ${META[candidate.type].name} <span class="mono">${tierNumeral(candidate.tier)}</span></span>
           <span id="forge-effect-${candidate.id}" class="candidate-effect">${forgeEffectHtml(forgeEffect(candidate.type, candidate.tier))}</span>
-          ${profileGradesHtml(candidate.type)}
+          ${profileGradesHtml(candidate.type, { breatherDisclosed: true })}
           ${candidate.type !== "spacer" && !["harmonizer", "echo", "bend", "amplifier", "ritual"].includes(candidate.type) ? `<span class="candidate-scaling">+${formatNumber((BALANCE.rarityPower[typeRarityOf(candidate.type)] - 1) * 100)}% / level</span>` : ""}</span>
         </div>`).join("") : mutOffer ? mutOffer.candidates.map(candidate => `
         <div class="candidate-tile mut-candidate" data-rarity="${candidate.rarity}"><button class="candidate-pick" data-mut-choice="${candidate.id}" data-mut-offer="${mutOffer.id}" data-rarity="${candidate.rarity}" aria-label="Take ${RARITY_LABEL[candidate.rarity]} ${FAMILY_WORD[candidate.family]} mutator" aria-describedby="forge-effect-${candidate.id}"></button>

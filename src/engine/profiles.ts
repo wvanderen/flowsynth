@@ -265,12 +265,12 @@ const BREATHER_RULES: Partial<Record<ModuleType, string>> = (() => {
   const standby = OSCILLATOR_PROFILES.standby;
   const deepening = standby.breatherDeepening;
   if (standby.breather !== undefined && deepening) {
-    rules.standby = `breather deepens ×${figure(deepening.perCompletedBreather)} per completed breather · ×${figure(standby.breather + deepening.capSteps * deepening.perCompletedBreather)} after ${deepening.capSteps}`;
+    rules.standby = `Breather response +${figure(deepening.perCompletedBreather)} per completion · ×${figure(standby.breather + deepening.capSteps * deepening.perCompletedBreather)} after ${deepening.capSteps}`;
   }
   const warmth = OSCILLATOR_PROFILES.tail.restWarmth;
   if (warmth) {
-    const marks = warmth.slice(1).map((step) => `×${figure(step.factor)} from ${figure(step.fromSeconds / 60)} lifetime breather min`);
-    rules.tail = `rest warms the term ${marks.join(" · ")}`;
+    const marks = warmth.slice(1).map((step, index) => `×${figure(step.factor)} from ${figure(step.fromSeconds / 60)}${index === 0 ? " lifetime breather" : ""} min`);
+    rules.tail = `Rest warmth ${marks.join(" · ")}`;
   }
   return rules;
 })();
