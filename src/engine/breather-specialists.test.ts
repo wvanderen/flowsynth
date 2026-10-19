@@ -6,7 +6,8 @@ import { deserialize, serialize } from "./save";
 import { fresh, give } from "./fixtures";
 import { hex } from "./hex";
 import { advance } from "./advance";
-import { endSession, startBreather, startSession } from "./actions";
+import { endBreather, endSession, startBreather, startSession } from "./actions";
+import { applyBreatherGap } from "./trust";
 import type { GameState, OscillatorType } from "./types";
 
 // The breather-specialist wave (issue #416, parent #366): three oscillator
@@ -90,6 +91,43 @@ describe("authorship and the axis's strong band", () => {
     const live = displayedRates(s);
     const loaded = displayedRates(restored);
     expect(loaded.rate).toBeCloseTo(live.rate, 9);
+  });
+
+  it("the deepened response survives the round-trip and reads through a real breather", () => {
+    const s = fresh();
+    pairBoard(s, "standby");
+    const restored = deserialize(serialize(s, 1)).state!;
+    runSession(restored, 1500);
+    const flowRates = displayedRates(restored);
+    const standbyFlow = flowRates.contributions.get(restored.modules[1]!.id)!.value;
+    const sineFlow = flowRates.contributions.get(restored.modules[0]!.id)!.value;
+    restored.breathersCompleted = 2;
+    startBreather(restored, 1000);
+    const breatherRates = displayedRates(restored);
+    const standbyBreather = breatherRates.contributions.get(restored.modules[1]!.id)!.value;
+    const sineBreather = breatherRates.contributions.get(restored.modules[0]!.id)!.value;
+    expect((standbyBreather / standbyFlow) / (sineBreather / sineFlow)).toBeCloseTo(1.6, 9);
+  });
+
+  it("a completed breather deepens the next one through the real seams", () => {
+    const s = fresh();
+    pairBoard(s, "standby");
+    runSession(s, 1500);
+    startBreather(s, 1000);
+    applyBreatherGap(s, 300); // the allowance runs to zero
+    endBreather(s); // the completion mints the count
+    expect(s.breathersCompleted).toBe(1);
+    // The next session's end offers again; the new breather reads the
+    // deepened response nothing hand-set.
+    runSession(s, 1500);
+    const flowRates = displayedRates(s);
+    const standbyFlow = flowRates.contributions.get(s.modules[1]!.id)!.value;
+    const sineFlow = flowRates.contributions.get(s.modules[0]!.id)!.value;
+    startBreather(s, 5000);
+    const breatherRates = displayedRates(s);
+    const standbyBreather = breatherRates.contributions.get(s.modules[1]!.id)!.value;
+    const sineBreather = breatherRates.contributions.get(s.modules[0]!.id)!.value;
+    expect((standbyBreather / standbyFlow) / (sineBreather / sineFlow)).toBeCloseTo(1.5, 9);
   });
 });
 

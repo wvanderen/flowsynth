@@ -223,30 +223,48 @@ export function breatherResponseOf(type: ModuleType, completedBreathers = 0): nu
 // readout shares, the temporal factor's contract (ADR-0061).
 export function restWarmthFactorOf(type: ModuleType, breatherSeconds: number): number {
   const warmth = oscillatorProfileOf(type)?.restWarmth;
-  return warmth ? warmupRead(warmth, breatherSeconds).factor : 1;
+  return warmth ? stepRead(warmth, breatherSeconds).factor : 1;
 }
+
+// The authored warmth ladders, gathered once — the phase key walks a
+// static shape, never the table, per fingerprint read.
+const REST_WARMTHS: readonly (readonly TemporalStep[])[] = Object.values(OSCILLATOR_PROFILES)
+  .map((profile) => profile.restWarmth)
+  .filter((steps): steps is readonly TemporalStep[] => steps !== undefined);
 
 // The warmth's phase key — the only form the rate memo may key the rest
 // basis on: the factor moves exactly when a lifetime step boundary
 // crosses, so the key stays warm between boundaries and never serves a
 // stale phase.
 export function restPhaseKeyOf(breatherSeconds: number): string {
-  const warmth = Object.values(OSCILLATOR_PROFILES)
-    .map((profile) => profile.restWarmth)
-    .filter((w): w is readonly TemporalStep[] => w !== undefined);
   const clock = Math.max(0, breatherSeconds);
-  const marks = warmth.map((steps, i) => `w${i}:${steps.filter((step) => step.fromSeconds <= clock).length}`);
+  const marks = REST_WARMTHS.map((steps, i) => `w${i}:${steps.filter((step) => step.fromSeconds <= clock).length}`);
   return `w:${marks.sort().join("")}`;
 }
 
-// The breather-fact rules' direct descriptions (issue #416) — the one
-// phrasing table, rendered beside the grade chips like a temporal timing
-// line. A fact-keyed rule is not a comparable coefficient: it takes no
-// aptitude grade, and the lifetime facts surface nowhere else.
-const BREATHER_RULES: Partial<Record<ModuleType, string>> = {
-  standby: "breather deepens ×0.1 per completed breather · ×1.8 after four",
-  tail: "rest warms the term ×1.6 from 30 lifetime breather min · ×2.0 from 120",
-};
+// One authored figure as disclosure prose — two decimals, trailing zeros
+// gone — so the rule lines derive from the tables above and a retune
+// cannot ship a stale string beside the data it describes.
+const figure = (value: number): string => String(Math.round(value * 100) / 100);
+
+// The breather-fact rules' direct descriptions (issue #416) — derived from
+// the authored tables, rendered beside the grade chips like a temporal
+// timing line. A fact-keyed rule is not a comparable coefficient: it
+// takes no aptitude grade, and the lifetime facts surface nowhere else.
+const BREATHER_RULES: Partial<Record<ModuleType, string>> = (() => {
+  const rules: Partial<Record<ModuleType, string>> = {};
+  const standby = OSCILLATOR_PROFILES.standby;
+  const deepening = standby.breatherDeepening;
+  if (standby.breather !== undefined && deepening) {
+    rules.standby = `breather deepens ×${figure(deepening.perCompletedBreather)} per completed breather · ×${figure(standby.breather + deepening.capSteps * deepening.perCompletedBreather)} after ${deepening.capSteps}`;
+  }
+  const warmth = OSCILLATOR_PROFILES.tail.restWarmth;
+  if (warmth) {
+    const marks = warmth.slice(1).map((step) => `×${figure(step.factor)} from ${figure(step.fromSeconds / 60)} lifetime breather min`);
+    rules.tail = `rest warms the term ${marks.join(" · ")}`;
+  }
+  return rules;
+})();
 
 export function breatherRuleOf(type: ModuleType): string | null {
   return BREATHER_RULES[type] ?? null;
@@ -503,10 +521,11 @@ export const PULSEWELL_CYCLE = {
   burstFactor: 2.5,
 } as const;
 
-// The warmup ladder's two reads — the factor at a clock mark and the next
-// mark where it changes. The clock clamps at zero: no profile reads
-// before its session began.
-function warmupRead(steps: readonly TemporalStep[], elapsedSeconds: number): { factor: number; nextBoundary: number } {
+// An ascending step ladder's two reads — the factor at a clock mark and
+// the next mark where it changes. The clock clamps at zero: no profile
+// reads before its basis began. Shared by the session-clock warmup and
+// the lifetime rest warmth alike.
+function stepRead(steps: readonly TemporalStep[], elapsedSeconds: number): { factor: number; nextBoundary: number } {
   const clock = Math.max(0, elapsedSeconds);
   let factor = steps[0]!.factor;
   let nextBoundary = Infinity;
@@ -550,8 +569,8 @@ export interface TemporalProfile {
 // below answers ×1, Infinity, or null for them.
 const TEMPORAL_PROFILES: Partial<Record<ModuleType, TemporalProfile>> = {
   afterglow: {
-    factorAt: (elapsed) => warmupRead(AFTERGLOW_WARMUP, elapsed).factor,
-    nextBoundary: (elapsed) => warmupRead(AFTERGLOW_WARMUP, elapsed).nextBoundary,
+    factorAt: (elapsed) => stepRead(AFTERGLOW_WARMUP, elapsed).factor,
+    nextBoundary: (elapsed) => stepRead(AFTERGLOW_WARMUP, elapsed).nextBoundary,
     phaseMark: (elapsed) => `a${AFTERGLOW_WARMUP.filter((step) => step.fromSeconds <= Math.max(0, elapsed)).length}`,
     label: "Warm-up",
     timing: "×0.3 open · ×0.8 from 2 min · ×1.25 sustained from 5 min",
