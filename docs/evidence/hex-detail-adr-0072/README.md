@@ -31,4 +31,15 @@ The four PNGs below are the **first-round** captures, taken before the same-day 
 ## Unavailable checks
 
 - Greyscale pass and a live reduced-motion capture could not run in this session (the browser host's screenshot pipeline was down for part of it; the four captures above predate the revisions). The unit suites pin the state grammar's non-color marks and the revised grammar; fresh desktop/phone captures and the greyscale review are owed before calling the surface fully validated.
-- Touch-target walk on the phone sheet performed by inspection only (44px min-heights are pinned in CSS and asserted in the controls-sheet round; the map's cell buttons inherit the board grid's 44px-plus hit pattern).
+- Touch-target walk on the phone sheet performed by inspection only (44px min-heights are pinned in CSS and asserted in the controls-sheet round; the miniature map cells do not inherit the board grid hit areas; review measured them at approximately 22×25px).
+
+
+## PR #413 accessibility corrections — 2026-10-19
+
+SVG map controls now retain keyboard focus across detail rebuilds. On phone widths and coarse-pointer devices, a labeled native Open hex picker provides a 44px-minimum-height navigation alternative to the miniature polygons; selecting a coordinate retains the focused layer and picker focus. The miniature remains unchanged for formation context. Regression tests cover focus through a changed resource read, Space activation after rebuilding, and phone picker navigation/focus.
+
+Fresh captures: `desktop-map-keyboard-focus.png` (1280×800) and `phone-map-picker.png` (390×844). Captured from `/private/tmp/flowsynth-review-413` at base commit `3332eae` with the accessibility corrections in the working tree; the provenance endpoint matched that checkout and base commit. The dev overlay was hidden for these captures. Browser probes confirmed SVG focus survives a resource-triggered rebuild, the phone picker measures 44px high, and changing its value navigates while retaining picker focus. The phone capture shows its visible focus outline and selected destination. Compared with the pinned instrument/controls references: the new picker is square-cut, labeled, and follows the existing panel and outline grammar.
+
+Native touch-picker interaction, greyscale, and reduced-motion browser checks remain unavailable; scripted change events verify navigation but do not verify the operating system's touch picker. The correction adds no motion.
+
+Validation: `npm run check` passed; full suite 1,668 passed / 2 skipped; UI regression suite 841 passed.

@@ -123,7 +123,7 @@ The ruled column beside the hex detail's stack holding the opened voice's standi
 _Avoid_: sidebar, info panel, chord column (the #388 predecessor)
 
 **Context map**:
-The miniature of the whole in-range board heading the details column — the opened hex in the selected marker, its active chords drawn in their chord hues as links between their voices. It answers where the voice sits in the formation, and its owned cells navigate, opening that coordinate's Hex detail.
+The miniature of the whole in-range board heading the details column — the opened hex in the selected marker, its active chords drawn in their chord hues as links between their voices. It answers where the voice sits in the formation, and its owned cells navigate, opening that coordinate's Hex detail. Phone widths and coarse-pointer devices also offer a native Open hex picker with a 44px minimum height; both navigation paths retain the focused layer.
 _Avoid_: minigrid, minimap
 
 **Action rail**:

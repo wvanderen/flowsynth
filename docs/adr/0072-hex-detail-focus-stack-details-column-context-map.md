@@ -11,3 +11,6 @@ Considered and rejected: keeping the rail beside each layer (it orphaned the act
 Revised 2026-10-18 by the same-day review round: the context map's chord links and cell navigation, the chips' disclosure retirement, and the chord facts' ruled-row grammar recorded above; earlier drafts of this document carried the static map and the tooltip-bearing chips.
 
 This records accepted direction from the interview; the phone sheet reflows the same posts — faces, actions, details, context map last.
+
+
+Accessibility correction, 2026-10-19 (PR #413 review): map controls preserve keyboard focus through live rebuilds. Phone widths and coarse-pointer devices also expose a native Open hex picker with a 44px minimum height, offering reliable cell navigation while retaining the miniature formation view and the current focused layer.

@@ -241,8 +241,8 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   // Scroll comes from the initial layout batch, before other surfaces
   // write; the new stack restores that captured position.
   const focused = document.activeElement;
-  const focusAttribute = focused instanceof HTMLElement && host.contains(focused)
-    ? ["id", "data-detail-face", "data-bulk", "data-shift", "data-target", "aria-describedby"]
+  const focusAttribute = focused instanceof Element && host.contains(focused)
+    ? ["id", "data-ctx-cell", "data-ctx-navigation", "data-detail-face", "data-bulk", "data-shift", "data-target", "aria-describedby"]
         .find((attribute) => focused.hasAttribute(attribute))
     : undefined;
   const focusValue = focusAttribute ? focused!.getAttribute(focusAttribute) : null;
@@ -291,6 +291,12 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
       }
     });
   });
+  const navigation = host.querySelector<HTMLSelectElement>("[data-ctx-navigation]");
+  app.listen(navigation, "change", () => {
+    if (!navigation || !ui.detail) return;
+    const [q, r] = navigation.value.split(",").map(Number);
+    app.openDetail({ q, r }, ui.detail.face);
+  });
   // The mutator actions and the buy column wire together — an empty
   // place's stack still carries the unlock control.
   if (module) wireDetailBuy(app, host, module.id);
@@ -313,7 +319,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   host.hidden = false;
   wireTooltips(host, app.signal);
   if (focusAttribute && focusValue !== null) {
-    [...host.querySelectorAll<HTMLElement>(`[${focusAttribute}]`)]
+    [...host.querySelectorAll<HTMLElement | SVGElement>(`[${focusAttribute}]`)]
       .find((control) => control.getAttribute(focusAttribute) === focusValue)
       ?.focus({ preventScroll: true });
   }

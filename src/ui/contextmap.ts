@@ -135,5 +135,9 @@ export function contextMapSvg(state: GameState, pos: Hex, module: ModuleInstance
   }
   const [ox, oy] = at(boardPoint(pos)[0], boardPoint(pos)[1]);
   const marker = `<polygon class="ctx-opened" points="${hexPoints(cellRadius)}" transform="translate(${px(ox)} ${px(oy)})"/>`;
-  return `<svg class="ctx-map" viewBox="0 0 ${MAP_WIDTH} ${MAP_HEIGHT}" role="group" aria-label="Context map — the opened hex, its active chords, and the owned board">${board}${chords}${marker}</svg>`;
+  const destinations = state.cells.map((cell) => {
+    const selected = cell.q === pos.q && cell.r === pos.r;
+    return `<option value="${cell.q},${cell.r}"${selected ? " selected" : ""}>${cellNoteOf(cell)}</option>`;
+  }).join("");
+  return `<label class="ctx-navigation">Open hex<select data-ctx-navigation="cell">${destinations}</select></label><svg class="ctx-map" viewBox="0 0 ${MAP_WIDTH} ${MAP_HEIGHT}" role="group" aria-label="Context map — the opened hex, its active chords, and the owned board">${board}${chords}${marker}</svg>`;
 }
