@@ -26,8 +26,21 @@ export type Category =
 // its production warms up on the shared session clock. The Sideband
 // (issue #375) is the third alternative-charge behavior: received charge
 // converts into its chord response instead of empowering it, over weak
-// standalone production.
-export type OscillatorType = "additive" | "blaster" | "triangle" | "square" | "saw" | "afterglow" | "sideband";
+// standalone production. The breather specialists (issue #416) make rest
+// their identity: the Release is the plain strongest responder, the
+// Standby deepens its response with lifetime completed breathers, and the
+// Tail's weak term warms with lifetime breather seconds.
+export type OscillatorType =
+  | "additive"
+  | "blaster"
+  | "triangle"
+  | "square"
+  | "saw"
+  | "afterglow"
+  | "sideband"
+  | "release"
+  | "standby"
+  | "tail";
 
 // The silent-voice category (ADR-0048): silent pitched modules that produce
 // no nous but count in chord clusters — they form and complete chords and

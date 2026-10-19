@@ -444,6 +444,13 @@ export const CATEGORY_OF: Record<ModuleType, Category> = {
   // response instead of empowering it (the Blaster's contract on a
   // different axis — ADR-0048's replacement rule, issue #375).
   sideband: "oscillator",
+  // The breather-specialist wave (issue #416, parent #366): three
+  // oscillators whose profiles make rest the identity — the S band's
+  // signature on the breather axis (ADR-0073), the launch roster's
+  // ×1.1–×1.25 untouched beside them.
+  release: "oscillator",
+  standby: "oscillator",
+  tail: "oscillator",
   harmonizer: "silentVoice",
   echo: "silentVoice",
   bend: "silentVoice",
@@ -533,6 +540,14 @@ export const TYPE_RARITY: Record<ModuleType, Rarity> = {
   // and the deeper charged curves it authors price it into the rare band
   // beside the Sideband.
   exciter: "rare",
+  // The breather-specialist wave (issue #416): authored per design against
+  // the roster's spread — the Release plain among the waveforms' commons,
+  // the Standby's deepening in the uncommon band beside the temporal wave,
+  // and the Tail's lifetime condition in the rare band beside the
+  // Sideband and Exciter.
+  release: "common",
+  standby: "uncommon",
+  tail: "rare",
   forge: "common",
   mutatorForge: "common",
 };
@@ -581,6 +596,9 @@ export const MODULE_TYPES: readonly ModuleType[] = [
   "saw",
   "afterglow",
   "sideband",
+  "release",
+  "standby",
+  "tail",
   "harmonizer",
   "echo",
   "bend",

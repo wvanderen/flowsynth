@@ -151,6 +151,9 @@ describe("module face", () => {
       saw: ["Saw", "SAW"],
       afterglow: ["Afterglow", "GLOW"],
       sideband: ["Sideband", "SIDE"],
+      release: ["Release", "RELS"],
+      standby: ["Standby", "STBY"],
+      tail: ["Tail", "TAIL"],
       harmonizer: ["Harmonizer", "HARM"],
       echo: ["Echo", "ECHO"],
       bend: ["Bend", "BEND"],
@@ -208,6 +211,13 @@ describe("module face", () => {
     // charge zigzags flanking the shared dot.
     expect(moduleIcon("exciter")).toContain('<circle r="2.2"/>');
     expect(moduleIcon("exciter")).toContain('M-13 5.5-8.5-4.5-4 5.5');
+    // The breather specialists (issue #416): the Release's ADSR
+    // silhouette, the Standby's broken power ring, the Tail's decaying
+    // reverb ripples.
+    expect(moduleIcon("release")).toContain('M-13 8-9.5-8-7.5-3H1.5L5.5 8');
+    expect(moduleIcon("standby")).toContain('M0-12V0');
+    expect(moduleIcon("standby")).toContain('A10 10');
+    expect(moduleIcon("tail")).toContain('c.7-2 1.4-2 2 0');
     expect(moduleIcon("mutatorForge")).toContain('<path d="M0-5.5 4.8-2.7V2.7L0 5.5-4.8 2.7V-2.7Z"/><circle r="1.5"/>');
     // The Mutator Forge's chassis drops the lattice — distinct from the
     // Module Forge's.

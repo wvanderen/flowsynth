@@ -95,8 +95,11 @@ describe("forge roll generation", () => {
     expect(ROLL_POOL).toContain("spotlight");
     expect(ROLL_POOL).toContain("chorus");
     expect(ROLL_POOL).toContain("exciter");
+    expect(ROLL_POOL).toContain("release");
+    expect(ROLL_POOL).toContain("standby");
+    expect(ROLL_POOL).toContain("tail");
     expect(ROLL_POOL).toContain("forge");
-    expect(ROLL_POOL).toHaveLength(23);
+    expect(ROLL_POOL).toHaveLength(26);
   });
 
   it("persists outcomes when the roll is earned, not when it is revealed", () => {

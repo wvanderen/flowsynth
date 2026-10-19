@@ -1,4 +1,4 @@
-import { profileAxesOf, temporalTimingOf, type ProfileAxisRead } from "../engine/profiles";
+import { breatherRuleOf, profileAxesOf, temporalTimingOf, type ProfileAxisRead } from "../engine/profiles";
 import type { ModuleType } from "../engine/types";
 import { formatNumber } from "./format";
 
@@ -40,12 +40,14 @@ function axisHtml(axis: ProfileAxisRead): string {
 
 // The type's grade line — empty for every type without authored profile
 // axes (non-oscillators until their waves land). A temporal profile's
-// timing rides beside the chips as its own plain line.
+// timing rides beside the chips as its own plain line, and the breather
+// specialists' fact rules (issue #416) ride the same shape: the growth
+// described directly, never given an aptitude grade.
 export function profileGradesHtml(type: ModuleType): string {
   const axes = profileAxesOf(type);
-  const timing = temporalTimingOf(type);
+  const timing = temporalTimingOf(type)?.timing ?? breatherRuleOf(type);
   if (axes.length === 0 && !timing) return "";
   const chips = axes.length > 0 ? `<span class="profile-grades">${axes.map(axisHtml).join("")}</span>` : "";
-  const timingLine = timing ? `<span class="profile-timing">${timing.timing}</span>` : "";
+  const timingLine = timing ? `<span class="profile-timing">${timing}</span>` : "";
   return `${chips}${timingLine}`;
 }

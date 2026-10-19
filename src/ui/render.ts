@@ -3494,6 +3494,12 @@ function forgeEffect(type: ModuleInstance["type"], tier: number): string {
     // The alternative-charge wave's oscillator (issue #375): the effect
     // line states the replacement — charge lands in the chord response.
     case "sideband": return "Received charge → chord response · weak standalone term";
+    // The breather specialists (issue #416): the lines name the rest
+    // keying; the chip carries the authored figure and the rule line
+    // beside it spells the fact-keyed growth out — never a grade.
+    case "release": return "Breather-fed term · strongest in the break · reduced base";
+    case "standby": return "Breather-fed term · deepens with completed breathers · reduced base";
+    case "tail": return "Breather-fed term · lifetime rest warms the weak base";
     case "harmonizer": return `Cell pitch · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * power)}%/level to its chords`;
     case "echo": return `Adjacent pitch, octave down · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * power)}%/level to its chords`;
     case "bend": return `Shifted cell pitch · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * power)}%/level to its chords`;

@@ -197,6 +197,18 @@ _Avoid_: warm-up bonus, ramp
 The chord-centered oscillator (issue #375, ADR-0064): received charge converts into its chord response — the authored coefficient scaled by the conversion curve, ×1 uncharged toward ×2 at the asymptote — instead of applying any empowerment; its charge axis takes the absent mark and the replacement is stated in the disclosure words. Weak standalone production (D-weak base) is the defining tradeoff: chordless boards leave it behind, and a charged chordless Sideband earns exactly its uncharged value.
 _Avoid_: chord converter, chord battery
 
+**Release**:
+The plain breather specialist (issue #416, ADR-0073): the breather axis's S band — the roster's strongest response — paid for with a reduced base, so in flow it trails every standard producer and ending a session onto it is the build decision. One authored coefficient, no fact keying: the chip is the whole story.
+_Avoid_: break bonus, rest module
+
+**Standby**:
+The rest-practicing oscillator (issue #416, ADR-0073): its breather response deepens with the lifetime completed-breather count — a fixed step per completion, capped — read straight off the persisted fact as a read-only input. The growth is a fact-keyed rule, described directly beside the grade chips and never graded (ADR-0061's discipline); the chip grades the authored floor alone. Slightly reduced base is the supporting tradeoff, and the facts price nothing outside a breather.
+_Avoid_: rest credit, streak (the count is lifetime, never a streak)
+
+**Tail**:
+The reverb-tail oscillator (issue #416, ADR-0073): the sound that outlives the note. Its whole term warms in authored steps over lifetime breather seconds — early exits included — from a D-weak authored base to a standard producer, the temporal profiles' shape (outside power, exact between boundaries) over the persisted fact; the steps are described directly, never graded. Its breather response rides strong beside the warmth: rest pays live and forever.
+_Avoid_: warm-up (the session-clock sense — the warmth never resets), ramp
+
 **Charge**:
 A habit-independent resource produced by generators that empowers or charges other modules; its state is preserved between flow sessions.
 
@@ -477,7 +489,7 @@ The breather duration a flow session's end mints from that session's credited pr
 _Avoid_: break bank, rest credit
 
 **Breather response**:
-An oscillator profile's comparable axis: the authored multiplier scaling that voice's final ν/s while a breather runs — synth term, chord factors, charge empowerment, and received booster uplift all included — and exactly ×1 under the absent mark. It speaks only during a breather; flow and upgrade mode read nothing from it. Graded like every comparable axis, absent-mark by default; the launch roster authors modest responses, the dedicated breather specialists join with the roster iteration. Generators, boosters' own grants, and forge progress carry no breather response — the axis is the oscillator roster's alone.
+An oscillator profile's comparable axis: the authored multiplier scaling that voice's final ν/s while a breather runs — synth term, chord factors, charge empowerment, and received booster uplift all included — and exactly ×1 under the absent mark. It speaks only during a breather; flow and upgrade mode read nothing from it. Graded like every comparable axis, absent-mark by default; the launch roster authors modest responses and the breather specialists (issue #416) author the S band, a fact-keyed deepening described directly where the design earns it. Generators, boosters' own grants, and forge progress carry no breather response — the axis is the oscillator roster's alone.
 _Avoid_: breather bonus (the global-multiplier reading), rest bonus, break boost
 
 **Present time**:

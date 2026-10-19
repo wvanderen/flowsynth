@@ -97,6 +97,12 @@ const DETAIL_BENEFITS: Record<ModuleInstance["type"], (input: DetailEffectInput)
   // The Sideband's level scales the whole term — the charge conversion's
   // curve and condition are untouched by it (issue #375).
   sideband: synthBenefit,
+  // The breather specialists (issue #416): a level scales the whole term
+  // — the authored breather figures and the fact-keyed rules are untouched
+  // by it, exactly as progression never moves a temporal timing.
+  release: synthBenefit,
+  standby: synthBenefit,
+  tail: synthBenefit,
   harmonizer: silentBenefit,
   echo: silentBenefit,
   bend: silentBenefit,

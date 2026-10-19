@@ -125,6 +125,39 @@ describe("grade chips on the Hex detail's module face", () => {
   });
 });
 
+describe("the breather specialists' fact rules (issue #416)", () => {
+  it("the specialists' chips lead with the S-band breather figure; the fact rules ride beside as plain lines", () => {
+    app.state.bankedRolls = [{ id: "breather-roll", candidates: [
+      { id: "c-release", type: "release", tier: 0 },
+      { id: "c-standby", type: "standby", tier: 0 },
+      { id: "c-tail", type: "tail", tier: 0 },
+    ] }];
+    app.openModal("forge");
+    const chipsOf = (id: string): (string | null)[] =>
+      [...panel().querySelector(`[data-choice="${id}"]`)!.closest(".candidate-tile")!.querySelectorAll<HTMLElement>(".profile-grade")].map((chip) => chip.textContent);
+    expect(chipsOf("c-release")).toEqual(["base ×0.7 (C)", "boost ×1 (B)", "chord ×1 (B)", "charge ×1 (B)", "breath ×1.6 (S)"]);
+    expect(chipsOf("c-standby")).toEqual(["base ×0.85 (B)", "boost ×1 (B)", "chord ×1 (B)", "charge ×1 (B)", "breath ×1.4 (S)"]);
+    expect(chipsOf("c-tail")).toEqual(["base ×0.5 (D)", "boost ×1 (B)", "chord ×1 (B)", "charge ×1 (B)", "breath ×1.5 (S)"]);
+    // The rule line sits beside the chips, letter-free: a fact-keyed
+    // growth is described directly, never graded.
+    const standby = panel().querySelector('[data-choice="c-standby"]')!.closest(".candidate-tile")!;
+    const standbyRule = standby.querySelector(".profile-timing")!;
+    expect(standbyRule.textContent).toContain("×0.1 per completed breather");
+    expect(standbyRule.querySelectorAll(".profile-grade")).toHaveLength(0);
+    const tail = panel().querySelector('[data-choice="c-tail"]')!.closest(".candidate-tile")!;
+    expect(tail.querySelector(".profile-timing")!.textContent).toContain("30 lifetime breather min");
+    // The Release authors no fact rule: its chip is the whole story.
+    const release = panel().querySelector('[data-choice="c-release"]')!.closest(".candidate-tile")!;
+    expect(release.querySelector(".profile-timing")).toBeNull();
+    // Every effect line names the rest keying — the specialists read as
+    // rest-keyed before any chip is parsed.
+    for (const id of ["c-release", "c-standby", "c-tail"]) {
+      expect(panel().querySelector(`[data-choice="${id}"]`)!.closest(".candidate-tile")!
+        .querySelector(".candidate-effect")!.textContent).toContain("Breather-fed term");
+    }
+  });
+});
+
 describe("the reusable presentation contract", () => {
   it("renders nothing for types without authored profile axes", () => {
     expect(profileGradesHtml("infusor")).toBe("");
