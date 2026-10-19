@@ -181,7 +181,7 @@ The ramp is decided once (issue #353): sizes are steps on it, and steps are **wh
 - **Compact** (12, any of the three faces): the dense register — small chips and controls, secondary figures, quiet notes, compact form fields. Recorded here as the ramp's step (issue #353): the stylesheet's most-used size sits on the ramp rather than folding into its neighbors — its uses are genuine compact-register content across all three faces, and folding them would churn dense readouts for no visual gain.
 - **Micro band** (8 / 9 / 10 mono caps, +0.08–0.16em): engraved marks, micro-labels, and board chrome words.
 
-**Reserved moments.** A few large reads are the surfaces they headline and keep their own sizes: the session clock (28px mono; 22px narrow, 20px phone) and the summary's banked-nous figure (34px; 28px phone). Named here so they stay theirs — with them, the list above is the whole ramp; nothing else renders.
+**Reserved moments.** A few large reads are the surfaces they headline and keep their own sizes: the display clock (36px mono; 28px narrow, 24px phone — the header-status brief's ladder, amending the old 28/22/20) and the summary's banked-nous figure (34px; 28px phone). Named here so they stay theirs — with them, the list above is the whole ramp; nothing else renders.
 
 ### Named Rules
 
@@ -216,6 +216,12 @@ Controls are square-cut — hairline border, condensed technical lettering, no r
 - **Shape:** the console's dominant centered control, square-cut.
 - **Live:** switch-vermillion fill, steady illumination and an inset marker; **paused:** held, not glowing; **idle:** dim `#96562f`.
 - The mode indicator — its state says what the session is doing; the thin session strip along the console's bottom edge is its expression, never a second colored element.
+
+### Display Well
+
+- **Shape:** the Focus door's recessed display (the header-status brief) — panel-deep, 1px hairline border, square-cut; the hypercube badge and wordmark sit on the chassis beside it.
+- **Composition:** the full-height display clock leads; the program block follows (habit name in condensed caps — completion's engraved check rides it when the displayed goal is done — caption, the vermillion provisional line while the honesty pool holds); the goal meter closes the well at its right edge.
+- **Goal meter:** a vertical LED column, seven square segments lighting bottom-up in the shown goal's palette token; unlit segments engraved, a `·N` mono count for further goals in play, absent when nothing qualifies. The column stays flush at the edge in every state. A display-only tooltip trigger — hover, its own tab stop, and touch open the gloss; the meter opens nothing.
 
 ### Goal Bars
 
@@ -269,4 +275,8 @@ Idle chords keep their readout and detail facts but draw no board geometry, incl
 
 ## Inventory amendment (2026-10-18)
 
-The [confirmed inventory brief](docs/inventory-ux-brief.md) standardizes grey-circle common, green-triangle uncommon, and blue-diamond rare markers across module and mutator surfaces, with accessible rarity words. `Lv.` plus Arabic digits identifies module level; Roman numerals starting at I identify merge tier. Compact rows carry category hex, rarity mark, name, tier, aligned level, and a converging-branches Merge icon. Inventory inspection uses a centered identity glyph with finish and merge rings, and shows name and numeric state once below. The shared inventory stays available in Hex detail, whose enlarged faces support placement and retrieval; Place directly targets the opened cell; retrieval uses dragging into inventory, with no redundant Store/Retrieve button. Inventory overlays Hex detail without shifting its composition. The collapsed browser is a hypercube and stored count. The main logo is unchanged.
+The [confirmed inventory brief](docs/inventory-ux-brief.md) standardizes grey-circle common, green-triangle uncommon, and blue-diamond rare markers across module and mutator surfaces, with accessible rarity words. `Lv.` plus Arabic digits identifies module level; Roman numerals starting at I identify merge tier. Compact rows carry category hex, rarity mark, name, tier, aligned level, and a converging-branches Merge icon. Inventory inspection uses a centered identity glyph with finish and merge rings, and shows name and numeric state once below. The shared inventory stays available in Hex detail, whose enlarged faces support placement and retrieval; Place directly targets the opened cell; retrieval uses dragging into inventory, with no redundant Store/Retrieve button. Inventory overlays Hex detail without shifting its composition. The collapsed browser is a hypercube and stored count.
+
+## Header display amendment (2026-10-19)
+
+The [header-status brief](docs/header-status-brief.md) recomposes the Focus door as a display panel: recessed display well, full-height 36px display clock (reserved-moment ladder 36/28/24, amending this file's ramp), program block, and the selected habit's goal meter as a seven-segment vertical LED column wearing its goal's palette token. The five-bar all-goals banner retires from the header. The provisional line joins the program block in the switch's vermillion. The main logo — unchanged by the inventory amendment — is now provisionally the inventory hypercube with its filled core, adopted dated and cheap to reverse. See the brief for the pick rule and behavior matrix.

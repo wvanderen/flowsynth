@@ -110,47 +110,69 @@ export function refreshConsoleClockPlan(app: App): void {
 
 // The running-session caption shared by the console clock block and the
 // sheet's running read (§2.2). Every running state names itself — paused,
-// open-ended, the overrun it counts, or what remains of the plan.
+// open-ended, the overrun it counts — and a planned session rides the bare
+// target: the display clock is the session's remainder, so the figure
+// beneath it reads as the plan without a joining word.
 export function sessionCaption(elapsed: number, target: number | null, paused: boolean): string {
   const reached = target !== null && elapsed >= target;
-  return paused ? "paused" : target === null ? OPEN_ENDED_WORD : reached ? "overrun" : `of ${formatClock(target)}`;
+  return paused ? "paused" : target === null ? OPEN_ENDED_WORD : reached ? "overrun" : formatClock(target);
 }
 
-/* ── The banner bars' derivation (edge states, ADR-0050; #312) ── */
+/* ── The goal meter's derivation (the display panel; header-status brief) ── */
 
-// The goal-progress bars the focus banner shows, derived entirely from
-// existing state: in-progress goals first, nearest complete first, completed
-// occurrences filling the remaining slots, with a +N count for the goals
-// past the bar budget. Each bar wears its goal's chosen palette color; the
-// fill height carries progress and the done bar's engraved mark carries
+// The display well's one goal read, derived entirely from existing state:
+// the goals qualifying the selected habit — its own plus the habit-agnostic
+// ones — with the nearest-to-completion open goal lighting the column and a
+// count mark answering for the rest still in play. All done reads done; no
+// habit or no qualifying goal reads nothing, and the well closes over the
+// meter's slot. Each column wears its goal's chosen palette color; the lit
+// segments carry progress and the done column's engraved mark carries
 // completion — never color alone. Nothing here reads or writes a new
 // persisted key — the derivation is the whole edge state.
-export interface GoalBarRead {
+export interface GoalMeterRead {
   fraction: number;
   done: boolean;
   color: GoalColor;
+  // Open qualifying goals still in play past the shown one.
+  extra: number;
+  // The tooltip gloss: which goal, what remains — the one fact the surface
+  // cannot show. The habit name stays off it; the display already reads it.
+  label: string;
+  aria: string;
 }
 
-export const BANNER_BARS = 5;
+// The meter's segment budget: seven steps, the LED ladder the display
+// column lights bottom-up.
+export const GOAL_METER_SEGMENTS = 7;
 
-export function goalBarsOf(state: GameState, max: number = BANNER_BARS): { bars: GoalBarRead[]; overflow: number } {
-  const reads = state.goals.map((goal) => {
+const GOAL_SCHEDULE_WORD = { once: "", daily: "Daily", weekly: "Weekly" } as const;
+
+export function goalMeterOf(state: GameState): GoalMeterRead | null {
+  const habit = activeHabit(state);
+  if (!habit) return null;
+  const qualifying = state.goals.filter(
+    (goal) => goal.condition.kind === "habit-minutes" && (goal.condition.habitId === null || goal.condition.habitId === habit.id),
+  );
+  if (qualifying.length === 0) return null;
+  const reads = qualifying.map((goal) => {
     const required = goalRequiredSeconds(goal);
-    return {
-      fraction: required > 0 ? Math.min(1, goal.progressSeconds / required) : 1,
-      done: goal.completed,
-      color: goal.color,
-    };
+    return { goal, fraction: required > 0 ? Math.min(1, goal.progressSeconds / required) : 1, done: goal.completed };
   });
-  // In-progress goals lead, nearest completion first; completed occurrences
-  // fill whatever slots remain, creation order kept.
+  // The nearest-to-completion open goal leads; a fully completed candidate
+  // set closes the meter on its done mark rather than vanishing.
   const open = reads.filter((read) => !read.done).sort((a, b) => b.fraction - a.fraction);
-  const done = reads.filter((read) => read.done);
-  const ordered = [...open, ...done];
-  return {
-    bars: ordered.slice(0, max).map(({ fraction, done: isDone, color }) => ({ fraction, done: isDone, color })),
-    overflow: Math.max(0, ordered.length - max),
-  };
+  const chosen = open[0] ?? reads[0]!;
+  const done = chosen.done;
+  const extra = done ? 0 : open.length - 1;
+  const minutes = Math.round(goalRequiredSeconds(chosen.goal) / 60);
+  const scheduleWord = GOAL_SCHEDULE_WORD[chosen.goal.schedule.kind];
+  const target = `${scheduleWord ? scheduleWord + " " : ""}${minutes} min`;
+  const remaining = Math.max(0, Math.ceil((goalRequiredSeconds(chosen.goal) - chosen.goal.progressSeconds) / 60));
+  const tail = done ? "complete" : `${remaining} min to go`;
+  const label = `${target} · ${tail}`;
+  const more = extra > 0 ? `, ${extra} more goal${extra === 1 ? "" : "s"} in play` : "";
+  const aria = `Goal progress: ${target.toLowerCase()}, ${done ? "complete" : `${remaining} minute${remaining === 1 ? "" : "s"} to go`}${more}`;
+  return { fraction: chosen.fraction, done, color: chosen.goal.color, extra, label, aria };
 }
 
 /* ── The sheet's rebuild signature ─────────────────── */

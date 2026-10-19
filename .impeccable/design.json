@@ -369,7 +369,7 @@
       "unit": "px",
       "steps": [8, 9, 10, 11, 12, 13, 14, 15, 17, 19, 40],
       "reservedMoments": {
-        "session-clock": [28, 22, 20],
+        "session-clock": [36, 28, 24],
         "summary-figure": [34, 28],
         "stage-name-phone": [24]
       },

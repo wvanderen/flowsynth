@@ -6,7 +6,7 @@ import { createGoal, accrueGoalProgress } from "../engine/goals";
 import { endSession, startSession } from "../engine/actions";
 import { advance } from "../engine/advance";
 import { serialize } from "../engine/save";
-import { goalBarsOf, BANNER_BARS } from "./focus";
+import { goalMeterOf, GOAL_METER_SEGMENTS } from "./focus";
 import { createInitialState } from "../engine/state";
 import { createAppFixture, setVisibility } from "./testing/app-fixture";
 
@@ -353,119 +353,131 @@ describe("the PLAN face rework (#311)", () => {
   });
 });
 
-describe("the goal bars' derivation (the banner's edge states)", () => {
-  it("bars bias in-progress goals, nearest complete first, completed filling the rest", () => {
+describe("the goal meter's derivation (the display well's edge states)", () => {
+  it("the meter qualifies the selected habit's goals plus the habit-agnostic ones, nearest complete leading", () => {
     const state = createInitialState();
-    state.goalCapacityBought = 1; // three slots for the three tracked goals
+    const piano = createHabit(state, "Piano").habit!;
+    const cooking = createHabit(state, "Cooking").habit!;
+    selectHabit(state, piano.id);
+    createGoal(state, { habitId: piano.id, minutes: 10, schedule: "once", now: 1000 });
+    createGoal(state, { habitId: null, minutes: 30, schedule: "once", now: 1001 });
+    createGoal(state, { habitId: cooking.id, minutes: 5, schedule: "once", now: 1002 }); // another habit's — never qualifies
+    accrueGoalProgress(state, piano.id, 9 * 60); // the 10-min goal sits at 9/10
+    const read = goalMeterOf(state)!;
+    expect(read.fraction).toBeCloseTo(0.9);
+    expect(read.done).toBe(false);
+    // One more open qualifying goal (the habit-agnostic one) stays in play.
+    expect(read.extra).toBe(1);
+  });
+
+  it("completion never displaces the nearest open goal; an all-done set closes on its mark", () => {
+    const state = createInitialState();
+    state.goalCapacityBought = 2;
     const habit = createHabit(state, "Piano").habit!;
+    selectHabit(state, habit.id);
     createGoal(state, { habitId: habit.id, minutes: 10, schedule: "once", now: 1000 });
-    createGoal(state, { habitId: habit.id, minutes: 60, schedule: "once", now: 1001 });
-    createGoal(state, { habitId: habit.id, minutes: 5, schedule: "once", now: 1002 });
-    accrueGoalProgress(state, habit.id, 8 * 60); // completes the 5-min goal; the 10-min sits at 8/10
-    const read = goalBarsOf(state);
-    expect(read.overflow).toBe(0);
-    expect(read.bars.map((bar) => `${bar.done ? "done" : "open"}@${bar.fraction.toFixed(2)}`)).toEqual([
-      "open@0.80", // nearest complete first
-      "open@0.13", // the far goal follows
-      "done@1.00", // completed occurrences close the run
-    ]);
+    createGoal(state, { habitId: habit.id, minutes: 5, schedule: "once", now: 1001 });
+    accrueGoalProgress(state, habit.id, 5 * 60); // completes the 5-min goal
+    const read = goalMeterOf(state)!;
+    expect(read.done).toBe(false);
+    expect(read.fraction).toBeCloseTo(0.5); // the 10-min goal leads, credited the same five minutes
+    expect(read.extra).toBe(0); // the done goal is not "in play"
+    accrueGoalProgress(state, habit.id, 10 * 60); // completes the 10-min too
+    const complete = goalMeterOf(state)!;
+    expect(complete.done).toBe(true);
+    expect(complete.fraction).toBe(1);
+    expect(complete.extra).toBe(0);
   });
 
-  it("goals past the bar budget read as the +N overflow count", () => {
+  it("no habit, no qualifying goal, no meter", () => {
+    expect(goalMeterOf(createInitialState())).toBeNull();
     const state = createInitialState();
-    state.goalCapacityBought = 5; // seven slots for the seven tracked goals
     const habit = createHabit(state, "Piano").habit!;
-    for (let i = 0; i < 7; i++) createGoal(state, { habitId: habit.id, minutes: 10 + i, schedule: "once", now: 1000 + i });
-    const read = goalBarsOf(state);
-    expect(read.bars).toHaveLength(BANNER_BARS);
-    expect(read.overflow).toBe(2);
-    // Every goal complete: the full bars hold, done-marked, overflow intact.
-    accrueGoalProgress(state, habit.id, 130 * 60);
-    const complete = goalBarsOf(state);
-    expect(complete.bars.every((bar) => bar.done)).toBe(true);
-    expect(complete.overflow).toBe(2);
+    selectHabit(state, habit.id);
+    expect(goalMeterOf(state)).toBeNull(); // a habit alone lights nothing
+    const cooking = createHabit(state, "Cooking").habit!;
+    createGoal(state, { habitId: cooking.id, minutes: 10, schedule: "daily", now: 1000 });
+    expect(goalMeterOf(state)).toBeNull(); // another habit's goal never qualifies
   });
 
-  it("an empty tracker derives no bars and no overflow", () => {
-    expect(goalBarsOf(createInitialState())).toEqual({ bars: [], overflow: 0 });
+  it("the gloss names the goal and what remains — the habit name stays off it", () => {
+    const state = createInitialState();
+    const habit = createHabit(state, "Piano").habit!;
+    selectHabit(state, habit.id);
+    createGoal(state, { habitId: habit.id, minutes: 20, schedule: "daily", now: 1000 });
+    accrueGoalProgress(state, habit.id, 14 * 60);
+    const read = goalMeterOf(state)!;
+    expect(read.label).toBe("Daily 20 min · 6 min to go");
+    expect(read.aria).toBe("Goal progress: daily 20 min, 6 minutes to go");
+    accrueGoalProgress(state, habit.id, 6 * 60);
+    expect(goalMeterOf(state)!.label).toBe("Daily 20 min · complete");
   });
 
   it("the derivation lives on existing state alone — the save shape never grows", () => {
     const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
     createGoal(app.state, { habitId: habit.id, minutes: 10, schedule: "daily", now: 1000 });
     addPracticeLog(app.state, habit.id, 5, 2000);
-    goalBarsOf(app.state);
+    goalMeterOf(app.state);
     const saved = JSON.parse(serialize(app.state, Date.now())).state;
     expect(Object.keys(saved)).toEqual(Object.keys(createInitialState()));
   });
 });
 
-describe("the focus banner's reads (ADR-0050; the vertical form, #312)", () => {
-  it("the session group reads the chosen habit where it starts; the bars ride beside it (+N overflow)", () => {
+describe("the display well's goal meter (the header-status brief)", () => {
+  it("the meter stands at the well's right edge: seven segments, the goal's palette, the count mark", () => {
     app.state.goalCapacityBought = 5; // seven slots for the seven tracked goals
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
     for (let i = 0; i < 7; i++) createGoal(app.state, { habitId: habit.id, minutes: 10 + i, schedule: "once", now: 1000 + i });
-    accrueGoalProgress(app.state, habit.id, 9 * 60);
+    accrueGoalProgress(app.state, habit.id, 9 * 60); // the 10-min goal leads at 9/10
     app.render();
-    // The habit read lives in the session group now (#331): the name leads
-    // the clock and the switch, one contiguous group — no second readout
-    // riding the bars.
-    const group = document.querySelector("#console-session .session-habit")!;
-    expect(group.querySelector('[data-session="habit"]')!.textContent).toBe("Piano");
-    expect(document.querySelectorAll('#console-session [data-session="habit"]')).toHaveLength(1);
-    const reads = document.querySelector("#console-session .banner-reads")!;
-    expect(reads.getAttribute("role")).toBe("group");
-    // Five bars stand — in-progress leads (nearest complete first) — and
-    // the count chip answers for the two past the budget.
-    const bars = [...reads.querySelectorAll<HTMLElement>(".gbar")];
-    expect(bars).toHaveLength(BANNER_BARS);
-    expect(bars[0]!.classList.contains("done")).toBe(false);
-    // The vertical form: progress rides the fill height, the goal's own
-    // palette token paints it.
-    expect(bars[0]!.querySelector("i")!.style.height).toBe("90.0%");
-    expect(bars[0]!.querySelector("i")!.style.background).toBe("var(--goal-vermillion)");
-    expect(reads.querySelector('[data-banner="overflow"]')!.textContent).toBe("+2");
-    // Reads, never controls: nothing inside the bars group answers a click.
-    expect(reads.querySelectorAll("button, input, select, a")).toHaveLength(0);
+    const meter = document.querySelector("#console-session .goal-meter")!;
+    expect(meter.getAttribute("style")).toContain("var(--goal-vermillion)");
+    // Seven steps, six lit at 9/10 — the lit spelling the patch shares.
+    expect(meter.querySelectorAll(".gm-seg")).toHaveLength(GOAL_METER_SEGMENTS);
+    expect(meter.querySelectorAll(".gm-seg.lit")).toHaveLength(6);
+    // The count mark answers for the six further goals in play.
+    expect(meter.querySelector(".gm-count")!.textContent).toBe("·6");
+    // The gloss rides the tooltip layer, the aria read carries the count.
+    expect(meter.querySelector(".inst-tip-body")!.textContent).toBe("10 min · 1 min to go");
+    expect(meter.getAttribute("aria-label")).toBe("Goal progress: 10 min, 1 minute to go, 6 more goals in play");
+    // Reads, never controls: the meter opens nothing — the door around it
+    // stays the one action.
+    expect(meter.querySelectorAll("button, input, select, a")).toHaveLength(0);
   });
 
-  it("in-progress vs complete reads without color: the aria label counts, done bars carry the mark", () => {
+  it("in-progress vs complete reads without color: the aria read and the engraved mark carry it", () => {
     app.state.goalCapacityBought = 2;
     const habit = createHabit(app.state, "Piano").habit!;
-    createGoal(app.state, { habitId: habit.id, minutes: 10, schedule: "once", now: 1000 });
-    createGoal(app.state, { habitId: habit.id, minutes: 5, schedule: "once", now: 1001, color: "cyan" });
-    accrueGoalProgress(app.state, habit.id, 5 * 60); // completes the 5-min goal
+    selectHabit(app.state, habit.id);
+    createGoal(app.state, { habitId: habit.id, minutes: 10, schedule: "once", now: 1000, color: "cyan" });
+    accrueGoalProgress(app.state, habit.id, 10 * 60);
     app.render();
-    const reads = document.querySelector("#console-session .banner-reads")!;
-    expect(reads.querySelector(".gbars")!.getAttribute("aria-label")).toBe("Goal progress: 1 in progress, 1 complete");
-    const [open, done] = [...reads.querySelectorAll<HTMLElement>(".gbar")];
-    expect(open!.classList.contains("done")).toBe(false);
-    expect(done!.classList.contains("done")).toBe(true);
-    // The mark is engraved class + CSS, never a color swap: both fills wear
-    // their goals' palette tokens, the done one at full height.
-    expect(done!.querySelector("i")!.style.background).toBe("var(--goal-cyan)");
-    expect(done!.querySelector("i")!.style.height).toBe("100.0%");
+    const meter = document.querySelector("#console-session .goal-meter")!;
+    expect(meter.classList.contains("goal-meter")).toBe(true);
+    expect(meter.querySelectorAll(".gm-seg.lit")).toHaveLength(GOAL_METER_SEGMENTS);
+    expect(meter.getAttribute("aria-label")).toBe("Goal progress: 10 min, complete");
+    // The done mark rides the practice name — the column stays at the edge.
+    expect(document.querySelector("#console-session .session-habit .habit-done")).not.toBeNull();
+    expect(meter.querySelector(".gm-done")).toBeNull();
   });
 
-  it("each bar wears its goal's chosen color — the banner fills and the face tracks agree", () => {
-    app.state.goalCapacityBought = 2;
+  it("a habit-agnostic goal lights the meter of whatever habit is selected", () => {
     const habit = createHabit(app.state, "Piano").habit!;
-    createGoal(app.state, { habitId: habit.id, minutes: 30, schedule: "once", now: 1000, color: "indigo" });
-    createGoal(app.state, { habitId: habit.id, minutes: 30, schedule: "once", now: 1001, color: "amber" });
+    selectHabit(app.state, habit.id);
+    createGoal(app.state, { habitId: null, minutes: 30, schedule: "weekly", now: 1000, color: "amber" });
+    accrueGoalProgress(app.state, habit.id, 15 * 60);
     app.render();
-    const bannerFills = [...document.querySelectorAll<HTMLElement>("#console-session .gbar i")].map((fill) => fill.style.background);
-    const face = openFace("goals");
-    const tracks = [...face.querySelectorAll<HTMLElement>("[data-goal-progress]")].map((span) => span.style.background);
-    expect(bannerFills).toEqual(["var(--goal-indigo)", "var(--goal-amber)"]);
-    expect(tracks).toEqual(bannerFills);
+    const meter = document.querySelector("#console-session .goal-meter")!;
+    expect(meter.getAttribute("style")).toContain("var(--goal-amber)");
+    expect(meter.querySelectorAll(".gm-seg.lit")).toHaveLength(Math.floor(0.5 * GOAL_METER_SEGMENTS));
+    expect(meter.querySelector(".inst-tip-body")!.textContent).toBe("Weekly 30 min · 15 min to go");
   });
 
-  it("an empty tracker and no habit leave the bars quiet; the session group names the unstructured choice", () => {
+  it("an empty tracker and no habit leave the well bare; the session group names the unstructured choice", () => {
     app.render();
-    const reads = document.querySelector("#console-session .banner-reads")!;
-    expect(reads.querySelectorAll(".gbar")).toHaveLength(0);
-    expect(reads.querySelector('[data-banner="overflow"]')).toBeNull();
+    expect(document.querySelector("#console-session .goal-meter")).toBeNull();
     // No habit selected wears the roster's one edge-state word, muted.
     const group = document.querySelector("#console-session .session-habit")!;
     const name = group.querySelector('[data-session="habit"]')!;
@@ -473,7 +485,7 @@ describe("the focus banner's reads (ADR-0050; the vertical form, #312)", () => {
     expect(name.classList.contains("unselected")).toBe(true);
   });
 
-  it("live reads during flow: the fills move on the tick and mutate nothing", () => {
+  it("live reads during flow: the lit steps move on the tick and mutate nothing", () => {
     setVisibility("visible");
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
@@ -481,18 +493,18 @@ describe("the focus banner's reads (ADR-0050; the vertical form, #312)", () => {
     startSession(app.state, null);
     advance(app.state, 30);
     app.render();
-    const reads = () => document.querySelector("#console-session .banner-reads")!;
+    const meter = () => document.querySelector("#console-session .goal-meter")!;
     const host = document.getElementById("console-session")!;
-    const barBefore = reads().querySelector<HTMLElement>(".gbar")!;
+    const meterBefore = meter();
     const keyBefore = host.dataset.renderKey;
-    expect(barBefore.querySelector("i")!.style.height).toBe("50.0%");
-    // One more tick, one more render: the read moved — same node, taller
-    // fill — the tick patched in place rather than rebuilding the cluster.
+    expect(meterBefore.querySelectorAll(".gm-seg.lit")).toHaveLength(Math.floor(0.5 * GOAL_METER_SEGMENTS));
+    // One more tick, one more render: the read moved — same node, more lit
+    // segments — the tick patched in place rather than rebuilding the door.
     advance(app.state, 15);
     app.render();
-    const barAfter = reads().querySelector<HTMLElement>(".gbar")!;
-    expect(barAfter).toBe(barBefore);
-    expect(barAfter.querySelector("i")!.style.height).toBe("75.0%");
+    const meterAfter = meter();
+    expect(meterAfter).toBe(meterBefore);
+    expect(meterAfter.querySelectorAll(".gm-seg.lit")).toHaveLength(5);
     expect(host.dataset.renderKey).toBe(keyBefore);
     // And the reads mutated nothing: the render's derivation is not on the
     // engine's path — the goal's progress holds exactly what advance left.
@@ -502,7 +514,7 @@ describe("the focus banner's reads (ADR-0050; the vertical form, #312)", () => {
     endSession(app.state);
   });
 
-  it("a goal completing mid-session re-biases the bars — the rebuild carries the done-mark", () => {
+  it("a goal completing mid-session rebuilds the read onto its engraved mark", () => {
     setVisibility("visible");
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
@@ -510,11 +522,10 @@ describe("the focus banner's reads (ADR-0050; the vertical form, #312)", () => {
     startSession(app.state, null);
     advance(app.state, 30);
     app.render();
-    expect(document.querySelector("#console-session .banner-reads .gbar")!.classList.contains("done")).toBe(false);
+    expect(document.querySelector("#console-session .session-habit .habit-done")).toBeNull();
     advance(app.state, 31);
     app.render();
-    const bar = document.querySelector("#console-session .banner-reads .gbar")!;
-    expect(bar.classList.contains("done")).toBe(true);
+    expect(document.querySelector("#console-session .session-habit .habit-done")).not.toBeNull();
     expect(app.state.goals[0]!.completed).toBe(true);
     endSession(app.state);
   });

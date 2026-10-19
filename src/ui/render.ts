@@ -29,7 +29,8 @@ import {
   escapeHtml,
   focusSheetHtml,
   focusSheetKey,
-  goalBarsOf,
+  goalMeterOf,
+  GOAL_METER_SEGMENTS,
   honestyEventLine,
   notesModalBodyHtml,
   notesModalKey,
@@ -167,23 +168,34 @@ function wireClockPlan(app: App): void {
   app.listen(byId("clock-plan"), "click", () => app.showFocusFace("plan"));
 }
 
-// Session controls (issue #148, grouped by #331) and the focus banner's
-// reads (ADR-0050): the habit name leading the clock with its disclosure,
-// then the Enter/Exit main switch — the console's visual center of gravity
-// and its sole session gate — with pause beside it during flow, and the
-// banner's goal-progress bars closing the cluster, live during flow,
-// mutating nothing. The switch's vermillion carries the session state: the
-// switch itself and the progress strip along the header's bottom edge
-// (issue #63); the bars wear their goals' own palette colors (#312). The
-// console is pure control (§7): the
-// clock is itself the plan affordance — its disclosure opens the Focus
-// control sheet (ADR-0050, the time app's PLAN face) — and no production
-// readout lives here (the banner's focus reads name practice state, never
-// production). The sheet itself anchors beneath the clock's own
-// disclosure, whatever face it carries.
-// The unified Focus door includes the logo, selected habit, and clock.
-// All three are reads inside one button; the sheet owns editing.
+// Session controls (issue #148, grouped by #331) and the display panel
+// (the header-status brief): the door recomposed as a synth display — the
+// hypercube badge on the chassis, the display well carrying the full-height
+// clock leading its program block (habit over caption, the provisional line
+// when the honesty pool holds), and the selected habit's goal meter closing
+// the well at its right edge. Then the Enter/Exit main switch — the
+// console's visual center of gravity and its sole session gate — with pause
+// beside it during flow. The switch's vermillion carries the session state:
+// the switch itself and the progress strip along the header's bottom edge
+// (issue #63); the meter wears its goal's own palette token. The console is
+// pure control (§7): the clock is itself the plan affordance — its
+// disclosure opens the Focus control sheet (ADR-0050, the time app's PLAN
+// face) — and no production readout lives here. The sheet itself anchors
+// beneath the clock's own disclosure, whatever face it carries.
+// The unified Focus door includes the logo, selected habit, clock, and goal
+// meter. All four are reads inside one button; the sheet owns editing.
 const UNSTRUCTURED_WORD = "none selected";
+
+// The device mark (the header-status brief, provisional): the inventory
+// hypercube with its filled core — the collapsed inventory's symbol adopted
+// as the app badge until a round names a permanent one.
+const BRAND_MARK = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7Z"/><path d="m12 7 4.5 2.5v5L12 17l-4.5-2.5v-5ZM3 7l4.5 2.5M21 7l-4.5 2.5M3 17l4.5-2.5M21 17l-4.5-2.5M12 2v5m0 10v5"/><path d="m12 9.8 1.9 1.1v2.2L12 14.2l-1.9-1.1v-2.2Z" fill="currentColor" stroke="none"/></svg>`;
+
+// Completion's engraved check rides the practice name (the header-status
+// brief, amended): the meter column stays flush at the well's right edge,
+// so the done mark lives with the read it completes — never color alone
+// (the meter's aria read carries "complete" beside it).
+const HABIT_DONE_MARK = `<svg class="habit-done" viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 5.5 4 8l4.5-6"/></svg>`;
 
 // The group's one habit-read source: the chosen habit's name, or null for
 // the unstructured choice — the builder escapes it, the patcher writes it
@@ -192,9 +204,12 @@ function chosenHabitName(state: GameState): string | null {
   return activeHabit(state)?.name ?? null;
 }
 
+// The session group's habit read: the name, with the displayed goal's done
+// mark riding it (the header-status brief, amended).
 function sessionHabitHtml(app: App): string {
   const name = chosenHabitName(app.state);
-  return `<span class="session-habit" id="session-habit"><span class="bread${name ? "" : " unselected"}" data-session="habit">${name ? escapeHtml(name) : UNSTRUCTURED_WORD}</span></span>`;
+  const done = goalMeterOf(app.state)?.done ?? false;
+  return `<span class="session-habit" id="session-habit"><span class="bread${name ? "" : " unselected"}" data-session="habit">${name ? escapeHtml(name) : UNSTRUCTURED_WORD}</span>${done ? HABIT_DONE_MARK : ""}</span>`;
 }
 
 function renderConsoleSession(app: App, projected: RateSnapshot): void {
@@ -212,33 +227,32 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
   const resumeSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5.5v13l10.5-6.5Z"/></svg>`;
   const discloseSvg = `<svg class="clock-disclose" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m2.5 4.5 3.5 3.5 3.5-3.5"/></svg>`;
 
-  // The clock block: digits with the small disclosure chevron riding beside
-  // them, the caption beneath — one stable two-line stack in both modes, so
-  // the live clock never shifts vertically. The provisional line (flow only)
-  // sits beside the stack within the clock anchor (see the flow markup
-  // below): the header stays one row and nothing below it ever moves. The
-  // id attributes ride in only on the flow side, where the tick patcher
-  // addresses the nodes directly.
+  // The display panel: digits lead — the full-height clock with its small
+  // disclosure chevron — and the program block follows: the habit name, the
+  // caption beneath, the provisional line when the honesty pool holds. The
+  // goal meter closes the well at its right edge. One stable composition in
+  // both modes, so the live clock never shifts vertically; the meter's slot
+  // closes entirely when nothing qualifies (the header-status brief's empty
+  // state). The id attributes ride in only on the flow side, where the tick
+  // patcher addresses the nodes directly.
   const focusButton = (title: string, clockAttrs = "", captionAttrs = ""): string => `
       <button class="session-focus" id="clock-plan" aria-label="Focus controls" title="${title}">
         <span class="brand" aria-hidden="true">
-          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-            <path d="M16 2 28 9v14l-12 7L4 23V9Z" />
-            <path d="m10 20 5-10v12l7-10" />
-          </svg>
+          ${BRAND_MARK}
           <span class="brand-name">FlowSynth</span>
         </span>
-        ${sessionHabitHtml(app)}
-        <span class="console-clock">
-        <span class="clock-stack">
+        <span class="display-well">
           <span class="clock-row">
             <span class="session-clock mono"${clockAttrs}></span>
             ${phone ? "" : discloseSvg}
           </span>
-          <span class="clock-caption"${captionAttrs}></span>
+          <span class="program-block">
+            ${sessionHabitHtml(app)}
+            <span class="clock-caption"${captionAttrs}></span>
+            ${state.mode !== "upgrade" ? '<span class="clock-provisional" id="session-provisional" role="status"></span>' : ""}
+          </span>
+          ${goalMeterHtml(app)}
         </span>
-        </span>
-        ${state.mode !== "upgrade" ? '<span class="clock-provisional" id="session-provisional" role="status"></span>' : ""}
       </button>`;
 
   // The Focus control sheet anchors beneath the clock's own disclosure
@@ -265,7 +279,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
     // the mode in the caption slot. The plan's own values patch in place
     // below (#115) — a plan pick never rebuilds the console session. No
     // session runs, so the header's progress strip stays empty.
-    const key = `upgrade|${phone ? "phone" : "wide"}|${popoverKey}|${bannerReadsKey(app)}`;
+    const key = `upgrade|${phone ? "phone" : "wide"}|${popoverKey}|${sessionReadsKey(app)}`;
     if (host.dataset.renderKey !== key) {
       host.dataset.renderKey = key;
       const scrollTop = popoverScroll(host);
@@ -281,7 +295,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
             </button>
           </div>
         </div>
-        ${bannerReadsHtml(app)}`;
+      `;
       wireClockPlan(app);
       app.listen(byId("flow-switch"), "click", () => app.startFlow());
       bindSheet(scrollTop);
@@ -289,7 +303,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
       updateFocusSheetLive(app, host, projected);
     }
     refreshConsoleClockPlan(app);
-    refreshBannerReads(app);
+    refreshSessionReads(app);
     renderSessionStrip(false);
     syncClockDisclosure(app);
     return;
@@ -301,7 +315,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
   const paused = state.mode === "paused";
   const reached = target !== null && elapsed >= target;
 
-  const key = `flow:${phone ? "phone" : "wide"}:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}|${popoverKey}|${bannerReadsKey(app)}`;
+  const key = `flow:${phone ? "phone" : "wide"}:${state.mode}:${target === null ? "open" : reached ? "reached" : "timed"}|${popoverKey}|${sessionReadsKey(app)}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     const scrollTop = popoverScroll(host);
@@ -316,9 +330,9 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
           <button class="main-switch ${paused ? "held" : "live"}" id="flow-switch" aria-label="${endFlowWord}" title="Ends the session and banks its production">
             ${switchSvg}<span>${endFlowWord}</span><i class="switch-state" aria-hidden="true"></i>
           </button>
+          </div>
         </div>
-      </div>
-      ${bannerReadsHtml(app)}`;
+      `;
     wireClockPlan(app);
     app.listen(byId("pause-flow"), "click", () => (state.mode === "paused" ? app.resume() : app.pause()));
     app.listen(byId("flow-switch"), "click", () => app.endFlow());
@@ -348,7 +362,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
       : "",
   );
   renderSessionStrip(true, elapsed, target, paused);
-  refreshBannerReads(app);
+  refreshSessionReads(app);
   syncClockDisclosure(app);
   if (sheetOpen) updateFocusSheetLive(app, host, projected);
 }
@@ -366,69 +380,66 @@ function syncClockDisclosure(app: App): void {
   if (door) door.setAttribute("aria-label", `Focus controls, ${chosenHabitName(app.state) ?? UNSTRUCTURED_WORD}, ${door.querySelector(".session-clock")?.textContent ?? ""} ${door.querySelector(".clock-caption")?.textContent ?? ""}`);
 }
 
-// The focus banner's reads (ADR-0050; vertical bars per #312): past the
-// session group, the tracker's goal-progress bars — biased in-progress
-// first (nearest complete leading, completed occurrences closing), past the
-// five-bar budget a +N count. The habit name left the group for the session
-// cluster itself (issue #331) — chosen session readable where it starts, no
-// second habit readout riding the bars. Each bar is a column: the fill
-// height carries progress, each fill wears its goal's chosen palette token,
-// and completion is the bar's engraved mark — never color alone. Reads live
-// during flow and mutate nothing: the derivation reads existing state
-// alone, and the live patch below only ever touches text and fill heights.
-// The phone banner drops the bars — the session group carries the row's
-// one session read (ADR-0050's phone line as amended by #331) — so the CSS
-// docks the group out below the 600px line.
-// The bars' one fill spelling: the fill height percentage both the markup
-// and the in-place patch read, so the two can never drift.
-function bannerBarFill(bar: { fraction: number }): string {
-  return `${(bar.fraction * 100).toFixed(1)}%`;
+// The display well's goal meter (the header-status brief): the selected
+// habit's progress as a vertical LED column at the well's right edge — the
+// nearest-to-completion qualifying goal lighting it bottom-up and the
+// count mark answering for the rest still in play. Completion's engraved
+// check rides the practice name in the program block; the column itself
+// never leaves the edge — never color alone. Reads live during flow and
+// mutate nothing: the derivation reads existing state alone, and the live
+// patch below only ever touches segment classes and text. Nothing
+// qualifies, the meter does not stand — the well closes over its slot.
+// The column's one lit spelling: the lit count both the markup and the
+// in-place patch read, so the two can never drift.
+function meterLitCount(fraction: number): number {
+  return Math.min(GOAL_METER_SEGMENTS, Math.floor(fraction * GOAL_METER_SEGMENTS + 1e-9));
 }
 
-function bannerReadsHtml(app: App): string {
-  const { bars, overflow } = goalBarsOf(app.state);
-  const done = bars.filter((bar) => bar.done).length;
-  // The label counts the whole tracker — the +N chip's goals included, so
-  // the aria read never under-counts what the columns can't fit.
-  const barsLabel = `Goal progress: ${bars.length - done} in progress, ${done} complete${overflow > 0 ? `, ${overflow} more` : ""}`;
-  return `<div class="banner-reads" role="group" aria-label="Focus reads">
-    ${
-      bars.length > 0
-        ? `<span class="gbars" role="img" aria-label="${barsLabel}">${bars
-            .map(
-              (bar, i) =>
-                `<span class="gbar${bar.done ? " done" : ""}" data-banner-bar="${i}" aria-hidden="true"><i style="height:${bannerBarFill(bar)};background:var(--goal-${bar.color})"></i></span>`,
-            )
-            .join("")}</span>`
-        : ""
-    }
-    ${overflow > 0 ? `<span class="gbar-overflow mono" data-banner="overflow">+${overflow}</span>` : ""}
-  </div>`;
+// A display-only tooltip trigger: the meter speaks its gloss on hover,
+// keyboard focus (its own tab stop inside the door), and touch — the
+// instrument layer's one access grammar, minus the ⓘ trigger a read never
+// wears. The whole door still opens PLAN; the meter opens nothing.
+let meterTipSequence = 0;
+
+function goalMeterHtml(app: App): string {
+  const read = goalMeterOf(app.state);
+  if (!read) return "";
+  const tip = `goal-meter-tip-${++meterTipSequence}`;
+  const lit = meterLitCount(read.fraction);
+  const segs = Array.from({ length: GOAL_METER_SEGMENTS }, (_, i) => `<i class="gm-seg${i < lit ? " lit" : ""}"></i>`).join("");
+  return `<span class="goal-meter inst-tip" id="goal-meter" role="img" tabindex="0" aria-label="${escapeHtml(read.aria)}" aria-describedby="${tip}" style="--gm-color:var(--goal-${read.color})">
+          <span class="gm-row" aria-hidden="true">
+            <span class="gm-track">${segs}</span>
+            ${read.extra > 0 ? `<span class="gm-count mono">·${read.extra}</span>` : ""}
+          </span>
+          <span class="inst-tip-body" id="${tip}" role="tooltip">${escapeHtml(read.label)}</span>
+        </span>`;
 }
 
-// The reads' rebuild signature: which bars stand (the bias order's
-// done-marks and palette keys — a re-pick must rebuild the bar), the
-// overflow count, and the habit — the session group's own read rides the
-// same cluster key, so a selection change lands in one rebuild.
-function bannerReadsKey(app: App): string {
-  const { bars, overflow } = goalBarsOf(app.state);
-  return `${activeHabit(app.state)?.id ?? "—"}|${bars.map((bar) => `${bar.done ? 1 : 0}${bar.color}`).join("")}|${overflow}`;
+// The reads' rebuild signature: which meter stands (its palette key, done
+// mark, and count — a re-pick or completion must rebuild), and the habit —
+// the session group's own read rides the same cluster key, so a selection
+// change lands in one rebuild. The fraction deliberately stays out: the
+// live patch moves it without a rebuild.
+function sessionReadsKey(app: App): string {
+  const read = goalMeterOf(app.state);
+  return `${activeHabit(app.state)?.id ?? "—"}|${read ? `${read.color}${read.done ? 1 : 0}${read.extra}` : "—"}`;
 }
 
-// The reads' in-place patch: the habit name (in the session group now) and
-// the bar fills move without a rebuild — the live clock's neighbor stays
-// live during flow (ADR-0050), and a manual log's progress lands between
-// renders too.
-function refreshBannerReads(app: App): void {
+// The reads' in-place patch: the habit name and the meter's lit steps move
+// without a rebuild — the live clock's neighbor stays live during flow
+// (ADR-0050), and a manual log's progress lands between renders too.
+function refreshSessionReads(app: App): void {
   setText(document.querySelector('#console-session [data-session="habit"]'), chosenHabitName(app.state) ?? UNSTRUCTURED_WORD);
-  const host = document.querySelector("#console-session .banner-reads");
-  if (!host) return;
-  const { bars } = goalBarsOf(app.state);
-  bars.forEach((bar, i) => {
-    const fill = host.querySelector<HTMLElement>(`[data-banner-bar="${i}"]`)?.firstElementChild as HTMLElement | null;
-    const height = bannerBarFill(bar);
-    if (fill && fill.style.height !== height) fill.style.height = height;
-  });
+  const meter = byId("goal-meter");
+  if (!meter) return;
+  const read = goalMeterOf(app.state);
+  if (!read) return;
+  const lit = meterLitCount(read.fraction);
+  meter.querySelectorAll<HTMLElement>(".gm-seg").forEach((seg, i) => seg.classList.toggle("lit", i < lit));
+  meter.setAttribute("aria-label", read.aria);
+  const tip = meter.querySelector(".inst-tip-body");
+  if (tip) setText(tip, read.label);
 }
 
 // The header's bottom edge is the progress surface (issue #63): a thin strip
