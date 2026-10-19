@@ -1,0 +1,1098 @@
+{
+  "model": "hypothesis-v1",
+  "frontier_checks": [
+    {
+      "curve": "log",
+      "depth": 0,
+      "budget": 2.0,
+      "enemy_clear_minutes": 12.0,
+      "return_minutes": 19.45,
+      "exceed_minutes": 21.35,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "log",
+      "depth": 1,
+      "budget": 4.0,
+      "enemy_clear_minutes": 4.5,
+      "return_minutes": 77.4,
+      "exceed_minutes": 81.35,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "log",
+      "depth": 2,
+      "budget": 6.0,
+      "enemy_clear_minutes": 3.0,
+      "return_minutes": 160.7,
+      "exceed_minutes": 165.25,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "log",
+      "depth": 3,
+      "budget": 8.0,
+      "enemy_clear_minutes": 2.53125,
+      "return_minutes": 249.05,
+      "exceed_minutes": 253.65,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "log",
+      "depth": 4,
+      "budget": 10.0,
+      "enemy_clear_minutes": 2.43,
+      "return_minutes": 338.0,
+      "exceed_minutes": 342.65,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "log",
+      "depth": 5,
+      "budget": 12.0,
+      "enemy_clear_minutes": 2.53125,
+      "return_minutes": 427.05,
+      "exceed_minutes": 431.7,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "log",
+      "depth": 6,
+      "budget": 14.0,
+      "enemy_clear_minutes": 2.7895408163265305,
+      "return_minutes": 516.15,
+      "exceed_minutes": 520.75,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "log",
+      "depth": 7,
+      "budget": 16.0,
+      "enemy_clear_minutes": 3.20361328125,
+      "return_minutes": 605.2,
+      "exceed_minutes": 609.85,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "log",
+      "depth": 8,
+      "budget": 18.0,
+      "enemy_clear_minutes": 3.796875,
+      "return_minutes": 694.3,
+      "exceed_minutes": 698.9,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 0,
+      "budget": 2.0,
+      "enemy_clear_minutes": 12.0,
+      "return_minutes": 19.45,
+      "exceed_minutes": 21.35,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 1,
+      "budget": 5.0,
+      "enemy_clear_minutes": 2.88,
+      "return_minutes": 77.3,
+      "exceed_minutes": 81.3,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 2,
+      "budget": 6.242640687119286,
+      "enemy_clear_minutes": 2.7713225671656567,
+      "return_minutes": 160.65,
+      "exceed_minutes": 165.25,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 3,
+      "budget": 7.196152422706632,
+      "enemy_clear_minutes": 3.1283425899548254,
+      "return_minutes": 249.05,
+      "exceed_minutes": 253.65,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 4,
+      "budget": 8.0,
+      "enemy_clear_minutes": 3.796875,
+      "return_minutes": 338.05,
+      "exceed_minutes": 342.7,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 5,
+      "budget": 8.70820393249937,
+      "enemy_clear_minutes": 4.8066262144056635,
+      "return_minutes": 427.15,
+      "exceed_minutes": 431.75,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 6,
+      "budget": 9.348469228349533,
+      "enemy_clear_minutes": 6.25615911903983,
+      "return_minutes": 516.25,
+      "exceed_minutes": 520.85,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 7,
+      "budget": 9.937253933193773,
+      "enemy_clear_minutes": 8.305146070714688,
+      "return_minutes": 605.35,
+      "exceed_minutes": 609.95,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 8,
+      "budget": 10.485281374238571,
+      "enemy_clear_minutes": 11.189511608502498,
+      "return_minutes": 694.55,
+      "exceed_minutes": 699.1,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "power_015",
+      "depth": 0,
+      "budget": 2.0,
+      "enemy_clear_minutes": 12.0,
+      "return_minutes": 19.45,
+      "exceed_minutes": 21.35,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "power_015",
+      "depth": 1,
+      "budget": 2.8250750892455088,
+      "enemy_clear_minutes": 9.0213702052909,
+      "return_minutes": 77.6,
+      "exceed_minutes": 81.55,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "power_015",
+      "depth": 2,
+      "budget": 3.990524629937759,
+      "enemy_clear_minutes": 6.782093365075867,
+      "return_minutes": 160.8,
+      "exceed_minutes": 165.35,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "power_015",
+      "depth": 3,
+      "budget": 5.636765862528907,
+      "enemy_clear_minutes": 5.098647917766378,
+      "return_minutes": 249.1,
+      "exceed_minutes": 253.7,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "power_015",
+      "depth": 4,
+      "budget": 7.9621434110699445,
+      "enemy_clear_minutes": 3.8330658677171745,
+      "return_minutes": 338.05,
+      "exceed_minutes": 342.7,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "power_015",
+      "depth": 5,
+      "budget": 11.24682650380698,
+      "enemy_clear_minutes": 2.8816255178284362,
+      "return_minutes": 427.1,
+      "exceed_minutes": 431.7,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "power_015",
+      "depth": 6,
+      "budget": 15.886564694485628,
+      "enemy_clear_minutes": 2.1663508824452853,
+      "return_minutes": 516.15,
+      "exceed_minutes": 520.75,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "power_015",
+      "depth": 7,
+      "budget": 22.440369086039265,
+      "enemy_clear_minutes": 1.6286211087581288,
+      "return_minutes": 605.2,
+      "exceed_minutes": 609.8,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    },
+    {
+      "curve": "power_015",
+      "depth": 8,
+      "budget": 31.697863849222266,
+      "enemy_clear_minutes": 1.2243661621882014,
+      "return_minutes": 694.25,
+      "exceed_minutes": 698.85,
+      "exceeds": true,
+      "within_20_minute_combat_target": true
+    }
+  ],
+  "strategies": [
+    {
+      "curve": "log",
+      "targets": [
+        1,
+        100
+      ],
+      "minutes": 181.0,
+      "eras": [
+        {
+          "target": 1,
+          "minutes": 19.45,
+          "claim": 2.0011321790579517,
+          "banked": 2.0011321790579517,
+          "victories": 0
+        },
+        {
+          "target": 100,
+          "minutes": 161.55,
+          "claim": 3.999379918296486,
+          "banked": 6.000512097354438,
+          "victories": 2
+        }
+      ]
+    },
+    {
+      "curve": "log",
+      "targets": [
+        1,
+        10,
+        100
+      ],
+      "minutes": 258.35,
+      "eras": [
+        {
+          "target": 1,
+          "minutes": 19.45,
+          "claim": 2.0011321790579517,
+          "banked": 2.0011321790579517,
+          "victories": 0
+        },
+        {
+          "target": 10,
+          "minutes": 78.1,
+          "claim": 1.9991501334056947,
+          "banked": 4.000282312463646,
+          "victories": 1
+        },
+        {
+          "target": 100,
+          "minutes": 160.8,
+          "claim": 2.0004208783327693,
+          "banked": 6.000703190796416,
+          "victories": 2
+        }
+      ]
+    },
+    {
+      "curve": "log",
+      "targets": [
+        100
+      ],
+      "minutes": 182.85,
+      "eras": [
+        {
+          "target": 100,
+          "minutes": 182.85,
+          "claim": 6.000542302306426,
+          "banked": 6.000542302306426,
+          "victories": 0
+        }
+      ]
+    },
+    {
+      "curve": "sqrt_log",
+      "targets": [
+        1,
+        100
+      ],
+      "minutes": 180.95,
+      "eras": [
+        {
+          "target": 1,
+          "minutes": 19.45,
+          "claim": 2.071377908072342,
+          "banked": 2.071377908072342,
+          "victories": 0
+        },
+        {
+          "target": 100,
+          "minutes": 161.5,
+          "claim": 4.1718691480641334,
+          "banked": 6.243247056136475,
+          "victories": 2
+        }
+      ]
+    },
+    {
+      "curve": "sqrt_log",
+      "targets": [
+        1,
+        10,
+        100
+      ],
+      "minutes": 258.2,
+      "eras": [
+        {
+          "target": 1,
+          "minutes": 19.45,
+          "claim": 2.071377908072342,
+          "banked": 2.071377908072342,
+          "victories": 0
+        },
+        {
+          "target": 10,
+          "minutes": 78.05,
+          "claim": 2.9292443476714825,
+          "banked": 5.000622255743824,
+          "victories": 1
+        },
+        {
+          "target": 100,
+          "minutes": 160.7,
+          "claim": 1.2420874065742646,
+          "banked": 6.242709662318089,
+          "victories": 2
+        }
+      ]
+    },
+    {
+      "curve": "sqrt_log",
+      "targets": [
+        100
+      ],
+      "minutes": 182.85,
+      "eras": [
+        {
+          "target": 100,
+          "minutes": 182.85,
+          "claim": 6.242928276600833,
+          "banked": 6.242928276600833,
+          "victories": 0
+        }
+      ]
+    },
+    {
+      "curve": "power_015",
+      "targets": [
+        1,
+        100
+      ],
+      "minutes": 181.0,
+      "eras": [
+        {
+          "target": 1,
+          "minutes": 19.45,
+          "claim": 2.000391079023933,
+          "banked": 2.000391079023933,
+          "victories": 0
+        },
+        {
+          "target": 100,
+          "minutes": 161.55,
+          "claim": 1.990486472874875,
+          "banked": 3.990877551898808,
+          "victories": 2
+        }
+      ]
+    },
+    {
+      "curve": "power_015",
+      "targets": [
+        1,
+        10,
+        100
+      ],
+      "minutes": 258.55,
+      "eras": [
+        {
+          "target": 1,
+          "minutes": 19.45,
+          "claim": 2.000391079023933,
+          "banked": 2.000391079023933,
+          "victories": 0
+        },
+        {
+          "target": 10,
+          "minutes": 78.1,
+          "claim": 0.8248217462596457,
+          "banked": 2.825212825283579,
+          "victories": 1
+        },
+        {
+          "target": 100,
+          "minutes": 161.0,
+          "claim": 1.1653657110907965,
+          "banked": 3.9905785363743753,
+          "victories": 2
+        }
+      ]
+    },
+    {
+      "curve": "power_015",
+      "targets": [
+        100
+      ],
+      "minutes": 182.85,
+      "eras": [
+        {
+          "target": 100,
+          "minutes": 182.85,
+          "claim": 3.9908983692101474,
+          "banked": 3.9908983692101474,
+          "victories": 0
+        }
+      ]
+    }
+  ],
+  "sensitivities": [
+    {
+      "settings": {
+        "layout": 0.25
+      },
+      "minutes": 250.35,
+      "score": 1000.0651427177668,
+      "target": 1000,
+      "reached": true,
+      "victories": 3,
+      "reach_spent_T": 11.1,
+      "damage_per_minute": 0.9952679263837431,
+      "trace": [
+        {
+          "minute": 19.45,
+          "event": "discover",
+          "enemy": 0,
+          "score": 1.0013
+        },
+        {
+          "minute": 35.5,
+          "event": "victory",
+          "enemy": 0,
+          "score": 2.0322
+        },
+        {
+          "minute": 78.1,
+          "event": "discover",
+          "enemy": 1,
+          "score": 10.0005
+        },
+        {
+          "minute": 101.2,
+          "event": "victory",
+          "enemy": 1,
+          "score": 17.6307
+        },
+        {
+          "minute": 161.55,
+          "event": "discover",
+          "enemy": 2,
+          "score": 100.0411
+        },
+        {
+          "minute": 194.65,
+          "event": "victory",
+          "enemy": 2,
+          "score": 209.3197
+        }
+      ]
+    },
+    {
+      "settings": {
+        "layout": 0
+      },
+      "minutes": 283.5,
+      "score": 1000.8215158782353,
+      "target": 1000,
+      "reached": true,
+      "victories": 0,
+      "reach_spent_T": 11.1,
+      "damage_per_minute": 0.0,
+      "trace": [
+        {
+          "minute": 19.45,
+          "event": "discover",
+          "enemy": 0,
+          "score": 1.0013
+        },
+        {
+          "minute": 86.4,
+          "event": "discover",
+          "enemy": 1,
+          "score": 10.0132
+        },
+        {
+          "minute": 182.85,
+          "event": "discover",
+          "enemy": 2,
+          "score": 100.0625
+        }
+      ]
+    },
+    {
+      "settings": {
+        "reach_minutes": 40
+      },
+      "minutes": 254.35,
+      "score": 1000.0362685504136,
+      "target": 1000,
+      "reached": true,
+      "victories": 3,
+      "reach_spent_T": 11.1,
+      "damage_per_minute": 3.9810717055349722,
+      "trace": [
+        {
+          "minute": 19.45,
+          "event": "discover",
+          "enemy": 0,
+          "score": 1.0013
+        },
+        {
+          "minute": 62.5,
+          "event": "victory",
+          "enemy": 0,
+          "score": 5.0314
+        },
+        {
+          "minute": 81.45,
+          "event": "discover",
+          "enemy": 1,
+          "score": 10.0138
+        },
+        {
+          "minute": 136.0,
+          "event": "victory",
+          "enemy": 1,
+          "score": 40.877
+        },
+        {
+          "minute": 164.9,
+          "event": "discover",
+          "enemy": 2,
+          "score": 100.0217
+        },
+        {
+          "minute": 231.65,
+          "event": "victory",
+          "enemy": 2,
+          "score": 497.0859
+        }
+      ]
+    },
+    {
+      "settings": {
+        "penalty": 0.5
+      },
+      "minutes": 249.75,
+      "score": 1000.5649328536289,
+      "target": 1000,
+      "reached": true,
+      "victories": 3,
+      "reach_spent_T": 11.1,
+      "damage_per_minute": 3.9810717055349722,
+      "trace": [
+        {
+          "minute": 19.45,
+          "event": "discover",
+          "enemy": 0,
+          "score": 1.0013
+        },
+        {
+          "minute": 26.45,
+          "event": "victory",
+          "enemy": 0,
+          "score": 1.2519
+        },
+        {
+          "minute": 77.9,
+          "event": "discover",
+          "enemy": 1,
+          "score": 10.01
+        },
+        {
+          "minute": 87.45,
+          "event": "victory",
+          "enemy": 1,
+          "score": 11.6521
+        },
+        {
+          "minute": 161.25,
+          "event": "discover",
+          "enemy": 2,
+          "score": 100.0908
+        },
+        {
+          "minute": 174.0,
+          "event": "victory",
+          "enemy": 2,
+          "score": 119.9017
+        }
+      ]
+    },
+    {
+      "settings": {
+        "bonus": 1.0
+      },
+      "minutes": 257.95,
+      "score": 1000.3652797365787,
+      "target": 1000,
+      "reached": true,
+      "victories": 3,
+      "reach_spent_T": 11.1,
+      "damage_per_minute": 3.9810717055349722,
+      "trace": [
+        {
+          "minute": 19.45,
+          "event": "discover",
+          "enemy": 0,
+          "score": 1.0013
+        },
+        {
+          "minute": 26.45,
+          "event": "victory",
+          "enemy": 0,
+          "score": 1.4022
+        },
+        {
+          "minute": 79.65,
+          "event": "discover",
+          "enemy": 1,
+          "score": 10.0129
+        },
+        {
+          "minute": 89.2,
+          "event": "victory",
+          "enemy": 1,
+          "score": 12.5545
+        },
+        {
+          "minute": 166.4,
+          "event": "discover",
+          "enemy": 2,
+          "score": 100.1158
+        },
+        {
+          "minute": 179.15,
+          "event": "victory",
+          "enemy": 2,
+          "score": 131.0253
+        }
+      ]
+    },
+    {
+      "settings": {
+        "integer": true
+      },
+      "minutes": 250.35,
+      "score": 1000.3371338697989,
+      "target": 1000,
+      "reached": true,
+      "victories": 3,
+      "reach_spent_T": 11.1,
+      "damage_per_minute": 1.0,
+      "trace": [
+        {
+          "minute": 19.45,
+          "event": "discover",
+          "enemy": 0,
+          "score": 1.0013
+        },
+        {
+          "minute": 35.4,
+          "event": "victory",
+          "enemy": 0,
+          "score": 2.0244
+        },
+        {
+          "minute": 78.1,
+          "event": "discover",
+          "enemy": 1,
+          "score": 10.0033
+        },
+        {
+          "minute": 101.1,
+          "event": "victory",
+          "enemy": 1,
+          "score": 17.59
+        },
+        {
+          "minute": 161.55,
+          "event": "discover",
+          "enemy": 2,
+          "score": 100.059
+        },
+        {
+          "minute": 194.5,
+          "event": "victory",
+          "enemy": 2,
+          "score": 208.6116
+        }
+      ]
+    },
+    {
+      "settings": {
+        "growth": 0.01
+      },
+      "minutes": 530.95,
+      "score": 1000.2308777970211,
+      "target": 1000,
+      "reached": true,
+      "victories": 3,
+      "reach_spent_T": 11.1,
+      "damage_per_minute": 3.9810717055349722,
+      "trace": [
+        {
+          "minute": 22.35,
+          "event": "discover",
+          "enemy": 0,
+          "score": 1.0015
+        },
+        {
+          "minute": 29.35,
+          "event": "victory",
+          "enemy": 0,
+          "score": 1.2937
+        },
+        {
+          "minute": 121.15,
+          "event": "discover",
+          "enemy": 1,
+          "score": 10.0039
+        },
+        {
+          "minute": 130.7,
+          "event": "victory",
+          "enemy": 1,
+          "score": 11.1731
+        },
+        {
+          "minute": 312.45,
+          "event": "discover",
+          "enemy": 2,
+          "score": 100.038
+        },
+        {
+          "minute": 325.2,
+          "event": "victory",
+          "enemy": 2,
+          "score": 111.6296
+        }
+      ]
+    },
+    {
+      "settings": {
+        "reach_cost": 1000
+      },
+      "minutes": 283.5,
+      "score": 1000.8215158782353,
+      "target": 1000,
+      "reached": true,
+      "victories": 0,
+      "reach_spent_T": 1000.0,
+      "damage_per_minute": 3.9810717055349722,
+      "trace": [
+        {
+          "minute": 19.45,
+          "event": "discover",
+          "enemy": 0,
+          "score": 1.0013
+        },
+        {
+          "minute": 86.4,
+          "event": "discover",
+          "enemy": 1,
+          "score": 10.0132
+        },
+        {
+          "minute": 182.85,
+          "event": "discover",
+          "enemy": 2,
+          "score": 100.0625
+        }
+      ]
+    },
+    {
+      "settings": {
+        "max_minutes": 100
+      },
+      "minutes": 100.05,
+      "score": 18.937583508588055,
+      "target": 1000,
+      "reached": false,
+      "victories": 2,
+      "reach_spent_T": 1.1,
+      "damage_per_minute": 3.9810717055349722,
+      "trace": [
+        {
+          "minute": 19.45,
+          "event": "discover",
+          "enemy": 0,
+          "score": 1.0013
+        },
+        {
+          "minute": 26.45,
+          "event": "victory",
+          "enemy": 0,
+          "score": 1.4022
+        },
+        {
+          "minute": 77.4,
+          "event": "discover",
+          "enemy": 1,
+          "score": 10.0099
+        },
+        {
+          "minute": 86.95,
+          "event": "victory",
+          "enemy": 1,
+          "score": 12.6046
+        }
+      ]
+    },
+    {
+      "settings": {
+        "dt": 0.025
+      },
+      "minutes": 249.2,
+      "score": 1000.0022544872861,
+      "target": 1000,
+      "reached": true,
+      "victories": 3,
+      "reach_spent_T": 11.1,
+      "damage_per_minute": 3.9810717055349722,
+      "trace": [
+        {
+          "minute": 19.45,
+          "event": "discover",
+          "enemy": 0,
+          "score": 1.0016
+        },
+        {
+          "minute": 26.47,
+          "event": "victory",
+          "enemy": 0,
+          "score": 1.4027
+        },
+        {
+          "minute": 77.38,
+          "event": "discover",
+          "enemy": 1,
+          "score": 10.0056
+        },
+        {
+          "minute": 86.88,
+          "event": "victory",
+          "enemy": 1,
+          "score": 12.5767
+        },
+        {
+          "minute": 160.78,
+          "event": "discover",
+          "enemy": 2,
+          "score": 100.0501
+        },
+        {
+          "minute": 173.55,
+          "event": "victory",
+          "enemy": 2,
+          "score": 131.3831
+        }
+      ]
+    }
+  ],
+  "deep_cost_counterexamples": [
+    {
+      "curve": "log",
+      "depth": 12,
+      "budget": 26.0,
+      "clear_minutes": 9.21275772004438
+    },
+    {
+      "curve": "log",
+      "depth": 20,
+      "budget": 42.0,
+      "clear_minutes": 90.48317632869798
+    },
+    {
+      "curve": "log",
+      "depth": 30,
+      "budget": 62.0,
+      "clear_minutes": 2394.3940799111438
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 12,
+      "budget": 12.392304845413264,
+      "clear_minutes": 40.55385736690174
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 20,
+      "budget": 15.416407864998739,
+      "clear_minutes": 671.5835270893593
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 30,
+      "budget": 18.431676725154983,
+      "clear_minutes": 27092.51482507348
+    },
+    {
+      "curve": "power_015",
+      "depth": 12,
+      "budget": 126.19146889603863,
+      "clear_minutes": 0.3910896788226221
+    },
+    {
+      "curve": "power_015",
+      "depth": 20,
+      "budget": 1999.9999999999995,
+      "clear_minutes": 0.03990308076095583
+    },
+    {
+      "curve": "power_015",
+      "depth": 30,
+      "budget": 63245.55320336756,
+      "clear_minutes": 0.0023010127107946105
+    }
+  ],
+  "representative_traces": {
+    "0": {
+      "minutes": 182.85,
+      "score": 100.06245435494951,
+      "target": 100,
+      "reached": true,
+      "victories": 0,
+      "reach_spent_T": 1.1,
+      "damage_per_minute": 0.0,
+      "trace": [
+        {
+          "minute": 19.45,
+          "event": "discover",
+          "enemy": 0,
+          "score": 1.0013
+        },
+        {
+          "minute": 86.4,
+          "event": "discover",
+          "enemy": 1,
+          "score": 10.0132
+        }
+      ]
+    },
+    "2": {
+      "minutes": 161.55,
+      "score": 100.05897477000788,
+      "target": 100,
+      "reached": true,
+      "victories": 2,
+      "reach_spent_T": 1.1,
+      "damage_per_minute": 1.0,
+      "trace": [
+        {
+          "minute": 19.45,
+          "event": "discover",
+          "enemy": 0,
+          "score": 1.0013
+        },
+        {
+          "minute": 35.4,
+          "event": "victory",
+          "enemy": 0,
+          "score": 2.0244
+        },
+        {
+          "minute": 78.1,
+          "event": "discover",
+          "enemy": 1,
+          "score": 10.0033
+        },
+        {
+          "minute": 101.1,
+          "event": "victory",
+          "enemy": 1,
+          "score": 17.59
+        }
+      ]
+    },
+    "8": {
+      "minutes": 160.65,
+      "score": 100.08677721290306,
+      "target": 100,
+      "reached": true,
+      "victories": 2,
+      "reach_spent_T": 1.1,
+      "damage_per_minute": 16.0,
+      "trace": [
+        {
+          "minute": 19.45,
+          "event": "discover",
+          "enemy": 0,
+          "score": 1.0013
+        },
+        {
+          "minute": 24.15,
+          "event": "victory",
+          "enemy": 0,
+          "score": 1.2636
+        },
+        {
+          "minute": 77.25,
+          "event": "discover",
+          "enemy": 1,
+          "score": 10.0137
+        },
+        {
+          "minute": 83.4,
+          "event": "victory",
+          "enemy": 1,
+          "score": 11.6115
+        }
+      ]
+    }
+  }
+}
