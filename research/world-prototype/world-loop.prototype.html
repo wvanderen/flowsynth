@@ -1,0 +1,931 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>World loop prototype — FlowSynth (throwaway)</title>
+<style>
+  :root {
+    --bg: #16171a;
+    --panel: #1d1f23;
+    --panel-2: #22252a;
+    --line: #34383f;
+    --text: #d8dce2;
+    --muted: #8b919b;
+    --accent: #e0532f;
+    --charge: #6fbf8f;
+    --enemy: #c2483e;
+    --cond: "SF Compact Display", "Arial Narrow", "Helvetica Neue", sans-serif;
+    --sans: -apple-system, "Segoe UI", "Helvetica Neue", sans-serif;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; }
+  header { padding: 18px 20px 10px; max-width: 1180px; margin: 0 auto; }
+  header h1 { font-family: var(--cond); font-size: 20px; letter-spacing: .04em; text-transform: uppercase; margin: 0 0 6px; }
+  header p { margin: 0; color: var(--muted); max-width: 940px; }
+  header p b { color: var(--text); font-weight: 600; }
+  .proto-mark { display: inline-block; border: 1px solid var(--accent); color: var(--accent); font-family: var(--cond); text-transform: uppercase; letter-spacing: .08em; font-size: 11px; padding: 1px 7px; margin-right: 10px; vertical-align: 2px; }
+  main { max-width: 1180px; margin: 0 auto; padding: 0 20px 60px; }
+  .ledger { display: flex; flex-wrap: wrap; border: 1px solid var(--line); background: var(--panel); margin: 14px 0; }
+  .ledger .cell { padding: 8px 14px; border-right: 1px solid var(--line); min-width: 100px; flex: 1 1 0; }
+  .ledger .k { font-family: var(--cond); text-transform: uppercase; letter-spacing: .06em; font-size: 10px; color: var(--muted); }
+  .ledger .v { font-family: var(--mono); font-size: 15px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .ledger .v.accent { color: var(--accent); }
+  .ledger .v.sub { font-size: 10px; color: var(--muted); }
+  .cols { display: grid; grid-template-columns: minmax(340px, 480px) 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 860px) { .cols { grid-template-columns: 1fr; } }
+  .panel { border: 1px solid var(--line); background: var(--panel); margin-bottom: 16px; }
+  .panel > h2 { font-family: var(--cond); text-transform: uppercase; letter-spacing: .07em; font-size: 12px; margin: 0; padding: 7px 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-weight: 600; }
+  .panel .body { padding: 10px 12px; }
+  .row { display: flex; align-items: baseline; gap: 10px; padding: 3px 0; flex-wrap: wrap; }
+  .row .k { color: var(--muted); font-size: 12px; min-width: 130px; }
+  .row .v { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 13px; }
+  button { appearance: none; background: transparent; border: 1px solid var(--line); color: var(--text); font-family: var(--cond); text-transform: uppercase; letter-spacing: .05em; font-size: 12px; padding: 5px 12px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--muted); }
+  button:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+  button:disabled { color: var(--muted); cursor: default; opacity: .5; }
+  button.primary { border-color: var(--accent); color: var(--accent); }
+  button.lit { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.small { padding: 2px 8px; font-size: 11px; }
+  .speed button.on { border-color: var(--accent); color: var(--accent); }
+  .board-wrap { padding: 4px; overflow-x: auto; }
+  svg text { pointer-events: none; }
+  g.hexcell { cursor: default; }
+  g.buyable, g.placeable { cursor: pointer; }
+  .readout { border-top: 1px solid var(--line); padding: 8px 12px; min-height: 48px; font-size: 12px; }
+  .readout .name { font-family: var(--cond); text-transform: uppercase; letter-spacing: .05em; }
+  .muted { color: var(--muted); }
+  .eventline { border-top: 1px solid var(--line); padding: 6px 12px; color: var(--muted); font-family: var(--mono); font-size: 11px; min-height: 26px; }
+  .tabs { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+  .tabs button { border: 0; border-right: 1px solid var(--line); border-bottom: 2px solid transparent; }
+  .tabs button.on { border-bottom-color: var(--accent); color: var(--accent); }
+  .scenario { padding: 10px 12px; }
+  .scenario p { color: var(--muted); margin: 0 0 10px; font-size: 13px; }
+  .step { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
+  .step .n { font-family: var(--mono); color: var(--muted); width: 18px; text-align: right; }
+  .step.done .n::after { content: " ✓"; color: var(--charge); }
+  .step button:disabled { border-style: dashed; background: transparent; }
+  .freeplay { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .tip { position: relative; }
+  .tipbody { position: absolute; left: 0; top: 100%; background: var(--panel); color: var(--text); padding: 4px 8px; font-size: 11px; white-space: nowrap; z-index: 30; display: none; }
+  .tip:hover .tipbody, .tip:focus-within .tipbody { display: block; }
+  .term { border-bottom: 1px dotted var(--muted); cursor: help; }
+  .term:focus { outline: none; }
+  .shopline { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .shopline:last-child { border-bottom: 0; }
+  .shopline .desc { color: var(--muted); font-size: 12px; flex: 1 1 170px; }
+  .lockmark { color: var(--muted); border: 1px dashed var(--line); padding: 1px 6px; font-size: 11px; font-family: var(--cond); text-transform: uppercase; letter-spacing: .05em; }
+  .node { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  .node .ranks { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .presetrow { display: flex; gap: 8px; flex-wrap: wrap; padding: 6px 0; }
+  .fine { color: var(--muted); font-size: 11px; }
+  .fine b { color: var(--text); font-weight: 600; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 10px 0; }
+  .goal { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+  .goal .bar { flex: 1; height: 8px; border: 1px solid var(--line); position: relative; background: var(--panel-2); min-width: 60px; }
+  .goal .bar i { position: absolute; top: 0; bottom: 0; left: 0; background: var(--charge); }
+  .goal.done .bar i { display: none; }
+  .goal.done .bar::after { content: "✓"; position: absolute; inset: 0; text-align: center; color: var(--charge); font-size: 9px; line-height: 8px; }
+  select { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); font-family: var(--cond); text-transform: uppercase; letter-spacing: .04em; font-size: 11px; padding: 3px 6px; }
+  .warn { color: var(--accent); }
+  .enemybar { height: 7px; border: 1px solid var(--line); position: relative; background: var(--panel-2); width: 110px; display: inline-block; vertical-align: middle; }
+  .enemybar i { position: absolute; top: 0; bottom: 0; left: 0; background: var(--enemy); }
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="proto-mark">Prototype — throwaway</span>World loop &amp; Engineer choices</h1>
+  <p><b>The question:</b> does the two-layer World loop — shared-coordinate placement, charge lifted and split to weapons, capped-cadence automatic combat, accumulated enemy penalties, frontier <span class="tip"><span class="term" tabindex="0">Arete claims<span class="tipbody">Claim = entitlement at era-earned minus entitlement already claimed</span></span></span>, full refunds — make resetting feel worthwhile, placement measurably matter, and push-versus-reset a real choice? All figures are hypothesis knobs carried from the <span class="tip"><span class="term" tabindex="0">frontier simulation<span class="tipbody">Issue #420 findings; parameters are hypotheses, not selected balance</span></span></span>.</p>
+</header>
+<main>
+  <div class="ledger" id="ledger"></div>
+
+  <div class="cols">
+    <div>
+      <div class="panel">
+        <h2>Board — module layer and World layer share coordinates</h2>
+        <div class="board-wrap"><svg id="board" width="460" height="430" viewBox="0 0 460 430" aria-label="Hex board"></svg></div>
+        <div class="readout" id="readout"></div>
+        <div class="eventline" id="eventline"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Session</h2>
+        <div class="body">
+          <div class="row"><span class="k">Mode</span><span class="v" id="mode-read"></span></div>
+          <div class="row"><span class="k">Habit · class</span><span class="v" id="habit-read"></span></div>
+          <div class="freeplay" style="margin-top:8px">
+            <button id="btn-start"></button>
+            <button id="btn-pause"></button>
+            <button class="small" id="btn-step1">+1 min</button>
+            <button class="small" id="btn-step10">+10 min</button>
+            <span style="flex:1"></span>
+            <span class="speed" id="speed"></span>
+          </div>
+          <p class="fine" style="margin:8px 0 0">Flow locks habit, class, placement, shop, and Engineer edits until the session ends.</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Walkthroughs</h2>
+        <div class="tabs" id="wtabs"></div>
+        <div class="scenario" id="wscenario"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>World shop — upgrade mode only</h2>
+        <div class="body" id="shop"></div>
+      </div>
+      <div class="panel">
+        <h2>Prestige</h2>
+        <div class="body" id="prestige"></div>
+      </div>
+      <div class="panel">
+        <h2>Engineer — habit class</h2>
+        <div class="body" id="engineer"></div>
+      </div>
+      <div class="panel">
+        <h2>Goals — owned by the habit</h2>
+        <div class="body" id="goals"></div>
+      </div>
+      <div class="panel">
+        <h2>Documented approximations</h2>
+        <div class="body fine" id="approx"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+"use strict";
+
+const CFG = {
+  rigBase: 0.04, rigGrowth: 0.025,
+  entryDepth: 1,
+  curves: {
+    log:      { label: "log",        E: (x) => 2 + 2 * Math.log10(x) },
+    sqrtlog:  { label: "sqrt-log",   E: (x) => 2 + 3 * Math.sqrt(Math.log10(x)) },
+    power015: { label: "power 0.15", E: (x) => 2 * Math.pow(x, 0.15) },
+  },
+  enemyPenalty: 0.8, victoryBonus: 1.08,
+  enemies: [
+    { id: "e1", name: "Standing Wave", depth: 0, hp: 12, q: 2,  r: -1 },
+    { id: "e2", name: "Hiss Field",    depth: 1, hp: 18, q: -1, r: 3 },
+    { id: "e3", name: "Detuned Choir", depth: 2, hp: 27, q: -3, r: 1 },
+  ],
+  weaponPrice: 1, columnPrice: 1, powerUpgradePrice: 1,
+  weaponBasePower: 2, weaponStorage: 5,
+  attackCost: 1, damage: (p) => (p * p) / 4,
+  cellBase: 0.4, cellRatio: 1.9,
+  generators: [ { q: 0, r: 0, output: 1 }, { q: 1, r: -1, output: 1 } ],
+  xpLevels: [5, 15, 30, 50, 80],
+  goalFuelPerMinute: 0.5, goalFuelBank: 8,
+  rollPerMinutes: 15,
+};
+
+const GRID_R = 3;
+const hexes = [];
+for (let q = -GRID_R; q <= GRID_R; q++)
+  for (let r = Math.max(-GRID_R, -q - GRID_R); r <= Math.min(GRID_R, -q + GRID_R); r++)
+    hexes.push({ q, r });
+
+function neighbors(q, r) {
+  return [[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]].map(([dq,dr]) => [q+dq, r+dr]);
+}
+
+function initialState() {
+  const owned = new Set(["0,0","1,0","1,-1","0,-1","-1,0","-1,1","0,1"]);
+  const enemyByCell = {};
+  CFG.enemies.forEach((e) => { enemyByCell[e.q + "," + e.r] = { ...e, hp: e.hp, discovered: false, defeated: false, discoveredAt: null }; });
+  return {
+    mode: "upgrade", paused: true, speed: 60,
+    credited: 0, eraCredited: 0,
+    earnedT: 0, frontierT: 0,
+    nousT: 0, arete: 0,
+    owned,
+    cellsBought: 0,
+    enemies: enemyByCell,
+    defeatedThisEra: 0,
+    occupants: {},
+    carried: null,
+    selected: null,
+    targetPriority: "lowhp",
+    curve: "log",
+    habit: "engineer",
+    engXp: 0, engPoints: 0, engSpent: { calib: 0, cadence: 0, eye: 0, merge: 0 },
+    goals: [
+      { target: 30, progress: 0, done: false, banked: false },
+      { target: 60, progress: 0, done: false, banked: false },
+    ],
+    goalAllowance: 0, goalFuelUsed: 0, goalFuelCapped: 0,
+    rolls: 0, rollFrac: 0,
+    combat: { shotsFired: 0, shotsStarved: 0 },
+    eraStats: { climbStartFrontier: null, climbTime: null, prevClimbTime: null },
+    events: [],
+    ascensions: 0,
+  };
+}
+
+const depthOf = (t) => Math.log10(Math.max(t, 1e-9));
+const eligible = (s) => s.earnedT >= CFG.entryDepth;
+const entitlement = (s) => (eligible(s) ? CFG.curves[s.curve].E(s.earnedT) : 0);
+const frontierEntitlement = (s) => (s.frontierT >= CFG.entryDepth ? CFG.curves[s.curve].E(s.frontierT) : 0);
+const pendingClaim = (s) => Math.max(0, entitlement(s) - frontierEntitlement(s));
+const cellPrice = (s) => CFG.cellBase * Math.pow(CFG.cellRatio, s.cellsBought);
+
+function enemyAt(s, q, r) { return s.enemies[q + "," + r]; }
+function occupantAt(s, q, r) { return s.occupants[q + "," + r]; }
+function isOwned(s, q, r) { return s.owned.has(q + "," + r); }
+
+function penaltyFactor(s) {
+  let f = 1;
+  for (const k in s.enemies) { const e = s.enemies[k]; if (e.discovered && !e.defeated) f *= CFG.enemyPenalty; }
+  return f;
+}
+function victoryFactor(s) { return Math.pow(CFG.victoryBonus, s.defeatedThisEra); }
+function productionRate(s) {
+  const rig = CFG.rigBase * Math.exp(CFG.rigGrowth * s.eraCredited);
+  return rig * penaltyFactor(s) * victoryFactor(s) * (1 + 0.05 * s.engSpent.calib);
+}
+function liftAt(s, q, r) {
+  let lift = 0;
+  for (const [nq, nr] of neighbors(q, r)) {
+    const g = CFG.generators.find((g) => g.q === nq && g.r === nr);
+    if (g) lift += g.output;
+  }
+  return lift;
+}
+function weaponPower(w) { return CFG.weaponBasePower + w.upgrades; }
+function weaponDamage(w) { return CFG.damage(weaponPower(w)); }
+function weaponTargets(s, w) {
+  const [q, r] = w.cell.split(",").map(Number);
+  return neighbors(q, r)
+    .map(([nq, nr]) => enemyAt(s, nq, nr))
+    .filter((e) => e && e.discovered && !e.defeated);
+}
+function adjacent(a, b) {
+  const [aq, ar] = a.split(",").map(Number), [bq, br] = b.split(",").map(Number);
+  return neighbors(aq, ar).some(([q, r]) => q === bq && r === br);
+}
+
+function log(s, text) { s.events.unshift(text); if (s.events.length > 5) s.events.pop(); }
+
+function fundedState(opts) {
+  const s = initialState();
+  s.earnedT = 1.2; s.frontierT = 1.2; s.arete = opts.arete; s.nousT = opts.nous || 20;
+  const e = s.enemies["2,-1"]; e.discovered = true; e.discoveredAt = 1;
+  s.eraStats.climbStartFrontier = 1.2;
+  return s;
+}
+function midPushState() {
+  const s = fundedState({ arete: 2 });
+  s.earnedT = 12; s.frontierT = 1.0; s.nousT = 20; s.eraCredited = 60;
+  const e = s.enemies["2,-1"]; e.discovered = true; e.defeated = true; s.defeatedThisEra = 1;
+  return s;
+}
+
+function bankCompletedGoals(s) {
+  for (const g of s.goals) {
+    if (g.done && !g.banked) {
+      g.banked = true;
+      const grant = Math.min(CFG.goalFuelBank, Math.max(0, s.goalAllowance - s.goalFuelUsed));
+      s.goalFuelUsed += grant;
+      if (grant < CFG.goalFuelBank) s.goalFuelCapped += CFG.goalFuelBank - grant;
+      s.rolls += 1;
+      log(s, `Goal completed — fuel banked ${grant.toFixed(1)}, +1 roll, capped ${(CFG.goalFuelBank - grant).toFixed(1)}`);
+    }
+  }
+}
+
+function advanceTime(s, minutes) {
+  for (let i = 0; i < minutes; i++) {
+    s.credited += 1; s.eraCredited += 1;
+    const rate = productionRate(s);
+    s.earnedT += rate; s.nousT += rate;
+
+    for (const k in s.enemies) {
+      const e = s.enemies[k];
+      if (!e.discovered && s.earnedT >= Math.pow(10, e.depth)) {
+        e.discovered = true; e.discoveredAt = s.eraCredited;
+        log(s, `${e.name} discovered — production ×${CFG.enemyPenalty}`);
+      }
+    }
+
+    const consumers = [], columns = [];
+    for (const key in s.occupants) {
+      if (s.occupants[key].kind === "weapon") consumers.push(s.occupants[key]);
+      if (s.occupants[key].kind === "column") columns.push(s.occupants[key]);
+    }
+    const demand = new Map(consumers.map((w) => [w, Math.max(0, CFG.weaponStorage - w.stored)]));
+    for (const col of columns) {
+      let supply = liftAt(s, ...col.cell.split(",").map(Number));
+      let open = consumers.filter((w) => adjacent(w.cell, col.cell) && demand.get(w) > 1e-9);
+      while (supply > 1e-9 && open.length) {
+        const share = supply / open.length;
+        let anyFull = false;
+        for (const w of open) {
+          const take = Math.min(share, demand.get(w));
+          if (take < share - 1e-9) anyFull = true;
+          w.stored += take; demand.set(w, demand.get(w) - take); supply -= take;
+        }
+        open = open.filter((w) => demand.get(w) > 1e-9);
+        if (!anyFull) break;
+      }
+    }
+
+    for (const w of consumers) {
+      const targets = weaponTargets(s, w);
+      if (!targets.length) continue;
+      const target = s.targetPriority === "lowhp"
+        ? targets.reduce((a, b) => (b.hp < a.hp ? b : a))
+        : targets.reduce((a, b) => (b.discoveredAt < a.discoveredAt ? b : a));
+      if (w.stored >= CFG.attackCost) {
+        w.stored -= CFG.attackCost;
+        s.combat.shotsFired += 1;
+        target.hp -= weaponDamage(w);
+        if (target.hp <= 0 && !target.defeated) {
+          target.defeated = true; s.defeatedThisEra += 1;
+          log(s, `${target.name} defeated — penalty lifts, era bonus ×${CFG.victoryBonus}`);
+        }
+      } else {
+        s.combat.shotsStarved += 1;
+      }
+    }
+
+    if (s.habit === "engineer") {
+      const before = s.engXp;
+      s.engXp += 1;
+      const crossed = CFG.xpLevels.filter((t) => before < t && s.engXp >= t).length;
+      if (crossed) { s.engPoints += crossed; log(s, `Engineer level up — ${crossed} tree point${crossed > 1 ? "s" : ""}`); }
+      for (const g of s.goals) if (!g.done) g.progress += 1;
+      s.goalAllowance += CFG.goalFuelPerMinute;
+      bankCompletedGoals(s);
+    }
+    s.rollFrac += (1 + s.engSpent.cadence) / CFG.rollPerMinutes;
+    while (s.rollFrac >= 1) { s.rollFrac -= 1; s.rolls += 1; }
+  }
+
+  for (const g of s.goals) if (!g.done && g.progress >= g.target) { g.done = true; bankCompletedGoals(s); }
+
+  if (s.eraStats.climbStartFrontier != null && s.eraStats.climbTime == null && s.earnedT >= s.eraStats.climbStartFrontier) {
+    s.eraStats.climbTime = s.eraCredited;
+    log(s, `Frontier re-reached in ${Math.round(s.eraCredited)} credited min`);
+  }
+}
+
+const Actions = {
+  startSession(s) { if (s.mode === "upgrade") { s.mode = "flow"; s.paused = false; s.carried = null; } return s; },
+  endSession(s) { if (s.mode === "flow") { s.mode = "upgrade"; s.paused = true; } return s; },
+  setPaused(s, v) { s.paused = v; return s; },
+  setSpeed(s, v) { s.speed = v; return s; },
+  select(s, key) { s.selected = key; return s; },
+  buyCell(s, key) {
+    const [q, r] = key.split(",").map(Number);
+    if (s.mode !== "upgrade" || isOwned(s, q, r) || enemyAt(s, q, r)) return s;
+    const price = cellPrice(s);
+    if (s.nousT < price) return s;
+    s.nousT -= price; s.cellsBought += 1; s.owned.add(key);
+    log(s, `Cell bought for ${fmtT(price)} ν`);
+    return s;
+  },
+  buyArm(s, kind) {
+    if (s.mode !== "upgrade") return s;
+    const price = kind === "weapon" ? CFG.weaponPrice : CFG.columnPrice;
+    if (s.arete < price) return s;
+    s.carried = { kind, upgrades: 0 };
+    return s;
+  },
+  place(s, key) {
+    const [q, r] = key.split(",").map(Number);
+    if (s.mode !== "upgrade" || !s.carried || !isOwned(s, q, r) || enemyAt(s, q, r) || occupantAt(s, q, r)) return s;
+    const kind = s.carried.kind;
+    if (kind === "weapon") s.occupants[key] = { kind: "weapon", cell: key, stored: 0, upgrades: s.carried.upgrades || 0 };
+    else s.occupants[key] = { kind: "column", cell: key };
+    s.arete -= kind === "weapon" ? CFG.weaponPrice : CFG.columnPrice;
+    s.carried = null;
+    return s;
+  },
+  relocateArm(s, key) {
+    if (s.mode !== "upgrade") return s;
+    const [q, r] = key.split(",").map(Number);
+    const o = occupantAt(s, q, r);
+    if (!o) return s;
+    s.carried = { kind: o.kind, upgrades: o.kind === "weapon" ? o.upgrades : 0 };
+    delete s.occupants[key];
+    return s;
+  },
+  upgradeWeapon(s, key) {
+    if (s.mode !== "upgrade") return s;
+    const [q, r] = key.split(",").map(Number);
+    const o = occupantAt(s, q, r);
+    if (!o || o.kind !== "weapon" || s.arete < CFG.powerUpgradePrice) return s;
+    o.upgrades += 1; s.arete -= CFG.powerUpgradePrice;
+    return s;
+  },
+  refundAll(s) {
+    if (s.mode !== "upgrade") return s;
+    let refund = 0;
+    for (const key in s.occupants) {
+      const o = s.occupants[key];
+      refund += o.kind === "weapon" ? CFG.weaponPrice + o.upgrades * CFG.powerUpgradePrice : CFG.columnPrice;
+    }
+    s.occupants = {}; s.carried = null; s.arete += refund;
+    if (refund) log(s, `Full refund — ${fmtD(refund)} ◇ returned`);
+    return s;
+  },
+  setPriority(s, v) { if (s.mode === "upgrade") s.targetPriority = v; return s; },
+  setCurve(s, v) { if (s.mode === "upgrade") s.curve = v; return s; },
+  prestige(s) {
+    if (s.mode !== "upgrade" || !eligible(s)) return s;
+    const claim = pendingClaim(s);
+    s.arete += claim;
+    if (s.earnedT > s.frontierT) s.frontierT = s.earnedT;
+    s.ascensions += 1;
+    s.eraCredited = 0; s.earnedT = 0; s.defeatedThisEra = 0;
+    for (const k in s.enemies) {
+      const e = s.enemies[k];
+      e.hp = CFG.enemies.find((c) => c.id === e.id).hp;
+      e.discovered = false; e.defeated = false; e.discoveredAt = null;
+    }
+    for (const k in s.occupants) if (s.occupants[k].kind === "weapon") s.occupants[k].stored = 0;
+    s.eraStats.prevClimbTime = s.eraStats.climbTime;
+    s.eraStats.climbStartFrontier = s.frontierT >= CFG.entryDepth ? s.frontierT : null;
+    s.eraStats.climbTime = null;
+    s.goalAllowance = 0; s.goalFuelUsed = 0; s.goalFuelCapped = 0; s.rollFrac = 0;
+    log(s, claim > 0 ? `Prestige — ${fmtD(claim)} ◇ banked` : `Prestige — zero claim banked`);
+    return s;
+  },
+  assignPoint(s, node) {
+    const caps = { calib: 2, cadence: 2, eye: 1, merge: 1 };
+    if (s.mode !== "upgrade" || s.engPoints < 1 || s.engSpent[node] >= caps[node]) return s;
+    s.engPoints -= 1; s.engSpent[node] += 1;
+    return s;
+  },
+  applyPreset(s, name) {
+    if (s.mode !== "upgrade") return s;
+    const total = Object.values(s.engSpent).reduce((a, b) => a + b, 0) + s.engPoints;
+    const calib = Math.min(2, total), cadence = Math.min(2, total);
+    const presets = {
+      default: { calib: calib, cadence: 0, eye: 0, merge: 0 },
+      draft:   { calib: 0, cadence: cadence, eye: Math.min(1, total - cadence), merge: 0 },
+      merge:   { calib: 0, cadence: cadence, eye: 0, merge: Math.min(1, total - cadence) },
+    };
+    const p = presets[name];
+    let spent = 0;
+    for (const k in p) spent += p[k];
+    s.engSpent = p; s.engPoints = total - spent;
+    return s;
+  },
+  selectHabit(s, h) { if (s.mode === "upgrade") s.habit = h; return s; },
+  replaceGoal(s, i, target) {
+    if (s.mode !== "upgrade") return s;
+    s.goals[i] = { target, progress: 0, done: false, banked: false };
+    return s;
+  },
+};
+
+function fmtT(v) {
+  if (!isFinite(v)) return "∞";
+  if (v >= 1000) return (v / 1000).toFixed(1) + "kT";
+  if (v >= 100) return v.toFixed(0) + "T";
+  if (v >= 10) return v.toFixed(1) + "T";
+  return v.toFixed(2) + "T";
+}
+function fmtD(v) { return (Math.round(v * 100) / 100).toString(); }
+
+let S = initialState();
+let hoverKey = null;
+
+const hexPx = (q, r) => [230 + 52 * (q + r / 2), 215 + 46 * r];
+function hexPoints(cx, cy, size) {
+  const pts = [];
+  for (let i = 0; i < 6; i++) {
+    const a = Math.PI / 180 * (60 * i - 30);
+    pts.push((cx + size * Math.cos(a)).toFixed(1) + "," + (cy + size * Math.sin(a)).toFixed(1));
+  }
+  return pts.join(" ");
+}
+
+const svg = document.getElementById("board");
+function renderBoard() {
+  svg.textContent = "";
+  const NS = "http://www.w3.org/2000/svg";
+  for (const h of hexes) {
+    const key = h.q + "," + h.r;
+    const [cx, cy] = hexPx(h.q, h.r);
+    const g = document.createElementNS(NS, "g");
+    const poly = document.createElementNS(NS, "polygon");
+    poly.setAttribute("points", hexPoints(cx, cy, 24));
+    const e = enemyAt(S, h.q, h.r);
+    const occ = occupantAt(S, h.q, h.r);
+    const owned = isOwned(S, h.q, h.r);
+    poly.setAttribute("fill", owned ? "#242830" : "#1a1c20");
+    poly.setAttribute("stroke", e ? "var(--enemy)" : owned ? "#454b55" : "#2b2f36");
+    poly.setAttribute("stroke-width", e ? (e.discovered ? 2 : 1.5) : 1);
+    if (e && !e.discovered) poly.setAttribute("stroke-dasharray", "4 3");
+    if (S.carried && S.mode === "upgrade" && owned && !e && !occ) { poly.setAttribute("stroke", "var(--accent)"); poly.setAttribute("stroke-dasharray", "3 2"); }
+    g.appendChild(poly);
+
+    const label = document.createElementNS(NS, "text");
+    label.setAttribute("x", cx); label.setAttribute("y", cy + 4);
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("font-family", "Arial Narrow, sans-serif");
+    label.setAttribute("font-size", "11");
+    if (e) {
+      label.setAttribute("fill", e.defeated ? "var(--muted)" : "var(--enemy)");
+      label.textContent = e.defeated ? "✓" : e.discovered ? e.name.split(" ").map((w) => w[0]).join("") : "?";
+    } else if (occ) {
+      label.setAttribute("fill", occ.kind === "column" ? "var(--charge)" : "var(--accent)");
+      label.textContent = occ.kind === "column" ? "COL" : "ARP";
+    } else if (owned) {
+      const gen = CFG.generators.find((g) => g.q === h.q && g.r === h.r);
+      label.setAttribute("fill", gen ? "var(--charge)" : "#5b6270");
+      label.textContent = gen ? "GEN" : "·";
+    } else {
+      label.setAttribute("fill", "#3a3f47");
+      label.textContent = "+";
+    }
+    g.appendChild(label);
+
+    if (e && e.discovered && !e.defeated) {
+      const bar = document.createElementNS(NS, "rect");
+      const frac = Math.max(0, e.hp) / CFG.enemies.find((c) => c.id === e.id).hp;
+      bar.setAttribute("x", cx - 18); bar.setAttribute("y", cy + 12);
+      bar.setAttribute("width", Math.max(0, 36 * frac)); bar.setAttribute("height", 3);
+      bar.setAttribute("fill", "var(--enemy)");
+      g.appendChild(bar);
+    }
+
+    const canBuy = S.mode === "upgrade" && !owned && !e;
+    const canPlace = S.mode === "upgrade" && S.carried && owned && !e && !occ;
+    if (canBuy || canPlace) g.setAttribute("class", canPlace ? "placeable" : "buyable");
+    g.addEventListener("click", () => {
+      if (canPlace) Actions.place(S, key);
+      else if (canBuy) Actions.buyCell(S, key);
+      else Actions.select(S, key);
+      renderAll();
+    });
+    g.addEventListener("mouseenter", () => { hoverKey = key; renderReadout(); });
+    g.addEventListener("mouseleave", () => { if (hoverKey === key) { hoverKey = null; renderReadout(); } });
+    svg.appendChild(g);
+  }
+}
+
+function renderLedger() {
+  const rate = productionRate(S);
+  const claim = pendingClaim(S);
+  const rows = [
+    { k: "nous ν", v: fmtT(S.nousT), sub: "bank" },
+    { k: "rate", v: fmtT(rate) + "/min", sub: `penalties ×${penaltyFactor(S).toFixed(2)}${S.defeatedThisEra ? " · victories ×" + victoryFactor(S).toFixed(2) : ""}` },
+    { k: "era earned", v: fmtT(S.earnedT), sub: "depth " + depthOf(S.earnedT).toFixed(2) },
+    { k: "frontier", v: S.frontierT ? fmtT(S.frontierT) : "—", sub: "depth " + (S.frontierT ? depthOf(S.frontierT).toFixed(2) : "—") },
+    { k: "arete ◇", v: fmtD(S.arete), sub: S.carried ? "placing " + S.carried.kind : (eligible(S) ? "claim now " + fmtD(claim) : "entry at 1.00T earned"), cls: "accent" },
+    { k: "combat", v: S.combat.shotsFired + " fired", sub: S.combat.shotsStarved + " starved" },
+  ];
+  document.getElementById("ledger").innerHTML = rows.map((r) => `<div class="cell"><div class="k">${r.k}</div><div class="v ${r.cls || ""}">${r.v}</div><div class="v sub">${r.sub}</div></div>`).join("");
+}
+
+function renderReadout() {
+  const el = document.getElementById("readout");
+  const key = hoverKey || S.selected;
+  if (!key) { el.innerHTML = `<span class="muted">Click a hex — plus-cells buy in upgrade mode; enemy cells stay reserved for the World's occupants.</span>`; return; }
+  const [q, r] = key.split(",").map(Number);
+  const e = enemyAt(S, q, r);
+  const occ = occupantAt(S, q, r);
+  const gen = CFG.generators.find((g) => g.q === q && g.r === r);
+  const parts = [];
+  if (e) {
+    const src = CFG.enemies.find((c) => c.id === e.id);
+    if (!e.discovered) {
+      parts.push(`<span class="name">Reserved — identity concealed</span> <span class="muted">reveals at ${fmtT(Math.pow(10, src.depth))} era earned</span>`);
+    } else {
+      const fed = [...S.occupants.values()].some((o) => o.kind === "weapon" && adjacent(o.cell, key));
+      parts.push(`<span class="name" style="color:var(--enemy)">${e.name}</span>`);
+      parts.push(`<span class="enemybar"><i style="width:${Math.max(0, e.hp) / src.hp * 100}%"></i></span> <span class="v">${Math.max(0, e.hp).toFixed(1)}/${src.hp}</span>`);
+      parts.push(e.defeated ? `<span class="muted">defeated — era bonus ×${CFG.victoryBonus} until prestige</span>` : `<span class="muted">penalty ×${CFG.enemyPenalty} · damage persists this era</span>`);
+      parts.push(fed ? `<span class="muted">weapon adjacent</span>` : `<span class="warn">no weapon adjacent</span>`);
+    }
+  } else if (occ) {
+    if (occ.kind === "column") {
+      parts.push(`<span class="name" style="color:var(--charge)">Charge Column</span>`);
+      parts.push(`<span class="v">${liftAt(S, q, r).toFixed(1)}</span><span class="muted">charge/min lifted, conserved equal split to adjacent weapons</span>`);
+      if (liftAt(S, q, r) === 0) parts.push(`<span class="warn">no adjacent generator — nothing to lift</span>`);
+      if (S.mode === "upgrade") parts.push(`<button class="small" data-act="relocate" data-key="${key}">Relocate</button>`);
+    } else {
+      parts.push(`<span class="name" style="color:var(--accent)">Arpeggiator</span>`);
+      parts.push(`<span class="v">${weaponDamage(occ).toFixed(2)}</span><span class="muted">damage/attack · power ${weaponPower(occ)}</span>`);
+      parts.push(`<span class="v">${occ.stored.toFixed(1)}/${CFG.weaponStorage}</span><span class="muted">stored · 1 per attack · 1/min cap</span>`);
+      const tg = weaponTargets(S, occ);
+      parts.push(tg.length
+        ? `<span class="muted">target (${S.targetPriority === "lowhp" ? "lowest HP" : "discovery order"}): ${tg.map((t) => t.name).join(", ")}</span>`
+        : `<span class="warn">no discovered enemy adjacent</span>`);
+      if (S.mode === "upgrade") {
+        parts.push(`<button class="small" data-act="upgrade" data-key="${key}" ${S.arete < CFG.powerUpgradePrice ? "disabled" : ""}>Power +1 (${CFG.powerUpgradePrice}◇)</button>`);
+        parts.push(`<button class="small" data-act="relocate" data-key="${key}">Relocate</button>`);
+      }
+    }
+  } else if (isOwned(S, q, r)) {
+    parts.push(`<span class="name">${gen ? "Generator" : "Rig cell"}</span>`);
+    parts.push(`<span class="muted">${gen ? gen.output.toFixed(1) + " charge/min to adjacent cells" : "World slot free"}</span>`);
+  } else {
+    parts.push(`<span class="name">Unowned</span> <span class="v">${fmtT(cellPrice(S))} ν</span><span class="muted">expands both layers</span>`);
+    if (S.mode !== "upgrade") parts.push(`<span class="warn">upgrade mode only</span>`);
+    else if (S.nousT < cellPrice(S)) parts.push(`<span class="warn">cannot afford</span>`);
+  }
+  el.innerHTML = parts.join(" &nbsp; ");
+}
+
+function renderSession() {
+  const inFlow = S.mode === "flow";
+  const bStart = document.getElementById("btn-start");
+  bStart.textContent = inFlow ? "End flow" : "Start flow";
+  bStart.className = inFlow ? "lit" : "primary";
+  const bPause = document.getElementById("btn-pause");
+  bPause.textContent = S.paused ? "Resume" : "Pause";
+  bPause.disabled = !inFlow;
+  document.getElementById("btn-step1").disabled = inFlow;
+  document.getElementById("btn-step10").disabled = inFlow;
+  document.getElementById("mode-read").textContent = inFlow ? (S.paused ? "Flow — paused" : "Flow — combat and production run unattended") : "Upgrade mode — between sessions";
+  document.getElementById("habit-read").innerHTML = `${S.habit === "engineer" ? "Engineer" : "Unstructured"} <span class="muted">${inFlow ? "· locked for the session" : "· switch below"}</span>`;
+  const sp = document.getElementById("speed");
+  if (!sp.dataset.built) {
+    sp.dataset.built = "1";
+    [1, 15, 60, 300].forEach((v) => {
+      const b = document.createElement("button");
+      b.className = "small"; b.textContent = "×" + v;
+      b.addEventListener("click", () => { Actions.setSpeed(S, v); kick(); renderAll(); });
+      sp.appendChild(b);
+    });
+  }
+  [...sp.children].forEach((b) => b.classList.toggle("on", S.speed === Number(b.textContent.slice(1))));
+}
+
+function renderShop() {
+  const el = document.getElementById("shop");
+  if (S.mode === "flow") {
+    el.innerHTML = `<span class="lockmark">locked during flow</span> <span class="fine">placement, purchases, and full refunds return when the session ends</span>`;
+    return;
+  }
+  const c = S.carried;
+  el.innerHTML = `
+    <div class="shopline"><span>Arpeggiator</span><span class="desc">weapon · 1 charge per attack · 1 attack/min cap · damage P²/4</span><span class="v">${CFG.weaponPrice}◇</span><button data-act="arm-weapon" ${S.arete < CFG.weaponPrice ? "disabled" : ""} class="${c && c.kind === "weapon" ? "lit" : ""}">${c && c.kind === "weapon" ? "Placing…" : "Buy + place"}</button></div>
+    <div class="shopline"><span>Charge Column</span><span class="desc">lifts charge received at its module cell, conserved equal split to adjacent weapons</span><span class="v">${CFG.columnPrice}◇</span><button data-act="arm-column" ${S.arete < CFG.columnPrice ? "disabled" : ""} class="${c && c.kind === "column" ? "lit" : ""}">${c && c.kind === "column" ? "Placing…" : "Buy + place"}</button></div>
+    <div class="shopline"><span>Curve</span><span class="desc">claim entitlement — test knob from the simulation</span>
+      <select data-sel="curve">${Object.keys(CFG.curves).map((k) => `<option value="${k}" ${S.curve === k ? "selected" : ""}>${CFG.curves[k].label}</option>`).join("")}</select></div>
+    <div class="shopline"><span>Target priority</span><span class="desc">when several enemies qualify</span>
+      <select data-sel="priority"><option value="lowhp" ${S.targetPriority === "lowhp" ? "selected" : ""}>Lowest HP</option><option value="order" ${S.targetPriority === "order" ? "selected" : ""}>Discovery order</option></select></div>
+    <div class="shopline"><span>Full refund</span><span class="desc">every World purchase returns its ◇ between sessions</span><button data-act="refund">Refund all</button></div>`;
+  el.querySelectorAll("[data-act]").forEach((b) => b.addEventListener("click", () => {
+    if (b.dataset.act === "arm-weapon") Actions.buyArm(S, "weapon");
+    if (b.dataset.act === "arm-column") Actions.buyArm(S, "column");
+    if (b.dataset.act === "refund") Actions.refundAll(S);
+    renderAll();
+  }));
+  el.querySelectorAll("[data-sel]").forEach((sel) => sel.addEventListener("change", () => {
+    if (sel.dataset.sel === "curve") Actions.setCurve(S, sel.value);
+    if (sel.dataset.sel === "priority") Actions.setPriority(S, sel.value);
+    renderAll();
+  }));
+}
+
+function renderPrestige() {
+  const el = document.getElementById("prestige");
+  const claim = pendingClaim(S);
+  const can = S.mode === "upgrade" && eligible(S);
+  const climbs = [];
+  if (S.eraStats.prevClimbTime != null) climbs.push(`previous climb ${Math.round(S.eraStats.prevClimbTime)} min`);
+  if (S.eraStats.climbTime != null) climbs.push(`this climb ${Math.round(S.eraStats.climbTime)} min`);
+  el.innerHTML = `
+    <div class="row"><span class="k">Claim on prestige</span><span class="v">${eligible(S) ? fmtD(claim) + " ◇" : "locked — entry at 1.00T earned"}</span></div>
+    <div class="row"><span class="k">Guaranteed first claim</span><span class="v">2◇ — one Arpeggiator + one Column</span></div>
+    <div class="row"><span class="k">Enemies</span><span class="v">reset unchanged · ${Object.values(S.enemies).filter((e) => e.defeated).length} defeated this era</span></div>
+    <div class="row"><span class="k">Return climbs</span><span class="v">${climbs.length ? climbs.join(" · ") : "—"}</span></div>
+    <div class="freeplay" style="margin-top:8px">
+      <button id="btn-prestige" class="primary" ${can ? "" : "disabled"}>Prestige — bank claim</button>
+    </div>
+    <p class="fine" style="margin:8px 0 0">Zero-claim resets stay available behind confirmation. Weapons, Columns, upgrades, and cells persist; enemy damage, stored charge, and era bonuses reset.</p>`;
+  const bp = document.getElementById("btn-prestige");
+  if (bp) bp.addEventListener("click", () => {
+    if (pendingClaim(S) <= 0 && !confirm("Zero-claim reset — bank nothing and restart the era?")) return;
+    Actions.prestige(S); renderAll();
+  });
+}
+
+function renderEngineer() {
+  const el = document.getElementById("engineer");
+  const lvl = CFG.xpLevels.filter((t) => S.engXp >= t).length;
+  const next = CFG.xpLevels.find((t) => S.engXp < t);
+  const caps = { calib: 2, cadence: 2, eye: 1, merge: 1 };
+  const names = { calib: "Calibration", cadence: "Roll Cadence", eye: "Draft Eye", merge: "Merge Math" };
+  const notes = { calib: "+5% production each", cadence: "+1 roll per 15 credited min", eye: "next roll mints +1 tier", merge: "+10% merge chance" };
+  const nodes = Object.keys(names).map((n) => `
+    <div class="node"><span>${names[n]}</span><span class="ranks">${S.engSpent[n]}/${caps[n]}</span><span class="fine">${notes[n]}</span>
+    <button class="small" data-node="${n}" ${S.mode === "upgrade" && S.engPoints >= 1 && S.engSpent[n] < caps[n] ? "" : "disabled"}>+1</button></div>`).join("");
+  el.innerHTML = `
+    <div class="row"><span class="k">Class experience</span><span class="v">${Math.round(S.engXp)} credited min${next ? " · next level at " + next : " · max"}</span></div>
+    <div class="row"><span class="k">Level · points</span><span class="v">${lvl} · ${S.engPoints} unspent</span></div>
+    ${nodes}
+    <div class="presetrow">
+      <button class="small" data-preset="default" ${S.mode === "upgrade" ? "" : "disabled"}>Preset: Default</button>
+      <button class="small" data-preset="draft" ${S.mode === "upgrade" ? "" : "disabled"}>Preset: Draft control</button>
+      <button class="small" data-preset="merge" ${S.mode === "upgrade" ? "" : "disabled"}>Preset: Merge progression</button>
+    </div>
+    <hr>
+    <div class="row"><span class="k">Habit</span>
+      <span><button class="small ${S.habit === "engineer" ? "lit" : ""}" data-habit="engineer" ${S.mode === "upgrade" ? "" : "disabled"}>Engineer</button>
+      <button class="small ${S.habit === "unstructured" ? "lit" : ""}" data-habit="unstructured" ${S.mode === "upgrade" ? "" : "disabled"}>Unstructured</button></span></div>
+    <p class="fine" style="margin:6px 0 0">Points reassign freely between sessions; earned levels stay with the habit. Unstructured sessions run production and charge forging with no class experience and no goal progress.</p>`;
+  el.querySelectorAll("[data-node]").forEach((b) => b.addEventListener("click", () => { Actions.assignPoint(S, b.dataset.node); renderAll(); }));
+  el.querySelectorAll("[data-preset]").forEach((b) => b.addEventListener("click", () => { Actions.applyPreset(S, b.dataset.preset); renderAll(); }));
+  el.querySelectorAll("[data-habit]").forEach((b) => b.addEventListener("click", () => { Actions.selectHabit(S, b.dataset.habit); renderAll(); }));
+}
+
+function renderGoals() {
+  const el = document.getElementById("goals");
+  const rows = S.goals.map((g, i) => {
+    const frac = Math.min(1, g.progress / g.target);
+    return `<div class="goal ${g.done ? "done" : ""}">
+      <span class="v" style="min-width:34px">${g.target}m</span>
+      <span class="bar"><i style="width:${frac * 100}%"></i></span>
+      ${S.mode === "upgrade"
+        ? `<select data-goal="${i}"><option value="">replace…</option><option value="10">10m</option><option value="30">30m</option><option value="60">60m</option></select>`
+        : `<span class="muted">${Math.round(g.progress)}/${g.target}</span>`}
+    </div>`;
+  }).join("");
+  el.innerHTML = `${rows}
+    <div class="row" style="margin-top:6px"><span class="k">Fuel budget</span><span class="v">${S.goalFuelUsed.toFixed(1)} used of ${S.goalAllowance.toFixed(1)} allowed this era</span></div>
+    ${S.goalFuelCapped > 0 ? `<div class="row"><span class="k">Capped</span><span class="v warn">${S.goalFuelCapped.toFixed(1)} wasted — replacing goals cannot raise the total</span></div>` : ""}
+    <div class="row"><span class="k">Banked rolls</span><span class="v">${S.rolls}</span></div>
+    <p class="fine" style="margin:6px 0 0">Only credited flow with the habit selected advances goals; a completion banks bounded fuel plus one roll within the per-minute budget.</p>`;
+  el.querySelectorAll("[data-goal]").forEach((sel) => sel.addEventListener("change", () => {
+    if (sel.value) { Actions.replaceGoal(S, Number(sel.dataset.goal), Number(sel.value)); renderAll(); }
+  }));
+}
+
+function renderApprox() {
+  document.getElementById("approx").innerHTML = `
+    <p style="margin:0 0 6px">Module-layer production is the simulation's retained-rig proxy ${CFG.rigBase}·e^${CFG.rigGrowth}·t — authored, not the real board formula; cells bought here host World hexes only.</p>
+    <p style="margin:0 0 6px">Combat ticks in whole credited minutes (the simulation integrated time-averaged); no provisional-time rollback, breathers, or session-boundary splitting.</p>
+    <p style="margin:0 0 6px">Octave rows are abstracted to one band; reachability is adjacency only, no path-cost wallet.</p>
+    <p style="margin:0 0 6px">Three authored encounters of the simulation's nine; module rolls and goal fuel appear as counters, not the real draft.</p>`;
+}
+
+function renderEvents() {
+  document.getElementById("eventline").textContent = S.events.length ? S.events[0] : "No events yet — start flow.";
+}
+
+const SCENARIOS = [
+  {
+    name: "First reset",
+    intro: "Reach 1.00T earned, take the guaranteed 2◇, buy the starter Arpeggiator and Charge Column, prestige, then compare the return climb against the first era's.",
+    steps: [
+      { label: "Start flow", run: () => { Actions.startSession(S); } },
+      { label: "Run +25 min — the Standing Wave reveals at 1.00T (×0.8 penalty)", run: () => { advanceTime(S, 25); Actions.endSession(S); } },
+      { label: "Prestige — bank the guaranteed 2◇ claim", run: () => { Actions.prestige(S); } },
+      { label: "Buy Arpeggiator (1◇)", run: () => { Actions.buyArm(S, "weapon"); } },
+      { label: "Place it on the generator cell (1,−1) — adjacent to the reserved enemy", run: () => { Actions.place(S, "1,-1"); } },
+      { label: "Buy Charge Column (1◇)", run: () => { Actions.buyArm(S, "column"); } },
+      { label: "Place it at (1,0) — lifts 2/min, feeds the weapon", run: () => { Actions.place(S, "1,0"); } },
+      { label: "Start flow again", run: () => { Actions.startSession(S); } },
+      { label: "Run +25 min — watch Return climbs in the Prestige panel and the enemy bar fall", run: () => { advanceTime(S, 25); Actions.endSession(S); } },
+    ],
+  },
+  {
+    name: "Placement matters",
+    intro: "Same budget, two weapons. One column cell lifts 2/min (touching both generators), another lifts 1 and feeds only one weapon. Placement decides the force's uptime.",
+    steps: [
+      { label: "Set up: 12T bank, 6◇, enemy revealed", run: () => { S = fundedState({ arete: 6, nous: 12 }); S.enemies["2,-1"].hp = 60; } },
+      { label: "Buy the cell at (2,0)", run: () => { Actions.buyCell(S, "2,0"); } },
+      { label: "Weapon at (1,−1)", run: () => { Actions.buyArm(S, "weapon"); Actions.place(S, "1,-1"); } },
+      { label: "Weapon at (2,0)", run: () => { Actions.buyArm(S, "weapon"); Actions.place(S, "2,0"); } },
+      { label: "Column at (0,−1) — lifts 1/min, adjacent to only one weapon", run: () => { Actions.buyArm(S, "column"); Actions.place(S, "0,-1"); } },
+      { label: "Run +20 min — one weapon fires, the other starves", run: () => { Actions.startSession(S); advanceTime(S, 20); Actions.endSession(S); } },
+      { label: "Relocate the column to (1,0) — lifts 2/min, feeds both", run: () => { Actions.relocateArm(S, "0,-1"); Actions.place(S, "1,0"); } },
+      { label: "Run +20 min — full cadence on both", run: () => { Actions.startSession(S); advanceTime(S, 20); Actions.endSession(S); } },
+    ],
+  },
+  {
+    name: "Push or reset",
+    intro: "At 12T with the first enemy down: keep pushing into the second penalty and a bigger claim, or reset now. Switch curves to see the choice move. There is no right answer on paper — that is the test.",
+    steps: [
+      { label: "Set up: 12T earned, Standing Wave defeated, frontier 1T", run: () => { S = midPushState(); } },
+      { label: "Run +20 min — Hiss Field discovers, penalties stack to ×0.64", run: () => { Actions.startSession(S); advanceTime(S, 20); Actions.endSession(S); } },
+      { label: "Push +40 min — the claim grows, production crawls", run: () => { advanceTime(S, 40); Actions.endSession(S); } },
+      { label: "Or reset instead — bank the claim, re-climb with forces intact", run: () => { Actions.prestige(S); } },
+    ],
+  },
+  {
+    name: "Starved and unreachable",
+    intro: "Two failure shapes the simulation could not see: a weapon with no charge reaching it, and an enemy no weapon can reach until cells are bought.",
+    steps: [
+      { label: "Set up: 20T bank, 4◇, enemy revealed", run: () => { S = fundedState({ arete: 4, nous: 20 }); } },
+      { label: "Weapon at (1,0) — adjacent to the enemy, no column anywhere", run: () => { Actions.buyArm(S, "weapon"); Actions.place(S, "1,0"); } },
+      { label: "Run +10 min — shots starve, the enemy is untouched", run: () => { Actions.startSession(S); advanceTime(S, 10); Actions.endSession(S); } },
+      { label: "Inspect Detuned Choir (−3,1) — no weapon can sit adjacent yet", run: () => { Actions.select(S, "-3,1"); } },
+      { label: "Buy cells toward it: (−2,0), (−2,1), (−3,0)", run: () => { ["-2,0","-2,1","-3,0"].forEach((k) => { if (S.nousT >= cellPrice(S)) Actions.buyCell(S, k); }); } },
+      { label: "Weapon at (−3,0) — the choir is reachable now", run: () => { Actions.buyArm(S, "weapon"); Actions.place(S, "-3,0"); } },
+    ],
+  },
+  {
+    name: "Refund recovery",
+    intro: "Misbuy on purpose, then take the full between-session refund and rebuild. The budget must return exactly.",
+    steps: [
+      { label: "Set up: 12T bank, 6◇", run: () => { S = fundedState({ arete: 6, nous: 12 }); } },
+      { label: "Spend badly: three weapons, one column, no plan", run: () => { ["0,1","1,-2","2,0"].forEach((k) => { if (!isOwned(S, ...k.split(",").map(Number))) Actions.buyCell(S, k); Actions.buyArm(S, "weapon"); Actions.place(S, k); }); Actions.buyArm(S, "column"); Actions.place(S, "-1,1"); } },
+      { label: "Refund all — every ◇ returns", run: () => { Actions.refundAll(S); } },
+      { label: "Rebuild: weapon at (1,−1), column at (1,0)", run: () => { Actions.buyArm(S, "weapon"); Actions.place(S, "1,-1"); Actions.buyArm(S, "column"); Actions.place(S, "1,0"); } },
+    ],
+  },
+  {
+    name: "Engineer and goals",
+    intro: "Credited flow with Engineer selected earns class experience; presets reassign points freely between sessions; goal completions bank bounded fuel; unstructured freezes it all.",
+    steps: [
+      { label: "Start flow as Engineer", run: () => { Actions.startSession(S); } },
+      { label: "Run +16 min — level up, a point lands", run: () => { advanceTime(S, 16); Actions.endSession(S); } },
+      { label: "Assign the point to Calibration", run: () => { Actions.assignPoint(S, "calib"); } },
+      { label: "Apply preset: Draft control — points reassign, level stays", run: () => { Actions.applyPreset(S, "draft"); } },
+      { label: "Replace goal 2 with a 10-minute target", run: () => { Actions.replaceGoal(S, 1, 10); } },
+      { label: "Switch to Unstructured", run: () => { Actions.selectHabit(S, "unstructured"); } },
+      { label: "Run +10 min — experience and goal progress freeze, production runs", run: () => { Actions.startSession(S); advanceTime(S, 10); Actions.endSession(S); Actions.selectHabit(S, "engineer"); } },
+    ],
+  },
+];
+let scenarioIdx = 0, stepIdx = 0;
+
+function renderWalkthrough() {
+  const tabs = document.getElementById("wtabs");
+  if (!tabs.dataset.built) {
+    tabs.dataset.built = "1";
+    SCENARIOS.forEach((sc, i) => {
+      const b = document.createElement("button");
+      b.textContent = sc.name;
+      b.addEventListener("click", () => { scenarioIdx = i; stepIdx = 0; S = initialState(); renderAll(); });
+      tabs.appendChild(b);
+    });
+  }
+  [...tabs.children].forEach((b, i) => b.classList.toggle("on", i === scenarioIdx));
+  const sc = SCENARIOS[scenarioIdx];
+  const rows = sc.steps.map((st, i) => `
+    <div class="step ${i < stepIdx ? "done" : ""}">
+      <span class="n">${i + 1}</span>
+      <button class="small" data-step="${i}" ${i === stepIdx ? "" : "disabled"}>${st.label}</button>
+    </div>`).join("");
+  document.getElementById("wscenario").innerHTML = `<p>${sc.intro}</p>${rows}
+    <button class="small" id="wreset" style="margin-top:8px">Reset scenario</button>`;
+  document.querySelectorAll("[data-step]").forEach((b) => b.addEventListener("click", () => {
+    const i = Number(b.dataset.step);
+    sc.steps[i].run();
+    stepIdx = i + 1;
+    kick();
+    renderAll();
+  }));
+  document.getElementById("wreset").addEventListener("click", () => { stepIdx = 0; S = initialState(); renderAll(); });
+}
+
+function renderAll() {
+  renderLedger(); renderBoard(); renderReadout(); renderSession();
+  renderShop(); renderPrestige(); renderEngineer(); renderGoals(); renderEvents(); renderApprox(); renderWalkthrough();
+}
+
+document.getElementById("btn-start").addEventListener("click", () => {
+  if (S.mode === "flow") Actions.endSession(S); else Actions.startSession(S);
+  kick();
+  renderAll();
+});
+document.getElementById("btn-pause").addEventListener("click", () => { Actions.setPaused(S, !S.paused); kick(); renderAll(); });
+document.getElementById("btn-step1").addEventListener("click", () => { advanceTime(S, 1); renderAll(); });
+document.getElementById("btn-step10").addEventListener("click", () => { advanceTime(S, 10); renderAll(); });
+document.getElementById("readout").addEventListener("click", (ev) => {
+  const b = ev.target.closest("[data-act]");
+  if (!b) return;
+  if (b.dataset.act === "upgrade") Actions.upgradeWeapon(S, b.dataset.key);
+  if (b.dataset.act === "relocate") Actions.relocateArm(S, b.dataset.key);
+  renderAll();
+});
+
+let acc = 0, last = null, rafId = null;
+function tick(now) {
+  if (last != null) {
+    const dt = Math.min(0.1, (now - last) / 1000);
+    acc += dt * S.speed;
+    if (acc >= 1) {
+      const whole = Math.floor(acc); acc -= whole;
+      advanceTime(S, whole);
+      renderAll();
+    }
+  }
+  last = now;
+  if (S.mode === "flow" && !S.paused) rafId = requestAnimationFrame(tick);
+  else { rafId = null; last = null; acc = 0; }
+}
+function kick() {
+  if (rafId == null && S.mode === "flow" && !S.paused) rafId = requestAnimationFrame(tick);
+}
+
+renderAll();
+</script>
+</body>
+</html>
