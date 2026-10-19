@@ -1,6 +1,6 @@
 import { amplifierGainOf, tierPowerOf } from "./module-strength";
 import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isOscillatorType, isVoiceType, typeRarityOf } from "./constants";
-import { baseProductionOf, boosterResponseOf, chargeResponseOf, chordResponseOf, usesChargeConversion, usesChordConversion, productionClockFactorOf, temporalPhaseKeyOf } from "./profiles";
+import { baseProductionOf, boosterResponseOf, breatherResponseOf, chargeResponseOf, chordResponseOf, usesChargeConversion, usesChordConversion, productionClockFactorOf, temporalPhaseKeyOf } from "./profiles";
 import { analyzeChords, hypotheticalBoardFor, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
 import { allocateChords, DEFAULT_ALLOCATION_BUDGET, type AllocationBudget, type AllocationRead, type AllocationVoiceParams } from "./allocation";
 import { capacityOf } from "./capacity";
@@ -19,11 +19,16 @@ export function chargedFactor(strength: number): number {
 
 // The shared session clock (issue #372): the running session's elapsed
 // active focus time — every flow second, pauses excluded — the one clock
-// every temporal profile reads. Null session (upgrade mode, the preview
-// basis): 0, which is also where every session starts, so previews and
-// commits agree on the phase a fresh session opens at.
+// every temporal profile reads. A breather advances the departed session's
+// clock (docs/breather-spec.md §1: breather seconds keep the Afterglow
+// warm and the Pulsewell cycling — lastSessionClock + breather elapsed).
+// No session and no breather (upgrade mode, the preview basis): 0, which
+// is also where every session starts, so previews and commits agree on
+// the phase a fresh session opens at.
 export function sessionClockOf(state: GameState): number {
-  return state.session?.elapsed ?? 0;
+  if (state.session) return state.session.elapsed;
+  if (state.breather) return state.lastSessionClock + state.breather.elapsed;
+  return 0;
 }
 
 // The Blaster's conversion curve (ADR-0048): the charged-empowerment
@@ -246,9 +251,12 @@ export function chargeDelivered(snapshot: RateSnapshot): boolean {
   return false;
 }
 
-// Charge exists only while flow is live: board production is session-bound.
+// The board is live — charge flows, generators emit, forge meters turn —
+// in flow and through a breather alike (docs/breather-spec.md §1): the
+// breather is production time, never practice time. Practice accounting
+// never reads this flag; the advance walks gate it on the mode directly.
 export function flowLive(state: GameState): boolean {
-  return state.mode === "flow";
+  return state.mode === "flow" || state.mode === "breather";
 }
 
 // Raw generator output into one cell: the sum of adjacent deployed
@@ -767,8 +775,14 @@ export function computeRates(
       BALANCE.synthRate * baseProductionOf(module.type) * productionClockFactorOf(module.type, clock) * power * (silent ? 0 : chordFactor) * (1 + factors.synthTerm);
     // The silent voice sings nothing of its own: its factor is display
     // only — the muted participant's read. The producers' value carries
-    // the whole chain.
-    const value = silent ? 0 : base * (1 + localBonus) * chargeTerm * achievementBoost * discoveryBoost;
+    // the whole chain. The breather response (docs/breather-spec.md §3)
+    // rides the final value alone — the voice's authored multiplier while
+    // a breather runs, every leg included, exactly ×1 the rest of the
+    // time — so the legs stay whole and the breakdown multiplies out (the
+    // conversion types' precedent): the response reads as empowerment on
+    // its own terms.
+    const breatherResponse = state.mode === "breather" ? breatherResponseOf(module.type) : 1;
+    const value = silent ? 0 : base * (1 + localBonus) * chargeTerm * achievementBoost * discoveryBoost * breatherResponse;
     if (!silent) {
       synthsLeg += base;
       boosters += base * localBonus;
@@ -928,6 +942,11 @@ function allocationFingerprint(state: GameState): string {
   // never the raw clock — keeps consecutive ticks on one solve while a
   // boundary always re-solves.
   parts.push(temporalPhaseKeyOf(sessionClockOf(state)));
+  // The mode (docs/breather-spec.md §3): the breather response changes the
+  // pass's output with the mode alone — the board can stand still across a
+  // flow → breather boundary, and a stale solve must never survive it.
+  // The board-live basis itself rides the memo key's flow leg.
+  parts.push(`m:${state.mode}`);
   return parts.join("|");
 }
 

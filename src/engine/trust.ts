@@ -1,5 +1,5 @@
 import { DRIFT_NOISE_SECONDS, EPS, RECONCILIATION_FLOOR_SECONDS } from "./constants";
-import { advance, earnNous, sumResults } from "./advance";
+import { advance, advanceBreather, earnNous, sumResults } from "./advance";
 import { accrueLivePractice } from "./habits";
 import { accrueGoalProgress } from "./goals";
 import { addFlowProgress, type Rng } from "./rolls";
@@ -38,6 +38,27 @@ const ZERO: AdvanceResult = { nousEarned: 0, rollsBanked: 0, rollsFlow: 0, rolls
 
 export function poolOutstanding(state: GameState): boolean {
   return (state.session?.accounting.poolSeconds ?? 0) > EPS;
+}
+
+export interface BreatherGapResult {
+  result: AdvanceResult;
+  // True when the gap reached the allowance: the phase completes itself at
+  // the deadline, whatever the player's presence (docs/breather-spec.md
+  // §4) — the caller ends it.
+  completed: boolean;
+}
+
+// The breather's boundary (docs/breather-spec.md §4): breather time is
+// pre-trusted — presence and the dual-clock drift classify nothing, since
+// the phase's whole design is sanctioned absence. Every wall second up to
+// the remaining allowance is breather production; a gap that reaches the
+// deadline completes the phase at that deadline, and seconds past it
+// produce nothing (the board sits upgrade-quiet from there).
+export function applyBreatherGap(state: GameState, seconds: number, rng: Rng = Math.random): BreatherGapResult {
+  if (state.mode !== "breather" || seconds <= EPS || !state.breather) return { result: ZERO, completed: false };
+  const result = advanceBreather(state, seconds, rng);
+  const completed = state.breather.elapsed >= state.breather.allowanceSeconds - EPS;
+  return { result, completed };
 }
 
 // One boundary's gap, classified and applied. `seconds` is the wall-clock

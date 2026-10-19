@@ -1,4 +1,4 @@
-import { BALANCE, CATEGORY_OF, EPS, isOscillatorType, NEXT_RARITY, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, ROLL_POOL, POOL_JOIN_TYPE, SHELF_MODULE, SHELF_TYPES, typeRarityOf } from "./constants";
+import { BALANCE, BREATHER, CATEGORY_OF, EPS, isOscillatorType, NEXT_RARITY, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, ROLL_POOL, POOL_JOIN_TYPE, SHELF_MODULE, SHELF_TYPES, typeRarityOf } from "./constants";
 import { claimOf, horizonReached } from "./accumulator";
 import { rowUnlockCost, unlockableRows, unlockedMergeCap, mergeCapIncreaseCost } from "./catalog";
 import { nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "./capacity";
@@ -123,9 +123,22 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
   const target = session?.target ?? null;
   const targetHit = plannedTargetHit(credited, target);
   state.mode = "upgrade";
+  // The departed session's final clock (docs/breather-spec.md §1): the
+  // temporal base a following breather advances — a breather keeps the
+  // Afterglow warm and the Pulsewell cycling from where the session left
+  // them. Dead in upgrade mode; reset by the next session start.
+  state.lastSessionClock = session?.elapsed ?? 0;
   state.session = null;
   state.sessionsCompleted++;
   if (targetHit) state.plannedSessionsCompleted++;
+  // The breather allowance (docs/breather-spec.md §2): credited practice
+  // seconds ÷ 5, gated at ten credited minutes, capped at ten minutes,
+  // floored to the whole minute. Captured onto the summary — the offer
+  // exists only while that summary stands unseen, and a decline expires it.
+  const breatherAllowance =
+    credited >= BREATHER.minCreditedSeconds
+      ? Math.floor(Math.min(credited / BREATHER.creditDivisor, BREATHER.capSeconds) / 60) * 60
+      : 0;
   // The banked-earning seam (§2.3, ADR-0012; basis amended by ADR-0019,
   // generalized by issue #371): ending any session banks every owned
   // generator's focus earning — its authored focus coefficient per credited
@@ -165,6 +178,9 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
     reflection: null,
     goalsAdvanced: Object.entries(session?.goalSeconds ?? {}).map(([goalId, seconds]) => ({ goalId, seconds })),
     achievements,
+    // No breather followed at write time — the line fills if one is taken
+    // (docs/breather-spec.md §5).
+    breather: null,
   });
   // The loud summary (§5.7): every exit path lands here, so the modal's
   // rows are captured from the session itself — earned, practice time, rate
@@ -204,8 +220,47 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
     // The reflection (§8) records from the summary itself, so it starts
     // absent here.
     reflection: null,
+    // The breather offer (docs/breather-spec.md §2): rides beside dismissal
+    // whenever the session minted an allowance.
+    breatherAllowance,
     seen: false,
   };
+  return ok;
+}
+
+// The breather's start (docs/breather-spec.md §1–2, ADR-0073): from the
+// summary that minted the allowance, before its dismissal — a dismissed
+// summary is a declined breather, and the allowance expires with it. One
+// breather per session; nothing starts while a session or breather is live.
+export function startBreather(state: GameState, now: number = 0): ActionResult {
+  if (state.mode === "breather") return fail("A breather is already running.");
+  if (state.mode !== "upgrade") return fail("A session is already running.");
+  const summary = state.summary;
+  if (!summary) return fail("No session summary to breathe from.");
+  if (summary.seen) return fail("The summary is closed — the breather offer expired.");
+  if (!(summary.breatherAllowance > 0)) return fail("This session minted no breather.");
+  summary.seen = true;
+  state.mode = "breather";
+  state.breather = { startedAt: now, allowanceSeconds: summary.breatherAllowance, elapsed: 0 };
+  return ok;
+}
+
+// The breather's one end (docs/breather-spec.md §4–6): the deadline's
+// auto-complete and the early exit land here identically — no penalty,
+// nothing prorated, the bonus was the response-scaled rate while it ran.
+// Completion is the allowance run to zero; an early exit never increments
+// the completed count. Both endings bank the breather seconds lived, and
+// the factual line lands on the session record the breather followed.
+export function endBreather(state: GameState): ActionResult {
+  if (state.mode !== "breather" || !state.breather) return fail("No breather is running.");
+  const breather = state.breather;
+  const completed = breather.elapsed >= breather.allowanceSeconds - EPS;
+  state.breatherSeconds += breather.elapsed;
+  if (completed) state.breathersCompleted++;
+  const record = state.sessionRecords[state.sessionRecords.length - 1];
+  if (record) record.breather = { seconds: breather.elapsed, completed };
+  state.mode = "upgrade";
+  state.breather = null;
   return ok;
 }
 

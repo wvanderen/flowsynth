@@ -384,6 +384,7 @@ describe("the session clock", () => {
       rollsForge: 0,
       rollsMutator: 0,
       reflection: null,
+      breatherAllowance: 0,
       seen: false,
     };
     app.ui.modal = "summary";
@@ -430,6 +431,7 @@ describe("the ruled folio surfaces (#279)", () => {
       rollsForge: 0,
       rollsMutator: 0,
       reflection: null,
+      breatherAllowance: 0,
       seen: false,
     };
     app.ui.modal = "summary";
@@ -1117,5 +1119,107 @@ describe("cross-tab save conflicts (#128)", () => {
     const fresh = boot();
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).version).toBe(SAVE_VERSION);
     expect(fresh.state.mode).toBe("upgrade");
+  });
+});
+
+describe("the breather (docs/breather-spec.md)", () => {
+  function runMintingSession(app: App, seconds: number): void {
+    startSession(app.state, null);
+    advance(app.state, seconds);
+    app.endFlow();
+  }
+
+  it("the summary offers the minted breather; taking it moves the console into the breather", () => {
+    runMintingSession(app, 1500);
+    expect(app.ui.modal).toBe("summary");
+    const offer = document.getElementById("summary-breather")!;
+    expect(offer.textContent).toBe("Take a 5 min breather");
+    offer.click();
+    expect(app.state.mode).toBe("breather");
+    expect(app.state.breather!.allowanceSeconds).toBe(300);
+    expect(app.ui.modal).toBeNull();
+    // The console reads the breather: the main switch is the early exit,
+    // no pause stands beside it, the caption names the phase.
+    expect(document.getElementById("pause-flow")).toBeNull();
+    const mainSwitch = document.getElementById("flow-switch")!;
+    expect(mainSwitch.getAttribute("aria-label")).toBe("End breather");
+    expect(document.getElementById("session-caption")!.textContent).toContain("Breather");
+    // The early exit lands in upgrade mode — the completed count untouched.
+    mainSwitch.click();
+    expect(app.state.mode).toBe("upgrade");
+    expect(app.state.breathersCompleted).toBe(0);
+    const record = app.state.sessionRecords[app.state.sessionRecords.length - 1]!;
+    expect(record.breather!.completed).toBe(false);
+  });
+
+  it("early exit reconciles the wall gap since the last tick", () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+    try {
+      runMintingSession(app, 1500);
+      app.takeBreather();
+      const balance = app.state.nous;
+      clock.mockReturnValue(1_037_500);
+      app.endBreather();
+      expect(app.state.breatherSeconds).toBeCloseTo(37.5);
+      expect(app.state.nous).toBeGreaterThan(balance);
+      expect(app.state.breathersCompleted).toBe(0);
+      const revived = boot();
+      expect(revived.ui.modal).toBeNull();
+      expect(document.getElementById("summary-breather")).toBeNull();
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("an exit after a delayed deadline completes and signals exactly once", () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+    try {
+      const { app, fired } = stubChannels();
+      runMintingSession(app, 1500);
+      app.takeBreather();
+      clock.mockReturnValue(1_400_000);
+      app.endBreather();
+      expect(app.state.breatherSeconds).toBe(300);
+      expect(app.state.breathersCompleted).toBe(1);
+      expect(fired.chimes).toBe(1);
+      expect(fired.notifications).toBe(1);
+      app.endBreather();
+      expect(fired.chimes).toBe(1);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("a reload past the deadline preserves the completion notice and consumes the offer", () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+    try {
+      runMintingSession(app, 1500);
+      app.takeBreather();
+      clock.mockReturnValue(1_400_000);
+      const { fired, channels } = makeRecorder();
+      const revived = boot(channels);
+      expect(revived.state.mode).toBe("upgrade");
+      expect(revived.state.breathersCompleted).toBe(1);
+      expect(revived.ui.modal).toBeNull();
+      expect(document.getElementById("status")!.textContent).toBe("Breather complete — welcome back.");
+      expect(fired.notifications).toBe(1);
+      boot(channels);
+      expect(fired.notifications).toBe(1);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("declining expires the offer: the dismissal is the decline", () => {
+    runMintingSession(app, 1500);
+    document.getElementById("summary-continue")!.click();
+    expect(app.state.summary!.seen).toBe(true);
+    expect(app.state.mode).toBe("upgrade");
+  });
+
+  it("no offer rides a session below the credited gate", () => {
+    runMintingSession(app, 300);
+    expect(app.ui.modal).toBe("summary");
+    expect(document.getElementById("summary-breather")).toBeNull();
   });
 });

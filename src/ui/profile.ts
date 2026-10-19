@@ -24,6 +24,7 @@ const SHORT_AXIS: Record<ProfileAxisRead["id"], string> = {
   booster: "boost",
   chord: "chord",
   charge: "charge",
+  breather: "breath",
 };
 
 // The chip's figure: the authored multiplier with the grade band beside it

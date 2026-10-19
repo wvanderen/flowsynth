@@ -331,6 +331,11 @@ export interface SessionSummary {
   // The reflection (§8): records as its fields are touched, survives a
   // reload with the summary, absent (null) when untouched.
   reflection: SessionReflection | null;
+  // The breather offer (docs/breather-spec.md §2): the allowance this
+  // session's end minted, in seconds — 0 when the session sat below the
+  // credited gate or the save predates the offer. The offer exists only
+  // while this summary stands unseen; a dismissal is a declined breather.
+  breatherAllowance: number;
   seen: boolean;
 }
 
@@ -369,6 +374,11 @@ export interface SessionRecord {
   reflection: SessionReflection | null;
   goalsAdvanced: GoalAdvanceSnapshot[];
   achievements: string[];
+  // The breather that followed this session (docs/breather-spec.md §5):
+  // one factual line — duration taken, and whether the allowance ran to
+  // zero or the player ended it early. Null when no breather was taken;
+  // lenient-defaulted to null at load.
+  breather: BreatherTaken | null;
 }
 
 export interface NoteEntry {
@@ -441,7 +451,29 @@ export interface Goal {
   createdAt: number;
 }
 
-export type Mode = "upgrade" | "flow" | "paused";
+export type Mode = "upgrade" | "flow" | "paused" | "breather";
+
+// The running breather (docs/breather-spec.md §1, ADR-0073): the timed
+// break phase between a closed flow session and upgrade mode. The clock is
+// the wall clock — the phase self-ends at its allowance whatever the
+// player's presence — while `elapsed` advances exactly like a session's,
+// so a discard/reload reconciles from the saved figure. `startedAt` stamps
+// the start gesture (epoch ms). The temporal clock reads
+// lastSessionClock + elapsed: breather seconds advance the departed
+// session's clock (spec §1), never a private timer.
+export interface BreatherState {
+  startedAt: number;
+  allowanceSeconds: number;
+  elapsed: number;
+}
+
+// The breather facts (docs/breather-spec.md §6): lifetime completed
+// breathers live on GameState; this is the record line's shape — what the
+// breather that followed a session took.
+export interface BreatherTaken {
+  seconds: number;
+  completed: boolean;
+}
 
 // Rolls banked during a session, attributed by source (ADR-0041): the flow
 // meter's practice crossings and the Forge branches' charge crossings. The
@@ -620,6 +652,20 @@ export interface GameState {
   // The last session's loud summary (§5.7): set at every session end,
   // dismissed once by the player, replaced by the next session's end.
   summary: SessionSummary | null;
+  // The running breather (docs/breather-spec.md §1): non-null only in
+  // breather mode. Lenient-defaulted to null at load.
+  breather: BreatherState | null;
+  // The departed session's final clock (docs/breather-spec.md §1): stamped
+  // at every session end, it is the temporal base a following breather
+  // advances — breather seconds keep the Afterglow warm and the Pulsewell
+  // cycling. Never read outside breather mode. Lenient-defaulted to 0.
+  lastSessionClock: number;
+  // The breather facts (docs/breather-spec.md §6): lifetime completed
+  // breathers — the allowance run to zero; early exits never count — and
+  // lifetime breather seconds lived, early exits included. Persist through
+  // prestige with the life record; lenient-defaulted to 0 at load.
+  breathersCompleted: number;
+  breatherSeconds: number;
   nextId: number;
 }
 

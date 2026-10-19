@@ -376,7 +376,7 @@ describe("authorship and disclosure", () => {
 
   it("the Sideband's charge axis takes the absent mark — the replacement is the disclosure", () => {
     const axes = profileAxesOf("sideband");
-    expect(axes.map((axis) => `${axis.id}:${axis.grade}`)).toEqual(["base:D", "booster:B", "chord:S", "charge:—"]);
+    expect(axes.map((axis) => `${axis.id}:${axis.grade}`)).toEqual(["base:D", "booster:B", "chord:S", "charge:—", "breather:A"]);
     const charge = axes.find((axis) => axis.id === "charge")!;
     expect(charge.coefficient).toBeNull();
     expect(axes.find((axis) => axis.id === "chord")!.coefficient).toBe(OSCILLATOR_PROFILES.sideband.chord);

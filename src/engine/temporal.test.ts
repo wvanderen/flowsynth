@@ -397,7 +397,7 @@ describe("the temporal profiles on the authoritative seams (#372)", () => {
   it("timing is described directly — axes stay graded, the curve takes no letter", () => {
     // The Afterglow's comparable axes grade from the same bands as every
     // profile; the warmup is not among them.
-    expect(profileAxesOf("afterglow").map((axis) => axis.grade).join("")).toBe("ABBB");
+    expect(profileAxesOf("afterglow").map((axis) => axis.grade).join("")).toBe("ABBBA");
     expect(profileAxesOf("pulsewell")).toEqual([]);
     expect(temporalTimingOf("afterglow")?.label).toBe("Warm-up");
     expect(temporalTimingOf("afterglow")?.timing).toBe("×0.3 open · ×0.8 from 2 min · ×1.25 sustained from 5 min");

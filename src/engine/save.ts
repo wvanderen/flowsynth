@@ -3,7 +3,7 @@ import { normalizeHabitBuilds } from "./builds";
 import { normalizeGoals } from "./goals";
 import { modulePower } from "./economy";
 import { BALANCE, SAVE_VERSION } from "./constants";
-import type { GameState, SpecialDraftKind } from "./types";
+import type { BreatherState, GameState, SpecialDraftKind } from "./types";
 
 export interface SaveFile {
   app: "flowsynth";
@@ -69,7 +69,7 @@ export function deserialize(text: string): LoadResult {
   const migrating = parsed.version === SAVE_VERSION - 1;
   const raw = parsed.state as Partial<GameState> & Record<string, unknown>;
   const fresh = createInitialState();
-  if (typeof raw.mode !== "string" || !["upgrade", "flow", "paused"].includes(raw.mode)) {
+  if (typeof raw.mode !== "string" || !["upgrade", "flow", "paused", "breather"].includes(raw.mode)) {
     return { error: "The save data has an unknown session mode." };
   }
   const merged: GameState = { ...fresh, ...raw } as GameState;
@@ -186,6 +186,54 @@ export function deserialize(text: string): LoadResult {
   // corrupt means never dismissed — the save is still owed its one hint.
   if (typeof raw.arcCardSeen !== "boolean") {
     merged.arcCardSeen = false;
+  }
+  // The breather (docs/breather-spec.md, ADR-0073) lenient-defaults the
+  // same way: absent facts read as none banked, and a breather mode saved
+  // without a coherent breather state cannot stand — it lands in upgrade
+  // mode beside the summary that offered it, exactly where a declined
+  // breather sits. The elapsed clamps at the allowance: a save written
+  // after the deadline can never resume a phase already over.
+  if (typeof raw.lastSessionClock !== "number" || !Number.isFinite(raw.lastSessionClock) || raw.lastSessionClock < 0) {
+    merged.lastSessionClock = 0;
+  }
+  merged.breathersCompleted =
+    typeof raw.breathersCompleted === "number" && Number.isFinite(raw.breathersCompleted) && raw.breathersCompleted > 0
+      ? Math.floor(raw.breathersCompleted)
+      : 0;
+  merged.breatherSeconds =
+    typeof raw.breatherSeconds === "number" && Number.isFinite(raw.breatherSeconds) && raw.breatherSeconds > 0
+      ? Math.floor(raw.breatherSeconds)
+      : 0;
+  const rawBreather = raw.breather as Partial<BreatherState> | null | undefined;
+  if (
+    merged.mode === "breather" &&
+    isRecord(rawBreather) &&
+    typeof rawBreather.allowanceSeconds === "number" &&
+    Number.isFinite(rawBreather.allowanceSeconds) &&
+    rawBreather.allowanceSeconds > 0 &&
+    typeof rawBreather.elapsed === "number" &&
+    Number.isFinite(rawBreather.elapsed) &&
+    rawBreather.elapsed >= 0
+  ) {
+    merged.breather = {
+      startedAt: typeof rawBreather.startedAt === "number" && Number.isFinite(rawBreather.startedAt) ? rawBreather.startedAt : 0,
+      allowanceSeconds: rawBreather.allowanceSeconds,
+      elapsed: Math.min(rawBreather.elapsed, rawBreather.allowanceSeconds),
+    };
+  } else {
+    merged.breather = null;
+    if (merged.mode === "breather") merged.mode = "upgrade";
+  }
+  // The summary's breather allowance (docs/breather-spec.md §2) lenient-
+  // defaults to none: a pre-breather summary carries no offer. A corrupt
+  // figure reads as none too — an offer is a whole-minute figure at most.
+  if (merged.summary && !(typeof merged.summary.breatherAllowance === "number" && Number.isFinite(merged.summary.breatherAllowance) && merged.summary.breatherAllowance > 0)) {
+    merged.summary.breatherAllowance = 0;
+  }
+  // The records' breather line (docs/breather-spec.md §5) lenient-defaults
+  // to null: a pre-breather record took no breather.
+  for (const record of merged.sessionRecords) {
+    if (!record.breather) record.breather = null;
   }
   // The retired 120 s reconcile dialog's frozen gap (ADR-0010 → ADR-0019):
   // a save may still carry one; drop it rather than resuming a state shape

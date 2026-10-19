@@ -20,7 +20,7 @@ export interface SignalChannels {
   playStrum(ctx: AudioContext | null, chord: NamedChordTerm): void;
   notificationPermission(): NotificationPermissionState;
   requestNotificationPermission(): void;
-  showTargetNotification(onFocus: () => void): void;
+  showTargetNotification(onFocus: () => void, body?: string): void;
 }
 
 // The session's AudioContext is created/resumed inside the start-session
@@ -156,11 +156,13 @@ export function requestNotificationPermission(): void {
 
 // The non-persistent, silent target notification: the OS never doubles the
 // chime, and clicking it focuses the FlowSynth tab — which acknowledges the
-// overrun. Delivered notifications are left alone afterwards (§4).
-export function showTargetNotification(onFocus: () => void): void {
+// overrun. Delivered notifications are left alone afterwards (§4). The
+// breather's completion rides the same channel with its own body
+// (docs/breather-spec.md §4).
+export function showTargetNotification(onFocus: () => void, body: string = "Target reached."): void {
   if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
   try {
-    const notification = new Notification("FlowSynth", { body: "Target reached.", silent: true });
+    const notification = new Notification("FlowSynth", { body, silent: true });
     notification.addEventListener("click", () => {
       onFocus();
       notification.close();

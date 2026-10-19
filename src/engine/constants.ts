@@ -406,6 +406,21 @@ export const CHIME = {
   maxChimes: 3,
 };
 
+// The breather (docs/breather-spec.md §2, ADR-0073): the timed break phase
+// after a flow session closes. The allowance a session's end mints is its
+// credited practice seconds divided off, gated at a credited-practice
+// minimum, capped, and floored to the whole minute. All figures provisional
+// tuning.
+export const BREATHER = {
+  // Breather seconds per credited practice second (the 1:5 example: a
+  // 25-minute session mints a 5-minute breather).
+  creditDivisor: 5,
+  // Nothing under ten credited practice minutes mints a breather.
+  minCreditedSeconds: 600,
+  // The allowance caps at ten minutes.
+  capSeconds: 600,
+} as const;
+
 // The category of every module type (ADR-0048's roster on ADR-0012's
 // landscape): oscillators and the Blaster sing; the Harmonizer, Echo, and
 // Bend are the silent voices; the Amplifier founds the charge conduit;

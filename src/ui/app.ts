@@ -22,6 +22,7 @@ import {
   breakHorizon,
   dismissArcCard as dismissArcCardAction,
   dismissSummary as dismissSessionSummary,
+  endBreather as endBreatherAction,
   endSession,
   joinRollPool,
   mergeAll,
@@ -37,6 +38,7 @@ import {
   setBendShift,
   setBoosterTarget,
   skipRoll,
+  startBreather as startBreatherAction,
   startSession,
   unlockMutatorSlot,
   upgradeAll,
@@ -48,7 +50,7 @@ import {
 import { ARETE_HORIZON, claimOf } from "../engine/accumulator";
 import { neighbors, hex, sameHex } from "../engine/hex";
 import { preferredChordCue } from "../engine/chords";
-import { displayedRates, mutatorAt, deployedAt } from "../engine/economy";
+import { displayedRates, flowLive, mutatorAt, deployedAt } from "../engine/economy";
 import { newlyActiveTermsOf, type AllocatedInstance } from "../engine/allocation";
 import { serialize, STORAGE_KEY } from "../engine/save";
 import { SharedSave, browserSaveStorage, type LoadedSave } from "./shared-save";
@@ -57,7 +59,7 @@ import { draftTierChanceOf } from "../engine/rolls";
 import { wireTooltips } from "./instrument";
 import { unlockedMergeCap } from "../engine/catalog";
 import { formatInt, formatNumber } from "./format";
-import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
+import { applyBreatherGap, applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
 import { createInitialState, createModule } from "../engine/state";
 import type { FocusApp } from "../engine/apps";
 import { writeNote } from "../engine/notes";
@@ -510,6 +512,7 @@ export class App {
     this.dev = dev;
     this.channels = channels;
     const loaded = this.load();
+    const resumingBreather = loaded?.state.mode === "breather";
     if (loaded) {
       this.resumeFromSave(loaded);
     } else {
@@ -524,7 +527,7 @@ export class App {
     // session host, sheet open or not. bindFocusSheet's later attach on the
     // same host and signal is idempotent.
     wireTooltips(document.getElementById("console-session") ?? document.body, this.signal);
-    this.greet();
+    if (!resumingBreather || this.state.mode === "breather") this.greet();
     this.render();
     this.save();
   }
@@ -582,6 +585,21 @@ export class App {
     if (this.state.mode === "upgrade" && this.state.summary && !this.state.summary.seen) {
       this.ui.modal = "summary";
     }
+    if (this.state.mode === "breather" && this.state.breather) {
+      // The breather reconciles on the wall clock (docs/breather-spec.md
+      // §4): the gap since the last save was breather time up to the
+      // deadline; past it the phase completed itself and the return finds
+      // upgrade mode with the completion read.
+      const gapSeconds = Math.max(0, (Date.now() - loaded.savedAt) / 1000);
+      const { result, completed } = applyBreatherGap(this.state, gapSeconds);
+      this.reportAdvance(result);
+      this.syncBoundaryClock(Date.now());
+      if (completed) {
+        this.completeBreather();
+        this.save();
+      }
+      return;
+    }
     if (this.state.mode !== "flow") return;
     // A discarded tab (Memory Saver, §10) lands here exactly like a plain
     // reload: the gap since the last hidden-transition save is away, and
@@ -613,8 +631,29 @@ export class App {
 
   // One boundary (§1): the wall-clock gap since the last boundary is
   // classified by the presence that held during it and the whole simulation
-  // advances by it — never by tick count, which throttling falsifies.
+  // advances by it — never by tick count, which throttling falsifies. The
+  // breather runs its own boundary (docs/breather-spec.md §4): pre-trusted,
+  // presence classifies nothing, and the deadline completes the phase.
   private applyBoundary(now: number): void {
+    if (this.state.mode === "breather") {
+      if (this.lastWall === null) {
+        this.syncBoundaryClock(now);
+        return;
+      }
+      const gapSeconds = (now - this.lastWall) / 1000;
+      this.syncBoundaryClock(now);
+      if (gapSeconds <= 0) return;
+      const { result, completed } = applyBreatherGap(this.state, gapSeconds);
+      this.reportAdvance(result);
+      if (completed) {
+        this.completeBreather();
+        // The completion facts (count, seconds, record line) persist now —
+        // an idempotent re-reconcile after a reload can never re-bank them.
+        this.save(now);
+        this.render();
+      } else if (now - this.lastSaveWall > 5000) this.save(now);
+      return;
+    }
     if (this.state.mode !== "flow") {
       this.lastWall = null;
       return;
@@ -1025,6 +1064,13 @@ export class App {
     // boundary roll below.
     rollGoalOccurrences(this.state, Date.now());
     this.applyBoundary(Date.now());
+    if (this.state.mode === "breather") {
+      // The breather's live cadence (docs/breather-spec.md §5): the
+      // boundary above advanced it — the tick keeps the countdown, the
+      // strip, and the title exact while visible.
+      this.render();
+      return;
+    }
     if (this.state.mode !== "flow") {
       this.lastWall = null;
       return;
@@ -1104,7 +1150,7 @@ export class App {
     if (this.state.muted) return;
     // Same snapshot basis as the caller's `before`, so the diff can't lie
     // if the two calls ever drift apart.
-    const after = displayedRates(this.state, this.state.mode === "flow");
+    const after = displayedRates(this.state, flowLive(this.state));
     const cue = preferredChordCue(newlyActiveTermsOf(before, this.activeInstancesOf(after)), changedVoiceId);
     if (!cue) return;
     this.unlockAudio();
@@ -1266,6 +1312,63 @@ export class App {
     if (this.act(resumeSession(this.state), "Flow resumed.")) {
       this.syncBoundaryClock(Date.now());
     }
+  }
+
+  // The breather's start (docs/breather-spec.md §1–2): the summary's offer
+  // committed. The gesture unlocks audio — the deadline's chime needs the
+  // context (§10) — and the boundary clock starts here.
+  takeBreather(): void {
+    if (this.released) return;
+    const result = startBreatherAction(this.state, Date.now());
+    if (!result.ok) {
+      this.say(result.reason ?? "Cannot take a breather right now.");
+      this.render();
+      return;
+    }
+    this.ui.modal = null;
+    this.exitPending = false;
+    this.syncBoundaryClock(Date.now());
+    this.unlockAudio();
+    const minutes = Math.round((this.state.breather?.allowanceSeconds ?? 0) / 60);
+    this.say(`Breather is live for ${minutes} minutes — the board runs while you rest.`);
+    this.save();
+    this.render();
+    this.restoreModalInvoker();
+  }
+
+  // The breather's one end (docs/breather-spec.md §4): the early exit's
+  // gesture and the deadline's auto-complete land together — no penalty,
+  // nothing prorated.
+  endBreather(): void {
+    if (this.released) return;
+    this.applyBoundary(Date.now());
+    if (this.state.mode === "breather") this.finishBreather();
+  }
+
+  private finishBreather(): void {
+    const breather = this.state.breather;
+    const completed = !!breather && breather.elapsed >= breather.allowanceSeconds - 1e-9;
+    const result = endBreatherAction(this.state);
+    if (!result.ok) {
+      this.say(result.reason ?? "No breather is running.");
+      this.render();
+      return;
+    }
+    this.lastWall = null;
+    this.signals.acknowledged = true;
+    this.say(completed ? "Breather complete — welcome back." : "Breather ended early — the board rests.");
+    this.save();
+    this.render();
+  }
+
+  // The deadline's auto-complete (docs/breather-spec.md §4): chime and
+  // notification fire the one completion signal — the target-hit channels'
+  // analog — then the phase ends. A return from away lands here too: the
+  // reconcile that discovers completion fires it.
+  private completeBreather(): void {
+    this.playChime();
+    this.channels.showTargetNotification(() => window.focus(), "Breather complete — welcome back.");
+    this.finishBreather();
   }
 
   buyShelf(type: ShelfType): void {
@@ -1611,7 +1714,7 @@ export class App {
   // step on the expanded face. The pick re-pitches the module's voice —
   // the chords move the moment it lands.
   setBendShift(id: string, shift: number): void {
-    const before = this.activeInstancesOf(displayedRates(this.state, this.state.mode === "flow"));
+    const before = this.activeInstancesOf(displayedRates(this.state, flowLive(this.state)));
     if (this.act(setBendShift(this.state, id, shift), `Bend re-pitched ${shift > 0 ? "sharp" : "flat"} ${Math.abs(shift)}.`)) {
       this.strumFormedChords(before, id);
     }
@@ -2168,7 +2271,7 @@ export class App {
   // its gesture. A chord the drop newly activates cues (issue #390),
   // preferring one carrying the placed voice.
   private placeAndStrum(module: ModuleInstance, pos: Hex): void {
-    const before = this.activeInstancesOf(displayedRates(this.state, this.state.mode === "flow"));
+    const before = this.activeInstancesOf(displayedRates(this.state, flowLive(this.state)));
     if (this.act(placeModule(this.state, module.id, pos), `${META[module.type].name} placed.`)) {
       this.ui.placing = null;
       this.strumFormedChords(before, module.id);
@@ -2844,6 +2947,10 @@ export class App {
     const session = this.state.session;
     if (this.state.mode === "paused") {
       title = "paused · FlowSynth";
+    } else if (this.state.mode === "breather" && this.state.breather) {
+      // The breather's remaining allowance (docs/breather-spec.md §5).
+      const remaining = Math.max(0, this.state.breather.allowanceSeconds - this.state.breather.elapsed);
+      title = `breather ${formatClock(remaining)} · FlowSynth`;
     } else if (this.state.mode === "flow" && session) {
       if (session.target === null) {
         title = `${formatClock(session.elapsed)} · FlowSynth`;
@@ -2861,7 +2968,7 @@ export class App {
     render(this);
     this.sweepListeners();
     this.syncTitle();
-    document.body.classList.toggle("live", this.state.mode === "flow");
+    document.body.classList.toggle("live", flowLive(this.state));
     // The second layer's grey (issue #199): while the Mutators layer
     // stands — flow reading it now too (issue #387) — the stylesheet greys
     // the module board and silences its pointers, the grid rendering as

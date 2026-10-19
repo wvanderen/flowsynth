@@ -221,7 +221,7 @@ The burst-delivery generator (issue #372): a mixed earning profile — half of e
 _Avoid_: burst battery, pulse generator
 
 **Session clock**:
-The running session's elapsed active focus time — every flow second since the session started, pauses excluded — and the one clock temporal profiles read. Away stretches run it (the session was live); a restart resets it; no module holds a private timer, so moving or re-placing a module can never preserve or manipulate a phase.
+The running session's elapsed active focus time — every flow second since the session started, pauses excluded — and the one clock temporal profiles read. Away stretches run it (the session was live); breather seconds advance it after the session ends; a restart resets it; no module holds a private timer, so moving or re-placing a module can never preserve or manipulate a phase.
 
 **Temporal profile**:
 An authored profile whose defining rule is a timing curve over the session clock instead of a comparable coefficient — the Afterglow's warmup steps, the Pulsewell's burst cycle (issue #372). A timing rule takes no aptitude grade: presentation says the figures directly, and the advance walk splits at the curve's marks so production stays exact.
@@ -298,7 +298,7 @@ The Arete Catalog's merge-cap product (issue #380): each purchase raises the unl
 _Avoid_: cap unlock, tier cap purchase, merge ceiling
 
 **Profile**:
-A named module type's fixed authored identity — coefficients over the category's comparable axes (the oscillators': base production, booster response, chord response, charge response), one defining behavior and at most two supporting tradeoffs, never rolled per copy (issue #369, ADR-0059). Levels, tiers, and mutators scale the profile's strengths; they never change its proportions, conditions, or relative weaknesses. The profile table also authors the non-graded figures — the oscillators' intrinsic capacity (issue #373, ADR-0062) and the temporal timing rules (issue #372, ADR-0061) — which present directly, never as grades.
+A named module type's fixed authored identity — coefficients over the category's comparable axes (the oscillators': base production, booster response, chord response, charge response, breather response), one defining behavior and at most two supporting tradeoffs, never rolled per copy (issue #369, ADR-0059). Levels, tiers, and mutators scale the profile's strengths; they never change its proportions, conditions, or relative weaknesses. The profile table also authors the non-graded figures — the oscillators' intrinsic capacity (issue #373, ADR-0062) and the temporal timing rules (issue #372, ADR-0061) — which present directly, never as grades.
 _Avoid_: stat roll (the per-instance sense), build (the habit sense)
 
 **Aptitude grade**:
@@ -468,6 +468,18 @@ A flow session without a planned duration.
 **Paused session**:
 A flow session whose elapsed time and board activity are frozen while its starting configuration remains locked; resuming continues the same session.
 
+**Breather**:
+An optional, timed break phase after a flow session has fully ended — the phase between the closed session and upgrade mode, lived away from the screen. The board runs at full production while it lasts: nous rate, charge delivery, and forge progress, with each voice's breather response applied and every practice accrual excluded. Entered once from that session's summary offer; the grid and all purchases stay locked, no pause exists, and an early exit is always allowed without penalty. It ends on its wall-clock allowance or on the early exit and auto-completes either way — the game's one self-ending phase. Breather time is pre-trusted: never provisional, never honesty-adjudicated, and never practice credit. Completed breathers — the allowance run to zero; early exits never count — and total breather seconds bank for life, persisting through prestige with the life record. Its one factual line lands on the session record it followed.
+_Avoid_: pause, rest session, cooldown
+
+**Breather allowance**:
+The breather duration a flow session's end mints from that session's credited practice time: credited seconds ÷ 5, nothing under 10 credited minutes, capped at 10 minutes, rounded down to the whole minute. Use-it-or-lose-it: the offer exists only at that session's end and a decline expires it; one breather per session.
+_Avoid_: break bank, rest credit
+
+**Breather response**:
+An oscillator profile's comparable axis: the authored multiplier scaling that voice's final ν/s while a breather runs — synth term, chord factors, charge empowerment, and received booster uplift all included — and exactly ×1 under the absent mark. It speaks only during a breather; flow and upgrade mode read nothing from it. Graded like every comparable axis, absent-mark by default; the launch roster authors modest responses, the dedicated breather specialists join with the roster iteration. Generators, boosters' own grants, and forge progress carry no breather response — the axis is the oscillator roster's alone.
+_Avoid_: breather bonus (the global-multiplier reading), rest bonus, break boost
+
 **Present time**:
 The portion of a flow session during which the player is present. Always trusted: banks and credits live, before and after a planned target.
 
@@ -499,10 +511,10 @@ The continued run of a planned session past its target: presence keeps banking l
 The chime, browser notification, and tab-title flip fired together the first moment a session's wall clock reaches its planned target. Open-ended and paused sessions fire none.
 
 **Upgrade mode**:
-The period between flow sessions when the player configures and upgrades the board and console while charge state is paused and no production occurs. It is the only window for all nous spending.
+The period between flow sessions — entered directly, or after a breather completes — when the player configures and upgrades the board and console while charge state is paused and no production occurs. It is the only window for all nous spending.
 
 **Session summary**:
-The modal every flow session ends with in upgrade mode, after the honesty report when one is owed: the session's banked nous headline, credited practice minutes, the achieved rate with its breakdown, its honesty event lines as neutral factual lines, and any unlocks. The reflection rides in it above dismissal.
+The modal every flow session ends with in upgrade mode, after the honesty report when one is owed: the session's banked nous headline, credited practice minutes, the achieved rate with its breakdown, its honesty event lines as neutral factual lines, and any unlocks. The breather offer rides beside dismissal whenever the session minted a breather allowance. The reflection rides in it above dismissal.
 
 **Reflection**:
 The optional insight capture in the session summary: free text plus a continuous valence slider (rough ↔ great), neutral middle default and end labels that brighten as the thumb nears. Recorded when either part is touched, absent otherwise; pure insight at launch — nothing reads it.

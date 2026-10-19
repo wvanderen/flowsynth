@@ -63,13 +63,21 @@ export interface OscillatorProfile {
   // 1 + the conversion curve (×1 uncharged, ×2 at the asymptote) — and
   // the charge factor stays exactly ×1: no empowerment pass, ever.
   chordConversion?: boolean;
+  // The authored breather response (docs/breather-spec.md §3, ADR-0073):
+  // the multiplier on the voice's final ν/s while a breather runs — the
+  // one comparable axis keyed to rest. Absent (undefined) is exactly ×1,
+  // the absent mark, so a type without the axis reads nothing from a
+  // breather. Provisional tuning.
+  breather?: number;
 }
 
 export const OSCILLATOR_PROFILES: Record<OscillatorType, OscillatorProfile> = {
+  // The strong independent producer takes no breather axis: the absent
+  // mark — exactly ×1 — is its contrast against every responder below.
   additive: { base: 1.0, booster: 0.5, chord: 1.0, charge: 1.0, capacity: 1 },
-  triangle: { base: 0.75, booster: 1.0, chord: 2.5, charge: 1.0, capacity: 1 },
-  square: { base: 0.9, booster: 2.0, chord: 0.6, charge: 1.0, capacity: 1 },
-  saw: { base: 0.7, booster: 1.0, chord: 1.0, charge: 3.0, capacity: 1 },
+  triangle: { base: 0.75, booster: 1.0, chord: 2.5, charge: 1.0, capacity: 1, breather: 1.1 },
+  square: { base: 0.9, booster: 2.0, chord: 0.6, charge: 1.0, capacity: 1, breather: 1.1 },
+  saw: { base: 0.7, booster: 1.0, chord: 1.0, charge: 3.0, capacity: 1, breather: 1.2 },
   // Two intrinsic seats (issue #373, representative): the conversion
   // producer holds a second chord seat — it sings and completes two
   // voice-sets while every standard voice holds one — and its ×0
@@ -80,7 +88,7 @@ export const OSCILLATOR_PROFILES: Record<OscillatorType, OscillatorProfile> = {
   // responses: the warmup condition below is the identity and the
   // tradeoff, and progression scales the strengths it rides without ever
   // touching the curve's timing.
-  afterglow: { base: 1.0, booster: 1.0, chord: 1.0, charge: 1.0, capacity: 1 },
+  afterglow: { base: 1.0, booster: 1.0, chord: 1.0, charge: 1.0, capacity: 1, breather: 1.25 },
   // The chord-centered alternative (issue #375, representative): received
   // charge scales the authored chord response — ×2.0 uncharged (S strong,
   // second only to the Triangle's ×2.5), toward ×4.0 at the conversion's
@@ -90,8 +98,15 @@ export const OSCILLATOR_PROFILES: Record<OscillatorType, OscillatorProfile> = {
   // replaces direct empowerment — the charge figure above never reads),
   // and the D-weak base ×0.5 pays for the whole mechanic: chordless
   // boards leave it behind whatever the charge reads. Provisional tuning.
-  sideband: { base: 0.5, booster: 1.0, chord: 2.0, charge: 1.0, capacity: 1, chordConversion: true },
+  sideband: { base: 0.5, booster: 1.0, chord: 2.0, charge: 1.0, capacity: 1, chordConversion: true, breather: 1.2 },
 };
+
+// The roster's breather-response wave (docs/breather-spec.md §3, the launch
+// authoring): modest responses across the roster so the mechanic is live
+// from day one, with the Sine's absent mark as the contrast. The dedicated
+// breather-specialist types — the ones that make the axis their identity —
+// join with the later roster iteration and author stronger figures.
+// Provisional tuning.
 
 // The one profile read. Non-oscillators have no profile — callers guard by
 // category; this accessor returns null rather than a neutral shape so a
@@ -119,6 +134,13 @@ export function chordResponseOf(type: ModuleType): number {
 
 export function chargeResponseOf(type: ModuleType): number {
   return oscillatorProfileOf(type)?.charge ?? 1;
+}
+
+// The breather response (docs/breather-spec.md §3): the authored multiplier
+// while a breather runs, exactly ×1 wherever no axis is authored — every
+// non-oscillator included.
+export function breatherResponseOf(type: ModuleType): number {
+  return oscillatorProfileOf(type)?.breather ?? 1;
 }
 
 export function usesChargeConversion(type: ModuleType): boolean {
@@ -185,7 +207,7 @@ const RESPONSE_BANDS: readonly { min: number; grade: AptitudeGrade }[] = [
   { min: EPS_FLOOR, grade: "D" },
 ];
 
-export function gradeOfCoefficient(value: number, axis: "base" | "booster" | "chord" | "charge"): AptitudeGrade {
+export function gradeOfCoefficient(value: number, axis: "base" | "booster" | "chord" | "charge" | "breather"): AptitudeGrade {
   if (value <= EPS_FLOOR) return "—";
   for (const band of axis === "base" ? BASE_BANDS : RESPONSE_BANDS) {
     if (value >= band.min) return band.grade;
@@ -209,7 +231,7 @@ export const GRADE_WORDS: Record<AptitudeGrade, string> = {
 // launch case is the Blaster's charge axis, whose conversion replaces the
 // ordinary charge factor instead of scaling it.
 export interface ProfileAxisRead {
-  id: "base" | "booster" | "chord" | "charge";
+  id: "base" | "booster" | "chord" | "charge" | "breather";
   label: string;
   grade: AptitudeGrade;
   // The exact authored multiplier, or null when the axis has no
@@ -222,6 +244,7 @@ export const PROFILE_AXIS_LABELS: Record<ProfileAxisRead["id"], string> = {
   booster: "Booster response",
   chord: "Chord response",
   charge: "Charge response",
+  breather: "Breather response",
 };
 
 // The type's fixed profile axes, grades included — the one read the Forge
@@ -243,6 +266,10 @@ export function profileAxesOf(type: ModuleType): readonly ProfileAxisRead[] {
   push("chord", profile.chord);
   const chargeAbsent = profile.chargeConversion === true || profile.chordConversion === true;
   push("charge", profile.charge, chargeAbsent);
+  // The breather axis (docs/breather-spec.md §3): the absent mark is the
+  // unauthored case — undefined means exactly ×1, never a weak one.
+  const breather = profile.breather;
+  push("breather", breather ?? 1, breather === undefined);
   return axes;
 }
 
