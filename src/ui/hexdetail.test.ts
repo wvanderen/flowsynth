@@ -13,12 +13,12 @@ import type { MutatorFamily, MutatorInstance, Rarity } from "../engine/types";
 
 // The Hex detail (issue #295): the module bloom's successor — an owned
 // cell's full-stack cross-section replacing the grid. The presentation is
-// the instrument, not a menu: the module face below at bloom scale (the
-// face itself is the plate — no text column re-speaks it), the Mutators
-// face above in the arete register (its state in the four-state grammar),
-// the action rail beside the stack, the chord row in the reserved
-// readout's grammar, and the return contract (explicit control and
-// Escape, preserving the layer, position, and zoom).
+// the instrument, not a menu (composition: ADR-0072): the focus-scaled
+// stack — the focused face at full engraving, the other layer the
+// identity thumbnail — the action rail below the stack following focus,
+// the details column beside it (context map, profile, chord facts,
+// mutator line), and the return contract (explicit control and Escape,
+// preserving the layer, position, and zoom).
 
 const fixture = createAppFixture();
 const boot = fixture.boot;
@@ -80,23 +80,111 @@ describe("opening the cross-section (issue #295)", () => {
     expect(document.getElementById("hex-detail-return")).not.toBeNull();
   });
 
-  it("the chord facts stand in their own column beside the module face", () => {
+  it("the chord facts stand in the details column's own ruled section", () => {
+    // A second voice beside the starter: the pair forms a Fifth.
+    give(app.state, "additive", hex(1, 0));
     app.render();
     clickCell(0, 0);
-    const col = detail().querySelector(".hex-chord-col")!;
-    expect(col).not.toBeNull();
-    const row = col.querySelector(".hex-chord-row")!;
-    // The ν/s figure stays off the row — the enlarged face carries it.
-    expect(row.textContent).not.toContain("ν/s");
-    // The voice's chord facts ride the reserved grammar's own chips.
-    expect(row.textContent).toContain("chord factor");
-    // The column is its own grid post — to the module's right, never
-    // beneath the faces (issue #388), and the faces' section no longer
-    // embeds it.
-    expect(section("modules").querySelector(".hex-chord-row")).toBeNull();
-    const css = readFileSync("src/ui/style.css", "utf8");
-    expect(css).toMatch(/\.hex-chord-col\s*\{[^}]*grid-column:\s*3/);
-    expect(css).toMatch(/\.hex-chord-col\s*\{[^}]*grid-row:\s*3/);
+    const side = detail().querySelector(".hex-detail-side")!;
+    expect(side).not.toBeNull();
+    // The standing facts as ruled rows — the capacity with its canonical
+    // mark, the factor, the formation term — the labels carrying the
+    // meaning, no tooltip restating them.
+    const facts = side.querySelector(".hex-chord-facts")!;
+    expect(facts).not.toBeNull();
+    const rows = [...facts.querySelectorAll(".hex-chord-fact")].map((node) => node.textContent);
+    expect(rows.some((text) => text!.includes("1/1"))).toBe(true);
+    expect(rows.some((text) => text!.includes("×1.46"))).toBe(true);
+    expect(rows.some((text) => text!.includes("×1.12"))).toBe(true);
+    expect(facts.querySelectorAll(".hex-chord-fact .capacity-mark")).toHaveLength(1);
+    expect(facts.querySelector(".inst-tip-body")).toBeNull();
+    // The formation's scale is drawn at column width for this surface.
+    expect(facts.querySelector(".chord-scale-wide")).not.toBeNull();
+    // The ν/s figure stays off the facts — the enlarged face carries it.
+    expect(facts.textContent).not.toContain("ν/s");
+    // The instances keep the readout's chips row, and the faces' section
+    // never embeds the facts.
+    expect(side.querySelector(".hex-chord-list")).not.toBeNull();
+    expect(side.querySelector(".hex-chord-list")!.textContent).toContain("Fifth");
+    expect(side.querySelector(".hex-chord-list")!.textContent).toContain("×1.3");
+    expect(section("modules").querySelector(".hex-chord-facts")).toBeNull();
+  });
+
+  it("the context map heads the details column: opened hex marked, its active chords drawn", () => {
+    // A second voice beside the starter: the pair forms a Fifth.
+    give(app.state, "additive", hex(1, 0));
+    app.render();
+    clickCell(0, 0);
+    const map = detail().querySelector(".hex-detail-ctx .ctx-map")!;
+    expect(map).not.toBeNull();
+    // The opened hex wears the firm selected marker — the state grammar,
+    // recognizable without color.
+    expect(map.querySelector(".ctx-opened")).not.toBeNull();
+    // The chord reads as the link between its voices: at the miniature's
+    // scale the board's twin edge lines fall inside one stroke, so the
+    // map draws the chord as the connection it is.
+    expect(map.querySelectorAll(".ctx-link").length).toBeGreaterThan(0);
+    expect(map.querySelectorAll(".ctx-cell.owned").length).toBeGreaterThanOrEqual(2);
+    // The opened cell's own dot yields to the selected marker.
+    expect(map.querySelectorAll(".ctx-dot").length).toBe(1);
+  });
+
+  it("an owned cell on the context map navigates the detail to its coordinate", () => {
+    give(app.state, "additive", hex(1, 0));
+    app.render();
+    clickCell(0, 0);
+    // Owned cells are the map's buttons — the board grid's own SVG
+    // grammar; the opened cell stays a marker, never a control.
+    const node = detail().querySelector('[data-ctx-cell="1,0"]')!;
+    expect(node.getAttribute("role")).toBe("button");
+    expect(detail().querySelector('[data-ctx-cell="0,0"]')).toBeNull();
+    node.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.detail).toEqual({ pos: hex(1, 0), face: "modules" });
+    // Keyboard opens too, and the face survives the jump.
+    const back = detail().querySelector('[data-ctx-cell="0,0"]')!;
+    back.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(app.ui.detail).toEqual({ pos: hex(0, 0), face: "modules" });
+  });
+
+  it("keeps context-map keyboard focus through a changing live read", () => {
+    app.render();
+    clickCell(0, 0);
+    const node = detail().querySelector<SVGElement>('[data-ctx-cell="1,0"]')!;
+    node.focus();
+    expect(document.activeElement).toBe(node);
+    app.state.nous += 10;
+    app.render();
+    const replacement = detail().querySelector<SVGElement>('[data-ctx-cell="1,0"]')!;
+    expect(replacement).not.toBe(node);
+    expect(document.activeElement).toBe(replacement);
+    replacement.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
+    expect(app.ui.detail?.pos).toEqual(hex(1, 0));
+  });
+
+  it("the phone cell picker navigates owned cells and retains the focused layer", () => {
+    setAppWidth(390);
+    seedEra();
+    app.openDetail(hex(0, 0), "mutators");
+    const picker = detail().querySelector<HTMLSelectElement>("[data-ctx-navigation]")!;
+    expect(picker.closest("label")?.textContent).toContain("Open hex");
+    expect(picker.options.length).toBe(app.state.cells.length);
+    expect(picker.value).toBe("0,0");
+    picker.focus();
+    picker.value = "1,0";
+    picker.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(app.ui.detail).toEqual({ pos: hex(1, 0), face: "mutators" });
+    const replacement = detail().querySelector<HTMLSelectElement>("[data-ctx-navigation]")!;
+    expect(replacement.value).toBe("1,0");
+    expect(document.activeElement).toBe(replacement);
+  });
+
+  it("an empty owned place still maps its context, with no chord work", () => {
+    app.render();
+    clickCell(0, 1);
+    const map = detail().querySelector(".hex-detail-ctx .ctx-map")!;
+    expect(map).not.toBeNull();
+    expect(map.querySelector(".ctx-opened")).not.toBeNull();
+    expect(map.querySelector(".ctx-link")).toBeNull();
   });
 
   it("an empty owned cell opens too: the empty Module place shows its state", () => {
@@ -231,6 +319,9 @@ describe("the Mutators face in detail", () => {
     app.state.cells.push(hex(0, 1));
     app.render();
     clickCell(0, 1);
+    // The action rail follows focus (ADR-0072): the unlock stands when the
+    // Mutators face holds it.
+    app.detailFace("mutators");
     const button = document.getElementById("detail-mutator-unlock")! as HTMLButtonElement;
     expect(button.textContent).toContain("Unlock slot");
     expect(button.textContent).toContain(`${formatInt(2)} ◇`);
@@ -248,6 +339,7 @@ describe("the Mutators face in detail", () => {
     app.state.arete = 5;
     app.render();
     clickCell(1, 0);
+    app.detailFace("mutators");
     const button = document.getElementById("detail-mutator-unlock")! as HTMLButtonElement;
     expect(button.textContent).toContain("free");
     button.click();
@@ -283,8 +375,10 @@ describe("the Mutators face in detail", () => {
     expect(section("mutators").textContent).not.toContain("beside the patch");
     // An eligible owned cell right beside the patch keeps the priced
     // unlock — eligibility and price stay distinct states, and both stay
-    // distinct from an open slot.
+    // distinct from an open slot. The rail follows focus: the Mutators
+    // face holds it for the unlock to stand (ADR-0072).
     clickCell(1, 0);
+    app.detailFace("mutators");
     const unlock = document.getElementById("detail-mutator-unlock")! as HTMLButtonElement;
     expect(unlock.textContent).toContain("Unlock slot");
     unlock.click();
@@ -388,8 +482,9 @@ describe("the upgrade column in detail", () => {
     give(app.state, "additive", hex(0, 1));
     app.render();
     clickCell(1, 0);
-    // One chip per adjacent oscillator, named by its note.
-    const group = detail().querySelector('.hex-rail-row [role="group"][aria-label="Recipient"]')!;
+    // One chip per adjacent oscillator, named by its note — the picker
+    // rides the action rail below the stack (ADR-0072).
+    const group = detail().querySelector('.hex-detail-actions [role="group"][aria-label="Recipient"]')!;
     const chips = [...group.querySelectorAll<HTMLButtonElement>("[data-target]")];
     expect(chips.map((chip) => chip.textContent)).toEqual(["C4", "C5"]);
     // Nothing picked yet: the inactive verdict stands with the chips, the
@@ -592,7 +687,7 @@ describe("the idle disclosure (issue #388)", () => {
   it("idle candidates hide behind one N idle disclosure in the shared tooltip layer", () => {
     seedIdleVoices();
     clickCell(0, 1);
-    const row = detail().querySelector(".hex-chord-row")!;
+    const row = detail().querySelector(".hex-chord-list")!;
     // No inline idle list: the candidates' names ride only the body, and
     // no transient-readout disclosure is duplicated here.
     expect(row.querySelectorAll(".chord-readout-chip.chord-readout-idle")).toHaveLength(0);
@@ -620,17 +715,22 @@ describe("the idle disclosure (issue #388)", () => {
     expect(css).toMatch(/\.inst-tip-body\s*\{[^}]*position:\s*fixed/);
   });
 
-  it("dense facts: active chips stand inline beside the single idle disclosure", () => {
+  it("dense facts: the active chord lists above the single idle row", () => {
     seedIdleVoices();
     clickCell(0, 0);
-    const row = detail().querySelector(".hex-chord-row")!;
-    const chips = [...row.querySelectorAll(".chord-readout-chip")].map((node) => node.textContent);
-    // The earning chord reads as itself — no idle suffix any more.
-    expect(chips).toContain("Fifth ×1.3");
-    expect(chips).not.toContain("Fifth ×1.3 · idle");
-    // The idle Octave waits behind its one count.
-    expect(row.querySelector(".detail-idle-trigger")!.textContent).toBe("1 idle");
-    const trigger = row.querySelector<HTMLButtonElement>(".detail-idle-trigger")!;
+    const list = detail().querySelector(".hex-chord-list")!;
+    const names = [...list.querySelectorAll(".hex-chord-instance-name")].map((node) => node.textContent);
+    // The earning chord reads as itself — one row, hue-ticked, no idle
+    // suffix and no idle styling on it.
+    expect(names).toContain("Fifth");
+    expect(names).not.toContain("Fifth · idle");
+    const fifthRow = list.querySelectorAll(".hex-chord-instance:not(.hex-chord-instance-idle)")[0]!;
+    expect(fifthRow.querySelector("b")!.textContent).toBe("×1.3");
+    expect(fifthRow.querySelector(".chord-tick")).not.toBeNull();
+    // The idle Octave waits behind its one count — the list's dashed row.
+    const trigger = list.querySelector<HTMLButtonElement>(".detail-idle-trigger")!;
+    expect(trigger.textContent).toContain("1 idle");
+    expect(trigger.classList.contains("hex-chord-instance-idle")).toBe(true);
     trigger.focus();
     expect(document.getElementById(trigger.getAttribute("aria-describedby")!)!.textContent).toContain("Octave ×1.15");
   });
@@ -774,30 +874,32 @@ describe("the phone face (issue #295)", () => {
     expect(document.getElementById("detail-upgrade")).not.toBeNull();
     // The chord facts reflow into the single column (issue #388): the
     // detailed content scrolls beneath the faces and actions, and the
-    // sheet drops the column's fixed width.
-    expect(detail().querySelector(".hex-chord-col .hex-chord-row")).not.toBeNull();
+    // sheet drops the column's fixed width, the context map last.
+    expect(detail().querySelector(".hex-detail-side .hex-chord-facts")).not.toBeNull();
+    expect(detail().querySelector(".hex-detail-side .ctx-map")).not.toBeNull();
     const css = readFileSync("src/ui/style.css", "utf8");
-    expect(css).toMatch(/\.hex-detail\.sheet \.hex-chord-col\s*\{[^}]*width:\s*auto/);
-    expect(css).toMatch(/\.hex-detail\.sheet \.hex-detail-grid\s*\{[^}]*overflow-y:\s*auto|\.hex-detail-grid\s*\{[^}]*overflow-y:\s*auto/);
+    expect(css).toMatch(/\.hex-detail\.sheet \.hex-detail-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+    expect(css).toMatch(/\.hex-detail\.sheet \.hex-detail-ctx\s*\{[^}]*order:\s*9/);
     // Return restores the grid.
     document.getElementById("hex-detail-return")!.click();
     expect(app.ui.detail).toBeNull();
     setAppWidth(1200);
   });
 
-  it("narrow compositions reflow the chord column beneath the stack before the sheet", () => {
+  it("narrow compositions reflow the details column beneath the stack before the sheet", () => {
     setAppWidth(900);
     app.render();
     clickCell(0, 0);
     expect(open()).toBe(true);
     expect(detail().classList.contains("sheet")).toBe(false);
-    // The container query drops the column to its own row: the faces and
-    // the rail keep their posts, the facts scroll below (issue #388).
+    // The container query drops the column to the stack's width: the
+    // faces and the action rail keep their posts, the facts scroll below
+    // (ADR-0072).
     const css = readFileSync("src/ui/style.css", "utf8");
-    const reflow = css.match(/@container app \(width < 1000px\) \{[\s\S]*?\n\}/g)!.find((block) => block.includes(".hex-chord-col"));
+    const reflow = css.match(/@container app \(width < 1000px\) \{[\s\S]*?\n\}/g)!.find((block) => block.includes(".hex-detail-side"));
     expect(reflow).toBeTruthy();
-    expect(reflow).toMatch(/\.hex-detail-scene\.readonly \.hex-chord-col\s*[,{][^}]*grid-column:\s*1/);
-    expect(reflow).toMatch(/grid-row:\s*4/);
+    expect(reflow).toMatch(/grid-template-columns:\s*minmax\(0,\s*var\(--detail-hex\)\)/);
+    expect(reflow).toMatch(/\.hex-detail-side\s*\{[^}]*width:\s*100%/);
     setAppWidth(1200);
   });
 });
@@ -811,7 +913,7 @@ describe("live detail review regressions (PR #301)", () => {
     app.openDetail(hex(1, 0));
     const snapshot = displayedRates(app.state, true);
     snapshot.chargeStrength.set(module.id, 10);
-    renderHexDetail(app, snapshot, snapshot, { html: "", key: "" });
+    renderHexDetail(app, snapshot, snapshot, { html: "", key: "", marks: [] });
     expect(faceSvg("modules").textContent).toContain("⌁10");
     expect(faceSvg("modules").querySelector(".charged")).not.toBeNull();
     const face = section("modules").querySelector<HTMLElement>("[data-detail-face]")!;
@@ -820,7 +922,7 @@ describe("live detail review regressions (PR #301)", () => {
     expect(description.textContent).toContain("⌁10");
     face.focus();
     snapshot.chargeStrength.set(module.id, 0);
-    renderHexDetail(app, snapshot, snapshot, { html: "", key: "" });
+    renderHexDetail(app, snapshot, snapshot, { html: "", key: "", marks: [] });
     expect(faceSvg("modules").textContent).toContain("⌁0");
     expect(faceSvg("modules").querySelector(".charged")).toBeNull();
     expect(document.activeElement?.getAttribute("data-detail-face")).toBe("modules");
@@ -829,6 +931,9 @@ describe("live detail review regressions (PR #301)", () => {
   });
 
   it("keeps Return and an open chord disclosure focused across unchanged flow renders", () => {
+    // The two-voice board gives C4 an idle disclosure to hold focus on.
+    give(app.state, "additive", hex(1, 0));
+    give(app.state, "additive", hex(0, 1));
     app.state.sessionsCompleted = 1;
     startSession(app.state, 600);
     app.openDetail(hex(0, 0));
@@ -836,7 +941,7 @@ describe("live detail review regressions (PR #301)", () => {
     back.focus();
     app.render();
     expect(document.activeElement).toBe(back);
-    const trigger = detail().querySelector<HTMLElement>(".hex-chord-row .inst-tip-trigger")!;
+    const trigger = detail().querySelector<HTMLElement>(".hex-chord-list .inst-tip-trigger")!;
     trigger.focus();
     const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
     expect(body.classList.contains("inst-show")).toBe(true);
@@ -847,18 +952,21 @@ describe("live detail review regressions (PR #301)", () => {
   });
 
   it("restores chord disclosure focus and removes its old portal when live values change", () => {
+    // The two-voice board gives C4 an idle disclosure to hold focus on.
+    give(app.state, "additive", hex(1, 0));
+    give(app.state, "additive", hex(0, 1));
     app.state.sessionsCompleted = 1;
     startSession(app.state, 600);
     app.openDetail(hex(0, 0));
-    const trigger = detail().querySelector<HTMLElement>(".hex-chord-row .inst-tip-trigger")!;
+    const trigger = detail().querySelector<HTMLElement>(".hex-chord-list .inst-tip-trigger")!;
     const id = trigger.getAttribute("aria-describedby")!;
-    const chordRow = detail().querySelector(".hex-chord-row")!.innerHTML;
+    const chordRow = detail().querySelector(".hex-chord-list")!.innerHTML;
     trigger.focus();
     const oldBody = document.getElementById(id)!;
     const snapshot = displayedRates(app.state, true);
     const module = app.state.modules.find((m) => m.pos && sameHex(m.pos, hex(0, 0)))!;
     snapshot.contributions.get(module.id)!.value += 1;
-    renderHexDetail(app, snapshot, snapshot, { html: chordRow, key: "" });
+    renderHexDetail(app, snapshot, snapshot, { html: chordRow, key: "", marks: [] });
     expect(document.activeElement?.getAttribute("aria-describedby")).toBe(id);
     expect(oldBody.isConnected).toBe(false);
     expect(document.querySelectorAll(`[id="${id}"]`)).toHaveLength(1);
@@ -905,7 +1013,7 @@ describe("the shared inventory in Hex detail", () => {
     expect(document.activeElement?.getAttribute("data-detail-face")).toBe("modules");
     expect(app.ui.placing).toBeNull();
     expect(app.ui.detail).toEqual({ pos: hex(0, 1), face: "modules" });
-    expect(detail().querySelector(".hex-chord-row")!.textContent).toContain("Octave");
+    expect(detail().querySelector(".hex-chord-list")!.textContent).toContain("Octave");
   });
 
   it("click placement swaps matching copies without silently merging", () => {
@@ -996,6 +1104,7 @@ describe("the shared inventory in Hex detail", () => {
     seedEra();
     app.state.arete = 0;
     clickCell(1, 0);
+    app.detailFace("mutators");
     const button = document.getElementById("detail-mutator-unlock")!;
     expect(button.getAttribute("aria-disabled")).toBe("true");
     expect(button.classList.contains("st-unavailable")).toBe(true);

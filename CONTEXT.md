@@ -111,8 +111,24 @@ Retired vocabulary — the module bloom's face, superseded by the **Hex detail**
 _Avoid_: bloom, pop-up
 
 **Hex detail**:
-An owned board coordinate's full-stack cross-section, opened by any owned cell's idle click (issue #295, presented as the frameless stack of ADR-0055) — the module bloom's successor. It stands where the grid stood, at every width, showing the fixed layer stack at that one cell: the Mutators face above the Modules face, both visible, never reordered. The faces themselves carry the information — the module face at full engraving, the slot face in the state grammar — and the composition adds only what the faces cannot say: the action rail beside the stack, the chord facts in the reserved readout's grammar standing in their own column to the module's right where width permits (one "N idle" disclosure for the candidates; issue #388), and the tooltip layer beneath. Only cell-specific actions belong to the rails — global destinations (Catalog, Forge) stay in the surrounding navigation, never repeated buttons inside the detail — and Return floats over the stage, a compact control without a dedicated band. Editing belongs to upgrade mode, and during flow the same cross-section opens read-only with live readouts. An explicit Return control and Escape give the grid back with its layer, position, and zoom intact; another Hex requires returning first.
+An owned board coordinate's full-stack cross-section, opened by any owned cell's idle click (issue #295, presented as the frameless stack of ADR-0055) — the module bloom's successor. It stands where the grid stood, at every width, showing the fixed layer stack at that one cell: the Mutators face above the Modules face, both visible, never reordered, one layer in focus (ADR-0072). The focused face carries the full engraving; the other layer stands as an identity thumbnail — chassis, category rail, signature glyph, state marks. The composition adds only what the faces cannot say: the action rail below the stack, the details column beside it, and the tooltip layer beneath. Only cell-specific actions belong to the rail — global destinations (Catalog, Forge) stay in the surrounding navigation, never repeated buttons inside the detail — and Return floats over the stage, a compact control without a dedicated band. Editing belongs to upgrade mode, and during flow the same cross-section opens read-only with live readouts. An explicit Return control and Escape give the grid back with its layer, position, and zoom intact; another Hex requires returning first.
 _Avoid_: pop-up, modal, inspector, bloom, detail panel, hosts line
+
+**Focus**:
+The emphasized state of one layer in the hex detail's stack: full scale and full engraving, while the other layer stays visible as an identity thumbnail. The layer legend and the faces' own clicks set it.
+_Avoid_: selected (overloaded), active
+
+**Details column**:
+The ruled column beside the hex detail's stack holding the opened voice's standing facts in open sections — context map, profile grades, chord facts, mutator line. Standing facts only: the wave connections keep their breakdown disclosures.
+_Avoid_: sidebar, info panel, chord column (the #388 predecessor)
+
+**Context map**:
+The miniature of the whole in-range board heading the details column — the opened hex in the selected marker, its active chords drawn in their chord hues as links between their voices. It answers where the voice sits in the formation, and its owned cells navigate, opening that coordinate's Hex detail. Phone widths and coarse-pointer devices also offer a native Open hex picker with a 44px minimum height; both navigation paths retain the focused layer.
+_Avoid_: minigrid, minimap
+
+**Action rail**:
+The row of cell-specific controls below the focus-scaled stack whose contents follow the focused face — the upgrade dial and button under Modules, the slot unlock under Mutators.
+_Avoid_: toolbar, button bar, side rail
 
 **Layer legend**:
 The vertical strip of layer symbols at the board's left edge (issue #295) — the one Modules / Mutators switch, shared by the grid and the Hex detail: on the grid it flips the layer, in the detail it emphasizes the face, and it synchronizes with both. The selected face wears the firm inset marker; pre-entry the Mutator symbol stands locked-but-visible, its click walking to the Catalog's entry screen. Every mode's furniture (ADR-0060): the legend stands through flow and pause, the session switching grid layers and emphasizing detail faces read-only — inspection never enables an edit, and mid-session the locked click stays inert (Arete is spent between sessions). Flow entry still lands the board at rest on Modules.
@@ -286,8 +302,12 @@ A named module type's fixed authored identity — coefficients over the category
 _Avoid_: stat roll (the per-instance sense), build (the habit sense)
 
 **Aptitude grade**:
-A profile axis's fixed letter from the category's absolute coefficient bands — S exceptional, A strong, B standard, C reduced, D weak, and the absent mark — shown beside the exact coefficient in the disclosure layer (issue #370). Grades belong to the named type and never re-rank: level, tier, mutators, and live conditions move output, not grades; rare does not imply a higher grade on every axis. Actual output belongs to the production readouts, never to the grade line.
+A profile axis's fixed letter from the category's absolute coefficient bands — S exceptional, A strong, B standard, C reduced, D weak, and the absent mark — shown in parentheses beside the exact authored multiplier on the profile-grades chip (issue #370, re-spoken by ADR-0072). Grades belong to the named type and never re-rank: level, tier, mutators, and live conditions move output, not grades; rare does not imply a higher grade on every axis. Actual output belongs to the production readouts, never to the grade line.
 _Avoid_: rating (the trust sense), current-output letter
+
+**Profile grades**:
+The chip line presenting a profile: one chip per comparable axis, each reading the authored multiplier with its grade in parentheses — `×1.05 (A)` — identical wherever the type's profile renders, self-contained text with no disclosure layer, the temporal axes' timing riding beside as plain figure lines.
+_Avoid_: grade letters (bare letters hide the fact)
 
 **Combination**:
 The consumption of two modules of the same type and merge tier to produce one of the next tier, retaining the higher input level and refunding the lower-level input's nous upgrade expenditure. Dropping one copy onto another (board or tray, either direction) reviews the outcome and lands the result at the drop target; the higher-level copy survives, ties favoring the carried copy. Inventory row Merge instead preserves the clicked copy's identity and secondary effects, inheriting the higher input's level and investment; the selected partner is consumed, and both inputs must remain in inventory (ADR-0071). Mutators combine by the same gesture: two of the same family and rarity yield one mutator of the next rarity — mutators carry no levels, so nothing is retained or refunded. Inventory mutator Merge preserves the clicked copy and excludes deployed partners.

@@ -358,7 +358,7 @@ describe("live rebuild (issue #297)", () => {
     const snap = displayedRates(app.state, true);
     const harmonizer = app.state.modules.find((m) => m.type === "harmonizer")!;
     snap.contributions.get(harmonizer.id)!.chordFactor = 1;
-    renderHexDetail(app, snap, snap, { html: "", key: "" });
+    renderHexDetail(app, snap, snap, { html: "", key: "", marks: [] });
     const rebuilt = trigger("chord");
     expect(rebuilt.classList.contains("flow-inert")).toBe(true);
     expect(breakdownOf(rebuilt).textContent).toContain("inert · no chord");
@@ -447,7 +447,7 @@ describe("PR #304 review regressions", () => {
     }
     const changed = displayedRates(app.state, true);
     changed.discoveryBoost = 1.3;
-    renderHexDetail(app, changed, changed, { html: "", key: "" });
+    renderHexDetail(app, changed, changed, { html: "", key: "", marks: [] });
     expect(breakdownOf(trigger("charge")).textContent).toContain("Discovery bonus×1.3");
   });
 });

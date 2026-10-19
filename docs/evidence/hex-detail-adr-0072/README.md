@@ -1,0 +1,45 @@
+# Hex detail — ADR-0072 composition evidence
+
+Captured 2026-10-18 from the verified checkout (worktree `t3/refine-hex-detail-ui`, commit `362f4cd` — provenance endpoint matched `git rev-parse` at capture time). Server `npm run dev`, `?dev` panel used only to seed a chord partner (a second Sine) and the mutator era; the dev panel itself is hidden in the captures. Viewports: desktop 1280×800, phone 390×844.
+
+## Captures
+
+The four PNGs below are the **first-round** captures, taken before the same-day review revisions landed; they show the pre-revision context map (twin seam lines), chip tooltips, chip-row chord facts, and centered stage. A re-capture of the revised surface was attempted the same session but the browser host's screenshot pipeline went down mid-review; the revisions were verified functionally against the live server (evaluate probes: chord link drawn, three ruled fact rows with the capacity mark, column-width scale present, zero chip tooltips, context-map navigation opening the target coordinate, stage top at 151px against the ledger's 136px baseline, and the upgrade title rendering `688 ν` without overflow). Fresh captures are owed when the pipeline is stable.
+
+- **desktop-modules-focus.png** — the default open on the Sine at C4 (first round): the locked Mutators face as the identity thumbnail, the Sine face at full scale and engraving, the action rail below the stack, and the details column — context map, PROFILE chips (`base ×1 (A)` …), CHORD FACTS.
+- **desktop-chord-breakdown-open.png** — the chord-bonus wave's breakdown opened by click (pin), the plain floating layer with ruled rows and the result row; the action rail fully visible beneath the stack.
+- **desktop-mutators-focus.png** — after the mutator era: the POWER mutator face at full scale in the arete register, the Sine face reduced to its identity thumbnail (chassis, rail, glyph — no text), the mutator→module wave between them, the details column dimmed with the MUTATOR section carrying `Power · +50% to this module's power`.
+- **phone-sheet.png** — the 390px bottom sheet: same posts in one column — faces with the focus scale intact, then the ruled sections scrolling, the context map last (CSS `order`).
+
+## Revisions verified after these captures (2026-10-18 review round)
+
+- Two-note chords register on the context map: active chords draw as center-to-center hue links between their voices (`ctx-link`), replacing the board's twin edge lines that fell inside one stroke width at miniature scale.
+- The context map navigates: owned cells are SVG buttons (`data-ctx-cell`, click / Enter / Space) opening that coordinate's Hex detail at the current face; the opened cell stays the marker.
+- Profile chips are self-contained plain text — the tooltip disclosure (which restated the visible figure) is retired everywhere the shared chip renders.
+- Chord facts speak in the breakdown's ruled-row grammar: capacity led by its canonical mark, the total factor, the formation term with its quality scale drawn at column width; instances remain chips with the one idle disclosure.
+- The composition hangs from the stage's top (grid `align-content: start`, 14px top pad) — no dead band between the ledger and the cross-section.
+- Exact prices wrap rather than clip: the upgrade title and unlock action drop `white-space: nowrap`; dial chips ellipsize with the full figure in the tooltip.
+- Chord instances list one per line (a second same-day review round): the reserved chip's panel backing showed as background rectangles in the column, so the details column draws each chord as a plain list row — hue tick beside the name, multiplier in the mono face, the idle count as the list's dashed last row opening the same floating disclosure. Verified live: zero instance rows carry a background.
+
+## Verified against the instrument standards
+
+- Identity, actionable state, effect, and cost readable at a glance; the ν/s figure stays on the face, never re-spoken in the column.
+- Non-color state: the selected marker (ink outline) on the focused face and the context map's opened hex; the muted/dashed/occupied outline grammar survives at thumbnail scale; the idle trigger is dashed.
+- Disclosure opened by click and by keyboard focus (focus-open verified in `profile.test.ts` / `hexdetail.test.ts` suites); Escape dismisses (unit-tested).
+- Reduced motion: the composition adds no new animation; the focus scale swap is an instantaneous class flip (deliberate — state survives without animation), and the existing wave-pulse rules remain gated on `prefers-reduced-motion`.
+
+## Unavailable checks
+
+- Greyscale pass and a live reduced-motion capture could not run in this session (the browser host's screenshot pipeline was down for part of it; the four captures above predate the revisions). The unit suites pin the state grammar's non-color marks and the revised grammar; fresh desktop/phone captures and the greyscale review are owed before calling the surface fully validated.
+- Touch-target walk on the phone sheet performed by inspection only (44px min-heights are pinned in CSS and asserted in the controls-sheet round; the miniature map cells do not inherit the board grid hit areas; review measured them at approximately 22×25px).
+
+
+## PR #413 accessibility corrections — 2026-10-19
+
+SVG map controls now retain keyboard focus across detail rebuilds. On phone widths and coarse-pointer devices, a labeled native Open hex picker provides a 44px-minimum-height navigation alternative to the miniature polygons; selecting a coordinate retains the focused layer and picker focus. The miniature remains unchanged for formation context. Regression tests cover focus through a changed resource read, Space activation after rebuilding, and phone picker navigation/focus.
+
+Fresh captures: `desktop-map-keyboard-focus.png` (1280×800) and `phone-map-picker.png` (390×844). Captured from `/private/tmp/flowsynth-review-413` at base commit `3332eae` with the accessibility corrections in the working tree; the provenance endpoint matched that checkout and base commit. The dev overlay was hidden for these captures. Browser probes confirmed SVG focus survives a resource-triggered rebuild, the phone picker measures 44px high, and changing its value navigates while retaining picker focus. The phone capture shows its visible focus outline and selected destination. Compared with the pinned instrument/controls references: the new picker is square-cut, labeled, and follows the existing panel and outline grammar.
+
+Native touch-picker interaction, greyscale, and reduced-motion browser checks remain unavailable; scripted change events verify navigation but do not verify the operating system's touch picker. The correction adds no motion.
+
+Validation: `npm run check` passed; full suite 1,668 passed / 2 skipped; UI regression suite 841 passed.
