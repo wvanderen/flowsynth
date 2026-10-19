@@ -851,26 +851,27 @@ describe("the phone banner (ADR-0050's amended phone line)", () => {
     endSession(app.state);
   });
 
-  it("the goal bars drop on phone; the session group carries the habit name at every width (ADR-0050 amended, #331)", () => {
+  it("the goal meter rides at every width; the session group carries the habit name (ADR-0050 amended, #331)", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
+    createGoal(app.state, { habitId: habit.id, minutes: 20, schedule: "once", now: 1000 });
+    accrueGoalProgress(app.state, habit.id, 10 * 60);
     app.render();
-    // The phone row's session group — habit name, clock, switch — reads
-    // where the player starts: the name is no longer dropped (ADR-0050's
+    // The phone row's session group — display well, switch — reads where
+    // the player starts: the habit is no longer dropped (ADR-0050's
     // omission amended by #331), and it is the change door here too.
     const group = document.querySelector("#console-session .session-habit")!;
     expect(group.querySelector('[data-session="habit"]')!.textContent).toBe("Piano");
     expect((group as HTMLElement).tagName).toBe("SPAN");
     expect(group.closest("button")).toBe(document.querySelector(".session-focus"));
-    // The bars stay docked out below the line — the drop lives in the phone
-    // query's own rules, and each block runs to its column-0 closing brace.
-    const css = readFileSync("src/ui/style.css", "utf8");
-    const phoneBlocks = [...css.matchAll(/@container app \(width < 600px\) \{[\s\S]*?\n\}/g)].map((match) => match[0]);
-    expect(phoneBlocks.some((block) => /\.banner-reads\s*\{[^}]*display:\s*none/.test(block))).toBe(true);
-    // Desktop wears the bars the phone drops, and the same session group.
+    // The meter rides where the banner never did (the header-status
+    // brief): the phone header finally carries a goal read.
+    expect(document.querySelector("#console-session .goal-meter")).not.toBeNull();
+    // Desktop wears the same panel, and the same session group.
     setAppWidth(1200);
     app.render();
-    expect(document.querySelector("#console-session .banner-reads")).not.toBeNull();
+    expect(document.querySelector("#console-session .display-well")).not.toBeNull();
+    expect(document.querySelector("#console-session .goal-meter")).not.toBeNull();
     expect(document.querySelector("#console-session .session-habit")!.querySelector('[data-session="habit"]')!.textContent).toBe("Piano");
   });
 });

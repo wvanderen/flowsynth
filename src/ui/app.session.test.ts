@@ -205,7 +205,7 @@ describe("the unified Focus surface", () => {
     expect(door().querySelectorAll("button, [tabindex]")).toHaveLength(0);
     expect(door().contains(document.querySelector(".brand"))).toBe(true);
     expect(door().contains(document.getElementById("session-habit"))).toBe(true);
-    expect(door().contains(document.querySelector(".console-clock"))).toBe(true);
+    expect(door().contains(document.querySelector(".display-well"))).toBe(true);
     document.querySelector<HTMLElement>(".brand")!.click();
     expect(app.ui.app).toBe("time");
     expect(door().getAttribute("aria-expanded")).toBe("true");

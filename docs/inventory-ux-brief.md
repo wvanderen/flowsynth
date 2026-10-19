@@ -50,7 +50,7 @@ The user agreed to each interaction decision and confirmed the complete brief be
 
 Status: consolidated scope confirmed 2026-10-18 and implemented in this checkout. This amendment supersedes conflicting presentation clauses above. Verification is recorded in [the amendment evidence](evidence/inventory-2026-10-18/README.md).
 
-- Collapse to a small hypercube inventory symbol with the stored-item count. Treat the symbol as inventory identity; adopting it as the main logo is a separate decision.
+- Collapse to a small hypercube inventory symbol with the stored-item count. Treat the symbol as inventory identity; adopting it as the main logo is a separate decision. (Decision made 2026-10-19: the hypercube — filled core — is provisionally the main logo; see the [header-status brief](header-status-brief.md).)
 - Standardize rarity marks wherever rarity appears: grey circle for common, green triangle for uncommon, blue diamond for rare. Shapes carry the distinction without color; accessible names retain the rarity word. Keep category glyphs and category hues distinct from these marks. Apply the same rarity vocabulary to mutators without changing their per-copy rarity rules.
 - Display module level with Arabic digits and merge tier with Roman numerals across inventory, details, draft choices, and merge reviews. Preserve the existing one-based display: the first merge tier is I. Mutators have neither module level nor merge tier; non-levelable modules do not acquire a level readout.
 - Inventory detail uses a compact identity face carrying the category glyph, rarity finish, and merge rings. Show level and tier once alongside the name below, rather than repeating them inside the face. Board faces and Hex detail retain their full information-bearing faces.

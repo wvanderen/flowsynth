@@ -150,7 +150,7 @@ describe("the console", () => {
     advance(s, 30);
     app.render();
     expect(document.querySelector("#console-session .session-clock")!.textContent).toBe("09:30");
-    expect(document.querySelector("#console-session .clock-caption")!.textContent).toBe("of 10:00");
+    expect(document.querySelector("#console-session .clock-caption")!.textContent).toBe("10:00");
     // Sixty seconds past the target: the clock counts the overrun, the
     // caption names it.
     advance(s, 630);
@@ -218,7 +218,7 @@ describe("the console header around Enter/Exit Flow (#148)", () => {
     expect(document.getElementById("app-popover")).toBeNull();
   });
 
-  it("the provisional line rides beside the clock, never stacked below it", () => {
+  it("the provisional line rides as the program block's third line inside the display well", () => {
     const s = app.state;
     s.sessionsCompleted = 1;
     startSession(s, 600);
@@ -231,7 +231,7 @@ describe("the console header around Enter/Exit Flow (#148)", () => {
     const anchor = document.querySelector("#console-session .clock-anchor")!;
     expect(anchor.contains(flag)).toBe(true);
     expect(document.querySelector(".session-focus")!.contains(flag)).toBe(true);
-    expect(anchor.querySelector(".clock-stack")!.contains(flag)).toBe(false);
+    expect(anchor.querySelector(".program-block")!.contains(flag)).toBe(true);
     expect(flag.textContent).toContain("provisional");
     expect(flag.textContent).toContain("30 ν");
   });

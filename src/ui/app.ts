@@ -54,6 +54,7 @@ import { serialize, STORAGE_KEY } from "../engine/save";
 import { SharedSave, browserSaveStorage, type LoadedSave } from "./shared-save";
 import { formatClock } from "../engine/clock";
 import { draftTierChanceOf } from "../engine/rolls";
+import { wireTooltips } from "./instrument";
 import { unlockedMergeCap } from "../engine/catalog";
 import { formatInt, formatNumber } from "./format";
 import { applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
@@ -518,6 +519,11 @@ export class App {
     this.ensureBoardOverlays();
     this.bindGlobalEvents();
     document.getElementById("console-settings")?.addEventListener("click", () => this.openModal("settings"), { signal: this.signal });
+    // The display panel's goal meter is a permanent header resident (the
+    // header-status brief): its tooltip layer wires at mount on the stable
+    // session host, sheet open or not. bindFocusSheet's later attach on the
+    // same host and signal is idempotent.
+    wireTooltips(document.getElementById("console-session") ?? document.body, this.signal);
     this.greet();
     this.render();
     this.save();

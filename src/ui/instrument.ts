@@ -53,14 +53,21 @@ function sweep(): void {
 function bodyOf(tip: HTMLElement): HTMLElement | null {
   const trigger = tip.querySelector<HTMLElement>(".inst-tip-trigger");
   const id = trigger?.getAttribute("aria-describedby");
-  const body = (id && document.getElementById(id)) || tip.querySelector<HTMLElement>(".inst-tip-body");
+  // A display-only tip has no trigger to carry aria-describedby, and its
+  // first show portals the body away from the tip's own subtree — the
+  // portal map resolves it there, the markup fallback before a first show.
+  const body =
+    (id && document.getElementById(id)) ||
+    [...portaled].find(([, tipOf]) => tipOf === tip)?.[0] ||
+    tip.querySelector<HTMLElement>(".inst-tip-body");
   return body ?? null;
 }
 
 function place(tip: HTMLElement, body: HTMLElement): void {
+  // A display-only tip has no ⓘ trigger — the meter rides the tip's own
+  // bounds instead, so the body still lands beside what it describes.
   const trigger = tip.querySelector<HTMLElement>(".inst-tip-trigger");
-  if (!trigger) return;
-  const at = trigger.getBoundingClientRect();
+  const at = (trigger ?? tip).getBoundingClientRect();
   const width = Math.min(230, window.innerWidth * 0.6);
   body.style.left = `${Math.max(8, Math.min(at.left, window.innerWidth - width - 8))}px`;
   if (body.classList.contains("inst-tip-scroll")) {
@@ -115,10 +122,19 @@ export function tooltipBodies(host: ParentNode): HTMLElement[] {
 // Dismiss every access state in the scope — the one teardown every
 // dismissal path shares.
 export function closeTooltips(host: ParentNode): void {
-  for (const tip of host.querySelectorAll<HTMLElement>(".inst-tip.over, .inst-tip.focused, .inst-tip.show")) {
-    // Keep focus on its control. Clearing the access states hides the body
-    // until a fresh pointer entry, focus entry, or explicit tap opens it,
-    // and sync reports the closure through aria-expanded.
+  for (const tip of host.querySelectorAll<HTMLElement>(".inst-tip")) {
+    const open = tip.classList.contains("over") || tip.classList.contains("focused") || tip.classList.contains("show");
+    if (!open) {
+      // A body left shown without its access classes is a desync (a rebuild
+      // or a racing dismissal can leave one); the dismissal paths close it.
+      // Keep focus on its control either way.
+      const orphan = bodyOf(tip);
+      if (orphan) orphan.classList.remove("inst-show");
+      continue;
+    }
+    // Clearing the access states hides the body until a fresh pointer
+    // entry, focus entry, or explicit tap opens it, and sync reports the
+    // closure through aria-expanded.
     tip.classList.remove("show", "over", "focused");
     sync(tip);
   }
@@ -234,8 +250,11 @@ export function wireTooltips(host: ParentNode, signal?: AbortSignal): () => void
   document.addEventListener("keydown", (event) => {
     if (host instanceof Node && !host.isConnected) return;
     if ((event as KeyboardEvent).key !== "Escape") return;
-    const open = host.querySelector<HTMLElement>(".inst-tip.show, .inst-tip.focused, .inst-tip.over");
-    if (!open) return;
+    // An open access state — or a body its classes lost (a racing dismissal
+    // or a rebuild) — both dismiss here; nothing open lets Escape through.
+    const hasOpen = !!host.querySelector<HTMLElement>(".inst-tip.show, .inst-tip.focused, .inst-tip.over");
+    const hasShownBody = [...portaled].some(([body, tip]) => host.contains(tip) && body.classList.contains("inst-show"));
+    if (!hasOpen && !hasShownBody) return;
     // Escape dismisses the tooltip first and the surface never sees it:
     // the sheet beneath stays until a second Escape.
     event.stopPropagation();
