@@ -4297,3 +4297,5 @@ body.hex-detail-open .tray-column { z-index: 24; }
 
 .inventory-copy-read > .rarity-symbol, .inventory-detail-name > .rarity-symbol { align-self: center; }
 .inventory-level { white-space: nowrap; }
+
+.class-rank-action { min-width: 44px; min-height: 44px; flex-shrink: 0; padding: 4px; font-size: 11px; }

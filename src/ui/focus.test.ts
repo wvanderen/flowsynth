@@ -613,10 +613,7 @@ describe("the habit-class face (issue #423)", () => {
     pair.spent = { reed: 1 };
     pair.rollMeter = { progress: 420, earned: 1 };
     const frame = drill(habit.id);
-    // The wear chips: the registry's one class, selected.
-    const chip = frame.querySelector<HTMLButtonElement>('[data-class-pick="engineer"]')!;
-    expect(chip.classList.contains("st-selected")).toBe(true);
-    expect(chip.getAttribute("aria-pressed")).toBe("true");
+    expect(frame.querySelector("[data-class-pick]")).toBeNull();
     // The one-place read: level and the point balance live here alone.
     // (The term disclosures sit inline, so the read asserts in pieces.)
     const read = frame.querySelector(".habit-class .stat-row .mono")!.textContent!;
@@ -671,12 +668,25 @@ describe("the habit-class face (issue #423)", () => {
     expect(frame.querySelector("[data-class-respec]")).toBeNull();
   });
 
-  it("the class selection action lands through the engine", () => {
+  it("node disclosures remain independent of rank actions and expose allocation state", () => {
     const habit = createHabit(app.state, "Piano").habit!;
+    const pair = habit.classes.engineer!;
+    pair.level = 3;
+    pair.points = 1;
+    pair.spent = { governor: 2, reed: 1 };
     const frame = drill(habit.id);
-    // The launch class is every habit's wear: clicking the standing chip
-    // is a no-op selection the engine accepts.
-    frame.querySelector<HTMLButtonElement>('[data-class-pick="engineer"]')!.click();
-    expect(habit.classId).toBe("engineer");
+    for (const name of ["Governor", "Reed", "Punch card"]) {
+      const trigger = frame.querySelector<HTMLButtonElement>(`[aria-label="${name} — what it means"]`)!;
+      expect(trigger).not.toBeNull();
+      expect(trigger.closest("button")).toBe(trigger);
+      trigger.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      expect(trigger.getAttribute("aria-expanded")).toBe("true");
+      expect(pair.spent).toEqual({ governor: 2, reed: 1 });
+    }
+    const fullRank = frame.querySelector(".build-node.equipped .build-node-mark")!;
+    expect(fullRank.textContent).toBe("2/2");
+    expect(fullRank.hasAttribute("aria-hidden")).toBe(false);
+    expect(frame.querySelector('[data-class-allocate="reed"]')!.getAttribute("aria-label")).toContain("rank 1 of 2");
+    expect(frame.querySelector(".habit-class")!.textContent!.match(/Engineer/g)).toHaveLength(1);
   });
 });

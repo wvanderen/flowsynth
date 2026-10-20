@@ -64,7 +64,7 @@ import {
   secondsToMinutes,
 } from "./format";
 import { REFLECTION_SLIDER_NEUTRAL } from "../engine/constants";
-import { termTipHtml } from "./terms";
+import { termTipHtml, type CatalogTerm } from "./terms";
 import { wireTooltips } from "./instrument";
 
 // The sheet's faces. HISTORY is the time app's history surfaces lifted to a
@@ -460,13 +460,16 @@ function habitClassHtml(app: App, habit: Habit): string {
   const atCap = pair.level >= def.levelThresholds.length;
   const nextAt = atCap ? null : def.levelThresholds[pair.level]!;
   const nextRead = atCap ? "max level" : `${formatCountdown(Math.max(0, nextAt! - pair.experience))} of practice to level ${pair.level + 1}`;
+  const nodeTerms: Record<string, CatalogTerm> = { governor: "Governor", reed: "Reed", "punch-card": "Punch card" };
   const rows = def.nodes.map((node) => {
+    const term = nodeTerms[node.id];
+    const name = term ? termTipHtml(term, escapeHtml(node.name)) : escapeHtml(node.name);
     const rank = rankOf(pair, node);
     const available = nodeAvailable(pair, node);
     if (!available) {
       return `<div class="build-node locked">
         <span class="build-node-mark mono" aria-hidden="true">·</span>
-        <span class="build-node-name">${escapeHtml(node.name)}<small>unlocks at class level ${node.requiredLevel} · ${escapeHtml(node.effect)}</small></span>
+        <span class="build-node-name">${name}<small>unlocks at class level ${node.requiredLevel} · ${escapeHtml(node.effect)}</small></span>
       </div>`;
     }
     const full = rank >= node.maxRank;
@@ -480,13 +483,13 @@ function habitClassHtml(app: App, habit: Habit): string {
       : "The tree is read-only during flow";
     return full
       ? `<div class="build-node equipped">
-          <span class="build-node-mark mono" aria-hidden="true">${mark}</span>
-          <span class="build-node-name">${escapeHtml(node.name)}<small>${escapeHtml(node.effect)}</small></span>
+          <span class="build-node-mark mono">${mark}</span>
+          <span class="build-node-name">${name}<small>${escapeHtml(node.effect)}</small></span>
         </div>`
-      : `<button class="build-node" data-class-allocate="${node.id}" data-habit="${habit.id}" ${upgrade && pair.points < 1 ? "disabled" : ""} title="${title}">
-          <span class="build-node-mark mono" aria-hidden="true">+${mark}</span>
-          <span class="build-node-name">${escapeHtml(node.name)}<small>${escapeHtml(node.effect)}</small></span>
-        </button>`;
+      : `<div class="build-node">
+          <button class="class-rank-action mono" data-class-allocate="${node.id}" data-habit="${habit.id}" ${!upgrade || pair.points < 1 ? "disabled" : ""} aria-label="Allocate ${escapeHtml(node.name)}, rank ${rank} of ${node.maxRank}" title="${title}">+${mark}</button>
+          <span class="build-node-name">${name}<small>${escapeHtml(node.effect)}</small></span>
+        </div>`;
   }).join("");
   const spentTotal = def.nodes.reduce((sum, node) => sum + rankOf(pair, node), 0);
   const presets = def.presets
@@ -499,9 +502,8 @@ function habitClassHtml(app: App, habit: Habit): string {
     })
     .join("");
   return `<div class="habit-class">
-    <span class="eyebrow">CLASS</span>
-    <div class="class-chips" role="group" aria-label="Class">${chips}</div>
-    <div class="stat-row"><span>Class</span><span class="mono">${termTipHtml(def.id === "engineer" ? "Engineer" : "Habit class", def.name)} · Level ${pair.level} · ${pair.points} ${termTipHtml("tree point", pair.points === 1 ? "tree point" : "tree points")} free</span></div>
+    ${CLASSES.length > 1 ? `<div class="class-chips" role="group" aria-label="Class">${chips}</div>` : ""}
+    <div class="stat-row"><span class="mono">${termTipHtml(def.id === "engineer" ? "Engineer" : "Habit class", def.name)} · Level ${pair.level} · ${pair.points} ${termTipHtml("tree point", pair.points === 1 ? "tree point" : "tree points")} free</span></div>
     <div class="stat-row"><span>Next level</span><span class="mono">${nextRead}</span></div>
     ${classMeterRowHtml(habit)}
     <div class="class-tree">
