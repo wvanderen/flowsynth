@@ -17,33 +17,60 @@ export function normalizeGoalColor(color: unknown): GoalColor {
   return typeof color === "string" && (GOAL_COLORS as readonly string[]).includes(color) ? (color as GoalColor) : DEFAULT_GOAL_COLOR;
 }
 
-// Goals (issue #6). A goal tracks a practice condition ("Piano, 20 minutes
-// a day") in a limited slot. Progress accrues only while the goal is active
-// — earlier practice never counts retroactively. Completions grant nothing
-// themselves — goal templates are conditions only (ADR-0012) — but the
-// completion tick is the fact every owned generator reads, banking its
-// profile's goal credit on the focus equivalent (issue #371). Daily and weekly
-// goals reset at the local calendar boundary; one-time goals keep their
-// slot until replaced in upgrade mode. Slot capacity grows only through the
-// console long goal (issue #42): one more slot per purchase, bought in the
-// Goals panel.
+// Goals (issue #6, as re-owned by issue #423). A goal tracks a practice
+// condition ("Piano, 20 minutes a day") and belongs to ONE habit: only the
+// selected habit's goals display, and only credited practice for that
+// habit advances them — unstructured practice advances no goals. The
+// shared slot economy and its Channel Strips purchase retire with the
+// World experiment (ADR-0074): each habit owns a small fixed capacity
+// (BALANCE.habitGoalSlots), never purchasable. Progress accrues only
+// while the goal is active — earlier practice never counts retroactively.
+// Completions grant nothing themselves — goal templates are conditions
+// only (ADR-0012) — but the completion tick is the fact every owned
+// generator reads, banking its profile's goal credit on the focus
+// equivalent (issue #371) under the bounded fuel budget (below). Daily and
+// weekly goals reset at the local calendar boundary; one-time goals keep
+// their slot until replaced in upgrade mode.
+//
+// The goal-generator fuel budget (issue #423): completions credit
+// generators only out of a pool that accrues at
+// BALANCE.goalFuelPerCreditedSecond per credited practice second — more
+// goals, shorter targets, and repeated replacement cannot raise the
+// generator credit the same practice time yields. The pool lives on
+// state.goalFuel and draws down inside the one credit seam
+// (reserves.creditGoalEarning); it is a rule, never a displayed resource.
 
-export function goalCapacity(state: GameState): number {
-  return BALANCE.goalBaseSlots + state.goalCapacityBought;
+export function goalCapacity(): number {
+  return BALANCE.habitGoalSlots;
+}
+
+// The goal-generator fuel's one accrual leg: credited practice seconds
+// only, called beside the credited time it budgets (advance's live sink
+// and the honesty report's credit). Manual logs and breathers feed
+// nothing.
+export function accrueGoalFuel(state: GameState, seconds: number): void {
+  if (!(seconds > EPS)) return;
+  state.goalFuel += BALANCE.goalFuelPerCreditedSecond * seconds;
 }
 
 export function goalRequiredSeconds(goal: Goal): number {
   return goal.condition.minutes * 60;
 }
 
-// The tracker's rolled-up state (issue #149): no tracked goals, work in
-// progress (at least one incomplete current occurrence), or every current
-// occurrence complete. A recurring reset rolls completed goals back to open.
+// The tracker's rolled-up state (issue #149, scoped by issue #423): the
+// selected habit's goals — none tracked, work in progress (at least one
+// incomplete current occurrence), or every current occurrence complete.
+// With no habit selected nothing is tracked; a recurring reset rolls
+// completed goals back to open. Cross-habit goals retired by the
+// experiment never qualify.
 export type GoalTrackerState = "none" | "open" | "complete";
 
 export function goalTrackerState(state: GameState): GoalTrackerState {
-  if (state.goals.length === 0) return "none";
-  return state.goals.some((g) => !g.completed) ? "open" : "complete";
+  const habitId = state.activeHabitId;
+  if (habitId === null) return "none";
+  const own = state.goals.filter((g) => g.condition.habitId === habitId);
+  if (own.length === 0) return "none";
+  return own.some((g) => !g.completed) ? "open" : "complete";
 }
 
 function localDateKey(now: number): string {
@@ -89,9 +116,14 @@ export interface GoalCreateInput {
 
 export function createGoal(state: GameState, input: GoalCreateInput): { ok: boolean; reason?: string; goal?: Goal } {
   if (state.mode !== "upgrade") return { ok: false, reason: "Goals are managed between sessions." };
-  if (state.goals.length >= goalCapacity(state)) return { ok: false, reason: "No free goal slots — remove a goal first." };
+  // Goals are owned by a habit (issue #423): the cross-habit template
+  // retired with the shared slot economy.
+  if (input.habitId === null) return { ok: false, reason: "Pick the habit this goal tracks." };
+  if (state.goals.filter((g) => g.condition.habitId === input.habitId).length >= goalCapacity()) {
+    return { ok: false, reason: "No free goal slots — remove a goal first." };
+  }
   if (!(input.minutes > 0) || input.minutes > 24 * 60) return { ok: false, reason: "Choose between 1 and 1440 minutes." };
-  if (input.habitId !== null && !state.habits.some((h) => h.id === input.habitId && !h.archived)) {
+  if (!state.habits.some((h) => h.id === input.habitId && !h.archived)) {
     return { ok: false, reason: "That habit does not exist." };
   }
   const schedule: GoalSchedule =
@@ -154,24 +186,29 @@ export function normalizeGoals(goals: Goal[]): void {
   }
 }
 
-// The completion tick's credit (ADR-0047, generalized by issue #371):
-// completing a goal of M minutes banks the focus equivalent
-// (the Flywheel's focus rate × M) × the live share of the goal's progress
-// into every owned generator at its profile's goal coefficient —
-// manual-only completions bank nothing (the honesty boundary) and mixed
-// practice banks its live share. Recurring goals credit once per
+// The completion tick's credit (ADR-0047, generalized by issue #371,
+// budgeted by issue #423): completing a goal of M minutes banks the focus
+// equivalent (the Flywheel's focus rate × M) × the live share of the
+// goal's progress into every owned generator at its profile's goal
+// coefficient — manual-only completions bank nothing (the honesty
+// boundary) and mixed practice banks its live share. The draw lands
+// inside the one credit seam (reserves.creditGoalEarning) against the
+// goalFuel pool, so a completion can never credit more than the credited
+// practice time it rode on has budgeted. Recurring goals credit once per
 // occurrence — this fires at the completion tick, and the occurrence
-// reset re-opens the goal — and overlapping completions each credit. No
-// size floor: goal slots and the practice itself keep farming
-// self-limiting.
+// reset re-opens the goal — and overlapping completions each credit.
 function creditGoalGenerators(state: GameState, goal: Goal): void {
   if (goal.progressSeconds <= EPS || goal.liveSeconds <= EPS) return;
   creditGoalEarning(state, goal.progressSeconds, goal.liveSeconds / goal.progressSeconds);
 }
 
 function acceptsPractice(goal: Goal, habitId: string | null): boolean {
+  // Goals are habit-owned (issue #423): only their own habit's credited
+  // practice advances them. The cross-habit template (habitId null)
+  // retired — a migrated save may still carry one until the conversion
+  // retires it, and it never accrues again.
   return !goal.completed && goal.condition.kind === "habit-minutes"
-    && (goal.condition.habitId === null || goal.condition.habitId === habitId);
+    && goal.condition.habitId !== null && goal.condition.habitId === habitId;
 }
 
 // Live advancement must stop at the next completion: its credit can change
@@ -187,9 +224,9 @@ export function secondsUntilGoalCompletion(state: GameState, habitId: string | n
   return earliest;
 }
 
-// Accrues qualifying practice and completes goals. Unstructured practice
-// (habitId null) counts toward any-habit goals; specific-habit goals only
-// accrue from their habit. The `source` splits the honesty boundary
+// Accrues qualifying practice and completes goals. Practice advances only
+// its own habit's goals (issue #423) — unstructured practice (habitId
+// null) advances nothing. The `source` splits the honesty boundary
 // (ADR-0047): "live" is credited present, trusted, and honesty-credited
 // time (the advance and reconciliation paths); "manual" is a player
 // practice log, which advances the condition but never joins the live

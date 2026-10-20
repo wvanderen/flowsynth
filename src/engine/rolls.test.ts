@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import { chooseRoll as chooseRollAction, startSession } from "./actions";
-import { fresh, give, stubRng } from "./fixtures";
+import { fresh, give, giveHabit, stubRng } from "./fixtures";
 import { ROLL_POOL, TYPE_RARITY } from "./constants";
-import { addFlowProgress, addForgeProgress, generateOffer } from "./rolls";
+import { addForgeProgress, generateOffer } from "./rolls";
+import { accrueClassDevelopment } from "./classes";
 import { hex } from "./hex";
 
 describe("forge roll generation", () => {
@@ -106,10 +107,11 @@ describe("forge roll generation", () => {
     const s = fresh();
     give(s, "forge", hex(1, 0));
     give(s, "focusKeyed", hex(2, 0));
+    const { pair } = giveHabit(s);
     s.modules.find((m) => m.type === "focusKeyed")!.reserve = 600;
     startSession(s, null);
     // Charge 100 crosses 60, carries 40; the 100 credited seconds sit
-    // inside the flow meter's opening fill — one offer, from the charge
+    // inside the practice meter's opening fill — one offer, from the charge
     // source, in the one shared queue.
     advance(s, 100, stubRng(new Array(12).fill(0.3)));
     expect(s.bankedRolls).toHaveLength(1);
@@ -119,13 +121,15 @@ describe("forge roll generation", () => {
     advance(s, 1);
     expect(s.bankedRolls).toHaveLength(1);
     expect(s.nous).toBeGreaterThan(before);
+    expect(pair.rollMeter.earned).toBe(0);
   });
 
   it("the one queue is interchangeable: each source's take spends the same bank", () => {
     const s = fresh();
-    addFlowProgress(s, 180);
+    const { pair } = giveHabit(s);
+    accrueClassDevelopment(s, 180, () => 0.5);
     addForgeProgress(s, 60);
-    expect(s.flow.earned).toBe(1);
+    expect(pair.rollMeter.earned).toBe(1);
     expect(s.forge.earned).toBe(1);
     expect(s.bankedRolls).toHaveLength(2);
     // Spending never asks which meter minted the offer.

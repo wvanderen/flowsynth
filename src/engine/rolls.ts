@@ -60,10 +60,12 @@ export function nextDraftUpgradePrice(owned: number): number | null {
 // The tier draw (issue #378): a fresh candidate mints one merge tier
 // higher with its owned rung's chance, clamped to the unlocked cap —
 // offered tiers never exceed it. The draw spends an rng value only while
-// rungs are owned: with none, the stream stays the bare three draws per
-// slot.
-function drawCandidateTier(state: GameState, rng: Rng): number {
-  const chance = draftTierChanceOf(state.draftTierBonus);
+// rungs are owned or an extra chance rides in: with neither, the stream
+// stays the bare three draws per slot. The extra chance (issue #423) is
+// the Engineer tree's merge-progression node shaping its own pair's
+// practice mints — additive over the loom's chance, still clamped.
+function drawCandidateTier(state: GameState, rng: Rng, extraChance = 0): number {
+  const chance = Math.min(1, draftTierChanceOf(state.draftTierBonus) + extraChance);
   if (chance <= 0) return 0;
   return rng() < chance ? Math.min(1, unlockedMergeCap(state)) : 0;
 }
@@ -132,13 +134,30 @@ export function generateSpecialOffer(state: GameState, kind: SpecialDraftKind, c
 // pool draw without a synthesizer is re-rigged to carry one. Whether the
 // rig re-rolls a slot or guarantees the type is tuning, not spec. One
 // queue, two sources (ADR-0041): the rig reads the total earned, so the
-// first roll is the rigged one whichever meter minted it — in the opening
-// that is always the flow meter.
+// first roll is the rigged one whichever meter minted it — the Forge's or
+// any habit–class pair's practice meter (issue #423).
 function firstRollRigged(state: GameState): boolean {
-  return state.forge.earned + state.flow.earned === 1;
+  return state.forge.earned + totalPracticeRollsEarned(state) === 1;
 }
 
-export function generateOffer(state: GameState, rng: Rng): RollOffer {
+// Every practice-minted roll ever banked from any habit–class pair (issue
+// #423): the retired flow meter's earned count fed this same figure, and
+// the feats that read rolls taken still read the total, never one pair's.
+export function totalPracticeRollsEarned(state: GameState): number {
+  let total = 0;
+  for (const habit of state.habits) {
+    const classes = habit.classes;
+    if (!classes || typeof classes !== "object") continue;
+    for (const pair of Object.values(classes)) {
+      if (pair && typeof pair === "object" && Number.isFinite(pair.rollMeter?.earned)) {
+        total += pair.rollMeter.earned;
+      }
+    }
+  }
+  return total;
+}
+
+export function generateOffer(state: GameState, rng: Rng, extraTierChance = 0): RollOffer {
   // The Mutator Forge type joins as one uniform, unweighted entry once the
   // roll-pool purchase owns membership (ADR-0043) — the purchase buys
   // membership, nothing else. Its draws ride its category's authored
@@ -160,7 +179,7 @@ export function generateOffer(state: GameState, rng: Rng): RollOffer {
     const inCategory = bandPool.filter((type) => CATEGORY_OF[type] === category);
     const type = inCategory[Math.floor(rng() * inCategory.length)]!;
     pool.splice(pool.indexOf(type), 1);
-    candidates.push({ id: newModuleId(state), type, tier: drawCandidateTier(state, rng) });
+    candidates.push({ id: newModuleId(state), type, tier: drawCandidateTier(state, rng, extraTierChance) });
   }
   // The rig can only ever land on the last slot: the guard means neither
   // earlier candidate sings, so the replacement can't duplicate a type. It
@@ -197,20 +216,15 @@ export function mutatorForgeThreshold(earned: number): number {
   return BALANCE.mutatorForgeInitialThreshold * BALANCE.mutatorForgeThresholdGrowth ** earned;
 }
 
-// The flow meter's fixed cadence (ADR-0041): a one-time fast opening fill
-// that teaches the loop, then one flat block of credited practice per roll
-// — forever, never scaling. The fill is measured in credited seconds
-// directly, so the threshold is a duration.
-export function flowThreshold(earned: number): number {
-  return earned === 0 ? BALANCE.flowOpeningSeconds : BALANCE.flowCadenceSeconds;
-}
-
-// The shared crossing loop (ADR-0009): add progress, and while the branch's
-// globally scaling threshold is met, subtract it, count the crossing, mint
+// The shared crossing loop (ADR-0009): add progress, and while the
+// branch's threshold is met, subtract it, count the crossing, mint
 // an offer into the branch's queue, and carry the excess forward. One queue
 // per branch; the module branches (ADR-0041) push interchangeably into one
-// queue, the Mutator Forge into the Mutator tray's own (issue #198).
-function bankRolls<O>(
+// queue, the Mutator Forge into the Mutator tray's own (issue #198). The
+// practice branch (issue #423) banks through here too — its meter belongs
+// to the active habit–class pair, and its threshold reads the pair's own
+// earned count and tree.
+export function bankRolls<O>(
   meter: Meter,
   source: keyof RollSources,
   amount: number,
@@ -236,10 +250,6 @@ function bankRolls<O>(
 
 export function addForgeProgress(state: GameState, amount: number, rng: Rng = Math.random): number {
   return bankRolls(state.forge, "forge", amount, forgeThreshold, state, rng, state.bankedRolls, generateOffer);
-}
-
-export function addFlowProgress(state: GameState, seconds: number, rng: Rng = Math.random): number {
-  return bankRolls(state.flow, "flow", seconds, flowThreshold, state, rng, state.bankedRolls, generateOffer);
 }
 
 // The Mutator Forge branch's crossings (ADR-0043, issue #198): charge-only

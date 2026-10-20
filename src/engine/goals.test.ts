@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
-import { buyGoalCapacity, endSession, startSession } from "./actions";
-import { fresh, give } from "./fixtures";
+import { endSession, startSession } from "./actions";
+import { fresh, give, giveHabit } from "./fixtures";
 import { addPracticeLog, createHabit, selectHabit } from "./habits";
 import { hex } from "./hex";
 import {
@@ -16,9 +16,9 @@ import {
   rollGoalOccurrences,
   setGoalColor,
 } from "./goals";
-import { longGoalCost } from "./economy";
 import { deserialize, serialize } from "./save";
 import { applyGap, flushPendingAway, resolveHonestyReport } from "./trust";
+import { BALANCE } from "./constants";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -28,82 +28,63 @@ function withHabit(s: ReturnType<typeof fresh>, name = "Piano") {
   return habit;
 }
 
+// The completion-credit arithmetic is the subject of its own describe; the
+// budget pool there is filled past any draw so the proration reads plain.
+// Where the budget itself is the subject, the pool starts where the state
+// starts: empty.
+function fullFuel(s: ReturnType<typeof fresh>): void {
+  s.goalFuel = 1e12;
+}
+
 describe("goal slots and creation", () => {
-  it("starts at the base two slots; capacity grows one slot per long-goal purchase", () => {
+  it("each habit owns a small fixed capacity — never purchasable (issue #423)", () => {
     const s = fresh();
-    expect(goalCapacity(s)).toBe(2);
-    s.goalCapacityBought = 2;
-    expect(goalCapacity(s)).toBe(4);
-  });
-
-  it("sells goal capacity as the first console long goal — Goals is free, so only nous gates it", () => {
-    const s = fresh();
-    s.nous = longGoalCost(0);
-    expect(buyGoalCapacity(s).ok).toBe(true);
-    expect(s.goalCapacityBought).toBe(1);
-    expect(goalCapacity(s)).toBe(3);
-    expect(s.nous).toBe(0);
-  });
-
-  it("adds exactly one slot per purchase, priced far past the last, with no occupancy gate (#150)", () => {
-    const s = fresh();
-    // Much steeper: each slot costs over twice the previous one.
-    expect(longGoalCost(1)).toBeGreaterThan(longGoalCost(0) * 2);
-    // Successive slots ride back-to-back whenever affordable — an empty
-    // tracker never blocks a purchase.
-    s.nous = longGoalCost(0) + longGoalCost(1);
-    expect(buyGoalCapacity(s).ok).toBe(true);
-    expect(goalCapacity(s)).toBe(3);
-    expect(buyGoalCapacity(s).ok).toBe(true);
-    expect(s.goalCapacityBought).toBe(2);
-    expect(goalCapacity(s)).toBe(4);
-    expect(s.nous).toBe(0);
-  });
-
-  it("refuses the long goal during flow or without nous", () => {
-    const s = fresh();
-    s.nous = longGoalCost(0);
-    startSession(s, null);
-    expect(buyGoalCapacity(s).ok).toBe(false);
-    endSession(s);
-    s.nous = 0;
-    expect(buyGoalCapacity(s).ok).toBe(false);
-    expect(s.goalCapacityBought).toBe(0);
-  });
-
-  it("rejects goals when full, with bad inputs, or while in flow", () => {
-    const s = fresh();
-    withHabit(s);
-    createGoal(s, { habitId: null, minutes: 20, schedule: "daily", now: 1 });
-    createGoal(s, { habitId: null, minutes: 20, schedule: "daily", now: 1 });
-    expect(createGoal(s, { habitId: null, minutes: 5, schedule: "daily", now: 1 }).ok).toBe(false);
+    expect(goalCapacity()).toBe(BALANCE.habitGoalSlots);
+    const habit = withHabit(s);
+    for (let i = 0; i < BALANCE.habitGoalSlots; i++) {
+      expect(createGoal(s, { habitId: habit.id, minutes: 5, schedule: "daily", now: 1 }).ok).toBe(true);
+    }
+    expect(createGoal(s, { habitId: habit.id, minutes: 5, schedule: "daily", now: 1 }).ok).toBe(false);
     deleteGoal(s, s.goals[0]!.id);
-    expect(createGoal(s, { habitId: null, minutes: 5, schedule: "daily", now: 1 }).ok).toBe(true);
-    expect(createGoal(s, { habitId: null, minutes: 0, schedule: "daily", now: 1 }).ok).toBe(false);
+    expect(createGoal(s, { habitId: habit.id, minutes: 5, schedule: "daily", now: 1 }).ok).toBe(true);
+    // Another habit's slots are its own.
+    const other = createHabit(s, "Cooking")!.habit!;
+    expect(createGoal(s, { habitId: other.id, minutes: 5, schedule: "daily", now: 1 }).ok).toBe(true);
+  });
+
+  it("goals are habit-owned: the cross-habit template refuses (issue #423)", () => {
+    const s = fresh();
+    expect(createGoal(s, { habitId: null, minutes: 10, schedule: "daily", now: 1 }).ok).toBe(false);
+  });
+
+  it("rejects goals with bad inputs, unknown habits, or while in flow", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    expect(createGoal(s, { habitId: habit.id, minutes: 0, schedule: "daily", now: 1 }).ok).toBe(false);
     expect(createGoal(s, { habitId: "nope", minutes: 5, schedule: "daily", now: 1 }).ok).toBe(false);
     startSession(s, 600);
-    expect(createGoal(s, { habitId: null, minutes: 5, schedule: "daily", now: 1 }).ok).toBe(false);
-    expect(deleteGoal(s, s.goals[0]!.id).ok).toBe(false);
+    expect(createGoal(s, { habitId: habit.id, minutes: 5, schedule: "daily", now: 1 }).ok).toBe(false);
     endSession(s);
-    expect(deleteGoal(s, s.goals[0]!.id).ok).toBe(true);
+    expect(createGoal(s, { habitId: habit.id, minutes: 5, schedule: "daily", now: 1 }).ok).toBe(true);
   });
 
   it("colors a goal at creation — vermillion default, chosen key kept (#312)", () => {
     const s = fresh();
-    s.goalCapacityBought = 1;
-    const plain = createGoal(s, { habitId: null, minutes: 10, schedule: "once", now: 1 }).goal!;
+    const habit = withHabit(s);
+    const plain = createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 }).goal!;
     expect(plain.color).toBe(DEFAULT_GOAL_COLOR);
     expect(GOAL_COLORS).toEqual(["vermillion", "amber", "green", "cyan", "indigo", "violet"]);
-    const picked = createGoal(s, { habitId: null, minutes: 10, schedule: "once", now: 1, color: "cyan" }).goal!;
+    const picked = createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1, color: "cyan" }).goal!;
     expect(picked.color).toBe("cyan");
     // An unknown key falls back to the default, never a made-up token.
-    const stray = createGoal(s, { habitId: null, minutes: 10, schedule: "once", now: 1, color: "chartreuse" as never }).goal!;
+    const stray = createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1, color: "chartreuse" as never }).goal!;
     expect(stray.color).toBe(DEFAULT_GOAL_COLOR);
   });
 
   it("re-colors a goal in upgrade mode only, on real goals with real keys (#312)", () => {
     const s = fresh();
-    const goal = createGoal(s, { habitId: null, minutes: 10, schedule: "once", now: 1 }).goal!;
+    const habit = withHabit(s);
+    const goal = createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 }).goal!;
     expect(setGoalColor(s, goal.id, "indigo").ok).toBe(true);
     expect(goal.color).toBe("indigo");
     expect(setGoalColor(s, "nope", "cyan").ok).toBe(false);
@@ -117,7 +98,8 @@ describe("goal slots and creation", () => {
 
   it("lenient-defaults a pre-palette save's color and drops corrupt keys (#312)", () => {
     const s = fresh();
-    const goal = createGoal(s, { habitId: null, minutes: 10, schedule: "once", now: 1, color: "violet" }).goal!;
+    const habit = withHabit(s);
+    const goal = createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1, color: "violet" }).goal!;
     const legacy = { ...goal, color: undefined } as unknown as typeof goal;
     const corrupt = { ...goal, id: `${goal.id}x`, color: 7 } as unknown as typeof goal;
     normalizeGoals([legacy, corrupt]);
@@ -142,26 +124,31 @@ describe("goal progress and completion", () => {
     const s = fresh();
     const habit = withHabit(s);
     createGoal(s, { habitId: habit.id, minutes: 10, schedule: "daily", now: 1 });
+    fullFuel(s);
     startSession(s, null);
     advance(s, 600);
     expect(s.goals[0]!.completed).toBe(true);
     const nousBefore = s.nous;
     advance(s, 3600);
     expect(s.nous - nousBefore).toBeCloseTo(360, 6); // one synth alone; no rewards
-    // The meter's growth is the flow cadence's (ADR-0041) — no completion grants:
-    // 4200 credited seconds cross the opening fill plus two flat blocks, carrying 420.
-    expect(s.flow.earned).toBe(3);
-    expect(s.flow.progress).toBeCloseTo(420, 6);
+    // The meter's growth is the practice-roll cadence's (issue #423) — no
+    // completion grants: 4200 credited seconds cross the opening fill plus
+    // two flat blocks, carrying 420.
+    expect(s.habits[0]!.classes.engineer!.rollMeter.earned).toBe(3);
+    expect(s.habits[0]!.classes.engineer!.rollMeter.progress).toBeCloseTo(420, 6);
     expect(s.goals[0]!.completedCount).toBe(1);
   });
 
-  it("matches any-habit goals from every habit and unstructured practice", () => {
+  it("goals are habit-owned: only their habit's practice advances them (issue #423)", () => {
     const s = fresh();
-    createGoal(s, { habitId: null, minutes: 10, schedule: "daily", now: 1 });
-    expect(accrueGoalProgress(s, null, 300)).toBe(0); // unstructured still counts
-    expect(s.goals[0]!.progressSeconds).toBeCloseTo(300, 6);
-    const other = createHabit(s, "Cooking")!.habit!;
-    expect(accrueGoalProgress(s, other.id, 300)).toBe(1); // completes
+    const piano = createHabit(s, "Piano")!.habit!;
+    createGoal(s, { habitId: piano.id, minutes: 10, schedule: "daily", now: 1 });
+    expect(accrueGoalProgress(s, null, 300)).toBe(0); // unstructured advances nothing
+    expect(s.goals[0]!.progressSeconds).toBe(0);
+    const cooking = createHabit(s, "Cooking")!.habit!;
+    expect(accrueGoalProgress(s, cooking.id, 600)).toBe(0); // another habit advances nothing
+    expect(s.goals[0]!.progressSeconds).toBe(0);
+    expect(accrueGoalProgress(s, piano.id, 600)).toBe(1); // completes
   });
 
   it("specific-habit goals ignore other habits and no-habit sessions", () => {
@@ -239,16 +226,21 @@ describe("recurrence", () => {
 describe("the tracker's rolled-up state (#149)", () => {
   it("distinguishes no tracked goals, work in progress, and every occurrence complete", () => {
     const s = fresh();
-    expect(goalTrackerState(s)).toBe("none");
+    expect(goalTrackerState(s)).toBe("none"); // no habit selected
     const habit = withHabit(s);
+    expect(goalTrackerState(s)).toBe("none"); // the habit tracks nothing yet
     createGoal(s, { habitId: habit.id, minutes: 10, schedule: "daily", now: 1 });
     expect(goalTrackerState(s)).toBe("open");
     accrueGoalProgress(s, habit.id, 600);
     expect(goalTrackerState(s)).toBe("complete");
     // One incomplete current occurrence is enough for in progress, whatever
     // the others say.
-    createGoal(s, { habitId: null, minutes: 20, schedule: "once", now: 2 });
+    createGoal(s, { habitId: habit.id, minutes: 20, schedule: "once", now: 2 });
     expect(goalTrackerState(s)).toBe("open");
+    // Another habit's goals never qualify the tracker.
+    const other = createHabit(s, "Cooking")!.habit!;
+    selectHabit(s, other.id);
+    expect(goalTrackerState(s)).toBe("none");
   });
 
   it("a recurring reset returns the tracker to in progress", () => {
@@ -275,17 +267,18 @@ describe("persistence", () => {
   });
 });
 
-// The completion tick's credit (ADR-0047, generalized by issue #371):
-// completing a goal banks the focus equivalent (the Flywheel's focus rate × the
-// goal's credited seconds) × its live share into every owned generator at
-// its profile's goal coefficient — the Milestone's ×5 leads, the others'
-// modest ×1 trails. Manual-only completions bank nothing; recurring goals
+// The completion tick's credit (ADR-0047, generalized by issue #371,
+// budgeted by issue #423): completing a goal banks the focus equivalent (the
+// Flywheel's focus rate × the goal's credited seconds) × its live share into
+// every owned generator at its profile's goal coefficient, drawn against the
+// goalFuel pool. Manual-only completions bank nothing; recurring goals
 // credit once per occurrence; overlapping completions each credit.
 describe("the completion tick's credit", () => {
   it.each(["live", "manual"] as const)("caps an oversized %s completion at the remaining goal duration", (source) => {
     const s = fresh();
     const habit = withHabit(s);
     const gen = give(s, "goalKeyed", null);
+    fullFuel(s);
     createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 });
     accrueGoalProgress(s, habit.id, 300, source === "live" ? "manual" : "live");
     accrueGoalProgress(s, habit.id, 3600, source);
@@ -298,6 +291,7 @@ describe("the completion tick's credit", () => {
     const s = fresh();
     const habit = withHabit(s);
     const gen = give(s, "goalKeyed", null);
+    fullFuel(s);
     createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 });
     startSession(s, null);
     advance(s, 300);
@@ -313,8 +307,10 @@ describe("the completion tick's credit", () => {
       const s = fresh();
       const board = give(s, "goalKeyed", hex(1, 0));
       const tray = give(s, "goalKeyed", null);
-      createGoal(s, { habitId: null, minutes: 1, schedule: "once", now: 1 });
-      createGoal(s, { habitId: null, minutes: 2, schedule: "once", now: 1 });
+      const habit = giveHabit(s).habit;
+      createGoal(s, { habitId: habit.id, minutes: 1, schedule: "once", now: 1 });
+      createGoal(s, { habitId: habit.id, minutes: 2, schedule: "once", now: 1 });
+      fullFuel(s);
       startSession(s, 600);
       return { s, board, tray };
     }
@@ -324,6 +320,10 @@ describe("the completion tick's credit", () => {
     const result = flushPendingAway(batch.s, () => 0.5);
     for (let i = 0; i < 600; i++) advance(ticks.s, 1, () => 0.5);
     expect(result.goalsCompleted).toBe(2);
+    // The sub-floor absence auto-credits through the live legs, so both
+    // completions bank their full live shares: 60 s and 120 s of credited
+    // time × the Milestone's 5 × 0.1, on every owned generator. The board
+    // copy's reserve already drained its window — the tray copy holds both.
     expect(batch.board.reserve).toBe(0);
     expect(batch.tray.reserve).toBe(90);
     expect(batch.s.nous).toBeCloseTo(ticks.s.nous, 6);
@@ -336,6 +336,7 @@ describe("the completion tick's credit", () => {
     const habit = withHabit(s);
     const board = give(s, "goalKeyed", hex(2, 0));
     const tray = give(s, "goalKeyed", null);
+    fullFuel(s);
     createGoal(s, { habitId: habit.id, minutes: 20, schedule: "once", now: 1 });
     startSession(s, 600);
     advance(s, 600);
@@ -349,6 +350,7 @@ describe("the completion tick's credit", () => {
     const s = fresh();
     const habit = withHabit(s);
     const gen = give(s, "goalKeyed", null);
+    fullFuel(s);
     createGoal(s, { habitId: habit.id, minutes: 20, schedule: "once", now: 1 });
     startSession(s, 600);
     advance(s, 600); // half the goal live
@@ -363,6 +365,7 @@ describe("the completion tick's credit", () => {
     const s = fresh();
     const habit = withHabit(s);
     const gen = give(s, "goalKeyed", null);
+    fullFuel(s);
     createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 });
     addPracticeLog(s, habit.id, 10, 2_000);
     expect(s.goals[0]!.completed).toBe(true);
@@ -373,6 +376,7 @@ describe("the completion tick's credit", () => {
     const s = fresh();
     const habit = withHabit(s);
     const gen = give(s, "goalKeyed", null);
+    fullFuel(s);
     createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 });
     startSession(s, null);
     applyGap(s, 900, "away", 0); // open-ended past the floor: provisional
@@ -389,6 +393,7 @@ describe("the completion tick's credit", () => {
     const habit = withHabit(s);
     const monday = Date.UTC(2026, 8, 14, 10);
     const gen = give(s, "goalKeyed", null);
+    fullFuel(s);
     createGoal(s, { habitId: habit.id, minutes: 10, schedule: "daily", now: monday });
     accrueGoalProgress(s, habit.id, 600);
     expect(gen.reserve).toBeCloseTo(300, 6);
@@ -402,6 +407,7 @@ describe("the completion tick's credit", () => {
     const s = fresh();
     const habit = withHabit(s);
     const gen = give(s, "goalKeyed", null);
+    fullFuel(s);
     createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 });
     createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 2 });
     accrueGoalProgress(s, habit.id, 600); // completes both at once

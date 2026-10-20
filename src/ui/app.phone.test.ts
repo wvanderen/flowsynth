@@ -794,10 +794,10 @@ describe("the phone banner (ADR-0050's amended phone line)", () => {
     expect(document.getElementById("app-tile-goals")).toBeNull();
     expect(document.getElementById("app-tile-habit")).toBeNull();
     expect(document.querySelector(".launcher-goal-state, .launcher-habit-state")).toBeNull();
-    createGoal(app.state, { habitId: null, minutes: 20, schedule: "daily", now: 1_000 });
-    accrueGoalProgress(app.state, null, 20 * 60);
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
+    createGoal(app.state, { habitId: habit.id, minutes: 20, schedule: "daily", now: 1_000 });
+    accrueGoalProgress(app.state, habit.id, 20 * 60);
     setAppWidth(1200);
     app.render();
     expect(document.getElementById("app-tile-goals")).toBeNull();

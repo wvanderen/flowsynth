@@ -713,11 +713,26 @@ h1, h2, h3, p { margin: 0; }
 .goal-ledger-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .goal-row.done .goal-ledger-name { color: var(--muted); }
 .goal-ledger-head .icon-btn { flex-shrink: 0; }
-.long-goal-row { justify-content: space-between; align-items: center; }
-.long-goal-row .long-goal-head { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex-wrap: wrap; }
-.long-goal-row .long-goal-name { font-size: 13px; font-weight: 550; }
-.long-goal-row .long-goal-effect { font: 12px var(--mono); color: var(--muted); white-space: nowrap; }
-.long-goal-row .shop-buy { align-items: flex-end; }
+/* The habit-class face (issue #423): the wear chips ride the state
+    grammar, the meter row carries the practice-roll track, and the tree's
+    actions sit under the build-nodes grid. */
+.class-chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 2px 0 8px; }
+.class-chip {
+  font: 600 12px var(--font-condensed); letter-spacing: 0.04em;
+  padding: 6px 10px; border: 1px solid var(--line); background: var(--panel-soft); color: var(--muted);
+}
+button.class-chip { cursor: pointer; }
+button.class-chip:hover:not(:disabled) { color: var(--ink); border-color: var(--line); }
+.class-chip.st-selected { border-color: var(--ink); color: var(--ink); box-shadow: inset 0 -3px var(--ink); }
+.class-meter-row { align-items: flex-start; }
+.class-meter { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; flex: 1; min-width: 0; }
+.class-meter-track { display: block; width: 100%; height: 4px; background: var(--line); }
+.class-meter-track i { display: block; height: 100%; background: var(--ink); }
+.class-meter small { color: var(--muted); font-size: 10px; text-align: right; }
+.class-tree-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.class-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.habit-detail-read .habit-class { margin-top: 12px; }
+.habit-detail-read .class-tree { margin-top: 12px; }
 
 /* The HISTORY face: the record list and drill as ruled rows. */
 .focus-history { display: flex; flex-direction: column; gap: 4px; }

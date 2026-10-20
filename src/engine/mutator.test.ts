@@ -19,10 +19,10 @@ import { BALANCE, MUTATOR_FAMILIES } from "./constants";
 import { OSCILLATOR_PROFILES } from "./profiles";
 import { computeRates, mutatorMagnitude, mutatorSlotCost } from "./economy";
 import { createMutator } from "./state";
-import { fresh, give, stubRng } from "./fixtures";
+import { fresh, give, giveHabit, stubRng } from "./fixtures";
 import { hex } from "./hex";
 import type { Hex } from "./types";
-import { addMutatorForgeProgress, generateMutatorOffer, generateOffer, mutatorForgeThreshold } from "./rolls";
+import { addMutatorForgeProgress, generateMutatorOffer, generateOffer, mutatorForgeThreshold, totalPracticeRollsEarned } from "./rolls";
 import { deserialize, serialize } from "./save";
 import type { GameState, MutatorFamily, MutatorInstance, Rarity } from "./types";
 
@@ -287,7 +287,7 @@ describe("the Mutator Forge branch", () => {
     addMutatorForgeProgress(s, 10);
     expect(s.mutatorForge).toEqual({ progress: 10, earned: 0 });
     expect(s.forge).toEqual({ progress: 0, earned: 0 });
-    expect(s.flow).toEqual({ progress: 0, earned: 0 });
+    expect(totalPracticeRollsEarned(s)).toBe(0);
   });
 
   it("mints two-candidate rolls into its own queue and carries the excess", () => {
@@ -303,7 +303,7 @@ describe("the Mutator Forge branch", () => {
     expect(offer.candidates[1]).toMatchObject({ family: "power", rarity: "common" });
     // The module queue and the rig's ledger stay untouched.
     expect(s.bankedRolls).toHaveLength(0);
-    expect(s.forge.earned + s.flow.earned).toBe(0);
+    expect(s.forge.earned + totalPracticeRollsEarned(s)).toBe(0);
     // The next threshold sits at ×2: the carried 5 waits inside it.
     addMutatorForgeProgress(s, BALANCE.mutatorForgeInitialThreshold * 2 - 5 - 1);
     expect(s.mutatorForge.earned).toBe(1);
@@ -316,14 +316,15 @@ describe("the Mutator Forge branch", () => {
     const s = fresh();
     give(s, "mutatorForge", hex(2, 0));
     give(s, "focusKeyed", hex(1, 0));
+    const { pair } = giveHabit(s);
     s.modules.find((m) => m.type === "focusKeyed")!.reserve = 30;
     startSession(s, null);
     const result = advance(s, 30);
     // strength 1 × 30 s: short of the threshold, but the meter moves —
-    // while practice fills the flow meter alone.
+    // while practice fills the practice meter alone.
     expect(s.mutatorForge.progress).toBeCloseTo(30);
     expect(result.rollsMutator).toBe(0);
-    expect(s.flow.progress).toBeCloseTo(30);
+    expect(pair.rollMeter.progress).toBeCloseTo(30);
     expect(s.forge.progress).toBe(0);
     endSession(s, 5_000);
     expect(s.mutatorForge.progress).toBeCloseTo(30);
@@ -387,15 +388,16 @@ describe("mutator rolls offer two candidates", () => {
     const s = fresh();
     // Draws: family 0.9→charge, rarity 0.9899→common; family 0.0→power,
     // rarity 0.9995→rare. Whatever the module side's rig state, the
-    // mutator roll reads exactly these.
-    s.flow.earned = 1;
+    // Whatever the module side's rig state, the mutator roll reads exactly
+    // these.
+    giveHabit(s).pair.rollMeter.earned = 1;
     const offer = generateMutatorOffer(s, stubRng([0.9, 0.9899, 0.0, 0.9995]));
     expect(offer.candidates).toHaveLength(2);
     expect(offer.candidates[0]).toMatchObject({ family: "charge", rarity: "common" });
     expect(offer.candidates[1]).toMatchObject({ family: "power", rarity: "rare" });
     // The crossing ledger the module rig reads is the module meters' alone.
     addMutatorForgeProgress(s, BALANCE.mutatorForgeInitialThreshold);
-    expect(s.forge.earned + s.flow.earned).toBe(1);
+    expect(s.forge.earned + totalPracticeRollsEarned(s)).toBe(1);
   });
 
   it("the choice mints the chosen candidate into the Mutator tray; the rest vanish", () => {

@@ -499,24 +499,10 @@ describe("the horizon bar (§7, issue #156)", () => {
     expect(document.getElementById("prestige-door")!.textContent).toContain("Claim 4 Arete");
   });
 
-  it("carries no formula chip; the flow meter rides the dock's pip", () => {
+  it("carries no formula chip", () => {
     app.render();
     expect(document.querySelector(".monitor-formula")).toBeNull();
     expect(document.querySelector(".monitor-rail")).toBeNull();
-    app.state.flow.progress = 90;
-    app.render();
-    const forge = document.querySelector('#board-tools [data-op="forge"]') as HTMLElement;
-    const pip = forge.querySelector(".forge-pip")!;
-    expect(pip).not.toBeNull();
-    expect(forge.querySelector('[data-live="forge-pip"]')!.getAttribute("style")).toContain("50");
-    // The pip answers as the flow meter's progressbar (#351): valuenow and
-    // valuetext carry the same read the detail speaks — no aria-hidden.
-    expect(pip.getAttribute("role")).toBe("progressbar");
-    expect(pip.getAttribute("aria-label")).toBe("Flow meter");
-    expect(pip.getAttribute("aria-valuenow")).toBe("90");
-    expect(pip.getAttribute("aria-valuemax")).toBe("180");
-    expect(pip.getAttribute("aria-valuetext")).toContain("1:30 / 3:00 — next roll in ~1:30 of practice");
-    expect(forge.querySelector(".tool-detail")!.textContent).toContain("Flow meter 1:30 / 3:00");
   });
 
   it("the break beat's flare is a dedicated layer behind the track, not an animated filter on the bar", () => {
@@ -635,8 +621,9 @@ describe("the action row (§7)", () => {
     expect(add.getAttribute("aria-label")).toBe("Add");
     expect(add.getAttribute("title")).toBeNull();
     expect(add.querySelector(".tool-detail")!.textContent).toContain("Add — ");
-    // The count badge rides the Forge icon; the charge pip strip rides beneath it.
-    expect(dock.querySelector('[data-op="forge"] .forge-pip')).not.toBeNull();
+    // The count badge rides the Forge icon; the shared queue's counts read
+    // there (issue #423 — the pip retired with the flow meter).
+    expect(dock.querySelector('[data-op="forge"] .forge-pip')).toBeNull();
     expect(document.querySelector(".legend")).toBeNull();
     expect(document.getElementById("tool-manage")).toBeNull();
     expect(document.getElementById("manage-banner")).toBeNull();
@@ -673,17 +660,15 @@ describe("the action row (§7)", () => {
     expect(mutTray.hidden).toBe(true);
   });
 
-  it("the Forge tool carries the flow-meter pip and the one meter detail (ADR-0041)", () => {
-    app.state.flow.progress = 90;
+  it("the Forge tool carries the one meter detail (issue #423)", () => {
     app.state.forge.progress = 30;
     app.render();
     const forge = document.querySelector('#board-tools [data-op="forge"]') as HTMLButtonElement;
-    // The pip shows the flow meter: half of the 3-minute opening fill.
-    expect(forge.querySelector('[data-live="forge-pip"]')!.getAttribute("style")).toContain("50");
-    // The detail lists every meter's progress, threshold, and rate.
-    expect(forge.querySelector(".tool-detail")!.textContent).toContain("Flow meter 1:30 / 3:00 — next roll in ~1:30 of practice");
+    // The detail lists the meter's progress, threshold, and rate; the
+    // practice-roll meter reads only on the Focus sheet.
     expect(forge.querySelector(".tool-detail")!.textContent).toContain("Forge progress 30 / 60");
-    // The sheet locks in flow (#233): the dock button disables, the pip
+    expect(forge.querySelector(".tool-detail")!.textContent).not.toContain("Flow meter");
+    // The sheet locks in flow (#233): the dock button disables, the badge
     // stays as the indicator, and the tooltip carries the meter read plus
     // the lock reason. The click never expands the sheet mid-session.
     app.state.sessionsCompleted = 1;
@@ -691,7 +676,6 @@ describe("the action row (§7)", () => {
     app.render();
     const flowForge = document.querySelector<HTMLButtonElement>('#board-tools [data-op="forge"]')!;
     expect(flowForge.getAttribute("aria-disabled")).toBe("true");
-    expect(flowForge.querySelector('[data-live="forge-pip"]')).not.toBeNull();
     expect(flowForge.querySelector(".tool-detail")!.textContent).toContain("choices settle between sessions.");
     flowForge.click();
     expect(app.ui.modal).toBeNull();
@@ -710,7 +694,7 @@ describe("the action row (§7)", () => {
       // Hover openness is announced (#351) — the trigger never reads
       // "collapsed" while the meter read stands open.
       expect(forge.getAttribute("aria-expanded")).toBe("true");
-      expect(detail.textContent).toContain("Flow meter");
+      expect(detail.textContent).toContain("Forge progress");
       expect(detail.textContent).toContain("choices settle between sessions.");
       forge.dispatchEvent(new MouseEvent("mouseleave"));
       expect(detail.hidden).toBe(true);
@@ -721,7 +705,7 @@ describe("the action row (§7)", () => {
   });
 
   it("focus opens live meter details without moving focus, and Escape or blur dismisses them", () => {
-    app.state.flow.progress = 90;
+    app.state.forge.progress = 30;
     app.render();
     for (const host of ["board-tools", "thumb-bar"]) {
       const forge = document.querySelector<HTMLButtonElement>(`#${host} [data-op="forge"]`)!;
@@ -733,11 +717,10 @@ describe("the action row (§7)", () => {
       expect(forge.getAttribute("aria-expanded")).toBe("true");
       expect(document.activeElement).toBe(forge);
       expect(app.ui.modal).toBeNull();
-      app.state.flow.progress = 90;
+      app.state.forge.progress = 45;
       app.render();
       expect(forge.querySelector(".tool-detail")).toBe(detail);
-      expect(detail.textContent).toContain("Flow meter 1:30 / 3:00");
-      expect(detail.textContent).toContain("Forge progress");
+      expect(detail.textContent).toContain("Forge progress 45 / 60");
       forge.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
       expect(detail.hidden).toBe(true);
       // Escape suppresses the tip alone: the trigger says collapsed and
@@ -771,26 +754,22 @@ describe("the action row (§7)", () => {
     app.openModal("forge");
     const modal = document.getElementById("modal-content")!;
     expect(modal.querySelector(".forge-meters")).not.toBeNull();
-    expect(modal.querySelector('[data-live="modal-flow-line"]')!.textContent).toContain("0:00 / 3:00");
+    // The practice-roll meter left the modal with the flow meter's
+    // retirement (issue #423): the block is the charge branch's alone.
+    expect(modal.querySelector('[data-live="modal-flow-line"]')).toBeNull();
     expect(modal.querySelector('[data-live="modal-forge-line"]')!.textContent).toContain("30 / 60");
     // Each track answers as its meter's progressbar (#351): the valuenow
     // and value text mirror the figures beside the bar.
-    const flowTrack = modal.querySelector('[data-live="modal-flow-track"]')!;
-    expect(flowTrack.getAttribute("role")).toBe("progressbar");
-    expect(flowTrack.getAttribute("aria-label")).toBe("Flow");
-    expect(flowTrack.getAttribute("aria-valuenow")).toBe("0");
-    expect(flowTrack.getAttribute("aria-valuemax")).toBe("180");
-    expect(flowTrack.getAttribute("aria-valuetext")).toContain("0:00 / 3:00");
     const forgeTrack = modal.querySelector('[data-live="modal-forge-track"]')!;
     expect(forgeTrack.getAttribute("role")).toBe("progressbar");
+    expect(forgeTrack.getAttribute("aria-label")).toBe("Module Forge");
     expect(forgeTrack.getAttribute("aria-valuenow")).toBe("30");
     expect(forgeTrack.getAttribute("aria-valuemax")).toBe("60");
     // Live slots fill in place as the meters move.
-    app.state.flow.progress = 90;
+    app.state.forge.progress = 45;
     app.render();
-    expect(modal.querySelector('[data-live="modal-flow-line"]')!.textContent).toContain("1:30 / 3:00");
-    expect(flowTrack.getAttribute("aria-valuenow")).toBe("90");
-    expect(flowTrack.getAttribute("aria-valuetext")).toContain("1:30 / 3:00");
+    expect(modal.querySelector('[data-live="modal-forge-line"]')!.textContent).toContain("45 / 60");
+    expect(forgeTrack.getAttribute("aria-valuenow")).toBe("45");
     app.closeModal();
     // The sheet locks in flow (#233): the dock refuses, the modal never
     // opens, and the banked roll waits for the session's end — the engine's
@@ -891,7 +870,7 @@ describe("the action row (§7)", () => {
       }
     }
     // The forge keeps its live meter read; Collection's is the static gloss.
-    expect(document.querySelector('#board-tools [data-op="forge"] .tool-detail')!.textContent).toContain("Flow meter");
+    expect(document.querySelector('#board-tools [data-op="forge"] .tool-detail')!.textContent).toContain("Forge progress");
     expect(document.querySelector('#thumb-bar [data-op="collection"] .tool-detail')!.textContent).toBe("Collection — feats and the chord library");
   });
 
@@ -944,13 +923,12 @@ describe("the action row (§7)", () => {
     }
   });
 
-  it("flow locks wear the shared padlock chip while the Forge pip keeps its read (#336)", () => {
+  it("flow locks wear the shared padlock chip while the badge keeps its read (#336)", () => {
     app.render();
     // The chip's drawing is the locked layer legend's own mark, captured
     // before flow clears the legend.
     const legendLock = document.querySelector<SVGElement>('[data-legend-layer="mutators"] svg')!.innerHTML;
     app.state.sessionsCompleted = 1;
-    app.state.flow.progress = 90;
     startSession(app.state, null);
     app.render();
     for (const host of ["board-tools", "thumb-bar"]) {
@@ -961,8 +939,11 @@ describe("the action row (§7)", () => {
         const lock = button.querySelector<SVGElement>(".tool-lock svg")!;
         expect(lock.innerHTML).toBe(legendLock);
       }
-      // Progress stays readable: the pip rides the locked Forge button.
-      expect(document.querySelector(`#${host} [data-op="forge"] [data-live="forge-pip"]`)).not.toBeNull();
+      // The shared queue's count stays readable: the badge rides the
+      // locked Forge button (issue #423 — the pip retired with the flow
+      // meter, and the detail read keeps the meters).
+      const forgeButton = document.querySelector<HTMLButtonElement>(`#${host} [data-op="forge"]`)!;
+      expect(forgeButton.querySelector(".tool-detail")!.textContent).toContain("Forge progress");
     }
     // The mode never closes Collection: it wears no lock and stays
     // clickable — the one live door beside the locked row.

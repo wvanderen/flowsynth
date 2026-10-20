@@ -18,6 +18,7 @@ import {
 import { nextCapacityPrice } from "./capacity";
 import { CATEGORY_OF, isOscillatorType } from "./constants";
 import { allocateRates, levelCost, wholeNous } from "./economy";
+import { createHabit, selectHabit } from "./habits";
 import { createGoal, deleteGoal } from "./goals";
 import { neighbors, sameHex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
@@ -154,6 +155,13 @@ export interface EraRunOptions {
 const SESSION_SECONDS = 1800;
 const NOTE_TEXT = "keep the shoulders down and the wrist loose through the scale run";
 
+// The walk's one standing habit (issue #423): goals are habit-owned, so
+// the sim selects a habit once and mints every goal for it.
+function ensureHabit(state: GameState): void {
+  if (!state.habits.some((h) => !h.archived)) createHabit(state, "Calibration");
+  if (state.activeHabitId === null) selectHabit(state, state.habits.find((h) => !h.archived)!.id);
+}
+
 // One management break, allocation-aware: the policy's purchases,
 // placements scored by the authoritative preview, level gestures, and the
 // capacity and Arete ladders. Returns the capacity milestones recorded
@@ -172,9 +180,13 @@ function manage(state: GameState, policy: CalibrationPolicy, minute: number): Ca
   // One small goal tracked at all times, re-minted each break (the sim
   // compresses days; a completed daily never rolls over). Completing it
   // is the completion tick's console fact (ADR-0047, issue #371) — the
-  // generators earn their reserves through play, never for free.
+  // generators earn their reserves through play, never for free. Goals
+  // are habit-owned (issue #423): the walk keeps one standing habit
+  // selected and mints the goal for it, so credited practice advances it
+  // under the same rules a player's session does.
+  ensureHabit(state);
   for (const goal of [...state.goals]) deleteGoal(state, goal.id);
-  createGoal(state, { habitId: null, minutes: 25, schedule: "once", now: 0 });
+  createGoal(state, { habitId: state.activeHabitId, minutes: 25, schedule: "once", now: 0 });
   // Shelf and cell purchases.
   for (const type of ["generator", "forge", "infusor"] as const) {
     if (!state.purchased[type] && (policy.expansion === "aggressive" || type === "generator")) {

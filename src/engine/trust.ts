@@ -1,8 +1,9 @@
 import { DRIFT_NOISE_SECONDS, EPS, RECONCILIATION_FLOOR_SECONDS } from "./constants";
 import { advance, advanceBreather, earnNous, sumResults } from "./advance";
 import { accrueLivePractice } from "./habits";
-import { accrueGoalProgress } from "./goals";
-import { addFlowProgress, type Rng } from "./rolls";
+import { accrueClassDevelopment } from "./classes";
+import { accrueGoalFuel, accrueGoalProgress } from "./goals";
+import type { Rng } from "./rolls";
 import type { AdvanceResult, GameState, HonestyOutcome, SessionAccounting } from "./types";
 
 export type { HonestyOutcome };
@@ -163,14 +164,19 @@ export function resolveHonestyReport(
   if (credit > EPS) {
     accounting.creditedSeconds += credit;
     accrueLivePractice(state, credit);
+    // The goal budget (issue #423) accrues ahead of the completion ticks,
+    // so the credited reconciliation funds the draws it may cause.
+    accrueGoalFuel(state, credit);
     // Honesty-credited minutes are the live side of the boundary (ADR-0047):
     // the completion tick here banks the goal generator's credit exactly as
     // a mid-session tick would — only manual logs prorate to zero.
     completions = accrueGoalProgress(state, state.activeHabitId, credit, "live");
-    // Every credited minute counts (ADR-0041): honesty-credited provisional
-    // minutes top the flow meter up here, beside habits and goals — the
-    // same one concept the live minutes fill with.
-    rollsBanked = addFlowProgress(state, credit, rng);
+    // Every credited minute counts (issue #423): honesty-credited
+    // provisional minutes develop the active habit–class pair here, beside
+    // habits and goals — credited flow time is the only class development,
+    // and reconciliation credit is credited flow time. The pair's
+    // practice-roll meter tops up on the same diet.
+    rollsBanked = accrueClassDevelopment(state, credit, rng);
   }
   if (outcome !== "missed" && accounting.bucketNous > 0) {
     // The bucket's nous banks through the one production-credit seam.

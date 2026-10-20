@@ -18,7 +18,6 @@
 // frame); its helpers live at the bottom of this file.
 
 import type { App } from "./app";
-import { displayedRates, longGoalCost, wholeNous } from "../engine/economy";
 import { formatClock, formatDuration } from "../engine/clock";
 import {
   habitPracticeSummary,
@@ -37,10 +36,12 @@ import {
   equippedNodes,
 } from "../engine/builds";
 import { activeHabit } from "../engine/habits";
+import { CLASSES, nodeAvailable, pairDef, pairOf, practiceRollThreshold, rankOf } from "../engine/classes";
+import type { ClassId } from "../engine/types";
 import { isInFlowNote } from "../engine/notes";
 import { achievementName } from "../engine/achievements";
 import { goalCapacity, goalRequiredSeconds, goalSummary, goalTrackerState, GOAL_COLORS, type GoalTrackerState } from "../engine/goals";
-import type { GameState, Goal, GoalColor, Habit, HonestyEvent, HonestyOutcome, NoteEntry } from "../engine/types";
+import type { ClassPairState, GameState, Goal, GoalColor, Habit, HonestyEvent, HonestyOutcome, NoteEntry } from "../engine/types";
 
 // The tracker word set (issue #149): the Goals-state read's one vocabulary —
 // the sheet head wears it, and nothing phone-side does (ADR-0033 amended).
@@ -57,13 +58,13 @@ import {
 } from "./meta";
 import {
   formatDate,
-  formatInt,
+  formatCountdown,
   formatNumber,
   formatPracticeMinutes,
-  practiceCountdown,
   secondsToMinutes,
 } from "./format";
 import { REFLECTION_SLIDER_NEUTRAL } from "../engine/constants";
+import { termTipHtml } from "./terms";
 import { wireTooltips } from "./instrument";
 
 // The sheet's faces. HISTORY is the time app's history surfaces lifted to a
@@ -150,8 +151,10 @@ const GOAL_SCHEDULE_WORD = { once: "", daily: "Daily", weekly: "Weekly" } as con
 export function goalMeterOf(state: GameState): GoalMeterRead | null {
   const habit = activeHabit(state);
   if (!habit) return null;
+  // Goals are habit-owned (issue #423): only the selected habit's own
+  // goals qualify the display well.
   const qualifying = state.goals.filter(
-    (goal) => goal.condition.kind === "habit-minutes" && (goal.condition.habitId === null || goal.condition.habitId === habit.id),
+    (goal) => goal.condition.kind === "habit-minutes" && goal.condition.habitId === habit.id,
   );
   if (qualifying.length === 0) return null;
   const reads = qualifying.map((goal) => {
@@ -195,10 +198,15 @@ export function focusSheetKey(app: App): string {
     ui.editingHabitId,
     state.activeHabitId,
     state.habits.map((h) => `${h.archived ? "·" : ""}${h.name}:${buildUnlocksFor(h.seconds)}:${h.build.join(",")}`).join("|"),
+    // The class layer (issue #423): the wear and each pair's level, free
+    // points, and allocation hash into the key, so tree moves rebuild the
+    // sheet. The meters ride the live patchers, never the key.
+    state.habits
+      .map((h) => `${h.classId}:` + Object.values(h.classes ?? {}).map((p) => `${p.level}.${p.points}.${Object.entries(p.spent ?? {}).map(([id, r]) => `${id}${r}`).join(",")}`).join(";"))
+      .join("|"),
     state.goals
       .map((g) => `${g.completed ? 1 : 0}${g.condition.minutes}${g.condition.habitId ?? ""}${g.schedule.kind}${g.completedCount}${g.color}`)
       .join("|"),
-    state.goalCapacityBought,
     state.sessionRecords.length,
     ui.goalRecolorId,
   ]);
@@ -397,11 +405,112 @@ function habitBuildHtml(app: App, habit: Habit): string {
   </div>`;
 }
 
+// The practice-roll meter's one-line read (issue #423): progress and
+// threshold as durations, and the practice remaining to the next roll —
+// the same figures the retired flow meter spoke, now the pair's own.
+export function practiceMeterLine(pair: ClassPairState): string {
+  const threshold = practiceRollThreshold(pair, pair.rollMeter.earned);
+  const remaining = Math.max(0, threshold - pair.rollMeter.progress);
+  return `${formatCountdown(pair.rollMeter.progress)} / ${formatCountdown(threshold)} — next roll in ~${formatCountdown(remaining)} of practice`;
+}
+
+// The meter's live row (issue #423): the track carries the same
+// progressbar semantics its fill shows (#351) — valuenow and valuetext
+// mirror the visible read. Rendered in the flow-mode active read and the
+// habit/class detail; the live patcher fills both.
+function classMeterRowHtml(habit: Habit): string {
+  const pair = pairOf(habit);
+  const threshold = practiceRollThreshold(pair, pair.rollMeter.earned);
+  const fill = `${(Math.min(1, Math.max(0, pair.rollMeter.progress / threshold)) * 100).toFixed(1)}%`;
+  return `<div class="folio-row class-meter-row">
+    <span class="folio-key">${termTipHtml("practice-roll meter", "Practice rolls")}</span>
+    <span class="folio-main class-meter">
+      <span class="class-meter-track" data-live="class-meter-track" data-habit="${habit.id}" role="progressbar" aria-label="Practice-roll meter" aria-valuemin="0" aria-valuemax="${threshold}" aria-valuenow="${pair.rollMeter.progress}" aria-valuetext="${escapeHtml(practiceMeterLine(pair))}"><i data-live="class-meter-pip" style="width:${fill}"></i></span>
+      <small class="mono" data-live="class-meter-line" data-habit="${habit.id}">${escapeHtml(practiceMeterLine(pair))}</small>
+    </span>
+  </div>`;
+}
+
+// The habit's class face (issue #423, ADR-0074): the wear chips, the
+// pair's development read — class, level, the unspent point balance, the
+// next threshold — the practice-roll meter, the tree's bounded-rank nodes
+// with their explicit prerequisites, and the respec/preset moves. This
+// detail is the one surface class experience, level, and the point
+// balance read on; the pair's meter renders here and in the flow-mode
+// active read, nowhere else.
+function habitClassHtml(app: App, habit: Habit): string {
+  const { state } = app;
+  const upgrade = state.mode === "upgrade";
+  const def = pairDef(habit);
+  const pair = pairOf(habit);
+  const chips = CLASSES.map((cls) => {
+    const selected = habit.classId === cls.id;
+    return upgrade
+      ? `<button class="class-chip${selected ? " st-selected" : ""}" data-class-pick="${cls.id}" data-habit="${habit.id}" aria-pressed="${selected}"${selected ? " disabled" : ""}>${cls.name}</button>`
+      : `<span class="class-chip${selected ? " st-selected" : ""}">${cls.name}</span>`;
+  }).join("");
+  const atCap = pair.level >= def.levelThresholds.length;
+  const nextAt = atCap ? null : def.levelThresholds[pair.level]!;
+  const nextRead = atCap ? "max level" : `${formatCountdown(Math.max(0, nextAt! - pair.experience))} of practice to level ${pair.level + 1}`;
+  const rows = def.nodes.map((node) => {
+    const rank = rankOf(pair, node);
+    const available = nodeAvailable(pair, node);
+    if (!available) {
+      return `<div class="build-node locked">
+        <span class="build-node-mark mono" aria-hidden="true">·</span>
+        <span class="build-node-name">${escapeHtml(node.name)}<small>unlocks at class level ${node.requiredLevel} · ${escapeHtml(node.effect)}</small></span>
+      </div>`;
+    }
+    const full = rank >= node.maxRank;
+    const mark = `${rank}/${node.maxRank}`;
+    const title = upgrade
+      ? full
+        ? "Fully ranked"
+        : pair.points < 1
+          ? "No point free — level up through practice"
+          : "Allocate a point"
+      : "The tree is read-only during flow";
+    return full
+      ? `<div class="build-node equipped">
+          <span class="build-node-mark mono" aria-hidden="true">${mark}</span>
+          <span class="build-node-name">${escapeHtml(node.name)}<small>${escapeHtml(node.effect)}</small></span>
+        </div>`
+      : `<button class="build-node" data-class-allocate="${node.id}" data-habit="${habit.id}" ${upgrade && pair.points < 1 ? "disabled" : ""} title="${title}">
+          <span class="build-node-mark mono" aria-hidden="true">+${mark}</span>
+          <span class="build-node-name">${escapeHtml(node.name)}<small>${escapeHtml(node.effect)}</small></span>
+        </button>`;
+  }).join("");
+  const spentTotal = def.nodes.reduce((sum, node) => sum + rankOf(pair, node), 0);
+  const presets = def.presets
+    .map((preset) => {
+      const cost = Object.values(preset.spent).reduce((sum, rank) => sum + rank, 0);
+      const affordable = upgrade && cost <= pair.points + spentTotal;
+      return `<button class="plan-chip" data-class-preset="${preset.id}" data-habit="${habit.id}" aria-pressed="false" ${affordable ? "" : "disabled"} title="Applies as an ordinary allocation">${escapeHtml(preset.name)}</button>`;
+    })
+    .join("");
+  return `<div class="habit-class">
+    <span class="eyebrow">CLASS</span>
+    <div class="class-chips" role="group" aria-label="Class">${chips}</div>
+    <div class="stat-row"><span>Class</span><span class="mono">${termTipHtml("Engineer", def.name)} · Level ${pair.level} · ${pair.points} ${termTipHtml("tree point", pair.points === 1 ? "tree point" : "tree points")} free</span></div>
+    <div class="stat-row"><span>Next level</span><span class="mono">${nextRead}</span></div>
+    ${classMeterRowHtml(habit)}
+    <div class="class-tree">
+      <span class="eyebrow">TREE</span>
+      <p class="small muted mono">${spentTotal} spent · ${termTipHtml("Respec", "respec")} is free</p>
+      <div class="build-nodes">${rows}</div>
+      <div class="class-tree-actions">
+        ${upgrade ? `<button class="quiet small" data-class-respec="${habit.id}" ${spentTotal > 0 ? "" : "disabled"} title="Returns every spent point — experience and level stay">Respec</button>` : ""}
+        ${upgrade ? `<span class="class-presets" role="group" aria-label="Presets">${presets}</span>` : ""}
+      </div>
+    </div>
+  </div>`;
+}
+
 // The development detail (§9): lifetime practice (the development total),
 // sessions practiced and last practiced — aggregates off the practice log,
-// live sessions and manual logs together — the habit's build (ADR-0046),
-// and the habit's tagged notes beneath, newest first, each with its date
-// and in-session stamp.
+// live sessions and manual logs together — the habit's class (issue #423),
+// the habit's build (ADR-0046), and the habit's tagged notes beneath,
+// newest first, each with its date and in-session stamp.
 function habitDetailBodyHtml(app: App, habit: Habit): string {
   const { state } = app;
   const { sessions, lastPracticed } = habitPracticeSummary(state, habit.id);
@@ -412,12 +521,15 @@ function habitDetailBodyHtml(app: App, habit: Habit): string {
   return `${stat("Lifetime practice", formatDuration(habit.seconds))}
     ${stat("Sessions practiced", String(sessions))}
     ${stat("Last practiced", lastPracticed !== null && lastPracticed > 0 ? formatDate(lastPracticed, true) : "—")}
+    ${habitClassHtml(app, habit)}
     ${habit.seconds > 0 ? habitBuildHtml(app, habit) : `<p class="small muted">Build nodes unlock with practice time — 1h for the first.</p>`}
     ${noteRows ? `<div class="note-list">${noteRows}</div>` : `<p class="small muted">No tagged notes yet.</p>`}`;
 }
 
-// The HABIT face. Flow: the running active read — selection locked. Upgrade:
-// the figure-led list with add and log as on-demand action-button forms, or
+// The HABIT face. Flow: the running active read — selection locked — with
+// the active pair's practice-roll meter live beneath it (issue #423): the
+// one place the meter's fill reads during a session. Upgrade: the
+// figure-led list with add and log as on-demand action-button forms, or
 // the drilled habit's detail with rename and archive in its head.
 function habitFaceHtml(app: App): string {
   const { state, ui } = app;
@@ -433,6 +545,7 @@ function habitFaceHtml(app: App): string {
         <span class="folio-key">This session</span>
         <span class="folio-main"><span class="folio-fig mono" data-live="focus-habit-session">${formatClock(state.session?.elapsed ?? 0)} of practice</span></span>
       </div>
+      ${active ? classMeterRowHtml(active) : ""}
     </div>`;
   }
 
@@ -498,29 +611,6 @@ function goalSwatchesHtml(attr: string, selected: GoalColor): string {
   ).join("")}</span>`;
 }
 
-// The one purchase affordance every buy row wears (§7, issue #150): the
-// price button — disabled until affordable — over its practice-minute
-// countdown. `live` keeps an empty countdown slot standing for the
-// control-driven patchers to fill; `note` swaps the countdown for static
-// copy (the flow-side "between sessions").
-function shopBuyHtml(options: {
-  attrs?: string;
-  small?: boolean;
-  price: number;
-  affordable: boolean;
-  countdown?: string | null;
-  live?: string;
-  note?: string;
-}): string {
-  const button = `<button class="primary mono${options.small ? " small" : ""}" ${options.attrs ?? ""}${options.affordable ? "" : " disabled"}>${formatInt(options.price)} ν</button>`;
-  const small = options.note
-    ? `<small class="shop-countdown">${options.note}</small>`
-    : options.live || options.countdown
-      ? `<small class="shop-countdown mono"${options.live ? ` data-live="${options.live}"` : ""}>${options.countdown ?? ""}</small>`
-      : "";
-  return `<span class="shop-buy">${button}${small}</span>`;
-}
-
 // The goal bar's fill height, one build for the row's markup and its live
 // patcher alike: the shared column fills by height, and a completed goal's
 // bar holds full height under the engraved check.
@@ -529,15 +619,19 @@ function goalBarHeight(goal: Goal): string {
   return `${Math.min(100, (goal.progressSeconds / goalRequiredSeconds(goal)) * 100)}%`;
 }
 
-// The GOALS face: the slots read over the ruled goal rows — live progress at
-// every width, each track wearing its goal's chosen color — with create and
-// delete as upgrade-mode controls, the palette picked at creation and
-// re-pickable on the row, and the capacity purchase trailing. Flow reads
-// live and mutates nothing.
-function goalsFaceHtml(app: App, projected: ReturnType<typeof displayedRates>): string {
+// The GOALS face: the selected habit's own slots read over the ruled goal
+// rows (issue #423 — goals are habit-owned; only the selected habit's
+// goals display, and no habit selected reads none), live progress at
+// every width, each track wearing its goal's chosen color — with create
+// and delete as upgrade-mode controls, the palette picked at creation and
+// re-pickable on the row. Capacity is the habit's own fixed count, never
+// purchasable. Flow reads live and mutates nothing.
+function goalsFaceHtml(app: App): string {
   const { state, ui } = app;
   const upgrade = state.mode === "upgrade";
-  const capacity = goalCapacity(state);
+  const habit = activeHabit(state);
+  const capacity = goalCapacity();
+  const ownGoals = habit ? state.goals.filter((g) => g.condition.habitId === habit.id) : [];
   const goalRow = (goal: Goal) => {
     const required = goalRequiredSeconds(goal);
     const status = goal.completed
@@ -562,47 +656,25 @@ function goalsFaceHtml(app: App, projected: ReturnType<typeof displayedRates>): 
       </div>
     </div>`;
   };
-  const orderedGoals = [...state.goals].sort(openGoalsFirst);
+  const orderedGoals = [...ownGoals].sort(openGoalsFirst);
   const createForm = ui.focusForm === "goal-create";
   const habitOptions = habitChoices(state);
-  // The first console long goal (ADR-0012 as amended by ADR-0034, issue
-  // #150): goal capacity sold as one compact product row — the Channel
-  // Strips, +1 goal slot per purchase, every price far past the last.
-  // Read-only in flow.
-  const longGoalPrice = longGoalCost(state.goalCapacityBought);
-  const longGoalAffordable = wholeNous(state) >= longGoalPrice;
-  const longGoalCountdown = upgrade ? practiceCountdown(longGoalPrice, wholeNous(state), projected.rate) : null;
-  const longGoalRow = `
-    <div class="folio-row long-goal-row">
-      <span class="long-goal-head">
-        <span class="long-goal-name inst-tip term-tip"><button class="inst-tip-trigger term-trigger" type="button" aria-expanded="false" aria-describedby="channel-strips-tip" aria-label="Channel Strips — what it means">Channel Strips</button><span class="inst-tip-body" id="channel-strips-tip" role="tooltip">Successive purchases reveal steeper prices</span></span>
-        <span class="long-goal-effect mono">+1 goal slot</span>
-      </span>
-      ${shopBuyHtml({
-        attrs: `id="long-goal-buy"`,
-        small: true,
-        price: longGoalPrice,
-        affordable: upgrade && longGoalAffordable,
-        countdown: longGoalCountdown,
-        ...(upgrade ? { live: "long-goal-countdown" } : { note: "between sessions" }),
-      })}
-    </div>`;
   return `<div class="folio-rows">
     <div class="folio-row">
-      <span class="folio-main"><span class="folio-fig mono" id="focus-slots-read">${state.goals.length}/${capacity} slots</span>${upgrade ? "" : `<span class="folio-sub">locked for this session</span>`}</span>
+      <span class="folio-main"><span class="folio-fig mono" id="focus-slots-read">${habit ? `${ownGoals.length}/${capacity} slots` : "no habit selected"}</span>${upgrade ? "" : `<span class="folio-sub">locked for this session</span>`}</span>
     </div>
+    ${habit && orderedGoals.length === 0 ? `<div class="folio-row"><span class="folio-line muted">${escapeHtml(habit.name)} tracks no goals yet.</span></div>` : ""}
     ${orderedGoals.map(goalRow).join("")}
   </div>
   ${
-    upgrade && state.goals.length < capacity
+    upgrade && (!habit || ownGoals.length < capacity)
       ? `<div class="folio-rows focus-actions"><div class="folio-row">${
           createForm
-            ? `<span class="focus-form-row goal-create"><select id="goal-habit" aria-label="Habit"><option value="">Any habit</option>${habitOptions}</select><input type="number" id="goal-minutes" min="1" max="1440" placeholder="min" aria-label="Minutes" /><select id="goal-schedule" aria-label="Schedule"><option value="daily">daily</option><option value="weekly">weekly</option><option value="once">once</option></select><button class="primary small" id="goal-add">Add</button></span>${goalSwatchesHtml("data-goal-draft-color", ui.goalColor)}`
+            ? `<span class="focus-form-row goal-create"><select id="goal-habit" aria-label="Habit">${habitOptions}</select><input type="number" id="goal-minutes" min="1" max="1440" placeholder="min" aria-label="Minutes" /><select id="goal-schedule" aria-label="Schedule"><option value="daily">daily</option><option value="weekly">weekly</option><option value="once">once</option></select><button class="primary small" id="goal-add">Add</button></span>${goalSwatchesHtml("data-goal-draft-color", ui.goalColor)}`
             : `<button class="focus-action" id="goal-create-open">+ New goal</button>`
         }</div></div>`
       : ""
-  }
-  <div class="folio-rows">${longGoalRow}</div>`;
+  }`;
 }
 
 /* ── The HISTORY face ──────────────────────────────── */
@@ -874,12 +946,12 @@ function sheetFrameHtml(label: string, name: string, stateWord: string, tabs: st
   </div></section></div>`;
 }
 
-export function focusSheetHtml(app: App, projected: ReturnType<typeof displayedRates>): string {
+export function focusSheetHtml(app: App): string {
   const face = focusFaceOf(app);
   let body: string;
   if (face === "plan") body = planFaceHtml(app);
   else if (face === "habit") body = habitFaceHtml(app);
-  else if (face === "goals") body = goalsFaceHtml(app, projected);
+  else if (face === "goals") body = goalsFaceHtml(app);
   else body = app.ui.drillSession !== null ? historyDrillHtml(app) : historyListHtml(app);
   const tabs = FACE_TABS.map(
     ([key, label]) =>
@@ -928,9 +1000,10 @@ function refreshPlanControls(app: App): void {
 /* ── The live patcher ──────────────────────────────── */
 
 // Values that move during flow without rebuilding the sheet: the HABIT
-// face's live session read, practice tallies, and goal progress. The PLAN
-// face carries no live figures — the console clock owns time.
-export function updateFocusSheetLive(app: App, scope: ParentNode, projected: ReturnType<typeof displayedRates>): void {
+// face's live session read, the active pair's practice-roll meter, the
+// practice tallies, and goal progress. The PLAN face carries no live
+// figures — the console clock owns time.
+export function updateFocusSheetLive(app: App, scope: ParentNode): void {
   const { state } = app;
   // Palette changes patch the standing pick, keeping form values and focus.
   for (const swatch of scope.querySelectorAll<HTMLElement>("[data-goal-draft-color]")) {
@@ -941,6 +1014,27 @@ export function updateFocusSheetLive(app: App, scope: ParentNode, projected: Ret
   if (state.mode !== "upgrade") {
     const elapsed = state.session?.elapsed ?? 0;
     setText(scope.querySelector('[data-live="focus-habit-session"]'), `${formatClock(elapsed)} of practice`);
+  }
+  // The practice-roll meters (issue #423): every rendered pair's track and
+  // line patch in place — the active one moves during flow, the frozen
+  // pairs never do, and both read through the same builder.
+  const habitById = new Map(state.habits.map((habit) => [habit.id, habit] as const));
+  for (const track of scope.querySelectorAll<HTMLElement>('[data-live="class-meter-track"]')) {
+    const habit = habitById.get(track.getAttribute("data-habit") ?? "");
+    if (!habit) continue;
+    const pair = pairOf(habit);
+    const threshold = practiceRollThreshold(pair, pair.rollMeter.earned);
+    const fill = `${(Math.min(1, Math.max(0, pair.rollMeter.progress / threshold)) * 100).toFixed(1)}%`;
+    const pip = track.querySelector<HTMLElement>('[data-live="class-meter-pip"]');
+    if (pip && pip.style.width !== fill) pip.style.width = fill;
+    track.setAttribute("aria-valuemax", String(threshold));
+    track.setAttribute("aria-valuenow", String(Math.max(0, pair.rollMeter.progress)));
+    track.setAttribute("aria-valuetext", practiceMeterLine(pair));
+  }
+  for (const line of scope.querySelectorAll<HTMLElement>('[data-live="class-meter-line"]')) {
+    const habit = habitById.get(line.getAttribute("data-habit") ?? "");
+    if (!habit) continue;
+    setText(line, practiceMeterLine(pairOf(habit)));
   }
   for (const habit of state.habits) {
     const node = scope.querySelector(`[data-habit-seconds="${habit.id}"]`);
@@ -956,15 +1050,6 @@ export function updateFocusSheetLive(app: App, scope: ParentNode, projected: Ret
       scope.querySelector(`[data-goal-minutes="${goal.id}"]`),
       `${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · ×${goal.completedCount} completed` : ""}`,
     );
-  }
-  // The long-goal row's affordability moves with the balance between
-  // rebuilds: the buy button and its practice-minute countdown keep
-  // themselves current, like the module upgrade CTA (§7).
-  const longGoalBuy = scope.querySelector("#long-goal-buy") as HTMLButtonElement | null;
-  if (longGoalBuy) {
-    const price = longGoalCost(state.goalCapacityBought);
-    longGoalBuy.disabled = !(state.mode === "upgrade" && wholeNous(state) >= price);
-    setText(scope.querySelector('[data-live="long-goal-countdown"]'), practiceCountdown(price, wholeNous(state), projected.rate) ?? "");
   }
 }
 
@@ -1115,8 +1200,40 @@ export function bindFocusSheet(app: App, scope: HTMLElement): void {
       if (nodeId && habitId) app.unequipBuildNodeAction(habitId, nodeId);
     });
   });
+  // The class layer (issue #423): the wear chips select between classes,
+  // the tree nodes take points, respec returns them, presets apply as
+  // ordinary allocations — every engine gate answers for mode and budget.
+  scope.querySelectorAll<HTMLElement>("[data-class-pick]").forEach((button) => {
+    app.listen(button, "click", () => {
+      const classId = button.getAttribute("data-class-pick");
+      const habitId = button.getAttribute("data-habit");
+      if (classId && habitId) app.selectHabitClassAction(habitId, classId as ClassId);
+    });
+  });
+  scope.querySelectorAll<HTMLElement>("[data-class-allocate]").forEach((button) => {
+    app.listen(button, "click", () => {
+      const nodeId = button.getAttribute("data-class-allocate");
+      const habitId = button.getAttribute("data-habit");
+      if (nodeId && habitId) app.allocateClassNodeAction(habitId, nodeId);
+    });
+  });
+  scope.querySelectorAll<HTMLElement>("[data-class-respec]").forEach((button) => {
+    app.listen(button, "click", () => {
+      const habitId = button.getAttribute("data-class-respec");
+      if (habitId) app.respecClassTreeAction(habitId);
+    });
+  });
+  scope.querySelectorAll<HTMLElement>("[data-class-preset]").forEach((button) => {
+    app.listen(button, "click", () => {
+      const presetId = button.getAttribute("data-class-preset");
+      const habitId = button.getAttribute("data-habit");
+      if (presetId && habitId) app.applyClassPresetAction(habitId, presetId);
+    });
+  });
   // Goals: delete rides the rows, create is an on-demand form with the
-  // palette picked on it, the capacity purchase trails.
+  // palette picked on it. Goals are habit-owned (issue #423): the form's
+  // select carries the roster with no any-habit escape, and the engine
+  // answers for the habit's own slot capacity.
   scope.querySelectorAll<HTMLElement>("[data-goal-delete]").forEach((button) => {
     app.listen(button, "click", () => {
       const id = button.getAttribute("data-goal-delete");
@@ -1158,7 +1275,6 @@ export function bindFocusSheet(app: App, scope: HTMLElement): void {
       if (id && key) app.setGoalColorAction(id, key);
     });
   });
-  app.listen(scope.querySelector("#long-goal-buy"), "click", () => app.buyGoalCapacityAction());
   // The history surfaces (§9): rows drill in; the tail pages; back unwinds
   // the drill to the list — the facetab is the list's own parent.
   app.listen(scope.querySelector("#history-more"), "click", () => app.moreHistory());

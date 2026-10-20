@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buyCell,
-  buyGoalCapacity,
+  buyDraftUpgrade,
   buyShelfModule,
   endSession,
   pauseSession,
@@ -107,7 +107,7 @@ describe("the carrierless opening board", () => {
     expect(restored.modules).toHaveLength(1);
     expect(restored.modules[0]!.pos).toEqual(hex(0, 0));
     expect(restored.nous).toBe(BALANCE.openingGrant);
-    expect(SAVE_VERSION).toBe(10);
+    expect(SAVE_VERSION).toBe(11);
   });
 });
 
@@ -120,12 +120,11 @@ describe("purchase windows — all nous spending is upgrade-mode-only (§3)", ()
       expect(buyShelfModule(s, type).ok).toBe(false);
     }
     expect(buyCell(s, hex(2, 0)).ok).toBe(false);
-    expect(buyGoalCapacity(s).ok).toBe(false);
+    expect(buyDraftUpgrade(s).ok).toBe(false);
     const opening = s.modules[0]!;
     expect(upgradeModule(s, opening.id).ok).toBe(false);
     expect(s.purchased.forge).toBe(false);
     expect(s.cellsBought).toBe(0);
-    expect(s.goalCapacityBought).toBe(0);
     expect(opening.level).toBe(0);
     endSession(s);
     // Back in upgrade mode the same purchases go through (ADR-0019: the
@@ -159,7 +158,7 @@ describe("the opening economy", () => {
     expect(cellCost(0)).toBeGreaterThan(grant);
     expect(buyCell(s, hex(2, 0)).ok).toBe(false);
     expect(longGoalCost(0)).toBeGreaterThan(grant);
-    expect(buyGoalCapacity(s).ok).toBe(false);
+    expect(buyDraftUpgrade(s).ok).toBe(false);
     expect(s.nous).toBe(grant);
   });
 

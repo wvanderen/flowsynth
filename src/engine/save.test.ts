@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import { endSession, startSession } from "./actions";
-import { fresh, give, stubRng } from "./fixtures";
+import { fresh, give, giveHabit, stubRng } from "./fixtures";
 import { SAVE_VERSION } from "./constants";
 import { deserialize, serialize } from "./save";
 import { applyGap, flushPendingAway, resolveHonestyReport } from "./trust";
@@ -10,27 +10,27 @@ import { writeNote } from "./notes";
 import { hex } from "./hex";
 import type { GameState } from "./types";
 
-// The v10 boundary (issue #371): the charge-quantity cut. A v9 save
-// migrates in place — each module's stored reserve seconds convert to the
-// charge quantity that delivers the same total at the module's authored
-// power — and the life record is never wiped. Every version older than v9
-// still rejects with the start-fresh message; there is no chain past one
-// step.
+// The v11 boundary (issue #423): the habit-class cut. The explicit
+// `migrateV10ToV11` belongs to the migration brief (#427); until it lands,
+// a v10 save loads through the lenient-default block alone — habits gain
+// their launch-class pairs, the goalFuel pool defaults empty, and the
+// retired flow meter's field drops. Every version older than v10 rejects
+// with the start-fresh message; there is no chain past one step.
 
 // Fabricate a v8 save from a live state: force the version. Rejected —
-// the v9 step was its one migration, and the chain does not grow.
+// the v10 step is the current chain's floor, and the chain does not grow.
 function asV7(state: GameState, savedAt = 1_000): string {
   const file = JSON.parse(serialize(state, savedAt));
   file.version = 7;
   return JSON.stringify(file);
 }
 
-// Fabricate a v9 save from a live v10 state: force the version. The v9
-// shape is the current shape everywhere but the reserve's unit — its
-// stored figures read as output seconds, which the migration converts.
-function asV9(state: GameState, savedAt = 1_000): string {
+// Fabricate a v10 save from a live v11 state: force the version. Its
+// figures load through the lenient defaults exactly as a real pre-class
+// save will, until the migration brief's conversion replaces this path.
+function asV10(state: GameState, savedAt = 1_000): string {
   const file = JSON.parse(serialize(state, savedAt));
-  file.version = 9;
+  file.version = 10;
   return JSON.stringify(file);
 }
 
@@ -54,7 +54,7 @@ describe("persistence", () => {
   it("saves carry the current version", () => {
     const parsed = JSON.parse(serialize(fresh()));
     expect(parsed.version).toBe(SAVE_VERSION);
-    expect(parsed.version).toBe(10);
+    expect(parsed.version).toBe(11);
   });
 
   it("saves lenient-default the gate ledger", () => {
@@ -273,8 +273,8 @@ describe("persistence", () => {
 });
 
 describe("the version gate (ADR-0017's pattern)", () => {
-  it("rejects v8 and every older version; there is no chain past one step", () => {
-    for (const version of [1, 4, 5, 6, 7, 8]) {
+  it("rejects v9 and every older version; there is no chain past one step", () => {
+    for (const version of [1, 4, 5, 6, 7, 8, 9]) {
       const text = serialize(fresh()).replace(`"version": ${SAVE_VERSION}`, `"version": ${version}`);
       const result = deserialize(text);
       expect(result.error, `v${version}`).toMatch(/older version/i);
@@ -299,7 +299,7 @@ describe("the version gate (ADR-0017's pattern)", () => {
     expect(deserialize('{"app":"flowsynth","version":99,"state":{}}').error).toBeDefined();
     expect(deserialize('{"app":"flowsynth","version":9,"state":{"mode":"weird"}}').error).toBeDefined();
     expect(deserialize('{"app":"flowsynth","version":9}').error).toBeDefined();
-    expect(deserialize('{"app":"flowsynth","version":11,"state":{}}').error).toMatch(/newer than this build/i);
+    expect(deserialize('{"app":"flowsynth","version":12,"state":{}}').error).toMatch(/newer than this build/i);
   });
 
   it("exported saves load unchanged", () => {
@@ -311,69 +311,44 @@ describe("the version gate (ADR-0017's pattern)", () => {
   });
 });
 
-describe("the v9 → v10 migration (issue #371)", () => {
-  it("a v9 save loads: each stored reserve converts to the charge quantity its power delivers", () => {
+describe("the v10 boundary (issue #423)", () => {
+  it("a v10 save loads through the lenient-default block: class pairs default, the retired flow field drops", () => {
     const s = fresh();
+    giveHabit(s);
     const gen = give(s, "focusKeyed", hex(1, 0));
-    gen.reserve = 60; // legacy output seconds
-    const leveled = give(s, "noteKeyed", hex(0, 1), 3); // power 1.2³
-    leveled.reserve = 60;
-    const loaded = deserialize(asV9(s));
-    expect(loaded.error).toBeUndefined();
-    const modules = loaded.state!.modules;
-    // Base power ×1: 60 seconds of delivery at strength 1 was 60 charge —
-    // the quantity carries it exactly, duration included (60 ÷ 1 = 60 s).
-    expect(modules.find((m) => m.id === gen.id)!.reserve).toBeCloseTo(60, 9);
-    // Power 1.728: the old reserve delivered 60 × 1.728 total — the
-    // conversion preserves that total, and with it the duration.
-    expect(modules.find((m) => m.id === leveled.id)!.reserve).toBeCloseTo(60 * 1.2 ** 3, 9);
-    // Nothing else moved: cells, levels, placement.
-    expect(modules.find((m) => m.id === gen.id)!.pos).toEqual(hex(1, 0));
-    expect(modules.find((m) => m.id === leveled.id)!.level).toBe(3);
-  });
-
-  it("the converted reserve delivers its legacy duration in the new model", () => {
-    const s = fresh();
-    const gen = give(s, "focusKeyed", hex(2, 0));
-    gen.reserve = 60; // 60 legacy seconds at strength 1
-    const leveled = give(s, "goalKeyed", null, 2); // power 1.44, waiting in the tray
-    leveled.reserve = 100; // 100 legacy seconds at strength 1.44
-    const loaded = deserialize(asV9(s)).state!;
-    // 60 × 1 and 100 × 1.44 charge — the totals the seconds model promised.
-    expect(loaded.modules.find((m) => m.id === gen.id)!.reserve).toBeCloseTo(60, 9);
-    expect(loaded.modules.find((m) => m.id === leveled.id)!.reserve).toBeCloseTo(144, 9);
-    give(loaded, "forge", hex(1, 0));
-    startSession(loaded, 600);
-    const migrated = loaded.modules.find((m) => m.id === gen.id)!;
-    const migratedLeveled = loaded.modules.find((m) => m.id === leveled.id)!;
-    advance(loaded, 60, stubRng(new Array(12).fill(0.5)));
-    // The base-power reserve empties at exactly its stored 60 seconds.
-    expect(migrated.reserve).toBeCloseTo(0, 6);
-    expect(loaded.forge.earned).toBe(1);
-    // The leveled reserve joins from the tray: 144 charge at strength 1.44
-    // holds out exactly its stored 100 seconds — the rhythm the seconds
-    // model promised, in quantity terms.
-    migratedLeveled.pos = hex(1, 1);
-    advance(loaded, 100, stubRng(new Array(24).fill(0.5)));
-    expect(migratedLeveled.reserve).toBeCloseTo(0, 6);
-    expect(loaded.session!.elapsed).toBeCloseTo(160, 6);
-    expect(loaded.forge.earned).toBe(2);
-    // Dry now: a further span moves the branch by nothing.
-    advance(loaded, 60, stubRng(new Array(12).fill(0.5)));
-    expect(loaded.forge.earned).toBe(2);
-  });
-
-  it("a corrupt or absent legacy reserve reads as an empty reserve, never a crash", () => {
-    const s = fresh();
-    give(s, "focusKeyed", hex(1, 0));
-    const file = JSON.parse(asV9(s));
-    file.state.modules[0]!.reserve = "most of a window";
+    gen.reserve = 60;
+    const file = JSON.parse(asV10(s));
+    // The pre-class shape: no class wear on the habit, the player-wide
+    // flow meter still on it.
+    delete file.state.habits[0].classId;
+    delete file.state.habits[0].classes;
+    file.state.flow = { progress: 300, earned: 1 };
     const loaded = deserialize(JSON.stringify(file));
     expect(loaded.error).toBeUndefined();
-    expect(loaded.state!.modules.every((m) => m.reserve === 0)).toBe(true);
+    const state = loaded.state!;
+    // The habit reads as an Engineer from zero — exactly what a fresh
+    // shape writes.
+    expect(state.habits[0]!.classId).toBe("engineer");
+    expect(state.habits[0]!.classes.engineer).toMatchObject({ experience: 0, level: 0, points: 0 });
+    expect(state.habits[0]!.classes.engineer!.rollMeter).toEqual({ progress: 0, earned: 0 });
+    // The goal-fuel pool defaults empty; the retired field drops.
+    expect(state.goalFuel).toBe(0);
+    expect("flow" in state).toBe(false);
+    // No conversion runs at this boundary: the reserve stands as stored.
+    expect(state.modules.find((m) => m.id === gen.id)!.reserve).toBe(60);
   });
 
-  it("mutators, tiers, and banked rolls are untouched by the migration", () => {
+  it("a loaded v10 save round-trips byte-identical", () => {
+    const s = fresh();
+    giveHabit(s);
+    const first = deserialize(asV10(s)).state!;
+    const text = serialize(first, 1_000);
+    const second = deserialize(text);
+    expect(second.error).toBeUndefined();
+    expect(serialize(second.state!, 1_000)).toBe(text);
+  });
+
+  it("mutators, tiers, and banked rolls are untouched at the boundary", () => {
     const s = fresh();
     s.mutators.push({ id: "mu1", family: "power", rarity: "uncommon", pos: null });
     const merged = give(s, "harmonizer", hex(0, 1));
@@ -386,54 +361,10 @@ describe("the v9 → v10 migration (issue #371)", () => {
         { id: "c3", type: "infusor", tier: 0 },
       ],
     });
-    const loaded = deserialize(asV9(s));
+    const loaded = deserialize(asV10(s));
     expect(loaded.error).toBeUndefined();
     expect(loaded.state!.mutators[0]).toMatchObject({ family: "power", rarity: "uncommon" });
     expect(loaded.state!.modules.find((m) => m.id === merged.id)!.tier).toBe(2);
     expect(loaded.state!.bankedRolls[0]!.candidates[1]!.tier).toBe(2);
-  });
-
-  it("the migration is repeatable: a migrated save reloads byte-identical", () => {
-    const s = fresh();
-    const leveled = give(s, "additive", hex(1, 0), 2);
-    leveled.tier = 1;
-    leveled.reserve = 30;
-    const first = deserialize(asV9(s)).state!;
-    const text = serialize(first, 1_000);
-    const second = deserialize(text);
-    expect(second.error).toBeUndefined();
-    expect(serialize(second.state!, 1_000)).toBe(text);
-  });
-
-  it("the migration loses no collection value: types, levels, converted reserves, and the life record stand", () => {
-    const s = fresh();
-    const gen = give(s, "focusKeyed", hex(1, 0), 1);
-    gen.reserve = 42;
-    const merged = give(s, "additive", hex(0, 1), 3);
-    merged.tier = 2;
-    merged.invested = 999;
-    s.sessionRecords.push({
-      sessionNumber: 1,
-      startedAt: 1,
-      endedAt: 2,
-      habitId: null,
-      mode: "open-ended",
-      plannedTarget: null,
-      creditedSeconds: 60,
-      earned: 6,
-      honestyEvents: [],
-      reflection: null,
-      goalsAdvanced: [],
-      achievements: [],
-      breather: null,
-    });
-    const before = { records: s.sessionRecords.length, modules: s.modules.length };
-    const loaded = deserialize(asV9(s));
-    expect(loaded.state!.modules).toHaveLength(before.modules);
-    // 42 legacy seconds on a level-1 Flywheel (power 1.2): 42 × 1.2 charge.
-    expect(loaded.state!.modules.find((m) => m.id === gen.id)!.reserve).toBeCloseTo(42 * 1.2, 9);
-    expect(loaded.state!.modules.find((m) => m.id === merged.id)!.level).toBe(3);
-    expect(loaded.state!.modules.find((m) => m.id === merged.id)!.invested).toBe(999);
-    expect(loaded.state!.sessionRecords).toHaveLength(before.records);
   });
 });

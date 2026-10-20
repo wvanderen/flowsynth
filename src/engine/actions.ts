@@ -2,7 +2,7 @@ import { BALANCE, BREATHER, CATEGORY_OF, EPS, isOscillatorType, NEXT_RARITY, REF
 import { claimOf, horizonReached } from "./accumulator";
 import { rowUnlockCost, unlockableRows, unlockedMergeCap, mergeCapIncreaseCost } from "./catalog";
 import { nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "./capacity";
-import { affordableLevels, cellPurchasePrice, chargeDelivered, maxChordFactorOf, deployedAt, findModule, levelCost, levelsCost, longGoalCost, mutatorSlotCost, rowGateOwed, syncRates, wholeNous } from "./economy";
+import { affordableLevels, cellPurchasePrice, chargeDelivered, maxChordFactorOf, deployedAt, findModule, levelCost, levelsCost, mutatorSlotCost, rowGateOwed, syncRates, wholeNous } from "./economy";
 import { summaryTermsOf } from "./allocation";
 import { arcCardDue } from "./arc";
 import { adjacent, hex, hexKey, isConnected, neighbors, sameHex } from "./hex";
@@ -364,19 +364,6 @@ export function buyCell(state: GameState, pos: Hex): ActionResult {
   state.cellsBought++;
   if (gateOwed) state.gatedRows.push(row);
   return { ok: true, unlocked: checkUnlocks(state) };
-}
-
-// The first console long goal (ADR-0012 as amended by ADR-0034, issue
-// #42): goal capacity. Each purchase adds exactly one slot — no occupancy
-// gate, so successive slots ride back-to-back whenever affordable — at
-// prices far past the last.
-export function buyGoalCapacity(state: GameState): ActionResult {
-  if (state.mode !== "upgrade") return fail("Purchases happen between sessions.");
-  const price = longGoalCost(state.goalCapacityBought);
-  if (wholeNous(state) < price) return fail("Not enough whole nous.");
-  state.nous -= price;
-  state.goalCapacityBought++;
-  return ok;
 }
 
 export function upgradeModule(state: GameState, id: string): ActionResult {
@@ -1116,7 +1103,10 @@ export function buyMergeCapIncrease(state: GameState): ActionResult {
 // with the scrap that pays for them, and the special drafts' held
 // entitlements (issue #379), which persist unused beside them — and the
 // Warp Beam's owned rungs (issue #380), which persist with the raised
-// cap they bought.
+// cap they bought — and the whole habit-class layer (issue #423,
+// ADR-0074): every habit's class wear, and each habit–class pair's
+// experience, level, tree points, allocations, and practice-roll meter.
+// Class progress persists through prestige; nothing class-side resets.
 // Module levels return to base, nous to
 // a fresh opening grant, and the charge window resets — as does the
 // ladder's purchased capacity (issue #259): the voices return to one. The era measure

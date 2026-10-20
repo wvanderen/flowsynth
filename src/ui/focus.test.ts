@@ -2,7 +2,7 @@
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import type { App } from "./app";
 import { createHabit, selectHabit, addPracticeLog } from "../engine/habits";
-import { createGoal, accrueGoalProgress } from "../engine/goals";
+import { createGoal, accrueGoalProgress, goalCapacity } from "../engine/goals";
 import { endSession, startSession } from "../engine/actions";
 import { advance } from "../engine/advance";
 import { serialize } from "../engine/save";
@@ -107,7 +107,7 @@ describe("the four faces in the Focus frame", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
     createGoal(app.state, { habitId: habit.id, minutes: 20, schedule: "daily", now: 1000 });
-    expect(openFace("goals").querySelector("#focus-slots-read")!.textContent).toContain("1/2 slots");
+    expect(openFace("goals").querySelector("#focus-slots-read")!.textContent).toContain(`1/${goalCapacity()} slots`);
     expect(openFace("plan").querySelector("#focus-plan-read")!.textContent).toContain("1 goal tracked");
   });
 
@@ -140,13 +140,13 @@ describe("the flow-mode rule", () => {
     expect(habitFrame.querySelector("#habit-log-open")).toBeNull();
     expect(habitFrame.querySelector("#habit-name-input")).toBeNull();
     // The GOALS face reads live; create, delete, and the palette's edit
-    // half are gone.
+    // half are gone. The retired purchase row left no trace.
     const goalsFrame = openFace("goals");
-    expect(goalsFrame.querySelector(".long-goal-row")!.textContent).toContain("between sessions");
+    expect(goalsFrame.querySelector(".long-goal-row")).toBeNull();
     expect(goalsFrame.querySelector("#goal-create-open")).toBeNull();
     expect(goalsFrame.querySelector("[data-goal-delete]")).toBeNull();
     expect(goalsFrame.querySelector("[data-goal-recolor]")).toBeNull();
-    expect(goalsFrame.querySelector("#long-goal-buy")!.hasAttribute("disabled")).toBe(true);
+    expect(goalsFrame.querySelector("#long-goal-buy")).toBeNull();
     // The engine owns the lock too: nothing these actions accept in flow.
     const nousBefore = app.state.nous;
     app.createHabitAction("Sneaky");
@@ -354,25 +354,24 @@ describe("the PLAN face rework (#311)", () => {
 });
 
 describe("the goal meter's derivation (the display well's edge states)", () => {
-  it("the meter qualifies the selected habit's goals plus the habit-agnostic ones, nearest complete leading", () => {
+  it("the meter qualifies the selected habit's own goals, nearest complete leading (issue #423)", () => {
     const state = createInitialState();
     const piano = createHabit(state, "Piano").habit!;
     const cooking = createHabit(state, "Cooking").habit!;
     selectHabit(state, piano.id);
     createGoal(state, { habitId: piano.id, minutes: 10, schedule: "once", now: 1000 });
-    createGoal(state, { habitId: null, minutes: 30, schedule: "once", now: 1001 });
+    createGoal(state, { habitId: piano.id, minutes: 30, schedule: "once", now: 1001 });
     createGoal(state, { habitId: cooking.id, minutes: 5, schedule: "once", now: 1002 }); // another habit's — never qualifies
     accrueGoalProgress(state, piano.id, 9 * 60); // the 10-min goal sits at 9/10
     const read = goalMeterOf(state)!;
     expect(read.fraction).toBeCloseTo(0.9);
     expect(read.done).toBe(false);
-    // One more open qualifying goal (the habit-agnostic one) stays in play.
+    // One more open goal of the same habit stays in play.
     expect(read.extra).toBe(1);
   });
 
   it("completion never displaces the nearest open goal; an all-done set closes on its mark", () => {
     const state = createInitialState();
-    state.goalCapacityBought = 2;
     const habit = createHabit(state, "Piano").habit!;
     selectHabit(state, habit.id);
     createGoal(state, { habitId: habit.id, minutes: 10, schedule: "once", now: 1000 });
@@ -448,10 +447,12 @@ describe("the display well's goal meter (the header-status brief)", () => {
   });
 
   it("the meter stands at the well's right edge: seven segments, the goal's palette, the count mark", () => {
-    app.state.goalCapacityBought = 5; // seven slots for the seven tracked goals
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
-    for (let i = 0; i < 7; i++) createGoal(app.state, { habitId: habit.id, minutes: 10 + i, schedule: "once", now: 1000 + i });
+    // The habit's full slot set tracks (issue #423: the fixed per-habit
+    // capacity), each goal a step further from done.
+    const capacity = goalCapacity();
+    for (let i = 0; i < capacity; i++) createGoal(app.state, { habitId: habit.id, minutes: 10 + i, schedule: "once", now: 1000 + i });
     accrueGoalProgress(app.state, habit.id, 9 * 60); // the 10-min goal leads at 9/10
     app.render();
     const meter = document.querySelector("#console-session .goal-meter")!;
@@ -459,18 +460,17 @@ describe("the display well's goal meter (the header-status brief)", () => {
     // Seven steps, six lit at 9/10 — the lit spelling the patch shares.
     expect(meter.querySelectorAll(".gm-seg")).toHaveLength(GOAL_METER_SEGMENTS);
     expect(meter.querySelectorAll(".gm-seg.lit")).toHaveLength(6);
-    // The count mark answers for the six further goals in play.
-    expect(meter.querySelector(".gm-count")!.textContent).toBe("·6");
+    // The count mark answers for the further goals in play.
+    expect(meter.querySelector(".gm-count")!.textContent).toBe(`·${capacity - 1}`);
     // The gloss rides the tooltip layer, the aria read carries the count.
     expect(meter.querySelector(".inst-tip-body")!.textContent).toBe("10 min · 1 min to go");
-    expect(meter.getAttribute("aria-label")).toBe("Goal progress: 10 min, 1 minute to go, 6 more goals in play");
+    expect(meter.getAttribute("aria-label")).toBe(`Goal progress: 10 min, 1 minute to go, ${capacity - 1} more goals in play`);
     // No nested controls: activating the meter opens PLAN with the door that
     // stays the one action.
     expect(meter.querySelectorAll("button, input, select, a")).toHaveLength(0);
   });
 
   it("in-progress vs complete reads without color: the aria read and the engraved mark carry it", () => {
-    app.state.goalCapacityBought = 2;
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
     createGoal(app.state, { habitId: habit.id, minutes: 10, schedule: "once", now: 1000, color: "cyan" });
@@ -485,10 +485,10 @@ describe("the display well's goal meter (the header-status brief)", () => {
     expect(meter.querySelector(".gm-done")).toBeNull();
   });
 
-  it("a habit-agnostic goal lights the meter of whatever habit is selected", () => {
+  it("the selected habit's own goal lights the meter (issue #423)", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
-    createGoal(app.state, { habitId: null, minutes: 30, schedule: "weekly", now: 1000, color: "amber" });
+    createGoal(app.state, { habitId: habit.id, minutes: 30, schedule: "weekly", now: 1000, color: "amber" });
     accrueGoalProgress(app.state, habit.id, 15 * 60);
     app.render();
     const meter = document.querySelector("#console-session .goal-meter")!;
@@ -595,5 +595,88 @@ describe("the sheet's live reads", () => {
     expect(document.querySelector("[data-goal-progress]")).toBe(bar);
     expect(bar.style.height).not.toBe(before);
     expect(bar.style.height).toBe("75%");
+  });
+});
+
+describe("the habit-class face (issue #423)", () => {
+  function drill(habitId: string): HTMLElement {
+    openFace("habit");
+    document.querySelector<HTMLButtonElement>(`[data-drill-habit="${habitId}"]`)!.click();
+    return sheet();
+  }
+
+  it("the detail wears the class section: chips, the level/point read, the meter, and the tree", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    const pair = habit.classes.engineer!;
+    pair.level = 3;
+    pair.points = 1;
+    pair.spent = { reed: 1 };
+    pair.rollMeter = { progress: 420, earned: 1 };
+    const frame = drill(habit.id);
+    // The wear chips: the registry's one class, selected.
+    const chip = frame.querySelector<HTMLButtonElement>('[data-class-pick="engineer"]')!;
+    expect(chip.classList.contains("st-selected")).toBe(true);
+    expect(chip.getAttribute("aria-pressed")).toBe("true");
+    // The one-place read: level and the point balance live here alone.
+    // (The term disclosures sit inline, so the read asserts in pieces.)
+    const read = frame.querySelector(".habit-class .stat-row .mono")!.textContent!;
+    expect(read).toContain("Engineer");
+    expect(read).toContain("Level 3");
+    expect(read).toContain("1 tree point");
+    expect(read).toContain("free");
+    // The practice-roll meter renders with its live slots and figures.
+    const track = frame.querySelector<HTMLElement>('[data-live="class-meter-track"]')!;
+    expect(track.getAttribute("aria-valuenow")).toBe("420");
+    expect(track.querySelector('[data-live="class-meter-pip"]')!.getAttribute("style")).toContain("23.3");
+    expect(frame.querySelector('[data-live="class-meter-line"]')!.textContent).toContain("next roll in");
+    // The tree: the half-ranked node offers its next rank; the locked rung
+    // names its level and renders no button.
+    expect(frame.querySelector('[data-class-allocate="reed"]')).not.toBeNull();
+    expect(frame.querySelector('[data-class-allocate="punch-card"]')).toBeNull();
+    expect(frame.textContent).toContain("unlocks at class level 5");
+    // Respec and presets stand in the tree's actions row.
+    expect(frame.querySelector('[data-class-respec]')).not.toBeNull();
+    expect(frame.querySelectorAll("[data-class-preset]").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("allocating, respecing, and preset moves land through the engine and re-render the sheet", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    const pair = habit.classes.engineer!;
+    pair.level = 1;
+    pair.points = 1;
+    const frame = drill(habit.id);
+    frame.querySelector<HTMLButtonElement>('[data-class-allocate="governor"]')!.click();
+    expect(pair.spent).toEqual({ governor: 1 });
+    expect(pair.points).toBe(0);
+    sheet().querySelector<HTMLButtonElement>('[data-class-respec]')!.click();
+    expect(pair.spent).toEqual({});
+    expect(pair.points).toBe(1);
+    // The default preset needs level 3's reed — the refusal surfaces, the
+    // allocation stands.
+    sheet().querySelector<HTMLButtonElement>('[data-class-preset="engineer-default"]')!.click();
+    expect(pair.spent).toEqual({});
+  });
+
+  it("the flow-mode active read carries the live meter; the drill-down never draws controls", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
+    startSession(app.state, null);
+    advance(app.state, 60);
+    const frame = openFace("habit");
+    // The active read shows the meter line live.
+    expect(frame.querySelector('[data-live="class-meter-line"]')!.textContent).toContain("1:00 / 3:00");
+    // No class controls stand in flow.
+    expect(frame.querySelector("[data-class-pick]")).toBeNull();
+    expect(frame.querySelector("[data-class-allocate]")).toBeNull();
+    expect(frame.querySelector("[data-class-respec]")).toBeNull();
+  });
+
+  it("the class selection action lands through the engine", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    const frame = drill(habit.id);
+    // The launch class is every habit's wear: clicking the standing chip
+    // is a no-op selection the engine accepts.
+    frame.querySelector<HTMLButtonElement>('[data-class-pick="engineer"]')!.click();
+    expect(habit.classId).toBe("engineer");
   });
 });
