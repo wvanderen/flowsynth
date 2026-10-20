@@ -166,7 +166,11 @@ read on the display basis), the ending mode change re-solves **at most
 once** (zero is a legitimate memo hit when the inputs returned to their
 pre-breather shape), and the breather's steady steps never solve beyond
 the real input boundaries (reserve depletion, burst windows) — the key
-timelines are piecewise-constant everywhere, never per-tick.
+timelines are piecewise-constant everywhere, never per-tick. The gate also
+bounds steady solves at eight over the five-minute break on every niche
+(including the re-pick niche), sampling at one-second and half-second
+ticks and requiring identical solve counts at both cadences. Repeated
+solves that retain the same keys therefore fail independently of key churn.
 
 Where a differing breather optimum genuinely exists, the re-pick is
 coherent. The re-pick niche (a contended C4 between a Fifth whose partner

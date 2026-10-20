@@ -201,7 +201,7 @@ function voiceValues(state: GameState): Record<string, number> {
   return read;
 }
 
-function runLeg(board: BoardBuilder, seed: number, take: boolean): ArcLeg {
+function runLeg(board: BoardBuilder, seed: number, take: boolean, breatherStep: number): ArcLeg {
   const state = createInitialState();
   board(state);
   const habit = createHabit(state, "Calibration");
@@ -284,7 +284,7 @@ function runLeg(board: BoardBuilder, seed: number, take: boolean): ArcLeg {
     const seenSets = new Set<string>([previousKeys]);
     for (;;) {
       const steadyBefore = allocationMemoStats.solves;
-      const applied = applyBreatherGap(state, STEP, rng);
+      const applied = applyBreatherGap(state, breatherStep, rng);
       displayedRates(state);
       leg.steadySolves += allocationMemoStats.solves - steadyBefore;
       const keys = activeKeys(state).join("|");
@@ -337,8 +337,8 @@ function reserveSum(state: GameState): number {
   return state.modules.reduce((total, module) => total + (module.pos !== null ? module.reserve : 0), 0);
 }
 
-export function runArcPair(board: BoardBuilder, seed: number): ArcPair {
-  return { taken: runLeg(board, seed, true), declined: runLeg(board, seed, false) };
+export function runArcPair(board: BoardBuilder, seed: number, breatherStep = STEP): ArcPair {
+  return { taken: runLeg(board, seed, true, breatherStep), declined: runLeg(board, seed, false, breatherStep) };
 }
 
 // The deployed generator's reserve after `seconds` more of breather — the

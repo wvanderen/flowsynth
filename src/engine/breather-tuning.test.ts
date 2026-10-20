@@ -175,6 +175,19 @@ describe("reserve and forge pacing across the boundary (priority 2)", () => {
 });
 
 describe("the allocation across the breather boundary", () => {
+  it("bounds steady solves at one-second ticks", () => {
+    for (const [name, board] of [...ALL_NICHES, ["repick", REPICK] as const]) {
+      const { taken } = runArcPair(board, SEED, 1);
+      // The five-minute walk has 300 ticks, but only a handful of
+      // reserve and temporal/rest phase boundaries. Re-solving an
+      // unchanged optimum on every tick must fail this gate too.
+      expect(taken.steadySolves, name).toBeLessThanOrEqual(8);
+      const finer = runArcPair(board, SEED, 0.5).taken;
+      expect(finer.steadySolves, name).toBe(taken.steadySolves);
+      expect(finer.joinSolves, name).toBe(1);
+    }
+  });
+
   it("the mode join re-solves exactly once, the exit at most once, and nothing thrashes", () => {
     for (const [name, board] of ALL_NICHES) {
       const { taken } = runArcPair(board, SEED);
